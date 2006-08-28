@@ -1,0 +1,93 @@
+// warnerr.h
+
+enum {
+	warnNoWadKey,				// 0
+	warnNoValidWads,
+	warnMultipleStarts,
+	warnBrushDuplicatePlane,
+	warnNoPlaneNormal,
+	warnNoPlayerStart,
+	warnNoPlayerDeathmatch,
+	warnNoPlayerCoop,
+	warnPointOffPlane,
+	warnNoBrushFaces,
+	warnMapLeak,				// 10
+	warnBadPortalDirection,
+	warnPortalClippedAway,
+	warnWindingOutside,
+	warnLowWindingArea,
+	warnNotWad,
+	warnTextureNotFound,
+	warnInvalidOption,
+	warnNoLogFile,
+	warnNoFilling,
+	warnBadMapFaceCount,		// 20
+	warnTooManyMergePoints,
+	warnDegenerateEdge,
+	warnNoRotateTarget,
+	cWarnings
+};
+
+enum {
+	errNoLeakNode,
+	errUnknownOption,
+	errEpairTooLong,
+	errInvalidMapPlane,
+	errLowFaceCount,
+	errParseEntity,
+	errLowEntCount,
+	errUnexpectedEOF,
+	errLowMiptexCount,
+	errLowTexinfoCount,
+	errBadVersion,			// 10
+	errNoWindingAxis,
+	errLowPointCount,
+	errNoValidBrushes,
+	errNoValidPlanes,
+	errNoSurfaceFaces,
+	errBadContents,
+	errMixedFaceContents,
+	errNoSurfaceFace,
+	errDegenerateEdge,
+	errConcaveFace,			// 20
+	errNonCanonicalVector,
+	errLowBrushPlaneCount,
+	errNormalization,
+	errLowFacePointCount,
+	errInvalidNormal,
+	errLowBrushFaceCount,
+	errLowHullPointCount,
+	errLowHullEdgeCount,
+	errFreedFace,
+	errLowSplitPointCount,	// 30
+	errTooFewPoints,
+	errBogusRange,
+	errDeformedBSPLump,
+	errOpenFailed,
+	errReadFailure,
+	errWriteFailure,
+	errColinearEdge,
+	errPortalAlreadyAdded,
+	errPortalNotInLeaf,
+	errPortalNotBoundLeaf,	// 40
+	errMislinkedPortal,
+	errNoPolygonSplit,
+	errLowVertexCount,
+	errZeroContents,
+	errLowEdgeCount,
+	errLowPlaneCount,
+	errLowWedgeCount,
+	errLowWvertCount,
+	errOriginalExists,
+	errInvalidMemType,		// 50
+	errTooManyPoints,
+	errOutOfMemory,
+	errLowTextureCount,
+	errLineIncomplete,
+	errEOFInQuotes,
+	errTokenTooLarge,
+	errInvalidOption,
+	errLowLeakCount,
+	errTooManyClipnodes,
+	cErrors					// 60
+};
