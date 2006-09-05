@@ -30,27 +30,27 @@ CheckColinear
 
 ================
 */
-void CheckColinear (face_t *f)
+void
+CheckColinear(face_t *f)
 {
-	int			i, j;
-	vec3_t		v1, v2;
-	
-	for (i=0 ; i<f->numpoints ;i++)
-	{
-		// skip the point if the vector from the previous point is the same
-		// as the vector to the next point
-		j = (i - 1 < 0) ? f->numpoints - 1 : i - 1;
-		VectorSubtract (f->pts[i], f->pts[j], v1);
-		VectorNormalize (v1);
-		
-		j = (i + 1 == f->numpoints) ? 0 : i + 1;
-		VectorSubtract (f->pts[j], f->pts[i], v2);
-		VectorNormalize (v2);
-		
-		if (VectorCompare (v1, v2))
-			Message(msgError, errColinearEdge);
-	}
-	
+    int i, j;
+    vec3_t v1, v2;
+
+    for (i = 0; i < f->numpoints; i++) {
+	// skip the point if the vector from the previous point is the same
+	// as the vector to the next point
+	j = (i - 1 < 0) ? f->numpoints - 1 : i - 1;
+	VectorSubtract(f->pts[i], f->pts[j], v1);
+	VectorNormalize(v1);
+
+	j = (i + 1 == f->numpoints) ? 0 : i + 1;
+	VectorSubtract(f->pts[j], f->pts[i], v2);
+	VectorNormalize(v2);
+
+	if (VectorCompare(v1, v2))
+	    Message(msgError, errColinearEdge);
+    }
+
 }
 
 
@@ -65,115 +65,110 @@ Returns NULL if the faces couldn't be merged, or the new face.
 The originals will NOT be freed.
 =============
 */
-face_t *TryMerge (face_t *f1, face_t *f2)
+face_t *
+TryMerge(face_t *f1, face_t *f2)
 {
-	vec_t		*p1, *p2, *p3, *p4, *back;
-	face_t		*newf;
-	int			i, j, k, l;
-	vec3_t		normal, delta, planenormal;
-	vec_t		dot;
-	plane_t		*plane;
-	bool		keep1, keep2;
-	
-	if (f1->numpoints == -1 ||
-		f2->numpoints == -1 ||
-		f1->planeside   != f2->planeside   ||
-		f1->texturenum  != f2->texturenum  ||
-		f1->contents[0] != f2->contents[0] ||
-		f1->contents[1] != f2->contents[1])
-		return NULL;
-		
-	// find a common edge
-	p1 = p2 = NULL;	// stop compiler warning
-	j = 0;			// 
-	
-	for (i=0; i<f1->numpoints; i++)
-	{
-		p1 = f1->pts[i];
-		p2 = f1->pts[(i+1)%f1->numpoints];
-		for (j=0; j<f2->numpoints; j++)
-		{
-			p3 = f2->pts[j];
-			p4 = f2->pts[(j+1)%f2->numpoints];
-			for (k=0; k<3; k++)
-			{
-				if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON ||
-					fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
-					break;
-			}
-			if (k==3)
-				break;
-		}
-		if (j < f2->numpoints)
-			break;
+    vec_t *p1, *p2, *p3, *p4, *back;
+    face_t *newf;
+    int i, j, k, l;
+    vec3_t normal, delta, planenormal;
+    vec_t dot;
+    plane_t *plane;
+    bool keep1, keep2;
+
+    if (f1->numpoints == -1 ||
+	f2->numpoints == -1 ||
+	f1->planeside != f2->planeside ||
+	f1->texturenum != f2->texturenum ||
+	f1->contents[0] != f2->contents[0] ||
+	f1->contents[1] != f2->contents[1])
+	return NULL;
+
+    // find a common edge
+    p1 = p2 = NULL;		// stop compiler warning
+    j = 0;			//
+
+    for (i = 0; i < f1->numpoints; i++) {
+	p1 = f1->pts[i];
+	p2 = f1->pts[(i + 1) % f1->numpoints];
+	for (j = 0; j < f2->numpoints; j++) {
+	    p3 = f2->pts[j];
+	    p4 = f2->pts[(j + 1) % f2->numpoints];
+	    for (k = 0; k < 3; k++) {
+		if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON ||
+		    fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
+		    break;
+	    }
+	    if (k == 3)
+		break;
 	}
-	
-	if (i == f1->numpoints)
-		return NULL;			// no matching edges
+	if (j < f2->numpoints)
+	    break;
+    }
 
-	// check slope of connected lines
-	// if the slopes are colinear, the point can be removed
-	plane = &pPlanes[f1->planenum];
-	VectorCopy (plane->normal, planenormal);
-	if (f1->planeside)
-		VectorSubtract (vec3_origin, planenormal, planenormal);
-		
-	back = f1->pts[(i+f1->numpoints-1)%f1->numpoints];
-	VectorSubtract (p1, back, delta);
-	CrossProduct (planenormal, delta, normal);
-	VectorNormalize (normal);
-	
-	back = f2->pts[(j+2)%f2->numpoints];
-	VectorSubtract (back, p1, delta);
-	dot = DotProduct (delta, normal);
-	if (dot > CONTINUOUS_EPSILON)
-		return NULL;			// not a convex polygon
-	keep1 = dot < -CONTINUOUS_EPSILON;
-	
-	back = f1->pts[(i+2)%f1->numpoints];
-	VectorSubtract (back, p2, delta);
-	CrossProduct (planenormal, delta, normal);
-	VectorNormalize (normal);
+    if (i == f1->numpoints)
+	return NULL;		// no matching edges
 
-	back = f2->pts[(j+f2->numpoints-1)%f2->numpoints];
-	VectorSubtract (back, p2, delta);
-	dot = DotProduct (delta, normal);
-	if (dot > CONTINUOUS_EPSILON)
-		return NULL;			// not a convex polygon
-	keep2 = dot < -CONTINUOUS_EPSILON;
+    // check slope of connected lines
+    // if the slopes are colinear, the point can be removed
+    plane = &pPlanes[f1->planenum];
+    VectorCopy(plane->normal, planenormal);
+    if (f1->planeside)
+	VectorSubtract(vec3_origin, planenormal, planenormal);
 
-	// build the new polygon
-	if (f1->numpoints + f2->numpoints > MAXEDGES)
-	{
-		Message(msgWarning, warnTooManyMergePoints);
-		return NULL;
-	}
+    back = f1->pts[(i + f1->numpoints - 1) % f1->numpoints];
+    VectorSubtract(p1, back, delta);
+    CrossProduct(planenormal, delta, normal);
+    VectorNormalize(normal);
 
-	newf = NewFaceFromFace (f1);
-	
-	// copy first polygon
-	if (keep2)
-		k = (i+1)%f1->numpoints;
-	else
-		k = (i+2)%f1->numpoints;
-	for (; k != i; k=(k+1)%f1->numpoints)
-	{
-		VectorCopy (f1->pts[k], newf->pts[newf->numpoints]);
-		newf->numpoints++;
-	}
-	
-	// copy second polygon
-	if (keep1)
-		l = (j+1)%f2->numpoints;
-	else
-		l = (j+2)%f2->numpoints;
-	for (; l != j; l=(l+1)%f2->numpoints)
-	{
-		VectorCopy (f2->pts[l], newf->pts[newf->numpoints]);
-		newf->numpoints++;
-	}
+    back = f2->pts[(j + 2) % f2->numpoints];
+    VectorSubtract(back, p1, delta);
+    dot = DotProduct(delta, normal);
+    if (dot > CONTINUOUS_EPSILON)
+	return NULL;		// not a convex polygon
+    keep1 = dot < -CONTINUOUS_EPSILON;
 
-	return newf;
+    back = f1->pts[(i + 2) % f1->numpoints];
+    VectorSubtract(back, p2, delta);
+    CrossProduct(planenormal, delta, normal);
+    VectorNormalize(normal);
+
+    back = f2->pts[(j + f2->numpoints - 1) % f2->numpoints];
+    VectorSubtract(back, p2, delta);
+    dot = DotProduct(delta, normal);
+    if (dot > CONTINUOUS_EPSILON)
+	return NULL;		// not a convex polygon
+    keep2 = dot < -CONTINUOUS_EPSILON;
+
+    // build the new polygon
+    if (f1->numpoints + f2->numpoints > MAXEDGES) {
+	Message(msgWarning, warnTooManyMergePoints);
+	return NULL;
+    }
+
+    newf = NewFaceFromFace(f1);
+
+    // copy first polygon
+    if (keep2)
+	k = (i + 1) % f1->numpoints;
+    else
+	k = (i + 2) % f1->numpoints;
+    for (; k != i; k = (k + 1) % f1->numpoints) {
+	VectorCopy(f1->pts[k], newf->pts[newf->numpoints]);
+	newf->numpoints++;
+    }
+
+    // copy second polygon
+    if (keep1)
+	l = (j + 1) % f2->numpoints;
+    else
+	l = (j + 2) % f2->numpoints;
+    for (; l != j; l = (l + 1) % f2->numpoints) {
+	VectorCopy(f2->pts[l], newf->pts[newf->numpoints]);
+	newf->numpoints++;
+    }
+
+    return newf;
 }
 
 
@@ -182,29 +177,27 @@ face_t *TryMerge (face_t *f1, face_t *f2)
 MergeFaceToList
 ===============
 */
-face_t *MergeFaceToList (face_t *face, face_t *list)
-{	
-	face_t	*newf, *f;
-	
-	f = list;
-	while (f)
-	{
-		//CheckColinear (f);		
-		newf = TryMerge (face, f);
-		if (newf)
-		{
-			FreeMem(face, FACE);
-			f->numpoints = -1;		// merged out, remove later
-			face = newf;
-			f = list;
-		}
-		else
-			f = f->next;
-	}
-	
-	// didn't merge, so add at start
-	face->next = list;
-	return face;
+face_t *
+MergeFaceToList(face_t *face, face_t *list)
+{
+    face_t *newf, *f;
+
+    f = list;
+    while (f) {
+	//CheckColinear (f);
+	newf = TryMerge(face, f);
+	if (newf) {
+	    FreeMem(face, FACE);
+	    f->numpoints = -1;	// merged out, remove later
+	    face = newf;
+	    f = list;
+	} else
+	    f = f->next;
+    }
+
+    // didn't merge, so add at start
+    face->next = list;
+    return face;
 }
 
 
@@ -213,24 +206,23 @@ face_t *MergeFaceToList (face_t *face, face_t *list)
 FreeMergeListScraps
 ===============
 */
-face_t *FreeMergeListScraps (face_t *merged)
+face_t *
+FreeMergeListScraps(face_t *merged)
 {
-	face_t *head, *next;
+    face_t *head, *next;
 
-	head = NULL;
-	for (; merged; merged = next)
-	{
-		next = merged->next;
-		if (merged->numpoints == -1)
-			FreeMem(merged, FACE);
-		else
-		{
-			merged->next = head;
-			head = merged;
-		}
+    head = NULL;
+    for (; merged; merged = next) {
+	next = merged->next;
+	if (merged->numpoints == -1)
+	    FreeMem(merged, FACE);
+	else {
+	    merged->next = head;
+	    head = merged;
 	}
+    }
 
-	return head;
+    return head;
 }
 
 
@@ -239,22 +231,22 @@ face_t *FreeMergeListScraps (face_t *merged)
 MergePlaneFaces
 ===============
 */
-void MergePlaneFaces (surface_t *plane)
+void
+MergePlaneFaces(surface_t *plane)
 {
-	face_t *f, *next;
-	face_t *merged;
-	
-	merged = NULL;
-	
-	for (f = plane->faces; f; f = next)
-	{
-		next = f->next;
-		merged = MergeFaceToList (f, merged);
-	}
+    face_t *f, *next;
+    face_t *merged;
 
-	// Remove all empty faces (numpoints == -1) and add the remaining
-	// faces to the plane
-	plane->faces = FreeMergeListScraps (merged);
+    merged = NULL;
+
+    for (f = plane->faces; f; f = next) {
+	next = f->next;
+	merged = MergeFaceToList(f, merged);
+    }
+
+    // Remove all empty faces (numpoints == -1) and add the remaining
+    // faces to the plane
+    plane->faces = FreeMergeListScraps(merged);
 }
 
 
@@ -263,23 +255,23 @@ void MergePlaneFaces (surface_t *plane)
 MergeAll
 ============
 */
-void MergeAll (surface_t *surfhead)
+void
+MergeAll(surface_t *surfhead)
 {
-	surface_t *surf;
-	int mergefaces = 0;
-	face_t *f;
-	
-	Message(msgProgress, "MergeAll");
+    surface_t *surf;
+    int mergefaces = 0;
+    face_t *f;
 
-	for (surf = surfhead; surf; surf=surf->next)
-	{
-		MergePlaneFaces (surf);
-		for (f=surf->faces; f; f=f->next)
-			mergefaces++;
-	}
-	
-	Message(msgStat, "%5i mergefaces", mergefaces);
+    Message(msgProgress, "MergeAll");
 
-	// Quick hack to let solidbsp print out progress %
-	csgmergefaces = mergefaces;
+    for (surf = surfhead; surf; surf = surf->next) {
+	MergePlaneFaces(surf);
+	for (f = surf->faces; f; f = f->next)
+	    mergefaces++;
+    }
+
+    Message(msgStat, "%5i mergefaces", mergefaces);
+
+    // Quick hack to let solidbsp print out progress %
+    csgmergefaces = mergefaces;
 }
