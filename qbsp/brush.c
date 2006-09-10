@@ -25,9 +25,9 @@
 
 int numbrushplanes;
 
-int numbrushfaces;
-mapface_t faces[128];		// beveled clipping hull can generate many extra
-
+/* beveled clipping hull can generate many extra faces */
+static mapface_t faces[128];
+static int numbrushfaces;
 
 /*
 =================
@@ -36,7 +36,7 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-void
+static void
 CheckFace(face_t *f)
 {
     int i, j;
@@ -106,7 +106,7 @@ CheckFace(face_t *f)
 AddToBounds
 =================
 */
-void
+static void
 AddToBounds(vec3_t v)
 {
     int i;
@@ -121,37 +121,10 @@ AddToBounds(vec3_t v)
 
 //===========================================================================
 
-int
-PlaneTypeForNormal(vec3_t normal)
-{
-    float ax, ay, az;
-
-    // NOTE: should these have an epsilon around 1.0?
-    if (normal[0] == 1.0)
-	return PLANE_X;
-    if (normal[1] == 1.0)
-	return PLANE_Y;
-    if (normal[2] == 1.0)
-	return PLANE_Z;
-
-    if (normal[0] == -1.0 || normal[1] == -1.0 || normal[2] == -1.0)
-	Message(msgError, errNonCanonicalVector);
-
-    ax = fabs(normal[0]);
-    ay = fabs(normal[1]);
-    az = fabs(normal[2]);
-
-    if (ax >= ay && ax >= az)
-	return PLANE_ANYX;
-    if (ay >= ax && ay >= az)
-	return PLANE_ANYY;
-    return PLANE_ANYZ;
-}
-
 #define	DISTEPSILON		0.01
 #define	ANGLEEPSILON	0.00001
 
-void
+static void
 NormalizePlane(plane_t *dp)
 {
     vec_t ax, ay, az;
@@ -249,14 +222,14 @@ FindPlane(plane_t *dplane, int *side)
 =============================================================================
 */
 
-vec3_t brush_mins, brush_maxs;
+static vec3_t brush_mins, brush_maxs;
 
 /*
 =================
 FindTargetEntity
 =================
 */
-int
+static int
 FindTargetEntity(char *szTarget)
 {
     int iEntity;
@@ -305,7 +278,7 @@ CreateBrushFaces
 =================
 */
 #define	ZERO_EPSILON	0.001
-face_t *
+static face_t *
 CreateBrushFaces(void)
 {
     int i, j, k;
@@ -411,7 +384,7 @@ CreateBrushFaces(void)
 FreeBrushFaces
 =================
 */
-void
+static void
 FreeBrushFaces(face_t *pFaceList)
 {
     face_t *pFace, *pNext;
@@ -454,18 +427,18 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 #define	MAX_HULL_POINTS	64	//32
 #define	MAX_HULL_EDGES	128	//64
 
-int num_hull_points;
-vec3_t hull_points[MAX_HULL_POINTS];
-vec3_t hull_corners[MAX_HULL_POINTS * 8];
-int num_hull_edges;
-int hull_edges[MAX_HULL_EDGES][2];
+static int num_hull_points;
+static vec3_t hull_points[MAX_HULL_POINTS];
+static vec3_t hull_corners[MAX_HULL_POINTS * 8];
+static int num_hull_edges;
+static int hull_edges[MAX_HULL_EDGES][2];
 
 /*
 ============
 AddBrushPlane
 =============
 */
-void
+static void
 AddBrushPlane(plane_t *plane)
 {
     int i;
@@ -498,7 +471,7 @@ Adds the given plane to the brush description if all of the original brush
 vertexes can be put on the front side
 =============
 */
-void
+static void
 TestAddPlane(plane_t *plane)
 {
     int i, c;
@@ -557,7 +530,7 @@ AddHullPoint
 Doesn't add if duplicated
 =============
 */
-int
+static int
 AddHullPoint(vec3_t p, vec3_t hull_size[2])
 {
     int i;
@@ -597,7 +570,7 @@ AddHullEdge
 Creates all of the hull planes around the given edge, if not done allready
 =============
 */
-void
+static void
 AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 {
     int pt1, pt2;
@@ -654,7 +627,7 @@ AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 ExpandBrush
 =============
 */
-void
+static void
 ExpandBrush(vec3_t hull_size[2], face_t *pFaceList)
 {
     int i, x, s;
@@ -715,7 +688,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-brush_t *
+static brush_t *
 LoadBrush(int iBrush)
 {
     brush_t *b;

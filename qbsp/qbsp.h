@@ -395,7 +395,6 @@ extern int numbrushplanes;
 void FixRotateOrigin(int iEntity, vec3_t offset);
 void Brush_LoadEntity(void);
 void FreeBrushsetBrushes(void);
-int PlaneTypeForNormal(vec3_t normal);
 int FindPlane(plane_t *dplane, int *side);
 
 //=============================================================================
