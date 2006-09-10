@@ -39,7 +39,7 @@ public:
 
     void Printf(char *szFormat, ...);
     void Read(void *pBuffer, int cLen);
-    void Write(void *pBuffer, int cLen);
+    void Write(const void *pBuffer, int cLen);
     int Seek(int Offset, int origin);
     int Position(void);
 

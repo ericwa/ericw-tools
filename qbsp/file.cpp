@@ -148,7 +148,7 @@ void File::Read(void *pBuffer, int cLen)
 Write
 ========
 */
-void File::Write(void *pBuffer, int cLen)
+void File::Write(const void *pBuffer, int cLen)
 {
     // Fails silently if fp == NULL
     if (fp && fwrite(pBuffer, 1, cLen, fp) != (size_t) cLen)

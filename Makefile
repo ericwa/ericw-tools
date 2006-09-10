@@ -8,10 +8,12 @@ ifeq ($(OSTYPE),msys)
 EXT=.exe
 DPTHREAD=
 LPTHREAD=
+LCURSES=
 else
 EXT=
 DPTHREAD=-DUSE_PTHREADS
 LPTHREAD=-lpthread
+LCURSES=-lcurses
 endif
 
 #CFLAGS   = -Wall -Werror -g
@@ -30,13 +32,15 @@ STRIP ?= strip
 all:	light/$(BIN_PFX)light$(EXT) \
 	vis/$(BIN_PFX)vis$(EXT) \
 	bspinfo/$(BIN_PFX)bspinfo$(EXT) \
-	bsputil/$(BIN_PFX)bsputil$(EXT)
+	bsputil/$(BIN_PFX)bsputil$(EXT) \
+	qbsp/$(BIN_PFX)qbsp$(EXT)
 
 release:	all
 	$(STRIP) light/$(BIN_PFX)light$(EXT)
 	$(STRIP) vis/$(BIN_PFX)vis$(EXT)
 	$(STRIP) bspinfo/$(BIN_PFX)bspinfo$(EXT)
 	$(STRIP) bsputil/$(BIN_PFX)bsputil$(EXT)
+	$(STRIP) qbsp/$(BIN_PFX)qbsp$(EXT)
 
 clean:
 	rm -f `find . -type f \( -name '*.o' -o -name '*~' \) -print`
@@ -44,10 +48,12 @@ clean:
 	rm -f vis/$(BIN_PFX)vis.exe
 	rm -f bspinfo/$(BIN_PFX)bspinfo.exe
 	rm -f bsputil/$(BIN_PFX)bsputil.exe
+	rm -f qbsp/$(BIN_PFX)qbsp.exe
 	rm -f light/$(BIN_PFX)light
 	rm -f vis/$(BIN_PFX)vis
 	rm -f bspinfo/$(BIN_PFX)bspinfo
 	rm -f bsputil/$(BIN_PFX)bsputil
+	rm -f qbsp/$(BIN_PFX)qbsp
 
 #########
 # Light #
@@ -125,3 +131,26 @@ BSPUTIL_OFILES =	bsputil/bsputil.o	\
 
 bsputil/$(BIN_PFX)bsputil$(EXT):	$(BSPUTIL_OFILES)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(BSPUTIL_OFILES)
+
+########
+# Qbsp #
+########
+
+# Quick hack job to get qbsp compiling. Source code is still a mix of C/C++,
+# including C++ in .c files - hence the extra implicit rules
+
+QBSP_OBJECTS = \
+	brush.o bspfile.o cmdlib.o csg4.o file.o globals.o map.o \
+	mathlib.o merge.o outside.o parser.o portals.o qbsp.o solidbsp.o \
+	surfaces.o tjunc.o util.o wad.o winding.o writebsp.o
+
+qbsp/%.o:	CPPFLAGS = -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp
+
+qbsp/%.o:	qbsp/%.c
+	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) -o $@ $<
+
+qbsp/%.o:	qbsp/%.cpp
+	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) -o $@ $<
+
+qbsp/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,qbsp/%,$(QBSP_OBJECTS))
+	$(CXX) -o $@ $^ $(LCURSES)

@@ -68,13 +68,13 @@ CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross)
     cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
 }
 
-inline vec_t
+vec_t
 DotProduct(vec3_t v1, vec3_t v2)
 {
     return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
 
-inline void
+void
 VectorSubtract(vec3_t va, vec3_t vb, vec3_t out)
 {
     out[0] = va[0] - vb[0];
@@ -82,7 +82,7 @@ VectorSubtract(vec3_t va, vec3_t vb, vec3_t out)
     out[2] = va[2] - vb[2];
 }
 
-inline void
+void
 VectorAdd(vec3_t va, vec3_t vb, vec3_t out)
 {
     out[0] = va[0] + vb[0];
@@ -90,7 +90,7 @@ VectorAdd(vec3_t va, vec3_t vb, vec3_t out)
     out[2] = va[2] + vb[2];
 }
 
-inline void
+void
 VectorCopy(vec3_t in, vec3_t out)
 {
     out[0] = in[0];

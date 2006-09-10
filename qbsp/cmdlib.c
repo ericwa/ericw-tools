@@ -21,9 +21,17 @@
 // cmdlib.c
 
 #include "qbsp.h"
-#include <direct.h>
-#include <sys\types.h>
-#include <sys\timeb.h>
+#include <sys/types.h>
+#include <sys/timeb.h>
+
+#ifdef _WIN32
+# include <direct.h>
+# define timeb  _timeb
+# define ftime  _ftime
+# define getcwd _getcwd
+#else
+# include <unistd.h>
+#endif
 
 #define PATHSEPERATOR   '/'
 
@@ -48,9 +56,9 @@ I_FloatTime
 double
 I_FloatTime(void)
 {
-    struct _timeb timebuffer;
+    struct timeb timebuffer;
 
-    _ftime(&timebuffer);
+    ftime(&timebuffer);
 
     return (double)timebuffer.time + (timebuffer.millitm / 1000.0);
 }
@@ -58,7 +66,7 @@ I_FloatTime(void)
 void
 Q_getwd(char *out)
 {
-    _getcwd(out, 256);
+    getcwd(out, 256);
     strcat(out, "\\");
 }
 

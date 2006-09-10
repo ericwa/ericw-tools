@@ -20,7 +20,15 @@
 */
 // util.c
 
-#include <conio.h>
+#ifdef _WIN32
+# include <conio.h>
+# define noecho() do {} while (0)
+# define echo()   do {} while (0)
+# define getch _getche
+#else
+# include <curses.h>
+#endif
+
 #include <stdarg.h>
 #include "qbsp.h"
 
@@ -66,7 +74,9 @@ AllocMem(int Type, int cElements, bool fZero)
 	printf
 	    ("\bOut of memory.  Please close some apps and hit 'y' to try again,\n");
 	printf("or any other key to exit -> ");
-	ch = toupper(_getche());
+	noecho();
+	ch = toupper(getch());
+	echo();
 	printf("\n");
 	fflush(stdin);
 	if (ch == 'Y')
@@ -104,10 +114,13 @@ FreeMem
 void
 FreeMem(void *pMem, int Type, int cElements)
 {
+    char *mem;
+
     rgMemActive[Type] -= cElements;
     rgMemActive[GLOBAL] -= cElements * rgcMemSize[Type];
 
-    delete pMem;
+    mem = (char *)pMem;
+    delete [] mem;
 }
 
 

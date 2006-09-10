@@ -180,10 +180,10 @@ extern vec3_t vec3_origin;
 bool VectorCompare(vec3_t v1, vec3_t v2);
 
 vec_t Q_rint(vec_t in);
-extern inline vec_t DotProduct(vec3_t v1, vec3_t v2);
-extern inline void VectorSubtract(vec3_t va, vec3_t vb, vec3_t out);
-extern inline void VectorAdd(vec3_t va, vec3_t vb, vec3_t out);
-extern inline void VectorCopy(vec3_t in, vec3_t out);
+extern vec_t DotProduct(vec3_t v1, vec3_t v2);
+extern void VectorSubtract(vec3_t va, vec3_t vb, vec3_t out);
+extern void VectorAdd(vec3_t va, vec3_t vb, vec3_t out);
+extern void VectorCopy(vec3_t in, vec3_t out);
 
 double VectorLength(vec3_t v);
 
