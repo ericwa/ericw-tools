@@ -100,7 +100,7 @@ ParseEpair(void)
 {
     epair_t *e;
 
-    e = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
+    e = AllocMem(OTHER, sizeof(epair_t), true);
     e->next = map.rgEntities[map.iEntities].epairs;
     map.rgEntities[map.iEntities].epairs = e;
 
@@ -352,7 +352,7 @@ ParseEntity(mapentity_t *e)
     // Allocate some model memory while we're here
     pCurEnt->iBrushStart = map.iBrushes + 1;
     if (pCurEnt->iBrushStart != pCurEnt->iBrushEnd) {
-	pCurEnt->pModels = (dmodel_t *)AllocMem(BSPMODEL, 1, true);
+	pCurEnt->pModels = AllocMem(BSPMODEL, 1, true);
 	pCurEnt->cModels = 1;
     }
 
@@ -400,17 +400,17 @@ PreParseFile(char *buf)
 	Message(msgWarning, warnBadMapFaceCount);
     map.cFaces /= 3;
 
-    map.rgFaces = (mapface_t *)AllocMem(MAPFACE, map.cFaces, true);
-    map.rgBrushes = (mapbrush_t *)AllocMem(MAPBRUSH, map.cBrushes, true);
-    map.rgEntities = (mapentity_t *)AllocMem(MAPENTITY, map.cEntities, true);
+    map.rgFaces = AllocMem(MAPFACE, map.cFaces, true);
+    map.rgBrushes = AllocMem(MAPBRUSH, map.cBrushes, true);
+    map.rgEntities = AllocMem(MAPENTITY, map.cEntities, true);
 
     // While we're here...
     pWorldEnt = map.rgEntities;
 
     // Allocate maximum memory here, copy over later
     // Maximum possible is one miptex/texinfo per face
-    rgszMiptex = (miptex_t *)AllocMem(MIPTEX, map.cFaces, true);
-    pWorldEnt->pTexinfo = (texinfo_t *)AllocMem(BSPTEXINFO, map.cFaces, true);
+    rgszMiptex = AllocMem(MIPTEX, map.cFaces, true);
+    pWorldEnt->pTexinfo = AllocMem(BSPTEXINFO, map.cFaces, true);
     pWorldEnt->cTexinfo = map.cFaces;
 }
 
@@ -456,8 +456,7 @@ LoadMapFile(void)
     else if (cMiptex < map.cFaces) {
 	// For stuff in AddAnimatingTex, make room available
 	pTemp = (void *)rgszMiptex;
-	rgszMiptex = (miptex_t *)AllocMem(MIPTEX, cMiptex + cAnimtex * 20,
-					  true);
+	rgszMiptex = AllocMem(MIPTEX, cMiptex + cAnimtex * 20, true);
 	memcpy(rgszMiptex, pTemp, cMiptex * rgcMemSize[MIPTEX]);
 	FreeMem(pTemp, MIPTEX, map.cFaces);
     }
@@ -466,8 +465,7 @@ LoadMapFile(void)
 	Message(msgError, errLowTexinfoCount);
     else if (pWorldEnt->iTexinfo < pWorldEnt->cTexinfo) {
 	pTemp = (void *)pWorldEnt->pTexinfo;
-	pWorldEnt->pTexinfo =
-	    (texinfo_t *)AllocMem(BSPTEXINFO, pWorldEnt->iTexinfo, true);
+	pWorldEnt->pTexinfo = AllocMem(BSPTEXINFO, pWorldEnt->iTexinfo, true);
 	memcpy(pWorldEnt->pTexinfo, pTemp,
 	       pWorldEnt->iTexinfo * rgcMemSize[BSPTEXINFO]);
 	FreeMem(pTemp, BSPTEXINFO, pWorldEnt->cTexinfo);
@@ -510,7 +508,7 @@ LoadMapFile(void)
 
     // cPlanes*3 because of 3 hulls, then add 20% as a fudge factor for hull edge bevel planes
     cPlanes = 3 * cPlanes + cPlanes / 5;
-    pPlanes = (plane_t *)AllocMem(PLANE, cPlanes, true);
+    pPlanes = AllocMem(PLANE, cPlanes, true);
 
     Message(msgStat, "%5i faces", map.cFaces);
     Message(msgStat, "%5i brushes", map.cBrushes);
@@ -555,7 +553,7 @@ SetKeyValue(int iEntity, char *key, char *value)
 	    ep->value = copystring(value);
 	    return;
 	}
-    ep = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
+    ep = AllocMem(OTHER, sizeof(epair_t), true);
     ep->next = map.rgEntities[iEntity].epairs;
     map.rgEntities[iEntity].epairs = ep;
     ep->key = copystring(key);
@@ -616,8 +614,7 @@ WriteEntitiesToString(void)
 
 	map.rgEntities[iEntity].cEntdata = cLen;
 	map.cTotal[BSPENT] += cLen;
-	map.rgEntities[iEntity].pEntdata = pCur =
-	    (char *)AllocMem(BSPENT, cLen, true);
+	map.rgEntities[iEntity].pEntdata = pCur = AllocMem(BSPENT, cLen, true);
 	*pCur = 0;
 
 	strcat(pCur, "{\n");

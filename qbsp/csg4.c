@@ -51,7 +51,7 @@ NewFaceFromFace(face_t *in)
 {
     face_t *newf;
 
-    newf = (face_t *)AllocMem(FACE, 1, true);
+    newf = AllocMem(FACE, 1, true);
 
     newf->planenum = in->planenum;
     newf->texturenum = in->texturenum;
@@ -311,7 +311,7 @@ BuildSurfaces(void)
 	    continue;		// nothing left on this plane
 
 	// create a new surface to hold the faces on this plane
-	s = (surface_t *)AllocMem(SURFACE, 1, true);
+	s = AllocMem(SURFACE, 1, true);
 	s->planenum = i;
 	s->next = surfhead;
 	surfhead = s;
@@ -340,7 +340,7 @@ CopyFacesToOutside(brush_t *b)
 
     for (f = b->faces; f; f = f->next) {
 	brushfaces++;
-	newf = (face_t *)AllocMem(FACE, 1, true);
+	newf = AllocMem(FACE, 1, true);
 	*newf = *f;
 	newf->next = outside;
 	newf->contents[0] = CONTENTS_EMPTY;
@@ -370,8 +370,7 @@ CSGFaces(void)
     Message(msgProgress, "CSGFaces");
 
     if (validfaces == NULL)
-	validfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * cPlanes,
-					 true);
+	validfaces = AllocMem(OTHER, sizeof(face_t *) * cPlanes, true);
     else
 	memset(validfaces, 0, sizeof(face_t *) * cPlanes);
     csgfaces = brushfaces = csgmergefaces = 0;

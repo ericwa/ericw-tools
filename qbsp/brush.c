@@ -348,7 +348,7 @@ CreateBrushFaces(void)
 	    continue;		// overcontrained plane
 
 	// this face is a keeper
-	f = (face_t *)AllocMem(FACE, 1, true);
+	f = AllocMem(FACE, 1, true);
 	f->numpoints = w->numpoints;
 	if (f->numpoints > MAXEDGES)
 	    Message(msgError, errLowFacePointCount);
@@ -780,7 +780,7 @@ LoadBrush(int iBrush)
     }
 
     // create the brush
-    b = (brush_t *)AllocMem(BRUSH, 1, true);
+    b = AllocMem(BRUSH, 1, true);
 
     b->contents = contents;
     b->faces = pFaceList;

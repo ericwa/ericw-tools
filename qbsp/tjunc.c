@@ -482,8 +482,8 @@ tjunc(node_t *headnode)
     cWEdges = cWVerts;
     cWVerts *= 2;
 
-    pWVerts = (wvert_t *) AllocMem(WVERT, cWVerts, true);
-    pWEdges = (wedge_t *)AllocMem(WEDGE, cWEdges, true);
+    pWVerts = AllocMem(WVERT, cWVerts, true);
+    pWEdges = AllocMem(WEDGE, cWEdges, true);
 
 // identify all points on common edges
 

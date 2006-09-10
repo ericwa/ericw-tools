@@ -41,7 +41,7 @@ copystring(char *s)
 {
     char *b;
 
-    b = (char *)AllocMem(OTHER, strlen(s) + 1, true);
+    b = AllocMem(OTHER, strlen(s) + 1, true);
     strcpy(b, s);
     return b;
 }

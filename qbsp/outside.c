@@ -443,9 +443,7 @@ FillOutside(node_t *node)
     valid++;
 
     if (hullnum == 2) {
-	pLeaks =
-	    (portal_t **)AllocMem(OTHER, sizeof(portal_t *) * num_visportals,
-				  true);
+	pLeaks = AllocMem(OTHER, sizeof(portal_t *) * num_visportals, true);
 	StripExtension(options.szBSPName);
 	strcat(options.szBSPName, ".pts");
 

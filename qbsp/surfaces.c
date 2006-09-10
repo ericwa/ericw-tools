@@ -313,7 +313,7 @@ FindFaceEdges(face_t *face)
     if (face->numpoints > MAXEDGES)
 	Message(msgError, errLowFacePointCount);
 
-    face->edges = (int *)AllocMem(OTHER, face->numpoints * sizeof(int), true);
+    face->edges = AllocMem(OTHER, face->numpoints * sizeof(int), true);
     for (i = 0; i < face->numpoints; i++)
 	face->edges[i] = GetEdge
 	    (face->pts[i], face->pts[(i + 1) % face->numpoints], face);
@@ -446,16 +446,13 @@ MakeFaceEdges(node_t *headnode)
 //      pCurEnt->cEdges = pCurEnt->cVertices;
     pCurEnt->cEdges += pCurEnt->cSurfedges;
 
-    pCurEnt->pVertices = (dvertex_t *)AllocMem(BSPVERTEX, pCurEnt->cVertices,
-					       true);
-    pCurEnt->pEdges = (dedge_t *)AllocMem(BSPEDGE, pCurEnt->cEdges, true);
+    pCurEnt->pVertices = AllocMem(BSPVERTEX, pCurEnt->cVertices, true);
+    pCurEnt->pEdges = AllocMem(BSPEDGE, pCurEnt->cEdges, true);
 
     // Accessory data
-    pHashverts = (hashvert_t *)AllocMem(HASHVERT, pCurEnt->cVertices, true);
-    pEdgeFaces0 =
-	(face_t **)AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges, true);
-    pEdgeFaces1 =
-	(face_t **)AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges, true);
+    pHashverts = AllocMem(HASHVERT, pCurEnt->cVertices, true);
+    pEdgeFaces0 = AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges, true);
+    pEdgeFaces1 = AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges, true);
 
     InitHash();
     c_tryedges = 0;
@@ -484,9 +481,8 @@ MakeFaceEdges(node_t *headnode)
 	pCurEnt->cEdges = pCurEnt->iEdges;
     }
 
-    pCurEnt->pSurfedges = (int *)AllocMem(BSPSURFEDGE, pCurEnt->cSurfedges,
-					  true);
-    pCurEnt->pFaces = (dface_t *)AllocMem(BSPFACE, pCurEnt->cFaces, true);
+    pCurEnt->pSurfedges = AllocMem(BSPSURFEDGE, pCurEnt->cSurfedges, true);
+    pCurEnt->pFaces = AllocMem(BSPFACE, pCurEnt->cFaces, true);
 
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion_r(headnode);

@@ -83,12 +83,10 @@ ExportNodePlanes(node_t *nodes)
     if (pWorldEnt->pPlanes == NULL) {
 	// I'd like to use numbrushplanes here but we haven't seen every entity yet...
 	pWorldEnt->cPlanes = cPlanes;
-	pWorldEnt->pPlanes =
-	    (dplane_t *) AllocMem(BSPPLANE, pWorldEnt->cPlanes, true);
+	pWorldEnt->pPlanes = AllocMem(BSPPLANE, pWorldEnt->cPlanes, true);
     }
     // TODO: make one-time allocation?
-    planemapping = (int *)AllocMem(OTHER, sizeof(int) * pWorldEnt->cPlanes,
-				   true);
+    planemapping = AllocMem(OTHER, sizeof(int) * pWorldEnt->cPlanes, true);
     memset(planemapping, -1, sizeof(int *) * pWorldEnt->cPlanes);
     ExportNodePlanes_r(nodes);
     FreeMem(planemapping, OTHER, sizeof(int) * pWorldEnt->cPlanes);
@@ -182,8 +180,7 @@ ExportClipNodes(node_t *nodes)
     if (pCurEnt->cClipnodes > MAX_BSP_CLIPNODES)
 	Message(msgError, errTooManyClipnodes);
     pTemp = pCurEnt->pClipnodes;
-    pCurEnt->pClipnodes =
-	(dclipnode_t *)AllocMem(BSPCLIPNODE, pCurEnt->cClipnodes, true);
+    pCurEnt->pClipnodes = AllocMem(BSPCLIPNODE, pCurEnt->cClipnodes, true);
     if (pTemp != NULL) {
 	memcpy(pCurEnt->pClipnodes, pTemp,
 	       oldcount * rgcMemSize[BSPCLIPNODE]);
@@ -371,10 +368,10 @@ ExportDrawNodes(node_t *headnode)
     CountNodes(headnode);
 
     // emit a model
-    pCurEnt->pNodes = (dnode_t *) AllocMem(BSPNODE, pCurEnt->cNodes, true);
-    pCurEnt->pLeaves = (dleaf_t *) AllocMem(BSPLEAF, pCurEnt->cLeaves, true);
-    pCurEnt->pMarksurfaces =
-	(unsigned short *)AllocMem(BSPMARKSURF, pCurEnt->cMarksurfaces, true);
+    pCurEnt->pNodes = AllocMem(BSPNODE, pCurEnt->cNodes, true);
+    pCurEnt->pLeaves = AllocMem(BSPLEAF, pCurEnt->cLeaves, true);
+    pCurEnt->pMarksurfaces = AllocMem(BSPMARKSURF, pCurEnt->cMarksurfaces,
+				      true);
 
     // Set leaf 0 properly (must be solid).  cLeaves etc incremented in BeginBSPFile.
     pWorldEnt->pLeaves->contents = CONTENTS_SOLID;
@@ -440,7 +437,7 @@ FinishBSPFile(void)
     Message(msgProgress, "WriteBSPFile");
 
     // TODO: Fix this somewhere else?
-    pTemp = (dplane_t *) AllocMem(BSPPLANE, map.cTotal[BSPPLANE], true);
+    pTemp = AllocMem(BSPPLANE, map.cTotal[BSPPLANE], true);
     memcpy(pTemp, pWorldEnt->pPlanes,
 	   map.cTotal[BSPPLANE] * rgcMemSize[BSPPLANE]);
     FreeMem(pWorldEnt->pPlanes, BSPPLANE, pWorldEnt->cPlanes);

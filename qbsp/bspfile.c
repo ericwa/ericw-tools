@@ -118,7 +118,7 @@ WriteBSPFile(void)
     FILE *f;
     size_t ret;
 
-    header = (dheader_t *)AllocMem(OTHER, sizeof(dheader_t), true);
+    header = AllocMem(OTHER, sizeof(dheader_t), true);
     header->version = BSPVERSION;
 
     StripExtension(options.szBSPName);
