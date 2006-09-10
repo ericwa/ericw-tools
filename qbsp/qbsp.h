@@ -666,6 +666,8 @@ void WriteEntitiesToString(void);
 #define msgScreen	6
 #define msgPercent	7
 
+extern char *rgszWarnings[cWarnings];
+extern char *rgszErrors[cErrors];
 extern const int rgcMemSize[];
 
 extern void *AllocMem(int Type, int cSize, bool fZero);

@@ -34,12 +34,9 @@
 
 #include "qbsp.h"
 
-extern char *rgszWarnings[cWarnings];
-extern char *rgszErrors[cErrors];
-
-int rgMemTotal[GLOBAL + 1];
-int rgMemActive[GLOBAL + 1];
-int rgMemPeak[GLOBAL + 1];
+static int rgMemTotal[GLOBAL + 1];
+static int rgMemActive[GLOBAL + 1];
+static int rgMemPeak[GLOBAL + 1];
 
 /*
 ==========
@@ -155,6 +152,7 @@ PrintMem(void)
 	Message(msgLiteral, "Bytes used: %d\n", rgMemPeak[GLOBAL]);
 }
 
+#if 0
 /*
 ============
 FreeAllMem
@@ -188,7 +186,7 @@ FreeAllMem(void)
     FreeMem(map.rgEntities, MAPENTITY, map.cEntities);
 
 }
-
+#endif
 
 /*
 =================
