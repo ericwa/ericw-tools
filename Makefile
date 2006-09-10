@@ -136,19 +136,10 @@ bsputil/$(BIN_PFX)bsputil$(EXT):	$(BSPUTIL_OFILES)
 # Qbsp #
 ########
 
-# Quick hack job to get qbsp compiling. Source code is still a mix of C/C++,
-# including C++ in .c files - hence the extra implicit rules
-
 QBSP_OBJECTS = \
 	brush.o bspfile.o cmdlib.o csg4.o file.o globals.o map.o \
 	mathlib.o merge.o outside.o parser.o portals.o qbsp.o solidbsp.o \
 	surfaces.o tjunc.o util.o wad.o winding.o writebsp.o
 
-qbsp/%.o:	qbsp/%.c
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) -o $@ $<
-
-qbsp/%.o:	qbsp/%.cpp
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) -o $@ $<
-
 qbsp/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,qbsp/%,$(QBSP_OBJECTS))
-	$(CXX) -o $@ $^ $(LCURSES)
+	$(CC) -o $@ $^ $(LCURSES)
