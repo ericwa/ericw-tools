@@ -22,33 +22,22 @@
 
 #include "qbsp.h"
 
-int numwedges, numwverts;
-int tjuncs;
-int tjuncfaces;
+static int numwedges, numwverts;
+static int tjuncs;
+static int tjuncfaces;
 
-int cWVerts;
-int cWEdges;
+static int cWVerts;
+static int cWEdges;
 
-wvert_t *pWVerts;
-wedge_t *pWEdges;
+static wvert_t *pWVerts;
+static wedge_t *pWEdges;
 
-
-void
-PrintFace(face_t *f)
-{
-    int i;
-
-    for (i = 0; i < f->numpoints; i++)
-	printf("(%5.2f, %5.2f, %5.2f)\n", f->pts[i][0], f->pts[i][1],
-	       f->pts[i][2]);
-}
 
 //============================================================================
 
 #define	NUM_HASH	1024
 
-wedge_t *wedge_hash[NUM_HASH];
-
+static wedge_t *wedge_hash[NUM_HASH];
 static vec3_t hash_min, hash_scale;
 
 static void
@@ -89,7 +78,7 @@ HashVec(vec3_t vec)
 
 //============================================================================
 
-void
+static void
 CanonicalVector(vec3_t vec)
 {
     VectorNormalize(vec);
@@ -119,7 +108,7 @@ CanonicalVector(vec3_t vec)
     Message(msgError, errDegenerateEdge, vec[0], vec[1], vec[2]);
 }
 
-wedge_t *
+static wedge_t *
 FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
 {
     vec3_t origin;
@@ -192,7 +181,7 @@ AddVert
 */
 #define	T_EPSILON	0.01
 
-void
+static void
 AddVert(wedge_t *w, vec_t t)
 {
     wvert_t *v, *newv;
@@ -227,7 +216,7 @@ AddEdge
 
 ===============
 */
-void
+static void
 AddEdge(vec3_t p1, vec3_t p2)
 {
     wedge_t *w;
@@ -244,7 +233,7 @@ AddFaceEdges
 
 ===============
 */
-void
+static void
 AddFaceEdges(face_t *f)
 {
     int i, j;
@@ -259,14 +248,11 @@ AddFaceEdges(face_t *f)
 //============================================================================
 
 // a specially allocated face that can hold hundreds of edges if needed
-byte superfacebuf[8192];
-face_t *superface = (face_t *)superfacebuf;
+static byte superfacebuf[8192];
+static face_t *superface = (face_t *)superfacebuf;
+static face_t *newlist;
 
-void FixFaceEdges(face_t *f);
-
-face_t *newlist;
-
-void
+static void
 SplitFaceForTjunc(face_t *f, face_t *original)
 {
     int i;
@@ -363,7 +349,7 @@ FixFaceEdges
 
 ===============
 */
-void
+static void
 FixFaceEdges(face_t *f)
 {
     int i, j, k;
@@ -410,7 +396,7 @@ FixFaceEdges(face_t *f)
 
 //============================================================================
 
-void
+static void
 tjunc_count_r(node_t *node)
 {
     face_t *f;
@@ -425,7 +411,7 @@ tjunc_count_r(node_t *node)
     tjunc_count_r(node->children[1]);
 }
 
-void
+static void
 tjunc_find_r(node_t *node)
 {
     face_t *f;
@@ -440,7 +426,7 @@ tjunc_find_r(node_t *node)
     tjunc_find_r(node->children[1]);
 }
 
-void
+static void
 tjunc_fix_r(node_t *node)
 {
     face_t *f, *next;
