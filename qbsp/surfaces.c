@@ -22,8 +22,8 @@
 
 #include "qbsp.h"
 
-hashvert_t *pHashverts;
-int iNodes;
+static hashvert_t *pHashverts;
+static int iNodes;
 
 /*
 a surface has all of the faces that could be drawn on a given plane
@@ -97,7 +97,7 @@ have inside faces.
 =============================================================================
 */
 
-void
+static void
 GatherNodeFaces_r(node_t *node)
 {
     face_t *f, *next;
@@ -141,19 +141,18 @@ GatherNodeFaces(node_t *headnode)
 
 #define	POINT_EPSILON	0.01
 
-hashvert_t *hvert_p;
+static hashvert_t *hvert_p;
 
 // This is a kludge.   Should be pEdgeFaces[2].
-face_t **pEdgeFaces0;
-face_t **pEdgeFaces1;
-int cStartEdge;
+static face_t **pEdgeFaces0;
+static face_t **pEdgeFaces1;
+static int cStartEdge;
 
 //============================================================================
 
 #define	NUM_HASH	4096
 
-hashvert_t *hashverts[NUM_HASH];
-
+static hashvert_t *hashverts[NUM_HASH];
 static vec3_t hash_min, hash_scale;
 
 static void
@@ -204,7 +203,7 @@ HashVec(vec3_t vec)
 GetVertex
 =============
 */
-int
+static int
 GetVertex(vec3_t in)
 {
     int h;
@@ -260,9 +259,9 @@ GetEdge
 Don't allow four way edges
 ==================
 */
-int c_tryedges;
+static int c_tryedges;
 
-int
+static int
 GetEdge(vec3_t p1, vec3_t p2, face_t *f)
 {
     int v1, v2;
@@ -304,7 +303,7 @@ GetEdge(vec3_t p1, vec3_t p2, face_t *f)
 FindFaceEdges
 ==================
 */
-void
+static void
 FindFaceEdges(face_t *face)
 {
     int i;
@@ -325,7 +324,7 @@ FindFaceEdges(face_t *face)
 MakeFaceEdges_r
 ================
 */
-void
+static void
 MakeFaceEdges_r(node_t *node)
 {
     face_t *f;
@@ -349,7 +348,7 @@ MakeFaceEdges_r(node_t *node)
 GrowNodeRegion_r
 ==============
 */
-void
+static void
 GrowNodeRegion_r(node_t *node)
 {
     dface_t *r;
@@ -401,7 +400,7 @@ GrowNodeRegion_r(node_t *node)
 CountData_r
 ==============
 */
-void
+static void
 CountData_r(node_t *node)
 {
     face_t *f;
