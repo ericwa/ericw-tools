@@ -22,9 +22,12 @@
 
 #include "qbsp.h"
 
-int iNodesDone;
-node_t outside_node;		// portals outside the world face this
-FILE *PortalFile;
+node_t outside_node;	// portals outside the world face this
+int num_visportals;
+
+static int num_visleafs;	// leafs the player can be in
+static int iNodesDone;
+static FILE *PortalFile;
 
 /*
 ==============================================================================
@@ -34,12 +37,9 @@ PORTAL FILE GENERATION
 ==============================================================================
 */
 
-void PlaneFromWinding(winding_t *w, plane_t *plane);
+static void PlaneFromWinding(winding_t *w, plane_t *plane);
 
-int num_visleafs;		// leafs the player can be in
-int num_visportals;
-
-void
+static void
 WriteFloat(vec_t v)
 {
     if (fabs(v - Q_rint(v)) < 0.001)
@@ -48,7 +48,7 @@ WriteFloat(vec_t v)
 	fprintf(PortalFile, "%f ", v);
 }
 
-void
+static void
 WritePortalFile_r(node_t *node)
 {
     int i;
@@ -123,7 +123,7 @@ WritePortalFile_r(node_t *node)
 NumberLeafs_r
 ================
 */
-void
+static void
 NumberLeafs_r(node_t *node)
 {
     portal_t *p;
@@ -173,7 +173,7 @@ NumberLeafs_r(node_t *node)
 WritePortalfile
 ================
 */
-void
+static void
 WritePortalfile(node_t *headnode)
 {
     // set the visleafnum field in every leaf and count the total number of portals
@@ -206,7 +206,7 @@ WritePortalfile(node_t *headnode)
 AddPortalToNodes
 =============
 */
-void
+static void
 AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
 {
     if (p->nodes[0] || p->nodes[1])
@@ -227,7 +227,7 @@ AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
 RemovePortalFromNode
 =============
 */
-void
+static void
 RemovePortalFromNode(portal_t *portal, node_t *l)
 {
     portal_t **pp, *t;
@@ -259,19 +259,6 @@ RemovePortalFromNode(portal_t *portal, node_t *l)
     }
 }
 
-//============================================================================
-
-void
-PrintPortal(portal_t *p)
-{
-    int i;
-    winding_t *w;
-
-    w = p->winding;
-    for (i = 0; i < w->numpoints; i++)
-	Message(msgLiteral, "(%5.0f,%5.0f,%5.0f)\n", w->points[i][0],
-		w->points[i][1], w->points[i][2]);
-}
 
 /*
 ================
@@ -280,7 +267,7 @@ MakeHeadnodePortals
 The created portals will face the global outside_node
 ================
 */
-void
+static void
 MakeHeadnodePortals(node_t *node)
 {
     vec3_t bounds[2];
@@ -334,9 +321,24 @@ MakeHeadnodePortals(node_t *node)
     }
 }
 
+static void
+PlaneFromWinding(winding_t *w, plane_t *plane)
+{
+    vec3_t v1, v2;
+
+    // calc plane
+    VectorSubtract(w->points[2], w->points[1], v1);
+    VectorSubtract(w->points[0], w->points[1], v2);
+    CrossProduct(v2, v1, plane->normal);
+    VectorNormalize(plane->normal);
+    plane->dist = DotProduct(w->points[0], plane->normal);
+}
+
 //============================================================================
 
-void
+#ifdef PARANOID
+
+static void
 CheckWindingInNode(winding_t *w, node_t *node)
 {
     int i, j;
@@ -351,7 +353,7 @@ CheckWindingInNode(winding_t *w, node_t *node)
     }
 }
 
-void
+static void
 CheckWindingArea(winding_t *w)
 {
     int i;
@@ -371,20 +373,7 @@ CheckWindingArea(winding_t *w)
 }
 
 
-void
-PlaneFromWinding(winding_t *w, plane_t *plane)
-{
-    vec3_t v1, v2;
-
-    // calc plane
-    VectorSubtract(w->points[2], w->points[1], v1);
-    VectorSubtract(w->points[0], w->points[1], v2);
-    CrossProduct(v2, v1, plane->normal);
-    VectorNormalize(plane->normal);
-    plane->dist = DotProduct(w->points[0], plane->normal);
-}
-
-void
+static void
 CheckLeafPortalConsistancy(node_t *node)
 {
     int side, side2;
@@ -429,12 +418,16 @@ CheckLeafPortalConsistancy(node_t *node)
     }
 }
 
+#endif /* PARANOID */
+
+//============================================================================
+
 /*
 ================
 CutNodePortals_r
 ================
 */
-void
+static void
 CutNodePortals_r(node_t *node)
 {
     plane_t *plane, clipplane;
@@ -443,7 +436,9 @@ CutNodePortals_r(node_t *node)
     winding_t *w, *frontwinding, *backwinding;
     int side;
 
-//      CheckLeafPortalConsistancy (node);
+#ifdef PARANOID
+    CheckLeafPortalConsistancy (node);
+#endif
 
     // separate the portals on node into it's children
     if (node->contents)

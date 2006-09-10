@@ -451,7 +451,6 @@ extern node_t outside_node;	// portals outside the world face this
 extern int num_visportals;
 
 void PortalizeWorld(node_t *headnode);
-void WritePortalfile(node_t *headnode);
 void FreeAllPortals(node_t *node);
 
 //=============================================================================
