@@ -28,8 +28,8 @@
 #define info_player_deathmatch	2
 #define	info_player_coop		4
 
-int cAnimtex;
-int rgfStartSpots;
+static int cAnimtex;
+static int rgfStartSpots;
 
 
 int
@@ -58,7 +58,7 @@ FindTexinfo
 Returns a global texinfo number
 ===============
 */
-int
+static int
 FindTexinfo(texinfo_t *t)
 {
     int i, j;
@@ -130,7 +130,7 @@ ParseEpair(void)
 }
 
 
-void
+static void
 TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
 {
     vec3_t baseaxis[18] = {
@@ -324,7 +324,7 @@ ParseBrush(void)
 }
 
 
-bool
+static bool
 ParseEntity(mapentity_t *e)
 {
     if (!ParseToken(true))
@@ -360,7 +360,7 @@ ParseEntity(mapentity_t *e)
 }
 
 
-void
+static void
 PreParseFile(char *buf)
 {
     int braces = 0;

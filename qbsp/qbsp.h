@@ -644,7 +644,6 @@ extern int cPlanes;
 extern miptex_t *rgszMiptex;
 extern plane_t *pPlanes;
 
-void PreParseFile(char *buf);
 void LoadMapFile(void);
 
 int FindMiptex(char *name);
