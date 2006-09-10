@@ -550,8 +550,7 @@ SetKeyValue(int iEntity, char *key, char *value)
 
     for (ep = map.rgEntities[iEntity].epairs; ep; ep = ep->next)
 	if (!strcmp(ep->key, key)) {
-	    delete ep->value;
-
+	    free(ep->value); /* FIXME */
 	    ep->value = copystring(value);
 	    return;
 	}

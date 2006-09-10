@@ -30,7 +30,7 @@
 #endif
 
 #include <stdarg.h>
-//#include <malloc.h>
+#include <malloc.h>
 
 #include "qbsp.h"
 
@@ -68,7 +68,7 @@ AllocMem(int Type, int cElements, bool fZero)
 	cSize = cElements * rgcMemSize[Type];
 
   Retry:
-    pTemp = (void *)new char[cSize];
+    pTemp = malloc(cSize);
 
     if (pTemp == NULL) {
 	char ch;
@@ -116,13 +116,10 @@ FreeMem
 void
 FreeMem(void *pMem, int Type, int cElements)
 {
-    char *mem;
-
     rgMemActive[Type] -= cElements;
     rgMemActive[GLOBAL] -= cElements * rgcMemSize[Type];
 
-    mem = (char *)pMem;
-    delete [] mem;
+    free(pMem);
 }
 
 
