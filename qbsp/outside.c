@@ -21,25 +21,25 @@
 
 #include "qbsp.h"
 
-int outleafs;
-int valid;
-int hit_occupied;
-int backdraw;
-int numports;
-bool firstone = true;
-FILE *LeakFile;
-FILE *PorFile;
-node_t *leakNode = NULL;
+static int outleafs;
+static int valid;
+static int hit_occupied;
+static int backdraw;
+static int numports;
+static bool firstone = true;
+static FILE *LeakFile;
+static FILE *PorFile;
+static node_t *leakNode = NULL;
 
-int numleaks;
-portal_t **pLeaks;
+static int numleaks;
+static portal_t **pLeaks;
 
 /*
 ===========
 PointInLeaf
 ===========
 */
-node_t *
+static node_t *
 PointInLeaf(node_t *node, vec3_t point)
 {
     vec_t d;
@@ -61,7 +61,7 @@ PointInLeaf(node_t *node, vec3_t point)
 PlaceOccupant
 ===========
 */
-bool
+static bool
 PlaceOccupant(int num, vec3_t point, node_t *headnode)
 {
     node_t *n;
@@ -74,7 +74,7 @@ PlaceOccupant(int num, vec3_t point, node_t *headnode)
 }
 
 
-void
+static void
 WriteLeakNode(node_t *n)
 {
     portal_t *p;
@@ -121,7 +121,7 @@ WriteLeakNode(node_t *n)
 MarkLeakTrail
 ==============
 */
-void
+static void
 MarkLeakTrail(portal_t *n2)
 {
     int i, j;
@@ -183,7 +183,7 @@ MarkLeakTrail(portal_t *n2)
     }
 }
 
-vec3_t v1, v2;
+static vec3_t v1, v2;
 
 /*
 =================
@@ -193,7 +193,7 @@ Returns true if the line segment v1, v2 does not intersect any of the faces
 in the node, false if it does.
 =================
 */
-bool
+static bool
 LineIntersect_r(node_t *n)
 {
     // Process this node's faces if leaf node
@@ -262,7 +262,7 @@ LineIntersect_r(node_t *n)
 SimplifyLeakline
 =================
 */
-void
+static void
 SimplifyLeakline(node_t *headnode)
 {
     int i, j, k;
@@ -278,18 +278,6 @@ SimplifyLeakline(node_t *headnode)
 
     while (i < numleaks - 1) {
 	MidpointWinding(p1->winding, v1);
-
-/*		j = i+1;
-		while (j < numleaks-1)
-		{
-			p2 = pLeaks[j+1];
-			MidpointWinding(p2->winding, v2);
-
-			if (0)//!LineIntersect_r(headnode))
-				j++;
-			else
-				break;
-		}*/
 	j = numleaks - 1;
 	while (j > i + 1) {
 	    p2 = pLeaks[j];
@@ -330,7 +318,7 @@ If fill is false, just check, don't fill
 Returns true if an occupied leaf is reached
 ==================
 */
-bool
+static bool
 RecursiveFillOutside(node_t *l, bool fill)
 {
     portal_t *p;
@@ -378,7 +366,7 @@ ClearOutFaces
 
 ==================
 */
-void
+static void
 ClearOutFaces(node_t *node)
 {
     face_t **fp;
