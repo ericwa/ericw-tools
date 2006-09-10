@@ -33,9 +33,9 @@ Brushes that touch still need to be split at the cut point to make a tjunction
 face_t **validfaces;
 
 
-face_t *inside, *outside;
-int brushfaces;
-int csgfaces;
+static face_t *inside, *outside;
+static int brushfaces;
+static int csgfaces;
 int csgmergefaces;
 
 /*
@@ -180,7 +180,7 @@ Faces exactly on the plane will stay inside unless overdrawn by later brush
 frontside is the side of the plane that holds the outside list
 =================
 */
-void
+static void
 ClipInside(int splitplane, int frontside, bool precedence)
 {
     face_t *f, *next;
@@ -227,7 +227,7 @@ SaveOutside
 Saves all of the faces in the outside list to the bsp plane list
 ==================
 */
-void
+static void
 SaveOutside(bool mirror)
 {
     face_t *f, *next, *newf;
@@ -266,7 +266,7 @@ FreeInside
 Free all the faces that got clipped out
 ==================
 */
-void
+static void
 FreeInside(int contents)
 {
     face_t *f, *next;
@@ -331,7 +331,7 @@ BuildSurfaces(void)
 CopyFacesToOutside
 ==================
 */
-void
+static void
 CopyFacesToOutside(brush_t *b)
 {
     face_t *f, *newf;
