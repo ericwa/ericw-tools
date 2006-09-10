@@ -19,6 +19,8 @@
     See file, 'COPYING', for details.
 */
 
+#include <string.h>
+
 #include "qbsp.h"
 #include "wad.h"
 
@@ -139,7 +141,7 @@ WAD_ProcessWad(wad_t *w)
     for (i = 0; i < cMiptex; i++)
 	for (j = 0; j < w->numwads; j++) {
 	    for (k = 0; k < w->wadlist[j].header.numlumps; k++)
-		if (!stricmp(rgszMiptex[i], w->wadlist[j].lumps[k].name)) {
+		if (!strcasecmp(rgszMiptex[i], w->wadlist[j].lumps[k].name)) {
 		    // Found it. Add in the size and skip to outer loop.
 		    pWorldEnt->cTexdata += w->wadlist[j].lumps[k].disksize;
 		    j = w->numwads;
@@ -202,7 +204,7 @@ WAD_LoadLump(wadlist_t *w, char *name, byte *dest)
     int len;
 
     for (i = 0; i < w->header.numlumps; i++) {
-	if (!stricmp(name, w->lumps[i].name)) {
+	if (!strcasecmp(name, w->lumps[i].name)) {
 	    fseek(w->Wad, w->lumps[i].filepos, SEEK_SET);
 	    len = fread(dest, 1, w->lumps[i].disksize, w->Wad);
 	    if (len != w->lumps[i].disksize)
@@ -239,7 +241,7 @@ WAD_AddAnimatingTextures(wad_t *w)
 	    // see if this name exists in the wadfiles
 	    for (l = 0; l < w->numwads; l++)
 		for (k = 0; k < w->wadlist[l].header.numlumps; k++)
-		    if (!stricmp(name, w->wadlist[l].lumps[k].name)) {
+		    if (!strcasecmp(name, w->wadlist[l].lumps[k].name)) {
 			FindMiptex(name);	// add to the miptex list
 			break;
 		    }

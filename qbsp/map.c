@@ -18,7 +18,8 @@
 
     See file, 'COPYING', for details.
 */
-// map.c
+
+#include <string.h>
 
 #include "qbsp.h"
 #include "parser.h"
@@ -65,7 +66,7 @@ FindTexinfo(texinfo_t *t)
 
     // set the special flag
     if ((rgszMiptex[t->miptex][0] == '*'
-	 || !strnicmp(rgszMiptex[t->miptex], "sky", 3))
+	 || !strncasecmp(rgszMiptex[t->miptex], "sky", 3))
 	&& !options.fSplitspecial)
 	t->flags |= TEX_SPECIAL;
 
@@ -111,19 +112,19 @@ ParseEpair(void)
 	Message(msgError, errEpairTooLong, linenum);
     e->value = copystring(token);
 
-    if (!stricmp(e->key, "origin"))
+    if (!strcasecmp(e->key, "origin"))
 	sscanf(e->value, "%f %f %f",
 	       &(map.rgEntities[map.iEntities].origin[0]),
 	       &(map.rgEntities[map.iEntities].origin[1]),
 	       &(map.rgEntities[map.iEntities].origin[2]));
-    else if (!stricmp(e->key, "classname")) {
-	if (!stricmp(e->value, "info_player_start")) {
+    else if (!strcasecmp(e->key, "classname")) {
+	if (!strcasecmp(e->value, "info_player_start")) {
 	    if (rgfStartSpots & info_player_start)
 		Message(msgWarning, warnMultipleStarts);
 	    rgfStartSpots |= info_player_start;
-	} else if (!stricmp(e->value, "info_player_deathmatch"))
+	} else if (!strcasecmp(e->value, "info_player_deathmatch"))
 	    rgfStartSpots |= info_player_deathmatch;
-	else if (!stricmp(e->value, "info_player_coop"))
+	else if (!strcasecmp(e->value, "info_player_coop"))
 	    rgfStartSpots |= info_player_coop;
     }
 }

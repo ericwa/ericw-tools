@@ -18,7 +18,8 @@
 
     See file, 'COPYING', for details.
 */
-// brush.c
+
+#include <string.h>
 
 #include "qbsp.h"
 
@@ -263,7 +264,7 @@ FindTargetEntity(char *szTarget)
 
     for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
 	szName = ValueForKey(iEntity, "targetname");
-	if (szName && !stricmp(szTarget, szName))
+	if (szName && !strcasecmp(szTarget, szName))
 	    return iEntity;
     }
 
@@ -728,20 +729,20 @@ LoadBrush(int iBrush)
 		   pTexinfo[map.rgFaces[map.rgBrushes[iBrush].iFaceStart].
 			    texinfo].miptex];
 
-    if (!stricmp(szName, "clip") && hullnum == 0)
+    if (!strcasecmp(szName, "clip") && hullnum == 0)
 	return NULL;		// "clip" brushes don't show up in the draw hull
 
     // entities never use water merging
     if (map.iEntities != 0)
 	contents = CONTENTS_SOLID;
     else if (szName[0] == '*') {
-	if (!strnicmp(szName + 1, "lava", 4))
+	if (!strncasecmp(szName + 1, "lava", 4))
 	    contents = CONTENTS_LAVA;
-	else if (!strnicmp(szName + 1, "slime", 5))
+	else if (!strncasecmp(szName + 1, "slime", 5))
 	    contents = CONTENTS_SLIME;
 	else
 	    contents = CONTENTS_WATER;
-    } else if (!strnicmp(szName, "sky", 3) && hullnum == 0)
+    } else if (!strncasecmp(szName, "sky", 3) && hullnum == 0)
 	contents = CONTENTS_SKY;
     else
 	contents = CONTENTS_SOLID;

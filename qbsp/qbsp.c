@@ -18,7 +18,8 @@
 
     See file, 'COPYING', for details.
 */
-// qbsp.c
+
+#include <string.h>
 
 #include "qbsp.h"
 #include "wad.h"
@@ -386,45 +387,45 @@ ParseOptions(char *szOptions)
 	    NameCount++;
 	} else {
 	    szTok++;
-	    if (!stricmp(szTok, "tjunc"))
+	    if (!strcasecmp(szTok, "tjunc"))
 		options.fTjunc = true;
-	    else if (!stricmp(szTok, "nofill"))
+	    else if (!strcasecmp(szTok, "nofill"))
 		options.fNofill = true;
-	    else if (!stricmp(szTok, "noclip"))
+	    else if (!strcasecmp(szTok, "noclip"))
 		options.fNoclip = true;
-	    else if (!stricmp(szTok, "onlyents"))
+	    else if (!strcasecmp(szTok, "onlyents"))
 		options.fOnlyents = true;
-	    else if (!stricmp(szTok, "verbose"))
+	    else if (!strcasecmp(szTok, "verbose"))
 		options.fAllverbose = true;
-	    else if (!stricmp(szTok, "splitspecial"))
+	    else if (!strcasecmp(szTok, "splitspecial"))
 		options.fSplitspecial = true;
-	    else if (!stricmp(szTok, "transwater"))
+	    else if (!strcasecmp(szTok, "transwater"))
 		options.fTranswater = true;
-	    else if (!stricmp(szTok, "transsky"))
+	    else if (!strcasecmp(szTok, "transsky"))
 		options.fTranssky = true;
-	    else if (!stricmp(szTok, "oldaxis"))
+	    else if (!strcasecmp(szTok, "oldaxis"))
 		options.fOldaxis = true;
-	    else if (!stricmp(szTok, "bspleak"))
+	    else if (!strcasecmp(szTok, "bspleak"))
 		options.fBspleak = true;
-	    else if (!stricmp(szTok, "noverbose"))
+	    else if (!strcasecmp(szTok, "noverbose"))
 		options.fNoverbose = true;
-	    else if (!stricmp(szTok, "oldleak"))
+	    else if (!strcasecmp(szTok, "oldleak"))
 		options.fOldleak = true;
-	    else if (!stricmp(szTok, "nopercent"))
+	    else if (!strcasecmp(szTok, "nopercent"))
 		options.fNopercent = true;
-	    else if (!stricmp(szTok, "leakdist")) {
+	    else if (!strcasecmp(szTok, "leakdist")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Message(msgError, errInvalidOption, szTok);
 		options.dxLeakDist = atoi(szTok2);
 		szTok = szTok2;
-	    } else if (!stricmp(szTok, "subdivide")) {
+	    } else if (!strcasecmp(szTok, "subdivide")) {
 		szTok2 = GetTok(szTok + strlen(szTok), szEnd);
 		if (!szTok2)
 		    Message(msgError, errInvalidOption, szTok);
 		options.dxSubdivide = atoi(szTok2);
 		szTok = szTok2;
-	    } else if (!stricmp(szTok, "?") || !stricmp(szTok, "help"))
+	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
 		Message(msgError, errUnknownOption, szTok);

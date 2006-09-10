@@ -144,8 +144,6 @@ QBSP_OBJECTS = \
 	mathlib.o merge.o outside.o parser.o portals.o qbsp.o solidbsp.o \
 	surfaces.o tjunc.o util.o wad.o winding.o writebsp.o
 
-qbsp/%.o:	CPPFLAGS = -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp
-
 qbsp/%.o:	qbsp/%.c
 	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) -o $@ $<
 
