@@ -101,9 +101,9 @@
 #define	NUM_AMBIENTS	4	// automatic ambient sounds
 
 // Misc values
-const float ON_EPSILON = 0.05F;
-const float BOGUS_RANGE = 18000;
-const float EQUAL_EPSILON = 0.001F;
+#define ON_EPSILON	0.05
+#define BOGUS_RANGE	18000
+#define EQUAL_EPSILON	0.001
 
 // the exact bounding box of the brushes is expanded some for the headnode
 // volume.  is this still needed?
