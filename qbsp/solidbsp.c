@@ -23,13 +23,12 @@
 
 #include "qbsp.h"
 
-
-int leaffaces;
-int nodefaces;
 int splitnodes;
-int c_solid, c_empty, c_water;
 
-bool usemidsplit;
+static int leaffaces;
+static int nodefaces;
+static int c_solid, c_empty, c_water;
+static bool usemidsplit;
 
 //============================================================================
 
@@ -40,7 +39,7 @@ FaceSide
 For BSP hueristic
 ==================
 */
-int
+static int
 FaceSide(face_t *in, plane_t *split)
 {
     bool frontcount, backcount;
@@ -94,7 +93,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-surface_t *
+static surface_t *
 ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
     int j, l;
@@ -156,7 +155,7 @@ ChoosePlaneFromList
 The real BSP hueristic
 ==================
 */
-surface_t *
+static surface_t *
 ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
     int j, k, l;
@@ -240,7 +239,7 @@ Selects a surface from a linked list of surfaces to split the group on
 returns NULL if the surface list can not be divided any more (a leaf)
 ==================
 */
-surface_t *
+static surface_t *
 SelectPartition(surface_t *surfaces)
 {
     int i, j;
@@ -324,7 +323,7 @@ CalcSurfaceInfo(surface_t *surf)
 DividePlane
 ==================
 */
-void
+static void
 DividePlane(surface_t *in, plane_t *split, surface_t **front,
 	    surface_t **back)
 {
@@ -424,7 +423,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
 DivideNodeBounds
 ==================
 */
-void
+static void
 DivideNodeBounds(node_t *node, plane_t *split)
 {
     VectorCopy(node->mins, node->children[0]->mins);
@@ -448,7 +447,7 @@ Determines the contents of the leaf and creates the final list of
 original faces that have some fragment inside this leaf
 ==================
 */
-void
+static void
 LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 {
     face_t *f, *next;
@@ -517,7 +516,7 @@ LinkNodeFaces
 Returns a duplicated list of all faces on surface
 ==================
 */
-face_t *
+static face_t *
 LinkNodeFaces(surface_t *surface)
 {
     face_t *f, *newf, **prevptr;
@@ -551,7 +550,7 @@ LinkNodeFaces(surface_t *surface)
 PartitionSurfaces
 ==================
 */
-void
+static void
 PartitionSurfaces(surface_t *surfaces, node_t *node)
 {
     surface_t *split, *p, *next;
