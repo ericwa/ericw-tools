@@ -24,8 +24,8 @@
 
 int linenum;
 char token[MAXTOKEN];
-bool unget;
 
+static bool unget;
 static char *script;
 
 

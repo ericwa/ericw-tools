@@ -28,7 +28,6 @@
 
 extern int linenum;
 extern char token[MAXTOKEN];
-extern bool unget;
 
 bool ParseToken(bool crossline);
 void ParserInit(char *data);
