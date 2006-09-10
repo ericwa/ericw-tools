@@ -176,8 +176,8 @@ InitHash(void)
 
     scale = sqrt(volume / NUM_HASH);
 
-    newsize[0] = int (size[0] / scale);
-    newsize[1] = int (size[1] / scale);
+    newsize[0] = size[0] / scale;
+    newsize[1] = size[1] / scale;
 
     hash_scale[0] = newsize[0] / size[0];
     hash_scale[1] = newsize[1] / size[1];
