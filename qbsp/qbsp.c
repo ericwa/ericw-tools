@@ -34,7 +34,7 @@ options_t options;
 ProcessEntity
 ===============
 */
-void
+static void
 ProcessEntity(void)
 {
     surface_t *surfs;
@@ -134,7 +134,7 @@ UpdateEntLump
 
 =================
 */
-void
+static void
 UpdateEntLump(void)
 {
     int m, iEntity;
@@ -175,7 +175,7 @@ CreateSingleHull
 
 =================
 */
-void
+static void
 CreateSingleHull(void)
 {
     Message(msgLiteral, "Processing hull %d...\n", hullnum);
@@ -196,7 +196,7 @@ CreateHulls
 
 =================
 */
-void
+static void
 CreateHulls(void)
 {
     // commanded to create a single hull only
@@ -229,7 +229,7 @@ CreateHulls(void)
 ProcessFile
 =================
 */
-void
+static void
 ProcessFile(void)
 {
     char *szWad;
@@ -274,7 +274,7 @@ ProcessFile(void)
 PrintOptions
 ==============
 */
-void
+static void
 PrintOptions(void)
 {
     printf
@@ -320,7 +320,7 @@ GetTok
 Gets tokens from command line string.
 =============
 */
-char *
+static char *
 GetTok(char *szBuf, char *szEnd)
 {
     char *szTok;
@@ -365,7 +365,7 @@ GetTok(char *szBuf, char *szEnd)
 ParseOptions
 ==================
 */
-void
+static void
 ParseOptions(char *szOptions)
 {
     char *szTok, *szTok2;
@@ -441,7 +441,7 @@ ParseOptions(char *szOptions)
 InitQBSP
 ==================
 */
-void
+static void
 InitQBSP(int argc, char **argv)
 {
     int i;
