@@ -24,7 +24,7 @@
 #include "file.h"
 #include "qbsp.h"
 
-dheader_t *header;
+static dheader_t *header;
 
 /*
 =============
@@ -68,7 +68,7 @@ LoadBSPFile(void)
 //============================================================================
 
 // To be used for all dynamic mem data
-void
+static void
 AddLump(FILE *f, int Type)
 {
     lump_t *lump;
