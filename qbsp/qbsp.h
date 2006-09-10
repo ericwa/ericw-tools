@@ -151,20 +151,12 @@ enum {
 
 typedef unsigned char byte;
 
-void Q_getwd(char *out);
-
 double I_FloatTime(void);
 
 void DefaultExtension(char *path, char *extension);
-void DefaultPath(char *path, char *basepath);
-void StripFilename(char *path);
 void StripExtension(char *path);
 
 char *copystring(char *s);
-
-void CRC_Init(unsigned short *crcvalue);
-void CRC_ProcessByte(unsigned short *crcvalue, byte data);
-unsigned short CRC_Value(unsigned short crcvalue);
 
 //===== mathlib.h
 
