@@ -23,10 +23,10 @@
 #include "qbsp.h"
 #include "wad.h"
 
-int firstface;
-int *planemapping;
+static int firstface;
+static int *planemapping;
 
-void
+static void
 ExportNodePlanes_r(node_t *node)
 {
     plane_t *plane;
@@ -100,7 +100,7 @@ ExportNodePlanes(node_t *nodes)
 CountClipNodes_r
 ==================
 */
-void
+static void
 CountClipNodes_r(node_t *node)
 {
     if (node->planenum == -1)
@@ -117,7 +117,7 @@ CountClipNodes_r(node_t *node)
 ExportClipNodes_r
 ==================
 */
-int
+static int
 ExportClipNodes_r(node_t *node)
 {
     int i, c;
@@ -212,7 +212,7 @@ ExportClipNodes(node_t *nodes)
 CountLeaves
 ==================
 */
-void
+static void
 CountLeaves(node_t *node)
 {
     face_t **fp, *f;
@@ -228,7 +228,7 @@ CountLeaves(node_t *node)
 CountNodes_r
 ==================
 */
-void
+static void
 CountNodes_r(node_t *node)
 {
     int i;
@@ -249,7 +249,7 @@ CountNodes_r(node_t *node)
 CountNodes
 ==================
 */
-void
+static void
 CountNodes(node_t *headnode)
 {
     if (headnode->contents < 0)
@@ -263,7 +263,7 @@ CountNodes(node_t *headnode)
 ExportLeaf
 ==================
 */
-void
+static void
 ExportLeaf(node_t *node)
 {
     face_t **fp, *f;
@@ -314,7 +314,7 @@ ExportLeaf(node_t *node)
 ExportDrawNodes_r
 ==================
 */
-void
+static void
 ExportDrawNodes_r(node_t *node)
 {
     dnode_t *n;
