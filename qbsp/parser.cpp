@@ -18,97 +18,86 @@
 
     See file, 'COPYING', for details.
 */
-/*
-
-Parser source file
-
-*/
 
 #include "qbsp.h"
 #include "parser.h"
 
-/*
-==================
-Parser
-==================
-*/
-Parser::Parser (char *data) {
-    iLineNum = 1;
-    pScript = data;
-    fUnget = false;
+int linenum;
+char token[MAXTOKEN];
+bool unget;
+
+static char *script;
+
+
+void
+ParserInit(char *data)
+{
+    linenum = 1;
+    script = data;
+    unget = false;
 }
 
 
-/*
-==================
-ParseToken
-==================
-*/
-bool Parser::ParseToken(bool crossline)
+bool
+ParseToken(bool crossline)
 {
     char *token_p;
 
-    if (fUnget)			// is a token already waiting?
+    /* is a token already waiting? */
+    if (unget) {
+	unget = false;
 	return true;
+    }
 
-    // skip space
-  skipspace:
-    while (*pScript <= 32) {
-	if (!*pScript) {
+ skipspace:
+    /* skip space */
+    while (*script <= 32) {
+	if (!*script) {
 	    if (!crossline)
-		Message(msgError, errLineIncomplete, iLineNum);
+		Message(msgError, errLineIncomplete, linenum);
 	    return false;
 	}
-	if (*pScript++ == '\n') {
+	if (*script++ == '\n') {
 	    if (!crossline)
-		Message(msgError, errLineIncomplete, iLineNum);
-	    iLineNum++;
+		Message(msgError, errLineIncomplete, linenum);
+	    linenum++;
 	}
     }
 
-    if (pScript[0] == '/' && pScript[1] == '/')	// comment field
-    {
+    /* comment field */
+    if (script[0] == '/' && script[1] == '/') {
 	if (!crossline)
-	    Message(msgError, errLineIncomplete, iLineNum);
-	while (*pScript++ != '\n')
-	    if (!*pScript) {
+	    Message(msgError, errLineIncomplete, linenum);
+	while (*script++ != '\n')
+	    if (!*script) {
 		if (!crossline)
-		    Message(msgError, errLineIncomplete, iLineNum);
+		    Message(msgError, errLineIncomplete, linenum);
 		return false;
 	    }
 	goto skipspace;
     }
-    // copy token
-    token_p = szToken;
 
-    if (*pScript == '"') {
-	pScript++;
-	while (*pScript != '"') {
-	    if (!*pScript)
-		Message(msgError, errEOFInQuotes, iLineNum);
-	    *token_p++ = *pScript++;
-	    if (token_p > &szToken[MAXTOKEN - 1])
-		Message(msgError, errTokenTooLarge, iLineNum);
+    /* copy token */
+    token_p = token;
+
+    if (*script == '"') {
+	script++;
+	while (*script != '"') {
+	    if (!*script)
+		Message(msgError, errEOFInQuotes, linenum);
+	    *token_p++ = *script++;
+	    if (token_p > &token[MAXTOKEN - 1])
+		Message(msgError, errTokenTooLarge, linenum);
 	}
-	pScript++;
+	script++;
     } else
-	while (*pScript > 32) {
-	    *token_p++ = *pScript++;
-	    if (token_p > &szToken[MAXTOKEN - 1])
-		Message(msgError, errTokenTooLarge, iLineNum);
+	while (*script > 32) {
+	    *token_p++ = *script++;
+	    if (token_p > &token[MAXTOKEN - 1])
+		Message(msgError, errTokenTooLarge, linenum);
 	}
 
     *token_p = 0;
 
     return true;
-}
-
-/*
-==================
-UngetToken
-==================
-*/
-void Parser::UngetToken()
-{
-    fUnget = true;
 }

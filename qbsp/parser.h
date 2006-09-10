@@ -18,25 +18,19 @@
 
     See file, 'COPYING', for details.
 */
-/*
 
-Parser header file
+#ifndef PARSER_H
+#define PARSER_H
 
-*/
+#include <stdbool.h>
 
 #define MAXTOKEN 256
 
-class Parser {
-public:
-    Parser (char *data);
-    bool ParseToken(bool crossline);
-    void UngetToken(void);
-    inline int GetLineNum(void) { return iLineNum; }
-    inline char *GetToken(void) { return szToken; }
+extern int linenum;
+extern char token[MAXTOKEN];
+extern bool unget;
 
-private:
-    bool fUnget;
-    char *pScript;
-    int iLineNum;
-    char szToken[MAXTOKEN];
-};
+bool ParseToken(bool crossline);
+void ParserInit(char *data);
+
+#endif /* PARSER_H */

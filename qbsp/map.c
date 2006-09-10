@@ -30,11 +30,7 @@
 int cAnimtex;
 int rgfStartSpots;
 
-/*
-===============
-FindMiptex
-===============
-*/
+
 int
 FindMiptex(char *szName)
 {
@@ -52,6 +48,7 @@ FindMiptex(char *szName)
 
     return i;
 }
+
 
 /*
 ===============
@@ -97,32 +94,22 @@ FindTexinfo(texinfo_t *t)
 }
 
 
-//============================================================================
-
-/*
-=================
-ParseEpair
-=================
-*/
-void
-ParseEpair(Parser *pParser)
+static void
+ParseEpair(void)
 {
     epair_t *e;
-    char *szToken;
 
     e = (epair_t *)AllocMem(OTHER, sizeof(epair_t));
     e->next = map.rgEntities[map.iEntities].epairs;
     map.rgEntities[map.iEntities].epairs = e;
 
-    szToken = pParser->GetToken();
-
-    if (strlen(szToken) >= MAX_KEY - 1)
-	Message(msgError, errEpairTooLong, pParser->GetLineNum());
-    e->key = copystring(szToken);
-    pParser->ParseToken(false);
-    if (strlen(szToken) >= MAX_VALUE - 1)
-	Message(msgError, errEpairTooLong, pParser->GetLineNum());
-    e->value = copystring(szToken);
+    if (strlen(token) >= MAX_KEY - 1)
+	Message(msgError, errEpairTooLong, linenum);
+    e->key = copystring(token);
+    ParseToken(false);
+    if (strlen(token) >= MAX_VALUE - 1)
+	Message(msgError, errEpairTooLong, linenum);
+    e->value = copystring(token);
 
     if (!stricmp(e->key, "origin"))
 	sscanf(e->value, "%f %f %f",
@@ -141,14 +128,7 @@ ParseEpair(Parser *pParser)
     }
 }
 
-//============================================================================
 
-
-/*
-==================
-textureAxisFromPlane
-==================
-*/
 void
 TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
 {
@@ -181,15 +161,8 @@ TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
 }
 
 
-//=============================================================================
-
-/*
-=================
-ParseBrush
-=================
-*/
-void
-ParseBrush(Parser *pParser)
+static void
+ParseBrush(void)
 {
     vec3_t planepts[3];
     vec3_t t1, t2, t3;
@@ -198,51 +171,45 @@ ParseBrush(Parser *pParser)
     vec_t d;
     int shift[2], rotate;
     float scale[2];
-    char *szToken;
     int iFace;
 
     map.rgBrushes[map.iBrushes].iFaceEnd = map.iFaces + 1;
 
-    szToken = pParser->GetToken();
-
-    do {
-	if (!pParser->ParseToken(true))
-	    break;
-	if (!strcmp(szToken, "}"))
+    while (ParseToken(true)) {
+	if (!strcmp(token, "}"))
 	    break;
 
 	// read the three point plane definition
 	for (i = 0; i < 3; i++) {
 	    if (i != 0)
-		pParser->ParseToken(true);
-	    if (strcmp(szToken, "("))
-		Message(msgError, errInvalidMapPlane, pParser->GetLineNum());
+		ParseToken(true);
+	    if (strcmp(token, "("))
+		Message(msgError, errInvalidMapPlane, linenum);
 
 	    for (j = 0; j < 3; j++) {
-		pParser->ParseToken(false);
-		planepts[i][j] = (float)atoi(szToken);
+		ParseToken(false);
+		planepts[i][j] = (float)atoi(token);
 	    }
 
-	    pParser->ParseToken(false);
-	    if (strcmp(szToken, ")"))
-		Message(msgError, errInvalidMapPlane, pParser->GetLineNum());
-
+	    ParseToken(false);
+	    if (strcmp(token, ")"))
+		Message(msgError, errInvalidMapPlane, linenum);
 	}
 
 	// read the texturedef
 	memset(&tx, 0, sizeof(tx));
-	pParser->ParseToken(false);
-	tx.miptex = FindMiptex(szToken);
-	pParser->ParseToken(false);
-	shift[0] = atoi(szToken);
-	pParser->ParseToken(false);
-	shift[1] = atoi(szToken);
-	pParser->ParseToken(false);
-	rotate = atoi(szToken);
-	pParser->ParseToken(false);
-	scale[0] = atof(szToken);
-	pParser->ParseToken(false);
-	scale[1] = atof(szToken);
+	ParseToken(false);
+	tx.miptex = FindMiptex(token);
+	ParseToken(false);
+	shift[0] = atoi(token);
+	ParseToken(false);
+	shift[1] = atoi(token);
+	ParseToken(false);
+	rotate = atoi(token);
+	ParseToken(false);
+	scale[0] = atof(token);
+	ParseToken(false);
+	scale[1] = atof(token);
 
 	// if the three points are all on a previous plane, it is a
 	// duplicate plane
@@ -258,8 +225,7 @@ ParseBrush(Parser *pParser)
 		break;
 	}
 	if (iFace > map.iFaces) {
-	    Message(msgWarning, warnBrushDuplicatePlane,
-		    pParser->GetLineNum());
+	    Message(msgWarning, warnBrushDuplicatePlane, linenum);
 	    continue;
 	}
 
@@ -275,7 +241,7 @@ ParseBrush(Parser *pParser)
 
 	CrossProduct(t1, t2, map.rgFaces[map.iFaces].plane.normal);
 	if (VectorCompare(map.rgFaces[map.iFaces].plane.normal, vec3_origin)) {
-	    Message(msgWarning, warnNoPlaneNormal, pParser->GetLineNum());
+	    Message(msgWarning, warnNoPlaneNormal, linenum);
 	    break;
 	}
 	VectorNormalize(map.rgFaces[map.iFaces].plane.normal);
@@ -350,29 +316,21 @@ ParseBrush(Parser *pParser)
 	map.rgFaces[map.iFaces].texinfo = FindTexinfo(&tx);
 	map.iFaces--;
 	Message(msgPercent, map.cFaces - map.iFaces - 1, map.cFaces);
-    } while (1);
+    }
 
     map.rgBrushes[map.iBrushes].iFaceStart = map.iFaces + 1;
     map.iBrushes--;
 }
 
-/*
-================
-ParseEntity
-================
-*/
+
 bool
-ParseEntity(Parser *pParser)
+ParseEntity(mapentity_t *e)
 {
-    char *szToken;
-
-    szToken = pParser->GetToken();
-
-    if (!pParser->ParseToken(true))
+    if (!ParseToken(true))
 	return false;
 
-    if (strcmp(szToken, "{"))
-	Message(msgError, errParseEntity, pParser->GetLineNum());
+    if (strcmp(token, "{"))
+	Message(msgError, errParseEntity, linenum);
 
     if (map.iEntities >= map.cEntities)
 	Message(msgError, errLowEntCount);
@@ -380,14 +338,14 @@ ParseEntity(Parser *pParser)
     pCurEnt->iBrushEnd = map.iBrushes + 1;
 
     do {
-	if (!pParser->ParseToken(true))
+	if (!ParseToken(true))
 	    Message(msgError, errUnexpectedEOF);
-	if (!strcmp(szToken, "}"))
+	if (!strcmp(token, "}"))
 	    break;
-	else if (!strcmp(szToken, "{"))
-	    ParseBrush(pParser);
+	else if (!strcmp(token, "{"))
+	    ParseBrush();
 	else
-	    ParseEpair(pParser);
+	    ParseEpair();
     } while (1);
 
     // Allocate some model memory while we're here
@@ -396,17 +354,11 @@ ParseEntity(Parser *pParser)
 	pCurEnt->pModels = (dmodel_t *)AllocMem(BSPMODEL, 1);
 	pCurEnt->cModels = 1;
     }
-    map.iEntities++;
-    pCurEnt++;
 
     return true;
 }
 
-/*
-================
-PreParseFile
-================
-*/
+
 void
 PreParseFile(char *buf)
 {
@@ -461,15 +413,10 @@ PreParseFile(char *buf)
     pWorldEnt->cTexinfo = map.cFaces;
 }
 
-/*
-================
-LoadMapFile
-================
-*/
+
 void
 LoadMapFile(void)
 {
-    Parser *pParser;
     char *buf;
     int i, j, length;
     void *pTemp;
@@ -478,8 +425,7 @@ LoadMapFile(void)
 
     length = LoadFile(options.szMapName, (void **)&buf, true);
     PreParseFile(buf);
-
-    pParser = new Parser (buf);
+    ParserInit(buf);
 
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
@@ -488,10 +434,12 @@ LoadMapFile(void)
     map.iEntities = 0;
     pCurEnt = &map.rgEntities[0];
 
-    while (ParseEntity(pParser));
+    while (ParseEntity(pCurEnt)) {
+	map.iEntities++;
+	pCurEnt++;
+    }
 
     FreeMem(buf, OTHER, length + 1);
-    delete pParser;
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))
@@ -570,6 +518,7 @@ LoadMapFile(void)
     Message(msgLiteral, "\n");
 }
 
+
 void
 PrintEntity(int iEntity)
 {
@@ -591,6 +540,7 @@ ValueForKey(int iEntity, char *key)
 
     return NULL;
 }
+
 
 void
 SetKeyValue(int iEntity, char *key, char *value)
