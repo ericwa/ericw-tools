@@ -18,101 +18,92 @@
 
     See file, 'COPYING', for details.
 */
-/*
-
-WAD source file
-
-*/
 
 #include "qbsp.h"
 #include "wad.h"
 
-/*
-==================
-WAD
-==================
-*/
-WAD::WAD (void) {
-    cWads = 0;
-    wadlist = NULL;
+static void WAD_LoadTextures(wad_t *w, dmiptexlump_t *l);
+static void WAD_AddAnimatingTextures(wad_t *w);
+static int WAD_LoadLump(wadlist_t *w, char *name, byte *dest);
+
+
+void
+WAD_Init(wad_t *w)
+{
+    w->numwads = 0;
+    w->wadlist = NULL;
 }
 
-/*
-==================
-~WAD
-==================
-*/
-WAD::~WAD (void) {
-    if (wadlist) {
-	for (iWad = 0; iWad < cWads; iWad++) {
-	    fclose(wadlist[iWad].Wad);
-	    FreeMem(wadlist[iWad].lumps, OTHER,
-		    sizeof(lumpinfo_t) * wadlist[iWad].header.numlumps);
+
+void
+WAD_Free(wad_t *w)
+{
+    int i;
+
+    if (w->wadlist) {
+	for (i = 0; i < w->numwads; i++) {
+	    fclose(w->wadlist[i].Wad);
+	    FreeMem(w->wadlist[i].lumps, OTHER,
+		    sizeof(lumpinfo_t) * w->wadlist[i].header.numlumps);
 	}
-	FreeMem(wadlist, OTHER, cWads * sizeof(wadlist_t));
+	FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wadlist_t));
     }
 }
 
-/*
-==================
-InitWADList
-==================
-*/
-bool WAD::InitWADList(char *szWadList)
+
+bool
+WAD_InitWadList(wad_t *w, char *list)
 {
     int i, len;
-    void *pTemp;
     FILE *fileT;
+    wadlist_t *wad, *tmp;
 
-    if (!szWadList)
+    if (!list)
 	return false;
 
-    len = strlen(szWadList);
+    len = strlen(list);
     if (len == 0)
 	return false;
 
     // Should never happen, but just in case...
-    assert(!wadlist);
+    assert(!w->wadlist);
 
     // Count # of wads
-    cWads = 1;
+    w->numwads = 1;
     for (i = 0; i < len; i++)
-	if (szWadList[i] == ';' && szWadList[i + 1] != ';')
-	    cWads++;
+	if (list[i] == ';' && list[i + 1] != ';')
+	    w->numwads++;
 
-    wadlist = (wadlist_t *) AllocMem(OTHER, cWads * sizeof(wadlist_t));
+    w->wadlist = (wadlist_t *)AllocMem(OTHER, w->numwads * sizeof(wadlist_t));
 
     // Verify that at least one WAD file exists
-    i = iWad = 0;
+    wad = w->wadlist;
+    i = 0;
     while (i < len) {
-	szWadName = szWadList + i;
-	while (szWadList[i] != 0 && szWadList[i] != ';')
+	w->name = list + i;
+	while (list[i] != 0 && list[i] != ';')
 	    i++;
-	szWadList[i] = 0;
+	list[i] = 0;
 	i++;
 
-	fileT = fopen(szWadName, "rb");
+	fileT = fopen(w->name, "rb");
 	if (fileT) {
-	    wadlist[iWad].Wad = fileT;
-	    len = fread(&wadlist[iWad].header, 1, sizeof(wadinfo_t), fileT);
+	    wad->Wad = fileT;
+	    len = fread(&wad->header, 1, sizeof(wadinfo_t), fileT);
 	    if (len != sizeof(wadinfo_t))
 		Message(msgError, errReadFailure);
-	    if (strncmp(wadlist[iWad].header.identification, "WAD2", 4)) {
-		Message(msgWarning, warnNotWad, szWadName);
+	    if (strncmp(wad->header.identification, "WAD2", 4)) {
+		Message(msgWarning, warnNotWad, w->name);
 		fclose(fileT);
 	    } else {
-//                              strcpy(wadlist[iWad].szName, szWadName);
-		fseek(fileT, wadlist[iWad].header.infotableofs, SEEK_SET);
-		wadlist[iWad].lumps =
-		    (lumpinfo_t *) AllocMem(OTHER,
-					    sizeof(lumpinfo_t) *
-					    wadlist[iWad].header.numlumps);
-		len = fread(wadlist[iWad].lumps, 1,
-			    wadlist[iWad].header.numlumps *
+		fseek(fileT, wad->header.infotableofs, SEEK_SET);
+		wad->lumps = (lumpinfo_t *)AllocMem(OTHER, sizeof(lumpinfo_t) *
+						    wad->header.numlumps);
+		len = fread(wad->lumps, 1, wad->header.numlumps *
 			    sizeof(lumpinfo_t), fileT);
-		if (len != wadlist[iWad].header.numlumps * sizeof(lumpinfo_t))
+		if (len != wad->header.numlumps * sizeof(lumpinfo_t))
 		    Message(msgError, errReadFailure);
-		iWad++;
+		wad++;
 		// Note that the file is NOT closed here!
 		// Also iWad is only incremented for valid files
 	    }
@@ -120,44 +111,39 @@ bool WAD::InitWADList(char *szWadList)
     }
 
     // Remove invalid wads from memory
-    pTemp = AllocMem(OTHER, iWad * sizeof(wadlist_t));
-    memcpy(pTemp, wadlist, iWad * sizeof(wadlist_t));
-    FreeMem(wadlist, OTHER, cWads * sizeof(wadlist_t));
-    wadlist = (wadlist_t *) pTemp;
-    cWads = iWad;
+    tmp = (wadlist_t *)AllocMem(OTHER, (wad - w->wadlist) * sizeof(wadlist_t));
+    memcpy(tmp, w->wadlist, (wad - w->wadlist) * sizeof(wadlist_t));
+    FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wadlist_t));
+    w->numwads = wad - w->wadlist;
+    w->wadlist = tmp;
 
-    return iWad > 0;
+    return w->numwads > 0;
 }
 
 
-/*
-==================
-fProcessWAD
-==================
-*/
-void WAD::fProcessWAD(void)
+void
+WAD_ProcessWad(wad_t *w)
 {
-    int i, j;
+    int i, j, k;
     dmiptexlump_t *l;
 
-    if (cWads < 1)
+    if (w->numwads < 1)
 	return;
 
-    AddAnimatingTextures();
+    WAD_AddAnimatingTextures(w);
 
     // Count texture size.  Slow but saves memory.
     for (i = 0; i < cMiptex; i++)
-	for (iWad = 0; iWad < cWads; iWad++) {
-	    for (j = 0; j < wadlist[iWad].header.numlumps; j++)
-		if (!stricmp(rgszMiptex[i], wadlist[iWad].lumps[j].name)) {
+	for (j = 0; j < w->numwads; j++) {
+	    for (k = 0; k < w->wadlist[j].header.numlumps; k++)
+		if (!stricmp(rgszMiptex[i], w->wadlist[j].lumps[k].name)) {
 		    // Found it. Add in the size and skip to outer loop.
-// For EvlG                     printf("Texture: %9s in wad: %s\n", rgszMiptex[i], wadlist[iWad].szName);
-		    pWorldEnt->cTexdata += wadlist[iWad].lumps[j].disksize;
-		    iWad = cWads;
+		    pWorldEnt->cTexdata += w->wadlist[j].lumps[k].disksize;
+		    j = w->numwads;
 		    break;
 		}
 	    // If we found the texture already, break out to outer loop
-	    if (j < wadlist[iWad].header.numlumps)
+	    if (k < w->wadlist[j].header.numlumps)
 		break;
 	}
 
@@ -168,7 +154,7 @@ void WAD::fProcessWAD(void)
     l = (dmiptexlump_t *)pWorldEnt->pTexdata;
     l->nummiptex = cMiptex;
 
-    LoadTextures(l);
+    WAD_LoadTextures(w, l);
 
     // Last pass, mark unfound textures as such
     for (i = 0; i < cMiptex; i++)
@@ -178,54 +164,47 @@ void WAD::fProcessWAD(void)
 	}
 }
 
-/*
-==================
-LoadTextures
-==================
-*/
-void WAD::LoadTextures(dmiptexlump_t *l)
+
+static void
+WAD_LoadTextures(wad_t *w, dmiptexlump_t *l)
 {
-    int i, len;
+    int i, j, len;
     byte *data;
 
     data = (byte *)&l->dataofs[cMiptex];
-    for (iWad = 0; iWad < cWads; iWad++) {
-	for (i = 0; i < cMiptex; i++) {
+    for (i = 0; i < w->numwads; i++) {
+	for (j = 0; j < cMiptex; j++) {
 	    // Texture already found in a previous WAD
-	    if (l->dataofs[i] != 0)
+	    if (l->dataofs[j] != 0)
 		continue;
 
-	    l->dataofs[i] = data - (byte *)l;
-	    len = LoadLump(rgszMiptex[i], data);
+	    l->dataofs[j] = data - (byte *)l;
+	    len = WAD_LoadLump(w->wadlist + i, rgszMiptex[j], data);
 	    if (data + len - pWorldEnt->pTexdata > pWorldEnt->cTexdata)
 		Message(msgError, errLowTextureCount);
 
 	    // didn't find the texture
 	    if (!len)
-		l->dataofs[i] = 0;
+		l->dataofs[j] = 0;
 	    data += len;
 	}
     }
 }
 
-/*
-==================
-LoadLump
-==================
-*/
-int WAD::LoadLump(char *szName, byte *pDest)
+
+static int
+WAD_LoadLump(wadlist_t *w, char *name, byte *dest)
 {
     int i;
     int len;
 
-    for (i = 0; i < wadlist[iWad].header.numlumps; i++) {
-	if (!stricmp(szName, wadlist[iWad].lumps[i].name)) {
-	    fseek(wadlist[iWad].Wad, wadlist[iWad].lumps[i].filepos, SEEK_SET);
-	    len = fread(pDest, 1, wadlist[iWad].lumps[i].disksize,
-			wadlist[iWad].Wad);
-	    if (len != wadlist[iWad].lumps[i].disksize)
+    for (i = 0; i < w->header.numlumps; i++) {
+	if (!stricmp(name, w->lumps[i].name)) {
+	    fseek(w->Wad, w->lumps[i].filepos, SEEK_SET);
+	    len = fread(dest, 1, w->lumps[i].disksize, w->Wad);
+	    if (len != w->lumps[i].disksize)
 		Message(msgError, errReadFailure);
-	    return wadlist[iWad].lumps[i].disksize;
+	    return w->lumps[i].disksize;
 	}
     }
 
@@ -233,12 +212,8 @@ int WAD::LoadLump(char *szName, byte *pDest)
 }
 
 
-/*
-==================
-AddAnimatingTextures
-==================
-*/
-void WAD::AddAnimatingTextures(void)
+static void
+WAD_AddAnimatingTextures(wad_t *w)
 {
     int base;
     int i, j, k, l;
@@ -259,9 +234,9 @@ void WAD::AddAnimatingTextures(void)
 
 
 	    // see if this name exists in the wadfiles
-	    for (l = 0; l < cWads; l++)
-		for (k = 0; k < wadlist[l].header.numlumps; k++)
-		    if (!stricmp(name, wadlist[l].lumps[k].name)) {
+	    for (l = 0; l < w->numwads; l++)
+		for (k = 0; k < w->wadlist[l].header.numlumps; k++)
+		    if (!stricmp(name, w->wadlist[l].lumps[k].name)) {
 			FindMiptex(name);	// add to the miptex list
 			break;
 		    }

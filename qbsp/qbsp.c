@@ -232,7 +232,9 @@ void
 ProcessFile(void)
 {
     char *szWad;
-    WAD wad;
+    wad_t wad;
+
+    WAD_Init(&wad);
 
     // load brushes and entities
     LoadMapFile();
@@ -247,7 +249,7 @@ ProcessFile(void)
 	if (!szWad) {
 	    Message(msgWarning, warnNoWadKey);
 	    pWorldEnt->cTexdata = 0;
-	} else if (!wad.InitWADList(szWad)) {
+	} else if (!WAD_InitWadList(&wad, szWad)) {
 	    Message(msgWarning, warnNoValidWads);
 	    pWorldEnt->cTexdata = 0;
 	}
@@ -261,7 +263,7 @@ ProcessFile(void)
     CreateHulls();
 
     WriteEntitiesToString();
-    wad.fProcessWAD();
+    WAD_ProcessWad(&wad);
     FinishBSPFile();
 }
 

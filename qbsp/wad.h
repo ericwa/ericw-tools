@@ -18,11 +18,11 @@
 
     See file, 'COPYING', for details.
 */
-/*
 
-WAD header file
+#ifndef WAD_H
+#define WAD_H
 
-*/
+#include <stdbool.h>
 
 typedef struct {
     char identification[4];	// should be WAD2
@@ -44,23 +44,18 @@ typedef struct {
     wadinfo_t header;
     lumpinfo_t *lumps;
     FILE *Wad;
-//      char szName[512];
 } wadlist_t;
 
-class WAD {
-public:
-    WAD (void);
-    ~WAD (void);
-    bool InitWADList(char *szWadlist);
-    void fProcessWAD(void);
-
-private:
-    char *szWadName;
+typedef struct {
+    char *name;
     wadlist_t *wadlist;
-    int iWad, cWads;
+    int numwads;
+} wad_t;
 
-    void LoadTextures(dmiptexlump_t *l);
-    void InitWadFile(void);
-    int LoadLump(char *szName, byte *pDest);
-    void AddAnimatingTextures(void);
-};
+void WAD_Init(wad_t *w);
+void WAD_Free(wad_t *w);
+
+bool WAD_InitWadList(wad_t *w, char *list);
+void WAD_ProcessWad(wad_t *w);
+
+#endif /* WAD_H */
