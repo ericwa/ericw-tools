@@ -24,13 +24,8 @@
 
 #define CONTINUOUS_EPSILON	0.001
 
-/*
-================
-CheckColinear
-
-================
-*/
-void
+#ifdef PARANOID
+static void
 CheckColinear(face_t *f)
 {
     int i, j;
@@ -50,9 +45,8 @@ CheckColinear(face_t *f)
 	if (VectorCompare(v1, v2))
 	    Message(msgError, errColinearEdge);
     }
-
 }
-
+#endif /* PARANOID */
 
 /*
 =============
@@ -65,7 +59,7 @@ Returns NULL if the faces couldn't be merged, or the new face.
 The originals will NOT be freed.
 =============
 */
-face_t *
+static face_t *
 TryMerge(face_t *f1, face_t *f2)
 {
     vec_t *p1, *p2, *p3, *p4, *back;
@@ -184,7 +178,9 @@ MergeFaceToList(face_t *face, face_t *list)
 
     f = list;
     while (f) {
-	//CheckColinear (f);
+#ifdef PARANOID
+	CheckColinear (f);
+#endif
 	newf = TryMerge(face, f);
 	if (newf) {
 	    FreeMem(face, FACE, 1);
