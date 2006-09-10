@@ -345,7 +345,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
 	    in->onnode = true;
 
 	    // divide the facets to the front and back sides
-	    news = (surface_t *)AllocMem(SURFACE);
+	    news = (surface_t *)AllocMem(SURFACE, 1, true);
 	    *news = *in;
 
 	    // Prepend each face in facet list to either in or news lists
@@ -405,7 +405,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
     }
 
     // stuff got split, so allocate one new plane and reuse in
-    news = (surface_t *)AllocMem(SURFACE);
+    news = (surface_t *)AllocMem(SURFACE, 1, true);
     *news = *in;
     news->faces = backlist;
     *back = news;
@@ -501,9 +501,9 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 	    next = f->next;
 	    leafnode->markfaces[i] = f->original;
 	    i++;
-	    FreeMem(f, FACE);
+	    FreeMem(f, FACE, 1);
 	}
-	FreeMem(surf, SURFACE);
+	FreeMem(surf, SURFACE, 1);
     }
     leafnode->markfaces[i] = NULL;	// sentinal
 }
@@ -534,7 +534,7 @@ LinkNodeFaces(surface_t *surface)
     // copy
     for (f = surface->faces; f; f = f->next) {
 	nodefaces++;
-	newf = (face_t *)AllocMem(FACE);
+	newf = (face_t *)AllocMem(FACE, 1, true);
 	*newf = *f;
 	f->original = newf;
 	newf->next = list;
@@ -569,8 +569,8 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     Message(msgPercent, splitnodes, csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
-    node->children[0] = (node_t *)AllocMem(NODE);
-    node->children[1] = (node_t *)AllocMem(NODE);
+    node->children[0] = (node_t *)AllocMem(NODE, 1, true);
+    node->children[1] = (node_t *)AllocMem(NODE, 1, true);
     node->planenum = split->planenum;
 
     splitplane = &pPlanes[split->planenum];
@@ -623,7 +623,7 @@ SolidBSP(surface_t *surfhead, bool midsplit)
 
     Message(msgProgress, "SolidBSP");
 
-    headnode = (node_t *)AllocMem(NODE);
+    headnode = (node_t *)AllocMem(NODE, 1, true);
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model

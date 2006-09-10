@@ -679,8 +679,8 @@ void WriteEntitiesToString(void);
 
 extern const int rgcMemSize[];
 
-extern void *AllocMem(int Type, int cSize = 1, bool fZero = true);
-extern void FreeMem(void *pMem, int Type, int cSize = 1);
+extern void *AllocMem(int Type, int cSize, bool fZero);
+extern void FreeMem(void *pMem, int Type, int cSize);
 extern void FreeAllMem(void);
 extern void PrintMem(void);
 

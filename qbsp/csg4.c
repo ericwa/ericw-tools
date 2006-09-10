@@ -51,7 +51,7 @@ NewFaceFromFace(face_t *in)
 {
     face_t *newf;
 
-    newf = (face_t *)AllocMem(FACE);
+    newf = (face_t *)AllocMem(FACE, 1, true);
 
     newf->planenum = in->planenum;
     newf->texturenum = in->texturenum;
@@ -165,7 +165,7 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
 	Message(msgError, errLowSplitPointCount);
 
     // free the original face now that it is represented by the fragments
-    FreeMem(in, FACE);
+    FreeMem(in, FACE, 1);
 }
 
 /*
@@ -279,7 +279,7 @@ FreeInside(int contents)
 	    f->next = outside;
 	    outside = f;
 	} else
-	    FreeMem(f, FACE);
+	    FreeMem(f, FACE, 1);
     }
 }
 
@@ -311,7 +311,7 @@ BuildSurfaces(void)
 	    continue;		// nothing left on this plane
 
 	// create a new surface to hold the faces on this plane
-	s = (surface_t *)AllocMem(SURFACE);
+	s = (surface_t *)AllocMem(SURFACE, 1, true);
 	s->planenum = i;
 	s->next = surfhead;
 	surfhead = s;
@@ -340,7 +340,7 @@ CopyFacesToOutside(brush_t *b)
 
     for (f = b->faces; f; f = f->next) {
 	brushfaces++;
-	newf = (face_t *)AllocMem(FACE);
+	newf = (face_t *)AllocMem(FACE, 1, true);
 	*newf = *f;
 	newf->next = outside;
 	newf->contents[0] = CONTENTS_EMPTY;
@@ -370,7 +370,8 @@ CSGFaces(void)
     Message(msgProgress, "CSGFaces");
 
     if (validfaces == NULL)
-	validfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * cPlanes);
+	validfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * cPlanes,
+					 true);
     else
 	memset(validfaces, 0, sizeof(face_t *) * cPlanes);
     csgfaces = brushfaces = csgmergefaces = 0;

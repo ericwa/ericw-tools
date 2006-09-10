@@ -74,7 +74,8 @@ WAD_InitWadList(wad_t *w, char *list)
 	if (list[i] == ';' && list[i + 1] != ';')
 	    w->numwads++;
 
-    w->wadlist = (wadlist_t *)AllocMem(OTHER, w->numwads * sizeof(wadlist_t));
+    w->wadlist = (wadlist_t *)AllocMem(OTHER, w->numwads * sizeof(wadlist_t),
+				       true);
 
     // Verify that at least one WAD file exists
     wad = w->wadlist;
@@ -98,7 +99,8 @@ WAD_InitWadList(wad_t *w, char *list)
 	    } else {
 		fseek(fileT, wad->header.infotableofs, SEEK_SET);
 		wad->lumps = (lumpinfo_t *)AllocMem(OTHER, sizeof(lumpinfo_t) *
-						    wad->header.numlumps);
+						    wad->header.numlumps,
+						    true);
 		len = fread(wad->lumps, 1, wad->header.numlumps *
 			    sizeof(lumpinfo_t), fileT);
 		if (len != wad->header.numlumps * sizeof(lumpinfo_t))
@@ -111,7 +113,8 @@ WAD_InitWadList(wad_t *w, char *list)
     }
 
     // Remove invalid wads from memory
-    tmp = (wadlist_t *)AllocMem(OTHER, (wad - w->wadlist) * sizeof(wadlist_t));
+    tmp = (wadlist_t *)AllocMem(OTHER, (wad - w->wadlist) * sizeof(wadlist_t),
+				true);
     memcpy(tmp, w->wadlist, (wad - w->wadlist) * sizeof(wadlist_t));
     FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wadlist_t));
     w->numwads = wad - w->wadlist;
@@ -150,7 +153,7 @@ WAD_ProcessWad(wad_t *w)
     pWorldEnt->cTexdata += sizeof(int) * (cMiptex + 1);
 
     // Default texture data to store in worldmodel
-    pWorldEnt->pTexdata = (byte *)AllocMem(BSPTEX, pWorldEnt->cTexdata);
+    pWorldEnt->pTexdata = (byte *)AllocMem(BSPTEX, pWorldEnt->cTexdata, true);
     l = (dmiptexlump_t *)pWorldEnt->pTexdata;
     l->nummiptex = cMiptex;
 

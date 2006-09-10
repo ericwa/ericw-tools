@@ -107,7 +107,7 @@ GatherNodeFaces_r(node_t *node)
 	for (f = node->faces; f; f = next) {
 	    next = f->next;
 	    if (!f->numpoints) {	// face was removed outside
-		FreeMem(f, FACE);
+		FreeMem(f, FACE, 1);
 	    } else {
 		f->next = validfaces[f->planenum];
 		validfaces[f->planenum] = f;
@@ -117,10 +117,10 @@ GatherNodeFaces_r(node_t *node)
 	GatherNodeFaces_r(node->children[0]);
 	GatherNodeFaces_r(node->children[1]);
 
-	FreeMem(node, NODE);
+	FreeMem(node, NODE, 1);
     } else {
 	// leaf node
-	FreeMem(node, NODE);
+	FreeMem(node, NODE, 1);
     }
 }
 
@@ -313,7 +313,7 @@ FindFaceEdges(face_t *face)
     if (face->numpoints > MAXEDGES)
 	Message(msgError, errLowFacePointCount);
 
-    face->edges = (int *)AllocMem(OTHER, face->numpoints * sizeof(int));
+    face->edges = (int *)AllocMem(OTHER, face->numpoints * sizeof(int), true);
     for (i = 0; i < face->numpoints; i++)
 	face->edges[i] = GetEdge
 	    (face->pts[i], face->pts[(i + 1) % face->numpoints], face);
@@ -446,15 +446,16 @@ MakeFaceEdges(node_t *headnode)
 //      pCurEnt->cEdges = pCurEnt->cVertices;
     pCurEnt->cEdges += pCurEnt->cSurfedges;
 
-    pCurEnt->pVertices = (dvertex_t *)AllocMem(BSPVERTEX, pCurEnt->cVertices);
-    pCurEnt->pEdges = (dedge_t *)AllocMem(BSPEDGE, pCurEnt->cEdges);
+    pCurEnt->pVertices = (dvertex_t *)AllocMem(BSPVERTEX, pCurEnt->cVertices,
+					       true);
+    pCurEnt->pEdges = (dedge_t *)AllocMem(BSPEDGE, pCurEnt->cEdges, true);
 
     // Accessory data
-    pHashverts = (hashvert_t *)AllocMem(HASHVERT, pCurEnt->cVertices);
+    pHashverts = (hashvert_t *)AllocMem(HASHVERT, pCurEnt->cVertices, true);
     pEdgeFaces0 =
-	(face_t **)AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges);
+	(face_t **)AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges, true);
     pEdgeFaces1 =
-	(face_t **)AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges);
+	(face_t **)AllocMem(OTHER, sizeof(face_t *) * pCurEnt->cEdges, true);
 
     InitHash();
     c_tryedges = 0;
@@ -468,7 +469,7 @@ MakeFaceEdges(node_t *headnode)
 
     // Swap these...
     if (pCurEnt->iVertices < pCurEnt->cVertices) {
-	pTemp = AllocMem(BSPVERTEX, pCurEnt->iVertices);
+	pTemp = AllocMem(BSPVERTEX, pCurEnt->iVertices, true);
 	memcpy(pTemp, pCurEnt->pVertices,
 	       rgcMemSize[BSPVERTEX] * pCurEnt->iVertices);
 	FreeMem(pCurEnt->pVertices, BSPVERTEX, pCurEnt->cVertices);
@@ -476,15 +477,16 @@ MakeFaceEdges(node_t *headnode)
 	pCurEnt->cVertices = pCurEnt->iVertices;
     }
     if (pCurEnt->iEdges < pCurEnt->cEdges) {
-	pTemp = AllocMem(BSPEDGE, pCurEnt->iEdges);
+	pTemp = AllocMem(BSPEDGE, pCurEnt->iEdges, true);
 	memcpy(pTemp, pCurEnt->pEdges, rgcMemSize[BSPEDGE] * pCurEnt->iEdges);
 	FreeMem(pCurEnt->pEdges, BSPEDGE, pCurEnt->cEdges);
 	pCurEnt->pEdges = (dedge_t *)pTemp;
 	pCurEnt->cEdges = pCurEnt->iEdges;
     }
 
-    pCurEnt->pSurfedges = (int *)AllocMem(BSPSURFEDGE, pCurEnt->cSurfedges);
-    pCurEnt->pFaces = (dface_t *)AllocMem(BSPFACE, pCurEnt->cFaces);
+    pCurEnt->pSurfedges = (int *)AllocMem(BSPSURFEDGE, pCurEnt->cSurfedges,
+					  true);
+    pCurEnt->pFaces = (dface_t *)AllocMem(BSPFACE, pCurEnt->cFaces, true);
 
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion_r(headnode);

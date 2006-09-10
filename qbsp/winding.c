@@ -71,7 +71,7 @@ BaseWindingForPlane(plane_t *p)
     VectorScale(vright, 8192, vright);
 
     // project a really big axis aligned box onto the plane
-    w = (winding_t *)AllocMem(WINDING, 4);
+    w = (winding_t *)AllocMem(WINDING, 4, true);
 
     VectorSubtract(org, vright, w->points[0]);
     VectorAdd(w->points[0], vup, w->points[0]);
@@ -172,7 +172,7 @@ ClipWinding(winding_t *in, plane_t *split, bool keepon)
 	return in;
 
     if (!counts[SIDE_FRONT]) {
-	FreeMem(in, WINDING);
+	FreeMem(in, WINDING, 1);
 	return NULL;
     }
 
@@ -181,7 +181,7 @@ ClipWinding(winding_t *in, plane_t *split, bool keepon)
 
     maxpts = in->numpoints + 4;	// can't use counts[0]+2 because
     // of fp grouping errors
-    neww = (winding_t *)AllocMem(WINDING, maxpts);
+    neww = (winding_t *)AllocMem(WINDING, maxpts, true);
 
     for (i = 0; i < in->numpoints; i++) {
 	p1 = in->points[i];
@@ -222,7 +222,7 @@ ClipWinding(winding_t *in, plane_t *split, bool keepon)
 	Message(msgError, errLowPointCount);
 
     // free the original winding
-    FreeMem(in, WINDING);
+    FreeMem(in, WINDING, 1);
 
     return neww;
 }
@@ -285,8 +285,8 @@ DivideWinding(winding_t *in, plane_t *split, winding_t **front,
     maxpts = in->numpoints + 4;	// can't use counts[0]+2 because
     // of fp grouping errors
 
-    *front = f = (winding_t *)AllocMem(WINDING, maxpts);
-    *back = b = (winding_t *)AllocMem(WINDING, maxpts);
+    *front = f = (winding_t *)AllocMem(WINDING, maxpts, true);
+    *back = b = (winding_t *)AllocMem(WINDING, maxpts, true);
 
     for (i = 0; i < in->numpoints; i++) {
 	p1 = in->points[i];

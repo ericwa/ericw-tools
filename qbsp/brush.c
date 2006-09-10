@@ -347,7 +347,7 @@ CreateBrushFaces(void)
 	    continue;		// overcontrained plane
 
 	// this face is a keeper
-	f = (face_t *)AllocMem(FACE);
+	f = (face_t *)AllocMem(FACE, 1, true);
 	f->numpoints = w->numpoints;
 	if (f->numpoints > MAXEDGES)
 	    Message(msgError, errLowFacePointCount);
@@ -377,7 +377,7 @@ CreateBrushFaces(void)
 	VectorSubtract(point, offset, point);
 	plane.dist = DotProduct(plane.normal, point);
 
-	FreeMem(w, WINDING);
+	FreeMem(w, WINDING, 1);
 
 	f->texturenum = hullnum ? 0 : pFace->texinfo;
 	f->planenum = FindPlane(&plane, &f->planeside);
@@ -417,7 +417,7 @@ FreeBrushFaces(face_t *pFaceList)
 
     for (pFace = pFaceList; pFace; pFace = pNext) {
 	pNext = pFace->next;
-	FreeMem(pFace, FACE);
+	FreeMem(pFace, FACE, 1);
     }
 }
 
@@ -435,7 +435,7 @@ FreeBrushsetBrushes(void)
     for (pBrush = pCurEnt->pBrushes; pBrush; pBrush = pNext) {
 	pNext = pBrush->next;
 	FreeBrushFaces(pBrush->faces);
-	FreeMem(pBrush, BRUSH);
+	FreeMem(pBrush, BRUSH, 1);
     }
 }
 
@@ -779,7 +779,7 @@ LoadBrush(int iBrush)
     }
 
     // create the brush
-    b = (brush_t *)AllocMem(BRUSH);
+    b = (brush_t *)AllocMem(BRUSH, 1, true);
 
     b->contents = contents;
     b->faces = pFaceList;
