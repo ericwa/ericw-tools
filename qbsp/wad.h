@@ -43,7 +43,7 @@ typedef struct {
 typedef struct {
     wadinfo_t header;
     lumpinfo_t *lumps;
-    File Wad;
+    FILE *Wad;
 //      char szName[512];
 } wadlist_t;
 

@@ -470,17 +470,16 @@ void
 LoadMapFile(void)
 {
     Parser *pParser;
-    File MapFile;
-    char *pBuf;
+    char *buf;
     int i, j, length;
     void *pTemp;
 
     Message(msgProgress, "LoadMapFile");
 
-    length = MapFile.LoadFile(options.szMapName, (void **)&pBuf);
-    PreParseFile(pBuf);
+    length = LoadFile(options.szMapName, (void **)&buf, true);
+    PreParseFile(buf);
 
-    pParser = new Parser (pBuf);
+    pParser = new Parser (buf);
 
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
@@ -491,7 +490,7 @@ LoadMapFile(void)
 
     while (ParseEntity(pParser));
 
-    FreeMem(pBuf, OTHER, length + 1);
+    FreeMem(buf, OTHER, length + 1);
     delete pParser;
 
     // Print out warnings for entities

@@ -686,6 +686,6 @@ extern void PrintMem(void);
 
 extern void Message(int MsgType, ...);
 
-extern File LogFile;
+extern FILE *logfile;
 
 #endif

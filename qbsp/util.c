@@ -30,6 +30,8 @@
 #endif
 
 #include <stdarg.h>
+//#include <malloc.h>
+
 #include "qbsp.h"
 
 extern char *rgszWarnings[cWarnings];
@@ -249,8 +251,8 @@ Message(int msgType, ...)
 	sprintf(szBuffer, "*** ERROR %02d: ", ErrType);
 	vsprintf(szBuffer + strlen(szBuffer), rgszErrors[ErrType], argptr);
 	puts(szBuffer);
-	LogFile.Printf("%s\n", szBuffer);
-	LogFile.Close();
+	fprintf(logfile, "%s\n", szBuffer);
+	fclose(logfile);
 	exit(1);
 	break;
 
@@ -303,7 +305,7 @@ Message(int msgType, ...)
     if (msgType != msgFile)
 	printf("%s", szBuffer);
     if (msgType != msgScreen)
-	LogFile.Printf("%s", szBuffer);
+	fprintf(logfile, "%s", szBuffer);
 
     va_end(argptr);
 }

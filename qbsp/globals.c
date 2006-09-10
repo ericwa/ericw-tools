@@ -54,7 +54,7 @@ int cPlanes;
 vec3_t vec3_origin = { 0, 0, 0 };
 
 // util.c
-File LogFile;
+FILE *logfile;
 
 char *rgszWarnings[cWarnings] = {
     "No wad or _wad key exists in the worldmodel",

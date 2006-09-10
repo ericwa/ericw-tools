@@ -445,10 +445,10 @@ InitQBSP(int argc, char **argv)
     char szArgs[512];
     char *szBuf;
     int length;
-    File IniFile;
 
     // Start logging to qbsp.log
-    if (!LogFile.fOpen("qbsp.log", "wt", false))
+    logfile = fopen("qbsp.log", "wt");
+    if (!logfile)
 	Message(msgWarning, warnNoLogFile);
     else
 	// Kinda dumb, but hey...
@@ -460,7 +460,7 @@ InitQBSP(int argc, char **argv)
     options.fVerbose = true;
     options.szMapName[0] = options.szBSPName[0] = 0;
 
-    length = IniFile.LoadFile("qbsp.ini", (void **)&szBuf, false);
+    length = LoadFile("qbsp.ini", (void **)&szBuf, false);
     if (length) {
 	Message(msgLiteral, "Loading options from qbsp.ini\n");
 	ParseOptions(szBuf);
@@ -541,7 +541,7 @@ main(int argc, char **argv)
 //      FreeAllMem();
 //      PrintMem();
 
-    LogFile.Close();
+    fclose(logfile);
 
     return 0;
 }

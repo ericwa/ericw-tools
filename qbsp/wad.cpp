@@ -45,7 +45,7 @@ WAD::WAD (void) {
 WAD::~WAD (void) {
     if (wadlist) {
 	for (iWad = 0; iWad < cWads; iWad++) {
-	    wadlist[iWad].Wad.Close();
+	    fclose(wadlist[iWad].Wad);
 	    FreeMem(wadlist[iWad].lumps, OTHER,
 		    sizeof(lumpinfo_t) * wadlist[iWad].header.numlumps);
 	}
@@ -62,7 +62,7 @@ bool WAD::InitWADList(char *szWadList)
 {
     int i, len;
     void *pTemp;
-    File *fileT;
+    FILE *fileT;
 
     if (!szWadList)
 	return false;
@@ -91,22 +91,27 @@ bool WAD::InitWADList(char *szWadList)
 	szWadList[i] = 0;
 	i++;
 
-	fileT = &wadlist[iWad].Wad;
-	if (fileT->fOpen(szWadName, "rb", false)) {
-	    fileT->Read(&wadlist[iWad].header, sizeof(wadinfo_t));
+	fileT = fopen(szWadName, "rb");
+	if (fileT) {
+	    wadlist[iWad].Wad = fileT;
+	    len = fread(&wadlist[iWad].header, 1, sizeof(wadinfo_t), fileT);
+	    if (len != sizeof(wadinfo_t))
+		Message(msgError, errReadFailure);
 	    if (strncmp(wadlist[iWad].header.identification, "WAD2", 4)) {
 		Message(msgWarning, warnNotWad, szWadName);
-		fileT->Close();
+		fclose(fileT);
 	    } else {
 //                              strcpy(wadlist[iWad].szName, szWadName);
-		fileT->Seek(wadlist[iWad].header.infotableofs, SEEK_SET);
+		fseek(fileT, wadlist[iWad].header.infotableofs, SEEK_SET);
 		wadlist[iWad].lumps =
 		    (lumpinfo_t *) AllocMem(OTHER,
 					    sizeof(lumpinfo_t) *
 					    wadlist[iWad].header.numlumps);
-		fileT->Read(wadlist[iWad].lumps,
+		len = fread(wadlist[iWad].lumps, 1,
 			    wadlist[iWad].header.numlumps *
-			    sizeof(lumpinfo_t));
+			    sizeof(lumpinfo_t), fileT);
+		if (len != wadlist[iWad].header.numlumps * sizeof(lumpinfo_t))
+		    Message(msgError, errReadFailure);
 		iWad++;
 		// Note that the file is NOT closed here!
 		// Also iWad is only incremented for valid files
@@ -211,11 +216,15 @@ LoadLump
 int WAD::LoadLump(char *szName, byte *pDest)
 {
     int i;
+    int len;
 
     for (i = 0; i < wadlist[iWad].header.numlumps; i++) {
 	if (!stricmp(szName, wadlist[iWad].lumps[i].name)) {
-	    wadlist[iWad].Wad.Seek(wadlist[iWad].lumps[i].filepos, SEEK_SET);
-	    wadlist[iWad].Wad.Read(pDest, wadlist[iWad].lumps[i].disksize);
+	    fseek(wadlist[iWad].Wad, wadlist[iWad].lumps[i].filepos, SEEK_SET);
+	    len = fread(pDest, 1, wadlist[iWad].lumps[i].disksize,
+			wadlist[iWad].Wad);
+	    if (len != wadlist[iWad].lumps[i].disksize)
+		Message(msgError, errReadFailure);
 	    return wadlist[iWad].lumps[i].disksize;
 	}
     }

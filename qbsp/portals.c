@@ -24,7 +24,7 @@
 
 int iNodesDone;
 node_t outside_node;		// portals outside the world face this
-File PortalFile;
+FILE *PortalFile;
 
 /*
 ==============================================================================
@@ -43,9 +43,9 @@ void
 WriteFloat(vec_t v)
 {
     if (fabs(v - Q_rint(v)) < 0.001)
-	PortalFile.Printf("%i ", (int)Q_rint(v));
+	fprintf(PortalFile, "%i ", (int)Q_rint(v));
     else
-	PortalFile.Printf("%f ", v);
+	fprintf(PortalFile, "%f ", v);
 }
 
 void
@@ -94,21 +94,19 @@ WritePortalFile_r(node_t *node)
 	    pl = &pPlanes[p->planenum];
 	    PlaneFromWinding(w, &plane2);
 	    if (DotProduct(pl->normal, plane2.normal) < 0.99) {	// backwards...
-		PortalFile.Printf("%i %i %i ", w->numpoints,
-				  p->nodes[1]->visleafnum,
-				  p->nodes[0]->visleafnum);
+		fprintf(PortalFile, "%i %i %i ", w->numpoints,
+			p->nodes[1]->visleafnum, p->nodes[0]->visleafnum);
 	    } else
-		PortalFile.Printf("%i %i %i ", w->numpoints,
-				  p->nodes[0]->visleafnum,
-				  p->nodes[1]->visleafnum);
+		fprintf(PortalFile, "%i %i %i ", w->numpoints,
+			p->nodes[0]->visleafnum, p->nodes[1]->visleafnum);
 	    for (i = 0; i < w->numpoints; i++) {
-		PortalFile.Printf("(");
+		fprintf(PortalFile, "(");
 		WriteFloat(w->points[i][0]);
 		WriteFloat(w->points[i][1]);
 		WriteFloat(w->points[i][2]);
-		PortalFile.Printf(") ");
+		fprintf(PortalFile, ") ");
 	    }
-	    PortalFile.Printf("\n");
+	    fprintf(PortalFile, "\n");
 	}
 
       NextPortal:
@@ -187,15 +185,17 @@ WritePortalfile(node_t *headnode)
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".prt");
 
-    PortalFile.fOpen(options.szBSPName, "wt", true);
+    PortalFile = fopen(options.szBSPName, "wt");
+    if (PortalFile == NULL)
+	Message(msgError, errOpenFailed, options.szBSPName, strerror(errno));
 
-    PortalFile.Printf("PRT1\n");
-    PortalFile.Printf("%i\n", num_visleafs);
-    PortalFile.Printf("%i\n", num_visportals);
+    fprintf(PortalFile, "PRT1\n");
+    fprintf(PortalFile, "%i\n", num_visleafs);
+    fprintf(PortalFile, "%i\n", num_visportals);
 
     WritePortalFile_r(headnode);
 
-    PortalFile.Close();
+    fclose(PortalFile);
 }
 
 

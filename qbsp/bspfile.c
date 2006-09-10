@@ -18,6 +18,10 @@
 
     See file, 'COPYING', for details.
 */
+
+#include <stddef.h>
+
+#include "file.h"
 #include "qbsp.h"
 
 dheader_t *header;
@@ -32,12 +36,11 @@ LoadBSPFile(void)
 {
     int i;
     int cFileSize, cLumpSize, iLumpOff;
-    File BSPFile;
 
     // Load the file header
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".bsp");
-    cFileSize = BSPFile.LoadFile(options.szBSPName, (void **)&header);
+    cFileSize = LoadFile(options.szBSPName, (void **)&header, true);
 
     if (header->version != BSPVERSION)
 	Message(msgError, errBadVersion, options.szBSPName, header->version,
@@ -66,33 +69,42 @@ LoadBSPFile(void)
 
 // To be used for all dynamic mem data
 void
-AddLump(File *pBSPFile, int Type)
+AddLump(FILE *f, int Type)
 {
     lump_t *lump;
     int cLen = 0, templen;
     int iEntity;
+    size_t ret;
 
     lump = &header->lumps[Type];
-    lump->fileofs = pBSPFile->Position();
+    lump->fileofs = ftell(f);
 
     for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
 	if (map.rgEntities[iEntity].pData[Type] != NULL) {
 	    templen = map.rgEntities[iEntity].cData[Type] * rgcMemSize[Type];
-	    pBSPFile->Write(map.rgEntities[iEntity].pData[Type], templen);
+	    ret = fwrite(map.rgEntities[iEntity].pData[Type], 1, templen, f);
+	    if (ret != templen)
+		Message(msgError, errWriteFailure);
 	    cLen += templen;
 	}
     }
 
     // Add null terminating char for text
     if (Type == BSPENT) {
-	pBSPFile->Write("", 1);
+	ret = fwrite("", 1, 1, f);
+	if (ret != 1)
+	    Message(msgError, errWriteFailure);
 	cLen++;
     }
     lump->filelen = cLen;
 
     // Pad to 4-byte boundary
-    if (cLen % 4 != 0)
-	pBSPFile->Write("   ", 4 - (cLen % 4));
+    if (cLen % 4 != 0) {
+	size_t pad = 4 - (cLen % 4);
+	ret = fwrite("   ", 1, pad, f);
+	if (ret != pad)
+	    Message(msgError, errWriteFailure);
+    }
 }
 
 /*
@@ -103,7 +115,8 @@ WriteBSPFile
 void
 WriteBSPFile(void)
 {
-    File BSPFile;
+    FILE *f;
+    size_t ret;
 
     header = (dheader_t *)AllocMem(OTHER, sizeof(dheader_t));
     header->version = BSPVERSION;
@@ -111,30 +124,38 @@ WriteBSPFile(void)
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".bsp");
 
-    BSPFile.fOpen(options.szBSPName, "wb");
-    BSPFile.Write(header, sizeof(dheader_t));	// overwritten later
+    f = fopen(options.szBSPName, "wb");
+    if (f == NULL)
+	Message(msgError, errOpenFailed, options.szBSPName, strerror(errno));
 
-    AddLump(&BSPFile, BSPPLANE);
-    AddLump(&BSPFile, BSPLEAF);
-    AddLump(&BSPFile, BSPVERTEX);
-    AddLump(&BSPFile, BSPNODE);
-    AddLump(&BSPFile, BSPTEXINFO);
-    AddLump(&BSPFile, BSPFACE);
-    AddLump(&BSPFile, BSPCLIPNODE);
-    AddLump(&BSPFile, BSPMARKSURF);
-    AddLump(&BSPFile, BSPSURFEDGE);
-    AddLump(&BSPFile, BSPEDGE);
-    AddLump(&BSPFile, BSPMODEL);
+    /* write placeholder, header is overwritten later */
+    ret = fwrite(header, sizeof(dheader_t), 1, f);
+    if (ret != 1)
+	Message(msgError, errWriteFailure);
 
-    AddLump(&BSPFile, BSPLIGHT);
-    AddLump(&BSPFile, BSPVIS);
-    AddLump(&BSPFile, BSPENT);
-    AddLump(&BSPFile, BSPTEX);
+    AddLump(f, BSPPLANE);
+    AddLump(f, BSPLEAF);
+    AddLump(f, BSPVERTEX);
+    AddLump(f, BSPNODE);
+    AddLump(f, BSPTEXINFO);
+    AddLump(f, BSPFACE);
+    AddLump(f, BSPCLIPNODE);
+    AddLump(f, BSPMARKSURF);
+    AddLump(f, BSPSURFEDGE);
+    AddLump(f, BSPEDGE);
+    AddLump(f, BSPMODEL);
 
-    BSPFile.Seek(0, SEEK_SET);
-    BSPFile.Write(header, sizeof(dheader_t));
-    BSPFile.Close();
+    AddLump(f, BSPLIGHT);
+    AddLump(f, BSPVIS);
+    AddLump(f, BSPENT);
+    AddLump(f, BSPTEX);
 
+    fseek(f, 0, SEEK_SET);
+    ret = fwrite(header, sizeof(dheader_t), 1, f);
+    if (ret != 1)
+	Message(msgError, errWriteFailure);
+
+    fclose(f);
     FreeMem(header, OTHER, sizeof(dheader_t));
 }
 

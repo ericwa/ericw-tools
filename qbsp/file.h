@@ -18,35 +18,12 @@
 
     See file, 'COPYING', for details.
 */
-/*
-
-File header file
-
-*/
 
 #ifndef FILE_H
 #define FILE_H
 
-#include <stdio.h>
+#include <stdbool.h>
 
-class File {
-public:
-    File (void);
-    ~File (void);
-    bool fOpen(char *szFile, char *szMode, bool fNoFail = true);
-    void Close(void);
-    int LoadFile(char *szFile, void **pBuffer, bool fNoFail = true);
-
-    void Printf(char *szFormat, ...);
-    void Read(void *pBuffer, int cLen);
-    void Write(const void *pBuffer, int cLen);
-    int Seek(int Offset, int origin);
-    int Position(void);
-
-private:
-    FILE *fp;
-
-    int Length(void);
-};
+size_t LoadFile(char *filename, void **buf, bool nofail);
 
 #endif
