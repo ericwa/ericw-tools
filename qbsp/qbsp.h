@@ -169,22 +169,22 @@ typedef vec_t vec3_t[3];
 
 extern vec3_t vec3_origin;
 
-bool VectorCompare(vec3_t v1, vec3_t v2);
+bool VectorCompare(const vec3_t v1, const vec3_t v2);
 
 vec_t Q_rint(vec_t in);
-extern vec_t DotProduct(vec3_t v1, vec3_t v2);
-extern void VectorSubtract(vec3_t va, vec3_t vb, vec3_t out);
-extern void VectorAdd(vec3_t va, vec3_t vb, vec3_t out);
-extern void VectorCopy(vec3_t in, vec3_t out);
+extern vec_t DotProduct(const vec3_t v1, const vec3_t v2);
+extern void VectorSubtract(const vec3_t va, const vec3_t vb, vec3_t out);
+extern void VectorAdd(const vec3_t va, const vec3_t vb, vec3_t out);
+extern void VectorCopy(const vec3_t in, vec3_t out);
 
-double VectorLength(vec3_t v);
+double VectorLength(const vec3_t v);
 
-void VectorMA(vec3_t va, double scale, vec3_t vb, vec3_t vc);
+void VectorMA(const vec3_t va, const double scale, const vec3_t vb, vec3_t vc);
 
-void CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross);
+void CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross);
 vec_t VectorNormalize(vec3_t v);
 void VectorInverse(vec3_t v);
-void VectorScale(vec3_t v, vec_t scale, vec3_t out);
+void VectorScale(const vec3_t v, const vec_t scale, vec3_t out);
 
 //====== bspfile.h
 

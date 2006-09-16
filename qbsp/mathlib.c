@@ -23,7 +23,7 @@
 #include "qbsp.h"
 
 double
-VectorLength(vec3_t v)
+VectorLength(const vec3_t v)
 {
     int i;
     double length;
@@ -35,7 +35,7 @@ VectorLength(vec3_t v)
 }
 
 bool
-VectorCompare(vec3_t v1, vec3_t v2)
+VectorCompare(const vec3_t v1, const vec3_t v2)
 {
     int i;
 
@@ -53,7 +53,7 @@ Q_rint(vec_t in)
 }
 
 void
-VectorMA(vec3_t va, double scale, vec3_t vb, vec3_t vc)
+VectorMA(const vec3_t va, const double scale, const vec3_t vb, vec3_t vc)
 {
     vc[0] = va[0] + scale * vb[0];
     vc[1] = va[1] + scale * vb[1];
@@ -61,7 +61,7 @@ VectorMA(vec3_t va, double scale, vec3_t vb, vec3_t vc)
 }
 
 void
-CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross)
+CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross)
 {
     cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
     cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
@@ -69,13 +69,13 @@ CrossProduct(vec3_t v1, vec3_t v2, vec3_t cross)
 }
 
 vec_t
-DotProduct(vec3_t v1, vec3_t v2)
+DotProduct(const vec3_t v1, const vec3_t v2)
 {
     return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
 
 void
-VectorSubtract(vec3_t va, vec3_t vb, vec3_t out)
+VectorSubtract(const vec3_t va, const vec3_t vb, vec3_t out)
 {
     out[0] = va[0] - vb[0];
     out[1] = va[1] - vb[1];
@@ -83,7 +83,7 @@ VectorSubtract(vec3_t va, vec3_t vb, vec3_t out)
 }
 
 void
-VectorAdd(vec3_t va, vec3_t vb, vec3_t out)
+VectorAdd(const vec3_t va, const vec3_t vb, vec3_t out)
 {
     out[0] = va[0] + vb[0];
     out[1] = va[1] + vb[1];
@@ -91,7 +91,7 @@ VectorAdd(vec3_t va, vec3_t vb, vec3_t out)
 }
 
 void
-VectorCopy(vec3_t in, vec3_t out)
+VectorCopy(const vec3_t in, vec3_t out)
 {
     out[0] = in[0];
     out[1] = in[1];
@@ -126,7 +126,7 @@ VectorInverse(vec3_t v)
 }
 
 void
-VectorScale(vec3_t v, vec_t scale, vec3_t out)
+VectorScale(const vec3_t v, const vec_t scale, vec3_t out)
 {
     out[0] = v[0] * scale;
     out[1] = v[1] * scale;
