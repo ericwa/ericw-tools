@@ -259,6 +259,14 @@ LineIntersect_r(node_t *n)
 	    }
 	}
     } else {
+	const plane_t *p = &pPlanes[n->planenum];
+	const vec_t dist1 = DotProduct(v1, p->normal) - p->dist;
+	const vec_t dist2 = DotProduct(v2, p->normal) - p->dist;
+
+	if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
+	    return LineIntersect_r(n->children[1]);
+	if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
+	    return LineIntersect_r(n->children[0]);
 	if (!LineIntersect_r(n->children[0]))
 	    return false;
 	if (!LineIntersect_r(n->children[1]))
