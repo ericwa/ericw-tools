@@ -372,7 +372,6 @@ ParseOptions(char *szOptions)
 {
     char *szTok, *szTok2;
     char *szEnd;
-    char szFilename[256] = "";
     int NameCount = 0;
 
     szEnd = szOptions + strlen(szOptions);
