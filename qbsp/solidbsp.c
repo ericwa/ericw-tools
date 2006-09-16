@@ -492,7 +492,7 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 
     // write the list of faces, and free the originals
     leaffaces += count;
-    leafnode->markfaces = (face_t **)malloc(sizeof(face_t *) * (count + 1)); /* FIXME */
+    leafnode->markfaces = malloc(sizeof(face_t *) * (count + 1)); /* FIXME */
 
     i = 0;
     for (surf = planelist; surf; surf = pnext) {
