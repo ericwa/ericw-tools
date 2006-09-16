@@ -117,6 +117,27 @@ WriteLeakNode(node_t *n)
 
 
 /*
+===============
+PrintLeakTrail
+===============
+*/
+static void
+PrintLeakTrail(vec3_t p1, vec3_t p2)
+{
+    vec3_t dir;
+    vec_t len;
+
+    VectorSubtract(p1, p1, dir);
+    len = VectorNormalize(dir);
+
+    while (len > options.dxLeakDist) {
+	fprintf(LeakFile, "%f %f %f\n", p1[0], p1[1], p1[2]);
+	VectorMA(p1, options.dxLeakDist, dir, p1);
+	len -= options.dxLeakDist;
+    }
+}
+
+/*
 ==============
 MarkLeakTrail
 ==============
@@ -124,9 +145,8 @@ MarkLeakTrail
 static void
 MarkLeakTrail(portal_t *n2)
 {
-    int i, j;
-    vec3_t p1, p2, dir;
-    vec_t len;
+    int i;
+    vec3_t p1, p2;
     portal_t *n1;
     vec_t *v;
 
@@ -146,7 +166,6 @@ MarkLeakTrail(portal_t *n2)
 	    firstone = false;
 	    v = map.rgEntities[hit_occupied].origin;
 	    fprintf(PorFile, "%f %f %f\n", v[0], v[1], v[2]);
-
 	    WriteLeakNode(leakNode);
 	}
 	numports++;
@@ -155,12 +174,9 @@ MarkLeakTrail(portal_t *n2)
 	fprintf(PorFile, "%f %f %f ", p1[0], p1[1], p1[2]);
 	fprintf(PorFile, "%i ", n2->winding->numpoints);
 
-	j = n2->winding->numpoints - 1;
-	for (i = 0; i < n2->winding->numpoints; i++) {
+	for (i = 0; i < n2->winding->numpoints; i++)
 	    fprintf(PorFile, "%f %f %f ", n2->winding->points[i][0],
-		    n2->winding->points[i][1],
-		    n2->winding->points[i][2]);
-	}
+		    n2->winding->points[i][1], n2->winding->points[i][2]);
 
 	fprintf(PorFile, "\n");
     }
@@ -169,18 +185,8 @@ MarkLeakTrail(portal_t *n2)
 	return;
 
     n1 = pLeaks[numleaks - 2];
-
     MidpointWinding(n1->winding, p2);
-    VectorSubtract(p2, p1, dir);
-    len = VectorLength(dir);
-    VectorNormalize(dir);
-
-    while (len > options.dxLeakDist) {
-	fprintf(LeakFile, "%f %f %f\n", p1[0], p1[1], p1[2]);
-	for (i = 0; i < 3; i++)
-	    p1[i] += dir[i] * options.dxLeakDist;
-	len -= options.dxLeakDist;
-    }
+    PrintLeakTrail(p1, p2);
 }
 
 static vec3_t v1, v2;
@@ -265,10 +271,8 @@ SimplifyLeakline
 static void
 SimplifyLeakline(node_t *headnode)
 {
-    int i, j, k;
+    int i, j;
     portal_t *p1, *p2;
-    vec3_t dir;
-    vec_t len;
 
     if (numleaks < 2)
 	return;
@@ -291,18 +295,8 @@ SimplifyLeakline(node_t *headnode)
 	}
 
 	p2 = pLeaks[j];
-
 	MidpointWinding(p2->winding, v2);
-	VectorSubtract(v2, v1, dir);
-	len = VectorLength(dir);
-	VectorNormalize(dir);
-
-	while (len > options.dxLeakDist) {
-	    fprintf(LeakFile, "%f %f %f\n", v1[0], v1[1], v1[2]);
-	    for (k = 0; k < 3; k++)
-		v1[k] += dir[k] * options.dxLeakDist;
-	    len -= options.dxLeakDist;
-	}
+	PrintLeakTrail(v1, v2);
 
 	i = j;
 	p1 = pLeaks[i];
