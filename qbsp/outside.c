@@ -300,8 +300,6 @@ SimplifyLeakline(node_t *headnode)
 	while (j > i + 1) {
 	    p2 = pLeaks[j];
 	    MidpointWinding(p2->winding, v2);
-
-	    // 3 should hit, 7 should miss
 	    if (LineIntersect_r(headnode))
 		break;
 	    else
