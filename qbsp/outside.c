@@ -211,27 +211,29 @@ LineIntersect_r(node_t *n)
 	plane_t *p;
 	int i, j;
 
-	for (fp = n->markfaces; *fp; fp++)
+	for (fp = n->markfaces; *fp; fp++) {
 	    for (f = *fp; f; f = f->original) {
 		p = &pPlanes[f->planenum];
 		dist1 = DotProduct(v1, p->normal) - p->dist;
 		dist2 = DotProduct(v2, p->normal) - p->dist;
 
 		// Line segment doesn't cross the plane
-		if ((dist1 < 0 && dist2 < 0) || (dist1 > 0 && dist2 > 0))
+		if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
+		    continue;
+		if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
 		    continue;
 
-		if (dist1 == 0)
+		if (fabs(dist1) < ON_EPSILON) {
+		    if (fabs(dist2) < ON_EPSILON)
+			return false; /* too short/close */
 		    VectorCopy(v1, mid);
-		else if (dist2 == 0)
+		} else if (fabs(dist2) < ON_EPSILON) {
 		    VectorCopy(v2, mid);
-		else {
+		} else {
 		    // Find the midpoint on the plane of the face
 		    VectorSubtract(v2, v1, dir);
 		    VectorMA(v1, dist1 / (dist1 - dist2), dir, mid);
 		}
-
-		dist1 = DotProduct(mid, p->normal) - p->dist;
 
 		// Do test here for point in polygon (face)
 		// Quick hack
@@ -245,13 +247,17 @@ LineIntersect_r(node_t *n)
 			    maxs[j] = f->pts[i][j];
 		    }
 
-		if (mid[0] < mins[0] || mid[1] < mins[1] || mid[2] < mins[2]
-		    || mid[0] > maxs[0] || mid[1] > maxs[1]
-		    || mid[2] > maxs[2])
+		if (mid[0] < mins[0] - ON_EPSILON ||
+		    mid[1] < mins[1] - ON_EPSILON ||
+		    mid[2] < mins[2] - ON_EPSILON ||
+		    mid[0] > maxs[0] + ON_EPSILON ||
+		    mid[1] > maxs[1] + ON_EPSILON ||
+		    mid[2] > maxs[2] + ON_EPSILON)
 		    continue;
-		else
-		    return false;
+
+		return false;
 	    }
+	}
     } else {
 	if (!LineIntersect_r(n->children[0]))
 	    return false;
