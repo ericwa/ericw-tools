@@ -152,7 +152,7 @@ MarkLeakTrail(portal_t *n2)
 	numports++;
 
 	// write the center...
-	fprintf(PorFile, "%f %f %f ", p1[0], p1[1], p2[1]);
+	fprintf(PorFile, "%f %f %f ", p1[0], p1[1], p1[2]);
 	fprintf(PorFile, "%i ", n2->winding->numpoints);
 
 	j = n2->winding->numpoints - 1;
