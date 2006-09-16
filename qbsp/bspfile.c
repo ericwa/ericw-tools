@@ -40,7 +40,7 @@ LoadBSPFile(void)
     // Load the file header
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".bsp");
-    cFileSize = LoadFile(options.szBSPName, (void **)&header, true);
+    cFileSize = LoadFile(options.szBSPName, (void *)&header, true);
 
     if (header->version != BSPVERSION)
 	Message(msgError, errBadVersion, options.szBSPName, header->version,

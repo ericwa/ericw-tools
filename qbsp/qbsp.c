@@ -463,7 +463,7 @@ InitQBSP(int argc, char **argv)
     options.fVerbose = true;
     options.szMapName[0] = options.szBSPName[0] = 0;
 
-    length = LoadFile("qbsp.ini", (void **)&szBuf, false);
+    length = LoadFile("qbsp.ini", (void *)&szBuf, false);
     if (length) {
 	Message(msgLiteral, "Loading options from qbsp.ini\n");
 	ParseOptions(szBuf);

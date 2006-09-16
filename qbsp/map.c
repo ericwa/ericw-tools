@@ -424,7 +424,7 @@ LoadMapFile(void)
 
     Message(msgProgress, "LoadMapFile");
 
-    length = LoadFile(options.szMapName, (void **)&buf, true);
+    length = LoadFile(options.szMapName, (void *)&buf, true);
     PreParseFile(buf);
     ParserInit(buf);
 
