@@ -113,10 +113,8 @@ ParseEpair(void)
     e->value = copystring(token);
 
     if (!strcasecmp(e->key, "origin"))
-	sscanf(e->value, "%f %f %f",
-	       &(map.rgEntities[map.iEntities].origin[0]),
-	       &(map.rgEntities[map.iEntities].origin[1]),
-	       &(map.rgEntities[map.iEntities].origin[2]));
+	GetVectorForKey(map.iEntities, e->key,
+			map.rgEntities[map.iEntities].origin);
     else if (!strcasecmp(e->key, "classname")) {
 	if (!strcasecmp(e->value, "info_player_start")) {
 	    if (rgfStartSpots & info_player_start)
@@ -143,7 +141,7 @@ TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
     };
 
     int bestaxis;
-    float dot, best;
+    vec_t dot, best;
     int i;
 
     best = 0;
@@ -171,7 +169,7 @@ ParseBrush(void)
     texinfo_t tx;
     vec_t d;
     int shift[2], rotate;
-    float scale[2];
+    vec_t scale[2];
     int iFace;
 
     map.rgBrushes[map.iBrushes].iFaceEnd = map.iFaces + 1;
@@ -189,7 +187,7 @@ ParseBrush(void)
 
 	    for (j = 0; j < 3; j++) {
 		ParseToken(false);
-		planepts[i][j] = (float)atoi(token);
+		planepts[i][j] = (vec_t)atoi(token);
 	    }
 
 	    ParseToken(false);
@@ -253,8 +251,8 @@ ParseBrush(void)
 	{
 	    vec3_t vecs[2];
 	    int sv, tv;
-	    float ang, sinv, cosv;
-	    float ns, nt;
+	    vec_t ang, sinv, cosv;
+	    vec_t ns, nt;
 
 	    TextureAxisFromPlane(&(map.rgFaces[map.iFaces].plane), vecs[0],
 				 vecs[1]);
@@ -279,7 +277,7 @@ ParseBrush(void)
 		sinv = -1;
 		cosv = 0;
 	    } else {
-		ang = (float)rotate / 180 * Q_PI;
+		ang = (vec_t)rotate / 180 * Q_PI;
 		sinv = sin(ang);
 		cosv = cos(ang);
 	    }

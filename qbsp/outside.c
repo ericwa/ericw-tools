@@ -126,9 +126,9 @@ MarkLeakTrail(portal_t *n2)
 {
     int i, j;
     vec3_t p1, p2, dir;
-    float len;
+    vec_t len;
     portal_t *n1;
-    float *v;
+    vec_t *v;
 
     if (hullnum != 2)
 	return;
@@ -268,7 +268,7 @@ SimplifyLeakline(node_t *headnode)
     int i, j, k;
     portal_t *p1, *p2;
     vec3_t dir;
-    float len;
+    vec_t len;
 
     if (numleaks < 2)
 	return;

@@ -32,6 +32,7 @@ ExportNodePlanes_r(node_t *node)
     plane_t *plane;
     dplane_t *dplane;
     int i;
+    vec3_t tmp;
 
     if (node->planenum == -1)
 	return;
@@ -40,11 +41,15 @@ ExportNodePlanes_r(node_t *node)
 	dplane = pWorldEnt->pPlanes;
 
 	// search for an equivalent plane
-	for (i = 0; i < pWorldEnt->iPlanes; i++, dplane++)
-	    if (DotProduct(dplane->normal, plane->normal) > 1 - 0.00001 &&
+	for (i = 0; i < pWorldEnt->iPlanes; i++, dplane++) {
+	    tmp[0] = dplane->normal[0];
+	    tmp[1] = dplane->normal[1];
+	    tmp[2] = dplane->normal[2];
+	    if (DotProduct(tmp, plane->normal) > 1 - 0.00001 &&
 		fabs(dplane->dist - plane->dist) < 0.01 &&
 		dplane->type == plane->type)
 		break;
+	}
 
 	// a new plane
 	planemapping[node->planenum] = i;

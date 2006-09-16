@@ -61,7 +61,7 @@ InitHash(vec3_t mins, vec3_t maxs)
 
     hash_scale[0] = newsize[0] / size[0];
     hash_scale[1] = newsize[1] / size[1];
-    hash_scale[2] = (float)newsize[1];
+    hash_scale[2] = (vec_t)newsize[1];
 }
 
 static unsigned

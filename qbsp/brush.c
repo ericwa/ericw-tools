@@ -443,7 +443,7 @@ AddBrushPlane(plane_t *plane)
 {
     int i;
     plane_t *pl;
-    float l;
+    vec_t l;
 
     l = VectorLength(plane->normal);
     if (l < 0.999 || l > 1.001)
@@ -664,7 +664,7 @@ ExpandBrush(vec3_t hull_size[2], face_t *pFaceList)
 	for (s = -1; s <= 1; s += 2) {
 	    // add the plane
 	    VectorCopy(vec3_origin, plane.normal);
-	    plane.normal[x] = (float)s;
+	    plane.normal[x] = (vec_t)s;
 	    if (s == -1)
 		plane.dist = -brush_mins[x] + -hull_size[0][x];
 	    else

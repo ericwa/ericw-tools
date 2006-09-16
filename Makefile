@@ -141,5 +141,7 @@ QBSP_OBJECTS = \
 	mathlib.o merge.o outside.o parser.o portals.o qbsp.o solidbsp.o \
 	surfaces.o tjunc.o util.o wad.o winding.o writebsp.o
 
+qbsp/%.o:	CPPFLAGS += -DDOUBLEVEC_T
+
 qbsp/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,qbsp/%,$(QBSP_OBJECTS))
 	$(CC) -o $@ $^ $(LCURSES)

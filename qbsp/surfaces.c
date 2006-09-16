@@ -41,12 +41,13 @@ piece off and insert the remainder in the next link
 void
 SubdivideFace(face_t *f, face_t **prevptr)
 {
-    float mins, maxs;
+    vec_t mins, maxs;
     vec_t v;
     int axis, i;
     plane_t plane;
     face_t *front, *back, *next;
     texinfo_t *tex;
+    vec3_t tmp;
 
     // special (non-surface cached) faces don't need subdivision
     tex = &pWorldEnt->pTexinfo[f->texturenum];
@@ -59,8 +60,12 @@ SubdivideFace(face_t *f, face_t **prevptr)
 	    mins = 9999;
 	    maxs = -9999;
 
+	    tmp[0] = tex->vecs[axis][0];
+	    tmp[1] = tex->vecs[axis][1];
+	    tmp[2] = tex->vecs[axis][2];
+
 	    for (i = 0; i < f->numpoints; i++) {
-		v = DotProduct(f->pts[i], tex->vecs[axis]);
+		v = DotProduct(f->pts[i], tmp);
 		if (v < mins)
 		    mins = v;
 		if (v > maxs)
@@ -71,7 +76,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
 		break;
 
 	    // split it
-	    VectorCopy(tex->vecs[axis], plane.normal);
+	    VectorCopy(tmp, plane.normal);
 	    v = VectorLength(plane.normal);
 	    VectorNormalize(plane.normal);
 	    plane.dist = (mins + options.dxSubdivide - 16) / v;
@@ -180,7 +185,7 @@ InitHash(void)
 
     hash_scale[0] = newsize[0] / size[0];
     hash_scale[1] = newsize[1] / size[1];
-    hash_scale[2] = (float)newsize[1];
+    hash_scale[2] = (vec_t)newsize[1];
 
     hvert_p = pHashverts;
 }

@@ -357,7 +357,7 @@ static void
 CheckWindingArea(winding_t *w)
 {
     int i;
-    float total, add;
+    vec_t total, add;
     vec3_t v1, v2, cross;
 
     total = 0;
@@ -381,7 +381,7 @@ CheckLeafPortalConsistancy(node_t *node)
     plane_t plane, plane2;
     int i;
     winding_t *w;
-    float dist;
+    vec_t dist;
 
     side = side2 = 0;		// quiet compiler warning
 
