@@ -266,6 +266,8 @@ ProcessFile(void)
     WriteEntitiesToString();
     WAD_ProcessWad(&wad);
     FinishBSPFile();
+
+    WAD_Free(&wad);
 }
 
 
