@@ -29,7 +29,13 @@
 extern int linenum;
 extern char token[MAXTOKEN];
 
-bool ParseToken(bool crossline);
+enum parseflags {
+    PARSE_NORMAL   = 0,
+    PARSE_SAMELINE = 1, /* The next token must be on the current line */
+    PARSE_COMMENT  = 2  /* Return a // comment as the next token */
+};
+
+bool ParseToken(int flags);
 void ParserInit(char *data);
 
 #endif /* PARSER_H */

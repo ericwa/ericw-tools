@@ -39,7 +39,7 @@ ParserInit(char *data)
 
 
 bool
-ParseToken(bool crossline)
+ParseToken(int flags)
 {
     char *token_p;
 
@@ -53,12 +53,12 @@ ParseToken(bool crossline)
     /* skip space */
     while (*script <= 32) {
 	if (!*script) {
-	    if (!crossline)
+	    if (flags & PARSE_SAMELINE)
 		Message(msgError, errLineIncomplete, linenum);
 	    return false;
 	}
 	if (*script++ == '\n') {
-	    if (!crossline)
+	    if (flags & PARSE_SAMELINE)
 		Message(msgError, errLineIncomplete, linenum);
 	    linenum++;
 	}
@@ -66,16 +66,27 @@ ParseToken(bool crossline)
 
     /* comment field */
     if (script[0] == '/' && script[1] == '/') {
-	if (!crossline)
+	if (flags & PARSE_COMMENT) {
+	    token_p = token;
+	    while (*script && *script != '\n') {
+		*token_p++ = *script++;
+		if (token_p > &token[MAXTOKEN - 1])
+		    Message(msgError, errTokenTooLarge, linenum);
+	    }
+	    goto out;
+	}
+	if (flags & PARSE_SAMELINE)
 	    Message(msgError, errLineIncomplete, linenum);
 	while (*script++ != '\n')
 	    if (!*script) {
-		if (!crossline)
+		if (flags & PARSE_SAMELINE)
 		    Message(msgError, errLineIncomplete, linenum);
 		return false;
 	    }
 	goto skipspace;
     }
+    if (flags & PARSE_COMMENT)
+	return false;
 
     /* copy token */
     token_p = token;
@@ -96,7 +107,7 @@ ParseToken(bool crossline)
 	    if (token_p > &token[MAXTOKEN - 1])
 		Message(msgError, errTokenTooLarge, linenum);
 	}
-
+ out:
     *token_p = 0;
 
     return true;

@@ -107,7 +107,7 @@ ParseEpair(void)
     if (strlen(token) >= MAX_KEY - 1)
 	Message(msgError, errEpairTooLong, linenum);
     e->key = copystring(token);
-    ParseToken(false);
+    ParseToken(PARSE_SAMELINE);
     if (strlen(token) >= MAX_VALUE - 1)
 	Message(msgError, errEpairTooLong, linenum);
     e->value = copystring(token);
@@ -174,40 +174,40 @@ ParseBrush(void)
 
     map.rgBrushes[map.iBrushes].iFaceEnd = map.iFaces + 1;
 
-    while (ParseToken(true)) {
+    while (ParseToken(PARSE_NORMAL)) {
 	if (!strcmp(token, "}"))
 	    break;
 
 	// read the three point plane definition
 	for (i = 0; i < 3; i++) {
 	    if (i != 0)
-		ParseToken(true);
+		ParseToken(PARSE_NORMAL);
 	    if (strcmp(token, "("))
 		Message(msgError, errInvalidMapPlane, linenum);
 
 	    for (j = 0; j < 3; j++) {
-		ParseToken(false);
+		ParseToken(PARSE_SAMELINE);
 		planepts[i][j] = (vec_t)atoi(token);
 	    }
 
-	    ParseToken(false);
+	    ParseToken(PARSE_SAMELINE);
 	    if (strcmp(token, ")"))
 		Message(msgError, errInvalidMapPlane, linenum);
 	}
 
 	// read the texturedef
 	memset(&tx, 0, sizeof(tx));
-	ParseToken(false);
+	ParseToken(PARSE_SAMELINE);
 	tx.miptex = FindMiptex(token);
-	ParseToken(false);
+	ParseToken(PARSE_SAMELINE);
 	shift[0] = atoi(token);
-	ParseToken(false);
+	ParseToken(PARSE_SAMELINE);
 	shift[1] = atoi(token);
-	ParseToken(false);
+	ParseToken(PARSE_SAMELINE);
 	rotate = atoi(token);
-	ParseToken(false);
+	ParseToken(PARSE_SAMELINE);
 	scale[0] = atof(token);
-	ParseToken(false);
+	ParseToken(PARSE_SAMELINE);
 	scale[1] = atof(token);
 
 	// if the three points are all on a previous plane, it is a
@@ -261,7 +261,6 @@ ParseBrush(void)
 		scale[0] = 1;
 	    if (!scale[1])
 		scale[1] = 1;
-
 
 	    // rotate axis
 	    if (rotate == 0) {
@@ -325,7 +324,7 @@ ParseBrush(void)
 static bool
 ParseEntity(mapentity_t *e)
 {
-    if (!ParseToken(true))
+    if (!ParseToken(PARSE_NORMAL))
 	return false;
 
     if (strcmp(token, "{"))
@@ -337,7 +336,7 @@ ParseEntity(mapentity_t *e)
     pCurEnt->iBrushEnd = map.iBrushes + 1;
 
     do {
-	if (!ParseToken(true))
+	if (!ParseToken(PARSE_NORMAL))
 	    Message(msgError, errUnexpectedEOF);
 	if (!strcmp(token, "}"))
 	    break;
