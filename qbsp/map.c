@@ -161,6 +161,71 @@ TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
 
 
 static void
+SetTexinfo_QuakeEd(int shift[2], int rotate, vec_t scale[2], texinfo_t *tx)
+{
+    int i, j;
+    vec3_t vecs[2];
+    int sv, tv;
+    vec_t ang, sinv, cosv;
+    vec_t ns, nt;
+
+    TextureAxisFromPlane(&(map.rgFaces[map.iFaces].plane), vecs[0], vecs[1]);
+
+    if (!scale[0])
+	scale[0] = 1;
+    if (!scale[1])
+	scale[1] = 1;
+
+    // rotate axis
+    if (rotate == 0) {
+	sinv = 0;
+	cosv = 1;
+    } else if (rotate == 90) {
+	sinv = 1;
+	cosv = 0;
+    } else if (rotate == 180) {
+	sinv = 0;
+	cosv = -1;
+    } else if (rotate == 270) {
+	sinv = -1;
+	cosv = 0;
+    } else {
+	ang = (vec_t)rotate / 180 * Q_PI;
+	sinv = sin(ang);
+	cosv = cos(ang);
+    }
+
+    if (vecs[0][0])
+	sv = 0;
+    else if (vecs[0][1])
+	sv = 1;
+    else
+	sv = 2;
+
+    if (vecs[1][0])
+	tv = 0;
+    else if (vecs[1][1])
+	tv = 1;
+    else
+	tv = 2;
+
+    for (i = 0; i < 2; i++) {
+	ns = cosv * vecs[i][sv] - sinv * vecs[i][tv];
+	nt = sinv * vecs[i][sv] + cosv * vecs[i][tv];
+	vecs[i][sv] = ns;
+	vecs[i][tv] = nt;
+    }
+
+    for (i = 0; i < 2; i++)
+	for (j = 0; j < 3; j++)
+	    tx->vecs[i][j] = vecs[i][j] / scale[i];
+
+    tx->vecs[0][3] = shift[0];
+    tx->vecs[1][3] = shift[1];
+}
+
+
+static void
 ParseBrush(void)
 {
     vec3_t planepts[3];
@@ -247,68 +312,7 @@ ParseBrush(void)
 	map.rgFaces[map.iFaces].plane.dist =
 	    DotProduct(t3, map.rgFaces[map.iFaces].plane.normal);
 
-	// fake proper texture vectors from QuakeEd style
-	{
-	    vec3_t vecs[2];
-	    int sv, tv;
-	    vec_t ang, sinv, cosv;
-	    vec_t ns, nt;
-
-	    TextureAxisFromPlane(&(map.rgFaces[map.iFaces].plane), vecs[0],
-				 vecs[1]);
-
-	    if (!scale[0])
-		scale[0] = 1;
-	    if (!scale[1])
-		scale[1] = 1;
-
-	    // rotate axis
-	    if (rotate == 0) {
-		sinv = 0;
-		cosv = 1;
-	    } else if (rotate == 90) {
-		sinv = 1;
-		cosv = 0;
-	    } else if (rotate == 180) {
-		sinv = 0;
-		cosv = -1;
-	    } else if (rotate == 270) {
-		sinv = -1;
-		cosv = 0;
-	    } else {
-		ang = (vec_t)rotate / 180 * Q_PI;
-		sinv = sin(ang);
-		cosv = cos(ang);
-	    }
-
-	    if (vecs[0][0])
-		sv = 0;
-	    else if (vecs[0][1])
-		sv = 1;
-	    else
-		sv = 2;
-
-	    if (vecs[1][0])
-		tv = 0;
-	    else if (vecs[1][1])
-		tv = 1;
-	    else
-		tv = 2;
-
-	    for (i = 0; i < 2; i++) {
-		ns = cosv * vecs[i][sv] - sinv * vecs[i][tv];
-		nt = sinv * vecs[i][sv] + cosv * vecs[i][tv];
-		vecs[i][sv] = ns;
-		vecs[i][tv] = nt;
-	    }
-
-	    for (i = 0; i < 2; i++)
-		for (j = 0; j < 3; j++)
-		    tx.vecs[i][j] = vecs[i][j] / scale[i];
-
-	    tx.vecs[0][3] = (float)shift[0];
-	    tx.vecs[1][3] = (float)shift[1];
-	}
+	SetTexinfo_QuakeEd(shift, rotate, scale, &tx);
 
 	// unique the texinfo
 	map.rgFaces[map.iFaces].texinfo = FindTexinfo(&tx);
