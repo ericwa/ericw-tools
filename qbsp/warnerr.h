@@ -45,6 +45,7 @@ enum {
     warnTooManyMergePoints,
     warnDegenerateEdge,
     warnNoRotateTarget,
+    warnDegenerateQuArKTX,
     cWarnings
 };
 

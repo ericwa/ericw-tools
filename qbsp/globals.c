@@ -83,6 +83,7 @@ char *rgszWarnings[cWarnings] = {
     "Too many edges in TryMerge",
     "Healing degenerate edge at (%.3f %.3f %.3f)",
     "No target for rotation entity \"%s\"",
+    "line %d: Face with degenerate QuArK-style texture axes",
 };
 
 char *rgszErrors[cErrors] = {
