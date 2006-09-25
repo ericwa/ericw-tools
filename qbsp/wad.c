@@ -56,7 +56,7 @@ WAD_Free(wad_t *w)
 bool
 WAD_InitWadList(wad_t *w, char *list)
 {
-    int i, len;
+    int i, len, ret;
     FILE *fileT;
     wadlist_t *wad, *tmp;
 
@@ -91,8 +91,8 @@ WAD_InitWadList(wad_t *w, char *list)
 	fileT = fopen(w->name, "rb");
 	if (fileT) {
 	    wad->Wad = fileT;
-	    len = fread(&wad->header, 1, sizeof(wadinfo_t), fileT);
-	    if (len != sizeof(wadinfo_t))
+	    ret = fread(&wad->header, 1, sizeof(wadinfo_t), fileT);
+	    if (ret != sizeof(wadinfo_t))
 		Message(msgError, errReadFailure);
 	    if (strncmp(wad->header.identification, "WAD2", 4)) {
 		Message(msgWarning, warnNotWad, w->name);
@@ -101,9 +101,9 @@ WAD_InitWadList(wad_t *w, char *list)
 		fseek(fileT, wad->header.infotableofs, SEEK_SET);
 		wad->lumps = AllocMem(OTHER, sizeof(lumpinfo_t) *
 				      wad->header.numlumps, true);
-		len = fread(wad->lumps, 1, wad->header.numlumps *
+		ret = fread(wad->lumps, 1, wad->header.numlumps *
 			    sizeof(lumpinfo_t), fileT);
-		if (len != wad->header.numlumps * sizeof(lumpinfo_t))
+		if (ret != wad->header.numlumps * sizeof(lumpinfo_t))
 		    Message(msgError, errReadFailure);
 		wad++;
 		// Note that the file is NOT closed here!
