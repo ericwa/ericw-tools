@@ -57,7 +57,7 @@ AllocMem(int Type, int cElements, bool fZero)
 	if (cElements > MAX_POINTS_ON_WINDING)
 	    Message(msgError, errTooManyPoints, cElements);
 
-	cSize = (int)((winding_t *)0)->points[cElements];
+	cSize = (int)((winding_t *)0)->points[cElements] + sizeof(int);
 
 	// Set cElements to 1 so bookkeeping works OK
 	cElements = 1;
@@ -89,6 +89,10 @@ AllocMem(int Type, int cElements, bool fZero)
     // Special stuff for face_t
     if (Type == FACE)
 	((face_t *)pTemp)->planenum = -1;
+    if (Type == WINDING) {
+	*(int *)pTemp = cSize;
+	pTemp = (char *)pTemp + sizeof(int);
+    }
 
     rgMemTotal[Type] += cElements;
     rgMemActive[Type] += cElements;
@@ -114,7 +118,11 @@ void
 FreeMem(void *pMem, int Type, int cElements)
 {
     rgMemActive[Type] -= cElements;
-    rgMemActive[GLOBAL] -= cElements * rgcMemSize[Type];
+    if (Type == WINDING) {
+	pMem = (char *)pMem - sizeof(int);
+	rgMemActive[GLOBAL] -= *(int *)pMem;
+    } else
+	rgMemActive[GLOBAL] -= cElements * rgcMemSize[Type];
 
     free(pMem);
 }
