@@ -29,11 +29,74 @@ static void WADList_AddAnimatingTextures(wadlist_t *w);
 static int WAD_LoadLump(wad_t *w, char *name, byte *dest);
 
 
-void
-WADList_Init(wadlist_t *w)
+static bool
+WAD_LoadInfo(wad_t *w)
 {
-    w->numwads = 0;
-    w->wads = NULL;
+    wadinfo_t *hdr = &w->header;
+    bool ret = false;
+    int len;
+
+    len = fread(hdr, 1, sizeof(wadinfo_t), w->file);
+    if (len == sizeof(wadinfo_t))
+	if (!strncmp(hdr->identification, "WAD2", 4)) {
+	    const int lumpinfo = sizeof(lumpinfo_t) * hdr->numlumps;
+	    fseek(w->file, hdr->infotableofs, SEEK_SET);
+	    w->lumps = AllocMem(OTHER, lumpinfo, true);
+	    len = fread(w->lumps, 1, lumpinfo, w->file);
+	    if (len == lumpinfo)
+		ret = true;
+	}
+
+    return ret;
+}
+
+
+void
+WADList_Init(wadlist_t *list, char *wadstring)
+{
+    int i, len;
+    wad_t *tmp, *w;
+    char *fname;
+
+    list->numwads = 0;
+    list->wads = NULL;
+
+    if (!wadstring)
+	return;
+
+    len = strlen(wadstring);
+    if (len == 0)
+	return;
+
+    // Count # of wads
+    list->numwads = 1;
+    for (i = 0; i < len; i++)
+	if (wadstring[i] == ';' && wadstring[i + 1] != ';')
+	    list->numwads++;
+
+    tmp = AllocMem(OTHER, list->numwads * sizeof(wad_t), true);
+
+    w = tmp;
+    i = 0;
+    while (i < len) {
+	fname = wadstring + i;
+	while (wadstring[i] != 0 && wadstring[i] != ';')
+	    i++;
+	wadstring[i++] = 0;
+	w->file = fopen(fname, "rb");
+	if (w->file) {
+	    if (WAD_LoadInfo(w))
+		w++;
+	    else
+		fclose(w->file);
+	}
+    }
+
+    /* Re-allocate just the required amount */
+    list->wads = AllocMem(OTHER, (w - tmp) * sizeof(wad_t), false);
+    memcpy(list->wads, tmp, (w - tmp) * sizeof(wad_t));
+    list->numwads = w - tmp;
+    FreeMem(tmp, OTHER, list->numwads * sizeof(wad_t));
 }
 
 
@@ -50,75 +113,6 @@ WADList_Free(wadlist_t *w)
 	}
 	FreeMem(w->wads, OTHER, w->numwads * sizeof(wad_t));
     }
-}
-
-
-bool
-WADList_LoadLumpInfo(wadlist_t *list, char *wadstring)
-{
-    int i, len, ret;
-    wad_t *w, *tmp;
-    char *fname;
-
-    if (!wadstring)
-	return false;
-
-    len = strlen(wadstring);
-    if (len == 0)
-	return false;
-
-    // Should never happen, but just in case...
-    assert(!list->wads);
-
-    // Count # of wads
-    list->numwads = 1;
-    for (i = 0; i < len; i++)
-	if (wadstring[i] == ';' && wadstring[i + 1] != ';')
-	    list->numwads++;
-
-    list->wads = AllocMem(OTHER, list->numwads * sizeof(wad_t), true);
-
-    // Verify that at least one WAD file exists
-    w = list->wads;
-    i = 0;
-    while (i < len) {
-	fname = wadstring + i;
-	while (wadstring[i] != 0 && wadstring[i] != ';')
-	    i++;
-	wadstring[i] = 0;
-	i++;
-
-	w->file = fopen(fname, "rb");
-	if (w->file) {
-	    ret = fread(&w->header, 1, sizeof(wadinfo_t), w->file);
-	    if (ret != sizeof(wadinfo_t))
-		Message(msgError, errReadFailure);
-	    if (strncmp(w->header.identification, "WAD2", 4)) {
-		Message(msgWarning, warnNotWad, fname);
-		fclose(w->file);
-	    } else {
-		fseek(w->file, w->header.infotableofs, SEEK_SET);
-		w->lumps = AllocMem(OTHER, sizeof(lumpinfo_t) *
-				    w->header.numlumps, true);
-		ret = fread(w->lumps, 1, w->header.numlumps *
-			    sizeof(lumpinfo_t), w->file);
-		if (ret != w->header.numlumps * sizeof(lumpinfo_t))
-		    Message(msgError, errReadFailure);
-		w++;
-		// Note that the file is NOT closed here!
-		// Also iWad is only incremented for valid files
-	    }
-	}
-    }
-
-    // Remove invalid wads from memory
-    tmp = AllocMem(OTHER, (w - list->wads) * sizeof(wad_t), true);
-    memcpy(tmp, list->wads, (w - list->wads) * sizeof(wad_t));
-    FreeMem(list->wads, OTHER, list->numwads * sizeof(wad_t));
-    list->numwads = w - list->wads;
-    list->wads = tmp;
-
-    return list->numwads > 0;
 }
 
 

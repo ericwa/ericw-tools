@@ -51,10 +51,8 @@ typedef struct {
     int numwads;
 } wadlist_t;
 
-void WADList_Init(wadlist_t *w);
-void WADList_Free(wadlist_t *w);
-
-bool WADList_LoadLumpInfo(wadlist_t *w, char *list);
+void WADList_Init(wadlist_t *list, char *wadstring);
 void WADList_Process(wadlist_t *w);
+void WADList_Free(wadlist_t *w);
 
 #endif /* WAD_H */

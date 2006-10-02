@@ -232,10 +232,8 @@ ProcessFile
 static void
 ProcessFile(void)
 {
-    char *szWad;
-    wadlist_t wad;
-
-    WADList_Init(&wad);
+    char *wadstring;
+    wadlist_t wads;
 
     // load brushes and entities
     LoadMapFile();
@@ -244,15 +242,18 @@ ProcessFile(void)
 	return;
     }
 
-    szWad = ValueForKey(0, "_wad");
-    if (!szWad) {
-	szWad = ValueForKey(0, "wad");
-	if (!szWad) {
+    wadstring = ValueForKey(0, "_wad");
+    if (!wadstring) {
+	wadstring = ValueForKey(0, "wad");
+	if (!wadstring) {
 	    Message(msgWarning, warnNoWadKey);
 	    pWorldEnt->cTexdata = 0;
-	} else if (!WADList_LoadLumpInfo(&wad, szWad)) {
-	    Message(msgWarning, warnNoValidWads);
-	    pWorldEnt->cTexdata = 0;
+	} else {
+	    WADList_Init(&wads, wadstring);
+	    if (!wads.numwads) {
+		Message(msgWarning, warnNoValidWads);
+		pWorldEnt->cTexdata = 0;
+	    }
 	}
     }
     // init the tables to be shared by all models
@@ -264,10 +265,10 @@ ProcessFile(void)
     CreateHulls();
 
     WriteEntitiesToString();
-    WADList_Process(&wad);
+    WADList_Process(&wads);
     FinishBSPFile();
 
-    WADList_Free(&wad);
+    WADList_Free(&wads);
 }
 
 
