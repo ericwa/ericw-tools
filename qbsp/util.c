@@ -136,6 +136,23 @@ FreeMem(void *pMem, int Type, int cElements)
 }
 
 
+static const char *
+MemString(int bytes)
+{
+    static char buf[20];
+
+    if (bytes > 1024 * 1024 * 1024 / 2)
+	snprintf(buf, 20, "%0.1fG", (float)bytes / (1024 * 1024 * 1024));
+    else if (bytes > 1024 * 1024 / 2)
+	snprintf(buf, 20, "%0.1fM", (float)bytes / (1024 * 1024));
+    else if (bytes > 1024 / 2)
+	snprintf(buf, 20, "%0.1fk", (float)bytes / 1024);
+    else
+	buf[0] = 0;
+
+    return buf;
+}
+
 /*
 ==========
 PrintMem
@@ -158,13 +175,15 @@ PrintMem(void)
 	Message(msgLiteral,
 		"\nData type        CurrentNum    PeakNum      PeakMem\n");
 	for (i = 0; i <= OTHER; i++)
-	    Message(msgLiteral, "%-16s  %9d  %9d %12d\n",
+	    Message(msgLiteral, "%-16s  %9d  %9d %12d %8s\n",
 		    rgszMemTypes[i], rgMemActive[i], rgMemPeak[i],
-		    rgMemPeakBytes[i]);
-	Message(msgLiteral, "%-16s                       %12d\n",
-		rgszMemTypes[GLOBAL], rgMemPeak[GLOBAL]);
+		    rgMemPeakBytes[i], MemString(rgMemPeakBytes[i]));
+	Message(msgLiteral, "%-16s                       %12d %8s\n",
+		rgszMemTypes[GLOBAL], rgMemPeak[GLOBAL],
+		MemString(rgMemPeak[GLOBAL]));
     } else
-	Message(msgLiteral, "Bytes used: %d\n", rgMemPeak[GLOBAL]);
+	Message(msgLiteral, "Peak memory usage: %d (%s)\n", rgMemPeak[GLOBAL],
+		MemString(rgMemPeak[GLOBAL]));
 }
 
 #if 0
