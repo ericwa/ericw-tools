@@ -48,7 +48,6 @@ typedef struct {
 
 typedef struct {
     wad_t *wads;
-    int numwads;
 } wadlist_t;
 
 int WADList_Init(wadlist_t *list, char *wadstring);

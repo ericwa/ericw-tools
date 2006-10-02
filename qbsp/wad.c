@@ -54,11 +54,11 @@ WAD_LoadInfo(wad_t *w)
 int
 WADList_Init(wadlist_t *list, char *wadstring)
 {
-    int i, len;
+    int i, len, numwads;
     wad_t *tmp, *w;
     char *fname;
 
-    list->numwads = 0;
+    numwads = 0;
     list->wads = NULL;
 
     if (!wadstring)
@@ -69,12 +69,12 @@ WADList_Init(wadlist_t *list, char *wadstring)
 	return 0;
 
     // Count # of wads
-    list->numwads = 1;
+    numwads = 1;
     for (i = 0; i < len; i++)
 	if (wadstring[i] == ';' && wadstring[i + 1] != ';')
-	    list->numwads++;
+	    numwads++;
 
-    tmp = AllocMem(OTHER, list->numwads * sizeof(wad_t), true);
+    tmp = AllocMem(OTHER, numwads * sizeof(wad_t), true);
 
     w = tmp;
     i = 0;
@@ -96,10 +96,10 @@ WADList_Init(wadlist_t *list, char *wadstring)
     /* Re-allocate just the required amount */
     list->wads = AllocMem(OTHER, (w - tmp) * sizeof(wad_t), false);
     memcpy(list->wads, tmp, (w - tmp) * sizeof(wad_t));
-    list->numwads = w - tmp;
-    FreeMem(tmp, OTHER, list->numwads * sizeof(wad_t));
+    FreeMem(tmp, OTHER, numwads * sizeof(wad_t));
+    numwads = w - tmp;
 
-    return list->numwads;
+    return numwads;
 }
 
 
