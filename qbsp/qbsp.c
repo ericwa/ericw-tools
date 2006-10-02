@@ -242,20 +242,33 @@ ProcessFile(void)
 	return;
     }
 
+    wads.numwads = 0;
     wadstring = ValueForKey(0, "_wad");
-    if (!wadstring) {
+    if (!wadstring)
 	wadstring = ValueForKey(0, "wad");
-	if (!wadstring) {
-	    Message(msgWarning, warnNoWadKey);
+    if (!wadstring)
+	Message(msgWarning, warnNoWadKey);
+    else
+	WADList_Init(&wads, wadstring);
+
+    if (!wads.numwads) {
+	if (wadstring)
+	    Message(msgWarning, warnNoValidWads);
+	/* Try the default wad name */
+	wadstring = AllocMem(OTHER, strlen(options.szMapName) + 5, false);
+	strcpy(wadstring, options.szMapName);
+	StripExtension(wadstring);
+	DefaultExtension(wadstring, ".wad");
+	WADList_Init(&wads, wadstring);
+	if (wads.numwads)
+	    Message(msgLiteral, "Using default WAD: %s\n", wadstring);
+	else
 	    pWorldEnt->cTexdata = 0;
-	} else {
-	    WADList_Init(&wads, wadstring);
-	    if (!wads.numwads) {
-		Message(msgWarning, warnNoValidWads);
-		pWorldEnt->cTexdata = 0;
-	    }
-	}
+	FreeMem(wadstring, OTHER, strlen(options.szMapName) + 5);
     }
+
+    if (!pWorldEnt->cTexdata)
+
     // init the tables to be shared by all models
     BeginBSPFile();
 
