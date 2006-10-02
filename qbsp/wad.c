@@ -85,10 +85,11 @@ WADList_Init(wadlist_t *list, char *wadstring)
 	wadstring[i++] = 0;
 	w->file = fopen(fname, "rb");
 	if (w->file) {
-	    if (WAD_LoadInfo(w))
-		w++;
-	    else
+	    if (!WAD_LoadInfo(w)) {
+		Message(msgWarning, warnNotWad, fname);
 		fclose(w->file);
+	    } else
+		w++;
 	}
     }
 
