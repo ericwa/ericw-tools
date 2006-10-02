@@ -233,7 +233,7 @@ static void
 ProcessFile(void)
 {
     char *wadstring;
-    wadlist_t wads;
+    wad_t *wads;
     int numwads = 0;
 
     // load brushes and entities
@@ -278,10 +278,10 @@ ProcessFile(void)
     CreateHulls();
 
     WriteEntitiesToString();
-    WADList_Process(&wads, numwads);
+    WADList_Process(wads, numwads);
     FinishBSPFile();
 
-    WADList_Free(&wads, numwads);
+    WADList_Free(wads, numwads);
 }
 
 

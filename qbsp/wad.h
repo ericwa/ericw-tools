@@ -46,12 +46,8 @@ typedef struct {
     FILE *file;
 } wad_t;
 
-typedef struct {
-    wad_t *wads;
-} wadlist_t;
-
-int WADList_Init(wadlist_t *list, char *wadstring);
-void WADList_Process(wadlist_t *w, int numwads);
-void WADList_Free(wadlist_t *w, int numwads);
+int WADList_Init(wad_t **wads, char *wadstring);
+void WADList_Process(wad_t *wads, int numwads);
+void WADList_Free(wad_t *wads, int numwads);
 
 #endif /* WAD_H */
