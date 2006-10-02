@@ -33,7 +33,7 @@ void
 WADList_Init(wadlist_t *w)
 {
     w->numwads = 0;
-    w->wadlist = NULL;
+    w->wads = NULL;
 }
 
 
@@ -42,13 +42,13 @@ WADList_Free(wadlist_t *w)
 {
     int i;
 
-    if (w->wadlist) {
+    if (w->wads) {
 	for (i = 0; i < w->numwads; i++) {
-	    fclose(w->wadlist[i].Wad);
-	    FreeMem(w->wadlist[i].lumps, OTHER,
-		    sizeof(lumpinfo_t) * w->wadlist[i].header.numlumps);
+	    fclose(w->wads[i].file);
+	    FreeMem(w->wads[i].lumps, OTHER,
+		    sizeof(lumpinfo_t) * w->wads[i].header.numlumps);
 	}
-	FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wad_t));
+	FreeMem(w->wads, OTHER, w->numwads * sizeof(wad_t));
     }
 }
 
@@ -57,7 +57,6 @@ bool
 WADList_LoadLumpInfo(wadlist_t *w, char *list)
 {
     int i, len, ret;
-    FILE *fileT;
     wad_t *wad, *tmp;
     char *fname;
 
@@ -69,7 +68,7 @@ WADList_LoadLumpInfo(wadlist_t *w, char *list)
 	return false;
 
     // Should never happen, but just in case...
-    assert(!w->wadlist);
+    assert(!w->wads);
 
     // Count # of wads
     w->numwads = 1;
@@ -77,10 +76,10 @@ WADList_LoadLumpInfo(wadlist_t *w, char *list)
 	if (list[i] == ';' && list[i + 1] != ';')
 	    w->numwads++;
 
-    w->wadlist = AllocMem(OTHER, w->numwads * sizeof(wad_t), true);
+    w->wads = AllocMem(OTHER, w->numwads * sizeof(wad_t), true);
 
     // Verify that at least one WAD file exists
-    wad = w->wadlist;
+    wad = w->wads;
     i = 0;
     while (i < len) {
 	fname = list + i;
@@ -89,21 +88,20 @@ WADList_LoadLumpInfo(wadlist_t *w, char *list)
 	list[i] = 0;
 	i++;
 
-	fileT = fopen(fname, "rb");
-	if (fileT) {
-	    wad->Wad = fileT;
-	    ret = fread(&wad->header, 1, sizeof(wadinfo_t), fileT);
+	wad->file = fopen(fname, "rb");
+	if (wad->file) {
+	    ret = fread(&wad->header, 1, sizeof(wadinfo_t), wad->file);
 	    if (ret != sizeof(wadinfo_t))
 		Message(msgError, errReadFailure);
 	    if (strncmp(wad->header.identification, "WAD2", 4)) {
 		Message(msgWarning, warnNotWad, fname);
-		fclose(fileT);
+		fclose(wad->file);
 	    } else {
-		fseek(fileT, wad->header.infotableofs, SEEK_SET);
+		fseek(wad->file, wad->header.infotableofs, SEEK_SET);
 		wad->lumps = AllocMem(OTHER, sizeof(lumpinfo_t) *
 				      wad->header.numlumps, true);
 		ret = fread(wad->lumps, 1, wad->header.numlumps *
-			    sizeof(lumpinfo_t), fileT);
+			    sizeof(lumpinfo_t), wad->file);
 		if (ret != wad->header.numlumps * sizeof(lumpinfo_t))
 		    Message(msgError, errReadFailure);
 		wad++;
@@ -114,11 +112,11 @@ WADList_LoadLumpInfo(wadlist_t *w, char *list)
     }
 
     // Remove invalid wads from memory
-    tmp = AllocMem(OTHER, (wad - w->wadlist) * sizeof(wad_t), true);
-    memcpy(tmp, w->wadlist, (wad - w->wadlist) * sizeof(wad_t));
-    FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wad_t));
-    w->numwads = wad - w->wadlist;
-    w->wadlist = tmp;
+    tmp = AllocMem(OTHER, (wad - w->wads) * sizeof(wad_t), true);
+    memcpy(tmp, w->wads, (wad - w->wads) * sizeof(wad_t));
+    FreeMem(w->wads, OTHER, w->numwads * sizeof(wad_t));
+    w->numwads = wad - w->wads;
+    w->wads = tmp;
 
     return w->numwads > 0;
 }
@@ -138,15 +136,15 @@ WADList_Process(wadlist_t *w)
     // Count texture size.  Slow but saves memory.
     for (i = 0; i < cMiptex; i++)
 	for (j = 0; j < w->numwads; j++) {
-	    for (k = 0; k < w->wadlist[j].header.numlumps; k++)
-		if (!strcasecmp(rgszMiptex[i], w->wadlist[j].lumps[k].name)) {
+	    for (k = 0; k < w->wads[j].header.numlumps; k++)
+		if (!strcasecmp(rgszMiptex[i], w->wads[j].lumps[k].name)) {
 		    // Found it. Add in the size and skip to outer loop.
-		    pWorldEnt->cTexdata += w->wadlist[j].lumps[k].disksize;
+		    pWorldEnt->cTexdata += w->wads[j].lumps[k].disksize;
 		    j = w->numwads;
 		    break;
 		}
 	    // If we found the texture already, break out to outer loop
-	    if (k < w->wadlist[j].header.numlumps)
+	    if (k < w->wads[j].header.numlumps)
 		break;
 	}
 
@@ -182,7 +180,7 @@ WADList_LoadTextures(wadlist_t *w, dmiptexlump_t *l)
 		continue;
 
 	    l->dataofs[j] = data - (byte *)l;
-	    len = WAD_LoadLump(w->wadlist + i, rgszMiptex[j], data);
+	    len = WAD_LoadLump(w->wads + i, rgszMiptex[j], data);
 	    if (data + len - pWorldEnt->pTexdata > pWorldEnt->cTexdata)
 		Message(msgError, errLowTextureCount);
 
@@ -203,8 +201,8 @@ WAD_LoadLump(wad_t *w, char *name, byte *dest)
 
     for (i = 0; i < w->header.numlumps; i++) {
 	if (!strcasecmp(name, w->lumps[i].name)) {
-	    fseek(w->Wad, w->lumps[i].filepos, SEEK_SET);
-	    len = fread(dest, 1, w->lumps[i].disksize, w->Wad);
+	    fseek(w->file, w->lumps[i].filepos, SEEK_SET);
+	    len = fread(dest, 1, w->lumps[i].disksize, w->file);
 	    if (len != w->lumps[i].disksize)
 		Message(msgError, errReadFailure);
 	    return w->lumps[i].disksize;
@@ -238,8 +236,8 @@ WADList_AddAnimatingTextures(wadlist_t *w)
 
 	    // see if this name exists in the wadfiles
 	    for (l = 0; l < w->numwads; l++)
-		for (k = 0; k < w->wadlist[l].header.numlumps; k++)
-		    if (!strcasecmp(name, w->wadlist[l].lumps[k].name)) {
+		for (k = 0; k < w->wads[l].header.numlumps; k++)
+		    if (!strcasecmp(name, w->wads[l].lumps[k].name)) {
 			FindMiptex(name);	// add to the miptex list
 			break;
 		    }

@@ -43,11 +43,11 @@ typedef struct {
 typedef struct {
     wadinfo_t header;
     lumpinfo_t *lumps;
-    FILE *Wad;
+    FILE *file;
 } wad_t;
 
 typedef struct {
-    wad_t *wadlist;
+    wad_t *wads;
     int numwads;
 } wadlist_t;
 
