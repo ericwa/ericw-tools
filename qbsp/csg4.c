@@ -155,6 +155,53 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
 
 /*
 =================
+CheckInside
+
+Quick test before running ClipInside; move any faces that are completely
+outside the brush to the outside list, without splitting them. This saves us
+time in mergefaces later on (and sometimes a lot of memory)
+=================
+*/
+static void
+CheckInside(brush_t *b)
+{
+    face_t *f, *bf, *next;
+    face_t *insidelist;
+    plane_t *plane, clip;
+    winding_t *w;
+
+    insidelist = NULL;
+    f = inside;
+    while (f) {
+	next = f->next;
+	plane = &pPlanes[f->planenum];
+	w = CopyWinding(&f->w);
+	for (bf = b->faces; bf; bf = bf->next) {
+	    clip = pPlanes[bf->planenum];
+	    if (!bf->planeside) {
+		VectorSubtract(vec3_origin, clip.normal, clip.normal);
+		clip.dist = -clip.dist;
+	    }
+	    w = ClipWinding(w, &clip, true);
+	    if (!w)
+		break;
+	}
+	if (!w) {
+	    /* The face is completely outside this brush */
+	    f->next = outside;
+	    outside = f;
+	} else {
+	    f->next = insidelist;
+	    insidelist = f;
+	    FreeMem(w, WINDING, 1);
+	}
+	f = next;
+    }
+    inside = insidelist;
+}
+
+/*
+=================
 ClipInside
 
 Clips all of the faces in the inside list, possibly moving them to the
@@ -385,6 +432,7 @@ CSGFaces(void)
 	    inside = outside;
 	    outside = NULL;
 
+	    CheckInside(b2);
 	    for (f = b2->faces; f; f = f->next)
 		ClipInside(f->planenum, f->planeside, overwrite);
 
