@@ -278,10 +278,10 @@ ProcessFile(void)
     CreateHulls();
 
     WriteEntitiesToString();
-    WADList_Process(&wads);
+    WADList_Process(&wads, numwads);
     FinishBSPFile();
 
-    WADList_Free(&wads);
+    WADList_Free(&wads, numwads);
 }
 
 
