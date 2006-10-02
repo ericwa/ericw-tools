@@ -51,7 +51,7 @@ WAD_LoadInfo(wad_t *w)
 }
 
 
-void
+int
 WADList_Init(wadlist_t *list, char *wadstring)
 {
     int i, len;
@@ -62,11 +62,11 @@ WADList_Init(wadlist_t *list, char *wadstring)
     list->wads = NULL;
 
     if (!wadstring)
-	return;
+	return 0;
 
     len = strlen(wadstring);
     if (len == 0)
-	return;
+	return 0;
 
     // Count # of wads
     list->numwads = 1;
@@ -98,6 +98,8 @@ WADList_Init(wadlist_t *list, char *wadstring)
     memcpy(list->wads, tmp, (w - tmp) * sizeof(wad_t));
     list->numwads = w - tmp;
     FreeMem(tmp, OTHER, list->numwads * sizeof(wad_t));
+
+    return list->numwads;
 }
 
 

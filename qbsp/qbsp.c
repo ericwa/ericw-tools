@@ -234,6 +234,7 @@ ProcessFile(void)
 {
     char *wadstring;
     wadlist_t wads;
+    int numwads = 0;
 
     // load brushes and entities
     LoadMapFile();
@@ -242,16 +243,15 @@ ProcessFile(void)
 	return;
     }
 
-    wads.numwads = 0;
     wadstring = ValueForKey(0, "_wad");
     if (!wadstring)
 	wadstring = ValueForKey(0, "wad");
     if (!wadstring)
 	Message(msgWarning, warnNoWadKey);
     else
-	WADList_Init(&wads, wadstring);
+	numwads = WADList_Init(&wads, wadstring);
 
-    if (!wads.numwads) {
+    if (!numwads) {
 	if (wadstring)
 	    Message(msgWarning, warnNoValidWads);
 	/* Try the default wad name */
@@ -259,8 +259,8 @@ ProcessFile(void)
 	strcpy(wadstring, options.szMapName);
 	StripExtension(wadstring);
 	DefaultExtension(wadstring, ".wad");
-	WADList_Init(&wads, wadstring);
-	if (wads.numwads)
+	numwads = WADList_Init(&wads, wadstring);
+	if (numwads)
 	    Message(msgLiteral, "Using default WAD: %s\n", wadstring);
 	else
 	    pWorldEnt->cTexdata = 0;
