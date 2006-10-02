@@ -125,6 +125,30 @@ CheckWinding(winding_t *w)
 }
 
 
+void
+CalcSides(const winding_t *in, const plane_t *split, int *sides, vec_t *dists,
+	  int counts[3])
+{
+    int i;
+    const vec_t *p;
+
+    counts[0] = counts[1] = counts[2] = 0;
+    p = in->points[0];
+    for (i = 0; i < in->numpoints; i++, p += 3) {
+	const vec_t dist = DotProduct(split->normal, p) - split->dist;
+	dists[i] = dist;
+	if (dist > ON_EPSILON)
+	    sides[i] = SIDE_FRONT;
+	else if (dist < -ON_EPSILON)
+	    sides[i] = SIDE_BACK;
+	else
+	    sides[i] = SIDE_ON;
+	counts[sides[i]]++;
+    }
+    sides[i] = sides[0];
+    dists[i] = dists[0];
+}
+
 /*
 ==================
 ClipWinding
@@ -148,25 +172,7 @@ ClipWinding(winding_t *in, plane_t *split, bool keepon)
     winding_t *neww;
     int maxpts;
 
-    counts[0] = counts[1] = counts[2] = 0;
-
-    // determine sides for each point
-    for (i = 0; i < in->numpoints; i++) {
-	dot = DotProduct(in->points[i], split->normal);
-	dot -= split->dist;
-	dists[i] = dot;
-	if (dot > ON_EPSILON)
-	    sides[i] = SIDE_FRONT;
-	else if (dot < -ON_EPSILON)
-	    sides[i] = SIDE_BACK;
-	else
-	    sides[i] = SIDE_ON;
-
-	counts[sides[i]]++;
-    }
-
-    sides[i] = sides[0];
-    dists[i] = dists[0];
+    CalcSides(in, split, sides, dists, counts);
 
     if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
 	return in;
@@ -254,22 +260,7 @@ DivideWinding(winding_t *in, plane_t *split, winding_t **front,
 
     counts[0] = counts[1] = counts[2] = 0;
 
-    // determine sides for each point
-    for (i = 0; i < in->numpoints; i++) {
-	dot = DotProduct(in->points[i], split->normal);
-	dot -= split->dist;
-	dists[i] = dot;
-	if (dot > ON_EPSILON)
-	    sides[i] = SIDE_FRONT;
-	else if (dot < -ON_EPSILON)
-	    sides[i] = SIDE_BACK;
-	else {
-	    sides[i] = SIDE_ON;
-	}
-	counts[sides[i]]++;
-    }
-    sides[i] = sides[0];
-    dists[i] = dists[0];
+    CalcSides(in, split, sides, dists, counts);
 
     *front = *back = NULL;
 

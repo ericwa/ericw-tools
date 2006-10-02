@@ -317,6 +317,10 @@ void DivideWinding(winding_t *in, plane_t *split, winding_t **front,
 		   winding_t **back);
 void MidpointWinding(winding_t *w, vec3_t v);
 
+/* Helper function for ClipWinding and it's variants */
+void CalcSides(const winding_t *in, const plane_t *split, int *sides,
+	       vec_t *dists, int counts[3]);
+
 //============================================================================
 
 

@@ -83,23 +83,8 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
 
     if (in->w.numpoints < 0)
 	Message(msgError, errFreedFace);
-    counts[0] = counts[1] = counts[2] = 0;
 
-    // determine sides for each point
-    for (i = 0; i < in->w.numpoints; i++) {
-	dot = DotProduct(in->w.points[i], split->normal);
-	dot -= split->dist;
-	dists[i] = dot;
-	if (dot > ON_EPSILON)
-	    sides[i] = SIDE_FRONT;
-	else if (dot < -ON_EPSILON)
-	    sides[i] = SIDE_BACK;
-	else
-	    sides[i] = SIDE_ON;
-	counts[sides[i]]++;
-    }
-    sides[i] = sides[0];
-    dists[i] = dists[0];
+    CalcSides(&in->w, split, sides, dists, counts);
 
     // Plane doesn't split this face after all
     if (!counts[SIDE_FRONT]) {
