@@ -47,7 +47,6 @@ typedef struct {
 } wadlist_t;
 
 typedef struct {
-    char *name;
     wadlist_t *wadlist;
     int numwads;
 } wad_t;

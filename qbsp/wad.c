@@ -59,6 +59,7 @@ WAD_InitWadList(wad_t *w, char *list)
     int i, len, ret;
     FILE *fileT;
     wadlist_t *wad, *tmp;
+    char *fname;
 
     if (!list)
 	return false;
@@ -82,20 +83,20 @@ WAD_InitWadList(wad_t *w, char *list)
     wad = w->wadlist;
     i = 0;
     while (i < len) {
-	w->name = list + i;
+	fname = list + i;
 	while (list[i] != 0 && list[i] != ';')
 	    i++;
 	list[i] = 0;
 	i++;
 
-	fileT = fopen(w->name, "rb");
+	fileT = fopen(fname, "rb");
 	if (fileT) {
 	    wad->Wad = fileT;
 	    ret = fread(&wad->header, 1, sizeof(wadinfo_t), fileT);
 	    if (ret != sizeof(wadinfo_t))
 		Message(msgError, errReadFailure);
 	    if (strncmp(wad->header.identification, "WAD2", 4)) {
-		Message(msgWarning, warnNotWad, w->name);
+		Message(msgWarning, warnNotWad, fname);
 		fclose(fileT);
 	    } else {
 		fseek(fileT, wad->header.infotableofs, SEEK_SET);
