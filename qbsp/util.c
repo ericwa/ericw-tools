@@ -37,6 +37,8 @@
 static int rgMemTotal[GLOBAL + 1];
 static int rgMemActive[GLOBAL + 1];
 static int rgMemPeak[GLOBAL + 1];
+static int rgMemActiveBytes[GLOBAL + 1];
+static int rgMemPeakBytes[GLOBAL + 1];
 
 /*
 ==========
@@ -96,8 +98,11 @@ AllocMem(int Type, int cElements, bool fZero)
 
     rgMemTotal[Type] += cElements;
     rgMemActive[Type] += cElements;
+    rgMemActiveBytes[Type] += cSize;
     if (rgMemActive[Type] > rgMemPeak[Type])
 	rgMemPeak[Type] = rgMemActive[Type];
+    if (rgMemActiveBytes[Type] > rgMemPeakBytes[Type])
+	rgMemPeakBytes[Type] = rgMemActiveBytes[Type];
 
     // Also keep global statistics
     rgMemTotal[GLOBAL] += cSize;
@@ -120,9 +125,12 @@ FreeMem(void *pMem, int Type, int cElements)
     rgMemActive[Type] -= cElements;
     if (Type == WINDING) {
 	pMem = (char *)pMem - sizeof(int);
+	rgMemActiveBytes[Type] -= *(int *)pMem;
 	rgMemActive[GLOBAL] -= *(int *)pMem;
-    } else
+    } else {
+	rgMemActiveBytes[Type] -= cElements * rgcMemSize[Type];
 	rgMemActive[GLOBAL] -= cElements * rgcMemSize[Type];
+    }
 
     free(pMem);
 }
@@ -136,26 +144,25 @@ PrintMem
 void
 PrintMem(void)
 {
-    char *rgszMemTypes[] =
-	{ "BSPEntity", "BSPPlane", "BSPTex", "BSPVertex", "BSPVis",
-	"BSPNode", "BSPTexinfo", "BSPFace", "BSPLight", "BSPClipnode",
-	    "BSPLeaf",
+    char *rgszMemTypes[] = {
+	"BSPEntity", "BSPPlane", "BSPTex", "BSPVertex", "BSPVis", "BSPNode",
+	"BSPTexinfo", "BSPFace", "BSPLight", "BSPClipnode", "BSPLeaf",
 	"BSPMarksurface", "BSPEdge", "BSPSurfedge", "BSPModel", "Mapface",
-	    "Mapbrush",
-	"Mapentity", "Winding", "Face", "Plane", "Portal", "Surface", "Node",
-	    "Brush",
-	"Miptex", "World verts", "World edges", "Hash verts", "Other (bytes)",
-	"Total (bytes)"
+	"Mapbrush", "Mapentity", "Winding", "Face", "Plane", "Portal",
+	"Surface", "Node", "Brush", "Miptex", "World verts", "World edges",
+	"Hash verts", "Other", "Total"
     };
     int i;
 
     if (options.fVerbose) {
 	Message(msgLiteral,
-		"\nData type         Current     Peak     Total   Peak Bytes\n");
-	for (i = 0; i <= GLOBAL; i++)
-	    Message(msgLiteral, "%-16s %8d %8d %10d %9d\n", rgszMemTypes[i],
-		    rgMemActive[i], rgMemPeak[i], rgMemTotal[i],
-		    rgMemPeak[i] * rgcMemSize[i]);
+		"\nData type        CurrentNum    PeakNum      PeakMem\n");
+	for (i = 0; i <= OTHER; i++)
+	    Message(msgLiteral, "%-16s  %9d  %9d %12d\n",
+		    rgszMemTypes[i], rgMemActive[i], rgMemPeak[i],
+		    rgMemPeakBytes[i]);
+	Message(msgLiteral, "%-16s                       %12d\n",
+		rgszMemTypes[GLOBAL], rgMemPeak[GLOBAL]);
     } else
 	Message(msgLiteral, "Bytes used: %d\n", rgMemPeak[GLOBAL]);
 }

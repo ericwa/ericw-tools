@@ -30,7 +30,7 @@ const int rgcMemSize[GLOBAL + 1] = {
     sizeof(byte), sizeof(dclipnode_t), sizeof(dleaf_t),
 	sizeof(unsigned short),
     sizeof(dedge_t), sizeof(int), sizeof(dmodel_t), sizeof(mapface_t),
-    sizeof(mapbrush_t), sizeof(mapentity_t), sizeof(winding_t),
+    sizeof(mapbrush_t), sizeof(mapentity_t), 1 /* winding_t */,
 	sizeof(face_t),
     sizeof(plane_t), sizeof(portal_t), sizeof(surface_t), sizeof(node_t),
     sizeof(brush_t), sizeof(miptex_t), sizeof(wvert_t), sizeof(wedge_t),
