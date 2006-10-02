@@ -233,9 +233,9 @@ static void
 ProcessFile(void)
 {
     char *szWad;
-    wad_t wad;
+    wadlist_t wad;
 
-    WAD_Init(&wad);
+    WADList_Init(&wad);
 
     // load brushes and entities
     LoadMapFile();
@@ -250,7 +250,7 @@ ProcessFile(void)
 	if (!szWad) {
 	    Message(msgWarning, warnNoWadKey);
 	    pWorldEnt->cTexdata = 0;
-	} else if (!WAD_InitWadList(&wad, szWad)) {
+	} else if (!WADList_LoadLumpInfo(&wad, szWad)) {
 	    Message(msgWarning, warnNoValidWads);
 	    pWorldEnt->cTexdata = 0;
 	}
@@ -264,10 +264,10 @@ ProcessFile(void)
     CreateHulls();
 
     WriteEntitiesToString();
-    WAD_ProcessWad(&wad);
+    WADList_Process(&wad);
     FinishBSPFile();
 
-    WAD_Free(&wad);
+    WADList_Free(&wad);
 }
 
 

@@ -44,17 +44,17 @@ typedef struct {
     wadinfo_t header;
     lumpinfo_t *lumps;
     FILE *Wad;
-} wadlist_t;
-
-typedef struct {
-    wadlist_t *wadlist;
-    int numwads;
 } wad_t;
 
-void WAD_Init(wad_t *w);
-void WAD_Free(wad_t *w);
+typedef struct {
+    wad_t *wadlist;
+    int numwads;
+} wadlist_t;
 
-bool WAD_InitWadList(wad_t *w, char *list);
-void WAD_ProcessWad(wad_t *w);
+void WADList_Init(wadlist_t *w);
+void WADList_Free(wadlist_t *w);
+
+bool WADList_LoadLumpInfo(wadlist_t *w, char *list);
+void WADList_Process(wadlist_t *w);
 
 #endif /* WAD_H */

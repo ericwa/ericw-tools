@@ -24,13 +24,13 @@
 #include "qbsp.h"
 #include "wad.h"
 
-static void WAD_LoadTextures(wad_t *w, dmiptexlump_t *l);
-static void WAD_AddAnimatingTextures(wad_t *w);
-static int WAD_LoadLump(wadlist_t *w, char *name, byte *dest);
+static void WADList_LoadTextures(wadlist_t *w, dmiptexlump_t *l);
+static void WADList_AddAnimatingTextures(wadlist_t *w);
+static int WAD_LoadLump(wad_t *w, char *name, byte *dest);
 
 
 void
-WAD_Init(wad_t *w)
+WADList_Init(wadlist_t *w)
 {
     w->numwads = 0;
     w->wadlist = NULL;
@@ -38,7 +38,7 @@ WAD_Init(wad_t *w)
 
 
 void
-WAD_Free(wad_t *w)
+WADList_Free(wadlist_t *w)
 {
     int i;
 
@@ -48,17 +48,17 @@ WAD_Free(wad_t *w)
 	    FreeMem(w->wadlist[i].lumps, OTHER,
 		    sizeof(lumpinfo_t) * w->wadlist[i].header.numlumps);
 	}
-	FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wadlist_t));
+	FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wad_t));
     }
 }
 
 
 bool
-WAD_InitWadList(wad_t *w, char *list)
+WADList_LoadLumpInfo(wadlist_t *w, char *list)
 {
     int i, len, ret;
     FILE *fileT;
-    wadlist_t *wad, *tmp;
+    wad_t *wad, *tmp;
     char *fname;
 
     if (!list)
@@ -77,7 +77,7 @@ WAD_InitWadList(wad_t *w, char *list)
 	if (list[i] == ';' && list[i + 1] != ';')
 	    w->numwads++;
 
-    w->wadlist = AllocMem(OTHER, w->numwads * sizeof(wadlist_t), true);
+    w->wadlist = AllocMem(OTHER, w->numwads * sizeof(wad_t), true);
 
     // Verify that at least one WAD file exists
     wad = w->wadlist;
@@ -114,9 +114,9 @@ WAD_InitWadList(wad_t *w, char *list)
     }
 
     // Remove invalid wads from memory
-    tmp = AllocMem(OTHER, (wad - w->wadlist) * sizeof(wadlist_t), true);
-    memcpy(tmp, w->wadlist, (wad - w->wadlist) * sizeof(wadlist_t));
-    FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wadlist_t));
+    tmp = AllocMem(OTHER, (wad - w->wadlist) * sizeof(wad_t), true);
+    memcpy(tmp, w->wadlist, (wad - w->wadlist) * sizeof(wad_t));
+    FreeMem(w->wadlist, OTHER, w->numwads * sizeof(wad_t));
     w->numwads = wad - w->wadlist;
     w->wadlist = tmp;
 
@@ -125,7 +125,7 @@ WAD_InitWadList(wad_t *w, char *list)
 
 
 void
-WAD_ProcessWad(wad_t *w)
+WADList_Process(wadlist_t *w)
 {
     int i, j, k;
     dmiptexlump_t *l;
@@ -133,7 +133,7 @@ WAD_ProcessWad(wad_t *w)
     if (w->numwads < 1)
 	return;
 
-    WAD_AddAnimatingTextures(w);
+    WADList_AddAnimatingTextures(w);
 
     // Count texture size.  Slow but saves memory.
     for (i = 0; i < cMiptex; i++)
@@ -157,7 +157,7 @@ WAD_ProcessWad(wad_t *w)
     l = (dmiptexlump_t *)pWorldEnt->pTexdata;
     l->nummiptex = cMiptex;
 
-    WAD_LoadTextures(w, l);
+    WADList_LoadTextures(w, l);
 
     // Last pass, mark unfound textures as such
     for (i = 0; i < cMiptex; i++)
@@ -169,7 +169,7 @@ WAD_ProcessWad(wad_t *w)
 
 
 static void
-WAD_LoadTextures(wad_t *w, dmiptexlump_t *l)
+WADList_LoadTextures(wadlist_t *w, dmiptexlump_t *l)
 {
     int i, j, len;
     byte *data;
@@ -196,7 +196,7 @@ WAD_LoadTextures(wad_t *w, dmiptexlump_t *l)
 
 
 static int
-WAD_LoadLump(wadlist_t *w, char *name, byte *dest)
+WAD_LoadLump(wad_t *w, char *name, byte *dest)
 {
     int i;
     int len;
@@ -216,7 +216,7 @@ WAD_LoadLump(wadlist_t *w, char *name, byte *dest)
 
 
 static void
-WAD_AddAnimatingTextures(wad_t *w)
+WADList_AddAnimatingTextures(wadlist_t *w)
 {
     int base;
     int i, j, k, l;
