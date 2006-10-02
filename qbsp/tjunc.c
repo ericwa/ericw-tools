@@ -238,9 +238,9 @@ AddFaceEdges(face_t *f)
 {
     int i, j;
 
-    for (i = 0; i < f->numpoints; i++) {
-	j = (i + 1) % f->numpoints;
-	AddEdge(f->pts[i], f->pts[j]);
+    for (i = 0; i < f->w.numpoints; i++) {
+	j = (i + 1) % f->w.numpoints;
+	AddEdge(f->w.points[i], f->w.points[j]);
     }
 }
 
@@ -263,7 +263,7 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 
     chain = NULL;
     do {
-	if (f->numpoints <= MAXPOINTS) {	// the face is now small enough without more cutting
+	if (f->w.numpoints <= MAXPOINTS) {	// the face is now small enough without more cutting
 	    // so copy it back to the original
 	    *original = *f;
 	    original->original = chain;
@@ -276,10 +276,10 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 
       restart:
 	// find the last corner
-	VectorSubtract(f->pts[f->numpoints - 1], f->pts[0], dir);
+	VectorSubtract(f->w.points[f->w.numpoints - 1], f->w.points[0], dir);
 	VectorNormalize(dir);
-	for (lastcorner = f->numpoints - 1; lastcorner > 0; lastcorner--) {
-	    VectorSubtract(f->pts[lastcorner - 1], f->pts[lastcorner], test);
+	for (lastcorner = f->w.numpoints - 1; lastcorner > 0; lastcorner--) {
+	    VectorSubtract(f->w.points[lastcorner - 1], f->w.points[lastcorner], test);
 	    VectorNormalize(test);
 	    v = DotProduct(test, dir);
 	    if (v < 0.9999 || v > 1.00001) {
@@ -288,10 +288,10 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	}
 
 	// find the first corner
-	VectorSubtract(f->pts[1], f->pts[0], dir);
+	VectorSubtract(f->w.points[1], f->w.points[0], dir);
 	VectorNormalize(dir);
-	for (firstcorner = 1; firstcorner < f->numpoints - 1; firstcorner++) {
-	    VectorSubtract(f->pts[firstcorner + 1], f->pts[firstcorner],
+	for (firstcorner = 1; firstcorner < f->w.numpoints - 1; firstcorner++) {
+	    VectorSubtract(f->w.points[firstcorner + 1], f->w.points[firstcorner],
 			   test);
 	    VectorNormalize(test);
 	    v = DotProduct(test, dir);
@@ -302,11 +302,11 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 
 	if (firstcorner + 2 >= MAXPOINTS) {
 	    // rotate the point winding
-	    VectorCopy(f->pts[0], test);
-	    for (i = 1; i < f->numpoints; i++) {
-		VectorCopy(f->pts[i], f->pts[i - 1]);
+	    VectorCopy(f->w.points[0], test);
+	    for (i = 1; i < f->w.numpoints; i++) {
+		VectorCopy(f->w.points[i], f->w.points[i - 1]);
 	    }
-	    VectorCopy(test, f->pts[f->numpoints - 1]);
+	    VectorCopy(test, f->w.points[f->w.numpoints - 1]);
 	    goto restart;
 	}
 
@@ -321,23 +321,23 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	chain = newf;
 	newf->next = newlist;
 	newlist = newf;
-	if (f->numpoints - firstcorner <= MAXPOINTS)
-	    newf->numpoints = firstcorner + 2;
+	if (f->w.numpoints - firstcorner <= MAXPOINTS)
+	    newf->w.numpoints = firstcorner + 2;
 	else if (lastcorner + 2 < MAXPOINTS &&
-		 f->numpoints - lastcorner <= MAXPOINTS)
-	    newf->numpoints = lastcorner + 2;
+		 f->w.numpoints - lastcorner <= MAXPOINTS)
+	    newf->w.numpoints = lastcorner + 2;
 	else
-	    newf->numpoints = MAXPOINTS;
+	    newf->w.numpoints = MAXPOINTS;
 
-	for (i = 0; i < newf->numpoints; i++) {
-	    VectorCopy(f->pts[i], newf->pts[i]);
+	for (i = 0; i < newf->w.numpoints; i++) {
+	    VectorCopy(f->w.points[i], newf->w.points[i]);
 	}
 
 
-	for (i = newf->numpoints - 1; i < f->numpoints; i++) {
-	    VectorCopy(f->pts[i], f->pts[i - (newf->numpoints - 2)]);
+	for (i = newf->w.numpoints - 1; i < f->w.numpoints; i++) {
+	    VectorCopy(f->w.points[i], f->w.points[i - (newf->w.numpoints - 2)]);
 	}
-	f->numpoints -= (newf->numpoints - 2);
+	f->w.numpoints -= (newf->w.numpoints - 2);
     } while (1);
 
 }
@@ -360,10 +360,10 @@ FixFaceEdges(face_t *f)
     *superface = *f;
 
   restart:
-    for (i = 0; i < superface->numpoints; i++) {
-	j = (i + 1) % superface->numpoints;
+    for (i = 0; i < superface->w.numpoints; i++) {
+	j = (i + 1) % superface->w.numpoints;
 
-	w = FindEdge(superface->pts[i], superface->pts[j], &t1, &t2);
+	w = FindEdge(superface->w.points[i], superface->w.points[j], &t1, &t2);
 
 	for (v = w->head.next; v->t < t1 + T_EPSILON; v = v->next) {
 	}
@@ -371,17 +371,17 @@ FixFaceEdges(face_t *f)
 	if (v->t < t2 - T_EPSILON) {
 	    tjuncs++;
 	    // insert a new vertex here
-	    for (k = superface->numpoints; k > j; k--) {
-		VectorCopy(superface->pts[k - 1], superface->pts[k]);
+	    for (k = superface->w.numpoints; k > j; k--) {
+		VectorCopy(superface->w.points[k - 1], superface->w.points[k]);
 	    }
-	    VectorMA(w->origin, v->t, w->dir, superface->pts[j]);
-	    superface->numpoints++;
+	    VectorMA(w->origin, v->t, w->dir, superface->w.points[j]);
+	    superface->w.numpoints++;
 	    goto restart;
 	}
     }
 
 
-    if (superface->numpoints <= MAXPOINTS) {
+    if (superface->w.numpoints <= MAXPOINTS) {
 	*f = *superface;
 	f->next = newlist;
 	newlist = f;
@@ -405,7 +405,7 @@ tjunc_count_r(node_t *node)
 	return;
 
     for (f = node->faces; f; f = f->next)
-	cWVerts += f->numpoints;
+	cWVerts += f->w.numpoints;
 
     tjunc_count_r(node->children[0]);
     tjunc_count_r(node->children[1]);

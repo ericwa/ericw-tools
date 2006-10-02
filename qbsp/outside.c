@@ -239,12 +239,12 @@ LineIntersect_r(node_t *n)
 		// Quick hack
 		mins[0] = mins[1] = mins[2] = 99999;
 		maxs[0] = maxs[1] = maxs[2] = -99999;
-		for (i = 0; i < f->numpoints; i++)
+		for (i = 0; i < f->w.numpoints; i++)
 		    for (j = 0; j < 3; j++) {
-			if (f->pts[i][j] < mins[j])
-			    mins[j] = f->pts[i][j];
-			if (f->pts[i][j] > maxs[j])
-			    maxs[j] = f->pts[i][j];
+			if (f->w.points[i][j] < mins[j])
+			    mins[j] = f->w.points[i][j];
+			if (f->w.points[i][j] > maxs[j])
+			    maxs[j] = f->w.points[i][j];
 		    }
 
 		if (mid[0] < mins[0] - ON_EPSILON ||
@@ -387,7 +387,7 @@ ClearOutFaces(node_t *node)
 
     for (fp = node->markfaces; *fp; fp++) {
 	// mark all the original faces that are removed
-	(*fp)->numpoints = 0;
+	(*fp)->w.numpoints = 0;
     }
     node->faces = NULL;
 }

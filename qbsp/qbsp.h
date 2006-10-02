@@ -304,7 +304,7 @@ typedef struct {
 
 typedef struct {
     int numpoints;
-    vec3_t points[8];		// variable sized
+    vec3_t points[MAXEDGES];		// variable sized
 } winding_t;
 
 winding_t *BaseWindingForPlane(plane_t *p);
@@ -330,12 +330,10 @@ typedef struct visfacet_s {
 
     struct visfacet_s *original;	// face on node
     int outputnumber;		// only valid for original faces after
-    // write surfaces
-    int numpoints;
-    vec3_t pts[MAXEDGES];	// FIXME: change to use winding_t
+				// write surfaces
     int *edges;
+    winding_t w;
 } face_t;
-
 
 typedef struct surface_s {
     struct surface_s *next;

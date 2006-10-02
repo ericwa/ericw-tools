@@ -51,7 +51,7 @@ FaceSide(face_t *in, plane_t *split)
 
     // axial planes are fast
     if (split->type < 3)
-	for (i = 0, p = in->pts[0] + split->type; i < in->numpoints;
+	for (i = 0, p = in->w.points[0] + split->type; i < in->w.numpoints;
 	     i++, p += 3) {
 	    if (*p > split->dist + ON_EPSILON) {
 		if (backcount)
@@ -64,7 +64,7 @@ FaceSide(face_t *in, plane_t *split)
 	    }
     } else
 	// sloping planes take longer
-	for (i = 0, p = in->pts[0]; i < in->numpoints; i++, p += 3) {
+	for (i = 0, p = in->w.points[0]; i < in->w.numpoints; i++, p += 3) {
 	    dot = DotProduct(p, split->normal);
 	    dot -= split->dist;
 	    if (dot > ON_EPSILON) {
@@ -306,12 +306,12 @@ CalcSurfaceInfo(surface_t *surf)
     for (f = surf->faces; f; f = f->next) {
 	if (f->contents[0] >= 0 || f->contents[1] >= 0)
 	    Message(msgError, errBadContents);
-	for (i = 0; i < f->numpoints; i++)
+	for (i = 0; i < f->w.numpoints; i++)
 	    for (j = 0; j < 3; j++) {
-		if (f->pts[i][j] < surf->mins[j])
-		    surf->mins[j] = f->pts[i][j];
-		if (f->pts[i][j] > surf->maxs[j])
-		    surf->maxs[j] = f->pts[i][j];
+		if (f->w.points[i][j] < surf->mins[j])
+		    surf->mins[j] = f->w.points[i][j];
+		if (f->w.points[i][j] > surf->maxs[j])
+		    surf->maxs[j] = f->w.points[i][j];
 	    }
     }
 }
@@ -465,8 +465,8 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 	    if (!leafnode->contents)
 		leafnode->contents = f->contents[0];
 	    else if (leafnode->contents != f->contents[0])
-		Message(msgError, errMixedFaceContents, f->pts[0][0],
-			f->pts[0][1], f->pts[0][2]);
+		Message(msgError, errMixedFaceContents, f->w.points[0][0],
+			f->w.points[0][1], f->w.points[0][2]);
 	}
     }
 

@@ -44,22 +44,22 @@ CheckFace(face_t *f)
     vec_t d, edgedist;
     vec3_t dir, edgenormal, facenormal;
 
-    if (f->numpoints < 3)
-	Message(msgError, errTooFewPoints, f->numpoints);
+    if (f->w.numpoints < 3)
+	Message(msgError, errTooFewPoints, f->w.numpoints);
 
     VectorCopy(pPlanes[f->planenum].normal, facenormal);
     if (f->planeside) {
 	VectorSubtract(vec3_origin, facenormal, facenormal);
     }
 
-    for (i = 0; i < f->numpoints; i++) {
-	p1 = f->pts[i];
+    for (i = 0; i < f->w.numpoints; i++) {
+	p1 = f->w.points[i];
 
 	for (j = 0; j < 3; j++)
 	    if (p1[j] > BOGUS_RANGE || p1[j] < -BOGUS_RANGE)
 		Message(msgError, errBogusRange, p1[j]);
 
-	j = i + 1 == f->numpoints ? 0 : i + 1;
+	j = i + 1 == f->w.numpoints ? 0 : i + 1;
 
 	// check the point is on the face plane
 	d = DotProduct(p1,
@@ -70,14 +70,14 @@ CheckFace(face_t *f)
 	    Message(msgWarning, warnPointOffPlane, p1[0], p1[1], p1[2], d);
 
 	// check the edge isn't degenerate
-	p2 = f->pts[j];
+	p2 = f->w.points[j];
 	VectorSubtract(p2, p1, dir);
 
 	if (VectorLength(dir) < ON_EPSILON) {
 	    Message(msgWarning, warnDegenerateEdge, p1[0], p1[1], p1[2]);
-	    for (j = i + 1; j < f->numpoints; j++)
-		VectorCopy(f->pts[j], f->pts[j - 1]);
-	    f->numpoints--;
+	    for (j = i + 1; j < f->w.numpoints; j++)
+		VectorCopy(f->w.points[j], f->w.points[j - 1]);
+	    f->w.numpoints--;
 	    CheckFace(f);
 	    break;
 	}
@@ -88,10 +88,10 @@ CheckFace(face_t *f)
 	edgedist += ON_EPSILON;
 
 	// all other points must be on front side
-	for (j = 0; j < f->numpoints; j++) {
+	for (j = 0; j < f->w.numpoints; j++) {
 	    if (j == i)
 		continue;
-	    d = DotProduct(f->pts[j], edgenormal);
+	    d = DotProduct(f->w.points[j], edgenormal);
 	    if (d > edgedist)
 		Message(msgError, errConcaveFace);
 	}
@@ -322,8 +322,8 @@ CreateBrushFaces(void)
 
 	// this face is a keeper
 	f = AllocMem(FACE, 1, true);
-	f->numpoints = w->numpoints;
-	if (f->numpoints > MAXEDGES)
+	f->w.numpoints = w->numpoints;
+	if (f->w.numpoints > MAXEDGES)
 	    Message(msgError, errLowFacePointCount);
 
 	for (j = 0; j < w->numpoints; j++) {
@@ -331,18 +331,18 @@ CreateBrushFaces(void)
 		point[k] = w->points[j][k] - offset[k];
 		r = Q_rint(point[k]);
 		if (fabs(point[k] - r) < ZERO_EPSILON)
-		    f->pts[j][k] = r;
+		    f->w.points[j][k] = r;
 		else
-		    f->pts[j][k] = point[k];
+		    f->w.points[j][k] = point[k];
 
-		if (f->pts[j][k] < brush_mins[k])
-		    brush_mins[k] = f->pts[j][k];
-		if (f->pts[j][k] > brush_maxs[k])
-		    brush_maxs[k] = f->pts[j][k];
-		if (f->pts[j][k] < min)
-		    min = f->pts[j][k];
-		if (f->pts[j][k] > max)
-		    max = f->pts[j][k];
+		if (f->w.points[j][k] < brush_mins[k])
+		    brush_mins[k] = f->w.points[j][k];
+		if (f->w.points[j][k] > brush_maxs[k])
+		    brush_maxs[k] = f->w.points[j][k];
+		if (f->w.points[j][k] < min)
+		    min = f->w.points[j][k];
+		if (f->w.points[j][k] > max)
+		    max = f->w.points[j][k];
 	    }
 	}
 
@@ -641,8 +641,8 @@ ExpandBrush(vec3_t hull_size[2], face_t *pFaceList)
 
     // create all the hull points
     for (f = pFaceList; f; f = f->next)
-	for (i = 0; i < f->numpoints; i++) {
-	    AddHullPoint(f->pts[i], hull_size);
+	for (i = 0; i < f->w.numpoints; i++) {
+	    AddHullPoint(f->w.points[i], hull_size);
 	    cBevEdge++;
 	}
 
@@ -674,8 +674,8 @@ ExpandBrush(vec3_t hull_size[2], face_t *pFaceList)
 
     // add all of the edge bevels
     for (f = pFaceList; f; f = f->next)
-	for (i = 0; i < f->numpoints; i++)
-	    AddHullEdge(f->pts[i], f->pts[(i + 1) % f->numpoints], hull_size);
+	for (i = 0; i < f->w.numpoints; i++)
+	    AddHullEdge(f->w.points[i], f->w.points[(i + 1) % f->w.numpoints], hull_size);
 }
 
 //============================================================================

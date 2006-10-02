@@ -81,13 +81,13 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
     vec_t *p1, *p2;
     vec3_t mid;
 
-    if (in->numpoints < 0)
+    if (in->w.numpoints < 0)
 	Message(msgError, errFreedFace);
     counts[0] = counts[1] = counts[2] = 0;
 
     // determine sides for each point
-    for (i = 0; i < in->numpoints; i++) {
-	dot = DotProduct(in->pts[i], split->normal);
+    for (i = 0; i < in->w.numpoints; i++) {
+	dot = DotProduct(in->w.points[i], split->normal);
 	dot -= split->dist;
 	dists[i] = dot;
 	if (dot > ON_EPSILON)
@@ -117,33 +117,33 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
     *front = new2 = NewFaceFromFace(in);
 
     // distribute the points and generate splits
-    for (i = 0; i < in->numpoints; i++) {
+    for (i = 0; i < in->w.numpoints; i++) {
 	// Note: Possible for numpoints on newf or new2 to exceed MAXEDGES if
-	// in->numpoints == MAXEDGES and it is a really devious split.
+	// in->w.numpoints == MAXEDGES and it is a really devious split.
 
-	p1 = in->pts[i];
+	p1 = in->w.points[i];
 
 	if (sides[i] == SIDE_ON) {
-	    VectorCopy(p1, newf->pts[newf->numpoints]);
-	    newf->numpoints++;
-	    VectorCopy(p1, new2->pts[new2->numpoints]);
-	    new2->numpoints++;
+	    VectorCopy(p1, newf->w.points[newf->w.numpoints]);
+	    newf->w.numpoints++;
+	    VectorCopy(p1, new2->w.points[new2->w.numpoints]);
+	    new2->w.numpoints++;
 	    continue;
 	}
 
 	if (sides[i] == SIDE_FRONT) {
-	    VectorCopy(p1, new2->pts[new2->numpoints]);
-	    new2->numpoints++;
+	    VectorCopy(p1, new2->w.points[new2->w.numpoints]);
+	    new2->w.numpoints++;
 	} else {
-	    VectorCopy(p1, newf->pts[newf->numpoints]);
-	    newf->numpoints++;
+	    VectorCopy(p1, newf->w.points[newf->w.numpoints]);
+	    newf->w.numpoints++;
 	}
 
 	if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
 	    continue;
 
 	// generate a split point
-	p2 = in->pts[(i + 1) % in->numpoints];
+	p2 = in->w.points[(i + 1) % in->w.numpoints];
 
 	dot = dists[i] / (dists[i] - dists[i + 1]);
 	for (j = 0; j < 3; j++) {	// avoid round off error when possible
@@ -155,13 +155,13 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
 		mid[j] = p1[j] + dot * (p2[j] - p1[j]);
 	}
 
-	VectorCopy(mid, newf->pts[newf->numpoints]);
-	newf->numpoints++;
-	VectorCopy(mid, new2->pts[new2->numpoints]);
-	new2->numpoints++;
+	VectorCopy(mid, newf->w.points[newf->w.numpoints]);
+	newf->w.numpoints++;
+	VectorCopy(mid, new2->w.points[new2->w.numpoints]);
+	new2->w.numpoints++;
     }
 
-    if (newf->numpoints > MAXEDGES || new2->numpoints > MAXEDGES)
+    if (newf->w.numpoints > MAXEDGES || new2->w.numpoints > MAXEDGES)
 	Message(msgError, errLowSplitPointCount);
 
     // free the original face now that it is represented by the fragments
@@ -242,13 +242,13 @@ SaveOutside(bool mirror)
 	if (mirror) {
 	    newf = NewFaceFromFace(f);
 
-	    newf->numpoints = f->numpoints;
+	    newf->w.numpoints = f->w.numpoints;
 	    newf->planeside = f->planeside ^ 1;	// reverse side
 	    newf->contents[0] = f->contents[1];
 	    newf->contents[1] = f->contents[0];
 
-	    for (i = 0; i < f->numpoints; i++)	// add points backwards
-		VectorCopy(f->pts[f->numpoints - 1 - i], newf->pts[i]);
+	    for (i = 0; i < f->w.numpoints; i++)	// add points backwards
+		VectorCopy(f->w.points[f->w.numpoints - 1 - i], newf->w.points[i]);
 
 	    validfaces[planenum] =
 		MergeFaceToList(newf, validfaces[planenum]);

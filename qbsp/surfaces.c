@@ -64,8 +64,8 @@ SubdivideFace(face_t *f, face_t **prevptr)
 	    tmp[1] = tex->vecs[axis][1];
 	    tmp[2] = tex->vecs[axis][2];
 
-	    for (i = 0; i < f->numpoints; i++) {
-		v = DotProduct(f->pts[i], tmp);
+	    for (i = 0; i < f->w.numpoints; i++) {
+		v = DotProduct(f->w.points[i], tmp);
 		if (v < mins)
 		    mins = v;
 		if (v > maxs)
@@ -111,7 +111,7 @@ GatherNodeFaces_r(node_t *node)
 	// decision node
 	for (f = node->faces; f; f = next) {
 	    next = f->next;
-	    if (!f->numpoints) {	// face was removed outside
+	    if (!f->w.numpoints) {	// face was removed outside
 		FreeMem(f, FACE, 1);
 	    } else {
 		f->next = validfaces[f->planenum];
@@ -314,13 +314,13 @@ FindFaceEdges(face_t *face)
     int i;
 
     face->outputnumber = -1;
-    if (face->numpoints > MAXEDGES)
+    if (face->w.numpoints > MAXEDGES)
 	Message(msgError, errLowFacePointCount);
 
-    face->edges = AllocMem(OTHER, face->numpoints * sizeof(int), true);
-    for (i = 0; i < face->numpoints; i++)
+    face->edges = AllocMem(OTHER, face->w.numpoints * sizeof(int), true);
+    for (i = 0; i < face->w.numpoints; i++)
 	face->edges[i] = GetEdge
-	    (face->pts[i], face->pts[(i + 1) % face->numpoints], face);
+	    (face->w.points[i], face->w.points[(i + 1) % face->w.numpoints], face);
 }
 
 
@@ -381,12 +381,12 @@ GrowNodeRegion_r(node_t *node)
 	r->lightofs = -1;
 
 	r->firstedge = map.cTotal[BSPSURFEDGE];
-	for (i = 0; i < f->numpoints; i++) {
+	for (i = 0; i < f->w.numpoints; i++) {
 	    pCurEnt->pSurfedges[pCurEnt->iSurfedges] = f->edges[i];
 	    pCurEnt->iSurfedges++;
 	    map.cTotal[BSPSURFEDGE]++;
 	}
-	FreeMem(f->edges, OTHER, f->numpoints * sizeof(int));
+	FreeMem(f->edges, OTHER, f->w.numpoints * sizeof(int));
 
 	r->numedges = map.cTotal[BSPSURFEDGE] - r->firstedge;
 
@@ -415,7 +415,7 @@ CountData_r(node_t *node)
 
     for (f = node->faces; f; f = f->next) {
 	pCurEnt->cFaces++;
-	pCurEnt->cVertices += f->numpoints;
+	pCurEnt->cVertices += f->w.numpoints;
     }
 
     CountData_r(node->children[0]);
