@@ -283,7 +283,7 @@ SetTexinfo_QuArK(vec3_t planepts[3], int tx_type, texinfo_t *tx)
      *    | tx->vecs[1] |   a*d - b*c | -c  a | | vecs[1] |
      */
     determinant = a * d - b * c;
-    if (fabs(determinant) < 0.00001) {
+    if (fabs(determinant) < ZERO_EPSILON) {
 	Message(msgWarning, warnDegenerateQuArKTX, linenum);
 	for (i = 0; i < 3; i++)
 	    tx->vecs[0][i] = tx->vecs[1][i] = 0;
@@ -587,9 +587,9 @@ LoadMapFile(void)
 	cAxis = 0;
 	for (j = map.rgBrushes[i].iFaceStart; j < map.rgBrushes[i].iFaceEnd;
 	     j++) {
-	    if ((fabs(map.rgFaces[j].plane.normal[0]) - (1 - 0.0001)) > 0
-		|| (fabs(map.rgFaces[j].plane.normal[1]) - (1 - 0.0001)) > 0
-		|| (fabs(map.rgFaces[j].plane.normal[2]) - (1 - 0.0001)) > 0)
+	    if (fabs(map.rgFaces[j].plane.normal[0]) > 1 - NORMAL_EPSILON
+		|| fabs(map.rgFaces[j].plane.normal[1]) > 1 - NORMAL_EPSILON
+		|| fabs(map.rgFaces[j].plane.normal[2]) > 1 - NORMAL_EPSILON)
 		cAxis++;
 	}
 	if (6 - cAxis > 0)

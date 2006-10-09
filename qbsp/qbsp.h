@@ -102,6 +102,7 @@
 
 // Misc values
 #define	ANGLEEPSILON		0.00001
+#define	NORMAL_EPSILON		0.0001
 #define EQUAL_EPSILON		0.001
 #define	ZERO_EPSILON		0.001
 #define CONTINUOUS_EPSILON	0.001

@@ -42,7 +42,7 @@ static void PlaneFromWinding(winding_t *w, plane_t *plane);
 static void
 WriteFloat(vec_t v)
 {
-    if (fabs(v - Q_rint(v)) < 0.001)
+    if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
 	fprintf(PortalFile, "%i ", (int)Q_rint(v));
     else
 	fprintf(PortalFile, "%f ", v);
@@ -93,7 +93,9 @@ WritePortalFile_r(node_t *node)
 	    // plane the same way vis will, and flip the side orders if needed
 	    pl = &pPlanes[p->planenum];
 	    PlaneFromWinding(w, &plane2);
-	    if (DotProduct(pl->normal, plane2.normal) < 0.99) {	// backwards...
+	    /* FIXME - not 100% sure about that epsilon... */
+	    if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON) {
+		/* backwards... */
 		fprintf(PortalFile, "%i %i %i ", w->numpoints,
 			p->nodes[1]->visleafnum, p->nodes[0]->visleafnum);
 	    } else

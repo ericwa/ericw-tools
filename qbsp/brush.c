@@ -442,7 +442,7 @@ AddBrushPlane(plane_t *plane)
     vec_t l;
 
     l = VectorLength(plane->normal);
-    if (l < 0.999 || l > 1.001)
+    if (l < 1.0 - NORMAL_EPSILON || l > 1.0 + NORMAL_EPSILON)
 	Message(msgError, errInvalidNormal, l);
 
     for (i = 0; i < numbrushfaces; i++) {

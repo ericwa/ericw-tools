@@ -280,7 +280,7 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	    VectorSubtract(f->w.points[lastcorner - 1], f->w.points[lastcorner], test);
 	    VectorNormalize(test);
 	    v = DotProduct(test, dir);
-	    if (v < 0.9999 || v > 1.00001) {
+	    if (v < 1 - ANGLEEPSILON || v > 1 + ANGLEEPSILON) {
 		break;
 	    }
 	}
@@ -293,7 +293,7 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 			   test);
 	    VectorNormalize(test);
 	    v = DotProduct(test, dir);
-	    if (v < 0.9999 || v > 1.00001) {
+	    if (v < 1 - ANGLEEPSILON || v > 1 + ANGLEEPSILON) {
 		break;
 	    }
 	}

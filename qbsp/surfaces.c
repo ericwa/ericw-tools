@@ -215,7 +215,7 @@ GetVertex(vec3_t in)
     vec3_t vert;
 
     for (i = 0; i < 3; i++) {
-	if (fabs(in[i] - Q_rint(in[i])) < 0.001)
+	if (fabs(in[i] - Q_rint(in[i])) < ZERO_EPSILON)
 	    vert[i] = Q_rint(in[i]);
 	else
 	    vert[i] = in[i];
