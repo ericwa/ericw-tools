@@ -428,7 +428,7 @@ ParseOptions(char *szOptions)
 		options.dxLeakDist = atoi(szTok2);
 		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "subdivide")) {
-		szTok2 = GetTok(szTok + strlen(szTok), szEnd);
+		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Message(msgError, errInvalidOption, szTok);
 		options.dxSubdivide = atoi(szTok2);
