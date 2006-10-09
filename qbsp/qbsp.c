@@ -24,7 +24,10 @@
 #include "qbsp.h"
 #include "wad.h"
 
-#define IntroString "TreeQBSP v1.62 by Greg Lewis.  Source supplied by John Carmack.\n\n"
+#define stringify__(x) #x
+#define stringify(x) stringify__(x)
+
+static const char *IntroString = "TyrQBSP v" stringify(QBSP_VERSION) "\n\n";
 
 // command line flags
 options_t options;
@@ -459,7 +462,6 @@ InitQBSP(int argc, char **argv)
     if (!logfile)
 	Message(msgWarning, warnNoLogFile);
     else
-	// Kinda dumb, but hey...
 	Message(msgFile, IntroString);
 
     // Initial values

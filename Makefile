@@ -136,12 +136,13 @@ bsputil/$(BIN_PFX)bsputil$(EXT):	$(BSPUTIL_OFILES)
 # Qbsp #
 ########
 
+QBSP_VERSION = 0.2
 QBSP_OBJECTS = \
 	brush.o bspfile.o cmdlib.o csg4.o file.o globals.o map.o \
 	mathlib.o merge.o outside.o parser.o portals.o qbsp.o solidbsp.o \
 	surfaces.o tjunc.o util.o wad.o winding.o writebsp.o
 
-qbsp/%.o:	CPPFLAGS += -DDOUBLEVEC_T
+qbsp/%.o:	CPPFLAGS += -DDOUBLEVEC_T -DQBSP_VERSION=$(QBSP_VERSION)
 
 qbsp/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,qbsp/%,$(QBSP_OBJECTS))
 	$(CC) -o $@ $^ $(LCURSES)
