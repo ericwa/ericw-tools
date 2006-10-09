@@ -179,8 +179,6 @@ AddVert
 
 ===============
 */
-#define	T_EPSILON	0.01
-
 static void
 AddVert(wedge_t *w, vec_t t)
 {

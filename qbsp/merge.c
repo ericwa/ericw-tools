@@ -22,8 +22,6 @@
 
 #include "qbsp.h"
 
-#define CONTINUOUS_EPSILON	0.001
-
 #ifdef PARANOID
 static void
 CheckColinear(face_t *f)

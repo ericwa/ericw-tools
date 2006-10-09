@@ -101,9 +101,16 @@
 #define	NUM_AMBIENTS	4	// automatic ambient sounds
 
 // Misc values
-#define ON_EPSILON	0.05
+#define	ANGLEEPSILON		0.00001
+#define EQUAL_EPSILON		0.001
+#define	ZERO_EPSILON		0.001
+#define CONTINUOUS_EPSILON	0.001
+#define	DISTEPSILON		0.01
+#define	POINT_EPSILON		0.01
+#define	T_EPSILON		0.01
+#define ON_EPSILON		0.05
+
 #define BOGUS_RANGE	18000
-#define EQUAL_EPSILON	0.001
 
 // the exact bounding box of the brushes is expanded some for the headnode
 // volume.  is this still needed?

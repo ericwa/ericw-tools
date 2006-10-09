@@ -144,8 +144,6 @@ GatherNodeFaces(node_t *headnode)
 
 //===========================================================================
 
-#define	POINT_EPSILON	0.01
-
 static hashvert_t *hvert_p;
 
 // This is a kludge.   Should be pEdgeFaces[2].

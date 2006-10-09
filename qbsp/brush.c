@@ -121,9 +121,6 @@ AddToBounds(vec3_t v)
 
 //===========================================================================
 
-#define	DISTEPSILON		0.01
-#define	ANGLEEPSILON	0.00001
-
 static void
 NormalizePlane(plane_t *dp)
 {
@@ -277,7 +274,6 @@ FixRotateOrigin(int iEntity, vec3_t offset)
 CreateBrushFaces
 =================
 */
-#define	ZERO_EPSILON	0.001
 static face_t *
 CreateBrushFaces(void)
 {
