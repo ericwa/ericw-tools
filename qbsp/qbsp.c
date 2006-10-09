@@ -293,35 +293,25 @@ PrintOptions
 static void
 PrintOptions(void)
 {
-    printf
-	("QBSP performs geometric level processing of Quake .MAP files to create\n");
+    printf("QBSP performs geometric level processing of Quake .MAP files to create\n");
     printf("Quake .BSP files.\n\n");
     printf("qbsp [options] sourcefile [destfile]\n\n");
     printf("Options:\n");
-    printf
-	("   -tjunc          Enables tjunc calculations (default is disabled)\n");
+    printf("   -tjunc          Enables tjunc calculations (default is disabled)\n");
     printf("   -nofill         Doesn't perform outside filling\n");
     printf("   -noclip         Doesn't build clip hulls\n");
     printf("   -onlyents       Only updates .MAP entities\n");
     printf("   -verbose        Print out more .MAP information\n");
     printf("   -noverbose      Print out almost no information at all\n");
-    printf
-	("   -splitspecial   Doesn't combine sky and water faces into one large face\n");
-    printf
-	("   -transwater     Computes portal information for transparent water\n");
-    printf
-	("   -transsky       Computes portal information for transparent sky\n");
-    printf
-	("   -oldaxis        Uses original QBSP texture alignment algorithm\n");
-    printf
-	("   -bspleak        Creates a .POR file, used in the BSP editor for leaky maps\n");
-    printf
-	("   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n");
-    printf
-	("   -nopercent      Prevents output of percent completion information\n");
+    printf("   -splitspecial   Doesn't combine sky and water faces into one large face\n");
+    printf("   -transwater     Computes portal information for transparent water\n");
+    printf("   -transsky       Computes portal information for transparent sky\n");
+    printf("   -oldaxis        Uses original QBSP texture alignment algorithm\n");
+    printf("   -bspleak        Creates a .POR file, used in the BSP editor for leaky maps\n");
+    printf("   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n");
+    printf("   -nopercent      Prevents output of percent completion information\n");
     printf("   -leakdist  [n]  Space between leakfile points (default 2)\n");
-    printf
-	("   -subdivide [n]  Use different texture subdivision (default 240)\n");
+    printf("   -subdivide [n]  Use different texture subdivision (default 240)\n");
     printf("   sourcefile      .MAP file to process\n");
     printf("   destfile        .BSP file to output\n");
 
