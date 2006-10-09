@@ -453,7 +453,6 @@ static void
 InitQBSP(int argc, char **argv)
 {
     int i;
-    char szArgs[512];
     char *szBuf;
     int length;
 
@@ -477,20 +476,28 @@ InitQBSP(int argc, char **argv)
 
 	FreeMem(szBuf, OTHER, length + 1);
     }
-    // Concatenate command line args
-    szArgs[0] = 0;
-    for (i = 1; i < argc; i++) {
-	// Toss " around filenames to preserve LFNs in the Parsing function
-	if (argv[i][0] != '-')
-	    strcat(szArgs, "\"");
-	strcat(szArgs, argv[i]);
-	if (argv[i][0] != '-')
-	    strcat(szArgs, "\" ");
-	else
-	    strcat(szArgs, " ");
-    }
 
-    ParseOptions(szArgs);
+    // Concatenate command line args
+    length = 0;
+    for (i = 1; i < argc; i++) {
+	length += strlen(argv[i]) + 1;
+	if (argv[i][0] != '-')
+	    length += 2; /* quotes */
+    }
+    szBuf = AllocMem(OTHER, length, true);
+    for (i = 1; i < argc; i++) {
+	/* Quote filenames for the parsing function */
+	if (argv[i][0] != '-')
+	    strcat(szBuf, "\"");
+	strcat(szBuf, argv[i]);
+	if (argv[i][0] != '-')
+	    strcat(szBuf, "\" ");
+	else
+	    strcat(szBuf, " ");
+    }
+    szBuf[length - 1] = 0;
+    ParseOptions(szBuf);
+    FreeMem(szBuf, OTHER, length);
 
     if (options.szMapName[0] == 0)
 	PrintOptions();
