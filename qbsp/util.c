@@ -18,16 +18,6 @@
 
     See file, 'COPYING', for details.
 */
-// util.c
-
-#ifdef _WIN32
-# include <conio.h>
-# define noecho() do {} while (0)
-# define echo()   do {} while (0)
-# define getch _getche
-#else
-# include <curses.h>
-#endif
 
 #include <stdarg.h>
 #include <malloc.h>
@@ -66,24 +56,9 @@ AllocMem(int Type, int cElements, bool fZero)
     } else
 	cSize = cElements * rgcMemSize[Type];
 
-  Retry:
     pTemp = malloc(cSize);
-
-    if (pTemp == NULL) {
-	char ch;
-
-	printf
-	    ("\bOut of memory.  Please close some apps and hit 'y' to try again,\n");
-	printf("or any other key to exit -> ");
-	noecho();
-	ch = toupper(getch());
-	echo();
-	printf("\n");
-	fflush(stdin);
-	if (ch == 'Y')
-	    goto Retry;
+    if (!pTemp)
 	Message(msgError, errOutOfMemory);
-    }
 
     if (fZero)
 	memset(pTemp, 0, cSize);
