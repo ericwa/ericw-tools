@@ -440,6 +440,9 @@ ParseOptions(char *szOptions)
 		    Message(msgError, errInvalidOption, szTok);
 		strcpy(options.wadPath, szTok2);
 		szTok = szTok2;
+		/* Remove trailing /, if any */
+		if (options.wadPath[strlen(options.wadPath) - 1] == '/')
+		    options.wadPath[strlen(options.wadPath) - 1] = 0;
 	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
