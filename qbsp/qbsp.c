@@ -478,7 +478,7 @@ InitQBSP(int argc, char **argv)
     }
 
     // Concatenate command line args
-    length = 0;
+    length = 1;
     for (i = 1; i < argc; i++) {
 	length += strlen(argv[i]) + 1;
 	if (argv[i][0] != '-')
