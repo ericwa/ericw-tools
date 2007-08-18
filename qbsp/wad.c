@@ -57,6 +57,8 @@ WADList_Init(wad_t **wads, char *wadstring)
     int i, len, numwads;
     wad_t *tmp, *w;
     char *fname;
+    char *fpath;
+    int pathlen;
 
     numwads = 0;
     *wads = NULL;
@@ -83,14 +85,25 @@ WADList_Init(wad_t **wads, char *wadstring)
 	while (wadstring[i] != 0 && wadstring[i] != ';')
 	    i++;
 	wadstring[i++] = 0;
-	w->file = fopen(fname, "rb");
+
+	if (!options.wadPath[0] || IsAbsolutePath(fname))
+	    fpath = copystring(fname);
+	else {
+	    pathlen = strlen(options.wadPath) + strlen(fname) + 1;
+	    fpath = AllocMem(OTHER, pathlen + 1, false);
+	    sprintf(fpath, "%s/%s", options.wadPath, fname);
+	}
+	w->file = fopen(fpath, "rb");
 	if (w->file) {
+	    if (options.fVerbose)
+		Message(msgLiteral, "Opened WAD: %s\n", fpath);
 	    if (!WAD_LoadInfo(w)) {
-		Message(msgWarning, warnNotWad, fname);
+		Message(msgWarning, warnNotWad, fpath);
 		fclose(w->file);
 	    } else
 		w++;
 	}
+	FreeMem(fpath, OTHER, strlen(fpath) + 1);
     }
 
     /* Re-allocate just the required amount */

@@ -315,6 +315,7 @@ PrintOptions(void)
     printf("   -nopercent      Prevents output of percent completion information\n");
     printf("   -leakdist  [n]  Space between leakfile points (default 2)\n");
     printf("   -subdivide [n]  Use different texture subdivision (default 240)\n");
+    printf("   -wadpath <dir>  Search this directory for wad files\n");
     printf("   sourcefile      .MAP file to process\n");
     printf("   destfile        .BSP file to output\n");
 
@@ -433,6 +434,12 @@ ParseOptions(char *szOptions)
 		    Message(msgError, errInvalidOption, szTok);
 		options.dxSubdivide = atoi(szTok2);
 		szTok = szTok2;
+	    } else if (!strcasecmp(szTok, "wadpath")) {
+		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+		if (!szTok2)
+		    Message(msgError, errInvalidOption, szTok);
+		strcpy(options.wadPath, szTok2);
+		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
@@ -467,7 +474,7 @@ InitQBSP(int argc, char **argv)
     options.dxLeakDist = 2;
     options.dxSubdivide = 240;
     options.fVerbose = true;
-    options.szMapName[0] = options.szBSPName[0] = 0;
+    options.szMapName[0] = options.szBSPName[0] = options.wadPath[0] = 0;
 
     length = LoadFile("qbsp.ini", (void *)&szBuf, false);
     if (length) {
@@ -508,6 +515,12 @@ InitQBSP(int argc, char **argv)
     // The .map extension gets removed right away anyways...
     if (options.szBSPName[0] == 0)
 	strcpy(options.szBSPName, options.szMapName);
+
+    /* If no wadpath given, default to the map directory */
+    if (options.wadPath[0] == 0) {
+	strcpy(options.wadPath, options.szMapName);
+	StripFilename(options.wadPath);
+    }
 
     // Remove already existing files
     if (!options.fOnlyents) {

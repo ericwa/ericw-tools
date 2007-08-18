@@ -163,6 +163,8 @@ double I_FloatTime(void);
 
 void DefaultExtension(char *path, char *extension);
 void StripExtension(char *path);
+void StripFilename(char *path);
+int IsAbsolutePath(const char *path);
 
 char *copystring(char *s);
 
@@ -525,6 +527,7 @@ typedef struct options_s {
     int dxLeakDist;
     char szMapName[512];
     char szBSPName[512];
+    char wadPath[512];
 } options_t;
 
 extern options_t options;

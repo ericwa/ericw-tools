@@ -107,3 +107,20 @@ StripExtension(char *path)
     if (length)
 	path[length] = 0;
 }
+
+void
+StripFilename(char *path)
+{
+    int length;
+
+    length = strlen(path) - 1;
+    while (length > 0 && path[length] != PATHSEPERATOR)
+        length--;
+    path[length] = '\0';
+}
+
+int
+IsAbsolutePath(const char *path)
+{
+    return path[0] == '/' || (isalpha(path[0]) && path[1] == ':');
+}
