@@ -463,12 +463,7 @@ InitQBSP(int argc, char **argv)
     char *szBuf;
     int length;
 
-    // Start logging to qbsp.log
-    logfile = fopen("qbsp.log", "wt");
-    if (!logfile)
-	Message(msgWarning, warnNoLogFile);
-    else
-	Message(msgFile, IntroString);
+    logfile = NULL;
 
     // Initial values
     options.dxLeakDist = 2;
@@ -509,12 +504,21 @@ InitQBSP(int argc, char **argv)
     if (options.szMapName[0] == 0)
 	PrintOptions();
 
-    // create destination name if not specified
-    DefaultExtension(options.szMapName, ".map");
+    StripExtension(options.szMapName);
+    strcat(options.szMapName, ".map");
 
     // The .map extension gets removed right away anyways...
     if (options.szBSPName[0] == 0)
 	strcpy(options.szBSPName, options.szMapName);
+
+    /* Start logging to <bspname>.log */
+    StripExtension(options.szBSPName);
+    strcat(options.szBSPName, ".log");
+    logfile = fopen(options.szBSPName, "wt");
+    if (!logfile)
+	Message(msgWarning, warnNoLogFile);
+    else
+	Message(msgFile, IntroString);
 
     /* If no wadpath given, default to the map directory */
     if (options.wadPath[0] == 0) {

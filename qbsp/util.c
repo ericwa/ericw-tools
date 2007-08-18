@@ -255,8 +255,10 @@ Message(int msgType, ...)
 	sprintf(szBuffer, "*** ERROR %02d: ", ErrType);
 	vsprintf(szBuffer + strlen(szBuffer), rgszErrors[ErrType], argptr);
 	puts(szBuffer);
-	fprintf(logfile, "%s\n", szBuffer);
-	fclose(logfile);
+	if (logfile) {
+	    fprintf(logfile, "%s\n", szBuffer);
+	    fclose(logfile);
+	}
 	exit(1);
 	break;
 
@@ -308,7 +310,7 @@ Message(int msgType, ...)
 
     if (msgType != msgFile)
 	printf("%s", szBuffer);
-    if (msgType != msgScreen)
+    if (msgType != msgScreen && logfile)
 	fprintf(logfile, "%s", szBuffer);
 
     va_end(argptr);
