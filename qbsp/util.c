@@ -314,4 +314,5 @@ Message(int msgType, ...)
 	fprintf(logfile, "%s", szBuffer);
 
     va_end(argptr);
+    fflush(stdout);
 }
