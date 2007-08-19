@@ -153,6 +153,61 @@ DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
 }
 
 /*
+ * Calculate the split plane metric for axial planes
+ */
+static vec_t
+SplitPlaneMetric_Axial(const plane_t *p, vec3_t mins, vec3_t maxs)
+{
+    vec_t value, dist;
+    int i;
+
+    value = 0;
+    for (i = 0; i < 3; i++) {
+	if (i == p->type) {
+	    dist = p->dist * p->normal[i];
+	    value += (maxs[i] - dist) * (maxs[i] - dist);
+	    value += (dist - mins[i]) * (dist - mins[i]);
+	} else {
+	    value += 2 * (maxs[i] - mins[i]) * (maxs[i] - mins[i]);
+	}
+    }
+
+    return value;
+}
+
+/*
+ * Calculate the split plane metric for non-axial planes
+ */
+static vec_t
+SplitPlaneMetric_NonAxial(const plane_t *p, vec3_t mins, vec3_t maxs)
+{
+    vec3_t fmins, fmaxs, bmins, bmaxs;
+    vec_t value = 0.0;
+    int i;
+
+    DivideBounds(mins, maxs, p, fmins, fmaxs, bmins, bmaxs);
+    for (i = 0; i < 3; i++) {
+	value += (fmaxs[i] - fmins[i]) * (fmaxs[i] - fmins[i]);
+	value += (bmaxs[i] - bmins[i]) * (bmaxs[i] - bmins[i]);
+    }
+
+    return value;
+}
+
+static inline vec_t
+SplitPlaneMetric(const plane_t *p, vec3_t mins, vec3_t maxs)
+{
+    vec_t value;
+
+    if (p->type < 3)
+	value = SplitPlaneMetric_Axial(p, mins, maxs);
+    else
+	value = SplitPlaneMetric_NonAxial(p, mins, maxs);
+
+    return value;
+}
+
+/*
 ==================
 ChooseMidPlaneFromList
 
@@ -162,44 +217,29 @@ The clipping hull BSP doesn't worry about avoiding splits
 static surface_t *
 ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
-    int j, l;
     surface_t *p, *bestsurface;
-    vec_t bestvalue, value, dist;
+    vec_t bestvalue, value;
     plane_t *plane;
 
     // pick the plane that splits the least
-    bestvalue = 6 * 8192 * 8192;
+    bestvalue = 10 * 8192 * 8192;
     bestsurface = NULL;
 
     for (p = surfaces; p; p = p->next) {
 	if (p->onnode)
 	    continue;
 
+	/* check for axis aligned surfaces */
 	plane = &pPlanes[p->planenum];
-
-	// check for axis aligned surfaces
-	l = plane->type;
-	if (l > PLANE_Z)
+	if (plane->type > 3)
 	    continue;
 
-	// calculate the split metric along axis l, smaller values are better
-	value = 0;
-
-	dist = plane->dist * plane->normal[l];
-	for (j = 0; j < 3; j++) {
-	    if (j == l) {
-		value += (maxs[l] - dist) * (maxs[l] - dist);
-		value += (dist - mins[l]) * (dist - mins[l]);
-	    } else
-		value += 2 * (maxs[j] - mins[j]) * (maxs[j] - mins[j]);
+	/* calculate the split metric, smaller values are better */
+	value = SplitPlaneMetric(plane, mins, maxs);
+	if (value < bestvalue) {
+	    bestvalue = value;
+	    bestsurface = p;
 	}
-
-	if (value > bestvalue)
-	    continue;
-
-	// currently the best!
-	bestvalue = value;
-	bestsurface = p;
     }
 
     if (!bestsurface) {
@@ -224,15 +264,15 @@ The real BSP hueristic
 static surface_t *
 ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
-    int j, k, l;
+    int k;
     surface_t *p, *p2, *bestsurface;
     int bestvalue;
-    vec_t bestdistribution, value, dist;
+    vec_t bestdistribution, value;
     plane_t *plane;
     face_t *f;
 
-    // pick the plane that splits the least
-    bestvalue = 99999;
+    /* pick the plane that splits the least */
+    bestvalue = 999999;
     bestsurface = NULL;
     bestdistribution = 9e30f;
 
@@ -246,51 +286,36 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	for (p2 = surfaces; p2; p2 = p2->next) {
 	    if (p2 == p || p2->onnode)
 		continue;
-
+	    if (plane->type < 3 && plane->type == pPlanes[p2->planenum].type)
+		continue;
 	    for (f = p2->faces; f; f = f->next) {
 		if (FaceSide(f, plane) == SIDE_ON) {
 		    k++;
 		    if (k >= bestvalue)
 			break;
 		}
-
 	    }
 	    if (k > bestvalue)
 		break;
 	}
-
 	if (k > bestvalue)
 	    continue;
 
-	// if equal numbers, axial planes win, then decide on spatial subdivision
-
-	if (k < bestvalue || (k == bestvalue && plane->type < PLANE_ANYX)) {
-	    // check for axis aligned surfaces
-	    l = plane->type;
-
-	    if (l <= PLANE_Z) {	// axial aligned
-		// calculate the split metric along axis l
-		value = 0;
-
-		for (j = 0; j < 3; j++) {
-		    if (j == l) {
-			dist = plane->dist * plane->normal[l];
-			value += (maxs[l] - dist) * (maxs[l] - dist);
-			value += (dist - mins[l]) * (dist - mins[l]);
-		    } else
-			value +=
-			    2 * (maxs[j] - mins[j]) * (maxs[j] - mins[j]);
-		}
-
+	/*
+	 * if equal numbers axial planes win, otherwise decide on spatial
+	 * subdivision
+	 */
+	if (k < bestvalue || (k == bestvalue && plane->type < 3)) {
+	    if (plane->type < 3) {
+		value = SplitPlaneMetric(plane, mins, maxs);
 		if (value > bestdistribution && k == bestvalue)
 		    continue;
 		bestdistribution = value;
 	    }
-	    // currently the best!
+	    /* currently the best! */
 	    bestvalue = k;
 	    bestsurface = p;
 	}
-
     }
 
     return bestsurface;
