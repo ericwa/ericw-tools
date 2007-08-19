@@ -168,7 +168,7 @@ FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
     VectorCopy(origin, w->origin);
     VectorCopy(dir, w->dir);
     w->head.next = w->head.prev = &w->head;
-    w->head.t = 99999;
+    w->head.t = VECT_MAX;
     return w;
 }
 

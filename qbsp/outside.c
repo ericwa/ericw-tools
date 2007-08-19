@@ -237,8 +237,8 @@ LineIntersect_r(node_t *n)
 
 		// Do test here for point in polygon (face)
 		// Quick hack
-		mins[0] = mins[1] = mins[2] = 99999;
-		maxs[0] = maxs[1] = maxs[2] = -99999;
+		mins[0] = mins[1] = mins[2] = VECT_MAX;
+		maxs[0] = maxs[1] = maxs[2] = -VECT_MAX;
 		for (i = 0; i < f->w.numpoints; i++)
 		    for (j = 0; j < 3; j++) {
 			if (f->w.points[i][j] < mins[j])

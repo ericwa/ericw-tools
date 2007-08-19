@@ -57,8 +57,8 @@ SubdivideFace(face_t *f, face_t **prevptr)
 
     for (axis = 0; axis < 2; axis++) {
 	while (1) {
-	    mins = 9999;
-	    maxs = -9999;
+	    mins = VECT_MAX;
+	    maxs = -VECT_MAX;
 
 	    tmp[0] = tex->vecs[axis][0];
 	    tmp[1] = tex->vecs[axis][1];

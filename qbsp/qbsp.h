@@ -172,8 +172,10 @@ char *copystring(char *s);
 
 #ifdef DOUBLEVEC_T
 typedef double vec_t;
+#define VECT_MAX DBL_MAX
 #else
 typedef float vec_t;
+#define VECT_MAX FLT_MAX
 #endif
 typedef vec_t vec3_t[3];
 

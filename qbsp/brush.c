@@ -290,8 +290,8 @@ CreateBrushFaces(void)
     vec_t max, min;
 
     offset[0] = offset[1] = offset[2] = 0;
-    min = brush_mins[0] = brush_mins[1] = brush_mins[2] = 99999;
-    max = brush_maxs[0] = brush_maxs[1] = brush_maxs[2] = -99999;
+    min = brush_mins[0] = brush_mins[1] = brush_mins[2] = VECT_MAX;
+    max = brush_maxs[0] = brush_maxs[1] = brush_maxs[2] = -VECT_MAX;
 
     // Hipnotic rotation
     szClassname = ValueForKey(map.iEntities, "classname");
@@ -775,8 +775,8 @@ Brush_LoadEntity(void)
     int i;
 
     for (i = 0; i < 3; i++) {
-	pCurEnt->mins[i] = 99999;
-	pCurEnt->maxs[i] = -99999;
+	pCurEnt->mins[i] = VECT_MAX;
+	pCurEnt->maxs[i] = -VECT_MAX;
     }
 
     pCurEnt->cBrushes = 0;

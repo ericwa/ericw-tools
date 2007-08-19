@@ -19,6 +19,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <limits.h>
 #include <malloc.h>
 
 #include "qbsp.h"
@@ -222,7 +223,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     plane_t *plane;
 
     // pick the plane that splits the least
-    bestvalue = 10 * 8192 * 8192;
+    bestvalue = VECT_MAX;
     bestsurface = NULL;
 
     for (p = surfaces; p; p = p->next) {
@@ -282,9 +283,9 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     face_t *f;
 
     /* pick the plane that splits the least */
-    bestvalue = 999999;
+    bestvalue = INT_MAX;
+    bestdistribution = VECT_MAX;
     bestsurface = NULL;
-    bestdistribution = 9e30f;
 
     for (p = surfaces; p; p = p->next) {
 	if (p->onnode)
@@ -364,8 +365,8 @@ SelectPartition(surface_t *surfaces)
 
     // calculate a bounding box of the entire surfaceset
     for (i = 0; i < 3; i++) {
-	mins[i] = 99999;
-	maxs[i] = -99999;
+	mins[i] = VECT_MAX;
+	maxs[i] = -VECT_MAX;
     }
 
     for (p = surfaces; p; p = p->next)
@@ -400,8 +401,8 @@ CalcSurfaceInfo(surface_t *surf)
 
     // calculate a bounding box
     for (i = 0; i < 3; i++) {
-	surf->mins[i] = 99999;
-	surf->maxs[i] = -99999;
+	surf->mins[i] = VECT_MAX;
+	surf->maxs[i] = -VECT_MAX;
     }
 
     for (f = surf->faces; f; f = f->next) {
