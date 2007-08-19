@@ -87,6 +87,72 @@ FaceSide(face_t *in, plane_t *split)
 }
 
 /*
+ * Split a bounding box by a plane; The front and back bounds returned
+ * are such that they completely contain the portion of the input box
+ * on that side of the plane. Therefore, if the split plane is
+ * non-axial, then the returned bounds will overlap.
+ */
+static void
+DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
+	     vec3_t front_mins, vec3_t front_maxs,
+	     vec3_t back_mins, vec3_t back_maxs)
+{
+    int a, b, c, i, j;
+    vec_t dist1, dist2, mid, split_mins, split_maxs;
+    vec3_t corner;
+    const vec_t *bounds[] = { mins, maxs };
+
+    VectorCopy(mins, front_mins);
+    VectorCopy(mins, back_mins);
+    VectorCopy(maxs, front_maxs);
+    VectorCopy(maxs, back_maxs);
+
+    if (split->type < 3) {
+	front_mins[split->type] = back_maxs[split->type] = split->dist;
+	return;
+    }
+
+    /* Make proper sloping cuts... */
+    for (a = 0; a < 3; ++a) {
+	/* Check for parallel case... no intersection */
+	if (fabs(split->normal[a]) < NORMAL_EPSILON)
+	    continue;
+
+	b = (a + 1) % 3;
+	c = (a + 2) % 3;
+
+	split_mins = maxs[a];
+	split_maxs = mins[a];
+	for (i = 0; i < 2; ++i) {
+	    corner[b] = bounds[i][b];
+	    for (j = 0; j < 2; ++j) {
+		corner[c] = bounds[j][c];
+
+		corner[a] = bounds[0][a];
+		dist1 = DotProduct(corner, split->normal) - split->dist;
+
+		corner[a] = bounds[1][a];
+		dist2 = DotProduct(corner, split->normal) - split->dist;
+
+		mid = bounds[1][a] - bounds[0][a];
+		mid *= (dist1 / (dist1 - dist2));
+		mid += bounds[0][a];
+
+		split_mins = max(min(mid, split_mins), mins[a]);
+		split_maxs = min(max(mid, split_maxs), maxs[a]);
+	    }
+	}
+	if (split->normal[a] > 0) {
+	    front_mins[a] = split_mins;
+	    back_maxs[a] = split_maxs;
+	} else {
+	    back_mins[a] = split_mins;
+	    front_maxs[a] = split_maxs;
+	}
+    }
+}
+
+/*
 ==================
 ChooseMidPlaneFromList
 
@@ -426,17 +492,9 @@ DivideNodeBounds
 static void
 DivideNodeBounds(node_t *node, plane_t *split)
 {
-    VectorCopy(node->mins, node->children[0]->mins);
-    VectorCopy(node->mins, node->children[1]->mins);
-    VectorCopy(node->maxs, node->children[0]->maxs);
-    VectorCopy(node->maxs, node->children[1]->maxs);
-
-    // OPTIMIZE: sloping cuts can give a better bbox than this...
-    if (split->type > 2)
-	return;
-
-    node->children[0]->mins[split->type] =
-	node->children[1]->maxs[split->type] = split->dist;
+    DivideBounds(node->mins, node->maxs, split,
+		 node->children[0]->mins, node->children[0]->maxs,
+		 node->children[1]->mins, node->children[1]->maxs);
 }
 
 /*

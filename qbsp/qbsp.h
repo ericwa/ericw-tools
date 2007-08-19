@@ -196,6 +196,19 @@ vec_t VectorNormalize(vec3_t v);
 void VectorInverse(vec3_t v);
 void VectorScale(const vec3_t v, const vec_t scale, vec3_t out);
 
+#define min(a,b) ({		\
+	typeof(a) a_ = (a);	\
+	typeof(b) b_ = (b);	\
+	(void)(&a_ == &b_);	\
+	(a_ < b_) ? a_ : b_;	\
+})
+#define max(a,b) ({		\
+	typeof(a) a_ = (a);	\
+	typeof(b) b_ = (b);	\
+	(void)(&a_ == &b_);	\
+	(a_ > b_) ? a_ : b_;	\
+})
+
 //====== bspfile.h
 
 
