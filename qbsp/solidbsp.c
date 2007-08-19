@@ -243,11 +243,21 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     }
 
     if (!bestsurface) {
-	for (p = surfaces; p; p = p->next)
-	    if (!p->onnode)
-		return p;	// first valid surface
-	Message(msgError, errNoValidPlanes);
+	/* Choose based on spatial subdivision again */
+	for (p = surfaces; p; p = p->next) {
+	    if (p->onnode)
+		continue;
+
+	    plane = &pPlanes[p->planenum];
+	    value = SplitPlaneMetric(plane, mins, maxs);
+	    if (value < bestvalue) {
+		bestvalue = value;
+		bestsurface = p;
+	    }
+	}
     }
+    if (!bestsurface)
+	Message(msgError, errNoValidPlanes);
 
     return bestsurface;
 }
