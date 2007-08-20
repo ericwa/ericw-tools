@@ -163,48 +163,114 @@ NormalizePlane(plane_t *p)
     return 0; /* no flip */
 }
 
-/*
-===============
-FindPlane
 
-Returns a global plane number and the side that will be the front
-===============
-*/
-int
-FindPlane(plane_t *dplane, int *side)
+static int
+PlaneEqual(const plane_t *p, const vec3_t normal, const vec_t dist)
+{
+    return (fabs(p->normal[0] - normal[0]) < NORMAL_EPSILON &&
+	    fabs(p->normal[1] - normal[1]) < NORMAL_EPSILON &&
+	    fabs(p->normal[2] - normal[2]) < NORMAL_EPSILON &&
+	    fabs(p->dist - dist) < DIST_EPSILON);
+}
+
+static int
+PlaneInvEqual(const plane_t *p, const vec3_t normal, const vec_t dist)
+{
+    return (fabs(p->normal[0] + normal[0]) < NORMAL_EPSILON &&
+	    fabs(p->normal[1] + normal[1]) < NORMAL_EPSILON &&
+	    fabs(p->normal[2] + normal[2]) < NORMAL_EPSILON &&
+	    fabs(p->dist + dist) < DIST_EPSILON);
+}
+
+/* Plane Hashing */
+#define	PLANE_HASHES (1<<10)
+static struct plane *plane_hash[PLANE_HASHES];
+
+/*
+ * Choice of hash function:
+ * - Begin with abs(dist), very rarely > 4096
+ * - Many maps probably won't go beyond 2048 units
+ * - Low 3 bits also very commonly zero (axial planes on multiples of 8 units)
+ */
+static inline int
+plane_hash_fn(const struct plane *p)
+{
+    const int dist = floor(fabs(p->dist) + 0.5);
+
+    return (dist ^ (dist >> 3)) & (PLANE_HASHES - 1);
+}
+
+static void
+PlaneHash_Add(struct plane *p)
+{
+    const int hash = plane_hash_fn(p);
+
+    p->hash_chain = plane_hash[hash];
+    plane_hash[hash] = p;
+}
+
+void
+PlaneHash_Init(void)
 {
     int i;
-    plane_t *dp, pl;
-    vec_t dot;
 
-    pl = *dplane;
-    NormalizePlane(&pl);
-    if (DotProduct(pl.normal, dplane->normal) > 0)
-	*side = 0;
-    else
-	*side = 1;
+    for (i = 0; i < PLANE_HASHES; ++i)
+	plane_hash[i] = NULL;
+}
 
-    // Find this plane if it already exists
-    dp = pPlanes;
-    for (i = 0; i < numbrushplanes; i++, dp++) {
-	dot = DotProduct(dp->normal, pl.normal);
-	if (dot > 1.0 - ANGLEEPSILON &&
-	    fabs(dp->dist - pl.dist) < DISTEPSILON) {
-	    return i;
+/*
+ * NewPlane
+ * - Returns a global plane number and the side that will be the front
+ */
+static int
+NewPlane(vec3_t normal, vec_t dist, int *side)
+{
+    plane_t *p;
+    vec_t len;
+
+    len = VectorLength(normal);
+    if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
+	Message(msgError, errInvalidNormal, len);
+    if (numbrushplanes == cPlanes)
+	Message(msgError, errLowBrushPlaneCount);
+
+    p = &pPlanes[numbrushplanes];
+    VectorCopy(normal, p->normal);
+    p->dist = dist;
+    *side = NormalizePlane(p) ? SIDE_BACK : SIDE_FRONT;
+    PlaneHash_Add(p);
+
+    return numbrushplanes++;
+}
+
+/*
+ * FindPlane
+ * - Returns a global plane number and the side that will be the front
+ */
+int
+FindPlane(plane_t *plane, int *side)
+{
+    const int bins[] = { 0, 1, -1 };
+    plane_t *p;
+    int hash, h;
+    int i;
+
+    /* search the border bins as well */
+    hash = plane_hash_fn(plane);
+    for (i = 0; i < 3; ++i) {
+	h = (hash + bins[i]) & (PLANE_HASHES - 1);
+	for (p = plane_hash[h]; p; p = p->hash_chain) {
+	    if (PlaneEqual(p, plane->normal, plane->dist)) {
+		*side = SIDE_FRONT;
+		return p - pPlanes;
+	    } else if (PlaneInvEqual(p, plane->normal, plane->dist)) {
+		*side = SIDE_BACK;
+		return p - pPlanes;
+	    }
 	}
     }
 
-    if (numbrushplanes >= cPlanes)
-	Message(msgError, errLowBrushPlaneCount);
-
-    dot = VectorLength(dplane->normal);
-    if (dot < 1.0 - ANGLEEPSILON || dot > 1.0 + ANGLEEPSILON)
-	Message(msgError, errNormalization, dot);
-
-    pPlanes[numbrushplanes] = pl;
-    numbrushplanes++;
-
-    return numbrushplanes - 1;
+    return NewPlane(plane->normal, plane->dist, side);
 }
 
 

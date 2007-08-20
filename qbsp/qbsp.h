@@ -104,6 +104,7 @@
 #define	ANGLEEPSILON		0.00001
 #define	NORMAL_EPSILON		0.0001
 #define EQUAL_EPSILON		0.001
+#define DIST_EPSILON		0.001
 #define	ZERO_EPSILON		0.001
 #define CONTINUOUS_EPSILON	0.001
 #define	DISTEPSILON		0.01
@@ -317,10 +318,11 @@ void PrintBSPFileSizes(void);
 
 //====== bsp5.h
 
-typedef struct {
+typedef struct plane {
     vec3_t normal;
     vec_t dist;
     int type;
+    struct plane *hash_chain;
 } plane_t;
 
 
@@ -414,6 +416,8 @@ extern int numbrushplanes;
 void FixRotateOrigin(int iEntity, vec3_t offset);
 void Brush_LoadEntity(void);
 void FreeBrushsetBrushes(void);
+
+void PlaneHash_Init(void);
 int FindPlane(plane_t *dplane, int *side);
 
 //=============================================================================

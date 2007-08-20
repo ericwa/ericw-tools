@@ -202,6 +202,8 @@ CreateHulls
 static void
 CreateHulls(void)
 {
+    PlaneHash_Init();
+
     // commanded to create a single hull only
     if (hullnum) {
 	CreateSingleHull();
