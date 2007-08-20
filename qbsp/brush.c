@@ -121,49 +121,46 @@ AddToBounds(vec3_t v)
 
 //===========================================================================
 
-static void
-NormalizePlane(plane_t *dp)
+static int
+NormalizePlane(plane_t *p)
 {
+    int i;
     vec_t ax, ay, az;
 
-    if (dp->normal[0] == -1.0) {
-	dp->normal[0] = 1.0;
-	dp->dist = -dp->dist;
-    } else if (dp->normal[1] == -1.0) {
-	dp->normal[1] = 1.0;
-	dp->dist = -dp->dist;
-    } else if (dp->normal[2] == -1.0) {
-	dp->normal[2] = 1.0;
-	dp->dist = -dp->dist;
+    for (i = 0; i < 3; i++) {
+	if (p->normal[i] == 1.0) {
+	    p->normal[(i + 1) % 3] = 0;
+	    p->normal[(i + 2) % 3] = 0;
+	    p->type = PLANE_X + i;
+	    return 0; /* no flip */
+	}
+	if (p->normal[i] == -1.0) {
+	    p->normal[i] = 1.0;
+	    p->normal[(i + 1) % 3] = 0;
+	    p->normal[(i + 2) % 3] = 0;
+	    p->dist = -p->dist;
+	    p->type = PLANE_X + i;
+	    return 1; /* plane flipped */
+	}
     }
 
-    if (dp->normal[0] == 1.0) {
-	dp->type = PLANE_X;
-	return;
-    }
-    if (dp->normal[1] == 1.0) {
-	dp->type = PLANE_Y;
-	return;
-    }
-    if (dp->normal[2] == 1.0) {
-	dp->type = PLANE_Z;
-	return;
-    }
-
-    ax = fabs(dp->normal[0]);
-    ay = fabs(dp->normal[1]);
-    az = fabs(dp->normal[2]);
+    ax = fabs(p->normal[0]);
+    ay = fabs(p->normal[1]);
+    az = fabs(p->normal[2]);
 
     if (ax >= ay && ax >= az)
-	dp->type = PLANE_ANYX;
+	p->type = PLANE_ANYX;
     else if (ay >= ax && ay >= az)
-	dp->type = PLANE_ANYY;
+	p->type = PLANE_ANYY;
     else
-	dp->type = PLANE_ANYZ;
-    if (dp->normal[dp->type - PLANE_ANYX] < 0) {
-	VectorSubtract(vec3_origin, dp->normal, dp->normal);
-	dp->dist = -dp->dist;
+	p->type = PLANE_ANYZ;
+
+    if (p->normal[p->type - PLANE_ANYX] < 0) {
+	VectorSubtract(vec3_origin, p->normal, p->normal);
+	p->dist = -p->dist;
+	return 1; /* plane flipped */
     }
+    return 0; /* no flip */
 }
 
 /*
