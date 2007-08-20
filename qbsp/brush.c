@@ -537,43 +537,40 @@ TestAddPlane(plane_t *plane)
     vec_t d;
     vec_t *corner;
     plane_t flip;
-    vec3_t inv;
-    int counts[3];
+    int points_front, points_back;
     plane_t *pl;
 
-    // see if the plane has already been added
+    /* see if the plane has already been added */
     for (i = 0; i < numbrushfaces; i++) {
 	pl = &faces[i].plane;
-	if (VectorCompare(plane->normal, pl->normal)
-	    && fabs(plane->dist - pl->dist) < ON_EPSILON)
+	if (PlaneEqual(plane, pl->normal, pl->dist))
 	    return;
-	VectorSubtract(vec3_origin, plane->normal, inv);
-	if (VectorCompare(inv, pl->normal)
-	    && fabs(plane->dist + pl->dist) < ON_EPSILON)
+	if (PlaneInvEqual(plane, pl->normal, pl->dist))
 	    return;
     }
 
-    // check all the corner points
-    counts[0] = counts[1] = counts[2] = 0;
-    c = num_hull_points * 8;
+    /* check all the corner points */
+    points_front = 0;
+    points_back = 0;
 
     corner = hull_corners[0];
+    c = num_hull_points * 8;
+
     for (i = 0; i < c; i++, corner += 3) {
 	d = DotProduct(corner, plane->normal) - plane->dist;
 	if (d < -ON_EPSILON) {
-	    if (counts[0])
+	    if (points_front)
 		return;
-	    counts[1]++;
+	    points_back = 1;
 	} else if (d > ON_EPSILON) {
-	    if (counts[1])
+	    if (points_back)
 		return;
-	    counts[0]++;
-	} else
-	    counts[2]++;
+	    points_front = 1;
+	}
     }
 
     // the plane is a seperator
-    if (counts[0]) {
+    if (points_front) {
 	VectorSubtract(vec3_origin, plane->normal, flip.normal);
 	flip.dist = -plane->dist;
 	plane = &flip;
