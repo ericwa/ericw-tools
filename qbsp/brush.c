@@ -483,8 +483,8 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 */
 
 // TODO: fix this whole thing
-#define	MAX_HULL_POINTS	64	//32
-#define	MAX_HULL_EDGES	128	//64
+#define	MAX_HULL_POINTS	512
+#define	MAX_HULL_EDGES	1024
 
 static int num_hull_points;
 static vec3_t hull_points[MAX_HULL_POINTS];
@@ -634,7 +634,7 @@ AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     int a, b, c, d, e;
     vec3_t edgevec, planeorg, planevec;
     plane_t plane;
-    vec_t l;
+    vec_t length;
 
     pt1 = AddHullPoint(p1, hull_size);
     pt2 = AddHullPoint(p2, hull_size);
@@ -642,7 +642,7 @@ AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     for (i = 0; i < num_hull_edges; i++)
 	if ((hull_edges[i][0] == pt1 && hull_edges[i][1] == pt2)
 	    || (hull_edges[i][0] == pt2 && hull_edges[i][1] == pt1))
-	    return;		// allread added
+	    return;
 
     if (num_hull_edges == MAX_HULL_EDGES)
 	Message(msgError, errLowHullEdgeCount);
@@ -657,23 +657,27 @@ AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     for (a = 0; a < 3; a++) {
 	b = (a + 1) % 3;
 	c = (a + 2) % 3;
-	for (d = 0; d <= 1; d++)
+
+	planevec[a] = 1;
+	planevec[b] = 0;
+	planevec[c] = 0;
+	CrossProduct(planevec, edgevec, plane.normal);
+	length = VectorLength(plane.normal);
+
+	/* If this edge is almost parallel to the hull edge, skip it. */
+	if (length < ANGLEEPSILON)
+	    continue;
+
+	VectorScale(plane.normal, 1.0 / length, plane.normal);
+	for (d = 0; d <= 1; d++) {
 	    for (e = 0; e <= 1; e++) {
 		VectorCopy(p1, planeorg);
 		planeorg[b] += hull_size[d][b];
 		planeorg[c] += hull_size[e][c];
-
-		VectorCopy(vec3_origin, planevec);
-		planevec[a] = 1;
-
-		CrossProduct(planevec, edgevec, plane.normal);
-		l = VectorLength(plane.normal);
-		if (l < 1 - ANGLEEPSILON || l > 1 + ANGLEEPSILON)
-		    continue;
 		plane.dist = DotProduct(planeorg, plane.normal);
-
 		TestAddPlane(&plane);
 	    }
+	}
     }
 }
 
