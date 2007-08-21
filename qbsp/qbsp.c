@@ -267,12 +267,8 @@ ProcessFile(void)
 	numwads = WADList_Init(&wads, wadstring);
 	if (numwads)
 	    Message(msgLiteral, "Using default WAD: %s\n", wadstring);
-	else
-	    pWorldEnt->cTexdata = 0;
 	FreeMem(wadstring, OTHER, strlen(options.szMapName) + 5);
     }
-
-    if (!pWorldEnt->cTexdata)
 
     // init the tables to be shared by all models
     BeginBSPFile();
