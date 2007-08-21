@@ -143,4 +143,4 @@ QBSP_OBJECTS = \
 qbsp/%.o:	CPPFLAGS += -DDOUBLEVEC_T -DQBSP_VERSION=$(QBSP_VERSION)
 
 qbsp/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,qbsp/%,$(QBSP_OBJECTS))
-	$(CC) -o $@ $^
+	$(CC) -o $@ $^ -lm
