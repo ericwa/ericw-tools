@@ -752,15 +752,17 @@ static brush_t *
 LoadBrush(int iBrush)
 {
     brush_t *b;
+    mapbrush_t *mb;
     int contents;
     char *szName;
     face_t *pFaceList;
+    mapface_t *face;
+    texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
-    // check texture name for attributes
-    szName =
-	rgszMiptex[pWorldEnt->
-		   pTexinfo[map.rgFaces[map.rgBrushes[iBrush].iFaceStart].
-			    texinfo].miptex];
+    /* check texture name for attributes */
+    mb = &map.rgBrushes[iBrush];
+    face = &map.rgFaces[mb->iFaceStart];
+    szName = rgszMiptex[texinfo[face->texinfo].miptex];
 
     if (!strcasecmp(szName, "clip") && hullnum == 0)
 	return NULL;		// "clip" brushes don't show up in the draw hull
@@ -783,13 +785,9 @@ LoadBrush(int iBrush)
     if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
 	return NULL;		// water brushes don't show up in clipping hulls
 
-// no seperate textures on clip hull
-
     // create the faces
-    numbrushfaces =
-	map.rgBrushes[iBrush].iFaceEnd - map.rgBrushes[iBrush].iFaceStart;
-    memcpy(faces, &(map.rgFaces[map.rgBrushes[iBrush].iFaceStart]),
-	   numbrushfaces * sizeof(mapface_t));
+    numbrushfaces = mb->iFaceEnd - mb->iFaceStart;
+    memcpy(faces, face, numbrushfaces * sizeof(mapface_t));
 
     pFaceList = CreateBrushFaces();
 

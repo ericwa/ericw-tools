@@ -70,8 +70,8 @@ FindTexinfo(texinfo_t *t)
 	&& !options.fSplitspecial)
 	t->flags |= TEX_SPECIAL;
 
-    tex = pWorldEnt->pTexinfo;
-    for (i = 0; i < pWorldEnt->iTexinfo; i++, tex++) {
+    tex = (texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data;
+    for (i = 0; i < pWorldEnt->lumps[BSPTEXINFO].index; i++, tex++) {
 	if (t->miptex != tex->miptex)
 	    continue;
 	if (t->flags != tex->flags)
@@ -87,8 +87,8 @@ FindTexinfo(texinfo_t *t)
     }
 
     // allocate a new texture
-    pWorldEnt->pTexinfo[i] = *t;
-    pWorldEnt->iTexinfo++;
+    *((texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data + i) = *t;
+    pWorldEnt->lumps[BSPTEXINFO].index++;
     map.cTotal[BSPTEXINFO]++;
 
     return i;
@@ -426,7 +426,7 @@ ParseEntity(mapentity_t *e)
     if (map.iEntities >= map.cEntities)
 	Message(msgError, errLowEntCount);
 
-    pCurEnt->iBrushEnd = map.iBrushes + 1;
+    e->iBrushEnd = map.iBrushes + 1;
 
     do {
 	if (!ParseToken(PARSE_NORMAL))
@@ -440,10 +440,10 @@ ParseEntity(mapentity_t *e)
     } while (1);
 
     // Allocate some model memory while we're here
-    pCurEnt->iBrushStart = map.iBrushes + 1;
-    if (pCurEnt->iBrushStart != pCurEnt->iBrushEnd) {
-	pCurEnt->pModels = AllocMem(BSPMODEL, 1, true);
-	pCurEnt->cModels = 1;
+    e->iBrushStart = map.iBrushes + 1;
+    if (e->iBrushStart != e->iBrushEnd) {
+	e->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
+	e->lumps[BSPMODEL].count = 1;
     }
 
     return true;
@@ -454,6 +454,7 @@ static void
 PreParseFile(char *buf)
 {
     int braces = 0;
+    struct lumpdata *texinfo;
 
     map.cEntities = map.cBrushes = map.cFaces = 0;
 
@@ -500,8 +501,9 @@ PreParseFile(char *buf)
     // Allocate maximum memory here, copy over later
     // Maximum possible is one miptex/texinfo per face
     rgszMiptex = AllocMem(MIPTEX, map.cFaces, true);
-    pWorldEnt->pTexinfo = AllocMem(BSPTEXINFO, map.cFaces, true);
-    pWorldEnt->cTexinfo = map.cFaces;
+    texinfo = &pWorldEnt->lumps[BSPTEXINFO];
+    texinfo->data = AllocMem(BSPTEXINFO, map.cFaces, true);
+    texinfo->count = map.cFaces;
 }
 
 
@@ -511,6 +513,7 @@ LoadMapFile(void)
     char *buf;
     int i, j, length;
     void *pTemp;
+    struct lumpdata *texinfo;
 
     Message(msgProgress, "LoadMapFile");
 
@@ -551,15 +554,15 @@ LoadMapFile(void)
 	FreeMem(pTemp, MIPTEX, map.cFaces);
     }
 
-    if (pWorldEnt->iTexinfo > pWorldEnt->cTexinfo)
+    texinfo = &pWorldEnt->lumps[BSPTEXINFO];
+    if (texinfo->index > texinfo->count)
 	Message(msgError, errLowTexinfoCount);
-    else if (pWorldEnt->iTexinfo < pWorldEnt->cTexinfo) {
-	pTemp = (void *)pWorldEnt->pTexinfo;
-	pWorldEnt->pTexinfo = AllocMem(BSPTEXINFO, pWorldEnt->iTexinfo, true);
-	memcpy(pWorldEnt->pTexinfo, pTemp,
-	       pWorldEnt->iTexinfo * rgcMemSize[BSPTEXINFO]);
-	FreeMem(pTemp, BSPTEXINFO, pWorldEnt->cTexinfo);
-	pWorldEnt->cTexinfo = pWorldEnt->iTexinfo;
+    else if (texinfo->index < texinfo->count) {
+	pTemp = texinfo->data;
+	texinfo->data = AllocMem(BSPTEXINFO, texinfo->index, true);
+	memcpy(texinfo->data, pTemp, texinfo->index * rgcMemSize[BSPTEXINFO]);
+	FreeMem(pTemp, BSPTEXINFO, texinfo->count);
+	texinfo->count = texinfo->index;
     }
     // One plane per face + 6 for portals
     cPlanes = map.cFaces + 6;
@@ -604,7 +607,7 @@ LoadMapFile(void)
     Message(msgStat, "%5i brushes", map.cBrushes);
     Message(msgStat, "%5i entities", map.cEntities);
     Message(msgStat, "%5i unique texnames", cMiptex);
-    Message(msgStat, "%5i texinfo", pWorldEnt->cTexinfo);
+    Message(msgStat, "%5i texinfo", texinfo->count);
     Message(msgLiteral, "\n");
 }
 
@@ -675,16 +678,18 @@ WriteEntitiesToString(void)
     char szLine[129];
     int iEntity;
     int cLen;
+    struct lumpdata *entities;
 
     map.cTotal[BSPENT] = 0;
 
     for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
 	ep = map.rgEntities[iEntity].epairs;
+	entities = &map.rgEntities[iEntity].lumps[BSPENT];
 
 	// ent got removed
 	if (!ep) {
-	    map.rgEntities[iEntity].cEntdata = 0;
-	    map.rgEntities[iEntity].pEntdata = NULL;
+	    entities->count = 0;
+	    entities->data = NULL;
 	    continue;
 	}
 
@@ -702,9 +707,9 @@ WriteEntitiesToString(void)
 	// Add 4 for {\n and }\n
 	cLen += 4;
 
-	map.rgEntities[iEntity].cEntdata = cLen;
+	entities->count = cLen;
 	map.cTotal[BSPENT] += cLen;
-	map.rgEntities[iEntity].pEntdata = pCur = AllocMem(BSPENT, cLen, true);
+	entities->data = pCur = AllocMem(BSPENT, cLen, true);
 	*pCur = 0;
 
 	strcat(pCur, "{\n");

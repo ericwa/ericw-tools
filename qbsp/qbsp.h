@@ -574,76 +574,21 @@ typedef struct mapbrush_s {
     int iFaceEnd;
 } mapbrush_t;
 
+struct lumpdata {
+    int count;
+    int index;
+    void *data;
+};
+
 typedef struct mapentity_s {
     vec3_t origin;
     int iBrushStart;
     int iBrushEnd;
     epair_t *epairs;
     vec3_t mins, maxs;
-    brush_t *pBrushes;		// NULL terminated list
+    brush_t *pBrushes;		/* NULL terminated list */
     int cBrushes;
-
-    // Contains two alternate ways of accessing memory, via enum or individual vars
-    // Ensure vars match up with the lump enum
-    union {
-	struct {
-	    // Total counts
-	    int cEntdata;
-	    int cPlanes;
-	    int cTexdata;
-	    int cVertices;
-	    int cVisdata;
-	    int cNodes;
-	    int cTexinfo;
-	    int cFaces;
-	    int cLightdata;
-	    int cClipnodes;
-	    int cLeaves;
-	    int cMarksurfaces;
-	    int cEdges;
-	    int cSurfedges;
-	    int cModels;
-
-	    // Current indices into data
-	    int iEntdata;
-	    int iPlanes;
-	    int iTexdata;
-	    int iVertices;
-	    int iVisdata;
-	    int iNodes;
-	    int iTexinfo;
-	    int iFaces;
-	    int iLightdata;
-	    int iClipnodes;
-	    int iLeaves;
-	    int iMarksurfaces;
-	    int iEdges;
-	    int iSurfedges;
-	    int iModels;
-
-	    // Pointers to data
-	    char *pEntdata;
-	    dplane_t *pPlanes;
-	    byte *pTexdata;
-	    dvertex_t *pVertices;
-	    byte *pVisdata;
-	    dnode_t *pNodes;
-	    texinfo_t *pTexinfo;
-	    dface_t *pFaces;
-	    byte *pLightdata;
-	    dclipnode_t *pClipnodes;
-	    dleaf_t *pLeaves;
-	    unsigned short *pMarksurfaces;
-	    dedge_t *pEdges;
-	    int *pSurfedges;
-	    dmodel_t *pModels;
-	};
-	struct {
-	    int cData[BSP_LUMPS];
-	    int iData[BSP_LUMPS];
-	    void *pData[BSP_LUMPS];
-	};
-    };
+    struct lumpdata lumps[BSP_LUMPS];
 } mapentity_t;
 
 typedef struct mapdata_s {

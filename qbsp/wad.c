@@ -136,7 +136,8 @@ void
 WADList_Process(wad_t *wads, int numwads)
 {
     int i, j, k;
-    dmiptexlump_t *l;
+    dmiptexlump_t *miptex;
+    struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
 
     if (numwads < 1)
 	return;
@@ -149,7 +150,7 @@ WADList_Process(wad_t *wads, int numwads)
 	    for (k = 0; k < wads[j].header.numlumps; k++)
 		if (!strcasecmp(rgszMiptex[i], wads[j].lumps[k].name)) {
 		    // Found it. Add in the size and skip to outer loop.
-		    pWorldEnt->cTexdata += wads[j].lumps[k].disksize;
+		    texdata->count += wads[j].lumps[k].disksize;
 		    j = numwads;
 		    break;
 		}
@@ -158,19 +159,19 @@ WADList_Process(wad_t *wads, int numwads)
 		break;
 	}
 
-    pWorldEnt->cTexdata += sizeof(int) * (cMiptex + 1);
+    texdata->count += sizeof(int) * (cMiptex + 1);
 
     // Default texture data to store in worldmodel
-    pWorldEnt->pTexdata = AllocMem(BSPTEX, pWorldEnt->cTexdata, true);
-    l = (dmiptexlump_t *)pWorldEnt->pTexdata;
-    l->nummiptex = cMiptex;
+    texdata->data = AllocMem(BSPTEX, texdata->count, true);
+    miptex = (dmiptexlump_t *)texdata->data;
+    miptex->nummiptex = cMiptex;
 
-    WADList_LoadTextures(wads, numwads, l);
+    WADList_LoadTextures(wads, numwads, miptex);
 
     // Last pass, mark unfound textures as such
     for (i = 0; i < cMiptex; i++)
-	if (l->dataofs[i] == 0) {
-	    l->dataofs[i] = -1;
+	if (miptex->dataofs[i] == 0) {
+	    miptex->dataofs[i] = -1;
 	    Message(msgWarning, warnTextureNotFound, rgszMiptex[i]);
 	}
 }
@@ -181,6 +182,7 @@ WADList_LoadTextures(wad_t *wads, int numwads, dmiptexlump_t *l)
 {
     int i, j, len;
     byte *data;
+    struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
 
     data = (byte *)&l->dataofs[cMiptex];
     for (i = 0; i < numwads; i++) {
@@ -191,7 +193,7 @@ WADList_LoadTextures(wad_t *wads, int numwads, dmiptexlump_t *l)
 
 	    l->dataofs[j] = data - (byte *)l;
 	    len = WAD_LoadLump(wads + i, rgszMiptex[j], data);
-	    if (data + len - pWorldEnt->pTexdata > pWorldEnt->cTexdata)
+	    if (data + len - (byte *)texdata->data > texdata->count)
 		Message(msgError, errLowTextureCount);
 
 	    // didn't find the texture

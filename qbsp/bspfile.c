@@ -36,6 +36,7 @@ LoadBSPFile(void)
 {
     int i;
     int cFileSize, cLumpSize, iLumpOff;
+    mapentity_t *ent;
 
     // Load the file header
     StripExtension(options.szBSPName);
@@ -46,20 +47,18 @@ LoadBSPFile(void)
 	Message(msgError, errBadVersion, options.szBSPName, header->version,
 		BSPVERSION);
 
-    // Throw all of the data into the first entity to be written out later
+    /* Throw all of the data into the first entity to be written out later */
+    ent = map.rgEntities;
     for (i = 0; i < BSP_LUMPS; i++) {
 	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
 	iLumpOff = header->lumps[i].fileofs;
-
 	if (cLumpSize % rgcMemSize[i])
 	    Message(msgError, errDeformedBSPLump, rgcMemSize[i], cLumpSize);
 
-	map.rgEntities[0].cData[i] = cLumpSize / rgcMemSize[i];
-	map.rgEntities[0].pData[i] =
-	    AllocMem(i, map.rgEntities[0].cData[i], false);
+	ent->lumps[i].count = cLumpSize / rgcMemSize[i];
+	ent->lumps[i].data = AllocMem(i, ent->lumps[i].count, false);
 
-	memcpy(map.rgEntities[0].pData[i], (byte *)header + iLumpOff,
-	       cLumpSize);
+	memcpy(ent->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
     }
 
     FreeMem(header, OTHER, cFileSize + 1);
@@ -72,20 +71,21 @@ static void
 AddLump(FILE *f, int Type)
 {
     lump_t *lump;
-    int cLen = 0, templen;
+    int cLen = 0;
     int iEntity;
     size_t ret;
+    struct lumpdata *entities;
 
     lump = &header->lumps[Type];
     lump->fileofs = ftell(f);
 
     for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
-	if (map.rgEntities[iEntity].pData[Type] != NULL) {
-	    templen = map.rgEntities[iEntity].cData[Type] * rgcMemSize[Type];
-	    ret = fwrite(map.rgEntities[iEntity].pData[Type], 1, templen, f);
-	    if (ret != templen)
+	entities = &map.rgEntities[iEntity].lumps[Type];
+	if (entities->data) {
+	    ret = fwrite(entities->data, rgcMemSize[Type], entities->count, f);
+	    if (ret != entities->count)
 		Message(msgError, errWriteFailure);
-	    cLen += templen;
+	    cLen += entities->count * rgcMemSize[Type];
 	}
     }
 
@@ -171,6 +171,8 @@ Dumps info about current file
 void
 PrintBSPFileSizes(void)
 {
+    struct lumpdata *lump;
+
     Message(msgStat, "%5i planes       %6i", map.cTotal[BSPPLANE],
 	    map.cTotal[BSPPLANE] * rgcMemSize[BSPPLANE]);
     Message(msgStat, "%5i vertexes     %6i", map.cTotal[BSPVERTEX],
@@ -191,12 +193,14 @@ PrintBSPFileSizes(void)
 	    map.cTotal[BSPSURFEDGE] * rgcMemSize[BSPSURFEDGE]);
     Message(msgStat, "%5i edges        %6i", map.cTotal[BSPEDGE],
 	    map.cTotal[BSPEDGE] * rgcMemSize[BSPEDGE]);
-    if (!pWorldEnt->cTexdata)
-	Message(msgStat, "    0 textures          0");
-    else
+
+    lump = &pWorldEnt->lumps[BSPTEX];
+    if (lump->data)
 	Message(msgStat, "%5i textures     %6i",
-		((dmiptexlump_t *)pWorldEnt->pTexdata)->nummiptex,
-		pWorldEnt->cTexdata);
+		((dmiptexlump_t *)lump->data)->nummiptex, lump->count);
+    else
+	Message(msgStat, "    0 textures          0");
+
     Message(msgStat, "      lightdata    %6i", map.cTotal[BSPLIGHT]);
     Message(msgStat, "      visdata      %6i", map.cTotal[BSPVIS]);
     Message(msgStat, "      entdata      %6i", map.cTotal[BSPENT] + 1);	// +1 for null terminator
