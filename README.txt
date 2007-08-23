@@ -1,7 +1,7 @@
-Updated 2006-07-22
+Updated 2007-08-23
 
 ------------------
- Tyr-Utils (v0.1)
+ Tyr-Utils (v0.2)
 ------------------
   Website: http://disenchant.net
   Author:  Kevin Shanahan (AKA Tyrann)
@@ -29,8 +29,9 @@ Included utilities:
             file into a text file. Might add a bsp -> wad extractor at some
             stage too.
 
-  qbsp    - Not here yet. I need to re-write my modified TreeQBSP util either
-            from scratch, or using some GPL'd sources as a base. Damn it.
+  qbsp    - A modified version of Greg Lewis' TreeQBSP, which is in turn based
+            on id's original qbsp tool. Used for turning a .map file into a
+	    playable .bsp file.
 
 ---------
  License
