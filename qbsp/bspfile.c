@@ -173,35 +173,35 @@ PrintBSPFileSizes(void)
 {
     struct lumpdata *lump;
 
-    Message(msgStat, "%5i planes       %6i", map.cTotal[BSPPLANE],
+    Message(msgStat, "%6i planes       %8i", map.cTotal[BSPPLANE],
 	    map.cTotal[BSPPLANE] * rgcMemSize[BSPPLANE]);
-    Message(msgStat, "%5i vertexes     %6i", map.cTotal[BSPVERTEX],
+    Message(msgStat, "%6i vertexes     %8i", map.cTotal[BSPVERTEX],
 	    map.cTotal[BSPVERTEX] * rgcMemSize[BSPVERTEX]);
-    Message(msgStat, "%5i nodes        %6i", map.cTotal[BSPNODE],
+    Message(msgStat, "%6i nodes        %8i", map.cTotal[BSPNODE],
 	    map.cTotal[BSPNODE] * rgcMemSize[BSPNODE]);
-    Message(msgStat, "%5i texinfo      %6i", map.cTotal[BSPTEXINFO],
+    Message(msgStat, "%6i texinfo      %8i", map.cTotal[BSPTEXINFO],
 	    map.cTotal[BSPTEXINFO] * rgcMemSize[BSPTEXINFO]);
-    Message(msgStat, "%5i faces        %6i", map.cTotal[BSPFACE],
+    Message(msgStat, "%6i faces        %8i", map.cTotal[BSPFACE],
 	    map.cTotal[BSPFACE] * rgcMemSize[BSPFACE]);
-    Message(msgStat, "%5i clipnodes    %6i", map.cTotal[BSPCLIPNODE],
+    Message(msgStat, "%6i clipnodes    %8i", map.cTotal[BSPCLIPNODE],
 	    map.cTotal[BSPCLIPNODE] * rgcMemSize[BSPCLIPNODE]);
-    Message(msgStat, "%5i leafs        %6i", map.cTotal[BSPLEAF],
+    Message(msgStat, "%6i leafs        %8i", map.cTotal[BSPLEAF],
 	    map.cTotal[BSPLEAF] * rgcMemSize[BSPLEAF]);
-    Message(msgStat, "%5i marksurfaces %6i", map.cTotal[BSPMARKSURF],
+    Message(msgStat, "%6i marksurfaces %8i", map.cTotal[BSPMARKSURF],
 	    map.cTotal[BSPMARKSURF] * rgcMemSize[BSPMARKSURF]);
-    Message(msgStat, "%5i surfedges    %6i", map.cTotal[BSPSURFEDGE],
+    Message(msgStat, "%6i surfedges    %8i", map.cTotal[BSPSURFEDGE],
 	    map.cTotal[BSPSURFEDGE] * rgcMemSize[BSPSURFEDGE]);
-    Message(msgStat, "%5i edges        %6i", map.cTotal[BSPEDGE],
+    Message(msgStat, "%6i edges        %8i", map.cTotal[BSPEDGE],
 	    map.cTotal[BSPEDGE] * rgcMemSize[BSPEDGE]);
 
     lump = &pWorldEnt->lumps[BSPTEX];
     if (lump->data)
-	Message(msgStat, "%5i textures     %6i",
+	Message(msgStat, "%6i textures     %8i",
 		((dmiptexlump_t *)lump->data)->nummiptex, lump->count);
     else
-	Message(msgStat, "    0 textures          0");
+	Message(msgStat, "     0 textures            0");
 
-    Message(msgStat, "      lightdata    %6i", map.cTotal[BSPLIGHT]);
-    Message(msgStat, "      visdata      %6i", map.cTotal[BSPVIS]);
-    Message(msgStat, "      entdata      %6i", map.cTotal[BSPENT] + 1);	// +1 for null terminator
+    Message(msgStat, "       lightdata    %8i", map.cTotal[BSPLIGHT]);
+    Message(msgStat, "       visdata      %8i", map.cTotal[BSPVIS]);
+    Message(msgStat, "       entdata      %8i", map.cTotal[BSPENT] + 1);
 }
