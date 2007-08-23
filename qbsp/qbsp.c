@@ -24,9 +24,6 @@
 #include "qbsp.h"
 #include "wad.h"
 
-#define stringify__(x) #x
-#define stringify(x) stringify__(x)
-
 static const char *IntroString = "TyrQBSP v" stringify(QBSP_VERSION) "\n\n";
 
 // command line flags

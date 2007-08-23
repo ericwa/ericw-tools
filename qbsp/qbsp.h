@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <float.h>
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,8 +42,14 @@
 // Current BSP version
 #define BSPVERSION	29
 
-// Data-restrained limits
-#define MAX_BSP_CLIPNODES	32767
+/*
+ * Clipnodes need to be stored as a 16-bit offset. Originally, this was a
+ * signed value and only the positive values up to 32767 were available. Since
+ * the negative range was unused apart from a few values reserved for flags,
+ * this has been extended to allow up to 65520 (0xfff0) clipnodes (with a
+ * suitably modified engine).
+ */
+#define MAX_BSP_CLIPNODES 0xfff0
 
 // key / value pair sizes
 #define	MAX_KEY		32
@@ -212,6 +219,9 @@ void VectorScale(const vec3_t v, const vec_t scale, vec3_t out);
 	(a_ > b_) ? a_ : b_;	\
 })
 
+#define stringify__(x) #x
+#define stringify(x) stringify__(x)
+
 //====== bspfile.h
 
 
@@ -266,7 +276,7 @@ typedef struct {
 
 typedef struct {
     int planenum;
-    short children[2];		// negative numbers are contents
+    uint16_t children[2];		// negative numbers are contents
 } dclipnode_t;
 
 

@@ -165,9 +165,9 @@ ExportClipNodes
 Called after the clipping hull is completed.  Generates a disk format
 representation and frees the original memory.
 
-This gets real ugly.  Gets called twice per entity, once for each clip hull.  First time
-just store away data, second time fix up reference points to accomodate new data
-interleaved with old.
+This gets real ugly.  Gets called twice per entity, once for each clip hull.
+First time just store away data, second time fix up reference points to
+accomodate new data interleaved with old.
 ==================
 */
 void
@@ -181,30 +181,30 @@ ExportClipNodes(node_t *nodes)
 
     oldcount = clipnodes->count;
 
-    // Count nodes before this one
+    /* Count nodes before this one */
     for (i = 0; i < map.iEntities; i++)
 	clipcount += map.rgEntities[i].lumps[BSPCLIPNODE].count;
     model->headnode[hullnum] = clipcount + oldcount;
 
     CountClipNodes_r(nodes);
-
     if (clipnodes->count > MAX_BSP_CLIPNODES)
 	Message(msgError, errTooManyClipnodes);
+
     pTemp = clipnodes->data;
     clipnodes->data = AllocMem(BSPCLIPNODE, clipnodes->count, true);
     if (pTemp) {
 	memcpy(clipnodes->data, pTemp, oldcount * rgcMemSize[BSPCLIPNODE]);
 	FreeMem(pTemp, BSPCLIPNODE, oldcount);
 
-	// Worthwhile to special-case this for entity 0 (no modification needed)
+	/* Worth special-casing for entity 0 (no modification needed) */
 	diff = clipcount - model->headnode[1];
 	if (diff != 0) {
 	    model->headnode[1] += diff;
 	    for (i = 0; i < oldcount; i++) {
 		pTemp = (dclipnode_t *)clipnodes->data + i;
-		if (pTemp->children[0] >= 0)
+		if (pTemp->children[0] < MAX_BSP_CLIPNODES)
 		    pTemp->children[0] += diff;
-		if (pTemp->children[1] >= 0)
+		if (pTemp->children[1] < MAX_BSP_CLIPNODES)
 		    pTemp->children[1] += diff;
 	    }
 	}
