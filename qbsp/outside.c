@@ -127,7 +127,7 @@ PrintLeakTrail(vec3_t p1, vec3_t p2)
     vec3_t dir;
     vec_t len;
 
-    VectorSubtract(p1, p1, dir);
+    VectorSubtract(p2, p1, dir);
     len = VectorNormalize(dir);
 
     while (len > options.dxLeakDist) {
