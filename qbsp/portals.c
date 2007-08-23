@@ -48,6 +48,32 @@ WriteFloat(vec_t v)
 	fprintf(PortalFile, "%f ", v);
 }
 
+static int
+SameContent(int Cont0, int Cont1)
+{
+    /* If contents values are the same, contents are equal */
+    if (Cont0 == Cont1)
+	return 1;
+
+    /* If water is transparent, liquids are like empty space */
+    if (options.fTranswater && ((Cont0 >= CONTENTS_LAVA
+				 && Cont0 <= CONTENTS_WATER
+				 && Cont1 == CONTENTS_EMPTY)
+				|| (Cont0 == CONTENTS_EMPTY
+				    && Cont1 >= CONTENTS_LAVA
+				    && Cont1 <= CONTENTS_WATER)))
+	return 1;
+
+    /* If sky is transparent, then sky is like empty space */
+    if (options.fTranssky && ((Cont0 == CONTENTS_SKY
+			       && Cont1 == CONTENTS_EMPTY)
+			      || (Cont0 == CONTENTS_EMPTY
+				  && Cont1 == CONTENTS_SKY)))
+	return 1;
+
+    return false;
+}
+
 static void
 WritePortalFile_r(node_t *node)
 {
@@ -67,33 +93,16 @@ WritePortalFile_r(node_t *node)
 
     for (p = node->portals; p;) {
 	w = p->winding;
-	if (w && p->nodes[0] == node) {
-	    if (!options.fTranswater && !options.fTranssky &&
-		p->nodes[0]->contents != p->nodes[1]->contents)
-		goto NextPortal;
-	    else if (options.fTranswater && !options.fTranssky &&
-		     ((p->nodes[0]->contents == CONTENTS_SKY) ||
-		      (p->nodes[1]->contents == CONTENTS_SOLID) ||
-		      (p->nodes[1]->contents == CONTENTS_SKY)))
-		goto NextPortal;
-	    else if (!options.fTranswater && options.fTranssky &&
-		     p->nodes[0]->contents != p->nodes[1]->contents &&
-		     !(p->nodes[0]->contents == CONTENTS_SKY &&
-		       p->nodes[1]->contents == CONTENTS_EMPTY) &&
-		     !(p->nodes[0]->contents == CONTENTS_EMPTY &&
-		       p->nodes[1]->contents == CONTENTS_SKY))
-		goto NextPortal;
-	    else if (p->nodes[1]->contents == CONTENTS_SOLID)
-		goto NextPortal;
-
-	    // write out to the file
-
-	    // sometimes planes get turned around when they are very near
-	    // the changeover point between different axis.  interpret the
-	    // plane the same way vis will, and flip the side orders if needed
+	if (w && p->nodes[0] == node
+	    && SameContent(p->nodes[0]->contents, p->nodes[1]->contents)) {
+	    /*
+	     * sometimes planes get turned around when they are very near
+	     * the changeover point between different axis.  interpret the
+	     * plane the same way vis will, and flip the side orders if needed
+	     */
 	    pl = &pPlanes[p->planenum];
 	    PlaneFromWinding(w, &plane2);
-	    /* FIXME - not 100% sure about that epsilon... */
+
 	    if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON) {
 		/* backwards... */
 		fprintf(PortalFile, "%i %i %i ", w->numpoints,
@@ -111,13 +120,11 @@ WritePortalFile_r(node_t *node)
 	    fprintf(PortalFile, "\n");
 	}
 
-      NextPortal:
 	if (p->nodes[0] == node)
 	    p = p->next[0];
 	else
 	    p = p->next[1];
     }
-
 }
 
 /*
@@ -137,7 +144,8 @@ NumberLeafs_r(node_t *node)
 	return;
     }
 
-    if (node->contents == CONTENTS_SOLID) {	// solid block, viewpoint never inside
+    if (node->contents == CONTENTS_SOLID) {
+	/* solid block, viewpoint never inside */
 	node->visleafnum = -1;
 	return;
     }
@@ -145,28 +153,14 @@ NumberLeafs_r(node_t *node)
     node->visleafnum = num_visleafs++;
 
     for (p = node->portals; p;) {
-	if (p->nodes[0] == node)	// only write out from first leaf
-	{
-	    if (!options.fTranswater && !options.fTranssky &&
-		p->nodes[0]->contents != p->nodes[1]->contents);
-	    else if (options.fTranswater && !options.fTranssky &&
-		     ((p->nodes[0]->contents == CONTENTS_SKY) ||
-		      (p->nodes[1]->contents == CONTENTS_SOLID) ||
-		      (p->nodes[1]->contents == CONTENTS_SKY)));
-	    else if (!options.fTranswater && options.fTranssky &&
-		     p->nodes[0]->contents != p->nodes[1]->contents &&
-		     !(p->nodes[0]->contents == CONTENTS_SKY &&
-		       p->nodes[1]->contents == CONTENTS_EMPTY) &&
-		     !(p->nodes[0]->contents == CONTENTS_EMPTY &&
-		       p->nodes[1]->contents == CONTENTS_SKY));
-	    else if (p->nodes[1]->contents == CONTENTS_SOLID);
-	    else
+	/* only write out from first leaf */
+	if (p->nodes[0] == node) {
+	    if (SameContent(p->nodes[0]->contents, p->nodes[1]->contents))
 		num_visportals++;
 	    p = p->next[0];
 	} else
 	    p = p->next[1];
     }
-
 }
 
 
