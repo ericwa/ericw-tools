@@ -70,15 +70,23 @@ Error(const char *error, ...)
 
 
 /*
- * qdir will hold the path up to the quake directory, including the slash
+ * qdir will hold the path up to the base directory (basedir), including the
+ * slash:
+ *	c:\quake\
+ *	/usr/local/games/quake/
  *
- *  f:\quake\
- *  /raid/quake/
- *
- * gamedir will hold qdir + the game directory (id1, id2, etc)
+ * gamedir will hold qdir + the game directory (id1, hipnotic, etc).
+ * SetQdirFromPath requires an input containing both the basedir and the
+ * gamedir:
+ *	c:\quake\id1\somefile.dat
+ *	/usr/local/games/quake/id1/somefile.dat
+ * or similar partials:
+ *	id1\somefile.dat
+ *	quake/id1/somefile.dat
  *
  */
 
+const char basedir[] = "quake";
 char qdir[1024];
 char gamedir[1024];
 
@@ -86,7 +94,7 @@ void
 SetQdirFromPath(char *path)
 {
     char temp[1024];
-    char *c;
+    char *c, *mark;
 
     if (!(path[0] == '/' || path[0] == '\\' || path[1] == ':')) {
 	/* path is partial */
@@ -95,13 +103,22 @@ SetQdirFromPath(char *path)
 	path = temp;
     }
 
-    /* search for "quake" in path */
-    for (c = path; *c; c++)
-	if (!Q_strncasecmp(c, "quake", 5)) {
-	    strncpy(qdir, path, c + 6 - path);
+    c = path + strlen(path);
+    while (c > path && *c != '/' && *c != '\\')
+	c--;
+    if (c == path)
+	goto out_err;
+    mark = c + 1;
+    c--;
+
+    /* search for the basedir in path */
+    while (c != path) {
+	if (!Q_strncasecmp(c, basedir, sizeof(basedir) - 1)) {
+	    strncpy (qdir, path, c + sizeof(basedir) - path);
 	    logprint("qdir: %s\n", qdir);
-	    c += 6;
-	    while (*c) {
+	    /* now search for a gamedir in path */
+	    c += sizeof(basedir);
+	    while (c < mark) {
 		if (*c == '/' || *c == '\\') {
 		    strncpy(gamedir, path, c + 1 - path);
 		    logprint("gamedir: %s\n", gamedir);
@@ -110,9 +127,11 @@ SetQdirFromPath(char *path)
 		c++;
 	    }
 	    Error("No gamedir in %s", path);
-	    return;
 	}
-    Error("SeetQdirFromPath: no 'quake' in %s", path);
+	c--;
+    }
+out_err:
+    Error("%s: no '%s' in %s", __func__, basedir, path);
 }
 
 char *
