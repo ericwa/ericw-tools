@@ -464,8 +464,14 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
 
 	    if (in->faces)
 		*front = in;
+	    else
+		FreeMem(in, SURFACE, 1);
+
 	    if (news->faces)
 		*back = news;
+	    else
+		FreeMem(news, SURFACE, 1);
+
 	    return;
 	}
 
