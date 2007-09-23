@@ -60,6 +60,9 @@ NewFaceFromFace(face_t *in)
     newf->contents[0] = in->contents[0];
     newf->contents[1] = in->contents[1];
 
+    VectorCopy(in->origin, newf->origin);
+    newf->radius = in->radius;
+
     return newf;
 }
 
@@ -295,8 +298,6 @@ SaveOutside(bool mirror)
 	    newf->planeside = f->planeside ^ 1;	// reverse side
 	    newf->contents[0] = f->contents[1];
 	    newf->contents[1] = f->contents[0];
-	    VectorCopy(f->origin, newf->origin);
-	    newf->radius = f->radius;
 
 	    for (i = 0; i < f->w.numpoints; i++)	// add points backwards
 		VectorCopy(f->w.points[f->w.numpoints - 1 - i], newf->w.points[i]);
