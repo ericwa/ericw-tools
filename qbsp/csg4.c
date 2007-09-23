@@ -105,7 +105,17 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
     if (in->w.numpoints < 0)
 	Message(msgError, errFreedFace);
 
-    CalcSides(&in->w, split, sides, dists, counts);
+    /* Fast test */
+    dot = DotProduct(in->origin, split->normal) - split->dist;
+    if (dot > in->radius) {
+	counts[SIDE_FRONT] = 1;
+	counts[SIDE_BACK] = 0;
+    } else if (dot < -in->radius) {
+	counts[SIDE_FRONT] = 0;
+	counts[SIDE_BACK] = 1;
+    } else {
+	CalcSides(&in->w, split, sides, dists, counts);
+    }
 
     // Plane doesn't split this face after all
     if (!counts[SIDE_FRONT]) {
