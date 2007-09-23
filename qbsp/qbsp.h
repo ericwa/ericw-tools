@@ -549,7 +549,6 @@ bool FillOutside(node_t *node);
 
 typedef struct options_s {
     bool fNofill;
-    bool fTjunc;
     bool fNoclip;
     bool fOnlyents;
     bool fVerbose;

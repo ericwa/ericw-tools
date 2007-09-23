@@ -113,9 +113,7 @@ ProcessEntity(void)
 		// make the real portals for vis tracing
 		PortalizeWorld(nodes);
 
-		// fix tjunctions
-		if (options.fTjunc)
-		    tjunc(nodes);
+		tjunc(nodes);
 	    }
 	    FreeAllPortals(nodes);
 	}
@@ -295,7 +293,6 @@ PrintOptions(void)
     printf("Quake .BSP files.\n\n");
     printf("qbsp [options] sourcefile [destfile]\n\n");
     printf("Options:\n");
-    printf("   -tjunc          Enables tjunc calculations (default is disabled)\n");
     printf("   -nofill         Doesn't perform outside filling\n");
     printf("   -noclip         Doesn't build clip hulls\n");
     printf("   -onlyents       Only updates .MAP entities\n");
@@ -391,9 +388,7 @@ ParseOptions(char *szOptions)
 	    NameCount++;
 	} else {
 	    szTok++;
-	    if (!strcasecmp(szTok, "tjunc"))
-		options.fTjunc = true;
-	    else if (!strcasecmp(szTok, "nofill"))
+	    if (!strcasecmp(szTok, "nofill"))
 		options.fNofill = true;
 	    else if (!strcasecmp(szTok, "noclip"))
 		options.fNoclip = true;
