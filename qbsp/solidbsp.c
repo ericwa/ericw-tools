@@ -41,7 +41,7 @@ For BSP hueristic
 ==================
 */
 static int
-FaceSide(face_t *in, plane_t *split)
+FaceSide__(face_t *in, plane_t *split)
 {
     bool frontcount, backcount;
     vec_t dot;
@@ -85,6 +85,23 @@ FaceSide(face_t *in, plane_t *split)
 	return SIDE_FRONT;
 
     return SIDE_ON;
+}
+
+static int
+FaceSide(face_t *in, plane_t *split)
+{
+    vec_t dist;
+    int ret;
+
+    dist = DotProduct(in->origin, split->normal) - split->dist;
+    if (dist > in->radius)
+	ret = SIDE_FRONT;
+    else if (dist < -in->radius)
+	ret = SIDE_BACK;
+    else
+	ret = FaceSide__(in, split);
+
+    return ret;
 }
 
 /*
