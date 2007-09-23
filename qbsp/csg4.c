@@ -185,14 +185,13 @@ CheckInside(brush_t *b)
 {
     face_t *f, *bf, *next;
     face_t *insidelist;
-    plane_t *plane, clip;
+    plane_t clip;
     winding_t *w;
 
     insidelist = NULL;
     f = inside;
     while (f) {
 	next = f->next;
-	plane = &pPlanes[f->planenum];
 	w = CopyWinding(&f->w);
 	for (bf = b->faces; bf; bf = bf->next) {
 	    clip = pPlanes[bf->planenum];
