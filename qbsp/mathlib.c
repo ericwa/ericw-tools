@@ -22,16 +22,23 @@
 
 #include "qbsp.h"
 
-double
-VectorLength(const vec3_t v)
+vec_t
+VectorLengthSq(const vec3_t v)
 {
     int i;
-    double length;
+    vec_t lensq;
 
-    length = 0;
+    lensq = 0;
     for (i = 0; i < 3; i++)
-	length += v[i] * v[i];
-    return sqrt(length);	// FIXME
+	lensq += v[i] * v[i];
+
+    return lensq;
+}
+
+vec_t
+VectorLength(const vec3_t v)
+{
+    return sqrt(VectorLengthSq(v));
 }
 
 bool

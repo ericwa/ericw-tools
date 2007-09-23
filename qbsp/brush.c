@@ -417,6 +417,7 @@ CreateBrushFaces(void)
 	f->next = pFaceList;
 	pFaceList = f;
 	CheckFace(f);
+	UpdateFaceSphere(f);
     }
 
     // Rotatable objects must have a bounding box big enough to

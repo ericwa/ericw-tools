@@ -202,7 +202,8 @@ extern void VectorSubtract(const vec3_t va, const vec3_t vb, vec3_t out);
 extern void VectorAdd(const vec3_t va, const vec3_t vb, vec3_t out);
 extern void VectorCopy(const vec3_t in, vec3_t out);
 
-double VectorLength(const vec3_t v);
+vec_t VectorLengthSq(const vec3_t v);
+vec_t VectorLength(const vec3_t v);
 
 void VectorMA(const vec3_t va, const double scale, const vec3_t vb, vec3_t vc);
 
@@ -377,6 +378,9 @@ typedef struct visfacet_s {
     struct visfacet_s *original;	// face on node
     int outputnumber;		// only valid for original faces after
 				// write surfaces
+    vec3_t origin;
+    vec_t radius;
+
     int *edges;
     winding_t w;
 } face_t;
@@ -447,6 +451,7 @@ surface_t *BuildSurfaces(void);
 face_t *NewFaceFromFace(face_t *in);
 surface_t *CSGFaces(void);
 void SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back);
+void UpdateFaceSphere(face_t *in);
 
 //=============================================================================
 

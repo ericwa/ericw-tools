@@ -63,6 +63,24 @@ NewFaceFromFace(face_t *in)
     return newf;
 }
 
+void
+UpdateFaceSphere(face_t *in)
+{
+    int i;
+    vec3_t radius;
+    vec_t lensq;
+
+    MidpointWinding(&in->w, in->origin);
+    in->radius = 0;
+    for (i = 0; i < in->w.numpoints; i++) {
+	VectorSubtract(in->w.points[i], in->origin, radius);
+	lensq = VectorLengthSq(radius);
+	if (lensq > in->radius)
+	    in->radius = lensq;
+    }
+    in->radius = sqrt(in->radius);
+}
+
 
 /*
 ==================
@@ -278,6 +296,8 @@ SaveOutside(bool mirror)
 	    newf->planeside = f->planeside ^ 1;	// reverse side
 	    newf->contents[0] = f->contents[1];
 	    newf->contents[1] = f->contents[0];
+	    VectorCopy(f->origin, newf->origin);
+	    newf->radius = f->radius;
 
 	    for (i = 0; i < f->w.numpoints; i++)	// add points backwards
 		VectorCopy(f->w.points[f->w.numpoints - 1 - i], newf->w.points[i]);
