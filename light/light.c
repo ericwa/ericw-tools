@@ -152,15 +152,17 @@ LightWorld(void)
     if (dlightdata)
 	free(dlightdata);
 
-    if (colored && bsp30)
+    if (colored)
 	lightdatasize = MAX_MAP_LIGHTING;
     else
 	lightdatasize = MAX_MAP_LIGHTING / 4;
-
     dlightdata = malloc(lightdatasize + 16); /* for alignment */
     if (!dlightdata)
 	Error("%s: allocation of %i bytes failed.", __func__, lightdatasize);
     memset(dlightdata, 0, lightdatasize + 16);
+
+    if (litfile)
+	lightdatasize /= 4;
 
     /* align filebase to a 4 byte boundary */
     filebase = file_p = (byte *)(((unsigned long)dlightdata + 3) & ~3);
