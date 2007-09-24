@@ -170,7 +170,7 @@ LightWorld(void)
 
     if (colored && litfile) {
 	/* litfile data stored in dlightdata, after the white light */
-	lit_filebase = file_end + 12 - ((unsigned long)lit_filebase % 12);
+	lit_filebase = file_end + 12 - ((unsigned long)file_end % 12);
 	lit_file_p = lit_filebase;
 	lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
     }
