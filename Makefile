@@ -134,7 +134,7 @@ bsputil/$(BIN_PFX)bsputil$(EXT):	$(BSPUTIL_OFILES)
 # Qbsp #
 ########
 
-QBSP_VERSION = 0.3
+QBSP_VERSION = 0.4
 QBSP_OBJECTS = \
 	brush.o bspfile.o cmdlib.o csg4.o file.o globals.o map.o \
 	mathlib.o merge.o outside.o parser.o portals.o qbsp.o solidbsp.o \

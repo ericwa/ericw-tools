@@ -1,9 +1,9 @@
-Updated: 2007-09-23
+Updated: 2007-09-25
 =====================================================================
 
 Title                   : TyrLight
 Filename                : light.exe
-Version                 : 0.99d
+Version                 : 0.99e
 
 Author                  : Kevin Shanahan
 Net Nick                : Tyrann
@@ -279,6 +279,10 @@ Known Issues            : None
 ===========
 Changelog:
 ===========
+v0.99e
+- Another embarassing bug fix release; "-lit" support still wasn't right. So,
+  fingers crossed this time around...
+
 v0.99d
 - Fix memory allocation for "-lit" style colored lighting
 

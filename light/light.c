@@ -196,7 +196,7 @@ main(int argc, const char **argv)
     char source[1024];
 
     init_log("light.log");
-    logprint("----- TyrLight v0.99d -----\n"
+    logprint("----- TyrLight v0.99e -----\n"
 #if 0
 	     "** Beta version " __DATE__ " " __TIME__ "\n"
 #endif
