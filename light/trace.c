@@ -97,7 +97,7 @@ typedef struct {
  * TYR - modified TestLine (a bit of a hack job...)
  * ==============
  */
-#define MAX_TSTACK 64
+#define MAX_TSTACK 128
 static qboolean
 TestLineOrSky(const vec3_t start, const vec3_t stop, qboolean sky_test)
 {
