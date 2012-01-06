@@ -4,131 +4,291 @@
 
 .PHONY:	all clean
 
-ifeq ($(OSTYPE),msys)
+# ============================================================================
+BUILD_DIR        ?= build
+BIN_DIR          ?= bin
+DEBUG            ?= N# Compile with debug info
+OPTIMIZED_CFLAGS ?= Y# Enable compiler optimisations (if DEBUG != Y)
+TARGET_OS        ?= $(HOST_OS)
+# ============================================================================
+
+SYSNAME := $(shell uname -s)
+
+ifneq (,$(findstring MINGW32,$(SYSNAME)))
+HOST_OS = WIN32
+TOPDIR := $(shell pwd -W)
+else
+ifneq (,$(findstring $(SYSNAME),FreeBSD NetBSD OpenBSD))
+HOST_OS = UNIX
+UNIX = bsd
+TOPDIR := $(shell pwd)
+else
+ifneq (,$(findstring $(SYSNAME),Linux))
+HOST_OS = UNIX
+UNIX = linux
+#UNIX = null
+TOPDIR := $(shell pwd)
+else
+$(error OS type not detected.)
+endif
+endif
+endif
+
+ifeq ($(TARGET_OS),WIN32)
 EXT=.exe
 DPTHREAD=
 LPTHREAD=
+ifneq ($(HOST_OS),WIN32)
+CC = $(TARGET)-gcc
+STRIP = $(TARGET)-strip
+endif
 else
 EXT=
 DPTHREAD=-DUSE_PTHREADS
 LPTHREAD=-lpthread
 endif
 
-#CFLAGS   = -Wall -Werror -g
-CFLAGS	 = -Wall -O3 -fomit-frame-pointer -ffast-math -march=i586
-CPPFLAGS = -I./include -DLINUX $(DPTHREAD)
-
 #BIN_PFX ?= tyr-
 BIN_PFX ?=
 
-STRIP ?= strip
+# ============================================================================
+# Helper functions
+# ============================================================================
 
-######################################
-# default rule and maintenence rules #
-######################################
+# ------------------------------------------------------------------------
+# Try to guess the MinGW cross compiler executables
+# - I've seen i386-mingw32msvc, i586-mingw32msvc (Debian) and now
+#   i486-mingw32 (Arch).
+# ------------------------------------------------------------------------
 
-all:	light/$(BIN_PFX)light$(EXT) \
-	vis/$(BIN_PFX)vis$(EXT) \
-	bspinfo/$(BIN_PFX)bspinfo$(EXT) \
-	bsputil/$(BIN_PFX)bsputil$(EXT) \
-	qbsp/$(BIN_PFX)qbsp$(EXT)
+MINGW_CROSS_GUESS := $(shell \
+	if which i486-mingw32-gcc > /dev/null 2>&1; then \
+		echo i486-mingw32; \
+	elif which i586-mingw32msvc-gcc > /dev/null 2>&1; then \
+		echo i586-mingw32msvc; \
+	else \
+		echo i386-mingw32msvc; \
+	fi)
 
-release:	all
-	$(STRIP) light/$(BIN_PFX)light$(EXT)
-	$(STRIP) vis/$(BIN_PFX)vis$(EXT)
-	$(STRIP) bspinfo/$(BIN_PFX)bspinfo$(EXT)
-	$(STRIP) bsputil/$(BIN_PFX)bsputil$(EXT)
-	$(STRIP) qbsp/$(BIN_PFX)qbsp$(EXT)
+# --------------------------------
+# GCC option checking
+# --------------------------------
 
-clean:
-	rm -f `find . -type f \( -name '*.o' -o -name '*~' \) -print`
-	rm -f light/$(BIN_PFX)light.exe
-	rm -f vis/$(BIN_PFX)vis.exe
-	rm -f bspinfo/$(BIN_PFX)bspinfo.exe
-	rm -f bsputil/$(BIN_PFX)bsputil.exe
-	rm -f qbsp/$(BIN_PFX)qbsp.exe
-	rm -f light/$(BIN_PFX)light
-	rm -f vis/$(BIN_PFX)vis
-	rm -f bspinfo/$(BIN_PFX)bspinfo
-	rm -f bsputil/$(BIN_PFX)bsputil
-	rm -f qbsp/$(BIN_PFX)qbsp
+cc-option = $(shell if $(CC) $(CFLAGS) $(1) -S -o /dev/null -xc /dev/null \
+             > /dev/null 2>&1; then echo "$(1)"; else echo "$(2)"; fi ;)
+
+# ---------------------------------------------------------------------------
+# Build commands
+# ---------------------------------------------------------------------------
+
+# To make warnings more obvious, be less verbose as default
+# Use 'make V=1' to see the full commands
+ifdef V
+  quiet =
+else
+  quiet = quiet_
+endif
+
+quiet_cmd_mkdir = '  MKDIR   $@'
+      cmd_mkdir = mkdir -p $@
+
+define do_mkdir
+	@if [ ! -d $@ ]; then \
+		echo $($(quiet)cmd_mkdir); \
+		$(cmd_mkdir); \
+	fi;
+endef
+
+# cmd_fixdep => Turn all pre-requisites into targets with no commands, to
+# prevent errors when moving files around between builds (e.g. from NQ or QW
+# dirs to the common dir.)
+cmd_fixdep = \
+	cp $(@D)/.$(@F).d $(@D)/.$(@F).d.tmp ; \
+	sed -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' \
+	    -e 's/$$/ :/' < $(@D)/.$(@F).d.tmp >> $(@D)/.$(@F).d ; \
+	rm -f $(@D)/.$(@F).d.tmp
+
+cmd_cc_dep_c = \
+	$(CC) -MM -MT $@ $(CPPFLAGS) -o $(@D)/.$(@F).d $< ; \
+	$(cmd_fixdep)
+
+quiet_cmd_cc_o_c = '  CC      $@'
+      cmd_cc_o_c = $(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
+
+define do_cc_o_c
+	@$(cmd_cc_dep_c);
+	@echo $($(quiet)cmd_cc_o_c);
+	@$(cmd_cc_o_c);
+endef
+
+cmd_cc_dep_rc = \
+	$(CC) -x c-header -MM -MT $@ $(CPPFLAGS) -o $(@D)/.$(@F).d $< ; \
+	$(cmd_fixdep)
+
+quiet_cmd_cc_link = '  LINK    $@'
+      cmd_cc_link = $(CC) -o $@ $^ $(1)
+
+define do_cc_link
+	@echo $($(quiet)cmd_cc_link);
+	@$(call cmd_cc_link,$(1))
+endef
+
+quiet_cmd_strip = '  STRIP   $(1)'
+      cmd_strip = $(STRIP) $(1)
+
+ifeq ($(DEBUG),Y)
+do_strip=
+else
+define do_strip
+	@echo $(call $(quiet)cmd_strip,$(1));
+	@$(call cmd_strip,$(1));
+endef
+endif
+
+# ---------------------------------------
+# Define some build variables
+# ---------------------------------------
+
+STRIP   ?= strip
+CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs
+
+ifeq ($(DEBUG),Y)
+CFLAGS += -g
+else
+ifeq ($(OPTIMIZED_CFLAGS),Y)
+CFLAGS += -O2
+# -funit-at-a-time is buggy for MinGW GCC > 3.2
+# I'm assuming it's fixed for MinGW GCC >= 4.0 when that comes about
+CFLAGS += $(call cc-option,-fno-unit-at-a-time,)
+CFLAGS += $(call cc-option,-fweb,)
+CFLAGS += $(call cc-option,-frename-registers,)
+CFLAGS += $(call cc-option,-ffast-math,)
+endif
+endif
+
+# --------------------------------------------------------------------------
+# Build in separate directories for now to avoid problems with name/symbol
+# clashes, etc. Qbsp may never be merged because we use doubles instead of
+# floats everywhere to help with inprecisions.
+# --------------------------------------------------------------------------
+
+BUILD_DIRS = \
+	$(BUILD_DIR)/common	\
+	$(BUILD_DIR)/qbsp	\
+	$(BUILD_DIR)/light	\
+	$(BUILD_DIR)/vis	\
+	$(BUILD_DIR)/bspinfo	\
+	$(BUILD_DIR)/bsputil	\
+	$(BIN_DIR)
+
+APPS = \
+	$(BIN_PFX)light$(EXT)	\
+	$(BIN_PFX)vis$(EXT)	\
+	$(BIN_PFX)bspinfo$(EXT)	\
+	$(BIN_PFX)bsputil$(EXT)	\
+	$(BIN_PFX)qbsp$(EXT)
+
+default:	all
+
+all:	prepare $(patsubst %,$(BIN_DIR)/%,$(APPS))
+
+.PHONY:	prepare
+prepare:	$(BUILD_DIRS) $(BIN_DIR)
+
+COMMON_CPPFLAGS := -I$(TOPDIR)/include -DLINUX $(DPTHREAD)
+ifeq ($(DEBUG),Y)
+COMMON_CPPFLAGS += -DDEBUG
+else
+COMMON_CPPFLAGS += -DNDEBUG
+endif
+
+$(BUILD_DIR)/qbsp/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS) -DDOUBLEVEC_T -DQBSP_VERSION=$(QBSP_VERSION)
+$(BUILD_DIR)/common/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
+$(BUILD_DIR)/light/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS)
+$(BUILD_DIR)/vis/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS)
+$(BUILD_DIR)/bspinfo/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
+$(BUILD_DIR)/bsputil/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
+$(BUILD_DIR)/common/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
+
+$(BUILD_DIR)/qbsp:	; $(do_mkdir)
+$(BUILD_DIR)/common:	; $(do_mkdir)
+$(BUILD_DIR)/light:	; $(do_mkdir)
+$(BUILD_DIR)/vis:	; $(do_mkdir)
+$(BUILD_DIR)/bspinfo:	; $(do_mkdir)
+$(BUILD_DIR)/bsputil:	; $(do_mkdir)
+$(BIN_DIR):		; $(do_mkdir)
+
+$(BUILD_DIR)/qbsp/%.o:		qbsp/%.c	; $(do_cc_o_c)
+$(BUILD_DIR)/common/%.o:	common/%.c	; $(do_cc_o_c)
+$(BUILD_DIR)/light/%.o:		light/%.c	; $(do_cc_o_c)
+$(BUILD_DIR)/vis/%.o:		vis/%.c		; $(do_cc_o_c)
+$(BUILD_DIR)/bspinfo/%.o:	bspinfo/%.c	; $(do_cc_o_c)
+$(BUILD_DIR)/bsputil/%.o:	bsputil/%.c	; $(do_cc_o_c)
 
 #########
 # Light #
 #########
 
-LIGHT_HEADERS =	include/light/entities.h	\
-		include/light/litfile.h		\
-		include/light/threads.h		\
-		include/light/light.h		\
-		include/common/bspfile.h	\
-		include/common/cmdlib.h		\
-		include/common/mathlib.h	\
-		include/common/log.h
+LIGHT_OBJS = \
+	light/entities.o	\
+	light/litfile.o		\
+	light/ltface.o		\
+	light/threads.o		\
+	light/trace.o		\
+	light/light.o		\
+	common/bspfile.o	\
+	common/cmdlib.o		\
+	common/mathlib.o	\
+	common/log.o
 
-LIGHT_SOURCES =	light/entities.c	\
-		light/litfile.c		\
-		light/ltface.c		\
-		light/threads.c		\
-		light/trace.c		\
-		light/light.c		\
-		common/bspfile.c	\
-		common/cmdlib.c		\
-		common/mathlib.c	\
-		common/log.c
-
-LIGHT_OFILES =	light/entities.o	\
-		light/litfile.o		\
-		light/ltface.o		\
-		light/threads.o		\
-		light/trace.o		\
-		light/light.o		\
-		common/bspfile.o	\
-		common/cmdlib.o		\
-		common/mathlib.o	\
-		common/log.o
-
-light/$(BIN_PFX)light$(EXT):	$(LIGHT_OFILES)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(LIGHT_OFILES) -lm
+$(BIN_DIR)/$(BIN_PFX)light$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(LIGHT_OBJS))
+	$(call do_cc_link,-lm)
+	$(call do_strip,$@)
 
 #######
 # Vis #
 #######
 
-VIS_OFILES =	vis/flow.o		\
-		vis/vis.o		\
-		vis/soundpvs.o		\
-		common/cmdlib.o		\
-		common/mathlib.o	\
-		common/bspfile.o	\
-		common/log.o
+VIS_OBJS = \
+	vis/flow.o		\
+	vis/vis.o		\
+	vis/soundpvs.o		\
+	common/cmdlib.o		\
+	common/mathlib.o	\
+	common/bspfile.o	\
+	common/log.o
 
-vis/$(BIN_PFX)vis$(EXT):	$(VIS_OFILES)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(VIS_OFILES) -lm $(LPTHREAD)
+$(BIN_DIR)/$(BIN_PFX)vis$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(VIS_OBJS))
+	$(call do_cc_link,-lm $(LPTHREAD))
+	$(call do_strip,$@)
 
 ###########
 # BSPInfo #
 ###########
 
-BSPINFO_OFILES =	bspinfo/bspinfo.o	\
-			common/cmdlib.o		\
-			common/bspfile.o	\
-			common/log.o
+BSPINFO_OBJS = \
+	bspinfo/bspinfo.o	\
+	common/cmdlib.o		\
+	common/bspfile.o	\
+	common/log.o
 
-bspinfo/$(BIN_PFX)bspinfo$(EXT):	$(BSPINFO_OFILES)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(BSPINFO_OFILES)
+$(BIN_DIR)/$(BIN_PFX)bspinfo$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(BSPINFO_OBJS))
+	$(call do_cc_link,)
+	$(call do_strip,$@)
 
 ###########
 # BSPUtil #
 ###########
 
-BSPUTIL_OFILES =	bsputil/bsputil.o	\
-			common/cmdlib.o		\
-			common/bspfile.o	\
-			common/log.o
+BSPUTIL_OBJS = \
+	bsputil/bsputil.o	\
+	common/cmdlib.o		\
+	common/bspfile.o	\
+	common/log.o
 
-bsputil/$(BIN_PFX)bsputil$(EXT):	$(BSPUTIL_OFILES)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $@ $(BSPUTIL_OFILES)
+$(BIN_DIR)/$(BIN_PFX)bsputil$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(BSPUTIL_OBJS))
+	$(call do_cc_link,)
+	$(call do_strip,$@)
 
 ########
 # Qbsp #
@@ -136,11 +296,35 @@ bsputil/$(BIN_PFX)bsputil$(EXT):	$(BSPUTIL_OFILES)
 
 QBSP_VERSION = 0.4
 QBSP_OBJECTS = \
-	brush.o bspfile.o cmdlib.o csg4.o file.o globals.o map.o \
-	mathlib.o merge.o outside.o parser.o portals.o qbsp.o solidbsp.o \
-	surfaces.o tjunc.o util.o wad.o winding.o writebsp.o
+	brush.o		\
+	bspfile.o	\
+	cmdlib.o	\
+	csg4.o		\
+	file.o		\
+	globals.o	\
+	map.o		\
+	mathlib.o	\
+	merge.o		\
+	outside.o	\
+	parser.o	\
+	portals.o	\
+	qbsp.o		\
+	solidbsp.o	\
+	surfaces.o	\
+	tjunc.o		\
+	util.o		\
+	wad.o		\
+	winding.o	\
+	writebsp.o
 
-qbsp/%.o:	CPPFLAGS += -DDOUBLEVEC_T -DQBSP_VERSION=$(QBSP_VERSION)
+$(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,build/qbsp/%,$(QBSP_OBJECTS))
+	$(call do_cc_link,-lm)
+	$(call do_strip,$@)
 
-qbsp/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,qbsp/%,$(QBSP_OBJECTS))
-	$(CC) -o $@ $^ -lm
+clean:
+	@rm -rf $(BUILD_DIR)
+	@rm -rf $(BIN_DIR)
+	@rm -f $(shell find . \( \
+		-name '*~' -o -name '#*#' -o -name '*.o' -o -name '*.res' \
+	\) -print)
+
