@@ -58,7 +58,7 @@ char *ExpandPathAndArchive(char *path);
 
 double I_FloatTime(void);
 
-void Error(const char *error, ...);
+void Error(const char *error, ...) __attribute__((noreturn));
 int CheckParm(const char *check);
 
 FILE *SafeOpenWrite(const char *filename);
