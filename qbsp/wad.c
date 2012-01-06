@@ -60,7 +60,6 @@ WADList_Init(wad_t **wads, char *wadstring)
     char *fpath;
     int pathlen;
 
-    numwads = 0;
     *wads = NULL;
 
     if (!wadstring)

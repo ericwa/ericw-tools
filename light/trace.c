@@ -131,9 +131,6 @@ TestLineOrSky(const vec3_t start, const vec3_t stop, qboolean sky_test)
 	    if (tstack_p < tracestack)
 		return !sky_test;	/* no obstructions */
 
-	    // FIXME - redundant?
-	    node = tstack_p->node;
-
 	    /* set the hit point for this plane */
 	    frontx = backx;
 	    fronty = backy;

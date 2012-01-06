@@ -378,10 +378,7 @@ void *
 LeafThread(void *unused)
 {
     portal_t *p;
-    int cnt, total;
 
-    cnt = 1;
-    total = numportals * 2;
     do {
 	p = GetNextPortal();
 	if (!p)

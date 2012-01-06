@@ -558,7 +558,6 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	falloff = 0;		/* shut up compiler warnings */
     }
 
-    mapnum = 0;
     for (mapnum = 0; mapnum < l->numlightstyles; mapnum++)
 	if (l->lightstyles[mapnum] == light->style)
 	    break;
@@ -857,7 +856,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     vec3_t *lightcolor;
     vec3_t totalcolors;
 
-    int w, h;
+    int width;
     vec3_t point;
 
 
@@ -1029,8 +1028,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     f->lightofs = out - filebase;
 
     /* extra filtering */
-    h = (l.texsize[1] + 1) * 2;
-    w = (l.texsize[0] + 1) * 2;
+    width = (l.texsize[0] + 1) * 2;
 
     for (i = 0; i < l.numlightstyles; i++) {
 	if (l.lightstyles[i] == 0xff)
@@ -1043,9 +1041,9 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	for (t = 0; t <= l.texsize[1]; t++) {
 	    for (s = 0; s <= l.texsize[0]; s++, c++) {
 		if (extrasamples) {
-		    x1 = t * 2 * w + s * 2;
+		    x1 = t * 2 * width + s * 2;
 		    x2 = x1 + 1;
-		    x3 = (t * 2 + 1) * w + s * 2;
+		    x3 = (t * 2 + 1) * width + s * 2;
 		    x4 = x3 + 1;
 
 		    /* filtered sample */
