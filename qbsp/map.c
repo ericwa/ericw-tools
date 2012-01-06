@@ -718,7 +718,7 @@ WriteEntitiesToString(void)
 	for (ep = map.rgEntities[iEntity].epairs; ep; ep = ep->next) {
 	    // Limit on Quake's strings of 128 bytes
 	    sprintf(szLine, "\"%.*s\" \"%.*s\"\n", MAX_KEY, ep->key,
-		    122 - strlen(ep->key), ep->value);
+		    122 - (int)strlen(ep->key), ep->value);
 	    strcat(pCur, szLine);
 	    pCur += strlen(szLine);
 	}
