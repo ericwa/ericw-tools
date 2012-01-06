@@ -1,5 +1,7 @@
 // vis.c
 
+#include <stddef.h>
+
 #include <vis/vis.h>
 #include <common/log.h>
 
@@ -119,7 +121,7 @@ NewWinding(int points)
     if (points > MAX_WINDING)
 	Error("%s: %i points", __func__, points);
 
-    size = (int)((winding_t *) 0)->points[points];
+    size = offsetof(winding_t, points[points]);
     w = malloc(size);
     memset(w, 0, size);
 
@@ -164,7 +166,7 @@ CopyWinding(winding_t * w)
     int size;
     winding_t *c;
 
-    size = (int)((winding_t *) 0)->points[w->numpoints];
+    size = offsetof(winding_t, points[w->numpoints]);
     c = malloc(size);
     memcpy(c, w, size);
     return c;

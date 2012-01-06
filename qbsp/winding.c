@@ -20,6 +20,8 @@
 */
 // winding.c
 
+#include <stddef.h>
+
 #include "qbsp.h"
 
 /*
@@ -104,7 +106,7 @@ CopyWinding(winding_t *w)
     winding_t *c;
 
     c = AllocMem(WINDING, w->numpoints, false);
-    size = (int)((winding_t *)0)->points[w->numpoints];
+    size = offsetof(winding_t, points[w->numpoints]);
     memcpy(c, w, size);
 
     return c;

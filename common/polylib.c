@@ -1,5 +1,7 @@
 /* common/polylib.c */
 
+#include <stddef.h>
+
 #include <common/cmdlib.h>
 #include <common/mathlib.h>
 #include <common/polylib.h>
@@ -198,7 +200,7 @@ CopyWinding(winding_t * w)
     int size;
     winding_t *c;
 
-    size = (int)((winding_t *) 0)->p[w->numpoints];
+    size = offsetof(winding_t, p[w->numpoints]);
     c = malloc(size);
     memcpy(c, w, size);
     return c;

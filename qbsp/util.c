@@ -19,6 +19,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <stddef.h>
 #include <stdarg.h>
 #include <malloc.h>
 
@@ -49,7 +50,7 @@ AllocMem(int Type, int cElements, bool fZero)
 	if (cElements > MAX_POINTS_ON_WINDING)
 	    Message(msgError, errTooManyPoints, cElements);
 
-	cSize = (int)((winding_t *)0)->points[cElements] + sizeof(int);
+	cSize = offsetof(winding_t, points[cElements]) + sizeof(int);
 
 	// Set cElements to 1 so bookkeeping works OK
 	cElements = 1;
