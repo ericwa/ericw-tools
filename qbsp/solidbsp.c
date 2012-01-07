@@ -275,7 +275,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	}
     }
     if (!bestsurface)
-	Message(msgError, errNoValidPlanes);
+	Error(errNoValidPlanes);
 
     return bestsurface;
 }
@@ -424,7 +424,7 @@ CalcSurfaceInfo(surface_t *surf)
 
     for (f = surf->faces; f; f = f->next) {
 	if (f->contents[0] >= 0 || f->contents[1] >= 0)
-	    Message(msgError, errBadContents);
+	    Error(errBadContents);
 	for (i = 0; i < f->w.numpoints; i++)
 	    for (j = 0; j < 3; j++) {
 		if (f->w.points[i][j] < surf->mins[j])
@@ -582,8 +582,8 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 	    if (!leafnode->contents)
 		leafnode->contents = f->contents[0];
 	    else if (leafnode->contents != f->contents[0])
-		Message(msgError, errMixedFaceContents, f->w.points[0][0],
-			f->w.points[0][1], f->w.points[0][2]);
+		Error(errMixedFaceContents, f->w.points[0][0],
+		      f->w.points[0][1], f->w.points[0][2]);
 	}
     }
 
@@ -604,7 +604,7 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 	c_water++;
 	break;
     default:
-	Message(msgError, errBadContents);
+	Error(errBadContents);
     }
 
     // write the list of faces, and free the originals
@@ -710,13 +710,13 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
 
 	if (frontfrag) {
 	    if (!frontfrag->faces)
-		Message(msgError, errNoSurfaceFaces);
+		Error(errNoSurfaceFaces);
 	    frontfrag->next = frontlist;
 	    frontlist = frontfrag;
 	}
 	if (backfrag) {
 	    if (!backfrag->faces)
-		Message(msgError, errNoSurfaceFaces);
+		Error(errNoSurfaceFaces);
 	    backfrag->next = backlist;
 	    backlist = backfrag;
 	}

@@ -82,7 +82,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
 	    next = f->next;
 	    SplitFace(f, &plane, &front, &back);
 	    if (!front || !back)
-		Message(msgError, errNoPolygonSplit);
+		Error(errNoPolygonSplit);
 	    *prevptr = back;
 	    back->next = front;
 	    front->next = next;
@@ -248,7 +248,7 @@ GetVertex(vec3_t in)
     map.cTotal[BSPVERTEX]++;
 
     if (vertices->index > vertices->count)
-	Message(msgError, errLowVertexCount);
+	Error(errLowVertexCount);
 
     return hv->num;
 }
@@ -273,7 +273,7 @@ GetEdge(vec3_t p1, vec3_t p2, face_t *f)
     struct lumpdata *edges = &pCurEnt->lumps[BSPEDGE];
 
     if (!f->contents[0])
-	Message(msgError, errZeroContents);
+	Error(errZeroContents);
 
     c_tryedges++;
     v1 = GetVertex(p1);
@@ -291,7 +291,7 @@ GetEdge(vec3_t p1, vec3_t p2, face_t *f)
 
     // emit an edge
     if (edges->index >= edges->count)
-	Message(msgError, errLowEdgeCount);
+	Error(errLowEdgeCount);
 
     edge = (dedge_t *)edges->data + edges->index;
     edges->index++;
@@ -315,7 +315,7 @@ FindFaceEdges(face_t *face)
 
     face->outputnumber = -1;
     if (face->w.numpoints > MAXEDGES)
-	Message(msgError, errLowFacePointCount);
+	Error(errLowFacePointCount);
 
     face->edges = AllocMem(OTHER, face->w.numpoints * sizeof(int), true);
     for (i = 0; i < face->w.numpoints; i++)

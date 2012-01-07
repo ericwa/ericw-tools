@@ -103,7 +103,7 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
     vec3_t mid;
 
     if (in->w.numpoints < 0)
-	Message(msgError, errFreedFace);
+	Error(errFreedFace);
 
     /* Fast test */
     dot = DotProduct(in->origin, split->normal) - split->dist;
@@ -178,7 +178,7 @@ SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
     }
 
     if (newf->w.numpoints > MAXEDGES || new2->w.numpoints > MAXEDGES)
-	Message(msgError, errLowSplitPointCount);
+	Error(errLowSplitPointCount);
 
     // free the original face now that it is represented by the fragments
     FreeMem(in, FACE, 1);

@@ -653,7 +653,6 @@ void WriteEntitiesToString(void);
 
 // util.c
 
-#define msgError	0
 #define msgWarning	1
 #define msgStat		2
 #define msgProgress	3
@@ -672,6 +671,7 @@ extern void FreeAllMem(void);
 extern void PrintMem(void);
 
 extern void Message(int MsgType, ...);
+extern void Error(int ErrType, ...) __attribute__((noreturn));
 
 extern FILE *logfile;
 

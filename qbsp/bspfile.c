@@ -44,8 +44,7 @@ LoadBSPFile(void)
     cFileSize = LoadFile(options.szBSPName, (void *)&header, true);
 
     if (header->version != BSPVERSION)
-	Message(msgError, errBadVersion, options.szBSPName, header->version,
-		BSPVERSION);
+	Error(errBadVersion, options.szBSPName, header->version, BSPVERSION);
 
     /* Throw all of the data into the first entity to be written out later */
     ent = map.rgEntities;
@@ -53,7 +52,7 @@ LoadBSPFile(void)
 	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
 	iLumpOff = header->lumps[i].fileofs;
 	if (cLumpSize % rgcMemSize[i])
-	    Message(msgError, errDeformedBSPLump, rgcMemSize[i], cLumpSize);
+	    Error(errDeformedBSPLump, rgcMemSize[i], cLumpSize);
 
 	ent->lumps[i].count = cLumpSize / rgcMemSize[i];
 	ent->lumps[i].data = AllocMem(i, ent->lumps[i].count, false);
@@ -84,7 +83,7 @@ AddLump(FILE *f, int Type)
 	if (entities->data) {
 	    ret = fwrite(entities->data, rgcMemSize[Type], entities->count, f);
 	    if (ret != entities->count)
-		Message(msgError, errWriteFailure);
+		Error(errWriteFailure);
 	    cLen += entities->count * rgcMemSize[Type];
 	}
     }
@@ -93,7 +92,7 @@ AddLump(FILE *f, int Type)
     if (Type == BSPENT) {
 	ret = fwrite("", 1, 1, f);
 	if (ret != 1)
-	    Message(msgError, errWriteFailure);
+	    Error(errWriteFailure);
 	cLen++;
     }
     lump->filelen = cLen;
@@ -103,7 +102,7 @@ AddLump(FILE *f, int Type)
 	size_t pad = 4 - (cLen % 4);
 	ret = fwrite("   ", 1, pad, f);
 	if (ret != pad)
-	    Message(msgError, errWriteFailure);
+	    Error(errWriteFailure);
     }
 }
 
@@ -126,12 +125,12 @@ WriteBSPFile(void)
 
     f = fopen(options.szBSPName, "wb");
     if (f == NULL)
-	Message(msgError, errOpenFailed, options.szBSPName, strerror(errno));
+	Error(errOpenFailed, options.szBSPName, strerror(errno));
 
     /* write placeholder, header is overwritten later */
     ret = fwrite(header, sizeof(dheader_t), 1, f);
     if (ret != 1)
-	Message(msgError, errWriteFailure);
+	Error(errWriteFailure);
 
     AddLump(f, BSPPLANE);
     AddLump(f, BSPLEAF);
@@ -153,7 +152,7 @@ WriteBSPFile(void)
     fseek(f, 0, SEEK_SET);
     ret = fwrite(header, sizeof(dheader_t), 1, f);
     if (ret != 1)
-	Message(msgError, errWriteFailure);
+	Error(errWriteFailure);
 
     fclose(f);
     FreeMem(header, OTHER, sizeof(dheader_t));

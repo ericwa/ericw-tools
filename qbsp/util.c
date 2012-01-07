@@ -43,12 +43,12 @@ AllocMem(int Type, int cElements, bool fZero)
     int cSize;
 
     if (Type < 0 || Type > OTHER)
-	Message(msgError, errInvalidMemType, Type);
+	Error(errInvalidMemType, Type);
 
     // For windings, cElements == number of points on winding
     if (Type == WINDING) {
 	if (cElements > MAX_POINTS_ON_WINDING)
-	    Message(msgError, errTooManyPoints, cElements);
+	    Error(errTooManyPoints, cElements);
 
 	cSize = offsetof(winding_t, points[cElements]) + sizeof(int);
 
@@ -59,7 +59,7 @@ AllocMem(int Type, int cElements, bool fZero)
 
     pTemp = malloc(cSize);
     if (!pTemp)
-	Message(msgError, errOutOfMemory);
+	Error(errOutOfMemory);
 
     if (fZero)
 	memset(pTemp, 0, cSize);
@@ -198,11 +198,40 @@ FreeAllMem(void)
 }
 #endif
 
+/* Keep track of output state */
+static bool fInPercent = false;
+
+void
+Error(int ErrType, ...)
+{
+    va_list argptr;
+    char szBuffer[512];
+
+    va_start(argptr, ErrType);
+
+    if (fInPercent) {
+	printf("\r");
+	fInPercent = false;
+    }
+    if (ErrType >= cErrors) {
+	printf("Program error: unknown ErrType in Message!\n");
+	exit(1);
+    }
+    sprintf(szBuffer, "*** ERROR %02d: ", ErrType);
+    vsprintf(szBuffer + strlen(szBuffer), rgszErrors[ErrType], argptr);
+    puts(szBuffer);
+    if (logfile) {
+	fprintf(logfile, "%s\n", szBuffer);
+	fclose(logfile);
+    }
+    exit(1);
+}
+
 /*
 =================
 Message
 
-Generic output of errors, warnings, stats, etc
+Generic output of warnings, stats, etc
 =================
 */
 void
@@ -211,9 +240,8 @@ Message(int msgType, ...)
     va_list argptr;
     char szBuffer[512];
     char *szFmt;
-    int ErrType;
+    int WarnType;
     int Cur, Total;
-    static bool fInPercent = false;
 
     va_start(argptr, msgType);
 
@@ -225,17 +253,6 @@ Message(int msgType, ...)
 	     && (options.fNopercent || options.fNoverbose))
 	return;
 
-    // Grab proper args
-    if (msgType == msgWarning || msgType == msgError)
-	ErrType = va_arg(argptr, int);
-
-    else if (msgType == msgPercent) {
-	Cur = va_arg(argptr, int);
-	Total = va_arg(argptr, int);
-    } else
-	szFmt = va_arg(argptr, char *);
-
-    // Handle warning/error-in-percent properly
     if (fInPercent && msgType != msgPercent) {
 	printf("\r");
 	fInPercent = false;
@@ -243,33 +260,23 @@ Message(int msgType, ...)
 
     switch (msgType) {
     case msgWarning:
-	if (ErrType >= cWarnings)
-	    printf("Internal error: unknown ErrType in Message!\n");
-	sprintf(szBuffer, "*** WARNING %02d: ", ErrType);
-	vsprintf(szBuffer + strlen(szBuffer), rgszWarnings[ErrType], argptr);
+	WarnType = va_arg(argptr, int);
+	if (WarnType >= cWarnings)
+	    printf("Internal error: unknown WarnType in Message!\n");
+	sprintf(szBuffer, "*** WARNING %02d: ", WarnType);
+	vsprintf(szBuffer + strlen(szBuffer), rgszWarnings[WarnType], argptr);
 	strcat(szBuffer, "\n");
-	break;
-
-    case msgError:
-	if (ErrType >= cErrors)
-	    printf("Program error: unknown ErrType in Message!\n");
-	sprintf(szBuffer, "*** ERROR %02d: ", ErrType);
-	vsprintf(szBuffer + strlen(szBuffer), rgszErrors[ErrType], argptr);
-	puts(szBuffer);
-	if (logfile) {
-	    fprintf(logfile, "%s\n", szBuffer);
-	    fclose(logfile);
-	}
-	exit(1);
 	break;
 
     case msgLiteral:
 	// Output as-is to screen and log file
+	szFmt = va_arg(argptr, char *);
 	vsprintf(szBuffer, szFmt, argptr);
 	break;
 
     case msgStat:
 	// Output as-is to screen and log file
+	szFmt = va_arg(argptr, char *);
 	strcpy(szBuffer, "\t");
 	vsprintf(szBuffer + strlen(szBuffer), szFmt, argptr);	// Concatenate
 	strcat(szBuffer, "\n");
@@ -277,6 +284,7 @@ Message(int msgType, ...)
 
     case msgProgress:
 	// Output as-is to screen and log file
+	szFmt = va_arg(argptr, char *);
 	strcpy(szBuffer, "---- ");
 	vsprintf(szBuffer + strlen(szBuffer), szFmt, argptr);	// Concatenate
 	strcat(szBuffer, " ----\n");
@@ -284,6 +292,8 @@ Message(int msgType, ...)
 
     case msgPercent:
 	// Calculate the percent complete.  Only output if it changes.
+	Cur = va_arg(argptr, int);
+	Total = va_arg(argptr, int);
 	if (((Cur + 1) * 100) / Total == (Cur * 100) / Total)
 	    return;
 
@@ -296,11 +306,13 @@ Message(int msgType, ...)
 
     case msgFile:
 	// Output only to the file
+	szFmt = va_arg(argptr, char *);
 	vsprintf(szBuffer, szFmt, argptr);
 	break;
 
     case msgScreen:
 	// Output only to the screen
+	szFmt = va_arg(argptr, char *);
 	vsprintf(szBuffer, szFmt, argptr);
 	break;
 

@@ -39,7 +39,7 @@ LoadFile(char *filename, void **buf, bool nofail)
     f = fopen(filename, "rb");
     if (f == NULL) {
 	if (nofail)
-	    Message(msgError, errOpenFailed, filename, strerror(errno));
+	    Error(errOpenFailed, filename, strerror(errno));
 	return 0;
     }
 
@@ -51,7 +51,7 @@ LoadFile(char *filename, void **buf, bool nofail)
     ((char *)*buf)[len] = 0;
 
     if (fread(*buf, 1, len, f) != len)
-	Message(msgError, errReadFailure);
+	Error(errReadFailure);
 
     fclose(f);
 

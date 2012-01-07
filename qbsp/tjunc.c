@@ -105,7 +105,7 @@ CanonicalVector(vec3_t vec)
 	return;
     } else
 	vec[2] = 0;
-    Message(msgError, errDegenerateEdge, vec[0], vec[1], vec[2]);
+    Error(errDegenerateEdge, vec[0], vec[1], vec[2]);
 }
 
 static wedge_t *
@@ -158,7 +158,7 @@ FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
     }
 
     if (numwedges >= cWEdges)
-	Message(msgError, errLowWedgeCount);
+	Error(errLowWedgeCount);
     w = pWEdges + numwedges;
     numwedges++;
 
@@ -195,7 +195,7 @@ AddVert(wedge_t *w, vec_t t)
 
     // insert a new wvert before v
     if (numwverts >= cWVerts)
-	Message(msgError, errLowWvertCount);
+	Error(errLowWvertCount);
 
     newv = pWVerts + numwverts;
     numwverts++;
@@ -313,7 +313,7 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 
 	newf = NewFaceFromFace(f);
 	if (f->original)
-	    Message(msgError, errOriginalExists);
+	    Error(errOriginalExists);
 
 	newf->original = chain;
 	chain = newf;

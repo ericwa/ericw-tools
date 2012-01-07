@@ -41,7 +41,7 @@ CheckColinear(face_t *f)
 	VectorNormalize(v2);
 
 	if (VectorCompare(v1, v2))
-	    Message(msgError, errColinearEdge);
+	    Error(errColinearEdge);
     }
 }
 #endif /* PARANOID */

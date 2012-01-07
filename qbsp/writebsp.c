@@ -57,7 +57,7 @@ ExportNodePlanes_r(node_t *node)
 
 	if (i == planes->index) {
 	    if (planes->index >= planes->count)
-		Message(msgError, errLowPlaneCount);
+		Error(errLowPlaneCount);
 	    plane = &pPlanes[node->planenum];
 	    dplane = (dplane_t *)planes->data + planes->index;
 	    dplane->normal[0] = plane->normal[0];
@@ -188,7 +188,7 @@ ExportClipNodes(node_t *nodes)
 
     CountClipNodes_r(nodes);
     if (clipnodes->count > MAX_BSP_CLIPNODES)
-	Message(msgError, errTooManyClipnodes);
+	Error(errTooManyClipnodes);
 
     pTemp = clipnodes->data;
     clipnodes->data = AllocMem(BSPCLIPNODE, clipnodes->count, true);

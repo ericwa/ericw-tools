@@ -58,7 +58,7 @@ BaseWindingForPlane(plane_t *p)
 	vup[0] = 1;
 	break;
     default:
-	Message(msgError, errNoWindingAxis);
+	Error(errNoWindingAxis);
     }
 
     v = DotProduct(vup, p->normal);
@@ -227,7 +227,7 @@ ClipWinding(winding_t *in, plane_t *split, bool keepon)
     }
 
     if (neww->numpoints > maxpts)
-	Message(msgError, errLowPointCount);
+	Error(errLowPointCount);
 
     // free the original winding
     FreeMem(in, WINDING, 1);
@@ -324,7 +324,7 @@ DivideWinding(winding_t *in, plane_t *split, winding_t **front,
     }
 
     if (f->numpoints > maxpts || b->numpoints > maxpts)
-	Message(msgError, errLowPointCount);
+	Error(errLowPointCount);
 }
 
 

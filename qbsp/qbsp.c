@@ -63,7 +63,7 @@ ProcessEntity(void)
 
     if (!pCurEnt->pBrushes) {
 	PrintEntity(map.iEntities);
-	Message(msgError, errNoValidBrushes);
+	Error(errNoValidBrushes);
     }
 
     surfs = CSGFaces();
@@ -384,7 +384,7 @@ ParseOptions(char *szOptions)
 	    else if (NameCount == 1)
 		strcpy(options.szBSPName, szTok);
 	    else
-		Message(msgError, errUnknownOption, szTok);
+		Error(errUnknownOption, szTok);
 	    NameCount++;
 	} else {
 	    szTok++;
@@ -415,19 +415,19 @@ ParseOptions(char *szOptions)
 	    else if (!strcasecmp(szTok, "leakdist")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
-		    Message(msgError, errInvalidOption, szTok);
+		    Error(errInvalidOption, szTok);
 		options.dxLeakDist = atoi(szTok2);
 		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "subdivide")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
-		    Message(msgError, errInvalidOption, szTok);
+		    Error(errInvalidOption, szTok);
 		options.dxSubdivide = atoi(szTok2);
 		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "wadpath")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
-		    Message(msgError, errInvalidOption, szTok);
+		    Error(errInvalidOption, szTok);
 		strcpy(options.wadPath, szTok2);
 		szTok = szTok2;
 		/* Remove trailing /, if any */
@@ -436,7 +436,7 @@ ParseOptions(char *szOptions)
 	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
-		Message(msgError, errUnknownOption, szTok);
+		Error(errUnknownOption, szTok);
 	}
 
 	szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);

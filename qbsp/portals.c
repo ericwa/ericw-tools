@@ -183,7 +183,7 @@ WritePortalfile(node_t *headnode)
 
     PortalFile = fopen(options.szBSPName, "wt");
     if (PortalFile == NULL)
-	Message(msgError, errOpenFailed, options.szBSPName, strerror(errno));
+	Error(errOpenFailed, options.szBSPName, strerror(errno));
 
     fprintf(PortalFile, "PRT1\n");
     fprintf(PortalFile, "%i\n", num_visleafs);
@@ -206,7 +206,7 @@ static void
 AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
 {
     if (p->nodes[0] || p->nodes[1])
-	Message(msgError, errPortalAlreadyAdded);
+	Error(errPortalAlreadyAdded);
 
     p->nodes[0] = front;
     p->next[0] = front->portals;
@@ -233,7 +233,7 @@ RemovePortalFromNode(portal_t *portal, node_t *l)
     while (1) {
 	t = *pp;
 	if (!t)
-	    Message(msgError, errPortalNotInLeaf);
+	    Error(errPortalNotInLeaf);
 
 	if (t == portal)
 	    break;
@@ -243,7 +243,7 @@ RemovePortalFromNode(portal_t *portal, node_t *l)
 	else if (t->nodes[1] == l)
 	    pp = &t->next[1];
 	else
-	    Message(msgError, errPortalNotBoundLeaf);
+	    Error(errPortalNotBoundLeaf);
     }
 
     if (portal->nodes[0] == l) {
@@ -387,7 +387,7 @@ CheckLeafPortalConsistancy(node_t *node)
 	else if (p->nodes[1] == node)
 	    side = 1;
 	else
-	    Message(msgError, errMislinkedPortal);
+	    Error(errMislinkedPortal);
 	CheckWindingInNode(p->winding, node);
 	CheckWindingArea(p->winding);
 
@@ -401,7 +401,7 @@ CheckLeafPortalConsistancy(node_t *node)
 	    else if (p2->nodes[1] == node)
 		side2 = 1;
 	    else
-		Message(msgError, errMislinkedPortal);
+		Error(errMislinkedPortal);
 	    w = p2->winding;
 	    for (i = 0; i < w->numpoints; i++) {
 		dist = DotProduct(w->points[i], plane.normal) - plane.dist;
@@ -461,7 +461,7 @@ CutNodePortals_r(node_t *node)
 	    VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
 	    side = 1;
 	} else
-	    Message(msgError, errMislinkedPortal);
+	    Error(errMislinkedPortal);
 
 	w = ClipWinding(w, &clipplane, true);
 	if (!w) {
@@ -482,7 +482,7 @@ CutNodePortals_r(node_t *node)
 	else if (p->nodes[1] == node)
 	    side = 1;
 	else
-	    Message(msgError, errMislinkedPortal);
+	    Error(errMislinkedPortal);
 	next_portal = p->next[side];
 
 	other_node = p->nodes[!side];

@@ -105,11 +105,11 @@ ParseEpair(void)
     map.rgEntities[map.iEntities].epairs = e;
 
     if (strlen(token) >= MAX_KEY - 1)
-	Message(msgError, errEpairTooLong, linenum);
+	Error(errEpairTooLong, linenum);
     e->key = copystring(token);
     ParseToken(PARSE_SAMELINE);
     if (strlen(token) >= MAX_VALUE - 1)
-	Message(msgError, errEpairTooLong, linenum);
+	Error(errEpairTooLong, linenum);
     e->value = copystring(token);
 
     if (!strcasecmp(e->key, "origin"))
@@ -328,7 +328,7 @@ ParseBrush(void)
 	    if (i != 0)
 		ParseToken(PARSE_NORMAL);
 	    if (strcmp(token, "("))
-		Message(msgError, errInvalidMapPlane, linenum);
+		Error(errInvalidMapPlane, linenum);
 
 	    for (j = 0; j < 3; j++) {
 		ParseToken(PARSE_SAMELINE);
@@ -337,7 +337,7 @@ ParseBrush(void)
 
 	    ParseToken(PARSE_SAMELINE);
 	    if (strcmp(token, ")"))
-		Message(msgError, errInvalidMapPlane, linenum);
+		Error(errInvalidMapPlane, linenum);
 	}
 
 	// read the texturedef
@@ -374,7 +374,7 @@ ParseBrush(void)
 	}
 
 	if (map.iFaces < 0)
-	    Message(msgError, errLowFaceCount);
+	    Error(errLowFaceCount);
 
 	// convert to a vector / dist plane
 	for (j = 0; j < 3; j++) {
@@ -421,16 +421,16 @@ ParseEntity(mapentity_t *e)
 	return false;
 
     if (strcmp(token, "{"))
-	Message(msgError, errParseEntity, linenum);
+	Error(errParseEntity, linenum);
 
     if (map.iEntities >= map.cEntities)
-	Message(msgError, errLowEntCount);
+	Error(errLowEntCount);
 
     e->iBrushEnd = map.iBrushes + 1;
 
     do {
 	if (!ParseToken(PARSE_NORMAL))
-	    Message(msgError, errUnexpectedEOF);
+	    Error(errUnexpectedEOF);
 	if (!strcmp(token, "}"))
 	    break;
 	else if (!strcmp(token, "{"))
@@ -545,7 +545,7 @@ LoadMapFile(void)
 
     // Clean up texture memory
     if (cMiptex > map.cFaces)
-	Message(msgError, errLowMiptexCount);
+	Error(errLowMiptexCount);
     else if (cMiptex < map.cFaces) {
 	// For stuff in AddAnimatingTex, make room available
 	pTemp = (void *)rgszMiptex;
@@ -556,7 +556,7 @@ LoadMapFile(void)
 
     texinfo = &pWorldEnt->lumps[BSPTEXINFO];
     if (texinfo->index > texinfo->count)
-	Message(msgError, errLowTexinfoCount);
+	Error(errLowTexinfoCount);
     else if (texinfo->index < texinfo->count) {
 	pTemp = texinfo->data;
 	texinfo->data = AllocMem(BSPTEXINFO, texinfo->index, true);

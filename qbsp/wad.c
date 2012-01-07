@@ -193,7 +193,7 @@ WADList_LoadTextures(wad_t *wads, int numwads, dmiptexlump_t *l)
 	    l->dataofs[j] = data - (byte *)l;
 	    len = WAD_LoadLump(wads + i, rgszMiptex[j], data);
 	    if (data + len - (byte *)texdata->data > texdata->count)
-		Message(msgError, errLowTextureCount);
+		Error(errLowTextureCount);
 
 	    // didn't find the texture
 	    if (!len)
@@ -215,7 +215,7 @@ WAD_LoadLump(wad_t *w, char *name, byte *dest)
 	    fseek(w->file, w->lumps[i].filepos, SEEK_SET);
 	    len = fread(dest, 1, w->lumps[i].disksize, w->file);
 	    if (len != w->lumps[i].disksize)
-		Message(msgError, errReadFailure);
+		Error(errReadFailure);
 	    return w->lumps[i].disksize;
 	}
     }

@@ -54,12 +54,12 @@ ParseToken(int flags)
     while (*script <= 32) {
 	if (!*script) {
 	    if (flags & PARSE_SAMELINE)
-		Message(msgError, errLineIncomplete, linenum);
+		Error(errLineIncomplete, linenum);
 	    return false;
 	}
 	if (*script++ == '\n') {
 	    if (flags & PARSE_SAMELINE)
-		Message(msgError, errLineIncomplete, linenum);
+		Error(errLineIncomplete, linenum);
 	    linenum++;
 	}
     }
@@ -71,16 +71,16 @@ ParseToken(int flags)
 	    while (*script && *script != '\n') {
 		*token_p++ = *script++;
 		if (token_p > &token[MAXTOKEN - 1])
-		    Message(msgError, errTokenTooLarge, linenum);
+		    Error(errTokenTooLarge, linenum);
 	    }
 	    goto out;
 	}
 	if (flags & PARSE_SAMELINE)
-	    Message(msgError, errLineIncomplete, linenum);
+	    Error(errLineIncomplete, linenum);
 	while (*script++ != '\n')
 	    if (!*script) {
 		if (flags & PARSE_SAMELINE)
-		    Message(msgError, errLineIncomplete, linenum);
+		    Error(errLineIncomplete, linenum);
 		return false;
 	    }
 	goto skipspace;
@@ -95,17 +95,17 @@ ParseToken(int flags)
 	script++;
 	while (*script != '"') {
 	    if (!*script)
-		Message(msgError, errEOFInQuotes, linenum);
+		Error(errEOFInQuotes, linenum);
 	    *token_p++ = *script++;
 	    if (token_p > &token[MAXTOKEN - 1])
-		Message(msgError, errTokenTooLarge, linenum);
+		Error(errTokenTooLarge, linenum);
 	}
 	script++;
     } else
 	while (*script > 32) {
 	    *token_p++ = *script++;
 	    if (token_p > &token[MAXTOKEN - 1])
-		Message(msgError, errTokenTooLarge, linenum);
+		Error(errTokenTooLarge, linenum);
 	}
  out:
     *token_p = 0;

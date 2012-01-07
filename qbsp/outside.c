@@ -83,7 +83,7 @@ WriteLeakNode(node_t *n)
     int count = 0;
 
     if (!n)
-	Message(msgError, errNoLeakNode);
+	Error(errNoLeakNode);
 
     count = 0;
 
@@ -154,7 +154,7 @@ MarkLeakTrail(portal_t *n2)
 	return;
 
     if (numleaks > num_visportals)
-	Message(msgError, errLowLeakCount);
+	Error(errLowLeakCount);
 
     pLeaks[numleaks] = n2;
     numleaks++;
@@ -443,8 +443,7 @@ FillOutside(node_t *node)
 
 	LeakFile = fopen(options.szBSPName, "wt");
 	if (LeakFile == NULL)
-	    Message(msgError, errOpenFailed, options.szBSPName,
-		    strerror(errno));
+	    Error(errOpenFailed, options.szBSPName, strerror(errno));
 
 	if (options.fBspleak) {
 	    StripExtension(options.szBSPName);
@@ -452,8 +451,7 @@ FillOutside(node_t *node)
 
 	    PorFile = fopen(options.szBSPName, "wt");
 	    if (PorFile == NULL)
-		Message(msgError, errOpenFailed, options.szBSPName,
-			strerror(errno));
+		Error(errOpenFailed, options.szBSPName, strerror(errno));
 
 	    /* ??? "make room for the count" */
 	    fprintf(PorFile, "PLACEHOLDER\r\n");

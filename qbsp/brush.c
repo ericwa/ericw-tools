@@ -45,7 +45,7 @@ CheckFace(face_t *f)
     vec3_t dir, edgenormal, facenormal;
 
     if (f->w.numpoints < 3)
-	Message(msgError, errTooFewPoints, f->w.numpoints);
+	Error(errTooFewPoints, f->w.numpoints);
 
     VectorCopy(pPlanes[f->planenum].normal, facenormal);
     if (f->planeside) {
@@ -57,7 +57,7 @@ CheckFace(face_t *f)
 
 	for (j = 0; j < 3; j++)
 	    if (p1[j] > BOGUS_RANGE || p1[j] < -BOGUS_RANGE)
-		Message(msgError, errBogusRange, p1[j]);
+		Error(errBogusRange, p1[j]);
 
 	j = i + 1 == f->w.numpoints ? 0 : i + 1;
 
@@ -93,7 +93,7 @@ CheckFace(face_t *f)
 		continue;
 	    d = DotProduct(f->w.points[j], edgenormal);
 	    if (d > edgedist)
-		Message(msgError, errConcaveFace);
+		Error(errConcaveFace);
 	}
     }
 }
@@ -230,9 +230,9 @@ NewPlane(vec3_t normal, vec_t dist, int *side)
 
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
-	Message(msgError, errInvalidNormal, len);
+	Error(errInvalidNormal, len);
     if (numbrushplanes == cPlanes)
-	Message(msgError, errLowBrushPlaneCount);
+	Error(errLowBrushPlaneCount);
 
     p = &pPlanes[numbrushplanes];
     VectorCopy(normal, p->normal);
@@ -383,7 +383,7 @@ CreateBrushFaces(void)
 	f = AllocMem(FACE, 1, true);
 	f->w.numpoints = w->numpoints;
 	if (f->w.numpoints > MAXEDGES)
-	    Message(msgError, errLowFacePointCount);
+	    Error(errLowFacePointCount);
 
 	for (j = 0; j < w->numpoints; j++) {
 	    for (k = 0; k < 3; k++) {
@@ -507,7 +507,7 @@ AddBrushPlane(plane_t *plane)
 
     l = VectorLength(plane->normal);
     if (l < 1.0 - NORMAL_EPSILON || l > 1.0 + NORMAL_EPSILON)
-	Message(msgError, errInvalidNormal, l);
+	Error(errInvalidNormal, l);
 
     for (i = 0; i < numbrushfaces; i++) {
 	pl = &faces[i].plane;
@@ -516,7 +516,7 @@ AddBrushPlane(plane_t *plane)
 	    return;
     }
     if (numbrushfaces >= MAX_FACES)
-	Message(msgError, errLowBrushFaceCount);
+	Error(errLowBrushFaceCount);
     faces[i].plane = *plane;
     faces[i].texinfo = 0;
     numbrushfaces++;
@@ -599,7 +599,7 @@ AddHullPoint(vec3_t p, vec3_t hull_size[2])
 	    return i;
 
     if (num_hull_points == MAX_HULL_POINTS)
-	Message(msgError, errLowHullPointCount);
+	Error(errLowHullPointCount);
 
     VectorCopy(p, hull_points[num_hull_points]);
 
@@ -646,7 +646,7 @@ AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 	    return;
 
     if (num_hull_edges == MAX_HULL_EDGES)
-	Message(msgError, errLowHullEdgeCount);
+	Error(errLowHullEdgeCount);
 
     hull_edges[i][0] = pt1;
     hull_edges[i][1] = pt2;
