@@ -91,11 +91,11 @@ else
   quiet = quiet_
 endif
 
-quiet_cmd_mkdir = '  MKDIR   $@'
-      cmd_mkdir = mkdir -p $@
+quiet_cmd_mkdir = '  MKDIR   $(@D)'
+      cmd_mkdir = mkdir -p $(@D)
 
 define do_mkdir
-	@if [ ! -d $@ ]; then \
+	@if [ ! -d $(@D) ]; then \
 		echo $($(quiet)cmd_mkdir); \
 		$(cmd_mkdir); \
 	fi;
@@ -118,19 +118,17 @@ quiet_cmd_cc_o_c = '  CC      $@'
       cmd_cc_o_c = $(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 define do_cc_o_c
+	@$(do_mkdir)
 	@$(cmd_cc_dep_c);
 	@echo $($(quiet)cmd_cc_o_c);
 	@$(cmd_cc_o_c);
 endef
 
-cmd_cc_dep_rc = \
-	$(CC) -x c-header -MM -MT $@ $(CPPFLAGS) -o $(@D)/.$(@F).d $< ; \
-	$(cmd_fixdep)
-
 quiet_cmd_cc_link = '  LINK    $@'
       cmd_cc_link = $(CC) -o $@ $^ $(1)
 
 define do_cc_link
+	@$(do_mkdir)
 	@echo $($(quiet)cmd_cc_link);
 	@$(call cmd_cc_link,$(1))
 endef
@@ -202,10 +200,7 @@ APPS = \
 	$(BIN_PFX)bsputil$(EXT)	\
 	$(BIN_PFX)qbsp$(EXT)
 
-all:	prepare $(patsubst %,$(BIN_DIR)/%,$(APPS))
-
-.PHONY:	prepare
-prepare:	$(BUILD_DIRS) $(BIN_DIR)
+all:	$(patsubst %,$(BIN_DIR)/%,$(APPS))
 
 COMMON_CPPFLAGS := -I$(TOPDIR)/include -DLINUX $(DPTHREAD)
 ifeq ($(DEBUG),Y)
@@ -221,14 +216,6 @@ $(BUILD_DIR)/vis/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS)
 $(BUILD_DIR)/bspinfo/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
 $(BUILD_DIR)/bsputil/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
 $(BUILD_DIR)/common/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
-
-$(BUILD_DIR)/qbsp:	; $(do_mkdir)
-$(BUILD_DIR)/common:	; $(do_mkdir)
-$(BUILD_DIR)/light:	; $(do_mkdir)
-$(BUILD_DIR)/vis:	; $(do_mkdir)
-$(BUILD_DIR)/bspinfo:	; $(do_mkdir)
-$(BUILD_DIR)/bsputil:	; $(do_mkdir)
-$(BIN_DIR):		; $(do_mkdir)
 
 $(BUILD_DIR)/qbsp/%.o:		qbsp/%.c	; $(do_cc_o_c)
 $(BUILD_DIR)/common/%.o:	common/%.c	; $(do_cc_o_c)
@@ -339,4 +326,3 @@ clean:
 	@rm -f $(shell find . \( \
 		-name '*~' -o -name '#*#' -o -name '*.o' -o -name '*.res' \
 	\) -print)
-
