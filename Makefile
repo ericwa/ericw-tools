@@ -4,6 +4,8 @@
 
 .PHONY:	all clean
 
+default:	all
+
 # ============================================================================
 BUILD_DIR        ?= build
 BIN_DIR          ?= bin
@@ -145,6 +147,18 @@ define do_strip
 endef
 endif
 
+DEPFILES = \
+	$(wildcard $(BUILD_DIR)/bspinfo/.*.d)	\
+	$(wildcard $(BUILD_DIR)/bsputil/.*.d)	\
+	$(wildcard $(BUILD_DIR)/common/.*.d)	\
+	$(wildcard $(BUILD_DIR)/light/.*.d)	\
+	$(wildcard $(BUILD_DIR)/qbsp/.*.d)	\
+	$(wildcard $(BUILD_DIR)/vis/.*.d)
+
+ifneq ($(DEPFILES),)
+-include $(DEPFILES)
+endif
+
 # ---------------------------------------
 # Define some build variables
 # ---------------------------------------
@@ -187,8 +201,6 @@ APPS = \
 	$(BIN_PFX)bspinfo$(EXT)	\
 	$(BIN_PFX)bsputil$(EXT)	\
 	$(BIN_PFX)qbsp$(EXT)
-
-default:	all
 
 all:	prepare $(patsubst %,$(BIN_DIR)/%,$(APPS))
 
