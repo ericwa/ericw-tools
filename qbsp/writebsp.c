@@ -95,7 +95,7 @@ ExportNodePlanes(node_t *nodes)
     }
     // TODO: make one-time allocation?
     planemapping = AllocMem(OTHER, sizeof(int) * planes->count, true);
-    memset(planemapping, -1, sizeof(int *) * planes->count);
+    memset(planemapping, -1, sizeof(int) * planes->count);
     ExportNodePlanes_r(nodes);
     FreeMem(planemapping, OTHER, sizeof(int) * planes->count);
 }
