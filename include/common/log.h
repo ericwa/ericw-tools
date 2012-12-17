@@ -32,7 +32,7 @@
 
 void init_log(char *filename);
 void close_log();
-void logprint(const char *fmt, ...);
-void logvprint(const char *fmt, va_list args);
+void logprint(const char *fmt, ...) __attribute__((format(printf,1,2)));
+void logvprint(const char *fmt, va_list args) __attribute__((format(printf,1,0)));
 
 #endif /* __COMMON_LOG_H__ */
