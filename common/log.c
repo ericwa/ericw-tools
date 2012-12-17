@@ -21,9 +21,11 @@
  * common/log.c
  */
 
+#include <stdarg.h>
+#include <stdio.h>
+
 #include <common/log.h>
 #include <common/cmdlib.h>
-#include <stdio.h>
 
 static FILE *logfile;
 static qboolean log_ok;
@@ -48,20 +50,27 @@ logprint(const char *fmt, ...)
 {
     va_list args;
 
-    va_start(args, fmt);
-    vprintf(fmt, args);
     if (log_ok) {
+	va_start(args, fmt);
 	vfprintf(logfile, fmt, args);
+	va_end(args);
 	fflush(logfile);
     }
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
 }
 
 void
 logvprint(const char *fmt, va_list args)
 {
-    vprintf(fmt, args);
+    va_list log_args;
+
     if (log_ok) {
-	vfprintf(logfile, fmt, args);
+	va_copy(log_args, args);
+	vfprintf(logfile, fmt, log_args);
+	va_end(log_args);
 	fflush(logfile);
     }
+    vprintf(fmt, args);
 }
