@@ -565,10 +565,6 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
      *
      *      We should only generate the error when if find out that the
      *      face actually gets hit by the light
-     *
-     *      I think maybe MAXLIGHTMAPS is actually supposed to be 3.
-     *      Have to make some more test maps (or check the engine source)
-     *      for this.
      */
 
     if (mapnum == l->numlightstyles) {	/* init a new light map */
