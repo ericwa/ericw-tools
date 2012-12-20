@@ -16,20 +16,17 @@ TARGET_OS        ?= $(HOST_OS)
 
 SYSNAME := $(shell uname -s)
 
+TOPDIR := $(shell pwd)
 ifneq (,$(findstring MINGW32,$(SYSNAME)))
 HOST_OS = WIN32
-TOPDIR := $(shell pwd -W)
 else
 ifneq (,$(findstring $(SYSNAME),FreeBSD NetBSD OpenBSD))
 HOST_OS = UNIX
 UNIX = bsd
-TOPDIR := $(shell pwd)
 else
 ifneq (,$(findstring $(SYSNAME),Linux))
 HOST_OS = UNIX
 UNIX = linux
-#UNIX = null
-TOPDIR := $(shell pwd)
 else
 $(error OS type not detected.)
 endif
