@@ -84,13 +84,8 @@ LU_Decompose(vec3_t mtx[3], int r[3], int c[2])
     return true;
 }
 
-#if __GNUC__ == 4 && __GNUC_MINOR__ == 1
-#define CONST_BUG
-#else
-#define CONST_BUG const
-#endif
 static void
-solve3(CONST_BUG vec3_t mtx[3], const int r[3], const int c[3],
+solve3(const vec3_t mtx[3], const int r[3], const int c[3],
        const vec3_t rhs, vec3_t soln)
 {
     vec3_t y;
