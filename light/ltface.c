@@ -359,8 +359,6 @@ CalcFaceExtents(lightinfo_t * l, const vec3_t faceoffset)
  * to get the world xyz value of the sample point
  * =================
  */
-static int c_bad;		// FIXME - what is this??
-
 static void
 CalcPoints(lightinfo_t * l)
 {
@@ -435,8 +433,6 @@ CalcPoints(lightinfo_t * l)
 		VectorNormalize(move);
 		VectorMA(surf, 8, move, surf);
 	    }
-	    if (i == 2)
-		c_bad++;	// FIXME - what?
 	}
     }
 }
