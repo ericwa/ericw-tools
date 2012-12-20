@@ -20,25 +20,29 @@
 #include <common/cmdlib.h>
 #include <light/threads.h>
 
-#ifdef __alpha
-static pthread_mutex_t *my_mutex;
-int numthreads = 4;
+#ifdef USE_PTHREADS
+#define MAX_THREADS 32
+pthread_mutex_t *my_mutex;
 #else
-int numthreads = 1;
+#define MAX_THREADS 1
 #endif
+
+int numthreads = 1;
 
 void
 InitThreads(void)
 {
-#ifdef __alpha
+#ifdef USE_PTHREADS
+    int status;
     pthread_mutexattr_t mattrib;
 
     my_mutex = malloc(sizeof(*my_mutex));
-    if (pthread_mutexattr_create(&mattrib) == -1)
-	Error("pthread_mutex_attr_create failed");
-    if (pthread_mutexattr_setkind_np(&mattrib, MUTEX_FAST_NP) == -1)
-	Error("pthread_mutexattr_setkind_np failed");
-    if (pthread_mutex_init(my_mutex, mattrib) == -1)
+    status = pthread_mutexattr_init(&mattrib);
+    if (status)
+	Error("pthread_mutexattr_init failed");
+
+    status = pthread_mutex_init(my_mutex, &mattrib);
+    if (status)
 	Error("pthread_mutex_init failed");
 #endif
 }
@@ -51,9 +55,9 @@ InitThreads(void)
 void
 RunThreadsOn(threadfunc_t func)
 {
-#ifdef __alpha
-    pthread_t work_threads[256];
-    pthread_addr_t status;
+#ifdef USE_PTHREADS
+    int status;
+    pthread_t threads[MAX_THREADS];
     pthread_attr_t attrib;
     int i;
 
@@ -62,22 +66,30 @@ RunThreadsOn(threadfunc_t func)
 	return;
     }
 
-    if (pthread_attr_create(&attrib) == -1)
-	Error("pthread_attr_create failed");
+    status = pthread_attr_init(&attrib);
+    if (status)
+	Error("pthread_attr_init failed");
+#if 0
     if (pthread_attr_setstacksize(&attrib, 0x100000) == -1)
 	Error("pthread_attr_setstacksize failed");
+#endif
 
     for (i = 0; i < numthreads; i++) {
-	if (pthread_create(&work_threads[i], attrib,
-			   (pthread_startroutine_t) func,
-			   (pthread_addr_t) i) == -1)
+	status = pthread_create(&threads[i], &attrib, func, NULL);
+	if (status)
 	    Error("pthread_create failed");
     }
 
     for (i = 0; i < numthreads; i++) {
-	if (pthread_join(work_threads[i], &status) == -1)
+	status = pthread_join(threads[i], NULL);
+	if (status)
 	    Error("pthread_join failed");
     }
+
+    status = pthread_mutex_destroy(my_mutex);
+    if (status)
+	Error("pthread_mutex_destroy failed");
+
 #else
     func(NULL);
 #endif

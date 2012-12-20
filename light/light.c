@@ -81,7 +81,7 @@ GetLitFileSpace(int size)
     return buf;
 }
 
-static void
+static void *
 LightThread(void *junk)
 {
     int i;
@@ -90,16 +90,19 @@ LightThread(void *junk)
 	LOCK;
 	i = bspfileface++;
 	UNLOCK;
+	if (i == numfaces)
+	    logprint("\nLighting Completed.\n\n");
+	if (i >= numfaces)
+	    return NULL;
+
 	if (!facecounter) {
 	    printf("Lighting face %i of %i\r", i, numfaces);
 	    fflush(stdout);
 	}
-	if (i >= numfaces) {
-	    logprint("\nLighting Completed.\n\n");
-	    return;
-	}
 	LightFace(i, nolightface[i], faceoffset[i]);
     }
+
+    return NULL;
 }
 
 static void

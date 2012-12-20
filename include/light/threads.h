@@ -20,10 +20,10 @@
 #ifndef __LIGHT_THREADS_H__
 #define __LIGHT_THREADS_H__
 
-#ifdef __alpha
+#ifdef USE_PTHREADS
 #  include <pthread.h>
-extern pthread_mutex_t *my_mutex;
 
+extern pthread_mutex_t *my_mutex;
 #  define LOCK   pthread_mutex_lock (my_mutex)
 #  define UNLOCK pthread_mutex_unlock (my_mutex)
 #else
@@ -33,7 +33,7 @@ extern pthread_mutex_t *my_mutex;
 
 extern int numthreads;
 
-typedef void (threadfunc_t) (void *);
+typedef void *(threadfunc_t)(void *);
 
 void InitThreads(void);
 void RunThreadsOn(threadfunc_t func);

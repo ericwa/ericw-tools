@@ -46,8 +46,8 @@ STRIP = $(TARGET)-strip
 endif
 else
 EXT=
-DPTHREAD=-DUSE_PTHREADS
-LPTHREAD=-lpthread
+DPTHREAD=-DUSE_PTHREADS -pthread
+LPTHREAD=-pthread -lpthread
 endif
 
 #BIN_PFX ?= tyr-
@@ -241,7 +241,7 @@ LIGHT_OBJS = \
 	common/log.o
 
 $(BIN_DIR)/$(BIN_PFX)light$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(LIGHT_OBJS))
-	$(call do_cc_link,-lm)
+	$(call do_cc_link,-lm $(LPTHREAD))
 	$(call do_strip,$@)
 
 #######
