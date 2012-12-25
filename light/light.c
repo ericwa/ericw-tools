@@ -53,12 +53,15 @@ GetFileSpace(int size)
 {
     byte *buf;
 
-    LOCK;
+    ThreadLock();
+
     /* align to 4 byte boudaries */
     file_p = (byte *)(((long)file_p + 3) & ~3);
     buf = file_p;
     file_p += size;
-    UNLOCK;
+
+    ThreadUnlock();
+
     if (file_p > file_end)
 	Error("%s: overrun", __func__);
     return buf;
@@ -69,13 +72,16 @@ GetLitFileSpace(int size)
 {
     byte *buf;
 
-    LOCK;
+    ThreadLock();
+
     /* align to 12 byte boundaries (match offets with 3 * GetFileSpace) */
     if ((long)lit_file_p % 12)
 	lit_file_p += 12 - ((long)lit_file_p % 12);
     buf = lit_file_p;
     lit_file_p += size;
-    UNLOCK;
+
+    ThreadUnlock();
+
     if (lit_file_p > lit_file_end)
 	Error("%s: overrun", __func__);
     return buf;
@@ -87,9 +93,11 @@ LightThread(void *junk)
     int i;
 
     while (1) {
-	LOCK;
+
+	ThreadLock();
 	i = bspfileface++;
-	UNLOCK;
+	ThreadUnlock();
+
 	if (i == numfaces)
 	    logprint("\nLighting Completed.\n\n");
 	if (i >= numfaces)
@@ -178,7 +186,7 @@ LightWorld(void)
 	lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
     }
 
-    RunThreadsOn(LightThread);
+    RunThreadsOn(numfaces, true, LightThread);
     lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", lightdatasize);
 }
@@ -204,6 +212,8 @@ main(int argc, const char **argv)
 	     "** Beta version " __DATE__ " " __TIME__ "\n"
 #endif
 	);
+
+    numthreads = GetDefaultThreads();
 
     for (i = 1; i < argc; i++) {
 	if (!strcmp(argv[i], "-threads")) {
@@ -241,6 +251,9 @@ main(int argc, const char **argv)
 	    break;
     }
 
+    if (numthreads > 1)
+	logprint("running with %d threads\n", numthreads);
+
     // Switch on colored flag if specifying -lit or -bsp30
     if (bsp30 || litfile)
 	colored = true;
@@ -263,8 +276,6 @@ main(int argc, const char **argv)
 	Error("usage: light [-threads num] [-light num] [-extra]\n"
 	      "             [-colored] [-bsp30] [-lit]\n"
 	      "             [-nocount] [-compress] [-nominlimit] bspfile\n");
-
-    InitThreads();
 
     start = I_FloatTime();
 

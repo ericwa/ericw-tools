@@ -24,8 +24,8 @@
 #include <common/mathlib.h>
 #include <common/bspfile.h>
 #include <common/log.h>
+#include <common/threads.h>
 #include <light/entities.h>
-#include <light/threads.h>
 #include <light/litfile.h>
 
 #define ON_EPSILON    0.1

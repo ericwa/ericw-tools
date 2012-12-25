@@ -229,13 +229,13 @@ LIGHT_OBJS = \
 	light/entities.o	\
 	light/litfile.o		\
 	light/ltface.o		\
-	light/threads.o		\
 	light/trace.o		\
 	light/light.o		\
 	common/bspfile.o	\
 	common/cmdlib.o		\
 	common/mathlib.o	\
-	common/log.o
+	common/log.o		\
+	common/threads.o
 
 $(BIN_DIR)/$(BIN_PFX)light$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(LIGHT_OBJS))
 	$(call do_cc_link,-lm $(LPTHREAD))
