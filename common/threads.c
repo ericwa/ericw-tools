@@ -1,14 +1,13 @@
 /* common/threads.c */
 
 #include <common/cmdlib.h>
+#include <common/log.h>
 #include <common/threads.h>
 
-#define MAX_THREADS 64
-
-int dispatch;
-int workcount;
-int oldf;
-qboolean pacifier;
+static int dispatch;
+static int workcount;
+static int oldf;
+static qboolean pacifier;
 
 /*
  * =============
@@ -49,14 +48,22 @@ GetThreadWork(void)
  * ===================================================================
  */
 #ifdef WIN32
-
-#define USED
+#define HAVE_THREADS
 
 #include <windows.h>
 
 int numthreads = 1;
-
 CRITICAL_SECTION crit;
+
+int
+GetDefaultThreads(void)
+{
+    SYSTEM_INFO info;
+
+    GetSystemInfo(&info);
+
+    return info.dwNumberOfProcessors;
+}
 
 void
 ThreadLock(void)
@@ -76,25 +83,31 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int workcnt, qboolean showpacifier, void (*func) (int))
+RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
 {
-    int threadid[MAX_THREADS];
-    HANDLE threadhandle[MAX_THREADS];
     int i;
+    DWORD *threadid;
+    HANDLE *threadhandle;
 
     dispatch = 0;
     workcount = workcnt;
     oldf = -1;
     pacifier = showpacifier;
 
+    threadid = malloc(sizeof(*threadid) * numthreads);
+    threadhandle = malloc(sizeof(*threadhandle) * numthreads);
+
+    if (!threadid || !threadhandle)
+	Error("Failed to allocate memory for threads");
+
     /* run threads in parallel */
     InitializeCriticalSection(&crit);
     for (i = 0; i < numthreads; i++) {
-	threadhandle[i] = CreateThread(NULL,	/* LPSECURITY_ATTRIBUTES lpsa, */
-				       0,	/* DWORD cbStack,              */
-				       (LPTHREAD_START_ROUTINE) func,	/* LPTHREAD_START_ROUTINE lpStartAddr, */
-				       (LPVOID)i,	/* LPVOID lpvThreadParm, */
-				       0,	/* DWORD fdwCreate, */
+	threadhandle[i] = CreateThread(NULL,
+				       0,
+				       (LPTHREAD_START_ROUTINE)func,
+				       (LPVOID)i,
+				       0,
 				       &threadid[i]);
     }
 
@@ -103,38 +116,54 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void (*func) (int))
     DeleteCriticalSection(&crit);
     if (pacifier)
 	logprint("\n");
+
+    free(threadhandle);
+    free(threadid);
 }
 
-
-#endif
+#endif /* WIN32 */
 
 /*
  * ===================================================================
- *                                 OSF1
+ *                               PTHREADS
  * ===================================================================
  */
 
-#ifdef __osf__
-#define    USED
-
-int numthreads = 4;
+#ifdef USE_PTHREADS
+#define HAVE_THREADS
 
 #include <pthread.h>
+#include <unistd.h>
 
+int numthreads = 1;
 pthread_mutex_t *my_mutex;
+
+int
+GetDefaultThreads(void)
+{
+    int threads;
+
+#ifdef _SC_NPROCESSORS_ONLN
+    threads = sysconf(_SC_NPROCESSORS_ONLN);
+    if (threads < 1)
+	threads = 1;
+#else
+    threads = 4;
+#endif
+
+    return threads;
+}
 
 void
 ThreadLock(void)
 {
-    if (my_mutex)
-	pthread_mutex_lock(my_mutex);
+    pthread_mutex_lock(my_mutex);
 }
 
 void
 ThreadUnlock(void)
 {
-    if (my_mutex)
-	pthread_mutex_unlock(my_mutex);
+    pthread_mutex_unlock(my_mutex);
 }
 
 
@@ -144,51 +173,67 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int workcnt, qboolean showpacifier, void (*func) (int))
+RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
 {
-    int i;
-    pthread_t work_threads[MAX_THREADS];
-    pthread_addr_t status;
-    pthread_attr_t attrib;
+    pthread_t *threads;
     pthread_mutexattr_t mattrib;
+    pthread_attr_t attrib;
+    int status;
+    int i;
 
     dispatch = 0;
     workcount = workcnt;
     oldf = -1;
     pacifier = showpacifier;
 
-    if (!my_mutex) {
-	my_mutex = malloc(sizeof(*my_mutex));
-	if (pthread_mutexattr_create(&mattrib) == -1)
-	    Error("pthread_mutex_attr_create failed");
-	if (pthread_mutexattr_setkind_np(&mattrib, MUTEX_FAST_NP) == -1)
-	    Error("pthread_mutexattr_setkind_np failed");
-	if (pthread_mutex_init(my_mutex, mattrib) == -1)
-	    Error("pthread_mutex_init failed");
-    }
+    status = pthread_mutexattr_init(&mattrib);
+    if (status)
+	Error("pthread_mutexattr_init failed");
 
-    if (pthread_attr_create(&attrib) == -1)
-	Error("pthread_attr_create failed");
-    if (pthread_attr_setstacksize(&attrib, 0x100000) == -1)
+    my_mutex = malloc(sizeof(*my_mutex));
+    if (!my_mutex)
+	Error("failed to allocate memory for thread mutex");
+    status = pthread_mutex_init(my_mutex, &mattrib);
+    if (status)
+	Error("pthread_mutex_init failed");
+
+    status = pthread_attr_init(&attrib);
+    if (status)
+	Error("pthread_attr_init failed");
+#if 0
+    status = pthread_attr_setstacksize(&attrib, 0x100000);
+    if (status)
 	Error("pthread_attr_setstacksize failed");
+#endif
+
+    threads = malloc(sizeof(*threads) * numthreads);
+    if (!threads)
+	Error("failed to allocate memory for threads");
 
     for (i = 0; i < numthreads; i++) {
-	if (pthread_create(&work_threads[i], attrib,
-			   (pthread_startroutine_t) func,
-			   (pthread_addr_t) i) == -1)
+	status = pthread_create(&threads[i], &attrib, func, NULL);
+	if (status)
 	    Error("pthread_create failed");
     }
 
     for (i = 0; i < numthreads; i++) {
-	if (pthread_join(work_threads[i], &status) == -1)
+	status = pthread_join(threads[i], NULL);
+	if (status)
 	    Error("pthread_join failed");
     }
+
+    status = pthread_mutex_destroy(my_mutex);
+    if (status)
+	Error("pthread_mutex_destroy failed");
+
+    free(threads);
+    free(my_mutex);
 
     if (pacifier)
 	logprint("\n");
 }
 
-#endif
+#endif /* USE_PTHREADS */
 
 /*
  * =======================================================================
@@ -196,19 +241,12 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void (*func) (int))
  * =======================================================================
  */
 
-#ifndef USED
+#ifndef HAVE_THREADS
 
 int numthreads = 1;
 
-void
-ThreadLock(void)
-{
-}
-
-void
-ThreadUnlock(void)
-{
-}
+void ThreadLock(void) {}
+void ThreadUnlock(void) {}
 
 /*
  * =============
@@ -216,10 +254,8 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int workcnt, qboolean showpacifier, void (*func) (int))
+RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
 {
-    int i;
-
     dispatch = 0;
     workcount = workcnt;
     oldf = -1;
