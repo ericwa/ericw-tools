@@ -1,5 +1,6 @@
 // vis.c
 
+#include <limits.h>
 #include <stddef.h>
 
 #include <vis/vis.h>
@@ -340,24 +341,24 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 portal_t *
 GetNextPortal(void)
 {
-    int j;
-    portal_t *p, *tp;
-    int min;
+    int i;
+    portal_t *p, *ret;
+    unsigned min;
 
     LOCK;
 
-    min = 99999999;
-    p = NULL;
+    min = INT_MAX;
+    ret = NULL;
 
-    for (j = 0, tp = portals; j < numportals * 2; j++, tp++) {
-	if (tp->nummightsee < min && tp->status == pstat_none) {
-	    min = tp->nummightsee;
-	    p = tp;
+    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
+	if (p->nummightsee < min && p->status == pstat_none) {
+	    min = p->nummightsee;
+	    ret = p;
 	}
     }
 
-    if (p) {
-	p->status = pstat_working;
+    if (ret) {
+	ret->status = pstat_working;
 	progress++;
 	printf("\r%i of %i: %i%%", progress, 2 * numportals,
 	       50 * progress / numportals);
@@ -366,7 +367,7 @@ GetNextPortal(void)
 
     UNLOCK;
 
-    return p;
+    return ret;
 }
 
 /*
