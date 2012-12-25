@@ -77,10 +77,13 @@ FindTexinfo(texinfo_t *t)
 	if (t->flags != tex->flags)
 	    continue;
 
-	for (j = 0; j < 8; j++)
+	for (j = 0; j < 4; j++) {
 	    if (t->vecs[0][j] != tex->vecs[0][j])
 		break;
-	if (j != 8)
+	    if (t->vecs[1][j] != tex->vecs[1][j])
+		break;
+	}
+	if (j != 4)
 	    continue;
 
 	return i;
