@@ -49,12 +49,13 @@ winding_t *CopyWinding(winding_t * w);
 void PlaneFromWinding(const winding_t * w, plane_t *plane);
 qboolean PlaneCompare(plane_t *p1, plane_t *p2);
 
-typedef enum { stat_none, stat_working, stat_done } vstatus_t;
+typedef enum { pstat_none = 0, pstat_working, pstat_done } pstatus_t;
+
 typedef struct {
     plane_t plane;		// normal pointing into neighbor
     int leaf;			// neighbor
     winding_t *winding;
-    vstatus_t status;
+    pstatus_t status;
     byte *visbits;
     byte *mightsee;
     int nummightsee;

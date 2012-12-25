@@ -350,14 +350,14 @@ GetNextPortal(void)
     p = NULL;
 
     for (j = 0, tp = portals; j < numportals * 2; j++, tp++) {
-	if (tp->nummightsee < min && tp->status == stat_none) {
+	if (tp->nummightsee < min && tp->status == pstat_none) {
 	    min = tp->nummightsee;
 	    p = tp;
 	}
     }
 
     if (p) {
-	p->status = stat_working;
+	p->status = pstat_working;
 	progress++;
 	printf("\r%i of %i: %i%%", progress, 2 * numportals,
 	       50 * progress / numportals);
@@ -460,7 +460,7 @@ LeafFlow(int leafnum)
     leaf = &leafs[leafnum];
     for (i = 0; i < leaf->numportals; i++) {
 	p = leaf->portals[i];
-	if (p->status != stat_done)
+	if (p->status != pstat_done)
 	    Error("portal not done");
 	for (j = 0; j < leafbytes; j++)
 	    outbuffer[j] |= p->visbits[j];
@@ -516,7 +516,7 @@ CalcPortalVis(void)
     if (fastvis) {
 	for (i = 0; i < numportals * 2; i++) {
 	    portals[i].visbits = portals[i].mightsee;
-	    portals[i].status = stat_done;
+	    portals[i].status = pstat_done;
 	}
 	return;
     }

@@ -193,7 +193,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t * thread, pstack_t * prevstack)
 	    continue;		// can't possibly see it
 	}
 	// if the portal can't see anything we haven't allready seen, skip it
-	if (p->status == stat_done) {
+	if (p->status == pstat_done) {
 	    c_vistest++;
 	    test = (long *)p->visbits;
 	} else {
@@ -354,9 +354,8 @@ PortalFlow(portal_t * p)
 {
     threaddata_t data;
 
-    if (p->status != stat_working)
+    if (p->status != pstat_working)
 	Error("%s: reflowed", __func__);
-    p->status = stat_working;
 
     p->visbits = malloc(leafbytes);
     memset(p->visbits, 0, leafbytes);
@@ -372,7 +371,7 @@ PortalFlow(portal_t * p)
 
     RecursiveLeafFlow(p->leaf, &data, &data.pstack_head);
 
-    p->status = stat_done;
+    p->status = pstat_done;
 }
 
 
