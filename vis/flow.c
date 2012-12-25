@@ -370,8 +370,6 @@ PortalFlow(portal_t * p)
     data.pstack_head.mightsee = p->mightsee;
 
     RecursiveLeafFlow(p->leaf, &data, &data.pstack_head);
-
-    p->status = pstat_done;
 }
 
 

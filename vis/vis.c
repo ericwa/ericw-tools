@@ -22,7 +22,7 @@ int progress;
 portal_t *portals;
 leaf_t *leafs;
 
-int c_portaltest, c_portalpass, c_portalcheck;
+int c_portaltest, c_portalpass, c_portalcheck, c_mightseeupdate;
 int c_noclip = 0;
 
 qboolean showgetleaf = true;
@@ -370,6 +370,121 @@ GetNextPortal(void)
     return ret;
 }
 
+
+/*
+  =============
+  UpdateMightSee
+
+  Called after completing a portal and finding that the source leaf is no
+  longer visible from the dest leaf. Visibility is symetrical, so the reverse
+  must also be true. Update mightsee for any portals on the source leaf which
+  haven't yet started processing.
+
+  Called with the lock held.
+  =============
+*/
+static void
+UpdateMightsee(const leaf_t *source, const leaf_t *dest)
+{
+    int i, leafnum;
+    portal_t *p;
+
+    leafnum = dest - leafs;
+    for (i = 0; i < source->numportals; i++) {
+	p = source->portals[i];
+	if (p->status != pstat_none)
+	    continue;
+	if (p->mightsee[leafnum >> 3] & (1 << (leafnum & 7))) {
+	    p->mightsee[leafnum >> 3] &= ~(1 << (leafnum & 7));
+	    p->nummightsee--;
+	    c_mightseeupdate++;
+	}
+    }
+}
+
+
+/*
+  =============
+  PortalCompleted
+
+  Mark the portal completed and propogate new vis information across
+  to the complementry portals.
+
+  Called with the lock held.
+  =============
+*/
+static void
+PortalCompleted(portal_t *completed)
+{
+    int i, j, k, bit;
+    int leafnum;
+    portal_t *p, *p2;
+    leaf_t *myleaf;
+    unsigned long *might, *vis, *check;
+    unsigned long changed;
+    byte *bcheck, bmask;
+
+    LOCK;
+
+    completed->status = pstat_done;
+
+    /*
+     * For each portal on the leaf, check the leafs we eliminated from
+     * mightsee during the full vis so far.
+     */
+    myleaf = &leafs[completed->leaf];
+    for (i = 0; i < myleaf->numportals; i++) {
+	p = myleaf->portals[i];
+	if (p->status != pstat_done)
+	    continue;
+
+	might = (unsigned long *)p->mightsee;
+	vis = (unsigned long *)p->visbits;
+	for (j = 0; j < leaflongs; j++) {
+	    changed = might[j] & ~vis[j];
+	    if (!changed)
+		continue;
+
+	    /*
+	     * If any of these changed bits are still visible from another
+	     * portal, we can't update yet.
+	     */
+	    for (k = 0; k < myleaf->numportals; k++) {
+		if (k == i)
+		    continue;
+		p2 = myleaf->portals[k];
+		if (p2->status == pstat_done)
+		    check = (unsigned long *)p2->visbits;
+		else
+		    check = (unsigned long *)p2->mightsee;
+		changed &= ~check[j];
+		if (!changed)
+		    break;
+	    }
+	    if (!changed)
+		continue;
+
+	    /*
+	     * Update mightsee for any of the changed bits that survived
+	     */
+	    bcheck = (byte *)&changed;
+	    for (k = 0; k < sizeof(changed); k++, bcheck++) {
+		if (!*bcheck)
+		    continue;
+		for (bit = 0, bmask = 1; bit < 8; bit++, bmask <<= 1) {
+		    if (!(*bcheck & bmask))
+			continue;
+		    leafnum = j * (sizeof(changed) << 3) + (k << 3) + bit;
+		    UpdateMightsee(leafs + leafnum, myleaf);
+		}
+	    }
+	}
+    }
+
+    UNLOCK;
+}
+
+
 /*
   ==============
   LeafThread
@@ -386,6 +501,8 @@ LeafThread(void *unused)
 	    break;
 
 	PortalFlow(p);
+
+	PortalCompleted(p);
 
 	if (verbose) {
 	    printf("\r");
@@ -566,7 +683,8 @@ CalcPortalVis(void)
     if (verbose) {
 	logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",
 		 c_portalcheck, c_portaltest, c_portalpass);
-	logprint("c_vistest: %i  c_mighttest: %i\n", c_vistest, c_mighttest);
+	logprint("c_vistest: %i  c_mighttest: %i  c_mightseeupdate %i\n",
+		 c_vistest, c_mighttest, c_mightseeupdate);
     }
 }
 
