@@ -41,7 +41,7 @@ int leaflongs;
 
 
 qboolean fastvis;
-qboolean verbose;
+static int verbose = 0;
 int testlevel = 2;
 
 #if 0
@@ -504,7 +504,7 @@ LeafThread(void *unused)
 
 	PortalCompleted(p);
 
-	if (verbose) {
+	if (verbose > 1) {
 	    printf("\r");
 	    logprint("portal:%4i  mightsee:%4i  cansee:%4i\n",
 		     (int)(p - portals), p->nummightsee, p->numcansee);
@@ -597,7 +597,7 @@ LeafFlow(int leafnum)
 //
 // compress the bit string
 //
-    if (verbose)
+    if (verbose > 1)
 	logprint("leaf %4i : %4i visible\n", leafnum, numvis);
     totalvis += numvis;
 
@@ -1106,7 +1106,10 @@ main(int argc, char **argv)
 	    i++;
 	} else if (!strcmp(argv[i], "-v")) {
 	    logprint("verbose = true\n");
-	    verbose = true;
+	    verbose = 1;
+	} else if (!strcmp(argv[i], "-vv")) {
+	    logprint("verbose = extra\n");
+	    verbose = 2;
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -1116,7 +1119,7 @@ main(int argc, char **argv)
     if (i == argc && credits)
 	return 0;
     else if (i != argc - 1)
-	Error("usage: vis [-threads #] [-level 0-4] [-fast] [-v] "
+	Error("usage: vis [-threads #] [-level 0-4] [-fast] [-v|-vv] "
 	      "[-credits] bspfile");
 
     start = I_FloatTime();

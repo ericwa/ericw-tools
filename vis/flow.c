@@ -441,7 +441,7 @@ BasePortalVis(void)
 	    // Quick test - completely at the back?
 	    d = DotProduct(tw->origin, p->plane.normal) - p->plane.dist;
 	    if (d < -tw->radius)
-	        continue;
+		continue;
 
 	    for (k = 0; k < tw->numpoints; k++) {
 		d = DotProduct(tw->points[k], p->plane.normal) - p->plane.dist;
@@ -454,7 +454,7 @@ BasePortalVis(void)
 	    // Quick test - completely on front?
 	    d = DotProduct(w->origin, tp->plane.normal) - tp->plane.dist;
 	    if (d > w->radius)
-	        continue;
+		continue;
 
 	    for (k = 0; k < w->numpoints; k++) {
 		d = DotProduct(w->points[k], tp->plane.normal)
