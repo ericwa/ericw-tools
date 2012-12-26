@@ -8,7 +8,7 @@ static int c_portalskip;
 static int c_leafskip;
 
 static void
-CheckStack(leaf_t * leaf, threaddata_t * thread)
+CheckStack(leaf_t *leaf, threaddata_t *thread)
 {
     pstack_t *p;
 
@@ -39,10 +39,10 @@ CheckStack(leaf_t * leaf, threaddata_t * thread)
   ==============
 */
 static winding_t *
-ClipToSeperators(const winding_t * source,
+ClipToSeperators(const winding_t *source,
 		 const plane_t src_pl,
-		 const winding_t * pass,
-		 winding_t * target, unsigned int test,
+		 const winding_t *pass,
+		 winding_t *target, unsigned int test,
 		 pstack_t *stack)
 {
     int i, j, k, l;
@@ -150,7 +150,7 @@ ClipToSeperators(const winding_t * source,
   ==================
 */
 static void
-RecursiveLeafFlow(int leafnum, threaddata_t * thread, pstack_t * prevstack)
+RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
 {
     pstack_t stack;
     portal_t *p;
@@ -351,7 +351,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t * thread, pstack_t * prevstack)
   ===============
 */
 void
-PortalFlow(portal_t * p)
+PortalFlow(portal_t *p)
 {
     threaddata_t data;
 
