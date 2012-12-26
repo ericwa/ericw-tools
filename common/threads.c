@@ -15,17 +15,13 @@ static qboolean pacifier;
  * =============
  */
 int
-GetThreadWork(void)
+GetThreadWork_Locked__(void)
 {
     int r;
     int f;
 
-    ThreadLock();
-
-    if (dispatch == workcount) {
-	ThreadUnlock();
+    if (dispatch == workcount)
 	return -1;
-    }
 
     f = 10 * dispatch / workcount;
     if (f != oldf) {
@@ -36,11 +32,21 @@ GetThreadWork(void)
 
     r = dispatch;
     dispatch++;
-    ThreadUnlock();
 
     return r;
 }
 
+int
+GetThreadWork(void)
+{
+    int ret;
+
+    ThreadLock();
+    ret = GetThreadWork_Locked__();
+    ThreadUnlock();
+
+    return ret;
+}
 
 /*
  * ===================================================================

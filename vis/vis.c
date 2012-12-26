@@ -9,7 +9,6 @@
 
 int numportals;
 int portalleafs;
-int progress;
 
 portal_t *portals;
 leaf_t *leafs;
@@ -349,10 +348,7 @@ GetNextPortal(void)
 
     if (ret) {
 	ret->status = pstat_working;
-	progress++;
-	printf("\r%i of %i: %i%%", progress, 2 * numportals,
-	       50 * progress / numportals);
-	fflush(stdout);
+	GetThreadWork_Locked__();
     }
 
     ThreadUnlock();
@@ -629,7 +625,7 @@ CalcPortalVis(void)
 	return;
     }
 
-    RunThreadsOn(numportals, false, LeafThread);
+    RunThreadsOn(numportals * 2, true, LeafThread);
 
     if (verbose) {
 	logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",
@@ -653,8 +649,6 @@ CalcVis(void)
     logprint("Calculating Base Vis:\n");
     BasePortalVis();
 
-    progress = 0;
-    printf("\r");
     logprint("Calculating Full Vis:\n");
     CalcPortalVis();
 
