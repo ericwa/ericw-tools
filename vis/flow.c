@@ -1,3 +1,4 @@
+#include <common/threads.h>
 #include <vis/vis.h>
 
 unsigned long c_chains;
@@ -380,12 +381,8 @@ PortalFlow(portal_t * p)
   ============================================================================
 */
 
-static byte portalsee[MAX_PORTALS * 2];
-static int c_leafsee;
-static int c_portalsee;
-
 static void
-SimpleFlood(portal_t * srcportal, int leafnum)
+SimpleFlood(portal_t *srcportal, int leafnum, byte *portalsee)
 {
     int i;
     leaf_t *leaf;
@@ -395,15 +392,93 @@ SimpleFlood(portal_t * srcportal, int leafnum)
 	return;
 
     srcportal->mightsee[leafnum >> 3] |= (1 << (leafnum & 7));
-    c_leafsee++;
+    srcportal->nummightsee++;
 
     leaf = &leafs[leafnum];
     for (i = 0; i < leaf->numportals; i++) {
 	p = leaf->portals[i];
 	if (!portalsee[p - portals])
 	    continue;
-	SimpleFlood(srcportal, p->leaf);
+	SimpleFlood(srcportal, p->leaf, portalsee);
     }
+}
+
+/*
+  ==============
+  BasePortalVis
+  ==============
+*/
+static void *
+BasePortalThread(void *dummy)
+{
+    int i, j, portalnum;
+    portal_t *p, *tp;
+    winding_t *w, *tw;
+    float d;
+    byte *portalsee;
+
+    portalsee = malloc(sizeof(*portalsee) * numportals * 2);
+    if (!portalsee)
+	Error("%s: Out of Memory", __func__);
+
+    while (1) {
+	portalnum = GetThreadWork();
+	if (portalnum == -1)
+	    break;
+
+	p = portals + portalnum;
+	w = p->winding;
+
+	// Progress message
+	//printf("\r%i of %i: %i%%", i, numportals * 2, 50 * i / numportals);
+	//fflush(stdout);
+
+	p->mightsee = malloc(leafbytes);
+	memset(p->mightsee, 0, leafbytes);
+
+	memset(portalsee, 0, numportals * 2);
+
+	for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
+	    tw = tp->winding;
+	    if (tp == p)
+		continue;
+
+	    // Quick test - completely at the back?
+	    d = DotProduct(tw->origin, p->plane.normal) - p->plane.dist;
+	    if (d < -tw->radius)
+		continue;
+
+	    for (j = 0; j < tw->numpoints; j++) {
+		d = DotProduct(tw->points[j], p->plane.normal) - p->plane.dist;
+		if (d > ON_EPSILON)
+		    break;
+	    }
+	    if (j == tw->numpoints)
+		continue;	// no points on front
+
+	    // Quick test - completely on front?
+	    d = DotProduct(w->origin, tp->plane.normal) - tp->plane.dist;
+	    if (d > w->radius)
+		continue;
+
+	    for (j = 0; j < w->numpoints; j++) {
+		d = DotProduct(w->points[j], tp->plane.normal) - tp->plane.dist;
+		if (d < -ON_EPSILON)
+		    break;
+	    }
+	    if (j == w->numpoints)
+		continue;	// no points on back
+
+	    portalsee[i] = 1;
+	}
+
+	p->nummightsee = 0;
+	SimpleFlood(p, p->leaf, portalsee);
+    }
+
+    free(portalsee);
+
+    return NULL;
 }
 
 
@@ -415,63 +490,5 @@ SimpleFlood(portal_t * srcportal, int leafnum)
 void
 BasePortalVis(void)
 {
-    int i, j, k;
-    portal_t *tp, *p;
-    winding_t *tw, *w;
-    float d;
-
-    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-	w = p->winding;
-
-	// Progress message
-	printf("\r%i of %i: %i%%", i, numportals * 2, 50 * i / numportals);
-	fflush(stdout);
-
-	p->mightsee = malloc(leafbytes);
-	memset(p->mightsee, 0, leafbytes);
-
-	c_portalsee = 0;
-	memset(portalsee, 0, numportals * 2);
-
-	for (j = 0, tp = portals; j < numportals * 2; j++, tp++) {
-	    tw = tp->winding;
-	    if (j == i)
-		continue;
-
-	    // Quick test - completely at the back?
-	    d = DotProduct(tw->origin, p->plane.normal) - p->plane.dist;
-	    if (d < -tw->radius)
-		continue;
-
-	    for (k = 0; k < tw->numpoints; k++) {
-		d = DotProduct(tw->points[k], p->plane.normal) - p->plane.dist;
-		if (d > ON_EPSILON)
-		    break;
-	    }
-	    if (k == tw->numpoints)
-		continue;	// no points on front
-
-	    // Quick test - completely on front?
-	    d = DotProduct(w->origin, tp->plane.normal) - tp->plane.dist;
-	    if (d > w->radius)
-		continue;
-
-	    for (k = 0; k < w->numpoints; k++) {
-		d = DotProduct(w->points[k], tp->plane.normal)
-		    - tp->plane.dist;
-		if (d < -ON_EPSILON)
-		    break;
-	    }
-	    if (k == w->numpoints)
-		continue;	// no points on back
-
-	    portalsee[j] = 1;
-	    c_portalsee++;
-	}
-
-	c_leafsee = 0;
-	SimpleFlood(p, p->leaf);
-	p->nummightsee = c_leafsee;
-//        logprint ("\nportal:%4i  c_leafsee:%4i \n", i, c_leafsee);
-    }
+    RunThreadsOn(numportals * 2, true, BasePortalThread);
 }

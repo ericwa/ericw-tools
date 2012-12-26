@@ -3,6 +3,8 @@
 #ifndef __COMMON_THREADS_H__
 #define __COMMON_THREADS_H__
 
+#include <common/cmdlib.h>
+
 extern int numthreads;
 
 int GetDefaultThreads(void);
