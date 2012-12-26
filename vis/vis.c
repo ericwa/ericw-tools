@@ -916,9 +916,6 @@ LoadPortals(char *name)
     if (strcmp(magic, PORTALFILE))
 	Error("%s: not a portal file", __func__);
 
-    if (numportals * 2 > MAX_PORTALS)
-	Error("Exceeded MAX_PORTALS.");
-
     logprint("%4i portalleafs\n", portalleafs);
     logprint("%4i numportals\n", numportals);
 

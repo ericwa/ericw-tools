@@ -23,8 +23,6 @@
 #include <common/mathlib.h>
 #include <common/bspfile.h>
 
-/* Increased MAX_PORTALS from 32768 */
-#define  MAX_PORTALS 131072
 #define  PORTALFILE  "PRT1"
 #define  ON_EPSILON  0.1
 
