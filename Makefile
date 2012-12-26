@@ -252,7 +252,8 @@ VIS_OBJS = \
 	common/cmdlib.o		\
 	common/mathlib.o	\
 	common/bspfile.o	\
-	common/log.o
+	common/log.o		\
+	common/threads.o
 
 $(BIN_DIR)/$(BIN_PFX)vis$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(VIS_OBJS))
 	$(call do_cc_link,-lm $(LPTHREAD))

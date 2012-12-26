@@ -5,15 +5,7 @@
 
 #include <vis/vis.h>
 #include <common/log.h>
-
-#ifdef USE_PTHREADS
-#define MAX_THREADS 8
-pthread_mutex_t *my_mutex;
-#else
-#define MAX_THREADS 1
-#endif
-
-int numthreads = 1;
+#include <common/threads.h>
 
 int numportals;
 int portalleafs;
@@ -27,7 +19,6 @@ int c_noclip = 0;
 
 qboolean showgetleaf = true;
 
-
 static byte *vismap;
 static byte *vismap_p;
 static byte *vismap_end;	// past visfile
@@ -38,7 +29,6 @@ byte *uncompressed;		// [leafbytes*portalleafs]
 
 int leafbytes;			// (portalleafs+63)>>3
 int leaflongs;
-
 
 qboolean fastvis;
 static int verbose = 0;
@@ -345,7 +335,7 @@ GetNextPortal(void)
     portal_t *p, *ret;
     unsigned min;
 
-    LOCK;
+    ThreadLock();
 
     min = INT_MAX;
     ret = NULL;
@@ -365,7 +355,7 @@ GetNextPortal(void)
 	fflush(stdout);
     }
 
-    UNLOCK;
+    ThreadUnlock();
 
     return ret;
 }
@@ -424,7 +414,7 @@ PortalCompleted(portal_t *completed)
     unsigned long changed;
     byte *bcheck, bmask;
 
-    LOCK;
+    ThreadLock();
 
     completed->status = pstat_done;
 
@@ -481,7 +471,7 @@ PortalCompleted(portal_t *completed)
 	}
     }
 
-    UNLOCK;
+    ThreadUnlock();
 }
 
 
@@ -639,46 +629,7 @@ CalcPortalVis(void)
 	return;
     }
 
-#ifdef USE_PTHREADS
-    {
-	int status;
-	pthread_t threads[MAX_THREADS];
-	pthread_attr_t attrib;
-	pthread_mutexattr_t mattrib;
-
-	my_mutex = malloc(sizeof(*my_mutex));
-	pthread_mutexattr_init(&mattrib);
-
-#if 0
-	status = pthread_mutexattr_settype(&mattrib, PTHREAD_MUTEX_FAST_NP);
-	if (status)
-	    Error("pthread_mutexattr_settype failed");
-#endif
-	pthread_mutex_init(my_mutex, &mattrib);
-
-	status = pthread_attr_init(&attrib);
-	if (status)
-	    Error("pthread_attr_init failed");
-
-	for (i = 0; i < numthreads; i++) {
-	    status = pthread_create(&threads[i], &attrib, LeafThread, NULL);
-	    if (status)
-		Error("pthread_create failed");
-	}
-
-	for (i = 0; i < numthreads; i++) {
-	    status = pthread_join(threads[i], NULL);
-	    if (status)
-		Error("pthread_join failed");
-	}
-
-	status = pthread_mutex_destroy(my_mutex);
-	if (status)
-	    Error("pthread_mutex_destroy failed");
-    }
-#else
-    LeafThread(NULL);
-#endif /* USE_PTHREADS */
+    RunThreadsOn(numportals, false, LeafThread);
 
     if (verbose) {
 	logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",
@@ -1085,6 +1036,9 @@ main(int argc, char **argv)
 	     "(Beta version " __DATE__ " " __TIME__ ")"
 #endif
 	     "\n");
+
+    numthreads = GetDefaultThreads();
+
     for (i = 1; i < argc; i++) {
 	if (!strcmp(argv[i], "-credits")) {
 	    logprint("Original source supplied no obligation by iD Software "
@@ -1121,6 +1075,8 @@ main(int argc, char **argv)
     else if (i != argc - 1)
 	Error("usage: vis [-threads #] [-level 0-4] [-fast] [-v|-vv] "
 	      "[-credits] bspfile");
+
+    logprint("running with %d threads\n", numthreads);
 
     start = I_FloatTime();
 
