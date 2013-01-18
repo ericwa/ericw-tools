@@ -6,7 +6,7 @@
 
 static int dispatch;
 static int workcount;
-static int oldf;
+static int oldpercent;
 static qboolean pacifier;
 
 /*
@@ -17,23 +17,23 @@ static qboolean pacifier;
 int
 GetThreadWork_Locked__(void)
 {
-    int r;
-    int f;
+    int ret;
+    int percent;
 
     if (dispatch == workcount)
 	return -1;
 
-    f = 10 * dispatch / workcount;
-    if (f != oldf) {
-	oldf = f;
+    percent = 50 * dispatch / workcount;
+    if (percent != oldpercent) {
+	oldpercent = percent;
 	if (pacifier)
-	    logprint("%i...", f);
+	    logprint("%c", (percent % 5) ? '.' : '0' + (percent / 5));
     }
 
-    r = dispatch;
+    ret = dispatch;
     dispatch++;
 
-    return r;
+    return ret;
 }
 
 int
@@ -97,7 +97,7 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
 
     dispatch = 0;
     workcount = workcnt;
-    oldf = -1;
+    oldpercent = -1;
     pacifier = showpacifier;
 
     threadid = malloc(sizeof(*threadid) * numthreads);
@@ -189,7 +189,7 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
 
     dispatch = 0;
     workcount = workcnt;
-    oldf = -1;
+    oldpercent = -1;
     pacifier = showpacifier;
 
     status = pthread_mutexattr_init(&mattrib);
@@ -264,7 +264,7 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
 {
     dispatch = 0;
     workcount = workcnt;
-    oldf = -1;
+    oldpercent = -1;
     pacifier = showpacifier;
 
     func(0);
