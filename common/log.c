@@ -59,6 +59,7 @@ logprint(const char *fmt, ...)
     va_start(args, fmt);
     vprintf(fmt, args);
     va_end(args);
+    fflush(stdout);
 }
 
 void
@@ -73,4 +74,5 @@ logvprint(const char *fmt, va_list args)
 	fflush(logfile);
     }
     vprintf(fmt, args);
+    fflush(stdout);
 }
