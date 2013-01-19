@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <stddef.h>
 
+#include <vis/leafbits.h>
 #include <vis/vis.h>
 #include <common/log.h>
 #include <common/threads.h>
@@ -380,8 +381,8 @@ UpdateMightsee(const leaf_t *source, const leaf_t *dest)
 	p = source->portals[i];
 	if (p->status != pstat_none)
 	    continue;
-	if (p->mightsee[leafnum >> 3] & (1 << (leafnum & 7))) {
-	    p->mightsee[leafnum >> 3] &= ~(1 << (leafnum & 7));
+	if (TestLeafBit(p->mightsee, leafnum)) {
+	    ClearLeafBit(p->mightsee, leafnum);
 	    p->nummightsee--;
 	    c_mightseeupdate++;
 	}
@@ -402,13 +403,12 @@ UpdateMightsee(const leaf_t *source, const leaf_t *dest)
 static void
 PortalCompleted(portal_t *completed)
 {
-    int i, j, k, bit;
+    int i, j, k, bit, numblocks;
     int leafnum;
-    portal_t *p, *p2;
-    leaf_t *myleaf;
-    unsigned long *might, *vis, *check;
-    unsigned long changed;
-    byte *bcheck, bmask;
+    const portal_t *p, *p2;
+    const leaf_t *myleaf;
+    const leafblock_t *might, *vis;
+    leafblock_t changed;
 
     ThreadLock();
 
@@ -424,9 +424,10 @@ PortalCompleted(portal_t *completed)
 	if (p->status != pstat_done)
 	    continue;
 
-	might = (unsigned long *)p->mightsee;
-	vis = (unsigned long *)p->visbits;
-	for (j = 0; j < leaflongs; j++) {
+	might = p->mightsee->bits;
+	vis = p->visbits->bits;
+	numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
+	for (j = 0; j < numblocks; j++) {
 	    changed = might[j] & ~vis[j];
 	    if (!changed)
 		continue;
@@ -440,29 +441,21 @@ PortalCompleted(portal_t *completed)
 		    continue;
 		p2 = myleaf->portals[k];
 		if (p2->status == pstat_done)
-		    check = (unsigned long *)p2->visbits;
+		    changed &= ~p2->visbits->bits[j];
 		else
-		    check = (unsigned long *)p2->mightsee;
-		changed &= ~check[j];
+		    changed &= ~p2->mightsee->bits[j];
 		if (!changed)
 		    break;
 	    }
-	    if (!changed)
-		continue;
 
 	    /*
 	     * Update mightsee for any of the changed bits that survived
 	     */
-	    bcheck = (byte *)&changed;
-	    for (k = 0; k < sizeof(changed); k++, bcheck++) {
-		if (!*bcheck)
-		    continue;
-		for (bit = 0, bmask = 1; bit < 8; bit++, bmask <<= 1) {
-		    if (!(*bcheck & bmask))
-			continue;
-		    leafnum = j * (sizeof(changed) << 3) + (k << 3) + bit;
-		    UpdateMightsee(leafs + leafnum, myleaf);
-		}
+	    while (changed) {
+		bit = ffsl(changed) - 1;
+		changed &= ~(1UL << bit);
+		leafnum = (j << LEAFSHIFT) + bit;
+		UpdateMightsee(leafs + leafnum, myleaf);
 	    }
 	}
     }
@@ -507,33 +500,31 @@ LeafThread(void *unused)
   CompressRow
   ===============
 */
-int
-CompressRow(byte *vis, byte *dest)
+static int
+CompressRow(const byte *vis, byte *out)
 {
-    int j;
-    int rep;
-    int visrow;
-    byte *dest_p;
+    int i, rep, numbytes;
+    byte *dst;
 
-    dest_p = dest;
-    visrow = (portalleafs + 7) >> 3;
+    dst = out;
+    numbytes = (portalleafs + 7) >> 3;
 
-    for (j = 0; j < visrow; j++) {
-	*dest_p++ = vis[j];
-	if (vis[j])
+    for (i = 0; i < numbytes; i++) {
+	*dst++ = vis[i];
+	if (vis[i])
 	    continue;
 
 	rep = 1;
-	for (j++; j < visrow; j++)
-	    if (vis[j] || rep == 255)
+	for (i++; i < numbytes; i++)
+	    if (vis[i] || rep == 255)
 		break;
 	    else
 		rep++;
-	*dest_p++ = rep;
-	j--;
+	*dst++ = rep;
+	i--;
     }
 
-    return dest_p - dest;
+    return dst - out;
 }
 
 
@@ -551,11 +542,11 @@ LeafFlow(int leafnum)
 {
     leaf_t *leaf;
     byte *outbuffer;
-    byte compressed[MAX_MAP_LEAFS / 8];
-    int i, j;
+    byte *compressed;
+    int i, j, shift;
     int numvis;
     byte *dest;
-    portal_t *p;
+    const portal_t *p;
 
 //
 // flow through all portals, collecting visible bits
@@ -566,8 +557,11 @@ LeafFlow(int leafnum)
 	p = leaf->portals[i];
 	if (p->status != pstat_done)
 	    Error("portal not done");
-	for (j = 0; j < leafbytes; j++)
-	    outbuffer[j] |= p->visbits[j];
+	shift = 0;
+	for (j = 0; j < leafbytes; j++) {
+	    outbuffer[j] |= (p->visbits->bits[j >> (LEAFSHIFT - 3)] >> shift) & 0xff;
+	    shift = (shift + 8) & LEAFMASK;
+	}
     }
 
     if (outbuffer[leafnum >> 3] & (1 << (leafnum & 7)))
@@ -587,12 +581,9 @@ LeafFlow(int leafnum)
 	logprint("leaf %4i : %4i visible\n", leafnum, numvis);
     totalvis += numvis;
 
-#if 0
-    i = (portalleafs + 7) >> 3;
-    memcpy(compressed, outbuffer, i);
-#else
+    /* Allocate for worst case where RLE might grow the data (unlikely) */
+    compressed = malloc(portalleafs * 2 / 8);
     i = CompressRow(outbuffer, compressed);
-#endif
 
     dest = vismap_p;
     vismap_p += i;
@@ -603,6 +594,7 @@ LeafFlow(int leafnum)
     dleafs[leafnum + 1].visofs = dest - vismap;	// leaf 0 is a common solid
 
     memcpy(dest, compressed, i);
+    free(compressed);
 }
 
 

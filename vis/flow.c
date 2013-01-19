@@ -1,5 +1,6 @@
 #include <common/threads.h>
 #include <vis/vis.h>
+#include <vis/leafbits.h>
 
 unsigned long c_chains;
 int c_vistest, c_mighttest;
@@ -15,8 +16,8 @@ CheckStack(leaf_t *leaf, threaddata_t *thread)
     for (p = thread->pstack_head.next; p; p = p->next)
 	if (p->leaf == leaf)
 	    Error("%s: leaf recursion", __func__);
-}
 
+}
 
 /*
   ==============
@@ -156,8 +157,8 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     portal_t *p;
     plane_t backplane;
     leaf_t *leaf;
-    int i, j;
-    long *test, *might, *vis, more;
+    int i, j, numblocks;
+    leafblock_t *test, *might, *vis, more;
 
     ++c_chains;
 
@@ -165,8 +166,8 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     CheckStack(leaf, thread);
 
     // mark the leaf as visible
-    if (!(thread->leafvis[leafnum >> 3] & (1 << (leafnum & 7)))) {
-	thread->leafvis[leafnum >> 3] |= 1 << (leafnum & 7);
+    if (!TestLeafBit(thread->leafvis, leafnum)) {
+	SetLeafBit(thread->leafvis, leafnum);
 	thread->base->numcansee++;
     }
 
@@ -181,29 +182,31 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     for (i = 0; i < STACK_WINDINGS; i++)
 	stack.freewindings[i] = 1;
 
-    stack.mightsee = malloc(leafbytes);
-    might = (long *)stack.mightsee;
-    vis = (long *)thread->leafvis;
+    stack.mightsee = malloc(LeafbitsSize(portalleafs));
+    might = stack.mightsee->bits;
+    vis = thread->leafvis->bits;
 
     // check all portals for flowing into other leafs
     for (i = 0; i < leaf->numportals; i++) {
 	p = leaf->portals[i];
 
-	if (!(prevstack->mightsee[p->leaf >> 3] & (1 << (p->leaf & 7)))) {
+	if (!TestLeafBit(prevstack->mightsee, p->leaf)) {
 	    c_leafskip++;
 	    continue;		// can't possibly see it
 	}
 	// if the portal can't see anything we haven't allready seen, skip it
 	if (p->status == pstat_done) {
 	    c_vistest++;
-	    test = (long *)p->visbits;
+	    test = p->visbits->bits;
 	} else {
 	    c_mighttest++;
-	    test = (long *)p->mightsee;
+	    test = p->mightsee->bits;
 	}
+
 	more = 0;
-	for (j = 0; j < leaflongs; j++) {
-	    might[j] = ((long *)prevstack->mightsee)[j] & test[j];
+	numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
+	for (j = 0; j < numblocks; j++) {
+	    might[j] = prevstack->mightsee->bits[j] & test[j];
 	    more |= (might[j] & ~vis[j]);
 	}
 
@@ -358,8 +361,8 @@ PortalFlow(portal_t *p)
     if (p->status != pstat_working)
 	Error("%s: reflowed", __func__);
 
-    p->visbits = malloc(leafbytes);
-    memset(p->visbits, 0, leafbytes);
+    p->visbits = malloc(LeafbitsSize(portalleafs));
+    memset(p->visbits, 0, LeafbitsSize(portalleafs));
 
     memset(&data, 0, sizeof(data));
     data.leafvis = p->visbits;
@@ -388,10 +391,10 @@ SimpleFlood(portal_t *srcportal, int leafnum, byte *portalsee)
     leaf_t *leaf;
     portal_t *p;
 
-    if (srcportal->mightsee[leafnum >> 3] & (1 << (leafnum & 7)))
+    if (TestLeafBit(srcportal->mightsee, leafnum))
 	return;
 
-    srcportal->mightsee[leafnum >> 3] |= (1 << (leafnum & 7));
+    SetLeafBit(srcportal->mightsee, leafnum);
     srcportal->nummightsee++;
 
     leaf = &leafs[leafnum];
@@ -433,8 +436,8 @@ BasePortalThread(void *dummy)
 	//printf("\r%i of %i: %i%%", i, numportals * 2, 50 * i / numportals);
 	//fflush(stdout);
 
-	p->mightsee = malloc(leafbytes);
-	memset(p->mightsee, 0, leafbytes);
+	p->mightsee = malloc(LeafbitsSize(portalleafs));
+	memset(p->mightsee, 0, LeafbitsSize(portalleafs));
 
 	memset(portalsee, 0, numportals * 2);
 

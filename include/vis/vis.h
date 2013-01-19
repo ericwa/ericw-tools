@@ -22,6 +22,7 @@
 #include <common/cmdlib.h>
 #include <common/mathlib.h>
 #include <common/bspfile.h>
+#include <vis/leafbits.h>
 
 #define  PORTALFILE  "PRT1"
 #define  ON_EPSILON  0.1
@@ -41,7 +42,6 @@ typedef struct {
     vec3_t points[MAX_WINDING_FIXED];	// variable sized
 } winding_t;
 
-
 winding_t *NewWinding(int points);
 winding_t *CopyWinding(winding_t * w);
 void PlaneFromWinding(const winding_t * w, plane_t *plane);
@@ -54,8 +54,8 @@ typedef struct {
     int leaf;			// neighbor
     winding_t *winding;
     pstatus_t status;
-    byte *visbits;
-    byte *mightsee;
+    leafbits_t *visbits;
+    leafbits_t *mightsee;
     int nummightsee;
     int numcansee;
 } portal_t;
@@ -90,7 +90,7 @@ typedef struct pstack_s {
     winding_t windings[STACK_WINDINGS];	// Fixed size windings
     int freewindings[STACK_WINDINGS];
     plane_t portalplane;
-    byte *mightsee;		// bit string
+    leafbits_t *mightsee;	// bit string
     plane_t separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
 } pstack_t;
@@ -102,7 +102,7 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split);
 int c_noclip;
 
 typedef struct {
-    byte *leafvis;		// bit string
+    leafbits_t *leafvis;
     portal_t *base;
     pstack_t pstack_head;
 } threaddata_t;
