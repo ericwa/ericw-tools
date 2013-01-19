@@ -107,17 +107,6 @@ typedef struct {
     pstack_t pstack_head;
 } threaddata_t;
 
-
-#ifdef USE_PTHREADS
-#include <pthread.h>
-extern pthread_mutex_t *my_mutex;
-#define LOCK   pthread_mutex_lock (my_mutex)
-#define UNLOCK pthread_mutex_unlock (my_mutex)
-#else
-#define LOCK   do {} while (0)
-#define UNLOCK do {} while (0)
-#endif
-
 extern int numportals;
 extern int portalleafs;
 
