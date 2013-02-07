@@ -557,10 +557,9 @@ LeafFlow(int leafnum)
 	p = leaf->portals[i];
 	if (p->status != pstat_done)
 	    Error("portal not done");
-	shift = 0;
 	for (j = 0; j < leafbytes; j++) {
+	    shift = (j << 3) & LEAFMASK;
 	    outbuffer[j] |= (p->visbits->bits[j >> (LEAFSHIFT - 3)] >> shift) & 0xff;
-	    shift = (shift + 8) & LEAFMASK;
 	}
     }
 
