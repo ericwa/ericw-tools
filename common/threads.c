@@ -7,7 +7,6 @@
 static int dispatch;
 static int workcount;
 static int oldpercent;
-static qboolean pacifier;
 
 /*
  * =============
@@ -26,8 +25,7 @@ GetThreadWork_Locked__(void)
     percent = 50 * dispatch / workcount;
     if (percent != oldpercent) {
 	oldpercent = percent;
-	if (pacifier)
-	    logprint("%c", (percent % 5) ? '.' : '0' + (percent / 5));
+	logprint("%c", (percent % 5) ? '.' : '0' + (percent / 5));
     }
 
     ret = dispatch;
@@ -89,7 +87,7 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
+RunThreadsOn(int workcnt, void *(func)(void *))
 {
     int i;
     DWORD *threadid;
@@ -98,7 +96,6 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
     dispatch = 0;
     workcount = workcnt;
     oldpercent = -1;
-    pacifier = showpacifier;
 
     threadid = malloc(sizeof(*threadid) * numthreads);
     threadhandle = malloc(sizeof(*threadhandle) * numthreads);
@@ -120,8 +117,7 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
     for (i = 0; i < numthreads; i++)
 	WaitForSingleObject(threadhandle[i], INFINITE);
     DeleteCriticalSection(&crit);
-    if (pacifier)
-	logprint("\n");
+    logprint("\n");
 
     free(threadhandle);
     free(threadid);
@@ -179,7 +175,7 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
+RunThreadsOn(int workcnt, void *(func)(void *))
 {
     pthread_t *threads;
     pthread_mutexattr_t mattrib;
@@ -190,7 +186,6 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
     dispatch = 0;
     workcount = workcnt;
     oldpercent = -1;
-    pacifier = showpacifier;
 
     status = pthread_mutexattr_init(&mattrib);
     if (status)
@@ -235,8 +230,7 @@ RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
     free(threads);
     free(my_mutex);
 
-    if (pacifier)
-	logprint("\n");
+    logprint("\n");
 }
 
 #endif /* USE_PTHREADS */
@@ -260,17 +254,15 @@ void ThreadUnlock(void) {}
  * =============
  */
 void
-RunThreadsOn(int workcnt, qboolean showpacifier, void *(func)(void *))
+RunThreadsOn(int workcnt, void *(func)(void *))
 {
     dispatch = 0;
     workcount = workcnt;
     oldpercent = -1;
-    pacifier = showpacifier;
 
     func(0);
 
-    if (pacifier)
-	logprint("\n");
+    logprint("\n");
 }
 
 #endif

@@ -186,7 +186,7 @@ LightWorld(void)
 	lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
     }
 
-    RunThreadsOn(numfaces, true, LightThread);
+    RunThreadsOn(numfaces, LightThread);
     lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", lightdatasize);
 }
