@@ -432,10 +432,6 @@ BasePortalThread(void *dummy)
 	p = portals + portalnum;
 	w = p->winding;
 
-	// Progress message
-	//printf("\r%i of %i: %i%%", i, numportals * 2, 50 * i / numportals);
-	//fflush(stdout);
-
 	p->mightsee = malloc(LeafbitsSize(portalleafs));
 	memset(p->mightsee, 0, LeafbitsSize(portalleafs));
 
