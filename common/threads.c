@@ -87,13 +87,13 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int workcnt, void *(func)(void *))
+RunThreadsOn(int start, int workcnt, void *(func)(void *))
 {
     int i;
     DWORD *threadid;
     HANDLE *threadhandle;
 
-    dispatch = 0;
+    dispatch = start;
     workcount = workcnt;
     oldpercent = -1;
 
@@ -175,7 +175,7 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int workcnt, void *(func)(void *))
+RunThreadsOn(int start, int workcnt, void *(func)(void *))
 {
     pthread_t *threads;
     pthread_mutexattr_t mattrib;
@@ -183,7 +183,7 @@ RunThreadsOn(int workcnt, void *(func)(void *))
     int status;
     int i;
 
-    dispatch = 0;
+    dispatch = start;
     workcount = workcnt;
     oldpercent = -1;
 
@@ -254,9 +254,9 @@ void ThreadUnlock(void) {}
  * =============
  */
 void
-RunThreadsOn(int workcnt, void *(func)(void *))
+RunThreadsOn(int start, int workcnt, void *(func)(void *))
 {
-    dispatch = 0;
+    dispatch = start;
     workcount = workcnt;
     oldpercent = -1;
 

@@ -489,5 +489,5 @@ BasePortalThread(void *dummy)
 void
 BasePortalVis(void)
 {
-    RunThreadsOn(numportals * 2, BasePortalThread);
+    RunThreadsOn(0, numportals * 2, BasePortalThread);
 }

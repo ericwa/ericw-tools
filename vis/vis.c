@@ -616,7 +616,7 @@ CalcPortalVis(void)
 	return;
     }
 
-    RunThreadsOn(numportals * 2, LeafThread);
+    RunThreadsOn(0, numportals * 2, LeafThread);
 
     if (verbose) {
 	logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",
