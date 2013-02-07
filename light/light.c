@@ -35,11 +35,8 @@ byte *lit_filebase;		// start of litfile data
 static byte *lit_file_p;	// start of free space after litfile data
 static byte *lit_file_end;	// end of space for litfile data
 
-static int bspfileface;		/* next surface to dispatch */
-
 qboolean extrasamples;
 qboolean compress_ents;
-qboolean facecounter;
 qboolean colored;
 qboolean bsp30;
 qboolean litfile;
@@ -90,24 +87,14 @@ GetLitFileSpace(int size)
 static void *
 LightThread(void *junk)
 {
-    int i;
+    int facenum;
 
     while (1) {
-
-	ThreadLock();
-	i = bspfileface++;
-	ThreadUnlock();
-
-	if (i == numfaces)
-	    logprint("\nLighting Completed.\n\n");
-	if (i >= numfaces)
+	facenum = GetThreadWork();
+	if (facenum == -1)
 	    return NULL;
 
-	if (!facecounter) {
-	    printf("Lighting face %i of %i\r", i, numfaces);
-	    fflush(stdout);
-	}
-	LightFace(i, nolightface[i], faceoffset[i]);
+	LightFace(facenum, nolightface[facenum], faceoffset[facenum]);
     }
 
     return NULL;
@@ -187,6 +174,8 @@ LightWorld(void)
     }
 
     RunThreadsOn(0, numfaces, LightThread);
+    logprint("Lighting Completed.\n\n");
+
     lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", lightdatasize);
 }
@@ -234,8 +223,6 @@ main(int argc, const char **argv)
 	} else if (!strcmp(argv[i], "-compress")) {
 	    compress_ents = true;
 	    logprint("light entity compression enabled\n");
-	} else if (!strcmp(argv[i], "-nocount")) {
-	    facecounter = true;
 	} else if (!strcmp(argv[i], "-colored") ||
 		   !strcmp(argv[i], "-coloured")) {
 	    colored = true;
