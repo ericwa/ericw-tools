@@ -25,7 +25,7 @@ GetThreadWork_Locked__(void)
     percent = 50 * dispatch / workcount;
     while (oldpercent < percent) {
 	oldpercent++;
-	logprint("%c", (percent % 5) ? '.' : '0' + (percent / 5));
+	logprint("%c", (oldpercent % 5) ? '.' : '0' + (oldpercent / 5));
     }
 
     ret = dispatch;
