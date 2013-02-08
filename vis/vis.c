@@ -484,13 +484,10 @@ LeafThread(void *unused)
 	PortalCompleted(p);
 
 	if (verbose > 1) {
-	    printf("\r");
 	    logprint("portal:%4i  mightsee:%4i  cansee:%4i\n",
 		     (int)(p - portals), p->nummightsee, p->numcansee);
 	}
     } while (1);
-
-    printf("\r");
 
     return NULL;
 }
