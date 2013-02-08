@@ -9,7 +9,8 @@ static qboolean threads_active = false;
 
 static int dispatch;
 static int workcount;
-static int oldpercent;
+static int oldpercent = -1;
+
 /*
  * =============
  * GetThreadWork
@@ -132,6 +133,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
 	WaitForSingleObject(threadhandle[i], INFINITE);
 
     threads_active = false;
+    oldpercent = -1;
     DeleteCriticalSection(&crit);
 
     logprint("\n");
@@ -245,6 +247,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
     }
 
     threads_active = false;
+    oldpercent = -1;
 
     status = pthread_mutex_destroy(my_mutex);
     if (status)
