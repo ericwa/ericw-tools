@@ -26,6 +26,7 @@
 
 #include <common/log.h>
 #include <common/cmdlib.h>
+#include <common/threads.h>
 
 static FILE *logfile;
 static qboolean log_ok;
@@ -45,25 +46,8 @@ close_log()
 	fclose(logfile);
 }
 
-void
-logprint(const char *fmt, ...)
-{
-    va_list args;
-
-    if (log_ok) {
-	va_start(args, fmt);
-	vfprintf(logfile, fmt, args);
-	va_end(args);
-	fflush(logfile);
-    }
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-    fflush(stdout);
-}
-
-void
-logvprint(const char *fmt, va_list args)
+static void
+logvprint_locked__(const char *fmt, va_list args)
 {
     va_list log_args;
 
@@ -75,4 +59,36 @@ logvprint(const char *fmt, va_list args)
     }
     vprintf(fmt, args);
     fflush(stdout);
+}
+
+void
+logvprint(const char *fmt, va_list args)
+{
+    ThreadLock();
+    InterruptThreadProgress__();
+    logvprint_locked__(fmt, args);
+    ThreadUnlock();
+}
+
+void
+logprint_locked__(const char *fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    logvprint_locked__(fmt, args);
+    va_end(args);
+}
+
+void
+logprint(const char *fmt, ...)
+{
+    va_list args;
+
+    ThreadLock();
+    InterruptThreadProgress__();
+    va_start(args, fmt);
+    logvprint_locked__(fmt, args);
+    va_end(args);
+    ThreadUnlock();
 }

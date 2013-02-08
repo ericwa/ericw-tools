@@ -267,7 +267,8 @@ BSPINFO_OBJS = \
 	bspinfo/bspinfo.o	\
 	common/cmdlib.o		\
 	common/bspfile.o	\
-	common/log.o
+	common/log.o		\
+	common/threads.o
 
 $(BIN_DIR)/$(BIN_PFX)bspinfo$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(BSPINFO_OBJS))
 	$(call do_cc_link,)
@@ -281,7 +282,8 @@ BSPUTIL_OBJS = \
 	bsputil/bsputil.o	\
 	common/cmdlib.o		\
 	common/bspfile.o	\
-	common/log.o
+	common/log.o		\
+	common/threads.o
 
 $(BIN_DIR)/$(BIN_PFX)bsputil$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(BSPUTIL_OBJS))
 	$(call do_cc_link,)

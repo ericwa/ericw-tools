@@ -15,4 +15,7 @@ void RunThreadsOn(int start, int workcnt, void *(func)(void *));
 void ThreadLock(void);
 void ThreadUnlock(void);
 
+/* Call if needing to print to stdout - should be called with lock held */
+void InterruptThreadProgress__(void);
+
 #endif /* __COMMON_THREADS_H__ */

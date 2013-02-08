@@ -4,10 +4,12 @@
 #include <common/log.h>
 #include <common/threads.h>
 
+/* Make the locks no-ops if we aren't running threads */
+static qboolean threads_active = false;
+
 static int dispatch;
 static int workcount;
 static int oldpercent;
-
 /*
  * =============
  * GetThreadWork
@@ -25,7 +27,7 @@ GetThreadWork_Locked__(void)
     percent = 50 * dispatch / workcount;
     while (oldpercent < percent) {
 	oldpercent++;
-	logprint("%c", (oldpercent % 5) ? '.' : '0' + (oldpercent / 5));
+	logprint_locked__("%c", (oldpercent % 5) ? '.' : '0' + (oldpercent / 5));
     }
 
     ret = dispatch;
@@ -44,6 +46,15 @@ GetThreadWork(void)
     ThreadUnlock();
 
     return ret;
+}
+
+void
+InterruptThreadProgress__(void)
+{
+    if (oldpercent != -1) {
+	logprint_locked__("\\\n");
+	oldpercent = -1;
+    }
 }
 
 /*
@@ -72,13 +83,15 @@ GetDefaultThreads(void)
 void
 ThreadLock(void)
 {
-    EnterCriticalSection(&crit);
+    if (threads_active)
+	EnterCriticalSection(&crit);
 }
 
 void
 ThreadUnlock(void)
 {
-    LeaveCriticalSection(&crit);
+    if (threads_active)
+	LeaveCriticalSection(&crit);
 }
 
 /*
@@ -105,6 +118,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
 
     /* run threads in parallel */
     InitializeCriticalSection(&crit);
+    threads_active = true;
     for (i = 0; i < numthreads; i++) {
 	threadhandle[i] = CreateThread(NULL,
 				       0,
@@ -116,7 +130,10 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
 
     for (i = 0; i < numthreads; i++)
 	WaitForSingleObject(threadhandle[i], INFINITE);
+
+    threads_active = false;
     DeleteCriticalSection(&crit);
+
     logprint("\n");
 
     free(threadhandle);
@@ -159,13 +176,15 @@ GetDefaultThreads(void)
 void
 ThreadLock(void)
 {
-    pthread_mutex_lock(my_mutex);
+    if (threads_active)
+	pthread_mutex_lock(my_mutex);
 }
 
 void
 ThreadUnlock(void)
 {
-    pthread_mutex_unlock(my_mutex);
+    if (threads_active)
+	pthread_mutex_unlock(my_mutex);
 }
 
 
@@ -211,6 +230,8 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
     if (!threads)
 	Error("failed to allocate memory for threads");
 
+    threads_active = true;
+
     for (i = 0; i < numthreads; i++) {
 	status = pthread_create(&threads[i], &attrib, func, NULL);
 	if (status)
@@ -222,6 +243,8 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
 	if (status)
 	    Error("pthread_join failed");
     }
+
+    threads_active = false;
 
     status = pthread_mutex_destroy(my_mutex);
     if (status)
