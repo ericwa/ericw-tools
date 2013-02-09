@@ -24,9 +24,9 @@
 #include "qbsp.h"
 #include "parser.h"
 
-#define info_player_start		1
+#define info_player_start	1
 #define info_player_deathmatch	2
-#define	info_player_coop		4
+#define	info_player_coop	4
 
 static int cAnimtex;
 static int rgfStartSpots;
