@@ -463,6 +463,8 @@ PortalCompleted(portal_t *completed)
     ThreadUnlock();
 }
 
+double starttime, endtime, statetime;
+static double stateinterval;
 
 /*
   ==============
@@ -472,9 +474,19 @@ PortalCompleted(portal_t *completed)
 void *
 LeafThread(void *unused)
 {
+    double now;
     portal_t *p;
 
     do {
+	ThreadLock();
+	/* Save state if sufficient time has elapsed */
+	now = I_FloatTime();
+	if (now > statetime + stateinterval) {
+	    statetime = now;
+	    SaveVisState();
+	}
+	ThreadUnlock();
+
 	p = GetNextPortal();
 	if (!p)
 	    break;
@@ -602,7 +614,8 @@ LeafFlow(int leafnum)
 void
 CalcPortalVis(void)
 {
-    int i;
+    int i, startcount;
+    portal_t *p;
 
 // fastvis just uses mightsee for a very loose bound
     if (fastvis) {
@@ -613,7 +626,15 @@ CalcPortalVis(void)
 	return;
     }
 
-    RunThreadsOn(0, numportals * 2, LeafThread);
+    /*
+     * Count the already completed portals in case we loaded previous state
+     */
+    startcount = 0;
+    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
+	if (p->status == pstat_done)
+	    startcount++;
+    }
+    RunThreadsOn(startcount, numportals * 2, LeafThread);
 
     if (verbose) {
 	logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",
@@ -634,8 +655,12 @@ CalcVis(void)
 {
     int i;
 
-    logprint("Calculating Base Vis:\n");
-    BasePortalVis();
+    if (LoadVisState()) {
+	logprint("Loaded previous state. Resuming progress...\n");
+    } else {
+	logprint("Calculating Base Vis:\n");
+	BasePortalVis();
+    }
 
     logprint("Calculating Full Vis:\n");
     CalcPortalVis();
@@ -994,6 +1019,10 @@ LoadPortals(char *name)
     fclose(f);
 }
 
+char sourcefile[1024];
+char portalfile[1024];
+char statefile[1024];
+char statetmpfile[1024];
 
 /*
   ===========
@@ -1003,10 +1032,7 @@ LoadPortals(char *name)
 int
 main(int argc, char **argv)
 {
-    char portalfile[1024];
-    char source[1024];
     int i, bsp_version;
-    double start, end;
     qboolean credits = false;
 
     init_log("vis.log");
@@ -1057,19 +1083,28 @@ main(int argc, char **argv)
 
     logprint("running with %d threads\n", numthreads);
 
-    start = I_FloatTime();
+    stateinterval = 300; /* 5 minutes */
+    starttime = statetime = I_FloatTime();
 
-    strcpy(source, argv[i]);
-    StripExtension(source);
-    DefaultExtension(source, ".bsp");
+    strcpy(sourcefile, argv[i]);
+    StripExtension(sourcefile);
+    DefaultExtension(sourcefile, ".bsp");
 
-    bsp_version = LoadBSPFile(source);
+    bsp_version = LoadBSPFile(sourcefile);
 
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
     strcat(portalfile, ".prt");
 
     LoadPortals(portalfile);
+
+    strcpy(statefile, sourcefile);
+    StripExtension(statefile);
+    DefaultExtension(statefile, ".vis");
+
+    strcpy(statetmpfile, sourcefile);
+    StripExtension(statetmpfile);
+    DefaultExtension(statetmpfile, ".vi0");
 
     uncompressed = malloc(leafbytes * portalleafs);
     memset(uncompressed, 0, leafbytes * portalleafs);
@@ -1087,12 +1122,12 @@ main(int argc, char **argv)
 
     CalcAmbientSounds();
 
-    WriteBSPFile(source, bsp_version);
+    WriteBSPFile(sourcefile, bsp_version);
 
 //    unlink (portalfile);
 
-    end = I_FloatTime();
-    logprint("%5.1f seconds elapsed\n", end - start);
+    endtime = I_FloatTime();
+    logprint("%5.1f seconds elapsed\n", endtime - starttime);
 
     close_log();
 

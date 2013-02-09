@@ -99,8 +99,6 @@ winding_t *AllocStackWinding(pstack_t *stack);
 void FreeStackWinding(winding_t *w, pstack_t *stack);
 winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split);
 
-int c_noclip;
-
 typedef struct {
     leafbits_t *leafvis;
     portal_t *base;
@@ -113,6 +111,7 @@ extern int portalleafs;
 extern portal_t *portals;
 extern leaf_t *leafs;
 
+extern int c_noclip;
 extern int c_portaltest, c_portalpass, c_portalcheck;
 extern int c_vistest, c_mighttest;
 extern unsigned long c_chains;
@@ -124,9 +123,19 @@ extern byte *uncompressed;
 extern int leafbytes;
 extern int leaflongs;
 
+extern char sourcefile[1024];
+extern char portalfile[1024];
+extern char statefile[1024];
+extern char statetmpfile[1024];
+
 void LeafFlow(int leafnum);
 void BasePortalVis(void);
 
 void PortalFlow(portal_t * p);
 
 void CalcAmbientSounds(void);
+
+extern double starttime, endtime, statetime;
+
+void SaveVisState(void);
+qboolean LoadVisState(void);

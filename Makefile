@@ -249,6 +249,7 @@ VIS_OBJS = \
 	vis/flow.o		\
 	vis/vis.o		\
 	vis/soundpvs.o		\
+	vis/state.o		\
 	common/cmdlib.o		\
 	common/mathlib.o	\
 	common/bspfile.o	\
