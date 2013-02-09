@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <vis/vis.h>
 #include <common/cmdlib.h>
