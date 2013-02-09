@@ -59,12 +59,13 @@ Error(const char *error, ...)
 {
     va_list argptr;
 
-    logprint("************ ERROR ************\n");
+    /* Use the lockless version so we can error out while holding the lock */
+    logprint_locked__("************ ERROR ************\n");
 
     va_start(argptr, error);
     logvprint(error, argptr);
     va_end(argptr);
-    logprint("\n");
+    logprint_locked__("\n");
     exit(1);
 }
 
