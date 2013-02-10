@@ -418,7 +418,7 @@ ParseBrush(void)
 
 
 static bool
-ParseEntity(mapentity_t *e)
+ParseEntity(mapentity_t *ent)
 {
     if (!ParseToken(PARSE_NORMAL))
 	return false;
@@ -429,7 +429,7 @@ ParseEntity(mapentity_t *e)
     if (map.iEntities >= map.cEntities)
 	Error(errLowEntCount);
 
-    e->iBrushEnd = map.iBrushes + 1;
+    ent->iBrushEnd = map.iBrushes + 1;
 
     do {
 	if (!ParseToken(PARSE_NORMAL))
@@ -443,10 +443,10 @@ ParseEntity(mapentity_t *e)
     } while (1);
 
     // Allocate some model memory while we're here
-    e->iBrushStart = map.iBrushes + 1;
-    if (e->iBrushStart != e->iBrushEnd) {
-	e->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
-	e->lumps[BSPMODEL].count = 1;
+    ent->iBrushStart = map.iBrushes + 1;
+    if (ent->iBrushStart != ent->iBrushEnd) {
+	ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
+	ent->lumps[BSPMODEL].count = 1;
     }
 
     return true;
@@ -517,6 +517,7 @@ LoadMapFile(void)
     int i, j, length;
     void *pTemp;
     struct lumpdata *texinfo;
+    mapentity_t *ent;
 
     Message(msgProgress, "LoadMapFile");
 
@@ -529,11 +530,11 @@ LoadMapFile(void)
     map.iFaces = map.cFaces - 1;
     map.iBrushes = map.cBrushes - 1;
     map.iEntities = 0;
-    pCurEnt = &map.rgEntities[0];
 
-    while (ParseEntity(pCurEnt)) {
+    ent = &map.rgEntities[0];
+    while (ParseEntity(ent)) {
 	map.iEntities++;
-	pCurEnt++;
+	ent++;
     }
 
     FreeMem(buf, OTHER, length + 1);
