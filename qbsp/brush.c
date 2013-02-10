@@ -831,30 +831,30 @@ Brush_LoadEntity
 ============
 */
 void
-Brush_LoadEntity(void)
+Brush_LoadEntity(mapentity_t *ent)
 {
     brush_t *b, *next, *water, *other;
     int iBrush, cMapBrushes;
     int i;
 
     for (i = 0; i < 3; i++) {
-	pCurEnt->mins[i] = VECT_MAX;
-	pCurEnt->maxs[i] = -VECT_MAX;
+	ent->mins[i] = VECT_MAX;
+	ent->maxs[i] = -VECT_MAX;
     }
 
-    pCurEnt->cBrushes = 0;
+    ent->cBrushes = 0;
     other = water = NULL;
 
     Message(msgProgress, "Brush_LoadEntity");
 
-    cMapBrushes = pCurEnt->iBrushEnd - pCurEnt->iBrushStart;
-    for (iBrush = pCurEnt->iBrushStart; iBrush < pCurEnt->iBrushEnd; iBrush++) {
+    cMapBrushes = ent->iBrushEnd - ent->iBrushStart;
+    for (iBrush = ent->iBrushStart; iBrush < ent->iBrushEnd; iBrush++) {
 	b = LoadBrush(iBrush);
 	if (!b)
 	    continue;
 
-	pCurEnt->cBrushes++;
-	Message(msgPercent, pCurEnt->cBrushes, cMapBrushes);
+	ent->cBrushes++;
+	Message(msgPercent, ent->cBrushes, cMapBrushes);
 
 	if (b->contents != CONTENTS_SOLID) {
 	    b->next = water;
@@ -864,8 +864,8 @@ Brush_LoadEntity(void)
 	    other = b;
 	}
 
-	AddToBounds(pCurEnt, b->mins);
-	AddToBounds(pCurEnt, b->maxs);
+	AddToBounds(ent, b->mins);
+	AddToBounds(ent, b->maxs);
     }
 
     // add all of the water textures at the start
@@ -875,8 +875,8 @@ Brush_LoadEntity(void)
 	other = b;
     }
 
-    Message(msgStat, "%5i brushes", pCurEnt->cBrushes);
+    Message(msgStat, "%5i brushes", ent->cBrushes);
 
     // Store the brushes away
-    pCurEnt->pBrushes = other;
+    ent->pBrushes = other;
 }

@@ -59,7 +59,7 @@ ProcessEntity(void)
     }
     // take the brush_ts and clip off all overlapping and contained faces,
     // leaving a perfect skin of the model with no hidden faces
-    Brush_LoadEntity();
+    Brush_LoadEntity(pCurEnt);
 
     if (!pCurEnt->pBrushes) {
 	PrintEntity(map.iEntities);

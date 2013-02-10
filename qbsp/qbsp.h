@@ -433,7 +433,6 @@ typedef struct brush_s {
 extern int numbrushplanes;
 
 void FixRotateOrigin(int iEntity, vec3_t offset);
-void Brush_LoadEntity(void);
 void FreeBrushsetBrushes(brush_t *pBrushList);
 
 void PlaneHash_Init(void);
@@ -649,6 +648,8 @@ void SetKeyValue(int iEntity, char *key, char *value);
 void GetVectorForKey(int iEntity, char *szKey, vec3_t vec);
 
 void WriteEntitiesToString(void);
+
+void Brush_LoadEntity(mapentity_t *ent);
 
 
 // util.c
