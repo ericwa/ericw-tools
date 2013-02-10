@@ -264,7 +264,7 @@ The created portals will face the global outside_node
 ================
 */
 static void
-MakeHeadnodePortals(node_t *node)
+MakeHeadnodePortals(const mapentity_t *ent, node_t *node)
 {
     vec3_t bounds[2];
     int i, j, n;
@@ -274,8 +274,8 @@ MakeHeadnodePortals(node_t *node)
 
     // pad with some space so there will never be null volume leafs
     for (i = 0; i < 3; i++) {
-	bounds[0][i] = pCurEnt->mins[i] - SIDESPACE;
-	bounds[1][i] = pCurEnt->maxs[i] + SIDESPACE;
+	bounds[0][i] = ent->mins[i] - SIDESPACE;
+	bounds[1][i] = ent->maxs[i] + SIDESPACE;
     }
 
     outside_node.contents = CONTENTS_SOLID;
@@ -539,13 +539,13 @@ Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
 void
-PortalizeWorld(node_t *headnode)
+PortalizeWorld(const mapentity_t *ent, node_t *headnode)
 {
     Message(msgProgress, "Portalize");
 
     iNodesDone = 0;
 
-    MakeHeadnodePortals(headnode);
+    MakeHeadnodePortals(ent, headnode);
     CutNodePortals_r(headnode);
 
     if (hullnum)

@@ -74,7 +74,7 @@ ProcessEntity(void)
 	nodes = SolidBSP(surfs, true);
 	if (map.iEntities == 0 && !options.fNofill)	// assume non-world bmodels are simple
 	{
-	    PortalizeWorld(nodes);
+	    PortalizeWorld(pCurEnt, nodes);
 	    if (FillOutside(nodes)) {
 		// Free portals before regenerating new nodes
 		FreeAllPortals(nodes);
@@ -96,7 +96,7 @@ ProcessEntity(void)
 	// some portals are solid polygons, and some are paths to other leafs
 	if (map.iEntities == 0 && !options.fNofill)	// assume non-world bmodels are simple
 	{
-	    PortalizeWorld(nodes);
+	    PortalizeWorld(pCurEnt, nodes);
 
 	    if (FillOutside(nodes)) {
 		FreeAllPortals(nodes);
@@ -111,7 +111,7 @@ ProcessEntity(void)
 		nodes = SolidBSP(surfs, false);
 
 		// make the real portals for vis tracing
-		PortalizeWorld(nodes);
+		PortalizeWorld(pCurEnt, nodes);
 
 		tjunc(nodes);
 	    }

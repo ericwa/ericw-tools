@@ -499,7 +499,6 @@ typedef struct portal_s {
 extern node_t outside_node;	// portals outside the world face this
 extern int num_visportals;
 
-void PortalizeWorld(node_t *headnode);
 void FreeAllPortals(node_t *node);
 
 //=============================================================================
@@ -650,6 +649,7 @@ void WriteEntitiesToString(void);
 
 void Brush_LoadEntity(mapentity_t *ent);
 surface_t *CSGFaces(const mapentity_t *ent);
+void PortalizeWorld(const mapentity_t *ent, node_t *headnode);
 
 // util.c
 
