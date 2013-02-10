@@ -462,11 +462,11 @@ FreeBrushsetBrushes
 =====================
 */
 void
-FreeBrushsetBrushes(void)
+FreeBrushsetBrushes(brush_t *pBrushList)
 {
     brush_t *pBrush, *pNext;
 
-    for (pBrush = pCurEnt->pBrushes; pBrush; pBrush = pNext) {
+    for (pBrush = pBrushList; pBrush; pBrush = pNext) {
 	pNext = pBrush->next;
 	FreeBrushFaces(pBrush->faces);
 	FreeMem(pBrush, BRUSH, 1);

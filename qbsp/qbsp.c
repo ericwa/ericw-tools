@@ -68,7 +68,7 @@ ProcessEntity(void)
 
     surfs = CSGFaces();
 
-    FreeBrushsetBrushes();
+    FreeBrushsetBrushes(pCurEnt->pBrushes);
 
     if (hullnum != 0) {
 	nodes = SolidBSP(surfs, true);
