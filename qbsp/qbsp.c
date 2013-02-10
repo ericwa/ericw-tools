@@ -120,7 +120,7 @@ ProcessEntity(void)
 	}
 
 	ExportNodePlanes(nodes);
-	MakeFaceEdges(nodes);
+	MakeFaceEdges(pCurEnt, nodes);
 	ExportDrawNodes(nodes);
     }
 

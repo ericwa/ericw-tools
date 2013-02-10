@@ -482,7 +482,6 @@ typedef struct hashvert_s {
 } hashvert_t;
 
 surface_t *GatherNodeFaces(node_t *headnode);
-void MakeFaceEdges(node_t *headnode);
 
 //=============================================================================
 
@@ -649,6 +648,7 @@ surface_t *CSGFaces(const mapentity_t *ent);
 void PortalizeWorld(const mapentity_t *ent, node_t *headnode);
 void TJunc(const mapentity_t *ent, node_t *headnode);
 node_t *SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit);
+void MakeFaceEdges(mapentity_t *ent, node_t *headnode);
 
 // util.c
 
