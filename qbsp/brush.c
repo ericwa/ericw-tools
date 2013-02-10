@@ -107,15 +107,15 @@ AddToBounds
 =================
 */
 static void
-AddToBounds(vec3_t v)
+AddToBounds(mapentity_t *ent, const vec3_t point)
 {
     int i;
 
     for (i = 0; i < 3; i++) {
-	if (v[i] < pCurEnt->mins[i])
-	    pCurEnt->mins[i] = v[i];
-	if (v[i] > pCurEnt->maxs[i])
-	    pCurEnt->maxs[i] = v[i];
+	if (point[i] < ent->mins[i])
+	    ent->mins[i] = point[i];
+	if (point[i] > ent->maxs[i])
+	    ent->maxs[i] = point[i];
     }
 }
 
@@ -864,8 +864,8 @@ Brush_LoadEntity(void)
 	    other = b;
 	}
 
-	AddToBounds(b->mins);
-	AddToBounds(b->maxs);
+	AddToBounds(pCurEnt, b->mins);
+	AddToBounds(pCurEnt, b->maxs);
     }
 
     // add all of the water textures at the start
