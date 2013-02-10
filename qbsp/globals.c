@@ -41,7 +41,6 @@ mapdata_t map;
 int hullnum;
 
 // Useful shortcuts
-mapentity_t *pCurEnt;
 mapentity_t *pWorldEnt;
 
 // Move these into mapdata_t?

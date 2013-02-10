@@ -622,7 +622,6 @@ typedef struct mapdata_s {
 } mapdata_t;
 
 extern mapdata_t map;
-extern mapentity_t *pCurEnt;
 extern mapentity_t *pWorldEnt;
 
 extern int cMiptex;
