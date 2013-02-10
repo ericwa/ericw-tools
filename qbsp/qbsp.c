@@ -113,7 +113,7 @@ ProcessEntity(void)
 		// make the real portals for vis tracing
 		PortalizeWorld(pCurEnt, nodes);
 
-		tjunc(nodes);
+		TJunc(pCurEnt, nodes);
 	    }
 	    FreeAllPortals(nodes);
 	}

@@ -523,8 +523,6 @@ typedef struct wedge_s {
     wvert_t head;
 } wedge_t;
 
-void tjunc(node_t *headnode);
-
 //=============================================================================
 
 // writebsp.c
@@ -650,6 +648,7 @@ void WriteEntitiesToString(void);
 void Brush_LoadEntity(mapentity_t *ent);
 surface_t *CSGFaces(const mapentity_t *ent);
 void PortalizeWorld(const mapentity_t *ent, node_t *headnode);
+void TJunc(const mapentity_t *ent, node_t *headnode);
 
 // util.c
 

@@ -451,7 +451,7 @@ tjunc
 ===========
 */
 void
-tjunc(node_t *headnode)
+TJunc(const mapentity_t *ent, node_t *headnode)
 {
     vec3_t maxs, mins;
     int i;
@@ -473,10 +473,10 @@ tjunc(node_t *headnode)
 
     // origin points won't allways be inside the map, so extend the hash area
     for (i = 0; i < 3; i++) {
-	if (fabs(pCurEnt->maxs[i]) > fabs(pCurEnt->mins[i]))
-	    maxs[i] = fabs(pCurEnt->maxs[i]);
+	if (fabs(ent->maxs[i]) > fabs(ent->mins[i]))
+	    maxs[i] = fabs(ent->maxs[i]);
 	else
-	    maxs[i] = fabs(pCurEnt->mins[i]);
+	    maxs[i] = fabs(ent->mins[i]);
     }
     VectorSubtract(vec3_origin, maxs, mins);
 
