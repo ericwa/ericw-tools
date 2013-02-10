@@ -35,13 +35,13 @@ ProcessEntity
 ===============
 */
 static void
-ProcessEntity(void)
+ProcessEntity(mapentity_t *ent)
 {
     surface_t *surfs;
     node_t *nodes;
 
     // No brushes means non-bmodel entity
-    if (pCurEnt->iBrushStart == pCurEnt->iBrushEnd)
+    if (ent->iBrushStart == ent->iBrushEnd)
 	return;
 
     if (map.iEntities > 0) {
@@ -59,45 +59,45 @@ ProcessEntity(void)
     }
     // take the brush_ts and clip off all overlapping and contained faces,
     // leaving a perfect skin of the model with no hidden faces
-    Brush_LoadEntity(pCurEnt);
+    Brush_LoadEntity(ent);
 
-    if (!pCurEnt->pBrushes) {
+    if (!ent->pBrushes) {
 	PrintEntity(map.iEntities);
 	Error(errNoValidBrushes);
     }
 
-    surfs = CSGFaces(pCurEnt);
+    surfs = CSGFaces(ent);
 
-    FreeBrushsetBrushes(pCurEnt->pBrushes);
+    FreeBrushsetBrushes(ent->pBrushes);
 
     if (hullnum != 0) {
-	nodes = SolidBSP(pCurEnt, surfs, true);
+	nodes = SolidBSP(ent, surfs, true);
 	if (map.iEntities == 0 && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    PortalizeWorld(pCurEnt, nodes);
+	    PortalizeWorld(ent, nodes);
 	    if (FillOutside(nodes)) {
 		// Free portals before regenerating new nodes
 		FreeAllPortals(nodes);
 		surfs = GatherNodeFaces(nodes);
 		// make a really good tree
-		nodes = SolidBSP(pCurEnt, surfs, false);
+		nodes = SolidBSP(ent, surfs, false);
 	    }
 	}
 	ExportNodePlanes(nodes);
-	ExportClipNodes(pCurEnt, nodes);
+	ExportClipNodes(ent, nodes);
     } else {
 	// SolidBSP generates a node tree
 	//
 	// if not the world, make a good tree first
 	// the world is just going to make a bad tree
 	// because the outside filling will force a regeneration later
-	nodes = SolidBSP(pCurEnt, surfs, map.iEntities == 0);
+	nodes = SolidBSP(ent, surfs, map.iEntities == 0);
 
 	// build all the portals in the bsp tree
 	// some portals are solid polygons, and some are paths to other leafs
 	if (map.iEntities == 0 && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    PortalizeWorld(pCurEnt, nodes);
+	    PortalizeWorld(ent, nodes);
 
 	    if (FillOutside(nodes)) {
 		FreeAllPortals(nodes);
@@ -109,19 +109,19 @@ ProcessEntity(void)
 		MergeAll(surfs);
 
 		// make a really good tree
-		nodes = SolidBSP(pCurEnt, surfs, false);
+		nodes = SolidBSP(ent, surfs, false);
 
 		// make the real portals for vis tracing
-		PortalizeWorld(pCurEnt, nodes);
+		PortalizeWorld(ent, nodes);
 
-		TJunc(pCurEnt, nodes);
+		TJunc(ent, nodes);
 	    }
 	    FreeAllPortals(nodes);
 	}
 
 	ExportNodePlanes(nodes);
-	MakeFaceEdges(pCurEnt, nodes);
-	ExportDrawNodes(pCurEnt, nodes);
+	MakeFaceEdges(ent, nodes);
+	ExportDrawNodes(ent, nodes);
     }
 
     map.cTotal[BSPMODEL]++;
@@ -183,7 +183,7 @@ CreateSingleHull(void)
     // for each entity in the map file that has geometry
     for (map.iEntities = 0, pCurEnt = &map.rgEntities[0];
 	 map.iEntities < map.cEntities; map.iEntities++, pCurEnt++) {
-	ProcessEntity();
+	ProcessEntity(pCurEnt);
 	if (!options.fAllverbose)
 	    options.fVerbose = false;	// don't print rest of entities
     }
