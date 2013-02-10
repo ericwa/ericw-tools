@@ -71,15 +71,16 @@ ProcessEntity(void)
     FreeBrushsetBrushes(pCurEnt->pBrushes);
 
     if (hullnum != 0) {
-	nodes = SolidBSP(surfs, true);
-	if (map.iEntities == 0 && !options.fNofill)	// assume non-world bmodels are simple
-	{
+	nodes = SolidBSP(pCurEnt, surfs, true);
+	if (map.iEntities == 0 && !options.fNofill) {
+	    // assume non-world bmodels are simple
 	    PortalizeWorld(pCurEnt, nodes);
 	    if (FillOutside(nodes)) {
 		// Free portals before regenerating new nodes
 		FreeAllPortals(nodes);
 		surfs = GatherNodeFaces(nodes);
-		nodes = SolidBSP(surfs, false);	// make a really good tree
+		// make a really good tree
+		nodes = SolidBSP(pCurEnt, surfs, false);
 	    }
 	}
 	ExportNodePlanes(nodes);
@@ -90,12 +91,12 @@ ProcessEntity(void)
 	// if not the world, make a good tree first
 	// the world is just going to make a bad tree
 	// because the outside filling will force a regeneration later
-	nodes = SolidBSP(surfs, map.iEntities == 0);
+	nodes = SolidBSP(pCurEnt, surfs, map.iEntities == 0);
 
 	// build all the portals in the bsp tree
 	// some portals are solid polygons, and some are paths to other leafs
-	if (map.iEntities == 0 && !options.fNofill)	// assume non-world bmodels are simple
-	{
+	if (map.iEntities == 0 && !options.fNofill) {
+	    // assume non-world bmodels are simple
 	    PortalizeWorld(pCurEnt, nodes);
 
 	    if (FillOutside(nodes)) {
@@ -108,7 +109,7 @@ ProcessEntity(void)
 		MergeAll(surfs);
 
 		// make a really good tree
-		nodes = SolidBSP(surfs, false);
+		nodes = SolidBSP(pCurEnt, surfs, false);
 
 		// make the real portals for vis tracing
 		PortalizeWorld(pCurEnt, nodes);

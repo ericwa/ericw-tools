@@ -460,7 +460,6 @@ extern int splitnodes;
 void DivideFacet(face_t *in, plane_t *split, face_t **front, face_t **back);
 void CalcSurfaceInfo(surface_t *surf);
 void SubdivideFace(face_t *f, face_t **prevptr);
-node_t *SolidBSP(surface_t *surfhead, bool midsplit);
 
 //=============================================================================
 
@@ -649,6 +648,7 @@ void Brush_LoadEntity(mapentity_t *ent);
 surface_t *CSGFaces(const mapentity_t *ent);
 void PortalizeWorld(const mapentity_t *ent, node_t *headnode);
 void TJunc(const mapentity_t *ent, node_t *headnode);
+node_t *SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit);
 
 // util.c
 
