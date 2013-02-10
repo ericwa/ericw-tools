@@ -392,8 +392,8 @@ typedef struct surface_s {
     int outputplanenum;		// only valid after WriteSurfacePlanes
     vec3_t mins, maxs;
     bool onnode;		// true if surface has already been used
-    // as a splitting node
-    face_t *faces;		// links to all the faces on either side of the surf
+				//   as a splitting node
+    face_t *faces;		// links to all faces on either side of the surf
 } surface_t;
 
 
@@ -526,8 +526,6 @@ typedef struct wedge_s {
 // writebsp.c
 
 void ExportNodePlanes(node_t *headnode);
-void ExportClipNodes(node_t *headnode);
-void ExportDrawNodes(node_t *headnode);
 
 void BeginBSPFile(void);
 void FinishBSPFile(void);
@@ -649,6 +647,8 @@ void PortalizeWorld(const mapentity_t *ent, node_t *headnode);
 void TJunc(const mapentity_t *ent, node_t *headnode);
 node_t *SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit);
 void MakeFaceEdges(mapentity_t *ent, node_t *headnode);
+void ExportClipNodes(mapentity_t *ent, node_t *headnode);
+void ExportDrawNodes(mapentity_t *ent, node_t *headnode);
 
 // util.c
 

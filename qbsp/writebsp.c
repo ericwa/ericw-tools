@@ -109,15 +109,15 @@ CountClipNodes_r
 ==================
 */
 static void
-CountClipNodes_r(node_t *node)
+CountClipNodes_r(mapentity_t *ent, node_t *node)
 {
     if (node->planenum == -1)
 	return;
 
-    pCurEnt->lumps[BSPCLIPNODE].count++;
+    ent->lumps[BSPCLIPNODE].count++;
 
-    CountClipNodes_r(node->children[0]);
-    CountClipNodes_r(node->children[1]);
+    CountClipNodes_r(ent, node->children[0]);
+    CountClipNodes_r(ent, node->children[1]);
 }
 
 /*
@@ -126,12 +126,12 @@ ExportClipNodes_r
 ==================
 */
 static int
-ExportClipNodes_r(node_t *node)
+ExportClipNodes_r(mapentity_t *ent, node_t *node)
 {
     int i, c;
     dclipnode_t *cn;
     face_t *f, *next;
-    struct lumpdata *clipnodes = &pCurEnt->lumps[BSPCLIPNODE];
+    struct lumpdata *clipnodes = &ent->lumps[BSPCLIPNODE];
 
     // FIXME: free more stuff?
     if (node->planenum == -1) {
@@ -147,7 +147,7 @@ ExportClipNodes_r(node_t *node)
 
     cn->planenum = node->outputplanenum;
     for (i = 0; i < 2; i++)
-	cn->children[i] = ExportClipNodes_r(node->children[i]);
+	cn->children[i] = ExportClipNodes_r(ent, node->children[i]);
 
     for (f = node->faces; f; f = next) {
 	next = f->next;
@@ -171,13 +171,13 @@ accomodate new data interleaved with old.
 ==================
 */
 void
-ExportClipNodes(node_t *nodes)
+ExportClipNodes(mapentity_t *ent, node_t *nodes)
 {
     int oldcount, i, diff;
     int clipcount = 0;
     dclipnode_t *pTemp;
-    struct lumpdata *clipnodes = &pCurEnt->lumps[BSPCLIPNODE];
-    dmodel_t *model = (dmodel_t *)pCurEnt->lumps[BSPMODEL].data;
+    struct lumpdata *clipnodes = &ent->lumps[BSPCLIPNODE];
+    dmodel_t *model = (dmodel_t *)ent->lumps[BSPMODEL].data;
 
     oldcount = clipnodes->count;
 
@@ -186,7 +186,7 @@ ExportClipNodes(node_t *nodes)
 	clipcount += map.rgEntities[i].lumps[BSPCLIPNODE].count;
     model->headnode[hullnum] = clipcount + oldcount;
 
-    CountClipNodes_r(nodes);
+    CountClipNodes_r(ent, nodes);
     if (clipnodes->count > MAX_BSP_CLIPNODES)
 	Error(errTooManyClipnodes);
 
@@ -211,7 +211,7 @@ ExportClipNodes(node_t *nodes)
     }
 
     map.cTotal[BSPCLIPNODE] = clipcount + oldcount;
-    ExportClipNodes_r(nodes);
+    ExportClipNodes_r(ent, nodes);
 }
 
 //===========================================================================
@@ -223,14 +223,14 @@ CountLeaves
 ==================
 */
 static void
-CountLeaves(node_t *node)
+CountLeaves(mapentity_t *ent, node_t *node)
 {
     face_t **fp, *f;
 
-    pCurEnt->lumps[BSPLEAF].count++;
+    ent->lumps[BSPLEAF].count++;
     for (fp = node->markfaces; *fp; fp++)
 	for (f = *fp; f; f = f->original)
-	    pCurEnt->lumps[BSPMARKSURF].count++;
+	    ent->lumps[BSPMARKSURF].count++;
 }
 
 /*
@@ -239,18 +239,18 @@ CountNodes_r
 ==================
 */
 static void
-CountNodes_r(node_t *node)
+CountNodes_r(mapentity_t *ent, node_t *node)
 {
     int i;
 
-    pCurEnt->lumps[BSPNODE].count++;
+    ent->lumps[BSPNODE].count++;
 
     for (i = 0; i < 2; i++) {
 	if (node->children[i]->planenum == -1) {
 	    if (node->children[i]->contents != CONTENTS_SOLID)
-		CountLeaves(node->children[i]);
+		CountLeaves(ent, node->children[i]);
 	} else
-	    CountNodes_r(node->children[i]);
+	    CountNodes_r(ent, node->children[i]);
     }
 }
 
@@ -260,12 +260,12 @@ CountNodes
 ==================
 */
 static void
-CountNodes(node_t *headnode)
+CountNodes(mapentity_t *ent, node_t *headnode)
 {
     if (headnode->contents < 0)
-	CountLeaves(headnode);
+	CountLeaves(ent, headnode);
     else
-	CountNodes_r(headnode);
+	CountNodes_r(ent, headnode);
 }
 
 /*
@@ -274,12 +274,12 @@ ExportLeaf
 ==================
 */
 static void
-ExportLeaf(node_t *node)
+ExportLeaf(mapentity_t *ent, node_t *node)
 {
     face_t **fp, *f;
     dleaf_t *leaf_p;
-    struct lumpdata *leaves = &pCurEnt->lumps[BSPLEAF];
-    struct lumpdata *marksurfs = &pCurEnt->lumps[BSPMARKSURF];
+    struct lumpdata *leaves = &ent->lumps[BSPLEAF];
+    struct lumpdata *marksurfs = &ent->lumps[BSPMARKSURF];
 
     // ptr arithmetic to get correct leaf in memory
     leaf_p = (dleaf_t *)leaves->data + leaves->index;
@@ -327,11 +327,11 @@ ExportDrawNodes_r
 ==================
 */
 static void
-ExportDrawNodes_r(node_t *node)
+ExportDrawNodes_r(mapentity_t *ent, node_t *node)
 {
     dnode_t *n;
     int i;
-    struct lumpdata *nodes = &pCurEnt->lumps[BSPNODE];
+    struct lumpdata *nodes = &ent->lumps[BSPNODE];
 
     // ptr arithmetic to get correct node in memory
     n = (dnode_t *)nodes->data + nodes->index;
@@ -357,11 +357,11 @@ ExportDrawNodes_r(node_t *node)
 		n->children[i] = -1;
 	    else {
 		n->children[i] = -(map.cTotal[BSPLEAF] + 1);
-		ExportLeaf(node->children[i]);
+		ExportLeaf(ent, node->children[i]);
 	    }
 	} else {
 	    n->children[i] = map.cTotal[BSPNODE];
-	    ExportDrawNodes_r(node->children[i]);
+	    ExportDrawNodes_r(ent, node->children[i]);
 	}
     }
 }
@@ -372,16 +372,16 @@ ExportDrawNodes
 ==================
 */
 void
-ExportDrawNodes(node_t *headnode)
+ExportDrawNodes(mapentity_t *ent, node_t *headnode)
 {
     int i;
     dmodel_t *bm;
-    struct lumpdata *nodes = &pCurEnt->lumps[BSPNODE];
-    struct lumpdata *leaves = &pCurEnt->lumps[BSPLEAF];
-    struct lumpdata *marksurfs = &pCurEnt->lumps[BSPMARKSURF];
+    struct lumpdata *nodes = &ent->lumps[BSPNODE];
+    struct lumpdata *leaves = &ent->lumps[BSPLEAF];
+    struct lumpdata *marksurfs = &ent->lumps[BSPMARKSURF];
 
     // Get a feel for how many of these things there are.
-    CountNodes(headnode);
+    CountNodes(ent, headnode);
 
     // emit a model
     nodes->data = AllocMem(BSPNODE, nodes->count, true);
@@ -394,16 +394,16 @@ ExportDrawNodes(node_t *headnode)
      */
     ((dleaf_t *)pWorldEnt->lumps[BSPLEAF].data)->contents = CONTENTS_SOLID;
 
-    bm = (dmodel_t *)pCurEnt->lumps[BSPMODEL].data;
+    bm = (dmodel_t *)ent->lumps[BSPMODEL].data;
     bm->headnode[0] = map.cTotal[BSPNODE];
     bm->firstface = firstface;
     bm->numfaces = map.cTotal[BSPFACE] - firstface;
     firstface = map.cTotal[BSPFACE];
 
     if (headnode->contents < 0)
-	ExportLeaf(headnode);
+	ExportLeaf(ent, headnode);
     else
-	ExportDrawNodes_r(headnode);
+	ExportDrawNodes_r(ent, headnode);
 
     // Not counting initial vis leaf
     bm->visleafs = leaves->count;
@@ -411,7 +411,7 @@ ExportDrawNodes(node_t *headnode)
 	bm->visleafs--;
 
     for (i = 0; i < 3; i++) {
-	bm->mins[i] = headnode->mins[i] + SIDESPACE + 1;	// remove the padding
+	bm->mins[i] = headnode->mins[i] + SIDESPACE + 1; // remove the padding
 	bm->maxs[i] = headnode->maxs[i] - SIDESPACE - 1;
     }
 }

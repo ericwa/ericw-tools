@@ -84,7 +84,7 @@ ProcessEntity(void)
 	    }
 	}
 	ExportNodePlanes(nodes);
-	ExportClipNodes(nodes);
+	ExportClipNodes(pCurEnt, nodes);
     } else {
 	// SolidBSP generates a node tree
 	//
@@ -121,7 +121,7 @@ ProcessEntity(void)
 
 	ExportNodePlanes(nodes);
 	MakeFaceEdges(pCurEnt, nodes);
-	ExportDrawNodes(nodes);
+	ExportDrawNodes(pCurEnt, nodes);
     }
 
     map.cTotal[BSPMODEL]++;
