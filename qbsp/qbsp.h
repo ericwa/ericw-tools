@@ -448,7 +448,6 @@ extern int csgmergefaces;
 
 surface_t *BuildSurfaces(void);
 face_t *NewFaceFromFace(face_t *in);
-surface_t *CSGFaces(void);
 void SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back);
 void UpdateFaceSphere(face_t *in);
 
@@ -650,7 +649,7 @@ void GetVectorForKey(int iEntity, char *szKey, vec3_t vec);
 void WriteEntitiesToString(void);
 
 void Brush_LoadEntity(mapentity_t *ent);
-
+surface_t *CSGFaces(const mapentity_t *ent);
 
 // util.c
 

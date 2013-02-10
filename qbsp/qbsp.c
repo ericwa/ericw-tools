@@ -66,7 +66,7 @@ ProcessEntity(void)
 	Error(errNoValidBrushes);
     }
 
-    surfs = CSGFaces();
+    surfs = CSGFaces(pCurEnt);
 
     FreeBrushsetBrushes(pCurEnt->pBrushes);
 

@@ -420,7 +420,7 @@ Returns a list of surfaces containing all of the faces
 ==================
 */
 surface_t *
-CSGFaces(void)
+CSGFaces(const mapentity_t *ent)
 {
     brush_t *b1, *b2;
     int i;
@@ -438,14 +438,14 @@ CSGFaces(void)
     csgfaces = brushfaces = csgmergefaces = 0;
 
     // do the solid faces
-    for (b1 = pCurEnt->pBrushes; b1; b1 = b1->next) {
+    for (b1 = ent->pBrushes; b1; b1 = b1->next) {
 	// set outside to a copy of the brush's faces
 	CopyFacesToOutside(b1);
 
 	// Why is this necessary?
 	overwrite = false;
 
-	for (b2 = pCurEnt->pBrushes; b2; b2 = b2->next) {
+	for (b2 = ent->pBrushes; b2; b2 = b2->next) {
 	    // check bounding box first
 	    for (i = 0; i < 3; i++)
 		if (b1->mins[i] > b2->maxs[i] || b1->maxs[i] < b2->mins[i])
@@ -481,7 +481,7 @@ CSGFaces(void)
 	    SaveOutside(false);
 
 	iBrushes++;
-	Message(msgPercent, iBrushes, pCurEnt->cBrushes);
+	Message(msgPercent, iBrushes, ent->cBrushes);
     }
 
     surfhead = BuildSurfaces();
