@@ -177,13 +177,15 @@ CreateSingleHull
 static void
 CreateSingleHull(void)
 {
+    mapentity_t *ent;
+
     Message(msgLiteral, "Processing hull %d...\n", hullnum);
     map.cTotal[BSPMODEL] = 0;
 
     // for each entity in the map file that has geometry
-    for (map.iEntities = 0, pCurEnt = &map.rgEntities[0];
-	 map.iEntities < map.cEntities; map.iEntities++, pCurEnt++) {
-	ProcessEntity(pCurEnt);
+    for (map.iEntities = 0, ent = &map.rgEntities[0];
+	 map.iEntities < map.cEntities; map.iEntities++, ent++) {
+	ProcessEntity(ent);
 	if (!options.fAllverbose)
 	    options.fVerbose = false;	// don't print rest of entities
     }
