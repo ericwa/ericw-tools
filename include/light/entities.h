@@ -77,7 +77,7 @@ extern entity_t entities[MAX_MAP_ENTITIES];
 extern int num_entities;
 
 entity_t *FindEntityWithKeyPair(const char *key, const char *value);
-char *ValueForKey(const entity_t *ent, const char *key);
+const char *ValueForKey(const entity_t *ent, const char *key);
 void GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec);
 
 void LoadEntities(void);

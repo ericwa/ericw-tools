@@ -289,7 +289,7 @@ LoadEntities(void)
     MatchTargets();
 }
 
-char *
+const char *
 ValueForKey(const entity_t *ent, const char *key)
 {
     epair_t *ep;
@@ -322,10 +322,10 @@ FindEntityWithKeyPair(const char *key, const char *value)
 void
 GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec)
 {
-    char *k;
+    const char *value;
 
-    k = ValueForKey(ent, key);
-    sscanf(k, "%f %f %f", &vec[0], &vec[1], &vec[2]);
+    value = ValueForKey(ent, key);
+    sscanf(value, "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
 

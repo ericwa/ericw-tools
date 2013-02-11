@@ -106,7 +106,7 @@ FindFaceOffsets(void)
     int i, j;
     entity_t *ent;
     char name[20];
-    char *classname;
+    const char *classname;
     vec3_t org;
 
     memset(nolightface, 0, sizeof(nolightface));
