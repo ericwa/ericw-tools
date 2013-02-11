@@ -174,12 +174,12 @@ typedef unsigned char byte;
 
 double I_FloatTime(void);
 
-void DefaultExtension(char *path, char *extension);
+void DefaultExtension(char *path, const char *extension);
 void StripExtension(char *path);
 void StripFilename(char *path);
 int IsAbsolutePath(const char *path);
 
-char *copystring(char *s);
+char *copystring(const char *s);
 
 //===== mathlib.h
 
@@ -634,9 +634,9 @@ void LoadMapFile(void);
 int FindMiptex(char *name);
 
 void PrintEntity(int iEntity);
-const char *ValueForKey(int iEntity, char *key);
-void SetKeyValue(int iEntity, char *key, char *value);
-void GetVectorForKey(int iEntity, char *szKey, vec3_t vec);
+const char *ValueForKey(int iEntity, const char *key);
+void SetKeyValue(int iEntity, const char *key, const char *value);
+void GetVectorForKey(int iEntity, const char *szKey, vec3_t vec);
 
 void WriteEntitiesToString(void);
 
@@ -659,8 +659,8 @@ void ExportDrawNodes(mapentity_t *ent, node_t *headnode);
 #define msgScreen	6
 #define msgPercent	7
 
-extern char *rgszWarnings[cWarnings];
-extern char *rgszErrors[cErrors];
+extern const char *rgszWarnings[cWarnings];
+extern const char *rgszErrors[cErrors];
 extern const int rgcMemSize[];
 
 extern void *AllocMem(int Type, int cSize, bool fZero);

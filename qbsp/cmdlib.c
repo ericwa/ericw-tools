@@ -36,7 +36,7 @@
 
 
 char *
-copystring(char *s)
+copystring(const char *s)
 {
     char *b;
 
@@ -73,7 +73,7 @@ I_FloatTime(void)
 
 
 void
-DefaultExtension(char *path, char *extension)
+DefaultExtension(char *path, const char *extension)
 {
     char *src;
 

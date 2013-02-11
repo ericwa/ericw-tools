@@ -55,7 +55,7 @@ vec3_t vec3_origin = { 0, 0, 0 };
 // util.c
 FILE *logfile;
 
-char *rgszWarnings[cWarnings] = {
+const char *rgszWarnings[cWarnings] = {
     "No wad or _wad key exists in the worldmodel",
     "No valid WAD filenames in worldmodel",
     "Multiple info_player_start entities",
@@ -85,7 +85,7 @@ char *rgszWarnings[cWarnings] = {
     "line %d: Face with degenerate QuArK-style texture axes",
 };
 
-char *rgszErrors[cErrors] = {
+const char *rgszErrors[cErrors] = {
     "No leak node in WriteLeakNode",
     "Unknown option '%s'",
     "line %d: Entity key or value too long",

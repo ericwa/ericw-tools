@@ -627,7 +627,7 @@ PrintEntity(int iEntity)
 
 
 const char *
-ValueForKey(int iEntity, char *key)
+ValueForKey(int iEntity, const char *key)
 {
     epair_t *ep;
 
@@ -640,7 +640,7 @@ ValueForKey(int iEntity, char *key)
 
 
 void
-SetKeyValue(int iEntity, char *key, char *value)
+SetKeyValue(int iEntity, const char *key, const char *value)
 {
     epair_t *ep;
 
@@ -659,7 +659,7 @@ SetKeyValue(int iEntity, char *key, char *value)
 
 
 void
-GetVectorForKey(int iEntity, char *szKey, vec3_t vec)
+GetVectorForKey(int iEntity, const char *szKey, vec3_t vec)
 {
     const char *value;
     double v1, v2, v3;

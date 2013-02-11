@@ -24,6 +24,6 @@
 
 #include <stdbool.h>
 
-size_t LoadFile(char *filename, void **buf, bool nofail);
+size_t LoadFile(const char *filename, void **buf, bool nofail);
 
 #endif

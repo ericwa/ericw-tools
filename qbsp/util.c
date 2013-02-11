@@ -137,7 +137,7 @@ PrintMem
 void
 PrintMem(void)
 {
-    char *rgszMemTypes[] = {
+    const char *rgszMemTypes[] = {
 	"BSPEntity", "BSPPlane", "BSPTex", "BSPVertex", "BSPVis", "BSPNode",
 	"BSPTexinfo", "BSPFace", "BSPLight", "BSPClipnode", "BSPLeaf",
 	"BSPMarksurface", "BSPEdge", "BSPSurfedge", "BSPModel", "Mapface",
