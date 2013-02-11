@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <common/cmdlib.h>
 
-void init_log(char *filename);
+void init_log(const char *filename);
 void close_log();
 void logprint(const char *fmt, ...) __attribute__((format(printf,1,2)));
 void logvprint(const char *fmt, va_list args) __attribute__((format(printf,1,0)));

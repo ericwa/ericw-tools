@@ -32,7 +32,7 @@ static FILE *logfile;
 static qboolean log_ok;
 
 void
-init_log(char *filename)
+init_log(const char *filename)
 {
     log_ok = false;
     if ((logfile = fopen(filename, "w")))
