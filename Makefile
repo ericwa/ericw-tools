@@ -20,7 +20,7 @@ TOPDIR := $(shell pwd)
 ifneq (,$(findstring MINGW32,$(SYSNAME)))
 HOST_OS = WIN32
 else
-ifneq (,$(findstring $(SYSNAME),FreeBSD NetBSD OpenBSD))
+ifneq (,$(findstring $(SYSNAME),FreeBSD NetBSD OpenBSD Darwin))
 HOST_OS = UNIX
 UNIX = bsd
 else
