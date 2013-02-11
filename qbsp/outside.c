@@ -75,7 +75,7 @@ static void
 WriteLeakNode(node_t *n)
 {
     portal_t *p;
-    int s;
+    int side;
     int i;
     int count = 0;
 
@@ -85,20 +85,20 @@ WriteLeakNode(node_t *n)
     count = 0;
 
     for (p = n->portals; p;) {
-	s = (p->nodes[0] == n);
-	if ((p->nodes[s]->contents != CONTENTS_SOLID) &&
-	    (p->nodes[s]->contents != CONTENTS_SKY))
+	side = (p->nodes[0] == n);
+	if ((p->nodes[side]->contents != CONTENTS_SOLID) &&
+	    (p->nodes[side]->contents != CONTENTS_SKY))
 	    count++;
-	p = p->next[!s];
+	p = p->next[!side];
     }
 
     if (options.fBspleak)
 	fprintf(PorFile, "%i\n", count);
 
     for (p = n->portals; p;) {
-	s = (p->nodes[0] == n);
-	if ((p->nodes[s]->contents != CONTENTS_SOLID) &&
-	    (p->nodes[s]->contents != CONTENTS_SKY)) {
+	side = (p->nodes[0] == n);
+	if ((p->nodes[side]->contents != CONTENTS_SOLID) &&
+	    (p->nodes[side]->contents != CONTENTS_SKY)) {
 	    if (options.fBspleak) {
 		fprintf(PorFile, "%i ", p->winding->numpoints);
 		for (i = 0; i < p->winding->numpoints; i++)
@@ -108,7 +108,7 @@ WriteLeakNode(node_t *n)
 		fprintf(PorFile, "\n");
 	    }
 	}
-	p = p->next[!s];
+	p = p->next[!side];
     }
 }
 
@@ -323,42 +323,40 @@ Returns true if an occupied leaf is reached
 ==================
 */
 static bool
-RecursiveFillOutside(node_t *l, bool fill)
+RecursiveFillOutside(node_t *node, bool fill)
 {
     portal_t *p;
-    int s;
+    int side;
 
-    if (l->contents == CONTENTS_SOLID || l->contents == CONTENTS_SKY)
+    if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
 	return false;
 
-    if (l->valid == valid)
+    if (node->valid == valid)
 	return false;
 
-    if (l->occupied) {
-	hit_occupied = l->occupied;
-	leakNode = l;
+    if (node->occupied) {
+	hit_occupied = node->occupied;
+	leakNode = node;
 	backdraw = 4000;
 	return true;
     }
 
-    l->valid = valid;
+    node->valid = valid;
 
     // fill it and it's neighbors
     if (fill) {
-	l->contents = CONTENTS_SOLID;
+	node->contents = CONTENTS_SOLID;
 	outleafs++;
     }
 
-    for (p = l->portals; p;) {
-	s = (p->nodes[0] == l);
-
-	if (RecursiveFillOutside(p->nodes[s], fill)) {	// leaked, so stop filling
+    for (p = node->portals; p; p = p->next[!side]) {
+	side = (p->nodes[0] == node);
+	if (RecursiveFillOutside(p->nodes[side], fill)) {
+	    // leaked, so stop filling
 	    if (backdraw-- > 0)
 		MarkLeakTrail(p);
-
 	    return true;
 	}
-	p = p->next[!s];
     }
 
     return false;
@@ -402,7 +400,7 @@ FillOutside
 bool
 FillOutside(node_t *node)
 {
-    int s;
+    int side;
     vec_t *v;
     int i;
     bool inside;
@@ -427,7 +425,7 @@ FillOutside(node_t *node)
 	return false;
     }
 
-    s = !(outside_node.portals->nodes[1] == &outside_node);
+    side = !(outside_node.portals->nodes[1] == &outside_node);
 
     // first check to see if an occupied leaf is hit
     outleafs = 0;
@@ -456,7 +454,7 @@ FillOutside(node_t *node)
 	}
     }
 
-    if (RecursiveFillOutside(outside_node.portals->nodes[s], false)) {
+    if (RecursiveFillOutside(outside_node.portals->nodes[side], false)) {
 	v = map.rgEntities[hit_occupied].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
 	if (hullnum == 2) {
@@ -501,7 +499,7 @@ FillOutside(node_t *node)
     }
     // now go back and fill things in
     valid++;
-    RecursiveFillOutside(outside_node.portals->nodes[s], true);
+    RecursiveFillOutside(outside_node.portals->nodes[side], true);
 
     // remove faces from filled in leafs
     ClearOutFaces(node);
