@@ -44,16 +44,13 @@ PointInLeaf(node_t *node, vec3_t point)
 {
     vec_t d;
 
-    if (node->contents)
-	return node;
+    while (!node->contents) {
+	d = DotProduct(pPlanes[node->planenum].normal, point) -
+	    pPlanes[node->planenum].dist;
+	node = (d > 0) ? node->children[0] : node->children[1];
+    }
 
-    d = DotProduct(pPlanes[node->planenum].normal,
-		   point) - pPlanes[node->planenum].dist;
-
-    if (d > 0)
-	return PointInLeaf(node->children[0], point);
-
-    return PointInLeaf(node->children[1], point);
+    return node;
 }
 
 /*
