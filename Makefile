@@ -44,7 +44,7 @@ endif
 else
 EXT=
 DPTHREAD=-DUSE_PTHREADS -pthread
-LPTHREAD=-pthread -lpthread
+LPTHREAD=-lpthread
 endif
 
 #BIN_PFX ?= tyr-
