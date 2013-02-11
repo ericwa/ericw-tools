@@ -46,7 +46,7 @@ typedef struct {
     FILE *file;
 } wad_t;
 
-int WADList_Init(wad_t **wads, char *wadstring);
+int WADList_Init(wad_t **wads, const char *wadstring);
 void WADList_Process(wad_t *wads, int numwads);
 void WADList_Free(wad_t *wads, int numwads);
 

@@ -52,12 +52,13 @@ WAD_LoadInfo(wad_t *w)
 
 
 int
-WADList_Init(wad_t **wads, char *wadstring)
+WADList_Init(wad_t **wads, const char *wadstring)
 {
-    int i, len, numwads;
-    wad_t *tmp, *w;
-    char *fname;
+    int len, numwads;
+    wad_t *wadlist, *wad;
+    const char *fname;
     char *fpath;
+    const char *pos;
     int pathlen;
 
     *wads = NULL;
@@ -71,45 +72,47 @@ WADList_Init(wad_t **wads, char *wadstring)
 
     // Count # of wads
     numwads = 1;
-    for (i = 0; i < len; i++)
-	if (wadstring[i] == ';' && wadstring[i + 1] != ';')
+    for (pos = wadstring; *pos ; pos++)
+	if (pos[0] == ';' && pos[1] != ';')
 	    numwads++;
 
-    tmp = AllocMem(OTHER, numwads * sizeof(wad_t), true);
+    wadlist = AllocMem(OTHER, numwads * sizeof(wad_t), true);
 
-    w = tmp;
-    i = 0;
-    while (i < len) {
-	fname = wadstring + i;
-	while (wadstring[i] != 0 && wadstring[i] != ';')
-	    i++;
-	wadstring[i++] = 0;
+    wad = wadlist;
+    pos = wadstring;
+    while (pos - wadstring < len) {
+	fname = pos;
+	while (*pos && *pos != ';')
+	    pos++;
 
-	if (!options.wadPath[0] || IsAbsolutePath(fname))
-	    fpath = copystring(fname);
-	else {
-	    pathlen = strlen(options.wadPath) + strlen(fname) + 1;
-	    fpath = AllocMem(OTHER, pathlen + 1, false);
-	    sprintf(fpath, "%s/%s", options.wadPath, fname);
+	if (!options.wadPath[0] || IsAbsolutePath(fname)) {
+	    fpath = AllocMem(OTHER, (pos - fname) + 1, false);
+	    snprintf(fpath, (pos - fname) + 1, "%s", fname);
+	} else {
+	    pathlen = strlen(options.wadPath) + 1 + (pos - fname);
+	    fpath = AllocMem(OTHER, pathlen + 1, true);
+	    snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
 	}
-	w->file = fopen(fpath, "rb");
-	if (w->file) {
+	wad->file = fopen(fpath, "rb");
+	if (wad->file) {
 	    if (options.fVerbose)
 		Message(msgLiteral, "Opened WAD: %s\n", fpath);
-	    if (!WAD_LoadInfo(w)) {
+	    if (WAD_LoadInfo(wad)) {
+		wad++;
+	    } else {
 		Message(msgWarning, warnNotWad, fpath);
-		fclose(w->file);
-	    } else
-		w++;
+		fclose(wad->file);
+	    }
 	}
 	FreeMem(fpath, OTHER, strlen(fpath) + 1);
+	pos++;
     }
 
     /* Re-allocate just the required amount */
-    *wads = AllocMem(OTHER, (w - tmp) * sizeof(wad_t), false);
-    memcpy(*wads, tmp, (w - tmp) * sizeof(wad_t));
-    FreeMem(tmp, OTHER, numwads * sizeof(wad_t));
-    numwads = w - tmp;
+    *wads = AllocMem(OTHER, (wad - wadlist) * sizeof(wad_t), false);
+    memcpy(*wads, wadlist, (wad - wadlist) * sizeof(wad_t));
+    FreeMem(wadlist, OTHER, numwads * sizeof(wad_t));
+    numwads = wad - wadlist;
 
     return numwads;
 }
