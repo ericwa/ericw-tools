@@ -290,10 +290,10 @@ FindTargetEntity
 =================
 */
 static int
-FindTargetEntity(char *szTarget)
+FindTargetEntity(const char *szTarget)
 {
     int iEntity;
-    char *szName;
+    const char *szName;
 
     for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
 	szName = ValueForKey(iEntity, "targetname");
@@ -314,7 +314,7 @@ void
 FixRotateOrigin(int iEntity, vec3_t offset)
 {
     int iFoundEnt;
-    char *szSearch;
+    const char *szSearch;
     char szOrigin[20];
 
     szSearch = ValueForKey(iEntity, "target");
@@ -348,7 +348,7 @@ CreateBrushFaces(void)
     face_t *pFaceList = NULL;
     mapface_t *pFace;
     vec3_t offset;
-    char *szClassname;
+    const char *szClassname;
     vec3_t point;
     vec_t max, min;
 

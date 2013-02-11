@@ -138,7 +138,7 @@ UpdateEntLump(void)
 {
     int m, iEntity;
     char szMod[80];
-    char *szClassname;
+    const char *szClassname;
     vec3_t temp;
 
     Message(msgStat, "Updating entities lump...");

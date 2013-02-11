@@ -626,7 +626,7 @@ PrintEntity(int iEntity)
 }
 
 
-char *
+const char *
 ValueForKey(int iEntity, char *key)
 {
     epair_t *ep;
@@ -661,13 +661,13 @@ SetKeyValue(int iEntity, char *key, char *value)
 void
 GetVectorForKey(int iEntity, char *szKey, vec3_t vec)
 {
-    char *k;
+    const char *value;
     double v1, v2, v3;
 
-    k = ValueForKey(iEntity, szKey);
+    value = ValueForKey(iEntity, szKey);
     v1 = v2 = v3 = 0;
     // scanf into doubles, then assign, so it is vec_t size independent
-    sscanf(k, "%lf %lf %lf", &v1, &v2, &v3);
+    sscanf(value, "%lf %lf %lf", &v1, &v2, &v3);
     vec[0] = v1;
     vec[1] = v2;
     vec[2] = v3;
