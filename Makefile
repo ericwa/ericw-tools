@@ -50,6 +50,27 @@ endif
 #BIN_PFX ?= tyr-
 BIN_PFX ?=
 
+# ---------------------------------------
+# Define some build variables
+# ---------------------------------------
+
+STRIP ?= strip
+CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs
+
+ifeq ($(DEBUG),Y)
+CFLAGS += -g
+else
+ifeq ($(OPTIMIZED_CFLAGS),Y)
+CFLAGS += -O2
+# -funit-at-a-time is buggy for MinGW GCC > 3.2
+# I'm assuming it's fixed for MinGW GCC >= 4.0 when that comes about
+CFLAGS += $(call cc-option,-fno-unit-at-a-time,)
+CFLAGS += $(call cc-option,-fweb,)
+CFLAGS += $(call cc-option,-frename-registers,)
+CFLAGS += $(call cc-option,-ffast-math,)
+endif
+endif
+
 # ============================================================================
 # Helper functions
 # ============================================================================
@@ -136,10 +157,14 @@ quiet_cmd_strip = '  STRIP   $(1)'
 ifeq ($(DEBUG),Y)
 do_strip=
 else
+ifeq ($(STRIP),)
+do_strip =
+else
 define do_strip
 	@echo $(call $(quiet)cmd_strip,$(1));
 	@$(call cmd_strip,$(1));
 endef
+endif
 endif
 
 DEPFILES = \
@@ -152,27 +177,6 @@ DEPFILES = \
 
 ifneq ($(DEPFILES),)
 -include $(DEPFILES)
-endif
-
-# ---------------------------------------
-# Define some build variables
-# ---------------------------------------
-
-STRIP   ?= strip
-CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs
-
-ifeq ($(DEBUG),Y)
-CFLAGS += -g
-else
-ifeq ($(OPTIMIZED_CFLAGS),Y)
-CFLAGS += -O2
-# -funit-at-a-time is buggy for MinGW GCC > 3.2
-# I'm assuming it's fixed for MinGW GCC >= 4.0 when that comes about
-CFLAGS += $(call cc-option,-fno-unit-at-a-time,)
-CFLAGS += $(call cc-option,-fweb,)
-CFLAGS += $(call cc-option,-frename-registers,)
-CFLAGS += $(call cc-option,-ffast-math,)
-endif
 endif
 
 # --------------------------------------------------------------------------
