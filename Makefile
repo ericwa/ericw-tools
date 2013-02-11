@@ -55,7 +55,7 @@ BIN_PFX ?=
 # ---------------------------------------
 
 STRIP ?= strip
-CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs
+CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs -Wwrite-strings
 
 ifeq ($(DEBUG),Y)
 CFLAGS += -g
