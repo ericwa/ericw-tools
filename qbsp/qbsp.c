@@ -235,7 +235,8 @@ ProcessFile
 static void
 ProcessFile(void)
 {
-    char *wadstring;
+    const char *wadstring;
+    char *defaultwad;
     wad_t *wads;
     int numwads = 0;
 
@@ -258,14 +259,14 @@ ProcessFile(void)
 	if (wadstring)
 	    Message(msgWarning, warnNoValidWads);
 	/* Try the default wad name */
-	wadstring = AllocMem(OTHER, strlen(options.szMapName) + 5, false);
-	strcpy(wadstring, options.szMapName);
-	StripExtension(wadstring);
-	DefaultExtension(wadstring, ".wad");
-	numwads = WADList_Init(&wads, wadstring);
+	defaultwad = AllocMem(OTHER, strlen(options.szMapName) + 5, false);
+	strcpy(defaultwad, options.szMapName);
+	StripExtension(defaultwad);
+	DefaultExtension(defaultwad, ".wad");
+	numwads = WADList_Init(&wads, defaultwad);
 	if (numwads)
-	    Message(msgLiteral, "Using default WAD: %s\n", wadstring);
-	FreeMem(wadstring, OTHER, strlen(options.szMapName) + 5);
+	    Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
+	FreeMem(defaultwad, OTHER, strlen(options.szMapName) + 5);
     }
 
     // init the tables to be shared by all models
