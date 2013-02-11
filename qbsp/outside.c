@@ -142,6 +142,7 @@ PrintLeakTrail(vec3_t p1, vec3_t p2)
 MarkLeakTrail
 ==============
 */
+__attribute__((noinline))
 static void
 MarkLeakTrail(portal_t *n2)
 {
