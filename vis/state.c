@@ -175,6 +175,9 @@ SaveVisState(void)
 	    SafeWrite(outfile, vis, vis_len);
     }
 
+    free(might);
+    free(vis);
+
     err = fclose(outfile);
     if (err)
 	Error("%s: error writing new state (%s)", __func__, strerror(errno));
@@ -276,6 +279,7 @@ LoadVisState(void)
 	    p->status = pstat_none;
     }
 
+    free(compressed);
     fclose(infile);
 
     return true;
