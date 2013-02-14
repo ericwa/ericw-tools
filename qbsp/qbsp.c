@@ -139,11 +139,9 @@ UpdateEntLump(void)
     int m, iEntity;
     char szMod[80];
     const char *szClassname;
-    vec3_t temp;
 
     Message(msgStat, "Updating entities lump...");
 
-    VectorCopy(vec3_origin, temp);
     m = 1;
     for (iEntity = 1; iEntity < map.cEntities; iEntity++) {
 	if (map.rgEntities[iEntity].iBrushStart ==
@@ -156,7 +154,7 @@ UpdateEntLump(void)
 	// Do extra work for rotating entities if necessary
 	szClassname = ValueForKey(&map.rgEntities[iEntity], "classname");
 	if (!strncmp(szClassname, "rotate_", 7))
-	    FixRotateOrigin(iEntity, temp);
+	    FixRotateOrigin(&map.rgEntities[iEntity]);
     }
 
     LoadBSPFile();

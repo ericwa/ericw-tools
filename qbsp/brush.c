@@ -289,7 +289,7 @@ static vec3_t brush_mins, brush_maxs;
 FindTargetEntity
 =================
 */
-static int
+static const mapentity_t *
 FindTargetEntity(const char *szTarget)
 {
     int iEntity;
@@ -298,10 +298,10 @@ FindTargetEntity(const char *szTarget)
     for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
 	szName = ValueForKey(&map.rgEntities[iEntity], "targetname");
 	if (szName && !strcasecmp(szTarget, szName))
-	    return iEntity;
+	    return &map.rgEntities[iEntity];
     }
 
-    return -1;
+    return NULL;
 }
 
 
@@ -311,24 +311,28 @@ FixRotateOrigin
 =================
 */
 void
-FixRotateOrigin(int iEntity, vec3_t offset)
+FixRotateOrigin(mapentity_t *ent)
 {
-    int iFoundEnt;
+    const mapentity_t *target = NULL;
     const char *szSearch;
-    char szOrigin[20];
+    vec3_t offset;
+    char value[20];
 
-    szSearch = ValueForKey(&map.rgEntities[iEntity], "target");
-    if (!szSearch) {
-	szSearch = ValueForKey(&map.rgEntities[iEntity], "classname");
-	Message(msgWarning, warnNoRotateTarget, szSearch);
+    szSearch = ValueForKey(ent, "target");
+    if (szSearch)
+	target = FindTargetEntity(szSearch);
+
+    if (target) {
+	GetVectorForKey(target, "origin", offset);
     } else {
-	iFoundEnt = FindTargetEntity(szSearch);
-	if (iFoundEnt != -1)
-	    GetVectorForKey(&map.rgEntities[iFoundEnt], "origin", offset);
+	szSearch = ValueForKey(ent, "classname");
+	Message(msgWarning, warnNoRotateTarget, szSearch);
+	VectorCopy(vec3_origin, offset);
     }
-    sprintf(szOrigin, "%d %d %d", (int)offset[0], (int)offset[1],
-	    (int)offset[2]);
-    SetKeyValue(&map.rgEntities[iEntity], "origin", szOrigin);
+
+    snprintf(value, sizeof(value), "%d %d %d", (int)offset[0],
+	     (int)offset[1], (int)offset[2]);
+    SetKeyValue(ent, "origin", value);
 }
 
 
@@ -347,19 +351,20 @@ CreateBrushFaces(void)
     plane_t plane;
     face_t *pFaceList = NULL;
     mapface_t *pFace;
-    vec3_t offset;
     const char *szClassname;
-    vec3_t point;
+    vec3_t point, rotate_offset;
     vec_t max, min;
 
-    offset[0] = offset[1] = offset[2] = 0;
     min = brush_mins[0] = brush_mins[1] = brush_mins[2] = VECT_MAX;
     max = brush_maxs[0] = brush_maxs[1] = brush_maxs[2] = -VECT_MAX;
 
     // Hipnotic rotation
+    VectorCopy(vec3_origin, rotate_offset);
     szClassname = ValueForKey(&map.rgEntities[map.iEntities], "classname");
-    if (!strncmp(szClassname, "rotate_", 7))
-	FixRotateOrigin(map.iEntities, offset);
+    if (!strncmp(szClassname, "rotate_", 7)) {
+	FixRotateOrigin(&map.rgEntities[map.iEntities]);
+	GetVectorForKey(&map.rgEntities[map.iEntities], "origin", rotate_offset);
+    }
 
     for (i = 0; i < numbrushfaces; i++) {
 	pFace = &faces[i];
@@ -377,7 +382,7 @@ CreateBrushFaces(void)
 	}
 
 	if (!w)
-	    continue;		// overcontrained plane
+	    continue;		// overconstrained plane
 
 	// this face is a keeper
 	f = AllocMem(FACE, 1, true);
@@ -387,7 +392,7 @@ CreateBrushFaces(void)
 
 	for (j = 0; j < w->numpoints; j++) {
 	    for (k = 0; k < 3; k++) {
-		point[k] = w->points[j][k] - offset[k];
+		point[k] = w->points[j][k] - rotate_offset[k];
 		r = Q_rint(point[k]);
 		if (fabs(point[k] - r) < ZERO_EPSILON)
 		    f->w.points[j][k] = r;
@@ -407,7 +412,7 @@ CreateBrushFaces(void)
 
 	VectorCopy(pFace->plane.normal, plane.normal);
 	VectorScale(pFace->plane.normal, pFace->plane.dist, point);
-	VectorSubtract(point, offset, point);
+	VectorSubtract(point, rotate_offset, point);
 	plane.dist = DotProduct(plane.normal, point);
 
 	FreeMem(w, WINDING, 1);
