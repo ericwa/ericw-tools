@@ -591,12 +591,12 @@ struct lumpdata {
 
 typedef struct mapentity_s {
     vec3_t origin;
-    int iBrushStart;
-    int iBrushEnd;
+    mapbrush_t *mapbrushes;	/* Array */
+    int nummapbrushes;
     epair_t *epairs;
     vec3_t mins, maxs;
-    brush_t *pBrushes;		/* NULL terminated list */
-    int cBrushes;
+    brush_t *brushes;		/* NULL terminated list */
+    int numbrushes;
     struct lumpdata lumps[BSP_LUMPS];
 } mapentity_t;
 
@@ -608,7 +608,6 @@ typedef struct mapdata_s {
 
     // i for (current) index of items
     int iFaces;
-    int iBrushes;
     int iEntities;
 
     // rg of array (range) of actual items

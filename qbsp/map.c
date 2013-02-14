@@ -414,10 +414,11 @@ ParseBrush(mapbrush_t *brush)
     brush->iFaceStart = map.iFaces + 1;
 }
 
-
 static bool
-ParseEntity(mapentity_t *ent)
+ParseEntity(mapentity_t *ent, mapbrush_t *endbrush)
 {
+    mapbrush_t *brush;
+
     if (!ParseToken(PARSE_NORMAL))
 	return false;
 
@@ -427,22 +428,28 @@ ParseEntity(mapentity_t *ent)
     if (map.iEntities >= map.cEntities)
 	Error(errLowEntCount);
 
-    ent->iBrushEnd = map.iBrushes + 1;
-
+    /*
+     * Having to load brushes in reverse order for compatibility makes this
+     * look a bit weird, but the endbrush argument is a pointer after the end
+     * of the free brush entries, so we decrement before adding each new
+     * brush.
+     */
+    brush = endbrush;
     do {
 	if (!ParseToken(PARSE_NORMAL))
 	    Error(errUnexpectedEOF);
 	if (!strcmp(token, "}"))
 	    break;
 	else if (!strcmp(token, "{"))
-	    ParseBrush(&map.rgBrushes[map.iBrushes--]);
+	    ParseBrush(--brush);
 	else
 	    ParseEpair();
     } while (1);
 
-    // Allocate some model memory while we're here
-    ent->iBrushStart = map.iBrushes + 1;
-    if (ent->iBrushStart != ent->iBrushEnd) {
+    ent->mapbrushes = brush;
+    ent->nummapbrushes = endbrush - brush;
+    if (brush != endbrush) {
+	// Allocate some model memory while we're here
 	ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
 	ent->lumps[BSPMODEL].count = 1;
     }
@@ -516,6 +523,7 @@ LoadMapFile(void)
     void *pTemp;
     struct lumpdata *texinfo;
     mapentity_t *ent;
+    mapbrush_t *endbrush;
 
     Message(msgProgress, "LoadMapFile");
 
@@ -526,11 +534,13 @@ LoadMapFile(void)
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
     map.iFaces = map.cFaces - 1;
-    map.iBrushes = map.cBrushes - 1;
     map.iEntities = 0;
 
+    endbrush = &map.rgBrushes[map.cBrushes];
+
     ent = &map.rgEntities[0];
-    while (ParseEntity(ent)) {
+    while (ParseEntity(ent, endbrush)) {
+	endbrush -= ent->nummapbrushes;
 	map.iEntities++;
 	ent++;
     }

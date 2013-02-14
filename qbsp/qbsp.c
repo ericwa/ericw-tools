@@ -40,8 +40,8 @@ ProcessEntity(mapentity_t *ent)
     surface_t *surfs;
     node_t *nodes;
 
-    // No brushes means non-bmodel entity
-    if (ent->iBrushStart == ent->iBrushEnd)
+    // No map brushes means non-bmodel entity
+    if (!ent->nummapbrushes)
 	return;
 
     if (map.iEntities > 0) {
@@ -61,14 +61,14 @@ ProcessEntity(mapentity_t *ent)
     // leaving a perfect skin of the model with no hidden faces
     Brush_LoadEntity(ent);
 
-    if (!ent->pBrushes) {
+    if (!ent->brushes) {
 	PrintEntity(map.iEntities);
 	Error(errNoValidBrushes);
     }
 
     surfs = CSGFaces(ent);
 
-    FreeBrushsetBrushes(ent->pBrushes);
+    FreeBrushsetBrushes(ent->brushes);
 
     if (hullnum != 0) {
 	nodes = SolidBSP(ent, surfs, true);
@@ -144,8 +144,7 @@ UpdateEntLump(void)
 
     m = 1;
     for (iEntity = 1; iEntity < map.cEntities; iEntity++) {
-	if (map.rgEntities[iEntity].iBrushStart ==
-	    map.rgEntities[iEntity].iBrushEnd)
+	if (!map.rgEntities[iEntity].nummapbrushes)
 	    continue;
 	sprintf(szMod, "*%i", m);
 	SetKeyValue(&map.rgEntities[iEntity], "model", szMod);

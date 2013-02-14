@@ -438,14 +438,14 @@ CSGFaces(const mapentity_t *ent)
     csgfaces = brushfaces = csgmergefaces = 0;
 
     // do the solid faces
-    for (b1 = ent->pBrushes; b1; b1 = b1->next) {
+    for (b1 = ent->brushes; b1; b1 = b1->next) {
 	// set outside to a copy of the brush's faces
 	CopyFacesToOutside(b1);
 
 	// Why is this necessary?
 	overwrite = false;
 
-	for (b2 = ent->pBrushes; b2; b2 = b2->next) {
+	for (b2 = ent->brushes; b2; b2 = b2->next) {
 	    // check bounding box first
 	    for (i = 0; i < 3; i++)
 		if (b1->mins[i] > b2->maxs[i] || b1->maxs[i] < b2->mins[i])
@@ -481,7 +481,7 @@ CSGFaces(const mapentity_t *ent)
 	    SaveOutside(false);
 
 	iBrushes++;
-	Message(msgPercent, iBrushes, ent->cBrushes);
+	Message(msgPercent, iBrushes, ent->numbrushes);
     }
 
     surfhead = BuildSurfaces();
