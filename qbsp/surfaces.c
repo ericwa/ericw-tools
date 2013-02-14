@@ -444,7 +444,7 @@ MakeFaceEdges(mapentity_t *ent, node_t *headnode)
     Message(msgProgress, "MakeFaceEdges");
 
     cStartEdge = 0;
-    for (i = 0; i < map.iEntities; i++)
+    for (i = 0; i < ent - map.rgEntities; i++)
 	cStartEdge += map.rgEntities[i].lumps[BSPEDGE].count;
 
     CountData_r(ent, headnode);

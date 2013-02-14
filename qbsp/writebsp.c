@@ -182,7 +182,7 @@ ExportClipNodes(mapentity_t *ent, node_t *nodes)
     oldcount = clipnodes->count;
 
     /* Count nodes before this one */
-    for (i = 0; i < map.iEntities; i++)
+    for (i = 0; i < ent - map.rgEntities; i++)
 	clipcount += map.rgEntities[i].lumps[BSPCLIPNODE].count;
     model->headnode[hullnum] = clipcount + oldcount;
 
@@ -407,7 +407,7 @@ ExportDrawNodes(mapentity_t *ent, node_t *headnode)
 
     // Not counting initial vis leaf
     bm->visleafs = leaves->count;
-    if (map.iEntities == 0)
+    if (ent == pWorldEnt)
 	bm->visleafs--;
 
     for (i = 0; i < 3; i++) {

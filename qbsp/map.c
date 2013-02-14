@@ -425,7 +425,7 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush)
     if (strcmp(token, "{"))
 	Error(errParseEntity, linenum);
 
-    if (map.iEntities >= map.cEntities)
+    if (ent - map.rgEntities >= map.cEntities)
 	Error(errLowEntCount);
 
     /*
@@ -534,16 +534,18 @@ LoadMapFile(void)
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
     map.iFaces = map.cFaces - 1;
-    map.iEntities = 0;
 
     endbrush = &map.rgBrushes[map.cBrushes];
 
-    ent = &map.rgEntities[0];
+    ent = map.rgEntities;
     while (ParseEntity(ent, endbrush)) {
 	endbrush -= ent->nummapbrushes;
-	map.iEntities++;
 	ent++;
     }
+
+    /* Double check the entity count matches our pre-parse count */
+    if (ent - map.rgEntities != map.cEntities)
+	Error(errLowEntCount);
 
     FreeMem(buf, OTHER, length + 1);
 

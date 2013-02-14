@@ -608,7 +608,6 @@ typedef struct mapdata_s {
 
     // i for (current) index of items
     int iFaces;
-    int iEntities;
 
     // rg of array (range) of actual items
     mapface_t *rgFaces;
