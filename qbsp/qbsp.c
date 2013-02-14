@@ -45,11 +45,11 @@ ProcessEntity(mapentity_t *ent)
 	return;
 
     if (map.iEntities > 0) {
-	char mod[8];
+	char mod[20];
 
 	if (map.iEntities == 1)
 	    Message(msgProgress, "Internal Entities");
-	sprintf(mod, "*%i", map.cTotal[BSPMODEL]);
+	snprintf(mod, sizeof(mod), "*%i", map.cTotal[BSPMODEL]);
 	if (options.fVerbose)
 	    PrintEntity(ent);
 
