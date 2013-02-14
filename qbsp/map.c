@@ -132,7 +132,7 @@ ParseEpair(mapentity_t *ent)
 
 
 static void
-TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
+TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv)
 {
     vec3_t baseaxis[18] = {
 	{0, 0, 1}, {1, 0, 0}, {0, -1, 0},	// floor
@@ -151,7 +151,7 @@ TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
     bestaxis = 0;
 
     for (i = 0; i < 6; i++) {
-	dot = DotProduct(pln->normal, baseaxis[i * 3]);
+	dot = DotProduct(plane->normal, baseaxis[i * 3]);
 	if (dot > best || (dot == best && !options.fOldaxis)) {
 	    best = dot;
 	    bestaxis = i;
@@ -163,16 +163,16 @@ TextureAxisFromPlane(plane_t *pln, vec3_t xv, vec3_t yv)
 }
 
 
-enum texcoord_style {
+typedef enum {
     TX_ORIGINAL    = 0,
     TX_QUARK_TYPE1 = 1,
     TX_QUARK_TYPE2 = 2
-};
+} texcoord_style_t;
 
-static int
+static texcoord_style_t
 ParseExtendedTX(void)
 {
-    int style = TX_ORIGINAL;
+    texcoord_style_t style = TX_ORIGINAL;
 
     if (ParseToken(PARSE_COMMENT)) {
 	if (!strncmp(token, "//TX", 4)) {
@@ -186,9 +186,9 @@ ParseExtendedTX(void)
     return style;
 }
 
-
 static void
-SetTexinfo_QuakeEd(int shift[2], int rotate, vec_t scale[2], texinfo_t *tx)
+SetTexinfo_QuakeEd(const plane_t *plane, const int shift[2], const int rotate,
+		   const vec_t scale[2], texinfo_t *out)
 {
     int i, j;
     vec3_t vecs[2];
@@ -196,27 +196,27 @@ SetTexinfo_QuakeEd(int shift[2], int rotate, vec_t scale[2], texinfo_t *tx)
     vec_t ang, sinv, cosv;
     vec_t ns, nt;
 
-    TextureAxisFromPlane(&(map.rgFaces[map.iFaces].plane), vecs[0], vecs[1]);
-
-    if (!scale[0])
-	scale[0] = 1;
-    if (!scale[1])
-	scale[1] = 1;
+    TextureAxisFromPlane(plane, vecs[0], vecs[1]);
 
     // rotate axis
-    if (rotate == 0) {
+    switch (rotate) {
+    case 0:
 	sinv = 0;
 	cosv = 1;
-    } else if (rotate == 90) {
+	break;
+    case 90:
 	sinv = 1;
 	cosv = 0;
-    } else if (rotate == 180) {
+	break;
+    case 180:
 	sinv = 0;
 	cosv = -1;
-    } else if (rotate == 270) {
+	break;
+    case 270:
 	sinv = -1;
 	cosv = 0;
-    } else {
+	break;
+    default:
 	ang = (vec_t)rotate / 180 * Q_PI;
 	sinv = sin(ang);
 	cosv = cos(ang);
@@ -245,18 +245,18 @@ SetTexinfo_QuakeEd(int shift[2], int rotate, vec_t scale[2], texinfo_t *tx)
 
     for (i = 0; i < 2; i++)
 	for (j = 0; j < 3; j++)
-	    tx->vecs[i][j] = vecs[i][j] / scale[i];
+	    /* Interpret zero scale as no scaling */
+	    out->vecs[i][j] = vecs[i][j] / (scale[i] ? scale[i] : 1);
 
-    tx->vecs[0][3] = shift[0];
-    tx->vecs[1][3] = shift[1];
+    out->vecs[0][3] = shift[0];
+    out->vecs[1][3] = shift[1];
 }
 
-
 static void
-SetTexinfo_QuArK(vec3_t planepts[3], int tx_type, texinfo_t *tx)
+SetTexinfo_QuArK(vec3_t planepts[3], texcoord_style_t style, texinfo_t *out)
 {
+    int i;
     vec3_t vecs[2];
-    int i, point;
     vec_t a, b, c, d;
     vec_t determinant;
 
@@ -265,11 +265,20 @@ SetTexinfo_QuArK(vec3_t planepts[3], int tx_type, texinfo_t *tx)
      * Type 2 reverses the order of the vecs
      * 128 is the scaling factor assumed by QuArK.
      */
-    for (i = 0; i < 2; i++) {
-	point = (tx_type == TX_QUARK_TYPE1) ? 2 - i : i + 1;
-	VectorSubtract(planepts[point], planepts[0], vecs[i]);
-	VectorScale(vecs[i], 1.0 / 128.0, vecs[i]);
+    switch (style) {
+    case TX_QUARK_TYPE1:
+	VectorSubtract(planepts[2], planepts[0], vecs[0]);
+	VectorSubtract(planepts[1], planepts[0], vecs[1]);
+	break;
+    case TX_QUARK_TYPE2:
+	VectorSubtract(planepts[1], planepts[0], vecs[0]);
+	VectorSubtract(planepts[2], planepts[0], vecs[1]);
+	break;
+    default:
+	Error(errBadTXStyle);
     }
+    VectorScale(vecs[0], 1.0 / 128.0, vecs[0]);
+    VectorScale(vecs[1], 1.0 / 128.0, vecs[1]);
 
     a = DotProduct(vecs[0], vecs[0]);
     b = DotProduct(vecs[0], vecs[1]);
@@ -277,33 +286,33 @@ SetTexinfo_QuArK(vec3_t planepts[3], int tx_type, texinfo_t *tx)
     d = DotProduct(vecs[1], vecs[1]);
 
     /*
-     * Want to solve for tx->vecs:
+     * Want to solve for out->vecs:
      *
-     *    | a b | | tx->vecs[0] | = | vecs[0] |
-     *    | c d | | tx->vecs[1] |   | vecs[1] |
+     *    | a b | | out->vecs[0] | = | vecs[0] |
+     *    | c d | | out->vecs[1] |   | vecs[1] |
      *
-     * => | tx->vecs[0] | = __ 1.0__  | d  -b | | vecs[0] |
-     *    | tx->vecs[1] |   a*d - b*c | -c  a | | vecs[1] |
+     * => | out->vecs[0] | = __ 1.0__  | d  -b | | vecs[0] |
+     *    | out->vecs[1] |   a*d - b*c | -c  a | | vecs[1] |
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
 	Message(msgWarning, warnDegenerateQuArKTX, linenum);
 	for (i = 0; i < 3; i++)
-	    tx->vecs[0][i] = tx->vecs[1][i] = 0;
+	    out->vecs[0][i] = out->vecs[1][i] = 0;
     } else {
 	for (i = 0; i < 3; i++) {
-	    tx->vecs[0][i] = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
-	    tx->vecs[1][i] = (a * vecs[1][i] - c * vecs[0][i]) / determinant;
+	    out->vecs[0][i] = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
+	    out->vecs[1][i] = (a * vecs[1][i] - c * vecs[0][i]) / determinant;
 	}
     }
 
     /* Finally, the texture offset is indicated by planepts[0] */
     for (i = 0; i < 3; ++i) {
-	vecs[0][i] = tx->vecs[0][i];
-	vecs[1][i] = tx->vecs[1][i];
+	vecs[0][i] = out->vecs[0][i];
+	vecs[1][i] = out->vecs[1][i];
     }
-    tx->vecs[0][3] = -DotProduct(vecs[0], planepts[0]);
-    tx->vecs[1][3] = -DotProduct(vecs[1], planepts[0]);
+    out->vecs[0][3] = -DotProduct(vecs[0], planepts[0]);
+    out->vecs[1][3] = -DotProduct(vecs[1], planepts[0]);
 }
 
 
@@ -319,6 +328,7 @@ ParseBrush(mapbrush_t *brush)
     vec_t scale[2];
     int iFace;
     int tx_type;
+    plane_t *plane;
 
     brush->iFaceEnd = map.iFaces + 1;
 
@@ -361,9 +371,9 @@ ParseBrush(mapbrush_t *brush)
 	// if the three points are all on a previous plane, it is a
 	// duplicate plane
 	for (iFace = brush->iFaceEnd - 1; iFace > map.iFaces; iFace--) {
+	    plane = &map.rgFaces[iFace].plane;
 	    for (i = 0; i < 3; i++) {
-		d = DotProduct(planepts[i], map.rgFaces[iFace].plane.normal) -
-		    map.rgFaces[iFace].plane.dist;
+		d = DotProduct(planepts[i], plane->normal) - plane->dist;
 		if (d < -ON_EPSILON || d > ON_EPSILON)
 		    break;
 	    }
@@ -385,23 +395,23 @@ ParseBrush(mapbrush_t *brush)
 	    t3[j] = planepts[1][j];
 	}
 
-	CrossProduct(t1, t2, map.rgFaces[map.iFaces].plane.normal);
-	if (VectorCompare(map.rgFaces[map.iFaces].plane.normal, vec3_origin)) {
+	plane = &map.rgFaces[map.iFaces].plane;
+	CrossProduct(t1, t2, plane->normal);
+	if (VectorCompare(plane->normal, vec3_origin)) {
 	    Message(msgWarning, warnNoPlaneNormal, linenum);
 	    break;
 	}
-	VectorNormalize(map.rgFaces[map.iFaces].plane.normal);
-	map.rgFaces[map.iFaces].plane.dist =
-	    DotProduct(t3, map.rgFaces[map.iFaces].plane.normal);
+	VectorNormalize(plane->normal);
+	plane->dist = DotProduct(t3, plane->normal);
 
 	tx_type = ParseExtendedTX();
 	switch (tx_type) {
 	case TX_QUARK_TYPE1:
 	case TX_QUARK_TYPE2:
-	    SetTexinfo_QuArK(planepts, tx_type, &tx);
+	    SetTexinfo_QuArK(&planepts[0], tx_type, &tx);
 	    break;
 	default:
-	    SetTexinfo_QuakeEd(shift, rotate, scale, &tx);
+	    SetTexinfo_QuakeEd(plane, shift, rotate, scale, &tx);
 	    break;
 	}
 

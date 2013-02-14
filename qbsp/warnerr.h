@@ -110,5 +110,6 @@ enum {
     errInvalidOption,
     errLowLeakCount,
     errTooManyClipnodes,
+    errBadTXStyle,
     cErrors			// 60
 };

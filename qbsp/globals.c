@@ -150,5 +150,6 @@ const char *rgszErrors[cErrors] = {
     "line %d: Token too large",
     "Invalid argument to option %s",
     "Internal error: numleaks > num_visportals",
-    "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES)
+    "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
+    "Internal error: bad texture coordinate style",
 };
