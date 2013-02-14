@@ -342,7 +342,7 @@ CreateBrushFaces
 =================
 */
 static face_t *
-CreateBrushFaces(void)
+CreateBrushFaces(mapentity_t *ent)
 {
     int i, j, k;
     vec_t r;
@@ -360,10 +360,10 @@ CreateBrushFaces(void)
 
     // Hipnotic rotation
     VectorCopy(vec3_origin, rotate_offset);
-    szClassname = ValueForKey(&map.rgEntities[map.iEntities], "classname");
+    szClassname = ValueForKey(ent, "classname");
     if (!strncmp(szClassname, "rotate_", 7)) {
-	FixRotateOrigin(&map.rgEntities[map.iEntities]);
-	GetVectorForKey(&map.rgEntities[map.iEntities], "origin", rotate_offset);
+	FixRotateOrigin(ent);
+	GetVectorForKey(ent, "origin", rotate_offset);
     }
 
     for (i = 0; i < numbrushfaces; i++) {
@@ -794,7 +794,7 @@ LoadBrush(const mapentity_t *ent, const mapbrush_t *mapbrush)
     numbrushfaces = mapbrush->iFaceEnd - mapbrush->iFaceStart;
     memcpy(faces, face, numbrushfaces * sizeof(mapface_t));
 
-    pFaceList = CreateBrushFaces();
+    pFaceList = CreateBrushFaces(&map.rgEntities[map.iEntities]);
 
     if (!pFaceList) {
 	Message(msgWarning, warnNoBrushFaces);
@@ -806,13 +806,13 @@ LoadBrush(const mapentity_t *ent, const mapbrush_t *mapbrush)
 
 	ExpandBrush(size, pFaceList);
 	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces();
+	pFaceList = CreateBrushFaces(&map.rgEntities[map.iEntities]);
     } else if (hullnum == 2) {
 	vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
 	ExpandBrush(size, pFaceList);
 	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces();
+	pFaceList = CreateBrushFaces(&map.rgEntities[map.iEntities]);
     }
 
     // create the brush
