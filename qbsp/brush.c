@@ -755,7 +755,7 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 static brush_t *
-LoadBrush(const mapentity_t *ent, const mapbrush_t *mapbrush)
+LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
 {
     brush_t *brush;
     int contents;
@@ -794,7 +794,7 @@ LoadBrush(const mapentity_t *ent, const mapbrush_t *mapbrush)
     numbrushfaces = mapbrush->iFaceEnd - mapbrush->iFaceStart;
     memcpy(faces, face, numbrushfaces * sizeof(mapface_t));
 
-    pFaceList = CreateBrushFaces(&map.rgEntities[map.iEntities]);
+    pFaceList = CreateBrushFaces(ent);
 
     if (!pFaceList) {
 	Message(msgWarning, warnNoBrushFaces);
@@ -806,13 +806,13 @@ LoadBrush(const mapentity_t *ent, const mapbrush_t *mapbrush)
 
 	ExpandBrush(size, pFaceList);
 	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces(&map.rgEntities[map.iEntities]);
+	pFaceList = CreateBrushFaces(ent);
     } else if (hullnum == 2) {
 	vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
 	ExpandBrush(size, pFaceList);
 	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces(&map.rgEntities[map.iEntities]);
+	pFaceList = CreateBrushFaces(ent);
     }
 
     // create the brush
