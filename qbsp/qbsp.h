@@ -579,8 +579,8 @@ typedef struct mapface_s {
 } mapface_t;
 
 typedef struct mapbrush_s {
-    int iFaceStart;
-    int iFaceEnd;
+    mapface_t *faces;
+    int numfaces;
 } mapbrush_t;
 
 struct lumpdata {
@@ -605,9 +605,6 @@ typedef struct mapdata_s {
     int cFaces;
     int cBrushes;
     int cEntities;
-
-    // i for (current) index of items
-    int iFaces;
 
     // rg of array (range) of actual items
     mapface_t *rgFaces;

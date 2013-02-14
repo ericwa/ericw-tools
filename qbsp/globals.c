@@ -90,7 +90,7 @@ const char *rgszErrors[cErrors] = {
     "Unknown option '%s'",
     "line %d: Entity key or value too long",
     "line %d: Invalid brush plane format",
-    "Internal error: map.iFaces >= map.cFaces",
+    "Internal error: face count mismatched during map file parsing",
     "line %d: Invalid entity format, { not found",
     "Internal error: entity count mismatched during map file parsing",
     "Unexpected EOF (no closing brace)",

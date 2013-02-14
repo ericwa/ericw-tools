@@ -317,7 +317,7 @@ SetTexinfo_QuArK(vec3_t planepts[3], texcoord_style_t style, texinfo_t *out)
 
 
 static void
-ParseBrush(mapbrush_t *brush)
+ParseBrush(mapbrush_t *brush, mapface_t *endface)
 {
     vec3_t planepts[3];
     vec3_t t1, t2, t3;
@@ -326,12 +326,11 @@ ParseBrush(mapbrush_t *brush)
     vec_t d;
     int shift[2], rotate;
     vec_t scale[2];
-    int iFace;
     int tx_type;
     plane_t *plane;
+    mapface_t *face, *checkface;
 
-    brush->iFaceEnd = map.iFaces + 1;
-
+    face = endface;
     while (ParseToken(PARSE_NORMAL)) {
 	if (!strcmp(token, "}"))
 	    break;
@@ -370,8 +369,8 @@ ParseBrush(mapbrush_t *brush)
 
 	// if the three points are all on a previous plane, it is a
 	// duplicate plane
-	for (iFace = brush->iFaceEnd - 1; iFace > map.iFaces; iFace--) {
-	    plane = &map.rgFaces[iFace].plane;
+	for (checkface = face; checkface < endface; checkface++) {
+	    plane = &checkface->plane;
 	    for (i = 0; i < 3; i++) {
 		d = DotProduct(planepts[i], plane->normal) - plane->dist;
 		if (d < -ON_EPSILON || d > ON_EPSILON)
@@ -380,12 +379,14 @@ ParseBrush(mapbrush_t *brush)
 	    if (i == 3)
 		break;
 	}
-	if (iFace > map.iFaces) {
+	if (checkface < endface) {
 	    Message(msgWarning, warnBrushDuplicatePlane, linenum);
 	    continue;
 	}
 
-	if (map.iFaces < 0)
+	/* Checks complete - now add the face */
+	face--;
+	if (face < map.rgFaces)
 	    Error(errLowFaceCount);
 
 	// convert to a vector / dist plane
@@ -395,7 +396,7 @@ ParseBrush(mapbrush_t *brush)
 	    t3[j] = planepts[1][j];
 	}
 
-	plane = &map.rgFaces[map.iFaces].plane;
+	plane = &face->plane;
 	CrossProduct(t1, t2, plane->normal);
 	if (VectorCompare(plane->normal, vec3_origin)) {
 	    Message(msgWarning, warnNoPlaneNormal, linenum);
@@ -416,16 +417,16 @@ ParseBrush(mapbrush_t *brush)
 	}
 
 	// unique the texinfo
-	map.rgFaces[map.iFaces].texinfo = FindTexinfo(&tx);
-	map.iFaces--;
-	Message(msgPercent, map.cFaces - map.iFaces - 1, map.cFaces);
+	face->texinfo = FindTexinfo(&tx);
+	Message(msgPercent, map.cFaces - (face - map.rgFaces), map.cFaces);
     }
 
-    brush->iFaceStart = map.iFaces + 1;
+    brush->faces = face;
+    brush->numfaces = endface - face;
 }
 
 static bool
-ParseEntity(mapentity_t *ent, mapbrush_t *endbrush)
+ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
 {
     mapbrush_t *brush;
 
@@ -450,9 +451,10 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush)
 	    Error(errUnexpectedEOF);
 	if (!strcmp(token, "}"))
 	    break;
-	else if (!strcmp(token, "{"))
-	    ParseBrush(--brush);
-	else
+	else if (!strcmp(token, "{")) {
+	    ParseBrush(--brush, endface);
+	    endface -= brush->numfaces;
+	} else
 	    ParseEpair(ent);
     } while (1);
 
@@ -529,11 +531,12 @@ void
 LoadMapFile(void)
 {
     char *buf;
-    int i, j, length;
+    int i, j, length, cAxis;
     void *pTemp;
     struct lumpdata *texinfo;
     mapentity_t *ent;
-    mapbrush_t *endbrush;
+    mapbrush_t *brush, *endbrush;
+    mapface_t *face, *face2, *endface;
 
     Message(msgProgress, "LoadMapFile");
 
@@ -543,13 +546,16 @@ LoadMapFile(void)
 
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
-    map.iFaces = map.cFaces - 1;
-
     endbrush = &map.rgBrushes[map.cBrushes];
+    endface = &map.rgFaces[map.cFaces];
 
     ent = map.rgEntities;
-    while (ParseEntity(ent, endbrush)) {
-	endbrush -= ent->nummapbrushes;
+    while (ParseEntity(ent, endbrush, endface)) {
+	/* FIXME - move the brush and face pointers backwards... ugly */
+	for (i = 0; i < ent->nummapbrushes; i++) {
+	    endbrush--;
+	    endface -= endbrush->numfaces;
+	}
 	ent++;
     }
 
@@ -591,34 +597,33 @@ LoadMapFile(void)
     // One plane per face + 6 for portals
     cPlanes = map.cFaces + 6;
 
-    // Count # of unique planes
+    // Count # of unique planes in all of the faces
     for (i = 0; i < map.cFaces; i++) {
-	map.rgFaces[i].fUnique = true;
-	for (j = 0; j < i; j++)
-	    if (map.rgFaces[j].fUnique &&
-		VectorCompare(map.rgFaces[i].plane.normal,
-			      map.rgFaces[j].plane.normal)
-		&& fabs(map.rgFaces[i].plane.dist -
-			map.rgFaces[j].plane.dist) < EQUAL_EPSILON) {
-		map.rgFaces[i].fUnique = false;
+	face = &map.rgFaces[i];
+	face->fUnique = true;
+	for (j = 0; j < i; j++) {
+	    face2 = &map.rgFaces[j];
+	    if (face2->fUnique &&
+		VectorCompare(face->plane.normal, face2->plane.normal) &&
+		fabs(face->plane.dist - face2->plane.dist) < EQUAL_EPSILON) {
+		face->fUnique = false;
 		cPlanes--;
 		break;
 	    }
+	}
     }
 
     /*
      * Now iterate through brushes, add one plane for each face below 6 axis
      * aligned faces. This compensates for planes added in ExpandBrush.
      */
-    int cAxis;
-
     for (i = 0; i < map.cBrushes; i++) {
+	brush = &map.rgBrushes[i];
 	cAxis = 0;
-	for (j = map.rgBrushes[i].iFaceStart; j < map.rgBrushes[i].iFaceEnd;
-	     j++) {
-	    if (fabs(map.rgFaces[j].plane.normal[0]) > 1 - NORMAL_EPSILON
-		|| fabs(map.rgFaces[j].plane.normal[1]) > 1 - NORMAL_EPSILON
-		|| fabs(map.rgFaces[j].plane.normal[2]) > 1 - NORMAL_EPSILON)
+	for (j = 0, face = brush->faces; j < brush->numfaces; j++, face++) {
+	    if (fabs(face->plane.normal[0]) > 1 - NORMAL_EPSILON
+		|| fabs(face->plane.normal[1]) > 1 - NORMAL_EPSILON
+		|| fabs(face->plane.normal[2]) > 1 - NORMAL_EPSILON)
 		cAxis++;
 	}
 	if (6 - cAxis > 0)

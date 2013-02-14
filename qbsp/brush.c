@@ -765,7 +765,7 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
     /* check texture name for attributes */
-    face = &map.rgFaces[mapbrush->iFaceStart];
+    face = mapbrush->faces;
     texname = rgszMiptex[texinfo[face->texinfo].miptex];
 
     if (!strcasecmp(texname, "clip") && hullnum == 0)
@@ -791,7 +791,7 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
 	return NULL;		// water brushes don't show up in clipping hulls
 
     // create the faces
-    numbrushfaces = mapbrush->iFaceEnd - mapbrush->iFaceStart;
+    numbrushfaces = mapbrush->numfaces;
     memcpy(faces, face, numbrushfaces * sizeof(mapface_t));
 
     pFaceList = CreateBrushFaces(ent);
