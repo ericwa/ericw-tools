@@ -594,8 +594,10 @@ LoadMapFile(void)
 	    }
     }
 
-    // Now iterate through brushes, add one plane for each face below 6 axis aligned faces.
-    // This compensates for planes added in ExpandBrush.
+    /*
+     * Now iterate through brushes, add one plane for each face below 6 axis
+     * aligned faces. This compensates for planes added in ExpandBrush.
+     */
     int cAxis;
 
     for (i = 0; i < map.cBrushes; i++) {
@@ -611,7 +613,10 @@ LoadMapFile(void)
 	    cPlanes += 6 - cAxis;
     }
 
-    // cPlanes*3 because of 3 hulls, then add 20% as a fudge factor for hull edge bevel planes
+    /*
+     * cPlanes*3 because of 3 hulls, then add 20% as a fudge factor for hull
+     * edge bevel planes
+     */
     cPlanes = 3 * cPlanes + cPlanes / 5;
     pPlanes = AllocMem(PLANE, cPlanes, true);
 
