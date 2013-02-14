@@ -99,34 +99,34 @@ FindTexinfo(texinfo_t *t)
 
 
 static void
-ParseEpair(void)
+ParseEpair(mapentity_t *ent)
 {
-    epair_t *e;
+    epair_t *epair;
 
-    e = AllocMem(OTHER, sizeof(epair_t), true);
-    e->next = map.rgEntities[map.iEntities].epairs;
-    map.rgEntities[map.iEntities].epairs = e;
+    epair = AllocMem(OTHER, sizeof(epair_t), true);
+    epair->next = ent->epairs;
+    ent->epairs = epair;
 
     if (strlen(token) >= MAX_KEY - 1)
 	Error(errEpairTooLong, linenum);
-    e->key = copystring(token);
+    epair->key = copystring(token);
     ParseToken(PARSE_SAMELINE);
     if (strlen(token) >= MAX_VALUE - 1)
 	Error(errEpairTooLong, linenum);
-    e->value = copystring(token);
+    epair->value = copystring(token);
 
-    if (!strcasecmp(e->key, "origin"))
-	GetVectorForKey(&map.rgEntities[map.iEntities], e->key,
-			map.rgEntities[map.iEntities].origin);
-    else if (!strcasecmp(e->key, "classname")) {
-	if (!strcasecmp(e->value, "info_player_start")) {
+    if (!strcasecmp(epair->key, "origin")) {
+	GetVectorForKey(ent, epair->key, ent->origin);
+    } else if (!strcasecmp(epair->key, "classname")) {
+	if (!strcasecmp(epair->value, "info_player_start")) {
 	    if (rgfStartSpots & info_player_start)
 		Message(msgWarning, warnMultipleStarts);
 	    rgfStartSpots |= info_player_start;
-	} else if (!strcasecmp(e->value, "info_player_deathmatch"))
+	} else if (!strcasecmp(epair->value, "info_player_deathmatch")) {
 	    rgfStartSpots |= info_player_deathmatch;
-	else if (!strcasecmp(e->value, "info_player_coop"))
+	} else if (!strcasecmp(epair->value, "info_player_coop")) {
 	    rgfStartSpots |= info_player_coop;
+	}
     }
 }
 
@@ -443,7 +443,7 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush)
 	else if (!strcmp(token, "{"))
 	    ParseBrush(--brush);
 	else
-	    ParseEpair();
+	    ParseEpair(ent);
     } while (1);
 
     ent->mapbrushes = brush;
