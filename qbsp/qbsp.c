@@ -44,10 +44,10 @@ ProcessEntity(mapentity_t *ent)
     if (!ent->nummapbrushes)
 	return;
 
-    if (map.iEntities > 0) {
+    if (ent != pWorldEnt) {
 	char mod[20];
 
-	if (map.iEntities == 1)
+	if (ent == pWorldEnt + 1)
 	    Message(msgProgress, "Internal Entities");
 	snprintf(mod, sizeof(mod), "*%i", map.cTotal[BSPMODEL]);
 	if (options.fVerbose)
@@ -55,7 +55,7 @@ ProcessEntity(mapentity_t *ent)
 
 	if (hullnum == 0)
 	    Message(msgStat, "MODEL: %s", mod);
-	SetKeyValue(&map.rgEntities[map.iEntities], "model", mod);
+	SetKeyValue(ent, "model", mod);
     }
     // take the brush_ts and clip off all overlapping and contained faces,
     // leaving a perfect skin of the model with no hidden faces
@@ -72,7 +72,7 @@ ProcessEntity(mapentity_t *ent)
 
     if (hullnum != 0) {
 	nodes = SolidBSP(ent, surfs, true);
-	if (map.iEntities == 0 && !options.fNofill) {
+	if (ent == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
 	    PortalizeWorld(ent, nodes);
 	    if (FillOutside(nodes)) {
@@ -91,11 +91,11 @@ ProcessEntity(mapentity_t *ent)
 	// if not the world, make a good tree first
 	// the world is just going to make a bad tree
 	// because the outside filling will force a regeneration later
-	nodes = SolidBSP(ent, surfs, map.iEntities == 0);
+	nodes = SolidBSP(ent, surfs, ent == pWorldEnt);
 
 	// build all the portals in the bsp tree
 	// some portals are solid polygons, and some are paths to other leafs
-	if (map.iEntities == 0 && !options.fNofill) {
+	if (ent == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
 	    PortalizeWorld(ent, nodes);
 
