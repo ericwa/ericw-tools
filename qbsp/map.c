@@ -116,7 +116,7 @@ ParseEpair(void)
     e->value = copystring(token);
 
     if (!strcasecmp(e->key, "origin"))
-	GetVectorForKey(map.iEntities, e->key,
+	GetVectorForKey(&map.rgEntities[map.iEntities], e->key,
 			map.rgEntities[map.iEntities].origin);
     else if (!strcasecmp(e->key, "classname")) {
 	if (!strcasecmp(e->value, "info_player_start")) {
@@ -627,11 +627,11 @@ PrintEntity(int iEntity)
 
 
 const char *
-ValueForKey(int iEntity, const char *key)
+ValueForKey(const mapentity_t *ent, const char *key)
 {
-    epair_t *ep;
+    const epair_t *ep;
 
-    for (ep = map.rgEntities[iEntity].epairs; ep; ep = ep->next)
+    for (ep = ent->epairs; ep; ep = ep->next)
 	if (!strcmp(ep->key, key))
 	    return ep->value;
 
@@ -640,31 +640,31 @@ ValueForKey(int iEntity, const char *key)
 
 
 void
-SetKeyValue(int iEntity, const char *key, const char *value)
+SetKeyValue(mapentity_t *ent, const char *key, const char *value)
 {
     epair_t *ep;
 
-    for (ep = map.rgEntities[iEntity].epairs; ep; ep = ep->next)
+    for (ep = ent->epairs; ep; ep = ep->next)
 	if (!strcmp(ep->key, key)) {
 	    free(ep->value); /* FIXME */
 	    ep->value = copystring(value);
 	    return;
 	}
     ep = AllocMem(OTHER, sizeof(epair_t), true);
-    ep->next = map.rgEntities[iEntity].epairs;
-    map.rgEntities[iEntity].epairs = ep;
+    ep->next = ent->epairs;
+    ent->epairs = ep;
     ep->key = copystring(key);
     ep->value = copystring(value);
 }
 
 
 void
-GetVectorForKey(int iEntity, const char *szKey, vec3_t vec)
+GetVectorForKey(const mapentity_t *ent, const char *szKey, vec3_t vec)
 {
     const char *value;
     double v1, v2, v3;
 
-    value = ValueForKey(iEntity, szKey);
+    value = ValueForKey(ent, szKey);
     v1 = v2 = v3 = 0;
     // scanf into doubles, then assign, so it is vec_t size independent
     sscanf(value, "%lf %lf %lf", &v1, &v2, &v3);

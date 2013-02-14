@@ -296,7 +296,7 @@ FindTargetEntity(const char *szTarget)
     const char *szName;
 
     for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
-	szName = ValueForKey(iEntity, "targetname");
+	szName = ValueForKey(&map.rgEntities[iEntity], "targetname");
 	if (szName && !strcasecmp(szTarget, szName))
 	    return iEntity;
     }
@@ -317,18 +317,18 @@ FixRotateOrigin(int iEntity, vec3_t offset)
     const char *szSearch;
     char szOrigin[20];
 
-    szSearch = ValueForKey(iEntity, "target");
+    szSearch = ValueForKey(&map.rgEntities[iEntity], "target");
     if (!szSearch) {
-	szSearch = ValueForKey(iEntity, "classname");
+	szSearch = ValueForKey(&map.rgEntities[iEntity], "classname");
 	Message(msgWarning, warnNoRotateTarget, szSearch);
     } else {
 	iFoundEnt = FindTargetEntity(szSearch);
 	if (iFoundEnt != -1)
-	    GetVectorForKey(iFoundEnt, "origin", offset);
+	    GetVectorForKey(&map.rgEntities[iFoundEnt], "origin", offset);
     }
     sprintf(szOrigin, "%d %d %d", (int)offset[0], (int)offset[1],
 	    (int)offset[2]);
-    SetKeyValue(iEntity, "origin", szOrigin);
+    SetKeyValue(&map.rgEntities[iEntity], "origin", szOrigin);
 }
 
 
@@ -357,7 +357,7 @@ CreateBrushFaces(void)
     max = brush_maxs[0] = brush_maxs[1] = brush_maxs[2] = -VECT_MAX;
 
     // Hipnotic rotation
-    szClassname = ValueForKey(map.iEntities, "classname");
+    szClassname = ValueForKey(&map.rgEntities[map.iEntities], "classname");
     if (!strncmp(szClassname, "rotate_", 7))
 	FixRotateOrigin(map.iEntities, offset);
 

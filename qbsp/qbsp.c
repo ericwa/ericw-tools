@@ -55,7 +55,7 @@ ProcessEntity(mapentity_t *ent)
 
 	if (hullnum == 0)
 	    Message(msgStat, "MODEL: %s", mod);
-	SetKeyValue(map.iEntities, "model", mod);
+	SetKeyValue(&map.rgEntities[map.iEntities], "model", mod);
     }
     // take the brush_ts and clip off all overlapping and contained faces,
     // leaving a perfect skin of the model with no hidden faces
@@ -150,11 +150,11 @@ UpdateEntLump(void)
 	    map.rgEntities[iEntity].iBrushEnd)
 	    continue;
 	sprintf(szMod, "*%i", m);
-	SetKeyValue(iEntity, "model", szMod);
+	SetKeyValue(&map.rgEntities[iEntity], "model", szMod);
 	m++;
 
 	// Do extra work for rotating entities if necessary
-	szClassname = ValueForKey(iEntity, "classname");
+	szClassname = ValueForKey(&map.rgEntities[iEntity], "classname");
 	if (!strncmp(szClassname, "rotate_", 7))
 	    FixRotateOrigin(iEntity, temp);
     }
@@ -247,9 +247,9 @@ ProcessFile(void)
 	return;
     }
 
-    wadstring = ValueForKey(0, "_wad");
+    wadstring = ValueForKey(pWorldEnt, "_wad");
     if (!wadstring)
-	wadstring = ValueForKey(0, "wad");
+	wadstring = ValueForKey(pWorldEnt, "wad");
     if (!wadstring)
 	Message(msgWarning, warnNoWadKey);
     else
