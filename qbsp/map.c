@@ -308,7 +308,7 @@ SetTexinfo_QuArK(vec3_t planepts[3], int tx_type, texinfo_t *tx)
 
 
 static void
-ParseBrush(void)
+ParseBrush(mapbrush_t *brush)
 {
     vec3_t planepts[3];
     vec3_t t1, t2, t3;
@@ -320,7 +320,7 @@ ParseBrush(void)
     int iFace;
     int tx_type;
 
-    map.rgBrushes[map.iBrushes].iFaceEnd = map.iFaces + 1;
+    brush->iFaceEnd = map.iFaces + 1;
 
     while (ParseToken(PARSE_NORMAL)) {
 	if (!strcmp(token, "}"))
@@ -360,8 +360,7 @@ ParseBrush(void)
 
 	// if the three points are all on a previous plane, it is a
 	// duplicate plane
-	for (iFace = map.rgBrushes[map.iBrushes].iFaceEnd - 1;
-	     iFace > map.iFaces; iFace--) {
+	for (iFace = brush->iFaceEnd - 1; iFace > map.iFaces; iFace--) {
 	    for (i = 0; i < 3; i++) {
 		d = DotProduct(planepts[i], map.rgFaces[iFace].plane.normal) -
 		    map.rgFaces[iFace].plane.dist;
@@ -412,8 +411,7 @@ ParseBrush(void)
 	Message(msgPercent, map.cFaces - map.iFaces - 1, map.cFaces);
     }
 
-    map.rgBrushes[map.iBrushes].iFaceStart = map.iFaces + 1;
-    map.iBrushes--;
+    brush->iFaceStart = map.iFaces + 1;
 }
 
 
@@ -437,7 +435,7 @@ ParseEntity(mapentity_t *ent)
 	if (!strcmp(token, "}"))
 	    break;
 	else if (!strcmp(token, "{"))
-	    ParseBrush();
+	    ParseBrush(&map.rgBrushes[map.iBrushes--]);
 	else
 	    ParseEpair();
     } while (1);
