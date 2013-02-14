@@ -750,44 +750,43 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 static brush_t *
-LoadBrush(int iBrush)
+LoadBrush(const mapentity_t *ent, const mapbrush_t *mapbrush)
 {
-    brush_t *b;
-    mapbrush_t *mb;
+    brush_t *brush;
     int contents;
-    char *szName;
     face_t *pFaceList;
-    mapface_t *face;
-    texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+    const mapface_t *face;
+    const char *texname;
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
     /* check texture name for attributes */
-    mb = &map.rgBrushes[iBrush];
-    face = &map.rgFaces[mb->iFaceStart];
-    szName = rgszMiptex[texinfo[face->texinfo].miptex];
+    face = &map.rgFaces[mapbrush->iFaceStart];
+    texname = rgszMiptex[texinfo[face->texinfo].miptex];
 
-    if (!strcasecmp(szName, "clip") && hullnum == 0)
+    if (!strcasecmp(texname, "clip") && hullnum == 0)
 	return NULL;		// "clip" brushes don't show up in the draw hull
 
     // entities never use water merging
-    if (map.iEntities != 0)
+    if (ent != pWorldEnt) {
 	contents = CONTENTS_SOLID;
-    else if (szName[0] == '*') {
-	if (!strncasecmp(szName + 1, "lava", 4))
+    } else if (texname[0] == '*') {
+	if (!strncasecmp(texname + 1, "lava", 4))
 	    contents = CONTENTS_LAVA;
-	else if (!strncasecmp(szName + 1, "slime", 5))
+	else if (!strncasecmp(texname + 1, "slime", 5))
 	    contents = CONTENTS_SLIME;
 	else
 	    contents = CONTENTS_WATER;
-    } else if (!strncasecmp(szName, "sky", 3) && hullnum == 0)
+    } else if (!strncasecmp(texname, "sky", 3) && hullnum == 0) {
 	contents = CONTENTS_SKY;
-    else
+    } else {
 	contents = CONTENTS_SOLID;
+    }
 
     if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
 	return NULL;		// water brushes don't show up in clipping hulls
 
     // create the faces
-    numbrushfaces = mb->iFaceEnd - mb->iFaceStart;
+    numbrushfaces = mapbrush->iFaceEnd - mapbrush->iFaceStart;
     memcpy(faces, face, numbrushfaces * sizeof(mapface_t));
 
     pFaceList = CreateBrushFaces();
@@ -812,14 +811,14 @@ LoadBrush(int iBrush)
     }
 
     // create the brush
-    b = AllocMem(BRUSH, 1, true);
+    brush = AllocMem(BRUSH, 1, true);
 
-    b->contents = contents;
-    b->faces = pFaceList;
-    VectorCopy(brush_mins, b->mins);
-    VectorCopy(brush_maxs, b->maxs);
+    brush->contents = contents;
+    brush->faces = pFaceList;
+    VectorCopy(brush_mins, brush->mins);
+    VectorCopy(brush_maxs, brush->maxs);
 
-    return b;
+    return brush;
 }
 
 //=============================================================================
@@ -849,7 +848,7 @@ Brush_LoadEntity(mapentity_t *ent)
 
     cMapBrushes = ent->iBrushEnd - ent->iBrushStart;
     for (iBrush = ent->iBrushStart; iBrush < ent->iBrushEnd; iBrush++) {
-	b = LoadBrush(iBrush);
+	b = LoadBrush(ent, &map.rgBrushes[iBrush]);
 	if (!b)
 	    continue;
 
