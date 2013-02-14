@@ -51,7 +51,7 @@ ProcessEntity(mapentity_t *ent)
 	    Message(msgProgress, "Internal Entities");
 	sprintf(mod, "*%i", map.cTotal[BSPMODEL]);
 	if (options.fVerbose)
-	    PrintEntity(map.iEntities);
+	    PrintEntity(ent);
 
 	if (hullnum == 0)
 	    Message(msgStat, "MODEL: %s", mod);
@@ -62,7 +62,7 @@ ProcessEntity(mapentity_t *ent)
     Brush_LoadEntity(ent);
 
     if (!ent->brushes) {
-	PrintEntity(map.iEntities);
+	PrintEntity(ent);
 	Error(errNoValidBrushes);
     }
 

@@ -630,12 +630,12 @@ LoadMapFile(void)
 
 
 void
-PrintEntity(int iEntity)
+PrintEntity(const mapentity_t *ent)
 {
-    epair_t *ep;
+    epair_t *epair;
 
-    for (ep = map.rgEntities[iEntity].epairs; ep; ep = ep->next)
-	Message(msgStat, "%20s : %s", ep->key, ep->value);
+    for (epair = ent->epairs; epair; epair = epair->next)
+	Message(msgStat, "%20s : %s", epair->key, epair->value);
 }
 
 

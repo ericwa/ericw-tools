@@ -631,7 +631,7 @@ void LoadMapFile(void);
 
 int FindMiptex(char *name);
 
-void PrintEntity(int iEntity);
+void PrintEntity(const mapentity_t *ent);
 const char *ValueForKey(const mapentity_t *ent, const char *key);
 void SetKeyValue(mapentity_t *ent, const char *key, const char *value);
 void GetVectorForKey(const mapentity_t *ent, const char *szKey, vec3_t vec);
