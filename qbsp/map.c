@@ -460,11 +460,6 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
 
     ent->mapbrushes = brush;
     ent->nummapbrushes = endbrush - brush;
-    if (brush != endbrush) {
-	// Allocate some model memory while we're here
-	ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
-	ent->lumps[BSPMODEL].count = 1;
-    }
 
     return true;
 }
@@ -551,10 +546,15 @@ LoadMapFile(void)
 
     ent = map.rgEntities;
     while (ParseEntity(ent, endbrush, endface)) {
-	/* FIXME - move the brush and face pointers backwards... ugly */
-	for (i = 0; i < ent->nummapbrushes; i++) {
-	    endbrush--;
-	    endface -= endbrush->numfaces;
+	if (ent->nummapbrushes) {
+	    ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
+	    ent->lumps[BSPMODEL].count = 1;
+
+	    /* Move the brush and face pointers backwards... FIXME - ugly */
+	    for (i = 0; i < ent->nummapbrushes; i++) {
+		endbrush--;
+		endface -= endbrush->numfaces;
+	    }
 	}
 	ent++;
     }
