@@ -418,7 +418,7 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 
 	// unique the texinfo
 	face->texinfo = FindTexinfo(&tx);
-	Message(msgPercent, map.cFaces - (face - map.rgFaces), map.cFaces);
+	Message(msgPercent, map.maxfaces - (face - map.rgFaces), map.maxfaces);
     }
 
     brush->faces = face;
@@ -436,7 +436,7 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
     if (strcmp(token, "{"))
 	Error(errParseEntity, linenum);
 
-    if (ent - map.rgEntities >= map.cEntities)
+    if (ent - map.rgEntities >= map.maxentities)
 	Error(errLowEntCount);
 
     /*
@@ -471,7 +471,7 @@ PreParseFile(char *buf)
     int braces = 0;
     struct lumpdata *texinfo;
 
-    map.cEntities = map.cBrushes = map.cFaces = 0;
+    map.maxentities = map.maxbrushes = map.maxfaces = 0;
 
     // Very simple... we just want numbers here.  Invalid formats are
     // detected later.  Problems with deviant .MAP formats.
@@ -491,34 +491,34 @@ PreParseFile(char *buf)
 		break;
 	} else if (*buf == '{') {
 	    if (braces == 0)
-		map.cEntities++;
+		map.maxentities++;
 	    else if (braces == 1)
-		map.cBrushes++;
+		map.maxbrushes++;
 	    braces++;
 	} else if (*buf == '}')
 	    braces--;
 	else if (*buf == '(')
-	    map.cFaces++;
+	    map.maxfaces++;
 	buf++;
     }
 
-    if (map.cFaces % 3 != 0)
+    if (map.maxfaces % 3 != 0)
 	Message(msgWarning, warnBadMapFaceCount);
-    map.cFaces /= 3;
+    map.maxfaces /= 3;
 
-    map.rgFaces = AllocMem(MAPFACE, map.cFaces, true);
-    map.rgBrushes = AllocMem(MAPBRUSH, map.cBrushes, true);
-    map.rgEntities = AllocMem(MAPENTITY, map.cEntities, true);
+    map.rgFaces = AllocMem(MAPFACE, map.maxfaces, true);
+    map.rgBrushes = AllocMem(MAPBRUSH, map.maxbrushes, true);
+    map.rgEntities = AllocMem(MAPENTITY, map.maxentities, true);
 
     // While we're here...
     pWorldEnt = map.rgEntities;
 
     // Allocate maximum memory here, copy over later
     // Maximum possible is one miptex/texinfo per face
-    rgszMiptex = AllocMem(MIPTEX, map.cFaces, true);
+    rgszMiptex = AllocMem(MIPTEX, map.maxfaces, true);
     texinfo = &pWorldEnt->lumps[BSPTEXINFO];
-    texinfo->data = AllocMem(BSPTEXINFO, map.cFaces, true);
-    texinfo->count = map.cFaces;
+    texinfo->data = AllocMem(BSPTEXINFO, map.maxfaces, true);
+    texinfo->count = map.maxfaces;
 }
 
 
@@ -541,8 +541,8 @@ LoadMapFile(void)
 
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
-    endbrush = &map.rgBrushes[map.cBrushes];
-    endface = &map.rgFaces[map.cFaces];
+    endbrush = &map.rgBrushes[map.maxbrushes];
+    endface = &map.rgFaces[map.maxfaces];
 
     ent = map.rgEntities;
     while (ParseEntity(ent, endbrush, endface)) {
@@ -560,7 +560,7 @@ LoadMapFile(void)
     }
 
     /* Double check the entity count matches our pre-parse count */
-    if (ent - map.rgEntities != map.cEntities)
+    if (ent - map.rgEntities != map.maxentities)
 	Error(errLowEntCount);
 
     FreeMem(buf, OTHER, length + 1);
@@ -574,14 +574,14 @@ LoadMapFile(void)
 //              Message(msgWarning, warnNoPlayerCoop);
 
     // Clean up texture memory
-    if (cMiptex > map.cFaces)
+    if (cMiptex > map.maxfaces)
 	Error(errLowMiptexCount);
-    else if (cMiptex < map.cFaces) {
+    else if (cMiptex < map.maxfaces) {
 	// For stuff in AddAnimatingTex, make room available
 	pTemp = (void *)rgszMiptex;
 	rgszMiptex = AllocMem(MIPTEX, cMiptex + cAnimtex * 20, true);
 	memcpy(rgszMiptex, pTemp, cMiptex * rgcMemSize[MIPTEX]);
-	FreeMem(pTemp, MIPTEX, map.cFaces);
+	FreeMem(pTemp, MIPTEX, map.maxfaces);
     }
 
     texinfo = &pWorldEnt->lumps[BSPTEXINFO];
@@ -595,10 +595,10 @@ LoadMapFile(void)
 	texinfo->count = texinfo->index;
     }
     // One plane per face + 6 for portals
-    cPlanes = map.cFaces + 6;
+    cPlanes = map.maxfaces + 6;
 
     // Count # of unique planes in all of the faces
-    for (i = 0; i < map.cFaces; i++) {
+    for (i = 0; i < map.maxfaces; i++) {
 	face = &map.rgFaces[i];
 	face->fUnique = true;
 	for (j = 0; j < i; j++) {
@@ -617,7 +617,7 @@ LoadMapFile(void)
      * Now iterate through brushes, add one plane for each face below 6 axis
      * aligned faces. This compensates for planes added in ExpandBrush.
      */
-    for (i = 0; i < map.cBrushes; i++) {
+    for (i = 0; i < map.maxbrushes; i++) {
 	brush = &map.rgBrushes[i];
 	cAxis = 0;
 	for (j = 0, face = brush->faces; j < brush->numfaces; j++, face++) {
@@ -637,9 +637,9 @@ LoadMapFile(void)
     cPlanes = 3 * cPlanes + cPlanes / 5;
     pPlanes = AllocMem(PLANE, cPlanes, true);
 
-    Message(msgStat, "%5i faces", map.cFaces);
-    Message(msgStat, "%5i brushes", map.cBrushes);
-    Message(msgStat, "%5i entities", map.cEntities);
+    Message(msgStat, "%5i faces", map.maxfaces);
+    Message(msgStat, "%5i brushes", map.maxbrushes);
+    Message(msgStat, "%5i entities", map.maxentities);
     Message(msgStat, "%5i unique texnames", cMiptex);
     Message(msgStat, "%5i texinfo", texinfo->count);
     Message(msgLiteral, "\n");
@@ -716,7 +716,7 @@ WriteEntitiesToString(void)
 
     map.cTotal[BSPENT] = 0;
 
-    for (iEntity = 0; iEntity < map.cEntities; iEntity++) {
+    for (iEntity = 0; iEntity < map.maxentities; iEntity++) {
 	ep = map.rgEntities[iEntity].epairs;
 	entities = &map.rgEntities[iEntity].lumps[BSPENT];
 

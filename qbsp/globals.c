@@ -94,7 +94,7 @@ const char *rgszErrors[cErrors] = {
     "line %d: Invalid entity format, { not found",
     "Internal error: entity count mismatched during map file parsing",
     "Unexpected EOF (no closing brace)",
-    "Internal error: cMiptex > map.cFaces",
+    "Internal error: cMiptex > map.maxfaces",
     "Internal error: pWorldEnt->iTexinfo > pWorldEnt->cTexinfo",
 
     "%s is version %i, not %i",

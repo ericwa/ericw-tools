@@ -601,10 +601,10 @@ typedef struct mapentity_s {
 } mapentity_t;
 
 typedef struct mapdata_s {
-    // c for (total) count of items
-    int cFaces;
-    int cBrushes;
-    int cEntities;
+    /* Maximum space available for items */
+    int maxfaces;
+    int maxbrushes;
+    int maxentities;
 
     // rg of array (range) of actual items
     mapface_t *rgFaces;

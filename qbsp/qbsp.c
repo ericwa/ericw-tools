@@ -143,7 +143,7 @@ UpdateEntLump(void)
     Message(msgStat, "Updating entities lump...");
 
     m = 1;
-    for (iEntity = 1; iEntity < map.cEntities; iEntity++) {
+    for (iEntity = 1; iEntity < map.maxentities; iEntity++) {
 	if (!map.rgEntities[iEntity].nummapbrushes)
 	    continue;
 	sprintf(szMod, "*%i", m);
@@ -181,7 +181,7 @@ CreateSingleHull(void)
     map.cTotal[BSPMODEL] = 0;
 
     // for each entity in the map file that has geometry
-    for (i = 0, ent = map.rgEntities; i < map.cEntities; i++, ent++) {
+    for (i = 0, ent = map.rgEntities; i < map.maxentities; i++, ent++) {
 	ProcessEntity(ent);
 	if (!options.fAllverbose)
 	    options.fVerbose = false;	// don't print rest of entities

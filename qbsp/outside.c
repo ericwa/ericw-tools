@@ -413,7 +413,7 @@ FillOutside(node_t *node)
     }
 
     inside = false;
-    for (i = 1; i < map.cEntities; i++) {
+    for (i = 1; i < map.maxentities; i++) {
 	if (!VectorCompare(map.rgEntities[i].origin, vec3_origin)) {
 	    if (PlaceOccupant(i, map.rgEntities[i].origin, node))
 		inside = true;
