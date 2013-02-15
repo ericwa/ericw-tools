@@ -63,14 +63,15 @@ FindTexinfo(texinfo_t *t)
 {
     int i, j;
     texinfo_t *tex;
+    const char *name;
 
     // set the special flag
-    if ((rgszMiptex[t->miptex][0] == '*'
-	 || !strncasecmp(rgszMiptex[t->miptex], "sky", 3))
-	&& !options.fSplitspecial)
-	t->flags |= TEX_SPECIAL;
+    name = rgszMiptex[t->miptex];
+    if (name[0] == '*' || !strncasecmp(name, "sky", 3))
+	if (!options.fSplitspecial)
+	    t->flags |= TEX_SPECIAL;
 
-    tex = (texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data;
+    tex = pWorldEnt->lumps[BSPTEXINFO].data;
     for (i = 0; i < pWorldEnt->lumps[BSPTEXINFO].index; i++, tex++) {
 	if (t->miptex != tex->miptex)
 	    continue;
@@ -89,8 +90,8 @@ FindTexinfo(texinfo_t *t)
 	return i;
     }
 
-    // allocate a new texture
-    *((texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data + i) = *t;
+    /* Allocate a new texinfo at the end of the array */
+    *tex = *t;
     pWorldEnt->lumps[BSPTEXINFO].index++;
     map.cTotal[BSPTEXINFO]++;
 
