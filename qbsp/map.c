@@ -583,7 +583,7 @@ LoadMapFile(void)
 	Error(errLowMiptexCount);
     else if (cMiptex < map.maxfaces) {
 	// For stuff in AddAnimatingTex, make room available
-	pTemp = (void *)rgszMiptex;
+	pTemp = rgszMiptex;
 	rgszMiptex = AllocMem(MIPTEX, cMiptex + cAnimtex * 20, true);
 	memcpy(rgszMiptex, pTemp, cMiptex * rgcMemSize[MIPTEX]);
 	FreeMem(pTemp, MIPTEX, map.maxfaces);
