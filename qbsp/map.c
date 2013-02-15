@@ -399,7 +399,7 @@ ParseBrush(mapbrush_t *brush)
 	CrossProduct(t1, t2, plane->normal);
 	if (VectorCompare(plane->normal, vec3_origin)) {
 	    Message(msgWarning, warnNoPlaneNormal, linenum);
-	    break;
+	    continue;
 	}
 	VectorNormalize(plane->normal);
 	plane->dist = DotProduct(t3, plane->normal);
