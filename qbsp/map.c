@@ -33,18 +33,18 @@ static int rgfStartSpots;
 
 
 int
-FindMiptex(char *szName)
+FindMiptex(const char *name)
 {
     int i;
 
     for (i = 0; i < cMiptex; i++) {
-	if (!strcmp(szName, rgszMiptex[i]))
+	if (!strcmp(name, rgszMiptex[i]))
 	    return i;
     }
-    strcpy(rgszMiptex[i], szName);
+    strcpy(rgszMiptex[i], name);
     cMiptex++;
 
-    if (szName[0] == '+')
+    if (name[0] == '+')
 	cAnimtex++;
 
     return i;

@@ -630,7 +630,7 @@ extern plane_t *pPlanes;
 
 void LoadMapFile(void);
 
-int FindMiptex(char *name);
+int FindMiptex(const char *name);
 
 void PrintEntity(const mapentity_t *ent);
 const char *ValueForKey(const mapentity_t *ent, const char *key);
