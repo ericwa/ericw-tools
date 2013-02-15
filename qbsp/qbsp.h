@@ -606,6 +606,11 @@ typedef struct mapdata_s {
     int maxbrushes;
     int maxentities;
 
+    /* Number of items currently used */
+    int numfaces;
+    int numbrushes;
+    int numentities;
+
     /* Arrays of actual items */
     mapface_t *faces;
     mapbrush_t *brushes;

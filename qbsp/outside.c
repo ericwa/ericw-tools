@@ -40,7 +40,7 @@ PointInLeaf
 ===========
 */
 static node_t *
-PointInLeaf(node_t *node, vec3_t point)
+PointInLeaf(node_t *node, const vec3_t point)
 {
     vec_t d;
 
@@ -59,7 +59,7 @@ PlaceOccupant
 ===========
 */
 static bool
-PlaceOccupant(int num, vec3_t point, node_t *headnode)
+PlaceOccupant(int num, const vec3_t point, node_t *headnode)
 {
     node_t *n;
 
@@ -404,6 +404,7 @@ FillOutside(node_t *node)
     vec_t *v;
     int i;
     bool inside;
+    const mapentity_t *ent;
 
     Message(msgProgress, "FillOutside");
 
@@ -413,9 +414,10 @@ FillOutside(node_t *node)
     }
 
     inside = false;
-    for (i = 1; i < map.maxentities; i++) {
-	if (!VectorCompare(map.entities[i].origin, vec3_origin)) {
-	    if (PlaceOccupant(i, map.entities[i].origin, node))
+    ent = &map.entities[map.maxentities - map.numentities + 1];
+    for (i = 1; i < map.numentities; i++, ent++) {
+	if (!VectorCompare(ent->origin, vec3_origin)) {
+	    if (PlaceOccupant(i, ent->origin, node))
 		inside = true;
 	}
     }

@@ -290,15 +290,17 @@ FindTargetEntity
 =================
 */
 static const mapentity_t *
-FindTargetEntity(const char *szTarget)
+FindTargetEntity(const char *target)
 {
-    int iEntity;
-    const char *szName;
+    int i;
+    const char *name;
+    const mapentity_t *ent;
 
-    for (iEntity = 0; iEntity < map.maxentities; iEntity++) {
-	szName = ValueForKey(&map.entities[iEntity], "targetname");
-	if (szName && !strcasecmp(szTarget, szName))
-	    return &map.entities[iEntity];
+    ent = &map.entities[map.maxentities - map.numentities];
+    for (i = 0; i < map.numentities; i++, ent++) {
+	name = ValueForKey(ent, "targetname");
+	if (name && !strcasecmp(target, name))
+	    return ent;
     }
 
     return NULL;

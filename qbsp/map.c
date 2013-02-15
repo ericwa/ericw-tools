@@ -385,8 +385,9 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 	}
 
 	/* Checks complete - now add the face */
+	map.numfaces++;
 	face--;
-	if (face < map.faces)
+	if (map.numfaces > map.maxfaces)
 	    Error(errLowFaceCount);
 
 	// convert to a vector / dist plane
@@ -418,7 +419,7 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 
 	// unique the texinfo
 	face->texinfo = FindTexinfo(&tx);
-	Message(msgPercent, map.maxfaces - (face - map.faces), map.maxfaces);
+	Message(msgPercent, map.numfaces, map.maxfaces);
     }
 
     brush->faces = face;
@@ -436,7 +437,7 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
     if (strcmp(token, "{"))
 	Error(errParseEntity, linenum);
 
-    if (ent - map.entities >= map.maxentities)
+    if (map.numentities >= map.maxentities)
 	Error(errLowEntCount);
 
     /*
@@ -452,6 +453,7 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
 	if (!strcmp(token, "}"))
 	    break;
 	else if (!strcmp(token, "{")) {
+	    map.numbrushes++;
 	    ParseBrush(--brush, endface);
 	    endface -= brush->numfaces;
 	} else
@@ -539,6 +541,8 @@ LoadMapFile(void)
     PreParseFile(buf);
     ParserInit(buf);
 
+    map.numfaces = map.numbrushes = map.numentities = 0;
+
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
     endbrush = &map.brushes[map.maxbrushes];
@@ -556,11 +560,12 @@ LoadMapFile(void)
 		endface -= endbrush->numfaces;
 	    }
 	}
+	map.numentities++;
 	ent++;
     }
 
     /* Double check the entity count matches our pre-parse count */
-    if (ent - map.entities != map.maxentities)
+    if (map.numentities != map.maxentities)
 	Error(errLowEntCount);
 
     FreeMem(buf, OTHER, length + 1);
@@ -595,14 +600,14 @@ LoadMapFile(void)
 	texinfo->count = texinfo->index;
     }
     // One plane per face + 6 for portals
-    cPlanes = map.maxfaces + 6;
+    cPlanes = map.numfaces + 6;
 
     // Count # of unique planes in all of the faces
-    for (i = 0; i < map.maxfaces; i++) {
-	face = &map.faces[i];
+    face = &map.faces[map.maxfaces - map.numfaces];
+    for (i = 0; i < map.numfaces; i++, face++) {
 	face->fUnique = true;
-	for (j = 0; j < i; j++) {
-	    face2 = &map.faces[j];
+	face2 = &map.faces[map.maxfaces - map.numfaces];
+	for (j = 0; j < i; j++, face2++) {
 	    if (face2->fUnique &&
 		VectorCompare(face->plane.normal, face2->plane.normal) &&
 		fabs(face->plane.dist - face2->plane.dist) < EQUAL_EPSILON) {
@@ -617,8 +622,8 @@ LoadMapFile(void)
      * Now iterate through brushes, add one plane for each face below 6 axis
      * aligned faces. This compensates for planes added in ExpandBrush.
      */
-    for (i = 0; i < map.maxbrushes; i++) {
-	brush = &map.brushes[i];
+    brush = &map.brushes[map.maxbrushes - map.numbrushes];
+    for (i = 0; i < map.numbrushes; i++, brush++) {
 	cAxis = 0;
 	for (j = 0, face = brush->faces; j < brush->numfaces; j++, face++) {
 	    if (fabs(face->plane.normal[0]) > 1 - NORMAL_EPSILON
@@ -637,9 +642,9 @@ LoadMapFile(void)
     cPlanes = 3 * cPlanes + cPlanes / 5;
     pPlanes = AllocMem(PLANE, cPlanes, true);
 
-    Message(msgStat, "%5i faces", map.maxfaces);
-    Message(msgStat, "%5i brushes", map.maxbrushes);
-    Message(msgStat, "%5i entities", map.maxentities);
+    Message(msgStat, "%5i faces", map.numfaces);
+    Message(msgStat, "%5i brushes", map.numbrushes);
+    Message(msgStat, "%5i entities", map.numentities);
     Message(msgStat, "%5i unique texnames", cMiptex);
     Message(msgStat, "%5i texinfo", texinfo->count);
     Message(msgLiteral, "\n");
@@ -710,34 +715,32 @@ WriteEntitiesToString(void)
     char *pCur;
     epair_t *ep;
     char szLine[129];
-    int iEntity;
+    int i;
     int cLen;
     struct lumpdata *entities;
+    const mapentity_t *ent;
 
     map.cTotal[BSPENT] = 0;
 
-    for (iEntity = 0; iEntity < map.maxentities; iEntity++) {
-	ep = map.entities[iEntity].epairs;
-	entities = &map.entities[iEntity].lumps[BSPENT];
+    ent = &map.entities[map.maxentities - map.numentities];
+    for (i = 0; i < map.numentities; i++, ent++) {
+	entities = &map.entities[i].lumps[BSPENT];
 
 	// ent got removed
-	if (!ep) {
+	if (!ent->epairs) {
 	    entities->count = 0;
 	    entities->data = NULL;
 	    continue;
 	}
 
 	cLen = 0;
-	while (ep) {
+	for (ep = ent->epairs; ep; ep = ep->next) {
 	    int i = strlen(ep->key) + strlen(ep->value) + 6;
-
 	    if (i <= 128)
 		cLen += i;
 	    else
 		cLen += 128;
-	    ep = ep->next;
 	}
-
 	// Add 4 for {\n and }\n
 	cLen += 4;
 
@@ -749,7 +752,7 @@ WriteEntitiesToString(void)
 	strcat(pCur, "{\n");
 	pCur += 2;
 
-	for (ep = map.entities[iEntity].epairs; ep; ep = ep->next) {
+	for (ep = ent->epairs; ep; ep = ep->next) {
 	    // Limit on Quake's strings of 128 bytes
 	    sprintf(szLine, "\"%.*s\" \"%.*s\"\n", MAX_KEY, ep->key,
 		    122 - (int)strlen(ep->key), ep->value);
