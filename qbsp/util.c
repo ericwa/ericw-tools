@@ -173,8 +173,9 @@ FreeAllMem(void)
 {
     int i, j;
     epair_t *ep, *next;
+    struct lumpdata *lump;
 
-    for (i = 0; i < map.cEntities; i++) {
+    for (i = 0; i < map.maxentities; i++) {
 	for (ep = map.rgEntities[i].epairs; ep; ep = next) {
 	    next = ep->next;
 	    if (ep->key)
@@ -183,18 +184,17 @@ FreeAllMem(void)
 		FreeMem(ep->value, OTHER, strlen(ep->value) + 1);
 	    FreeMem(ep, OTHER, sizeof(epair_t));
 	}
+	lump = map.rgEntities[i].lumps;
 	for (j = 0; j < BSP_LUMPS; j++)
-	    if (map.rgEntities[i].pData[j])
-		FreeMem(map.rgEntities[i].pData[j], j,
-			map.rgEntities[i].cData[j]);
+	    if (lump[j].data)
+		FreeMem(lump[j].data, j, lump[j].count);
     }
 
     FreeMem(validfaces, OTHER, sizeof(face_t *) * cPlanes);
     FreeMem(pPlanes, PLANE, cPlanes);
-    FreeMem(map.rgFaces, MAPFACE, map.cFaces);
-    FreeMem(map.rgBrushes, MAPBRUSH, map.cBrushes);
-    FreeMem(map.rgEntities, MAPENTITY, map.cEntities);
-
+    FreeMem(map.rgFaces, MAPFACE, map.maxfaces);
+    FreeMem(map.rgBrushes, MAPBRUSH, map.maxbrushes);
+    FreeMem(map.rgEntities, MAPENTITY, map.maxentities);
 }
 #endif
 
