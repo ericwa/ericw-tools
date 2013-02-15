@@ -296,8 +296,7 @@ FindTargetEntity(const char *target)
     const char *name;
     const mapentity_t *ent;
 
-    ent = &map.entities[map.maxentities - map.numentities];
-    for (i = 0; i < map.numentities; i++, ent++) {
+    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
 	name = ValueForKey(ent, "targetname");
 	if (name && !strcasecmp(target, name))
 	    return ent;

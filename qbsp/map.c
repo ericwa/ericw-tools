@@ -318,7 +318,7 @@ SetTexinfo_QuArK(vec3_t planepts[3], texcoord_style_t style, texinfo_t *out)
 
 
 static void
-ParseBrush(mapbrush_t *brush, mapface_t *endface)
+ParseBrush(mapbrush_t *brush)
 {
     vec3_t planepts[3];
     vec3_t t1, t2, t3;
@@ -331,7 +331,7 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
     plane_t *plane;
     mapface_t *face, *checkface;
 
-    face = endface;
+    brush->faces = face = map.faces + map.numfaces;
     while (ParseToken(PARSE_NORMAL)) {
 	if (!strcmp(token, "}"))
 	    break;
@@ -370,7 +370,7 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 
 	// if the three points are all on a previous plane, it is a
 	// duplicate plane
-	for (checkface = face; checkface < endface; checkface++) {
+	for (checkface = brush->faces; checkface < face; checkface++) {
 	    plane = &checkface->plane;
 	    for (i = 0; i < 3; i++) {
 		d = DotProduct(planepts[i], plane->normal) - plane->dist;
@@ -380,15 +380,12 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 	    if (i == 3)
 		break;
 	}
-	if (checkface < endface) {
+	if (checkface < face) {
 	    Message(msgWarning, warnBrushDuplicatePlane, linenum);
 	    continue;
 	}
 
-	/* Checks complete - now add the face */
-	map.numfaces++;
-	face--;
-	if (map.numfaces > map.maxfaces)
+	if (map.numfaces == map.maxfaces)
 	    Error(errLowFaceCount);
 
 	// convert to a vector / dist plane
@@ -417,18 +414,20 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 	    SetTexinfo_QuakeEd(plane, shift, rotate, scale, &tx);
 	    break;
 	}
-
-	// unique the texinfo
 	face->texinfo = FindTexinfo(&tx);
+
+	face++;
+	map.numfaces++;
 	Message(msgPercent, map.numfaces, map.maxfaces);
     }
 
-    brush->faces = face;
-    brush->numfaces = endface - face;
+    brush->numfaces = face - brush->faces;
+    if (!brush->numfaces)
+	brush->faces = NULL;
 }
 
 static bool
-ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
+ParseEntity(mapentity_t *ent)
 {
     mapbrush_t *brush;
 
@@ -438,31 +437,27 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
     if (strcmp(token, "{"))
 	Error(errParseEntity, linenum);
 
-    if (map.numentities >= map.maxentities)
+    if (map.numentities == map.maxentities)
 	Error(errLowEntCount);
 
-    /*
-     * Having to load brushes in reverse order for compatibility makes this
-     * look a bit weird, but the endbrush argument is a pointer after the end
-     * of the free brush entries, so we decrement before adding each new
-     * brush.
-     */
-    brush = endbrush;
+    ent->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
 	if (!ParseToken(PARSE_NORMAL))
 	    Error(errUnexpectedEOF);
 	if (!strcmp(token, "}"))
 	    break;
 	else if (!strcmp(token, "{")) {
+	    if (map.numbrushes == map.maxbrushes)
+		Error(errLowMapbrushCount);
+	    ParseBrush(brush++);
 	    map.numbrushes++;
-	    ParseBrush(--brush, endface);
-	    endface -= brush->numfaces;
 	} else
 	    ParseEpair(ent);
     } while (1);
 
-    ent->mapbrushes = brush;
-    ent->nummapbrushes = endbrush - brush;
+    ent->nummapbrushes = brush - ent->mapbrushes;
+    if (!ent->nummapbrushes)
+	ent->mapbrushes = NULL;
 
     return true;
 }
@@ -533,8 +528,8 @@ LoadMapFile(void)
     void *pTemp;
     struct lumpdata *texinfo;
     mapentity_t *ent;
-    mapbrush_t *brush, *endbrush;
-    mapface_t *face, *face2, *endface;
+    mapbrush_t *brush;
+    mapface_t *face, *face2;
 
     Message(msgProgress, "LoadMapFile");
 
@@ -543,23 +538,11 @@ LoadMapFile(void)
     ParserInit(buf);
 
     map.numfaces = map.numbrushes = map.numentities = 0;
-
-    // Faces are loaded in reverse order, to be compatible with origqbsp.
-    // Brushes too.
-    endbrush = &map.brushes[map.maxbrushes];
-    endface = &map.faces[map.maxfaces];
-
     ent = map.entities;
-    while (ParseEntity(ent, endbrush, endface)) {
+    while (ParseEntity(ent)) {
 	if (ent->nummapbrushes) {
 	    ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
 	    ent->lumps[BSPMODEL].count = 1;
-
-	    /* Move the brush and face pointers backwards... FIXME - ugly */
-	    for (i = 0; i < ent->nummapbrushes; i++) {
-		endbrush--;
-		endface -= endbrush->numfaces;
-	    }
 	}
 	map.numentities++;
 	ent++;
@@ -604,11 +587,9 @@ LoadMapFile(void)
     cPlanes = map.numfaces + 6;
 
     // Count # of unique planes in all of the faces
-    face = &map.faces[map.maxfaces - map.numfaces];
-    for (i = 0; i < map.numfaces; i++, face++) {
+    for (i = 0, face = map.faces; i < map.numfaces; i++, face++) {
 	face->fUnique = true;
-	face2 = &map.faces[map.maxfaces - map.numfaces];
-	for (j = 0; j < i; j++, face2++) {
+	for (j = 0, face2 = map.faces; j < i; j++, face2++) {
 	    if (face2->fUnique &&
 		VectorCompare(face->plane.normal, face2->plane.normal) &&
 		fabs(face->plane.dist - face2->plane.dist) < EQUAL_EPSILON) {
@@ -623,8 +604,7 @@ LoadMapFile(void)
      * Now iterate through brushes, add one plane for each face below 6 axis
      * aligned faces. This compensates for planes added in ExpandBrush.
      */
-    brush = &map.brushes[map.maxbrushes - map.numbrushes];
-    for (i = 0; i < map.numbrushes; i++, brush++) {
+    for (i = 0, brush = map.brushes; i < map.numbrushes; i++, brush++) {
 	cAxis = 0;
 	for (j = 0, face = brush->faces; j < brush->numfaces; j++, face++) {
 	    if (fabs(face->plane.normal[0]) > 1 - NORMAL_EPSILON
@@ -723,8 +703,7 @@ WriteEntitiesToString(void)
 
     map.cTotal[BSPENT] = 0;
 
-    ent = &map.entities[map.maxentities - map.numentities];
-    for (i = 0; i < map.numentities; i++, ent++) {
+    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
 	entities = &map.entities[i].lumps[BSPENT];
 
 	// ent got removed

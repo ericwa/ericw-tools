@@ -414,8 +414,7 @@ FillOutside(node_t *node)
     }
 
     inside = false;
-    ent = &map.entities[map.maxentities - map.numentities + 1];
-    for (i = 1; i < map.numentities; i++, ent++) {
+    for (i = 1, ent = map.entities + 1; i < map.numentities; i++, ent++) {
 	if (!VectorCompare(ent->origin, vec3_origin)) {
 	    if (PlaceOccupant(i, ent->origin, node))
 		inside = true;

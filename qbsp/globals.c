@@ -152,4 +152,5 @@ const char *rgszErrors[cErrors] = {
     "Internal error: numleaks > num_visportals",
     "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
     "Internal error: bad texture coordinate style",
+    "Internal error: brush count mismatched during map file parsing",
 };

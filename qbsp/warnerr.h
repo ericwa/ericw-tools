@@ -110,6 +110,7 @@ enum {
     errInvalidOption,
     errLowLeakCount,
     errTooManyClipnodes,
-    errBadTXStyle,
-    cErrors			// 60
+    errBadTXStyle,		// 60
+    errLowMapbrushCount,
+    cErrors
 };

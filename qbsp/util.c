@@ -176,8 +176,7 @@ FreeAllMem(void)
     struct lumpdata *lump;
     mapentity_t *ent;
 
-    ent = map.entities[map.maxentities - map.numentities];
-    for (i = 0; i < map.numentities; i++, ent++) {
+    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
 	for (ep = ent->epairs; ep; ep = next) {
 	    next = ep->next;
 	    if (ep->key)

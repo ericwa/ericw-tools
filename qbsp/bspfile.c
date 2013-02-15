@@ -79,8 +79,7 @@ AddLump(FILE *f, int Type)
     lump = &header->lumps[Type];
     lump->fileofs = ftell(f);
 
-    ent = &map.entities[map.maxentities - map.numentities];
-    for (i = 0; i < map.numentities; i++, ent++) {
+    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
 	entities = &ent->lumps[Type];
 	if (entities->data) {
 	    ret = fwrite(entities->data, rgcMemSize[Type], entities->count, f);
