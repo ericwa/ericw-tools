@@ -144,16 +144,16 @@ UpdateEntLump(void)
 
     m = 1;
     for (iEntity = 1; iEntity < map.maxentities; iEntity++) {
-	if (!map.rgEntities[iEntity].nummapbrushes)
+	if (!map.entities[iEntity].nummapbrushes)
 	    continue;
 	sprintf(szMod, "*%i", m);
-	SetKeyValue(&map.rgEntities[iEntity], "model", szMod);
+	SetKeyValue(&map.entities[iEntity], "model", szMod);
 	m++;
 
 	// Do extra work for rotating entities if necessary
-	szClassname = ValueForKey(&map.rgEntities[iEntity], "classname");
+	szClassname = ValueForKey(&map.entities[iEntity], "classname");
 	if (!strncmp(szClassname, "rotate_", 7))
-	    FixRotateOrigin(&map.rgEntities[iEntity]);
+	    FixRotateOrigin(&map.entities[iEntity]);
     }
 
     LoadBSPFile();
@@ -181,7 +181,7 @@ CreateSingleHull(void)
     map.cTotal[BSPMODEL] = 0;
 
     // for each entity in the map file that has geometry
-    for (i = 0, ent = map.rgEntities; i < map.maxentities; i++, ent++) {
+    for (i = 0, ent = map.entities; i < map.maxentities; i++, ent++) {
 	ProcessEntity(ent);
 	if (!options.fAllverbose)
 	    options.fVerbose = false;	// don't print rest of entities

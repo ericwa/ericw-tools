@@ -47,7 +47,7 @@ LoadBSPFile(void)
 	Error(errBadVersion, options.szBSPName, header->version, BSPVERSION);
 
     /* Throw all of the data into the first entity to be written out later */
-    ent = map.rgEntities;
+    ent = map.entities;
     for (i = 0; i < BSP_LUMPS; i++) {
 	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
 	iLumpOff = header->lumps[i].fileofs;
@@ -79,7 +79,7 @@ AddLump(FILE *f, int Type)
     lump->fileofs = ftell(f);
 
     for (iEntity = 0; iEntity < map.maxentities; iEntity++) {
-	entities = &map.rgEntities[iEntity].lumps[Type];
+	entities = &map.entities[iEntity].lumps[Type];
 	if (entities->data) {
 	    ret = fwrite(entities->data, rgcMemSize[Type], entities->count, f);
 	    if (ret != entities->count)

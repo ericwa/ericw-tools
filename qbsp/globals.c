@@ -144,7 +144,7 @@ const char *rgszErrors[cErrors] = {
     "Internal error: invalid memory %i type in AllocMem",
     "Too many points on winding (%d)",
     "Out of memory",
-    "Internal error: data + len - map.rgEntities[0].pTexdata > map.rgEntities[0].cTexdata",
+    "Internal error: data + len - map.entities[0].pTexdata > map.entities[0].cTexdata",
     "line %d: Line is incomplete",
     "line %d: EOF inside quoted token",
     "line %d: Token too large",

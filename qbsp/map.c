@@ -386,7 +386,7 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 
 	/* Checks complete - now add the face */
 	face--;
-	if (face < map.rgFaces)
+	if (face < map.faces)
 	    Error(errLowFaceCount);
 
 	// convert to a vector / dist plane
@@ -418,7 +418,7 @@ ParseBrush(mapbrush_t *brush, mapface_t *endface)
 
 	// unique the texinfo
 	face->texinfo = FindTexinfo(&tx);
-	Message(msgPercent, map.maxfaces - (face - map.rgFaces), map.maxfaces);
+	Message(msgPercent, map.maxfaces - (face - map.faces), map.maxfaces);
     }
 
     brush->faces = face;
@@ -436,7 +436,7 @@ ParseEntity(mapentity_t *ent, mapbrush_t *endbrush, mapface_t *endface)
     if (strcmp(token, "{"))
 	Error(errParseEntity, linenum);
 
-    if (ent - map.rgEntities >= map.maxentities)
+    if (ent - map.entities >= map.maxentities)
 	Error(errLowEntCount);
 
     /*
@@ -506,12 +506,12 @@ PreParseFile(char *buf)
 	Message(msgWarning, warnBadMapFaceCount);
     map.maxfaces /= 3;
 
-    map.rgFaces = AllocMem(MAPFACE, map.maxfaces, true);
-    map.rgBrushes = AllocMem(MAPBRUSH, map.maxbrushes, true);
-    map.rgEntities = AllocMem(MAPENTITY, map.maxentities, true);
+    map.faces = AllocMem(MAPFACE, map.maxfaces, true);
+    map.brushes = AllocMem(MAPBRUSH, map.maxbrushes, true);
+    map.entities = AllocMem(MAPENTITY, map.maxentities, true);
 
     // While we're here...
-    pWorldEnt = map.rgEntities;
+    pWorldEnt = map.entities;
 
     // Allocate maximum memory here, copy over later
     // Maximum possible is one miptex/texinfo per face
@@ -541,10 +541,10 @@ LoadMapFile(void)
 
     // Faces are loaded in reverse order, to be compatible with origqbsp.
     // Brushes too.
-    endbrush = &map.rgBrushes[map.maxbrushes];
-    endface = &map.rgFaces[map.maxfaces];
+    endbrush = &map.brushes[map.maxbrushes];
+    endface = &map.faces[map.maxfaces];
 
-    ent = map.rgEntities;
+    ent = map.entities;
     while (ParseEntity(ent, endbrush, endface)) {
 	if (ent->nummapbrushes) {
 	    ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
@@ -560,7 +560,7 @@ LoadMapFile(void)
     }
 
     /* Double check the entity count matches our pre-parse count */
-    if (ent - map.rgEntities != map.maxentities)
+    if (ent - map.entities != map.maxentities)
 	Error(errLowEntCount);
 
     FreeMem(buf, OTHER, length + 1);
@@ -599,10 +599,10 @@ LoadMapFile(void)
 
     // Count # of unique planes in all of the faces
     for (i = 0; i < map.maxfaces; i++) {
-	face = &map.rgFaces[i];
+	face = &map.faces[i];
 	face->fUnique = true;
 	for (j = 0; j < i; j++) {
-	    face2 = &map.rgFaces[j];
+	    face2 = &map.faces[j];
 	    if (face2->fUnique &&
 		VectorCompare(face->plane.normal, face2->plane.normal) &&
 		fabs(face->plane.dist - face2->plane.dist) < EQUAL_EPSILON) {
@@ -618,7 +618,7 @@ LoadMapFile(void)
      * aligned faces. This compensates for planes added in ExpandBrush.
      */
     for (i = 0; i < map.maxbrushes; i++) {
-	brush = &map.rgBrushes[i];
+	brush = &map.brushes[i];
 	cAxis = 0;
 	for (j = 0, face = brush->faces; j < brush->numfaces; j++, face++) {
 	    if (fabs(face->plane.normal[0]) > 1 - NORMAL_EPSILON
@@ -717,8 +717,8 @@ WriteEntitiesToString(void)
     map.cTotal[BSPENT] = 0;
 
     for (iEntity = 0; iEntity < map.maxentities; iEntity++) {
-	ep = map.rgEntities[iEntity].epairs;
-	entities = &map.rgEntities[iEntity].lumps[BSPENT];
+	ep = map.entities[iEntity].epairs;
+	entities = &map.entities[iEntity].lumps[BSPENT];
 
 	// ent got removed
 	if (!ep) {
@@ -749,7 +749,7 @@ WriteEntitiesToString(void)
 	strcat(pCur, "{\n");
 	pCur += 2;
 
-	for (ep = map.rgEntities[iEntity].epairs; ep; ep = ep->next) {
+	for (ep = map.entities[iEntity].epairs; ep; ep = ep->next) {
 	    // Limit on Quake's strings of 128 bytes
 	    sprintf(szLine, "\"%.*s\" \"%.*s\"\n", MAX_KEY, ep->key,
 		    122 - (int)strlen(ep->key), ep->value);

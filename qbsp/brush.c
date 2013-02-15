@@ -296,9 +296,9 @@ FindTargetEntity(const char *szTarget)
     const char *szName;
 
     for (iEntity = 0; iEntity < map.maxentities; iEntity++) {
-	szName = ValueForKey(&map.rgEntities[iEntity], "targetname");
+	szName = ValueForKey(&map.entities[iEntity], "targetname");
 	if (szName && !strcasecmp(szTarget, szName))
-	    return &map.rgEntities[iEntity];
+	    return &map.entities[iEntity];
     }
 
     return NULL;

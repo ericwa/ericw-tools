@@ -182,8 +182,8 @@ ExportClipNodes(mapentity_t *ent, node_t *nodes)
     oldcount = clipnodes->count;
 
     /* Count nodes before this one */
-    for (i = 0; i < ent - map.rgEntities; i++)
-	clipcount += map.rgEntities[i].lumps[BSPCLIPNODE].count;
+    for (i = 0; i < ent - map.entities; i++)
+	clipcount += map.entities[i].lumps[BSPCLIPNODE].count;
     model->headnode[hullnum] = clipcount + oldcount;
 
     CountClipNodes_r(ent, nodes);

@@ -606,10 +606,10 @@ typedef struct mapdata_s {
     int maxbrushes;
     int maxentities;
 
-    // rg of array (range) of actual items
-    mapface_t *rgFaces;
-    mapbrush_t *rgBrushes;
-    mapentity_t *rgEntities;
+    /* Arrays of actual items */
+    mapface_t *faces;
+    mapbrush_t *brushes;
+    mapentity_t *entities;
 
     // Totals for BSP data items
     int cTotal[BSP_LUMPS];

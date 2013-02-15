@@ -162,7 +162,7 @@ MarkLeakTrail(portal_t *n2)
     if (options.fBspleak) {
 	if (firstone) {
 	    firstone = false;
-	    v = map.rgEntities[hit_occupied].origin;
+	    v = map.entities[hit_occupied].origin;
 	    fprintf(PorFile, "%f %f %f\n", v[0], v[1], v[2]);
 	    WriteLeakNode(leakNode);
 	}
@@ -414,8 +414,8 @@ FillOutside(node_t *node)
 
     inside = false;
     for (i = 1; i < map.maxentities; i++) {
-	if (!VectorCompare(map.rgEntities[i].origin, vec3_origin)) {
-	    if (PlaceOccupant(i, map.rgEntities[i].origin, node))
+	if (!VectorCompare(map.entities[i].origin, vec3_origin)) {
+	    if (PlaceOccupant(i, map.entities[i].origin, node))
 		inside = true;
 	}
     }
@@ -455,7 +455,7 @@ FillOutside(node_t *node)
     }
 
     if (RecursiveFillOutside(outside_node.portals->nodes[side], false)) {
-	v = map.rgEntities[hit_occupied].origin;
+	v = map.entities[hit_occupied].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
 	if (hullnum == 2) {
 	    if (!options.fOldleak)
