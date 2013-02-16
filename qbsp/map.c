@@ -188,7 +188,7 @@ ParseExtendedTX(void)
 }
 
 static void
-SetTexinfo_QuakeEd(const plane_t *plane, const int shift[2], const int rotate,
+SetTexinfo_QuakeEd(const plane_t *plane, const int shift[2], int rotate,
 		   const vec_t scale[2], texinfo_t *out)
 {
     int i, j;
@@ -198,6 +198,11 @@ SetTexinfo_QuakeEd(const plane_t *plane, const int shift[2], const int rotate,
     vec_t ns, nt;
 
     TextureAxisFromPlane(plane, vecs[0], vecs[1]);
+
+    /* Normalize the Texture rotation */
+    rotate %= 360;
+    while (rotate < 0)
+	rotate += 360;
 
     // rotate axis
     switch (rotate) {
