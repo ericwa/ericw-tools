@@ -31,8 +31,9 @@ LoadFile
 ==============
 */
 size_t
-LoadFile(const char *filename, void **buf, bool nofail)
+LoadFile(const char *filename, void *bufptr, bool nofail)
 {
+    char **buf = bufptr;
     size_t len;
     FILE *f;
 
