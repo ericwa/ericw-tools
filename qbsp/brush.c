@@ -237,7 +237,7 @@ PlaneHash_Init(void)
  * - Returns a global plane number and the side that will be the front
  */
 static int
-NewPlane(vec3_t normal, vec_t dist, int *side)
+NewPlane(const vec3_t normal, const vec_t dist, int *side)
 {
     plane_t *plane;
     vec_t len;
@@ -262,10 +262,10 @@ NewPlane(vec3_t normal, vec_t dist, int *side)
  * - Returns a global plane number and the side that will be the front
  */
 int
-FindPlane(plane_t *plane, int *side)
+FindPlane(const plane_t *plane, int *side)
 {
     const int bins[] = { 0, 1, -1 };
-    plane_t *p;
+    const plane_t *p;
     int hash, h;
     int i;
 
