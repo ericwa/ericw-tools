@@ -327,19 +327,19 @@ void
 FixRotateOrigin(mapentity_t *ent)
 {
     const mapentity_t *target = NULL;
-    const char *szSearch;
+    const char *search;
     vec3_t offset;
     char value[20];
 
-    szSearch = ValueForKey(ent, "target");
-    if (szSearch)
-	target = FindTargetEntity(szSearch);
+    search = ValueForKey(ent, "target");
+    if (search)
+	target = FindTargetEntity(search);
 
     if (target) {
 	GetVectorForKey(target, "origin", offset);
     } else {
-	szSearch = ValueForKey(ent, "classname");
-	Message(msgWarning, warnNoRotateTarget, szSearch);
+	search = ValueForKey(ent, "classname");
+	Message(msgWarning, warnNoRotateTarget, search);
 	VectorCopy(vec3_origin, offset);
     }
 
@@ -362,9 +362,9 @@ CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent)
     face_t *f;
     winding_t *w;
     plane_t plane;
-    face_t *pFaceList = NULL;
+    face_t *facelist = NULL;
     mapface_t *mapface, *mapface2;
-    const char *szClassname;
+    const char *classname;
     vec3_t point, rotate_offset;
     vec_t max, min;
 
@@ -377,8 +377,8 @@ CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent)
 
     // Hipnotic rotation
     VectorCopy(vec3_origin, rotate_offset);
-    szClassname = ValueForKey(ent, "classname");
-    if (!strncmp(szClassname, "rotate_", 7)) {
+    classname = ValueForKey(ent, "classname");
+    if (!strncmp(classname, "rotate_", 7)) {
 	FixRotateOrigin(ent);
 	GetVectorForKey(ent, "origin", rotate_offset);
     }
@@ -434,15 +434,15 @@ CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent)
 
 	f->texturenum = hullnum ? 0 : mapface->texinfo;
 	f->planenum = FindPlane(&plane, &f->planeside);
-	f->next = pFaceList;
-	pFaceList = f;
+	f->next = facelist;
+	facelist = f;
 	CheckFace(f);
 	UpdateFaceSphere(f);
     }
 
     // Rotatable objects must have a bounding box big enough to
     // account for all its rotations
-    if (!strncmp(szClassname, "rotate_", 7)) {
+    if (!strncmp(classname, "rotate_", 7)) {
 	vec_t delta;
 
 	delta = fabs(max);
@@ -455,7 +455,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent)
 	}
     }
 
-    return pFaceList;
+    return facelist;
 }
 
 
@@ -465,13 +465,13 @@ FreeBrushFaces
 =================
 */
 static void
-FreeBrushFaces(face_t *pFaceList)
+FreeBrushFaces(face_t *facelist)
 {
-    face_t *pFace, *pNext;
+    face_t *face, *next;
 
-    for (pFace = pFaceList; pFace; pFace = pNext) {
-	pNext = pFace->next;
-	FreeMem(pFace, FACE, 1);
+    for (face = facelist; face; face = next) {
+	next = face->next;
+	FreeMem(face, FACE, 1);
     }
 }
 
@@ -482,14 +482,14 @@ FreeBrushsetBrushes
 =====================
 */
 void
-FreeBrushsetBrushes(brush_t *pBrushList)
+FreeBrushsetBrushes(brush_t *brushlist)
 {
-    brush_t *pBrush, *pNext;
+    brush_t *brush, *next;
 
-    for (pBrush = pBrushList; pBrush; pBrush = pNext) {
-	pNext = pBrush->next;
-	FreeBrushFaces(pBrush->faces);
-	FreeMem(pBrush, BRUSH, 1);
+    for (brush = brushlist; brush; brush = next) {
+	next = brush->next;
+	FreeBrushFaces(brush->faces);
+	FreeMem(brush, BRUSH, 1);
     }
 }
 
@@ -699,7 +699,7 @@ ExpandBrush
 =============
 */
 static void
-ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *pFaceList)
+ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
 {
     int i, x, s;
     vec3_t corner;
@@ -712,7 +712,7 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *pFaceList)
     hullbrush->numedges = 0;
 
     // create all the hull points
-    for (f = pFaceList; f; f = f->next)
+    for (f = facelist; f; f = f->next)
 	for (i = 0; i < f->w.numpoints; i++) {
 	    AddHullPoint(hullbrush, f->w.points[i], hull_size);
 	    cBevEdge++;
@@ -745,7 +745,7 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *pFaceList)
 	}
 
     // add all of the edge bevels
-    for (f = pFaceList; f; f = f->next)
+    for (f = facelist; f; f = f->next)
 	for (i = 0; i < f->w.numpoints; i++)
 	    AddHullEdge(hullbrush, f->w.points[i],
 			f->w.points[(i + 1) % f->w.numpoints], hull_size);
@@ -767,7 +767,7 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
     hullbrush_t hullbrush;
     brush_t *brush;
     int contents;
-    face_t *pFaceList;
+    face_t *facelist;
     const mapface_t *mapface;
     const char *texname;
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
@@ -804,8 +804,8 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
     hullbrush.numfaces = mapbrush->numfaces;
     memcpy(hullbrush.faces, mapface, mapbrush->numfaces * sizeof(mapface_t));
 
-    pFaceList = CreateBrushFaces(&hullbrush, ent);
-    if (!pFaceList) {
+    facelist = CreateBrushFaces(&hullbrush, ent);
+    if (!facelist) {
 	Message(msgWarning, warnNoBrushFaces);
 	return NULL;
     }
@@ -813,22 +813,22 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
     if (hullnum == 1) {
 	vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
 
-	ExpandBrush(&hullbrush, size, pFaceList);
-	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces(&hullbrush, ent);
+	ExpandBrush(&hullbrush, size, facelist);
+	FreeBrushFaces(facelist);
+	facelist = CreateBrushFaces(&hullbrush, ent);
     } else if (hullnum == 2) {
 	vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
-	ExpandBrush(&hullbrush, size, pFaceList);
-	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces(&hullbrush, ent);
+	ExpandBrush(&hullbrush, size, facelist);
+	FreeBrushFaces(facelist);
+	facelist = CreateBrushFaces(&hullbrush, ent);
     }
 
     // create the brush
     brush = AllocMem(BRUSH, 1, true);
 
     brush->contents = contents;
-    brush->faces = pFaceList;
+    brush->faces = facelist;
     VectorCopy(hullbrush.mins, brush->mins);
     VectorCopy(hullbrush.maxs, brush->maxs);
 
