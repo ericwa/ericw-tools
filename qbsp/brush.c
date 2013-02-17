@@ -179,21 +179,21 @@ NormalizePlane(plane_t *p)
 
 
 static int
-PlaneEqual(const plane_t *p, const vec3_t normal, const vec_t dist)
+PlaneEqual(const plane_t *p1, const plane_t *p2)
 {
-    return (fabs(p->normal[0] - normal[0]) < NORMAL_EPSILON &&
-	    fabs(p->normal[1] - normal[1]) < NORMAL_EPSILON &&
-	    fabs(p->normal[2] - normal[2]) < NORMAL_EPSILON &&
-	    fabs(p->dist - dist) < DIST_EPSILON);
+    return (fabs(p1->normal[0] - p2->normal[0]) < NORMAL_EPSILON &&
+	    fabs(p1->normal[1] - p2->normal[1]) < NORMAL_EPSILON &&
+	    fabs(p1->normal[2] - p2->normal[2]) < NORMAL_EPSILON &&
+	    fabs(p1->dist - p2->dist) < DIST_EPSILON);
 }
 
 static int
-PlaneInvEqual(const plane_t *p, const vec3_t normal, const vec_t dist)
+PlaneInvEqual(const plane_t *p1, const plane_t *p2)
 {
-    return (fabs(p->normal[0] + normal[0]) < NORMAL_EPSILON &&
-	    fabs(p->normal[1] + normal[1]) < NORMAL_EPSILON &&
-	    fabs(p->normal[2] + normal[2]) < NORMAL_EPSILON &&
-	    fabs(p->dist + dist) < DIST_EPSILON);
+    return (fabs(p1->normal[0] + p2->normal[0]) < NORMAL_EPSILON &&
+	    fabs(p1->normal[1] + p2->normal[1]) < NORMAL_EPSILON &&
+	    fabs(p1->normal[2] + p2->normal[2]) < NORMAL_EPSILON &&
+	    fabs(p1->dist + p2->dist) < DIST_EPSILON);
 }
 
 /* Plane Hashing */
@@ -274,10 +274,10 @@ FindPlane(plane_t *plane, int *side)
     for (i = 0; i < 3; ++i) {
 	h = (hash + bins[i]) & (PLANE_HASHES - 1);
 	for (p = plane_hash[h]; p; p = p->hash_chain) {
-	    if (PlaneEqual(p, plane->normal, plane->dist)) {
+	    if (PlaneEqual(p, plane)) {
 		*side = SIDE_FRONT;
 		return p - map.planes;
-	    } else if (PlaneInvEqual(p, plane->normal, plane->dist)) {
+	    } else if (PlaneInvEqual(p, plane)) {
 		*side = SIDE_BACK;
 		return p - map.planes;
 	    }
@@ -554,9 +554,9 @@ TestAddPlane(hullbrush_t *hullbrush, plane_t *plane)
     /* see if the plane has already been added */
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-	if (PlaneEqual(plane, mapface->plane.normal, mapface->plane.dist))
+	if (PlaneEqual(plane, &mapface->plane))
 	    return;
-	if (PlaneInvEqual(plane, mapface->plane.normal, mapface->plane.dist))
+	if (PlaneInvEqual(plane, &mapface->plane))
 	    return;
     }
 
