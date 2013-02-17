@@ -142,7 +142,7 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(portal_t *n2)
+MarkLeakTrail(portal_t *n2, const int hullnum)
 {
     int i;
     vec3_t p1, p2;
@@ -324,7 +324,7 @@ Returns true if an occupied leaf is reached
 ==================
 */
 static bool
-RecursiveFillOutside(node_t *node, bool fill)
+RecursiveFillOutside(node_t *node, bool fill, const int hullnum)
 {
     portal_t *p;
     int side;
@@ -352,10 +352,10 @@ RecursiveFillOutside(node_t *node, bool fill)
 
     for (p = node->portals; p; p = p->next[!side]) {
 	side = (p->nodes[0] == node);
-	if (RecursiveFillOutside(p->nodes[side], fill)) {
+	if (RecursiveFillOutside(p->nodes[side], fill, hullnum)) {
 	    // leaked, so stop filling
 	    if (backdraw-- > 0)
-		MarkLeakTrail(p);
+		MarkLeakTrail(p, hullnum);
 	    return true;
 	}
     }
@@ -399,13 +399,14 @@ FillOutside
 ===========
 */
 bool
-FillOutside(node_t *node)
+FillOutside(node_t *node, const int hullnum)
 {
     int side;
     vec_t *v;
     int i;
     bool inside;
     const mapentity_t *ent;
+    node_t *fillnode;
 
     Message(msgProgress, "FillOutside");
 
@@ -426,8 +427,6 @@ FillOutside(node_t *node)
 	Message(msgWarning, warnNoFilling, hullnum);
 	return false;
     }
-
-    side = !(outside_node.portals->nodes[1] == &outside_node);
 
     // first check to see if an occupied leaf is hit
     outleafs = 0;
@@ -456,7 +455,9 @@ FillOutside(node_t *node)
 	}
     }
 
-    if (RecursiveFillOutside(outside_node.portals->nodes[side], false)) {
+    side = !(outside_node.portals->nodes[1] == &outside_node);
+    fillnode = outside_node.portals->nodes[side];
+    if (RecursiveFillOutside(fillnode, false, hullnum)) {
 	v = map.entities[hit_occupied].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
 	if (hullnum == 2) {
@@ -501,7 +502,7 @@ FillOutside(node_t *node)
     }
     // now go back and fill things in
     valid++;
-    RecursiveFillOutside(outside_node.portals->nodes[side], true);
+    RecursiveFillOutside(outside_node.portals->nodes[side], true, hullnum);
 
     // remove faces from filled in leafs
     ClearOutFaces(node);

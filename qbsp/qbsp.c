@@ -75,7 +75,7 @@ ProcessEntity(mapentity_t *ent)
 	if (ent == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
 	    PortalizeWorld(ent, nodes);
-	    if (FillOutside(nodes)) {
+	    if (FillOutside(nodes, hullnum)) {
 		// Free portals before regenerating new nodes
 		FreeAllPortals(nodes);
 		surfs = GatherNodeFaces(nodes);
@@ -99,7 +99,7 @@ ProcessEntity(mapentity_t *ent)
 	    // assume non-world bmodels are simple
 	    PortalizeWorld(ent, nodes);
 
-	    if (FillOutside(nodes)) {
+	    if (FillOutside(nodes, hullnum)) {
 		FreeAllPortals(nodes);
 
 		// get the remaining faces together into surfaces again

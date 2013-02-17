@@ -529,7 +529,7 @@ void FinishBSPFile(void);
 
 // outside.c
 
-bool FillOutside(node_t *node);
+bool FillOutside(node_t *node, const int hullnum);
 
 //=============================================================================
 
