@@ -108,9 +108,9 @@ const char *rgszErrors[cErrors] = {
     "Normalization error in FindPlane (vector length %.4f)",
     "Internal error: f->numpoints > MAXEDGES",
     "Invalid normal (vector length %.4f)",
-    "Internal error: numbrushfaces == MAX_FACES",
-    "Internal error: num_hull_points == MAX_HULL_POINTS",
-    "Internal error: num_hull_edges == MAX_HULL_EDGES",
+    "Internal error: brush faces >= MAX_FACES",
+    "Internal error: brush hull points == MAX_HULL_POINTS",
+    "Internal error: brush hull edges == MAX_HULL_EDGES",
     "Attempting to split freed face",
 
     "Internal error: numpoints > MAXEDGES in SplitFace",

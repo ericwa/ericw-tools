@@ -23,9 +23,25 @@
 
 #include "qbsp.h"
 
-/* beveled clipping hull can generate many extra faces */
-static mapface_t faces[128];
-static int numbrushfaces;
+/*
+ * Beveled clipping hull can generate many extra faces
+ */
+#define MAX_FACES 128
+#define MAX_HULL_POINTS 512
+#define MAX_HULL_EDGES 1024
+
+typedef struct hullbrush_s {
+    int numfaces;
+    vec3_t mins;
+    vec3_t maxs;
+    mapface_t faces[MAX_FACES];
+
+    int numpoints;
+    int numedges;
+    vec3_t points[MAX_HULL_POINTS];
+    vec3_t corners[MAX_HULL_POINTS * 8];
+    int edges[MAX_HULL_EDGES][2];
+} hullbrush_t;
 
 /*
 =================
@@ -280,8 +296,6 @@ FindPlane(plane_t *plane, int *side)
 =============================================================================
 */
 
-static vec3_t brush_mins, brush_maxs;
-
 /*
 =================
 FindTargetEntity
@@ -341,7 +355,7 @@ CreateBrushFaces
 =================
 */
 static face_t *
-CreateBrushFaces(mapentity_t *ent)
+CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent)
 {
     int i, j, k;
     vec_t r;
@@ -349,13 +363,17 @@ CreateBrushFaces(mapentity_t *ent)
     winding_t *w;
     plane_t plane;
     face_t *pFaceList = NULL;
-    mapface_t *pFace;
+    mapface_t *mapface, *mapface2;
     const char *szClassname;
     vec3_t point, rotate_offset;
     vec_t max, min;
 
-    min = brush_mins[0] = brush_mins[1] = brush_mins[2] = VECT_MAX;
-    max = brush_maxs[0] = brush_maxs[1] = brush_maxs[2] = -VECT_MAX;
+    min = VECT_MAX;
+    max = -VECT_MAX;
+    for (i = 0; i < 3; i++) {
+	hullbrush->mins[i] = VECT_MAX;
+	hullbrush->maxs[i] = -VECT_MAX;
+    }
 
     // Hipnotic rotation
     VectorCopy(vec3_origin, rotate_offset);
@@ -365,21 +383,19 @@ CreateBrushFaces(mapentity_t *ent)
 	GetVectorForKey(ent, "origin", rotate_offset);
     }
 
-    for (i = 0; i < numbrushfaces; i++) {
-	pFace = &faces[i];
-
-	w = BaseWindingForPlane(&pFace->plane);
-
-	for (j = 0; j < numbrushfaces && w; j++) {
+    mapface = hullbrush->faces;
+    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
+	w = BaseWindingForPlane(&mapface->plane);
+	mapface2 = hullbrush->faces;
+	for (j = 0; j < hullbrush->numfaces && w; j++, mapface2++) {
 	    if (j == i)
 		continue;
 	    // flip the plane, because we want to keep the back side
-	    VectorSubtract(vec3_origin, faces[j].plane.normal, plane.normal);
-	    plane.dist = -faces[j].plane.dist;
+	    VectorSubtract(vec3_origin, mapface2->plane.normal, plane.normal);
+	    plane.dist = -mapface2->plane.dist;
 
 	    w = ClipWinding(w, &plane, false);
 	}
-
 	if (!w)
 	    continue;		// overconstrained plane
 
@@ -398,10 +414,10 @@ CreateBrushFaces(mapentity_t *ent)
 		else
 		    f->w.points[j][k] = point[k];
 
-		if (f->w.points[j][k] < brush_mins[k])
-		    brush_mins[k] = f->w.points[j][k];
-		if (f->w.points[j][k] > brush_maxs[k])
-		    brush_maxs[k] = f->w.points[j][k];
+		if (f->w.points[j][k] < hullbrush->mins[k])
+		    hullbrush->mins[k] = f->w.points[j][k];
+		if (f->w.points[j][k] > hullbrush->maxs[k])
+		    hullbrush->maxs[k] = f->w.points[j][k];
 		if (f->w.points[j][k] < min)
 		    min = f->w.points[j][k];
 		if (f->w.points[j][k] > max)
@@ -409,14 +425,14 @@ CreateBrushFaces(mapentity_t *ent)
 	    }
 	}
 
-	VectorCopy(pFace->plane.normal, plane.normal);
-	VectorScale(pFace->plane.normal, pFace->plane.dist, point);
+	VectorCopy(mapface->plane.normal, plane.normal);
+	VectorScale(mapface->plane.normal, mapface->plane.dist, point);
 	VectorSubtract(point, rotate_offset, point);
 	plane.dist = DotProduct(plane.normal, point);
 
 	FreeMem(w, WINDING, 1);
 
-	f->texturenum = hullnum ? 0 : pFace->texinfo;
+	f->texturenum = hullnum ? 0 : mapface->texinfo;
 	f->planenum = FindPlane(&plane, &f->planeside);
 	f->next = pFaceList;
 	pFaceList = f;
@@ -434,8 +450,8 @@ CreateBrushFaces(mapentity_t *ent)
 	    delta = fabs(min);
 
 	for (k = 0; k < 3; k++) {
-	    brush_mins[k] = -delta;
-	    brush_maxs[k] = delta;
+	    hullbrush->mins[k] = -delta;
+	    hullbrush->maxs[k] = delta;
 	}
     }
 
@@ -487,43 +503,33 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 ==============================================================================
 */
 
-// TODO: fix this whole thing
-#define	MAX_HULL_POINTS	512
-#define	MAX_HULL_EDGES	1024
-
-static int num_hull_points;
-static vec3_t hull_points[MAX_HULL_POINTS];
-static vec3_t hull_corners[MAX_HULL_POINTS * 8];
-static int num_hull_edges;
-static int hull_edges[MAX_HULL_EDGES][2];
-
 /*
 ============
 AddBrushPlane
 =============
 */
 static void
-AddBrushPlane(plane_t *plane)
+AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
 {
     int i;
-    plane_t *pl;
-    vec_t l;
+    mapface_t *mapface;
+    vec_t len;
 
-    l = VectorLength(plane->normal);
-    if (l < 1.0 - NORMAL_EPSILON || l > 1.0 + NORMAL_EPSILON)
-	Error(errInvalidNormal, l);
+    len = VectorLength(plane->normal);
+    if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
+	Error(errInvalidNormal, len);
 
-    for (i = 0; i < numbrushfaces; i++) {
-	pl = &faces[i].plane;
-	if (VectorCompare(pl->normal, plane->normal) &&
-	    fabs(pl->dist - plane->dist) < ON_EPSILON)
+    mapface = hullbrush->faces;
+    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
+	if (VectorCompare(mapface->plane.normal, plane->normal) &&
+	    fabs(mapface->plane.dist - plane->dist) < ON_EPSILON)
 	    return;
     }
-    if (numbrushfaces >= MAX_FACES)
+    if (hullbrush->numfaces == MAX_FACES)
 	Error(errLowBrushFaceCount);
-    faces[i].plane = *plane;
-    faces[i].texinfo = 0;
-    numbrushfaces++;
+    mapface->plane = *plane;
+    mapface->texinfo = 0;
+    hullbrush->numfaces++;
 }
 
 
@@ -536,21 +542,21 @@ vertexes can be put on the front side
 =============
 */
 static void
-TestAddPlane(plane_t *plane)
+TestAddPlane(hullbrush_t *hullbrush, plane_t *plane)
 {
     int i, c;
     vec_t d;
+    mapface_t *mapface;
     vec_t *corner;
     plane_t flip;
     int points_front, points_back;
-    plane_t *pl;
 
     /* see if the plane has already been added */
-    for (i = 0; i < numbrushfaces; i++) {
-	pl = &faces[i].plane;
-	if (PlaneEqual(plane, pl->normal, pl->dist))
+    mapface = hullbrush->faces;
+    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
+	if (PlaneEqual(plane, mapface->plane.normal, mapface->plane.dist))
 	    return;
-	if (PlaneInvEqual(plane, pl->normal, pl->dist))
+	if (PlaneInvEqual(plane, mapface->plane.normal, mapface->plane.dist))
 	    return;
     }
 
@@ -558,8 +564,8 @@ TestAddPlane(plane_t *plane)
     points_front = 0;
     points_back = 0;
 
-    corner = hull_corners[0];
-    c = num_hull_points * 8;
+    corner = hullbrush->corners[0];
+    c = hullbrush->numpoints * 8;
 
     for (i = 0; i < c; i++, corner += 3) {
 	d = DotProduct(corner, plane->normal) - plane->dist;
@@ -581,7 +587,7 @@ TestAddPlane(plane_t *plane)
 	plane = &flip;
     }
 
-    AddBrushPlane(plane);
+    AddBrushPlane(hullbrush, plane);
 }
 
 /*
@@ -592,22 +598,22 @@ Doesn't add if duplicated
 =============
 */
 static int
-AddHullPoint(vec3_t p, vec3_t hull_size[2])
+AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
 {
     int i;
     vec_t *c;
     int x, y, z;
 
-    for (i = 0; i < num_hull_points; i++)
-	if (VectorCompare(p, hull_points[i]))
+    for (i = 0; i < hullbrush->numpoints; i++)
+	if (VectorCompare(p, hullbrush->points[i]))
 	    return i;
 
-    if (num_hull_points == MAX_HULL_POINTS)
+    if (hullbrush->numpoints == MAX_HULL_POINTS)
 	Error(errLowHullPointCount);
 
-    VectorCopy(p, hull_points[num_hull_points]);
+    VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
 
-    c = hull_corners[i * 8];
+    c = hullbrush->corners[i * 8];
 
     for (x = 0; x < 2; x++)
 	for (y = 0; y < 2; y++)
@@ -618,7 +624,7 @@ AddHullPoint(vec3_t p, vec3_t hull_size[2])
 		c += 3;
 	    }
 
-    num_hull_points++;
+    hullbrush->numpoints++;
 
     return i;
 }
@@ -632,7 +638,7 @@ Creates all of the hull planes around the given edge, if not done allready
 =============
 */
 static void
-AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
+AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 {
     int pt1, pt2;
     int i;
@@ -641,20 +647,20 @@ AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     plane_t plane;
     vec_t length;
 
-    pt1 = AddHullPoint(p1, hull_size);
-    pt2 = AddHullPoint(p2, hull_size);
+    pt1 = AddHullPoint(hullbrush, p1, hull_size);
+    pt2 = AddHullPoint(hullbrush, p2, hull_size);
 
-    for (i = 0; i < num_hull_edges; i++)
-	if ((hull_edges[i][0] == pt1 && hull_edges[i][1] == pt2)
-	    || (hull_edges[i][0] == pt2 && hull_edges[i][1] == pt1))
+    for (i = 0; i < hullbrush->numedges; i++)
+	if ((hullbrush->edges[i][0] == pt1 && hullbrush->edges[i][1] == pt2)
+	    || (hullbrush->edges[i][0] == pt2 && hullbrush->edges[i][1] == pt1))
 	    return;
 
-    if (num_hull_edges == MAX_HULL_EDGES)
+    if (hullbrush->numedges == MAX_HULL_EDGES)
 	Error(errLowHullEdgeCount);
 
-    hull_edges[i][0] = pt1;
-    hull_edges[i][1] = pt2;
-    num_hull_edges++;
+    hullbrush->edges[i][0] = pt1;
+    hullbrush->edges[i][1] = pt2;
+    hullbrush->numedges++;
 
     VectorSubtract(p1, p2, edgevec);
     VectorNormalize(edgevec);
@@ -680,7 +686,7 @@ AddHullEdge(vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 		planeorg[b] += hull_size[d][b];
 		planeorg[c] += hull_size[e][c];
 		plane.dist = DotProduct(planeorg, plane.normal);
-		TestAddPlane(&plane);
+		TestAddPlane(hullbrush, &plane);
 	    }
 	}
     }
@@ -693,35 +699,36 @@ ExpandBrush
 =============
 */
 static void
-ExpandBrush(vec3_t hull_size[2], face_t *pFaceList)
+ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *pFaceList)
 {
     int i, x, s;
     vec3_t corner;
     face_t *f;
-    plane_t plane, *p;
+    plane_t plane;
+    mapface_t *mapface;
     int cBevEdge = 0;
 
-    num_hull_points = 0;
-    num_hull_edges = 0;
+    hullbrush->numpoints = 0;
+    hullbrush->numedges = 0;
 
     // create all the hull points
     for (f = pFaceList; f; f = f->next)
 	for (i = 0; i < f->w.numpoints; i++) {
-	    AddHullPoint(f->w.points[i], hull_size);
+	    AddHullPoint(hullbrush, f->w.points[i], hull_size);
 	    cBevEdge++;
 	}
 
     // expand all of the planes
-    for (i = 0; i < numbrushfaces; i++) {
-	p = &faces[i].plane;
+    mapface = hullbrush->faces;
+    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
 	VectorCopy(vec3_origin, corner);
 	for (x = 0; x < 3; x++) {
-	    if (p->normal[x] > 0)
+	    if (mapface->plane.normal[x] > 0)
 		corner[x] = hull_size[1][x];
-	    else if (p->normal[x] < 0)
+	    else if (mapface->plane.normal[x] < 0)
 		corner[x] = hull_size[0][x];
 	}
-	p->dist += DotProduct(corner, p->normal);
+	mapface->plane.dist += DotProduct(corner, mapface->plane.normal);
     }
 
     // add any axis planes not contained in the brush to bevel off corners
@@ -731,16 +738,17 @@ ExpandBrush(vec3_t hull_size[2], face_t *pFaceList)
 	    VectorCopy(vec3_origin, plane.normal);
 	    plane.normal[x] = (vec_t)s;
 	    if (s == -1)
-		plane.dist = -brush_mins[x] + -hull_size[0][x];
+		plane.dist = -hullbrush->mins[x] + -hull_size[0][x];
 	    else
-		plane.dist = brush_maxs[x] + hull_size[1][x];
-	    AddBrushPlane(&plane);
+		plane.dist = hullbrush->maxs[x] + hull_size[1][x];
+	    AddBrushPlane(hullbrush, &plane);
 	}
 
     // add all of the edge bevels
     for (f = pFaceList; f; f = f->next)
 	for (i = 0; i < f->w.numpoints; i++)
-	    AddHullEdge(f->w.points[i], f->w.points[(i + 1) % f->w.numpoints], hull_size);
+	    AddHullEdge(hullbrush, f->w.points[i],
+			f->w.points[(i + 1) % f->w.numpoints], hull_size);
 }
 
 //============================================================================
@@ -756,16 +764,17 @@ Converts a mapbrush to a bsp brush
 static brush_t *
 LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
 {
+    hullbrush_t hullbrush;
     brush_t *brush;
     int contents;
     face_t *pFaceList;
-    const mapface_t *face;
+    const mapface_t *mapface;
     const char *texname;
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
     /* check texture name for attributes */
-    face = mapbrush->faces;
-    texname = map.miptex[texinfo[face->texinfo].miptex];
+    mapface = mapbrush->faces;
+    texname = map.miptex[texinfo[mapface->texinfo].miptex];
 
     if (!strcasecmp(texname, "clip") && hullnum == 0)
 	return NULL;		// "clip" brushes don't show up in the draw hull
@@ -790,11 +799,12 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
 	return NULL;		// water brushes don't show up in clipping hulls
 
     // create the faces
-    numbrushfaces = mapbrush->numfaces;
-    memcpy(faces, face, numbrushfaces * sizeof(mapface_t));
+    if (mapbrush->numfaces > MAX_FACES)
+	Error(errLowBrushFaceCount);
+    hullbrush.numfaces = mapbrush->numfaces;
+    memcpy(hullbrush.faces, mapface, mapbrush->numfaces * sizeof(mapface_t));
 
-    pFaceList = CreateBrushFaces(ent);
-
+    pFaceList = CreateBrushFaces(&hullbrush, ent);
     if (!pFaceList) {
 	Message(msgWarning, warnNoBrushFaces);
 	return NULL;
@@ -803,15 +813,15 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
     if (hullnum == 1) {
 	vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
 
-	ExpandBrush(size, pFaceList);
+	ExpandBrush(&hullbrush, size, pFaceList);
 	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces(ent);
+	pFaceList = CreateBrushFaces(&hullbrush, ent);
     } else if (hullnum == 2) {
 	vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
-	ExpandBrush(size, pFaceList);
+	ExpandBrush(&hullbrush, size, pFaceList);
 	FreeBrushFaces(pFaceList);
-	pFaceList = CreateBrushFaces(ent);
+	pFaceList = CreateBrushFaces(&hullbrush, ent);
     }
 
     // create the brush
@@ -819,8 +829,8 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
 
     brush->contents = contents;
     brush->faces = pFaceList;
-    VectorCopy(brush_mins, brush->mins);
-    VectorCopy(brush_maxs, brush->maxs);
+    VectorCopy(hullbrush.mins, brush->mins);
+    VectorCopy(hullbrush.maxs, brush->maxs);
 
     return brush;
 }

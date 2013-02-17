@@ -56,8 +56,6 @@
 #define	MAX_VALUE	1024
 
 // Various other geometry maximums
-// TODO: fix MAX_FACES??
-#define	MAX_FACES		128	// (was 16)
 #define MAX_POINTS_ON_WINDING	64
 #define	MAXEDGES		32
 #define	MAXPOINTS		28	// don't let a base face get past this
