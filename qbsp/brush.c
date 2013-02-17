@@ -355,7 +355,7 @@ CreateBrushFaces
 =================
 */
 static face_t *
-CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent)
+CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent, const int hullnum)
 {
     int i, j, k;
     vec_t r;
@@ -762,7 +762,7 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 static brush_t *
-LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
+LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -804,7 +804,7 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
     hullbrush.numfaces = mapbrush->numfaces;
     memcpy(hullbrush.faces, mapface, mapbrush->numfaces * sizeof(mapface_t));
 
-    facelist = CreateBrushFaces(&hullbrush, ent);
+    facelist = CreateBrushFaces(&hullbrush, ent, hullnum);
     if (!facelist) {
 	Message(msgWarning, warnNoBrushFaces);
 	return NULL;
@@ -815,13 +815,13 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
 
 	ExpandBrush(&hullbrush, size, facelist);
 	FreeBrushFaces(facelist);
-	facelist = CreateBrushFaces(&hullbrush, ent);
+	facelist = CreateBrushFaces(&hullbrush, ent, hullnum);
     } else if (hullnum == 2) {
 	vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
 	ExpandBrush(&hullbrush, size, facelist);
 	FreeBrushFaces(facelist);
-	facelist = CreateBrushFaces(&hullbrush, ent);
+	facelist = CreateBrushFaces(&hullbrush, ent, hullnum);
     }
 
     // create the brush
@@ -844,7 +844,7 @@ Brush_LoadEntity
 ============
 */
 void
-Brush_LoadEntity(mapentity_t *ent)
+Brush_LoadEntity(mapentity_t *ent, const int hullnum)
 {
     brush_t *brush, *next, *water, *other;
     mapbrush_t *mapbrush;
@@ -861,7 +861,7 @@ Brush_LoadEntity(mapentity_t *ent)
     mapbrush = ent->mapbrushes;
     ent->numbrushes = 0;
     for (i = 0; i < ent->nummapbrushes; i++, mapbrush++) {
-	brush = LoadBrush(ent, mapbrush);
+	brush = LoadBrush(ent, mapbrush, hullnum);
 	if (!brush)
 	    continue;
 

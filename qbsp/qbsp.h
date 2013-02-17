@@ -637,7 +637,7 @@ void GetVectorForKey(const mapentity_t *ent, const char *szKey, vec3_t vec);
 void WriteEntitiesToString(void);
 
 void FixRotateOrigin(mapentity_t *ent);
-void Brush_LoadEntity(mapentity_t *ent);
+void Brush_LoadEntity(mapentity_t *ent, const int hullnum);
 surface_t *CSGFaces(const mapentity_t *ent);
 void PortalizeWorld(const mapentity_t *ent, node_t *headnode);
 void TJunc(const mapentity_t *ent, node_t *headnode);

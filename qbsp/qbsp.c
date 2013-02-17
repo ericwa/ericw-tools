@@ -59,7 +59,7 @@ ProcessEntity(mapentity_t *ent)
     }
     // take the brush_ts and clip off all overlapping and contained faces,
     // leaving a perfect skin of the model with no hidden faces
-    Brush_LoadEntity(ent);
+    Brush_LoadEntity(ent, hullnum);
 
     if (!ent->brushes) {
 	PrintEntity(ent);
