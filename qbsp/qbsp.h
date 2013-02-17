@@ -265,7 +265,7 @@ typedef struct {
 typedef struct {
     float normal[3];
     float dist;
-    int type;			// PLANE_X - PLANE_ANYZ ?remove? trivial to regenerate
+    int type;
 } dplane_t;
 
 // !!! if this is changed, it must be changed in asm_i386.h too !!!
