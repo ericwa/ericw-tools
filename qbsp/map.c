@@ -37,12 +37,15 @@ FindMiptex(const char *name)
 {
     int i;
 
-    for (i = 0; i < cMiptex; i++) {
-	if (!strcmp(name, rgszMiptex[i]))
+    for (i = 0; i < map.nummiptex; i++) {
+	if (!strcmp(name, map.miptex[i]))
 	    return i;
     }
-    strcpy(rgszMiptex[i], name);
-    cMiptex++;
+    if (map.nummiptex == map.maxmiptex)
+	Error(errLowMiptexCount);
+
+    strcpy(map.miptex[i], name);
+    map.nummiptex++;
 
     if (name[0] == '+')
 	cAnimtex++;
@@ -66,7 +69,7 @@ FindTexinfo(texinfo_t *t)
     const char *name;
 
     // set the special flag
-    name = rgszMiptex[t->miptex];
+    name = map.miptex[t->miptex];
     if (name[0] == '*' || !strncasecmp(name, "sky", 3))
 	if (!options.fSplitspecial)
 	    t->flags |= TEX_SPECIAL;
@@ -519,7 +522,8 @@ PreParseFile(const char *buf)
 
     // Allocate maximum memory here, copy over later
     // Maximum possible is one miptex/texinfo per face
-    rgszMiptex = AllocMem(MIPTEX, map.maxfaces, true);
+    map.maxmiptex = map.maxfaces;
+    map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
     texinfo = &pWorldEnt->lumps[BSPTEXINFO];
     texinfo->data = AllocMem(BSPTEXINFO, map.maxfaces, true);
     texinfo->count = map.maxfaces;
@@ -570,13 +574,14 @@ LoadMapFile(void)
 //              Message(msgWarning, warnNoPlayerCoop);
 
     // Clean up texture memory
-    if (cMiptex > map.maxfaces)
+    if (map.nummiptex > map.maxfaces)
 	Error(errLowMiptexCount);
-    else if (cMiptex < map.maxfaces) {
+    else if (map.nummiptex < map.maxfaces) {
 	// For stuff in AddAnimatingTex, make room available
-	pTemp = rgszMiptex;
-	rgszMiptex = AllocMem(MIPTEX, cMiptex + cAnimtex * 20, true);
-	memcpy(rgszMiptex, pTemp, cMiptex * rgcMemSize[MIPTEX]);
+	pTemp = map.miptex;
+	map.maxmiptex = map.nummiptex + cAnimtex * 20;
+	map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
+	memcpy(map.miptex, pTemp, map.nummiptex * rgcMemSize[MIPTEX]);
 	FreeMem(pTemp, MIPTEX, map.maxfaces);
     }
 
@@ -591,7 +596,7 @@ LoadMapFile(void)
 	texinfo->count = texinfo->index;
     }
     // One plane per face + 6 for portals
-    cPlanes = map.numfaces + 6;
+    map.maxplanes = map.numfaces + 6;
 
     // Count # of unique planes in all of the faces
     for (i = 0, face = map.faces; i < map.numfaces; i++, face++) {
@@ -601,7 +606,7 @@ LoadMapFile(void)
 		VectorCompare(face->plane.normal, face2->plane.normal) &&
 		fabs(face->plane.dist - face2->plane.dist) < EQUAL_EPSILON) {
 		face->fUnique = false;
-		cPlanes--;
+		map.maxplanes--;
 		break;
 	    }
 	}
@@ -620,20 +625,20 @@ LoadMapFile(void)
 		cAxis++;
 	}
 	if (6 - cAxis > 0)
-	    cPlanes += 6 - cAxis;
+	    map.maxplanes += 6 - cAxis;
     }
 
     /*
-     * cPlanes*3 because of 3 hulls, then add 20% as a fudge factor for hull
-     * edge bevel planes
+     * map.maxplanes*3 because of 3 hulls, then add 20% as a fudge factor for
+     * hull edge bevel planes
      */
-    cPlanes = 3 * cPlanes + cPlanes / 5;
-    pPlanes = AllocMem(PLANE, cPlanes, true);
+    map.maxplanes = 3 * map.maxplanes + map.maxplanes / 5;
+    map.planes = AllocMem(PLANE, map.maxplanes, true);
 
     Message(msgStat, "%5i faces", map.numfaces);
     Message(msgStat, "%5i brushes", map.numbrushes);
     Message(msgStat, "%5i entities", map.numentities);
-    Message(msgStat, "%5i unique texnames", cMiptex);
+    Message(msgStat, "%5i unique texnames", map.nummiptex);
     Message(msgStat, "%5i texinfo", texinfo->count);
     Message(msgLiteral, "\n");
 }

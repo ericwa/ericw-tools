@@ -23,8 +23,6 @@
 
 #include "qbsp.h"
 
-int numbrushplanes;
-
 /* beveled clipping hull can generate many extra faces */
 static mapface_t faces[128];
 static int numbrushfaces;
@@ -40,6 +38,7 @@ static void
 CheckFace(face_t *f)
 {
     int i, j;
+    plane_t *plane;
     vec_t *p1, *p2;
     vec_t d, edgedist;
     vec3_t dir, edgenormal, facenormal;
@@ -47,7 +46,7 @@ CheckFace(face_t *f)
     if (f->w.numpoints < 3)
 	Error(errTooFewPoints, f->w.numpoints);
 
-    VectorCopy(pPlanes[f->planenum].normal, facenormal);
+    VectorCopy(map.planes[f->planenum].normal, facenormal);
     if (f->planeside) {
 	VectorSubtract(vec3_origin, facenormal, facenormal);
     }
@@ -62,9 +61,8 @@ CheckFace(face_t *f)
 	j = i + 1 == f->w.numpoints ? 0 : i + 1;
 
 	// check the point is on the face plane
-	d = DotProduct(p1,
-		       pPlanes[f->planenum].normal) -
-	    pPlanes[f->planenum].dist;
+	plane = &map.planes[f->planenum];
+	d = DotProduct(p1, plane->normal) - plane->dist;
 	if (d < -ON_EPSILON || d > ON_EPSILON)
 	    // This used to be an error
 	    Message(msgWarning, warnPointOffPlane, p1[0], p1[1], p1[2], d);
@@ -225,22 +223,22 @@ PlaneHash_Init(void)
 static int
 NewPlane(vec3_t normal, vec_t dist, int *side)
 {
-    plane_t *p;
+    plane_t *plane;
     vec_t len;
 
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
 	Error(errInvalidNormal, len);
-    if (numbrushplanes == cPlanes)
+    if (map.numplanes == map.maxplanes)
 	Error(errLowBrushPlaneCount);
 
-    p = &pPlanes[numbrushplanes];
-    VectorCopy(normal, p->normal);
-    p->dist = dist;
-    *side = NormalizePlane(p) ? SIDE_BACK : SIDE_FRONT;
-    PlaneHash_Add(p);
+    plane = &map.planes[map.numplanes];
+    VectorCopy(normal, plane->normal);
+    plane->dist = dist;
+    *side = NormalizePlane(plane) ? SIDE_BACK : SIDE_FRONT;
+    PlaneHash_Add(plane);
 
-    return numbrushplanes++;
+    return map.numplanes++;
 }
 
 /*
@@ -262,10 +260,10 @@ FindPlane(plane_t *plane, int *side)
 	for (p = plane_hash[h]; p; p = p->hash_chain) {
 	    if (PlaneEqual(p, plane->normal, plane->dist)) {
 		*side = SIDE_FRONT;
-		return p - pPlanes;
+		return p - map.planes;
 	    } else if (PlaneInvEqual(p, plane->normal, plane->dist)) {
 		*side = SIDE_BACK;
-		return p - pPlanes;
+		return p - map.planes;
 	    }
 	}
     }
@@ -767,7 +765,7 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush)
 
     /* check texture name for attributes */
     face = mapbrush->faces;
-    texname = rgszMiptex[texinfo[face->texinfo].miptex];
+    texname = map.miptex[texinfo[face->texinfo].miptex];
 
     if (!strcasecmp(texname, "clip") && hullnum == 0)
 	return NULL;		// "clip" brushes don't show up in the draw hull

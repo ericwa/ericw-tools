@@ -147,10 +147,10 @@ WADList_Process(wad_t *wads, int numwads)
     WADList_AddAnimatingTextures(wads, numwads);
 
     // Count texture size.  Slow but saves memory.
-    for (i = 0; i < cMiptex; i++)
+    for (i = 0; i < map.nummiptex; i++)
 	for (j = 0; j < numwads; j++) {
 	    for (k = 0; k < wads[j].header.numlumps; k++)
-		if (!strcasecmp(rgszMiptex[i], wads[j].lumps[k].name)) {
+		if (!strcasecmp(map.miptex[i], wads[j].lumps[k].name)) {
 		    // Found it. Add in the size and skip to outer loop.
 		    texdata->count += wads[j].lumps[k].disksize;
 		    j = numwads;
@@ -161,20 +161,20 @@ WADList_Process(wad_t *wads, int numwads)
 		break;
 	}
 
-    texdata->count += sizeof(int) * (cMiptex + 1);
+    texdata->count += sizeof(int) * (map.nummiptex + 1);
 
     // Default texture data to store in worldmodel
     texdata->data = AllocMem(BSPTEX, texdata->count, true);
     miptex = (dmiptexlump_t *)texdata->data;
-    miptex->nummiptex = cMiptex;
+    miptex->nummiptex = map.nummiptex;
 
     WADList_LoadTextures(wads, numwads, miptex);
 
     // Last pass, mark unfound textures as such
-    for (i = 0; i < cMiptex; i++)
+    for (i = 0; i < map.nummiptex; i++)
 	if (miptex->dataofs[i] == 0) {
 	    miptex->dataofs[i] = -1;
-	    Message(msgWarning, warnTextureNotFound, rgszMiptex[i]);
+	    Message(msgWarning, warnTextureNotFound, map.miptex[i]);
 	}
 }
 
@@ -186,15 +186,15 @@ WADList_LoadTextures(wad_t *wads, int numwads, dmiptexlump_t *l)
     byte *data;
     struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
 
-    data = (byte *)&l->dataofs[cMiptex];
+    data = (byte *)&l->dataofs[map.nummiptex];
     for (i = 0; i < numwads; i++) {
-	for (j = 0; j < cMiptex; j++) {
+	for (j = 0; j < map.nummiptex; j++) {
 	    // Texture already found in a previous WAD
 	    if (l->dataofs[j] != 0)
 		continue;
 
 	    l->dataofs[j] = data - (byte *)l;
-	    len = WAD_LoadLump(wads + i, rgszMiptex[j], data);
+	    len = WAD_LoadLump(wads + i, map.miptex[j], data);
 	    if (data + len - (byte *)texdata->data > texdata->count)
 		Error(errLowTextureCount);
 
@@ -234,12 +234,12 @@ WADList_AddAnimatingTextures(wad_t *wads, int numwads)
     int i, j, k, l;
     char name[32];
 
-    base = cMiptex;
+    base = map.nummiptex;
 
     for (i = 0; i < base; i++) {
-	if (rgszMiptex[i][0] != '+')
+	if (map.miptex[i][0] != '+')
 	    continue;
-	strcpy(name, rgszMiptex[i]);
+	strcpy(name, map.miptex[i]);
 
 	for (j = 0; j < 20; j++) {
 	    if (j < 10)
@@ -258,5 +258,5 @@ WADList_AddAnimatingTextures(wad_t *wads, int numwads)
 	}
     }
 
-    Message(msgStat, "%5i texture frames added", cMiptex - base);
+    Message(msgStat, "%5i texture frames added", map.nummiptex - base);
 }

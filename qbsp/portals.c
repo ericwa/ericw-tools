@@ -100,7 +100,7 @@ WritePortalFile_r(node_t *node)
 	     * the changeover point between different axis.  interpret the
 	     * plane the same way vis will, and flip the side orders if needed
 	     */
-	    pl = &pPlanes[p->planenum];
+	    pl = &map.planes[p->planenum];
 	    PlaneFromWinding(w, &plane2);
 
 	    if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON) {
@@ -392,7 +392,7 @@ CheckLeafPortalConsistancy(node_t *node)
 	CheckWindingArea(p->winding);
 
 	// check that the side orders are correct
-	plane = pPlanes[p->planenum];
+	plane = map.planes[p->planenum];
 	PlaneFromWinding(p->winding, &plane2);
 
 	for (p2 = node->portals; p2; p2 = p2->next[side2]) {
@@ -440,7 +440,7 @@ CutNodePortals_r(node_t *node)
     if (node->contents)
 	return;			// at a leaf, no more dividing
 
-    plane = &pPlanes[node->planenum];
+    plane = &map.planes[node->planenum];
 
     f = node->children[0];
     b = node->children[1];
@@ -450,10 +450,10 @@ CutNodePortals_r(node_t *node)
     new_portal = AllocMem(PORTAL, 1, true);
     new_portal->planenum = node->planenum;
 
-    w = BaseWindingForPlane(&pPlanes[node->planenum]);
+    w = BaseWindingForPlane(&map.planes[node->planenum]);
     side = 0;			// shut up compiler warning
     for (p = node->portals; p; p = p->next[side]) {
-	clipplane = pPlanes[p->planenum];
+	clipplane = map.planes[p->planenum];
 	if (p->nodes[0] == node)
 	    side = 0;
 	else if (p->nodes[1] == node) {

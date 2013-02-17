@@ -43,12 +43,6 @@ int hullnum;
 // Useful shortcuts
 mapentity_t *pWorldEnt;
 
-// Move these into mapdata_t?
-miptex_t *rgszMiptex;
-plane_t *pPlanes;
-int cMiptex;
-int cPlanes;
-
 // Mathlib.c
 vec3_t vec3_origin = { 0, 0, 0 };
 
@@ -94,7 +88,7 @@ const char *rgszErrors[cErrors] = {
     "line %d: Invalid entity format, { not found",
     "Internal error: entity count mismatched during map file parsing",
     "Unexpected EOF (no closing brace)",
-    "Internal error: cMiptex > map.maxfaces",
+    "Internal error: map.nummiptex > map.maxmiptex",
     "Internal error: pWorldEnt->iTexinfo > pWorldEnt->cTexinfo",
 
     "%s is version %i, not %i",
@@ -110,7 +104,7 @@ const char *rgszErrors[cErrors] = {
 
     "Found a non-convex face",
     "Found a non-canonical vector",
-    "Internal error: numbrushplanes >= cPlanes",
+    "Internal error: map.numplanes >= map.maxplanes",
     "Normalization error in FindPlane (vector length %.4f)",
     "Internal error: f->numpoints > MAXEDGES",
     "Invalid normal (vector length %.4f)",
@@ -136,7 +130,7 @@ const char *rgszErrors[cErrors] = {
     "Internal error: entity->iVertices > entity->cVertices",
     "0 contents in GetEdge",
     "Internal error: entity->iEdges >= entity->cEdges",
-    "Internal error: pWorldEnt->iPlanes >= pWorldEnt->cPlanes",
+    "Internal error: pWorldEnt->lumps[BSPPLANE].index >= pWorldEnt->lumps[BSPPLANE].count",
     "Internal error: numwedges >= cWEdges",
     "Internal error: numwverts >= cWVerts",
     "f->original exists in SplitFaceForTjunc",

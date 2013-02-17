@@ -136,7 +136,7 @@ GatherNodeFaces
 surface_t *
 GatherNodeFaces(node_t *headnode)
 {
-    memset(validfaces, 0, sizeof(face_t *) * cPlanes);
+    memset(validfaces, 0, sizeof(face_t *) * map.maxplanes);
     GatherNodeFaces_r(headnode);
     return BuildSurfaces();
 }

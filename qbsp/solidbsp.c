@@ -247,7 +247,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	    continue;
 
 	/* check for axis aligned surfaces */
-	plane = &pPlanes[p->planenum];
+	plane = &map.planes[p->planenum];
 	if (plane->type > 3)
 	    continue;
 
@@ -265,7 +265,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	    if (p->onnode)
 		continue;
 
-	    plane = &pPlanes[p->planenum];
+	    plane = &map.planes[p->planenum];
 	    value = SplitPlaneMetric(plane, mins, maxs);
 	    if (value < bestvalue) {
 		bestvalue = value;
@@ -307,13 +307,13 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	if (p->onnode)
 	    continue;
 
-	plane = &pPlanes[p->planenum];
+	plane = &map.planes[p->planenum];
 	k = 0;
 
 	for (p2 = surfaces; p2; p2 = p2->next) {
 	    if (p2 == p || p2->onnode)
 		continue;
-	    if (plane->type < 3 && plane->type == pPlanes[p2->planenum].type)
+	    if (plane->type < 3 && plane->type == map.planes[p2->planenum].type)
 		continue;
 	    for (f = p2->faces; f; f = f->next) {
 		if (FaceSide(f, plane) == SIDE_ON) {
@@ -451,7 +451,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
     surface_t *news;
     plane_t *inplane;
 
-    inplane = &pPlanes[in->planenum];
+    inplane = &map.planes[in->planenum];
     *front = *back = NULL;
 
     // parallel case is easy
@@ -689,7 +689,7 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     node->children[1] = AllocMem(NODE, 1, true);
     node->planenum = split->planenum;
 
-    splitplane = &pPlanes[split->planenum];
+    splitplane = &map.planes[split->planenum];
 
     DivideNodeBounds(node, splitplane);
 

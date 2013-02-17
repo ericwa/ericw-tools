@@ -207,7 +207,7 @@ CheckInside(brush_t *b)
 	next = f->next;
 	w = CopyWinding(&f->w);
 	for (bf = b->faces; bf; bf = bf->next) {
-	    clip = pPlanes[bf->planenum];
+	    clip = map.planes[bf->planenum];
 	    if (!bf->planeside) {
 		VectorSubtract(vec3_origin, clip.normal, clip.normal);
 		clip.dist = -clip.dist;
@@ -250,7 +250,7 @@ ClipInside(int splitplane, int frontside, bool precedence)
     face_t *insidelist;
     plane_t *split;
 
-    split = &pPlanes[splitplane];
+    split = &map.planes[splitplane];
 
     insidelist = NULL;
     for (f = inside; f; f = next) {
@@ -368,7 +368,7 @@ BuildSurfaces(void)
     surfhead = NULL;
 
     f = validfaces;
-    for (i = 0; i < numbrushplanes; i++, f++) {
+    for (i = 0; i < map.numplanes; i++, f++) {
 	if (!*f)
 	    continue;		// nothing left on this plane
 
@@ -432,9 +432,9 @@ CSGFaces(const mapentity_t *ent)
     Message(msgProgress, "CSGFaces");
 
     if (validfaces == NULL)
-	validfaces = AllocMem(OTHER, sizeof(face_t *) * cPlanes, true);
+	validfaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
     else
-	memset(validfaces, 0, sizeof(face_t *) * cPlanes);
+	memset(validfaces, 0, sizeof(face_t *) * map.maxplanes);
     csgfaces = brushfaces = csgmergefaces = 0;
 
     // do the solid faces

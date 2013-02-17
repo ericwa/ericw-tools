@@ -38,7 +38,7 @@ ExportNodePlanes_r(node_t *node)
     if (node->planenum == -1)
 	return;
     if (planemapping[node->planenum] == -1) {
-	plane = &pPlanes[node->planenum];
+	plane = &map.planes[node->planenum];
 	dplane = (dplane_t *)planes->data;
 
 	// search for an equivalent plane
@@ -58,7 +58,7 @@ ExportNodePlanes_r(node_t *node)
 	if (i == planes->index) {
 	    if (planes->index >= planes->count)
 		Error(errLowPlaneCount);
-	    plane = &pPlanes[node->planenum];
+	    plane = &map.planes[node->planenum];
 	    dplane = (dplane_t *)planes->data + planes->index;
 	    dplane->normal[0] = plane->normal[0];
 	    dplane->normal[1] = plane->normal[1];
@@ -89,8 +89,8 @@ ExportNodePlanes(node_t *nodes)
 
     // OK just need one plane array, stick it in worldmodel
     if (!planes->data) {
-	// I'd like to use numbrushplanes here but we haven't seen every entity yet...
-	planes->count = cPlanes;
+	// I'd like to use map.numplanes here but we haven't seen every entity yet...
+	planes->count = map.maxplanes;
 	planes->data = AllocMem(BSPPLANE, planes->count, true);
     }
     // TODO: make one-time allocation?

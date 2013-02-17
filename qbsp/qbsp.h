@@ -430,8 +430,6 @@ typedef struct brush_s {
     int contents;
 } brush_t;
 
-extern int numbrushplanes;
-
 void FreeBrushsetBrushes(brush_t *pBrushList);
 
 void PlaneHash_Init(void);
@@ -605,16 +603,22 @@ typedef struct mapdata_s {
     int maxfaces;
     int maxbrushes;
     int maxentities;
+    int maxplanes;
+    int maxmiptex;
 
     /* Number of items currently used */
     int numfaces;
     int numbrushes;
     int numentities;
+    int numplanes;
+    int nummiptex;
 
     /* Arrays of actual items */
     mapface_t *faces;
     mapbrush_t *brushes;
     mapentity_t *entities;
+    plane_t *planes;
+    miptex_t *miptex;
 
     // Totals for BSP data items
     int cTotal[BSP_LUMPS];
@@ -622,11 +626,6 @@ typedef struct mapdata_s {
 
 extern mapdata_t map;
 extern mapentity_t *pWorldEnt;
-
-extern int cMiptex;
-extern int cPlanes;
-extern miptex_t *rgszMiptex;
-extern plane_t *pPlanes;
 
 void LoadMapFile(void);
 

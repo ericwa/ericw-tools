@@ -103,7 +103,7 @@ TryMerge(face_t *f1, face_t *f2)
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
-    plane = &pPlanes[f1->planenum];
+    plane = &map.planes[f1->planenum];
     VectorCopy(plane->normal, planenormal);
     if (f1->planeside)
 	VectorSubtract(vec3_origin, planenormal, planenormal);
