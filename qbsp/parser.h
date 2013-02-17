@@ -26,16 +26,20 @@
 
 #define MAXTOKEN 256
 
-extern int linenum;
-extern char token[MAXTOKEN];
-
-enum parseflags {
+typedef enum parseflags {
     PARSE_NORMAL   = 0,
     PARSE_SAMELINE = 1, /* The next token must be on the current line */
     PARSE_COMMENT  = 2  /* Return a // comment as the next token */
-};
+} parseflags_t;
 
-bool ParseToken(int flags);
-void ParserInit(char *data);
+typedef struct parser {
+    bool unget;
+    const char *pos;
+    int linenum;
+    char token[MAXTOKEN];
+} parser_t;
+
+bool ParseToken(parser_t *p, parseflags_t flags);
+void ParserInit(parser_t *p, const char *data);
 
 #endif /* PARSER_H */

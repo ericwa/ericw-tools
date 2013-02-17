@@ -22,65 +22,58 @@
 #include "qbsp.h"
 #include "parser.h"
 
-int linenum;
-char token[MAXTOKEN];
-
-static bool unget;
-static char *script;
-
-
 void
-ParserInit(char *data)
+ParserInit(parser_t *p, const char *data)
 {
-    linenum = 1;
-    script = data;
-    unget = false;
+    p->linenum = 1;
+    p->pos = data;
+    p->unget = false;
 }
 
 
 bool
-ParseToken(int flags)
+ParseToken(parser_t *p, parseflags_t flags)
 {
     char *token_p;
 
     /* is a token already waiting? */
-    if (unget) {
-	unget = false;
+    if (p->unget) {
+	p->unget = false;
 	return true;
     }
 
  skipspace:
     /* skip space */
-    while (*script <= 32) {
-	if (!*script) {
+    while (*p->pos <= 32) {
+	if (!*p->pos) {
 	    if (flags & PARSE_SAMELINE)
-		Error(errLineIncomplete, linenum);
+		Error(errLineIncomplete, p->linenum);
 	    return false;
 	}
-	if (*script++ == '\n') {
+	if (*p->pos++ == '\n') {
 	    if (flags & PARSE_SAMELINE)
-		Error(errLineIncomplete, linenum);
-	    linenum++;
+		Error(errLineIncomplete, p->linenum);
+	    p->linenum++;
 	}
     }
 
     /* comment field */
-    if (script[0] == '/' && script[1] == '/') {
+    if (p->pos[0] == '/' && p->pos[1] == '/') {
 	if (flags & PARSE_COMMENT) {
-	    token_p = token;
-	    while (*script && *script != '\n') {
-		*token_p++ = *script++;
-		if (token_p > &token[MAXTOKEN - 1])
-		    Error(errTokenTooLarge, linenum);
+	    token_p = p->token;
+	    while (*p->pos && *p->pos != '\n') {
+		*token_p++ = *p->pos++;
+		if (token_p > &p->token[MAXTOKEN - 1])
+		    Error(errTokenTooLarge, p->linenum);
 	    }
 	    goto out;
 	}
 	if (flags & PARSE_SAMELINE)
-	    Error(errLineIncomplete, linenum);
-	while (*script++ != '\n')
-	    if (!*script) {
+	    Error(errLineIncomplete, p->linenum);
+	while (*p->pos++ != '\n')
+	    if (!*p->pos) {
 		if (flags & PARSE_SAMELINE)
-		    Error(errLineIncomplete, linenum);
+		    Error(errLineIncomplete, p->linenum);
 		return false;
 	    }
 	goto skipspace;
@@ -89,23 +82,23 @@ ParseToken(int flags)
 	return false;
 
     /* copy token */
-    token_p = token;
+    token_p = p->token;
 
-    if (*script == '"') {
-	script++;
-	while (*script != '"') {
-	    if (!*script)
-		Error(errEOFInQuotes, linenum);
-	    *token_p++ = *script++;
-	    if (token_p > &token[MAXTOKEN - 1])
-		Error(errTokenTooLarge, linenum);
+    if (*p->pos == '"') {
+	p->pos++;
+	while (*p->pos != '"') {
+	    if (!*p->pos)
+		Error(errEOFInQuotes, p->linenum);
+	    *token_p++ = *p->pos++;
+	    if (token_p > &p->token[MAXTOKEN - 1])
+		Error(errTokenTooLarge, p->linenum);
 	}
-	script++;
+	p->pos++;
     } else
-	while (*script > 32) {
-	    *token_p++ = *script++;
-	    if (token_p > &token[MAXTOKEN - 1])
-		Error(errTokenTooLarge, linenum);
+	while (*p->pos > 32) {
+	    *token_p++ = *p->pos++;
+	    if (token_p > &p->token[MAXTOKEN - 1])
+		Error(errTokenTooLarge, p->linenum);
 	}
  out:
     *token_p = 0;

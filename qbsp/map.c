@@ -100,7 +100,7 @@ FindTexinfo(texinfo_t *t)
 
 
 static void
-ParseEpair(mapentity_t *ent)
+ParseEpair(parser_t *parser, mapentity_t *ent)
 {
     epair_t *epair;
 
@@ -108,13 +108,13 @@ ParseEpair(mapentity_t *ent)
     epair->next = ent->epairs;
     ent->epairs = epair;
 
-    if (strlen(token) >= MAX_KEY - 1)
-	Error(errEpairTooLong, linenum);
-    epair->key = copystring(token);
-    ParseToken(PARSE_SAMELINE);
-    if (strlen(token) >= MAX_VALUE - 1)
-	Error(errEpairTooLong, linenum);
-    epair->value = copystring(token);
+    if (strlen(parser->token) >= MAX_KEY - 1)
+	Error(errEpairTooLong, parser->linenum);
+    epair->key = copystring(parser->token);
+    ParseToken(parser, PARSE_SAMELINE);
+    if (strlen(parser->token) >= MAX_VALUE - 1)
+	Error(errEpairTooLong, parser->linenum);
+    epair->value = copystring(parser->token);
 
     if (!strcasecmp(epair->key, "origin")) {
 	GetVectorForKey(ent, epair->key, ent->origin);
@@ -171,15 +171,15 @@ typedef enum {
 } texcoord_style_t;
 
 static texcoord_style_t
-ParseExtendedTX(void)
+ParseExtendedTX(parser_t *parser)
 {
     texcoord_style_t style = TX_ORIGINAL;
 
-    if (ParseToken(PARSE_COMMENT)) {
-	if (!strncmp(token, "//TX", 4)) {
-	    if (token[4] == '1')
+    if (ParseToken(parser, PARSE_COMMENT)) {
+	if (!strncmp(parser->token, "//TX", 4)) {
+	    if (parser->token[4] == '1')
 		style = TX_QUARK_TYPE1;
-	    else if (token[4] == '2')
+	    else if (parser->token[4] == '2')
 		style = TX_QUARK_TYPE2;
 	}
     }
@@ -259,7 +259,8 @@ SetTexinfo_QuakeEd(const plane_t *plane, const int shift[2], int rotate,
 }
 
 static void
-SetTexinfo_QuArK(vec3_t planepts[3], texcoord_style_t style, texinfo_t *out)
+SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_style_t style,
+		 texinfo_t *out)
 {
     int i;
     vec3_t vecs[2];
@@ -302,7 +303,7 @@ SetTexinfo_QuArK(vec3_t planepts[3], texcoord_style_t style, texinfo_t *out)
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
-	Message(msgWarning, warnDegenerateQuArKTX, linenum);
+	Message(msgWarning, warnDegenerateQuArKTX, parser->linenum);
 	for (i = 0; i < 3; i++)
 	    out->vecs[0][i] = out->vecs[1][i] = 0;
     } else {
@@ -323,7 +324,7 @@ SetTexinfo_QuArK(vec3_t planepts[3], texcoord_style_t style, texinfo_t *out)
 
 
 static void
-ParseBrush(mapbrush_t *brush)
+ParseBrush(parser_t *parser, mapbrush_t *brush)
 {
     vec3_t planepts[3];
     vec3_t t1, t2, t3;
@@ -337,41 +338,41 @@ ParseBrush(mapbrush_t *brush)
     mapface_t *face, *checkface;
 
     brush->faces = face = map.faces + map.numfaces;
-    while (ParseToken(PARSE_NORMAL)) {
-	if (!strcmp(token, "}"))
+    while (ParseToken(parser, PARSE_NORMAL)) {
+	if (!strcmp(parser->token, "}"))
 	    break;
 
 	// read the three point plane definition
 	for (i = 0; i < 3; i++) {
 	    if (i != 0)
-		ParseToken(PARSE_NORMAL);
-	    if (strcmp(token, "("))
-		Error(errInvalidMapPlane, linenum);
+		ParseToken(parser, PARSE_NORMAL);
+	    if (strcmp(parser->token, "("))
+		Error(errInvalidMapPlane, parser->linenum);
 
 	    for (j = 0; j < 3; j++) {
-		ParseToken(PARSE_SAMELINE);
-		planepts[i][j] = atof(token);
+		ParseToken(parser, PARSE_SAMELINE);
+		planepts[i][j] = atof(parser->token);
 	    }
 
-	    ParseToken(PARSE_SAMELINE);
-	    if (strcmp(token, ")"))
-		Error(errInvalidMapPlane, linenum);
+	    ParseToken(parser, PARSE_SAMELINE);
+	    if (strcmp(parser->token, ")"))
+		Error(errInvalidMapPlane, parser->linenum);
 	}
 
 	// read the texturedef
 	memset(&tx, 0, sizeof(tx));
-	ParseToken(PARSE_SAMELINE);
-	tx.miptex = FindMiptex(token);
-	ParseToken(PARSE_SAMELINE);
-	shift[0] = atoi(token);
-	ParseToken(PARSE_SAMELINE);
-	shift[1] = atoi(token);
-	ParseToken(PARSE_SAMELINE);
-	rotate = atoi(token);
-	ParseToken(PARSE_SAMELINE);
-	scale[0] = atof(token);
-	ParseToken(PARSE_SAMELINE);
-	scale[1] = atof(token);
+	ParseToken(parser, PARSE_SAMELINE);
+	tx.miptex = FindMiptex(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	shift[0] = atoi(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	shift[1] = atoi(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	rotate = atoi(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	scale[0] = atof(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	scale[1] = atof(parser->token);
 
 	// if the three points are all on a previous plane, it is a
 	// duplicate plane
@@ -386,7 +387,7 @@ ParseBrush(mapbrush_t *brush)
 		break;
 	}
 	if (checkface < face) {
-	    Message(msgWarning, warnBrushDuplicatePlane, linenum);
+	    Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
 	    continue;
 	}
 
@@ -403,17 +404,17 @@ ParseBrush(mapbrush_t *brush)
 	plane = &face->plane;
 	CrossProduct(t1, t2, plane->normal);
 	if (VectorCompare(plane->normal, vec3_origin)) {
-	    Message(msgWarning, warnNoPlaneNormal, linenum);
+	    Message(msgWarning, warnNoPlaneNormal, parser->linenum);
 	    continue;
 	}
 	VectorNormalize(plane->normal);
 	plane->dist = DotProduct(t3, plane->normal);
 
-	tx_type = ParseExtendedTX();
+	tx_type = ParseExtendedTX(parser);
 	switch (tx_type) {
 	case TX_QUARK_TYPE1:
 	case TX_QUARK_TYPE2:
-	    SetTexinfo_QuArK(&planepts[0], tx_type, &tx);
+	    SetTexinfo_QuArK(parser, &planepts[0], tx_type, &tx);
 	    break;
 	default:
 	    SetTexinfo_QuakeEd(plane, shift, rotate, scale, &tx);
@@ -432,32 +433,32 @@ ParseBrush(mapbrush_t *brush)
 }
 
 static bool
-ParseEntity(mapentity_t *ent)
+ParseEntity(parser_t *parser, mapentity_t *ent)
 {
     mapbrush_t *brush;
 
-    if (!ParseToken(PARSE_NORMAL))
+    if (!ParseToken(parser, PARSE_NORMAL))
 	return false;
 
-    if (strcmp(token, "{"))
-	Error(errParseEntity, linenum);
+    if (strcmp(parser->token, "{"))
+	Error(errParseEntity, parser->linenum);
 
     if (map.numentities == map.maxentities)
 	Error(errLowEntCount);
 
     ent->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
-	if (!ParseToken(PARSE_NORMAL))
+	if (!ParseToken(parser, PARSE_NORMAL))
 	    Error(errUnexpectedEOF);
-	if (!strcmp(token, "}"))
+	if (!strcmp(parser->token, "}"))
 	    break;
-	else if (!strcmp(token, "{")) {
+	else if (!strcmp(parser->token, "{")) {
 	    if (map.numbrushes == map.maxbrushes)
 		Error(errLowMapbrushCount);
-	    ParseBrush(brush++);
+	    ParseBrush(parser, brush++);
 	    map.numbrushes++;
 	} else
-	    ParseEpair(ent);
+	    ParseEpair(parser, ent);
     } while (1);
 
     ent->nummapbrushes = brush - ent->mapbrushes;
@@ -469,7 +470,7 @@ ParseEntity(mapentity_t *ent)
 
 
 static void
-PreParseFile(char *buf)
+PreParseFile(const char *buf)
 {
     int braces = 0;
     struct lumpdata *texinfo;
@@ -528,6 +529,7 @@ PreParseFile(char *buf)
 void
 LoadMapFile(void)
 {
+    parser_t parser;
     char *buf;
     int i, j, length, cAxis;
     void *pTemp;
@@ -540,11 +542,11 @@ LoadMapFile(void)
 
     length = LoadFile(options.szMapName, &buf, true);
     PreParseFile(buf);
-    ParserInit(buf);
+    ParserInit(&parser, buf);
 
     map.numfaces = map.numbrushes = map.numentities = 0;
     ent = map.entities;
-    while (ParseEntity(ent)) {
+    while (ParseEntity(&parser, ent)) {
 	if (ent->nummapbrushes) {
 	    ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
 	    ent->lumps[BSPMODEL].count = 1;
