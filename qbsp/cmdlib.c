@@ -21,19 +21,12 @@
 // cmdlib.c
 
 #include "qbsp.h"
-#include <sys/types.h>
-#include <sys/timeb.h>
 
-#ifdef _WIN32
-# include <direct.h>
-# define timeb  _timeb
-# define ftime  _ftime
-#else
-# include <unistd.h>
-#endif
+#include <sys/types.h>
+#include <sys/time.h>
+#include <string.h>
 
 #define PATHSEPERATOR   '/'
-
 
 char *
 copystring(const char *s)
@@ -55,18 +48,18 @@ I_FloatTime
 double
 I_FloatTime(void)
 {
-    struct timeb timebuffer;
+    struct timeval tv;
 
-    ftime(&timebuffer);
+    gettimeofday(&tv, NULL);
 
-    return (double)timebuffer.time + (timebuffer.millitm / 1000.0);
+    return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
 }
 
 
 /*
 =============================================================================
 
-						MISC FUNCTIONS
+				MISC FUNCTIONS
 
 =============================================================================
 */
@@ -101,7 +94,7 @@ StripExtension(char *path)
     length = strlen(path) - 1;
     while (length > 0 && path[length] != '.') {
 	length--;
-	if (path[length] == '/')
+	if (path[length] == PATHSEPERATOR)
 	    return;		// no extension
     }
     if (length)
@@ -122,5 +115,5 @@ StripFilename(char *path)
 int
 IsAbsolutePath(const char *path)
 {
-    return path[0] == '/' || (isalpha(path[0]) && path[1] == ':');
+    return path[0] == PATHSEPERATOR || (isalpha(path[0]) && path[1] == ':');
 }
