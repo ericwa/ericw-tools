@@ -38,7 +38,6 @@ const int rgcMemSize[GLOBAL + 1] = {
 };
 
 mapdata_t map;
-int hullnum;
 
 // Useful shortcuts
 mapentity_t *pWorldEnt;

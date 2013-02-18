@@ -35,7 +35,7 @@ ProcessEntity
 ===============
 */
 static void
-ProcessEntity(mapentity_t *ent)
+ProcessEntity(mapentity_t *ent, const int hullnum)
 {
     surface_t *surfs;
     node_t *nodes;
@@ -173,7 +173,7 @@ CreateSingleHull
 =================
 */
 static void
-CreateSingleHull(void)
+CreateSingleHull(const int hullnum)
 {
     int i;
     mapentity_t *ent;
@@ -183,7 +183,7 @@ CreateSingleHull(void)
 
     // for each entity in the map file that has geometry
     for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
-	ProcessEntity(ent);
+	ProcessEntity(ent, hullnum);
 	if (!options.fAllverbose)
 	    options.fVerbose = false;	// don't print rest of entities
     }
@@ -200,28 +200,18 @@ CreateHulls(void)
 {
     PlaneHash_Init();
 
-    // commanded to create a single hull only
-    if (hullnum) {
-	CreateSingleHull();
-	exit(0);
-    }
-    // commanded to ignore the hulls altogether
-    if (options.fNoclip) {
-	CreateSingleHull();
-	return;
-    }
-    // create the hulls sequentially
+    /* create the hulls sequentially */
     if (!options.fNoverbose)
 	options.fVerbose = true;
-    hullnum = 0;
-    CreateSingleHull();
 
-    hullnum = 1;
-    CreateSingleHull();
+    CreateSingleHull(0);
 
-    hullnum = 2;
-    CreateSingleHull();
+    /* ignore the clipping hulls altogether */
+    if (options.fNoclip)
+	return;
 
+    CreateSingleHull(1);
+    CreateSingleHull(2);
 }
 
 

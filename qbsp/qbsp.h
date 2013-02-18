@@ -556,8 +556,6 @@ typedef struct options_s {
 
 extern options_t options;
 
-extern int hullnum;
-
 //=============================================================================
 
 // map.c
