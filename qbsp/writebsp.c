@@ -171,7 +171,7 @@ accomodate new data interleaved with old.
 ==================
 */
 void
-ExportClipNodes(mapentity_t *ent, node_t *nodes)
+ExportClipNodes(mapentity_t *ent, node_t *nodes, const int hullnum)
 {
     int oldcount, i, diff;
     int clipcount = 0;

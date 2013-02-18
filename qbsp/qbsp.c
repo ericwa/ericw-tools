@@ -84,7 +84,7 @@ ProcessEntity(mapentity_t *ent)
 	    }
 	}
 	ExportNodePlanes(nodes);
-	ExportClipNodes(ent, nodes);
+	ExportClipNodes(ent, nodes, hullnum);
     } else {
 	// SolidBSP generates a node tree
 	//
