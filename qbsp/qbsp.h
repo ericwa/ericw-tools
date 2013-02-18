@@ -639,7 +639,7 @@ void WriteEntitiesToString(void);
 void FixRotateOrigin(mapentity_t *ent);
 void Brush_LoadEntity(mapentity_t *ent, const int hullnum);
 surface_t *CSGFaces(const mapentity_t *ent);
-void PortalizeWorld(const mapentity_t *ent, node_t *headnode);
+void PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *ent, node_t *headnode);
 node_t *SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit);
 void MakeFaceEdges(mapentity_t *ent, node_t *headnode);

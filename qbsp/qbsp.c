@@ -74,7 +74,7 @@ ProcessEntity(mapentity_t *ent)
 	nodes = SolidBSP(ent, surfs, true);
 	if (ent == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    PortalizeWorld(ent, nodes);
+	    PortalizeWorld(ent, nodes, hullnum);
 	    if (FillOutside(nodes, hullnum)) {
 		// Free portals before regenerating new nodes
 		FreeAllPortals(nodes);
@@ -97,7 +97,7 @@ ProcessEntity(mapentity_t *ent)
 	// some portals are solid polygons, and some are paths to other leafs
 	if (ent == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    PortalizeWorld(ent, nodes);
+	    PortalizeWorld(ent, nodes, hullnum);
 
 	    if (FillOutside(nodes, hullnum)) {
 		FreeAllPortals(nodes);
@@ -112,7 +112,7 @@ ProcessEntity(mapentity_t *ent)
 		nodes = SolidBSP(ent, surfs, false);
 
 		// make the real portals for vis tracing
-		PortalizeWorld(ent, nodes);
+		PortalizeWorld(ent, nodes, hullnum);
 
 		TJunc(ent, nodes);
 	    }

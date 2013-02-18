@@ -539,7 +539,7 @@ Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
 void
-PortalizeWorld(const mapentity_t *ent, node_t *headnode)
+PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum)
 {
     Message(msgProgress, "Portalize");
 
