@@ -754,14 +754,13 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 static brush_t *
-LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush, const int hullnum)
+LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush,
+	  const vec3_t rotate_offset, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
     int contents;
     face_t *facelist;
-    vec3_t rotate_offset;
-    const char *classname;
     const mapface_t *mapface;
     const char *texname;
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
@@ -797,14 +796,6 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush, const int hullnum)
 	Error(errLowBrushFaceCount);
     hullbrush.numfaces = mapbrush->numfaces;
     memcpy(hullbrush.faces, mapface, mapbrush->numfaces * sizeof(mapface_t));
-
-    // Hipnotic rotation
-    VectorCopy(vec3_origin, rotate_offset);
-    classname = ValueForKey(ent, "classname");
-    if (!strncmp(classname, "rotate_", 7)) {
-	FixRotateOrigin(ent);
-	GetVectorForKey(ent, "origin", rotate_offset);
-    }
 
     facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
     if (!facelist) {
@@ -848,6 +839,8 @@ Brush_LoadEntity
 void
 Brush_LoadEntity(mapentity_t *ent, const int hullnum)
 {
+    const char *classname;
+    vec3_t rotate_offset;
     brush_t *brush, *next, *water, *other;
     mapbrush_t *mapbrush;
     int i;
@@ -858,12 +851,20 @@ Brush_LoadEntity(mapentity_t *ent, const int hullnum)
     }
     other = water = NULL;
 
+    // Hipnotic rotation
+    VectorCopy(vec3_origin, rotate_offset);
+    classname = ValueForKey(ent, "classname");
+    if (!strncmp(classname, "rotate_", 7)) {
+	FixRotateOrigin(ent);
+	GetVectorForKey(ent, "origin", rotate_offset);
+    }
+
     Message(msgProgress, "Brush_LoadEntity");
 
     mapbrush = ent->mapbrushes;
     ent->numbrushes = 0;
     for (i = 0; i < ent->nummapbrushes; i++, mapbrush++) {
-	brush = LoadBrush(ent, mapbrush, hullnum);
+	brush = LoadBrush(ent, mapbrush, rotate_offset, hullnum);
 	if (!brush)
 	    continue;
 
