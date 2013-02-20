@@ -834,7 +834,7 @@ Brush_LoadEntity
 ============
 */
 void
-Brush_LoadEntity(mapentity_t *ent, const int hullnum)
+Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 {
     const char *classname;
     brush_t *brush, *next, *water, *other;
@@ -842,25 +842,21 @@ Brush_LoadEntity(mapentity_t *ent, const int hullnum)
     vec3_t rotate_offset;
     int i, contents;
 
-    for (i = 0; i < 3; i++) {
-	ent->mins[i] = VECT_MAX;
-	ent->maxs[i] = -VECT_MAX;
-    }
-    other = water = NULL;
+    classname = ValueForKey(src, "classname");
+    other = dst->brushes;
+    water = NULL;
 
-    // Hipnotic rotation
+    /* Hipnotic rotation */
     VectorCopy(vec3_origin, rotate_offset);
-    classname = ValueForKey(ent, "classname");
     if (!strncmp(classname, "rotate_", 7)) {
-	FixRotateOrigin(ent);
-	GetVectorForKey(ent, "origin", rotate_offset);
+	FixRotateOrigin(dst);
+	GetVectorForKey(dst, "origin", rotate_offset);
     }
 
     Message(msgProgress, "Brush_LoadEntity");
 
-    mapbrush = ent->mapbrushes;
-    ent->numbrushes = 0;
-    for (i = 0; i < ent->nummapbrushes; i++, mapbrush++) {
+    mapbrush = src->mapbrushes;
+    for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
 	contents = Brush_GetContents(mapbrush);
 
 	/* "clip" brushes don't show up in the draw hull */
@@ -871,7 +867,7 @@ Brush_LoadEntity(mapentity_t *ent, const int hullnum)
 	}
 
 	/* entities never use water merging */
-	if (ent != pWorldEnt)
+	if (dst != pWorldEnt)
 	    contents = CONTENTS_SOLID;
 
 	/* water brushes don't show up in clipping hulls */
@@ -882,7 +878,7 @@ Brush_LoadEntity(mapentity_t *ent, const int hullnum)
 	if (!brush)
 	    continue;
 
-	ent->numbrushes++;
+	dst->numbrushes++;
 	brush->contents = contents;
 	if (brush->contents != CONTENTS_SOLID) {
 	    brush->next = water;
@@ -892,12 +888,12 @@ Brush_LoadEntity(mapentity_t *ent, const int hullnum)
 	    other = brush;
 	}
 
-	AddToBounds(ent, brush->mins);
-	AddToBounds(ent, brush->maxs);
+	AddToBounds(dst, brush->mins);
+	AddToBounds(dst, brush->maxs);
 
-	Message(msgPercent, i + 1, ent->nummapbrushes);
+	Message(msgPercent, i + 1, src->nummapbrushes);
     }
-    Message(msgStat, "%5i brushes", ent->numbrushes);
+    Message(msgStat, "%5i brushes", src->numbrushes);
 
     // add all of the water textures at the start
     for (brush = water; brush; brush = next) {
@@ -907,5 +903,5 @@ Brush_LoadEntity(mapentity_t *ent, const int hullnum)
     }
 
     // Store the brushes away
-    ent->brushes = other;
+    dst->brushes = other;
 }

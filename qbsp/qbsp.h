@@ -636,7 +636,11 @@ void GetVectorForKey(const mapentity_t *ent, const char *szKey, vec3_t vec);
 void WriteEntitiesToString(void);
 
 void FixRotateOrigin(mapentity_t *ent);
-void Brush_LoadEntity(mapentity_t *ent, const int hullnum);
+
+/* Create BSP brushes from map brushes in src and save into dst */
+void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src,
+		      const int hullnum);
+
 surface_t *CSGFaces(const mapentity_t *ent);
 void PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *ent, node_t *headnode);

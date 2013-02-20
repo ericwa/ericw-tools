@@ -37,10 +37,11 @@ ProcessEntity
 static void
 ProcessEntity(mapentity_t *ent, const int hullnum)
 {
+    int i;
     surface_t *surfs;
     node_t *nodes;
 
-    // No map brushes means non-bmodel entity
+    /* No map brushes means non-bmodel entity */
     if (!ent->nummapbrushes)
 	return;
 
@@ -57,17 +58,32 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	    Message(msgStat, "MODEL: %s", mod);
 	SetKeyValue(ent, "model", mod);
     }
-    // take the brush_ts and clip off all overlapping and contained faces,
-    // leaving a perfect skin of the model with no hidden faces
-    Brush_LoadEntity(ent, hullnum);
 
+    /*
+     * Init the entity
+     */
+    ent->brushes = NULL;
+    ent->numbrushes = 0;
+    for (i = 0; i < 3; i++) {
+	ent->mins[i] = VECT_MAX;
+	ent->maxs[i] = -VECT_MAX;
+    }
+
+    /*
+     * Convert the map brushes (planes) into BSP brushes (polygons)
+     */
+    Brush_LoadEntity(ent, ent, hullnum);
     if (!ent->brushes) {
 	PrintEntity(ent);
 	Error(errNoValidBrushes);
     }
 
-    surfs = CSGFaces(ent);
 
+    /*
+     * Take the brush_t's and clip off all overlapping and contained faces,
+     * leaving a perfect skin of the model with no hidden faces
+     */
+    surfs = CSGFaces(ent);
     FreeBrushsetBrushes(ent->brushes);
 
     if (hullnum != 0) {
