@@ -92,6 +92,7 @@
 #define	CONTENTS_SLIME	-4
 #define	CONTENTS_LAVA	-5
 #define	CONTENTS_SKY	-6
+#define CONTENTS_CLIP	-7	/* compiler internal use only */
 
 // flag for textures, sky or slime, no lightmap or 256 subdivision
 #define	TEX_SPECIAL	1
