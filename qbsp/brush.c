@@ -745,6 +745,33 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
 
 //============================================================================
 
+static int
+Brush_GetContents(const mapbrush_t *mapbrush)
+{
+    const mapface_t *mapface;
+    const char *texname;
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+
+    mapface = mapbrush->faces;
+    texname = map.miptex[texinfo[mapface->texinfo].miptex];
+
+    if (!strcasecmp(texname, "clip"))
+	return CONTENTS_CLIP;
+
+    if (texname[0] == '*') {
+	if (!strncasecmp(texname + 1, "lava", 4))
+	    return CONTENTS_LAVA;
+	if (!strncasecmp(texname + 1, "slime", 5))
+	    return CONTENTS_SLIME;
+	return CONTENTS_WATER;
+    }
+
+    if (!strncasecmp(texname, "sky", 3))
+	return CONTENTS_SKY;
+
+    return CONTENTS_SOLID;
+}
+
 
 /*
 ===============
@@ -761,41 +788,30 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush,
     brush_t *brush;
     int contents;
     face_t *facelist;
-    const mapface_t *mapface;
-    const char *texname;
-    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
-    /* check texture name for attributes */
-    mapface = mapbrush->faces;
-    texname = map.miptex[texinfo[mapface->texinfo].miptex];
+    contents = Brush_GetContents(mapbrush);
 
-    if (!strcasecmp(texname, "clip") && hullnum == 0)
-	return NULL;		// "clip" brushes don't show up in the draw hull
-
-    // entities never use water merging
-    if (ent != pWorldEnt) {
-	contents = CONTENTS_SOLID;
-    } else if (texname[0] == '*') {
-	if (!strncasecmp(texname + 1, "lava", 4))
-	    contents = CONTENTS_LAVA;
-	else if (!strncasecmp(texname + 1, "slime", 5))
-	    contents = CONTENTS_SLIME;
-	else
-	    contents = CONTENTS_WATER;
-    } else if (!strncasecmp(texname, "sky", 3) && hullnum == 0) {
-	contents = CONTENTS_SKY;
-    } else {
+    /* "clip" brushes don't show up in the draw hull */
+    if (contents == CONTENTS_CLIP) {
+	if (!hullnum)
+	    return NULL;
 	contents = CONTENTS_SOLID;
     }
 
+    /* entities never use water merging */
+    if (ent != pWorldEnt)
+	contents = CONTENTS_SOLID;
+
+    /* water brushes don't show up in clipping hulls */
     if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
-	return NULL;		// water brushes don't show up in clipping hulls
+	return NULL;
 
     // create the faces
     if (mapbrush->numfaces > MAX_FACES)
 	Error(errLowBrushFaceCount);
     hullbrush.numfaces = mapbrush->numfaces;
-    memcpy(hullbrush.faces, mapface, mapbrush->numfaces * sizeof(mapface_t));
+    memcpy(hullbrush.faces, mapbrush->faces,
+	   mapbrush->numfaces * sizeof(mapface_t));
 
     facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
     if (!facelist) {
