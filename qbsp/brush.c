@@ -355,7 +355,8 @@ CreateBrushFaces
 =================
 */
 static face_t *
-CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent, const int hullnum)
+CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
+		 const int hullnum)
 {
     int i, j, k;
     vec_t r;
@@ -364,8 +365,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent, const int hullnum)
     plane_t plane;
     face_t *facelist = NULL;
     mapface_t *mapface, *mapface2;
-    const char *classname;
-    vec3_t point, rotate_offset;
+    vec3_t point;
     vec_t max, min;
 
     min = VECT_MAX;
@@ -373,14 +373,6 @@ CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent, const int hullnum)
     for (i = 0; i < 3; i++) {
 	hullbrush->mins[i] = VECT_MAX;
 	hullbrush->maxs[i] = -VECT_MAX;
-    }
-
-    // Hipnotic rotation
-    VectorCopy(vec3_origin, rotate_offset);
-    classname = ValueForKey(ent, "classname");
-    if (!strncmp(classname, "rotate_", 7)) {
-	FixRotateOrigin(ent);
-	GetVectorForKey(ent, "origin", rotate_offset);
     }
 
     mapface = hullbrush->faces;
@@ -442,7 +434,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, mapentity_t *ent, const int hullnum)
 
     // Rotatable objects must have a bounding box big enough to
     // account for all its rotations
-    if (!strncmp(classname, "rotate_", 7)) {
+    if (rotate_offset[0] || rotate_offset[1] || rotate_offset[2]) {
 	vec_t delta;
 
 	delta = fabs(max);
@@ -768,6 +760,8 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush, const int hullnum)
     brush_t *brush;
     int contents;
     face_t *facelist;
+    vec3_t rotate_offset;
+    const char *classname;
     const mapface_t *mapface;
     const char *texname;
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
@@ -804,7 +798,15 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush, const int hullnum)
     hullbrush.numfaces = mapbrush->numfaces;
     memcpy(hullbrush.faces, mapface, mapbrush->numfaces * sizeof(mapface_t));
 
-    facelist = CreateBrushFaces(&hullbrush, ent, hullnum);
+    // Hipnotic rotation
+    VectorCopy(vec3_origin, rotate_offset);
+    classname = ValueForKey(ent, "classname");
+    if (!strncmp(classname, "rotate_", 7)) {
+	FixRotateOrigin(ent);
+	GetVectorForKey(ent, "origin", rotate_offset);
+    }
+
+    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
     if (!facelist) {
 	Message(msgWarning, warnNoBrushFaces);
 	return NULL;
@@ -815,13 +817,13 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush, const int hullnum)
 
 	ExpandBrush(&hullbrush, size, facelist);
 	FreeBrushFaces(facelist);
-	facelist = CreateBrushFaces(&hullbrush, ent, hullnum);
+	facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
     } else if (hullnum == 2) {
 	vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
 	ExpandBrush(&hullbrush, size, facelist);
 	FreeBrushFaces(facelist);
-	facelist = CreateBrushFaces(&hullbrush, ent, hullnum);
+	facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
     }
 
     // create the brush
