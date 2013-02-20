@@ -236,15 +236,15 @@ ProcessFile(void)
     }
 
     wadstring = ValueForKey(pWorldEnt, "_wad");
-    if (!wadstring)
+    if (!wadstring[0])
 	wadstring = ValueForKey(pWorldEnt, "wad");
-    if (!wadstring)
+    if (!wadstring[0])
 	Message(msgWarning, warnNoWadKey);
     else
 	numwads = WADList_Init(&wads, wadstring);
 
     if (!numwads) {
-	if (wadstring)
+	if (wadstring[0])
 	    Message(msgWarning, warnNoValidWads);
 	/* Try the default wad name */
 	defaultwad = AllocMem(OTHER, strlen(options.szMapName) + 5, false);

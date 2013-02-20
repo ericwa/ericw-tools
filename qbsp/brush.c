@@ -310,7 +310,7 @@ FindTargetEntity(const char *target)
 
     for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
 	name = ValueForKey(ent, "targetname");
-	if (name && !strcasecmp(target, name))
+	if (!strcasecmp(target, name))
 	    return ent;
     }
 
@@ -332,7 +332,7 @@ FixRotateOrigin(mapentity_t *ent)
     char value[20];
 
     search = ValueForKey(ent, "target");
-    if (search)
+    if (search[0])
 	target = FindTargetEntity(search);
 
     if (target) {

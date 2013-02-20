@@ -663,7 +663,7 @@ ValueForKey(const mapentity_t *ent, const char *key)
 	if (!strcmp(ep->key, key))
 	    return ep->value;
 
-    return NULL;
+    return "";
 }
 
 
