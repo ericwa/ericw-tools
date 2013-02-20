@@ -781,30 +781,12 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 static brush_t *
-LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush,
-	  const vec3_t rotate_offset, const int hullnum)
+LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
+	  const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
-    int contents;
     face_t *facelist;
-
-    contents = Brush_GetContents(mapbrush);
-
-    /* "clip" brushes don't show up in the draw hull */
-    if (contents == CONTENTS_CLIP) {
-	if (!hullnum)
-	    return NULL;
-	contents = CONTENTS_SOLID;
-    }
-
-    /* entities never use water merging */
-    if (ent != pWorldEnt)
-	contents = CONTENTS_SOLID;
-
-    /* water brushes don't show up in clipping hulls */
-    if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
-	return NULL;
 
     // create the faces
     if (mapbrush->numfaces > MAX_FACES)
@@ -836,7 +818,6 @@ LoadBrush(mapentity_t *ent, const mapbrush_t *mapbrush,
     // create the brush
     brush = AllocMem(BRUSH, 1, true);
 
-    brush->contents = contents;
     brush->faces = facelist;
     VectorCopy(hullbrush.mins, brush->mins);
     VectorCopy(hullbrush.maxs, brush->maxs);
@@ -856,10 +837,10 @@ void
 Brush_LoadEntity(mapentity_t *ent, const int hullnum)
 {
     const char *classname;
-    vec3_t rotate_offset;
     brush_t *brush, *next, *water, *other;
     mapbrush_t *mapbrush;
-    int i;
+    vec3_t rotate_offset;
+    int i, contents;
 
     for (i = 0; i < 3; i++) {
 	ent->mins[i] = VECT_MAX;
@@ -880,11 +861,29 @@ Brush_LoadEntity(mapentity_t *ent, const int hullnum)
     mapbrush = ent->mapbrushes;
     ent->numbrushes = 0;
     for (i = 0; i < ent->nummapbrushes; i++, mapbrush++) {
-	brush = LoadBrush(ent, mapbrush, rotate_offset, hullnum);
+	contents = Brush_GetContents(mapbrush);
+
+	/* "clip" brushes don't show up in the draw hull */
+	if (contents == CONTENTS_CLIP) {
+	    if (!hullnum)
+		continue;
+	    contents = CONTENTS_SOLID;
+	}
+
+	/* entities never use water merging */
+	if (ent != pWorldEnt)
+	    contents = CONTENTS_SOLID;
+
+	/* water brushes don't show up in clipping hulls */
+	if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
+	    continue;
+
+	brush = LoadBrush(mapbrush, rotate_offset, hullnum);
 	if (!brush)
 	    continue;
 
 	ent->numbrushes++;
+	brush->contents = contents;
 	if (brush->contents != CONTENTS_SOLID) {
 	    brush->next = water;
 	    water = brush;
