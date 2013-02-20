@@ -40,9 +40,15 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
     int i;
     surface_t *surfs;
     node_t *nodes;
+    const char *class;
 
     /* No map brushes means non-bmodel entity */
     if (!ent->nummapbrushes)
+	return;
+
+    /* func_detail entities get their brushes added to the worldspawn */
+    class = ValueForKey(ent, "classname");
+    if (!strcmp(class, "func_detail"))
 	return;
 
     if (ent != pWorldEnt) {
@@ -78,6 +84,22 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	Error(errNoValidBrushes);
     }
 
+    /*
+     * If this is the world entity, find all func_detail entities and
+     * add their brushes with the detail flag set.
+     */
+    if (ent == pWorldEnt) {
+	const mapentity_t *detail;
+	const int detailstart = ent->numbrushes;
+
+	detail = map.entities + 1;
+	for (i = 1; i < map.numentities; i++, detail++) {
+	    class = ValueForKey(detail, "classname");
+	    if (!strcmp(class, "func_detail"))
+		Brush_LoadEntity(ent, detail, hullnum);
+	}
+	Message(msgStat, "%5i detail brushes", ent->numbrushes - detailstart);
+    }
 
     /*
      * Take the brush_t's and clip off all overlapping and contained faces,
