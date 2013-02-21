@@ -174,24 +174,27 @@ UpdateEntLump
 static void
 UpdateEntLump(void)
 {
-    int m, i;
-    char szMod[80];
-    const char *szClassname;
+    int modnum, i;
+    char modname[10];
+    const char *classname;
     mapentity_t *ent;
 
     Message(msgStat, "Updating entities lump...");
 
-    m = 1;
+    modnum = 1;
     for (i = 1, ent = map.entities + 1; i < map.numentities; i++, ent++) {
 	if (!ent->nummapbrushes)
 	    continue;
-	sprintf(szMod, "*%i", m);
-	SetKeyValue(ent, "model", szMod);
-	m++;
+	classname = ValueForKey(ent, "classname");
+	if (!strcmp(classname, "func_detail"))
+	    continue;
 
-	// Do extra work for rotating entities if necessary
-	szClassname = ValueForKey(ent, "classname");
-	if (!strncmp(szClassname, "rotate_", 7))
+	snprintf(modname, sizeof(modname), "*%i", modnum);
+	SetKeyValue(ent, "model", modname);
+	modnum++;
+
+	/* Do extra work for rotating entities if necessary */
+	if (!strncmp(classname, "rotate_", 7))
 	    FixRotateOrigin(ent);
     }
 
