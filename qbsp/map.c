@@ -551,7 +551,9 @@ LoadMapFile(void)
     map.numfaces = map.numbrushes = map.numentities = 0;
     ent = map.entities;
     while (ParseEntity(&parser, ent)) {
-	if (ent->nummapbrushes) {
+	/* Allocate memory for the bmodel, if needed. */
+	const char *classname = ValueForKey(ent, "classname");
+	if (strcmp(classname, "func_detail") && ent->nummapbrushes) {
 	    ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
 	    ent->lumps[BSPMODEL].count = 1;
 	}
