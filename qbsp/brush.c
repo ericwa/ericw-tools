@@ -840,7 +840,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     brush_t *brush, *next, *water, *other;
     mapbrush_t *mapbrush;
     vec3_t rotate_offset;
-    int i, contents;
+    int i, contents, cflags = 0;
 
     classname = ValueForKey(src, "classname");
     other = dst->brushes;
@@ -853,6 +853,9 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	GetVectorForKey(dst, "origin", rotate_offset);
     }
 
+    /* If the source entity is func_detail, set the content flag */
+    if (!strcmp(classname, "func_detail"))
+	cflags |= CFLAGS_DETAIL;
 
     mapbrush = src->mapbrushes;
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
@@ -879,6 +882,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
 	dst->numbrushes++;
 	brush->contents = contents;
+	brush->cflags = cflags;
 	if (brush->contents != CONTENTS_SOLID) {
 	    brush->next = water;
 	    water = brush;

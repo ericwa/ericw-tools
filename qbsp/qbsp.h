@@ -94,6 +94,9 @@
 #define	CONTENTS_SKY	-6
 #define CONTENTS_CLIP	-7	/* compiler internal use only */
 
+// Special contents flags for the compiler only
+#define CFLAGS_DETAIL	(1U << 0)
+
 // flag for textures, sky or slime, no lightmap or 256 subdivision
 #define	TEX_SPECIAL	1
 
@@ -426,7 +429,8 @@ typedef struct brush_s {
     struct brush_s *next;
     vec3_t mins, maxs;
     face_t *faces;
-    int contents;
+    short contents;		/* BSP contents */
+    short cflags;		/* Compiler internal contents flags */
 } brush_t;
 
 void FreeBrushsetBrushes(brush_t *brushlist);
