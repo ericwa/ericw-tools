@@ -100,7 +100,7 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	    if (!strcmp(class, "func_detail"))
 		Brush_LoadEntity(ent, detail, hullnum);
 	}
-	Message(msgStat, "%5i detail brushes", ent->numbrushes - detailstart);
+	Message(msgStat, "%5i detail", ent->numbrushes - detailstart);
     }
 
     /*
