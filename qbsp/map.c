@@ -714,14 +714,16 @@ WriteEntitiesToString(void)
     int cLen;
     struct lumpdata *entities;
     const mapentity_t *ent;
+    const char *classname;
 
     map.cTotal[BSPENT] = 0;
 
     for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
 	entities = &map.entities[i].lumps[BSPENT];
 
-	// ent got removed
-	if (!ent->epairs) {
+	/* Check if entity needs to be removed */
+	classname = ValueForKey(ent, "classname");
+	if (!ent->epairs || !strcmp(classname, "func_detail")) {
 	    entities->count = 0;
 	    entities->data = NULL;
 	    continue;
