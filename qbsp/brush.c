@@ -853,7 +853,6 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	GetVectorForKey(dst, "origin", rotate_offset);
     }
 
-    Message(msgProgress, "Brush_LoadEntity");
 
     mapbrush = src->mapbrushes;
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
@@ -893,7 +892,6 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
 	Message(msgPercent, i + 1, src->nummapbrushes);
     }
-    Message(msgStat, "%5i brushes", src->numbrushes);
 
     // add all of the water textures at the start
     for (brush = water; brush; brush = next) {

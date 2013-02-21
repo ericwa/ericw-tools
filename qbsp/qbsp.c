@@ -78,11 +78,13 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
+    Message(msgProgress, "Brush_LoadEntity");
     Brush_LoadEntity(ent, ent, hullnum);
     if (!ent->brushes) {
 	PrintEntity(ent);
 	Error(errNoValidBrushes);
     }
+    Message(msgStat, "%5i brushes", ent->numbrushes);
 
     /*
      * If this is the world entity, find all func_detail entities and
