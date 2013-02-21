@@ -65,7 +65,7 @@ AllocMem(int Type, int cElements, bool fZero)
 	memset(pTemp, 0, cSize);
 
     // Special stuff for face_t
-    if (Type == FACE)
+    if (Type == FACE && cElements == 1)
 	((face_t *)pTemp)->planenum = -1;
     if (Type == WINDING) {
 	*(int *)pTemp = cSize;
