@@ -358,8 +358,10 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	}
 
 	/* If we found a candidate on first pass, don't do a second pass */
-	if (bestsurface)
+	if (pass > 0 && bestsurface) {
+	    bestsurface->detail_separator = true;
 	    break;
+	}
     }
 
     return bestsurface;
@@ -704,6 +706,7 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     node->children[0] = AllocMem(NODE, 1, true);
     node->children[1] = AllocMem(NODE, 1, true);
     node->planenum = split->planenum;
+    node->detail_separator = split->detail_separator;
 
     splitplane = &map.planes[split->planenum];
 
