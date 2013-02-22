@@ -377,23 +377,23 @@ returns NULL if the surface list can not be divided any more (a leaf)
 static surface_t *
 SelectPartition(surface_t *surfaces)
 {
-    int i, j;
+    int i, surfcount;
     vec3_t mins, maxs;
-    surface_t *p, *bestsurface;
+    surface_t *surf, *bestsurface;
 
     // count onnode surfaces
-    i = 0;
+    surfcount = 0;
     bestsurface = NULL;
-    for (p = surfaces; p; p = p->next)
-	if (!p->onnode) {
-	    i++;
-	    bestsurface = p;
+    for (surf = surfaces; surf; surf = surf->next)
+	if (!surf->onnode) {
+	    surfcount++;
+	    bestsurface = surf;
 	}
 
-    if (i == 0)
+    if (surfcount == 0)
 	return NULL;
 
-    if (i == 1)
+    if (surfcount == 1)
 	return bestsurface;	// this is a final split
 
     // calculate a bounding box of the entire surfaceset
@@ -401,13 +401,12 @@ SelectPartition(surface_t *surfaces)
 	mins[i] = VECT_MAX;
 	maxs[i] = -VECT_MAX;
     }
-
-    for (p = surfaces; p; p = p->next)
-	for (j = 0; j < 3; j++) {
-	    if (p->mins[j] < mins[j])
-		mins[j] = p->mins[j];
-	    if (p->maxs[j] > maxs[j])
-		maxs[j] = p->maxs[j];
+    for (surf = surfaces; surf; surf = surf->next)
+	for (i = 0; i < 3; i++) {
+	    if (surf->mins[i] < mins[i])
+		mins[i] = surf->mins[i];
+	    if (surf->maxs[i] > maxs[i])
+		maxs[i] = surf->maxs[i];
 	}
 
     if (usemidsplit)		// do fast way for clipping hull
@@ -465,7 +464,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
     face_t *facet, *next;
     face_t *frontlist, *backlist;
     face_t *frontfrag, *backfrag;
-    surface_t *news;
+    surface_t *newsurf;
     plane_t *inplane;
 
     inplane = &map.planes[in->planenum];
@@ -480,15 +479,15 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
 	    in->onnode = true;
 
 	    // divide the facets to the front and back sides
-	    news = AllocMem(SURFACE, 1, true);
-	    *news = *in;
+	    newsurf = AllocMem(SURFACE, 1, true);
+	    *newsurf = *in;
 
-	    // Prepend each face in facet list to either in or news lists
+	    // Prepend each face in facet list to either in or newsurf lists
 	    for (; facet; facet = next) {
 		next = facet->next;
 		if (facet->planeside == 1) {
-		    facet->next = news->faces;
-		    news->faces = facet;
+		    facet->next = newsurf->faces;
+		    newsurf->faces = facet;
 		} else {
 		    facet->next = in->faces;
 		    in->faces = facet;
@@ -500,10 +499,10 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
 	    else
 		FreeMem(in, SURFACE, 1);
 
-	    if (news->faces)
-		*back = news;
+	    if (newsurf->faces)
+		*back = newsurf;
 	    else
-		FreeMem(news, SURFACE, 1);
+		FreeMem(newsurf, SURFACE, 1);
 
 	    return;
 	}
@@ -546,16 +545,16 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
     }
 
     // stuff got split, so allocate one new plane and reuse in
-    news = AllocMem(SURFACE, 1, true);
-    *news = *in;
-    news->faces = backlist;
-    *back = news;
+    newsurf = AllocMem(SURFACE, 1, true);
+    *newsurf = *in;
+    newsurf->faces = backlist;
+    *back = newsurf;
 
     in->faces = frontlist;
     *front = in;
 
     // recalc bboxes and flags
-    CalcSurfaceInfo(news);
+    CalcSurfaceInfo(newsurf);
     CalcSurfaceInfo(in);
 }
 
@@ -686,7 +685,7 @@ PartitionSurfaces
 static void
 PartitionSurfaces(surface_t *surfaces, node_t *node)
 {
-    surface_t *split, *p, *next;
+    surface_t *split, *surf, *next;
     surface_t *frontlist, *backlist;
     surface_t *frontfrag, *backfrag;
     plane_t *splitplane;
@@ -714,9 +713,9 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     frontlist = NULL;
     backlist = NULL;
 
-    for (p = surfaces; p; p = next) {
-	next = p->next;
-	DividePlane(p, splitplane, &frontfrag, &backfrag);
+    for (surf = surfaces; surf; surf = next) {
+	next = surf->next;
+	DividePlane(surf, splitplane, &frontfrag, &backfrag);
 	if (frontfrag && backfrag) {
 	    // the plane was split, which may expose oportunities to merge
 	    // adjacent faces into a single face
