@@ -837,14 +837,24 @@ void
 Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 {
     const char *classname;
-    brush_t *brush, *next, *water, *other;
+    brush_t *brush, *next, *water, *solid;
     mapbrush_t *mapbrush;
     vec3_t rotate_offset;
     int i, contents, cflags = 0;
 
+    /*
+     * The brush list need to be ordered:
+     * 1. detail water
+     * 2. water
+     * 3. detail solid
+     * 4. solid
+     *
+     * We can always just put water on the head of the list, but will need to
+     * insert solid brushes between any existing water and solids on the list.
+     */
+    solid = NULL;
+    water = dst->brushes;
     classname = ValueForKey(src, "classname");
-    other = dst->brushes;
-    water = NULL;
 
     /* Hipnotic rotation */
     VectorCopy(vec3_origin, rotate_offset);
@@ -887,8 +897,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	    brush->next = water;
 	    water = brush;
 	} else {
-	    brush->next = other;
-	    other = brush;
+	    brush->next = solid;
+	    solid = brush;
 	}
 
 	AddToBounds(dst, brush->mins);
@@ -897,13 +907,22 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	Message(msgPercent, i + 1, src->nummapbrushes);
     }
 
-    // add all of the water textures at the start
+    /* Insert the solid brushes after the water */
     for (brush = water; brush; brush = next) {
 	next = brush->next;
-	brush->next = other;
-	other = brush;
+	if (!next || next->contents == CONTENTS_SOLID)
+	    break;
     }
+    if (!brush) {
+	dst->brushes = solid; /* No water */
+	return;
+    }
+    brush->next = solid;
+    dst->brushes = water;
+    if (!solid)
+	return;
 
-    // Store the brushes away
-    dst->brushes = other;
+    while (solid->next)
+	solid = solid->next;
+    solid->next = next;
 }

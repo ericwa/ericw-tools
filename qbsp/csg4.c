@@ -431,33 +431,31 @@ CSGFaces(const mapentity_t *ent)
 
     Message(msgProgress, "CSGFaces");
 
-    if (validfaces == NULL)
-	validfaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
-    else
-	memset(validfaces, 0, sizeof(face_t *) * map.maxplanes);
+    if (!validfaces)
+	validfaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, false);
+
+    memset(validfaces, 0, sizeof(face_t *) * map.maxplanes);
     csgfaces = brushfaces = csgmergefaces = 0;
 
     // do the solid faces
     for (b1 = ent->brushes; b1; b1 = b1->next) {
 	// set outside to a copy of the brush's faces
 	CopyFacesToOutside(b1);
-
-	// Why is this necessary?
 	overwrite = false;
-
 	for (b2 = ent->brushes; b2; b2 = b2->next) {
-	    // check bounding box first
+	    if (b1 == b2) {
+		/* Brushes further down the list overried earlier ones */
+		overwrite = true;
+		continue;
+	    }
+
+	    /* check bounding box first */
 	    for (i = 0; i < 3; i++)
 		if (b1->mins[i] > b2->maxs[i] || b1->maxs[i] < b2->mins[i])
 		    break;
 	    if (i < 3)
 		continue;
 
-	    // see if b2 needs to clip a chunk out of b1
-	    if (b1 == b2) {
-		overwrite = true;
-		continue;
-	    }
 	    // divide faces by the planes of the new brush
 	    inside = outside;
 	    outside = NULL;
