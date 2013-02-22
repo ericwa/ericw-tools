@@ -296,53 +296,70 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     plane_t *plane, *plane2;
     vec_t distribution, bestdistribution;
     face_t *face;
+    int pass;
 
     /* pick the plane that splits the least */
     minsplits = INT_MAX;
     bestdistribution = VECT_MAX;
     bestsurface = NULL;
 
-    for (surf = surfaces; surf; surf = surf->next) {
-	if (surf->onnode)
-	    continue;
-
-	plane = &map.planes[surf->planenum];
-	splits = 0;
-
-	for (surf2 = surfaces; surf2; surf2 = surf2->next) {
-	    if (surf2 == surf || surf2->onnode)
+    /* Two passes - exhaust all non-detail faces before details */
+    for (pass = 0; pass < 2; pass++) {
+	for (surf = surfaces; surf; surf = surf->next) {
+	    if (surf->onnode)
 		continue;
-	    plane2 = &map.planes[surf2->planenum];
-	    if (plane->type < 3 && plane->type == plane2->type)
+
+	    for (face = surf->faces; face; face = face->next) {
+		if (pass && (face->cflags[1] & CFLAGS_DETAIL))
+		    break;
+		if (!pass && !(face->cflags[1] & CFLAGS_DETAIL))
+		    break;
+	    }
+	    if (!face)
 		continue;
-	    for (face = surf2->faces; face; face = face->next) {
-		if (FaceSide(face, plane) == SIDE_ON) {
-		    splits++;
-		    if (splits >= minsplits)
-			break;
+
+	    plane = &map.planes[surf->planenum];
+	    splits = 0;
+
+	    for (surf2 = surfaces; surf2; surf2 = surf2->next) {
+		if (surf2 == surf || surf2->onnode)
+		    continue;
+		plane2 = &map.planes[surf2->planenum];
+		if (plane->type < 3 && plane->type == plane2->type)
+		    continue;
+		for (face = surf2->faces; face; face = face->next) {
+		    if (FaceSide(face, plane) == SIDE_ON) {
+			splits++;
+			if (splits >= minsplits)
+			    break;
+		    }
 		}
+		if (splits > minsplits)
+		    break;
 	    }
 	    if (splits > minsplits)
-		break;
-	}
-	if (splits > minsplits)
-	    continue;
+		continue;
 
-	/*
-	 * if equal numbers axial planes win, otherwise decide on spatial
-	 * subdivision
-	 */
-	if (splits < minsplits || (splits == minsplits && plane->type < 3)) {
-	    if (plane->type < 3) {
-		distribution = SplitPlaneMetric(plane, mins, maxs);
-		if (distribution > bestdistribution && splits == minsplits)
-		    continue;
-		bestdistribution = distribution;
+	    /*
+	     * if equal numbers axial planes win, otherwise decide on spatial
+	     * subdivision
+	     */
+	    if (splits < minsplits || (splits == minsplits && plane->type < 3)) {
+		if (plane->type < 3) {
+		    distribution = SplitPlaneMetric(plane, mins, maxs);
+		    if (distribution > bestdistribution && splits == minsplits)
+			continue;
+		    bestdistribution = distribution;
+		}
+		/* currently the best! */
+		minsplits = splits;
+		bestsurface = surf;
 	    }
-	    /* currently the best! */
-	    minsplits = splits;
-	    bestsurface = surf;
 	}
+
+	/* If we found a candidate on first pass, don't do a second pass */
+	if (bestsurface)
+	    break;
     }
 
     return bestsurface;
