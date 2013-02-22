@@ -470,11 +470,11 @@ FreeBrushFaces(face_t *facelist)
 
 /*
 =====================
-FreeBrushsetBrushes
+FreeBrushes
 =====================
 */
 void
-FreeBrushsetBrushes(brush_t *brushlist)
+FreeBrushes(brush_t *brushlist)
 {
     brush_t *brush, *next;
 

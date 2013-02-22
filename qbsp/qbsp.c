@@ -108,7 +108,7 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
      * leaving a perfect skin of the model with no hidden faces
      */
     surfs = CSGFaces(ent);
-    FreeBrushsetBrushes(ent->brushes);
+    FreeBrushes(ent->brushes);
 
     if (hullnum != 0) {
 	nodes = SolidBSP(ent, surfs, true);

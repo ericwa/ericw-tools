@@ -434,7 +434,7 @@ typedef struct brush_s {
     short cflags;		/* Compiler internal contents flags */
 } brush_t;
 
-void FreeBrushsetBrushes(brush_t *brushlist);
+void FreeBrushes(brush_t *brushlist);
 
 void PlaneHash_Init(void);
 int FindPlane(const plane_t *plane, int *side);
