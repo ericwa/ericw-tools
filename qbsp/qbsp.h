@@ -352,15 +352,15 @@ typedef struct {
     vec3_t points[MAXEDGES];		// variable sized
 } winding_t;
 
-winding_t *BaseWindingForPlane(plane_t *p);
-void CheckWinding(winding_t *w);
+winding_t *BaseWindingForPlane(const plane_t *p);
+void CheckWinding(const winding_t *w);
 winding_t *NewWinding(int points);
 void FreeWinding(winding_t *w);
-winding_t *CopyWinding(winding_t *w);
-winding_t *ClipWinding(winding_t *in, plane_t *split, bool keepon);
-void DivideWinding(winding_t *in, plane_t *split, winding_t **front,
+winding_t *CopyWinding(const winding_t *w);
+winding_t *ClipWinding(winding_t *in, const plane_t *split, bool keepon);
+void DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
 		   winding_t **back);
-void MidpointWinding(winding_t *w, vec3_t v);
+void MidpointWinding(const winding_t *w, vec3_t v);
 
 /* Helper function for ClipWinding and it's variants */
 void CalcSides(const winding_t *in, const plane_t *split, int *sides,

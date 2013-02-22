@@ -30,7 +30,7 @@ BaseWindingForPlane
 =================
 */
 winding_t *
-BaseWindingForPlane(plane_t *p)
+BaseWindingForPlane(const plane_t *p)
 {
     int i, x;
     vec_t max, v;
@@ -100,7 +100,7 @@ CopyWinding
 ==================
 */
 winding_t *
-CopyWinding(winding_t *w)
+CopyWinding(const winding_t *w)
 {
     int size;
     winding_t *c;
@@ -122,7 +122,7 @@ Check for possible errors
 ==================
 */
 void
-CheckWinding(winding_t *w)
+CheckWinding(const winding_t *w)
 {
 }
 
@@ -162,7 +162,7 @@ it will be clipped away.
 ==================
 */
 winding_t *
-ClipWinding(winding_t *in, plane_t *split, bool keepon)
+ClipWinding(winding_t *in, const plane_t *split, bool keepon)
 {
     vec_t dists[MAX_POINTS_ON_WINDING];
     int sides[MAX_POINTS_ON_WINDING];
@@ -247,7 +247,7 @@ new windings will be created.
 ==================
 */
 void
-DivideWinding(winding_t *in, plane_t *split, winding_t **front,
+DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
 	      winding_t **back)
 {
     vec_t dists[MAX_POINTS_ON_WINDING];
@@ -334,16 +334,13 @@ MidpointWinding
 ==================
 */
 void
-MidpointWinding(winding_t *w, vec3_t v)
+MidpointWinding(const winding_t *w, vec3_t v)
 {
-    int i, j;
+    int i;
 
     VectorCopy(vec3_origin, v);
     for (i = 0; i < w->numpoints; i++)
-	for (j = 0; j < 3; j++)
-	    v[j] += w->points[i][j];
-
-    if (w->numpoints > 0)
-	for (j = 0; j < 3; j++)
-	    v[j] /= w->numpoints;
+	VectorAdd(v, w->points[i], v);
+    if (w->numpoints)
+	VectorScale(v, w->numpoints, v);
 }
