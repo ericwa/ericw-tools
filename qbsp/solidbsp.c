@@ -234,42 +234,42 @@ The clipping hull BSP doesn't worry about avoiding splits
 static surface_t *
 ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
-    surface_t *p, *bestsurface;
-    vec_t bestvalue, value;
+    surface_t *surf, *bestsurface;
+    vec_t metric, bestmetric;
     plane_t *plane;
 
-    // pick the plane that splits the least
-    bestvalue = VECT_MAX;
+    /* pick the plane that splits the least */
+    bestmetric = VECT_MAX;
     bestsurface = NULL;
 
-    for (p = surfaces; p; p = p->next) {
-	if (p->onnode)
+    for (surf = surfaces; surf; surf = surf->next) {
+	if (surf->onnode)
 	    continue;
 
 	/* check for axis aligned surfaces */
-	plane = &map.planes[p->planenum];
+	plane = &map.planes[surf->planenum];
 	if (plane->type > 3)
 	    continue;
 
 	/* calculate the split metric, smaller values are better */
-	value = SplitPlaneMetric(plane, mins, maxs);
-	if (value < bestvalue) {
-	    bestvalue = value;
-	    bestsurface = p;
+	metric = SplitPlaneMetric(plane, mins, maxs);
+	if (metric < bestmetric) {
+	    bestmetric = metric;
+	    bestsurface = surf;
 	}
     }
 
     if (!bestsurface) {
-	/* Choose based on spatial subdivision again */
-	for (p = surfaces; p; p = p->next) {
-	    if (p->onnode)
+	/* Choose based on spatial subdivision only */
+	for (surf = surfaces; surf; surf = surf->next) {
+	    if (surf->onnode)
 		continue;
 
-	    plane = &map.planes[p->planenum];
-	    value = SplitPlaneMetric(plane, mins, maxs);
-	    if (value < bestvalue) {
-		bestvalue = value;
-		bestsurface = p;
+	    plane = &map.planes[surf->planenum];
+	    metric = SplitPlaneMetric(plane, mins, maxs);
+	    if (metric < bestmetric) {
+		bestmetric = metric;
+		bestsurface = surf;
 	    }
 	}
     }
@@ -291,57 +291,57 @@ The real BSP hueristic
 static surface_t *
 ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
-    int k;
-    surface_t *p, *p2, *bestsurface;
-    int bestvalue;
-    vec_t bestdistribution, value;
-    plane_t *plane;
-    face_t *f;
+    int splits, minsplits;
+    surface_t *surf, *surf2, *bestsurface;
+    plane_t *plane, *plane2;
+    vec_t distribution, bestdistribution;
+    face_t *face;
 
     /* pick the plane that splits the least */
-    bestvalue = INT_MAX;
+    minsplits = INT_MAX;
     bestdistribution = VECT_MAX;
     bestsurface = NULL;
 
-    for (p = surfaces; p; p = p->next) {
-	if (p->onnode)
+    for (surf = surfaces; surf; surf = surf->next) {
+	if (surf->onnode)
 	    continue;
 
-	plane = &map.planes[p->planenum];
-	k = 0;
+	plane = &map.planes[surf->planenum];
+	splits = 0;
 
-	for (p2 = surfaces; p2; p2 = p2->next) {
-	    if (p2 == p || p2->onnode)
+	for (surf2 = surfaces; surf2; surf2 = surf2->next) {
+	    if (surf2 == surf || surf2->onnode)
 		continue;
-	    if (plane->type < 3 && plane->type == map.planes[p2->planenum].type)
+	    plane2 = &map.planes[surf2->planenum];
+	    if (plane->type < 3 && plane->type == plane2->type)
 		continue;
-	    for (f = p2->faces; f; f = f->next) {
-		if (FaceSide(f, plane) == SIDE_ON) {
-		    k++;
-		    if (k >= bestvalue)
+	    for (face = surf2->faces; face; face = face->next) {
+		if (FaceSide(face, plane) == SIDE_ON) {
+		    splits++;
+		    if (splits >= minsplits)
 			break;
 		}
 	    }
-	    if (k > bestvalue)
+	    if (splits > minsplits)
 		break;
 	}
-	if (k > bestvalue)
+	if (splits > minsplits)
 	    continue;
 
 	/*
 	 * if equal numbers axial planes win, otherwise decide on spatial
 	 * subdivision
 	 */
-	if (k < bestvalue || (k == bestvalue && plane->type < 3)) {
+	if (splits < minsplits || (splits == minsplits && plane->type < 3)) {
 	    if (plane->type < 3) {
-		value = SplitPlaneMetric(plane, mins, maxs);
-		if (value > bestdistribution && k == bestvalue)
+		distribution = SplitPlaneMetric(plane, mins, maxs);
+		if (distribution > bestdistribution && splits == minsplits)
 		    continue;
-		bestdistribution = value;
+		bestdistribution = distribution;
 	    }
 	    /* currently the best! */
-	    bestvalue = k;
-	    bestsurface = p;
+	    minsplits = splits;
+	    bestsurface = surf;
 	}
     }
 
