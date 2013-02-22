@@ -426,108 +426,111 @@ CutNodePortals_r
 static void
 CutNodePortals_r(node_t *node)
 {
-    plane_t *plane, clipplane;
-    node_t *f, *b, *other_node;
-    portal_t *p, *new_portal, *next_portal;
-    winding_t *w, *frontwinding, *backwinding;
+    const plane_t *plane;
+    plane_t clipplane;
+    node_t *front, *back, *other_node;
+    portal_t *portal, *new_portal, *next_portal;
+    winding_t *winding, *frontwinding, *backwinding;
     int side;
 
 #ifdef PARANOID
-    CheckLeafPortalConsistancy (node);
+    CheckLeafPortalConsistancy(node);
 #endif
 
-    // separate the portals on node into it's children
+    /* If a leaf, no more dividing */
     if (node->contents)
-	return;			// at a leaf, no more dividing
+	return;
 
     plane = &map.planes[node->planenum];
+    front = node->children[0];
+    back = node->children[1];
 
-    f = node->children[0];
-    b = node->children[1];
-
-    // create the new portal by taking the full plane winding for the cutting plane
-    // and clipping it by all of the planes from the other portals
+    /*
+     * create the new portal by taking the full plane winding for the cutting
+     * plane and clipping it by all of the planes from the other portals
+     */
     new_portal = AllocMem(PORTAL, 1, true);
     new_portal->planenum = node->planenum;
 
-    w = BaseWindingForPlane(&map.planes[node->planenum]);
-    side = 0;			// shut up compiler warning
-    for (p = node->portals; p; p = p->next[side]) {
-	clipplane = map.planes[p->planenum];
-	if (p->nodes[0] == node)
+    winding = BaseWindingForPlane(plane);
+    for (portal = node->portals; portal; portal = portal->next[side]) {
+	clipplane = map.planes[portal->planenum];
+	if (portal->nodes[0] == node)
 	    side = 0;
-	else if (p->nodes[1] == node) {
+	else if (portal->nodes[1] == node) {
 	    clipplane.dist = -clipplane.dist;
 	    VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
 	    side = 1;
 	} else
 	    Error(errMislinkedPortal);
 
-	w = ClipWinding(w, &clipplane, true);
-	if (!w) {
+	winding = ClipWinding(winding, &clipplane, true);
+	if (!winding) {
 	    Message(msgWarning, warnPortalClippedAway);
 	    break;
 	}
     }
 
-    if (w) {
-	// if the plane was not clipped on all sides, there was an error
-	new_portal->winding = w;
-	AddPortalToNodes(new_portal, f, b);
+    /* If the plane was not clipped on all sides, there was an error */
+    if (winding) {
+	new_portal->winding = winding;
+	AddPortalToNodes(new_portal, front, back);
     }
-    // partition the portals
-    for (p = node->portals; p; p = next_portal) {
-	if (p->nodes[0] == node)
+
+    /* partition the portals */
+    for (portal = node->portals; portal; portal = next_portal) {
+	if (portal->nodes[0] == node)
 	    side = 0;
-	else if (p->nodes[1] == node)
+	else if (portal->nodes[1] == node)
 	    side = 1;
 	else
 	    Error(errMislinkedPortal);
-	next_portal = p->next[side];
+	next_portal = portal->next[side];
 
-	other_node = p->nodes[!side];
-	RemovePortalFromNode(p, p->nodes[0]);
-	RemovePortalFromNode(p, p->nodes[1]);
+	other_node = portal->nodes[!side];
+	RemovePortalFromNode(portal, portal->nodes[0]);
+	RemovePortalFromNode(portal, portal->nodes[1]);
 
-	// cut the portal into two portals, one on each side of the cut plane
-	DivideWinding(p->winding, plane, &frontwinding, &backwinding);
+	/* cut the portal into two portals, one on each side of the cut plane */
+	DivideWinding(portal->winding, plane, &frontwinding, &backwinding);
 
 	if (!frontwinding) {
 	    if (side == 0)
-		AddPortalToNodes(p, b, other_node);
+		AddPortalToNodes(portal, back, other_node);
 	    else
-		AddPortalToNodes(p, other_node, b);
+		AddPortalToNodes(portal, other_node, back);
 	    continue;
 	}
 	if (!backwinding) {
 	    if (side == 0)
-		AddPortalToNodes(p, f, other_node);
+		AddPortalToNodes(portal, front, other_node);
 	    else
-		AddPortalToNodes(p, other_node, f);
+		AddPortalToNodes(portal, other_node, front);
 	    continue;
 	}
-	// the winding is split
+
+	/* the winding is split */
 	new_portal = AllocMem(PORTAL, 1, true);
-	*new_portal = *p;
+	*new_portal = *portal;
 	new_portal->winding = backwinding;
-	FreeMem(p->winding, WINDING, 1);
-	p->winding = frontwinding;
+	FreeMem(portal->winding, WINDING, 1);
+	portal->winding = frontwinding;
 
 	if (side == 0) {
-	    AddPortalToNodes(p, f, other_node);
-	    AddPortalToNodes(new_portal, b, other_node);
+	    AddPortalToNodes(portal, front, other_node);
+	    AddPortalToNodes(new_portal, back, other_node);
 	} else {
-	    AddPortalToNodes(p, other_node, f);
-	    AddPortalToNodes(new_portal, other_node, b);
+	    AddPortalToNodes(portal, other_node, front);
+	    AddPortalToNodes(new_portal, other_node, back);
 	}
     }
 
-    // Display progress
+    /* Display progress */
     iNodesDone++;
     Message(msgPercent, iNodesDone, splitnodes);
 
-    CutNodePortals_r(f);
-    CutNodePortals_r(b);
+    CutNodePortals_r(front);
+    CutNodePortals_r(back);
 }
 
 
