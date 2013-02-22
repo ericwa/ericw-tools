@@ -40,12 +40,12 @@ For BSP hueristic
 ==================
 */
 static int
-FaceSide__(face_t *in, plane_t *split)
+FaceSide__(const face_t *in, const plane_t *split)
 {
     bool frontcount, backcount;
     vec_t dot;
     int i;
-    vec_t *p;
+    const vec_t *p;
 
     frontcount = backcount = false;
 
@@ -87,7 +87,7 @@ FaceSide__(face_t *in, plane_t *split)
 }
 
 static int
-FaceSide(face_t *in, plane_t *split)
+FaceSide(const face_t *in, const plane_t *split)
 {
     vec_t dist;
     int ret;
@@ -291,12 +291,11 @@ The real BSP hueristic
 static surface_t *
 ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
-    int splits, minsplits;
+    int pass, splits, minsplits;
     surface_t *surf, *surf2, *bestsurface;
-    plane_t *plane, *plane2;
     vec_t distribution, bestdistribution;
-    face_t *face;
-    int pass;
+    const plane_t *plane, *plane2;
+    const face_t *face;
 
     /* pick the plane that splits the least */
     minsplits = INT_MAX;
@@ -431,7 +430,7 @@ void
 CalcSurfaceInfo(surface_t *surf)
 {
     int i, j;
-    face_t *f;
+    const face_t *f;
 
     // calculate a bounding box
     for (i = 0; i < 3; i++) {
