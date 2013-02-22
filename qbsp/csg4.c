@@ -59,6 +59,8 @@ NewFaceFromFace(face_t *in)
     newf->original = in->original;
     newf->contents[0] = in->contents[0];
     newf->contents[1] = in->contents[1];
+    newf->cflags[0] = in->cflags[0];
+    newf->cflags[1] = in->cflags[1];
 
     VectorCopy(in->origin, newf->origin);
     newf->radius = in->radius;
@@ -308,6 +310,8 @@ SaveOutside(bool mirror)
 	    newf->planeside = f->planeside ^ 1;	// reverse side
 	    newf->contents[0] = f->contents[1];
 	    newf->contents[1] = f->contents[0];
+	    newf->cflags[0] = f->cflags[1];
+	    newf->cflags[1] = f->cflags[0];
 
 	    for (i = 0; i < f->w.numpoints; i++)	// add points backwards
 		VectorCopy(f->w.points[f->w.numpoints - 1 - i], newf->w.points[i]);
@@ -329,7 +333,7 @@ Free all the faces that got clipped out
 ==================
 */
 static void
-FreeInside(int contents)
+FreeInside(int contents, int cflags)
 {
     face_t *f, *next;
 
@@ -338,6 +342,7 @@ FreeInside(int contents)
 
 	if (contents != CONTENTS_SOLID) {
 	    f->contents[0] = contents;
+	    f->cflags[0] = cflags;
 	    f->next = outside;
 	    outside = f;
 	} else
@@ -407,6 +412,8 @@ CopyFacesToOutside(brush_t *b)
 	newf->next = outside;
 	newf->contents[0] = CONTENTS_EMPTY;
 	newf->contents[1] = b->contents;
+	newf->cflags[0] = 0;
+	newf->cflags[1] = b->cflags;
 	outside = newf;
     }
 }
@@ -465,11 +472,10 @@ CSGFaces(const mapentity_t *ent)
 		ClipInside(f->planenum, f->planeside, overwrite);
 
 	    // these faces are continued in another brush, so get rid of them
-	    if (b1->contents == CONTENTS_SOLID
-		&& b2->contents <= CONTENTS_WATER)
-		FreeInside(b2->contents);
+	    if (b1->contents == CONTENTS_SOLID && b2->contents <= CONTENTS_WATER)
+		FreeInside(b2->contents, b2->cflags);
 	    else
-		FreeInside(CONTENTS_SOLID);
+		FreeInside(CONTENTS_SOLID, 0);
 	}
 
 	// all of the faces left in outside are real surface faces
