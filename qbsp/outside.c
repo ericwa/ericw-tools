@@ -142,7 +142,7 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(portal_t *n2, const int hullnum)
+MarkLeakTrail(portal_t *n2, const int hullnum, const int numportals)
 {
     int i;
     vec3_t p1, p2;
@@ -152,7 +152,7 @@ MarkLeakTrail(portal_t *n2, const int hullnum)
     if (hullnum != 2)
 	return;
 
-    if (numleaks > num_visportals)
+    if (numleaks > numportals)
 	Error(errLowLeakCount);
 
     pLeaks[numleaks] = n2;
@@ -324,7 +324,7 @@ Returns true if an occupied leaf is reached
 ==================
 */
 static bool
-RecursiveFillOutside(node_t *node, bool fill, const int hullnum)
+RecursiveFillOutside(node_t *node, bool fill, const int hullnum, const int numportals)
 {
     portal_t *p;
     int side;
@@ -352,10 +352,10 @@ RecursiveFillOutside(node_t *node, bool fill, const int hullnum)
 
     for (p = node->portals; p; p = p->next[!side]) {
 	side = (p->nodes[0] == node);
-	if (RecursiveFillOutside(p->nodes[side], fill, hullnum)) {
+	if (RecursiveFillOutside(p->nodes[side], fill, hullnum, numportals)) {
 	    // leaked, so stop filling
 	    if (backdraw-- > 0)
-		MarkLeakTrail(p, hullnum);
+		MarkLeakTrail(p, hullnum, numportals);
 	    return true;
 	}
     }
@@ -399,7 +399,7 @@ FillOutside
 ===========
 */
 bool
-FillOutside(node_t *node, const int hullnum)
+FillOutside(node_t *node, const int hullnum, const int numportals)
 {
     int side;
     vec_t *v;
@@ -434,7 +434,7 @@ FillOutside(node_t *node, const int hullnum)
     valid++;
 
     if (hullnum == 2) {
-	pLeaks = AllocMem(OTHER, sizeof(portal_t *) * num_visportals, true);
+	pLeaks = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
 	StripExtension(options.szBSPName);
 	strcat(options.szBSPName, ".pts");
 
@@ -457,7 +457,7 @@ FillOutside(node_t *node, const int hullnum)
 
     side = !(outside_node.portals->nodes[1] == &outside_node);
     fillnode = outside_node.portals->nodes[side];
-    if (RecursiveFillOutside(fillnode, false, hullnum)) {
+    if (RecursiveFillOutside(fillnode, false, hullnum, numportals)) {
 	v = map.entities[hit_occupied].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
 	if (hullnum == 2) {
@@ -486,7 +486,7 @@ FillOutside(node_t *node, const int hullnum)
     }
 
     if (hullnum == 2) {
-	FreeMem(pLeaks, OTHER, sizeof(portal_t *) * num_visportals);
+	FreeMem(pLeaks, OTHER, sizeof(portal_t *) * numportals);
 	fclose(LeakFile);
 
 	// Get rid of 0-byte .pts file
@@ -502,7 +502,8 @@ FillOutside(node_t *node, const int hullnum)
     }
     // now go back and fill things in
     valid++;
-    RecursiveFillOutside(outside_node.portals->nodes[side], true, hullnum);
+    fillnode = outside_node.portals->nodes[side];
+    RecursiveFillOutside(fillnode, true, hullnum, numportals);
 
     // remove faces from filled in leafs
     ClearOutFaces(node);

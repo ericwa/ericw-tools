@@ -37,7 +37,7 @@ ProcessEntity
 static void
 ProcessEntity(mapentity_t *ent, const int hullnum)
 {
-    int i;
+    int i, numportals;
     surface_t *surfs;
     node_t *nodes;
     const char *class;
@@ -114,8 +114,8 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	nodes = SolidBSP(ent, surfs, true);
 	if (ent == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    PortalizeWorld(ent, nodes, hullnum);
-	    if (FillOutside(nodes, hullnum)) {
+	    numportals = PortalizeWorld(ent, nodes, hullnum);
+	    if (FillOutside(nodes, hullnum, numportals)) {
 		// Free portals before regenerating new nodes
 		FreeAllPortals(nodes);
 		surfs = GatherNodeFaces(nodes);
@@ -137,9 +137,8 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	// some portals are solid polygons, and some are paths to other leafs
 	if (ent == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    PortalizeWorld(ent, nodes, hullnum);
-
-	    if (FillOutside(nodes, hullnum)) {
+	    numportals = PortalizeWorld(ent, nodes, hullnum);
+	    if (FillOutside(nodes, hullnum, numportals)) {
 		FreeAllPortals(nodes);
 
 		// get the remaining faces together into surfaces again
@@ -152,7 +151,7 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 		nodes = SolidBSP(ent, surfs, false);
 
 		// make the real portals for vis tracing
-		PortalizeWorld(ent, nodes, hullnum);
+		numportals = PortalizeWorld(ent, nodes, hullnum);
 
 		TJunc(ent, nodes);
 	    }

@@ -23,8 +23,8 @@
 #include "qbsp.h"
 
 node_t outside_node;	// portals outside the world face this
-int num_visportals;
 
+static int num_visportals;
 static int num_visleafs;	// leafs the player can be in
 static int iNodesDone;
 static FILE *PortalFile;
@@ -551,7 +551,7 @@ PortalizeWorld
 Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
-void
+int
 PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum)
 {
     Message(msgProgress, "Portalize");
@@ -561,14 +561,16 @@ PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum)
     MakeHeadnodePortals(ent, headnode);
     CutNodePortals_r(headnode);
 
-    if (hullnum)
-	return;
+    if (!hullnum) {
+	/* save portal file for vis tracing */
+	WritePortalfile(headnode);
 
-    // save portal file for vis tracing
-    WritePortalfile(headnode);
+	Message(msgStat, "%5i vis leafs", num_visleafs);
+	Message(msgStat, "%5i vis clusters", num_visclusters);
+	Message(msgStat, "%5i vis portals", num_visportals);
+    }
 
-    Message(msgStat, "%5i vis leafs", num_visleafs);
-    Message(msgStat, "%5i vis portals", num_visportals);
+    return num_visportals;
 }
 
 

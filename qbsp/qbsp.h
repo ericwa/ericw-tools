@@ -498,7 +498,6 @@ typedef struct portal_s {
 } portal_t;
 
 extern node_t outside_node;	// portals outside the world face this
-extern int num_visportals;
 
 void FreeAllPortals(node_t *node);
 
@@ -537,7 +536,7 @@ void FinishBSPFile(void);
 
 // outside.c
 
-bool FillOutside(node_t *node, const int hullnum);
+bool FillOutside(node_t *node, const int hullnum, const int numportals);
 
 //=============================================================================
 
@@ -649,7 +648,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src,
 		      const int hullnum);
 
 surface_t *CSGFaces(const mapentity_t *ent);
-void PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum);
+int PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *ent, node_t *headnode);
 node_t *SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit);
 void MakeFaceEdges(mapentity_t *ent, node_t *headnode);
