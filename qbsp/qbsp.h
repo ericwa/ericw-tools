@@ -419,6 +419,7 @@ typedef struct node_s {
     face_t **markfaces;		// leaf nodes only, point to node faces
     struct portal_s *portals;
     int visleafnum;		// -1 = solid
+    int viscluster;		// detail cluster for faster vis
     int valid;			// for flood filling
     int occupied;		// entity number in leaf for outside filling
     bool detail_separator;	// for vis portal generation

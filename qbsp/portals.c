@@ -26,6 +26,7 @@ node_t outside_node;	// portals outside the world face this
 
 static int num_visportals;
 static int num_visleafs;	// leafs the player can be in
+static int num_visclusters;	// clusters of leafs
 static int iNodesDone;
 static FILE *PortalFile;
 
@@ -140,27 +141,36 @@ WritePortalFile_r(node_t *node)
 /*
 ================
 NumberLeafs_r
+- Assigns leaf numbers and cluster numbers
+- If cluster < 0, assign next available global cluster number and increment
+- Otherwise, assign the given cluster number because parent splitter is detail
 ================
 */
 static void
-NumberLeafs_r(node_t *node)
+NumberLeafs_r(node_t *node, int cluster)
 {
     portal_t *p;
 
-    if (!node->contents) {	// decision node
+    /* decision node */
+    if (!node->contents) {
 	node->visleafnum = -99;
-	NumberLeafs_r(node->children[0]);
-	NumberLeafs_r(node->children[1]);
+	node->viscluster = -99;
+	if (cluster < 0 && node->detail_separator)
+	    cluster = num_visclusters++;
+	NumberLeafs_r(node->children[0], cluster);
+	NumberLeafs_r(node->children[1], cluster);
 	return;
     }
 
     if (node->contents == CONTENTS_SOLID) {
 	/* solid block, viewpoint never inside */
 	node->visleafnum = -1;
+	node->viscluster = -1;
 	return;
     }
 
     node->visleafnum = num_visleafs++;
+    node->viscluster = (cluster < 0) ? num_visclusters++ : cluster;
 
     for (p = node->portals; p;) {
 	/* only write out from first leaf */
@@ -182,10 +192,14 @@ WritePortalfile
 static void
 WritePortalfile(node_t *headnode)
 {
-    // set the visleafnum field in every leaf and count the total number of portals
+    /*
+     * Set the visleafnum and viscluster field in every leaf and count the
+     * total number of portals.
+     */
     num_visleafs = 0;
+    num_visclusters = 0;
     num_visportals = 0;
-    NumberLeafs_r(headnode);
+    NumberLeafs_r(headnode, -1);
 
     // write the file
     StripExtension(options.szBSPName);
