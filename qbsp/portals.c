@@ -48,28 +48,38 @@ WriteFloat(vec_t v)
 	fprintf(PortalFile, "%f ", v);
 }
 
-static int
-SameContent(int Cont0, int Cont1)
+/*
+ * Return true if possible to see from a leaf with content0 into an adjacent
+ * leaf with content1
+ */
+static bool
+PortalThru(int contents0, int contents1)
 {
+    /* Can't see through solids */
+    if (contents0 == CONTENTS_SOLID || contents1 == CONTENTS_SOLID)
+	return false;
+
     /* If contents values are the same, contents are equal */
-    if (Cont0 == Cont1)
-	return 1;
+    if (contents0 == contents1)
+	return true;
 
     /* If water is transparent, liquids are like empty space */
-    if (options.fTranswater && ((Cont0 >= CONTENTS_LAVA
-				 && Cont0 <= CONTENTS_WATER
-				 && Cont1 == CONTENTS_EMPTY)
-				|| (Cont0 == CONTENTS_EMPTY
-				    && Cont1 >= CONTENTS_LAVA
-				    && Cont1 <= CONTENTS_WATER)))
-	return 1;
+    if (options.fTranswater) {
+	if (contents0 >= CONTENTS_LAVA && contents0 <= CONTENTS_WATER &&
+	    contents1 == CONTENTS_EMPTY)
+	    return true;
+	if (contents1 >= CONTENTS_LAVA && contents1 <= CONTENTS_WATER &&
+	    contents0 == CONTENTS_EMPTY)
+	    return true;
+    }
 
     /* If sky is transparent, then sky is like empty space */
-    if (options.fTranssky && ((Cont0 == CONTENTS_SKY
-			       && Cont1 == CONTENTS_EMPTY)
-			      || (Cont0 == CONTENTS_EMPTY
-				  && Cont1 == CONTENTS_SKY)))
-	return 1;
+    if (options.fTranssky) {
+	if (contents0 == CONTENTS_SKY && contents1 == CONTENTS_EMPTY)
+	    return true;
+	if (contents0 == CONTENTS_EMPTY && contents1 == CONTENTS_SKY)
+	    return true;
+    }
 
     return false;
 }
@@ -94,7 +104,7 @@ WritePortalFile_r(node_t *node)
     for (p = node->portals; p;) {
 	w = p->winding;
 	if (w && p->nodes[0] == node
-	    && SameContent(p->nodes[0]->contents, p->nodes[1]->contents)) {
+	    && PortalThru(p->nodes[0]->contents, p->nodes[1]->contents)) {
 	    /*
 	     * sometimes planes get turned around when they are very near
 	     * the changeover point between different axis.  interpret the
@@ -155,7 +165,7 @@ NumberLeafs_r(node_t *node)
     for (p = node->portals; p;) {
 	/* only write out from first leaf */
 	if (p->nodes[0] == node) {
-	    if (SameContent(p->nodes[0]->contents, p->nodes[1]->contents))
+	    if (PortalThru(p->nodes[0]->contents, p->nodes[1]->contents))
 		num_visportals++;
 	    p = p->next[0];
 	} else
