@@ -357,8 +357,8 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	}
 
 	/* If we found a candidate on first pass, don't do a second pass */
-	if (pass > 0 && bestsurface) {
-	    bestsurface->detail_separator = true;
+	if (bestsurface) {
+	    bestsurface->detail_separator = (pass > 0);
 	    break;
 	}
     }
