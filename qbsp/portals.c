@@ -451,6 +451,10 @@ CutNodePortals_r(node_t *node)
     if (node->contents)
 	return;
 
+    /* No portals on detail separators */
+    if (node->detail_separator)
+	return;
+
     plane = &map.planes[node->planenum];
     front = node->children[0];
     back = node->children[1];
