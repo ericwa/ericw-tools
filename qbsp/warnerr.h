@@ -112,5 +112,6 @@ enum {
     errTooManyClipnodes,
     errBadTXStyle,		// 60
     errLowMapbrushCount,
+    errDetailClusterMismatch,
     cErrors
 };

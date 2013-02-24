@@ -146,4 +146,5 @@ const char *rgszErrors[cErrors] = {
     "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
     "Internal error: bad texture coordinate style",
     "Internal error: brush count mismatched during map file parsing",
+    "Internal error: Detail cluster mismatch",
 };

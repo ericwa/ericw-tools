@@ -136,6 +136,32 @@ WritePortals_r(node_t *node, bool clusters)
     }
 }
 
+static int
+WriteClusters_r(node_t *node, int viscluster)
+{
+    if (!node->contents) {
+	viscluster = WriteClusters_r(node->children[0], viscluster);
+	viscluster = WriteClusters_r(node->children[1], viscluster);
+	return viscluster;
+    }
+    if (node->contents == CONTENTS_SOLID)
+	return viscluster;
+
+    /* If we're in the next cluster, start a new line */
+    if (node->viscluster != viscluster) {
+	fprintf(PortalFile, "\n");
+	viscluster++;
+    }
+
+    /* Sanity check */
+    if (node->viscluster != viscluster)
+	Error(errDetailClusterMismatch);
+
+    fprintf(PortalFile, "%d ", node->visleafnum);
+
+    return viscluster;
+}
+
 /*
 ================
 NumberLeafs_r
@@ -190,6 +216,8 @@ WritePortalfile
 static void
 WritePortalfile(node_t *headnode)
 {
+    int check;
+
     /*
      * Set the visleafnum and viscluster field in every leaf and count the
      * total number of portals.
@@ -219,7 +247,10 @@ WritePortalfile(node_t *headnode)
 	fprintf(PortalFile, "%i\n", num_visclusters);
 	fprintf(PortalFile, "%i\n", num_visportals);
 	WritePortals_r(headnode, true);
-	fprintf(PortalFile, "CLUSTERMAP NOT YET IMPLEMENTED\n");
+	check = WriteClusters_r(headnode, 0);
+	if (check != num_visclusters - 1)
+	    Error(errDetailClusterMismatch);
+	fprintf(PortalFile, "\n");
     }
 
     fclose(PortalFile);
