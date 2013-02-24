@@ -38,7 +38,7 @@ PORTAL FILE GENERATION
 ==============================================================================
 */
 
-static void PlaneFromWinding(winding_t *w, plane_t *plane);
+static void PlaneFromWinding(const winding_t *w, plane_t *plane);
 
 static void
 WriteFloat(vec_t v)
@@ -86,55 +86,53 @@ PortalThru(int contents0, int contents1)
 }
 
 static void
-WritePortalFile_r(node_t *node)
+WritePortals_r(node_t *node, bool clusters)
 {
-    int i;
-    portal_t *p;
-    winding_t *w;
-    plane_t *pl, plane2;
+    const portal_t *p, *next;
+    const winding_t *w;
+    const plane_t *pl;
+    int i, front, back;
+    plane_t plane2;
 
     if (!node->contents) {
-	WritePortalFile_r(node->children[0]);
-	WritePortalFile_r(node->children[1]);
+	WritePortals_r(node->children[0], clusters);
+	WritePortals_r(node->children[1], clusters);
 	return;
     }
-
     if (node->contents == CONTENTS_SOLID)
 	return;
 
-    for (p = node->portals; p;) {
+    for (p = node->portals; p; p = next) {
+	next = (p->nodes[0] == node) ? p->next[0] : p->next[1];
+	if (!p->winding || p->nodes[0] != node)
+	    continue;
+	if (!PortalThru(p->nodes[0]->contents, p->nodes[1]->contents))
+	    continue;
+
 	w = p->winding;
-	if (w && p->nodes[0] == node
-	    && PortalThru(p->nodes[0]->contents, p->nodes[1]->contents)) {
-	    /*
-	     * sometimes planes get turned around when they are very near
-	     * the changeover point between different axis.  interpret the
-	     * plane the same way vis will, and flip the side orders if needed
-	     */
-	    pl = &map.planes[p->planenum];
-	    PlaneFromWinding(w, &plane2);
+	front = clusters ? p->nodes[0]->viscluster : p->nodes[0]->visleafnum;
+	back  = clusters ? p->nodes[1]->viscluster : p->nodes[1]->visleafnum;
 
-	    if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON) {
-		/* backwards... */
-		fprintf(PortalFile, "%i %i %i ", w->numpoints,
-			p->nodes[1]->visleafnum, p->nodes[0]->visleafnum);
-	    } else
-		fprintf(PortalFile, "%i %i %i ", w->numpoints,
-			p->nodes[0]->visleafnum, p->nodes[1]->visleafnum);
-	    for (i = 0; i < w->numpoints; i++) {
-		fprintf(PortalFile, "(");
-		WriteFloat(w->points[i][0]);
-		WriteFloat(w->points[i][1]);
-		WriteFloat(w->points[i][2]);
-		fprintf(PortalFile, ") ");
-	    }
-	    fprintf(PortalFile, "\n");
-	}
-
-	if (p->nodes[0] == node)
-	    p = p->next[0];
+	/*
+	 * sometimes planes get turned around when they are very near the
+	 * changeover point between different axis.  interpret the plane the
+	 * same way vis will, and flip the side orders if needed
+	 */
+	pl = &map.planes[p->planenum];
+	PlaneFromWinding(w, &plane2);
+	if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
+	    fprintf(PortalFile, "%i %i %i ", w->numpoints, back, front);
 	else
-	    p = p->next[1];
+	    fprintf(PortalFile, "%i %i %i ", w->numpoints, front, back);
+
+	for (i = 0; i < w->numpoints; i++) {
+	    fprintf(PortalFile, "(");
+	    WriteFloat(w->points[i][0]);
+	    WriteFloat(w->points[i][1]);
+	    WriteFloat(w->points[i][2]);
+	    fprintf(PortalFile, ") ");
+	}
+	fprintf(PortalFile, "\n");
     }
 }
 
@@ -209,11 +207,20 @@ WritePortalfile(node_t *headnode)
     if (PortalFile == NULL)
 	Error(errOpenFailed, options.szBSPName, strerror(errno));
 
-    fprintf(PortalFile, "PRT1\n");
-    fprintf(PortalFile, "%i\n", num_visleafs);
-    fprintf(PortalFile, "%i\n", num_visportals);
-
-    WritePortalFile_r(headnode);
+    /* If no detail clusters, just use a normal PRT1 format */
+    if (num_visclusters == num_visleafs) {
+	fprintf(PortalFile, "PRT1\n");
+	fprintf(PortalFile, "%i\n", num_visleafs);
+	fprintf(PortalFile, "%i\n", num_visportals);
+	WritePortals_r(headnode, false);
+    } else {
+	fprintf(PortalFile, "PRT2\n");
+	fprintf(PortalFile, "%i\n", num_visleafs);
+	fprintf(PortalFile, "%i\n", num_visclusters);
+	fprintf(PortalFile, "%i\n", num_visportals);
+	WritePortals_r(headnode, true);
+	fprintf(PortalFile, "CLUSTERMAP NOT YET IMPLEMENTED\n");
+    }
 
     fclose(PortalFile);
 }
@@ -342,7 +349,7 @@ MakeHeadnodePortals(const mapentity_t *ent, node_t *node)
 }
 
 static void
-PlaneFromWinding(winding_t *w, plane_t *plane)
+PlaneFromWinding(const winding_t *w, plane_t *plane)
 {
     vec3_t v1, v2;
 
