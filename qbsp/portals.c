@@ -60,7 +60,7 @@ PortalThru(int contents0, int contents1)
     if (contents0 == CONTENTS_SOLID || contents1 == CONTENTS_SOLID)
 	return false;
 
-    /* If contents values are the same, contents are equal */
+    /* If contents values are the same and not solid, can see through */
     if (contents0 == contents1)
 	return true;
 
