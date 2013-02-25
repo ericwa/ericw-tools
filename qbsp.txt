@@ -1,0 +1,97 @@
+NAME
+	qbsp
+
+SYNOPSIS
+	qbsp [OPTION]... SOURCFILE [DESTFILE]
+
+DESCRIPTION
+	qbsp is a tool used in the creation of maps for the game Quake.
+	qbsp takes a .map file as input and produces a .bsp file playable in
+	the Quake engine.  If the DESTFILE argument is not supplied, the
+	output filename will be chosen by stripping the file extension (if any)
+        from SOURCEFILE and appending the .bsp extension.
+
+OPTIONS
+	-nofill         Doesn't perform outside filling
+	-noclip         Doesn't build clip hulls
+	-onlyents       Only updates .map entities
+	-verbose        Print out more .map information
+	-noverbose      Print out almost no information at all
+	-splitspecial   Doesn't combine sky and water faces into one large face
+	-transwater     Computes portal information for transparent water
+	-transsky       Computes portal information for transparent sky
+	-oldaxis        Uses original qbsp texture alignment algorithm
+	-bspleak        Creates a .por file, used in the BSP editor
+	-oldleak        Create an old-style QBSP .PTS file (default is new)
+	-nopercent      Prevents output of percent completion information
+	-leakdist  [n]  Space between leakfile points (default 2)
+	-subdivide [n]  Use different texture subdivision (default 240)
+	-wadpath <dir>  Search this directory for wad files (default is cwd)
+
+DETAIL BRUSH SUPPORT
+	This version of qbsp supports detail brushes which are similar
+	in concept to Quake 2's detail brushes.
+
+	To be compatible with existing Quake 1 mapping tools, detail brushes
+	can be added by creating an entity with classname "func_detail".  When
+	qbsp reads the map file, it will add any brushes included in a
+	func_detail entity into the worldspawn as details and remove the
+	func_detail entity.  Any number of func_detail entities can be used
+	(useful for grouping) and all included brushes will be added to the
+	worldspawn.
+
+	Here is an example entity definition suitable to add the the .QC files
+	used by BSP Editor:
+
+		/*QUAKED func_detail (0.5 0.5 0.9) ?
+		Detail brushes add visual details to
+		the world, but do not block visibility.
+		func_detail entities are merged into
+		the worldspawn entity by the qbsp compiler
+		and do not appear as separate entities in
+		the compiled bsp.
+
+	Similarly for WorldCraft in .FGD format (untested):
+
+		@SolidClass color(128 128 230) = func_detail: "Detail" []
+
+	What should be written to the .map file is a simple entity with one or
+	more brushes. E.g.:
+
+	{
+	"classname" "func_detail"
+	{
+	( -176  80  0 ) ( -208  80  0 ) ( -208  48  0 ) COP1_1 0 0 0 1.0 1.0
+	( -192 -80 64 ) ( -208 -80  0 ) ( -192 -64 64 ) COP1_1 0 0 0 1.0 1.0
+	( -176 -80  0 ) ( -192 -80 64 ) ( -176 -64  0 ) COP1_1 0 0 0 1.0 1.0
+	( -16   48  0 ) (  -16  64 64 ) (    0  48  0 ) COP1_1 0 0 0 1.0 1.0
+	( -16   64 64 ) (  -16  80  0 ) (    0  64 64 ) COP1_1 0 0 0 1.0 1.0
+	}
+	}
+
+	When qbsp detects detail brushes, it outputs a modified portal file
+	format with the header PRT2 (default is PRT1).  This portal file
+	contains extra information needed by vis to compute the potentially
+	visible set (PVS) for the map/bsp.  So you will also need a vis util
+	capable of processing the PRT2 file format.
+
+AUTHOR
+	Written by Kevin Shanahan (aka Tyrann)
+	Based on source provided by id Software and Greg Lewis
+	http://disenchant.net
+
+REPORTING BUGS
+	Please send bug reports to tyrann@disenchant.net.
+	Improvements to the documentation are welcome and encouraged.
+
+COPYRIGHT
+	Copyright © 2013 Kevin Shanahan
+	Copyright © 1997 Greg Lewis
+	Copyright © 1997 id Software
+	License GPLv2+:  GNU GPL version 2 or later
+		<http://gnu.org/licenses/gpl2.html>.
+	This is free software:  you are free to change and redistribute it.
+	There is NO WARRANTY, to the extent permitted by law.
+
+SEE ALSO
+	light, vis, quake.

@@ -1,0 +1,55 @@
+NAME
+	vis
+
+SYNOPSIS
+	vis [OPTION]... BSPFILE
+
+DESCRIPTION
+	vis is a tool used in the creation of maps for the game Quake.
+	vis looks for a .prt file by stripping the file extension from BSPFILE
+	(if any) and appending ".prt". vis then calculates the potentially
+	visible set (PVS) information before updating the .bsp	file,
+	overwriting any existing PVS data.
+
+	This vis tool supports the PRT2 format for Quake maps with detail
+	brushes. See the qbsp documentation for details.
+
+	Compiling a map (without the -fast parameter) can take a long time,
+	even days or weeks in extreme cases. Vis will attempt to write a state
+	file every five minutes so that progress will not be lost in case the
+	computer needs to be rebooted or an unexpected power outage occurs.
+
+OPTIONS
+	-threads n     Set number of threads explicitly. By default vis will
+	               attempt to detect the number of CPUs/cores available.
+
+	-fast          Skip detailed calculations and calculate a very loose
+	               set of PVS data. Useful for testing.
+
+	-level n       Select a test level from 1 to 4. Increasing test levels
+	               require more calculations, but compute a tighter PVS.
+	               Finished maps should be compiled with -level 4.
+
+	-v             Verbose output
+
+	-vv            Very verbose output
+
+AUTHOR
+	Written by Kevin Shanahan (aka Tyrann)
+	Based on source provided by id Software
+	http://disenchant.net
+
+REPORTING BUGS
+	Please send bug reports to tyrann@disenchant.net.
+	Improvements to the documentation are welcome and encouraged.
+
+COPYRIGHT
+	Copyright © 2013 Kevin Shanahan
+	Copyright © 1997 id Software
+	License GPLv2+:  GNU GPL version 2 or later
+		<http://gnu.org/licenses/gpl2.html>.
+	This is free software:  you are free to change and redistribute it.
+	There is NO WARRANTY, to the extent permitted by law.
+
+SEE ALSO
+	qbsp, light, quake.

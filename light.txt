@@ -1,0 +1,157 @@
+NAME
+	light
+
+SYNOPSIS
+	light [OPTION]... BSPFILE
+
+DESCRIPTION
+	light reads a Quake .bsp file and calculates light and shadow
+	information based on the entity definitions contained in the .bsp.
+	The .bsp file is updated with the new light data upon completion,
+	overwriting any existing lighting data.
+
+OPTIONS
+	-threads n     Set number of threads explicitly. By default light will
+	               attempt to detect the number of CPUs/cores available.
+
+	-extra         Calculate extra samples (2x2) and average the results
+	               for smoother shadows.
+
+	-light n       Set a global minimum light level. Overrides default
+	               light level set in worldspawn.
+
+	-nominlimit    Allow negative lights to reduce surface lighting below
+	               the global minumum light level.
+
+	-dist n        Scales the fade distance of all lights by a factor of n.
+	               If n > 1 lights fade more quickly with distance and if
+	               n < 1, lights fade more slowly with distance and light
+	               reaches further.
+
+	-range n       Scales the brightness range of all lights without
+	               affecting their fade discance. Values of n > 0.5 makes
+	               lights brighter and n < 0.5 makes lights less bright.
+	               The same effect can be achieved on individual lights by
+	               adjusting both the "light" and "wait" attributes.
+
+	-colored       (DEPRECATED) Turn on coloured lighting support. By
+	-coloured      default this will output a bsp in "BSP30" format, which
+	               almost no Quake engines support. BSP30 support will be
+	               removed in the near future.
+
+	-bsp30         (DEPRECATED) Output a bsp in BSP30 format.
+
+	-lit           (DEPRECATED) Output coloured lighting in a separate
+	               file with the .lit extension. This format will become
+	               the default soon and this option will be removed.
+
+	NOTE: The plan for coloured lighting support in the future is to detect
+	      entities with coloured light fields and automatically output a
+	      .lit file in this case. I may add a -nocolour option if there is
+	      a significant speed advantage.
+
+ENTITY PARAMETERS
+
+    WORLDSPAWN PARAMETERS
+
+	"light" "n"
+
+	Set a global minimum light level of "n" across the whole map.  This is
+	an easy way to eliminate completely dark areas of the level, however
+	you may lose some contrast as a result, so use with care.
+
+	"_sunlight" "n"
+
+	Set the brightness of the sunlight coming from an unseen sun in the
+        sky.  Sky brushes (or more accurately bsp leafs with sky contents) will
+	emit sunlight at an angle specified by the "_sun_mangle" paramter.
+
+	"_sun_mangle" "x y z"
+
+	Specifies the direction of sunlight using yaw(x), pitch(y) and roll(z)
+	in degrees. Yaw specifies the angle around the Z-axis from 0 to 359
+	degrees and pitch specifies the angle from 90 (straight up) to -90
+	(straight down). Roll has no effect, so use any value (e.g. 0).
+
+	"_sunlight_color" "r g b"
+
+	Specify red(r), green(g) and blue(b) components for the colour of the
+	sunlight. RGB component values are between -255 and 255. Negative
+	values will cause colour subtraction from light cast by other entities.
+
+    LIGHT PARAMETERS
+
+	Light parameters can be used in any entity with a classname starting
+	with the first five letters "light". E.g. "light", "light_globe",
+	"light_flame_small_yellow", etc.
+
+	"light" "n"
+
+	Set the light intensity. Negative values are also allowed and will
+	cause the entity to subtract light cast by other entities. Default 300.
+
+	"wait" "n"
+
+	Scale the fade distance of the light by "n". Values of n > 1 make the
+	light fade more quickly with distance, and values < 1 make the light
+	fade more slowly (and thus reach further). Default 1.
+
+	"delay" "n"
+
+	Select an attenuation formaula for the light:
+	  0 => linear attenuation (default)
+	  1 => 1/x attenuation
+	  2 => 1/(x^2) attenuation
+          3 => no attenuation (light stays same brightness at any distance)
+
+	"_color" "r g b"
+
+	Specify red(r), green(g) and blue(b) components for the colour of the
+	light. RGB component values are between -255 and 255. Negative values
+	will cause colour subtraction from light cast by other entities.
+
+	"target" "name"
+
+	Turns the light into a spotlight, with the direction of light being
+	towards another entity with it's "targetname" parameter set to "name".
+
+	"mangle" "x y z"
+
+	Turns the light into a spotlight and specifies the direction of light
+	using yaw(x), pitch(y) and roll(z) in degrees. Yaw specifies the angle
+	around the Z-axis from 0 to 359	degrees and pitch specifies the angle
+	from 90 (straight up) to -90 (straight down). Roll has no effect, so
+	use any value (e.g. 0).  Often easier than the "target" method.
+
+	"angle" "n"
+
+	Specifies the angle in degrees for a spotlight cone. Default 40.
+
+	"targetname" "name"
+
+	Turns the light into a switchable light, toggled by another entity
+	targeting it's name.
+
+	"style" "n"
+
+	Set the animated light style. Default 0.
+
+AUTHOR
+	Written by Kevin Shanahan (aka Tyrann)
+	Based on source provided by id Software
+	http://disenchant.net
+
+REPORTING BUGS
+	Please send bug reports to tyrann@disenchant.net.
+	Improvements to the documentation are welcome and encouraged.
+
+COPYRIGHT
+	Copyright © 2013 Kevin Shanahan
+	Copyright © 1997 id Software
+	License GPLv2+:  GNU GPL version 2 or later
+		<http://gnu.org/licenses/gpl2.html>.
+	This is free software:  you are free to change and redistribute it.
+	There is NO WARRANTY, to the extent permitted by law.
+
+SEE ALSO
+	qbsp, vis, quake.

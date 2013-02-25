@@ -1,7 +1,7 @@
-Updated 2007-09-25
+Updated 2013-02-25
 
 ------------------
- Tyr-Utils (v0.4)
+ Tyr-Utils (v0.5)
 ------------------
   Website: http://disenchant.net
   Author:  Kevin Shanahan (AKA Tyrann)
@@ -13,25 +13,21 @@ more, but below are some brief descriptions of the tools.
 
 Included utilities:
 
-  light   - A modified version of id's original light tool. Used for lighting a
-            level after the bsp stage. This util is also known as TyrLite; see
-            tyrlite.txt for detailed usage instructions.
+  qbsp    - Used for turning a .map file into a playable .bsp file.
+            See qbsp.txt for more detailed information.
 
-  vis     - Standard vis util; creates the potentially visible set (PVS) for a
-            bsp. This version had been slightly modified from id's version to
-            reduce the compile time a little.
+  light   - Used for lighting a level after the bsp stage. This util is also
+            known as TyrLite; see light.txt for detailed usage instructions.
+
+  vis     - Creates the potentially visible set (PVS) for a bsp.
+            See vis.txt for more detailed information.
 
   bspinfo - Simple util to print out some stats about the data contained in a
             bsp file.
 
-  bsputil - Tool for working with a bsp file. Not sure where this one is going,
-            but for now all it can do is extract the entities lump from a bsp
-            file into a text file. Might add a bsp -> wad extractor at some
-            stage too.
-
-  qbsp    - A modified version of Greg Lewis' TreeQBSP, which is in turn based
-            on id's original qbsp tool. Used for turning a .map file into a
-	    playable .bsp file.
+  bsputil - Tool for working with a bsp file. Minimal features currently, but
+            it can extract the entities lump from a bsp file into a text file
+            and extract the textures to a .wad file.
 
 ---------
  License
