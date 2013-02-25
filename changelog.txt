@@ -1,7 +1,9 @@
 2013-02-25 TyrUtils v0.5
 
-* New changelog to summarise changes in future
+* New changelog to summarise changes going forward
 * light and vis both now multithreaded on Unix and Windows platforms
 * vis now writes a state file every 5 minutes so it can resume if needed
 * qbsp and vis now support a form of detail brushes, similar to Quake 2. See
   qbsp.txt for further details.
+* added a small optimisation to vis for a minor speedup (usually only 1-2%)
+* build system re-written and lots of cleanups all over the code
