@@ -49,13 +49,47 @@ WriteFloat(vec_t v)
 	fprintf(PortalFile, "%f ", v);
 }
 
+static int
+ClusterContents(const node_t *node)
+{
+    int contents0, contents1;
+
+    /* Either a leaf or non-detail node */
+    if (node->contents || !node->detail_separator)
+	return node->contents;
+
+    contents0 = ClusterContents(node->children[0]);
+    contents1 = ClusterContents(node->children[1]);
+
+    if (contents0 == contents1)
+	return contents0;
+
+    /*
+     * Clusters may be partially solid but still be seen into
+     * ?? - Should we do something more explicit with mixed liquid contents?
+     */
+    if (contents0 == CONTENTS_EMPTY || contents1 == CONTENTS_EMPTY)
+	return CONTENTS_EMPTY;
+
+    if (contents0 >= CONTENTS_LAVA && contents0 <= CONTENTS_WATER)
+	return contents0;
+    if (contents1 >= CONTENTS_LAVA && contents1 <= CONTENTS_WATER)
+	return contents1;
+    if (contents0 == CONTENTS_SKY || contents1 == CONTENTS_SKY)
+	return CONTENTS_SKY;
+
+    return CONTENTS_SOLID;
+}
+
 /*
- * Return true if possible to see from a leaf with content0 into an adjacent
- * leaf with content1
+ * Return true if possible to see the through the contents of the portals nodes
  */
 static bool
-PortalThru(int contents0, int contents1)
+PortalThru(const portal_t *p)
 {
+    int contents0 = ClusterContents(p->nodes[0]);
+    int contents1 = ClusterContents(p->nodes[1]);
+
     /* Can't see through solids */
     if (contents0 == CONTENTS_SOLID || contents1 == CONTENTS_SOLID)
 	return false;
@@ -106,7 +140,7 @@ WritePortals_r(node_t *node, bool clusters)
 	next = (p->nodes[0] == node) ? p->next[0] : p->next[1];
 	if (!p->winding || p->nodes[0] != node)
 	    continue;
-	if (!PortalThru(p->nodes[0]->contents, p->nodes[1]->contents))
+	if (!PortalThru(p))
 	    continue;
 
 	w = p->winding;
@@ -199,7 +233,7 @@ NumberLeafs_r(node_t *node, int cluster)
     for (p = node->portals; p;) {
 	/* only write out from first leaf */
 	if (p->nodes[0] == node) {
-	    if (PortalThru(p->nodes[0]->contents, p->nodes[1]->contents))
+	    if (PortalThru(p))
 		num_visportals++;
 	    p = p->next[0];
 	} else
