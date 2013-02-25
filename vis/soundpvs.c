@@ -83,7 +83,7 @@ CalcAmbientSounds(void)
     float dists[NUM_AMBIENTS];
     float vol;
 
-    for (i = 0; i < portalleafs; i++) {
+    for (i = 0; i < portalleafs_real; i++) {
 	leaf = &dleafs[i + 1];
 
 	//
@@ -92,9 +92,9 @@ CalcAmbientSounds(void)
 	for (j = 0; j < NUM_AMBIENTS; j++)
 	    dists[j] = 1020;
 
-	vis = &uncompressed[i * leafbytes];
+	vis = &uncompressed[i * leafbytes_real];
 
-	for (j = 0; j < portalleafs; j++) {
+	for (j = 0; j < portalleafs_real; j++) {
 	    if (!(vis[j >> 3] & (1 << (j & 7))))
 		continue;
 

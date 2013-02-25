@@ -25,6 +25,7 @@
 #include <vis/leafbits.h>
 
 #define  PORTALFILE  "PRT1"
+#define  PORTALFILE2 "PRT2"
 #define  ON_EPSILON  0.1
 
 typedef struct {
@@ -107,6 +108,7 @@ typedef struct {
 
 extern int numportals;
 extern int portalleafs;
+extern int portalleafs_real;
 
 extern portal_t *portals;
 extern leaf_t *leafs;
@@ -121,6 +123,7 @@ extern int testlevel;
 
 extern byte *uncompressed;
 extern int leafbytes;
+extern int leafbytes_real;
 extern int leaflongs;
 
 extern char sourcefile[1024];
