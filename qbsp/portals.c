@@ -128,7 +128,7 @@ WritePortals_r(node_t *node, bool clusters)
     int i, front, back;
     plane_t plane2;
 
-    if (!node->contents) {
+    if (!node->contents && !node->detail_separator) {
 	WritePortals_r(node->children[0], clusters);
 	WritePortals_r(node->children[1], clusters);
 	return;
@@ -196,6 +196,26 @@ WriteClusters_r(node_t *node, int viscluster)
     return viscluster;
 }
 
+
+/* FIXME - bleh, incrementing global counts */
+static void
+CountPortals(const node_t *node)
+{
+    const portal_t *portal;
+
+    for (portal = node->portals; portal;) {
+	/* only write out from first leaf */
+	if (portal->nodes[0] == node) {
+	    if (PortalThru(portal))
+		num_visportals++;
+	    portal = portal->next[0];
+	} else {
+	    portal = portal->next[1];
+	}
+    }
+
+}
+
 /*
 ================
 NumberLeafs_r
@@ -207,14 +227,15 @@ NumberLeafs_r
 static void
 NumberLeafs_r(node_t *node, int cluster)
 {
-    portal_t *p;
-
     /* decision node */
     if (!node->contents) {
 	node->visleafnum = -99;
 	node->viscluster = -99;
-	if (cluster < 0 && node->detail_separator)
+	if (cluster < 0 && node->detail_separator) {
 	    cluster = num_visclusters++;
+	    node->viscluster = cluster;
+	    CountPortals(node);
+	}
 	NumberLeafs_r(node->children[0], cluster);
 	NumberLeafs_r(node->children[1], cluster);
 	return;
@@ -229,16 +250,7 @@ NumberLeafs_r(node_t *node, int cluster)
 
     node->visleafnum = num_visleafs++;
     node->viscluster = (cluster < 0) ? num_visclusters++ : cluster;
-
-    for (p = node->portals; p;) {
-	/* only write out from first leaf */
-	if (p->nodes[0] == node) {
-	    if (PortalThru(p))
-		num_visportals++;
-	    p = p->next[0];
-	} else
-	    p = p->next[1];
-    }
+    CountPortals(node);
 }
 
 
