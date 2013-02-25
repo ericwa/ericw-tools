@@ -149,7 +149,7 @@ WriteClusters_r(node_t *node, int viscluster)
 
     /* If we're in the next cluster, start a new line */
     if (node->viscluster != viscluster) {
-	fprintf(PortalFile, "\n");
+	fprintf(PortalFile, "-1\n");
 	viscluster++;
     }
 
@@ -250,7 +250,7 @@ WritePortalfile(node_t *headnode)
 	check = WriteClusters_r(headnode, 0);
 	if (check != num_visclusters - 1)
 	    Error(errDetailClusterMismatch);
-	fprintf(PortalFile, "\n");
+	fprintf(PortalFile, "-1\n");
     }
 
     fclose(PortalFile);
