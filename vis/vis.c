@@ -510,14 +510,12 @@ LeafThread(void *unused)
   ===============
 */
 static int
-CompressRow(const byte *vis, byte *out)
+CompressRow(const byte *vis, const int numbytes, byte *out)
 {
-    int i, rep, numbytes;
+    int i, rep;
     byte *dst;
 
     dst = out;
-    numbytes = (portalleafs + 7) >> 3;
-
     for (i = 0; i < numbytes; i++) {
 	*dst++ = vis[i];
 	if (vis[i])
@@ -552,14 +550,14 @@ LeafFlow(int leafnum)
     leaf_t *leaf;
     byte *outbuffer;
     byte *compressed;
-    int i, j, shift;
+    int i, j, shift, len;
     int numvis;
     byte *dest;
     const portal_t *p;
 
-//
-// flow through all portals, collecting visible bits
-//
+    /*
+     * flow through all portals, collecting visible bits
+     */
     outbuffer = uncompressed + leafnum * leafbytes;
     leaf = &leafs[leafnum];
     for (i = 0; i < leaf->numportals; i++) {
@@ -574,7 +572,6 @@ LeafFlow(int leafnum)
 
     if (outbuffer[leafnum >> 3] & (1 << (leafnum & 7)))
 	logprint("WARNING: Leaf portals saw into leaf (%i)\n", leafnum);
-
     outbuffer[leafnum >> 3] |= (1 << (leafnum & 7));
 
     numvis = 0;
@@ -582,26 +579,27 @@ LeafFlow(int leafnum)
 	if (outbuffer[i >> 3] & (1 << (i & 3)))
 	    numvis++;
 
-//
-// compress the bit string
-//
+    /*
+     * compress the bit string
+     */
     if (verbose > 1)
 	logprint("leaf %4i : %4i visible\n", leafnum, numvis);
     totalvis += numvis;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
     compressed = malloc(portalleafs * 2 / 8);
-    i = CompressRow(outbuffer, compressed);
+    len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
 
     dest = vismap_p;
-    vismap_p += i;
+    vismap_p += len;
 
     if (vismap_p > vismap_end)
 	Error("Vismap expansion overflow");
 
-    dleafs[leafnum + 1].visofs = dest - vismap;	// leaf 0 is a common solid
+    /* leaf 0 is a common solid */
+    dleafs[leafnum + 1].visofs = dest - vismap;
 
-    memcpy(dest, compressed, i);
+    memcpy(dest, compressed, len);
     free(compressed);
 }
 
