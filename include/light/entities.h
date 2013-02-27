@@ -30,13 +30,25 @@ typedef struct epair_s {
     char value[MAX_ENT_VALUE];
 } epair_t;
 
+/*
+ * Light attenuation formalae
+ * (relative to distance 'x' from the light source)
+ */
+#define LF_SCALE 128
+typedef enum {
+    LF_LINEAR    = 0,	/* Linear (x) (DEFAULT) */
+    LF_INVERSE   = 1,	/* Inverse (1/x), scaled by 1/128 */
+    LF_INVERSE2  = 2,	/* Inverse square (1/(x^2)), scaled by 1/(128^2) */
+    LF_INFINITE  = 3,	/* No attenuation, same brightness at any distance */
+    LF_COUNT
+} light_formula_t;
+
 typedef struct entity_s {
     char classname[MAX_ENT_VALUE];
     vec3_t origin;
     float angle;
 
-    /* TYR - added fields */
-    int formula;
+    light_formula_t formula;
     float atten;
     vec3_t mangle;
     qboolean use_mangle;
@@ -50,15 +62,7 @@ typedef struct entity_s {
     struct entity_s *targetent;
 } entity_t;
 
-/* Explanation of values added to struct entity_s
- *
- * formula:
- *    takes a value 0-3 (default 0)
- *    0 - Standard lighting formula like original light
- *    1 - light fades as 1/x
- *    2 - light fades as 1/(x^2)
- *    3 - Light stays same brightness reguardless of distance
- *
+/*
  * atten:
  *    Takes a float as a value (default 1.0).
  *    This reflects how fast a light fades with distance.

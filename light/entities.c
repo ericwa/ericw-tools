@@ -250,8 +250,19 @@ LoadEntities(void)
 		entity->light = DEFAULTLIGHTLEVEL;
 	    if (entity->atten <= 0.0)
 		entity->atten = 1.0;
-	    if ((entity->formula < 0) || (entity->formula > 3))
-		entity->formula = 0;
+	    if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
+		static qboolean warned_once = true;
+		if (!warned_once) {
+		    warned_once = true;
+		    logprint("WARNING: unknown formula number (%d) in delay "
+			     "field\n   %s at (%d %d %d)\n   (any further "
+			     "unknown formula warnings will be supressed)\n",
+			     entity->formula, entity->classname,
+			     (int)entity->origin[0], (int)entity->origin[1],
+			     (int)entity->origin[2]);
+		}
+		entity->formula = LF_LINEAR;
+	    }
 	    if (!entity->lightcolor[0] && !entity->lightcolor[1]
 		&& !entity->lightcolor[2]) {
 		entity->lightcolor[0] = 255;

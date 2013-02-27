@@ -456,16 +456,16 @@ static vec_t
 scaledDistance(vec_t distance, const entity_t *light)
 {
     switch (light->formula) {
-    case 1:
-    case 2:
-    case 3:
+    case LF_LINEAR:
+	return scaledist * light->atten * distance;
+    case LF_INVERSE:
+    case LF_INVERSE2:
+    case LF_INFINITE:
 	/* Return a small distance to prevent culling these lights, since we */
 	/* know these formulae won't fade to nothing.                        */
 	return (distance <= 0.0) ? -0.25 : 0.25;
-    case 0:
-	return scaledist * light->atten * distance;
     default:
-	return 1;		/* shut up compiler warnings */
+	Error("Internal error: unknown light formula");
     }
 }
 
@@ -475,19 +475,19 @@ scaledLight(vec_t distance, const entity_t *light)
     const vec_t tmp = scaledist * light->atten * distance;
 
     switch (light->formula) {
-    case 3:
+    case LF_INFINITE:
 	return light->light;
-    case 1:
-	return light->light / (tmp / 128);
-    case 2:
-	return light->light / ((tmp * tmp) / 16384);
-    case 0:
+    case LF_INVERSE:
+	return light->light / (tmp / LF_SCALE);
+    case LF_INVERSE2:
+	return light->light / ((tmp * tmp) / (LF_SCALE * LF_SCALE));
+    case LF_LINEAR:
 	if (light->light > 0)
 	    return (light->light - tmp > 0) ? light->light - tmp : 0;
 	else
 	    return (light->light + tmp < 0) ? light->light + tmp : 0;
     default:
-	return 1;		/* shut up compiler warnings */
+	Error("Internal error: unknown light formula");
     }
 }
 
