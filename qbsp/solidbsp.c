@@ -117,7 +117,7 @@ DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
     int a, b, c, i, j;
     vec_t dist1, dist2, mid, split_mins, split_maxs;
     vec3_t corner;
-    const vec_t *bounds[] = { mins, maxs };
+    const vec_t *bounds[2];
 
     VectorCopy(mins, front_mins);
     VectorCopy(mins, back_mins);
@@ -130,6 +130,8 @@ DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
     }
 
     /* Make proper sloping cuts... */
+    bounds[0] = mins;
+    bounds[1] = maxs;
     for (a = 0; a < 3; ++a) {
 	/* Check for parallel case... no intersection */
 	if (fabs(split->normal[a]) < NORMAL_EPSILON)
