@@ -134,6 +134,35 @@ vec_from_mangle(vec3_t v, const vec3_t m)
     v[2] = sin(tmp[1]);
 }
 
+static void
+CheckEntityFields(entity_t *entity)
+{
+    if (!entity->light)
+	entity->light = DEFAULTLIGHTLEVEL;
+    if (entity->atten <= 0.0)
+	entity->atten = 1.0;
+    if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
+	static qboolean warned_once = true;
+	if (!warned_once) {
+	    warned_once = true;
+	    logprint("WARNING: unknown formula number (%d) in delay field\n"
+		     "   %s at (%d %d %d)\n"
+		     "   (further formula warnings will be supressed)\n",
+		     entity->formula, entity->classname,
+		     (int)entity->origin[0], (int)entity->origin[1],
+		     (int)entity->origin[2]);
+	}
+	entity->formula = LF_LINEAR;
+    }
+    if (!entity->lightcolor[0] && !entity->lightcolor[1]
+	&& !entity->lightcolor[2]) {
+	entity->lightcolor[0] = 255;
+	entity->lightcolor[1] = 255;
+	entity->lightcolor[2] = 255;
+    }
+}
+
+
 /*
  * ==================
  * LoadEntities
@@ -241,36 +270,12 @@ LoadEntities(void)
 	}
 
 	/*
-	 * All fields have been parsed. Check default settings and check for
-	 * light value in worldspawn...
+	 * Check light entity fields and any global settings in worldspawn.
 	 */
 	if (!strncmp(entity->classname, "light", 5)) {
-	    if (!entity->light)
-		entity->light = DEFAULTLIGHTLEVEL;
-	    if (entity->atten <= 0.0)
-		entity->atten = 1.0;
-	    if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
-		static qboolean warned_once = true;
-		if (!warned_once) {
-		    warned_once = true;
-		    logprint("WARNING: unknown formula number (%d) in delay "
-			     "field\n   %s at (%d %d %d)\n   (any further "
-			     "unknown formula warnings will be supressed)\n",
-			     entity->formula, entity->classname,
-			     (int)entity->origin[0], (int)entity->origin[1],
-			     (int)entity->origin[2]);
-		}
-		entity->formula = LF_LINEAR;
-	    }
-	    if (!entity->lightcolor[0] && !entity->lightcolor[1]
-		&& !entity->lightcolor[2]) {
-		entity->lightcolor[0] = 255;
-		entity->lightcolor[1] = 255;
-		entity->lightcolor[2] = 255;
-	    }
+	    CheckEntityFields(entity);
 	    num_lights++;
 	}
-
 	if (!strcmp(entity->classname, "light")) {
 	    if (entity->targetname[0] && !entity->style) {
 		char style[16];
@@ -279,7 +284,6 @@ LoadEntities(void)
 		SetKeyValue(entity, "style", style);
 	    }
 	}
-
 	if (!strcmp(entity->classname, "worldspawn")) {
 	    if (entity->light > 0 && !worldminlight) {
 		worldminlight = entity->light;
