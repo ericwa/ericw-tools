@@ -102,11 +102,10 @@ MatchTargets(void)
 
 	/* set the style on the source ent for switchable lights */
 	if (entities[j].style) {
-	    char s[16];
-
+	    char style[16];
 	    entities[i].style = entities[j].style;
-	    sprintf(s, "%i", entities[i].style);
-	    SetKeyValue(&entities[i], "style", s);
+	    snprintf(style, sizeof(style), "%i", entities[i].style);
+	    SetKeyValue(&entities[i], "style", style);
 	}
     }
 }
