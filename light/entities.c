@@ -56,21 +56,19 @@ SetKeyValue(entity_t *ent, const char *key, const char *value)
 }
 
 static int
-LightStyleForTargetname(const char *targetname, qboolean alloc)
+LightStyleForTargetname(const char *targetname)
 {
     int i;
 
     for (i = 0; i < numlighttargets; i++)
 	if (!strcmp(lighttargets[i], targetname))
 	    return 32 + i;
-    if (!alloc)
-	return -1;
-
     if (i == MAX_LIGHT_TARGETS)
 	Error("%s: Too many unique light targetnames\n", __func__);
 
     strcpy(lighttargets[i], targetname);
     numlighttargets++;
+
     return numlighttargets - 1 + 32;
 }
 
@@ -265,12 +263,10 @@ LoadEntities(void)
 
 	if (!strcmp(entity->classname, "light")) {
 	    if (entity->targetname[0] && !entity->style) {
-		char s[16];
-
-		entity->style =
-		    LightStyleForTargetname(entity->targetname, true);
-		sprintf(s, "%i", entity->style);
-		SetKeyValue(entity, "style", s);
+		char style[16];
+		entity->style = LightStyleForTargetname(entity->targetname);
+		snprintf(style, sizeof(style), "%i", entity->style);
+		SetKeyValue(entity, "style", style);
 	    }
 	}
 
