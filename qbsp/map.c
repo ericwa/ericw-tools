@@ -191,7 +191,7 @@ ParseExtendedTX(parser_t *parser)
 }
 
 static void
-SetTexinfo_QuakeEd(const plane_t *plane, const int shift[2], int rotate,
+SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
 		   const vec_t scale[2], texinfo_t *out)
 {
     int i, j;
@@ -202,34 +202,10 @@ SetTexinfo_QuakeEd(const plane_t *plane, const int shift[2], int rotate,
 
     TextureAxisFromPlane(plane, vecs[0], vecs[1]);
 
-    /* Normalize the Texture rotation */
-    rotate %= 360;
-    while (rotate < 0)
-	rotate += 360;
-
-    // rotate axis
-    switch (rotate) {
-    case 0:
-	sinv = 0;
-	cosv = 1;
-	break;
-    case 90:
-	sinv = 1;
-	cosv = 0;
-	break;
-    case 180:
-	sinv = 0;
-	cosv = -1;
-	break;
-    case 270:
-	sinv = -1;
-	cosv = 0;
-	break;
-    default:
-	ang = (vec_t)rotate / 180 * Q_PI;
-	sinv = sin(ang);
-	cosv = cos(ang);
-    }
+    /* Rotate axis */
+    ang = (vec_t)rotate / 180 * Q_PI;
+    sinv = sin(ang);
+    cosv = cos(ang);
 
     if (vecs[0][0])
 	sv = 0;
@@ -334,8 +310,7 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
     int i, j;
     texinfo_t tx;
     vec_t d;
-    int shift[2], rotate;
-    vec_t scale[2];
+    vec_t shift[2], rotate, scale[2];
     int tx_type;
     plane_t *plane;
     mapface_t *face, *checkface;
@@ -367,11 +342,11 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 	ParseToken(parser, PARSE_SAMELINE);
 	tx.miptex = FindMiptex(parser->token);
 	ParseToken(parser, PARSE_SAMELINE);
-	shift[0] = atoi(parser->token);
+	shift[0] = atof(parser->token);
 	ParseToken(parser, PARSE_SAMELINE);
-	shift[1] = atoi(parser->token);
+	shift[1] = atof(parser->token);
 	ParseToken(parser, PARSE_SAMELINE);
-	rotate = atoi(parser->token);
+	rotate = atof(parser->token);
 	ParseToken(parser, PARSE_SAMELINE);
 	scale[0] = atof(parser->token);
 	ParseToken(parser, PARSE_SAMELINE);

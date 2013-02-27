@@ -1,3 +1,7 @@
+????-??-?? (unreleased)
+
+* qbsp: respect floating point texture rotation and shift in map files
+
 2013-02-25 TyrUtils v0.5
 
 * New changelog to summarise changes going forward
