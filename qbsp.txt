@@ -51,9 +51,18 @@ DETAIL BRUSH SUPPORT
 		and do not appear as separate entities in
 		the compiled bsp.
 
-	Similarly for WorldCraft in .FGD format (untested):
+	For WorldCraft in .FGD format (untested):
 
 		@SolidClass color(128 128 230) = func_detail: "Detail" []
+
+	For Radiant in .ENT format:
+
+		<group name="func_detail" color="0 .5 .8">
+		Detail brushes add visual details to the world, but do not
+		block visibility. func_detail entities are merged into the
+		worldspawn entity by the qbsp compiler and do not appear as
+		separate entities in the compiled bsp.
+		</group>
 
 	What should be written to the .map file is a simple entity with one or
 	more brushes. E.g.:
