@@ -154,11 +154,14 @@ CheckEntityFields(entity_t *entity)
 	}
 	entity->formula = LF_LINEAR;
     }
-    if (!entity->lightcolor[0] && !entity->lightcolor[1]
-	&& !entity->lightcolor[2]) {
-	entity->lightcolor[0] = 255;
-	entity->lightcolor[1] = 255;
-	entity->lightcolor[2] = 255;
+    if (!VectorCompare(entity->lightcolor, vec3_origin)) {
+	if (!colored) {
+	    colored = true;
+	    logprint("Colored light entities detected: "
+		     ".lit output enabled.\n");
+	}
+    } else {
+	VectorCopy(vec3_white, entity->lightcolor);
     }
 }
 
@@ -181,6 +184,7 @@ LoadEntities(void)
     data = dentdata;
 
     /* start parsing */
+    memset(entities, 0, sizeof(entity_t) * MAX_MAP_ENTITIES);
     num_entities = 0;
     num_lights = 0;
 
@@ -295,6 +299,16 @@ LoadEntities(void)
 	    }
 	}
     }
+
+    if (!VectorCompare(sunlight_color, vec3_white) ||
+	!VectorCompare(minlight_color, vec3_white)) {
+	if (!colored) {
+	    colored = true;
+	    logprint("Colored light entities detected: "
+		     ".lit output enabled.\n");
+	}
+    }
+
     logprint("%d entities read, %d are lights.\n", num_entities, num_lights);
     MatchTargets();
 }

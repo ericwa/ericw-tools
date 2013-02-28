@@ -886,7 +886,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     int lightmapwidth;
     int lightmapsize;
     byte *out;
-    byte *lit_out;
+    byte *lit_out = NULL;
     vec_t *light;
 
     vec3_t *lightcolor;
@@ -1037,18 +1037,10 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     for (i = 0; i < MAXLIGHTMAPS; i++)
 	face->styles[i] = l.lightstyles[i];
 
-    /* Extra room for BSP30 lightmaps */
-    if (colored && bsp30)
-	lightmapsize = size * l.numlightstyles * 4;
-    else
-	lightmapsize = size * l.numlightstyles;
-
+    lightmapsize = size * l.numlightstyles;
     out = GetFileSpace(lightmapsize);
-
-    if (litfile)
+    if (colored)
 	lit_out = GetLitFileSpace(lightmapsize * 3);
-    else
-	lit_out = NULL;		/* Fix compiler warning... */
 
     face->lightofs = out - filebase;
 
@@ -1121,12 +1113,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 		}
 
 		/* Write out the lightmap in the appropriate format */
-		if (colored && bsp30) {
-		    *out++ = colors[0];
-		    *out++ = colors[1];
-		    *out++ = colors[2];
-		}
-		if (colored && litfile) {
+		if (colored) {
 		    *lit_out++ = colors[0];
 		    *lit_out++ = colors[1];
 		    *lit_out++ = colors[2];

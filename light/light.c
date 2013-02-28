@@ -22,8 +22,9 @@
 float scaledist = 1.0;
 float rangescale = 0.5;
 int worldminlight = 0;
-vec3_t minlight_color = { 255, 255, 255 };	/* defaults to white light   */
 int sunlight = 0;
+const vec3_t vec3_white = { 255, 255, 255 };
+vec3_t minlight_color = { 255, 255, 255 };	/* defaults to white light   */
 vec3_t sunlight_color = { 255, 255, 255 };	/* defaults to white light   */
 vec3_t sunmangle = { 0, 0, 16384 };	/* defaults to straight down */
 
@@ -38,8 +39,6 @@ static byte *lit_file_end;	// end of space for litfile data
 qboolean extrasamples;
 qboolean compress_ents;
 qboolean colored;
-qboolean bsp30;
-qboolean litfile;
 qboolean nominlimit;
 
 qboolean nolightface[MAX_MAP_FACES];
@@ -159,14 +158,14 @@ LightWorld(void)
 	Error("%s: allocation of %i bytes failed.", __func__, lightdatasize);
     memset(dlightdata, 0, lightdatasize + 16);
 
-    if (litfile)
+    if (colored)
 	lightdatasize /= 4;
 
     /* align filebase to a 4 byte boundary */
     filebase = file_p = (byte *)(((unsigned long)dlightdata + 3) & ~3);
     file_end = filebase + lightdatasize;
 
-    if (colored && litfile) {
+    if (colored) {
 	/* litfile data stored in dlightdata, after the white light */
 	lit_filebase = file_end + 12 - ((unsigned long)file_end % 12);
 	lit_file_p = lit_filebase;
@@ -223,13 +222,8 @@ main(int argc, const char **argv)
 	} else if (!strcmp(argv[i], "-compress")) {
 	    compress_ents = true;
 	    logprint("light entity compression enabled\n");
-	} else if (!strcmp(argv[i], "-colored") ||
-		   !strcmp(argv[i], "-coloured")) {
-	    colored = true;
-	} else if (!strcmp(argv[i], "-bsp30")) {
-	    bsp30 = true;
 	} else if (!strcmp(argv[i], "-lit")) {
-	    litfile = true;
+	    colored = true;
 	} else if (!strcmp(argv[i], "-nominlimit")) {
 	    nominlimit = true;
 	} else if (argv[i][0] == '-')
@@ -240,29 +234,13 @@ main(int argc, const char **argv)
 
     if (numthreads > 1)
 	logprint("running with %d threads\n", numthreads);
-
-    // Switch on colored flag if specifying -lit or -bsp30
-    if (bsp30 || litfile)
-	colored = true;
-
-    // Check the colored options
-    if (colored) {
-	if (!bsp30 && !litfile) {
-	    logprint("colored output format not specified -> using bsp 30\n");
-	    bsp30 = true;
-	} else if (bsp30 && litfile) {
-	    Error("Two colored output formats specified");
-	} else if (litfile) {
-	    logprint("colored output format: lit\n");
-	} else if (bsp30) {
-	    logprint("colored output format: bsp30\n");
-	}
-    }
+    if (colored)
+	logprint(".lit colored light output requested on command line.\n");
 
     if (i != argc - 1)
 	Error("usage: light [-threads num] [-light num] [-extra]\n"
-	      "             [-colored] [-bsp30] [-lit]\n"
-	      "             [-nocount] [-compress] [-nominlimit] bspfile\n");
+	      "             [-dist n] [-range n] [-lit] [-compress]\n"
+	      "             [-nominlimit] bspfile\n");
 
     start = I_FloatTime();
 
@@ -277,13 +255,8 @@ main(int argc, const char **argv)
     LightWorld();
 
     WriteEntitiesToString();
-
-    if (colored && bsp30)
-	WriteBSPFile(source, 30);
-    else
-	WriteBSPFile(source, bsp_version);
-
-    if (colored && litfile)
+    WriteBSPFile(source, bsp_version);
+    if (colored)
 	WriteLitFile(source, LIT_VERSION);
 
     end = I_FloatTime();

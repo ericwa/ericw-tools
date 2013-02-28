@@ -242,8 +242,8 @@ LoadBSPFile(const char *filename)
     bsp_version = (int)header->version;
     logprint("BSP is version %i\n", bsp_version);
 
-    if (bsp_version != 29 && bsp_version != 30)
-	Error("Sorry, only bsp versions 29 & 30 supported.");
+    if (bsp_version != 29)
+	Error("Sorry, only bsp version 29 supported.");
 
     nummodels = CopyLump(LUMP_MODELS, &dmodels, sizeof(dmodel_t));
     numvertexes = CopyLump(LUMP_VERTEXES, &dvertexes, sizeof(dvertex_t));
