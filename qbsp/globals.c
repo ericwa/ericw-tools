@@ -147,4 +147,5 @@ const char *rgszErrors[cErrors] = {
     "Internal error: bad texture coordinate style",
     "Internal error: brush count mismatched during map file parsing",
     "Internal error: Detail cluster mismatch",
+    "line %d: couldn't parse Valve220 texture info",
 };

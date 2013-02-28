@@ -113,5 +113,6 @@ enum {
     errBadTXStyle,		// 60
     errLowMapbrushCount,
     errDetailClusterMismatch,
+    errBadValve220TX,
     cErrors
 };

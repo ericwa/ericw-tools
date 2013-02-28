@@ -168,15 +168,16 @@ TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv)
 
 
 typedef enum {
-    TX_ORIGINAL    = 0,
+    TX_QUAKED      = 0,
     TX_QUARK_TYPE1 = 1,
-    TX_QUARK_TYPE2 = 2
+    TX_QUARK_TYPE2 = 2,
+    TX_VALVE_220   = 3,
 } texcoord_style_t;
 
 static texcoord_style_t
 ParseExtendedTX(parser_t *parser)
 {
-    texcoord_style_t style = TX_ORIGINAL;
+    texcoord_style_t style = TX_QUAKED;
 
     if (ParseToken(parser, PARSE_COMMENT)) {
 	if (!strncmp(parser->token, "//TX", 4)) {
@@ -301,11 +302,52 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_style_t style,
     out->vecs[1][3] = -DotProduct(vecs[1], planepts[0]);
 }
 
+static void
+ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2],
+		vec_t *rotate, vec_t scale[2])
+{
+    int i, j;
+
+    for (i = 0; i < 2; i++) {
+	ParseToken(parser, PARSE_SAMELINE);
+	if (strcmp(parser->token, "["))
+	    Error(errBadValve220TX, 9999);//parser->linenum);
+	for (j = 0; j < 3; j++) {
+	    ParseToken(parser, PARSE_SAMELINE);
+	    axis[i][j] = atof(parser->token);
+	}
+	ParseToken(parser, PARSE_SAMELINE);
+	shift[i] = atof(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	if (strcmp(parser->token, "]"))
+	    Error(errBadValve220TX, parser->linenum);
+    }
+    ParseToken(parser, PARSE_SAMELINE);
+    rotate[0] = atof(parser->token);
+    ParseToken(parser, PARSE_SAMELINE);
+    scale[0] = atof(parser->token);
+    ParseToken(parser, PARSE_SAMELINE);
+    scale[1] = atof(parser->token);
+}
+
+static void
+SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2],
+		    texinfo_t *out)
+{
+    int i;
+
+    for (i = 0; i < 3; i++) {
+	out->vecs[0][i] = axis[0][i] / scale[0];
+	out->vecs[1][i] = axis[1][i] / scale[1];
+    }
+    out->vecs[0][3] = shift[0];
+    out->vecs[1][3] = shift[1];
+}
 
 static void
 ParseBrush(parser_t *parser, mapbrush_t *brush)
 {
-    vec3_t planepts[3];
+    vec3_t planepts[3], axis[2];
     vec3_t t1, t2, t3;
     int i, j;
     texinfo_t tx;
@@ -337,20 +379,27 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 		Error(errInvalidMapPlane, parser->linenum);
 	}
 
-	// read the texturedef
+	// Read the texturedef
 	memset(&tx, 0, sizeof(tx));
 	ParseToken(parser, PARSE_SAMELINE);
 	tx.miptex = FindMiptex(parser->token);
 	ParseToken(parser, PARSE_SAMELINE);
-	shift[0] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	shift[1] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	rotate = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	scale[0] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	scale[1] = atof(parser->token);
+	if (!strcmp(parser->token, "[")) {
+	    parser->unget = true;
+	    ParseValve220TX(parser, axis, shift, &rotate, scale);
+	    tx_type = TX_VALVE_220;
+	} else {
+	    shift[0] = atof(parser->token);
+	    ParseToken(parser, PARSE_SAMELINE);
+	    shift[1] = atof(parser->token);
+	    ParseToken(parser, PARSE_SAMELINE);
+	    rotate = atof(parser->token);
+	    ParseToken(parser, PARSE_SAMELINE);
+	    scale[0] = atof(parser->token);
+	    ParseToken(parser, PARSE_SAMELINE);
+	    scale[1] = atof(parser->token);
+	    tx_type = ParseExtendedTX(parser);
+	}
 
 	// if the three points are all on a previous plane, it is a
 	// duplicate plane
@@ -388,12 +437,15 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 	VectorNormalize(plane->normal);
 	plane->dist = DotProduct(t3, plane->normal);
 
-	tx_type = ParseExtendedTX(parser);
 	switch (tx_type) {
 	case TX_QUARK_TYPE1:
 	case TX_QUARK_TYPE2:
 	    SetTexinfo_QuArK(parser, &planepts[0], tx_type, &tx);
 	    break;
+	case TX_VALVE_220:
+	    SetTexinfo_Valve220(axis, shift, scale, &tx);
+	    break;
+	case TX_QUAKED:
 	default:
 	    SetTexinfo_QuakeEd(plane, shift, rotate, scale, &tx);
 	    break;
