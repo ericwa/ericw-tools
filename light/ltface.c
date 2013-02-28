@@ -636,7 +636,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
  * =============
  */
 static void
-SkyLightFace(lightinfo_t * l, const vec3_t faceoffset)
+SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 {
     int i, j;
     vec_t *surf;
@@ -644,7 +644,6 @@ SkyLightFace(lightinfo_t * l, const vec3_t faceoffset)
     vec_t angle;
 
     /* Don't bother if surface facing away from sun */
-    //if (DotProduct (sunmangle, l->facenormal) <= 0)
     if (DotProduct(sunmangle, l->facenormal) < -ANGLE_EPSILON)
 	return;
 
@@ -699,9 +698,9 @@ SkyLightFace(lightinfo_t * l, const vec3_t faceoffset)
 		if (TestSky(surf, sun_vectors[k])) {
 		    l->lightmaps[i][j] += (angle * sunlight);
 		    if (colored)
-			VectorMA(l->lightmapcolors[i][j], angle * sunlight /
-				 (vec_t)255, sunlight_color,
-				 l->lightmapcolors[i][j]);
+			VectorMA(l->lightmapcolors[i][j],
+				 angle * sunlight / 255,
+				 colors, l->lightmapcolors[i][j]);
 		    break;
 		}
 	    }
@@ -713,8 +712,8 @@ SkyLightFace(lightinfo_t * l, const vec3_t faceoffset)
 	if (TestSky(surf, sunmangle)) {
 	    l->lightmaps[i][j] += (angle * sunlight);
 	    if (colored)
-		VectorMA(l->lightmapcolors[i][j], angle * sunlight /
-			 (vec_t)255, sunlight_color, l->lightmapcolors[i][j]);
+		VectorMA(l->lightmapcolors[i][j], angle * sunlight / 255,
+			 colors, l->lightmapcolors[i][j]);
 	}
     }
 #endif
@@ -824,7 +823,8 @@ MakeNegColoredLight(int light, vec3_t dest, const vec3_t src)
 void
 LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 {
-    dface_t *f;
+    const entity_t *entity;
+    dface_t *face;
     lightinfo_t l;
     int s, t;
     int i, j, k, c;
@@ -841,35 +841,34 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     vec_t *light;
 
     vec3_t *lightcolor;
-    vec3_t totalcolors;
+    vec3_t colors = { 0, 0, 0 };
 
     int width;
     vec3_t point;
 
-
-    f = dfaces + surfnum;
+    face = dfaces + surfnum;
 
     /* some surfaces don't need lightmaps */
-    f->lightofs = -1;
+    face->lightofs = -1;
     for (j = 0; j < MAXLIGHTMAPS; j++)
-	f->styles[j] = 255;
+	face->styles[j] = 255;
 
-    if (texinfo[f->texinfo].flags & TEX_SPECIAL)
+    if (texinfo[face->texinfo].flags & TEX_SPECIAL)
 	return;			/* non-lit texture */
 
     memset(&l, 0, sizeof(l));
     l.surfnum = surfnum;
-    l.face = f;
+    l.face = face;
 
     /* rotate plane */
 
-    VectorCopy(dplanes[f->planenum].normal, l.facenormal);
-    l.facedist = dplanes[f->planenum].dist;
+    VectorCopy(dplanes[face->planenum].normal, l.facenormal);
+    l.facedist = dplanes[face->planenum].dist;
     VectorScale(l.facenormal, l.facedist, point);
     VectorAdd(point, faceoffset, point);
     l.facedist = DotProduct(point, l.facenormal);
 
-    if (f->side) {
+    if (face->side) {
 	VectorSubtract(vec3_origin, l.facenormal, l.facenormal);
 	l.facedist = -l.facedist;
     }
@@ -905,40 +904,36 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	/* cast only positive lights */
 	entity_t lt;
 
-	for (i = 0; i < num_entities; i++) {
+	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	    if (colored) {
-		if (entities[i].light) {
-		    memcpy(&lt, &entities[i], sizeof(entity_t));
-		    MakePosColoredLight(entities[i].light, lt.lightcolor,
-					entities[i].lightcolor);
+		if (entity->light) {
+		    memcpy(&lt, entity, sizeof(entity_t));
+		    MakePosColoredLight(entity->light, lt.lightcolor,
+					entity->lightcolor);
 		    SingleLightFace(&lt, &l, faceoffset);
 		}
-	    } else if (entities[i].light > 0) {
-		SingleLightFace(&entities[i], &l, faceoffset);
+	    } else if (entity->light > 0) {
+		SingleLightFace(entity, &l, faceoffset);
 	    }
 	}
 	/* cast positive sky light */
 	if (sunlight) {
 	    if (colored) {
-		vec3_t suncol_save;
-
-		VectorCopy(sunlight_color, suncol_save);
-		MakePosColoredLight(sunlight, sunlight_color, suncol_save);
-		SkyLightFace(&l, faceoffset);
-		VectorCopy(suncol_save, sunlight_color);
+		MakePosColoredLight(sunlight, sunlight_color, colors);
+		SkyLightFace(&l, faceoffset, colors);
 	    } else if (sunlight > 0) {
-		SkyLightFace(&l, faceoffset);
+		SkyLightFace(&l, faceoffset, colors);
 	    }
 	}
     } else {
 	/* (!nominlimit) => cast all lights */
-	for (i = 0; i < num_entities; i++)
-	    if (entities[i].light)
-		SingleLightFace(&entities[i], &l, faceoffset);
+	for (i = 0, entity = entities; i < num_entities; i++, entity++)
+	    if (entity->light)
+		SingleLightFace(entity, &l, faceoffset);
 
 	/* cast sky light */
 	if (sunlight)
-	    SkyLightFace(&l, faceoffset);
+	    SkyLightFace(&l, faceoffset, colors);
     }
 
     /* Minimum lighting */
@@ -948,29 +943,25 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	/* cast only negative lights */
 	entity_t lt;
 
-	for (i = 0; i < num_entities; i++) {
+	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	    if (colored) {
-		if (entities[i].light) {
-		    memcpy(&lt, &entities[i], sizeof(entity_t));
-		    MakeNegColoredLight(entities[i].light, lt.lightcolor,
-					entities[i].lightcolor);
+		if (entity->light) {
+		    memcpy(&lt, entity, sizeof(entity_t));
+		    MakeNegColoredLight(entity->light, lt.lightcolor,
+					entity->lightcolor);
 		    SingleLightFace(&lt, &l, faceoffset);
 		}
-	    } else if (entities[i].light < 0) {
-		SingleLightFace(&entities[i], &l, faceoffset);
+	    } else if (entity->light < 0) {
+		SingleLightFace(entity, &l, faceoffset);
 	    }
 	}
 	/* cast negative sky light */
 	if (sunlight) {
 	    if (colored) {
-		vec3_t suncol_save;
-
-		VectorCopy(sunlight_color, suncol_save);
-		MakeNegColoredLight(sunlight, sunlight_color, suncol_save);
-		SkyLightFace(&l, faceoffset);
-		VectorCopy(suncol_save, sunlight_color);
+		MakeNegColoredLight(sunlight, colors, sunlight_color);
+		SkyLightFace(&l, faceoffset, colors);
 	    } else if (sunlight < 0) {
-		SkyLightFace(&l, faceoffset);
+		SkyLightFace(&l, faceoffset, colors);
 	    }
 	}
 
@@ -997,7 +988,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     /* save out the values */
 
     for (i = 0; i < MAXLIGHTMAPS; i++)
-	f->styles[i] = l.lightstyles[i];
+	face->styles[i] = l.lightstyles[i];
 
     /* Extra room for BSP30 lightmaps */
     if (colored && bsp30)
@@ -1012,7 +1003,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     else
 	lit_out = NULL;		/* Fix compiler warning... */
 
-    f->lightofs = out - filebase;
+    face->lightofs = out - filebase;
 
     /* extra filtering */
     width = (l.texsize[0] + 1) * 2;
@@ -1039,23 +1030,23 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 
 		    /* Calculate the color */
 		    if (colored) {
-			totalcolors[0] =
+			colors[0] =
 			    lightcolor[x1][0] + lightcolor[x2][0]
 			    + lightcolor[x3][0] + lightcolor[x4][0];
-			totalcolors[0] *= 0.25;
-			totalcolors[1] =
+			colors[0] *= 0.25;
+			colors[1] =
 			    lightcolor[x1][1] + lightcolor[x2][1]
 			    + lightcolor[x3][1] + lightcolor[x4][1];
-			totalcolors[1] *= 0.25;
-			totalcolors[2] =
+			colors[1] *= 0.25;
+			colors[2] =
 			    lightcolor[x1][2] + lightcolor[x2][2]
 			    + lightcolor[x3][2] + lightcolor[x4][2];
-			totalcolors[2] *= 0.25;
+			colors[2] *= 0.25;
 		    }
 		} else {
 		    total = light[c];
 		    if (colored)
-			VectorCopy(lightcolor[c], totalcolors);
+			VectorCopy(lightcolor[c], colors);
 		}
 		total *= rangescale;	/* scale before clamping */
 
@@ -1063,16 +1054,16 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 		    /* Scale back intensity, instead of capping individual
 		     * colors
 		     */
-		    VectorScale(totalcolors, rangescale, totalcolors);
+		    VectorScale(colors, rangescale, colors);
 		    max = 0.0;
 		    for (j = 0; j < 3; j++)
-			if (totalcolors[j] > max) {
-			    max = totalcolors[j];
-			} else if (totalcolors[j] < 0.0f) {
+			if (colors[j] > max) {
+			    max = colors[j];
+			} else if (colors[j] < 0.0f) {
 			    Error("color %i < 0", j);
 			}
 		    if (max > 255.0f)
-			VectorScale(totalcolors, 255.0f / max, totalcolors);
+			VectorScale(colors, 255.0f / max, colors);
 		}
 
 		if (total > 255.0f)
@@ -1084,14 +1075,14 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 
 		/* Write out the lightmap in the appropriate format */
 		if (colored && bsp30) {
-		    *out++ = totalcolors[0];
-		    *out++ = totalcolors[1];
-		    *out++ = totalcolors[2];
+		    *out++ = colors[0];
+		    *out++ = colors[1];
+		    *out++ = colors[2];
 		}
 		if (colored && litfile) {
-		    *lit_out++ = totalcolors[0];
-		    *lit_out++ = totalcolors[1];
-		    *lit_out++ = totalcolors[2];
+		    *lit_out++ = colors[0];
+		    *lit_out++ = colors[1];
+		    *lit_out++ = colors[2];
 		}
 		*out++ = total;
 	    }
