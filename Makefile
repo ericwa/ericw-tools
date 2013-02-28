@@ -143,7 +143,7 @@ define do_cc_o_c
 endef
 
 quiet_cmd_cc_link = '  LINK    $@'
-      cmd_cc_link = $(CC) -o $@ $^ $(1)
+      cmd_cc_link = $(CC) $(LDFLAGS) -o $@ $^ $(1)
 
 define do_cc_link
 	@$(do_mkdir)
