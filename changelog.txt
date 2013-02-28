@@ -1,6 +1,12 @@
 ????-??-?? (unreleased)
 
 * qbsp: respect floating point texture rotation and shift in map files
+* qbsp: support for Valve's 220 map format used in later Worldcraft/Hammer
+* light: fixed a race condition in multithreaded coloured light processing
+* light: fixed bug preventing use of all 4 light styles in a common case
+* light: implemented attenutation formulae "delay" 4+5, ala Bengt's tools
+* light: removed old bsp30 support
+* light: lit files now automatically generated when coloured lights detected
 
 2013-02-25 TyrUtils v0.5
 
