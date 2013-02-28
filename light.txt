@@ -99,10 +99,15 @@ ENTITY PARAMETERS
 	"delay" "n"
 
 	Select an attenuation formaula for the light:
-	  0 => linear attenuation (default)
+	  0 => Linear attenuation (default)
 	  1 => 1/x attenuation
 	  2 => 1/(x^2) attenuation
-          3 => no attenuation (light stays same brightness at any distance)
+	  3 => No attenuation (light stays same brightness at any distance)
+	  4 => "local minlight" - No attenuation and like minlight, it won't
+	       raise the lighting above it's light value. Unlike minlight, it
+	       will only affect surfaces within line of sight of the entity.
+	  5 => 1/(x^2) attenuation, but slightly more attenuated and without
+	       the extra bright effect that "delay 2" has near the source.
 
 	"_color" "r g b"
 

@@ -460,7 +460,9 @@ scaledDistance(vec_t distance, const entity_t *light)
 	return scaledist * light->atten * distance;
     case LF_INVERSE:
     case LF_INVERSE2:
+    case LF_INVERSE2A:
     case LF_INFINITE:
+    case LF_LOCALMIN:
 	/* Return a small distance to prevent culling these lights, since we */
 	/* know these formulae won't fade to nothing.                        */
 	return (distance <= 0.0) ? -0.25 : 0.25;
@@ -472,20 +474,25 @@ scaledDistance(vec_t distance, const entity_t *light)
 static vec_t
 scaledLight(vec_t distance, const entity_t *light)
 {
-    const vec_t tmp = scaledist * light->atten * distance;
+    vec_t dist;
 
-    switch (light->formula) {
-    case LF_INFINITE:
+    if (light->formula == LF_INFINITE || light->formula == LF_LOCALMIN)
 	return light->light;
+
+    dist = scaledist * light->atten * distance;
+    switch (light->formula) {
     case LF_INVERSE:
-	return light->light / (tmp / LF_SCALE);
+	return light->light / (dist / LF_SCALE);
+    case LF_INVERSE2A:
+	dist += LF_SCALE;
+	/* Fall through */
     case LF_INVERSE2:
-	return light->light / ((tmp * tmp) / (LF_SCALE * LF_SCALE));
+	return light->light / ((dist * dist) / (LF_SCALE * LF_SCALE));
     case LF_LINEAR:
 	if (light->light > 0)
-	    return (light->light - tmp > 0) ? light->light - tmp : 0;
+	    return (light->light - dist > 0) ? light->light - dist : 0;
 	else
-	    return (light->light + tmp < 0) ? light->light + tmp : 0;
+	    return (light->light + dist < 0) ? light->light + dist : 0;
     default:
 	Error("Internal error: unknown light formula");
     }
@@ -722,9 +729,10 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 static void
 FixMinlight(lightinfo_t *l)
 {
-    int i, j;
+    int i, j, k;
     vec_t *lightmap;
     vec3_t *colormap;
+    const entity_t *entity;
 
     /* Find a style 0 lightmap */
     lightmap = NULL;
@@ -739,7 +747,7 @@ FixMinlight(lightinfo_t *l)
 
     if (!lightmap) {
 	if (l->numlightstyles == MAXLIGHTMAPS)
-	    return; /* oh well... */
+	    return; /* oh well... FIXME - should we warn? */
 	lightmap = l->lightmaps[l->numlightstyles];
 	for (i = 0; i < l->numsurfpt; i++)
 	    lightmap[i] = worldminlight;
@@ -758,6 +766,50 @@ FixMinlight(lightinfo_t *l)
 		    vec_t lightval = worldminlight * minlight_color[j] / 255;
 		    if (colormap[i][j] < lightval)
 			colormap[i][j] = lightval;
+		}
+	    }
+	}
+    }
+
+    /* Cast rays for local minlight entities */
+    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	if (entity->formula != LF_LOCALMIN)
+	    continue;
+
+	/* Find the lightmap with correct style */
+	lightmap = NULL;
+	colormap = NULL;
+	for (j = 0; j < l->numlightstyles; j++) {
+	    if (l->lightstyles[j] == 0) {
+		lightmap = l->lightmaps[j];
+		colormap = l->lightmapcolors[j];
+		break;
+	    }
+	}
+	if (!lightmap) {
+	    if (l->numlightstyles == MAXLIGHTMAPS)
+		continue; /* oh well... FIXME - should we warn? */
+	    lightmap = l->lightmaps[l->numlightstyles];
+	    colormap = l->lightmapcolors[l->numlightstyles];
+	    l->numlightstyles++;
+	}
+
+	for (j = 0; j < l->numsurfpt; j++) {
+	    qboolean trace = false;
+	    if (lightmap[j] < entity->light) {
+		trace = TestLine(entity->origin, l->surfpt[j]);
+		if (!trace)
+		    continue;
+		lightmap[j] = entity->light;
+	    }
+	    if (!colored)
+		continue;
+	    for (k = 0; k < 3; k++) {
+		if (colormap[j][k] < minlight_color[k]) {
+		    if (!trace)
+			trace = TestLine(entity->origin, l->surfpt[j]);
+		    if (trace)
+			colormap[j][k] = minlight_color[k];
 		}
 	    }
 	}
@@ -900,6 +952,8 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     if (nominlimit) {
 	/* cast only positive lights */
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	    if (entity->formula == LF_LOCALMIN)
+		continue;
 	    if (colored) {
 		if (entity->light) {
 		    PositiveColors(entity->light, colors, entity->lightcolor);
@@ -920,10 +974,12 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	}
     } else {
 	/* (!nominlimit) => cast all lights */
-	for (i = 0, entity = entities; i < num_entities; i++, entity++)
+	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	    if (entity->formula == LF_LOCALMIN)
+		continue;
 	    if (entity->light)
 		SingleLightFace(entity, &l, faceoffset, colors);
-
+	}
 	/* cast sky light */
 	if (sunlight)
 	    SkyLightFace(&l, faceoffset, colors);
@@ -935,6 +991,8 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     if (nominlimit) {
 	/* cast only negative lights */
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	    if (entity->formula == LF_LOCALMIN)
+		continue;
 	    if (colored) {
 		if (entity->light) {
 		    NegativeColors(entity->light, colors, entity->lightcolor);
