@@ -556,18 +556,8 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     lightsamp = l->lightmaps[mapnum];
     lightcolorsamp = l->lightmapcolors[mapnum];
 
-    /* TYR: The original way of doing things will generate "Too many light
-     *      styles on a face" errors that aren't necessarily true.
-     *      This is especially likely to happen if you make styled
-     *      lights with delay != 0 as they are seen to be within
-     *      lighting distance, even though they may be on totally
-     *      opposite sides of the map (or separated by solid wall(s))
-     *
-     *      We should only generate the error when if find out that the
-     *      face actually gets hit by the light
-     */
-
-    if (mapnum == l->numlightstyles) {	/* init a new light map */
+    if (mapnum == l->numlightstyles) {
+	/* init a new light map */
 	size = (l->texsize[1] + 1) * (l->texsize[0] + 1);
 	for (i = 0; i < size; i++) {
 	    if (colored) {
@@ -580,7 +570,6 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     }
 
     /* check it for real */
-
     hit = false;
     c_proper++;
 
