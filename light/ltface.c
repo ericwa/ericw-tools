@@ -714,42 +714,44 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
  * ============
  */
 static void
-FixMinlight(lightinfo_t * l)
+FixMinlight(lightinfo_t *l)
 {
-    int i, j, k;
-    vec_t tmp;
+    int i, j;
+    vec_t *lightmap;
+    vec3_t *colormap;
 
-    /* if minlight is set, there must be a style 0 light map */
+    /* Find a style 0 lightmap */
+    lightmap = NULL;
+    colormap = NULL;
     for (i = 0; i < l->numlightstyles; i++) {
 	if (l->lightstyles[i] == 0) {
-	    // Set the minimum light level...
+	    lightmap = l->lightmaps[i];
+	    colormap = l->lightmapcolors[i];
 	    break;
-	} else {
-	    // Set zero minimum...
 	}
     }
-    if (i == l->numlightstyles) {
-	if (l->numlightstyles == MAXLIGHTMAPS)
-	    return;		/* oh well.. */
-	for (j = 0; j < l->numsurfpt; j++)
-	    l->lightmaps[i][j] = worldminlight;
-	if (colored)
-	    for (j = 0; j < l->numsurfpt; j++)
-		VectorScale(minlight_color, worldminlight / (vec_t)255,
-			    l->lightmapcolors[i][j]);
-	l->lightstyles[i] = 0;
-	l->numlightstyles++;
-    } else {
-	for (j = 0; j < l->numsurfpt; j++) {
-	    if (l->lightmaps[i][j] < worldminlight)
-		l->lightmaps[i][j] = worldminlight;
-	    if (colored) {
-		for (k = 0; k < 3; k++) {
-		    tmp = (vec_t)worldminlight *minlight_color[k];
 
-		    tmp /= (vec_t)255.0;
-		    if (l->lightmapcolors[i][j][k] < tmp)
-			l->lightmapcolors[i][j][k] = tmp;
+    if (!lightmap) {
+	if (l->numlightstyles == MAXLIGHTMAPS)
+	    return; /* oh well... */
+	lightmap = l->lightmaps[l->numlightstyles];
+	for (i = 0; i < l->numsurfpt; i++)
+	    lightmap[i] = worldminlight;
+	if (colored) {
+	    colormap = l->lightmapcolors[l->numlightstyles];
+	    for (i = 0; i < l->numsurfpt; i++)
+		VectorScale(minlight_color, worldminlight / 255, colormap[i]);
+	}
+	l->lightstyles[l->numlightstyles++] = 0;
+    } else {
+	for (i = 0; i < l->numsurfpt; i++) {
+	    if (lightmap[i] < worldminlight)
+		lightmap[i] = worldminlight;
+	    if (colored) {
+		for (j = 0; j < 3; j++) {
+		    vec_t lightval = worldminlight * minlight_color[j] / 255;
+		    if (colormap[i][j] < lightval)
+			colormap[i][j] = lightval;
 		}
 	    }
 	}
