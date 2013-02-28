@@ -321,7 +321,7 @@ QBSP_OBJECTS = \
 	winding.o	\
 	writebsp.o
 
-$(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,build/qbsp/%,$(QBSP_OBJECTS))
+$(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,$(BUILD_DIR)/qbsp/%,$(QBSP_OBJECTS))
 	$(call do_cc_link,-lm)
 	$(call do_strip,$@)
 
