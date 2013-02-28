@@ -508,15 +508,15 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     vec_t *surf;
     qboolean hit;
     int mapnum;
-    int size;
-    int c, i;
+    int c;
     vec3_t rel;
     vec3_t spotvec;
     vec_t falloff;
     vec_t *lightsamp;
-
-    /* Colored lighting */
-    vec3_t *lightcolorsamp;
+    vec3_t *colorsamp;
+    qboolean newmap;
+    vec_t newlightmap[SINGLEMAP];
+    vec3_t newcolormap[SINGLEMAP];
 
     VectorSubtract(light->origin, bsp_origin, rel);
     dist = scaledDistance((DotProduct(rel, l->facenormal) - l->facedist),
@@ -549,41 +549,43 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	falloff = 0;		/* shut up compiler warnings */
     }
 
-    for (mapnum = 0; mapnum < l->numlightstyles; mapnum++)
-	if (l->lightstyles[mapnum] == light->style)
+    /*
+     * Find the lightmap with matching style
+     */
+    newmap = true;
+    for (mapnum = 0; mapnum < l->numlightstyles; mapnum++) {
+	if (l->lightstyles[mapnum] == light->style) {
+	    newmap = false;
 	    break;
-
-    lightsamp = l->lightmaps[mapnum];
-    lightcolorsamp = l->lightmapcolors[mapnum];
-
-    if (mapnum == l->numlightstyles) {
-	/* init a new light map */
-	size = (l->texsize[1] + 1) * (l->texsize[0] + 1);
-	for (i = 0; i < size; i++) {
-	    if (colored) {
-		lightcolorsamp[i][0] = 0;
-		lightcolorsamp[i][1] = 0;
-		lightcolorsamp[i][2] = 0;
-	    }
-	    lightsamp[i] = 0;
 	}
     }
+    if (newmap) {
+	memset(newlightmap, 0, sizeof(newlightmap));
+	memset(newcolormap, 0, sizeof(newcolormap));
+	lightsamp = newlightmap;
+	colorsamp = newcolormap;
+    } else {
+	lightsamp = l->lightmaps[mapnum];
+	colorsamp = l->lightmapcolors[mapnum];
+    }
 
-    /* check it for real */
+    /*
+     * Check it for real
+     */
     hit = false;
     c_proper++;
 
     surf = l->surfpt[0];
     for (c = 0; c < l->numsurfpt; c++, surf += 3) {
 	dist = scaledDistance(CastRay(light->origin, surf), light);
-
 	if (dist < 0)
-	    continue;		/* light doesn't reach */
+	    continue;
 
 	VectorSubtract(light->origin, surf, incoming);
 	VectorNormalize(incoming);
 	angle = DotProduct(incoming, l->facenormal);
-	if (light->targetent || light->use_mangle) {	/* spotlight cutoff */
+	if (light->targetent || light->use_mangle) {
+	    /* spotlight cutoff */
 	    if (DotProduct(spotvec, incoming) > falloff)
 		continue;
 	}
@@ -595,17 +597,18 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 
 	if (colored) {
 	    add /= (vec_t)255.0;
-	    lightcolorsamp[c][0] += add * colors[0];
-	    lightcolorsamp[c][1] += add * colors[1];
-	    lightcolorsamp[c][2] += add * colors[2];
+	    colorsamp[c][0] += add * colors[0];
+	    colorsamp[c][1] += add * colors[1];
+	    colorsamp[c][2] += add * colors[2];
 	}
 
-	if (abs(lightsamp[c]) > 1)	/* ignore really tiny lights */
+	/* Check if we really hit, ignore tiny lights */
+	if (abs(lightsamp[c]) > 1)
 	    hit = true;
     }
 
-    if (mapnum == l->numlightstyles && hit) {
-	if (mapnum == MAXLIGHTMAPS - 1) {
+    if (newmap && hit) {
+	if (l->numlightstyles == MAXLIGHTMAPS) {
 	    logprint("WARNING: Too many light styles on a face\n");
 	    logprint("   lightmap point near (%0.0f, %0.0f, %0.0f)\n",
 		     l->surfpt[0][0], l->surfpt[0][1], l->surfpt[0][2]);
@@ -614,8 +617,11 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	    return;
 	}
 
+	/* the style has some real data now */
+	mapnum = l->numlightstyles++;
 	l->lightstyles[mapnum] = light->style;
-	l->numlightstyles++;	/* the style has some real data now */
+	memcpy(l->lightmaps[mapnum], newlightmap, sizeof(newlightmap));
+	memcpy(l->lightmapcolors[mapnum], newcolormap, sizeof(newcolormap));
     }
 }
 
