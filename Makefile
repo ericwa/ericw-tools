@@ -331,3 +331,26 @@ clean:
 	@rm -f $(shell find . \( \
 		-name '*~' -o -name '#*#' -o -name '*.o' -o -name '*.res' \
 	\) -print)
+
+# OS X Fat Binaries (Intel only)
+fatbin:
+	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86"    BIN_PFX=x86.    CFLAGS="-arch i386"   LDFLAGS="-arch i386"
+	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86_64" BIN_PFX=x86_64. CFLAGS="-arch x86_64" LDFLAGS="-arch x86_64"
+	lipo -create bin/x86.qbsp    bin/x86_64.qbsp    -output bin/qbsp
+	lipo -create bin/x86.light   bin/x86_64.light   -output bin/light
+	lipo -create bin/x86.vis     bin/x86_64.vis     -output bin/vis
+	lipo -create bin/x86.bsputil bin/x86_64.bsputil -output bin/bsputil
+	lipo -create bin/x86.bspinfo bin/x86_64.bspinfo -output bin/bspinfo
+
+# OS X Fat Binaries (PPC & Intel)
+# - Not working yet, need to get the right cross compiler...
+fatbin2:
+	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86"    BIN_PFX=x86.    CFLAGS="-arch i386"   LDFLAGS="-arch i386"
+	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86_64" BIN_PFX=x86_64. CFLAGS="-arch x86_64" LDFLAGS="-arch x86_64"
+	$(MAKE) BUILD_DIR="$(BUILD_DIR).ppc"    BIN_PFX=ppc.    CFLAGS="-arch ppc"    LDFLAGS="-arch ppc"
+	$(MAKE) BUILD_DIR="$(BUILD_DIR).ppc64"  BIN_PFX=ppc64.  CFLAGS="-arch ppc64"  LDFLAGS="-arch ppc64"
+	lipo -create bin/x86.qbsp    bin/x86_64.qbsp    bin/ppc.qbsp    bin/ppc64.qbsp    -output bin/qbsp
+	lipo -create bin/x86.light   bin/x86_64.light   bin/ppc.light   bin/ppc64.light   -output bin/light
+	lipo -create bin/x86.vis     bin/x86_64.vis     bin/ppc.vis     bin/ppc64.vis     -output bin/vis
+	lipo -create bin/x86.bsputil bin/x86_64.bsputil bin/ppc.bsputil bin/ppc64.bsputil -output bin/bsputil
+	lipo -create bin/x86.bspinfo bin/x86_64.bspinfo bin/ppc.bspinfo bin/ppc64.bspinfo -output bin/bspinfo
