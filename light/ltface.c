@@ -499,7 +499,7 @@ scaledLight(vec_t distance, const entity_t *light)
  */
 static void
 SingleLightFace(const entity_t *light, lightinfo_t * l,
-		const vec3_t faceoffset)
+		const vec3_t faceoffset, const vec3_t colors)
 {
     vec_t dist;
     vec3_t incoming;
@@ -606,9 +606,9 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 
 	if (colored) {
 	    add /= (vec_t)255.0;
-	    lightcolorsamp[c][0] += add * light->lightcolor[0];
-	    lightcolorsamp[c][1] += add * light->lightcolor[1];
-	    lightcolorsamp[c][2] += add * light->lightcolor[2];
+	    lightcolorsamp[c][0] += add * colors[0];
+	    lightcolorsamp[c][1] += add * colors[1];
+	    lightcolorsamp[c][2] += add * colors[2];
 	}
 
 	if (abs(lightsamp[c]) > 1)	/* ignore really tiny lights */
@@ -772,11 +772,11 @@ FixMinlight(lightinfo_t * l)
  * light is the light intensity, needed to check if +ve or -ve.
  * src and dest are the source and destination color vectors (vec3_t).
  * dest becomes a copy of src where
- *    MakePosColoredLight zeros negative light components.
- *    MakeNegColoredLight zeros positive light components.
+ *    PositiveColors zeros negative light components.
+ *    NegativeColors zeros positive light components.
  */
 static void
-MakePosColoredLight(int light, vec3_t dest, const vec3_t src)
+PositiveColors(int light, vec3_t dest, const vec3_t src)
 {
     int i;
 
@@ -796,7 +796,7 @@ MakePosColoredLight(int light, vec3_t dest, const vec3_t src)
 }
 
 static void
-MakeNegColoredLight(int light, vec3_t dest, const vec3_t src)
+NegativeColors(int light, vec3_t dest, const vec3_t src)
 {
     int i;
 
@@ -902,24 +902,20 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     l.numlightstyles = 0;
     if (nominlimit) {
 	/* cast only positive lights */
-	entity_t lt;
-
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	    if (colored) {
 		if (entity->light) {
-		    memcpy(&lt, entity, sizeof(entity_t));
-		    MakePosColoredLight(entity->light, lt.lightcolor,
-					entity->lightcolor);
-		    SingleLightFace(&lt, &l, faceoffset);
+		    PositiveColors(entity->light, colors, entity->lightcolor);
+		    SingleLightFace(entity, &l, faceoffset, colors);
 		}
 	    } else if (entity->light > 0) {
-		SingleLightFace(entity, &l, faceoffset);
+		SingleLightFace(entity, &l, faceoffset, colors);
 	    }
 	}
 	/* cast positive sky light */
 	if (sunlight) {
 	    if (colored) {
-		MakePosColoredLight(sunlight, sunlight_color, colors);
+		PositiveColors(sunlight, sunlight_color, colors);
 		SkyLightFace(&l, faceoffset, colors);
 	    } else if (sunlight > 0) {
 		SkyLightFace(&l, faceoffset, colors);
@@ -929,7 +925,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	/* (!nominlimit) => cast all lights */
 	for (i = 0, entity = entities; i < num_entities; i++, entity++)
 	    if (entity->light)
-		SingleLightFace(entity, &l, faceoffset);
+		SingleLightFace(entity, &l, faceoffset, colors);
 
 	/* cast sky light */
 	if (sunlight)
@@ -941,24 +937,20 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 
     if (nominlimit) {
 	/* cast only negative lights */
-	entity_t lt;
-
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	    if (colored) {
 		if (entity->light) {
-		    memcpy(&lt, entity, sizeof(entity_t));
-		    MakeNegColoredLight(entity->light, lt.lightcolor,
-					entity->lightcolor);
-		    SingleLightFace(&lt, &l, faceoffset);
+		    NegativeColors(entity->light, colors, entity->lightcolor);
+		    SingleLightFace(entity, &l, faceoffset, colors);
 		}
 	    } else if (entity->light < 0) {
-		SingleLightFace(entity, &l, faceoffset);
+		SingleLightFace(entity, &l, faceoffset, colors);
 	    }
 	}
 	/* cast negative sky light */
 	if (sunlight) {
 	    if (colored) {
-		MakeNegColoredLight(sunlight, colors, sunlight_color);
+		NegativeColors(sunlight, colors, sunlight_color);
 		SkyLightFace(&l, faceoffset, colors);
 	    } else if (sunlight < 0) {
 		SkyLightFace(&l, faceoffset, colors);
