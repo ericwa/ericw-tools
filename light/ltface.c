@@ -380,11 +380,11 @@ CalcPoints(lightinfo_t * l)
 
     tex_to_world(mids, midt, l, facemid);
 
-    if (extrasamples) {		/* extra filtering */
+    if (extrasamples) {
 	h = (l->texsize[1] + 1) * 2;
 	w = (l->texsize[0] + 1) * 2;
-	starts = (l->texmins[0] - 0.5) * 16;
-	startt = (l->texmins[1] - 0.5) * 16;
+	starts = (l->texmins[0] - 0.25) * 16;
+	startt = (l->texmins[1] - 0.25) * 16;
 	step = 8;
     } else {
 	h = l->texsize[1] + 1;
