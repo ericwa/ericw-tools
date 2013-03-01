@@ -601,13 +601,8 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	add = scaledLight(CastRay(light->origin, surf), light);
 	add *= angle;
 	lightsamp[c] += add;
-
-	if (colored) {
-	    add /= (vec_t)255.0;
-	    colorsamp[c][0] += add * colors[0];
-	    colorsamp[c][1] += add * colors[1];
-	    colorsamp[c][2] += add * colors[2];
-	}
+	if (colored)
+	    VectorMA(colorsamp[c], add / 255, colors, colorsamp[c]);
 
 	/* Check if we really hit, ignore tiny lights */
 	if (abs(lightsamp[c]) > 1)
