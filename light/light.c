@@ -36,7 +36,7 @@ byte *lit_filebase;		// start of litfile data
 static byte *lit_file_p;	// start of free space after litfile data
 static byte *lit_file_end;	// end of space for litfile data
 
-qboolean extrasamples;
+int oversample = 1;
 qboolean compress_ents;
 qboolean colored;
 qboolean nominlimit;
@@ -208,8 +208,11 @@ main(int argc, const char **argv)
 	    numthreads = atoi(argv[i + 1]);
 	    i++;
 	} else if (!strcmp(argv[i], "-extra")) {
-	    extrasamples = true;
-	    logprint("extra sampling enabled\n");
+	    oversample = 2;
+	    logprint("extra 2x2 sampling enabled\n");
+	} else if (!strcmp(argv[i], "-extra4")) {
+	    oversample = 4;
+	    logprint("extra 4x4 sampling enabled\n");
 	} else if (!strcmp(argv[i], "-dist")) {
 	    scaledist = atof(argv[i + 1]);
 	    i++;
@@ -238,7 +241,7 @@ main(int argc, const char **argv)
 	logprint(".lit colored light output requested on command line.\n");
 
     if (i != argc - 1)
-	Error("usage: light [-threads num] [-light num] [-extra]\n"
+	Error("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
 	      "             [-dist n] [-range n] [-lit] [-compress]\n"
 	      "             [-nominlimit] bspfile\n");
 

@@ -17,6 +17,9 @@ OPTIONS
 	-extra         Calculate extra samples (2x2) and average the results
 	               for smoother shadows.
 
+	-extra4        Calculate even more samples (4x4) and average the
+	               results for smoother shadows.
+
 	-light n       Set a global minimum light level. Overrides default
 	               light level set in worldspawn.
 

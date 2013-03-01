@@ -150,7 +150,8 @@ CastRay(const vec3_t p1, const vec3_t p2)
  * ============================================================================
  */
 
-#define SINGLEMAP (18*18*4)
+/* Allow space for 4x4 oversampling */
+#define SINGLEMAP (18*18*4*4)
 
 typedef struct {
     vec_t lightmaps[MAXLIGHTMAPS][SINGLEMAP];
@@ -380,19 +381,11 @@ CalcPoints(lightinfo_t * l)
 
     tex_to_world(mids, midt, l, facemid);
 
-    if (extrasamples) {
-	h = (l->texsize[1] + 1) * 2;
-	w = (l->texsize[0] + 1) * 2;
-	starts = (l->texmins[0] - 0.25) * 16;
-	startt = (l->texmins[1] - 0.25) * 16;
-	step = 8;
-    } else {
-	h = l->texsize[1] + 1;
-	w = l->texsize[0] + 1;
-	starts = l->texmins[0] * 16;
-	startt = l->texmins[1] * 16;
-	step = 16;
-    }
+    h = (l->texsize[1] + 1) * oversample;
+    w = (l->texsize[0] + 1) * oversample;
+    starts = (l->texmins[0] - 0.5 + (0.5 / oversample)) * 16;
+    startt = (l->texmins[1] - 0.5 + (0.5 / oversample)) * 16;
+    step = 16 / oversample;
 
     l->numsurfpt = w * h;
     for (t = 0; t < h; t++) {
@@ -853,8 +846,6 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     int i, j, k, c;
 
     vec_t max;
-    int x1, x2, x3, x4;
-
     vec_t total;
     int size;
     int lightmapwidth;
@@ -1019,7 +1010,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     face->lightofs = out - filebase;
 
     /* extra filtering */
-    width = (l.texsize[0] + 1) * 2;
+    width = (l.texsize[0] + 1) * oversample;
 
     for (i = 0; i < l.numlightstyles; i++) {
 	if (l.lightstyles[i] == 0xff)
@@ -1031,38 +1022,27 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 
 	for (t = 0; t <= l.texsize[1]; t++) {
 	    for (s = 0; s <= l.texsize[0]; s++, c++) {
-		if (extrasamples) {
-		    x1 = t * 2 * width + s * 2;
-		    x2 = x1 + 1;
-		    x3 = (t * 2 + 1) * width + s * 2;
-		    x4 = x3 + 1;
-
-		    /* filtered sample */
-		    total = light[x1] + light[x2] + light[x3] + light[x4];
-		    total *= 0.25;
-
-		    /* Calculate the color */
-		    if (colored) {
-			colors[0] =
-			    lightcolor[x1][0] + lightcolor[x2][0]
-			    + lightcolor[x3][0] + lightcolor[x4][0];
-			colors[0] *= 0.25;
-			colors[1] =
-			    lightcolor[x1][1] + lightcolor[x2][1]
-			    + lightcolor[x3][1] + lightcolor[x4][1];
-			colors[1] *= 0.25;
-			colors[2] =
-			    lightcolor[x1][2] + lightcolor[x2][2]
-			    + lightcolor[x3][2] + lightcolor[x4][2];
-			colors[2] *= 0.25;
+		if (oversample > 1) {
+		    total = 0;
+		    VectorCopy(vec3_origin, colors);
+		    for (j = 0; j < oversample; j++) {
+			for (k = 0; k < oversample; k++) {
+			    int sample = (t * oversample + j) * width;
+			    sample += s * oversample + k;
+			    total += light[sample];
+			    if (colored)
+				VectorAdd(colors, lightcolor[sample], colors);
+			}
 		    }
+		    total /= oversample * oversample;
+		    VectorScale(colors, 1.0 / oversample / oversample, colors);
 		} else {
 		    total = light[c];
 		    if (colored)
 			VectorCopy(lightcolor[c], colors);
 		}
-		total *= rangescale;	/* scale before clamping */
 
+		total *= rangescale;	/* scale before clamping */
 		if (colored) {
 		    /* Scale back intensity, instead of capping individual
 		     * colors

@@ -61,7 +61,7 @@ extern byte *lit_filebase;
 void TransformSample(vec3_t in, vec3_t out);
 void RotateSample(vec3_t in, vec3_t out);
 
-extern qboolean extrasamples;
+extern int oversample;
 extern qboolean compress_ents;
 extern qboolean facecounter;
 extern qboolean colored;
