@@ -517,8 +517,6 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     int mapnum;
     int c;
     vec3_t rel;
-    vec3_t spotvec;
-    vec_t falloff;
     vec_t *lightsamp;
     vec3_t *colorsamp;
     vec_t newlightmap[SINGLEMAP];
@@ -536,23 +534,6 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     if (dist > abs(light->light)) {
 	c_culldistplane++;
 	return;
-    }
-
-    if (light->targetent) {
-	VectorSubtract(light->targetent->origin, light->origin, spotvec);
-	VectorNormalize(spotvec);
-	if (!light->angle)
-	    falloff = -cos(20 * Q_PI / 180);
-	else
-	    falloff = -cos(light->angle / 2 * Q_PI / 180);
-    } else if (light->use_mangle) {
-	VectorCopy(light->mangle, spotvec);
-	if (!light->angle)
-	    falloff = -cos(20 * Q_PI / 180);
-	else
-	    falloff = -cos(light->angle / 2 * Q_PI / 180);
-    } else {
-	falloff = 0;		/* shut up compiler warnings */
     }
 
     /*
@@ -590,11 +571,10 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	VectorSubtract(light->origin, surf, incoming);
 	VectorNormalize(incoming);
 	angle = DotProduct(incoming, l->facenormal);
-	if (light->targetent || light->use_mangle) {
+	if (light->spotlight &&
+	    DotProduct(light->spotvec, incoming) > light->spotfalloff)
 	    /* spotlight cutoff */
-	    if (DotProduct(spotvec, incoming) > falloff)
-		continue;
-	}
+	    continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
 	add = scaledLight(CastRay(light->origin, surf), light);

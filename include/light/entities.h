@@ -51,16 +51,18 @@ typedef enum {
 typedef struct entity_s {
     char classname[MAX_ENT_VALUE];
     vec3_t origin;
-    float angle;
 
-    light_formula_t formula;
+    qboolean spotlight;
+    vec3_t spotvec;
+    float spotangle;
+    float spotfalloff;
+
+    int style;
+    int light;
     float atten;
-    vec3_t mangle;
-    qboolean use_mangle;
+    light_formula_t formula;
     vec3_t lightcolor;
 
-    int light;
-    int style;
     char target[MAX_ENT_VALUE];
     char targetname[MAX_ENT_VALUE];
     struct epair_s *epairs;

@@ -110,6 +110,28 @@ MatchTargets(void)
     }
 }
 
+static void
+SetupSpotlights(void)
+{
+    int i;
+    entity_t *entity;
+
+    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	if (strncmp(entity->classname, "light", 5))
+	    continue;
+	if (entity->targetent) {
+	    VectorSubtract(entity->targetent->origin, entity->origin,
+			   entity->spotvec);
+	    VectorNormalize(entity->spotvec);
+	    entity->spotlight = true;
+	}
+	if (entity->spotlight) {
+	    vec_t angle = entity->spotangle ? entity->spotangle : 40;
+	    entity->spotfalloff = -cos(angle / 2 * Q_PI / 180);
+	}
+    }
+}
+
 /* helper function */
 static void
 scan_vec3(vec3_t dest, const char *buf, const char *name)
@@ -249,15 +271,15 @@ LoadEntities(void)
 		    Error("Bad light style %i (must be 0-254)",
 			  entity->style);
 	    } else if (!strcmp(key, "angle"))
-		entity->angle = atof(com_token);
+		entity->spotangle = atof(com_token);
 	    else if (!strcmp(key, "wait"))
 		entity->atten = atof(com_token);
 	    else if (!strcmp(key, "delay"))
 		entity->formula = atoi(com_token);
 	    else if (!strcmp(key, "mangle")) {
 		scan_vec3(vec, com_token, "mangle");
-		vec_from_mangle(entity->mangle, vec);
-		entity->use_mangle = true;
+		vec_from_mangle(entity->spotvec, vec);
+		entity->spotlight = true;
 	    } else if (!strcmp(key, "_color") || !strcmp(key, "color"))
 		scan_vec3(entity->lightcolor, com_token, "color");
 	    else if (!strcmp(key, "_sunlight"))
@@ -311,6 +333,7 @@ LoadEntities(void)
 
     logprint("%d entities read, %d are lights.\n", num_entities, num_lights);
     MatchTargets();
+    SetupSpotlights();
 }
 
 const char *
