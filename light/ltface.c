@@ -513,7 +513,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     vec_t angle;
     vec_t add;
     vec_t *surf;
-    qboolean hit;
+    qboolean newmap, hit;
     int mapnum;
     int c;
     vec3_t rel;
@@ -521,7 +521,6 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     vec_t falloff;
     vec_t *lightsamp;
     vec3_t *colorsamp;
-    qboolean newmap;
     vec_t newlightmap[SINGLEMAP];
     vec3_t newcolormap[SINGLEMAP];
 
@@ -605,7 +604,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	    VectorMA(colorsamp[c], add / 255, colors, colorsamp[c]);
 
 	/* Check if we really hit, ignore tiny lights */
-	if (abs(lightsamp[c]) > 1)
+	if (newmap && lightsamp[c] > 1)
 	    hit = true;
     }
 
