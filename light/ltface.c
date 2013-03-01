@@ -620,7 +620,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
     vec_t angle;
 
     /* Don't bother if surface facing away from sun */
-    if (DotProduct(sunmangle, l->facenormal) < -ANGLE_EPSILON)
+    if (DotProduct(sunvec, l->facenormal) < -ANGLE_EPSILON)
 	return;
 
     /* if sunlight is set, use a style 0 light map */
@@ -635,7 +635,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
     }
 
     /* Check each point... */
-    VectorCopy(sunmangle, incoming);
+    VectorCopy(sunvec, incoming);
     VectorNormalize(incoming);
     angle = DotProduct(incoming, l->facenormal);
     angle = (1.0 - scalecos) + scalecos * angle;
@@ -654,15 +654,15 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 	    angle = (1.0 - scalecos) + scalecos * ANGLE_EPSILON;
 	}
 
-	a = fabs(sunmangle[0]) > fabs(sunmangle[1]) ?
-	    (fabs(sunmangle[0]) > fabs(sunmangle[2]) ? 0 : 2) :
-	    (fabs(sunmangle[1]) > fabs(sunmangle[2]) ? 1 : 2);
+	a = fabs(sunvec[0]) > fabs(sunvec[1]) ?
+	    (fabs(sunvec[0]) > fabs(sunvec[2]) ? 0 : 2) :
+	    (fabs(sunvec[1]) > fabs(sunvec[2]) ? 1 : 2);
 	b = (a + 1) % 3;
 	c = (a + 2) % 3;
 
-	offset = sunmangle[a] * ANGLE_EPSILON * 2.0;	// approx...
+	offset = sunvec[a] * ANGLE_EPSILON * 2.0;	// approx...
 	for (j = 0; j < 5; ++j)
-	    VectorCopy(sunmangle, sun_vectors[j]);
+	    VectorCopy(sunvec, sun_vectors[j]);
 	sun_vectors[1][b] += offset;
 	sun_vectors[2][b] -= offset;
 	sun_vectors[3][c] += offset;
@@ -685,7 +685,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 #else
     surf = l->surfpt[0];
     for (j = 0; j < l->numsurfpt; j++, surf += 3) {
-	if (TestSky(surf, sunmangle)) {
+	if (TestSky(surf, sunvec)) {
 	    l->lightmaps[i][j] += (angle * sunlight);
 	    if (colored)
 		VectorMA(l->lightmapcolors[i][j], angle * sunlight / 255,

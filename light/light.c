@@ -26,7 +26,7 @@ int sunlight = 0;
 const vec3_t vec3_white = { 255, 255, 255 };
 vec3_t minlight_color = { 255, 255, 255 };	/* defaults to white light   */
 vec3_t sunlight_color = { 255, 255, 255 };	/* defaults to white light   */
-vec3_t sunmangle = { 0, 0, 16384 };	/* defaults to straight down */
+vec3_t sunvec = { 0, 0, 16384 };		/* defaults to straight down */
 
 byte *filebase;			// start of lightmap data
 static byte *file_p;		// start of free space after data

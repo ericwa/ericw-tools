@@ -50,7 +50,7 @@ extern const vec3_t vec3_white;
 extern vec3_t minlight_color;
 extern int sunlight;
 extern vec3_t sunlight_color;
-extern vec3_t sunmangle;
+extern vec3_t sunvec;
 
 byte *GetFileSpace(int size);
 byte *GetLitFileSpace(int size);

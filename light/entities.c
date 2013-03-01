@@ -286,9 +286,9 @@ LoadEntities(void)
 		sunlight = atof(com_token);
 	    else if (!strcmp(key, "_sun_mangle")) {
 		scan_vec3(vec, com_token, "_sun_mangle");
-		vec_from_mangle(sunmangle, vec);
-		VectorNormalize(sunmangle);
-		VectorScale(sunmangle, -16384, sunmangle);
+		vec_from_mangle(sunvec, vec);
+		VectorNormalize(sunvec);
+		VectorScale(sunvec, -16384, sunvec);
 	    } else if (!strcmp(key, "_sunlight_color"))
 		scan_vec3(sunlight_color, com_token, "_sunlight_color");
 	    else if (!strcmp(key, "_minlight_color"))
