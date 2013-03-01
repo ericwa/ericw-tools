@@ -943,11 +943,11 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	    if (entity->formula == LF_LOCALMIN)
 		continue;
 	    if (entity->light)
-		SingleLightFace(entity, &l, faceoffset, colors);
+		SingleLightFace(entity, &l, faceoffset, entity->lightcolor);
 	}
 	/* cast sky light */
 	if (sunlight)
-	    SkyLightFace(&l, faceoffset, colors);
+	    SkyLightFace(&l, faceoffset, sunlight_color);
     }
 
     /* Minimum lighting */
