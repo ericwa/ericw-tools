@@ -505,7 +505,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     vec3_t incoming;
     vec_t angle;
     vec_t add;
-    vec_t *surf;
+    const vec_t *surf;
     qboolean newmap, hit;
     int mapnum;
     int c;
