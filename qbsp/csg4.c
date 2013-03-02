@@ -463,6 +463,11 @@ CSGFaces(const mapentity_t *ent)
 	    if (i < 3)
 		continue;
 
+	    /*
+	     * TODO - optimise by checking for opposing planes?
+	     *  => brushes can't intersect
+	     */
+
 	    // divide faces by the planes of the new brush
 	    inside = outside;
 	    outside = NULL;
