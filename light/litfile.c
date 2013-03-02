@@ -25,23 +25,22 @@
 void
 WriteLitFile(const char *filename, int version)
 {
-    FILE *l;
-    char f[1024];
-    litheader_t h;
+    FILE *litfile;
+    char litname[1024];
+    litheader_t header;
 
-    strncpy(f, filename, 1019);	/* 1024 - space for extension - '\0' */
-    f[1023] = '\0';
-    StripExtension(f);
-    DefaultExtension(f, ".lit");
+    snprintf(litname, sizeof(litname) - 4, "%s", filename);
+    StripExtension(litname);
+    DefaultExtension(litname, ".lit");
 
-    h.ident[0] = 'Q';
-    h.ident[1] = 'L';
-    h.ident[2] = 'I';
-    h.ident[3] = 'T';
-    h.version = LittleLong(version);
+    header.ident[0] = 'Q';
+    header.ident[1] = 'L';
+    header.ident[2] = 'I';
+    header.ident[3] = 'T';
+    header.version = LittleLong(version);
 
-    l = SafeOpenWrite(f);
-    SafeWrite(l, &h, sizeof(litheader_t));
-    SafeWrite(l, lit_filebase, lightdatasize * 3);
-    fclose(l);
+    litfile = SafeOpenWrite(litname);
+    SafeWrite(litfile, &header, sizeof(header));
+    SafeWrite(litfile, lit_filebase, lightdatasize * 3);
+    fclose(litfile);
 }
