@@ -66,7 +66,7 @@ typedef struct entity_s {
     char target[MAX_ENT_VALUE];
     char targetname[MAX_ENT_VALUE];
     struct epair_s *epairs;
-    struct entity_s *targetent;
+    const struct entity_s *targetent;
 } entity_t;
 
 /*
