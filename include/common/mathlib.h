@@ -107,4 +107,7 @@ void CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross);
 vec_t VectorNormalize(vec3_t v);
 double VectorLength(const vec3_t v);
 
+/* Shortcut for output of warnings/errors */
+const char *VecStr(const vec3_t vec);
+
 #endif /* __COMMON_MATHLIB_H__ */

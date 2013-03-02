@@ -75,3 +75,20 @@ VectorNormalize(vec3_t v)
 
     return (vec_t)length;
 }
+
+/*
+ * VecStr - handy shortcut for printf, not thread safe, obviously
+ */
+const char *
+VecStr(const vec3_t vec)
+{
+    static char buffers[4][20];
+    static int current = 0;
+    char *buf;
+
+    buf = buffers[current++ & 3];
+    snprintf(buf, sizeof(buffers[0]), "%i %i %i",
+	     (int)vec[0], (int)vec[1], (int)vec[2]);
+
+    return buf;
+}
