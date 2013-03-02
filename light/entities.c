@@ -80,32 +80,32 @@ LightStyleForTargetname(const char *targetname)
 static void
 MatchTargets(void)
 {
-    int i;
-    int j;
+    int i, j;
+    entity_t *entity;
+    const entity_t *target;
 
-    for (i = 0; i < num_entities; i++) {
-	if (!entities[i].target[0])
+    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	if (!entity->target[0])
 	    continue;
-	for (j = 0; j < num_entities; j++)
-	    if (!strcmp(entities[j].targetname, entities[i].target)) {
-		entities[i].targetent = &entities[j];
+	for (j = 0, target = entities; j < num_entities; j++, target++) {
+	    if (!strcmp(target->targetname, entity->target)) {
+		entity->targetent = target;
 		break;
 	    }
+	}
 	if (j == num_entities) {
-	    const entity_t *e = &entities[i];
-
-	    logprint("WARNING: entity at (%i, %i, %i) (%s) has unmatched "
-		     "target (%s)\n", (int)e->origin[0], (int)e->origin[1],
-		     (int)e->origin[2], e->classname, e->target);
+	    logprint("WARNING: entity at (%s) (%s) has unmatched "
+		     "target (%s)\n", VecStr(entity->origin),
+		     entity->classname, entity->target);
 	    continue;
 	}
 
 	/* set the style on the source ent for switchable lights */
-	if (entities[j].style) {
-	    char style[16];
-	    entities[i].style = entities[j].style;
-	    snprintf(style, sizeof(style), "%i", entities[i].style);
-	    SetKeyValue(&entities[i], "style", style);
+	if (target->style) {
+	    char style[10];
+	    entity->style = target->style;
+	    snprintf(style, sizeof(style), "%d", entity->style);
+	    SetKeyValue(entity, "style", style);
 	}
     }
 }
@@ -163,19 +163,20 @@ CheckEntityFields(entity_t *entity)
 	entity->light = DEFAULTLIGHTLEVEL;
     if (entity->atten <= 0.0)
 	entity->atten = 1.0;
+
     if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
 	static qboolean warned_once = true;
 	if (!warned_once) {
 	    warned_once = true;
 	    logprint("WARNING: unknown formula number (%d) in delay field\n"
-		     "   %s at (%d %d %d)\n"
+		     "   %s at (%s)\n"
 		     "   (further formula warnings will be supressed)\n",
 		     entity->formula, entity->classname,
-		     (int)entity->origin[0], (int)entity->origin[1],
-		     (int)entity->origin[2]);
+		     VecStr(entity->origin));
 	}
 	entity->formula = LF_LINEAR;
     }
+
     if (!VectorCompare(entity->lightcolor, vec3_origin)) {
 	if (!colored) {
 	    colored = true;

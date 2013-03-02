@@ -583,11 +583,10 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 
     if (newmap && hit) {
 	if (l->numlightstyles == MAXLIGHTMAPS) {
-	    logprint("WARNING: Too many light styles on a face\n");
-	    logprint("   lightmap point near (%0.0f, %0.0f, %0.0f)\n",
-		     l->surfpt[0][0], l->surfpt[0][1], l->surfpt[0][2]);
-	    logprint("   light->origin (%0.0f, %0.0f, %0.0f)\n",
-		     light->origin[0], light->origin[1], light->origin[2]);
+	    logprint("WARNING: Too many light styles on a face\n"
+		     "   lightmap point near (%s)\n"
+		     "   light->origin (%s)\n",
+		     VecStr(l->surfpt[0]), VecStr(light->origin));
 	    return;
 	}
 
