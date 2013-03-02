@@ -1003,9 +1003,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	face->styles[i] = l.lightstyles[i];
 
     lightmapsize = size * l.numlightstyles;
-    out = GetFileSpace(lightmapsize);
-    if (colored)
-	lit_out = GetLitFileSpace(lightmapsize * 3);
+    GetFileSpace(&out, &lit_out, lightmapsize);
 
     face->lightofs = out - filebase;
 

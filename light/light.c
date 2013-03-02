@@ -44,43 +44,31 @@ qboolean nominlimit;
 qboolean nolightface[MAX_MAP_FACES];
 vec3_t faceoffset[MAX_MAP_FACES];
 
-byte *
-GetFileSpace(int size)
+void
+GetFileSpace(byte **lightdata, byte **colordata, int size)
 {
-    byte *buf;
-
     ThreadLock();
 
     /* align to 4 byte boudaries */
     file_p = (byte *)(((long)file_p + 3) & ~3);
-    buf = file_p;
+    *lightdata = file_p;
     file_p += size;
+
+    if (colored && colordata) {
+	/* align to 12 byte boundaries to match offets with 3 * lightdata */
+	if ((long)lit_file_p % 12)
+	    lit_file_p += 12 - ((long)lit_file_p % 12);
+	*colordata = lit_file_p;
+	lit_file_p += size * 3;
+    }
 
     ThreadUnlock();
 
     if (file_p > file_end)
 	Error("%s: overrun", __func__);
-    return buf;
-}
-
-byte *
-GetLitFileSpace(int size)
-{
-    byte *buf;
-
-    ThreadLock();
-
-    /* align to 12 byte boundaries (match offets with 3 * GetFileSpace) */
-    if ((long)lit_file_p % 12)
-	lit_file_p += 12 - ((long)lit_file_p % 12);
-    buf = lit_file_p;
-    lit_file_p += size;
-
-    ThreadUnlock();
 
     if (lit_file_p > lit_file_end)
 	Error("%s: overrun", __func__);
-    return buf;
 }
 
 static void *

@@ -52,8 +52,11 @@ extern int sunlight;
 extern vec3_t sunlight_color;
 extern vec3_t sunvec;
 
-byte *GetFileSpace(int size);
-byte *GetLitFileSpace(int size);
+/*
+ * Return space for the lightmap and colourmap at the same time so it can
+ * be done in a thread-safe manner.
+ */
+void GetFileSpace(byte **lightdata, byte **colordata, int size);
 
 extern byte *filebase;
 extern byte *lit_filebase;
