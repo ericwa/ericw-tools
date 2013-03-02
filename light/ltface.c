@@ -154,14 +154,11 @@ CastRay(const vec3_t p1, const vec3_t p2)
 #define SINGLEMAP (18*18*4*4)
 
 typedef struct {
-    vec_t lightmaps[MAXLIGHTMAPS][SINGLEMAP];
-    int numlightstyles;
     vec_t *light;
+
+    dface_t *face;
     vec_t facedist;
     vec3_t facenormal;
-
-    int numsurfpt;
-    vec3_t surfpt[SINGLEMAP];
 
     /* FIXME - Comment this properly */
     vec_t worldtotex[2][4];	// Copy of face->texinfo->vecs
@@ -173,11 +170,13 @@ typedef struct {
 
     int texmins[2], texsize[2];
     int lightstyles[256];
-    int surfnum;
-    dface_t *face;
 
-    /* Colored lighting */
-    vec3_t lightmapcolors[MAXLIGHTMAPS][SINGLEMAP];
+    int numsurfpt;
+    int numlightstyles;
+
+    vec3_t surfpt[SINGLEMAP];
+    vec_t lightmaps[MAXLIGHTMAPS][SINGLEMAP];
+    vec3_t colormaps[MAXLIGHTMAPS][SINGLEMAP];
 } lightinfo_t;
 
 /*
@@ -546,7 +545,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	colorsamp = newcolormap;
     } else {
 	lightsamp = l->lightmaps[mapnum];
-	colorsamp = l->lightmapcolors[mapnum];
+	colorsamp = l->colormaps[mapnum];
     }
 
     /*
@@ -595,7 +594,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	mapnum = l->numlightstyles++;
 	l->lightstyles[mapnum] = light->style;
 	memcpy(l->lightmaps[mapnum], newlightmap, sizeof(newlightmap));
-	memcpy(l->lightmapcolors[mapnum], newcolormap, sizeof(newcolormap));
+	memcpy(l->colormaps[mapnum], newcolormap, sizeof(newcolormap));
     }
 }
 
@@ -667,9 +666,8 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 		if (TestSky(surf, sun_vectors[k])) {
 		    l->lightmaps[i][j] += (angle * sunlight);
 		    if (colored)
-			VectorMA(l->lightmapcolors[i][j],
-				 angle * sunlight / 255,
-				 colors, l->lightmapcolors[i][j]);
+			VectorMA(l->colormaps[i][j], angle * sunlight / 255,
+				 colors, l->colormaps[i][j]);
 		    break;
 		}
 	    }
@@ -681,8 +679,8 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 	if (TestSky(surf, sunvec)) {
 	    l->lightmaps[i][j] += (angle * sunlight);
 	    if (colored)
-		VectorMA(l->lightmapcolors[i][j], angle * sunlight / 255,
-			 colors, l->lightmapcolors[i][j]);
+		VectorMA(l->colormaps[i][j], angle * sunlight / 255, colors,
+			 l->colormaps[i][j]);
 	}
     }
 #endif
@@ -707,7 +705,7 @@ FixMinlight(lightinfo_t *l)
     for (i = 0; i < l->numlightstyles; i++) {
 	if (l->lightstyles[i] == 0) {
 	    lightmap = l->lightmaps[i];
-	    colormap = l->lightmapcolors[i];
+	    colormap = l->colormaps[i];
 	    break;
 	}
     }
@@ -719,7 +717,7 @@ FixMinlight(lightinfo_t *l)
 	for (i = 0; i < l->numsurfpt; i++)
 	    lightmap[i] = worldminlight;
 	if (colored) {
-	    colormap = l->lightmapcolors[l->numlightstyles];
+	    colormap = l->colormaps[l->numlightstyles];
 	    for (i = 0; i < l->numsurfpt; i++)
 		VectorScale(minlight_color, worldminlight / 255, colormap[i]);
 	}
@@ -749,7 +747,7 @@ FixMinlight(lightinfo_t *l)
 	for (j = 0; j < l->numlightstyles; j++) {
 	    if (l->lightstyles[j] == 0) {
 		lightmap = l->lightmaps[j];
-		colormap = l->lightmapcolors[j];
+		colormap = l->colormaps[j];
 		break;
 	    }
 	}
@@ -757,7 +755,7 @@ FixMinlight(lightinfo_t *l)
 	    if (l->numlightstyles == MAXLIGHTMAPS)
 		continue; /* oh well... FIXME - should we warn? */
 	    lightmap = l->lightmaps[l->numlightstyles];
-	    colormap = l->lightmapcolors[l->numlightstyles];
+	    colormap = l->colormaps[l->numlightstyles];
 	    l->numlightstyles++;
 	}
 
@@ -871,7 +869,6 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	return;			/* non-lit texture */
 
     memset(&l, 0, sizeof(l));
-    l.surfnum = surfnum;
     l.face = face;
 
     /* rotate plane */
@@ -985,8 +982,8 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 		}
 		if (colored) {
 		    for (k = 0; k < 3; k++) {
-			if (l.lightmapcolors[i][j][k] < 0) {
-			    l.lightmapcolors[i][j][k] = 0;
+			if (l.colormaps[i][j][k] < 0) {
+			    l.colormaps[i][j][k] = 0;
 			}
 		    }
 		}
@@ -1015,7 +1012,7 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	    Error("Wrote empty lightmap");
 
 	light = l.lightmaps[i];
-	lightcolor = l.lightmapcolors[i];
+	lightcolor = l.colormaps[i];
 	c = 0;
 
 	for (t = 0; t <= l.texsize[1]; t++) {
