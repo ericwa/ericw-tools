@@ -44,16 +44,9 @@ OPTIONS
 	               less than 1.0 will cause no discernable visual
 	               differences.  Default 0.001.
 
-	-colored       (DEPRECATED) Turn on coloured lighting support. By
-	-coloured      default this will output a bsp in "BSP30" format, which
-	               almost no Quake engines support. BSP30 support will be
-	               removed in the near future.
-
-	-bsp30         (DEPRECATED) Output a bsp in BSP30 format.
-
-	-lit           (DEPRECATED) Output coloured lighting in a separate
-	               file with the .lit extension. This format will become
-	               the default soon and this option will be removed.
+	-lit           Force generation of a .lit file, even if your map does
+	               not have any coloured lights. By default, light will
+	               automatically generate the .lit file when needed.
 
 	NOTE: The plan for coloured lighting support in the future is to detect
 	      entities with coloured light fields and automatically output a
