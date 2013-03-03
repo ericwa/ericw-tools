@@ -563,8 +563,8 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 		continue;
 	}
 
-	dist = scaledDistance(CastRay(light->origin, surf), light);
-	if (dist < 0)
+	/* Test for line of sight */
+	if (!TestLine(light->origin, surf))
 	    continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
