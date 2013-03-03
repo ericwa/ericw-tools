@@ -556,6 +556,12 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 
 	VectorSubtract(light->origin, surf, ray);
 	dist = VectorLength(ray);
+
+	/* Quick distance check first */
+	if (dist > light->fadedist)
+	    continue;
+
+	/* Check spotlight cone */
 	VectorScale(ray, 1.0 / dist, ray);
 	angle = DotProduct(ray, l->facenormal);
 	if (light->spotlight) {

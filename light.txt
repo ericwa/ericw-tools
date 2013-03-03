@@ -37,6 +37,13 @@ OPTIONS
 	               The same effect can be achieved on individual lights by
 	               adjusting both the "light" and "wait" attributes.
 
+	-gate n        Set a minimum light level, below which can be considered
+	               zero brightness.  This can dramatically speed up
+	               processing when there are large numbers of lights with
+	               inverse or inverse square falloff. In most cases, values
+	               less than 1.0 will cause no discernable visual
+	               differences.  Default 0.001.
+
 	-colored       (DEPRECATED) Turn on coloured lighting support. By
 	-coloured      default this will output a bsp in "BSP30" format, which
 	               almost no Quake engines support. BSP30 support will be

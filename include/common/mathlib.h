@@ -20,12 +20,15 @@
 #ifndef __COMMON_MATHLIB_H__
 #define __COMMON_MATHLIB_H__
 
+#include <float.h>
 #include <math.h>
 
 #ifdef DOUBLEVEC_T
 typedef double vec_t;
+#define VECT_MAX DBL_MAX;
 #else
 typedef float vec_t;
+#define VECT_MAX FLT_MAX;
 #endif
 typedef vec_t vec3_t[3];
 

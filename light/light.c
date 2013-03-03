@@ -23,6 +23,7 @@
 
 float scaledist = 1.0;
 float rangescale = 0.5;
+float fadegate = EQUAL_EPSILON;
 int worldminlight = 0;
 int sunlight = 0;
 const vec3_t vec3_white = { 255, 255, 255 };
@@ -209,6 +210,9 @@ main(int argc, const char **argv)
 	} else if (!strcmp(argv[i], "-range")) {
 	    rangescale = atof(argv[i + 1]);
 	    i++;
+	} else if (!strcmp(argv[i], "-gate")) {
+	    fadegate = atof(argv[i + 1]);
+	    i++;
 	} else if (!strcmp(argv[i], "-light")) {
 	    worldminlight = atof(argv[i + 1]);
 	    i++;
@@ -232,7 +236,7 @@ main(int argc, const char **argv)
 
     if (i != argc - 1)
 	Error("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
-	      "             [-dist n] [-range n] [-lit] [-compress]\n"
+	      "             [-dist n] [-range n] [-gate n] [-lit] [-compress]\n"
 	      "             [-nominlimit] bspfile\n");
 
     start = I_FloatTime();

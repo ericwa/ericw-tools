@@ -186,6 +186,40 @@ CheckEntityFields(entity_t *entity)
     } else {
 	VectorCopy(vec3_white, entity->lightcolor);
     }
+
+    if (entity->formula == LF_LINEAR) {
+	/* Linear formula always has a falloff point */
+	entity->fadedist = fabs(entity->light / entity->atten / scaledist);
+    } else if (fadegate < EQUAL_EPSILON) {
+	/* If fadegate is tiny, other lights have effectively infinite reach */
+	entity->fadedist = VECT_MAX;
+    } else {
+	/* Calculate the distance at which brightness falls to zero */
+	switch (entity->formula) {
+	case LF_INFINITE:
+	case LF_LOCALMIN:
+	    entity->fadedist = VECT_MAX;
+	    break;
+	case LF_INVERSE:
+	    entity->fadedist = entity->light * entity->atten * scaledist;
+	    entity->fadedist *= LF_SCALE / fadegate;
+	    entity->fadedist = fabs(entity->fadedist);
+	    break;
+	case LF_INVERSE2:
+	    entity->fadedist = entity->light * entity->atten * scaledist;
+	    entity->fadedist *= LF_SCALE / sqrt(fadegate);
+	    entity->fadedist = fabs(entity->fadedist);
+	    break;
+	case LF_INVERSE2A:
+	    entity->fadedist = entity->light * entity->atten * scaledist;
+	    entity->fadedist -= LF_SCALE;
+	    entity->fadedist *= LF_SCALE / sqrt(fadegate);
+	    entity->fadedist = fabs(entity->fadedist);
+	    break;
+	default:
+	    Error("Internal error: formula not handled in %s", __func__);
+	}
+    }
 }
 
 

@@ -8,6 +8,7 @@
 * light: removed old bsp30 support
 * light: lit files now automatically generated when coloured lights detected
 * light: implemented 4x4 oversampling with -extra4 command line
+* light: implemented the -gate option to help speed processing (default 0.001)
 
 2013-02-25 TyrUtils v0.5
 

@@ -62,6 +62,7 @@ typedef struct entity_s {
     float atten;
     light_formula_t formula;
     vec3_t lightcolor;
+    vec_t fadedist;
 
     char target[MAX_ENT_VALUE];
     char targetname[MAX_ENT_VALUE];
