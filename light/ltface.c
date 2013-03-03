@@ -439,30 +439,6 @@ CalcPoints(lightinfo_t * l)
 static int c_culldistplane;
 static int c_proper;
 
-/*
- * ==============================================
- * LIGHT: Attenuation formulae setup functions
- * ==============================================
- */
-static vec_t
-scaledDistance(vec_t distance, const entity_t *light)
-{
-    switch (light->formula) {
-    case LF_LINEAR:
-	return scaledist * light->atten * distance;
-    case LF_INVERSE:
-    case LF_INVERSE2:
-    case LF_INVERSE2A:
-    case LF_INFINITE:
-    case LF_LOCALMIN:
-	/* Return a small distance to prevent culling these lights, since we */
-	/* know these formulae won't fade to nothing.                        */
-	return (distance <= 0.0) ? -0.25 : 0.25;
-    default:
-	Error("Internal error: unknown light formula");
-    }
-}
-
 static vec_t
 scaledLight(vec_t distance, const entity_t *light)
 {
@@ -515,11 +491,11 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     dist = DotProduct(light->origin, l->facenormal) - l->facedist;
 
     /* don't bother with lights behind the surface */
-    if (scaledDistance(dist, light) < 0)
+    if (dist < 0)
 	return;
 
     /* don't bother with light too far away */
-    if (scaledDistance(dist, light) > abs(light->light)) {
+    if (dist > light->fadedist) {
 	c_culldistplane++;
 	return;
     }
