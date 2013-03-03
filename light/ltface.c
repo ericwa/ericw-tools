@@ -569,8 +569,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	    continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
-	add = scaledLight(dist, light);
-	add *= angle;
+	add = scaledLight(dist, light) * angle;
 	lightsamp[c] += add;
 	if (colored)
 	    VectorMA(colorsamp[c], add / 255, colors, colorsamp[c]);
