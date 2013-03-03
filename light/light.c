@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#include <stdint.h>
+
 #include <light/light.h>
 
 float scaledist = 1.0;
@@ -50,14 +52,14 @@ GetFileSpace(byte **lightdata, byte **colordata, int size)
     ThreadLock();
 
     /* align to 4 byte boudaries */
-    file_p = (byte *)(((long)file_p + 3) & ~3);
+    file_p = (byte *)(((uintptr_t)file_p + 3) & ~3);
     *lightdata = file_p;
     file_p += size;
 
     if (colored && colordata) {
 	/* align to 12 byte boundaries to match offets with 3 * lightdata */
-	if ((long)lit_file_p % 12)
-	    lit_file_p += 12 - ((long)lit_file_p % 12);
+	if ((uintptr_t)lit_file_p % 12)
+	    lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
 	*colordata = lit_file_p;
 	lit_file_p += size * 3;
     }
