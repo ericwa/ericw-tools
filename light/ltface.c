@@ -501,7 +501,6 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 		const vec3_t faceoffset, const vec3_t colors)
 {
     vec_t dist;
-    vec3_t incoming;
     vec_t angle;
     vec_t add;
     const vec_t *surf;
@@ -553,18 +552,20 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 
     surf = l->surfpt[0];
     for (c = 0; c < l->numsurfpt; c++, surf += 3) {
-	dist = scaledDistance(CastRay(light->origin, surf), light);
-	if (dist < 0)
-	    continue;
+	vec3_t ray;
 
-	VectorSubtract(light->origin, surf, incoming);
-	VectorNormalize(incoming);
-	angle = DotProduct(incoming, l->facenormal);
+	VectorSubtract(light->origin, surf, ray);
+	VectorNormalize(ray);
+	angle = DotProduct(ray, l->facenormal);
 	if (light->spotlight) {
-	    vec_t falloff = DotProduct(light->spotvec, incoming);
+	    vec_t falloff = DotProduct(light->spotvec, ray);
 	    if (falloff > light->spotfalloff)
 		continue;
 	}
+
+	dist = scaledDistance(CastRay(light->origin, surf), light);
+	if (dist < 0)
+	    continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
 	add = scaledLight(CastRay(light->origin, surf), light);
