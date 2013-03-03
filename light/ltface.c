@@ -586,25 +586,29 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 static void
 SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 {
-    int i, j;
+    int i, mapnum;
     vec_t *surf;
     vec3_t incoming;
     vec_t angle;
+    vec_t *lightmap;
+    vec3_t *colormap;
 
     /* Don't bother if surface facing away from sun */
     if (DotProduct(sunvec, l->facenormal) < -ANGLE_EPSILON)
 	return;
 
     /* if sunlight is set, use a style 0 light map */
-    for (i = 0; i < l->numlightstyles; i++)
-	if (l->lightstyles[i] == 0)
+    for (mapnum = 0; mapnum < l->numlightstyles; mapnum++)
+	if (l->lightstyles[mapnum] == 0)
 	    break;
-    if (i == l->numlightstyles) {
+    if (mapnum == l->numlightstyles) {
 	if (l->numlightstyles == MAXLIGHTMAPS)
 	    return;		/* oh well, too many lightmaps... */
-	l->lightstyles[i] = 0;
+	l->lightstyles[mapnum] = 0;
 	l->numlightstyles++;
     }
+    lightmap = l->lightmaps[mapnum];
+    colormap = l->colormaps[mapnum];
 
     /* Check each point... */
     VectorCopy(sunvec, incoming);
@@ -615,7 +619,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 #if 0
     /* Experimental - lighting of faces parallel to sunlight*/
     {
-	int a, b, c, k;
+	int a, b, c, j;
 	vec_t oldangle, offset;
 	vec3_t sun_vectors[5];
 
@@ -641,13 +645,13 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
 	sun_vectors[4][c] -= offset;
 
 	surf = l->surfpt[0];
-	for (j = 0; j < l->numsurfpt; j++, surf += 3) {
-	    for (k = 0; k < 1 || (oldangle < ANGLE_EPSILON && k < 5); ++k) {
-		if (TestSky(surf, sun_vectors[k])) {
-		    l->lightmaps[i][j] += (angle * sunlight);
+	for (i = 0; i < l->numsurfpt; i++, surf += 3) {
+	    for (j = 0; j < 1 || (oldangle < ANGLE_EPSILON && j < 5); ++j) {
+		if (TestSky(surf, sun_vectors[j])) {
+		    lightmap[i] += angle * sunlight;
 		    if (colored)
-			VectorMA(l->colormaps[i][j], angle * sunlight / 255,
-				 colors, l->colormaps[i][j]);
+			VectorMA(colormap[i], angle * sunlight / 255, colors,
+				 colormap[i]);
 		    break;
 		}
 	    }
@@ -655,12 +659,12 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
     }
 #else
     surf = l->surfpt[0];
-    for (j = 0; j < l->numsurfpt; j++, surf += 3) {
+    for (i = 0; i < l->numsurfpt; i++, surf += 3) {
 	if (TestSky(surf, sunvec)) {
-	    l->lightmaps[i][j] += (angle * sunlight);
+	    lightmap[i] += angle * sunlight;
 	    if (colored)
-		VectorMA(l->colormaps[i][j], angle * sunlight / 255, colors,
-			 l->colormaps[i][j]);
+		VectorMA(colormap[i], angle * sunlight / 255, colors,
+			 colormap[i]);
 	}
     }
 #endif
@@ -830,9 +834,8 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
     int lightmapsize;
     byte *out;
     byte *lit_out = NULL;
-    vec_t *light;
-
-    vec3_t *lightcolor;
+    vec_t *lightmap;
+    vec3_t *colormap;
     vec3_t colors = { 0, 0, 0 };
 
     int width;
@@ -991,8 +994,8 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 	if (l.lightstyles[i] == 0xff)
 	    Error("Wrote empty lightmap");
 
-	light = l.lightmaps[i];
-	lightcolor = l.colormaps[i];
+	lightmap = l.lightmaps[i];
+	colormap = l.colormaps[i];
 	c = 0;
 
 	for (t = 0; t <= l.texsize[1]; t++) {
@@ -1004,17 +1007,17 @@ LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
 			for (k = 0; k < oversample; k++) {
 			    int sample = (t * oversample + j) * width;
 			    sample += s * oversample + k;
-			    total += light[sample];
+			    total += lightmap[sample];
 			    if (colored)
-				VectorAdd(colors, lightcolor[sample], colors);
+				VectorAdd(colors, colormap[sample], colors);
 			}
 		    }
 		    total /= oversample * oversample;
 		    VectorScale(colors, 1.0 / oversample / oversample, colors);
 		} else {
-		    total = light[c];
+		    total = lightmap[c];
 		    if (colored)
-			VectorCopy(lightcolor[c], colors);
+			VectorCopy(colormap[c], colors);
 		}
 
 		total *= rangescale;	/* scale before clamping */
