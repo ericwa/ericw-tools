@@ -508,22 +508,19 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
     qboolean newmap, hit;
     int mapnum;
     int c;
-    vec3_t rel;
     vec_t *lightsamp;
     vec3_t *colorsamp;
     vec_t newlightmap[SINGLEMAP];
     vec3_t newcolormap[SINGLEMAP];
 
-    VectorSubtract(light->origin, bsp_origin, rel);
-    dist = scaledDistance((DotProduct(rel, l->facenormal) - l->facedist),
-			  light);
+    dist = DotProduct(light->origin, l->facenormal) - l->facedist;
 
     /* don't bother with lights behind the surface */
-    if (dist < 0)
+    if (scaledDistance(dist, light) < 0)
 	return;
 
     /* don't bother with light too far away */
-    if (dist > abs(light->light)) {
+    if (scaledDistance(dist, light) > abs(light->light)) {
 	c_culldistplane++;
 	return;
     }
