@@ -440,27 +440,27 @@ static int c_culldistplane;
 static int c_proper;
 
 static vec_t
-scaledLight(vec_t distance, const entity_t *light)
+GetLightValue(const entity_t *light, vec_t distance)
 {
-    vec_t dist;
+    vec_t value;
 
     if (light->formula == LF_INFINITE || light->formula == LF_LOCALMIN)
 	return light->light;
 
-    dist = scaledist * light->atten * distance;
+    value = scaledist * light->atten * distance;
     switch (light->formula) {
     case LF_INVERSE:
-	return light->light / (dist / LF_SCALE);
+	return light->light / (value / LF_SCALE);
     case LF_INVERSE2A:
-	dist += LF_SCALE;
+	value += LF_SCALE;
 	/* Fall through */
     case LF_INVERSE2:
-	return light->light / ((dist * dist) / (LF_SCALE * LF_SCALE));
+	return light->light / ((value * value) / (LF_SCALE * LF_SCALE));
     case LF_LINEAR:
 	if (light->light > 0)
-	    return (light->light - dist > 0) ? light->light - dist : 0;
+	    return (light->light - value > 0) ? light->light - value : 0;
 	else
-	    return (light->light + dist < 0) ? light->light + dist : 0;
+	    return (light->light + value < 0) ? light->light + value : 0;
     default:
 	Error("Internal error: unknown light formula");
     }
@@ -551,7 +551,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	    continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
-	add = scaledLight(dist, light) * angle;
+	add = GetLightValue(light, dist) * angle;
 	lightsamp[c] += add;
 	if (colored)
 	    VectorMA(colorsamp[c], add / 255, colors, colorsamp[c]);
