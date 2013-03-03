@@ -56,6 +56,8 @@ typedef struct entity_s {
     vec3_t spotvec;
     float spotangle;
     float spotfalloff;
+    float spotangle2;
+    float spotfalloff2;
 
     int style;
     int light;

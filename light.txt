@@ -135,6 +135,13 @@ ENTITY PARAMETERS
 
 	Specifies the angle in degrees for a spotlight cone. Default 40.
 
+	"_softangle" "n"
+
+	Specifies the angle in degrees for an inner spotlight cone (must be
+	less than the "angle" cone. Creates a softer transition between the
+	full brightness of the inner cone to the edge of the outer cone.
+	Default 0 (disabled).
+
 	"targetname" "name"
 
 	Turns the light into a switchable light, toggled by another entity

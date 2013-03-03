@@ -477,7 +477,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 		const vec3_t faceoffset, const vec3_t colors)
 {
     vec_t dist;
-    vec_t angle;
+    vec_t angle, spotscale;
     vec_t add;
     const vec_t *surf;
     qboolean newmap, hit;
@@ -540,10 +540,17 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	/* Check spotlight cone */
 	VectorScale(ray, 1.0 / dist, ray);
 	angle = DotProduct(ray, l->facenormal);
+	spotscale = 1;
 	if (light->spotlight) {
 	    vec_t falloff = DotProduct(light->spotvec, ray);
 	    if (falloff > light->spotfalloff)
 		continue;
+	    if (falloff > light->spotfalloff2) {
+		/* Interpolate between the two spotlight falloffs */
+		spotscale = falloff - light->spotfalloff2;
+		spotscale /= light->spotfalloff - light->spotfalloff2;
+		spotscale = 1.0 - spotscale;
+	    }
 	}
 
 	/* Test for line of sight */
@@ -551,7 +558,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	    continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
-	add = GetLightValue(light, dist) * angle;
+	add = GetLightValue(light, dist) * angle * spotscale;
 	lightsamp[c] += add;
 	if (colored)
 	    VectorMA(colorsamp[c], add / 255, colors, colorsamp[c]);

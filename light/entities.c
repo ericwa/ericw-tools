@@ -126,8 +126,15 @@ SetupSpotlights(void)
 	    entity->spotlight = true;
 	}
 	if (entity->spotlight) {
-	    vec_t angle = entity->spotangle ? entity->spotangle : 40;
+	    vec_t angle, angle2;
+
+	    angle = (entity->spotangle > 0) ? entity->spotangle : 40;
 	    entity->spotfalloff = -cos(angle / 2 * Q_PI / 180);
+
+	    angle2 = entity->spotangle2;
+	    if (angle2 <= 0 || angle2 > angle)
+		angle2 = angle;
+	    entity->spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
 	}
     }
 }
@@ -302,11 +309,12 @@ LoadEntities(void)
 		entity->light = atof(com_token);
 	    else if (!strcmp(key, "style")) {
 		entity->style = atof(com_token);
-		if ((unsigned)entity->style > 254)
-		    Error("Bad light style %i (must be 0-254)",
-			  entity->style);
+		if (entity->style < 0 || entity->style > 254)
+		    Error("Bad light style %i (must be 0-254)", entity->style);
 	    } else if (!strcmp(key, "angle"))
 		entity->spotangle = atof(com_token);
+	    else if (!strcmp(key, "_softangle"))
+		entity->spotangle2 = atof(com_token);
 	    else if (!strcmp(key, "wait"))
 		entity->atten = atof(com_token);
 	    else if (!strcmp(key, "delay"))
