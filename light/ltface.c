@@ -555,7 +555,8 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	vec3_t ray;
 
 	VectorSubtract(light->origin, surf, ray);
-	VectorNormalize(ray);
+	dist = VectorLength(ray);
+	VectorScale(ray, 1.0 / dist, ray);
 	angle = DotProduct(ray, l->facenormal);
 	if (light->spotlight) {
 	    vec_t falloff = DotProduct(light->spotvec, ray);
@@ -568,7 +569,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
 	    continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
-	add = scaledLight(CastRay(light->origin, surf), light);
+	add = scaledLight(dist, light);
 	add *= angle;
 	lightsamp[c] += add;
 	if (colored)
