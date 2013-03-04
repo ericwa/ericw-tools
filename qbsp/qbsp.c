@@ -40,15 +40,20 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
     int i, numportals;
     surface_t *surfs;
     node_t *nodes;
-    const char *class;
+    const char *classname;
 
     /* No map brushes means non-bmodel entity */
     if (!ent->nummapbrushes)
 	return;
 
-    /* func_detail entities get their brushes added to the worldspawn */
-    class = ValueForKey(ent, "classname");
-    if (!strcmp(class, "func_detail"))
+    /*
+     * func_group and func_detail entities get their brushes added to the
+     * worldspawn
+     */
+    classname = ValueForKey(ent, "classname");
+    if (!strcmp(classname, "func_group"))
+	return;
+    if (!strcmp(classname, "func_detail"))
 	return;
 
     if (ent != pWorldEnt) {
@@ -84,23 +89,38 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	PrintEntity(ent);
 	Error(errNoValidBrushes);
     }
-    Message(msgStat, "%5i brushes", ent->numbrushes);
 
     /*
-     * If this is the world entity, find all func_detail entities and
-     * add their brushes with the detail flag set.
+     * If this is the world entity, find all func_group and func_detail
+     * entities and add their brushes with the appropriate contents flag set.
      */
     if (ent == pWorldEnt) {
-	const mapentity_t *detail;
-	const int detailstart = ent->numbrushes;
+	const mapentity_t *source;
+	int detailcount;
 
-	detail = map.entities + 1;
-	for (i = 1; i < map.numentities; i++, detail++) {
-	    class = ValueForKey(detail, "classname");
-	    if (!strcmp(class, "func_detail"))
-		Brush_LoadEntity(ent, detail, hullnum);
+	/* Add func_group brushes first */
+	source = map.entities + 1;
+	for (i = 1; i < map.numentities; i++, source++) {
+	    classname = ValueForKey(source, "classname");
+	    if (!strcmp(classname, "func_group"))
+		Brush_LoadEntity(ent, source, hullnum);
 	}
-	Message(msgStat, "%5i detail", ent->numbrushes - detailstart);
+
+	/* Add detail brushes next */
+	detailcount = 0;
+	source = map.entities + 1;
+	for (i = 1; i < map.numentities; i++, source++) {
+	    classname = ValueForKey(source, "classname");
+	    if (!strcmp(classname, "func_detail")) {
+		int detailstart = ent->numbrushes;
+		Brush_LoadEntity(ent, source, hullnum);
+		detailcount += ent->numbrushes - detailstart;
+	    }
+	}
+	Message(msgStat, "%5i brushes", ent->numbrushes - detailcount);
+	Message(msgStat, "%5i detail", detailcount);
+    } else {
+	Message(msgStat, "%5i brushes", ent->numbrushes);
     }
 
     /*

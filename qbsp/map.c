@@ -556,6 +556,23 @@ PreParseFile(const char *buf)
     texinfo->count = map.maxfaces;
 }
 
+/*
+ * Special world entities are entities which have their brushes added to the
+ * world before being removed from the map. Currently func_detail and
+ * func_group.
+ */
+static bool
+IsWorldBrushEntity(const mapentity_t *entity)
+{
+    const char *classname = ValueForKey(entity, "classname");
+
+    if (!strcmp(classname, "func_detail"))
+	return true;
+    if (!strcmp(classname, "func_group"))
+	return true;
+    return false;
+}
+
 
 void
 LoadMapFile(void)
@@ -565,7 +582,7 @@ LoadMapFile(void)
     int i, j, length, cAxis;
     void *pTemp;
     struct lumpdata *texinfo;
-    mapentity_t *ent;
+    mapentity_t *entity;
     mapbrush_t *brush;
     mapface_t *face, *face2;
 
@@ -576,16 +593,15 @@ LoadMapFile(void)
     ParserInit(&parser, buf);
 
     map.numfaces = map.numbrushes = map.numentities = 0;
-    ent = map.entities;
-    while (ParseEntity(&parser, ent)) {
+    entity = map.entities;
+    while (ParseEntity(&parser, entity)) {
 	/* Allocate memory for the bmodel, if needed. */
-	const char *classname = ValueForKey(ent, "classname");
-	if (strcmp(classname, "func_detail") && ent->nummapbrushes) {
-	    ent->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
-	    ent->lumps[BSPMODEL].count = 1;
+	if (!IsWorldBrushEntity(entity) && entity->nummapbrushes) {
+	    entity->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
+	    entity->lumps[BSPMODEL].count = 1;
 	}
 	map.numentities++;
-	ent++;
+	entity++;
     }
 
     /* Double check the entity count matches our pre-parse count */
@@ -741,7 +757,6 @@ WriteEntitiesToString(void)
     int cLen;
     struct lumpdata *entities;
     const mapentity_t *ent;
-    const char *classname;
 
     map.cTotal[BSPENT] = 0;
 
@@ -749,8 +764,7 @@ WriteEntitiesToString(void)
 	entities = &map.entities[i].lumps[BSPENT];
 
 	/* Check if entity needs to be removed */
-	classname = ValueForKey(ent, "classname");
-	if (!ent->epairs || !strcmp(classname, "func_detail")) {
+	if (!ent->epairs || IsWorldBrushEntity(ent)) {
 	    entities->count = 0;
 	    entities->data = NULL;
 	    continue;

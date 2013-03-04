@@ -849,8 +849,9 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
      * 3. detail solid
      * 4. solid
      *
-     * We can always just put water on the head of the list, but will need to
-     * insert solid brushes between any existing water and solids on the list.
+     * We will add func_group brushes first and detail brushes last, so we can
+     * always just put water on the head of the list, but will need to insert
+     * solid brushes between any existing water and solids on the list.
      */
     solid = NULL;
     water = dst->brushes;
