@@ -3,6 +3,7 @@
 * qbsp: respect floating point texture rotation and shift in map files
 * qbsp: support for Valve's 220 map format used in later Worldcraft/Hammer
 * qbsp: support func_group entities used by Radiant and similar editors
+* qbsp: surfaces with the skip texture are now removed from the compiled bsp
 * light: fixed a race condition in multithreaded coloured light processing
 * light: fixed bug preventing use of all 4 light styles in a common case
 * light: implemented attenutation formulae "delay" 4+5, ala Bengt's tools
