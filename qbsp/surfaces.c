@@ -53,6 +53,8 @@ SubdivideFace(face_t *f, face_t **prevptr)
     tex = (texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data + f->texturenum;
     if (tex->flags & TEX_SPECIAL)
 	return;
+    if (tex->flags & TEX_SKIP)
+	return;
 
     for (axis = 0; axis < 2; axis++) {
 	while (1) {
