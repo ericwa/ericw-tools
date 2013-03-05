@@ -421,7 +421,7 @@ typedef struct node_s {
     struct portal_s *portals;
     int visleafnum;		// -1 = solid
     int viscluster;		// detail cluster for faster vis
-    int valid;			// for flood filling
+    int fillmark;		// for flood filling
     int occupied;		// entity number in leaf for outside filling
     bool detail_separator;	// for vis portal generation
 } node_t;

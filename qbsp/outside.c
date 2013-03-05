@@ -22,7 +22,7 @@
 #include "qbsp.h"
 
 static int outleafs;
-static int valid;
+static int fillmark
 static int hit_occupied;
 static int backdraw;
 static int numports;
@@ -329,7 +329,7 @@ RecursiveFillOutside(node_t *node, bool fill, const int hullnum, const int numpo
     if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
 	return false;
 
-    if (node->valid == valid)
+    if (node->fillmark == fillmark)
 	return false;
 
     if (node->occupied) {
@@ -339,7 +339,7 @@ RecursiveFillOutside(node_t *node, bool fill, const int hullnum, const int numpo
 	return true;
     }
 
-    node->valid = valid;
+    node->fillmark = fillmark;
 
     // fill it and it's neighbors
     if (fill) {
@@ -431,7 +431,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     // first check to see if an occupied leaf is hit
     outleafs = 0;
     numleaks = 0;
-    valid++;
+    fillmark++;
 
     if (hullnum == 2) {
 	pLeaks = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
@@ -501,7 +501,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	}
     }
     // now go back and fill things in
-    valid++;
+    fillmark++;
     fillnode = outside_node.portals->nodes[side];
     RecursiveFillOutside(fillnode, true, hullnum, numportals);
 
