@@ -445,6 +445,20 @@ BeginBSPFile(void)
     map.cTotal[BSPLEAF]++;
 }
 
+/*
+ * Remove any extra texinfo flags we added that are not normally written
+ * Standard quake utils only ever write the TEX_SPECIAL flag.
+ */
+static void
+CleanBSPTexinfoFlags(void)
+{
+    texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+    const int num_texinfo = pWorldEnt->lumps[BSPTEXINFO].index;
+    int i;
+
+    for (i = 0; i < num_texinfo; i++, texinfo++)
+	texinfo->flags &= TEX_SPECIAL;
+}
 
 /*
 ==================
@@ -468,6 +482,7 @@ FinishBSPFile(void)
     planes->count = map.cTotal[BSPPLANE];
 
     PrintBSPFileSizes();
+    CleanBSPTexinfoFlags();
     WriteBSPFile();
 
     options.fVerbose = options.fAllverbose;
