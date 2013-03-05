@@ -37,7 +37,7 @@ ProcessEntity
 static void
 ProcessEntity(mapentity_t *ent, const int hullnum)
 {
-    int i, numportals;
+    int i, numportals, firstface;
     surface_t *surfs;
     node_t *nodes;
     const char *classname;
@@ -180,8 +180,9 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	}
 
 	ExportNodePlanes(nodes);
-	MakeFaceEdges(ent, nodes);
-	ExportDrawNodes(ent, nodes);
+
+	firstface = MakeFaceEdges(ent, nodes);
+	ExportDrawNodes(ent, nodes, firstface);
     }
 
     map.cTotal[BSPMODEL]++;

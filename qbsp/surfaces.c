@@ -436,10 +436,10 @@ CountData_r(mapentity_t *ent, node_t *node)
 MakeFaceEdges
 ================
 */
-void
+int
 MakeFaceEdges(mapentity_t *ent, node_t *headnode)
 {
-    int i;
+    int i, firstface;
     void *pTemp;
     struct lumpdata *surfedges = &ent->lumps[BSPSURFEDGE];
     struct lumpdata *edges = &ent->lumps[BSPEDGE];
@@ -475,6 +475,7 @@ MakeFaceEdges(mapentity_t *ent, node_t *headnode)
     c_tryedges = 0;
     iNodes = 0;
 
+    firstface = map.cTotal[BSPFACE];
     MakeFaceEdges_r(ent, headnode);
 
     FreeMem(pHashverts, HASHVERT, vertices->count);
@@ -502,4 +503,6 @@ MakeFaceEdges(mapentity_t *ent, node_t *headnode)
 
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion_r(ent, headnode);
+
+    return firstface;
 }

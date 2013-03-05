@@ -653,9 +653,9 @@ surface_t *CSGFaces(const mapentity_t *ent);
 int PortalizeWorld(const mapentity_t *ent, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *ent, node_t *headnode);
 node_t *SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit);
-void MakeFaceEdges(mapentity_t *ent, node_t *headnode);
+int MakeFaceEdges(mapentity_t *ent, node_t *headnode);
 void ExportClipNodes(mapentity_t *ent, node_t *headnode, const int hullnum);
-void ExportDrawNodes(mapentity_t *ent, node_t *headnode);
+void ExportDrawNodes(mapentity_t *ent, node_t *headnode, int firstface);
 
 // util.c
 

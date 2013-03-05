@@ -23,8 +23,6 @@
 #include "qbsp.h"
 #include "wad.h"
 
-static int firstface;
-
 static void
 ExportNodePlanes_r(node_t *node, int *planemap)
 {
@@ -379,7 +377,7 @@ ExportDrawNodes
 ==================
 */
 void
-ExportDrawNodes(mapentity_t *entity, node_t *headnode)
+ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 {
     int i;
     dmodel_t *dmodel;
@@ -405,7 +403,6 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode)
     dmodel->headnode[0] = map.cTotal[BSPNODE];
     dmodel->firstface = firstface;
     dmodel->numfaces = map.cTotal[BSPFACE] - firstface;
-    firstface = map.cTotal[BSPFACE];
 
     if (headnode->contents < 0)
 	ExportLeaf(entity, headnode);
@@ -434,8 +431,6 @@ BeginBSPFile
 void
 BeginBSPFile(void)
 {
-    firstface = 0;
-
     // First edge must remain unused because 0 can't be negated
     pWorldEnt->lumps[BSPEDGE].count++;
     pWorldEnt->lumps[BSPEDGE].index++;
