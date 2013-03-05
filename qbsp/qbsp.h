@@ -630,6 +630,7 @@ typedef struct mapdata_s {
 
     /* Misc other global state for the compile process */
     int fillmark;	/* For marking leaves while outside filling */
+    bool leakfile;	/* Flag once we've written a leak (.por/.pts) file */
 } mapdata_t;
 
 extern mapdata_t map;

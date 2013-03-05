@@ -29,7 +29,6 @@ typedef struct {
 
 typedef struct {
     bool fill;
-    int hullnum;
     int fillmark;
     int numportals;
 } fillparms_t;
@@ -334,6 +333,7 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 {
     portal_t *p;
     int side;
+    bool leak;
 
     if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
 	return false;
@@ -358,11 +358,11 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 
     for (p = node->portals; p; p = p->next[!side]) {
 	side = (p->nodes[0] == node);
-	if (RecursiveFillOutside(state, parms, p->nodes[side])) {
-	    /* leaked, so stop filling */
+	leak = RecursiveFillOutside(state, parms, p->nodes[side]);
+	if (leak) {
 	    if (state->backdraw) {
 		state->backdraw--;
-		if (parms->hullnum == 2) /* FIXME!!! */
+		if (!map.leakfile)
 		    MarkLeakTrail(p, state->hit_occupied, parms->numportals);
 	    }
 	    return true;
@@ -413,7 +413,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     int side;
     vec_t *v;
     int i;
-    bool inside;
+    bool inside, leak;
     fillstate_t fillstate;
     fillparms_t fillparms;
     const mapentity_t *entity;
@@ -439,7 +439,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	return false;
     }
 
-    if (hullnum == 2) {
+    if (!map.leakfile) {
 	pLeaks = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
 	StripExtension(options.szBSPName);
 	strcat(options.szBSPName, ".pts");
@@ -462,7 +462,6 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     /* Set up state and parameters for the recursive fill */
-    fillparms.hullnum = hullnum;
     fillparms.numportals = numportals;
     fillstate.outleafs = 0;
     fillstate.backdraw = 0;
@@ -474,35 +473,39 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     fillparms.fillmark = ++map.fillmark;
     side = !(outside_node.portals->nodes[1] == &outside_node);
     fillnode = outside_node.portals->nodes[side];
-    if (RecursiveFillOutside(&fillstate, &fillparms, fillnode)) {
+
+    leak = RecursiveFillOutside(&fillstate, &fillparms, fillnode);
+    if (leak) {
 	v = map.entities[fillstate.hit_occupied].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
-	if (hullnum == 2) {
-	    if (!options.fOldleak)
-		SimplifyLeakline(node);
+	if (map.leakfile)
+	    return false;
 
-	    // heh slight little kludge thing
-	    StripExtension(options.szBSPName);
-	    Message(msgLiteral, "Leak file written to %s.pts\n",
+	if (!options.fOldleak)
+	    SimplifyLeakline(node);
+
+	// heh slight little kludge thing
+	StripExtension(options.szBSPName);
+	Message(msgLiteral, "Leak file written to %s.pts\n", options.szBSPName);
+	fclose(LeakFile);
+
+	// Get rid of .prt file if .pts file is generated
+	strcat(options.szBSPName, ".prt");
+	remove(options.szBSPName);
+
+	if (options.fBspleak) {
+	    Message(msgLiteral, "BSP portal file written to %s.por\n",
 		    options.szBSPName);
-	    fclose(LeakFile);
-
-	    // Get rid of .prt file if .pts file is generated
-	    strcat(options.szBSPName, ".prt");
-	    remove(options.szBSPName);
-
-	    if (options.fBspleak) {
-		Message(msgLiteral, "BSP portal file written to %s.por\n",
-			options.szBSPName);
-		fseek(PorFile, 0, SEEK_SET);
-		fprintf(PorFile, "%11i", numports);
-		fclose(PorFile);
-	    }
+	    fseek(PorFile, 0, SEEK_SET);
+	    fprintf(PorFile, "%11i", numports);
+	    fclose(PorFile);
 	}
+	map.leakfile = true;
+
 	return false;
     }
 
-    if (hullnum == 2) {
+    if (!map.leakfile) {
 	FreeMem(pLeaks, OTHER, sizeof(portal_t *) * numportals);
 	fclose(LeakFile);
 
