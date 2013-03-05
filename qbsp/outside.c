@@ -494,10 +494,6 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	Message(msgLiteral, "Leak file written to %s.pts\n", options.szBSPName);
 	fclose(LeakFile);
 
-	// Get rid of .prt file if .pts file is generated
-	strcat(options.szBSPName, ".prt");
-	remove(options.szBSPName);
-
 	if (options.fBspleak) {
 	    Message(msgLiteral, "BSP portal file written to %s.por\n",
 		    options.szBSPName);
@@ -506,6 +502,10 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	    fclose(PorFile);
 	}
 	map.leakfile = true;
+
+	// Get rid of .prt file if .pts file is generated
+	strcat(options.szBSPName, ".prt");
+	remove(options.szBSPName);
 
 	return false;
     }
