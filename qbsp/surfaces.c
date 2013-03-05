@@ -26,11 +26,6 @@ static hashvert_t *pHashverts;
 static int iNodes;
 
 /*
-a surface has all of the faces that could be drawn on a given plane
-the outside filling stage can remove some of them so a better bsp can be generated
-*/
-
-/*
 ===============
 SubdivideFace
 
