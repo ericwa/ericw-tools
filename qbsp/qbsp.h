@@ -625,8 +625,11 @@ typedef struct mapdata_s {
     plane_t *planes;
     miptex_t *miptex;
 
-    // Totals for BSP data items
+    /* Totals for BSP data items -> TODO: move to a bspdata struct? */
     int cTotal[BSP_LUMPS];
+
+    /* Misc other global state for the compile process */
+    int fillmark;	/* For marking leaves while outside filling */
 } mapdata_t;
 
 extern mapdata_t map;

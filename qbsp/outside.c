@@ -30,10 +30,10 @@ typedef struct {
 typedef struct {
     bool fill;
     int hullnum;
+    int fillmark;
     int numportals;
 } fillparms_t;
 
-static int fillmark;
 static int numports;
 static bool firstone = true;
 static FILE *LeakFile;
@@ -338,7 +338,7 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
     if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
 	return false;
 
-    if (node->fillmark == fillmark)
+    if (node->fillmark == parms->fillmark)
 	return false;
 
     if (node->occupied) {
@@ -348,7 +348,7 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 	return true;
     }
 
-    node->fillmark = fillmark;
+    node->fillmark = parms->fillmark;
 
     // fill it and it's neighbors
     if (parms->fill) {
@@ -468,10 +468,10 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     fillstate.backdraw = 0;
     fillstate.hit_occupied = 0;
     numleaks = 0;
-    fillmark++;
 
     /* first check to see if an occupied leaf is hit */
     fillparms.fill = false;
+    fillparms.fillmark = ++map.fillmark;
     side = !(outside_node.portals->nodes[1] == &outside_node);
     fillnode = outside_node.portals->nodes[side];
     if (RecursiveFillOutside(&fillstate, &fillparms, fillnode)) {
@@ -519,8 +519,8 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     /* now go back and fill things in */
-    fillmark++;
     fillparms.fill = true;
+    fillparms.fillmark = ++map.fillmark;
     fillnode = outside_node.portals->nodes[side];
     RecursiveFillOutside(&fillstate, &fillparms, fillnode);
 
