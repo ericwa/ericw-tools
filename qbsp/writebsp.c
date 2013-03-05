@@ -24,10 +24,9 @@
 #include "wad.h"
 
 static int firstface;
-static int *planemapping;
 
 static void
-ExportNodePlanes_r(node_t *node)
+ExportNodePlanes_r(node_t *node, int *planemap)
 {
     struct lumpdata *planes = &pWorldEnt->lumps[BSPPLANE];
     plane_t *plane;
@@ -36,7 +35,7 @@ ExportNodePlanes_r(node_t *node)
 
     if (node->planenum == -1)
 	return;
-    if (planemapping[node->planenum] == -1) {
+    if (planemap[node->planenum] == -1) {
 	plane = &map.planes[node->planenum];
 	dplane = (dplane_t *)planes->data;
 
@@ -53,7 +52,7 @@ ExportNodePlanes_r(node_t *node)
 	}
 
 	// a new plane
-	planemapping[node->planenum] = i;
+	planemap[node->planenum] = i;
 
 	if (i == planes->index) {
 	    if (planes->index >= planes->count)
@@ -71,10 +70,10 @@ ExportNodePlanes_r(node_t *node)
 	}
     }
 
-    node->outputplanenum = planemapping[node->planenum];
+    node->outputplanenum = planemap[node->planenum];
 
-    ExportNodePlanes_r(node->children[0]);
-    ExportNodePlanes_r(node->children[1]);
+    ExportNodePlanes_r(node->children[0], planemap);
+    ExportNodePlanes_r(node->children[1], planemap);
 }
 
 /*
@@ -86,6 +85,7 @@ void
 ExportNodePlanes(node_t *nodes)
 {
     struct lumpdata *planes = &pWorldEnt->lumps[BSPPLANE];
+    int *planemap;
 
     // OK just need one plane array, stick it in worldmodel
     if (!planes->data) {
@@ -94,10 +94,10 @@ ExportNodePlanes(node_t *nodes)
 	planes->data = AllocMem(BSPPLANE, planes->count, true);
     }
     // TODO: make one-time allocation?
-    planemapping = AllocMem(OTHER, sizeof(int) * planes->count, true);
-    memset(planemapping, -1, sizeof(int) * planes->count);
-    ExportNodePlanes_r(nodes);
-    FreeMem(planemapping, OTHER, sizeof(int) * planes->count);
+    planemap = AllocMem(OTHER, sizeof(int) * planes->count, true);
+    memset(planemap, -1, sizeof(int) * planes->count);
+    ExportNodePlanes_r(nodes, planemap);
+    FreeMem(planemap, OTHER, sizeof(int) * planes->count);
 }
 
 //===========================================================================
