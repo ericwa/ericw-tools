@@ -22,9 +22,10 @@
 #include "qbsp.h"
 
 typedef struct {
-    int outleafs;
-    int backdraw;
-    int hit_occupied;
+    int outleafs;	/* Count of outside leafs removed by fill process */
+    int backdraw;	/* Limit the length of the leak line */
+    int hit_occupied;	/* Entity number that outside filling reached */
+    int numportals;	/* Number of portals written to .por file */
 } fillstate_t;
 
 typedef struct {
@@ -33,7 +34,6 @@ typedef struct {
     int numportals;
 } fillparms_t;
 
-static int numports;
 static bool firstone = true;
 static FILE *LeakFile;
 static FILE *PorFile;
@@ -149,13 +149,14 @@ MarkLeakTrail
 ==============
 */
 __attribute__((noinline))
-static void
+static bool
 MarkLeakTrail(portal_t *n2, int hit_occupied, const int numportals)
 {
     int i;
     vec3_t p1, p2;
     portal_t *n1;
     vec_t *v;
+    bool written = false;
 
     if (numleaks > numportals)
 	Error(errLowLeakCount);
@@ -172,7 +173,6 @@ MarkLeakTrail(portal_t *n2, int hit_occupied, const int numportals)
 	    fprintf(PorFile, "%f %f %f\n", v[0], v[1], v[2]);
 	    WriteLeakNode(leakNode);
 	}
-	numports++;
 
 	// write the center...
 	fprintf(PorFile, "%f %f %f ", p1[0], p1[1], p1[2]);
@@ -183,14 +183,18 @@ MarkLeakTrail(portal_t *n2, int hit_occupied, const int numportals)
 		    n2->winding->points[i][1], n2->winding->points[i][2]);
 
 	fprintf(PorFile, "\n");
+
+	written = true;
     }
 
     if (numleaks < 2 || !options.fOldleak)
-	return;
+	return written;
 
     n1 = pLeaks[numleaks - 2];
     MidpointWinding(n1->winding, p2);
     PrintLeakTrail(p1, p2);
+
+    return written;
 }
 
 static vec3_t v1, v2;
@@ -360,11 +364,11 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 	side = (p->nodes[0] == node);
 	leak = RecursiveFillOutside(state, parms, p->nodes[side]);
 	if (leak) {
-	    if (state->backdraw) {
-		state->backdraw--;
-		if (!map.leakfile)
-		    MarkLeakTrail(p, state->hit_occupied, parms->numportals);
-	    }
+	    if (map.leakfile || !state->backdraw)
+		return true;
+	    state->backdraw--;
+	    if (MarkLeakTrail(p, state->hit_occupied, parms->numportals))
+		state->numportals++;
 	    return true;
 	}
     }
@@ -465,6 +469,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     fillparms.numportals = numportals;
     fillstate.outleafs = 0;
     fillstate.backdraw = 0;
+    fillstate.numportals = 0;
     fillstate.hit_occupied = 0;
     numleaks = 0;
 
@@ -497,7 +502,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	    Message(msgLiteral, "BSP portal file written to %s.por\n",
 		    options.szBSPName);
 	    fseek(PorFile, 0, SEEK_SET);
-	    fprintf(PorFile, "%11i", numports);
+	    fprintf(PorFile, "%11i", fillstate.numportals);
 	    fclose(PorFile);
 	}
 	map.leakfile = true;
@@ -516,7 +521,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 
 	if (options.fBspleak) {
 	    fseek(PorFile, 0, SEEK_SET);
-	    fprintf(PorFile, "%11i", numports);
+	    fprintf(PorFile, "%11i", fillstate.numportals);
 	    fclose(PorFile);
 	}
     }
