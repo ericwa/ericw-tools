@@ -142,15 +142,12 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(portal_t *n2, const int hullnum, const int numportals)
+MarkLeakTrail(portal_t *n2, const int numportals)
 {
     int i;
     vec3_t p1, p2;
     portal_t *n1;
     vec_t *v;
-
-    if (hullnum != 2)
-	return;
 
     if (numleaks > numportals)
 	Error(errLowLeakCount);
@@ -353,9 +350,12 @@ RecursiveFillOutside(node_t *node, bool fill, const int hullnum, const int numpo
     for (p = node->portals; p; p = p->next[!side]) {
 	side = (p->nodes[0] == node);
 	if (RecursiveFillOutside(p->nodes[side], fill, hullnum, numportals)) {
-	    // leaked, so stop filling
-	    if (backdraw-- > 0)
-		MarkLeakTrail(p, hullnum, numportals);
+	    /* leaked, so stop filling */
+	    if (backdraw) {
+		backdraw--;
+		if (hullnum == 2) /* FIXME!!! */
+		    MarkLeakTrail(p, numportals);
+	    }
 	    return true;
 	}
     }
