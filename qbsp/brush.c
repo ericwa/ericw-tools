@@ -424,7 +424,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
 	FreeMem(w, WINDING, 1);
 
-	f->texturenum = hullnum ? 0 : mapface->texinfo;
+	f->texinfo = hullnum ? 0 : mapface->texinfo;
 	f->planenum = FindPlane(&plane, &f->planeside);
 	f->next = facelist;
 	facelist = f;

@@ -230,7 +230,7 @@ CountLeaves(mapentity_t *ent, node_t *node)
 
     ent->lumps[BSPLEAF].count++;
     for (fp = node->markfaces; *fp; fp++) {
-	if (texinfo[(*fp)->texturenum].flags & TEX_SKIP)
+	if (texinfo[(*fp)->texinfo].flags & TEX_SKIP)
 	    continue;
 	for (f = *fp; f; f = f->original)
 	    ent->lumps[BSPMARKSURF].count++;
@@ -312,7 +312,7 @@ ExportLeaf(mapentity_t *ent, node_t *node)
 
     for (fp = node->markfaces; *fp; fp++) {
 	f = *fp;
-	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	if (texinfo[f->texinfo].flags & TEX_SKIP)
 	    continue;
 
 	/* emit a marksurface */

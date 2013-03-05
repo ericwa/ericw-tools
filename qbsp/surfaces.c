@@ -45,7 +45,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
     vec3_t tmp;
 
     /* special (non-surface cached) faces don't need subdivision */
-    tex = (texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data + f->texturenum;
+    tex = (texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data + f->texinfo;
     if (tex->flags & TEX_SPECIAL)
 	return;
     if (tex->flags & TEX_SKIP)
@@ -337,7 +337,7 @@ MakeFaceEdges_r(mapentity_t *ent, node_t *node)
 	return;
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	if (texinfo[f->texinfo].flags & TEX_SKIP)
 	    continue;
 	FindFaceEdges(ent, f);
     }
@@ -371,7 +371,7 @@ GrowNodeRegion_r(mapentity_t *ent, node_t *node)
     node->firstface = map.cTotal[BSPFACE];
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	if (texinfo[f->texinfo].flags & TEX_SKIP)
 	    continue;
 
 	// emit a region
@@ -380,7 +380,7 @@ GrowNodeRegion_r(mapentity_t *ent, node_t *node)
 
 	r->planenum = node->outputplanenum;
 	r->side = f->planeside;
-	r->texinfo = f->texturenum;
+	r->texinfo = f->texinfo;
 	for (i = 0; i < MAXLIGHTMAPS; i++)
 	    r->styles[i] = 255;
 	r->lightofs = -1;
@@ -420,7 +420,7 @@ CountData_r(mapentity_t *ent, node_t *node)
 	return;
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	if (texinfo[f->texinfo].flags & TEX_SKIP)
 	    continue;
 	ent->lumps[BSPFACE].count++;
 	ent->lumps[BSPVERTEX].count += f->w.numpoints;

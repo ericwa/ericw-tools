@@ -375,7 +375,7 @@ typedef struct visfacet_s {
 
     int planenum;
     int planeside;		// which side is the front of the face
-    int texturenum;
+    int texinfo;
     short contents[2];		// 0 = front side
     short cflags[2];		// contents flags
 

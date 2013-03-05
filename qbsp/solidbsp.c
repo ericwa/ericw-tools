@@ -331,7 +331,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 		    continue;
 		for (face = surf2->faces; face; face = face->next) {
 		    /* Don't penalize for splitting skip faces */
-		    if (texinfo[face->texturenum].flags & TEX_SKIP)
+		    if (texinfo[face->texinfo].flags & TEX_SKIP)
 			continue;
 		    if (FaceSide(face, plane) == SIDE_ON) {
 			splits++;

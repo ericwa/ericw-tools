@@ -54,7 +54,7 @@ NewFaceFromFace(face_t *in)
     newf = AllocMem(FACE, 1, true);
 
     newf->planenum = in->planenum;
-    newf->texturenum = in->texturenum;
+    newf->texinfo = in->texinfo;
     newf->planeside = in->planeside;
     newf->original = in->original;
     newf->contents[0] = in->contents[0];
