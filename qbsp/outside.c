@@ -405,7 +405,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     vec_t *v;
     int i;
     bool inside;
-    const mapentity_t *ent;
+    const mapentity_t *entity;
     node_t *fillnode;
 
     Message(msgProgress, "FillOutside");
@@ -416,9 +416,9 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     inside = false;
-    for (i = 1, ent = map.entities + 1; i < map.numentities; i++, ent++) {
-	if (!VectorCompare(ent->origin, vec3_origin)) {
-	    if (PlaceOccupant(i, ent->origin, node))
+    for (i = 1, entity = map.entities + 1; i < map.numentities; i++, entity++) {
+	if (!VectorCompare(entity->origin, vec3_origin)) {
+	    if (PlaceOccupant(i, entity->origin, node))
 		inside = true;
 	}
     }

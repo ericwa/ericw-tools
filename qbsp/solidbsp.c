@@ -756,7 +756,7 @@ SolidBSP
 ==================
 */
 node_t *
-SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit)
+SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 {
     int i;
     node_t *headnode;
@@ -768,8 +768,8 @@ SolidBSP(const mapentity_t *ent, surface_t *surfhead, bool midsplit)
 
     // calculate a bounding box for the entire model
     for (i = 0; i < 3; i++) {
-	headnode->mins[i] = ent->mins[i] - SIDESPACE;
-	headnode->maxs[i] = ent->maxs[i] + SIDESPACE;
+	headnode->mins[i] = entity->mins[i] - SIDESPACE;
+	headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
     }
 
     // recursively partition everything

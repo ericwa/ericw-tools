@@ -203,13 +203,13 @@ GetVertex
 =============
 */
 static int
-GetVertex(mapentity_t *ent, const vec3_t in)
+GetVertex(mapentity_t *entity, const vec3_t in)
 {
     int h;
     int i;
     hashvert_t *hv;
     vec3_t vert;
-    struct lumpdata *vertices = &ent->lumps[BSPVERTEX];
+    struct lumpdata *vertices = &entity->lumps[BSPVERTEX];
 
     for (i = 0; i < 3; i++) {
 	if (fabs(in[i] - Q_rint(in[i])) < ZERO_EPSILON)
@@ -262,19 +262,19 @@ Don't allow four way edges
 static int c_tryedges;
 
 static int
-GetEdge(mapentity_t *ent, vec3_t p1, vec3_t p2, face_t *f)
+GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
 {
     int v1, v2;
     dedge_t *edge;
     int i;
-    struct lumpdata *edges = &ent->lumps[BSPEDGE];
+    struct lumpdata *edges = &entity->lumps[BSPEDGE];
 
     if (!f->contents[0])
 	Error(errZeroContents);
 
     c_tryedges++;
-    v1 = GetVertex(ent, p1);
-    v2 = GetVertex(ent, p2);
+    v1 = GetVertex(entity, p1);
+    v2 = GetVertex(entity, p2);
 
     for (i = 0; i < edges->index; i++) {
 	edge = (dedge_t *)edges->data + i;
@@ -306,7 +306,7 @@ FindFaceEdges
 ==================
 */
 static void
-FindFaceEdges(mapentity_t *ent, face_t *face)
+FindFaceEdges(mapentity_t *entity, face_t *face)
 {
     int i;
 
@@ -316,7 +316,7 @@ FindFaceEdges(mapentity_t *ent, face_t *face)
 
     face->edges = AllocMem(OTHER, face->w.numpoints * sizeof(int), true);
     for (i = 0; i < face->w.numpoints; i++)
-	face->edges[i] = GetEdge(ent, face->w.points[i],
+	face->edges[i] = GetEdge(entity, face->w.points[i],
 				 face->w.points[(i + 1) % face->w.numpoints],
 				 face);
 }
@@ -328,7 +328,7 @@ MakeFaceEdges_r
 ================
 */
 static void
-MakeFaceEdges_r(mapentity_t *ent, node_t *node)
+MakeFaceEdges_r(mapentity_t *entity, node_t *node)
 {
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     face_t *f;
@@ -339,15 +339,15 @@ MakeFaceEdges_r(mapentity_t *ent, node_t *node)
     for (f = node->faces; f; f = f->next) {
 	if (texinfo[f->texinfo].flags & TEX_SKIP)
 	    continue;
-	FindFaceEdges(ent, f);
+	FindFaceEdges(entity, f);
     }
 
     // Print progress
     iNodes++;
     Message(msgPercent, iNodes, splitnodes);
 
-    MakeFaceEdges_r(ent, node->children[0]);
-    MakeFaceEdges_r(ent, node->children[1]);
+    MakeFaceEdges_r(entity, node->children[0]);
+    MakeFaceEdges_r(entity, node->children[1]);
 }
 
 /*
@@ -356,14 +356,14 @@ GrowNodeRegion_r
 ==============
 */
 static void
-GrowNodeRegion_r(mapentity_t *ent, node_t *node)
+GrowNodeRegion_r(mapentity_t *entity, node_t *node)
 {
     dface_t *r;
     face_t *f;
     int i;
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
-    struct lumpdata *surfedges = &ent->lumps[BSPSURFEDGE];
-    struct lumpdata *faces = &ent->lumps[BSPFACE];
+    struct lumpdata *surfedges = &entity->lumps[BSPSURFEDGE];
+    struct lumpdata *faces = &entity->lumps[BSPFACE];
 
     if (node->planenum == PLANENUM_LEAF)
 	return;
@@ -401,8 +401,8 @@ GrowNodeRegion_r(mapentity_t *ent, node_t *node)
 
     node->numfaces = map.cTotal[BSPFACE] - node->firstface;
 
-    GrowNodeRegion_r(ent, node->children[0]);
-    GrowNodeRegion_r(ent, node->children[1]);
+    GrowNodeRegion_r(entity, node->children[0]);
+    GrowNodeRegion_r(entity, node->children[1]);
 }
 
 /*
@@ -411,7 +411,7 @@ CountData_r
 ==============
 */
 static void
-CountData_r(mapentity_t *ent, node_t *node)
+CountData_r(mapentity_t *entity, node_t *node)
 {
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     face_t *f;
@@ -422,12 +422,12 @@ CountData_r(mapentity_t *ent, node_t *node)
     for (f = node->faces; f; f = f->next) {
 	if (texinfo[f->texinfo].flags & TEX_SKIP)
 	    continue;
-	ent->lumps[BSPFACE].count++;
-	ent->lumps[BSPVERTEX].count += f->w.numpoints;
+	entity->lumps[BSPFACE].count++;
+	entity->lumps[BSPVERTEX].count += f->w.numpoints;
     }
 
-    CountData_r(ent, node->children[0]);
-    CountData_r(ent, node->children[1]);
+    CountData_r(entity, node->children[0]);
+    CountData_r(entity, node->children[1]);
 }
 
 
@@ -437,22 +437,22 @@ MakeFaceEdges
 ================
 */
 int
-MakeFaceEdges(mapentity_t *ent, node_t *headnode)
+MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
     void *pTemp;
-    struct lumpdata *surfedges = &ent->lumps[BSPSURFEDGE];
-    struct lumpdata *edges = &ent->lumps[BSPEDGE];
-    struct lumpdata *vertices = &ent->lumps[BSPVERTEX];
-    struct lumpdata *faces = &ent->lumps[BSPFACE];
+    struct lumpdata *surfedges = &entity->lumps[BSPSURFEDGE];
+    struct lumpdata *edges = &entity->lumps[BSPEDGE];
+    struct lumpdata *vertices = &entity->lumps[BSPVERTEX];
+    struct lumpdata *faces = &entity->lumps[BSPFACE];
 
     Message(msgProgress, "MakeFaceEdges");
 
     cStartEdge = 0;
-    for (i = 0; i < ent - map.entities; i++)
+    for (i = 0; i < entity - map.entities; i++)
 	cStartEdge += map.entities[i].lumps[BSPEDGE].count;
 
-    CountData_r(ent, headnode);
+    CountData_r(entity, headnode);
 
     /*
      * Guess: less than half vertices actually are unique.  Add one to round up
@@ -476,7 +476,7 @@ MakeFaceEdges(mapentity_t *ent, node_t *headnode)
     iNodes = 0;
 
     firstface = map.cTotal[BSPFACE];
-    MakeFaceEdges_r(ent, headnode);
+    MakeFaceEdges_r(entity, headnode);
 
     FreeMem(pHashverts, HASHVERT, vertices->count);
     FreeMem(pEdgeFaces0, OTHER, sizeof(face_t *) * edges->count);
@@ -502,7 +502,7 @@ MakeFaceEdges(mapentity_t *ent, node_t *headnode)
     faces->data = AllocMem(BSPFACE, faces->count, true);
 
     Message(msgProgress, "GrowRegions");
-    GrowNodeRegion_r(ent, headnode);
+    GrowNodeRegion_r(entity, headnode);
 
     return firstface;
 }

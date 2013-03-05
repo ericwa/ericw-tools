@@ -121,15 +121,15 @@ AddToBounds
 =================
 */
 static void
-AddToBounds(mapentity_t *ent, const vec3_t point)
+AddToBounds(mapentity_t *entity, const vec3_t point)
 {
     int i;
 
     for (i = 0; i < 3; i++) {
-	if (point[i] < ent->mins[i])
-	    ent->mins[i] = point[i];
-	if (point[i] > ent->maxs[i])
-	    ent->maxs[i] = point[i];
+	if (point[i] < entity->mins[i])
+	    entity->mins[i] = point[i];
+	if (point[i] > entity->maxs[i])
+	    entity->maxs[i] = point[i];
     }
 }
 
@@ -306,12 +306,12 @@ FindTargetEntity(const char *target)
 {
     int i;
     const char *name;
-    const mapentity_t *ent;
+    const mapentity_t *entity;
 
-    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
-	name = ValueForKey(ent, "targetname");
+    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+	name = ValueForKey(entity, "targetname");
 	if (!strcasecmp(target, name))
-	    return ent;
+	    return entity;
     }
 
     return NULL;
@@ -324,28 +324,28 @@ FixRotateOrigin
 =================
 */
 void
-FixRotateOrigin(mapentity_t *ent)
+FixRotateOrigin(mapentity_t *entity)
 {
     const mapentity_t *target = NULL;
     const char *search;
     vec3_t offset;
     char value[20];
 
-    search = ValueForKey(ent, "target");
+    search = ValueForKey(entity, "target");
     if (search[0])
 	target = FindTargetEntity(search);
 
     if (target) {
 	GetVectorForKey(target, "origin", offset);
     } else {
-	search = ValueForKey(ent, "classname");
+	search = ValueForKey(entity, "classname");
 	Message(msgWarning, warnNoRotateTarget, search);
 	VectorCopy(vec3_origin, offset);
     }
 
     snprintf(value, sizeof(value), "%d %d %d", (int)offset[0],
 	     (int)offset[1], (int)offset[2]);
-    SetKeyValue(ent, "origin", value);
+    SetKeyValue(entity, "origin", value);
 }
 
 

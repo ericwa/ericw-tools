@@ -36,7 +36,7 @@ LoadBSPFile(void)
 {
     int i;
     int cFileSize, cLumpSize, iLumpOff;
-    mapentity_t *ent;
+    mapentity_t *entity;
 
     // Load the file header
     StripExtension(options.szBSPName);
@@ -47,17 +47,17 @@ LoadBSPFile(void)
 	Error(errBadVersion, options.szBSPName, header->version, BSPVERSION);
 
     /* Throw all of the data into the first entity to be written out later */
-    ent = map.entities;
+    entity = map.entities;
     for (i = 0; i < BSP_LUMPS; i++) {
 	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
 	iLumpOff = header->lumps[i].fileofs;
 	if (cLumpSize % rgcMemSize[i])
 	    Error(errDeformedBSPLump, rgcMemSize[i], cLumpSize);
 
-	ent->lumps[i].count = cLumpSize / rgcMemSize[i];
-	ent->lumps[i].data = AllocMem(i, ent->lumps[i].count, false);
+	entity->lumps[i].count = cLumpSize / rgcMemSize[i];
+	entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
 
-	memcpy(ent->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
+	memcpy(entity->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
     }
 
     FreeMem(header, OTHER, cFileSize + 1);
@@ -74,13 +74,13 @@ AddLump(FILE *f, int Type)
     int i;
     size_t ret;
     const struct lumpdata *entities;
-    const mapentity_t *ent;
+    const mapentity_t *entity;
 
     lump = &header->lumps[Type];
     lump->fileofs = ftell(f);
 
-    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
-	entities = &ent->lumps[Type];
+    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+	entities = &entity->lumps[Type];
 	if (entities->data) {
 	    ret = fwrite(entities->data, rgcMemSize[Type], entities->count, f);
 	    if (ret != entities->count)

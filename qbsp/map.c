@@ -110,13 +110,13 @@ FindTexinfo(texinfo_t *texinfo)
 
 
 static void
-ParseEpair(parser_t *parser, mapentity_t *ent)
+ParseEpair(parser_t *parser, mapentity_t *entity)
 {
     epair_t *epair;
 
     epair = AllocMem(OTHER, sizeof(epair_t), true);
-    epair->next = ent->epairs;
-    ent->epairs = epair;
+    epair->next = entity->epairs;
+    entity->epairs = epair;
 
     if (strlen(parser->token) >= MAX_KEY - 1)
 	Error(errEpairTooLong, parser->linenum);
@@ -127,7 +127,7 @@ ParseEpair(parser_t *parser, mapentity_t *ent)
     epair->value = copystring(parser->token);
 
     if (!strcasecmp(epair->key, "origin")) {
-	GetVectorForKey(ent, epair->key, ent->origin);
+	GetVectorForKey(entity, epair->key, entity->origin);
     } else if (!strcasecmp(epair->key, "classname")) {
 	if (!strcasecmp(epair->value, "info_player_start")) {
 	    if (rgfStartSpots & info_player_start)
@@ -470,7 +470,7 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 }
 
 static bool
-ParseEntity(parser_t *parser, mapentity_t *ent)
+ParseEntity(parser_t *parser, mapentity_t *entity)
 {
     mapbrush_t *brush;
 
@@ -483,7 +483,7 @@ ParseEntity(parser_t *parser, mapentity_t *ent)
     if (map.numentities == map.maxentities)
 	Error(errLowEntCount);
 
-    ent->mapbrushes = brush = map.brushes + map.numbrushes;
+    entity->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
 	if (!ParseToken(parser, PARSE_NORMAL))
 	    Error(errUnexpectedEOF);
@@ -495,12 +495,12 @@ ParseEntity(parser_t *parser, mapentity_t *ent)
 	    ParseBrush(parser, brush++);
 	    map.numbrushes++;
 	} else
-	    ParseEpair(parser, ent);
+	    ParseEpair(parser, entity);
     } while (1);
 
-    ent->nummapbrushes = brush - ent->mapbrushes;
-    if (!ent->nummapbrushes)
-	ent->mapbrushes = NULL;
+    entity->nummapbrushes = brush - entity->mapbrushes;
+    if (!entity->nummapbrushes)
+	entity->mapbrushes = NULL;
 
     return true;
 }
@@ -697,21 +697,21 @@ LoadMapFile(void)
 
 
 void
-PrintEntity(const mapentity_t *ent)
+PrintEntity(const mapentity_t *entity)
 {
     epair_t *epair;
 
-    for (epair = ent->epairs; epair; epair = epair->next)
+    for (epair = entity->epairs; epair; epair = epair->next)
 	Message(msgStat, "%20s : %s", epair->key, epair->value);
 }
 
 
 const char *
-ValueForKey(const mapentity_t *ent, const char *key)
+ValueForKey(const mapentity_t *entity, const char *key)
 {
     const epair_t *ep;
 
-    for (ep = ent->epairs; ep; ep = ep->next)
+    for (ep = entity->epairs; ep; ep = ep->next)
 	if (!strcmp(ep->key, key))
 	    return ep->value;
 
@@ -720,31 +720,31 @@ ValueForKey(const mapentity_t *ent, const char *key)
 
 
 void
-SetKeyValue(mapentity_t *ent, const char *key, const char *value)
+SetKeyValue(mapentity_t *entity, const char *key, const char *value)
 {
     epair_t *ep;
 
-    for (ep = ent->epairs; ep; ep = ep->next)
+    for (ep = entity->epairs; ep; ep = ep->next)
 	if (!strcmp(ep->key, key)) {
 	    free(ep->value); /* FIXME */
 	    ep->value = copystring(value);
 	    return;
 	}
     ep = AllocMem(OTHER, sizeof(epair_t), true);
-    ep->next = ent->epairs;
-    ent->epairs = ep;
+    ep->next = entity->epairs;
+    entity->epairs = ep;
     ep->key = copystring(key);
     ep->value = copystring(value);
 }
 
 
 void
-GetVectorForKey(const mapentity_t *ent, const char *szKey, vec3_t vec)
+GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec)
 {
     const char *value;
     double v1, v2, v3;
 
-    value = ValueForKey(ent, szKey);
+    value = ValueForKey(entity, szKey);
     v1 = v2 = v3 = 0;
     // scanf into doubles, then assign, so it is vec_t size independent
     sscanf(value, "%lf %lf %lf", &v1, &v2, &v3);
@@ -763,22 +763,22 @@ WriteEntitiesToString(void)
     int i;
     int cLen;
     struct lumpdata *entities;
-    const mapentity_t *ent;
+    const mapentity_t *entity;
 
     map.cTotal[BSPENT] = 0;
 
-    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
+    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
 	entities = &map.entities[i].lumps[BSPENT];
 
 	/* Check if entity needs to be removed */
-	if (!ent->epairs || IsWorldBrushEntity(ent)) {
+	if (!entity->epairs || IsWorldBrushEntity(entity)) {
 	    entities->count = 0;
 	    entities->data = NULL;
 	    continue;
 	}
 
 	cLen = 0;
-	for (ep = ent->epairs; ep; ep = ep->next) {
+	for (ep = entity->epairs; ep; ep = ep->next) {
 	    int i = strlen(ep->key) + strlen(ep->value) + 6;
 	    if (i <= 128)
 		cLen += i;
@@ -796,7 +796,7 @@ WriteEntitiesToString(void)
 	strcat(pCur, "{\n");
 	pCur += 2;
 
-	for (ep = ent->epairs; ep; ep = ep->next) {
+	for (ep = entity->epairs; ep; ep = ep->next) {
 	    // Limit on Quake's strings of 128 bytes
 	    sprintf(szLine, "\"%.*s\" \"%.*s\"\n", MAX_KEY, ep->key,
 		    122 - (int)strlen(ep->key), ep->value);

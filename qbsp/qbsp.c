@@ -35,7 +35,7 @@ ProcessEntity
 ===============
 */
 static void
-ProcessEntity(mapentity_t *ent, const int hullnum)
+ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     int i, numportals, firstface;
     surface_t *surfs;
@@ -43,50 +43,50 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
     const char *classname;
 
     /* No map brushes means non-bmodel entity */
-    if (!ent->nummapbrushes)
+    if (!entity->nummapbrushes)
 	return;
 
     /*
      * func_group and func_detail entities get their brushes added to the
      * worldspawn
      */
-    classname = ValueForKey(ent, "classname");
+    classname = ValueForKey(entity, "classname");
     if (!strcmp(classname, "func_group"))
 	return;
     if (!strcmp(classname, "func_detail"))
 	return;
 
-    if (ent != pWorldEnt) {
+    if (entity != pWorldEnt) {
 	char mod[20];
 
-	if (ent == pWorldEnt + 1)
+	if (entity == pWorldEnt + 1)
 	    Message(msgProgress, "Internal Entities");
 	snprintf(mod, sizeof(mod), "*%i", map.cTotal[BSPMODEL]);
 	if (options.fVerbose)
-	    PrintEntity(ent);
+	    PrintEntity(entity);
 
 	if (hullnum == 0)
 	    Message(msgStat, "MODEL: %s", mod);
-	SetKeyValue(ent, "model", mod);
+	SetKeyValue(entity, "model", mod);
     }
 
     /*
      * Init the entity
      */
-    ent->brushes = NULL;
-    ent->numbrushes = 0;
+    entity->brushes = NULL;
+    entity->numbrushes = 0;
     for (i = 0; i < 3; i++) {
-	ent->mins[i] = VECT_MAX;
-	ent->maxs[i] = -VECT_MAX;
+	entity->mins[i] = VECT_MAX;
+	entity->maxs[i] = -VECT_MAX;
     }
 
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
     Message(msgProgress, "Brush_LoadEntity");
-    Brush_LoadEntity(ent, ent, hullnum);
-    if (!ent->brushes) {
-	PrintEntity(ent);
+    Brush_LoadEntity(entity, entity, hullnum);
+    if (!entity->brushes) {
+	PrintEntity(entity);
 	Error(errNoValidBrushes);
     }
 
@@ -94,7 +94,7 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
      * If this is the world entity, find all func_group and func_detail
      * entities and add their brushes with the appropriate contents flag set.
      */
-    if (ent == pWorldEnt) {
+    if (entity == pWorldEnt) {
 	const mapentity_t *source;
 	int detailcount;
 
@@ -103,7 +103,7 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	for (i = 1; i < map.numentities; i++, source++) {
 	    classname = ValueForKey(source, "classname");
 	    if (!strcmp(classname, "func_group"))
-		Brush_LoadEntity(ent, source, hullnum);
+		Brush_LoadEntity(entity, source, hullnum);
 	}
 
 	/* Add detail brushes next */
@@ -112,53 +112,53 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	for (i = 1; i < map.numentities; i++, source++) {
 	    classname = ValueForKey(source, "classname");
 	    if (!strcmp(classname, "func_detail")) {
-		int detailstart = ent->numbrushes;
-		Brush_LoadEntity(ent, source, hullnum);
-		detailcount += ent->numbrushes - detailstart;
+		int detailstart = entity->numbrushes;
+		Brush_LoadEntity(entity, source, hullnum);
+		detailcount += entity->numbrushes - detailstart;
 	    }
 	}
-	Message(msgStat, "%5i brushes", ent->numbrushes - detailcount);
+	Message(msgStat, "%5i brushes", entity->numbrushes - detailcount);
 	if (detailcount)
 	    Message(msgStat, "%5i detail", detailcount);
     } else {
-	Message(msgStat, "%5i brushes", ent->numbrushes);
+	Message(msgStat, "%5i brushes", entity->numbrushes);
     }
 
     /*
      * Take the brush_t's and clip off all overlapping and contained faces,
      * leaving a perfect skin of the model with no hidden faces
      */
-    surfs = CSGFaces(ent);
-    FreeBrushes(ent->brushes);
+    surfs = CSGFaces(entity);
+    FreeBrushes(entity->brushes);
 
     if (hullnum != 0) {
-	nodes = SolidBSP(ent, surfs, true);
-	if (ent == pWorldEnt && !options.fNofill) {
+	nodes = SolidBSP(entity, surfs, true);
+	if (entity == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    numportals = PortalizeWorld(ent, nodes, hullnum);
+	    numportals = PortalizeWorld(entity, nodes, hullnum);
 	    if (FillOutside(nodes, hullnum, numportals)) {
 		// Free portals before regenerating new nodes
 		FreeAllPortals(nodes);
 		surfs = GatherNodeFaces(nodes);
 		// make a really good tree
-		nodes = SolidBSP(ent, surfs, false);
+		nodes = SolidBSP(entity, surfs, false);
 	    }
 	}
 	ExportNodePlanes(nodes);
-	ExportClipNodes(ent, nodes, hullnum);
+	ExportClipNodes(entity, nodes, hullnum);
     } else {
 	// SolidBSP generates a node tree
 	//
 	// if not the world, make a good tree first
 	// the world is just going to make a bad tree
 	// because the outside filling will force a regeneration later
-	nodes = SolidBSP(ent, surfs, ent == pWorldEnt);
+	nodes = SolidBSP(entity, surfs, entity == pWorldEnt);
 
 	// build all the portals in the bsp tree
 	// some portals are solid polygons, and some are paths to other leafs
-	if (ent == pWorldEnt && !options.fNofill) {
+	if (entity == pWorldEnt && !options.fNofill) {
 	    // assume non-world bmodels are simple
-	    numportals = PortalizeWorld(ent, nodes, hullnum);
+	    numportals = PortalizeWorld(entity, nodes, hullnum);
 	    if (FillOutside(nodes, hullnum, numportals)) {
 		FreeAllPortals(nodes);
 
@@ -169,20 +169,20 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 		MergeAll(surfs);
 
 		// make a really good tree
-		nodes = SolidBSP(ent, surfs, false);
+		nodes = SolidBSP(entity, surfs, false);
 
 		// make the real portals for vis tracing
-		numportals = PortalizeWorld(ent, nodes, hullnum);
+		numportals = PortalizeWorld(entity, nodes, hullnum);
 
-		TJunc(ent, nodes);
+		TJunc(entity, nodes);
 	    }
 	    FreeAllPortals(nodes);
 	}
 
 	ExportNodePlanes(nodes);
 
-	firstface = MakeFaceEdges(ent, nodes);
-	ExportDrawNodes(ent, nodes, firstface);
+	firstface = MakeFaceEdges(entity, nodes);
+	ExportDrawNodes(entity, nodes, firstface);
     }
 
     map.cTotal[BSPMODEL]++;
@@ -200,25 +200,25 @@ UpdateEntLump(void)
     int modnum, i;
     char modname[10];
     const char *classname;
-    mapentity_t *ent;
+    mapentity_t *entity;
 
     Message(msgStat, "Updating entities lump...");
 
     modnum = 1;
-    for (i = 1, ent = map.entities + 1; i < map.numentities; i++, ent++) {
-	if (!ent->nummapbrushes)
+    for (i = 1, entity = map.entities + 1; i < map.numentities; i++, entity++) {
+	if (!entity->nummapbrushes)
 	    continue;
-	classname = ValueForKey(ent, "classname");
+	classname = ValueForKey(entity, "classname");
 	if (!strcmp(classname, "func_detail"))
 	    continue;
 
 	snprintf(modname, sizeof(modname), "*%i", modnum);
-	SetKeyValue(ent, "model", modname);
+	SetKeyValue(entity, "model", modname);
 	modnum++;
 
 	/* Do extra work for rotating entities if necessary */
 	if (!strncmp(classname, "rotate_", 7))
-	    FixRotateOrigin(ent);
+	    FixRotateOrigin(entity);
     }
 
     LoadBSPFile();
@@ -240,14 +240,14 @@ static void
 CreateSingleHull(const int hullnum)
 {
     int i;
-    mapentity_t *ent;
+    mapentity_t *entity;
 
     Message(msgLiteral, "Processing hull %d...\n", hullnum);
     map.cTotal[BSPMODEL] = 0;
 
     // for each entity in the map file that has geometry
-    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
-	ProcessEntity(ent, hullnum);
+    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+	ProcessEntity(entity, hullnum);
 	if (!options.fAllverbose)
 	    options.fVerbose = false;	// don't print rest of entities
     }

@@ -174,10 +174,10 @@ FreeAllMem(void)
     int i, j;
     epair_t *ep, *next;
     struct lumpdata *lump;
-    mapentity_t *ent;
+    mapentity_t *entity;
 
-    for (i = 0, ent = map.entities; i < map.numentities; i++, ent++) {
-	for (ep = ent->epairs; ep; ep = next) {
+    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+	for (ep = entity->epairs; ep; ep = next) {
 	    next = ep->next;
 	    if (ep->key)
 		FreeMem(ep->key, OTHER, strlen(ep->key) + 1);
@@ -185,7 +185,7 @@ FreeAllMem(void)
 		FreeMem(ep->value, OTHER, strlen(ep->value) + 1);
 	    FreeMem(ep, OTHER, sizeof(epair_t));
 	}
-	lump = ent->lumps;
+	lump = entity->lumps;
 	for (j = 0; j < BSP_LUMPS; j++)
 	    if (lump[j].data)
 		FreeMem(lump[j].data, j, lump[j].count);
