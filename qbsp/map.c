@@ -84,6 +84,10 @@ FindTexinfo(texinfo_t *texinfo)
 	if (texinfo->flags != target->flags)
 	    continue;
 
+	/* Don't worry about texture alignment on skip surfaces */
+	if (texinfo->flags & TEX_SKIP)
+	    return index;
+
 	for (j = 0; j < 4; j++) {
 	    if (texinfo->vecs[0][j] != target->vecs[0][j])
 		break;
