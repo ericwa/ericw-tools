@@ -97,8 +97,9 @@
 // Special contents flags for the compiler only
 #define CFLAGS_DETAIL	(1U << 0)
 
-// flag for textures, sky or slime, no lightmap or 256 subdivision
-#define	TEX_SPECIAL	1
+// Texture flags
+#define	TEX_SPECIAL (1U << 0)	/* sky or liquid (no lightmap or subdivision */
+#define	TEX_SKIP    (1U << 1)	/* an invisible surface */
 
 #define	MAXLIGHTMAPS	4
 

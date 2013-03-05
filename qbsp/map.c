@@ -62,43 +62,46 @@ Returns a global texinfo number
 ===============
 */
 static int
-FindTexinfo(texinfo_t *t)
+FindTexinfo(texinfo_t *texinfo)
 {
-    int i, j;
-    texinfo_t *tex;
-    const char *name;
+    int index, j;
+    texinfo_t *target;
+    const char *texname;
+    const int num_texinfo = pWorldEnt->lumps[BSPTEXINFO].index;
 
     // set the special flag
-    name = map.miptex[t->miptex];
-    if (name[0] == '*' || !strncasecmp(name, "sky", 3))
+    texname = map.miptex[texinfo->miptex];
+    if (texname[0] == '*' || !strncasecmp(texname, "sky", 3))
 	if (!options.fSplitspecial)
-	    t->flags |= TEX_SPECIAL;
+	    texinfo->flags |= TEX_SPECIAL;
+    if (!strcasecmp(texname, "skip"))
+	texinfo->flags |= TEX_SKIP;
 
-    tex = pWorldEnt->lumps[BSPTEXINFO].data;
-    for (i = 0; i < pWorldEnt->lumps[BSPTEXINFO].index; i++, tex++) {
-	if (t->miptex != tex->miptex)
+    target = pWorldEnt->lumps[BSPTEXINFO].data;
+    for (index = 0; index < num_texinfo; index++, target++) {
+	if (texinfo->miptex != target->miptex)
 	    continue;
-	if (t->flags != tex->flags)
+	if (texinfo->flags != target->flags)
 	    continue;
 
 	for (j = 0; j < 4; j++) {
-	    if (t->vecs[0][j] != tex->vecs[0][j])
+	    if (texinfo->vecs[0][j] != target->vecs[0][j])
 		break;
-	    if (t->vecs[1][j] != tex->vecs[1][j])
+	    if (texinfo->vecs[1][j] != target->vecs[1][j])
 		break;
 	}
 	if (j != 4)
 	    continue;
 
-	return i;
+	return index;
     }
 
     /* Allocate a new texinfo at the end of the array */
-    *tex = *t;
+    *target = *texinfo;
     pWorldEnt->lumps[BSPTEXINFO].index++;
     map.cTotal[BSPTEXINFO]++;
 
-    return i;
+    return index;
 }
 
 
