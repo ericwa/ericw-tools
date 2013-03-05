@@ -21,10 +21,19 @@
 
 #include "qbsp.h"
 
-static int outleafs;
-static int fillmark
-static int hit_occupied;
-static int backdraw;
+typedef struct {
+    int outleafs;
+    int backdraw;
+    int hit_occupied;
+} fillstate_t;
+
+typedef struct {
+    bool fill;
+    int hullnum;
+    int numportals;
+} fillparms_t;
+
+static int fillmark;
 static int numports;
 static bool firstone = true;
 static FILE *LeakFile;
@@ -142,7 +151,7 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(portal_t *n2, const int numportals)
+MarkLeakTrail(portal_t *n2, int hit_occupied, const int numportals)
 {
     int i;
     vec3_t p1, p2;
@@ -321,7 +330,7 @@ Returns true if an occupied leaf is reached
 ==================
 */
 static bool
-RecursiveFillOutside(node_t *node, bool fill, const int hullnum, const int numportals)
+RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 {
     portal_t *p;
     int side;
@@ -333,28 +342,28 @@ RecursiveFillOutside(node_t *node, bool fill, const int hullnum, const int numpo
 	return false;
 
     if (node->occupied) {
-	hit_occupied = node->occupied;
+	state->hit_occupied = node->occupied;
 	leakNode = node;
-	backdraw = 4000;
+	state->backdraw = 4000;
 	return true;
     }
 
     node->fillmark = fillmark;
 
     // fill it and it's neighbors
-    if (fill) {
+    if (parms->fill) {
 	node->contents = CONTENTS_SOLID;
-	outleafs++;
+	state->outleafs++;
     }
 
     for (p = node->portals; p; p = p->next[!side]) {
 	side = (p->nodes[0] == node);
-	if (RecursiveFillOutside(p->nodes[side], fill, hullnum, numportals)) {
+	if (RecursiveFillOutside(state, parms, p->nodes[side])) {
 	    /* leaked, so stop filling */
-	    if (backdraw) {
-		backdraw--;
-		if (hullnum == 2) /* FIXME!!! */
-		    MarkLeakTrail(p, numportals);
+	    if (state->backdraw) {
+		state->backdraw--;
+		if (parms->hullnum == 2) /* FIXME!!! */
+		    MarkLeakTrail(p, state->hit_occupied, parms->numportals);
 	    }
 	    return true;
 	}
@@ -405,6 +414,8 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     vec_t *v;
     int i;
     bool inside;
+    fillstate_t fillstate;
+    fillparms_t fillparms;
     const mapentity_t *entity;
     node_t *fillnode;
 
@@ -428,11 +439,6 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	return false;
     }
 
-    // first check to see if an occupied leaf is hit
-    outleafs = 0;
-    numleaks = 0;
-    fillmark++;
-
     if (hullnum == 2) {
 	pLeaks = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
 	StripExtension(options.szBSPName);
@@ -455,10 +461,21 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	}
     }
 
+    /* Set up state and parameters for the recursive fill */
+    fillparms.hullnum = hullnum;
+    fillparms.numportals = numportals;
+    fillstate.outleafs = 0;
+    fillstate.backdraw = 0;
+    fillstate.hit_occupied = 0;
+    numleaks = 0;
+    fillmark++;
+
+    /* first check to see if an occupied leaf is hit */
+    fillparms.fill = false;
     side = !(outside_node.portals->nodes[1] == &outside_node);
     fillnode = outside_node.portals->nodes[side];
-    if (RecursiveFillOutside(fillnode, false, hullnum, numportals)) {
-	v = map.entities[hit_occupied].origin;
+    if (RecursiveFillOutside(&fillstate, &fillparms, fillnode)) {
+	v = map.entities[fillstate.hit_occupied].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
 	if (hullnum == 2) {
 	    if (!options.fOldleak)
@@ -500,14 +517,16 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	    fclose(PorFile);
 	}
     }
-    // now go back and fill things in
-    fillmark++;
-    fillnode = outside_node.portals->nodes[side];
-    RecursiveFillOutside(fillnode, true, hullnum, numportals);
 
-    // remove faces from filled in leafs
+    /* now go back and fill things in */
+    fillmark++;
+    fillparms.fill = true;
+    fillnode = outside_node.portals->nodes[side];
+    RecursiveFillOutside(&fillstate, &fillparms, fillnode);
+
+    /* remove faces from filled in leafs */
     ClearOutFaces(node);
 
-    Message(msgStat, "%4i outleafs", outleafs);
+    Message(msgStat, "%4i outleafs", fillstate.outleafs);
     return true;
 }
