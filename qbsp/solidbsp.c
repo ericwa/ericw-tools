@@ -298,6 +298,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     vec_t distribution, bestdistribution;
     const plane_t *plane, *plane2;
     const face_t *face;
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
     /* pick the plane that splits the least */
     minsplits = INT_MAX;
@@ -329,6 +330,9 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 		if (plane->type < 3 && plane->type == plane2->type)
 		    continue;
 		for (face = surf2->faces; face; face = face->next) {
+		    /* Don't penalize for splitting skip faces */
+		    if (texinfo[face->texturenum].flags & TEX_SKIP)
+			continue;
 		    if (FaceSide(face, plane) == SIDE_ON) {
 			splits++;
 			if (splits >= minsplits)
