@@ -226,11 +226,15 @@ static void
 CountLeaves(mapentity_t *ent, node_t *node)
 {
     face_t **fp, *f;
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
     ent->lumps[BSPLEAF].count++;
-    for (fp = node->markfaces; *fp; fp++)
+    for (fp = node->markfaces; *fp; fp++) {
+	if (texinfo[(*fp)->texturenum].flags & TEX_SKIP)
+	    continue;
 	for (f = *fp; f; f = f->original)
 	    ent->lumps[BSPMARKSURF].count++;
+    }
 }
 
 /*
@@ -277,47 +281,49 @@ static void
 ExportLeaf(mapentity_t *ent, node_t *node)
 {
     face_t **fp, *f;
-    dleaf_t *leaf_p;
+    dleaf_t *dleaf;
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     struct lumpdata *leaves = &ent->lumps[BSPLEAF];
     struct lumpdata *marksurfs = &ent->lumps[BSPMARKSURF];
+    unsigned short *marksurfnums = marksurfs->data;
 
     // ptr arithmetic to get correct leaf in memory
-    leaf_p = (dleaf_t *)leaves->data + leaves->index;
+    dleaf = (dleaf_t *)leaves->data + leaves->index;
     leaves->index++;
     map.cTotal[BSPLEAF]++;
 
-    leaf_p->contents = node->contents;
+    dleaf->contents = node->contents;
 
 //
 // write bounding box info
 //
     // VectorCopy don't work since dest are shorts
-    leaf_p->mins[0] = (short)node->mins[0];
-    leaf_p->mins[1] = (short)node->mins[1];
-    leaf_p->mins[2] = (short)node->mins[2];
-    leaf_p->maxs[0] = (short)node->maxs[0];
-    leaf_p->maxs[1] = (short)node->maxs[1];
-    leaf_p->maxs[2] = (short)node->maxs[2];
+    dleaf->mins[0] = (short)node->mins[0];
+    dleaf->mins[1] = (short)node->mins[1];
+    dleaf->mins[2] = (short)node->mins[2];
+    dleaf->maxs[0] = (short)node->maxs[0];
+    dleaf->maxs[1] = (short)node->maxs[1];
+    dleaf->maxs[2] = (short)node->maxs[2];
 
-    leaf_p->visofs = -1;	// no vis info yet
+    dleaf->visofs = -1;	// no vis info yet
 
     // write the marksurfaces
-    leaf_p->firstmarksurface = map.cTotal[BSPMARKSURF];
+    dleaf->firstmarksurface = map.cTotal[BSPMARKSURF];
 
     for (fp = node->markfaces; *fp; fp++) {
-	// emit a marksurface
 	f = *fp;
+	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	    continue;
+
+	/* emit a marksurface */
 	do {
-	    *((unsigned short *)marksurfs->data + marksurfs->index) =
-		f->outputnumber;
+	    marksurfnums[marksurfs->index] = f->outputnumber;
 	    marksurfs->index++;
 	    map.cTotal[BSPMARKSURF]++;
-	    f = f->original;	// grab tjunction split faces
+	    f = f->original;	/* grab tjunction split faces */
 	} while (f);
     }
-
-    leaf_p->nummarksurfaces =
-	map.cTotal[BSPMARKSURF] - leaf_p->firstmarksurface;
+    dleaf->nummarksurfaces = map.cTotal[BSPMARKSURF] - dleaf->firstmarksurface;
 }
 
 

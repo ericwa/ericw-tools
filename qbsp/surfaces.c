@@ -333,13 +333,17 @@ MakeFaceEdges_r
 static void
 MakeFaceEdges_r(mapentity_t *ent, node_t *node)
 {
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
 	return;
 
-    for (f = node->faces; f; f = f->next)
+    for (f = node->faces; f; f = f->next) {
+	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	    continue;
 	FindFaceEdges(ent, f);
+    }
 
     // Print progress
     iNodes++;
@@ -360,6 +364,7 @@ GrowNodeRegion_r(mapentity_t *ent, node_t *node)
     dface_t *r;
     face_t *f;
     int i;
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     struct lumpdata *surfedges = &ent->lumps[BSPSURFEDGE];
     struct lumpdata *faces = &ent->lumps[BSPFACE];
 
@@ -369,8 +374,8 @@ GrowNodeRegion_r(mapentity_t *ent, node_t *node)
     node->firstface = map.cTotal[BSPFACE];
 
     for (f = node->faces; f; f = f->next) {
-//              if (f->outputnumber != -1)
-//                      continue;       // allready grown into an earlier region
+	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	    continue;
 
 	// emit a region
 	f->outputnumber = map.cTotal[BSPFACE];
@@ -411,12 +416,15 @@ CountData_r
 static void
 CountData_r(mapentity_t *ent, node_t *node)
 {
+    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
 	return;
 
     for (f = node->faces; f; f = f->next) {
+	if (texinfo[f->texturenum].flags & TEX_SKIP)
+	    continue;
 	ent->lumps[BSPFACE].count++;
 	ent->lumps[BSPVERTEX].count += f->w.numpoints;
     }
