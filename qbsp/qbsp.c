@@ -118,7 +118,8 @@ ProcessEntity(mapentity_t *ent, const int hullnum)
 	    }
 	}
 	Message(msgStat, "%5i brushes", ent->numbrushes - detailcount);
-	Message(msgStat, "%5i detail", detailcount);
+	if (detailcount)
+	    Message(msgStat, "%5i detail", detailcount);
     } else {
 	Message(msgStat, "%5i brushes", ent->numbrushes);
     }
