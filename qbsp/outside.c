@@ -30,10 +30,9 @@ typedef struct {
     const portal_t **portals;	/* Portals traversed by leak line */
     int numportals;
     int maxportals;
+    FILE *ptsfile;
+    FILE *porfile;
 } leakstate_t;
-
-static FILE *LeakFile;
-static FILE *PorFile;
 
 /*
 ===========
@@ -74,7 +73,7 @@ PlaceOccupant(int num, const vec3_t point, node_t *headnode)
 
 
 static void
-WriteLeakNode(const node_t *node)
+WriteLeakNode(FILE *porfile, const node_t *node)
 {
     const portal_t *portal;
     int i, side, count;
@@ -93,7 +92,7 @@ WriteLeakNode(const node_t *node)
     }
 
     if (options.fBspleak)
-	fprintf(PorFile, "%i\n", count);
+	fprintf(porfile, "%i\n", count);
 
     for (portal = node->portals; portal; portal = portal->next[!side]) {
 	side = (portal->nodes[0] == node);
@@ -102,12 +101,12 @@ WriteLeakNode(const node_t *node)
 	if (portal->nodes[side]->contents == CONTENTS_SKY)
 	    continue;
 	if (options.fBspleak) {
-	    fprintf(PorFile, "%i ", portal->winding->numpoints);
+	    fprintf(porfile, "%i ", portal->winding->numpoints);
 	    for (i = 0; i < portal->winding->numpoints; i++) {
 		const vec_t *point = portal->winding->points[i];
-		fprintf(PorFile, "%f %f %f ", point[0], point[1], point[2]);
+		fprintf(porfile, "%f %f %f ", point[0], point[1], point[2]);
 	    }
-	    fprintf(PorFile, "\n");
+	    fprintf(porfile, "\n");
 	}
     }
 }
@@ -115,11 +114,11 @@ WriteLeakNode(const node_t *node)
 
 /*
 ===============
-PrintLeakTrail
+WriteLeakTrail
 ===============
 */
 static void
-PrintLeakTrail(const vec3_t point1, const vec3_t point2)
+WriteLeakTrail(FILE *leakfile, const vec3_t point1, const vec3_t point2)
 {
     vec3_t vector, trail;
     vec_t dist;
@@ -129,7 +128,7 @@ PrintLeakTrail(const vec3_t point1, const vec3_t point2)
 
     VectorCopy(point1, trail);
     while (dist > options.dxLeakDist) {
-	fprintf(LeakFile, "%f %f %f\n", trail[0], trail[1], trail[2]);
+	fprintf(leakfile, "%f %f %f\n", trail[0], trail[1], trail[2]);
 	VectorMA(trail, options.dxLeakDist, vector, trail);
 	dist -= options.dxLeakDist;
     }
@@ -159,19 +158,19 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
 	/* Write the header if needed */
 	if (!leak->header) {
 	    const vec_t *origin = leak->entity->origin;
-	    fprintf(PorFile, "%f %f %f\n", origin[0], origin[1], origin[2]);
-	    WriteLeakNode(leak->node);
+	    fprintf(leak->porfile, "%f %f %f\n", origin[0], origin[1], origin[2]);
+	    WriteLeakNode(leak->porfile, leak->node);
 	    leak->header = true;
 	}
 
 	/* Write the portal center and winding */
-	fprintf(PorFile, "%f %f %f ", point1[0], point1[1], point1[2]);
-	fprintf(PorFile, "%i ", portal2->winding->numpoints);
+	fprintf(leak->porfile, "%f %f %f ", point1[0], point1[1], point1[2]);
+	fprintf(leak->porfile, "%i ", portal2->winding->numpoints);
 	for (i = 0; i < portal2->winding->numpoints; i++) {
 	    const vec_t *point = portal2->winding->points[i];
-	    fprintf(PorFile, "%f %f %f ", point[0], point[1], point[2]);
+	    fprintf(leak->porfile, "%f %f %f ", point[0], point[1], point[2]);
 	}
-	fprintf(PorFile, "\n");
+	fprintf(leak->porfile, "\n");
 	leak->numwritten++;
     }
 
@@ -180,7 +179,7 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
 
     portal1 = leak->portals[leak->numportals - 2];
     MidpointWinding(portal1->winding, point2);
-    PrintLeakTrail(point1, point2);
+    WriteLeakTrail(leak->ptsfile, point1, point2);
 }
 
 /*
@@ -192,7 +191,7 @@ of the faces in the node, false if it does.
 =================
 */
 static bool
-LineIntersect_r(node_t *node, const vec3_t point1, const vec3_t point2)
+LineIntersect_r(const node_t *node, const vec3_t point1, const vec3_t point2)
 {
     // Process this node's faces if leaf node
     if (node->contents) {
@@ -301,7 +300,7 @@ SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
 
 	portal2 = leak->portals[j];
 	MidpointWinding(portal2->winding, point2);
-	PrintLeakTrail(point1, point2);
+	WriteLeakTrail(leak->ptsfile, point1, point2);
 
 	i = j;
 	portal1 = leak->portals[i];
@@ -445,20 +444,20 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	StripExtension(options.szBSPName);
 	strcat(options.szBSPName, ".pts");
 
-	LeakFile = fopen(options.szBSPName, "wt");
-	if (LeakFile == NULL)
+	leak.ptsfile = fopen(options.szBSPName, "wt");
+	if (leak.ptsfile == NULL)
 	    Error(errOpenFailed, options.szBSPName, strerror(errno));
 
 	if (options.fBspleak) {
 	    StripExtension(options.szBSPName);
 	    strcat(options.szBSPName, ".por");
 
-	    PorFile = fopen(options.szBSPName, "wt");
-	    if (PorFile == NULL)
+	    leak.porfile = fopen(options.szBSPName, "wt");
+	    if (leak.porfile == NULL)
 		Error(errOpenFailed, options.szBSPName, strerror(errno));
 
 	    /* ??? "make room for the count" */
-	    fprintf(PorFile, "PLACEHOLDER\r\n");
+	    fprintf(leak.porfile, "PLACEHOLDER\r\n");
 	}
     }
 
@@ -485,14 +484,14 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	// heh slight little kludge thing
 	StripExtension(options.szBSPName);
 	Message(msgLiteral, "Leak file written to %s.pts\n", options.szBSPName);
-	fclose(LeakFile);
+	fclose(leak.ptsfile);
 
 	if (options.fBspleak) {
 	    Message(msgLiteral, "BSP portal file written to %s.por\n",
 		    options.szBSPName);
-	    fseek(PorFile, 0, SEEK_SET);
-	    fprintf(PorFile, "%11i", leak.numwritten);
-	    fclose(PorFile);
+	    fseek(leak.porfile, 0, SEEK_SET);
+	    fprintf(leak.porfile, "%11i", leak.numwritten);
+	    fclose(leak.porfile);
 	}
 	FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
 	map.leakfile = true;
@@ -506,7 +505,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 
     if (!map.leakfile) {
 	FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
-	fclose(LeakFile);
+	fclose(leak.ptsfile);
 
 	// Get rid of 0-byte .pts file
 	StripExtension(options.szBSPName);
@@ -514,9 +513,9 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	remove(options.szBSPName);
 
 	if (options.fBspleak) {
-	    fseek(PorFile, 0, SEEK_SET);
-	    fprintf(PorFile, "%11i", leak.numwritten);
-	    fclose(PorFile);
+	    fseek(leak.porfile, 0, SEEK_SET);
+	    fprintf(leak.porfile, "%11i", leak.numwritten);
+	    fclose(leak.porfile);
 	}
     }
 
