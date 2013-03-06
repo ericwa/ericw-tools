@@ -342,12 +342,12 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 		    /* Don't penalize for splitting skip faces */
 		    if (flags & TEX_SKIP)
 			continue;
-		    /* Never split a hint face except with a hint */
-		    if (!hintsplit && (flags & TEX_HINT)) {
-			splits = INT_MAX;
-			break;
-		    }
 		    if (FaceSide(face, plane) == SIDE_ON) {
+			/* Never split a hint face except with a hint */
+			if (!hintsplit && (flags & TEX_HINT)) {
+			    splits = INT_MAX;
+			    break;
+			}
 			splits++;
 			if (splits >= minsplits)
 			    break;
