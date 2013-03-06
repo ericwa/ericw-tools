@@ -25,7 +25,7 @@ typedef struct {
     bool header;		/* Flag true once header has been written */
     int backdraw;		/* Limit the length of the leak line */
     int numwritten;		/* Number of portals written to .por file */
-    int entity;			/* Entity that outside filling reached */
+    const mapentity_t *entity;	/* Entity that outside filling reached */
     const node_t *node;		/* Node where entity was reached */
     const portal_t **portals;	/* Portals traversed by leak line */
     int numportals;
@@ -148,7 +148,6 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *n2)
     int i;
     vec3_t p1, p2;
     const portal_t *n1;
-    vec_t *v;
 
     if (leak->numportals >= leak->maxportals)
 	Error(errLowLeakCount);
@@ -160,8 +159,8 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *n2)
     if (options.fBspleak) {
 	/* Write the header if needed */
 	if (!leak->header) {
-	    v = map.entities[leak->entity].origin;
-	    fprintf(PorFile, "%f %f %f\n", v[0], v[1], v[2]);
+	    const vec_t *origin = leak->entity->origin;
+	    fprintf(PorFile, "%f %f %f\n", origin[0], origin[1], origin[2]);
 	    WriteLeakNode(leak->node);
 	    leak->header = true;
 	}
@@ -169,9 +168,10 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *n2)
 	/* Write the portal center and winding */
 	fprintf(PorFile, "%f %f %f ", p1[0], p1[1], p1[2]);
 	fprintf(PorFile, "%i ", n2->winding->numpoints);
-	for (i = 0; i < n2->winding->numpoints; i++)
-	    fprintf(PorFile, "%f %f %f ", n2->winding->points[i][0],
-		    n2->winding->points[i][1], n2->winding->points[i][2]);
+	for (i = 0; i < n2->winding->numpoints; i++) {
+	    const vec_t *point = n2->winding->points[i];
+	    fprintf(PorFile, "%f %f %f ", point[0], point[1], point[2]);
+	}
 	fprintf(PorFile, "\n");
 	leak->numwritten++;
     }
@@ -324,7 +324,7 @@ FindLeaks_r(leakstate_t *leak, const int fillmark, node_t *node)
 	return false;
 
     if (node->occupied) {
-	leak->entity = node->occupied;
+	leak->entity = &map.entities[node->occupied];
 	leak->node = node;
 	leak->backdraw = 4000;
 	return true;
@@ -416,7 +416,6 @@ bool
 FillOutside(node_t *node, const int hullnum, const int numportals)
 {
     int i, side, outleafs;
-    vec_t *v;
     bool inside, leak_found;
     leakstate_t leak;
     const mapentity_t *entity;
@@ -469,7 +468,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     leak.backdraw = 0;
     leak.header = false;
     leak.numwritten = 0;
-    leak.entity = 0;
+    leak.entity = NULL;
     leak.numportals = 0;
 
     /* first check to see if an occupied leaf is hit */
@@ -477,8 +476,8 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     fillnode = outside_node.portals->nodes[side];
     leak_found = FindLeaks_r(&leak, ++map.fillmark, fillnode);
     if (leak_found) {
-	v = map.entities[leak.entity].origin;
-	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
+	const vec_t *origin = leak.entity->origin;
+	Message(msgWarning, warnMapLeak, origin[0], origin[1], origin[2]);
 	if (map.leakfile)
 	    return false;
 
