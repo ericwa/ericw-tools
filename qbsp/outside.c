@@ -22,10 +22,11 @@
 #include "qbsp.h"
 
 typedef struct {
-    bool header;	/* Flag true once header has been written */
-    int numportals;	/* Number of portals written to .por file */
-    int entity;		/* Entity number that outside filling reached */
-    portal_t **leaks;
+    bool header;		/* Flag true once header has been written */
+    int numportals;		/* Number of portals written to .por file */
+    int entity;			/* Entity that outside filling reached */
+    const node_t *leaknode;	/* Node where entity was reached */
+    const portal_t **leaks;
     int numleaks;
 } bspleak_t;
 
@@ -43,7 +44,6 @@ typedef struct {
 
 static FILE *LeakFile;
 static FILE *PorFile;
-static node_t *leakNode = NULL;
 
 /*
 ===========
@@ -84,7 +84,7 @@ PlaceOccupant(int num, const vec3_t point, node_t *headnode)
 
 
 static void
-WriteLeakNode(node_t *n)
+WriteLeakNode(const node_t *n)
 {
     portal_t *p;
     int side;
@@ -153,11 +153,11 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(bspleak_t *bspleak, const fillparms_t *parms, portal_t *n2)
+MarkLeakTrail(bspleak_t *bspleak, const fillparms_t *parms, const portal_t *n2)
 {
     int i;
     vec3_t p1, p2;
-    portal_t *n1;
+    const portal_t *n1;
     vec_t *v;
 
     if (bspleak->numleaks > parms->numportals)
@@ -172,7 +172,7 @@ MarkLeakTrail(bspleak_t *bspleak, const fillparms_t *parms, portal_t *n2)
 	if (!bspleak->header) {
 	    v = map.entities[bspleak->entity].origin;
 	    fprintf(PorFile, "%f %f %f\n", v[0], v[1], v[2]);
-	    WriteLeakNode(leakNode);
+	    WriteLeakNode(bspleak->leaknode);
 	    bspleak->header = true;
 	}
 
@@ -344,7 +344,7 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 
     if (node->occupied) {
 	state->bspleak.entity = node->occupied;
-	leakNode = node;
+	state->bspleak.leaknode = node;
 	state->backdraw = 4000;
 	return true;
     }
