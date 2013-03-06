@@ -43,13 +43,13 @@ PointInLeaf
 static node_t *
 PointInLeaf(node_t *node, const vec3_t point)
 {
-    vec_t d;
+    vec_t dist;
     const plane_t *plane;
 
     while (!node->contents) {
 	plane = &map.planes[node->planenum];
-	d = DotProduct(plane->normal, point) - plane->dist;
-	node = (d > 0) ? node->children[0] : node->children[1];
+	dist = DotProduct(plane->normal, point) - plane->dist;
+	node = (dist > 0) ? node->children[0] : node->children[1];
     }
 
     return node;
@@ -63,12 +63,12 @@ PlaceOccupant
 static bool
 PlaceOccupant(int num, const vec3_t point, node_t *headnode)
 {
-    node_t *n;
+    node_t *node;
 
-    n = PointInLeaf(headnode, point);
-    if (n->contents == CONTENTS_SOLID)
+    node = PointInLeaf(headnode, point);
+    if (node->contents == CONTENTS_SOLID)
 	return false;
-    n->occupied = num;
+    node->occupied = num;
     return true;
 }
 
@@ -141,18 +141,18 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(leakstate_t *leak, const portal_t *n2)
+MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
 {
     int i;
-    vec3_t p1, p2;
-    const portal_t *n1;
+    vec3_t point1, point2;
+    const portal_t *portal1;
 
     if (leak->numportals >= leak->maxportals)
 	Error(errLowLeakCount);
 
-    leak->portals[leak->numportals++] = n2;
+    leak->portals[leak->numportals++] = portal2;
 
-    MidpointWinding(n2->winding, p1);
+    MidpointWinding(portal2->winding, point1);
 
     if (options.fBspleak) {
 	/* Write the header if needed */
@@ -164,10 +164,10 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *n2)
 	}
 
 	/* Write the portal center and winding */
-	fprintf(PorFile, "%f %f %f ", p1[0], p1[1], p1[2]);
-	fprintf(PorFile, "%i ", n2->winding->numpoints);
-	for (i = 0; i < n2->winding->numpoints; i++) {
-	    const vec_t *point = n2->winding->points[i];
+	fprintf(PorFile, "%f %f %f ", point1[0], point1[1], point1[2]);
+	fprintf(PorFile, "%i ", portal2->winding->numpoints);
+	for (i = 0; i < portal2->winding->numpoints; i++) {
+	    const vec_t *point = portal2->winding->points[i];
 	    fprintf(PorFile, "%f %f %f ", point[0], point[1], point[2]);
 	}
 	fprintf(PorFile, "\n");
@@ -177,9 +177,9 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *n2)
     if (leak->numportals < 2 || !options.fOldleak)
 	return;
 
-    n1 = leak->portals[leak->numportals - 2];
-    MidpointWinding(n1->winding, p2);
-    PrintLeakTrail(p1, p2);
+    portal1 = leak->portals[leak->numportals - 2];
+    MidpointWinding(portal1->winding, point2);
+    PrintLeakTrail(point1, point2);
 }
 
 static vec3_t v1, v2;
@@ -193,22 +193,22 @@ in the node, false if it does.
 =================
 */
 static bool
-LineIntersect_r(node_t *n)
+LineIntersect_r(node_t *node)
 {
     // Process this node's faces if leaf node
-    if (n->contents) {
-	face_t *f, **fp;
+    if (node->contents) {
+	face_t *const *markfaces;
+	const face_t *face;
 	vec_t dist1, dist2;
 	vec3_t dir;
 	vec3_t mid, mins, maxs;
-	plane_t *p;
 	int i, j;
 
-	for (fp = n->markfaces; *fp; fp++) {
-	    for (f = *fp; f; f = f->original) {
-		p = &map.planes[f->planenum];
-		dist1 = DotProduct(v1, p->normal) - p->dist;
-		dist2 = DotProduct(v2, p->normal) - p->dist;
+	for (markfaces = node->markfaces; *markfaces; markfaces++) {
+	    for (face = *markfaces; face; face = face->original) {
+		const plane_t *plane = &map.planes[face->planenum];
+		dist1 = DotProduct(v1, plane->normal) - plane->dist;
+		dist2 = DotProduct(v2, plane->normal) - plane->dist;
 
 		// Line segment doesn't cross the plane
 		if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
@@ -232,12 +232,12 @@ LineIntersect_r(node_t *n)
 		// Quick hack
 		mins[0] = mins[1] = mins[2] = VECT_MAX;
 		maxs[0] = maxs[1] = maxs[2] = -VECT_MAX;
-		for (i = 0; i < f->w.numpoints; i++)
+		for (i = 0; i < face->w.numpoints; i++)
 		    for (j = 0; j < 3; j++) {
-			if (f->w.points[i][j] < mins[j])
-			    mins[j] = f->w.points[i][j];
-			if (f->w.points[i][j] > maxs[j])
-			    maxs[j] = f->w.points[i][j];
+			if (face->w.points[i][j] < mins[j])
+			    mins[j] = face->w.points[i][j];
+			if (face->w.points[i][j] > maxs[j])
+			    maxs[j] = face->w.points[i][j];
 		    }
 
 		if (mid[0] < mins[0] - ON_EPSILON ||
@@ -252,17 +252,17 @@ LineIntersect_r(node_t *n)
 	    }
 	}
     } else {
-	const plane_t *p = &map.planes[n->planenum];
-	const vec_t dist1 = DotProduct(v1, p->normal) - p->dist;
-	const vec_t dist2 = DotProduct(v2, p->normal) - p->dist;
+	const plane_t *plane = &map.planes[node->planenum];
+	const vec_t dist1 = DotProduct(v1, plane->normal) - plane->dist;
+	const vec_t dist2 = DotProduct(v2, plane->normal) - plane->dist;
 
 	if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
-	    return LineIntersect_r(n->children[1]);
+	    return LineIntersect_r(node->children[1]);
 	if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
-	    return LineIntersect_r(n->children[0]);
-	if (!LineIntersect_r(n->children[0]))
+	    return LineIntersect_r(node->children[0]);
+	if (!LineIntersect_r(node->children[0]))
 	    return false;
-	if (!LineIntersect_r(n->children[1]))
+	if (!LineIntersect_r(node->children[1]))
 	    return false;
     }
 
@@ -279,32 +279,32 @@ static void
 SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
 {
     int i, j;
-    const portal_t *p1, *p2;
+    const portal_t *portal1, *portal2;
 
     if (leak->numportals < 2)
 	return;
 
     i = 0;
-    p1 = leak->portals[i];
+    portal1 = leak->portals[i];
 
     while (i < leak->numportals - 1) {
-	MidpointWinding(p1->winding, v1);
+	MidpointWinding(portal1->winding, v1);
 	j = leak->numportals - 1;
 	while (j > i + 1) {
-	    p2 = leak->portals[j];
-	    MidpointWinding(p2->winding, v2);
+	    portal2 = leak->portals[j];
+	    MidpointWinding(portal2->winding, v2);
 	    if (LineIntersect_r(headnode))
 		break;
 	    else
 		j--;
 	}
 
-	p2 = leak->portals[j];
-	MidpointWinding(p2->winding, v2);
+	portal2 = leak->portals[j];
+	MidpointWinding(portal2->winding, v2);
 	PrintLeakTrail(v1, v2);
 
 	i = j;
-	p1 = leak->portals[i];
+	portal1 = leak->portals[i];
     }
 }
 
@@ -384,7 +384,7 @@ ClearOutFaces
 static void
 ClearOutFaces(node_t *node)
 {
-    face_t **fp;
+    face_t **markfaces;
 
     if (node->planenum != -1) {
 	ClearOutFaces(node->children[0]);
@@ -394,9 +394,9 @@ ClearOutFaces(node_t *node)
     if (node->contents != CONTENTS_SOLID)
 	return;
 
-    for (fp = node->markfaces; *fp; fp++) {
+    for (markfaces = node->markfaces; *markfaces; markfaces++) {
 	// mark all the original faces that are removed
-	(*fp)->w.numpoints = 0;
+	(*markfaces)->w.numpoints = 0;
     }
     node->faces = NULL;
 }
