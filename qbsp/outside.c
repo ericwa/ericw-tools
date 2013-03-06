@@ -37,11 +37,6 @@ typedef struct {
     bspleak_t bspleak;	/* State for writing the .por file */
 } fillstate_t;
 
-typedef struct {
-    bool fill;
-    int fillmark;
-} fillparms_t;
-
 static FILE *LeakFile;
 static FILE *PorFile;
 
@@ -321,25 +316,16 @@ SimplifyLeakline(const bspleak_t *bspleak, node_t *headnode)
 }
 
 
-/*
-==================
-RecursiveFillOutside
-
-If fill is false, just check, don't fill
-Returns true if an occupied leaf is reached
-==================
-*/
 static bool
-RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
+FindLeaks_r(fillstate_t *state, const int fillmark, node_t *node)
 {
-    portal_t *p;
+    portal_t *portal;
     int side;
     bool leak;
 
     if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
 	return false;
-
-    if (node->fillmark == parms->fillmark)
+    if (node->fillmark == fillmark)
 	return false;
 
     if (node->occupied) {
@@ -349,27 +335,49 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 	return true;
     }
 
-    node->fillmark = parms->fillmark;
+    /* Mark this node so we don't visit it again */
+    node->fillmark = fillmark;
 
-    // fill it and it's neighbors
-    if (parms->fill) {
-	node->contents = CONTENTS_SOLID;
-	state->outleafs++;
-    }
-
-    for (p = node->portals; p; p = p->next[!side]) {
-	side = (p->nodes[0] == node);
-	leak = RecursiveFillOutside(state, parms, p->nodes[side]);
+    for (portal = node->portals; portal; portal = portal->next[!side]) {
+	side = (portal->nodes[0] == node);
+	leak = FindLeaks_r(state, fillmark, portal->nodes[side]);
 	if (leak) {
 	    if (map.leakfile || !state->bspleak.backdraw)
 		return true;
 	    state->bspleak.backdraw--;
-	    MarkLeakTrail(&state->bspleak, p);
+	    MarkLeakTrail(&state->bspleak, portal);
 	    return true;
 	}
     }
 
     return false;
+}
+
+/*
+==================
+RecursiveFillOutside
+Already assumed here that we have checked for leaks, so just fill
+==================
+*/
+static void
+FillOutside_r(fillstate_t *state, const int fillmark, node_t *node)
+{
+    portal_t *portal;
+    int side;
+
+    if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
+	return;
+    if (node->fillmark == fillmark)
+	return;
+
+    node->fillmark = fillmark;
+    node->contents = CONTENTS_SOLID;
+    state->outleafs++;
+
+    for (portal = node->portals; portal; portal = portal->next[!side]) {
+	side = (portal->nodes[0] == node);
+	FillOutside_r(state, fillmark, portal->nodes[side]);
+    }
 }
 
 /*
@@ -415,7 +423,6 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     int i;
     bool inside, leak;
     fillstate_t fillstate;
-    fillparms_t fillparms;
     const mapentity_t *entity;
     node_t *fillnode;
 
@@ -472,12 +479,9 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     fillstate.bspleak.numleaks = 0;
 
     /* first check to see if an occupied leaf is hit */
-    fillparms.fill = false;
-    fillparms.fillmark = ++map.fillmark;
     side = !(outside_node.portals->nodes[1] == &outside_node);
     fillnode = outside_node.portals->nodes[side];
-
-    leak = RecursiveFillOutside(&fillstate, &fillparms, fillnode);
+    leak = FindLeaks_r(&fillstate, ++map.fillmark, fillnode);
     if (leak) {
 	v = map.entities[fillstate.bspleak.entity].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
@@ -526,10 +530,8 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     /* now go back and fill things in */
-    fillparms.fill = true;
-    fillparms.fillmark = ++map.fillmark;
     fillnode = outside_node.portals->nodes[side];
-    RecursiveFillOutside(&fillstate, &fillparms, fillnode);
+    FillOutside_r(&fillstate, ++map.fillmark, fillnode);
 
     /* remove faces from filled in leafs */
     ClearOutFaces(node);
