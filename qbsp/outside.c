@@ -25,6 +25,8 @@ typedef struct {
     bool header;	/* Flag true once header has been written */
     int numportals;	/* Number of portals written to .por file */
     int entity;		/* Entity number that outside filling reached */
+    portal_t **leaks;
+    int numleaks;
 } bspleak_t;
 
 typedef struct {
@@ -42,9 +44,6 @@ typedef struct {
 static FILE *LeakFile;
 static FILE *PorFile;
 static node_t *leakNode = NULL;
-
-static int numleaks;
-static portal_t **pLeaks;
 
 /*
 ===========
@@ -161,11 +160,10 @@ MarkLeakTrail(bspleak_t *bspleak, const fillparms_t *parms, portal_t *n2)
     portal_t *n1;
     vec_t *v;
 
-    if (numleaks > parms->numportals)
+    if (bspleak->numleaks > parms->numportals)
 	Error(errLowLeakCount);
 
-    pLeaks[numleaks] = n2;
-    numleaks++;
+    bspleak->leaks[bspleak->numleaks++] = n2;
 
     MidpointWinding(n2->winding, p1);
 
@@ -188,10 +186,10 @@ MarkLeakTrail(bspleak_t *bspleak, const fillparms_t *parms, portal_t *n2)
 	bspleak->numportals++;
     }
 
-    if (numleaks < 2 || !options.fOldleak)
+    if (bspleak->numleaks < 2 || !options.fOldleak)
 	return;
 
-    n1 = pLeaks[numleaks - 2];
+    n1 = bspleak->leaks[bspleak->numleaks - 2];
     MidpointWinding(n1->winding, p2);
     PrintLeakTrail(p1, p2);
 }
@@ -290,22 +288,22 @@ SimplifyLeakline
 =================
 */
 static void
-SimplifyLeakline(node_t *headnode)
+SimplifyLeakline(const bspleak_t *bspleak, node_t *headnode)
 {
     int i, j;
-    portal_t *p1, *p2;
+    const portal_t *p1, *p2;
 
-    if (numleaks < 2)
+    if (bspleak->numleaks < 2)
 	return;
 
     i = 0;
-    p1 = pLeaks[i];
+    p1 = bspleak->leaks[i];
 
-    while (i < numleaks - 1) {
+    while (i < bspleak->numleaks - 1) {
 	MidpointWinding(p1->winding, v1);
-	j = numleaks - 1;
+	j = bspleak->numleaks - 1;
 	while (j > i + 1) {
-	    p2 = pLeaks[j];
+	    p2 = bspleak->leaks[j];
 	    MidpointWinding(p2->winding, v2);
 	    if (LineIntersect_r(headnode))
 		break;
@@ -313,12 +311,12 @@ SimplifyLeakline(node_t *headnode)
 		j--;
 	}
 
-	p2 = pLeaks[j];
+	p2 = bspleak->leaks[j];
 	MidpointWinding(p2->winding, v2);
 	PrintLeakTrail(v1, v2);
 
 	i = j;
-	p1 = pLeaks[i];
+	p1 = bspleak->leaks[i];
     }
 }
 
@@ -442,7 +440,8 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     if (!map.leakfile) {
-	pLeaks = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
+	fillstate.bspleak.leaks =
+	    AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
 	StripExtension(options.szBSPName);
 	strcat(options.szBSPName, ".pts");
 
@@ -470,7 +469,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     fillstate.bspleak.header = false;
     fillstate.bspleak.numportals = 0;
     fillstate.bspleak.entity = 0;
-    numleaks = 0;
+    fillstate.bspleak.numleaks = 0;
 
     /* first check to see if an occupied leaf is hit */
     fillparms.fill = false;
@@ -486,7 +485,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	    return false;
 
 	if (!options.fOldleak)
-	    SimplifyLeakline(node);
+	    SimplifyLeakline(&fillstate.bspleak, node);
 
 	// heh slight little kludge thing
 	StripExtension(options.szBSPName);
@@ -510,7 +509,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     if (!map.leakfile) {
-	FreeMem(pLeaks, OTHER, sizeof(portal_t *) * numportals);
+	FreeMem(fillstate.bspleak.leaks, OTHER,	sizeof(portal_t *) * numportals);
 	fclose(LeakFile);
 
 	// Get rid of 0-byte .pts file
