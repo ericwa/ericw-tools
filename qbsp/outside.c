@@ -23,6 +23,7 @@
 
 typedef struct {
     bool header;		/* Flag true once header has been written */
+    int backdraw;		/* Limit the length of the leak line */
     int numportals;		/* Number of portals written to .por file */
     int entity;			/* Entity that outside filling reached */
     const node_t *leaknode;	/* Node where entity was reached */
@@ -33,7 +34,6 @@ typedef struct {
 
 typedef struct {
     int outleafs;	/* Count of outside leafs removed by fill process */
-    int backdraw;	/* Limit the length of the leak line */
     bspleak_t bspleak;	/* State for writing the .por file */
 } fillstate_t;
 
@@ -345,7 +345,7 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
     if (node->occupied) {
 	state->bspleak.entity = node->occupied;
 	state->bspleak.leaknode = node;
-	state->backdraw = 4000;
+	state->bspleak.backdraw = 4000;
 	return true;
     }
 
@@ -361,9 +361,9 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 	side = (p->nodes[0] == node);
 	leak = RecursiveFillOutside(state, parms, p->nodes[side]);
 	if (leak) {
-	    if (map.leakfile || !state->backdraw)
+	    if (map.leakfile || !state->bspleak.backdraw)
 		return true;
-	    state->backdraw--;
+	    state->bspleak.backdraw--;
 	    MarkLeakTrail(&state->bspleak, p);
 	    return true;
 	}
@@ -465,7 +465,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 
     /* Set up state and parameters for the recursive fill */
     fillstate.outleafs = 0;
-    fillstate.backdraw = 0;
+    fillstate.bspleak.backdraw = 0;
     fillstate.bspleak.header = false;
     fillstate.bspleak.numportals = 0;
     fillstate.bspleak.entity = 0;
