@@ -453,7 +453,7 @@ extern int csgmergefaces;
 
 surface_t *BuildSurfaces(void);
 face_t *NewFaceFromFace(face_t *in);
-void SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back);
+void SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back);
 void UpdateFaceSphere(face_t *in);
 
 //=============================================================================

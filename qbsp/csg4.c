@@ -93,7 +93,7 @@ SplitFace
 ==================
 */
 void
-SplitFace(face_t *in, plane_t *split, face_t **front, face_t **back)
+SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back)
 {
     vec_t dists[MAXEDGES + 1];
     int sides[MAXEDGES + 1];
@@ -250,7 +250,7 @@ ClipInside(int splitplane, int frontside, bool precedence)
     face_t *f, *next;
     face_t *frags[2];
     face_t *insidelist;
-    plane_t *split;
+    const plane_t *split;
 
     split = &map.planes[splitplane];
 
@@ -258,15 +258,19 @@ ClipInside(int splitplane, int frontside, bool precedence)
     for (f = inside; f; f = next) {
 	next = f->next;
 
-	if (f->planenum == splitplane) {	// exactly on, handle special
-	    if (frontside != f->planeside || precedence) {	// allways clip off opposite faceing
+	/* Handle exactly on-plane faces */
+	if (f->planenum == splitplane) {
+	    if (frontside != f->planeside || precedence) {
+		/* always clip off opposite facing */
 		frags[frontside] = NULL;
 		frags[!frontside] = f;
-	    } else {		// leave it on the outside
+	    } else {
+		/* leave it on the outside */
 		frags[frontside] = f;
 		frags[!frontside] = NULL;
 	    }
-	} else {		// proper split
+	} else {
+	    /* proper split */
 	    SplitFace(f, split, &frags[0], &frags[1]);
 	}
 
@@ -325,28 +329,37 @@ SaveOutside(bool mirror)
     }
 }
 
+static void
+FreeFaces(face_t *face)
+{
+    face_t *next;
+
+    while (face) {
+	next = face->next;
+	FreeMem(face, FACE, 1);
+	face = next;
+    }
+}
+
 /*
 ==================
-FreeInside
+KeepInsideFaces
 
-Free all the faces that got clipped out
+Keep the solid faces clipped inside a non-solid brush
 ==================
 */
 static void
-FreeInside(int contents, int cflags)
+KeepInsideFaces(face_t *face, const brush_t *brush)
 {
-    face_t *f, *next;
+    face_t *next;
 
-    for (f = inside; f; f = next) {
-	next = f->next;
-
-	if (contents != CONTENTS_SOLID) {
-	    f->contents[0] = contents;
-	    f->cflags[0] = cflags;
-	    f->next = outside;
-	    outside = f;
-	} else
-	    FreeMem(f, FACE, 1);
+    while (face) {
+	next = face->next;
+	face->contents[0] = brush->contents;
+	face->cflags[0] = brush->cflags;
+	face->next = outside;
+	outside = face;
+	face = next;
     }
 }
 
@@ -478,9 +491,9 @@ CSGFaces(const mapentity_t *entity)
 
 	    // these faces are continued in another brush, so get rid of them
 	    if (b1->contents == CONTENTS_SOLID && b2->contents <= CONTENTS_WATER)
-		FreeInside(b2->contents, b2->cflags);
+		KeepInsideFaces(inside, b2);
 	    else
-		FreeInside(CONTENTS_SOLID, 0);
+		FreeFaces(inside);
 	}
 
 	// all of the faces left in outside are real surface faces
