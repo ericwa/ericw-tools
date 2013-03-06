@@ -71,6 +71,35 @@ PlaceOccupant(int num, const vec3_t point, node_t *headnode)
     return true;
 }
 
+static FILE *
+InitPorFile(void)
+{
+    FILE *porfile;
+
+    StripExtension(options.szBSPName);
+    strcat(options.szBSPName, ".por");
+    porfile = fopen(options.szBSPName, "wt");
+    if (!porfile)
+	Error(errOpenFailed, options.szBSPName, strerror(errno));
+
+    fprintf(porfile, "PLACEHOLDER\r\n");
+
+    return porfile;
+}
+
+static FILE *
+InitPtsFile(void)
+{
+    FILE *ptsfile;
+
+    StripExtension(options.szBSPName);
+    strcat(options.szBSPName, ".pts");
+    ptsfile = fopen(options.szBSPName, "wt");
+    if (!ptsfile)
+	Error(errOpenFailed, options.szBSPName, strerror(errno));
+
+    return ptsfile;
+}
 
 static void
 WriteLeakNode(FILE *porfile, const node_t *node)
@@ -155,6 +184,9 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
     MidpointWinding(portal2->winding, point1);
 
     if (options.fBspleak) {
+	if (!leak->porfile)
+	    leak->porfile = InitPorFile();
+
 	/* Write the header if needed */
 	if (!leak->header) {
 	    const vec_t *origin = leak->entity->origin;
@@ -176,6 +208,9 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
 
     if (leak->numportals < 2 || !options.fOldleak)
 	return;
+
+    if (!leak->ptsfile)
+	leak->ptsfile = InitPtsFile();
 
     portal1 = leak->portals[leak->numportals - 2];
     MidpointWinding(portal1->winding, point2);
@@ -274,7 +309,7 @@ SimplifyLeakline
 =================
 */
 static void
-SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
+SimplifyLeakline(leakstate_t *leak, node_t *headnode)
 {
     int i, j;
     const portal_t *portal1, *portal2;
@@ -298,6 +333,9 @@ SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
 		j--;
 	}
 
+	if (!leak->ptsfile)
+	    leak->ptsfile = InitPtsFile();
+
 	portal2 = leak->portals[j];
 	MidpointWinding(portal2->winding, point2);
 	WriteLeakTrail(leak->ptsfile, point1, point2);
@@ -306,7 +344,6 @@ SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
 	portal1 = leak->portals[i];
     }
 }
-
 
 static bool
 FindLeaks_r(leakstate_t *leak, const int fillmark, node_t *node)
@@ -334,6 +371,7 @@ FindLeaks_r(leakstate_t *leak, const int fillmark, node_t *node)
 	side = (portal->nodes[0] == node);
 	leak_found = FindLeaks_r(leak, fillmark, portal->nodes[side]);
 	if (leak_found) {
+	    /* If we're already written or written too much, bail */
 	    if (map.leakfile || !leak->backdraw)
 		return true;
 	    leak->backdraw--;
@@ -438,35 +476,21 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	return false;
     }
 
+    /* Set up state for the recursive fill */
     if (!map.leakfile) {
 	leak.portals = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
 	leak.maxportals = numportals;
-	StripExtension(options.szBSPName);
-	strcat(options.szBSPName, ".pts");
-
-	leak.ptsfile = fopen(options.szBSPName, "wt");
-	if (leak.ptsfile == NULL)
-	    Error(errOpenFailed, options.szBSPName, strerror(errno));
-
-	if (options.fBspleak) {
-	    StripExtension(options.szBSPName);
-	    strcat(options.szBSPName, ".por");
-
-	    leak.porfile = fopen(options.szBSPName, "wt");
-	    if (leak.porfile == NULL)
-		Error(errOpenFailed, options.szBSPName, strerror(errno));
-
-	    /* ??? "make room for the count" */
-	    fprintf(leak.porfile, "PLACEHOLDER\r\n");
-	}
+    } else {
+	leak.portals = NULL;
+	leak.maxportals = 0;
     }
-
-    /* Set up state and parameters for the recursive fill */
     leak.backdraw = 0;
     leak.header = false;
     leak.numwritten = 0;
     leak.entity = NULL;
     leak.numportals = 0;
+    leak.porfile = NULL;
+    leak.ptsfile = NULL;
 
     /* first check to see if an occupied leaf is hit */
     side = !(outside_node.portals->nodes[1] == &outside_node);
@@ -481,45 +505,34 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	if (!options.fOldleak)
 	    SimplifyLeakline(&leak, node);
 
-	// heh slight little kludge thing
 	StripExtension(options.szBSPName);
-	Message(msgLiteral, "Leak file written to %s.pts\n", options.szBSPName);
-	fclose(leak.ptsfile);
-
-	if (options.fBspleak) {
-	    Message(msgLiteral, "BSP portal file written to %s.por\n",
+	if (leak.ptsfile) {
+	    fclose(leak.ptsfile);
+	    Message(msgLiteral, "Leak file written to %s.pts\n",
 		    options.szBSPName);
+	}
+	if (options.fBspleak && leak.porfile) {
 	    fseek(leak.porfile, 0, SEEK_SET);
 	    fprintf(leak.porfile, "%11i", leak.numwritten);
 	    fclose(leak.porfile);
+	    Message(msgLiteral, "BSP portal file written to %s.por\n",
+		    options.szBSPName);
 	}
 	FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
 	map.leakfile = true;
 
-	// Get rid of .prt file if .pts file is generated
+	/* Get rid of the .prt file since the map has a leak */
 	strcat(options.szBSPName, ".prt");
 	remove(options.szBSPName);
 
 	return false;
     }
-
-    if (!map.leakfile) {
+    if (leak.portals) {
 	FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
-	fclose(leak.ptsfile);
-
-	// Get rid of 0-byte .pts file
-	StripExtension(options.szBSPName);
-	strcat(options.szBSPName, ".pts");
-	remove(options.szBSPName);
-
-	if (options.fBspleak) {
-	    fseek(leak.porfile, 0, SEEK_SET);
-	    fprintf(leak.porfile, "%11i", leak.numwritten);
-	    fclose(leak.porfile);
-	}
+	leak.portals = NULL;
     }
 
-    /* now go back and fill things in */
+    /* now go back and fill outside with solid contents */
     fillnode = outside_node.portals->nodes[side];
     outleafs = FillOutside_r(fillnode, ++map.fillmark, 0);
 
