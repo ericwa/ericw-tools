@@ -93,6 +93,7 @@
 #define	CONTENTS_LAVA	-5
 #define	CONTENTS_SKY	-6
 #define CONTENTS_CLIP	-7	/* compiler internal use only */
+#define CONTENTS_HINT	-8	/* compiler internal use only */
 
 // Special contents flags for the compiler only
 #define CFLAGS_DETAIL	(1U << 0)
@@ -100,7 +101,7 @@
 // Texture flags
 #define	TEX_SPECIAL (1U << 0)	/* sky or liquid (no lightmap or subdivision */
 #define	TEX_SKIP    (1U << 1)	/* an invisible surface */
-
+#define TEX_HINT    (1U << 2)	/* hint surface */
 #define	MAXLIGHTMAPS	4
 
 // Ambient sounds

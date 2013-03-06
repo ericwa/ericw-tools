@@ -46,9 +46,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
 
     /* special (non-surface cached) faces don't need subdivision */
     tex = (texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data + f->texinfo;
-    if (tex->flags & TEX_SPECIAL)
-	return;
-    if (tex->flags & TEX_SKIP)
+    if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
 	return;
 
     for (axis = 0; axis < 2; axis++) {
@@ -337,7 +335,7 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node)
 	return;
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texinfo].flags & TEX_SKIP)
+	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
 	FindFaceEdges(entity, f);
     }
@@ -371,7 +369,7 @@ GrowNodeRegion_r(mapentity_t *entity, node_t *node)
     node->firstface = map.cTotal[BSPFACE];
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texinfo].flags & TEX_SKIP)
+	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
 
 	// emit a region
@@ -420,7 +418,7 @@ CountData_r(mapentity_t *entity, node_t *node)
 	return;
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texinfo].flags & TEX_SKIP)
+	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
 	entity->lumps[BSPFACE].count++;
 	entity->lumps[BSPVERTEX].count += f->w.numpoints;

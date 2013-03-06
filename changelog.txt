@@ -4,6 +4,7 @@
 * qbsp: support for Valve's 220 map format used in later Worldcraft/Hammer
 * qbsp: support func_group entities used by Radiant and similar editors
 * qbsp: surfaces with the skip texture are now removed from the compiled bsp
+* qbsp: hint brush support similar to Quake 2 for hand-tweaking the PVS
 * qbsp: fixed a problem where leak files were not written for hull0 or hull1
 * light: fixed a race condition in multithreaded coloured light processing
 * light: fixed bug preventing use of all 4 light styles in a common case

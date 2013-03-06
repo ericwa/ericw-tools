@@ -755,6 +755,8 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     mapface = mapbrush->faces;
     texname = map.miptex[texinfo[mapface->texinfo].miptex];
 
+    if (!strcasecmp(texname, "hint"))
+	return CONTENTS_HINT;
     if (!strcasecmp(texname, "clip"))
 	return CONTENTS_CLIP;
 
@@ -837,24 +839,24 @@ void
 Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 {
     const char *classname;
-    brush_t *brush, *next, *water, *solid;
+    brush_t *brush, *next, *nonsolid, *solid;
     mapbrush_t *mapbrush;
     vec3_t rotate_offset;
     int i, contents, cflags = 0;
 
     /*
      * The brush list need to be ordered:
-     * 1. detail water
-     * 2. water
+     * 1. detail nonsolid
+     * 2. nonsolid
      * 3. detail solid
      * 4. solid
      *
      * We will add func_group brushes first and detail brushes last, so we can
-     * always just put water on the head of the list, but will need to insert
-     * solid brushes between any existing water and solids on the list.
+     * always just put nonsolid on the head of the list, but will need to insert
+     * solid brushes between any existing nonsolid and solids on the list.
      */
     solid = NULL;
-    water = dst->brushes;
+    nonsolid = dst->brushes;
     classname = ValueForKey(src, "classname");
 
     /* Hipnotic rotation */
@@ -878,12 +880,18 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 		continue;
 	    contents = CONTENTS_SOLID;
 	}
+	/* "hint" brushes don't affect the collision hulls */
+	if (contents == CONTENTS_HINT) {
+	    if (hullnum)
+		continue;
+	    contents = CONTENTS_EMPTY;
+	}
 
 	/* entities never use water merging */
 	if (dst != pWorldEnt)
 	    contents = CONTENTS_SOLID;
 
-	/* water brushes don't show up in clipping hulls */
+	/* nonsolid brushes don't show up in clipping hulls */
 	if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
 	    continue;
 
@@ -895,8 +903,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	brush->contents = contents;
 	brush->cflags = cflags;
 	if (brush->contents != CONTENTS_SOLID) {
-	    brush->next = water;
-	    water = brush;
+	    brush->next = nonsolid;
+	    nonsolid = brush;
 	} else {
 	    brush->next = solid;
 	    solid = brush;
@@ -908,18 +916,18 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	Message(msgPercent, i + 1, src->nummapbrushes);
     }
 
-    /* Insert the solid brushes after the water */
-    for (brush = water; brush; brush = next) {
+    /* Insert the solid brushes after the nonsolids */
+    for (brush = nonsolid; brush; brush = next) {
 	next = brush->next;
 	if (!next || next->contents == CONTENTS_SOLID)
 	    break;
     }
     if (!brush) {
-	dst->brushes = solid; /* No water */
+	dst->brushes = solid; /* No nonsolids */
 	return;
     }
     brush->next = solid;
-    dst->brushes = water;
+    dst->brushes = nonsolid;
     if (!solid)
 	return;
 

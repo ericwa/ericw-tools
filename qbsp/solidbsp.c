@@ -294,6 +294,7 @@ static surface_t *
 ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
     int pass, splits, minsplits;
+    bool hintsplit, detailtest;
     surface_t *surf, *surf2, *bestsurface;
     vec_t distribution, bestdistribution;
     const plane_t *plane, *plane2;
@@ -301,7 +302,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
 
     /* pick the plane that splits the least */
-    minsplits = INT_MAX;
+    minsplits = INT_MAX - 1;
     bestdistribution = VECT_MAX;
     bestsurface = NULL;
 
@@ -311,13 +312,20 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	    if (surf->onnode)
 		continue;
 
+	    /*
+	     * Check that the surface has a suitable face for the current pass
+	     * and check whether this is a hint split.
+	     */
+	    detailtest = hintsplit = false;
 	    for (face = surf->faces; face; face = face->next) {
 		if (pass && (face->cflags[1] & CFLAGS_DETAIL))
-		    break;
+		    detailtest = true;
 		if (!pass && !(face->cflags[1] & CFLAGS_DETAIL))
-		    break;
+		    detailtest = true;
+		if (texinfo[face->texinfo].flags & TEX_HINT)
+		    hintsplit = true;
 	    }
-	    if (!face)
+	    if (!detailtest)
 		continue;
 
 	    plane = &map.planes[surf->planenum];
@@ -330,9 +338,15 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 		if (plane->type < 3 && plane->type == plane2->type)
 		    continue;
 		for (face = surf2->faces; face; face = face->next) {
+		    const int flags = texinfo[face->texinfo].flags;
 		    /* Don't penalize for splitting skip faces */
-		    if (texinfo[face->texinfo].flags & TEX_SKIP)
+		    if (flags & TEX_SKIP)
 			continue;
+		    /* Never split a hint face except with a hint */
+		    if (!hintsplit && (flags & TEX_HINT)) {
+			splits = INT_MAX;
+			break;
+		    }
 		    if (FaceSide(face, plane) == SIDE_ON) {
 			splits++;
 			if (splits >= minsplits)

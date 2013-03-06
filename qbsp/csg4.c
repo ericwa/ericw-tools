@@ -490,7 +490,7 @@ CSGFaces(const mapentity_t *entity)
 		ClipInside(f->planenum, f->planeside, overwrite);
 
 	    // these faces are continued in another brush, so get rid of them
-	    if (b1->contents == CONTENTS_SOLID && b2->contents <= CONTENTS_WATER)
+	    if (b1->contents == CONTENTS_SOLID && b2->contents != CONTENTS_SOLID)
 		KeepInsideFaces(inside, b2);
 	    else
 		FreeFaces(inside);

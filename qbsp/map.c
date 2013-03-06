@@ -76,6 +76,8 @@ FindTexinfo(texinfo_t *texinfo)
 	    texinfo->flags |= TEX_SPECIAL;
     if (!strcasecmp(texname, "skip"))
 	texinfo->flags |= TEX_SKIP;
+    if (!strcasecmp(texname, "hint"))
+	texinfo->flags |= TEX_HINT;
 
     target = pWorldEnt->lumps[BSPTEXINFO].data;
     for (index = 0; index < num_texinfo; index++, target++) {
@@ -84,8 +86,8 @@ FindTexinfo(texinfo_t *texinfo)
 	if (texinfo->flags != target->flags)
 	    continue;
 
-	/* Don't worry about texture alignment on skip surfaces */
-	if (texinfo->flags & TEX_SKIP)
+	/* Don't worry about texture alignment on skip or hint surfaces */
+	if (texinfo->flags & (TEX_SKIP | TEX_HINT))
 	    return index;
 
 	for (j = 0; j < 4; j++) {
