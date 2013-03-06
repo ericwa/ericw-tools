@@ -28,6 +28,7 @@ typedef struct {
     const node_t *leaknode;	/* Node where entity was reached */
     const portal_t **leaks;
     int numleaks;
+    int maxleaks;
 } bspleak_t;
 
 typedef struct {
@@ -39,7 +40,6 @@ typedef struct {
 typedef struct {
     bool fill;
     int fillmark;
-    int numportals;
 } fillparms_t;
 
 static FILE *LeakFile;
@@ -153,14 +153,14 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(bspleak_t *bspleak, const fillparms_t *parms, const portal_t *n2)
+MarkLeakTrail(bspleak_t *bspleak, const portal_t *n2)
 {
     int i;
     vec3_t p1, p2;
     const portal_t *n1;
     vec_t *v;
 
-    if (bspleak->numleaks > parms->numportals)
+    if (bspleak->numleaks >= bspleak->maxleaks)
 	Error(errLowLeakCount);
 
     bspleak->leaks[bspleak->numleaks++] = n2;
@@ -364,7 +364,7 @@ RecursiveFillOutside(fillstate_t *state, const fillparms_t *parms, node_t *node)
 	    if (map.leakfile || !state->backdraw)
 		return true;
 	    state->backdraw--;
-	    MarkLeakTrail(&state->bspleak, parms, p);
+	    MarkLeakTrail(&state->bspleak, p);
 	    return true;
 	}
     }
@@ -440,6 +440,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     if (!map.leakfile) {
+	fillstate.bspleak.maxleaks = numportals;
 	fillstate.bspleak.leaks =
 	    AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
 	StripExtension(options.szBSPName);
@@ -463,7 +464,6 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     /* Set up state and parameters for the recursive fill */
-    fillparms.numportals = numportals;
     fillstate.outleafs = 0;
     fillstate.backdraw = 0;
     fillstate.bspleak.header = false;
