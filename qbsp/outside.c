@@ -499,6 +499,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	    fprintf(PorFile, "%11i", fillstate.bspleak.numportals);
 	    fclose(PorFile);
 	}
+	FreeMem(fillstate.bspleak.leaks, OTHER, sizeof(portal_t *) * numportals);
 	map.leakfile = true;
 
 	// Get rid of .prt file if .pts file is generated
