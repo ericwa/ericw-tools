@@ -119,18 +119,19 @@ PrintLeakTrail
 ===============
 */
 static void
-PrintLeakTrail(vec3_t p1, vec3_t p2)
+PrintLeakTrail(const vec3_t point1, const vec3_t point2)
 {
-    vec3_t dir;
-    vec_t len;
+    vec3_t vector, trail;
+    vec_t dist;
 
-    VectorSubtract(p2, p1, dir);
-    len = VectorNormalize(dir);
+    VectorSubtract(point2, point1, vector);
+    dist = VectorNormalize(vector);
 
-    while (len > options.dxLeakDist) {
-	fprintf(LeakFile, "%f %f %f\n", p1[0], p1[1], p1[2]);
-	VectorMA(p1, options.dxLeakDist, dir, p1);
-	len -= options.dxLeakDist;
+    VectorCopy(point1, trail);
+    while (dist > options.dxLeakDist) {
+	fprintf(LeakFile, "%f %f %f\n", trail[0], trail[1], trail[2]);
+	VectorMA(trail, options.dxLeakDist, vector, trail);
+	dist -= options.dxLeakDist;
     }
 }
 
@@ -182,18 +183,16 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
     PrintLeakTrail(point1, point2);
 }
 
-static vec3_t v1, v2;
-
 /*
 =================
 LineIntersect_r
 
-Returns true if the line segment v1, v2 does not intersect any of the faces
-in the node, false if it does.
+Returns true if the line segment from point1 to point2 does not intersect any
+of the faces in the node, false if it does.
 =================
 */
 static bool
-LineIntersect_r(node_t *node)
+LineIntersect_r(node_t *node, const vec3_t point1, const vec3_t point2)
 {
     // Process this node's faces if leaf node
     if (node->contents) {
@@ -207,8 +206,8 @@ LineIntersect_r(node_t *node)
 	for (markfaces = node->markfaces; *markfaces; markfaces++) {
 	    for (face = *markfaces; face; face = face->original) {
 		const plane_t *plane = &map.planes[face->planenum];
-		dist1 = DotProduct(v1, plane->normal) - plane->dist;
-		dist2 = DotProduct(v2, plane->normal) - plane->dist;
+		dist1 = DotProduct(point1, plane->normal) - plane->dist;
+		dist2 = DotProduct(point2, plane->normal) - plane->dist;
 
 		// Line segment doesn't cross the plane
 		if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
@@ -219,13 +218,13 @@ LineIntersect_r(node_t *node)
 		if (fabs(dist1) < ON_EPSILON) {
 		    if (fabs(dist2) < ON_EPSILON)
 			return false; /* too short/close */
-		    VectorCopy(v1, mid);
+		    VectorCopy(point1, mid);
 		} else if (fabs(dist2) < ON_EPSILON) {
-		    VectorCopy(v2, mid);
+		    VectorCopy(point2, mid);
 		} else {
 		    // Find the midpoint on the plane of the face
-		    VectorSubtract(v2, v1, dir);
-		    VectorMA(v1, dist1 / (dist1 - dist2), dir, mid);
+		    VectorSubtract(point2, point1, dir);
+		    VectorMA(point1, dist1 / (dist1 - dist2), dir, mid);
 		}
 
 		// Do test here for point in polygon (face)
@@ -253,16 +252,16 @@ LineIntersect_r(node_t *node)
 	}
     } else {
 	const plane_t *plane = &map.planes[node->planenum];
-	const vec_t dist1 = DotProduct(v1, plane->normal) - plane->dist;
-	const vec_t dist2 = DotProduct(v2, plane->normal) - plane->dist;
+	const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
+	const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
 
 	if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
-	    return LineIntersect_r(node->children[1]);
+	    return LineIntersect_r(node->children[1], point1, point2);
 	if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
-	    return LineIntersect_r(node->children[0]);
-	if (!LineIntersect_r(node->children[0]))
+	    return LineIntersect_r(node->children[0], point1, point2);
+	if (!LineIntersect_r(node->children[0], point1, point2))
 	    return false;
-	if (!LineIntersect_r(node->children[1]))
+	if (!LineIntersect_r(node->children[1], point1, point2))
 	    return false;
     }
 
@@ -280,6 +279,7 @@ SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
 {
     int i, j;
     const portal_t *portal1, *portal2;
+    vec3_t point1, point2;
 
     if (leak->numportals < 2)
 	return;
@@ -288,20 +288,20 @@ SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
     portal1 = leak->portals[i];
 
     while (i < leak->numportals - 1) {
-	MidpointWinding(portal1->winding, v1);
+	MidpointWinding(portal1->winding, point1);
 	j = leak->numportals - 1;
 	while (j > i + 1) {
 	    portal2 = leak->portals[j];
-	    MidpointWinding(portal2->winding, v2);
-	    if (LineIntersect_r(headnode))
+	    MidpointWinding(portal2->winding, point2);
+	    if (LineIntersect_r(headnode, point1, point2))
 		break;
 	    else
 		j--;
 	}
 
 	portal2 = leak->portals[j];
-	MidpointWinding(portal2->winding, v2);
-	PrintLeakTrail(v1, v2);
+	MidpointWinding(portal2->winding, point2);
+	PrintLeakTrail(point1, point2);
 
 	i = j;
 	portal1 = leak->portals[i];
