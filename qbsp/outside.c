@@ -24,18 +24,13 @@
 typedef struct {
     bool header;		/* Flag true once header has been written */
     int backdraw;		/* Limit the length of the leak line */
-    int numportals;		/* Number of portals written to .por file */
+    int numwritten;		/* Number of portals written to .por file */
     int entity;			/* Entity that outside filling reached */
-    const node_t *leaknode;	/* Node where entity was reached */
-    const portal_t **leaks;
-    int numleaks;
-    int maxleaks;
-} bspleak_t;
-
-typedef struct {
-    int outleafs;	/* Count of outside leafs removed by fill process */
-    bspleak_t bspleak;	/* State for writing the .por file */
-} fillstate_t;
+    const node_t *node;		/* Node where entity was reached */
+    const portal_t **portals;	/* Portals traversed by leak line */
+    int numportals;
+    int maxportals;
+} leakstate_t;
 
 static FILE *LeakFile;
 static FILE *PorFile;
@@ -148,27 +143,27 @@ MarkLeakTrail
 */
 __attribute__((noinline))
 static void
-MarkLeakTrail(bspleak_t *bspleak, const portal_t *n2)
+MarkLeakTrail(leakstate_t *leak, const portal_t *n2)
 {
     int i;
     vec3_t p1, p2;
     const portal_t *n1;
     vec_t *v;
 
-    if (bspleak->numleaks >= bspleak->maxleaks)
+    if (leak->numportals >= leak->maxportals)
 	Error(errLowLeakCount);
 
-    bspleak->leaks[bspleak->numleaks++] = n2;
+    leak->portals[leak->numportals++] = n2;
 
     MidpointWinding(n2->winding, p1);
 
     if (options.fBspleak) {
 	/* Write the header if needed */
-	if (!bspleak->header) {
-	    v = map.entities[bspleak->entity].origin;
+	if (!leak->header) {
+	    v = map.entities[leak->entity].origin;
 	    fprintf(PorFile, "%f %f %f\n", v[0], v[1], v[2]);
-	    WriteLeakNode(bspleak->leaknode);
-	    bspleak->header = true;
+	    WriteLeakNode(leak->node);
+	    leak->header = true;
 	}
 
 	/* Write the portal center and winding */
@@ -178,13 +173,13 @@ MarkLeakTrail(bspleak_t *bspleak, const portal_t *n2)
 	    fprintf(PorFile, "%f %f %f ", n2->winding->points[i][0],
 		    n2->winding->points[i][1], n2->winding->points[i][2]);
 	fprintf(PorFile, "\n");
-	bspleak->numportals++;
+	leak->numwritten++;
     }
 
-    if (bspleak->numleaks < 2 || !options.fOldleak)
+    if (leak->numportals < 2 || !options.fOldleak)
 	return;
 
-    n1 = bspleak->leaks[bspleak->numleaks - 2];
+    n1 = leak->portals[leak->numportals - 2];
     MidpointWinding(n1->winding, p2);
     PrintLeakTrail(p1, p2);
 }
@@ -283,22 +278,22 @@ SimplifyLeakline
 =================
 */
 static void
-SimplifyLeakline(const bspleak_t *bspleak, node_t *headnode)
+SimplifyLeakline(const leakstate_t *leak, node_t *headnode)
 {
     int i, j;
     const portal_t *p1, *p2;
 
-    if (bspleak->numleaks < 2)
+    if (leak->numportals < 2)
 	return;
 
     i = 0;
-    p1 = bspleak->leaks[i];
+    p1 = leak->portals[i];
 
-    while (i < bspleak->numleaks - 1) {
+    while (i < leak->numportals - 1) {
 	MidpointWinding(p1->winding, v1);
-	j = bspleak->numleaks - 1;
+	j = leak->numportals - 1;
 	while (j > i + 1) {
-	    p2 = bspleak->leaks[j];
+	    p2 = leak->portals[j];
 	    MidpointWinding(p2->winding, v2);
 	    if (LineIntersect_r(headnode))
 		break;
@@ -306,22 +301,22 @@ SimplifyLeakline(const bspleak_t *bspleak, node_t *headnode)
 		j--;
 	}
 
-	p2 = bspleak->leaks[j];
+	p2 = leak->portals[j];
 	MidpointWinding(p2->winding, v2);
 	PrintLeakTrail(v1, v2);
 
 	i = j;
-	p1 = bspleak->leaks[i];
+	p1 = leak->portals[i];
     }
 }
 
 
 static bool
-FindLeaks_r(fillstate_t *state, const int fillmark, node_t *node)
+FindLeaks_r(leakstate_t *leak, const int fillmark, node_t *node)
 {
     portal_t *portal;
     int side;
-    bool leak;
+    bool leak_found;
 
     if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
 	return false;
@@ -329,9 +324,9 @@ FindLeaks_r(fillstate_t *state, const int fillmark, node_t *node)
 	return false;
 
     if (node->occupied) {
-	state->bspleak.entity = node->occupied;
-	state->bspleak.leaknode = node;
-	state->bspleak.backdraw = 4000;
+	leak->entity = node->occupied;
+	leak->node = node;
+	leak->backdraw = 4000;
 	return true;
     }
 
@@ -340,12 +335,12 @@ FindLeaks_r(fillstate_t *state, const int fillmark, node_t *node)
 
     for (portal = node->portals; portal; portal = portal->next[!side]) {
 	side = (portal->nodes[0] == node);
-	leak = FindLeaks_r(state, fillmark, portal->nodes[side]);
-	if (leak) {
-	    if (map.leakfile || !state->bspleak.backdraw)
+	leak_found = FindLeaks_r(leak, fillmark, portal->nodes[side]);
+	if (leak_found) {
+	    if (map.leakfile || !leak->backdraw)
 		return true;
-	    state->bspleak.backdraw--;
-	    MarkLeakTrail(&state->bspleak, portal);
+	    leak->backdraw--;
+	    MarkLeakTrail(leak, portal);
 	    return true;
 	}
     }
@@ -359,25 +354,27 @@ RecursiveFillOutside
 Already assumed here that we have checked for leaks, so just fill
 ==================
 */
-static void
-FillOutside_r(fillstate_t *state, const int fillmark, node_t *node)
+static int
+FillOutside_r(node_t *node, const int fillmark, int outleafs)
 {
     portal_t *portal;
     int side;
 
     if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
-	return;
+	return outleafs;
     if (node->fillmark == fillmark)
-	return;
+	return outleafs;
 
     node->fillmark = fillmark;
     node->contents = CONTENTS_SOLID;
-    state->outleafs++;
+    outleafs++;
 
     for (portal = node->portals; portal; portal = portal->next[!side]) {
 	side = (portal->nodes[0] == node);
-	FillOutside_r(state, fillmark, portal->nodes[side]);
+	outleafs = FillOutside_r(portal->nodes[side], fillmark, outleafs);
     }
+
+    return outleafs;
 }
 
 /*
@@ -418,11 +415,10 @@ FillOutside
 bool
 FillOutside(node_t *node, const int hullnum, const int numportals)
 {
-    int side;
+    int i, side, outleafs;
     vec_t *v;
-    int i;
-    bool inside, leak;
-    fillstate_t fillstate;
+    bool inside, leak_found;
+    leakstate_t leak;
     const mapentity_t *entity;
     node_t *fillnode;
 
@@ -447,9 +443,8 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     if (!map.leakfile) {
-	fillstate.bspleak.maxleaks = numportals;
-	fillstate.bspleak.leaks =
-	    AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
+	leak.portals = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
+	leak.maxportals = numportals;
 	StripExtension(options.szBSPName);
 	strcat(options.szBSPName, ".pts");
 
@@ -471,25 +466,24 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     /* Set up state and parameters for the recursive fill */
-    fillstate.outleafs = 0;
-    fillstate.bspleak.backdraw = 0;
-    fillstate.bspleak.header = false;
-    fillstate.bspleak.numportals = 0;
-    fillstate.bspleak.entity = 0;
-    fillstate.bspleak.numleaks = 0;
+    leak.backdraw = 0;
+    leak.header = false;
+    leak.numwritten = 0;
+    leak.entity = 0;
+    leak.numportals = 0;
 
     /* first check to see if an occupied leaf is hit */
     side = !(outside_node.portals->nodes[1] == &outside_node);
     fillnode = outside_node.portals->nodes[side];
-    leak = FindLeaks_r(&fillstate, ++map.fillmark, fillnode);
-    if (leak) {
-	v = map.entities[fillstate.bspleak.entity].origin;
+    leak_found = FindLeaks_r(&leak, ++map.fillmark, fillnode);
+    if (leak_found) {
+	v = map.entities[leak.entity].origin;
 	Message(msgWarning, warnMapLeak, v[0], v[1], v[2]);
 	if (map.leakfile)
 	    return false;
 
 	if (!options.fOldleak)
-	    SimplifyLeakline(&fillstate.bspleak, node);
+	    SimplifyLeakline(&leak, node);
 
 	// heh slight little kludge thing
 	StripExtension(options.szBSPName);
@@ -500,10 +494,10 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	    Message(msgLiteral, "BSP portal file written to %s.por\n",
 		    options.szBSPName);
 	    fseek(PorFile, 0, SEEK_SET);
-	    fprintf(PorFile, "%11i", fillstate.bspleak.numportals);
+	    fprintf(PorFile, "%11i", leak.numwritten);
 	    fclose(PorFile);
 	}
-	FreeMem(fillstate.bspleak.leaks, OTHER, sizeof(portal_t *) * numportals);
+	FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
 	map.leakfile = true;
 
 	// Get rid of .prt file if .pts file is generated
@@ -514,7 +508,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     if (!map.leakfile) {
-	FreeMem(fillstate.bspleak.leaks, OTHER,	sizeof(portal_t *) * numportals);
+	FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
 	fclose(LeakFile);
 
 	// Get rid of 0-byte .pts file
@@ -524,18 +518,18 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 
 	if (options.fBspleak) {
 	    fseek(PorFile, 0, SEEK_SET);
-	    fprintf(PorFile, "%11i", fillstate.bspleak.numportals);
+	    fprintf(PorFile, "%11i", leak.numwritten);
 	    fclose(PorFile);
 	}
     }
 
     /* now go back and fill things in */
     fillnode = outside_node.portals->nodes[side];
-    FillOutside_r(&fillstate, ++map.fillmark, fillnode);
+    outleafs = FillOutside_r(fillnode, ++map.fillmark, 0);
 
     /* remove faces from filled in leafs */
     ClearOutFaces(node);
 
-    Message(msgStat, "%4i outleafs", fillstate.outleafs);
+    Message(msgStat, "%4i outleafs", outleafs);
     return true;
 }
