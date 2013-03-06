@@ -357,6 +357,12 @@ KeepInsideFaces(face_t *face, const brush_t *brush)
 	next = face->next;
 	face->contents[0] = brush->contents;
 	face->cflags[0] = brush->cflags;
+	/*
+	 * If the inside brush is empty space, inherit the outside contents.
+	 * The only brushes with empty contents currently are hint brushes.
+	 */
+	if (face->contents[1] == CONTENTS_EMPTY)
+	    face->contents[1] = brush->contents;
 	face->next = outside;
 	outside = face;
 	face = next;
