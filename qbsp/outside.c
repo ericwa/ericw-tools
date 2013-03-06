@@ -74,43 +74,41 @@ PlaceOccupant(int num, const vec3_t point, node_t *headnode)
 
 
 static void
-WriteLeakNode(const node_t *n)
+WriteLeakNode(const node_t *node)
 {
-    portal_t *p;
-    int side;
-    int i;
-    int count = 0;
+    const portal_t *portal;
+    int i, side, count;
 
-    if (!n)
+    if (!node)
 	Error(errNoLeakNode);
 
     count = 0;
-
-    for (p = n->portals; p;) {
-	side = (p->nodes[0] == n);
-	if ((p->nodes[side]->contents != CONTENTS_SOLID) &&
-	    (p->nodes[side]->contents != CONTENTS_SKY))
-	    count++;
-	p = p->next[!side];
+    for (portal = node->portals; portal; portal = portal->next[!side]) {
+	side = (portal->nodes[0] == node);
+	if (portal->nodes[side]->contents == CONTENTS_SOLID)
+	    continue;
+	if (portal->nodes[side]->contents == CONTENTS_SKY)
+	    continue;
+	count++;
     }
 
     if (options.fBspleak)
 	fprintf(PorFile, "%i\n", count);
 
-    for (p = n->portals; p;) {
-	side = (p->nodes[0] == n);
-	if ((p->nodes[side]->contents != CONTENTS_SOLID) &&
-	    (p->nodes[side]->contents != CONTENTS_SKY)) {
-	    if (options.fBspleak) {
-		fprintf(PorFile, "%i ", p->winding->numpoints);
-		for (i = 0; i < p->winding->numpoints; i++)
-		    fprintf(PorFile, "%f %f %f ", p->winding->points[i][0],
-			    p->winding->points[i][1],
-			    p->winding->points[i][2]);
-		fprintf(PorFile, "\n");
+    for (portal = node->portals; portal; portal = portal->next[!side]) {
+	side = (portal->nodes[0] == node);
+	if (portal->nodes[side]->contents == CONTENTS_SOLID)
+	    continue;
+	if (portal->nodes[side]->contents == CONTENTS_SKY)
+	    continue;
+	if (options.fBspleak) {
+	    fprintf(PorFile, "%i ", portal->winding->numpoints);
+	    for (i = 0; i < portal->winding->numpoints; i++) {
+		const vec_t *point = portal->winding->points[i];
+		fprintf(PorFile, "%f %f %f ", point[0], point[1], point[2]);
 	    }
+	    fprintf(PorFile, "\n");
 	}
-	p = p->next[!side];
     }
 }
 
