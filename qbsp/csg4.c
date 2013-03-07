@@ -30,7 +30,6 @@ Brushes that touch still need to be split at the cut point to make a tjunction
 
 */
 
-static face_t *inside, *outside;
 static int brushfaces;
 static int csgfaces;
 int csgmergefaces;
@@ -405,27 +404,28 @@ BuildSurfaces(face_t **planefaces)
 
 /*
 ==================
-CopyFacesToOutside
+CopyBrushFaces
 ==================
 */
-static void
-CopyFacesToOutside(const brush_t *brush)
+static face_t *
+CopyBrushFaces(const brush_t *brush)
 {
-    face_t *face, *newface;
+    face_t *facelist, *face, *newface;
 
-    outside = NULL;
-
+    facelist = NULL;
     for (face = brush->faces; face; face = face->next) {
 	brushfaces++;
 	newface = AllocMem(FACE, 1, true);
 	*newface = *face;
-	newface->next = outside;
 	newface->contents[0] = CONTENTS_EMPTY;
 	newface->contents[1] = brush->contents;
 	newface->cflags[0] = 0;
 	newface->cflags[1] = brush->cflags;
-	outside = newface;
+	newface->next = facelist;
+	facelist = newface;
     }
+
+    return facelist;
 }
 
 
@@ -442,7 +442,7 @@ CSGFaces(const mapentity_t *entity)
     int i;
     const brush_t *brush, *clipbrush;
     const face_t *clipface;
-    face_t **planefaces;
+    face_t *inside, *outside, **planefaces;
     bool overwrite, mirror;
     surface_t *surfaces;
     int progress = 0;
@@ -459,8 +459,7 @@ CSGFaces(const mapentity_t *entity)
      *   clipbrush => the brush we are clipping against
      */
     for (brush = entity->brushes; brush; brush = brush->next) {
-	// set outside to a copy of the brush's faces
-	CopyFacesToOutside(brush);
+	outside = CopyBrushFaces(brush);
 	overwrite = false;
 	clipbrush = entity->brushes;
 	for (; clipbrush; clipbrush = clipbrush->next) {
