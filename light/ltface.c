@@ -683,7 +683,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
  * ============
  */
 static void
-FixMinlight(lightinfo_t *l)
+FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
 {
     int i, j, k;
     vec_t *lightmap;
@@ -706,20 +706,20 @@ FixMinlight(lightinfo_t *l)
 	    return; /* oh well... FIXME - should we warn? */
 	lightmap = l->lightmaps[l->numlightstyles];
 	for (i = 0; i < l->numsurfpt; i++)
-	    lightmap[i] = worldminlight;
+	    lightmap[i] = minlight;
 	if (colored) {
 	    colormap = l->colormaps[l->numlightstyles];
 	    for (i = 0; i < l->numsurfpt; i++)
-		VectorScale(minlight_color, worldminlight / 255, colormap[i]);
+		VectorScale(mincolor, minlight / 255, colormap[i]);
 	}
 	l->lightstyles[l->numlightstyles++] = 0;
     } else {
 	for (i = 0; i < l->numsurfpt; i++) {
-	    if (lightmap[i] < worldminlight)
-		lightmap[i] = worldminlight;
+	    if (lightmap[i] < minlight)
+		lightmap[i] = minlight;
 	    if (colored) {
 		for (j = 0; j < 3; j++) {
-		    vec_t lightval = worldminlight * minlight_color[j] / 255;
+		    vec_t lightval = minlight * mincolor[j] / 255;
 		    if (colormap[i][j] < lightval)
 			colormap[i][j] = lightval;
 		}
@@ -761,11 +761,11 @@ FixMinlight(lightinfo_t *l)
 	    if (!colored)
 		continue;
 	    for (k = 0; k < 3; k++) {
-		if (colormap[j][k] < minlight_color[k]) {
+		if (colormap[j][k] < mincolor[k]) {
 		    if (!trace)
 			trace = TestLine(entity->origin, l->surfpt[j]);
 		    if (trace)
-			colormap[j][k] = minlight_color[k];
+			colormap[j][k] = mincolor[k];
 		}
 	    }
 	}
@@ -938,7 +938,7 @@ LightFace(int surfnum, const vec3_t faceoffset)
     }
 
     /* Minimum lighting */
-    FixMinlight(&l);
+    FixMinlight(&l, worldminlight, minlight_color);
 
     if (nominlimit) {
 	/* cast only negative lights */
