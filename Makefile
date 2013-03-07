@@ -14,7 +14,7 @@ OPTIMIZED_CFLAGS ?= Y# Enable compiler optimisations (if DEBUG != Y)
 TARGET_OS        ?= $(HOST_OS)
 # ============================================================================
 
-TYRUTILS_RELEASE := v0.5
+TYRUTILS_RELEASE := v0.6
 TYRUTILS_VERSION := $(shell \
 	git describe 2> /dev/null || printf '%s' $(TYRUTILS_RELEASE))
 

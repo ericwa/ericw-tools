@@ -1,4 +1,4 @@
-????-??-?? (unreleased)
+2013-03-07 TyrUtils v0.6
 
 * qbsp: respect floating point texture rotation and shift in map files
 * qbsp: support for Valve's 220 map format used in later Worldcraft/Hammer
