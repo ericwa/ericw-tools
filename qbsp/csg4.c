@@ -32,7 +32,6 @@ Brushes that touch still need to be split at the cut point to make a tjunction
 
 face_t **validfaces;
 
-
 static face_t *inside, *outside;
 static int brushfaces;
 static int csgfaces;
@@ -239,51 +238,48 @@ Clips all of the faces in the inside list, possibly moving them to the
 outside list or spliting it into a piece in each list.
 
 Faces exactly on the plane will stay inside unless overdrawn by later brush
-
-frontside is the side of the plane that holds the outside list
 =================
 */
 static void
-ClipInside(int splitplane, int frontside, bool precedence)
+ClipInside(const face_t *clipface, bool precedence,
+	   face_t **inside, face_t **outside)
 {
-    face_t *face, *next;
-    face_t *frags[2];
-    face_t *insidelist;
-    const plane_t *split;
+    face_t *face, *next, *frags[2];
+    const plane_t *splitplane;
 
-    split = &map.planes[splitplane];
+    splitplane = &map.planes[clipface->planenum];
 
-    insidelist = NULL;
-    for (face = inside; face; face = next) {
+    face = *inside;
+    *inside = NULL;
+    while (face) {
 	next = face->next;
 
 	/* Handle exactly on-plane faces */
-	if (face->planenum == splitplane) {
-	    if (frontside != face->planeside || precedence) {
+	if (face->planenum == clipface->planenum) {
+	    if (clipface->planeside != face->planeside || precedence) {
 		/* always clip off opposite facing */
-		frags[frontside] = NULL;
-		frags[!frontside] = face;
+		frags[clipface->planeside] = NULL;
+		frags[!clipface->planeside] = face;
 	    } else {
 		/* leave it on the outside */
-		frags[frontside] = face;
-		frags[!frontside] = NULL;
+		frags[clipface->planeside] = face;
+		frags[!clipface->planeside] = NULL;
 	    }
 	} else {
 	    /* proper split */
-	    SplitFace(face, split, &frags[0], &frags[1]);
+	    SplitFace(face, splitplane, &frags[0], &frags[1]);
 	}
 
-	if (frags[frontside]) {
-	    frags[frontside]->next = outside;
-	    outside = frags[frontside];
+	if (frags[clipface->planeside]) {
+	    frags[clipface->planeside]->next = *outside;
+	    *outside = frags[clipface->planeside];
 	}
-	if (frags[!frontside]) {
-	    frags[!frontside]->next = insidelist;
-	    insidelist = frags[!frontside];
+	if (frags[!clipface->planeside]) {
+	    frags[!clipface->planeside]->next = *inside;
+	    *inside = frags[!clipface->planeside];
 	}
+	face = next;
     }
-
-    inside = insidelist;
 }
 
 
@@ -449,7 +445,7 @@ CSGFaces(const mapentity_t *entity)
 {
     int i;
     const brush_t *b1, *b2;
-    const face_t *face;
+    const face_t *clipface;
     bool overwrite;
     surface_t *surfaces;
     int progress = 0;
@@ -491,8 +487,8 @@ CSGFaces(const mapentity_t *entity)
 	    outside = NULL;
 
 	    RemoveOutsideFaces(b2, &inside, &outside);
-	    for (face = b2->faces; face; face = face->next)
-		ClipInside(face->planenum, face->planeside, overwrite);
+	    for (clipface = b2->faces; clipface; clipface = clipface->next)
+		ClipInside(clipface, overwrite, &inside, &outside);
 
 	    // these faces are continued in another brush, so get rid of them
 	    if (b1->contents == CONTENTS_SOLID && b2->contents != CONTENTS_SOLID)
