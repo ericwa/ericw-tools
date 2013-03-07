@@ -369,30 +369,28 @@ KeepInsideFaces(face_t *face, const brush_t *brush)
 ==================
 BuildSurfaces
 
-Returns a chain of all the external surfaces with one or more visible
-faces.
+Returns a chain of all the surfaces for all the planes with one or more
+visible face.
 ==================
 */
 surface_t *
-BuildSurfaces(void)
+BuildSurfaces(face_t **planefaces)
 {
     int i;
-    face_t *face, **facelist;
-    surface_t *surf, *surfhead;
+    surface_t *surf, *surfaces;
+    face_t *face;
 
-    surfhead = NULL;
-
-    facelist = validfaces;
-    for (i = 0; i < map.numplanes; i++, facelist++) {
-	if (!*facelist)
+    surfaces = NULL;
+    for (i = 0; i < map.numplanes; i++, planefaces++) {
+	if (!*planefaces)
 	    continue;
 
 	/* create a new surface to hold the faces on this plane */
 	surf = AllocMem(SURFACE, 1, true);
 	surf->planenum = i;
-	surf->next = surfhead;
-	surfhead = surf;
-	surf->faces = *facelist;
+	surf->next = surfaces;
+	surfaces = surf;
+	surf->faces = *planefaces;
 	for (face = surf->faces; face; face = face->next)
 	    csgmergefaces++;
 
@@ -400,7 +398,7 @@ BuildSurfaces(void)
 	CalcSurfaceInfo(surf);
     }
 
-    return surfhead;
+    return surfaces;
 }
 
 //==========================================================================
@@ -506,7 +504,7 @@ CSGFaces(const mapentity_t *entity)
 	Message(msgPercent, progress, entity->numbrushes);
     }
 
-    surfaces = BuildSurfaces();
+    surfaces = BuildSurfaces(validfaces);
 
     Message(msgStat, "%5i brushfaces", brushfaces);
     Message(msgStat, "%5i csgfaces", csgfaces);

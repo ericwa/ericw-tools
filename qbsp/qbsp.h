@@ -452,7 +452,7 @@ int FindPlane(const plane_t *plane, int *side);
 extern face_t **validfaces;
 extern int csgmergefaces;
 
-surface_t *BuildSurfaces(void);
+surface_t *BuildSurfaces(face_t **planefaces);
 face_t *NewFaceFromFace(face_t *in);
 void SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back);
 void UpdateFaceSphere(face_t *in);
