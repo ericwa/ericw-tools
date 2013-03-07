@@ -186,7 +186,7 @@ typedef struct {
  * ================
  */
 static void
-CalcFaceVectors(lightinfo_t * l)
+CalcFaceVectors(lightinfo_t *l)
 {
     texinfo_t *tex;
     int i, j;
@@ -214,7 +214,7 @@ CalcFaceVectors(lightinfo_t * l)
 }
 
 static void
-tex_to_world(vec_t s, vec_t t, const lightinfo_t * l, vec3_t world)
+tex_to_world(vec_t s, vec_t t, const lightinfo_t *l, vec3_t world)
 {
     vec3_t rhs;
 
@@ -297,7 +297,7 @@ face_centroid(const dface_t *f, vec3_t out)
  * ================
  */
 static void
-CalcFaceExtents(lightinfo_t * l, const vec3_t faceoffset)
+CalcFaceExtents(lightinfo_t *l, const vec3_t offset)
 {
     dface_t *s;
     vec_t mins[2], maxs[2], val;
@@ -321,9 +321,9 @@ CalcFaceExtents(lightinfo_t * l, const vec3_t faceoffset)
 
 	for (j = 0; j < 2; j++) {
 	    // This is world->tex with world offset...
-	    val = (v->point[0] + faceoffset[0]) * tex->vecs[j][0]
-		+ (v->point[1] + faceoffset[1]) * tex->vecs[j][1]
-		+ (v->point[2] + faceoffset[2]) * tex->vecs[j][2]
+	    val = (v->point[0] + offset[0]) * tex->vecs[j][0]
+		+ (v->point[1] + offset[1]) * tex->vecs[j][1]
+		+ (v->point[2] + offset[2]) * tex->vecs[j][2]
 		+ tex->vecs[j][3];
 	    if (val < mins[j])
 		mins[j] = val;
@@ -336,9 +336,9 @@ CalcFaceExtents(lightinfo_t * l, const vec3_t faceoffset)
 
     for (i = 0; i < 2; i++) {
 	l->exactmid[i] =
-	      (centroid[0] + faceoffset[0]) * tex->vecs[i][0]
-	    + (centroid[1] + faceoffset[1]) * tex->vecs[i][1]
-	    + (centroid[2] + faceoffset[2]) * tex->vecs[i][2]
+	      (centroid[0] + offset[0]) * tex->vecs[i][0]
+	    + (centroid[1] + offset[1]) * tex->vecs[i][1]
+	    + (centroid[2] + offset[2]) * tex->vecs[i][2]
 	    + tex->vecs[i][3];
 
 
@@ -360,7 +360,7 @@ CalcFaceExtents(lightinfo_t * l, const vec3_t faceoffset)
  * =================
  */
 static void
-CalcPoints(lightinfo_t * l)
+CalcPoints(lightinfo_t *l)
 {
     int i;
     int s, t;
@@ -473,8 +473,7 @@ GetLightValue(const entity_t *light, vec_t distance)
  * ================
  */
 static void
-SingleLightFace(const entity_t *light, lightinfo_t * l,
-		const vec3_t faceoffset, const vec3_t colors)
+SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
 {
     vec_t dist;
     vec_t angle, spotscale;
@@ -591,7 +590,7 @@ SingleLightFace(const entity_t *light, lightinfo_t * l,
  * =============
  */
 static void
-SkyLightFace(lightinfo_t *l, const vec3_t faceoffset, const vec3_t colors)
+SkyLightFace(lightinfo_t *l, const vec3_t colors)
 {
     int i, mapnum;
     vec_t *surf;
@@ -862,7 +861,6 @@ LightFace(int surfnum, const vec3_t faceoffset)
     l.face = face;
 
     /* rotate plane */
-
     VectorCopy(dplanes[face->planenum].normal, l.facenormal);
     l.facedist = dplanes[face->planenum].dist;
     VectorScale(l.facenormal, l.facedist, point);
@@ -909,19 +907,19 @@ LightFace(int surfnum, const vec3_t faceoffset)
 	    if (colored) {
 		if (entity->light) {
 		    PositiveColors(entity->light, colors, entity->lightcolor);
-		    SingleLightFace(entity, &l, faceoffset, colors);
+		    SingleLightFace(entity, &l, colors);
 		}
 	    } else if (entity->light > 0) {
-		SingleLightFace(entity, &l, faceoffset, colors);
+		SingleLightFace(entity, &l, colors);
 	    }
 	}
 	/* cast positive sky light */
 	if (sunlight) {
 	    if (colored) {
 		PositiveColors(sunlight, sunlight_color, colors);
-		SkyLightFace(&l, faceoffset, colors);
+		SkyLightFace(&l, colors);
 	    } else if (sunlight > 0) {
-		SkyLightFace(&l, faceoffset, colors);
+		SkyLightFace(&l, colors);
 	    }
 	}
     } else {
@@ -930,11 +928,11 @@ LightFace(int surfnum, const vec3_t faceoffset)
 	    if (entity->formula == LF_LOCALMIN)
 		continue;
 	    if (entity->light)
-		SingleLightFace(entity, &l, faceoffset, entity->lightcolor);
+		SingleLightFace(entity, &l, entity->lightcolor);
 	}
 	/* cast sky light */
 	if (sunlight)
-	    SkyLightFace(&l, faceoffset, sunlight_color);
+	    SkyLightFace(&l, sunlight_color);
     }
 
     /* Minimum lighting */
@@ -948,19 +946,19 @@ LightFace(int surfnum, const vec3_t faceoffset)
 	    if (colored) {
 		if (entity->light) {
 		    NegativeColors(entity->light, colors, entity->lightcolor);
-		    SingleLightFace(entity, &l, faceoffset, colors);
+		    SingleLightFace(entity, &l, colors);
 		}
 	    } else if (entity->light < 0) {
-		SingleLightFace(entity, &l, faceoffset, colors);
+		SingleLightFace(entity, &l, colors);
 	    }
 	}
 	/* cast negative sky light */
 	if (sunlight) {
 	    if (colored) {
 		NegativeColors(sunlight, colors, sunlight_color);
-		SkyLightFace(&l, faceoffset, colors);
+		SkyLightFace(&l, colors);
 	    } else if (sunlight < 0) {
-		SkyLightFace(&l, faceoffset, colors);
+		SkyLightFace(&l, colors);
 	    }
 	}
 
