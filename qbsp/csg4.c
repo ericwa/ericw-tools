@@ -285,42 +285,40 @@ ClipInside(const face_t *clipface, bool precedence,
 
 /*
 ==================
-SaveOutside
+SaveFacesToPlaneList
 
-Saves all of the faces in the outside list to the bsp plane list
+Links the given list of faces into a mapping from plane number to faces.
+This plane map is later used to build up the surfaces for creating the BSP.
 ==================
 */
 static void
-SaveOutside(bool mirror)
+SaveFacesToPlaneList(face_t *facelist, bool mirror, face_t **planefaces)
 {
-    face_t *f, *next, *newf;
+    face_t *face, *next, *newface, **planeface;
     int i;
-    int planenum;
 
-    for (f = outside; f; f = next) {
-	next = f->next;
-	csgfaces++;
-	planenum = f->planenum;
+    for (face = facelist; face; face = next) {
+	next = face->next;
+	planeface = &planefaces[face->planenum];
 
 	if (mirror) {
-	    newf = NewFaceFromFace(f);
+	    newface = NewFaceFromFace(face);
+	    newface->w.numpoints = face->w.numpoints;
+	    newface->planeside = face->planeside ^ 1;
+	    newface->contents[0] = face->contents[1];
+	    newface->contents[1] = face->contents[0];
+	    newface->cflags[0] = face->cflags[1];
+	    newface->cflags[1] = face->cflags[0];
 
-	    newf->w.numpoints = f->w.numpoints;
-	    newf->planeside = f->planeside ^ 1;	// reverse side
-	    newf->contents[0] = f->contents[1];
-	    newf->contents[1] = f->contents[0];
-	    newf->cflags[0] = f->cflags[1];
-	    newf->cflags[1] = f->cflags[0];
+	    for (i = 0; i < face->w.numpoints; i++)
+		VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
 
-	    for (i = 0; i < f->w.numpoints; i++)	// add points backwards
-		VectorCopy(f->w.points[f->w.numpoints - 1 - i], newf->w.points[i]);
-
-	    validfaces[planenum] =
-		MergeFaceToList(newf, validfaces[planenum]);
+	    *planeface = MergeFaceToList(newface, *planeface);
 	}
+	*planeface = MergeFaceToList(face, *planeface);
+	*planeface = FreeMergeListScraps(*planeface);
 
-	validfaces[planenum] = MergeFaceToList(f, validfaces[planenum]);
-	validfaces[planenum] = FreeMergeListScraps(validfaces[planenum]);
+	csgfaces++;
     }
 }
 
@@ -446,7 +444,7 @@ CSGFaces(const mapentity_t *entity)
     int i;
     const brush_t *b1, *b2;
     const face_t *clipface;
-    bool overwrite;
+    bool overwrite, mirror;
     surface_t *surfaces;
     int progress = 0;
 
@@ -497,11 +495,12 @@ CSGFaces(const mapentity_t *entity)
 		FreeFaces(inside);
 	}
 
-	// all of the faces left in outside are real surface faces
-	if (b1->contents != CONTENTS_SOLID)
-	    SaveOutside(true);	// mirror faces for inside view
-	else
-	    SaveOutside(false);
+	/*
+	 * All of the faces left on the outside list are real surface faces
+	 * If the brush is non-solid, mirror faces for the inside view
+	 */
+	mirror = (b1->contents != CONTENTS_SOLID);
+	SaveFacesToPlaneList(outside, mirror, validfaces);
 
 	progress++;
 	Message(msgPercent, progress, entity->numbrushes);
