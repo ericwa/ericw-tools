@@ -101,9 +101,12 @@ main(int argc, char **argv)
     char source[1024];
     FILE *f;
 
-    if (argc == 1)
-	Error("usage: bsputil [--extract-entities] [--extract-textures] "
-	      "bspfile");
+    printf("---- bsputil / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
+    if (argc == 1) {
+	printf("usage: bsputil [--extract-entities] [--extract-textures] "
+	       "bspfile");
+	exit(1);
+    }
 
     strcpy(source, argv[argc - 1]);
     DefaultExtension(source, ".bsp");

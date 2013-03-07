@@ -14,6 +14,10 @@ OPTIMIZED_CFLAGS ?= Y# Enable compiler optimisations (if DEBUG != Y)
 TARGET_OS        ?= $(HOST_OS)
 # ============================================================================
 
+TYRUTILS_RELEASE := v0.5
+TYRUTILS_VERSION := $(shell \
+	git describe 2> /dev/null || printf '%s' $(TYRUTILS_RELEASE))
+
 SYSNAME := $(shell uname -s)
 
 TOPDIR := $(shell pwd)
@@ -203,14 +207,15 @@ APPS = \
 
 all:	$(patsubst %,$(BIN_DIR)/%,$(APPS))
 
-COMMON_CPPFLAGS := -I$(TOPDIR)/include -DLINUX $(DPTHREAD)
+COMMON_CPPFLAGS := -DTYRUTILS_VERSION=$(TYRUTILS_VERSION)
+COMMON_CPPFLAGS += -I$(TOPDIR)/include -DLINUX $(DPTHREAD)
 ifeq ($(DEBUG),Y)
 COMMON_CPPFLAGS += -DDEBUG
 else
 COMMON_CPPFLAGS += -DNDEBUG
 endif
 
-$(BUILD_DIR)/qbsp/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS) -DDOUBLEVEC_T -DQBSP_VERSION=$(QBSP_VERSION)
+$(BUILD_DIR)/qbsp/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS) -DDOUBLEVEC_T
 $(BUILD_DIR)/common/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
 $(BUILD_DIR)/light/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS)
 $(BUILD_DIR)/vis/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS)
@@ -298,7 +303,6 @@ $(BIN_DIR)/$(BIN_PFX)bsputil$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(BSPUTIL_OBJS))
 # Qbsp #
 ########
 
-QBSP_VERSION = 0.4
 QBSP_OBJECTS = \
 	brush.o		\
 	bspfile.o	\

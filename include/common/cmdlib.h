@@ -28,6 +28,9 @@
 #include <time.h>
 #include <stdarg.h>
 
+#define stringify__(x) #x
+#define stringify(x) stringify__(x)
+
 typedef enum { false, true } qboolean;
 typedef unsigned char byte;
 

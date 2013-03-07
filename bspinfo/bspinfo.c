@@ -27,8 +27,11 @@ main(int argc, char **argv)
     int i;
     char source[1024];
 
-    if (argc == 1)
-	Error("usage: bspinfo bspfile [bspfiles]");
+    printf("---- bspinfo / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
+    if (argc == 1) {
+	printf("usage: bspinfo bspfile [bspfiles]");
+	exit(1);
+    }
 
     for (i = 1; i < argc; i++) {
 	printf("---------------------\n");

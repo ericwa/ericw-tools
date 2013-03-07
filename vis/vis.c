@@ -1156,27 +1156,14 @@ int
 main(int argc, char **argv)
 {
     int i, bsp_version;
-    qboolean credits = false;
 
     init_log("vis.log");
-    logprint("---- TyrVis v1.0 ---- "
-#if 0
-	     "(Beta version " __DATE__ " " __TIME__ ")"
-#endif
-	     "\n");
+    logprint("---- vis / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
 
     numthreads = GetDefaultThreads();
 
     for (i = 1; i < argc; i++) {
-	if (!strcmp(argv[i], "-credits")) {
-	    logprint("Original source supplied no obligation by iD Software "
-		     "12th September 96\n"
-		     "Modification by Antony Suter, TeamFortress Software "
-		     "<antony@teamfortress.com>\n"
-		     "Additional Modification by Kevin Shanahan, Aka "
-		     "Tyrann <tyrann@disenchant.net>\n");
-	    credits = true;
-	} else if (!strcmp(argv[i], "-threads")) {
+	if (!strcmp(argv[i], "-threads")) {
 	    numthreads = atoi(argv[i + 1]);
 	    i++;
 	} else if (!strcmp(argv[i], "-fast")) {
@@ -1198,11 +1185,11 @@ main(int argc, char **argv)
 	    break;
     }
 
-    if (i == argc && credits)
-	return 0;
-    else if (i != argc - 1)
-	Error("usage: vis [-threads #] [-level 0-4] [-fast] [-v|-vv] "
-	      "[-credits] bspfile");
+    if (i != argc - 1) {
+	printf("usage: vis [-threads #] [-level 0-4] [-fast] [-v|-vv] "
+	       "[-credits] bspfile");
+	exit(1);
+    }
 
     logprint("running with %d threads\n", numthreads);
 

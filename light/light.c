@@ -186,11 +186,7 @@ main(int argc, const char **argv)
     char source[1024];
 
     init_log("light.log");
-    logprint("----- TyrLight v0.99e -----\n"
-#if 0
-	     "** Beta version " __DATE__ " " __TIME__ "\n"
-#endif
-	);
+    logprint("---- light / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
 
     numthreads = GetDefaultThreads();
 
@@ -229,15 +225,17 @@ main(int argc, const char **argv)
 	    break;
     }
 
+    if (i != argc - 1) {
+	printf("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
+	       "             [-dist n] [-range n] [-gate n] [-lit] "
+	       "             [-compress] [-nominlimit] bspfile\n");
+	exit(1);
+    }
+
     if (numthreads > 1)
 	logprint("running with %d threads\n", numthreads);
     if (colored)
 	logprint(".lit colored light output requested on command line.\n");
-
-    if (i != argc - 1)
-	Error("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
-	      "             [-dist n] [-range n] [-gate n] [-lit] [-compress]\n"
-	      "             [-nominlimit] bspfile\n");
 
     start = I_FloatTime();
 
