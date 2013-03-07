@@ -188,7 +188,7 @@ SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back)
 
 /*
 =================
-CheckInside
+RemoveOutsideFaces
 
 Quick test before running ClipInside; move any faces that are completely
 outside the brush to the outside list, without splitting them. This saves us
@@ -196,20 +196,19 @@ time in mergefaces later on (and sometimes a lot of memory)
 =================
 */
 static void
-CheckInside(const brush_t *brush)
+RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **outside)
 {
     plane_t clipplane;
     const face_t *clipface;
     face_t *face, *next;
-    face_t *insidelist;
     winding_t *w;
 
-    insidelist = NULL;
-    face = inside;
+    face = *inside;
+    *inside = NULL;
     while (face) {
 	next = face->next;
 	w = CopyWinding(&face->w);
-	for (clipface = brush->faces; clipface; clipface =clipface->next) {
+	for (clipface = brush->faces; clipface; clipface = clipface->next) {
 	    clipplane = map.planes[clipface->planenum];
 	    if (!clipface->planeside) {
 		VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
@@ -221,16 +220,15 @@ CheckInside(const brush_t *brush)
 	}
 	if (!w) {
 	    /* The face is completely outside this brush */
-	    face->next = outside;
-	    outside = face;
+	    face->next = *outside;
+	    *outside = face;
 	} else {
-	    face->next = insidelist;
-	    insidelist = face;
+	    face->next = *inside;
+	    *inside = face;
 	    FreeMem(w, WINDING, 1);
 	}
 	face = next;
     }
-    inside = insidelist;
 }
 
 /*
@@ -492,7 +490,7 @@ CSGFaces(const mapentity_t *entity)
 	    inside = outside;
 	    outside = NULL;
 
-	    CheckInside(b2);
+	    RemoveOutsideFaces(b2, &inside, &outside);
 	    for (face = b2->faces; face; face = face->next)
 		ClipInside(face->planenum, face->planeside, overwrite);
 
