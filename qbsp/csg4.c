@@ -438,7 +438,7 @@ surface_t *
 CSGFaces(const mapentity_t *entity)
 {
     int i;
-    const brush_t *b1, *b2;
+    const brush_t *brush, *clipbrush;
     const face_t *clipface;
     face_t **planefaces;
     bool overwrite, mirror;
@@ -450,22 +450,31 @@ CSGFaces(const mapentity_t *entity)
     planefaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
     csgfaces = brushfaces = csgmergefaces = 0;
 
-    // do the solid faces
-    for (b1 = entity->brushes; b1; b1 = b1->next) {
+    /*
+     * For each brush, clip away the parts that are inside other brushes.
+     * Solid brushes override non-solid brushes.
+     *   brush     => the brush to be clipped
+     *   clipbrush => the brush we are clipping against
+     */
+    for (brush = entity->brushes; brush; brush = brush->next) {
 	// set outside to a copy of the brush's faces
-	CopyFacesToOutside(b1);
+	CopyFacesToOutside(brush);
 	overwrite = false;
-	for (b2 = entity->brushes; b2; b2 = b2->next) {
-	    if (b1 == b2) {
+	clipbrush = entity->brushes;
+	for (; clipbrush; clipbrush = clipbrush->next) {
+	    if (brush == clipbrush) {
 		/* Brushes further down the list overried earlier ones */
 		overwrite = true;
 		continue;
 	    }
 
 	    /* check bounding box first */
-	    for (i = 0; i < 3; i++)
-		if (b1->mins[i] > b2->maxs[i] || b1->maxs[i] < b2->mins[i])
+	    for (i = 0; i < 3; i++) {
+		if (brush->mins[i] > clipbrush->maxs[i])
 		    break;
+		if (brush->maxs[i] < clipbrush->mins[i])
+		    break;
+	    }
 	    if (i < 3)
 		continue;
 
@@ -478,22 +487,30 @@ CSGFaces(const mapentity_t *entity)
 	    inside = outside;
 	    outside = NULL;
 
-	    RemoveOutsideFaces(b2, &inside, &outside);
-	    for (clipface = b2->faces; clipface; clipface = clipface->next)
+	    RemoveOutsideFaces(clipbrush, &inside, &outside);
+	    clipface = clipbrush->faces;
+	    for (; clipface; clipface = clipface->next)
 		ClipInside(clipface, overwrite, &inside, &outside);
 
-	    // these faces are continued in another brush, so get rid of them
-	    if (b1->contents == CONTENTS_SOLID && b2->contents != CONTENTS_SOLID)
-		KeepInsideFaces(inside, b2);
-	    else
+	    /*
+	     * If the brush is solid and the clipbrush is not, then we need to
+	     * keep the inside faces and set the outside contents to those of
+	     * the clipbrush. Otherwise, these inside surfaces are hidden and
+	     * should be discarded.
+	     */
+	    if (brush->contents != CONTENTS_SOLID)
 		FreeFaces(inside);
+	    else if (clipbrush->contents == CONTENTS_SOLID)
+		FreeFaces(inside);
+	    else
+		KeepInsideFaces(inside, clipbrush);
 	}
 
 	/*
 	 * All of the faces left on the outside list are real surface faces
 	 * If the brush is non-solid, mirror faces for the inside view
 	 */
-	mirror = (b1->contents != CONTENTS_SOLID);
+	mirror = (brush->contents != CONTENTS_SOLID);
 	SaveFacesToPlaneList(outside, mirror, planefaces);
 
 	progress++;
