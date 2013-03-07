@@ -39,12 +39,12 @@ byte *lit_filebase;		// start of litfile data
 static byte *lit_file_p;	// start of free space after litfile data
 static byte *lit_file_end;	// end of space for litfile data
 
+static vec3_t *modeloffset;
+
 int oversample = 1;
 qboolean compress_ents;
 qboolean colored;
 qboolean nominlimit;
-
-vec3_t faceoffset[MAX_MAP_FACES];
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, int size)
@@ -76,49 +76,49 @@ GetFileSpace(byte **lightdata, byte **colordata, int size)
 static void *
 LightThread(void *junk)
 {
-    int facenum;
+    int facenum, i;
+    dmodel_t *model;
 
     while (1) {
 	facenum = GetThreadWork();
 	if (facenum == -1)
-	    return NULL;
+	    break;
 
-	LightFace(facenum, faceoffset[facenum]);
+	/* Find the correct model offset */
+	for (i = 0, model = dmodels; i < nummodels; i++, model++) {
+	    if (facenum < model->firstface)
+		continue;
+	    if (facenum < model->firstface + model->numfaces)
+		break;
+	}
+	if (i == nummodels)
+	    Error("%s: no model has face %d", __func__, facenum);
+
+	LightFace(facenum, modeloffset[i]);
     }
 
     return NULL;
 }
 
 static void
-FindFaceOffsets(void)
+FindModelOffsets(void)
 {
-    int i, j;
-    entity_t *ent;
-    char name[20];
+    int i;
+    entity_t *entity;
+    char modelname[20];
     const char *classname;
-    vec3_t org;
 
+    memset(modeloffset, 0, sizeof(*modeloffset) * nummodels);
     for (i = 1; i < nummodels; i++) {
-	sprintf(name, "*%d", i);
-	ent = FindEntityWithKeyPair("model", name);
-	if (!ent)
-	    Error("%s: Couldn't find entity for model %s.\n", __func__, name);
+	snprintf(modelname, sizeof(modelname), "*%d", i);
+	entity = FindEntityWithKeyPair("model", modelname);
+	if (!entity)
+	    Error("%s: Couldn't find entity for model %s.\n", __func__,
+		  modelname);
 
-	classname = ValueForKey(ent, "classname");
-	if (!strncmp(classname, "rotate_", 7)) {
-	    int start;
-	    int end;
-
-	    GetVectorForKey(ent, "origin", org);
-
-	    start = dmodels[i].firstface;
-	    end = start + dmodels[i].numfaces;
-	    for (j = start; j < end; j++) {
-		faceoffset[j][0] = org[0];
-		faceoffset[j][1] = org[1];
-		faceoffset[j][2] = org[2];
-	    }
-	}
+	classname = ValueForKey(entity, "classname");
+	if (!strncmp(classname, "rotate_", 7))
+	    GetVectorForKey(entity, "origin", modeloffset[i]);
     }
 }
 
@@ -239,8 +239,10 @@ main(int argc, const char **argv)
 
     LoadEntities();
     MakeTnodes();
-    FindFaceOffsets();
+    modeloffset = malloc(nummodels * sizeof(*modeloffset));
+    FindModelOffsets();
     LightWorld();
+    free(modeloffset);
 
     WriteEntitiesToString();
     WriteBSPFile(source, bsp_version);
