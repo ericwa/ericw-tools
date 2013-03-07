@@ -826,7 +826,7 @@ NegativeColors(int light, vec3_t dest, const vec3_t src)
  * ============
  */
 void
-LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset)
+LightFace(int surfnum, const vec3_t faceoffset)
 {
     const entity_t *entity;
     dface_t *face;

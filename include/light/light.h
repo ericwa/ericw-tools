@@ -38,7 +38,7 @@ void LoadNodes(char *file);
 qboolean TestLine(const vec3_t start, const vec3_t stop);
 qboolean TestSky(const vec3_t start, const vec3_t dirn);
 
-void LightFace(int surfnum, qboolean nolight, const vec3_t faceoffset);
+void LightFace(int surfnum, const vec3_t faceoffset);
 void LightLeaf(dleaf_t * leaf);
 
 void MakeTnodes(void);

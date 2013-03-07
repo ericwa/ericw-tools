@@ -44,7 +44,6 @@ qboolean compress_ents;
 qboolean colored;
 qboolean nominlimit;
 
-qboolean nolightface[MAX_MAP_FACES];
 vec3_t faceoffset[MAX_MAP_FACES];
 
 void
@@ -84,7 +83,7 @@ LightThread(void *junk)
 	if (facenum == -1)
 	    return NULL;
 
-	LightFace(facenum, nolightface[facenum], faceoffset[facenum]);
+	LightFace(facenum, faceoffset[facenum]);
     }
 
     return NULL;
@@ -98,11 +97,6 @@ FindFaceOffsets(void)
     char name[20];
     const char *classname;
     vec3_t org;
-
-    memset(nolightface, 0, sizeof(nolightface));
-
-    for (j = dmodels[0].firstface; j < dmodels[0].numfaces; j++)
-	nolightface[j] = 0;
 
     for (i = 1; i < nummodels; i++) {
 	sprintf(name, "*%d", i);
@@ -120,7 +114,6 @@ FindFaceOffsets(void)
 	    start = dmodels[i].firstface;
 	    end = start + dmodels[i].numfaces;
 	    for (j = start; j < end; j++) {
-		nolightface[j] = 300;
 		faceoffset[j][0] = org[0];
 		faceoffset[j][1] = org[1];
 		faceoffset[j][2] = org[2];
