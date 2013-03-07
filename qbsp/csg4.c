@@ -334,13 +334,15 @@ FreeFaces(face_t *face)
 
 /*
 ==================
-KeepInsideFaces
+SaveInsideFaces
 
-Keep the solid faces clipped inside a non-solid brush
+Save the list of faces onto the output list, modifying the outside contents to
+match given brush. If the inside contents are empty, the given brush's
+contents override the face inside contents.
 ==================
 */
 static void
-KeepInsideFaces(face_t *face, const brush_t *brush)
+SaveInsideFaces(face_t *face, const brush_t *brush, face_t **savelist)
 {
     face_t *next;
 
@@ -354,8 +356,8 @@ KeepInsideFaces(face_t *face, const brush_t *brush)
 	 */
 	if (face->contents[1] == CONTENTS_EMPTY)
 	    face->contents[1] = brush->contents;
-	face->next = outside;
-	outside = face;
+	face->next = *savelist;
+	*savelist = face;
 	face = next;
     }
 }
@@ -503,7 +505,7 @@ CSGFaces(const mapentity_t *entity)
 	    else if (clipbrush->contents == CONTENTS_SOLID)
 		FreeFaces(inside);
 	    else
-		KeepInsideFaces(inside, clipbrush);
+		SaveInsideFaces(inside, clipbrush, &outside);
 	}
 
 	/*
