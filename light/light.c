@@ -39,7 +39,7 @@ byte *lit_filebase;		// start of litfile data
 static byte *lit_file_p;	// start of free space after litfile data
 static byte *lit_file_end;	// end of space for litfile data
 
-static vec3_t *modeloffset;
+static modelinfo_t *modelinfo;
 
 int oversample = 1;
 qboolean compress_ents;
@@ -94,21 +94,21 @@ LightThread(void *junk)
 	if (i == nummodels)
 	    Error("%s: no model has face %d", __func__, facenum);
 
-	LightFace(facenum, modeloffset[i]);
+	LightFace(facenum, &modelinfo[i]);
     }
 
     return NULL;
 }
 
 static void
-FindModelOffsets(void)
+FindModelInfo(void)
 {
     int i;
     entity_t *entity;
     char modelname[20];
-    const char *classname;
+    const char *attribute;
 
-    memset(modeloffset, 0, sizeof(*modeloffset) * nummodels);
+    memset(modelinfo, 0, sizeof(*modelinfo) * nummodels);
     for (i = 1; i < nummodels; i++) {
 	snprintf(modelname, sizeof(modelname), "*%d", i);
 	entity = FindEntityWithKeyPair("model", modelname);
@@ -116,9 +116,25 @@ FindModelOffsets(void)
 	    Error("%s: Couldn't find entity for model %s.\n", __func__,
 		  modelname);
 
-	classname = ValueForKey(entity, "classname");
-	if (!strncmp(classname, "rotate_", 7))
-	    GetVectorForKey(entity, "origin", modeloffset[i]);
+	/* Set up the offset for rotate_* entities */
+	attribute = ValueForKey(entity, "classname");
+	if (!strncmp(attribute, "rotate_", 7))
+	    GetVectorForKey(entity, "origin", modelinfo[i].offset);
+
+	/* Grab the bmodel minlight values, if any */
+	attribute = ValueForKey(entity, "_minlight");
+	if (attribute[0])
+	    modelinfo[i].minlight = atoi(attribute);
+	GetVectorForKey(entity, "_mincolor", modelinfo[i].mincolor);
+	if (!VectorCompare(modelinfo[i].mincolor, vec3_origin)) {
+	    if (!colored) {
+		colored = true;
+		logprint("Colored light entities detected: "
+			 ".lit output enabled.\n");
+	    }
+	} else {
+	    VectorCopy(vec3_white, modelinfo[i].mincolor);
+	}
     }
 }
 
@@ -239,10 +255,10 @@ main(int argc, const char **argv)
 
     LoadEntities();
     MakeTnodes();
-    modeloffset = malloc(nummodels * sizeof(*modeloffset));
-    FindModelOffsets();
+    modelinfo = malloc(nummodels * sizeof(*modelinfo));
+    FindModelInfo();
     LightWorld();
-    free(modeloffset);
+    free(modelinfo);
 
     WriteEntitiesToString();
     WriteBSPFile(source, bsp_version);

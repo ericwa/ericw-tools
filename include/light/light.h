@@ -38,7 +38,13 @@ void LoadNodes(char *file);
 qboolean TestLine(const vec3_t start, const vec3_t stop);
 qboolean TestSky(const vec3_t start, const vec3_t dirn);
 
-void LightFace(int surfnum, const vec3_t faceoffset);
+typedef struct {
+    int minlight;
+    vec3_t mincolor;
+    vec3_t offset;
+} modelinfo_t;
+
+void LightFace(int surfnum, const modelinfo_t *modelinfo);
 void LightLeaf(dleaf_t * leaf);
 
 void MakeTnodes(void);

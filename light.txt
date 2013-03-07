@@ -82,6 +82,19 @@ ENTITY PARAMETERS
 	sunlight. RGB component values are between -255 and 255. Negative
 	values will cause colour subtraction from light cast by other entities.
 
+    MODEL PARAMETERS
+
+	The following parameters can be used on any entity with a brush model.
+
+	"_minlight" "n"
+
+	Set the minimum light level for any surface of the brush model.
+
+	"_mincolor" "r g b"
+
+	Specify red(r), green(g) and blue(b) components for the colour of the
+	minlight. RGB component values are between 0 and 255.
+
     LIGHT PARAMETERS
 
 	Light parameters can be used in any entity with a classname starting

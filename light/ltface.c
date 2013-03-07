@@ -825,7 +825,7 @@ NegativeColors(int light, vec3_t dest, const vec3_t src)
  * ============
  */
 void
-LightFace(int surfnum, const vec3_t faceoffset)
+LightFace(int surfnum, const modelinfo_t *modelinfo)
 {
     const entity_t *entity;
     dface_t *face;
@@ -864,7 +864,7 @@ LightFace(int surfnum, const vec3_t faceoffset)
     VectorCopy(dplanes[face->planenum].normal, l.facenormal);
     l.facedist = dplanes[face->planenum].dist;
     VectorScale(l.facenormal, l.facedist, point);
-    VectorAdd(point, faceoffset, point);
+    VectorAdd(point, modelinfo->offset, point);
     l.facedist = DotProduct(point, l.facenormal);
 
     if (face->side) {
@@ -873,7 +873,7 @@ LightFace(int surfnum, const vec3_t faceoffset)
     }
 
     CalcFaceVectors(&l);
-    CalcFaceExtents(&l, faceoffset);
+    CalcFaceExtents(&l, modelinfo->offset);
     CalcPoints(&l);
 
     lightmapwidth = l.texsize[0] + 1;
@@ -935,8 +935,11 @@ LightFace(int surfnum, const vec3_t faceoffset)
 	    SkyLightFace(&l, sunlight_color);
     }
 
-    /* Minimum lighting */
-    FixMinlight(&l, worldminlight, minlight_color);
+    /* Minimum lighting - Use the greater of global or model minlight. */
+    if (modelinfo->minlight > worldminlight)
+	FixMinlight(&l, modelinfo->minlight, modelinfo->mincolor);
+    else
+	FixMinlight(&l, worldminlight, minlight_color);
 
     if (nominlimit) {
 	/* cast only negative lights */

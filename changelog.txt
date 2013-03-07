@@ -14,6 +14,7 @@
 * light: implemented 4x4 oversampling with -extra4 command line
 * light: implemented the -gate option to help speed processing (default 0.001)
 * light: implemented the "_softangle" key for spotlights
+* light: implemented minlighting for brush models
 
 2013-02-25 TyrUtils v0.5
 
