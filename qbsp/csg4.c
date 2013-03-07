@@ -196,38 +196,39 @@ time in mergefaces later on (and sometimes a lot of memory)
 =================
 */
 static void
-CheckInside(brush_t *b)
+CheckInside(const brush_t *brush)
 {
-    face_t *f, *bf, *next;
+    plane_t clipplane;
+    const face_t *clipface;
+    face_t *face, *next;
     face_t *insidelist;
-    plane_t clip;
     winding_t *w;
 
     insidelist = NULL;
-    f = inside;
-    while (f) {
-	next = f->next;
-	w = CopyWinding(&f->w);
-	for (bf = b->faces; bf; bf = bf->next) {
-	    clip = map.planes[bf->planenum];
-	    if (!bf->planeside) {
-		VectorSubtract(vec3_origin, clip.normal, clip.normal);
-		clip.dist = -clip.dist;
+    face = inside;
+    while (face) {
+	next = face->next;
+	w = CopyWinding(&face->w);
+	for (clipface = brush->faces; clipface; clipface =clipface->next) {
+	    clipplane = map.planes[clipface->planenum];
+	    if (!clipface->planeside) {
+		VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
+		clipplane.dist = -clipplane.dist;
 	    }
-	    w = ClipWinding(w, &clip, true);
+	    w = ClipWinding(w, &clipplane, true);
 	    if (!w)
 		break;
 	}
 	if (!w) {
 	    /* The face is completely outside this brush */
-	    f->next = outside;
-	    outside = f;
+	    face->next = outside;
+	    outside = face;
 	} else {
-	    f->next = insidelist;
-	    insidelist = f;
+	    face->next = insidelist;
+	    insidelist = face;
 	    FreeMem(w, WINDING, 1);
 	}
-	f = next;
+	face = next;
     }
     inside = insidelist;
 }
@@ -247,7 +248,7 @@ frontside is the side of the plane that holds the outside list
 static void
 ClipInside(int splitplane, int frontside, bool precedence)
 {
-    face_t *f, *next;
+    face_t *face, *next;
     face_t *frags[2];
     face_t *insidelist;
     const plane_t *split;
@@ -255,23 +256,23 @@ ClipInside(int splitplane, int frontside, bool precedence)
     split = &map.planes[splitplane];
 
     insidelist = NULL;
-    for (f = inside; f; f = next) {
-	next = f->next;
+    for (face = inside; face; face = next) {
+	next = face->next;
 
 	/* Handle exactly on-plane faces */
-	if (f->planenum == splitplane) {
-	    if (frontside != f->planeside || precedence) {
+	if (face->planenum == splitplane) {
+	    if (frontside != face->planeside || precedence) {
 		/* always clip off opposite facing */
 		frags[frontside] = NULL;
-		frags[!frontside] = f;
+		frags[!frontside] = face;
 	    } else {
 		/* leave it on the outside */
-		frags[frontside] = f;
+		frags[frontside] = face;
 		frags[!frontside] = NULL;
 	    }
 	} else {
 	    /* proper split */
-	    SplitFace(f, split, &frags[0], &frags[1]);
+	    SplitFace(face, split, &frags[0], &frags[1]);
 	}
 
 	if (frags[frontside]) {
@@ -383,28 +384,28 @@ faces.
 surface_t *
 BuildSurfaces(void)
 {
-    face_t **f;
-    face_t *count;
     int i;
-    surface_t *s;
-    surface_t *surfhead;
+    face_t *face, **facelist;
+    surface_t *surf, *surfhead;
 
     surfhead = NULL;
 
-    f = validfaces;
-    for (i = 0; i < map.numplanes; i++, f++) {
-	if (!*f)
-	    continue;		// nothing left on this plane
+    facelist = validfaces;
+    for (i = 0; i < map.numplanes; i++, facelist++) {
+	if (!*facelist)
+	    continue;
 
-	// create a new surface to hold the faces on this plane
-	s = AllocMem(SURFACE, 1, true);
-	s->planenum = i;
-	s->next = surfhead;
-	surfhead = s;
-	s->faces = *f;
-	for (count = s->faces; count; count = count->next)
+	/* create a new surface to hold the faces on this plane */
+	surf = AllocMem(SURFACE, 1, true);
+	surf->planenum = i;
+	surf->next = surfhead;
+	surfhead = surf;
+	surf->faces = *facelist;
+	for (face = surf->faces; face; face = face->next)
 	    csgmergefaces++;
-	CalcSurfaceInfo(s);	// bounding box and flags
+
+	/* Calculate bounding box and flags */
+	CalcSurfaceInfo(surf);
     }
 
     return surfhead;
@@ -418,22 +419,22 @@ CopyFacesToOutside
 ==================
 */
 static void
-CopyFacesToOutside(brush_t *b)
+CopyFacesToOutside(const brush_t *brush)
 {
-    face_t *f, *newf;
+    face_t *face, *newface;
 
     outside = NULL;
 
-    for (f = b->faces; f; f = f->next) {
+    for (face = brush->faces; face; face = face->next) {
 	brushfaces++;
-	newf = AllocMem(FACE, 1, true);
-	*newf = *f;
-	newf->next = outside;
-	newf->contents[0] = CONTENTS_EMPTY;
-	newf->contents[1] = b->contents;
-	newf->cflags[0] = 0;
-	newf->cflags[1] = b->cflags;
-	outside = newf;
+	newface = AllocMem(FACE, 1, true);
+	*newface = *face;
+	newface->next = outside;
+	newface->contents[0] = CONTENTS_EMPTY;
+	newface->contents[1] = brush->contents;
+	newface->cflags[0] = 0;
+	newface->cflags[1] = brush->cflags;
+	outside = newface;
     }
 }
 
@@ -448,12 +449,12 @@ Returns a list of surfaces containing all of the faces
 surface_t *
 CSGFaces(const mapentity_t *entity)
 {
-    brush_t *b1, *b2;
     int i;
+    const brush_t *b1, *b2;
+    const face_t *face;
     bool overwrite;
-    face_t *f;
-    surface_t *surfhead;
-    int iBrushes = 0;
+    surface_t *surfaces;
+    int progress = 0;
 
     Message(msgProgress, "CSGFaces");
 
@@ -492,8 +493,8 @@ CSGFaces(const mapentity_t *entity)
 	    outside = NULL;
 
 	    CheckInside(b2);
-	    for (f = b2->faces; f; f = f->next)
-		ClipInside(f->planenum, f->planeside, overwrite);
+	    for (face = b2->faces; face; face = face->next)
+		ClipInside(face->planenum, face->planeside, overwrite);
 
 	    // these faces are continued in another brush, so get rid of them
 	    if (b1->contents == CONTENTS_SOLID && b2->contents != CONTENTS_SOLID)
@@ -508,15 +509,15 @@ CSGFaces(const mapentity_t *entity)
 	else
 	    SaveOutside(false);
 
-	iBrushes++;
-	Message(msgPercent, iBrushes, entity->numbrushes);
+	progress++;
+	Message(msgPercent, progress, entity->numbrushes);
     }
 
-    surfhead = BuildSurfaces();
+    surfaces = BuildSurfaces();
 
     Message(msgStat, "%5i brushfaces", brushfaces);
     Message(msgStat, "%5i csgfaces", csgfaces);
     Message(msgStat, "%5i mergedfaces", csgmergefaces);
 
-    return surfhead;
+    return surfaces;
 }
