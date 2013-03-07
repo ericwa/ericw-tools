@@ -30,8 +30,6 @@ Brushes that touch still need to be split at the cut point to make a tjunction
 
 */
 
-face_t **validfaces;
-
 static face_t *inside, *outside;
 static int brushfaces;
 static int csgfaces;
@@ -442,16 +440,14 @@ CSGFaces(const mapentity_t *entity)
     int i;
     const brush_t *b1, *b2;
     const face_t *clipface;
+    face_t **planefaces;
     bool overwrite, mirror;
     surface_t *surfaces;
     int progress = 0;
 
     Message(msgProgress, "CSGFaces");
 
-    if (!validfaces)
-	validfaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, false);
-
-    memset(validfaces, 0, sizeof(face_t *) * map.maxplanes);
+    planefaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
     csgfaces = brushfaces = csgmergefaces = 0;
 
     // do the solid faces
@@ -498,13 +494,14 @@ CSGFaces(const mapentity_t *entity)
 	 * If the brush is non-solid, mirror faces for the inside view
 	 */
 	mirror = (b1->contents != CONTENTS_SOLID);
-	SaveFacesToPlaneList(outside, mirror, validfaces);
+	SaveFacesToPlaneList(outside, mirror, planefaces);
 
 	progress++;
 	Message(msgPercent, progress, entity->numbrushes);
     }
 
-    surfaces = BuildSurfaces(validfaces);
+    surfaces = BuildSurfaces(planefaces);
+    FreeMem(planefaces, OTHER, sizeof(face_t *) * map.maxplanes);
 
     Message(msgStat, "%5i brushfaces", brushfaces);
     Message(msgStat, "%5i csgfaces", csgfaces);

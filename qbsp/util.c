@@ -191,7 +191,6 @@ FreeAllMem(void)
 		FreeMem(lump[j].data, j, lump[j].count);
     }
 
-    FreeMem(validfaces, OTHER, sizeof(face_t *) * map.maxplanes);
     FreeMem(map.planes, PLANE, map.maxplanes);
     FreeMem(map.faces, MAPFACE, map.maxfaces);
     FreeMem(map.brushes, MAPBRUSH, map.maxbrushes);

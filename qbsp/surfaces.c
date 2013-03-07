@@ -97,7 +97,7 @@ have inside faces.
 */
 
 static void
-GatherNodeFaces_r(node_t *node)
+GatherNodeFaces_r(node_t *node, face_t **planefaces)
 {
     face_t *f, *next;
 
@@ -108,19 +108,14 @@ GatherNodeFaces_r(node_t *node)
 	    if (!f->w.numpoints) {	// face was removed outside
 		FreeMem(f, FACE, 1);
 	    } else {
-		f->next = validfaces[f->planenum];
-		validfaces[f->planenum] = f;
+		f->next = planefaces[f->planenum];
+		planefaces[f->planenum] = f;
 	    }
 	}
-
-	GatherNodeFaces_r(node->children[0]);
-	GatherNodeFaces_r(node->children[1]);
-
-	FreeMem(node, NODE, 1);
-    } else {
-	// leaf node
-	FreeMem(node, NODE, 1);
+	GatherNodeFaces_r(node->children[0], planefaces);
+	GatherNodeFaces_r(node->children[1], planefaces);
     }
+    FreeMem(node, NODE, 1);
 }
 
 /*
@@ -131,9 +126,15 @@ GatherNodeFaces
 surface_t *
 GatherNodeFaces(node_t *headnode)
 {
-    memset(validfaces, 0, sizeof(face_t *) * map.maxplanes);
-    GatherNodeFaces_r(headnode);
-    return BuildSurfaces(validfaces);
+    face_t **planefaces;
+    surface_t *surfaces;
+
+    planefaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
+    GatherNodeFaces_r(headnode, planefaces);
+    surfaces = BuildSurfaces(planefaces);
+    FreeMem(planefaces, OTHER, sizeof(face_t *) * map.maxplanes);
+
+    return surfaces;
 }
 
 //===========================================================================

@@ -448,10 +448,9 @@ int FindPlane(const plane_t *plane, int *side);
 
 // csg4.c
 
-// build surfaces is also used by GatherNodeFaces
-extern face_t **validfaces;
 extern int csgmergefaces;
 
+// build surfaces is also used by GatherNodeFaces
 surface_t *BuildSurfaces(face_t **planefaces);
 face_t *NewFaceFromFace(face_t *in);
 void SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back);
