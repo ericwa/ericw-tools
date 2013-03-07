@@ -560,7 +560,7 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
 	add = GetLightValue(light, dist) * angle * spotscale;
 	lightsamp[c] += add;
 	if (colored)
-	    VectorMA(colorsamp[c], add / 255, colors, colorsamp[c]);
+	    VectorMA(colorsamp[c], add / 255.0f, colors, colorsamp[c]);
 
 	/* Check if we really hit, ignore tiny lights */
 	if (newmap && lightsamp[c] > 1)
@@ -656,7 +656,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
 		if (TestSky(surf, sun_vectors[j])) {
 		    lightmap[i] += angle * sunlight;
 		    if (colored)
-			VectorMA(colormap[i], angle * sunlight / 255, colors,
+			VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
 				 colormap[i]);
 		    break;
 		}
@@ -669,7 +669,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
 	if (TestSky(surf, sunvec)) {
 	    lightmap[i] += angle * sunlight;
 	    if (colored)
-		VectorMA(colormap[i], angle * sunlight / 255, colors,
+		VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
 			 colormap[i]);
 	}
     }
@@ -709,7 +709,7 @@ FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
 	if (colored) {
 	    colormap = l->colormaps[l->numlightstyles];
 	    for (i = 0; i < l->numsurfpt; i++)
-		VectorScale(mincolor, minlight / 255, colormap[i]);
+		VectorScale(mincolor, minlight / 255.0f, colormap[i]);
 	}
 	l->lightstyles[l->numlightstyles++] = 0;
     } else {
@@ -718,7 +718,7 @@ FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
 		lightmap[i] = minlight;
 	    if (colored) {
 		for (j = 0; j < 3; j++) {
-		    vec_t lightval = minlight * mincolor[j] / 255;
+		    vec_t lightval = minlight * mincolor[j] / 255.0f;
 		    if (colormap[i][j] < lightval)
 			colormap[i][j] = lightval;
 		}
