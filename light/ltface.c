@@ -102,35 +102,6 @@ solve3(const vec3_t mtx[3], const int r[3], const int c[3],
 	/ mtx[0][0];
 }
 
-/* ======================================================================== */
-
-
-/*
- * ============
- * CastRay
- * Returns the distance between the points, or -1 if blocked
- * =============
- */
-static vec_t
-CastRay(const vec3_t p1, const vec3_t p2)
-{
-    int i;
-    vec_t t;
-    qboolean trace;
-
-    trace = TestLine(p1, p2);
-    if (!trace)
-	return -1;		/* ray was blocked */
-
-    t = 0;
-    for (i = 0; i < 3; i++)
-	t += (p2[i] - p1[i]) * (p2[i] - p1[i]);
-
-    if (t == 0)
-	t = 1;			/* don't blow up... */
-    return sqrt(t);
-}
-
 /*
  * ============================================================================
  * SAMPLE POINT DETERMINATION
@@ -396,7 +367,7 @@ CalcPoints(lightinfo_t *l)
 	    for (i = 0; i < 6; i++) {
 		tex_to_world(us, ut, l, surf);
 
-		if (CastRay(facemid, surf) != -1)
+		if (TestLine(facemid, surf))
 		    break;	/* got it */
 		if (i & 1) {	// i is odd
 		    if (us > mids) {
