@@ -64,7 +64,7 @@ MakeTnodes_r(int nodenum)
 }
 
 void
-MakeTnodes(const dmodel_t *model)
+MakeTnodes(void)
 {
     int i;
 
