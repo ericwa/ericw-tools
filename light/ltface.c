@@ -595,48 +595,6 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
     angle = DotProduct(incoming, l->facenormal);
     angle = (1.0 - scalecos) + scalecos * angle;
 
-#if 0
-    /* Experimental - lighting of faces parallel to sunlight*/
-    {
-	int a, b, c, j;
-	vec_t oldangle, offset;
-	vec3_t sun_vectors[5];
-
-	// Try to hit parallel surfaces?
-	oldangle = DotProduct(incoming, l->facenormal);
-	if (oldangle < ANGLE_EPSILON) {
-	    printf("real small angle! (%f)\n", oldangle);
-	    angle = (1.0 - scalecos) + scalecos * ANGLE_EPSILON;
-	}
-
-	a = fabs(sunvec[0]) > fabs(sunvec[1]) ?
-	    (fabs(sunvec[0]) > fabs(sunvec[2]) ? 0 : 2) :
-	    (fabs(sunvec[1]) > fabs(sunvec[2]) ? 1 : 2);
-	b = (a + 1) % 3;
-	c = (a + 2) % 3;
-
-	offset = sunvec[a] * ANGLE_EPSILON * 2.0;	// approx...
-	for (j = 0; j < 5; ++j)
-	    VectorCopy(sunvec, sun_vectors[j]);
-	sun_vectors[1][b] += offset;
-	sun_vectors[2][b] -= offset;
-	sun_vectors[3][c] += offset;
-	sun_vectors[4][c] -= offset;
-
-	surf = l->surfpt[0];
-	for (i = 0; i < l->numsurfpt; i++, surf += 3) {
-	    for (j = 0; j < 1 || (oldangle < ANGLE_EPSILON && j < 5); ++j) {
-		if (TestSky(surf, sun_vectors[j])) {
-		    lightmap[i] += angle * sunlight;
-		    if (colored)
-			VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
-				 colormap[i]);
-		    break;
-		}
-	    }
-	}
-    }
-#else
     surf = l->surfpt[0];
     for (i = 0; i < l->numsurfpt; i++, surf += 3) {
 	vec3_t skypoint;
@@ -650,7 +608,6 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
 	    VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
 		     colormap[i]);
     }
-#endif
 }
 
 /*
