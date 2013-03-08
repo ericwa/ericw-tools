@@ -32,12 +32,12 @@ static tnode_t *tnode_p;
 
 /*
  * ==============
- * MakeTnode
+ * MakeTnodes
  * Converts the disk node structure into the efficient tracing structure
  * ==============
  */
 static void
-MakeTnode(int nodenum)
+MakeTnodes_r(int nodenum)
 {
     tnode_t *t;
     dplane_t *plane;
@@ -58,24 +58,20 @@ MakeTnode(int nodenum)
 	    t->children[i] = dleafs[-node->children[i] - 1].contents;
 	} else {
 	    t->children[i] = tnode_p - tnodes;
-	    MakeTnode(node->children[i]);
+	    MakeTnodes_r(node->children[i]);
 	}
     }
 }
 
-/*
- * =============
- * MakeTnodes
- * Loads the node structure out of a .bsp file to be used for light occlusion
- * =============
- */
 void
-MakeTnodes(void)
+MakeTnodes(const dmodel_t *model)
 {
-    tnode_p = tnodes = malloc(numnodes * sizeof(tnode_t));
-    MakeTnode(0);
-}
+    int i;
 
+    tnode_p = tnodes = malloc(numnodes * sizeof(tnode_t));
+    for (i = 0; i < nummodels; i++)
+	MakeTnodes_r(dmodels[i].headnode[0]);
+}
 
 /*
  * ============================================================================
@@ -94,12 +90,12 @@ typedef struct {
 /*
  * ==============
  * TestLineOrSky
- * TYR - modified TestLine (a bit of a hack job...)
  * ==============
  */
 #define MAX_TSTACK 128
 static qboolean
-TestLineOrSky(const vec3_t start, const vec3_t stop, qboolean sky_test)
+TestLineOrSky(const dmodel_t *model, const vec3_t start, const vec3_t stop,
+	      qboolean sky_test)
 {
     int node;
     float front, back;
@@ -119,7 +115,7 @@ TestLineOrSky(const vec3_t start, const vec3_t stop, qboolean sky_test)
     backz = stop[2];
 
     tstack_p = tracestack;
-    node = 0;
+    node = model->headnode[0];
 
     while (1) {
 	while (node < 0 && node != CONTENTS_SOLID
@@ -202,6 +198,28 @@ TestLineOrSky(const vec3_t start, const vec3_t stop, qboolean sky_test)
     }
 }
 
+qboolean
+TestLine(const vec3_t start, const vec3_t stop)
+{
+    const dmodel_t *const *model;
+
+    for (model = tracelist; *model; model++)
+	if (!TestLineModel(*model, start, stop))
+	    break;
+
+    return !*model;
+}
+
+/*
+ * Wrapper functions for testing LOS between two points (TestLine)
+ * and testing LOS to a sky brush along a direction vector (TestSky)
+ */
+qboolean
+TestLineModel(const dmodel_t *model, const vec3_t start, const vec3_t stop)
+{
+    return TestLineOrSky(model, start, stop, false);
+}
+
 /*
  * =======
  * TestSky
@@ -209,22 +227,12 @@ TestLineOrSky(const vec3_t start, const vec3_t stop, qboolean sky_test)
  * Returns true if the ray cast from point 'start' in the
  * direction of vector 'dirn' hits a CONTENTS_SKY node before
  * a CONTENTS_SOLID node.
- *
- * Wrapper functions for testing LOS between two points (TestLine)
- * and testing LOS to a sky brush along a direction vector (TestSky)
  */
-
-qboolean
-TestLine(const vec3_t start, const vec3_t stop)
-{
-    return TestLineOrSky(start, stop, false);
-}
-
 qboolean
 TestSky(const vec3_t start, const vec3_t dirn)
 {
     vec3_t stop;
 
     VectorAdd(dirn, start, stop);
-    return TestLineOrSky(start, stop, true);
+    return TestLineOrSky(tracelist[0], start, stop, true);
 }

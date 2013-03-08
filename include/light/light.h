@@ -33,16 +33,20 @@
 
 #define MAXLIGHTS 1024
 
-void LoadNodes(char *file);
-
-qboolean TestLine(const vec3_t start, const vec3_t stop);
 qboolean TestSky(const vec3_t start, const vec3_t dirn);
+qboolean TestLine(const vec3_t start, const vec3_t stop);
+qboolean TestLineModel(const dmodel_t *model,
+		       const vec3_t start, const vec3_t stop);
 
 typedef struct {
+    const dmodel_t *model;
     int minlight;
     vec3_t mincolor;
     vec3_t offset;
 } modelinfo_t;
+
+/* tracelist is a null terminated array of BSP models to use for LOS tests */
+extern const dmodel_t *const *tracelist;
 
 void LightFace(int surfnum, const modelinfo_t *modelinfo);
 void LightLeaf(dleaf_t * leaf);

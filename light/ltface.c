@@ -331,7 +331,7 @@ CalcFaceExtents(lightinfo_t *l, const vec3_t offset)
  * =================
  */
 static void
-CalcPoints(lightinfo_t *l)
+CalcPoints(const dmodel_t *model, lightinfo_t *l)
 {
     int i;
     int s, t;
@@ -367,7 +367,7 @@ CalcPoints(lightinfo_t *l)
 	    for (i = 0; i < 6; i++) {
 		tex_to_world(us, ut, l, surf);
 
-		if (TestLine(facemid, surf))
+		if (TestLineModel(model, facemid, surf))
 		    break;	/* got it */
 		if (i & 1) {	// i is odd
 		    if (us > mids) {
@@ -845,7 +845,7 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 
     CalcFaceVectors(&l);
     CalcFaceExtents(&l, modelinfo->offset);
-    CalcPoints(&l);
+    CalcPoints(modelinfo->model, &l);
 
     lightmapwidth = l.texsize[0] + 1;
 

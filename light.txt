@@ -95,6 +95,12 @@ ENTITY PARAMETERS
 	Specify red(r), green(g) and blue(b) components for the colour of the
 	minlight. RGB component values are between 0 and 255.
 
+	"_shadow" "1"
+
+	This model will cast shadows.  Note that this doesn't magically give
+	Quake dynamic lighting powers, so the shadows will not move if the
+	model moves.
+
     LIGHT PARAMETERS
 
 	Light parameters can be used in any entity with a classname starting

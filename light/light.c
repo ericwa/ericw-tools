@@ -40,6 +40,7 @@ static byte *lit_file_p;	// start of free space after litfile data
 static byte *lit_file_end;	// end of space for litfile data
 
 static modelinfo_t *modelinfo;
+const dmodel_t *const *tracelist;
 
 int oversample = 1;
 qboolean compress_ents;
@@ -103,18 +104,36 @@ LightThread(void *junk)
 static void
 FindModelInfo(void)
 {
-    int i;
+    int i, shadow, numshadowmodels;
     entity_t *entity;
     char modelname[20];
     const char *attribute;
+    const dmodel_t **shadowmodels;
+
+    shadowmodels = malloc(sizeof(dmodel_t *) * (nummodels + 1));
+    memset(shadowmodels, 0, sizeof(dmodel_t *) * (nummodels + 1));
+
+    /* The world always casts shadows */
+    shadowmodels[0] = &dmodels[0];
+    numshadowmodels = 1;
 
     memset(modelinfo, 0, sizeof(*modelinfo) * nummodels);
+    modelinfo[0].model = &dmodels[0];
+
     for (i = 1; i < nummodels; i++) {
+	modelinfo[i].model = &dmodels[i];
+
+	/* Find the entity for the model */
 	snprintf(modelname, sizeof(modelname), "*%d", i);
 	entity = FindEntityWithKeyPair("model", modelname);
 	if (!entity)
 	    Error("%s: Couldn't find entity for model %s.\n", __func__,
 		  modelname);
+
+	/* Check if this model will cast shadows */
+	shadow = atoi(ValueForKey(entity, "_shadow"));
+	if (shadow)
+	    shadowmodels[numshadowmodels++] = &dmodels[i];
 
 	/* Set up the offset for rotate_* entities */
 	attribute = ValueForKey(entity, "classname");
@@ -136,6 +155,8 @@ FindModelInfo(void)
 	    VectorCopy(vec3_white, modelinfo[i].mincolor);
 	}
     }
+
+    tracelist = shadowmodels;
 }
 
 /*
