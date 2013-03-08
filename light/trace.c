@@ -22,7 +22,7 @@
 typedef struct tnode_s {
     int type;
     vec3_t normal;
-    float dist;
+    vec_t dist;
     int children[2];
     int pad;
 } tnode_t;
@@ -95,104 +95,90 @@ typedef struct {
 #define MAX_TSTACK 128
 static qboolean
 TestLineOrSky(const dmodel_t *model, const vec3_t start, const vec3_t stop,
-	      qboolean sky_test)
+	      qboolean skytest, vec3_t skypoint)
 {
-    int node;
-    float front, back;
-    tracestack_t *tstack_p;
-    int side;
-    float frontx, fronty, frontz, backx, backy, backz;
+    int node, side;
+    vec3_t front, back;
+    vec_t frontdist, backdist;
     tracestack_t tracestack[MAX_TSTACK];
+    tracestack_t *tstack;
     tnode_t *tnode;
+    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
 
-    const tracestack_t *tstack_max = tracestack + MAX_TSTACK;
+    VectorCopy(start, front);
+    VectorCopy(stop, back);
 
-    frontx = start[0];
-    fronty = start[1];
-    frontz = start[2];
-    backx = stop[0];
-    backy = stop[1];
-    backz = stop[2];
-
-    tstack_p = tracestack;
+    tstack = tracestack;
     node = model->headnode[0];
 
     while (1) {
-	while (node < 0 && node != CONTENTS_SOLID
-	       && (!sky_test || node != CONTENTS_SKY)) {
+	while (node < 0 && node != CONTENTS_SOLID) {
+	    if (skytest && node == CONTENTS_SKY)
+		break;
 
-	    /* pop up the stack for a back side */
-	    tstack_p--;
+	    /* If the stack is empty, not obstructions were hit */
+	    if (tstack == tracestack)
+		return !skytest;
 
-	    if (tstack_p < tracestack)
-		return !sky_test;	/* no obstructions */
-
-	    /* set the hit point for this plane */
-	    frontx = backx;
-	    fronty = backy;
-	    frontz = backz;
-
-	    /* go down the back side */
-	    backx = tstack_p->backpt[0];
-	    backy = tstack_p->backpt[1];
-	    backz = tstack_p->backpt[2];
-
-	    node = tnodes[tstack_p->node].children[!tstack_p->side];
+	    /*
+	     * pop the stack, set the hit point for this plane and
+	     * go down the back side
+	     */
+	    tstack--;
+	    VectorCopy(back, front);
+	    VectorCopy(tstack->backpt, back);
+	    node = tnodes[tstack->node].children[!tstack->side];
 	}
 
 	if (node == CONTENTS_SOLID)
-	    return false;	/* DONE! */
-	else if (node == CONTENTS_SKY && sky_test)
-	    return true;	/* DONE! */
+	    return false;
+	if (node == CONTENTS_SKY && skytest) {
+	    VectorCopy(front, skypoint);
+	    return true;
+	}
 
 	tnode = &tnodes[node];
 
 	switch (tnode->type) {
 	case PLANE_X:
-	    front = frontx - tnode->dist;
-	    back = backx - tnode->dist;
+	    frontdist = front[0] - tnode->dist;
+	    backdist = back[0] - tnode->dist;
 	    break;
 	case PLANE_Y:
-	    front = fronty - tnode->dist;
-	    back = backy - tnode->dist;
+	    frontdist = front[1] - tnode->dist;
+	    backdist = back[1] - tnode->dist;
 	    break;
 	case PLANE_Z:
-	    front = frontz - tnode->dist;
-	    back = backz - tnode->dist;
+	    frontdist = front[2] - tnode->dist;
+	    backdist = back[2] - tnode->dist;
 	    break;
 	default:
-	    front = (frontx * tnode->normal[0] + fronty * tnode->normal[1]
-		     + frontz * tnode->normal[2]) - tnode->dist;
-	    back = (backx * tnode->normal[0] + backy * tnode->normal[1]
-		    + backz * tnode->normal[2]) - tnode->dist;
+	    frontdist = DotProduct(front, tnode->normal) - tnode->dist;
+	    backdist = DotProduct(back, tnode->normal) - tnode->dist;
 	    break;
 	}
 
-	if (front > -ON_EPSILON && back > -ON_EPSILON) {
+	if (frontdist > -ON_EPSILON && backdist > -ON_EPSILON) {
 	    node = tnode->children[0];
 	    continue;
 	}
-	if (front < ON_EPSILON && back < ON_EPSILON) {
+	if (frontdist < ON_EPSILON && backdist < ON_EPSILON) {
 	    node = tnode->children[1];
 	    continue;
 	}
 
-	side = front < 0.0f ? 1 : 0;
-	front /= (front - back);
-
-	tstack_p->node = node;
-	tstack_p->side = side;
-	tstack_p->backpt[0] = backx;
-	tstack_p->backpt[1] = backy;
-	tstack_p->backpt[2] = backz;
-
-	tstack_p++;
-	if (tstack_p >= tstack_max)
+	if (tstack == tstack_max)
 	    Error("%s: tstack overflow\n", __func__);
 
-	backx = frontx + front * (backx - frontx);
-	backy = fronty + front * (backy - fronty);
-	backz = frontz + front * (backz - frontz);
+	side = frontdist < 0.0f ? 1 : 0;
+	tstack->node = node;
+	tstack->side = side;
+	VectorCopy(back, tstack->backpt);
+	tstack++;
+
+	/* The new back is the intersection point with the node plane */
+	VectorSubtract(back, front, back);
+	VectorMA(front, frontdist / (frontdist - backdist), back, back);
 
 	node = tnode->children[side];
     }
@@ -217,7 +203,7 @@ TestLine(const vec3_t start, const vec3_t stop)
 qboolean
 TestLineModel(const dmodel_t *model, const vec3_t start, const vec3_t stop)
 {
-    return TestLineOrSky(model, start, stop, false);
+    return TestLineOrSky(model, start, stop, false, NULL);
 }
 
 /*
@@ -232,7 +218,15 @@ qboolean
 TestSky(const vec3_t start, const vec3_t dirn)
 {
     vec3_t stop;
+    const dmodel_t *const *model;
 
     VectorAdd(dirn, start, stop);
-    return TestLineOrSky(tracelist[0], start, stop, true);
+    if (!TestLineOrSky(tracelist[0], start, stop, true, stop))
+	return false;
+
+    for (model = tracelist + 1; *model; model++)
+	if (!TestLineModel(*model, start, stop))
+	    break;
+
+    return !*model;
 }
