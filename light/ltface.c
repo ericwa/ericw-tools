@@ -125,9 +125,8 @@ solve3(const vec3_t mtx[3], const int r[3], const int c[3],
 #define SINGLEMAP (18*18*4*4)
 
 typedef struct {
-    vec_t *light;
-
-    dface_t *face;
+    const modelinfo_t *modelinfo;
+    const dface_t *face;
     vec_t facedist;
     vec3_t facenormal;
 
@@ -270,7 +269,7 @@ face_centroid(const dface_t *f, vec3_t out)
 static void
 CalcFaceExtents(lightinfo_t *l, const vec3_t offset)
 {
-    dface_t *s;
+    const dface_t *s;
     vec_t mins[2], maxs[2], val;
     vec3_t centroid;
     int i, j, e;
@@ -526,6 +525,9 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
 	/* Test for line of sight */
 	if (!TestLine(light->origin, surf))
 	    continue;
+	if (l->modelinfo->shadowself)
+	    if (!TestLineModel(l->modelinfo->model, light->origin, surf))
+		continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
 	add = GetLightValue(light, dist) * angle * spotscale;
@@ -637,12 +639,16 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
 #else
     surf = l->surfpt[0];
     for (i = 0; i < l->numsurfpt; i++, surf += 3) {
-	if (TestSky(surf, sunvec)) {
-	    lightmap[i] += angle * sunlight;
-	    if (colored)
-		VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
-			 colormap[i]);
-	}
+	vec3_t skypoint;
+	if (!TestSky(surf, sunvec, skypoint))
+	    continue;
+	if (l->modelinfo->shadowself)
+	    if (!TestLineModel(l->modelinfo->model, surf, skypoint))
+		continue;
+	lightmap[i] += angle * sunlight;
+	if (colored)
+	    VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
+		     colormap[i]);
     }
 #endif
 }
@@ -726,16 +732,29 @@ FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
 		trace = TestLine(entity->origin, l->surfpt[j]);
 		if (!trace)
 		    continue;
+		if (l->modelinfo->shadowself) {
+		    trace = TestLineModel(l->modelinfo->model, entity->origin, l->surfpt[j]);
+		    if (!trace)
+			continue;
+		}
 		lightmap[j] = entity->light;
 	    }
 	    if (!colored)
 		continue;
 	    for (k = 0; k < 3; k++) {
 		if (colormap[j][k] < mincolor[k]) {
-		    if (!trace)
+		    if (!trace) {
 			trace = TestLine(entity->origin, l->surfpt[j]);
-		    if (trace)
-			colormap[j][k] = mincolor[k];
+			if (!trace)
+			    break;
+			if (l->modelinfo->shadowself) {
+			    trace = TestLineModel(l->modelinfo->model,
+						  entity->origin, l->surfpt[j]);
+			    if (!trace)
+				break;
+			}
+		    }
+		    colormap[j][k] = mincolor[k];
 		}
 	    }
 	}
@@ -829,6 +848,7 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 	return;			/* non-lit texture */
 
     memset(&l, 0, sizeof(l));
+    l.modelinfo = modelinfo;
     l.face = face;
 
     /* rotate plane */

@@ -215,17 +215,16 @@ TestLineModel(const dmodel_t *model, const vec3_t start, const vec3_t stop)
  * a CONTENTS_SOLID node.
  */
 qboolean
-TestSky(const vec3_t start, const vec3_t dirn)
+TestSky(const vec3_t start, const vec3_t dirn, vec3_t skypoint)
 {
-    vec3_t stop;
     const dmodel_t *const *model;
 
-    VectorAdd(dirn, start, stop);
-    if (!TestLineOrSky(tracelist[0], start, stop, true, stop))
+    VectorAdd(dirn, start, skypoint);
+    if (!TestLineOrSky(tracelist[0], start, skypoint, true, skypoint))
 	return false;
 
     for (model = tracelist + 1; *model; model++)
-	if (!TestLineModel(*model, start, stop))
+	if (!TestLineModel(*model, start, skypoint))
 	    break;
 
     return !*model;

@@ -130,10 +130,15 @@ FindModelInfo(void)
 	    Error("%s: Couldn't find entity for model %s.\n", __func__,
 		  modelname);
 
-	/* Check if this model will cast shadows */
+	/* Check if this model will cast shadows (shadow => shadowself) */
 	shadow = atoi(ValueForKey(entity, "_shadow"));
-	if (shadow)
+	if (shadow) {
 	    shadowmodels[numshadowmodels++] = &dmodels[i];
+	} else {
+	    shadow = atoi(ValueForKey(entity, "_shadowself"));
+	    if (shadow)
+		modelinfo[i].shadowself = true;
+	}
 
 	/* Set up the offset for rotate_* entities */
 	attribute = ValueForKey(entity, "classname");

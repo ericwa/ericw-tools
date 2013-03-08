@@ -1,6 +1,6 @@
 Unreleased
 
-* light: brush model entities with the "_shadow" key will cast shadows
+* light: implemented self shadowing and full shadows for brush models
 
 2013-03-07 TyrUtils v0.6
 

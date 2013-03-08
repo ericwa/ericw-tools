@@ -68,6 +68,7 @@ ENTITY PARAMETERS
 	Set the brightness of the sunlight coming from an unseen sun in the
         sky.  Sky brushes (or more accurately bsp leafs with sky contents) will
 	emit sunlight at an angle specified by the "_sun_mangle" paramter.
+	Default 0.
 
 	"_sun_mangle" "x y z"
 
@@ -75,12 +76,14 @@ ENTITY PARAMETERS
 	in degrees. Yaw specifies the angle around the Z-axis from 0 to 359
 	degrees and pitch specifies the angle from 90 (straight up) to -90
 	(straight down). Roll has no effect, so use any value (e.g. 0).
+	Default is straight down ("0 -90 0").
 
 	"_sunlight_color" "r g b"
 
 	Specify red(r), green(g) and blue(b) components for the colour of the
 	sunlight. RGB component values are between -255 and 255. Negative
 	values will cause colour subtraction from light cast by other entities.
+	Default is white light ("255 255 255").
 
     MODEL PARAMETERS
 
@@ -89,17 +92,27 @@ ENTITY PARAMETERS
 	"_minlight" "n"
 
 	Set the minimum light level for any surface of the brush model.
+	Default 0.
 
 	"_mincolor" "r g b"
 
 	Specify red(r), green(g) and blue(b) components for the colour of the
-	minlight. RGB component values are between 0 and 255.
+	minlight. RGB component values are between 0 and 255. Default is
+	white light ("255 255 255").
 
-	"_shadow" "1"
+	"_shadow" "n"
 
-	This model will cast shadows.  Note that this doesn't magically give
-	Quake dynamic lighting powers, so the shadows will not move if the
-	model moves.
+	If n is 1, this model will cast shadows on other models and itself
+	(i.e. "_shadow" implies "_shadowself").  Note that this doesn't
+	magically give Quake dynamic lighting powers, so the shadows will
+	not move if the model moves. Default 0.
+
+	"_shadowself" "n"
+
+	If n is 1, this model will cast shadows on itself if one part
+	of the model blocks the light from another model surface. This
+	can be a better compromise for moving models than full
+	shadowing.  Default 0.
 
     LIGHT PARAMETERS
 

@@ -33,13 +33,14 @@
 
 #define MAXLIGHTS 1024
 
-qboolean TestSky(const vec3_t start, const vec3_t dirn);
+qboolean TestSky(const vec3_t start, const vec3_t dirn, vec3_t skypoint);
 qboolean TestLine(const vec3_t start, const vec3_t stop);
 qboolean TestLineModel(const dmodel_t *model,
 		       const vec3_t start, const vec3_t stop);
 
 typedef struct {
     const dmodel_t *model;
+    qboolean shadowself;
     int minlight;
     vec3_t mincolor;
     vec3_t offset;
