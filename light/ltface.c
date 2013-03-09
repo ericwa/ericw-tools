@@ -209,6 +209,18 @@ TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
     Solve3(&texorg->transform, rhs, world);
 }
 
+static void
+WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
+{
+    int i;
+
+    for (i = 0; i < 2; i++)
+	coord[i] =
+	    world[0] * tex->vecs[i][0] +
+	    world[1] * tex->vecs[i][1] +
+	    world[2] * tex->vecs[i][2] + tex->vecs[i][3];
+}
+
 /*
  * Functions to aid in calculation of polygon centroid
  */
@@ -283,49 +295,38 @@ FaceCentroid(const dface_t *f, vec3_t out)
 static void
 CalcFaceExtents(const dface_t *face, const vec3_t offset, lightinfo_t *l)
 {
-    vec_t mins[2], maxs[2], val;
-    vec3_t centroid;
-    int i, j, e;
-    dvertex_t *v;
-    texinfo_t *tex;
+    vec_t mins[2], maxs[2], texcoord[2];
+    vec3_t world, centroid;
+    int i, j, edge, vert;
+    const dvertex_t *dvertex;
+    const texinfo_t *tex;
 
-    mins[0] = mins[1] = 999999;
-    maxs[0] = maxs[1] = -99999;
+    mins[0] = mins[1] = VECT_MAX;
+    maxs[0] = maxs[1] = -VECT_MAX;
     tex = &texinfo[face->texinfo];
 
     for (i = 0; i < face->numedges; i++) {
-	e = dsurfedges[face->firstedge + i];
-	if (e >= 0)
-	    v = dvertexes + dedges[e].v[0];
-	else
-	    v = dvertexes + dedges[-e].v[1];
+	edge = dsurfedges[face->firstedge + i];
+	vert = (edge >= 0) ? dedges[edge].v[0] : dedges[-edge].v[1];
+	dvertex = &dvertexes[vert];
 
+	VectorAdd(dvertex->point, offset, world);
+	WorldToTexCoord(world, tex, texcoord);
 	for (j = 0; j < 2; j++) {
-	    // This is world->tex with world offset...
-	    val = (v->point[0] + offset[0]) * tex->vecs[j][0]
-		+ (v->point[1] + offset[1]) * tex->vecs[j][1]
-		+ (v->point[2] + offset[2]) * tex->vecs[j][2]
-		+ tex->vecs[j][3];
-	    if (val < mins[j])
-		mins[j] = val;
-	    if (val > maxs[j])
-		maxs[j] = val;
+	    if (texcoord[j] < mins[j])
+		mins[j] = texcoord[j];
+	    if (texcoord[j] > maxs[j])
+		maxs[j] = texcoord[j];
 	}
     }
 
     FaceCentroid(face, centroid);
 
+    VectorAdd(centroid, offset, world);
+    WorldToTexCoord(world, tex, l->exactmid);
     for (i = 0; i < 2; i++) {
-	l->exactmid[i] =
-	      (centroid[0] + offset[0]) * tex->vecs[i][0]
-	    + (centroid[1] + offset[1]) * tex->vecs[i][1]
-	    + (centroid[2] + offset[2]) * tex->vecs[i][2]
-	    + tex->vecs[i][3];
-
-
 	mins[i] = floor(mins[i] / 16);
 	maxs[i] = ceil(maxs[i] / 16);
-
 	l->texmins[i] = mins[i];
 	l->texsize[i] = maxs[i] - mins[i];
 	if (l->texsize[i] > 17)
