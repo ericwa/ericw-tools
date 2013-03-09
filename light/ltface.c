@@ -833,6 +833,84 @@ NegativeColors(int light, vec3_t dest, const vec3_t src)
     }
 }
 
+static void
+WriteLightdata(dface_t *face, const lightsurf_t *lightsurf,
+	       const lightdata_t *lightdata)
+{
+    int size, style, width, s, t, i, j, k;
+    const vec_t *lightmap;
+    const vec3_t *colormap;
+    vec_t light;
+    vec3_t color;
+    byte *out, *lit;
+
+    if (!lightdata->numstyles)
+	return;
+
+    size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
+    GetFileSpace(&out, &lit, size * lightdata->numstyles);
+
+    face->lightofs = out - filebase;
+    for (style = 0; style < MAXLIGHTMAPS; style++)
+	face->styles[style] = lightdata->styles[style];
+
+    width = (lightsurf->texsize[0] + 1) * oversample;
+    for (style = 0; style < lightdata->numstyles; style++) {
+	if (lightdata->styles[style] == 255)
+	    Error("Wrote empty lightmap");
+
+	lightmap = lightdata->lightmaps[style];
+	colormap = lightdata->colormaps[style];
+
+	i = 0;
+	for (t = 0; t <= lightsurf->texsize[1]; t++) {
+	    for (s = 0; s <= lightsurf->texsize[0]; s++, i++) {
+		if (oversample == 1) {
+		    light = lightmap[i];
+		    if (colored)
+			VectorCopy(colormap[i], color);
+		} else {
+		    light = 0;
+		    VectorCopy(vec3_origin, color);
+		    for (j = 0; j < oversample; j++) {
+			for (k = 0; k < oversample; k++) {
+			    int sample = (t * oversample + j) * width;
+			    sample += s * oversample + k;
+			    light += lightmap[sample];
+			    if (colored)
+				VectorAdd(color, colormap[sample], color);
+			}
+		    }
+		    light /= oversample * oversample;
+		    VectorScale(color, 1.0 / oversample / oversample, color);
+		}
+
+		light *= rangescale;
+		if (colored) {
+		    vec_t max = 0;
+		    VectorScale(color, rangescale, color);
+		    for (j = 0; j < 3; j++)
+			if (color[j] > max)
+			    max = color[j];
+		    if (max > 255)
+			VectorScale(color, 255.0f / max, color);
+		}
+		if (light > 255)
+		    light = 255;
+		else if (light < 0)
+		    light = 0;
+
+		if (colored) {
+		    *lit++ = color[0];
+		    *lit++ = color[1];
+		    *lit++ = color[2];
+		}
+		*out++ = light;
+	    }
+	}
+    }
+}
+
 /*
  * ============
  * LightFace
@@ -841,22 +919,11 @@ NegativeColors(int light, vec3_t dest, const vec3_t src)
 void
 LightFace(dface_t *face, const modelinfo_t *modelinfo)
 {
+    int i, j, k;
+    vec3_t color;
     const entity_t *entity;
     lightdata_t lightdata;
     lightsurf_t lightsurf;
-    int s, t;
-    int i, j, k, c;
-
-    vec_t max;
-    vec_t total;
-    int size;
-    byte *out;
-    byte *lit_out = NULL;
-    vec_t *lightmap;
-    vec3_t *colormap;
-    vec3_t colors = { 0, 0, 0 };
-
-    int width;
 
     /* some surfaces don't need lightmaps */
     face->lightofs = -1;
@@ -888,20 +955,20 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 		continue;
 	    if (colored) {
 		if (entity->light) {
-		    PositiveColors(entity->light, colors, entity->lightcolor);
-		    SingleLightFace(entity, &lightsurf, colors, &lightdata);
+		    PositiveColors(entity->light, color, entity->lightcolor);
+		    SingleLightFace(entity, &lightsurf, color, &lightdata);
 		}
 	    } else if (entity->light > 0) {
-		SingleLightFace(entity, &lightsurf, colors, &lightdata);
+		SingleLightFace(entity, &lightsurf, color, &lightdata);
 	    }
 	}
 	/* cast positive sky light */
 	if (sunlight) {
 	    if (colored) {
-		PositiveColors(sunlight, sunlight_color, colors);
-		SkyLightFace(&lightsurf, colors, &lightdata);
+		PositiveColors(sunlight, sunlight_color, color);
+		SkyLightFace(&lightsurf, color, &lightdata);
 	    } else if (sunlight > 0) {
-		SkyLightFace(&lightsurf, colors, &lightdata);
+		SkyLightFace(&lightsurf, color, &lightdata);
 	    }
 	}
     } else {
@@ -932,20 +999,20 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 		continue;
 	    if (colored) {
 		if (entity->light) {
-		    NegativeColors(entity->light, colors, entity->lightcolor);
-		    SingleLightFace(entity, &lightsurf, colors, &lightdata);
+		    NegativeColors(entity->light, color, entity->lightcolor);
+		    SingleLightFace(entity, &lightsurf, color, &lightdata);
 		}
 	    } else if (entity->light < 0) {
-		SingleLightFace(entity, &lightsurf, colors, &lightdata);
+		SingleLightFace(entity, &lightsurf, color, &lightdata);
 	    }
 	}
 	/* cast negative sky light */
 	if (sunlight) {
 	    if (colored) {
-		NegativeColors(sunlight, colors, sunlight_color);
-		SkyLightFace(&lightsurf, colors, &lightdata);
+		NegativeColors(sunlight, color, sunlight_color);
+		SkyLightFace(&lightsurf, color, &lightdata);
 	    } else if (sunlight < 0) {
-		SkyLightFace(&lightsurf, colors, &lightdata);
+		SkyLightFace(&lightsurf, color, &lightdata);
 	    }
 	}
 
@@ -966,84 +1033,5 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	}
     }
 
-    if (!lightdata.numstyles)
-	return;			/* no light hitting it */
-
-    /* save out the values */
-
-    for (i = 0; i < MAXLIGHTMAPS; i++)
-	face->styles[i] = lightdata.styles[i];
-
-    size = (lightsurf.texsize[0] + 1) * (lightsurf.texsize[1] + 1);
-    GetFileSpace(&out, &lit_out, size * lightdata.numstyles);
-
-    face->lightofs = out - filebase;
-
-    /* extra filtering */
-    width = (lightsurf.texsize[0] + 1) * oversample;
-
-    for (i = 0; i < lightdata.numstyles; i++) {
-	if (lightdata.styles[i] == 0xff)
-	    Error("Wrote empty lightmap");
-
-	lightmap = lightdata.lightmaps[i];
-	colormap = lightdata.colormaps[i];
-	c = 0;
-
-	for (t = 0; t <= lightsurf.texsize[1]; t++) {
-	    for (s = 0; s <= lightsurf.texsize[0]; s++, c++) {
-		if (oversample > 1) {
-		    total = 0;
-		    VectorCopy(vec3_origin, colors);
-		    for (j = 0; j < oversample; j++) {
-			for (k = 0; k < oversample; k++) {
-			    int sample = (t * oversample + j) * width;
-			    sample += s * oversample + k;
-			    total += lightmap[sample];
-			    if (colored)
-				VectorAdd(colors, colormap[sample], colors);
-			}
-		    }
-		    total /= oversample * oversample;
-		    VectorScale(colors, 1.0 / oversample / oversample, colors);
-		} else {
-		    total = lightmap[c];
-		    if (colored)
-			VectorCopy(colormap[c], colors);
-		}
-
-		total *= rangescale;	/* scale before clamping */
-		if (colored) {
-		    /* Scale back intensity, instead of capping individual
-		     * colors
-		     */
-		    VectorScale(colors, rangescale, colors);
-		    max = 0.0;
-		    for (j = 0; j < 3; j++)
-			if (colors[j] > max) {
-			    max = colors[j];
-			} else if (colors[j] < 0.0f) {
-			    Error("color %i < 0", j);
-			}
-		    if (max > 255.0f)
-			VectorScale(colors, 255.0f / max, colors);
-		}
-
-		if (total > 255.0f)
-		    total = 255.0f;
-		else if (total < 0) {
-		    //Error ("light < 0");
-		    total = 0;
-		}
-
-		/* Write out the lightmap in the appropriate format */
-		if (colored) {
-		    *lit_out++ = colors[0];
-		    *lit_out++ = colors[1];
-		    *lit_out++ = colors[2];
-		}
-		*out++ = total;
-	    }
-	}
-    }
+    WriteLightdata(face, &lightsurf, &lightdata);
 }
