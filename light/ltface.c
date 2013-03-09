@@ -414,6 +414,49 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
     }
 }
 
+static void
+Lightsurf_Init(const modelinfo_t *modelinfo, const dface_t *face,
+	       lightsurf_t *lightsurf)
+{
+    plane_t *plane;
+    vec3_t planepoint;
+    texorg_t texorg;
+
+    memset(lightsurf, 0, sizeof(*lightsurf));
+    lightsurf->modelinfo = modelinfo;
+
+    /* Set up the plane, including model offset */
+    plane = &lightsurf->plane;
+    VectorCopy(dplanes[face->planenum].normal, plane->normal);
+    plane->dist = dplanes[face->planenum].dist;
+    VectorScale(plane->normal, plane->dist, planepoint);
+    VectorAdd(planepoint, modelinfo->offset, planepoint);
+    plane->dist = DotProduct(plane->normal, planepoint);
+    if (face->side) {
+	VectorSubtract(vec3_origin, plane->normal, plane->normal);
+	plane->dist = -plane->dist;
+    }
+
+    /* Set up the texorg for coordinate transformation */
+    CreateFaceTransform(face, &texorg.transform);
+    texorg.texinfo = &texinfo[face->texinfo];
+    texorg.planedist = plane->dist;
+
+    /* Set up the surface points */
+    CalcFaceExtents(face, modelinfo->offset, lightsurf);
+    CalcPoints(modelinfo->model, &texorg, lightsurf);
+}
+
+static void
+Lightdata_Init(lightdata_t *lightdata)
+{
+    int i;
+
+    memset(lightdata, 0, sizeof(*lightdata));
+    for (i = 0; i < MAXLIGHTMAPS; i++)
+	lightdata->styles[i] = 255;
+}
+
 
 /*
  * ============================================================================
@@ -800,7 +843,6 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 {
     const entity_t *entity;
     dface_t *face;
-    plane_t *plane;
     lightdata_t lightdata;
     lightsurf_t lightsurf;
     int s, t;
@@ -809,8 +851,6 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     vec_t max;
     vec_t total;
     int size;
-    int lightmapwidth;
-    int lightmapsize;
     byte *out;
     byte *lit_out = NULL;
     vec_t *lightmap;
@@ -818,9 +858,6 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     vec3_t colors = { 0, 0, 0 };
 
     int width;
-    vec3_t planepoint;
-
-    texorg_t texorg;
 
     face = dfaces + surfnum;
 
@@ -832,39 +869,8 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     if (texinfo[face->texinfo].flags & TEX_SPECIAL)
 	return;			/* non-lit texture */
 
-    memset(&lightdata, 0, sizeof(lightdata));
-    memset(&lightsurf, 0, sizeof(lightsurf));
-    lightsurf.modelinfo = modelinfo;
-
-    /* Offset the plane according to the model offset */
-    plane = &lightsurf.plane;
-    VectorCopy(dplanes[face->planenum].normal, plane->normal);
-    plane->dist = dplanes[face->planenum].dist;
-    VectorScale(plane->normal, plane->dist, planepoint);
-    VectorAdd(planepoint, modelinfo->offset, planepoint);
-    plane->dist = DotProduct(plane->normal, planepoint);
-
-    /* flip if needed */
-    if (face->side) {
-	VectorSubtract(vec3_origin, plane->normal, plane->normal);
-	plane->dist = -plane->dist;
-    }
-
-    CreateFaceTransform(face, &texorg.transform);
-    texorg.texinfo = &texinfo[face->texinfo];
-    texorg.planedist = plane->dist;
-
-    CalcFaceExtents(face, modelinfo->offset, &lightsurf);
-    CalcPoints(modelinfo->model, &texorg, &lightsurf);
-
-    lightmapwidth = lightsurf.texsize[0] + 1;
-
-    size = lightmapwidth * (lightsurf.texsize[1] + 1);
-    if (size > SINGLEMAP)
-	Error("Bad lightmap size");
-
-    for (i = 0; i < MAXLIGHTMAPS; i++)
-	lightdata.styles[i] = 255;
+    Lightsurf_Init(modelinfo, face, &lightsurf);
+    Lightdata_Init(&lightdata);
 
     /* Under normal circumstances, the lighting procedure is:
      * - cast all light entities
@@ -879,7 +885,6 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
      * - cast _negative_ sky light (if any)
      */
 
-    lightdata.numstyles = 0;
     if (nominlimit) {
 	/* cast only positive lights */
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
@@ -973,8 +978,8 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     for (i = 0; i < MAXLIGHTMAPS; i++)
 	face->styles[i] = lightdata.styles[i];
 
-    lightmapsize = size * lightdata.numstyles;
-    GetFileSpace(&out, &lit_out, lightmapsize);
+    size = (lightsurf.texsize[0] + 1) * (lightsurf.texsize[1] + 1);
+    GetFileSpace(&out, &lit_out, size * lightdata.numstyles);
 
     face->lightofs = out - filebase;
 
