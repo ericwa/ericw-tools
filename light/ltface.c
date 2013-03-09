@@ -24,60 +24,70 @@ static const vec3_t bsp_origin = { 0, 0, 0 };
 
 /* ======================================================================== */
 
-// Solve three simultaneous equations
-// mtx is modified by the function...
+typedef struct {
+    vec3_t data[3];	/* permuted 3x3 matrix */
+    int row[3];		/* row permutations */
+    int col[3];		/* column permutations */
+} pmatrix3_t;
+
+/*
+ * To do arbitrary transformation of texture coordinates to world
+ * coordinates requires solving for three simultaneous equations. We
+ * set up the LU decomposed form of the transform matrix here.
+ */
 #define ZERO_EPSILON (0.001)
 static qboolean
-LU_Decompose(vec3_t mtx[3], int r[3], int c[2])
+PMatrix3_LU_Decompose(pmatrix3_t *matrix)
 {
-    int i, j, k;		// loop variables
+    int i, j, k, tmp;
     vec_t max;
     int max_r, max_c;
 
-    // Do gauss elimination
+    /* Do gauss elimination */
     for (i = 0; i < 3; ++i) {
 	max = 0;
 	max_r = max_c = i;
 	for (j = i; j < 3; ++j) {
 	    for (k = i; k < 3; ++k) {
-		if (fabs(mtx[j][k]) > max) {
-		    max = fabs(mtx[j][k]);
+		if (fabs(matrix->data[j][k]) > max) {
+		    max = fabs(matrix->data[j][k]);
 		    max_r = j;
 		    max_c = k;
 		}
 	    }
 	}
 
-	// Check for parallel planes
+	/* Check for parallel planes */
 	if (max < ZERO_EPSILON)
 	    return false;
 
-	// Swap rows/columns if necessary
+	/* Swap rows/columns if necessary */
 	if (max_r != i) {
 	    for (j = 0; j < 3; ++j) {
-		max = mtx[i][j];
-		mtx[i][j] = mtx[max_r][j];
-		mtx[max_r][j] = max;
+		max = matrix->data[i][j];
+		matrix->data[i][j] = matrix->data[max_r][j];
+		matrix->data[max_r][j] = max;
 	    }
-	    k = r[i];
-	    r[i] = r[max_r];
-	    r[max_r] = k;
+	    tmp = matrix->row[i];
+	    matrix->row[i] = matrix->row[max_r];
+	    matrix->row[max_r] = tmp;
 	}
 	if (max_c != i) {
 	    for (j = 0; j < 3; ++j) {
-		max = mtx[j][i];
-		mtx[j][i] = mtx[j][max_c];
-		mtx[j][max_c] = max;
+		max = matrix->data[j][i];
+		matrix->data[j][i] = matrix->data[j][max_c];
+		matrix->data[j][max_c] = max;
 	    }
-	    k = c[i];
-	    c[i] = c[max_c];
-	    c[max_c] = k;
+	    tmp = matrix->col[i];
+	    matrix->col[i] = matrix->col[max_c];
+	    matrix->col[max_c] = tmp;
 	}
-	// Do pivot
+
+	/* Do pivot */
 	for (j = i + 1; j < 3; ++j) {
-	    mtx[j][i] /= mtx[i][i];
+	    matrix->data[j][i] /= matrix->data[i][i];
 	    for (k = i + 1; k < 3; ++k)
-		mtx[j][k] -= mtx[j][i] * mtx[i][k];
+		matrix->data[j][k] -= matrix->data[j][i] * matrix->data[i][k];
 	}
     }
 
@@ -85,21 +95,24 @@ LU_Decompose(vec3_t mtx[3], int r[3], int c[2])
 }
 
 static void
-solve3(const vec3_t mtx[3], const int r[3], const int c[3],
-       const vec3_t rhs, vec3_t soln)
+Solve3(const pmatrix3_t *matrix, const vec3_t rhs, vec3_t out)
 {
-    vec3_t y;
+    /* Use local short names just for readability (should optimize away) */
+    const vec3_t *data = matrix->data;
+    const int *r = matrix->row;
+    const int *c = matrix->col;
+    vec3_t tmp;
 
-    // forward-substitution
-    y[0] = rhs[r[0]];
-    y[1] = rhs[r[1]] - mtx[1][0] * y[0];
-    y[2] = rhs[r[2]] - mtx[2][0] * y[0] - mtx[2][1] * y[1];
+    /* forward-substitution */
+    tmp[0] = rhs[r[0]];
+    tmp[1] = rhs[r[1]] - data[1][0] * tmp[0];
+    tmp[2] = rhs[r[2]] - data[2][0] * tmp[0] - data[2][1] * tmp[1];
 
-    // back-substitution
-    soln[c[2]] = y[2] / mtx[2][2];
-    soln[c[1]] = (y[1] - mtx[1][2] * soln[c[2]]) / mtx[1][1];
-    soln[c[0]] = (y[0] - mtx[0][1] * soln[c[1]] - mtx[0][2] * soln[c[2]])
-	/ mtx[0][0];
+    /* back-substitution */
+    out[c[2]] = tmp[2] / data[2][2];
+    out[c[1]] = (tmp[1] - data[1][2] * out[c[2]]) / data[1][1];
+    out[c[0]] = (tmp[0] - data[0][1] * out[c[1]] - data[0][2] * out[c[2]])
+	/ data[0][0];
 }
 
 /*
@@ -121,85 +134,82 @@ solve3(const vec3_t mtx[3], const int r[3], const int c[3],
  * ============================================================================
  */
 
+typedef struct {
+    pmatrix3_t transform;
+    const texinfo_t *texinfo;
+    vec_t facedist;
+} texorg_t;
+
 /* Allow space for 4x4 oversampling */
 #define SINGLEMAP (18*18*4*4)
 
 typedef struct {
     const modelinfo_t *modelinfo;
-    const dface_t *face;
-    vec_t facedist;
-    vec3_t facenormal;
-
-    /* FIXME - Comment this properly */
-    vec_t worldtotex[2][4];	// Copy of face->texinfo->vecs
-    vec3_t LU[3];
-    int row_p[3];
-    int col_p[3];
 
     vec_t exactmid[2];
-
     int texmins[2], texsize[2];
-    int lightstyles[256];
 
+    vec_t facedist;
+    vec3_t facenormal;
     int numsurfpt;
-    int numlightstyles;
-
     vec3_t surfpt[SINGLEMAP];
+
+    int numlightstyles;
+    int lightstyles[MAXLIGHTMAPS];
     vec_t lightmaps[MAXLIGHTMAPS][SINGLEMAP];
     vec3_t colormaps[MAXLIGHTMAPS][SINGLEMAP];
 } lightinfo_t;
 
 /*
  * ================
- * CalcFaceVectors
- * Fills in texorg, worldtotex. and textoworld
+ * CreateFaceTransform
+ * Fills in the transform matrix for converting tex coord <-> world coord
  * ================
  */
 static void
-CalcFaceVectors(lightinfo_t *l)
+CreateFaceTransform(const dface_t *face, pmatrix3_t *transform)
 {
-    texinfo_t *tex;
-    int i, j;
+    const dplane_t *plane;
+    const texinfo_t *tex;
+    int i;
 
-    /* convert from float to vec_t */
-    tex = &texinfo[l->face->texinfo];
-    for (i = 0; i < 2; i++)
-	for (j = 0; j < 4; j++)
-	    l->worldtotex[i][j] = tex->vecs[i][j];
-
-    /* Prepare LU and row, column permutations */
-    for (i = 0; i < 3; ++i)
-	l->row_p[i] = l->col_p[i] = i;
-    VectorCopy(l->worldtotex[0], l->LU[0]);
-    VectorCopy(l->worldtotex[1], l->LU[1]);
-    VectorCopy(l->facenormal, l->LU[2]);
+    /* Prepare the transform matrix and init row/column permutations */
+    plane = &dplanes[face->planenum];
+    tex = &texinfo[face->texinfo];
+    for (i = 0; i < 3; i++) {
+	transform->data[0][i] = tex->vecs[0][i];
+	transform->data[1][i] = tex->vecs[1][i];
+	transform->data[2][i] = plane->normal[i];
+	transform->row[i] = transform->col[i] = i;
+    }
+    if (face->side)
+	VectorSubtract(vec3_origin, transform->data[2], transform->data[2]);
 
     /* Decompose the matrix. If we can't, texture axes are invalid. */
-    if (!LU_Decompose(l->LU, l->row_p, l->col_p)) {
-	const vec_t *p = dvertexes[dedges[l->face->firstedge].v[0]].point;
-
+    if (!PMatrix3_LU_Decompose(transform)) {
+	const vec_t *p = dvertexes[dedges[face->firstedge].v[0]].point;
 	Error("Bad texture axes on face:\n"
 	      "   face point at (%5.3f, %5.3f, %5.3f)\n", p[0], p[1], p[2]);
     }
 }
 
 static void
-tex_to_world(vec_t s, vec_t t, const lightinfo_t *l, vec3_t world)
+TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
 {
     vec3_t rhs;
 
-    rhs[0] = s - l->worldtotex[0][3];
-    rhs[1] = t - l->worldtotex[1][3];
-    rhs[2] = l->facedist + 1;	// one "unit" in front of surface
+    rhs[0] = s - texorg->texinfo->vecs[0][3];
+    rhs[1] = t - texorg->texinfo->vecs[1][3];
+    rhs[2] = texorg->facedist + 1; /* one "unit" in front of surface */
 
-    solve3(l->LU, l->row_p, l->col_p, rhs, world);
+    Solve3(&texorg->transform, rhs, world);
 }
 
 /*
  * Functions to aid in calculation of polygon centroid
  */
 static void
-tri_centroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
+TriCentroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
 	    vec3_t out)
 {
     int i;
@@ -209,7 +219,7 @@ tri_centroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
 }
 
 static vec_t
-tri_area(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
+TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 {
     int i;
     vec3_t edge0, edge1, cross;
@@ -224,7 +234,7 @@ tri_area(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 }
 
 static void
-face_centroid(const dface_t *f, vec3_t out)
+FaceCentroid(const dface_t *f, vec3_t out)
 {
     int i, e;
     dvertex_t *v0, *v1, *v2;
@@ -250,10 +260,10 @@ face_centroid(const dface_t *f, vec3_t out)
 	    v2 = dvertexes + dedges[-e].v[0];
 	}
 
-	area = tri_area(v0, v1, v2);
+	area = TriArea(v0, v1, v2);
 	poly_area += area;
 
-	tri_centroid(v0, v1, v2, centroid);
+	TriCentroid(v0, v1, v2, centroid);
 	VectorMA(poly_centroid, area, centroid, poly_centroid);
     }
 
@@ -263,27 +273,24 @@ face_centroid(const dface_t *f, vec3_t out)
 /*
  * ================
  * CalcFaceExtents
- * Fills in s->texmins[], s->texsize[] and sets exactmid[]
+ * Fills in l->texmins[], l->texsize[] and sets exactmid[]
  * ================
  */
 static void
-CalcFaceExtents(lightinfo_t *l, const vec3_t offset)
+CalcFaceExtents(const dface_t *face, const vec3_t offset, lightinfo_t *l)
 {
-    const dface_t *s;
     vec_t mins[2], maxs[2], val;
     vec3_t centroid;
     int i, j, e;
     dvertex_t *v;
     texinfo_t *tex;
 
-    s = l->face;
-
     mins[0] = mins[1] = 999999;
     maxs[0] = maxs[1] = -99999;
-    tex = &texinfo[s->texinfo];
+    tex = &texinfo[face->texinfo];
 
-    for (i = 0; i < s->numedges; i++) {
-	e = dsurfedges[s->firstedge + i];
+    for (i = 0; i < face->numedges; i++) {
+	e = dsurfedges[face->firstedge + i];
 	if (e >= 0)
 	    v = dvertexes + dedges[e].v[0];
 	else
@@ -302,7 +309,7 @@ CalcFaceExtents(lightinfo_t *l, const vec3_t offset)
 	}
     }
 
-    face_centroid(s, centroid);
+    FaceCentroid(face, centroid);
 
     for (i = 0; i < 2; i++) {
 	l->exactmid[i] =
@@ -330,7 +337,7 @@ CalcFaceExtents(lightinfo_t *l, const vec3_t offset)
  * =================
  */
 static void
-CalcPoints(const dmodel_t *model, lightinfo_t *l)
+CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightinfo_t *l)
 {
     int i;
     int s, t;
@@ -348,7 +355,7 @@ CalcPoints(const dmodel_t *model, lightinfo_t *l)
     mids = l->exactmid[0];
     midt = l->exactmid[1];
 
-    tex_to_world(mids, midt, l, facemid);
+    TexCoordToWorld(mids, midt, texorg, facemid);
 
     h = (l->texsize[1] + 1) * oversample;
     w = (l->texsize[0] + 1) * oversample;
@@ -364,7 +371,7 @@ CalcPoints(const dmodel_t *model, lightinfo_t *l)
 
 	    /* if a line can be traced from surf to facemid, point is good */
 	    for (i = 0; i < 6; i++) {
-		tex_to_world(us, ut, l, surf);
+		TexCoordToWorld(us, ut, texorg, surf);
 
 		if (TestLineModel(model, facemid, surf))
 		    break;	/* got it */
@@ -837,6 +844,8 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     int width;
     vec3_t point;
 
+    texorg_t texorg;
+
     face = dfaces + surfnum;
 
     /* some surfaces don't need lightmaps */
@@ -849,7 +858,6 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 
     memset(&l, 0, sizeof(l));
     l.modelinfo = modelinfo;
-    l.face = face;
 
     /* rotate plane */
     VectorCopy(dplanes[face->planenum].normal, l.facenormal);
@@ -863,9 +871,12 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 	l.facedist = -l.facedist;
     }
 
-    CalcFaceVectors(&l);
-    CalcFaceExtents(&l, modelinfo->offset);
-    CalcPoints(modelinfo->model, &l);
+    CreateFaceTransform(face, &texorg.transform);
+    texorg.texinfo = &texinfo[face->texinfo];
+    texorg.facedist = l.facedist;
+
+    CalcFaceExtents(face, modelinfo->offset, &l);
+    CalcPoints(modelinfo->model, &texorg, &l);
 
     lightmapwidth = l.texsize[0] + 1;
 
