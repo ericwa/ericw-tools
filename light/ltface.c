@@ -150,19 +150,22 @@ typedef struct {
 
 typedef struct {
     const modelinfo_t *modelinfo;
+    plane_t plane;
 
+    /* FIXME - to be removed... */
     vec_t exactmid[2];
     int texmins[2], texsize[2];
 
-    plane_t plane;
-    int numsurfpt;
-    vec3_t surfpt[SINGLEMAP];
+    int numpoints;
+    vec3_t points[SINGLEMAP];
+} lightsurf_t;
 
-    int numlightstyles;
-    int lightstyles[MAXLIGHTMAPS];
+typedef struct {
+    int numstyles;
+    int styles[MAXLIGHTMAPS];
     vec_t lightmaps[MAXLIGHTMAPS][SINGLEMAP];
     vec3_t colormaps[MAXLIGHTMAPS][SINGLEMAP];
-} lightinfo_t;
+} lightdata_t;
 
 /*
  * ================
@@ -289,11 +292,11 @@ FaceCentroid(const dface_t *f, vec3_t out)
 /*
  * ================
  * CalcFaceExtents
- * Fills in l->texmins[], l->texsize[] and sets exactmid[]
+ * Fills in surf->texmins[], surf->texsize[] and sets surf->exactmid[]
  * ================
  */
 static void
-CalcFaceExtents(const dface_t *face, const vec3_t offset, lightinfo_t *l)
+CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
     vec3_t world, centroid;
@@ -323,13 +326,13 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightinfo_t *l)
     FaceCentroid(face, centroid);
 
     VectorAdd(centroid, offset, world);
-    WorldToTexCoord(world, tex, l->exactmid);
+    WorldToTexCoord(world, tex, surf->exactmid);
     for (i = 0; i < 2; i++) {
 	mins[i] = floor(mins[i] / 16);
 	maxs[i] = ceil(maxs[i] / 16);
-	l->texmins[i] = mins[i];
-	l->texsize[i] = maxs[i] - mins[i];
-	if (l->texsize[i] > 17)
+	surf->texmins[i] = mins[i];
+	surf->texsize[i] = maxs[i] - mins[i];
+	if (surf->texsize[i] > 17)
 	    Error("Bad surface extents");
     }
 }
@@ -342,13 +345,13 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightinfo_t *l)
  * =================
  */
 static void
-CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightinfo_t *l)
+CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 {
     int i;
     int s, t;
     int w, h, step;
     vec_t starts, startt, us, ut;
-    vec_t *surf;
+    vec_t *point;
     vec_t mids, midt;
     vec3_t facemid, move;
 
@@ -356,29 +359,29 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightinfo_t *l)
     /* the points are biased towards the center of the surface */
     /* to help avoid edge cases just inside walls              */
 
-    surf = l->surfpt[0];
-    mids = l->exactmid[0];
-    midt = l->exactmid[1];
+    point = surf->points[0];
+    mids = surf->exactmid[0];
+    midt = surf->exactmid[1];
 
     TexCoordToWorld(mids, midt, texorg, facemid);
 
-    h = (l->texsize[1] + 1) * oversample;
-    w = (l->texsize[0] + 1) * oversample;
-    starts = (l->texmins[0] - 0.5 + (0.5 / oversample)) * 16;
-    startt = (l->texmins[1] - 0.5 + (0.5 / oversample)) * 16;
+    h = (surf->texsize[1] + 1) * oversample;
+    w = (surf->texsize[0] + 1) * oversample;
+    starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * 16;
+    startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * 16;
     step = 16 / oversample;
 
-    l->numsurfpt = w * h;
+    surf->numpoints = w * h;
     for (t = 0; t < h; t++) {
-	for (s = 0; s < w; s++, surf += 3) {
+	for (s = 0; s < w; s++, point += 3) {
 	    us = starts + s * step;
 	    ut = startt + t * step;
 
 	    /* if a line can be traced from surf to facemid, point is good */
 	    for (i = 0; i < 6; i++) {
-		TexCoordToWorld(us, ut, texorg, surf);
+		TexCoordToWorld(us, ut, texorg, point);
 
-		if (TestLineModel(model, facemid, surf))
+		if (TestLineModel(model, facemid, point))
 		    break;	/* got it */
 		if (i & 1) {	// i is odd
 		    if (us > mids) {
@@ -403,9 +406,9 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightinfo_t *l)
 		}
 
 		/* move surf 8 pixels towards the center */
-		VectorSubtract(facemid, surf, move);
+		VectorSubtract(facemid, point, move);
 		VectorNormalize(move);
-		VectorMA(surf, 8, move, surf);
+		VectorMA(point, 8, move, point);
 	    }
 	}
     }
@@ -422,27 +425,27 @@ static int c_culldistplane;
 static int c_proper;
 
 static vec_t
-GetLightValue(const entity_t *light, vec_t distance)
+GetLightValue(const entity_t *entity, vec_t distance)
 {
     vec_t value;
 
-    if (light->formula == LF_INFINITE || light->formula == LF_LOCALMIN)
-	return light->light;
+    if (entity->formula == LF_INFINITE || entity->formula == LF_LOCALMIN)
+	return entity->light;
 
-    value = scaledist * light->atten * distance;
-    switch (light->formula) {
+    value = scaledist * entity->atten * distance;
+    switch (entity->formula) {
     case LF_INVERSE:
-	return light->light / (value / LF_SCALE);
+	return entity->light / (value / LF_SCALE);
     case LF_INVERSE2A:
 	value += LF_SCALE;
 	/* Fall through */
     case LF_INVERSE2:
-	return light->light / ((value * value) / (LF_SCALE * LF_SCALE));
+	return entity->light / ((value * value) / (LF_SCALE * LF_SCALE));
     case LF_LINEAR:
-	if (light->light > 0)
-	    return (light->light - value > 0) ? light->light - value : 0;
+	if (entity->light > 0)
+	    return (entity->light - value > 0) ? entity->light - value : 0;
 	else
-	    return (light->light + value < 0) ? light->light + value : 0;
+	    return (entity->light + value < 0) ? entity->light + value : 0;
     default:
 	Error("Internal error: unknown light formula");
     }
@@ -455,12 +458,15 @@ GetLightValue(const entity_t *light, vec_t distance)
  * ================
  */
 static void
-SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
+SingleLightFace(const entity_t *entity, const lightsurf_t *lightsurf,
+		const vec3_t colors, lightdata_t *lightdata)
 {
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
+    const plane_t *plane = &lightsurf->plane;
     vec_t dist;
     vec_t angle, spotscale;
     vec_t add;
-    const vec_t *surf;
+    const vec_t *surfpoint;
     qboolean newmap, hit;
     int mapnum;
     int c;
@@ -469,14 +475,14 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
     vec_t newlightmap[SINGLEMAP];
     vec3_t newcolormap[SINGLEMAP];
 
-    dist = DotProduct(light->origin, l->plane.normal) - l->plane.dist;
+    dist = DotProduct(entity->origin, plane->normal) - plane->dist;
 
     /* don't bother with lights behind the surface */
     if (dist < 0)
 	return;
 
     /* don't bother with light too far away */
-    if (dist > light->fadedist) {
+    if (dist > entity->fadedist) {
 	c_culldistplane++;
 	return;
     }
@@ -485,8 +491,8 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
      * Find the lightmap with matching style
      */
     newmap = true;
-    for (mapnum = 0; mapnum < l->numlightstyles; mapnum++) {
-	if (l->lightstyles[mapnum] == light->style) {
+    for (mapnum = 0; mapnum < lightdata->numstyles; mapnum++) {
+	if (lightdata->styles[mapnum] == entity->style) {
 	    newmap = false;
 	    break;
 	}
@@ -497,8 +503,8 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
 	lightsamp = newlightmap;
 	colorsamp = newcolormap;
     } else {
-	lightsamp = l->lightmaps[mapnum];
-	colorsamp = l->colormaps[mapnum];
+	lightsamp = lightdata->lightmaps[mapnum];
+	colorsamp = lightdata->colormaps[mapnum];
     }
 
     /*
@@ -507,42 +513,42 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
     hit = false;
     c_proper++;
 
-    surf = l->surfpt[0];
-    for (c = 0; c < l->numsurfpt; c++, surf += 3) {
+    surfpoint = lightsurf->points[0];
+    for (c = 0; c < lightsurf->numpoints; c++, surfpoint += 3) {
 	vec3_t ray;
 
-	VectorSubtract(light->origin, surf, ray);
+	VectorSubtract(entity->origin, surfpoint, ray);
 	dist = VectorLength(ray);
 
 	/* Quick distance check first */
-	if (dist > light->fadedist)
+	if (dist > entity->fadedist)
 	    continue;
 
 	/* Check spotlight cone */
 	VectorScale(ray, 1.0 / dist, ray);
-	angle = DotProduct(ray, l->plane.normal);
+	angle = DotProduct(ray, plane->normal);
 	spotscale = 1;
-	if (light->spotlight) {
-	    vec_t falloff = DotProduct(light->spotvec, ray);
-	    if (falloff > light->spotfalloff)
+	if (entity->spotlight) {
+	    vec_t falloff = DotProduct(entity->spotvec, ray);
+	    if (falloff > entity->spotfalloff)
 		continue;
-	    if (falloff > light->spotfalloff2) {
+	    if (falloff > entity->spotfalloff2) {
 		/* Interpolate between the two spotlight falloffs */
-		spotscale = falloff - light->spotfalloff2;
-		spotscale /= light->spotfalloff - light->spotfalloff2;
+		spotscale = falloff - entity->spotfalloff2;
+		spotscale /= entity->spotfalloff - entity->spotfalloff2;
 		spotscale = 1.0 - spotscale;
 	    }
 	}
 
 	/* Test for line of sight */
-	if (!TestLine(light->origin, surf))
+	if (!TestLine(entity->origin, surfpoint))
 	    continue;
-	if (l->modelinfo->shadowself)
-	    if (!TestLineModel(l->modelinfo->model, light->origin, surf))
+	if (modelinfo->shadowself)
+	    if (!TestLineModel(modelinfo->model, entity->origin, surfpoint))
 		continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
-	add = GetLightValue(light, dist) * angle * spotscale;
+	add = GetLightValue(entity, dist) * angle * spotscale;
 	lightsamp[c] += add;
 	if (colored)
 	    VectorMA(colorsamp[c], add / 255.0f, colors, colorsamp[c]);
@@ -553,19 +559,19 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
     }
 
     if (newmap && hit) {
-	if (l->numlightstyles == MAXLIGHTMAPS) {
+	if (lightdata->numstyles == MAXLIGHTMAPS) {
 	    logprint("WARNING: Too many light styles on a face\n"
 		     "   lightmap point near (%s)\n"
-		     "   light->origin (%s)\n",
-		     VecStr(l->surfpt[0]), VecStr(light->origin));
+		     "   entity->origin (%s)\n",
+		     VecStr(lightsurf->points[0]), VecStr(entity->origin));
 	    return;
 	}
 
 	/* the style has some real data now */
-	mapnum = l->numlightstyles++;
-	l->lightstyles[mapnum] = light->style;
-	memcpy(l->lightmaps[mapnum], newlightmap, sizeof(newlightmap));
-	memcpy(l->colormaps[mapnum], newcolormap, sizeof(newcolormap));
+	mapnum = lightdata->numstyles++;
+	lightdata->styles[mapnum] = entity->style;
+	memcpy(lightdata->lightmaps[mapnum], newlightmap, sizeof(newlightmap));
+	memcpy(lightdata->colormaps[mapnum], newcolormap, sizeof(newcolormap));
     }
 }
 
@@ -575,94 +581,54 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
  * =============
  */
 static void
-SkyLightFace(lightinfo_t *l, const vec3_t colors)
+SkyLightFace(const lightsurf_t *lightsurf, const vec3_t colors,
+	     lightdata_t *lightdata)
 {
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
+    const plane_t *plane = &lightsurf->plane;
+    const vec_t *surfpoint;
     int i, mapnum;
-    vec_t *surf;
     vec3_t incoming;
     vec_t angle;
     vec_t *lightmap;
     vec3_t *colormap;
 
     /* Don't bother if surface facing away from sun */
-    if (DotProduct(sunvec, l->plane.normal) < -ANGLE_EPSILON)
+    if (DotProduct(sunvec, plane->normal) < -ANGLE_EPSILON)
 	return;
 
     /* if sunlight is set, use a style 0 light map */
-    for (mapnum = 0; mapnum < l->numlightstyles; mapnum++)
-	if (l->lightstyles[mapnum] == 0)
+    for (mapnum = 0; mapnum < lightdata->numstyles; mapnum++)
+	if (lightdata->styles[mapnum] == 0)
 	    break;
-    if (mapnum == l->numlightstyles) {
-	if (l->numlightstyles == MAXLIGHTMAPS)
+    if (mapnum == lightdata->numstyles) {
+	if (lightdata->numstyles == MAXLIGHTMAPS)
 	    return;		/* oh well, too many lightmaps... */
-	l->lightstyles[mapnum] = 0;
-	l->numlightstyles++;
+	lightdata->styles[mapnum] = 0;
+	lightdata->numstyles++;
     }
-    lightmap = l->lightmaps[mapnum];
-    colormap = l->colormaps[mapnum];
+    lightmap = lightdata->lightmaps[mapnum];
+    colormap = lightdata->colormaps[mapnum];
 
     /* Check each point... */
     VectorCopy(sunvec, incoming);
     VectorNormalize(incoming);
-    angle = DotProduct(incoming, l->plane.normal);
+    angle = DotProduct(incoming, plane->normal);
     angle = (1.0 - scalecos) + scalecos * angle;
 
-#if 0
-    /* Experimental - lighting of faces parallel to sunlight*/
-    {
-	int a, b, c, j;
-	vec_t oldangle, offset;
-	vec3_t sun_vectors[5];
-
-	// Try to hit parallel surfaces?
-	oldangle = DotProduct(incoming, l->plane.normal);
-	if (oldangle < ANGLE_EPSILON) {
-	    printf("real small angle! (%f)\n", oldangle);
-	    angle = (1.0 - scalecos) + scalecos * ANGLE_EPSILON;
-	}
-
-	a = fabs(sunvec[0]) > fabs(sunvec[1]) ?
-	    (fabs(sunvec[0]) > fabs(sunvec[2]) ? 0 : 2) :
-	    (fabs(sunvec[1]) > fabs(sunvec[2]) ? 1 : 2);
-	b = (a + 1) % 3;
-	c = (a + 2) % 3;
-
-	offset = sunvec[a] * ANGLE_EPSILON * 2.0;	// approx...
-	for (j = 0; j < 5; ++j)
-	    VectorCopy(sunvec, sun_vectors[j]);
-	sun_vectors[1][b] += offset;
-	sun_vectors[2][b] -= offset;
-	sun_vectors[3][c] += offset;
-	sun_vectors[4][c] -= offset;
-
-	surf = l->surfpt[0];
-	for (i = 0; i < l->numsurfpt; i++, surf += 3) {
-	    for (j = 0; j < 1 || (oldangle < ANGLE_EPSILON && j < 5); ++j) {
-		if (TestSky(surf, sun_vectors[j])) {
-		    lightmap[i] += angle * sunlight;
-		    if (colored)
-			VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
-				 colormap[i]);
-		    break;
-		}
-	    }
-	}
-    }
-#else
-    surf = l->surfpt[0];
-    for (i = 0; i < l->numsurfpt; i++, surf += 3) {
+    surfpoint = lightsurf->points[0];
+    for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
 	vec3_t skypoint;
-	if (!TestSky(surf, sunvec, skypoint))
+	if (!TestSky(surfpoint, sunvec, skypoint))
 	    continue;
-	if (l->modelinfo->shadowself)
-	    if (!TestLineModel(l->modelinfo->model, surf, skypoint))
+	if (modelinfo->shadowself)
+	    if (!TestLineModel(modelinfo->model, surfpoint, skypoint))
 		continue;
 	lightmap[i] += angle * sunlight;
 	if (colored)
 	    VectorMA(colormap[i], angle * sunlight / 255.0f, colors,
 		     colormap[i]);
     }
-#endif
 }
 
 /*
@@ -671,8 +637,10 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
  * ============
  */
 static void
-FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
+FixMinlight(const lightsurf_t *lightsurf, const int minlight,
+	    const vec3_t mincolor, lightdata_t *lightdata)
 {
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
     int i, j, k;
     vec_t *lightmap;
     vec3_t *colormap;
@@ -681,28 +649,28 @@ FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
     /* Find a style 0 lightmap */
     lightmap = NULL;
     colormap = NULL;
-    for (i = 0; i < l->numlightstyles; i++) {
-	if (l->lightstyles[i] == 0) {
-	    lightmap = l->lightmaps[i];
-	    colormap = l->colormaps[i];
+    for (i = 0; i < lightdata->numstyles; i++) {
+	if (lightdata->styles[i] == 0) {
+	    lightmap = lightdata->lightmaps[i];
+	    colormap = lightdata->colormaps[i];
 	    break;
 	}
     }
 
     if (!lightmap) {
-	if (l->numlightstyles == MAXLIGHTMAPS)
+	if (lightdata->numstyles == MAXLIGHTMAPS)
 	    return; /* oh well... FIXME - should we warn? */
-	lightmap = l->lightmaps[l->numlightstyles];
-	for (i = 0; i < l->numsurfpt; i++)
+	lightmap = lightdata->lightmaps[lightdata->numstyles];
+	for (i = 0; i < lightsurf->numpoints; i++)
 	    lightmap[i] = minlight;
 	if (colored) {
-	    colormap = l->colormaps[l->numlightstyles];
-	    for (i = 0; i < l->numsurfpt; i++)
+	    colormap = lightdata->colormaps[lightdata->numstyles];
+	    for (i = 0; i < lightsurf->numpoints; i++)
 		VectorScale(mincolor, minlight / 255.0f, colormap[i]);
 	}
-	l->lightstyles[l->numlightstyles++] = 0;
+	lightdata->styles[lightdata->numstyles++] = 0;
     } else {
-	for (i = 0; i < l->numsurfpt; i++) {
+	for (i = 0; i < lightsurf->numpoints; i++) {
 	    if (lightmap[i] < minlight)
 		lightmap[i] = minlight;
 	    if (colored) {
@@ -723,29 +691,29 @@ FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
 	/* Find the lightmap with correct style */
 	lightmap = NULL;
 	colormap = NULL;
-	for (j = 0; j < l->numlightstyles; j++) {
-	    if (l->lightstyles[j] == 0) {
-		lightmap = l->lightmaps[j];
-		colormap = l->colormaps[j];
+	for (j = 0; j < lightdata->numstyles; j++) {
+	    if (lightdata->styles[j] == 0) {
+		lightmap = lightdata->lightmaps[j];
+		colormap = lightdata->colormaps[j];
 		break;
 	    }
 	}
 	if (!lightmap) {
-	    if (l->numlightstyles == MAXLIGHTMAPS)
+	    if (lightdata->numstyles == MAXLIGHTMAPS)
 		continue; /* oh well... FIXME - should we warn? */
-	    lightmap = l->lightmaps[l->numlightstyles];
-	    colormap = l->colormaps[l->numlightstyles];
-	    l->numlightstyles++;
+	    lightmap = lightdata->lightmaps[lightdata->numstyles];
+	    colormap = lightdata->colormaps[lightdata->numstyles];
+	    lightdata->numstyles++;
 	}
 
-	for (j = 0; j < l->numsurfpt; j++) {
+	for (j = 0; j < lightsurf->numpoints; j++) {
 	    qboolean trace = false;
 	    if (lightmap[j] < entity->light) {
-		trace = TestLine(entity->origin, l->surfpt[j]);
+		trace = TestLine(entity->origin, lightsurf->points[j]);
 		if (!trace)
 		    continue;
-		if (l->modelinfo->shadowself) {
-		    trace = TestLineModel(l->modelinfo->model, entity->origin, l->surfpt[j]);
+		if (modelinfo->shadowself) {
+		    trace = TestLineModel(modelinfo->model, entity->origin, lightsurf->points[j]);
 		    if (!trace)
 			continue;
 		}
@@ -756,12 +724,13 @@ FixMinlight(lightinfo_t *l, const int minlight, const vec3_t mincolor)
 	    for (k = 0; k < 3; k++) {
 		if (colormap[j][k] < mincolor[k]) {
 		    if (!trace) {
-			trace = TestLine(entity->origin, l->surfpt[j]);
+			trace = TestLine(entity->origin, lightsurf->points[j]);
 			if (!trace)
 			    break;
-			if (l->modelinfo->shadowself) {
-			    trace = TestLineModel(l->modelinfo->model,
-						  entity->origin, l->surfpt[j]);
+			if (modelinfo->shadowself) {
+			    trace = TestLineModel(modelinfo->model,
+						  entity->origin,
+						  lightsurf->points[j]);
 			    if (!trace)
 				break;
 			}
@@ -832,7 +801,8 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     const entity_t *entity;
     dface_t *face;
     plane_t *plane;
-    lightinfo_t l;
+    lightdata_t lightdata;
+    lightsurf_t lightsurf;
     int s, t;
     int i, j, k, c;
 
@@ -862,11 +832,12 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     if (texinfo[face->texinfo].flags & TEX_SPECIAL)
 	return;			/* non-lit texture */
 
-    memset(&l, 0, sizeof(l));
-    l.modelinfo = modelinfo;
+    memset(&lightdata, 0, sizeof(lightdata));
+    memset(&lightsurf, 0, sizeof(lightsurf));
+    lightsurf.modelinfo = modelinfo;
 
     /* Offset the plane according to the model offset */
-    plane = &l.plane;
+    plane = &lightsurf.plane;
     VectorCopy(dplanes[face->planenum].normal, plane->normal);
     plane->dist = dplanes[face->planenum].dist;
     VectorScale(plane->normal, plane->dist, planepoint);
@@ -883,17 +854,17 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     texorg.texinfo = &texinfo[face->texinfo];
     texorg.planedist = plane->dist;
 
-    CalcFaceExtents(face, modelinfo->offset, &l);
-    CalcPoints(modelinfo->model, &texorg, &l);
+    CalcFaceExtents(face, modelinfo->offset, &lightsurf);
+    CalcPoints(modelinfo->model, &texorg, &lightsurf);
 
-    lightmapwidth = l.texsize[0] + 1;
+    lightmapwidth = lightsurf.texsize[0] + 1;
 
-    size = lightmapwidth * (l.texsize[1] + 1);
+    size = lightmapwidth * (lightsurf.texsize[1] + 1);
     if (size > SINGLEMAP)
 	Error("Bad lightmap size");
 
     for (i = 0; i < MAXLIGHTMAPS; i++)
-	l.lightstyles[i] = 255;
+	lightdata.styles[i] = 255;
 
     /* Under normal circumstances, the lighting procedure is:
      * - cast all light entities
@@ -908,7 +879,7 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
      * - cast _negative_ sky light (if any)
      */
 
-    l.numlightstyles = 0;
+    lightdata.numstyles = 0;
     if (nominlimit) {
 	/* cast only positive lights */
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
@@ -917,19 +888,19 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 	    if (colored) {
 		if (entity->light) {
 		    PositiveColors(entity->light, colors, entity->lightcolor);
-		    SingleLightFace(entity, &l, colors);
+		    SingleLightFace(entity, &lightsurf, colors, &lightdata);
 		}
 	    } else if (entity->light > 0) {
-		SingleLightFace(entity, &l, colors);
+		SingleLightFace(entity, &lightsurf, colors, &lightdata);
 	    }
 	}
 	/* cast positive sky light */
 	if (sunlight) {
 	    if (colored) {
 		PositiveColors(sunlight, sunlight_color, colors);
-		SkyLightFace(&l, colors);
+		SkyLightFace(&lightsurf, colors, &lightdata);
 	    } else if (sunlight > 0) {
-		SkyLightFace(&l, colors);
+		SkyLightFace(&lightsurf, colors, &lightdata);
 	    }
 	}
     } else {
@@ -938,18 +909,20 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 	    if (entity->formula == LF_LOCALMIN)
 		continue;
 	    if (entity->light)
-		SingleLightFace(entity, &l, entity->lightcolor);
+		SingleLightFace(entity, &lightsurf, entity->lightcolor,
+				&lightdata);
 	}
 	/* cast sky light */
 	if (sunlight)
-	    SkyLightFace(&l, sunlight_color);
+	    SkyLightFace(&lightsurf, sunlight_color, &lightdata);
     }
 
     /* Minimum lighting - Use the greater of global or model minlight. */
     if (modelinfo->minlight > worldminlight)
-	FixMinlight(&l, modelinfo->minlight, modelinfo->mincolor);
+	FixMinlight(&lightsurf, modelinfo->minlight, modelinfo->mincolor,
+		    &lightdata);
     else
-	FixMinlight(&l, worldminlight, minlight_color);
+	FixMinlight(&lightsurf, worldminlight, minlight_color, &lightdata);
 
     if (nominlimit) {
 	/* cast only negative lights */
@@ -959,32 +932,32 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 	    if (colored) {
 		if (entity->light) {
 		    NegativeColors(entity->light, colors, entity->lightcolor);
-		    SingleLightFace(entity, &l, colors);
+		    SingleLightFace(entity, &lightsurf, colors, &lightdata);
 		}
 	    } else if (entity->light < 0) {
-		SingleLightFace(entity, &l, colors);
+		SingleLightFace(entity, &lightsurf, colors, &lightdata);
 	    }
 	}
 	/* cast negative sky light */
 	if (sunlight) {
 	    if (colored) {
 		NegativeColors(sunlight, colors, sunlight_color);
-		SkyLightFace(&l, colors);
+		SkyLightFace(&lightsurf, colors, &lightdata);
 	    } else if (sunlight < 0) {
-		SkyLightFace(&l, colors);
+		SkyLightFace(&lightsurf, colors, &lightdata);
 	    }
 	}
 
 	/* Fix any negative values */
-	for (i = 0; i < l.numlightstyles; i++) {
-	    for (j = 0; j < l.numsurfpt; j++) {
-		if (l.lightmaps[i][j] < 0) {
-		    l.lightmaps[i][j] = 0;
+	for (i = 0; i < lightdata.numstyles; i++) {
+	    for (j = 0; j < lightsurf.numpoints; j++) {
+		if (lightdata.lightmaps[i][j] < 0) {
+		    lightdata.lightmaps[i][j] = 0;
 		}
 		if (colored) {
 		    for (k = 0; k < 3; k++) {
-			if (l.colormaps[i][j][k] < 0) {
-			    l.colormaps[i][j][k] = 0;
+			if (lightdata.colormaps[i][j][k] < 0) {
+			    lightdata.colormaps[i][j][k] = 0;
 			}
 		    }
 		}
@@ -992,32 +965,32 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 	}
     }
 
-    if (!l.numlightstyles)
+    if (!lightdata.numstyles)
 	return;			/* no light hitting it */
 
     /* save out the values */
 
     for (i = 0; i < MAXLIGHTMAPS; i++)
-	face->styles[i] = l.lightstyles[i];
+	face->styles[i] = lightdata.styles[i];
 
-    lightmapsize = size * l.numlightstyles;
+    lightmapsize = size * lightdata.numstyles;
     GetFileSpace(&out, &lit_out, lightmapsize);
 
     face->lightofs = out - filebase;
 
     /* extra filtering */
-    width = (l.texsize[0] + 1) * oversample;
+    width = (lightsurf.texsize[0] + 1) * oversample;
 
-    for (i = 0; i < l.numlightstyles; i++) {
-	if (l.lightstyles[i] == 0xff)
+    for (i = 0; i < lightdata.numstyles; i++) {
+	if (lightdata.styles[i] == 0xff)
 	    Error("Wrote empty lightmap");
 
-	lightmap = l.lightmaps[i];
-	colormap = l.colormaps[i];
+	lightmap = lightdata.lightmaps[i];
+	colormap = lightdata.colormaps[i];
 	c = 0;
 
-	for (t = 0; t <= l.texsize[1]; t++) {
-	    for (s = 0; s <= l.texsize[0]; s++, c++) {
+	for (t = 0; t <= lightsurf.texsize[1]; t++) {
+	    for (s = 0; s <= lightsurf.texsize[0]; s++, c++) {
 		if (oversample > 1) {
 		    total = 0;
 		    VectorCopy(vec3_origin, colors);
