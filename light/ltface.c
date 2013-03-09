@@ -839,10 +839,9 @@ NegativeColors(int light, vec3_t dest, const vec3_t src)
  * ============
  */
 void
-LightFace(int surfnum, const modelinfo_t *modelinfo)
+LightFace(dface_t *face, const modelinfo_t *modelinfo)
 {
     const entity_t *entity;
-    dface_t *face;
     lightdata_t lightdata;
     lightsurf_t lightsurf;
     int s, t;
@@ -859,15 +858,12 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 
     int width;
 
-    face = dfaces + surfnum;
-
     /* some surfaces don't need lightmaps */
     face->lightofs = -1;
     for (j = 0; j < MAXLIGHTMAPS; j++)
 	face->styles[j] = 255;
-
     if (texinfo[face->texinfo].flags & TEX_SPECIAL)
-	return;			/* non-lit texture */
+	return;
 
     Lightsurf_Init(modelinfo, face, &lightsurf);
     Lightdata_Init(&lightdata);

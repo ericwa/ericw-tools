@@ -95,7 +95,7 @@ LightThread(void *junk)
 	if (i == nummodels)
 	    Error("%s: no model has face %d", __func__, facenum);
 
-	LightFace(facenum, &modelinfo[i]);
+	LightFace(dfaces + facenum, &modelinfo[i]);
     }
 
     return NULL;
