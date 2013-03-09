@@ -137,8 +137,13 @@ Solve3(const pmatrix3_t *matrix, const vec3_t rhs, vec3_t out)
 typedef struct {
     pmatrix3_t transform;
     const texinfo_t *texinfo;
-    vec_t facedist;
+    vec_t planedist;
 } texorg_t;
+
+typedef struct {
+    vec3_t normal;
+    vec_t dist;
+} plane_t;
 
 /* Allow space for 4x4 oversampling */
 #define SINGLEMAP (18*18*4*4)
@@ -149,8 +154,7 @@ typedef struct {
     vec_t exactmid[2];
     int texmins[2], texsize[2];
 
-    vec_t facedist;
-    vec3_t facenormal;
+    plane_t plane;
     int numsurfpt;
     vec3_t surfpt[SINGLEMAP];
 
@@ -200,7 +204,7 @@ TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
 
     rhs[0] = s - texorg->texinfo->vecs[0][3];
     rhs[1] = t - texorg->texinfo->vecs[1][3];
-    rhs[2] = texorg->facedist + 1; /* one "unit" in front of surface */
+    rhs[2] = texorg->planedist + 1; /* one "unit" in front of surface */
 
     Solve3(&texorg->transform, rhs, world);
 }
@@ -464,7 +468,7 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
     vec_t newlightmap[SINGLEMAP];
     vec3_t newcolormap[SINGLEMAP];
 
-    dist = DotProduct(light->origin, l->facenormal) - l->facedist;
+    dist = DotProduct(light->origin, l->plane.normal) - l->plane.dist;
 
     /* don't bother with lights behind the surface */
     if (dist < 0)
@@ -515,7 +519,7 @@ SingleLightFace(const entity_t *light, lightinfo_t *l, const vec3_t colors)
 
 	/* Check spotlight cone */
 	VectorScale(ray, 1.0 / dist, ray);
-	angle = DotProduct(ray, l->facenormal);
+	angle = DotProduct(ray, l->plane.normal);
 	spotscale = 1;
 	if (light->spotlight) {
 	    vec_t falloff = DotProduct(light->spotvec, ray);
@@ -580,7 +584,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
     vec3_t *colormap;
 
     /* Don't bother if surface facing away from sun */
-    if (DotProduct(sunvec, l->facenormal) < -ANGLE_EPSILON)
+    if (DotProduct(sunvec, l->plane.normal) < -ANGLE_EPSILON)
 	return;
 
     /* if sunlight is set, use a style 0 light map */
@@ -599,7 +603,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
     /* Check each point... */
     VectorCopy(sunvec, incoming);
     VectorNormalize(incoming);
-    angle = DotProduct(incoming, l->facenormal);
+    angle = DotProduct(incoming, l->plane.normal);
     angle = (1.0 - scalecos) + scalecos * angle;
 
 #if 0
@@ -610,7 +614,7 @@ SkyLightFace(lightinfo_t *l, const vec3_t colors)
 	vec3_t sun_vectors[5];
 
 	// Try to hit parallel surfaces?
-	oldangle = DotProduct(incoming, l->facenormal);
+	oldangle = DotProduct(incoming, l->plane.normal);
 	if (oldangle < ANGLE_EPSILON) {
 	    printf("real small angle! (%f)\n", oldangle);
 	    angle = (1.0 - scalecos) + scalecos * ANGLE_EPSILON;
@@ -826,6 +830,7 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
 {
     const entity_t *entity;
     dface_t *face;
+    plane_t *plane;
     lightinfo_t l;
     int s, t;
     int i, j, k, c;
@@ -842,7 +847,7 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     vec3_t colors = { 0, 0, 0 };
 
     int width;
-    vec3_t point;
+    vec3_t planepoint;
 
     texorg_t texorg;
 
@@ -859,21 +864,23 @@ LightFace(int surfnum, const modelinfo_t *modelinfo)
     memset(&l, 0, sizeof(l));
     l.modelinfo = modelinfo;
 
-    /* rotate plane */
-    VectorCopy(dplanes[face->planenum].normal, l.facenormal);
-    l.facedist = dplanes[face->planenum].dist;
-    VectorScale(l.facenormal, l.facedist, point);
-    VectorAdd(point, modelinfo->offset, point);
-    l.facedist = DotProduct(point, l.facenormal);
+    /* Offset the plane according to the model offset */
+    plane = &l.plane;
+    VectorCopy(dplanes[face->planenum].normal, plane->normal);
+    plane->dist = dplanes[face->planenum].dist;
+    VectorScale(plane->normal, plane->dist, planepoint);
+    VectorAdd(planepoint, modelinfo->offset, planepoint);
+    plane->dist = DotProduct(plane->normal, planepoint);
 
+    /* flip if needed */
     if (face->side) {
-	VectorSubtract(vec3_origin, l.facenormal, l.facenormal);
-	l.facedist = -l.facedist;
+	VectorSubtract(vec3_origin, plane->normal, plane->normal);
+	plane->dist = -plane->dist;
     }
 
     CreateFaceTransform(face, &texorg.transform);
     texorg.texinfo = &texinfo[face->texinfo];
-    texorg.facedist = l.facedist;
+    texorg.planedist = plane->dist;
 
     CalcFaceExtents(face, modelinfo->offset, &l);
     CalcPoints(modelinfo->model, &texorg, &l);
