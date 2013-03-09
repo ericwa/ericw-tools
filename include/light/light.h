@@ -71,9 +71,6 @@ void GetFileSpace(byte **lightdata, byte **colordata, int size);
 extern byte *filebase;
 extern byte *lit_filebase;
 
-void TransformSample(vec3_t in, vec3_t out);
-void RotateSample(vec3_t in, vec3_t out);
-
 extern int oversample;
 extern qboolean compress_ents;
 extern qboolean facecounter;
