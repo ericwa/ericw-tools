@@ -166,8 +166,8 @@ vec_from_mangle(vec3_t v, const vec3_t m)
 static void
 CheckEntityFields(entity_t *entity)
 {
-    if (!entity->light)
-	entity->light = DEFAULTLIGHTLEVEL;
+    if (!entity->light.light)
+	entity->light.light = DEFAULTLIGHTLEVEL;
     if (entity->atten <= 0.0)
 	entity->atten = 1.0;
 
@@ -184,19 +184,19 @@ CheckEntityFields(entity_t *entity)
 	entity->formula = LF_LINEAR;
     }
 
-    if (!VectorCompare(entity->lightcolor, vec3_origin)) {
+    if (!VectorCompare(entity->light.color, vec3_origin)) {
 	if (!colored) {
 	    colored = true;
 	    logprint("Colored light entities detected: "
 		     ".lit output enabled.\n");
 	}
     } else {
-	VectorCopy(vec3_white, entity->lightcolor);
+	VectorCopy(vec3_white, entity->light.color);
     }
 
     if (entity->formula == LF_LINEAR) {
 	/* Linear formula always has a falloff point */
-	entity->fadedist = fabs(entity->light / entity->atten / scaledist);
+	entity->fadedist = fabs(entity->light.light / entity->atten / scaledist);
     } else if (fadegate < EQUAL_EPSILON) {
 	/* If fadegate is tiny, other lights have effectively infinite reach */
 	entity->fadedist = VECT_MAX;
@@ -208,17 +208,17 @@ CheckEntityFields(entity_t *entity)
 	    entity->fadedist = VECT_MAX;
 	    break;
 	case LF_INVERSE:
-	    entity->fadedist = entity->light * entity->atten * scaledist;
+	    entity->fadedist = entity->light.light * entity->atten * scaledist;
 	    entity->fadedist *= LF_SCALE / fadegate;
 	    entity->fadedist = fabs(entity->fadedist);
 	    break;
 	case LF_INVERSE2:
-	    entity->fadedist = entity->light * entity->atten * scaledist;
+	    entity->fadedist = entity->light.light * entity->atten * scaledist;
 	    entity->fadedist *= LF_SCALE / sqrt(fadegate);
 	    entity->fadedist = fabs(entity->fadedist);
 	    break;
 	case LF_INVERSE2A:
-	    entity->fadedist = entity->light * entity->atten * scaledist;
+	    entity->fadedist = entity->light.light * entity->atten * scaledist;
 	    entity->fadedist -= LF_SCALE;
 	    entity->fadedist *= LF_SCALE / sqrt(fadegate);
 	    entity->fadedist = fabs(entity->fadedist);
@@ -306,7 +306,7 @@ LoadEntities(void)
 	    else if (!strcmp(key, "origin"))
 		scan_vec3(entity->origin, com_token, "origin");
 	    else if (!strncmp(key, "light", 5) || !strcmp(key, "_light"))
-		entity->light = atof(com_token);
+		entity->light.light = atof(com_token);
 	    else if (!strcmp(key, "style")) {
 		entity->style = atof(com_token);
 		if (entity->style < 0 || entity->style > 254)
@@ -324,7 +324,7 @@ LoadEntities(void)
 		vec_from_mangle(entity->spotvec, vec);
 		entity->spotlight = true;
 	    } else if (!strcmp(key, "_color") || !strcmp(key, "color"))
-		scan_vec3(entity->lightcolor, com_token, "color");
+		scan_vec3(entity->light.color, com_token, "color");
 	    else if (!strcmp(key, "_sunlight"))
 		sunlight = atof(com_token);
 	    else if (!strcmp(key, "_sun_mangle")) {
@@ -354,8 +354,8 @@ LoadEntities(void)
 	    }
 	}
 	if (!strcmp(entity->classname, "worldspawn")) {
-	    if (entity->light > 0 && !worldminlight) {
-		worldminlight = entity->light;
+	    if (entity->light.light > 0 && !worldminlight) {
+		worldminlight = entity->light.light;
 		logprint("using minlight value %i from worldspawn.\n",
 			 worldminlight);
 	    } else if (worldminlight) {

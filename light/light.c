@@ -20,6 +20,7 @@
 #include <stdint.h>
 
 #include <light/light.h>
+#include <light/entities.h>
 
 float scaledist = 1.0;
 float rangescale = 0.5;

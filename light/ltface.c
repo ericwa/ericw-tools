@@ -18,6 +18,7 @@
 */
 
 #include <light/light.h>
+#include <light/entities.h>
 
 static const float scalecos = 0.5;
 static const vec3_t bsp_origin = { 0, 0, 0 };
@@ -706,7 +707,7 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	surfpoint = lightsurf->points[0];
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
 	    qboolean trace = false;
-	    if (sample->light < entity->light) {
+	    if (sample->light < entity->light.light) {
 		trace = TestLine(entity->origin, surfpoint);
 		if (!trace)
 		    continue;
@@ -715,12 +716,12 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 		    if (!trace)
 			continue;
 		}
-		sample->light = entity->light;
+		sample->light = entity->light.light;
 	    }
 	    if (!colored)
 		continue;
 	    for (k = 0; k < 3; k++) {
-		if (sample->color[k] < entity->lightcolor[k]) {
+		if (sample->color[k] < entity->light.color[k]) {
 		    if (!trace) {
 			trace = TestLine(entity->origin, surfpoint);
 			if (!trace)
@@ -732,7 +733,7 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 				break;
 			}
 		    }
-		    sample->color[k] = entity->lightcolor[k];
+		    sample->color[k] = entity->light.color[k];
 		}
 	    }
 	}
@@ -919,7 +920,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	    if (entity->formula == LF_LOCALMIN)
 		continue;
-	    if (PositiveLight(entity->light, entity->lightcolor, &light))
+	    if (PositiveLight(entity->light.light, entity->light.color, &light))
 		SingleLightFace(entity, &light, &lightsurf, lightmaps);
 	}
 	/* cast positive sky light */
@@ -930,11 +931,8 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	    if (entity->formula == LF_LOCALMIN)
 		continue;
-	    if (entity->light) {
-		light.light = entity->light;
-		VectorCopy(entity->lightcolor, light.color);
-		SingleLightFace(entity, &light, &lightsurf, lightmaps);
-	    }
+	    if (entity->light.light)
+		SingleLightFace(entity, &entity->light, &lightsurf, lightmaps);
 	}
 	/* cast sky light */
 	if (sunlight) {
@@ -958,7 +956,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	    if (entity->formula == LF_LOCALMIN)
 		continue;
-	    if (NegativeLight(entity->light, entity->lightcolor, &light))
+	    if (NegativeLight(entity->light.light, entity->light.color, &light))
 		SingleLightFace(entity, &light, &lightsurf, lightmaps);
 	}
 	/* cast negative sky light */
