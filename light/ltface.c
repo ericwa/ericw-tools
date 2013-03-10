@@ -161,11 +161,6 @@ typedef struct {
 } lightsurf_t;
 
 typedef struct {
-    vec_t light;
-    vec3_t color;
-} lightsample_t;
-
-typedef struct {
     int style;
     lightsample_t samples[SINGLEMAP];
 } lightmap_t;
@@ -950,14 +945,13 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
     }
 
     /* Minimum lighting - Use the greater of global or model minlight. */
-    if (modelinfo->minlight > worldminlight) {
-	light.light = modelinfo->minlight;
-	VectorCopy(modelinfo->mincolor, light.color);
+    if (modelinfo->minlight.light > worldminlight) {
+	FixMinlight(&modelinfo->minlight, &lightsurf, lightmaps);
     } else {
 	light.light = worldminlight;
 	VectorCopy(minlight_color, light.color);
+	FixMinlight(&light, &lightsurf, lightmaps);
     }
-    FixMinlight(&light, &lightsurf, lightmaps);
 
     if (nominlimit) {
 	/* cast only negative lights */

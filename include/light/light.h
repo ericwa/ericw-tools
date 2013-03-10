@@ -39,10 +39,14 @@ qboolean TestLineModel(const dmodel_t *model,
 		       const vec3_t start, const vec3_t stop);
 
 typedef struct {
+    vec_t light;
+    vec3_t color;
+} lightsample_t;
+
+typedef struct {
     const dmodel_t *model;
     qboolean shadowself;
-    int minlight;
-    vec3_t mincolor;
+    lightsample_t minlight;
     vec3_t offset;
 } modelinfo_t;
 

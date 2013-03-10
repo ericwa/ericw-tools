@@ -109,6 +109,7 @@ FindModelInfo(void)
     char modelname[20];
     const char *attribute;
     const dmodel_t **shadowmodels;
+    modelinfo_t *info;
 
     shadowmodels = malloc(sizeof(dmodel_t *) * (nummodels + 1));
     memset(shadowmodels, 0, sizeof(dmodel_t *) * (nummodels + 1));
@@ -120,8 +121,8 @@ FindModelInfo(void)
     memset(modelinfo, 0, sizeof(*modelinfo) * nummodels);
     modelinfo[0].model = &dmodels[0];
 
-    for (i = 1; i < nummodels; i++) {
-	modelinfo[i].model = &dmodels[i];
+    for (i = 1, info = modelinfo + 1; i < nummodels; i++, info++) {
+	info->model = &dmodels[i];
 
 	/* Find the entity for the model */
 	snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -137,27 +138,27 @@ FindModelInfo(void)
 	} else {
 	    shadow = atoi(ValueForKey(entity, "_shadowself"));
 	    if (shadow)
-		modelinfo[i].shadowself = true;
+		info->shadowself = true;
 	}
 
 	/* Set up the offset for rotate_* entities */
 	attribute = ValueForKey(entity, "classname");
 	if (!strncmp(attribute, "rotate_", 7))
-	    GetVectorForKey(entity, "origin", modelinfo[i].offset);
+	    GetVectorForKey(entity, "origin", info->offset);
 
 	/* Grab the bmodel minlight values, if any */
 	attribute = ValueForKey(entity, "_minlight");
 	if (attribute[0])
-	    modelinfo[i].minlight = atoi(attribute);
-	GetVectorForKey(entity, "_mincolor", modelinfo[i].mincolor);
-	if (!VectorCompare(modelinfo[i].mincolor, vec3_origin)) {
+	    info->minlight.light = atoi(attribute);
+	GetVectorForKey(entity, "_mincolor", info->minlight.color);
+	if (!VectorCompare(info->minlight.color, vec3_origin)) {
 	    if (!colored) {
 		colored = true;
 		logprint("Colored light entities detected: "
 			 ".lit output enabled.\n");
 	    }
 	} else {
-	    VectorCopy(vec3_white, modelinfo[i].mincolor);
+	    VectorCopy(vec3_white, info->minlight.color);
 	}
     }
 
