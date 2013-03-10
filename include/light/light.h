@@ -75,10 +75,7 @@ extern byte *lit_filebase;
 
 extern int oversample;
 extern qboolean compress_ents;
-extern qboolean facecounter;
 extern qboolean colored;
-extern qboolean bsp30;
 extern qboolean litfile;
-extern qboolean nominlimit;
 
 #endif /* __LIGHT_LIGHT_H__ */

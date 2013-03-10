@@ -740,67 +740,6 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
     }
 }
 
-
-/*
- * PositiveLight zeros negative light components.
- * NegativeLight zeros positive light components.
- */
-static qboolean
-PositiveLight(int light, const vec3_t color, lightsample_t *out)
-{
-    int i;
-    qboolean positive = false;
-
-    if (light > 0) {
-	out->light = light;
-	positive = true;
-	for (i = 0; i < 3; i++)
-	    if (color[i] > 0)
-		out->color[i] = color[i];
-	    else
-		out->color[i] = 0;
-    } else if (light < 0) {
-	out->light = -light;
-	for (i = 0; i < 3; i++)
-	    if (color[i] < 0) {
-		out->color[i] = -color[i];
-		positive = true;
-	    } else {
-		out->color[i] = 0;
-	    }
-    }
-
-    return positive;
-}
-
-static qboolean
-NegativeLight(int light, const vec3_t color, lightsample_t *out)
-{
-    int i;
-    qboolean negative = false;
-
-    if (light < 0) {
-	out->light = light;
-	negative = true;
-	for (i = 0; i < 3; i++)
-	    if (color[i] > 0)
-		out->color[i] = color[i];
-	    else
-		out->color[i] = 0;
-    } else if (light > 0) {
-	out->light = -light;
-	for (i = 0; i < 3; i++)
-	    if (color[i] < 0) {
-		out->color[i] = -color[i];
-		negative = true;
-	    } else {
-		out->color[i] = 0;
-	    }
-    }
-
-    return negative;
-}
-
 static void
 WriteLightmaps(dface_t *face, const lightsurf_t *lightsurf,
 	       const lightmap_t *lightmaps)
@@ -886,7 +825,6 @@ void
 LightFace(dface_t *face, const modelinfo_t *modelinfo)
 {
     int i, j, k;
-    lightsample_t light;
     const entity_t *entity;
     lightsample_t *sample;
     lightsurf_t lightsurf;
@@ -902,74 +840,50 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
     Lightsurf_Init(modelinfo, face, &lightsurf);
     Lightmaps_Init(lightmaps);
 
-    /* Under normal circumstances, the lighting procedure is:
-     * - cast all light entities
-     * - cast sky lighting
-     * - do minlighting.
-     *
-     * However, if nominlimit is enabled then we need to do the following:
-     * - cast _positive_ lights
-     * - cast _positive_ skylight (if any)
-     * - do minlighting
-     * - cast _negative_ lights
-     * - cast _negative_ sky light (if any)
+    /*
+     * The lighting procedure is: cast all positive lights, fix
+     * minlight levels, then cast all negative lights. Finally, we
+     * clamp any values that may have gone negative.
      */
 
-    if (nominlimit) {
-	/* cast only positive lights */
-	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
-	    if (entity->formula == LF_LOCALMIN)
-		continue;
-	    if (PositiveLight(entity->light.light, entity->light.color, &light))
-		SingleLightFace(entity, &light, &lightsurf, lightmaps);
-	}
-	/* cast positive sky light */
-	if (PositiveLight(sunlight.light, sunlight.color, &light))
-	    SkyLightFace(&light, &lightsurf, lightmaps);
-    } else {
-	/* (!nominlimit) => cast all lights */
-	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
-	    if (entity->formula == LF_LOCALMIN)
-		continue;
-	    if (entity->light.light)
-		SingleLightFace(entity, &entity->light, &lightsurf, lightmaps);
-	}
-	/* cast sky light */
-	if (sunlight.light)
-	    SkyLightFace(&sunlight, &lightsurf, lightmaps);
+    /* positive lights */
+    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	if (entity->formula == LF_LOCALMIN)
+	    continue;
+	if (entity->light.light > 0)
+	    SingleLightFace(entity, &entity->light, &lightsurf, lightmaps);
     }
+    if (sunlight.light > 0)
+	SkyLightFace(&sunlight, &lightsurf, lightmaps);
 
-    /* Minimum lighting - Use the greater of global or model minlight. */
+    /* minlight - Use the greater of global or model minlight. */
     if (modelinfo->minlight.light > minlight.light)
 	FixMinlight(&modelinfo->minlight, &lightsurf, lightmaps);
     else
 	FixMinlight(&minlight, &lightsurf, lightmaps);
 
-    if (nominlimit) {
-	/* cast only negative lights */
-	for (i = 0, entity = entities; i < num_entities; i++, entity++) {
-	    if (entity->formula == LF_LOCALMIN)
-		continue;
-	    if (NegativeLight(entity->light.light, entity->light.color, &light))
-		SingleLightFace(entity, &light, &lightsurf, lightmaps);
-	}
-	/* cast negative sky light */
-	if (NegativeLight(sunlight.light, sunlight.color, &light))
-	    SkyLightFace(&light, &lightsurf, lightmaps);
+    /* negative lights */
+    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	if (entity->formula == LF_LOCALMIN)
+	    continue;
+	if (entity->light.light < 0)
+	    SingleLightFace(entity, &entity->light, &lightsurf, lightmaps);
+    }
+    if (sunlight.light < 0)
+	SkyLightFace(&sunlight, &lightsurf, lightmaps);
 
-	/* Fix any negative values */
-	for (i = 0; i < MAXLIGHTMAPS; i++) {
-	    if (lightmaps[i].style == 255)
-		break;
-	    sample = lightmaps[i].samples;
-	    for (j = 0; j < lightsurf.numpoints; j++, sample++) {
-		if (sample->light < 0)
-		    sample->light = 0;
-		if (colored) {
-		    for (k = 0; k < 3; k++) {
-			if (sample->color[k] < 0) {
-			    sample->color[k] = 0;
-			}
+    /* Fix any negative values */
+    for (i = 0; i < MAXLIGHTMAPS; i++) {
+	if (lightmaps[i].style == 255)
+	    break;
+	sample = lightmaps[i].samples;
+	for (j = 0; j < lightsurf.numpoints; j++, sample++) {
+	    if (sample->light < 0)
+		sample->light = 0;
+	    if (colored) {
+		for (k = 0; k < 3; k++) {
+		    if (sample->color[k] < 0) {
+			sample->color[k] = 0;
 		    }
 		}
 	    }

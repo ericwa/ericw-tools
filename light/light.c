@@ -45,7 +45,6 @@ const dmodel_t *const *tracelist;
 int oversample = 1;
 qboolean compress_ents;
 qboolean colored;
-qboolean nominlimit;
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, int size)
@@ -253,8 +252,6 @@ main(int argc, const char **argv)
 	    logprint("light entity compression enabled\n");
 	} else if (!strcmp(argv[i], "-lit")) {
 	    colored = true;
-	} else if (!strcmp(argv[i], "-nominlimit")) {
-	    nominlimit = true;
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -264,7 +261,7 @@ main(int argc, const char **argv)
     if (i != argc - 1) {
 	printf("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] "
-	       "             [-compress] [-nominlimit] bspfile\n");
+	       "             [-compress] bspfile\n");
 	exit(1);
     }
 
