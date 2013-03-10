@@ -924,7 +924,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 		SingleLightFace(entity, &light, &lightsurf, lightmaps);
 	}
 	/* cast positive sky light */
-	if (PositiveLight(sunlight, sunlight_color, &light))
+	if (PositiveLight(sunlight.light, sunlight.color, &light))
 	    SkyLightFace(&light, &lightsurf, lightmaps);
     } else {
 	/* (!nominlimit) => cast all lights */
@@ -935,21 +935,15 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 		SingleLightFace(entity, &entity->light, &lightsurf, lightmaps);
 	}
 	/* cast sky light */
-	if (sunlight) {
-	    light.light = sunlight;
-	    VectorCopy(sunlight_color, light.color);
-	    SkyLightFace(&light, &lightsurf, lightmaps);
-	}
+	if (sunlight.light)
+	    SkyLightFace(&sunlight, &lightsurf, lightmaps);
     }
 
     /* Minimum lighting - Use the greater of global or model minlight. */
-    if (modelinfo->minlight.light > worldminlight) {
+    if (modelinfo->minlight.light > minlight.light)
 	FixMinlight(&modelinfo->minlight, &lightsurf, lightmaps);
-    } else {
-	light.light = worldminlight;
-	VectorCopy(minlight_color, light.color);
-	FixMinlight(&light, &lightsurf, lightmaps);
-    }
+    else
+	FixMinlight(&minlight, &lightsurf, lightmaps);
 
     if (nominlimit) {
 	/* cast only negative lights */
@@ -960,7 +954,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 		SingleLightFace(entity, &light, &lightsurf, lightmaps);
 	}
 	/* cast negative sky light */
-	if (NegativeLight(sunlight, sunlight_color, &light))
+	if (NegativeLight(sunlight.light, sunlight.color, &light))
 	    SkyLightFace(&light, &lightsurf, lightmaps);
 
 	/* Fix any negative values */

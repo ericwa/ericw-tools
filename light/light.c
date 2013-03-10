@@ -25,11 +25,10 @@
 float scaledist = 1.0;
 float rangescale = 0.5;
 float fadegate = EQUAL_EPSILON;
-int worldminlight = 0;
-int sunlight = 0;
 const vec3_t vec3_white = { 255, 255, 255 };
-vec3_t minlight_color = { 255, 255, 255 };	/* defaults to white light   */
-vec3_t sunlight_color = { 255, 255, 255 };	/* defaults to white light   */
+
+lightsample_t minlight = { 0, { 255, 255, 255 } };
+lightsample_t sunlight = { 0, { 255, 255, 255 } };
 vec3_t sunvec = { 0, 0, 16384 };		/* defaults to straight down */
 
 byte *filebase;			// start of lightmap data
@@ -247,7 +246,7 @@ main(int argc, const char **argv)
 	    fadegate = atof(argv[i + 1]);
 	    i++;
 	} else if (!strcmp(argv[i], "-light")) {
-	    worldminlight = atof(argv[i + 1]);
+	    minlight.light = atof(argv[i + 1]);
 	    i++;
 	} else if (!strcmp(argv[i], "-compress")) {
 	    compress_ents = true;

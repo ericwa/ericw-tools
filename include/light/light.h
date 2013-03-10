@@ -58,11 +58,10 @@ void MakeTnodes(void);
 extern float scaledist;
 extern float rangescale;
 extern float fadegate;
-extern int worldminlight;
 extern const vec3_t vec3_white;
-extern vec3_t minlight_color;
-extern int sunlight;
-extern vec3_t sunlight_color;
+
+extern lightsample_t minlight;
+extern lightsample_t sunlight;
 extern vec3_t sunvec;
 
 /*

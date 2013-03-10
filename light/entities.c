@@ -326,16 +326,16 @@ LoadEntities(void)
 	    } else if (!strcmp(key, "_color") || !strcmp(key, "color"))
 		scan_vec3(entity->light.color, com_token, "color");
 	    else if (!strcmp(key, "_sunlight"))
-		sunlight = atof(com_token);
+		sunlight.light = atof(com_token);
 	    else if (!strcmp(key, "_sun_mangle")) {
 		scan_vec3(vec, com_token, "_sun_mangle");
 		vec_from_mangle(sunvec, vec);
 		VectorNormalize(sunvec);
 		VectorScale(sunvec, -16384, sunvec);
 	    } else if (!strcmp(key, "_sunlight_color"))
-		scan_vec3(sunlight_color, com_token, "_sunlight_color");
+		scan_vec3(sunlight.color, com_token, "_sunlight_color");
 	    else if (!strcmp(key, "_minlight_color"))
-		scan_vec3(minlight_color, com_token, "_minlight_color");
+		scan_vec3(minlight.color, com_token, "_minlight_color");
 	}
 
 	/*
@@ -354,19 +354,19 @@ LoadEntities(void)
 	    }
 	}
 	if (!strcmp(entity->classname, "worldspawn")) {
-	    if (entity->light.light > 0 && !worldminlight) {
-		worldminlight = entity->light.light;
+	    if (entity->light.light > 0 && !minlight.light) {
+		minlight.light = entity->light.light;
 		logprint("using minlight value %i from worldspawn.\n",
-			 worldminlight);
-	    } else if (worldminlight) {
+			 (int)minlight.light);
+	    } else if (minlight.light) {
 		logprint("Using minlight value %i from command line.\n",
-			 worldminlight);
+			 (int)minlight.light);
 	    }
 	}
     }
 
-    if (!VectorCompare(sunlight_color, vec3_white) ||
-	!VectorCompare(minlight_color, vec3_white)) {
+    if (!VectorCompare(sunlight.color, vec3_white) ||
+	!VectorCompare(minlight.color, vec3_white)) {
 	if (!colored) {
 	    colored = true;
 	    logprint("Colored light entities detected: "
