@@ -20,7 +20,9 @@
 #ifndef __LIGHT_ENTITIES_H__
 #define __LIGHT_ENTITIES_H__
 
+#include <common/mathlib.h>
 #include <common/bspfile.h>
+#include <light/light.h>
 
 #define DEFAULTLIGHTLEVEL 300
 
@@ -59,12 +61,11 @@ typedef struct entity_s {
     float spotangle2;
     float spotfalloff2;
 
-    int style;
-    int light;
-    float atten;
+    lightsample_t light;
     light_formula_t formula;
-    vec3_t lightcolor;
     vec_t fadedist;
+    float atten;
+    int style;
 
     char target[MAX_ENT_VALUE];
     char targetname[MAX_ENT_VALUE];

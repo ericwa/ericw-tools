@@ -20,15 +20,15 @@
 #include <stdint.h>
 
 #include <light/light.h>
+#include <light/entities.h>
 
 float scaledist = 1.0;
 float rangescale = 0.5;
 float fadegate = EQUAL_EPSILON;
-int worldminlight = 0;
-int sunlight = 0;
 const vec3_t vec3_white = { 255, 255, 255 };
-vec3_t minlight_color = { 255, 255, 255 };	/* defaults to white light   */
-vec3_t sunlight_color = { 255, 255, 255 };	/* defaults to white light   */
+
+lightsample_t minlight = { 0, { 255, 255, 255 } };
+lightsample_t sunlight = { 0, { 255, 255, 255 } };
 vec3_t sunvec = { 0, 0, 16384 };		/* defaults to straight down */
 
 byte *filebase;			// start of lightmap data
@@ -45,7 +45,6 @@ const dmodel_t *const *tracelist;
 int oversample = 1;
 qboolean compress_ents;
 qboolean colored;
-qboolean nominlimit;
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, int size)
@@ -95,7 +94,7 @@ LightThread(void *junk)
 	if (i == nummodels)
 	    Error("%s: no model has face %d", __func__, facenum);
 
-	LightFace(facenum, &modelinfo[i]);
+	LightFace(dfaces + facenum, &modelinfo[i]);
     }
 
     return NULL;
@@ -109,6 +108,7 @@ FindModelInfo(void)
     char modelname[20];
     const char *attribute;
     const dmodel_t **shadowmodels;
+    modelinfo_t *info;
 
     shadowmodels = malloc(sizeof(dmodel_t *) * (nummodels + 1));
     memset(shadowmodels, 0, sizeof(dmodel_t *) * (nummodels + 1));
@@ -120,8 +120,8 @@ FindModelInfo(void)
     memset(modelinfo, 0, sizeof(*modelinfo) * nummodels);
     modelinfo[0].model = &dmodels[0];
 
-    for (i = 1; i < nummodels; i++) {
-	modelinfo[i].model = &dmodels[i];
+    for (i = 1, info = modelinfo + 1; i < nummodels; i++, info++) {
+	info->model = &dmodels[i];
 
 	/* Find the entity for the model */
 	snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -137,27 +137,27 @@ FindModelInfo(void)
 	} else {
 	    shadow = atoi(ValueForKey(entity, "_shadowself"));
 	    if (shadow)
-		modelinfo[i].shadowself = true;
+		info->shadowself = true;
 	}
 
 	/* Set up the offset for rotate_* entities */
 	attribute = ValueForKey(entity, "classname");
 	if (!strncmp(attribute, "rotate_", 7))
-	    GetVectorForKey(entity, "origin", modelinfo[i].offset);
+	    GetVectorForKey(entity, "origin", info->offset);
 
 	/* Grab the bmodel minlight values, if any */
 	attribute = ValueForKey(entity, "_minlight");
 	if (attribute[0])
-	    modelinfo[i].minlight = atoi(attribute);
-	GetVectorForKey(entity, "_mincolor", modelinfo[i].mincolor);
-	if (!VectorCompare(modelinfo[i].mincolor, vec3_origin)) {
+	    info->minlight.light = atoi(attribute);
+	GetVectorForKey(entity, "_mincolor", info->minlight.color);
+	if (!VectorCompare(info->minlight.color, vec3_origin)) {
 	    if (!colored) {
 		colored = true;
 		logprint("Colored light entities detected: "
 			 ".lit output enabled.\n");
 	    }
 	} else {
-	    VectorCopy(vec3_white, modelinfo[i].mincolor);
+	    VectorCopy(vec3_white, info->minlight.color);
 	}
     }
 
@@ -245,15 +245,13 @@ main(int argc, const char **argv)
 	    fadegate = atof(argv[i + 1]);
 	    i++;
 	} else if (!strcmp(argv[i], "-light")) {
-	    worldminlight = atof(argv[i + 1]);
+	    minlight.light = atof(argv[i + 1]);
 	    i++;
 	} else if (!strcmp(argv[i], "-compress")) {
 	    compress_ents = true;
 	    logprint("light entity compression enabled\n");
 	} else if (!strcmp(argv[i], "-lit")) {
 	    colored = true;
-	} else if (!strcmp(argv[i], "-nominlimit")) {
-	    nominlimit = true;
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -263,7 +261,7 @@ main(int argc, const char **argv)
     if (i != argc - 1) {
 	printf("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] "
-	       "             [-compress] [-nominlimit] bspfile\n");
+	       "             [-compress] bspfile\n");
 	exit(1);
     }
 
