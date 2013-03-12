@@ -32,10 +32,48 @@
 
 #define MAXLIGHTS 1024
 
-qboolean TestSky(const vec3_t start, const vec3_t dirn, vec3_t skypoint);
-qboolean TestLine(const vec3_t start, const vec3_t stop);
-qboolean TestLineModel(const dmodel_t *model,
-		       const vec3_t start, const vec3_t stop);
+
+#define TRACE_HIT_NONE  0
+#define TRACE_HIT_SOLID (1 << 0)
+#define TRACE_HIT_WATER (1 << 1)
+#define TRACE_HIT_SLIME (1 << 2)
+#define TRACE_HIT_LAVA  (1 << 3)
+#define TRACE_HIT_SKY   (1 << 4)
+
+typedef struct {
+    const dplane_t *dplane;
+    int side;
+    vec3_t point;
+} tracepoint_t;
+
+/*
+ * ---------
+ * TraceLine
+ * ---------
+ * Generic BSP model ray tracing function. Traces a ray from start towards
+ * stop. If the trace line hits one of the flagged contents along the way, the
+ * corresponding TRACE flag will be returned. Furthermore, if hitpoint is
+ * non-null, information about the point the ray hit will be filled in.
+ *
+ *  model    - The bsp model to trace against
+ *  flags    - contents which will stop the trace (must be > 0)
+ *  start    - coordinates to start trace
+ *  stop     - coordinates to end the trace
+ *  hitpoint - filled in if result > 0 and hitpoint is non-NULL
+ *
+ * TraceLine will return a negative traceflag if the point 'start' resides
+ * inside a leaf with one of the contents types which stop the trace.
+ */
+int TraceLine(const dmodel_t *model, const int traceflags,
+	      const vec3_t start, const vec3_t end, tracepoint_t *hitpoint);
+
+/*
+ * Convenience functions TestLight and TestSky will test against all shadow
+ * casting bmodels and self-shadow the model 'self' if self != NULL. Returns
+ * true if sky or light is visible, respectively.
+ */
+qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
+qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 
 typedef struct {
     vec_t light;

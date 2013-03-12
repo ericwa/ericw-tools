@@ -82,9 +82,10 @@ MakeTnodes(void)
  */
 
 typedef struct {
-    vec3_t backpt;
-    int side;
+    vec3_t back;
+    vec3_t front;
     int node;
+    int side;
 } tracestack_t;
 
 /*
@@ -93,52 +94,81 @@ typedef struct {
  * ==============
  */
 #define MAX_TSTACK 128
-static qboolean
-TestLineOrSky(const dmodel_t *model, const vec3_t start, const vec3_t stop,
-	      qboolean skytest, vec3_t skypoint)
+int
+TraceLine(const dmodel_t *model, const int traceflags,
+	  const vec3_t start, const vec3_t stop, tracepoint_t *hitpoint)
 {
-    int node, side;
+    int node, side, tracehit;
     vec3_t front, back;
     vec_t frontdist, backdist;
     tracestack_t tracestack[MAX_TSTACK];
-    tracestack_t *tstack;
+    tracestack_t *tstack, *crossnode;
     tnode_t *tnode;
     const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
+
+    if (traceflags <= 0)
+	Error("Internal error: %s - bad traceflags (%d)",
+	      __func__, traceflags);
 
     VectorCopy(start, front);
     VectorCopy(stop, back);
 
     tstack = tracestack;
     node = model->headnode[0];
+    crossnode = NULL;
+    tracehit = TRACE_HIT_NONE;
 
     while (1) {
-	while (node < 0 && node != CONTENTS_SOLID) {
-	    if (skytest && node == CONTENTS_SKY)
+	while (node < 0) {
+	    switch (node) {
+	    case CONTENTS_SOLID:
+		if (traceflags & TRACE_HIT_SOLID)
+		    tracehit = TRACE_HIT_SOLID;
 		break;
+	    case CONTENTS_WATER:
+		if (traceflags & TRACE_HIT_WATER)
+		    tracehit = TRACE_HIT_WATER;
+		break;
+	    case CONTENTS_SLIME:
+		if (traceflags & TRACE_HIT_SLIME)
+		    tracehit = TRACE_HIT_SLIME;
+		break;
+	    case CONTENTS_LAVA:
+		if (traceflags & TRACE_HIT_LAVA)
+		    tracehit = TRACE_HIT_LAVA;
+		break;
+	    case CONTENTS_SKY:
+		if (traceflags & TRACE_HIT_SKY)
+		    tracehit = TRACE_HIT_SKY;
+		break;
+	    default:
+		break;
+	    }
+	    if (tracehit != TRACE_HIT_NONE) {
+		/* If we haven't crossed, start was inside flagged contents */
+		if (!crossnode)
+		    return -tracehit;
+		if (hitpoint) {
+		    const int planenum = dnodes[crossnode->node].planenum;
+		    hitpoint->dplane = dplanes + planenum;
+		    hitpoint->side = crossnode->side;
+		    VectorCopy(crossnode->back, hitpoint->point);
+		}
+		return tracehit;
+	    }
 
-	    /* If the stack is empty, not obstructions were hit */
+	    /* If the stack is empty, no obstructions were hit */
 	    if (tstack == tracestack)
-		return !skytest;
+		return TRACE_HIT_NONE;
 
-	    /*
-	     * pop the stack, set the hit point for this plane and
-	     * go down the back side
-	     */
-	    tstack--;
-	    VectorCopy(back, front);
-	    VectorCopy(tstack->backpt, back);
+	    /* Pop the stack and go down the back side */
+	    crossnode = --tstack;
+	    VectorCopy(tstack->front, front);
+	    VectorCopy(tstack->back, back);
 	    node = tnodes[tstack->node].children[!tstack->side];
 	}
 
-	if (node == CONTENTS_SOLID)
-	    return false;
-	if (node == CONTENTS_SKY && skytest) {
-	    VectorCopy(front, skypoint);
-	    return true;
-	}
-
 	tnode = &tnodes[node];
-
 	switch (tnode->type) {
 	case PLANE_X:
 	    frontdist = front[0] - tnode->dist;
@@ -158,74 +188,116 @@ TestLineOrSky(const dmodel_t *model, const vec3_t start, const vec3_t stop,
 	    break;
 	}
 
-	if (frontdist > -ON_EPSILON && backdist > -ON_EPSILON) {
+	if (frontdist > ON_EPSILON && backdist > ON_EPSILON) {
 	    node = tnode->children[0];
 	    continue;
 	}
-	if (frontdist < ON_EPSILON && backdist < ON_EPSILON) {
+	if (frontdist < -ON_EPSILON && backdist < -ON_EPSILON) {
 	    node = tnode->children[1];
 	    continue;
 	}
 
-	if (tstack == tstack_max)
-	    Error("%s: tstack overflow\n", __func__);
+	if (frontdist >= -ON_EPSILON && frontdist <= ON_EPSILON) {
+	    if (backdist >= -ON_EPSILON && backdist <= ON_EPSILON) {
+		/* Front and back on-node, go down both sides */
+		if (tstack == tstack_max)
+		    Error("%s: tstack overflow\n", __func__);
+		tstack->node = node;
+		tstack->side = 0;
+		VectorCopy(front, tstack->front);
+		VectorCopy(back, tstack->back);
+		crossnode = tstack++;
+		node = tnode->children[0];
+		continue;
+	    }
 
-	side = frontdist < 0.0f ? 1 : 0;
+	    /* If only front is on-node, go down the side containing back */
+	    side = back < 0;
+	    node = tnode->children[side];
+	    continue;
+	}
+
+	if (backdist >= -ON_EPSILON && backdist <= ON_EPSILON) {
+	    /* If only back is on-node, record a cross point but continue */
+	    if (tstack == tstack_max)
+		Error("%s: tstack overflow\n", __func__);
+	    side = frontdist < 0;
+	    tstack->node = node;
+	    tstack->side = side;
+	    VectorCopy(front, tstack->front);
+	    VectorCopy(back, tstack->back);
+	    crossnode = tstack;
+	    node = tnode->children[side];
+	    continue;
+	}
+
+	/*
+	 * If we get here, we have a clean split with front and back on
+	 * opposite sides. The new back is the intersection point with the
+	 * node plane. Push the other segment onto the stack and continue.
+	 */
+	side = frontdist < 0;
 	tstack->node = node;
 	tstack->side = side;
-	VectorCopy(back, tstack->backpt);
-	tstack++;
-
-	/* The new back is the intersection point with the node plane */
+	VectorCopy(back, tstack->back);
 	VectorSubtract(back, front, back);
 	VectorMA(front, frontdist / (frontdist - backdist), back, back);
-
+	VectorCopy(back, tstack->front);
+	crossnode = tstack++;
 	node = tnode->children[side];
     }
 }
 
 qboolean
-TestLine(const vec3_t start, const vec3_t stop)
+TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 {
     const dmodel_t *const *model;
+    const int traceflags = TRACE_HIT_SOLID;
+    int result = TRACE_HIT_NONE;
 
-    for (model = tracelist; *model; model++)
-	if (!TestLineModel(*model, start, stop))
+    /* Check against the list of global shadow casters */
+    for (model = tracelist; *model; model++) {
+	result = TraceLine(*model, traceflags, start, stop, NULL);
+	if (result != TRACE_HIT_NONE)
 	    break;
+    }
 
-    return !*model;
+    /* If not yet obscured, check against the self-shadow model */
+    if (result == TRACE_HIT_NONE && self)
+	result = TraceLine(self, traceflags, start, stop, NULL);
+
+    return (result == TRACE_HIT_NONE);
 }
 
-/*
- * Wrapper functions for testing LOS between two points (TestLine)
- * and testing LOS to a sky brush along a direction vector (TestSky)
- */
 qboolean
-TestLineModel(const dmodel_t *model, const vec3_t start, const vec3_t stop)
-{
-    return TestLineOrSky(model, start, stop, false, NULL);
-}
-
-/*
- * =======
- * TestSky
- * =======
- * Returns true if the ray cast from point 'start' in the
- * direction of vector 'dirn' hits a CONTENTS_SKY node before
- * a CONTENTS_SOLID node.
- */
-qboolean
-TestSky(const vec3_t start, const vec3_t dirn, vec3_t skypoint)
+TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 {
     const dmodel_t *const *model;
+    int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
+    int result = TRACE_HIT_NONE;
+    vec3_t stop;
+    tracepoint_t hit;
 
-    VectorAdd(dirn, start, skypoint);
-    if (!TestLineOrSky(tracelist[0], start, skypoint, true, skypoint))
+    /* Trace towards the sunlight for a sky brush */
+    VectorAdd(dirn, start, stop);
+    result = TraceLine(tracelist[0], traceflags, start, stop, &hit);
+    if (result != TRACE_HIT_SKY)
 	return false;
 
-    for (model = tracelist + 1; *model; model++)
-	if (!TestLineModel(*model, start, skypoint))
-	    break;
+    /* If good, check it isn't shadowed by another model */
+    traceflags = TRACE_HIT_SOLID;
+    for (model = tracelist + 1; *model; model++) {
+	result = TraceLine(*model, traceflags, start, hit.point, NULL);
+	if (result != TRACE_HIT_NONE)
+	    return false;
+    }
 
-    return !*model;
+    /* Check for self-shadowing */
+    if (self) {
+	result = TraceLine(self, traceflags, start, hit.point, NULL);
+	if (result != TRACE_HIT_NONE)
+	    return false;
+    }
+
+    return true;
 }

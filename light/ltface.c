@@ -337,6 +337,29 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 }
 
 /*
+ * Print warning for CalcPoint where the midpoint of a polygon, one
+ * unit above the surface is covered by a solid brush.
+ */
+static void
+WarnBadMidpoint(const vec3_t point)
+{
+#if 0
+    static qboolean warned = false;
+
+    if (warned)
+	return;
+
+    warned = true;
+    logprint("WARNING: unable to lightmap surface near (%s)\n"
+	     "   This is usually caused by an unintentional tiny gap between\n"
+	     "   two solid brushes which doesn't leave enough room for the\n"
+	     "   lightmap to fit (one world unit). Further instances of this\n"
+	     "   warning during this compile will be supressed.\n",
+	     VecStr(point));
+#endif
+}
+
+/*
  * =================
  * CalcPoints
  * For each texture aligned grid point, back project onto the plane
@@ -348,66 +371,50 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 {
     int i;
     int s, t;
-    int w, h, step;
+    int width, height, step;
     vec_t starts, startt, us, ut;
     vec_t *point;
-    vec_t mids, midt;
-    vec3_t facemid, move;
+    vec3_t midpoint, move;
 
-    /* fill in surforg                                         */
-    /* the points are biased towards the center of the surface */
-    /* to help avoid edge cases just inside walls              */
+    /*
+     * Fill in the surface points. The points are biased towards the center of
+     * the surface to help avoid edge cases just inside walls
+     */
+    TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], texorg, midpoint);
 
-    point = surf->points[0];
-    mids = surf->exactmid[0];
-    midt = surf->exactmid[1];
-
-    TexCoordToWorld(mids, midt, texorg, facemid);
-
-    h = (surf->texsize[1] + 1) * oversample;
-    w = (surf->texsize[0] + 1) * oversample;
+    width  = (surf->texsize[0] + 1) * oversample;
+    height = (surf->texsize[1] + 1) * oversample;
     starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * 16;
     startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * 16;
     step = 16 / oversample;
 
-    surf->numpoints = w * h;
-    for (t = 0; t < h; t++) {
-	for (s = 0; s < w; s++, point += 3) {
+    point = surf->points[0];
+    surf->numpoints = width * height;
+    for (t = 0; t < height; t++) {
+	for (s = 0; s < width; s++, point += 3) {
 	    us = starts + s * step;
 	    ut = startt + t * step;
 
-	    /* if a line can be traced from surf to facemid, point is good */
+	    TexCoordToWorld(us, ut, texorg, point);
 	    for (i = 0; i < 6; i++) {
-		TexCoordToWorld(us, ut, texorg, point);
+		const int flags = TRACE_HIT_SOLID;
+		tracepoint_t hit;
+		int result;
+		vec_t dist;
 
-		if (TestLineModel(model, facemid, point))
-		    break;	/* got it */
-		if (i & 1) {	// i is odd
-		    if (us > mids) {
-			us -= 8;
-			if (us < mids)
-			    us = mids;
-		    } else {
-			us += 8;
-			if (us > mids)
-			    us = mids;
-		    }
-		} else {
-		    if (ut > midt) {
-			ut -= 8;
-			if (ut < midt)
-			    ut = midt;
-		    } else {
-			ut += 8;
-			if (ut > midt)
-			    ut = midt;
-		    }
+		result = TraceLine(model, flags, midpoint, point, &hit);
+		if (result == TRACE_HIT_NONE)
+		    break;
+		if (result != TRACE_HIT_SOLID) {
+		    WarnBadMidpoint(midpoint);
+		    break;
 		}
 
-		/* move surf 8 pixels towards the center */
-		VectorSubtract(facemid, point, move);
-		VectorNormalize(move);
-		VectorMA(point, 8, move, point);
+		/* Move the point 1 unit above the obstructing surface */
+		dist = DotProduct(point, hit.dplane->normal) - hit.dplane->dist;
+		dist = hit.side ? -dist - 1 : -dist + 1;
+		VectorScale(hit.dplane->normal, dist, move);
+		VectorAdd(point, move, point);
 	    }
 	}
     }
@@ -502,12 +509,13 @@ SingleLightFace(const entity_t *entity, const lightsample_t *light,
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
+    const dmodel_t *shadowself;
+    const vec_t *surfpoint;
     vec_t dist;
     vec_t angle, spotscale;
     vec_t add;
     qboolean newmap, hit;
     int i, mapnum;
-    const vec_t *surfpoint;
     lightsample_t *sample;
     lightmap_t newlightmap;
 
@@ -544,6 +552,7 @@ SingleLightFace(const entity_t *entity, const lightsample_t *light,
      * Check it for real
      */
     hit = false;
+    shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
 	vec3_t ray;
@@ -571,12 +580,8 @@ SingleLightFace(const entity_t *entity, const lightsample_t *light,
 	    }
 	}
 
-	/* Test for line of sight */
-	if (!TestLine(entity->origin, surfpoint))
+	if (!TestLight(entity->origin, surfpoint, shadowself))
 	    continue;
-	if (modelinfo->shadowself)
-	    if (!TestLineModel(modelinfo->model, entity->origin, surfpoint))
-		continue;
 
 	angle = (1.0 - scalecos) + scalecos * angle;
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
@@ -614,6 +619,7 @@ SkyLightFace(const lightsample_t *light, const lightsurf_t *lightsurf,
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
+    const dmodel_t *shadowself;
     const vec_t *surfpoint;
     int i, mapnum;
     vec3_t incoming;
@@ -642,15 +648,12 @@ SkyLightFace(const lightsample_t *light, const lightsurf_t *lightsurf,
     angle = (1.0 - scalecos) + scalecos * angle;
 
     /* Check each point... */
+    shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
     sample = lightmaps[mapnum].samples;
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
-	vec3_t skypoint;
-	if (!TestSky(surfpoint, sunvec, skypoint))
+	if (!TestSky(surfpoint, sunvec, shadowself))
 	    continue;
-	if (modelinfo->shadowself)
-	    if (!TestLineModel(modelinfo->model, surfpoint, skypoint))
-		continue;
 	sample->light += angle * light->light;
 	if (colored)
 	    VectorMA(sample->color, angle * light->light / 255.0f, light->color,
@@ -668,10 +671,11 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	    lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    int mapnum, i, j, k;
-    lightsample_t *sample;
+    const dmodel_t *shadowself;
     const entity_t *entity;
     const vec_t *surfpoint;
+    int mapnum, i, j, k;
+    lightsample_t *sample;
 
     /* Find a style 0 lightmap */
     for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
@@ -699,6 +703,7 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
     }
 
     /* Cast rays for local minlight entities */
+    shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
     for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	if (entity->formula != LF_LOCALMIN)
 	    continue;
@@ -708,14 +713,9 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
 	    qboolean trace = false;
 	    if (sample->light < entity->light.light) {
-		trace = TestLine(entity->origin, surfpoint);
+		trace = TestLight(entity->origin, surfpoint, shadowself);
 		if (!trace)
 		    continue;
-		if (modelinfo->shadowself) {
-		    trace = TestLineModel(modelinfo->model, entity->origin, surfpoint);
-		    if (!trace)
-			continue;
-		}
 		sample->light = entity->light.light;
 	    }
 	    if (!colored)
@@ -723,15 +723,9 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	    for (k = 0; k < 3; k++) {
 		if (sample->color[k] < entity->light.color[k]) {
 		    if (!trace) {
-			trace = TestLine(entity->origin, surfpoint);
+			trace = TestLight(entity->origin, surfpoint, shadowself);
 			if (!trace)
 			    break;
-			if (modelinfo->shadowself) {
-			    trace = TestLineModel(modelinfo->model,
-						  entity->origin, surfpoint);
-			    if (!trace)
-				break;
-			}
 		    }
 		    sample->color[k] = entity->light.color[k];
 		}
