@@ -47,15 +47,16 @@ typedef struct {
     uint32_t offsets[MIPLEVELS];
 } dmiptex_t;
 
-typedef struct {
+typedef struct wad_s {
     wadinfo_t header;
     int version;
     lumpinfo_t *lumps;
     FILE *file;
+    struct wad_s *next;
 } wad_t;
 
-int WADList_Init(wad_t **wads, const char *wadstring);
-void WADList_Process(wad_t *wads, int numwads);
-void WADList_Free(wad_t *wads, int numwads);
+wad_t *WADList_Init(const char *wadstring);
+void WADList_Process(const wad_t *wadlist);
+void WADList_Free(wad_t *wadlist);
 
 #endif /* WAD_H */

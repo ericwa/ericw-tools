@@ -290,8 +290,7 @@ ProcessFile(void)
 {
     const char *wadstring;
     char *defaultwad;
-    wad_t *wads;
-    int numwads = 0;
+    wad_t *wadlist;
 
     // load brushes and entities
     LoadMapFile();
@@ -300,15 +299,16 @@ ProcessFile(void)
 	return;
     }
 
+    wadlist = NULL;
     wadstring = ValueForKey(pWorldEnt, "_wad");
     if (!wadstring[0])
 	wadstring = ValueForKey(pWorldEnt, "wad");
     if (!wadstring[0])
 	Message(msgWarning, warnNoWadKey);
     else
-	numwads = WADList_Init(&wads, wadstring);
+	wadlist = WADList_Init(wadstring);
 
-    if (!numwads) {
+    if (!wadlist) {
 	if (wadstring[0])
 	    Message(msgWarning, warnNoValidWads);
 	/* Try the default wad name */
@@ -316,8 +316,8 @@ ProcessFile(void)
 	strcpy(defaultwad, options.szMapName);
 	StripExtension(defaultwad);
 	DefaultExtension(defaultwad, ".wad");
-	numwads = WADList_Init(&wads, defaultwad);
-	if (numwads)
+	wadlist = WADList_Init(defaultwad);
+	if (wadlist)
 	    Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
 	FreeMem(defaultwad, OTHER, strlen(options.szMapName) + 5);
     }
@@ -325,16 +325,15 @@ ProcessFile(void)
     // init the tables to be shared by all models
     BeginBSPFile();
 
-    // the clipping hulls will not be written out to text files by forked processes :)
     if (!options.fAllverbose)
 	options.fVerbose = false;
     CreateHulls();
 
     WriteEntitiesToString();
-    WADList_Process(wads, numwads);
+    WADList_Process(wadlist);
     FinishBSPFile();
 
-    WADList_Free(wads, numwads);
+    WADList_Free(wadlist);
 }
 
 

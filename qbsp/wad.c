@@ -24,9 +24,9 @@
 #include "qbsp.h"
 #include "wad.h"
 
-static void WADList_LoadTextures(wad_t *wads, int numwads, dmiptexlump_t *l);
-static void WADList_AddAnimatingTextures(wad_t *wads, int numwads);
-static int WAD_LoadLump(wad_t *w, char *name, byte *dest);
+static void WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump);
+static void WADList_AddAnimatingTextures(const wad_t *wadlist);
+static int WAD_LoadLump(const wad_t *wad, const char *name, byte *dest);
 
 
 static bool
@@ -76,34 +76,21 @@ WAD_LoadInfo(wad_t *wad)
 }
 
 
-int
-WADList_Init(wad_t **wads, const char *wadstring)
+wad_t *
+WADList_Init(const char *wadstring)
 {
-    int len, numwads;
-    wad_t *wadlist, *wad;
+    int len;
+    wad_t wad, *wadlist, *newwad;
     const char *fname;
     char *fpath;
     const char *pos;
     int pathlen;
 
-    *wads = NULL;
+    if (!wadstring || !wadstring[0])
+	return NULL;
 
-    if (!wadstring)
-	return 0;
-
+    wadlist = NULL;
     len = strlen(wadstring);
-    if (len == 0)
-	return 0;
-
-    // Count # of wads
-    numwads = 1;
-    for (pos = wadstring; *pos ; pos++)
-	if (pos[0] == ';' && pos[1] != ';')
-	    numwads++;
-
-    wadlist = AllocMem(OTHER, numwads * sizeof(wad_t), true);
-
-    wad = wadlist;
     pos = wadstring;
     while (pos - wadstring < len) {
 	fname = pos;
@@ -118,76 +105,68 @@ WADList_Init(wad_t **wads, const char *wadstring)
 	    fpath = AllocMem(OTHER, pathlen + 1, true);
 	    snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
 	}
-	wad->file = fopen(fpath, "rb");
-	if (wad->file) {
+	wad.file = fopen(fpath, "rb");
+	if (wad.file) {
 	    if (options.fVerbose)
 		Message(msgLiteral, "Opened WAD: %s\n", fpath);
-	    if (WAD_LoadInfo(wad)) {
-		wad++;
+	    if (WAD_LoadInfo(&wad)) {
+		newwad = AllocMem(OTHER, sizeof(wad), true);
+		memcpy(newwad, &wad, sizeof(wad));
+		newwad->next = wadlist;
+		wadlist = newwad;
 	    } else {
 		Message(msgWarning, warnNotWad, fpath);
-		fclose(wad->file);
+		fclose(wad.file);
 	    }
 	}
 	FreeMem(fpath, OTHER, strlen(fpath) + 1);
 	pos++;
     }
 
-    /* Re-allocate just the required amount */
-    *wads = AllocMem(OTHER, (wad - wadlist) * sizeof(wad_t), false);
-    memcpy(*wads, wadlist, (wad - wadlist) * sizeof(wad_t));
-    FreeMem(wadlist, OTHER, numwads * sizeof(wad_t));
-    numwads = wad - wadlist;
-
-    return numwads;
+    return wadlist;
 }
 
 
 void
-WADList_Free(wad_t *wads, int numwads)
+WADList_Free(wad_t *wadlist)
 {
-    int i;
+    wad_t *wad, *next;
 
-    if (wads) {
-	for (i = 0; i < numwads; i++) {
-	    fclose(wads[i].file);
-	    FreeMem(wads[i].lumps, OTHER,
-		    sizeof(lumpinfo_t) * wads[i].header.numlumps);
-	}
-	FreeMem(wads, OTHER, numwads * sizeof(wad_t));
+    for (wad = wadlist; wad; wad = next) {
+	next = wad->next;
+	fclose(wad->file);
+	FreeMem(wad->lumps, OTHER, sizeof(lumpinfo_t) * wad->header.numlumps);
+	FreeMem(wad, OTHER, sizeof(*wad));
     }
 }
 
 static lumpinfo_t *
-WADList_FindTexture(const wad_t *wads, int numwads, const char *name)
+WADList_FindTexture(const wad_t *wadlist, const char *name)
 {
-    int i, j;
+    int i;
     const wad_t *wad;
 
-    for (i = 0, wad = wads; i < numwads; i++, wad++)
-	for (j = 0; j < wad->header.numlumps; j++)
-	    if (!strcasecmp(name, wad->lumps[j].name))
-		return &wad->lumps[j];
+    for (wad = wadlist; wad; wad = wad->next)
+	for (i = 0; i < wad->header.numlumps; i++)
+	    if (!strcasecmp(name, wad->lumps[i].name))
+		return &wad->lumps[i];
 
     return NULL;
 }
 
 void
-WADList_Process(wad_t *wads, int numwads)
+WADList_Process(const wad_t *wadlist)
 {
     int i;
     lumpinfo_t *texture;
     dmiptexlump_t *miptexlump;
     struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
 
-    if (numwads < 1)
-	return;
-
-    WADList_AddAnimatingTextures(wads, numwads);
+    WADList_AddAnimatingTextures(wadlist);
 
     // Count texture size.  Slow but saves memory.
     for (i = 0; i < map.nummiptex; i++) {
-	texture = WADList_FindTexture(wads, numwads, map.miptex[i]);
+	texture = WADList_FindTexture(wadlist, map.miptex[i]);
 	if (texture)
 	    texdata->count += texture->disksize;
     }
@@ -198,58 +177,57 @@ WADList_Process(wad_t *wads, int numwads)
     miptexlump = (dmiptexlump_t *)texdata->data;
     miptexlump->nummiptex = map.nummiptex;
 
-    WADList_LoadTextures(wads, numwads, miptexlump);
+    WADList_LoadTextures(wadlist, miptexlump);
 
     // Last pass, mark unfound textures as such
-    for (i = 0; i < map.nummiptex; i++)
+    for (i = 0; i < map.nummiptex; i++) {
 	if (miptexlump->dataofs[i] == 0) {
 	    miptexlump->dataofs[i] = -1;
 	    Message(msgWarning, warnTextureNotFound, map.miptex[i]);
-	}
-}
-
-
-static void
-WADList_LoadTextures(wad_t *wads, int numwads, dmiptexlump_t *l)
-{
-    int i, j, len;
-    byte *data;
-    struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
-
-    data = (byte *)&l->dataofs[map.nummiptex];
-    for (i = 0; i < numwads; i++) {
-	for (j = 0; j < map.nummiptex; j++) {
-	    // Texture already found in a previous WAD
-	    if (l->dataofs[j] != 0)
-		continue;
-
-	    l->dataofs[j] = data - (byte *)l;
-	    len = WAD_LoadLump(wads + i, map.miptex[j], data);
-	    if (data + len - (byte *)texdata->data > texdata->count)
-		Error(errLowTextureCount);
-
-	    // didn't find the texture
-	    if (!len)
-		l->dataofs[j] = 0;
-	    data += len;
 	}
     }
 }
 
 
+static void
+WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
+{
+    int i, size;
+    byte *data;
+    const wad_t *wad;
+    struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
+
+    data = (byte *)&lump->dataofs[map.nummiptex];
+
+    for (i = 0; i < map.nummiptex; i++) {
+	if (lump->dataofs[i])
+	    continue;
+	for (wad = wadlist; wad; wad = wad->next) {
+	    size = WAD_LoadLump(wad, map.miptex[i], data);
+	    if (size)
+		break;
+	}
+	if (data + size - (byte *)texdata->data > texdata->count)
+	    Error(errLowTextureCount);
+	lump->dataofs[i] = data - (byte *)lump;
+	data += size;
+    }
+}
+
+
 static int
-WAD_LoadLump(wad_t *w, char *name, byte *dest)
+WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
 {
     int i;
-    int len;
+    int size;
 
-    for (i = 0; i < w->header.numlumps; i++) {
-	if (!strcasecmp(name, w->lumps[i].name)) {
-	    fseek(w->file, w->lumps[i].filepos, SEEK_SET);
-	    len = fread(dest, 1, w->lumps[i].disksize, w->file);
-	    if (len != w->lumps[i].disksize)
+    for (i = 0; i < wad->header.numlumps; i++) {
+	if (!strcasecmp(name, wad->lumps[i].name)) {
+	    fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
+	    size = fread(dest, 1, wad->lumps[i].disksize, wad->file);
+	    if (size != wad->lumps[i].disksize)
 		Error(errReadFailure);
-	    return w->lumps[i].disksize;
+	    return wad->lumps[i].disksize;
 	}
     }
 
@@ -258,7 +236,7 @@ WAD_LoadLump(wad_t *w, char *name, byte *dest)
 
 
 static void
-WADList_AddAnimatingTextures(wad_t *wads, int numwads)
+WADList_AddAnimatingTextures(const wad_t *wadlist)
 {
     int base;
     int i, j;
@@ -274,7 +252,7 @@ WADList_AddAnimatingTextures(wad_t *wads, int numwads)
 	/* Search for all animations (0-9) and alt-animations (A-J) */
 	for (j = 0; j < 20; j++) {
 	    name[1] = (j < 10) ? '0' + j : 'A' + j - 10;
-	    if (WADList_FindTexture(wads, numwads, name))
+	    if (WADList_FindTexture(wadlist, name))
 		FindMiptex(name);
 	}
     }
