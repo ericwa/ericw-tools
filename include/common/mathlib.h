@@ -112,5 +112,6 @@ double VectorLength(const vec3_t v);
 
 /* Shortcut for output of warnings/errors */
 const char *VecStr(const vec3_t vec);
+const char *VecStrf(const vec3_t vec);
 
 #endif /* __COMMON_MATHLIB_H__ */

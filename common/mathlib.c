@@ -82,13 +82,27 @@ VectorNormalize(vec3_t v)
 const char *
 VecStr(const vec3_t vec)
 {
-    static char buffers[4][20];
+    static char buffers[8][20];
     static int current = 0;
     char *buf;
 
-    buf = buffers[current++ & 3];
+    buf = buffers[current++ & 7];
     snprintf(buf, sizeof(buffers[0]), "%i %i %i",
 	     (int)vec[0], (int)vec[1], (int)vec[2]);
+
+    return buf;
+}
+
+const char *
+VecStrf(const vec3_t vec)
+{
+    static char buffers[8][20];
+    static int current = 0;
+    char *buf;
+
+    buf = buffers[current++ & 7];
+    snprintf(buf, sizeof(buffers[0]), "%.2f %.2f %.2f",
+	     vec[0], vec[1], vec[2]);
 
     return buf;
 }
