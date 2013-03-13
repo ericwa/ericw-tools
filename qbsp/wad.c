@@ -158,12 +158,26 @@ WADList_Free(wad_t *wads, int numwads)
     }
 }
 
+static lumpinfo_t *
+WADList_FindTexture(const wad_t *wads, int numwads, const char *name)
+{
+    int i, j;
+    const wad_t *wad;
+
+    for (i = 0, wad = wads; i < numwads; i++, wad++)
+	for (j = 0; j < wad->header.numlumps; j++)
+	    if (!strcasecmp(name, wad->lumps[j].name))
+		return &wad->lumps[j];
+
+    return NULL;
+}
 
 void
 WADList_Process(wad_t *wads, int numwads)
 {
-    int i, j, k;
-    dmiptexlump_t *miptex;
+    int i;
+    lumpinfo_t *texture;
+    dmiptexlump_t *miptexlump;
     struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
 
     if (numwads < 1)
@@ -172,33 +186,24 @@ WADList_Process(wad_t *wads, int numwads)
     WADList_AddAnimatingTextures(wads, numwads);
 
     // Count texture size.  Slow but saves memory.
-    for (i = 0; i < map.nummiptex; i++)
-	for (j = 0; j < numwads; j++) {
-	    for (k = 0; k < wads[j].header.numlumps; k++)
-		if (!strcasecmp(map.miptex[i], wads[j].lumps[k].name)) {
-		    // Found it. Add in the size and skip to outer loop.
-		    texdata->count += wads[j].lumps[k].disksize;
-		    j = numwads;
-		    break;
-		}
-	    // If we found the texture already, break out to outer loop
-	    if (k < wads[j].header.numlumps)
-		break;
-	}
-
+    for (i = 0; i < map.nummiptex; i++) {
+	texture = WADList_FindTexture(wads, numwads, map.miptex[i]);
+	if (texture)
+	    texdata->count += texture->disksize;
+    }
     texdata->count += sizeof(int) * (map.nummiptex + 1);
 
     // Default texture data to store in worldmodel
     texdata->data = AllocMem(BSPTEX, texdata->count, true);
-    miptex = (dmiptexlump_t *)texdata->data;
-    miptex->nummiptex = map.nummiptex;
+    miptexlump = (dmiptexlump_t *)texdata->data;
+    miptexlump->nummiptex = map.nummiptex;
 
-    WADList_LoadTextures(wads, numwads, miptex);
+    WADList_LoadTextures(wads, numwads, miptexlump);
 
     // Last pass, mark unfound textures as such
     for (i = 0; i < map.nummiptex; i++)
-	if (miptex->dataofs[i] == 0) {
-	    miptex->dataofs[i] = -1;
+	if (miptexlump->dataofs[i] == 0) {
+	    miptexlump->dataofs[i] = -1;
 	    Message(msgWarning, warnTextureNotFound, map.miptex[i]);
 	}
 }
@@ -256,7 +261,7 @@ static void
 WADList_AddAnimatingTextures(wad_t *wads, int numwads)
 {
     int base;
-    int i, j, k, l;
+    int i, j;
     char name[32];
 
     base = map.nummiptex;
@@ -266,20 +271,11 @@ WADList_AddAnimatingTextures(wad_t *wads, int numwads)
 	    continue;
 	strcpy(name, map.miptex[i]);
 
+	/* Search for all animations (0-9) and alt-animations (A-J) */
 	for (j = 0; j < 20; j++) {
-	    if (j < 10)
-		name[1] = '0' + j;
-	    else
-		name[1] = 'A' + j - 10;	// alternate animation
-
-
-	    // see if this name exists in the wadfiles
-	    for (l = 0; l < numwads; l++)
-		for (k = 0; k < wads[l].header.numlumps; k++)
-		    if (!strcasecmp(name, wads[l].lumps[k].name)) {
-			FindMiptex(name);	// add to the miptex list
-			break;
-		    }
+	    name[1] = (j < 10) ? '0' + j : 'A' + j - 10;
+	    if (WADList_FindTexture(wads, numwads, name))
+		FindMiptex(name);
 	}
     }
 
