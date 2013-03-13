@@ -30,24 +30,49 @@ static int WAD_LoadLump(wad_t *w, char *name, byte *dest);
 
 
 static bool
-WAD_LoadInfo(wad_t *w)
+WAD_LoadInfo(wad_t *wad)
 {
-    wadinfo_t *hdr = &w->header;
-    bool ret = false;
-    int len;
+    wadinfo_t *hdr = &wad->header;
+    int i, len, lumpinfosize, disksize;
+    dmiptex_t miptex;
 
-    len = fread(hdr, 1, sizeof(wadinfo_t), w->file);
-    if (len == sizeof(wadinfo_t))
-	if (!strncmp(hdr->identification, "WAD2", 4)) {
-	    const int lumpinfo = sizeof(lumpinfo_t) * hdr->numlumps;
-	    fseek(w->file, hdr->infotableofs, SEEK_SET);
-	    w->lumps = AllocMem(OTHER, lumpinfo, true);
-	    len = fread(w->lumps, 1, lumpinfo, w->file);
-	    if (len == lumpinfo)
-		ret = true;
-	}
+    len = fread(hdr, 1, sizeof(wadinfo_t), wad->file);
+    if (len != sizeof(wadinfo_t))
+	return false;
 
-    return ret;
+    wad->version = 0;
+    if (!strncmp(hdr->identification, "WAD2", 4))
+	wad->version = 2;
+    else if (!strncmp(hdr->identification, "WAD3", 4))
+	wad->version = 3;
+    if (!wad->version)
+	return false;
+
+    lumpinfosize = sizeof(lumpinfo_t) * hdr->numlumps;
+    fseek(wad->file, hdr->infotableofs, SEEK_SET);
+    wad->lumps = AllocMem(OTHER, lumpinfosize, true);
+    len = fread(wad->lumps, 1, lumpinfosize, wad->file);
+    if (len != lumpinfosize)
+	return false;
+
+    if (wad->version == 2)
+	return true;
+
+    /*
+     * WAD3 format includes a palette after the mipmap data.
+     * Reduce the disksize in the lumpinfo so we can treat it like WAD2.
+     */
+    for (i = 0; i < wad->header.numlumps; i++) {
+	fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
+	len = fread(&miptex, 1, sizeof(miptex), wad->file);
+	if (len != sizeof(miptex))
+	    return false;
+	disksize = miptex.width * miptex.height / 64 * 85;
+	if (disksize < wad->lumps[i].disksize)
+	    wad->lumps[i].disksize = disksize;
+    }
+
+    return true;
 }
 
 

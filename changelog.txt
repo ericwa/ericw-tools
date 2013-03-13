@@ -1,5 +1,6 @@
 Unreleased
 
+* qbsp: added support for using WAD3 texture wads used by Hammer
 * light: implemented self shadowing and full shadows for brush models
 * light: removed the "-nominlimit" option (now the default behaviour)
 * light: remove support for negative color components (never worked properly)

@@ -40,8 +40,16 @@ typedef struct {
     char name[16];		// must be null terminated
 } lumpinfo_t;
 
+#define MIPLEVELS 4
+typedef struct {
+    char name[16];
+    uint32_t width, height;
+    uint32_t offsets[MIPLEVELS];
+} dmiptex_t;
+
 typedef struct {
     wadinfo_t header;
+    int version;
     lumpinfo_t *lumps;
     FILE *file;
 } wad_t;
