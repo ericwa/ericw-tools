@@ -153,9 +153,9 @@ typedef struct {
     const modelinfo_t *modelinfo;
     plane_t plane;
 
-    /* FIXME - to be removed... */
+    int texmins[2];
+    int texsize[2];
     vec_t exactmid[2];
-    int texmins[2], texsize[2];
 
     int numpoints;
     vec3_t points[SINGLEMAP];
@@ -298,7 +298,7 @@ static void
 CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
-    vec3_t world, centroid;
+    vec3_t worldpoint;
     int i, j, edge, vert;
     const dvertex_t *dvertex;
     const texinfo_t *tex;
@@ -312,8 +312,8 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 	vert = (edge >= 0) ? dedges[edge].v[0] : dedges[-edge].v[1];
 	dvertex = &dvertexes[vert];
 
-	VectorAdd(dvertex->point, offset, world);
-	WorldToTexCoord(world, tex, texcoord);
+	VectorAdd(dvertex->point, offset, worldpoint);
+	WorldToTexCoord(worldpoint, tex, texcoord);
 	for (j = 0; j < 2; j++) {
 	    if (texcoord[j] < mins[j])
 		mins[j] = texcoord[j];
@@ -322,10 +322,10 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 	}
     }
 
-    FaceCentroid(face, centroid);
+    FaceCentroid(face, worldpoint);
+    VectorAdd(worldpoint, offset, worldpoint);
+    WorldToTexCoord(worldpoint, tex, surf->exactmid);
 
-    VectorAdd(centroid, offset, world);
-    WorldToTexCoord(world, tex, surf->exactmid);
     for (i = 0; i < 2; i++) {
 	mins[i] = floor(mins[i] / 16);
 	maxs[i] = ceil(maxs[i] / 16);
