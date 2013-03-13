@@ -2,7 +2,7 @@
 # Tyrann's Quake utilities Makefile #
 #####################################
 
-.PHONY:	all clean
+.PHONY:	all clean snapshot
 
 default:	all
 
@@ -14,7 +14,7 @@ OPTIMIZED_CFLAGS ?= Y# Enable compiler optimisations (if DEBUG != Y)
 TARGET_OS        ?= $(HOST_OS)
 # ============================================================================
 
-TYRUTILS_RELEASE := v0.6
+TYRUTILS_RELEASE := v0.7-prerelease
 TYRUTILS_VERSION := $(shell \
 	git describe 2> /dev/null || printf '%s' $(TYRUTILS_RELEASE))
 
@@ -358,3 +358,15 @@ fatbin2:
 	lipo -create bin/x86.vis     bin/x86_64.vis     bin/ppc.vis     bin/ppc64.vis     -output bin/vis
 	lipo -create bin/x86.bsputil bin/x86_64.bsputil bin/ppc.bsputil bin/ppc64.bsputil -output bin/bsputil
 	lipo -create bin/x86.bspinfo bin/x86_64.bspinfo bin/ppc.bspinfo bin/ppc64.bspinfo -output bin/bspinfo
+
+DOC_FILES = COPYING README.txt vis.txt light.txt qbsp.txt changelog.txt
+RELEASE_FILES = $(patsubst %,$(BIN_DIR)/%,$(APPS)) $(DOC_FILES)
+
+# Strip the 'v' off the front of the git tag, if any
+TYRUTILS_FILE_VERSION = $(patsubst v%,%,$(TYRUTILS_VERSION))
+tyrutils-$(TYRUTILS_FILE_VERSION)-win32.zip: $(RELEASE_FILES)
+	rm -f $@
+	zip $@ $^
+
+# TODO: detect default platform for snapshot, do cross builds?
+snapshot:	tyrutils-$(TYRUTILS_FILE_VERSION)-win32.zip
