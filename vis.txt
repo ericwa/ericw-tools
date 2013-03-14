@@ -26,9 +26,11 @@ OPTIONS
 	-fast          Skip detailed calculations and calculate a very loose
 	               set of PVS data. Useful for testing.
 
-	-level n       Select a test level from 1 to 4. Increasing test levels
-	               require more calculations, but compute a tighter PVS.
-	               Finished maps should be compiled with -level 4.
+	-level n       Select a test level from 0 to 4 for detailed visibility
+	               calculations.  Lower levels are not necessarily faster in
+	               in all cases.  It is not recommended that you change
+	               the default level unless you are experiencing problems.
+	               Default 4.
 
 	-v             Verbose output
 

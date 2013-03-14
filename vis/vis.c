@@ -40,7 +40,7 @@ int leafbytes_real;		// (portalleafs_real+63)>>3
 
 qboolean fastvis;
 static int verbose = 0;
-int testlevel = 2;
+int testlevel = 4;
 
 #if 0
 void
@@ -1171,7 +1171,6 @@ main(int argc, char **argv)
 	    fastvis = true;
 	} else if (!strcmp(argv[i], "-level")) {
 	    testlevel = atoi(argv[i + 1]);
-	    logprint("testlevel = %i\n", testlevel);
 	    i++;
 	} else if (!strcmp(argv[i], "-v")) {
 	    logprint("verbose = true\n");
@@ -1192,6 +1191,7 @@ main(int argc, char **argv)
     }
 
     logprint("running with %d threads\n", numthreads);
+    logprint("testlevel = %i\n", testlevel);
 
     stateinterval = 300; /* 5 minutes */
     starttime = statetime = I_FloatTime();

@@ -5,6 +5,7 @@ Unreleased
 * light: removed the "-nominlimit" option (now the default behaviour)
 * light: remove support for negative color components (never worked properly)
 * light: implemented the "-soft" command line option
+* vis: changed the default testlevel to 4
 
 2013-03-07 TyrUtils v0.6
 
