@@ -202,11 +202,14 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
     for (i = 0; i < map.nummiptex; i++) {
 	if (lump->dataofs[i])
 	    continue;
+	size = 0;
 	for (wad = wadlist; wad; wad = wad->next) {
 	    size = WAD_LoadLump(wad, map.miptex[i], data);
 	    if (size)
 		break;
 	}
+	if (!size)
+	    continue;
 	if (data + size - (byte *)texdata->data > texdata->count)
 	    Error(errLowTextureCount);
 	lump->dataofs[i] = data - (byte *)lump;
