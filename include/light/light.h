@@ -96,6 +96,7 @@ void MakeTnodes(void);
 extern float scaledist;
 extern float rangescale;
 extern float fadegate;
+extern int softsamples;
 extern const vec3_t vec3_white;
 
 extern lightsample_t minlight;

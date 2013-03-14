@@ -294,6 +294,7 @@ FaceCentroid(const dface_t *f, vec3_t out)
  * Fills in surf->texmins[], surf->texsize[] and sets surf->exactmid[]
  * ================
  */
+__attribute__((noinline))
 static void
 CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 {
@@ -366,6 +367,7 @@ WarnBadMidpoint(const vec3_t point)
  * to get the world xyz value of the sample point
  * =================
  */
+__attribute__((noinline))
 static void
 CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 {
@@ -420,6 +422,7 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
     }
 }
 
+__attribute__((noinline))
 static void
 Lightsurf_Init(const modelinfo_t *modelinfo, const dface_t *face,
 	       lightsurf_t *lightsurf)
@@ -462,6 +465,61 @@ Lightmaps_Init(lightmap_t *lightmaps)
     for (i = 0; i < MAXLIGHTMAPS; i++)
 	lightmaps[i].style = 255;
 }
+
+/*
+ * Average adjacent points on the grid to soften shadow edges
+ */
+__attribute__((noinline))
+static void
+Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
+{
+    int i, samples;
+    int s, t, starts, startt, ends, endt;
+    const lightsample_t *src;
+    lightsample_t *dst;
+    lightmap_t softmap;
+
+    const int width = (lightsurf->texsize[0] + 1) * oversample;
+    const int height = (lightsurf->texsize[1] + 1) * oversample;
+    const int fullsamples = (2 * softsamples + 1) * (2 * softsamples + 1);
+
+    memset(&softmap, 0, sizeof(softmap));
+    dst = softmap.samples;
+    for (i = 0; i < lightsurf->numpoints; i++, dst++) {
+	startt = qmax((i / width) - softsamples, 0);
+	endt = qmin((i / width) + softsamples + 1, height);
+	starts = qmax((i % width) - softsamples, 0);
+	ends = qmin((i % width) + softsamples + 1, width);
+
+	for (t = startt; t < endt; t++) {
+	    src = &lightmap->samples[t * width + starts];
+	    for (s = starts; s < ends; s++) {
+		dst->light += src->light;
+		VectorAdd(dst->color, src->color, dst->color);
+		src++;
+	    }
+	}
+	/*
+	 * For cases where we are softening near the edge of the lightmap,
+	 * take extra samples from the centre point (follows old bjp tools
+	 * behaviour)
+	 */
+	samples = (endt - startt) * (ends - starts);
+	if (samples < fullsamples) {
+	    const int extraweight = 2 * (fullsamples - samples);
+	    src = &lightmap->samples[i];
+	    dst->light += src->light * extraweight;
+	    VectorMA(dst->color, extraweight, src->color, dst->color);
+	    samples += extraweight;
+	}
+	dst->light /= samples;
+	VectorScale(dst->color, 1.0 / samples, dst->color);
+    }
+
+    softmap.style = lightmap->style;
+    memcpy(lightmap, &softmap, sizeof(softmap));
+}
+
 
 
 /*
@@ -881,6 +939,15 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 		    }
 		}
 	    }
+	}
+    }
+
+    /* Perform post-processing if requested */
+    if (softsamples > 0) {
+	for (i = 0; i < MAXLIGHTMAPS; i++) {
+	    if (lightmaps[i].style == 255)
+		break;
+	    Lightmap_Soften(&lightmaps[i], &lightsurf);
 	}
     }
 

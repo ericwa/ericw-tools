@@ -34,6 +34,20 @@
 typedef enum { false, true } qboolean;
 typedef unsigned char byte;
 
+/* min and max macros with type checking */
+#define qmax(a,b) ({      \
+    typeof(a) a_ = (a);   \
+    typeof(b) b_ = (b);   \
+    (void)(&a_ == &b_);   \
+    (a_ > b_) ? a_ : b_;  \
+})
+#define qmin(a,b) ({      \
+    typeof(a) a_ = (a);   \
+    typeof(b) b_ = (b);   \
+    (void)(&a_ == &b_);   \
+    (a_ < b_) ? a_ : b_;  \
+})
+
 /* set these before calling CheckParm */
 extern int myargc;
 extern char **myargv;

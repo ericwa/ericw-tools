@@ -25,6 +25,7 @@
 float scaledist = 1.0;
 float rangescale = 0.5;
 float fadegate = EQUAL_EPSILON;
+int softsamples = 0;
 const vec3_t vec3_white = { 255, 255, 255 };
 
 lightsample_t minlight = { 0, { 255, 255, 255 } };
@@ -227,8 +228,7 @@ main(int argc, const char **argv)
 
     for (i = 1; i < argc; i++) {
 	if (!strcmp(argv[i], "-threads")) {
-	    numthreads = atoi(argv[i + 1]);
-	    i++;
+	    numthreads = atoi(argv[++i]);
 	} else if (!strcmp(argv[i], "-extra")) {
 	    oversample = 2;
 	    logprint("extra 2x2 sampling enabled\n");
@@ -236,22 +236,23 @@ main(int argc, const char **argv)
 	    oversample = 4;
 	    logprint("extra 4x4 sampling enabled\n");
 	} else if (!strcmp(argv[i], "-dist")) {
-	    scaledist = atof(argv[i + 1]);
-	    i++;
+	    scaledist = atof(argv[++i]);
 	} else if (!strcmp(argv[i], "-range")) {
-	    rangescale = atof(argv[i + 1]);
-	    i++;
+	    rangescale = atof(argv[++i]);
 	} else if (!strcmp(argv[i], "-gate")) {
-	    fadegate = atof(argv[i + 1]);
-	    i++;
+	    fadegate = atof(argv[++i]);
 	} else if (!strcmp(argv[i], "-light")) {
-	    minlight.light = atof(argv[i + 1]);
-	    i++;
+	    minlight.light = atof(argv[++i]);
 	} else if (!strcmp(argv[i], "-compress")) {
 	    compress_ents = true;
 	    logprint("light entity compression enabled\n");
 	} else if (!strcmp(argv[i], "-lit")) {
 	    colored = true;
+	} else if (!strcmp(argv[i], "-soft")) {
+	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
+		softsamples = atoi(argv[++i]);
+	    else
+		softsamples = -1; /* auto, based on oversampling */
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -260,8 +261,8 @@ main(int argc, const char **argv)
 
     if (i != argc - 1) {
 	printf("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
-	       "             [-dist n] [-range n] [-gate n] [-lit] "
-	       "             [-compress] bspfile\n");
+	       "             [-dist n] [-range n] [-gate n] [-lit]\n"
+	       "             [-soft [n]] [-compress] bspfile\n");
 	exit(1);
     }
 
@@ -269,6 +270,19 @@ main(int argc, const char **argv)
 	logprint("running with %d threads\n", numthreads);
     if (colored)
 	logprint(".lit colored light output requested on command line.\n");
+    if (softsamples == -1) {
+	switch (oversample) {
+	case 2:
+	    softsamples = 1;
+	    break;
+	case 4:
+	    softsamples = 2;
+	    break;
+	default:
+	    softsamples = 0;
+	    break;
+	}
+    }
 
     start = I_FloatTime();
 

@@ -41,6 +41,18 @@ OPTIONS
 	               less than 1.0 will cause no discernable visual
 	               differences.  Default 0.001.
 
+	-soft [n]      Perform post-processing on the lightmap which averages
+	               adjacent samples to smooth shadow edges.  If n is
+	               specified, the algorithm will take 'n' samples on each
+	               side of the sample point and replace the original value
+	               with the average. e.g. a value of 1 results in averaging
+	               a 3x3 square centred on the original sample. 2 implies a
+	               5x5 square and so on.  If -soft is specified, but n is
+	               omitted, a value will be the level of oversampling
+	               requested. If no oversampling, then the implied value is
+	               1. -extra implies a value of 2 and -extra4 implies 3.
+	               Default 0 (off).
+
 	-lit           Force generation of a .lit file, even if your map does
 	               not have any coloured lights. By default, light will
 	               automatically generate the .lit file when needed.
