@@ -190,12 +190,12 @@ LightWorld(void)
 	lightdatasize /= 4;
 
     /* align filebase to a 4 byte boundary */
-    filebase = file_p = (byte *)(((unsigned long)dlightdata + 3) & ~3);
+    filebase = file_p = (byte *)(((uintptr_t)dlightdata + 3) & ~3);
     file_end = filebase + lightdatasize;
 
     if (colored) {
 	/* litfile data stored in dlightdata, after the white light */
-	lit_filebase = file_end + 12 - ((unsigned long)file_end % 12);
+	lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
 	lit_file_p = lit_filebase;
 	lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
     }

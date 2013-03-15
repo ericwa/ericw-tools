@@ -1,5 +1,7 @@
 /* common/threads.c */
 
+#include <stdint.h>
+
 #include <common/cmdlib.h>
 #include <common/log.h>
 #include <common/threads.h>
@@ -103,7 +105,7 @@ ThreadUnlock(void)
 void
 RunThreadsOn(int start, int workcnt, void *(func)(void *))
 {
-    int i;
+    uintptr_t i; /* avoid warning due to cast for the CreateThread API */
     DWORD *threadid;
     HANDLE *threadhandle;
 

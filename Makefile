@@ -43,6 +43,17 @@ EXT=.exe
 DPTHREAD=
 LPTHREAD=
 ifneq ($(HOST_OS),WIN32)
+TARGET ?= $(MINGW32_CROSS_GUESS)
+CC = $(TARGET)-gcc
+STRIP = $(TARGET)-strip
+endif
+else
+ifeq ($(TARGET_OS),WIN64)
+EXT=.exe
+DPTHREAD=
+LPTHREAD=
+ifneq ($(HOST_OS),WIN64)
+TARGET ?= $(MINGW64_CROSS_GUESS)
 CC = $(TARGET)-gcc
 STRIP = $(TARGET)-strip
 endif
@@ -50,6 +61,7 @@ else
 EXT=
 DPTHREAD=-DUSE_PTHREADS -pthread
 LPTHREAD=-lpthread
+endif
 endif
 
 #BIN_PFX ?= tyr-
@@ -87,13 +99,20 @@ endif
 #   i486-mingw32 (Arch).
 # ------------------------------------------------------------------------
 
-MINGW_CROSS_GUESS := $(shell \
+MINGW32_CROSS_GUESS := $(shell \
 	if which i486-mingw32-gcc > /dev/null 2>&1; then \
 		echo i486-mingw32; \
 	elif which i586-mingw32msvc-gcc > /dev/null 2>&1; then \
 		echo i586-mingw32msvc; \
 	else \
 		echo i386-mingw32msvc; \
+	fi)
+
+MINGW64_CROSS_GUESS := $(shell \
+	if which x86_64-w64-mingw32-gcc > /dev/null 2>&1; then \
+		echo x86_64-w64-mingw32; \
+	else \
+		echo x86_64-w64-mingw32; \
 	fi)
 
 # --------------------------------
