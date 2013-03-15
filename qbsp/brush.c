@@ -874,12 +874,25 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
 	contents = Brush_GetContents(mapbrush);
 
-	/* "clip" brushes don't show up in the draw hull */
+	/*
+	 * "clip" brushes don't show up in the draw hull, but we still want to
+	 * include them in the model bounds so collision detection works
+	 * correctly.
+	 */
 	if (contents == CONTENTS_CLIP) {
-	    if (!hullnum)
+	    if (!hullnum) {
+		brush = LoadBrush(mapbrush, rotate_offset, hullnum);
+		if (brush) {
+		    AddToBounds(dst, brush->mins);
+		    AddToBounds(dst, brush->maxs);
+		    FreeBrushFaces(brush->faces);
+		    FreeMem(brush, BRUSH, 1);
+		}
 		continue;
+	    }
 	    contents = CONTENTS_SOLID;
 	}
+
 	/* "hint" brushes don't affect the collision hulls */
 	if (contents == CONTENTS_HINT) {
 	    if (hullnum)
