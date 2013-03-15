@@ -775,6 +775,30 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     int i;
     node_t *headnode;
 
+    if (!surfhead) {
+	/*
+	 * We allow an entity to be constructed with no visible brushes
+	 * (i.e. all clip brushes), but need to construct a simple empty
+	 * collision hull for the engine. Probably could be done a little
+	 * smarter, but this works.
+	 */
+	headnode = AllocMem(NODE, 1, true);
+	for (i = 0; i < 3; i++) {
+	    headnode->mins[i] = entity->mins[i] - SIDESPACE;
+	    headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
+	}
+	headnode->children[0] = AllocMem(NODE, 1, true);
+	headnode->children[0]->planenum = PLANENUM_LEAF;
+	headnode->children[0]->contents = CONTENTS_EMPTY;
+	headnode->children[0]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
+	headnode->children[1] = AllocMem(NODE, 1, true);
+	headnode->children[1]->planenum = PLANENUM_LEAF;
+	headnode->children[1]->contents = CONTENTS_EMPTY;
+	headnode->children[1]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
+
+	return headnode;
+    }
+
     Message(msgProgress, "SolidBSP");
 
     headnode = AllocMem(NODE, 1, true);

@@ -1,6 +1,8 @@
 Unreleased
 
 * qbsp: added support for using WAD3 texture wads used by Hammer
+* qbsp: include clip brushes when calculating bmodel bounding box
+* qbsp: enable creation of clip-only bmodels
 * light: implemented self shadowing and full shadows for brush models
 * light: removed the "-nominlimit" option (now the default behaviour)
 * light: remove support for negative color components (never worked properly)

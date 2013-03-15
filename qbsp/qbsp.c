@@ -86,7 +86,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     Message(msgProgress, "Brush_LoadEntity");
     Brush_LoadEntity(entity, entity, hullnum);
-    if (!entity->brushes) {
+    if (!entity->brushes && hullnum) {
 	PrintEntity(entity);
 	Error(errNoValidBrushes);
     }
