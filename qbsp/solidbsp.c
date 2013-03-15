@@ -609,7 +609,7 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 
     leafnode->faces = NULL;
     leafnode->contents = 0;
-    leafnode->planenum = -1;
+    leafnode->planenum = PLANENUM_LEAF;
 
     count = 0;
     for (surf = planelist; surf; surf = surf->next) {
