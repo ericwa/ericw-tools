@@ -2,13 +2,14 @@
 # Tyrann's Quake utilities Makefile #
 #####################################
 
-.PHONY:	all clean snapshot
+.PHONY:	all clean docs snapshot
 
 default:	all
 
 # ============================================================================
 BUILD_DIR        ?= build
 BIN_DIR          ?= bin
+DOC_DIR          ?= doc
 DEBUG            ?= N# Compile with debug info
 OPTIMIZED_CFLAGS ?= Y# Enable compiler optimisations (if DEBUG != Y)
 TARGET_OS        ?= $(HOST_OS)
@@ -59,6 +60,7 @@ BIN_PFX ?=
 # ---------------------------------------
 
 STRIP ?= strip
+GROFF ?= groff
 CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs -Wwrite-strings
 
 ifeq ($(DEBUG),Y)
@@ -113,7 +115,7 @@ else
   quiet = quiet_
 endif
 
-quiet_cmd_mkdir = '  MKDIR   $(@D)'
+quiet_cmd_mkdir = '  MKDIR    $(@D)'
       cmd_mkdir = mkdir -p $(@D)
 
 define do_mkdir
@@ -136,7 +138,7 @@ cmd_cc_dep_c = \
 	$(CC) -MM -MT $@ $(CPPFLAGS) -o $(@D)/.$(@F).d $< ; \
 	$(cmd_fixdep)
 
-quiet_cmd_cc_o_c = '  CC      $@'
+quiet_cmd_cc_o_c = '  CC       $@'
       cmd_cc_o_c = $(CC) -c $(CPPFLAGS) $(CFLAGS) -o $@ $<
 
 define do_cc_o_c
@@ -146,7 +148,7 @@ define do_cc_o_c
 	@$(cmd_cc_o_c);
 endef
 
-quiet_cmd_cc_link = '  LINK    $@'
+quiet_cmd_cc_link = '  LINK     $@'
       cmd_cc_link = $(CC) $(LDFLAGS) -o $@ $^ $(1)
 
 define do_cc_link
@@ -155,7 +157,7 @@ define do_cc_link
 	@$(call cmd_cc_link,$(1))
 endef
 
-quiet_cmd_strip = '  STRIP   $(1)'
+quiet_cmd_strip = '  STRIP    $(1)'
       cmd_strip = $(STRIP) $(1)
 
 ifeq ($(DEBUG),Y)
@@ -170,6 +172,29 @@ define do_strip
 endef
 endif
 endif
+
+# The sed magic is a little ugly, but I wanted something that would work
+# across Linux/BSD/Msys/Darwin
+quiet_cmd_man2txt = '  MAN2TXT  $@'
+      cmd_man2txt = \
+	$(GROFF) -man -Tascii $< | cat -v | \
+	sed -e 's/\^\[\[\([0-9]\)\{1,2\}[a-z]//g' \
+	    -e 's/$$/'`echo \\\r`'/' > $@
+
+define do_man2txt
+	@$(do_mkdir)
+	@echo $($(quiet)cmd_man2txt);
+	@$(call cmd_man2txt);
+endef
+
+quiet_cmd_man2html = '  MAN2HTML $@'
+      cmd_man2html = $(GROFF) -man -Thtml $< > $@
+
+define do_man2html
+	@$(do_mkdir)
+	@echo $($(quiet)cmd_man2html);
+	@$(call cmd_man2html);
+endef
 
 DEPFILES = \
 	$(wildcard $(BUILD_DIR)/bspinfo/.*.d)	\
@@ -332,9 +357,25 @@ $(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,$(BUILD_DIR)/qbsp/%,$(QBSP_OBJECTS
 clean:
 	@rm -rf $(BUILD_DIR)
 	@rm -rf $(BIN_DIR)
+	@rm -rf $(DOC_DIR)
 	@rm -f $(shell find . \( \
 		-name '*~' -o -name '#*#' -o -name '*.o' -o -name '*.res' \
 	\) -print)
+
+# Build text and/or html docs from man page source
+$(DOC_DIR)/%.txt:	man/%.1	; $(do_man2txt)
+$(DOC_DIR)/%.html:	man/%.1	; $(do_man2html)
+
+# --------------------------------------------------------------------------
+# Release Management
+# --------------------------------------------------------------------------
+
+HTML_DOCS = $(patsubst %,$(DOC_DIR)/%.html,qbsp light vis)
+TEXT_DOCS = $(patsubst %,$(DOC_DIR)/%.txt,qbsp light vis)
+DOC_FILES = COPYING README.txt changelog.txt $(HTML_DOCS)
+RELEASE_FILES = $(patsubst %,$(BIN_DIR)/%,$(APPS)) $(DOC_FILES)
+
+docs:	$(HTML_DOCS) $(TEXT_DOCS)
 
 # OS X Fat Binaries (Intel only)
 fatbin:
@@ -358,9 +399,6 @@ fatbin2:
 	lipo -create $(BIN_DIR).x86/vis     $(BIN_DIR).x86_64/vis     bin/ppc.vis     bin/ppc64.vis     -output bin/vis
 	lipo -create $(BIN_DIR).x86/bsputil $(BIN_DIR).x86_64/bsputil bin/ppc.bsputil bin/ppc64.bsputil -output bin/bsputil
 	lipo -create $(BIN_DIR).x86/bspinfo $(BIN_DIR).x86_64/bspinfo bin/ppc.bspinfo bin/ppc64.bspinfo -output bin/bspinfo
-
-DOC_FILES = COPYING README.txt vis.txt light.txt qbsp.txt changelog.txt
-RELEASE_FILES = $(patsubst %,$(BIN_DIR)/%,$(APPS)) $(DOC_FILES)
 
 # Strip the 'v' off the front of the git tag, if any
 TYRUTILS_FILE_VERSION = $(patsubst v%,%,$(TYRUTILS_VERSION))

@@ -1,5 +1,7 @@
 Unreleased
 
+* Unix man page documentation for the main tools (qbsp, light, vis)
+* HTML and text documentation is generated from the man page sources
 * qbsp: added support for using WAD3 texture wads used by Hammer
 * qbsp: include clip brushes when calculating bmodel bounding box
 * qbsp: enable creation of clip-only bmodels

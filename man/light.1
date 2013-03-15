@@ -1,0 +1,201 @@
+.\" Process this file with
+.\" groff -man -Tascii light.1
+.\"
+.TH LIGHT 1 "MARCH 2013" TYRUTILS
+
+.SH NAME
+light \- Caclulate lightmap data for a Quake BSP file
+
+.SH SYNOPSIS
+\fBlight\fP [OPTION]... BSPFILE
+
+.SH DESCRIPTION
+\fBlight\fP reads a Quake .bsp file and calculates light and shadow
+information based on the entity definitions contained in the .bsp.  The .bsp
+file is updated with the new light data upon completion, overwriting any
+existing lighting data.
+
+.SH OPTIONS
+.IP "\fB\-threads n\fP"
+Set number of threads explicitly. By default light will attempt to detect the
+number of CPUs/cores available.
+.IP "\fB\-extra\fP"
+Calculate extra samples (2x2) and average the results for smoother shadows.
+.IP "\fB\-extra4\fP"
+Calculate even more samples (4x4) and average the results for smoother
+shadows.
+.IP "\fB\-light n\fP"
+Set a global minimum light level. Overrides default light level set in
+worldspawn.
+.IP "\fB\-dist n\fP"
+Scales the fade distance of all lights by a factor of n.  If n > 1 lights fade
+more quickly with distance and if n < 1, lights fade more slowly with distance
+and light reaches further.
+.IP "\fB\-range n\fP"
+Scales the brightness range of all lights without affecting their fade
+discance.  Values of n > 0.5 makes lights brighter and n < 0.5 makes lights
+less bright.  The same effect can be achieved on individual lights by
+adjusting both the "light" and "wait" attributes.
+.IP "\fB\-gate n\fP"
+Set a minimum light level, below which can be considered zero brightness.
+This can dramatically speed up processing when there are large numbers of
+lights with inverse or inverse square falloff. In most cases, values less than
+1.0 will cause no discernable visual differences.  Default 0.001.
+.IP "\fB\-soft [n]\fP"
+Perform post-processing on the lightmap which averages adjacent samples to
+smooth shadow edges.  If n is specified, the algorithm will take 'n' samples
+on each side of the sample point and replace the original value with the
+average. e.g. a value of 1 results in averaging a 3x3 square centred on the
+original sample. 2 implies a 5x5 square and so on.  If \-soft is specified, but
+n is omitted, a value will be the level of oversampling requested. If no
+oversampling, then the implied value is 1. \-extra implies a value of 2 and
+\-extra4 implies 3.  Default 0 (off).
+.IP "\fB\-lit\fP"
+Force generation of a .lit file, even if your map does not have any coloured
+lights. By default, light will automatically generate the .lit file when
+needed.
+
+.SH "MODEL ENTITY KEYS"
+
+.SS "Worldspawn Keys"
+
+.PP
+The following keys can be added to the \fIworldspawn\fP entity:
+
+.IP "\fB""light"" ""n""\fP"
+Set a global minimum light level of "n" across the whole map.  This is an easy
+way to eliminate completely dark areas of the level, however you may lose some
+contrast as a result, so use with care. Default 0.
+
+.IP "\fB""_sunlight"" ""n""\fP"
+Set the brightness of the sunlight coming from an unseen sun in the sky.  Sky
+brushes (or more accurately bsp leafs with sky contents) will emit sunlight at
+an angle specified by the "_sun_mangle" key.  Default 0.
+
+.IP "\fB""_sun_mangle"" ""x y z""\fP"
+Specifies the direction of sunlight using yaw(x), pitch(y) and roll(z) in
+degrees. Yaw specifies the angle around the Z-axis from 0 to 359 degrees and
+pitch specifies the angle from 90 (straight up) to -90 (straight down). Roll
+has no effect, so use any value (e.g. 0).  Default is straight down ("0 -90
+0").
+
+.IP "\fB""_sunlight_color"" ""r g b""\fP"
+Specify red(r), green(g) and blue(b) components for the colour of the
+sunlight. RGB component values are between 0 and 255. Default is white light
+("255 255 255").
+
+.SS "Model Entity Keys"
+
+.PP
+The following keys can be used on any entity with a brush model:
+
+.IP "\fB""_minlight"" ""n""\fP"
+Set the minimum light level for any surface of the brush model.  Default 0.
+
+.IP "\fB""_mincolor"" ""r g b""\fP"
+Specify red(r), green(g) and blue(b) components for the colour of the
+minlight. RGB component values are between 0 and 255. Default is white light
+("255 255 255").
+
+.IP "\fB""_shadow"" ""n""\fP"
+If n is 1, this model will cast shadows on other models and itself
+(i.e. "_shadow" implies "_shadowself").  Note that this doesn't magically give
+Quake dynamic lighting powers, so the shadows will not move if the model
+moves. Default 0.
+
+.IP "\fB""_shadowself"" ""n""\fP"
+If n is 1, this model will cast shadows on itself if one part of the model
+blocks the light from another model surface. This can be a better compromise
+for moving models than full shadowing.  Default 0.
+
+.SH "LIGHT ENTITY KEYS"
+
+.PP
+Light entity keys can be used in any entity with a classname starting
+with the first five letters "light". E.g. "light", "light_globe",
+"light_flame_small_yellow", etc.
+
+.IP "\fB""light"" ""n""\fP"
+Set the light intensity. Negative values are also allowed and will cause the
+entity to subtract light cast by other entities. Default 300.
+
+.IP "\fB""wait"" ""n""\fP"
+Scale the fade distance of the light by "n". Values of n > 1 make the light
+fade more quickly with distance, and values < 1 make the light fade more
+slowly (and thus reach further). Default 1.
+
+.IP "\fB""delay"" ""n""\fP"
+Select an attenuation formaula for the light:
+.nf
+  0 => Linear attenuation (default)
+  1 => 1/x attenuation
+  2 => 1/(x^2) attenuation
+  3 => No attenuation (same brightness at any distance)
+  4 => "local minlight" - No attenuation and like minlight,
+       it won't raise the lighting above it's light value.
+       Unlike minlight, it will only affect surfaces within
+       line of sight of the entity.
+  5 => 1/(x^2) attenuation, but slightly more attenuated and
+       without the extra bright effect that "delay 2" has
+       near the source.
+.fi
+
+.IP "\fB""_color"" ""r g b""\fP"
+Specify red(r), green(g) and blue(b) components for the colour of the
+light. RGB component values are between 0 and 255. Default is white light
+("255 255 255").
+
+.IP "\fB""target"" ""name""\fP"
+Turns the light into a spotlight, with the direction of light being towards
+another entity with it's "targetname" key set to "name".
+
+.IP "\fB""mangle"" ""x y z""\fP"
+Turns the light into a spotlight and specifies the direction of light using
+yaw(x), pitch(y) and roll(z) in degrees. Yaw specifies the angle around the
+Z-axis from 0 to 359 degrees and pitch specifies the angle from 90 (straight
+up) to -90 (straight down). Roll has no effect, so use any value (e.g. 0).
+Often easier than the "target" method.
+
+.IP "\fB""angle"" ""n""\fP"
+Specifies the angle in degrees for a spotlight cone. Default 40.
+
+.IP "\fB""_softangle"" ""n""\fP"
+Specifies the angle in degrees for an inner spotlight cone (must be less than
+the "angle" cone. Creates a softer transition between the full brightness of
+the inner cone to the edge of the outer cone.  Default 0 (disabled).
+
+.IP "\fB""targetname"" ""name""\fP"
+Turns the light into a switchable light, toggled by another entity targeting
+it's name.
+
+.IP "\fB""style"" ""n""\fP"
+Set the animated light style. Default 0.
+
+.SH AUTHOR
+Written by Kevin Shanahan (aka Tyrann)
+.br
+Based on source provided by id Software
+.br
+http://disenchant.net
+
+.SH "REPORTING BUGS"
+Please send bug reports to tyrann@disenchant.net.
+.br
+Improvements to the documentation are welcome and encouraged.
+
+.SH COPYRIGHT
+Copyright (C) 2013 Kevin Shanahan
+.br
+Copyright (C) 1997 id Software
+.br
+License GPLv2+:  GNU GPL version 2 or later
+.br
+<http://gnu.org/licenses/gpl2.html>.
+.PP
+This is free software: you are free to change and redistribute it.  There is
+NO WARRANTY, to the extent permitted by law.
+
+.SH "SEE ALSO"
+\fBqbsp\fP(1)
+\fBvis\fP(1)
+\fBquake\fP(6)

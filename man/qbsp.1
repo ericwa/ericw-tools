@@ -1,0 +1,146 @@
+.\" Process this file with
+.\" groff -man -Tascii qbsp.1
+.\"
+.TH QBSP 1 "MARCH 2013" TYRUTILS
+
+.SH NAME
+qbsp \- Compile a Quake BSP file from a MAP source file
+
+.SH SYNOPSIS
+\fBqbsp\fP [OPTION]... SOURCFILE [DESTFILE]
+
+.SH DESCRIPTION
+\fBqbsp\fP is a tool used in the creation of maps for the \fB id Software\fP
+game \fBQuake\fP. qbsp takes a .map file as input and produces a .bsp file
+playable in the Quake engine.  If the \fIDESTFILE\fP argument is not supplied,
+the output filename will be chosen by stripping the file extension (if any)
+from \fISOURCEFILE\fP and appending the .bsp extension.
+
+.SH OPTIONS
+.IP "\fB\-nofill\fP"
+Doesn't perform outside filling
+.IP "\fB\-noclip\fP"
+Doesn't build clip hulls
+.IP "\fB\-onlyents\fP"
+Only updates .map entities
+.IP "\fB\-verbose\fP"
+Print out more .map information
+.IP "\fB\-noverbose\fP"
+Print out almost no information at all
+.IP "\fB\-splitspecial\fP"
+Doesn't combine sky and water faces into one large face
+.IP "\fB\-transwater\fP"
+Computes portal information for transparent water
+.IP "\fB\-transsky\fP"
+Computes portal information for transparent sky
+.IP "\fB\-oldaxis\fP"
+Uses original qbsp texture alignment algorithm
+.IP "\fB\-bspleak\fP"
+Creates a .por file, used in the BSP editor
+.IP "\fB\-oldleak\fP"
+Create an old-style QBSP .PTS file (default is new)
+.IP "\fB\-nopercent\fP"
+Prevents output of percent completion information
+.IP "\fB\-leakdist [n]\fP"
+Space between leakfile points (default 2)
+.IP "\fB\-subdivide [n]\fP"
+Use different texture subdivision (default 240)
+.IP "\fB\-wadpath <dir>\fP"
+Search this directory for wad files (default is cwd)
+
+.SH "DETAIL BRUSH SUPPORT"
+
+.PP
+This version of qbsp supports detail brushes which are similar in concept to
+Quake 2's detail brushes.
+.PP
+To be compatible with existing Quake 1 mapping tools, detail brushes can be
+added by creating an entity with classname "func_detail".  When qbsp reads the
+map file, it will add any brushes included in a func_detail entity into the
+worldspawn as details and remove the func_detail entity.  Any number of
+func_detail entities can be used (useful for grouping) and all included
+brushes will be added to the worldspawn.
+.PP
+Here is an example entity definition suitable to add the the .QC files used by
+BSP Editor:
+.PP
+.nf
+    /*QUAKED func_detail (0.5 0.5 0.9) ?
+    Detail brushes add visual details to
+    the world, but do not block visibility.
+    func_detail entities are merged into
+    the worldspawn entity by the qbsp compiler
+    and do not appear as separate entities in
+    the compiled bsp.
+    */
+.fi
+.PP
+For WorldCraft in .FGD format (untested):
+.PP
+.nf
+    @SolidClass color(128 128 230) = func_detail: "Detail" []
+.fi
+.PP
+For Radiant in .ENT format:
+.PP
+.nf
+    <group name="func_detail" color="0 .5 .8">
+    Detail brushes add visual details to the world, but do not
+    block visibility. func_detail entities are merged into the
+    worldspawn entity by the qbsp compiler and do not appear as
+    separate entities in the compiled bsp.
+    </group>
+.fi
+.PP
+What should be written to the .map file is a simple entity with one or more
+brushes. E.g.:
+.PP
+.nf
+    {
+    "classname" "func_detail"
+    {
+    ( -176  80  0 ) ( -208  80  0 ) ( -208  48  0 ) COP1_1 0 0 0 1.0 1.0
+    ( -192 -80 64 ) ( -208 -80  0 ) ( -192 -64 64 ) COP1_1 0 0 0 1.0 1.0
+    ( -176 -80  0 ) ( -192 -80 64 ) ( -176 -64  0 ) COP1_1 0 0 0 1.0 1.0
+    ( -16   48  0 ) (  -16  64 64 ) (    0  48  0 ) COP1_1 0 0 0 1.0 1.0
+    ( -16   64 64 ) (  -16  80  0 ) (    0  64 64 ) COP1_1 0 0 0 1.0 1.0
+    }
+    }
+.fi
+.PP
+When qbsp detects detail brushes, it outputs a modified portal file format
+with the header PRT2 (default is PRT1).  This portal file contains extra
+information needed by vis to compute the potentially visible set (PVS) for the
+map/bsp.  So you will also need a vis util capable of processing the PRT2 file
+format.
+
+.SH AUTHOR
+Written by Kevin Shanahan (aka Tyrann)
+.br
+Based on source provided by id Software and Greg Lewis
+.br
+http://disenchant.net
+
+.SH "REPORTING BUGS"
+Please send bug reports to tyrann@disenchant.net.
+.br
+Improvements to the documentation are welcome and encouraged.
+
+.SH COPYRIGHT
+Copyright (C) 2013 Kevin Shanahan
+.br
+Copyright (C) 1997 Greg Lewis
+.br
+Copyright (C) 1997 id Software
+.br
+License GPLv2+:  GNU GPL version 2 or later
+.br
+<http://gnu.org/licenses/gpl2.html>.
+.PP
+This is free software: you are free to change and redistribute it.  There is
+NO WARRANTY, to the extent permitted by law.
+
+.SH "SEE ALSO"
+\fBlight\fP(1)
+\fBvis\fP(1)
+\fBquake\fP(6)
