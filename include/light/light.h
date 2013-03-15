@@ -113,7 +113,6 @@ extern byte *filebase;
 extern byte *lit_filebase;
 
 extern int oversample;
-extern qboolean compress_ents;
 extern qboolean colored;
 extern qboolean litfile;
 

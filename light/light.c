@@ -44,7 +44,6 @@ static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
 
 int oversample = 1;
-qboolean compress_ents;
 qboolean colored;
 
 void
@@ -243,9 +242,6 @@ main(int argc, const char **argv)
 	    fadegate = atof(argv[++i]);
 	} else if (!strcmp(argv[i], "-light")) {
 	    minlight.light = atof(argv[++i]);
-	} else if (!strcmp(argv[i], "-compress")) {
-	    compress_ents = true;
-	    logprint("light entity compression enabled\n");
 	} else if (!strcmp(argv[i], "-lit")) {
 	    colored = true;
 	} else if (!strcmp(argv[i], "-soft")) {
@@ -262,7 +258,7 @@ main(int argc, const char **argv)
     if (i != argc - 1) {
 	printf("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit]\n"
-	       "             [-soft [n]] [-compress] bspfile\n");
+	       "             [-soft [n]] bspfile\n");
 	exit(1);
     }
 

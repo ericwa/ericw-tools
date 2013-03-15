@@ -455,20 +455,9 @@ WriteEntitiesToString(void)
 	end += 2;
 
 	for (ep = entities[i].epairs; ep; ep = ep->next) {
-	    if (compress_ents && !strncmp(entities[i].classname, "light", 5)) {
-		if (!strcmp(ep->key, "classname") ||
-		    !strcmp(ep->key, "origin") ||
-		    !strcmp(ep->key, "targetname") ||
-		    !strcmp(ep->key, "spawnflags")) {
-		    sprintf(line, "\"%s\" \"%s\"\n", ep->key, ep->value);
-		    strcat(end, line);
-		    end += strlen(line);
-		}
-	    } else {
-		sprintf(line, "\"%s\" \"%s\"\n", ep->key, ep->value);
-		strcat(end, line);
-		end += strlen(line);
-	    }
+	    sprintf(line, "\"%s\" \"%s\"\n", ep->key, ep->value);
+	    strcat(end, line);
+	    end += strlen(line);
 	}
 	strcat(end, "}\n");
 	end += 2;

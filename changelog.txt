@@ -6,9 +6,10 @@ Unreleased
 * qbsp: include clip brushes when calculating bmodel bounding box
 * qbsp: enable creation of clip-only bmodels
 * light: implemented self shadowing and full shadows for brush models
-* light: removed the "-nominlimit" option (now the default behaviour)
-* light: remove support for negative color components (never worked properly)
 * light: implemented the "-soft" command line option
+* light: remove support for negative color components (never worked properly)
+* light: removed the "-nominlimit" option (now the default behaviour)
+* light: removed the "-compress" option (a bad idea from long ago)
 * vis: changed the default testlevel to 4
 
 2013-03-07 TyrUtils v0.6
