@@ -20,7 +20,6 @@
 #include <light/light.h>
 #include <light/entities.h>
 
-static const float scalecos = 0.5;
 static const vec3_t bsp_origin = { 0, 0, 0 };
 
 /* ======================================================================== */
@@ -641,7 +640,7 @@ SingleLightFace(const entity_t *entity, const lightsample_t *light,
 	if (!TestLight(entity->origin, surfpoint, shadowself))
 	    continue;
 
-	angle = (1.0 - scalecos) + scalecos * angle;
+	angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
 	sample->light += add;
 	if (colored)
@@ -703,7 +702,7 @@ SkyLightFace(const lightsample_t *light, const lightsurf_t *lightsurf,
     VectorCopy(sunvec, incoming);
     VectorNormalize(incoming);
     angle = DotProduct(incoming, plane->normal);
-    angle = (1.0 - scalecos) + scalecos * angle;
+    angle = (1.0 - sun_anglescale) + sun_anglescale * angle;
 
     /* Check each point... */
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;

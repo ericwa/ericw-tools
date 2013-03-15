@@ -50,6 +50,9 @@ original sample. 2 implies a 5x5 square and so on.  If \-soft is specified, but
 n is omitted, a value will be the level of oversampling requested. If no
 oversampling, then the implied value is 1. \-extra implies a value of 2 and
 \-extra4 implies 3.  Default 0 (off).
+.IP "\fB\-anglescale\fP | \fB\-anglesense\fP"
+Set the scaling of sunlight brightness due to the angle of incidence with a
+surface (more detailed explanation in the "_anglescale" key below).
 .IP "\fB\-lit\fP"
 Force generation of a .lit file, even if your map does not have any coloured
 lights. By default, light will automatically generate the .lit file when
@@ -170,6 +173,12 @@ it's name.
 
 .IP "\fB""style"" ""n""\fP"
 Set the animated light style. Default 0.
+
+.IP "\fB""_anglescale"" ""n""\fP | \fB""_anglesense"" ""n""\fP"
+Sets a scaling factor for how much influence the angle of incidence of light
+on a surface has on the brightness of the surface. \fIn\fP must be between 0.0
+and 1.0. Smaller values mean less attenuation, with zero meaning that angle of
+incidence has no effect at all on the brightness. Default 0.5.
 
 .SH AUTHOR
 Written by Kevin Shanahan (aka Tyrann)

@@ -65,6 +65,7 @@ typedef struct entity_s {
     light_formula_t formula;
     vec_t fadedist;
     float atten;
+    float anglescale;
     int style;
 
     char target[MAX_ENT_VALUE];

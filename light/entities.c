@@ -170,6 +170,8 @@ CheckEntityFields(entity_t *entity)
 	entity->light.light = DEFAULTLIGHTLEVEL;
     if (entity->atten <= 0.0)
 	entity->atten = 1.0;
+    if (entity->anglescale < 0 || entity->anglescale > 1.0)
+	entity->anglescale = anglescale;
 
     if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
 	static qboolean warned_once = true;
@@ -266,6 +268,9 @@ LoadEntities(void)
 	entity = &entities[num_entities];
 	num_entities++;
 
+	/* Init some fields... */
+	entity->anglescale = -1;
+
 	/* go through all the keys in this entity */
 	while (1) {
 	    int c;
@@ -336,6 +341,8 @@ LoadEntities(void)
 		scan_vec3(sunlight.color, com_token, "_sunlight_color");
 	    else if (!strcmp(key, "_minlight_color"))
 		scan_vec3(minlight.color, com_token, "_minlight_color");
+	    else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
+		entity->anglescale = atof(com_token);
 	}
 
 	/*
@@ -362,6 +369,8 @@ LoadEntities(void)
 		logprint("Using minlight value %i from command line.\n",
 			 (int)minlight.light);
 	    }
+	    if (entity->anglescale >= 0 && entity->anglescale <= 1.0)
+		sun_anglescale = entity->anglescale;
 	}
     }
 

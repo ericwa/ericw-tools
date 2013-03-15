@@ -24,6 +24,8 @@
 
 float scaledist = 1.0;
 float rangescale = 0.5;
+float anglescale = 0.5;
+float sun_anglescale = 0.5;
 float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
 const vec3_t vec3_white = { 255, 255, 255 };
@@ -249,6 +251,11 @@ main(int argc, const char **argv)
 		softsamples = atoi(argv[++i]);
 	    else
 		softsamples = -1; /* auto, based on oversampling */
+	} else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
+	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
+		anglescale = atoi(argv[++i]);
+	    else
+		Error("-anglesense requires a numeric argument (0.0 - 1.0)");
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
