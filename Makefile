@@ -198,21 +198,24 @@ quiet_cmd_man2txt = '  MAN2TXT  $@'
       cmd_man2txt = \
 	$(GROFF) -man -Tascii $< | cat -v | \
 	sed -e 's/\^\[\[\([0-9]\)\{1,2\}[a-z]//g' \
-	    -e 's/$$/'`echo \\\r`'/' > $@
+	    -e 's/$$/'`printf \\\r`'/' > $(@D)/.$(@F).tmp && \
+	mv $(@D)/.$(@F).tmp $@
 
 define do_man2txt
 	@$(do_mkdir)
-	@echo $($(quiet)cmd_man2txt);
-	@$(call cmd_man2txt);
+	@echo $(if $(quiet),$(quiet_cmd_man2txt),"$(cmd_man2txt)");
+	@$(cmd_man2txt);
 endef
 
 quiet_cmd_man2html = '  MAN2HTML $@'
-      cmd_man2html = $(GROFF) -man -Thtml $< > $@
+      cmd_man2html = \
+	$(GROFF) -man -Thtml $< > $(@D)/.$(@F).tmp && \
+	mv $(@D)/.$(@F).tmp $@
 
 define do_man2html
 	@$(do_mkdir)
-	@echo $($(quiet)cmd_man2html);
-	@$(call cmd_man2html);
+	@echo $(if $(quiet),$(quiet_cmd_man2html),"$(cmd_man2html)");
+	@$(cmd_man2html);
 endef
 
 DEPFILES = \
