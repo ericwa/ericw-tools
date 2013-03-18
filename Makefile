@@ -193,6 +193,20 @@ endef
 endif
 endif
 
+git_date = $(shell git log -1 --date=short --format="%ad" -- $< 2>/dev/null)
+doc_version = $(git_date) $(TYR_VERSION)
+
+quiet_cmd_man2man = '  MAN2MAN  $@'
+      cmd_man2man = \
+	sed -e 's/TYR_VERSION/$(doc_version)/' < $< > $(@D)/.$(@F).tmp && \
+	mv $(@D)/.$(@F).tmp $@
+
+define do_man2man
+	@$(do_mkdir)
+	@echo $(if $(quiet),$(quiet_cmd_man2man),"$(cmd_man2man)");
+	@$(cmd_man2man);
+endef
+
 # The sed magic is a little ugly, but I wanted something that would work
 # across Linux/BSD/Msys/Darwin
 quiet_cmd_man2txt = '  MAN2TXT  $@'
@@ -386,20 +400,22 @@ clean:
 	\) -print)
 
 # Build text and/or html docs from man page source
-$(DOC_DIR)/%.txt:	man/%.1	; $(do_man2txt)
-$(DOC_DIR)/%.html:	man/%.1	; $(do_man2html)
+$(DOC_DIR)/%.1:		man/%.1		; $(do_man2man)
+$(DOC_DIR)/%.txt:	$(DOC_DIR)/%.1	; $(do_man2txt)
+$(DOC_DIR)/%.html:	$(DOC_DIR)/%.1	; $(do_man2html)
 
 # --------------------------------------------------------------------------
 # Release Management
 # --------------------------------------------------------------------------
 
-MAN_DOCS = qbsp.1 light.1 vis.1
-HTML_DOCS = $(patsubst %.1,$(DOC_DIR)/%.html,$(MAN_DOCS))
-TEXT_DOCS = $(patsubst %.1,$(DOC_DIR)/%.txt,$(MAN_DOCS))
+SRC_DOCS = qbsp.1 light.1 vis.1
+MAN_DOCS = $(patsubst %.1,$(DOC_DIR)/%.1,$(SRC_DOCS))
+HTML_DOCS = $(patsubst %.1,$(DOC_DIR)/%.html,$(SRC_DOCS))
+TEXT_DOCS = $(patsubst %.1,$(DOC_DIR)/%.txt,$(SRC_DOCS))
 DOC_FILES = COPYING README.txt changelog.txt $(HTML_DOCS) $(TEXT_DOCS)
 RELEASE_FILES = $(patsubst %,$(BIN_DIR)/%,$(APPS)) $(DOC_FILES)
 
-docs:	$(HTML_DOCS) $(TEXT_DOCS)
+docs:	$(MAN_DOCS) $(HTML_DOCS) $(TEXT_DOCS)
 
 # OS X Fat Binaries (Intel only)
 fatbin:
