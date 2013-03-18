@@ -421,11 +421,11 @@ docs:	$(MAN_DOCS) $(HTML_DOCS) $(TEXT_DOCS)
 fatbin:
 	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86"    BIN_DIR="$(BIN_DIR).x86"    CFLAGS="-arch i386"   LDFLAGS="-arch i386"
 	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86_64" BIN_DIR="$(BIN_DIR).x86_64" CFLAGS="-arch x86_64" LDFLAGS="-arch x86_64"
-	lipo -create $(BIN_DIR).x86/qbsp    $(BIN_DIR).x86_64.qbsp    -output $(BIN_DIR)/qbsp
-	lipo -create $(BIN_DIR).x86/light   $(BIN_DIR).x86_64.light   -output $(BIN_DIR)/light
-	lipo -create $(BIN_DIR).x86/vis     $(BIN_DIR).x86_64.vis     -output $(BIN_DIR)/vis
-	lipo -create $(BIN_DIR).x86/bsputil $(BIN_DIR).x86_64.bsputil -output $(BIN_DIR)/bsputil
-	lipo -create $(BIN_DIR).x86/bspinfo $(BIN_DIR).x86_64.bspinfo -output $(BIN_DIR)/bspinfo
+	lipo -create $(BIN_DIR).x86/qbsp    $(BIN_DIR).x86_64/qbsp    -output $(BIN_DIR)/qbsp
+	lipo -create $(BIN_DIR).x86/light   $(BIN_DIR).x86_64/light   -output $(BIN_DIR)/light
+	lipo -create $(BIN_DIR).x86/vis     $(BIN_DIR).x86_64/vis     -output $(BIN_DIR)/vis
+	lipo -create $(BIN_DIR).x86/bsputil $(BIN_DIR).x86_64/bsputil -output $(BIN_DIR)/bsputil
+	lipo -create $(BIN_DIR).x86/bspinfo $(BIN_DIR).x86_64/bspinfo -output $(BIN_DIR)/bspinfo
 
 # OS X Fat Binaries (PPC & Intel)
 # - Not working yet, need to get the right cross compiler...
