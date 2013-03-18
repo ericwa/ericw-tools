@@ -393,9 +393,10 @@ $(DOC_DIR)/%.html:	man/%.1	; $(do_man2html)
 # Release Management
 # --------------------------------------------------------------------------
 
-HTML_DOCS = $(patsubst %,$(DOC_DIR)/%.html,qbsp light vis)
-TEXT_DOCS = $(patsubst %,$(DOC_DIR)/%.txt,qbsp light vis)
-DOC_FILES = COPYING README.txt changelog.txt $(HTML_DOCS)
+MAN_DOCS = qbsp.1 light.1 vis.1
+HTML_DOCS = $(patsubst %.1,$(DOC_DIR)/%.html,$(MAN_DOCS))
+TEXT_DOCS = $(patsubst %.1,$(DOC_DIR)/%.txt,$(MAN_DOCS))
+DOC_FILES = COPYING README.txt changelog.txt $(HTML_DOCS) $(TEXT_DOCS)
 RELEASE_FILES = $(patsubst %,$(BIN_DIR)/%,$(APPS)) $(DOC_FILES)
 
 docs:	$(HTML_DOCS) $(TEXT_DOCS)
