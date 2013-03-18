@@ -15,9 +15,10 @@ OPTIMIZED_CFLAGS ?= Y# Enable compiler optimisations (if DEBUG != Y)
 TARGET_OS        ?= $(HOST_OS)
 # ============================================================================
 
-TYRUTILS_RELEASE := v0.7-prerelease
-TYRUTILS_VERSION := $(shell \
-	git describe 2> /dev/null || printf '%s' $(TYRUTILS_RELEASE))
+TYR_RELEASE := v0.7-pre
+TYR_GIT := $(shell git describe 2> /dev/null)
+TYR_VERSION := $(if $(TYR_GIT),$(TYR_GIT),$(TYR_RELEASE))
+TYR_VERSION_NUM ?= $(patsubst v%,%,$(TYR_VERSION))
 
 SYSNAME := $(shell uname -s)
 
@@ -254,7 +255,7 @@ APPS = \
 
 all:	$(patsubst %,$(BIN_DIR)/%,$(APPS))
 
-COMMON_CPPFLAGS := -DTYRUTILS_VERSION=$(TYRUTILS_VERSION)
+COMMON_CPPFLAGS := -DTYRUTILS_VERSION=$(TYR_VERSION)
 COMMON_CPPFLAGS += -I$(TOPDIR)/include -DLINUX $(DPTHREAD)
 ifeq ($(DEBUG),Y)
 COMMON_CPPFLAGS += -DDEBUG
@@ -422,11 +423,9 @@ fatbin2:
 	lipo -create $(BIN_DIR).x86/bsputil $(BIN_DIR).x86_64/bsputil bin/ppc.bsputil bin/ppc64.bsputil -output bin/bsputil
 	lipo -create $(BIN_DIR).x86/bspinfo $(BIN_DIR).x86_64/bspinfo bin/ppc.bspinfo bin/ppc64.bspinfo -output bin/bspinfo
 
-# Strip the 'v' off the front of the git tag, if any
-TYRUTILS_FILE_VERSION = $(patsubst v%,%,$(TYRUTILS_VERSION))
-tyrutils-$(TYRUTILS_FILE_VERSION)-win32.zip: $(RELEASE_FILES)
+tyrutils-$(TYR_VERSION_NUM)-win32.zip: $(RELEASE_FILES)
 	rm -f $@
 	zip $@ $^
 
 # TODO: detect default platform for snapshot, do cross builds?
-snapshot:	tyrutils-$(TYRUTILS_FILE_VERSION)-win32.zip
+snapshot:	tyrutils-$(TYR_VERSION_NUM)-win32.zip
