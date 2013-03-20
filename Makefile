@@ -213,6 +213,7 @@ quiet_cmd_man2txt = '  MAN2TXT  $@'
       cmd_man2txt = \
 	$(GROFF) -man -Tascii $< | cat -v | \
 	sed -e 's/\^\[\[\([0-9]\)\{1,2\}[a-z]//g' \
+	    -e 's/.\^H//g' \
 	    -e 's/$$/'`printf \\\r`'/' > $(@D)/.$(@F).tmp && \
 	mv $(@D)/.$(@F).tmp $@
 
