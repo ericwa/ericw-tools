@@ -38,9 +38,14 @@ int leafbytes;			// (portalleafs+63)>>3
 int leaflongs;
 int leafbytes_real;		// (portalleafs_real+63)>>3
 
+/* Options - TODO: collect these in a struct */
 qboolean fastvis;
 static int verbose = 0;
 int testlevel = 4;
+qboolean ambientsky = true;
+qboolean ambientwater = true;
+qboolean ambientslime = true;
+qboolean ambientlava = true;
 
 #if 0
 void
@@ -1178,6 +1183,24 @@ main(int argc, char **argv)
 	} else if (!strcmp(argv[i], "-vv")) {
 	    logprint("verbose = extra\n");
 	    verbose = 2;
+	} else if (!strcmp(argv[i], "-noambientsky")) {
+	    logprint("ambient sky sounds disabled\n");
+	    ambientsky = false;
+	} else if (!strcmp(argv[i], "-noambientwater")) {
+	    logprint("ambient water sounds disabled\n");
+	    ambientwater = false;
+	} else if (!strcmp(argv[i], "-noambientslime")) {
+	    logprint("ambient slime sounds disabled\n");
+	    ambientslime = false;
+	} else if (!strcmp(argv[i], "-noambientlava")) {
+	    logprint("ambient lava sounds disabled\n");
+	    ambientlava = false;
+	} else if (!strcmp(argv[i], "-noambient")) {
+	    logprint("ambient sound calculation disabled\n");
+	    ambientsky = false;
+	    ambientwater = false;
+	    ambientslime = false;
+	    ambientlava = false;
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else

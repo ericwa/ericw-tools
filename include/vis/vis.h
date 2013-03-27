@@ -119,7 +119,12 @@ extern int c_vistest, c_mighttest;
 extern unsigned long c_chains;
 
 extern qboolean showgetleaf;
+
 extern int testlevel;
+extern qboolean ambientsky;
+extern qboolean ambientwater;
+extern qboolean ambientslime;
+extern qboolean ambientlava;
 
 extern byte *uncompressed;
 extern int leafbytes;

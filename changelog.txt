@@ -12,6 +12,7 @@ Unreleased
 * light: removed the "-nominlimit" option (now the default behaviour)
 * light: removed the "-compress" option (a bad idea from long ago)
 * vis: changed the default testlevel to 4
+* vis: added the '-noambient*' options to disable auto ambient sounds.
 
 2013-03-07 TyrUtils v0.6
 
