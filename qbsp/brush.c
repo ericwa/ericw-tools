@@ -929,22 +929,41 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	Message(msgPercent, i + 1, src->nummapbrushes);
     }
 
-    /* Insert the solid brushes after the nonsolids */
-    for (brush = nonsolid; brush; brush = next) {
-	next = brush->next;
-	if (!next || next->contents == CONTENTS_SOLID)
-	    break;
-    }
-    if (!brush) {
-	dst->brushes = solid; /* No nonsolids */
+    if (!nonsolid) {
+	/* No non-solids and no dst brushes */
+	dst->brushes = solid;
 	return;
     }
-    brush->next = solid;
-    dst->brushes = nonsolid;
-    if (!solid)
-	return;
+    if (nonsolid->contents == CONTENTS_SOLID) {
+	/* No non-solids */
+	if (!solid)
+	    return;
 
-    while (solid->next)
-	solid = solid->next;
-    solid->next = next;
+	/* Add the new solids to the head of the dst list */
+	brush = dst->brushes;
+	dst->brushes = solid;
+	next = solid->next;
+	while (next) {
+	    solid = next;
+	    next = next->next;
+	}
+	solid->next = brush;
+	return;
+    }
+
+    /* Insert the non-solids at the dst head and insert solids after */
+    dst->brushes = nonsolid;
+    next = nonsolid->next;
+    while (next && next->contents != CONTENTS_SOLID) {
+	nonsolid = next;
+	next = next->next;
+    }
+    nonsolid->next = solid;
+
+    /* Re-attach the existing solids at the end of our list */
+    if (solid && next) {
+	while (solid->next)
+	    solid = solid->next;
+	solid->next = next;
+    }
 }
