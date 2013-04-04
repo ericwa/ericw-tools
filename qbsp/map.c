@@ -31,7 +31,6 @@
 static int cAnimtex;
 static int rgfStartSpots;
 
-
 int
 FindMiptex(const char *name)
 {
@@ -53,6 +52,19 @@ FindMiptex(const char *name)
     return i;
 }
 
+static bool
+IsSkipName(const char *name)
+{
+    if (!strcasecmp(name, "skip"))
+	return true;
+    if (!strcasecmp(name, "*waterskip"))
+	return true;
+    if (!strcasecmp(name, "*slimeskip"))
+	return true;
+    if (!strcasecmp(name, "*lavaskip"))
+	return true;
+    return false;
+}
 
 /*
 ===============
@@ -74,7 +86,7 @@ FindTexinfo(texinfo_t *texinfo)
     if (texname[0] == '*' || !strncasecmp(texname, "sky", 3))
 	if (!options.fSplitspecial)
 	    texinfo->flags |= TEX_SPECIAL;
-    if (!strcasecmp(texname, "skip"))
+    if (IsSkipName(texname))
 	texinfo->flags |= TEX_SKIP;
     if (!strcasecmp(texname, "hint"))
 	texinfo->flags |= TEX_HINT;

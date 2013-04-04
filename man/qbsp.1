@@ -48,8 +48,42 @@ Use different texture subdivision (default 240)
 .IP "\fB\-wadpath <dir>\fP"
 Search this directory for wad files (default is cwd)
 
-.SH "DETAIL BRUSH SUPPORT"
+.SH "SPECIAL TEXTURE NAMES"
+.PP
+The contents inside a brush depend on the texture name(s) assigned to
+it.
+.PP
+By default brush contents are solid unless they have a special name.
+Names beginning with an asterisk are liquids.  A prefix of
+\fI*slime\fP indicates slime, \fI*lava\fP is for lava and anything
+else beginning with \fI*\fP will have contents as water.
+.PP
+All faces of a brush must have textures which indicate the same
+contents.  Mixed content types will cause qbsp to print an error and
+exit.
 
+.SS "SKIP"
+.PP
+Any surfaces assigned a texture name of \fIskip\fP will be compiled
+into the bsp as invisible surfaces.  Solid surfaces will still be
+solid (e.g. the play can't walk or shoot through them) but they will
+not be drawn.  Water, slime and lava surfaces can be made invisible
+using the texture names \fI*waterskip\fP, \fI*slimeskip\fP and
+\fI*lavaskip\fP respectively.
+
+.SS "HINT"
+.PP
+Hint surfaces cause a bsp split and portal to be generated the on the
+surface plane, after which they are removed from the final bsp - they
+are neither visible, nor structural.  Strategic placement of hint
+surfaces can be used by a map author to optimise the PVS calculations
+so as to limit overdraw by the engine (see also: \fBvis\fP(1)).
+.PP
+Hint surfaces are created by assigning a texture name of \fIhint\fP to
+a brush.  Currently all surfaces of a brush need to be hint (or
+none). \fIhintskip\fP surfaces will be supported in the future...
+
+.SH "DETAIL BRUSH SUPPORT"
 .PP
 This version of qbsp supports detail brushes which are similar in concept to
 Quake 2's detail brushes.
