@@ -377,6 +377,14 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
+	if (!hullnum) {
+	    /* Don't generate hintskip faces */
+	    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+	    const char *texname = map.miptex[texinfo[mapface->texinfo].miptex];
+	    if (!strcasecmp(texname, "hintskip"))
+		continue;
+	}
+
 	w = BaseWindingForPlane(&mapface->plane);
 	mapface2 = hullbrush->faces;
 	for (j = 0; j < hullbrush->numfaces && w; j++, mapface2++) {
@@ -755,7 +763,7 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     mapface = mapbrush->faces;
     texname = map.miptex[texinfo[mapface->texinfo].miptex];
 
-    if (!strcasecmp(texname, "hint"))
+    if (!strcasecmp(texname, "hint") || !strcasecmp(texname, "hintskip"))
 	return CONTENTS_HINT;
     if (!strcasecmp(texname, "clip"))
 	return CONTENTS_CLIP;

@@ -6,6 +6,7 @@ Unreleased
 * qbsp: include clip brushes when calculating bmodel bounding box
 * qbsp: enable creation of clip-only bmodels
 * qbsp: recognise and remove *waterskip, *slimeskip and *lavaskip surfaces
+* qbsp: added hintskip texture support
 * light: implemented self shadowing and full shadows for brush models
 * light: implemented the "-soft" command line option
 * light: implemented the "_anglescale" (aka "_anglesense") key and cmdline

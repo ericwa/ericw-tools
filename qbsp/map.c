@@ -88,7 +88,7 @@ FindTexinfo(texinfo_t *texinfo)
 	    texinfo->flags |= TEX_SPECIAL;
     if (IsSkipName(texname))
 	texinfo->flags |= TEX_SKIP;
-    if (!strcasecmp(texname, "hint"))
+    if (!strcasecmp(texname, "hint") || !strcasecmp(texname, "hintskip"))
 	texinfo->flags |= TEX_HINT;
 
     target = pWorldEnt->lumps[BSPTEXINFO].data;

@@ -79,9 +79,10 @@ are neither visible, nor structural.  Strategic placement of hint
 surfaces can be used by a map author to optimise the PVS calculations
 so as to limit overdraw by the engine (see also: \fBvis\fP(1)).
 .PP
-Hint surfaces are created by assigning a texture name of \fIhint\fP to
-a brush.  Currently all surfaces of a brush need to be hint (or
-none). \fIhintskip\fP surfaces will be supported in the future...
+Use a texture with the name \fIhintskip\fP on any surfaces of a hint
+brush which you don't want to generate bsp splits or portals.  All
+surfaces of a hint brush must use either the \fIhint\fP or
+\fIhintskip\fP texture name.
 
 .SH "DETAIL BRUSH SUPPORT"
 .PP
