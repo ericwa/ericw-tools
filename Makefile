@@ -207,19 +207,21 @@ define do_man2man
 	@$(cmd_man2man);
 endef
 
-# The sed magic is a little ugly, but I wanted something that would work
-# across Linux/BSD/Msys/Darwin
+# The sed/awk magic is a little ugly, but I wanted something that
+# would work across Linux/BSD/Msys/Darwin
 quiet_cmd_man2txt = '  MAN2TXT  $@'
       cmd_man2txt = \
 	$(GROFF) -man -Tascii $< | cat -v | \
 	sed -e 's/\^\[\[\([0-9]\)\{1,2\}[a-z]//g' \
-	    -e 's/.\^H//g' \
-	    -e 's/$$/'`printf \\\r`'/' > $(@D)/.$(@F).tmp && \
+	    -e 's/.\^H//g' | \
+	awk '{ gsub("$$", "\r"); print $$0;}' - > $(@D)/.$(@F).tmp && \
 	mv $(@D)/.$(@F).tmp $@
+ loud_cmd_man2txt = \
+	$(subst ",\",$(subst $$,\$$,$(subst "\r","\\r",$(cmd_man2txt))))
 
 define do_man2txt
 	@$(do_mkdir)
-	@echo $(if $(quiet),$(quiet_cmd_man2txt),"$(cmd_man2txt)");
+	@echo $(if $(quiet),$(quiet_cmd_man2txt),"$(loud_cmd_man2txt)");
 	@$(cmd_man2txt);
 endef
 
