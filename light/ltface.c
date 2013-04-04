@@ -748,12 +748,16 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 
     sample = lightmaps[mapnum].samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
-	if (sample->light < minlight->light)
+	if (addminlight)
+	    sample->light += minlight->light;
+	else if (sample->light < minlight->light)
 	    sample->light = minlight->light;
 	if (colored) {
 	    for (j = 0; j < 3; j++) {
 		vec_t lightval = minlight->light * minlight->color[j] / 255.0f;
-		if (sample->color[j] < lightval)
+		if (addminlight)
+		    sample->color[j] += lightval;
+		else if (sample->color[j] < lightval)
 		    sample->color[j] = lightval;
 	    }
 	}
@@ -769,22 +773,28 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	surfpoint = lightsurf->points[0];
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
 	    qboolean trace = false;
-	    if (sample->light < entity->light.light) {
+	    if (addminlight || sample->light < entity->light.light) {
 		trace = TestLight(entity->origin, surfpoint, shadowself);
 		if (!trace)
 		    continue;
-		sample->light = entity->light.light;
+		if (addminlight)
+		    sample->light += entity->light.light;
+		else
+		    sample->light = entity->light.light;
 	    }
 	    if (!colored)
 		continue;
 	    for (k = 0; k < 3; k++) {
-		if (sample->color[k] < entity->light.color[k]) {
+		if (addminlight || sample->color[k] < entity->light.color[k]) {
 		    if (!trace) {
 			trace = TestLight(entity->origin, surfpoint, shadowself);
 			if (!trace)
 			    break;
 		    }
-		    sample->color[k] = entity->light.color[k];
+		    if (addminlight)
+			sample->color[k] += entity->light.color[k];
+		    else
+			sample->color[k] = entity->light.color[k];
 		}
 	    }
 	}

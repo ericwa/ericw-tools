@@ -9,6 +9,7 @@ Unreleased
 * qbsp: added hintskip texture support
 * light: implemented self shadowing and full shadows for brush models
 * light: implemented the "-soft" command line option
+* light: implemented the "-addmin" command line option
 * light: implemented the "_anglescale" (aka "_anglesense") key and cmdline
 * light: remove support for negative color components (never worked properly)
 * light: removed the "-nominlimit" option (now the default behaviour)

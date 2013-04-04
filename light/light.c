@@ -30,6 +30,7 @@ float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
 const vec3_t vec3_white = { 255, 255, 255 };
 
+qboolean addminlight = false;
 lightsample_t minlight = { 0, { 255, 255, 255 } };
 lightsample_t sunlight = { 0, { 255, 255, 255 } };
 vec3_t sunvec = { 0, 0, 16384 };		/* defaults to straight down */
@@ -244,6 +245,8 @@ main(int argc, const char **argv)
 	    fadegate = atof(argv[++i]);
 	} else if (!strcmp(argv[i], "-light")) {
 	    minlight.light = atof(argv[++i]);
+	} else if (!strcmp(argv[i], "-addmin")) {
+	    addminlight = true;
 	} else if (!strcmp(argv[i], "-lit")) {
 	    colored = true;
 	} else if (!strcmp(argv[i], "-soft")) {
@@ -263,7 +266,8 @@ main(int argc, const char **argv)
     }
 
     if (i != argc - 1) {
-	printf("usage: light [-threads num] [-light num] [-extra|-extra4]\n"
+	printf("usage: light [-threads num] [-extra|-extra4]\n"
+	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit]\n"
 	       "             [-soft [n]] bspfile\n");
 	exit(1);
