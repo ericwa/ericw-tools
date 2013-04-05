@@ -256,7 +256,7 @@ main(int argc, const char **argv)
 		softsamples = -1; /* auto, based on oversampling */
 	} else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
 	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
-		anglescale = atoi(argv[++i]);
+		anglescale = sun_anglescale = atoi(argv[++i]);
 	    else
 		Error("-anglesense requires a numeric argument (0.0 - 1.0)");
 	} else if (argv[i][0] == '-')
