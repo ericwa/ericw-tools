@@ -198,7 +198,8 @@ CheckEntityFields(entity_t *entity)
 
     if (entity->formula == LF_LINEAR) {
 	/* Linear formula always has a falloff point */
-	entity->fadedist = fabs(entity->light.light / entity->atten / scaledist);
+	entity->fadedist = fabs(entity->light.light) - fadegate;
+	entity->fadedist = entity->fadedist / entity->atten / scaledist;
     } else if (fadegate < EQUAL_EPSILON) {
 	/* If fadegate is tiny, other lights have effectively infinite reach */
 	entity->fadedist = VECT_MAX;

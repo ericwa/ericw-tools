@@ -14,6 +14,7 @@ Unreleased
 * light: remove support for negative color components (never worked properly)
 * light: removed the "-nominlimit" option (now the default behaviour)
 * light: removed the "-compress" option (a bad idea from long ago)
+* light: make -gate command line affect linear falloff lights as well
 * vis: changed the default testlevel to 4
 * vis: added the '-noambient*' options to disable auto ambient sounds.
 
