@@ -23,6 +23,20 @@ TYR_GIT := $(shell git describe --dirty 2> /dev/null)
 TYR_VERSION := $(if $(TYR_GIT),$(TYR_GIT),$(TYR_RELEASE))
 TYR_VERSION_NUM ?= $(patsubst v%,%,$(TYR_VERSION))
 
+# Create/update the build version file
+# Any source files which use TYR_VERSION will depend on this
+BUILD_VER = $(BUILD_DIR)/.build_version
+$(shell \
+	if [ ! -d "$(BUILD_DIR)" ]; then mkdir -p "$(BUILD_DIR)"; fi ; \
+	if [ ! -f "$(BUILD_VER)" ] || \
+	   [ "`cat $(BUILD_VER)`" != "$(TYR_VERSION)" ]; then \
+		printf '%s' "$(TYR_VERSION)" > "$(BUILD_VER)"; \
+	fi)
+
+# ---------------------------------------
+# Attempt detection of the build host OS
+# ---------------------------------------
+
 SYSNAME := $(shell uname -s)
 
 TOPDIR := $(shell pwd)
@@ -170,10 +184,13 @@ endef
 # prevent errors when moving files around between builds (e.g. from NQ or QW
 # dirs to the common dir.)
 cmd_fixdep = \
-	cp $(@D)/.$(@F).d $(@D)/.$(@F).d.tmp ; \
+	cp $(@D)/.$(@F).d $(@D)/.$(@F).d.tmp && \
 	sed -e 's/\#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' \
-	    -e 's/$$/ :/' < $(@D)/.$(@F).d.tmp >> $(@D)/.$(@F).d ; \
-	rm -f $(@D)/.$(@F).d.tmp
+	    -e 's/$$/ :/' < $(@D)/.$(@F).d.tmp >> $(@D)/.$(@F).d && \
+	rm -f $(@D)/.$(@F).d.tmp && \
+	if grep -q TYRUTILS_VERSION $<; then \
+		printf '%s: %s\n' $@ $(BUILD_VER) >> $(@D)/.$(@F).d ; \
+	fi
 
 cmd_cc_dep_c = \
 	$(CC) -MM -MT $@ $(CPPFLAGS) -o $(@D)/.$(@F).d $< ; \
@@ -487,9 +504,9 @@ clean:
 # --------------------------------------------------------------------------
 
 # Build text and/or html docs from man page source
-$(DOC_DIR)/%.1:		man/%.1		; $(do_man2man)
-$(DOC_DIR)/%.txt:	$(DOC_DIR)/%.1	; $(do_man2txt)
-$(DOC_DIR)/%.html:	$(DOC_DIR)/%.1	; $(do_man2html)
+$(DOC_DIR)/%.1:		man/%.1	$(BUILD_VER)	; $(do_man2man)
+$(DOC_DIR)/%.txt:	$(DOC_DIR)/%.1		; $(do_man2txt)
+$(DOC_DIR)/%.html:	$(DOC_DIR)/%.1		; $(do_man2html)
 
 SRC_DOCS = qbsp.1 light.1 vis.1
 MAN_DOCS = $(patsubst %.1,$(DOC_DIR)/%.1,$(SRC_DOCS))
@@ -505,7 +522,7 @@ docs:	$(MAN_DOCS) $(HTML_DOCS) $(TEXT_DOCS)
 # DIST_FILES
 # $(1) = distribution directory
 DIST_FILES = \
-	$(patsubst %,$(1)/bin/%,$(APPS))	\
+	$(patsubst %,$(1)/bin/%,$(APPS)) \
 	$(1)/README.txt \
 	$(1)/COPYING \
 	$(1)/changelog.txt \
