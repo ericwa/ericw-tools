@@ -101,6 +101,7 @@ extern float fadegate;
 extern int softsamples;
 extern const vec3_t vec3_white;
 
+extern qboolean addminlight;
 extern lightsample_t minlight;
 extern lightsample_t sunlight;
 extern vec3_t sunvec;

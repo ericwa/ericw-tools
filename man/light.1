@@ -25,8 +25,13 @@ Calculate extra samples (2x2) and average the results for smoother shadows.
 Calculate even more samples (4x4) and average the results for smoother
 shadows.
 .IP "\fB\-light n\fP"
-Set a global minimum light level. Overrides default light level set in
-worldspawn.
+Set a global minimum light level for style 0 (default)
+lightmaps. Overrides default light level set in worldspawn.
+.IP "\fB\-addmin\fP"
+Changes the behaviour of \fIminlight\fP.  Instead of increasing low
+light levels to the global minimum, add the global minimum light level
+to all style 0 lightmaps.  This may help reducing the sometimes
+uniform minlight effect.
 .IP "\fB\-dist n\fP"
 Scales the fade distance of all lights by a factor of n.  If n > 1 lights fade
 more quickly with distance and if n < 1, lights fade more slowly with distance
