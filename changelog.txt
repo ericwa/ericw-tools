@@ -1,4 +1,4 @@
-Unreleased
+2013-04-10 TyrUtils v0.7
 
 * Unix man page documentation for the main tools (qbsp, light, vis)
 * HTML and text documentation is generated from the man page sources
@@ -7,6 +7,7 @@ Unreleased
 * qbsp: enable creation of clip-only bmodels
 * qbsp: recognise and remove *waterskip, *slimeskip and *lavaskip surfaces
 * qbsp: added hintskip texture support
+* qbsp: fixed some bugs parsing empty func_group/func_detail entities
 * light: implemented self shadowing and full shadows for brush models
 * light: implemented the "-soft" command line option
 * light: implemented the "-addmin" command line option
