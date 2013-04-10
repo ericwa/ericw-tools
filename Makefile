@@ -10,9 +10,12 @@ default:	all
 BUILD_DIR        ?= build
 BIN_DIR          ?= bin
 DOC_DIR          ?= doc
+DIST_DIR         ?= dist
 DEBUG            ?= N# Compile with debug info
 OPTIMIZED_CFLAGS ?= Y# Enable compiler optimisations (if DEBUG != Y)
 TARGET_OS        ?= $(HOST_OS)
+TARGET_UNIX      ?= $(if $(filter UNIX,$(TARGET_OS)),$(HOST_UNIX),)
+
 # ============================================================================
 
 TYR_RELEASE := v0.7-pre
@@ -26,15 +29,20 @@ TOPDIR := $(shell pwd)
 ifneq (,$(findstring MINGW32,$(SYSNAME)))
 HOST_OS = WIN32
 else
-ifneq (,$(findstring $(SYSNAME),FreeBSD NetBSD OpenBSD Darwin))
+ifneq (,$(findstring $(SYSNAME),FreeBSD NetBSD OpenBSD))
 HOST_OS = UNIX
-UNIX = bsd
+HOST_UNIX = bsd
 else
 ifneq (,$(findstring $(SYSNAME),Linux))
 HOST_OS = UNIX
-UNIX = linux
+HOST_UNIX = linux
+else
+ifneq (,$(findstring $(SYSNAME),Darwin))
+HOST_OS = UNIX
+HOST_UNIX = darwin
 else
 $(error OS type not detected.)
+endif
 endif
 endif
 endif
@@ -43,6 +51,7 @@ ifeq ($(TARGET_OS),WIN32)
 EXT=.exe
 DPTHREAD=
 LPTHREAD=
+SNAPSHOT_TARGET = $(DIST_DIR)/tyrutils-$(TYR_VERSION_NUM)-win32.zip
 ifneq ($(HOST_OS),WIN32)
 TARGET ?= $(MINGW32_CROSS_GUESS)
 CC = $(TARGET)-gcc
@@ -62,6 +71,9 @@ else
 EXT=
 DPTHREAD=-DUSE_PTHREADS -pthread
 LPTHREAD=-lpthread
+ifeq ($(TARGET_UNIX),darwin)
+SNAPSHOT_TARGET = $(DIST_DIR)/tyrutils-$(TYR_VERSION_NUM)-osx.zip
+endif
 endif
 endif
 
@@ -143,6 +155,15 @@ define do_mkdir
 		echo $($(quiet)cmd_mkdir); \
 		$(cmd_mkdir); \
 	fi;
+endef
+
+quiet_cmd_cp = '  CP       $@'
+      cmd_cp = cp $< $@
+
+define do_cp
+	$(do_mkdir)
+	@echo $($(quiet)cmd_cp)
+	@$(cmd_cp)
 endef
 
 # cmd_fixdep => Turn all pre-requisites into targets with no commands, to
@@ -234,13 +255,29 @@ define do_man2html
 	@$(cmd_man2html);
 endef
 
-DEPFILES = \
-	$(wildcard $(BUILD_DIR)/bspinfo/.*.d)	\
-	$(wildcard $(BUILD_DIR)/bsputil/.*.d)	\
-	$(wildcard $(BUILD_DIR)/common/.*.d)	\
-	$(wildcard $(BUILD_DIR)/light/.*.d)	\
-	$(wildcard $(BUILD_DIR)/qbsp/.*.d)	\
-	$(wildcard $(BUILD_DIR)/vis/.*.d)
+# cmd_zip ~ takes a leading path to be stripped from the archive members
+#           (basically simulates tar's -C option).
+# $(1) - leading path to strip from files
+NOTHING:=
+SPACE:=$(NOTHING) $(NOTHING)
+quiet_cmd_zip = '  ZIP      $@'
+      cmd_zip = ( \
+	cd $(1) && \
+	zip -q $(subst $(SPACE),/,$(patsubst %,..,$(subst /, ,$(1))))/$@ \
+		$(patsubst $(1)/%,%,$^) )
+
+# $@ - the archive file
+# $^ - files to be added
+# $(1) - leading path to strip from files
+define do_zip
+	@$(do_mkdir)
+	@echo $(if $(quiet),$(quiet_cmd_zip),"$(call cmd_zip,$(1))")
+	@$(call cmd_zip,$(1))
+endef
+
+DEPFILES := \
+	$(wildcard $(BUILD_DIR)/*/.*.d) \
+	$(wildcard $(BUILD_DIR)/*/*/.*.d)
 
 ifneq ($(DEPFILES),)
 -include $(DEPFILES)
@@ -278,20 +315,62 @@ else
 COMMON_CPPFLAGS += -DNDEBUG
 endif
 
-$(BUILD_DIR)/qbsp/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS) -DDOUBLEVEC_T
-$(BUILD_DIR)/common/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
-$(BUILD_DIR)/light/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS)
-$(BUILD_DIR)/vis/%.o:		CPPFLAGS = $(COMMON_CPPFLAGS)
-$(BUILD_DIR)/bspinfo/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
-$(BUILD_DIR)/bsputil/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
-$(BUILD_DIR)/common/%.o:	CPPFLAGS = $(COMMON_CPPFLAGS)
+# ----------------------------------------------------------------------------
+# Build rule generation
+# ----------------------------------------------------------------------------
+# Because I want to do nasty things like build for multiple architectures
+# with a single make invocation (and not resort to recursion) I generate the
+# rules for building using defines.
 
-$(BUILD_DIR)/qbsp/%.o:		qbsp/%.c	; $(do_cc_o_c)
-$(BUILD_DIR)/common/%.o:	common/%.c	; $(do_cc_o_c)
-$(BUILD_DIR)/light/%.o:		light/%.c	; $(do_cc_o_c)
-$(BUILD_DIR)/vis/%.o:		vis/%.c		; $(do_cc_o_c)
-$(BUILD_DIR)/bspinfo/%.o:	bspinfo/%.c	; $(do_cc_o_c)
-$(BUILD_DIR)/bsputil/%.o:	bsputil/%.c	; $(do_cc_o_c)
+#  define rulesets for building object files
+#  $(1) - the build directory
+#  $(2) - CPPFLAGS
+#  $(3) - CFLAGS
+define OBJECT_RULES
+$(1)/qbsp/%.o:		CPPFLAGS = $(2) -DDOUBLEVEC_T
+$(1)/common/%.o:	CPPFLAGS = $(2)
+$(1)/light/%.o:		CPPFLAGS = $(2)
+$(1)/vis/%.o:		CPPFLAGS = $(2)
+$(1)/bspinfo/%.o:	CPPFLAGS = $(2)
+$(1)/bsputil/%.o:	CPPFLAGS = $(2)
+$(1)/common/%.o:	CPPFLAGS = $(2)
+
+$(1)/qbsp/%.o:		CFLAGS += $(3)
+$(1)/common/%.o:	CFLAGS += $(3)
+$(1)/light/%.o:		CFLAGS += $(3)
+$(1)/vis/%.o:		CFLAGS += $(3)
+$(1)/bspinfo/%.o:	CFLAGS += $(3)
+$(1)/bsputil/%.o:	CFLAGS += $(3)
+$(1)/common/%.o:	CFLAGS += $(3)
+
+$(1)/qbsp/%.o:		qbsp/%.c	; $$(do_cc_o_c)
+$(1)/common/%.o:	common/%.c	; $$(do_cc_o_c)
+$(1)/light/%.o:		light/%.c	; $$(do_cc_o_c)
+$(1)/vis/%.o:		vis/%.c		; $$(do_cc_o_c)
+$(1)/bspinfo/%.o:	bspinfo/%.c	; $$(do_cc_o_c)
+$(1)/bsputil/%.o:	bsputil/%.c	; $$(do_cc_o_c)
+endef
+
+# Another level of indirection
+# (mainly for consistency with TyrQuake build system...
+# $(1) - build sub-directory
+# $(2) - extra cflags for arch
+define TARGET_RULES
+$(eval $(call OBJECT_RULES,$$(BUILD_DIR)/$(1),$$(COMMON_CPPFLAGS),$(2)))
+endef
+
+# Standard build rules
+$(eval $(call OBJECT_RULES,$$(BUILD_DIR),$$(COMMON_CPPFLAGS),))
+
+# OSX building for two intel archs, two ppc archs
+$(eval $(call TARGET_RULES,osx-intel-32,-arch i386 -mmacosx-version-min=10.5))
+$(eval $(call TARGET_RULES,osx-intel-64,-arch x86_64 -mmacosx-version-min=10.5))
+$(eval $(call TARGET_RULES,osx-ppc-32,-arch ppc))
+$(eval $(call TARGET_RULES,osx-ppc-64,-arch ppc64))
+
+# Win32 and Win64 builds ?? - cross compiler...
+$(eval $(call TARGET_RULES,win32,))
+$(eval $(call TARGET_RULES,win64,))
 
 #########
 # Light #
@@ -366,7 +445,7 @@ $(BIN_DIR)/$(BIN_PFX)bsputil$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(BSPUTIL_OBJS))
 # Qbsp #
 ########
 
-QBSP_OBJECTS = \
+QBSP_OBJS = \
 	brush.o		\
 	bspfile.o	\
 	cmdlib.o	\
@@ -388,7 +467,7 @@ QBSP_OBJECTS = \
 	winding.o	\
 	writebsp.o
 
-$(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,$(BUILD_DIR)/qbsp/%,$(QBSP_OBJECTS))
+$(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,$(BUILD_DIR)/qbsp/%,$(QBSP_OBJS))
 	$(call do_cc_link,-lm)
 	$(call do_strip,$@)
 
@@ -400,50 +479,167 @@ clean:
 		-name '*~' -o -name '#*#' -o -name '*.o' -o -name '*.res' \
 	\) -print)
 
+# --------------------------------------------------------------------------
+# Documentation
+# --------------------------------------------------------------------------
+
 # Build text and/or html docs from man page source
 $(DOC_DIR)/%.1:		man/%.1		; $(do_man2man)
 $(DOC_DIR)/%.txt:	$(DOC_DIR)/%.1	; $(do_man2txt)
 $(DOC_DIR)/%.html:	$(DOC_DIR)/%.1	; $(do_man2html)
 
-# --------------------------------------------------------------------------
-# Release Management
-# --------------------------------------------------------------------------
-
 SRC_DOCS = qbsp.1 light.1 vis.1
 MAN_DOCS = $(patsubst %.1,$(DOC_DIR)/%.1,$(SRC_DOCS))
 HTML_DOCS = $(patsubst %.1,$(DOC_DIR)/%.html,$(SRC_DOCS))
 TEXT_DOCS = $(patsubst %.1,$(DOC_DIR)/%.txt,$(SRC_DOCS))
-DOC_FILES = COPYING README.txt changelog.txt $(HTML_DOCS) $(TEXT_DOCS)
-RELEASE_FILES = $(patsubst %,$(BIN_DIR)/%,$(APPS)) $(DOC_FILES)
 
 docs:	$(MAN_DOCS) $(HTML_DOCS) $(TEXT_DOCS)
 
-# OS X Fat Binaries (Intel only)
-fatbin:
-	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86"    BIN_DIR="$(BIN_DIR).x86"    CFLAGS="-arch i386"   LDFLAGS="-arch i386"
-	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86_64" BIN_DIR="$(BIN_DIR).x86_64" CFLAGS="-arch x86_64" LDFLAGS="-arch x86_64"
-	lipo -create $(BIN_DIR).x86/qbsp    $(BIN_DIR).x86_64/qbsp    -output $(BIN_DIR)/qbsp
-	lipo -create $(BIN_DIR).x86/light   $(BIN_DIR).x86_64/light   -output $(BIN_DIR)/light
-	lipo -create $(BIN_DIR).x86/vis     $(BIN_DIR).x86_64/vis     -output $(BIN_DIR)/vis
-	lipo -create $(BIN_DIR).x86/bsputil $(BIN_DIR).x86_64/bsputil -output $(BIN_DIR)/bsputil
-	lipo -create $(BIN_DIR).x86/bspinfo $(BIN_DIR).x86_64/bspinfo -output $(BIN_DIR)/bspinfo
+# --------------------------------------------------------------------------
+# Release Management
+# --------------------------------------------------------------------------
 
-# OS X Fat Binaries (PPC & Intel)
-# - Not working yet, need to get the right cross compiler...
-fatbin2:
-	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86"    BIN_DIR="$(BIN_DIR).x86"    CFLAGS="-arch i386"   LDFLAGS="-arch i386"
-	$(MAKE) BUILD_DIR="$(BUILD_DIR).x86_64" BIN_DIR="$(BIN_DIR).x86_64" CFLAGS="-arch x86_64" LDFLAGS="-arch x86_64"
-	$(MAKE) BUILD_DIR="$(BUILD_DIR).ppc"    BIN_DIR="$(BIN_DIR).ppc"    CFLAGS="-arch ppc"    LDFLAGS="-arch ppc"
-	$(MAKE) BUILD_DIR="$(BUILD_DIR).ppc64"  BIN_DIR="$(BIN_DIR).ppc64"  CFLAGS="-arch ppc64"  LDFLAGS="-arch ppc64"
-	lipo -create $(BIN_DIR).x86/qbsp    $(BIN_DIR).x86_64/qbsp    bin/ppc.qbsp    bin/ppc64.qbsp    -output bin/qbsp
-	lipo -create $(BIN_DIR).x86/light   $(BIN_DIR).x86_64/light   bin/ppc.light   bin/ppc64.light   -output bin/light
-	lipo -create $(BIN_DIR).x86/vis     $(BIN_DIR).x86_64/vis     bin/ppc.vis     bin/ppc64.vis     -output bin/vis
-	lipo -create $(BIN_DIR).x86/bsputil $(BIN_DIR).x86_64/bsputil bin/ppc.bsputil bin/ppc64.bsputil -output bin/bsputil
-	lipo -create $(BIN_DIR).x86/bspinfo $(BIN_DIR).x86_64/bspinfo bin/ppc.bspinfo bin/ppc64.bspinfo -output bin/bspinfo
+# DIST_FILES
+# $(1) = distribution directory
+DIST_FILES = \
+	$(patsubst %,$(1)/bin/%,$(APPS))	\
+	$(1)/README.txt \
+	$(1)/COPYING \
+	$(1)/changelog.txt \
+	$(1)/doc/qbsp.1 \
+	$(1)/doc/qbsp.txt \
+	$(1)/doc/qbsp.html \
+	$(1)/doc/light.1 \
+	$(1)/doc/light.txt \
+	$(1)/doc/light.html \
+	$(1)/doc/vis.1 \
+	$(1)/doc/vis.txt \
+	$(1)/doc/vis.html
 
-tyrutils-$(TYR_VERSION_NUM)-win32.zip: $(RELEASE_FILES)
-	rm -f $@
-	zip $@ $^
 
-# TODO: detect default platform for snapshot, do cross builds?
-snapshot:	tyrutils-$(TYR_VERSION_NUM)-win32.zip
+
+# ----------------------------------------------------------------------------
+# OSX Packaging Tools
+# ----------------------------------------------------------------------------
+
+LIPO     ?= lipo
+
+quiet_cmd_lipo = '  LIPO     $@'
+      cmd_lipo = lipo -create $^ -output $@
+
+define do_lipo
+	$(do_mkdir)
+	@echo $($(quiet)cmd_lipo)
+	@$(cmd_lipo)
+endef
+
+# ----------------------------------------------------------------------------
+# Packaging Rules
+# ----------------------------------------------------------------------------
+# OSX
+
+OSX_DIR = $(DIST_DIR)/osx
+
+# OSX arch binary rules
+# $(1) = arch build dir
+# $(2) = arch linker flags
+define OSX_ARCH_BIN_RULES
+$(1)/bin/$$(BIN_PFX)light$$(EXT): $$(patsubst %,$(1)/%,$$(LIGHT_OBJS))
+	$$(call do_cc_link,-lm $$(LPTHREAD) $(2))
+	$$(call do_strip,$$@)
+
+$(1)/bin/$$(BIN_PFX)vis$$(EXT): $$(patsubst %,$(1)/%,$$(VIS_OBJS))
+	$$(call do_cc_link,-lm $$(LPTHREAD) $(2))
+	$$(call do_strip,$$@)
+
+$(1)/bin/$$(BIN_PFX)bspinfo$$(EXT): $$(patsubst %,$(1)/%,$$(BSPINFO_OBJS))
+	$$(call do_cc_link,-lm $$(LPTHREAD) $(2))
+	$$(call do_strip,$$@)
+
+$(1)/bin/$$(BIN_PFX)bsputil$$(EXT): $$(patsubst %,$(1)/%,$$(BSPUTIL_OBJS))
+	$$(call do_cc_link,-lm $$(LPTHREAD) $(2))
+	$$(call do_strip,$$@)
+
+$(1)/bin/$$(BIN_PFX)qbsp$$(EXT): $$(patsubst %,$(1)/qbsp/%,$$(QBSP_OBJS))
+	$$(call do_cc_link,-lm $(2))
+	$$(call do_strip,$$@)
+endef
+
+$(eval $(call OSX_ARCH_BIN_RULES,$(BUILD_DIR)/osx-intel-32,-arch i386))
+$(eval $(call OSX_ARCH_BIN_RULES,$(BUILD_DIR)/osx-intel-64,-arch x86_64))
+$(eval $(call OSX_ARCH_BIN_RULES,$(BUILD_DIR)/osx-ppc-32,-arch ppc))
+$(eval $(call OSX_ARCH_BIN_RULES,$(BUILD_DIR)/osx-ppc-64,-arch ppc64))
+
+OSX_ARCHS = intel-32 intel-64
+
+# Combine the arch binaries with lipo
+osx-arch-bins = $(foreach ARCH,$(OSX_ARCHS),$(BUILD_DIR)/osx-$(ARCH)/bin/$(1))
+osx-fat-bin = $(OSX_DIR)/bin/$(1): $(call osx-arch-bins,$(1)) ; $$(do_lipo)
+
+$(eval $(call osx-fat-bin,$(BIN_PFX)light$(EXT)))
+$(eval $(call osx-fat-bin,$(BIN_PFX)vis$(EXT)))
+$(eval $(call osx-fat-bin,$(BIN_PFX)bspinfo$(EXT)))
+$(eval $(call osx-fat-bin,$(BIN_PFX)bsputil$(EXT)))
+$(eval $(call osx-fat-bin,$(BIN_PFX)qbsp$(EXT)))
+
+# Simple rules to copy distribution files
+
+$(DIST_DIR)/osx/%.txt:		%.txt		; $(do_cp)
+$(DIST_DIR)/osx/doc/%.1:	doc/%.1		; $(do_cp)
+$(DIST_DIR)/osx/doc/%.txt:	doc/%.txt	; $(do_cp)
+$(DIST_DIR)/osx/doc/%.html:	doc/%.html	; $(do_cp)
+$(DIST_DIR)/osx/COPYING:	COPYING		; $(do_cp)
+
+DIST_FILES_OSX = $(call DIST_FILES,$(OSX_DIR))
+
+$(DIST_DIR)/tyrutils-$(TYR_VERSION_NUM)-osx.zip: $(DIST_FILES_OSX)
+	$(call do_zip,$(DIST_DIR)/osx)
+
+# ----------------------------------------------------------------------------
+# WIN32
+
+WIN32_DIR = $(DIST_DIR)/win32
+
+# Nothing too special required for the binaries...
+$(BUILD_DIR)/win32/bin/$(BIN_PFX)light$(EXT): $(patsubst %,$(BUILD_DIR)/win32/%,$(LIGHT_OBJS))
+	$(call do_cc_link,-lm $(LPTHREAD))
+	$(call do_strip,$@)
+
+$(BUILD_DIR)/win32/bin/$(BIN_PFX)vis$(EXT): $(patsubst %,$(BUILD_DIR)/win32/%,$(VIS_OBJS))
+	$(call do_cc_link,-lm $(LPTHREAD))
+	$(call do_strip,$@)
+
+$(BUILD_DIR)/win32/bin/$(BIN_PFX)bspinfo$(EXT): $(patsubst %,$(BUILD_DIR)/win32/%,$(BSPINFO_OBJS))
+	$(call do_cc_link,-lm $(LPTHREAD))
+	$(call do_strip,$@)
+
+$(BUILD_DIR)/win32/bin/$(BIN_PFX)bsputil$(EXT): $(patsubst %,$(BUILD_DIR)/win32/%,$(BSPUTIL_OBJS))
+	$(call do_cc_link,-lm $(LPTHREAD))
+	$(call do_strip,$@)
+
+$(BUILD_DIR)/win32/bin/$(BIN_PFX)qbsp$(EXT): $(patsubst %,$(BUILD_DIR)/win32/qbsp/%,$(QBSP_OBJS))
+	$(call do_cc_link,-lm)
+	$(call do_strip,$@)
+
+# Simple rules to copy distribution files
+
+$(DIST_DIR)/win32/bin/%.exe:	$(BUILD_DIR)/win32/bin/%.exe	; $(do_cp)
+$(DIST_DIR)/win32/%.txt:	%.txt		; $(do_cp)
+$(DIST_DIR)/win32/doc/%.1:	doc/%.1		; $(do_cp)
+$(DIST_DIR)/win32/doc/%.txt:	doc/%.txt	; $(do_cp)
+$(DIST_DIR)/win32/doc/%.html:	doc/%.html	; $(do_cp)
+$(DIST_DIR)/win32/COPYING:	COPYING		; $(do_cp)
+
+DIST_FILES_WIN32 = $(call DIST_FILES,$(WIN32_DIR))
+
+$(DIST_DIR)/tyrutils-$(TYR_VERSION_NUM)-win32.zip: $(DIST_FILES_WIN32)
+	$(call do_zip,$(DIST_DIR)/win32)
+
+# ----------------------------------------------------------------------------
+
+.PHONY:	snapshot
+
+#
+# To test, do 'make bundles' or 'make snapshot'
+#
+snapshot: $(SNAPSHOT_TARGET)
