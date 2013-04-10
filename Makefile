@@ -477,6 +477,7 @@ clean:
 	@rm -rf $(BUILD_DIR)
 	@rm -rf $(BIN_DIR)
 	@rm -rf $(DOC_DIR)
+	@rm -rf $(DIST_DIR)
 	@rm -f $(shell find . \( \
 		-name '*~' -o -name '#*#' -o -name '*.o' -o -name '*.res' \
 	\) -print)
