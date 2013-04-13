@@ -282,6 +282,16 @@ COM_Parse(char *data)
 	goto skipwhite;
     }
 
+    /* skip C-style comments */
+    if (c == '/' && data[1] == '*') {
+	data += 2;
+	while (*data && !(*data == '*' && data[1] == '/'))
+	    data++;
+	if (*data)
+	    data += 2;
+	goto skipwhite;
+    }
+
     /* handle quoted strings specially */
     if (c == '\"') {
 	data++;
