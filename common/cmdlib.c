@@ -296,7 +296,9 @@ COM_Parse(char *data)
     if (c == '\"') {
 	data++;
 	do {
-	    c = *data++;
+	    c = *data;
+	    if (c)
+		data++;
 	    if (c == '\"') {
 		com_token[len] = 0;
 		return data;
