@@ -117,8 +117,10 @@ SwapBSPFile(qboolean todisk)
 
     /* texinfos */
     for (i = 0; i < numtexinfo; i++) {
-	for (j = 0; j < 8; j++)
+	for (j = 0; j < 4; j++) {
 	    texinfo[i].vecs[0][j] = LittleFloat(texinfo[i].vecs[0][j]);
+	    texinfo[i].vecs[1][j] = LittleFloat(texinfo[i].vecs[1][j]);
+	}
 	texinfo[i].miptex = LittleLong(texinfo[i].miptex);
 	texinfo[i].flags = LittleLong(texinfo[i].flags);
     }
