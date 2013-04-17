@@ -454,13 +454,14 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     CountData_r(entity, headnode);
 
     /*
-     * Guess: less than half vertices actually are unique.  Add one to round up
-     * odd values.  Remember edges are +1 in BeginBSPFile.
+     * Remember edges are +1 in BeginBSPFile.  Often less than half
+     * the vertices actually are unique, although heavy use of skip
+     * faces will break that assumption.  2/3 should be safe most of
+     * the time without wasting *quite* so much memory...
      */
     surfedges->count = vertices->count;
-    vertices->count++;
-    vertices->count /= 2;
     edges->count += surfedges->count;
+    vertices->count = vertices->count * 2 / 3;
 
     vertices->data = AllocMem(BSPVERTEX, vertices->count, true);
     edges->data = AllocMem(BSPEDGE, edges->count, true);
