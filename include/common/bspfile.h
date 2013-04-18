@@ -28,8 +28,6 @@
 #define MAX_MAP_HULLS              4
 #define MAX_MAP_MODELS           256
 #define MAX_MAP_BRUSHES         4096
-#define MAX_MAP_ENTITIES        2048
-#define MAX_MAP_ENTSTRING     262143
 #define MAX_MAP_PLANES         16384
 #define MAX_MAP_NODES          32767	/* negative shorts are contents */
 #define MAX_MAP_CLIPNODES      65520	/* = 0xfff0; larger are contents */

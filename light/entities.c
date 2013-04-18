@@ -23,8 +23,9 @@
 #include <light/light.h>
 #include <light/entities.h>
 
-entity_t entities[MAX_MAP_ENTITIES];
+entity_t *entities;
 int num_entities;
+static int max_entities;
 
 /*
  * ============================================================================
@@ -232,6 +233,48 @@ CheckEntityFields(entity_t *entity)
     }
 }
 
+/*
+ * Quick count of entities.
+ * Assumes correct syntax, etc.
+ */
+static int
+CountEntities(const char *entitystring)
+{
+    const char *pos = entitystring;
+    int count = 0;
+
+    while (1) {
+	pos += strcspn(pos, "/{");
+	if (!*pos)
+	    return count;
+
+	/* It's probably overkill to consider comments, but... */
+	if (*pos == '/') {
+	    pos++;
+	    if (*pos == '*') {
+		pos++;
+		while (1) {
+		    pos = strchr(pos, '*');
+		    if (!pos)
+			return count;
+		    if (pos[1] == '/') {
+			pos += 2;
+			break;
+		    }
+		}
+	    } else if (*pos == '/') {
+		pos = strchr(pos, '\n');
+		if (!pos)
+		    return count;
+	    }
+	    continue;
+	}
+
+	/* Add one entity for every opening brace */
+	count++;
+	pos++;
+    }
+}
 
 /*
  * ==================
@@ -248,12 +291,18 @@ LoadEntities(void)
     vec3_t vec;
     int num_lights;
 
-    data = dentdata;
+    /* Count the entities and allocate memory */
+    max_entities = CountEntities(dentdata);
+    entities = malloc(max_entities * sizeof(*entities));
+    if (!entities)
+	Error("%s: allocation of %d bytes failed\n", __func__,
+	      max_entities * sizeof(*entities));
+    memset(entities, 0, max_entities * sizeof(*entities));
 
     /* start parsing */
-    memset(entities, 0, sizeof(entity_t) * MAX_MAP_ENTITIES);
     num_entities = 0;
     num_lights = 0;
+    data = dentdata;
 
     /* go through all the entities */
     while (1) {
@@ -264,8 +313,8 @@ LoadEntities(void)
 	if (com_token[0] != '{')
 	    Error("%s: found %s when expecting {", __func__, com_token);
 
-	if (num_entities == MAX_MAP_ENTITIES)
-	    Error("%s: MAX_MAP_ENTITIES", __func__);
+	if (num_entities == max_entities)
+	    Error("%s: Internal Error - exceeded max_entities", __func__);
 	entity = &entities[num_entities];
 	num_entities++;
 
@@ -428,62 +477,75 @@ GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec)
     sscanf(value, "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
+static size_t
+Get_EntityStringSize(const entity_t *entities, int num_entities)
+{
+    const entity_t *entity;
+    const epair_t *epair;
+    size_t size;
+    int i;
+
+    size = 0;
+    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	if (!entity->epairs)
+	    continue;
+	size += 2; /* "{\n" */
+	for (epair = entity->epairs; epair; epair = epair->next) {
+	    /* 6 extra chars for quotes, space and newline */
+	    size += strlen(epair->key) + strlen(epair->value) + 6;
+	}
+	size += 2; /* "}\n" */
+    }
+    size += 1; /* zero terminator */
+
+    return size;
+}
 
 /*
  * ================
  * WriteEntitiesToString
+ * FIXME - why even bother re-writing the string?
  * ================
  */
 void
 WriteEntitiesToString(void)
 {
-    char *buf;
-    char *end;
-    epair_t *ep;
+    const entity_t *entity;
+    const epair_t *epair;
+    size_t space, length;
+    char *pos;
     int i;
-    char line[MAX_ENT_KEY + MAX_ENT_VALUE + 4];
-
-    /*
-     * max strlen(line) = (MAX_ENT_KEY - 1) + (MAX_ENT_VALUE - 1) +
-     *                    strlen("\"\" \"\") + 1
-     */
-
-    buf = malloc(MAX_MAP_ENTSTRING);
-    if (!buf)
-	Error("%s: allocation of %i bytes failed.", __func__, entdatasize);
-
-    end = buf;
-    *end = 0;
-
-    logprint("%i switchable light styles\n", numlighttargets);
-
-    for (i = 0; i < num_entities; i++) {
-	if (!entities[i].epairs)
-	    continue;		/* ent got removed */
-
-	strcat(end, "{\n");
-	end += 2;
-
-	for (ep = entities[i].epairs; ep; ep = ep->next) {
-	    sprintf(line, "\"%s\" \"%s\"\n", ep->key, ep->value);
-	    strcat(end, line);
-	    end += strlen(line);
-	}
-	strcat(end, "}\n");
-	end += 2;
-
-	if (end > buf + MAX_MAP_ENTSTRING)
-	    Error("Entity text too long");
-    }
-    entdatasize = end - buf + 1;
 
     if (dentdata)
 	free(dentdata);
 
+    /* FIXME - why are we printing this here? */
+    logprint("%i switchable light styles\n", numlighttargets);
+
+    entdatasize = Get_EntityStringSize(entities, num_entities);
     dentdata = malloc(entdatasize);
     if (!dentdata)
-	Error("%s: allocation of %i bytes failed.", __func__, entdatasize);
+	Error("%s: allocation of %d bytes failed\n", entdatasize);
 
-    memcpy(dentdata, buf, entdatasize);
-    free(buf);
+    space = entdatasize;
+    pos = dentdata;
+    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+	if (!entity->epairs)
+	    continue;
+
+	length = snprintf(pos, space, "{\n");
+	pos += length;
+	space -= length;
+
+	for (epair = entity->epairs; epair; epair = epair->next) {
+	    length = snprintf(pos, space, "\"%s\" \"%s\"\n",
+			      epair->key, epair->value);
+	    pos += length;
+	    space -= length;
+	}
+
+	length = snprintf(pos, space, "}\n");
+	pos += length;
+	space -= length;
+    }
 }

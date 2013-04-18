@@ -89,7 +89,7 @@ typedef struct entity_s {
  *    Stores the RGB values to determine the light color
  */
 
-extern entity_t entities[MAX_MAP_ENTITIES];
+extern entity_t *entities;
 extern int num_entities;
 
 entity_t *FindEntityWithKeyPair(const char *key, const char *value);
