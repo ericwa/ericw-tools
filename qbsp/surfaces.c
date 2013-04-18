@@ -419,10 +419,10 @@ CountData_r(mapentity_t *entity, node_t *node)
 	return;
 
     for (f = node->faces; f; f = f->next) {
+	entity->lumps[BSPVERTEX].count += f->w.numpoints;
 	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
 	entity->lumps[BSPFACE].count++;
-	entity->lumps[BSPVERTEX].count += f->w.numpoints;
     }
 
     CountData_r(entity, node->children[0]);
@@ -457,7 +457,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
      * Remember edges are +1 in BeginBSPFile.  Often less than half
      * the vertices actually are unique, although heavy use of skip
      * faces will break that assumption.  2/3 should be safe most of
-     * the time without wasting *quite* so much memory...
+     * the time without wasting too much memory...
      */
     surfedges->count = vertices->count;
     edges->count += surfedges->count;
