@@ -79,27 +79,7 @@ int *dsurfedges;
 static void
 SwapBSPFile(qboolean todisk)
 {
-    int i, j, c;
-    dmodel_t *d;
-    dmiptexlump_t *mtl;
-
-    /* models */
-    for (i = 0; i < nummodels; i++) {
-	d = &dmodels[i];
-
-	for (j = 0; j < MAX_MAP_HULLS; j++)
-	    d->headnode[j] = LittleLong(d->headnode[j]);
-
-	d->visleafs = LittleLong(d->visleafs);
-	d->firstface = LittleLong(d->firstface);
-	d->numfaces = LittleLong(d->numfaces);
-
-	for (j = 0; j < 3; j++) {
-	    d->mins[j] = LittleFloat(d->mins[j]);
-	    d->maxs[j] = LittleFloat(d->maxs[j]);
-	    d->origin[j] = LittleFloat(d->origin[j]);
-	}
-    }
+    int i, j;
 
     /* vertexes */
     for (i = 0; i < numvertexes; i++) {
@@ -169,15 +149,12 @@ SwapBSPFile(qboolean todisk)
 
     /* miptex */
     if (texdatasize) {
-	mtl = (dmiptexlump_t *)dtexdata;
-	if (todisk)
-	    c = mtl->nummiptex;
-	else
-	    c = LittleLong(mtl->nummiptex);
+	dmiptexlump_t *lump = (dmiptexlump_t *)dtexdata;
+	int count = todisk ? lump->nummiptex : LittleLong(lump->nummiptex);
 
-	mtl->nummiptex = LittleLong(mtl->nummiptex);
-	for (i = 0; i < c; i++)
-	    mtl->dataofs[i] = LittleLong(mtl->dataofs[i]);
+	lump->nummiptex = LittleLong(lump->nummiptex);
+	for (i = 0; i < count; i++)
+	    lump->dataofs[i] = LittleLong(lump->dataofs[i]);
     }
 
     /* marksurfaces */
@@ -192,6 +169,24 @@ SwapBSPFile(qboolean todisk)
     for (i = 0; i < numedges; i++) {
 	dedges[i].v[0] = LittleShort(dedges[i].v[0]);
 	dedges[i].v[1] = LittleShort(dedges[i].v[1]);
+    }
+
+    /* models */
+    for (i = 0; i < nummodels; i++) {
+	dmodel_t *dmodel = &dmodels[i];
+
+	for (j = 0; j < MAX_MAP_HULLS; j++)
+	    dmodel->headnode[j] = LittleLong(dmodel->headnode[j]);
+
+	dmodel->visleafs = LittleLong(dmodel->visleafs);
+	dmodel->firstface = LittleLong(dmodel->firstface);
+	dmodel->numfaces = LittleLong(dmodel->numfaces);
+
+	for (j = 0; j < 3; j++) {
+	    dmodel->mins[j] = LittleFloat(dmodel->mins[j]);
+	    dmodel->maxs[j] = LittleFloat(dmodel->maxs[j]);
+	    dmodel->origin[j] = LittleFloat(dmodel->origin[j]);
+	}
     }
 }
 
