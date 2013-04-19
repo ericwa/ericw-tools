@@ -68,6 +68,26 @@ IsSkipName(const char *name)
     return false;
 }
 
+static bool
+IsSplitName(const char *name)
+{
+    if (options.fSplitspecial)
+	return false;
+    if (name[0] == '*' || !strncasecmp(name, "sky", 3))
+	return true;
+    return false;
+}
+
+static bool
+IsHintName(const char *name)
+{
+    if (!strcasecmp(name, "hint"))
+	return true;
+    if (!strcasecmp(name, "hintskip"))
+	return true;
+    return false;
+}
+
 /*
 ===============
 FindTexinfo
@@ -83,15 +103,15 @@ FindTexinfo(texinfo_t *texinfo)
     const char *texname;
     const int num_texinfo = pWorldEnt->lumps[BSPTEXINFO].index;
 
-    // set the special flag
+    /* Set the texture flags */
+    texinfo->flags = 0;
     texname = map.miptex[texinfo->miptex];
-    if (texname[0] == '*' || !strncasecmp(texname, "sky", 3))
-	if (!options.fSplitspecial)
-	    texinfo->flags |= TEX_SPECIAL;
     if (IsSkipName(texname))
 	texinfo->flags |= TEX_SKIP;
-    if (!strcasecmp(texname, "hint") || !strcasecmp(texname, "hintskip"))
+    if (IsHintName(texname))
 	texinfo->flags |= TEX_HINT;
+    if (IsSplitName(texname))
+	texinfo->flags |= TEX_SPECIAL;
 
     target = pWorldEnt->lumps[BSPTEXINFO].data;
     for (index = 0; index < num_texinfo; index++, target++) {
