@@ -337,7 +337,7 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 	    const dplane_t *plane = dplanes + face->planenum;
 	    Error("Bad surface extents:\n"
 		  "   surface %d, %s extents = %d\n"
-		  "   Texture %s at (%s)\n"
+		  "   texture %s at (%s)\n"
 		  "   surface normal (%s)\n",
 		  face - dfaces, i ? "t" : "s", surf->texsize[i],
 		  texname, VecStr(worldpoint), VecStrf(plane->normal));
