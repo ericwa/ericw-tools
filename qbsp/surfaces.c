@@ -23,7 +23,6 @@
 #include "qbsp.h"
 
 static hashvert_t *pHashverts;
-static int iNodes;
 
 /*
 ===============
@@ -326,14 +325,14 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
 MakeFaceEdges_r
 ================
 */
-static void
-MakeFaceEdges_r(mapentity_t *entity, node_t *node)
+static int
+MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 {
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
-	return;
+	return progress;
 
     for (f = node->faces; f; f = f->next) {
 	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
@@ -341,12 +340,11 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node)
 	FindFaceEdges(entity, f);
     }
 
-    // Print progress
-    iNodes++;
-    Message(msgPercent, iNodes, splitnodes);
+    Message(msgPercent, ++progress, splitnodes);
+    progress = MakeFaceEdges_r(entity, node->children[0], progress);
+    progress = MakeFaceEdges_r(entity, node->children[1], progress);
 
-    MakeFaceEdges_r(entity, node->children[0]);
-    MakeFaceEdges_r(entity, node->children[1]);
+    return progress;
 }
 
 /*
@@ -471,10 +469,9 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     InitHash();
     c_tryedges = 0;
-    iNodes = 0;
 
     firstface = map.cTotal[BSPFACE];
-    MakeFaceEdges_r(entity, headnode);
+    MakeFaceEdges_r(entity, headnode, 0);
 
     FreeMem(pHashverts, HASHVERT, vertices->count);
     FreeMem(pEdgeFaces0, OTHER, sizeof(face_t *) * edges->count);
