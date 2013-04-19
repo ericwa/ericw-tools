@@ -19,6 +19,7 @@
 
 #include <common/cmdlib.h>
 #include <common/log.h>
+#include <common/threads.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -59,7 +60,8 @@ Error(const char *error, ...)
 {
     va_list argptr;
 
-    /* Use the lockless version so we can error out while holding the lock */
+    /* Using lockless prints so we can error out while holding the lock */
+    InterruptThreadProgress__();
     logprint_locked__("************ ERROR ************\n");
 
     va_start(argptr, error);
