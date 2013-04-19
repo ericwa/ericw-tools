@@ -438,7 +438,6 @@ int
 MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
-    void *pTemp;
     struct lumpdata *surfedges = &entity->lumps[BSPSURFEDGE];
     struct lumpdata *edges = &entity->lumps[BSPEDGE];
     struct lumpdata *vertices = &entity->lumps[BSPVERTEX];
@@ -481,19 +480,19 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     FreeMem(pEdgeFaces0, OTHER, sizeof(face_t *) * edges->count);
     FreeMem(pEdgeFaces1, OTHER, sizeof(face_t *) * edges->count);
 
-    // Swap these...
+    /* Free any excess allocated memory */
     if (vertices->index < vertices->count) {
-	pTemp = AllocMem(BSPVERTEX, vertices->index, true);
-	memcpy(pTemp, vertices->data, rgcMemSize[BSPVERTEX] * vertices->index);
+	dvertex_t *temp = AllocMem(BSPVERTEX, vertices->index, true);
+	memcpy(temp, vertices->data, sizeof(*temp) * vertices->index);
 	FreeMem(vertices->data, BSPVERTEX, vertices->count);
-	vertices->data = pTemp;
+	vertices->data = temp;
 	vertices->count = vertices->index;
     }
     if (edges->index < edges->count) {
-	pTemp = AllocMem(BSPEDGE, edges->index, true);
-	memcpy(pTemp, edges->data, rgcMemSize[BSPEDGE] * edges->index);
+	dedge_t *temp = AllocMem(BSPEDGE, edges->index, true);
+	memcpy(temp, edges->data, sizeof(*temp) * edges->index);
 	FreeMem(edges->data, BSPEDGE, edges->count);
-	edges->data = pTemp;
+	edges->data = temp;
 	edges->count = edges->index;
     }
 
