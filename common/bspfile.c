@@ -190,31 +190,50 @@ SwapBSPFile(qboolean todisk)
     }
 }
 
+const lumpspec_t lumpspec[] = {
+    { "entity",      sizeof(char)           },
+    { "plane",       sizeof(dplane_t)       },
+    { "texture",     sizeof(byte)           },
+    { "vertex",      sizeof(dvertex_t)      },
+    { "visibility",  sizeof(byte)           },
+    { "node",        sizeof(dnode_t)        },
+    { "texinfo",     sizeof(texinfo_t)      },
+    { "face",        sizeof(dface_t)        },
+    { "lighting",    sizeof(byte)           },
+    { "clipnode",    sizeof(dclipnode_t)    },
+    { "leaf",        sizeof(dleaf_t)        },
+    { "marksurface", sizeof(unsigned short) },
+    { "edge",        sizeof(dedge_t)        },
+    { "surfedge",    sizeof(int)            },
+    { "model",       sizeof(dmodel_t)       },
+};
 
 static dheader_t *header;
 
 static int
-CopyLump(int lump, void *dest, int size)
+CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 {
+    const size_t size = lumpspec[lumpnum].size;
+    byte **bufferptr = destptr;
+    byte *buffer = *bufferptr;
     int length;
     int ofs;
-    byte **buf = dest;
 
-    length = header->lumps[lump].filelen;
-    ofs = header->lumps[lump].fileofs;
+    length = header->lumps[lumpnum].filelen;
+    ofs = header->lumps[lumpnum].fileofs;
 
     if (length % size)
-	Error("%s: odd lump size", __func__);
+	Error("%s: odd %s lump size", __func__, lumpspec[lumpnum].name);
 
-    if (*buf)
-	free(*buf);
+    if (buffer)
+	free(buffer);
 
-    *buf = malloc(length + 1);
-    if (!*buf)
+    buffer = *bufferptr = malloc(length + 1);
+    if (!buffer)
 	Error("%s: allocation of %i bytes failed.", __func__, length);
 
-    memcpy(*buf, (byte *)header + ofs, length);
-    *(*buf + length) = 0; /* Required for entity lump? */
+    memcpy(buffer, (const byte *)header + ofs, length);
+    buffer[length] = 0; /* In case of corrupt entity lump */
 
     return length / size;
 }
@@ -242,24 +261,22 @@ LoadBSPFile(const char *filename)
     if (bsp_version != 29)
 	Error("Sorry, only bsp version 29 supported.");
 
-    nummodels = CopyLump(LUMP_MODELS, &dmodels, sizeof(dmodel_t));
-    numvertexes = CopyLump(LUMP_VERTEXES, &dvertexes, sizeof(dvertex_t));
-    numplanes = CopyLump(LUMP_PLANES, &dplanes, sizeof(dplane_t));
-    numleafs = CopyLump(LUMP_LEAFS, &dleafs, sizeof(dleaf_t));
-    numnodes = CopyLump(LUMP_NODES, &dnodes, sizeof(dnode_t));
-    numtexinfo = CopyLump(LUMP_TEXINFO, &texinfo, sizeof(texinfo_t));
-    numclipnodes = CopyLump(LUMP_CLIPNODES, &dclipnodes, sizeof(dclipnode_t));
-    numfaces = CopyLump(LUMP_FACES, &dfaces, sizeof(dface_t));
-    nummarksurfaces = CopyLump(LUMP_MARKSURFACES, &dmarksurfaces,
-			       sizeof(dmarksurfaces[0]));
-    numsurfedges = CopyLump(LUMP_SURFEDGES, &dsurfedges,
-			    sizeof(dsurfedges[0]));
-    numedges = CopyLump(LUMP_EDGES, &dedges, sizeof(dedge_t));
+    nummodels = CopyLump(header, LUMP_MODELS, &dmodels);
+    numvertexes = CopyLump(header, LUMP_VERTEXES, &dvertexes);
+    numplanes = CopyLump(header, LUMP_PLANES, &dplanes);
+    numleafs = CopyLump(header, LUMP_LEAFS, &dleafs);
+    numnodes = CopyLump(header, LUMP_NODES, &dnodes);
+    numtexinfo = CopyLump(header, LUMP_TEXINFO, &texinfo);
+    numclipnodes = CopyLump(header, LUMP_CLIPNODES, &dclipnodes);
+    numfaces = CopyLump(header, LUMP_FACES, &dfaces);
+    nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &dmarksurfaces);
+    numsurfedges = CopyLump(header, LUMP_SURFEDGES, &dsurfedges);
+    numedges = CopyLump(header, LUMP_EDGES, &dedges);
 
-    texdatasize = CopyLump(LUMP_TEXTURES, &dtexdata, 1);
-    visdatasize = CopyLump(LUMP_VISIBILITY, &dvisdata, 1);
-    lightdatasize = CopyLump(LUMP_LIGHTING, &dlightdata, 1);
-    entdatasize = CopyLump(LUMP_ENTITIES, &dentdata, 1);
+    texdatasize = CopyLump(header, LUMP_TEXTURES, &dtexdata);
+    visdatasize = CopyLump(header, LUMP_VISIBILITY, &dvisdata);
+    lightdatasize = CopyLump(header, LUMP_LIGHTING, &dlightdata);
+    entdatasize = CopyLump(header, LUMP_ENTITIES, &dentdata);
 
     free(header);		/* everything has been copied out */
 
@@ -273,7 +290,6 @@ LoadBSPFile(const char *filename)
 /* ========================================================================= */
 
 static FILE *wadfile;
-static dheader_t outheader;
 
 static void
 AddLump(int lumpnum, const void *data, int len)
@@ -299,6 +315,8 @@ AddLump(int lumpnum, const void *data, int len)
 void
 WriteBSPFile(const char *filename, int version)
 {
+    dheader_t outheader;
+
     header = &outheader;
     memset(header, 0, sizeof(dheader_t));
 

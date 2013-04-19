@@ -76,6 +76,13 @@ typedef struct {
 #define HEADER_LUMPS      15
 
 typedef struct {
+    const char *name;
+    size_t size;
+} lumpspec_t;
+
+extern const lumpspec_t lumpspec[HEADER_LUMPS];
+
+typedef struct {
     float mins[3];
     float maxs[3];
     float origin[3];
