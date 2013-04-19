@@ -357,42 +357,41 @@ GrowNodeRegion_r
 static void
 GrowNodeRegion_r(mapentity_t *entity, node_t *node)
 {
-    dface_t *r;
-    face_t *f;
-    int i;
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[BSPSURFEDGE];
     struct lumpdata *faces = &entity->lumps[BSPFACE];
+    dface_t *out;
+    face_t *face;
+    int i;
 
     if (node->planenum == PLANENUM_LEAF)
 	return;
 
     node->firstface = map.cTotal[BSPFACE];
 
-    for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
+    for (face = node->faces; face; face = face->next) {
+	if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
 
 	// emit a region
-	f->outputnumber = map.cTotal[BSPFACE];
-	r = (dface_t *)faces->data + faces->index;
-
-	r->planenum = node->outputplanenum;
-	r->side = f->planeside;
-	r->texinfo = f->texinfo;
+	face->outputnumber = map.cTotal[BSPFACE];
+	out = (dface_t *)faces->data + faces->index;
+	out->planenum = node->outputplanenum;
+	out->side = face->planeside;
+	out->texinfo = face->texinfo;
 	for (i = 0; i < MAXLIGHTMAPS; i++)
-	    r->styles[i] = 255;
-	r->lightofs = -1;
+	    out->styles[i] = 255;
+	out->lightofs = -1;
 
-	r->firstedge = map.cTotal[BSPSURFEDGE];
-	for (i = 0; i < f->w.numpoints; i++) {
-	    ((int *)surfedges->data)[surfedges->index] = f->edges[i];
+	out->firstedge = map.cTotal[BSPSURFEDGE];
+	for (i = 0; i < face->w.numpoints; i++) {
+	    ((int *)surfedges->data)[surfedges->index] = face->edges[i];
 	    surfedges->index++;
 	    map.cTotal[BSPSURFEDGE]++;
 	}
-	FreeMem(f->edges, OTHER, f->w.numpoints * sizeof(int));
+	FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
 
-	r->numedges = map.cTotal[BSPSURFEDGE] - r->firstedge;
+	out->numedges = map.cTotal[BSPSURFEDGE] - out->firstedge;
 
 	map.cTotal[BSPFACE]++;
 	faces->index++;
