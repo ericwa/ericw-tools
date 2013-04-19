@@ -55,6 +55,8 @@ FindMiptex(const char *name)
 static bool
 IsSkipName(const char *name)
 {
+    if (options.fNoskip)
+	return false;
     if (!strcasecmp(name, "skip"))
 	return true;
     if (!strcasecmp(name, "*waterskip"))

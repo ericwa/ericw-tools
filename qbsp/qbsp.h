@@ -545,6 +545,7 @@ bool FillOutside(node_t *node, const int hullnum, const int numportals);
 typedef struct options_s {
     bool fNofill;
     bool fNoclip;
+    bool fNoskip;
     bool fOnlyents;
     bool fVerbose;
     bool fAllverbose;
