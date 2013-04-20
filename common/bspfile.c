@@ -354,9 +354,8 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
  * =============
  */
 int
-LoadBSPFile(const char *filename)
+LoadBSPFile(const char *filename, bspdata_t *bsp)
 {
-    bspdata_t bsp;
     dheader_t *header;
     int i, version;
 
@@ -376,32 +375,29 @@ LoadBSPFile(const char *filename)
     }
 
     /* copy the data */
-    memset(&bsp, 0, sizeof(bsp));
-    bsp.nummodels = CopyLump(header, LUMP_MODELS, &bsp.dmodels);
-    bsp.numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp.dvertexes);
-    bsp.numplanes = CopyLump(header, LUMP_PLANES, &bsp.dplanes);
-    bsp.numleafs = CopyLump(header, LUMP_LEAFS, &bsp.dleafs);
-    bsp.numnodes = CopyLump(header, LUMP_NODES, &bsp.dnodes);
-    bsp.numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp.texinfo);
-    bsp.numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp.dclipnodes);
-    bsp.numfaces = CopyLump(header, LUMP_FACES, &bsp.dfaces);
-    bsp.nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp.dmarksurfaces);
-    bsp.numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp.dsurfedges);
-    bsp.numedges = CopyLump(header, LUMP_EDGES, &bsp.dedges);
+    memset(bsp, 0, sizeof(*bsp));
+    bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
+    bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
+    bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
+    bsp->numleafs = CopyLump(header, LUMP_LEAFS, &bsp->dleafs);
+    bsp->numnodes = CopyLump(header, LUMP_NODES, &bsp->dnodes);
+    bsp->numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp->texinfo);
+    bsp->numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp->dclipnodes);
+    bsp->numfaces = CopyLump(header, LUMP_FACES, &bsp->dfaces);
+    bsp->nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
+    bsp->numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp->dsurfedges);
+    bsp->numedges = CopyLump(header, LUMP_EDGES, &bsp->dedges);
 
-    bsp.texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp.dtexdata.base);
-    bsp.visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp.dvisdata);
-    bsp.lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp.dlightdata);
-    bsp.entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp.dentdata);
+    bsp->texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp->dtexdata.base);
+    bsp->visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp->dvisdata);
+    bsp->lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp->dlightdata);
+    bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
 
     /* everything has been copied out */
     free(header);
 
     /* swap everything */
-    SwapBSPFile(&bsp, TO_CPU);
-
-    /* Set the bsp globals for compatibility */
-    SetBSPGlobals(&bsp);
+    SwapBSPFile(bsp, TO_CPU);
 
     /* Return the version */
     return version;

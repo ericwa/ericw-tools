@@ -40,10 +40,9 @@ main(int argc, char **argv)
 	DefaultExtension(source, ".bsp");
 	printf("%s\n", source);
 
-	LoadBSPFile(source);
-
-	GetBSPGlobals(&bsp);
+	LoadBSPFile(source, &bsp);
 	PrintBSPFileSizes(&bsp);
+
 	printf("---------------------\n");
     }
 

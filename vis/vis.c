@@ -1224,7 +1224,8 @@ main(int argc, char **argv)
     StripExtension(sourcefile);
     DefaultExtension(sourcefile, ".bsp");
 
-    bsp_version = LoadBSPFile(sourcefile);
+    bsp_version = LoadBSPFile(sourcefile, &bsp);
+    SetBSPGlobals(&bsp); /* FIXME */
 
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
@@ -1256,6 +1257,7 @@ main(int argc, char **argv)
 
     CalcAmbientSounds();
 
+    /* still need to update from globals */
     GetBSPGlobals(&bsp);
     WriteBSPFile(sourcefile, &bsp, bsp_version);
 

@@ -297,7 +297,8 @@ main(int argc, const char **argv)
     strcpy(source, argv[i]);
     StripExtension(source);
     DefaultExtension(source, ".bsp");
-    bsp_version = LoadBSPFile(source);
+    bsp_version = LoadBSPFile(source, &bsp);
+    SetBSPGlobals(&bsp); /* FIXME */
 
     LoadEntities();
     MakeTnodes();
@@ -308,6 +309,7 @@ main(int argc, const char **argv)
 
     WriteEntitiesToString();
 
+    /* Still need to update from globals */
     GetBSPGlobals(&bsp);
     WriteBSPFile(source, &bsp, bsp_version);
 

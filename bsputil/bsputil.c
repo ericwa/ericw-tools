@@ -96,10 +96,10 @@ ExportWad(FILE *f)
 int
 main(int argc, char **argv)
 {
-    int i;
-    int err;
+    bspdata_t bsp;
     char source[1024];
     FILE *f;
+    int i, err;
 
     printf("---- bsputil / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
     if (argc == 1) {
@@ -113,7 +113,8 @@ main(int argc, char **argv)
     printf("---------------------\n");
     printf("%s\n", source);
 
-    LoadBSPFile(source);
+    LoadBSPFile(source, &bsp);
+    SetBSPGlobals(&bsp); /* FIXME */
 
     for (i = 0; i < argc - 1; i++) {
 	if (!strcmp(argv[i], "--extract-entities")) {
@@ -125,7 +126,7 @@ main(int argc, char **argv)
 	    if (!f)
 		Error("couldn't open %s for writing\n", source);
 
-	    err = fwrite(dentdata, sizeof(char), entdatasize - 1, f);
+	    err = fwrite(bsp.dentdata, sizeof(char), bsp.entdatasize - 1, f);
 	    if (err != entdatasize - 1)
 		Error("%s", strerror(errno));
 
