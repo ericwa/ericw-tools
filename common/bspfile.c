@@ -177,80 +177,87 @@ typedef enum { TO_DISK, TO_CPU } swaptype_t;
  * Byte swaps all data in a bsp file.
  * =============
  */
-static void
-SwapBSPFile(swaptype_t swap)
+void
+SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 {
     int i, j;
 
     /* vertexes */
-    for (i = 0; i < numvertexes; i++) {
+    for (i = 0; i < bspdata->numvertexes; i++) {
+	dvertex_t *vertex = &bspdata->dvertexes[i];
 	for (j = 0; j < 3; j++)
-	    dvertexes[i].point[j] = LittleFloat(dvertexes[i].point[j]);
+	    vertex->point[j] = LittleFloat(vertex->point[j]);
     }
 
     /* planes */
-    for (i = 0; i < numplanes; i++) {
+    for (i = 0; i < bspdata->numplanes; i++) {
+	dplane_t *plane = &dplanes[i];
 	for (j = 0; j < 3; j++)
-	    dplanes[i].normal[j] = LittleFloat(dplanes[i].normal[j]);
-	dplanes[i].dist = LittleFloat(dplanes[i].dist);
-	dplanes[i].type = LittleLong(dplanes[i].type);
+	    plane->normal[j] = LittleFloat(plane->normal[j]);
+	plane->dist = LittleFloat(plane->dist);
+	plane->type = LittleLong(plane->type);
     }
 
     /* texinfos */
-    for (i = 0; i < numtexinfo; i++) {
+    for (i = 0; i < bspdata->numtexinfo; i++) {
+	texinfo_t *texinfo = &bspdata->texinfo[i];
 	for (j = 0; j < 4; j++) {
-	    texinfo[i].vecs[0][j] = LittleFloat(texinfo[i].vecs[0][j]);
-	    texinfo[i].vecs[1][j] = LittleFloat(texinfo[i].vecs[1][j]);
+	    texinfo->vecs[0][j] = LittleFloat(texinfo->vecs[0][j]);
+	    texinfo->vecs[1][j] = LittleFloat(texinfo->vecs[1][j]);
 	}
-	texinfo[i].miptex = LittleLong(texinfo[i].miptex);
-	texinfo[i].flags = LittleLong(texinfo[i].flags);
+	texinfo->miptex = LittleLong(texinfo->miptex);
+	texinfo->flags = LittleLong(texinfo->flags);
     }
 
     /* faces */
-    for (i = 0; i < numfaces; i++) {
-	dfaces[i].texinfo = LittleShort(dfaces[i].texinfo);
-	dfaces[i].planenum = LittleShort(dfaces[i].planenum);
-	dfaces[i].side = LittleShort(dfaces[i].side);
-	dfaces[i].lightofs = LittleLong(dfaces[i].lightofs);
-	dfaces[i].firstedge = LittleLong(dfaces[i].firstedge);
-	dfaces[i].numedges = LittleShort(dfaces[i].numedges);
+    for (i = 0; i < bspdata->numfaces; i++) {
+	dface_t *face = &bspdata->dfaces[i];
+	face->texinfo = LittleShort(face->texinfo);
+	face->planenum = LittleShort(face->planenum);
+	face->side = LittleShort(face->side);
+	face->lightofs = LittleLong(face->lightofs);
+	face->firstedge = LittleLong(face->firstedge);
+	face->numedges = LittleShort(face->numedges);
     }
 
     /* nodes */
-    for (i = 0; i < numnodes; i++) {
-	dnodes[i].planenum = LittleLong(dnodes[i].planenum);
+    for (i = 0; i < bspdata->numnodes; i++) {
+	dnode_t *node = &bspdata->dnodes[i];
+	node->planenum = LittleLong(node->planenum);
 	for (j = 0; j < 3; j++) {
-	    dnodes[i].mins[j] = LittleShort(dnodes[i].mins[j]);
-	    dnodes[i].maxs[j] = LittleShort(dnodes[i].maxs[j]);
+	    node->mins[j] = LittleShort(node->mins[j]);
+	    node->maxs[j] = LittleShort(node->maxs[j]);
 	}
-	dnodes[i].children[0] = LittleShort(dnodes[i].children[0]);
-	dnodes[i].children[1] = LittleShort(dnodes[i].children[1]);
-	dnodes[i].firstface = LittleShort(dnodes[i].firstface);
-	dnodes[i].numfaces = LittleShort(dnodes[i].numfaces);
+	node->children[0] = LittleShort(node->children[0]);
+	node->children[1] = LittleShort(node->children[1]);
+	node->firstface = LittleShort(node->firstface);
+	node->numfaces = LittleShort(node->numfaces);
     }
 
     /* leafs */
-    for (i = 0; i < numleafs; i++) {
-	dleafs[i].contents = LittleLong(dleafs[i].contents);
+    for (i = 0; i < bspdata->numleafs; i++) {
+	dleaf_t *leaf = &bspdata->dleafs[i];
+	leaf->contents = LittleLong(leaf->contents);
 	for (j = 0; j < 3; j++) {
-	    dleafs[i].mins[j] = LittleShort(dleafs[i].mins[j]);
-	    dleafs[i].maxs[j] = LittleShort(dleafs[i].maxs[j]);
+	    leaf->mins[j] = LittleShort(leaf->mins[j]);
+	    leaf->maxs[j] = LittleShort(leaf->maxs[j]);
 	}
-	dleafs[i].firstmarksurface = LittleShort(dleafs[i].firstmarksurface);
-	dleafs[i].nummarksurfaces = LittleShort(dleafs[i].nummarksurfaces);
-	dleafs[i].visofs = LittleLong(dleafs[i].visofs);
+	leaf->firstmarksurface = LittleShort(leaf->firstmarksurface);
+	leaf->nummarksurfaces = LittleShort(leaf->nummarksurfaces);
+	leaf->visofs = LittleLong(leaf->visofs);
     }
 
     /* clipnodes */
-    for (i = 0; i < numclipnodes; i++) {
-	dclipnodes[i].planenum = LittleLong(dclipnodes[i].planenum);
-	dclipnodes[i].children[0] = LittleShort(dclipnodes[i].children[0]);
-	dclipnodes[i].children[1] = LittleShort(dclipnodes[i].children[1]);
+    for (i = 0; i < bspdata->numclipnodes; i++) {
+	dclipnode_t *clipnode = &bspdata->dclipnodes[i];
+	clipnode->planenum = LittleLong(clipnode->planenum);
+	clipnode->children[0] = LittleShort(clipnode->children[0]);
+	clipnode->children[1] = LittleShort(clipnode->children[1]);
     }
 
     /* miptex */
-    if (texdatasize) {
-	dmiptexlump_t *lump = (dmiptexlump_t *)dtexdata;
+    if (bspdata->texdatasize) {
+	dmiptexlump_t *lump = (dmiptexlump_t *)bspdata->dtexdata;
 	int count = lump->nummiptex;
 	if (swap == TO_CPU)
 	    count = LittleLong(count);
@@ -261,30 +268,32 @@ SwapBSPFile(swaptype_t swap)
     }
 
     /* marksurfaces */
-    for (i = 0; i < nummarksurfaces; i++)
-	dmarksurfaces[i] = LittleShort(dmarksurfaces[i]);
+    for (i = 0; i < bspdata->nummarksurfaces; i++) {
+	unsigned short *marksurface = &bspdata->dmarksurfaces[i];
+	*marksurface = LittleShort(*marksurface);
+    }
 
     /* surfedges */
-    for (i = 0; i < numsurfedges; i++)
-	dsurfedges[i] = LittleLong(dsurfedges[i]);
+    for (i = 0; i < bspdata->numsurfedges; i++) {
+	int *surfedge = &bspdata->dsurfedges[i];
+	*surfedge = LittleLong(*surfedge);
+    }
 
     /* edges */
-    for (i = 0; i < numedges; i++) {
-	dedges[i].v[0] = LittleShort(dedges[i].v[0]);
-	dedges[i].v[1] = LittleShort(dedges[i].v[1]);
+    for (i = 0; i < bspdata->numedges; i++) {
+	dedge_t *edge = &bspdata->dedges[i];
+	edge->v[0] = LittleShort(edge->v[0]);
+	edge->v[1] = LittleShort(edge->v[1]);
     }
 
     /* models */
-    for (i = 0; i < nummodels; i++) {
-	dmodel_t *dmodel = &dmodels[i];
-
+    for (i = 0; i < bspdata->nummodels; i++) {
+	dmodel_t *dmodel = &bspdata->dmodels[i];
 	for (j = 0; j < MAX_MAP_HULLS; j++)
 	    dmodel->headnode[j] = LittleLong(dmodel->headnode[j]);
-
 	dmodel->visleafs = LittleLong(dmodel->visleafs);
 	dmodel->firstface = LittleLong(dmodel->firstface);
 	dmodel->numfaces = LittleLong(dmodel->numfaces);
-
 	for (j = 0; j < 3; j++) {
 	    dmodel->mins[j] = LittleFloat(dmodel->mins[j]);
 	    dmodel->maxs[j] = LittleFloat(dmodel->maxs[j]);
@@ -347,6 +356,7 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 int
 LoadBSPFile(const char *filename)
 {
+    bspdata_t bspdata;
     dheader_t *header;
     int i, bsp_version;
 
@@ -388,7 +398,8 @@ LoadBSPFile(const char *filename)
     free(header);
 
     /* swap everything */
-    SwapBSPFile(TO_CPU);
+    GetBSPGlobals(&bspdata);
+    SwapBSPFile(&bspdata, TO_CPU);
 
     /* Return the version */
     return bsp_version;
@@ -420,12 +431,14 @@ AddLump(FILE *wadfile, dheader_t *header, int lumpnum,
 void
 WriteBSPFile(const char *filename, int version)
 {
+    bspdata_t bspdata;
     dheader_t header;
     FILE *wadfile;
 
     memset(&header, 0, sizeof(header));
 
-    SwapBSPFile(TO_DISK);
+    GetBSPGlobals(&bspdata);
+    SwapBSPFile(&bspdata, TO_DISK);
 
     header.version = LittleLong(version);
     logprint("Writing BSP version %i\n", header.version);
