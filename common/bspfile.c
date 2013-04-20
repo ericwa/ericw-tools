@@ -191,7 +191,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
     /* planes */
     for (i = 0; i < bspdata->numplanes; i++) {
-	dplane_t *plane = &dplanes[i];
+	dplane_t *plane = &bspdata->dplanes[i];
 	for (j = 0; j < 3; j++)
 	    plane->normal[j] = LittleFloat(plane->normal[j]);
 	plane->dist = LittleFloat(plane->dist);
