@@ -39,57 +39,56 @@ typedef struct {
     char name[16];		// must be null terminated
 } lumpinfo_t;
 
-void
-ExportWad(FILE *f)
+static void
+ExportWad(FILE *wadfile, bspdata_t *bsp)
 {
     wadinfo_t header;
-    dtexdata_t m;
-    miptex_t *mt;
-    int i, j, datalen;
-    lumpinfo_t l;
+    lumpinfo_t lump;
+    dtexdata_t texdata;
+    miptex_t *miptex;
+    int i, j, size, filepos;
 
-    m = dtexdata;
+    texdata = bsp->dtexdata;
     memcpy(&header.identification, "WAD2", 4);
-    header.numlumps = m.header->nummiptex;
-    header.infotableofs = sizeof(wadinfo_t);
+    header.numlumps = texdata.header->nummiptex;
+    header.infotableofs = sizeof(header);
 
     /* Byte-swap header and write out */
     header.numlumps = LittleLong(header.numlumps);
     header.infotableofs = LittleLong(header.infotableofs);
-    fwrite(&header, sizeof(wadinfo_t), 1, f);
+    fwrite(&header, sizeof(header), 1, wadfile);
 
-    datalen = sizeof(wadinfo_t) + sizeof(lumpinfo_t) * m.header->nummiptex;
+    /* miptex data will follow the lump headers */
+    filepos = sizeof(header) + sizeof(lump) * texdata.header->nummiptex;
+    for (i = 0; i < texdata.header->nummiptex; i++) {
+	miptex = (miptex_t *)(texdata.base + texdata.header->dataofs[i]);
 
-    for (i = 0; i < m.header->nummiptex; i++) {
-	mt = (miptex_t *)(m.base + m.header->dataofs[i]);
+	lump.filepos = filepos;
+	lump.size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
+	lump.type = 'D';
+	lump.disksize = lump.size;
+	lump.compression = 0;
+	lump.pad1 = lump.pad2 = 0;
+	snprintf(lump.name, sizeof(lump.name), "%s", miptex->name);
 
-	l.filepos = datalen;
-	l.disksize = sizeof(miptex_t) + mt->width * mt->height / 64 * 85;
-	l.size = l.disksize;
-	l.type = 'D';
-	l.compression = 0;
-	l.pad1 = l.pad2 = 0;
-	memcpy(l.name, mt->name, 15);
-	l.name[15] = 0;
-
-	datalen += l.disksize;
+	filepos += lump.disksize;
 
 	/* Byte-swap lumpinfo and write out */
-	l.filepos = LittleLong(l.filepos);
-	l.disksize = LittleLong(l.disksize);
-	l.size = LittleLong(l.size);
-	fwrite(&l, sizeof(lumpinfo_t), 1, f);
+	lump.filepos = LittleLong(lump.filepos);
+	lump.disksize = LittleLong(lump.disksize);
+	lump.size = LittleLong(lump.size);
+	fwrite(&lump, sizeof(lump), 1, wadfile);
     }
-    for (i = 0; i < m.header->nummiptex; i++) {
-	mt = (miptex_t *)(m.base + m.header->dataofs[i]);
-	datalen = sizeof(miptex_t) + mt->width * mt->height / 64 * 85;
+    for (i = 0; i < texdata.header->nummiptex; i++) {
+	miptex = (miptex_t *)(texdata.base + texdata.header->dataofs[i]);
+	size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
 
 	/* Byte-swap miptex info and write out */
-	mt->width = LittleLong(mt->width);
-	mt->height = LittleLong(mt->height);
+	miptex->width = LittleLong(miptex->width);
+	miptex->height = LittleLong(miptex->height);
 	for (j = 0; j < MIPLEVELS; j++)
-	    mt->offsets[j] = LittleLong(mt->offsets[j]);
-	fwrite(mt, datalen, 1, f);
+	    miptex->offsets[j] = LittleLong(miptex->offsets[j]);
+	fwrite(miptex, size, 1, wadfile);
     }
 }
 
@@ -114,7 +113,6 @@ main(int argc, char **argv)
     printf("%s\n", source);
 
     LoadBSPFile(source, &bsp);
-    SetBSPGlobals(&bsp); /* FIXME */
 
     for (i = 0; i < argc - 1; i++) {
 	if (!strcmp(argv[i], "--extract-entities")) {
@@ -144,7 +142,7 @@ main(int argc, char **argv)
 	    if (!f)
 		Error("couldn't open %s for writing\n", source);
 
-	    ExportWad(f);
+	    ExportWad(f, &bsp);
 
 	    err = fclose(f);
 	    if (err)
