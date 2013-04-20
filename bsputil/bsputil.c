@@ -92,6 +92,122 @@ ExportWad(FILE *wadfile, bspdata_t *bsp)
     }
 }
 
+static void
+CheckBSPFile(const bspdata_t *bsp)
+{
+    int i;
+
+    /* faces */
+    for (i = 0; i < bsp->numfaces; i++) {
+	const dface_t *face = &bsp->dfaces[i];
+
+	/* texinfo bounds check */
+	if (face->texinfo < 0)
+	    printf("warning: face %d has negative texinfo (%d)\n",
+		   i, face->texinfo);
+	if (face->texinfo >= bsp->numtexinfo)
+	    printf("warning: face %d has texinfo out of range (%d >= %d)\n",
+		   i, face->texinfo, bsp->numtexinfo);
+
+	/* planenum bounds check */
+	if (face->planenum < 0)
+	    printf("warning: face %d has negative planenum (%d)\n",
+		   i, face->planenum);
+	if (face->planenum >= bsp->numplanes)
+	    printf("warning: face %d has planenum out of range (%d >= %d)\n",
+		   i, face->planenum, bsp->numplanes);
+
+	/* lightofs check */
+	if (face->lightofs < -1)
+	    printf("warning: face %d has negative light offset (%d)\n",
+		   i, face->lightofs);
+	if (face->lightofs >= bsp->lightdatasize)
+	    printf("warning: face %d has light offset out of range "
+		   "(%d >= %d)\n", i, face->lightofs, bsp->lightdatasize);
+
+	/* edge check */
+	if (face->firstedge < 0)
+	    printf("warning: face %d has negative firstedge (%d)\n",
+		   i, face->firstedge);
+	if (face->firstedge + face->numedges > bsp->numsurfedges)
+	    printf("warning: face %d has edges out of range (%d..%d >= %d)\n",
+		   i, face->firstedge, face->firstedge + face->numedges - 1,
+		   bsp->numsurfedges);
+    }
+
+    /* edges */
+    for (i = 0; i < bsp->numedges; i++) {
+	const dedge_t *edge = &bsp->dedges[i];
+	int j;
+
+	for (j = 0; j < 2; j++) {
+	    const uint16_t vertex = edge->v[j];
+	    if (vertex < 0)
+		printf("warning: edge %d has vertex %d < 0 (%d)\n",
+		       i, j, vertex);
+	    if (vertex > bsp->numvertexes)
+		printf("warning: edge %d has vertex %d out range "
+		       "(%d >= %d)\n", i, j, vertex, bsp->numvertexes);
+	}
+    }
+
+    /* surfedges */
+    for (i = 0; i < bsp->numsurfedges; i++) {
+	const int edgenum = bsp->dsurfedges[i];
+	if (!edgenum)
+	    printf("warning: surfedge %d has zero value!\n", i);
+	if (abs(edgenum) >= bsp->numedges)
+	    printf("warning: surfedge %d is out of range (abs(%d) >= %d)\n",
+		   i, edgenum, bsp->numedges);
+    }
+
+    /* marksurfaces */
+    for (i = 0; i < bsp->nummarksurfaces; i++) {
+	const uint16_t surfnum = bsp->dmarksurfaces[i];
+	if (surfnum >= bsp->numfaces)
+	    printf("warning: marksurface %d is out of range (%d >= %d)\n",
+		   i, surfnum, bsp->numfaces);
+    }
+
+    /* leafs */
+    for (i = 0; i < bsp->numleafs; i++) {
+	const dleaf_t *leaf = &bsp->dleafs[i];
+	const uint16_t endmarksurface =
+	    leaf->firstmarksurface + leaf->nummarksurfaces;
+	if (leaf->firstmarksurface < 0)
+	    printf("warning: leaf %d had negative firstmarksurface (%d)\n",
+		   i, leaf->firstmarksurface);
+	if (endmarksurface > bsp->nummarksurfaces)
+	    printf("warning: leaf %d has marksurfaces out of range "
+		   "(%d..%d >= %d)\n", i, leaf->firstmarksurface,
+		   endmarksurface - 1, bsp->nummarksurfaces);
+	if (leaf->visofs < -1)
+	    printf("warning: leaf %d has negative visdata offset (%d)\n",
+		   i, leaf->visofs);
+	if (leaf->visofs >= bsp->visdatasize)
+	    printf("warning: leaf %d has visdata offset out of range "
+		   "(%d >= %d)\n", i, leaf->visofs, bsp->visdatasize);
+    }
+
+    /* nodes */
+    for (i = 0; i < bsp->numnodes; i++) {
+	const dnode_t *node = &bsp->dnodes[i];
+	int j;
+
+	for (j = 0; j < 2; j++) {
+	    const int16_t child = node->children[j];
+	    if (child >= 0 && child >= bsp->numnodes)
+		printf("warning: node %d has child %d (node) out of range "
+		       "(%d >= %d)\n", i, j, child, bsp->numnodes);
+	    if (child < 0 && -child - 1 >= bsp->numleafs)
+		printf("warning: node %d has child %d (leaf) out of range "
+		       "(%d >= %d)\n", i, j, -child - 1, bsp->numleafs);
+	}
+    }
+
+    /* TODO: finish range checks, add "unreferenced" checks... */
+}
+
 int
 main(int argc, char **argv)
 {
@@ -103,7 +219,7 @@ main(int argc, char **argv)
     printf("---- bsputil / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
     if (argc == 1) {
 	printf("usage: bsputil [--extract-entities] [--extract-textures] "
-	       "bspfile");
+	       "[--check] bspfile");
 	exit(1);
     }
 
@@ -149,6 +265,10 @@ main(int argc, char **argv)
 		Error("%s", strerror(errno));
 
 	    printf("done.\n");
+	} else if (!strcmp(argv[i], "--check")) {
+	    printf("Beginning BSP data check...\n");
+	    CheckBSPFile(&bsp);
+	    printf("Done.\n");
 	}
     }
 
