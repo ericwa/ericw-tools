@@ -376,6 +376,7 @@ LoadBSPFile(const char *filename)
     }
 
     /* copy the data */
+    memset(&bsp, 0, sizeof(bsp));
     bsp.nummodels = CopyLump(header, LUMP_MODELS, &bsp.dmodels);
     bsp.numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp.dvertexes);
     bsp.numplanes = CopyLump(header, LUMP_PLANES, &bsp.dplanes);
