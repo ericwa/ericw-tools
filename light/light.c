@@ -218,6 +218,7 @@ LightWorld(void)
 int
 main(int argc, const char **argv)
 {
+    bspdata_t bsp;
     int i, bsp_version;
     double start;
     double end;
@@ -306,7 +307,10 @@ main(int argc, const char **argv)
     free(modelinfo);
 
     WriteEntitiesToString();
-    WriteBSPFile(source, bsp_version);
+
+    GetBSPGlobals(&bsp);
+    WriteBSPFile(source, &bsp, bsp_version);
+
     if (colored)
 	WriteLitFile(source, LIT_VERSION);
 

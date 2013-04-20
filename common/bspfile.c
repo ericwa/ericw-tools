@@ -409,19 +409,23 @@ LoadBSPFile(const char *filename)
 
 /* ========================================================================= */
 
+typedef struct {
+    dheader_t header;
+    FILE *file;
+} bspfile_t;
+
 static void
-AddLump(FILE *wadfile, dheader_t *header, int lumpnum,
-	const void *data, int count)
+AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
 {
     const size_t size = lumpspec[lumpnum].size * count;
-    lump_t *lump = &header->lumps[lumpnum];
+    lump_t *lump = &bspfile->header.lumps[lumpnum];
     byte pad[4] = {0};
 
-    lump->fileofs = LittleLong(ftell(wadfile));
+    lump->fileofs = LittleLong(ftell(bspfile->file));
     lump->filelen = LittleLong(size);
-    SafeWrite(wadfile, data, (size + 3) & ~3);
+    SafeWrite(bspfile->file, data, (size + 3) & ~3);
     if (size % 4)
-	SafeWrite(wadfile, pad, size % 4);
+	SafeWrite(bspfile->file, pad, size % 4);
 }
 
 /*
@@ -431,45 +435,42 @@ AddLump(FILE *wadfile, dheader_t *header, int lumpnum,
  * =============
  */
 void
-WriteBSPFile(const char *filename, int version)
+WriteBSPFile(const char *filename, bspdata_t *bsp, int version)
 {
-    bspdata_t bspdata;
-    dheader_t header;
-    FILE *wadfile;
+    bspfile_t bspfile;
 
-    memset(&header, 0, sizeof(header));
+    memset(&bspfile.header, 0, sizeof(bspfile.header));
 
-    GetBSPGlobals(&bspdata);
-    SwapBSPFile(&bspdata, TO_DISK);
+    SwapBSPFile(bsp, TO_DISK);
 
-    header.version = LittleLong(version);
-    logprint("Writing BSP version %i\n", header.version);
-    wadfile = SafeOpenWrite(filename);
+    bspfile.header.version = LittleLong(version);
+    logprint("Writing BSP version %i\n", bspfile.header.version);
+    bspfile.file = SafeOpenWrite(filename);
 
     /* Save header space, updated after adding the lumps */
-    SafeWrite(wadfile, &header, sizeof(header));
+    SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
 
-    AddLump(wadfile, &header, LUMP_PLANES, dplanes, numplanes);
-    AddLump(wadfile, &header, LUMP_LEAFS, dleafs, numleafs);
-    AddLump(wadfile, &header, LUMP_VERTEXES, dvertexes, numvertexes);
-    AddLump(wadfile, &header, LUMP_NODES, dnodes, numnodes);
-    AddLump(wadfile, &header, LUMP_TEXINFO, texinfo, numtexinfo);
-    AddLump(wadfile, &header, LUMP_FACES, dfaces, numfaces);
-    AddLump(wadfile, &header, LUMP_CLIPNODES, dclipnodes, numclipnodes);
-    AddLump(wadfile, &header, LUMP_MARKSURFACES, dmarksurfaces, nummarksurfaces);
-    AddLump(wadfile, &header, LUMP_SURFEDGES, dsurfedges, numsurfedges);
-    AddLump(wadfile, &header, LUMP_EDGES, dedges, numedges);
-    AddLump(wadfile, &header, LUMP_MODELS, dmodels, nummodels);
+    AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
+    AddLump(&bspfile, LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
+    AddLump(&bspfile, LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
+    AddLump(&bspfile, LUMP_NODES, bsp->dnodes, bsp->numnodes);
+    AddLump(&bspfile, LUMP_TEXINFO, bsp->texinfo, bsp->numtexinfo);
+    AddLump(&bspfile, LUMP_FACES, bsp->dfaces, bsp->numfaces);
+    AddLump(&bspfile, LUMP_CLIPNODES, bsp->dclipnodes, bsp->numclipnodes);
+    AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
+    AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
+    AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
+    AddLump(&bspfile, LUMP_MODELS, bsp->dmodels, bsp->nummodels);
 
-    AddLump(wadfile, &header, LUMP_LIGHTING, dlightdata, lightdatasize);
-    AddLump(wadfile, &header, LUMP_VISIBILITY, dvisdata, visdatasize);
-    AddLump(wadfile, &header, LUMP_ENTITIES, dentdata, entdatasize);
-    AddLump(wadfile, &header, LUMP_TEXTURES, dtexdata, texdatasize);
+    AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
+    AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
+    AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
+    AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
 
-    fseek(wadfile, 0, SEEK_SET);
-    SafeWrite(wadfile, &header, sizeof(header));
+    fseek(bspfile.file, 0, SEEK_SET);
+    SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
 
-    fclose(wadfile);
+    fclose(bspfile.file);
 }
 
 /* ========================================================================= */

@@ -1160,6 +1160,7 @@ char statetmpfile[1024];
 int
 main(int argc, char **argv)
 {
+    bspdata_t bsp;
     int i, bsp_version;
 
     init_log("vis.log");
@@ -1255,7 +1256,8 @@ main(int argc, char **argv)
 
     CalcAmbientSounds();
 
-    WriteBSPFile(sourcefile, bsp_version);
+    GetBSPGlobals(&bsp);
+    WriteBSPFile(sourcefile, &bsp, bsp_version);
 
 //    unlink (portalfile);
 
