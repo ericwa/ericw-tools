@@ -70,6 +70,8 @@ int *dsurfedges;
 
 /* ========================================================================= */
 
+typedef enum { TO_DISK, TO_CPU } swaptype_t;
+
 /*
  * =============
  * SwapBSPFile
@@ -77,7 +79,7 @@ int *dsurfedges;
  * =============
  */
 static void
-SwapBSPFile(qboolean todisk)
+SwapBSPFile(swaptype_t swap)
 {
     int i, j;
 
@@ -150,7 +152,9 @@ SwapBSPFile(qboolean todisk)
     /* miptex */
     if (texdatasize) {
 	dmiptexlump_t *lump = (dmiptexlump_t *)dtexdata;
-	int count = todisk ? lump->nummiptex : LittleLong(lump->nummiptex);
+	int count = lump->nummiptex;
+	if (swap == TO_CPU)
+	    count = LittleLong(count);
 
 	lump->nummiptex = LittleLong(lump->nummiptex);
 	for (i = 0; i < count; i++)
@@ -285,7 +289,7 @@ LoadBSPFile(const char *filename)
     free(header);
 
     /* swap everything */
-    SwapBSPFile(false);
+    SwapBSPFile(TO_CPU);
 
     /* Return the version */
     return bsp_version;
@@ -322,7 +326,7 @@ WriteBSPFile(const char *filename, int version)
 
     memset(&header, 0, sizeof(header));
 
-    SwapBSPFile(true);
+    SwapBSPFile(TO_DISK);
 
     header.version = LittleLong(version);
     logprint("Writing BSP version %i\n", header.version);
