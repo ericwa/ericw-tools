@@ -68,6 +68,105 @@ unsigned short *dmarksurfaces;
 int numsurfedges;
 int *dsurfedges;
 
+/* Transitional helper functions */
+void
+GetBSPGlobals(bspdata_t *bspdata)
+{
+    bspdata->nummodels = nummodels;
+    bspdata->dmodels = dmodels;
+
+    bspdata->visdatasize = visdatasize;
+    bspdata->dvisdata = dvisdata;
+
+    bspdata->lightdatasize = lightdatasize;
+    bspdata->dlightdata = dlightdata;
+
+    bspdata->texdatasize = texdatasize;
+    bspdata->dtexdata = dtexdata;
+
+    bspdata->entdatasize = entdatasize;
+    bspdata->dentdata = dentdata;
+
+    bspdata->numleafs = numleafs;
+    bspdata->dleafs = dleafs;
+
+    bspdata->numplanes = numplanes;
+    bspdata->dplanes = dplanes;
+
+    bspdata->numvertexes = numvertexes;
+    bspdata->dvertexes = dvertexes;
+
+    bspdata->numnodes = numnodes;
+    bspdata->dnodes = dnodes;
+
+    bspdata->numtexinfo = numtexinfo;
+    bspdata->texinfo = texinfo;
+
+    bspdata->numfaces = numfaces;
+    bspdata->dfaces = dfaces;
+
+    bspdata->numclipnodes = numclipnodes;
+    bspdata->dclipnodes = dclipnodes;
+
+    bspdata->numedges = numedges;
+    bspdata->dedges = dedges;
+
+    bspdata->nummarksurfaces = nummarksurfaces;
+    bspdata->dmarksurfaces = dmarksurfaces;
+
+    bspdata->numsurfedges = numsurfedges;
+    bspdata->dsurfedges = dsurfedges;
+}
+
+void
+SetBSPGlobals(const bspdata_t *bspdata)
+{
+    nummodels = bspdata->nummodels;
+    dmodels = bspdata->dmodels;
+
+    visdatasize = bspdata->visdatasize;
+    dvisdata = bspdata->dvisdata;
+
+    lightdatasize = bspdata->lightdatasize;
+    dlightdata = bspdata->dlightdata;
+
+    texdatasize = bspdata->texdatasize;
+    dtexdata = bspdata->dtexdata;
+
+    entdatasize = bspdata->entdatasize;
+    dentdata = bspdata->dentdata;
+
+    numleafs = bspdata->numleafs;
+    dleafs = bspdata->dleafs;
+
+    numplanes = bspdata->numplanes;
+    dplanes = bspdata->dplanes;
+
+    numvertexes = bspdata->numvertexes;
+    dvertexes = bspdata->dvertexes;
+
+    numnodes = bspdata->numnodes;
+    dnodes = bspdata->dnodes;
+
+    numtexinfo = bspdata->numtexinfo;
+    texinfo = bspdata->texinfo;
+
+    numfaces = bspdata->numfaces;
+    dfaces = bspdata->dfaces;
+
+    numclipnodes = bspdata->numclipnodes;
+    dclipnodes = bspdata->dclipnodes;
+
+    numedges = bspdata->numedges;
+    dedges = bspdata->dedges;
+
+    nummarksurfaces = bspdata->nummarksurfaces;
+    dmarksurfaces = bspdata->dmarksurfaces;
+
+    numsurfedges = bspdata->numsurfedges;
+    dsurfedges = bspdata->dsurfedges;
+}
+
 /* ========================================================================= */
 
 typedef enum { TO_DISK, TO_CPU } swaptype_t;

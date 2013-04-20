@@ -205,8 +205,6 @@ typedef struct {
 
 /* ========================================================================= */
 
-/* the utilities get to be lazy and just use large static arrays */
-
 extern int nummodels;
 extern dmodel_t *dmodels;
 
@@ -252,6 +250,57 @@ extern unsigned short *dmarksurfaces;
 extern int numsurfedges;
 extern int *dsurfedges;
 
+/* TODO - Transition utils over to using an instanced struct for bsp data */
+typedef struct {
+    int nummodels;
+    dmodel_t *dmodels;
+
+    int visdatasize;
+    byte *dvisdata;
+
+    int lightdatasize;
+    byte *dlightdata;
+
+    int texdatasize;
+    byte *dtexdata;	/* (dmiptexlump_t) */
+
+    int entdatasize;
+    char *dentdata;
+
+    int numleafs;
+    dleaf_t *dleafs;
+
+    int numplanes;
+    dplane_t *dplanes;
+
+    int numvertexes;
+    dvertex_t *dvertexes;
+
+    int numnodes;
+    dnode_t *dnodes;
+
+    int numtexinfo;
+    texinfo_t *texinfo;
+
+    int numfaces;
+    dface_t *dfaces;
+
+    int numclipnodes;
+    dclipnode_t *dclipnodes;
+
+    int numedges;
+    dedge_t *dedges;
+
+    int nummarksurfaces;
+    unsigned short *dmarksurfaces;
+
+    int numsurfedges;
+    int *dsurfedges;
+} bspdata_t;
+
+/* Transitional helper functions */
+void GetBSPGlobals(bspdata_t *bspdata);
+void SetBSPGlobals(const bspdata_t *bspdata);
 
 /* LoadBSPFile returns the BSP version... */
 int LoadBSPFile(const char *filename);
