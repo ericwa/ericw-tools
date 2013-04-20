@@ -356,18 +356,17 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 int
 LoadBSPFile(const char *filename)
 {
-    bspdata_t bspdata;
+    bspdata_t bsp;
     dheader_t *header;
-    int i, bsp_version;
+    int i;
 
     /* load the file header */
     LoadFile(filename, &header);
 
     /* check the file version */
     header->version = LittleLong(header->version);
-    bsp_version = (int)header->version;
-    logprint("BSP is version %i\n", bsp_version);
-    if (bsp_version != 29)
+    logprint("BSP is version %i\n", header->version);
+    if (header->version != 29)
 	Error("Sorry, only bsp version 29 supported.");
 
     /* swap the lump headers */
@@ -377,32 +376,34 @@ LoadBSPFile(const char *filename)
     }
 
     /* copy the data */
-    nummodels = CopyLump(header, LUMP_MODELS, &dmodels);
-    numvertexes = CopyLump(header, LUMP_VERTEXES, &dvertexes);
-    numplanes = CopyLump(header, LUMP_PLANES, &dplanes);
-    numleafs = CopyLump(header, LUMP_LEAFS, &dleafs);
-    numnodes = CopyLump(header, LUMP_NODES, &dnodes);
-    numtexinfo = CopyLump(header, LUMP_TEXINFO, &texinfo);
-    numclipnodes = CopyLump(header, LUMP_CLIPNODES, &dclipnodes);
-    numfaces = CopyLump(header, LUMP_FACES, &dfaces);
-    nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &dmarksurfaces);
-    numsurfedges = CopyLump(header, LUMP_SURFEDGES, &dsurfedges);
-    numedges = CopyLump(header, LUMP_EDGES, &dedges);
+    bsp.nummodels = CopyLump(header, LUMP_MODELS, &bsp.dmodels);
+    bsp.numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp.dvertexes);
+    bsp.numplanes = CopyLump(header, LUMP_PLANES, &bsp.dplanes);
+    bsp.numleafs = CopyLump(header, LUMP_LEAFS, &bsp.dleafs);
+    bsp.numnodes = CopyLump(header, LUMP_NODES, &bsp.dnodes);
+    bsp.numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp.texinfo);
+    bsp.numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp.dclipnodes);
+    bsp.numfaces = CopyLump(header, LUMP_FACES, &bsp.dfaces);
+    bsp.nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp.dmarksurfaces);
+    bsp.numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp.dsurfedges);
+    bsp.numedges = CopyLump(header, LUMP_EDGES, &bsp.dedges);
 
-    texdatasize = CopyLump(header, LUMP_TEXTURES, &dtexdata);
-    visdatasize = CopyLump(header, LUMP_VISIBILITY, &dvisdata);
-    lightdatasize = CopyLump(header, LUMP_LIGHTING, &dlightdata);
-    entdatasize = CopyLump(header, LUMP_ENTITIES, &dentdata);
+    bsp.texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp.dtexdata);
+    bsp.visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp.dvisdata);
+    bsp.lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp.dlightdata);
+    bsp.entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp.dentdata);
 
     /* everything has been copied out */
     free(header);
 
     /* swap everything */
-    GetBSPGlobals(&bspdata);
-    SwapBSPFile(&bspdata, TO_CPU);
+    SwapBSPFile(&bsp, TO_CPU);
+
+    /* Set the bsp globals for compatibility */
+    SetBSPGlobals(&bsp);
 
     /* Return the version */
-    return bsp_version;
+    return header->version;
 }
 
 /* ========================================================================= */
