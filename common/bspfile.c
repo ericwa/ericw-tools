@@ -208,8 +208,6 @@ const lumpspec_t lumpspec[] = {
     { "model",       sizeof(dmodel_t)       },
 };
 
-static dheader_t *header;
-
 static int
 CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 {
@@ -246,21 +244,26 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 int
 LoadBSPFile(const char *filename)
 {
+    dheader_t *header;
     int i, bsp_version;
 
     /* load the file header */
     LoadFile(filename, &header);
 
-    /* swap the header */
-    for (i = 0; i < sizeof(dheader_t) / 4; i++)
-	((int *)header)[i] = LittleLong(((int *)header)[i]);
-
+    /* check the file version */
+    header->version = LittleLong(header->version);
     bsp_version = (int)header->version;
     logprint("BSP is version %i\n", bsp_version);
-
     if (bsp_version != 29)
 	Error("Sorry, only bsp version 29 supported.");
 
+    /* swap the lump headers */
+    for (i = 0; i < HEADER_LUMPS; i++) {
+	header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
+	header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
+    }
+
+    /* copy the data */
     nummodels = CopyLump(header, LUMP_MODELS, &dmodels);
     numvertexes = CopyLump(header, LUMP_VERTEXES, &dvertexes);
     numplanes = CopyLump(header, LUMP_PLANES, &dplanes);
@@ -278,7 +281,8 @@ LoadBSPFile(const char *filename)
     lightdatasize = CopyLump(header, LUMP_LIGHTING, &dlightdata);
     entdatasize = CopyLump(header, LUMP_ENTITIES, &dentdata);
 
-    free(header);		/* everything has been copied out */
+    /* everything has been copied out */
+    free(header);
 
     /* swap everything */
     SwapBSPFile(false);
@@ -289,21 +293,19 @@ LoadBSPFile(const char *filename)
 
 /* ========================================================================= */
 
-static FILE *wadfile;
-
 static void
-AddLump(int lumpnum, const void *data, int len)
+AddLump(FILE *wadfile, dheader_t *header, int lumpnum,
+	const void *data, int count)
 {
-    lump_t *lump;
+    const size_t size = lumpspec[lumpnum].size * count;
+    lump_t *lump = &header->lumps[lumpnum];
     byte pad[4] = {0};
 
-    lump = &header->lumps[lumpnum];
-
     lump->fileofs = LittleLong(ftell(wadfile));
-    lump->filelen = LittleLong(len);
-    SafeWrite(wadfile, data, (len + 3) & ~3);
-    if (len % 4)
-	SafeWrite(wadfile, pad, len % 4);
+    lump->filelen = LittleLong(size);
+    SafeWrite(wadfile, data, (size + 3) & ~3);
+    if (size % 4)
+	SafeWrite(wadfile, pad, size % 4);
 }
 
 /*
@@ -315,38 +317,39 @@ AddLump(int lumpnum, const void *data, int len)
 void
 WriteBSPFile(const char *filename, int version)
 {
-    dheader_t outheader;
+    dheader_t header;
+    FILE *wadfile;
 
-    header = &outheader;
-    memset(header, 0, sizeof(dheader_t));
+    memset(&header, 0, sizeof(header));
 
     SwapBSPFile(true);
 
-    header->version = LittleLong(version);
-    logprint("Writing BSP version %i\n", (int)header->version);
+    header.version = LittleLong(version);
+    logprint("Writing BSP version %i\n", header.version);
     wadfile = SafeOpenWrite(filename);
-    SafeWrite(wadfile, header, sizeof(dheader_t));	/* overwritten later */
 
-    AddLump(LUMP_PLANES, dplanes, numplanes * sizeof(dplane_t));
-    AddLump(LUMP_LEAFS, dleafs, numleafs * sizeof(dleaf_t));
-    AddLump(LUMP_VERTEXES, dvertexes, numvertexes * sizeof(dvertex_t));
-    AddLump(LUMP_NODES, dnodes, numnodes * sizeof(dnode_t));
-    AddLump(LUMP_TEXINFO, texinfo, numtexinfo * sizeof(texinfo_t));
-    AddLump(LUMP_FACES, dfaces, numfaces * sizeof(dface_t));
-    AddLump(LUMP_CLIPNODES, dclipnodes, numclipnodes * sizeof(dclipnode_t));
-    AddLump(LUMP_MARKSURFACES, dmarksurfaces,
-	    nummarksurfaces * sizeof(dmarksurfaces[0]));
-    AddLump(LUMP_SURFEDGES, dsurfedges, numsurfedges * sizeof(dsurfedges[0]));
-    AddLump(LUMP_EDGES, dedges, numedges * sizeof(dedge_t));
-    AddLump(LUMP_MODELS, dmodels, nummodels * sizeof(dmodel_t));
+    /* Save header space, updated after adding the lumps */
+    SafeWrite(wadfile, &header, sizeof(header));
 
-    AddLump(LUMP_LIGHTING, dlightdata, lightdatasize);
-    AddLump(LUMP_VISIBILITY, dvisdata, visdatasize);
-    AddLump(LUMP_ENTITIES, dentdata, entdatasize);
-    AddLump(LUMP_TEXTURES, dtexdata, texdatasize);
+    AddLump(wadfile, &header, LUMP_PLANES, dplanes, numplanes);
+    AddLump(wadfile, &header, LUMP_LEAFS, dleafs, numleafs);
+    AddLump(wadfile, &header, LUMP_VERTEXES, dvertexes, numvertexes);
+    AddLump(wadfile, &header, LUMP_NODES, dnodes, numnodes);
+    AddLump(wadfile, &header, LUMP_TEXINFO, texinfo, numtexinfo);
+    AddLump(wadfile, &header, LUMP_FACES, dfaces, numfaces);
+    AddLump(wadfile, &header, LUMP_CLIPNODES, dclipnodes, numclipnodes);
+    AddLump(wadfile, &header, LUMP_MARKSURFACES, dmarksurfaces, nummarksurfaces);
+    AddLump(wadfile, &header, LUMP_SURFEDGES, dsurfedges, numsurfedges);
+    AddLump(wadfile, &header, LUMP_EDGES, dedges, numedges);
+    AddLump(wadfile, &header, LUMP_MODELS, dmodels, nummodels);
+
+    AddLump(wadfile, &header, LUMP_LIGHTING, dlightdata, lightdatasize);
+    AddLump(wadfile, &header, LUMP_VISIBILITY, dvisdata, visdatasize);
+    AddLump(wadfile, &header, LUMP_ENTITIES, dentdata, entdatasize);
+    AddLump(wadfile, &header, LUMP_TEXTURES, dtexdata, texdatasize);
 
     fseek(wadfile, 0, SEEK_SET);
-    SafeWrite(wadfile, header, sizeof(dheader_t));
+    SafeWrite(wadfile, &header, sizeof(header));
 
     fclose(wadfile);
 }

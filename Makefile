@@ -100,7 +100,7 @@ BIN_PFX ?=
 
 STRIP ?= strip
 GROFF ?= groff
-CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs -Wwrite-strings
+CFLAGS := $(CFLAGS) -Wall -Wno-trigraphs -Wwrite-strings -Wcast-qual
 
 ifeq ($(DEBUG),Y)
 CFLAGS += -g
