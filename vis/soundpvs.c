@@ -33,13 +33,13 @@ Find an aproximate distance to the nearest emiter of each class for each leaf.
   SurfaceBBox
   ====================
 */
-void
-SurfaceBBox(dface_t *s, vec3_t mins, vec3_t maxs)
+static void
+SurfaceBBox(const dface_t *s, vec3_t mins, vec3_t maxs)
 {
     int i, j;
     int e;
     int vi;
-    float *v;
+    const float *v;
 
     mins[0] = mins[1] = 999999;
     maxs[0] = maxs[1] = -99999;
@@ -70,15 +70,15 @@ SurfaceBBox(dface_t *s, vec3_t mins, vec3_t maxs)
 void
 CalcAmbientSounds(void)
 {
+    const dface_t *surf;
+    const texinfo_t *info;
+    const miptex_t *miptex;
     int i, j, k, l;
     dleaf_t *leaf, *hit;
     byte *vis;
-    dface_t *surf;
     vec3_t mins, maxs;
     float d, maxd;
     int ambient_type;
-    texinfo_t *info;
-    miptex_t *miptex;
     int ofs;
     float dists[NUM_AMBIENTS];
     float vol;
@@ -106,8 +106,8 @@ CalcAmbientSounds(void)
 	    for (k = 0; k < hit->nummarksurfaces; k++) {
 		surf = &dfaces[dmarksurfaces[hit->firstmarksurface + k]];
 		info = &texinfo[surf->texinfo];
-		ofs = ((dmiptexlump_t *)dtexdata)->dataofs[info->miptex];
-		miptex = (miptex_t *)(&dtexdata[ofs]);
+		ofs = dtexdata.header->dataofs[info->miptex];
+		miptex = (const miptex_t *)(dtexdata.base + ofs);
 
 		if (!strncasecmp(miptex->name, "sky", 3) && ambientsky)
 		    ambient_type = AMBIENT_SKY;

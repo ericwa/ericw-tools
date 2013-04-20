@@ -43,14 +43,14 @@ void
 ExportWad(FILE *f)
 {
     wadinfo_t header;
-    dmiptexlump_t *m;
+    dtexdata_t m;
     miptex_t *mt;
     int i, j, datalen;
     lumpinfo_t l;
 
-    m = (dmiptexlump_t *)dtexdata;
+    m = dtexdata;
     memcpy(&header.identification, "WAD2", 4);
-    header.numlumps = m->nummiptex;
+    header.numlumps = m.header->nummiptex;
     header.infotableofs = sizeof(wadinfo_t);
 
     /* Byte-swap header and write out */
@@ -58,10 +58,10 @@ ExportWad(FILE *f)
     header.infotableofs = LittleLong(header.infotableofs);
     fwrite(&header, sizeof(wadinfo_t), 1, f);
 
-    datalen = sizeof(wadinfo_t) + sizeof(lumpinfo_t) * m->nummiptex;
+    datalen = sizeof(wadinfo_t) + sizeof(lumpinfo_t) * m.header->nummiptex;
 
-    for (i = 0; i < m->nummiptex; i++) {
-	mt = (miptex_t *)((byte *)m + m->dataofs[i]);
+    for (i = 0; i < m.header->nummiptex; i++) {
+	mt = (miptex_t *)(m.base + m.header->dataofs[i]);
 
 	l.filepos = datalen;
 	l.disksize = sizeof(miptex_t) + mt->width * mt->height / 64 * 85;
@@ -80,8 +80,8 @@ ExportWad(FILE *f)
 	l.size = LittleLong(l.size);
 	fwrite(&l, sizeof(lumpinfo_t), 1, f);
     }
-    for (i = 0; i < m->nummiptex; i++) {
-	mt = (miptex_t *)((byte *)m + m->dataofs[i]);
+    for (i = 0; i < m.header->nummiptex; i++) {
+	mt = (miptex_t *)(m.base + m.header->dataofs[i]);
 	datalen = sizeof(miptex_t) + mt->width * mt->height / 64 * 85;
 
 	/* Byte-swap miptex info and write out */

@@ -214,8 +214,13 @@ extern byte *dvisdata;
 extern int lightdatasize;
 extern byte *dlightdata;
 
+typedef union {
+    byte *base;
+    dmiptexlump_t *header;
+} dtexdata_t;
+
 extern int texdatasize;
-extern byte *dtexdata;	/* (dmiptexlump_t) */
+extern dtexdata_t dtexdata;
 
 extern int entdatasize;
 extern char *dentdata;
@@ -262,7 +267,7 @@ typedef struct {
     byte *dlightdata;
 
     int texdatasize;
-    byte *dtexdata;	/* (dmiptexlump_t) */
+    dtexdata_t dtexdata;
 
     int entdatasize;
     char *dentdata;

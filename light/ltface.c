@@ -332,15 +332,15 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 	surf->texmins[i] = mins[i];
 	surf->texsize[i] = maxs[i] - mins[i];
 	if (surf->texsize[i] > 17) {
-	    const dmiptexlump_t *lump = (dmiptexlump_t *)dtexdata;
-	    const char *texname = (char *)dtexdata + lump->dataofs[tex->miptex];
 	    const dplane_t *plane = dplanes + face->planenum;
+	    const int offset = dtexdata.header->dataofs[tex->miptex];
+	    const miptex_t *miptex = (const miptex_t *)(dtexdata.base + offset);
 	    Error("Bad surface extents:\n"
 		  "   surface %d, %s extents = %d\n"
 		  "   texture %s at (%s)\n"
 		  "   surface normal (%s)\n",
 		  face - dfaces, i ? "t" : "s", surf->texsize[i],
-		  texname, VecStr(worldpoint), VecStrf(plane->normal));
+		  miptex->name, VecStr(worldpoint), VecStrf(plane->normal));
 	}
     }
 }

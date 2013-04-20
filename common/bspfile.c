@@ -33,7 +33,7 @@ int lightdatasize;
 byte *dlightdata;
 
 int texdatasize;
-byte *dtexdata; /* (dmiptexlump_t) */
+dtexdata_t dtexdata;
 
 int entdatasize;
 char *dentdata;
@@ -257,14 +257,14 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
     /* miptex */
     if (bspdata->texdatasize) {
-	dmiptexlump_t *lump = (dmiptexlump_t *)bspdata->dtexdata;
-	int count = lump->nummiptex;
+	dmiptexlump_t *header = bspdata->dtexdata.header;
+	int count = header->nummiptex;
 	if (swap == TO_CPU)
 	    count = LittleLong(count);
 
-	lump->nummiptex = LittleLong(lump->nummiptex);
+	header->nummiptex = LittleLong(header->nummiptex);
 	for (i = 0; i < count; i++)
-	    lump->dataofs[i] = LittleLong(lump->dataofs[i]);
+	    header->dataofs[i] = LittleLong(header->dataofs[i]);
     }
 
     /* marksurfaces */
@@ -389,7 +389,7 @@ LoadBSPFile(const char *filename)
     bsp.numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp.dsurfedges);
     bsp.numedges = CopyLump(header, LUMP_EDGES, &bsp.dedges);
 
-    bsp.texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp.dtexdata);
+    bsp.texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp.dtexdata.base);
     bsp.visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp.dvisdata);
     bsp.lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp.dlightdata);
     bsp.entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp.dentdata);
@@ -465,7 +465,7 @@ WriteBSPFile(const char *filename, bspdata_t *bsp, int version)
     AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
     AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
     AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
-    AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
+    AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata.base, bsp->texdatasize);
 
     fseek(bspfile.file, 0, SEEK_SET);
     SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
@@ -494,7 +494,7 @@ PrintBSPFileSizes(const bspdata_t *bsp)
     int numtextures = 0;
 
     if (bsp->texdatasize)
-	numtextures = ((const dmiptexlump_t *)bsp->dtexdata)->nummiptex;
+	numtextures = bsp->dtexdata.header->nummiptex;
 
     PrintLumpSize(LUMP_PLANES, bsp->numplanes);
     PrintLumpSize(LUMP_VERTEXES, bsp->numvertexes);
