@@ -24,8 +24,9 @@
 int
 main(int argc, char **argv)
 {
-    int i;
+    bspdata_t bsp;
     char source[1024];
+    int i;
 
     printf("---- bspinfo / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
     if (argc == 1) {
@@ -40,7 +41,9 @@ main(int argc, char **argv)
 	printf("%s\n", source);
 
 	LoadBSPFile(source);
-	PrintBSPFileSizes();
+
+	GetBSPGlobals(&bsp);
+	PrintBSPFileSizes(&bsp);
 	printf("---------------------\n");
     }
 

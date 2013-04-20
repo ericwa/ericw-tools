@@ -303,21 +303,21 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 }
 
 const lumpspec_t lumpspec[] = {
-    { "entity",      sizeof(char)           },
-    { "plane",       sizeof(dplane_t)       },
-    { "texture",     sizeof(byte)           },
-    { "vertex",      sizeof(dvertex_t)      },
-    { "visibility",  sizeof(byte)           },
-    { "node",        sizeof(dnode_t)        },
-    { "texinfo",     sizeof(texinfo_t)      },
-    { "face",        sizeof(dface_t)        },
-    { "lighting",    sizeof(byte)           },
-    { "clipnode",    sizeof(dclipnode_t)    },
-    { "leaf",        sizeof(dleaf_t)        },
-    { "marksurface", sizeof(unsigned short) },
-    { "edge",        sizeof(dedge_t)        },
-    { "surfedge",    sizeof(int)            },
-    { "model",       sizeof(dmodel_t)       },
+    { "entities",     sizeof(char)           },
+    { "planes",       sizeof(dplane_t)       },
+    { "texture",      sizeof(byte)           },
+    { "vertexes",     sizeof(dvertex_t)      },
+    { "visibility",   sizeof(byte)           },
+    { "nodes",        sizeof(dnode_t)        },
+    { "texinfos",     sizeof(texinfo_t)      },
+    { "faces",        sizeof(dface_t)        },
+    { "lighting",     sizeof(byte)           },
+    { "clipnodes",    sizeof(dclipnode_t)    },
+    { "leafs",        sizeof(dleaf_t)        },
+    { "marksurfaces", sizeof(unsigned short) },
+    { "edges",        sizeof(dedge_t)        },
+    { "surfedges",    sizeof(int)            },
+    { "models",       sizeof(dmodel_t)       },
 };
 
 static int
@@ -474,43 +474,40 @@ WriteBSPFile(const char *filename, int version)
 
 /* ========================================================================= */
 
+static void
+PrintLumpSize(int lumptype, int count)
+{
+    const lumpspec_t *lump = &lumpspec[lumptype];
+    logprint("%7i %-12s %10i\n", count, lump->name, count * (int)lump->size);
+}
+
 /*
  * =============
  * PrintBSPFileSizes
- * Dumps info about current file
+ * Dumps info about the bsp data
  * =============
  */
 void
-PrintBSPFileSizes(void)
+PrintBSPFileSizes(const bspdata_t *bsp)
 {
-    logprint("%6i planes       %8i\n",
-	     numplanes, (int)(numplanes * sizeof(dplane_t)));
-    logprint("%6i vertexes     %8i\n",
-	     numvertexes, (int)(numvertexes * sizeof(dvertex_t)));
-    logprint("%6i nodes        %8i\n",
-	     numnodes, (int)(numnodes * sizeof(dnode_t)));
-    logprint("%6i texinfo      %8i\n",
-	     numtexinfo, (int)(numtexinfo * sizeof(texinfo_t)));
-    logprint("%6i faces        %8i\n",
-	     numfaces, (int)(numfaces * sizeof(dface_t)));
-    logprint("%6i clipnodes    %8i\n",
-	     numclipnodes, (int)(numclipnodes * sizeof(dclipnode_t)));
-    logprint("%6i leafs        %8i\n",
-	     numleafs, (int)(numleafs * sizeof(dleaf_t)));
-    logprint("%6i marksurfaces %8i\n",
-	     nummarksurfaces,
-	     (int)(nummarksurfaces * sizeof(dmarksurfaces[0])));
-    logprint("%6i surfedges    %8i\n", numsurfedges,
-	     (int)(numsurfedges * sizeof(dmarksurfaces[0])));
-    logprint("%6i edges        %8i\n", numedges,
-	     (int)(numedges * sizeof(dedge_t)));
-    if (!texdatasize) {
-	logprint("     0 textures            0\n");
-    } else {
-	logprint("%6i textures     %8i\n",
-		 ((dmiptexlump_t *)dtexdata)->nummiptex, texdatasize);
-    }
-    logprint("       lightdata    %8i\n", lightdatasize);
-    logprint("       visdata      %8i\n", visdatasize);
-    logprint("       entdata      %8i\n", entdatasize);
+    int numtextures = 0;
+
+    if (bsp->texdatasize)
+	numtextures = ((const dmiptexlump_t *)bsp->dtexdata)->nummiptex;
+
+    PrintLumpSize(LUMP_PLANES, bsp->numplanes);
+    PrintLumpSize(LUMP_VERTEXES, bsp->numvertexes);
+    PrintLumpSize(LUMP_NODES, bsp->numnodes);
+    PrintLumpSize(LUMP_TEXINFO, bsp->numtexinfo);
+    PrintLumpSize(LUMP_FACES, bsp->numfaces);
+    PrintLumpSize(LUMP_CLIPNODES, bsp->numclipnodes);
+    PrintLumpSize(LUMP_LEAFS, bsp->numleafs);
+    PrintLumpSize(LUMP_MARKSURFACES, bsp->nummarksurfaces);
+    PrintLumpSize(LUMP_EDGES, bsp->numedges);
+    PrintLumpSize(LUMP_SURFEDGES, bsp->numsurfedges);
+
+    logprint("%7i %-12s %10i\n", numtextures, "textures", bsp->texdatasize);
+    logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
+    logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
+    logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
 }

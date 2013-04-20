@@ -305,6 +305,6 @@ void SetBSPGlobals(const bspdata_t *bspdata);
 /* LoadBSPFile returns the BSP version... */
 int LoadBSPFile(const char *filename);
 void WriteBSPFile(const char *filename, int version);
-void PrintBSPFileSizes(void);
+void PrintBSPFileSizes(const bspdata_t *bsp);
 
 #endif /* __COMMON_BSPFILE_H__ */
