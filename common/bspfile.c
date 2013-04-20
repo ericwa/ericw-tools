@@ -358,13 +358,13 @@ LoadBSPFile(const char *filename)
 {
     bspdata_t bsp;
     dheader_t *header;
-    int i;
+    int i, version;
 
     /* load the file header */
     LoadFile(filename, &header);
 
     /* check the file version */
-    header->version = LittleLong(header->version);
+    version = header->version = LittleLong(header->version);
     logprint("BSP is version %i\n", header->version);
     if (header->version != 29)
 	Error("Sorry, only bsp version 29 supported.");
@@ -403,7 +403,7 @@ LoadBSPFile(const char *filename)
     SetBSPGlobals(&bsp);
 
     /* Return the version */
-    return header->version;
+    return version;
 }
 
 /* ========================================================================= */
