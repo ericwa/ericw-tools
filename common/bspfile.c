@@ -249,7 +249,7 @@ LoadBSPFile(const char *filename)
     int i, bsp_version;
 
     /* load the file header */
-    LoadFile(filename, (void *)&header);
+    LoadFile(filename, &header);
 
     /* swap the header */
     for (i = 0; i < sizeof(dheader_t) / 4; i++)

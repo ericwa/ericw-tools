@@ -80,7 +80,7 @@ FILE *SafeOpenRead(const char *filename);
 void SafeRead(FILE *f, void *buffer, int count);
 void SafeWrite(FILE *f, const void *buffer, int count);
 
-int LoadFile(const char *filename, void **bufferptr);
+int LoadFile(const char *filename, void *destptr);
 void SaveFile(const char *filename, const void *buffer, int count);
 
 void DefaultExtension(char *path, const char *extension);

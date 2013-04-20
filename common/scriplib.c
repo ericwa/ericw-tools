@@ -26,7 +26,7 @@ LoadScriptFile(char *filename)
 {
     int size;
 
-    size = LoadFile(filename, (void **)&scriptbuffer);
+    size = LoadFile(filename, &scriptbuffer);
 
     script_p = scriptbuffer;
     scriptend_p = script_p + size;

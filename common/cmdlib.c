@@ -484,20 +484,23 @@ SafeWrite(FILE *f, const void *buffer, int count)
  * ==============
  */
 int
-LoadFile(const char *filename, void **bufferptr)
+LoadFile(const char *filename, void *destptr)
 {
-    FILE *f;
+    byte **bufferptr = destptr;
+    byte *buffer;
+    FILE *file;
     int length;
-    void *buffer;
 
-    f = SafeOpenRead(filename);
-    length = Sys_filelength(f);
-    buffer = malloc(length + 1);
-    ((char *)buffer)[length] = 0;
-    SafeRead(f, buffer, length);
-    fclose(f);
+    file = SafeOpenRead(filename);
+    length = Sys_filelength(file);
+    buffer = *bufferptr = malloc(length + 1);
+    if (!buffer)
+	Error("%s: allocation of %i bytes failed.", __func__, length);
 
-    *bufferptr = buffer;
+    SafeRead(file, buffer, length);
+    fclose(file);
+    buffer[length] = 0;
+
     return length;
 }
 
