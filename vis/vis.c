@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include <vis/leafbits.h>
 #include <vis/vis.h>
@@ -213,12 +214,12 @@ AllocStackWinding(pstack_t *stack)
 void
 FreeStackWinding(winding_t *w, pstack_t *stack)
 {
-    unsigned long i = w - stack->windings;
+    uintptr_t index = w - stack->windings;
 
-    if (i < STACK_WINDINGS) {
-	if (stack->freewindings[i])
+    if (index < (uintptr_t)STACK_WINDINGS) {
+	if (stack->freewindings[index])
 	    Error("%s: winding already freed", __func__);
-	stack->freewindings[i] = 1;
+	stack->freewindings[index] = 1;
     }
 }
 
