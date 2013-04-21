@@ -2,6 +2,7 @@ Unreleased
 
 * qbsp: fixed surface edge corruption when using skip surfaces
 * qbsp: added "-noskip" option for troubleshooting skip related problems
+* vis: fix portal stack corruption in ClipStackWinding
 * bsputil: added a "--check" option to check internal data consistency
 
 2013-04-10 TyrUtils v0.7

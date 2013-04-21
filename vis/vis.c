@@ -308,6 +308,13 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 	if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
 	    continue;
 
+	if (neww->numpoints == MAX_WINDING_FIXED) {
+	    /* Can't clip, fall back to original */
+	    FreeStackWinding(neww, stack);
+	    c_noclip++;
+	    return in;
+	}
+
 	// generate a split point
 	p2 = in->points[(i + 1) % in->numpoints];
 
