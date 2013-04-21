@@ -1,6 +1,7 @@
 Unreleased
 
 * qbsp: fixed surface edge corruption when using skip surfaces
+* qbsp: fixed portal generation for transparent water and detail nodes
 * qbsp: added "-noskip" option for troubleshooting skip related problems
 * vis: fix portal stack corruption in ClipStackWinding
 * bsputil: added a "--check" option to check internal data consistency

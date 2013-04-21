@@ -54,8 +54,8 @@ ClusterContents(const node_t *node)
 {
     int contents0, contents1;
 
-    /* Either a leaf or non-detail node */
-    if (node->contents || !node->detail_separator)
+    /* Pass the leaf contents up the stack */
+    if (node->contents)
 	return node->contents;
 
     contents0 = ClusterContents(node->children[0]);
