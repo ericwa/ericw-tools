@@ -235,8 +235,8 @@ FreeStackWinding(winding_t *w, pstack_t *stack)
 winding_t *
 ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 {
-    vec_t dists[MAX_WINDING];
-    int sides[MAX_WINDING];
+    vec_t dists[MAX_WINDING + 1];
+    int sides[MAX_WINDING + 1];
     int counts[3];
     vec_t dot;
     int i, j;
