@@ -1,5 +1,6 @@
 Unreleased
 
+* qbsp: fixed surface edge corruption when using skip surfaces
 * qbsp: added "-noskip" option for troubleshooting skip related problems
 * bsputil: added a "--check" option to check internal data consistency
 

@@ -416,10 +416,10 @@ CountData_r(mapentity_t *entity, node_t *node)
 	return;
 
     for (f = node->faces; f; f = f->next) {
-	entity->lumps[BSPVERTEX].count += f->w.numpoints;
 	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
 	entity->lumps[BSPFACE].count++;
+	entity->lumps[BSPVERTEX].count += f->w.numpoints;
     }
 
     CountData_r(entity, node->children[0]);
@@ -457,7 +457,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
      */
     surfedges->count = vertices->count;
     edges->count += surfedges->count;
-    vertices->count = vertices->count * 2 / 3;
 
     vertices->data = AllocMem(BSPVERTEX, vertices->count, true);
     edges->data = AllocMem(BSPEDGE, edges->count, true);
