@@ -125,9 +125,10 @@ ClipToSeperators(const winding_t *source,
 
 	    /* Cache separating planes for tests 0, 1 */
 	    if (test < 2) {
-		stack->separators[test][stack->numseparators[test]] = sep;
-		if (++stack->numseparators[test] >= MAX_SEPARATORS)
+		if (stack->numseparators[test] == MAX_SEPARATORS)
 		    Error("MAX_SEPARATORS");
+		stack->separators[test][stack->numseparators[test]] = sep;
+		stack->numseparators[test]++;
 	    }
 
 	    target = ClipStackWinding(target, stack, &sep);
