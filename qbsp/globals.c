@@ -104,9 +104,6 @@ const char *rgszErrors[cErrors] = {
     "Internal error: invalid memory %i type in AllocMem",
     "Too many points on winding (%d)",
     "Out of memory",
-    "line %d: Line is incomplete",
-    "line %d: EOF inside quoted token",
-    "line %d: Token too large",
     "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
     "Internal error: Detail cluster mismatch",
 };

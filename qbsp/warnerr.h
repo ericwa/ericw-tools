@@ -75,10 +75,6 @@ enum {
     errInvalidMemType,		// 50
     errTooManyPoints,
     errOutOfMemory,
-    errLineIncomplete,
-    errEOFInQuotes,
-    errTokenTooLarge,
-    errLowLeakCount,
     errTooManyClipnodes,
     errDetailClusterMismatch,
     cErrors
