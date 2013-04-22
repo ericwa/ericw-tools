@@ -94,8 +94,10 @@ LightThread(void *junk)
 	    if (facenum < model->firstface + model->numfaces)
 		break;
 	}
-	if (i == nummodels)
-	    Error("%s: no model has face %d", __func__, facenum);
+	if (i == nummodels) {
+	    logprint("warning: no model has face %d\n", facenum);
+	    continue;
+	}
 
 	LightFace(dfaces + facenum, &modelinfo[i]);
     }
