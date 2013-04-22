@@ -52,7 +52,7 @@ LoadFile(const char *filename, void *bufptr, bool nofail)
     ((char *)*buf)[len] = 0;
 
     if (fread(*buf, 1, len, f) != len)
-	Error(errReadFailure);
+	Error_("Failure reading from file");
 
     fclose(f);
 

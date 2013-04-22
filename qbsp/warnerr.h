@@ -62,7 +62,6 @@ enum {
     errDegenerateEdge,
     errNonCanonicalVector,
     errNormalization,
-    errReadFailure,
     errColinearEdge,
     errPortalAlreadyAdded,
     errPortalNotInLeaf,
@@ -79,7 +78,6 @@ enum {
     errInvalidMemType,		// 50
     errTooManyPoints,
     errOutOfMemory,
-    errLowTextureCount,
     errLineIncomplete,
     errEOFInQuotes,
     errTokenTooLarge,

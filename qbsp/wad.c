@@ -211,7 +211,7 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
 	if (!size)
 	    continue;
 	if (data + size - (byte *)texdata->data > texdata->count)
-	    Error(errLowTextureCount);
+	    Error_("Internal error: not enough texture memory allocated");
 	lump->dataofs[i] = data - (byte *)lump;
 	data += size;
     }
@@ -229,7 +229,7 @@ WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
 	    fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
 	    size = fread(dest, 1, wad->lumps[i].disksize, wad->file);
 	    if (size != wad->lumps[i].disksize)
-		Error(errReadFailure);
+		Error_("Failure reading from file");
 	    return wad->lumps[i].disksize;
 	}
     }
