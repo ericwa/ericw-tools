@@ -38,9 +38,9 @@ LoadFile(const char *filename, void *bufptr, bool nofail)
     FILE *f;
 
     f = fopen(filename, "rb");
-    if (f == NULL) {
+    if (!f) {
 	if (nofail)
-	    Error(errOpenFailed, filename, strerror(errno));
+	    Error_("Failed to open %s: %s", filename, strerror(errno));
 	return 0;
     }
 

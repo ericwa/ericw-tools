@@ -81,7 +81,6 @@ const char *rgszWarnings[cWarnings] = {
 const char *rgszErrors[cErrors] = {
     "No leak node in WriteLeakNode",
 
-    "%s is version %i, not %i",
     "No axis found for winding",
     "Points on winding exceeded estimate",
     "No valid planes in surface list",
@@ -96,10 +95,7 @@ const char *rgszErrors[cErrors] = {
     "Attempting to split freed face",
 
     "Internal error: numpoints > MAXEDGES in SplitFace",
-    "Deformed lump in BSP file (%d size is not divisible by %d)",
-    "Failed to open %s: %s",
     "Failure reading from file",
-    "Failure writing to file",
     "Colinear edge",
     "Portal already included in AddPortalToNodes",
     "Portal not in leaf",

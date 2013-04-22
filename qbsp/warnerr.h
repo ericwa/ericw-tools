@@ -52,7 +52,6 @@ enum {
 enum {
     errNoLeakNode,
 
-    errBadVersion,		// 10
     errNoWindingAxis,
     errLowPointCount,
     errNoValidPlanes,
@@ -65,10 +64,7 @@ enum {
     errNormalization,
     errFreedFace,
     errLowSplitPointCount,	// 30
-    errDeformedBSPLump,
-    errOpenFailed,
     errReadFailure,
-    errWriteFailure,
     errColinearEdge,
     errPortalAlreadyAdded,
     errPortalNotInLeaf,

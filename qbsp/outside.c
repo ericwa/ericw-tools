@@ -80,7 +80,7 @@ InitPorFile(void)
     strcat(options.szBSPName, ".por");
     porfile = fopen(options.szBSPName, "wt");
     if (!porfile)
-	Error(errOpenFailed, options.szBSPName, strerror(errno));
+	Error_("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     fprintf(porfile, "PLACEHOLDER\r\n");
 
@@ -96,7 +96,7 @@ InitPtsFile(void)
     strcat(options.szBSPName, ".pts");
     ptsfile = fopen(options.szBSPName, "wt");
     if (!ptsfile)
-	Error(errOpenFailed, options.szBSPName, strerror(errno));
+	Error_("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     return ptsfile;
 }

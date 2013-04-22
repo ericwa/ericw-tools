@@ -278,8 +278,8 @@ WritePortalfile(node_t *headnode)
     strcat(options.szBSPName, ".prt");
 
     PortalFile = fopen(options.szBSPName, "wt");
-    if (PortalFile == NULL)
-	Error(errOpenFailed, options.szBSPName, strerror(errno));
+    if (!PortalFile)
+	Error_("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     /* If no detail clusters, just use a normal PRT1 format */
     if (num_visclusters == num_visleafs) {
