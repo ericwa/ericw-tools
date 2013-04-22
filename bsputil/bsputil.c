@@ -17,6 +17,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <stdint.h>
 #include <unistd.h>
 
 #include <common/cmdlib.h>
