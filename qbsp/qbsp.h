@@ -683,6 +683,8 @@ extern void PrintMem(void);
 
 extern void Message(int MsgType, ...);
 extern void Error(int ErrType, ...) __attribute__((noreturn));
+extern void Error_(const char *error, ...)
+    __attribute__((format(printf,1,2),noreturn));
 
 extern FILE *logfile;
 

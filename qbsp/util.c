@@ -227,6 +227,24 @@ Error(int ErrType, ...)
     exit(1);
 }
 
+void
+Error_(const char *error, ...)
+{
+    va_list argptr;
+    char message[512];
+
+    va_start(argptr, error);
+    vsnprintf(message, sizeof(message), error, argptr);
+    va_end(argptr);
+
+    fprintf(stderr, "\nERROR: %s\n\n", message);
+    if (logfile) {
+	fprintf(logfile, "\nERROR: %s\n\n", message);
+	fclose(logfile);
+    }
+    exit(1);
+}
+
 /*
 =================
 Message
