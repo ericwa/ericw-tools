@@ -79,8 +79,6 @@ const char *rgszWarnings[cWarnings] = {
 };
 
 const char *rgszErrors[cErrors] = {
-    "No leak node in WriteLeakNode",
-
     "No axis found for winding",
     "Points on winding exceeded estimate",
     "No valid planes in surface list",
@@ -89,14 +87,10 @@ const char *rgszErrors[cErrors] = {
     "Mixed face contents in leafnode near (%.2f %.2f %.2f)",
     "Surface without a face",
     "Degenerate edge at (%.3f %.3f %.3f)",
-
     "Found a non-canonical vector",
     "Normalization error in FindPlane (vector length %.4f)",
-
-    "Colinear edge",
     "Portal already included in AddPortalToNodes",
     "Portal not in leaf",
-
     "Portal not bounding leaf",
     "Mislinked portal in CutNodePortals_r",
     "Didn't split the polygon in SubdivideFace",
@@ -107,15 +101,12 @@ const char *rgszErrors[cErrors] = {
     "Internal error: numwedges >= cWEdges",
     "Internal error: numwverts >= cWVerts",
     "f->original exists in SplitFaceForTjunc",
-
     "Internal error: invalid memory %i type in AllocMem",
     "Too many points on winding (%d)",
     "Out of memory",
-
     "line %d: Line is incomplete",
     "line %d: EOF inside quoted token",
     "line %d: Token too large",
-    "Internal error: numleaks > num_visportals",
     "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
     "Internal error: Detail cluster mismatch",
 };

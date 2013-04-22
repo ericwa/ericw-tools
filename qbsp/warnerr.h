@@ -50,8 +50,6 @@ enum {
 };
 
 enum {
-    errNoLeakNode,
-
     errNoWindingAxis,
     errLowPointCount,
     errNoValidPlanes,
@@ -62,7 +60,6 @@ enum {
     errDegenerateEdge,
     errNonCanonicalVector,
     errNormalization,
-    errColinearEdge,
     errPortalAlreadyAdded,
     errPortalNotInLeaf,
     errPortalNotBoundLeaf,	// 40
