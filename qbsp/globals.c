@@ -89,10 +89,6 @@ const char *rgszErrors[cErrors] = {
     "Degenerate edge at (%.3f %.3f %.3f)",
     "Found a non-canonical vector",
     "Normalization error in FindPlane (vector length %.4f)",
-    "Portal already included in AddPortalToNodes",
-    "Portal not in leaf",
-    "Portal not bounding leaf",
-    "Mislinked portal in CutNodePortals_r",
     "Didn't split the polygon in SubdivideFace",
     "Internal error: entity->iVertices > entity->cVertices",
     "0 contents in GetEdge",
@@ -105,5 +101,4 @@ const char *rgszErrors[cErrors] = {
     "Too many points on winding (%d)",
     "Out of memory",
     "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
-    "Internal error: Detail cluster mismatch",
 };

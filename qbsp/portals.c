@@ -189,7 +189,7 @@ WriteClusters_r(node_t *node, int viscluster)
 
     /* Sanity check */
     if (node->viscluster != viscluster)
-	Error(errDetailClusterMismatch);
+	Error_("Internal error: Detail cluster mismatch (%s)", __func__);
 
     fprintf(PortalFile, "%d ", node->visleafnum);
 
@@ -295,7 +295,7 @@ WritePortalfile(node_t *headnode)
 	WritePortals_r(headnode, true);
 	check = WriteClusters_r(headnode, 0);
 	if (check != num_visclusters - 1)
-	    Error(errDetailClusterMismatch);
+	    Error_("Internal error: Detail cluster mismatch (%s)", __func__);
 	fprintf(PortalFile, "-1\n");
     }
 
@@ -314,7 +314,7 @@ static void
 AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
 {
     if (p->nodes[0] || p->nodes[1])
-	Error(errPortalAlreadyAdded);
+	Error_("portal already included (%s)", __func__);
 
     p->nodes[0] = front;
     p->next[0] = front->portals;
@@ -341,7 +341,7 @@ RemovePortalFromNode(portal_t *portal, node_t *l)
     while (1) {
 	t = *pp;
 	if (!t)
-	    Error(errPortalNotInLeaf);
+	    Error_("Portal not in leaf (%s)", __func__);
 
 	if (t == portal)
 	    break;
@@ -351,7 +351,7 @@ RemovePortalFromNode(portal_t *portal, node_t *l)
 	else if (t->nodes[1] == l)
 	    pp = &t->next[1];
 	else
-	    Error(errPortalNotBoundLeaf);
+	    Error_("Portal not bounding leaf (%s)", __func__);
     }
 
     if (portal->nodes[0] == l) {
@@ -495,7 +495,8 @@ CheckLeafPortalConsistancy(node_t *node)
 	else if (p->nodes[1] == node)
 	    side = 1;
 	else
-	    Error(errMislinkedPortal);
+	    Error_("Mislinked portal (%s)", __func__);
+
 	CheckWindingInNode(p->winding, node);
 	CheckWindingArea(p->winding);
 
@@ -509,7 +510,8 @@ CheckLeafPortalConsistancy(node_t *node)
 	    else if (p2->nodes[1] == node)
 		side2 = 1;
 	    else
-		Error(errMislinkedPortal);
+		Error_("Mislinked portal (%s)", __func__);
+
 	    w = p2->winding;
 	    for (i = 0; i < w->numpoints; i++) {
 		dist = DotProduct(w->points[i], plane.normal) - plane.dist;
@@ -574,7 +576,7 @@ CutNodePortals_r(node_t *node)
 	    VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
 	    side = 1;
 	} else
-	    Error(errMislinkedPortal);
+	    Error_("Mislinked portal (%s)", __func__);
 
 	winding = ClipWinding(winding, &clipplane, true);
 	if (!winding) {
@@ -596,7 +598,7 @@ CutNodePortals_r(node_t *node)
 	else if (portal->nodes[1] == node)
 	    side = 1;
 	else
-	    Error(errMislinkedPortal);
+	    Error_("Mislinked portal (%s)", __func__);
 	next_portal = portal->next[side];
 
 	other_node = portal->nodes[!side];

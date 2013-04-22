@@ -60,10 +60,6 @@ enum {
     errDegenerateEdge,
     errNonCanonicalVector,
     errNormalization,
-    errPortalAlreadyAdded,
-    errPortalNotInLeaf,
-    errPortalNotBoundLeaf,	// 40
-    errMislinkedPortal,
     errNoPolygonSplit,
     errLowVertexCount,
     errZeroContents,
@@ -76,6 +72,5 @@ enum {
     errTooManyPoints,
     errOutOfMemory,
     errTooManyClipnodes,
-    errDetailClusterMismatch,
     cErrors
 };
