@@ -43,12 +43,12 @@ AllocMem(int Type, int cElements, bool fZero)
     int cSize;
 
     if (Type < 0 || Type > OTHER)
-	Error(errInvalidMemType, Type);
+	Error_("Internal error: invalid memory type %d (%s)", Type, __func__);
 
     // For windings, cElements == number of points on winding
     if (Type == WINDING) {
 	if (cElements > MAX_POINTS_ON_WINDING)
-	    Error(errTooManyPoints, cElements);
+	    Error_("Too many points (%d) on winding (%s)", cElements, __func__);
 
 	cSize = offsetof(winding_t, points[cElements]) + sizeof(int);
 
@@ -59,7 +59,7 @@ AllocMem(int Type, int cElements, bool fZero)
 
     pTemp = malloc(cSize);
     if (!pTemp)
-	Error(errOutOfMemory);
+	Error_("allocation of %d bytes failed (%s)", cSize, __func__);
 
     if (fZero)
 	memset(pTemp, 0, cSize);
@@ -200,32 +200,6 @@ FreeAllMem(void)
 
 /* Keep track of output state */
 static bool fInPercent = false;
-
-void
-Error(int ErrType, ...)
-{
-    va_list argptr;
-    char szBuffer[512];
-
-    va_start(argptr, ErrType);
-
-    if (fInPercent) {
-	printf("\r");
-	fInPercent = false;
-    }
-    if (ErrType >= cErrors) {
-	printf("Program error: unknown ErrType in Message!\n");
-	exit(1);
-    }
-    sprintf(szBuffer, "*** ERROR %02d: ", ErrType);
-    vsprintf(szBuffer + strlen(szBuffer), rgszErrors[ErrType], argptr);
-    puts(szBuffer);
-    if (logfile) {
-	fprintf(logfile, "%s\n", szBuffer);
-	fclose(logfile);
-    }
-    exit(1);
-}
 
 void
 Error_(const char *error, ...)

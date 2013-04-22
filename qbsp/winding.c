@@ -58,7 +58,7 @@ BaseWindingForPlane(const plane_t *p)
 	vup[0] = 1;
 	break;
     default:
-	Error(errNoWindingAxis);
+	Error_("Internal error: no axis for winding (%s)", __func__);
     }
 
     v = DotProduct(vup, p->normal);
@@ -227,7 +227,7 @@ ClipWinding(winding_t *in, const plane_t *split, bool keepon)
     }
 
     if (neww->numpoints > maxpts)
-	Error(errLowPointCount);
+	Error_("Internal error: excess clipped points (%s)", __func__);
 
     // free the original winding
     FreeMem(in, WINDING, 1);
@@ -324,7 +324,7 @@ DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
     }
 
     if (f->numpoints > maxpts || b->numpoints > maxpts)
-	Error(errLowPointCount);
+	Error_("Internal error: excess clipped points (%s)", __func__);
 }
 
 

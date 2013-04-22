@@ -77,19 +77,3 @@ const char *rgszWarnings[cWarnings] = {
     "No target for rotation entity \"%s\"",
     "line %d: Face with degenerate QuArK-style texture axes",
 };
-
-const char *rgszErrors[cErrors] = {
-    "No axis found for winding",
-    "Points on winding exceeded estimate",
-    "Degenerate edge at (%.3f %.3f %.3f)",
-    "Found a non-canonical vector",
-    "Normalization error in FindPlane (vector length %.4f)",
-    "Internal error: pWorldEnt->lumps[BSPPLANE].index >= pWorldEnt->lumps[BSPPLANE].count",
-    "Internal error: numwedges >= cWEdges",
-    "Internal error: numwverts >= cWVerts",
-    "f->original exists in SplitFaceForTjunc",
-    "Internal error: invalid memory %i type in AllocMem",
-    "Too many points on winding (%d)",
-    "Out of memory",
-    "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
-};

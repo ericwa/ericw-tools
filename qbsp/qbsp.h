@@ -675,7 +675,6 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 #define msgPercent	7
 
 extern const char *rgszWarnings[cWarnings];
-extern const char *rgszErrors[cErrors];
 extern const int rgcMemSize[];
 
 extern void *AllocMem(int Type, int cSize, bool fZero);
@@ -684,7 +683,6 @@ extern void FreeAllMem(void);
 extern void PrintMem(void);
 
 extern void Message(int MsgType, ...);
-extern void Error(int ErrType, ...) __attribute__((noreturn));
 extern void Error_(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
 

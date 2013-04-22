@@ -48,20 +48,3 @@ enum {
     warnDegenerateQuArKTX,
     cWarnings
 };
-
-enum {
-    errNoWindingAxis,
-    errLowPointCount,
-    errDegenerateEdge,
-    errNonCanonicalVector,
-    errNormalization,
-    errLowPlaneCount,
-    errLowWedgeCount,
-    errLowWvertCount,
-    errOriginalExists,
-    errInvalidMemType,		// 50
-    errTooManyPoints,
-    errOutOfMemory,
-    errTooManyClipnodes,
-    cErrors
-};
