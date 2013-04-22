@@ -47,12 +47,12 @@ ParseToken(parser_t *p, parseflags_t flags)
     while (*p->pos <= 32) {
 	if (!*p->pos) {
 	    if (flags & PARSE_SAMELINE)
-		Error_("line %d: Line is incomplete", p->linenum);
+		Error("line %d: Line is incomplete", p->linenum);
 	    return false;
 	}
 	if (*p->pos++ == '\n') {
 	    if (flags & PARSE_SAMELINE)
-		Error_("line %d: Line is incomplete", p->linenum);
+		Error("line %d: Line is incomplete", p->linenum);
 	    p->linenum++;
 	}
     }
@@ -64,16 +64,16 @@ ParseToken(parser_t *p, parseflags_t flags)
 	    while (*p->pos && *p->pos != '\n') {
 		*token_p++ = *p->pos++;
 		if (token_p > &p->token[MAXTOKEN - 1])
-		    Error_("line %d: Token too large", p->linenum);
+		    Error("line %d: Token too large", p->linenum);
 	    }
 	    goto out;
 	}
 	if (flags & PARSE_SAMELINE)
-	    Error_("line %d: Line is incomplete", p->linenum);
+	    Error("line %d: Line is incomplete", p->linenum);
 	while (*p->pos++ != '\n')
 	    if (!*p->pos) {
 		if (flags & PARSE_SAMELINE)
-		    Error_("line %d: Line is incomplete", p->linenum);
+		    Error("line %d: Line is incomplete", p->linenum);
 		return false;
 	    }
 	goto skipspace;
@@ -88,17 +88,17 @@ ParseToken(parser_t *p, parseflags_t flags)
 	p->pos++;
 	while (*p->pos != '"') {
 	    if (!*p->pos)
-		Error_("line %d: EOF inside quoted token", p->linenum);
+		Error("line %d: EOF inside quoted token", p->linenum);
 	    *token_p++ = *p->pos++;
 	    if (token_p > &p->token[MAXTOKEN - 1])
-		Error_("line %d: Token too large", p->linenum);
+		Error("line %d: Token too large", p->linenum);
 	}
 	p->pos++;
     } else
 	while (*p->pos > 32) {
 	    *token_p++ = *p->pos++;
 	    if (token_p > &p->token[MAXTOKEN - 1])
-		Error_("line %d: Token too large", p->linenum);
+		Error("line %d: Token too large", p->linenum);
 	}
  out:
     *token_p = 0;

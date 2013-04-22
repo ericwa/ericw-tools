@@ -41,7 +41,7 @@ FindMiptex(const char *name)
 	    return i;
     }
     if (map.nummiptex == map.maxmiptex)
-	Error_("Internal error: map.nummiptex > map.maxmiptex");
+	Error("Internal error: map.nummiptex > map.maxmiptex");
 
     strcpy(map.miptex[i], name);
     map.nummiptex++;
@@ -178,7 +178,7 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
     return;
 
  parse_error:
-    Error_("line %d: Entity key or value too long", parser->linenum);
+    Error("line %d: Entity key or value too long", parser->linenum);
 }
 
 
@@ -309,7 +309,7 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
 	VectorSubtract(planepts[2], planepts[0], vecs[1]);
 	break;
     default:
-	Error_("Internal error: bad texture coordinate style");
+	Error("Internal error: bad texture coordinate style");
     }
     VectorScale(vecs[0], 1.0 / 128.0, vecs[0]);
     VectorScale(vecs[1], 1.0 / 128.0, vecs[1]);
@@ -386,7 +386,7 @@ ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
     return;
 
  parse_error:
-    Error_("line %d: Invalid brush plane format", parser->linenum);
+    Error("line %d: Invalid brush plane format", parser->linenum);
 }
 
 static void
@@ -418,7 +418,7 @@ ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2],
     return;
 
  parse_error:
-    Error_("line %d: couldn't parse Valve220 texture info", parser->linenum);
+    Error("line %d: couldn't parse Valve220 texture info", parser->linenum);
 }
 
 static void
@@ -511,7 +511,7 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 	    break;
 
 	if (map.numfaces == map.maxfaces)
-	    Error_("Internal error: didn't allocate enough faces?");
+	    Error("Internal error: didn't allocate enough faces?");
 
 	faceok = ParseBrushFace(parser, face);
 	if (!faceok)
@@ -550,20 +550,20 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
 	return false;
 
     if (strcmp(parser->token, "{"))
-	Error_("line %d: Invalid entity format, { not found", parser->linenum);
+	Error("line %d: Invalid entity format, { not found", parser->linenum);
 
     if (map.numentities == map.maxentities)
-	Error_("Internal error: didn't allocate enough entities?");
+	Error("Internal error: didn't allocate enough entities?");
 
     entity->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
 	if (!ParseToken(parser, PARSE_NORMAL))
-	    Error_("Unexpected EOF (no closing brace)");
+	    Error("Unexpected EOF (no closing brace)");
 	if (!strcmp(parser->token, "}"))
 	    break;
 	else if (!strcmp(parser->token, "{")) {
 	    if (map.numbrushes == map.maxbrushes)
-		Error_("Internal error: didn't allocate enough brushes?");
+		Error("Internal error: didn't allocate enough brushes?");
 	    ParseBrush(parser, brush++);
 	    map.numbrushes++;
 	} else
@@ -685,7 +685,7 @@ LoadMapFile(void)
 
     /* Double check the entity count matches our pre-parse count */
     if (map.numentities != map.maxentities)
-	Error_("Internal error: mismatched entity count?");
+	Error("Internal error: mismatched entity count?");
 
     FreeMem(buf, OTHER, length + 1);
 
@@ -699,7 +699,7 @@ LoadMapFile(void)
 
     // Clean up texture memory
     if (map.nummiptex > map.maxfaces)
-	Error_("Internal error: map.nummiptex > map.maxfaces");
+	Error("Internal error: map.nummiptex > map.maxfaces");
     else if (map.nummiptex < map.maxfaces) {
 	// For stuff in AddAnimatingTex, make room available
 	pTemp = map.miptex;
@@ -711,7 +711,7 @@ LoadMapFile(void)
 
     texinfo = &pWorldEnt->lumps[BSPTEXINFO];
     if (texinfo->index > texinfo->count)
-	Error_("Internal error: didn't allocate enough texinfos?");
+	Error("Internal error: didn't allocate enough texinfos?");
     else if (texinfo->index < texinfo->count) {
 	pTemp = texinfo->data;
 	texinfo->data = AllocMem(BSPTEXINFO, texinfo->index, true);

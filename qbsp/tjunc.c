@@ -106,7 +106,7 @@ CanonicalVector(vec3_t vec)
     } else
 	vec[2] = 0;
 
-    Error_("Degenerate edge at (%.3f %.3f %.3f)", vec[0], vec[1], vec[2]);
+    Error("Degenerate edge at (%.3f %.3f %.3f)", vec[0], vec[1], vec[2]);
 }
 
 static wedge_t *
@@ -159,7 +159,7 @@ FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
     }
 
     if (numwedges >= cWEdges)
-	Error_("Internal error: didn't allocate enough edges for tjuncs?");
+	Error("Internal error: didn't allocate enough edges for tjuncs?");
     w = pWEdges + numwedges;
     numwedges++;
 
@@ -196,7 +196,7 @@ AddVert(wedge_t *w, vec_t t)
 
     // insert a new wvert before v
     if (numwverts >= cWVerts)
-	Error_("Internal error: didn't allocate enough vertices for tjuncs?");
+	Error("Internal error: didn't allocate enough vertices for tjuncs?");
 
     newv = pWVerts + numwverts;
     numwverts++;
@@ -314,7 +314,7 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 
 	newf = NewFaceFromFace(f);
 	if (f->original)
-	    Error_("original face still exists (%s)", __func__);
+	    Error("original face still exists (%s)", __func__);
 
 	newf->original = chain;
 	chain = newf;

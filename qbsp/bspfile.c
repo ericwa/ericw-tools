@@ -44,8 +44,8 @@ LoadBSPFile(void)
     cFileSize = LoadFile(options.szBSPName, &header, true);
 
     if (header->version != BSPVERSION)
-	Error_("%s is version %i, not %i",
-	       options.szBSPName, header->version, BSPVERSION);
+	Error("%s is version %i, not %i",
+	      options.szBSPName, header->version, BSPVERSION);
 
     /* Throw all of the data into the first entity to be written out later */
     entity = map.entities;
@@ -53,8 +53,8 @@ LoadBSPFile(void)
 	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
 	iLumpOff = header->lumps[i].fileofs;
 	if (cLumpSize % rgcMemSize[i])
-	    Error_("Deformed lump in BSP file (%d size is not divisible by %d)",
-		   rgcMemSize[i], cLumpSize);
+	    Error("Deformed lump in BSP file (%d size is not divisible by %d)",
+		  rgcMemSize[i], cLumpSize);
 
 	entity->lumps[i].count = cLumpSize / rgcMemSize[i];
 	entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
@@ -86,7 +86,7 @@ AddLump(FILE *f, int Type)
 	if (entities->data) {
 	    ret = fwrite(entities->data, rgcMemSize[Type], entities->count, f);
 	    if (ret != entities->count)
-		Error_("Failure writing to file");
+		Error("Failure writing to file");
 	    cLen += entities->count * rgcMemSize[Type];
 	}
     }
@@ -95,7 +95,7 @@ AddLump(FILE *f, int Type)
     if (Type == BSPENT) {
 	ret = fwrite("", 1, 1, f);
 	if (ret != 1)
-	    Error_("Failure writing to file");
+	    Error("Failure writing to file");
 	cLen++;
     }
     lump->filelen = cLen;
@@ -105,7 +105,7 @@ AddLump(FILE *f, int Type)
 	size_t pad = 4 - (cLen % 4);
 	ret = fwrite("   ", 1, pad, f);
 	if (ret != pad)
-	    Error_("Failure writing to file");
+	    Error("Failure writing to file");
     }
 }
 
@@ -128,12 +128,12 @@ WriteBSPFile(void)
 
     f = fopen(options.szBSPName, "wb");
     if (!f)
-	Error_("Failed to open %s: %s", options.szBSPName, strerror(errno));
+	Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     /* write placeholder, header is overwritten later */
     ret = fwrite(header, sizeof(dheader_t), 1, f);
     if (ret != 1)
-	Error_("Failure writing to file");
+	Error("Failure writing to file");
 
     AddLump(f, BSPPLANE);
     AddLump(f, BSPLEAF);
@@ -155,7 +155,7 @@ WriteBSPFile(void)
     fseek(f, 0, SEEK_SET);
     ret = fwrite(header, sizeof(dheader_t), 1, f);
     if (ret != 1)
-	Error_("Failure writing to file");
+	Error("Failure writing to file");
 
     fclose(f);
     FreeMem(header, OTHER, sizeof(dheader_t));

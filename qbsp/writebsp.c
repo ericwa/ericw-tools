@@ -54,7 +54,7 @@ ExportNodePlanes_r(node_t *node, int *planemap)
 
 	if (i == planes->index) {
 	    if (planes->index >= planes->count)
-		Error_("Internal error: plane count mismatch (%s)", __func__);
+		Error("Internal error: plane count mismatch (%s)", __func__);
 	    plane = &map.planes[node->planenum];
 	    dplane = (dplane_t *)planes->data + planes->index;
 	    dplane->normal[0] = plane->normal[0];
@@ -188,8 +188,8 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 
     CountClipNodes_r(entity, nodes);
     if (clipnodes->count > MAX_BSP_CLIPNODES)
-	Error_("Clipnode count exceeds bsp29 max (%d > %d)",
-	       clipnodes->count, MAX_BSP_CLIPNODES);
+	Error("Clipnode count exceeds bsp29 max (%d > %d)",
+	      clipnodes->count, MAX_BSP_CLIPNODES);
 
     olddata = clipnodes->data;
     clipnodes->data = AllocMem(BSPCLIPNODE, clipnodes->count, true);

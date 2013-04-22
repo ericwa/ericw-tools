@@ -76,7 +76,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
 	    next = f->next;
 	    SplitFace(f, &plane, &front, &back);
 	    if (!front || !back)
-		Error_("Didn't split the polygon (%s)", __func__);
+		Error("Didn't split the polygon (%s)", __func__);
 	    *prevptr = back;
 	    back->next = front;
 	    front->next = next;
@@ -243,7 +243,7 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     map.cTotal[BSPVERTEX]++;
 
     if (vertices->index > vertices->count)
-	Error_("Internal error: didn't allocate enough vertices?");
+	Error("Internal error: didn't allocate enough vertices?");
 
     return hv->num;
 }
@@ -268,7 +268,7 @@ GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
     struct lumpdata *edges = &entity->lumps[BSPEDGE];
 
     if (!f->contents[0])
-	Error_("Face with 0 contents (%s)", __func__);
+	Error("Face with 0 contents (%s)", __func__);
 
     c_tryedges++;
     v1 = GetVertex(entity, p1);
@@ -286,7 +286,7 @@ GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
 
     /* emit an edge */
     if (edges->index >= edges->count)
-	Error_("Internal error: didn't allocate enough edges?");
+	Error("Internal error: didn't allocate enough edges?");
 
     edge = (dedge_t *)edges->data + edges->index;
     edges->index++;
@@ -310,7 +310,7 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
 
     face->outputnumber = -1;
     if (face->w.numpoints > MAXEDGES)
-	Error_("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
+	Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
 
     face->edges = AllocMem(OTHER, face->w.numpoints * sizeof(int), true);
     for (i = 0; i < face->w.numpoints; i++)

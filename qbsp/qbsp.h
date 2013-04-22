@@ -683,7 +683,7 @@ extern void FreeAllMem(void);
 extern void PrintMem(void);
 
 extern void Message(int MsgType, ...);
-extern void Error_(const char *error, ...)
+extern void Error(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
 
 extern FILE *logfile;

@@ -80,7 +80,7 @@ InitPorFile(void)
     strcat(options.szBSPName, ".por");
     porfile = fopen(options.szBSPName, "wt");
     if (!porfile)
-	Error_("Failed to open %s: %s", options.szBSPName, strerror(errno));
+	Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     fprintf(porfile, "PLACEHOLDER\r\n");
 
@@ -96,7 +96,7 @@ InitPtsFile(void)
     strcat(options.szBSPName, ".pts");
     ptsfile = fopen(options.szBSPName, "wt");
     if (!ptsfile)
-	Error_("Failed to open %s: %s", options.szBSPName, strerror(errno));
+	Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     return ptsfile;
 }
@@ -108,7 +108,7 @@ WriteLeakNode(FILE *porfile, const node_t *node)
     int i, side, count;
 
     if (!node)
-	Error_("Internal error: no leak node! (%s)", __func__);
+	Error("Internal error: no leak node! (%s)", __func__);
 
     count = 0;
     for (portal = node->portals; portal; portal = portal->next[!side]) {
@@ -177,7 +177,7 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
     const portal_t *portal1;
 
     if (leak->numportals >= leak->maxportals)
-	Error_("Internal error: numportals > maxportals (%s)", __func__);
+	Error("Internal error: numportals > maxportals (%s)", __func__);
 
     leak->portals[leak->numportals++] = portal2;
 
