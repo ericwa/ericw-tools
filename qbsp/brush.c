@@ -178,7 +178,7 @@ NormalizePlane(plane_t *p)
 }
 
 
-static int
+int
 PlaneEqual(const plane_t *p1, const plane_t *p2)
 {
     return (fabs(p1->normal[0] - p2->normal[0]) < NORMAL_EPSILON &&
@@ -187,7 +187,7 @@ PlaneEqual(const plane_t *p1, const plane_t *p2)
 	    fabs(p1->dist - p2->dist) < DIST_EPSILON);
 }
 
-static int
+int
 PlaneInvEqual(const plane_t *p1, const plane_t *p2)
 {
     return (fabs(p1->normal[0] + p2->normal[0]) < NORMAL_EPSILON &&

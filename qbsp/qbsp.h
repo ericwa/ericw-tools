@@ -443,6 +443,8 @@ void FreeBrushes(brush_t *brushlist);
 
 void PlaneHash_Init(void);
 int FindPlane(const plane_t *plane, int *side);
+int PlaneEqual(const plane_t *p1, const plane_t *p2);
+int PlaneInvEqual(const plane_t *p1, const plane_t *p2);
 
 //=============================================================================
 

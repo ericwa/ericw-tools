@@ -52,14 +52,7 @@ enum {
 enum {
     errNoLeakNode,
     errUnknownOption,
-    errEpairTooLong,
-    errInvalidMapPlane,
-    errLowFaceCount,
-    errParseEntity,
-    errLowEntCount,
-    errUnexpectedEOF,
-    errLowMiptexCount,
-    errLowTexinfoCount,
+
     errBadVersion,		// 10
     errNoWindingAxis,
     errLowPointCount,
@@ -110,9 +103,6 @@ enum {
     errInvalidOption,
     errLowLeakCount,
     errTooManyClipnodes,
-    errBadTXStyle,		// 60
-    errLowMapbrushCount,
     errDetailClusterMismatch,
-    errBadValve220TX,
     cErrors
 };

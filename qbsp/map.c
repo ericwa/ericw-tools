@@ -41,7 +41,7 @@ FindMiptex(const char *name)
 	    return i;
     }
     if (map.nummiptex == map.maxmiptex)
-	Error(errLowMiptexCount);
+	Error_("Internal error: map.nummiptex > map.maxmiptex");
 
     strcpy(map.miptex[i], name);
     map.nummiptex++;
@@ -155,11 +155,11 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
     entity->epairs = epair;
 
     if (strlen(parser->token) >= MAX_KEY - 1)
-	Error(errEpairTooLong, parser->linenum);
+	goto parse_error;
     epair->key = copystring(parser->token);
     ParseToken(parser, PARSE_SAMELINE);
     if (strlen(parser->token) >= MAX_VALUE - 1)
-	Error(errEpairTooLong, parser->linenum);
+	goto parse_error;
     epair->value = copystring(parser->token);
 
     if (!strcasecmp(epair->key, "origin")) {
@@ -175,6 +175,10 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 	    rgfStartSpots |= info_player_coop;
 	}
     }
+    return;
+
+ parse_error:
+    Error_("line %d: Entity key or value too long", parser->linenum);
 }
 
 
@@ -247,7 +251,7 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
     TextureAxisFromPlane(plane, vecs[0], vecs[1]);
 
     /* Rotate axis */
-    ang = (vec_t)rotate / 180 * Q_PI;
+    ang = rotate / 180.0 * Q_PI;
     sinv = sin(ang);
     cosv = cos(ang);
 
@@ -282,8 +286,8 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
 }
 
 static void
-SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_style_t style,
-		 texinfo_t *out)
+SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
+		 texcoord_style_t style, texinfo_t *out)
 {
     int i;
     vec3_t vecs[2];
@@ -305,7 +309,7 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_style_t style,
 	VectorSubtract(planepts[2], planepts[0], vecs[1]);
 	break;
     default:
-	Error(errBadTXStyle);
+	Error_("Internal error: bad texture coordinate style");
     }
     VectorScale(vecs[0], 1.0 / 128.0, vecs[0]);
     VectorScale(vecs[1], 1.0 / 128.0, vecs[1]);
@@ -346,34 +350,6 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_style_t style,
 }
 
 static void
-ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2],
-		vec_t *rotate, vec_t scale[2])
-{
-    int i, j;
-
-    for (i = 0; i < 2; i++) {
-	ParseToken(parser, PARSE_SAMELINE);
-	if (strcmp(parser->token, "["))
-	    Error(errBadValve220TX, 9999);//parser->linenum);
-	for (j = 0; j < 3; j++) {
-	    ParseToken(parser, PARSE_SAMELINE);
-	    axis[i][j] = atof(parser->token);
-	}
-	ParseToken(parser, PARSE_SAMELINE);
-	shift[i] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	if (strcmp(parser->token, "]"))
-	    Error(errBadValve220TX, parser->linenum);
-    }
-    ParseToken(parser, PARSE_SAMELINE);
-    rotate[0] = atof(parser->token);
-    ParseToken(parser, PARSE_SAMELINE);
-    scale[0] = atof(parser->token);
-    ParseToken(parser, PARSE_SAMELINE);
-    scale[1] = atof(parser->token);
-}
-
-static void
 SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2],
 		    texinfo_t *out)
 {
@@ -388,116 +364,176 @@ SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2],
 }
 
 static void
+ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
+{
+    int i, j;
+
+    for (i = 0; i < 3; i++) {
+	if (i != 0)
+	    ParseToken(parser, PARSE_NORMAL);
+	if (strcmp(parser->token, "("))
+	    goto parse_error;
+
+	for (j = 0; j < 3; j++) {
+	    ParseToken(parser, PARSE_SAMELINE);
+	    planepts[i][j] = atof(parser->token);
+	}
+
+	ParseToken(parser, PARSE_SAMELINE);
+	if (strcmp(parser->token, ")"))
+	    goto parse_error;
+    }
+    return;
+
+ parse_error:
+    Error_("line %d: Invalid brush plane format", parser->linenum);
+}
+
+static void
+ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2],
+		vec_t *rotate, vec_t scale[2])
+{
+    int i, j;
+
+    for (i = 0; i < 2; i++) {
+	ParseToken(parser, PARSE_SAMELINE);
+	if (strcmp(parser->token, "["))
+	    goto parse_error;
+	for (j = 0; j < 3; j++) {
+	    ParseToken(parser, PARSE_SAMELINE);
+	    axis[i][j] = atof(parser->token);
+	}
+	ParseToken(parser, PARSE_SAMELINE);
+	shift[i] = atof(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	if (strcmp(parser->token, "]"))
+	    goto parse_error;
+    }
+    ParseToken(parser, PARSE_SAMELINE);
+    rotate[0] = atof(parser->token);
+    ParseToken(parser, PARSE_SAMELINE);
+    scale[0] = atof(parser->token);
+    ParseToken(parser, PARSE_SAMELINE);
+    scale[1] = atof(parser->token);
+    return;
+
+ parse_error:
+    Error_("line %d: couldn't parse Valve220 texture info", parser->linenum);
+}
+
+static void
+ParseTextureDef(parser_t *parser, texinfo_t *tx,
+		vec3_t planepts[3], const plane_t *plane)
+{
+    vec3_t axis[2];
+    vec_t shift[2], rotate, scale[2];
+    texcoord_style_t tx_type;
+
+    memset(tx, 0, sizeof(*tx));
+    ParseToken(parser, PARSE_SAMELINE);
+    tx->miptex = FindMiptex(parser->token);
+    ParseToken(parser, PARSE_SAMELINE);
+    if (!strcmp(parser->token, "[")) {
+	parser->unget = true;
+	ParseValve220TX(parser, axis, shift, &rotate, scale);
+	tx_type = TX_VALVE_220;
+    } else {
+	shift[0] = atof(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	shift[1] = atof(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	rotate = atof(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	scale[0] = atof(parser->token);
+	ParseToken(parser, PARSE_SAMELINE);
+	scale[1] = atof(parser->token);
+	tx_type = ParseExtendedTX(parser);
+    }
+
+    if (!planepts || !plane)
+	return;
+
+    switch (tx_type) {
+    case TX_QUARK_TYPE1:
+    case TX_QUARK_TYPE2:
+	SetTexinfo_QuArK(parser, &planepts[0], tx_type, tx);
+	break;
+    case TX_VALVE_220:
+	SetTexinfo_Valve220(axis, shift, scale, tx);
+	break;
+    case TX_QUAKED:
+    default:
+	SetTexinfo_QuakeEd(plane, shift, rotate, scale, tx);
+	break;
+    }
+}
+
+static bool
+ParseBrushFace(parser_t *parser, mapface_t *face)
+{
+    vec3_t planepts[3], planevecs[2];
+    vec_t length;
+    plane_t *plane;
+    texinfo_t tx;
+
+    ParsePlaneDef(parser, planepts);
+
+    /* calculate the normal/dist plane equation */
+    VectorSubtract(planepts[0], planepts[1], planevecs[0]);
+    VectorSubtract(planepts[2], planepts[1], planevecs[1]);
+    plane = &face->plane;
+    CrossProduct(planevecs[0], planevecs[1], plane->normal);
+    length = VectorNormalize(plane->normal);
+    plane->dist = DotProduct(planepts[1], plane->normal);
+
+    ParseTextureDef(parser, &tx, planepts, plane);
+
+    if (length < NORMAL_EPSILON) {
+	Message(msgWarning, warnNoPlaneNormal, parser->linenum);
+	return false;
+    }
+
+    face->texinfo = FindTexinfo(&tx);
+
+    return true;
+}
+
+static void
 ParseBrush(parser_t *parser, mapbrush_t *brush)
 {
-    vec3_t planepts[3], axis[2];
-    vec3_t t1, t2, t3;
-    int i, j;
-    texinfo_t tx;
-    vec_t d;
-    vec_t shift[2], rotate, scale[2];
-    int tx_type;
-    plane_t *plane;
-    mapface_t *face, *checkface;
+    const mapface_t *check;
+    mapface_t *face;
+    bool faceok;
 
     brush->faces = face = map.faces + map.numfaces;
     while (ParseToken(parser, PARSE_NORMAL)) {
 	if (!strcmp(parser->token, "}"))
 	    break;
 
-	// read the three point plane definition
-	for (i = 0; i < 3; i++) {
-	    if (i != 0)
-		ParseToken(parser, PARSE_NORMAL);
-	    if (strcmp(parser->token, "("))
-		Error(errInvalidMapPlane, parser->linenum);
-
-	    for (j = 0; j < 3; j++) {
-		ParseToken(parser, PARSE_SAMELINE);
-		planepts[i][j] = atof(parser->token);
-	    }
-
-	    ParseToken(parser, PARSE_SAMELINE);
-	    if (strcmp(parser->token, ")"))
-		Error(errInvalidMapPlane, parser->linenum);
-	}
-
-	// Read the texturedef
-	memset(&tx, 0, sizeof(tx));
-	ParseToken(parser, PARSE_SAMELINE);
-	tx.miptex = FindMiptex(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	if (!strcmp(parser->token, "[")) {
-	    parser->unget = true;
-	    ParseValve220TX(parser, axis, shift, &rotate, scale);
-	    tx_type = TX_VALVE_220;
-	} else {
-	    shift[0] = atof(parser->token);
-	    ParseToken(parser, PARSE_SAMELINE);
-	    shift[1] = atof(parser->token);
-	    ParseToken(parser, PARSE_SAMELINE);
-	    rotate = atof(parser->token);
-	    ParseToken(parser, PARSE_SAMELINE);
-	    scale[0] = atof(parser->token);
-	    ParseToken(parser, PARSE_SAMELINE);
-	    scale[1] = atof(parser->token);
-	    tx_type = ParseExtendedTX(parser);
-	}
-
-	// if the three points are all on a previous plane, it is a
-	// duplicate plane
-	for (checkface = brush->faces; checkface < face; checkface++) {
-	    plane = &checkface->plane;
-	    for (i = 0; i < 3; i++) {
-		d = DotProduct(planepts[i], plane->normal) - plane->dist;
-		if (d < -ON_EPSILON || d > ON_EPSILON)
-		    break;
-	    }
-	    if (i == 3)
-		break;
-	}
-	if (checkface < face) {
-	    Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
-	    continue;
-	}
-
 	if (map.numfaces == map.maxfaces)
-	    Error(errLowFaceCount);
+	    Error_("Internal error: didn't allocate enough faces?");
 
-	// convert to a vector / dist plane
-	for (j = 0; j < 3; j++) {
-	    t1[j] = planepts[0][j] - planepts[1][j];
-	    t2[j] = planepts[2][j] - planepts[1][j];
-	    t3[j] = planepts[1][j];
-	}
-
-	plane = &face->plane;
-	CrossProduct(t1, t2, plane->normal);
-	if (VectorCompare(plane->normal, vec3_origin)) {
-	    Message(msgWarning, warnNoPlaneNormal, parser->linenum);
+	faceok = ParseBrushFace(parser, face);
+	if (!faceok)
 	    continue;
-	}
-	VectorNormalize(plane->normal);
-	plane->dist = DotProduct(t3, plane->normal);
 
-	switch (tx_type) {
-	case TX_QUARK_TYPE1:
-	case TX_QUARK_TYPE2:
-	    SetTexinfo_QuArK(parser, &planepts[0], tx_type, &tx);
-	    break;
-	case TX_VALVE_220:
-	    SetTexinfo_Valve220(axis, shift, scale, &tx);
-	    break;
-	case TX_QUAKED:
-	default:
-	    SetTexinfo_QuakeEd(plane, shift, rotate, scale, &tx);
-	    break;
+	/* Check for duplicate planes */
+	for (check = brush->faces; check < face; check++) {
+	    if (PlaneEqual(&check->plane, &face->plane)) {
+		Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
+		continue;
+	    }
+	    if (PlaneInvEqual(&check->plane, &face->plane)) {
+		/* FIXME - this is actually an invalid brush */
+		Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
+		continue;
+	    }
 	}
-	face->texinfo = FindTexinfo(&tx);
 
-	face++;
+	/* Save the face, update progress */
 	map.numfaces++;
 	Message(msgPercent, map.numfaces, map.maxfaces);
+	face++;
     }
 
     brush->numfaces = face - brush->faces;
@@ -514,20 +550,20 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
 	return false;
 
     if (strcmp(parser->token, "{"))
-	Error(errParseEntity, parser->linenum);
+	Error_("line %d: Invalid entity format, { not found", parser->linenum);
 
     if (map.numentities == map.maxentities)
-	Error(errLowEntCount);
+	Error_("Internal error: didn't allocate enough entities?");
 
     entity->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
 	if (!ParseToken(parser, PARSE_NORMAL))
-	    Error(errUnexpectedEOF);
+	    Error_("Unexpected EOF (no closing brace)");
 	if (!strcmp(parser->token, "}"))
 	    break;
 	else if (!strcmp(parser->token, "{")) {
 	    if (map.numbrushes == map.maxbrushes)
-		Error(errLowMapbrushCount);
+		Error_("Internal error: didn't allocate enough brushes?");
 	    ParseBrush(parser, brush++);
 	    map.numbrushes++;
 	} else
@@ -649,7 +685,7 @@ LoadMapFile(void)
 
     /* Double check the entity count matches our pre-parse count */
     if (map.numentities != map.maxentities)
-	Error(errLowEntCount);
+	Error_("Internal error: mismatched entity count?");
 
     FreeMem(buf, OTHER, length + 1);
 
@@ -663,7 +699,7 @@ LoadMapFile(void)
 
     // Clean up texture memory
     if (map.nummiptex > map.maxfaces)
-	Error(errLowMiptexCount);
+	Error_("Internal error: map.nummiptex > map.maxfaces");
     else if (map.nummiptex < map.maxfaces) {
 	// For stuff in AddAnimatingTex, make room available
 	pTemp = map.miptex;
@@ -675,7 +711,7 @@ LoadMapFile(void)
 
     texinfo = &pWorldEnt->lumps[BSPTEXINFO];
     if (texinfo->index > texinfo->count)
-	Error(errLowTexinfoCount);
+	Error_("Internal error: didn't allocate enough texinfos?");
     else if (texinfo->index < texinfo->count) {
 	pTemp = texinfo->data;
 	texinfo->data = AllocMem(BSPTEXINFO, texinfo->index, true);

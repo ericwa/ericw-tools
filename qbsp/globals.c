@@ -81,14 +81,6 @@ const char *rgszWarnings[cWarnings] = {
 const char *rgszErrors[cErrors] = {
     "No leak node in WriteLeakNode",
     "Unknown option '%s'",
-    "line %d: Entity key or value too long",
-    "line %d: Invalid brush plane format",
-    "Internal error: face count mismatched during map file parsing",
-    "line %d: Invalid entity format, { not found",
-    "Internal error: entity count mismatched during map file parsing",
-    "Unexpected EOF (no closing brace)",
-    "Internal error: map.nummiptex > map.maxmiptex",
-    "Internal error: pWorldEnt->iTexinfo > pWorldEnt->cTexinfo",
 
     "%s is version %i, not %i",
     "No axis found for winding",
@@ -144,8 +136,5 @@ const char *rgszErrors[cErrors] = {
     "Invalid argument to option %s",
     "Internal error: numleaks > num_visportals",
     "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
-    "Internal error: bad texture coordinate style",
-    "Internal error: brush count mismatched during map file parsing",
     "Internal error: Detail cluster mismatch",
-    "line %d: couldn't parse Valve220 texture info",
 };
