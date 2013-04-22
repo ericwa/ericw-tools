@@ -62,8 +62,6 @@ enum {
     errDegenerateEdge,
     errNonCanonicalVector,
     errNormalization,
-    errFreedFace,
-    errLowSplitPointCount,	// 30
     errReadFailure,
     errColinearEdge,
     errPortalAlreadyAdded,

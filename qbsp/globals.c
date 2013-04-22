@@ -92,9 +92,7 @@ const char *rgszErrors[cErrors] = {
 
     "Found a non-canonical vector",
     "Normalization error in FindPlane (vector length %.4f)",
-    "Attempting to split freed face",
 
-    "Internal error: numpoints > MAXEDGES in SplitFace",
     "Failure reading from file",
     "Colinear edge",
     "Portal already included in AddPortalToNodes",
