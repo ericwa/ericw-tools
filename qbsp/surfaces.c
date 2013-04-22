@@ -310,7 +310,7 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
 
     face->outputnumber = -1;
     if (face->w.numpoints > MAXEDGES)
-	Error(errLowFacePointCount);
+	Error_("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
 
     face->edges = AllocMem(OTHER, face->w.numpoints * sizeof(int), true);
     for (i = 0; i < face->w.numpoints; i++)

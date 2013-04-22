@@ -60,7 +60,7 @@ CheckFace(face_t *f)
     vec3_t dir, edgenormal, facenormal;
 
     if (f->w.numpoints < 3)
-	Error(errTooFewPoints, f->w.numpoints);
+	Error_("%s: too few points (%i)", __func__, f->w.numpoints);
 
     VectorCopy(map.planes[f->planenum].normal, facenormal);
     if (f->planeside) {
@@ -72,7 +72,7 @@ CheckFace(face_t *f)
 
 	for (j = 0; j < 3; j++)
 	    if (p1[j] > BOGUS_RANGE || p1[j] < -BOGUS_RANGE)
-		Error(errBogusRange, p1[j]);
+		Error_("%s: coordinate out of range (%f)", __func__, p1[j]);
 
 	j = i + 1 == f->w.numpoints ? 0 : i + 1;
 
@@ -107,7 +107,7 @@ CheckFace(face_t *f)
 		continue;
 	    d = DotProduct(f->w.points[j], edgenormal);
 	    if (d > edgedist)
-		Error(errConcaveFace);
+		Error_("%s: Found a non-convex face", __func__);
 	}
     }
 }
@@ -244,9 +244,9 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
 
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
-	Error(errInvalidNormal, len);
+	Error_("%s: invalid normal (vector length %.4f)", __func__, len);
     if (map.numplanes == map.maxplanes)
-	Error(errLowBrushPlaneCount);
+	Error_("Internal error: didn't allocate enough planes? (%s)", __func__);
 
     plane = &map.planes[map.numplanes];
     VectorCopy(normal, plane->normal);
@@ -403,7 +403,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 	f = AllocMem(FACE, 1, true);
 	f->w.numpoints = w->numpoints;
 	if (f->w.numpoints > MAXEDGES)
-	    Error(errLowFacePointCount);
+	    Error_("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
 
 	for (j = 0; j < w->numpoints; j++) {
 	    for (k = 0; k < 3; k++) {
@@ -517,7 +517,7 @@ AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
 
     len = VectorLength(plane->normal);
     if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
-	Error(errInvalidNormal, len);
+	Error_("%s: invalid normal (vector length %.4f)", __func__, len);
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
@@ -526,7 +526,8 @@ AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
 	    return;
     }
     if (hullbrush->numfaces == MAX_FACES)
-	Error(errLowBrushFaceCount);
+	Error_("Internal error: brush->faces >= MAX_FACES (%s)", __func__);
+
     mapface->plane = *plane;
     mapface->texinfo = 0;
     hullbrush->numfaces++;
@@ -609,7 +610,7 @@ AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
 	    return i;
 
     if (hullbrush->numpoints == MAX_HULL_POINTS)
-	Error(errLowHullPointCount);
+	Error_("Internal error: hullbrush->numpoints == MAX_HULL_POINTS");
 
     VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
 
@@ -656,7 +657,7 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 	    return;
 
     if (hullbrush->numedges == MAX_HULL_EDGES)
-	Error(errLowHullEdgeCount);
+	Error_("Internal error: hulbrush->numedges == MAX_HULL_EDGES");
 
     hullbrush->edges[i][0] = pt1;
     hullbrush->edges[i][1] = pt2;
@@ -800,7 +801,8 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
 
     // create the faces
     if (mapbrush->numfaces > MAX_FACES)
-	Error(errLowBrushFaceCount);
+	Error_("Internal error: brush->faces >= MAX_FACES (%s)", __func__);
+
     hullbrush.numfaces = mapbrush->numfaces;
     memcpy(hullbrush.faces, mapbrush->faces,
 	   mapbrush->numfaces * sizeof(mapface_t));
