@@ -51,12 +51,10 @@ enum {
 
 enum {
     errNoLeakNode,
-    errUnknownOption,
 
     errBadVersion,		// 10
     errNoWindingAxis,
     errLowPointCount,
-    errNoValidBrushes,
     errNoValidPlanes,
     errNoSurfaceFaces,
     errBadContents,
@@ -100,7 +98,6 @@ enum {
     errLineIncomplete,
     errEOFInQuotes,
     errTokenTooLarge,
-    errInvalidOption,
     errLowLeakCount,
     errTooManyClipnodes,
     errDetailClusterMismatch,

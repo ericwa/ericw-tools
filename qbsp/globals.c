@@ -80,12 +80,10 @@ const char *rgszWarnings[cWarnings] = {
 
 const char *rgszErrors[cErrors] = {
     "No leak node in WriteLeakNode",
-    "Unknown option '%s'",
 
     "%s is version %i, not %i",
     "No axis found for winding",
     "Points on winding exceeded estimate",
-    "Entity with no valid brushes",
     "No valid planes in surface list",
     "Surface with no faces",
     "Bad contents in face",
@@ -133,7 +131,6 @@ const char *rgszErrors[cErrors] = {
     "line %d: Line is incomplete",
     "line %d: EOF inside quoted token",
     "line %d: Token too large",
-    "Invalid argument to option %s",
     "Internal error: numleaks > num_visportals",
     "Clipnodes in map exceed " stringify(MAX_BSP_CLIPNODES),
     "Internal error: Detail cluster mismatch",

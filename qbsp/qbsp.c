@@ -88,7 +88,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     Brush_LoadEntity(entity, entity, hullnum);
     if (!entity->brushes && hullnum) {
 	PrintEntity(entity);
-	Error(errNoValidBrushes);
+	Error_("Entity with no valid brushes");
     }
 
     /*
@@ -436,13 +436,13 @@ ParseOptions(char *szOptions)
     szTok = GetTok(szOptions, szEnd);
     while (szTok) {
 	if (szTok[0] != '-' && szTok[0] != '/') {
-	    // Treat as filename
+	    /* Treat as filename */
 	    if (NameCount == 0)
 		strcpy(options.szMapName, szTok);
 	    else if (NameCount == 1)
 		strcpy(options.szBSPName, szTok);
 	    else
-		Error(errUnknownOption, szTok);
+		Error_("Unknown option '%s'", szTok);
 	    NameCount++;
 	} else {
 	    szTok++;
@@ -475,19 +475,19 @@ ParseOptions(char *szOptions)
 	    else if (!strcasecmp(szTok, "leakdist")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
-		    Error(errInvalidOption, szTok);
+		    Error_("Invalid argument to option %s", szTok);
 		options.dxLeakDist = atoi(szTok2);
 		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "subdivide")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
-		    Error(errInvalidOption, szTok);
+		    Error_("Invalid argument to option %s", szTok);
 		options.dxSubdivide = atoi(szTok2);
 		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "wadpath")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
-		    Error(errInvalidOption, szTok);
+		    Error_("Invalid argument to option %s", szTok);
 		strcpy(options.wadPath, szTok2);
 		szTok = szTok2;
 		/* Remove trailing /, if any */
@@ -496,9 +496,8 @@ ParseOptions(char *szOptions)
 	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
-		Error(errUnknownOption, szTok);
+		Error_("Unknown option '%s'", szTok);
 	}
-
 	szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);
     }
 }
