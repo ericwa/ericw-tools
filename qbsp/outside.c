@@ -226,78 +226,84 @@ of the faces in the node, false if it does.
 =================
 */
 static bool
-LineIntersect_r(const node_t *node, const vec3_t point1, const vec3_t point2)
+LineIntersect_Leafnode(const node_t *node,
+		       const vec3_t point1, const vec3_t point2)
 {
-    // Process this node's faces if leaf node
-    if (node->contents) {
-	face_t *const *markfaces;
-	const face_t *face;
-	vec_t dist1, dist2;
-	vec3_t dir;
-	vec3_t mid, mins, maxs;
-	int i, j;
+    face_t *const *markfaces;
+    const face_t *face;
 
-	for (markfaces = node->markfaces; *markfaces; markfaces++) {
-	    for (face = *markfaces; face; face = face->original) {
-		const plane_t *plane = &map.planes[face->planenum];
-		dist1 = DotProduct(point1, plane->normal) - plane->dist;
-		dist2 = DotProduct(point2, plane->normal) - plane->dist;
+    for (markfaces = node->markfaces; *markfaces; markfaces++) {
+	for (face = *markfaces; face; face = face->original) {
+	    const plane_t *const plane = &map.planes[face->planenum];
+	    const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
+	    const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
+	    vec3_t mid, mins, maxs;
+	    int i, j;
 
-		// Line segment doesn't cross the plane
-		if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
-		    continue;
-		if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
-		    continue;
+	    // Line segment doesn't cross the plane
+	    if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
+		continue;
+	    if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
+		continue;
 
-		if (fabs(dist1) < ON_EPSILON) {
-		    if (fabs(dist2) < ON_EPSILON)
-			return false; /* too short/close */
-		    VectorCopy(point1, mid);
-		} else if (fabs(dist2) < ON_EPSILON) {
-		    VectorCopy(point2, mid);
-		} else {
-		    // Find the midpoint on the plane of the face
-		    VectorSubtract(point2, point1, dir);
-		    VectorMA(point1, dist1 / (dist1 - dist2), dir, mid);
+	    if (fabs(dist1) < ON_EPSILON) {
+		if (fabs(dist2) < ON_EPSILON)
+		    return false; /* too short/close */
+		VectorCopy(point1, mid);
+	    } else if (fabs(dist2) < ON_EPSILON) {
+		VectorCopy(point2, mid);
+	    } else {
+		/* Find the midpoint on the plane of the face */
+		vec3_t pointvec;
+		VectorSubtract(point2, point1, pointvec);
+		VectorMA(point1, dist1 / (dist1 - dist2), pointvec, mid);
+	    }
+
+	    // Do test here for point in polygon (face)
+	    // Quick hack
+	    mins[0] = mins[1] = mins[2] = VECT_MAX;
+	    maxs[0] = maxs[1] = maxs[2] = -VECT_MAX;
+	    for (i = 0; i < face->w.numpoints; i++)
+		for (j = 0; j < 3; j++) {
+		    if (face->w.points[i][j] < mins[j])
+			mins[j] = face->w.points[i][j];
+		    if (face->w.points[i][j] > maxs[j])
+			maxs[j] = face->w.points[i][j];
 		}
 
-		// Do test here for point in polygon (face)
-		// Quick hack
-		mins[0] = mins[1] = mins[2] = VECT_MAX;
-		maxs[0] = maxs[1] = maxs[2] = -VECT_MAX;
-		for (i = 0; i < face->w.numpoints; i++)
-		    for (j = 0; j < 3; j++) {
-			if (face->w.points[i][j] < mins[j])
-			    mins[j] = face->w.points[i][j];
-			if (face->w.points[i][j] > maxs[j])
-			    maxs[j] = face->w.points[i][j];
-		    }
+	    if (mid[0] < mins[0] - ON_EPSILON ||
+		mid[1] < mins[1] - ON_EPSILON ||
+		mid[2] < mins[2] - ON_EPSILON ||
+		mid[0] > maxs[0] + ON_EPSILON ||
+		mid[1] > maxs[1] + ON_EPSILON ||
+		mid[2] > maxs[2] + ON_EPSILON)
+		continue;
 
-		if (mid[0] < mins[0] - ON_EPSILON ||
-		    mid[1] < mins[1] - ON_EPSILON ||
-		    mid[2] < mins[2] - ON_EPSILON ||
-		    mid[0] > maxs[0] + ON_EPSILON ||
-		    mid[1] > maxs[1] + ON_EPSILON ||
-		    mid[2] > maxs[2] + ON_EPSILON)
-		    continue;
-
-		return false;
-	    }
+	    return false;
 	}
-    } else {
-	const plane_t *plane = &map.planes[node->planenum];
-	const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
-	const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
-
-	if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
-	    return LineIntersect_r(node->children[1], point1, point2);
-	if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
-	    return LineIntersect_r(node->children[0], point1, point2);
-	if (!LineIntersect_r(node->children[0], point1, point2))
-	    return false;
-	if (!LineIntersect_r(node->children[1], point1, point2))
-	    return false;
     }
+
+    return true;
+}
+
+static bool
+LineIntersect_r(const node_t *node, const vec3_t point1, const vec3_t point2)
+{
+    if (node->contents)
+	return LineIntersect_Leafnode(node, point1, point2);
+
+    const plane_t *const plane = &map.planes[node->planenum];
+    const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
+    const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
+
+    if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
+	return LineIntersect_r(node->children[1], point1, point2);
+    if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
+	return LineIntersect_r(node->children[0], point1, point2);
+    if (!LineIntersect_r(node->children[0], point1, point2))
+	return false;
+    if (!LineIntersect_r(node->children[1], point1, point2))
+	return false;
 
     return true;
 }
