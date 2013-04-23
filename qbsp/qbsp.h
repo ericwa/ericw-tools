@@ -677,13 +677,13 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 extern const char *rgszWarnings[cWarnings];
 extern const int rgcMemSize[];
 
-extern void *AllocMem(int Type, int cSize, bool fZero);
-extern void FreeMem(void *pMem, int Type, int cSize);
-extern void FreeAllMem(void);
-extern void PrintMem(void);
+void *AllocMem(int Type, int cSize, bool fZero);
+void FreeMem(void *pMem, int Type, int cSize);
+void FreeAllMem(void);
+void PrintMem(void);
 
-extern void Message(int MsgType, ...);
-extern void Error(const char *error, ...)
+void Message(int MsgType, ...);
+void Error(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
 
 extern FILE *logfile;
