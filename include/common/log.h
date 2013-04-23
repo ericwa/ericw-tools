@@ -28,7 +28,6 @@
 #define __COMMON_LOG_H__
 
 #include <stdio.h>
-#include <common/cmdlib.h>
 
 void init_log(const char *filename);
 void close_log();

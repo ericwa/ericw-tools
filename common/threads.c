@@ -1,13 +1,15 @@
 /* common/threads.c */
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <common/cmdlib.h>
 #include <common/log.h>
 #include <common/threads.h>
 
 /* Make the locks no-ops if we aren't running threads */
-static qboolean threads_active = false;
+static _Bool threads_active = false;
 
 static int dispatch;
 static int workcount;

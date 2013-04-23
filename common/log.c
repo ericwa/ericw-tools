@@ -21,15 +21,15 @@
  * common/log.c
  */
 
+#include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
 
 #include <common/log.h>
-#include <common/cmdlib.h>
 #include <common/threads.h>
 
 static FILE *logfile;
-static qboolean log_ok;
+static _Bool log_ok;
 
 void
 init_log(const char *filename)
