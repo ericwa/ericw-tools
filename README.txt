@@ -1,7 +1,7 @@
-Updated 2013-04-10
+Updated 2013-04-23
 
 ------------------
- Tyr-Utils (v0.7)
+ Tyr-Utils (v0.8)
 ------------------
   Website: http://disenchant.net
   Author:  Kevin Shanahan (AKA Tyrann)
@@ -28,7 +28,9 @@ Included utilities:
             and extract the textures to a .wad file.
 
 See the doc/ directory for more detailed descriptions of the various
-tools capabilities.
+tools capabilities.  See changelog.txt for a brief overview of recent
+changes or git://disenchant.net/tyrutils for the full changelog and
+source code.
 
 ---------
  License
