@@ -229,7 +229,7 @@ LoadVisState(void)
     /* Sanity check the headers */
     if (state.version != VIS_STATE_VERSION) {
 	fclose(infile);
-	Error("%s: state file version does not match");
+	Error("%s: state file version does not match", __func__);
     }
     if (state.numportals != numportals || state.numleafs != portalleafs) {
 	fclose(infile);

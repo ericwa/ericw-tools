@@ -289,15 +289,15 @@ LoadEntities(void)
     char key[MAX_ENT_KEY];
     epair_t *epair;
     vec3_t vec;
-    int num_lights;
+    int memsize, num_lights;
 
     /* Count the entities and allocate memory */
     max_entities = CountEntities(dentdata);
-    entities = malloc(max_entities * sizeof(*entities));
+    memsize = max_entities * sizeof(*entities);
+    entities = malloc(memsize);
     if (!entities)
-	Error("%s: allocation of %d bytes failed\n", __func__,
-	      max_entities * sizeof(*entities));
-    memset(entities, 0, max_entities * sizeof(*entities));
+	Error("%s: allocation of %d bytes failed\n", __func__, memsize);
+    memset(entities, 0, memsize);
 
     /* start parsing */
     num_entities = 0;
@@ -525,7 +525,7 @@ WriteEntitiesToString(void)
     entdatasize = Get_EntityStringSize(entities, num_entities);
     dentdata = malloc(entdatasize);
     if (!dentdata)
-	Error("%s: allocation of %d bytes failed\n", entdatasize);
+	Error("%s: allocation of %d bytes failed\n", __func__, entdatasize);
 
     space = entdatasize;
     pos = dentdata;

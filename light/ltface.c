@@ -339,7 +339,7 @@ CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
 		  "   surface %d, %s extents = %d\n"
 		  "   texture %s at (%s)\n"
 		  "   surface normal (%s)\n",
-		  face - dfaces, i ? "t" : "s", surf->texsize[i],
+		  (int)(face - dfaces), i ? "t" : "s", surf->texsize[i],
 		  miptex->name, VecStr(worldpoint), VecStrf(plane->normal));
 	}
     }
