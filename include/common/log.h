@@ -27,6 +27,7 @@
 #ifndef __COMMON_LOG_H__
 #define __COMMON_LOG_H__
 
+#include <stdarg.h>
 #include <stdio.h>
 
 void init_log(const char *filename);
