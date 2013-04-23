@@ -369,5 +369,5 @@ MidpointWinding(const winding_t *w, vec3_t v)
     for (i = 0; i < w->numpoints; i++)
 	VectorAdd(v, w->points[i], v);
     if (w->numpoints)
-	VectorScale(v, w->numpoints, v);
+	VectorScale(v, 1.0 / w->numpoints, v);
 }
