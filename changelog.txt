@@ -1,4 +1,4 @@
-Unreleased
+2013-04-24 TyrUtils v0.9
 
 * qbsp: fixed bad pointfile generation
 
