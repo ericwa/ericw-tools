@@ -490,7 +490,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     /* first check to see if an occupied leaf is hit */
-    side = !(outside_node.portals->nodes[1] == &outside_node);
+    side = (outside_node.portals->nodes[0] == &outside_node);
     fillnode = outside_node.portals->nodes[side];
     leak_found = FindLeaks_r(&leak, ++map.fillmark, fillnode);
     if (leak_found) {
