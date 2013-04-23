@@ -164,15 +164,19 @@ it will be clipped away.
 winding_t *
 ClipWinding(winding_t *in, const plane_t *split, bool keepon)
 {
-    vec_t dists[MAX_POINTS_ON_WINDING];
-    int sides[MAX_POINTS_ON_WINDING];
+    vec_t dists[MAX_POINTS_ON_WINDING + 1];
+    int sides[MAX_POINTS_ON_WINDING + 1];
     int counts[3];
-    vec_t dot;
+    vec_t fraction;
     int i, j;
     vec_t *p1, *p2;
     vec3_t mid;
     winding_t *neww;
     int maxpts;
+
+    if (in->numpoints > MAX_POINTS_ON_WINDING)
+	Error("Internal error: in->numpoints > MAX (%s: %d > %d)",
+	      __func__, in->numpoints, MAX_POINTS_ON_WINDING);
 
     CalcSides(in, split, sides, dists, counts);
 
@@ -187,20 +191,24 @@ ClipWinding(winding_t *in, const plane_t *split, bool keepon)
     if (!counts[SIDE_BACK])
 	return in;
 
-    maxpts = in->numpoints + 4;	// can't use counts[0]+2 because
-    // of fp grouping errors
+    /* 	can't use maxpoints = counts[0] + 2 because of fp grouping errors */
+    maxpts = in->numpoints + 4;
     neww = AllocMem(WINDING, maxpts, true);
 
     for (i = 0; i < in->numpoints; i++) {
 	p1 = in->points[i];
 
 	if (sides[i] == SIDE_ON) {
+	    if (neww->numpoints == maxpts)
+		goto noclip;
 	    VectorCopy(p1, neww->points[neww->numpoints]);
 	    neww->numpoints++;
 	    continue;
 	}
 
 	if (sides[i] == SIDE_FRONT) {
+	    if (neww->numpoints == maxpts)
+		goto noclip;
 	    VectorCopy(p1, neww->points[neww->numpoints]);
 	    neww->numpoints++;
 	}
@@ -208,31 +216,31 @@ ClipWinding(winding_t *in, const plane_t *split, bool keepon)
 	if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
 	    continue;
 
-	// generate a split point
+	/* generate a split point */
 	p2 = in->points[(i + 1) % in->numpoints];
-
-	dot = dists[i] / (dists[i] - dists[i + 1]);
+	fraction = dists[i] / (dists[i] - dists[i + 1]);
 	for (j = 0; j < 3; j++) {
-	    // avoid round off error when possible
+	    /* avoid round off error when possible */
 	    if (split->normal[j] == 1)
 		mid[j] = split->dist;
 	    else if (split->normal[j] == -1)
 		mid[j] = -split->dist;
 	    else
-		mid[j] = p1[j] + dot * (p2[j] - p1[j]);
+		mid[j] = p1[j] + fraction * (p2[j] - p1[j]);
 	}
 
+	if (neww->numpoints == maxpts)
+	    goto noclip;
 	VectorCopy(mid, neww->points[neww->numpoints]);
 	neww->numpoints++;
     }
-
-    if (neww->numpoints > maxpts)
-	Error("Internal error: excess clipped points (%s)", __func__);
-
-    // free the original winding
     FreeMem(in, WINDING, 1);
 
     return neww;
+
+ noclip:
+    Error("Internal error: new->numpoints > MAX (%s: %d > %d)",
+	  __func__, neww->numpoints, maxpts);
 }
 
 
@@ -250,17 +258,19 @@ void
 DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
 	      winding_t **back)
 {
-    vec_t dists[MAX_POINTS_ON_WINDING];
-    int sides[MAX_POINTS_ON_WINDING];
+    vec_t dists[MAX_POINTS_ON_WINDING + 1];
+    int sides[MAX_POINTS_ON_WINDING + 1];
     int counts[3];
-    vec_t dot;
+    vec_t fraction;
     int i, j;
     vec_t *p1, *p2;
     vec3_t mid;
     winding_t *f, *b;
     int maxpts;
 
-    counts[0] = counts[1] = counts[2] = 0;
+    if (in->numpoints > MAX_POINTS_ON_WINDING)
+	Error("Internal error: in->numpoints > MAX (%s: %d > %d)",
+	      __func__, in->numpoints, MAX_POINTS_ON_WINDING);
 
     CalcSides(in, split, sides, dists, counts);
 
@@ -275,9 +285,8 @@ DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
 	return;
     }
 
-    maxpts = in->numpoints + 4;	// can't use counts[0]+2 because
-    // of fp grouping errors
-
+    /* 	can't use maxpoints = counts[0] + 2 because of fp grouping errors */
+    maxpts = in->numpoints + 4;
     *front = f = AllocMem(WINDING, maxpts, true);
     *back = b = AllocMem(WINDING, maxpts, true);
 
@@ -285,18 +294,26 @@ DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
 	p1 = in->points[i];
 
 	if (sides[i] == SIDE_ON) {
+	    if (f->numpoints == maxpts)
+		goto noclip_front;
 	    VectorCopy(p1, f->points[f->numpoints]);
 	    f->numpoints++;
+	    if (b->numpoints == maxpts)
+		goto noclip_back;
 	    VectorCopy(p1, b->points[b->numpoints]);
 	    b->numpoints++;
 	    continue;
 	}
 
 	if (sides[i] == SIDE_FRONT) {
+	    if (f->numpoints == maxpts)
+		goto noclip_front;
 	    VectorCopy(p1, f->points[f->numpoints]);
 	    f->numpoints++;
 	}
 	if (sides[i] == SIDE_BACK) {
+	    if (b->numpoints == maxpts)
+		goto noclip_back;
 	    VectorCopy(p1, b->points[b->numpoints]);
 	    b->numpoints++;
 	}
@@ -304,27 +321,37 @@ DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
 	if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
 	    continue;
 
-	// generate a split point
+	/* generate a split point */
 	p2 = in->points[(i + 1) % in->numpoints];
 
-	dot = dists[i] / (dists[i] - dists[i + 1]);
-	for (j = 0; j < 3; j++) {	// avoid round off error when possible
+	fraction = dists[i] / (dists[i] - dists[i + 1]);
+	for (j = 0; j < 3; j++) {
+	    /* avoid round off error when possible */
 	    if (split->normal[j] == 1)
 		mid[j] = split->dist;
 	    else if (split->normal[j] == -1)
 		mid[j] = -split->dist;
 	    else
-		mid[j] = p1[j] + dot * (p2[j] - p1[j]);
+		mid[j] = p1[j] + fraction * (p2[j] - p1[j]);
 	}
 
+	if (f->numpoints == maxpts)
+	    goto noclip_front;
 	VectorCopy(mid, f->points[f->numpoints]);
 	f->numpoints++;
+	if (b->numpoints == maxpts)
+	    goto noclip_back;
 	VectorCopy(mid, b->points[b->numpoints]);
 	b->numpoints++;
     }
+    return;
 
-    if (f->numpoints > maxpts || b->numpoints > maxpts)
-	Error("Internal error: excess clipped points (%s)", __func__);
+ noclip_front:
+    Error("Internal error: front->numpoints > MAX (%s: %d > %d)",
+	  __func__, f->numpoints, maxpts);
+ noclip_back:
+    Error("Internal error: back->numpoints > MAX (%s: %d > %d)",
+	  __func__, b->numpoints, maxpts);
 }
 
 

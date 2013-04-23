@@ -239,7 +239,7 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
     vec_t dists[MAX_WINDING + 1];
     int sides[MAX_WINDING + 1];
     int counts[3];
-    vec_t dot;
+    vec_t dot, fraction;
     int i, j;
     vec_t *p1, *p2;
     vec3_t mid;
@@ -254,9 +254,13 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 	return in;
     }
 
+    if (in->numpoints > MAX_WINDING)
+	Error("%s: in->numpoints > MAX_WINDING (%d > %d)",
+	      __func__, in->numpoints, MAX_WINDING);
+
     counts[0] = counts[1] = counts[2] = 0;
 
-// determine sides for each point
+    /* determine sides for each point */
     for (i = 0; i < in->numpoints; i++) {
 	dot = DotProduct(in->points[i], split->normal);
 	dot -= split->dist;
@@ -288,20 +292,16 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
     for (i = 0; i < in->numpoints; i++) {
 	p1 = in->points[i];
 
-	if (neww->numpoints == MAX_WINDING_FIXED) {
-	    /* Can't clip, fall back to original */
-	    FreeStackWinding(neww, stack);
-	    c_noclip++;
-	    return in;
-	}
-
 	if (sides[i] == SIDE_ON) {
-	    VectorCopy(p1, neww->points[neww->numpoints]);
+	    if (neww->numpoints == MAX_WINDING_FIXED)
+		goto noclip;
 	    neww->numpoints++;
 	    continue;
 	}
 
 	if (sides[i] == SIDE_FRONT) {
+	    if (neww->numpoints == MAX_WINDING_FIXED)
+		goto noclip;
 	    VectorCopy(p1, neww->points[neww->numpoints]);
 	    neww->numpoints++;
 	}
@@ -309,34 +309,33 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 	if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
 	    continue;
 
-	if (neww->numpoints == MAX_WINDING_FIXED) {
-	    /* Can't clip, fall back to original */
-	    FreeStackWinding(neww, stack);
-	    c_noclip++;
-	    return in;
-	}
-
-	// generate a split point
+	/* generate a split point */
 	p2 = in->points[(i + 1) % in->numpoints];
-
-	dot = dists[i] / (dists[i] - dists[i + 1]);
-	for (j = 0; j < 3; j++) {	// avoid round off error when possible
+	fraction = dists[i] / (dists[i] - dists[i + 1]);
+	for (j = 0; j < 3; j++) {
+	    /* avoid round off error when possible */
 	    if (split->normal[j] == 1)
 		mid[j] = split->dist;
 	    else if (split->normal[j] == -1)
 		mid[j] = -split->dist;
 	    else
-		mid[j] = p1[j] + dot * (p2[j] - p1[j]);
+		mid[j] = p1[j] + fraction * (p2[j] - p1[j]);
 	}
 
+	if (neww->numpoints == MAX_WINDING_FIXED)
+	    goto noclip;
 	VectorCopy(mid, neww->points[neww->numpoints]);
 	neww->numpoints++;
     }
     FreeStackWinding(in, stack);
 
     return neww;
-}
 
+ noclip:
+    FreeStackWinding(neww, stack);
+    c_noclip++;
+    return in;
+}
 
 //============================================================================
 
