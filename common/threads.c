@@ -4,9 +4,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include <common/cmdlib.h>
 #include <common/log.h>
 #include <common/threads.h>
+
+/*
+ * FIXME - Temporary hack while trying to get qbsp to use the common
+ *         thread/logging code.  Error() would normally be defined in
+ *         either common/cmdlib.h or qbsp/qbsp.h.
+ */
+void Error(const char *error, ...)
+    __attribute__((format(printf,1,2),noreturn));
 
 /* Make the locks no-ops if we aren't running threads */
 static _Bool threads_active = false;
