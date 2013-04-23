@@ -477,20 +477,11 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     /* Set up state for the recursive fill */
+    memset(&leak, 0, sizeof(leak));
     if (!map.leakfile) {
 	leak.portals = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
 	leak.maxportals = numportals;
-    } else {
-	leak.portals = NULL;
-	leak.maxportals = 0;
     }
-    leak.backdraw = 0;
-    leak.header = false;
-    leak.numwritten = 0;
-    leak.entity = NULL;
-    leak.numportals = 0;
-    leak.porfile = NULL;
-    leak.ptsfile = NULL;
 
     /* first check to see if an occupied leaf is hit */
     side = !(outside_node.portals->nodes[1] == &outside_node);
