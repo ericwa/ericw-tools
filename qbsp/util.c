@@ -23,6 +23,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
+#include "common/threads.h"
+#include "common/log.h"
+
 #include "qbsp.h"
 
 static int rgMemTotal[GLOBAL + 1];
@@ -205,17 +208,15 @@ void
 Error(const char *error, ...)
 {
     va_list argptr;
-    char message[512];
+
+    /* Using lockless prints so we can error out while holding the lock */
+    InterruptThreadProgress__();
+    logprint_locked__("************ ERROR ************\n");
 
     va_start(argptr, error);
-    vsnprintf(message, sizeof(message), error, argptr);
+    logvprint(error, argptr);
     va_end(argptr);
-
-    fprintf(stderr, "\nERROR: %s\n\n", message);
-    if (logfile) {
-	fprintf(logfile, "\nERROR: %s\n\n", message);
-	fclose(logfile);
-    }
+    logprint_locked__("\n");
     exit(1);
 }
 
@@ -313,11 +314,12 @@ Message(int msgType, ...)
 	return;
     }
 
-    if (msgType != msgFile)
+    if (msgType == msgScreen)
 	printf("%s", szBuffer);
-    if (msgType != msgScreen && logfile)
-	fprintf(logfile, "%s", szBuffer);
+    else if (msgType == msgFile)
+	logprint_silent("%s", szBuffer);
+    else
+	logprint("%s", szBuffer);
 
     va_end(argptr);
-    fflush(stdout);
 }

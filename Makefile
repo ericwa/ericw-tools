@@ -465,29 +465,31 @@ $(BIN_DIR)/$(BIN_PFX)bsputil$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(BSPUTIL_OBJS))
 ########
 
 QBSP_OBJS = \
-	brush.o		\
-	bspfile.o	\
-	cmdlib.o	\
-	csg4.o		\
-	file.o		\
-	globals.o	\
-	map.o		\
-	mathlib.o	\
-	merge.o		\
-	outside.o	\
-	parser.o	\
-	portals.o	\
-	qbsp.o		\
-	solidbsp.o	\
-	surfaces.o	\
-	tjunc.o		\
-	util.o		\
-	wad.o		\
-	winding.o	\
-	writebsp.o
+	common/threads.o	\
+	common/log.o		\
+	qbsp/brush.o		\
+	qbsp/bspfile.o		\
+	qbsp/cmdlib.o		\
+	qbsp/csg4.o		\
+	qbsp/file.o		\
+	qbsp/globals.o		\
+	qbsp/map.o		\
+	qbsp/mathlib.o		\
+	qbsp/merge.o		\
+	qbsp/outside.o		\
+	qbsp/parser.o		\
+	qbsp/portals.o		\
+	qbsp/qbsp.o		\
+	qbsp/solidbsp.o		\
+	qbsp/surfaces.o		\
+	qbsp/tjunc.o		\
+	qbsp/util.o		\
+	qbsp/wad.o		\
+	qbsp/winding.o		\
+	qbsp/writebsp.o
 
-$(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,$(BUILD_DIR)/qbsp/%,$(QBSP_OBJS))
-	$(call do_cc_link,-lm)
+$(BIN_DIR)/$(BIN_PFX)qbsp$(EXT):	$(patsubst %,$(BUILD_DIR)/%,$(QBSP_OBJS))
+	$(call do_cc_link,-lm $(LPTHREAD))
 	$(call do_strip,$@)
 
 clean:
@@ -580,8 +582,8 @@ $(1)/bin/$$(BIN_PFX)bsputil$$(EXT): $$(patsubst %,$(1)/%,$$(BSPUTIL_OBJS))
 	$$(call do_cc_link,-lm $$(LPTHREAD) $(2))
 	$$(call do_strip,$$@)
 
-$(1)/bin/$$(BIN_PFX)qbsp$$(EXT): $$(patsubst %,$(1)/qbsp/%,$$(QBSP_OBJS))
-	$$(call do_cc_link,-lm $(2))
+$(1)/bin/$$(BIN_PFX)qbsp$$(EXT): $$(patsubst %,$(1)/%,$$(QBSP_OBJS))
+	$$(call do_cc_link,-lm $$(LPTHREAD) $(2))
 	$$(call do_strip,$$@)
 endef
 
@@ -637,8 +639,8 @@ $(BUILD_DIR)/win32/bin/$(BIN_PFX)bsputil$(EXT): $(patsubst %,$(BUILD_DIR)/win32/
 	$(call do_cc_link,-lm $(LPTHREAD))
 	$(call do_strip,$@)
 
-$(BUILD_DIR)/win32/bin/$(BIN_PFX)qbsp$(EXT): $(patsubst %,$(BUILD_DIR)/win32/qbsp/%,$(QBSP_OBJS))
-	$(call do_cc_link,-lm)
+$(BUILD_DIR)/win32/bin/$(BIN_PFX)qbsp$(EXT): $(patsubst %,$(BUILD_DIR)/win32/%,$(QBSP_OBJS))
+	$(call do_cc_link,-lm $(LPTHREAD))
 	$(call do_strip,$@)
 
 # Simple rules to copy distribution files

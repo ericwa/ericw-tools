@@ -21,6 +21,7 @@
 
 #include <string.h>
 
+#include "common/log.h"
 #include "qbsp.h"
 #include "wad.h"
 
@@ -515,8 +516,6 @@ InitQBSP(int argc, char **argv)
     char *szBuf;
     int length;
 
-    logfile = NULL;
-
     // Initial values
     options.dxLeakDist = 2;
     options.dxSubdivide = 240;
@@ -566,11 +565,9 @@ InitQBSP(int argc, char **argv)
     /* Start logging to <bspname>.log */
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".log");
-    logfile = fopen(options.szBSPName, "wt");
-    if (!logfile)
-	Message(msgWarning, warnNoLogFile);
-    else
-	Message(msgFile, IntroString);
+    init_log(options.szBSPName);
+
+    Message(msgFile, IntroString);
 
     /* If no wadpath given, default to the map directory */
     if (options.wadPath[0] == 0) {
@@ -627,7 +624,7 @@ main(int argc, char **argv)
 //      FreeAllMem();
 //      PrintMem();
 
-    fclose(logfile);
+    close_log();
 
     return 0;
 }
