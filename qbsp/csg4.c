@@ -521,9 +521,9 @@ CSGFaces(const mapentity_t *entity)
     surfaces = BuildSurfaces(planefaces);
     FreeMem(planefaces, OTHER, sizeof(face_t *) * map.maxplanes);
 
-    Message(msgStat, "%5i brushfaces", brushfaces);
-    Message(msgStat, "%5i csgfaces", csgfaces);
-    Message(msgStat, "%5i mergedfaces", csgmergefaces);
+    Message(msgStat, "%8d brushfaces", brushfaces);
+    Message(msgStat, "%8d csgfaces", csgfaces);
+    Message(msgStat, "%8d mergedfaces", csgmergefaces);
 
     return surfaces;
 }

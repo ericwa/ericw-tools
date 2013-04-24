@@ -487,8 +487,8 @@ TJunc(const mapentity_t *entity, node_t *headnode)
 
     tjunc_find_r(headnode);
 
-    Message(msgStat, "%5i world edges", numwedges);
-    Message(msgStat, "%5i edge points", numwverts);
+    Message(msgStat, "%8d world edges", numwedges);
+    Message(msgStat, "%8d edge points", numwverts);
 
     // add extra vertexes on edges where needed
     tjuncs = tjuncfaces = 0;
@@ -498,6 +498,6 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     FreeMem(pWVerts, WVERT, cWVerts);
     FreeMem(pWEdges, WEDGE, cWEdges);
 
-    Message(msgStat, "%5i edges added by tjunctions", tjuncs);
-    Message(msgStat, "%5i faces added by tjunctions", tjuncfaces);
+    Message(msgStat, "%8d edges added by tjunctions", tjuncs);
+    Message(msgStat, "%8d faces added by tjunctions", tjuncfaces);
 }

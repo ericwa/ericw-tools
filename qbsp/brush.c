@@ -60,7 +60,7 @@ CheckFace(face_t *f)
     vec3_t dir, edgenormal, facenormal;
 
     if (f->w.numpoints < 3)
-	Error("%s: too few points (%i)", __func__, f->w.numpoints);
+	Error("%s: too few points (%d)", __func__, f->w.numpoints);
 
     VectorCopy(map.planes[f->planenum].normal, facenormal);
     if (f->planeside) {

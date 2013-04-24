@@ -759,11 +759,11 @@ LoadMapFile(void)
     map.maxplanes = 3 * map.maxplanes + map.maxplanes / 5;
     map.planes = AllocMem(PLANE, map.maxplanes, true);
 
-    Message(msgStat, "%5i faces", map.numfaces);
-    Message(msgStat, "%5i brushes", map.numbrushes);
-    Message(msgStat, "%5i entities", map.numentities);
-    Message(msgStat, "%5i unique texnames", map.nummiptex);
-    Message(msgStat, "%5i texinfo", texinfo->count);
+    Message(msgStat, "%8d faces", map.numfaces);
+    Message(msgStat, "%8d brushes", map.numbrushes);
+    Message(msgStat, "%8d entities", map.numentities);
+    Message(msgStat, "%8d unique texnames", map.nummiptex);
+    Message(msgStat, "%8d texinfo", texinfo->count);
     Message(msgLiteral, "\n");
 }
 

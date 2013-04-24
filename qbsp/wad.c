@@ -260,5 +260,5 @@ WADList_AddAnimatingTextures(const wad_t *wadlist)
 	}
     }
 
-    Message(msgStat, "%5i texture frames added", map.nummiptex - base);
+    Message(msgStat, "%8d texture frames added", map.nummiptex - base);
 }

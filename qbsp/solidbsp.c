@@ -818,12 +818,12 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 
     PartitionSurfaces(surfhead, headnode);
 
-    Message(msgStat, "%5i split nodes", splitnodes);
-    Message(msgStat, "%5i solid leafs", c_solid);
-    Message(msgStat, "%5i empty leafs", c_empty);
-    Message(msgStat, "%5i water leafs", c_water);
-    Message(msgStat, "%5i leaffaces", leaffaces);
-    Message(msgStat, "%5i nodefaces", nodefaces);
+    Message(msgStat, "%8d split nodes", splitnodes);
+    Message(msgStat, "%8d solid leafs", c_solid);
+    Message(msgStat, "%8d empty leafs", c_empty);
+    Message(msgStat, "%8d water leafs", c_water);
+    Message(msgStat, "%8d leaffaces", leaffaces);
+    Message(msgStat, "%8d nodefaces", nodefaces);
 
     return headnode;
 }

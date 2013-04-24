@@ -44,7 +44,7 @@ static void
 WriteFloat(vec_t v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
-	fprintf(PortalFile, "%i ", (int)Q_rint(v));
+	fprintf(PortalFile, "%d ", (int)Q_rint(v));
     else
 	fprintf(PortalFile, "%f ", v);
 }
@@ -155,9 +155,9 @@ WritePortals_r(node_t *node, bool clusters)
 	pl = &map.planes[p->planenum];
 	PlaneFromWinding(w, &plane2);
 	if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
-	    fprintf(PortalFile, "%i %i %i ", w->numpoints, back, front);
+	    fprintf(PortalFile, "%d %d %d ", w->numpoints, back, front);
 	else
-	    fprintf(PortalFile, "%i %i %i ", w->numpoints, front, back);
+	    fprintf(PortalFile, "%d %d %d ", w->numpoints, front, back);
 
 	for (i = 0; i < w->numpoints; i++) {
 	    fprintf(PortalFile, "(");
@@ -284,14 +284,14 @@ WritePortalfile(node_t *headnode)
     /* If no detail clusters, just use a normal PRT1 format */
     if (num_visclusters == num_visleafs) {
 	fprintf(PortalFile, "PRT1\n");
-	fprintf(PortalFile, "%i\n", num_visleafs);
-	fprintf(PortalFile, "%i\n", num_visportals);
+	fprintf(PortalFile, "%d\n", num_visleafs);
+	fprintf(PortalFile, "%d\n", num_visportals);
 	WritePortals_r(headnode, false);
     } else {
 	fprintf(PortalFile, "PRT2\n");
-	fprintf(PortalFile, "%i\n", num_visleafs);
-	fprintf(PortalFile, "%i\n", num_visclusters);
-	fprintf(PortalFile, "%i\n", num_visportals);
+	fprintf(PortalFile, "%d\n", num_visleafs);
+	fprintf(PortalFile, "%d\n", num_visclusters);
+	fprintf(PortalFile, "%d\n", num_visportals);
 	WritePortals_r(headnode, true);
 	check = WriteClusters_r(headnode, 0);
 	if (check != num_visclusters - 1)
@@ -669,9 +669,9 @@ PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
 	/* save portal file for vis tracing */
 	WritePortalfile(headnode);
 
-	Message(msgStat, "%5i vis leafs", num_visleafs);
-	Message(msgStat, "%5i vis clusters", num_visclusters);
-	Message(msgStat, "%5i vis portals", num_visportals);
+	Message(msgStat, "%8d vis leafs", num_visleafs);
+	Message(msgStat, "%8d vis clusters", num_visclusters);
+	Message(msgStat, "%8d vis portals", num_visportals);
     }
 
     return num_visportals;

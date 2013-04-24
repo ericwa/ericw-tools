@@ -121,7 +121,7 @@ WriteLeakNode(FILE *porfile, const node_t *node)
     }
 
     if (options.fBspleak)
-	fprintf(porfile, "%i\n", count);
+	fprintf(porfile, "%d\n", count);
 
     for (portal = node->portals; portal; portal = portal->next[!side]) {
 	side = (portal->nodes[0] == node);
@@ -130,7 +130,7 @@ WriteLeakNode(FILE *porfile, const node_t *node)
 	if (portal->nodes[side]->contents == CONTENTS_SKY)
 	    continue;
 	if (options.fBspleak) {
-	    fprintf(porfile, "%i ", portal->winding->numpoints);
+	    fprintf(porfile, "%d ", portal->winding->numpoints);
 	    for (i = 0; i < portal->winding->numpoints; i++) {
 		const vec_t *point = portal->winding->points[i];
 		fprintf(porfile, "%f %f %f ", point[0], point[1], point[2]);
@@ -197,7 +197,7 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
 
 	/* Write the portal center and winding */
 	fprintf(leak->porfile, "%f %f %f ", point1[0], point1[1], point1[2]);
-	fprintf(leak->porfile, "%i ", portal2->winding->numpoints);
+	fprintf(leak->porfile, "%d ", portal2->winding->numpoints);
 	for (i = 0; i < portal2->winding->numpoints; i++) {
 	    const vec_t *point = portal2->winding->points[i];
 	    fprintf(leak->porfile, "%f %f %f ", point[0], point[1], point[2]);
@@ -510,7 +510,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
 	}
 	if (options.fBspleak && leak.porfile) {
 	    fseek(leak.porfile, 0, SEEK_SET);
-	    fprintf(leak.porfile, "%11i", leak.numwritten);
+	    fprintf(leak.porfile, "%11d", leak.numwritten);
 	    fclose(leak.porfile);
 	    Message(msgLiteral, "BSP portal file written to %s.por\n",
 		    options.szBSPName);
@@ -536,6 +536,6 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     /* remove faces from filled in leafs */
     ClearOutFaces(node);
 
-    Message(msgStat, "%4i outleafs", outleafs);
+    Message(msgStat, "%8d outleafs", outleafs);
     return true;
 }

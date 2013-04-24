@@ -63,7 +63,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
 	if (entity == pWorldEnt + 1)
 	    Message(msgProgress, "Internal Entities");
-	snprintf(mod, sizeof(mod), "*%i", map.cTotal[BSPMODEL]);
+	snprintf(mod, sizeof(mod), "*%d", map.cTotal[BSPMODEL]);
 	if (options.fVerbose)
 	    PrintEntity(entity);
 
@@ -119,11 +119,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 		detailcount += entity->numbrushes - detailstart;
 	    }
 	}
-	Message(msgStat, "%5i brushes", entity->numbrushes - detailcount);
+	Message(msgStat, "%8d brushes", entity->numbrushes - detailcount);
 	if (detailcount)
-	    Message(msgStat, "%5i detail", detailcount);
+	    Message(msgStat, "%8d detail", detailcount);
     } else {
-	Message(msgStat, "%5i brushes", entity->numbrushes);
+	Message(msgStat, "%8d brushes", entity->numbrushes);
     }
 
     /*
@@ -214,7 +214,7 @@ UpdateEntLump(void)
 	if (!strcmp(classname, "func_detail"))
 	    continue;
 
-	snprintf(modname, sizeof(modname), "*%i", modnum);
+	snprintf(modname, sizeof(modname), "*%d", modnum);
 	SetKeyValue(entity, "model", modname);
 	modnum++;
 

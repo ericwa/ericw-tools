@@ -266,7 +266,7 @@ MergeAll(surface_t *surfhead)
 	    mergefaces++;
     }
 
-    Message(msgStat, "%5i mergefaces", mergefaces);
+    Message(msgStat, "%8d mergefaces", mergefaces);
 
     // Quick hack to let solidbsp print out progress %
     csgmergefaces = mergefaces;

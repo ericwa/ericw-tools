@@ -44,7 +44,7 @@ LoadBSPFile(void)
     cFileSize = LoadFile(options.szBSPName, &header, true);
 
     if (header->version != BSPVERSION)
-	Error("%s is version %i, not %i",
+	Error("%s is version %d, not %d",
 	      options.szBSPName, header->version, BSPVERSION);
 
     /* Throw all of the data into the first entity to be written out later */
@@ -175,35 +175,35 @@ PrintBSPFileSizes(void)
 {
     struct lumpdata *lump;
 
-    Message(msgStat, "%6i planes       %8i", map.cTotal[BSPPLANE],
+    Message(msgStat, "%8d planes       %10d", map.cTotal[BSPPLANE],
 	    map.cTotal[BSPPLANE] * rgcMemSize[BSPPLANE]);
-    Message(msgStat, "%6i vertexes     %8i", map.cTotal[BSPVERTEX],
+    Message(msgStat, "%8d vertexes     %10d", map.cTotal[BSPVERTEX],
 	    map.cTotal[BSPVERTEX] * rgcMemSize[BSPVERTEX]);
-    Message(msgStat, "%6i nodes        %8i", map.cTotal[BSPNODE],
+    Message(msgStat, "%8d nodes        %10d", map.cTotal[BSPNODE],
 	    map.cTotal[BSPNODE] * rgcMemSize[BSPNODE]);
-    Message(msgStat, "%6i texinfo      %8i", map.cTotal[BSPTEXINFO],
+    Message(msgStat, "%8d texinfo      %10d", map.cTotal[BSPTEXINFO],
 	    map.cTotal[BSPTEXINFO] * rgcMemSize[BSPTEXINFO]);
-    Message(msgStat, "%6i faces        %8i", map.cTotal[BSPFACE],
+    Message(msgStat, "%8d faces        %10d", map.cTotal[BSPFACE],
 	    map.cTotal[BSPFACE] * rgcMemSize[BSPFACE]);
-    Message(msgStat, "%6i clipnodes    %8i", map.cTotal[BSPCLIPNODE],
+    Message(msgStat, "%8d clipnodes    %10d", map.cTotal[BSPCLIPNODE],
 	    map.cTotal[BSPCLIPNODE] * rgcMemSize[BSPCLIPNODE]);
-    Message(msgStat, "%6i leafs        %8i", map.cTotal[BSPLEAF],
+    Message(msgStat, "%8d leafs        %10d", map.cTotal[BSPLEAF],
 	    map.cTotal[BSPLEAF] * rgcMemSize[BSPLEAF]);
-    Message(msgStat, "%6i marksurfaces %8i", map.cTotal[BSPMARKSURF],
+    Message(msgStat, "%8d marksurfaces %10d", map.cTotal[BSPMARKSURF],
 	    map.cTotal[BSPMARKSURF] * rgcMemSize[BSPMARKSURF]);
-    Message(msgStat, "%6i surfedges    %8i", map.cTotal[BSPSURFEDGE],
+    Message(msgStat, "%8d surfedges    %10d", map.cTotal[BSPSURFEDGE],
 	    map.cTotal[BSPSURFEDGE] * rgcMemSize[BSPSURFEDGE]);
-    Message(msgStat, "%6i edges        %8i", map.cTotal[BSPEDGE],
+    Message(msgStat, "%8d edges        %10d", map.cTotal[BSPEDGE],
 	    map.cTotal[BSPEDGE] * rgcMemSize[BSPEDGE]);
 
     lump = &pWorldEnt->lumps[BSPTEX];
     if (lump->data)
-	Message(msgStat, "%6i textures     %8i",
+	Message(msgStat, "%8d textures     %10d",
 		((dmiptexlump_t *)lump->data)->nummiptex, lump->count);
     else
 	Message(msgStat, "     0 textures            0");
 
-    Message(msgStat, "       lightdata    %8i", map.cTotal[BSPLIGHT]);
-    Message(msgStat, "       visdata      %8i", map.cTotal[BSPVIS]);
-    Message(msgStat, "       entdata      %8i", map.cTotal[BSPENT] + 1);
+    Message(msgStat, "       lightdata    %10d", map.cTotal[BSPLIGHT]);
+    Message(msgStat, "       visdata      %10d", map.cTotal[BSPVIS]);
+    Message(msgStat, "       entdata      %10d", map.cTotal[BSPENT] + 1);
 }
