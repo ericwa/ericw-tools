@@ -270,7 +270,7 @@ Message(int msgType, ...)
     case msgStat:
 	// Output as-is to screen and log file
 	szFmt = va_arg(argptr, char *);
-	strcpy(szBuffer, "\t");
+	strcpy(szBuffer, "     ");
 	vsprintf(szBuffer + strlen(szBuffer), szFmt, argptr);	// Concatenate
 	strcat(szBuffer, "\n");
 	break;
