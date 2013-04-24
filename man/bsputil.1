@@ -1,0 +1,62 @@
+.\" Process this file with
+.\" groff -man -Tascii bsputil.1
+.\"
+.TH BSPUTIL 1 "TYR_VERSION" TYRUTILS
+
+.SH NAME
+bsputil \- utiltiy for working with Quake BSP files
+
+.SH SYNOPSIS
+\fBbsputil\fP [OPTION]... BSPFILE
+
+.SH DESCRIPTION
+\fBbsputil is a small utility for basic manipulation of Quake BSP files.
+
+.SH OPTIONS
+.IP "\fB\--extract-textures\fP"
+Extract the texture data from \fIBSPFILE\fP and create a Quake WAD
+file.  The output filename is generated from \fIBSPFILE\fP by
+stripping the .bsp extension and adding the .wad extension.
+.IP "\fB\--extract-entities\fP"
+Extract the entity data from \fIBSPFILE\fP and create a plain
+text .ent file.  The output filename is generated from \fIBSPFILE\fP
+by stripping the .bsp extension and adding the .ent extension.
+.IP "\fB\--check\fP"
+Load \fIBSPFILE\fP into memory and run a set of tests to check that
+all internal data structures are self-consistent.  Currently the tests
+are very basic and not all warnings will result in errors from all
+versions of the Quake engine.  This option is not targeted at level
+designers, but is intended to assist with development of the
+\fBqbsp\fP tool and check that a "clean" bsp file is generated.
+
+.SH AUTHOR
+Written by Kevin Shanahan (aka Tyrann)
+.br
+Based on source provided by id Software
+.br
+http://disenchant.net
+.br
+
+.SH REPORTING BUGS
+Please send bug reports to tyrann@disenchant.net.
+.br
+Improvements to the documentation are welcome and encouraged.
+
+.SH COPYRIGHT
+Copyright (C) 2013 Kevin Shanahan
+.br
+Copyright (C) 1997 id Software
+.br
+License GPLv2+:  GNU GPL version 2 or later
+.br
+<http://gnu.org/licenses/gpl2.html>.
+.PP
+This is free software: you are free to change and redistribute it.  There is
+NO WARRANTY, to the extent permitted by law.
+
+.SH "SEE ALSO"
+\fBqbsp\fP(1)
+\fBlight\fP(1)
+\fBvis\fP(1)
+\fBbspinfo\fP(1)
+\fBquake\fP(6)

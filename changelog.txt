@@ -1,6 +1,6 @@
 Unreleased
 
-* 
+* Documentation added for bspinfo and bsputil
 
 2013-04-24 TyrUtils v0.9
 

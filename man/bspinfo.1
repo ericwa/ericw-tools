@@ -1,0 +1,52 @@
+.\" Process this file with
+.\" groff -man -Tascii bspinfo.1
+.\"
+.TH BSPINFO 1 "TYR_VERSION" TYRUTILS
+
+.SH NAME
+bspinfo \- print basic information about a Quake BSP file
+
+.SH SYNOPSIS
+\fBbspinfo\fP BSPFILE
+
+.SH DESCRIPTION
+\fBbspinfo\fP will print a very basic summary of the internal data in
+\fIBSPFILE\fP.  The BSP version number is printed, followed by one
+line for each of the data types inside, giving the count and data size
+in bytes of each data type.
+
+If the filename \fIBSPFILE\fP does not have a .bsp extension,
+\fBbsputil\fP will look for a .bsp file by stripping the file
+extension from BSPFILE (if any) and appending ".bsp".
+
+.SH AUTHOR
+Written by Kevin Shanahan (aka Tyrann)
+.br
+Based on source provided by id Software
+.br
+http://disenchant.net
+.br
+
+.SH REPORTING BUGS
+Please send bug reports to tyrann@disenchant.net.
+.br
+Improvements to the documentation are welcome and encouraged.
+
+.SH COPYRIGHT
+Copyright (C) 2013 Kevin Shanahan
+.br
+Copyright (C) 1997 id Software
+.br
+License GPLv2+:  GNU GPL version 2 or later
+.br
+<http://gnu.org/licenses/gpl2.html>.
+.PP
+This is free software: you are free to change and redistribute it.  There is
+NO WARRANTY, to the extent permitted by law.
+
+.SH "SEE ALSO"
+\fBqbsp\fP(1)
+\fBlight\fP(1)
+\fBvis\fP(1)
+\fBbsputil\fP(1)
+\fBquake\fP(6)

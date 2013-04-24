@@ -20,12 +20,9 @@ Included utilities:
 
   vis     - Creates the potentially visible set (PVS) for a bsp.
 
-  bspinfo - Simple util to print out some stats about the data contained in a
-            bsp file.
+  bspinfo - Print stats about the data contained in a bsp file.
 
-  bsputil - Tool for working with a bsp file. Minimal features currently, but
-            it can extract the entities lump from a bsp file into a text file
-            and extract the textures to a .wad file.
+  bsputil - Simple tool for manipulation of bsp file data
 
 See the doc/ directory for more detailed descriptions of the various
 tools capabilities.  See changelog.txt for a brief overview of recent

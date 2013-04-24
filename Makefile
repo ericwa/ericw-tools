@@ -510,7 +510,7 @@ $(DOC_DIR)/%.1:		man/%.1	$(BUILD_VER)	; $(do_man2man)
 $(DOC_DIR)/%.txt:	$(DOC_DIR)/%.1		; $(do_man2txt)
 $(DOC_DIR)/%.html:	$(DOC_DIR)/%.1		; $(do_man2html)
 
-SRC_DOCS = qbsp.1 light.1 vis.1
+SRC_DOCS = qbsp.1 light.1 vis.1 bsputil.1 bspinfo.1
 MAN_DOCS = $(patsubst %.1,$(DOC_DIR)/%.1,$(SRC_DOCS))
 HTML_DOCS = $(patsubst %.1,$(DOC_DIR)/%.html,$(SRC_DOCS))
 TEXT_DOCS = $(patsubst %.1,$(DOC_DIR)/%.txt,$(SRC_DOCS))
@@ -528,17 +528,9 @@ DIST_FILES = \
 	$(1)/README.txt \
 	$(1)/COPYING \
 	$(1)/changelog.txt \
-	$(1)/doc/qbsp.1 \
-	$(1)/doc/qbsp.txt \
-	$(1)/doc/qbsp.html \
-	$(1)/doc/light.1 \
-	$(1)/doc/light.txt \
-	$(1)/doc/light.html \
-	$(1)/doc/vis.1 \
-	$(1)/doc/vis.txt \
-	$(1)/doc/vis.html
-
-
+	$(patsubst %.1,$(1)/doc/%.1,$(SRC_DOCS)) \
+	$(patsubst %.1,$(1)/doc/%.txt,$(SRC_DOCS)) \
+	$(patsubst %.1,$(1)/doc/%.html,$(SRC_DOCS))
 
 # ----------------------------------------------------------------------------
 # OSX Packaging Tools
