@@ -18,7 +18,7 @@ TARGET_UNIX      ?= $(if $(filter UNIX,$(TARGET_OS)),$(HOST_UNIX),)
 
 # ============================================================================
 
-TYR_RELEASE := v0.9
+TYR_RELEASE := v0.10-pre
 TYR_GIT := $(shell git describe --dirty 2> /dev/null)
 TYR_VERSION := $(if $(TYR_GIT),$(TYR_GIT),$(TYR_RELEASE))
 TYR_VERSION_NUM ?= $(patsubst v%,%,$(TYR_VERSION))
