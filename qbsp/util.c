@@ -314,12 +314,17 @@ Message(int msgType, ...)
 	return;
     }
 
-    if (msgType == msgScreen)
-	printf("%s", szBuffer);
-    else if (msgType == msgFile)
+    switch (msgType) {
+    case msgScreen:
+	fprintf(stdout, "%s", szBuffer);
+	fflush(stdout);
+	break;
+    case msgFile:
 	logprint_silent("%s", szBuffer);
-    else
+	break;
+    default:
 	logprint("%s", szBuffer);
+    }
 
     va_end(argptr);
 }
