@@ -295,6 +295,7 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 	if (sides[i] == SIDE_ON) {
 	    if (neww->numpoints == MAX_WINDING_FIXED)
 		goto noclip;
+	    VectorCopy(p1, neww->points[neww->numpoints]);
 	    neww->numpoints++;
 	    continue;
 	}
