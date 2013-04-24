@@ -1,6 +1,7 @@
-Unreleased
+2013-04-25 TyrUtils v0.10
 
 * Documentation added for bspinfo and bsputil
+* Fix vis bug due to missing vertex copy in v0.9 portal clip changes
 
 2013-04-24 TyrUtils v0.9
 
