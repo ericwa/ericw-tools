@@ -220,7 +220,7 @@ main(int argc, char **argv)
     printf("---- bsputil / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
     if (argc == 1) {
 	printf("usage: bsputil [--extract-entities] [--extract-textures] "
-	       "[--check] bspfile");
+	       "[--check] bspfile\n");
 	exit(1);
     }
 

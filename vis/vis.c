@@ -1217,7 +1217,7 @@ main(int argc, char **argv)
 
     if (i != argc - 1) {
 	printf("usage: vis [-threads #] [-level 0-4] [-fast] [-v|-vv] "
-	       "[-credits] bspfile");
+	       "[-credits] bspfile\n");
 	exit(1);
     }
 
