@@ -135,9 +135,12 @@ NewWinding(int points)
 
 
 void
-pw(winding_t * w)
+LogWinding(const winding_t *w)
 {
     int i;
+
+    if (!verbose)
+	return;
 
     for (i = 0; i < w->numpoints; i++)
 	logprint("(%5.1f, %5.1f, %5.1f)\n",
@@ -145,18 +148,21 @@ pw(winding_t * w)
 }
 
 void
-prl(leaf_t * l)
+LogLeaf(const leaf_t *leaf)
 {
+    const portal_t *portal;
+    const plane_t *plane;
     int i;
-    portal_t *p;
-    plane_t pl;
 
-    for (i = 0; i < l->numportals; i++) {
-	p = l->portals[i];
-	pl = p->plane;
-	logprint("portal %4i to leaf %4i : %7.1f : (%4.1f, %4.1f, %4.1f)\n",
-		 (int)(p - portals), p->leaf, pl.dist,
-		 pl.normal[0], pl.normal[1], pl.normal[2]);
+    if (!verbose)
+	return;
+
+    for (i = 0; i < leaf->numportals; i++) {
+	portal = leaf->portals[i];
+	plane = &portal->plane;
+	logprint("portal %4i to leaf %4i : %7.1f : (%4.2f, %4.2f, %4.2f)\n",
+		 (int)(portal - portals), portal->leaf, plane->dist,
+		 plane->normal[0], plane->normal[1], plane->normal[2]);
     }
 }
 

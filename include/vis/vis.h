@@ -147,3 +147,7 @@ extern double starttime, endtime, statetime;
 
 void SaveVisState(void);
 qboolean LoadVisState(void);
+
+/* Print winding/leaf info for debugging */
+void LogWinding(const winding_t *w);
+void LogLeaf(const leaf_t *leaf);
