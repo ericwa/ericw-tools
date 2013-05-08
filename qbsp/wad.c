@@ -254,7 +254,7 @@ WADList_AddAnimatingTextures(const wad_t *wadlist)
 
 	/* Search for all animations (0-9) and alt-animations (A-J) */
 	for (j = 0; j < 20; j++) {
-	    name[1] = (j < 10) ? '0' + j : 'A' + j - 10;
+	    name[1] = (j < 10) ? '0' + j : 'a' + j - 10;
 	    if (WADList_FindTexture(wadlist, name))
 		FindMiptex(name);
 	}

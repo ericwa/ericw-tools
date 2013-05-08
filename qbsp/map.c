@@ -37,7 +37,7 @@ FindMiptex(const char *name)
     int i;
 
     for (i = 0; i < map.nummiptex; i++) {
-	if (!strcmp(name, map.miptex[i]))
+	if (!strcasecmp(name, map.miptex[i]))
 	    return i;
     }
     if (map.nummiptex == map.maxmiptex)

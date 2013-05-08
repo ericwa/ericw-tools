@@ -1,3 +1,7 @@
+Unreleased
+
+* qbsp: Fix animating texture bug when brushes are textured with alt-animations
+
 2013-04-25 TyrUtils v0.10
 
 * Documentation added for bspinfo and bsputil
