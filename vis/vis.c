@@ -166,7 +166,7 @@ prl(leaf_t * l)
   ==================
 */
 winding_t *
-CopyWinding(winding_t * w)
+CopyWinding(const winding_t * w)
 {
     int size;
     winding_t *c;

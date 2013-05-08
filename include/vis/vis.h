@@ -44,8 +44,8 @@ typedef struct {
 } winding_t;
 
 winding_t *NewWinding(int points);
-winding_t *CopyWinding(winding_t * w);
-void PlaneFromWinding(const winding_t * w, plane_t *plane);
+winding_t *CopyWinding(const winding_t *w);
+void PlaneFromWinding(const winding_t *w, plane_t *plane);
 qboolean PlaneCompare(plane_t *p1, plane_t *p2);
 
 typedef enum { pstat_none = 0, pstat_working, pstat_done } pstatus_t;
@@ -139,7 +139,7 @@ extern char statetmpfile[1024];
 void LeafFlow(int leafnum);
 void BasePortalVis(void);
 
-void PortalFlow(portal_t * p);
+void PortalFlow(portal_t *p);
 
 void CalcAmbientSounds(void);
 
