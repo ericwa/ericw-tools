@@ -8,17 +8,6 @@ int c_vistest, c_mighttest;
 static int c_portalskip;
 static int c_leafskip;
 
-static void
-CheckStack(leaf_t *leaf, threaddata_t *thread)
-{
-    pstack_t *p;
-
-    for (p = thread->pstack_head.next; p; p = p->next)
-	if (p->leaf == leaf)
-	    Error("%s: leaf recursion", __func__);
-
-}
-
 /*
   ==============
   ClipToSeperators
@@ -141,7 +130,16 @@ ClipToSeperators(const winding_t *source,
     return target;
 }
 
+static int
+CheckStack(leaf_t *leaf, threaddata_t *thread)
+{
+    pstack_t *p;
 
+    for (p = thread->pstack_head.next; p; p = p->next)
+	if (p->leaf == leaf)
+	    return 1;
+    return 0;
+}
 
 /*
   ==================
@@ -158,13 +156,22 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     portal_t *p;
     plane_t backplane;
     leaf_t *leaf;
-    int i, j, numblocks;
+    int i, j, err, numblocks;
     leafblock_t *test, *might, *vis, more;
 
     ++c_chains;
 
     leaf = &leafs[leafnum];
-    CheckStack(leaf, thread);
+
+    /*
+     * Check we haven't recursed into a leaf already on the stack
+     */
+    err = CheckStack(leaf, thread);
+    if (err) {
+	logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
+	LogLeaf(leaf);
+	return;
+    }
 
     // mark the leaf as visible
     if (!TestLeafBit(thread->leafvis, leafnum)) {
