@@ -355,27 +355,26 @@ FixFaceEdges(face_t *f)
 
     *superface = *f;
 
-  restart:
+ restart:
     for (i = 0; i < superface->w.numpoints; i++) {
 	j = (i + 1) % superface->w.numpoints;
 
 	w = FindEdge(superface->w.points[i], superface->w.points[j], &t1, &t2);
 
-	for (v = w->head.next; v->t < t1 + T_EPSILON; v = v->next) {
-	}
+	v = w->head.next;
+	while (v->t < t1 + T_EPSILON)
+	    v = v->next;
 
 	if (v->t < t2 - T_EPSILON) {
 	    tjuncs++;
-	    // insert a new vertex here
-	    for (k = superface->w.numpoints; k > j; k--) {
+	    /* insert a new vertex here */
+	    for (k = superface->w.numpoints; k > j; k--)
 		VectorCopy(superface->w.points[k - 1], superface->w.points[k]);
-	    }
 	    VectorMA(w->origin, v->t, w->dir, superface->w.points[j]);
 	    superface->w.numpoints++;
 	    goto restart;
 	}
     }
-
 
     if (superface->w.numpoints <= MAXPOINTS) {
 	*f = *superface;
@@ -383,10 +382,9 @@ FixFaceEdges(face_t *f)
 	newlist = f;
 	return;
     }
-// the face needs to be split into multiple faces because of too many edges
 
+    /* Too many edges - needs to be split into multiple faces */
     SplitFaceForTjunc(superface, f);
-
 }
 
 
@@ -456,9 +454,11 @@ TJunc(const mapentity_t *entity, node_t *headnode)
 
     Message(msgProgress, "Tjunc");
 
-    // Guess edges = 1/2 verts
-    // Verts are arbitrarily multiplied by 2 because there appears to
-    // be a need for them to "grow" slightly.
+    /*
+     * Guess edges = 1/2 verts
+     * Verts are arbitrarily multiplied by 2 because there appears to
+     * be a need for them to "grow" slightly.
+     */
     cWVerts = 0;
     tjunc_count_r(headnode);
     cWEdges = cWVerts;
@@ -467,9 +467,10 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     pWVerts = AllocMem(WVERT, cWVerts, true);
     pWEdges = AllocMem(WEDGE, cWEdges, true);
 
-// identify all points on common edges
-
-    // origin points won't allways be inside the map, so extend the hash area
+    /*
+     * identify all points on common edges
+     * origin points won't allways be inside the map, so extend the hash area
+     */
     for (i = 0; i < 3; i++) {
 	if (fabs(entity->maxs[i]) > fabs(entity->mins[i]))
 	    maxs[i] = fabs(entity->maxs[i]);
@@ -487,9 +488,8 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     Message(msgStat, "%8d world edges", numwedges);
     Message(msgStat, "%8d edge points", numwverts);
 
-    // add extra vertexes on edges where needed
+    /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
-
     tjunc_fix_r(headnode);
 
     FreeMem(pWVerts, WVERT, cWVerts);
