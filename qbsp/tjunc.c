@@ -257,13 +257,16 @@ SplitFaceForTjunc(face_t *f, face_t *original)
     int i;
     face_t *newf, *chain;
     vec3_t dir, test;
-    vec_t v;
+    vec_t angle;
     int firstcorner, lastcorner;
 
     chain = NULL;
     do {
-	if (f->w.numpoints <= MAXPOINTS) {	// the face is now small enough without more cutting
-	    // so copy it back to the original
+	if (f->w.numpoints <= MAXPOINTS) {
+	    /*
+	     * the face is now small enough without more cutting so
+	     * copy it back to the original
+	     */
 	    *original = *f;
 	    original->original = chain;
 	    original->next = newlist;
@@ -274,44 +277,42 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	tjuncfaces++;
 
       restart:
-	// find the last corner
+	/* find the last corner */
 	VectorSubtract(f->w.points[f->w.numpoints - 1], f->w.points[0], dir);
 	VectorNormalize(dir);
 	for (lastcorner = f->w.numpoints - 1; lastcorner > 0; lastcorner--) {
 	    VectorSubtract(f->w.points[lastcorner - 1], f->w.points[lastcorner], test);
 	    VectorNormalize(test);
-	    v = DotProduct(test, dir);
-	    if (v < 1 - ANGLEEPSILON || v > 1 + ANGLEEPSILON) {
+	    angle = DotProduct(test, dir);
+	    if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
 		break;
-	    }
 	}
 
-	// find the first corner
+	/* find the first corner */
 	VectorSubtract(f->w.points[1], f->w.points[0], dir);
 	VectorNormalize(dir);
 	for (firstcorner = 1; firstcorner < f->w.numpoints - 1; firstcorner++) {
 	    VectorSubtract(f->w.points[firstcorner + 1], f->w.points[firstcorner],
 			   test);
 	    VectorNormalize(test);
-	    v = DotProduct(test, dir);
-	    if (v < 1 - ANGLEEPSILON || v > 1 + ANGLEEPSILON) {
+	    angle = DotProduct(test, dir);
+	    if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
 		break;
-	    }
 	}
 
 	if (firstcorner + 2 >= MAXPOINTS) {
-	    // rotate the point winding
+	    /* rotate the point winding */
 	    VectorCopy(f->w.points[0], test);
-	    for (i = 1; i < f->w.numpoints; i++) {
+	    for (i = 1; i < f->w.numpoints; i++)
 		VectorCopy(f->w.points[i], f->w.points[i - 1]);
-	    }
 	    VectorCopy(test, f->w.points[f->w.numpoints - 1]);
 	    goto restart;
 	}
 
-	// cut off as big a piece as possible, less than MAXPOINTS, and not
-	// past lastcorner
-
+	/*
+	 * cut off as big a piece as possible, less than MAXPOINTS, and not
+	 * past lastcorner
+	 */
 	newf = NewFaceFromFace(f);
 	if (f->original)
 	    Error("original face still exists (%s)", __func__);
@@ -328,17 +329,13 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	else
 	    newf->w.numpoints = MAXPOINTS;
 
-	for (i = 0; i < newf->w.numpoints; i++) {
+	for (i = 0; i < newf->w.numpoints; i++)
 	    VectorCopy(f->w.points[i], newf->w.points[i]);
-	}
-
-
-	for (i = newf->w.numpoints - 1; i < f->w.numpoints; i++) {
+	for (i = newf->w.numpoints - 1; i < f->w.numpoints; i++)
 	    VectorCopy(f->w.points[i], f->w.points[i - (newf->w.numpoints - 2)]);
-	}
+
 	f->w.numpoints -= (newf->w.numpoints - 2);
     } while (1);
-
 }
 
 
