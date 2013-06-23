@@ -114,8 +114,9 @@
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:
- * - CONTINUOUS_EPSILON needs to be slightly larger than EQUAL_EPSILON,
- *   otherwise this messes with t-junctions
+ * - T-junction calculations are sensitive to errors and need the various
+ *   epsilons to be such that EQUAL_EPSILON < T_EPSILON < CONTINUOUS_EPSILON.
+ *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
  */
 #define NORMAL_EPSILON		0.000001
 #define ANGLEEPSILON		0.000001
@@ -123,9 +124,9 @@
 #define ZERO_EPSILON		0.0001
 #define DISTEPSILON		0.0001
 #define POINT_EPSILON		0.0001
-#define T_EPSILON		0.0001
 #define ON_EPSILON		0.0001
 #define EQUAL_EPSILON		0.0001
+#define T_EPSILON		0.0002
 #define CONTINUOUS_EPSILON	0.0005
 
 #define BOGUS_RANGE	18000
