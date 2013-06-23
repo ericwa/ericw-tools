@@ -516,15 +516,15 @@ void GrowNodeRegions(node_t *headnode);
 // tjunc.c
 
 typedef struct wvert_s {
-    vec_t t;
-    struct wvert_s *prev, *next;
+    vec_t t;                    /* t-value for parametric equation of edge */
+    struct wvert_s *prev, *next; /* t-ordered list of vertices on same edge */
 } wvert_t;
 
 typedef struct wedge_s {
-    struct wedge_s *next;
-    vec3_t dir;
-    vec3_t origin;
-    wvert_t head;
+    struct wedge_s *next;       /* pointer for hash bucket chain */
+    vec3_t dir;                 /* direction vector for the edge */
+    vec3_t origin;              /* origin (t = 0) in parametric form */
+    wvert_t head;               /* linked list of verticies on this edge */
 } wedge_t;
 
 //=============================================================================
