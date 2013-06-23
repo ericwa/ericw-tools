@@ -255,7 +255,7 @@ static face_t *newlist;
 static void
 SplitFaceForTjunc(face_t *f, face_t *original)
 {
-    const winding_t *w = &f->w;
+    winding_t *w = &f->w;
     face_t *newf, *chain;
     vec3_t edgevec[2];
     vec_t angle;
@@ -308,10 +308,10 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	    /* rotate the point winding */
 	    vec3_t point0;
 
-	    VectorCopy(f->w.points[0], point0);
-	    for (i = 1; i < f->w.numpoints; i++)
-		VectorCopy(f->w.points[i], f->w.points[i - 1]);
-	    VectorCopy(point0, f->w.points[f->w.numpoints - 1]);
+	    VectorCopy(w->points[0], point0);
+	    for (i = 1; i < w->numpoints; i++)
+		VectorCopy(w->points[i], w->points[i - 1]);
+	    VectorCopy(point0, w->points[w->numpoints - 1]);
 	    goto restart;
 	}
 
@@ -327,20 +327,20 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	chain = newf;
 	newf->next = newlist;
 	newlist = newf;
-	if (f->w.numpoints - firstcorner <= MAXPOINTS)
+	if (w->numpoints - firstcorner <= MAXPOINTS)
 	    newf->w.numpoints = firstcorner + 2;
 	else if (lastcorner + 2 < MAXPOINTS &&
-		 f->w.numpoints - lastcorner <= MAXPOINTS)
+		 w->numpoints - lastcorner <= MAXPOINTS)
 	    newf->w.numpoints = lastcorner + 2;
 	else
 	    newf->w.numpoints = MAXPOINTS;
 
 	for (i = 0; i < newf->w.numpoints; i++)
-	    VectorCopy(f->w.points[i], newf->w.points[i]);
-	for (i = newf->w.numpoints - 1; i < f->w.numpoints; i++)
-	    VectorCopy(f->w.points[i], f->w.points[i - (newf->w.numpoints - 2)]);
+	    VectorCopy(w->points[i], newf->w.points[i]);
+	for (i = newf->w.numpoints - 1; i < w->numpoints; i++)
+	    VectorCopy(w->points[i], w->points[i - (newf->w.numpoints - 2)]);
 
-	f->w.numpoints -= (newf->w.numpoints - 2);
+	w->numpoints -= (newf->w.numpoints - 2);
     } while (1);
 }
 
