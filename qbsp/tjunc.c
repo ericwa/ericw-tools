@@ -255,15 +255,15 @@ static face_t *newlist;
 static void
 SplitFaceForTjunc(face_t *f, face_t *original)
 {
-    int i;
+    const winding_t *w = &f->w;
     face_t *newf, *chain;
-    vec3_t dir, test;
+    vec3_t edgevec[2];
     vec_t angle;
-    int firstcorner, lastcorner;
+    int i, firstcorner, lastcorner;
 
     chain = NULL;
     do {
-	if (f->w.numpoints <= MAXPOINTS) {
+	if (w->numpoints <= MAXPOINTS) {
 	    /*
 	     * the face is now small enough without more cutting so
 	     * copy it back to the original
@@ -279,34 +279,39 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 
       restart:
 	/* find the last corner */
-	VectorSubtract(f->w.points[f->w.numpoints - 1], f->w.points[0], dir);
-	VectorNormalize(dir);
-	for (lastcorner = f->w.numpoints - 1; lastcorner > 0; lastcorner--) {
-	    VectorSubtract(f->w.points[lastcorner - 1], f->w.points[lastcorner], test);
-	    VectorNormalize(test);
-	    angle = DotProduct(test, dir);
+	VectorSubtract(w->points[w->numpoints - 1], w->points[0], edgevec[0]);
+	VectorNormalize(edgevec[0]);
+	for (lastcorner = w->numpoints - 1; lastcorner > 0; lastcorner--) {
+	    const vec_t *const p0 = w->points[lastcorner - 1];
+	    const vec_t *const p1 = w->points[lastcorner];
+	    VectorSubtract(p0, p1, edgevec[1]);
+	    VectorNormalize(edgevec[1]);
+	    angle = DotProduct(edgevec[0], edgevec[1]);
 	    if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
 		break;
 	}
 
 	/* find the first corner */
-	VectorSubtract(f->w.points[1], f->w.points[0], dir);
-	VectorNormalize(dir);
-	for (firstcorner = 1; firstcorner < f->w.numpoints - 1; firstcorner++) {
-	    VectorSubtract(f->w.points[firstcorner + 1], f->w.points[firstcorner],
-			   test);
-	    VectorNormalize(test);
-	    angle = DotProduct(test, dir);
+	VectorSubtract(w->points[1], w->points[0], edgevec[0]);
+	VectorNormalize(edgevec[0]);
+	for (firstcorner = 1; firstcorner < w->numpoints - 1; firstcorner++) {
+	    const vec_t *const p0 = w->points[firstcorner + 1];
+	    const vec_t *const p1 = w->points[firstcorner];
+	    VectorSubtract(p0, p1, edgevec[1]);
+	    VectorNormalize(edgevec[1]);
+	    angle = DotProduct(edgevec[0], edgevec[1]);
 	    if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
 		break;
 	}
 
 	if (firstcorner + 2 >= MAXPOINTS) {
 	    /* rotate the point winding */
-	    VectorCopy(f->w.points[0], test);
+	    vec3_t point0;
+
+	    VectorCopy(f->w.points[0], point0);
 	    for (i = 1; i < f->w.numpoints; i++)
 		VectorCopy(f->w.points[i], f->w.points[i - 1]);
-	    VectorCopy(test, f->w.points[f->w.numpoints - 1]);
+	    VectorCopy(point0, f->w.points[f->w.numpoints - 1]);
 	    goto restart;
 	}
 
