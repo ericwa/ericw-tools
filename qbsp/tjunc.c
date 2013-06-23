@@ -113,18 +113,18 @@ static wedge_t *
 FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
 {
     vec3_t origin;
-    vec3_t dir;
-    wedge_t *w;
+    vec3_t edgevec;
+    wedge_t *edge;
     vec_t temp;
     int h;
 
-    VectorSubtract(p2, p1, dir);
-    CanonicalVector(dir);
+    VectorSubtract(p2, p1, edgevec);
+    CanonicalVector(edgevec);
 
-    *t1 = DotProduct(p1, dir);
-    *t2 = DotProduct(p2, dir);
+    *t1 = DotProduct(p1, edgevec);
+    *t2 = DotProduct(p2, edgevec);
 
-    VectorMA(p1, -*t1, dir, origin);
+    VectorMA(p1, -*t1, edgevec, origin);
 
     if (*t1 > *t2) {
 	temp = *t1;
@@ -134,43 +134,44 @@ FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
 
     h = HashVec(origin);
 
-    for (w = wedge_hash[h]; w; w = w->next) {
-	temp = w->origin[0] - origin[0];
+    for (edge = wedge_hash[h]; edge; edge = edge->next) {
+	temp = edge->origin[0] - origin[0];
 	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
 	    continue;
-	temp = w->origin[1] - origin[1];
+	temp = edge->origin[1] - origin[1];
 	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
 	    continue;
-	temp = w->origin[2] - origin[2];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
-
-	temp = w->dir[0] - dir[0];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
-	temp = w->dir[1] - dir[1];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
-	temp = w->dir[2] - dir[2];
+	temp = edge->origin[2] - origin[2];
 	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
 	    continue;
 
-	return w;
+	temp = edge->dir[0] - edgevec[0];
+	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+	    continue;
+	temp = edge->dir[1] - edgevec[1];
+	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+	    continue;
+	temp = edge->dir[2] - edgevec[2];
+	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+	    continue;
+
+	return edge;
     }
 
     if (numwedges >= cWEdges)
 	Error("Internal error: didn't allocate enough edges for tjuncs?");
-    w = pWEdges + numwedges;
+    edge = pWEdges + numwedges;
     numwedges++;
 
-    w->next = wedge_hash[h];
-    wedge_hash[h] = w;
+    edge->next = wedge_hash[h];
+    wedge_hash[h] = edge;
 
-    VectorCopy(origin, w->origin);
-    VectorCopy(dir, w->dir);
-    w->head.next = w->head.prev = &w->head;
-    w->head.t = VECT_MAX;
-    return w;
+    VectorCopy(origin, edge->origin);
+    VectorCopy(edgevec, edge->dir);
+    edge->head.next = edge->head.prev = &edge->head;
+    edge->head.t = VECT_MAX;
+
+    return edge;
 }
 
 
@@ -181,11 +182,11 @@ AddVert
 ===============
 */
 static void
-AddVert(wedge_t *w, vec_t t)
+AddVert(wedge_t *edge, vec_t t)
 {
     wvert_t *v, *newv;
 
-    v = w->head.next;
+    v = edge->head.next;
     do {
 	if (fabs(v->t - t) < T_EPSILON)
 	    return;
@@ -218,12 +219,12 @@ AddEdge
 static void
 AddEdge(vec3_t p1, vec3_t p2)
 {
-    wedge_t *w;
+    wedge_t *edge;
     vec_t t1, t2;
 
-    w = FindEdge(p1, p2, &t1, &t2);
-    AddVert(w, t1);
-    AddVert(w, t2);
+    edge = FindEdge(p1, p2, &t1, &t2);
+    AddVert(edge, t1);
+    AddVert(edge, t2);
 }
 
 /*
@@ -349,7 +350,7 @@ static void
 FixFaceEdges(face_t *f)
 {
     int i, j, k;
-    wedge_t *w;
+    wedge_t *edge;
     wvert_t *v;
     vec_t t1, t2;
 
@@ -359,9 +360,9 @@ FixFaceEdges(face_t *f)
     for (i = 0; i < superface->w.numpoints; i++) {
 	j = (i + 1) % superface->w.numpoints;
 
-	w = FindEdge(superface->w.points[i], superface->w.points[j], &t1, &t2);
+	edge = FindEdge(superface->w.points[i], superface->w.points[j], &t1, &t2);
 
-	v = w->head.next;
+	v = edge->head.next;
 	while (v->t < t1 + T_EPSILON)
 	    v = v->next;
 
@@ -370,7 +371,7 @@ FixFaceEdges(face_t *f)
 	    /* insert a new vertex here */
 	    for (k = superface->w.numpoints; k > j; k--)
 		VectorCopy(superface->w.points[k - 1], superface->w.points[k]);
-	    VectorMA(w->origin, v->t, w->dir, superface->w.points[j]);
+	    VectorMA(edge->origin, v->t, edge->dir, superface->w.points[j]);
 	    superface->w.numpoints++;
 	    goto restart;
 	}
