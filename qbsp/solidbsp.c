@@ -42,45 +42,45 @@ For BSP hueristic
 static int
 FaceSide__(const face_t *in, const plane_t *split)
 {
-    bool frontcount, backcount;
-    vec_t dot;
+    bool have_front, have_back;
     int i;
-    const vec_t *p;
 
-    frontcount = backcount = false;
+    have_front = have_back = false;
 
-    // axial planes are fast
-    if (split->type < 3)
-	for (i = 0, p = in->w.points[0] + split->type; i < in->w.numpoints;
-	     i++, p += 3) {
+    if (split->type < 3) {
+	/* shortcut for axial planes */
+	const vec_t *p = in->w.points[0] + split->type;
+	for (i = 0; i < in->w.numpoints; i++, p += 3) {
 	    if (*p > split->dist + ON_EPSILON) {
-		if (backcount)
+		if (have_back)
 		    return SIDE_ON;
-		frontcount = true;
+		have_front = true;
 	    } else if (*p < split->dist - ON_EPSILON) {
-		if (frontcount)
+		if (have_front)
 		    return SIDE_ON;
-		backcount = true;
-	    }
-    } else
-	// sloping planes take longer
-	for (i = 0, p = in->w.points[0]; i < in->w.numpoints; i++, p += 3) {
-	    dot = DotProduct(p, split->normal);
-	    dot -= split->dist;
-	    if (dot > ON_EPSILON) {
-		if (backcount)
-		    return SIDE_ON;
-		frontcount = true;
-	    } else if (dot < -ON_EPSILON) {
-		if (frontcount)
-		    return SIDE_ON;
-		backcount = true;
+		have_back = true;
 	    }
 	}
+    } else {
+	/* sloping planes take longer */
+	const vec_t *p = in->w.points[0];
+	for (i = 0; i < in->w.numpoints; i++, p += 3) {
+	    const vec_t dot = DotProduct(p, split->normal) - split->dist;
+	    if (dot > ON_EPSILON) {
+		if (have_back)
+		    return SIDE_ON;
+		have_front = true;
+	    } else if (dot < -ON_EPSILON) {
+		if (have_front)
+		    return SIDE_ON;
+		have_back = true;
+	    }
+	}
+    }
 
-    if (!frontcount)
+    if (!have_front)
 	return SIDE_BACK;
-    if (!backcount)
+    if (!have_back)
 	return SIDE_FRONT;
 
     return SIDE_ON;
