@@ -164,22 +164,24 @@ WADList_Process(const wad_t *wadlist)
 
     WADList_AddAnimatingTextures(wadlist);
 
-    // Count texture size.  Slow but saves memory.
+    /* Count space for miptex header/offsets */
+    texdata->count = offsetof(dmiptexlump_t, dataofs[map.nummiptex]);
+
+    /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex; i++) {
 	texture = WADList_FindTexture(wadlist, map.miptex[i]);
 	if (texture)
 	    texdata->count += texture->disksize;
     }
-    texdata->count += sizeof(int) * (map.nummiptex + 1);
 
-    // Default texture data to store in worldmodel
+    /* Default texture data to store in worldmodel */
     texdata->data = AllocMem(BSPTEX, texdata->count, true);
     miptexlump = (dmiptexlump_t *)texdata->data;
     miptexlump->nummiptex = map.nummiptex;
 
     WADList_LoadTextures(wadlist, miptexlump);
 
-    // Last pass, mark unfound textures as such
+    /* Last pass, mark unfound textures as such */
     for (i = 0; i < map.nummiptex; i++) {
 	if (miptexlump->dataofs[i] == 0) {
 	    miptexlump->dataofs[i] = -1;

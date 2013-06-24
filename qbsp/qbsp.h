@@ -263,7 +263,7 @@ typedef struct {
 
 typedef struct {
     int nummiptex;
-    int dataofs[4];		// [nummiptex]
+    int dataofs[];		/* [nummiptex] */
 } dmiptexlump_t;
 
 typedef char miptex_t[16];
