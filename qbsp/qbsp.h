@@ -37,6 +37,10 @@
 #include "warnerr.h"
 #include "file.h"
 
+#ifndef offsetof
+#define offsetof(type, member) __builtin_offsetof(type, member)
+#endif
+
 //===== cmdlib.h
 
 // Current BSP version
