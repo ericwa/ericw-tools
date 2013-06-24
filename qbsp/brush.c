@@ -855,7 +855,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     int i, contents, cflags = 0;
 
     /*
-     * The brush list need to be ordered:
+     * The brush list needs to be ordered:
      * 1. detail nonsolid
      * 2. nonsolid
      * 3. detail solid
