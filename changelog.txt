@@ -2,6 +2,7 @@ Unreleased
 
 * qbsp: Fix animating texture bug when brushes are textured with alt-animations
 * qbsp: Fix a crash in tjunc calculations
+* qbsp: Add experimental "-forcegoodtree" command line option (thanks Rebb)
 * vis: reduce "leaf recursion" error to a warning and continue processing
 
 2013-04-25 TyrUtils v0.10

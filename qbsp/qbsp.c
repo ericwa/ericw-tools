@@ -149,12 +149,21 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	ExportNodePlanes(nodes);
 	ExportClipNodes(entity, nodes, hullnum);
     } else {
-	// SolidBSP generates a node tree
-	//
-	// if not the world, make a good tree first
-	// the world is just going to make a bad tree
-	// because the outside filling will force a regeneration later
-	nodes = SolidBSP(entity, surfs, entity == pWorldEnt);
+	/*
+	 * SolidBSP generates a node tree
+	 *
+	 * if not the world, make a good tree first the world is just
+	 * going to make a bad tree because the outside filling will
+	 * force a regeneration later.
+	 *
+	 * Forcing the good tree for the first pass on the world can
+	 * sometimes result in reduced marksurfaces at the expense of
+	 * longer processing time.
+	 */
+	if (options.forceGoodTree)
+	    nodes = SolidBSP(entity, surfs, false);
+	else
+	    nodes = SolidBSP(entity, surfs, entity == pWorldEnt);
 
 	// build all the portals in the bsp tree
 	// some portals are solid polygons, and some are paths to other leafs
@@ -361,6 +370,7 @@ PrintOptions(void)
 	   "   -transwater     Computes portal information for transparent water\n"
 	   "   -transsky       Computes portal information for transparent sky\n"
 	   "   -oldaxis        Uses original QBSP texture alignment algorithm\n"
+	   "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
 	   "   -bspleak        Creates a .POR file, used in the BSP editor for leaky maps\n"
 	   "   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n"
 	   "   -nopercent      Prevents output of percent completion information\n"
@@ -465,6 +475,8 @@ ParseOptions(char *szOptions)
 		options.fTranssky = true;
 	    else if (!strcasecmp(szTok, "oldaxis"))
 		options.fOldaxis = true;
+	    else if (!strcasecmp(szTok, "forcegoodtree"))
+		options.forceGoodTree = true;
 	    else if (!strcasecmp(szTok, "bspleak"))
 		options.fBspleak = true;
 	    else if (!strcasecmp(szTok, "noverbose"))
