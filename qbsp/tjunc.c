@@ -247,9 +247,13 @@ AddFaceEdges(face_t *f)
 
 //============================================================================
 
-// a specially allocated face that can hold hundreds of edges if needed
-static byte superfacebuf[8192];
-static face_t *superface = (face_t *)superfacebuf;
+/*
+ * superface is a large face used as intermediate stage in tjunc fixes,
+ * can hold hundreds of edges of edges if needed
+ */
+#define MAX_SUPERFACE_POINTS 512
+
+/* FIXME */
 static face_t *newlist;
 
 static void
@@ -352,7 +356,7 @@ FixFaceEdges
 ===============
 */
 static void
-FixFaceEdges(face_t *f)
+FixFaceEdges(face_t *f, face_t *superface)
 {
     int i, j, k;
     wedge_t *edge;
@@ -372,8 +376,12 @@ FixFaceEdges(face_t *f)
 	    v = v->next;
 
 	if (v->t < t2 - T_EPSILON) {
-	    tjuncs++;
 	    /* insert a new vertex here */
+	    if (superface->w.numpoints == MAX_SUPERFACE_POINTS)
+		Error("%s: tjunc fixups generated too many edges (max %d)",
+		      __func__, MAX_SUPERFACE_POINTS);
+
+	    tjuncs++;
 	    for (k = superface->w.numpoints; k > j; k--)
 		VectorCopy(superface->w.points[k - 1], superface->w.points[k]);
 	    VectorMA(edge->origin, v->t, edge->dir, superface->w.points[j]);
@@ -427,7 +435,7 @@ tjunc_find_r(node_t *node)
 }
 
 static void
-tjunc_fix_r(node_t *node)
+tjunc_fix_r(node_t *node, face_t *superface)
 {
     face_t *f, *next;
 
@@ -438,13 +446,13 @@ tjunc_fix_r(node_t *node)
 
     for (f = node->faces; f; f = next) {
 	next = f->next;
-	FixFaceEdges(f);
+	FixFaceEdges(f, superface);
     }
 
     node->faces = newlist;
 
-    tjunc_fix_r(node->children[0]);
-    tjunc_fix_r(node->children[1]);
+    tjunc_fix_r(node->children[0], superface);
+    tjunc_fix_r(node->children[1], superface);
 }
 
 /*
@@ -456,7 +464,8 @@ void
 TJunc(const mapentity_t *entity, node_t *headnode)
 {
     vec3_t maxs, mins;
-    int i;
+    face_t *superface;
+    int i, superface_bytes;
 
     Message(msgProgress, "Tjunc");
 
@@ -494,9 +503,14 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     Message(msgStat, "%8d world edges", numwedges);
     Message(msgStat, "%8d edge points", numwverts);
 
+    superface_bytes = offsetof(face_t, w.points[MAX_SUPERFACE_POINTS]);
+    superface = AllocMem(OTHER, superface_bytes, true);
+
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
-    tjunc_fix_r(headnode);
+    tjunc_fix_r(headnode, superface);
+
+    FreeMem(superface, OTHER, superface_bytes);
 
     FreeMem(pWVerts, WVERT, cWVerts);
     FreeMem(pWEdges, WEDGE, cWEdges);
