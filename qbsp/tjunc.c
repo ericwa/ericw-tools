@@ -253,13 +253,10 @@ AddFaceEdges(face_t *f)
  */
 #define MAX_SUPERFACE_POINTS 512
 
-/* FIXME */
-static face_t *newlist;
-
 static void
-SplitFaceForTjunc(face_t *f, face_t *original)
+SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
 {
-    winding_t *w = &f->w;
+    winding_t *w = &face->w;
     face_t *newf, *chain;
     vec3_t edgevec[2];
     vec_t angle;
@@ -272,10 +269,10 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	     * the face is now small enough without more cutting so
 	     * copy it back to the original
 	     */
-	    *original = *f;
+	    *original = *face;
 	    original->original = chain;
-	    original->next = newlist;
-	    newlist = original;
+	    original->next = *facelist;
+	    *facelist = original;
 	    return;
 	}
 
@@ -323,14 +320,14 @@ SplitFaceForTjunc(face_t *f, face_t *original)
 	 * cut off as big a piece as possible, less than MAXPOINTS, and not
 	 * past lastcorner
 	 */
-	newf = NewFaceFromFace(f);
-	if (f->original)
+	newf = NewFaceFromFace(face);
+	if (face->original)
 	    Error("original face still exists (%s)", __func__);
 
 	newf->original = chain;
 	chain = newf;
-	newf->next = newlist;
-	newlist = newf;
+	newf->next = *facelist;
+	*facelist = newf;
 	if (w->numpoints - firstcorner <= MAXPOINTS)
 	    newf->w.numpoints = firstcorner + 2;
 	else if (lastcorner + 2 < MAXPOINTS &&
@@ -356,14 +353,14 @@ FixFaceEdges
 ===============
 */
 static void
-FixFaceEdges(face_t *f, face_t *superface)
+FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
 {
     int i, j, k;
     wedge_t *edge;
     wvert_t *v;
     vec_t t1, t2;
 
-    *superface = *f;
+    *superface = *face;
 
  restart:
     for (i = 0; i < superface->w.numpoints; i++) {
@@ -391,14 +388,14 @@ FixFaceEdges(face_t *f, face_t *superface)
     }
 
     if (superface->w.numpoints <= MAXPOINTS) {
-	*f = *superface;
-	f->next = newlist;
-	newlist = f;
+	*face = *superface;
+	face->next = *facelist;
+	*facelist = face;
 	return;
     }
 
     /* Too many edges - needs to be split into multiple faces */
-    SplitFaceForTjunc(superface, f);
+    SplitFaceForTjunc(superface, face, facelist);
 }
 
 
@@ -437,19 +434,19 @@ tjunc_find_r(node_t *node)
 static void
 tjunc_fix_r(node_t *node, face_t *superface)
 {
-    face_t *f, *next;
+    face_t *face, *next, *facelist;
 
     if (node->planenum == PLANENUM_LEAF)
 	return;
 
-    newlist = NULL;
+    facelist = NULL;
 
-    for (f = node->faces; f; f = next) {
-	next = f->next;
-	FixFaceEdges(f, superface);
+    for (face = node->faces; face; face = next) {
+	next = face->next;
+	FixFaceEdges(face, superface, &facelist);
     }
 
-    node->faces = newlist;
+    node->faces = facelist;
 
     tjunc_fix_r(node->children[0], superface);
     tjunc_fix_r(node->children[1], superface);
