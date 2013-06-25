@@ -1,6 +1,8 @@
 Unreleased
 
 * qbsp: Fix animating texture bug when brushes are textured with alt-animations
+* qbsp: Fix a crash in tjunc calculations
+* vis: reduce "leaf recursion" error to a warning and continue processing
 
 2013-04-25 TyrUtils v0.10
 
