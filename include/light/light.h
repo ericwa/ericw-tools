@@ -30,9 +30,6 @@
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
-#define MAXLIGHTS 1024
-
-
 #define TRACE_HIT_NONE  0
 #define TRACE_HIT_SOLID (1 << 0)
 #define TRACE_HIT_WATER (1 << 1)
