@@ -188,8 +188,8 @@ CheckEntityFields(entity_t *entity)
     }
 
     if (!VectorCompare(entity->light.color, vec3_origin)) {
-	if (!colored) {
-	    colored = true;
+	if (!write_litfile) {
+	    write_litfile = true;
 	    logprint("Colored light entities detected: "
 		     ".lit output enabled.\n");
 	}
@@ -426,8 +426,8 @@ LoadEntities(void)
 
     if (!VectorCompare(sunlight.color, vec3_white) ||
 	!VectorCompare(minlight.color, vec3_white)) {
-	if (!colored) {
-	    colored = true;
+	if (!write_litfile) {
+	    write_litfile = true;
 	    logprint("Colored light entities detected: "
 		     ".lit output enabled.\n");
 	}

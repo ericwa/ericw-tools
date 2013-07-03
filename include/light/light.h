@@ -113,7 +113,6 @@ extern byte *filebase;
 extern byte *lit_filebase;
 
 extern int oversample;
-extern qboolean colored;
-extern qboolean litfile;
+extern qboolean write_litfile;
 
 #endif /* __LIGHT_LIGHT_H__ */

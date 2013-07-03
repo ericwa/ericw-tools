@@ -652,8 +652,7 @@ SingleLightFace(const entity_t *entity, const lightsample_t *light,
 	angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
 	sample->light += add;
-	if (colored)
-	    VectorMA(sample->color, add / 255.0f, light->color, sample->color);
+	VectorMA(sample->color, add / 255.0f, light->color, sample->color);
 
 	/* Check if we really hit, ignore tiny lights */
 	if (newmap && sample->light >= 1)
@@ -721,9 +720,8 @@ SkyLightFace(const lightsample_t *light, const lightsurf_t *lightsurf,
 	if (!TestSky(surfpoint, sunvec, shadowself))
 	    continue;
 	sample->light += angle * light->light;
-	if (colored)
-	    VectorMA(sample->color, angle * light->light / 255.0f, light->color,
-		     sample->color);
+	VectorMA(sample->color, angle * light->light / 255.0f, light->color,
+		 sample->color);
     }
 }
 
@@ -761,14 +759,12 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	    sample->light += minlight->light;
 	else if (sample->light < minlight->light)
 	    sample->light = minlight->light;
-	if (colored) {
-	    for (j = 0; j < 3; j++) {
-		vec_t lightval = minlight->light * minlight->color[j] / 255.0f;
-		if (addminlight)
-		    sample->color[j] += lightval;
-		else if (sample->color[j] < lightval)
-		    sample->color[j] = lightval;
-	    }
+	for (j = 0; j < 3; j++) {
+	    vec_t lightval = minlight->light * minlight->color[j] / 255.0f;
+	    if (addminlight)
+		sample->color[j] += lightval;
+	    else if (sample->color[j] < lightval)
+		sample->color[j] = lightval;
 	}
     }
 
@@ -791,8 +787,6 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 		else
 		    sample->light = entity->light.light;
 	    }
-	    if (!colored)
-		continue;
 	    for (k = 0; k < 3; k++) {
 		if (addminlight || sample->color[k] < entity->light.color[k]) {
 		    if (!trace) {
@@ -816,7 +810,7 @@ WriteLightmaps(dface_t *face, const lightsurf_t *lightsurf,
 {
     int numstyles, size, mapnum, width, s, t, i, j;
     const lightsample_t *sample;
-    vec_t light;
+    vec_t light, maxcolor;
     vec3_t color;
     byte *out, *lit;
 
@@ -848,8 +842,7 @@ WriteLightmaps(dface_t *face, const lightsurf_t *lightsurf,
 		for (i = 0; i < oversample; i++) {
 		    for (j = 0; j < oversample; j++) {
 			light += sample->light;
-			if (colored)
-			    VectorAdd(color, sample->color, color);
+			VectorAdd(color, sample->color, color);
 			sample++;
 		    }
 		    sample += width - oversample;
@@ -859,26 +852,24 @@ WriteLightmaps(dface_t *face, const lightsurf_t *lightsurf,
 
 		/* Scale and clamp any out-of-range samples */
 		light *= rangescale;
-		if (colored) {
-		    vec_t max = 0;
-		    VectorScale(color, rangescale, color);
-		    for (i = 0; i < 3; i++)
-			if (color[i] > max)
-			    max = color[i];
-		    if (max > 255)
-			VectorScale(color, 255.0f / max, color);
-		}
 		if (light > 255)
 		    light = 255;
 		else if (light < 0)
 		    light = 0;
-
-		if (colored) {
-		    *lit++ = color[0];
-		    *lit++ = color[1];
-		    *lit++ = color[2];
-		}
 		*out++ = light;
+
+		maxcolor = 0;
+		VectorScale(color, rangescale, color);
+		for (i = 0; i < 3; i++)
+		    if (color[i] > maxcolor)
+			maxcolor = color[i];
+		if (maxcolor > 255)
+		    VectorScale(color, 255.0f / maxcolor, color);
+
+		*lit++ = color[0];
+		*lit++ = color[1];
+		*lit++ = color[2];
+
 		sample -= width * oversample - oversample;
 	    }
 	    sample += width * oversample - width;
@@ -950,11 +941,9 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	for (j = 0; j < lightsurf.numpoints; j++, sample++) {
 	    if (sample->light < 0)
 		sample->light = 0;
-	    if (colored) {
-		for (k = 0; k < 3; k++) {
-		    if (sample->color[k] < 0) {
-			sample->color[k] = 0;
-		    }
+	    for (k = 0; k < 3; k++) {
+		if (sample->color[k] < 0) {
+		    sample->color[k] = 0;
 		}
 	    }
 	}

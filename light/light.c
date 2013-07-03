@@ -47,7 +47,7 @@ static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
 
 int oversample = 1;
-qboolean colored;
+qboolean write_litfile = false;
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, int size)
@@ -59,7 +59,7 @@ GetFileSpace(byte **lightdata, byte **colordata, int size)
     *lightdata = file_p;
     file_p += size;
 
-    if (colored && colordata) {
+    if (colordata) {
 	/* align to 12 byte boundaries to match offets with 3 * lightdata */
 	if ((uintptr_t)lit_file_p % 12)
 	    lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
@@ -156,11 +156,8 @@ FindModelInfo(void)
 	    info->minlight.light = atoi(attribute);
 	GetVectorForKey(entity, "_mincolor", info->minlight.color);
 	if (!VectorCompare(info->minlight.color, vec3_origin)) {
-	    if (!colored) {
-		colored = true;
-		logprint("Colored light entities detected: "
-			 ".lit output enabled.\n");
-	    }
+	    if (!write_litfile)
+		write_litfile = true;
 	} else {
 	    VectorCopy(vec3_white, info->minlight.color);
 	}
@@ -180,28 +177,22 @@ LightWorld(void)
     if (dlightdata)
 	free(dlightdata);
 
-    if (colored)
-	lightdatasize = MAX_MAP_LIGHTING;
-    else
-	lightdatasize = MAX_MAP_LIGHTING / 4;
+    /* FIXME - remove this limit */
+    lightdatasize = MAX_MAP_LIGHTING;
     dlightdata = malloc(lightdatasize + 16); /* for alignment */
     if (!dlightdata)
 	Error("%s: allocation of %i bytes failed.", __func__, lightdatasize);
     memset(dlightdata, 0, lightdatasize + 16);
-
-    if (colored)
-	lightdatasize /= 4;
+    lightdatasize /= 4;
 
     /* align filebase to a 4 byte boundary */
     filebase = file_p = (byte *)(((uintptr_t)dlightdata + 3) & ~3);
     file_end = filebase + lightdatasize;
 
-    if (colored) {
-	/* litfile data stored in dlightdata, after the white light */
-	lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
-	lit_file_p = lit_filebase;
-	lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
-    }
+    /* litfile data stored in dlightdata, after the white light */
+    lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
+    lit_file_p = lit_filebase;
+    lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
 
     RunThreadsOn(0, numfaces, LightThread);
     logprint("Lighting Completed.\n\n");
@@ -251,7 +242,7 @@ main(int argc, const char **argv)
 	} else if (!strcmp(argv[i], "-addmin")) {
 	    addminlight = true;
 	} else if (!strcmp(argv[i], "-lit")) {
-	    colored = true;
+	    write_litfile = true;
 	} else if (!strcmp(argv[i], "-soft")) {
 	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
 		softsamples = atoi(argv[++i]);
@@ -278,7 +269,7 @@ main(int argc, const char **argv)
 
     if (numthreads > 1)
 	logprint("running with %d threads\n", numthreads);
-    if (colored)
+    if (write_litfile)
 	logprint(".lit colored light output requested on command line.\n");
     if (softsamples == -1) {
 	switch (oversample) {
@@ -315,7 +306,7 @@ main(int argc, const char **argv)
     GetBSPGlobals(&bsp);
     WriteBSPFile(source, &bsp, bsp_version);
 
-    if (colored)
+    if (write_litfile)
 	WriteLitFile(source, LIT_VERSION);
 
     end = I_FloatTime();
