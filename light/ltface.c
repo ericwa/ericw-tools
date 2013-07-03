@@ -675,12 +675,12 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 
 /*
  * =============
- * SkyLightFace
+ * LightFace_Sky
  * =============
  */
 static void
-SkyLightFace(const lightsample_t *light, const lightsurf_t *lightsurf,
-	     lightmap_t *lightmaps)
+LightFace_Sky(const lightsample_t *light, const lightsurf_t *lightsurf,
+	      lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
@@ -915,7 +915,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
     }
     if (sunlight.light > 0)
-	SkyLightFace(&sunlight, &lightsurf, lightmaps);
+	LightFace_Sky(&sunlight, &lightsurf, lightmaps);
 
     /* minlight - Use the greater of global or model minlight. */
     if (modelinfo->minlight.light > minlight.light)
@@ -931,7 +931,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
     }
     if (sunlight.light < 0)
-	SkyLightFace(&sunlight, &lightsurf, lightmaps);
+	LightFace_Sky(&sunlight, &lightsurf, lightmaps);
 
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {
