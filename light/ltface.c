@@ -566,12 +566,12 @@ GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist)
 
 /*
  * ================
- * SingleLightFace
+ * LightFace_Entity
  * ================
  */
 static void
-SingleLightFace(const entity_t *entity, const lightsample_t *light,
-		const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_Entity(const entity_t *entity, const lightsample_t *light,
+		 const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
@@ -912,7 +912,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	if (entity->formula == LF_LOCALMIN)
 	    continue;
 	if (entity->light.light > 0)
-	    SingleLightFace(entity, &entity->light, &lightsurf, lightmaps);
+	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
     }
     if (sunlight.light > 0)
 	SkyLightFace(&sunlight, &lightsurf, lightmaps);
@@ -928,7 +928,7 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 	if (entity->formula == LF_LOCALMIN)
 	    continue;
 	if (entity->light.light < 0)
-	    SingleLightFace(entity, &entity->light, &lightsurf, lightmaps);
+	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
     }
     if (sunlight.light < 0)
 	SkyLightFace(&sunlight, &lightsurf, lightmaps);
