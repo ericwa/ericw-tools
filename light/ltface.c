@@ -475,6 +475,54 @@ Lightmaps_Init(lightmap_t *lightmaps)
 }
 
 /*
+ * Lightmap_ForStyle
+ *
+ * If lightmap with given style has already been allocated, return it.
+ * Otherwise, init "newmap" and return that.
+ */
+static lightmap_t *
+Lightmap_ForStyle(lightmap_t *lightmaps, const int style, lightmap_t *newmap)
+{
+    lightmap_t *lightmap = lightmaps;
+    int i;
+
+    for (i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
+	if (lightmap->style == style)
+	    return lightmap;
+	if (lightmap->style == 255)
+	    break;
+    }
+    memset(newmap, 0, sizeof(*newmap));
+    newmap->style = style;
+
+    return newmap;
+}
+
+/*
+ * Lightmap_AddStyle
+ *
+ * Helper to simplify checking if we used a new light style which needs
+ * to be added back into the lightmaps.
+ */
+static lightmap_t *
+Lightmap_AddStyle(lightmap_t *lightmaps, const lightmap_t *newmap)
+{
+    lightmap_t *lightmap = lightmaps;
+    int i;
+
+    for (i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
+	if (lightmap == newmap)
+	    return lightmap;
+	if (lightmap->style == 255) {
+	    memcpy(lightmap, newmap, sizeof(*lightmap));
+	    return lightmap;
+	}
+    }
+
+    return NULL;
+}
+
+/*
  * Average adjacent points on the grid to soften shadow edges
  */
 __attribute__((noinline))
@@ -577,13 +625,11 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
     const plane_t *plane = &lightsurf->plane;
     const dmodel_t *shadowself;
     const vec_t *surfpoint;
-    vec_t dist;
-    vec_t angle, spotscale;
-    vec_t add;
-    qboolean newmap, hit;
-    int i, mapnum;
+    int i;
+    qboolean hit;
+    vec_t dist, add, angle, spotscale;
     lightsample_t *sample;
-    lightmap_t newlightmap;
+    lightmap_t *lightmap, newmap;
 
     dist = DotProduct(entity->origin, plane->normal) - plane->dist;
 
@@ -596,29 +642,12 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	return;
 
     /*
-     * Find the lightmap with matching style
-     */
-    newmap = true;
-    for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
-	if (lightmaps[mapnum].style == 255)
-	    break;
-	if (lightmaps[mapnum].style == entity->style) {
-	    newmap = false;
-	    sample = lightmaps[mapnum].samples;
-	    break;
-	}
-    }
-    if (newmap) {
-	memset(&newlightmap, 0, sizeof(newlightmap));
-	newlightmap.style = entity->style;
-	sample = newlightmap.samples;
-    }
-
-    /*
      * Check it for real
      */
     hit = false;
+    lightmap = Lightmap_ForStyle(lightmaps, entity->style, &newmap);
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
+    sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
 	vec3_t ray;
@@ -655,22 +684,20 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	VectorMA(sample->color, add / 255.0f, light->color, sample->color);
 
 	/* Check if we really hit, ignore tiny lights */
-	if (newmap && sample->light >= 1)
+	if (lightmap == &newmap && sample->light >= 1)
 	    hit = true;
     }
 
-    if (newmap && hit) {
-	if (mapnum == MAXLIGHTMAPS) {
-	    logprint("WARNING: Too many light styles on a face\n"
-		     "   lightmap point near (%s)\n"
-		     "   entity->origin (%s)\n",
-		     VecStr(lightsurf->points[0]), VecStr(entity->origin));
-	    return;
-	}
+    /* If we updated an existing style or didn't hit, we are done */
+    if (lightmap != &newmap || !hit)
+	return;
 
-	/* the new lightmap has some real data now */
-	memcpy(&lightmaps[mapnum], &newlightmap, sizeof(newlightmap));
-    }
+    lightmap = Lightmap_AddStyle(lightmaps, &newmap);
+    if (!lightmap)
+	logprint("WARNING: Too many light styles on a face\n"
+		 "   lightmap point near (%s)\n"
+		 "   entity->origin (%s)\n",
+		 VecStr(lightsurf->points[0]), VecStr(entity->origin));
 }
 
 /*
@@ -686,26 +713,19 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
     const plane_t *plane = &lightsurf->plane;
     const dmodel_t *shadowself;
     const vec_t *surfpoint;
-    int i, mapnum;
+    int i;
+    qboolean hit;
     vec3_t incoming;
     vec_t angle;
     lightsample_t *sample;
+    lightmap_t *lightmap, newmap;
 
     /* Don't bother if surface facing away from sun */
     if (DotProduct(vector, plane->normal) < -ANGLE_EPSILON)
 	return;
 
     /* if sunlight is set, use a style 0 light map */
-    for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
-	if (lightmaps[mapnum].style == 0)
-	    break;
-	if (lightmaps[mapnum].style == 255) {
-	    lightmaps[mapnum].style = 0;
-	    break;
-	}
-    }
-    if (mapnum == MAXLIGHTMAPS)
-	return; /* oh well, too many lightmaps... */
+    lightmap = Lightmap_ForStyle(lightmaps, 0, &newmap);
 
     VectorCopy(vector, incoming);
     VectorNormalize(incoming);
@@ -713,16 +733,30 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
     angle = (1.0 - sun_anglescale) + sun_anglescale * angle;
 
     /* Check each point... */
+    hit = false;
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
-    sample = lightmaps[mapnum].samples;
+    sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
 	if (!TestSky(surfpoint, vector, shadowself))
 	    continue;
 	sample->light += angle * light->light;
+	if (lightmap == &newmap && sample->light >= 1)
+	    hit = true;
 	VectorMA(sample->color, angle * light->light / 255.0f, light->color,
 		 sample->color);
     }
+
+    /* If we updated an existing style or didn't hit, we are done */
+    if (lightmap != &newmap || !hit)
+	return;
+
+    lightmap = Lightmap_AddStyle(lightmaps, &newmap);
+    if (!lightmap)
+	logprint("WARNING: Too many light styles on a face\n"
+		 "   lightmap point near (%s)\n"
+		 "   for sky/sunlight\n",
+		 VecStr(lightsurf->points[0]));
 }
 
 /*
@@ -738,27 +772,23 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
     const dmodel_t *shadowself;
     const entity_t *entity;
     const vec_t *surfpoint;
-    int mapnum, i, j, k;
+    qboolean hit;
+    int i, j, k;
     lightsample_t *sample;
+    lightmap_t *lightmap, newmap;
 
     /* Find a style 0 lightmap */
-    for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
-	if (lightmaps[mapnum].style == 0)
-	    break;
-	if (lightmaps[mapnum].style == 255) {
-	    lightmaps[mapnum].style = 0;
-	    break;
-	}
-    }
-    if (mapnum == MAXLIGHTMAPS)
-	return; /* oh well... FIXME - should we warn? */
+    lightmap = Lightmap_ForStyle(lightmaps, 0, &newmap);
 
-    sample = lightmaps[mapnum].samples;
+    hit = false;
+    sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
 	if (addminlight)
 	    sample->light += minlight->light;
 	else if (sample->light < minlight->light)
 	    sample->light = minlight->light;
+	if (lightmap == &newmap && sample->light >= 1)
+	    hit = true;
 	for (j = 0; j < 3; j++) {
 	    vec_t lightval = minlight->light * minlight->color[j] / 255.0f;
 	    if (addminlight)
@@ -774,7 +804,7 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	if (entity->formula != LF_LOCALMIN)
 	    continue;
 
-	sample = lightmaps[mapnum].samples;
+	sample = lightmap->samples;
 	surfpoint = lightsurf->points[0];
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
 	    qboolean trace = false;
@@ -787,6 +817,8 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 		else
 		    sample->light = entity->light.light;
 	    }
+	    if (lightmap == &newmap && sample->light >= 1)
+		hit = true;
 	    for (k = 0; k < 3; k++) {
 		if (addminlight || sample->color[k] < entity->light.color[k]) {
 		    if (!trace) {
@@ -802,6 +834,16 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
 	    }
 	}
     }
+
+    if (lightmap != &newmap || !hit)
+	return;
+
+    lightmap = Lightmap_AddStyle(lightmaps, &newmap);
+    if (!lightmap)
+	logprint("WARNING: Too many light styles on a face\n"
+		 "   lightmap point near (%s)\n"
+		 "   for minlight\n",
+		 VecStr(lightsurf->points[0]));
 }
 
 static void
