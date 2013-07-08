@@ -611,6 +611,25 @@ GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist)
     }
 }
 
+static inline void
+Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color)
+{
+    sample->light += light;
+    VectorMA(sample->color, light / 255.0f, color, sample->color);
+}
+
+static inline void
+Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
+{
+    int i;
+
+    if (sample->light < light) {
+	sample->light = light;
+	for (i = 0; i < 3; i++)
+	    if (sample->color[i] < color[i])
+		sample->color[i] = color[i];
+    }
+}
 
 /*
  * ================
@@ -680,8 +699,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 
 	angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
-	sample->light += add;
-	VectorMA(sample->color, add / 255.0f, light->color, sample->color);
+	Light_Add(sample, add, light->color);
 
 	/* Check if we really hit, ignore tiny lights */
 	if (lightmap == &newmap && sample->light >= 1)
@@ -740,11 +758,9 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
 	if (!TestSky(surfpoint, vector, shadowself))
 	    continue;
-	sample->light += angle * light->light;
+	Light_Add(sample, angle * light->light, light->color);
 	if (lightmap == &newmap && sample->light >= 1)
 	    hit = true;
-	VectorMA(sample->color, angle * light->light / 255.0f, light->color,
-		 sample->color);
     }
 
     /* If we updated an existing style or didn't hit, we are done */
@@ -772,8 +788,8 @@ LightFace_Min(const lightsample_t *light,
     const dmodel_t *shadowself;
     const entity_t *entity;
     const vec_t *surfpoint;
-    qboolean hit;
-    int i, j, k;
+    qboolean hit, trace;
+    int i, j;
     lightsample_t *sample;
     lightmap_t *lightmap, newmap;
 
@@ -784,18 +800,11 @@ LightFace_Min(const lightsample_t *light,
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
 	if (addminlight)
-	    sample->light += light->light;
-	else if (sample->light < light->light)
-	    sample->light = light->light;
+	    Light_Add(sample, light->light, light->color);
+	else
+	    Light_ClampMin(sample, light->light, light->color);
 	if (lightmap == &newmap && sample->light >= 1)
 	    hit = true;
-	for (j = 0; j < 3; j++) {
-	    vec_t lightval = light->light * light->color[j] / 255.0f;
-	    if (addminlight)
-		sample->color[j] += lightval;
-	    else if (sample->color[j] < lightval)
-		sample->color[j] = lightval;
-	}
     }
 
     /* Cast rays for local minlight entities */
@@ -807,31 +816,17 @@ LightFace_Min(const lightsample_t *light,
 	sample = lightmap->samples;
 	surfpoint = lightsurf->points[0];
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
-	    qboolean trace = false;
 	    if (addminlight || sample->light < entity->light.light) {
 		trace = TestLight(entity->origin, surfpoint, shadowself);
 		if (!trace)
 		    continue;
 		if (addminlight)
-		    sample->light += entity->light.light;
+		    Light_Add(sample, entity->light.light, entity->light.color);
 		else
-		    sample->light = entity->light.light;
+		    Light_ClampMin(sample, entity->light.light, entity->light.color);
 	    }
 	    if (lightmap == &newmap && sample->light >= 1)
 		hit = true;
-	    for (k = 0; k < 3; k++) {
-		if (addminlight || sample->color[k] < entity->light.color[k]) {
-		    if (!trace) {
-			trace = TestLight(entity->origin, surfpoint, shadowself);
-			if (!trace)
-			    break;
-		    }
-		    if (addminlight)
-			sample->color[k] += entity->light.color[k];
-		    else
-			sample->color[k] = entity->light.color[k];
-		}
-	    }
 	}
     }
 
