@@ -761,12 +761,12 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
 
 /*
  * ============
- * FixMinlight
+ * LightFace_Min
  * ============
  */
 static void
-FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
-	    lightmap_t *lightmaps)
+LightFace_Min(const lightsample_t *light,
+	      const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const dmodel_t *shadowself;
@@ -784,13 +784,13 @@ FixMinlight(const lightsample_t *minlight, const lightsurf_t *lightsurf,
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
 	if (addminlight)
-	    sample->light += minlight->light;
-	else if (sample->light < minlight->light)
-	    sample->light = minlight->light;
+	    sample->light += light->light;
+	else if (sample->light < light->light)
+	    sample->light = light->light;
 	if (lightmap == &newmap && sample->light >= 1)
 	    hit = true;
 	for (j = 0; j < 3; j++) {
-	    vec_t lightval = minlight->light * minlight->color[j] / 255.0f;
+	    vec_t lightval = light->light * light->color[j] / 255.0f;
 	    if (addminlight)
 		sample->color[j] += lightval;
 	    else if (sample->color[j] < lightval)
@@ -961,9 +961,9 @@ LightFace(dface_t *face, const modelinfo_t *modelinfo)
 
     /* minlight - Use the greater of global or model minlight. */
     if (modelinfo->minlight.light > minlight.light)
-	FixMinlight(&modelinfo->minlight, &lightsurf, lightmaps);
+	LightFace_Min(&modelinfo->minlight, &lightsurf, lightmaps);
     else
-	FixMinlight(&minlight, &lightsurf, lightmaps);
+	LightFace_Min(&minlight, &lightsurf, lightmaps);
 
     /* negative lights */
     for (i = 0, entity = entities; i < num_entities; i++, entity++) {
