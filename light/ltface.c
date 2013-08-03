@@ -166,63 +166,6 @@ typedef struct {
 } lightmap_t;
 
 /*
- * ================
- * CreateFaceTransform
- * Fills in the transform matrix for converting tex coord <-> world coord
- * ================
- */
-static void
-CreateFaceTransform(const dface_t *face, pmatrix3_t *transform)
-{
-    const dplane_t *plane;
-    const texinfo_t *tex;
-    int i;
-
-    /* Prepare the transform matrix and init row/column permutations */
-    plane = &dplanes[face->planenum];
-    tex = &texinfo[face->texinfo];
-    for (i = 0; i < 3; i++) {
-	transform->data[0][i] = tex->vecs[0][i];
-	transform->data[1][i] = tex->vecs[1][i];
-	transform->data[2][i] = plane->normal[i];
-	transform->row[i] = transform->col[i] = i;
-    }
-    if (face->side)
-	VectorSubtract(vec3_origin, transform->data[2], transform->data[2]);
-
-    /* Decompose the matrix. If we can't, texture axes are invalid. */
-    if (!PMatrix3_LU_Decompose(transform)) {
-	const vec_t *p = dvertexes[dedges[face->firstedge].v[0]].point;
-	Error("Bad texture axes on face:\n"
-	      "   face point at (%5.3f, %5.3f, %5.3f)\n", p[0], p[1], p[2]);
-    }
-}
-
-static void
-TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
-{
-    vec3_t rhs;
-
-    rhs[0] = s - texorg->texinfo->vecs[0][3];
-    rhs[1] = t - texorg->texinfo->vecs[1][3];
-    rhs[2] = texorg->planedist + 1; /* one "unit" in front of surface */
-
-    Solve3(&texorg->transform, rhs, world);
-}
-
-static void
-WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
-{
-    int i;
-
-    for (i = 0; i < 2; i++)
-	coord[i] =
-	    world[0] * tex->vecs[i][0] +
-	    world[1] * tex->vecs[i][1] +
-	    world[2] * tex->vecs[i][2] + tex->vecs[i][3];
-}
-
-/*
  * Functions to aid in calculation of polygon centroid
  */
 static void
@@ -248,6 +191,34 @@ TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
     CrossProduct(edge0, edge1, cross);
 
     return VectorLength(cross) * 0.5;
+}
+
+static vec_t
+FaceArea(const dface_t *f)
+{
+    int i, e;
+    dvertex_t *v0, *v1, *v2;
+    vec_t poly_area = 0;
+
+    e = dsurfedges[f->firstedge];
+    if (e >= 0)
+	v0 = dvertexes + dedges[e].v[0];
+    else
+	v0 = dvertexes + dedges[-e].v[1];
+
+    for (i = 1; i < f->numedges - 1; i++) {
+	e = dsurfedges[f->firstedge + i];
+	if (e >= 0) {
+	    v1 = dvertexes + dedges[e].v[0];
+	    v2 = dvertexes + dedges[e].v[1];
+	} else {
+	    v1 = dvertexes + dedges[-e].v[1];
+	    v2 = dvertexes + dedges[-e].v[0];
+	}
+	poly_area += TriArea(v0, v1, v2);
+    }
+
+    return poly_area;
 }
 
 static void
@@ -285,6 +256,64 @@ FaceCentroid(const dface_t *f, vec3_t out)
     }
 
     VectorScale(poly_centroid, 1.0 / poly_area, out);
+}
+
+/*
+ * ================
+ * CreateFaceTransform
+ * Fills in the transform matrix for converting tex coord <-> world coord
+ * ================
+ */
+static void
+CreateFaceTransform(const dface_t *face, pmatrix3_t *transform)
+{
+    const dplane_t *plane;
+    const texinfo_t *tex;
+    int i;
+
+    /* Prepare the transform matrix and init row/column permutations */
+    plane = &dplanes[face->planenum];
+    tex = &texinfo[face->texinfo];
+    for (i = 0; i < 3; i++) {
+	transform->data[0][i] = tex->vecs[0][i];
+	transform->data[1][i] = tex->vecs[1][i];
+	transform->data[2][i] = plane->normal[i];
+	transform->row[i] = transform->col[i] = i;
+    }
+    if (face->side)
+	VectorSubtract(vec3_origin, transform->data[2], transform->data[2]);
+
+    /* Decompose the matrix. If we can't, texture axes are invalid. */
+    if (!PMatrix3_LU_Decompose(transform)) {
+	const vec_t *p = dvertexes[dedges[face->firstedge].v[0]].point;
+	Error("Bad texture axes on face:\n"
+	      "   face point at (%s)\n"
+	      "   face area = %5.3f\n", VecStr(p), FaceArea(face));
+    }
+}
+
+static void
+TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
+{
+    vec3_t rhs;
+
+    rhs[0] = s - texorg->texinfo->vecs[0][3];
+    rhs[1] = t - texorg->texinfo->vecs[1][3];
+    rhs[2] = texorg->planedist + 1; /* one "unit" in front of surface */
+
+    Solve3(&texorg->transform, rhs, world);
+}
+
+static void
+WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
+{
+    int i;
+
+    for (i = 0; i < 2; i++)
+	coord[i] =
+	    world[0] * tex->vecs[i][0] +
+	    world[1] * tex->vecs[i][1] +
+	    world[2] * tex->vecs[i][2] + tex->vecs[i][3];
 }
 
 /*
