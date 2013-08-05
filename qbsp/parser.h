@@ -24,7 +24,7 @@
 
 #include <stdbool.h>
 
-#define MAXTOKEN 256
+#define MAXTOKEN 1024
 
 typedef enum parseflags {
     PARSE_NORMAL   = 0,
