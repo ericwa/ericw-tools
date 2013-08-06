@@ -295,8 +295,7 @@ define do_zip
 endef
 
 DEPFILES := \
-	$(wildcard $(BUILD_DIR)/*/.*.d) \
-	$(wildcard $(BUILD_DIR)/*/*/.*.d)
+	$(wildcard $(BUILD_DIR)/*/.*.d $(BUILD_DIR)/*/*/.*.d)
 
 ifneq ($(DEPFILES),)
 -include $(DEPFILES)
