@@ -28,8 +28,49 @@
 #define info_player_deathmatch	2
 #define	info_player_coop	4
 
-static int cAnimtex;
 static int rgfStartSpots;
+
+static void
+AddAnimTex(const char *name)
+{
+    int i, j, frame;
+    char framename[16], basechar = '0';
+
+    frame = name[1];
+    if (frame >= 'a' && frame <= 'j')
+	frame -= 'a' - 'A';
+
+    if (frame >= '0' && frame <= '9') {
+	frame -= '0';
+	basechar = '0';
+    } else if (frame >= 'A' && frame <= 'J') {
+	frame -= 'A';
+	basechar = 'A';
+    }
+
+    if (frame < 0 || frame > 9)
+	Error("Bad animating texture %s", name);
+
+    /*
+     * Always add the lower numbered animation frames first, otherwise
+     * many Quake engines will exit with an error loading the bsp.
+     */
+    snprintf(framename, sizeof(framename), "%s", name);
+    for (i = 0; i < frame; i++) {
+	framename[1] = basechar + i;
+	for (j = 0; j < map.nummiptex; j++) {
+	    if (!strcasecmp(framename, map.miptex[j]))
+		break;
+	}
+	if (j < map.nummiptex)
+	    continue;
+	if (map.nummiptex == map.maxmiptex)
+	    Error("Internal error: map.nummiptex > map.maxmiptex");
+
+	snprintf(map.miptex[j], sizeof(map.miptex[j]), "%s", framename);
+	map.nummiptex++;
+    }
+}
 
 int
 FindMiptex(const char *name)
@@ -43,11 +84,14 @@ FindMiptex(const char *name)
     if (map.nummiptex == map.maxmiptex)
 	Error("Internal error: map.nummiptex > map.maxmiptex");
 
-    strcpy(map.miptex[i], name);
-    map.nummiptex++;
+    /* Handle animating textures carefully */
+    if (name[0] == '+') {
+	AddAnimTex(name);
+	i = map.nummiptex;
+    }
 
-    if (name[0] == '+')
-	cAnimtex++;
+    snprintf(map.miptex[i], sizeof(map.miptex[i]), "%s", name);
+    map.nummiptex++;
 
     return i;
 }
@@ -701,9 +745,8 @@ LoadMapFile(void)
     if (map.nummiptex > map.maxfaces)
 	Error("Internal error: map.nummiptex > map.maxfaces");
     else if (map.nummiptex < map.maxfaces) {
-	// For stuff in AddAnimatingTex, make room available
 	pTemp = map.miptex;
-	map.maxmiptex = map.nummiptex + cAnimtex * 20;
+	map.maxmiptex = map.nummiptex;
 	map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
 	memcpy(map.miptex, pTemp, map.nummiptex * rgcMemSize[MIPTEX]);
 	FreeMem(pTemp, MIPTEX, map.maxfaces);
