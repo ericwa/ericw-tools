@@ -50,63 +50,58 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-static void
-CheckFace(face_t *f)
+void
+CheckFace(face_t *face)
 {
+    const plane_t *plane = &map.planes[face->planenum];
+    const vec_t *p1, *p2;
+    vec_t length, dist, edgedist;
+    vec3_t edgevec, edgenormal, facenormal;
     int i, j;
-    plane_t *plane;
-    vec_t *p1, *p2;
-    vec_t d, edgedist;
-    vec3_t dir, edgenormal, facenormal;
 
-    if (f->w.numpoints < 3)
-	Error("%s: too few points (%d)", __func__, f->w.numpoints);
+    if (face->w.numpoints < 3)
+	Error("%s: too few points (%d)", __func__, face->w.numpoints);
 
-    VectorCopy(map.planes[f->planenum].normal, facenormal);
-    if (f->planeside) {
+    VectorCopy(plane->normal, facenormal);
+    if (face->planeside)
 	VectorSubtract(vec3_origin, facenormal, facenormal);
-    }
 
-    for (i = 0; i < f->w.numpoints; i++) {
-	p1 = f->w.points[i];
+    for (i = 0; i < face->w.numpoints; i++) {
+	p1 = face->w.points[i];
+	p2 = face->w.points[(i + 1) % face->w.numpoints];
 
 	for (j = 0; j < 3; j++)
 	    if (p1[j] > BOGUS_RANGE || p1[j] < -BOGUS_RANGE)
 		Error("%s: coordinate out of range (%f)", __func__, p1[j]);
 
-	j = i + 1 == f->w.numpoints ? 0 : i + 1;
+	/* check the point is on the face plane */
+	dist = DotProduct(p1, plane->normal) - plane->dist;
+	if (dist < -ON_EPSILON || dist > ON_EPSILON)
+	    Message(msgWarning, warnPointOffPlane, p1[0], p1[1], p1[2], dist);
 
-	// check the point is on the face plane
-	plane = &map.planes[f->planenum];
-	d = DotProduct(p1, plane->normal) - plane->dist;
-	if (d < -ON_EPSILON || d > ON_EPSILON)
-	    // This used to be an error
-	    Message(msgWarning, warnPointOffPlane, p1[0], p1[1], p1[2], d);
-
-	// check the edge isn't degenerate
-	p2 = f->w.points[j];
-	VectorSubtract(p2, p1, dir);
-
-	if (VectorLength(dir) < ON_EPSILON) {
-	    Message(msgWarning, warnDegenerateEdge, p1[0], p1[1], p1[2]);
-	    for (j = i + 1; j < f->w.numpoints; j++)
-		VectorCopy(f->w.points[j], f->w.points[j - 1]);
-	    f->w.numpoints--;
-	    CheckFace(f);
+	/* check the edge isn't degenerate */
+	VectorSubtract(p2, p1, edgevec);
+	length = VectorLength(edgevec);
+	if (length < ON_EPSILON) {
+	    Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
+	    for (j = i + 1; j < face->w.numpoints; j++)
+		VectorCopy(face->w.points[j], face->w.points[j - 1]);
+	    face->w.numpoints--;
+	    CheckFace(face);
 	    break;
 	}
 
-	CrossProduct(facenormal, dir, edgenormal);
+	CrossProduct(facenormal, edgevec, edgenormal);
 	VectorNormalize(edgenormal);
 	edgedist = DotProduct(p1, edgenormal);
 	edgedist += ON_EPSILON;
 
-	// all other points must be on front side
-	for (j = 0; j < f->w.numpoints; j++) {
+	/* all other points must be on front side */
+	for (j = 0; j < face->w.numpoints; j++) {
 	    if (j == i)
 		continue;
-	    d = DotProduct(f->w.points[j], edgenormal);
-	    if (d > edgedist)
+	    dist = DotProduct(face->w.points[j], edgenormal);
+	    if (dist > edgedist)
 		Error("%s: Found a non-convex face", __func__);
 	}
     }

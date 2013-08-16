@@ -73,7 +73,7 @@ const char *rgszWarnings[cWarnings] = {
 
     "Strange map face count",
     "Too many edges in TryMerge",
-    "Healing degenerate edge at (%.3f %.3f %.3f)",
+    "Healing degenerate edge (%f) at (%.3f %.3f %.3f)",
     "No target for rotation entity \"%s\"",
     "line %d: Face with degenerate QuArK-style texture axes",
 };
