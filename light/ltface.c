@@ -316,6 +316,35 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 	    world[2] * tex->vecs[i][2] + tex->vecs[i][3];
 }
 
+#if 0
+/* Debug helper - move elsewhere? */
+static void
+PrintFaceInfo(const dface_t *face)
+{
+    const texinfo_t *tex = &texinfo[face->texinfo];
+    const int offset = dtexdata.header->dataofs[tex->miptex];
+    const miptex_t *miptex = (const miptex_t *)(dtexdata.base + offset);
+    int i;
+
+    logprint("face %d, texture %s, %d edges...\n"
+	     "  vectors (%3.3f, %3.3f, %3.3f) (%3.3f)\n"
+	     "          (%3.3f, %3.3f, %3.3f) (%3.3f)\n",
+	     (int)(face - dfaces), miptex->name, face->numedges,
+	     tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2], tex->vecs[0][3],
+	     tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
+
+    for (i = 0; i < face->numedges; i++) {
+	int edge = dsurfedges[face->firstedge + i];
+	int vert = (edge >= 0) ? dedges[edge].v[0] : dedges[-edge].v[1];
+	const float *point = dvertexes[vert].point;
+
+	logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: edge %d\n",
+		 i ? "          " : "    verts ", vert,
+		 point[0], point[1], point[2], edge);
+    }
+}
+#endif
+
 /*
  * ================
  * CalcFaceExtents
