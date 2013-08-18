@@ -22,6 +22,7 @@
 
 #include <common/cmdlib.h>
 #include <common/bspfile.h>
+#include <common/mathlib.h>
 
 /* FIXME - share header with qbsp, etc. */
 typedef struct {
@@ -90,6 +91,18 @@ ExportWad(FILE *wadfile, bspdata_t *bsp)
 	for (j = 0; j < MIPLEVELS; j++)
 	    miptex->offsets[j] = LittleLong(miptex->offsets[j]);
 	fwrite(miptex, size, 1, wadfile);
+    }
+}
+
+static void
+PrintModelInfo(const bspdata_t *bsp)
+{
+    int i;
+
+    for (i = 0; i < bsp->nummodels; i++) {
+	const dmodel_t *dmodel = &bsp->dmodels[i];
+	printf("model %3d: %5d faces (firstface = %d)\n",
+	       i, dmodel->numfaces, dmodel->firstface);
     }
 }
 
@@ -270,6 +283,8 @@ main(int argc, char **argv)
 	    printf("Beginning BSP data check...\n");
 	    CheckBSPFile(&bsp);
 	    printf("Done.\n");
+	} else if (!strcmp(argv[i], "--modelinfo")) {
+	    PrintModelInfo(&bsp);
 	}
     }
 
