@@ -102,7 +102,8 @@ CheckFace(face_t *face)
 		continue;
 	    dist = DotProduct(face->w.points[j], edgenormal);
 	    if (dist > edgedist)
-		Error("%s: Found a non-convex face", __func__);
+		Error("%s: Found a non-convex face (error size %f)\n",
+		      __func__, dist - edgedist);
 	}
     }
 }
