@@ -208,6 +208,7 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     hashvert_t *hv;
     vec3_t vert;
     struct lumpdata *vertices = &entity->lumps[BSPVERTEX];
+    dvertex_t *dvertex;
 
     for (i = 0; i < 3; i++) {
 	if (fabs(in[i] - Q_rint(in[i])) < ZERO_EPSILON)
@@ -217,7 +218,6 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     }
 
     h = HashVec(vert);
-
     for (hv = hashverts[h]; hv; hv = hv->next) {
 	if (fabs(hv->point[0] - vert[0]) < POINT_EPSILON &&
 	    fabs(hv->point[1] - vert[1]) < POINT_EPSILON &&
@@ -227,23 +227,22 @@ GetVertex(mapentity_t *entity, const vec3_t in)
 	}
     }
 
-    hv = hvert_p;
+    hv = hvert_p++;
+    hv->num = map.cTotal[BSPVERTEX]++;
     hv->numedges = 1;
     hv->next = hashverts[h];
     hashverts[h] = hv;
     VectorCopy(vert, hv->point);
-    hv->num = map.cTotal[BSPVERTEX];
-    hvert_p++;
 
-    // emit a vertex
-    ((dvertex_t *)vertices->data)[vertices->index].point[0] = vert[0];
-    ((dvertex_t *)vertices->data)[vertices->index].point[1] = vert[1];
-    ((dvertex_t *)vertices->data)[vertices->index].point[2] = vert[2];
-    vertices->index++;
-    map.cTotal[BSPVERTEX]++;
-
-    if (vertices->index > vertices->count)
+    if (vertices->index == vertices->count)
 	Error("Internal error: didn't allocate enough vertices?");
+
+    /* emit a vertex */
+    dvertex = (dvertex_t *)vertices->data + vertices->index;
+    dvertex->point[0] = vert[0];
+    dvertex->point[1] = vert[1];
+    dvertex->point[2] = vert[2];
+    vertices->index++;
 
     return hv->num;
 }
