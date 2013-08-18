@@ -303,17 +303,19 @@ FindFaceEdges
 static void
 FindFaceEdges(mapentity_t *entity, face_t *face)
 {
-    int i;
+    int i, memsize;
 
     face->outputnumber = -1;
     if (face->w.numpoints > MAXEDGES)
 	Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
 
-    face->edges = AllocMem(OTHER, face->w.numpoints * sizeof(int), true);
-    for (i = 0; i < face->w.numpoints; i++)
-	face->edges[i] = GetEdge(entity, face->w.points[i],
-				 face->w.points[(i + 1) % face->w.numpoints],
-				 face);
+    memsize = face->w.numpoints * sizeof(face->edges[0]);
+    face->edges = AllocMem(OTHER, memsize, true);
+    for (i = 0; i < face->w.numpoints; i++) {
+	const vec_t *p1 = face->w.points[i];
+	const vec_t *p2 = face->w.points[(i + 1) % face->w.numpoints];
+	face->edges[i] = GetEdge(entity, p1, p2, face);
+    }
 }
 
 
