@@ -257,8 +257,6 @@ GetEdge
 Don't allow four way edges
 ==================
 */
-static int c_tryedges;
-
 static int
 GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
 {
@@ -270,7 +268,6 @@ GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
     if (!f->contents[0])
 	Error("Face with 0 contents (%s)", __func__);
 
-    c_tryedges++;
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
 
@@ -467,7 +464,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     pEdgeFaces1 = AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
 
     InitHash();
-    c_tryedges = 0;
 
     firstface = map.cTotal[BSPFACE];
     MakeFaceEdges_r(entity, headnode, 0);
