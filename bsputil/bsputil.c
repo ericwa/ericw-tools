@@ -106,6 +106,39 @@ PrintModelInfo(const bspdata_t *bsp)
     }
 }
 
+
+/*
+ * Quick hack to check verticies of faces lie on the correct plane
+ */
+#define ON_EPSILON 0.01
+vec3_t vec3_origin = { 0, 0, 0 };
+static void
+CheckBSPFacesPlanar(const bspdata_t *bsp)
+{
+    int i, j;
+
+    for (i = 0; i < bsp->numfaces; i++) {
+	const dface_t *face = &bsp->dfaces[i];
+	dplane_t plane = bsp->dplanes[face->planenum];
+
+	if (face->side) {
+	    VectorSubtract(vec3_origin, plane.normal, plane.normal);
+	    plane.dist = -plane.dist;
+	}
+
+	for (j = 0; j < face->numedges; j++) {
+	    const int edgenum = bsp->dsurfedges[face->firstedge + j];
+	    const int vertnum = (edgenum >= 0) ? bsp->dedges[edgenum].v[0] : bsp->dedges[-edgenum].v[1];
+	    const float *point = bsp->dvertexes[vertnum].point;
+	    const float dist = DotProduct(plane.normal, point) - plane.dist;
+
+	    if (dist < -ON_EPSILON || dist > ON_EPSILON)
+		printf("WARNING: face %d, point %d off plane by %f\n",
+		       face - bsp->dfaces, j, dist);
+	}
+    }
+}
+
 static void
 CheckBSPFile(const bspdata_t *bsp)
 {
@@ -282,6 +315,7 @@ main(int argc, char **argv)
 	} else if (!strcmp(argv[i], "--check")) {
 	    printf("Beginning BSP data check...\n");
 	    CheckBSPFile(&bsp);
+	    CheckBSPFacesPlanar(&bsp);
 	    printf("Done.\n");
 	} else if (!strcmp(argv[i], "--modelinfo")) {
 	    PrintModelInfo(&bsp);
