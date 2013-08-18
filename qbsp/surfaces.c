@@ -141,8 +141,8 @@ GatherNodeFaces(node_t *headnode)
 static hashvert_t *hvert_p;
 
 // This is a kludge.   Should be pEdgeFaces[2].
-static face_t **pEdgeFaces0;
-static face_t **pEdgeFaces1;
+static const face_t **pEdgeFaces0;
+static const face_t **pEdgeFaces1;
 static int cStartEdge;
 
 //============================================================================
@@ -258,14 +258,15 @@ Don't allow four way edges
 ==================
 */
 static int
-GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
+GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
+	const face_t *face)
 {
+    struct lumpdata *edges = &entity->lumps[BSPEDGE];
     int v1, v2;
     dedge_t *edge;
     int i;
-    struct lumpdata *edges = &entity->lumps[BSPEDGE];
 
-    if (!f->contents[0])
+    if (!face->contents[0])
 	Error("Face with 0 contents (%s)", __func__);
 
     v1 = GetVertex(entity, p1);
@@ -275,8 +276,8 @@ GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
 	edge = (dedge_t *)edges->data + i;
 	if (v1 == edge->v[1] && v2 == edge->v[0]
 	    && pEdgeFaces1[i] == NULL
-	    && pEdgeFaces0[i]->contents[0] == f->contents[0]) {
-	    pEdgeFaces1[i] = f;
+	    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+	    pEdgeFaces1[i] = face;
 	    return -(i + cStartEdge);
 	}
     }
@@ -290,7 +291,7 @@ GetEdge(mapentity_t *entity, vec3_t p1, vec3_t p2, face_t *f)
     map.cTotal[BSPEDGE]++;
     edge->v[0] = v1;
     edge->v[1] = v2;
-    pEdgeFaces0[i] = f;
+    pEdgeFaces0[i] = face;
     return i + cStartEdge;
 }
 
