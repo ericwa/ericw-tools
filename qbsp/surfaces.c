@@ -488,6 +488,9 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 	edges->count = edges->index;
     }
 
+    if (map.cTotal[BSPVERTEX] > 65535)
+	Error("Too many vertices (%d > 65535)", map.cTotal[BSPVERTEX]);
+
     surfedges->data = AllocMem(BSPSURFEDGE, surfedges->count, true);
     faces->data = AllocMem(BSPFACE, faces->count, true);
 
