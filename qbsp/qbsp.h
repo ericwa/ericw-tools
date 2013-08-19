@@ -447,6 +447,7 @@ typedef struct options_s {
     bool fOldleak;
     bool fNopercent;
     bool forceGoodTree;
+    bool fBSP2;
     int dxSubdivide;
     int dxLeakDist;
     char szMapName[512];

@@ -43,9 +43,17 @@ LoadBSPFile(void)
     strcat(options.szBSPName, ".bsp");
     cFileSize = LoadFile(options.szBSPName, &header, true);
 
-    if (header->version != BSPVERSION)
-	Error("%s is version %d, not %d",
-	      options.szBSPName, header->version, BSPVERSION);
+    switch (header->version) {
+    case BSPVERSION:
+	MemSize = MemSize_BSP29;
+	break;
+    case BSP2VERSION:
+	MemSize = MemSize_BSP2;
+	break;
+    default:
+	Error("%s has unknown BSP version %d",
+	      options.szBSPName, header->version);
+    }
 
     /* Throw all of the data into the first entity to be written out later */
     entity = map.entities;
@@ -121,7 +129,10 @@ WriteBSPFile(void)
     size_t ret;
 
     header = AllocMem(OTHER, sizeof(dheader_t), true);
-    header->version = BSPVERSION;
+    if (options.fBSP2)
+	header->version = BSP2VERSION;
+    else
+	header->version = BSPVERSION;
 
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".bsp");

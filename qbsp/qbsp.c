@@ -374,6 +374,7 @@ PrintOptions(void)
 	   "   -bspleak        Creates a .POR file, used in the BSP editor for leaky maps\n"
 	   "   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n"
 	   "   -nopercent      Prevents output of percent completion information\n"
+	   "   -bsp2           Request output in bsp2 format\n"
 	   "   -leakdist  [n]  Space between leakfile points (default 2)\n"
 	   "   -subdivide [n]  Use different texture subdivision (default 240)\n"
 	   "   -wadpath <dir>  Search this directory for wad files\n"
@@ -485,7 +486,10 @@ ParseOptions(char *szOptions)
 		options.fOldleak = true;
 	    else if (!strcasecmp(szTok, "nopercent"))
 		options.fNopercent = true;
-	    else if (!strcasecmp(szTok, "leakdist")) {
+	    else if (!strcasecmp(szTok, "bsp2")) {
+		options.fBSP2 = true;
+		MemSize = MemSize_BSP2;
+	    } else if (!strcasecmp(szTok, "leakdist")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Error("Invalid argument to option %s", szTok);

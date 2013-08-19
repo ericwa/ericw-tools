@@ -18,7 +18,6 @@
 
     See file, 'COPYING', for details.
 */
-// divide.h
 
 #include "qbsp.h"
 
@@ -262,7 +261,6 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
 {
     struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     int v1, v2;
-    bsp29_dedge_t *edge;
     int i;
 
     if (!face->contents[0])
@@ -271,25 +269,44 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
 
-    for (i = 0; i < edges->index; i++) {
-	edge = (bsp29_dedge_t *)edges->data + i;
-	if (v1 == edge->v[1] && v2 == edge->v[0]
-	    && pEdgeFaces1[i] == NULL
-	    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
-	    pEdgeFaces1[i] = face;
-	    return -(i + cStartEdge);
+    if (options.fBSP2) {
+	bsp2_dedge_t *edge = edges->data;
+
+	for (i = 0; i < edges->index; i++, edge++) {
+	    if (v1 == edge->v[1] && v2 == edge->v[0]
+		&& pEdgeFaces1[i] == NULL
+		&& pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+		pEdgeFaces1[i] = face;
+		return -(i + cStartEdge);
+	    }
 	}
+
+	/* emit an edge */
+	if (edges->index >= edges->count)
+	    Error("Internal error: didn't allocate enough edges?");
+	edge->v[0] = v1;
+	edge->v[1] = v2;
+    } else {
+	bsp29_dedge_t *edge = edges->data;
+
+	for (i = 0; i < edges->index; i++, edge++) {
+	    if (v1 == edge->v[1] && v2 == edge->v[0]
+		&& pEdgeFaces1[i] == NULL
+		&& pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+		pEdgeFaces1[i] = face;
+		return -(i + cStartEdge);
+	    }
+	}
+
+	/* emit an edge */
+	if (edges->index >= edges->count)
+	    Error("Internal error: didn't allocate enough edges?");
+	edge->v[0] = v1;
+	edge->v[1] = v2;
     }
 
-    /* emit an edge */
-    if (edges->index >= edges->count)
-	Error("Internal error: didn't allocate enough edges?");
-
-    edge = (bsp29_dedge_t *)edges->data + edges->index;
     edges->index++;
     map.cTotal[LUMP_EDGES]++;
-    edge->v[0] = v1;
-    edge->v[1] = v2;
     pEdgeFaces0[i] = face;
     return i + cStartEdge;
 }
@@ -348,11 +365,11 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 
 /*
 ==============
-GrowNodeRegion_r
+GrowNodeRegion
 ==============
 */
 static void
-GrowNodeRegion_r(mapentity_t *entity, node_t *node)
+GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 {
     const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
@@ -396,8 +413,57 @@ GrowNodeRegion_r(mapentity_t *entity, node_t *node)
 
     node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
 
-    GrowNodeRegion_r(entity, node->children[0]);
-    GrowNodeRegion_r(entity, node->children[1]);
+    GrowNodeRegion_BSP29(entity, node->children[0]);
+    GrowNodeRegion_BSP29(entity, node->children[1]);
+}
+
+static void
+GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
+{
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
+    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
+    bsp2_dface_t *out;
+    face_t *face;
+    int i;
+
+    if (node->planenum == PLANENUM_LEAF)
+	return;
+
+    node->firstface = map.cTotal[LUMP_FACES];
+
+    for (face = node->faces; face; face = face->next) {
+	if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
+	    continue;
+
+	// emit a region
+	face->outputnumber = map.cTotal[LUMP_FACES];
+	out = (bsp2_dface_t *)faces->data + faces->index;
+	out->planenum = node->outputplanenum;
+	out->side = face->planeside;
+	out->texinfo = face->texinfo;
+	for (i = 0; i < MAXLIGHTMAPS; i++)
+	    out->styles[i] = 255;
+	out->lightofs = -1;
+
+	out->firstedge = map.cTotal[LUMP_SURFEDGES];
+	for (i = 0; i < face->w.numpoints; i++) {
+	    ((int *)surfedges->data)[surfedges->index] = face->edges[i];
+	    surfedges->index++;
+	    map.cTotal[LUMP_SURFEDGES]++;
+	}
+	FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
+
+	out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
+
+	map.cTotal[LUMP_FACES]++;
+	faces->index++;
+    }
+
+    node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
+
+    GrowNodeRegion_BSP2(entity, node->children[0]);
+    GrowNodeRegion_BSP2(entity, node->children[1]);
 }
 
 /*
@@ -483,8 +549,8 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 	vertices->count = vertices->index;
     }
     if (edges->index < edges->count) {
-	bsp29_dedge_t *temp = AllocMem(BSP_EDGE, edges->index, true);
-	memcpy(temp, edges->data, sizeof(*temp) * edges->index);
+	void *temp = AllocMem(BSP_EDGE, edges->index, true);
+	memcpy(temp, edges->data, MemSize[BSP_EDGE] * edges->index);
 	FreeMem(edges->data, BSP_EDGE, edges->count);
 	edges->data = temp;
 	edges->count = edges->index;
@@ -497,7 +563,11 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     faces->data = AllocMem(BSP_FACE, faces->count, true);
 
     Message(msgProgress, "GrowRegions");
-    GrowNodeRegion_r(entity, headnode);
+
+    if (options.fBSP2)
+	GrowNodeRegion_BSP2(entity, headnode);
+    else
+	GrowNodeRegion_BSP29(entity, headnode);
 
     return firstface;
 }
