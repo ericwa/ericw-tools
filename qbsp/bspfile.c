@@ -92,7 +92,7 @@ AddLump(FILE *f, int Type)
     }
 
     // Add null terminating char for text
-    if (Type == BSPENT) {
+    if (Type == LUMP_ENTITIES) {
 	ret = fwrite("", 1, 1, f);
 	if (ret != 1)
 	    Error("Failure writing to file");
@@ -135,22 +135,22 @@ WriteBSPFile(void)
     if (ret != 1)
 	Error("Failure writing to file");
 
-    AddLump(f, BSPPLANE);
-    AddLump(f, BSPLEAF);
-    AddLump(f, BSPVERTEX);
-    AddLump(f, BSPNODE);
-    AddLump(f, BSPTEXINFO);
-    AddLump(f, BSPFACE);
-    AddLump(f, BSPCLIPNODE);
-    AddLump(f, BSPMARKSURF);
-    AddLump(f, BSPSURFEDGE);
-    AddLump(f, BSPEDGE);
-    AddLump(f, BSPMODEL);
+    AddLump(f, LUMP_PLANES);
+    AddLump(f, LUMP_LEAFS);
+    AddLump(f, LUMP_VERTEXES);
+    AddLump(f, LUMP_NODES);
+    AddLump(f, LUMP_TEXINFO);
+    AddLump(f, LUMP_FACES);
+    AddLump(f, LUMP_CLIPNODES);
+    AddLump(f, LUMP_MARKSURFACES);
+    AddLump(f, LUMP_SURFEDGES);
+    AddLump(f, LUMP_EDGES);
+    AddLump(f, LUMP_MODELS);
 
-    AddLump(f, BSPLIGHT);
-    AddLump(f, BSPVIS);
-    AddLump(f, BSPENT);
-    AddLump(f, BSPTEX);
+    AddLump(f, LUMP_LIGHTING);
+    AddLump(f, LUMP_VISIBILITY);
+    AddLump(f, LUMP_ENTITIES);
+    AddLump(f, LUMP_TEXTURES);
 
     fseek(f, 0, SEEK_SET);
     ret = fwrite(header, sizeof(dheader_t), 1, f);
@@ -175,35 +175,35 @@ PrintBSPFileSizes(void)
 {
     struct lumpdata *lump;
 
-    Message(msgStat, "%8d planes       %10d", map.cTotal[BSPPLANE],
-	    map.cTotal[BSPPLANE] * rgcMemSize[BSPPLANE]);
-    Message(msgStat, "%8d vertexes     %10d", map.cTotal[BSPVERTEX],
-	    map.cTotal[BSPVERTEX] * rgcMemSize[BSPVERTEX]);
-    Message(msgStat, "%8d nodes        %10d", map.cTotal[BSPNODE],
-	    map.cTotal[BSPNODE] * rgcMemSize[BSPNODE]);
-    Message(msgStat, "%8d texinfo      %10d", map.cTotal[BSPTEXINFO],
-	    map.cTotal[BSPTEXINFO] * rgcMemSize[BSPTEXINFO]);
-    Message(msgStat, "%8d faces        %10d", map.cTotal[BSPFACE],
-	    map.cTotal[BSPFACE] * rgcMemSize[BSPFACE]);
-    Message(msgStat, "%8d clipnodes    %10d", map.cTotal[BSPCLIPNODE],
-	    map.cTotal[BSPCLIPNODE] * rgcMemSize[BSPCLIPNODE]);
-    Message(msgStat, "%8d leafs        %10d", map.cTotal[BSPLEAF],
-	    map.cTotal[BSPLEAF] * rgcMemSize[BSPLEAF]);
-    Message(msgStat, "%8d marksurfaces %10d", map.cTotal[BSPMARKSURF],
-	    map.cTotal[BSPMARKSURF] * rgcMemSize[BSPMARKSURF]);
-    Message(msgStat, "%8d surfedges    %10d", map.cTotal[BSPSURFEDGE],
-	    map.cTotal[BSPSURFEDGE] * rgcMemSize[BSPSURFEDGE]);
-    Message(msgStat, "%8d edges        %10d", map.cTotal[BSPEDGE],
-	    map.cTotal[BSPEDGE] * rgcMemSize[BSPEDGE]);
+    Message(msgStat, "%8d planes       %10d", map.cTotal[LUMP_PLANES],
+	    map.cTotal[LUMP_PLANES] * rgcMemSize[BSPPLANE]);
+    Message(msgStat, "%8d vertexes     %10d", map.cTotal[LUMP_VERTEXES],
+	    map.cTotal[LUMP_VERTEXES] * rgcMemSize[BSPVERTEX]);
+    Message(msgStat, "%8d nodes        %10d", map.cTotal[LUMP_NODES],
+	    map.cTotal[LUMP_NODES] * rgcMemSize[BSPNODE]);
+    Message(msgStat, "%8d texinfo      %10d", map.cTotal[LUMP_TEXINFO],
+	    map.cTotal[LUMP_TEXINFO] * rgcMemSize[BSPTEXINFO]);
+    Message(msgStat, "%8d faces        %10d", map.cTotal[LUMP_FACES],
+	    map.cTotal[LUMP_FACES] * rgcMemSize[BSPFACE]);
+    Message(msgStat, "%8d clipnodes    %10d", map.cTotal[LUMP_CLIPNODES],
+	    map.cTotal[LUMP_CLIPNODES] * rgcMemSize[BSPCLIPNODE]);
+    Message(msgStat, "%8d leafs        %10d", map.cTotal[LUMP_LEAFS],
+	    map.cTotal[LUMP_LEAFS] * rgcMemSize[BSPLEAF]);
+    Message(msgStat, "%8d marksurfaces %10d", map.cTotal[LUMP_MARKSURFACES],
+	    map.cTotal[LUMP_MARKSURFACES] * rgcMemSize[BSPMARKSURF]);
+    Message(msgStat, "%8d surfedges    %10d", map.cTotal[LUMP_SURFEDGES],
+	    map.cTotal[LUMP_SURFEDGES] * rgcMemSize[BSPSURFEDGE]);
+    Message(msgStat, "%8d edges        %10d", map.cTotal[LUMP_EDGES],
+	    map.cTotal[LUMP_EDGES] * rgcMemSize[BSPEDGE]);
 
-    lump = &pWorldEnt->lumps[BSPTEX];
+    lump = &pWorldEnt->lumps[LUMP_TEXTURES];
     if (lump->data)
 	Message(msgStat, "%8d textures     %10d",
 		((dmiptexlump_t *)lump->data)->nummiptex, lump->count);
     else
-	Message(msgStat, "     0 textures            0");
+	Message(msgStat, "       0 textures              0");
 
-    Message(msgStat, "       lightdata    %10d", map.cTotal[BSPLIGHT]);
-    Message(msgStat, "       visdata      %10d", map.cTotal[BSPVIS]);
-    Message(msgStat, "       entdata      %10d", map.cTotal[BSPENT] + 1);
+    Message(msgStat, "         lightdata    %10d", map.cTotal[LUMP_LIGHTING]);
+    Message(msgStat, "         visdata      %10d", map.cTotal[LUMP_VISIBILITY]);
+    Message(msgStat, "         entdata      %10d", map.cTotal[LUMP_ENTITIES] + 1);
 }

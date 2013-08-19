@@ -44,7 +44,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
     vec3_t tmp;
 
     /* special (non-surface cached) faces don't need subdivision */
-    tex = (texinfo_t *)pWorldEnt->lumps[BSPTEXINFO].data + f->texinfo;
+    tex = (texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data + f->texinfo;
     if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
 	return;
 
@@ -207,7 +207,7 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     int i;
     hashvert_t *hv;
     vec3_t vert;
-    struct lumpdata *vertices = &entity->lumps[BSPVERTEX];
+    struct lumpdata *vertices = &entity->lumps[LUMP_VERTEXES];
     dvertex_t *dvertex;
 
     for (i = 0; i < 3; i++) {
@@ -228,7 +228,7 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     }
 
     hv = hvert_p++;
-    hv->num = map.cTotal[BSPVERTEX]++;
+    hv->num = map.cTotal[LUMP_VERTEXES]++;
     hv->numedges = 1;
     hv->next = hashverts[h];
     hashverts[h] = hv;
@@ -260,7 +260,7 @@ static int
 GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
 	const face_t *face)
 {
-    struct lumpdata *edges = &entity->lumps[BSPEDGE];
+    struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     int v1, v2;
     bsp29_dedge_t *edge;
     int i;
@@ -287,7 +287,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
 
     edge = (bsp29_dedge_t *)edges->data + edges->index;
     edges->index++;
-    map.cTotal[BSPEDGE]++;
+    map.cTotal[LUMP_EDGES]++;
     edge->v[0] = v1;
     edge->v[1] = v2;
     pEdgeFaces0[i] = face;
@@ -327,7 +327,7 @@ MakeFaceEdges_r
 static int
 MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
@@ -354,9 +354,9 @@ GrowNodeRegion_r
 static void
 GrowNodeRegion_r(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
-    struct lumpdata *surfedges = &entity->lumps[BSPSURFEDGE];
-    struct lumpdata *faces = &entity->lumps[BSPFACE];
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
+    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     bsp29_dface_t *out;
     face_t *face;
     int i;
@@ -364,14 +364,14 @@ GrowNodeRegion_r(mapentity_t *entity, node_t *node)
     if (node->planenum == PLANENUM_LEAF)
 	return;
 
-    node->firstface = map.cTotal[BSPFACE];
+    node->firstface = map.cTotal[LUMP_FACES];
 
     for (face = node->faces; face; face = face->next) {
 	if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
 
 	// emit a region
-	face->outputnumber = map.cTotal[BSPFACE];
+	face->outputnumber = map.cTotal[LUMP_FACES];
 	out = (bsp29_dface_t *)faces->data + faces->index;
 	out->planenum = node->outputplanenum;
 	out->side = face->planeside;
@@ -380,21 +380,21 @@ GrowNodeRegion_r(mapentity_t *entity, node_t *node)
 	    out->styles[i] = 255;
 	out->lightofs = -1;
 
-	out->firstedge = map.cTotal[BSPSURFEDGE];
+	out->firstedge = map.cTotal[LUMP_SURFEDGES];
 	for (i = 0; i < face->w.numpoints; i++) {
 	    ((int *)surfedges->data)[surfedges->index] = face->edges[i];
 	    surfedges->index++;
-	    map.cTotal[BSPSURFEDGE]++;
+	    map.cTotal[LUMP_SURFEDGES]++;
 	}
 	FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
 
-	out->numedges = map.cTotal[BSPSURFEDGE] - out->firstedge;
+	out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
 
-	map.cTotal[BSPFACE]++;
+	map.cTotal[LUMP_FACES]++;
 	faces->index++;
     }
 
-    node->numfaces = map.cTotal[BSPFACE] - node->firstface;
+    node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
 
     GrowNodeRegion_r(entity, node->children[0]);
     GrowNodeRegion_r(entity, node->children[1]);
@@ -408,7 +408,7 @@ CountData_r
 static void
 CountData_r(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
@@ -417,8 +417,8 @@ CountData_r(mapentity_t *entity, node_t *node)
     for (f = node->faces; f; f = f->next) {
 	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
 	    continue;
-	entity->lumps[BSPFACE].count++;
-	entity->lumps[BSPVERTEX].count += f->w.numpoints;
+	entity->lumps[LUMP_FACES].count++;
+	entity->lumps[LUMP_VERTEXES].count += f->w.numpoints;
     }
 
     CountData_r(entity, node->children[0]);
@@ -435,16 +435,16 @@ int
 MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
-    struct lumpdata *surfedges = &entity->lumps[BSPSURFEDGE];
-    struct lumpdata *edges = &entity->lumps[BSPEDGE];
-    struct lumpdata *vertices = &entity->lumps[BSPVERTEX];
-    struct lumpdata *faces = &entity->lumps[BSPFACE];
+    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
+    struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
+    struct lumpdata *vertices = &entity->lumps[LUMP_VERTEXES];
+    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
 
     Message(msgProgress, "MakeFaceEdges");
 
     cStartEdge = 0;
     for (i = 0; i < entity - map.entities; i++)
-	cStartEdge += map.entities[i].lumps[BSPEDGE].count;
+	cStartEdge += map.entities[i].lumps[LUMP_EDGES].count;
 
     CountData_r(entity, headnode);
 
@@ -467,7 +467,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     InitHash();
 
-    firstface = map.cTotal[BSPFACE];
+    firstface = map.cTotal[LUMP_FACES];
     MakeFaceEdges_r(entity, headnode, 0);
 
     FreeMem(pHashverts, HASHVERT, vertices->count);
@@ -490,8 +490,8 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 	edges->count = edges->index;
     }
 
-    if (map.cTotal[BSPVERTEX] > 65535)
-	Error("Too many vertices (%d > 65535)", map.cTotal[BSPVERTEX]);
+    if (map.cTotal[LUMP_VERTEXES] > 65535)
+	Error("Too many vertices (%d > 65535)", map.cTotal[LUMP_VERTEXES]);
 
     surfedges->data = AllocMem(BSPSURFEDGE, surfedges->count, true);
     faces->data = AllocMem(BSPFACE, faces->count, true);

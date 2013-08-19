@@ -299,7 +299,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     vec_t distribution, bestdistribution;
     const plane_t *plane, *plane2;
     const face_t *face;
-    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
 
     /* pick the plane that splits the least */
     minsplits = INT_MAX - 1;

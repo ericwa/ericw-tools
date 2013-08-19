@@ -375,7 +375,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
 	if (!hullnum) {
 	    /* Don't generate hintskip faces */
-	    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+	    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
 	    const char *texname = map.miptex[texinfo[mapface->texinfo].miptex];
 	    if (!strcasecmp(texname, "hintskip"))
 		continue;
@@ -755,7 +755,7 @@ Brush_GetContents(const mapbrush_t *mapbrush)
 {
     const mapface_t *mapface;
     const char *texname;
-    const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
 
     mapface = mapbrush->faces;
     texname = map.miptex[texinfo[mapface->texinfo].miptex];

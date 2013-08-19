@@ -63,7 +63,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
 	if (entity == pWorldEnt + 1)
 	    Message(msgProgress, "Internal Entities");
-	snprintf(mod, sizeof(mod), "*%d", map.cTotal[BSPMODEL]);
+	snprintf(mod, sizeof(mod), "*%d", map.cTotal[LUMP_MODELS]);
 	if (options.fVerbose)
 	    PrintEntity(entity);
 
@@ -196,7 +196,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	ExportDrawNodes(entity, nodes, firstface);
     }
 
-    map.cTotal[BSPMODEL]++;
+    map.cTotal[LUMP_MODELS]++;
 }
 
 /*
@@ -254,7 +254,7 @@ CreateSingleHull(const int hullnum)
     mapentity_t *entity;
 
     Message(msgLiteral, "Processing hull %d...\n", hullnum);
-    map.cTotal[BSPMODEL] = 0;
+    map.cTotal[LUMP_MODELS] = 0;
 
     // for each entity in the map file that has geometry
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {

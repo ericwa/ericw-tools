@@ -159,7 +159,7 @@ WADList_Process(const wad_t *wadlist)
     int i;
     lumpinfo_t *texture;
     dmiptexlump_t *miptexlump;
-    struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
+    struct lumpdata *texdata = &pWorldEnt->lumps[LUMP_TEXTURES];
 
     /* Count space for miptex header/offsets */
     texdata->count = offsetof(dmiptexlump_t, dataofs[map.nummiptex]);
@@ -194,7 +194,7 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
     int i, size;
     byte *data;
     const wad_t *wad;
-    struct lumpdata *texdata = &pWorldEnt->lumps[BSPTEX];
+    struct lumpdata *texdata = &pWorldEnt->lumps[LUMP_TEXTURES];
 
     data = (byte *)&lump->dataofs[map.nummiptex];
 

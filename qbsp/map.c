@@ -145,7 +145,7 @@ FindTexinfo(texinfo_t *texinfo)
     int index, j;
     texinfo_t *target;
     const char *texname;
-    const int num_texinfo = pWorldEnt->lumps[BSPTEXINFO].index;
+    const int num_texinfo = pWorldEnt->lumps[LUMP_TEXINFO].index;
 
     /* Set the texture flags */
     texinfo->flags = 0;
@@ -157,7 +157,7 @@ FindTexinfo(texinfo_t *texinfo)
     if (IsSplitName(texname))
 	texinfo->flags |= TEX_SPECIAL;
 
-    target = pWorldEnt->lumps[BSPTEXINFO].data;
+    target = pWorldEnt->lumps[LUMP_TEXINFO].data;
     for (index = 0; index < num_texinfo; index++, target++) {
 	if (texinfo->miptex != target->miptex)
 	    continue;
@@ -182,8 +182,8 @@ FindTexinfo(texinfo_t *texinfo)
 
     /* Allocate a new texinfo at the end of the array */
     *target = *texinfo;
-    pWorldEnt->lumps[BSPTEXINFO].index++;
-    map.cTotal[BSPTEXINFO]++;
+    pWorldEnt->lumps[LUMP_TEXINFO].index++;
+    map.cTotal[LUMP_TEXINFO]++;
 
     return index;
 }
@@ -674,7 +674,7 @@ PreParseFile(const char *buf)
     // Maximum possible is one miptex/texinfo per face
     map.maxmiptex = map.maxfaces;
     map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
-    texinfo = &pWorldEnt->lumps[BSPTEXINFO];
+    texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
     texinfo->data = AllocMem(BSPTEXINFO, map.maxfaces, true);
     texinfo->count = map.maxfaces;
 }
@@ -720,8 +720,8 @@ LoadMapFile(void)
     while (ParseEntity(&parser, entity)) {
 	/* Allocate memory for the bmodel, if needed. */
 	if (!IsWorldBrushEntity(entity) && entity->nummapbrushes) {
-	    entity->lumps[BSPMODEL].data = AllocMem(BSPMODEL, 1, true);
-	    entity->lumps[BSPMODEL].count = 1;
+	    entity->lumps[LUMP_MODELS].data = AllocMem(BSPMODEL, 1, true);
+	    entity->lumps[LUMP_MODELS].count = 1;
 	}
 	map.numentities++;
 	entity++;
@@ -752,7 +752,7 @@ LoadMapFile(void)
 	FreeMem(pTemp, MIPTEX, map.maxfaces);
     }
 
-    texinfo = &pWorldEnt->lumps[BSPTEXINFO];
+    texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
     if (texinfo->index > texinfo->count)
 	Error("Internal error: didn't allocate enough texinfos?");
     else if (texinfo->index < texinfo->count) {
@@ -880,10 +880,10 @@ WriteEntitiesToString(void)
     struct lumpdata *entities;
     const mapentity_t *entity;
 
-    map.cTotal[BSPENT] = 0;
+    map.cTotal[LUMP_ENTITIES] = 0;
 
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
-	entities = &map.entities[i].lumps[BSPENT];
+	entities = &map.entities[i].lumps[LUMP_ENTITIES];
 
 	/* Check if entity needs to be removed */
 	if (!entity->epairs || IsWorldBrushEntity(entity)) {
@@ -904,7 +904,7 @@ WriteEntitiesToString(void)
 	cLen += 4;
 
 	entities->count = cLen;
-	map.cTotal[BSPENT] += cLen;
+	map.cTotal[LUMP_ENTITIES] += cLen;
 	entities->data = pCur = AllocMem(BSPENT, cLen, true);
 	*pCur = 0;
 
