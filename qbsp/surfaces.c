@@ -262,7 +262,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
 {
     struct lumpdata *edges = &entity->lumps[BSPEDGE];
     int v1, v2;
-    dedge_t *edge;
+    bsp29_dedge_t *edge;
     int i;
 
     if (!face->contents[0])
@@ -272,7 +272,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     v2 = GetVertex(entity, p2);
 
     for (i = 0; i < edges->index; i++) {
-	edge = (dedge_t *)edges->data + i;
+	edge = (bsp29_dedge_t *)edges->data + i;
 	if (v1 == edge->v[1] && v2 == edge->v[0]
 	    && pEdgeFaces1[i] == NULL
 	    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
@@ -285,7 +285,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     if (edges->index >= edges->count)
 	Error("Internal error: didn't allocate enough edges?");
 
-    edge = (dedge_t *)edges->data + edges->index;
+    edge = (bsp29_dedge_t *)edges->data + edges->index;
     edges->index++;
     map.cTotal[BSPEDGE]++;
     edge->v[0] = v1;
@@ -357,7 +357,7 @@ GrowNodeRegion_r(mapentity_t *entity, node_t *node)
     const texinfo_t *texinfo = pWorldEnt->lumps[BSPTEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[BSPSURFEDGE];
     struct lumpdata *faces = &entity->lumps[BSPFACE];
-    dface_t *out;
+    bsp29_dface_t *out;
     face_t *face;
     int i;
 
@@ -372,7 +372,7 @@ GrowNodeRegion_r(mapentity_t *entity, node_t *node)
 
 	// emit a region
 	face->outputnumber = map.cTotal[BSPFACE];
-	out = (dface_t *)faces->data + faces->index;
+	out = (bsp29_dface_t *)faces->data + faces->index;
 	out->planenum = node->outputplanenum;
 	out->side = face->planeside;
 	out->texinfo = face->texinfo;
@@ -483,7 +483,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 	vertices->count = vertices->index;
     }
     if (edges->index < edges->count) {
-	dedge_t *temp = AllocMem(BSPEDGE, edges->index, true);
+	bsp29_dedge_t *temp = AllocMem(BSPEDGE, edges->index, true);
 	memcpy(temp, edges->data, sizeof(*temp) * edges->index);
 	FreeMem(edges->data, BSPEDGE, edges->count);
 	edges->data = temp;

@@ -127,7 +127,7 @@ static int
 ExportClipNodes_r(mapentity_t *entity, node_t *node)
 {
     int i, nodenum;
-    dclipnode_t *clipnode;
+    bsp29_dclipnode_t *clipnode;
     face_t *face, *next;
     struct lumpdata *clipnodes = &entity->lumps[BSPCLIPNODE];
 
@@ -139,7 +139,7 @@ ExportClipNodes_r(mapentity_t *entity, node_t *node)
     }
 
     /* emit a clipnode */
-    clipnode = (dclipnode_t *)clipnodes->data + clipnodes->index;
+    clipnode = (bsp29_dclipnode_t *)clipnodes->data + clipnodes->index;
     clipnodes->index++;
     nodenum = map.cTotal[BSPCLIPNODE];
     map.cTotal[BSPCLIPNODE]++;
@@ -175,7 +175,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 {
     int oldcount, i, diff;
     int clipcount = 0;
-    dclipnode_t *olddata, *clipnode;
+    bsp29_dclipnode_t *olddata, *clipnode;
     struct lumpdata *clipnodes = &entity->lumps[BSPCLIPNODE];
     dmodel_t *model = (dmodel_t *)entity->lumps[BSPMODEL].data;
 
@@ -286,10 +286,10 @@ ExportLeaf(mapentity_t *entity, node_t *node)
     struct lumpdata *marksurfs = &entity->lumps[BSPMARKSURF];
     unsigned short *marksurfnums = marksurfs->data;
     face_t **markfaces, *face;
-    dleaf_t *dleaf;
+    bsp29_dleaf_t *dleaf;
 
     // ptr arithmetic to get correct leaf in memory
-    dleaf = (dleaf_t *)leaves->data + leaves->index;
+    dleaf = (bsp29_dleaf_t *)leaves->data + leaves->index;
     leaves->index++;
     map.cTotal[BSPLEAF]++;
 
@@ -337,10 +337,10 @@ static void
 ExportDrawNodes_r(mapentity_t *entity, node_t *node)
 {
     struct lumpdata *nodes = &entity->lumps[BSPNODE];
-    dnode_t *dnode;
+    bsp29_dnode_t *dnode;
     int i;
 
-    dnode = (dnode_t *)nodes->data + nodes->index;
+    dnode = (bsp29_dnode_t *)nodes->data + nodes->index;
     nodes->index++;
     map.cTotal[BSPNODE]++;
 
@@ -398,7 +398,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
      * Set leaf 0 properly (must be solid). cLeaves etc incremented in
      * BeginBSPFile.
      */
-    ((dleaf_t *)pWorldEnt->lumps[BSPLEAF].data)->contents = CONTENTS_SOLID;
+    ((bsp29_dleaf_t *)pWorldEnt->lumps[BSPLEAF].data)->contents = CONTENTS_SOLID;
 
     dmodel = (dmodel_t *)entity->lumps[BSPMODEL].data;
     dmodel->headnode[0] = map.cTotal[BSPNODE];
