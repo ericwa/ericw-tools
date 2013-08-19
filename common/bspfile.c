@@ -365,8 +365,8 @@ LoadBSPFile(const char *filename, bspdata_t *bsp)
     /* check the file version */
     version = header->version = LittleLong(header->version);
     logprint("BSP is version %i\n", header->version);
-    if (header->version != 29)
-	Error("Sorry, only bsp version 29 supported.");
+    if (header->version != BSPVERSION)
+	Error("Sorry, only bsp version %d supported.", BSPVERSION);
 
     /* swap the lump headers */
     for (i = 0; i < HEADER_LUMPS; i++) {

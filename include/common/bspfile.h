@@ -46,9 +46,8 @@
 #define MAX_ENT_KEY   32
 #define MAX_ENT_VALUE 1024
 
-/* TYR - #define BSPVERSION 29 */
-#define BSP_OLD_VERSION     29
-#define BSP_COLORED_VERSION 30
+#define BSPVERSION  29
+#define BSP2VERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 
 /* ========================================================================= */
 
