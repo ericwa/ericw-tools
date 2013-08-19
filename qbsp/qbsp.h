@@ -34,17 +34,15 @@
 #include <string.h>
 #include <time.h>
 
-#include "warnerr.h"
+#include "bspfile.h"
 #include "file.h"
+#include "warnerr.h"
 
 #ifndef offsetof
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #endif
 
 //===== cmdlib.h
-
-// Current BSP version
-#define BSPVERSION	29
 
 /*
  * Clipnodes need to be stored as a 16-bit offset. Originally, this was a
@@ -106,14 +104,6 @@
 #define	TEX_SPECIAL (1U << 0)	/* sky or liquid (no lightmap or subdivision */
 #define	TEX_SKIP    (1U << 1)	/* an invisible surface */
 #define TEX_HINT    (1U << 2)	/* hint surface */
-#define	MAXLIGHTMAPS	4
-
-// Ambient sounds
-#define	AMBIENT_WATER	0
-#define	AMBIENT_SKY	1
-#define	AMBIENT_SLIME	2
-#define	AMBIENT_LAVA	3
-#define	NUM_AMBIENTS	4	// automatic ambient sounds
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -177,10 +167,6 @@ enum {
     GLOBAL
 };
 
-#define BSP_LUMPS	15
-
-typedef unsigned char byte;
-
 double I_FloatTime(void);
 
 void DefaultExtension(char *path, const char *extension);
@@ -236,110 +222,6 @@ void VectorScale(const vec3_t v, const vec_t scale, vec3_t out);
 
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
-
-//====== bspfile.h
-
-
-
-//=============================================================================
-
-
-typedef struct {
-    int fileofs, filelen;
-} lump_t;
-
-typedef struct {
-    float mins[3], maxs[3];
-    float origin[3];
-    int headnode[4];		// 4 for backward compat, only 3 hulls exist
-    int visleafs;		// not including the solid leaf 0
-    int firstface, numfaces;
-} dmodel_t;
-
-typedef struct {
-    int version;
-    lump_t lumps[BSP_LUMPS];
-} dheader_t;
-
-typedef struct {
-    int nummiptex;
-    int dataofs[];		/* [nummiptex] */
-} dmiptexlump_t;
-
-typedef char miptex_t[16];
-
-typedef struct {
-    float point[3];
-} dvertex_t;
-
-
-typedef struct {
-    float normal[3];
-    float dist;
-    int type;
-} dplane_t;
-
-// !!! if this is changed, it must be changed in asm_i386.h too !!!
-typedef struct {
-    int planenum;
-    short children[2];		// negative numbers are -(leafs+1), not nodes
-    short mins[3];		// for sphere culling
-    short maxs[3];
-    unsigned short firstface;
-    unsigned short numfaces;	// counting both sides
-} dnode_t;
-
-typedef struct {
-    int planenum;
-    uint16_t children[2];		// negative numbers are contents
-} dclipnode_t;
-
-
-typedef struct texinfo_s {
-    float vecs[2][4];		// [s/t][xyz offset]
-    int miptex;
-    int flags;
-} texinfo_t;
-
-// note that edge 0 is never used, because negative edge nums are used for
-// counterclockwise use of the edge in a face
-typedef struct {
-    unsigned short v[2];	// vertex numbers
-} dedge_t;
-
-typedef struct {
-    short planenum;
-    short side;
-
-    int firstedge;		// we must support > 64k edges
-    short numedges;
-    short texinfo;
-
-    // lighting info
-    byte styles[MAXLIGHTMAPS];
-    int lightofs;		// start of [numstyles*surfsize] samples
-} dface_t;
-
-// leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas
-// all other leafs need visibility info
-typedef struct {
-    int contents;
-    int visofs;			// -1 = no visibility info
-
-    short mins[3];		// for frustum culling
-    short maxs[3];
-
-    unsigned short firstmarksurface;
-    unsigned short nummarksurfaces;
-
-    byte ambient_level[NUM_AMBIENTS];
-} dleaf_t;
-
-//============================================================================
-
-void LoadBSPFile(void);
-void WriteBSPFile(void);
-void PrintBSPFileSizes(void);
 
 //====== bsp5.h
 
