@@ -58,7 +58,7 @@ AllocMem(int Type, int cElements, bool fZero)
 	// Set cElements to 1 so bookkeeping works OK
 	cElements = 1;
     } else
-	cSize = cElements * rgcMemSize[Type];
+	cSize = cElements * MemSize[Type];
 
     pTemp = malloc(cSize);
     if (!pTemp)
@@ -107,8 +107,8 @@ FreeMem(void *pMem, int Type, int cElements)
 	rgMemActiveBytes[Type] -= *(int *)pMem;
 	rgMemActive[GLOBAL] -= *(int *)pMem;
     } else {
-	rgMemActiveBytes[Type] -= cElements * rgcMemSize[Type];
-	rgMemActive[GLOBAL] -= cElements * rgcMemSize[Type];
+	rgMemActiveBytes[Type] -= cElements * MemSize[Type];
+	rgMemActive[GLOBAL] -= cElements * MemSize[Type];
     }
 
     free(pMem);
@@ -140,13 +140,14 @@ PrintMem
 void
 PrintMem(void)
 {
-    const char *rgszMemTypes[] = {
+    const char *MemTypes[] = {
 	"BSPEntity", "BSPPlane", "BSPTex", "BSPVertex", "BSPVis", "BSPNode",
 	"BSPTexinfo", "BSPFace", "BSPLight", "BSPClipnode", "BSPLeaf",
-	"BSPMarksurface", "BSPEdge", "BSPSurfedge", "BSPModel", "Mapface",
-	"Mapbrush", "Mapentity", "Winding", "Face", "Plane", "Portal",
-	"Surface", "Node", "Brush", "Miptex", "World verts", "World edges",
-	"Hash verts", "Other", "Total"
+	"BSPMarksurface", "BSPEdge", "BSPSurfedge", "BSPModel",
+
+	"Mapface", "Mapbrush", "Mapentity", "Winding", "Face", "Plane",
+	"Portal", "Surface", "Node", "Brush", "Miptex", "World verts",
+	"World edges", "Hash verts", "Other", "Total"
     };
     int i;
 
@@ -155,10 +156,10 @@ PrintMem(void)
 		"\nData type        CurrentNum    PeakNum      PeakMem\n");
 	for (i = 0; i <= OTHER; i++)
 	    Message(msgLiteral, "%-16s  %9d  %9d %12d %8s\n",
-		    rgszMemTypes[i], rgMemActive[i], rgMemPeak[i],
+		    MemTypes[i], rgMemActive[i], rgMemPeak[i],
 		    rgMemPeakBytes[i], MemString(rgMemPeakBytes[i]));
 	Message(msgLiteral, "%-16s                       %12d %8s\n",
-		rgszMemTypes[GLOBAL], rgMemPeak[GLOBAL],
+		MemTypes[GLOBAL], rgMemPeak[GLOBAL],
 		MemString(rgMemPeak[GLOBAL]));
     } else
 	Message(msgLiteral, "Peak memory usage: %d (%s)\n", rgMemPeak[GLOBAL],

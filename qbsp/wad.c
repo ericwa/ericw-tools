@@ -172,7 +172,7 @@ WADList_Process(const wad_t *wadlist)
     }
 
     /* Default texture data to store in worldmodel */
-    texdata->data = AllocMem(BSPTEX, texdata->count, true);
+    texdata->data = AllocMem(BSP_TEX, texdata->count, true);
     miptexlump = (dmiptexlump_t *)texdata->data;
     miptexlump->nummiptex = map.nummiptex;
 
@@ -186,7 +186,6 @@ WADList_Process(const wad_t *wadlist)
 	}
     }
 }
-
 
 static void
 WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)

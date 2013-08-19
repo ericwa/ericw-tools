@@ -457,8 +457,8 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     surfedges->count = vertices->count;
     edges->count += surfedges->count;
 
-    vertices->data = AllocMem(BSPVERTEX, vertices->count, true);
-    edges->data = AllocMem(BSPEDGE, edges->count, true);
+    vertices->data = AllocMem(BSP_VERTEX, vertices->count, true);
+    edges->data = AllocMem(BSP_EDGE, edges->count, true);
 
     // Accessory data
     pHashverts = AllocMem(HASHVERT, vertices->count, true);
@@ -476,16 +476,16 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     /* Free any excess allocated memory */
     if (vertices->index < vertices->count) {
-	dvertex_t *temp = AllocMem(BSPVERTEX, vertices->index, true);
+	dvertex_t *temp = AllocMem(BSP_VERTEX, vertices->index, true);
 	memcpy(temp, vertices->data, sizeof(*temp) * vertices->index);
-	FreeMem(vertices->data, BSPVERTEX, vertices->count);
+	FreeMem(vertices->data, BSP_VERTEX, vertices->count);
 	vertices->data = temp;
 	vertices->count = vertices->index;
     }
     if (edges->index < edges->count) {
-	bsp29_dedge_t *temp = AllocMem(BSPEDGE, edges->index, true);
+	bsp29_dedge_t *temp = AllocMem(BSP_EDGE, edges->index, true);
 	memcpy(temp, edges->data, sizeof(*temp) * edges->index);
-	FreeMem(edges->data, BSPEDGE, edges->count);
+	FreeMem(edges->data, BSP_EDGE, edges->count);
 	edges->data = temp;
 	edges->count = edges->index;
     }
@@ -493,8 +493,8 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     if (map.cTotal[LUMP_VERTEXES] > 65535)
 	Error("Too many vertices (%d > 65535)", map.cTotal[LUMP_VERTEXES]);
 
-    surfedges->data = AllocMem(BSPSURFEDGE, surfedges->count, true);
-    faces->data = AllocMem(BSPFACE, faces->count, true);
+    surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
+    faces->data = AllocMem(BSP_FACE, faces->count, true);
 
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion_r(entity, headnode);

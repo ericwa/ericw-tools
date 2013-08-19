@@ -89,7 +89,7 @@ ExportNodePlanes(node_t *nodes)
     if (!planes->data) {
 	// I'd like to use map.numplanes here but we haven't seen every entity yet...
 	planes->count = map.maxplanes;
-	planes->data = AllocMem(BSPPLANE, planes->count, true);
+	planes->data = AllocMem(BSP_PLANE, planes->count, true);
     }
     // TODO: make one-time allocation?
     planemap = AllocMem(OTHER, sizeof(int) * planes->count, true);
@@ -192,10 +192,10 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 	      clipnodes->count, MAX_BSP_CLIPNODES);
 
     olddata = clipnodes->data;
-    clipnodes->data = AllocMem(BSPCLIPNODE, clipnodes->count, true);
+    clipnodes->data = AllocMem(BSP_CLIPNODE, clipnodes->count, true);
     if (olddata) {
-	memcpy(clipnodes->data, olddata, oldcount * rgcMemSize[BSPCLIPNODE]);
-	FreeMem(olddata, BSPCLIPNODE, oldcount);
+	memcpy(clipnodes->data, olddata, oldcount * MemSize[BSP_CLIPNODE]);
+	FreeMem(olddata, BSP_CLIPNODE, oldcount);
 
 	/* Worth special-casing for entity 0 (no modification needed) */
 	diff = clipcount - model->headnode[1];
@@ -391,9 +391,9 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     CountNodes(entity, headnode);
 
     // emit a model
-    nodes->data = AllocMem(BSPNODE, nodes->count, true);
-    leaves->data = AllocMem(BSPLEAF, leaves->count, true);
-    marksurfs->data = AllocMem(BSPMARKSURF, marksurfs->count, true);
+    nodes->data = AllocMem(BSP_NODE, nodes->count, true);
+    leaves->data = AllocMem(BSP_LEAF, leaves->count, true);
+    marksurfs->data = AllocMem(BSP_MARKSURF, marksurfs->count, true);
 
     /*
      * Set leaf 0 properly (must be solid). cLeaves etc incremented in
@@ -474,9 +474,9 @@ FinishBSPFile(void)
     Message(msgProgress, "WriteBSPFile");
 
     // TODO: Fix this somewhere else?
-    newdata = AllocMem(BSPPLANE, map.cTotal[LUMP_PLANES], true);
-    memcpy(newdata, planes->data, map.cTotal[LUMP_PLANES] * rgcMemSize[BSPPLANE]);
-    FreeMem(planes->data, BSPPLANE, planes->count);
+    newdata = AllocMem(BSP_PLANE, map.cTotal[LUMP_PLANES], true);
+    memcpy(newdata, planes->data, map.cTotal[LUMP_PLANES] * MemSize[BSP_PLANE]);
+    FreeMem(planes->data, BSP_PLANE, planes->count);
     planes->data = newdata;
     planes->count = map.cTotal[LUMP_PLANES];
 

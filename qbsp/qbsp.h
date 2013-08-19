@@ -129,25 +129,25 @@
 // volume.  is this still needed?
 #define	SIDESPACE	24
 
-// First 15 must be in same order as BSP file is in.
-// Up through BSPMODEL must remain UNALTERED
-// must also alter rgcMemSize and PrintMem
+/*
+ * If this enum is changed, make sure to also update MemSize and PrintMem
+ */
 enum {
-    BSPENT,
-    BSPPLANE,
-    BSPTEX,
-    BSPVERTEX,
-    BSPVIS,
-    BSPNODE,
-    BSPTEXINFO,
-    BSPFACE,
-    BSPLIGHT,
-    BSPCLIPNODE,
-    BSPLEAF,
-    BSPMARKSURF,
-    BSPEDGE,
-    BSPSURFEDGE,
-    BSPMODEL,
+    BSP_ENT,
+    BSP_PLANE,
+    BSP_TEX,
+    BSP_VERTEX,
+    BSP_VIS,
+    BSP_NODE,
+    BSP_TEXINFO,
+    BSP_FACE,
+    BSP_LIGHT,
+    BSP_CLIPNODE,
+    BSP_LEAF,
+    BSP_MARKSURF,
+    BSP_EDGE,
+    BSP_SURFEDGE,
+    BSP_MODEL,
 
     MAPFACE,
     MAPBRUSH,
@@ -563,7 +563,9 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 #define msgPercent	7
 
 extern const char *rgszWarnings[cWarnings];
-extern const int rgcMemSize[];
+extern const int *MemSize;
+extern const int MemSize_BSP29[GLOBAL + 1];
+extern const int MemSize_BSP2[GLOBAL + 1];
 
 void *AllocMem(int Type, int cSize, bool fZero);
 void FreeMem(void *pMem, int Type, int cSize);

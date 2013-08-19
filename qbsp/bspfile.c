@@ -52,11 +52,11 @@ LoadBSPFile(void)
     for (i = 0; i < BSP_LUMPS; i++) {
 	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
 	iLumpOff = header->lumps[i].fileofs;
-	if (cLumpSize % rgcMemSize[i])
-	    Error("Deformed lump in BSP file (%d size is not divisible by %d)",
-		  rgcMemSize[i], cLumpSize);
+	if (cLumpSize % MemSize[i])
+	    Error("Deformed lump in BSP file (size %d is not divisible by %d)",
+		  cLumpSize, MemSize[i]);
 
-	entity->lumps[i].count = cLumpSize / rgcMemSize[i];
+	entity->lumps[i].count = cLumpSize / MemSize[i];
 	entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
 
 	memcpy(entity->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
@@ -84,10 +84,10 @@ AddLump(FILE *f, int Type)
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
 	entities = &entity->lumps[Type];
 	if (entities->data) {
-	    ret = fwrite(entities->data, rgcMemSize[Type], entities->count, f);
+	    ret = fwrite(entities->data, MemSize[Type], entities->count, f);
 	    if (ret != entities->count)
 		Error("Failure writing to file");
-	    cLen += entities->count * rgcMemSize[Type];
+	    cLen += entities->count * MemSize[Type];
 	}
     }
 
@@ -176,25 +176,25 @@ PrintBSPFileSizes(void)
     struct lumpdata *lump;
 
     Message(msgStat, "%8d planes       %10d", map.cTotal[LUMP_PLANES],
-	    map.cTotal[LUMP_PLANES] * rgcMemSize[BSPPLANE]);
+	    map.cTotal[LUMP_PLANES] * MemSize[BSP_PLANE]);
     Message(msgStat, "%8d vertexes     %10d", map.cTotal[LUMP_VERTEXES],
-	    map.cTotal[LUMP_VERTEXES] * rgcMemSize[BSPVERTEX]);
+	    map.cTotal[LUMP_VERTEXES] * MemSize[BSP_VERTEX]);
     Message(msgStat, "%8d nodes        %10d", map.cTotal[LUMP_NODES],
-	    map.cTotal[LUMP_NODES] * rgcMemSize[BSPNODE]);
+	    map.cTotal[LUMP_NODES] * MemSize[BSP_NODE]);
     Message(msgStat, "%8d texinfo      %10d", map.cTotal[LUMP_TEXINFO],
-	    map.cTotal[LUMP_TEXINFO] * rgcMemSize[BSPTEXINFO]);
+	    map.cTotal[LUMP_TEXINFO] * MemSize[BSP_TEXINFO]);
     Message(msgStat, "%8d faces        %10d", map.cTotal[LUMP_FACES],
-	    map.cTotal[LUMP_FACES] * rgcMemSize[BSPFACE]);
+	    map.cTotal[LUMP_FACES] * MemSize[BSP_FACE]);
     Message(msgStat, "%8d clipnodes    %10d", map.cTotal[LUMP_CLIPNODES],
-	    map.cTotal[LUMP_CLIPNODES] * rgcMemSize[BSPCLIPNODE]);
+	    map.cTotal[LUMP_CLIPNODES] * MemSize[BSP_CLIPNODE]);
     Message(msgStat, "%8d leafs        %10d", map.cTotal[LUMP_LEAFS],
-	    map.cTotal[LUMP_LEAFS] * rgcMemSize[BSPLEAF]);
+	    map.cTotal[LUMP_LEAFS] * MemSize[BSP_LEAF]);
     Message(msgStat, "%8d marksurfaces %10d", map.cTotal[LUMP_MARKSURFACES],
-	    map.cTotal[LUMP_MARKSURFACES] * rgcMemSize[BSPMARKSURF]);
+	    map.cTotal[LUMP_MARKSURFACES] * MemSize[BSP_MARKSURF]);
     Message(msgStat, "%8d surfedges    %10d", map.cTotal[LUMP_SURFEDGES],
-	    map.cTotal[LUMP_SURFEDGES] * rgcMemSize[BSPSURFEDGE]);
+	    map.cTotal[LUMP_SURFEDGES] * MemSize[BSP_SURFEDGE]);
     Message(msgStat, "%8d edges        %10d", map.cTotal[LUMP_EDGES],
-	    map.cTotal[LUMP_EDGES] * rgcMemSize[BSPEDGE]);
+	    map.cTotal[LUMP_EDGES] * MemSize[BSP_EDGE]);
 
     lump = &pWorldEnt->lumps[LUMP_TEXTURES];
     if (lump->data)

@@ -22,41 +22,74 @@
 
 #include "qbsp.h"
 
-// A convenient collection of most shared globals in the program
+/*
+ * MemSize is used by the memory manager to allocate and track data
+ * allocations.  Default to BSP29 allocations.
+ */
+const int *MemSize = MemSize_BSP29;
 
-const int rgcMemSize[GLOBAL + 1] = {
-    sizeof(char),
+/*
+ * Use a macro to avoid repeating the shared data
+ */
+#define COMMON_MEMSIZES					\
+    sizeof(mapface_t),					\
+    sizeof(mapbrush_t),					\
+    sizeof(mapentity_t),				\
+    1,				/* Winding */		\
+    sizeof(face_t),					\
+    sizeof(plane_t),					\
+    sizeof(portal_t),					\
+    sizeof(surface_t),					\
+    sizeof(node_t),					\
+    sizeof(brush_t),					\
+    sizeof(miptex_t),					\
+    sizeof(wvert_t),					\
+    sizeof(wedge_t),					\
+    sizeof(hashvert_t),					\
+    1,				/* Other (byte) */	\
+    1,				/* Global (totals) */
+
+const int MemSize_BSP29[] = {
+    sizeof(char),		/* Entity text */
     sizeof(dplane_t),
-    sizeof(byte),
+    sizeof(byte),		/* Texture data */
     sizeof(dvertex_t),
-    sizeof(byte),
+    sizeof(byte),		/* Visibility data */
     sizeof(bsp29_dnode_t),
     sizeof(texinfo_t),
     sizeof(bsp29_dface_t),
-    sizeof(byte),
+    sizeof(byte),		/* Light data */
     sizeof(bsp29_dclipnode_t),
     sizeof(bsp29_dleaf_t),
-    sizeof(unsigned short),
+    sizeof(uint16_t),		/* Marksurfaces */
     sizeof(bsp29_dedge_t),
-    sizeof(int),
+    sizeof(int32_t),		/* Surfedges */
     sizeof(dmodel_t),
-    sizeof(mapface_t),
-    sizeof(mapbrush_t),
-    sizeof(mapentity_t),
-    1 /* winding_t */,
-    sizeof(face_t),
-    sizeof(plane_t),
-    sizeof(portal_t),
-    sizeof(surface_t),
-    sizeof(node_t),
-    sizeof(brush_t),
-    sizeof(miptex_t),
-    sizeof(wvert_t),
-    sizeof(wedge_t),
-    sizeof(hashvert_t),
-    1,
-    1,
+    COMMON_MEMSIZES
 };
+
+const int MemSize_BSP2[] = {
+    sizeof(char),		/* Entity text */
+    sizeof(dplane_t),
+    sizeof(byte),		/* Texture data */
+    sizeof(dvertex_t),
+    sizeof(byte),		/* Visibility data */
+    sizeof(bsp2_dnode_t),
+    sizeof(texinfo_t),
+    sizeof(bsp2_dface_t),
+    sizeof(byte),		/* Light data */
+    sizeof(bsp2_dclipnode_t),
+    sizeof(bsp2_dleaf_t),
+    sizeof(uint32_t),		/* Marksurfaces */
+    sizeof(bsp2_dedge_t),
+    sizeof(int32_t),		/* Surfedges */
+    sizeof(dmodel_t),
+    COMMON_MEMSIZES
+};
+
+#undef COMMON_MEMSIZES
+
+/* ------------------------------------------------------------------------ */
 
 mapdata_t map;
 

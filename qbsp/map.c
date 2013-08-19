@@ -675,7 +675,7 @@ PreParseFile(const char *buf)
     map.maxmiptex = map.maxfaces;
     map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
-    texinfo->data = AllocMem(BSPTEXINFO, map.maxfaces, true);
+    texinfo->data = AllocMem(BSP_TEXINFO, map.maxfaces, true);
     texinfo->count = map.maxfaces;
 }
 
@@ -720,7 +720,7 @@ LoadMapFile(void)
     while (ParseEntity(&parser, entity)) {
 	/* Allocate memory for the bmodel, if needed. */
 	if (!IsWorldBrushEntity(entity) && entity->nummapbrushes) {
-	    entity->lumps[LUMP_MODELS].data = AllocMem(BSPMODEL, 1, true);
+	    entity->lumps[LUMP_MODELS].data = AllocMem(BSP_MODEL, 1, true);
 	    entity->lumps[LUMP_MODELS].count = 1;
 	}
 	map.numentities++;
@@ -748,7 +748,7 @@ LoadMapFile(void)
 	pTemp = map.miptex;
 	map.maxmiptex = map.nummiptex;
 	map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
-	memcpy(map.miptex, pTemp, map.nummiptex * rgcMemSize[MIPTEX]);
+	memcpy(map.miptex, pTemp, map.nummiptex * MemSize[MIPTEX]);
 	FreeMem(pTemp, MIPTEX, map.maxfaces);
     }
 
@@ -757,9 +757,9 @@ LoadMapFile(void)
 	Error("Internal error: didn't allocate enough texinfos?");
     else if (texinfo->index < texinfo->count) {
 	pTemp = texinfo->data;
-	texinfo->data = AllocMem(BSPTEXINFO, texinfo->index, true);
-	memcpy(texinfo->data, pTemp, texinfo->index * rgcMemSize[BSPTEXINFO]);
-	FreeMem(pTemp, BSPTEXINFO, texinfo->count);
+	texinfo->data = AllocMem(BSP_TEXINFO, texinfo->index, true);
+	memcpy(texinfo->data, pTemp, texinfo->index * MemSize[BSP_TEXINFO]);
+	FreeMem(pTemp, BSP_TEXINFO, texinfo->count);
 	texinfo->count = texinfo->index;
     }
     // One plane per face + 6 for portals
@@ -905,7 +905,7 @@ WriteEntitiesToString(void)
 
 	entities->count = cLen;
 	map.cTotal[LUMP_ENTITIES] += cLen;
-	entities->data = pCur = AllocMem(BSPENT, cLen, true);
+	entities->data = pCur = AllocMem(BSP_ENT, cLen, true);
 	*pCur = 0;
 
 	strcat(pCur, "{\n");
