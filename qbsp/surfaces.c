@@ -556,7 +556,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 	edges->count = edges->index;
     }
 
-    if (map.cTotal[LUMP_VERTEXES] > 65535)
+    if (map.cTotal[LUMP_VERTEXES] > 65535 && !options.fBSP2)
 	Error("Too many vertices (%d > 65535)", map.cTotal[LUMP_VERTEXES]);
 
     surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
