@@ -97,7 +97,7 @@ mapdata_t map;
 mapentity_t *pWorldEnt;
 
 // Mathlib.c
-vec3_t vec3_origin = { 0, 0, 0 };
+const vec3_t vec3_origin = { 0, 0, 0 };
 
 // util.c
 FILE *logfile;

@@ -111,7 +111,7 @@ PrintModelInfo(const bspdata_t *bsp)
  * Quick hack to check verticies of faces lie on the correct plane
  */
 #define ON_EPSILON 0.01
-vec3_t vec3_origin = { 0, 0, 0 };
+const vec3_t vec3_origin = { 0, 0, 0 };
 static void
 CheckBSPFacesPlanar(const bspdata_t *bsp)
 {

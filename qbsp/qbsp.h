@@ -187,7 +187,7 @@ typedef float vec_t;
 #endif
 typedef vec_t vec3_t[3];
 
-extern vec3_t vec3_origin;
+extern const vec3_t vec3_origin;
 
 bool VectorCompare(const vec3_t v1, const vec3_t v2);
 
