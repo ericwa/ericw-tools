@@ -29,15 +29,6 @@ typedef uint8_t byte;
 #define BSPVERSION  29
 #define BSP2VERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 
-#define MAXLIGHTMAPS 4
-
-/* Ambient sounds */
-#define AMBIENT_WATER   0
-#define AMBIENT_SKY     1
-#define AMBIENT_SLIME   2
-#define AMBIENT_LAVA    3
-#define NUM_AMBIENTS    4
-
 typedef struct {
     int32_t fileofs;
     int32_t filelen;
@@ -143,6 +134,7 @@ typedef struct {
     uint32_t v[2];		/* vertex numbers */
 } bsp2_dedge_t;
 
+#define MAXLIGHTMAPS 4
 typedef struct {
     int16_t planenum;
     int16_t side;
@@ -168,6 +160,13 @@ typedef struct {
     uint8_t styles[MAXLIGHTMAPS];
     int32_t lightofs;		/* start of [numstyles*surfsize] samples */
 } bsp2_dface_t;
+
+/* Ambient sounds */
+#define AMBIENT_WATER   0
+#define AMBIENT_SKY     1
+#define AMBIENT_SLIME   2
+#define AMBIENT_LAVA    3
+#define NUM_AMBIENTS    4
 
 /*
  * leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas
