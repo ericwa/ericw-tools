@@ -118,7 +118,7 @@ Solve3(const pmatrix3_t *matrix, const vec3_t rhs, vec3_t out)
 /*
  * ============================================================================
  * SAMPLE POINT DETERMINATION
- * void SetupBlock (dface_t *f) Returns with surfpt[] set
+ * void SetupBlock (bsp29_dface_t *f) Returns with surfpt[] set
  *
  * This is a little tricky because the lightmap covers more area than the face.
  * If done in the straightforward fashion, some of the sample points will be
@@ -194,7 +194,7 @@ TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 }
 
 static vec_t
-FaceArea(const dface_t *f)
+FaceArea(const bsp29_dface_t *f)
 {
     int i, e;
     dvertex_t *v0, *v1, *v2;
@@ -222,7 +222,7 @@ FaceArea(const dface_t *f)
 }
 
 static void
-FaceCentroid(const dface_t *f, vec3_t out)
+FaceCentroid(const bsp29_dface_t *f, vec3_t out)
 {
     int i, e;
     dvertex_t *v0, *v1, *v2;
@@ -265,7 +265,7 @@ FaceCentroid(const dface_t *f, vec3_t out)
  * ================
  */
 static void
-CreateFaceTransform(const dface_t *face, pmatrix3_t *transform)
+CreateFaceTransform(const bsp29_dface_t *face, pmatrix3_t *transform)
 {
     const dplane_t *plane;
     const texinfo_t *tex;
@@ -319,7 +319,7 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 #if 0
 /* Debug helper - move elsewhere? */
 static void
-PrintFaceInfo(const dface_t *face)
+PrintFaceInfo(const bsp29_dface_t *face)
 {
     const texinfo_t *tex = &texinfo[face->texinfo];
     const int offset = dtexdata.header->dataofs[tex->miptex];
@@ -353,7 +353,7 @@ PrintFaceInfo(const dface_t *face)
  */
 __attribute__((noinline))
 static void
-CalcFaceExtents(const dface_t *face, const vec3_t offset, lightsurf_t *surf)
+CalcFaceExtents(const bsp29_dface_t *face, const vec3_t offset, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
     vec3_t worldpoint;
@@ -490,7 +490,7 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 
 __attribute__((noinline))
 static void
-Lightsurf_Init(const modelinfo_t *modelinfo, const dface_t *face,
+Lightsurf_Init(const modelinfo_t *modelinfo, const bsp29_dface_t *face,
 	       lightsurf_t *lightsurf)
 {
     plane_t *plane;
@@ -875,7 +875,7 @@ LightFace_Min(const lightsample_t *light,
 }
 
 static void
-WriteLightmaps(dface_t *face, const lightsurf_t *lightsurf,
+WriteLightmaps(bsp29_dface_t *face, const lightsurf_t *lightsurf,
 	       const lightmap_t *lightmaps)
 {
     int numstyles, size, mapnum, width, s, t, i, j;
@@ -953,7 +953,7 @@ WriteLightmaps(dface_t *face, const lightsurf_t *lightsurf,
  * ============
  */
 void
-LightFace(dface_t *face, const modelinfo_t *modelinfo)
+LightFace(bsp29_dface_t *face, const modelinfo_t *modelinfo)
 {
     int i, j, k;
     const entity_t *entity;

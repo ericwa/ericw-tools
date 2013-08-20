@@ -175,26 +175,20 @@ typedef struct {
 typedef struct {
     int32_t contents;
     int32_t visofs;		/* -1 = no visibility info */
-
     int16_t mins[3];		/* for frustum culling */
     int16_t maxs[3];
-
     uint16_t firstmarksurface;
     uint16_t nummarksurfaces;
-
     uint8_t ambient_level[NUM_AMBIENTS];
 } bsp29_dleaf_t;
 
 typedef struct {
     int32_t contents;
     int32_t visofs;		/* -1 = no visibility info */
-
     int16_t mins[3];		/* for frustum culling */
     int16_t maxs[3];
-
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
-
     uint8_t ambient_level[NUM_AMBIENTS];
 } bsp2_dleaf_t;
 

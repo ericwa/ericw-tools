@@ -136,7 +136,6 @@ typedef struct {
 #define CONTENTS_LAVA  -5
 #define CONTENTS_SKY   -6
 
-/* !!! if this is changed, it must be changed in asm_i386.h too !!! */
 typedef struct {
     int32_t planenum;
     int16_t children[2];	/* negative numbers are -(leafs+1), not nodes */
@@ -144,12 +143,32 @@ typedef struct {
     int16_t maxs[3];
     uint16_t firstface;
     uint16_t numfaces;		/* counting both sides */
-} dnode_t;
+} bsp29_dnode_t;
 
 typedef struct {
     int32_t planenum;
-    int16_t children[2];		/* negative numbers are contents */
-} dclipnode_t;
+    int32_t children[2];	/* negative numbers are -(leafs+1), not nodes */
+    int16_t mins[3];		/* for sphere culling */
+    int16_t maxs[3];
+    uint32_t firstface;
+    uint32_t numfaces;		/* counting both sides */
+} bsp2_dnode_t;
+
+/*
+ * Note that children are interpreted as unsigned values now, so that we can
+ * handle > 32k clipnodes. Values > 0xFFF0 can be assumed to be CONTENTS
+ * values and can be read as the signed value to be compatible with the above
+ * (i.e. simply subtract 65536).
+ */
+typedef struct {
+    int32_t planenum;
+    int16_t children[2];	/* negative numbers are contents */
+} bsp29_dclipnode_t;
+
+typedef struct {
+    int32_t planenum;
+    int32_t children[2];	/* negative numbers are contents */
+} bsp2_dclipnode_t;
 
 typedef struct texinfo_s {
     float vecs[2][4];		/* [s/t][xyz offset] */
@@ -159,12 +178,17 @@ typedef struct texinfo_s {
 
 #define TEX_SPECIAL 1		/* sky or slime, no lightmap or 256 subdivision */
 
-/* note that edge 0 is never used, because negative edge nums are used for
+/*
+ * Note that edge 0 is never used, because negative edge nums are used for
  * counterclockwise use of the edge in a face
  */
 typedef struct {
     uint16_t v[2];		/* vertex numbers */
-} dedge_t;
+} bsp29_dedge_t;
+
+typedef struct {
+    uint32_t v[2];		/* vertex numbers */
+} bsp2_dedge_t;
 
 #define MAXLIGHTMAPS 4
 typedef struct {
@@ -177,7 +201,19 @@ typedef struct {
     /* lighting info */
     uint8_t styles[MAXLIGHTMAPS];
     int32_t lightofs;		/* start of [numstyles*surfsize] samples */
-} dface_t;
+} bsp29_dface_t;
+
+typedef struct {
+    int32_t planenum;
+    int32_t side;
+    int32_t firstedge;		/* we must support > 64k edges */
+    int32_t numedges;
+    int32_t texinfo;
+
+    /* lighting info */
+    uint8_t styles[MAXLIGHTMAPS];
+    int32_t lightofs;		/* start of [numstyles*surfsize] samples */
+} bsp2_dface_t;
 
 /* Ambient Sounds */
 #define AMBIENT_WATER   0
@@ -195,12 +231,20 @@ typedef struct {
     int32_t visofs;		/* -1 = no visibility info */
     int16_t mins[3];		/* for frustum culling     */
     int16_t maxs[3];
-
     uint16_t firstmarksurface;
     uint16_t nummarksurfaces;
-
     uint8_t ambient_level[NUM_AMBIENTS];
-} dleaf_t;
+} bsp29_dleaf_t;
+
+typedef struct {
+    int32_t contents;
+    int32_t visofs;		/* -1 = no visibility info */
+    int16_t mins[3];		/* for frustum culling     */
+    int16_t maxs[3];
+    uint32_t firstmarksurface;
+    uint32_t nummarksurfaces;
+    uint8_t ambient_level[NUM_AMBIENTS];
+} bsp2_dleaf_t;
 
 /* ========================================================================= */
 
@@ -225,7 +269,7 @@ extern int entdatasize;
 extern char *dentdata;
 
 extern int numleafs;
-extern dleaf_t *dleafs;
+extern bsp29_dleaf_t *dleafs;
 
 extern int numplanes;
 extern dplane_t *dplanes;
@@ -234,19 +278,19 @@ extern int numvertexes;
 extern dvertex_t *dvertexes;
 
 extern int numnodes;
-extern dnode_t *dnodes;
+extern bsp29_dnode_t *dnodes;
 
 extern int numtexinfo;
 extern texinfo_t *texinfo;
 
 extern int numfaces;
-extern dface_t *dfaces;
+extern bsp29_dface_t *dfaces;
 
 extern int numclipnodes;
-extern dclipnode_t *dclipnodes;
+extern bsp29_dclipnode_t *dclipnodes;
 
 extern int numedges;
-extern dedge_t *dedges;
+extern bsp29_dedge_t *dedges;
 
 extern int nummarksurfaces;
 extern unsigned short *dmarksurfaces;
@@ -272,7 +316,7 @@ typedef struct {
     char *dentdata;
 
     int numleafs;
-    dleaf_t *dleafs;
+    bsp29_dleaf_t *dleafs;
 
     int numplanes;
     dplane_t *dplanes;
@@ -281,19 +325,19 @@ typedef struct {
     dvertex_t *dvertexes;
 
     int numnodes;
-    dnode_t *dnodes;
+    bsp29_dnode_t *dnodes;
 
     int numtexinfo;
     texinfo_t *texinfo;
 
     int numfaces;
-    dface_t *dfaces;
+    bsp29_dface_t *dfaces;
 
     int numclipnodes;
-    dclipnode_t *dclipnodes;
+    bsp29_dclipnode_t *dclipnodes;
 
     int numedges;
-    dedge_t *dedges;
+    bsp29_dedge_t *dedges;
 
     int nummarksurfaces;
     uint16_t *dmarksurfaces;

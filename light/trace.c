@@ -42,7 +42,7 @@ MakeTnodes_r(int nodenum)
     tnode_t *t;
     dplane_t *plane;
     int i;
-    dnode_t *node;
+    bsp29_dnode_t *node;
 
     t = tnode_p++;
 

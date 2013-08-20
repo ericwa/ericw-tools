@@ -39,7 +39,7 @@ int entdatasize;
 char *dentdata;
 
 int numleafs;
-dleaf_t *dleafs;
+bsp29_dleaf_t *dleafs;
 
 int numplanes;
 dplane_t *dplanes;
@@ -48,25 +48,25 @@ int numvertexes;
 dvertex_t *dvertexes;
 
 int numnodes;
-dnode_t *dnodes;
+bsp29_dnode_t *dnodes;
 
 int numtexinfo;
 texinfo_t *texinfo;
 
 int numfaces;
-dface_t *dfaces;
+bsp29_dface_t *dfaces;
 
 int numclipnodes;
-dclipnode_t *dclipnodes;
+bsp29_dclipnode_t *dclipnodes;
 
 int numedges;
-dedge_t *dedges;
+bsp29_dedge_t *dedges;
 
 int nummarksurfaces;
-unsigned short *dmarksurfaces;
+uint16_t *dmarksurfaces;
 
 int numsurfedges;
-int *dsurfedges;
+int32_t *dsurfedges;
 
 /* Transitional helper functions */
 void
@@ -211,7 +211,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
     /* faces */
     for (i = 0; i < bspdata->numfaces; i++) {
-	dface_t *face = &bspdata->dfaces[i];
+	bsp29_dface_t *face = &bspdata->dfaces[i];
 	face->texinfo = LittleShort(face->texinfo);
 	face->planenum = LittleShort(face->planenum);
 	face->side = LittleShort(face->side);
@@ -222,7 +222,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
     /* nodes */
     for (i = 0; i < bspdata->numnodes; i++) {
-	dnode_t *node = &bspdata->dnodes[i];
+	bsp29_dnode_t *node = &bspdata->dnodes[i];
 	node->planenum = LittleLong(node->planenum);
 	for (j = 0; j < 3; j++) {
 	    node->mins[j] = LittleShort(node->mins[j]);
@@ -236,7 +236,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
     /* leafs */
     for (i = 0; i < bspdata->numleafs; i++) {
-	dleaf_t *leaf = &bspdata->dleafs[i];
+	bsp29_dleaf_t *leaf = &bspdata->dleafs[i];
 	leaf->contents = LittleLong(leaf->contents);
 	for (j = 0; j < 3; j++) {
 	    leaf->mins[j] = LittleShort(leaf->mins[j]);
@@ -249,7 +249,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
     /* clipnodes */
     for (i = 0; i < bspdata->numclipnodes; i++) {
-	dclipnode_t *clipnode = &bspdata->dclipnodes[i];
+	bsp29_dclipnode_t *clipnode = &bspdata->dclipnodes[i];
 	clipnode->planenum = LittleLong(clipnode->planenum);
 	clipnode->children[0] = LittleShort(clipnode->children[0]);
 	clipnode->children[1] = LittleShort(clipnode->children[1]);
@@ -269,19 +269,19 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
     /* marksurfaces */
     for (i = 0; i < bspdata->nummarksurfaces; i++) {
-	unsigned short *marksurface = &bspdata->dmarksurfaces[i];
+	uint16_t *marksurface = &bspdata->dmarksurfaces[i];
 	*marksurface = LittleShort(*marksurface);
     }
 
     /* surfedges */
     for (i = 0; i < bspdata->numsurfedges; i++) {
-	int *surfedge = &bspdata->dsurfedges[i];
+	int32_t *surfedge = &bspdata->dsurfedges[i];
 	*surfedge = LittleLong(*surfedge);
     }
 
     /* edges */
     for (i = 0; i < bspdata->numedges; i++) {
-	dedge_t *edge = &bspdata->dedges[i];
+	bsp29_dedge_t *edge = &bspdata->dedges[i];
 	edge->v[0] = LittleShort(edge->v[0]);
 	edge->v[1] = LittleShort(edge->v[1]);
     }
@@ -303,21 +303,21 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 }
 
 const lumpspec_t lumpspec[] = {
-    { "entities",     sizeof(char)           },
-    { "planes",       sizeof(dplane_t)       },
-    { "texture",      sizeof(byte)           },
-    { "vertexes",     sizeof(dvertex_t)      },
-    { "visibility",   sizeof(byte)           },
-    { "nodes",        sizeof(dnode_t)        },
-    { "texinfos",     sizeof(texinfo_t)      },
-    { "faces",        sizeof(dface_t)        },
-    { "lighting",     sizeof(byte)           },
-    { "clipnodes",    sizeof(dclipnode_t)    },
-    { "leafs",        sizeof(dleaf_t)        },
-    { "marksurfaces", sizeof(unsigned short) },
-    { "edges",        sizeof(dedge_t)        },
-    { "surfedges",    sizeof(int)            },
-    { "models",       sizeof(dmodel_t)       },
+    { "entities",     sizeof(char)              },
+    { "planes",       sizeof(dplane_t)          },
+    { "texture",      sizeof(byte)              },
+    { "vertexes",     sizeof(dvertex_t)         },
+    { "visibility",   sizeof(byte)              },
+    { "nodes",        sizeof(bsp29_dnode_t)     },
+    { "texinfos",     sizeof(texinfo_t)         },
+    { "faces",        sizeof(bsp29_dface_t)     },
+    { "lighting",     sizeof(byte)              },
+    { "clipnodes",    sizeof(bsp29_dclipnode_t) },
+    { "leafs",        sizeof(bsp29_dleaf_t)     },
+    { "marksurfaces", sizeof(uint16_t)          },
+    { "edges",        sizeof(bsp29_dedge_t)     },
+    { "surfedges",    sizeof(int32_t)           },
+    { "models",       sizeof(dmodel_t)          },
 };
 
 static int

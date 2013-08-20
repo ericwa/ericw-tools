@@ -27,14 +27,14 @@
 /* FIXME - share header with qbsp, etc. */
 typedef struct {
     char identification[4];	// should be WAD2
-    int numlumps;
-    int infotableofs;
+    int32_t numlumps;
+    int32_t infotableofs;
 } wadinfo_t;
 
 typedef struct {
-    int filepos;
-    int disksize;
-    int size;			// uncompressed
+    int32_t filepos;
+    int32_t disksize;
+    int32_t size;			// uncompressed
     char type;
     char compression;
     char pad1, pad2;
@@ -118,7 +118,7 @@ CheckBSPFacesPlanar(const bspdata_t *bsp)
     int i, j;
 
     for (i = 0; i < bsp->numfaces; i++) {
-	const dface_t *face = &bsp->dfaces[i];
+	const bsp29_dface_t *face = &bsp->dfaces[i];
 	dplane_t plane = bsp->dplanes[face->planenum];
 
 	if (face->side) {
@@ -146,7 +146,7 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* faces */
     for (i = 0; i < bsp->numfaces; i++) {
-	const dface_t *face = &bsp->dfaces[i];
+	const bsp29_dface_t *face = &bsp->dfaces[i];
 
 	/* texinfo bounds check */
 	if (face->texinfo < 0)
@@ -184,7 +184,7 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* edges */
     for (i = 0; i < bsp->numedges; i++) {
-	const dedge_t *edge = &bsp->dedges[i];
+	const bsp29_dedge_t *edge = &bsp->dedges[i];
 	int j;
 
 	for (j = 0; j < 2; j++) {
@@ -218,7 +218,7 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* leafs */
     for (i = 0; i < bsp->numleafs; i++) {
-	const dleaf_t *leaf = &bsp->dleafs[i];
+	const bsp29_dleaf_t *leaf = &bsp->dleafs[i];
 	const uint16_t endmarksurface =
 	    leaf->firstmarksurface + leaf->nummarksurfaces;
 	if (leaf->firstmarksurface < 0)
@@ -238,7 +238,7 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* nodes */
     for (i = 0; i < bsp->numnodes; i++) {
-	const dnode_t *node = &bsp->dnodes[i];
+	const bsp29_dnode_t *node = &bsp->dnodes[i];
 	int j;
 
 	for (j = 0; j < 2; j++) {
