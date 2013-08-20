@@ -369,7 +369,7 @@ LoadBSPFile(const char *filename, bspdata_t *bsp)
 	Error("Sorry, only bsp version %d supported.", BSPVERSION);
 
     /* swap the lump headers */
-    for (i = 0; i < HEADER_LUMPS; i++) {
+    for (i = 0; i < BSP_LUMPS; i++) {
 	header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
 	header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
     }

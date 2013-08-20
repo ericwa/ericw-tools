@@ -72,14 +72,14 @@ typedef struct {
 #define LUMP_SURFEDGES    13
 #define LUMP_MODELS       14
 
-#define HEADER_LUMPS      15
+#define BSP_LUMPS         15
 
 typedef struct {
     const char *name;
     size_t size;
 } lumpspec_t;
 
-extern const lumpspec_t lumpspec[HEADER_LUMPS];
+extern const lumpspec_t lumpspec[BSP_LUMPS];
 
 typedef struct {
     float mins[3];
@@ -93,7 +93,7 @@ typedef struct {
 
 typedef struct {
     int version;
-    lump_t lumps[HEADER_LUMPS];
+    lump_t lumps[BSP_LUMPS];
 } dheader_t;
 
 typedef struct {
