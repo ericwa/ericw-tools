@@ -112,7 +112,7 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int start, int workcnt, void *(func)(void *))
+RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 {
     uintptr_t i; /* avoid warning due to cast for the CreateThread API */
     DWORD *threadid;
@@ -135,7 +135,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
 	threadhandle[i] = CreateThread(NULL,
 				       0,
 				       (LPTHREAD_START_ROUTINE)func,
-				       (LPVOID)i,
+				       (LPVOID)arg,
 				       0,
 				       &threadid[i]);
     }
@@ -207,7 +207,7 @@ ThreadUnlock(void)
  * =============
  */
 void
-RunThreadsOn(int start, int workcnt, void *(func)(void *))
+RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 {
     pthread_t *threads;
     pthread_mutexattr_t mattrib;
@@ -246,7 +246,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *))
     threads_active = true;
 
     for (i = 0; i < numthreads; i++) {
-	status = pthread_create(&threads[i], &attrib, func, NULL);
+	status = pthread_create(&threads[i], &attrib, func, arg);
 	if (status)
 	    Error("pthread_create failed");
     }
@@ -291,13 +291,13 @@ void ThreadUnlock(void) {}
  * =============
  */
 void
-RunThreadsOn(int start, int workcnt, void *(func)(void *))
+RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 {
     dispatch = start;
     workcount = workcnt;
     oldpercent = -1;
 
-    func(0);
+    func(arg);
 
     logprint("\n");
 }

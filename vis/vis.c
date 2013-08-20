@@ -722,7 +722,7 @@ CalcPortalVis(void)
 	if (p->status == pstat_done)
 	    startcount++;
     }
-    RunThreadsOn(startcount, numportals * 2, LeafThread);
+    RunThreadsOn(startcount, numportals * 2, LeafThread, NULL);
 
     if (verbose) {
 	logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",

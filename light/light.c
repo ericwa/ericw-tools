@@ -194,7 +194,7 @@ LightWorld(void)
     lit_file_p = lit_filebase;
     lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
 
-    RunThreadsOn(0, numfaces, LightThread);
+    RunThreadsOn(0, numfaces, LightThread, NULL);
     logprint("Lighting Completed.\n\n");
 
     lightdatasize = file_p - filebase;
