@@ -302,12 +302,12 @@ main(int argc, const char **argv)
 
     WriteEntitiesToString();
 
+    if (write_litfile)
+	WriteLitFile(&bsp, source, LIT_VERSION);
+
     /* Still need to update from globals */
     GetBSPGlobals(&bsp);
     WriteBSPFile(source, &bsp, bsp_version);
-
-    if (write_litfile)
-	WriteLitFile(source, LIT_VERSION);
 
     end = I_FloatTime();
     logprint("%5.1f seconds elapsed\n", end - start);

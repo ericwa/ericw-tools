@@ -20,6 +20,8 @@
 #ifndef __LIGHT_LITFILE_H__
 #define __LIGHT_LITFILE_H__
 
+#include <common/bspfile.h>
+
 #define LIT_VERSION 1
 
 typedef struct litheader_s {
@@ -27,6 +29,6 @@ typedef struct litheader_s {
     int version;
 } litheader_t;
 
-void WriteLitFile(const char *filename, int version);
+void WriteLitFile(const bspdata_t *bsp, const char *filename, int version);
 
 #endif /* __LIGHT_LITFILE_H__ */

@@ -23,7 +23,7 @@
 #include <common/cmdlib.h>
 
 void
-WriteLitFile(const char *filename, int version)
+WriteLitFile(const bspdata_t *bsp, const char *filename, int version)
 {
     FILE *litfile;
     char litname[1024];
@@ -41,6 +41,6 @@ WriteLitFile(const char *filename, int version)
 
     litfile = SafeOpenWrite(litname);
     SafeWrite(litfile, &header, sizeof(header));
-    SafeWrite(litfile, lit_filebase, lightdatasize * 3);
+    SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
     fclose(litfile);
 }
