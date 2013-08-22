@@ -20,11 +20,11 @@
 #include <light/light.h>
 
 typedef struct tnode_s {
-    int type;
     vec3_t normal;
     vec_t dist;
+    int type;
     int children[2];
-    int pad;
+    const dplane_t *plane;
 } tnode_t;
 
 static tnode_t *tnodes;
@@ -37,40 +37,39 @@ static tnode_t *tnode_p;
  * ==============
  */
 static void
-MakeTnodes_r(int nodenum)
+MakeTnodes_r(int nodenum, const bspdata_t *bsp)
 {
-    tnode_t *t;
-    dplane_t *plane;
+    tnode_t *tnode;
     int i;
     bsp29_dnode_t *node;
 
-    t = tnode_p++;
+    tnode = tnode_p++;
 
-    node = dnodes + nodenum;
-    plane = dplanes + node->planenum;
+    node = bsp->dnodes + nodenum;
+    tnode->plane = bsp->dplanes + node->planenum;
 
-    t->type = plane->type;
-    VectorCopy(plane->normal, t->normal);
-    t->dist = plane->dist;
+    tnode->type = tnode->plane->type;
+    VectorCopy(tnode->plane->normal, tnode->normal);
+    tnode->dist = tnode->plane->dist;
 
     for (i = 0; i < 2; i++) {
 	if (node->children[i] < 0) {
-	    t->children[i] = dleafs[-node->children[i] - 1].contents;
+	    tnode->children[i] = bsp->dleafs[-node->children[i] - 1].contents;
 	} else {
-	    t->children[i] = tnode_p - tnodes;
-	    MakeTnodes_r(node->children[i]);
+	    tnode->children[i] = tnode_p - tnodes;
+	    MakeTnodes_r(node->children[i], bsp);
 	}
     }
 }
 
 void
-MakeTnodes(void)
+MakeTnodes(const bspdata_t *bsp)
 {
     int i;
 
-    tnode_p = tnodes = malloc(numnodes * sizeof(tnode_t));
-    for (i = 0; i < nummodels; i++)
-	MakeTnodes_r(dmodels[i].headnode[0]);
+    tnode_p = tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
+    for (i = 0; i < bsp->nummodels; i++)
+	MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
 }
 
 /*
@@ -86,11 +85,12 @@ typedef struct {
     vec3_t front;
     int node;
     int side;
+    const dplane_t *plane;
 } tracestack_t;
 
 /*
  * ==============
- * TestLineOrSky
+ * TraceLine
  * ==============
  */
 #define MAX_TSTACK 128
@@ -149,8 +149,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
 		if (!crossnode)
 		    return -tracehit;
 		if (hitpoint) {
-		    const int planenum = dnodes[crossnode->node].planenum;
-		    hitpoint->dplane = dplanes + planenum;
+		    hitpoint->dplane = crossnode->plane;
 		    hitpoint->side = crossnode->side;
 		    VectorCopy(crossnode->back, hitpoint->point);
 		}
@@ -204,6 +203,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
 		    Error("%s: tstack overflow\n", __func__);
 		tstack->node = node;
 		tstack->side = 0;
+		tstack->plane = tnode->plane;
 		VectorCopy(front, tstack->front);
 		VectorCopy(back, tstack->back);
 		crossnode = tstack++;
@@ -224,6 +224,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
 	    side = frontdist < 0;
 	    tstack->node = node;
 	    tstack->side = side;
+	    tstack->plane = tnode->plane;
 	    VectorCopy(front, tstack->front);
 	    VectorCopy(back, tstack->back);
 	    crossnode = tstack;
@@ -239,6 +240,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
 	side = frontdist < 0;
 	tstack->node = node;
 	tstack->side = side;
+	tstack->plane = tnode->plane;
 	VectorCopy(back, tstack->back);
 	VectorSubtract(back, front, back);
 	VectorMA(front, frontdist / (frontdist - backdist), back, back);

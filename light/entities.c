@@ -282,7 +282,7 @@ CountEntities(const char *entitystring)
  * ==================
  */
 void
-LoadEntities(void)
+LoadEntities(const bspdata_t *bsp)
 {
     char *data;
     entity_t *entity;
@@ -292,7 +292,7 @@ LoadEntities(void)
     int memsize, num_lights;
 
     /* Count the entities and allocate memory */
-    max_entities = CountEntities(dentdata);
+    max_entities = CountEntities(bsp->dentdata);
     memsize = max_entities * sizeof(*entities);
     entities = malloc(memsize);
     if (!entities)
@@ -302,7 +302,7 @@ LoadEntities(void)
     /* start parsing */
     num_entities = 0;
     num_lights = 0;
-    data = dentdata;
+    data = bsp->dentdata;
 
     /* go through all the entities */
     while (1) {
@@ -508,7 +508,7 @@ Get_EntityStringSize(const entity_t *entities, int num_entities)
  * ================
  */
 void
-WriteEntitiesToString(void)
+WriteEntitiesToString(bspdata_t *bsp)
 {
     const entity_t *entity;
     const epair_t *epair;
@@ -516,19 +516,20 @@ WriteEntitiesToString(void)
     char *pos;
     int i;
 
-    if (dentdata)
-	free(dentdata);
+    if (bsp->dentdata)
+	free(bsp->dentdata);
 
     /* FIXME - why are we printing this here? */
     logprint("%i switchable light styles\n", numlighttargets);
 
-    entdatasize = Get_EntityStringSize(entities, num_entities);
-    dentdata = malloc(entdatasize);
-    if (!dentdata)
-	Error("%s: allocation of %d bytes failed\n", __func__, entdatasize);
+    bsp->entdatasize = Get_EntityStringSize(entities, num_entities);
+    bsp->dentdata = malloc(bsp->entdatasize);
+    if (!bsp->dentdata)
+	Error("%s: allocation of %d bytes failed\n", __func__,
+	      bsp->entdatasize);
 
-    space = entdatasize;
-    pos = dentdata;
+    space = bsp->entdatasize;
+    pos = bsp->dentdata;
     for (i = 0, entity = entities; i < num_entities; i++, entity++) {
 	if (!entity->epairs)
 	    continue;

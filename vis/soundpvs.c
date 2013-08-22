@@ -17,6 +17,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <float.h>
 
 #include <vis/vis.h>
 
@@ -34,29 +35,30 @@ Find an aproximate distance to the nearest emiter of each class for each leaf.
   ====================
 */
 static void
-SurfaceBBox(const bsp29_dface_t *s, vec3_t mins, vec3_t maxs)
+SurfaceBBox(const bspdata_t *bsp, const bsp29_dface_t *surf,
+	    vec3_t mins, vec3_t maxs)
 {
     int i, j;
-    int e;
-    int vi;
-    const float *v;
+    int edgenum;
+    int vertnum;
+    const float *vert;
 
-    mins[0] = mins[1] = 999999;
-    maxs[0] = maxs[1] = -99999;
+    mins[0] = mins[1] = FLT_MAX;
+    maxs[0] = maxs[1] = -FLT_MAX;
 
-    for (i = 0; i < s->numedges; i++) {
-	e = dsurfedges[s->firstedge + i];
-	if (e >= 0)
-	    vi = dedges[e].v[0];
+    for (i = 0; i < surf->numedges; i++) {
+	edgenum = bsp->dsurfedges[surf->firstedge + i];
+	if (edgenum >= 0)
+	    vertnum = bsp->dedges[edgenum].v[0];
 	else
-	    vi = dedges[-e].v[1];
-	v = dvertexes[vi].point;
+	    vertnum = bsp->dedges[-edgenum].v[1];
+	vert = bsp->dvertexes[vertnum].point;
 
 	for (j = 0; j < 3; j++) {
-	    if (v[j] < mins[j])
-		mins[j] = v[j];
-	    if (v[j] > maxs[j])
-		maxs[j] = v[j];
+	    if (vert[j] < mins[j])
+		mins[j] = vert[j];
+	    if (vert[j] > maxs[j])
+		maxs[j] = vert[j];
 	}
     }
 }
@@ -68,7 +70,7 @@ SurfaceBBox(const bsp29_dface_t *s, vec3_t mins, vec3_t maxs)
   ====================
 */
 void
-CalcAmbientSounds(void)
+CalcAmbientSounds(bspdata_t *bsp)
 {
     const bsp29_dface_t *surf;
     const texinfo_t *info;
@@ -84,7 +86,7 @@ CalcAmbientSounds(void)
     float vol;
 
     for (i = 0; i < portalleafs_real; i++) {
-	leaf = &dleafs[i + 1];
+	leaf = &bsp->dleafs[i + 1];
 
 	//
 	// clear ambients
@@ -101,13 +103,13 @@ CalcAmbientSounds(void)
 	    //
 	    // check this leaf for sound textures
 	    //
-	    hit = &dleafs[j + 1];
+	    hit = &bsp->dleafs[j + 1];
 
 	    for (k = 0; k < hit->nummarksurfaces; k++) {
-		surf = &dfaces[dmarksurfaces[hit->firstmarksurface + k]];
-		info = &texinfo[surf->texinfo];
-		ofs = dtexdata.header->dataofs[info->miptex];
-		miptex = (const miptex_t *)(dtexdata.base + ofs);
+		surf = &bsp->dfaces[bsp->dmarksurfaces[hit->firstmarksurface + k]];
+		info = &bsp->texinfo[surf->texinfo];
+		ofs = bsp->dtexdata.header->dataofs[info->miptex];
+		miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
 
 		if (!strncasecmp(miptex->name, "sky", 3) && ambientsky)
 		    ambient_type = AMBIENT_SKY;
@@ -123,7 +125,7 @@ CalcAmbientSounds(void)
 		    continue;
 
 		// find distance from source leaf to polygon
-		SurfaceBBox(surf, mins, maxs);
+		SurfaceBBox(bsp, surf, mins, maxs);
 		maxd = 0;
 		for (l = 0; l < 3; l++) {
 		    if (mins[l] > leaf->maxs[l])

@@ -288,7 +288,7 @@ main(int argc, char **argv)
 		Error("couldn't open %s for writing\n", source);
 
 	    err = fwrite(bsp.dentdata, sizeof(char), bsp.entdatasize - 1, f);
-	    if (err != entdatasize - 1)
+	    if (err != bsp.entdatasize - 1)
 		Error("%s", strerror(errno));
 
 	    err = fclose(f);

@@ -77,10 +77,11 @@ GetFileSpace(byte **lightdata, byte **colordata, int size)
 }
 
 static void *
-LightThread(void *junk)
+LightThread(void *arg)
 {
     int facenum, i;
     dmodel_t *model;
+    const bspdata_t *bsp = arg;
 
     while (1) {
 	facenum = GetThreadWork();
@@ -88,25 +89,25 @@ LightThread(void *junk)
 	    break;
 
 	/* Find the correct model offset */
-	for (i = 0, model = dmodels; i < nummodels; i++, model++) {
+	for (i = 0, model = bsp->dmodels; i < bsp->nummodels; i++, model++) {
 	    if (facenum < model->firstface)
 		continue;
 	    if (facenum < model->firstface + model->numfaces)
 		break;
 	}
-	if (i == nummodels) {
+	if (i == bsp->nummodels) {
 	    logprint("warning: no model has face %d\n", facenum);
 	    continue;
 	}
 
-	LightFace(dfaces + facenum, &modelinfo[i]);
+	LightFace(bsp->dfaces + facenum, &modelinfo[i], bsp);
     }
 
     return NULL;
 }
 
 static void
-FindModelInfo(void)
+FindModelInfo(const bspdata_t *bsp)
 {
     int i, shadow, numshadowmodels;
     entity_t *entity;
@@ -115,18 +116,18 @@ FindModelInfo(void)
     const dmodel_t **shadowmodels;
     modelinfo_t *info;
 
-    shadowmodels = malloc(sizeof(dmodel_t *) * (nummodels + 1));
-    memset(shadowmodels, 0, sizeof(dmodel_t *) * (nummodels + 1));
+    shadowmodels = malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
+    memset(shadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
 
     /* The world always casts shadows */
-    shadowmodels[0] = &dmodels[0];
+    shadowmodels[0] = &bsp->dmodels[0];
     numshadowmodels = 1;
 
-    memset(modelinfo, 0, sizeof(*modelinfo) * nummodels);
-    modelinfo[0].model = &dmodels[0];
+    memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
+    modelinfo[0].model = &bsp->dmodels[0];
 
-    for (i = 1, info = modelinfo + 1; i < nummodels; i++, info++) {
-	info->model = &dmodels[i];
+    for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
+	info->model = &bsp->dmodels[i];
 
 	/* Find the entity for the model */
 	snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -138,7 +139,7 @@ FindModelInfo(void)
 	/* Check if this model will cast shadows (shadow => shadowself) */
 	shadow = atoi(ValueForKey(entity, "_shadow"));
 	if (shadow) {
-	    shadowmodels[numshadowmodels++] = &dmodels[i];
+	    shadowmodels[numshadowmodels++] = &bsp->dmodels[i];
 	} else {
 	    shadow = atoi(ValueForKey(entity, "_shadowself"));
 	    if (shadow)
@@ -172,33 +173,34 @@ FindModelInfo(void)
  * =============
  */
 static void
-LightWorld(void)
+LightWorld(bspdata_t *bsp)
 {
-    if (dlightdata)
-	free(dlightdata);
+    if (bsp->dlightdata)
+	free(bsp->dlightdata);
 
     /* FIXME - remove this limit */
-    lightdatasize = MAX_MAP_LIGHTING;
-    dlightdata = malloc(lightdatasize + 16); /* for alignment */
-    if (!dlightdata)
-	Error("%s: allocation of %i bytes failed.", __func__, lightdatasize);
-    memset(dlightdata, 0, lightdatasize + 16);
-    lightdatasize /= 4;
+    bsp->lightdatasize = MAX_MAP_LIGHTING;
+    bsp->dlightdata = malloc(bsp->lightdatasize + 16); /* for alignment */
+    if (!bsp->dlightdata)
+	Error("%s: allocation of %i bytes failed.",
+	      __func__, bsp->lightdatasize);
+    memset(bsp->dlightdata, 0, bsp->lightdatasize + 16);
+    bsp->lightdatasize /= 4;
 
     /* align filebase to a 4 byte boundary */
-    filebase = file_p = (byte *)(((uintptr_t)dlightdata + 3) & ~3);
-    file_end = filebase + lightdatasize;
+    filebase = file_p = (byte *)(((uintptr_t)bsp->dlightdata + 3) & ~3);
+    file_end = filebase + bsp->lightdatasize;
 
     /* litfile data stored in dlightdata, after the white light */
     lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
     lit_file_p = lit_filebase;
     lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
 
-    RunThreadsOn(0, numfaces, LightThread, NULL);
+    RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
     logprint("Lighting Completed.\n\n");
 
-    lightdatasize = file_p - filebase;
-    logprint("lightdatasize: %i\n", lightdatasize);
+    bsp->lightdatasize = file_p - filebase;
+    logprint("lightdatasize: %i\n", bsp->lightdatasize);
 }
 
 
@@ -291,22 +293,19 @@ main(int argc, const char **argv)
     StripExtension(source);
     DefaultExtension(source, ".bsp");
     bsp_version = LoadBSPFile(source, &bsp);
-    SetBSPGlobals(&bsp); /* FIXME */
 
-    LoadEntities();
-    MakeTnodes();
-    modelinfo = malloc(nummodels * sizeof(*modelinfo));
-    FindModelInfo();
-    LightWorld();
+    LoadEntities(&bsp);
+    MakeTnodes(&bsp);
+    modelinfo = malloc(bsp.nummodels * sizeof(*modelinfo));
+    FindModelInfo(&bsp);
+    LightWorld(&bsp);
     free(modelinfo);
 
-    WriteEntitiesToString();
+    WriteEntitiesToString(&bsp);
 
     if (write_litfile)
 	WriteLitFile(&bsp, source, LIT_VERSION);
 
-    /* Still need to update from globals */
-    GetBSPGlobals(&bsp);
     WriteBSPFile(source, &bsp, bsp_version);
 
     end = I_FloatTime();

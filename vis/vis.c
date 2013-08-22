@@ -499,7 +499,7 @@ static double stateinterval;
   ==============
 */
 void *
-LeafThread(void *unused)
+LeafThread(void *arg)
 {
     double now;
     portal_t *p;
@@ -571,8 +571,8 @@ CompressRow(const byte *vis, const int numbytes, byte *out)
 */
 int totalvis;
 
-void
-LeafFlow(int leafnum)
+static void
+LeafFlow(int leafnum, bsp29_dleaf_t *dleaf)
 {
     leaf_t *leaf;
     byte *outbuffer;
@@ -624,7 +624,7 @@ LeafFlow(int leafnum)
 	Error("Vismap expansion overflow");
 
     /* leaf 0 is a common solid */
-    dleafs[leafnum + 1].visofs = dest - vismap;
+    dleaf->visofs = dest - vismap;
 
     memcpy(dest, compressed, len);
     free(compressed);
@@ -632,7 +632,7 @@ LeafFlow(int leafnum)
 
 
 void
-ClusterFlow(int leafnum, leafbits_t *buffer)
+ClusterFlow(int leafnum, leafbits_t *buffer, bsp29_dleaf_t *dleaf)
 {
     leaf_t *leaf;
     byte *outbuffer;
@@ -688,7 +688,7 @@ ClusterFlow(int leafnum, leafbits_t *buffer)
 	Error("Vismap expansion overflow");
 
     /* leaf 0 is a common solid */
-    dleafs[leafnum + 1].visofs = dest - vismap;
+    dleaf->visofs = dest - vismap;
 
     memcpy(dest, compressed, len);
     free(compressed);
@@ -700,7 +700,7 @@ ClusterFlow(int leafnum, leafbits_t *buffer)
   ==================
 */
 void
-CalcPortalVis(void)
+CalcPortalVis(const bspdata_t *bsp)
 {
     int i, startcount;
     portal_t *p;
@@ -739,7 +739,7 @@ CalcPortalVis(void)
   ==================
 */
 void
-CalcVis(void)
+CalcVis(const bspdata_t *bsp)
 {
     int i;
 
@@ -751,14 +751,14 @@ CalcVis(void)
     }
 
     logprint("Calculating Full Vis:\n");
-    CalcPortalVis();
+    CalcPortalVis(bsp);
 
 //
 // assemble the leaf vis lists by oring and compressing the portal lists
 //
     if (portalleafs == portalleafs_real) {
 	for (i = 0; i < portalleafs; i++)
-	    LeafFlow(i);
+	    LeafFlow(i, &bsp->dleafs[i + 1]);
     } else {
 	leafbits_t *buffer;
 
@@ -766,7 +766,7 @@ CalcVis(void)
 	buffer = malloc(LeafbitsSize(portalleafs));
 	for (i = 0; i < portalleafs_real; i++) {
 	    memset(buffer, 0, LeafbitsSize(portalleafs));
-	    ClusterFlow(i, buffer);
+	    ClusterFlow(i, buffer, &bsp->dleafs[i + 1]);
 	}
 	free(buffer);
     }
@@ -1001,7 +1001,7 @@ SetWindingSphere(winding_t *w)
   ============
 */
 void
-LoadPortals(char *name)
+LoadPortals(char *name, bspdata_t *bsp)
 {
     int i, j, count;
     portal_t *p;
@@ -1064,13 +1064,13 @@ LoadPortals(char *name)
     originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
 
     // FIXME - more intelligent allocation?
-    dvisdata = malloc(MAX_MAP_VISIBILITY);
-    if (!dvisdata)
+    bsp->dvisdata = malloc(MAX_MAP_VISIBILITY);
+    if (!bsp->dvisdata)
 	Error("%s: dvisdata allocation failed (%i bytes)", __func__,
 	      MAX_MAP_VISIBILITY);
-    memset(dvisdata, 0, MAX_MAP_VISIBILITY);
+    memset(bsp->dvisdata, 0, MAX_MAP_VISIBILITY);
 
-    vismap = vismap_p = dvisdata;
+    vismap = vismap_p = bsp->dvisdata;
     vismap_end = vismap + MAX_MAP_VISIBILITY;
 
     for (i = 0, p = portals; i < numportals; i++) {
@@ -1239,13 +1239,12 @@ main(int argc, char **argv)
     DefaultExtension(sourcefile, ".bsp");
 
     bsp_version = LoadBSPFile(sourcefile, &bsp);
-    SetBSPGlobals(&bsp); /* FIXME */
 
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
     strcat(portalfile, ".prt");
 
-    LoadPortals(portalfile);
+    LoadPortals(portalfile, &bsp);
 
     strcpy(statefile, sourcefile);
     StripExtension(statefile);
@@ -1260,19 +1259,17 @@ main(int argc, char **argv)
 
 //    CalcPassages ();
 
-    CalcVis();
+    CalcVis(&bsp);
 
     logprint("c_noclip: %i\n", c_noclip);
     logprint("c_chains: %lu\n", c_chains);
 
-    visdatasize = vismap_p - dvisdata;
+    bsp.visdatasize = vismap_p - bsp.dvisdata;
     logprint("visdatasize:%i  compressed from %i\n",
-	     visdatasize, originalvismapsize);
+	     bsp.visdatasize, originalvismapsize);
 
-    CalcAmbientSounds();
+    CalcAmbientSounds(&bsp);
 
-    /* still need to update from globals */
-    GetBSPGlobals(&bsp);
     WriteBSPFile(sourcefile, &bsp, bsp_version);
 
 //    unlink (portalfile);

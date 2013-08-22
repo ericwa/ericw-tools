@@ -246,59 +246,13 @@ typedef struct {
     uint8_t ambient_level[NUM_AMBIENTS];
 } bsp2_dleaf_t;
 
-/* ========================================================================= */
-
-extern int nummodels;
-extern dmodel_t *dmodels;
-
-extern int visdatasize;
-extern byte *dvisdata;
-
-extern int lightdatasize;
-extern byte *dlightdata;
-
 typedef union {
     byte *base;
     dmiptexlump_t *header;
 } dtexdata_t;
 
-extern int texdatasize;
-extern dtexdata_t dtexdata;
+/* ========================================================================= */
 
-extern int entdatasize;
-extern char *dentdata;
-
-extern int numleafs;
-extern bsp29_dleaf_t *dleafs;
-
-extern int numplanes;
-extern dplane_t *dplanes;
-
-extern int numvertexes;
-extern dvertex_t *dvertexes;
-
-extern int numnodes;
-extern bsp29_dnode_t *dnodes;
-
-extern int numtexinfo;
-extern texinfo_t *texinfo;
-
-extern int numfaces;
-extern bsp29_dface_t *dfaces;
-
-extern int numclipnodes;
-extern bsp29_dclipnode_t *dclipnodes;
-
-extern int numedges;
-extern bsp29_dedge_t *dedges;
-
-extern int nummarksurfaces;
-extern unsigned short *dmarksurfaces;
-
-extern int numsurfedges;
-extern int *dsurfedges;
-
-/* TODO - Transition utils over to using an instanced struct for bsp data */
 typedef struct {
     int nummodels;
     dmodel_t *dmodels;
@@ -345,10 +299,6 @@ typedef struct {
     int numsurfedges;
     int32_t *dsurfedges;
 } bspdata_t;
-
-/* Transitional helper functions */
-void GetBSPGlobals(bspdata_t *bspdata);
-void SetBSPGlobals(const bspdata_t *bspdata);
 
 /* LoadBSPFile returns the BSP version... */
 int LoadBSPFile(const char *filename, bspdata_t *bsp);

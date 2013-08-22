@@ -136,12 +136,11 @@ extern char portalfile[1024];
 extern char statefile[1024];
 extern char statetmpfile[1024];
 
-void LeafFlow(int leafnum);
 void BasePortalVis(void);
 
 void PortalFlow(portal_t *p);
 
-void CalcAmbientSounds(void);
+void CalcAmbientSounds(bspdata_t *bsp);
 
 extern double starttime, endtime, statetime;
 

@@ -194,26 +194,26 @@ TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 }
 
 static vec_t
-FaceArea(const bsp29_dface_t *f)
+FaceArea(const bsp29_dface_t *face, const bspdata_t *bsp)
 {
-    int i, e;
+    int i, edgenum;
     dvertex_t *v0, *v1, *v2;
     vec_t poly_area = 0;
 
-    e = dsurfedges[f->firstedge];
-    if (e >= 0)
-	v0 = dvertexes + dedges[e].v[0];
+    edgenum = bsp->dsurfedges[face->firstedge];
+    if (edgenum >= 0)
+	v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
     else
-	v0 = dvertexes + dedges[-e].v[1];
+	v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
 
-    for (i = 1; i < f->numedges - 1; i++) {
-	e = dsurfedges[f->firstedge + i];
-	if (e >= 0) {
-	    v1 = dvertexes + dedges[e].v[0];
-	    v2 = dvertexes + dedges[e].v[1];
+    for (i = 1; i < face->numedges - 1; i++) {
+	edgenum = bsp->dsurfedges[face->firstedge + i];
+	if (edgenum >= 0) {
+	    v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
+	    v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
 	} else {
-	    v1 = dvertexes + dedges[-e].v[1];
-	    v2 = dvertexes + dedges[-e].v[0];
+	    v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
+	    v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
 	}
 	poly_area += TriArea(v0, v1, v2);
     }
@@ -222,9 +222,9 @@ FaceArea(const bsp29_dface_t *f)
 }
 
 static void
-FaceCentroid(const bsp29_dface_t *f, vec3_t out)
+FaceCentroid(const bsp29_dface_t *face, const bspdata_t *bsp, vec3_t out)
 {
-    int i, e;
+    int i, edgenum;
     dvertex_t *v0, *v1, *v2;
     vec3_t centroid, poly_centroid;
     vec_t area, poly_area;
@@ -232,20 +232,20 @@ FaceCentroid(const bsp29_dface_t *f, vec3_t out)
     VectorCopy(vec3_origin, poly_centroid);
     poly_area = 0;
 
-    e = dsurfedges[f->firstedge];
-    if (e >= 0)
-	v0 = dvertexes + dedges[e].v[0];
+    edgenum = bsp->dsurfedges[face->firstedge];
+    if (edgenum >= 0)
+	v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
     else
-	v0 = dvertexes + dedges[-e].v[1];
+	v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
 
-    for (i = 1; i < f->numedges - 1; i++) {
-	e = dsurfedges[f->firstedge + i];
-	if (e >= 0) {
-	    v1 = dvertexes + dedges[e].v[0];
-	    v2 = dvertexes + dedges[e].v[1];
+    for (i = 1; i < face->numedges - 1; i++) {
+	edgenum = bsp->dsurfedges[face->firstedge + i];
+	if (edgenum >= 0) {
+	    v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
+	    v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
 	} else {
-	    v1 = dvertexes + dedges[-e].v[1];
-	    v2 = dvertexes + dedges[-e].v[0];
+	    v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
+	    v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
 	}
 
 	area = TriArea(v0, v1, v2);
@@ -265,15 +265,16 @@ FaceCentroid(const bsp29_dface_t *f, vec3_t out)
  * ================
  */
 static void
-CreateFaceTransform(const bsp29_dface_t *face, pmatrix3_t *transform)
+CreateFaceTransform(const bsp29_dface_t *face, const bspdata_t *bsp,
+		    pmatrix3_t *transform)
 {
     const dplane_t *plane;
     const texinfo_t *tex;
     int i;
 
     /* Prepare the transform matrix and init row/column permutations */
-    plane = &dplanes[face->planenum];
-    tex = &texinfo[face->texinfo];
+    plane = &bsp->dplanes[face->planenum];
+    tex = &bsp->texinfo[face->texinfo];
     for (i = 0; i < 3; i++) {
 	transform->data[0][i] = tex->vecs[0][i];
 	transform->data[1][i] = tex->vecs[1][i];
@@ -285,10 +286,10 @@ CreateFaceTransform(const bsp29_dface_t *face, pmatrix3_t *transform)
 
     /* Decompose the matrix. If we can't, texture axes are invalid. */
     if (!PMatrix3_LU_Decompose(transform)) {
-	const vec_t *p = dvertexes[dedges[face->firstedge].v[0]].point;
+	const vec_t *p = bsp->dvertexes[bsp->dedges[face->firstedge].v[0]].point;
 	Error("Bad texture axes on face:\n"
 	      "   face point at (%s)\n"
-	      "   face area = %5.3f\n", VecStr(p), FaceArea(face));
+	      "   face area = %5.3f\n", VecStr(p), FaceArea(face, bsp));
     }
 }
 
@@ -319,24 +320,24 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 #if 0
 /* Debug helper - move elsewhere? */
 static void
-PrintFaceInfo(const bsp29_dface_t *face)
+PrintFaceInfo(const bsp29_dface_t *face, const bspdata_t *bsp)
 {
-    const texinfo_t *tex = &texinfo[face->texinfo];
-    const int offset = dtexdata.header->dataofs[tex->miptex];
-    const miptex_t *miptex = (const miptex_t *)(dtexdata.base + offset);
+    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
+    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
     int i;
 
     logprint("face %d, texture %s, %d edges...\n"
 	     "  vectors (%3.3f, %3.3f, %3.3f) (%3.3f)\n"
 	     "          (%3.3f, %3.3f, %3.3f) (%3.3f)\n",
-	     (int)(face - dfaces), miptex->name, face->numedges,
+	     (int)(face - bsp->dfaces), miptex->name, face->numedges,
 	     tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2], tex->vecs[0][3],
 	     tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
 
     for (i = 0; i < face->numedges; i++) {
-	int edge = dsurfedges[face->firstedge + i];
-	int vert = (edge >= 0) ? dedges[edge].v[0] : dedges[-edge].v[1];
-	const float *point = dvertexes[vert].point;
+	int edge = bsp->dsurfedges[face->firstedge + i];
+	int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
+	const float *point = bsp->dvertexes[vert].point;
 
 	logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: edge %d\n",
 		 i ? "          " : "    verts ", vert,
@@ -353,7 +354,8 @@ PrintFaceInfo(const bsp29_dface_t *face)
  */
 __attribute__((noinline))
 static void
-CalcFaceExtents(const bsp29_dface_t *face, const vec3_t offset, lightsurf_t *surf)
+CalcFaceExtents(const bsp29_dface_t *face, const vec3_t offset,
+		const bspdata_t *bsp, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
     vec3_t worldpoint;
@@ -363,12 +365,12 @@ CalcFaceExtents(const bsp29_dface_t *face, const vec3_t offset, lightsurf_t *sur
 
     mins[0] = mins[1] = VECT_MAX;
     maxs[0] = maxs[1] = -VECT_MAX;
-    tex = &texinfo[face->texinfo];
+    tex = &bsp->texinfo[face->texinfo];
 
     for (i = 0; i < face->numedges; i++) {
-	edge = dsurfedges[face->firstedge + i];
-	vert = (edge >= 0) ? dedges[edge].v[0] : dedges[-edge].v[1];
-	dvertex = &dvertexes[vert];
+	edge = bsp->dsurfedges[face->firstedge + i];
+	vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
+	dvertex = &bsp->dvertexes[vert];
 
 	VectorAdd(dvertex->point, offset, worldpoint);
 	WorldToTexCoord(worldpoint, tex, texcoord);
@@ -380,7 +382,7 @@ CalcFaceExtents(const bsp29_dface_t *face, const vec3_t offset, lightsurf_t *sur
 	}
     }
 
-    FaceCentroid(face, worldpoint);
+    FaceCentroid(face, bsp, worldpoint);
     VectorAdd(worldpoint, offset, worldpoint);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
 
@@ -390,14 +392,14 @@ CalcFaceExtents(const bsp29_dface_t *face, const vec3_t offset, lightsurf_t *sur
 	surf->texmins[i] = mins[i];
 	surf->texsize[i] = maxs[i] - mins[i];
 	if (surf->texsize[i] > 17) {
-	    const dplane_t *plane = dplanes + face->planenum;
-	    const int offset = dtexdata.header->dataofs[tex->miptex];
-	    const miptex_t *miptex = (const miptex_t *)(dtexdata.base + offset);
+	    const dplane_t *plane = bsp->dplanes + face->planenum;
+	    const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
+	    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
 	    Error("Bad surface extents:\n"
 		  "   surface %d, %s extents = %d\n"
 		  "   texture %s at (%s)\n"
 		  "   surface normal (%s)\n",
-		  (int)(face - dfaces), i ? "t" : "s", surf->texsize[i],
+		  (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i],
 		  miptex->name, VecStr(worldpoint), VecStrf(plane->normal));
 	}
     }
@@ -491,7 +493,7 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 __attribute__((noinline))
 static void
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp29_dface_t *face,
-	       lightsurf_t *lightsurf)
+	       const bspdata_t *bsp, lightsurf_t *lightsurf)
 {
     plane_t *plane;
     vec3_t planepoint;
@@ -502,8 +504,8 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp29_dface_t *face,
 
     /* Set up the plane, including model offset */
     plane = &lightsurf->plane;
-    VectorCopy(dplanes[face->planenum].normal, plane->normal);
-    plane->dist = dplanes[face->planenum].dist;
+    VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
+    plane->dist = bsp->dplanes[face->planenum].dist;
     VectorScale(plane->normal, plane->dist, planepoint);
     VectorAdd(planepoint, modelinfo->offset, planepoint);
     plane->dist = DotProduct(plane->normal, planepoint);
@@ -513,12 +515,12 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp29_dface_t *face,
     }
 
     /* Set up the texorg for coordinate transformation */
-    CreateFaceTransform(face, &texorg.transform);
-    texorg.texinfo = &texinfo[face->texinfo];
+    CreateFaceTransform(face, bsp, &texorg.transform);
+    texorg.texinfo = &bsp->texinfo[face->texinfo];
     texorg.planedist = plane->dist;
 
     /* Set up the surface points */
-    CalcFaceExtents(face, modelinfo->offset, lightsurf);
+    CalcFaceExtents(face, modelinfo->offset, bsp, lightsurf);
     CalcPoints(modelinfo->model, &texorg, lightsurf);
 }
 
@@ -953,7 +955,8 @@ WriteLightmaps(bsp29_dface_t *face, const lightsurf_t *lightsurf,
  * ============
  */
 void
-LightFace(bsp29_dface_t *face, const modelinfo_t *modelinfo)
+LightFace(bsp29_dface_t *face, const modelinfo_t *modelinfo,
+	  const bspdata_t *bsp)
 {
     int i, j, k;
     const entity_t *entity;
@@ -967,10 +970,10 @@ LightFace(bsp29_dface_t *face, const modelinfo_t *modelinfo)
     face->lightofs = -1;
     for (i = 0; i < MAXLIGHTMAPS; i++)
 	face->styles[i] = 255;
-    if (texinfo[face->texinfo].flags & TEX_SPECIAL)
+    if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL)
 	return;
 
-    Lightsurf_Init(modelinfo, face, &lightsurf);
+    Lightsurf_Init(modelinfo, face, bsp, &lightsurf);
     Lightmaps_Init(lightmaps, MAXLIGHTMAPS + 1);
 
     /*
