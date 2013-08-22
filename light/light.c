@@ -214,7 +214,7 @@ int
 main(int argc, const char **argv)
 {
     bspdata_t bsp;
-    int i, bsp_version;
+    int i;
     double start;
     double end;
     char source[1024];
@@ -292,7 +292,7 @@ main(int argc, const char **argv)
     strcpy(source, argv[i]);
     StripExtension(source);
     DefaultExtension(source, ".bsp");
-    bsp_version = LoadBSPFile(source, &bsp);
+    LoadBSPFile(source, &bsp);
 
     LoadEntities(&bsp);
     MakeTnodes(&bsp);
@@ -306,7 +306,7 @@ main(int argc, const char **argv)
     if (write_litfile)
 	WriteLitFile(&bsp, source, LIT_VERSION);
 
-    WriteBSPFile(source, &bsp, bsp_version);
+    WriteBSPFile(source, &bsp);
 
     end = I_FloatTime();
     logprint("%5.1f seconds elapsed\n", end - start);

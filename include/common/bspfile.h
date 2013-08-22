@@ -254,6 +254,8 @@ typedef union {
 /* ========================================================================= */
 
 typedef struct {
+    int version;
+
     int nummodels;
     dmodel_t *dmodels;
 
@@ -300,9 +302,8 @@ typedef struct {
     int32_t *dsurfedges;
 } bspdata_t;
 
-/* LoadBSPFile returns the BSP version... */
-int LoadBSPFile(const char *filename, bspdata_t *bsp);
-void WriteBSPFile(const char *filename, bspdata_t *bsp, int version);
+void LoadBSPFile(const char *filename, bspdata_t *bsp);
+void WriteBSPFile(const char *filename, bspdata_t *bsp);
 void PrintBSPFileSizes(const bspdata_t *bsp);
 
 #endif /* __COMMON_BSPFILE_H__ */

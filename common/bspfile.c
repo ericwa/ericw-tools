@@ -207,17 +207,17 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
  * LoadBSPFile
  * =============
  */
-int
+void
 LoadBSPFile(const char *filename, bspdata_t *bsp)
 {
     dheader_t *header;
-    int i, version;
+    int i;
 
     /* load the file header */
     LoadFile(filename, &header);
 
     /* check the file version */
-    version = header->version = LittleLong(header->version);
+    bsp->version = header->version = LittleLong(header->version);
     logprint("BSP is version %i\n", header->version);
     if (header->version != BSPVERSION)
 	Error("Sorry, only bsp version %d supported.", BSPVERSION);
@@ -252,9 +252,6 @@ LoadBSPFile(const char *filename, bspdata_t *bsp)
 
     /* swap everything */
     SwapBSPFile(bsp, TO_CPU);
-
-    /* Return the version */
-    return version;
 }
 
 /* ========================================================================= */
@@ -285,7 +282,7 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
  * =============
  */
 void
-WriteBSPFile(const char *filename, bspdata_t *bsp, int version)
+WriteBSPFile(const char *filename, bspdata_t *bsp)
 {
     bspfile_t bspfile;
 
@@ -293,8 +290,8 @@ WriteBSPFile(const char *filename, bspdata_t *bsp, int version)
 
     SwapBSPFile(bsp, TO_DISK);
 
-    bspfile.header.version = LittleLong(version);
-    logprint("Writing BSP version %i\n", bspfile.header.version);
+    bspfile.header.version = LittleLong(bsp->version);
+    logprint("Writing BSP version %i\n", bsp->version);
     bspfile.file = SafeOpenWrite(filename);
 
     /* Save header space, updated after adding the lumps */

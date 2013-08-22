@@ -1175,7 +1175,7 @@ int
 main(int argc, char **argv)
 {
     bspdata_t bsp;
-    int i, bsp_version;
+    int i;
 
     init_log("vis.log");
     logprint("---- vis / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
@@ -1238,7 +1238,7 @@ main(int argc, char **argv)
     StripExtension(sourcefile);
     DefaultExtension(sourcefile, ".bsp");
 
-    bsp_version = LoadBSPFile(sourcefile, &bsp);
+    LoadBSPFile(sourcefile, &bsp);
 
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
@@ -1270,7 +1270,7 @@ main(int argc, char **argv)
 
     CalcAmbientSounds(&bsp);
 
-    WriteBSPFile(sourcefile, &bsp, bsp_version);
+    WriteBSPFile(sourcefile, &bsp);
 
 //    unlink (portalfile);
 
