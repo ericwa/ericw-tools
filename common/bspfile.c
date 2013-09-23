@@ -202,6 +202,32 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
     return length / size;
 }
 
+static const char *
+BSPVersionString(int version)
+{
+    static char buffer[20];
+
+    switch (version) {
+    case BSP2VERSION:
+	return "BSP2";
+    default:
+	snprintf(buffer, sizeof(buffer), "%d", version);
+	return buffer;
+    }
+}
+
+static qboolean
+BSPVersionSupported(int version)
+{
+    switch (version) {
+    case BSPVERSION:
+    case BSP2VERSION:
+	return true;
+    default:
+	return false;
+    }
+}
+
 /*
  * =============
  * LoadBSPFile
@@ -217,10 +243,10 @@ LoadBSPFile(const char *filename, bspdata_t *bsp)
     LoadFile(filename, &header);
 
     /* check the file version */
-    bsp->version = header->version = LittleLong(header->version);
-    logprint("BSP is version %i\n", header->version);
-    if (header->version != BSPVERSION)
-	Error("Sorry, only bsp version %d supported.", BSPVERSION);
+    header->version = LittleLong(header->version);
+    logprint("BSP is version %s\n", BSPVersionString(header->version));
+    if (!BSPVersionSupported(header->version))
+	Error("Sorry, this bsp version is not supported.");
 
     /* swap the lump headers */
     for (i = 0; i < BSP_LUMPS; i++) {
@@ -230,6 +256,7 @@ LoadBSPFile(const char *filename, bspdata_t *bsp)
 
     /* copy the data */
     memset(bsp, 0, sizeof(*bsp));
+    bsp->version = header->version;
     bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
     bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
     bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
