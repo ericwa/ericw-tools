@@ -1,4 +1,4 @@
-Unreleased
+2013-09-24 TyrUtils v0.11
 
 * Support BSP2 format (qbsp requires the "-bsp2" command line option)
 * qbsp: Fix animating texture bug when brushes are textured with alt-animations
