@@ -21,40 +21,75 @@
 #include <common/mathlib.h>
 #include <common/bspfile.h>
 
-/* ========================================================================= */
+static const char *
+BSPVersionString(int32_t version)
+{
+    static char buffers[2][20];
+    static int index;
+    char *buffer;
+
+    switch (version) {
+    case BSP2VERSION:
+	return "BSP2";
+    default:
+	buffer = buffers[1 & ++index];
+	snprintf(buffer, sizeof(buffers[0]), "%d", version);
+	return buffer;
+    }
+}
+
+static qboolean
+BSPVersionSupported(int32_t version)
+{
+    switch (version) {
+    case BSPVERSION:
+    case BSP2VERSION:
+	return true;
+    default:
+	return false;
+    }
+}
+
+/*
+ * =========================================================================
+ * BSP BYTE SWAPPING
+ * =========================================================================
+ */
 
 typedef enum { TO_DISK, TO_CPU } swaptype_t;
 
-/*
- * =============
- * SwapBSPFile
- * Byte swaps all data in a bsp file.
- * =============
- */
-void
-SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
+static void
+SwapBSPVertexes(int numvertexes, dvertex_t *verticies)
 {
+    dvertex_t *vertex = verticies;
     int i, j;
 
-    /* vertexes */
-    for (i = 0; i < bspdata->numvertexes; i++) {
-	dvertex_t *vertex = &bspdata->dvertexes[i];
+    for (i = 0; i < numvertexes; i++, vertex++)
 	for (j = 0; j < 3; j++)
 	    vertex->point[j] = LittleFloat(vertex->point[j]);
-    }
+}
 
-    /* planes */
-    for (i = 0; i < bspdata->numplanes; i++) {
-	dplane_t *plane = &bspdata->dplanes[i];
+static void
+SwapBSPPlanes(int numplanes, dplane_t *planes)
+{
+    dplane_t *plane = planes;
+    int i, j;
+
+    for (i = 0; i < numplanes; i++, plane++) {
 	for (j = 0; j < 3; j++)
 	    plane->normal[j] = LittleFloat(plane->normal[j]);
 	plane->dist = LittleFloat(plane->dist);
 	plane->type = LittleLong(plane->type);
     }
+}
 
-    /* texinfos */
-    for (i = 0; i < bspdata->numtexinfo; i++) {
-	texinfo_t *texinfo = &bspdata->texinfo[i];
+static void
+SwapBSPTexinfo(int numtexinfo, texinfo_t *texinfos)
+{
+    texinfo_t *texinfo = texinfos;
+    int i, j;
+
+    for (i = 0; i < numtexinfo; i++, texinfo++) {
 	for (j = 0; j < 4; j++) {
 	    texinfo->vecs[0][j] = LittleFloat(texinfo->vecs[0][j]);
 	    texinfo->vecs[1][j] = LittleFloat(texinfo->vecs[1][j]);
@@ -62,10 +97,15 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 	texinfo->miptex = LittleLong(texinfo->miptex);
 	texinfo->flags = LittleLong(texinfo->flags);
     }
+}
 
-    /* faces */
-    for (i = 0; i < bspdata->numfaces; i++) {
-	bsp29_dface_t *face = &bspdata->dfaces[i];
+static void
+SwapBSP29Faces(int numfaces, bsp29_dface_t *faces)
+{
+    bsp29_dface_t *face = faces;
+    int i;
+
+    for (i = 0; i < numfaces; i++, face++) {
 	face->texinfo = LittleShort(face->texinfo);
 	face->planenum = LittleShort(face->planenum);
 	face->side = LittleShort(face->side);
@@ -73,10 +113,32 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 	face->firstedge = LittleLong(face->firstedge);
 	face->numedges = LittleShort(face->numedges);
     }
+}
+
+static void
+SwapBSP2Faces(int numfaces, bsp2_dface_t *faces)
+{
+    bsp2_dface_t *face = faces;
+    int i;
+
+    for (i = 0; i < numfaces; i++, face++) {
+	face->texinfo = LittleLong(face->texinfo);
+	face->planenum = LittleLong(face->planenum);
+	face->side = LittleLong(face->side);
+	face->lightofs = LittleLong(face->lightofs);
+	face->firstedge = LittleLong(face->firstedge);
+	face->numedges = LittleLong(face->numedges);
+    }
+}
+
+static void
+SwapBSP29Nodes(int numnodes, bsp29_dnode_t *nodes)
+{
+    bsp29_dnode_t *node = nodes;
+    int i, j;
 
     /* nodes */
-    for (i = 0; i < bspdata->numnodes; i++) {
-	bsp29_dnode_t *node = &bspdata->dnodes[i];
+    for (i = 0; i < numnodes; i++, node++) {
 	node->planenum = LittleLong(node->planenum);
 	for (j = 0; j < 3; j++) {
 	    node->mins[j] = LittleShort(node->mins[j]);
@@ -87,10 +149,35 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 	node->firstface = LittleShort(node->firstface);
 	node->numfaces = LittleShort(node->numfaces);
     }
+}
 
-    /* leafs */
-    for (i = 0; i < bspdata->numleafs; i++) {
-	bsp29_dleaf_t *leaf = &bspdata->dleafs[i];
+static void
+SwapBSP2Nodes(int numnodes, bsp2_dnode_t *nodes)
+{
+    bsp2_dnode_t *node = nodes;
+    int i, j;
+
+    /* nodes */
+    for (i = 0; i < numnodes; i++, node++) {
+	node->planenum = LittleLong(node->planenum);
+	for (j = 0; j < 3; j++) {
+	    node->mins[j] = LittleShort(node->mins[j]);
+	    node->maxs[j] = LittleShort(node->maxs[j]);
+	}
+	node->children[0] = LittleLong(node->children[0]);
+	node->children[1] = LittleLong(node->children[1]);
+	node->firstface = LittleLong(node->firstface);
+	node->numfaces = LittleLong(node->numfaces);
+    }
+}
+
+static void
+SwapBSP29Leafs(int numleafs, bsp29_dleaf_t *leafs)
+{
+    bsp29_dleaf_t *leaf = leafs;
+    int i, j;
+
+    for (i = 0; i < numleafs; i++, leaf++) {
 	leaf->contents = LittleLong(leaf->contents);
 	for (j = 0; j < 3; j++) {
 	    leaf->mins[j] = LittleShort(leaf->mins[j]);
@@ -100,49 +187,113 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 	leaf->nummarksurfaces = LittleShort(leaf->nummarksurfaces);
 	leaf->visofs = LittleLong(leaf->visofs);
     }
+}
 
-    /* clipnodes */
-    for (i = 0; i < bspdata->numclipnodes; i++) {
-	bsp29_dclipnode_t *clipnode = &bspdata->dclipnodes[i];
+static void
+SwapBSP2Leafs(int numleafs, bsp2_dleaf_t *leafs)
+{
+    bsp2_dleaf_t *leaf = leafs;
+    int i, j;
+
+    for (i = 0; i < numleafs; i++, leaf++) {
+	leaf->contents = LittleLong(leaf->contents);
+	for (j = 0; j < 3; j++) {
+	    leaf->mins[j] = LittleShort(leaf->mins[j]);
+	    leaf->maxs[j] = LittleShort(leaf->maxs[j]);
+	}
+	leaf->firstmarksurface = LittleLong(leaf->firstmarksurface);
+	leaf->nummarksurfaces = LittleLong(leaf->nummarksurfaces);
+	leaf->visofs = LittleLong(leaf->visofs);
+    }
+}
+
+static void
+SwapBSP29Clipnodes(int numclipnodes, bsp29_dclipnode_t *clipnodes)
+{
+    bsp29_dclipnode_t *clipnode = clipnodes;
+    int i;
+
+    for (i = 0; i < numclipnodes; i++, clipnode++) {
 	clipnode->planenum = LittleLong(clipnode->planenum);
 	clipnode->children[0] = LittleShort(clipnode->children[0]);
 	clipnode->children[1] = LittleShort(clipnode->children[1]);
     }
+}
 
-    /* miptex */
-    if (bspdata->texdatasize) {
-	dmiptexlump_t *header = bspdata->dtexdata.header;
-	int count = header->nummiptex;
-	if (swap == TO_CPU)
-	    count = LittleLong(count);
+static void
+SwapBSP2Clipnodes(int numclipnodes, bsp2_dclipnode_t *clipnodes)
+{
+    bsp2_dclipnode_t *clipnode = clipnodes;
+    int i;
 
-	header->nummiptex = LittleLong(header->nummiptex);
-	for (i = 0; i < count; i++)
-	    header->dataofs[i] = LittleLong(header->dataofs[i]);
+    for (i = 0; i < numclipnodes; i++, clipnode++) {
+	clipnode->planenum = LittleLong(clipnode->planenum);
+	clipnode->children[0] = LittleLong(clipnode->children[0]);
+	clipnode->children[1] = LittleLong(clipnode->children[1]);
     }
+}
 
-    /* marksurfaces */
-    for (i = 0; i < bspdata->nummarksurfaces; i++) {
-	uint16_t *marksurface = &bspdata->dmarksurfaces[i];
+static void
+SwapBSP29Marksurfaces(int nummarksurfaces, uint16_t *dmarksurfaces)
+{
+    uint16_t *marksurface = dmarksurfaces;
+    int i;
+
+    for (i = 0; i < nummarksurfaces; i++, marksurface++)
 	*marksurface = LittleShort(*marksurface);
-    }
+}
 
-    /* surfedges */
-    for (i = 0; i < bspdata->numsurfedges; i++) {
-	int32_t *surfedge = &bspdata->dsurfedges[i];
+static void
+SwapBSP2Marksurfaces(int nummarksurfaces, uint32_t *dmarksurfaces)
+{
+    uint32_t *marksurface = dmarksurfaces;
+    int i;
+
+    for (i = 0; i < nummarksurfaces; i++, marksurface++)
+	*marksurface = LittleLong(*marksurface);
+}
+
+static void
+SwapBSPSurfedges(int numsurfedges, int32_t *dsurfedges)
+{
+    int32_t *surfedge = dsurfedges;
+    int i;
+
+    for (i = 0; i < numsurfedges; i++, surfedge++)
 	*surfedge = LittleLong(*surfedge);
-    }
+}
 
-    /* edges */
-    for (i = 0; i < bspdata->numedges; i++) {
-	bsp29_dedge_t *edge = &bspdata->dedges[i];
+static void
+SwapBSP29Edges(int numedges, bsp29_dedge_t *dedges)
+{
+    bsp29_dedge_t *edge = dedges;
+    int i;
+
+    for (i = 0; i < numedges; i++, edge++) {
 	edge->v[0] = LittleShort(edge->v[0]);
 	edge->v[1] = LittleShort(edge->v[1]);
     }
+}
 
-    /* models */
-    for (i = 0; i < bspdata->nummodels; i++) {
-	dmodel_t *dmodel = &bspdata->dmodels[i];
+static void
+SwapBSP2Edges(int numedges, bsp2_dedge_t *dedges)
+{
+    bsp2_dedge_t *edge = dedges;
+    int i;
+
+    for (i = 0; i < numedges; i++, edge++) {
+	edge->v[0] = LittleLong(edge->v[0]);
+	edge->v[1] = LittleLong(edge->v[1]);
+    }
+}
+
+static void
+SwapBSPModels(int nummodels, dmodel_t *dmodels)
+{
+    dmodel_t *dmodel = dmodels;
+    int i, j;
+
+    for (i = 0; i < nummodels; i++, dmodel++) {
 	for (j = 0; j < MAX_MAP_HULLS; j++)
 	    dmodel->headnode[j] = LittleLong(dmodel->headnode[j]);
 	dmodel->visleafs = LittleLong(dmodel->visleafs);
@@ -156,7 +307,401 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
     }
 }
 
-const lumpspec_t lumpspec[] = {
+static void
+SwapBSPMiptex(int texdatasize, dmiptexlump_t *header, const swaptype_t swap)
+{
+    int i, count;
+
+    if (!texdatasize)
+	return;
+
+    count = header->nummiptex;
+    if (swap == TO_CPU)
+	count = LittleLong(count);
+
+    header->nummiptex = LittleLong(header->nummiptex);
+    for (i = 0; i < count; i++)
+	header->dataofs[i] = LittleLong(header->dataofs[i]);
+}
+
+/*
+ * =============
+ * SwapBSPFile
+ * Byte swaps all data in a bsp file.
+ * =============
+ */
+static void
+SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
+{
+    if (bspdata->version == BSPVERSION) {
+	bsp29_t *bsp29 = &bspdata->data.bsp29;
+
+	SwapBSPVertexes(bsp29->numvertexes, bsp29->dvertexes);
+	SwapBSPPlanes(bsp29->numplanes, bsp29->dplanes);
+	SwapBSPTexinfo(bsp29->numtexinfo, bsp29->texinfo);
+	SwapBSP29Faces(bsp29->numfaces, bsp29->dfaces);
+	SwapBSP29Nodes(bsp29->numnodes, bsp29->dnodes);
+	SwapBSP29Leafs(bsp29->numleafs, bsp29->dleafs);
+	SwapBSP29Clipnodes(bsp29->numclipnodes, bsp29->dclipnodes);
+	SwapBSPMiptex(bsp29->texdatasize, bsp29->dtexdata.header, swap);
+	SwapBSP29Marksurfaces(bsp29->nummarksurfaces, bsp29->dmarksurfaces);
+	SwapBSPSurfedges(bsp29->numsurfedges, bsp29->dsurfedges);
+	SwapBSP29Edges(bsp29->numedges, bsp29->dedges);
+	SwapBSPModels(bsp29->nummodels, bsp29->dmodels);
+
+	return;
+    }
+
+    if (bspdata->version == BSP2VERSION) {
+	bsp2_t *bsp2 = &bspdata->data.bsp2;
+
+	SwapBSPVertexes(bsp2->numvertexes, bsp2->dvertexes);
+	SwapBSPPlanes(bsp2->numplanes, bsp2->dplanes);
+	SwapBSPTexinfo(bsp2->numtexinfo, bsp2->texinfo);
+	SwapBSP2Faces(bsp2->numfaces, bsp2->dfaces);
+	SwapBSP2Nodes(bsp2->numnodes, bsp2->dnodes);
+	SwapBSP2Leafs(bsp2->numleafs, bsp2->dleafs);
+	SwapBSP2Clipnodes(bsp2->numclipnodes, bsp2->dclipnodes);
+	SwapBSPMiptex(bsp2->texdatasize, bsp2->dtexdata.header, swap);
+	SwapBSP2Marksurfaces(bsp2->nummarksurfaces, bsp2->dmarksurfaces);
+	SwapBSPSurfedges(bsp2->numsurfedges, bsp2->dsurfedges);
+	SwapBSP2Edges(bsp2->numedges, bsp2->dedges);
+	SwapBSPModels(bsp2->nummodels, bsp2->dmodels);
+
+	return;
+    }
+
+    Error("Unsupported BSP version: %d", bspdata->version);
+}
+
+/*
+ * =========================================================================
+ * BSP Format Conversion (ver. 29 <-> BSP2)
+ * =========================================================================
+ */
+
+static bsp2_dleaf_t *
+BSP29to2_Leafs(const bsp29_t *bsp) {
+    const bsp29_dleaf_t *dleaf29 = bsp->dleafs;
+    bsp2_dleaf_t *newdata, *dleaf2;
+    int i, j;
+
+    newdata = dleaf2 = malloc(bsp->numleafs * sizeof(*dleaf2));
+
+    for (i = 0; i < bsp->numleafs; i++, dleaf29++, dleaf2++) {
+	dleaf2->contents = dleaf29->contents;
+	dleaf2->visofs = dleaf29->visofs;
+	for (j = 0; j < 3; j++) {
+	    dleaf2->mins[j] = dleaf29->mins[j];
+	    dleaf2->maxs[j] = dleaf29->maxs[j];
+	}
+	dleaf2->firstmarksurface = dleaf29->firstmarksurface;
+	dleaf2->nummarksurfaces = dleaf29->nummarksurfaces;
+	for (j = 0; j < NUM_AMBIENTS; j++)
+	    dleaf2->ambient_level[j] = dleaf29->ambient_level[j];
+    }
+
+    free(bsp->dleafs);
+
+    return newdata;
+}
+
+static bsp29_dleaf_t *
+BSP2to29_Leafs(const bsp2_t *bsp) {
+    const bsp2_dleaf_t *dleaf2 = bsp->dleafs;
+    bsp29_dleaf_t *newdata, *dleaf29;
+    int i, j;
+
+    newdata = dleaf29 = malloc(bsp->numleafs * sizeof(*dleaf29));
+
+    for (i = 0; i < bsp->numleafs; i++, dleaf2++, dleaf29++) {
+	dleaf29->contents = dleaf2->contents;
+	dleaf29->visofs = dleaf2->visofs;
+	for (j = 0; j < 3; j++) {
+	    dleaf29->mins[j] = dleaf2->mins[j];
+	    dleaf29->maxs[j] = dleaf2->maxs[j];
+	}
+	dleaf29->firstmarksurface = dleaf2->firstmarksurface;
+	dleaf29->nummarksurfaces = dleaf2->nummarksurfaces;
+	for (j = 0; j < NUM_AMBIENTS; j++)
+	    dleaf29->ambient_level[j] = dleaf2->ambient_level[j];
+    }
+
+    free(bsp->dleafs);
+
+    return newdata;
+}
+
+static bsp2_dnode_t *
+BSP29to2_Nodes(const bsp29_t *bsp) {
+    const bsp29_dnode_t *dnode29 = bsp->dnodes;
+    bsp2_dnode_t *newdata, *dnode2;
+    int i, j;
+
+    newdata = dnode2 = malloc(bsp->numnodes * sizeof(*dnode2));
+
+    for (i = 0; i < bsp->numnodes; i++, dnode29++, dnode2++) {
+	dnode2->planenum = dnode29->planenum;
+	dnode2->children[0] = dnode29->children[0];
+	dnode2->children[1] = dnode29->children[1];
+	for (j = 0; j < 3; j++) {
+	    dnode2->mins[j] = dnode29->mins[j];
+	    dnode2->maxs[j] = dnode29->maxs[j];
+	}
+	dnode2->firstface = dnode29->firstface;
+	dnode2->numfaces = dnode29->numfaces;
+    }
+
+    free(bsp->dnodes);
+
+    return newdata;
+}
+
+static bsp29_dnode_t *
+BSP2to29_Nodes(const bsp2_t *bsp) {
+    const bsp2_dnode_t *dnode2 = bsp->dnodes;
+    bsp29_dnode_t *newdata, *dnode29;
+    int i, j;
+
+    newdata = dnode29 = malloc(bsp->numnodes * sizeof(*dnode29));
+
+    for (i = 0; i < bsp->numnodes; i++, dnode2++, dnode29++) {
+	dnode29->planenum = dnode2->planenum;
+	dnode29->children[0] = dnode2->children[0];
+	dnode29->children[1] = dnode2->children[1];
+	for (j = 0; j < 3; j++) {
+	    dnode29->mins[j] = dnode2->mins[j];
+	    dnode29->maxs[j] = dnode2->maxs[j];
+	}
+	dnode29->firstface = dnode2->firstface;
+	dnode29->numfaces = dnode2->numfaces;
+    }
+
+    free(bsp->dnodes);
+
+    return newdata;
+}
+
+static bsp2_dface_t *
+BSP29to2_Faces(const bsp29_t *bsp) {
+    const bsp29_dface_t *dface29 = bsp->dfaces;
+    bsp2_dface_t *newdata, *dface2;
+    int i, j;
+
+    newdata = dface2 = malloc(bsp->numfaces * sizeof(*dface2));
+
+    for (i = 0; i < bsp->numfaces; i++, dface29++, dface2++) {
+	dface2->planenum = dface29->planenum;
+	dface2->side = dface29->side;
+	dface2->firstedge = dface29->firstedge;
+	dface2->numedges = dface29->numedges;
+	dface2->texinfo = dface29->texinfo;
+	for (j = 0; j < MAXLIGHTMAPS; j++)
+	    dface2->styles[j] = dface29->styles[j];
+	dface2->lightofs = dface29->lightofs;
+    }
+
+    free(bsp->dfaces);
+
+    return newdata;
+}
+
+static bsp29_dface_t *
+BSP2to29_Faces(const bsp2_t *bsp) {
+    const bsp2_dface_t *dface2 = bsp->dfaces;
+    bsp29_dface_t *newdata, *dface29;
+    int i, j;
+
+    newdata = dface29 = malloc(bsp->numfaces * sizeof(*dface29));
+
+    for (i = 0; i < bsp->numfaces; i++, dface2++, dface29++) {
+	dface29->planenum = dface2->planenum;
+	dface29->side = dface2->side;
+	dface29->firstedge = dface2->firstedge;
+	dface29->numedges = dface2->numedges;
+	dface29->texinfo = dface2->texinfo;
+	for (j = 0; j < MAXLIGHTMAPS; j++)
+	    dface29->styles[j] = dface2->styles[j];
+	dface29->lightofs = dface2->lightofs;
+    }
+
+    free(bsp->dfaces);
+
+    return newdata;
+}
+
+static bsp2_dclipnode_t *
+BSP29to2_Clipnodes(const bsp29_t *bsp) {
+    const bsp29_dclipnode_t *dclipnode29 = bsp->dclipnodes;
+    bsp2_dclipnode_t *newdata, *dclipnode2;
+    int i, j;
+
+    newdata = dclipnode2 = malloc(bsp->numclipnodes * sizeof(*dclipnode2));
+
+    for (i = 0; i < bsp->numclipnodes; i++, dclipnode29++, dclipnode2++) {
+	dclipnode2->planenum = dclipnode29->planenum;
+	for (j = 0; j < 2; j++) {
+	    /* Slightly tricky since we support > 32k clipnodes */
+	    int32_t child = (uint16_t)dclipnode29->children[j];
+	    dclipnode2->children[j] = child > 0xfff0 ? child - 0x10000 : child;
+	}
+    }
+
+    free(bsp->dclipnodes);
+
+    return newdata;
+}
+
+static bsp29_dclipnode_t *
+BSP2to29_Clipnodes(const bsp2_t *bsp) {
+    const bsp2_dclipnode_t *dclipnode2 = bsp->dclipnodes;
+    bsp29_dclipnode_t *newdata, *dclipnode29;
+    int i, j;
+
+    newdata = dclipnode29 = malloc(bsp->numclipnodes * sizeof(*dclipnode29));
+
+    for (i = 0; i < bsp->numclipnodes; i++, dclipnode2++, dclipnode29++) {
+	dclipnode29->planenum = dclipnode2->planenum;
+	for (j = 0; j < 2; j++) {
+	    /* Slightly tricky since we support > 32k clipnodes */
+	    int32_t child = dclipnode2->children[j];
+	    dclipnode29->children[j] = child < 0 ? child + 0x10000 : child;
+	}
+    }
+
+    free(bsp->dclipnodes);
+
+    return newdata;
+}
+
+static bsp2_dedge_t *
+BSP29to2_Edges(const bsp29_t *bsp)
+{
+    const bsp29_dedge_t *dedge29 = bsp->dedges;
+    bsp2_dedge_t *newdata, *dedge2;
+    int i;
+
+    newdata = dedge2 = malloc(bsp->numedges * sizeof(*dedge2));
+
+    for (i = 0; i < bsp->numedges; i++, dedge29++, dedge2++) {
+	dedge2->v[0] = dedge29->v[0];
+	dedge2->v[1] = dedge29->v[1];
+    }
+
+    free(bsp->dedges);
+
+    return newdata;
+}
+
+static bsp29_dedge_t *
+BSP2to29_Edges(const bsp2_t *bsp)
+{
+    const bsp2_dedge_t *dedge2 = bsp->dedges;
+    bsp29_dedge_t *newdata, *dedge29;
+    int i;
+
+    newdata = dedge29 = malloc(bsp->numedges * sizeof(*dedge29));
+
+    for (i = 0; i < bsp->numedges; i++, dedge2++, dedge29++) {
+	dedge29->v[0] = dedge2->v[0];
+	dedge29->v[1] = dedge2->v[1];
+    }
+
+    free(bsp->dedges);
+
+    return newdata;
+}
+
+static uint32_t *
+BSP29to2_Marksurfaces(const bsp29_t *bsp)
+{
+    const uint16_t *dmarksurface29 = bsp->dmarksurfaces;
+    uint32_t *newdata, *dmarksurface2;
+    int i;
+
+    newdata = dmarksurface2 = malloc(bsp->nummarksurfaces * sizeof(*dmarksurface2));
+
+    for (i = 0; i < bsp->nummarksurfaces; i++, dmarksurface29++, dmarksurface2++)
+	*dmarksurface2 = *dmarksurface29;
+
+    free(bsp->dmarksurfaces);
+
+    return newdata;
+}
+
+static uint16_t *
+BSP2to29_Marksurfaces(const bsp2_t *bsp)
+{
+    const uint32_t *dmarksurface2 = bsp->dmarksurfaces;
+    uint16_t *newdata, *dmarksurface29;
+    int i;
+
+    newdata = dmarksurface29 = malloc(bsp->nummarksurfaces * sizeof(*dmarksurface29));
+
+    for (i = 0; i < bsp->nummarksurfaces; i++, dmarksurface2++, dmarksurface29++)
+	*dmarksurface29 = *dmarksurface2;
+
+    free(bsp->dmarksurfaces);
+
+    return newdata;
+}
+
+/*
+ * ConvertBSPFormat
+ * - BSP is assumed to be in CPU byte order already
+ * - No checks are done here (yet) for overflow of values when down-converting
+ */
+void
+ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
+{
+    if (bspdata->version == version)
+	return;
+
+    if (bspdata->version == BSPVERSION && version == BSP2VERSION) {
+	bsp29_t *bsp29 = &bspdata->data.bsp29;
+	bsp2_t *bsp2 = &bspdata->data.bsp2;
+
+	bsp2->dleafs = BSP29to2_Leafs(bsp29);
+	bsp2->dnodes = BSP29to2_Nodes(bsp29);
+	bsp2->dfaces = BSP29to2_Faces(bsp29);
+	bsp2->dclipnodes = BSP29to2_Clipnodes(bsp29);
+	bsp2->dedges = BSP29to2_Edges(bsp29);
+	bsp2->dmarksurfaces = BSP29to2_Marksurfaces(bsp29);
+
+	/* Conversion complete! */
+	bspdata->version = BSP2VERSION;
+
+	return;
+    }
+
+    if (bspdata->version == BSP2VERSION && version == BSPVERSION) {
+	bsp29_t *bsp29 = &bspdata->data.bsp29;
+	bsp2_t *bsp2 = &bspdata->data.bsp2;
+
+	bsp29->dleafs = BSP2to29_Leafs(bsp2);
+	bsp29->dnodes = BSP2to29_Nodes(bsp2);
+	bsp29->dfaces = BSP2to29_Faces(bsp2);
+	bsp29->dclipnodes = BSP2to29_Clipnodes(bsp2);
+	bsp29->dedges = BSP2to29_Edges(bsp2);
+	bsp29->dmarksurfaces = BSP2to29_Marksurfaces(bsp2);
+
+	/* Conversion complete! */
+	bspdata->version = BSPVERSION;
+
+	return;
+    }
+
+    Error("Don't know how to convert BSP version %s to %s",
+	  BSPVersionString(bspdata->version), BSPVersionString(version));
+}
+
+/*
+ * =========================================================================
+ * ...
+ * =========================================================================
+ */
+
+const lumpspec_t lumpspec_bsp29[] = {
     { "entities",     sizeof(char)              },
     { "planes",       sizeof(dplane_t)          },
     { "texture",      sizeof(byte)              },
@@ -174,20 +719,49 @@ const lumpspec_t lumpspec[] = {
     { "models",       sizeof(dmodel_t)          },
 };
 
+const lumpspec_t lumpspec_bsp2[] = {
+    { "entities",     sizeof(char)              },
+    { "planes",       sizeof(dplane_t)          },
+    { "texture",      sizeof(byte)              },
+    { "vertexes",     sizeof(dvertex_t)         },
+    { "visibility",   sizeof(byte)              },
+    { "nodes",        sizeof(bsp2_dnode_t)      },
+    { "texinfos",     sizeof(texinfo_t)         },
+    { "faces",        sizeof(bsp2_dface_t)      },
+    { "lighting",     sizeof(byte)              },
+    { "clipnodes",    sizeof(bsp2_dclipnode_t ) },
+    { "leafs",        sizeof(bsp2_dleaf_t)      },
+    { "marksurfaces", sizeof(uint32_t)          },
+    { "edges",        sizeof(bsp2_dedge_t)      },
+    { "surfedges",    sizeof(int32_t)           },
+    { "models",       sizeof(dmodel_t)          },
+};
+
 static int
 CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 {
-    const size_t size = lumpspec[lumpnum].size;
+    const lumpspec_t *lumpspec;
     byte **bufferptr = destptr;
     byte *buffer = *bufferptr;
     int length;
     int ofs;
 
+    switch (header->version) {
+    case BSPVERSION:
+	lumpspec = &lumpspec_bsp29[lumpnum];
+	break;
+    case BSP2VERSION:
+	lumpspec = &lumpspec_bsp2[lumpnum];
+	break;
+    default:
+	Error("Unsupported BSP version: %d", header->version);
+    }
+
     length = header->lumps[lumpnum].filelen;
     ofs = header->lumps[lumpnum].fileofs;
 
-    if (length % size)
-	Error("%s: odd %s lump size", __func__, lumpspec[lumpnum].name);
+    if (length % lumpspec->size)
+	Error("%s: odd %s lump size", __func__, lumpspec->name);
 
     if (buffer)
 	free(buffer);
@@ -199,33 +773,7 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
     memcpy(buffer, (const byte *)header + ofs, length);
     buffer[length] = 0; /* In case of corrupt entity lump */
 
-    return length / size;
-}
-
-static const char *
-BSPVersionString(int version)
-{
-    static char buffer[20];
-
-    switch (version) {
-    case BSP2VERSION:
-	return "BSP2";
-    default:
-	snprintf(buffer, sizeof(buffer), "%d", version);
-	return buffer;
-    }
-}
-
-static qboolean
-BSPVersionSupported(int version)
-{
-    switch (version) {
-    case BSPVERSION:
-    case BSP2VERSION:
-	return true;
-    default:
-	return false;
-    }
+    return length / lumpspec->size;
 }
 
 /*
@@ -234,7 +782,7 @@ BSPVersionSupported(int version)
  * =============
  */
 void
-LoadBSPFile(const char *filename, bspdata_t *bsp)
+LoadBSPFile(const char *filename, bspdata_t *bspdata)
 {
     dheader_t *header;
     int i;
@@ -255,30 +803,57 @@ LoadBSPFile(const char *filename, bspdata_t *bsp)
     }
 
     /* copy the data */
-    memset(bsp, 0, sizeof(*bsp));
-    bsp->version = header->version;
-    bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
-    bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
-    bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
-    bsp->numleafs = CopyLump(header, LUMP_LEAFS, &bsp->dleafs);
-    bsp->numnodes = CopyLump(header, LUMP_NODES, &bsp->dnodes);
-    bsp->numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp->texinfo);
-    bsp->numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp->dclipnodes);
-    bsp->numfaces = CopyLump(header, LUMP_FACES, &bsp->dfaces);
-    bsp->nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
-    bsp->numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp->dsurfedges);
-    bsp->numedges = CopyLump(header, LUMP_EDGES, &bsp->dedges);
+    if (header->version == BSPVERSION) {
+	bsp29_t *bsp = &bspdata->data.bsp29;
 
-    bsp->texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp->dtexdata.base);
-    bsp->visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp->dvisdata);
-    bsp->lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp->dlightdata);
-    bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
+	memset(bsp, 0, sizeof(*bsp));
+	bspdata->version = header->version;
+	bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
+	bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
+	bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
+	bsp->numleafs = CopyLump(header, LUMP_LEAFS, &bsp->dleafs);
+	bsp->numnodes = CopyLump(header, LUMP_NODES, &bsp->dnodes);
+	bsp->numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp->texinfo);
+	bsp->numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp->dclipnodes);
+	bsp->numfaces = CopyLump(header, LUMP_FACES, &bsp->dfaces);
+	bsp->nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
+	bsp->numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp->dsurfedges);
+	bsp->numedges = CopyLump(header, LUMP_EDGES, &bsp->dedges);
+
+	bsp->texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp->dtexdata.base);
+	bsp->visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp->dvisdata);
+	bsp->lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp->dlightdata);
+	bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
+    }
+
+    if (header->version == BSP2VERSION) {
+	bsp2_t *bsp = &bspdata->data.bsp2;
+
+	memset(bsp, 0, sizeof(*bsp));
+	bspdata->version = header->version;
+	bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
+	bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
+	bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
+	bsp->numleafs = CopyLump(header, LUMP_LEAFS, &bsp->dleafs);
+	bsp->numnodes = CopyLump(header, LUMP_NODES, &bsp->dnodes);
+	bsp->numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp->texinfo);
+	bsp->numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp->dclipnodes);
+	bsp->numfaces = CopyLump(header, LUMP_FACES, &bsp->dfaces);
+	bsp->nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
+	bsp->numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp->dsurfedges);
+	bsp->numedges = CopyLump(header, LUMP_EDGES, &bsp->dedges);
+
+	bsp->texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp->dtexdata.base);
+	bsp->visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp->dvisdata);
+	bsp->lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp->dlightdata);
+	bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
+    }
 
     /* everything has been copied out */
     free(header);
 
     /* swap everything */
-    SwapBSPFile(bsp, TO_CPU);
+    SwapBSPFile(bspdata, TO_CPU);
 }
 
 /* ========================================================================= */
@@ -291,9 +866,23 @@ typedef struct {
 static void
 AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
 {
-    const size_t size = lumpspec[lumpnum].size * count;
     lump_t *lump = &bspfile->header.lumps[lumpnum];
     byte pad[4] = {0};
+    size_t size;
+
+    /* FIXME - bad API, needing to byte swap back and forth... */
+    switch (LittleLong(bspfile->header.version)) {
+    case BSPVERSION:
+	size = lumpspec_bsp29[lumpnum].size * count;
+	break;
+    case BSP2VERSION:
+	size = lumpspec_bsp2[lumpnum].size * count;
+	break;
+    default:
+	Error("Unsupported BSP version: %d",
+	      LittleLong(bspfile->header.version));
+
+    }
 
     lump->fileofs = LittleLong(ftell(bspfile->file));
     lump->filelen = LittleLong(size);
@@ -309,37 +898,62 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
  * =============
  */
 void
-WriteBSPFile(const char *filename, bspdata_t *bsp)
+WriteBSPFile(const char *filename, bspdata_t *bspdata)
 {
     bspfile_t bspfile;
 
     memset(&bspfile.header, 0, sizeof(bspfile.header));
 
-    SwapBSPFile(bsp, TO_DISK);
+    SwapBSPFile(bspdata, TO_DISK);
 
-    bspfile.header.version = LittleLong(bsp->version);
-    logprint("Writing BSP version %i\n", bsp->version);
+    bspfile.header.version = LittleLong(bspdata->version);
+    logprint("Writing BSP version %i\n", bspdata->version);
     bspfile.file = SafeOpenWrite(filename);
 
     /* Save header space, updated after adding the lumps */
     SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
 
-    AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
-    AddLump(&bspfile, LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
-    AddLump(&bspfile, LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
-    AddLump(&bspfile, LUMP_NODES, bsp->dnodes, bsp->numnodes);
-    AddLump(&bspfile, LUMP_TEXINFO, bsp->texinfo, bsp->numtexinfo);
-    AddLump(&bspfile, LUMP_FACES, bsp->dfaces, bsp->numfaces);
-    AddLump(&bspfile, LUMP_CLIPNODES, bsp->dclipnodes, bsp->numclipnodes);
-    AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
-    AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
-    AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
-    AddLump(&bspfile, LUMP_MODELS, bsp->dmodels, bsp->nummodels);
+    if (bspdata->version == BSPVERSION) {
+	bsp29_t *bsp = &bspdata->data.bsp29;
 
-    AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
-    AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
-    AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
-    AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata.base, bsp->texdatasize);
+	AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
+	AddLump(&bspfile, LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
+	AddLump(&bspfile, LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
+	AddLump(&bspfile, LUMP_NODES, bsp->dnodes, bsp->numnodes);
+	AddLump(&bspfile, LUMP_TEXINFO, bsp->texinfo, bsp->numtexinfo);
+	AddLump(&bspfile, LUMP_FACES, bsp->dfaces, bsp->numfaces);
+	AddLump(&bspfile, LUMP_CLIPNODES, bsp->dclipnodes, bsp->numclipnodes);
+	AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
+	AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
+	AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
+	AddLump(&bspfile, LUMP_MODELS, bsp->dmodels, bsp->nummodels);
+
+	AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
+	AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
+	AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
+	AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata.base, bsp->texdatasize);
+    }
+
+    if (bspdata->version == BSP2VERSION) {
+	bsp2_t *bsp = &bspdata->data.bsp2;
+
+	AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
+	AddLump(&bspfile, LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
+	AddLump(&bspfile, LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
+	AddLump(&bspfile, LUMP_NODES, bsp->dnodes, bsp->numnodes);
+	AddLump(&bspfile, LUMP_TEXINFO, bsp->texinfo, bsp->numtexinfo);
+	AddLump(&bspfile, LUMP_FACES, bsp->dfaces, bsp->numfaces);
+	AddLump(&bspfile, LUMP_CLIPNODES, bsp->dclipnodes, bsp->numclipnodes);
+	AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
+	AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
+	AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
+	AddLump(&bspfile, LUMP_MODELS, bsp->dmodels, bsp->nummodels);
+
+	AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
+	AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
+	AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
+	AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata.base, bsp->texdatasize);
+    }
 
     fseek(bspfile.file, 0, SEEK_SET);
     SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
@@ -350,7 +964,7 @@ WriteBSPFile(const char *filename, bspdata_t *bsp)
 /* ========================================================================= */
 
 static void
-PrintLumpSize(int lumptype, int count)
+PrintLumpSize(const lumpspec_t *lumpspec, int lumptype, int count)
 {
     const lumpspec_t *lump = &lumpspec[lumptype];
     logprint("%7i %-12s %10i\n", count, lump->name, count * (int)lump->size);
@@ -363,26 +977,55 @@ PrintLumpSize(int lumptype, int count)
  * =============
  */
 void
-PrintBSPFileSizes(const bspdata_t *bsp)
+PrintBSPFileSizes(const bspdata_t *bspdata)
 {
     int numtextures = 0;
 
-    if (bsp->texdatasize)
-	numtextures = bsp->dtexdata.header->nummiptex;
+    if (bspdata->version == BSPVERSION) {
+	const bsp29_t *bsp = &bspdata->data.bsp29;
+	const lumpspec_t *lumpspec = lumpspec_bsp29;
 
-    PrintLumpSize(LUMP_PLANES, bsp->numplanes);
-    PrintLumpSize(LUMP_VERTEXES, bsp->numvertexes);
-    PrintLumpSize(LUMP_NODES, bsp->numnodes);
-    PrintLumpSize(LUMP_TEXINFO, bsp->numtexinfo);
-    PrintLumpSize(LUMP_FACES, bsp->numfaces);
-    PrintLumpSize(LUMP_CLIPNODES, bsp->numclipnodes);
-    PrintLumpSize(LUMP_LEAFS, bsp->numleafs);
-    PrintLumpSize(LUMP_MARKSURFACES, bsp->nummarksurfaces);
-    PrintLumpSize(LUMP_EDGES, bsp->numedges);
-    PrintLumpSize(LUMP_SURFEDGES, bsp->numsurfedges);
+	if (bsp->texdatasize)
+	    numtextures = bsp->dtexdata.header->nummiptex;
 
-    logprint("%7i %-12s %10i\n", numtextures, "textures", bsp->texdatasize);
-    logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
-    logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
-    logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
+	PrintLumpSize(lumpspec, LUMP_PLANES, bsp->numplanes);
+	PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp->numvertexes);
+	PrintLumpSize(lumpspec, LUMP_NODES, bsp->numnodes);
+	PrintLumpSize(lumpspec, LUMP_TEXINFO, bsp->numtexinfo);
+	PrintLumpSize(lumpspec, LUMP_FACES, bsp->numfaces);
+	PrintLumpSize(lumpspec, LUMP_CLIPNODES, bsp->numclipnodes);
+	PrintLumpSize(lumpspec, LUMP_LEAFS, bsp->numleafs);
+	PrintLumpSize(lumpspec, LUMP_MARKSURFACES, bsp->nummarksurfaces);
+	PrintLumpSize(lumpspec, LUMP_EDGES, bsp->numedges);
+	PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp->numsurfedges);
+
+	logprint("%7i %-12s %10i\n", numtextures, "textures", bsp->texdatasize);
+	logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
+	logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
+	logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
+    }
+
+    if (bspdata->version == BSP2VERSION) {
+	const bsp2_t *bsp = &bspdata->data.bsp2;
+	const lumpspec_t *lumpspec = lumpspec_bsp2;
+
+	if (bsp->texdatasize)
+	    numtextures = bsp->dtexdata.header->nummiptex;
+
+	PrintLumpSize(lumpspec, LUMP_PLANES, bsp->numplanes);
+	PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp->numvertexes);
+	PrintLumpSize(lumpspec, LUMP_NODES, bsp->numnodes);
+	PrintLumpSize(lumpspec, LUMP_TEXINFO, bsp->numtexinfo);
+	PrintLumpSize(lumpspec, LUMP_FACES, bsp->numfaces);
+	PrintLumpSize(lumpspec, LUMP_CLIPNODES, bsp->numclipnodes);
+	PrintLumpSize(lumpspec, LUMP_LEAFS, bsp->numleafs);
+	PrintLumpSize(lumpspec, LUMP_MARKSURFACES, bsp->nummarksurfaces);
+	PrintLumpSize(lumpspec, LUMP_EDGES, bsp->numedges);
+	PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp->numsurfedges);
+
+	logprint("%7i %-12s %10i\n", numtextures, "textures", bsp->texdatasize);
+	logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
+	logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
+	logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
+    }
 }

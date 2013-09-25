@@ -79,7 +79,8 @@ typedef struct {
     size_t size;
 } lumpspec_t;
 
-extern const lumpspec_t lumpspec[BSP_LUMPS];
+extern const lumpspec_t lumpspec_bsp29[BSP_LUMPS];
+extern const lumpspec_t lumpspec_bsp2[BSP_LUMPS];
 
 typedef struct {
     float mins[3];
@@ -90,11 +91,6 @@ typedef struct {
     int32_t firstface;
     int32_t numfaces;
 } dmodel_t;
-
-typedef struct {
-    int32_t version;
-    lump_t lumps[BSP_LUMPS];
-} dheader_t;
 
 typedef struct {
     int32_t nummiptex;
@@ -254,8 +250,6 @@ typedef union {
 /* ========================================================================= */
 
 typedef struct {
-    int version;
-
     int nummodels;
     dmodel_t *dmodels;
 
@@ -300,10 +294,72 @@ typedef struct {
 
     int numsurfedges;
     int32_t *dsurfedges;
+} bsp29_t;
+
+typedef struct {
+    int nummodels;
+    dmodel_t *dmodels;
+
+    int visdatasize;
+    byte *dvisdata;
+
+    int lightdatasize;
+    byte *dlightdata;
+
+    int texdatasize;
+    dtexdata_t dtexdata;
+
+    int entdatasize;
+    char *dentdata;
+
+    int numleafs;
+    bsp2_dleaf_t *dleafs;
+
+    int numplanes;
+    dplane_t *dplanes;
+
+    int numvertexes;
+    dvertex_t *dvertexes;
+
+    int numnodes;
+    bsp2_dnode_t *dnodes;
+
+    int numtexinfo;
+    texinfo_t *texinfo;
+
+    int numfaces;
+    bsp2_dface_t *dfaces;
+
+    int numclipnodes;
+    bsp2_dclipnode_t *dclipnodes;
+
+    int numedges;
+    bsp2_dedge_t *dedges;
+
+    int nummarksurfaces;
+    uint32_t *dmarksurfaces;
+
+    int numsurfedges;
+    int32_t *dsurfedges;
+} bsp2_t;
+
+
+typedef struct {
+    int32_t version;
+    lump_t lumps[BSP_LUMPS];
+} dheader_t;
+
+typedef struct {
+    int32_t version;
+    union {
+	bsp29_t bsp29;
+	bsp2_t bsp2;
+    } data;
 } bspdata_t;
 
 void LoadBSPFile(const char *filename, bspdata_t *bsp);
 void WriteBSPFile(const char *filename, bspdata_t *bsp);
 void PrintBSPFileSizes(const bspdata_t *bsp);
+void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
 
 #endif /* __COMMON_BSPFILE_H__ */

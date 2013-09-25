@@ -23,7 +23,7 @@
 #include <common/cmdlib.h>
 
 void
-WriteLitFile(const bspdata_t *bsp, const char *filename, int version)
+WriteLitFile(const bsp2_t *bsp, const char *filename, int version)
 {
     FILE *litfile;
     char litname[1024];

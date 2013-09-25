@@ -37,11 +37,11 @@ static tnode_t *tnode_p;
  * ==============
  */
 static void
-MakeTnodes_r(int nodenum, const bspdata_t *bsp)
+MakeTnodes_r(int nodenum, const bsp2_t *bsp)
 {
     tnode_t *tnode;
     int i;
-    bsp29_dnode_t *node;
+    bsp2_dnode_t *node;
 
     tnode = tnode_p++;
 
@@ -63,7 +63,7 @@ MakeTnodes_r(int nodenum, const bspdata_t *bsp)
 }
 
 void
-MakeTnodes(const bspdata_t *bsp)
+MakeTnodes(const bsp2_t *bsp)
 {
     int i;
 

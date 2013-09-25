@@ -42,7 +42,7 @@ typedef struct {
 } lumpinfo_t;
 
 static void
-ExportWad(FILE *wadfile, bspdata_t *bsp)
+ExportWad(FILE *wadfile, bsp2_t *bsp)
 {
     wadinfo_t header;
     lumpinfo_t lump;
@@ -95,7 +95,7 @@ ExportWad(FILE *wadfile, bspdata_t *bsp)
 }
 
 static void
-PrintModelInfo(const bspdata_t *bsp)
+PrintModelInfo(const bsp2_t *bsp)
 {
     int i;
 
@@ -113,12 +113,12 @@ PrintModelInfo(const bspdata_t *bsp)
 #define ON_EPSILON 0.01
 const vec3_t vec3_origin = { 0, 0, 0 };
 static void
-CheckBSPFacesPlanar(const bspdata_t *bsp)
+CheckBSPFacesPlanar(const bsp2_t *bsp)
 {
     int i, j;
 
     for (i = 0; i < bsp->numfaces; i++) {
-	const bsp29_dface_t *face = &bsp->dfaces[i];
+	const bsp2_dface_t *face = &bsp->dfaces[i];
 	dplane_t plane = bsp->dplanes[face->planenum];
 
 	if (face->side) {
@@ -140,13 +140,13 @@ CheckBSPFacesPlanar(const bspdata_t *bsp)
 }
 
 static void
-CheckBSPFile(const bspdata_t *bsp)
+CheckBSPFile(const bsp2_t *bsp)
 {
     int i;
 
     /* faces */
     for (i = 0; i < bsp->numfaces; i++) {
-	const bsp29_dface_t *face = &bsp->dfaces[i];
+	const bsp2_dface_t *face = &bsp->dfaces[i];
 
 	/* texinfo bounds check */
 	if (face->texinfo < 0)
@@ -184,11 +184,11 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* edges */
     for (i = 0; i < bsp->numedges; i++) {
-	const bsp29_dedge_t *edge = &bsp->dedges[i];
+	const bsp2_dedge_t *edge = &bsp->dedges[i];
 	int j;
 
 	for (j = 0; j < 2; j++) {
-	    const uint16_t vertex = edge->v[j];
+	    const uint32_t vertex = edge->v[j];
 	    if (vertex < 0)
 		printf("warning: edge %d has vertex %d < 0 (%d)\n",
 		       i, j, vertex);
@@ -210,7 +210,7 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* marksurfaces */
     for (i = 0; i < bsp->nummarksurfaces; i++) {
-	const uint16_t surfnum = bsp->dmarksurfaces[i];
+	const uint32_t surfnum = bsp->dmarksurfaces[i];
 	if (surfnum >= bsp->numfaces)
 	    printf("warning: marksurface %d is out of range (%d >= %d)\n",
 		   i, surfnum, bsp->numfaces);
@@ -218,8 +218,8 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* leafs */
     for (i = 0; i < bsp->numleafs; i++) {
-	const bsp29_dleaf_t *leaf = &bsp->dleafs[i];
-	const uint16_t endmarksurface =
+	const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
+	const uint32_t endmarksurface =
 	    leaf->firstmarksurface + leaf->nummarksurfaces;
 	if (leaf->firstmarksurface < 0)
 	    printf("warning: leaf %d had negative firstmarksurface (%d)\n",
@@ -238,11 +238,11 @@ CheckBSPFile(const bspdata_t *bsp)
 
     /* nodes */
     for (i = 0; i < bsp->numnodes; i++) {
-	const bsp29_dnode_t *node = &bsp->dnodes[i];
+	const bsp2_dnode_t *node = &bsp->dnodes[i];
 	int j;
 
 	for (j = 0; j < 2; j++) {
-	    const int16_t child = node->children[j];
+	    const int32_t child = node->children[j];
 	    if (child >= 0 && child >= bsp->numnodes)
 		printf("warning: node %d has child %d (node) out of range "
 		       "(%d >= %d)\n", i, j, child, bsp->numnodes);
@@ -258,7 +258,8 @@ CheckBSPFile(const bspdata_t *bsp)
 int
 main(int argc, char **argv)
 {
-    bspdata_t bsp;
+    bspdata_t bspdata;
+    bsp2_t *const bsp = &bspdata.data.bsp2;
     char source[1024];
     FILE *f;
     int i, err;
@@ -275,7 +276,10 @@ main(int argc, char **argv)
     printf("---------------------\n");
     printf("%s\n", source);
 
-    LoadBSPFile(source, &bsp);
+    LoadBSPFile(source, &bspdata);
+
+    if (bspdata.version != BSP2VERSION)
+	ConvertBSPFormat(BSP2VERSION, &bspdata);
 
     for (i = 0; i < argc - 1; i++) {
 	if (!strcmp(argv[i], "--extract-entities")) {
@@ -287,8 +291,8 @@ main(int argc, char **argv)
 	    if (!f)
 		Error("couldn't open %s for writing\n", source);
 
-	    err = fwrite(bsp.dentdata, sizeof(char), bsp.entdatasize - 1, f);
-	    if (err != bsp.entdatasize - 1)
+	    err = fwrite(bsp->dentdata, sizeof(char), bsp->entdatasize - 1, f);
+	    if (err != bsp->entdatasize - 1)
 		Error("%s", strerror(errno));
 
 	    err = fclose(f);
@@ -305,7 +309,7 @@ main(int argc, char **argv)
 	    if (!f)
 		Error("couldn't open %s for writing\n", source);
 
-	    ExportWad(f, &bsp);
+	    ExportWad(f, bsp);
 
 	    err = fclose(f);
 	    if (err)
@@ -314,11 +318,11 @@ main(int argc, char **argv)
 	    printf("done.\n");
 	} else if (!strcmp(argv[i], "--check")) {
 	    printf("Beginning BSP data check...\n");
-	    CheckBSPFile(&bsp);
-	    CheckBSPFacesPlanar(&bsp);
+	    CheckBSPFile(bsp);
+	    CheckBSPFacesPlanar(bsp);
 	    printf("Done.\n");
 	} else if (!strcmp(argv[i], "--modelinfo")) {
-	    PrintModelInfo(&bsp);
+	    PrintModelInfo(bsp);
 	}
     }
 

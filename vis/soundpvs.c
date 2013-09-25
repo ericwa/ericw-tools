@@ -35,7 +35,7 @@ Find an aproximate distance to the nearest emiter of each class for each leaf.
   ====================
 */
 static void
-SurfaceBBox(const bspdata_t *bsp, const bsp29_dface_t *surf,
+SurfaceBBox(const bsp2_t *bsp, const bsp2_dface_t *surf,
 	    vec3_t mins, vec3_t maxs)
 {
     int i, j;
@@ -70,13 +70,13 @@ SurfaceBBox(const bspdata_t *bsp, const bsp29_dface_t *surf,
   ====================
 */
 void
-CalcAmbientSounds(bspdata_t *bsp)
+CalcAmbientSounds(bsp2_t *bsp)
 {
-    const bsp29_dface_t *surf;
+    const bsp2_dface_t *surf;
     const texinfo_t *info;
     const miptex_t *miptex;
     int i, j, k, l;
-    bsp29_dleaf_t *leaf, *hit;
+    bsp2_dleaf_t *leaf, *hit;
     byte *vis;
     vec3_t mins, maxs;
     float d, maxd;

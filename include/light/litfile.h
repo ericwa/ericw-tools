@@ -29,6 +29,6 @@ typedef struct litheader_s {
     int version;
 } litheader_t;
 
-void WriteLitFile(const bspdata_t *bsp, const char *filename, int version);
+void WriteLitFile(const bsp2_t *bsp, const char *filename, int version);
 
 #endif /* __LIGHT_LITFILE_H__ */

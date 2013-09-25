@@ -282,7 +282,7 @@ CountEntities(const char *entitystring)
  * ==================
  */
 void
-LoadEntities(const bspdata_t *bsp)
+LoadEntities(const bsp2_t *bsp)
 {
     char *data;
     entity_t *entity;
@@ -508,7 +508,7 @@ Get_EntityStringSize(const entity_t *entities, int num_entities)
  * ================
  */
 void
-WriteEntitiesToString(bspdata_t *bsp)
+WriteEntitiesToString(bsp2_t *bsp)
 {
     const entity_t *entity;
     const epair_t *epair;

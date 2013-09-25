@@ -140,7 +140,7 @@ void BasePortalVis(void);
 
 void PortalFlow(portal_t *p);
 
-void CalcAmbientSounds(bspdata_t *bsp);
+void CalcAmbientSounds(bsp2_t *bsp);
 
 extern double starttime, endtime, statetime;
 

@@ -81,7 +81,7 @@ LightThread(void *arg)
 {
     int facenum, i;
     dmodel_t *model;
-    const bspdata_t *bsp = arg;
+    const bsp2_t *bsp = arg;
 
     while (1) {
 	facenum = GetThreadWork();
@@ -107,7 +107,7 @@ LightThread(void *arg)
 }
 
 static void
-FindModelInfo(const bspdata_t *bsp)
+FindModelInfo(const bsp2_t *bsp)
 {
     int i, shadow, numshadowmodels;
     entity_t *entity;
@@ -173,7 +173,7 @@ FindModelInfo(const bspdata_t *bsp)
  * =============
  */
 static void
-LightWorld(bspdata_t *bsp)
+LightWorld(bsp2_t *bsp)
 {
     if (bsp->dlightdata)
 	free(bsp->dlightdata);
@@ -213,7 +213,9 @@ LightWorld(bspdata_t *bsp)
 int
 main(int argc, const char **argv)
 {
-    bspdata_t bsp;
+    bspdata_t bspdata;
+    bsp2_t *const bsp = &bspdata.data.bsp2;
+    int32_t loadversion;
     int i;
     double start;
     double end;
@@ -292,21 +294,29 @@ main(int argc, const char **argv)
     strcpy(source, argv[i]);
     StripExtension(source);
     DefaultExtension(source, ".bsp");
-    LoadBSPFile(source, &bsp);
+    LoadBSPFile(source, &bspdata);
 
-    LoadEntities(&bsp);
-    MakeTnodes(&bsp);
-    modelinfo = malloc(bsp.nummodels * sizeof(*modelinfo));
-    FindModelInfo(&bsp);
-    LightWorld(&bsp);
+    loadversion = bspdata.version;
+    if (bspdata.version != BSP2VERSION)
+	ConvertBSPFormat(BSP2VERSION, &bspdata);
+
+    LoadEntities(bsp);
+    MakeTnodes(bsp);
+    modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
+    FindModelInfo(bsp);
+    LightWorld(bsp);
     free(modelinfo);
 
-    WriteEntitiesToString(&bsp);
+    WriteEntitiesToString(bsp);
 
     if (write_litfile)
-	WriteLitFile(&bsp, source, LIT_VERSION);
+	WriteLitFile(bsp, source, LIT_VERSION);
 
-    WriteBSPFile(source, &bsp);
+    /* Convert data format back if necessary */
+    if (loadversion != BSP2VERSION)
+	ConvertBSPFormat(loadversion, &bspdata);
+
+    WriteBSPFile(source, &bspdata);
 
     end = I_FloatTime();
     logprint("%5.1f seconds elapsed\n", end - start);

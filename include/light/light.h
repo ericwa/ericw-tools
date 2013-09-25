@@ -87,9 +87,9 @@ typedef struct {
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const dmodel_t *const *tracelist;
 
-void LightFace(bsp29_dface_t *face, const modelinfo_t *modelinfo,
-	       const bspdata_t *bsp);
-void MakeTnodes(const bspdata_t *bsp);
+void LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
+	       const bsp2_t *bsp);
+void MakeTnodes(const bsp2_t *bsp);
 
 extern float scaledist;
 extern float rangescale;

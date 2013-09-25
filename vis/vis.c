@@ -572,7 +572,7 @@ CompressRow(const byte *vis, const int numbytes, byte *out)
 int totalvis;
 
 static void
-LeafFlow(int leafnum, bsp29_dleaf_t *dleaf)
+LeafFlow(int leafnum, bsp2_dleaf_t *dleaf)
 {
     leaf_t *leaf;
     byte *outbuffer;
@@ -632,7 +632,7 @@ LeafFlow(int leafnum, bsp29_dleaf_t *dleaf)
 
 
 void
-ClusterFlow(int leafnum, leafbits_t *buffer, bsp29_dleaf_t *dleaf)
+ClusterFlow(int leafnum, leafbits_t *buffer, bsp2_dleaf_t *dleaf)
 {
     leaf_t *leaf;
     byte *outbuffer;
@@ -700,7 +700,7 @@ ClusterFlow(int leafnum, leafbits_t *buffer, bsp29_dleaf_t *dleaf)
   ==================
 */
 void
-CalcPortalVis(const bspdata_t *bsp)
+CalcPortalVis(const bsp2_t *bsp)
 {
     int i, startcount;
     portal_t *p;
@@ -739,7 +739,7 @@ CalcPortalVis(const bspdata_t *bsp)
   ==================
 */
 void
-CalcVis(const bspdata_t *bsp)
+CalcVis(const bsp2_t *bsp)
 {
     int i;
 
@@ -1001,7 +1001,7 @@ SetWindingSphere(winding_t *w)
   ============
 */
 void
-LoadPortals(char *name, bspdata_t *bsp)
+LoadPortals(char *name, bsp2_t *bsp)
 {
     int i, j, count;
     portal_t *p;
@@ -1174,7 +1174,9 @@ char statetmpfile[1024];
 int
 main(int argc, char **argv)
 {
-    bspdata_t bsp;
+    bspdata_t bspdata;
+    bsp2_t *const bsp = &bspdata.data.bsp2;
+    int32_t loadversion;
     int i;
 
     init_log("vis.log");
@@ -1238,13 +1240,17 @@ main(int argc, char **argv)
     StripExtension(sourcefile);
     DefaultExtension(sourcefile, ".bsp");
 
-    LoadBSPFile(sourcefile, &bsp);
+    LoadBSPFile(sourcefile, &bspdata);
+
+    loadversion = bspdata.version;
+    if (loadversion != BSP2VERSION)
+	ConvertBSPFormat(BSP2VERSION, &bspdata);
 
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
     strcat(portalfile, ".prt");
 
-    LoadPortals(portalfile, &bsp);
+    LoadPortals(portalfile, bsp);
 
     strcpy(statefile, sourcefile);
     StripExtension(statefile);
@@ -1259,18 +1265,22 @@ main(int argc, char **argv)
 
 //    CalcPassages ();
 
-    CalcVis(&bsp);
+    CalcVis(bsp);
 
     logprint("c_noclip: %i\n", c_noclip);
     logprint("c_chains: %lu\n", c_chains);
 
-    bsp.visdatasize = vismap_p - bsp.dvisdata;
+    bsp->visdatasize = vismap_p - bsp->dvisdata;
     logprint("visdatasize:%i  compressed from %i\n",
-	     bsp.visdatasize, originalvismapsize);
+	     bsp->visdatasize, originalvismapsize);
 
-    CalcAmbientSounds(&bsp);
+    CalcAmbientSounds(bsp);
 
-    WriteBSPFile(sourcefile, &bsp);
+    /* Convert data format back if necessary */
+    if (loadversion != BSP2VERSION)
+	ConvertBSPFormat(loadversion, &bspdata);
+
+    WriteBSPFile(sourcefile, &bspdata);
 
 //    unlink (portalfile);
 

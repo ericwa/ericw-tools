@@ -1,10 +1,10 @@
 Unreleased
 
+* Support BSP2 format (qbsp requires the "-bsp2" command line option)
 * qbsp: Fix animating texture bug when brushes are textured with alt-animations
 * qbsp: Fix a crash in tjunc calculations
 * qbsp: Exit with error if verticies exceed 65535 (BSP29 limit)
 * qbsp: Add experimental "-forcegoodtree" command line option (thanks Rebb)
-* qbsp: Support BSP2 output (use "-bsp2" command line option)
 * vis: reduce "leaf recursion" error to a warning and continue processing
 
 2013-04-25 TyrUtils v0.10
