@@ -1,3 +1,9 @@
+Unreleased
+
+* Implement the Darkplaces (LordHavoc) style BSP2 format and use as default
+* Still support the RMQ style BSP2 format (but don't create any new ones)
+* qbsp: Fix bug causing sky brushes to be non-solid
+
 2013-09-24 TyrUtils v0.11
 
 * Support BSP2 format (qbsp requires the "-bsp2" command line option)
