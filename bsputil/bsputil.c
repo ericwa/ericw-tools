@@ -189,9 +189,6 @@ CheckBSPFile(const bsp2_t *bsp)
 
 	for (j = 0; j < 2; j++) {
 	    const uint32_t vertex = edge->v[j];
-	    if (vertex < 0)
-		printf("warning: edge %d has vertex %d < 0 (%d)\n",
-		       i, j, vertex);
 	    if (vertex > bsp->numvertexes)
 		printf("warning: edge %d has vertex %d out range "
 		       "(%d >= %d)\n", i, j, vertex, bsp->numvertexes);
@@ -221,9 +218,6 @@ CheckBSPFile(const bsp2_t *bsp)
 	const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
 	const uint32_t endmarksurface =
 	    leaf->firstmarksurface + leaf->nummarksurfaces;
-	if (leaf->firstmarksurface < 0)
-	    printf("warning: leaf %d had negative firstmarksurface (%d)\n",
-		   i, leaf->firstmarksurface);
 	if (endmarksurface > bsp->nummarksurfaces)
 	    printf("warning: leaf %d has marksurfaces out of range "
 		   "(%d..%d >= %d)\n", i, leaf->firstmarksurface,
