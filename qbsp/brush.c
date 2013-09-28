@@ -914,6 +914,10 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
 	    continue;
 
+	/* sky brushes are solid in the collision hulls */
+	if (hullnum && contents == CONTENTS_SKY)
+	    contents = CONTENTS_SOLID;
+
 	brush = LoadBrush(mapbrush, rotate_offset, hullnum);
 	if (!brush)
 	    continue;
