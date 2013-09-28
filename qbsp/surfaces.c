@@ -269,7 +269,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
 
-    if (options.fBSP2) {
+    if (options.BSPVersion == BSP2VERSION) {
 	bsp2_dedge_t *edge = edges->data;
 
 	for (i = 0; i < edges->index; i++, edge++) {
@@ -556,7 +556,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 	edges->count = edges->index;
     }
 
-    if (map.cTotal[LUMP_VERTEXES] > 65535 && !options.fBSP2)
+    if (map.cTotal[LUMP_VERTEXES] > 65535 && options.BSPVersion == BSPVERSION)
 	Error("Too many vertices (%d > 65535)", map.cTotal[LUMP_VERTEXES]);
 
     surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
@@ -564,7 +564,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     Message(msgProgress, "GrowRegions");
 
-    if (options.fBSP2)
+    if (options.BSPVersion == BSP2VERSION)
 	GrowNodeRegion_BSP2(entity, headnode);
     else
 	GrowNodeRegion_BSP29(entity, headnode);

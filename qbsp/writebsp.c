@@ -222,8 +222,8 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
     model->headnode[hullnum] = clipcount + oldcount;
 
     CountClipNodes_r(entity, nodes);
-    if (clipnodes->count > MAX_BSP_CLIPNODES && !options.fBSP2)
-	Error("Clipnode count exceeds bsp29 max (%d > %d)",
+    if (clipnodes->count > MAX_BSP_CLIPNODES && options.BSPVersion == BSPVERSION)
+	Error("Clipnode count exceeds bsp 29 max (%d > %d)",
 	      clipnodes->count, MAX_BSP_CLIPNODES);
 
     olddata = clipnodes->data;
@@ -236,7 +236,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 	diff = clipcount - model->headnode[1];
 	if (diff != 0) {
 	    model->headnode[1] += diff;
-	    if (options.fBSP2) {
+	    if (options.BSPVersion == BSP2VERSION) {
 		bsp2_dclipnode_t *clipnode = clipnodes->data;
 		for (i = 0; i < oldcount; i++, clipnode++) {
 		    if (clipnode->children[0] >= 0)
@@ -257,7 +257,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
     }
 
     map.cTotal[LUMP_CLIPNODES] = clipcount + oldcount;
-    if (options.fBSP2)
+    if (options.BSPVersion == BSP2VERSION)
 	ExportClipNodes_BSP2(entity, nodes);
     else
 	ExportClipNodes_BSP29(entity, nodes);
@@ -395,14 +395,14 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 
     /*
      * write bounding box info
-     * (VectorCopy doesn't work since dest are shorts)
+     * (VectorCopy doesn't work double->float)
      */
-    dleaf->mins[0] = (short)node->mins[0];
-    dleaf->mins[1] = (short)node->mins[1];
-    dleaf->mins[2] = (short)node->mins[2];
-    dleaf->maxs[0] = (short)node->maxs[0];
-    dleaf->maxs[1] = (short)node->maxs[1];
-    dleaf->maxs[2] = (short)node->maxs[2];
+    dleaf->mins[0] = node->mins[0];
+    dleaf->mins[1] = node->mins[1];
+    dleaf->mins[2] = node->mins[2];
+    dleaf->maxs[0] = node->maxs[0];
+    dleaf->maxs[1] = node->maxs[1];
+    dleaf->maxs[2] = node->maxs[2];
 
     dleaf->visofs = -1;	// no vis info yet
 
@@ -481,13 +481,13 @@ ExportDrawNodes_BSP2(mapentity_t *entity, node_t *node)
     nodes->index++;
     map.cTotal[LUMP_NODES]++;
 
-    // VectorCopy doesn't work since dest are shorts
-    dnode->mins[0] = (short)node->mins[0];
-    dnode->mins[1] = (short)node->mins[1];
-    dnode->mins[2] = (short)node->mins[2];
-    dnode->maxs[0] = (short)node->maxs[0];
-    dnode->maxs[1] = (short)node->maxs[1];
-    dnode->maxs[2] = (short)node->maxs[2];
+    // VectorCopy doesn't work double->float
+    dnode->mins[0] = node->mins[0];
+    dnode->mins[1] = node->mins[1];
+    dnode->mins[2] = node->mins[2];
+    dnode->maxs[0] = node->maxs[0];
+    dnode->maxs[1] = node->maxs[1];
+    dnode->maxs[2] = node->maxs[2];
 
     dnode->planenum = node->outputplanenum;
     dnode->firstface = node->firstface;
@@ -535,7 +535,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
      * Set leaf 0 properly (must be solid). cLeaves etc incremented in
      * BeginBSPFile.
      */
-    if (options.fBSP2) {
+    if (options.BSPVersion == BSP2VERSION) {
 	bsp2_dleaf_t *leaf = pWorldEnt->lumps[LUMP_LEAFS].data;
 	leaf->contents = CONTENTS_SOLID;
     } else {
@@ -548,7 +548,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     dmodel->firstface = firstface;
     dmodel->numfaces = map.cTotal[LUMP_FACES] - firstface;
 
-    if (options.fBSP2) {
+    if (options.BSPVersion == BSP2VERSION) {
 	if (headnode->contents < 0)
 	    ExportLeaf_BSP2(entity, headnode);
 	else

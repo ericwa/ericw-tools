@@ -48,8 +48,9 @@
 #define MAX_ENT_KEY   32
 #define MAX_ENT_VALUE 1024
 
-#define BSPVERSION  29
-#define BSP2VERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
+#define BSPVERSION     29
+#define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
+#define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
 
 typedef struct {
     int32_t fileofs;
@@ -80,6 +81,7 @@ typedef struct {
 } lumpspec_t;
 
 extern const lumpspec_t lumpspec_bsp29[BSP_LUMPS];
+extern const lumpspec_t lumpspec_bsp2rmq[BSP_LUMPS];
 extern const lumpspec_t lumpspec_bsp2[BSP_LUMPS];
 
 typedef struct {
@@ -146,6 +148,15 @@ typedef struct {
     int32_t children[2];	/* negative numbers are -(leafs+1), not nodes */
     int16_t mins[3];		/* for sphere culling */
     int16_t maxs[3];
+    uint32_t firstface;
+    uint32_t numfaces;		/* counting both sides */
+} bsp2rmq_dnode_t;
+
+typedef struct {
+    int32_t planenum;
+    int32_t children[2];	/* negative numbers are -(leafs+1), not nodes */
+    float mins[3];		/* for sphere culling */
+    float maxs[3];
     uint32_t firstface;
     uint32_t numfaces;		/* counting both sides */
 } bsp2_dnode_t;
@@ -240,6 +251,16 @@ typedef struct {
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
     uint8_t ambient_level[NUM_AMBIENTS];
+} bsp2rmq_dleaf_t;
+
+typedef struct {
+    int32_t contents;
+    int32_t visofs;		/* -1 = no visibility info */
+    float mins[3];		/* for frustum culling     */
+    float maxs[3];
+    uint32_t firstmarksurface;
+    uint32_t nummarksurfaces;
+    uint8_t ambient_level[NUM_AMBIENTS];
 } bsp2_dleaf_t;
 
 typedef union {
@@ -313,6 +334,53 @@ typedef struct {
     char *dentdata;
 
     int numleafs;
+    bsp2rmq_dleaf_t *dleafs;
+
+    int numplanes;
+    dplane_t *dplanes;
+
+    int numvertexes;
+    dvertex_t *dvertexes;
+
+    int numnodes;
+    bsp2rmq_dnode_t *dnodes;
+
+    int numtexinfo;
+    texinfo_t *texinfo;
+
+    int numfaces;
+    bsp2_dface_t *dfaces;
+
+    int numclipnodes;
+    bsp2_dclipnode_t *dclipnodes;
+
+    int numedges;
+    bsp2_dedge_t *dedges;
+
+    int nummarksurfaces;
+    uint32_t *dmarksurfaces;
+
+    int numsurfedges;
+    int32_t *dsurfedges;
+} bsp2rmq_t;
+
+typedef struct {
+    int nummodels;
+    dmodel_t *dmodels;
+
+    int visdatasize;
+    byte *dvisdata;
+
+    int lightdatasize;
+    byte *dlightdata;
+
+    int texdatasize;
+    dtexdata_t dtexdata;
+
+    int entdatasize;
+    char *dentdata;
+
+    int numleafs;
     bsp2_dleaf_t *dleafs;
 
     int numplanes;
@@ -343,7 +411,6 @@ typedef struct {
     int32_t *dsurfedges;
 } bsp2_t;
 
-
 typedef struct {
     int32_t version;
     lump_t lumps[BSP_LUMPS];
@@ -353,6 +420,7 @@ typedef struct {
     int32_t version;
     union {
 	bsp29_t bsp29;
+	bsp2rmq_t bsp2rmq;
 	bsp2_t bsp2;
     } data;
 } bspdata_t;

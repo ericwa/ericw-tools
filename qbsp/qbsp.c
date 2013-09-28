@@ -444,6 +444,9 @@ ParseOptions(char *szOptions)
     char *szEnd;
     int NameCount = 0;
 
+    /* Default to the original Quake BSP Version... */
+    options.BSPVersion = BSPVERSION;
+
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
     while (szTok) {
@@ -487,7 +490,7 @@ ParseOptions(char *szOptions)
 	    else if (!strcasecmp(szTok, "nopercent"))
 		options.fNopercent = true;
 	    else if (!strcasecmp(szTok, "bsp2")) {
-		options.fBSP2 = true;
+		options.BSPVersion = BSP2VERSION;
 		MemSize = MemSize_BSP2;
 	    } else if (!strcasecmp(szTok, "leakdist")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
