@@ -134,7 +134,7 @@ CheckBSPFacesPlanar(const bsp2_t *bsp)
 
 	    if (dist < -ON_EPSILON || dist > ON_EPSILON)
 		printf("WARNING: face %d, point %d off plane by %f\n",
-		       face - bsp->dfaces, j, dist);
+		       (int)(face - bsp->dfaces), j, dist);
 	}
     }
 }
