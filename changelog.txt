@@ -1,4 +1,4 @@
-Unreleased
+2013-09-29 TyrUtils v0.12
 
 * Implement the Darkplaces (LordHavoc) style BSP2 format and use as default
 * Still support the RMQ style BSP2 format (but don't create any new ones)
