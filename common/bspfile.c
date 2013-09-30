@@ -1163,7 +1163,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
     SwapBSPFile(bspdata, TO_DISK);
 
     bspfile.header.version = LittleLong(bspdata->version);
-    logprint("Writing BSP version %i\n", bspdata->version);
+    logprint("Writing BSP version %s\n", BSPVersionString(bspdata->version));
     bspfile.file = SafeOpenWrite(filename);
 
     /* Save header space, updated after adding the lumps */
