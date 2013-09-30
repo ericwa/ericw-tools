@@ -670,9 +670,12 @@ PreParseFile(const char *buf)
     // While we're here...
     pWorldEnt = map.entities;
 
-    // Allocate maximum memory here, copy over later
-    // Maximum possible is one miptex/texinfo per face
-    map.maxmiptex = map.maxfaces;
+    /*
+     * Allocate maximum memory here, copy over later
+     * Maximum possible is one miptex/texinfo per face
+     * Plus a few extra for animations
+     */
+    map.maxmiptex = map.maxfaces + 100;
     map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
     texinfo->data = AllocMem(BSP_TEXINFO, map.maxfaces, true);
