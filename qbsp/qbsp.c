@@ -53,9 +53,9 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      * worldspawn
      */
     classname = ValueForKey(entity, "classname");
-    if (!strcmp(classname, "func_group"))
+    if (!strcasecmp(classname, "func_group"))
 	return;
-    if (!strcmp(classname, "func_detail"))
+    if (!strcasecmp(classname, "func_detail"))
 	return;
 
     if (entity != pWorldEnt) {
@@ -104,7 +104,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	source = map.entities + 1;
 	for (i = 1; i < map.numentities; i++, source++) {
 	    classname = ValueForKey(source, "classname");
-	    if (!strcmp(classname, "func_group"))
+	    if (!strcasecmp(classname, "func_group"))
 		Brush_LoadEntity(entity, source, hullnum);
 	}
 
@@ -113,7 +113,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	source = map.entities + 1;
 	for (i = 1; i < map.numentities; i++, source++) {
 	    classname = ValueForKey(source, "classname");
-	    if (!strcmp(classname, "func_detail")) {
+	    if (!strcasecmp(classname, "func_detail")) {
 		int detailstart = entity->numbrushes;
 		Brush_LoadEntity(entity, source, hullnum);
 		detailcount += entity->numbrushes - detailstart;
@@ -220,7 +220,7 @@ UpdateEntLump(void)
 	if (!entity->nummapbrushes)
 	    continue;
 	classname = ValueForKey(entity, "classname");
-	if (!strcmp(classname, "func_detail"))
+	if (!strcasecmp(classname, "func_detail"))
 	    continue;
 
 	snprintf(modname, sizeof(modname), "*%d", modnum);

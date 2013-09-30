@@ -689,9 +689,9 @@ IsWorldBrushEntity(const mapentity_t *entity)
 {
     const char *classname = ValueForKey(entity, "classname");
 
-    if (!strcmp(classname, "func_detail"))
+    if (!strcasecmp(classname, "func_detail"))
 	return true;
-    if (!strcmp(classname, "func_group"))
+    if (!strcasecmp(classname, "func_group"))
 	return true;
     return false;
 }
@@ -827,7 +827,7 @@ ValueForKey(const mapentity_t *entity, const char *key)
     const epair_t *ep;
 
     for (ep = entity->epairs; ep; ep = ep->next)
-	if (!strcmp(ep->key, key))
+	if (!strcasecmp(ep->key, key))
 	    return ep->value;
 
     return "";
@@ -840,7 +840,7 @@ SetKeyValue(mapentity_t *entity, const char *key, const char *value)
     epair_t *ep;
 
     for (ep = entity->epairs; ep; ep = ep->next)
-	if (!strcmp(ep->key, key)) {
+	if (!strcasecmp(ep->key, key)) {
 	    free(ep->value); /* FIXME */
 	    ep->value = copystring(value);
 	    return;
