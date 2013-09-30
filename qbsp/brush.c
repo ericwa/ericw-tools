@@ -945,7 +945,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	return;
     }
     if (nonsolid->contents == CONTENTS_SOLID) {
-	/* No non-solids */
+	/* No non-solids added */
 	if (!solid)
 	    return;
 
@@ -961,17 +961,20 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 	return;
     }
 
-    /* Insert the non-solids at the dst head and insert solids after */
+    /* Insert the non-solids at the dst head */
     dst->brushes = nonsolid;
     next = nonsolid->next;
     while (next && next->contents != CONTENTS_SOLID) {
 	nonsolid = next;
 	next = next->next;
     }
-    nonsolid->next = solid;
+    /* If no new solids to add, we are done */
+    if (!solid)
+	return;
 
-    /* Re-attach the existing solids at the end of our list */
-    if (solid && next) {
+    /* Insert new solids and re-attach the existing solids list (next) */
+    nonsolid->next = solid;
+    if (next) {
 	while (solid->next)
 	    solid = solid->next;
 	solid->next = next;

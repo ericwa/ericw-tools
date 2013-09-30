@@ -1,3 +1,7 @@
+Unreleased
+
+* Fix handling of func_group/detail entities with no solid brushes
+
 2013-09-29 TyrUtils v0.12
 
 * Implement the Darkplaces (LordHavoc) style BSP2 format and use as default
