@@ -744,17 +744,6 @@ LoadMapFile(void)
 //      if (!(rgfStartSpots & info_player_coop))
 //              Message(msgWarning, warnNoPlayerCoop);
 
-    // Clean up texture memory
-    if (map.nummiptex > map.maxfaces)
-	Error("Internal error: map.nummiptex > map.maxfaces");
-    else if (map.nummiptex < map.maxfaces) {
-	pTemp = map.miptex;
-	map.maxmiptex = map.nummiptex;
-	map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
-	memcpy(map.miptex, pTemp, map.nummiptex * MemSize[MIPTEX]);
-	FreeMem(pTemp, MIPTEX, map.maxfaces);
-    }
-
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
     if (texinfo->index > texinfo->count)
 	Error("Internal error: didn't allocate enough texinfos?");

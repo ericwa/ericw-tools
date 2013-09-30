@@ -26,7 +26,7 @@
 
 static void WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump);
 static int WAD_LoadLump(const wad_t *wad, const char *name, byte *dest);
-
+static void WADList_AddAnimationFrames(const wad_t *wadlist);
 
 static bool
 WAD_LoadInfo(wad_t *wad)
@@ -161,6 +161,8 @@ WADList_Process(const wad_t *wadlist)
     dmiptexlump_t *miptexlump;
     struct lumpdata *texdata = &pWorldEnt->lumps[LUMP_TEXTURES];
 
+    WADList_AddAnimationFrames(wadlist);
+
     /* Count space for miptex header/offsets */
     texdata->count = offsetof(dmiptexlump_t, dataofs[map.nummiptex]);
 
@@ -233,4 +235,28 @@ WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
     }
 
     return 0;
+}
+
+static void
+WADList_AddAnimationFrames(const wad_t *wadlist)
+{
+    int oldcount, i, j;
+    miptex_t name;
+
+    oldcount = map.nummiptex;
+
+    for (i = 0; i < oldcount; i++) {
+	if (map.miptex[i][0] != '+')
+	    continue;
+	snprintf(name, sizeof(name), "%s", map.miptex[i]);
+
+	/* Search for all animations (0-9) and alt-animations (A-J) */
+	for (j = 0; j < 20; j++) {
+	    name[1] = (j < 10) ? '0' + j : 'a' + j - 10;
+	    if (WADList_FindTexture(wadlist, name))
+		FindMiptex(name);
+	}
+    }
+
+    Message(msgStat, "%8d texture frames added", map.nummiptex - oldcount);
 }
