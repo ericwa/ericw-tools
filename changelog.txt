@@ -1,6 +1,7 @@
-Unreleased
+2013-09-30 TyrUtils v0.13
 
 * Fix handling of func_group/detail entities with no solid brushes
+* Fix automatic adding of animated texture frames
 
 2013-09-29 TyrUtils v0.12
 
