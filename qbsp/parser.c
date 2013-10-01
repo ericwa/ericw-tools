@@ -46,16 +46,21 @@ ParseToken(parser_t *p, parseflags_t flags)
     /* skip space */
     while (*p->pos <= 32) {
 	if (!*p->pos) {
+	    if (flags & PARSE_OPTIONAL)
+		return false;
 	    if (flags & PARSE_SAMELINE)
 		Error("line %d: Line is incomplete", p->linenum);
 	    return false;
 	}
-	if (*p->pos++ == '\n') {
+	if (*p->pos == '\n') {
+	    if (flags & PARSE_OPTIONAL)
+		return false;
 	    if (flags & PARSE_SAMELINE)
 		Error("line %d: Line is incomplete", p->linenum);
 	    p->linenum++;
 	}
-    }
+	p->pos++;
+   }
 
     /* comment field */
     if (p->pos[0] == '/' && p->pos[1] == '/') {
@@ -68,14 +73,17 @@ ParseToken(parser_t *p, parseflags_t flags)
 	    }
 	    goto out;
 	}
+	if (flags & PARSE_OPTIONAL)
+	    return false;
 	if (flags & PARSE_SAMELINE)
 	    Error("line %d: Line is incomplete", p->linenum);
-	while (*p->pos++ != '\n')
+	while (*p->pos++ != '\n') {
 	    if (!*p->pos) {
 		if (flags & PARSE_SAMELINE)
 		    Error("line %d: Line is incomplete", p->linenum);
 		return false;
 	    }
+	}
 	goto skipspace;
     }
     if (flags & PARSE_COMMENT)

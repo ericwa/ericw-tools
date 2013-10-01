@@ -28,8 +28,9 @@
 
 typedef enum parseflags {
     PARSE_NORMAL   = 0,
-    PARSE_SAMELINE = 1, /* The next token must be on the current line */
-    PARSE_COMMENT  = 2  /* Return a // comment as the next token */
+    PARSE_SAMELINE = 1, /* Expect the next token the current line */
+    PARSE_COMMENT  = 2, /* If a // comment is next token, return it */
+    PARSE_OPTIONAL = 4, /* Return next token on same line, or false if EOL */
 } parseflags_t;
 
 typedef struct parser {
