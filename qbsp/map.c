@@ -270,13 +270,18 @@ ParseExtendedTX(parser_t *parser)
 {
     texcoord_style_t style = TX_QUAKED;
 
-    if (ParseToken(parser, PARSE_COMMENT)) {
+    if (ParseToken(parser, PARSE_COMMENT | PARSE_OPTIONAL)) {
 	if (!strncmp(parser->token, "//TX", 4)) {
 	    if (parser->token[4] == '1')
 		style = TX_QUARK_TYPE1;
 	    else if (parser->token[4] == '2')
 		style = TX_QUARK_TYPE2;
 	}
+    } else {
+	/* Throw away extra Quake 2 surface info */
+	ParseToken(parser, PARSE_OPTIONAL); /* contents */
+	ParseToken(parser, PARSE_OPTIONAL); /* flags */
+	ParseToken(parser, PARSE_OPTIONAL); /* value */
     }
 
     return style;
