@@ -158,6 +158,19 @@ information needed by vis to compute the potentially visible set (PVS) for the
 map/bsp.  So you will also need a vis util capable of processing the PRT2 file
 format.
 
+.SH MAP COMPATIBILITY
+In addition to standard Quake 1 .map files, TyrUtils QBSP is compatible with:
+
+.IP \(bu
+Floating point brush coordinates and texture alignments
+.IP \(bu
+Valve's 220 map format as produced by the \fIHammer\fP editor
+.IP \(bu
+Extended texture positioning as supported by the \fIQuArK\fP editor
+.IP \(bu
+Standard Quake 2 map format (leading paths in texture names are
+stripped and any extra surface properties are ignored)
+
 .SH AUTHOR
 Written by Kevin Shanahan (aka Tyrann)
 .br

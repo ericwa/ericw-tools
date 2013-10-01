@@ -1,3 +1,7 @@
+Unreleased
+
+* Add compatibility with Quake 2 map format (extra surface attributes ignored)
+
 2013-09-30 TyrUtils v0.13
 
 * Fix handling of func_group/detail entities with no solid brushes
