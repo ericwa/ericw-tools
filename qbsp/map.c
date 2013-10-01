@@ -75,7 +75,13 @@ AddAnimTex(const char *name)
 int
 FindMiptex(const char *name)
 {
+    const char *pathsep;
     int i;
+
+    /* Ignore leading path in texture names (Q2 map compatibility) */
+    pathsep = strrchr(name, '/');
+    if (pathsep)
+	name = pathsep + 1;
 
     for (i = 0; i < map.nummiptex; i++) {
 	if (!strcasecmp(name, map.miptex[i]))
