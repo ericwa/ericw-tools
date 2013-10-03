@@ -1,3 +1,7 @@
+Unreleased
+
+* qbsp: Cope with textures names containing '{' or '}' (e.g. for alpha mask)
+
 2013-10-03 TyrUtils v0.14
 
 * qbsp: Added Quake 2 map compatibility (extra surface attributes ignored)

@@ -19,6 +19,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <ctype.h>
 #include <string.h>
 
 #include "qbsp.h"
@@ -657,16 +658,17 @@ PreParseFile(const char *buf)
 		buf++;
 	    if (!*buf)
 		break;
-	} else if (*buf == '{') {
+	} else if (*buf == '{' && (isspace(buf[1]) || !buf[1])) {
 	    if (braces == 0)
 		map.maxentities++;
 	    else if (braces == 1)
 		map.maxbrushes++;
 	    braces++;
-	} else if (*buf == '}')
+	} else if (*buf == '}' && (isspace(buf[1]) || !buf[1])) {
 	    braces--;
-	else if (*buf == '(')
+	} else if (*buf == '(') {
 	    map.maxfaces++;
+	}
 	buf++;
     }
 
