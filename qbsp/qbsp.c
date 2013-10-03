@@ -375,6 +375,7 @@ PrintOptions(void)
 	   "   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n"
 	   "   -nopercent      Prevents output of percent completion information\n"
 	   "   -bsp2           Request output in bsp2 format\n"
+	   "   -2psb           Request output in 2psb format (RMQ compatible)\n"
 	   "   -leakdist  [n]  Space between leakfile points (default 2)\n"
 	   "   -subdivide [n]  Use different texture subdivision (default 240)\n"
 	   "   -wadpath <dir>  Search this directory for wad files\n"
@@ -492,6 +493,9 @@ ParseOptions(char *szOptions)
 	    else if (!strcasecmp(szTok, "bsp2")) {
 		options.BSPVersion = BSP2VERSION;
 		MemSize = MemSize_BSP2;
+	    } else if (!strcasecmp(szTok, "2psb")) {
+		options.BSPVersion = BSP2RMQVERSION;
+		MemSize = MemSize_BSP2rmq;
 	    } else if (!strcasecmp(szTok, "leakdist")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)

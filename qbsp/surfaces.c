@@ -269,8 +269,8 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
 
-    if (options.BSPVersion == BSP2VERSION) {
-	bsp2_dedge_t *edge = edges->data;
+    if (options.BSPVersion == BSPVERSION) {
+	bsp29_dedge_t *edge = edges->data;
 
 	for (i = 0; i < edges->index; i++, edge++) {
 	    if (v1 == edge->v[1] && v2 == edge->v[0]
@@ -287,7 +287,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
 	edge->v[0] = v1;
 	edge->v[1] = v2;
     } else {
-	bsp29_dedge_t *edge = edges->data;
+	bsp2_dedge_t *edge = edges->data;
 
 	for (i = 0; i < edges->index; i++, edge++) {
 	    if (v1 == edge->v[1] && v2 == edge->v[0]
@@ -564,10 +564,10 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     Message(msgProgress, "GrowRegions");
 
-    if (options.BSPVersion == BSP2VERSION)
-	GrowNodeRegion_BSP2(entity, headnode);
-    else
+    if (options.BSPVersion == BSPVERSION)
 	GrowNodeRegion_BSP29(entity, headnode);
+    else
+	GrowNodeRegion_BSP2(entity, headnode);
 
     return firstface;
 }

@@ -48,8 +48,12 @@ Create an old-style QBSP .PTS file (default is new)
 .IP "\fB\-nopercent\fP"
 Prevents output of percent completion information
 .IP "\fB\-bsp2\fP"
-Create the output BSP file in BSP2 format (increases a number of limits in the
-original BSP 29 format).
+Create the output BSP file in BSP2 format.  Allows the creation of much larger
+and more complex maps than the original BSP 29 format).
+.IP "\fB\-2psb\fP"
+Create the output BSP file in 2PSB format.  This an earlier version of the
+BSP2 format, supported by the RMQ engine (and thus is also known as the
+BSP2rmq or RMQe bsp format).  original BSP 29 format).
 .IP "\fB\-leakdist [n]\fP"
 Space between leakfile points (default 2)
 .IP "\fB\-subdivide [n]\fP"

@@ -93,12 +93,12 @@ const int MemSize_BSP2rmq[] = {
     sizeof(byte),		/* Texture data */
     sizeof(dvertex_t),
     sizeof(byte),		/* Visibility data */
-    sizeof(bsp2_dnode_t),
+    sizeof(bsp2rmq_dnode_t),
     sizeof(texinfo_t),
     sizeof(bsp2_dface_t),
     sizeof(byte),		/* Light data */
     sizeof(bsp2_dclipnode_t),
-    sizeof(bsp2_dleaf_t),
+    sizeof(bsp2rmq_dleaf_t),
     sizeof(uint32_t),		/* Marksurfaces */
     sizeof(bsp2_dedge_t),
     sizeof(int32_t),		/* Surfedges */

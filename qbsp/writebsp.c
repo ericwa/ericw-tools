@@ -236,15 +236,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 	diff = clipcount - model->headnode[1];
 	if (diff != 0) {
 	    model->headnode[1] += diff;
-	    if (options.BSPVersion == BSP2VERSION) {
-		bsp2_dclipnode_t *clipnode = clipnodes->data;
-		for (i = 0; i < oldcount; i++, clipnode++) {
-		    if (clipnode->children[0] >= 0)
-			clipnode->children[0] += diff;
-		    if (clipnode->children[1] >= 0)
-			clipnode->children[1] += diff;
-		}
-	    } else {
+	    if (options.BSPVersion == BSPVERSION) {
 		bsp29_dclipnode_t *clipnode = clipnodes->data;
 		for (i = 0; i < oldcount; i++, clipnode++) {
 		    if (clipnode->children[0] < MAX_BSP_CLIPNODES)
@@ -252,15 +244,23 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 		    if (clipnode->children[1] < MAX_BSP_CLIPNODES)
 			clipnode->children[1] += diff;
 		}
+	    } else {
+		bsp2_dclipnode_t *clipnode = clipnodes->data;
+		for (i = 0; i < oldcount; i++, clipnode++) {
+		    if (clipnode->children[0] >= 0)
+			clipnode->children[0] += diff;
+		    if (clipnode->children[1] >= 0)
+			clipnode->children[1] += diff;
+		}
 	    }
 	}
     }
 
     map.cTotal[LUMP_CLIPNODES] = clipcount + oldcount;
-    if (options.BSPVersion == BSP2VERSION)
-	ExportClipNodes_BSP2(entity, nodes);
-    else
+    if (options.BSPVersion == BSPVERSION)
 	ExportClipNodes_BSP29(entity, nodes);
+    else
+	ExportClipNodes_BSP2(entity, nodes);
 }
 
 //===========================================================================
@@ -426,6 +426,56 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 	map.cTotal[LUMP_MARKSURFACES] - dleaf->firstmarksurface;
 }
 
+static void
+ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
+{
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
+    struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
+    uint32_t *marksurfnums = marksurfs->data;
+    face_t **markfaces, *face;
+    bsp2rmq_dleaf_t *dleaf;
+
+    // ptr arithmetic to get correct leaf in memory
+    dleaf = (bsp2rmq_dleaf_t *)leaves->data + leaves->index;
+    leaves->index++;
+    map.cTotal[LUMP_LEAFS]++;
+
+    dleaf->contents = node->contents;
+
+    /*
+     * write bounding box info
+     * (VectorCopy doesn't work since dest are shorts)
+     */
+    dleaf->mins[0] = node->mins[0];
+    dleaf->mins[1] = node->mins[1];
+    dleaf->mins[2] = node->mins[2];
+    dleaf->maxs[0] = node->maxs[0];
+    dleaf->maxs[1] = node->maxs[1];
+    dleaf->maxs[2] = node->maxs[2];
+
+    dleaf->visofs = -1;	// no vis info yet
+
+    // write the marksurfaces
+    dleaf->firstmarksurface = map.cTotal[LUMP_MARKSURFACES];
+
+    for (markfaces = node->markfaces; *markfaces; markfaces++) {
+	face = *markfaces;
+	if (texinfo[face->texinfo].flags & TEX_SKIP)
+	    continue;
+
+	/* emit a marksurface */
+	do {
+	    marksurfnums[marksurfs->index] = face->outputnumber;
+	    marksurfs->index++;
+	    map.cTotal[LUMP_MARKSURFACES]++;
+	    face = face->original;	/* grab tjunction split faces */
+	} while (face);
+    }
+    dleaf->nummarksurfaces =
+	map.cTotal[LUMP_MARKSURFACES] - dleaf->firstmarksurface;
+}
+
 /*
 ==================
 ExportDrawNodes
@@ -509,6 +559,45 @@ ExportDrawNodes_BSP2(mapentity_t *entity, node_t *node)
     }
 }
 
+static void
+ExportDrawNodes_BSP2rmq(mapentity_t *entity, node_t *node)
+{
+    struct lumpdata *nodes = &entity->lumps[LUMP_NODES];
+    bsp2rmq_dnode_t *dnode;
+    int i;
+
+    dnode = (bsp2rmq_dnode_t *)nodes->data + nodes->index;
+    nodes->index++;
+    map.cTotal[LUMP_NODES]++;
+
+    // VectorCopy doesn't work since dest are shorts
+    dnode->mins[0] = node->mins[0];
+    dnode->mins[1] = node->mins[1];
+    dnode->mins[2] = node->mins[2];
+    dnode->maxs[0] = node->maxs[0];
+    dnode->maxs[1] = node->maxs[1];
+    dnode->maxs[2] = node->maxs[2];
+
+    dnode->planenum = node->outputplanenum;
+    dnode->firstface = node->firstface;
+    dnode->numfaces = node->numfaces;
+
+    // recursively output the other nodes
+    for (i = 0; i < 2; i++) {
+	if (node->children[i]->planenum == -1) {
+	    if (node->children[i]->contents == CONTENTS_SOLID)
+		dnode->children[i] = -1;
+	    else {
+		dnode->children[i] = -(map.cTotal[LUMP_LEAFS] + 1);
+		ExportLeaf_BSP2rmq(entity, node->children[i]);
+	    }
+	} else {
+	    dnode->children[i] = map.cTotal[LUMP_NODES];
+	    ExportDrawNodes_BSP2rmq(entity, node->children[i]);
+	}
+    }
+}
+
 /*
 ==================
 ExportDrawNodes
@@ -538,6 +627,9 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     if (options.BSPVersion == BSP2VERSION) {
 	bsp2_dleaf_t *leaf = pWorldEnt->lumps[LUMP_LEAFS].data;
 	leaf->contents = CONTENTS_SOLID;
+    } else if (options.BSPVersion == BSP2RMQVERSION) {
+	bsp2rmq_dleaf_t *leaf = pWorldEnt->lumps[LUMP_LEAFS].data;
+	leaf->contents = CONTENTS_SOLID;
     } else {
 	bsp29_dleaf_t *leaf = pWorldEnt->lumps[LUMP_LEAFS].data;
 	leaf->contents = CONTENTS_SOLID;
@@ -553,6 +645,11 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 	    ExportLeaf_BSP2(entity, headnode);
 	else
 	    ExportDrawNodes_BSP2(entity, headnode);
+    } else if (options.BSPVersion == BSP2RMQVERSION) {
+	if (headnode->contents < 0)
+	    ExportLeaf_BSP2rmq(entity, headnode);
+	else
+	    ExportDrawNodes_BSP2rmq(entity, headnode);
     } else {
 	if (headnode->contents < 0)
 	    ExportLeaf_BSP29(entity, headnode);
