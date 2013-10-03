@@ -1,4 +1,4 @@
-Unreleased
+2013-10-03 TyrUtils v0.14
 
 * qbsp: Added Quake 2 map compatibility (extra surface attributes ignored)
 * qbsp: Add -2psb option to output in RMQ compatible BSP2 format
