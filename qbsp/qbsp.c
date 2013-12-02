@@ -222,6 +222,8 @@ UpdateEntLump(void)
 	classname = ValueForKey(entity, "classname");
 	if (!strcasecmp(classname, "func_detail"))
 	    continue;
+	if (!strcasecmp(classname, "func_group"))
+	    continue;
 
 	snprintf(modname, sizeof(modname), "*%d", modnum);
 	SetKeyValue(entity, "model", modname);
