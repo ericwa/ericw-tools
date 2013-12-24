@@ -369,7 +369,7 @@ PrintOptions(void)
 	   "   -verbose        Print out more .MAP information\n"
 	   "   -noverbose      Print out almost no information at all\n"
 	   "   -splitspecial   Doesn't combine sky and water faces into one large face\n"
-	   "   -transwater     Computes portal information for transparent water\n"
+	   "   -notranswater   Computes portal information for opaque water\n"
 	   "   -transsky       Computes portal information for transparent sky\n"
 	   "   -oldaxis        Uses original QBSP texture alignment algorithm\n"
 	   "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
@@ -449,6 +449,7 @@ ParseOptions(char *szOptions)
 
     /* Default to the original Quake BSP Version... */
     options.BSPVersion = BSPVERSION;
+    options.fTranswater = true;
 
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
@@ -476,6 +477,8 @@ ParseOptions(char *szOptions)
 		options.fAllverbose = true;
 	    else if (!strcasecmp(szTok, "splitspecial"))
 		options.fSplitspecial = true;
+	    else if (!strcasecmp(szTok, "notranswater"))
+		options.fTranswater = false;
 	    else if (!strcasecmp(szTok, "transwater"))
 		options.fTranswater = true;
 	    else if (!strcasecmp(szTok, "transsky"))
