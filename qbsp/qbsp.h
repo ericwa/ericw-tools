@@ -58,9 +58,9 @@
 #define	MAX_VALUE	1024
 
 // Various other geometry maximums
-#define MAX_POINTS_ON_WINDING	64
-#define	MAXEDGES		32
-#define	MAXPOINTS		28	// don't let a base face get past this
+#define MAX_POINTS_ON_WINDING	96
+#define	MAXEDGES		64
+#define	MAXPOINTS		60	// don't let a base face get past this
 					// because it can be split more later
 
 // For brush.c, normal and +16 (?)
