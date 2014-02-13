@@ -400,7 +400,8 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 	f = AllocMem(FACE, 1, true);
 	f->w.numpoints = w->numpoints;
 	if (f->w.numpoints > MAXEDGES)
-	    Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
+	    Error("face->numpoints > MAXEDGES (%d), source face on line %d",
+		  MAXEDGES, mapface->linenum);
 
 	for (j = 0; j < w->numpoints; j++) {
 	    for (k = 0; k < 3; k++) {
@@ -523,7 +524,8 @@ AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
 	    return;
     }
     if (hullbrush->numfaces == MAX_FACES)
-	Error("Internal error: brush->faces >= MAX_FACES (%s)", __func__);
+	Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
+	      MAX_FACES, hullbrush->srcbrush->faces[0].linenum);
 
     mapface->plane = *plane;
     mapface->texinfo = 0;
@@ -607,7 +609,9 @@ AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
 	    return i;
 
     if (hullbrush->numpoints == MAX_HULL_POINTS)
-	Error("Internal error: hullbrush->numpoints == MAX_HULL_POINTS");
+	Error("hullbrush->numpoints == MAX_HULL_POINTS (%d), "
+	      "source brush on line %d",
+	      MAX_HULL_POINTS, hullbrush->srcbrush->faces[0].linenum);
 
     VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
 
@@ -654,7 +658,9 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 	    return;
 
     if (hullbrush->numedges == MAX_HULL_EDGES)
-	Error("Internal error: hulbrush->numedges == MAX_HULL_EDGES");
+	Error("hullbrush->numedges == MAX_HULL_EDGES (%d), "
+	      "source brush on line %d",
+	      MAX_HULL_EDGES, hullbrush->srcbrush->faces[0].linenum);
 
     hullbrush->edges[i][0] = pt1;
     hullbrush->edges[i][1] = pt2;
@@ -798,7 +804,8 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
 
     // create the faces
     if (mapbrush->numfaces > MAX_FACES)
-	Error("Internal error: brush->faces >= MAX_FACES (%s)", __func__);
+	Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
+	      MAX_FACES, mapbrush->faces[0].linenum);
 
     hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
