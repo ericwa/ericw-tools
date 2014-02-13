@@ -31,6 +31,7 @@
 #define MAX_HULL_EDGES 1024
 
 typedef struct hullbrush_s {
+    const mapbrush_t *srcbrush;
     int numfaces;
     vec3_t mins;
     vec3_t maxs;
@@ -799,6 +800,7 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
     if (mapbrush->numfaces > MAX_FACES)
 	Error("Internal error: brush->faces >= MAX_FACES (%s)", __func__);
 
+    hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
     memcpy(hullbrush.faces, mapbrush->faces,
 	   mapbrush->numfaces * sizeof(mapface_t));

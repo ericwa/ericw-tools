@@ -471,6 +471,7 @@ typedef struct mapface_s {
     plane_t plane;
     int texinfo;
     int fUnique;
+    int linenum;
 } mapface_t;
 
 typedef struct mapbrush_s {

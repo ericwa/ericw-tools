@@ -532,6 +532,7 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
     plane_t *plane;
     texinfo_t tx;
 
+    face->linenum = parser->linenum;
     ParsePlaneDef(parser, planepts);
 
     /* calculate the normal/dist plane equation */
