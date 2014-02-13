@@ -447,12 +447,12 @@ ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
      * write bounding box info
      * (VectorCopy doesn't work since dest are shorts)
      */
-    dleaf->mins[0] = node->mins[0];
-    dleaf->mins[1] = node->mins[1];
-    dleaf->mins[2] = node->mins[2];
-    dleaf->maxs[0] = node->maxs[0];
-    dleaf->maxs[1] = node->maxs[1];
-    dleaf->maxs[2] = node->maxs[2];
+    dleaf->mins[0] = (short)node->mins[0];
+    dleaf->mins[1] = (short)node->mins[1];
+    dleaf->mins[2] = (short)node->mins[2];
+    dleaf->maxs[0] = (short)node->maxs[0];
+    dleaf->maxs[1] = (short)node->maxs[1];
+    dleaf->maxs[2] = (short)node->maxs[2];
 
     dleaf->visofs = -1;	// no vis info yet
 
