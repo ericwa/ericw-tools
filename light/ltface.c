@@ -684,8 +684,8 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
     if (sample->light < light) {
 	sample->light = light;
 	for (i = 0; i < 3; i++)
-	    if (sample->color[i] < color[i])
-		sample->color[i] = color[i];
+	    if (sample->color[i] < color[i] * light / 255.0f)
+		sample->color[i] = color[i] * light / 255.0f;
     }
 }
 
