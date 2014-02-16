@@ -3,6 +3,9 @@ Unreleased
 * qbsp: Cope with textures names containing '{' or '}' (e.g. for alpha mask)
 * qbsp: Increase MAXEDGES limit from 32 to 64
 * qbsp: Make transparent water the default (same as txqbsp)
+* qbsp: Improve some clip hull errors with map source line numbers
+* qbsp: Ignore func_detail entities on -onlyents compiles
+* light: Fix bug with minglight clamping with coloured lighting
 
 2013-10-03 TyrUtils v0.14
 
