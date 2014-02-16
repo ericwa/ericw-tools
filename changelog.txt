@@ -1,4 +1,4 @@
-Unreleased
+2014-02-16 TyrUtils v0.15
 
 * qbsp: Cope with textures names containing '{' or '}' (e.g. for alpha mask)
 * qbsp: Increase MAXEDGES limit from 32 to 64
