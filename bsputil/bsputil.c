@@ -48,11 +48,18 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
     lumpinfo_t lump;
     dtexdata_t texdata;
     miptex_t *miptex;
-    int i, j, size, filepos;
+    int i, j, size, filepos, numvalid;
 
     texdata = bsp->dtexdata;
+
+    /* Count up the valid lumps */
+    numvalid = 0;
+    for (i = 0; i < texdata.header->nummiptex; i++)
+	if (texdata.header->dataofs[i] >= 0)
+	    numvalid++;
+
     memcpy(&header.identification, "WAD2", 4);
-    header.numlumps = texdata.header->nummiptex;
+    header.numlumps = numvalid;
     header.infotableofs = sizeof(header);
 
     /* Byte-swap header and write out */
@@ -60,9 +67,12 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
     header.infotableofs = LittleLong(header.infotableofs);
     fwrite(&header, sizeof(header), 1, wadfile);
 
-    /* miptex data will follow the lump headers */
-    filepos = sizeof(header) + sizeof(lump) * texdata.header->nummiptex;
+    /* Miptex data will follow the lump headers */
+    filepos = sizeof(header) + numvalid * sizeof(lump);
     for (i = 0; i < texdata.header->nummiptex; i++) {
+	if (texdata.header->dataofs[i] < 0)
+	    continue;
+
 	miptex = (miptex_t *)(texdata.base + texdata.header->dataofs[i]);
 
 	lump.filepos = filepos;
@@ -82,6 +92,8 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
 	fwrite(&lump, sizeof(lump), 1, wadfile);
     }
     for (i = 0; i < texdata.header->nummiptex; i++) {
+	if (texdata.header->dataofs[i] < 0)
+	    continue;
 	miptex = (miptex_t *)(texdata.base + texdata.header->dataofs[i]);
 	size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
 
