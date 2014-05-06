@@ -79,9 +79,12 @@ HashVec(vec3_t vec)
 //============================================================================
 
 static void
-CanonicalVector(vec3_t vec)
+CanonicalVector(const vec3_t p1, const vec3_t p2, vec3_t vec)
 {
-    VectorNormalize(vec);
+    vec_t length;
+
+    VectorSubtract(p2, p1, vec);
+    length = VectorNormalize(vec);
     if (vec[0] > EQUAL_EPSILON)
 	return;
     else if (vec[0] < -EQUAL_EPSILON) {
@@ -106,7 +109,8 @@ CanonicalVector(vec3_t vec)
     } else
 	vec[2] = 0;
 
-    Error("Degenerate edge at (%.3f %.3f %.3f)", vec[0], vec[1], vec[2]);
+    Error("Degenerate edge of length %f at (%.3f %.3f %.3f)",
+	  length, p1[0], p1[1], p1[2]);
 }
 
 static wedge_t *
@@ -118,8 +122,7 @@ FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
     vec_t temp;
     int h;
 
-    VectorSubtract(p2, p1, edgevec);
-    CanonicalVector(edgevec);
+    CanonicalVector(p1, p2, edgevec);
 
     *t1 = DotProduct(p1, edgevec);
     *t2 = DotProduct(p2, edgevec);
