@@ -310,11 +310,27 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 {
     int i;
 
+    /*
+     * The (long double) casts below are important: The original code
+     * was written for x87 floating-point which uses 80-bit floats for
+     * intermediate calculations. But if you compile it without the
+     * casts for modern x86_64, the compiler will round each
+     * intermediate result to a 32-bit float, which introduces extra
+     * rounding error.
+     *
+     * This becomes a problem if the rounding error causes the light
+     * utilities and the engine to disagree about the lightmap size
+     * for some surfaces.
+     *
+     * Casting to (long double) keeps the intermediate values at at
+     * least 64 bits of precision, probably 128.
+     */
     for (i = 0; i < 2; i++)
 	coord[i] =
-	    world[0] * tex->vecs[i][0] +
-	    world[1] * tex->vecs[i][1] +
-	    world[2] * tex->vecs[i][2] + tex->vecs[i][3];
+	    (long double)world[0] * tex->vecs[i][0] +
+	    (long double)world[1] * tex->vecs[i][1] +
+	    (long double)world[2] * tex->vecs[i][2] +
+	                            tex->vecs[i][3];
 }
 
 #if 0
