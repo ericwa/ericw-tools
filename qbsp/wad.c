@@ -66,7 +66,7 @@ WAD_LoadInfo(wad_t *wad)
 	len = fread(&miptex, 1, sizeof(miptex), wad->file);
 	if (len != sizeof(miptex))
 	    return false;
-	disksize = miptex.width * miptex.height / 64 * 85;
+	disksize = sizeof(miptex) + (miptex.width * miptex.height / 64 * 85);
 	if (disksize < wad->lumps[i].disksize)
 	    wad->lumps[i].disksize = disksize;
     }
