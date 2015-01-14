@@ -62,6 +62,22 @@ surface (more detailed explanation in the "_anglescale" key below).
 Force generation of a .lit file, even if your map does not have any coloured
 lights. By default, light will automatically generate the .lit file when
 needed.
+.IP "\fB\-dirty\fP"
+Enables dirtmapping (ambient occlusion), borrowed from q3map2. This adds shadows
+to corners and crevices. For best results combine with \-extra4.
+.IP "\fB\-dirtdebug\fP"
+When used with \-dirty, renders just the dirtmap against a fullbright background,
+ignoring regular lights in the map.
+.IP "\fB\-dirtmode n\fP"
+Choose between ordered (0, default) and randomized (1) dirtmapping.
+.IP "\fB\-dirtdepth n\fP"
+Maximum depth of occlusion checking for dirtmapping, default 128.
+.IP "\fB\-dirtscale n\fP"
+Scale factor used in dirt calculations, default 1. Lower values (e.g. 0.5) make
+the dirt fainter, 2.0 would create much darker shadows.
+.IP "\fB\-dirtgain n\fP"
+Exponent used in dirt calculation, default 1. Lower values (e.g. 0.5) make the
+shadows darker and stretch further away from corners.
 
 .SH "MODEL ENTITY KEYS"
 

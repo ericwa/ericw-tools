@@ -104,6 +104,15 @@ extern lightsample_t minlight;
 extern lightsample_t sunlight;
 extern vec3_t sunvec;
 
+/* dirt */
+extern qboolean dirty;
+extern qboolean dirtDebug;
+extern int dirtMode;
+extern float dirtDepth;
+extern float dirtScale;
+extern float dirtGain;
+
+
 /*
  * Return space for the lightmap and colourmap at the same time so it can
  * be done in a thread-safe manner.
@@ -115,5 +124,7 @@ extern byte *lit_filebase;
 
 extern int oversample;
 extern qboolean write_litfile;
+
+void SetupDirt();
 
 #endif /* __LIGHT_LIGHT_H__ */
