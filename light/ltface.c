@@ -1111,7 +1111,7 @@ LightFace_Dirt(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     lightsample_t *sample;
     lightmap_t *lightmap;
 
-    /* if sunlight is set, use a style 0 light map */
+    /* apply dirt to style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0);
 
     /* Check each point... */
