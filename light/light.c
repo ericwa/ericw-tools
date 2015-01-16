@@ -266,45 +266,40 @@ main(int argc, const char **argv)
 	    else
 		Error("-anglesense requires a numeric argument (0.0 - 1.0)");
 	} else if ( !strcmp( argv[ i ], "-dirty" ) ) {
-		dirty = true;
-		logprint( "Dirtmapping enabled\n" );
-	}
-	else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
-		dirtDebug = true;
-		logprint( "Dirtmap debugging enabled\n" );
-	}
-	else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
-		dirtMode = atoi( argv[ ++i ] );
-		if ( dirtMode != 0 && dirtMode != 1 ) {
-			dirtMode = 0;
-		}
-		if ( dirtMode == 1 ) {
-			logprint( "Enabling randomized dirtmapping\n" );
-		}
-		else{
-			logprint( "Enabling ordered dirtmapping\n" );
-		}
-	}
-	else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
-		dirtDepth = atof( argv[ ++i ] );
-		if ( dirtDepth <= 0.0f ) {
-			dirtDepth = 128.0f;
-		}
-		logprint( "Dirtmapping depth set to %.1f\n", dirtDepth );
-	}
-	else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
-		dirtScale = atof( argv[ ++i ] );
-		if ( dirtScale <= 0.0f ) {
-			dirtScale = 1.0f;
-		}
-		logprint( "Dirtmapping scale set to %.1f\n", dirtScale );
-	}
-	else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
-		dirtGain = atof( argv[ ++i ] );
-		if ( dirtGain <= 0.0f ) {
-			dirtGain = 1.0f;
-		}
-		logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
+	    dirty = true;
+	    logprint( "Dirtmapping enabled\n" );
+	} else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
+	    dirtDebug = true;
+	    logprint( "Dirtmap debugging enabled\n" );
+	} else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
+	    dirtMode = atoi( argv[ ++i ] );
+	    if ( dirtMode != 0 && dirtMode != 1 ) {
+		dirtMode = 0;
+	    }
+	    if ( dirtMode == 1 ) {
+		logprint( "Enabling randomized dirtmapping\n" );
+	    }
+	    else{
+		logprint( "Enabling ordered dirtmapping\n" );
+	    }
+	} else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
+	    dirtDepth = atof( argv[ ++i ] );
+	    if ( dirtDepth <= 0.0f ) {
+		dirtDepth = 128.0f;
+	    }
+	    logprint( "Dirtmapping depth set to %.1f\n", dirtDepth );
+	} else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
+	    dirtScale = atof( argv[ ++i ] );
+	    if ( dirtScale <= 0.0f ) {
+		dirtScale = 1.0f;
+	    }
+	    logprint( "Dirtmapping scale set to %.1f\n", dirtScale );
+	} else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
+	    dirtGain = atof( argv[ ++i ] );
+	    if ( dirtGain <= 0.0f ) {
+		dirtGain = 1.0f;
+	    }
+	    logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -352,7 +347,7 @@ main(int argc, const char **argv)
     LoadEntities(bsp);
 
     if (dirty)
-		SetupDirt();
+	SetupDirt();
 
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
