@@ -164,6 +164,18 @@ vec_from_mangle(vec3_t v, const vec3_t m)
     v[2] = sin(tmp[1]);
 }
 
+/* detect colors with components in 0-1 and scale them to 0-255 */
+static void
+normalize_color_format(vec3_t color)
+{
+    if (color[0] >= 0 && color[0] <= 1 &&
+	color[1] >= 0 && color[1] <= 1 &&
+	color[2] >= 0 && color[2] <= 1)
+    {
+	VectorScale(color, 255, color);
+    }
+}
+
 static void
 CheckEntityFields(entity_t *entity)
 {
@@ -378,20 +390,23 @@ LoadEntities(const bsp2_t *bsp)
 		scan_vec3(vec, com_token, "mangle");
 		vec_from_mangle(entity->spotvec, vec);
 		entity->spotlight = true;
-	    } else if (!strcmp(key, "_color") || !strcmp(key, "color"))
+	    } else if (!strcmp(key, "_color") || !strcmp(key, "color")) {
 		scan_vec3(entity->light.color, com_token, "color");
-	    else if (!strcmp(key, "_sunlight"))
+		normalize_color_format(entity->light.color);
+	    } else if (!strcmp(key, "_sunlight"))
 		sunlight.light = atof(com_token);
 	    else if (!strcmp(key, "_sun_mangle")) {
 		scan_vec3(vec, com_token, "_sun_mangle");
 		vec_from_mangle(sunvec, vec);
 		VectorNormalize(sunvec);
 		VectorScale(sunvec, -16384, sunvec);
-	    } else if (!strcmp(key, "_sunlight_color"))
+	    } else if (!strcmp(key, "_sunlight_color")) {
 		scan_vec3(sunlight.color, com_token, "_sunlight_color");
-	    else if (!strcmp(key, "_minlight_color"))
+		normalize_color_format(sunlight.color);
+	    } else if (!strcmp(key, "_minlight_color")) {
 		scan_vec3(minlight.color, com_token, "_minlight_color");
-	    else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
+		normalize_color_format(minlight.color);
+	    } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
 		entity->anglescale = atof(com_token);
 	}
 
