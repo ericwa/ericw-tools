@@ -151,7 +151,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
 		if (hitpoint) {
 		    hitpoint->dplane = crossnode->plane;
 		    hitpoint->side = crossnode->side;
-		    VectorCopy(crossnode->back, hitpoint->point);
+		    VectorCopy(crossnode->front, hitpoint->point);
 		}
 		return tracehit;
 	    }
