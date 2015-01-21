@@ -187,11 +187,11 @@ TraceLine(const dmodel_t *model, const int traceflags,
 	    break;
 	}
 
-	if (frontdist > ON_EPSILON && backdist > ON_EPSILON) {
+	if (frontdist > -ON_EPSILON && backdist > -ON_EPSILON) {
 	    node = tnode->children[0];
 	    continue;
 	}
-	if (frontdist < -ON_EPSILON && backdist < -ON_EPSILON) {
+	if (frontdist < ON_EPSILON && backdist < ON_EPSILON) {
 	    node = tnode->children[1];
 	    continue;
 	}
