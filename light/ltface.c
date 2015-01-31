@@ -158,6 +158,12 @@ typedef struct {
 
     int numpoints;
     vec3_t points[SINGLEMAP];
+
+    /*
+    raw ambient occlusion amount per sample point, 0-1, where 1 is 
+    fully occluded. dirtgain/dirtscale are not applied yet
+    */
+    vec_t occlusion[SINGLEMAP];
 } lightsurf_t;
 
 typedef struct {
@@ -706,6 +712,56 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
 }
 
 /*
+ * ============
+ * Dirt_GetScaleFactor
+ *
+ * returns scale factor for dirt/ambient occlusion
+ * ============
+ */
+static inline vec_t
+Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity)
+{
+    vec_t light_dirtgain = dirtGain;
+    vec_t light_dirtscale = dirtScale;
+    vec_t outDirt;
+
+    if (!dirty)
+    	return 1.0f;
+
+    /* override the global scale and gain values with the light-specific
+       values, if present */
+    if (entity) {
+	if (entity->nodirt)
+	    return 1.0f;
+	if (entity->dirtgain)
+	    light_dirtgain = entity->dirtgain;
+	if (entity->dirtscale)
+	    light_dirtscale = entity->dirtscale;
+    }
+
+    /* early out */
+    if ( occlusion <= 0.0f ) {
+	return 1.0f;
+    }
+
+    /* apply gain (does this even do much? heh) */
+    outDirt = pow( occlusion, light_dirtgain );
+    if ( outDirt > 1.0f ) {
+	outDirt = 1.0f;
+    }
+
+    /* apply scale */
+    outDirt *= light_dirtscale;
+    if ( outDirt > 1.0f ) {
+	outDirt = 1.0f;
+    }
+
+    /* return to sender */
+    return 1.0f - outDirt;
+}
+
+
+/*
  * ================
  * LightFace_Entity
  * ================
@@ -773,6 +829,8 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 
 	angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
+	add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity);
+
 	Light_Add(sample, add, light->color);
 
 	/* Check if we really hit, ignore tiny lights */
@@ -822,9 +880,13 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
     sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
+    	vec_t value;
 	if (!TestSky(surfpoint, vector, shadowself))
 	    continue;
-	Light_Add(sample, angle * light->light, light->color);
+	value = angle * light->light;
+	if (!sunlightNoDirt)
+	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
+	Light_Add(sample, value, light->color);
 	if (!hit && sample->light >= 1)
 	    hit = true;
     }
@@ -857,10 +919,12 @@ LightFace_Min(const lightsample_t *light,
     hit = false;
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+    	vec_t value = light->light;
+    	value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
 	if (addminlight)
-	    Light_Add(sample, light->light, light->color);
+	    Light_Add(sample, value, light->color);
 	else
-	    Light_ClampMin(sample, light->light, light->color);
+	    Light_ClampMin(sample, value, light->color);
 	if (!hit && sample->light >= 1)
 	    hit = true;
     }
@@ -875,13 +939,15 @@ LightFace_Min(const lightsample_t *light,
 	surfpoint = lightsurf->points[0];
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
 	    if (addminlight || sample->light < entity->light.light) {
+	    	vec_t value = entity->light.light;
 		trace = TestLight(entity->origin, surfpoint, shadowself);
 		if (!trace)
 		    continue;
+		value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], entity);
 		if (addminlight)
-		    Light_Add(sample, entity->light.light, entity->light.color);
+		    Light_Add(sample, value, entity->light.color);
 		else
-		    Light_ClampMin(sample, entity->light.light, entity->light.color);
+		    Light_ClampMin(sample, value, entity->light.color);
 	    }
 	    if (!hit && sample->light >= 1)
 		hit = true;
@@ -890,6 +956,31 @@ LightFace_Min(const lightsample_t *light,
 
     if (hit)
 	Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
+
+/*
+ * =============
+ * LightFace_DirtDebug
+ * =============
+ */
+static void
+LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+{
+    int i;
+    lightsample_t *sample;
+    lightmap_t *lightmap;
+
+    /* use a style 0 light map */
+    lightmap = Lightmap_ForStyle(lightmaps, 0);
+
+    /* Overwrite each point with the dirt value for that sample... */
+    sample = lightmap->samples;
+    for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+	sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
+	VectorSet(sample->color, sample->light, sample->light, sample->light);
+    }
+
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
@@ -991,7 +1082,7 @@ DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hi
 static vec_t
 DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     int i;
-    float gatherDirt, outDirt, angle, elevation, ooDepth;
+    float gatherDirt, angle, elevation, ooDepth;
     vec3_t worldUp, myUp, myRt, temp, direction, displacement;
     vec3_t traceEnd, traceHitpoint;
 
@@ -1074,69 +1165,31 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
 	gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
     }
 
-    /* early out */
-    if ( gatherDirt <= 0.0f ) {
-	return 1.0f;
-    }
+    /* save gatherDirt, the rest of the scaling of the dirt value is done
+       per-light */
 
-    /* apply gain (does this even do much? heh) */
-    outDirt = pow( gatherDirt / ( numDirtVectors + 1 ), dirtGain );
-    if ( outDirt > 1.0f ) {
-	outDirt = 1.0f;
-    }
-
-    /* apply scale */
-    outDirt *= dirtScale;
-    if ( outDirt > 1.0f ) {
-	outDirt = 1.0f;
-    }
-
-    /* return to sender */
-    return 1.0f - outDirt;
+    return gatherDirt / ( numDirtVectors + 1 );
 }
+
 
 /*
  * ============
- * LightFace_Dirt
+ * LightFace_CalculateDirt
  * ============
  */
 static void
-LightFace_Dirt(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_CalculateDirt(lightsurf_t *lightsurf)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
     const vec_t *surfpoint;
     int i;
-    qboolean hit;
-    lightsample_t *sample;
-    lightmap_t *lightmap;
-
-    /* apply dirt to style 0 light map */
-    lightmap = Lightmap_ForStyle(lightmaps, 0);
 
     /* Check each point... */
-    hit = false;
-    sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
-    for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
-	vec_t dirt = DirtForSample(modelinfo->model, surfpoint, plane->normal);
-
-	if (dirtDebug) {
-	    sample->light = dirt * 255;
-	    VectorSet(sample->color, dirt * 255, dirt * 255, dirt * 255);
-	} else {
-	    sample->light *= dirt;
-	    sample->color[0] *= dirt;
-	    sample->color[1] *= dirt;
-	    sample->color[2] *= dirt;
-	}
-	 
-    	if (!hit && sample->light >= 1)
-    	    hit = true;
+    for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
+	lightsurf->occlusion[i] = DirtForSample(modelinfo->model, surfpoint, plane->normal);
     }
-
-    if (hit)
-	Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 
@@ -1240,6 +1293,10 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
     Lightsurf_Init(modelinfo, face, bsp, &lightsurf);
     Lightmaps_Init(lightmaps, MAXLIGHTMAPS + 1);
 
+    /* calculate dirt (ambient occlusion) but don't use it yet */
+    if (dirty)
+        LightFace_CalculateDirt(&lightsurf);
+
     /*
      * The lighting procedure is: cast all positive lights, fix
      * minlight levels, then cast all negative lights. Finally, we
@@ -1272,9 +1329,9 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
     if (sunlight.light < 0)
 	LightFace_Sky(&sunlight, sunvec, &lightsurf, lightmaps);
 
-    /* dirt (ambient occlusion) */
-    if (dirty)
-	LightFace_Dirt(&lightsurf, lightmaps);
+    /* replace lightmaps with AO for debugging */
+    if (dirtDebug)
+    	LightFace_DirtDebug(&lightsurf, lightmaps);
 
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {

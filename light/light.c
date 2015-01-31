@@ -42,6 +42,12 @@ int dirtMode = 0;
 float dirtDepth = 128.0f;
 float dirtScale = 1.0f;
 float dirtGain = 1.0f;
+qboolean sunlightNoDirt = false;
+
+qboolean dirtModeSetOnCmdline = false;
+qboolean dirtDepthSetOnCmdline = false;
+qboolean dirtScaleSetOnCmdline = false;
+qboolean dirtGainSetOnCmdline = false;
 
 byte *filebase;			// start of lightmap data
 static byte *file_p;		// start of free space after data
@@ -272,6 +278,7 @@ main(int argc, const char **argv)
 	    dirtDebug = true;
 	    logprint( "Dirtmap debugging enabled\n" );
 	} else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
+	    dirtModeSetOnCmdline = true;
 	    dirtMode = atoi( argv[ ++i ] );
 	    if ( dirtMode != 0 && dirtMode != 1 ) {
 		dirtMode = 0;
@@ -283,18 +290,21 @@ main(int argc, const char **argv)
 		logprint( "Enabling ordered dirtmapping\n" );
 	    }
 	} else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
+	    dirtDepthSetOnCmdline = true;
 	    dirtDepth = atof( argv[ ++i ] );
 	    if ( dirtDepth <= 0.0f ) {
 		dirtDepth = 128.0f;
 	    }
 	    logprint( "Dirtmapping depth set to %.1f\n", dirtDepth );
 	} else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
+	    dirtScaleSetOnCmdline = true;
 	    dirtScale = atof( argv[ ++i ] );
 	    if ( dirtScale <= 0.0f ) {
 		dirtScale = 1.0f;
 	    }
 	    logprint( "Dirtmapping scale set to %.1f\n", dirtScale );
 	} else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
+	    dirtGainSetOnCmdline = true;
 	    dirtGain = atof( argv[ ++i ] );
 	    if ( dirtGain <= 0.0f ) {
 		dirtGain = 1.0f;

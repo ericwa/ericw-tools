@@ -408,7 +408,19 @@ LoadEntities(const bsp2_t *bsp)
 		normalize_color_format(minlight.color);
 	    } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
 		entity->anglescale = atof(com_token);
-	}
+	    else if (!strcmp(key, "_dirtdepth"))
+		entity->dirtdepth = atof(com_token);
+	    else if (!strcmp(key, "_dirtmode"))
+		entity->dirtmode = atoi(com_token);
+	    else if (!strcmp(key, "_sunlight_nodirt"))
+		entity->sunlight_nodirt = atoi(com_token);
+	    else if (!strcmp(key, "_dirtscale"))
+		entity->dirtscale = atof(com_token);
+	    else if (!strcmp(key, "_dirtgain"))
+		entity->dirtgain = atof(com_token);
+	    else if (!strcmp(key, "_nodirt"))
+		entity->nodirt = atoi(com_token);
+	}	
 
 	/*
 	 * Check light entity fields and any global settings in worldspawn.
@@ -436,6 +448,31 @@ LoadEntities(const bsp2_t *bsp)
 	    }
 	    if (entity->anglescale >= 0 && entity->anglescale <= 1.0)
 		sun_anglescale = entity->anglescale;
+
+	    if (entity->dirtdepth && !dirtDepthSetOnCmdline) {
+		dirtDepth = entity->dirtdepth;
+		logprint("Using dirtdepth value %f from worldspawn.\n", 
+			dirtDepth);
+	    }
+	    if (entity->dirtmode && !dirtModeSetOnCmdline) {
+		dirtMode = entity->dirtmode;
+		logprint("Using dirtmode value %i from worldspawn.\n", 
+			dirtMode);
+	    }
+	    if (entity->dirtscale && !dirtScaleSetOnCmdline) {
+		dirtScale = entity->dirtscale;
+		logprint("Using dirtscale value %f from worldspawn.\n", 
+			dirtScale);
+	    }
+	    if (entity->dirtgain && !dirtGainSetOnCmdline) {
+		dirtGain = entity->dirtgain;
+		logprint("Using dirtgain value %f from worldspawn.\n", 
+			dirtGain);
+	    }
+	    if (entity->sunlight_nodirt) {
+		sunlightNoDirt = true;
+		logprint("Dirtmapping disabled for sunlight in worldspawn.\n");
+	    }
 	}
     }
 

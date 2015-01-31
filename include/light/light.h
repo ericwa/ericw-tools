@@ -105,13 +105,20 @@ extern lightsample_t sunlight;
 extern vec3_t sunvec;
 
 /* dirt */
+
+/* enable dirt processing and apply it to all lights by default */
 extern qboolean dirty;
 extern qboolean dirtDebug;
 extern int dirtMode;
 extern float dirtDepth;
 extern float dirtScale;
 extern float dirtGain;
+extern qboolean sunlightNoDirt;
 
+extern qboolean dirtModeSetOnCmdline;
+extern qboolean dirtDepthSetOnCmdline;
+extern qboolean dirtScaleSetOnCmdline;
+extern qboolean dirtGainSetOnCmdline;
 
 /*
  * Return space for the lightmap and colourmap at the same time so it can
