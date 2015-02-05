@@ -39,6 +39,8 @@ typedef vec_t vec3_t[3];
 
 #define Q_PI 3.14159265358979323846
 
+#define DEG2RAD( a ) ( ( a ) * ( ( 2 * Q_PI ) / 360.0 ) )
+
 extern const vec3_t vec3_origin;
 
 #define EQUAL_EPSILON 0.001
@@ -91,10 +93,29 @@ VectorInverse(vec3_t v)
     v[2] = -v[2];
 }
 
+static inline void
+VectorSet(vec3_t out, vec_t x, vec_t y, vec_t z)
+{
+    out[0] = x;
+    out[1] = y;
+    out[2] = z;
+}
+
 static inline vec_t
 Q_rint(vec_t in)
 {
     return (vec_t)(floor(in + 0.5));
+}
+
+/*
+   Random()
+   returns a pseudorandom number between 0 and 1
+ */
+
+static inline vec_t
+Random( void )
+{
+    return (vec_t) rand() / RAND_MAX;
 }
 
 static inline void

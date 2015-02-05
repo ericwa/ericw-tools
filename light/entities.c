@@ -417,6 +417,26 @@ LoadEntities(const bsp2_t *bsp)
 		normalize_color_format(minlight.color);
 	    } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
 		entity->anglescale = atof(com_token);
+	    else if (!strcmp(key, "_dirtdepth"))
+		entity->dirtdepth = atof(com_token);
+	    else if (!strcmp(key, "_dirtmode"))
+		entity->dirtmode = atoi(com_token);
+	    else if (!strcmp(key, "_sunlight_dirt"))
+		entity->sunlight_dirt = atoi(com_token);
+	    else if (!strcmp(key, "_minlight_dirt"))
+		entity->minlight_dirt = atoi(com_token);
+	    else if (!strcmp(key, "_dirtscale"))
+		entity->dirtscale = atof(com_token);
+	    else if (!strcmp(key, "_dirtgain"))
+		entity->dirtgain = atof(com_token);
+	    else if (!strcmp(key, "_dirt")) {
+		entity->dirt = atoi(com_token);
+		if (entity->dirt == 1 && !dirty) {
+		    logprint("entity with \"_dirt\" \"1\" detected, enabling "
+			"dirtmapping.\n");
+		    dirty = true;
+		}
+	    }
 	}
 
 	/*
@@ -445,6 +465,54 @@ LoadEntities(const bsp2_t *bsp)
 	    }
 	    if (entity->anglescale >= 0 && entity->anglescale <= 1.0)
 		sun_anglescale = entity->anglescale;
+
+	    if (entity->dirtdepth && !dirtDepthSetOnCmdline) {
+		dirtDepth = entity->dirtdepth;
+		logprint("Using dirtdepth value %f from worldspawn.\n", 
+			dirtDepth);
+	    }
+	    if (entity->dirtmode && !dirtModeSetOnCmdline) {
+		dirtMode = entity->dirtmode;
+		logprint("Using dirtmode value %i from worldspawn.\n", 
+			dirtMode);
+	    }
+	    if (entity->dirtscale && !dirtScaleSetOnCmdline) {
+		dirtScale = entity->dirtscale;
+		logprint("Using dirtscale value %f from worldspawn.\n", 
+			dirtScale);
+	    }
+	    if (entity->dirtgain && !dirtGainSetOnCmdline) {
+		dirtGain = entity->dirtgain;
+		logprint("Using dirtgain value %f from worldspawn.\n", 
+			dirtGain);
+	    }
+	    if (entity->dirt == 1) {
+		globalDirt = true;
+		dirty = true;
+		logprint("Global dirtmapping enabled in worldspawn.\n");
+	    }
+
+	    if (entity->sunlight_dirt == 1) {
+		sunlightDirt = true;
+		dirty = true;
+		logprint("Sunlight dirtmapping enabled in worldspawn.\n");
+	    } else if (entity->sunlight_dirt == -1) {
+		sunlightDirt = false;
+		logprint("Sunlight dirtmapping disabled in worldspawn.\n");
+	    } else {
+		sunlightDirt = globalDirt;
+	    } 
+
+	    if (entity->minlight_dirt == 1) {
+		minlightDirt = true;
+		dirty = true;
+		logprint("Minlight dirtmapping enabled in worldspawn.\n");
+	    } else if (entity->minlight_dirt == -1) {
+		minlightDirt = false;
+		logprint("Minlight dirtmapping disabled in worldspawn.\n");
+	    } else {
+		minlightDirt = globalDirt;
+	    }
 	}
     }
 

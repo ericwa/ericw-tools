@@ -158,6 +158,12 @@ typedef struct {
 
     int numpoints;
     vec3_t points[SINGLEMAP];
+
+    /*
+    raw ambient occlusion amount per sample point, 0-1, where 1 is 
+    fully occluded. dirtgain/dirtscale are not applied yet
+    */
+    vec_t occlusion[SINGLEMAP];
 } lightsurf_t;
 
 typedef struct {
@@ -706,6 +712,69 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
 }
 
 /*
+ * ============
+ * Dirt_GetScaleFactor
+ *
+ * returns scale factor for dirt/ambient occlusion
+ * ============
+ */
+static inline vec_t
+Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity)
+{
+    vec_t light_dirtgain = dirtGain;
+    vec_t light_dirtscale = dirtScale;
+    vec_t outDirt;
+    qboolean usedirt;
+
+    /* is dirt processing disabled entirely? */
+    if (!dirty)
+	return 1.0f;
+
+    /* should this light be affected by dirt? */
+    if (entity && entity->dirt == -1) {
+	usedirt = false;
+    } else if (entity && entity->dirt == 1) {
+	usedirt = true;
+    } else {
+	usedirt = globalDirt;
+    }
+
+    /* if not, quit */
+    if (!usedirt)
+	return 1.0;
+
+    /* override the global scale and gain values with the light-specific
+       values, if present */
+    if (entity) {
+	if (entity->dirtgain)
+	    light_dirtgain = entity->dirtgain;
+	if (entity->dirtscale)
+	    light_dirtscale = entity->dirtscale;
+    }
+
+    /* early out */
+    if ( occlusion <= 0.0f ) {
+	return 1.0f;
+    }
+
+    /* apply gain (does this even do much? heh) */
+    outDirt = pow( occlusion, light_dirtgain );
+    if ( outDirt > 1.0f ) {
+	outDirt = 1.0f;
+    }
+
+    /* apply scale */
+    outDirt *= light_dirtscale;
+    if ( outDirt > 1.0f ) {
+	outDirt = 1.0f;
+    }
+
+    /* return to sender */
+    return 1.0f - outDirt;
+}
+
+
+/*
  * ================
  * LightFace_Entity
  * ================
@@ -773,6 +842,8 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 
 	angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
+	add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity);
+
 	Light_Add(sample, add, light->color);
 
 	/* Check if we really hit, ignore tiny lights */
@@ -822,9 +893,13 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
     sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
+    	vec_t value;
 	if (!TestSky(surfpoint, vector, shadowself))
 	    continue;
-	Light_Add(sample, angle * light->light, light->color);
+	value = angle * light->light;
+	if (sunlightDirt)
+	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
+	Light_Add(sample, value, light->color);
 	if (!hit && sample->light >= 1)
 	    hit = true;
     }
@@ -857,10 +932,13 @@ LightFace_Min(const lightsample_t *light,
     hit = false;
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+    	vec_t value = light->light;
+        if (minlightDirt)
+	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
 	if (addminlight)
-	    Light_Add(sample, light->light, light->color);
+	    Light_Add(sample, value, light->color);
 	else
-	    Light_ClampMin(sample, light->light, light->color);
+	    Light_ClampMin(sample, value, light->color);
 	if (!hit && sample->light >= 1)
 	    hit = true;
     }
@@ -875,13 +953,15 @@ LightFace_Min(const lightsample_t *light,
 	surfpoint = lightsurf->points[0];
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
 	    if (addminlight || sample->light < entity->light.light) {
+	    	vec_t value = entity->light.light;
 		trace = TestLight(entity->origin, surfpoint, shadowself);
 		if (!trace)
 		    continue;
+		value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], entity);
 		if (addminlight)
-		    Light_Add(sample, entity->light.light, entity->light.color);
+		    Light_Add(sample, value, entity->light.color);
 		else
-		    Light_ClampMin(sample, entity->light.light, entity->light.color);
+		    Light_ClampMin(sample, value, entity->light.color);
 	    }
 	    if (!hit && sample->light >= 1)
 		hit = true;
@@ -891,6 +971,240 @@ LightFace_Min(const lightsample_t *light,
     if (hit)
 	Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
+
+/*
+ * =============
+ * LightFace_DirtDebug
+ * =============
+ */
+static void
+LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+{
+    int i;
+    lightsample_t *sample;
+    lightmap_t *lightmap;
+
+    /* use a style 0 light map */
+    lightmap = Lightmap_ForStyle(lightmaps, 0);
+
+    /* Overwrite each point with the dirt value for that sample... */
+    sample = lightmap->samples;
+    for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+	sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
+	VectorSet(sample->color, sample->light, sample->light, sample->light);
+    }
+
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
+
+/* Dirtmapping borrowed from q3map2, originally by RaP7oR */
+
+#define DIRT_CONE_ANGLE             88  /* degrees */
+#define DIRT_NUM_ANGLE_STEPS        16
+#define DIRT_NUM_ELEVATION_STEPS    3
+#define DIRT_NUM_VECTORS            ( DIRT_NUM_ANGLE_STEPS * DIRT_NUM_ELEVATION_STEPS )
+
+static vec3_t dirtVectors[ DIRT_NUM_VECTORS ];
+static int numDirtVectors = 0;
+
+/*
+ * ============
+ * SetupDirt
+ *
+ * sets up dirtmap (ambient occlusion)
+ * ============
+ */
+void SetupDirt( void ) {
+    int i, j;
+    float angle, elevation, angleStep, elevationStep;
+
+    /* note it */
+    logprint("--- SetupDirt ---\n" );
+
+    /* calculate angular steps */
+    angleStep = DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
+    elevationStep = DEG2RAD( DIRT_CONE_ANGLE / DIRT_NUM_ELEVATION_STEPS );
+
+    /* iterate angle */
+    angle = 0.0f;
+    for ( i = 0, angle = 0.0f; i < DIRT_NUM_ANGLE_STEPS; i++, angle += angleStep ) {
+	/* iterate elevation */
+	for ( j = 0, elevation = elevationStep * 0.5f; j < DIRT_NUM_ELEVATION_STEPS; j++, elevation += elevationStep ) {
+	    dirtVectors[ numDirtVectors ][ 0 ] = sin( elevation ) * cos( angle );
+	    dirtVectors[ numDirtVectors ][ 1 ] = sin( elevation ) * sin( angle );
+	    dirtVectors[ numDirtVectors ][ 2 ] = cos( elevation );
+	    numDirtVectors++;
+	}
+    }
+
+    /* emit some statistics */
+    logprint("%9d dirtmap vectors\n", numDirtVectors );
+}
+
+/*
+ * ============
+ * DirtTrace
+ *
+ * returns true if the trace from start to stop hits something solid,
+ * or if it started in the void.
+ * ============
+ */
+qboolean
+DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out)
+{
+    const dmodel_t *const *model;
+    const int traceflags = TRACE_HIT_SOLID | TRACE_HIT_SKY;
+    int result = TRACE_HIT_NONE;
+    tracepoint_t hitpoint;
+
+    if (self) {
+	result = TraceLine(self, traceflags, start, stop, &hitpoint);
+	if (result == -TRACE_HIT_SOLID) {
+	    /* We started in the void, which ideally wouldn't happen, 
+	       but does (say on e1m1). Return the start point as the hitpoint,
+	       which will make fully black dirt.
+	     */
+	    VectorCopy(start, hitpoint_out);
+	    return true;
+	} else if (result == TRACE_HIT_SOLID) {
+	    VectorCopy(hitpoint.point, hitpoint_out);
+	    return true;
+	}
+    }
+
+    /* Check against the list of global shadow casters */
+    for (model = tracelist; *model; model++) {
+	result = TraceLine(*model, traceflags, start, stop, &hitpoint);
+	if (result == -TRACE_HIT_SOLID) {
+	    VectorCopy(start, hitpoint_out);
+	    return true;
+	} else if (result == TRACE_HIT_SOLID) {
+	    VectorCopy(hitpoint.point, hitpoint_out);
+	    return true;
+	}
+    }
+
+    return false;
+}
+
+/*
+ * ============
+ * DirtForSample
+ * ============
+ */
+static vec_t
+DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
+    int i;
+    float gatherDirt, angle, elevation, ooDepth;
+    vec3_t worldUp, myUp, myRt, temp, direction, displacement;
+    vec3_t traceEnd, traceHitpoint;
+
+    /* dummy check */
+    if ( !dirty ) {
+	return 1.0f;
+    }
+    
+    /* setup */
+    gatherDirt = 0.0f;
+    ooDepth = 1.0f / dirtDepth;
+
+    /* check if the normal is aligned to the world-up */
+    if ( normal[ 0 ] == 0.0f && normal[ 1 ] == 0.0f ) {
+	if ( normal[ 2 ] == 1.0f ) {
+	    VectorSet( myRt, 1.0f, 0.0f, 0.0f );
+	    VectorSet( myUp, 0.0f, 1.0f, 0.0f );
+	} else if ( normal[ 2 ] == -1.0f ) {
+	    VectorSet( myRt, -1.0f, 0.0f, 0.0f );
+	    VectorSet( myUp,  0.0f, 1.0f, 0.0f );
+	}
+    } else {
+	VectorSet( worldUp, 0.0f, 0.0f, 1.0f );
+	CrossProduct( normal, worldUp, myRt );
+	VectorNormalize( myRt );
+	CrossProduct( myRt, normal, myUp );
+	VectorNormalize( myUp );
+    }
+
+    /* 1 = random mode, 0 (well everything else) = non-random mode */
+    if ( dirtMode == 1 ) {
+	/* iterate */
+	for ( i = 0; i < numDirtVectors; i++ ) {
+	    /* get random vector */
+	    angle = Random() * DEG2RAD( 360.0f );
+	    elevation = Random() * DEG2RAD( DIRT_CONE_ANGLE );
+	    temp[ 0 ] = cos( angle ) * sin( elevation );
+	    temp[ 1 ] = sin( angle ) * sin( elevation );
+	    temp[ 2 ] = cos( elevation );
+
+	    /* transform into tangent space */
+	    direction[ 0 ] = myRt[ 0 ] * temp[ 0 ] + myUp[ 0 ] * temp[ 1 ] + normal[ 0 ] * temp[ 2 ];
+	    direction[ 1 ] = myRt[ 1 ] * temp[ 0 ] + myUp[ 1 ] * temp[ 1 ] + normal[ 1 ] * temp[ 2 ];
+	    direction[ 2 ] = myRt[ 2 ] * temp[ 0 ] + myUp[ 2 ] * temp[ 1 ] + normal[ 2 ] * temp[ 2 ];
+
+	    /* set endpoint */
+	    VectorMA( origin, dirtDepth, direction, traceEnd );
+
+	    /* trace */
+	    if (DirtTrace(origin, traceEnd, model, traceHitpoint)) {
+		VectorSubtract( traceHitpoint, origin, displacement );
+		gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
+	    }
+	}
+    } else {
+	/* iterate through ordered vectors */
+	for ( i = 0; i < numDirtVectors; i++ ) {
+	    /* transform vector into tangent space */
+	    direction[ 0 ] = myRt[ 0 ] * dirtVectors[ i ][ 0 ] + myUp[ 0 ] * dirtVectors[ i ][ 1 ] + normal[ 0 ] * dirtVectors[ i ][ 2 ];
+	    direction[ 1 ] = myRt[ 1 ] * dirtVectors[ i ][ 0 ] + myUp[ 1 ] * dirtVectors[ i ][ 1 ] + normal[ 1 ] * dirtVectors[ i ][ 2 ];
+	    direction[ 2 ] = myRt[ 2 ] * dirtVectors[ i ][ 0 ] + myUp[ 2 ] * dirtVectors[ i ][ 1 ] + normal[ 2 ] * dirtVectors[ i ][ 2 ];
+
+	    /* set endpoint */
+	    VectorMA( origin, dirtDepth, direction, traceEnd );
+	    
+	    /* trace */
+	    if (DirtTrace(origin, traceEnd, model, traceHitpoint)) {
+		VectorSubtract( traceHitpoint, origin, displacement );
+		gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
+	    }
+	}
+    }
+
+    /* direct ray */
+    VectorMA( origin, dirtDepth, normal, traceEnd );
+    
+    /* trace */
+    if (DirtTrace(origin, traceEnd, model, traceHitpoint)) {
+	VectorSubtract( traceHitpoint, origin, displacement );
+	gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
+    }
+
+    /* save gatherDirt, the rest of the scaling of the dirt value is done
+       per-light */
+
+    return gatherDirt / ( numDirtVectors + 1 );
+}
+
+
+/*
+ * ============
+ * LightFace_CalculateDirt
+ * ============
+ */
+static void
+LightFace_CalculateDirt(lightsurf_t *lightsurf)
+{
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
+    const plane_t *plane = &lightsurf->plane;
+    const vec_t *surfpoint;
+    int i;
+
+    /* Check each point... */
+    surfpoint = lightsurf->points[0];
+    for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
+	lightsurf->occlusion[i] = DirtForSample(modelinfo->model, surfpoint, plane->normal);
+    }
+}
+
 
 static void
 WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
@@ -992,6 +1306,10 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
     Lightsurf_Init(modelinfo, face, bsp, &lightsurf);
     Lightmaps_Init(lightmaps, MAXLIGHTMAPS + 1);
 
+    /* calculate dirt (ambient occlusion) but don't use it yet */
+    if (dirty)
+        LightFace_CalculateDirt(&lightsurf);
+
     /*
      * The lighting procedure is: cast all positive lights, fix
      * minlight levels, then cast all negative lights. Finally, we
@@ -1023,6 +1341,10 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
     }
     if (sunlight.light < 0)
 	LightFace_Sky(&sunlight, sunvec, &lightsurf, lightmaps);
+
+    /* replace lightmaps with AO for debugging */
+    if (dirtDebug)
+    	LightFace_DirtDebug(&lightsurf, lightmaps);
 
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {

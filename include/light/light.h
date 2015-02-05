@@ -104,6 +104,24 @@ extern lightsample_t minlight;
 extern lightsample_t sunlight;
 extern vec3_t sunvec;
 
+/* dirt */
+
+extern qboolean dirty;          // should any dirtmapping take place?
+extern qboolean dirtDebug;
+extern int dirtMode;
+extern float dirtDepth;
+extern float dirtScale;
+extern float dirtGain;
+
+extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
+extern qboolean sunlightDirt;   // apply dirt to sunlight?
+extern qboolean minlightDirt;   // apply dirt to minlight?
+
+extern qboolean dirtModeSetOnCmdline;
+extern qboolean dirtDepthSetOnCmdline;
+extern qboolean dirtScaleSetOnCmdline;
+extern qboolean dirtGainSetOnCmdline;
+
 /*
  * Return space for the lightmap and colourmap at the same time so it can
  * be done in a thread-safe manner.
@@ -115,5 +133,7 @@ extern byte *lit_filebase;
 
 extern int oversample;
 extern qboolean write_litfile;
+
+void SetupDirt();
 
 #endif /* __LIGHT_LIGHT_H__ */
