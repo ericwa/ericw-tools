@@ -68,6 +68,17 @@ typedef struct entity_s {
     float anglescale;
     int style;
 
+    /* worldspawn only */
+    vec_t dirtdepth;
+    int dirtmode;
+    int sunlight_dirt;
+    int minlight_dirt;
+
+    /* worldspawn, light entities */
+    vec_t dirtscale;
+    vec_t dirtgain;
+    int dirt;
+
     char target[MAX_ENT_VALUE];
     char targetname[MAX_ENT_VALUE];
     struct epair_s *epairs;

@@ -35,6 +35,24 @@ lightsample_t minlight = { 0, { 255, 255, 255 } };
 lightsample_t sunlight = { 0, { 255, 255, 255 } };
 vec3_t sunvec = { 0, 0, 16384 };		/* defaults to straight down */
 
+/* dirt */
+qboolean dirty = false;
+qboolean dirtDebug = false;
+int dirtMode = 0;
+float dirtDepth = 128.0f;
+float dirtScale = 1.0f;
+float dirtGain = 1.0f;
+
+qboolean globalDirt = false;
+qboolean sunlightDirt = false;
+qboolean minlightDirt = false;
+
+qboolean dirtSetOnCmdline = false;
+qboolean dirtModeSetOnCmdline = false;
+qboolean dirtDepthSetOnCmdline = false;
+qboolean dirtScaleSetOnCmdline = false;
+qboolean dirtGainSetOnCmdline = false;
+
 byte *filebase;			// start of lightmap data
 static byte *file_p;		// start of free space after data
 static byte *file_end;		// end of free space for lightmap data
@@ -257,6 +275,50 @@ main(int argc, const char **argv)
 		anglescale = sun_anglescale = atoi(argv[++i]);
 	    else
 		Error("-anglesense requires a numeric argument (0.0 - 1.0)");
+	} else if ( !strcmp( argv[ i ], "-dirty" ) ) {
+	    dirty = true;
+	    globalDirt = true;
+	    sunlightDirt = true;
+	    minlightDirt = true;
+	    logprint( "Dirtmapping enabled globally\n" );
+	} else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
+	    dirty = true;
+	    globalDirt = true;
+	    dirtDebug = true;
+	    logprint( "Dirtmap debugging enabled\n" );
+	} else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
+	    dirtModeSetOnCmdline = true;
+	    dirtMode = atoi( argv[ ++i ] );
+	    if ( dirtMode != 0 && dirtMode != 1 ) {
+		dirtMode = 0;
+	    }
+	    if ( dirtMode == 1 ) {
+		logprint( "Enabling randomized dirtmapping\n" );
+	    }
+	    else{
+		logprint( "Enabling ordered dirtmapping\n" );
+	    }
+	} else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
+	    dirtDepthSetOnCmdline = true;
+	    dirtDepth = atof( argv[ ++i ] );
+	    if ( dirtDepth <= 0.0f ) {
+		dirtDepth = 128.0f;
+	    }
+	    logprint( "Dirtmapping depth set to %.1f\n", dirtDepth );
+	} else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
+	    dirtScaleSetOnCmdline = true;
+	    dirtScale = atof( argv[ ++i ] );
+	    if ( dirtScale <= 0.0f ) {
+		dirtScale = 1.0f;
+	    }
+	    logprint( "Dirtmapping scale set to %.1f\n", dirtScale );
+	} else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
+	    dirtGainSetOnCmdline = true;
+	    dirtGain = atof( argv[ ++i ] );
+	    if ( dirtGain <= 0.0f ) {
+		dirtGain = 1.0f;
+	    }
+	    logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -267,6 +329,7 @@ main(int argc, const char **argv)
 	printf("usage: light [-threads num] [-extra|-extra4]\n"
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit]\n"
+	       "             [-dirty] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
 	       "             [-soft [n]] bspfile\n");
 	exit(1);
     }
@@ -301,6 +364,10 @@ main(int argc, const char **argv)
 	ConvertBSPFormat(BSP2VERSION, &bspdata);
 
     LoadEntities(bsp);
+
+    if (dirty)
+	SetupDirt();
+
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp);

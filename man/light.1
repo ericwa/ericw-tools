@@ -62,6 +62,15 @@ surface (more detailed explanation in the "_anglescale" key below).
 Force generation of a .lit file, even if your map does not have any coloured
 lights. By default, light will automatically generate the .lit file when
 needed.
+.IP "\fB\-dirty\fP"
+Globally enables dirtmapping (ambient occlusion), overriding the "_dirt" worldspawn
+key. See "_dirt" for more details.
+.IP "\fB\-dirtdebug\fP"
+Implies "-dirty", and renders just the dirtmap against a fullbright background,
+ignoring all lights in the map. Useful for previewing and turning the dirt settings.
+.IP "\fB\-dirtmode n\fP | \fB\-dirtdepth n\fP | \fB\-dirtscale n\fP | \fB\-dirtgain n\fP"
+Fine-tune the dirtmapping, overriding the corresponding worldspawn keys. See the
+worldspawn keys below.
 
 .SH "MODEL ENTITY KEYS"
 
@@ -92,6 +101,33 @@ Specify red(r), green(g) and blue(b) components for the colour of the
 sunlight. RGB component values are between 0 and 255 (between 0 and 1 is also
 accepted). Default is white light
 ("255 255 255").
+
+.IP "\fB""_dirt"" ""n""\fP"
+1 enables dirtmapping (ambient occlusion) on all lights, borrowed from q3map2. This adds shadows
+to corners and crevices. You can override the global setting for specific lights with the
+"_dirt" light entitiy key or "_sunlight_nodirt" and "_minlight_nodirt" worldspawn keys.
+Default is no dirtmapping (-1).
+
+.IP "\fB""_sunlight_dirt"" ""n""\fP"
+1 enables dirtmapping (ambient occlusion) on sunlight, -1 to disable (making it illuminate the dirtmapping shadows). Default is to use the value of "_dirt".
+
+.IP "\fB""_minlight_dirt"" ""n""\fP"
+1 enables dirtmapping (ambient occlusion) on minlight, -1 to disable. Default is to use the value of "_dirt".
+
+.IP "\fB""_dirtmode"" ""n""\fP"
+Choose between ordered (0, default) and randomized (1) dirtmapping.
+
+.IP "\fB""_dirtdepth"" ""n""\fP"
+Maximum depth of occlusion checking for dirtmapping, default 128.
+
+.IP "\fB""_dirtscale"" ""n""\fP"
+Scale factor used in dirt calculations, default 1. Lower values (e.g. 0.5) make
+the dirt fainter, 2.0 would create much darker shadows.
+
+.IP "\fB""_dirtgain"" ""n""\fP"
+Exponent used in dirt calculation, default 1. Lower values (e.g. 0.5) make the
+shadows darker and stretch further away from corners.
+
 
 .SS "Model Entity Keys"
 
@@ -187,6 +223,15 @@ Sets a scaling factor for how much influence the angle of incidence of light
 on a surface has on the brightness of the surface. \fIn\fP must be between 0.0
 and 1.0. Smaller values mean less attenuation, with zero meaning that angle of
 incidence has no effect at all on the brightness. Default 0.5.
+
+.IP "\fB""_dirtscale"" ""n""\fP | \fB""_dirtgain"" ""n""\fP"
+Override the global "_dirtscale" or "_dirtgain" settings to change how this
+light is affected by dirtmapping (ambient occlusion). See descriptions of these
+keys in the worldspawn section.
+
+.IP "\fB""_dirt"" ""n""\fP"
+Overrides the worldspawn setting of "_dirt" for this particular light. -1 to disable dirtmapping (ambient occlusion) for this light, making it illuminate the dirtmapping shadows. 1 to enable ambient occlusion for this light. Default is to defer to the worldspawn setting.
+
 
 .SH AUTHOR
 Written by Kevin Shanahan (aka Tyrann)
