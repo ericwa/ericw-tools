@@ -39,7 +39,7 @@ $(shell \
 
 SYSNAME := $(shell uname -s)
 
-TOPDIR := $(shell pwd)
+TOPDIR := "$(shell pwd)"
 ifneq (,$(findstring MINGW32,$(SYSNAME)))
 HOST_OS = WIN32
 else
