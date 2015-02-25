@@ -731,12 +731,17 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity)
 	return 1.0f;
 
     /* should this light be affected by dirt? */
-    if (entity && entity->dirt == -1) {
-	usedirt = false;
-    } else if (entity && entity->dirt == 1) {
-	usedirt = true;
+    if (entity) {
+        if (entity->dirt == -1) {
+	    usedirt = false;
+        } else if (entity->dirt == 1) {
+	    usedirt = true;
+        } else {
+	    usedirt = globalDirt;
+        }
     } else {
-	usedirt = globalDirt;
+        /* no entity is provided, assume the caller wants dirt */
+        usedirt = true;
     }
 
     /* if not, quit */
@@ -847,7 +852,9 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	Light_Add(sample, add, light->color);
 
 	/* Check if we really hit, ignore tiny lights */
-	if (!hit && sample->light >= 1)
+	/* ericw -- don't ignore tiny lights if the light was split up
+	   for a penumbra; the small light values are important in that case */
+	if (!hit && (sample->light >= 1 || entity->num_samples > 1))
 	    hit = true;
     }
 
@@ -861,8 +868,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
  * =============
  */
 static void
-LightFace_Sky(const lightsample_t *light, const vec3_t vector,
-	      const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
@@ -876,16 +882,16 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
     lightmap_t *lightmap;
 
     /* Don't bother if surface facing away from sun */
-    if (DotProduct(vector, plane->normal) < -ANGLE_EPSILON)
+    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON)
 	return;
 
     /* if sunlight is set, use a style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0);
 
-    VectorCopy(vector, incoming);
+    VectorCopy(sun->sunvec, incoming);
     VectorNormalize(incoming);
     angle = DotProduct(incoming, plane->normal);
-    angle = (1.0 - sun_anglescale) + sun_anglescale * angle;
+    angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
 
     /* Check each point... */
     hit = false;
@@ -894,13 +900,13 @@ LightFace_Sky(const lightsample_t *light, const vec3_t vector,
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
     	vec_t value;
-	if (!TestSky(surfpoint, vector, shadowself))
+	if (!TestSky(surfpoint, sun->sunvec, shadowself))
 	    continue;
-	value = angle * light->light;
-	if (sunlightDirt)
+	value = angle * sun->sunlight.light;
+	if (sun->dirt)
 	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
-	Light_Add(sample, value, light->color);
-	if (!hit && sample->light >= 1)
+	Light_Add(sample, value, sun->sunlight.color);
+	if (!hit/* && (sample->light >= 1)*/)
 	    hit = true;
     }
 
@@ -945,7 +951,7 @@ LightFace_Min(const lightsample_t *light,
 
     /* Cast rays for local minlight entities */
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
-    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+    for (entity = entities; entity; entity = entity->next) {
 	if (entity->formula != LF_LOCALMIN)
 	    continue;
 
@@ -1292,6 +1298,7 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
     const entity_t *entity;
     lightsample_t *sample;
     lightsurf_t lightsurf;
+    sun_t *sun;
 
     /* One extra lightmap is allocated to simplify handling overflow */
     lightmap_t lightmaps[MAXLIGHTMAPS + 1];
@@ -1317,14 +1324,15 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
      */
 
     /* positive lights */
-    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+    for (entity = entities; entity; entity = entity->next) {
 	if (entity->formula == LF_LOCALMIN)
 	    continue;
 	if (entity->light.light > 0)
 	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
     }
-    if (sunlight.light > 0)
-	LightFace_Sky(&sunlight, sunvec, &lightsurf, lightmaps);
+    for ( sun = suns; sun; sun = sun->next )
+        if (sun->sunlight.light > 0)
+            LightFace_Sky (sun, &lightsurf, lightmaps);
 
     /* minlight - Use the greater of global or model minlight. */
     if (modelinfo->minlight.light > minlight.light)
@@ -1333,14 +1341,15 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
 	LightFace_Min(&minlight, &lightsurf, lightmaps);
 
     /* negative lights */
-    for (i = 0, entity = entities; i < num_entities; i++, entity++) {
+    for (entity = entities; entity; entity = entity->next) {
 	if (entity->formula == LF_LOCALMIN)
 	    continue;
 	if (entity->light.light < 0)
 	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
     }
-    if (sunlight.light < 0)
-	LightFace_Sky(&sunlight, sunvec, &lightsurf, lightmaps);
+    for ( sun = suns; sun; sun = sun->next )
+        if (sun->sunlight.light < 0)
+            LightFace_Sky (sun, &lightsurf, lightmaps);
 
     /* replace lightmaps with AO for debugging */
     if (dirtDebug)

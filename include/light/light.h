@@ -84,6 +84,14 @@ typedef struct {
     vec3_t offset;
 } modelinfo_t;
 
+typedef struct sun_s {
+    vec3_t sunvec;
+    lightsample_t sunlight;
+    struct sun_s *next;
+    qboolean dirt;
+    float anglescale;
+} sun_t;
+
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const dmodel_t *const *tracelist;
 
@@ -101,8 +109,8 @@ extern const vec3_t vec3_white;
 
 extern qboolean addminlight;
 extern lightsample_t minlight;
-extern lightsample_t sunlight;
-extern vec3_t sunvec;
+
+extern sun_t *suns;
 
 /* dirt */
 
@@ -114,7 +122,6 @@ extern float dirtScale;
 extern float dirtGain;
 
 extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
-extern qboolean sunlightDirt;   // apply dirt to sunlight?
 extern qboolean minlightDirt;   // apply dirt to minlight?
 
 extern qboolean dirtModeSetOnCmdline;

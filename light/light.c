@@ -32,8 +32,7 @@ const vec3_t vec3_white = { 255, 255, 255 };
 
 qboolean addminlight = false;
 lightsample_t minlight = { 0, { 255, 255, 255 } };
-lightsample_t sunlight = { 0, { 255, 255, 255 } };
-vec3_t sunvec = { 0, 0, 16384 };		/* defaults to straight down */
+sun_t *suns = NULL;
 
 /* dirt */
 qboolean dirty = false;
@@ -44,7 +43,6 @@ float dirtScale = 1.0f;
 float dirtGain = 1.0f;
 
 qboolean globalDirt = false;
-qboolean sunlightDirt = false;
 qboolean minlightDirt = false;
 
 qboolean dirtSetOnCmdline = false;
@@ -278,7 +276,6 @@ main(int argc, const char **argv)
 	} else if ( !strcmp( argv[ i ], "-dirty" ) ) {
 	    dirty = true;
 	    globalDirt = true;
-	    sunlightDirt = true;
 	    minlightDirt = true;
 	    logprint( "Dirtmapping enabled globally\n" );
 	} else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
