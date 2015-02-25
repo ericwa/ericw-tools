@@ -96,20 +96,37 @@ pitch specifies the angle from 90 (straight up) to -90 (straight down). Roll
 has no effect, so use any value (e.g. 0).  Default is straight down ("0 -90
 0").
 
+.IP "\fB""_sunlight_penumbra"" ""n""\fP"
+Specifies the penumbra width, in degrees, of sunlight.
+Useful values are 3-4 for a gentle soft edge, or 10-20+ for more diffuse
+sunlight. Default is 0.
+
 .IP "\fB""_sunlight_color"" ""r g b""\fP"
 Specify red(r), green(g) and blue(b) components for the colour of the
 sunlight. RGB component values are between 0 and 255 (between 0 and 1 is also
 accepted). Default is white light
 ("255 255 255").
 
+.IP "\fB""_sunlight2"" ""n""\fP"
+Set the brightness of a large dome of lights positioned around the map (16K unit
+radius). Useful for simulating higly diffused light (e.g. cloudy skies)
+in outdoor areas. Default 0.
+
+.IP "\fB""_sunlight_color2"" ""r g b""\fP | \fB""_sunlight2_color"" ""r g b""\fP"
+Specifies the colour of _sunlight2, same format as "_sunlight_color". Default is
+white light ("255 255 255").
+
 .IP "\fB""_dirt"" ""n""\fP"
 1 enables dirtmapping (ambient occlusion) on all lights, borrowed from q3map2. This adds shadows
 to corners and crevices. You can override the global setting for specific lights with the
-"_dirt" light entitiy key or "_sunlight_nodirt" and "_minlight_nodirt" worldspawn keys.
+"_dirt" light entitiy key or "_sunlight_dirt", "_sunlight2_dirt", and "_minlight_dirt" worldspawn keys.
 Default is no dirtmapping (-1).
 
 .IP "\fB""_sunlight_dirt"" ""n""\fP"
 1 enables dirtmapping (ambient occlusion) on sunlight, -1 to disable (making it illuminate the dirtmapping shadows). Default is to use the value of "_dirt".
+
+.IP "\fB""_sunlight2_dirt"" ""n""\fP"
+1 enables dirtmapping (ambient occlusion) on sunlight2, -1 to disable. Default is to use the value of "_dirt".
 
 .IP "\fB""_minlight_dirt"" ""n""\fP"
 1 enables dirtmapping (ambient occlusion) on minlight, -1 to disable. Default is to use the value of "_dirt".
@@ -232,6 +249,11 @@ keys in the worldspawn section.
 .IP "\fB""_dirt"" ""n""\fP"
 Overrides the worldspawn setting of "_dirt" for this particular light. -1 to disable dirtmapping (ambient occlusion) for this light, making it illuminate the dirtmapping shadows. 1 to enable ambient occlusion for this light. Default is to defer to the worldspawn setting.
 
+.IP "\fB""_deviance"" ""n""\fP"
+Convert the light into a sphere of randomly positioned lights with radius "n" (in world units). Useful to shadows cast by the light a wider penumbra. "_samples" must also be set to a number greater than 1. Default is 0.
+
+.IP "\fB""_samples"" ""n""\fP"
+Number of lights to use for "_deviance". Use 16 as a starting point, more for higher quality. Default 1.
 
 .SH AUTHOR
 Written by Kevin Shanahan (aka Tyrann)

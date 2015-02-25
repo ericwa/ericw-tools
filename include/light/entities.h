@@ -71,7 +71,6 @@ typedef struct entity_s {
     /* worldspawn only */
     vec_t dirtdepth;
     int dirtmode;
-    int sunlight_dirt;
     int minlight_dirt;
 
     /* worldspawn, light entities */
@@ -79,10 +78,18 @@ typedef struct entity_s {
     vec_t dirtgain;
     int dirt;
 
+    /* light entities: q3map2 penumbra */
+    vec_t deviance;
+    int num_samples;
+
     char target[MAX_ENT_VALUE];
     char targetname[MAX_ENT_VALUE];
     struct epair_s *epairs;
     const struct entity_s *targetent;
+
+    qboolean generated;     // if true, don't write to the bsp
+
+    struct entity_s *next;
 } entity_t;
 
 /*
@@ -101,7 +108,6 @@ typedef struct entity_s {
  */
 
 extern entity_t *entities;
-extern int num_entities;
 
 entity_t *FindEntityWithKeyPair(const char *key, const char *value);
 const char *ValueForKey(const entity_t *ent, const char *key);
