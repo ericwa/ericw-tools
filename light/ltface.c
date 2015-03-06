@@ -719,7 +719,7 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
  * ============
  */
 static inline vec_t
-Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity)
+Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const modelinfo_t *modelinfo)
 {
     vec_t light_dirtgain = dirtGain;
     vec_t light_dirtscale = dirtScale;
@@ -729,6 +729,8 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity)
     /* is dirt processing disabled entirely? */
     if (!dirty)
 	return 1.0f;
+    if (modelinfo != NULL && modelinfo->nodirt)
+        return 1.0f;
 
     /* should this light be affected by dirt? */
     if (entity) {
@@ -847,7 +849,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 
 	angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
-	add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity);
+	add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, modelinfo);
 
 	Light_Add(sample, add, light->color);
 
@@ -904,7 +906,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
 	    continue;
 	value = angle * sun->sunlight.light;
 	if (sun->dirt)
-	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
+	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
 	Light_Add(sample, value, sun->sunlight.color);
 	if (!hit/* && (sample->light >= 1)*/)
 	    hit = true;
@@ -940,7 +942,7 @@ LightFace_Min(const lightsample_t *light,
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
     	vec_t value = light->light;
         if (minlightDirt)
-	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
+	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
 	if (addminlight)
 	    Light_Add(sample, value, light->color);
 	else
@@ -963,7 +965,7 @@ LightFace_Min(const lightsample_t *light,
 		trace = TestLight(entity->origin, surfpoint, shadowself);
 		if (!trace)
 		    continue;
-		value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], entity);
+		value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], entity, modelinfo);
 		if (addminlight)
 		    Light_Add(sample, value, entity->light.color);
 		else
@@ -996,7 +998,7 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     /* Overwrite each point with the dirt value for that sample... */
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
-	sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL);
+	sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, NULL);
 	VectorSet(sample->color, sample->light, sample->light, sample->light);
     }
 

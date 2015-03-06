@@ -178,6 +178,11 @@ FindModelInfo(const bsp2_t *bsp)
 	} else {
 	    VectorCopy(vec3_white, info->minlight.color);
 	}
+
+	/* Check for disabled dirtmapping on this bmodel */
+	if (atoi(ValueForKey(entity, "_dirt")) == -1) {
+	    info->nodirt = true;
+	}
     }
 
     tracelist = shadowmodels;
