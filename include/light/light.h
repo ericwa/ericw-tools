@@ -82,6 +82,7 @@ typedef struct {
     qboolean shadowself;
     lightsample_t minlight;
     vec3_t offset;
+    qboolean nodirt;    
 } modelinfo_t;
 
 typedef struct sun_s {
