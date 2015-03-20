@@ -988,6 +988,7 @@ LightFace_Min(const lightsample_t *light,
 static void
 LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
     int i;
     lightsample_t *sample;
     lightmap_t *lightmap;
@@ -998,7 +999,7 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     /* Overwrite each point with the dirt value for that sample... */
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
-	sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, NULL);
+	sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
 	VectorSet(sample->color, sample->light, sample->light, sample->light);
     }
 
