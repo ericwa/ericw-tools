@@ -698,6 +698,12 @@ LoadEntities(const bsp2_t *bsp)
 	    else if (!strcmp(key, "_samples")) {
 		entity->num_samples = atoi(com_token);
 	    }
+	    else if (!strcmp(key, "_dist")) {
+		entity->dist = atof(com_token);
+	    }
+	    else if (!strcmp(key, "_range")) {
+		entity->range = atof(com_token);
+	    }
 	}
 
 	/*
@@ -728,6 +734,18 @@ LoadEntities(const bsp2_t *bsp)
 	    }
 	    if (entity->anglescale >= 0 && entity->anglescale <= 1.0)
 		sun_anglescale = entity->anglescale;
+
+	    if (entity->dist != 0.0) {
+		scaledist = entity->dist;
+		logprint("using _dist value %f from worldspawn.\n",
+			 scaledist);
+	    }
+
+	    if (entity->range != 0.0) {
+		rangescale = entity->range;
+		logprint("using _range value %f from worldspawn.\n",
+			 rangescale);
+	    }
 
 	    if (entity->dirtdepth && !dirtDepthSetOnCmdline) {
 		dirtDepth = entity->dirtdepth;
