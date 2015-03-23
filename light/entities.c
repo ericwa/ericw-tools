@@ -404,7 +404,7 @@ LoadEntities(const bsp2_t *bsp)
 		normalize_color_format(entity->light.color);
 	    } else if (!strcmp(key, "_sunlight"))
 		sunlight.light = atof(com_token);
-	    else if (!strcmp(key, "_sun_mangle")) {
+	    else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
 		scan_vec3(vec, com_token, "_sun_mangle");
 		vec_from_mangle(sunvec, vec);
 		VectorNormalize(sunvec);
