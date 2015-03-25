@@ -102,12 +102,21 @@ MatchTargets(void)
 	}
 
 	/* set the style on the source ent for switchable lights */
+
+	// ericw -- this seems completely useless, why would the
+	// triggering entity need to have the light's style key?
+	//
+	// disabling because it can cause problems, e.g. if the
+	// triggering entity is a monster, and the style key is used
+	// by the mod.
+#if 0
 	if (target->style) {
 	    char style[10];
 	    entity->style = target->style;
 	    snprintf(style, sizeof(style), "%d", entity->style);
 	    SetKeyValue(entity, "style", style);
 	}
+#endif
     }
 }
 
