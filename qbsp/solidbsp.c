@@ -250,7 +250,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 
 	/* check for axis aligned surfaces */
 	plane = &map.planes[surf->planenum];
-	if (plane->type > 3)
+	if (!(plane->type < 3))
 	    continue;
 
 	/* calculate the split metric, smaller values are better */
