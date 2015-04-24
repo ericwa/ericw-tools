@@ -470,7 +470,6 @@ typedef struct epair_s {
 typedef struct mapface_s {
     plane_t plane;
     int texinfo;
-    int fUnique;
     int linenum;
 } mapface_t;
 

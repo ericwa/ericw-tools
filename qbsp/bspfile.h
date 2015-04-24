@@ -30,6 +30,8 @@ typedef uint8_t byte;
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 #define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
 
+#define	MAX_MAP_PLANES     262144
+
 typedef struct {
     int32_t fileofs;
     int32_t filelen;

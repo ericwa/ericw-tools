@@ -719,12 +719,10 @@ LoadMapFile(void)
 {
     parser_t parser;
     char *buf;
-    int i, j, length, cAxis;
+    int length;
     void *pTemp;
     struct lumpdata *texinfo;
     mapentity_t *entity;
-    mapbrush_t *brush;
-    mapface_t *face, *face2;
 
     Message(msgProgress, "LoadMapFile");
 
@@ -768,44 +766,7 @@ LoadMapFile(void)
 	FreeMem(pTemp, BSP_TEXINFO, texinfo->count);
 	texinfo->count = texinfo->index;
     }
-    // One plane per face + 6 for portals
-    map.maxplanes = map.numfaces + 6;
-
-    // Count # of unique planes in all of the faces
-    for (i = 0, face = map.faces; i < map.numfaces; i++, face++) {
-	face->fUnique = true;
-	for (j = 0, face2 = map.faces; j < i; j++, face2++) {
-	    if (face2->fUnique &&
-		VectorCompare(face->plane.normal, face2->plane.normal) &&
-		fabs(face->plane.dist - face2->plane.dist) < EQUAL_EPSILON) {
-		face->fUnique = false;
-		map.maxplanes--;
-		break;
-	    }
-	}
-    }
-
-    /*
-     * Now iterate through brushes, add one plane for each face below 6 axis
-     * aligned faces. This compensates for planes added in ExpandBrush.
-     */
-    for (i = 0, brush = map.brushes; i < map.numbrushes; i++, brush++) {
-	cAxis = 0;
-	for (j = 0, face = brush->faces; j < brush->numfaces; j++, face++) {
-	    if (fabs(face->plane.normal[0]) > 1 - NORMAL_EPSILON
-		|| fabs(face->plane.normal[1]) > 1 - NORMAL_EPSILON
-		|| fabs(face->plane.normal[2]) > 1 - NORMAL_EPSILON)
-		cAxis++;
-	}
-	if (6 - cAxis > 0)
-	    map.maxplanes += 6 - cAxis;
-    }
-
-    /*
-     * map.maxplanes*3 because of 3 hulls, then add 20% as a fudge factor for
-     * hull edge bevel planes
-     */
-    map.maxplanes = 3 * map.maxplanes + map.maxplanes / 5;
+    map.maxplanes = MAX_MAP_PLANES;
     map.planes = AllocMem(PLANE, map.maxplanes, true);
 
     Message(msgStat, "%8d faces", map.numfaces);
