@@ -116,6 +116,14 @@ CFLAGS += $(call cc-option,-ffast-math,)
 endif
 endif
 
+# give a generous 8MB stack
+STACKSIZE := 8388608
+CFLAGS += -DQ_STACKSIZE=$(STACKSIZE)
+
+ifeq ($(TARGET_OS),WIN32)
+LDFLAGS += -Wl,--stack,$(STACKSIZE)
+endif
+
 # ============================================================================
 # Helper functions
 # ============================================================================

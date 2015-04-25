@@ -118,7 +118,10 @@ endif (CMAKE_USE_PTHREADS_INIT)
 #FIXME: Should be only for qbsp
 add_definitions(-DDOUBLEVEC_T)
 
+set(STACKSIZE 8388608)
+add_definitions(-DQ_STACKSIZE=${STACKSIZE})
+
 #request 8MB stack
 if (WIN32)
-	set(CMAKE_EXE_LINKER_FLAGS -Wl,--stack,8388608)
+	set(CMAKE_EXE_LINKER_FLAGS -Wl,--stack,${STACKSIZE})
 endif (WIN32)

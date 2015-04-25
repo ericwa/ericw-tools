@@ -233,7 +233,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     status = pthread_attr_init(&attrib);
     if (status)
 	Error("pthread_attr_init failed");
-    status = pthread_attr_setstacksize(&attrib, 0x100000);
+    status = pthread_attr_setstacksize(&attrib, Q_STACKSIZE);
     if (status)
 	Error("pthread_attr_setstacksize failed");
 
