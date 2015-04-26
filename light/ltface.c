@@ -20,8 +20,6 @@
 #include <light/light.h>
 #include <light/entities.h>
 
-static const vec3_t bsp_origin = { 0, 0, 0 };
-
 /* ======================================================================== */
 
 typedef struct {
