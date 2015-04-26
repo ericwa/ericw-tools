@@ -151,6 +151,13 @@ static int cStartEdge;
 static hashvert_t *hashverts[NUM_HASH];
 static vec3_t hash_min, hash_scale;
 
+typedef struct hashedge_s {
+    unsigned i;
+    struct hashedge_s *next;
+} hashedge_t;
+
+static hashedge_t *hashedges[NUM_HASH];
+
 static void
 InitHash(void)
 {
@@ -179,6 +186,35 @@ InitHash(void)
     hash_scale[2] = (vec_t)newsize[1];
 
     hvert_p = pHashverts;
+    
+    /* edges hash table */
+    for (i=0; i<NUM_HASH; i++) {
+        hashedge_t *he;
+        for (he = hashedges[i]; he; )
+        {
+            hashedge_t *to_free = he;
+            he = he->next;
+            FreeMem(to_free, OTHER, sizeof(hashedge_t));
+        }
+    }
+    memset(hashedges, 0, sizeof(hashedges));
+}
+
+static unsigned
+HashEdge(unsigned v1, unsigned v2)
+{
+    return (v1 + v2) % NUM_HASH;
+}
+
+static void
+AddHashEdge(unsigned v1, unsigned v2, unsigned i)
+{
+    hashedge_t *he = AllocMem(OTHER, sizeof(hashedge_t), true);
+    unsigned slot = HashEdge(v1, v2);
+    
+    he->i = i;
+    he->next = hashedges[slot];
+    hashedges[slot] = he;
 }
 
 static unsigned
@@ -262,6 +298,8 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     int v1, v2;
     int i;
+    unsigned edge_hash_key;
+    hashedge_t *he;
 
     if (!face->contents[0])
 	Error("Face with 0 contents (%s)", __func__);
@@ -269,10 +307,14 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
 
-    if (options.BSPVersion == BSPVERSION) {
-	bsp29_dedge_t *edge = edges->data;
+    edge_hash_key = HashEdge(v1, v2);
 
-	for (i = 0; i < edges->index; i++, edge++) {
+    if (options.BSPVersion == BSPVERSION) {
+	bsp29_dedge_t *edge;
+
+        for (he = hashedges[edge_hash_key]; he; he = he->next) {
+            i = he->i;
+            edge = (bsp29_dedge_t *)edges->data + i;
 	    if (v1 == edge->v[1] && v2 == edge->v[0]
 		&& pEdgeFaces1[i] == NULL
 		&& pEdgeFaces0[i]->contents[0] == face->contents[0]) {
@@ -282,14 +324,18 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
 	}
 
 	/* emit an edge */
+        i = edges->index;
+        edge = (bsp29_dedge_t *)edges->data + i;
 	if (edges->index >= edges->count)
 	    Error("Internal error: didn't allocate enough edges?");
 	edge->v[0] = v1;
 	edge->v[1] = v2;
     } else {
-	bsp2_dedge_t *edge = edges->data;
+	bsp2_dedge_t *edge = (bsp2_dedge_t *)edges->data;
 
-	for (i = 0; i < edges->index; i++, edge++) {
+        for (he = hashedges[edge_hash_key]; he; he = he->next) {
+            i = he->i;
+            edge = (bsp2_dedge_t *)edges->data + i;
 	    if (v1 == edge->v[1] && v2 == edge->v[0]
 		&& pEdgeFaces1[i] == NULL
 		&& pEdgeFaces0[i]->contents[0] == face->contents[0]) {
@@ -299,11 +345,15 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
 	}
 
 	/* emit an edge */
+        i = edges->index;
+        edge = (bsp2_dedge_t *)edges->data + i;
 	if (edges->index >= edges->count)
 	    Error("Internal error: didn't allocate enough edges?");
 	edge->v[0] = v1;
 	edge->v[1] = v2;
     }
+
+    AddHashEdge(v1, v2, edges->index);
 
     edges->index++;
     map.cTotal[LUMP_EDGES]++;
