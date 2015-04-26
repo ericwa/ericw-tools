@@ -28,6 +28,12 @@ static entity_t *entities_tail;
 static int num_entities;
 static int num_lights;
 
+/* surface lights */
+#define MAX_SURFLIGHT_TEMPLATES 256
+entity_t *surfacelight_templates[MAX_SURFLIGHT_TEMPLATES];
+int num_surfacelight_templates;
+static void MakeSurfaceLights(const bsp2_t *bsp);
+
 /* temporary storage for sunlight settings before the sun_t objects are
    created. */
 static lightsample_t sunlight = { 0, { 255, 255, 255 } };
@@ -551,6 +557,19 @@ JitterEntity(entity_t *entity)
 	}
 }
 
+static void
+JitterEntities()
+{
+    entity_t *entity;
+
+    for (entity = entities; entity; entity = entity->next) {
+        if (strncmp(entity->classname, "light", 5))
+            continue;
+
+        JitterEntity(entity);
+    }
+}
+
 /*
  * ==================
  * LoadEntities
@@ -712,8 +731,6 @@ LoadEntities(const bsp2_t *bsp)
 	if (!strncmp(entity->classname, "light", 5)) {
 	    CheckEntityFields(entity);
 	    num_lights++;
-	    
-	    JitterEntity(entity);
 	}
 	if (!strcmp(entity->classname, "light")) {
 	    if (entity->targetname[0] && !entity->style) {
@@ -811,7 +828,12 @@ LoadEntities(const bsp2_t *bsp)
     }
 
     logprint("%d entities read, %d are lights.\n", num_entities, num_lights);
+
+    // Creates more light entities, needs to be done before the rest
+    MakeSurfaceLights(bsp);
+
     MatchTargets();
+    JitterEntities();
     SetupSpotlights();
     SetupSuns();
     SetupSkyDome();
@@ -927,5 +949,254 @@ WriteEntitiesToString(bsp2_t *bsp)
 	length = snprintf(pos, space, "}\n");
 	pos += length;
 	space -= length;
+    }
+}
+
+
+/*
+ * =======================================================================
+ *                            SURFACE LIGHTS
+ * =======================================================================
+ */
+
+static entity_t *DuplicateEntity(const entity_t *src)
+{
+    epair_t *ep;
+    entity_t *entity = (entity_t *)malloc(sizeof(entity_t));
+    memcpy(entity, src, sizeof(entity_t));
+
+    /* also copy epairs */
+    entity->epairs = NULL;
+    for (ep = src->epairs; ep; ep = ep->next)
+        SetKeyValue(entity, ep->key, ep->value);
+
+    /* also insert into the entity list */
+    entity->next = NULL;
+    Entities_Insert(entity);
+
+    return entity;
+}
+
+static void CreateSurfaceLight(const vec3_t origin, const entity_t *surflight_template)
+{
+    entity_t *entity = DuplicateEntity(surflight_template);
+
+    VectorCopy(origin, entity->origin);
+
+    /* don't write to bsp */
+    entity->generated = true;
+
+    CheckEntityFields(entity);
+    num_lights++;
+}
+
+static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const entity_t *surflight_template, const bsp2_t *bsp, int numverts, const vec_t *verts)
+{
+    int i;
+    vec3_t midpoint = {0, 0, 0};
+    vec3_t normal;
+    vec_t offset;
+
+    for (i=0; i<numverts; i++)
+    {
+        VectorAdd(midpoint, verts + (i * 3), midpoint);
+    }
+    midpoint[0] /= numverts;
+    midpoint[1] /= numverts;
+    midpoint[2] /= numverts;
+    VectorCopy(bsp->dplanes[face->planenum].normal, normal);
+    vec_t dist = bsp->dplanes[face->planenum].dist;
+
+    /* Nudge 2 units (by default) along face normal */
+    if (face->side) {
+        dist = -dist;
+        VectorSubtract(vec3_origin, normal, normal);
+    }
+
+    offset = atof(ValueForKey(surflight_template, "_surface_offset"));
+    if (offset <= 0)
+        offset = 2.0;
+    
+    VectorMA(midpoint, offset, normal, midpoint);
+
+    CreateSurfaceLight(midpoint, surflight_template);
+}
+
+static void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
+{
+    int             i, j;
+    float   *v;
+
+    mins[0] = mins[1] = mins[2] = 9999;
+    maxs[0] = maxs[1] = maxs[2] = -9999;
+    v = verts;
+    for (i=0 ; i<numverts ; i++)
+        for (j=0 ; j<3 ; j++, v++)
+        {
+            if (*v < mins[j])
+                mins[j] = *v;
+            if (*v > maxs[j])
+                maxs[j] = *v;
+        }
+}
+
+/*
+ ================
+ SubdividePolygon - from GLQuake
+ ================
+ */
+static void SubdividePolygon (const bsp2_dface_t *face, const bsp2_t *bsp, int numverts, vec_t *verts, float subdivide_size)
+{
+    int             i, j, k;
+    vec3_t  mins, maxs;
+    float   m;
+    float   *v;
+    vec3_t  front[64], back[64];
+    int             f, b;
+    float   dist[64];
+    float   frac;
+    //glpoly_t        *poly;
+    //float   s, t;
+
+    if (numverts > 60)
+        Error ("numverts = %i", numverts);
+
+    BoundPoly (numverts, verts, mins, maxs);
+
+    for (i=0 ; i<3 ; i++)
+    {
+        m = (mins[i] + maxs[i]) * 0.5;
+        m = subdivide_size * floor (m/subdivide_size + 0.5);
+        if (maxs[i] - m < 8)
+            continue;
+        if (m - mins[i] < 8)
+            continue;
+
+        // cut it
+        v = verts + i;
+        for (j=0 ; j<numverts ; j++, v+= 3)
+            dist[j] = *v - m;
+
+        // wrap cases
+        dist[j] = dist[0];
+        v-=i;
+        VectorCopy (verts, v);
+
+        f = b = 0;
+        v = verts;
+        for (j=0 ; j<numverts ; j++, v+= 3)
+        {
+            if (dist[j] >= 0)
+            {
+                VectorCopy (v, front[f]);
+                f++;
+            }
+            if (dist[j] <= 0)
+            {
+                VectorCopy (v, back[b]);
+                b++;
+            }
+            if (dist[j] == 0 || dist[j+1] == 0)
+                continue;
+            if ( (dist[j] > 0) != (dist[j+1] > 0) )
+            {
+                // clip point
+                frac = dist[j] / (dist[j] - dist[j+1]);
+                for (k=0 ; k<3 ; k++)
+                    front[f][k] = back[b][k] = v[k] + frac*(v[3+k] - v[k]);
+                f++;
+                b++;
+            }
+        }
+
+        SubdividePolygon (face, bsp, f, front[0], subdivide_size);
+        SubdividePolygon (face, bsp, b, back[0], subdivide_size);
+        return;
+    }
+
+    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
+    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
+    const char *texname = miptex->name;
+
+    for (i=0; i<num_surfacelight_templates; i++) {
+        if (!strcmp(texname, ValueForKey(surfacelight_templates[i], "_surface"))) {
+            CreateSurfaceLightOnFaceSubdivision(face, surfacelight_templates[i], bsp, numverts, verts);
+        }
+    }
+}
+
+/*
+ ================
+ GL_SubdivideSurface - from GLQuake
+ ================
+ */
+static void GL_SubdivideSurface (const bsp2_dface_t *face, const bsp2_t *bsp)
+{
+    int i;
+    vec3_t  verts[64];
+
+    for (i = 0; i < face->numedges; i++) {
+        dvertex_t *v;
+        int edgenum = bsp->dsurfedges[face->firstedge + i];
+        if (edgenum >= 0) {
+            v = bsp->dvertexes + bsp->dedges[edgenum].v[0];
+        } else {
+            v = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
+        }
+        VectorCopy(v->point, verts[i]);
+    }
+
+    SubdividePolygon (face, bsp, face->numedges, verts[0], 128);
+}
+
+static void MakeSurfaceLights(const bsp2_t *bsp)
+{
+    entity_t *entity;
+    int i, k;
+
+    for (entity = entities; entity; entity = entity->next) {
+        const char *tex = ValueForKey(entity, "_surface");
+        if (strcmp(tex, "") != 0) {
+            /* Add to template list */
+            if (num_surfacelight_templates == MAX_SURFLIGHT_TEMPLATES)
+                Error("num_surfacelight_templates == MAX_SURFLIGHT_TEMPLATES");
+            surfacelight_templates[num_surfacelight_templates++] = entity;
+            
+            printf("Creating surface lights for texture \"%s\" from template at (%s)\n",
+                   tex, ValueForKey(entity, "origin"));
+        }
+    }
+
+    if (!num_surfacelight_templates)
+        return;
+
+    /* Create the surface lights */
+    for (i=0; i<bsp->numleafs; i++) {
+        const bsp2_dleaf_t *leaf = bsp->dleafs + i;
+        const bsp2_dface_t *surf;
+        int ofs;
+        qboolean underwater = leaf->contents != CONTENTS_EMPTY;
+
+        for (k = 0; k < leaf->nummarksurfaces; k++) {
+            const texinfo_t *info;
+            const miptex_t *miptex;
+
+            surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
+            info = &bsp->texinfo[surf->texinfo];
+            ofs = bsp->dtexdata.header->dataofs[info->miptex];
+            miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
+            
+            /* Ignore the underwater side of liquid surfaces */
+            if (miptex->name[0] == '*' && underwater)
+                continue;
+
+            GL_SubdivideSurface(surf, bsp);
+        }
+    }
+    
+    /* Hack: clear templates light value to 0 so they don't cast light */
+    for (i=0;i<num_surfacelight_templates;i++) {
+        surfacelight_templates[i]->light.light = 0;
     }
 }

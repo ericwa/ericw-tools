@@ -852,9 +852,9 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	Light_Add(sample, add, light->color);
 
 	/* Check if we really hit, ignore tiny lights */
-	/* ericw -- don't ignore tiny lights if the light was split up
-	   for a penumbra; the small light values are important in that case */
-	if (!hit && (sample->light >= 1 || entity->num_samples > 1))
+	/* ericw -- never ignore generated lights, which can be tiny and need
+           the additive effect of lots hitting */
+	if (!hit && (sample->light >= 1 || entity->generated))
 	    hit = true;
     }
 

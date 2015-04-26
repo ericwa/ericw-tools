@@ -269,6 +269,15 @@ Convert the light into a sphere of randomly positioned lights with radius "n" (i
 .IP "\fB""_samples"" ""n""\fP"
 Number of lights to use for "_deviance". Use 16 as a starting point, more for higher quality. Default 1.
 
+.IP "\fB""_surface"" ""texturename""\fP"
+Makes surfaces with the given texture name emit light, by using this light as a
+template which is copied across those surfaces. Lights are spaced
+about 128 units (though possibly closer due to bsp splitting) apart and positioned 2 units above
+the surfaces. 
+
+.IP "\fB""_surface_offset"" ""texturename""\fP"
+Controls the offset lights are placed above surfaces for "_surface". Default 2.
+
 .SH AUTHOR
 Written by Kevin Shanahan (aka Tyrann)
 .br
