@@ -1,3 +1,56 @@
+2015-04-27 TyrUtils-ericw snapshot
+
+new features:
+* light: fence texture tracing, for bmodels with "_shadow" "1"
+* light: surface light support via "_surface" "texturename" light key
+ 
+convenience:
+* light: respect "_dirt" "-1" bmodel key in -dirtdebug mode
+* light: allow setting "-dist" and "-range" command-line flags in worldspawn
+  ("_dist", "_range")
+* light: accept "_sunlight_mangle" as an alternative for "_sun_mangle"
+
+other:
+* all: increase stack size to 8MB. Fixes qbsp crash with bbin1.map on Windows,
+  light crashes.
+* qbsp: switch to hardcoded MAX_MAP_PLANES (262K), speeds up map file loading 
+  phase.
+* qbsp: MakeFaceEdges: accelerate with a hash table to avoid slow O(n^2) search
+  for edges
+* qbsp: ChooseMidPlaneFromList: fix off-by-one error in axial plane test. On 
+  the first SolidBSP pass, gives fewer split nodes on bbin1.map (128k vs 199k)
+* light: MatchTargets: disable copying "style" key/value from a light to the 
+  entity that targets it. Don't see any point, and causes problems if "style"
+  is meaningful for the targetting entity (e.g. a monster).
+
+2015-03-05 TyrUtils-ericw shapshot
+
+* light: support "_dirt" "-1" on bmodels to disable dirtmapping
+  
+2015-02-24 TyrUtils-ericw snapshot
+
+* light: _sunlight2 (sky light/light dome) support from q3map2 
+* light: _sunlight_penumbra (deviance) from q3map2
+
+2015-01-31 TyrUtils-ericw snapshot
+  
+* light: per-light dirtmapping control
+
+2015-01-21 TyrUtils-ericw snapshot
+  
+* light: revert trace change in TyrUtils 0.7 that was causing artifacts.
+  fix bug in determining trace hitpoint
+  
+2015-01-19 TyrUtils-ericw snapshot
+
+* light: handle colours in the range 0-1
+* light: ambient occlusion / dirtmapping from q3map2 support
+* qbsp: account for miptex struct in wad3 lump disksize
+* light: Increase precision of lightmap extents calculations
+* qbsp: fix coordinates in degenerate edge error in tjunc.c
+* build: bump the fallback version number in Makefile
+* bsputil: fix wad export from bsp with missing textures
+
 2014-02-16 TyrUtils v0.15
 
 * qbsp: Cope with textures names containing '{' or '}' (e.g. for alpha mask)
