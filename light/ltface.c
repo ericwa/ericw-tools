@@ -309,7 +309,7 @@ TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
     Solve3(&texorg->transform, rhs, world);
 }
 
-static void
+void
 WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 {
     int i;

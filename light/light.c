@@ -51,6 +51,8 @@ qboolean dirtDepthSetOnCmdline = false;
 qboolean dirtScaleSetOnCmdline = false;
 qboolean dirtGainSetOnCmdline = false;
 
+qboolean testFenceTextures = false;
+
 byte *filebase;			// start of lightmap data
 static byte *file_p;		// start of free space after data
 static byte *file_end;		// end of free space for lightmap data
@@ -224,6 +226,22 @@ LightWorld(bsp2_t *bsp)
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 }
 
+static void
+CheckFenceTextures(bsp2_t *bsp)
+{
+    int i;
+    for (i = 0; i < bsp->numfaces; i++) {
+        const bsp2_dface_t *face = &bsp->dfaces[i];
+        const texinfo_t *tex = &bsp->texinfo[face->texinfo];
+        const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
+        const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
+        if (miptex->name[0] == '{') {
+            logprint("Fence texture detected, enabling fence texture tracing on bmodels\n");
+            testFenceTextures = true;
+            break;
+        }
+    }
+}
 
 /*
  * ==================
@@ -369,6 +387,8 @@ main(int argc, const char **argv)
 
     if (dirty)
 	SetupDirt();
+
+    CheckFenceTextures(bsp);
 
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));

@@ -144,4 +144,9 @@ extern qboolean write_litfile;
 
 void SetupDirt();
 
+/* Used by fence texture sampling */
+void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
+
+extern qboolean testFenceTextures;
+
 #endif /* __LIGHT_LIGHT_H__ */
