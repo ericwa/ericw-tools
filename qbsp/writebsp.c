@@ -726,6 +726,19 @@ FinishBSPFile(void)
     planes->data = newdata;
     planes->count = map.cTotal[LUMP_PLANES];
 
+    // Shrink texinfo lump
+    {
+        struct lumpdata *texinfo;
+        void *pTemp;
+
+        texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
+        pTemp = texinfo->data;
+        texinfo->data = AllocMem(BSP_TEXINFO, texinfo->index, true);
+        memcpy(texinfo->data, pTemp, texinfo->index * MemSize[BSP_TEXINFO]);
+        FreeMem(pTemp, BSP_TEXINFO, texinfo->count);
+        texinfo->count = texinfo->index;
+    }
+
     PrintBSPFileSizes();
     CleanBSPTexinfoFlags();
     WriteBSPFile();

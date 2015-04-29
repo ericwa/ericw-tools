@@ -146,7 +146,7 @@ FindTexinfo
 Returns a global texinfo number
 ===============
 */
-static int
+int
 FindTexinfo(texinfo_t *texinfo)
 {
     int index, j;
@@ -186,6 +186,9 @@ FindTexinfo(texinfo_t *texinfo)
 
 	return index;
     }
+
+    if (index >= pWorldEnt->lumps[LUMP_TEXINFO].count)
+        Error("Internal error: didn't allocate enough texinfos?");
 
     /* Allocate a new texinfo at the end of the array */
     *target = *texinfo;
@@ -691,9 +694,12 @@ PreParseFile(const char *buf)
      */
     map.maxmiptex = map.maxfaces + 100;
     map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
+
+    /* Fixing textures on rotate_object requires an extra texinfo per face */
+    map.maxtexinfo = map.maxfaces * 2;
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
-    texinfo->data = AllocMem(BSP_TEXINFO, map.maxfaces, true);
-    texinfo->count = map.maxfaces;
+    texinfo->data = AllocMem(BSP_TEXINFO, map.maxtexinfo, true);
+    texinfo->count = map.maxtexinfo;
 }
 
 /*
@@ -720,7 +726,6 @@ LoadMapFile(void)
     parser_t parser;
     char *buf;
     int length;
-    void *pTemp;
     struct lumpdata *texinfo;
     mapentity_t *entity;
 
@@ -757,15 +762,7 @@ LoadMapFile(void)
 //              Message(msgWarning, warnNoPlayerCoop);
 
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
-    if (texinfo->index > texinfo->count)
-	Error("Internal error: didn't allocate enough texinfos?");
-    else if (texinfo->index < texinfo->count) {
-	pTemp = texinfo->data;
-	texinfo->data = AllocMem(BSP_TEXINFO, texinfo->index, true);
-	memcpy(texinfo->data, pTemp, texinfo->index * MemSize[BSP_TEXINFO]);
-	FreeMem(pTemp, BSP_TEXINFO, texinfo->count);
-	texinfo->count = texinfo->index;
-    }
+
     map.maxplanes = MAX_MAP_PLANES;
     map.planes = AllocMem(PLANE, map.maxplanes, true);
 

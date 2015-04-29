@@ -381,6 +381,7 @@ PrintOptions(void)
 	   "   -leakdist  [n]  Space between leakfile points (default 2)\n"
 	   "   -subdivide [n]  Use different texture subdivision (default 240)\n"
 	   "   -wadpath <dir>  Search this directory for wad files\n"
+	   "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
 	   "   sourcefile      .MAP file to process\n"
 	   "   destfile        .BSP file to output\n");
 
@@ -450,6 +451,7 @@ ParseOptions(char *szOptions)
     /* Default to the original Quake BSP Version... */
     options.BSPVersion = BSPVERSION;
     options.fTranswater = true;
+    options.fixRotateObjTexture = true;
 
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
@@ -522,7 +524,9 @@ ParseOptions(char *szOptions)
 		/* Remove trailing /, if any */
 		if (options.wadPath[strlen(options.wadPath) - 1] == '/')
 		    options.wadPath[strlen(options.wadPath) - 1] = 0;
-	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
+            } else if (!strcasecmp(szTok, "oldrottex")) {
+                options.fixRotateObjTexture = false;
+            } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
 		Error("Unknown option '%s'", szTok);

@@ -447,6 +447,7 @@ typedef struct options_s {
     bool fOldleak;
     bool fNopercent;
     bool forceGoodTree;
+    bool fixRotateObjTexture;
     int BSPVersion;
     int dxSubdivide;
     int dxLeakDist;
@@ -502,6 +503,7 @@ typedef struct mapdata_s {
     int maxentities;
     int maxplanes;
     int maxmiptex;
+    int maxtexinfo;
 
     /* Number of items currently used */
     int numfaces;
@@ -531,6 +533,7 @@ extern mapentity_t *pWorldEnt;
 void LoadMapFile(void);
 
 int FindMiptex(const char *name);
+int FindTexinfo(texinfo_t *texinfo);
 
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);

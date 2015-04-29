@@ -423,6 +423,26 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 	    }
 	}
 
+        // account for texture offset, from txqbsp-xt
+        if (options.fixRotateObjTexture) {
+            const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+            texinfo_t texInfoNew;
+            vec3_t vecs[2];
+            int k, l;
+
+            memcpy(&texInfoNew, &texinfo[ mapface->texinfo ], sizeof(texInfoNew));
+            for (k=0; k<2; k++) {
+                for (l=0; l<3; l++) {
+                    vecs[k][l] = texinfo[ mapface->texinfo ].vecs[k][l];
+                }
+            }
+
+            texInfoNew.vecs[0][3] += DotProduct( rotate_offset, vecs[0] );
+            texInfoNew.vecs[1][3] += DotProduct( rotate_offset, vecs[1] );
+
+            mapface->texinfo = FindTexinfo( &texInfoNew );
+        }
+
 	VectorCopy(mapface->plane.normal, plane.normal);
 	VectorScale(mapface->plane.normal, mapface->plane.dist, point);
 	VectorSubtract(point, rotate_offset, point);
