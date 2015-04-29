@@ -1265,6 +1265,8 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 	if (bsp->texdatasize)
 	    numtextures = bsp->dtexdata.header->nummiptex;
 
+        logprint("%7i %-12s\n", bsp->nummodels, "models");
+
 	PrintLumpSize(lumpspec, LUMP_PLANES, bsp->numplanes);
 	PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp->numvertexes);
 	PrintLumpSize(lumpspec, LUMP_NODES, bsp->numnodes);
@@ -1289,6 +1291,8 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 	if (bsp->texdatasize)
 	    numtextures = bsp->dtexdata.header->nummiptex;
 
+        logprint("%7i %-12s\n", bsp->nummodels, "models");
+
 	PrintLumpSize(lumpspec, LUMP_PLANES, bsp->numplanes);
 	PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp->numvertexes);
 	PrintLumpSize(lumpspec, LUMP_NODES, bsp->numnodes);
@@ -1312,6 +1316,8 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 
 	if (bsp->texdatasize)
 	    numtextures = bsp->dtexdata.header->nummiptex;
+
+        logprint("%7i %-12s\n", bsp->nummodels, "models");
 
 	PrintLumpSize(lumpspec, LUMP_PLANES, bsp->numplanes);
 	PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp->numvertexes);
