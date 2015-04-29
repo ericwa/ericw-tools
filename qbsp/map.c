@@ -738,11 +738,6 @@ LoadMapFile(void)
     map.numfaces = map.numbrushes = map.numentities = 0;
     entity = map.entities;
     while (ParseEntity(&parser, entity)) {
-	/* Allocate memory for the bmodel, if needed. */
-	if (!IsWorldBrushEntity(entity) && entity->nummapbrushes) {
-	    entity->lumps[LUMP_MODELS].data = AllocMem(BSP_MODEL, 1, true);
-	    entity->lumps[LUMP_MODELS].count = 1;
-	}
 	map.numentities++;
 	entity++;
     }

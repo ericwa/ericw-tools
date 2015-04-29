@@ -612,6 +612,10 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
 
+    // Allocate a model
+    entity->lumps[LUMP_MODELS].data = AllocMem(BSP_MODEL, 1, true);
+    entity->lumps[LUMP_MODELS].count = 1;
+    
     // Get a feel for how many of these things there are.
     CountNodes(entity, headnode);
 
