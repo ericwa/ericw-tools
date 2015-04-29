@@ -1,3 +1,9 @@
+2015-04-29 TyrUtils-ericw snapshot
+
+* qbsp: fix broken -onlyents flag
+* qbsp: fix texture offset on rotate_object, so they match in the
+ editor. Added "-oldrottex" flag to revert to old behaviour. From txqbsp-xt.
+
 2015-04-27 TyrUtils-ericw snapshot
 
 new features:
