@@ -986,7 +986,6 @@ static void CreateSurfaceLight(const vec3_t origin, const entity_t *surflight_te
     /* don't write to bsp */
     entity->generated = true;
 
-    CheckEntityFields(entity);
     num_lights++;
 }
 
