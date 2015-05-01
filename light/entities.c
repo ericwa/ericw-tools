@@ -205,13 +205,6 @@ CheckEntityFields(entity_t *entity)
     if (!entity->light.light)
 	entity->light.light = DEFAULTLIGHTLEVEL;
 
-    /* ydnar: get deviance and samples */
-    if (entity->deviance < 0.0f || entity->num_samples < 1) {
-	entity->deviance = 0.0f;
-	entity->num_samples = 1;
-    }
-    entity->light.light /= entity->num_samples;
-
     if (entity->atten <= 0.0)
 	entity->atten = 1.0;
     if (entity->anglescale < 0 || entity->anglescale > 1.0)
@@ -228,6 +221,24 @@ CheckEntityFields(entity_t *entity)
 		     VecStr(entity->origin));
 	}
 	entity->formula = LF_LINEAR;
+    }
+    
+    /* set up deviance and samples defaults */
+    if (entity->deviance > 0 && entity->num_samples == 0) {
+        entity->num_samples = 16;
+    }
+    if (entity->deviance < 0.0f || entity->num_samples < 1) {
+        entity->deviance = 0.0f;
+        entity->num_samples = 1;
+    }
+    /* For most formulas, we need to divide the light value by the number of
+       samples (jittering) to keep the brightness approximately the same. */
+    if (entity->formula == LF_INVERSE
+        || entity->formula == LF_INVERSE2
+        || entity->formula == LF_INFINITE
+        || (entity->formula == LF_LOCALMIN && addminlight)
+        || entity->formula == LF_INVERSE2A) {
+        entity->light.light /= entity->num_samples;
     }
 
     if (!VectorCompare(entity->light.color, vec3_origin)) {
@@ -526,6 +537,30 @@ Entities_Insert(entity_t *entity)
 
 /*
  * =============
+ * DuplicateEntity
+ * =============
+ */
+static entity_t *
+DuplicateEntity(const entity_t *src)
+{
+    epair_t *ep;
+    entity_t *entity = (entity_t *)malloc(sizeof(entity_t));
+    memcpy(entity, src, sizeof(entity_t));
+    
+    /* also copy epairs */
+    entity->epairs = NULL;
+    for (ep = src->epairs; ep; ep = ep->next)
+        SetKeyValue(entity, ep->key, ep->value);
+    
+    /* also insert into the entity list */
+    entity->next = NULL;
+    Entities_Insert(entity);
+    
+    return entity;
+}
+
+/*
+ * =============
  * JitterEntity
  *
  * Creates jittered copies of the light if specified using the "_samples" and "_deviance" keys. 
@@ -542,13 +577,8 @@ JitterEntity(entity_t *entity)
 	for ( j = 1; j < entity->num_samples; j++ )
 	{
 		/* create a light */
-		entity_t *light2 = malloc( sizeof( *entity ) );
-		memcpy( light2, entity, sizeof( *entity ) );
-
+                entity_t *light2 = DuplicateEntity(entity);
 		light2->generated = true; // don't write generated light to bsp
-		
-		/* add to list */
-		Entities_Insert(light2);
 
 		/* jitter it */
 		light2->origin[ 0 ] = entity->origin[ 0 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
@@ -560,13 +590,21 @@ JitterEntity(entity_t *entity)
 static void
 JitterEntities()
 {
+    entity_t *old_tail;
     entity_t *entity;
 
+    // We will append to the list during iteration. This is the entity
+    // to stop at.
+    old_tail = entities_tail;
+    
     for (entity = entities; entity; entity = entity->next) {
-        if (strncmp(entity->classname, "light", 5))
-            continue;
-
-        JitterEntity(entity);
+        if (!strncmp(entity->classname, "light", 5)) {
+            printf("Jitterning %p for %d. dev %f\n, light %f\n", entity, entity->num_samples, entity->deviance, entity->light.light);
+            JitterEntity(entity);
+        }
+        
+        if (entity == old_tail)
+            break;
     }
 }
 
@@ -958,24 +996,6 @@ WriteEntitiesToString(bsp2_t *bsp)
  *                            SURFACE LIGHTS
  * =======================================================================
  */
-
-static entity_t *DuplicateEntity(const entity_t *src)
-{
-    epair_t *ep;
-    entity_t *entity = (entity_t *)malloc(sizeof(entity_t));
-    memcpy(entity, src, sizeof(entity_t));
-
-    /* also copy epairs */
-    entity->epairs = NULL;
-    for (ep = src->epairs; ep; ep = ep->next)
-        SetKeyValue(entity, ep->key, ep->value);
-
-    /* also insert into the entity list */
-    entity->next = NULL;
-    Entities_Insert(entity);
-
-    return entity;
-}
 
 static void CreateSurfaceLight(const vec3_t origin, const entity_t *surflight_template)
 {
