@@ -599,7 +599,6 @@ JitterEntities()
     
     for (entity = entities; entity; entity = entity->next) {
         if (!strncmp(entity->classname, "light", 5)) {
-            printf("Jitterning %p for %d. dev %f\n, light %f\n", entity, entity->num_samples, entity->deviance, entity->light.light);
             JitterEntity(entity);
         }
         
