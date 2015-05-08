@@ -61,14 +61,20 @@ byte *lit_filebase;		// start of litfile data
 static byte *lit_file_p;	// start of free space after litfile data
 static byte *lit_file_end;	// end of space for litfile data
 
+byte *lux_buffer;		// luxfile allocation (misaligned)
+byte *lux_filebase;		// start of luxfile data
+static byte *lux_file_p;	// start of free space after luxfile data
+static byte *lux_file_end;	// end of space for luxfile data
+
 static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
 
 int oversample = 1;
-qboolean write_litfile = false;
+int write_litfile = 0;	/* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
+int write_luxfile = 0;	/* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 
 void
-GetFileSpace(byte **lightdata, byte **colordata, int size)
+GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
     ThreadLock();
 
@@ -83,6 +89,14 @@ GetFileSpace(byte **lightdata, byte **colordata, int size)
 	    lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
 	*colordata = lit_file_p;
 	lit_file_p += size * 3;
+    }
+
+    if (deluxdata) {
+	/* align to 12 byte boundaries to match offets with 3 * lightdata */
+	if ((uintptr_t)lux_file_p % 12)
+	    lux_file_p += 12 - ((uintptr_t)lux_file_p % 12);
+	*deluxdata = lux_file_p;
+	lux_file_p += size * 3;
     }
 
     ThreadUnlock();
@@ -100,6 +114,9 @@ LightThread(void *arg)
     int facenum, i;
     dmodel_t *model;
     const bsp2_t *bsp = arg;
+    struct ltface_ctx *ctx;
+
+    ctx = LightFaceInit(bsp);
 
     while (1) {
 	facenum = GetThreadWork();
@@ -118,14 +135,15 @@ LightThread(void *arg)
 	    continue;
 	}
 
-	LightFace(bsp->dfaces + facenum, &modelinfo[i], bsp);
+	LightFace(bsp->dfaces + facenum, bsp->dfacesup + facenum, &modelinfo[i], ctx);
     }
+    LightFaceShutdown(ctx);
 
     return NULL;
 }
 
 static void
-FindModelInfo(const bsp2_t *bsp)
+FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
     int i, shadow, numshadowmodels;
     entity_t *entity;
@@ -133,6 +151,7 @@ FindModelInfo(const bsp2_t *bsp)
     const char *attribute;
     const dmodel_t **shadowmodels;
     modelinfo_t *info;
+    float lightmapscale;
 
     shadowmodels = malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
     memset(shadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
@@ -144,8 +163,28 @@ FindModelInfo(const bsp2_t *bsp)
     memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
     modelinfo[0].model = &bsp->dmodels[0];
 
+    if (lmscaleoverride)
+        SetKeyValue(entities, "_lightmap_scale", lmscaleoverride);
+
+    lightmapscale = atoi(ValueForKey(entities, "_lightmap_scale"));
+    if (!lightmapscale)
+        lightmapscale = 16; /* the default */
+    if (lightmapscale <= 0)
+        Error("lightmap scale is 0 or negative\n");
+    if (lightmapscale == 16)
+        logprint("Using default lightmap scale\n");
+    else
+        logprint("Using base lightmap scale of %gqu\n", lightmapscale);
+    /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software ones that might be able to just do some mip hacks). This tool doesn't really care.*/
+    for (i = 1; i < lightmapscale;)
+        i++;
+    if (i != lightmapscale)
+        logprint("WARNING: lightmap scale is not a power of 2\n");
+    modelinfo[0].lightmapscale = lightmapscale;
+
     for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
 	info->model = &bsp->dmodels[i];
+	info->lightmapscale = lightmapscale;
 
 	/* Find the entity for the model */
 	snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -200,6 +239,8 @@ LightWorld(bsp2_t *bsp)
 {
     if (bsp->dlightdata)
 	free(bsp->dlightdata);
+    if (lux_buffer)
+	free(lux_buffer);
 
     /* FIXME - remove this limit */
     bsp->lightdatasize = MAX_MAP_LIGHTING;
@@ -218,6 +259,12 @@ LightWorld(bsp2_t *bsp)
     lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
     lit_file_p = lit_filebase;
     lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
+
+    /* litfile data stored in dlightdata, after the white light */
+    lux_buffer = malloc(bsp->lightdatasize*3);
+    lux_filebase = lux_buffer + 12 - ((uintptr_t)lux_buffer % 12);
+    lux_file_p = lux_filebase;
+    lux_file_end = lux_filebase + 3 * (MAX_MAP_LIGHTING / 4);
 
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
     logprint("Lighting Completed.\n\n");
@@ -242,6 +289,7 @@ main(int argc, const char **argv)
     double start;
     double end;
     char source[1024];
+    char *lmscaleoverride = NULL;
 
     init_log("light.log");
     logprint("---- light / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
@@ -268,7 +316,18 @@ main(int argc, const char **argv)
 	} else if (!strcmp(argv[i], "-addmin")) {
 	    addminlight = true;
 	} else if (!strcmp(argv[i], "-lit")) {
-	    write_litfile = true;
+	    write_litfile |= 1;
+	} else if (!strcmp(argv[i], "-lit2")) {
+	    write_litfile = ~0;
+	} else if (!strcmp(argv[i], "-lux")) {
+	    write_luxfile |= 1;
+	} else if (!strcmp(argv[i], "-bspxlit")) {
+	    write_litfile |= 2;
+	} else if (!strcmp(argv[i], "-bspxlux")) {
+	    write_luxfile |= 2;
+	} else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
+	    lmscaleoverride = argv[++i];
+	    logprint( "Overriding lightmap scale\n" );
 	} else if (!strcmp(argv[i], "-soft")) {
 	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
 		softsamples = atoi(argv[++i]);
@@ -342,8 +401,21 @@ main(int argc, const char **argv)
 
     if (numthreads > 1)
 	logprint("running with %d threads\n", numthreads);
-    if (write_litfile)
+
+	if (write_litfile == ~0)
+		logprint("generating lit2 output only.\n");
+	else
+	{
+		if (write_litfile & 1)
 	logprint(".lit colored light output requested on command line.\n");
+		if (write_litfile & 2)
+			logprint("BSPX colored light output requested on command line.\n");
+		if (write_luxfile & 1)
+			logprint(".lux light directions output requested on command line.\n");
+		if (write_luxfile & 2)
+			logprint("BSPX light directions output requested on command line.\n");
+	}
+
     if (softsamples == -1) {
 	switch (oversample) {
 	case 2:
@@ -376,20 +448,37 @@ main(int argc, const char **argv)
 
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
-    FindModelInfo(bsp);
+    FindModelInfo(bsp, lmscaleoverride);
     LightWorld(bsp);
     free(modelinfo);
 
     WriteEntitiesToString(bsp);
 
-    if (write_litfile)
+    /*invalidate any bspx lighting info early*/
+    BSPX_AddLump(&bspdata, "RGBLIGHTING", NULL, 0);
+    BSPX_AddLump(&bspdata, "LIGHTINGDIR", NULL, 0);
+
+	if (write_litfile == ~0)
+	{
+		WriteLitFile(bsp, source, 2);
+	}
+	else
+	{
+		/*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
+		if (write_litfile & 1)
 	WriteLitFile(bsp, source, LIT_VERSION);
+		if (write_litfile & 2)
+			BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp->lightdatasize*3);
+		if (write_luxfile & 1)
+			WriteLuxFile(bsp, source, LIT_VERSION);
+		if (write_luxfile & 2)
+			BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp->lightdatasize*3);
 
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
 	ConvertBSPFormat(loadversion, &bspdata);
-
     WriteBSPFile(source, &bspdata);
+	}
 
     end = I_FloatTime();
     logprint("%5.1f seconds elapsed\n", end - start);

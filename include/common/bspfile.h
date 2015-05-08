@@ -41,7 +41,7 @@
 #define MAX_MAP_EDGES         256000
 #define MAX_MAP_SURFEDGES     512000
 #define MAX_MAP_MIPTEX     0x0800000
-#define MAX_MAP_LIGHTING   0x1000000
+#define MAX_MAP_LIGHTING   0x8000000
 #define MAX_MAP_VISIBILITY 0x1000000
 
 /* key / value pair sizes */
@@ -74,6 +74,16 @@ typedef struct {
 #define LUMP_MODELS       14
 
 #define BSP_LUMPS         15
+
+typedef struct {
+	char id[4]; //'BSPX'
+	uint32_t numlumps;
+} bspx_header_t;
+typedef struct {
+	char lumpname[24];
+	uint32_t fileofs;
+	uint32_t filelen;
+} bspx_lump_t;
 
 typedef struct {
     const char *name;
@@ -222,6 +232,11 @@ typedef struct {
     int32_t lightofs;		/* start of [numstyles*surfsize] samples */
 } bsp2_dface_t;
 
+typedef struct {
+	float lmscale;
+	unsigned short extent[2];
+} dfacesup_t;
+
 /* Ambient Sounds */
 #define AMBIENT_WATER   0
 #define AMBIENT_SKY     1
@@ -270,6 +285,15 @@ typedef union {
 
 /* ========================================================================= */
 
+typedef struct bspxentry_s
+{
+	char lumpname[24];
+	const void *lumpdata;
+	size_t lumpsize;
+
+	struct bspxentry_s *next;
+} bspxentry_t;
+
 typedef struct {
     int nummodels;
     dmodel_t *dmodels;
@@ -303,6 +327,7 @@ typedef struct {
 
     int numfaces;
     bsp29_dface_t *dfaces;
+	dfacesup_t *dfacesup;
 
     int numclipnodes;
     bsp29_dclipnode_t *dclipnodes;
@@ -350,6 +375,7 @@ typedef struct {
 
     int numfaces;
     bsp2_dface_t *dfaces;
+	dfacesup_t *dfacesup;
 
     int numclipnodes;
     bsp2_dclipnode_t *dclipnodes;
@@ -397,6 +423,7 @@ typedef struct {
 
     int numfaces;
     bsp2_dface_t *dfaces;
+	dfacesup_t *dfacesup;
 
     int numclipnodes;
     bsp2_dclipnode_t *dclipnodes;
@@ -423,11 +450,14 @@ typedef struct {
 	bsp2rmq_t bsp2rmq;
 	bsp2_t bsp2;
     } data;
+
+	bspxentry_t *bspxentries;
 } bspdata_t;
 
 void LoadBSPFile(const char *filename, bspdata_t *bsp);
 void WriteBSPFile(const char *filename, bspdata_t *bsp);
 void PrintBSPFileSizes(const bspdata_t *bsp);
 void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
+void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 
 #endif /* __COMMON_BSPFILE_H__ */

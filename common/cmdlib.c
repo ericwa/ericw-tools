@@ -478,6 +478,64 @@ SafeWrite(FILE *f, const void *buffer, int count)
 	Error("File read failure");
 }
 
+typedef struct {
+	char magic[4];
+	unsigned int tableofs;
+	unsigned int numfiles;
+} pakheader_t;
+typedef struct {
+	char name[56];
+	unsigned int offset;
+	unsigned int length;
+} pakfile_t;
+
+/*
+ * ==============
+ * LoadFilePak
+ * reads a file directly out of a pak, to make re-lighting friendlier
+ * ==============
+ */
+int
+LoadFilePak(const char *pakfilename, const char *filename, void *destptr)
+{
+	int result = -1;
+	byte **bufferptr = destptr;
+	pakheader_t header;
+	unsigned int i;
+	FILE *file;
+	file = SafeOpenRead(pakfilename);
+	SafeRead(file, &header, sizeof(header));
+
+	header.numfiles = LittleLong(header.numfiles) / sizeof(pakfile_t);
+	header.tableofs = LittleLong(header.tableofs);
+
+	if (!strncmp(header.magic, "PACK", 4))
+	{
+		pakfile_t *files = malloc(header.numfiles * sizeof(*files));
+		printf("%s: %u files\n", pakfilename, header.numfiles);
+		fseek(file, header.tableofs, SEEK_SET);
+		SafeRead(file, files, header.numfiles * sizeof(*files));
+
+		for (i = 0; i < header.numfiles; i++)
+		{
+			if (!strcmp(files[i].name, filename))
+			{
+				fseek(file, files[i].offset, SEEK_SET);
+				*bufferptr = malloc(files[i].length + 1);
+				SafeRead(file, *bufferptr, files[i].length);
+				result = files[i].length;
+				break;
+			}
+		}
+		free(files);
+	}
+
+	fclose(file);
+	if (result < 0)
+		Error("Unable to find %s inside %s", filename, pakfilename);
+	return result;
+}
+
 /*
  * ==============
  * LoadFile
