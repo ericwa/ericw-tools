@@ -73,6 +73,8 @@ int oversample = 1;
 int write_litfile = 0;	/* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;	/* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 
+byte *lmshifts;
+
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
@@ -163,6 +165,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
     modelinfo[0].model = &bsp->dmodels[0];
 
+#if 0
     if (lmscaleoverride)
         SetKeyValue(entities, "_lightmap_scale", lmscaleoverride);
 
@@ -181,10 +184,11 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     if (i != lightmapscale)
         logprint("WARNING: lightmap scale is not a power of 2\n");
     modelinfo[0].lightmapscale = lightmapscale;
+#endif
 
     for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
 	info->model = &bsp->dmodels[i];
-	info->lightmapscale = lightmapscale;
+	//info->lightmapscale = lightmapscale;
 
 	/* Find the entity for the model */
 	snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -227,6 +231,35 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     }
 
     tracelist = shadowmodels;
+}
+
+/*
+ ==================
+ FinishBSPFile
+ ==================
+ */
+void
+LoadLMScaleFile(const bsp2_t *bsp, const char *name)
+{
+	char source[1024];
+	FILE *LmscaleFile;
+	
+	strcpy(source, name);
+	StripExtension(source);
+	DefaultExtension(source, ".lmscale");
+	
+	LmscaleFile = fopen(source, "rb");
+	if (!LmscaleFile)
+		Error("Failed to open %s: %s", source, strerror(errno));
+	
+
+	lmshifts = calloc(bsp->numfaces, 1);
+	if (bsp->numfaces != fread(lmshifts, 1, bsp->numfaces, LmscaleFile)) {
+		Error("Corrupt .lmscale file");
+		// FIXME: Not fatal
+	}
+	
+	fclose(LmscaleFile);
 }
 
 /*
@@ -440,7 +473,9 @@ main(int argc, const char **argv)
     loadversion = bspdata.version;
     if (bspdata.version != BSP2VERSION)
 	ConvertBSPFormat(BSP2VERSION, &bspdata);
-
+	
+	LoadLMScaleFile(bsp, source);
+	
     LoadEntities(bsp);
 
     if (dirty)

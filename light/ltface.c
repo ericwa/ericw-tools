@@ -531,12 +531,15 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     const texinfo_t *tex;
     vec3_t planepoint;
     texorg_t texorg;
+	int facenum, lmshift;
 
 	/*FIXME: memset can be slow on large datasets*/
 //    memset(lightsurf, 0, sizeof(*lightsurf));
     lightsurf->modelinfo = modelinfo;
 
-    lightsurf->lightmapscale = modelinfo->lightmapscale;
+	facenum = face - bsp->dfaces;
+	lmshift = lmshifts[facenum];
+	lightsurf->lightmapscale = 1 << lmshift;
 
     /* Set up the plane, including model offset */
     plane = &lightsurf->plane;

@@ -82,7 +82,7 @@ typedef struct {
     const dmodel_t *model;
     qboolean shadowself;
     lightsample_t minlight;
-	float lightmapscale;
+	//float lightmapscale;
     vec3_t offset;
     qboolean nodirt;    
 } modelinfo_t;
@@ -147,6 +147,8 @@ extern byte *lux_filebase;
 extern int oversample;
 extern int write_litfile;
 extern int write_luxfile;
+
+extern byte *lmshifts;
 
 void SetupDirt();
 

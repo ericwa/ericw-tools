@@ -554,7 +554,7 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
     }
 
     face->texinfo = FindTexinfo(&tx);
-
+	
     return true;
 }
 
@@ -601,10 +601,33 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 	brush->faces = NULL;
 }
 
+static int GetLightmapShift(const mapentity_t *src)
+{
+	float floatscale;
+	int intscale;
+	int shift;
+	
+	floatscale = atof(ValueForKey(src, "_lightmapscale"));
+	intscale = 16 * floatscale;
+	
+	if (intscale == 0)
+	{
+		return 4; // 1<<4 == 16, default lightmap shift
+	}
+	
+	for (shift = 0; (1<<shift) < intscale; shift++)
+	{
+	}
+	printf("entity %s had lmshift %d\n", ValueForKey(src, "classname"), shift);
+	return shift;
+}
+
 static bool
 ParseEntity(parser_t *parser, mapentity_t *entity)
 {
     mapbrush_t *brush;
+	mapface_t *face;
+	int i, j, lmshift;
 
     if (!ParseToken(parser, PARSE_NORMAL))
 	return false;
@@ -634,6 +657,14 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     if (!entity->nummapbrushes)
 	entity->mapbrushes = NULL;
 
+	/* Record scale for lit2 */
+	lmshift = GetLightmapShift(entity);
+	for (i=0, brush = entity->mapbrushes; i<entity->nummapbrushes; i++, brush++) {
+		for (j=0, face = brush->faces; j<brush->numfaces; j++, face++) {
+			face->lmshift = lmshift;
+			if (lmshift != 4) printf("face %p has %d\n", face, lmshift);
+		}
+	}
     return true;
 }
 
@@ -683,6 +714,7 @@ PreParseFile(const char *buf)
     map.faces = AllocMem(MAPFACE, map.maxfaces, true);
     map.brushes = AllocMem(MAPBRUSH, map.maxbrushes, true);
     map.entities = AllocMem(MAPENTITY, map.maxentities, true);
+	lmshifts = AllocMem(OTHER, map.maxfaces *64, true);
 
     // While we're here...
     pWorldEnt = map.entities;

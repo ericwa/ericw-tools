@@ -73,7 +73,8 @@ TryMerge(face_t *f1, face_t *f2)
 	f1->planeside != f2->planeside ||
 	f1->texinfo != f2->texinfo ||
 	f1->contents[0] != f2->contents[0] ||
-	f1->contents[1] != f2->contents[1])
+	f1->contents[1] != f2->contents[1] ||
+	f1->lmshift != f2->lmshift)
 	return NULL;
 
     // find a common edge

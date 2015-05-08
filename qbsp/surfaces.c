@@ -439,6 +439,8 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 
 	// emit a region
 	face->outputnumber = map.cTotal[LUMP_FACES];
+	// ericw -- record lmshift
+	lmshifts[face->outputnumber] = face->lmshift;
 	out = (bsp29_dface_t *)faces->data + faces->index;
 	out->planenum = node->outputplanenum;
 	out->side = face->planeside;
@@ -488,6 +490,8 @@ GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
 
 	// emit a region
 	face->outputnumber = map.cTotal[LUMP_FACES];
+	// ericw -- record lmshift
+	lmshifts[face->outputnumber] = face->lmshift;
 	out = (bsp2_dface_t *)faces->data + faces->index;
 	out->planenum = node->outputplanenum;
 	out->side = face->planeside;

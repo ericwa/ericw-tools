@@ -366,6 +366,7 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
 
 	/* emit a marksurface */
 	do {
+		printf ("face %p has lmscale %d!\n", face, face->lmshift);
 	    marksurfnums[marksurfs->index] = face->outputnumber;
 	    marksurfs->index++;
 	    map.cTotal[LUMP_MARKSURFACES]++;
@@ -416,6 +417,7 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 
 	/* emit a marksurface */
 	do {
+		printf ("face %p has lmscale %d!\n", face, face->lmshift);
 	    marksurfnums[marksurfs->index] = face->outputnumber;
 	    marksurfs->index++;
 	    map.cTotal[LUMP_MARKSURFACES]++;
@@ -710,6 +712,30 @@ CleanBSPTexinfoFlags(void)
 }
 
 /*
+ ==================
+ FinishBSPFile
+ ==================
+ */
+void
+WriteLMScaleFile(void)
+{
+	FILE *LmscaleFile;
+	int numfaces;
+	
+	// write the file
+	StripExtension(options.szBSPName);
+	strcat(options.szBSPName, ".lmscale");
+	
+	LmscaleFile = fopen(options.szBSPName, "wb");
+	if (!LmscaleFile)
+		Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+	
+	numfaces = map.cTotal[LUMP_FACES];
+	fwrite(lmshifts, 1, numfaces, LmscaleFile);
+	fclose(LmscaleFile);
+}
+
+/*
 ==================
 FinishBSPFile
 ==================
@@ -746,6 +772,8 @@ FinishBSPFile(void)
     PrintBSPFileSizes();
     CleanBSPTexinfoFlags();
     WriteBSPFile();
+	
+	WriteLMScaleFile();
 
     options.fVerbose = options.fAllverbose;
 }

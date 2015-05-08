@@ -114,6 +114,7 @@ mapdata_t map;
 
 // Useful shortcuts
 mapentity_t *pWorldEnt;
+byte *lmshifts;
 
 // Mathlib.c
 const vec3_t vec3_origin = { 0, 0, 0 };

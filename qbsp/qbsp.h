@@ -266,6 +266,7 @@ typedef struct visfacet_s {
     int texinfo;
     short contents[2];		// 0 = front side
     short cflags[2];		// contents flags
+	int lmshift;
 
     struct visfacet_s *original;	// face on node
     int outputnumber;		// only valid for original faces after
@@ -472,6 +473,7 @@ typedef struct mapface_s {
     plane_t plane;
     int texinfo;
     int linenum;
+	int lmshift;
 } mapface_t;
 
 typedef struct mapbrush_s {
@@ -529,6 +531,7 @@ typedef struct mapdata_s {
 
 extern mapdata_t map;
 extern mapentity_t *pWorldEnt;
+extern byte *lmshifts;
 
 void LoadMapFile(void);
 

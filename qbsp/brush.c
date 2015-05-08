@@ -452,6 +452,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
 	f->texinfo = hullnum ? 0 : mapface->texinfo;
 	f->planenum = FindPlane(&plane, &f->planeside);
+	f->lmshift = mapface->lmshift;
 	f->next = facelist;
 	facelist = f;
 	CheckFace(f);
@@ -904,7 +905,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     /* If the source entity is func_detail, set the content flag */
     if (!strcasecmp(classname, "func_detail"))
 	cflags |= CFLAGS_DETAIL;
-
+	
     mapbrush = src->mapbrushes;
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
 	contents = Brush_GetContents(mapbrush);
