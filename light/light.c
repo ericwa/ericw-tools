@@ -446,6 +446,8 @@ main(int argc, const char **argv)
     if (dirty)
 	SetupDirt();
 
+	CheckFenceTextures(bsp);
+	
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp, lmscaleoverride);
@@ -473,12 +475,12 @@ main(int argc, const char **argv)
 			WriteLuxFile(bsp, source, LIT_VERSION);
 		if (write_luxfile & 2)
 			BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp->lightdatasize*3);
+	}
 
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
 	ConvertBSPFormat(loadversion, &bspdata);
     WriteBSPFile(source, &bspdata);
-	}
 
     end = I_FloatTime();
     logprint("%5.1f seconds elapsed\n", end - start);
