@@ -31,7 +31,10 @@ WriteLitFile(const bsp2_t *bsp, const char *filename, int version)
 
     snprintf(litname, sizeof(litname) - 4, "%s", filename);
     StripExtension(litname);
-    DefaultExtension(litname, ".lit");
+    if (version == 2)
+	DefaultExtension(litname, ".lit2");
+    else
+	DefaultExtension(litname, ".lit");
 
     header.v1.ident[0] = 'Q';
     header.v1.ident[1] = 'L';
