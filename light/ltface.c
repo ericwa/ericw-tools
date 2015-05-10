@@ -545,7 +545,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 	    lightsurf->lightmapscale = 1 << lmshift_override;
 	} else if (lmshifts) {
 	    /* per-face info file saved by qbsp? */
-	    lightsurf->lightmapscale = lmshifts[facenum];
+	    lightsurf->lightmapscale = 1 << lmshifts[facenum];
 	} else {
 	    lightsurf->lightmapscale = 16;
 	}
