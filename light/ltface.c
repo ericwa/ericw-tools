@@ -539,7 +539,11 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 
 	facenum = face - bsp->dfaces;
 	lmshift = lmshifts[facenum];
+    
+    if (lit2pass)
 	lightsurf->lightmapscale = 1 << lmshift;
+    else
+	lightsurf->lightmapscale = 16;
 
     /* Set up the plane, including model offset */
     plane = &lightsurf->plane;

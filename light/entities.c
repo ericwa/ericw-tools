@@ -243,7 +243,7 @@ CheckEntityFields(entity_t *entity)
 
     if (!VectorCompare(entity->light.color, vec3_origin)) {
 	if (!write_litfile) {
-	    write_litfile = true;
+	    write_litfile |= WRITE_LIT;
 	    logprint("Colored light entities detected: "
 		     ".lit output enabled.\n");
 	}
@@ -1101,7 +1101,7 @@ LoadEntities(const bsp2_t *bsp)
 	!VectorCompare(minlight.color, vec3_white) ||
 	!VectorCompare(sunlight2.color, vec3_white)) {
 	if (!write_litfile) {
-	    write_litfile = true;
+	    write_litfile |= WRITE_LIT;
 	    logprint("Colored light entities detected: "
 		     ".lit output enabled.\n");
 	}

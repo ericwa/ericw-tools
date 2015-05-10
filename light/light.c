@@ -53,6 +53,8 @@ qboolean dirtGainSetOnCmdline = false;
 
 qboolean testFenceTextures = false;
 
+qboolean lit2pass = false;	// currently doing the high-res lit2 light pass
+
 byte *filebase;			// start of lightmap data
 static byte *file_p;		// start of free space after data
 static byte *file_end;		// end of free space for lightmap data
@@ -70,7 +72,7 @@ static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
 
 int oversample = 1;
-int write_litfile = 0;	/* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
+int write_litfile = 0;	/* 0 for none, 1 for .lit, 2 for bspx, 4 for .lit2 */
 int write_luxfile = 0;	/* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 
 byte *lmshifts;
@@ -219,7 +221,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 	GetVectorForKey(entity, "_mincolor", info->minlight.color);
 	if (!VectorCompare(info->minlight.color, vec3_origin)) {
 	    if (!write_litfile)
-		write_litfile = true;
+		write_litfile |= WRITE_LIT;
 	} else {
 	    VectorCopy(vec3_white, info->minlight.color);
 	}
@@ -241,6 +243,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 void
 LoadLMScaleFile(const bsp2_t *bsp, const char *name)
 {
+	int i;
 	char source[1024];
 	FILE *LmscaleFile;
 	
@@ -250,16 +253,25 @@ LoadLMScaleFile(const bsp2_t *bsp, const char *name)
 	
 	LmscaleFile = fopen(source, "rb");
 	if (!LmscaleFile)
-		Error("Failed to open %s: %s", source, strerror(errno));
+	    return;
 	
-
 	lmshifts = calloc(bsp->numfaces, 1);
+    
 	if (bsp->numfaces != fread(lmshifts, 1, bsp->numfaces, LmscaleFile)) {
-		Error("Corrupt .lmscale file");
-		// FIXME: Not fatal
+	    logprint("Ignoring corrupt lmscale file: '%s'.\n", source);
+	    free(lmshifts);
+	    lmshifts = NULL;
 	}
 	
 	fclose(LmscaleFile);
+    
+    for (i=0; i<bsp->numfaces; i++) {
+	if (lmshifts[i] != 4) {
+	    write_litfile = WRITE_LIT | WRITE_LIT2;
+	    logprint("Non-vanilla lightmap scale detected, enabling .lit2 output\n");
+	    return;
+	}
+    }
 }
 
 /*
@@ -349,13 +361,13 @@ main(int argc, const char **argv)
 	} else if (!strcmp(argv[i], "-addmin")) {
 	    addminlight = true;
 	} else if (!strcmp(argv[i], "-lit")) {
-	    write_litfile |= 1;
+	    write_litfile |= WRITE_LIT;
 	} else if (!strcmp(argv[i], "-lit2")) {
-	    write_litfile = ~0;
+	    write_litfile |= WRITE_LIT2;
 	} else if (!strcmp(argv[i], "-lux")) {
 	    write_luxfile |= 1;
 	} else if (!strcmp(argv[i], "-bspxlit")) {
-	    write_litfile |= 2;
+	    write_litfile |= WRITE_BSPX;
 	} else if (!strcmp(argv[i], "-bspxlux")) {
 	    write_luxfile |= 2;
 	} else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
@@ -426,7 +438,7 @@ main(int argc, const char **argv)
     if (i != argc - 1) {
 	printf("usage: light [-threads num] [-extra|-extra4]\n"
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
-	       "             [-dist n] [-range n] [-gate n] [-lit]\n"
+	       "             [-dist n] [-range n] [-gate n] [-lit] [-lit2] [-lmscale n]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
 	       "             [-soft [n]] [-fence] bspfile\n");
 	exit(1);
@@ -435,19 +447,19 @@ main(int argc, const char **argv)
     if (numthreads > 1)
 	logprint("running with %d threads\n", numthreads);
 
-	if (write_litfile == ~0)
-		logprint("generating lit2 output only.\n");
-	else
-	{
-		if (write_litfile & 1)
+    if (write_litfile & WRITE_LIT)
 	logprint(".lit colored light output requested on command line.\n");
-		if (write_litfile & 2)
-			logprint("BSPX colored light output requested on command line.\n");
-		if (write_luxfile & 1)
-			logprint(".lux light directions output requested on command line.\n");
-		if (write_luxfile & 2)
-			logprint("BSPX light directions output requested on command line.\n");
-	}
+    if (write_litfile & WRITE_LIT2)
+	logprint(".lit2 colored light output requested on command line.\n");
+
+#if 0
+    if (write_litfile & WRITE_LIT2)
+	logprint("BSPX colored light output requested on command line.\n");
+    if (write_luxfile & 1)
+	logprint(".lux light directions output requested on command line.\n");
+    if (write_luxfile & 2)
+	logprint("BSPX light directions output requested on command line.\n");
+#endif
 
     if (softsamples == -1) {
 	switch (oversample) {
@@ -474,7 +486,7 @@ main(int argc, const char **argv)
     if (bspdata.version != BSP2VERSION)
 	ConvertBSPFormat(BSP2VERSION, &bspdata);
 	
-	LoadLMScaleFile(bsp, source);
+    LoadLMScaleFile(bsp, source);
 	
     LoadEntities(bsp);
 
@@ -486,11 +498,24 @@ main(int argc, const char **argv)
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp, lmscaleoverride);
+    
+    if (write_litfile & WRITE_LIT2) {
+	lit2pass = true;
+	LightWorld(bsp);
+	WriteLitFile(bsp, source, LIT2_VERSION);
+	lit2pass = false;
+    }
+    
     LightWorld(bsp);
     free(modelinfo);
 
     WriteEntitiesToString(bsp);
 
+    if (write_litfile & WRITE_LIT) {
+	WriteLitFile(bsp, source, LIT_VERSION);
+    }
+    
+#if 0
     /*invalidate any bspx lighting info early*/
     BSPX_AddLump(&bspdata, "RGBLIGHTING", NULL, 0);
     BSPX_AddLump(&bspdata, "LIGHTINGDIR", NULL, 0);
@@ -511,7 +536,8 @@ main(int argc, const char **argv)
 		if (write_luxfile & 2)
 			BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp->lightdatasize*3);
 	}
-
+#endif
+    
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
 	ConvertBSPFormat(loadversion, &bspdata);

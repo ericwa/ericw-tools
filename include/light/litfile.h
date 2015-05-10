@@ -23,6 +23,7 @@
 #include <common/bspfile.h>
 
 #define LIT_VERSION 1
+#define LIT2_VERSION 2
 
 typedef struct litheader_s {
 	struct {

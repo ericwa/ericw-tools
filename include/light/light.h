@@ -144,6 +144,10 @@ extern byte *filebase;
 extern byte *lit_filebase;
 extern byte *lux_filebase;
 
+#define WRITE_LIT 1
+#define WRITE_BSPX 2
+#define WRITE_LIT2 4
+
 extern int oversample;
 extern int write_litfile;
 extern int write_luxfile;
@@ -156,5 +160,7 @@ void SetupDirt();
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 
 extern qboolean testFenceTextures;
+
+extern qboolean lit2pass;
 
 #endif /* __LIGHT_LIGHT_H__ */
