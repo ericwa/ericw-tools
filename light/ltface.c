@@ -537,13 +537,21 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 //    memset(lightsurf, 0, sizeof(*lightsurf));
     lightsurf->modelinfo = modelinfo;
 
-	facenum = face - bsp->dfaces;
-	lmshift = lmshifts[facenum];
-    
-    if (lit2pass)
-	lightsurf->lightmapscale = 1 << lmshift;
-    else
+    facenum = face - bsp->dfaces;
+	
+    if (lit2pass) {
+	if (lmshift_override != -1) {
+	    /* global override? */
+	    lightsurf->lightmapscale = 1 << lmshift_override;
+	} else if (lmshifts) {
+	    /* per-face info file saved by qbsp? */
+	    lightsurf->lightmapscale = lmshifts[facenum];
+	} else {
+	    lightsurf->lightmapscale = 16;
+	}
+    } else {
 	lightsurf->lightmapscale = 16;
+    }
 
     /* Set up the plane, including model offset */
     plane = &lightsurf->plane;

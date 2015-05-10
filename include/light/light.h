@@ -153,6 +153,7 @@ extern int write_litfile;
 extern int write_luxfile;
 
 extern byte *lmshifts;
+extern int lmshift_override;	// default -1
 
 void SetupDirt();
 

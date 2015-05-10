@@ -76,6 +76,7 @@ int write_litfile = 0;	/* 0 for none, 1 for .lit, 2 for bspx, 4 for .lit2 */
 int write_luxfile = 0;	/* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 
 byte *lmshifts;
+int lmshift_override = -1;
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
@@ -371,8 +372,19 @@ main(int argc, const char **argv)
 	} else if (!strcmp(argv[i], "-bspxlux")) {
 	    write_luxfile |= 2;
 	} else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
-	    lmscaleoverride = argv[++i];
-	    logprint( "Overriding lightmap scale\n" );
+	    int j;
+	    int lightmapscale = atoi(argv[++i]);
+	    
+	    logprint( "Overriding lightmap scale to %d\n", lightmapscale );
+	    
+	    for (j = 1, lmshift_override = 0; j < lightmapscale;) {
+		j *= 2;
+		lmshift_override++;
+	    }
+	    
+	    if (j != lightmapscale) {
+		logprint("WARNING: requested lightmap scale is not a power of 2. Using %d\n", 1<<lmshift_override);
+	    }
 	} else if (!strcmp(argv[i], "-soft")) {
 	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
 		softsamples = atoi(argv[++i]);
