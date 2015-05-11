@@ -771,6 +771,7 @@ float CalcFov (float fov_x, float width, float height)
 
 	return a;
 }
+#if 0
 /*
 scans the world's textures for window*
 */
@@ -828,7 +829,7 @@ static void SetupProjections(const bsp2_t *bsp)
 		}
 	}
 }
-
+#endif
 /*
  * ==================
  * LoadEntities
@@ -1117,8 +1118,9 @@ LoadEntities(const bsp2_t *bsp)
     SetupSpotlights();
     SetupSuns();
     SetupSkyDome();
-
+#if 0
 	SetupProjections(bsp);
+#endif
 }
 
 const char *
