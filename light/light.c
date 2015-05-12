@@ -55,18 +55,10 @@ qboolean testFenceTextures = false;
 
 qboolean lit2pass = false;	// currently doing the high-res lit2 light pass
 
-byte *filebase;			// start of lightmap data
-static byte *file_p;		// start of free space after data
-static byte *file_end;		// end of free space for lightmap data
-
-byte *lit_filebase;		// start of litfile data
-static byte *lit_file_p;	// start of free space after litfile data
-static byte *lit_file_end;	// end of space for litfile data
-
-byte *lux_buffer;		// luxfile allocation (misaligned)
-byte *lux_filebase;		// start of luxfile data
-static byte *lux_file_p;	// start of free space after luxfile data
-static byte *lux_file_end;	// end of space for luxfile data
+byte *filebase;
+byte *lit_filebase;
+byte *lux_filebase;
+static int lightmap_buffer_used;
 
 static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
@@ -81,36 +73,22 @@ int lmshift_override = -1;
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
+    int current_dest;
+
     ThreadLock();
 
     /* align to 4 byte boudaries */
-    file_p = (byte *)(((uintptr_t)file_p + 3) & ~3);
-    *lightdata = file_p;
-    file_p += size;
+    current_dest = ((lightmap_buffer_used + 3) & ~3);
+    lightmap_buffer_used = current_dest + size;
 
-    if (colordata) {
-	/* align to 12 byte boundaries to match offets with 3 * lightdata */
-	if ((uintptr_t)lit_file_p % 12)
-	    lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
-	*colordata = lit_file_p;
-	lit_file_p += size * 3;
-    }
+    if (lightmap_buffer_used > MAX_MAP_LIGHTING)
+	Error("%s: overrun", __func__);
 
-    if (deluxdata) {
-	/* align to 12 byte boundaries to match offets with 3 * lightdata */
-	if ((uintptr_t)lux_file_p % 12)
-	    lux_file_p += 12 - ((uintptr_t)lux_file_p % 12);
-	*deluxdata = lux_file_p;
-	lux_file_p += size * 3;
-    }
+    *lightdata = filebase + current_dest;
+    *colordata = lit_filebase + 3*current_dest;
+    *deluxdata = lux_filebase + 3*current_dest;
 
     ThreadUnlock();
-
-    if (file_p > file_end)
-	Error("%s: overrun", __func__);
-
-    if (lit_file_p > lit_file_end)
-	Error("%s: overrun", __func__);
 }
 
 static void *
@@ -283,39 +261,27 @@ LoadLMScaleFile(const bsp2_t *bsp, const char *name)
 static void
 LightWorld(bsp2_t *bsp)
 {
-    if (bsp->dlightdata)
-	free(bsp->dlightdata);
-    if (lux_buffer)
-	free(lux_buffer);
+    if (filebase)
+	free(filebase);
+    if (lit_filebase)
+	free(lit_filebase);
+    if (lux_filebase)
+	free(lux_filebase);
 
-    /* FIXME - remove this limit */
-    bsp->lightdatasize = MAX_MAP_LIGHTING;
-    bsp->dlightdata = malloc(bsp->lightdatasize + 16); /* for alignment */
-    if (!bsp->dlightdata)
-	Error("%s: allocation of %i bytes failed.",
-	      __func__, bsp->lightdatasize);
-    memset(bsp->dlightdata, 0, bsp->lightdatasize + 16);
-    bsp->lightdatasize /= 4;
+    lightmap_buffer_used = 0;
 
-    /* align filebase to a 4 byte boundary */
-    filebase = file_p = (byte *)(((uintptr_t)bsp->dlightdata + 3) & ~3);
-    file_end = filebase + bsp->lightdatasize;
+    filebase = calloc(MAX_MAP_LIGHTING, 1);
+    lit_filebase = calloc(MAX_MAP_LIGHTING, 3);
+    lux_filebase = calloc(MAX_MAP_LIGHTING, 3);
 
-    /* litfile data stored in dlightdata, after the white light */
-    lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
-    lit_file_p = lit_filebase;
-    lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
-
-    /* litfile data stored in dlightdata, after the white light */
-    lux_buffer = malloc(bsp->lightdatasize*3);
-    lux_filebase = lux_buffer + 12 - ((uintptr_t)lux_buffer % 12);
-    lux_file_p = lux_filebase;
-    lux_file_end = lux_filebase + 3 * (MAX_MAP_LIGHTING / 4);
+    if (!filebase || !lit_filebase || !lux_filebase)
+	Error("%s: calloc failed", __func__);
 
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
     logprint("Lighting Completed.\n\n");
 
-    bsp->lightdatasize = file_p - filebase;
+    bsp->lightdatasize = lightmap_buffer_used;
+    bsp->dlightdata = filebase;
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 }
 

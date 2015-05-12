@@ -1373,7 +1373,7 @@ WriteLightmaps(bsp2_dface_t *face, dfacesup_t *facesup, const lightsurf_t *light
     size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
     GetFileSpace(&out, &lit, &lux, size * numstyles);
     face->lightofs = out - filebase;
-
+    
     width = (lightsurf->texsize[0] + 1) * oversample;
     for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
 	if (lightmaps[mapnum].style == 255)
