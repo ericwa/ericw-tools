@@ -385,6 +385,8 @@ main(int argc, const char **argv)
 	    if (j != lightmapscale) {
 		logprint("WARNING: requested lightmap scale is not a power of 2. Using %d\n", 1<<lmshift_override);
 	    }
+
+	    write_litfile |= WRITE_LIT2;
 	} else if (!strcmp(argv[i], "-soft")) {
 	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
 		softsamples = atoi(argv[++i]);
