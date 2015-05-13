@@ -905,7 +905,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     /* If the source entity is func_detail, set the content flag */
     if (!strcasecmp(classname, "func_detail"))
 	cflags |= CFLAGS_DETAIL;
-	
+
     mapbrush = src->mapbrushes;
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
 	contents = Brush_GetContents(mapbrush);

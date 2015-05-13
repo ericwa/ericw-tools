@@ -554,7 +554,7 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
     }
 
     face->texinfo = FindTexinfo(&tx);
-	
+
     return true;
 }
 
@@ -618,7 +618,6 @@ static int GetLightmapShift(const mapentity_t *src)
 	for (shift = 0; (1<<shift) < intscale; shift++)
 	{
 	}
-	printf("entity %s had lmshift %d\n", ValueForKey(src, "classname"), shift);
 	return shift;
 }
 
@@ -662,7 +661,6 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
 	for (i=0, brush = entity->mapbrushes; i<entity->nummapbrushes; i++, brush++) {
 		for (j=0, face = brush->faces; j<brush->numfaces; j++, face++) {
 			face->lmshift = lmshift;
-			if (lmshift != 4) printf("face %p has %d\n", face, lmshift);
 		}
 	}
     return true;
