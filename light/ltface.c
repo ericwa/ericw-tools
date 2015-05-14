@@ -1375,6 +1375,42 @@ WriteLightmaps(bsp2_dface_t *face, dfacesup_t *facesup, const lightsurf_t *light
     face->lightofs = out - filebase;
     
     width = (lightsurf->texsize[0] + 1) * oversample;
+    
+    /* Check for solid-color lightmaps */
+    if (lit2pass) {
+	qboolean solid;
+	vec3_t cornercolor;
+
+	solid = true;
+	VectorCopy(lightmaps[0].samples[0].color, cornercolor);
+	
+	for (mapnum = 0; mapnum < MAXLIGHTMAPS && solid; mapnum++) {
+	    if (lightmaps[mapnum].style == 255)
+		break;
+	    
+	    sample = &lightmaps[mapnum].samples[0];
+	    for (i = 0; i < lightsurf->numpoints && solid; i++, sample++) {
+		for (j=0; j<3; j++) {
+		    if (fabs(sample->color[j] - cornercolor[j]) > 2) {
+			solid = false;
+		    }
+		}
+	    }
+	}
+	
+	if (solid) {
+	    for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
+		if (lightmaps[mapnum].style == 255)
+		    break;
+		
+		sample = &lightmaps[mapnum].samples[0];
+		for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+		    VectorSet(sample->color, 255, 0, 0);
+		}
+	    }
+	}
+    }
+    
     for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
 	if (lightmaps[mapnum].style == 255)
 	    break;
