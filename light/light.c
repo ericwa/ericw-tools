@@ -339,18 +339,14 @@ main(int argc, const char **argv)
 	    write_luxfile |= 2;
 	} else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
 	    int j;
-	    int lightmapscale = atoi(argv[++i]);
-	    
-	    logprint( "Overriding lightmap scale to %d\n", lightmapscale );
+	    int lightmapscale = atof(argv[++i]) * 16;
 	    
 	    for (j = 1, lmshift_override = 0; j < lightmapscale;) {
 		j *= 2;
 		lmshift_override++;
 	    }
 	    
-	    if (j != lightmapscale) {
-		logprint("WARNING: requested lightmap scale is not a power of 2. Using %d\n", 1<<lmshift_override);
-	    }
+	    logprint( "Overriding lightmap scale to %.3g\n", (1<<lmshift_override)/16.0 );
 
 	    write_litfile |= WRITE_LIT2;
 	} else if (!strcmp(argv[i], "-soft")) {
