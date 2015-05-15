@@ -149,9 +149,6 @@ typedef struct {
 /*with extra sampling, lit+lux etc, we need at least 46mb stack space per thread. yes, that's a lot. on the plus side, it doesn't affect bsp complexity (actually, can simplify it a little)*/
 #define MAXDIMENSION (255+1)
 
-/* Allow space for 4x4 oversampling */
-#define SINGLEMAP (MAXDIMENSION*MAXDIMENSION*4*4)
-
 typedef struct {
     const modelinfo_t *modelinfo;
     plane_t plane;
