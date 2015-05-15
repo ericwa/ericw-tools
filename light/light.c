@@ -132,7 +132,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     const char *attribute;
     const dmodel_t **shadowmodels;
     modelinfo_t *info;
-    float lightmapscale;
 
     shadowmodels = malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
     memset(shadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
@@ -467,8 +466,6 @@ main(int argc, const char **argv)
     if (dirty)
 	SetupDirt();
 
-	CheckFenceTextures(bsp);
-	
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp, lmscaleoverride);

@@ -20,8 +20,6 @@
 #include <light/light.h>
 #include <light/entities.h>
 
-static const vec3_t bsp_origin = { 0, 0, 0 };
-
 /* ======================================================================== */
 
 typedef struct {
@@ -531,7 +529,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     const texinfo_t *tex;
     vec3_t planepoint;
     texorg_t texorg;
-	int facenum, lmshift;
+    int facenum;
 
 	/*FIXME: memset can be slow on large datasets*/
 //    memset(lightsurf, 0, sizeof(*lightsurf));
@@ -985,7 +983,6 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	if (entity->projectedmip)
 	{
 		vec3_t col;
-		float s, t;
 		VectorCopy(light->color, col);
 		VectorScale(ray, 255, col);
 		LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
