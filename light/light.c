@@ -99,8 +99,6 @@ LightThread(void *arg)
     const bsp2_t *bsp = arg;
     struct ltface_ctx *ctx;
 
-    ctx = LightFaceInit(bsp);
-
     while (1) {
 	facenum = GetThreadWork();
 	if (facenum == -1)
@@ -117,10 +115,10 @@ LightThread(void *arg)
 	    logprint("warning: no model has face %d\n", facenum);
 	    continue;
 	}
-
+	ctx = LightFaceInit(bsp);
 	LightFace(bsp->dfaces + facenum, bsp->dfacesup + facenum, &modelinfo[i], ctx);
+	LightFaceShutdown(ctx);
     }
-    LightFaceShutdown(ctx);
 
     return NULL;
 }
