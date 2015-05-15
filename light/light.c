@@ -226,23 +226,6 @@ LightWorld(bsp2_t *bsp)
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 }
 
-static void
-CheckFenceTextures(bsp2_t *bsp)
-{
-    int i;
-    for (i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *face = &bsp->dfaces[i];
-        const texinfo_t *tex = &bsp->texinfo[face->texinfo];
-        const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
-        const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
-        if (miptex->name[0] == '{') {
-            logprint("Fence texture detected, enabling fence texture tracing on bmodels\n");
-            testFenceTextures = true;
-            break;
-        }
-    }
-}
-
 /*
  * ==================
  * main
@@ -339,6 +322,9 @@ main(int argc, const char **argv)
 		dirtGain = 1.0f;
 	    }
 	    logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
+	} else if ( !strcmp( argv[ i ], "-fence" ) ) {
+	    testFenceTextures = true;
+	    logprint( "Fence texture tracing enabled on command line\n" );
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -350,7 +336,7 @@ main(int argc, const char **argv)
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit]\n"
 	       "             [-dirty] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
-	       "             [-soft [n]] bspfile\n");
+	       "             [-soft [n]] [-fence] bspfile\n");
 	exit(1);
     }
 
@@ -387,8 +373,6 @@ main(int argc, const char **argv)
 
     if (dirty)
 	SetupDirt();
-
-    CheckFenceTextures(bsp);
 
     MakeTnodes(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));

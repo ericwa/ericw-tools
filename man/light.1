@@ -68,6 +68,11 @@ ignoring all lights in the map. Useful for previewing and turning the dirt setti
 .IP "\fB\-dirtmode n\fP | \fB\-dirtdepth n\fP | \fB\-dirtscale n\fP | \fB\-dirtgain n\fP"
 Fine-tune the dirtmapping, overriding the corresponding worldspawn keys. See the
 worldspawn keys below.
+.IP "\fB\-fence\fP"
+Enables light to pass through transparent pixels in fence textures
+(textures with a "{" prefix). Typically, shadow-casting fences should
+be a func_wall entity with the "_shadow" "1" key set. Default is for
+transparent pixels to block light.
 
 .SH "MODEL ENTITY KEYS"
 
