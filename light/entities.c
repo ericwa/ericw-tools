@@ -769,7 +769,7 @@ LoadEntities(const bsp2_t *bsp)
 	    CheckEntityFields(entity);
 	    num_lights++;
 	}
-	if (!strcmp(entity->classname, "light")) {
+	if (!strncmp(entity->classname, "light", 5)) {
 	    if (entity->targetname[0] && !entity->style) {
 		char style[16];
 		entity->style = LightStyleForTargetname(entity->targetname);
