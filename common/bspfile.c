@@ -1006,43 +1006,6 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
     return length / lumpspec->size;
 }
 
-void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize)
-{
-	bspxentry_t *e;
-	bspxentry_t **link;
-	if (!xdata)
-	{
-		for (link = &bspdata->bspxentries; *link; )
-		{
-			e = *link;
-			if (!strcmp(e->lumpname, xname))
-			{
-				*link = e->next;
-				free(e);
-			}
-			else
-				link = &(*link)->next;
-		}
-		return;
-	}
-	for (e = bspdata->bspxentries; e; e = e->next)
-	{
-		if (!strcmp(e->lumpname, xname))
-			break;
-	}
-	if (!e)
-	{
-		e = malloc(sizeof(*e));
-		memset(e, 0, sizeof(*e));
-		strncpy(e->lumpname, xname, sizeof(e->lumpname));
-		e->next = bspdata->bspxentries;
-		bspdata->bspxentries = e;
-	}
-
-	e->lumpdata = xdata;
-	e->lumpsize = xsize;
-}
-
 /*
  * =============
  * LoadBSPFile
@@ -1053,15 +1016,10 @@ LoadBSPFile(const char *filename, bspdata_t *bspdata)
 {
     dheader_t *header;
     int i;
-    uint32_t flen;
-    //uint32_t bspxofs;
-    //const bspx_header_t *bspx;
 
     /* load the file header */
-//    flen = LoadFilePak("c:/games/quake/id1/pak0.pak", filename, &header);
-    flen = LoadFile(filename, &header);
+    LoadFile(filename, &header);
 
-    bspdata->bspxentries = NULL;
     /* check the file version */
     header->version = LittleLong(header->version);
     logprint("BSP is version %s\n", BSPVersionString(header->version));
@@ -1147,41 +1105,6 @@ LoadBSPFile(const char *filename, bspdata_t *bspdata)
 	bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
     }
 
-#if 0
-	/*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
-	for (i = 0, bspxofs = 0; i < BSP_LUMPS; i++)
-	{
-		if (bspxofs < header->lumps[i].fileofs + header->lumps[i].filelen)
-			bspxofs = header->lumps[i].fileofs + header->lumps[i].filelen;
-	}
-	bspxofs = (bspxofs+3) & ~3;
-	/*okay, so that's where it *should* be if it exists */
-	if (bspxofs + sizeof(*bspx) <= flen)
-	{
-		uint32_t xlumps;
-		const bspx_lump_t *xlump;
-		bspx = (const bspx_header_t*)((const byte*)header + bspxofs);
-		xlump = (const bspx_lump_t*)(bspx+1);
-		xlumps = LittleLong(bspx->numlumps);
-		if (!memcmp(&bspx->id,"BSPX",4) && xlumps >= 0 && bspxofs+sizeof(*bspx)+sizeof(*xlump)*xlumps <= flen)
-		{
-			/*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring that they get written out anew*/
-			while(xlumps --> 0)
-			{
-				uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
-				uint32_t len = LittleLong(xlump[xlumps].filelen);
-				void *lumpdata = malloc(len);
-				memcpy(lumpdata, (const byte*)header + ofs, len);
-				BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
-			}
-		}
-		else 
-		{
-			if (!memcmp(&bspx->id,"BSPX",4))
-				printf("invalid bspx header\n");
-		}
-	}
-#endif
     /* everything has been copied out */
     free(header);
 
@@ -1312,46 +1235,6 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
 	AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata.base, bsp->texdatasize);
     }
 
-    /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
-    if (bspdata->bspxentries)
-    {
-        bspx_header_t xheader;
-        bspxentry_t *x; 
-        bspx_lump_t xlumps[64];
-        uint32_t l;
-        uint32_t bspxheader = ftell(bspfile.file);
-        if (bspxheader & 3)
-            Error("BSPX header is misaligned");
-        xheader.id[0] = 'B';
-        xheader.id[1] = 'S';
-        xheader.id[2] = 'P';
-        xheader.id[3] = 'X';
-        xheader.numlumps = 0;
-        for (x = bspdata->bspxentries; x; x = x->next)
-            xheader.numlumps++;
-
-        if (xheader.numlumps > sizeof(xlumps)/sizeof(xlumps[0]))	/*eep*/
-            xheader.numlumps = sizeof(xlumps)/sizeof(xlumps[0]);
-
-        SafeWrite(bspfile.file, &xheader, sizeof(xheader));
-        SafeWrite(bspfile.file, xlumps, xheader.numlumps * sizeof(xlumps[0]));
-
-        for (x = bspdata->bspxentries, l = 0; x && l < xheader.numlumps; x = x->next, l++)
-        {
-            byte pad[4] = {0};
-            xlumps[l].filelen = LittleLong(x->lumpsize);
-            xlumps[l].fileofs = LittleLong(ftell(bspfile.file));
-            strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));
-            SafeWrite(bspfile.file, x->lumpdata, x->lumpsize);
-            if (x->lumpsize % 4)
-                SafeWrite(bspfile.file, pad, x->lumpsize % 4);
-        }
-
-        fseek(bspfile.file, bspxheader, SEEK_SET);
-        SafeWrite(bspfile.file, &xheader, sizeof(xheader));
-        SafeWrite(bspfile.file, xlumps, xheader.numlumps * sizeof(xlumps[0]));
-    }
-
     fseek(bspfile.file, 0, SEEK_SET);
     SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
 
@@ -1455,15 +1338,4 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 	logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
 	logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
     }
-
-#if 0
-	if (bspdata->bspxentries)
-	{
-		bspxentry_t *x;
-		for (x = bspdata->bspxentries; x; x = x->next)
-		{
-			logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, x->lumpsize);
-		}
-	}
-#endif
 }

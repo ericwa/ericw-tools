@@ -76,16 +76,6 @@ typedef struct {
 #define BSP_LUMPS         15
 
 typedef struct {
-	char id[4]; //'BSPX'
-	uint32_t numlumps;
-} bspx_header_t;
-typedef struct {
-	char lumpname[24];
-	uint32_t fileofs;
-	uint32_t filelen;
-} bspx_lump_t;
-
-typedef struct {
     const char *name;
     size_t size;
 } lumpspec_t;
@@ -285,15 +275,6 @@ typedef union {
 
 /* ========================================================================= */
 
-typedef struct bspxentry_s
-{
-	char lumpname[24];
-	const void *lumpdata;
-	size_t lumpsize;
-
-	struct bspxentry_s *next;
-} bspxentry_t;
-
 typedef struct {
     int nummodels;
     dmodel_t *dmodels;
@@ -450,14 +431,11 @@ typedef struct {
 	bsp2rmq_t bsp2rmq;
 	bsp2_t bsp2;
     } data;
-
-	bspxentry_t *bspxentries;
 } bspdata_t;
 
 void LoadBSPFile(const char *filename, bspdata_t *bsp);
 void WriteBSPFile(const char *filename, bspdata_t *bsp);
 void PrintBSPFileSizes(const bspdata_t *bsp);
 void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
-void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 
 #endif /* __COMMON_BSPFILE_H__ */

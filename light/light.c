@@ -143,30 +143,9 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
     modelinfo[0].model = &bsp->dmodels[0];
 
-#if 0
-    if (lmscaleoverride)
-        SetKeyValue(entities, "_lightmap_scale", lmscaleoverride);
-
-    lightmapscale = atoi(ValueForKey(entities, "_lightmap_scale"));
-    if (!lightmapscale)
-        lightmapscale = 16; /* the default */
-    if (lightmapscale <= 0)
-        Error("lightmap scale is 0 or negative\n");
-    if (lightmapscale == 16)
-        logprint("Using default lightmap scale\n");
-    else
-        logprint("Using base lightmap scale of %gqu\n", lightmapscale);
-    /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software ones that might be able to just do some mip hacks). This tool doesn't really care.*/
-    for (i = 1; i < lightmapscale;)
-        i++;
-    if (i != lightmapscale)
-        logprint("WARNING: lightmap scale is not a power of 2\n");
-    modelinfo[0].lightmapscale = lightmapscale;
-#endif
 
     for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
 	info->model = &bsp->dmodels[i];
-	//info->lightmapscale = lightmapscale;
 
 	/* Find the entity for the model */
 	snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -330,10 +309,6 @@ main(int argc, const char **argv)
 	    write_litfile |= WRITE_LIT2;
 	} else if (!strcmp(argv[i], "-lux")) {
 	    write_luxfile |= 1;
-	} else if (!strcmp(argv[i], "-bspxlit")) {
-	    write_litfile |= WRITE_BSPX;
-	} else if (!strcmp(argv[i], "-bspxlux")) {
-	    write_luxfile |= 2;
 	} else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
 	    int j;
 	    int lightmapscale = atof(argv[++i]) * 16;
@@ -425,15 +400,6 @@ main(int argc, const char **argv)
     if (write_litfile & WRITE_LIT2)
 	logprint(".lit2 colored light output requested on command line.\n");
 
-#if 0
-    if (write_litfile & WRITE_LIT2)
-	logprint("BSPX colored light output requested on command line.\n");
-    if (write_luxfile & 1)
-	logprint(".lux light directions output requested on command line.\n");
-    if (write_luxfile & 2)
-	logprint("BSPX light directions output requested on command line.\n");
-#endif
-
     if (softsamples == -1) {
 	switch (oversample) {
 	case 2:
@@ -485,30 +451,6 @@ main(int argc, const char **argv)
     if (write_litfile & WRITE_LIT) {
 	WriteLitFile(bsp, source, LIT_VERSION);
     }
-    
-#if 0
-    /*invalidate any bspx lighting info early*/
-    BSPX_AddLump(&bspdata, "RGBLIGHTING", NULL, 0);
-    BSPX_AddLump(&bspdata, "LIGHTINGDIR", NULL, 0);
-
-	if (write_litfile == ~0)
-	{
-		WriteLitFile(bsp, source, 2);
-	}
-	else
-	{
-		/*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
-		if (write_litfile & 1)
-	WriteLitFile(bsp, source, LIT_VERSION);
-		if (write_litfile & 2)
-			BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp->lightdatasize*3);
-		if (write_luxfile & 1)
-			WriteLuxFile(bsp, source, LIT_VERSION);
-		if (write_luxfile & 2)
-			BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp->lightdatasize*3);
-	}
-#endif
-    
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
 	ConvertBSPFormat(loadversion, &bspdata);
