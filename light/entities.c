@@ -665,12 +665,6 @@ LoadEntities(const bsp2_t *bsp)
 	    if (strlen(com_token) > MAX_ENT_VALUE - 1)
 		Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
 
-			if (!strcmp(key, "lightmap_scale"))
-			{ /*this is parsed by the engine. make sure we're consistent*/
-				strcpy(key, "_lightmap_scale");
-				logprint("lightmap_scale should be _lightmap_scale\n");
-			}
-
 	    epair = malloc(sizeof(epair_t));
 	    memset(epair, 0, sizeof(epair_t));
 	    strcpy(epair->key, key);
