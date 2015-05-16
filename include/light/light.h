@@ -75,14 +75,13 @@ qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 typedef struct {
     vec_t light;
     vec3_t color;
-	vec3_t direction;
+    vec3_t direction;
 } lightsample_t;
 
 typedef struct {
     const dmodel_t *model;
     qboolean shadowself;
     lightsample_t minlight;
-	//float lightmapscale;
     vec3_t offset;
     qboolean nodirt;    
 } modelinfo_t;
