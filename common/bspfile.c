@@ -1053,8 +1053,9 @@ LoadBSPFile(const char *filename, bspdata_t *bspdata)
 {
     dheader_t *header;
     int i;
-    uint32_t bspxofs, flen;
-    const bspx_header_t *bspx;
+    uint32_t flen;
+    //uint32_t bspxofs;
+    //const bspx_header_t *bspx;
 
     /* load the file header */
 //    flen = LoadFilePak("c:/games/quake/id1/pak0.pak", filename, &header);
@@ -1146,6 +1147,7 @@ LoadBSPFile(const char *filename, bspdata_t *bspdata)
 	bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
     }
 
+#if 0
 	/*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
 	for (i = 0, bspxofs = 0; i < BSP_LUMPS; i++)
 	{
@@ -1179,7 +1181,7 @@ LoadBSPFile(const char *filename, bspdata_t *bspdata)
 				printf("invalid bspx header\n");
 		}
 	}
-
+#endif
     /* everything has been copied out */
     free(header);
 
@@ -1454,6 +1456,7 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 	logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
     }
 
+#if 0
 	if (bspdata->bspxentries)
 	{
 		bspxentry_t *x;
@@ -1462,4 +1465,5 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 			logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, x->lumpsize);
 		}
 	}
+#endif
 }
