@@ -145,7 +145,7 @@ extern byte *lit_filebase;
 extern byte *lux_filebase;
 
 #define WRITE_LIT 1
-#define WRITE_LIT2 4
+#define WRITE_LIT2 2
 
 extern int oversample;
 extern int write_litfile;

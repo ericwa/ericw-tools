@@ -222,7 +222,7 @@ LoadLMScaleFile(const bsp2_t *bsp, const char *name)
     for (i=0; i<bsp->numfaces; i++) {
 	if (lmshifts[i] != 4) {
 	    write_litfile = WRITE_LIT | WRITE_LIT2;
-	    logprint("Non-vanilla lightmap scale detected, enabling .lit2 output\n");
+	    logprint("Non-vanilla lightmap scale detected, enabling .lit and .lit2 output\n");
 	    return;
 	}
     }

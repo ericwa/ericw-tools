@@ -421,7 +421,7 @@ CalcFaceExtents(const bsp2_dface_t *face, const vec3_t offset,
 	    const dplane_t *plane = bsp->dplanes + face->planenum;
 	    const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
 	    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
-	    Error("Bad surface extents:\n"		
+	    Error("Bad surface extents:\n"
 		  "   surface %d, %s extents = %d, scale = %g\n"
 		  "   texture %s at (%s)\n"
 		  "   surface normal (%s)\n",
@@ -1271,9 +1271,9 @@ WriteLightmaps(bsp2_dface_t *face, dfacesup_t *facesup, const lightsurf_t *light
     vec3_t color, direction;
     byte *out, *lit, *lux;
 
-	facesup->extent[0] = lightsurf->texsize[0] + 1;
-	facesup->extent[1] = lightsurf->texsize[1] + 1;
-	facesup->lmscale = lightsurf->lightmapscale;
+    facesup->extent[0] = lightsurf->texsize[0] + 1;
+    facesup->extent[1] = lightsurf->texsize[1] + 1;
+    facesup->lmscale = lightsurf->lightmapscale;
 
     numstyles = 0;
     for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {

@@ -72,7 +72,7 @@ WriteLitFile(const bsp2_t *bsp, const char *filename, int version)
         SafeWrite(litfile, extents, 2*bsp->numfaces * sizeof(*extents));
         SafeWrite(litfile, styles, 4*bsp->numfaces * sizeof(*styles));
         SafeWrite(litfile, shifts, bsp->numfaces * sizeof(*shifts));
-    SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
+	SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
         SafeWrite(litfile, lux_filebase, bsp->lightdatasize * 3);
     }
     else

@@ -308,7 +308,7 @@ typedef struct {
 
     int numfaces;
     bsp29_dface_t *dfaces;
-	dfacesup_t *dfacesup;
+    dfacesup_t *dfacesup;
 
     int numclipnodes;
     bsp29_dclipnode_t *dclipnodes;
@@ -356,7 +356,7 @@ typedef struct {
 
     int numfaces;
     bsp2_dface_t *dfaces;
-	dfacesup_t *dfacesup;
+    dfacesup_t *dfacesup;
 
     int numclipnodes;
     bsp2_dclipnode_t *dclipnodes;
@@ -404,7 +404,7 @@ typedef struct {
 
     int numfaces;
     bsp2_dface_t *dfaces;
-	dfacesup_t *dfacesup;
+    dfacesup_t *dfacesup;
 
     int numclipnodes;
     bsp2_dclipnode_t *dclipnodes;

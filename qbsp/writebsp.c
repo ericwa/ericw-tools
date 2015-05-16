@@ -717,20 +717,20 @@ CleanBSPTexinfoFlags(void)
 void
 WriteLMScaleFile(void)
 {
-	FILE *LmscaleFile;
-	int numfaces;
-	
-	// write the file
-	StripExtension(options.szBSPName);
-	strcat(options.szBSPName, ".lmscale");
-	
-	LmscaleFile = fopen(options.szBSPName, "wb");
-	if (!LmscaleFile)
-		Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
-	
-	numfaces = map.cTotal[LUMP_FACES];
-	fwrite(lmshifts, 1, numfaces, LmscaleFile);
-	fclose(LmscaleFile);
+    FILE *LmscaleFile;
+    int numfaces;
+
+    // write the file
+    StripExtension(options.szBSPName);
+    strcat(options.szBSPName, ".lmscale");
+
+    LmscaleFile = fopen(options.szBSPName, "wb");
+    if (!LmscaleFile)
+	Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+
+    numfaces = map.cTotal[LUMP_FACES];
+    fwrite(lmshifts, 1, numfaces, LmscaleFile);
+    fclose(LmscaleFile);
 }
 
 /*
@@ -770,8 +770,8 @@ FinishBSPFile(void)
     PrintBSPFileSizes();
     CleanBSPTexinfoFlags();
     WriteBSPFile();
-	
-	WriteLMScaleFile();
+
+    WriteLMScaleFile();
 
     options.fVerbose = options.fAllverbose;
 }

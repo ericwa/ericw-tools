@@ -57,7 +57,7 @@ NewFaceFromFace(face_t *in)
     newf->contents[1] = in->contents[1];
     newf->cflags[0] = in->cflags[0];
     newf->cflags[1] = in->cflags[1];
-	newf->lmshift = in->lmshift;
+    newf->lmshift = in->lmshift;
 
     VectorCopy(in->origin, newf->origin);
     newf->radius = in->radius;
