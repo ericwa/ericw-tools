@@ -150,8 +150,11 @@ extern byte *lux_filebase;
 extern int oversample;
 extern int write_litfile;
 
+/* lit2 stuff */
+
 extern byte *lmshifts;
 extern int lmshift_override;	// default -1
+extern qboolean lit2pass;	// currently doing lit2 pass of LightWorld?
 
 void SetupDirt();
 
@@ -159,7 +162,5 @@ void SetupDirt();
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 
 extern qboolean testFenceTextures;
-
-extern qboolean lit2pass;
 
 #endif /* __LIGHT_LIGHT_H__ */
