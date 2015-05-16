@@ -236,6 +236,8 @@ LoadLMScaleFile(const bsp2_t *bsp, const char *name)
 static void
 LightWorld(bsp2_t *bsp)
 {
+    logprint("--- LightWorld %s---\n", lit2pass ? "(.lit2 pass) " : "" );
+    
     if (filebase)
 	free(filebase);
     if (lit_filebase)
