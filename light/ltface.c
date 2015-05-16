@@ -826,89 +826,6 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const modelinfo_t *
     return 1.0f - outDirt;
 }
 
-static byte thepalette[768] =
-{
-0,0,0,15,15,15,31,31,31,47,47,47,63,63,63,75,75,75,91,91,91,107,107,107,123,123,123,139,139,139,155,155,155,171,171,171,187,187,187,203,203,203,219,219,219,235,235,235,15,11,7,23,15,11,31,23,11,39,27,15,47,35,19,55,43,23,63,47,23,75,55,27,83,59,27,91,67,31,99,75,31,107,83,31,115,87,31,123,95,35,131,103,35,143,111,35,11,11,15,19,19,27,27,27,39,39,39,51,47,47,63,55,55,75,63,63,87,71,71,103,79,79,115,91,91,127,99,99,
-139,107,107,151,115,115,163,123,123,175,131,131,187,139,139,203,0,0,0,7,7,0,11,11,0,19,19,0,27,27,0,35,35,0,43,43,7,47,47,7,55,55,7,63,63,7,71,71,7,75,75,11,83,83,11,91,91,11,99,99,11,107,107,15,7,0,0,15,0,0,23,0,0,31,0,0,39,0,0,47,0,0,55,0,0,63,0,0,71,0,0,79,0,0,87,0,0,95,0,0,103,0,0,111,0,0,119,0,0,127,0,0,19,19,0,27,27,0,35,35,0,47,43,0,55,47,0,67,
-55,0,75,59,7,87,67,7,95,71,7,107,75,11,119,83,15,131,87,19,139,91,19,151,95,27,163,99,31,175,103,35,35,19,7,47,23,11,59,31,15,75,35,19,87,43,23,99,47,31,115,55,35,127,59,43,143,67,51,159,79,51,175,99,47,191,119,47,207,143,43,223,171,39,239,203,31,255,243,27,11,7,0,27,19,0,43,35,15,55,43,19,71,51,27,83,55,35,99,63,43,111,71,51,127,83,63,139,95,71,155,107,83,167,123,95,183,135,107,195,147,123,211,163,139,227,179,151,
-171,139,163,159,127,151,147,115,135,139,103,123,127,91,111,119,83,99,107,75,87,95,63,75,87,55,67,75,47,55,67,39,47,55,31,35,43,23,27,35,19,19,23,11,11,15,7,7,187,115,159,175,107,143,163,95,131,151,87,119,139,79,107,127,75,95,115,67,83,107,59,75,95,51,63,83,43,55,71,35,43,59,31,35,47,23,27,35,19,19,23,11,11,15,7,7,219,195,187,203,179,167,191,163,155,175,151,139,163,135,123,151,123,111,135,111,95,123,99,83,107,87,71,95,75,59,83,63,
-51,67,51,39,55,43,31,39,31,23,27,19,15,15,11,7,111,131,123,103,123,111,95,115,103,87,107,95,79,99,87,71,91,79,63,83,71,55,75,63,47,67,55,43,59,47,35,51,39,31,43,31,23,35,23,15,27,19,11,19,11,7,11,7,255,243,27,239,223,23,219,203,19,203,183,15,187,167,15,171,151,11,155,131,7,139,115,7,123,99,7,107,83,0,91,71,0,75,55,0,59,43,0,43,31,0,27,15,0,11,7,0,0,0,255,11,11,239,19,19,223,27,27,207,35,35,191,43,
-43,175,47,47,159,47,47,143,47,47,127,47,47,111,47,47,95,43,43,79,35,35,63,27,27,47,19,19,31,11,11,15,43,0,0,59,0,0,75,7,0,95,7,0,111,15,0,127,23,7,147,31,7,163,39,11,183,51,15,195,75,27,207,99,43,219,127,59,227,151,79,231,171,95,239,191,119,247,211,139,167,123,59,183,155,55,199,195,55,231,227,87,127,191,255,171,231,255,215,255,255,103,0,0,139,0,0,179,0,0,215,0,0,255,0,0,255,243,147,255,247,199,255,255,255,159,91,83
-};
-static void Matrix4x4_CM_Transform4(const float *matrix, const float *vector, float *product)
-{
-	product[0] = matrix[0]*vector[0] + matrix[4]*vector[1] + matrix[8]*vector[2] + matrix[12]*vector[3];
-	product[1] = matrix[1]*vector[0] + matrix[5]*vector[1] + matrix[9]*vector[2] + matrix[13]*vector[3];
-	product[2] = matrix[2]*vector[0] + matrix[6]*vector[1] + matrix[10]*vector[2] + matrix[14]*vector[3];
-	product[3] = matrix[3]*vector[0] + matrix[7]*vector[1] + matrix[11]*vector[2] + matrix[15]*vector[3];
-}
-static qboolean Matrix4x4_CM_Project (const vec3_t in, vec3_t out, const float *modelviewproj)
-{
-	qboolean result = true;
-
-	float v[4], tempv[4];
-	tempv[0] = in[0];
-	tempv[1] = in[1];
-	tempv[2] = in[2];
-	tempv[3] = 1;
-
-	Matrix4x4_CM_Transform4(modelviewproj, tempv, v);
-
-	v[0] /= v[3];
-	v[1] /= v[3];
-	if (v[2] < 0)
-		result = false;	//too close to the view
-	v[2] /= v[3];
-
-	out[0] = (1+v[0])/2;
-	out[1] = (1+v[1])/2;
-	out[2] = (1+v[2])/2;
-	if (out[2] > 1)
-		result = false;	//beyond far clip plane
-	return result;
-}
-
-
-static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix, const vec3_t point, float *result)
-{
-	//okay, yes, this is weird, yes we're using a vec3_t for a coord...
-	//this is because we're treating it like a cubemap. why? no idea.
-	float sfrac, tfrac, weight[4];
-	int sbase, tbase;
-	byte *data = (byte*)tex + tex->offsets[0], pi[4];
-
-	vec3_t coord;
-	if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 || coord[1] >= 1)
-		VectorSet(result, 0, 0, 0);
-	else
-	{
-		sfrac = (coord[0]) * tex->width;
-		sbase = sfrac;
-		sfrac -= sbase;
-		tfrac = (1-coord[1]) * tex->height;
-		tbase = tfrac;
-		tfrac -= tbase;
-
-		pi[0] = data[((sbase+0)%tex->width) + (tex->width*((tbase+0)%tex->height))];	weight[0] = (1-sfrac)*(1-tfrac);
-		pi[1] = data[((sbase+1)%tex->width) + (tex->width*((tbase+0)%tex->height))];	weight[1] = (sfrac)*(1-tfrac);
-		pi[2] = data[((sbase+0)%tex->width) + (tex->width*((tbase+1)%tex->height))];	weight[2] = (1-sfrac)*(tfrac);
-		pi[3] = data[((sbase+1)%tex->width) + (tex->width*((tbase+1)%tex->height))];	weight[3] = (sfrac)*(tfrac);
-		VectorSet(result, 0, 0, 0);
-		result[0]  = weight[0] * thepalette[pi[0]*3+0];
-		result[1]  = weight[0] * thepalette[pi[0]*3+1];
-		result[2]  = weight[0] * thepalette[pi[0]*3+2];
-		result[0] += weight[1] * thepalette[pi[1]*3+0];
-		result[1] += weight[1] * thepalette[pi[1]*3+1];
-		result[2] += weight[1] * thepalette[pi[1]*3+2];
-		result[0] += weight[2] * thepalette[pi[2]*3+0];
-		result[1] += weight[2] * thepalette[pi[2]*3+1];
-		result[2] += weight[2] * thepalette[pi[2]*3+2];
-		result[0] += weight[3] * thepalette[pi[3]*3+0];
-		result[1] += weight[3] * thepalette[pi[3]*3+1];
-		result[2] += weight[3] * thepalette[pi[3]*3+2];
-		VectorScale(result, 2, result);
-	}
-}
 
 /*
  * ================
@@ -980,16 +897,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
 	add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, modelinfo);
 
-	if (entity->projectedmip)
-	{
-		vec3_t col;
-		VectorCopy(light->color, col);
-		VectorScale(ray, 255, col);
-		LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
-		Light_Add(sample, add, col, ray);		
-	}
-	else
-		Light_Add(sample, add, light->color, ray);
+	Light_Add(sample, add, light->color, ray);
 
 	/* Check if we really hit, ignore tiny lights */
 	/* ericw -- never ignore generated lights, which can be tiny and need

@@ -60,8 +60,6 @@ typedef struct entity_s {
     float spotfalloff;
     float spotangle2;
     float spotfalloff2;
-	miptex_t *projectedmip; /*projected texture*/
-	float projectionmatrix[16]; /*matrix used to project the specified texture. already contains origin.*/
 
     lightsample_t light;
     light_formula_t formula;
