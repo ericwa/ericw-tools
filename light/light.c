@@ -64,8 +64,7 @@ static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
 
 int oversample = 1;
-int write_litfile = 0;	/* 0 for none, 1 for .lit, 2 for bspx, 4 for .lit2 */
-int write_luxfile = 0;	/* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
+int write_litfile = 0;
 
 byte *lmshifts;
 int lmshift_override = -1;
@@ -307,8 +306,6 @@ main(int argc, const char **argv)
 	    write_litfile |= WRITE_LIT;
 	} else if (!strcmp(argv[i], "-lit2")) {
 	    write_litfile |= WRITE_LIT2;
-	} else if (!strcmp(argv[i], "-lux")) {
-	    write_luxfile |= 1;
 	} else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
 	    int j;
 	    int lightmapscale = atof(argv[++i]) * 16;
