@@ -59,6 +59,10 @@ surface (more detailed explanation in the "_anglescale" key below).
 Force generation of a .lit file, even if your map does not have any coloured
 lights. By default, light will automatically generate the .lit file when
 needed.
+.IP "\fB\-lit2\fP"
+Force generation of a .lit2 file, which allow variable lightmap
+resolution as well as storing light direction data. By default, light
+will automatically generate the .lit2 file when needed.
 .IP "\fB\-dirt\fP"
 Globally enables dirtmapping (ambient occlusion), overriding the "_dirt" worldspawn
 key. See "_dirt" for more details.
@@ -73,6 +77,10 @@ Enables light to pass through transparent pixels in fence textures
 (textures with a "{" prefix). Typically, shadow-casting fences should
 be a func_wall entity with the "_shadow" "1" key set. Default is for
 transparent pixels to block light.
+.IP "\fB\-lightmapscale n\fP | \fB\-lmscale n\fP"
+Force the given lightmap scale for the entire map, overriding any
+values set in the map via the "_lightmapscale" entity key. See
+"_lightmapscale". Default 1.0.
 
 .SH "MODEL ENTITY KEYS"
 
@@ -189,6 +197,29 @@ For brush models, -1 prevents dirtmapping on the brush model. Useful it the
 bmodel touches or sticks into the world, and you want to those ares from
 turning black. Default 0.
 
+
+.SS "Func_Group/Func_Detail Keys"
+
+.PP
+The following keys can be used on any entity with a brush model,
+worldspawn, as well as special entities func_group and func_detail,
+which are processed by qbsp.
+Note: these keys are read by qbsp and passed to light through a temporary file.
+
+.IP "\fB""_lightmapscale"" ""n""\fP"
+Customize the lightmap scale for brush faces of this entity:
+.nf
+  0.0625 => 16 times default resolution (finest)
+  0.125 => eight times default resoluton
+  0.25 => four times default resolution
+  0.5 => two times default resolution
+  1 => default
+  2 => half default resolution
+  4 => quarter default resolution
+  8 => eigth default resolution
+  16 => 1/16 default resolution (coarsest)
+.fi
+Using this key imples -lit2.
 
 .SH "LIGHT ENTITY KEYS"
 

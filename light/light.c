@@ -308,9 +308,15 @@ main(int argc, const char **argv)
 	    write_litfile |= WRITE_LIT;
 	} else if (!strcmp(argv[i], "-lit2")) {
 	    write_litfile |= WRITE_LIT2;
-	} else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
+	} else if ( !strcmp( argv[ i ], "-lmscale" ) || !strcmp( argv[ i ], "-lightmapscale" ) ) {
 	    int j;
 	    int lightmapscale = atof(argv[++i]) * 16;
+	    
+	    if (lightmapscale < 1) {
+		lightmapscale = 1;
+	    } else if (lightmapscale > 256) {
+		lightmapscale = 256;
+	    }
 	    
 	    for (j = 1, lmshift_override = 0; j < lightmapscale;) {
 		j *= 2;
