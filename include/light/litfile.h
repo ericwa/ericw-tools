@@ -26,14 +26,14 @@
 #define LIT2_VERSION 2
 
 typedef struct litheader_s {
-	struct {
-    char ident[4];
-    int version;
-	} v1;
-	struct {
-		int numsurfs;
-		int lmsamples;
-	} v2;
+    struct {
+	char ident[4];
+	int version;
+    } v1;
+    struct {
+	int numsurfs;
+	int lmsamples;
+    } v2;
 } litheader_t;
 
 void WriteLitFile(const bsp2_t *bsp, const char *filename, int version);
