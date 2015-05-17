@@ -307,7 +307,7 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, face_t **planefaces)
 	    newface->contents[1] = face->contents[0];
 	    newface->cflags[0] = face->cflags[1];
 	    newface->cflags[1] = face->cflags[0];
-		newface->lmshift = face->lmshift;
+	    newface->lmshift = face->lmshift;
 
 	    for (i = 0; i < face->w.numpoints; i++)
 		VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
