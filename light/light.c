@@ -197,28 +197,28 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 void
 LoadLMScaleFile(const bsp2_t *bsp, const char *name)
 {
-	int i;
-	char source[1024];
-	FILE *LmscaleFile;
-	
-	strcpy(source, name);
-	StripExtension(source);
-	DefaultExtension(source, ".lmscale");
-	
-	LmscaleFile = fopen(source, "rb");
-	if (!LmscaleFile)
-	    return;
-	
-	lmshifts = calloc(bsp->numfaces, 1);
-    
-	if (bsp->numfaces != fread(lmshifts, 1, bsp->numfaces, LmscaleFile)) {
-	    logprint("Ignoring corrupt lmscale file: '%s'.\n", source);
-	    free(lmshifts);
-	    lmshifts = NULL;
-	}
-	
-	fclose(LmscaleFile);
-    
+    int i;
+    char source[1024];
+    FILE *LmscaleFile;
+
+    strcpy(source, name);
+    StripExtension(source);
+    DefaultExtension(source, ".lmscale");
+
+    LmscaleFile = fopen(source, "rb");
+    if (!LmscaleFile)
+	return;
+
+    lmshifts = calloc(bsp->numfaces, 1);
+
+    if (bsp->numfaces != fread(lmshifts, 1, bsp->numfaces, LmscaleFile)) {
+	logprint("Ignoring corrupt lmscale file: '%s'.\n", source);
+	free(lmshifts);
+	lmshifts = NULL;
+    }
+
+    fclose(LmscaleFile);
+
     for (i=0; i<bsp->numfaces; i++) {
 	if (lmshifts[i] != 4) {
 	    write_litfile = WRITE_LIT | WRITE_LIT2;
