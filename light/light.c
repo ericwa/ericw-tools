@@ -391,7 +391,7 @@ main(int argc, const char **argv)
     if (i != argc - 1) {
 	printf("usage: light [-threads num] [-extra|-extra4]\n"
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
-	       "             [-dist n] [-range n] [-gate n] [-lit] [-lit2] [-lmscale n]\n"
+	       "             [-dist n] [-range n] [-gate n] [-lit] [-lit2] [-lightmapscale|-lmscale n]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
 	       "             [-soft [n]] [-fence] bspfile\n");
 	exit(1);
