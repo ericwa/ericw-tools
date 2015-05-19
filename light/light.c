@@ -279,7 +279,7 @@ main(int argc, const char **argv)
 		anglescale = sun_anglescale = atoi(argv[++i]);
 	    else
 		Error("-anglesense requires a numeric argument (0.0 - 1.0)");
-	} else if ( !strcmp( argv[ i ], "-dirty" ) ) {
+	} else if ( !strcmp( argv[ i ], "-dirt" ) || !strcmp( argv[ i ], "-dirty" ) ) {
 	    dirty = true;
 	    globalDirt = true;
 	    minlightDirt = true;
@@ -335,7 +335,7 @@ main(int argc, const char **argv)
 	printf("usage: light [-threads num] [-extra|-extra4]\n"
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit]\n"
-	       "             [-dirty] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
+	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
 	       "             [-soft [n]] [-fence] bspfile\n");
 	exit(1);
     }
