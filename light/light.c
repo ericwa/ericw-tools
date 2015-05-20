@@ -221,8 +221,8 @@ LoadLMScaleFile(const bsp2_t *bsp, const char *name)
 
     for (i=0; i<bsp->numfaces; i++) {
 	if (lmshifts[i] != 4) {
-	    write_litfile = WRITE_LIT | WRITE_LIT2;
-	    logprint("Non-vanilla lightmap scale detected, enabling .lit and .lit2 output\n");
+	    write_litfile = WRITE_LIT2;
+	    logprint("Non-vanilla lightmap scale detected, enabling .lit2 output\n");
 	    return;
 	}
     }
@@ -453,7 +453,8 @@ main(int argc, const char **argv)
 
     WriteEntitiesToString(bsp);
 
-    if (write_litfile & WRITE_LIT) {
+    /* Write .lit if requested, or if we wrote a .lit2 */
+    if (write_litfile & (WRITE_LIT | WRITE_LIT2)) {
 	WriteLitFile(bsp, source, LIT_VERSION);
     }
     /* Convert data format back if necessary */
