@@ -1241,7 +1241,6 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 	if (lightmaps[mapnum].style == 255)
 	    break;
 
-	sample = lightmaps[mapnum].samples;
 	for (t = 0; t <= lightsurf->texsize[1]; t++) {
 	    for (s = 0; s <= lightsurf->texsize[0]; s++) {
 
@@ -1250,11 +1249,14 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 		VectorCopy(vec3_origin, color);
 		for (i = 0; i < oversample; i++) {
 		    for (j = 0; j < oversample; j++) {
+			const int col = (s*oversample) + j;
+			const int row = (t*oversample) + i;
+
+			sample = lightmaps[mapnum].samples + (row * width) + col;
+			
 			light += sample->light;
 			VectorAdd(color, sample->color, color);
-			sample++;
 		    }
-		    sample += width - oversample;
 		}
 		light /= oversample * oversample;
 		VectorScale(color, 1.0 / oversample / oversample, color);
@@ -1278,10 +1280,7 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 		*lit++ = color[0];
 		*lit++ = color[1];
 		*lit++ = color[2];
-
-		sample -= width * oversample - oversample;
 	    }
-	    sample += width * oversample - width;
 	}
     }
 }
