@@ -929,7 +929,7 @@ LightFace_Min(const lightsample_t *light,
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const dmodel_t *shadowself;
-    const entity_t *entity;
+    entity_t **entity;
     const vec_t *surfpoint;
     qboolean hit, trace;
     int i, j;
@@ -955,23 +955,23 @@ LightFace_Min(const lightsample_t *light,
 
     /* Cast rays for local minlight entities */
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
-    for (entity = entities; entity; entity = entity->next) {
-	if (entity->formula != LF_LOCALMIN)
-	    continue;
+    for (entity = lights; *entity; entity++) {
+        if ((*entity)->formula != LF_LOCALMIN)
+            continue;
 
 	sample = lightmap->samples;
 	surfpoint = lightsurf->points[0];
 	for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
-	    if (addminlight || sample->light < entity->light.light) {
-	    	vec_t value = entity->light.light;
-		trace = TestLight(entity->origin, surfpoint, shadowself);
+	    if (addminlight || sample->light < (*entity)->light.light) {
+	    	vec_t value = (*entity)->light.light;
+		trace = TestLight((*entity)->origin, surfpoint, shadowself);
 		if (!trace)
 		    continue;
-		value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], entity, modelinfo);
+		value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), modelinfo);
 		if (addminlight)
-		    Light_Add(sample, value, entity->light.color);
+		    Light_Add(sample, value, (*entity)->light.color);
 		else
-		    Light_ClampMin(sample, value, entity->light.color);
+		    Light_ClampMin(sample, value, (*entity)->light.color);
 	    }
 	    if (!hit && sample->light >= 1)
 		hit = true;
@@ -1299,7 +1299,7 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
 	  const bsp2_t *bsp)
 {
     int i, j, k;
-    const entity_t *entity;
+    entity_t **entity;
     lightsample_t *sample;
     lightsurf_t lightsurf;
     sun_t *sun;
@@ -1328,11 +1328,11 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
      */
 
     /* positive lights */
-    for (entity = entities; entity; entity = entity->next) {
-	if (entity->formula == LF_LOCALMIN)
-	    continue;
-	if (entity->light.light > 0)
-	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
+    for (entity = lights; *entity; entity++) {
+        if ((*entity)->formula == LF_LOCALMIN)
+            continue;
+        if ((*entity)->light.light > 0)
+            LightFace_Entity(*entity, &(*entity)->light, &lightsurf, lightmaps);
     }
     for ( sun = suns; sun; sun = sun->next )
         if (sun->sunlight.light > 0)
@@ -1345,11 +1345,11 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
 	LightFace_Min(&minlight, &lightsurf, lightmaps);
 
     /* negative lights */
-    for (entity = entities; entity; entity = entity->next) {
-	if (entity->formula == LF_LOCALMIN)
-	    continue;
-	if (entity->light.light < 0)
-	    LightFace_Entity(entity, &entity->light, &lightsurf, lightmaps);
+    for (entity = lights; *entity; entity++) {
+        if ((*entity)->formula == LF_LOCALMIN)
+            continue;
+        if ((*entity)->light.light < 0)
+            LightFace_Entity(*entity, &(*entity)->light, &lightsurf, lightmaps);
     }
     for ( sun = suns; sun; sun = sun->next )
         if (sun->sunlight.light < 0)

@@ -28,6 +28,8 @@ static entity_t *entities_tail;
 static int num_entities;
 static int num_lights;
 
+entity_t *lights[MAX_LIGHTS];
+
 /* surface lights */
 #define MAX_SURFLIGHT_TEMPLATES 256
 entity_t *surfacelight_templates[MAX_SURFLIGHT_TEMPLATES];
@@ -607,6 +609,23 @@ JitterEntities()
     }
 }
 
+static void
+FindLights()
+{
+    int totallights;
+    entity_t *entity;
+
+    totallights = 0;
+    for (entity = entities; entity; entity = entity->next) {
+        if (totallights == MAX_LIGHTS) {
+            Error("totallights == MAX_LIGHTS");
+        }
+        if (entity->light.light != 0) {
+            lights[totallights++] = entity;
+        }
+    }
+}
+
 /*
  * ==================
  * LoadEntities
@@ -874,6 +893,7 @@ LoadEntities(const bsp2_t *bsp)
     SetupSpotlights();
     SetupSuns();
     SetupSkyDome();
+    FindLights();
 }
 
 const char *
