@@ -106,6 +106,7 @@ extern float anglescale;
 extern float sun_anglescale;
 extern float fadegate;
 extern int softsamples;
+extern float lightmapgamma;
 extern const vec3_t vec3_white;
 
 extern qboolean addminlight;

@@ -73,6 +73,8 @@ Enables light to pass through transparent pixels in fence textures
 (textures with a "{" prefix). Typically, shadow-casting fences should
 be a func_wall entity with the "_shadow" "1" key set. Default is for
 transparent pixels to block light.
+.IP "\fB\-gamma [n]\fP"
+Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is darker. See "_gamma" worldspawn key.
 
 .SH "MODEL ENTITY KEYS"
 
@@ -157,6 +159,9 @@ the dirt fainter, 2.0 would create much darker shadows.
 .IP "\fB""_dirtgain"" ""n""\fP"
 Exponent used in dirt calculation, default 1. Lower values (e.g. 0.5) make the
 shadows darker and stretch further away from corners.
+
+.IP "\fB""_gamma"" ""n""\fP"
+Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is darker.
 
 
 .SS "Model Entity Keys"

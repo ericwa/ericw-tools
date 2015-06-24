@@ -779,6 +779,10 @@ LoadEntities(const bsp2_t *bsp)
 	    else if (!strcmp(key, "_range")) {
 		entity->range = atof(com_token);
 	    }
+	    else if (!strcmp(key, "_gamma")) {
+		lightmapgamma = atof(com_token);
+		logprint("using lightmap gamma value %f\n", lightmapgamma);
+	    }
 	}
 
 	/*

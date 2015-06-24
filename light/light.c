@@ -28,6 +28,7 @@ float anglescale = 0.5;
 float sun_anglescale = 0.5;
 float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
+float lightmapgamma = 1.0;
 const vec3_t vec3_white = { 255, 255, 255 };
 
 qboolean addminlight = false;
@@ -267,6 +268,9 @@ main(int argc, const char **argv)
 	    minlight.light = atof(argv[++i]);
 	} else if (!strcmp(argv[i], "-addmin")) {
 	    addminlight = true;
+	} else if (!strcmp(argv[i], "-gamma")) {
+	    lightmapgamma = atof(argv[++i]);
+	    logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma );
 	} else if (!strcmp(argv[i], "-lit")) {
 	    write_litfile = true;
 	} else if (!strcmp(argv[i], "-soft")) {

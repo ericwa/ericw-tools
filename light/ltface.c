@@ -1267,6 +1267,8 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 
 		/* Scale and clamp any out-of-range samples */
 		light *= rangescale;
+		if (light > 0)
+		    light = pow( light / 255.0f, 1.0 / lightmapgamma ) * 255.0f;
 		if (light > 255)
 		    light = 255;
 		else if (light < 0)
@@ -1275,6 +1277,8 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 
 		maxcolor = 0;
 		VectorScale(color, rangescale, color);
+		for (i = 0; i < 3; i++)
+		    color[i] = pow( color[i] / 255.0f, 1.0 / lightmapgamma ) * 255.0f;
 		for (i = 0; i < 3; i++)
 		    if (color[i] > maxcolor)
 			maxcolor = color[i];
