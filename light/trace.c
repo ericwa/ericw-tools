@@ -170,6 +170,20 @@ MiptexForFace(const bsp2_dface_t *face, const bsp2_t *bsp)
     return miptex;
 }
 
+vec_t fix_coord(vec_t in, int width)
+{
+    if (in > 0)
+    {
+	return (int)in % width;
+    }
+    else
+    {
+	vec_t in_abs = fabs(in);
+	int in_abs_mod = (int)in_abs % width;
+	return width - in_abs_mod;
+    }
+}
+
 static int
 SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
 {
@@ -191,8 +205,8 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
 
     miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[tex->miptex]);
 
-    x = (int)texcoord[0] % miptex->width;
-    y = (int)texcoord[1] % miptex->height;
+    x = fix_coord(texcoord[0], miptex->width);
+    y = fix_coord(texcoord[1], miptex->height);
 
     data = (byte*)miptex + miptex->offsets[0];
     sample = data[(miptex->width * y) + x];
