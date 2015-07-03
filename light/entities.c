@@ -965,7 +965,7 @@ Get_EntityStringSize(const entity_t *entities)
 /*
  * ================
  * WriteEntitiesToString
- * FIXME - why even bother re-writing the string?
+ * FIXME - why even bother re-writing the string? Switchable lights need styles set.
  * ================
  */
 void
