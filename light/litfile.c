@@ -44,3 +44,26 @@ WriteLitFile(const bsp2_t *bsp, const char *filename, int version)
     SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
     fclose(litfile);
 }
+
+void
+WriteLuxFile(const bsp2_t *bsp, const char *filename, int version)
+{
+    FILE *luxfile;
+    char luxname[1024];
+    litheader_t header;
+
+    snprintf(luxname, sizeof(luxname) - 4, "%s", filename);
+    StripExtension(luxname);
+    DefaultExtension(luxname, ".lux");
+
+    header.ident[0] = 'Q';
+    header.ident[1] = 'L';
+    header.ident[2] = 'I';
+    header.ident[3] = 'T';
+    header.version = LittleLong(version);
+
+    luxfile = SafeOpenWrite(luxname);
+    SafeWrite(luxfile, &header, sizeof(header));
+    SafeWrite(luxfile, lux_filebase, bsp->lightdatasize * 3);
+    fclose(luxfile);
+}

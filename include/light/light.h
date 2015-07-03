@@ -75,6 +75,7 @@ qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 typedef struct {
     vec_t light;
     vec3_t color;
+    vec3_t direction;
 } lightsample_t;
 
 typedef struct {
@@ -135,13 +136,15 @@ extern qboolean dirtGainSetOnCmdline;
  * Return space for the lightmap and colourmap at the same time so it can
  * be done in a thread-safe manner.
  */
-void GetFileSpace(byte **lightdata, byte **colordata, int size);
+void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
 
 extern byte *filebase;
 extern byte *lit_filebase;
+extern byte *lux_filebase;
 
 extern int oversample;
 extern qboolean write_litfile;
+extern qboolean write_luxfile;
 
 void SetupDirt();
 

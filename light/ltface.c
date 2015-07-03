@@ -149,6 +149,8 @@ typedef struct {
 typedef struct {
     const modelinfo_t *modelinfo;
     plane_t plane;
+    vec3_t snormal;
+    vec3_t tnormal;
 
     int texmins[2];
     int texsize[2];
@@ -516,6 +518,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 	       const bsp2_t *bsp, lightsurf_t *lightsurf)
 {
     plane_t *plane;
+    const texinfo_t *tex;
     vec3_t planepoint;
     texorg_t texorg;
 
@@ -538,6 +541,12 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     CreateFaceTransform(face, bsp, &texorg.transform);
     texorg.texinfo = &bsp->texinfo[face->texinfo];
     texorg.planedist = plane->dist;
+
+    tex = &bsp->texinfo[face->texinfo];
+    VectorCopy(tex->vecs[0], lightsurf->snormal);
+    VectorSubtract(vec3_origin, tex->vecs[1], lightsurf->tnormal);
+    VectorNormalize(lightsurf->snormal);
+    VectorNormalize(lightsurf->tnormal);
 
     /* Set up the surface points */
     CalcFaceExtents(face, modelinfo->offset, bsp, lightsurf);
@@ -634,6 +643,7 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
 	    for (s = starts; s < ends; s++) {
 		dst->light += src->light;
 		VectorAdd(dst->color, src->color, dst->color);
+		VectorAdd(dst->direction, src->direction, dst->direction);
 		src++;
 	    }
 	}
@@ -648,10 +658,12 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
 	    src = &lightmap->samples[i];
 	    dst->light += src->light * extraweight;
 	    VectorMA(dst->color, extraweight, src->color, dst->color);
+	    VectorMA(dst->direction, extraweight, src->direction, dst->direction);
 	    samples += extraweight;
 	}
 	dst->light /= samples;
 	VectorScale(dst->color, 1.0 / samples, dst->color);
+	VectorScale(dst->direction, 1.0 / samples, dst->direction);
     }
 
     softmap.style = lightmap->style;
@@ -694,10 +706,11 @@ GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist)
 }
 
 static inline void
-Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color)
+Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color, const vec3_t direction)
 {
     sample->light += light;
     VectorMA(sample->color, light / 255.0f, color, sample->color);
+    VectorMA(sample->direction, light, direction, sample->direction);
 }
 
 static inline void
@@ -853,7 +866,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	add = GetLightValue(light, entity, dist) * angle * spotscale;
 	add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, modelinfo);
 
-	Light_Add(sample, add, light->color);
+	Light_Add(sample, add, light->color, ray);
 
 	/* Check if we really hit, ignore tiny lights */
 	/* ericw -- never ignore generated lights, which can be tiny and need
@@ -909,7 +922,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
 	value = angle * sun->sunlight.light;
 	if (sun->dirt)
 	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
-	Light_Add(sample, value, sun->sunlight.color);
+	Light_Add(sample, value, sun->sunlight.color, sun->sunvec);
 	if (!hit/* && (sample->light >= 1)*/)
 	    hit = true;
     }
@@ -946,7 +959,7 @@ LightFace_Min(const lightsample_t *light,
         if (minlightDirt)
 	    value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
 	if (addminlight)
-	    Light_Add(sample, value, light->color);
+	    Light_Add(sample, value, light->color, vec3_origin);
 	else
 	    Light_ClampMin(sample, value, light->color);
 	if (!hit && sample->light >= 1)
@@ -969,7 +982,7 @@ LightFace_Min(const lightsample_t *light,
 		    continue;
 		value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), modelinfo);
 		if (addminlight)
-		    Light_Add(sample, value, (*entity)->light.color);
+		    Light_Add(sample, value, (*entity)->light.color, vec3_origin);
 		else
 		    Light_ClampMin(sample, value, (*entity)->light.color);
 	    }
@@ -1224,8 +1237,8 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
     int numstyles, size, mapnum, width, s, t, i, j;
     const lightsample_t *sample;
     vec_t light, maxcolor;
-    vec3_t color;
-    byte *out, *lit;
+    vec3_t color, direction;
+    byte *out, *lit, *lux;
 
     numstyles = 0;
     for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
@@ -1237,7 +1250,7 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 	return;
 
     size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
-    GetFileSpace(&out, &lit, size * numstyles);
+    GetFileSpace(&out, &lit, &lux, size * numstyles);
     face->lightofs = out - filebase;
 
     width = (lightsurf->texsize[0] + 1) * oversample;
@@ -1251,6 +1264,7 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 		/* Take the average of any oversampling */
 		light = 0;
 		VectorCopy(vec3_origin, color);
+		VectorCopy(vec3_origin, direction);
 		for (i = 0; i < oversample; i++) {
 		    for (j = 0; j < oversample; j++) {
 			const int col = (s*oversample) + j;
@@ -1260,6 +1274,7 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 			
 			light += sample->light;
 			VectorAdd(color, sample->color, color);
+			VectorAdd(direction, sample->direction, direction);
 		    }
 		}
 		light /= oversample * oversample;
@@ -1288,6 +1303,24 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 		*lit++ = color[0];
 		*lit++ = color[1];
 		*lit++ = color[2];
+
+		if (lux)
+		{
+			vec3_t temp;
+			int v;
+			temp[0] = DotProduct(direction, lightsurf->snormal);
+			temp[1] = DotProduct(direction, lightsurf->tnormal);
+			temp[2] = DotProduct(direction, lightsurf->plane.normal);
+
+			if (!temp[0] && !temp[1] && !temp[2])
+				VectorSet(temp, 0, 0, 1);
+			else
+				VectorNormalize(temp);
+
+			v = (temp[0]+1)*128;  *lux++ = (v>255)?255:v;
+			v = (temp[1]+1)*128;  *lux++ = (v>255)?255:v;
+			v = (temp[2]+1)*128;  *lux++ = (v>255)?255:v;
+		}
 	    }
 	}
     }

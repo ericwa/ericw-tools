@@ -62,14 +62,20 @@ byte *lit_filebase;		// start of litfile data
 static byte *lit_file_p;	// start of free space after litfile data
 static byte *lit_file_end;	// end of space for litfile data
 
+byte *lux_buffer;		// luxfile allocation (misaligned)
+byte *lux_filebase;		// start of luxfile data
+static byte *lux_file_p;	// start of free space after luxfile data
+static byte *lux_file_end;	// end of space for luxfile data
+
 static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
 
 int oversample = 1;
 qboolean write_litfile = false;
+qboolean write_luxfile = false;
 
 void
-GetFileSpace(byte **lightdata, byte **colordata, int size)
+GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
     ThreadLock();
 
@@ -84,6 +90,14 @@ GetFileSpace(byte **lightdata, byte **colordata, int size)
 	    lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
 	*colordata = lit_file_p;
 	lit_file_p += size * 3;
+    }
+
+    if (deluxdata) {
+	/* align to 12 byte boundaries to match offets with 3 * lightdata */
+	if ((uintptr_t)lux_file_p % 12)
+	    lux_file_p += 12 - ((uintptr_t)lux_file_p % 12);
+	*deluxdata = lux_file_p;
+	lux_file_p += size * 3;
     }
 
     ThreadUnlock();
@@ -201,6 +215,8 @@ LightWorld(bsp2_t *bsp)
 {
     if (bsp->dlightdata)
 	free(bsp->dlightdata);
+    if (lux_buffer)
+	free(lux_buffer);
 
     /* FIXME - remove this limit */
     bsp->lightdatasize = MAX_MAP_LIGHTING;
@@ -219,6 +235,12 @@ LightWorld(bsp2_t *bsp)
     lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
     lit_file_p = lit_filebase;
     lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
+
+    /* lux data stored in a separate buffer */
+    lux_buffer = malloc(bsp->lightdatasize*3);
+    lux_filebase = lux_buffer + 12 - ((uintptr_t)lux_buffer % 12);
+    lux_file_p = lux_filebase;
+    lux_file_end = lux_filebase + 3 * (MAX_MAP_LIGHTING / 4);
 
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
     logprint("Lighting Completed.\n\n");
@@ -273,6 +295,8 @@ main(int argc, const char **argv)
 	    logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma );
 	} else if (!strcmp(argv[i], "-lit")) {
 	    write_litfile = true;
+	} else if (!strcmp(argv[i], "-lux")) {
+	    write_luxfile = true;
 	} else if (!strcmp(argv[i], "-soft")) {
 	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
 		softsamples = atoi(argv[++i]);
@@ -348,6 +372,8 @@ main(int argc, const char **argv)
 	logprint("running with %d threads\n", numthreads);
     if (write_litfile)
 	logprint(".lit colored light output requested on command line.\n");
+    if (write_luxfile)
+	logprint(".lux light directions output requested on command line.\n");
     if (softsamples == -1) {
 	switch (oversample) {
 	case 2:
@@ -388,6 +414,8 @@ main(int argc, const char **argv)
 
     if (write_litfile)
 	WriteLitFile(bsp, source, LIT_VERSION);
+    if (write_luxfile)
+	WriteLuxFile(bsp, source, LIT_VERSION);
 
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
