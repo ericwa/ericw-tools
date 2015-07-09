@@ -1,3 +1,20 @@
+2015-07-09 TyrUtils-ericw 0.15.1 release
+
+* light: .lux file support from Spike, for deluxemapping
+* light: add gamma control with -gamma flag and "_gamma" key
+* light: various optimizations
+* light: rename -dirty flag to -dirt for consistency
+* light: make fence texture tracing opt-in with the "-fence" flag.
+  fix an issue with fence texture coords.
+* light: support switchable lights with any light* classname, not just "light"
+* light: fix debugging spam output from last build
+
+2015-05-01 TyrUtils-ericw snapshot
+
+* light: fix hang when using _deviance, make _samples default to 16 when
+  _deviance is set.
+* light: fix for always generating a .lit file when surface lights are used
+
 2015-04-29 TyrUtils-ericw snapshot
 
 * qbsp: fix broken -onlyents flag
