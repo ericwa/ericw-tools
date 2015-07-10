@@ -1,11 +1,22 @@
-Updated 2014-02-16
+Updated 2015-07-13
 
-------------------
- Tyr-Utils (v0.15)
-------------------
+--------------------------
+ tyrutils-ericw (v0.15.1)
+--------------------------
+  Website:         http://ericwa.github.io/tyrutils-ericw
+  Maintainer:      Eric Wasylishen (AKA ericw)
+  Email:           ewasylishen@gmail.com
+
+Original tyurtils:
+
   Website: http://disenchant.net
   Author:  Kevin Shanahan (AKA Tyrann)
   Email:   tyrann@disenchant.net
+
+
+tyrutils-ericw is a branch of Tyrann's quake 1 tools, focused on
+adding lighting features, mostly borrowed from q3map2. There are a few
+bugfixes for qbsp as well. Original readme follows:
 
 A collection of command line utilities for building Quake levels and working
 with various Quake file formats. I need to work on the documentation a bit
