@@ -809,8 +809,11 @@ LoadEntities(const bsp2_t *bsp)
 		logprint("Using minlight value %i from command line.\n",
 			 (int)minlight.light);
 	    }
-	    if (entity->anglescale >= 0 && entity->anglescale <= 1.0)
+	    if (entity->anglescale >= 0 && entity->anglescale <= 1.0) {
 		sun_anglescale = entity->anglescale;
+		logprint("using sunlight anglescale value %f from worldspawn.\n",
+			 sun_anglescale);
+	    }
 
 	    if (entity->dist != 0.0) {
 		scaledist = entity->dist;
