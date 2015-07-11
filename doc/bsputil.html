@@ -1,0 +1,128 @@
+<!-- Creator     : groff version 1.19.2 -->
+<!-- CreationDate: Sat Jul 11 13:51:45 2015 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p     { margin-top: 0; margin-bottom: 0; }
+       pre   { margin-top: 0; margin-bottom: 0; }
+       table { margin-top: 0; margin-bottom: 0; }
+</style>
+<title>BSPUTIL</title>
+
+</head>
+<body>
+
+<h1 align=center>BSPUTIL</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+<a href="#REPORTING BUGS">REPORTING BUGS</a><br>
+<a href="#COPYRIGHT">COPYRIGHT</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+
+
+<a name="NAME"></a>
+<h2>NAME</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">bsputil &minus;
+utiltiy for working with Quake BSP files</p>
+
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>bsputil</b>
+[OPTION]... BSPFILE</p>
+
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>bsputil is a
+small utility for basic manipulation of Quake BSP
+files.</b></p>
+
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;-extract-textures</b></p>
+
+<p style="margin-left:22%;">Extract the texture data from
+<i>BSPFILE</i> and create a Quake WAD file. The output
+filename is generated from <i>BSPFILE</i> by stripping the
+.bsp extension and adding the .wad extension.</p>
+
+
+<p style="margin-left:11%;"><b>&minus;-extract-entities</b></p>
+
+<p style="margin-left:22%;">Extract the entity data from
+<i>BSPFILE</i> and create a plain text .ent file. The output
+filename is generated from <i>BSPFILE</i> by stripping the
+.bsp extension and adding the .ent extension.</p>
+
+<p style="margin-left:11%;"><b>&minus;-check</b></p>
+
+<p style="margin-left:22%;">Load <i>BSPFILE</i> into memory
+and run a set of tests to check that all internal data
+structures are self-consistent. Currently the tests are very
+basic and not all warnings will result in errors from all
+versions of the Quake engine. This option is not targeted at
+level designers, but is intended to assist with development
+of the <b>qbsp</b> tool and check that a &quot;clean&quot;
+bsp file is generated.</p>
+
+<a name="AUTHOR"></a>
+<h2>AUTHOR</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Written by
+Kevin Shanahan (aka Tyrann) <br>
+Based on source provided by id Software <br>
+http://disenchant.net</p>
+
+<a name="REPORTING BUGS"></a>
+<h2>REPORTING BUGS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Please send bug
+reports to tyrann@disenchant.net. <br>
+Improvements to the documentation are welcome and
+encouraged.</p>
+
+<a name="COPYRIGHT"></a>
+<h2>COPYRIGHT</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Copyright (C)
+2013 Kevin Shanahan <br>
+Copyright (C) 1997 id Software <br>
+License GPLv2+: GNU GPL version 2 or later <br>
+&lt;http://gnu.org/licenses/gpl2.html&gt;.</p>
+
+<p style="margin-left:11%; margin-top: 1em">This is free
+software: you are free to change and redistribute it. There
+is NO WARRANTY, to the extent permitted by law.</p>
+
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>(1)
+<b>light</b>(1) <b>vis</b>(1) <b>bspinfo</b>(1)
+<b>quake</b>(6)</p>
+<hr>
+</body>
+</html>

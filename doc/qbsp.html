@@ -1,0 +1,432 @@
+<!-- Creator     : groff version 1.19.2 -->
+<!-- CreationDate: Sat Jul 11 13:51:45 2015 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p     { margin-top: 0; margin-bottom: 0; }
+       pre   { margin-top: 0; margin-bottom: 0; }
+       table { margin-top: 0; margin-bottom: 0; }
+</style>
+<title>QBSP</title>
+
+</head>
+<body>
+
+<h1 align=center>QBSP</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#SPECIAL TEXTURE NAMES">SPECIAL TEXTURE NAMES</a><br>
+<a href="#DETAIL BRUSH SUPPORT">DETAIL BRUSH SUPPORT</a><br>
+<a href="#MAP COMPATIBILITY">MAP COMPATIBILITY</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+<a href="#REPORTING BUGS">REPORTING BUGS</a><br>
+<a href="#COPYRIGHT">COPYRIGHT</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+
+
+<a name="NAME"></a>
+<h2>NAME</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">qbsp &minus;
+Compile a Quake BSP file from a MAP source file</p>
+
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>
+[OPTION]... SOURCFILE [DESTFILE]</p>
+
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>qbsp</b> is
+a tool used in the creation of maps for the <b>id
+Software</b> game <b>Quake</b>. qbsp takes a .map file as
+input and produces a .bsp file playable in the Quake engine.
+If the <i>DESTFILE</i> argument is not supplied, the output
+filename will be chosen by stripping the file extension (if
+any) from <i>SOURCEFILE</i> and appending the .bsp
+extension.</p>
+
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;nofill</b></p>
+
+<p style="margin-left:22%;">Doesn&rsquo;t perform outside
+filling</p>
+
+<p style="margin-left:11%;"><b>&minus;noclip</b></p>
+
+<p style="margin-left:22%;">Doesn&rsquo;t build clip
+hulls</p>
+
+<p style="margin-left:11%;"><b>&minus;noskip</b></p>
+
+<p style="margin-left:22%;">Doesn&rsquo;t remove faces
+using the &rsquo;skip&rsquo; texture</p>
+
+<p style="margin-left:11%;"><b>&minus;onlyents</b></p>
+
+<p style="margin-left:22%;">Only updates .map entities</p>
+
+<p style="margin-left:11%;"><b>&minus;verbose</b></p>
+
+<p style="margin-left:22%;">Print out more .map
+information</p>
+
+<p style="margin-left:11%;"><b>&minus;noverbose</b></p>
+
+<p style="margin-left:22%;">Print out almost no information
+at all</p>
+
+<p style="margin-left:11%;"><b>&minus;splitspecial</b></p>
+
+<p style="margin-left:22%;">Doesn&rsquo;t combine sky and
+water faces into one large face</p>
+
+<p style="margin-left:11%;"><b>&minus;transwater</b></p>
+
+<p style="margin-left:22%;">Computes portal information for
+transparent water (default)</p>
+
+<p style="margin-left:11%;"><b>&minus;notranswater</b></p>
+
+<p style="margin-left:22%;">Computes portal information for
+opaque water</p>
+
+<p style="margin-left:11%;"><b>&minus;transsky</b></p>
+
+<p style="margin-left:22%;">Computes portal information for
+transparent sky</p>
+
+<p style="margin-left:11%;"><b>&minus;oldaxis</b></p>
+
+<p style="margin-left:22%;">Uses original qbsp texture
+alignment algorithm</p>
+
+<p style="margin-left:11%;"><b>&minus;forcegoodtree</b>
+(experimental)</p>
+
+<p style="margin-left:22%;">Force use of expensive
+processing for SolidBSP stage. Often results in a more
+optimal BSP file in terms of file size, at the expense of
+extra processing time.</p>
+
+<p style="margin-left:11%;"><b>&minus;bspleak</b></p>
+
+<p style="margin-left:22%;">Creates a .por file, used in
+the BSP editor</p>
+
+<p style="margin-left:11%;"><b>&minus;oldleak</b></p>
+
+<p style="margin-left:22%;">Create an old-style QBSP .PTS
+file (default is new)</p>
+
+<p style="margin-left:11%;"><b>&minus;nopercent</b></p>
+
+<p style="margin-left:22%;">Prevents output of percent
+completion information</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;bsp2</b></p> </td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Create the output
+BSP file in BSP2 format. Allows the creation of much larger
+and more complex maps than the original BSP 29 format).</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;2psb</b></p> </td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Create the output
+BSP file in 2PSB format. This an earlier version of the BSP2
+format, supported by the RMQ engine (and thus is also known
+as the BSP2rmq or RMQe bsp format). original BSP 29
+format).</p> </td>
+</table>
+
+<p style="margin-left:11%;"><b>&minus;leakdist [n]</b></p>
+
+<p style="margin-left:22%;">Space between leakfile points
+(default 2)</p>
+
+<p style="margin-left:11%;"><b>&minus;subdivide [n]</b></p>
+
+<p style="margin-left:22%;">Use different texture
+subdivision (default 240)</p>
+
+<p style="margin-left:11%;"><b>&minus;wadpath
+&lt;dir&gt;</b></p>
+
+<p style="margin-left:22%;">Search this directory for wad
+files (default is cwd)</p>
+
+<p style="margin-left:11%;"><b>&minus;oldrottex</b></p>
+
+<p style="margin-left:22%;">Use old method of texturing
+rotate_ brushes where the mapper aligns textures for the
+object at (0 0 0).</p>
+
+<a name="SPECIAL TEXTURE NAMES"></a>
+<h2>SPECIAL TEXTURE NAMES</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The contents
+inside a brush depend on the texture name(s) assigned to
+it.</p>
+
+<p style="margin-left:11%; margin-top: 1em">By default
+brush contents are solid unless they have a special name.
+Names beginning with an asterisk are liquids. A prefix of
+<i>*slime</i> indicates slime, <i>*lava</i> is for lava and
+anything else beginning with <i>*</i> will have contents as
+water.</p>
+
+<p style="margin-left:11%; margin-top: 1em">All faces of a
+brush must have textures which indicate the same contents.
+Mixed content types will cause qbsp to print an error and
+exit.</p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>SKIP</b>
+<br>
+Any surfaces assigned a texture name of <i>skip</i> will be
+compiled into the bsp as invisible surfaces. Solid surfaces
+will still be solid (e.g. the play can&rsquo;t walk or shoot
+through them) but they will not be drawn. Water, slime and
+lava surfaces can be made invisible using the texture names
+<i>*waterskip</i>, <i>*slimeskip</i> and <i>*lavaskip</i>
+respectively.</p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>HINT</b>
+<br>
+Hint surfaces cause a bsp split and portal to be generated
+the on the surface plane, after which they are removed from
+the final bsp - they are neither visible, nor structural.
+Strategic placement of hint surfaces can be used by a map
+author to optimise the PVS calculations so as to limit
+overdraw by the engine (see also: <b>vis</b>(1)).</p>
+
+<p style="margin-left:11%; margin-top: 1em">Use a texture
+with the name <i>hintskip</i> on any surfaces of a hint
+brush which you don&rsquo;t want to generate bsp splits or
+portals. All surfaces of a hint brush must use either the
+<i>hint</i> or <i>hintskip</i> texture name.</p>
+
+<a name="DETAIL BRUSH SUPPORT"></a>
+<h2>DETAIL BRUSH SUPPORT</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">This version of
+qbsp supports detail brushes which are similar in concept to
+Quake 2&rsquo;s detail brushes.</p>
+
+<p style="margin-left:11%; margin-top: 1em">To be
+compatible with existing Quake 1 mapping tools, detail
+brushes can be added by creating an entity with classname
+&quot;func_detail&quot;. When qbsp reads the map file, it
+will add any brushes included in a func_detail entity into
+the worldspawn as details and remove the func_detail entity.
+Any number of func_detail entities can be used (useful for
+grouping) and all included brushes will be added to the
+worldspawn.</p>
+
+<p style="margin-left:11%; margin-top: 1em">Here is an
+example entity definition suitable to add the the .QC files
+used by BSP Editor:</p>
+
+<p style="margin-left:11%; margin-top: 1em">/*QUAKED
+func_detail (0.5 0.5 0.9) ? <br>
+Detail brushes add visual details to <br>
+the world, but do not block visibility. <br>
+func_detail entities are merged into <br>
+the worldspawn entity by the qbsp compiler <br>
+and do not appear as separate entities in <br>
+the compiled bsp. <br>
+*/</p>
+
+<p style="margin-left:11%; margin-top: 1em">For WorldCraft
+in .FGD format (untested):</p>
+
+<p style="margin-left:11%; margin-top: 1em">@SolidClass
+color(128 128 230) = func_detail: &quot;Detail&quot; []</p>
+
+<p style="margin-left:11%; margin-top: 1em">For Radiant in
+.ENT format:</p>
+
+<p style="margin-left:11%; margin-top: 1em">&lt;group
+name=&quot;func_detail&quot; color=&quot;0 .5 .8&quot;&gt;
+<br>
+Detail brushes add visual details to the world, but do not
+<br>
+block visibility. func_detail entities are merged into the
+<br>
+worldspawn entity by the qbsp compiler and do not appear as
+<br>
+separate entities in the compiled bsp. <br>
+&lt;/group&gt;</p>
+
+<p style="margin-left:11%; margin-top: 1em">What should be
+written to the .map file is a simple entity with one or more
+brushes. E.g.:</p>
+
+<p style="margin-left:11%; margin-top: 1em">{ <br>
+&quot;classname&quot; &quot;func_detail&quot; <br>
+{ <br>
+( -176 80 0 ) ( -208 80 0 ) ( -208 48 0 ) COP1_1 0 0 0 1.0
+1.0 <br>
+( -192 -80 64 ) ( -208 -80 0 ) ( -192 -64 64 ) COP1_1 0 0 0
+1.0 1.0 <br>
+( -176 -80 0 ) ( -192 -80 64 ) ( -176 -64 0 ) COP1_1 0 0 0
+1.0 1.0 <br>
+( -16 48 0 ) ( -16 64 64 ) ( 0 48 0 ) COP1_1 0 0 0 1.0 1.0
+<br>
+( -16 64 64 ) ( -16 80 0 ) ( 0 64 64 ) COP1_1 0 0 0 1.0 1.0
+<br>
+} <br>
+}</p>
+
+<p style="margin-left:11%; margin-top: 1em">When qbsp
+detects detail brushes, it outputs a modified portal file
+format with the header PRT2 (default is PRT1). This portal
+file contains extra information needed by vis to compute the
+potentially visible set (PVS) for the map/bsp. So you will
+also need a vis util capable of processing the PRT2 file
+format.</p>
+
+<a name="MAP COMPATIBILITY"></a>
+<h2>MAP COMPATIBILITY</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">In addition to
+standard Quake 1 .map files, TyrUtils QBSP is compatible
+with:</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="1%">
+
+
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<td width="10%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Floating point
+brush coordinates and texture alignments</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="1%">
+
+
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<td width="10%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Valve&rsquo;s 220
+map format as produced by the <i>Hammer</i> editor</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="1%">
+
+
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<td width="10%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Extended texture
+positioning as supported by the <i>QuArK</i> editor</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="1%">
+
+
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<td width="10%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Standard Quake 2
+map format (leading paths in texture names are stripped and
+any extra surface properties are ignored)</p></td>
+</table>
+
+<a name="AUTHOR"></a>
+<h2>AUTHOR</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Written by
+Kevin Shanahan (aka Tyrann) <br>
+Based on source provided by id Software and Greg Lewis <br>
+http://disenchant.net</p>
+
+<a name="REPORTING BUGS"></a>
+<h2>REPORTING BUGS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Please send bug
+reports to tyrann@disenchant.net. <br>
+Improvements to the documentation are welcome and
+encouraged.</p>
+
+<a name="COPYRIGHT"></a>
+<h2>COPYRIGHT</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Copyright (C)
+2013 Kevin Shanahan <br>
+Copyright (C) 1997 Greg Lewis <br>
+Copyright (C) 1997 id Software <br>
+License GPLv2+: GNU GPL version 2 or later <br>
+&lt;http://gnu.org/licenses/gpl2.html&gt;.</p>
+
+<p style="margin-left:11%; margin-top: 1em">This is free
+software: you are free to change and redistribute it. There
+is NO WARRANTY, to the extent permitted by law.</p>
+
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>light</b>(1)
+<b>vis</b>(1) <b>bspinfo</b>(1) <b>bsputil</b>(1)
+<b>quake</b>(6)</p>
+<hr>
+</body>
+</html>

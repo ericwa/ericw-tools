@@ -1,0 +1,671 @@
+<!-- Creator     : groff version 1.19.2 -->
+<!-- CreationDate: Sat Jul 11 13:51:45 2015 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p     { margin-top: 0; margin-bottom: 0; }
+       pre   { margin-top: 0; margin-bottom: 0; }
+       table { margin-top: 0; margin-bottom: 0; }
+</style>
+<title>LIGHT</title>
+
+</head>
+<body>
+
+<h1 align=center>LIGHT</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#MODEL ENTITY KEYS">MODEL ENTITY KEYS</a><br>
+<a href="#LIGHT ENTITY KEYS">LIGHT ENTITY KEYS</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+<a href="#REPORTING BUGS">REPORTING BUGS</a><br>
+<a href="#COPYRIGHT">COPYRIGHT</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+
+
+<a name="NAME"></a>
+<h2>NAME</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">light &minus;
+Caclulate lightmap data for a Quake BSP file</p>
+
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>light</b>
+[OPTION]... BSPFILE</p>
+
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>light</b>
+reads a Quake .bsp file and calculates light and shadow
+information based on the entity definitions contained in the
+.bsp. The .bsp file is updated with the new light data upon
+completion, overwriting any existing lighting data.</p>
+
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;threads
+n</b></p>
+
+<p style="margin-left:22%;">Set number of threads
+explicitly. By default light will attempt to detect the
+number of CPUs/cores available.</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="9%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;extra</b></p> </td>
+<td width="2%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Calculate extra
+samples (2x2) and average the results for smoother
+shadows.</p> </td>
+</table>
+
+<p style="margin-left:11%;"><b>&minus;extra4</b></p>
+
+<p style="margin-left:22%;">Calculate even more samples
+(4x4) and average the results for smoother shadows.</p>
+
+<p style="margin-left:11%;"><b>&minus;light n</b></p>
+
+<p style="margin-left:22%;">Set a global minimum light
+level for style 0 (default) lightmaps. Overrides default
+light level set in worldspawn.</p>
+
+<p style="margin-left:11%;"><b>&minus;addmin</b></p>
+
+<p style="margin-left:22%;">Changes the behaviour of
+<i>minlight</i>. Instead of increasing low light levels to
+the global minimum, add the global minimum light level to
+all style 0 lightmaps. This may help reducing the sometimes
+uniform minlight effect.</p>
+
+<p style="margin-left:11%;"><b>&minus;dist n</b></p>
+
+<p style="margin-left:22%;">Scales the fade distance of all
+lights by a factor of n. See &quot;_dist&quot; worldspawn
+key.</p>
+
+<p style="margin-left:11%;"><b>&minus;range n</b></p>
+
+<p style="margin-left:22%;">Scales the brightness range of
+all lights without affecting their fade discance. See
+&quot;_range&quot; worldspawn key.</p>
+
+<p style="margin-left:11%;"><b>&minus;gate n</b></p>
+
+<p style="margin-left:22%;">Set a minimum light level,
+below which can be considered zero brightness. This can
+dramatically speed up processing when there are large
+numbers of lights with inverse or inverse square falloff. In
+most cases, values less than 1.0 will cause no discernable
+visual differences. Default 0.001.</p>
+
+<p style="margin-left:11%;"><b>&minus;soft [n]</b></p>
+
+<p style="margin-left:22%;">Perform post-processing on the
+lightmap which averages adjacent samples to smooth shadow
+edges. If n is specified, the algorithm will take
+&rsquo;n&rsquo; samples on each side of the sample point and
+replace the original value with the average. e.g. a value of
+1 results in averaging a 3x3 square centred on the original
+sample. 2 implies a 5x5 square and so on. If &minus;soft is
+specified, but n is omitted, a value will be the level of
+oversampling requested. If no oversampling, then the implied
+value is 1. &minus;extra implies a value of 2 and
+&minus;extra4 implies 3. Default 0 (off).</p>
+
+<p style="margin-left:11%;"><b>&minus;anglescale</b> |
+<b>&minus;anglesense</b></p>
+
+<p style="margin-left:22%;">Set the scaling of sunlight
+brightness due to the angle of incidence with a surface
+(more detailed explanation in the &quot;_anglescale&quot;
+key below).</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;lit</b></p> </td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Force generation of
+a .lit file, even if your map does not have any coloured
+lights. By default, light will automatically generate the
+.lit file when needed.</p></td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;dirt</b></p> </td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Globally enables
+dirtmapping (ambient occlusion), overriding the
+&quot;_dirt&quot; worldspawn key. See &quot;_dirt&quot; for
+more details.</p></td>
+</table>
+
+<p style="margin-left:11%;"><b>&minus;dirtdebug</b></p>
+
+<p style="margin-left:22%;">Implies &quot;-dirt&quot;, and
+renders just the dirtmap against a fullbright background,
+ignoring all lights in the map. Useful for previewing and
+turning the dirt settings.</p>
+
+<p style="margin-left:11%;"><b>&minus;dirtmode n</b> |
+<b>&minus;dirtdepth n</b> | <b>&minus;dirtscale n</b> |
+<b>&minus;dirtgain n</b></p>
+
+<p style="margin-left:22%;">Fine-tune the dirtmapping,
+overriding the corresponding worldspawn keys. See the
+worldspawn keys below.</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="9%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;fence</b></p> </td>
+<td width="2%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Enables light to
+pass through transparent pixels in fence textures (textures
+with a &quot;{&quot; prefix). Typically, shadow-casting
+fences should be a func_wall entity with the
+&quot;_shadow&quot; &quot;1&quot; key set. Default is for
+transparent pixels to block light.</p></td>
+</table>
+
+<p style="margin-left:11%;"><b>&minus;gamma [n]</b></p>
+
+<p style="margin-left:22%;">Adjust brightness of final
+lightmap. Default 1, &gt;1 is brighter, &lt;1 is darker. See
+&quot;_gamma&quot; worldspawn key.</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="6%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;lux</b></p> </td>
+<td width="5%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Generate a .lux
+file storing average incoming light directions for surfaces.
+Usable by FTEQW with &quot;r_deluxemapping 1&quot;</p></td>
+</table>
+
+<a name="MODEL ENTITY KEYS"></a>
+<h2>MODEL ENTITY KEYS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>Worldspawn
+Keys</b> <br>
+The following keys can be added to the <i>worldspawn</i>
+entity: <b><br>
+&quot;light&quot; &quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Set a global minimum light
+level of &quot;n&quot; across the whole map. This is an easy
+way to eliminate completely dark areas of the level, however
+you may lose some contrast as a result, so use with care.
+Default 0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dist&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Scales the fade distance of all
+lights by a factor of n. If n &gt; 1 lights fade more
+quickly with distance and if n &lt; 1, lights fade more
+slowly with distance and light reaches further.</p>
+
+<p style="margin-left:11%;"><b>&quot;_range&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Scales the brightness range of
+all lights without affecting their fade discance. Values of
+n &gt; 0.5 makes lights brighter and n &lt; 0.5 makes lights
+less bright. The same effect can be achieved on individual
+lights by adjusting both the &quot;light&quot; and
+&quot;wait&quot; attributes.</p>
+
+<p style="margin-left:11%;"><b>&quot;_sunlight&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Set the brightness of the
+sunlight coming from an unseen sun in the sky. Sky brushes
+(or more accurately bsp leafs with sky contents) will emit
+sunlight at an angle specified by the
+&quot;_sun_mangle&quot; key. Default 0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_anglescale&quot;
+&quot;n&quot;</b> | <b>&quot;_anglesense&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Set the scaling of sunlight
+brightness due to the angle of incidence with a surface
+(more detailed explanation in the &quot;_anglescale&quot;
+light entity key below).</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_sunlight_mangle&quot;
+&quot;x y z&quot;</b> | <b>&quot;_sun_mangle&quot; &quot;x y
+z&quot;</b></p>
+
+<p style="margin-left:22%;">Specifies the direction of
+sunlight using yaw(x), pitch(y) and roll(z) in degrees. Yaw
+specifies the angle around the Z-axis from 0 to 359 degrees
+and pitch specifies the angle from 90 (straight up) to -90
+(straight down). Roll has no effect, so use any value (e.g.
+0). Default is straight down (&quot;0 -90 0&quot;).</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_sunlight_penumbra&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Specifies the penumbra width,
+in degrees, of sunlight. Useful values are 3-4 for a gentle
+soft edge, or 10-20+ for more diffuse sunlight. Default is
+0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_sunlight_color&quot;
+&quot;r g b&quot;</b></p>
+
+<p style="margin-left:22%;">Specify red(r), green(g) and
+blue(b) components for the colour of the sunlight. RGB
+component values are between 0 and 255 (between 0 and 1 is
+also accepted). Default is white light (&quot;255 255
+255&quot;).</p>
+
+<p style="margin-left:11%;"><b>&quot;_sunlight2&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Set the brightness of a large
+dome of lights positioned around the map (16K unit radius).
+Useful for simulating higly diffused light (e.g. cloudy
+skies) in outdoor areas. Default 0.</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_sunlight_color2&quot;
+&quot;r g b&quot;</b> | <b>&quot;_sunlight2_color&quot;
+&quot;r g b&quot;</b></p>
+
+<p style="margin-left:22%;">Specifies the colour of
+_sunlight2, same format as &quot;_sunlight_color&quot;.
+Default is white light (&quot;255 255 255&quot;).</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirt&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">1 enables dirtmapping (ambient
+occlusion) on all lights, borrowed from q3map2. This adds
+shadows to corners and crevices. You can override the global
+setting for specific lights with the &quot;_dirt&quot; light
+entitiy key or &quot;_sunlight_dirt&quot;,
+&quot;_sunlight2_dirt&quot;, and &quot;_minlight_dirt&quot;
+worldspawn keys. Default is no dirtmapping (-1).</p>
+
+<p style="margin-left:11%;"><b>&quot;_sunlight_dirt&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">1 enables dirtmapping (ambient
+occlusion) on sunlight, -1 to disable (making it illuminate
+the dirtmapping shadows). Default is to use the value of
+&quot;_dirt&quot;.</p>
+
+<p style="margin-left:11%;"><b>&quot;_sunlight2_dirt&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">1 enables dirtmapping (ambient
+occlusion) on sunlight2, -1 to disable. Default is to use
+the value of &quot;_dirt&quot;.</p>
+
+<p style="margin-left:11%;"><b>&quot;_minlight_dirt&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">1 enables dirtmapping (ambient
+occlusion) on minlight, -1 to disable. Default is to use the
+value of &quot;_dirt&quot;.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirtmode&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Choose between ordered (0,
+default) and randomized (1) dirtmapping.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirtdepth&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Maximum depth of occlusion
+checking for dirtmapping, default 128.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirtscale&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Scale factor used in dirt
+calculations, default 1. Lower values (e.g. 0.5) make the
+dirt fainter, 2.0 would create much darker shadows.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirtgain&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Exponent used in dirt
+calculation, default 1. Lower values (e.g. 0.5) make the
+shadows darker and stretch further away from corners.</p>
+
+<p style="margin-left:11%;"><b>&quot;_gamma&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Adjust brightness of final
+lightmap. Default 1, &gt;1 is brighter, &lt;1 is darker.</p>
+
+<p style="margin-left:11%; margin-top: 1em"><b>Model Entity
+Keys</b> <br>
+The following keys can be used on any entity with a brush
+model: <b><br>
+&quot;_minlight&quot; &quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Set the minimum light level for
+any surface of the brush model. Default 0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_mincolor&quot;
+&quot;r g b&quot;</b></p>
+
+<p style="margin-left:22%;">Specify red(r), green(g) and
+blue(b) components for the colour of the minlight. RGB
+component values are between 0 and 255 (between 0 and 1 is
+also accepted). Default is white light (&quot;255 255
+255&quot;).</p>
+
+<p style="margin-left:11%;"><b>&quot;_shadow&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">If n is 1, this model will cast
+shadows on other models and itself (i.e. &quot;_shadow&quot;
+implies &quot;_shadowself&quot;). Note that this
+doesn&rsquo;t magically give Quake dynamic lighting powers,
+so the shadows will not move if the model moves. Default
+0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_shadowself&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">If n is 1, this model will cast
+shadows on itself if one part of the model blocks the light
+from another model surface. This can be a better compromise
+for moving models than full shadowing. Default 0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirt&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">For brush models, -1 prevents
+dirtmapping on the brush model. Useful it the bmodel touches
+or sticks into the world, and you want to those ares from
+turning black. Default 0.</p>
+
+<a name="LIGHT ENTITY KEYS"></a>
+<h2>LIGHT ENTITY KEYS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Light entity
+keys can be used in any entity with a classname starting
+with the first five letters &quot;light&quot;. E.g.
+&quot;light&quot;, &quot;light_globe&quot;,
+&quot;light_flame_small_yellow&quot;, etc. <b><br>
+&quot;light&quot; &quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Set the light intensity.
+Negative values are also allowed and will cause the entity
+to subtract light cast by other entities. Default 300.</p>
+
+<p style="margin-left:11%;"><b>&quot;wait&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Scale the fade distance of the
+light by &quot;n&quot;. Values of n &gt; 1 make the light
+fade more quickly with distance, and values &lt; 1 make the
+light fade more slowly (and thus reach further). Default
+1.</p>
+
+<p style="margin-left:11%;"><b>&quot;delay&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Select an attenuation formaula
+for the light: <br>
+0 =&gt; Linear attenuation (default) <br>
+1 =&gt; 1/x attenuation <br>
+2 =&gt; 1/(x^2) attenuation <br>
+3 =&gt; No attenuation (same brightness at any distance)
+<br>
+4 =&gt; &quot;local minlight&quot; - No attenuation and like
+minlight, <br>
+it won&rsquo;t raise the lighting above it&rsquo;s light
+value. <br>
+Unlike minlight, it will only affect surfaces within <br>
+line of sight of the entity. <br>
+5 =&gt; 1/(x^2) attenuation, but slightly more attenuated
+and <br>
+without the extra bright effect that &quot;delay 2&quot; has
+<br>
+near the source.</p>
+
+<p style="margin-left:11%;"><b>&quot;_color&quot; &quot;r g
+b&quot;</b></p>
+
+<p style="margin-left:22%;">Specify red(r), green(g) and
+blue(b) components for the colour of the light. RGB
+component values are between 0 and 255 (between 0 and 1 is
+also accepted). Default is white light (&quot;255 255
+255&quot;).</p>
+
+<p style="margin-left:11%;"><b>&quot;target&quot;
+&quot;name&quot;</b></p>
+
+<p style="margin-left:22%;">Turns the light into a
+spotlight, with the direction of light being towards another
+entity with it&rsquo;s &quot;targetname&quot; key set to
+&quot;name&quot;.</p>
+
+<p style="margin-left:11%;"><b>&quot;mangle&quot; &quot;x y
+z&quot;</b></p>
+
+<p style="margin-left:22%;">Turns the light into a
+spotlight and specifies the direction of light using yaw(x),
+pitch(y) and roll(z) in degrees. Yaw specifies the angle
+around the Z-axis from 0 to 359 degrees and pitch specifies
+the angle from 90 (straight up) to -90 (straight down). Roll
+has no effect, so use any value (e.g. 0). Often easier than
+the &quot;target&quot; method.</p>
+
+<p style="margin-left:11%;"><b>&quot;angle&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Specifies the angle in degrees
+for a spotlight cone. Default 40.</p>
+
+<p style="margin-left:11%;"><b>&quot;_softangle&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Specifies the angle in degrees
+for an inner spotlight cone (must be less than the
+&quot;angle&quot; cone. Creates a softer transition between
+the full brightness of the inner cone to the edge of the
+outer cone. Default 0 (disabled).</p>
+
+<p style="margin-left:11%;"><b>&quot;targetname&quot;
+&quot;name&quot;</b></p>
+
+<p style="margin-left:22%;">Turns the light into a
+switchable light, toggled by another entity targeting
+it&rsquo;s name.</p>
+
+<p style="margin-left:11%;"><b>&quot;style&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Set the animated light style.
+Default 0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_anglescale&quot;
+&quot;n&quot;</b> | <b>&quot;_anglesense&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Sets a scaling factor for how
+much influence the angle of incidence of light on a surface
+has on the brightness of the surface. <i>n</i> must be
+between 0.0 and 1.0. Smaller values mean less attenuation,
+with zero meaning that angle of incidence has no effect at
+all on the brightness. Default 0.5.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirtscale&quot;
+&quot;n&quot;</b> | <b>&quot;_dirtgain&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Override the global
+&quot;_dirtscale&quot; or &quot;_dirtgain&quot; settings to
+change how this light is affected by dirtmapping (ambient
+occlusion). See descriptions of these keys in the worldspawn
+section.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirt&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Overrides the worldspawn
+setting of &quot;_dirt&quot; for this particular light. -1
+to disable dirtmapping (ambient occlusion) for this light,
+making it illuminate the dirtmapping shadows. 1 to enable
+ambient occlusion for this light. Default is to defer to the
+worldspawn setting.</p>
+
+<p style="margin-left:11%;"><b>&quot;_deviance&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Split up the light into a
+sphere of randomly positioned lights within radius
+&quot;n&quot; (in world units). Useful to give shadows a
+wider penumbra. &quot;_samples&quot; specifies the number of
+lights in the sphere. The &quot;light&quot; value is
+automatically scaled down for most lighting formulas (except
+linear and non-additive minlight) to attempt to keep the
+brightness equal. Default is 0, do not split up lights.</p>
+
+<p style="margin-left:11%;"><b>&quot;_samples&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Number of lights to use for
+&quot;_deviance&quot;. Default 16 (only used if
+&quot;_deviance&quot; is set).</p>
+
+<p style="margin-left:11%;"><b>&quot;_surface&quot;
+&quot;texturename&quot;</b></p>
+
+<p style="margin-left:22%;">Makes surfaces with the given
+texture name emit light, by using this light as a template
+which is copied across those surfaces. Lights are spaced
+about 128 units (though possibly closer due to bsp
+splitting) apart and positioned 2 units above the
+surfaces.</p>
+
+<p style="margin-left:11%;"><b>&quot;_surface_offset&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Controls the offset lights are
+placed above surfaces for &quot;_surface&quot;. Default
+2.</p>
+
+<a name="AUTHOR"></a>
+<h2>AUTHOR</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Written by
+Kevin Shanahan (aka Tyrann) <br>
+Modifications by Eric Wasylishen (aka ericw); many changes
+are based on code from q3map2. <br>
+Modifications by David Walton (aka spike); focusing on lux
+support and optimizations. <br>
+Based on source provided by id Software <br>
+http://disenchant.net</p>
+
+<a name="REPORTING BUGS"></a>
+<h2>REPORTING BUGS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Please send bug
+reports for this modified build to ewasylishen@gmail.com.
+<br>
+Original message: Please send bug reports to
+tyrann@disenchant.net. <br>
+Improvements to the documentation are welcome and
+encouraged.</p>
+
+<a name="COPYRIGHT"></a>
+<h2>COPYRIGHT</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Copyright (C)
+2013 Kevin Shanahan <br>
+Copyright (C) 1997 id Software <br>
+License GPLv2+: GNU GPL version 2 or later <br>
+&lt;http://gnu.org/licenses/gpl2.html&gt;.</p>
+
+<p style="margin-left:11%; margin-top: 1em">This is free
+software: you are free to change and redistribute it. There
+is NO WARRANTY, to the extent permitted by law.</p>
+
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>(1)
+<b>vis</b>(1) <b>bspinfo</b>(1) <b>bsputil</b>(1)
+<b>quake</b>(6)</p>
+<hr>
+</body>
+</html>

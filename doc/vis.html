@@ -1,0 +1,216 @@
+<!-- Creator     : groff version 1.19.2 -->
+<!-- CreationDate: Sat Jul 11 13:51:45 2015 -->
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta name="generator" content="groff -Thtml, see www.gnu.org">
+<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
+<meta name="Content-Style" content="text/css">
+<style type="text/css">
+       p     { margin-top: 0; margin-bottom: 0; }
+       pre   { margin-top: 0; margin-bottom: 0; }
+       table { margin-top: 0; margin-bottom: 0; }
+</style>
+<title>VIS</title>
+
+</head>
+<body>
+
+<h1 align=center>VIS</h1>
+
+<a href="#NAME">NAME</a><br>
+<a href="#SYNOPSIS">SYNOPSIS</a><br>
+<a href="#DESCRIPTION">DESCRIPTION</a><br>
+<a href="#OPTIONS">OPTIONS</a><br>
+<a href="#AUTHOR">AUTHOR</a><br>
+<a href="#REPORTING BUGS">REPORTING BUGS</a><br>
+<a href="#COPYRIGHT">COPYRIGHT</a><br>
+<a href="#SEE ALSO">SEE ALSO</a><br>
+
+<hr>
+
+
+<a name="NAME"></a>
+<h2>NAME</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">vis &minus;
+Compute visibility (PVS) for a Quake BSP file</p>
+
+<a name="SYNOPSIS"></a>
+<h2>SYNOPSIS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>vis</b>
+[OPTION]... BSPFILE</p>
+
+<a name="DESCRIPTION"></a>
+<h2>DESCRIPTION</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>vis</b> is a
+tool used in the creation of maps for the game Quake. vis
+looks for a .prt file by stripping the file extension from
+BSPFILE (if any) and appending &quot;.prt&quot;. vis then
+calculates the potentially visible set (PVS) information
+before updating the .bsp file, overwriting any existing PVS
+data.</p>
+
+<p style="margin-left:11%; margin-top: 1em">This vis tool
+supports the PRT2 format for Quake maps with detail brushes.
+See the qbsp documentation for details.</p>
+
+<p style="margin-left:11%; margin-top: 1em">Compiling a map
+(without the -fast parameter) can take a long time, even
+days or weeks in extreme cases. Vis will attempt to write a
+state file every five minutes so that progress will not be
+lost in case the computer needs to be rebooted or an
+unexpected power outage occurs.</p>
+
+<a name="OPTIONS"></a>
+<h2>OPTIONS</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>&minus;threads
+n</b></p>
+
+<p style="margin-left:22%;">Set number of threads
+explicitly. By default vis will attempt to detect the number
+of CPUs/cores available.</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="7%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;fast</b></p> </td>
+<td width="4%"></td>
+<td width="78%">
+
+
+<p style="margin-top: 1em" valign="top">Skip detailed
+calculations and calculate a very loose set of PVS data.
+Sometimes useful for a quick test while developing a
+map.</p> </td>
+</table>
+
+<p style="margin-left:11%;"><b>&minus;level n</b></p>
+
+<p style="margin-left:22%;">Select a test level from 0 to 4
+for detailed visibility calculations. Lower levels are not
+necessarily faster in in all cases. It is not recommended
+that you change the default level unless you are
+experiencing problems. Default 4.</p>
+
+<table width="100%" border=0 rules="none" frame="void"
+       cellspacing="0" cellpadding="0">
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="4%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;v</b></p> </td>
+<td width="7%"></td>
+<td width="30%">
+
+
+<p style="margin-top: 1em" valign="top">Verbose output.</p></td>
+<td width="48%">
+</td>
+<tr valign="top" align="left">
+<td width="11%"></td>
+<td width="4%">
+
+
+
+<p style="margin-top: 1em" valign="top"><b>&minus;vv</b></p> </td>
+<td width="7%"></td>
+<td width="30%">
+
+
+<p style="margin-top: 1em" valign="top">Very verbose
+output.</p> </td>
+<td width="48%">
+</td>
+</table>
+
+<p style="margin-left:11%;"><b>&minus;noambientsky</b></p>
+
+<p style="margin-left:22%;">Disable ambient sound
+generation for textures with names beginning with
+&rsquo;SKY&rsquo;.</p>
+
+
+<p style="margin-left:11%;"><b>&minus;noambientwater</b></p>
+
+<p style="margin-left:22%;">Disable ambient sound
+generation for textures with names beginning with
+&rsquo;*WATER&rsquo; or &rsquo;*04WATER&rsquo;.</p>
+
+
+<p style="margin-left:11%;"><b>&minus;noambientslime</b></p>
+
+<p style="margin-left:22%;">Disable ambient sound
+generation for textures with names beginning with
+&rsquo;*SLIME&rsquo;.</p>
+
+
+<p style="margin-left:11%;"><b>&minus;noambientlava</b></p>
+
+<p style="margin-left:22%;">Disable ambient sound
+generation for textures with names beginning with
+&rsquo;*LAVA&rsquo;.</p>
+
+<p style="margin-left:11%;"><b>&minus;noambient</b></p>
+
+<p style="margin-left:22%;">Disable all ambient sound
+generation.</p>
+
+<a name="AUTHOR"></a>
+<h2>AUTHOR</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Written by
+Kevin Shanahan (aka Tyrann) <br>
+Based on source provided by id Software <br>
+http://disenchant.net</p>
+
+<a name="REPORTING BUGS"></a>
+<h2>REPORTING BUGS</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Please send bug
+reports to tyrann@disenchant.net. <br>
+Improvements to the documentation are welcome and
+encouraged.</p>
+
+<a name="COPYRIGHT"></a>
+<h2>COPYRIGHT</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">Copyright (C)
+2013 Kevin Shanahan <br>
+Copyright (C) 1997 id Software <br>
+License GPLv2+: GNU GPL version 2 or later <br>
+&lt;http://gnu.org/licenses/gpl2.html&gt;.</p>
+
+<p style="margin-left:11%; margin-top: 1em">This is free
+software: you are free to change and redistribute it. There
+is NO WARRANTY, to the extent permitted by law.</p>
+
+<a name="SEE ALSO"></a>
+<h2>SEE ALSO</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>(1)
+<b>light</b>(1) <b>bspinfo</b>(1) <b>bsputil</b>(1)
+<b>quake</b>(6)</p>
+<hr>
+</body>
+</html>

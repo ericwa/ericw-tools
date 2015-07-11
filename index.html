@@ -20,13 +20,53 @@
   <body>
 
     <div class="container">
-      <h1>tyrutils-ericw</h1>
-      
-      <h2>dirtdepth</h2>
 
+      <div class="jumbotron">
+	<h1>tyrutils-ericw</h1>
+	<p>A branch of Tyrann's quake 1 tools <a href="http://disenchant.net/utils">tyrutils</a>, focused on adding lighting features</p>
+	<p>Download:
+	  <div>
+	  <a class="btn btn-primary btn-lg" href="#" role="button">
+	    <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
+	    win32</a>
+	  <a class="btn btn-primary btn-lg" href="#" role="button">
+	    <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
+	    osx</a>
+	  <a class="btn btn-primary btn-lg" href="#" role="button">
+	    <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
+	    tgz</a>
+	   <a class="btn btn-default btn-lg" href="https://github.com/ericwa/tyrutils-ericw" role="button">
+	    github</a>
+	  </div>
+	</p>
+	<p>
+	  Documentation:
+	  <div class="btn-group" role="group" aria-label="...">
+	    <a href="doc/qbsp.html" class="btn btn-default">qbsp</a>
+	    <a href="doc/vis.html" class="btn btn-default">vis</a>
+	    <a href="doc/light.html" class="btn btn-default">light</a>
+	    <a href="doc/bspinfo.html" class="btn btn-default">bspinfo</a>
+	    <a href="doc/bsputil.html" class="btn btn-default">bsputil</a>
+	  </div>
+	</p>
+      </div>
+      
+      <h1>Features</h1>
+
+      <p>
+	Screeshots below use <a href="http://www.simonoc.com/pages/design/sp/1000cuts.htm"><i>One Thousand Cuts</i></a> by <a href="http://www.simonoc.com">sock</a>.
+      </p>
+      
+      <h2>Ambient occlusion (aka dirtmapping)</h2>
+
+      <p>The <code>-dirtdebug</code> flag causes the whole map to be lit at 50% gray, with ambient occlusion applied. It's good for previewing the AO settings.</p>
+      <p><code>-dirtdepth</code> controls the distance tested for occlusion, in quake units. You can see at 512+ the palace rooms start to self-shadow.</p>
+      <p><code>-dirtgain</code> controls the intensity of the dirt with an exponential scale while <code>-dirtscale</code> is a simple multiplier.</p>
+      <p>Once you are happy with the command-line settings, you can transfer them to worldspawn keys; see the light documentation for details.</p>
+      
       <div class="row">
 	<!-- Tab panes -->
-	<div class="col-md-8 tab-content">
+	<div class="col-md-10 tab-content">
 	  <div role="tabpanel" class="tab-pane active" id="dirtdefault">
 	    
 	    <div class="row">
@@ -34,9 +74,9 @@
 		<img src="dirtdefault.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug</code>
 	      </div>
 	    </div>
 	    
@@ -48,9 +88,9 @@
 		<img src="dirtdepth_256.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtdepth 256</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtdepth 256</code>
 	      </div>
 	    </div>
 	    
@@ -62,9 +102,9 @@
 		<img src="dirtdepth_512.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtdepth 512</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtdepth 512</code>
 	      </div>
 	    </div>
 	    
@@ -76,9 +116,9 @@
 		<img src="dirtdepth_1024.jpg" class="img-responsive"  />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtdepth 1024</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtdepth 1024</code>
 	      </div>
 	    </div>
 	  </div>
@@ -90,9 +130,9 @@
 		<img src="dirtgain_0.75.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtgain 0.75</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtgain 0.75</code>
 	      </div>
 	    </div>
 	  </div>
@@ -103,9 +143,9 @@
 		<img src="dirtgain_0.5.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtgain 0.5</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtgain 0.5</code>
 	      </div>
 	    </div>
 	  </div>
@@ -117,9 +157,9 @@
 		<img src="dirtmode_1_dirtgain_0.5.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtgain 0.5 -dirtmode 1</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtgain 0.5 -dirtmode 1</code>
 	      </div>
 	    </div>
 	  </div>
@@ -131,9 +171,9 @@
 		<img src="dirtscale_1.5.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtscale 1.5</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtscale 1.5</code>
 	      </div>
 	    </div>
 	  </div>
@@ -144,9 +184,9 @@
 		<img src="dirtscale_2.0.jpg" class="img-responsive" />
 	      </div>
 	    </div>
-	    <div class="row">
-	      <div class="col-md-12">
-		<pre>-extra4 -dirt -dirtdebug -dirtscale 2.0</pre>
+	    <div class="panel panel-default">
+	      <div class="panel-body">
+		<code>-extra4 -dirt -dirtdebug -dirtscale 2.0</code>
 	      </div>
 	    </div>
 	  </div>
@@ -172,11 +212,13 @@
       </div>
 
 
-      <h2>sunlight</h2>
+      <h2>Sunlight</h2>
 
+      <p>the new <code>_sunlight2</code> worldspawn key creates a hemisphere of suns around the level. It's good for avoiding pure black shadows in outdoor areas (fake indirect lighting).</p>
+      
       <div class="row">
 	<!-- Tab panes -->
-	<div class="col-md-8 tab-content">
+	<div class="col-md-10 tab-content">
 	  <div role="tabpanel" class="tab-pane active" id="sunlight">
 	    <div class="row">
 	      <div class="col-md-6">
@@ -244,11 +286,11 @@
       </div>
 
 
-      <h2>sunlight penumbra</h2>
+      <h2>Sunlight penumbra</h2>
 
       <div class="row">
 	<!-- Tab panes -->
-	<div class="col-md-8 tab-content">
+	<div class="col-md-10 tab-content">
 	  <div role="tabpanel" class="tab-pane active" id="penumbra0">
 	    <img src="sunlight_penumbra_0.jpg" class="img-responsive" />
 	  </div>
@@ -276,9 +318,13 @@
       
       <h2>fake area lights (deviance)</h2>
 
+      <p>
+	<code>_deviance</code> lets you split a point light into several lights, so it casts softer shadows.
+      </p>
+      
       <div class="row">
 	<!-- Tab panes -->
-	<div class="col-md-8 tab-content">
+	<div class="col-md-10 tab-content">
 	  <div role="tabpanel" class="tab-pane active" id="deviance0">
 	    <div class="row">
 	      <div class="col-md-12">
@@ -361,16 +407,20 @@
 	</ul>
       </div>
       
-      <h2>surface lights</h2>
+      <h2>Surface lights</h2>
 
+      <p>
+	surface lights are good to quickly light a scene, especially if there are runic-style light fixtures. The shot below is lit entirely with one light entity.
+      </p>
+      
       <div class="row">
-	<div class="col-md-8">
+	<div class="col-md-10">
 	  <img src="surface.jpg" class="img-responsive" />
 	</div>
       </div>
 
       <div class="row">
-	<div class="col-md-8">
+	<div class="col-md-10">
 	  <pre><code>{
 &quot;classname&quot; &quot;light&quot;
 &quot;origin&quot; &quot;-640 -192 656&quot; // ignored for surface lights
@@ -382,6 +432,29 @@
 	</div>
       </div>
 
+      <h2>Other Features</h2>
+      <ul>
+	<li>raytracing light through fence textures (enabled with <code>-fence</code>).</li>
+	<li>.lux output for deluxemapping in FTEQW</li>
+	<li>gamma adjustment of the final lightmap <code>-gamma</code></li>
+      </ul>
+      
+      <hr></hr>
+      
+      <h1>Thanks/credits</h1>
+
+      <p>
+	<ul>
+	  <li><a href="http://disenchant.net/utils">tyrutils</a> is by Kevin Shanahan (AKA Tyrann)</li>
+	  <li>Most of the new lighting code is derived from q3map2 (<a href="https://github.com/TTimo/GtkRadiant/tree/master/tools/quake3/q3map2">source</a>, <a href="http://q3map2.robotrenegade.com">homepage</a>)
+	  <li>Spike contributed optimizations and .lux support</li>
+	  <li>Lunaran helped track down bugs</li> 
+	  <li>Sock for feedback/suggestions and allowing his level to be used as a lighting test</li>
+	  <li>Thanks to users at <a href="http://www.celephais.net/board/forum.php">func_msgboard</a></li>
+      </ul>
+      </p>
+
+<hr></hr>
       
     </div>
     
