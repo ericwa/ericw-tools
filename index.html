@@ -1,99 +1,204 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>Tyrutils-ericw by ericwa</title>
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/github-dark.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-    <script src="javascripts/respond.js"></script>
-    <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <!--[if lt IE 8]>
-    <link rel="stylesheet" href="stylesheets/ie.css">
-    <![endif]-->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>tyrutils-ericw</title>
 
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+	<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+	<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+	<![endif]-->
   </head>
   <body>
-      <div id="header">
-        <nav>
-          <li class="fork"><a href="https://github.com/ericwa/tyrutils-ericw">View On GitHub</a></li>
-          <li class="downloads"><a href="https://github.com/ericwa/tyrutils-ericw/zipball/master">ZIP</a></li>
-          <li class="downloads"><a href="https://github.com/ericwa/tyrutils-ericw/tarball/master">TAR</a></li>
-          <li class="title">DOWNLOADS</li>
-        </nav>
-      </div><!-- end header -->
 
-    <div class="wrapper">
+    <div class="container">
+      <h2>dirtdepth</h2>
 
-      <section>
-        <div id="title">
-          <h1>Tyrutils-ericw</h1>
-          <p>personal branch of http://disenchant.net/utils/</p>
-          <hr>
-          <span class="credits left">Project maintained by <a href="https://github.com/ericwa">ericwa</a></span>
-          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
-        </div>
+      <div class="row">
+	<!-- Tab panes -->
+	<div class="col-md-8 tab-content">
+	  <div role="tabpanel" class="tab-pane active" id="dirtdefault">
+	    <img src="dirtdefault.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="dirtdepth_256">
+	    <img src="dirtdepth_256.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="dirtdepth_512">
+	    <img src="dirtdepth_512.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="dirtdepth_1024">
+	    <img src="dirtdepth_1024.jpg" class="img-responsive"  />
+	  </div>
 
-        <p>Updated 2014-02-16</p>
+	  <div role="tabpanel" class="tab-pane" id="dirtgain_075">
+	   <img src="dirtgain_0.75.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="dirtgain_05">
+	   <img src="dirtgain_0.5.jpg" class="img-responsive" />
+	  </div>
 
-<hr>
+	  <div role="tabpanel" class="tab-pane" id="dirtmode_1">
+	   <img src="dirtmode_1_dirtgain_0.5.jpg" class="img-responsive" />
+	  </div>
 
-<h2>
-<a id="-tyr-utils-v015" class="anchor" href="#-tyr-utils-v015" aria-hidden="true"><span class="octicon octicon-link"></span></a> Tyr-Utils (v0.15)</h2>
+	  <div role="tabpanel" class="tab-pane" id="dirtscale_15">
+	   <img src="dirtscale_1.5.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="dirtscale_20">
+	   <img src="dirtscale_2.0.jpg" class="img-responsive" />
+	  </div>
+	</div>
 
-<p>Website: <a href="http://disenchant.net">http://disenchant.net</a>
-  Author:  Kevin Shanahan (AKA Tyrann)
-  Email:   <a href="mailto:tyrann@disenchant.net">tyrann@disenchant.net</a></p>
+	<!-- Nav tabs -->
+	<ul class="col-md-2 nav nav-pills nav-stacked" role="tablist">
+	  <li role="presentation" class="active"><a href="#dirtdefault" aria-controls="dirtdefault role="tab" data-toggle="tab">dirtdepth 128 (default)</a></li>
+	  <li role="presentation"><a href="#dirtdepth_256" aria-controls="dirtdepth_256" role="tab" data-toggle="tab">dirtdepth 256</a></li>
+	  <li role="presentation"><a href="#dirtdepth_512" aria-controls="dirtdepth_512" role="tab" data-toggle="tab">dirtdepth 512</a></li>
+	  <li role="presentation"><a href="#dirtdepth_1024" aria-controls="dirdirtdepth_1024" role="tab" data-toggle="tab">dirtdepth 1024</a></li>
 
-<p>A collection of command line utilities for building Quake levels and working
-with various Quake file formats. I need to work on the documentation a bit
-more, but below are some brief descriptions of the tools.</p>
+	  <li role="presentation"><a href="#dirtdefault" aria-controls="dirtdefault role="tab" data-toggle="tab">dirtgain 1.0 (default)</a></li>
+	  <li role="presentation"><a href="#dirtgain_075" aria-controls="dirtgain_075" role="tab" data-toggle="tab">dirtgain 0.75</a></li>
+	  <li role="presentation"><a href="#dirtgain_05" aria-controls="dirtgain_05" role="tab" data-toggle="tab">dirtgain 0.5</a></li>	  
 
-<p>Included utilities:</p>
+	  
+	  <li role="presentation"><a href="#dirtmode_1" aria-controls="dirtmode_1" role="tab" data-toggle="tab">dirtgain 0.5, dirtmode 1</a></li>
 
-<p>qbsp    - Used for turning a .map file into a playable .bsp file.</p>
+	  <li role="presentation"><a href="#dirtdefault" aria-controls="dirtdefault role="tab" data-toggle="tab">dirtscale 1.0 (default)</a></li>
+	  <li role="presentation"><a href="#dirtscale_15" aria-controls="dirtscale_15" role="tab" data-toggle="tab">dirtscale 1.5</a></li>
+	  <li role="presentation"><a href="#dirtscale_20" aria-controls="dirtscale_20" role="tab" data-toggle="tab">dirtscale 2.0</a></li>	  
+	</ul>
+      </div>
 
-<p>light   - Used for lighting a level after the bsp stage.
-            This util was previously known as TyrLite</p>
 
-<p>vis     - Creates the potentially visible set (PVS) for a bsp.</p>
+      <h2>sunlight</h2>
 
-<p>bspinfo - Print stats about the data contained in a bsp file.</p>
+      <div class="row">
+	<!-- Tab panes -->
+	<div class="col-md-8 tab-content">
+	  <div role="tabpanel" class="tab-pane active" id="sunlight">
+	    <div class="row">
+	      <div class="col-md-6">
+		<img src="a_sunlight.jpg" class="img-responsive" />
+	      </div>
+	      <div class="col-md-6">
+		<img src="b_sunlight.jpg" class="img-responsive" />
+	      </div>
+	    </div>
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="sunlight2">
+	    <div class="row">
+	      <div class="col-md-6">
+		<img src="a_sunlight2.jpg" class="img-responsive" />
+	      </div>
+	      <div class="col-md-6">
+		<img src="b_sunlight2.jpg" class="img-responsive" />
+	      </div>
+	    </div>
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="sunlight_plus_sunlight2">
+	    <div class="row">
+	      <div class="col-md-6">
+		<img src="a_sunlight_plus_sunlight2.jpg" class="img-responsive" />
+	      </div>
+	      <div class="col-md-6">
+		<img src="b_sunlight_plus_sunlight2.jpg" class="img-responsive" />
+	      </div>
+	    </div>
+	  </div>
+	</div>
 
-<p>bsputil - Simple tool for manipulation of bsp file data</p>
+	<!-- Nav tabs -->
+	<ul class="col-md-2 nav nav-pills nav-stacked" role="tablist">
+	  <li role="presentation" class="active"><a href="#sunlight" aria-controls="sunlight role="tab" data-toggle="tab">sunlight</a></li>
+	  <li role="presentation"><a href="#sunlight2" aria-controls="sunlight2" role="tab" data-toggle="tab">sunlight2</a></li>
+	  <li role="presentation"><a href="#sunlight_plus_sunlight2" aria-controls="sunlight_plus_sunlight2" role="tab" data-toggle="tab">sunlight + sunlight2</a></li>
+	</ul>
+      </div>
 
-<p>See the doc/ directory for more detailed descriptions of the various
-tools capabilities.  See changelog.txt for a brief overview of recent
-changes or git://disenchant.net/tyrutils for the full changelog and
-source code.</p>
 
-<hr>
+      <h2>sunlight penumbra</h2>
 
-<h2>
-<a id="-license" class="anchor" href="#-license" aria-hidden="true"><span class="octicon octicon-link"></span></a> License</h2>
+      <div class="row">
+	<!-- Tab panes -->
+	<div class="col-md-8 tab-content">
+	  <div role="tabpanel" class="tab-pane active" id="penumbra0">
+	    <img src="sunlight_penumbra_0.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="penumbra2">
+	    <img src="sunlight_penumbra_2.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="penumbra4">
+	    <img src="sunlight_penumbra_4.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="penumbra8">
+	    <img src="sunlight_penumbra_8.jpg" class="img-responsive"  />
+	  </div>
+	</div>
 
-<pre><code>This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	<!-- Nav tabs -->
+	<ul class="col-md-2 nav nav-pills nav-stacked" role="tablist">
+	  <li role="presentation" class="active"><a href="#penumbra0" aria-controls="penumbra0" role="tab" data-toggle="tab">_sunlight_penumbra 0</a></li>
+	  <li role="presentation"><a href="#penumbra2" aria-controls="penumbra2" role="tab" data-toggle="tab">_sunlight_penumbra 2</a></li>
+	  <li role="presentation"><a href="#penumbra4" aria-controls="penumbra4" role="tab" data-toggle="tab">_sunlight_penumbra 4</a></li>
+	  <li role="presentation"><a href="#penumbra8" aria-controls="penumbra8" role="tab" data-toggle="tab">_sunlight_penumbra 8</a></li>
+	</ul>
+      </div>
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-</code></pre>
-      </section>
+      
+      <h2>fake area lights (deviance)</h2>
 
+      <div class="row">
+	<!-- Tab panes -->
+	<div class="col-md-8 tab-content">
+	  <div role="tabpanel" class="tab-pane active" id="deviance0">
+	    <img src="deviance_0.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="deviance24">
+	    <img src="deviance_24.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="deviance48">
+	    <img src="deviance_48.jpg" class="img-responsive" />
+	  </div>
+	  <div role="tabpanel" class="tab-pane" id="deviance96">
+	    <img src="deviance_96.jpg" class="img-responsive"  />
+	  </div>
+	</div>
+
+	<!-- Nav tabs -->
+	<ul class="col-md-2 nav nav-pills nav-stacked" role="tablist">
+	  <li role="presentation" class="active"><a href="#deviance0" aria-controls="deviance0" role="tab" data-toggle="tab">_deviance 0</a></li>
+	  <li role="presentation"><a href="#deviance24" aria-controls="deviance24" role="tab" data-toggle="tab">_deviance 24</a></li>
+	  <li role="presentation"><a href="#deviance48" aria-controls="deviance48" role="tab" data-toggle="tab">_deviance 48</a></li>
+	  <li role="presentation"><a href="#deviance96" aria-controls="deviance96" role="tab" data-toggle="tab">_deviance 96</a></li>
+	</ul>
+      </div>
+      
+      <h2>surface lights</h2>
+
+      <div class="row">
+	
+	<div class="col-md-8">
+	  <img src="surface.jpg" class="img-responsive" />
+	  </div>
+	</div>
+
+      </div>
     </div>
-    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
     
+        
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
   </body>
 </html>
