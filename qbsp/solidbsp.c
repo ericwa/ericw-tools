@@ -594,6 +594,37 @@ DivideNodeBounds(node_t *node, plane_t *split)
 
 /*
 ==================
+GetContentsName
+==================
+*/
+const char *
+GetContentsName( int Contents ) {
+    switch( Contents ) {
+	case CONTENTS_EMPTY:
+	    return "Empty";
+	    
+	case CONTENTS_SOLID:
+	    return "Solid";
+	    
+	case CONTENTS_WATER:
+	    return "Water";
+	    
+	case CONTENTS_SLIME:
+	    return "Slime";
+	    
+	case CONTENTS_LAVA:
+	    return "Lava";
+	    
+	case CONTENTS_SKY:
+	    return "Sky";
+	    
+	default:
+	    return "Error";
+    }
+}
+
+/*
+==================
 LinkConvexFaces
 
 Determines the contents of the leaf and creates the final list of
@@ -617,9 +648,15 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 	    count++;
 	    if (!leafnode->contents)
 		leafnode->contents = f->contents[0];
-	    else if (leafnode->contents != f->contents[0])
-		Error("Mixed face contents in leafnode near (%.2f %.2f %.2f)",
-		      f->w.points[0][0], f->w.points[0][1], f->w.points[0][2]);
+	    else if (leafnode->contents != f->contents[0]) {
+		const bool OnlyWarn = leafnode->contents == CONTENTS_EMPTY || f->contents[ 0 ] == CONTENTS_EMPTY;
+		Message(msgWarning, warnMixedFaceContents,
+			GetContentsName( leafnode->contents ), GetContentsName( f->contents[ 0 ] ),
+			f->w.points[0][0], f->w.points[0][1], f->w.points[0][2]);
+		if (!OnlyWarn) {
+		    Error("Last mixed face contents was fatal");
+		}
+	    }
 	}
     }
 

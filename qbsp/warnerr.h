@@ -46,5 +46,6 @@ enum {
     warnDegenerateEdge,
     warnNoRotateTarget,
     warnDegenerateQuArKTX,
+    warnMixedFaceContents,
     cWarnings
 };
