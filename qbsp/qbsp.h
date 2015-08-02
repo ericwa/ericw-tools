@@ -99,7 +99,6 @@
 
 // Special contents flags for the compiler only
 #define CFLAGS_DETAIL	(1U << 0)
-#define CFLAGS_NOCLIP      (1U << 1)
 
 // Texture flags
 #define	TEX_SPECIAL (1U << 0)	/* sky or liquid (no lightmap or subdivision */

@@ -469,14 +469,6 @@ CSGFaces(const mapentity_t *entity)
 		continue;
 	    }
             
-            /* Nothing clips a brush that has CFLAGS_NOCLIP set */
-            if (brush->cflags & CFLAGS_NOCLIP)
-                continue;
-            
-            /* Clipbrush with CFLAGS_NOCLIP should not clip other brushes */
-            if (clipbrush->cflags & CFLAGS_NOCLIP)
-                continue;
-
 	    /* check bounding box first */
 	    for (i = 0; i < 3; i++) {
 		if (brush->mins[i] > clipbrush->maxs[i])
