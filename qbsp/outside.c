@@ -177,7 +177,10 @@ MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
     const portal_t *portal1;
 
     if (leak->numportals >= leak->maxportals)
-	Error("Internal error: numportals > maxportals (%s)", __func__);
+    {
+	Message(msgLiteral, "Internal error: numportals > maxportals (%s)\n", __func__);
+	return;
+    }
 
     leak->portals[leak->numportals++] = portal2;
 
