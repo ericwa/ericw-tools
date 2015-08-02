@@ -800,11 +800,28 @@ STToQuakeTexVec(const vec3_t s, const vec3_t x, const vec3_t y, const vec3_t z, 
     return 0;
 }
 
+void
+SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
+		   const vec_t scale[2], texinfo_t *out);
+
 static texinfo_t
-TexinfoForObjFace(const obj_face_t *face, const obj_model_t *model)
+TexinfoForObjFace(const mapentity_t *entity, const plane_t *plane, const obj_face_t *face, const obj_model_t *model)
 {
     texinfo_t tx;
     memset(&tx, 0, sizeof(tx));
+    
+    const char *texture_override = ValueForKey(entity, "_texture");
+    if (0 != strcmp("", texture_override)) {
+	tx.miptex = FindMiptex(texture_override);
+	tx.flags = 0;
+	
+	// Default texture coords
+	vec_t shift[2] = {0, 0};
+	vec_t scale[2] = {1, 1};
+	SetTexinfo_QuakeEd(plane, shift, 0, scale, &tx);
+	return tx;
+    }
+    // Search for the texture specified in the obj
     tx.miptex = FindMiptex(face->texture);
     tx.flags = 0;
 
@@ -973,7 +990,7 @@ CreateFacesFromModel(const mapentity_t *entity, const obj_model_t *model, vec3_t
 
 
     	plane = PlaneForObjFace(face, model);
-    	tx = TexinfoForObjFace(face, model);
+    	tx = TexinfoForObjFace(entity, &plane, face, model);
 
         if (VectorLength(plane.normal) <= ZERO_EPSILON)
         {

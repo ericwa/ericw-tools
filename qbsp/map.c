@@ -297,7 +297,7 @@ ParseExtendedTX(parser_t *parser)
     return style;
 }
 
-static void
+void
 SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
 		   const vec_t scale[2], texinfo_t *out)
 {
