@@ -760,17 +760,6 @@ int m3x3_invert( m3x3_t matrix )
 
 typedef vec_t vec4_t[4];
 
-static inline void
-vec4_ma(const vec4_t va, vec_t scale, const vec4_t vb, vec4_t vc)
-{
-    vc[0] = va[0] + scale * vb[0];
-    vc[1] = va[1] + scale * vb[1];
-    vc[2] = va[2] + scale * vb[2];
-    vc[3] = va[3] + scale * vb[3];
-}
-
-static const vec3_t vec3_one = {1, 1, 1};
-
 /* ======================================================================== */
 
 static int
@@ -1630,24 +1619,18 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
 }
 
-static void FlipPlane(plane_t *plane)
-{
-    plane->dist = -plane->dist;
-    VectorSubtract(vec3_origin, plane->normal, plane->normal);
-}
-
-static void PrintPoint(const vec3_t vec)
-{
-    printf("( %f %f %f ) ", vec[0], vec[1], vec[2]);
-}
-
-static void PrintPlane(const vec3_t vec0, const vec3_t vec1, const vec3_t vec2)
-{
-    PrintPoint(vec0);
-    PrintPoint(vec1);
-    PrintPoint(vec2);
-    printf("wbrick1_5 0 0 0 1 1\n");
-}
+//static void PrintPoint(const vec3_t vec)
+//{
+//    printf("( %f %f %f ) ", vec[0], vec[1], vec[2]);
+//}
+//
+//static void PrintPlane(const vec3_t vec0, const vec3_t vec1, const vec3_t vec2)
+//{
+//    PrintPoint(vec0);
+//    PrintPoint(vec1);
+//    PrintPoint(vec2);
+//    printf("wbrick1_5 0 0 0 1 1\n");
+//}
 
 mapbrush_t *
 CreateMapClipBrushForObjFace(face_t *face)
@@ -1705,11 +1688,8 @@ CreateMapClipBrushForObjFace(face_t *face)
 void
 Brush_LoadObj(mapentity_t *dst, const mapentity_t *src, const int hullnum, bool bmodel)
 {
-    const char *classname;
     brush_t *brush, *next, *nonsolid, *solid;
-    mapbrush_t *mapbrush;
     vec3_t rotate_offset;
-    int i, contents, cflags = 0;
     const char *filename;
 
     VectorCopy(vec3_origin, rotate_offset);
