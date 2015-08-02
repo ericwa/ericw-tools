@@ -30,6 +30,7 @@ float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
 float lightmapgamma = 1.0;
 const vec3_t vec3_white = { 255, 255, 255 };
+float surflight_subdivide = 128.0f;
 
 qboolean addminlight = false;
 lightsample_t minlight = { 0, { 255, 255, 255 } };
@@ -353,6 +354,10 @@ main(int argc, const char **argv)
 	} else if ( !strcmp( argv[ i ], "-fence" ) ) {
 	    testFenceTextures = true;
 	    logprint( "Fence texture tracing enabled on command line\n" );
+	} else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
+	    surflight_subdivide = atof( argv[ ++i ] );
+	    surflight_subdivide = qmin(qmax(surflight_subdivide, 128.0f), 2048.0f);
+	    logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else

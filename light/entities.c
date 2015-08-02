@@ -1194,7 +1194,7 @@ static void GL_SubdivideSurface (const bsp2_dface_t *face, const bsp2_t *bsp)
         VectorCopy(v->point, verts[i]);
     }
 
-    SubdividePolygon (face, bsp, face->numedges, verts[0], 128);
+    SubdividePolygon (face, bsp, face->numedges, verts[0], surflight_subdivide);
 }
 
 static void MakeSurfaceLights(const bsp2_t *bsp)
