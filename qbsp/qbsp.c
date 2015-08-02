@@ -199,12 +199,12 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	else
 	    nodes = SolidBSP(entity, surfs, entity == pWorldEnt);
 
-        if (isObjBModel)
-        {
-            printf("ExportObjToMap\n");
-            ExportObjMap(nodes);
-        }
-        
+//        if (isObjBModel)
+//        {
+//            printf("ExportObjToMap\n");
+//            ExportObjMap(nodes);
+//        }
+	
 	// build all the portals in the bsp tree
 	// some portals are solid polygons, and some are paths to other leafs
 	if (entity == pWorldEnt && !options.fNofill) {
