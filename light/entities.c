@@ -624,6 +624,8 @@ FindLights()
             lights[totallights++] = entity;
         }
     }
+    
+    logprint("FindLights: %d total lights\n", totallights);
 }
 
 /*
