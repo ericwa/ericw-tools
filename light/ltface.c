@@ -33,7 +33,7 @@ typedef struct {
  * coordinates requires solving for three simultaneous equations. We
  * set up the LU decomposed form of the transform matrix here.
  */
-#define ZERO_EPSILON (0.001)
+#define ZERO_EPSILON (0.00001)
 static qboolean
 PMatrix3_LU_Decompose(pmatrix3_t *matrix)
 {
@@ -270,7 +270,7 @@ FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
  * Fills in the transform matrix for converting tex coord <-> world coord
  * ================
  */
-static void
+static qboolean
 CreateFaceTransform(const bsp2_dface_t *face, const bsp2_t *bsp,
 		    pmatrix3_t *transform)
 {
@@ -292,11 +292,14 @@ CreateFaceTransform(const bsp2_dface_t *face, const bsp2_t *bsp,
 
     /* Decompose the matrix. If we can't, texture axes are invalid. */
     if (!PMatrix3_LU_Decompose(transform)) {
-	const vec_t *p = bsp->dvertexes[bsp->dedges[face->firstedge].v[0]].point;
-	Error("Bad texture axes on face:\n"
+	int edge = bsp->dsurfedges[face->firstedge];
+	const vec_t *p = bsp->dvertexes[(edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1]].point;
+	printf("warning: Bad texture axes on face:\n"
 	      "   face point at (%s)\n"
 	      "   face area = %5.3f\n", VecStr(p), FaceArea(face, bsp));
+        return false;
     }
+    return true;
 }
 
 static void
@@ -513,7 +516,7 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 }
 
 __attribute__((noinline))
-static void
+static qboolean
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 	       const bsp2_t *bsp, lightsurf_t *lightsurf)
 {
@@ -538,7 +541,9 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     }
 
     /* Set up the texorg for coordinate transformation */
-    CreateFaceTransform(face, bsp, &texorg.transform);
+    if (!CreateFaceTransform(face, bsp, &texorg.transform)) {
+        return false;
+    }
     texorg.texinfo = &bsp->texinfo[face->texinfo];
     texorg.planedist = plane->dist;
 
@@ -551,6 +556,8 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     /* Set up the surface points */
     CalcFaceExtents(face, modelinfo->offset, bsp, lightsurf);
     CalcPoints(modelinfo->model, &texorg, lightsurf);
+
+    return true;
 }
 
 static void
@@ -1351,7 +1358,8 @@ LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
     if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL)
 	return;
 
-    Lightsurf_Init(modelinfo, face, bsp, &lightsurf);
+    if (!Lightsurf_Init(modelinfo, face, bsp, &lightsurf))
+        return;
     Lightmaps_Init(lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */

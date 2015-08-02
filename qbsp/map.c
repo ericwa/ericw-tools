@@ -695,8 +695,8 @@ PreParseFile(const char *buf)
     map.maxmiptex = map.maxfaces + 100;
     map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
 
-    /* Fixing textures on rotate_object requires an extra texinfo per face */
-    map.maxtexinfo = map.maxfaces * 2;
+    // ericw -- .obj models - just use a lot
+    map.maxtexinfo = 2000000;
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
     texinfo->data = AllocMem(BSP_TEXINFO, map.maxtexinfo, true);
     texinfo->count = map.maxtexinfo;
@@ -716,6 +716,35 @@ IsWorldBrushEntity(const mapentity_t *entity)
 	return true;
     if (!strcasecmp(classname, "func_group"))
 	return true;
+    return false;
+}
+
+bool
+IsObjBModelEntity(const mapentity_t *entity)
+{
+    //const char *model = ValueForKey(entity, "classname");
+
+    //if (!strcasecmp(model, "misc_objmodel"))
+    {
+        const char *type = ValueForKey(entity, "_modeltype");
+        if (!strcasecmp(type, "bmodel"))
+            return true;
+    }
+    
+    return false;
+}
+
+bool
+IsObjDetailEntity(const mapentity_t *entity)
+{
+    //const char *model = ValueForKey(entity, "classname");
+    
+    //if (!strcasecmp(model, "misc_objmodel"))
+    {
+        const char *type = ValueForKey(entity, "_modeltype");
+        if (!strcasecmp(type, "detail"))
+            return true;
+    }
     return false;
 }
 
@@ -757,7 +786,6 @@ LoadMapFile(void)
 //              Message(msgWarning, warnNoPlayerCoop);
 
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
-
     map.maxplanes = MAX_MAP_PLANES;
     map.planes = AllocMem(PLANE, map.maxplanes, true);
 
@@ -845,7 +873,7 @@ WriteEntitiesToString(void)
 	entities = &map.entities[i].lumps[LUMP_ENTITIES];
 
 	/* Check if entity needs to be removed */
-	if (!entity->epairs || IsWorldBrushEntity(entity)) {
+	if (!entity->epairs || IsWorldBrushEntity(entity) || IsObjDetailEntity(entity)) {
 	    entities->count = 0;
 	    entities->data = NULL;
 	    continue;

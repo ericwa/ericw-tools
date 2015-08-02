@@ -40,6 +40,12 @@ typedef struct {
     char name[16];		// must be null terminated
 } lumpinfo_t;
 
+typedef struct texture_s {
+    char name[16];
+    int width, height;
+    struct texture_s *next;
+} texture_t;
+
 #define MIPLEVELS 4
 typedef struct {
     char name[16];
@@ -58,5 +64,7 @@ typedef struct wad_s {
 wad_t *WADList_Init(const char *wadstring);
 void WADList_Process(const wad_t *wadlist);
 void WADList_Free(wad_t *wadlist);
+const texture_t *WADList_GetTexture(const char *name);
+// for getting a texture width/height
 
 #endif /* WAD_H */

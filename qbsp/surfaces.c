@@ -135,6 +135,234 @@ GatherNodeFaces(node_t *headnode)
     return surfaces;
 }
 
+typedef struct node_with_parent_s {
+    const struct node_with_parent_s *parent;
+    node_t *node;
+    int side;
+} node_with_parent_t;
+
+
+//static void FlipPlane(plane_t *plane)
+//{
+//    plane->dist = -plane->dist;
+//    VectorSubtract(vec3_origin, plane->normal, plane->normal);
+//}
+//
+static void PrintPoint(const vec3_t vec)
+{
+    printf("( %f %f %f ) ", vec[0], vec[1], vec[2]);
+}
+
+static void PrintPlane(const vec3_t vec0, const vec3_t vec1, const vec3_t vec2)
+{
+    PrintPoint(vec0);
+    PrintPoint(vec1);
+    PrintPoint(vec2);
+    printf("wbrick1_5 0 0 0 1 1\n");
+}
+//
+//static mapbrush_t *
+//CreateMapClipBrushForObjFace(face_t *face)
+//{
+//    mapbrush_t *result;
+//    result = AllocMem(MAPBRUSH, 1, true);
+//    result->numfaces = 4; /* always create a tetrahedron */
+//    result->faces = AllocMem(MAPFACE, result->numfaces, true);
+//    
+//    // Grab the plane info
+//    vec3_t normal;
+//    vec_t dist;
+//    VectorCopy(map.planes[face->planenum].normal, normal);
+//    dist = map.planes[face->planenum].dist;
+//    if (face->planeside) {
+//        VectorSubtract(vec3_origin, normal, normal);
+//        dist = -dist;
+//    }
+//    
+//    // Grab the points
+//    vec3_t points[3];
+//    VectorCopy(face->w.points[0], points[0]);
+//    VectorCopy(face->w.points[1], points[1]);
+//    VectorCopy(face->w.points[2], points[2]);
+//    
+//    printf("{\n");
+//    
+//    PrintPlane(points[ 0 ], points[ 1 ], points[ 2 ] );
+//    printf("}\n");
+//    
+//    //    FlipPlane(&result->faces[0].plane);
+//    //    FlipPlane(&result->faces[1].plane);
+//    //    FlipPlane(&result->faces[2].plane);
+//    //    FlipPlane(&result->faces[3].plane);
+//    
+//    return result;
+//}
+
+static void
+ExportObjMap_leaf(const node_with_parent_t *np)
+{
+    int i, j;
+    winding_t *w;
+    const node_with_parent_t *currnode;
+    const node_with_parent_t *currnode2;
+    
+    i=0;
+    for (currnode = np; currnode; currnode = currnode->parent) {
+        i++;
+    }
+    
+    j=0;
+    printf("{\n\"classname\" \"func_detail\"\n{\n");
+    for (currnode = np; currnode->parent != NULL; currnode = currnode->parent) {
+        plane_t plane = map.planes[currnode->parent->node->planenum];
+        
+        if (!currnode->side) {
+            VectorSubtract(vec3_origin, plane.normal, plane.normal);
+            plane.dist = -plane.dist;
+        }
+
+        w = BaseWindingForPlane(&plane);
+
+        for (currnode2 = np; currnode2->parent != NULL && w; currnode2 = currnode2->parent) {
+            if (currnode2 == currnode)
+                continue;
+            
+            plane = map.planes[currnode2->parent->node->planenum];
+            if (currnode2->side) {
+                VectorSubtract(vec3_origin, plane.normal, plane.normal);
+                plane.dist = -plane.dist;
+            }
+            
+            w = ClipWinding(w, &plane, false);
+        }
+
+        if (!w)
+            continue;		// overconstrained plane
+        
+        // this face is a keeper
+        
+        // Grab the points
+        vec3_t points[3];
+        VectorCopy(w->points[0], points[0]);
+        VectorCopy(w->points[1], points[1]);
+        VectorCopy(w->points[2], points[2]);
+
+        PrintPlane(points[ 0 ], points[ 1 ], points[ 2 ] );
+        
+        j++;
+    }
+    printf("}\n}\n");
+    
+    printf("Leaf has %d constraining planes, %d after simplification\n", i, j);
+}
+//
+//        
+//        mapface2 = hullbrush->faces;
+//        for (j = 0; j < hullbrush->numfaces && w; j++, mapface2++) {
+//            if (j == i)
+//                continue;
+//            // flip the plane, because we want to keep the back side
+//            VectorSubtract(vec3_origin, mapface2->plane.normal, plane.normal);
+//            plane.dist = -mapface2->plane.dist;
+//            
+//            w = ClipWinding(w, &plane, false);
+//        }
+//        if (!w)
+//            continue;		// overconstrained plane
+//        
+//        // this face is a keeper
+//        f = AllocMem(FACE, 1, true);
+//        f->w.numpoints = w->numpoints;
+//        if (f->w.numpoints > MAXEDGES)
+//            Error("face->numpoints > MAXEDGES (%d), source face on line %d",
+//                  MAXEDGES, mapface->linenum);
+//        
+//        for (j = 0; j < w->numpoints; j++) {
+//            for (k = 0; k < 3; k++) {
+//                point[k] = w->points[j][k] - rotate_offset[k];
+//                r = Q_rint(point[k]);
+//                if (fabs(point[k] - r) < ZERO_EPSILON)
+//                    f->w.points[j][k] = r;
+//                else
+//                    f->w.points[j][k] = point[k];
+//                
+//                if (f->w.points[j][k] < hullbrush->mins[k])
+//                    hullbrush->mins[k] = f->w.points[j][k];
+//                if (f->w.points[j][k] > hullbrush->maxs[k])
+//                    hullbrush->maxs[k] = f->w.points[j][k];
+//                if (f->w.points[j][k] < min)
+//                    min = f->w.points[j][k];
+//                if (f->w.points[j][k] > max)
+//                    max = f->w.points[j][k];
+//            }
+//        }
+//        
+//        VectorCopy(mapface->plane.normal, plane.normal);
+//        VectorScale(mapface->plane.normal, mapface->plane.dist, point);
+//        VectorSubtract(point, rotate_offset, point);
+//        plane.dist = DotProduct(plane.normal, point);
+//        
+//        FreeMem(w, WINDING, 1);
+//        
+//        f->texinfo = hullnum ? 0 : mapface->texinfo;
+//        f->planenum = FindPlane(&plane, &f->planeside);
+//        f->next = facelist;
+//        facelist = f;
+//        CheckFace(f);
+//        UpdateFaceSphere(f);
+//    }
+//    
+//    // Rotatable objects must have a bounding box big enough to
+//    // account for all its rotations
+//    if (rotate_offset[0] || rotate_offset[1] || rotate_offset[2]) {
+//        vec_t delta;
+//        
+//        delta = fabs(max);
+//        if (fabs(min) > delta)
+//            delta = fabs(min);
+//        
+//        for (k = 0; k < 3; k++) {
+//            hullbrush->mins[k] = -delta;
+//            hullbrush->maxs[k] = delta;
+//        }
+//    }
+//    
+//    return facelist;
+//}
+
+static void
+ExportObjMap_r(const node_with_parent_t *np)
+{
+    node_t *node;
+    
+    node = np->node;
+    if (node->planenum != PLANENUM_LEAF) {
+        node_with_parent_t temp;
+        
+        temp.parent = np;
+        temp.side = 0;
+        temp.node = node->children[0];
+        ExportObjMap_r(&temp);
+        
+        temp.side = 1;
+        temp.node = node->children[1];
+        ExportObjMap_r(&temp);
+    } else {
+        /* now we have a linked list of planes that constrain the leaf. */
+        if (node->contents == CONTENTS_SOLID) {
+            ExportObjMap_leaf(np);
+        }
+    }
+}
+
+void ExportObjMap(node_t *headnode)
+{
+    node_with_parent_t root;
+    root.parent = NULL;
+    root.node = headnode;
+    ExportObjMap_r(&root);
+}
+
 //===========================================================================
 
 static hashvert_t *hvert_p;

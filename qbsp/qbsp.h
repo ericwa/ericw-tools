@@ -99,6 +99,7 @@
 
 // Special contents flags for the compiler only
 #define CFLAGS_DETAIL	(1U << 0)
+#define CFLAGS_NOCLIP      (1U << 1)
 
 // Texture flags
 #define	TEX_SPECIAL (1U << 0)	/* sky or liquid (no lightmap or subdivision */
@@ -532,6 +533,7 @@ extern mapentity_t *pWorldEnt;
 
 void LoadMapFile(void);
 
+int FindTexinfo(texinfo_t *texinfo);
 int FindMiptex(const char *name);
 int FindTexinfo(texinfo_t *texinfo);
 
@@ -547,6 +549,9 @@ void FixRotateOrigin(mapentity_t *entity);
 /* Create BSP brushes from map brushes in src and save into dst */
 void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src,
 		      const int hullnum);
+
+void
+Brush_LoadObj(mapentity_t *dst, const mapentity_t *src, const int hullnum, bool bmodel);
 
 surface_t *CSGFaces(const mapentity_t *entity);
 int PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);

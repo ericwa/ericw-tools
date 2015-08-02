@@ -28,12 +28,15 @@ static void WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump);
 static int WAD_LoadLump(const wad_t *wad, const char *name, byte *dest);
 static void WADList_AddAnimationFrames(const wad_t *wadlist);
 
+static texture_t *textures;
+
 static bool
 WAD_LoadInfo(wad_t *wad)
 {
     wadinfo_t *hdr = &wad->header;
     int i, len, lumpinfosize, disksize;
     dmiptex_t miptex;
+    texture_t *tex;
 
     len = fread(hdr, 1, sizeof(wadinfo_t), wad->file);
     if (len != sizeof(wadinfo_t))
@@ -53,6 +56,24 @@ WAD_LoadInfo(wad_t *wad)
     len = fread(wad->lumps, 1, lumpinfosize, wad->file);
     if (len != lumpinfosize)
 	return false;
+
+    /* Get the dimensions and make a texture_t */
+    for (i = 0; i < wad->header.numlumps; i++) {
+	fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
+	len = fread(&miptex, 1, sizeof(miptex), wad->file);
+	if (len == sizeof(miptex))
+	{
+	    tex = AllocMem(OTHER, sizeof(texture_t), true);
+	    tex->next = textures;
+	    textures = tex;
+	    memcpy(tex->name, miptex.name, 16);
+	    tex->name[15] = '\0';
+	    tex->width = miptex.width;
+	    tex->height = miptex.height;
+
+	    //printf("Created texture_t %s %d %d\n", tex->name, tex->width, tex->height);
+	}
+    }
 
     if (wad->version == 2)
 	return true;
@@ -259,4 +280,15 @@ WADList_AddAnimationFrames(const wad_t *wadlist)
     }
 
     Message(msgStat, "%8d texture frames added", map.nummiptex - oldcount);
+}
+
+const texture_t *WADList_GetTexture(const char *name)
+{
+    texture_t *tex;
+    for (tex = textures; tex; tex = tex->next)
+    {
+        if (!strcmp(name, tex->name))
+            return tex;
+    }
+    return NULL;
 }

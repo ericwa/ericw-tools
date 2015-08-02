@@ -31,6 +31,14 @@ static const char *IntroString =
 // command line flags
 options_t options;
 
+bool
+IsObjBModelEntity(const mapentity_t *entity);
+
+bool
+IsObjDetailEntity(const mapentity_t *entity);
+
+void ExportObjMap(node_t *headnode);
+
 /*
 ===============
 ProcessEntity
@@ -44,10 +52,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     node_t *nodes;
     const char *classname;
 
-    /* No map brushes means non-bmodel entity */
-    if (!entity->nummapbrushes)
-	return;
-
     /*
      * func_group and func_detail entities get their brushes added to the
      * worldspawn
@@ -57,6 +61,16 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	return;
     if (!strcasecmp(classname, "func_detail"))
 	return;
+
+    bool isObjBModel = IsObjBModelEntity(entity);
+
+    /* No map brushes means non-bmodel entity */
+    if (!entity->nummapbrushes && !isObjBModel)
+	return;
+
+    /* OBJs only exist in hull 0 for now */
+//    if (isObjBModel && hullnum != 0)
+//    	return;
 
     if (entity != pWorldEnt) {
 	char mod[20];
@@ -85,11 +99,22 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
-    Message(msgProgress, "Brush_LoadEntity");
-    Brush_LoadEntity(entity, entity, hullnum);
-    if (!entity->brushes && hullnum) {
-	PrintEntity(entity);
-	Error("Entity with no valid brushes");
+    
+
+    if (isObjBModel)
+    {
+    	Message(msgProgress, "Brush_LoadObj (BModel case)");
+    	Brush_LoadObj(entity, entity, hullnum, true);
+    }
+    else
+    {
+    	Message(msgProgress, "Brush_LoadEntity");
+	    Brush_LoadEntity(entity, entity, hullnum);
+
+	    if (!entity->brushes && hullnum) {
+		PrintEntity(entity);
+		Error("Entity with no valid brushes");
+	    }
     }
 
     /*
@@ -119,6 +144,15 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 		detailcount += entity->numbrushes - detailstart;
 	    }
 	}
+
+	/* Add .OBJ entities */
+	source = map.entities + 1;
+	for (i = 1; i < map.numentities; i++, source++) {
+	    if (IsObjDetailEntity(source)) {
+		Brush_LoadObj(entity, source, hullnum, false);
+	    }
+	}
+
 	Message(msgStat, "%8d brushes", entity->numbrushes - detailcount);
 	if (detailcount)
 	    Message(msgStat, "%8d detail", detailcount);
@@ -165,6 +199,12 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	else
 	    nodes = SolidBSP(entity, surfs, entity == pWorldEnt);
 
+        if (isObjBModel)
+        {
+            printf("ExportObjToMap\n");
+            ExportObjMap(nodes);
+        }
+        
 	// build all the portals in the bsp tree
 	// some portals are solid polygons, and some are paths to other leafs
 	if (entity == pWorldEnt && !options.fNofill) {
@@ -303,7 +343,7 @@ ProcessFile(void)
     const char *wadstring;
     char *defaultwad;
     wad_t *wadlist;
-
+    
     // load brushes and entities
     LoadMapFile();
     if (options.fOnlyents) {
