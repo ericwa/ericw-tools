@@ -109,8 +109,7 @@ CanonicalVector(const vec3_t p1, const vec3_t p2, vec3_t vec)
     } else
 	vec[2] = 0;
 
-    Error("Degenerate edge of length %f at (%.3f %.3f %.3f)",
-	  length, p1[0], p1[1], p1[2]);
+    Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
 }
 
 static wedge_t *
