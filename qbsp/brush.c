@@ -1639,6 +1639,10 @@ CreateMapClipBrushForObjFace(face_t *face)
     result = AllocMem(MAPBRUSH, 1, true);
     result->numfaces = 4; /* always create a tetrahedron */
     result->faces = AllocMem(MAPFACE, result->numfaces, true);
+
+    if (face->w.numpoints != 3) {
+	Error("CreateMapClipBrushForObjFace: currentlly only triangulated .obj files supported.");
+    }
     
     // Grab the plane info
     vec3_t normal;
