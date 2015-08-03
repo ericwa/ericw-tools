@@ -82,6 +82,12 @@ InterruptThreadProgress__(void)
 int numthreads = 1;
 CRITICAL_SECTION crit;
 
+void
+LowerProcessPriority(void)
+{
+    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+}
+
 int
 GetDefaultThreads(void)
 {
@@ -169,6 +175,12 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 
 int numthreads = 1;
 pthread_mutex_t *my_mutex;
+
+void
+LowerProcessPriority(void)
+{
+    /* not implemented for now */
+}
 
 int
 GetDefaultThreads(void)

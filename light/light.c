@@ -270,6 +270,7 @@ main(int argc, const char **argv)
     init_log("light.log");
     logprint("---- light / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
 
+    LowerProcessPriority();
     numthreads = GetDefaultThreads();
 
     for (i = 1; i < argc; i++) {

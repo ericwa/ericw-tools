@@ -1182,6 +1182,7 @@ main(int argc, char **argv)
     init_log("vis.log");
     logprint("---- vis / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
 
+    LowerProcessPriority();
     numthreads = GetDefaultThreads();
 
     for (i = 1; i < argc; i++) {

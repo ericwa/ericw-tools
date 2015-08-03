@@ -5,6 +5,7 @@
 
 extern int numthreads;
 
+void LowerProcessPriority(void);
 int GetDefaultThreads(void);
 int GetMaxThreads(void); /* returns 0 if no limit specified */
 int GetThreadWork(void);
