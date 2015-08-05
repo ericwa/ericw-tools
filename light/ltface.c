@@ -1262,7 +1262,6 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 	    for (s = 0; s <= lightsurf->texsize[0]; s++) {
 
 		/* Take the average of any oversampling */
-		light = 0;
 		VectorCopy(vec3_origin, color);
 		VectorCopy(vec3_origin, direction);
 		for (i = 0; i < oversample; i++) {
@@ -1272,24 +1271,13 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 
 			sample = lightmaps[mapnum].samples + (row * width) + col;
 			
-			light += sample->light;
 			VectorAdd(color, sample->color, color);
 			VectorAdd(direction, sample->direction, direction);
 		    }
 		}
-		light /= oversample * oversample;
 		VectorScale(color, 1.0 / oversample / oversample, color);
 
 		/* Scale and clamp any out-of-range samples */
-		light *= rangescale;
-		if (light > 0)
-		    light = pow( light / 255.0f, 1.0 / lightmapgamma ) * 255.0f;
-		if (light > 255)
-		    light = 255;
-		else if (light < 0)
-		    light = 0;
-		*out++ = light;
-
 		maxcolor = 0;
 		VectorScale(color, rangescale, color);
 		for (i = 0; i < 3; i++)
@@ -1303,6 +1291,16 @@ WriteLightmaps(bsp2_dface_t *face, const lightsurf_t *lightsurf,
 		*lit++ = color[0];
 		*lit++ = color[1];
 		*lit++ = color[2];
+		
+		/* Average the color to get the value to write to the
+		   .bsp lightmap. this avoids issues with some engines
+		   that require the lit and internal lightmap to have the same
+		   intensity. (MarkV, some QW engines)
+		 */
+		light = (color[0] + color[1] + color[2]) / 3.0;
+		if (light < 0) light = 0;
+		if (light > 255) light = 255;
+		*out++ = light;
 
 		if (lux)
 		{
