@@ -1061,7 +1061,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const 
     }
 
     offset = atof(ValueForKey(surflight_template, "_surface_offset"));
-    if (offset <= 0)
+    if (offset == 0)
         offset = 2.0;
     
     VectorMA(midpoint, offset, normal, midpoint);
