@@ -371,7 +371,7 @@ PrintOptions(void)
 	   "   -splitspecial   Doesn't combine sky and water faces into one large face\n"
 	   "   -notranswater   Computes portal information for opaque water\n"
 	   "   -transsky       Computes portal information for transparent sky\n"
-	   "   -oldaxis        Uses original QBSP texture alignment algorithm\n"
+	   "   -nooldaxis      Uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older\n"
 	   "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
 	   "   -bspleak        Creates a .POR file, used in the BSP editor for leaky maps\n"
 	   "   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n"
