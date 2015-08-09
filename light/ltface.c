@@ -264,6 +264,9 @@ FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
     VectorScale(poly_centroid, 1.0 / poly_area, out);
 }
 
+static void
+PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
+
 /*
  * ================
  * CreateFaceTransform
@@ -292,10 +295,9 @@ CreateFaceTransform(const bsp2_dface_t *face, const bsp2_t *bsp,
 
     /* Decompose the matrix. If we can't, texture axes are invalid. */
     if (!PMatrix3_LU_Decompose(transform)) {
-	const vec_t *p = bsp->dvertexes[bsp->dedges[face->firstedge].v[0]].point;
-	Error("Bad texture axes on face:\n"
-	      "   face point at (%s)\n"
-	      "   face area = %5.3f\n", VecStr(p), FaceArea(face, bsp));
+	logprint("Bad texture axes on face:\n");
+	PrintFaceInfo(face, bsp);
+	Error("");
     }
 }
 
@@ -339,7 +341,6 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 	                            tex->vecs[i][3];
 }
 
-#if 0
 /* Debug helper - move elsewhere? */
 static void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
@@ -366,7 +367,6 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 		 point[0], point[1], point[2], edge);
     }
 }
-#endif
 
 /*
  * ================
