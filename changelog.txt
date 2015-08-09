@@ -1,3 +1,17 @@
+2015-08-09 TyrUtils-ericw 0.15.2 release
+
+* qbsp: make "mixed face contents" and "degenerate edge" non-fatal, from txqbsp-xt
+* qbsp: make "-oldaxis" the default. new "-nooldaxis" flag to get the previous behaviour.
+* light: add "-surflight_subdivide" flag to control amount of surface lights created
+* light, vis: use below normal process priority on Windows
+* light: allow negative surface light offset
+* light: ensure light values in the bsp equal the average of the lit file color components. 
+  This fixes "dark" colors (where all components are < 1), on some engines 
+  (such as MarkV), which require the bsp lightmap brightness to match the .lit brightness
+  as a cheat prevention mechanism.
+* light: fix lighting of hipnotic rotating entities.
+* light: fix crash in "Bad texture axes on face:"
+
 2015-07-09 TyrUtils-ericw 0.15.1 release
 
 * light: .lux file support from Spike, for deluxemapping
