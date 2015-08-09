@@ -376,7 +376,7 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
  */
 __attribute__((noinline))
 static void
-CalcFaceExtents(const bsp2_dface_t *face, const vec3_t offset,
+CalcFaceExtents(const bsp2_dface_t *face,
 		const bsp2_t *bsp, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
@@ -394,7 +394,7 @@ CalcFaceExtents(const bsp2_dface_t *face, const vec3_t offset,
 	vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
 	dvertex = &bsp->dvertexes[vert];
 
-	VectorAdd(dvertex->point, offset, worldpoint);
+	VectorCopy(dvertex->point, worldpoint);
 	WorldToTexCoord(worldpoint, tex, texcoord);
 	for (j = 0; j < 2; j++) {
 	    if (texcoord[j] < mins[j])
@@ -405,7 +405,6 @@ CalcFaceExtents(const bsp2_dface_t *face, const vec3_t offset,
     }
 
     FaceCentroid(face, bsp, worldpoint);
-    VectorAdd(worldpoint, offset, worldpoint);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
 
     for (i = 0; i < 2; i++) {
@@ -459,7 +458,7 @@ WarnBadMidpoint(const vec3_t point)
  */
 __attribute__((noinline))
 static void
-CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
+CalcPoints(const dmodel_t *model, const vec3_t offset, const texorg_t *texorg, lightsurf_t *surf)
 {
     int i;
     int s, t;
@@ -473,6 +472,7 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
      * the surface to help avoid edge cases just inside walls
      */
     TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], texorg, midpoint);
+    VectorAdd(midpoint, offset, midpoint);
 
     width  = (surf->texsize[0] + 1) * oversample;
     height = (surf->texsize[1] + 1) * oversample;
@@ -488,6 +488,7 @@ CalcPoints(const dmodel_t *model, const texorg_t *texorg, lightsurf_t *surf)
 	    ut = startt + t * step;
 
 	    TexCoordToWorld(us, ut, texorg, point);
+	    VectorAdd(point, offset, point);
 	    for (i = 0; i < 6; i++) {
 		const int flags = TRACE_HIT_SOLID;
 		tracepoint_t hit;
@@ -525,13 +526,10 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     memset(lightsurf, 0, sizeof(*lightsurf));
     lightsurf->modelinfo = modelinfo;
 
-    /* Set up the plane, including model offset */
+    /* Set up the plane, not including model offset */
     plane = &lightsurf->plane;
     VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
     plane->dist = bsp->dplanes[face->planenum].dist;
-    VectorScale(plane->normal, plane->dist, planepoint);
-    VectorAdd(planepoint, modelinfo->offset, planepoint);
-    plane->dist = DotProduct(plane->normal, planepoint);
     if (face->side) {
 	VectorSubtract(vec3_origin, plane->normal, plane->normal);
 	plane->dist = -plane->dist;
@@ -549,8 +547,14 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     VectorNormalize(lightsurf->tnormal);
 
     /* Set up the surface points */
-    CalcFaceExtents(face, modelinfo->offset, bsp, lightsurf);
-    CalcPoints(modelinfo->model, &texorg, lightsurf);
+    CalcFaceExtents(face, bsp, lightsurf);
+    CalcPoints(modelinfo->model, modelinfo->offset, &texorg, lightsurf);
+    
+    /* Correct the plane for the model offset (must be done last, 
+       calculation of face extents / points needs the uncorrected plane) */
+    VectorScale(plane->normal, plane->dist, planepoint);
+    VectorAdd(planepoint, modelinfo->offset, planepoint);
+    plane->dist = DotProduct(plane->normal, planepoint);
 }
 
 static void
