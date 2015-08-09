@@ -452,6 +452,7 @@ ParseOptions(char *szOptions)
     options.BSPVersion = BSPVERSION;
     options.fTranswater = true;
     options.fixRotateObjTexture = true;
+    options.fOldaxis = true;
 
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
@@ -486,7 +487,9 @@ ParseOptions(char *szOptions)
 	    else if (!strcasecmp(szTok, "transsky"))
 		options.fTranssky = true;
 	    else if (!strcasecmp(szTok, "oldaxis"))
-		options.fOldaxis = true;
+		logprint("-oldaxis is now the default and the flag is ignored.\nUse -nooldaxis to get the alternate behaviour.\n");
+	    else if (!strcasecmp(szTok, "nooldaxis"))
+		options.fOldaxis = false;
 	    else if (!strcasecmp(szTok, "forcegoodtree"))
 		options.forceGoodTree = true;
 	    else if (!strcasecmp(szTok, "bspleak"))

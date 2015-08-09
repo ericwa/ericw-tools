@@ -37,8 +37,10 @@ Computes portal information for transparent water (default)
 Computes portal information for opaque water
 .IP "\fB\-transsky\fP"
 Computes portal information for transparent sky
-.IP "\fB\-oldaxis\fP"
-Uses original qbsp texture alignment algorithm
+.IP "\fB\-nooldaxis\fP"
+Use alternate texture alignment algorithm. The default is to use the original
+QBSP texture alignment algorithm, which required the -oldaxis switch in
+tyrutils-ericw v0.15.1 and earlier.
 .IP "\fB\-forcegoodtree\fP (experimental)"
 Force use of expensive processing for SolidBSP stage.  Often results
 in a more optimal BSP file in terms of file size, at the expense of
@@ -64,7 +66,7 @@ Use different texture subdivision (default 240)
 Search this directory for wad files (default is cwd)
 .IP "\fB\-oldrottex\fP"
 Use old method of texturing rotate_ brushes where the mapper aligns
-textures for the object at (0 0 0). 
+textures for the object at (0 0 0).
 
 .SH "SPECIAL TEXTURE NAMES"
 .PP
