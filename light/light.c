@@ -357,7 +357,7 @@ main(int argc, const char **argv)
 	    logprint( "Fence texture tracing enabled on command line\n" );
 	} else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
 	    surflight_subdivide = atof( argv[ ++i ] );
-	    surflight_subdivide = qmin(qmax(surflight_subdivide, 128.0f), 2048.0f);
+	    surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
 	    logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
@@ -370,7 +370,7 @@ main(int argc, const char **argv)
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
-	       "             [-soft [n]] [-fence] [-gamma n] bspfile\n");
+	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] bspfile\n");
 	exit(1);
     }
 

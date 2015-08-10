@@ -77,6 +77,9 @@ transparent pixels to block light.
 Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is darker. See "_gamma" worldspawn key.
 .IP "\fB\-lux\fP"
 Generate a .lux file storing average incoming light directions for surfaces. Usable by FTEQW with "r_deluxemapping 1"
+.IP "\fB\-surflight_subdivide [n]\fP"
+Configure spacing of all surface lights. Default 128 units. Minimum setting: 64 / max 2048.
+In the future I'd like to make this configurable per-surface-light.
 
 .SH "MODEL ENTITY KEYS"
 
