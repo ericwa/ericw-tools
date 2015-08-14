@@ -229,7 +229,7 @@ CheckEntityFields(entity_t *entity)
     if (entity->deviance > 0 && entity->num_samples == 0) {
         entity->num_samples = 16;
     }
-    if (entity->deviance < 0.0f || entity->num_samples < 1) {
+    if (entity->deviance <= 0.0f || entity->num_samples <= 1) {
         entity->deviance = 0.0f;
         entity->num_samples = 1;
     }
