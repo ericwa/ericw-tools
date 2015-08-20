@@ -66,6 +66,9 @@ EXT=.exe
 DPTHREAD=
 LPTHREAD=
 SNAPSHOT_TARGET = $(DIST_DIR)/tyrutils-$(TYR_VERSION_NUM)-win32.zip
+# request standard-compilant snprintf in case we are using mingw-w64
+# (see http://sourceforge.net/p/mingw-w64/wiki2/printf%20and%20scanf%20family/)
+CFLAGS += -D__USE_MINGW_ANSI_STDIO=1
 ifneq ($(HOST_OS),WIN32)
 TARGET ?= $(MINGW32_CROSS_GUESS)
 CC = $(TARGET)-gcc
@@ -76,6 +79,7 @@ ifeq ($(TARGET_OS),WIN64)
 EXT=.exe
 DPTHREAD=
 LPTHREAD=
+CFLAGS += -D__USE_MINGW_ANSI_STDIO=1
 ifneq ($(HOST_OS),WIN64)
 TARGET ?= $(MINGW64_CROSS_GUESS)
 CC = $(TARGET)-gcc
