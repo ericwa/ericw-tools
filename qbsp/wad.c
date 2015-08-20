@@ -87,6 +87,8 @@ WADList_Init(const char *wadstring)
 
     if (!wadstring || !wadstring[0])
 	return NULL;
+    
+    printf("full wad string is: '%s'\n", wadstring);
 
     wadlist = NULL;
     len = strlen(wadstring);
@@ -104,7 +106,9 @@ WADList_Init(const char *wadstring)
 	    fpath = AllocMem(OTHER, pathlen + 1, true);
 	    snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
 	}
+	
 	wad.file = fopen(fpath, "rb");
+	printf("attempting to open '%s' got %p\n", fpath, wad.file);
 	if (wad.file) {
 	    if (options.fVerbose)
 		Message(msgLiteral, "Opened WAD: %s\n", fpath);
