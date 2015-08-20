@@ -146,6 +146,7 @@ extern byte *lux_filebase;
 extern int oversample;
 extern qboolean write_litfile;
 extern qboolean write_luxfile;
+extern qboolean onlyents;
 
 void SetupDirt();
 

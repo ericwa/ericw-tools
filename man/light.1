@@ -80,6 +80,10 @@ Generate a .lux file storing average incoming light directions for surfaces. Usa
 .IP "\fB\-surflight_subdivide [n]\fP"
 Configure spacing of all surface lights. Default 128 units. Minimum setting: 64 / max 2048.
 In the future I'd like to make this configurable per-surface-light.
+.IP "\fB\-onlyents\fP"
+Updates the entities lump in the bsp. You should run this after running qbsp with -onlyents,
+if your map uses any switchable lights. All this does is assign style numbers to each
+switchable light.
 
 .SH "MODEL ENTITY KEYS"
 
@@ -111,7 +115,7 @@ an angle specified by the "_sun_mangle" key.  Default 0.
 
 .IP "\fB""_anglescale"" ""n""\fP | \fB""_anglesense"" ""n""\fP"
 Set the scaling of sunlight brightness due to the angle of incidence with a
-surface (more detailed explanation in the "_anglescale" light entity key 
+surface (more detailed explanation in the "_anglescale" light entity key
 below).
 
 .IP "\fB""_sunlight_mangle"" ""x y z""\fP | \fB""_sun_mangle"" ""x y z""\fP"
@@ -200,7 +204,7 @@ blocks the light from another model surface. This can be a better compromise
 for moving models than full shadowing.  Default 0.
 
 .IP "\fB""_dirt"" ""n""\fP"
-For brush models, -1 prevents dirtmapping on the brush model. Useful it the 
+For brush models, -1 prevents dirtmapping on the brush model. Useful it the
 bmodel touches or sticks into the world, and you want to those ares from
 turning black. Default 0.
 
@@ -300,7 +304,7 @@ Number of lights to use for "_deviance". Default 16 (only used if
 Makes surfaces with the given texture name emit light, by using this light as a
 template which is copied across those surfaces. Lights are spaced
 about 128 units (though possibly closer due to bsp splitting) apart and positioned 2 units above
-the surfaces. 
+the surfaces.
 
 .IP "\fB""_surface_offset"" ""n""\fP"
 Controls the offset lights are placed above surfaces for "_surface". Default 2.

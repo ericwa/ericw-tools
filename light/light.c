@@ -74,6 +74,7 @@ const dmodel_t *const *tracelist;
 int oversample = 1;
 qboolean write_litfile = false;
 qboolean write_luxfile = false;
+qboolean onlyents = false;
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
@@ -359,6 +360,9 @@ main(int argc, const char **argv)
 	    surflight_subdivide = atof( argv[ ++i ] );
 	    surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
 	    logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
+	} else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
+	    onlyents = true;
+	    logprint( "Onlyents mode enabled\n" );
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -370,7 +374,7 @@ main(int argc, const char **argv)
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
-	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] bspfile\n");
+	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] bspfile\n");
 	exit(1);
     }
 
@@ -407,21 +411,23 @@ main(int argc, const char **argv)
 
     LoadEntities(bsp);
 
-    if (dirty)
-	SetupDirt();
+    if (!onlyents) {
+	if (dirty)
+	    SetupDirt();
 
-    MakeTnodes(bsp);
-    modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
-    FindModelInfo(bsp);
-    LightWorld(bsp);
-    free(modelinfo);
+	MakeTnodes(bsp);
+	modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
+	FindModelInfo(bsp);
+	LightWorld(bsp);
+	free(modelinfo);
+
+	if (write_litfile)
+	    WriteLitFile(bsp, source, LIT_VERSION);
+	if (write_luxfile)
+	    WriteLuxFile(bsp, source, LIT_VERSION);	
+    }
 
     WriteEntitiesToString(bsp);
-
-    if (write_litfile)
-	WriteLitFile(bsp, source, LIT_VERSION);
-    if (write_luxfile)
-	WriteLuxFile(bsp, source, LIT_VERSION);
 
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
