@@ -43,6 +43,7 @@ int dirtMode = 0;
 float dirtDepth = 128.0f;
 float dirtScale = 1.0f;
 float dirtGain = 1.0f;
+float dirtAngle = 88.0f;
 
 qboolean globalDirt = false;
 qboolean minlightDirt = false;
@@ -52,6 +53,7 @@ qboolean dirtModeSetOnCmdline = false;
 qboolean dirtDepthSetOnCmdline = false;
 qboolean dirtScaleSetOnCmdline = false;
 qboolean dirtGainSetOnCmdline = false;
+qboolean dirtAngleSetOnCmdline = false;
 
 qboolean testFenceTextures = false;
 
@@ -353,6 +355,10 @@ main(int argc, const char **argv)
 		dirtGain = 1.0f;
 	    }
 	    logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
+	} else if ( !strcmp( argv[ i ], "-dirtangle" ) ) {
+	    dirtAngleSetOnCmdline = true;
+	    dirtAngle = atof( argv[ ++i ] );
+	    logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle );
 	} else if ( !strcmp( argv[ i ], "-fence" ) ) {
 	    testFenceTextures = true;
 	    logprint( "Fence texture tracing enabled on command line\n" );
@@ -373,7 +379,7 @@ main(int argc, const char **argv)
 	printf("usage: light [-threads num] [-extra|-extra4]\n"
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
-	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n]\n"
+	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
 	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] bspfile\n");
 	exit(1);
     }

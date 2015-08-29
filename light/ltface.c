@@ -1027,7 +1027,6 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
 
-#define DIRT_CONE_ANGLE             88  /* degrees */
 #define DIRT_NUM_ANGLE_STEPS        16
 #define DIRT_NUM_ELEVATION_STEPS    3
 #define DIRT_NUM_VECTORS            ( DIRT_NUM_ANGLE_STEPS * DIRT_NUM_ELEVATION_STEPS )
@@ -1049,9 +1048,17 @@ void SetupDirt( void ) {
     /* note it */
     logprint("--- SetupDirt ---\n" );
 
+    /* clamp dirtAngle */
+    if ( dirtAngle <= 1.0f ) {
+	dirtAngle = 1.0f;
+    }
+    if ( dirtAngle >= 90.0f) {
+	dirtAngle = 90.0f;
+    }
+    
     /* calculate angular steps */
     angleStep = DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
-    elevationStep = DEG2RAD( DIRT_CONE_ANGLE / DIRT_NUM_ELEVATION_STEPS );
+    elevationStep = DEG2RAD( dirtAngle / DIRT_NUM_ELEVATION_STEPS );
 
     /* iterate angle */
     angle = 0.0f;
@@ -1159,7 +1166,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
 	for ( i = 0; i < numDirtVectors; i++ ) {
 	    /* get random vector */
 	    angle = Random() * DEG2RAD( 360.0f );
-	    elevation = Random() * DEG2RAD( DIRT_CONE_ANGLE );
+	    elevation = Random() * DEG2RAD( dirtAngle );
 	    temp[ 0 ] = cos( angle ) * sin( elevation );
 	    temp[ 1 ] = sin( angle ) * sin( elevation );
 	    temp[ 2 ] = cos( elevation );

@@ -65,7 +65,7 @@ key. See "_dirt" for more details.
 .IP "\fB\-dirtdebug\fP"
 Implies "-dirt", and renders just the dirtmap against a fullbright background,
 ignoring all lights in the map. Useful for previewing and turning the dirt settings.
-.IP "\fB\-dirtmode n\fP | \fB\-dirtdepth n\fP | \fB\-dirtscale n\fP | \fB\-dirtgain n\fP"
+.IP "\fB\-dirtmode n\fP | \fB\-dirtdepth n\fP | \fB\-dirtscale n\fP | \fB\-dirtgain n\fP | \fB\-dirtangle n\fP"
 Fine-tune the dirtmapping, overriding the corresponding worldspawn keys. See the
 worldspawn keys below.
 .IP "\fB\-fence\fP"
@@ -173,6 +173,10 @@ the dirt fainter, 2.0 would create much darker shadows.
 .IP "\fB""_dirtgain"" ""n""\fP"
 Exponent used in dirt calculation, default 1. Lower values (e.g. 0.5) make the
 shadows darker and stretch further away from corners.
+
+.IP "\fB""_dirtangle"" ""n""\fP"
+Cone angle in degrees for occlusion testing, default 88. Allowed range 1-90.
+Lower values can avoid unwanted dirt on arches, pipe interiors, etc. 
 
 .IP "\fB""_gamma"" ""n""\fP"
 Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is darker.

@@ -71,6 +71,7 @@ typedef struct entity_s {
     /* worldspawn only */
     vec_t dirtdepth;
     int dirtmode;
+    float dirtangle;
     int minlight_dirt;
     vec_t dist;
     vec_t range;

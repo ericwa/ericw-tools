@@ -124,6 +124,7 @@ extern int dirtMode;
 extern float dirtDepth;
 extern float dirtScale;
 extern float dirtGain;
+extern float dirtAngle;
 
 extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
 extern qboolean minlightDirt;   // apply dirt to minlight?
@@ -132,6 +133,7 @@ extern qboolean dirtModeSetOnCmdline;
 extern qboolean dirtDepthSetOnCmdline;
 extern qboolean dirtScaleSetOnCmdline;
 extern qboolean dirtGainSetOnCmdline;
+extern qboolean dirtAngleSetOnCmdline;
 
 /*
  * Return space for the lightmap and colourmap at the same time so it can

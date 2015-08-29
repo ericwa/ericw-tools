@@ -748,6 +748,8 @@ LoadEntities(const bsp2_t *bsp)
 		entity->dirtdepth = atof(com_token);
 	    else if (!strcmp(key, "_dirtmode"))
 		entity->dirtmode = atoi(com_token);
+	    else if (!strcmp(key, "_dirtangle"))
+		entity->dirtangle = atoi(com_token);
 	    else if (!strcmp(key, "_sunlight_dirt"))
 		sunlight_dirt = atoi(com_token);
 	    else if (!strcmp(key, "_sunlight2_dirt"))
@@ -848,6 +850,11 @@ LoadEntities(const bsp2_t *bsp)
 		dirtGain = entity->dirtgain;
 		logprint("Using dirtgain value %f from worldspawn.\n", 
 			dirtGain);
+	    }
+	    if (entity->dirtangle && !dirtAngleSetOnCmdline) {
+		dirtAngle = entity->dirtangle;
+		logprint("Using dirtangle value %f from worldspawn.\n",
+			 dirtAngle);
 	    }
 	    if (entity->dirt == 1) {
 		globalDirt = true;
