@@ -23,6 +23,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #ifdef WIN32
 #include <direct.h>
@@ -184,11 +185,11 @@ copystring(const char *s)
 double
 I_FloatTime(void)
 {
-    time_t t;
-
-    time(&t);
-
-    return t;
+    struct timeval tv;
+    
+    gettimeofday(&tv, NULL);
+    
+    return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
 }
 
 void
