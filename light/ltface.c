@@ -1109,6 +1109,8 @@ DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hi
 
     /* Check against the list of global shadow casters */
     for (model = tracelist; *model; model++) {
+	if (*model == self)
+	    continue;
 	result = TraceLine(*model, traceflags, start, stop, &hitpoint);
 	if (result == -TRACE_HIT_SOLID) {
 	    VectorCopy(start, hitpoint_out);

@@ -461,6 +461,8 @@ TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 
     /* Check against the list of global shadow casters */
     for (model = tracelist; *model; model++) {
+	if (*model == self)
+	    continue;
 	result = TraceLine(*model, traceflags, start, stop, NULL);
 	if (result != TRACE_HIT_NONE)
 	    break;
@@ -491,6 +493,8 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
     /* If good, check it isn't shadowed by another model */
     traceflags = TRACE_HIT_SOLID;
     for (model = tracelist + 1; *model; model++) {
+	if (*model == self)
+	    continue;
 	result = TraceLine(*model, traceflags, start, hit.point, NULL);
 	if (result != TRACE_HIT_NONE)
 	    return false;
