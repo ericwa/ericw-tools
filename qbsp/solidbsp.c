@@ -430,7 +430,16 @@ SelectPartition(surface_t *surfaces)
 		maxs[i] = surf->maxs[i];
 	}
 
-    if (usemidsplit)		// do fast way for clipping hull
+    bool largenode = false;
+    if (options.maxNodeSize >= 64) {
+	const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
+
+	largenode = (maxs[0] - mins[0]) > maxnodesize
+	    || (maxs[1] - mins[1]) > maxnodesize
+	    || (maxs[2] - mins[2]) > maxnodesize;
+    }
+
+    if (usemidsplit || largenode) // do fast way for clipping hull
 	return ChooseMidPlaneFromList(surfaces, mins, maxs);
 
     // do slow way to save poly splits for drawing hull

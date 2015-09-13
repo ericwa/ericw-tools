@@ -451,6 +451,7 @@ typedef struct options_s {
     int BSPVersion;
     int dxSubdivide;
     int dxLeakDist;
+	int maxNodeSize;
     char szMapName[512];
     char szBSPName[512];
     char wadPath[512];

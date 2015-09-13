@@ -382,6 +382,7 @@ PrintOptions(void)
 	   "   -subdivide [n]  Use different texture subdivision (default 240)\n"
 	   "   -wadpath <dir>  Search this directory for wad files\n"
 	   "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
+	   "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
 	   "   sourcefile      .MAP file to process\n"
 	   "   destfile        .BSP file to output\n");
 
@@ -453,6 +454,7 @@ ParseOptions(char *szOptions)
     options.fTranswater = true;
     options.fixRotateObjTexture = true;
     options.fOldaxis = true;
+    options.maxNodeSize = 1024;
 
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
@@ -529,7 +531,13 @@ ParseOptions(char *szOptions)
 		    options.wadPath[strlen(options.wadPath) - 1] = 0;
             } else if (!strcasecmp(szTok, "oldrottex")) {
                 options.fixRotateObjTexture = false;
-            } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
+	    } else if (!strcasecmp(szTok, "maxnodesize")) {
+		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+		if (!szTok2)
+		    Error("Invalid argument to option %s", szTok);
+		options.maxNodeSize= atoi(szTok2);
+		szTok = szTok2;
+	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
 		Error("Unknown option '%s'", szTok);
