@@ -524,6 +524,17 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
 		}
 	    }
 
+	    // ericw -- added these CalcSurfaceInfo to recalculate the surf bbox.
+	    // pretty sure their omission here was a bug.
+	    // It's tied to options.maxNodeSize because that change needs
+	    // valid bboxes to work well (txqbsp-xt calculated the node bbox from
+	    // faces in SelectPartition)
+	    if (options.maxNodeSize >= 64) {
+		// recalc bboxes and flags
+		CalcSurfaceInfo(newsurf);
+		CalcSurfaceInfo(in);
+	    }
+
 	    if (in->faces)
 		*front = in;
 	    else
