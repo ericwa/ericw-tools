@@ -199,34 +199,6 @@ TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
     return VectorLength(cross) * 0.5;
 }
 
-static vec_t
-FaceArea(const bsp2_dface_t *face, const bsp2_t *bsp)
-{
-    int i, edgenum;
-    dvertex_t *v0, *v1, *v2;
-    vec_t poly_area = 0;
-
-    edgenum = bsp->dsurfedges[face->firstedge];
-    if (edgenum >= 0)
-	v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-    else
-	v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-
-    for (i = 1; i < face->numedges - 1; i++) {
-	edgenum = bsp->dsurfedges[face->firstedge + i];
-	if (edgenum >= 0) {
-	    v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-	    v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
-	} else {
-	    v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-	    v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
-	}
-	poly_area += TriArea(v0, v1, v2);
-    }
-
-    return poly_area;
-}
-
 static void
 FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
 {
