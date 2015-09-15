@@ -1226,6 +1226,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
         return;
 
     /* Create the surface lights */
+    qboolean *face_visited = (qboolean *)calloc(bsp->numfaces, sizeof(qboolean));
     for (i=0; i<bsp->numleafs; i++) {
         const bsp2_dleaf_t *leaf = bsp->dleafs + i;
         const bsp2_dface_t *surf;
@@ -1235,8 +1236,9 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
         for (k = 0; k < leaf->nummarksurfaces; k++) {
             const texinfo_t *info;
             const miptex_t *miptex;
+	    int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
 
-            surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
+            surf = &bsp->dfaces[facenum];
             info = &bsp->texinfo[surf->texinfo];
             ofs = bsp->dtexdata.header->dataofs[info->miptex];
             miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
@@ -1245,9 +1247,18 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
             if (miptex->name[0] == '*' && underwater)
                 continue;
 
+	    /* Skip if already handled */
+	    if (face_visited[facenum])
+		continue;
+	    
+	    /* Mark as handled */
+	    face_visited[facenum] = true;
+	    
+	    /* Generate the lights */
             GL_SubdivideSurface(surf, bsp);
         }
     }
+    free(face_visited);
     
     /* Hack: clear templates light value to 0 so they don't cast light */
     for (i=0;i<num_surfacelight_templates;i++) {
