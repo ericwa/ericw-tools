@@ -24,19 +24,21 @@
       <div class="jumbotron">
 	<h1>tyrutils-ericw</h1>
 	<p>A branch of Tyrann's quake 1 tools <a href="http://disenchant.net/utils">tyrutils</a>, focused on adding lighting features</p>
-	<p>Download v0.15.1:
+	<p>Download v0.15.2:
 	  <div>
-	  <a class="btn btn-primary btn-lg" href="https://github.com/ericwa/tyrutils-ericw/releases/download/ericw-v0.15.1/tyrutils-ericw-v0.15.1-win32.zip" role="button">
+	  <a class="btn btn-primary btn-lg" href="https://github.com/ericwa/tyrutils-ericw/releases/download/ericw-v0.15.2/tyrutils-ericw-v0.15.2-win32.zip" role="button">
 	    <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
 	    win32</a>
-	  <a class="btn btn-primary btn-lg" href="https://github.com/ericwa/tyrutils-ericw/releases/download/ericw-v0.15.1/tyrutils-ericw-v0.15.1-osx.zip" role="button">
+	  <a class="btn btn-primary btn-lg" href="https://github.com/ericwa/tyrutils-ericw/releases/download/ericw-v0.15.2/tyrutils-ericw-v0.15.2-osx.zip" role="button">
 	    <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
 	    osx</a>
-	  <a class="btn btn-primary btn-lg" href="https://github.com/ericwa/tyrutils-ericw/archive/ericw-v0.15.1.tar.gz" role="button">
+	  <a class="btn btn-primary btn-lg" href="https://github.com/ericwa/tyrutils-ericw/archive/ericw-v0.15.2.tar.gz" role="button">
 	    <span class="glyphicon glyphicon-download" aria-hidden="true"></span>
 	    tgz</a>
-	   <a class="btn btn-default btn-lg" href="https://github.com/ericwa/tyrutils-ericw" role="button">
+	  <a class="btn btn-default btn-lg" href="https://github.com/ericwa/tyrutils-ericw" role="button">
 	    github</a>
+          <a class="btn btn-default btn-lg" href="https://github.com/ericwa/tyrutils-ericw/releases" role="button">
+ 	    changes</a>
 	  </div>
 	</p>
 	<p>
@@ -47,28 +49,29 @@
 	    <a href="doc/light.html" class="btn btn-default">light</a>
 	    <a href="doc/bspinfo.html" class="btn btn-default">bspinfo</a>
 	    <a href="doc/bsputil.html" class="btn btn-default">bsputil</a>
+            <a href="http://celephais.net/board/view_thread.php?id=61211" class="btn btn-default">discuss</a>
 	  </div>
 	</p>
       </div>
-      
+
       <h1>Features</h1>
 
       <p>
 	Screeshots below use <a href="http://www.simonoc.com/pages/design/sp/1000cuts.htm"><i>One Thousand Cuts</i></a> by <a href="http://www.simonoc.com">sock</a>.
       </p>
-      
+
       <h2>Ambient occlusion (aka dirtmapping)</h2>
 
       <p>The <code>-dirtdebug</code> flag causes the whole map to be lit at 50% gray, with ambient occlusion applied. It's good for previewing the AO settings.</p>
       <p><code>-dirtdepth</code> controls the distance tested for occlusion, in quake units. You can see at 512+ the palace rooms start to self-shadow.</p>
       <p><code>-dirtgain</code> controls the intensity of the dirt with an exponential scale while <code>-dirtscale</code> is a simple multiplier.</p>
       <p>Once you are happy with the command-line settings, you can transfer them to worldspawn keys; see the light documentation for details.</p>
-      
+
       <div class="row">
 	<!-- Tab panes -->
 	<div class="col-md-10 tab-content">
 	  <div role="tabpanel" class="tab-pane active" id="dirtdefault">
-	    
+
 	    <div class="row">
 	      <div class="col-md-12">
 		<img src="dirtdefault.jpg" class="img-responsive" />
@@ -79,7 +82,7 @@
 		<code>-extra4 -dirt -dirtdebug</code>
 	      </div>
 	    </div>
-	    
+
 	  </div>
 	  <div role="tabpanel" class="tab-pane" id="dirtdepth_256">
 
@@ -93,7 +96,7 @@
 		<code>-extra4 -dirt -dirtdebug -dirtdepth 256</code>
 	      </div>
 	    </div>
-	    
+
 	  </div>
 	  <div role="tabpanel" class="tab-pane" id="dirtdepth_512">
 
@@ -107,7 +110,7 @@
 		<code>-extra4 -dirt -dirtdebug -dirtdepth 512</code>
 	      </div>
 	    </div>
-	    
+
 	  </div>
 	  <div role="tabpanel" class="tab-pane" id="dirtdepth_1024">
 
@@ -198,16 +201,16 @@
 	  <li role="presentation"><a href="#dirtdepth_256" aria-controls="dirtdepth_256" role="tab" data-toggle="tab">dirtdepth 256</a></li>
 	  <li role="presentation"><a href="#dirtdepth_512" aria-controls="dirtdepth_512" role="tab" data-toggle="tab">dirtdepth 512</a></li>
 	  <li role="presentation"><a href="#dirtdepth_1024" aria-controls="dirdirtdepth_1024" role="tab" data-toggle="tab">dirtdepth 1024</a></li>
-	  
+
 	  <li role="presentation"><a href="#dirtdefault" aria-controls="dirtdefault" role="tab" data-toggle="tab">dirtgain 1.0 (default)</a></li>
 	  <li role="presentation"><a href="#dirtgain_075" aria-controls="dirtgain_075" role="tab" data-toggle="tab">dirtgain 0.75</a></li>
-	  <li role="presentation"><a href="#dirtgain_05" aria-controls="dirtgain_05" role="tab" data-toggle="tab">dirtgain 0.5</a></li>	  
-	  
+	  <li role="presentation"><a href="#dirtgain_05" aria-controls="dirtgain_05" role="tab" data-toggle="tab">dirtgain 0.5</a></li>
+
 	  <li role="presentation"><a href="#dirtmode_1" aria-controls="dirtmode_1" role="tab" data-toggle="tab">dirtgain 0.5, dirtmode 1</a></li>
 
 	  <li role="presentation"><a href="#dirtdefault" aria-controls="dirtdefault" role="tab" data-toggle="tab">dirtscale 1.0 (default)</a></li>
 	  <li role="presentation"><a href="#dirtscale_15" aria-controls="dirtscale_15" role="tab" data-toggle="tab">dirtscale 1.5</a></li>
-	  <li role="presentation"><a href="#dirtscale_20" aria-controls="dirtscale_20" role="tab" data-toggle="tab">dirtscale 2.0</a></li>	  
+	  <li role="presentation"><a href="#dirtscale_20" aria-controls="dirtscale_20" role="tab" data-toggle="tab">dirtscale 2.0</a></li>
 	</ul>
       </div>
 
@@ -215,7 +218,7 @@
       <h2>Sunlight</h2>
 
       <p>the new <code>_sunlight2</code> worldspawn key creates a hemisphere of suns around the level. It's good for avoiding pure black shadows in outdoor areas (fake indirect lighting).</p>
-      
+
       <div class="row">
 	<!-- Tab panes -->
 	<div class="col-md-10 tab-content">
@@ -236,7 +239,7 @@
 &quot;_sunlight_penumbra&quot; &quot;4&quot;</code></pre>
 	      </div>
 	    </div>
-	    
+
 	  </div>
 	  <div role="tabpanel" class="tab-pane" id="sunlight2">
 	    <div class="row">
@@ -252,7 +255,7 @@
 		<pre><code>&quot;_sunlight2&quot; &quot;300&quot;</code></pre>
 	      </div>
 	    </div>
-	    
+
 	  </div>
 	  <div role="tabpanel" class="tab-pane" id="sunlight_plus_sunlight2">
 	    <div class="row">
@@ -272,9 +275,9 @@
 &quot;_sunlight2&quot; &quot;300&quot;</code></pre>
 	      </div>
 	    </div>
-	    
+
 	  </div>
-	  
+
 	</div>
 
 	<!-- Nav tabs -->
@@ -315,13 +318,13 @@
       </div>
 
 
-      
+
       <h2>fake area lights (deviance)</h2>
 
       <p>
 	<code>_deviance</code> lets you split a point light into several lights, so it casts softer shadows.
       </p>
-      
+
       <div class="row">
 	<!-- Tab panes -->
 	<div class="col-md-10 tab-content">
@@ -382,7 +385,7 @@
 	    <div class="row">
 	      <div class="col-md-12">
 		<img src="deviance_96.jpg" class="img-responsive"  />
-	      </div> 
+	      </div>
 	    </div>
 	    <div class="row">
 	      <div class="col-md-12">
@@ -406,13 +409,13 @@
 	  <li role="presentation"><a href="#deviance96" aria-controls="deviance96" role="tab" data-toggle="tab">_deviance 96</a></li>
 	</ul>
       </div>
-      
+
       <h2>Surface lights</h2>
 
       <p>
 	surface lights are good to quickly light a scene, especially if there are runic-style light fixtures. The shot below is lit entirely with one light entity.
       </p>
-      
+
       <div class="row">
 	<div class="col-md-10">
 	  <img src="surface.jpg" class="img-responsive" />
@@ -438,9 +441,9 @@
 	<li>.lux output for deluxemapping in FTEQW</li>
 	<li>gamma adjustment of the final lightmap <code>-gamma</code></li>
       </ul>
-      
+
       <hr></hr>
-      
+
       <h1>Thanks/credits</h1>
 
       <p>
@@ -448,7 +451,7 @@
 	  <li><a href="http://disenchant.net/utils">tyrutils</a> is by Kevin Shanahan (AKA Tyrann)</li>
 	  <li>Ambient occlusion, sunlight2, penumbra, and deviance are from q3map2 (<a href="https://github.com/TTimo/GtkRadiant/tree/master/tools/quake3/q3map2">source</a>, <a href="http://q3map2.robotrenegade.com">homepage</a>)
 	  <li>Spike contributed optimizations and .lux support</li>
-	  <li>Lunaran helped track down light trace bugs</li> 
+	  <li>Lunaran helped track down light trace bugs</li>
 	  <li>Sock for feedback/suggestions and allowing his level to be used as a lighting test</li>
 	  <li>Surface lights are based on MH's tool MHColour
 	  <li>Thanks to users at <a href="http://www.celephais.net/board/forum.php">func_msgboard</a> for feedback and testing</li>
@@ -456,10 +459,10 @@
       </p>
 
 <hr></hr>
-      
+
     </div>
-    
-    
+
+
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
