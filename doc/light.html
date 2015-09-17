@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Sat Jul 11 13:51:45 2015 -->
+<!-- CreationDate: Thu Sep 17 00:05:31 2015 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -192,7 +192,7 @@ turning the dirt settings.</p>
 
 <p style="margin-left:11%;"><b>&minus;dirtmode n</b> |
 <b>&minus;dirtdepth n</b> | <b>&minus;dirtscale n</b> |
-<b>&minus;dirtgain n</b></p>
+<b>&minus;dirtgain n</b> | <b>&minus;dirtangle n</b></p>
 
 <p style="margin-left:22%;">Fine-tune the dirtmapping,
 overriding the corresponding worldspawn keys. See the
@@ -242,6 +242,21 @@ lightmap. Default 1, &gt;1 is brighter, &lt;1 is darker. See
 file storing average incoming light directions for surfaces.
 Usable by FTEQW with &quot;r_deluxemapping 1&quot;</p></td>
 </table>
+
+<p style="margin-left:11%;"><b>&minus;surflight_subdivide
+[n]</b></p>
+
+<p style="margin-left:22%;">Configure spacing of all
+surface lights. Default 128 units. Minimum setting: 64 / max
+2048. In the future I&rsquo;d like to make this configurable
+per-surface-light.</p>
+
+<p style="margin-left:11%;"><b>&minus;onlyents</b></p>
+
+<p style="margin-left:22%;">Updates the entities lump in
+the bsp. You should run this after running qbsp with
+-onlyents, if your map uses any switchable lights. All this
+does is assign style numbers to each switchable light.</p>
 
 <a name="MODEL ENTITY KEYS"></a>
 <h2>MODEL ENTITY KEYS</h2>
@@ -400,6 +415,14 @@ dirt fainter, 2.0 would create much darker shadows.</p>
 <p style="margin-left:22%;">Exponent used in dirt
 calculation, default 1. Lower values (e.g. 0.5) make the
 shadows darker and stretch further away from corners.</p>
+
+<p style="margin-left:11%;"><b>&quot;_dirtangle&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Cone angle in degrees for
+occlusion testing, default 88. Allowed range 1-90. Lower
+values can avoid unwanted dirt on arches, pipe interiors,
+etc.</p>
 
 <p style="margin-left:11%;"><b>&quot;_gamma&quot;
 &quot;n&quot;</b></p>

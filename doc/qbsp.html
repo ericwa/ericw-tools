@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Sat Jul 11 13:51:45 2015 -->
+<!-- CreationDate: Thu Sep 17 00:05:30 2015 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -115,10 +115,12 @@ opaque water</p>
 <p style="margin-left:22%;">Computes portal information for
 transparent sky</p>
 
-<p style="margin-left:11%;"><b>&minus;oldaxis</b></p>
+<p style="margin-left:11%;"><b>&minus;nooldaxis</b></p>
 
-<p style="margin-left:22%;">Uses original qbsp texture
-alignment algorithm</p>
+<p style="margin-left:22%;">Use alternate texture alignment
+algorithm. The default is to use the original QBSP texture
+alignment algorithm, which required the -oldaxis switch in
+tyrutils-ericw v0.15.1 and earlier.</p>
 
 <p style="margin-left:11%;"><b>&minus;forcegoodtree</b>
 (experimental)</p>
@@ -198,6 +200,16 @@ files (default is cwd)</p>
 <p style="margin-left:22%;">Use old method of texturing
 rotate_ brushes where the mapper aligns textures for the
 object at (0 0 0).</p>
+
+<p style="margin-left:11%;"><b>&minus;maxNodeSize
+[n]</b></p>
+
+<p style="margin-left:22%;">Switch to the cheap spatial
+subdivion bsp heuristic when splitting nodes of this size
+(in any dimension). This gives much faster qbsp processing
+times on large maps and should generate better bsp trees as
+well. From txqbsp-xt, thanks rebb. (default 1024, 0 to
+disable)</p>
 
 <a name="SPECIAL TEXTURE NAMES"></a>
 <h2>SPECIAL TEXTURE NAMES</h2>
