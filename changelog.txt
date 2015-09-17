@@ -1,16 +1,20 @@
 2015-08-09 TyrUtils-ericw 0.15.2 release
 
+* qbsp: add "-maxNodeSize" option, from txqbsp-xt. Defaults to 1024. Makes large
+        maps process much faster and should generate better bsp trees.
+        If it causes a problem disable with "-maxNodeSize 0"
 * qbsp: make "mixed face contents" and "degenerate edge" non-fatal, from txqbsp-xt
 * qbsp: make "-oldaxis" the default. new "-nooldaxis" flag to get the previous behaviour.
 * light: add "-surflight_subdivide" flag to control amount of surface lights created
 * light, vis: use below normal process priority on Windows
 * light: allow negative surface light offset
-* light: ensure light values in the bsp equal the average of the lit file color components. 
-  This fixes "dark" colors (where all components are < 1), on some engines 
-  (such as MarkV), which require the bsp lightmap brightness to match the .lit brightness
-  as a cheat prevention mechanism.
+* light: average the lit file color components to generate the bsp lightmap value.
+         TODO: use a perceptually weighted average.
 * light: fix lighting of hipnotic rotating entities.
 * light: fix crash in "Bad texture axes on face:"
+* light: fix surface lights being mistakenly duplicated
+* light: add "-onlyents"
+* light: add "-dirtangle" setting to control dirtmapping cone angle, default 88 degrees.
 
 2015-07-09 TyrUtils-ericw 0.15.1 release
 
@@ -40,7 +44,7 @@
 new features:
 * light: fence texture tracing, for bmodels with "_shadow" "1"
 * light: surface light support via "_surface" "texturename" light key
- 
+
 convenience:
 * light: respect "_dirt" "-1" bmodel key in -dirtdebug mode
 * light: allow setting "-dist" and "-range" command-line flags in worldspawn
@@ -50,34 +54,34 @@ convenience:
 other:
 * all: increase stack size to 8MB. Fixes qbsp crash with bbin1.map on Windows,
   light crashes.
-* qbsp: switch to hardcoded MAX_MAP_PLANES (262K), speeds up map file loading 
+* qbsp: switch to hardcoded MAX_MAP_PLANES (262K), speeds up map file loading
   phase.
 * qbsp: MakeFaceEdges: accelerate with a hash table to avoid slow O(n^2) search
   for edges
-* qbsp: ChooseMidPlaneFromList: fix off-by-one error in axial plane test. On 
+* qbsp: ChooseMidPlaneFromList: fix off-by-one error in axial plane test. On
   the first SolidBSP pass, gives fewer split nodes on bbin1.map (128k vs 199k)
-* light: MatchTargets: disable copying "style" key/value from a light to the 
+* light: MatchTargets: disable copying "style" key/value from a light to the
   entity that targets it. Don't see any point, and causes problems if "style"
   is meaningful for the targetting entity (e.g. a monster).
 
 2015-03-05 TyrUtils-ericw shapshot
 
 * light: support "_dirt" "-1" on bmodels to disable dirtmapping
-  
+
 2015-02-24 TyrUtils-ericw snapshot
 
-* light: _sunlight2 (sky light/light dome) support from q3map2 
+* light: _sunlight2 (sky light/light dome) support from q3map2
 * light: _sunlight_penumbra (deviance) from q3map2
 
 2015-01-31 TyrUtils-ericw snapshot
-  
+
 * light: per-light dirtmapping control
 
 2015-01-21 TyrUtils-ericw snapshot
-  
+
 * light: revert trace change in TyrUtils 0.7 that was causing artifacts.
   fix bug in determining trace hitpoint
-  
+
 2015-01-19 TyrUtils-ericw snapshot
 
 * light: handle colours in the range 0-1
