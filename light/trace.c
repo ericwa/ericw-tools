@@ -389,48 +389,12 @@ TraceLine(const dmodel_t *model, const int traceflags,
 	    break;
 	}
 
-	if (frontdist > -ON_EPSILON && backdist > -ON_EPSILON) {
+	if (frontdist >= -ON_EPSILON && backdist >= -ON_EPSILON) {
 	    node = tnode->children[0];
 	    continue;
 	}
 	if (frontdist < ON_EPSILON && backdist < ON_EPSILON) {
 	    node = tnode->children[1];
-	    continue;
-	}
-
-	if (frontdist >= -ON_EPSILON && frontdist <= ON_EPSILON) {
-	    if (backdist >= -ON_EPSILON && backdist <= ON_EPSILON) {
-		/* Front and back on-node, go down both sides */
-		if (tstack == tstack_max)
-		    Error("%s: tstack overflow\n", __func__);
-		tstack->node = node;
-		tstack->side = 0;
-		tstack->plane = tnode->plane;
-		VectorCopy(front, tstack->front);
-		VectorCopy(back, tstack->back);
-		crossnode = tstack++;
-		node = tnode->children[0];
-		continue;
-	    }
-
-	    /* If only front is on-node, go down the side containing back */
-	    side = back < 0;
-	    node = tnode->children[side];
-	    continue;
-	}
-
-	if (backdist >= -ON_EPSILON && backdist <= ON_EPSILON) {
-	    /* If only back is on-node, record a cross point but continue */
-	    if (tstack == tstack_max)
-		Error("%s: tstack overflow\n", __func__);
-	    side = frontdist < 0;
-	    tstack->node = node;
-	    tstack->side = side;
-	    tstack->plane = tnode->plane;
-	    VectorCopy(front, tstack->front);
-	    VectorCopy(back, tstack->back);
-	    crossnode = tstack;
-	    node = tnode->children[side];
 	    continue;
 	}
 
