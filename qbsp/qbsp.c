@@ -383,6 +383,7 @@ PrintOptions(void)
 	   "   -wadpath <dir>  Search this directory for wad files\n"
 	   "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
 	   "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
+	   "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
 	   "   sourcefile      .MAP file to process\n"
 	   "   destfile        .BSP file to output\n");
 
@@ -455,6 +456,7 @@ ParseOptions(char *szOptions)
     options.fixRotateObjTexture = true;
     options.fOldaxis = true;
     options.maxNodeSize = 1024;
+    options.on_epsilon = 0.0001;
 
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
@@ -536,6 +538,12 @@ ParseOptions(char *szOptions)
 		if (!szTok2)
 		    Error("Invalid argument to option %s", szTok);
 		options.maxNodeSize= atoi(szTok2);
+		szTok = szTok2;
+	    } else if (!strcasecmp(szTok, "epsilon")) {
+		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+		if (!szTok2)
+		    Error("Invalid argument to option %s", szTok);
+		options.on_epsilon= atof(szTok2);
 		szTok = szTok2;
 	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
 		PrintOptions();

@@ -118,7 +118,7 @@
 #define ZERO_EPSILON		0.0001
 #define DISTEPSILON		0.0001
 #define POINT_EPSILON		0.0001
-#define ON_EPSILON		0.0001
+#define ON_EPSILON		options.on_epsilon
 #define EQUAL_EPSILON		0.0001
 #define T_EPSILON		0.0002
 #define CONTINUOUS_EPSILON	0.0005
@@ -455,6 +455,7 @@ typedef struct options_s {
     char szMapName[512];
     char szBSPName[512];
     char wadPath[512];
+    vec_t on_epsilon;
 } options_t;
 
 extern options_t options;
