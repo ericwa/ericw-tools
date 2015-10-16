@@ -448,6 +448,7 @@ typedef struct options_s {
     bool fNopercent;
     bool forceGoodTree;
     bool fixRotateObjTexture;
+    int hexen2;/*2 if the worldspawn mission pack flag was set*/
     int BSPVersion;
     int dxSubdivide;
     int dxLeakDist;

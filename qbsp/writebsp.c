@@ -235,7 +235,8 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 	/* Worth special-casing for entity 0 (no modification needed) */
 	diff = clipcount - model->headnode[1];
 	if (diff != 0) {
-	    model->headnode[1] += diff;
+	    for (i = 1; i < hullnum; i++)
+		model->headnode[i] += diff;
 	    if (options.BSPVersion == BSPVERSION) {
 		bsp29_dclipnode_t *clipnode = clipnodes->data;
 		for (i = 0; i < oldcount; i++, clipnode++) {

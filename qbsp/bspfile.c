@@ -96,10 +96,33 @@ AddLump(FILE *f, int Type)
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
 	entities = &entity->lumps[Type];
 	if (entities->data) {
-	    ret = fwrite(entities->data, MemSize[Type], entities->count, f);
-	    if (ret != entities->count)
-		Error("Failure writing to file");
-	    cLen += entities->count * MemSize[Type];
+	    if (Type == LUMP_MODELS && !options.hexen2) {
+		const dmodel_t *in = entities->data;
+		dmodelq1_t out;
+		int j, k;
+		for (j = 0; j < entities->count; j++)
+		{
+		    for (k = 0; k < 3; k++) {
+			out.mins[k] = in[j].mins[k];
+			out.maxs[k] = in[j].maxs[k];
+			out.origin[k] = in[j].origin[k];
+		    }
+		    for (k = 0; k < MAX_MAP_HULLS_Q1; k++)
+			out.headnode[k] = in[j].headnode[k];
+		    out.visleafs = in[j].visleafs;
+		    out.firstface = in[j].firstface;
+		    out.numfaces = in[j].numfaces;
+		    ret = fwrite(&out, sizeof(out), 1, f);
+		    if (ret != 1)
+			Error("Failure writing to file");
+		}
+		cLen += entities->count * sizeof(out);
+	    } else {
+		ret = fwrite(entities->data, MemSize[Type], entities->count, f);
+		if (ret != entities->count)
+		    Error("Failure writing to file");
+		cLen += entities->count * MemSize[Type];
+	    }
 	}
     }
 

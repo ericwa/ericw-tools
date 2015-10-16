@@ -904,6 +904,17 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
 	  BSPVersionString(bspdata->version), BSPVersionString(version));
 }
 
+static int 
+isHexen2(const dheader_t *header)
+{
+	/*
+	the world should always have some face.
+	however, if the sizes are wrong then we're actually reading headnode[6]. hexen2 only used 5 hulls, so this should be 0 in hexen2, and not in quake.
+	*/
+	const dmodelq1_t *modelsq1 = (const dmodelq1_t*)((const byte *)header + header->lumps[LUMP_MODELS].fileofs);
+	return !modelsq1->numfaces;
+}
+
 /*
  * =========================================================================
  * ...
@@ -990,20 +1001,54 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
     length = header->lumps[lumpnum].filelen;
     ofs = header->lumps[lumpnum].fileofs;
 
-    if (length % lumpspec->size)
-	Error("%s: odd %s lump size", __func__, lumpspec->name);
-
     if (buffer)
 	free(buffer);
 
-    buffer = *bufferptr = malloc(length + 1);
-    if (!buffer)
-	Error("%s: allocation of %i bytes failed.", __func__, length);
+    if (lumpnum == LUMP_MODELS && !isHexen2(header))
+    {	/*convert in-place. no need to care about endian here.*/
+	const dmodelq1_t *in = (const dmodelq1_t*)((const byte *)header + ofs);
+	dmodel_t *out;
+	int i, j;
+	if (length % sizeof(dmodelq1_t))
+		Error("%s: odd %s lump size", __func__, lumpspec->name);
+	length /= sizeof(dmodelq1_t);
 
-    memcpy(buffer, (const byte *)header + ofs, length);
-    buffer[length] = 0; /* In case of corrupt entity lump */
+	buffer = *bufferptr = malloc(length * sizeof(dmodel_t));
+	if (!buffer)
+		Error("%s: allocation of %i bytes failed.", __func__, length);
+	out = (dmodel_t*)buffer;
+	for (i = 0; i < length; i++)
+	{
+	    for (j = 0; j < 3; j++)
+	    {
+		out[i].mins[j] = in[i].mins[j];
+		out[i].maxs[j] = in[i].maxs[j];
+		out[i].origin[j] = in[i].origin[j];
+	    }
+	    for (j = 0; j < MAX_MAP_HULLS_Q1; j++)
+		out[i].headnode[j] = in[i].headnode[j];
+	    for (     ; j < MAX_MAP_HULLS_H2; j++)
+		out[i].headnode[j] = 0;
+	    out[i].visleafs = in[i].visleafs;
+	    out[i].firstface = in[i].firstface;
+	    out[i].numfaces = in[i].numfaces;
+	}
+	return length;
+    }
+    else
+    {
+	if (length % lumpspec->size)
+	    Error("%s: odd %s lump size", __func__, lumpspec->name);
 
-    return length / lumpspec->size;
+	buffer = *bufferptr = malloc(length + 1);
+	if (!buffer)
+	    Error("%s: allocation of %i bytes failed.", __func__, length);
+
+	memcpy(buffer, (const byte *)header + ofs, length);
+	buffer[length] = 0; /* In case of corrupt entity lump */
+
+	return length / lumpspec->size;
+    }
 }
 
 /*
@@ -1031,6 +1076,14 @@ LoadBSPFile(const char *filename, bspdata_t *bspdata)
 	header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
 	header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
     }
+
+	if (isHexen2(header))
+	{
+		logprint("BSP appears to be from hexen2\n");
+		bspdata->hullcount = MAX_MAP_HULLS_H2;
+	}
+	else
+		bspdata->hullcount = MAX_MAP_HULLS_Q1;
 
     /* copy the data */
     if (header->version == BSPVERSION) {
@@ -1147,6 +1200,39 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
 	SafeWrite(bspfile->file, pad, size % 4);
 }
 
+static void
+AddModelsLump(bspfile_t *bspfile, bspdata_t *bspdata, const void *data, int count)
+{
+    if (bspdata->hullcount == MAX_MAP_HULLS_Q1)
+    {	/*convert in-place. no need to care about endian here.*/
+	lump_t *lump = &bspfile->header.lumps[LUMP_MODELS];
+	const dmodel_t *in = data;
+	dmodelq1_t *out = malloc(count * sizeof(dmodelq1_t));
+	int i, j;
+	for (i = 0; i < count; i++)
+	{
+	    for (j = 0; j < 3; j++)
+	    {
+		out[i].mins[j] = in[i].mins[j];
+		out[i].maxs[j] = in[i].maxs[j];
+		out[i].origin[j] = in[i].origin[j];
+	    }
+	    for (j = 0; j < MAX_MAP_HULLS_Q1; j++)
+		out[i].headnode[j] = in[i].headnode[j];
+	    out[i].visleafs = in[i].visleafs;
+	    out[i].firstface = in[i].firstface;
+	    out[i].numfaces = in[i].numfaces;
+	}
+	lump->fileofs = LittleLong(ftell(bspfile->file));
+	lump->filelen = LittleLong(sizeof(dmodelq1_t) * count);
+	SafeWrite(bspfile->file, out, lump->filelen);
+	free(out);
+	return;
+    }
+    else
+	AddLump(bspfile, LUMP_MODELS, data, count);
+}
+
 /*
  * =============
  * WriteBSPFile
@@ -1182,7 +1268,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
 	AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
 	AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
 	AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
-	AddLump(&bspfile, LUMP_MODELS, bsp->dmodels, bsp->nummodels);
+	AddModelsLump(&bspfile, bspdata, bsp->dmodels, bsp->nummodels);
 
 	AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
 	AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
@@ -1203,7 +1289,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
 	AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
 	AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
 	AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
-	AddLump(&bspfile, LUMP_MODELS, bsp->dmodels, bsp->nummodels);
+	AddModelsLump(&bspfile, bspdata, bsp->dmodels, bsp->nummodels);
 
 	AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
 	AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
@@ -1224,7 +1310,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
 	AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
 	AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
 	AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
-	AddLump(&bspfile, LUMP_MODELS, bsp->dmodels, bsp->nummodels);
+	AddModelsLump(&bspfile, bspdata, bsp->dmodels, bsp->nummodels);
 
 	AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
 	AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);

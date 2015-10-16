@@ -838,18 +838,64 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
 	return NULL;
     }
 
-    if (hullnum == 1) {
-	vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
+    if (options.hexen2)
+    {
+	if (hullnum == 1) {
+	    vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
+	    ExpandBrush(&hullbrush, size, facelist);
+	    FreeBrushFaces(facelist);
+	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	}
+	else	if (hullnum == 2) {
+	    vec3_t size[2] = { {-24, -24, -20}, {24, 24, 20} };
+	    ExpandBrush(&hullbrush, size, facelist);
+	    FreeBrushFaces(facelist);
+	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	}
+	else	if (hullnum == 3) {
+	    vec3_t size[2] = { {-16, -16, -12}, {16, 16, 16} };
+	    ExpandBrush(&hullbrush, size, facelist);
+	    FreeBrushFaces(facelist);
+	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	}
+	else	if (hullnum == 4) {
+#if 0
+	    if (options.hexen2 == 1) { /*original game*/
+		vec3_t size[2] = { {-40, -40, -42}, {40, 40, 42} };
+		ExpandBrush(&hullbrush, size, facelist);
+		FreeBrushFaces(facelist);
+		facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	    } else
+#endif
+	    {	/*mission pack*/
+		    vec3_t size[2] = { {-8, -8, -8}, {8, 8, 8} };
+		    ExpandBrush(&hullbrush, size, facelist);
+		    FreeBrushFaces(facelist);
+		    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	    }
+	}
+	else	if (hullnum == 5) {
+	    vec3_t size[2] = { {-48, -48, -50}, {48, 48, 50} };
+	    ExpandBrush(&hullbrush, size, facelist);
+	    FreeBrushFaces(facelist);
+	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	}
+    }
+    else
+    {
+	if (hullnum == 1) {
+	    vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
 
-	ExpandBrush(&hullbrush, size, facelist);
-	FreeBrushFaces(facelist);
-	facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-    } else if (hullnum == 2) {
-	vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
+	    ExpandBrush(&hullbrush, size, facelist);
+	    FreeBrushFaces(facelist);
+	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	} else if (hullnum == 2) {
+	    vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
-	ExpandBrush(&hullbrush, size, facelist);
-	FreeBrushFaces(facelist);
-	facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	    ExpandBrush(&hullbrush, size, facelist);
+	    FreeBrushFaces(facelist);
+	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+	}
     }
 
     // create the brush

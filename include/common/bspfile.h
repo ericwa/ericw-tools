@@ -27,7 +27,10 @@
 
 /* upper design bounds */
 
-#define MAX_MAP_HULLS              4
+#define MAX_MAP_HULLS_Q1              4
+#define MAX_MAP_HULLS_H2              8
+#define MAX_MAP_HULLS MAX_MAP_HULLS_H2
+
 #define MAX_MAP_MODELS           256
 #define MAX_MAP_BRUSHES         4096
 #define MAX_MAP_PLANES         16384
@@ -88,11 +91,21 @@ typedef struct {
     float mins[3];
     float maxs[3];
     float origin[3];
-    int32_t headnode[MAX_MAP_HULLS];
+    int32_t headnode[MAX_MAP_HULLS_Q1];
     int32_t visleafs;		/* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
-} dmodel_t;
+} dmodelq1_t;
+typedef struct {
+    float mins[3];
+    float maxs[3];
+    float origin[3];
+    int32_t headnode[MAX_MAP_HULLS_H2];
+    int32_t visleafs;		/* not including the solid leaf 0 */
+    int32_t firstface;
+    int32_t numfaces;
+} dmodelh2_t;
+typedef dmodelh2_t dmodel_t;
 
 typedef struct {
     int32_t nummiptex;
@@ -418,6 +431,7 @@ typedef struct {
 
 typedef struct {
     int32_t version;
+	int hullcount;
     union {
 	bsp29_t bsp29;
 	bsp2rmq_t bsp2rmq;

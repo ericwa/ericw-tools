@@ -56,12 +56,22 @@ typedef struct {
 #define BSP_LUMPS         15
 
 typedef struct {
+#define MAX_MAP_HULLS_Q1 4
     float mins[3], maxs[3];
     float origin[3];
-    int32_t headnode[4];	/* 4 for backward compat, only 3 hulls exist */
+    int32_t headnode[MAX_MAP_HULLS_Q1];	/* 4 for backward compat, only 3 hulls exist */
     int32_t visleafs;		/* not including the solid leaf 0 */
     int32_t firstface, numfaces;
-} dmodel_t;
+} dmodelq1_t;
+typedef struct {
+#define MAX_MAP_HULLS_H2 8
+    float mins[3], maxs[3];
+    float origin[3];
+    int32_t headnode[MAX_MAP_HULLS_H2];	/* hexen2 only uses 6 */
+    int32_t visleafs;		/* not including the solid leaf 0 */
+    int32_t firstface, numfaces;
+} dmodelh2_t;
+typedef dmodelh2_t dmodel_t;
 
 typedef struct {
     int32_t version;
