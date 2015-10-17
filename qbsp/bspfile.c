@@ -64,14 +64,46 @@ LoadBSPFile(void)
     for (i = 0; i < BSP_LUMPS; i++) {
 	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
 	iLumpOff = header->lumps[i].fileofs;
-	if (cLumpSize % MemSize[i])
-	    Error("Deformed lump in BSP file (size %d is not divisible by %d)",
-		  cLumpSize, MemSize[i]);
+	
+	if (i == LUMP_MODELS && !options.hexen2) {
+	    int j;
 
-	entity->lumps[i].count = cLumpSize / MemSize[i];
-	entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
-
-	memcpy(entity->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
+	    if (cLumpSize % sizeof(dmodelq1_t))
+		Error("Deformed lump in BSP file (size %d is not divisible by %d)",
+		      cLumpSize, (int)sizeof(dmodelq1_t));
+	    
+	    entity->lumps[i].count = cLumpSize / sizeof(dmodelq1_t);
+	    entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
+	    
+	    map.cTotal[i] = entity->lumps[i].count * sizeof(dmodel_t);
+	    
+	    for (j=0; j<entity->lumps[i].count; j++)
+	    {
+		int k;
+		const dmodelq1_t *in = (dmodelq1_t *)((byte *)header + iLumpOff) + j;
+		dmodelh2_t *out = (dmodelh2_t *)entity->lumps[i].data + j;
+		
+		for (k = 0; k < 3; k++) {
+		    out->mins[k] = in->mins[k];
+		    out->maxs[k] = in->maxs[k];
+		    out->origin[k] = in->origin[k];
+		}
+		for (k = 0; k < MAX_MAP_HULLS_Q1; k++)
+		    out->headnode[k] = in->headnode[k];
+		out->visleafs = in->visleafs;
+		out->firstface = in->firstface;
+		out->numfaces = in->numfaces;
+	    }
+	} else {
+	    if (cLumpSize % MemSize[i])
+		Error("Deformed lump in BSP file (size %d is not divisible by %d)",
+		      cLumpSize, MemSize[i]);
+	    
+	    entity->lumps[i].count = cLumpSize / MemSize[i];
+	    entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
+	    
+	    memcpy(entity->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
+	}
     }
 
     FreeMem(header, OTHER, cFileSize + 1);
