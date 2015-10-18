@@ -239,41 +239,57 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     surface_t *surf, *bestsurface;
     vec_t metric, bestmetric;
     plane_t *plane;
+    int pass;
 
     /* pick the plane that splits the least */
     bestmetric = VECT_MAX;
     bestsurface = NULL;
 
-    for (surf = surfaces; surf; surf = surf->next) {
-	if (surf->onnode)
-	    continue;
-
-	/* check for axis aligned surfaces */
-	plane = &map.planes[surf->planenum];
-	if (!(plane->type < 3))
-	    continue;
-
-	/* calculate the split metric, smaller values are better */
-	metric = SplitPlaneMetric(plane, mins, maxs);
-	if (metric < bestmetric) {
-	    bestmetric = metric;
-	    bestsurface = surf;
-	}
-    }
-
-    if (!bestsurface) {
-	/* Choose based on spatial subdivision only */
+    for (pass = 0; pass < 2; pass++) {
 	for (surf = surfaces; surf; surf = surf->next) {
 	    if (surf->onnode)
 		continue;
+	    
+	    if( surf->has_struct && pass )
+		continue;
+	    if( !surf->has_struct && !pass )
+		continue;
 
+	    /* check for axis aligned surfaces */
 	    plane = &map.planes[surf->planenum];
+	    if (!(plane->type < 3))
+		continue;
+
+	    /* calculate the split metric, smaller values are better */
 	    metric = SplitPlaneMetric(plane, mins, maxs);
 	    if (metric < bestmetric) {
 		bestmetric = metric;
 		bestsurface = surf;
 	    }
 	}
+
+	if (!bestsurface) {
+	    /* Choose based on spatial subdivision only */
+	    for (surf = surfaces; surf; surf = surf->next) {
+		if (surf->onnode)
+		    continue;
+
+		if( surf->has_struct && pass )
+		    continue;
+		if( !surf->has_struct && !pass )
+		    continue;
+		
+		plane = &map.planes[surf->planenum];
+		metric = SplitPlaneMetric(plane, mins, maxs);
+		if (metric < bestmetric) {
+		    bestmetric = metric;
+		    bestsurface = surf;
+		}
+	    }
+	}
+	
+	if (bestsurface)
+	    break;
     }
     if (!bestsurface)
 	Error("No valid planes in surface list (%s)", __func__);
@@ -294,7 +310,7 @@ static surface_t *
 ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
     int pass, splits, minsplits;
-    bool hintsplit, detailtest;
+    bool hintsplit;
     surface_t *surf, *surf2, *bestsurface;
     vec_t distribution, bestdistribution;
     const plane_t *plane, *plane2;
@@ -316,17 +332,17 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 	     * Check that the surface has a suitable face for the current pass
 	     * and check whether this is a hint split.
 	     */
-	    detailtest = hintsplit = false;
+	     hintsplit = false;
 	    for (face = surf->faces; face; face = face->next) {
-		if (pass && (face->cflags[1] & CFLAGS_DETAIL))
-		    detailtest = true;
-		if (!pass && !(face->cflags[1] & CFLAGS_DETAIL))
-		    detailtest = true;
 		if (texinfo[face->texinfo].flags & TEX_HINT)
 		    hintsplit = true;
 	    }
-	    if (!detailtest)
+
+	    if( surf->has_struct && pass )
 		continue;
+	    if( !surf->has_struct && !pass )
+		continue;
+	    
 
 	    plane = &map.planes[surf->planenum];
 	    splits = 0;
@@ -467,9 +483,19 @@ CalcSurfaceInfo(surface_t *surf)
 	surf->maxs[i] = -VECT_MAX;
     }
 
+    surf->has_detail = false;
+    surf->has_struct = false;
+    
     for (f = surf->faces; f; f = f->next) {
 	if (f->contents[0] >= 0 || f->contents[1] >= 0)
 	    Error("Bad contents in face (%s)", __func__);
+
+	if ((f->cflags[0] & CFLAGS_DETAIL)
+	    || (f->cflags[1] & CFLAGS_DETAIL))
+	    surf->has_detail = true;
+	else
+	    surf->has_struct = true;
+
 	for (i = 0; i < f->w.numpoints; i++)
 	    for (j = 0; j < 3; j++) {
 		if (f->w.points[i][j] < surf->mins[j])
