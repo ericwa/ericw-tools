@@ -675,7 +675,16 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
      */
     if (verbose > 1)
 	logprint("cluster %4i : %4i visible\n", clusternum, numvis);
-    totalvis += numvis;
+    
+    /*
+     * increment totalvis by 
+     * (# of real leafs in this cluster) x (# of real leafs visible from this cluster)
+     */
+    for (i = 0; i < portalleafs_real; i++) {
+	if (clustermap[i] == clusternum) {
+	    totalvis += numvis;
+	}
+    }
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
     compressed = malloc(portalleafs_real * 2 / 8);
