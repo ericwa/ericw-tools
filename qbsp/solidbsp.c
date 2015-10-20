@@ -294,6 +294,17 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     if (!bestsurface)
 	Error("No valid planes in surface list (%s)", __func__);
 
+    // ericw -- (!usemidsplit) is true on the final SolidBSP phase for the world.
+    // !bestsurface->has_struct means all surfaces in this node are detail, so
+    // mark the surface as a detail separator.
+    //
+    // TODO: investigate dropping the maxNodeSize feature (dynamically choosing
+    // between ChooseMidPlaneFromList and ChoosePlaneFromList) and use Q2's
+    // chopping on a uniform grid?
+    if (!usemidsplit && !bestsurface->has_struct) {
+	bestsurface->detail_separator = true;
+    }
+    
     return bestsurface;
 }
 
