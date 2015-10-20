@@ -45,7 +45,7 @@
 #define MAX_MAP_SURFEDGES     512000
 #define MAX_MAP_MIPTEX     0x0800000
 #define MAX_MAP_LIGHTING   0x1000000
-#define MAX_MAP_VISIBILITY 0x1000000
+#define MAX_MAP_VISIBILITY 0x8000000
 
 /* key / value pair sizes */
 #define MAX_ENT_KEY   32
