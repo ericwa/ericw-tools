@@ -632,7 +632,7 @@ LeafFlow(int leafnum, bsp2_dleaf_t *dleaf)
 
 
 void
-ClusterFlow(int leafnum, leafbits_t *buffer, bsp2_dleaf_t *dleaf)
+ClusterFlow(int clusternum, leafbits_t *buffer)
 {
     leaf_t *leaf;
     byte *outbuffer;
@@ -645,7 +645,7 @@ ClusterFlow(int leafnum, leafbits_t *buffer, bsp2_dleaf_t *dleaf)
     /*
      * Collect visible bits from all portals into buffer
      */
-    leaf = &leafs[clustermap[leafnum]];
+    leaf = &leafs[clusternum];
     numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
     for (i = 0; i < leaf->numportals; i++) {
 	p = leaf->portals[i];
@@ -654,15 +654,15 @@ ClusterFlow(int leafnum, leafbits_t *buffer, bsp2_dleaf_t *dleaf)
 	for (j = 0; j < numblocks; j++)
 	    buffer->bits[j] |= p->visbits->bits[j];
     }
-    if (TestLeafBit(buffer, clustermap[leafnum]))
-	logprint("WARNING: Leaf portals saw into leaf (%i)\n", leafnum);
-    SetLeafBit(buffer, clustermap[leafnum]);
+    if (TestLeafBit(buffer, clusternum))
+	logprint("WARNING: Leaf portals saw into cluster (%i)\n", clusternum);
+    SetLeafBit(buffer, clusternum);
 
     /*
      * Now expand the clusters into the full leaf visibility map
      */
     numvis = 0;
-    outbuffer = uncompressed + leafnum * leafbytes_real;
+    outbuffer = uncompressed + clusternum * leafbytes_real;
     for (i = 0; i < portalleafs_real; i++) {
 	if (TestLeafBit(buffer, clustermap[i])) {
 	    outbuffer[i >> 3] |= (1 << (i & 7));
@@ -674,7 +674,7 @@ ClusterFlow(int leafnum, leafbits_t *buffer, bsp2_dleaf_t *dleaf)
      * compress the bit string
      */
     if (verbose > 1)
-	logprint("leaf %4i : %4i visible\n", leafnum, numvis);
+	logprint("cluster %4i : %4i visible\n", clusternum, numvis);
     totalvis += numvis;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
@@ -688,7 +688,7 @@ ClusterFlow(int leafnum, leafbits_t *buffer, bsp2_dleaf_t *dleaf)
 	Error("Vismap expansion overflow");
 
     /* leaf 0 is a common solid */
-    dleaf->visofs = dest - vismap;
+    leaf->visofs = dest - vismap;
 
     memcpy(dest, compressed, len);
     free(compressed);
@@ -764,11 +764,16 @@ CalcVis(const bsp2_t *bsp)
 
 	logprint("Expanding clusters...\n");
 	buffer = malloc(LeafbitsSize(portalleafs));
-	for (i = 0; i < portalleafs_real; i++) {
+	for (i = 0; i < portalleafs; i++) {
 	    memset(buffer, 0, LeafbitsSize(portalleafs));
-	    ClusterFlow(i, buffer, &bsp->dleafs[i + 1]);
+	    ClusterFlow(i, buffer);
 	}
 	free(buffer);
+	
+	// Set pointers
+	for (i = 0; i < portalleafs_real; i++) {
+	    bsp->dleafs[i + 1].visofs = leafs[clustermap[i]].visofs;
+	}
     }
 
     logprint("average leafs visible: %i\n", totalvis / portalleafs_real);

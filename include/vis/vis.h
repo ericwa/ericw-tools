@@ -79,6 +79,7 @@ typedef struct leaf_s {
     int numportals;
     passage_t *passages;
     portal_t *portals[MAX_PORTALS_ON_LEAF];
+    int visofs;			// used when writing final visdata
 } leaf_t;
 
 #define MAX_SEPARATORS MAX_WINDING
