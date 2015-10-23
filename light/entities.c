@@ -201,6 +201,8 @@ normalize_color_format(vec3_t color)
     }
 }
 
+#define SQR(x) ((x)*(x))
+
 static void
 CheckEntityFields(entity_t *entity)
 {
@@ -257,6 +259,7 @@ CheckEntityFields(entity_t *entity)
 	/* Linear formula always has a falloff point */
 	entity->fadedist = fabs(entity->light.light) - fadegate;
 	entity->fadedist = entity->fadedist / entity->atten / scaledist;
+	entity->fadedist = qmax(0.0f, entity->fadedist);
     } else if (fadegate < EQUAL_EPSILON) {
 	/* If fadegate is tiny, other lights have effectively infinite reach */
 	entity->fadedist = VECT_MAX;
@@ -268,20 +271,15 @@ CheckEntityFields(entity_t *entity)
 	    entity->fadedist = VECT_MAX;
 	    break;
 	case LF_INVERSE:
-	    entity->fadedist = entity->light.light * entity->atten * scaledist;
-	    entity->fadedist *= LF_SCALE / fadegate;
-	    entity->fadedist = fabs(entity->fadedist);
+	    entity->fadedist = (LF_SCALE * fabs(entity->light.light)) / (scaledist * entity->atten * fadegate);
 	    break;
 	case LF_INVERSE2:
-	    entity->fadedist = entity->light.light * entity->atten * scaledist;
-	    entity->fadedist *= LF_SCALE / sqrt(fadegate);
-	    entity->fadedist = fabs(entity->fadedist);
-	    break;
 	case LF_INVERSE2A:
-	    entity->fadedist = entity->light.light * entity->atten * scaledist;
-	    entity->fadedist -= LF_SCALE;
-	    entity->fadedist *= LF_SCALE / sqrt(fadegate);
-	    entity->fadedist = fabs(entity->fadedist);
+	    entity->fadedist = sqrt(fabs(entity->light.light * SQR(LF_SCALE) / (SQR(scaledist) * SQR(entity->atten) * fadegate)));
+	    if (entity->formula == LF_INVERSE2A) {
+		entity->fadedist -= (LF_SCALE / (scaledist * entity->atten));
+	    }
+	    entity->fadedist = qmax(0.0f, entity->fadedist);
 	    break;
 	default:
 	    Error("Internal error: formula not handled in %s", __func__);
