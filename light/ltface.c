@@ -164,6 +164,10 @@ typedef struct {
     fully occluded. dirtgain/dirtscale are not applied yet
     */
     vec_t occlusion[SINGLEMAP];
+    
+    /* for sphere culling */
+    vec3_t origin;
+    vec_t radius;
 } lightsurf_t;
 
 typedef struct {
@@ -352,13 +356,15 @@ CalcFaceExtents(const bsp2_dface_t *face,
 		const bsp2_t *bsp, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
-    vec3_t worldpoint;
+    vec3_t worldpoint, worldmaxs, worldmins;
     int i, j, edge, vert;
     const dvertex_t *dvertex;
     const texinfo_t *tex;
 
     mins[0] = mins[1] = VECT_MAX;
     maxs[0] = maxs[1] = -VECT_MAX;
+    worldmaxs[0] = worldmaxs[1] = worldmaxs[2] = -VECT_MAX;
+    worldmins[0] = worldmins[1] = worldmins[2] = VECT_MAX;
     tex = &bsp->texinfo[face->texinfo];
 
     for (i = 0; i < face->numedges; i++) {
@@ -374,11 +380,30 @@ CalcFaceExtents(const bsp2_dface_t *face,
 	    if (texcoord[j] > maxs[j])
 		maxs[j] = texcoord[j];
 	}
+	
+	//ericw -- also save worldmaxs/worldmins, for calculating a bounding sphere
+	for (j = 0; j < 3; j++) {
+	    if (worldpoint[j] > worldmaxs[j])
+		worldmaxs[j] = worldpoint[j];
+	    if (worldpoint[j] < worldmins[j])
+		worldmins[j] = worldpoint[j];
+	}
     }
 
     FaceCentroid(face, bsp, worldpoint);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
-
+    
+    // calculate a bounding sphere for the face
+    {
+	vec3_t radius;
+	
+	VectorSubtract(worldmaxs, worldmins, radius);
+	VectorScale(radius, 0.5, radius);
+	
+	VectorAdd(worldmins, radius, surf->origin);
+	surf->radius = VectorLength(radius);
+    }
+    
     for (i = 0; i < 2; i++) {
 	mins[i] = floor(mins[i] / 16);
 	maxs[i] = ceil(maxs[i] / 16);
@@ -527,6 +552,9 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     VectorScale(plane->normal, plane->dist, planepoint);
     VectorAdd(planepoint, modelinfo->offset, planepoint);
     plane->dist = DotProduct(plane->normal, planepoint);
+    
+    /* Correct bounding sphere */
+    VectorAdd(lightsurf->origin, modelinfo->offset, lightsurf->origin);
 }
 
 static void
@@ -771,6 +799,25 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const modelinfo_t *
     return 1.0f - outDirt;
 }
 
+/*
+ * ================
+ * CullLight
+ * 
+ * Returns true if the given light doesn't reach lightsurf.
+ * ================
+ */
+static inline qboolean
+CullLight(const entity_t *entity, const lightsurf_t *lightsurf)
+{
+    vec3_t distvec;
+    vec_t dist;
+    
+    VectorSubtract(entity->origin, lightsurf->origin, distvec);
+    dist = VectorLength(distvec) - lightsurf->radius - entity->fadedist;
+    
+    /* return true if the spheres don't intersect */
+    return dist > 0;
+}
 
 /*
  * ================
@@ -797,10 +844,14 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
     if (dist < 0)
 	return;
 
-    /* don't bother with light too far away */
+    /* don't bother with light too far away from plane */
     if (dist > entity->fadedist)
 	return;
 
+    /* sphere cull surface and light */
+    if (CullLight(entity, lightsurf))
+	return;
+    
     /*
      * Check it for real
      */
