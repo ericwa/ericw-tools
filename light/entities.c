@@ -345,7 +345,7 @@ static void
 SetupSuns()
 {
     int i;
-    int sun_num_samples = 100;
+    int sun_num_samples = sunsamples;
 
     if (sun_deviance == 0) {
     	sun_num_samples = 1;
@@ -411,16 +411,20 @@ SetupSkyDome()
 {
 	int i, j, numSuns;
 	int angleSteps, elevationSteps;
+	int iterations;
 	float angle, elevation;
 	float angleStep, elevationStep;
 	vec3_t direction;
-	const int iterations = 8;
 
+	/* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
+	iterations = rint(sqrt((sunsamples - 1) / 4)) + 1;
+	iterations = qmax(iterations, 2);
+    
 	/* dummy check */
-	if ( sunlight2.light <= 0.0f || iterations < 2 ) {
+	if ( sunlight2.light <= 0.0f ) {
 		return;
 	}
-
+    
 	/* setup */
 	elevationSteps = iterations - 1;
 	angleSteps = elevationSteps * 4;

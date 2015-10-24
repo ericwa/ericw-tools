@@ -31,6 +31,7 @@ int softsamples = 0;
 float lightmapgamma = 1.0;
 const vec3_t vec3_white = { 255, 255, 255 };
 float surflight_subdivide = 128.0f;
+int sunsamples = 64;
 
 qboolean addminlight = false;
 lightsample_t minlight = { 0, { 255, 255, 255 } };
@@ -366,6 +367,10 @@ main(int argc, const char **argv)
 	    surflight_subdivide = atof( argv[ ++i ] );
 	    surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
 	    logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
+	} else if ( !strcmp( argv[ i ], "-sunsamples" ) ) {
+	    sunsamples = atof( argv[ ++i ] );
+	    sunsamples = qmin(qmax(sunsamples, 8), 2048);
+	    logprint( "Using sunsamples of %d\n", sunsamples);
 	} else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
 	    onlyents = true;
 	    logprint( "Onlyents mode enabled\n" );
@@ -380,7 +385,7 @@ main(int argc, const char **argv)
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] bspfile\n");
+	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] [-sunsamples n] bspfile\n");
 	exit(1);
     }
 

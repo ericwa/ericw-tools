@@ -110,6 +110,7 @@ extern int softsamples;
 extern float lightmapgamma;
 extern const vec3_t vec3_white;
 extern float surflight_subdivide;
+extern int sunsamples;
 
 extern qboolean addminlight;
 extern lightsample_t minlight;
