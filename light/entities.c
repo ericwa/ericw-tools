@@ -413,7 +413,6 @@ SetupSkyDome()
 	int angleSteps, elevationSteps;
 	float angle, elevation;
 	float angleStep, elevationStep;
-	float step, start;
 	vec3_t direction;
 	const int iterations = 8;
 
@@ -422,15 +421,11 @@ SetupSkyDome()
 		return;
 	}
 
-	/* calculate some stuff */
-	step = 2.0f / ( iterations - 1 );
-	start = -1.0f;
-
 	/* setup */
 	elevationSteps = iterations - 1;
 	angleSteps = elevationSteps * 4;
 	angle = 0.0f;
-	elevationStep = DEG2RAD( 90.0f / iterations );  /* skip elevation 0 */
+	elevationStep = DEG2RAD( 90.0f / (elevationSteps + 1) );  /* skip elevation 0 */
 	angleStep = DEG2RAD( 360.0f / angleSteps );
 
 	/* calc individual sun brightness */
