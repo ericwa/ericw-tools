@@ -13,6 +13,7 @@ lights.)
 * qbsp: updates to the "-maxNodeSize" feature added in 0.15.2 to be closer to
 the txqbsp-xt version.
 * light: Adjust the trace algorithm to match that in q3map. 
+* qbsp: print coordinates for "New portal was clipped away" warning
 
 2015-08-09 TyrUtils-ericw 0.15.2 release
 
