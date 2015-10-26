@@ -135,7 +135,7 @@ const char *rgszWarnings[cWarnings] = {
 
     "Reached occupant at (%.0f %.0f %.0f), no filling performed.",
     "Portal siding direction is wrong",
-    "New portal was clipped away in CutNodePortals_r",
+    "New portal was clipped away in CutNodePortals_r near (%.3f %.3f %.3f)",
     "Winding outside node",
     "Winding with area %f",
     "%s isn't a wadfile",

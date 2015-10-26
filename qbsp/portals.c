@@ -580,7 +580,10 @@ CutNodePortals_r(node_t *node)
 
 	winding = ClipWinding(winding, &clipplane, true);
 	if (!winding) {
-	    Message(msgWarning, warnPortalClippedAway);
+	    Message(msgWarning, warnPortalClippedAway,
+		    portal->winding->points[0][0],
+		    portal->winding->points[0][1],
+		    portal->winding->points[0][2]);
 	    break;
 	}
     }
