@@ -550,7 +550,7 @@ DIST_FILES = \
 LIPO     ?= lipo
 
 quiet_cmd_lipo = '  LIPO     $@'
-      cmd_lipo = lipo -create $^ -output $@
+      cmd_lipo = $(LIPO) -create $^ -output $@
 
 define do_lipo
 	$(do_mkdir)
