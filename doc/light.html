@@ -1,5 +1,5 @@
-<!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Thu Sep 17 00:05:31 2015 -->
+<!-- Creator     : groff version 1.22.2 -->
+<!-- CreationDate: Mon Oct 26 20:34:52 2015 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -8,16 +8,17 @@
 <meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <meta name="Content-Style" content="text/css">
 <style type="text/css">
-       p     { margin-top: 0; margin-bottom: 0; }
-       pre   { margin-top: 0; margin-bottom: 0; }
-       table { margin-top: 0; margin-bottom: 0; }
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
 </style>
 <title>LIGHT</title>
 
 </head>
 <body>
 
-<h1 align=center>LIGHT</h1>
+<h1 align="center">LIGHT</h1>
 
 <a href="#NAME">NAME</a><br>
 <a href="#SYNOPSIS">SYNOPSIS</a><br>
@@ -33,22 +34,25 @@
 <hr>
 
 
+<h2>NAME
 <a name="NAME"></a>
-<h2>NAME</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">light &minus;
 Caclulate lightmap data for a Quake BSP file</p>
 
+<h2>SYNOPSIS
 <a name="SYNOPSIS"></a>
-<h2>SYNOPSIS</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>light</b>
 [OPTION]... BSPFILE</p>
 
+<h2>DESCRIPTION
 <a name="DESCRIPTION"></a>
-<h2>DESCRIPTION</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>light</b>
@@ -57,8 +61,9 @@ information based on the entity definitions contained in the
 .bsp. The .bsp file is updated with the new light data upon
 completion, overwriting any existing lighting data.</p>
 
+<h2>OPTIONS
 <a name="OPTIONS"></a>
-<h2>OPTIONS</h2>
+</h2>
 
 
 
@@ -69,22 +74,20 @@ n</b></p>
 explicitly. By default light will attempt to detect the
 number of CPUs/cores available.</p>
 
-<table width="100%" border=0 rules="none" frame="void"
+<table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="9%">
 
 
-
-<p style="margin-top: 1em" valign="top"><b>&minus;extra</b></p> </td>
+<p><b>&minus;extra</b></p></td>
 <td width="2%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Calculate extra
-samples (2x2) and average the results for smoother
-shadows.</p> </td>
+<p>Calculate extra samples (2x2) and average the results
+for smoother shadows.</p></td></tr>
 </table>
 
 <p style="margin-left:11%;"><b>&minus;extra4</b></p>
@@ -149,38 +152,34 @@ brightness due to the angle of incidence with a surface
 (more detailed explanation in the &quot;_anglescale&quot;
 key below).</p>
 
-<table width="100%" border=0 rules="none" frame="void"
+<table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-
-<p style="margin-top: 1em" valign="top"><b>&minus;lit</b></p> </td>
+<p><b>&minus;lit</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Force generation of
-a .lit file, even if your map does not have any coloured
-lights. By default, light will automatically generate the
-.lit file when needed.</p></td>
+<p>Force generation of a .lit file, even if your map does
+not have any coloured lights. By default, light will
+automatically generate the .lit file when needed.</p></td></tr>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-
-<p style="margin-top: 1em" valign="top"><b>&minus;dirt</b></p> </td>
+<p><b>&minus;dirt</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Globally enables
-dirtmapping (ambient occlusion), overriding the
-&quot;_dirt&quot; worldspawn key. See &quot;_dirt&quot; for
-more details.</p></td>
+<p>Globally enables dirtmapping (ambient occlusion),
+overriding the &quot;_dirt&quot; worldspawn key. See
+&quot;_dirt&quot; for more details.</p></td></tr>
 </table>
 
 <p style="margin-left:11%;"><b>&minus;dirtdebug</b></p>
@@ -198,25 +197,23 @@ turning the dirt settings.</p>
 overriding the corresponding worldspawn keys. See the
 worldspawn keys below.</p>
 
-<table width="100%" border=0 rules="none" frame="void"
+<table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="9%">
 
 
-
-<p style="margin-top: 1em" valign="top"><b>&minus;fence</b></p> </td>
+<p><b>&minus;fence</b></p></td>
 <td width="2%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Enables light to
-pass through transparent pixels in fence textures (textures
-with a &quot;{&quot; prefix). Typically, shadow-casting
-fences should be a func_wall entity with the
-&quot;_shadow&quot; &quot;1&quot; key set. Default is for
-transparent pixels to block light.</p></td>
+<p>Enables light to pass through transparent pixels in
+fence textures (textures with a &quot;{&quot; prefix).
+Typically, shadow-casting fences should be a func_wall
+entity with the &quot;_shadow&quot; &quot;1&quot; key set.
+Default is for transparent pixels to block light.</p></td></tr>
 </table>
 
 <p style="margin-left:11%;"><b>&minus;gamma [n]</b></p>
@@ -225,22 +222,21 @@ transparent pixels to block light.</p></td>
 lightmap. Default 1, &gt;1 is brighter, &lt;1 is darker. See
 &quot;_gamma&quot; worldspawn key.</p>
 
-<table width="100%" border=0 rules="none" frame="void"
+<table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="6%">
 
 
-
-<p style="margin-top: 1em" valign="top"><b>&minus;lux</b></p> </td>
+<p><b>&minus;lux</b></p></td>
 <td width="5%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Generate a .lux
-file storing average incoming light directions for surfaces.
-Usable by FTEQW with &quot;r_deluxemapping 1&quot;</p></td>
+<p>Generate a .lux file storing average incoming light
+directions for surfaces. Usable by FTEQW with
+&quot;r_deluxemapping 1&quot;</p></td></tr>
 </table>
 
 <p style="margin-left:11%;"><b>&minus;surflight_subdivide
@@ -258,8 +254,18 @@ the bsp. You should run this after running qbsp with
 -onlyents, if your map uses any switchable lights. All this
 does is assign style numbers to each switchable light.</p>
 
+<p style="margin-left:11%;"><b>&minus;sunsamples
+[n]</b></p>
+
+<p style="margin-left:22%;">Set the number of samples to
+use for &quot;_sunlight_penumbra&quot; and
+&quot;_sunlight2&quot; (sunlight2 may use more or less
+because of how the suns are set up in a sphere). Default
+100.</p>
+
+<h2>MODEL ENTITY KEYS
 <a name="MODEL ENTITY KEYS"></a>
-<h2>MODEL ENTITY KEYS</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>Worldspawn
@@ -474,8 +480,9 @@ dirtmapping on the brush model. Useful it the bmodel touches
 or sticks into the world, and you want to those ares from
 turning black. Default 0.</p>
 
+<h2>LIGHT ENTITY KEYS
 <a name="LIGHT ENTITY KEYS"></a>
-<h2>LIGHT ENTITY KEYS</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Light entity
@@ -547,6 +554,17 @@ around the Z-axis from 0 to 359 degrees and pitch specifies
 the angle from 90 (straight up) to -90 (straight down). Roll
 has no effect, so use any value (e.g. 0). Often easier than
 the &quot;target&quot; method.</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_surface_spotlight&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">For a surface light template
+(i.e. a light with &quot;_surface&quot; set), setting this
+to &quot;1&quot; makes each instance into a spotlight, with
+the direction of light pointing along the surface normal. In
+other words, it automatically sets &quot;mangle&quot; on
+each of the generated lights.</p>
 
 <p style="margin-left:11%;"><b>&quot;angle&quot;
 &quot;n&quot;</b></p>
@@ -643,8 +661,9 @@ surfaces.</p>
 placed above surfaces for &quot;_surface&quot;. Default
 2.</p>
 
+<h2>AUTHOR
 <a name="AUTHOR"></a>
-<h2>AUTHOR</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Written by
@@ -656,8 +675,9 @@ support and optimizations. <br>
 Based on source provided by id Software <br>
 http://disenchant.net</p>
 
+<h2>REPORTING BUGS
 <a name="REPORTING BUGS"></a>
-<h2>REPORTING BUGS</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Please send bug
@@ -668,8 +688,9 @@ tyrann@disenchant.net. <br>
 Improvements to the documentation are welcome and
 encouraged.</p>
 
+<h2>COPYRIGHT
 <a name="COPYRIGHT"></a>
-<h2>COPYRIGHT</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Copyright (C)
@@ -682,8 +703,9 @@ License GPLv2+: GNU GPL version 2 or later <br>
 software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.</p>
 
+<h2>SEE ALSO
 <a name="SEE ALSO"></a>
-<h2>SEE ALSO</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>(1)

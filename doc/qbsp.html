@@ -1,5 +1,5 @@
-<!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Thu Sep 17 00:05:30 2015 -->
+<!-- Creator     : groff version 1.22.2 -->
+<!-- CreationDate: Mon Oct 26 20:34:52 2015 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -8,16 +8,17 @@
 <meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <meta name="Content-Style" content="text/css">
 <style type="text/css">
-       p     { margin-top: 0; margin-bottom: 0; }
-       pre   { margin-top: 0; margin-bottom: 0; }
-       table { margin-top: 0; margin-bottom: 0; }
+       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
+       h1      { text-align: center }
 </style>
 <title>QBSP</title>
 
 </head>
 <body>
 
-<h1 align=center>QBSP</h1>
+<h1 align="center">QBSP</h1>
 
 <a href="#NAME">NAME</a><br>
 <a href="#SYNOPSIS">SYNOPSIS</a><br>
@@ -34,22 +35,25 @@
 <hr>
 
 
+<h2>NAME
 <a name="NAME"></a>
-<h2>NAME</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">qbsp &minus;
 Compile a Quake BSP file from a MAP source file</p>
 
+<h2>SYNOPSIS
 <a name="SYNOPSIS"></a>
-<h2>SYNOPSIS</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>
 [OPTION]... SOURCFILE [DESTFILE]</p>
 
+<h2>DESCRIPTION
 <a name="DESCRIPTION"></a>
-<h2>DESCRIPTION</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>qbsp</b> is
@@ -61,8 +65,9 @@ filename will be chosen by stripping the file extension (if
 any) from <i>SOURCEFILE</i> and appending the .bsp
 extension.</p>
 
+<h2>OPTIONS
 <a name="OPTIONS"></a>
-<h2>OPTIONS</h2>
+</h2>
 
 
 
@@ -145,38 +150,35 @@ file (default is new)</p>
 <p style="margin-left:22%;">Prevents output of percent
 completion information</p>
 
-<table width="100%" border=0 rules="none" frame="void"
+<table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-
-<p style="margin-top: 1em" valign="top"><b>&minus;bsp2</b></p> </td>
+<p><b>&minus;bsp2</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Create the output
-BSP file in BSP2 format. Allows the creation of much larger
-and more complex maps than the original BSP 29 format).</p></td>
+<p>Create the output BSP file in BSP2 format. Allows the
+creation of much larger and more complex maps than the
+original BSP 29 format).</p></td></tr>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-
-<p style="margin-top: 1em" valign="top"><b>&minus;2psb</b></p> </td>
+<p><b>&minus;2psb</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Create the output
-BSP file in 2PSB format. This an earlier version of the BSP2
-format, supported by the RMQ engine (and thus is also known
-as the BSP2rmq or RMQe bsp format). original BSP 29
-format).</p> </td>
+<p>Create the output BSP file in 2PSB format. This an
+earlier version of the BSP2 format, supported by the RMQ
+engine (and thus is also known as the BSP2rmq or RMQe bsp
+format). original BSP 29 format).</p></td></tr>
 </table>
 
 <p style="margin-left:11%;"><b>&minus;leakdist [n]</b></p>
@@ -211,8 +213,13 @@ times on large maps and should generate better bsp trees as
 well. From txqbsp-xt, thanks rebb. (default 1024, 0 to
 disable)</p>
 
+<p style="margin-left:11%;"><b>&minus;hexen2</b></p>
+
+<p style="margin-left:22%;">Generate a hexen2 bsp.</p>
+
+<h2>SPECIAL TEXTURE NAMES
 <a name="SPECIAL TEXTURE NAMES"></a>
-<h2>SPECIAL TEXTURE NAMES</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">The contents
@@ -256,8 +263,9 @@ brush which you don&rsquo;t want to generate bsp splits or
 portals. All surfaces of a hint brush must use either the
 <i>hint</i> or <i>hintskip</i> texture name.</p>
 
+<h2>DETAIL BRUSH SUPPORT
 <a name="DETAIL BRUSH SUPPORT"></a>
-<h2>DETAIL BRUSH SUPPORT</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">This version of
@@ -337,69 +345,71 @@ potentially visible set (PVS) for the map/bsp. So you will
 also need a vis util capable of processing the PRT2 file
 format.</p>
 
+<h2>MAP COMPATIBILITY
 <a name="MAP COMPATIBILITY"></a>
-<h2>MAP COMPATIBILITY</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">In addition to
 standard Quake 1 .map files, TyrUtils QBSP is compatible
 with:</p>
 
-<table width="100%" border=0 rules="none" frame="void"
+<table width="100%" border="0" rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<p>&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Floating point
-brush coordinates and texture alignments</p></td>
+<p>Floating point brush coordinates and texture
+alignments</p> </td></tr>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<p>&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Valve&rsquo;s 220
-map format as produced by the <i>Hammer</i> editor</p></td>
+<p>Valve&rsquo;s 220 map format as produced by the
+<i>Hammer</i> editor</p></td></tr>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<p>&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Extended texture
-positioning as supported by the <i>QuArK</i> editor</p></td>
+<p>Extended texture positioning as supported by the
+<i>QuArK</i> editor</p></td></tr>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p style="margin-top: 1em" valign="top">&bull;</p></td>
+<p>&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p style="margin-top: 1em" valign="top">Standard Quake 2
-map format (leading paths in texture names are stripped and
-any extra surface properties are ignored)</p></td>
+<p>Standard Quake 2 map format (leading paths in texture
+names are stripped and any extra surface properties are
+ignored)</p> </td></tr>
 </table>
 
+<h2>AUTHOR
 <a name="AUTHOR"></a>
-<h2>AUTHOR</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Written by
@@ -407,8 +417,9 @@ Kevin Shanahan (aka Tyrann) <br>
 Based on source provided by id Software and Greg Lewis <br>
 http://disenchant.net</p>
 
+<h2>REPORTING BUGS
 <a name="REPORTING BUGS"></a>
-<h2>REPORTING BUGS</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Please send bug
@@ -416,8 +427,9 @@ reports to tyrann@disenchant.net. <br>
 Improvements to the documentation are welcome and
 encouraged.</p>
 
+<h2>COPYRIGHT
 <a name="COPYRIGHT"></a>
-<h2>COPYRIGHT</h2>
+</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Copyright (C)
@@ -431,8 +443,9 @@ License GPLv2+: GNU GPL version 2 or later <br>
 software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.</p>
 
+<h2>SEE ALSO
 <a name="SEE ALSO"></a>
-<h2>SEE ALSO</h2>
+</h2>
 
 
 
