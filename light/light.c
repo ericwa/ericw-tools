@@ -134,7 +134,8 @@ LightThread(void *arg)
 		break;
 	}
 	if (i == bsp->nummodels) {
-	    logprint("warning: no model has face %d\n", facenum);
+	    // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
+	    //logprint("warning: no model has face %d\n", facenum);
 	    continue;
 	}
 
