@@ -813,10 +813,15 @@ CullLight(const entity_t *entity, const lightsurf_t *lightsurf)
     vec_t dist;
     
     VectorSubtract(entity->origin, lightsurf->origin, distvec);
-    dist = VectorLength(distvec) - lightsurf->radius - entity->fadedist;
+    dist = VectorLength(distvec) - lightsurf->radius;
     
-    /* return true if the spheres don't intersect */
-    return dist > 0;
+    /* light is inside surface bounding sphere => can't cull */
+    if (dist < 0)
+	return false;
+    
+    /* return true if the light level at the closest point on the
+       surface bounding sphere to the light source is <= fadegate */
+    return GetLightValue(&entity->light, entity, dist) <= fadegate;
 }
 
 /*
@@ -844,10 +849,6 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
     if (dist < 0)
 	return;
 
-    /* don't bother with light too far away from plane */
-    if (dist > entity->fadedist)
-	return;
-
     /* sphere cull surface and light */
     if (CullLight(entity, lightsurf))
 	return;
@@ -867,7 +868,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	dist = VectorLength(ray);
 
 	/* Quick distance check first */
-	if (dist > entity->fadedist)
+	if (GetLightValue(&entity->light, entity, dist) <= fadegate)
 	    continue;
 
 	/* Check spotlight cone */

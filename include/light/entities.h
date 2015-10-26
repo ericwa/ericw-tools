@@ -63,7 +63,6 @@ typedef struct entity_s {
 
     lightsample_t light;
     light_formula_t formula;
-    vec_t fadedist;
     float atten;
     float anglescale;
     int style;
