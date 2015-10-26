@@ -264,6 +264,12 @@ Z-axis from 0 to 359 degrees and pitch specifies the angle from 90 (straight
 up) to -90 (straight down). Roll has no effect, so use any value (e.g. 0).
 Often easier than the "target" method.
 
+.IP "\fB""_surface_spotlight"" ""n""\fP"
+For a surface light template (i.e. a light with "_surface" set), setting this to
+"1" makes each instance into a spotlight, with the direction of light
+pointing along the surface normal. In other words, it automatically sets
+"mangle" on each of the generated lights.
+
 .IP "\fB""angle"" ""n""\fP"
 Specifies the angle in degrees for a spotlight cone. Default 40.
 

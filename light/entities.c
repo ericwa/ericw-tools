@@ -1029,7 +1029,7 @@ WriteEntitiesToString(bsp2_t *bsp)
  * =======================================================================
  */
 
-static void CreateSurfaceLight(const vec3_t origin, const entity_t *surflight_template)
+static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const entity_t *surflight_template)
 {
     entity_t *entity = DuplicateEntity(surflight_template);
 
@@ -1038,6 +1038,12 @@ static void CreateSurfaceLight(const vec3_t origin, const entity_t *surflight_te
     /* don't write to bsp */
     entity->generated = true;
 
+    /* set spotlight vector based on face normal */
+    if (atoi(ValueForKey(surflight_template, "_surface_spotlight"))) {
+	entity->spotlight = true;
+	VectorCopy(normal, entity->spotvec);
+    }
+	
     num_lights++;
 }
 
@@ -1070,7 +1076,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const 
     
     VectorMA(midpoint, offset, normal, midpoint);
 
-    CreateSurfaceLight(midpoint, surflight_template);
+    CreateSurfaceLight(midpoint, normal, surflight_template);
 }
 
 static void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
