@@ -820,8 +820,9 @@ CullLight(const entity_t *entity, const lightsurf_t *lightsurf)
 	return false;
     
     /* return true if the light level at the closest point on the
-       surface bounding sphere to the light source is <= fadegate */
-    return GetLightValue(&entity->light, entity, dist) <= fadegate;
+       surface bounding sphere to the light source is <= fadegate.
+       need fabs to handle antilights. */
+    return fabs(GetLightValue(&entity->light, entity, dist)) <= fadegate;
 }
 
 /*
@@ -868,7 +869,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
 	dist = VectorLength(ray);
 
 	/* Quick distance check first */
-	if (GetLightValue(&entity->light, entity, dist) <= fadegate)
+	if (fabs(GetLightValue(&entity->light, entity, dist)) <= fadegate)
 	    continue;
 
 	/* Check spotlight cone */
