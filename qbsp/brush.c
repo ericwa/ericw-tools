@@ -307,7 +307,7 @@ FindTargetEntity(const char *target)
 
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
 	name = ValueForKey(entity, "targetname");
-	if (!strcasecmp(target, name))
+	if (!Q_strcasecmp(target, name))
 	    return entity;
     }
 
@@ -378,7 +378,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 	    /* Don't generate hintskip faces */
 	    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
 	    const char *texname = map.miptex[texinfo[mapface->texinfo].miptex];
-	    if (!strcasecmp(texname, "hintskip"))
+	    if (!Q_strcasecmp(texname, "hintskip"))
 		continue;
 	}
 
@@ -787,20 +787,20 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     mapface = mapbrush->faces;
     texname = map.miptex[texinfo[mapface->texinfo].miptex];
 
-    if (!strcasecmp(texname, "hint") || !strcasecmp(texname, "hintskip"))
+    if (!Q_strcasecmp(texname, "hint") || !Q_strcasecmp(texname, "hintskip"))
 	return CONTENTS_HINT;
-    if (!strcasecmp(texname, "clip"))
+    if (!Q_strcasecmp(texname, "clip"))
 	return CONTENTS_CLIP;
 
     if (texname[0] == '*') {
-	if (!strncasecmp(texname + 1, "lava", 4))
+	if (!Q_strncasecmp(texname + 1, "lava", 4))
 	    return CONTENTS_LAVA;
-	if (!strncasecmp(texname + 1, "slime", 5))
+	if (!Q_strncasecmp(texname + 1, "slime", 5))
 	    return CONTENTS_SLIME;
 	return CONTENTS_WATER;
     }
 
-    if (!strncasecmp(texname, "sky", 3))
+    if (!Q_strncasecmp(texname, "sky", 3))
 	return CONTENTS_SKY;
 
     return CONTENTS_SOLID;
@@ -948,7 +948,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
 
     /* If the source entity is func_detail, set the content flag */
-    if (!strcasecmp(classname, "func_detail"))
+    if (!Q_strcasecmp(classname, "func_detail"))
 	cflags |= CFLAGS_DETAIL;
 
     mapbrush = src->mapbrushes;

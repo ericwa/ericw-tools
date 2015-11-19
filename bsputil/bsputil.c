@@ -18,7 +18,10 @@
 */
 
 #include <stdint.h>
+
+#ifndef WIN32
 #include <unistd.h>
+#endif
 
 #include <common/cmdlib.h>
 #include <common/bspfile.h>

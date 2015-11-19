@@ -27,13 +27,23 @@
 #include <ctype.h>
 #include <time.h>
 #include <stdarg.h>
+#include <stdbool.h>
 
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
 
-typedef enum { false, true } qboolean;
+typedef bool qboolean;
 typedef unsigned char byte;
 
+#ifndef __GNUC__
+#define __attribute__(x)
+#endif
+
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
+#ifdef __GNUC__
 /* min and max macros with type checking */
 #define qmax(a,b) ({      \
     typeof(a) a_ = (a);   \
@@ -47,6 +57,10 @@ typedef unsigned char byte;
     (void)(&a_ == &b_);   \
     (a_ < b_) ? a_ : b_;  \
 })
+#else
+#define qmax(a,b) (((a)>(b)) ? (a) : (b))
+#define qmin(a,b) (((a)>(b)) ? (b) : (a))
+#endif
 
 /* set these before calling CheckParm */
 extern int myargc;
@@ -115,7 +129,7 @@ void CRC_ProcessByte(unsigned short *crcvalue, byte data);
 unsigned short CRC_Value(unsigned short crcvalue);
 
 void CreatePath(char *path);
-void CopyFile(const char *from, char *to);
+void Q_CopyFile(const char *from, char *to);
 
 extern qboolean archive;
 extern char archivedir[1024];

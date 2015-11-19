@@ -19,7 +19,10 @@
 
 #include <stdint.h>
 #include <stdio.h>
+
+#ifdef LINUX
 #include <unistd.h>
+#endif
 
 #include <vis/vis.h>
 #include <common/cmdlib.h>

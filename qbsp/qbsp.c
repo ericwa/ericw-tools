@@ -53,9 +53,9 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      * worldspawn
      */
     classname = ValueForKey(entity, "classname");
-    if (!strcasecmp(classname, "func_group"))
+    if (!Q_strcasecmp(classname, "func_group"))
 	return;
-    if (!strcasecmp(classname, "func_detail"))
+    if (!Q_strcasecmp(classname, "func_detail"))
 	return;
 
     if (entity != pWorldEnt) {
@@ -104,7 +104,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	source = map.entities + 1;
 	for (i = 1; i < map.numentities; i++, source++) {
 	    classname = ValueForKey(source, "classname");
-	    if (!strcasecmp(classname, "func_group"))
+	    if (!Q_strcasecmp(classname, "func_group"))
 		Brush_LoadEntity(entity, source, hullnum);
 	}
 
@@ -113,7 +113,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 	source = map.entities + 1;
 	for (i = 1; i < map.numentities; i++, source++) {
 	    classname = ValueForKey(source, "classname");
-	    if (!strcasecmp(classname, "func_detail")) {
+	    if (!Q_strcasecmp(classname, "func_detail")) {
 		int detailstart = entity->numbrushes;
 		Brush_LoadEntity(entity, source, hullnum);
 		detailcount += entity->numbrushes - detailstart;
@@ -220,9 +220,9 @@ UpdateEntLump(void)
 	if (!entity->nummapbrushes)
 	    continue;
 	classname = ValueForKey(entity, "classname");
-	if (!strcasecmp(classname, "func_detail"))
+	if (!Q_strcasecmp(classname, "func_detail"))
 	    continue;
-	if (!strcasecmp(classname, "func_group"))
+	if (!Q_strcasecmp(classname, "func_group"))
 	    continue;
 
 	snprintf(modname, sizeof(modname), "*%d", modnum);
@@ -479,59 +479,59 @@ ParseOptions(char *szOptions)
 	    NameCount++;
 	} else {
 	    szTok++;
-	    if (!strcasecmp(szTok, "nofill"))
+	    if (!Q_strcasecmp(szTok, "nofill"))
 		options.fNofill = true;
-	    else if (!strcasecmp(szTok, "noclip"))
+	    else if (!Q_strcasecmp(szTok, "noclip"))
 		options.fNoclip = true;
-	    else if (!strcasecmp(szTok, "noskip"))
+	    else if (!Q_strcasecmp(szTok, "noskip"))
 		options.fNoskip = true;
-	    else if (!strcasecmp(szTok, "onlyents"))
+	    else if (!Q_strcasecmp(szTok, "onlyents"))
 		options.fOnlyents = true;
-	    else if (!strcasecmp(szTok, "verbose"))
+	    else if (!Q_strcasecmp(szTok, "verbose"))
 		options.fAllverbose = true;
-	    else if (!strcasecmp(szTok, "splitspecial"))
+	    else if (!Q_strcasecmp(szTok, "splitspecial"))
 		options.fSplitspecial = true;
-	    else if (!strcasecmp(szTok, "notranswater"))
+	    else if (!Q_strcasecmp(szTok, "notranswater"))
 		options.fTranswater = false;
-	    else if (!strcasecmp(szTok, "transwater"))
+	    else if (!Q_strcasecmp(szTok, "transwater"))
 		options.fTranswater = true;
-	    else if (!strcasecmp(szTok, "transsky"))
+	    else if (!Q_strcasecmp(szTok, "transsky"))
 		options.fTranssky = true;
-	    else if (!strcasecmp(szTok, "oldaxis"))
+	    else if (!Q_strcasecmp(szTok, "oldaxis"))
 		logprint("-oldaxis is now the default and the flag is ignored.\nUse -nooldaxis to get the alternate behaviour.\n");
-	    else if (!strcasecmp(szTok, "nooldaxis"))
+	    else if (!Q_strcasecmp(szTok, "nooldaxis"))
 		options.fOldaxis = false;
-	    else if (!strcasecmp(szTok, "forcegoodtree"))
+	    else if (!Q_strcasecmp(szTok, "forcegoodtree"))
 		options.forceGoodTree = true;
-	    else if (!strcasecmp(szTok, "bspleak"))
+	    else if (!Q_strcasecmp(szTok, "bspleak"))
 		options.fBspleak = true;
-	    else if (!strcasecmp(szTok, "noverbose"))
+	    else if (!Q_strcasecmp(szTok, "noverbose"))
 		options.fNoverbose = true;
-	    else if (!strcasecmp(szTok, "oldleak"))
+	    else if (!Q_strcasecmp(szTok, "oldleak"))
 		options.fOldleak = true;
-	    else if (!strcasecmp(szTok, "nopercent"))
+	    else if (!Q_strcasecmp(szTok, "nopercent"))
 		options.fNopercent = true;
-	    else if (!strcasecmp(szTok, "hexen2"))
+	    else if (!Q_strcasecmp(szTok, "hexen2"))
 		options.hexen2 = true;
-	    else if (!strcasecmp(szTok, "bsp2")) {
+	    else if (!Q_strcasecmp(szTok, "bsp2")) {
 		options.BSPVersion = BSP2VERSION;
 		MemSize = MemSize_BSP2;
-	    } else if (!strcasecmp(szTok, "2psb")) {
+	    } else if (!Q_strcasecmp(szTok, "2psb")) {
 		options.BSPVersion = BSP2RMQVERSION;
 		MemSize = MemSize_BSP2rmq;
-	    } else if (!strcasecmp(szTok, "leakdist")) {
+	    } else if (!Q_strcasecmp(szTok, "leakdist")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Error("Invalid argument to option %s", szTok);
 		options.dxLeakDist = atoi(szTok2);
 		szTok = szTok2;
-	    } else if (!strcasecmp(szTok, "subdivide")) {
+	    } else if (!Q_strcasecmp(szTok, "subdivide")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Error("Invalid argument to option %s", szTok);
 		options.dxSubdivide = atoi(szTok2);
 		szTok = szTok2;
-	    } else if (!strcasecmp(szTok, "wadpath")) {
+	    } else if (!Q_strcasecmp(szTok, "wadpath")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Error("Invalid argument to option %s", szTok);
@@ -540,21 +540,21 @@ ParseOptions(char *szOptions)
 		/* Remove trailing /, if any */
 		if (options.wadPath[strlen(options.wadPath) - 1] == '/')
 		    options.wadPath[strlen(options.wadPath) - 1] = 0;
-            } else if (!strcasecmp(szTok, "oldrottex")) {
+            } else if (!Q_strcasecmp(szTok, "oldrottex")) {
                 options.fixRotateObjTexture = false;
-	    } else if (!strcasecmp(szTok, "maxnodesize")) {
+	    } else if (!Q_strcasecmp(szTok, "maxnodesize")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Error("Invalid argument to option %s", szTok);
 		options.maxNodeSize= atoi(szTok2);
 		szTok = szTok2;
-	    } else if (!strcasecmp(szTok, "epsilon")) {
+	    } else if (!Q_strcasecmp(szTok, "epsilon")) {
 		szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
 		if (!szTok2)
 		    Error("Invalid argument to option %s", szTok);
 		options.on_epsilon= atof(szTok2);
 		szTok = szTok2;
-	    } else if (!strcasecmp(szTok, "?") || !strcasecmp(szTok, "help"))
+	    } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
 		PrintOptions();
 	    else
 		Error("Unknown option '%s'", szTok);

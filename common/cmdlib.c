@@ -23,20 +23,19 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 
 #ifdef WIN32
 #include <direct.h>
-#endif
-
-#ifdef NeXT
-#include <libc.h>
+#include <windows.h>
 #endif
 
 #ifdef LINUX
+#include <sys/time.h>
 #include <unistd.h>
 #include <string.h>
 #endif
+
+#include <stdint.h>
 
 #define PATHSEPERATOR '/'
 
@@ -161,7 +160,7 @@ ExpandPathAndArchive(char *path)
 
     if (archive) {
 	sprintf(archivename, "%s/%s", archivedir, path);
-	CopyFile(expanded, archivename);
+	Q_CopyFile(expanded, archivename);
     }
     return expanded;
 }
@@ -185,11 +184,19 @@ copystring(const char *s)
 double
 I_FloatTime(void)
 {
+#ifdef WIN32
+	FILETIME ft;
+	uint64_t hundred_ns;
+	GetSystemTimeAsFileTime(&ft);
+	hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
+	return (double)hundred_ns / 10000000.0;
+#else
     struct timeval tv;
     
     gettimeofday(&tv, NULL);
     
     return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
+#endif
 }
 
 void
@@ -903,12 +910,12 @@ CreatePath(char *path)
 
 /*
  * ============
- * CopyFile
+ * Q_CopyFile
  * Used to archive source files
  *============
  */
 void
-CopyFile(const char *from, char *to)
+Q_CopyFile(const char *from, char *to)
 {
     void *buffer;
     int length;

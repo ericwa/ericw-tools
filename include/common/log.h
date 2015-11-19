@@ -29,6 +29,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <common/cmdlib.h>
 
 void init_log(const char *filename);
 void close_log();

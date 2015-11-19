@@ -23,8 +23,15 @@
 #include "qbsp.h"
 
 #include <sys/types.h>
-#include <sys/time.h>
 #include <string.h>
+
+#ifdef WIN32
+#include <windows.h>
+#endif
+
+#ifdef LINUX
+#include <sys/time.h>
+#endif
 
 #define PATHSEPERATOR   '/'
 
@@ -48,11 +55,19 @@ I_FloatTime
 double
 I_FloatTime(void)
 {
-    struct timeval tv;
+#ifdef WIN32
+	FILETIME ft;
+	uint64_t hundred_ns;
+	GetSystemTimeAsFileTime(&ft);
+	hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
+	return (double)hundred_ns / 10000000.0;
+#else
+	struct timeval tv;
 
-    gettimeofday(&tv, NULL);
+	gettimeofday(&tv, NULL);
 
-    return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
+	return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
+#endif
 }
 
 
@@ -116,4 +131,37 @@ int
 IsAbsolutePath(const char *path)
 {
     return path[0] == PATHSEPERATOR || (isalpha(path[0]) && path[1] == ':');
+}
+
+int
+Q_strncasecmp(const char *s1, const char *s2, int n)
+{
+	int c1, c2;
+
+	while (1) {
+		c1 = *s1++;
+		c2 = *s2++;
+
+		if (!n--)
+			return 0;		/* strings are equal until end point */
+
+		if (c1 != c2) {
+			if (c1 >= 'a' && c1 <= 'z')
+				c1 -= ('a' - 'A');
+			if (c2 >= 'a' && c2 <= 'z')
+				c2 -= ('a' - 'A');
+			if (c1 != c2)
+				return -1;	/* strings not equal */
+		}
+		if (!c1)
+			return 0;		/* strings are equal */
+	}
+
+	return -1;
+}
+
+int
+Q_strcasecmp(const char *s1, const char *s2)
+{
+	return Q_strncasecmp(s1, s2, 99999);
 }

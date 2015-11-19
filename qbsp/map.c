@@ -60,7 +60,7 @@ AddAnimTex(const char *name)
     for (i = 0; i < frame; i++) {
 	framename[1] = basechar + i;
 	for (j = 0; j < map.nummiptex; j++) {
-	    if (!strcasecmp(framename, map.miptex[j]))
+	    if (!Q_strcasecmp(framename, map.miptex[j]))
 		break;
 	}
 	if (j < map.nummiptex)
@@ -85,7 +85,7 @@ FindMiptex(const char *name)
 	name = pathsep + 1;
 
     for (i = 0; i < map.nummiptex; i++) {
-	if (!strcasecmp(name, map.miptex[i]))
+	if (!Q_strcasecmp(name, map.miptex[i]))
 	    return i;
     }
     if (map.nummiptex == map.maxmiptex)
@@ -108,13 +108,13 @@ IsSkipName(const char *name)
 {
     if (options.fNoskip)
 	return false;
-    if (!strcasecmp(name, "skip"))
+    if (!Q_strcasecmp(name, "skip"))
 	return true;
-    if (!strcasecmp(name, "*waterskip"))
+    if (!Q_strcasecmp(name, "*waterskip"))
 	return true;
-    if (!strcasecmp(name, "*slimeskip"))
+    if (!Q_strcasecmp(name, "*slimeskip"))
 	return true;
-    if (!strcasecmp(name, "*lavaskip"))
+    if (!Q_strcasecmp(name, "*lavaskip"))
 	return true;
     return false;
 }
@@ -124,7 +124,7 @@ IsSplitName(const char *name)
 {
     if (options.fSplitspecial)
 	return false;
-    if (name[0] == '*' || !strncasecmp(name, "sky", 3))
+    if (name[0] == '*' || !Q_strncasecmp(name, "sky", 3))
 	return true;
     return false;
 }
@@ -132,9 +132,9 @@ IsSplitName(const char *name)
 static bool
 IsHintName(const char *name)
 {
-    if (!strcasecmp(name, "hint"))
+    if (!Q_strcasecmp(name, "hint"))
 	return true;
-    if (!strcasecmp(name, "hintskip"))
+    if (!Q_strcasecmp(name, "hintskip"))
 	return true;
     return false;
 }
@@ -216,16 +216,16 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 	goto parse_error;
     epair->value = copystring(parser->token);
 
-    if (!strcasecmp(epair->key, "origin")) {
+    if (!Q_strcasecmp(epair->key, "origin")) {
 	GetVectorForKey(entity, epair->key, entity->origin);
-    } else if (!strcasecmp(epair->key, "classname")) {
-	if (!strcasecmp(epair->value, "info_player_start")) {
+    } else if (!Q_strcasecmp(epair->key, "classname")) {
+	if (!Q_strcasecmp(epair->value, "info_player_start")) {
 	    if (rgfStartSpots & info_player_start)
 		Message(msgWarning, warnMultipleStarts);
 	    rgfStartSpots |= info_player_start;
-	} else if (!strcasecmp(epair->value, "info_player_deathmatch")) {
+	} else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {
 	    rgfStartSpots |= info_player_deathmatch;
-	} else if (!strcasecmp(epair->value, "info_player_coop")) {
+	} else if (!Q_strcasecmp(epair->value, "info_player_coop")) {
 	    rgfStartSpots |= info_player_coop;
 	}
     }
@@ -712,9 +712,9 @@ IsWorldBrushEntity(const mapentity_t *entity)
 {
     const char *classname = ValueForKey(entity, "classname");
 
-    if (!strcasecmp(classname, "func_detail"))
+    if (!Q_strcasecmp(classname, "func_detail"))
 	return true;
-    if (!strcasecmp(classname, "func_group"))
+    if (!Q_strcasecmp(classname, "func_group"))
 	return true;
     return false;
 }
@@ -786,7 +786,7 @@ ValueForKey(const mapentity_t *entity, const char *key)
     const epair_t *ep;
 
     for (ep = entity->epairs; ep; ep = ep->next)
-	if (!strcasecmp(ep->key, key))
+	if (!Q_strcasecmp(ep->key, key))
 	    return ep->value;
 
     return "";
@@ -799,7 +799,7 @@ SetKeyValue(mapentity_t *entity, const char *key, const char *value)
     epair_t *ep;
 
     for (ep = entity->epairs; ep; ep = ep->next)
-	if (!strcasecmp(ep->key, key)) {
+	if (!Q_strcasecmp(ep->key, key)) {
 	    free(ep->value); /* FIXME */
 	    ep->value = copystring(value);
 	    return;

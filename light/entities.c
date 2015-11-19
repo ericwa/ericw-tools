@@ -1146,7 +1146,7 @@ static void SubdividePolygon (const bsp2_dface_t *face, const bsp2_t *bsp, int n
     const char *texname = miptex->name;
 
     for (i=0; i<num_surfacelight_templates; i++) {
-        if (!strcasecmp(texname, ValueForKey(surfacelight_templates[i], "_surface"))) {
+        if (!Q_strcasecmp(texname, ValueForKey(surfacelight_templates[i], "_surface"))) {
             CreateSurfaceLightOnFaceSubdivision(face, surfacelight_templates[i], bsp, numverts, verts);
         }
     }
