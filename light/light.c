@@ -195,6 +195,7 @@ FindModelInfo(const bsp2_t *bsp)
 	if (attribute[0])
 	    info->minlight.light = atoi(attribute);
 	GetVectorForKey(entity, "_mincolor", info->minlight.color);
+	normalize_color_format(info->minlight.color);
 	if (!VectorCompare(info->minlight.color, vec3_origin)) {
 	    if (!write_litfile)
 		write_litfile = true;

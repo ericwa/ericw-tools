@@ -112,6 +112,9 @@ typedef struct entity_s {
 #define MAX_LIGHTS 65536
 extern entity_t *lights[MAX_LIGHTS];
 
+/* detect colors with components in 0-1 and scale them to 0-255 */
+void normalize_color_format(vec3_t color);
+
 entity_t *FindEntityWithKeyPair(const char *key, const char *value);
 const char *ValueForKey(const entity_t *ent, const char *key);
 void GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec);
