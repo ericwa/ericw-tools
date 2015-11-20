@@ -190,7 +190,7 @@ vec_from_mangle(vec3_t v, const vec3_t m)
 }
 
 /* detect colors with components in 0-1 and scale them to 0-255 */
-static void
+void
 normalize_color_format(vec3_t color)
 {
     if (color[0] >= 0 && color[0] <= 1 &&
