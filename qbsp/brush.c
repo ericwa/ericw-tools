@@ -60,8 +60,18 @@ CheckFace(face_t *face)
     vec3_t edgevec, edgenormal, facenormal;
     int i, j;
 
-    if (face->w.numpoints < 3)
-	Error("%s: too few points (%d)", __func__, face->w.numpoints);
+    if (face->w.numpoints < 3) {
+        if (face->w.numpoints == 2) {
+            Error("%s: too few points (2): (%f %f %f) (%f %f %f)\n", __func__,
+                  face->w.points[0][0], face->w.points[0][1], face->w.points[0][2],
+                  face->w.points[1][0], face->w.points[1][1], face->w.points[1][2]);
+        } else if (face->w.numpoints == 1) {
+            Error("%s: too few points (1): (%f %f %f)\n", __func__, 
+                  face->w.points[0][0], face->w.points[0][1], face->w.points[0][2]);
+        } else {
+            Error("%s: too few points (%d)", __func__, face->w.numpoints);
+        }
+    }
 
     VectorCopy(plane->normal, facenormal);
     if (face->planeside)
