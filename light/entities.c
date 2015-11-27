@@ -940,6 +940,29 @@ Get_EntityStringSize(const entity_t *entities)
     return size;
 }
 
+const char *
+CopyValueWithEscapeSequencesParsed(const char *value)
+{
+    char *result = copystring(value);
+    const char *inptr = value;
+    char *outptr = result;
+    qboolean bold = false;
+    
+    for ( ; *inptr; inptr++) {
+        if (inptr[0] == '\\' && inptr[1] == 'b') {
+            bold = !bold; // Toggle bold
+            inptr++;
+            continue;
+        } else {
+            int mask = bold ? 128 : 0;
+            *(outptr++) = *inptr | mask;
+        }
+    }
+    *outptr = 0;
+    
+    return result;
+}
+
 /*
  * ================
  * WriteEntitiesToString
@@ -979,8 +1002,20 @@ WriteEntitiesToString(bsp2_t *bsp)
 	space -= length;
 
 	for (epair = entity->epairs; epair; epair = epair->next) {
+            const char *value;
+            if (parse_escape_sequences) {
+                value = CopyValueWithEscapeSequencesParsed(epair->value);
+            } else {
+                value = epair->value;
+            }
+            
 	    length = snprintf(pos, space, "\"%s\" \"%s\"\n",
-			      epair->key, epair->value);
+			      epair->key, value);
+            
+            if (parse_escape_sequences) {
+                free(value);
+            }
+            
 	    pos += length;
 	    space -= length;
 	}

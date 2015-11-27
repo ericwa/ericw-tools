@@ -78,6 +78,7 @@ int oversample = 1;
 qboolean write_litfile = false;
 qboolean write_luxfile = false;
 qboolean onlyents = false;
+qboolean parse_escape_sequences = false;
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
@@ -376,6 +377,9 @@ main(int argc, const char **argv)
 	} else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
 	    onlyents = true;
 	    logprint( "Onlyents mode enabled\n" );
+        } else if ( !strcmp( argv[ i ], "-parse_escape_sequences" ) ) {
+            parse_escape_sequences = true;
+            logprint( "Parsing escape sequences enabled\n" );
 	} else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
@@ -387,7 +391,7 @@ main(int argc, const char **argv)
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] [-sunsamples n] bspfile\n");
+	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] [-sunsamples n] [-parse_escape_sequences] bspfile\n");
 	exit(1);
     }
 
