@@ -534,6 +534,7 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
     vec_t length;
     plane_t *plane;
     texinfo_t tx;
+	int i, j;
 
     face->linenum = parser->linenum;
     ParsePlaneDef(parser, planepts);
@@ -552,6 +553,18 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
 	Message(msgWarning, warnNoPlaneNormal, parser->linenum);
 	return false;
     }
+
+	// ericw -- round texture vector values that are within ZERO_EPSILON of integers,
+	// to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
+	// (it uses 32 bit precision in CalcSurfaceExtents)
+	for (i = 0; i < 2; i++) {
+		for (j = 0; j < 4; j++) {
+			vec_t r = Q_rint(tx.vecs[i][j]);
+			if (fabs(tx.vecs[i][j] - r) < ZERO_EPSILON)
+				tx.vecs[i][j] = r;
+		}
+	}
+
 
     face->texinfo = FindTexinfo(&tx);
 
