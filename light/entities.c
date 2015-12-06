@@ -40,6 +40,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp);
    created. */
 static lightsample_t sunlight = { 0, { 255, 255, 255 } };
 static lightsample_t sunlight2 = { 0, { 255, 255, 255 } };
+static lightsample_t sunlight3 = { 0, { 255, 255, 255 } };
 static int sunlight_dirt = 0;
 static int sunlight2_dirt = 0;
 static vec3_t sunvec = { 0, 0, -1 };		/* defaults to straight down */
@@ -390,7 +391,7 @@ SetupSkyDome()
 	iterations = qmax(iterations, 2);
     
 	/* dummy check */
-	if ( sunlight2.light <= 0.0f ) {
+	if ( sunlight2.light <= 0.0f && sunlight3.light <= 0.0f ) {
 		return;
 	}
     
@@ -404,7 +405,9 @@ SetupSkyDome()
 	/* calc individual sun brightness */
 	numSuns = angleSteps * elevationSteps + 1;
 	logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.light, sunlight2.color[0], sunlight2.color[1], sunlight2.color[2]);
+	logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.light, sunlight3.color[0], sunlight3.color[1], sunlight3.color[2]);
 	sunlight2.light /= numSuns;
+	sunlight3.light /= numSuns;
 
 	/* iterate elevation */
 	elevation = elevationStep * 0.5f;
@@ -421,6 +424,13 @@ SetupSkyDome()
 
 			AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
 
+                        /* create bottom hemisphere */
+                        if (sunlight3.light > 0) {
+                            direction[ 2 ] = -direction[ 2 ];
+                            
+                            AddSun(direction, sunlight3, 0.0, sunlight2_dirt);
+                        }
+                    
 			/* move */
 			angle += angleStep;
 		}
@@ -434,6 +444,12 @@ SetupSkyDome()
 	VectorSet( direction, 0.0f, 0.0f, 1.0f );
 
 	AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+    
+        if (sunlight3.light > 0) {
+            VectorSet( direction, 0.0f, 0.0f, -1.0f );
+            
+            AddSun(direction, sunlight3, 0.0, sunlight2_dirt);
+        }
 }
 
 #if 0
@@ -702,10 +718,15 @@ LoadEntities(const bsp2_t *bsp)
 		normalize_color_format(sunlight.color);
 	    } else if (!strcmp(key, "_sunlight2"))
 		sunlight2.light = atof(com_token);
-	    else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
+            else if (!strcmp(key, "_sunlight3"))
+                sunlight3.light = atof(com_token);
+            else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
 		scan_vec3(sunlight2.color, com_token, key);
 		normalize_color_format(sunlight2.color);
-	    } else if (!strcmp(key, "_minlight_color")) {
+            } else if (!strcmp(key, "_sunlight3_color") || !strcmp(key, "_sunlight_color3")) {
+                scan_vec3(sunlight3.color, com_token, key);
+                normalize_color_format(sunlight3.color);
+            } else if (!strcmp(key, "_minlight_color")) {
 		scan_vec3(minlight.color, com_token, "_minlight_color");
 		normalize_color_format(minlight.color);
 	    } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
@@ -857,7 +878,8 @@ LoadEntities(const bsp2_t *bsp)
 
     if (!VectorCompare(sunlight.color, vec3_white) ||
 	!VectorCompare(minlight.color, vec3_white) ||
-	!VectorCompare(sunlight2.color, vec3_white)) {
+	!VectorCompare(sunlight2.color, vec3_white) ||
+        !VectorCompare(sunlight3.color, vec3_white)) {
 	if (!write_litfile) {
 	    write_litfile = true;
 	    logprint("Colored light entities detected: "
