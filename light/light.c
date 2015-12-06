@@ -57,6 +57,7 @@ qboolean dirtGainSetOnCmdline = false;
 qboolean dirtAngleSetOnCmdline = false;
 
 qboolean testFenceTextures = false;
+qboolean surflight_dump = false;
 
 byte *filebase;			// start of lightmap data
 static byte *file_p;		// start of free space after data
@@ -79,6 +80,8 @@ qboolean write_litfile = false;
 qboolean write_luxfile = false;
 qboolean onlyents = false;
 qboolean parse_escape_sequences = false;
+
+char mapfilename[1024];
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
@@ -383,7 +386,9 @@ main(int argc, const char **argv)
 	    surflight_subdivide = atof( argv[ ++i ] );
 	    surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
 	    logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
-	} else if ( !strcmp( argv[ i ], "-sunsamples" ) ) {
+        } else if ( !strcmp( argv[ i ], "-surflight_dump" ) ) {
+            surflight_dump = true;
+        } else if ( !strcmp( argv[ i ], "-sunsamples" ) ) {
 	    sunsamples = atof( argv[ ++i ] );
 	    sunsamples = qmin(qmax(sunsamples, 8), 2048);
 	    logprint( "Using sunsamples of %d\n", sunsamples);
@@ -404,7 +409,7 @@ main(int argc, const char **argv)
 	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] [-sunsamples n] [-parse_escape_sequences] bspfile\n");
+	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-parse_escape_sequences] bspfile\n");
 	exit(1);
     }
 
@@ -431,6 +436,7 @@ main(int argc, const char **argv)
     start = I_FloatTime();
 
     strcpy(source, argv[i]);
+    strcpy(mapfilename, argv[i]);
     StripExtension(source);
     DefaultExtension(source, ".bsp");
     LoadBSPFile(source, &bspdata);

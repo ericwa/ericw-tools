@@ -1037,6 +1037,24 @@ WriteEntitiesToString(bsp2_t *bsp)
  * =======================================================================
  */
 
+FILE *surflights_dump_file;
+char surflights_dump_filename[1024];
+
+void
+WriteEntityToFile(FILE *f, entity_t *entity)
+{
+    const epair_t *epair;
+    
+    if (!entity->epairs)
+        return;
+    
+    fprintf(f, "{\n");
+    for (epair = entity->epairs; epair; epair = epair->next) {
+        fprintf(f, "\"%s\" \"%s\"\n", epair->key, epair->value);
+    }
+    fprintf(f, "}\n");
+}
+
 static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const entity_t *surflight_template)
 {
     entity_t *entity = DuplicateEntity(surflight_template);
@@ -1051,7 +1069,13 @@ static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const e
 	entity->spotlight = true;
 	VectorCopy(normal, entity->spotvec);
     }
-	
+    
+    /* export it to a map file for debugging */
+    if (surflight_dump) {
+        SetKeyValue(entity, "origin", VecStr(origin));
+        WriteEntityToFile(surflights_dump_file, entity);
+    }
+    
     num_lights++;
 }
 
@@ -1239,6 +1263,13 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
     if (!num_surfacelight_templates)
         return;
 
+    if (surflight_dump) {
+        strcpy(surflights_dump_filename, mapfilename);
+        StripExtension(surflights_dump_filename);
+        strcat(surflights_dump_filename, "-surflights.map");
+        surflights_dump_file = fopen(surflights_dump_filename, "w");
+    }
+    
     /* Create the surface lights */
     qboolean *face_visited = (qboolean *)calloc(bsp->numfaces, sizeof(qboolean));
     for (i=0; i<bsp->numleafs; i++) {
@@ -1283,5 +1314,10 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
     /* Hack: clear templates light value to 0 so they don't cast light */
     for (i=0;i<num_surfacelight_templates;i++) {
         surfacelight_templates[i]->light.light = 0;
+    }
+    
+    if (surflights_dump_file) {
+        fclose(surflights_dump_file);
+        printf("wrote surface lights to '%s'\n", surflights_dump_filename);
     }
 }
