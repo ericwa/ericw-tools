@@ -120,6 +120,7 @@ const char *ValueForKey(const entity_t *ent, const char *key);
 void GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec);
 
 void LoadEntities(const bsp2_t *bsp);
+void SetupLights(const bsp2_t *bsp);
 void WriteEntitiesToString(bsp2_t *bsp);
 
 #endif /* __LIGHT_ENTITIES_H__ */

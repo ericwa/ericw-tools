@@ -866,7 +866,11 @@ LoadEntities(const bsp2_t *bsp)
     }
 
     logprint("%d entities read, %d are lights.\n", num_entities, num_lights);
+}
 
+void
+SetupLights(const bsp2_t *bsp)
+{
     // Creates more light entities, needs to be done before the rest
     MakeSurfaceLights(bsp);
 
@@ -1051,7 +1055,7 @@ static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const e
     num_lights++;
 }
 
-static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const entity_t *surflight_template, const bsp2_t *bsp, int numverts, const vec_t *verts)
+static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const entity_t *surflight_template, const bsp2_t *bsp, int numverts, const vec_t *verts)
 {
     int i;
     vec3_t midpoint = {0, 0, 0};
@@ -1080,6 +1084,9 @@ static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const 
     
     VectorMA(midpoint, offset, normal, midpoint);
 
+    /* Add the model offset */
+    VectorAdd(midpoint, face_modelinfo->offset, midpoint);
+    
     CreateSurfaceLight(midpoint, normal, surflight_template);
 }
 
@@ -1106,7 +1113,7 @@ static void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
  SubdividePolygon - from GLQuake
  ================
  */
-static void SubdividePolygon (const bsp2_dface_t *face, const bsp2_t *bsp, int numverts, vec_t *verts, float subdivide_size)
+static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const bsp2_t *bsp, int numverts, vec_t *verts, float subdivide_size)
 {
     int             i, j, k;
     vec3_t  mins, maxs;
@@ -1170,8 +1177,8 @@ static void SubdividePolygon (const bsp2_dface_t *face, const bsp2_t *bsp, int n
             }
         }
 
-        SubdividePolygon (face, bsp, f, front[0], subdivide_size);
-        SubdividePolygon (face, bsp, b, back[0], subdivide_size);
+        SubdividePolygon (face, face_modelinfo, bsp, f, front[0], subdivide_size);
+        SubdividePolygon (face, face_modelinfo, bsp, b, back[0], subdivide_size);
         return;
     }
 
@@ -1182,7 +1189,7 @@ static void SubdividePolygon (const bsp2_dface_t *face, const bsp2_t *bsp, int n
 
     for (i=0; i<num_surfacelight_templates; i++) {
         if (!strcasecmp(texname, ValueForKey(surfacelight_templates[i], "_surface"))) {
-            CreateSurfaceLightOnFaceSubdivision(face, surfacelight_templates[i], bsp, numverts, verts);
+            CreateSurfaceLightOnFaceSubdivision(face, face_modelinfo, surfacelight_templates[i], bsp, numverts, verts);
         }
     }
 }
@@ -1192,7 +1199,7 @@ static void SubdividePolygon (const bsp2_dface_t *face, const bsp2_t *bsp, int n
  GL_SubdivideSurface - from GLQuake
  ================
  */
-static void GL_SubdivideSurface (const bsp2_dface_t *face, const bsp2_t *bsp)
+static void GL_SubdivideSurface (const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const bsp2_t *bsp)
 {
     int i;
     vec3_t  verts[64];
@@ -1208,7 +1215,7 @@ static void GL_SubdivideSurface (const bsp2_dface_t *face, const bsp2_t *bsp)
         VectorCopy(v->point, verts[i]);
     }
 
-    SubdividePolygon (face, bsp, face->numedges, verts[0], surflight_subdivide);
+    SubdividePolygon (face, face_modelinfo, bsp, face->numedges, verts[0], surflight_subdivide);
 }
 
 static void MakeSurfaceLights(const bsp2_t *bsp)
@@ -1243,12 +1250,18 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
         for (k = 0; k < leaf->nummarksurfaces; k++) {
             const texinfo_t *info;
             const miptex_t *miptex;
+            const modelinfo_t *face_modelinfo;
 	    int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
 
             surf = &bsp->dfaces[facenum];
             info = &bsp->texinfo[surf->texinfo];
             ofs = bsp->dtexdata.header->dataofs[info->miptex];
             miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
+            face_modelinfo = ModelInfoForFace(bsp, facenum);
+            
+            /* Skip face with no modelinfo */
+            if (face_modelinfo == NULL)
+                continue;
             
             /* Ignore the underwater side of liquid surfaces */
             if (miptex->name[0] == '*' && underwater)
@@ -1260,9 +1273,9 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
 	    
 	    /* Mark as handled */
 	    face_visited[facenum] = true;
-	    
+
 	    /* Generate the lights */
-            GL_SubdivideSurface(surf, bsp);
+            GL_SubdivideSurface(surf, face_modelinfo, bsp);
         }
     }
     free(face_visited);

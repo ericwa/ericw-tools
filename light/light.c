@@ -115,12 +115,30 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 	Error("%s: overrun", __func__);
 }
 
+const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
+{
+    int i;
+    dmodel_t *model;
+    
+    /* Find the correct model offset */
+    for (i = 0, model = bsp->dmodels; i < bsp->nummodels; i++, model++) {
+        if (facenum < model->firstface)
+            continue;
+        if (facenum < model->firstface + model->numfaces)
+            break;
+    }
+    if (i == bsp->nummodels) {
+        return NULL;
+    }
+    return &modelinfo[i];
+}
+
 static void *
 LightThread(void *arg)
 {
-    int facenum, i;
-    dmodel_t *model;
+    int facenum;
     const bsp2_t *bsp = arg;
+    const modelinfo_t *face_modelinfo;
 
     while (1) {
 	facenum = GetThreadWork();
@@ -128,19 +146,14 @@ LightThread(void *arg)
 	    break;
 
 	/* Find the correct model offset */
-	for (i = 0, model = bsp->dmodels; i < bsp->nummodels; i++, model++) {
-	    if (facenum < model->firstface)
-		continue;
-	    if (facenum < model->firstface + model->numfaces)
-		break;
-	}
-	if (i == bsp->nummodels) {
+        face_modelinfo = ModelInfoForFace(bsp, facenum);
+	if (face_modelinfo == NULL) {
 	    // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
 	    //logprint("warning: no model has face %d\n", facenum);
 	    continue;
 	}
 
-	LightFace(bsp->dfaces + facenum, &modelinfo[i], bsp);
+	LightFace(bsp->dfaces + facenum, face_modelinfo, bsp);
     }
 
     return NULL;
@@ -427,14 +440,15 @@ main(int argc, const char **argv)
 	ConvertBSPFormat(BSP2VERSION, &bspdata);
 
     LoadEntities(bsp);
-
+    modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
+    FindModelInfo(bsp);
+    SetupLights(bsp);
+    
     if (!onlyents) {
 	if (dirty)
 	    SetupDirt();
 
 	MakeTnodes(bsp);
-	modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
-	FindModelInfo(bsp);
 	LightWorld(bsp);
 	free(modelinfo);
 

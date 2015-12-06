@@ -97,6 +97,7 @@ typedef struct sun_s {
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const dmodel_t *const *tracelist;
 
+const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 void LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
 	       const bsp2_t *bsp);
 void MakeTnodes(const bsp2_t *bsp);
