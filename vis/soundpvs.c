@@ -36,7 +36,7 @@ Find an aproximate distance to the nearest emiter of each class for each leaf.
 */
 static void
 SurfaceBBox(const bsp2_t *bsp, const bsp2_dface_t *surf,
-	    vec3_t mins, vec3_t maxs)
+            vec3_t mins, vec3_t maxs)
 {
     int i, j;
     int edgenum;
@@ -47,19 +47,19 @@ SurfaceBBox(const bsp2_t *bsp, const bsp2_dface_t *surf,
     maxs[0] = maxs[1] = -FLT_MAX;
 
     for (i = 0; i < surf->numedges; i++) {
-	edgenum = bsp->dsurfedges[surf->firstedge + i];
-	if (edgenum >= 0)
-	    vertnum = bsp->dedges[edgenum].v[0];
-	else
-	    vertnum = bsp->dedges[-edgenum].v[1];
-	vert = bsp->dvertexes[vertnum].point;
+        edgenum = bsp->dsurfedges[surf->firstedge + i];
+        if (edgenum >= 0)
+            vertnum = bsp->dedges[edgenum].v[0];
+        else
+            vertnum = bsp->dedges[-edgenum].v[1];
+        vert = bsp->dvertexes[vertnum].point;
 
-	for (j = 0; j < 3; j++) {
-	    if (vert[j] < mins[j])
-		mins[j] = vert[j];
-	    if (vert[j] > maxs[j])
-		maxs[j] = vert[j];
-	}
+        for (j = 0; j < 3; j++) {
+            if (vert[j] < mins[j])
+                mins[j] = vert[j];
+            if (vert[j] > maxs[j])
+                maxs[j] = vert[j];
+        }
     }
 }
 
@@ -86,73 +86,73 @@ CalcAmbientSounds(bsp2_t *bsp)
     float vol;
 
     for (i = 0; i < portalleafs_real; i++) {
-	leaf = &bsp->dleafs[i + 1];
+        leaf = &bsp->dleafs[i + 1];
 
-	//
-	// clear ambients
-	//
-	for (j = 0; j < NUM_AMBIENTS; j++)
-	    dists[j] = 1020;
+        //
+        // clear ambients
+        //
+        for (j = 0; j < NUM_AMBIENTS; j++)
+            dists[j] = 1020;
 
-	vis = &uncompressed[i * leafbytes_real];
+        vis = &uncompressed[i * leafbytes_real];
 
-	for (j = 0; j < portalleafs_real; j++) {
-	    if (!(vis[j >> 3] & (1 << (j & 7))))
-		continue;
+        for (j = 0; j < portalleafs_real; j++) {
+            if (!(vis[j >> 3] & (1 << (j & 7))))
+                continue;
 
-	    //
-	    // check this leaf for sound textures
-	    //
-	    hit = &bsp->dleafs[j + 1];
+            //
+            // check this leaf for sound textures
+            //
+            hit = &bsp->dleafs[j + 1];
 
-	    for (k = 0; k < hit->nummarksurfaces; k++) {
-		surf = &bsp->dfaces[bsp->dmarksurfaces[hit->firstmarksurface + k]];
-		info = &bsp->texinfo[surf->texinfo];
-		ofs = bsp->dtexdata.header->dataofs[info->miptex];
-		miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
+            for (k = 0; k < hit->nummarksurfaces; k++) {
+                surf = &bsp->dfaces[bsp->dmarksurfaces[hit->firstmarksurface + k]];
+                info = &bsp->texinfo[surf->texinfo];
+                ofs = bsp->dtexdata.header->dataofs[info->miptex];
+                miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
 
-		if (!Q_strncasecmp(miptex->name, "sky", 3) && ambientsky)
-		    ambient_type = AMBIENT_SKY;
-		else if (!Q_strncasecmp(miptex->name, "*water", 6) && ambientwater)
-		    ambient_type = AMBIENT_WATER;
-		else if (!Q_strncasecmp(miptex->name, "*04water", 8) && ambientwater)
-		    ambient_type = AMBIENT_WATER;
-		else if (!Q_strncasecmp(miptex->name, "*slime", 6) && ambientslime)
-		    ambient_type = AMBIENT_WATER;	// AMBIENT_SLIME;
-		else if (!Q_strncasecmp(miptex->name, "*lava", 5) && ambientlava)
-		    ambient_type = AMBIENT_LAVA;
-		else
-		    continue;
+                if (!Q_strncasecmp(miptex->name, "sky", 3) && ambientsky)
+                    ambient_type = AMBIENT_SKY;
+                else if (!Q_strncasecmp(miptex->name, "*water", 6) && ambientwater)
+                    ambient_type = AMBIENT_WATER;
+                else if (!Q_strncasecmp(miptex->name, "*04water", 8) && ambientwater)
+                    ambient_type = AMBIENT_WATER;
+                else if (!Q_strncasecmp(miptex->name, "*slime", 6) && ambientslime)
+                    ambient_type = AMBIENT_WATER;       // AMBIENT_SLIME;
+                else if (!Q_strncasecmp(miptex->name, "*lava", 5) && ambientlava)
+                    ambient_type = AMBIENT_LAVA;
+                else
+                    continue;
 
-		// find distance from source leaf to polygon
-		SurfaceBBox(bsp, surf, mins, maxs);
-		maxd = 0;
-		for (l = 0; l < 3; l++) {
-		    if (mins[l] > leaf->maxs[l])
-			d = mins[l] - leaf->maxs[l];
-		    else if (maxs[l] < leaf->mins[l])
-			d = leaf->mins[l] - mins[l];
-		    else
-			d = 0;
-		    if (d > maxd)
-			maxd = d;
-		}
+                // find distance from source leaf to polygon
+                SurfaceBBox(bsp, surf, mins, maxs);
+                maxd = 0;
+                for (l = 0; l < 3; l++) {
+                    if (mins[l] > leaf->maxs[l])
+                        d = mins[l] - leaf->maxs[l];
+                    else if (maxs[l] < leaf->mins[l])
+                        d = leaf->mins[l] - mins[l];
+                    else
+                        d = 0;
+                    if (d > maxd)
+                        maxd = d;
+                }
 
-		maxd = 0.25;
-		if (maxd < dists[ambient_type])
-		    dists[ambient_type] = maxd;
-	    }
-	}
+                maxd = 0.25;
+                if (maxd < dists[ambient_type])
+                    dists[ambient_type] = maxd;
+            }
+        }
 
-	for (j = 0; j < NUM_AMBIENTS; j++) {
-	    if (dists[j] < 100)
-		vol = 1.0;
-	    else {
-		vol = (vec_t)(1.0 - dists[2] * 0.002);
-		if (vol < 0)
-		    vol = 0;
-	    }
-	    leaf->ambient_level[j] = (byte)(vol * 255);
-	}
+        for (j = 0; j < NUM_AMBIENTS; j++) {
+            if (dists[j] < 100)
+                vol = 1.0;
+            else {
+                vol = (vec_t)(1.0 - dists[2] * 0.002);
+                if (vol < 0)
+                    vol = 0;
+            }
+            leaf->ambient_level[j] = (byte)(vol * 255);
+        }
     }
 }

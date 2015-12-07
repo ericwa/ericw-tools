@@ -38,15 +38,15 @@ typedef struct epair_s {
  */
 #define LF_SCALE 128
 typedef enum {
-    LF_LINEAR    = 0,	/* Linear (x) (DEFAULT) */
-    LF_INVERSE   = 1,	/* Inverse (1/x), scaled by 1/128 */
-    LF_INVERSE2  = 2,	/* Inverse square (1/(x^2)), scaled by 1/(128^2) */
-    LF_INFINITE  = 3,	/* No attenuation, same brightness at any distance */
-    LF_LOCALMIN  = 4,	/* No attenuation, non-additive minlight effect within
-			   line of sight of the light source. */
-    LF_INVERSE2A = 5,	/* Inverse square, with distance adjusted to avoid
-			   exponentially bright values near the source.
-			     (1/(x+128)^2), scaled by 1/(128^2) */
+    LF_LINEAR    = 0,   /* Linear (x) (DEFAULT) */
+    LF_INVERSE   = 1,   /* Inverse (1/x), scaled by 1/128 */
+    LF_INVERSE2  = 2,   /* Inverse square (1/(x^2)), scaled by 1/(128^2) */
+    LF_INFINITE  = 3,   /* No attenuation, same brightness at any distance */
+    LF_LOCALMIN  = 4,   /* No attenuation, non-additive minlight effect within
+                           line of sight of the light source. */
+    LF_INVERSE2A = 5,   /* Inverse square, with distance adjusted to avoid
+                           exponentially bright values near the source.
+                             (1/(x+128)^2), scaled by 1/(128^2) */
     LF_COUNT
 } light_formula_t;
 

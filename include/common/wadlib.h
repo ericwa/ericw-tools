@@ -10,10 +10,10 @@
 
 #define TYP_NONE   0
 #define TYP_LABEL  1
-#define TYP_LUMPY 64		/* 64 + grab command number */
+#define TYP_LUMPY 64            /* 64 + grab command number */
 
 typedef struct {
-    char identification[4];	/* should be WAD2 or 2DAW */
+    char identification[4];     /* should be WAD2 or 2DAW */
     int numlumps;
     int infotableofs;
 } wadinfo_t;
@@ -22,14 +22,14 @@ typedef struct {
 typedef struct {
     int filepos;
     int disksize;
-    int size;			/* uncompressed */
+    int size;                   /* uncompressed */
     char type;
     char compression;
     char pad1, pad2;
-    char name[16];		/* must be null terminated */
+    char name[16];              /* must be null terminated */
 } lumpinfo_t;
 
-extern lumpinfo_t *lumpinfo;	/* location of each lump on disk */
+extern lumpinfo_t *lumpinfo;    /* location of each lump on disk */
 extern int numlumps;
 extern wadinfo_t header;
 

@@ -38,76 +38,76 @@ ParseToken(parser_t *p, parseflags_t flags)
 
     /* is a token already waiting? */
     if (p->unget) {
-	p->unget = false;
-	return true;
+        p->unget = false;
+        return true;
     }
 
  skipspace:
     /* skip space */
     while (*p->pos <= 32) {
-	if (!*p->pos) {
-	    if (flags & PARSE_OPTIONAL)
-		return false;
-	    if (flags & PARSE_SAMELINE)
-		Error("line %d: Line is incomplete", p->linenum);
-	    return false;
-	}
-	if (*p->pos == '\n') {
-	    if (flags & PARSE_OPTIONAL)
-		return false;
-	    if (flags & PARSE_SAMELINE)
-		Error("line %d: Line is incomplete", p->linenum);
-	    p->linenum++;
-	}
-	p->pos++;
+        if (!*p->pos) {
+            if (flags & PARSE_OPTIONAL)
+                return false;
+            if (flags & PARSE_SAMELINE)
+                Error("line %d: Line is incomplete", p->linenum);
+            return false;
+        }
+        if (*p->pos == '\n') {
+            if (flags & PARSE_OPTIONAL)
+                return false;
+            if (flags & PARSE_SAMELINE)
+                Error("line %d: Line is incomplete", p->linenum);
+            p->linenum++;
+        }
+        p->pos++;
    }
 
     /* comment field */
     if (p->pos[0] == '/' && p->pos[1] == '/') {
-	if (flags & PARSE_COMMENT) {
-	    token_p = p->token;
-	    while (*p->pos && *p->pos != '\n') {
-		*token_p++ = *p->pos++;
-		if (token_p > &p->token[MAXTOKEN - 1])
-		    Error("line %d: Token too large", p->linenum);
-	    }
-	    goto out;
-	}
-	if (flags & PARSE_OPTIONAL)
-	    return false;
-	if (flags & PARSE_SAMELINE)
-	    Error("line %d: Line is incomplete", p->linenum);
-	while (*p->pos++ != '\n') {
-	    if (!*p->pos) {
-		if (flags & PARSE_SAMELINE)
-		    Error("line %d: Line is incomplete", p->linenum);
-		return false;
-	    }
-	}
-	goto skipspace;
+        if (flags & PARSE_COMMENT) {
+            token_p = p->token;
+            while (*p->pos && *p->pos != '\n') {
+                *token_p++ = *p->pos++;
+                if (token_p > &p->token[MAXTOKEN - 1])
+                    Error("line %d: Token too large", p->linenum);
+            }
+            goto out;
+        }
+        if (flags & PARSE_OPTIONAL)
+            return false;
+        if (flags & PARSE_SAMELINE)
+            Error("line %d: Line is incomplete", p->linenum);
+        while (*p->pos++ != '\n') {
+            if (!*p->pos) {
+                if (flags & PARSE_SAMELINE)
+                    Error("line %d: Line is incomplete", p->linenum);
+                return false;
+            }
+        }
+        goto skipspace;
     }
     if (flags & PARSE_COMMENT)
-	return false;
+        return false;
 
     /* copy token */
     token_p = p->token;
 
     if (*p->pos == '"') {
-	p->pos++;
-	while (*p->pos != '"') {
-	    if (!*p->pos)
-		Error("line %d: EOF inside quoted token", p->linenum);
-	    *token_p++ = *p->pos++;
-	    if (token_p > &p->token[MAXTOKEN - 1])
-		Error("line %d: Token too large", p->linenum);
-	}
-	p->pos++;
+        p->pos++;
+        while (*p->pos != '"') {
+            if (!*p->pos)
+                Error("line %d: EOF inside quoted token", p->linenum);
+            *token_p++ = *p->pos++;
+            if (token_p > &p->token[MAXTOKEN - 1])
+                Error("line %d: Token too large", p->linenum);
+        }
+        p->pos++;
     } else
-	while (*p->pos > 32) {
-	    *token_p++ = *p->pos++;
-	    if (token_p > &p->token[MAXTOKEN - 1])
-		Error("line %d: Token too large", p->linenum);
-	}
+        while (*p->pos > 32) {
+            *token_p++ = *p->pos++;
+            if (token_p > &p->token[MAXTOKEN - 1])
+                Error("line %d: Token too large", p->linenum);
+        }
  out:
     *token_p = 0;
 

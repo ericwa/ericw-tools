@@ -30,7 +30,7 @@ VectorLengthSq(const vec3_t v)
 
     lensq = 0;
     for (i = 0; i < 3; i++)
-	lensq += v[i] * v[i];
+        lensq += v[i] * v[i];
 
     return lensq;
 }
@@ -47,8 +47,8 @@ VectorCompare(const vec3_t v1, const vec3_t v2)
     int i;
 
     for (i = 0; i < 3; i++)
-	if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
-	    return false;
+        if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
+            return false;
 
     return true;
 }
@@ -113,13 +113,13 @@ VectorNormalize(vec3_t v)
 
     length = 0;
     for (i = 0; i < 3; i++)
-	length += v[i] * v[i];
+        length += v[i] * v[i];
     length = sqrt(length);
     if (length == 0)
-	return 0;
+        return 0;
 
     for (i = 0; i < 3; i++)
-	v[i] /= length;
+        v[i] /= length;
 
     return length;
 }

@@ -30,7 +30,7 @@ typedef uint8_t byte;
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 #define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
 
-#define	MAX_MAP_PLANES     262144
+#define MAX_MAP_PLANES     262144
 
 typedef struct {
     int32_t fileofs;
@@ -59,16 +59,16 @@ typedef struct {
 #define MAX_MAP_HULLS_Q1 4
     float mins[3], maxs[3];
     float origin[3];
-    int32_t headnode[MAX_MAP_HULLS_Q1];	/* 4 for backward compat, only 3 hulls exist */
-    int32_t visleafs;		/* not including the solid leaf 0 */
+    int32_t headnode[MAX_MAP_HULLS_Q1]; /* 4 for backward compat, only 3 hulls exist */
+    int32_t visleafs;           /* not including the solid leaf 0 */
     int32_t firstface, numfaces;
 } dmodelq1_t;
 typedef struct {
 #define MAX_MAP_HULLS_H2 8
     float mins[3], maxs[3];
     float origin[3];
-    int32_t headnode[MAX_MAP_HULLS_H2];	/* hexen2 only uses 6 */
-    int32_t visleafs;		/* not including the solid leaf 0 */
+    int32_t headnode[MAX_MAP_HULLS_H2]; /* hexen2 only uses 6 */
+    int32_t visleafs;           /* not including the solid leaf 0 */
     int32_t firstface, numfaces;
 } dmodelh2_t;
 typedef dmodelh2_t dmodel_t;
@@ -80,7 +80,7 @@ typedef struct {
 
 typedef struct {
     int32_t nummiptex;
-    int32_t dataofs[];		/* [nummiptex] */
+    int32_t dataofs[];          /* [nummiptex] */
 } dmiptexlump_t;
 
 typedef char miptex_t[16];
@@ -97,29 +97,29 @@ typedef struct {
 
 typedef struct {
     int32_t planenum;
-    int16_t children[2];	/* negative numbers are -(leafs+1), not nodes */
-    int16_t mins[3];		/* for sphere culling */
+    int16_t children[2];        /* negative numbers are -(leafs+1), not nodes */
+    int16_t mins[3];            /* for sphere culling */
     int16_t maxs[3];
     uint16_t firstface;
-    uint16_t numfaces;		/* counting both sides */
+    uint16_t numfaces;          /* counting both sides */
 } bsp29_dnode_t;
 
 typedef struct {
     int32_t planenum;
-    int32_t children[2];	/* negative numbers are -(leafs+1), not nodes */
-    int16_t mins[3];		/* for sphere culling */
+    int32_t children[2];        /* negative numbers are -(leafs+1), not nodes */
+    int16_t mins[3];            /* for sphere culling */
     int16_t maxs[3];
     uint32_t firstface;
-    uint32_t numfaces;		/* counting both sides */
+    uint32_t numfaces;          /* counting both sides */
 } bsp2rmq_dnode_t;
 
 typedef struct {
     int32_t planenum;
-    int32_t children[2];	/* negative numbers are -(leafs+1), not nodes */
-    float mins[3];		/* for sphere culling */
+    int32_t children[2];        /* negative numbers are -(leafs+1), not nodes */
+    float mins[3];              /* for sphere culling */
     float maxs[3];
     uint32_t firstface;
-    uint32_t numfaces;		/* counting both sides */
+    uint32_t numfaces;          /* counting both sides */
 } bsp2_dnode_t;
 
 /*
@@ -130,16 +130,16 @@ typedef struct {
  */
 typedef struct {
     int32_t planenum;
-    uint16_t children[2];	/* "negative" numbers are contents */
+    uint16_t children[2];       /* "negative" numbers are contents */
 } bsp29_dclipnode_t;
 
 typedef struct {
     int32_t planenum;
-    int32_t children[2];	/* negative numbers are contents */
+    int32_t children[2];        /* negative numbers are contents */
 } bsp2_dclipnode_t;
 
 typedef struct texinfo_s {
-    float vecs[2][4];		/* [s/t][xyz offset] */
+    float vecs[2][4];           /* [s/t][xyz offset] */
     int32_t miptex;
     int32_t flags;
 } texinfo_t;
@@ -149,11 +149,11 @@ typedef struct texinfo_s {
  * counterclockwise use of the edge in a face.
  */
 typedef struct {
-    uint16_t v[2];		/* vertex numbers */
+    uint16_t v[2];              /* vertex numbers */
 } bsp29_dedge_t;
 
 typedef struct {
-    uint32_t v[2];		/* vertex numbers */
+    uint32_t v[2];              /* vertex numbers */
 } bsp2_dedge_t;
 
 #define MAXLIGHTMAPS 4
@@ -161,26 +161,26 @@ typedef struct {
     int16_t planenum;
     int16_t side;
 
-    int32_t firstedge;		/* we must support > 64k edges */
+    int32_t firstedge;          /* we must support > 64k edges */
     int16_t numedges;
     int16_t texinfo;
 
     /* lighting info */
     uint8_t styles[MAXLIGHTMAPS];
-    int32_t lightofs;		/* start of [numstyles*surfsize] samples */
+    int32_t lightofs;           /* start of [numstyles*surfsize] samples */
 } bsp29_dface_t;
 
 typedef struct {
     int32_t planenum;
     int32_t side;
 
-    int32_t firstedge;		/* we must support > 64k edges */
+    int32_t firstedge;          /* we must support > 64k edges */
     int32_t numedges;
     int32_t texinfo;
 
     /* lighting info */
     uint8_t styles[MAXLIGHTMAPS];
-    int32_t lightofs;		/* start of [numstyles*surfsize] samples */
+    int32_t lightofs;           /* start of [numstyles*surfsize] samples */
 } bsp2_dface_t;
 
 /* Ambient sounds */
@@ -196,8 +196,8 @@ typedef struct {
  */
 typedef struct {
     int32_t contents;
-    int32_t visofs;		/* -1 = no visibility info */
-    int16_t mins[3];		/* for frustum culling */
+    int32_t visofs;             /* -1 = no visibility info */
+    int16_t mins[3];            /* for frustum culling */
     int16_t maxs[3];
     uint16_t firstmarksurface;
     uint16_t nummarksurfaces;
@@ -206,8 +206,8 @@ typedef struct {
 
 typedef struct {
     int32_t contents;
-    int32_t visofs;		/* -1 = no visibility info */
-    int16_t mins[3];		/* for frustum culling */
+    int32_t visofs;             /* -1 = no visibility info */
+    int16_t mins[3];            /* for frustum culling */
     int16_t maxs[3];
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
@@ -216,8 +216,8 @@ typedef struct {
 
 typedef struct {
     int32_t contents;
-    int32_t visofs;		/* -1 = no visibility info */
-    float mins[3];		/* for frustum culling */
+    int32_t visofs;             /* -1 = no visibility info */
+    float mins[3];              /* for frustum culling */
     float maxs[3];
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;

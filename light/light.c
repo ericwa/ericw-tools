@@ -59,18 +59,18 @@ qboolean dirtAngleSetOnCmdline = false;
 qboolean testFenceTextures = false;
 qboolean surflight_dump = false;
 
-byte *filebase;			// start of lightmap data
-static byte *file_p;		// start of free space after data
-static byte *file_end;		// end of free space for lightmap data
+byte *filebase;                 // start of lightmap data
+static byte *file_p;            // start of free space after data
+static byte *file_end;          // end of free space for lightmap data
 
-byte *lit_filebase;		// start of litfile data
-static byte *lit_file_p;	// start of free space after litfile data
-static byte *lit_file_end;	// end of space for litfile data
+byte *lit_filebase;             // start of litfile data
+static byte *lit_file_p;        // start of free space after litfile data
+static byte *lit_file_end;      // end of space for litfile data
 
-byte *lux_buffer;		// luxfile allocation (misaligned)
-byte *lux_filebase;		// start of luxfile data
-static byte *lux_file_p;	// start of free space after luxfile data
-static byte *lux_file_end;	// end of space for luxfile data
+byte *lux_buffer;               // luxfile allocation (misaligned)
+byte *lux_filebase;             // start of luxfile data
+static byte *lux_file_p;        // start of free space after luxfile data
+static byte *lux_file_end;      // end of space for luxfile data
 
 static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
@@ -94,28 +94,28 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
     file_p += size;
 
     if (colordata) {
-	/* align to 12 byte boundaries to match offets with 3 * lightdata */
-	if ((uintptr_t)lit_file_p % 12)
-	    lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
-	*colordata = lit_file_p;
-	lit_file_p += size * 3;
+        /* align to 12 byte boundaries to match offets with 3 * lightdata */
+        if ((uintptr_t)lit_file_p % 12)
+            lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
+        *colordata = lit_file_p;
+        lit_file_p += size * 3;
     }
 
     if (deluxdata) {
-	/* align to 12 byte boundaries to match offets with 3 * lightdata */
-	if ((uintptr_t)lux_file_p % 12)
-	    lux_file_p += 12 - ((uintptr_t)lux_file_p % 12);
-	*deluxdata = lux_file_p;
-	lux_file_p += size * 3;
+        /* align to 12 byte boundaries to match offets with 3 * lightdata */
+        if ((uintptr_t)lux_file_p % 12)
+            lux_file_p += 12 - ((uintptr_t)lux_file_p % 12);
+        *deluxdata = lux_file_p;
+        lux_file_p += size * 3;
     }
 
     ThreadUnlock();
 
     if (file_p > file_end)
-	Error("%s: overrun", __func__);
+        Error("%s: overrun", __func__);
 
     if (lit_file_p > lit_file_end)
-	Error("%s: overrun", __func__);
+        Error("%s: overrun", __func__);
 }
 
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
@@ -144,19 +144,19 @@ LightThread(void *arg)
     const modelinfo_t *face_modelinfo;
 
     while (1) {
-	facenum = GetThreadWork();
-	if (facenum == -1)
-	    break;
+        facenum = GetThreadWork();
+        if (facenum == -1)
+            break;
 
-	/* Find the correct model offset */
+        /* Find the correct model offset */
         face_modelinfo = ModelInfoForFace(bsp, facenum);
-	if (face_modelinfo == NULL) {
-	    // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
-	    //logprint("warning: no model has face %d\n", facenum);
-	    continue;
-	}
+        if (face_modelinfo == NULL) {
+            // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
+            //logprint("warning: no model has face %d\n", facenum);
+            continue;
+        }
 
-	LightFace(bsp->dfaces + facenum, face_modelinfo, bsp);
+        LightFace(bsp->dfaces + facenum, face_modelinfo, bsp);
     }
 
     return NULL;
@@ -183,47 +183,47 @@ FindModelInfo(const bsp2_t *bsp)
     modelinfo[0].model = &bsp->dmodels[0];
 
     for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
-	info->model = &bsp->dmodels[i];
+        info->model = &bsp->dmodels[i];
 
-	/* Find the entity for the model */
-	snprintf(modelname, sizeof(modelname), "*%d", i);
-	entity = FindEntityWithKeyPair("model", modelname);
-	if (!entity)
-	    Error("%s: Couldn't find entity for model %s.\n", __func__,
-		  modelname);
+        /* Find the entity for the model */
+        snprintf(modelname, sizeof(modelname), "*%d", i);
+        entity = FindEntityWithKeyPair("model", modelname);
+        if (!entity)
+            Error("%s: Couldn't find entity for model %s.\n", __func__,
+                  modelname);
 
-	/* Check if this model will cast shadows (shadow => shadowself) */
-	shadow = atoi(ValueForKey(entity, "_shadow"));
-	if (shadow) {
-	    shadowmodels[numshadowmodels++] = &bsp->dmodels[i];
-	} else {
-	    shadow = atoi(ValueForKey(entity, "_shadowself"));
-	    if (shadow)
-		info->shadowself = true;
-	}
+        /* Check if this model will cast shadows (shadow => shadowself) */
+        shadow = atoi(ValueForKey(entity, "_shadow"));
+        if (shadow) {
+            shadowmodels[numshadowmodels++] = &bsp->dmodels[i];
+        } else {
+            shadow = atoi(ValueForKey(entity, "_shadowself"));
+            if (shadow)
+                info->shadowself = true;
+        }
 
-	/* Set up the offset for rotate_* entities */
-	attribute = ValueForKey(entity, "classname");
-	if (!strncmp(attribute, "rotate_", 7))
-	    GetVectorForKey(entity, "origin", info->offset);
+        /* Set up the offset for rotate_* entities */
+        attribute = ValueForKey(entity, "classname");
+        if (!strncmp(attribute, "rotate_", 7))
+            GetVectorForKey(entity, "origin", info->offset);
 
-	/* Grab the bmodel minlight values, if any */
-	attribute = ValueForKey(entity, "_minlight");
-	if (attribute[0])
-	    info->minlight.light = atoi(attribute);
-	GetVectorForKey(entity, "_mincolor", info->minlight.color);
-	normalize_color_format(info->minlight.color);
-	if (!VectorCompare(info->minlight.color, vec3_origin)) {
-	    if (!write_litfile)
-		write_litfile = true;
-	} else {
-	    VectorCopy(vec3_white, info->minlight.color);
-	}
+        /* Grab the bmodel minlight values, if any */
+        attribute = ValueForKey(entity, "_minlight");
+        if (attribute[0])
+            info->minlight.light = atoi(attribute);
+        GetVectorForKey(entity, "_mincolor", info->minlight.color);
+        normalize_color_format(info->minlight.color);
+        if (!VectorCompare(info->minlight.color, vec3_origin)) {
+            if (!write_litfile)
+                write_litfile = true;
+        } else {
+            VectorCopy(vec3_white, info->minlight.color);
+        }
 
-	/* Check for disabled dirtmapping on this bmodel */
-	if (atoi(ValueForKey(entity, "_dirt")) == -1) {
-	    info->nodirt = true;
-	}
+        /* Check for disabled dirtmapping on this bmodel */
+        if (atoi(ValueForKey(entity, "_dirt")) == -1) {
+            info->nodirt = true;
+        }
     }
 
     tracelist = shadowmodels;
@@ -238,16 +238,16 @@ static void
 LightWorld(bsp2_t *bsp)
 {
     if (bsp->dlightdata)
-	free(bsp->dlightdata);
+        free(bsp->dlightdata);
     if (lux_buffer)
-	free(lux_buffer);
+        free(lux_buffer);
 
     /* FIXME - remove this limit */
     bsp->lightdatasize = MAX_MAP_LIGHTING;
     bsp->dlightdata = malloc(bsp->lightdatasize + 16); /* for alignment */
     if (!bsp->dlightdata)
-	Error("%s: allocation of %i bytes failed.",
-	      __func__, bsp->lightdatasize);
+        Error("%s: allocation of %i bytes failed.",
+              __func__, bsp->lightdatasize);
     memset(bsp->dlightdata, 0, bsp->lightdatasize + 16);
     bsp->lightdatasize /= 4;
 
@@ -297,140 +297,140 @@ main(int argc, const char **argv)
     numthreads = GetDefaultThreads();
 
     for (i = 1; i < argc; i++) {
-	if (!strcmp(argv[i], "-threads")) {
-	    numthreads = atoi(argv[++i]);
-	} else if (!strcmp(argv[i], "-extra")) {
-	    oversample = 2;
-	    logprint("extra 2x2 sampling enabled\n");
-	} else if (!strcmp(argv[i], "-extra4")) {
-	    oversample = 4;
-	    logprint("extra 4x4 sampling enabled\n");
-	} else if (!strcmp(argv[i], "-dist")) {
-	    scaledist = atof(argv[++i]);
-	} else if (!strcmp(argv[i], "-range")) {
-	    rangescale = atof(argv[++i]);
-	} else if (!strcmp(argv[i], "-gate")) {
-	    fadegate = atof(argv[++i]);
-	} else if (!strcmp(argv[i], "-light")) {
-	    minlight.light = atof(argv[++i]);
-	} else if (!strcmp(argv[i], "-addmin")) {
-	    addminlight = true;
-	} else if (!strcmp(argv[i], "-gamma")) {
-	    lightmapgamma = atof(argv[++i]);
-	    logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma );
-	} else if (!strcmp(argv[i], "-lit")) {
-	    write_litfile = true;
-	} else if (!strcmp(argv[i], "-lux")) {
-	    write_luxfile = true;
-	} else if (!strcmp(argv[i], "-soft")) {
-	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
-		softsamples = atoi(argv[++i]);
-	    else
-		softsamples = -1; /* auto, based on oversampling */
-	} else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
-	    if (i < argc - 2 && isdigit(argv[i + 1][0]))
-		anglescale = sun_anglescale = atoi(argv[++i]);
-	    else
-		Error("-anglesense requires a numeric argument (0.0 - 1.0)");
-	} else if ( !strcmp( argv[ i ], "-dirt" ) || !strcmp( argv[ i ], "-dirty" ) ) {
-	    dirty = true;
-	    globalDirt = true;
-	    minlightDirt = true;
-	    logprint( "Dirtmapping enabled globally\n" );
-	} else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
-	    dirty = true;
-	    globalDirt = true;
-	    dirtDebug = true;
-	    logprint( "Dirtmap debugging enabled\n" );
-	} else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
-	    dirtModeSetOnCmdline = true;
-	    dirtMode = atoi( argv[ ++i ] );
-	    if ( dirtMode != 0 && dirtMode != 1 ) {
-		dirtMode = 0;
-	    }
-	    if ( dirtMode == 1 ) {
-		logprint( "Enabling randomized dirtmapping\n" );
-	    }
-	    else{
-		logprint( "Enabling ordered dirtmapping\n" );
-	    }
-	} else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
-	    dirtDepthSetOnCmdline = true;
-	    dirtDepth = atof( argv[ ++i ] );
-	    if ( dirtDepth <= 0.0f ) {
-		dirtDepth = 128.0f;
-	    }
-	    logprint( "Dirtmapping depth set to %.1f\n", dirtDepth );
-	} else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
-	    dirtScaleSetOnCmdline = true;
-	    dirtScale = atof( argv[ ++i ] );
-	    if ( dirtScale <= 0.0f ) {
-		dirtScale = 1.0f;
-	    }
-	    logprint( "Dirtmapping scale set to %.1f\n", dirtScale );
-	} else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
-	    dirtGainSetOnCmdline = true;
-	    dirtGain = atof( argv[ ++i ] );
-	    if ( dirtGain <= 0.0f ) {
-		dirtGain = 1.0f;
-	    }
-	    logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
-	} else if ( !strcmp( argv[ i ], "-dirtangle" ) ) {
-	    dirtAngleSetOnCmdline = true;
-	    dirtAngle = atof( argv[ ++i ] );
-	    logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle );
-	} else if ( !strcmp( argv[ i ], "-fence" ) ) {
-	    testFenceTextures = true;
-	    logprint( "Fence texture tracing enabled on command line\n" );
-	} else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
-	    surflight_subdivide = atof( argv[ ++i ] );
-	    surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
-	    logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
+        if (!strcmp(argv[i], "-threads")) {
+            numthreads = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-extra")) {
+            oversample = 2;
+            logprint("extra 2x2 sampling enabled\n");
+        } else if (!strcmp(argv[i], "-extra4")) {
+            oversample = 4;
+            logprint("extra 4x4 sampling enabled\n");
+        } else if (!strcmp(argv[i], "-dist")) {
+            scaledist = atof(argv[++i]);
+        } else if (!strcmp(argv[i], "-range")) {
+            rangescale = atof(argv[++i]);
+        } else if (!strcmp(argv[i], "-gate")) {
+            fadegate = atof(argv[++i]);
+        } else if (!strcmp(argv[i], "-light")) {
+            minlight.light = atof(argv[++i]);
+        } else if (!strcmp(argv[i], "-addmin")) {
+            addminlight = true;
+        } else if (!strcmp(argv[i], "-gamma")) {
+            lightmapgamma = atof(argv[++i]);
+            logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma );
+        } else if (!strcmp(argv[i], "-lit")) {
+            write_litfile = true;
+        } else if (!strcmp(argv[i], "-lux")) {
+            write_luxfile = true;
+        } else if (!strcmp(argv[i], "-soft")) {
+            if (i < argc - 2 && isdigit(argv[i + 1][0]))
+                softsamples = atoi(argv[++i]);
+            else
+                softsamples = -1; /* auto, based on oversampling */
+        } else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
+            if (i < argc - 2 && isdigit(argv[i + 1][0]))
+                anglescale = sun_anglescale = atoi(argv[++i]);
+            else
+                Error("-anglesense requires a numeric argument (0.0 - 1.0)");
+        } else if ( !strcmp( argv[ i ], "-dirt" ) || !strcmp( argv[ i ], "-dirty" ) ) {
+            dirty = true;
+            globalDirt = true;
+            minlightDirt = true;
+            logprint( "Dirtmapping enabled globally\n" );
+        } else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
+            dirty = true;
+            globalDirt = true;
+            dirtDebug = true;
+            logprint( "Dirtmap debugging enabled\n" );
+        } else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
+            dirtModeSetOnCmdline = true;
+            dirtMode = atoi( argv[ ++i ] );
+            if ( dirtMode != 0 && dirtMode != 1 ) {
+                dirtMode = 0;
+            }
+            if ( dirtMode == 1 ) {
+                logprint( "Enabling randomized dirtmapping\n" );
+            }
+            else{
+                logprint( "Enabling ordered dirtmapping\n" );
+            }
+        } else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
+            dirtDepthSetOnCmdline = true;
+            dirtDepth = atof( argv[ ++i ] );
+            if ( dirtDepth <= 0.0f ) {
+                dirtDepth = 128.0f;
+            }
+            logprint( "Dirtmapping depth set to %.1f\n", dirtDepth );
+        } else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
+            dirtScaleSetOnCmdline = true;
+            dirtScale = atof( argv[ ++i ] );
+            if ( dirtScale <= 0.0f ) {
+                dirtScale = 1.0f;
+            }
+            logprint( "Dirtmapping scale set to %.1f\n", dirtScale );
+        } else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
+            dirtGainSetOnCmdline = true;
+            dirtGain = atof( argv[ ++i ] );
+            if ( dirtGain <= 0.0f ) {
+                dirtGain = 1.0f;
+            }
+            logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
+        } else if ( !strcmp( argv[ i ], "-dirtangle" ) ) {
+            dirtAngleSetOnCmdline = true;
+            dirtAngle = atof( argv[ ++i ] );
+            logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle );
+        } else if ( !strcmp( argv[ i ], "-fence" ) ) {
+            testFenceTextures = true;
+            logprint( "Fence texture tracing enabled on command line\n" );
+        } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
+            surflight_subdivide = atof( argv[ ++i ] );
+            surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
+            logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
         } else if ( !strcmp( argv[ i ], "-surflight_dump" ) ) {
             surflight_dump = true;
         } else if ( !strcmp( argv[ i ], "-sunsamples" ) ) {
-	    sunsamples = atof( argv[ ++i ] );
-	    sunsamples = qmin(qmax(sunsamples, 8), 2048);
-	    logprint( "Using sunsamples of %d\n", sunsamples);
-	} else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
-	    onlyents = true;
-	    logprint( "Onlyents mode enabled\n" );
+            sunsamples = atof( argv[ ++i ] );
+            sunsamples = qmin(qmax(sunsamples, 8), 2048);
+            logprint( "Using sunsamples of %d\n", sunsamples);
+        } else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
+            onlyents = true;
+            logprint( "Onlyents mode enabled\n" );
         } else if ( !strcmp( argv[ i ], "-parse_escape_sequences" ) ) {
             parse_escape_sequences = true;
             logprint( "Parsing escape sequences enabled\n" );
-	} else if (argv[i][0] == '-')
-	    Error("Unknown option \"%s\"", argv[i]);
-	else
-	    break;
+        } else if (argv[i][0] == '-')
+            Error("Unknown option \"%s\"", argv[i]);
+        else
+            break;
     }
 
     if (i != argc - 1) {
-	printf("usage: light [-threads num] [-extra|-extra4]\n"
-	       "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
-	       "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
-	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-parse_escape_sequences] bspfile\n");
-	exit(1);
+        printf("usage: light [-threads num] [-extra|-extra4]\n"
+               "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
+               "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
+               "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
+               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-parse_escape_sequences] bspfile\n");
+        exit(1);
     }
 
     if (numthreads > 1)
-	logprint("running with %d threads\n", numthreads);
+        logprint("running with %d threads\n", numthreads);
     if (write_litfile)
-	logprint(".lit colored light output requested on command line.\n");
+        logprint(".lit colored light output requested on command line.\n");
     if (write_luxfile)
-	logprint(".lux light directions output requested on command line.\n");
+        logprint(".lux light directions output requested on command line.\n");
     if (softsamples == -1) {
-	switch (oversample) {
-	case 2:
-	    softsamples = 1;
-	    break;
-	case 4:
-	    softsamples = 2;
-	    break;
-	default:
-	    softsamples = 0;
-	    break;
-	}
+        switch (oversample) {
+        case 2:
+            softsamples = 1;
+            break;
+        case 4:
+            softsamples = 2;
+            break;
+        default:
+            softsamples = 0;
+            break;
+        }
     }
 
     start = I_FloatTime();
@@ -443,7 +443,7 @@ main(int argc, const char **argv)
 
     loadversion = bspdata.version;
     if (bspdata.version != BSP2VERSION)
-	ConvertBSPFormat(BSP2VERSION, &bspdata);
+        ConvertBSPFormat(BSP2VERSION, &bspdata);
 
     LoadEntities(bsp);
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
@@ -451,24 +451,24 @@ main(int argc, const char **argv)
     SetupLights(bsp);
     
     if (!onlyents) {
-	if (dirty)
-	    SetupDirt();
+        if (dirty)
+            SetupDirt();
 
-	MakeTnodes(bsp);
-	LightWorld(bsp);
-	free(modelinfo);
+        MakeTnodes(bsp);
+        LightWorld(bsp);
+        free(modelinfo);
 
-	if (write_litfile)
-	    WriteLitFile(bsp, source, LIT_VERSION);
-	if (write_luxfile)
-	    WriteLuxFile(bsp, source, LIT_VERSION);	
+        if (write_litfile)
+            WriteLitFile(bsp, source, LIT_VERSION);
+        if (write_luxfile)
+            WriteLuxFile(bsp, source, LIT_VERSION);     
     }
 
     WriteEntitiesToString(bsp);
 
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
-	ConvertBSPFormat(loadversion, &bspdata);
+        ConvertBSPFormat(loadversion, &bspdata);
 
     WriteBSPFile(source, &bspdata);
 

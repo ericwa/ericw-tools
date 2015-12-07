@@ -58,14 +58,14 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     tnode->dist = tnode->plane->dist;
 
     for (i = 0; i < 2; i++) {
-	if (node->children[i] < 0) {
-	    leaf = &bsp->dleafs[-node->children[i] - 1];
-	    tnode->children[i] = leaf->contents;
-	    tnode->childleafs[i] = leaf;
-	} else {
-	    tnode->children[i] = tnode_p - tnodes;
-	    MakeTnodes_r(node->children[i], bsp);
-	}
+        if (node->children[i] < 0) {
+            leaf = &bsp->dleafs[-node->children[i] - 1];
+            tnode->children[i] = leaf->contents;
+            tnode->childleafs[i] = leaf;
+        } else {
+            tnode->children[i] = tnode_p - tnodes;
+            MakeTnodes_r(node->children[i], bsp);
+        }
     }
 }
 
@@ -76,7 +76,7 @@ MakeTnodes(const bsp2_t *bsp)
     bsp_static = bsp;
     tnode_p = tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
     for (i = 0; i < bsp->nummodels; i++)
-	MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
+        MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
 }
 
 /*
@@ -87,21 +87,21 @@ MakeTnodes(const bsp2_t *bsp)
 
 static qboolean
 PointInTri(const vec3_t v0, 
-	const vec3_t v1, 
-	const vec3_t v2, 
-	const vec3_t point,
-	const vec3_t facenormal)
+        const vec3_t v1, 
+        const vec3_t v2, 
+        const vec3_t point,
+        const vec3_t facenormal)
 {
-	vec3_t temp;
-	vec3_t normal[3];
-	vec_t dist[3];
+        vec3_t temp;
+        vec3_t normal[3];
+        vec_t dist[3];
 
         VectorSubtract (v1, v0, temp);
         VectorNormalize (temp);
         CrossProduct (temp, facenormal, normal[0]);
         dist[0] = DotProduct (v0, normal[0]);
 
-	VectorSubtract (v2, v1, temp);
+        VectorSubtract (v2, v1, temp);
         VectorNormalize (temp);
         CrossProduct (temp, facenormal, normal[1]);
         dist[1] = DotProduct (v1, normal[1]);
@@ -128,31 +128,31 @@ PointInFace(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
     
     edgenum = bsp->dsurfedges[face->firstedge];
     if (edgenum >= 0)
-	v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
+        v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
     else
-	v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
+        v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
 
     for (i = 1; i < face->numedges - 1; i++) {
-	edgenum = bsp->dsurfedges[face->firstedge + i];
-	if (edgenum >= 0) {
-	    v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-	    v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
-	} else {
-	    v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-	    v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
-	}
+        edgenum = bsp->dsurfedges[face->firstedge + i];
+        if (edgenum >= 0) {
+            v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
+            v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
+        } else {
+            v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
+            v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
+        }
 
-	vec3_t p0 = {v0->point[0], v0->point[1], v0->point[2]};
-	vec3_t p1 = {v1->point[0], v1->point[1], v1->point[2]};
-	vec3_t p2 = {v2->point[0], v2->point[1], v2->point[2]};
+        vec3_t p0 = {v0->point[0], v0->point[1], v0->point[2]};
+        vec3_t p1 = {v1->point[0], v1->point[1], v1->point[2]};
+        vec3_t p2 = {v2->point[0], v2->point[1], v2->point[2]};
 
-	vec3_t facenormal;
-	VectorCopy(bsp->dplanes[face->planenum].normal, facenormal);
+        vec3_t facenormal;
+        VectorCopy(bsp->dplanes[face->planenum].normal, facenormal);
         if (face->side) {
             VectorSubtract(vec3_origin, facenormal, facenormal);
         }
 
-	if (PointInTri(p0, p1, p2, point, facenormal)) return true;
+        if (PointInTri(p0, p1, p2, point, facenormal)) return true;
     }
 
     return false;
@@ -174,13 +174,13 @@ vec_t fix_coord(vec_t in, int width)
 {
     if (in > 0)
     {
-	return (int)in % width;
+        return (int)in % width;
     }
     else
     {
-	vec_t in_abs = fabs(in);
-	int in_abs_mod = (int)in_abs % width;
-	return width - in_abs_mod;
+        vec_t in_abs = fabs(in);
+        int in_abs_mod = (int)in_abs % width;
+        return width - in_abs_mod;
     }
 }
 
@@ -200,7 +200,7 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
     WorldToTexCoord(point, tex, texcoord);
 
     if (miplump->dataofs[tex->miptex] == -1) {
-	return -1;
+        return -1;
     }
 
     miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[tex->miptex]);
@@ -270,7 +270,7 @@ typedef struct {
 #define MAX_TSTACK 128
 int
 TraceLine(const dmodel_t *model, const int traceflags,
-	  const vec3_t start, const vec3_t stop, tracepoint_t *hitpoint)
+          const vec3_t start, const vec3_t stop, tracepoint_t *hitpoint)
 {
     int node, side, tracehit;
     vec3_t front, back;
@@ -282,8 +282,8 @@ TraceLine(const dmodel_t *model, const int traceflags,
     qboolean isbmodel;
     
     if (traceflags <= 0)
-	Error("Internal error: %s - bad traceflags (%d)",
-	      __func__, traceflags);
+        Error("Internal error: %s - bad traceflags (%d)",
+              __func__, traceflags);
 
     isbmodel = (model != tracelist[0]);
     
@@ -296,37 +296,37 @@ TraceLine(const dmodel_t *model, const int traceflags,
     tracehit = TRACE_HIT_NONE;
 
     while (1) {
-	while (node < 0) {
-	    switch (node) {
-	    case CONTENTS_SOLID:
-		if (traceflags & TRACE_HIT_SOLID)
-		    tracehit = TRACE_HIT_SOLID;
-		break;
-	    case CONTENTS_WATER:
-		if (traceflags & TRACE_HIT_WATER)
-		    tracehit = TRACE_HIT_WATER;
-		break;
-	    case CONTENTS_SLIME:
-		if (traceflags & TRACE_HIT_SLIME)
-		    tracehit = TRACE_HIT_SLIME;
-		break;
-	    case CONTENTS_LAVA:
-		if (traceflags & TRACE_HIT_LAVA)
-		    tracehit = TRACE_HIT_LAVA;
-		break;
-	    case CONTENTS_SKY:
-		if (traceflags & TRACE_HIT_SKY)
-		    tracehit = TRACE_HIT_SKY;
-		break;
-	    default:
-		break;
-	    }
-	    if (tracehit != TRACE_HIT_NONE) {
+        while (node < 0) {
+            switch (node) {
+            case CONTENTS_SOLID:
+                if (traceflags & TRACE_HIT_SOLID)
+                    tracehit = TRACE_HIT_SOLID;
+                break;
+            case CONTENTS_WATER:
+                if (traceflags & TRACE_HIT_WATER)
+                    tracehit = TRACE_HIT_WATER;
+                break;
+            case CONTENTS_SLIME:
+                if (traceflags & TRACE_HIT_SLIME)
+                    tracehit = TRACE_HIT_SLIME;
+                break;
+            case CONTENTS_LAVA:
+                if (traceflags & TRACE_HIT_LAVA)
+                    tracehit = TRACE_HIT_LAVA;
+                break;
+            case CONTENTS_SKY:
+                if (traceflags & TRACE_HIT_SKY)
+                    tracehit = TRACE_HIT_SKY;
+                break;
+            default:
+                break;
+            }
+            if (tracehit != TRACE_HIT_NONE) {
                 qboolean done = true;
                 
-		/* If we haven't crossed, start was inside flagged contents */
-		if (!crossnode)
-		    return -tracehit;
+                /* If we haven't crossed, start was inside flagged contents */
+                if (!crossnode)
+                    return -tracehit;
 
                 if (isbmodel && testFenceTextures) {
                     const bsp2_dnode_t *bspnode = tnodes[crossnode->node].node;
@@ -347,7 +347,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
                     }
                 }
 
-	    	if (done) {
+                if (done) {
                     if (hitpoint) {
                         hitpoint->dplane = crossnode->plane;
                         hitpoint->side = crossnode->side;
@@ -355,64 +355,64 @@ TraceLine(const dmodel_t *model, const int traceflags,
                     }
 
                     return tracehit;
-	    	}
-	    }
+                }
+            }
 
-	    /* If the stack is empty, no obstructions were hit */
-	    if (tstack == tracestack)
-		return TRACE_HIT_NONE;
+            /* If the stack is empty, no obstructions were hit */
+            if (tstack == tracestack)
+                return TRACE_HIT_NONE;
 
-	    /* Pop the stack and go down the back side */
-	    crossnode = --tstack;
-	    VectorCopy(tstack->front, front);
-	    VectorCopy(tstack->back, back);
-	    node = tnodes[tstack->node].children[!tstack->side];
-	}
+            /* Pop the stack and go down the back side */
+            crossnode = --tstack;
+            VectorCopy(tstack->front, front);
+            VectorCopy(tstack->back, back);
+            node = tnodes[tstack->node].children[!tstack->side];
+        }
 
-	tnode = &tnodes[node];
-	switch (tnode->type) {
-	case PLANE_X:
-	    frontdist = front[0] - tnode->dist;
-	    backdist = back[0] - tnode->dist;
-	    break;
-	case PLANE_Y:
-	    frontdist = front[1] - tnode->dist;
-	    backdist = back[1] - tnode->dist;
-	    break;
-	case PLANE_Z:
-	    frontdist = front[2] - tnode->dist;
-	    backdist = back[2] - tnode->dist;
-	    break;
-	default:
-	    frontdist = DotProduct(front, tnode->normal) - tnode->dist;
-	    backdist = DotProduct(back, tnode->normal) - tnode->dist;
-	    break;
-	}
+        tnode = &tnodes[node];
+        switch (tnode->type) {
+        case PLANE_X:
+            frontdist = front[0] - tnode->dist;
+            backdist = back[0] - tnode->dist;
+            break;
+        case PLANE_Y:
+            frontdist = front[1] - tnode->dist;
+            backdist = back[1] - tnode->dist;
+            break;
+        case PLANE_Z:
+            frontdist = front[2] - tnode->dist;
+            backdist = back[2] - tnode->dist;
+            break;
+        default:
+            frontdist = DotProduct(front, tnode->normal) - tnode->dist;
+            backdist = DotProduct(back, tnode->normal) - tnode->dist;
+            break;
+        }
 
-	if (frontdist >= -ON_EPSILON && backdist >= -ON_EPSILON) {
-	    node = tnode->children[0];
-	    continue;
-	}
-	if (frontdist < ON_EPSILON && backdist < ON_EPSILON) {
-	    node = tnode->children[1];
-	    continue;
-	}
+        if (frontdist >= -ON_EPSILON && backdist >= -ON_EPSILON) {
+            node = tnode->children[0];
+            continue;
+        }
+        if (frontdist < ON_EPSILON && backdist < ON_EPSILON) {
+            node = tnode->children[1];
+            continue;
+        }
 
-	/*
-	 * If we get here, we have a clean split with front and back on
-	 * opposite sides. The new back is the intersection point with the
-	 * node plane. Push the other segment onto the stack and continue.
-	 */
-	side = frontdist < 0;
-	tstack->node = node;
-	tstack->side = side;
-	tstack->plane = tnode->plane;
-	VectorCopy(back, tstack->back);
-	VectorSubtract(back, front, back);
-	VectorMA(front, frontdist / (frontdist - backdist), back, back);
-	VectorCopy(back, tstack->front);
-	crossnode = tstack++;
-	node = tnode->children[side];
+        /*
+         * If we get here, we have a clean split with front and back on
+         * opposite sides. The new back is the intersection point with the
+         * node plane. Push the other segment onto the stack and continue.
+         */
+        side = frontdist < 0;
+        tstack->node = node;
+        tstack->side = side;
+        tstack->plane = tnode->plane;
+        VectorCopy(back, tstack->back);
+        VectorSubtract(back, front, back);
+        VectorMA(front, frontdist / (frontdist - backdist), back, back);
+        VectorCopy(back, tstack->front);
+        crossnode = tstack++;
+        node = tnode->children[side];
     }
 }
 
@@ -425,16 +425,16 @@ TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 
     /* Check against the list of global shadow casters */
     for (model = tracelist; *model; model++) {
-	if (*model == self)
-	    continue;
-	result = TraceLine(*model, traceflags, start, stop, NULL);
-	if (result != TRACE_HIT_NONE)
-	    break;
+        if (*model == self)
+            continue;
+        result = TraceLine(*model, traceflags, start, stop, NULL);
+        if (result != TRACE_HIT_NONE)
+            break;
     }
 
     /* If not yet obscured, check against the self-shadow model */
     if (result == TRACE_HIT_NONE && self)
-	result = TraceLine(self, traceflags, start, stop, NULL);
+        result = TraceLine(self, traceflags, start, stop, NULL);
 
     return (result == TRACE_HIT_NONE);
 }
@@ -452,23 +452,23 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
     VectorAdd(dirn, start, stop);
     result = TraceLine(tracelist[0], traceflags, start, stop, &hit);
     if (result != TRACE_HIT_SKY)
-	return false;
+        return false;
 
     /* If good, check it isn't shadowed by another model */
     traceflags = TRACE_HIT_SOLID;
     for (model = tracelist + 1; *model; model++) {
-	if (*model == self)
-	    continue;
-	result = TraceLine(*model, traceflags, start, hit.point, NULL);
-	if (result != TRACE_HIT_NONE)
-	    return false;
+        if (*model == self)
+            continue;
+        result = TraceLine(*model, traceflags, start, hit.point, NULL);
+        if (result != TRACE_HIT_NONE)
+            return false;
     }
 
     /* Check for self-shadowing */
     if (self) {
-	result = TraceLine(self, traceflags, start, hit.point, NULL);
-	if (result != TRACE_HIT_NONE)
-	    return false;
+        result = TraceLine(self, traceflags, start, hit.point, NULL);
+        if (result != TRACE_HIT_NONE)
+            return false;
     }
 
     return true;

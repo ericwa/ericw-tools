@@ -32,11 +32,11 @@ typedef struct {
     WORD pageWidth, pageHeight;
 } bmhd_t;
 
-extern bmhd_t bmhd;		/* will be in native byte order */
+extern bmhd_t bmhd;             /* will be in native byte order */
 
 void LoadLBM(char *filename, byte **picture, byte **palette);
 
 void WriteLBMfile(char *filename, byte *data, int width, int height,
-		  byte *palette);
+                  byte *palette);
 
 #endif /* __COMMON_LBMLIB_H__ */

@@ -35,7 +35,7 @@ static wedge_t *pWEdges;
 
 //============================================================================
 
-#define	NUM_HASH	1024
+#define NUM_HASH        1024
 
 static wedge_t *wedge_hash[NUM_HASH];
 static vec3_t hash_min, hash_scale;
@@ -70,9 +70,9 @@ HashVec(vec3_t vec)
     unsigned h;
 
     h = (unsigned)(hash_scale[0] * (vec[0] - hash_min[0]) * hash_scale[2] +
-		   hash_scale[1] * (vec[1] - hash_min[1]));
+                   hash_scale[1] * (vec[1] - hash_min[1]));
     if (h >= NUM_HASH)
-	return NUM_HASH - 1;
+        return NUM_HASH - 1;
     return h;
 }
 
@@ -86,28 +86,28 @@ CanonicalVector(const vec3_t p1, const vec3_t p2, vec3_t vec)
     VectorSubtract(p2, p1, vec);
     length = VectorNormalize(vec);
     if (vec[0] > EQUAL_EPSILON)
-	return;
+        return;
     else if (vec[0] < -EQUAL_EPSILON) {
-	VectorSubtract(vec3_origin, vec, vec);
-	return;
+        VectorSubtract(vec3_origin, vec, vec);
+        return;
     } else
-	vec[0] = 0;
+        vec[0] = 0;
 
     if (vec[1] > EQUAL_EPSILON)
-	return;
+        return;
     else if (vec[1] < -EQUAL_EPSILON) {
-	VectorSubtract(vec3_origin, vec, vec);
-	return;
+        VectorSubtract(vec3_origin, vec, vec);
+        return;
     } else
-	vec[1] = 0;
+        vec[1] = 0;
 
     if (vec[2] > EQUAL_EPSILON)
-	return;
+        return;
     else if (vec[2] < -EQUAL_EPSILON) {
-	VectorSubtract(vec3_origin, vec, vec);
-	return;
+        VectorSubtract(vec3_origin, vec, vec);
+        return;
     } else
-	vec[2] = 0;
+        vec[2] = 0;
 
     Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
 }
@@ -129,39 +129,39 @@ FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
     VectorMA(p1, -*t1, edgevec, origin);
 
     if (*t1 > *t2) {
-	temp = *t1;
-	*t1 = *t2;
-	*t2 = temp;
+        temp = *t1;
+        *t1 = *t2;
+        *t2 = temp;
     }
 
     h = HashVec(origin);
 
     for (edge = wedge_hash[h]; edge; edge = edge->next) {
-	temp = edge->origin[0] - origin[0];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
-	temp = edge->origin[1] - origin[1];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
-	temp = edge->origin[2] - origin[2];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
+        temp = edge->origin[0] - origin[0];
+        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+            continue;
+        temp = edge->origin[1] - origin[1];
+        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+            continue;
+        temp = edge->origin[2] - origin[2];
+        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+            continue;
 
-	temp = edge->dir[0] - edgevec[0];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
-	temp = edge->dir[1] - edgevec[1];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
-	temp = edge->dir[2] - edgevec[2];
-	if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-	    continue;
+        temp = edge->dir[0] - edgevec[0];
+        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+            continue;
+        temp = edge->dir[1] - edgevec[1];
+        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+            continue;
+        temp = edge->dir[2] - edgevec[2];
+        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
+            continue;
 
-	return edge;
+        return edge;
     }
 
     if (numwedges >= cWEdges)
-	Error("Internal error: didn't allocate enough edges for tjuncs?");
+        Error("Internal error: didn't allocate enough edges for tjuncs?");
     edge = pWEdges + numwedges;
     numwedges++;
 
@@ -190,16 +190,16 @@ AddVert(wedge_t *edge, vec_t t)
 
     v = edge->head.next;
     do {
-	if (fabs(v->t - t) < T_EPSILON)
-	    return;
-	if (v->t > t)
-	    break;
-	v = v->next;
+        if (fabs(v->t - t) < T_EPSILON)
+            return;
+        if (v->t > t)
+            break;
+        v = v->next;
     } while (1);
 
     // insert a new wvert before v
     if (numwverts >= cWVerts)
-	Error("Internal error: didn't allocate enough vertices for tjuncs?");
+        Error("Internal error: didn't allocate enough vertices for tjuncs?");
 
     newv = pWVerts + numwverts;
     numwverts++;
@@ -241,8 +241,8 @@ AddFaceEdges(face_t *f)
     int i, j;
 
     for (i = 0; i < f->w.numpoints; i++) {
-	j = (i + 1) % f->w.numpoints;
-	AddEdge(f->w.points[i], f->w.points[j]);
+        j = (i + 1) % f->w.numpoints;
+        AddEdge(f->w.points[i], f->w.points[j]);
     }
 }
 
@@ -266,84 +266,84 @@ SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
 
     chain = NULL;
     do {
-	if (w->numpoints <= MAXPOINTS) {
-	    /*
-	     * the face is now small enough without more cutting so
-	     * copy it back to the original
-	     */
-	    *original = *face;
-	    original->original = chain;
-	    original->next = *facelist;
-	    *facelist = original;
-	    return;
-	}
+        if (w->numpoints <= MAXPOINTS) {
+            /*
+             * the face is now small enough without more cutting so
+             * copy it back to the original
+             */
+            *original = *face;
+            original->original = chain;
+            original->next = *facelist;
+            *facelist = original;
+            return;
+        }
 
-	tjuncfaces++;
+        tjuncfaces++;
 
       restart:
-	/* find the last corner */
-	VectorSubtract(w->points[w->numpoints - 1], w->points[0], edgevec[0]);
-	VectorNormalize(edgevec[0]);
-	for (lastcorner = w->numpoints - 1; lastcorner > 0; lastcorner--) {
-	    const vec_t *const p0 = w->points[lastcorner - 1];
-	    const vec_t *const p1 = w->points[lastcorner];
-	    VectorSubtract(p0, p1, edgevec[1]);
-	    VectorNormalize(edgevec[1]);
-	    angle = DotProduct(edgevec[0], edgevec[1]);
-	    if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
-		break;
-	}
+        /* find the last corner */
+        VectorSubtract(w->points[w->numpoints - 1], w->points[0], edgevec[0]);
+        VectorNormalize(edgevec[0]);
+        for (lastcorner = w->numpoints - 1; lastcorner > 0; lastcorner--) {
+            const vec_t *const p0 = w->points[lastcorner - 1];
+            const vec_t *const p1 = w->points[lastcorner];
+            VectorSubtract(p0, p1, edgevec[1]);
+            VectorNormalize(edgevec[1]);
+            angle = DotProduct(edgevec[0], edgevec[1]);
+            if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
+                break;
+        }
 
-	/* find the first corner */
-	VectorSubtract(w->points[1], w->points[0], edgevec[0]);
-	VectorNormalize(edgevec[0]);
-	for (firstcorner = 1; firstcorner < w->numpoints - 1; firstcorner++) {
-	    const vec_t *const p0 = w->points[firstcorner + 1];
-	    const vec_t *const p1 = w->points[firstcorner];
-	    VectorSubtract(p0, p1, edgevec[1]);
-	    VectorNormalize(edgevec[1]);
-	    angle = DotProduct(edgevec[0], edgevec[1]);
-	    if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
-		break;
-	}
+        /* find the first corner */
+        VectorSubtract(w->points[1], w->points[0], edgevec[0]);
+        VectorNormalize(edgevec[0]);
+        for (firstcorner = 1; firstcorner < w->numpoints - 1; firstcorner++) {
+            const vec_t *const p0 = w->points[firstcorner + 1];
+            const vec_t *const p1 = w->points[firstcorner];
+            VectorSubtract(p0, p1, edgevec[1]);
+            VectorNormalize(edgevec[1]);
+            angle = DotProduct(edgevec[0], edgevec[1]);
+            if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
+                break;
+        }
 
-	if (firstcorner + 2 >= MAXPOINTS) {
-	    /* rotate the point winding */
-	    vec3_t point0;
+        if (firstcorner + 2 >= MAXPOINTS) {
+            /* rotate the point winding */
+            vec3_t point0;
 
-	    VectorCopy(w->points[0], point0);
-	    for (i = 1; i < w->numpoints; i++)
-		VectorCopy(w->points[i], w->points[i - 1]);
-	    VectorCopy(point0, w->points[w->numpoints - 1]);
-	    goto restart;
-	}
+            VectorCopy(w->points[0], point0);
+            for (i = 1; i < w->numpoints; i++)
+                VectorCopy(w->points[i], w->points[i - 1]);
+            VectorCopy(point0, w->points[w->numpoints - 1]);
+            goto restart;
+        }
 
-	/*
-	 * cut off as big a piece as possible, less than MAXPOINTS, and not
-	 * past lastcorner
-	 */
-	newf = NewFaceFromFace(face);
-	if (face->original)
-	    Error("original face still exists (%s)", __func__);
+        /*
+         * cut off as big a piece as possible, less than MAXPOINTS, and not
+         * past lastcorner
+         */
+        newf = NewFaceFromFace(face);
+        if (face->original)
+            Error("original face still exists (%s)", __func__);
 
-	newf->original = chain;
-	chain = newf;
-	newf->next = *facelist;
-	*facelist = newf;
-	if (w->numpoints - firstcorner <= MAXPOINTS)
-	    newf->w.numpoints = firstcorner + 2;
-	else if (lastcorner + 2 < MAXPOINTS &&
-		 w->numpoints - lastcorner <= MAXPOINTS)
-	    newf->w.numpoints = lastcorner + 2;
-	else
-	    newf->w.numpoints = MAXPOINTS;
+        newf->original = chain;
+        chain = newf;
+        newf->next = *facelist;
+        *facelist = newf;
+        if (w->numpoints - firstcorner <= MAXPOINTS)
+            newf->w.numpoints = firstcorner + 2;
+        else if (lastcorner + 2 < MAXPOINTS &&
+                 w->numpoints - lastcorner <= MAXPOINTS)
+            newf->w.numpoints = lastcorner + 2;
+        else
+            newf->w.numpoints = MAXPOINTS;
 
-	for (i = 0; i < newf->w.numpoints; i++)
-	    VectorCopy(w->points[i], newf->w.points[i]);
-	for (i = newf->w.numpoints - 1; i < w->numpoints; i++)
-	    VectorCopy(w->points[i], w->points[i - (newf->w.numpoints - 2)]);
+        for (i = 0; i < newf->w.numpoints; i++)
+            VectorCopy(w->points[i], newf->w.points[i]);
+        for (i = newf->w.numpoints - 1; i < w->numpoints; i++)
+            VectorCopy(w->points[i], w->points[i - (newf->w.numpoints - 2)]);
 
-	w->numpoints -= (newf->w.numpoints - 2);
+        w->numpoints -= (newf->w.numpoints - 2);
     } while (1);
 }
 
@@ -366,34 +366,34 @@ FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
 
  restart:
     for (i = 0; i < superface->w.numpoints; i++) {
-	j = (i + 1) % superface->w.numpoints;
+        j = (i + 1) % superface->w.numpoints;
 
-	edge = FindEdge(superface->w.points[i], superface->w.points[j], &t1, &t2);
+        edge = FindEdge(superface->w.points[i], superface->w.points[j], &t1, &t2);
 
-	v = edge->head.next;
-	while (v->t < t1 + T_EPSILON)
-	    v = v->next;
+        v = edge->head.next;
+        while (v->t < t1 + T_EPSILON)
+            v = v->next;
 
-	if (v->t < t2 - T_EPSILON) {
-	    /* insert a new vertex here */
-	    if (superface->w.numpoints == MAX_SUPERFACE_POINTS)
-		Error("%s: tjunc fixups generated too many edges (max %d)",
-		      __func__, MAX_SUPERFACE_POINTS);
+        if (v->t < t2 - T_EPSILON) {
+            /* insert a new vertex here */
+            if (superface->w.numpoints == MAX_SUPERFACE_POINTS)
+                Error("%s: tjunc fixups generated too many edges (max %d)",
+                      __func__, MAX_SUPERFACE_POINTS);
 
-	    tjuncs++;
-	    for (k = superface->w.numpoints; k > j; k--)
-		VectorCopy(superface->w.points[k - 1], superface->w.points[k]);
-	    VectorMA(edge->origin, v->t, edge->dir, superface->w.points[j]);
-	    superface->w.numpoints++;
-	    goto restart;
-	}
+            tjuncs++;
+            for (k = superface->w.numpoints; k > j; k--)
+                VectorCopy(superface->w.points[k - 1], superface->w.points[k]);
+            VectorMA(edge->origin, v->t, edge->dir, superface->w.points[j]);
+            superface->w.numpoints++;
+            goto restart;
+        }
     }
 
     if (superface->w.numpoints <= MAXPOINTS) {
-	*face = *superface;
-	face->next = *facelist;
-	*facelist = face;
-	return;
+        *face = *superface;
+        face->next = *facelist;
+        *facelist = face;
+        return;
     }
 
     /* Too many edges - needs to be split into multiple faces */
@@ -409,10 +409,10 @@ tjunc_count_r(node_t *node)
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
-	return;
+        return;
 
     for (f = node->faces; f; f = f->next)
-	cWVerts += f->w.numpoints;
+        cWVerts += f->w.numpoints;
 
     tjunc_count_r(node->children[0]);
     tjunc_count_r(node->children[1]);
@@ -424,10 +424,10 @@ tjunc_find_r(node_t *node)
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
-	return;
+        return;
 
     for (f = node->faces; f; f = f->next)
-	AddFaceEdges(f);
+        AddFaceEdges(f);
 
     tjunc_find_r(node->children[0]);
     tjunc_find_r(node->children[1]);
@@ -439,13 +439,13 @@ tjunc_fix_r(node_t *node, face_t *superface)
     face_t *face, *next, *facelist;
 
     if (node->planenum == PLANENUM_LEAF)
-	return;
+        return;
 
     facelist = NULL;
 
     for (face = node->faces; face; face = next) {
-	next = face->next;
-	FixFaceEdges(face, superface, &facelist);
+        next = face->next;
+        FixFaceEdges(face, superface, &facelist);
     }
 
     node->faces = facelist;
@@ -486,10 +486,10 @@ TJunc(const mapentity_t *entity, node_t *headnode)
      * origin points won't allways be inside the map, so extend the hash area
      */
     for (i = 0; i < 3; i++) {
-	if (fabs(entity->maxs[i]) > fabs(entity->mins[i]))
-	    maxs[i] = fabs(entity->maxs[i]);
-	else
-	    maxs[i] = fabs(entity->mins[i]);
+        if (fabs(entity->maxs[i]) > fabs(entity->mins[i]))
+            maxs[i] = fabs(entity->maxs[i]);
+        else
+            maxs[i] = fabs(entity->mins[i]);
     }
     VectorSubtract(vec3_origin, maxs, mins);
 

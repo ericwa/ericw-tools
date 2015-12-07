@@ -31,7 +31,7 @@ VectorLength(const vec3_t v)
 
     length = 0;
     for (i = 0; i < 3; i++)
-	length += v[i] * v[i];
+        length += v[i] * v[i];
     length = sqrt(length);
 
     return length;
@@ -43,8 +43,8 @@ VectorCompare(const vec3_t v1, const vec3_t v2)
     int i;
 
     for (i = 0; i < 3; i++)
-	if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
-	    return false;
+        if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
+            return false;
 
     return true;
 }
@@ -65,13 +65,13 @@ VectorNormalize(vec3_t v)
 
     length = 0;
     for (i = 0; i < 3; i++)
-	length += v[i] * v[i];
+        length += v[i] * v[i];
     length = sqrt(length);
     if (length == 0)
-	return 0;
+        return 0;
 
     for (i = 0; i < 3; i++)
-	v[i] /= (vec_t)length;
+        v[i] /= (vec_t)length;
 
     return (vec_t)length;
 }
@@ -88,7 +88,7 @@ VecStr(const vec3_t vec)
 
     buf = buffers[current++ & 7];
     snprintf(buf, sizeof(buffers[0]), "%i %i %i",
-	     (int)vec[0], (int)vec[1], (int)vec[2]);
+             (int)vec[0], (int)vec[1], (int)vec[2]);
 
     return buf;
 }
@@ -102,7 +102,7 @@ VecStrf(const vec3_t vec)
 
     buf = buffers[current++ & 7];
     snprintf(buf, sizeof(buffers[0]), "%.2f %.2f %.2f",
-	     vec[0], vec[1], vec[2]);
+             vec[0], vec[1], vec[2]);
 
     return buf;
 }

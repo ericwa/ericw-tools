@@ -36,14 +36,14 @@ init_log(const char *filename)
 {
     log_ok = false;
     if ((logfile = fopen(filename, "w")))
-	log_ok = true;
+        log_ok = true;
 }
 
 void
 close_log()
 {
     if (log_ok)
-	fclose(logfile);
+        fclose(logfile);
 }
 
 static void
@@ -52,10 +52,10 @@ logvprint_locked__(const char *fmt, va_list args)
     va_list log_args;
 
     if (log_ok) {
-	va_copy(log_args, args);
-	vfprintf(logfile, fmt, log_args);
-	va_end(log_args);
-	fflush(logfile);
+        va_copy(log_args, args);
+        vfprintf(logfile, fmt, log_args);
+        va_end(log_args);
+        fflush(logfile);
     }
     vprintf(fmt, args);
     fflush(stdout);

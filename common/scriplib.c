@@ -14,7 +14,7 @@ char *scriptbuffer, *script_p, *scriptend_p;
 int grabbed;
 int scriptline;
 qboolean endofscript;
-qboolean tokenready;		/* only true if UnGetToken was just called */
+qboolean tokenready;            /* only true if UnGetToken was just called */
 
 /*
  * ==============
@@ -65,62 +65,62 @@ GetToken(qboolean crossline)
 {
     char *token_p;
 
-    if (tokenready) {		/* is a token allready waiting? */
-	tokenready = false;
-	return true;
+    if (tokenready) {           /* is a token allready waiting? */
+        tokenready = false;
+        return true;
     }
 
     if (script_p >= scriptend_p) {
-	if (!crossline)
-	    Error("Line %i is incomplete\n", scriptline);
-	endofscript = true;
-	return false;
+        if (!crossline)
+            Error("Line %i is incomplete\n", scriptline);
+        endofscript = true;
+        return false;
     }
 
     /* skip space */
   skipspace:
     while (*script_p <= 32) {
-	if (script_p >= scriptend_p) {
-	    if (!crossline)
-		Error("Line %i is incomplete\n", scriptline);
-	    endofscript = true;
-	    return true;
-	}
-	if (*script_p++ == '\n') {
-	    if (!crossline)
-		Error("Line %i is incomplete\n", scriptline);
-	    scriptline++;
-	}
+        if (script_p >= scriptend_p) {
+            if (!crossline)
+                Error("Line %i is incomplete\n", scriptline);
+            endofscript = true;
+            return true;
+        }
+        if (*script_p++ == '\n') {
+            if (!crossline)
+                Error("Line %i is incomplete\n", scriptline);
+            scriptline++;
+        }
     }
 
     if (script_p >= scriptend_p) {
-	if (!crossline)
-	    Error("Line %i is incomplete\n", scriptline);
-	endofscript = true;
-	return true;
+        if (!crossline)
+            Error("Line %i is incomplete\n", scriptline);
+        endofscript = true;
+        return true;
     }
 
-    if (*script_p == ';' || *script_p == '#') {	/* semicolon is comment field */
-	/* also make # comment field */
-	if (!crossline)
-	    Error("Line %i is incomplete\n", scriptline);
-	while (*script_p++ != '\n')
-	    if (script_p >= scriptend_p) {
-		endofscript = true;
-		return false;
-	    }
-	goto skipspace;
+    if (*script_p == ';' || *script_p == '#') { /* semicolon is comment field */
+        /* also make # comment field */
+        if (!crossline)
+            Error("Line %i is incomplete\n", scriptline);
+        while (*script_p++ != '\n')
+            if (script_p >= scriptend_p) {
+                endofscript = true;
+                return false;
+            }
+        goto skipspace;
     }
 
     /* copy token */
     token_p = token;
 
     while (*script_p > 32 && *script_p != ';') {
-	*token_p++ = *script_p++;
-	if (script_p == scriptend_p)
-	    break;
-	if (token_p == &token[MAXTOKEN])
-	    Error("Token too large on line %i\n", scriptline);
+        *token_p++ = *script_p++;
+        if (script_p == scriptend_p)
+            break;
+        if (token_p == &token[MAXTOKEN])
+            Error("Token too large on line %i\n", scriptline);
     }
 
     *token_p = 0;
@@ -142,18 +142,18 @@ TokenAvailable(void)
     search_p = script_p;
 
     if (search_p >= scriptend_p)
-	return false;
+        return false;
 
     while (*search_p <= 32) {
-	if (*search_p == '\n')
-	    return false;
-	search_p++;
-	if (search_p == scriptend_p)
-	    return false;
+        if (*search_p == '\n')
+            return false;
+        search_p++;
+        if (search_p == scriptend_p)
+            return false;
     }
 
     if (*search_p == ';')
-	return false;
+        return false;
 
     return true;
 }

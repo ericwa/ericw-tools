@@ -30,20 +30,20 @@ main(int argc, char **argv)
 
     printf("---- bspinfo / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
     if (argc == 1) {
-	printf("usage: bspinfo bspfile [bspfiles]\n");
-	exit(1);
+        printf("usage: bspinfo bspfile [bspfiles]\n");
+        exit(1);
     }
 
     for (i = 1; i < argc; i++) {
-	printf("---------------------\n");
-	strcpy(source, argv[i]);
-	DefaultExtension(source, ".bsp");
-	printf("%s\n", source);
+        printf("---------------------\n");
+        strcpy(source, argv[i]);
+        DefaultExtension(source, ".bsp");
+        printf("%s\n", source);
 
-	LoadBSPFile(source, &bsp);
-	PrintBSPFileSizes(&bsp);
+        LoadBSPFile(source, &bsp);
+        PrintBSPFileSizes(&bsp);
 
-	printf("---------------------\n");
+        printf("---------------------\n");
     }
 
     return 0;

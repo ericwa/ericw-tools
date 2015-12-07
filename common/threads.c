@@ -34,12 +34,12 @@ GetThreadWork_Locked__(void)
     int percent;
 
     if (dispatch == workcount)
-	return -1;
+        return -1;
 
     percent = 50 * dispatch / workcount;
     while (oldpercent < percent) {
-	oldpercent++;
-	logprint_locked__("%c", (oldpercent % 5) ? '.' : '0' + (oldpercent / 5));
+        oldpercent++;
+        logprint_locked__("%c", (oldpercent % 5) ? '.' : '0' + (oldpercent / 5));
     }
 
     ret = dispatch;
@@ -64,8 +64,8 @@ void
 InterruptThreadProgress__(void)
 {
     if (oldpercent != -1) {
-	logprint_locked__("\\\n");
-	oldpercent = -1;
+        logprint_locked__("\\\n");
+        oldpercent = -1;
     }
 }
 
@@ -102,14 +102,14 @@ void
 ThreadLock(void)
 {
     if (threads_active)
-	EnterCriticalSection(&crit);
+        EnterCriticalSection(&crit);
 }
 
 void
 ThreadUnlock(void)
 {
     if (threads_active)
-	LeaveCriticalSection(&crit);
+        LeaveCriticalSection(&crit);
 }
 
 /*
@@ -132,22 +132,22 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     threadhandle = malloc(sizeof(*threadhandle) * numthreads);
 
     if (!threadid || !threadhandle)
-	Error("Failed to allocate memory for threads");
+        Error("Failed to allocate memory for threads");
 
     /* run threads in parallel */
     InitializeCriticalSection(&crit);
     threads_active = true;
     for (i = 0; i < numthreads; i++) {
-	threadhandle[i] = CreateThread(NULL,
-				       0,
-				       (LPTHREAD_START_ROUTINE)func,
-				       (LPVOID)arg,
-				       0,
-				       &threadid[i]);
+        threadhandle[i] = CreateThread(NULL,
+                                       0,
+                                       (LPTHREAD_START_ROUTINE)func,
+                                       (LPVOID)arg,
+                                       0,
+                                       &threadid[i]);
     }
 
     for (i = 0; i < numthreads; i++)
-	WaitForSingleObject(threadhandle[i], INFINITE);
+        WaitForSingleObject(threadhandle[i], INFINITE);
 
     threads_active = false;
     oldpercent = -1;
@@ -190,7 +190,7 @@ GetDefaultThreads(void)
 #ifdef _SC_NPROCESSORS_ONLN
     threads = sysconf(_SC_NPROCESSORS_ONLN);
     if (threads < 1)
-	threads = 1;
+        threads = 1;
 #else
     threads = 4;
 #endif
@@ -202,14 +202,14 @@ void
 ThreadLock(void)
 {
     if (threads_active)
-	pthread_mutex_lock(my_mutex);
+        pthread_mutex_lock(my_mutex);
 }
 
 void
 ThreadUnlock(void)
 {
     if (threads_active)
-	pthread_mutex_unlock(my_mutex);
+        pthread_mutex_unlock(my_mutex);
 }
 
 
@@ -233,38 +233,38 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 
     status = pthread_mutexattr_init(&mattrib);
     if (status)
-	Error("pthread_mutexattr_init failed");
+        Error("pthread_mutexattr_init failed");
 
     my_mutex = malloc(sizeof(*my_mutex));
     if (!my_mutex)
-	Error("failed to allocate memory for thread mutex");
+        Error("failed to allocate memory for thread mutex");
     status = pthread_mutex_init(my_mutex, &mattrib);
     if (status)
-	Error("pthread_mutex_init failed");
+        Error("pthread_mutex_init failed");
 
     status = pthread_attr_init(&attrib);
     if (status)
-	Error("pthread_attr_init failed");
+        Error("pthread_attr_init failed");
     status = pthread_attr_setstacksize(&attrib, Q_STACKSIZE);
     if (status)
-	Error("pthread_attr_setstacksize failed");
+        Error("pthread_attr_setstacksize failed");
 
     threads = malloc(sizeof(*threads) * numthreads);
     if (!threads)
-	Error("failed to allocate memory for threads");
+        Error("failed to allocate memory for threads");
 
     threads_active = true;
 
     for (i = 0; i < numthreads; i++) {
-	status = pthread_create(&threads[i], &attrib, func, arg);
-	if (status)
-	    Error("pthread_create failed");
+        status = pthread_create(&threads[i], &attrib, func, arg);
+        if (status)
+            Error("pthread_create failed");
     }
 
     for (i = 0; i < numthreads; i++) {
-	status = pthread_join(threads[i], NULL);
-	if (status)
-	    Error("pthread_join failed");
+        status = pthread_join(threads[i], NULL);
+        if (status)
+            Error("pthread_join failed");
     }
 
     threads_active = false;
@@ -272,7 +272,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 
     status = pthread_mutex_destroy(my_mutex);
     if (status)
-	Error("pthread_mutex_destroy failed");
+        Error("pthread_mutex_destroy failed");
 
     free(threads);
     free(my_mutex);

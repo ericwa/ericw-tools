@@ -62,56 +62,56 @@
 #define MAX_BSP_CLIPNODES 0xfff0
 
 // key / value pair sizes
-#define	MAX_KEY		32
-#define	MAX_VALUE	1024
+#define MAX_KEY         32
+#define MAX_VALUE       1024
 
 // Various other geometry maximums
-#define MAX_POINTS_ON_WINDING	96
-#define	MAXEDGES		64
-#define	MAXPOINTS		60	// don't let a base face get past this
-					// because it can be split more later
+#define MAX_POINTS_ON_WINDING   96
+#define MAXEDGES                64
+#define MAXPOINTS               60      // don't let a base face get past this
+                                        // because it can be split more later
 
 // For brush.c, normal and +16 (?)
-#define	NUM_HULLS	2
+#define NUM_HULLS       2
 
 // 0-2 are axial planes
 // 3-5 are non-axial planes snapped to the nearest
-#define	PLANE_X		0
-#define	PLANE_Y		1
-#define	PLANE_Z		2
-#define	PLANE_ANYX	3
-#define	PLANE_ANYY	4
-#define	PLANE_ANYZ	5
+#define PLANE_X         0
+#define PLANE_Y         1
+#define PLANE_Z         2
+#define PLANE_ANYX      3
+#define PLANE_ANYY      4
+#define PLANE_ANYZ      5
 
 // planenum for a leaf (?)
-#define	PLANENUM_LEAF	-1
+#define PLANENUM_LEAF   -1
 
 // Which side of polygon a point is on
-#define	SIDE_FRONT	0
-#define	SIDE_BACK	1
-#define	SIDE_ON		2
-#define	SIDE_CROSS	-2
+#define SIDE_FRONT      0
+#define SIDE_BACK       1
+#define SIDE_ON         2
+#define SIDE_CROSS      -2
 
 // Pi
-#define	Q_PI	3.14159265358979323846
+#define Q_PI    3.14159265358979323846
 
 // Possible contents of a leaf node
-#define	CONTENTS_EMPTY	-1
-#define	CONTENTS_SOLID	-2
-#define	CONTENTS_WATER	-3
-#define	CONTENTS_SLIME	-4
-#define	CONTENTS_LAVA	-5
-#define	CONTENTS_SKY	-6
-#define CONTENTS_CLIP	-7	/* compiler internal use only */
-#define CONTENTS_HINT	-8	/* compiler internal use only */
+#define CONTENTS_EMPTY  -1
+#define CONTENTS_SOLID  -2
+#define CONTENTS_WATER  -3
+#define CONTENTS_SLIME  -4
+#define CONTENTS_LAVA   -5
+#define CONTENTS_SKY    -6
+#define CONTENTS_CLIP   -7      /* compiler internal use only */
+#define CONTENTS_HINT   -8      /* compiler internal use only */
 
 // Special contents flags for the compiler only
-#define CFLAGS_DETAIL	(1U << 0)
+#define CFLAGS_DETAIL   (1U << 0)
 
 // Texture flags
-#define	TEX_SPECIAL (1U << 0)	/* sky or liquid (no lightmap or subdivision */
-#define	TEX_SKIP    (1U << 1)	/* an invisible surface */
-#define TEX_HINT    (1U << 2)	/* hint surface */
+#define TEX_SPECIAL (1U << 0)   /* sky or liquid (no lightmap or subdivision */
+#define TEX_SKIP    (1U << 1)   /* an invisible surface */
+#define TEX_HINT    (1U << 2)   /* hint surface */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -120,22 +120,22 @@
  *   epsilons to be such that EQUAL_EPSILON < T_EPSILON < CONTINUOUS_EPSILON.
  *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
  */
-#define NORMAL_EPSILON		0.000001
-#define ANGLEEPSILON		0.000001
-#define DIST_EPSILON		0.0001
-#define ZERO_EPSILON		0.0001
-#define DISTEPSILON		0.0001
-#define POINT_EPSILON		0.0001
-#define ON_EPSILON		options.on_epsilon
-#define EQUAL_EPSILON		0.0001
-#define T_EPSILON		0.0002
-#define CONTINUOUS_EPSILON	0.0005
+#define NORMAL_EPSILON          0.000001
+#define ANGLEEPSILON            0.000001
+#define DIST_EPSILON            0.0001
+#define ZERO_EPSILON            0.0001
+#define DISTEPSILON             0.0001
+#define POINT_EPSILON           0.0001
+#define ON_EPSILON              options.on_epsilon
+#define EQUAL_EPSILON           0.0001
+#define T_EPSILON               0.0002
+#define CONTINUOUS_EPSILON      0.0005
 
-#define BOGUS_RANGE	18000
+#define BOGUS_RANGE     18000
 
 // the exact bounding box of the brushes is expanded some for the headnode
 // volume.  is this still needed?
-#define	SIDESPACE	24
+#define SIDESPACE       24
 
 /*
  * If this enum is changed, make sure to also update MemSize and PrintMem
@@ -253,7 +253,7 @@ typedef struct plane {
 
 typedef struct {
     int numpoints;
-    vec3_t points[MAXEDGES];		// variable sized
+    vec3_t points[MAXEDGES];            // variable sized
 } winding_t;
 
 winding_t *BaseWindingForPlane(const plane_t *p);
@@ -263,12 +263,12 @@ void FreeWinding(winding_t *w);
 winding_t *CopyWinding(const winding_t *w);
 winding_t *ClipWinding(winding_t *in, const plane_t *split, bool keepon);
 void DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
-		   winding_t **back);
+                   winding_t **back);
 void MidpointWinding(const winding_t *w, vec3_t v);
 
 /* Helper function for ClipWinding and it's variants */
 void CalcSides(const winding_t *in, const plane_t *split, int *sides,
-	       vec_t *dists, int counts[3]);
+               vec_t *dists, int counts[3]);
 
 //============================================================================
 
@@ -277,14 +277,14 @@ typedef struct visfacet_s {
     struct visfacet_s *next;
 
     int planenum;
-    int planeside;		// which side is the front of the face
+    int planeside;              // which side is the front of the face
     int texinfo;
-    short contents[2];		// 0 = front side
-    short cflags[2];		// contents flags
+    short contents[2];          // 0 = front side
+    short cflags[2];            // contents flags
 
-    struct visfacet_s *original;	// face on node
-    int outputnumber;		// only valid for original faces after
-				// write surfaces
+    struct visfacet_s *original;        // face on node
+    int outputnumber;           // only valid for original faces after
+                                // write surfaces
     vec3_t origin;
     vec_t radius;
 
@@ -294,41 +294,41 @@ typedef struct visfacet_s {
 
 typedef struct surface_s {
     struct surface_s *next;
-    struct surface_s *original;	// before BSP cuts it up
+    struct surface_s *original; // before BSP cuts it up
     int planenum;
-    int outputplanenum;		// only valid after WriteSurfacePlanes
+    int outputplanenum;         // only valid after WriteSurfacePlanes
     vec3_t mins, maxs;
-    bool onnode;		// true if surface has already been used
-				//   as a splitting node
-    bool detail_separator;	// true if split generated by a detail brush
-    face_t *faces;		// links to all faces on either side of the surf
-    bool has_detail;		// 1 if the surface has detail brushes
-    bool has_struct;		// 1 if the surface has non-detail brushes
+    bool onnode;                // true if surface has already been used
+                                //   as a splitting node
+    bool detail_separator;      // true if split generated by a detail brush
+    face_t *faces;              // links to all faces on either side of the surf
+    bool has_detail;            // 1 if the surface has detail brushes
+    bool has_struct;            // 1 if the surface has non-detail brushes
 } surface_t;
 
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
 typedef struct node_s {
-    vec3_t mins, maxs;		// bounding volume, not just points inside
+    vec3_t mins, maxs;          // bounding volume, not just points inside
 
     // information for decision nodes
-    int planenum;		// -1 = leaf node
-    int outputplanenum;		// only valid after WriteNodePlanes
-    int firstface;		// decision node only
-    int numfaces;		// decision node only
-    struct node_s *children[2];	// only valid for decision nodes
-    face_t *faces;		// decision nodes only, list for both sides
+    int planenum;               // -1 = leaf node
+    int outputplanenum;         // only valid after WriteNodePlanes
+    int firstface;              // decision node only
+    int numfaces;               // decision node only
+    struct node_s *children[2]; // only valid for decision nodes
+    face_t *faces;              // decision nodes only, list for both sides
 
     // information for leafs
-    int contents;		// leaf nodes (0 for decision nodes)
-    face_t **markfaces;		// leaf nodes only, point to node faces
+    int contents;               // leaf nodes (0 for decision nodes)
+    face_t **markfaces;         // leaf nodes only, point to node faces
     struct portal_s *portals;
-    int visleafnum;		// -1 = solid
-    int viscluster;		// detail cluster for faster vis
-    int fillmark;		// for flood filling
-    int occupied;		// entity number in leaf for outside filling
-    bool detail_separator;	// for vis portal generation
+    int visleafnum;             // -1 = solid
+    int viscluster;             // detail cluster for faster vis
+    int fillmark;               // for flood filling
+    int occupied;               // entity number in leaf for outside filling
+    bool detail_separator;      // for vis portal generation
 } node_t;
 
 //=============================================================================
@@ -339,8 +339,8 @@ typedef struct brush_s {
     struct brush_s *next;
     vec3_t mins, maxs;
     face_t *faces;
-    short contents;		/* BSP contents */
-    short cflags;		/* Compiler internal contents flags */
+    short contents;             /* BSP contents */
+    short cflags;               /* Compiler internal contents flags */
 } brush_t;
 
 void FreeBrushes(brush_t *brushlist);
@@ -400,12 +400,12 @@ surface_t *GatherNodeFaces(node_t *headnode);
 
 typedef struct portal_s {
     int planenum;
-    node_t *nodes[2];		// [0] = front side of planenum
+    node_t *nodes[2];           // [0] = front side of planenum
     struct portal_s *next[2];
     winding_t *winding;
 } portal_t;
 
-extern node_t outside_node;	// portals outside the world face this
+extern node_t outside_node;     // portals outside the world face this
 
 void FreeAllPortals(node_t *node);
 
@@ -469,7 +469,7 @@ typedef struct options_s {
     int BSPVersion;
     int dxSubdivide;
     int dxLeakDist;
-	int maxNodeSize;
+        int maxNodeSize;
     char szMapName[512];
     char szBSPName[512];
     char wadPath[512];
@@ -507,11 +507,11 @@ struct lumpdata {
 
 typedef struct mapentity_s {
     vec3_t origin;
-    mapbrush_t *mapbrushes;	/* Array */
+    mapbrush_t *mapbrushes;     /* Array */
     int nummapbrushes;
     epair_t *epairs;
     vec3_t mins, maxs;
-    brush_t *brushes;		/* NULL terminated list */
+    brush_t *brushes;           /* NULL terminated list */
     int numbrushes;
     struct lumpdata lumps[BSP_LUMPS];
 } mapentity_t;
@@ -543,8 +543,8 @@ typedef struct mapdata_s {
     int cTotal[BSP_LUMPS];
 
     /* Misc other global state for the compile process */
-    int fillmark;	/* For marking leaves while outside filling */
-    bool leakfile;	/* Flag once we've written a leak (.por/.pts) file */
+    int fillmark;       /* For marking leaves while outside filling */
+    bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
 } mapdata_t;
 
 extern mapdata_t map;
@@ -566,7 +566,7 @@ void FixRotateOrigin(mapentity_t *entity);
 
 /* Create BSP brushes from map brushes in src and save into dst */
 void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src,
-		      const int hullnum);
+                      const int hullnum);
 
 surface_t *CSGFaces(const mapentity_t *entity);
 int PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
@@ -578,13 +578,13 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 
 // util.c
 
-#define msgWarning	1
-#define msgStat		2
-#define msgProgress	3
-#define msgLiteral	4
-#define msgFile		5
-#define msgScreen	6
-#define msgPercent	7
+#define msgWarning      1
+#define msgStat         2
+#define msgProgress     3
+#define msgLiteral      4
+#define msgFile         5
+#define msgScreen       6
+#define msgPercent      7
 
 extern const char *rgszWarnings[cWarnings];
 extern const int *MemSize;

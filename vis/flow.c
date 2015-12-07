@@ -30,10 +30,10 @@ static int c_leafskip;
 */
 static winding_t *
 ClipToSeperators(const winding_t *source,
-		 const plane_t src_pl,
-		 const winding_t *pass,
-		 winding_t *target, unsigned int test,
-		 pstack_t *stack)
+                 const plane_t src_pl,
+                 const winding_t *pass,
+                 winding_t *target, unsigned int test,
+                 pstack_t *stack)
 {
     int i, j, k, l;
     plane_t sep;
@@ -45,87 +45,87 @@ ClipToSeperators(const winding_t *source,
 
     // check all combinations
     for (i = 0; i < source->numpoints; i++) {
-	l = (i + 1) % source->numpoints;
-	VectorSubtract(source->points[l], source->points[i], v1);
+        l = (i + 1) % source->numpoints;
+        VectorSubtract(source->points[l], source->points[i], v1);
 
-	// find a vertex of pass that makes a plane that puts all of the
-	// vertexes of pass on the front side and all of the vertexes of
-	// source on the back side
-	for (j = 0; j < pass->numpoints; j++) {
+        // find a vertex of pass that makes a plane that puts all of the
+        // vertexes of pass on the front side and all of the vertexes of
+        // source on the back side
+        for (j = 0; j < pass->numpoints; j++) {
 
-	    // Which side of the source portal is this point?
-	    // This also tells us which side of the seperating plane has
-	    //  the source portal.
-	    d = DotProduct(pass->points[j], src_pl.normal) - src_pl.dist;
-	    if (d < -ON_EPSILON)
-		fliptest = true;
-	    else if (d > ON_EPSILON)
-		fliptest = false;
-	    else
-		continue;	// Point lies in source plane
+            // Which side of the source portal is this point?
+            // This also tells us which side of the seperating plane has
+            //  the source portal.
+            d = DotProduct(pass->points[j], src_pl.normal) - src_pl.dist;
+            if (d < -ON_EPSILON)
+                fliptest = true;
+            else if (d > ON_EPSILON)
+                fliptest = false;
+            else
+                continue;       // Point lies in source plane
 
-	    // Make a plane with the three points
-	    VectorSubtract(pass->points[j], source->points[i], v2);
-	    CrossProduct(v1, v2, sep.normal);
-	    len_sq = sep.normal[0] * sep.normal[0]
-		+ sep.normal[1] * sep.normal[1]
-		+ sep.normal[2] * sep.normal[2];
+            // Make a plane with the three points
+            VectorSubtract(pass->points[j], source->points[i], v2);
+            CrossProduct(v1, v2, sep.normal);
+            len_sq = sep.normal[0] * sep.normal[0]
+                + sep.normal[1] * sep.normal[1]
+                + sep.normal[2] * sep.normal[2];
 
-	    // If points don't make a valid plane, skip it.
-	    if (len_sq < ON_EPSILON)
-		continue;
+            // If points don't make a valid plane, skip it.
+            if (len_sq < ON_EPSILON)
+                continue;
 
-	    VectorScale(sep.normal, 1.0 / sqrt(len_sq), sep.normal);
-	    sep.dist = DotProduct(pass->points[j], sep.normal);
+            VectorScale(sep.normal, 1.0 / sqrt(len_sq), sep.normal);
+            sep.dist = DotProduct(pass->points[j], sep.normal);
 
-	    //
-	    // flip the plane if the source portal is backwards
-	    //
-	    if (fliptest) {
-		VectorSubtract(vec3_origin, sep.normal, sep.normal);
-		sep.dist = -sep.dist;
-	    }
-	    //
-	    // if all of the pass portal points are now on the positive side,
-	    // this is the seperating plane
-	    //
-	    count = 0;
-	    for (k = 0; k < pass->numpoints; k++) {
-		if (k == j)
-		    continue;
-		d = DotProduct(pass->points[k], sep.normal) - sep.dist;
-		if (d < -ON_EPSILON)
-		    break;
-		else if (d > ON_EPSILON)
-		    ++count;
-	    }
-	    if (k != pass->numpoints)
-		continue;	// points on negative side, not a seperating plane
-	    if (!count)
-		continue;	// planar with seperating plane
+            //
+            // flip the plane if the source portal is backwards
+            //
+            if (fliptest) {
+                VectorSubtract(vec3_origin, sep.normal, sep.normal);
+                sep.dist = -sep.dist;
+            }
+            //
+            // if all of the pass portal points are now on the positive side,
+            // this is the seperating plane
+            //
+            count = 0;
+            for (k = 0; k < pass->numpoints; k++) {
+                if (k == j)
+                    continue;
+                d = DotProduct(pass->points[k], sep.normal) - sep.dist;
+                if (d < -ON_EPSILON)
+                    break;
+                else if (d > ON_EPSILON)
+                    ++count;
+            }
+            if (k != pass->numpoints)
+                continue;       // points on negative side, not a seperating plane
+            if (!count)
+                continue;       // planar with seperating plane
 
-	    //
-	    // flip the normal if we want the back side (tests 1 and 3)
-	    //
-	    if (test & 1) {
-		VectorSubtract(vec3_origin, sep.normal, sep.normal);
-		sep.dist = -sep.dist;
-	    }
+            //
+            // flip the normal if we want the back side (tests 1 and 3)
+            //
+            if (test & 1) {
+                VectorSubtract(vec3_origin, sep.normal, sep.normal);
+                sep.dist = -sep.dist;
+            }
 
-	    /* Cache separating planes for tests 0, 1 */
-	    if (test < 2) {
-		if (stack->numseparators[test] == MAX_SEPARATORS)
-		    Error("MAX_SEPARATORS");
-		stack->separators[test][stack->numseparators[test]] = sep;
-		stack->numseparators[test]++;
-	    }
+            /* Cache separating planes for tests 0, 1 */
+            if (test < 2) {
+                if (stack->numseparators[test] == MAX_SEPARATORS)
+                    Error("MAX_SEPARATORS");
+                stack->separators[test][stack->numseparators[test]] = sep;
+                stack->numseparators[test]++;
+            }
 
-	    target = ClipStackWinding(target, stack, &sep);
-	    if (!target)
-		return NULL;	// target is not visible
+            target = ClipStackWinding(target, stack, &sep);
+            if (!target)
+                return NULL;    // target is not visible
 
-	    break;
-	}
+            break;
+        }
     }
     return target;
 }
@@ -136,8 +136,8 @@ CheckStack(leaf_t *leaf, threaddata_t *thread)
     pstack_t *p;
 
     for (p = thread->pstack_head.next; p; p = p->next)
-	if (p->leaf == leaf)
-	    return 1;
+        if (p->leaf == leaf)
+            return 1;
     return 0;
 }
 
@@ -168,15 +168,15 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
      */
     err = CheckStack(leaf, thread);
     if (err) {
-	logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
-	LogLeaf(leaf);
-	return;
+        logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
+        LogLeaf(leaf);
+        return;
     }
 
     // mark the leaf as visible
     if (!TestLeafBit(thread->leafvis, leafnum)) {
-	SetLeafBit(thread->leafvis, leafnum);
-	thread->base->numcansee++;
+        SetLeafBit(thread->leafvis, leafnum);
+        thread->base->numcansee++;
     }
 
     prevstack->next = &stack;
@@ -188,7 +188,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     stack.numseparators[1] = 0;
 
     for (i = 0; i < STACK_WINDINGS; i++)
-	stack.freewindings[i] = 1;
+        stack.freewindings[i] = 1;
 
     stack.mightsee = malloc(LeafbitsSize(portalleafs));
     might = stack.mightsee->bits;
@@ -196,160 +196,160 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
 
     // check all portals for flowing into other leafs
     for (i = 0; i < leaf->numportals; i++) {
-	p = leaf->portals[i];
+        p = leaf->portals[i];
 
-	if (!TestLeafBit(prevstack->mightsee, p->leaf)) {
-	    c_leafskip++;
-	    continue;		// can't possibly see it
-	}
-	// if the portal can't see anything we haven't allready seen, skip it
-	if (p->status == pstat_done) {
-	    c_vistest++;
-	    test = p->visbits->bits;
-	} else {
-	    c_mighttest++;
-	    test = p->mightsee->bits;
-	}
+        if (!TestLeafBit(prevstack->mightsee, p->leaf)) {
+            c_leafskip++;
+            continue;           // can't possibly see it
+        }
+        // if the portal can't see anything we haven't allready seen, skip it
+        if (p->status == pstat_done) {
+            c_vistest++;
+            test = p->visbits->bits;
+        } else {
+            c_mighttest++;
+            test = p->mightsee->bits;
+        }
 
-	more = 0;
-	numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
-	for (j = 0; j < numblocks; j++) {
-	    might[j] = prevstack->mightsee->bits[j] & test[j];
-	    more |= (might[j] & ~vis[j]);
-	}
+        more = 0;
+        numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
+        for (j = 0; j < numblocks; j++) {
+            might[j] = prevstack->mightsee->bits[j] & test[j];
+            more |= (might[j] & ~vis[j]);
+        }
 
-	if (!more) {
-	    // can't see anything new
-	    c_portalskip++;
-	    continue;
-	}
-	// get plane of portal, point normal into the neighbor leaf
-	stack.portalplane = p->plane;
-	VectorSubtract(vec3_origin, p->plane.normal, backplane.normal);
-	backplane.dist = -p->plane.dist;
+        if (!more) {
+            // can't see anything new
+            c_portalskip++;
+            continue;
+        }
+        // get plane of portal, point normal into the neighbor leaf
+        stack.portalplane = p->plane;
+        VectorSubtract(vec3_origin, p->plane.normal, backplane.normal);
+        backplane.dist = -p->plane.dist;
 
-	if (VectorCompare(prevstack->portalplane.normal, backplane.normal))
-	    continue;		// can't go out a coplanar face
+        if (VectorCompare(prevstack->portalplane.normal, backplane.normal))
+            continue;           // can't go out a coplanar face
 
-	c_portalcheck++;
+        c_portalcheck++;
 
-	stack.portal = p;
-	stack.next = NULL;
+        stack.portal = p;
+        stack.next = NULL;
 
-	/*
-	 * Testing visibility of a target portal, from a source portal,
-	 * looking through a pass portal.
-	 *
-	 *    source portal  =>  pass portal      =>  target portal
-	 *    stack.source   =>  prevstack->pass  =>  stack.pass
-	 *
-	 * If we can see part of the target portal, we use that clipped portal
-	 * as the pass portal into the next leaf.
-	 */
+        /*
+         * Testing visibility of a target portal, from a source portal,
+         * looking through a pass portal.
+         *
+         *    source portal  =>  pass portal      =>  target portal
+         *    stack.source   =>  prevstack->pass  =>  stack.pass
+         *
+         * If we can see part of the target portal, we use that clipped portal
+         * as the pass portal into the next leaf.
+         */
 
-	/* Clip any part of the target portal behind the source portal */
-	stack.pass = ClipStackWinding(p->winding, &stack,
-				      &thread->pstack_head.portalplane);
-	if (!stack.pass)
-	    continue;
+        /* Clip any part of the target portal behind the source portal */
+        stack.pass = ClipStackWinding(p->winding, &stack,
+                                      &thread->pstack_head.portalplane);
+        if (!stack.pass)
+            continue;
 
-	if (!prevstack->pass) {
-	    // the second leaf can only be blocked if coplanar
-	    stack.source = prevstack->source;
-	    RecursiveLeafFlow(p->leaf, thread, &stack);
-	    FreeStackWinding(stack.pass, &stack);
-	    continue;
-	}
+        if (!prevstack->pass) {
+            // the second leaf can only be blocked if coplanar
+            stack.source = prevstack->source;
+            RecursiveLeafFlow(p->leaf, thread, &stack);
+            FreeStackWinding(stack.pass, &stack);
+            continue;
+        }
 
-	/* Clip any part of the target portal behind the pass portal */
-	stack.pass = ClipStackWinding(stack.pass, &stack,
-				      &prevstack->portalplane);
-	if (!stack.pass)
-	    continue;
+        /* Clip any part of the target portal behind the pass portal */
+        stack.pass = ClipStackWinding(stack.pass, &stack,
+                                      &prevstack->portalplane);
+        if (!stack.pass)
+            continue;
 
-	/* Clip any part of the source portal in front of the target portal */
-	stack.source = ClipStackWinding(prevstack->source, &stack,
-					&backplane);
-	if (!stack.source) {
-	    FreeStackWinding(stack.pass, &stack);
-	    continue;
-	}
+        /* Clip any part of the source portal in front of the target portal */
+        stack.source = ClipStackWinding(prevstack->source, &stack,
+                                        &backplane);
+        if (!stack.source) {
+            FreeStackWinding(stack.pass, &stack);
+            continue;
+        }
 
-	c_portaltest++;
+        c_portaltest++;
 
-	/* TEST 0 :: source -> pass -> target */
-	if (testlevel > 0) {
-	    if (stack.numseparators[0]) {
-		for (j = 0; j < stack.numseparators[0]; j++) {
-		    stack.pass = ClipStackWinding(stack.pass, &stack,
-						  &stack.separators[0][j]);
-		    if (!stack.pass)
-			break;
-		}
-	    } else {
-		/* Using prevstack source for separator cache correctness */
-		stack.pass = ClipToSeperators(prevstack->source,
-					      thread->pstack_head.portalplane,
-					      prevstack->pass, stack.pass, 0,
-					      &stack);
-	    }
-	    if (!stack.pass) {
-		FreeStackWinding(stack.source, &stack);
-		continue;
-	    }
-	}
+        /* TEST 0 :: source -> pass -> target */
+        if (testlevel > 0) {
+            if (stack.numseparators[0]) {
+                for (j = 0; j < stack.numseparators[0]; j++) {
+                    stack.pass = ClipStackWinding(stack.pass, &stack,
+                                                  &stack.separators[0][j]);
+                    if (!stack.pass)
+                        break;
+                }
+            } else {
+                /* Using prevstack source for separator cache correctness */
+                stack.pass = ClipToSeperators(prevstack->source,
+                                              thread->pstack_head.portalplane,
+                                              prevstack->pass, stack.pass, 0,
+                                              &stack);
+            }
+            if (!stack.pass) {
+                FreeStackWinding(stack.source, &stack);
+                continue;
+            }
+        }
 
-	/* TEST 1 :: pass -> source -> target */
-	if (testlevel > 1) {
-	    if (stack.numseparators[1]) {
-		for (j = 0; j < stack.numseparators[1]; j++) {
-		    stack.pass = ClipStackWinding(stack.pass, &stack,
-						  &stack.separators[1][j]);
-		    if (!stack.pass)
-			break;
-		}
-	    } else {
-		/* Using prevstack source for separator cache correctness */
-		stack.pass = ClipToSeperators(prevstack->pass,
-					      prevstack->portalplane,
-					      prevstack->source, stack.pass, 1,
-					      &stack);
-	    }
-	    if (!stack.pass) {
-		FreeStackWinding(stack.source, &stack);
-		continue;
-	    }
-	}
+        /* TEST 1 :: pass -> source -> target */
+        if (testlevel > 1) {
+            if (stack.numseparators[1]) {
+                for (j = 0; j < stack.numseparators[1]; j++) {
+                    stack.pass = ClipStackWinding(stack.pass, &stack,
+                                                  &stack.separators[1][j]);
+                    if (!stack.pass)
+                        break;
+                }
+            } else {
+                /* Using prevstack source for separator cache correctness */
+                stack.pass = ClipToSeperators(prevstack->pass,
+                                              prevstack->portalplane,
+                                              prevstack->source, stack.pass, 1,
+                                              &stack);
+            }
+            if (!stack.pass) {
+                FreeStackWinding(stack.source, &stack);
+                continue;
+            }
+        }
 
-	/* TEST 2 :: target -> pass -> source */
-	if (testlevel > 2) {
-	    stack.source = ClipToSeperators(stack.pass, stack.portalplane,
-					    prevstack->pass, stack.source, 2,
-					    &stack);
-	    if (!stack.source) {
-		FreeStackWinding(stack.pass, &stack);
-		continue;
-	    }
-	}
+        /* TEST 2 :: target -> pass -> source */
+        if (testlevel > 2) {
+            stack.source = ClipToSeperators(stack.pass, stack.portalplane,
+                                            prevstack->pass, stack.source, 2,
+                                            &stack);
+            if (!stack.source) {
+                FreeStackWinding(stack.pass, &stack);
+                continue;
+            }
+        }
 
-	/* TEST 3 :: pass -> target -> source */
-	if (testlevel > 3) {
-	    stack.source = ClipToSeperators(prevstack->pass,
-					    prevstack->portalplane, stack.pass,
-					    stack.source, 3, &stack);
-	    if (!stack.source) {
-		FreeStackWinding(stack.pass, &stack);
-		continue;
-	    }
-	}
+        /* TEST 3 :: pass -> target -> source */
+        if (testlevel > 3) {
+            stack.source = ClipToSeperators(prevstack->pass,
+                                            prevstack->portalplane, stack.pass,
+                                            stack.source, 3, &stack);
+            if (!stack.source) {
+                FreeStackWinding(stack.pass, &stack);
+                continue;
+            }
+        }
 
-	c_portalpass++;
+        c_portalpass++;
 
-	// flow through it for real
-	RecursiveLeafFlow(p->leaf, thread, &stack);
+        // flow through it for real
+        RecursiveLeafFlow(p->leaf, thread, &stack);
 
-	FreeStackWinding(stack.source, &stack);
-	FreeStackWinding(stack.pass, &stack);
+        FreeStackWinding(stack.source, &stack);
+        FreeStackWinding(stack.pass, &stack);
     }
 
     free(stack.mightsee);
@@ -367,7 +367,7 @@ PortalFlow(portal_t *p)
     threaddata_t data;
 
     if (p->status != pstat_working)
-	Error("%s: reflowed", __func__);
+        Error("%s: reflowed", __func__);
 
     p->visbits = malloc(LeafbitsSize(portalleafs));
     memset(p->visbits, 0, LeafbitsSize(portalleafs));
@@ -400,17 +400,17 @@ SimpleFlood(portal_t *srcportal, int leafnum, byte *portalsee)
     portal_t *p;
 
     if (TestLeafBit(srcportal->mightsee, leafnum))
-	return;
+        return;
 
     SetLeafBit(srcportal->mightsee, leafnum);
     srcportal->nummightsee++;
 
     leaf = &leafs[leafnum];
     for (i = 0; i < leaf->numportals; i++) {
-	p = leaf->portals[i];
-	if (!portalsee[p - portals])
-	    continue;
-	SimpleFlood(srcportal, p->leaf, portalsee);
+        p = leaf->portals[i];
+        if (!portalsee[p - portals])
+            continue;
+        SimpleFlood(srcportal, p->leaf, portalsee);
     }
 }
 
@@ -430,57 +430,57 @@ BasePortalThread(void *dummy)
 
     portalsee = malloc(sizeof(*portalsee) * numportals * 2);
     if (!portalsee)
-	Error("%s: Out of Memory", __func__);
+        Error("%s: Out of Memory", __func__);
 
     while (1) {
-	portalnum = GetThreadWork();
-	if (portalnum == -1)
-	    break;
+        portalnum = GetThreadWork();
+        if (portalnum == -1)
+            break;
 
-	p = portals + portalnum;
-	w = p->winding;
+        p = portals + portalnum;
+        w = p->winding;
 
-	p->mightsee = malloc(LeafbitsSize(portalleafs));
-	memset(p->mightsee, 0, LeafbitsSize(portalleafs));
+        p->mightsee = malloc(LeafbitsSize(portalleafs));
+        memset(p->mightsee, 0, LeafbitsSize(portalleafs));
 
-	memset(portalsee, 0, numportals * 2);
+        memset(portalsee, 0, numportals * 2);
 
-	for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
-	    tw = tp->winding;
-	    if (tp == p)
-		continue;
+        for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
+            tw = tp->winding;
+            if (tp == p)
+                continue;
 
-	    // Quick test - completely at the back?
-	    d = DotProduct(tw->origin, p->plane.normal) - p->plane.dist;
-	    if (d < -tw->radius)
-		continue;
+            // Quick test - completely at the back?
+            d = DotProduct(tw->origin, p->plane.normal) - p->plane.dist;
+            if (d < -tw->radius)
+                continue;
 
-	    for (j = 0; j < tw->numpoints; j++) {
-		d = DotProduct(tw->points[j], p->plane.normal) - p->plane.dist;
-		if (d > ON_EPSILON)
-		    break;
-	    }
-	    if (j == tw->numpoints)
-		continue;	// no points on front
+            for (j = 0; j < tw->numpoints; j++) {
+                d = DotProduct(tw->points[j], p->plane.normal) - p->plane.dist;
+                if (d > ON_EPSILON)
+                    break;
+            }
+            if (j == tw->numpoints)
+                continue;       // no points on front
 
-	    // Quick test - completely on front?
-	    d = DotProduct(w->origin, tp->plane.normal) - tp->plane.dist;
-	    if (d > w->radius)
-		continue;
+            // Quick test - completely on front?
+            d = DotProduct(w->origin, tp->plane.normal) - tp->plane.dist;
+            if (d > w->radius)
+                continue;
 
-	    for (j = 0; j < w->numpoints; j++) {
-		d = DotProduct(w->points[j], tp->plane.normal) - tp->plane.dist;
-		if (d < -ON_EPSILON)
-		    break;
-	    }
-	    if (j == w->numpoints)
-		continue;	// no points on back
+            for (j = 0; j < w->numpoints; j++) {
+                d = DotProduct(w->points[j], tp->plane.normal) - tp->plane.dist;
+                if (d < -ON_EPSILON)
+                    break;
+            }
+            if (j == w->numpoints)
+                continue;       // no points on back
 
-	    portalsee[i] = 1;
-	}
+            portalsee[i] = 1;
+        }
 
-	p->nummightsee = 0;
-	SimpleFlood(p, p->leaf, portalsee);
+        p->nummightsee = 0;
+        SimpleFlood(p, p->leaf, portalsee);
     }
 
     free(portalsee);

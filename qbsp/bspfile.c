@@ -45,65 +45,65 @@ LoadBSPFile(void)
 
     switch (header->version) {
     case BSPVERSION:
-	MemSize = MemSize_BSP29;
-	break;
+        MemSize = MemSize_BSP29;
+        break;
     case BSP2RMQVERSION:
-	MemSize = MemSize_BSP2rmq;
-	break;
+        MemSize = MemSize_BSP2rmq;
+        break;
     case BSP2VERSION:
-	MemSize = MemSize_BSP2;
-	break;
+        MemSize = MemSize_BSP2;
+        break;
     default:
-	Error("%s has unknown BSP version %d",
-	      options.szBSPName, header->version);
+        Error("%s has unknown BSP version %d",
+              options.szBSPName, header->version);
     }
     options.BSPVersion = header->version;
 
     /* Throw all of the data into the first entity to be written out later */
     entity = map.entities;
     for (i = 0; i < BSP_LUMPS; i++) {
-	map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
-	iLumpOff = header->lumps[i].fileofs;
-	
-	if (i == LUMP_MODELS && !options.hexen2) {
-	    int j;
+        map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
+        iLumpOff = header->lumps[i].fileofs;
+        
+        if (i == LUMP_MODELS && !options.hexen2) {
+            int j;
 
-	    if (cLumpSize % sizeof(dmodelq1_t))
-		Error("Deformed lump in BSP file (size %d is not divisible by %d)",
-		      cLumpSize, (int)sizeof(dmodelq1_t));
-	    
-	    entity->lumps[i].count = cLumpSize / sizeof(dmodelq1_t);
-	    entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
-	    
-	    map.cTotal[i] = entity->lumps[i].count * sizeof(dmodel_t);
-	    
-	    for (j=0; j<entity->lumps[i].count; j++)
-	    {
-		int k;
-		const dmodelq1_t *in = (dmodelq1_t *)((byte *)header + iLumpOff) + j;
-		dmodelh2_t *out = (dmodelh2_t *)entity->lumps[i].data + j;
-		
-		for (k = 0; k < 3; k++) {
-		    out->mins[k] = in->mins[k];
-		    out->maxs[k] = in->maxs[k];
-		    out->origin[k] = in->origin[k];
-		}
-		for (k = 0; k < MAX_MAP_HULLS_Q1; k++)
-		    out->headnode[k] = in->headnode[k];
-		out->visleafs = in->visleafs;
-		out->firstface = in->firstface;
-		out->numfaces = in->numfaces;
-	    }
-	} else {
-	    if (cLumpSize % MemSize[i])
-		Error("Deformed lump in BSP file (size %d is not divisible by %d)",
-		      cLumpSize, MemSize[i]);
-	    
-	    entity->lumps[i].count = cLumpSize / MemSize[i];
-	    entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
-	    
-	    memcpy(entity->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
-	}
+            if (cLumpSize % sizeof(dmodelq1_t))
+                Error("Deformed lump in BSP file (size %d is not divisible by %d)",
+                      cLumpSize, (int)sizeof(dmodelq1_t));
+            
+            entity->lumps[i].count = cLumpSize / sizeof(dmodelq1_t);
+            entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
+            
+            map.cTotal[i] = entity->lumps[i].count * sizeof(dmodel_t);
+            
+            for (j=0; j<entity->lumps[i].count; j++)
+            {
+                int k;
+                const dmodelq1_t *in = (dmodelq1_t *)((byte *)header + iLumpOff) + j;
+                dmodelh2_t *out = (dmodelh2_t *)entity->lumps[i].data + j;
+                
+                for (k = 0; k < 3; k++) {
+                    out->mins[k] = in->mins[k];
+                    out->maxs[k] = in->maxs[k];
+                    out->origin[k] = in->origin[k];
+                }
+                for (k = 0; k < MAX_MAP_HULLS_Q1; k++)
+                    out->headnode[k] = in->headnode[k];
+                out->visleafs = in->visleafs;
+                out->firstface = in->firstface;
+                out->numfaces = in->numfaces;
+            }
+        } else {
+            if (cLumpSize % MemSize[i])
+                Error("Deformed lump in BSP file (size %d is not divisible by %d)",
+                      cLumpSize, MemSize[i]);
+            
+            entity->lumps[i].count = cLumpSize / MemSize[i];
+            entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
+            
+            memcpy(entity->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
+        }
     }
 
     FreeMem(header, OTHER, cFileSize + 1);
@@ -126,53 +126,53 @@ AddLump(FILE *f, int Type)
     lump->fileofs = ftell(f);
 
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
-	entities = &entity->lumps[Type];
-	if (entities->data) {
-	    if (Type == LUMP_MODELS && !options.hexen2) {
-		const dmodel_t *in = entities->data;
-		dmodelq1_t out;
-		int j, k;
-		for (j = 0; j < entities->count; j++)
-		{
-		    for (k = 0; k < 3; k++) {
-			out.mins[k] = in[j].mins[k];
-			out.maxs[k] = in[j].maxs[k];
-			out.origin[k] = in[j].origin[k];
-		    }
-		    for (k = 0; k < MAX_MAP_HULLS_Q1; k++)
-			out.headnode[k] = in[j].headnode[k];
-		    out.visleafs = in[j].visleafs;
-		    out.firstface = in[j].firstface;
-		    out.numfaces = in[j].numfaces;
-		    ret = fwrite(&out, sizeof(out), 1, f);
-		    if (ret != 1)
-			Error("Failure writing to file");
-		}
-		cLen += entities->count * sizeof(out);
-	    } else {
-		ret = fwrite(entities->data, MemSize[Type], entities->count, f);
-		if (ret != entities->count)
-		    Error("Failure writing to file");
-		cLen += entities->count * MemSize[Type];
-	    }
-	}
+        entities = &entity->lumps[Type];
+        if (entities->data) {
+            if (Type == LUMP_MODELS && !options.hexen2) {
+                const dmodel_t *in = entities->data;
+                dmodelq1_t out;
+                int j, k;
+                for (j = 0; j < entities->count; j++)
+                {
+                    for (k = 0; k < 3; k++) {
+                        out.mins[k] = in[j].mins[k];
+                        out.maxs[k] = in[j].maxs[k];
+                        out.origin[k] = in[j].origin[k];
+                    }
+                    for (k = 0; k < MAX_MAP_HULLS_Q1; k++)
+                        out.headnode[k] = in[j].headnode[k];
+                    out.visleafs = in[j].visleafs;
+                    out.firstface = in[j].firstface;
+                    out.numfaces = in[j].numfaces;
+                    ret = fwrite(&out, sizeof(out), 1, f);
+                    if (ret != 1)
+                        Error("Failure writing to file");
+                }
+                cLen += entities->count * sizeof(out);
+            } else {
+                ret = fwrite(entities->data, MemSize[Type], entities->count, f);
+                if (ret != entities->count)
+                    Error("Failure writing to file");
+                cLen += entities->count * MemSize[Type];
+            }
+        }
     }
 
     // Add null terminating char for text
     if (Type == LUMP_ENTITIES) {
-	ret = fwrite("", 1, 1, f);
-	if (ret != 1)
-	    Error("Failure writing to file");
-	cLen++;
+        ret = fwrite("", 1, 1, f);
+        if (ret != 1)
+            Error("Failure writing to file");
+        cLen++;
     }
     lump->filelen = cLen;
 
     // Pad to 4-byte boundary
     if (cLen % 4 != 0) {
-	size_t pad = 4 - (cLen % 4);
-	ret = fwrite("   ", 1, pad, f);
-	if (ret != pad)
-	    Error("Failure writing to file");
+        size_t pad = 4 - (cLen % 4);
+        ret = fwrite("   ", 1, pad, f);
+        if (ret != pad)
+            Error("Failure writing to file");
     }
 }
 
@@ -195,12 +195,12 @@ WriteBSPFile(void)
 
     f = fopen(options.szBSPName, "wb");
     if (!f)
-	Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     /* write placeholder, header is overwritten later */
     ret = fwrite(header, sizeof(dheader_t), 1, f);
     if (ret != 1)
-	Error("Failure writing to file");
+        Error("Failure writing to file");
 
     AddLump(f, LUMP_PLANES);
     AddLump(f, LUMP_LEAFS);
@@ -222,7 +222,7 @@ WriteBSPFile(void)
     fseek(f, 0, SEEK_SET);
     ret = fwrite(header, sizeof(dheader_t), 1, f);
     if (ret != 1)
-	Error("Failure writing to file");
+        Error("Failure writing to file");
 
     fclose(f);
     FreeMem(header, OTHER, sizeof(dheader_t));
@@ -243,32 +243,32 @@ PrintBSPFileSizes(void)
     struct lumpdata *lump;
 
     Message(msgStat, "%8d planes       %10d", map.cTotal[LUMP_PLANES],
-	    map.cTotal[LUMP_PLANES] * MemSize[BSP_PLANE]);
+            map.cTotal[LUMP_PLANES] * MemSize[BSP_PLANE]);
     Message(msgStat, "%8d vertexes     %10d", map.cTotal[LUMP_VERTEXES],
-	    map.cTotal[LUMP_VERTEXES] * MemSize[BSP_VERTEX]);
+            map.cTotal[LUMP_VERTEXES] * MemSize[BSP_VERTEX]);
     Message(msgStat, "%8d nodes        %10d", map.cTotal[LUMP_NODES],
-	    map.cTotal[LUMP_NODES] * MemSize[BSP_NODE]);
+            map.cTotal[LUMP_NODES] * MemSize[BSP_NODE]);
     Message(msgStat, "%8d texinfo      %10d", map.cTotal[LUMP_TEXINFO],
-	    map.cTotal[LUMP_TEXINFO] * MemSize[BSP_TEXINFO]);
+            map.cTotal[LUMP_TEXINFO] * MemSize[BSP_TEXINFO]);
     Message(msgStat, "%8d faces        %10d", map.cTotal[LUMP_FACES],
-	    map.cTotal[LUMP_FACES] * MemSize[BSP_FACE]);
+            map.cTotal[LUMP_FACES] * MemSize[BSP_FACE]);
     Message(msgStat, "%8d clipnodes    %10d", map.cTotal[LUMP_CLIPNODES],
-	    map.cTotal[LUMP_CLIPNODES] * MemSize[BSP_CLIPNODE]);
+            map.cTotal[LUMP_CLIPNODES] * MemSize[BSP_CLIPNODE]);
     Message(msgStat, "%8d leafs        %10d", map.cTotal[LUMP_LEAFS],
-	    map.cTotal[LUMP_LEAFS] * MemSize[BSP_LEAF]);
+            map.cTotal[LUMP_LEAFS] * MemSize[BSP_LEAF]);
     Message(msgStat, "%8d marksurfaces %10d", map.cTotal[LUMP_MARKSURFACES],
-	    map.cTotal[LUMP_MARKSURFACES] * MemSize[BSP_MARKSURF]);
+            map.cTotal[LUMP_MARKSURFACES] * MemSize[BSP_MARKSURF]);
     Message(msgStat, "%8d surfedges    %10d", map.cTotal[LUMP_SURFEDGES],
-	    map.cTotal[LUMP_SURFEDGES] * MemSize[BSP_SURFEDGE]);
+            map.cTotal[LUMP_SURFEDGES] * MemSize[BSP_SURFEDGE]);
     Message(msgStat, "%8d edges        %10d", map.cTotal[LUMP_EDGES],
-	    map.cTotal[LUMP_EDGES] * MemSize[BSP_EDGE]);
+            map.cTotal[LUMP_EDGES] * MemSize[BSP_EDGE]);
 
     lump = &pWorldEnt->lumps[LUMP_TEXTURES];
     if (lump->data)
-	Message(msgStat, "%8d textures     %10d",
-		((dmiptexlump_t *)lump->data)->nummiptex, lump->count);
+        Message(msgStat, "%8d textures     %10d",
+                ((dmiptexlump_t *)lump->data)->nummiptex, lump->count);
     else
-	Message(msgStat, "       0 textures              0");
+        Message(msgStat, "       0 textures              0");
 
     Message(msgStat, "         lightdata    %10d", map.cTotal[LUMP_LIGHTING]);
     Message(msgStat, "         visdata      %10d", map.cTotal[LUMP_VISIBILITY]);

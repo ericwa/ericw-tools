@@ -62,7 +62,7 @@ typedef struct {
  * inside a leaf with one of the contents types which stop the trace.
  */
 int TraceLine(const dmodel_t *model, const int traceflags,
-	      const vec3_t start, const vec3_t end, tracepoint_t *hitpoint);
+              const vec3_t start, const vec3_t end, tracepoint_t *hitpoint);
 
 /*
  * Convenience functions TestLight and TestSky will test against all shadow
@@ -99,7 +99,7 @@ extern const dmodel_t *const *tracelist;
 
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 void LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
-	       const bsp2_t *bsp);
+               const bsp2_t *bsp);
 void MakeTnodes(const bsp2_t *bsp);
 
 extern float scaledist;

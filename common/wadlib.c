@@ -22,7 +22,7 @@
  * ============================================================================
  */
 
-lumpinfo_t *lumpinfo;		/* location of each lump on disk */
+lumpinfo_t *lumpinfo;           /* location of each lump on disk */
 int numlumps;
 
 wadinfo_t header;
@@ -45,7 +45,7 @@ W_OpenWad(char *filename)
     SafeRead(wadhandle, &header, sizeof(header));
 
     if (strncmp(header.identification, "WAD2", 4))
-	Error("Wad file %s doesn't have WAD2 id\n", filename);
+        Error("Wad file %s doesn't have WAD2 id\n", filename);
 
     header.numlumps = LittleLong(header.numlumps);
     header.infotableofs = LittleLong(header.infotableofs);
@@ -61,8 +61,8 @@ W_OpenWad(char *filename)
 
     /* Fill in lumpinfo */
     for (i = 0; i < numlumps; i++, lump_p++) {
-	lump_p->filepos = LittleLong(lump_p->filepos);
-	lump_p->size = LittleLong(lump_p->size);
+        lump_p->filepos = LittleLong(lump_p->filepos);
+        lump_p->size = LittleLong(lump_p->size);
     }
 }
 
@@ -73,14 +73,14 @@ CleanupName(char *in, char *out)
     int i;
 
     for (i = 0; i < sizeof(((lumpinfo_t *) 0)->name); i++) {
-	if (!in[i])
-	    break;
+        if (!in[i])
+            break;
 
-	out[i] = toupper(in[i]);
+        out[i] = toupper(in[i]);
     }
 
     for (; i < sizeof(((lumpinfo_t *) 0)->name); i++)
-	out[i] = 0;
+        out[i] = 0;
 }
 
 
@@ -109,11 +109,11 @@ W_CheckNumForName(char *name)
     /* find it */
     lump_p = lumpinfo;
     for (i = 0; i < numlumps; i++, lump_p++) {
-	if (*(int *)lump_p->name == v1
-	    && *(int *)&lump_p->name[4] == v2
-	    && *(int *)&lump_p->name[8] == v3
-	    && *(int *)&lump_p->name[12] == v4)
-	    return i;
+        if (*(int *)lump_p->name == v1
+            && *(int *)&lump_p->name[4] == v2
+            && *(int *)&lump_p->name[8] == v3
+            && *(int *)&lump_p->name[12] == v4)
+            return i;
     }
 
     return -1;
@@ -134,7 +134,7 @@ W_GetNumForName(char *name)
 
     i = W_CheckNumForName(name);
     if (i != -1)
-	return i;
+        return i;
 
     Error("%s: %s not found!", __func__, name);
     return -1;
@@ -151,7 +151,7 @@ int
 W_LumpLength(int lump)
 {
     if (lump >= numlumps)
-	Error("%s: %i >= numlumps", __func__, lump);
+        Error("%s: %i >= numlumps", __func__, lump);
     return lumpinfo[lump].size;
 }
 
@@ -168,7 +168,7 @@ W_ReadLumpNum(int lump, void *dest)
     lumpinfo_t *l;
 
     if (lump >= numlumps)
-	Error("%s: %i >= numlumps", __func__, lump);
+        Error("%s: %i >= numlumps", __func__, lump);
     l = lumpinfo + lump;
 
     fseek(wadhandle, l->filepos, SEEK_SET);
@@ -187,7 +187,7 @@ W_LoadLumpNum(int lump)
     void *buf;
 
     if ((unsigned)lump >= numlumps)
-	Error("%s: %i >= numlumps", __func__, lump);
+        Error("%s: %i >= numlumps", __func__, lump);
 
     buf = malloc(W_LumpLength(lump));
     W_ReadLumpNum(lump, buf);
@@ -235,11 +235,11 @@ NewWad(char *pathname, qboolean bigendien)
     memset(outinfo, 0, sizeof(outinfo));
 
     if (bigendien) {
-	wadshort = BigShort;
-	wadlong = BigLong;
+        wadshort = BigShort;
+        wadlong = BigLong;
     } else {
-	wadshort = LittleShort;
-	wadlong = LittleLong;
+        wadshort = LittleShort;
+        wadlong = LittleLong;
     }
 
     outlumps = 0;

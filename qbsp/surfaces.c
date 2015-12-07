@@ -45,42 +45,42 @@ SubdivideFace(face_t *f, face_t **prevptr)
     /* special (non-surface cached) faces don't need subdivision */
     tex = (texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data + f->texinfo;
     if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
-	return;
+        return;
 
     for (axis = 0; axis < 2; axis++) {
-	while (1) {
-	    mins = VECT_MAX;
-	    maxs = -VECT_MAX;
+        while (1) {
+            mins = VECT_MAX;
+            maxs = -VECT_MAX;
 
-	    tmp[0] = tex->vecs[axis][0];
-	    tmp[1] = tex->vecs[axis][1];
-	    tmp[2] = tex->vecs[axis][2];
+            tmp[0] = tex->vecs[axis][0];
+            tmp[1] = tex->vecs[axis][1];
+            tmp[2] = tex->vecs[axis][2];
 
-	    for (i = 0; i < f->w.numpoints; i++) {
-		v = DotProduct(f->w.points[i], tmp);
-		if (v < mins)
-		    mins = v;
-		if (v > maxs)
-		    maxs = v;
-	    }
+            for (i = 0; i < f->w.numpoints; i++) {
+                v = DotProduct(f->w.points[i], tmp);
+                if (v < mins)
+                    mins = v;
+                if (v > maxs)
+                    maxs = v;
+            }
 
-	    if (maxs - mins <= options.dxSubdivide)
-		break;
+            if (maxs - mins <= options.dxSubdivide)
+                break;
 
-	    // split it
-	    VectorCopy(tmp, plane.normal);
-	    v = VectorLength(plane.normal);
-	    VectorNormalize(plane.normal);
-	    plane.dist = (mins + options.dxSubdivide - 16) / v;
-	    next = f->next;
-	    SplitFace(f, &plane, &front, &back);
-	    if (!front || !back)
-		Error("Didn't split the polygon (%s)", __func__);
-	    *prevptr = back;
-	    back->next = front;
-	    front->next = next;
-	    f = back;
-	}
+            // split it
+            VectorCopy(tmp, plane.normal);
+            v = VectorLength(plane.normal);
+            VectorNormalize(plane.normal);
+            plane.dist = (mins + options.dxSubdivide - 16) / v;
+            next = f->next;
+            SplitFace(f, &plane, &front, &back);
+            if (!front || !back)
+                Error("Didn't split the polygon (%s)", __func__);
+            *prevptr = back;
+            back->next = front;
+            front->next = next;
+            f = back;
+        }
     }
 }
 
@@ -100,18 +100,18 @@ GatherNodeFaces_r(node_t *node, face_t **planefaces)
     face_t *f, *next;
 
     if (node->planenum != PLANENUM_LEAF) {
-	// decision node
-	for (f = node->faces; f; f = next) {
-	    next = f->next;
-	    if (!f->w.numpoints) {	// face was removed outside
-		FreeMem(f, FACE, 1);
-	    } else {
-		f->next = planefaces[f->planenum];
-		planefaces[f->planenum] = f;
-	    }
-	}
-	GatherNodeFaces_r(node->children[0], planefaces);
-	GatherNodeFaces_r(node->children[1], planefaces);
+        // decision node
+        for (f = node->faces; f; f = next) {
+            next = f->next;
+            if (!f->w.numpoints) {      // face was removed outside
+                FreeMem(f, FACE, 1);
+            } else {
+                f->next = planefaces[f->planenum];
+                planefaces[f->planenum] = f;
+            }
+        }
+        GatherNodeFaces_r(node->children[0], planefaces);
+        GatherNodeFaces_r(node->children[1], planefaces);
     }
     FreeMem(node, NODE, 1);
 }
@@ -146,7 +146,7 @@ static int cStartEdge;
 
 //============================================================================
 
-#define	NUM_HASH	4096
+#define NUM_HASH        4096
 
 static hashvert_t *hashverts[NUM_HASH];
 static vec3_t hash_min, hash_scale;
@@ -170,8 +170,8 @@ InitHash(void)
     memset(hashverts, 0, sizeof(hashverts));
 
     for (i = 0; i < 3; i++) {
-	hash_min[i] = -8000;
-	size[i] = 16000;
+        hash_min[i] = -8000;
+        size[i] = 16000;
     }
 
     volume = size[0] * size[1];
@@ -223,9 +223,9 @@ HashVec(vec3_t vec)
     unsigned h;
 
     h = (unsigned)(hash_scale[0] * (vec[0] - hash_min[0]) * hash_scale[2] +
-		   hash_scale[1] * (vec[1] - hash_min[1]));
+                   hash_scale[1] * (vec[1] - hash_min[1]));
     if (h >= NUM_HASH)
-	return NUM_HASH - 1;
+        return NUM_HASH - 1;
     return h;
 }
 
@@ -246,20 +246,20 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     dvertex_t *dvertex;
 
     for (i = 0; i < 3; i++) {
-	if (fabs(in[i] - Q_rint(in[i])) < ZERO_EPSILON)
-	    vert[i] = Q_rint(in[i]);
-	else
-	    vert[i] = in[i];
+        if (fabs(in[i] - Q_rint(in[i])) < ZERO_EPSILON)
+            vert[i] = Q_rint(in[i]);
+        else
+            vert[i] = in[i];
     }
 
     h = HashVec(vert);
     for (hv = hashverts[h]; hv; hv = hv->next) {
-	if (fabs(hv->point[0] - vert[0]) < POINT_EPSILON &&
-	    fabs(hv->point[1] - vert[1]) < POINT_EPSILON &&
-	    fabs(hv->point[2] - vert[2]) < POINT_EPSILON) {
-	    hv->numedges++;
-	    return hv->num;
-	}
+        if (fabs(hv->point[0] - vert[0]) < POINT_EPSILON &&
+            fabs(hv->point[1] - vert[1]) < POINT_EPSILON &&
+            fabs(hv->point[2] - vert[2]) < POINT_EPSILON) {
+            hv->numedges++;
+            return hv->num;
+        }
     }
 
     hv = hvert_p++;
@@ -270,7 +270,7 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     VectorCopy(vert, hv->point);
 
     if (vertices->index == vertices->count)
-	Error("Internal error: didn't allocate enough vertices?");
+        Error("Internal error: didn't allocate enough vertices?");
 
     /* emit a vertex */
     dvertex = (dvertex_t *)vertices->data + vertices->index;
@@ -293,7 +293,7 @@ Don't allow four way edges
 */
 static int
 GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
-	const face_t *face)
+        const face_t *face)
 {
     struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     int v1, v2;
@@ -302,7 +302,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     hashedge_t *he;
 
     if (!face->contents[0])
-	Error("Face with 0 contents (%s)", __func__);
+        Error("Face with 0 contents (%s)", __func__);
 
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
@@ -310,47 +310,47 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     edge_hash_key = HashEdge(v1, v2);
 
     if (options.BSPVersion == BSPVERSION) {
-	bsp29_dedge_t *edge;
+        bsp29_dedge_t *edge;
 
         for (he = hashedges[edge_hash_key]; he; he = he->next) {
             i = he->i;
             edge = (bsp29_dedge_t *)edges->data + i;
-	    if (v1 == edge->v[1] && v2 == edge->v[0]
-		&& pEdgeFaces1[i] == NULL
-		&& pEdgeFaces0[i]->contents[0] == face->contents[0]) {
-		pEdgeFaces1[i] = face;
-		return -(i + cStartEdge);
-	    }
-	}
+            if (v1 == edge->v[1] && v2 == edge->v[0]
+                && pEdgeFaces1[i] == NULL
+                && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+                pEdgeFaces1[i] = face;
+                return -(i + cStartEdge);
+            }
+        }
 
-	/* emit an edge */
+        /* emit an edge */
         i = edges->index;
         edge = (bsp29_dedge_t *)edges->data + i;
-	if (edges->index >= edges->count)
-	    Error("Internal error: didn't allocate enough edges?");
-	edge->v[0] = v1;
-	edge->v[1] = v2;
+        if (edges->index >= edges->count)
+            Error("Internal error: didn't allocate enough edges?");
+        edge->v[0] = v1;
+        edge->v[1] = v2;
     } else {
-	bsp2_dedge_t *edge = (bsp2_dedge_t *)edges->data;
+        bsp2_dedge_t *edge = (bsp2_dedge_t *)edges->data;
 
         for (he = hashedges[edge_hash_key]; he; he = he->next) {
             i = he->i;
             edge = (bsp2_dedge_t *)edges->data + i;
-	    if (v1 == edge->v[1] && v2 == edge->v[0]
-		&& pEdgeFaces1[i] == NULL
-		&& pEdgeFaces0[i]->contents[0] == face->contents[0]) {
-		pEdgeFaces1[i] = face;
-		return -(i + cStartEdge);
-	    }
-	}
+            if (v1 == edge->v[1] && v2 == edge->v[0]
+                && pEdgeFaces1[i] == NULL
+                && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+                pEdgeFaces1[i] = face;
+                return -(i + cStartEdge);
+            }
+        }
 
-	/* emit an edge */
+        /* emit an edge */
         i = edges->index;
         edge = (bsp2_dedge_t *)edges->data + i;
-	if (edges->index >= edges->count)
-	    Error("Internal error: didn't allocate enough edges?");
-	edge->v[0] = v1;
-	edge->v[1] = v2;
+        if (edges->index >= edges->count)
+            Error("Internal error: didn't allocate enough edges?");
+        edge->v[0] = v1;
+        edge->v[1] = v2;
     }
 
     AddHashEdge(v1, v2, edges->index);
@@ -374,14 +374,14 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
 
     face->outputnumber = -1;
     if (face->w.numpoints > MAXEDGES)
-	Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
+        Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
 
     memsize = face->w.numpoints * sizeof(face->edges[0]);
     face->edges = AllocMem(OTHER, memsize, true);
     for (i = 0; i < face->w.numpoints; i++) {
-	const vec_t *p1 = face->w.points[i];
-	const vec_t *p2 = face->w.points[(i + 1) % face->w.numpoints];
-	face->edges[i] = GetEdge(entity, p1, p2, face);
+        const vec_t *p1 = face->w.points[i];
+        const vec_t *p2 = face->w.points[(i + 1) % face->w.numpoints];
+        face->edges[i] = GetEdge(entity, p1, p2, face);
     }
 }
 
@@ -398,12 +398,12 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
-	return progress;
+        return progress;
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
-	    continue;
-	FindFaceEdges(entity, f);
+        if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
+            continue;
+        FindFaceEdges(entity, f);
     }
 
     Message(msgPercent, ++progress, splitnodes);
@@ -429,36 +429,36 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
     int i;
 
     if (node->planenum == PLANENUM_LEAF)
-	return;
+        return;
 
     node->firstface = map.cTotal[LUMP_FACES];
 
     for (face = node->faces; face; face = face->next) {
-	if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
-	    continue;
+        if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
+            continue;
 
-	// emit a region
-	face->outputnumber = map.cTotal[LUMP_FACES];
-	out = (bsp29_dface_t *)faces->data + faces->index;
-	out->planenum = node->outputplanenum;
-	out->side = face->planeside;
-	out->texinfo = face->texinfo;
-	for (i = 0; i < MAXLIGHTMAPS; i++)
-	    out->styles[i] = 255;
-	out->lightofs = -1;
+        // emit a region
+        face->outputnumber = map.cTotal[LUMP_FACES];
+        out = (bsp29_dface_t *)faces->data + faces->index;
+        out->planenum = node->outputplanenum;
+        out->side = face->planeside;
+        out->texinfo = face->texinfo;
+        for (i = 0; i < MAXLIGHTMAPS; i++)
+            out->styles[i] = 255;
+        out->lightofs = -1;
 
-	out->firstedge = map.cTotal[LUMP_SURFEDGES];
-	for (i = 0; i < face->w.numpoints; i++) {
-	    ((int *)surfedges->data)[surfedges->index] = face->edges[i];
-	    surfedges->index++;
-	    map.cTotal[LUMP_SURFEDGES]++;
-	}
-	FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
+        out->firstedge = map.cTotal[LUMP_SURFEDGES];
+        for (i = 0; i < face->w.numpoints; i++) {
+            ((int *)surfedges->data)[surfedges->index] = face->edges[i];
+            surfedges->index++;
+            map.cTotal[LUMP_SURFEDGES]++;
+        }
+        FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
 
-	out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
+        out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
 
-	map.cTotal[LUMP_FACES]++;
-	faces->index++;
+        map.cTotal[LUMP_FACES]++;
+        faces->index++;
     }
 
     node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
@@ -478,36 +478,36 @@ GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
     int i;
 
     if (node->planenum == PLANENUM_LEAF)
-	return;
+        return;
 
     node->firstface = map.cTotal[LUMP_FACES];
 
     for (face = node->faces; face; face = face->next) {
-	if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
-	    continue;
+        if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
+            continue;
 
-	// emit a region
-	face->outputnumber = map.cTotal[LUMP_FACES];
-	out = (bsp2_dface_t *)faces->data + faces->index;
-	out->planenum = node->outputplanenum;
-	out->side = face->planeside;
-	out->texinfo = face->texinfo;
-	for (i = 0; i < MAXLIGHTMAPS; i++)
-	    out->styles[i] = 255;
-	out->lightofs = -1;
+        // emit a region
+        face->outputnumber = map.cTotal[LUMP_FACES];
+        out = (bsp2_dface_t *)faces->data + faces->index;
+        out->planenum = node->outputplanenum;
+        out->side = face->planeside;
+        out->texinfo = face->texinfo;
+        for (i = 0; i < MAXLIGHTMAPS; i++)
+            out->styles[i] = 255;
+        out->lightofs = -1;
 
-	out->firstedge = map.cTotal[LUMP_SURFEDGES];
-	for (i = 0; i < face->w.numpoints; i++) {
-	    ((int *)surfedges->data)[surfedges->index] = face->edges[i];
-	    surfedges->index++;
-	    map.cTotal[LUMP_SURFEDGES]++;
-	}
-	FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
+        out->firstedge = map.cTotal[LUMP_SURFEDGES];
+        for (i = 0; i < face->w.numpoints; i++) {
+            ((int *)surfedges->data)[surfedges->index] = face->edges[i];
+            surfedges->index++;
+            map.cTotal[LUMP_SURFEDGES]++;
+        }
+        FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
 
-	out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
+        out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
 
-	map.cTotal[LUMP_FACES]++;
-	faces->index++;
+        map.cTotal[LUMP_FACES]++;
+        faces->index++;
     }
 
     node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
@@ -528,13 +528,13 @@ CountData_r(mapentity_t *entity, node_t *node)
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
-	return;
+        return;
 
     for (f = node->faces; f; f = f->next) {
-	if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
-	    continue;
-	entity->lumps[LUMP_FACES].count++;
-	entity->lumps[LUMP_VERTEXES].count += f->w.numpoints;
+        if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
+            continue;
+        entity->lumps[LUMP_FACES].count++;
+        entity->lumps[LUMP_VERTEXES].count += f->w.numpoints;
     }
 
     CountData_r(entity, node->children[0]);
@@ -560,7 +560,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     cStartEdge = 0;
     for (i = 0; i < entity - map.entities; i++)
-	cStartEdge += map.entities[i].lumps[LUMP_EDGES].count;
+        cStartEdge += map.entities[i].lumps[LUMP_EDGES].count;
 
     CountData_r(entity, headnode);
 
@@ -592,22 +592,22 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     /* Free any excess allocated memory */
     if (vertices->index < vertices->count) {
-	dvertex_t *temp = AllocMem(BSP_VERTEX, vertices->index, true);
-	memcpy(temp, vertices->data, sizeof(*temp) * vertices->index);
-	FreeMem(vertices->data, BSP_VERTEX, vertices->count);
-	vertices->data = temp;
-	vertices->count = vertices->index;
+        dvertex_t *temp = AllocMem(BSP_VERTEX, vertices->index, true);
+        memcpy(temp, vertices->data, sizeof(*temp) * vertices->index);
+        FreeMem(vertices->data, BSP_VERTEX, vertices->count);
+        vertices->data = temp;
+        vertices->count = vertices->index;
     }
     if (edges->index < edges->count) {
-	void *temp = AllocMem(BSP_EDGE, edges->index, true);
-	memcpy(temp, edges->data, MemSize[BSP_EDGE] * edges->index);
-	FreeMem(edges->data, BSP_EDGE, edges->count);
-	edges->data = temp;
-	edges->count = edges->index;
+        void *temp = AllocMem(BSP_EDGE, edges->index, true);
+        memcpy(temp, edges->data, MemSize[BSP_EDGE] * edges->index);
+        FreeMem(edges->data, BSP_EDGE, edges->count);
+        edges->data = temp;
+        edges->count = edges->index;
     }
 
     if (map.cTotal[LUMP_VERTEXES] > 65535 && options.BSPVersion == BSPVERSION)
-	Error("Too many vertices (%d > 65535)", map.cTotal[LUMP_VERTEXES]);
+        Error("Too many vertices (%d > 65535)", map.cTotal[LUMP_VERTEXES]);
 
     surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
     faces->data = AllocMem(BSP_FACE, faces->count, true);
@@ -615,9 +615,9 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     Message(msgProgress, "GrowRegions");
 
     if (options.BSPVersion == BSPVERSION)
-	GrowNodeRegion_BSP29(entity, headnode);
+        GrowNodeRegion_BSP29(entity, headnode);
     else
-	GrowNodeRegion_BSP2(entity, headnode);
+        GrowNodeRegion_BSP2(entity, headnode);
 
     return firstface;
 }

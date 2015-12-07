@@ -38,9 +38,9 @@ typedef struct {
 
 typedef struct {
     int numpoints;
-    vec3_t origin;		// Bounding sphere for fast clipping tests
-    vec_t radius;		// Not updated, so won't shrink when clipping
-    vec3_t points[MAX_WINDING_FIXED];	// variable sized
+    vec3_t origin;              // Bounding sphere for fast clipping tests
+    vec_t radius;               // Not updated, so won't shrink when clipping
+    vec3_t points[MAX_WINDING_FIXED];   // variable sized
 } winding_t;
 
 winding_t *NewWinding(int points);
@@ -51,8 +51,8 @@ qboolean PlaneCompare(plane_t *p1, plane_t *p2);
 typedef enum { pstat_none = 0, pstat_working, pstat_done } pstatus_t;
 
 typedef struct {
-    plane_t plane;		// normal pointing into neighbor
-    int leaf;			// neighbor
+    plane_t plane;              // normal pointing into neighbor
+    int leaf;                   // neighbor
     winding_t *winding;
     pstatus_t status;
     leafbits_t *visbits;
@@ -63,12 +63,12 @@ typedef struct {
 
 typedef struct seperating_plane_s {
     struct seperating_plane_s *next;
-    plane_t plane;		// from portal is on positive side
+    plane_t plane;              // from portal is on positive side
 } sep_t;
 
 typedef struct passage_s {
     struct passage_s *next;
-    int from, to;		// leaf numbers
+    int from, to;               // leaf numbers
     sep_t *planes;
 } passage_t;
 
@@ -79,20 +79,20 @@ typedef struct leaf_s {
     int numportals;
     passage_t *passages;
     portal_t *portals[MAX_PORTALS_ON_LEAF];
-    int visofs;			// used when writing final visdata
+    int visofs;                 // used when writing final visdata
 } leaf_t;
 
 #define MAX_SEPARATORS MAX_WINDING
-#define STACK_WINDINGS 3	// source, pass and a temp for clipping
+#define STACK_WINDINGS 3        // source, pass and a temp for clipping
 typedef struct pstack_s {
     struct pstack_s *next;
     leaf_t *leaf;
-    portal_t *portal;		// portal exiting
+    portal_t *portal;           // portal exiting
     winding_t *source, *pass;
-    winding_t windings[STACK_WINDINGS];	// Fixed size windings
+    winding_t windings[STACK_WINDINGS]; // Fixed size windings
     int freewindings[STACK_WINDINGS];
     plane_t portalplane;
-    leafbits_t *mightsee;	// bit string
+    leafbits_t *mightsee;       // bit string
     plane_t separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
 } pstack_t;

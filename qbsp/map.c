@@ -25,9 +25,9 @@
 #include "qbsp.h"
 #include "parser.h"
 
-#define info_player_start	1
-#define info_player_deathmatch	2
-#define	info_player_coop	4
+#define info_player_start       1
+#define info_player_deathmatch  2
+#define info_player_coop        4
 
 static int rgfStartSpots;
 
@@ -39,18 +39,18 @@ AddAnimTex(const char *name)
 
     frame = name[1];
     if (frame >= 'a' && frame <= 'j')
-	frame -= 'a' - 'A';
+        frame -= 'a' - 'A';
 
     if (frame >= '0' && frame <= '9') {
-	frame -= '0';
-	basechar = '0';
+        frame -= '0';
+        basechar = '0';
     } else if (frame >= 'A' && frame <= 'J') {
-	frame -= 'A';
-	basechar = 'A';
+        frame -= 'A';
+        basechar = 'A';
     }
 
     if (frame < 0 || frame > 9)
-	Error("Bad animating texture %s", name);
+        Error("Bad animating texture %s", name);
 
     /*
      * Always add the lower numbered animation frames first, otherwise
@@ -58,18 +58,18 @@ AddAnimTex(const char *name)
      */
     snprintf(framename, sizeof(framename), "%s", name);
     for (i = 0; i < frame; i++) {
-	framename[1] = basechar + i;
-	for (j = 0; j < map.nummiptex; j++) {
-	    if (!Q_strcasecmp(framename, map.miptex[j]))
-		break;
-	}
-	if (j < map.nummiptex)
-	    continue;
-	if (map.nummiptex == map.maxmiptex)
-	    Error("Internal error: map.nummiptex > map.maxmiptex");
+        framename[1] = basechar + i;
+        for (j = 0; j < map.nummiptex; j++) {
+            if (!Q_strcasecmp(framename, map.miptex[j]))
+                break;
+        }
+        if (j < map.nummiptex)
+            continue;
+        if (map.nummiptex == map.maxmiptex)
+            Error("Internal error: map.nummiptex > map.maxmiptex");
 
-	snprintf(map.miptex[j], sizeof(map.miptex[j]), "%s", framename);
-	map.nummiptex++;
+        snprintf(map.miptex[j], sizeof(map.miptex[j]), "%s", framename);
+        map.nummiptex++;
     }
 }
 
@@ -82,19 +82,19 @@ FindMiptex(const char *name)
     /* Ignore leading path in texture names (Q2 map compatibility) */
     pathsep = strrchr(name, '/');
     if (pathsep)
-	name = pathsep + 1;
+        name = pathsep + 1;
 
     for (i = 0; i < map.nummiptex; i++) {
-	if (!Q_strcasecmp(name, map.miptex[i]))
-	    return i;
+        if (!Q_strcasecmp(name, map.miptex[i]))
+            return i;
     }
     if (map.nummiptex == map.maxmiptex)
-	Error("Internal error: map.nummiptex > map.maxmiptex");
+        Error("Internal error: map.nummiptex > map.maxmiptex");
 
     /* Handle animating textures carefully */
     if (name[0] == '+') {
-	AddAnimTex(name);
-	i = map.nummiptex;
+        AddAnimTex(name);
+        i = map.nummiptex;
     }
 
     snprintf(map.miptex[i], sizeof(map.miptex[i]), "%s", name);
@@ -107,15 +107,15 @@ static bool
 IsSkipName(const char *name)
 {
     if (options.fNoskip)
-	return false;
+        return false;
     if (!Q_strcasecmp(name, "skip"))
-	return true;
+        return true;
     if (!Q_strcasecmp(name, "*waterskip"))
-	return true;
+        return true;
     if (!Q_strcasecmp(name, "*slimeskip"))
-	return true;
+        return true;
     if (!Q_strcasecmp(name, "*lavaskip"))
-	return true;
+        return true;
     return false;
 }
 
@@ -123,9 +123,9 @@ static bool
 IsSplitName(const char *name)
 {
     if (options.fSplitspecial)
-	return false;
+        return false;
     if (name[0] == '*' || !Q_strncasecmp(name, "sky", 3))
-	return true;
+        return true;
     return false;
 }
 
@@ -133,9 +133,9 @@ static bool
 IsHintName(const char *name)
 {
     if (!Q_strcasecmp(name, "hint"))
-	return true;
+        return true;
     if (!Q_strcasecmp(name, "hintskip"))
-	return true;
+        return true;
     return false;
 }
 
@@ -158,33 +158,33 @@ FindTexinfo(texinfo_t *texinfo)
     texinfo->flags = 0;
     texname = map.miptex[texinfo->miptex];
     if (IsSkipName(texname))
-	texinfo->flags |= TEX_SKIP;
+        texinfo->flags |= TEX_SKIP;
     if (IsHintName(texname))
-	texinfo->flags |= TEX_HINT;
+        texinfo->flags |= TEX_HINT;
     if (IsSplitName(texname))
-	texinfo->flags |= TEX_SPECIAL;
+        texinfo->flags |= TEX_SPECIAL;
 
     target = pWorldEnt->lumps[LUMP_TEXINFO].data;
     for (index = 0; index < num_texinfo; index++, target++) {
-	if (texinfo->miptex != target->miptex)
-	    continue;
-	if (texinfo->flags != target->flags)
-	    continue;
+        if (texinfo->miptex != target->miptex)
+            continue;
+        if (texinfo->flags != target->flags)
+            continue;
 
-	/* Don't worry about texture alignment on skip or hint surfaces */
-	if (texinfo->flags & (TEX_SKIP | TEX_HINT))
-	    return index;
+        /* Don't worry about texture alignment on skip or hint surfaces */
+        if (texinfo->flags & (TEX_SKIP | TEX_HINT))
+            return index;
 
-	for (j = 0; j < 4; j++) {
-	    if (texinfo->vecs[0][j] != target->vecs[0][j])
-		break;
-	    if (texinfo->vecs[1][j] != target->vecs[1][j])
-		break;
-	}
-	if (j != 4)
-	    continue;
+        for (j = 0; j < 4; j++) {
+            if (texinfo->vecs[0][j] != target->vecs[0][j])
+                break;
+            if (texinfo->vecs[1][j] != target->vecs[1][j])
+                break;
+        }
+        if (j != 4)
+            continue;
 
-	return index;
+        return index;
     }
 
     if (index >= pWorldEnt->lumps[LUMP_TEXINFO].count)
@@ -209,25 +209,25 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
     entity->epairs = epair;
 
     if (strlen(parser->token) >= MAX_KEY - 1)
-	goto parse_error;
+        goto parse_error;
     epair->key = copystring(parser->token);
     ParseToken(parser, PARSE_SAMELINE);
     if (strlen(parser->token) >= MAX_VALUE - 1)
-	goto parse_error;
+        goto parse_error;
     epair->value = copystring(parser->token);
 
     if (!Q_strcasecmp(epair->key, "origin")) {
-	GetVectorForKey(entity, epair->key, entity->origin);
+        GetVectorForKey(entity, epair->key, entity->origin);
     } else if (!Q_strcasecmp(epair->key, "classname")) {
-	if (!Q_strcasecmp(epair->value, "info_player_start")) {
-	    if (rgfStartSpots & info_player_start)
-		Message(msgWarning, warnMultipleStarts);
-	    rgfStartSpots |= info_player_start;
-	} else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {
-	    rgfStartSpots |= info_player_deathmatch;
-	} else if (!Q_strcasecmp(epair->value, "info_player_coop")) {
-	    rgfStartSpots |= info_player_coop;
-	}
+        if (!Q_strcasecmp(epair->value, "info_player_start")) {
+            if (rgfStartSpots & info_player_start)
+                Message(msgWarning, warnMultipleStarts);
+            rgfStartSpots |= info_player_start;
+        } else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {
+            rgfStartSpots |= info_player_deathmatch;
+        } else if (!Q_strcasecmp(epair->value, "info_player_coop")) {
+            rgfStartSpots |= info_player_coop;
+        }
     }
     return;
 
@@ -240,12 +240,12 @@ static void
 TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv)
 {
     vec3_t baseaxis[18] = {
-	{0, 0, 1}, {1, 0, 0}, {0, -1, 0},	// floor
-	{0, 0, -1}, {1, 0, 0}, {0, -1, 0},	// ceiling
-	{1, 0, 0}, {0, 1, 0}, {0, 0, -1},	// west wall
-	{-1, 0, 0}, {0, 1, 0}, {0, 0, -1},	// east wall
-	{0, 1, 0}, {1, 0, 0}, {0, 0, -1},	// south wall
-	{0, -1, 0}, {1, 0, 0}, {0, 0, -1}	// north wall
+        {0, 0, 1}, {1, 0, 0}, {0, -1, 0},       // floor
+        {0, 0, -1}, {1, 0, 0}, {0, -1, 0},      // ceiling
+        {1, 0, 0}, {0, 1, 0}, {0, 0, -1},       // west wall
+        {-1, 0, 0}, {0, 1, 0}, {0, 0, -1},      // east wall
+        {0, 1, 0}, {1, 0, 0}, {0, 0, -1},       // south wall
+        {0, -1, 0}, {1, 0, 0}, {0, 0, -1}       // north wall
     };
 
     int bestaxis;
@@ -256,11 +256,11 @@ TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv)
     bestaxis = 0;
 
     for (i = 0; i < 6; i++) {
-	dot = DotProduct(plane->normal, baseaxis[i * 3]);
-	if (dot > best || (dot == best && !options.fOldaxis)) {
-	    best = dot;
-	    bestaxis = i;
-	}
+        dot = DotProduct(plane->normal, baseaxis[i * 3]);
+        if (dot > best || (dot == best && !options.fOldaxis)) {
+            best = dot;
+            bestaxis = i;
+        }
     }
 
     VectorCopy(baseaxis[bestaxis * 3 + 1], xv);
@@ -281,17 +281,17 @@ ParseExtendedTX(parser_t *parser)
     texcoord_style_t style = TX_QUAKED;
 
     if (ParseToken(parser, PARSE_COMMENT | PARSE_OPTIONAL)) {
-	if (!strncmp(parser->token, "//TX", 4)) {
-	    if (parser->token[4] == '1')
-		style = TX_QUARK_TYPE1;
-	    else if (parser->token[4] == '2')
-		style = TX_QUARK_TYPE2;
-	}
+        if (!strncmp(parser->token, "//TX", 4)) {
+            if (parser->token[4] == '1')
+                style = TX_QUARK_TYPE1;
+            else if (parser->token[4] == '2')
+                style = TX_QUARK_TYPE2;
+        }
     } else {
-	/* Throw away extra Quake 2 surface info */
-	ParseToken(parser, PARSE_OPTIONAL); /* contents */
-	ParseToken(parser, PARSE_OPTIONAL); /* flags */
-	ParseToken(parser, PARSE_OPTIONAL); /* value */
+        /* Throw away extra Quake 2 surface info */
+        ParseToken(parser, PARSE_OPTIONAL); /* contents */
+        ParseToken(parser, PARSE_OPTIONAL); /* flags */
+        ParseToken(parser, PARSE_OPTIONAL); /* value */
     }
 
     return style;
@@ -299,7 +299,7 @@ ParseExtendedTX(parser_t *parser)
 
 static void
 SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
-		   const vec_t scale[2], texinfo_t *out)
+                   const vec_t scale[2], texinfo_t *out)
 {
     int i, j;
     vec3_t vecs[2];
@@ -315,30 +315,30 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
     cosv = cos(ang);
 
     if (vecs[0][0])
-	sv = 0;
+        sv = 0;
     else if (vecs[0][1])
-	sv = 1;
+        sv = 1;
     else
-	sv = 2;
+        sv = 2;
 
     if (vecs[1][0])
-	tv = 0;
+        tv = 0;
     else if (vecs[1][1])
-	tv = 1;
+        tv = 1;
     else
-	tv = 2;
+        tv = 2;
 
     for (i = 0; i < 2; i++) {
-	ns = cosv * vecs[i][sv] - sinv * vecs[i][tv];
-	nt = sinv * vecs[i][sv] + cosv * vecs[i][tv];
-	vecs[i][sv] = ns;
-	vecs[i][tv] = nt;
+        ns = cosv * vecs[i][sv] - sinv * vecs[i][tv];
+        nt = sinv * vecs[i][sv] + cosv * vecs[i][tv];
+        vecs[i][sv] = ns;
+        vecs[i][tv] = nt;
     }
 
     for (i = 0; i < 2; i++)
-	for (j = 0; j < 3; j++)
-	    /* Interpret zero scale as no scaling */
-	    out->vecs[i][j] = vecs[i][j] / (scale[i] ? scale[i] : 1);
+        for (j = 0; j < 3; j++)
+            /* Interpret zero scale as no scaling */
+            out->vecs[i][j] = vecs[i][j] / (scale[i] ? scale[i] : 1);
 
     out->vecs[0][3] = shift[0];
     out->vecs[1][3] = shift[1];
@@ -346,7 +346,7 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
 
 static void
 SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
-		 texcoord_style_t style, texinfo_t *out)
+                 texcoord_style_t style, texinfo_t *out)
 {
     int i;
     vec3_t vecs[2];
@@ -360,15 +360,15 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
      */
     switch (style) {
     case TX_QUARK_TYPE1:
-	VectorSubtract(planepts[2], planepts[0], vecs[0]);
-	VectorSubtract(planepts[1], planepts[0], vecs[1]);
-	break;
+        VectorSubtract(planepts[2], planepts[0], vecs[0]);
+        VectorSubtract(planepts[1], planepts[0], vecs[1]);
+        break;
     case TX_QUARK_TYPE2:
-	VectorSubtract(planepts[1], planepts[0], vecs[0]);
-	VectorSubtract(planepts[2], planepts[0], vecs[1]);
-	break;
+        VectorSubtract(planepts[1], planepts[0], vecs[0]);
+        VectorSubtract(planepts[2], planepts[0], vecs[1]);
+        break;
     default:
-	Error("Internal error: bad texture coordinate style");
+        Error("Internal error: bad texture coordinate style");
     }
     VectorScale(vecs[0], 1.0 / 128.0, vecs[0]);
     VectorScale(vecs[1], 1.0 / 128.0, vecs[1]);
@@ -389,20 +389,20 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
-	Message(msgWarning, warnDegenerateQuArKTX, parser->linenum);
-	for (i = 0; i < 3; i++)
-	    out->vecs[0][i] = out->vecs[1][i] = 0;
+        Message(msgWarning, warnDegenerateQuArKTX, parser->linenum);
+        for (i = 0; i < 3; i++)
+            out->vecs[0][i] = out->vecs[1][i] = 0;
     } else {
-	for (i = 0; i < 3; i++) {
-	    out->vecs[0][i] = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
-	    out->vecs[1][i] = (a * vecs[1][i] - c * vecs[0][i]) / determinant;
-	}
+        for (i = 0; i < 3; i++) {
+            out->vecs[0][i] = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
+            out->vecs[1][i] = (a * vecs[1][i] - c * vecs[0][i]) / determinant;
+        }
     }
 
     /* Finally, the texture offset is indicated by planepts[0] */
     for (i = 0; i < 3; ++i) {
-	vecs[0][i] = out->vecs[0][i];
-	vecs[1][i] = out->vecs[1][i];
+        vecs[0][i] = out->vecs[0][i];
+        vecs[1][i] = out->vecs[1][i];
     }
     out->vecs[0][3] = -DotProduct(vecs[0], planepts[0]);
     out->vecs[1][3] = -DotProduct(vecs[1], planepts[0]);
@@ -410,13 +410,13 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
 
 static void
 SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2],
-		    texinfo_t *out)
+                    texinfo_t *out)
 {
     int i;
 
     for (i = 0; i < 3; i++) {
-	out->vecs[0][i] = axis[0][i] / scale[0];
-	out->vecs[1][i] = axis[1][i] / scale[1];
+        out->vecs[0][i] = axis[0][i] / scale[0];
+        out->vecs[1][i] = axis[1][i] / scale[1];
     }
     out->vecs[0][3] = shift[0];
     out->vecs[1][3] = shift[1];
@@ -428,19 +428,19 @@ ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
     int i, j;
 
     for (i = 0; i < 3; i++) {
-	if (i != 0)
-	    ParseToken(parser, PARSE_NORMAL);
-	if (strcmp(parser->token, "("))
-	    goto parse_error;
+        if (i != 0)
+            ParseToken(parser, PARSE_NORMAL);
+        if (strcmp(parser->token, "("))
+            goto parse_error;
 
-	for (j = 0; j < 3; j++) {
-	    ParseToken(parser, PARSE_SAMELINE);
-	    planepts[i][j] = atof(parser->token);
-	}
+        for (j = 0; j < 3; j++) {
+            ParseToken(parser, PARSE_SAMELINE);
+            planepts[i][j] = atof(parser->token);
+        }
 
-	ParseToken(parser, PARSE_SAMELINE);
-	if (strcmp(parser->token, ")"))
-	    goto parse_error;
+        ParseToken(parser, PARSE_SAMELINE);
+        if (strcmp(parser->token, ")"))
+            goto parse_error;
     }
     return;
 
@@ -450,23 +450,23 @@ ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
 
 static void
 ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2],
-		vec_t *rotate, vec_t scale[2])
+                vec_t *rotate, vec_t scale[2])
 {
     int i, j;
 
     for (i = 0; i < 2; i++) {
-	ParseToken(parser, PARSE_SAMELINE);
-	if (strcmp(parser->token, "["))
-	    goto parse_error;
-	for (j = 0; j < 3; j++) {
-	    ParseToken(parser, PARSE_SAMELINE);
-	    axis[i][j] = atof(parser->token);
-	}
-	ParseToken(parser, PARSE_SAMELINE);
-	shift[i] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	if (strcmp(parser->token, "]"))
-	    goto parse_error;
+        ParseToken(parser, PARSE_SAMELINE);
+        if (strcmp(parser->token, "["))
+            goto parse_error;
+        for (j = 0; j < 3; j++) {
+            ParseToken(parser, PARSE_SAMELINE);
+            axis[i][j] = atof(parser->token);
+        }
+        ParseToken(parser, PARSE_SAMELINE);
+        shift[i] = atof(parser->token);
+        ParseToken(parser, PARSE_SAMELINE);
+        if (strcmp(parser->token, "]"))
+            goto parse_error;
     }
     ParseToken(parser, PARSE_SAMELINE);
     rotate[0] = atof(parser->token);
@@ -482,7 +482,7 @@ ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2],
 
 static void
 ParseTextureDef(parser_t *parser, texinfo_t *tx,
-		vec3_t planepts[3], const plane_t *plane)
+                vec3_t planepts[3], const plane_t *plane)
 {
     vec3_t axis[2];
     vec_t shift[2], rotate, scale[2];
@@ -493,37 +493,37 @@ ParseTextureDef(parser_t *parser, texinfo_t *tx,
     tx->miptex = FindMiptex(parser->token);
     ParseToken(parser, PARSE_SAMELINE);
     if (!strcmp(parser->token, "[")) {
-	parser->unget = true;
-	ParseValve220TX(parser, axis, shift, &rotate, scale);
-	tx_type = TX_VALVE_220;
+        parser->unget = true;
+        ParseValve220TX(parser, axis, shift, &rotate, scale);
+        tx_type = TX_VALVE_220;
     } else {
-	shift[0] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	shift[1] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	rotate = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	scale[0] = atof(parser->token);
-	ParseToken(parser, PARSE_SAMELINE);
-	scale[1] = atof(parser->token);
-	tx_type = ParseExtendedTX(parser);
+        shift[0] = atof(parser->token);
+        ParseToken(parser, PARSE_SAMELINE);
+        shift[1] = atof(parser->token);
+        ParseToken(parser, PARSE_SAMELINE);
+        rotate = atof(parser->token);
+        ParseToken(parser, PARSE_SAMELINE);
+        scale[0] = atof(parser->token);
+        ParseToken(parser, PARSE_SAMELINE);
+        scale[1] = atof(parser->token);
+        tx_type = ParseExtendedTX(parser);
     }
 
     if (!planepts || !plane)
-	return;
+        return;
 
     switch (tx_type) {
     case TX_QUARK_TYPE1:
     case TX_QUARK_TYPE2:
-	SetTexinfo_QuArK(parser, &planepts[0], tx_type, tx);
-	break;
+        SetTexinfo_QuArK(parser, &planepts[0], tx_type, tx);
+        break;
     case TX_VALVE_220:
-	SetTexinfo_Valve220(axis, shift, scale, tx);
-	break;
+        SetTexinfo_Valve220(axis, shift, scale, tx);
+        break;
     case TX_QUAKED:
     default:
-	SetTexinfo_QuakeEd(plane, shift, rotate, scale, tx);
-	break;
+        SetTexinfo_QuakeEd(plane, shift, rotate, scale, tx);
+        break;
     }
 }
 
@@ -534,7 +534,7 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
     vec_t length;
     plane_t *plane;
     texinfo_t tx;
-	int i, j;
+        int i, j;
 
     face->linenum = parser->linenum;
     ParsePlaneDef(parser, planepts);
@@ -550,20 +550,20 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
     ParseTextureDef(parser, &tx, planepts, plane);
 
     if (length < NORMAL_EPSILON) {
-	Message(msgWarning, warnNoPlaneNormal, parser->linenum);
-	return false;
+        Message(msgWarning, warnNoPlaneNormal, parser->linenum);
+        return false;
     }
 
-	// ericw -- round texture vector values that are within ZERO_EPSILON of integers,
-	// to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
-	// (it uses 32 bit precision in CalcSurfaceExtents)
-	for (i = 0; i < 2; i++) {
-		for (j = 0; j < 4; j++) {
-			vec_t r = Q_rint(tx.vecs[i][j]);
-			if (fabs(tx.vecs[i][j] - r) < ZERO_EPSILON)
-				tx.vecs[i][j] = r;
-		}
-	}
+        // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
+        // to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
+        // (it uses 32 bit precision in CalcSurfaceExtents)
+        for (i = 0; i < 2; i++) {
+                for (j = 0; j < 4; j++) {
+                        vec_t r = Q_rint(tx.vecs[i][j]);
+                        if (fabs(tx.vecs[i][j] - r) < ZERO_EPSILON)
+                                tx.vecs[i][j] = r;
+                }
+        }
 
 
     face->texinfo = FindTexinfo(&tx);
@@ -580,38 +580,38 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 
     brush->faces = face = map.faces + map.numfaces;
     while (ParseToken(parser, PARSE_NORMAL)) {
-	if (!strcmp(parser->token, "}"))
-	    break;
+        if (!strcmp(parser->token, "}"))
+            break;
 
-	if (map.numfaces == map.maxfaces)
-	    Error("Internal error: didn't allocate enough faces?");
+        if (map.numfaces == map.maxfaces)
+            Error("Internal error: didn't allocate enough faces?");
 
-	faceok = ParseBrushFace(parser, face);
-	if (!faceok)
-	    continue;
+        faceok = ParseBrushFace(parser, face);
+        if (!faceok)
+            continue;
 
-	/* Check for duplicate planes */
-	for (check = brush->faces; check < face; check++) {
-	    if (PlaneEqual(&check->plane, &face->plane)) {
-		Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
-		continue;
-	    }
-	    if (PlaneInvEqual(&check->plane, &face->plane)) {
-		/* FIXME - this is actually an invalid brush */
-		Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
-		continue;
-	    }
-	}
+        /* Check for duplicate planes */
+        for (check = brush->faces; check < face; check++) {
+            if (PlaneEqual(&check->plane, &face->plane)) {
+                Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
+                continue;
+            }
+            if (PlaneInvEqual(&check->plane, &face->plane)) {
+                /* FIXME - this is actually an invalid brush */
+                Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
+                continue;
+            }
+        }
 
-	/* Save the face, update progress */
-	map.numfaces++;
-	Message(msgPercent, map.numfaces, map.maxfaces);
-	face++;
+        /* Save the face, update progress */
+        map.numfaces++;
+        Message(msgPercent, map.numfaces, map.maxfaces);
+        face++;
     }
 
     brush->numfaces = face - brush->faces;
     if (!brush->numfaces)
-	brush->faces = NULL;
+        brush->faces = NULL;
 }
 
 static bool
@@ -620,32 +620,32 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     mapbrush_t *brush;
 
     if (!ParseToken(parser, PARSE_NORMAL))
-	return false;
+        return false;
 
     if (strcmp(parser->token, "{"))
-	Error("line %d: Invalid entity format, { not found", parser->linenum);
+        Error("line %d: Invalid entity format, { not found", parser->linenum);
 
     if (map.numentities == map.maxentities)
-	Error("Internal error: didn't allocate enough entities?");
+        Error("Internal error: didn't allocate enough entities?");
 
     entity->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
-	if (!ParseToken(parser, PARSE_NORMAL))
-	    Error("Unexpected EOF (no closing brace)");
-	if (!strcmp(parser->token, "}"))
-	    break;
-	else if (!strcmp(parser->token, "{")) {
-	    if (map.numbrushes == map.maxbrushes)
-		Error("Internal error: didn't allocate enough brushes?");
-	    ParseBrush(parser, brush++);
-	    map.numbrushes++;
-	} else
-	    ParseEpair(parser, entity);
+        if (!ParseToken(parser, PARSE_NORMAL))
+            Error("Unexpected EOF (no closing brace)");
+        if (!strcmp(parser->token, "}"))
+            break;
+        else if (!strcmp(parser->token, "{")) {
+            if (map.numbrushes == map.maxbrushes)
+                Error("Internal error: didn't allocate enough brushes?");
+            ParseBrush(parser, brush++);
+            map.numbrushes++;
+        } else
+            ParseEpair(parser, entity);
     } while (1);
 
     entity->nummapbrushes = brush - entity->mapbrushes;
     if (!entity->nummapbrushes)
-	entity->mapbrushes = NULL;
+        entity->mapbrushes = NULL;
 
     return true;
 }
@@ -662,35 +662,35 @@ PreParseFile(const char *buf)
     // Very simple... we just want numbers here.  Invalid formats are
     // detected later.  Problems with deviant .MAP formats.
     while (*buf != 0) {
-	if (*buf == '\"') {
-	    buf++;
-	    // Quoted string... skip to end of quote
-	    while (*buf != '\"' && *buf)
-		buf++;
-	    if (!*buf)
-		break;
-	} else if (*buf == '/' && *(buf + 1) == '/') {
-	    // Comment... skip to end of line
-	    while (*buf != '\n' && *buf)
-		buf++;
-	    if (!*buf)
-		break;
-	} else if (*buf == '{' && (isspace(buf[1]) || !buf[1])) {
-	    if (braces == 0)
-		map.maxentities++;
-	    else if (braces == 1)
-		map.maxbrushes++;
-	    braces++;
-	} else if (*buf == '}' && (isspace(buf[1]) || !buf[1])) {
-	    braces--;
-	} else if (*buf == '(') {
-	    map.maxfaces++;
-	}
-	buf++;
+        if (*buf == '\"') {
+            buf++;
+            // Quoted string... skip to end of quote
+            while (*buf != '\"' && *buf)
+                buf++;
+            if (!*buf)
+                break;
+        } else if (*buf == '/' && *(buf + 1) == '/') {
+            // Comment... skip to end of line
+            while (*buf != '\n' && *buf)
+                buf++;
+            if (!*buf)
+                break;
+        } else if (*buf == '{' && (isspace(buf[1]) || !buf[1])) {
+            if (braces == 0)
+                map.maxentities++;
+            else if (braces == 1)
+                map.maxbrushes++;
+            braces++;
+        } else if (*buf == '}' && (isspace(buf[1]) || !buf[1])) {
+            braces--;
+        } else if (*buf == '(') {
+            map.maxfaces++;
+        }
+        buf++;
     }
 
     if (map.maxfaces % 3 != 0)
-	Message(msgWarning, warnBadMapFaceCount);
+        Message(msgWarning, warnBadMapFaceCount);
     map.maxfaces /= 3;
 
     map.faces = AllocMem(MAPFACE, map.maxfaces, true);
@@ -726,9 +726,9 @@ IsWorldBrushEntity(const mapentity_t *entity)
     const char *classname = ValueForKey(entity, "classname");
 
     if (!Q_strcasecmp(classname, "func_detail"))
-	return true;
+        return true;
     if (!Q_strcasecmp(classname, "func_group"))
-	return true;
+        return true;
     return false;
 }
 
@@ -751,21 +751,21 @@ LoadMapFile(void)
     map.numfaces = map.numbrushes = map.numentities = 0;
     entity = map.entities;
     while (ParseEntity(&parser, entity)) {
-	map.numentities++;
-	entity++;
+        map.numentities++;
+        entity++;
     }
 
     /* Double check the entity count matches our pre-parse count */
     if (map.numentities != map.maxentities)
-	Error("Internal error: mismatched entity count?");
+        Error("Internal error: mismatched entity count?");
 
     FreeMem(buf, OTHER, length + 1);
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))
-	Message(msgWarning, warnNoPlayerStart);
+        Message(msgWarning, warnNoPlayerStart);
     if (!(rgfStartSpots & info_player_deathmatch))
-	Message(msgWarning, warnNoPlayerDeathmatch);
+        Message(msgWarning, warnNoPlayerDeathmatch);
 //      if (!(rgfStartSpots & info_player_coop))
 //              Message(msgWarning, warnNoPlayerCoop);
 
@@ -789,7 +789,7 @@ PrintEntity(const mapentity_t *entity)
     epair_t *epair;
 
     for (epair = entity->epairs; epair; epair = epair->next)
-	Message(msgStat, "%20s : %s", epair->key, epair->value);
+        Message(msgStat, "%20s : %s", epair->key, epair->value);
 }
 
 
@@ -799,8 +799,8 @@ ValueForKey(const mapentity_t *entity, const char *key)
     const epair_t *ep;
 
     for (ep = entity->epairs; ep; ep = ep->next)
-	if (!Q_strcasecmp(ep->key, key))
-	    return ep->value;
+        if (!Q_strcasecmp(ep->key, key))
+            return ep->value;
 
     return "";
 }
@@ -812,11 +812,11 @@ SetKeyValue(mapentity_t *entity, const char *key, const char *value)
     epair_t *ep;
 
     for (ep = entity->epairs; ep; ep = ep->next)
-	if (!Q_strcasecmp(ep->key, key)) {
-	    free(ep->value); /* FIXME */
-	    ep->value = copystring(value);
-	    return;
-	}
+        if (!Q_strcasecmp(ep->key, key)) {
+            free(ep->value); /* FIXME */
+            ep->value = copystring(value);
+            return;
+        }
     ep = AllocMem(OTHER, sizeof(epair_t), true);
     ep->next = entity->epairs;
     entity->epairs = ep;
@@ -855,44 +855,44 @@ WriteEntitiesToString(void)
     map.cTotal[LUMP_ENTITIES] = 0;
 
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
-	entities = &map.entities[i].lumps[LUMP_ENTITIES];
+        entities = &map.entities[i].lumps[LUMP_ENTITIES];
 
-	/* Check if entity needs to be removed */
-	if (!entity->epairs || IsWorldBrushEntity(entity)) {
-	    entities->count = 0;
-	    entities->data = NULL;
-	    continue;
-	}
+        /* Check if entity needs to be removed */
+        if (!entity->epairs || IsWorldBrushEntity(entity)) {
+            entities->count = 0;
+            entities->data = NULL;
+            continue;
+        }
 
-	cLen = 0;
-	for (ep = entity->epairs; ep; ep = ep->next) {
-	    int i = strlen(ep->key) + strlen(ep->value) + 6;
-	    if (i <= 128)
-		cLen += i;
-	    else
-		cLen += 128;
-	}
-	// Add 4 for {\n and }\n
-	cLen += 4;
+        cLen = 0;
+        for (ep = entity->epairs; ep; ep = ep->next) {
+            int i = strlen(ep->key) + strlen(ep->value) + 6;
+            if (i <= 128)
+                cLen += i;
+            else
+                cLen += 128;
+        }
+        // Add 4 for {\n and }\n
+        cLen += 4;
 
-	entities->count = cLen;
-	map.cTotal[LUMP_ENTITIES] += cLen;
-	entities->data = pCur = AllocMem(BSP_ENT, cLen, true);
-	*pCur = 0;
+        entities->count = cLen;
+        map.cTotal[LUMP_ENTITIES] += cLen;
+        entities->data = pCur = AllocMem(BSP_ENT, cLen, true);
+        *pCur = 0;
 
-	strcat(pCur, "{\n");
-	pCur += 2;
+        strcat(pCur, "{\n");
+        pCur += 2;
 
-	for (ep = entity->epairs; ep; ep = ep->next) {
-	    // Limit on Quake's strings of 128 bytes
-	    sprintf(szLine, "\"%.*s\" \"%.*s\"\n", MAX_KEY, ep->key,
-		    122 - (int)strlen(ep->key), ep->value);
-	    strcat(pCur, szLine);
-	    pCur += strlen(szLine);
-	}
+        for (ep = entity->epairs; ep; ep = ep->next) {
+            // Limit on Quake's strings of 128 bytes
+            sprintf(szLine, "\"%.*s\" \"%.*s\"\n", MAX_KEY, ep->key,
+                    122 - (int)strlen(ep->key), ep->value);
+            strcat(pCur, szLine);
+            pCur += strlen(szLine);
+        }
 
-	// No terminating null on this string
-	pCur[0] = '}';
-	pCur[1] = '\n';
+        // No terminating null on this string
+        pCur[0] = '}';
+        pCur[1] = '\n';
     }
 }

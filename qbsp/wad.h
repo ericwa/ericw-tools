@@ -25,7 +25,7 @@
 #include <stdbool.h>
 
 typedef struct {
-    char identification[4];	// should be WAD2
+    char identification[4];     // should be WAD2
     int numlumps;
     int infotableofs;
 } wadinfo_t;
@@ -33,11 +33,11 @@ typedef struct {
 typedef struct {
     int filepos;
     int disksize;
-    int size;			// uncompressed
+    int size;                   // uncompressed
     char type;
     char compression;
     char pad1, pad2;
-    char name[16];		// must be null terminated
+    char name[16];              // must be null terminated
 } lumpinfo_t;
 
 #define MIPLEVELS 4

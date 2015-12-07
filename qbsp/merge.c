@@ -30,18 +30,18 @@ CheckColinear(face_t *f)
     vec3_t v1, v2;
 
     for (i = 0; i < f->w.numpoints; i++) {
-	// skip the point if the vector from the previous point is the same
-	// as the vector to the next point
-	j = (i - 1 < 0) ? f->w.numpoints - 1 : i - 1;
-	VectorSubtract(f->w.points[i], f->w.points[j], v1);
-	VectorNormalize(v1);
+        // skip the point if the vector from the previous point is the same
+        // as the vector to the next point
+        j = (i - 1 < 0) ? f->w.numpoints - 1 : i - 1;
+        VectorSubtract(f->w.points[i], f->w.points[j], v1);
+        VectorNormalize(v1);
 
-	j = (i + 1 == f->w.numpoints) ? 0 : i + 1;
-	VectorSubtract(f->w.points[j], f->w.points[i], v2);
-	VectorNormalize(v2);
+        j = (i + 1 == f->w.numpoints) ? 0 : i + 1;
+        VectorSubtract(f->w.points[j], f->w.points[i], v2);
+        VectorNormalize(v2);
 
-	if (VectorCompare(v1, v2))
-	    Error("Colinear edge (%s)", __func__);
+        if (VectorCompare(v1, v2))
+            Error("Colinear edge (%s)", __func__);
     }
 }
 #endif /* PARANOID */
@@ -69,46 +69,46 @@ TryMerge(face_t *f1, face_t *f2)
     bool keep1, keep2;
 
     if (f1->w.numpoints == -1 ||
-	f2->w.numpoints == -1 ||
-	f1->planeside != f2->planeside ||
-	f1->texinfo != f2->texinfo ||
-	f1->contents[0] != f2->contents[0] ||
-	f1->contents[1] != f2->contents[1] ||
+        f2->w.numpoints == -1 ||
+        f1->planeside != f2->planeside ||
+        f1->texinfo != f2->texinfo ||
+        f1->contents[0] != f2->contents[0] ||
+        f1->contents[1] != f2->contents[1] ||
         f1->cflags[0] != f2->cflags[0] ||
         f1->cflags[1] != f2->cflags[1])
-	return NULL;
+        return NULL;
 
     // find a common edge
-    p1 = p2 = NULL;		// stop compiler warning
-    j = 0;			//
+    p1 = p2 = NULL;             // stop compiler warning
+    j = 0;                      //
 
     for (i = 0; i < f1->w.numpoints; i++) {
-	p1 = f1->w.points[i];
-	p2 = f1->w.points[(i + 1) % f1->w.numpoints];
-	for (j = 0; j < f2->w.numpoints; j++) {
-	    p3 = f2->w.points[j];
-	    p4 = f2->w.points[(j + 1) % f2->w.numpoints];
-	    for (k = 0; k < 3; k++) {
-		if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON ||
-		    fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
-		    break;
-	    }
-	    if (k == 3)
-		break;
-	}
-	if (j < f2->w.numpoints)
-	    break;
+        p1 = f1->w.points[i];
+        p2 = f1->w.points[(i + 1) % f1->w.numpoints];
+        for (j = 0; j < f2->w.numpoints; j++) {
+            p3 = f2->w.points[j];
+            p4 = f2->w.points[(j + 1) % f2->w.numpoints];
+            for (k = 0; k < 3; k++) {
+                if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON ||
+                    fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
+                    break;
+            }
+            if (k == 3)
+                break;
+        }
+        if (j < f2->w.numpoints)
+            break;
     }
 
     if (i == f1->w.numpoints)
-	return NULL;		// no matching edges
+        return NULL;            // no matching edges
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
     plane = &map.planes[f1->planenum];
     VectorCopy(plane->normal, planenormal);
     if (f1->planeside)
-	VectorSubtract(vec3_origin, planenormal, planenormal);
+        VectorSubtract(vec3_origin, planenormal, planenormal);
 
     back = f1->w.points[(i + f1->w.numpoints - 1) % f1->w.numpoints];
     VectorSubtract(p1, back, delta);
@@ -119,7 +119,7 @@ TryMerge(face_t *f1, face_t *f2)
     VectorSubtract(back, p1, delta);
     dot = DotProduct(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
-	return NULL;		// not a convex polygon
+        return NULL;            // not a convex polygon
     keep1 = dot < -CONTINUOUS_EPSILON;
 
     back = f1->w.points[(i + 2) % f1->w.numpoints];
@@ -131,35 +131,35 @@ TryMerge(face_t *f1, face_t *f2)
     VectorSubtract(back, p2, delta);
     dot = DotProduct(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
-	return NULL;		// not a convex polygon
+        return NULL;            // not a convex polygon
     keep2 = dot < -CONTINUOUS_EPSILON;
 
     // build the new polygon
     if (f1->w.numpoints + f2->w.numpoints > MAXEDGES) {
-	Message(msgWarning, warnTooManyMergePoints);
-	return NULL;
+        Message(msgWarning, warnTooManyMergePoints);
+        return NULL;
     }
 
     newf = NewFaceFromFace(f1);
 
     // copy first polygon
     if (keep2)
-	k = (i + 1) % f1->w.numpoints;
+        k = (i + 1) % f1->w.numpoints;
     else
-	k = (i + 2) % f1->w.numpoints;
+        k = (i + 2) % f1->w.numpoints;
     for (; k != i; k = (k + 1) % f1->w.numpoints) {
-	VectorCopy(f1->w.points[k], newf->w.points[newf->w.numpoints]);
-	newf->w.numpoints++;
+        VectorCopy(f1->w.points[k], newf->w.points[newf->w.numpoints]);
+        newf->w.numpoints++;
     }
 
     // copy second polygon
     if (keep1)
-	l = (j + 1) % f2->w.numpoints;
+        l = (j + 1) % f2->w.numpoints;
     else
-	l = (j + 2) % f2->w.numpoints;
+        l = (j + 2) % f2->w.numpoints;
     for (; l != j; l = (l + 1) % f2->w.numpoints) {
-	VectorCopy(f2->w.points[l], newf->w.points[newf->w.numpoints]);
-	newf->w.numpoints++;
+        VectorCopy(f2->w.points[l], newf->w.points[newf->w.numpoints]);
+        newf->w.numpoints++;
     }
 
     UpdateFaceSphere(newf);
@@ -181,16 +181,16 @@ MergeFaceToList(face_t *face, face_t *list)
     f = list;
     while (f) {
 #ifdef PARANOID
-	CheckColinear (f);
+        CheckColinear (f);
 #endif
-	newf = TryMerge(face, f);
-	if (newf) {
-	    FreeMem(face, FACE, 1);
-	    f->w.numpoints = -1;	// merged out, remove later
-	    face = newf;
-	    f = list;
-	} else
-	    f = f->next;
+        newf = TryMerge(face, f);
+        if (newf) {
+            FreeMem(face, FACE, 1);
+            f->w.numpoints = -1;        // merged out, remove later
+            face = newf;
+            f = list;
+        } else
+            f = f->next;
     }
 
     // didn't merge, so add at start
@@ -211,13 +211,13 @@ FreeMergeListScraps(face_t *merged)
 
     head = NULL;
     for (; merged; merged = next) {
-	next = merged->next;
-	if (merged->w.numpoints == -1)
-	    FreeMem(merged, FACE, 1);
-	else {
-	    merged->next = head;
-	    head = merged;
-	}
+        next = merged->next;
+        if (merged->w.numpoints == -1)
+            FreeMem(merged, FACE, 1);
+        else {
+            merged->next = head;
+            head = merged;
+        }
     }
 
     return head;
@@ -238,8 +238,8 @@ MergePlaneFaces(surface_t *plane)
     merged = NULL;
 
     for (f = plane->faces; f; f = next) {
-	next = f->next;
-	merged = MergeFaceToList(f, merged);
+        next = f->next;
+        merged = MergeFaceToList(f, merged);
     }
 
     // Remove all empty faces (numpoints == -1) and add the remaining
@@ -263,9 +263,9 @@ MergeAll(surface_t *surfhead)
     Message(msgProgress, "MergeAll");
 
     for (surf = surfhead; surf; surf = surf->next) {
-	MergePlaneFaces(surf);
-	for (f = surf->faces; f; f = f->next)
-	    mergefaces++;
+        MergePlaneFaces(surf);
+        for (f = surf->faces; f; f = f->next)
+            mergefaces++;
     }
 
     Message(msgStat, "%8d mergefaces", mergefaces);

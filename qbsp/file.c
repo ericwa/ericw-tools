@@ -39,9 +39,9 @@ LoadFile(const char *filename, void *bufptr, bool nofail)
 
     f = fopen(filename, "rb");
     if (!f) {
-	if (nofail)
-	    Error("Failed to open %s: %s", filename, strerror(errno));
-	return 0;
+        if (nofail)
+            Error("Failed to open %s: %s", filename, strerror(errno));
+        return 0;
     }
 
     fseek(f, 0, SEEK_END);
@@ -52,7 +52,7 @@ LoadFile(const char *filename, void *bufptr, bool nofail)
     ((char *)*buf)[len] = 0;
 
     if (fread(*buf, 1, len, f) != len)
-	Error("Failure reading from file");
+        Error("Failure reading from file");
 
     fclose(f);
 

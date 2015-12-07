@@ -29,10 +29,10 @@
 #elif defined(WIN32)
 inline int ffsl(long int val)
 {
-	unsigned long indexout;
-	unsigned char res = _BitScanForward(&indexout, val);
-	if (!res) return 0;
-	else return indexout + 1;
+        unsigned long indexout;
+        unsigned char res = _BitScanForward(&indexout, val);
+        if (!res) return 0;
+        else return indexout + 1;
 }
 #endif
 

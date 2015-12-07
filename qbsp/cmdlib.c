@@ -56,17 +56,17 @@ double
 I_FloatTime(void)
 {
 #ifdef WIN32
-	FILETIME ft;
-	uint64_t hundred_ns;
-	GetSystemTimeAsFileTime(&ft);
-	hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
-	return (double)hundred_ns / 10000000.0;
+        FILETIME ft;
+        uint64_t hundred_ns;
+        GetSystemTimeAsFileTime(&ft);
+        hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
+        return (double)hundred_ns / 10000000.0;
 #else
-	struct timeval tv;
+        struct timeval tv;
 
-	gettimeofday(&tv, NULL);
+        gettimeofday(&tv, NULL);
 
-	return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
+        return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
 #endif
 }
 
@@ -74,7 +74,7 @@ I_FloatTime(void)
 /*
 =============================================================================
 
-				MISC FUNCTIONS
+                                MISC FUNCTIONS
 
 =============================================================================
 */
@@ -92,9 +92,9 @@ DefaultExtension(char *path, const char *extension)
     src = path + strlen(path) - 1;
 
     while (*src != PATHSEPERATOR && src != path) {
-	if (*src == '.')
-	    return;		// it has an extension
-	src--;
+        if (*src == '.')
+            return;             // it has an extension
+        src--;
     }
 
     strcat(path, extension);
@@ -108,12 +108,12 @@ StripExtension(char *path)
 
     length = strlen(path) - 1;
     while (length > 0 && path[length] != '.') {
-	length--;
-	if (path[length] == PATHSEPERATOR)
-	    return;		// no extension
+        length--;
+        if (path[length] == PATHSEPERATOR)
+            return;             // no extension
     }
     if (length)
-	path[length] = 0;
+        path[length] = 0;
 }
 
 void
@@ -136,32 +136,32 @@ IsAbsolutePath(const char *path)
 int
 Q_strncasecmp(const char *s1, const char *s2, int n)
 {
-	int c1, c2;
+        int c1, c2;
 
-	while (1) {
-		c1 = *s1++;
-		c2 = *s2++;
+        while (1) {
+                c1 = *s1++;
+                c2 = *s2++;
 
-		if (!n--)
-			return 0;		/* strings are equal until end point */
+                if (!n--)
+                        return 0;               /* strings are equal until end point */
 
-		if (c1 != c2) {
-			if (c1 >= 'a' && c1 <= 'z')
-				c1 -= ('a' - 'A');
-			if (c2 >= 'a' && c2 <= 'z')
-				c2 -= ('a' - 'A');
-			if (c1 != c2)
-				return -1;	/* strings not equal */
-		}
-		if (!c1)
-			return 0;		/* strings are equal */
-	}
+                if (c1 != c2) {
+                        if (c1 >= 'a' && c1 <= 'z')
+                                c1 -= ('a' - 'A');
+                        if (c2 >= 'a' && c2 <= 'z')
+                                c2 -= ('a' - 'A');
+                        if (c1 != c2)
+                                return -1;      /* strings not equal */
+                }
+                if (!c1)
+                        return 0;               /* strings are equal */
+        }
 
-	return -1;
+        return -1;
 }
 
 int
 Q_strcasecmp(const char *s1, const char *s2)
 {
-	return Q_strncasecmp(s1, s2, 99999);
+        return Q_strncasecmp(s1, s2, 99999);
 }

@@ -74,10 +74,10 @@ UpdateFaceSphere(face_t *in)
     MidpointWinding(&in->w, in->origin);
     in->radius = 0;
     for (i = 0; i < in->w.numpoints; i++) {
-	VectorSubtract(in->w.points[i], in->origin, radius);
-	lensq = VectorLengthSq(radius);
-	if (lensq > in->radius)
-	    in->radius = lensq;
+        VectorSubtract(in->w.points[i], in->origin, radius);
+        lensq = VectorLengthSq(radius);
+        if (lensq > in->radius)
+            in->radius = lensq;
     }
     in->radius = sqrt(in->radius);
 }
@@ -101,30 +101,30 @@ SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back)
     vec3_t mid;
 
     if (in->w.numpoints < 0)
-	Error("Attempting to split freed face");
+        Error("Attempting to split freed face");
 
     /* Fast test */
     dot = DotProduct(in->origin, split->normal) - split->dist;
     if (dot > in->radius) {
-	counts[SIDE_FRONT] = 1;
-	counts[SIDE_BACK] = 0;
+        counts[SIDE_FRONT] = 1;
+        counts[SIDE_BACK] = 0;
     } else if (dot < -in->radius) {
-	counts[SIDE_FRONT] = 0;
-	counts[SIDE_BACK] = 1;
+        counts[SIDE_FRONT] = 0;
+        counts[SIDE_BACK] = 1;
     } else {
-	CalcSides(&in->w, split, sides, dists, counts);
+        CalcSides(&in->w, split, sides, dists, counts);
     }
 
     // Plane doesn't split this face after all
     if (!counts[SIDE_FRONT]) {
-	*front = NULL;
-	*back = in;
-	return;
+        *front = NULL;
+        *back = in;
+        return;
     }
     if (!counts[SIDE_BACK]) {
-	*front = in;
-	*back = NULL;
-	return;
+        *front = in;
+        *back = NULL;
+        return;
     }
 
     *back = newf = NewFaceFromFace(in);
@@ -132,51 +132,51 @@ SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back)
 
     // distribute the points and generate splits
     for (i = 0; i < in->w.numpoints; i++) {
-	// Note: Possible for numpoints on newf or new2 to exceed MAXEDGES if
-	// in->w.numpoints == MAXEDGES and it is a really devious split.
+        // Note: Possible for numpoints on newf or new2 to exceed MAXEDGES if
+        // in->w.numpoints == MAXEDGES and it is a really devious split.
 
-	p1 = in->w.points[i];
+        p1 = in->w.points[i];
 
-	if (sides[i] == SIDE_ON) {
-	    VectorCopy(p1, newf->w.points[newf->w.numpoints]);
-	    newf->w.numpoints++;
-	    VectorCopy(p1, new2->w.points[new2->w.numpoints]);
-	    new2->w.numpoints++;
-	    continue;
-	}
+        if (sides[i] == SIDE_ON) {
+            VectorCopy(p1, newf->w.points[newf->w.numpoints]);
+            newf->w.numpoints++;
+            VectorCopy(p1, new2->w.points[new2->w.numpoints]);
+            new2->w.numpoints++;
+            continue;
+        }
 
-	if (sides[i] == SIDE_FRONT) {
-	    VectorCopy(p1, new2->w.points[new2->w.numpoints]);
-	    new2->w.numpoints++;
-	} else {
-	    VectorCopy(p1, newf->w.points[newf->w.numpoints]);
-	    newf->w.numpoints++;
-	}
+        if (sides[i] == SIDE_FRONT) {
+            VectorCopy(p1, new2->w.points[new2->w.numpoints]);
+            new2->w.numpoints++;
+        } else {
+            VectorCopy(p1, newf->w.points[newf->w.numpoints]);
+            newf->w.numpoints++;
+        }
 
-	if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
-	    continue;
+        if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
+            continue;
 
-	// generate a split point
-	p2 = in->w.points[(i + 1) % in->w.numpoints];
+        // generate a split point
+        p2 = in->w.points[(i + 1) % in->w.numpoints];
 
-	dot = dists[i] / (dists[i] - dists[i + 1]);
-	for (j = 0; j < 3; j++) {	// avoid round off error when possible
-	    if (split->normal[j] == 1)
-		mid[j] = split->dist;
-	    else if (split->normal[j] == -1)
-		mid[j] = -split->dist;
-	    else
-		mid[j] = p1[j] + dot * (p2[j] - p1[j]);
-	}
+        dot = dists[i] / (dists[i] - dists[i + 1]);
+        for (j = 0; j < 3; j++) {       // avoid round off error when possible
+            if (split->normal[j] == 1)
+                mid[j] = split->dist;
+            else if (split->normal[j] == -1)
+                mid[j] = -split->dist;
+            else
+                mid[j] = p1[j] + dot * (p2[j] - p1[j]);
+        }
 
-	VectorCopy(mid, newf->w.points[newf->w.numpoints]);
-	newf->w.numpoints++;
-	VectorCopy(mid, new2->w.points[new2->w.numpoints]);
-	new2->w.numpoints++;
+        VectorCopy(mid, newf->w.points[newf->w.numpoints]);
+        newf->w.numpoints++;
+        VectorCopy(mid, new2->w.points[new2->w.numpoints]);
+        new2->w.numpoints++;
     }
 
     if (newf->w.numpoints > MAXEDGES || new2->w.numpoints > MAXEDGES)
-	Error("Internal error: numpoints > MAXEDGES (%s)", __func__);
+        Error("Internal error: numpoints > MAXEDGES (%s)", __func__);
 
     /* free the original face now that it is represented by the fragments */
     FreeMem(in, FACE, 1);
@@ -202,28 +202,28 @@ RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **outside)
     face = *inside;
     *inside = NULL;
     while (face) {
-	next = face->next;
-	w = CopyWinding(&face->w);
-	for (clipface = brush->faces; clipface; clipface = clipface->next) {
-	    clipplane = map.planes[clipface->planenum];
-	    if (!clipface->planeside) {
-		VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
-		clipplane.dist = -clipplane.dist;
-	    }
-	    w = ClipWinding(w, &clipplane, true);
-	    if (!w)
-		break;
-	}
-	if (!w) {
-	    /* The face is completely outside this brush */
-	    face->next = *outside;
-	    *outside = face;
-	} else {
-	    face->next = *inside;
-	    *inside = face;
-	    FreeMem(w, WINDING, 1);
-	}
-	face = next;
+        next = face->next;
+        w = CopyWinding(&face->w);
+        for (clipface = brush->faces; clipface; clipface = clipface->next) {
+            clipplane = map.planes[clipface->planenum];
+            if (!clipface->planeside) {
+                VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
+                clipplane.dist = -clipplane.dist;
+            }
+            w = ClipWinding(w, &clipplane, true);
+            if (!w)
+                break;
+        }
+        if (!w) {
+            /* The face is completely outside this brush */
+            face->next = *outside;
+            *outside = face;
+        } else {
+            face->next = *inside;
+            *inside = face;
+            FreeMem(w, WINDING, 1);
+        }
+        face = next;
     }
 }
 
@@ -239,7 +239,7 @@ Faces exactly on the plane will stay inside unless overdrawn by later brush
 */
 static void
 ClipInside(const face_t *clipface, bool precedence,
-	   face_t **inside, face_t **outside)
+           face_t **inside, face_t **outside)
 {
     face_t *face, *next, *frags[2];
     const plane_t *splitplane;
@@ -249,33 +249,33 @@ ClipInside(const face_t *clipface, bool precedence,
     face = *inside;
     *inside = NULL;
     while (face) {
-	next = face->next;
+        next = face->next;
 
-	/* Handle exactly on-plane faces */
-	if (face->planenum == clipface->planenum) {
-	    if (clipface->planeside != face->planeside || precedence) {
-		/* always clip off opposite facing */
-		frags[clipface->planeside] = NULL;
-		frags[!clipface->planeside] = face;
-	    } else {
-		/* leave it on the outside */
-		frags[clipface->planeside] = face;
-		frags[!clipface->planeside] = NULL;
-	    }
-	} else {
-	    /* proper split */
-	    SplitFace(face, splitplane, &frags[0], &frags[1]);
-	}
+        /* Handle exactly on-plane faces */
+        if (face->planenum == clipface->planenum) {
+            if (clipface->planeside != face->planeside || precedence) {
+                /* always clip off opposite facing */
+                frags[clipface->planeside] = NULL;
+                frags[!clipface->planeside] = face;
+            } else {
+                /* leave it on the outside */
+                frags[clipface->planeside] = face;
+                frags[!clipface->planeside] = NULL;
+            }
+        } else {
+            /* proper split */
+            SplitFace(face, splitplane, &frags[0], &frags[1]);
+        }
 
-	if (frags[clipface->planeside]) {
-	    frags[clipface->planeside]->next = *outside;
-	    *outside = frags[clipface->planeside];
-	}
-	if (frags[!clipface->planeside]) {
-	    frags[!clipface->planeside]->next = *inside;
-	    *inside = frags[!clipface->planeside];
-	}
-	face = next;
+        if (frags[clipface->planeside]) {
+            frags[clipface->planeside]->next = *outside;
+            *outside = frags[clipface->planeside];
+        }
+        if (frags[!clipface->planeside]) {
+            frags[!clipface->planeside]->next = *inside;
+            *inside = frags[!clipface->planeside];
+        }
+        face = next;
     }
 }
 
@@ -295,27 +295,27 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, face_t **planefaces)
     int i;
 
     for (face = facelist; face; face = next) {
-	next = face->next;
-	planeface = &planefaces[face->planenum];
+        next = face->next;
+        planeface = &planefaces[face->planenum];
 
-	if (mirror) {
-	    newface = NewFaceFromFace(face);
-	    newface->w.numpoints = face->w.numpoints;
-	    newface->planeside = face->planeside ^ 1;
-	    newface->contents[0] = face->contents[1];
-	    newface->contents[1] = face->contents[0];
-	    newface->cflags[0] = face->cflags[1];
-	    newface->cflags[1] = face->cflags[0];
+        if (mirror) {
+            newface = NewFaceFromFace(face);
+            newface->w.numpoints = face->w.numpoints;
+            newface->planeside = face->planeside ^ 1;
+            newface->contents[0] = face->contents[1];
+            newface->contents[1] = face->contents[0];
+            newface->cflags[0] = face->cflags[1];
+            newface->cflags[1] = face->cflags[0];
 
-	    for (i = 0; i < face->w.numpoints; i++)
-		VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
+            for (i = 0; i < face->w.numpoints; i++)
+                VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
 
-	    *planeface = MergeFaceToList(newface, *planeface);
-	}
-	*planeface = MergeFaceToList(face, *planeface);
-	*planeface = FreeMergeListScraps(*planeface);
+            *planeface = MergeFaceToList(newface, *planeface);
+        }
+        *planeface = MergeFaceToList(face, *planeface);
+        *planeface = FreeMergeListScraps(*planeface);
 
-	csgfaces++;
+        csgfaces++;
     }
 }
 
@@ -325,9 +325,9 @@ FreeFaces(face_t *face)
     face_t *next;
 
     while (face) {
-	next = face->next;
-	FreeMem(face, FACE, 1);
-	face = next;
+        next = face->next;
+        FreeMem(face, FACE, 1);
+        face = next;
     }
 }
 
@@ -346,18 +346,18 @@ SaveInsideFaces(face_t *face, const brush_t *brush, face_t **savelist)
     face_t *next;
 
     while (face) {
-	next = face->next;
-	face->contents[0] = brush->contents;
-	face->cflags[0] = brush->cflags;
-	/*
-	 * If the inside brush is empty space, inherit the outside contents.
-	 * The only brushes with empty contents currently are hint brushes.
-	 */
-	if (face->contents[1] == CONTENTS_EMPTY)
-	    face->contents[1] = brush->contents;
-	face->next = *savelist;
-	*savelist = face;
-	face = next;
+        next = face->next;
+        face->contents[0] = brush->contents;
+        face->cflags[0] = brush->cflags;
+        /*
+         * If the inside brush is empty space, inherit the outside contents.
+         * The only brushes with empty contents currently are hint brushes.
+         */
+        if (face->contents[1] == CONTENTS_EMPTY)
+            face->contents[1] = brush->contents;
+        face->next = *savelist;
+        *savelist = face;
+        face = next;
     }
 }
 
@@ -381,20 +381,20 @@ BuildSurfaces(face_t **planefaces)
 
     surfaces = NULL;
     for (i = 0; i < map.numplanes; i++, planefaces++) {
-	if (!*planefaces)
-	    continue;
+        if (!*planefaces)
+            continue;
 
-	/* create a new surface to hold the faces on this plane */
-	surf = AllocMem(SURFACE, 1, true);
-	surf->planenum = i;
-	surf->next = surfaces;
-	surfaces = surf;
-	surf->faces = *planefaces;
-	for (face = surf->faces; face; face = face->next)
-	    csgmergefaces++;
+        /* create a new surface to hold the faces on this plane */
+        surf = AllocMem(SURFACE, 1, true);
+        surf->planenum = i;
+        surf->next = surfaces;
+        surfaces = surf;
+        surf->faces = *planefaces;
+        for (face = surf->faces; face; face = face->next)
+            csgmergefaces++;
 
-	/* Calculate bounding box and flags */
-	CalcSurfaceInfo(surf);
+        /* Calculate bounding box and flags */
+        CalcSurfaceInfo(surf);
     }
 
     return surfaces;
@@ -414,15 +414,15 @@ CopyBrushFaces(const brush_t *brush)
 
     facelist = NULL;
     for (face = brush->faces; face; face = face->next) {
-	brushfaces++;
-	newface = AllocMem(FACE, 1, true);
-	*newface = *face;
-	newface->contents[0] = CONTENTS_EMPTY;
-	newface->contents[1] = brush->contents;
-	newface->cflags[0] = 0;
-	newface->cflags[1] = brush->cflags;
-	newface->next = facelist;
-	facelist = newface;
+        brushfaces++;
+        newface = AllocMem(FACE, 1, true);
+        *newface = *face;
+        newface->contents[0] = CONTENTS_EMPTY;
+        newface->contents[1] = brush->contents;
+        newface->cflags[0] = 0;
+        newface->cflags[1] = brush->cflags;
+        newface->next = facelist;
+        facelist = newface;
     }
 
     return facelist;
@@ -459,63 +459,63 @@ CSGFaces(const mapentity_t *entity)
      *   clipbrush => the brush we are clipping against
      */
     for (brush = entity->brushes; brush; brush = brush->next) {
-	outside = CopyBrushFaces(brush);
-	overwrite = false;
-	clipbrush = entity->brushes;
-	for (; clipbrush; clipbrush = clipbrush->next) {
-	    if (brush == clipbrush) {
-		/* Brushes further down the list overried earlier ones */
-		overwrite = true;
-		continue;
-	    }
+        outside = CopyBrushFaces(brush);
+        overwrite = false;
+        clipbrush = entity->brushes;
+        for (; clipbrush; clipbrush = clipbrush->next) {
+            if (brush == clipbrush) {
+                /* Brushes further down the list overried earlier ones */
+                overwrite = true;
+                continue;
+            }
 
-	    /* check bounding box first */
-	    for (i = 0; i < 3; i++) {
-		if (brush->mins[i] > clipbrush->maxs[i])
-		    break;
-		if (brush->maxs[i] < clipbrush->mins[i])
-		    break;
-	    }
-	    if (i < 3)
-		continue;
+            /* check bounding box first */
+            for (i = 0; i < 3; i++) {
+                if (brush->mins[i] > clipbrush->maxs[i])
+                    break;
+                if (brush->maxs[i] < clipbrush->mins[i])
+                    break;
+            }
+            if (i < 3)
+                continue;
 
-	    /*
-	     * TODO - optimise by checking for opposing planes?
-	     *  => brushes can't intersect
-	     */
+            /*
+             * TODO - optimise by checking for opposing planes?
+             *  => brushes can't intersect
+             */
 
-	    // divide faces by the planes of the new brush
-	    inside = outside;
-	    outside = NULL;
+            // divide faces by the planes of the new brush
+            inside = outside;
+            outside = NULL;
 
-	    RemoveOutsideFaces(clipbrush, &inside, &outside);
-	    clipface = clipbrush->faces;
-	    for (; clipface; clipface = clipface->next)
-		ClipInside(clipface, overwrite, &inside, &outside);
+            RemoveOutsideFaces(clipbrush, &inside, &outside);
+            clipface = clipbrush->faces;
+            for (; clipface; clipface = clipface->next)
+                ClipInside(clipface, overwrite, &inside, &outside);
 
-	    /*
-	     * If the brush is solid and the clipbrush is not, then we need to
-	     * keep the inside faces and set the outside contents to those of
-	     * the clipbrush. Otherwise, these inside surfaces are hidden and
-	     * should be discarded.
-	     */
-	    if (brush->contents != CONTENTS_SOLID)
-		FreeFaces(inside);
-	    else if (clipbrush->contents == CONTENTS_SOLID)
-		FreeFaces(inside);
-	    else
-		SaveInsideFaces(inside, clipbrush, &outside);
-	}
+            /*
+             * If the brush is solid and the clipbrush is not, then we need to
+             * keep the inside faces and set the outside contents to those of
+             * the clipbrush. Otherwise, these inside surfaces are hidden and
+             * should be discarded.
+             */
+            if (brush->contents != CONTENTS_SOLID)
+                FreeFaces(inside);
+            else if (clipbrush->contents == CONTENTS_SOLID)
+                FreeFaces(inside);
+            else
+                SaveInsideFaces(inside, clipbrush, &outside);
+        }
 
-	/*
-	 * All of the faces left on the outside list are real surface faces
-	 * If the brush is non-solid, mirror faces for the inside view
-	 */
-	mirror = (brush->contents != CONTENTS_SOLID);
-	SaveFacesToPlaneList(outside, mirror, planefaces);
+        /*
+         * All of the faces left on the outside list are real surface faces
+         * If the brush is non-solid, mirror faces for the inside view
+         */
+        mirror = (brush->contents != CONTENTS_SOLID);
+        SaveFacesToPlaneList(outside, mirror, planefaces);
 
-	progress++;
-	Message(msgPercent, progress, entity->numbrushes);
+        progress++;
+        Message(msgPercent, progress, entity->numbrushes);
     }
 
     surfaces = BuildSurfaces(planefaces);

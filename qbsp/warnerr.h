@@ -21,7 +21,7 @@
 // warnerr.h
 
 enum {
-    warnNoWadKey,		// 0
+    warnNoWadKey,               // 0
     warnNoValidWads,
     warnMultipleStarts,
     warnBrushDuplicatePlane,
@@ -31,7 +31,7 @@ enum {
     warnNoPlayerCoop,
     warnPointOffPlane,
     warnNoBrushFaces,
-    warnMapLeak,		// 10
+    warnMapLeak,                // 10
     warnBadPortalDirection,
     warnPortalClippedAway,
     warnWindingOutside,
@@ -41,7 +41,7 @@ enum {
     warnInvalidOption,
     warnNoLogFile,
     warnNoFilling,
-    warnBadMapFaceCount,	// 20
+    warnBadMapFaceCount,        // 20
     warnTooManyMergePoints,
     warnDegenerateEdge,
     warnNoRotateTarget,

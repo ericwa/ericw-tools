@@ -48,40 +48,40 @@ FaceSide__(const face_t *in, const plane_t *split)
     have_front = have_back = false;
 
     if (split->type < 3) {
-	/* shortcut for axial planes */
-	const vec_t *p = in->w.points[0] + split->type;
-	for (i = 0; i < in->w.numpoints; i++, p += 3) {
-	    if (*p > split->dist + ON_EPSILON) {
-		if (have_back)
-		    return SIDE_ON;
-		have_front = true;
-	    } else if (*p < split->dist - ON_EPSILON) {
-		if (have_front)
-		    return SIDE_ON;
-		have_back = true;
-	    }
-	}
+        /* shortcut for axial planes */
+        const vec_t *p = in->w.points[0] + split->type;
+        for (i = 0; i < in->w.numpoints; i++, p += 3) {
+            if (*p > split->dist + ON_EPSILON) {
+                if (have_back)
+                    return SIDE_ON;
+                have_front = true;
+            } else if (*p < split->dist - ON_EPSILON) {
+                if (have_front)
+                    return SIDE_ON;
+                have_back = true;
+            }
+        }
     } else {
-	/* sloping planes take longer */
-	const vec_t *p = in->w.points[0];
-	for (i = 0; i < in->w.numpoints; i++, p += 3) {
-	    const vec_t dot = DotProduct(p, split->normal) - split->dist;
-	    if (dot > ON_EPSILON) {
-		if (have_back)
-		    return SIDE_ON;
-		have_front = true;
-	    } else if (dot < -ON_EPSILON) {
-		if (have_front)
-		    return SIDE_ON;
-		have_back = true;
-	    }
-	}
+        /* sloping planes take longer */
+        const vec_t *p = in->w.points[0];
+        for (i = 0; i < in->w.numpoints; i++, p += 3) {
+            const vec_t dot = DotProduct(p, split->normal) - split->dist;
+            if (dot > ON_EPSILON) {
+                if (have_back)
+                    return SIDE_ON;
+                have_front = true;
+            } else if (dot < -ON_EPSILON) {
+                if (have_front)
+                    return SIDE_ON;
+                have_back = true;
+            }
+        }
     }
 
     if (!have_front)
-	return SIDE_BACK;
+        return SIDE_BACK;
     if (!have_back)
-	return SIDE_FRONT;
+        return SIDE_FRONT;
 
     return SIDE_ON;
 }
@@ -94,11 +94,11 @@ FaceSide(const face_t *in, const plane_t *split)
 
     dist = DotProduct(in->origin, split->normal) - split->dist;
     if (dist > in->radius)
-	ret = SIDE_FRONT;
+        ret = SIDE_FRONT;
     else if (dist < -in->radius)
-	ret = SIDE_BACK;
+        ret = SIDE_BACK;
     else
-	ret = FaceSide__(in, split);
+        ret = FaceSide__(in, split);
 
     return ret;
 }
@@ -111,8 +111,8 @@ FaceSide(const face_t *in, const plane_t *split)
  */
 static void
 DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
-	     vec3_t front_mins, vec3_t front_maxs,
-	     vec3_t back_mins, vec3_t back_maxs)
+             vec3_t front_mins, vec3_t front_maxs,
+             vec3_t back_mins, vec3_t back_maxs)
 {
     int a, b, c, i, j;
     vec_t dist1, dist2, mid, split_mins, split_maxs;
@@ -125,49 +125,49 @@ DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
     VectorCopy(maxs, back_maxs);
 
     if (split->type < 3) {
-	front_mins[split->type] = back_maxs[split->type] = split->dist;
-	return;
+        front_mins[split->type] = back_maxs[split->type] = split->dist;
+        return;
     }
 
     /* Make proper sloping cuts... */
     bounds[0] = mins;
     bounds[1] = maxs;
     for (a = 0; a < 3; ++a) {
-	/* Check for parallel case... no intersection */
-	if (fabs(split->normal[a]) < NORMAL_EPSILON)
-	    continue;
+        /* Check for parallel case... no intersection */
+        if (fabs(split->normal[a]) < NORMAL_EPSILON)
+            continue;
 
-	b = (a + 1) % 3;
-	c = (a + 2) % 3;
+        b = (a + 1) % 3;
+        c = (a + 2) % 3;
 
-	split_mins = maxs[a];
-	split_maxs = mins[a];
-	for (i = 0; i < 2; ++i) {
-	    corner[b] = bounds[i][b];
-	    for (j = 0; j < 2; ++j) {
-		corner[c] = bounds[j][c];
+        split_mins = maxs[a];
+        split_maxs = mins[a];
+        for (i = 0; i < 2; ++i) {
+            corner[b] = bounds[i][b];
+            for (j = 0; j < 2; ++j) {
+                corner[c] = bounds[j][c];
 
-		corner[a] = bounds[0][a];
-		dist1 = DotProduct(corner, split->normal) - split->dist;
+                corner[a] = bounds[0][a];
+                dist1 = DotProduct(corner, split->normal) - split->dist;
 
-		corner[a] = bounds[1][a];
-		dist2 = DotProduct(corner, split->normal) - split->dist;
+                corner[a] = bounds[1][a];
+                dist2 = DotProduct(corner, split->normal) - split->dist;
 
-		mid = bounds[1][a] - bounds[0][a];
-		mid *= (dist1 / (dist1 - dist2));
-		mid += bounds[0][a];
+                mid = bounds[1][a] - bounds[0][a];
+                mid *= (dist1 / (dist1 - dist2));
+                mid += bounds[0][a];
 
-		split_mins = qmax(qmin(mid, split_mins), mins[a]);
-		split_maxs = qmin(qmax(mid, split_maxs), maxs[a]);
-	    }
-	}
-	if (split->normal[a] > 0) {
-	    front_mins[a] = split_mins;
-	    back_maxs[a] = split_maxs;
-	} else {
-	    back_mins[a] = split_mins;
-	    front_maxs[a] = split_maxs;
-	}
+                split_mins = qmax(qmin(mid, split_mins), mins[a]);
+                split_maxs = qmin(qmax(mid, split_maxs), maxs[a]);
+            }
+        }
+        if (split->normal[a] > 0) {
+            front_mins[a] = split_mins;
+            back_maxs[a] = split_maxs;
+        } else {
+            back_mins[a] = split_mins;
+            front_maxs[a] = split_maxs;
+        }
     }
 }
 
@@ -182,13 +182,13 @@ SplitPlaneMetric_Axial(const plane_t *p, vec3_t mins, vec3_t maxs)
 
     value = 0;
     for (i = 0; i < 3; i++) {
-	if (i == p->type) {
-	    dist = p->dist * p->normal[i];
-	    value += (maxs[i] - dist) * (maxs[i] - dist);
-	    value += (dist - mins[i]) * (dist - mins[i]);
-	} else {
-	    value += 2 * (maxs[i] - mins[i]) * (maxs[i] - mins[i]);
-	}
+        if (i == p->type) {
+            dist = p->dist * p->normal[i];
+            value += (maxs[i] - dist) * (maxs[i] - dist);
+            value += (dist - mins[i]) * (dist - mins[i]);
+        } else {
+            value += 2 * (maxs[i] - mins[i]) * (maxs[i] - mins[i]);
+        }
     }
 
     return value;
@@ -206,8 +206,8 @@ SplitPlaneMetric_NonAxial(const plane_t *p, vec3_t mins, vec3_t maxs)
 
     DivideBounds(mins, maxs, p, fmins, fmaxs, bmins, bmaxs);
     for (i = 0; i < 3; i++) {
-	value += (fmaxs[i] - fmins[i]) * (fmaxs[i] - fmins[i]);
-	value += (bmaxs[i] - bmins[i]) * (bmaxs[i] - bmins[i]);
+        value += (fmaxs[i] - fmins[i]) * (fmaxs[i] - fmins[i]);
+        value += (bmaxs[i] - bmins[i]) * (bmaxs[i] - bmins[i]);
     }
 
     return value;
@@ -219,9 +219,9 @@ SplitPlaneMetric(const plane_t *p, vec3_t mins, vec3_t maxs)
     vec_t value;
 
     if (p->type < 3)
-	value = SplitPlaneMetric_Axial(p, mins, maxs);
+        value = SplitPlaneMetric_Axial(p, mins, maxs);
     else
-	value = SplitPlaneMetric_NonAxial(p, mins, maxs);
+        value = SplitPlaneMetric_NonAxial(p, mins, maxs);
 
     return value;
 }
@@ -246,53 +246,53 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     bestsurface = NULL;
 
     for (pass = 0; pass < 2; pass++) {
-	for (surf = surfaces; surf; surf = surf->next) {
-	    if (surf->onnode)
-		continue;
-	    
-	    if( surf->has_struct && pass )
-		continue;
-	    if( !surf->has_struct && !pass )
-		continue;
+        for (surf = surfaces; surf; surf = surf->next) {
+            if (surf->onnode)
+                continue;
+            
+            if( surf->has_struct && pass )
+                continue;
+            if( !surf->has_struct && !pass )
+                continue;
 
-	    /* check for axis aligned surfaces */
-	    plane = &map.planes[surf->planenum];
-	    if (!(plane->type < 3))
-		continue;
+            /* check for axis aligned surfaces */
+            plane = &map.planes[surf->planenum];
+            if (!(plane->type < 3))
+                continue;
 
-	    /* calculate the split metric, smaller values are better */
-	    metric = SplitPlaneMetric(plane, mins, maxs);
-	    if (metric < bestmetric) {
-		bestmetric = metric;
-		bestsurface = surf;
-	    }
-	}
+            /* calculate the split metric, smaller values are better */
+            metric = SplitPlaneMetric(plane, mins, maxs);
+            if (metric < bestmetric) {
+                bestmetric = metric;
+                bestsurface = surf;
+            }
+        }
 
-	if (!bestsurface) {
-	    /* Choose based on spatial subdivision only */
-	    for (surf = surfaces; surf; surf = surf->next) {
-		if (surf->onnode)
-		    continue;
+        if (!bestsurface) {
+            /* Choose based on spatial subdivision only */
+            for (surf = surfaces; surf; surf = surf->next) {
+                if (surf->onnode)
+                    continue;
 
-		if( surf->has_struct && pass )
-		    continue;
-		if( !surf->has_struct && !pass )
-		    continue;
-		
-		plane = &map.planes[surf->planenum];
-		metric = SplitPlaneMetric(plane, mins, maxs);
-		if (metric < bestmetric) {
-		    bestmetric = metric;
-		    bestsurface = surf;
-		}
-	    }
-	}
-	
-	if (bestsurface)
-	    break;
+                if( surf->has_struct && pass )
+                    continue;
+                if( !surf->has_struct && !pass )
+                    continue;
+                
+                plane = &map.planes[surf->planenum];
+                metric = SplitPlaneMetric(plane, mins, maxs);
+                if (metric < bestmetric) {
+                    bestmetric = metric;
+                    bestsurface = surf;
+                }
+            }
+        }
+        
+        if (bestsurface)
+            break;
     }
     if (!bestsurface)
-	Error("No valid planes in surface list (%s)", __func__);
+        Error("No valid planes in surface list (%s)", __func__);
 
     // ericw -- (!usemidsplit) is true on the final SolidBSP phase for the world.
     // !bestsurface->has_struct means all surfaces in this node are detail, so
@@ -302,7 +302,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     // between ChooseMidPlaneFromList and ChoosePlaneFromList) and use Q2's
     // chopping on a uniform grid?
     if (!usemidsplit && !bestsurface->has_struct) {
-	bestsurface->detail_separator = true;
+        bestsurface->detail_separator = true;
     }
     
     return bestsurface;
@@ -335,79 +335,79 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 
     /* Two passes - exhaust all non-detail faces before details */
     for (pass = 0; pass < 2; pass++) {
-	for (surf = surfaces; surf; surf = surf->next) {
-	    if (surf->onnode)
-		continue;
+        for (surf = surfaces; surf; surf = surf->next) {
+            if (surf->onnode)
+                continue;
 
-	    /*
-	     * Check that the surface has a suitable face for the current pass
-	     * and check whether this is a hint split.
-	     */
-	     hintsplit = false;
-	    for (face = surf->faces; face; face = face->next) {
-		if (texinfo[face->texinfo].flags & TEX_HINT)
-		    hintsplit = true;
-	    }
+            /*
+             * Check that the surface has a suitable face for the current pass
+             * and check whether this is a hint split.
+             */
+             hintsplit = false;
+            for (face = surf->faces; face; face = face->next) {
+                if (texinfo[face->texinfo].flags & TEX_HINT)
+                    hintsplit = true;
+            }
 
-	    if( surf->has_struct && pass )
-		continue;
-	    if( !surf->has_struct && !pass )
-		continue;
-	    
+            if( surf->has_struct && pass )
+                continue;
+            if( !surf->has_struct && !pass )
+                continue;
+            
 
-	    plane = &map.planes[surf->planenum];
-	    splits = 0;
+            plane = &map.planes[surf->planenum];
+            splits = 0;
 
-	    for (surf2 = surfaces; surf2; surf2 = surf2->next) {
-		if (surf2 == surf || surf2->onnode)
-		    continue;
-		plane2 = &map.planes[surf2->planenum];
-		if (plane->type < 3 && plane->type == plane2->type)
-		    continue;
-		for (face = surf2->faces; face; face = face->next) {
-		    const int flags = texinfo[face->texinfo].flags;
-		    /* Don't penalize for splitting skip faces */
-		    if (flags & TEX_SKIP)
-			continue;
-		    if (FaceSide(face, plane) == SIDE_ON) {
-			/* Never split a hint face except with a hint */
-			if (!hintsplit && (flags & TEX_HINT)) {
-			    splits = INT_MAX;
-			    break;
-			}
-			splits++;
-			if (splits >= minsplits)
-			    break;
-		    }
-		}
-		if (splits > minsplits)
-		    break;
-	    }
-	    if (splits > minsplits)
-		continue;
+            for (surf2 = surfaces; surf2; surf2 = surf2->next) {
+                if (surf2 == surf || surf2->onnode)
+                    continue;
+                plane2 = &map.planes[surf2->planenum];
+                if (plane->type < 3 && plane->type == plane2->type)
+                    continue;
+                for (face = surf2->faces; face; face = face->next) {
+                    const int flags = texinfo[face->texinfo].flags;
+                    /* Don't penalize for splitting skip faces */
+                    if (flags & TEX_SKIP)
+                        continue;
+                    if (FaceSide(face, plane) == SIDE_ON) {
+                        /* Never split a hint face except with a hint */
+                        if (!hintsplit && (flags & TEX_HINT)) {
+                            splits = INT_MAX;
+                            break;
+                        }
+                        splits++;
+                        if (splits >= minsplits)
+                            break;
+                    }
+                }
+                if (splits > minsplits)
+                    break;
+            }
+            if (splits > minsplits)
+                continue;
 
-	    /*
-	     * if equal numbers axial planes win, otherwise decide on spatial
-	     * subdivision
-	     */
-	    if (splits < minsplits || (splits == minsplits && plane->type < 3)) {
-		if (plane->type < 3) {
-		    distribution = SplitPlaneMetric(plane, mins, maxs);
-		    if (distribution > bestdistribution && splits == minsplits)
-			continue;
-		    bestdistribution = distribution;
-		}
-		/* currently the best! */
-		minsplits = splits;
-		bestsurface = surf;
-	    }
-	}
+            /*
+             * if equal numbers axial planes win, otherwise decide on spatial
+             * subdivision
+             */
+            if (splits < minsplits || (splits == minsplits && plane->type < 3)) {
+                if (plane->type < 3) {
+                    distribution = SplitPlaneMetric(plane, mins, maxs);
+                    if (distribution > bestdistribution && splits == minsplits)
+                        continue;
+                    bestdistribution = distribution;
+                }
+                /* currently the best! */
+                minsplits = splits;
+                bestsurface = surf;
+            }
+        }
 
-	/* If we found a candidate on first pass, don't do a second pass */
-	if (bestsurface) {
-	    bestsurface->detail_separator = (pass > 0);
-	    break;
-	}
+        /* If we found a candidate on first pass, don't do a second pass */
+        if (bestsurface) {
+            bestsurface->detail_separator = (pass > 0);
+            break;
+        }
     }
 
     return bestsurface;
@@ -433,41 +433,41 @@ SelectPartition(surface_t *surfaces)
     surfcount = 0;
     bestsurface = NULL;
     for (surf = surfaces; surf; surf = surf->next)
-	if (!surf->onnode) {
-	    surfcount++;
-	    bestsurface = surf;
-	}
+        if (!surf->onnode) {
+            surfcount++;
+            bestsurface = surf;
+        }
 
     if (surfcount == 0)
-	return NULL;
+        return NULL;
 
     if (surfcount == 1)
-	return bestsurface;	// this is a final split
+        return bestsurface;     // this is a final split
 
     // calculate a bounding box of the entire surfaceset
     for (i = 0; i < 3; i++) {
-	mins[i] = VECT_MAX;
-	maxs[i] = -VECT_MAX;
+        mins[i] = VECT_MAX;
+        maxs[i] = -VECT_MAX;
     }
     for (surf = surfaces; surf; surf = surf->next)
-	for (i = 0; i < 3; i++) {
-	    if (surf->mins[i] < mins[i])
-		mins[i] = surf->mins[i];
-	    if (surf->maxs[i] > maxs[i])
-		maxs[i] = surf->maxs[i];
-	}
+        for (i = 0; i < 3; i++) {
+            if (surf->mins[i] < mins[i])
+                mins[i] = surf->mins[i];
+            if (surf->maxs[i] > maxs[i])
+                maxs[i] = surf->maxs[i];
+        }
 
     bool largenode = false;
     if (options.maxNodeSize >= 64) {
-	const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
+        const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
 
-	largenode = (maxs[0] - mins[0]) > maxnodesize
-	    || (maxs[1] - mins[1]) > maxnodesize
-	    || (maxs[2] - mins[2]) > maxnodesize;
+        largenode = (maxs[0] - mins[0]) > maxnodesize
+            || (maxs[1] - mins[1]) > maxnodesize
+            || (maxs[2] - mins[2]) > maxnodesize;
     }
 
     if (usemidsplit || largenode) // do fast way for clipping hull
-	return ChooseMidPlaneFromList(surfaces, mins, maxs);
+        return ChooseMidPlaneFromList(surfaces, mins, maxs);
 
     // do slow way to save poly splits for drawing hull
     return ChoosePlaneFromList(surfaces, mins, maxs);
@@ -490,30 +490,30 @@ CalcSurfaceInfo(surface_t *surf)
 
     // calculate a bounding box
     for (i = 0; i < 3; i++) {
-	surf->mins[i] = VECT_MAX;
-	surf->maxs[i] = -VECT_MAX;
+        surf->mins[i] = VECT_MAX;
+        surf->maxs[i] = -VECT_MAX;
     }
 
     surf->has_detail = false;
     surf->has_struct = false;
     
     for (f = surf->faces; f; f = f->next) {
-	if (f->contents[0] >= 0 || f->contents[1] >= 0)
-	    Error("Bad contents in face (%s)", __func__);
+        if (f->contents[0] >= 0 || f->contents[1] >= 0)
+            Error("Bad contents in face (%s)", __func__);
 
-	if ((f->cflags[0] & CFLAGS_DETAIL)
-	    || (f->cflags[1] & CFLAGS_DETAIL))
-	    surf->has_detail = true;
-	else
-	    surf->has_struct = true;
+        if ((f->cflags[0] & CFLAGS_DETAIL)
+            || (f->cflags[1] & CFLAGS_DETAIL))
+            surf->has_detail = true;
+        else
+            surf->has_struct = true;
 
-	for (i = 0; i < f->w.numpoints; i++)
-	    for (j = 0; j < 3; j++) {
-		if (f->w.points[i][j] < surf->mins[j])
-		    surf->mins[j] = f->w.points[i][j];
-		if (f->w.points[i][j] > surf->maxs[j])
-		    surf->maxs[j] = f->w.points[i][j];
-	    }
+        for (i = 0; i < f->w.numpoints; i++)
+            for (j = 0; j < 3; j++) {
+                if (f->w.points[i][j] < surf->mins[j])
+                    surf->mins[j] = f->w.points[i][j];
+                if (f->w.points[i][j] > surf->maxs[j])
+                    surf->maxs[j] = f->w.points[i][j];
+            }
     }
 }
 
@@ -526,7 +526,7 @@ DividePlane
 */
 static void
 DividePlane(surface_t *in, plane_t *split, surface_t **front,
-	    surface_t **back)
+            surface_t **back)
 {
     face_t *facet, *next;
     face_t *frontlist, *backlist;
@@ -539,51 +539,51 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
 
     // parallel case is easy
     if (VectorCompare(inplane->normal, split->normal)) {
-	// check for exactly on node
-	if (inplane->dist == split->dist) {
-	    facet = in->faces;
-	    in->faces = NULL;
-	    in->onnode = true;
+        // check for exactly on node
+        if (inplane->dist == split->dist) {
+            facet = in->faces;
+            in->faces = NULL;
+            in->onnode = true;
 
-	    // divide the facets to the front and back sides
-	    newsurf = AllocMem(SURFACE, 1, true);
-	    *newsurf = *in;
+            // divide the facets to the front and back sides
+            newsurf = AllocMem(SURFACE, 1, true);
+            *newsurf = *in;
 
-	    // Prepend each face in facet list to either in or newsurf lists
-	    for (; facet; facet = next) {
-		next = facet->next;
-		if (facet->planeside == 1) {
-		    facet->next = newsurf->faces;
-		    newsurf->faces = facet;
-		} else {
-		    facet->next = in->faces;
-		    in->faces = facet;
-		}
-	    }
+            // Prepend each face in facet list to either in or newsurf lists
+            for (; facet; facet = next) {
+                next = facet->next;
+                if (facet->planeside == 1) {
+                    facet->next = newsurf->faces;
+                    newsurf->faces = facet;
+                } else {
+                    facet->next = in->faces;
+                    in->faces = facet;
+                }
+            }
 
-	    // ericw -- added these CalcSurfaceInfo to recalculate the surf bbox.
-	    // pretty sure their omission here was a bug.
-	    CalcSurfaceInfo(newsurf);
-	    CalcSurfaceInfo(in);
+            // ericw -- added these CalcSurfaceInfo to recalculate the surf bbox.
+            // pretty sure their omission here was a bug.
+            CalcSurfaceInfo(newsurf);
+            CalcSurfaceInfo(in);
 
-	    if (in->faces)
-		*front = in;
-	    else
-		FreeMem(in, SURFACE, 1);
+            if (in->faces)
+                *front = in;
+            else
+                FreeMem(in, SURFACE, 1);
 
-	    if (newsurf->faces)
-		*back = newsurf;
-	    else
-		FreeMem(newsurf, SURFACE, 1);
+            if (newsurf->faces)
+                *back = newsurf;
+            else
+                FreeMem(newsurf, SURFACE, 1);
 
-	    return;
-	}
+            return;
+        }
 
-	if (inplane->dist > split->dist)
-	    *front = in;
-	else
-	    *back = in;
-	return;
+        if (inplane->dist > split->dist)
+            *front = in;
+        else
+            *back = in;
+        return;
     }
 // do a real split.  may still end up entirely on one side
 // OPTIMIZE: use bounding box for fast test
@@ -591,29 +591,29 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
     backlist = NULL;
 
     for (facet = in->faces; facet; facet = next) {
-	next = facet->next;
-	SplitFace(facet, split, &frontfrag, &backfrag);
-	if (frontfrag) {
-	    frontfrag->next = frontlist;
-	    frontlist = frontfrag;
-	}
-	if (backfrag) {
-	    backfrag->next = backlist;
-	    backlist = backfrag;
-	}
+        next = facet->next;
+        SplitFace(facet, split, &frontfrag, &backfrag);
+        if (frontfrag) {
+            frontfrag->next = frontlist;
+            frontlist = frontfrag;
+        }
+        if (backfrag) {
+            backfrag->next = backlist;
+            backlist = backfrag;
+        }
     }
 
     // if nothing actually got split, just move the in plane
     if (frontlist == NULL) {
-	*back = in;
-	in->faces = backlist;
-	return;
+        *back = in;
+        in->faces = backlist;
+        return;
     }
 
     if (backlist == NULL) {
-	*front = in;
-	in->faces = frontlist;
-	return;
+        *front = in;
+        in->faces = frontlist;
+        return;
     }
 
     // stuff got split, so allocate one new plane and reuse in
@@ -639,8 +639,8 @@ static void
 DivideNodeBounds(node_t *node, plane_t *split)
 {
     DivideBounds(node->mins, node->maxs, split,
-		 node->children[0]->mins, node->children[0]->maxs,
-		 node->children[1]->mins, node->children[1]->maxs);
+                 node->children[0]->mins, node->children[0]->maxs,
+                 node->children[1]->mins, node->children[1]->maxs);
 }
 
 /*
@@ -651,26 +651,26 @@ GetContentsName
 const char *
 GetContentsName( int Contents ) {
     switch( Contents ) {
-	case CONTENTS_EMPTY:
-	    return "Empty";
-	    
-	case CONTENTS_SOLID:
-	    return "Solid";
-	    
-	case CONTENTS_WATER:
-	    return "Water";
-	    
-	case CONTENTS_SLIME:
-	    return "Slime";
-	    
-	case CONTENTS_LAVA:
-	    return "Lava";
-	    
-	case CONTENTS_SKY:
-	    return "Sky";
-	    
-	default:
-	    return "Error";
+        case CONTENTS_EMPTY:
+            return "Empty";
+            
+        case CONTENTS_SOLID:
+            return "Solid";
+            
+        case CONTENTS_WATER:
+            return "Water";
+            
+        case CONTENTS_SLIME:
+            return "Slime";
+            
+        case CONTENTS_LAVA:
+            return "Lava";
+            
+        case CONTENTS_SKY:
+            return "Sky";
+            
+        default:
+            return "Error";
     }
 }
 
@@ -695,40 +695,40 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 
     count = 0;
     for (surf = planelist; surf; surf = surf->next) {
-	for (f = surf->faces; f; f = f->next) {
-	    count++;
-	    if (!leafnode->contents)
-		leafnode->contents = f->contents[0];
-	    else if (leafnode->contents != f->contents[0]) {
-		const bool OnlyWarn = leafnode->contents == CONTENTS_EMPTY || f->contents[ 0 ] == CONTENTS_EMPTY;
-		Message(msgWarning, warnMixedFaceContents,
-			GetContentsName( leafnode->contents ), GetContentsName( f->contents[ 0 ] ),
-			f->w.points[0][0], f->w.points[0][1], f->w.points[0][2]);
-		if (!OnlyWarn) {
-		    Error("Last mixed face contents was fatal");
-		}
-	    }
-	}
+        for (f = surf->faces; f; f = f->next) {
+            count++;
+            if (!leafnode->contents)
+                leafnode->contents = f->contents[0];
+            else if (leafnode->contents != f->contents[0]) {
+                const bool OnlyWarn = leafnode->contents == CONTENTS_EMPTY || f->contents[ 0 ] == CONTENTS_EMPTY;
+                Message(msgWarning, warnMixedFaceContents,
+                        GetContentsName( leafnode->contents ), GetContentsName( f->contents[ 0 ] ),
+                        f->w.points[0][0], f->w.points[0][1], f->w.points[0][2]);
+                if (!OnlyWarn) {
+                    Error("Last mixed face contents was fatal");
+                }
+            }
+        }
     }
 
     if (!leafnode->contents)
-	leafnode->contents = CONTENTS_SOLID;
+        leafnode->contents = CONTENTS_SOLID;
 
     switch (leafnode->contents) {
     case CONTENTS_EMPTY:
-	c_empty++;
-	break;
+        c_empty++;
+        break;
     case CONTENTS_SOLID:
-	c_solid++;
-	break;
+        c_solid++;
+        break;
     case CONTENTS_WATER:
     case CONTENTS_SLIME:
     case CONTENTS_LAVA:
     case CONTENTS_SKY:
-	c_water++;
-	break;
+        c_water++;
+        break;
     default:
-	Error("Bad contents in face (%s)", __func__);
+        Error("Bad contents in face (%s)", __func__);
     }
 
     // write the list of faces, and free the originals
@@ -737,16 +737,16 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 
     i = 0;
     for (surf = planelist; surf; surf = pnext) {
-	pnext = surf->next;
-	for (f = surf->faces; f; f = next) {
-	    next = f->next;
-	    leafnode->markfaces[i] = f->original;
-	    i++;
-	    FreeMem(f, FACE, 1);
-	}
-	FreeMem(surf, SURFACE, 1);
+        pnext = surf->next;
+        for (f = surf->faces; f; f = next) {
+            next = f->next;
+            leafnode->markfaces[i] = f->original;
+            i++;
+            FreeMem(f, FACE, 1);
+        }
+        FreeMem(surf, SURFACE, 1);
     }
-    leafnode->markfaces[i] = NULL;	// sentinal
+    leafnode->markfaces[i] = NULL;      // sentinal
 }
 
 
@@ -767,19 +767,19 @@ LinkNodeFaces(surface_t *surface)
     prevptr = &surface->faces;
     f = *prevptr;
     while (f) {
-	SubdivideFace(f, prevptr);
-	prevptr = &(*prevptr)->next;
-	f = *prevptr;
+        SubdivideFace(f, prevptr);
+        prevptr = &(*prevptr)->next;
+        f = *prevptr;
     }
 
     // copy
     for (f = surface->faces; f; f = f->next) {
-	nodefaces++;
-	newf = AllocMem(FACE, 1, true);
-	*newf = *f;
-	f->original = newf;
-	newf->next = list;
-	list = newf;
+        nodefaces++;
+        newf = AllocMem(FACE, 1, true);
+        *newf = *f;
+        f->original = newf;
+        newf->next = list;
+        list = newf;
     }
 
     return list;
@@ -800,10 +800,10 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     plane_t *splitplane;
 
     split = SelectPartition(surfaces);
-    if (!split) {		// this is a leaf node
-	node->planenum = PLANENUM_LEAF;
-	LinkConvexFaces(surfaces, node);
-	return;
+    if (!split) {               // this is a leaf node
+        node->planenum = PLANENUM_LEAF;
+        LinkConvexFaces(surfaces, node);
+        return;
     }
 
     splitnodes++;
@@ -824,27 +824,27 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     backlist = NULL;
 
     for (surf = surfaces; surf; surf = next) {
-	next = surf->next;
-	DividePlane(surf, splitplane, &frontfrag, &backfrag);
-	if (frontfrag && backfrag) {
-	    // the plane was split, which may expose oportunities to merge
-	    // adjacent faces into a single face
+        next = surf->next;
+        DividePlane(surf, splitplane, &frontfrag, &backfrag);
+        if (frontfrag && backfrag) {
+            // the plane was split, which may expose oportunities to merge
+            // adjacent faces into a single face
 //                      MergePlaneFaces (frontfrag);
 //                      MergePlaneFaces (backfrag);
-	}
+        }
 
-	if (frontfrag) {
-	    if (!frontfrag->faces)
-		Error("Surface with no faces (%s)", __func__);
-	    frontfrag->next = frontlist;
-	    frontlist = frontfrag;
-	}
-	if (backfrag) {
-	    if (!backfrag->faces)
-		Error("Surface with no faces (%s)", __func__);
-	    backfrag->next = backlist;
-	    backlist = backfrag;
-	}
+        if (frontfrag) {
+            if (!frontfrag->faces)
+                Error("Surface with no faces (%s)", __func__);
+            frontfrag->next = frontlist;
+            frontlist = frontfrag;
+        }
+        if (backfrag) {
+            if (!backfrag->faces)
+                Error("Surface with no faces (%s)", __func__);
+            backfrag->next = backlist;
+            backlist = backfrag;
+        }
     }
 
     PartitionSurfaces(frontlist, node->children[0]);
@@ -864,27 +864,27 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     node_t *headnode;
 
     if (!surfhead) {
-	/*
-	 * We allow an entity to be constructed with no visible brushes
-	 * (i.e. all clip brushes), but need to construct a simple empty
-	 * collision hull for the engine. Probably could be done a little
-	 * smarter, but this works.
-	 */
-	headnode = AllocMem(NODE, 1, true);
-	for (i = 0; i < 3; i++) {
-	    headnode->mins[i] = entity->mins[i] - SIDESPACE;
-	    headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
-	}
-	headnode->children[0] = AllocMem(NODE, 1, true);
-	headnode->children[0]->planenum = PLANENUM_LEAF;
-	headnode->children[0]->contents = CONTENTS_EMPTY;
-	headnode->children[0]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
-	headnode->children[1] = AllocMem(NODE, 1, true);
-	headnode->children[1]->planenum = PLANENUM_LEAF;
-	headnode->children[1]->contents = CONTENTS_EMPTY;
-	headnode->children[1]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
+        /*
+         * We allow an entity to be constructed with no visible brushes
+         * (i.e. all clip brushes), but need to construct a simple empty
+         * collision hull for the engine. Probably could be done a little
+         * smarter, but this works.
+         */
+        headnode = AllocMem(NODE, 1, true);
+        for (i = 0; i < 3; i++) {
+            headnode->mins[i] = entity->mins[i] - SIDESPACE;
+            headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
+        }
+        headnode->children[0] = AllocMem(NODE, 1, true);
+        headnode->children[0]->planenum = PLANENUM_LEAF;
+        headnode->children[0]->contents = CONTENTS_EMPTY;
+        headnode->children[0]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
+        headnode->children[1] = AllocMem(NODE, 1, true);
+        headnode->children[1]->planenum = PLANENUM_LEAF;
+        headnode->children[1]->contents = CONTENTS_EMPTY;
+        headnode->children[1]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
 
-	return headnode;
+        return headnode;
     }
 
     Message(msgProgress, "SolidBSP");
@@ -894,8 +894,8 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 
     // calculate a bounding box for the entire model
     for (i = 0; i < 3; i++) {
-	headnode->mins[i] = entity->mins[i] - SIDESPACE;
-	headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
+        headnode->mins[i] = entity->mins[i] - SIDESPACE;
+        headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
     }
 
     // recursively partition everything

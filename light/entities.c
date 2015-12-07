@@ -43,7 +43,7 @@ static lightsample_t sunlight2 = { 0, { 255, 255, 255 } };
 static lightsample_t sunlight3 = { 0, { 255, 255, 255 } };
 static int sunlight_dirt = 0;
 static int sunlight2_dirt = 0;
-static vec3_t sunvec = { 0, 0, -1 };		/* defaults to straight down */
+static vec3_t sunvec = { 0, 0, -1 };            /* defaults to straight down */
 static vec_t sun_deviance = 0;
 
 /*
@@ -64,10 +64,10 @@ SetKeyValue(entity_t *ent, const char *key, const char *value)
     epair_t *ep;
 
     for (ep = ent->epairs; ep; ep = ep->next)
-	if (!strcmp(ep->key, key)) {
-	    strcpy(ep->value, value);
-	    return;
-	}
+        if (!strcmp(ep->key, key)) {
+            strcpy(ep->value, value);
+            return;
+        }
     ep = malloc(sizeof(*ep));
     ep->next = ent->epairs;
     ent->epairs = ep;
@@ -81,10 +81,10 @@ LightStyleForTargetname(const char *targetname)
     int i;
 
     for (i = 0; i < numlighttargets; i++)
-	if (!strcmp(lighttargets[i], targetname))
-	    return 32 + i;
+        if (!strcmp(lighttargets[i], targetname))
+            return 32 + i;
     if (i == MAX_LIGHT_TARGETS)
-	Error("%s: Too many unique light targetnames\n", __func__);
+        Error("%s: Too many unique light targetnames\n", __func__);
 
     strcpy(lighttargets[i], targetname);
     numlighttargets++;
@@ -104,36 +104,36 @@ MatchTargets(void)
     const entity_t *target;
 
     for (entity = entities; entity; entity = entity->next) {
-	if (!entity->target[0])
-	    continue;
-	for (target = entities; target; target = target->next) {
-	    if (!strcmp(target->targetname, entity->target)) {
-		entity->targetent = target;
-		break;
-	    }
-	}
-	if (target == NULL) {
-	    logprint("WARNING: entity at (%s) (%s) has unmatched "
-		     "target (%s)\n", VecStr(entity->origin),
-		     entity->classname, entity->target);
-	    continue;
-	}
+        if (!entity->target[0])
+            continue;
+        for (target = entities; target; target = target->next) {
+            if (!strcmp(target->targetname, entity->target)) {
+                entity->targetent = target;
+                break;
+            }
+        }
+        if (target == NULL) {
+            logprint("WARNING: entity at (%s) (%s) has unmatched "
+                     "target (%s)\n", VecStr(entity->origin),
+                     entity->classname, entity->target);
+            continue;
+        }
 
-	/* set the style on the source ent for switchable lights */
+        /* set the style on the source ent for switchable lights */
 
-	// ericw -- this seems completely useless, why would the
-	// triggering entity need to have the light's style key?
-	//
-	// disabling because it can cause problems, e.g. if the
-	// triggering entity is a monster, and the style key is used
-	// by the mod.
+        // ericw -- this seems completely useless, why would the
+        // triggering entity need to have the light's style key?
+        //
+        // disabling because it can cause problems, e.g. if the
+        // triggering entity is a monster, and the style key is used
+        // by the mod.
 #if 0
-	if (target->style) {
-	    char style[10];
-	    entity->style = target->style;
-	    snprintf(style, sizeof(style), "%d", entity->style);
-	    SetKeyValue(entity, "style", style);
-	}
+        if (target->style) {
+            char style[10];
+            entity->style = target->style;
+            snprintf(style, sizeof(style), "%d", entity->style);
+            SetKeyValue(entity, "style", style);
+        }
 #endif
     }
 }
@@ -144,25 +144,25 @@ SetupSpotlights(void)
     entity_t *entity;
 
     for (entity = entities; entity; entity = entity->next) {
-	if (strncmp(entity->classname, "light", 5))
-	    continue;
-	if (entity->targetent) {
-	    VectorSubtract(entity->targetent->origin, entity->origin,
-			   entity->spotvec);
-	    VectorNormalize(entity->spotvec);
-	    entity->spotlight = true;
-	}
-	if (entity->spotlight) {
-	    vec_t angle, angle2;
+        if (strncmp(entity->classname, "light", 5))
+            continue;
+        if (entity->targetent) {
+            VectorSubtract(entity->targetent->origin, entity->origin,
+                           entity->spotvec);
+            VectorNormalize(entity->spotvec);
+            entity->spotlight = true;
+        }
+        if (entity->spotlight) {
+            vec_t angle, angle2;
 
-	    angle = (entity->spotangle > 0) ? entity->spotangle : 40;
-	    entity->spotfalloff = -cos(angle / 2 * Q_PI / 180);
+            angle = (entity->spotangle > 0) ? entity->spotangle : 40;
+            entity->spotfalloff = -cos(angle / 2 * Q_PI / 180);
 
-	    angle2 = entity->spotangle2;
-	    if (angle2 <= 0 || angle2 > angle)
-		angle2 = angle;
-	    entity->spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
-	}
+            angle2 = entity->spotangle2;
+            if (angle2 <= 0 || angle2 > angle)
+                angle2 = angle;
+            entity->spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
+        }
     }
 }
 
@@ -174,9 +174,9 @@ scan_vec3(vec3_t dest, const char *buf, const char *name)
     double vec[3] = { 0.0, 0.0, 0.0 };
 
     if (sscanf(buf, "%lf %lf %lf", &vec[0], &vec[1], &vec[2]) != 3)
-	logprint("WARNING: Not 3 values for %s\n", name);
+        logprint("WARNING: Not 3 values for %s\n", name);
     for (i = 0; i < 3; ++i)
-	dest[i] = vec[i];
+        dest[i] = vec[i];
 }
 
 static void
@@ -195,10 +195,10 @@ void
 normalize_color_format(vec3_t color)
 {
     if (color[0] >= 0 && color[0] <= 1 &&
-	color[1] >= 0 && color[1] <= 1 &&
-	color[2] >= 0 && color[2] <= 1)
+        color[1] >= 0 && color[1] <= 1 &&
+        color[2] >= 0 && color[2] <= 1)
     {
-	VectorScale(color, 255, color);
+        VectorScale(color, 255, color);
     }
 }
 
@@ -208,24 +208,24 @@ static void
 CheckEntityFields(entity_t *entity)
 {
     if (!entity->light.light)
-	entity->light.light = DEFAULTLIGHTLEVEL;
+        entity->light.light = DEFAULTLIGHTLEVEL;
 
     if (entity->atten <= 0.0)
-	entity->atten = 1.0;
+        entity->atten = 1.0;
     if (entity->anglescale < 0 || entity->anglescale > 1.0)
-	entity->anglescale = anglescale;
+        entity->anglescale = anglescale;
 
     if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
-	static qboolean warned_once = true;
-	if (!warned_once) {
-	    warned_once = true;
-	    logprint("WARNING: unknown formula number (%d) in delay field\n"
-		     "   %s at (%s)\n"
-		     "   (further formula warnings will be supressed)\n",
-		     entity->formula, entity->classname,
-		     VecStr(entity->origin));
-	}
-	entity->formula = LF_LINEAR;
+        static qboolean warned_once = true;
+        if (!warned_once) {
+            warned_once = true;
+            logprint("WARNING: unknown formula number (%d) in delay field\n"
+                     "   %s at (%s)\n"
+                     "   (further formula warnings will be supressed)\n",
+                     entity->formula, entity->classname,
+                     VecStr(entity->origin));
+        }
+        entity->formula = LF_LINEAR;
     }
     
     /* set up deviance and samples defaults */
@@ -247,13 +247,13 @@ CheckEntityFields(entity_t *entity)
     }
 
     if (!VectorCompare(entity->light.color, vec3_origin)) {
-	if (!write_litfile) {
-	    write_litfile = true;
-	    logprint("Colored light entities detected: "
-		     ".lit output enabled.\n");
-	}
+        if (!write_litfile) {
+            write_litfile = true;
+            logprint("Colored light entities detected: "
+                     ".lit output enabled.\n");
+        }
     } else {
-	VectorCopy(vec3_white, entity->light.color);
+        VectorCopy(vec3_white, entity->light.color);
     }
 }
 
@@ -267,9 +267,9 @@ CheckEntityFields(entity_t *entity)
 static qboolean 
 Dirt_ResolveFlag(int dirtInt)
 {
-	if (dirtInt == 1) return true;
-	else if (dirtInt == -1) return false;
-	else return globalDirt;
+        if (dirtInt == 1) return true;
+        else if (dirtInt == -1) return false;
+        else return globalDirt;
 }
 
 /*
@@ -294,11 +294,11 @@ AddSun(vec3_t sunvec, lightsample_t sunlight, float anglescale, int dirtInt)
     suns = sun;
 
     // printf( "sun is using vector %f %f %f light %f color %f %f %f anglescale %f dirt %d resolved to %d\n", 
-    // 	sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
-    // 	sun->sunlight.color[0], sun->sunlight.color[1], sun->sunlight.color[2],
-    // 	anglescale,
-    // 	dirtInt,
-    // 	(int)sun->dirt);
+    //  sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
+    //  sun->sunlight.color[0], sun->sunlight.color[1], sun->sunlight.color[2],
+    //  anglescale,
+    //  dirtInt,
+    //  (int)sun->dirt);
 }
 
 /*
@@ -318,9 +318,9 @@ SetupSuns()
     int sun_num_samples = sunsamples;
 
     if (sun_deviance == 0) {
-    	sun_num_samples = 1;
+        sun_num_samples = 1;
     } else {
-	logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", sun_deviance);
+        logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", sun_deviance);
     }
 
     VectorNormalize(sunvec);
@@ -332,7 +332,7 @@ SetupSuns()
 
     for ( i = 0; i < sun_num_samples; i++ )
     {
-    	vec3_t direction;
+        vec3_t direction;
 
         /* calculate sun direction */
         if ( i == 0 ) {
@@ -379,50 +379,50 @@ SetupSuns()
 static void
 SetupSkyDome()
 {
-	int i, j, numSuns;
-	int angleSteps, elevationSteps;
-	int iterations;
-	float angle, elevation;
-	float angleStep, elevationStep;
-	vec3_t direction;
+        int i, j, numSuns;
+        int angleSteps, elevationSteps;
+        int iterations;
+        float angle, elevation;
+        float angleStep, elevationStep;
+        vec3_t direction;
 
-	/* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
-	iterations = rint(sqrt((sunsamples - 1) / 4)) + 1;
-	iterations = qmax(iterations, 2);
+        /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
+        iterations = rint(sqrt((sunsamples - 1) / 4)) + 1;
+        iterations = qmax(iterations, 2);
     
-	/* dummy check */
-	if ( sunlight2.light <= 0.0f && sunlight3.light <= 0.0f ) {
-		return;
-	}
+        /* dummy check */
+        if ( sunlight2.light <= 0.0f && sunlight3.light <= 0.0f ) {
+                return;
+        }
     
-	/* setup */
-	elevationSteps = iterations - 1;
-	angleSteps = elevationSteps * 4;
-	angle = 0.0f;
-	elevationStep = DEG2RAD( 90.0f / (elevationSteps + 1) );  /* skip elevation 0 */
-	angleStep = DEG2RAD( 360.0f / angleSteps );
+        /* setup */
+        elevationSteps = iterations - 1;
+        angleSteps = elevationSteps * 4;
+        angle = 0.0f;
+        elevationStep = DEG2RAD( 90.0f / (elevationSteps + 1) );  /* skip elevation 0 */
+        angleStep = DEG2RAD( 360.0f / angleSteps );
 
-	/* calc individual sun brightness */
-	numSuns = angleSteps * elevationSteps + 1;
-	logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.light, sunlight2.color[0], sunlight2.color[1], sunlight2.color[2]);
-	logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.light, sunlight3.color[0], sunlight3.color[1], sunlight3.color[2]);
-	sunlight2.light /= numSuns;
-	sunlight3.light /= numSuns;
+        /* calc individual sun brightness */
+        numSuns = angleSteps * elevationSteps + 1;
+        logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.light, sunlight2.color[0], sunlight2.color[1], sunlight2.color[2]);
+        logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.light, sunlight3.color[0], sunlight3.color[1], sunlight3.color[2]);
+        sunlight2.light /= numSuns;
+        sunlight3.light /= numSuns;
 
-	/* iterate elevation */
-	elevation = elevationStep * 0.5f;
-	angle = 0.0f;
-	for ( i = 0, elevation = elevationStep * 0.5f; i < elevationSteps; i++ )
-	{
-		/* iterate angle */
-		for ( j = 0; j < angleSteps; j++ )
-		{
-			/* create sun */
-			direction[ 0 ] = cos( angle ) * cos( elevation );
-			direction[ 1 ] = sin( angle ) * cos( elevation );
-			direction[ 2 ] = -sin( elevation );
+        /* iterate elevation */
+        elevation = elevationStep * 0.5f;
+        angle = 0.0f;
+        for ( i = 0, elevation = elevationStep * 0.5f; i < elevationSteps; i++ )
+        {
+                /* iterate angle */
+                for ( j = 0; j < angleSteps; j++ )
+                {
+                        /* create sun */
+                        direction[ 0 ] = cos( angle ) * cos( elevation );
+                        direction[ 1 ] = sin( angle ) * cos( elevation );
+                        direction[ 2 ] = -sin( elevation );
 
-			AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+                        AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
 
                         /* create bottom hemisphere */
                         if (sunlight3.light > 0) {
@@ -431,19 +431,19 @@ SetupSkyDome()
                             AddSun(direction, sunlight3, 0.0, sunlight2_dirt);
                         }
                     
-			/* move */
-			angle += angleStep;
-		}
+                        /* move */
+                        angle += angleStep;
+                }
 
-		/* move */
-		elevation += elevationStep;
-		angle += angleStep / elevationSteps;
-	}
+                /* move */
+                elevation += elevationStep;
+                angle += angleStep / elevationSteps;
+        }
 
-	/* create vertical sun */
-	VectorSet( direction, 0.0f, 0.0f, 1.0f );
+        /* create vertical sun */
+        VectorSet( direction, 0.0f, 0.0f, 1.0f );
 
-	AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+        AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
     
         if (sunlight3.light > 0) {
             VectorSet( direction, 0.0f, 0.0f, -1.0f );
@@ -464,35 +464,35 @@ CountEntities(const char *entitystring)
     int count = 0;
 
     while (1) {
-	pos += strcspn(pos, "/{");
-	if (!*pos)
-	    return count;
+        pos += strcspn(pos, "/{");
+        if (!*pos)
+            return count;
 
-	/* It's probably overkill to consider comments, but... */
-	if (*pos == '/') {
-	    pos++;
-	    if (*pos == '*') {
-		pos++;
-		while (1) {
-		    pos = strchr(pos, '*');
-		    if (!pos)
-			return count;
-		    if (pos[1] == '/') {
-			pos += 2;
-			break;
-		    }
-		}
-	    } else if (*pos == '/') {
-		pos = strchr(pos, '\n');
-		if (!pos)
-		    return count;
-	    }
-	    continue;
-	}
+        /* It's probably overkill to consider comments, but... */
+        if (*pos == '/') {
+            pos++;
+            if (*pos == '*') {
+                pos++;
+                while (1) {
+                    pos = strchr(pos, '*');
+                    if (!pos)
+                        return count;
+                    if (pos[1] == '/') {
+                        pos += 2;
+                        break;
+                    }
+                }
+            } else if (*pos == '/') {
+                pos = strchr(pos, '\n');
+                if (!pos)
+                    return count;
+            }
+            continue;
+        }
 
-	/* Add one entity for every opening brace */
-	count++;
-	pos++;
+        /* Add one entity for every opening brace */
+        count++;
+        pos++;
     }
 }
 #endif
@@ -507,16 +507,16 @@ CountEntities(const char *entitystring)
 static void
 Entities_Insert(entity_t *entity)
 {
-	/* Insert it into the tail end of the list */
-	if (num_entities == 0) {
-	    entities = entity;
-	    entities_tail = entity;
-	} else {
-	    entities_tail->next = entity;
-	    entities_tail = entity;
-	}
-	entity->next = NULL;
-	num_entities++;
+        /* Insert it into the tail end of the list */
+        if (num_entities == 0) {
+            entities = entity;
+            entities_tail = entity;
+        } else {
+            entities_tail->next = entity;
+            entities_tail = entity;
+        }
+        entity->next = NULL;
+        num_entities++;
 }
 
 /*
@@ -555,20 +555,20 @@ DuplicateEntity(const entity_t *src)
 static void
 JitterEntity(entity_t *entity)
 {
-	int j;
+        int j;
 
-	/* jitter the light */
-	for ( j = 1; j < entity->num_samples; j++ )
-	{
-		/* create a light */
+        /* jitter the light */
+        for ( j = 1; j < entity->num_samples; j++ )
+        {
+                /* create a light */
                 entity_t *light2 = DuplicateEntity(entity);
-		light2->generated = true; // don't write generated light to bsp
+                light2->generated = true; // don't write generated light to bsp
 
-		/* jitter it */
-		light2->origin[ 0 ] = entity->origin[ 0 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
-		light2->origin[ 1 ] = entity->origin[ 1 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
-		light2->origin[ 2 ] = entity->origin[ 2 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
-	}
+                /* jitter it */
+                light2->origin[ 0 ] = entity->origin[ 0 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
+                light2->origin[ 1 ] = entity->origin[ 1 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
+                light2->origin[ 2 ] = entity->origin[ 2 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
+        }
 }
 
 static void
@@ -633,258 +633,258 @@ LoadEntities(const bsp2_t *bsp)
 
     /* go through all the entities */
     while (1) {
-	/* parse the opening brace */
-	data = COM_Parse(data);
-	if (!data)
-	    break;
-	if (com_token[0] != '{')
-	    Error("%s: found %s when expecting {", __func__, com_token);
+        /* parse the opening brace */
+        data = COM_Parse(data);
+        if (!data)
+            break;
+        if (com_token[0] != '{')
+            Error("%s: found %s when expecting {", __func__, com_token);
 
-	/* Allocate a new entity */
-	entity = (entity_t *)malloc(sizeof(entity_t));
-	memset(entity, 0, sizeof(*entity));
-	Entities_Insert(entity);
+        /* Allocate a new entity */
+        entity = (entity_t *)malloc(sizeof(entity_t));
+        memset(entity, 0, sizeof(*entity));
+        Entities_Insert(entity);
 
-	/* Init some fields... */
-	entity->anglescale = -1;
+        /* Init some fields... */
+        entity->anglescale = -1;
 
-	/* go through all the keys in this entity */
-	while (1) {
-	    int c;
+        /* go through all the keys in this entity */
+        while (1) {
+            int c;
 
-	    /* parse key */
-	    data = COM_Parse(data);
-	    if (!data)
-		Error("%s: EOF without closing brace", __func__);
-	    if (!strcmp(com_token, "}"))
-		break;
-	    if (strlen(com_token) > MAX_ENT_KEY - 1)
-		Error("%s: Key length > %i", __func__, MAX_ENT_KEY - 1);
-	    strcpy(key, com_token);
+            /* parse key */
+            data = COM_Parse(data);
+            if (!data)
+                Error("%s: EOF without closing brace", __func__);
+            if (!strcmp(com_token, "}"))
+                break;
+            if (strlen(com_token) > MAX_ENT_KEY - 1)
+                Error("%s: Key length > %i", __func__, MAX_ENT_KEY - 1);
+            strcpy(key, com_token);
 
-	    /* parse value */
-	    data = COM_Parse(data);
-	    if (!data)
-		Error("%s: EOF without closing brace", __func__);
-	    c = com_token[0];
-	    if (c == '}')
-		Error("%s: closing brace without data", __func__);
-	    if (strlen(com_token) > MAX_ENT_VALUE - 1)
-		Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
+            /* parse value */
+            data = COM_Parse(data);
+            if (!data)
+                Error("%s: EOF without closing brace", __func__);
+            c = com_token[0];
+            if (c == '}')
+                Error("%s: closing brace without data", __func__);
+            if (strlen(com_token) > MAX_ENT_VALUE - 1)
+                Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
 
-	    epair = malloc(sizeof(epair_t));
-	    memset(epair, 0, sizeof(epair_t));
-	    strcpy(epair->key, key);
-	    strcpy(epair->value, com_token);
-	    epair->next = entity->epairs;
-	    entity->epairs = epair;
+            epair = malloc(sizeof(epair_t));
+            memset(epair, 0, sizeof(epair_t));
+            strcpy(epair->key, key);
+            strcpy(epair->value, com_token);
+            epair->next = entity->epairs;
+            entity->epairs = epair;
 
-	    if (!strcmp(key, "classname"))
-		strcpy(entity->classname, com_token);
-	    else if (!strcmp(key, "target"))
-		strcpy(entity->target, com_token);
-	    else if (!strcmp(key, "targetname"))
-		strcpy(entity->targetname, com_token);
-	    else if (!strcmp(key, "origin"))
-		scan_vec3(entity->origin, com_token, "origin");
-	    else if (!strncmp(key, "light", 5) || !strcmp(key, "_light"))
-		entity->light.light = atof(com_token);
-	    else if (!strcmp(key, "style")) {
-		entity->style = atof(com_token);
-		if (entity->style < 0 || entity->style > 254)
-		    Error("Bad light style %i (must be 0-254)", entity->style);
-	    } else if (!strcmp(key, "angle"))
-		entity->spotangle = atof(com_token);
-	    else if (!strcmp(key, "_softangle"))
-		entity->spotangle2 = atof(com_token);
-	    else if (!strcmp(key, "wait"))
-		entity->atten = atof(com_token);
-	    else if (!strcmp(key, "delay"))
-		entity->formula = atoi(com_token);
-	    else if (!strcmp(key, "mangle")) {
-		scan_vec3(vec, com_token, "mangle");
-		vec_from_mangle(entity->spotvec, vec);
-		entity->spotlight = true;
-	    } else if (!strcmp(key, "_color") || !strcmp(key, "color")) {
-		scan_vec3(entity->light.color, com_token, "color");
-		normalize_color_format(entity->light.color);
-	    } else if (!strcmp(key, "_sunlight"))
-		sunlight.light = atof(com_token);
-	    else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
-		scan_vec3(vec, com_token, "_sun_mangle");
-		vec_from_mangle(sunvec, vec);
-	    } else if (!strcmp(key, "_sunlight_color")) {
-		scan_vec3(sunlight.color, com_token, "_sunlight_color");
-		normalize_color_format(sunlight.color);
-	    } else if (!strcmp(key, "_sunlight2"))
-		sunlight2.light = atof(com_token);
+            if (!strcmp(key, "classname"))
+                strcpy(entity->classname, com_token);
+            else if (!strcmp(key, "target"))
+                strcpy(entity->target, com_token);
+            else if (!strcmp(key, "targetname"))
+                strcpy(entity->targetname, com_token);
+            else if (!strcmp(key, "origin"))
+                scan_vec3(entity->origin, com_token, "origin");
+            else if (!strncmp(key, "light", 5) || !strcmp(key, "_light"))
+                entity->light.light = atof(com_token);
+            else if (!strcmp(key, "style")) {
+                entity->style = atof(com_token);
+                if (entity->style < 0 || entity->style > 254)
+                    Error("Bad light style %i (must be 0-254)", entity->style);
+            } else if (!strcmp(key, "angle"))
+                entity->spotangle = atof(com_token);
+            else if (!strcmp(key, "_softangle"))
+                entity->spotangle2 = atof(com_token);
+            else if (!strcmp(key, "wait"))
+                entity->atten = atof(com_token);
+            else if (!strcmp(key, "delay"))
+                entity->formula = atoi(com_token);
+            else if (!strcmp(key, "mangle")) {
+                scan_vec3(vec, com_token, "mangle");
+                vec_from_mangle(entity->spotvec, vec);
+                entity->spotlight = true;
+            } else if (!strcmp(key, "_color") || !strcmp(key, "color")) {
+                scan_vec3(entity->light.color, com_token, "color");
+                normalize_color_format(entity->light.color);
+            } else if (!strcmp(key, "_sunlight"))
+                sunlight.light = atof(com_token);
+            else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
+                scan_vec3(vec, com_token, "_sun_mangle");
+                vec_from_mangle(sunvec, vec);
+            } else if (!strcmp(key, "_sunlight_color")) {
+                scan_vec3(sunlight.color, com_token, "_sunlight_color");
+                normalize_color_format(sunlight.color);
+            } else if (!strcmp(key, "_sunlight2"))
+                sunlight2.light = atof(com_token);
             else if (!strcmp(key, "_sunlight3"))
                 sunlight3.light = atof(com_token);
             else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
-		scan_vec3(sunlight2.color, com_token, key);
-		normalize_color_format(sunlight2.color);
+                scan_vec3(sunlight2.color, com_token, key);
+                normalize_color_format(sunlight2.color);
             } else if (!strcmp(key, "_sunlight3_color") || !strcmp(key, "_sunlight_color3")) {
                 scan_vec3(sunlight3.color, com_token, key);
                 normalize_color_format(sunlight3.color);
             } else if (!strcmp(key, "_minlight_color")) {
-		scan_vec3(minlight.color, com_token, "_minlight_color");
-		normalize_color_format(minlight.color);
-	    } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
-		entity->anglescale = atof(com_token);
-	    else if (!strcmp(key, "_dirtdepth"))
-		entity->dirtdepth = atof(com_token);
-	    else if (!strcmp(key, "_dirtmode"))
-		entity->dirtmode = atoi(com_token);
-	    else if (!strcmp(key, "_dirtangle"))
-		entity->dirtangle = atoi(com_token);
-	    else if (!strcmp(key, "_sunlight_dirt"))
-		sunlight_dirt = atoi(com_token);
-	    else if (!strcmp(key, "_sunlight2_dirt"))
-		sunlight2_dirt = atoi(com_token);
-	    else if (!strcmp(key, "_minlight_dirt"))
-		entity->minlight_dirt = atoi(com_token);
-	    else if (!strcmp(key, "_dirtscale"))
-		entity->dirtscale = atof(com_token);
-	    else if (!strcmp(key, "_dirtgain"))
-		entity->dirtgain = atof(com_token);
-	    else if (!strcmp(key, "_dirt")) {
-		entity->dirt = atoi(com_token);
-		if (entity->dirt == 1 && !dirty) {
-		    logprint("entity with \"_dirt\" \"1\" detected, enabling "
-			"dirtmapping.\n");
-		    dirty = true;
-		}
-	    }
-	    else if (!strcmp(key, "_sunlight_penumbra")) {
-		sun_deviance = atof(com_token);
-	    }
-	    else if (!strcmp(key, "_deviance")) {
-		entity->deviance = atof(com_token);
-	    }
-	    else if (!strcmp(key, "_samples")) {
-		entity->num_samples = atoi(com_token);
-	    }
-	    else if (!strcmp(key, "_dist")) {
-		entity->dist = atof(com_token);
-	    }
-	    else if (!strcmp(key, "_range")) {
-		entity->range = atof(com_token);
-	    }
-	    else if (!strcmp(key, "_gamma")) {
-		lightmapgamma = atof(com_token);
-		logprint("using lightmap gamma value %f\n", lightmapgamma);
-	    }
-	}
+                scan_vec3(minlight.color, com_token, "_minlight_color");
+                normalize_color_format(minlight.color);
+            } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
+                entity->anglescale = atof(com_token);
+            else if (!strcmp(key, "_dirtdepth"))
+                entity->dirtdepth = atof(com_token);
+            else if (!strcmp(key, "_dirtmode"))
+                entity->dirtmode = atoi(com_token);
+            else if (!strcmp(key, "_dirtangle"))
+                entity->dirtangle = atoi(com_token);
+            else if (!strcmp(key, "_sunlight_dirt"))
+                sunlight_dirt = atoi(com_token);
+            else if (!strcmp(key, "_sunlight2_dirt"))
+                sunlight2_dirt = atoi(com_token);
+            else if (!strcmp(key, "_minlight_dirt"))
+                entity->minlight_dirt = atoi(com_token);
+            else if (!strcmp(key, "_dirtscale"))
+                entity->dirtscale = atof(com_token);
+            else if (!strcmp(key, "_dirtgain"))
+                entity->dirtgain = atof(com_token);
+            else if (!strcmp(key, "_dirt")) {
+                entity->dirt = atoi(com_token);
+                if (entity->dirt == 1 && !dirty) {
+                    logprint("entity with \"_dirt\" \"1\" detected, enabling "
+                        "dirtmapping.\n");
+                    dirty = true;
+                }
+            }
+            else if (!strcmp(key, "_sunlight_penumbra")) {
+                sun_deviance = atof(com_token);
+            }
+            else if (!strcmp(key, "_deviance")) {
+                entity->deviance = atof(com_token);
+            }
+            else if (!strcmp(key, "_samples")) {
+                entity->num_samples = atoi(com_token);
+            }
+            else if (!strcmp(key, "_dist")) {
+                entity->dist = atof(com_token);
+            }
+            else if (!strcmp(key, "_range")) {
+                entity->range = atof(com_token);
+            }
+            else if (!strcmp(key, "_gamma")) {
+                lightmapgamma = atof(com_token);
+                logprint("using lightmap gamma value %f\n", lightmapgamma);
+            }
+        }
 
-	/*
-	 * Check light entity fields and any global settings in worldspawn.
-	 */
-	if (!strncmp(entity->classname, "light", 5)) {
-	    CheckEntityFields(entity);
-	    num_lights++;
-	}
-	if (!strncmp(entity->classname, "light", 5)) {
-	    if (entity->targetname[0] && !entity->style) {
-		char style[16];
-		entity->style = LightStyleForTargetname(entity->targetname);
-		snprintf(style, sizeof(style), "%i", entity->style);
-		SetKeyValue(entity, "style", style);
-	    }
-	}
-	if (!strcmp(entity->classname, "worldspawn")) {
-	    if (entity->light.light > 0 && !minlight.light) {
-		minlight.light = entity->light.light;
-		logprint("using minlight value %i from worldspawn.\n",
-			 (int)minlight.light);
-	    } else if (minlight.light) {
-		logprint("Using minlight value %i from command line.\n",
-			 (int)minlight.light);
-	    }
-	    if (entity->anglescale >= 0 && entity->anglescale <= 1.0) {
-		sun_anglescale = entity->anglescale;
-		logprint("using sunlight anglescale value %f from worldspawn.\n",
-			 sun_anglescale);
-	    }
+        /*
+         * Check light entity fields and any global settings in worldspawn.
+         */
+        if (!strncmp(entity->classname, "light", 5)) {
+            CheckEntityFields(entity);
+            num_lights++;
+        }
+        if (!strncmp(entity->classname, "light", 5)) {
+            if (entity->targetname[0] && !entity->style) {
+                char style[16];
+                entity->style = LightStyleForTargetname(entity->targetname);
+                snprintf(style, sizeof(style), "%i", entity->style);
+                SetKeyValue(entity, "style", style);
+            }
+        }
+        if (!strcmp(entity->classname, "worldspawn")) {
+            if (entity->light.light > 0 && !minlight.light) {
+                minlight.light = entity->light.light;
+                logprint("using minlight value %i from worldspawn.\n",
+                         (int)minlight.light);
+            } else if (minlight.light) {
+                logprint("Using minlight value %i from command line.\n",
+                         (int)minlight.light);
+            }
+            if (entity->anglescale >= 0 && entity->anglescale <= 1.0) {
+                sun_anglescale = entity->anglescale;
+                logprint("using sunlight anglescale value %f from worldspawn.\n",
+                         sun_anglescale);
+            }
 
-	    if (entity->dist != 0.0) {
-		scaledist = entity->dist;
-		logprint("using _dist value %f from worldspawn.\n",
-			 scaledist);
-	    }
+            if (entity->dist != 0.0) {
+                scaledist = entity->dist;
+                logprint("using _dist value %f from worldspawn.\n",
+                         scaledist);
+            }
 
-	    if (entity->range != 0.0) {
-		rangescale = entity->range;
-		logprint("using _range value %f from worldspawn.\n",
-			 rangescale);
-	    }
+            if (entity->range != 0.0) {
+                rangescale = entity->range;
+                logprint("using _range value %f from worldspawn.\n",
+                         rangescale);
+            }
 
-	    if (entity->dirtdepth && !dirtDepthSetOnCmdline) {
-		dirtDepth = entity->dirtdepth;
-		logprint("Using dirtdepth value %f from worldspawn.\n", 
-			dirtDepth);
-	    }
-	    if (entity->dirtmode && !dirtModeSetOnCmdline) {
-		dirtMode = entity->dirtmode;
-		logprint("Using dirtmode value %i from worldspawn.\n", 
-			dirtMode);
-	    }
-	    if (entity->dirtscale && !dirtScaleSetOnCmdline) {
-		dirtScale = entity->dirtscale;
-		logprint("Using dirtscale value %f from worldspawn.\n", 
-			dirtScale);
-	    }
-	    if (entity->dirtgain && !dirtGainSetOnCmdline) {
-		dirtGain = entity->dirtgain;
-		logprint("Using dirtgain value %f from worldspawn.\n", 
-			dirtGain);
-	    }
-	    if (entity->dirtangle && !dirtAngleSetOnCmdline) {
-		dirtAngle = entity->dirtangle;
-		logprint("Using dirtangle value %f from worldspawn.\n",
-			 dirtAngle);
-	    }
-	    if (entity->dirt == 1) {
-		globalDirt = true;
-		dirty = true;
-		logprint("Global dirtmapping enabled in worldspawn.\n");
-	    }
+            if (entity->dirtdepth && !dirtDepthSetOnCmdline) {
+                dirtDepth = entity->dirtdepth;
+                logprint("Using dirtdepth value %f from worldspawn.\n", 
+                        dirtDepth);
+            }
+            if (entity->dirtmode && !dirtModeSetOnCmdline) {
+                dirtMode = entity->dirtmode;
+                logprint("Using dirtmode value %i from worldspawn.\n", 
+                        dirtMode);
+            }
+            if (entity->dirtscale && !dirtScaleSetOnCmdline) {
+                dirtScale = entity->dirtscale;
+                logprint("Using dirtscale value %f from worldspawn.\n", 
+                        dirtScale);
+            }
+            if (entity->dirtgain && !dirtGainSetOnCmdline) {
+                dirtGain = entity->dirtgain;
+                logprint("Using dirtgain value %f from worldspawn.\n", 
+                        dirtGain);
+            }
+            if (entity->dirtangle && !dirtAngleSetOnCmdline) {
+                dirtAngle = entity->dirtangle;
+                logprint("Using dirtangle value %f from worldspawn.\n",
+                         dirtAngle);
+            }
+            if (entity->dirt == 1) {
+                globalDirt = true;
+                dirty = true;
+                logprint("Global dirtmapping enabled in worldspawn.\n");
+            }
 
-	    if (sunlight_dirt == 1) {
-		dirty = true;
-		logprint("Sunlight dirtmapping enabled in worldspawn.\n");
-	    } else if (sunlight_dirt == -1) {
-		logprint("Sunlight dirtmapping disabled in worldspawn.\n");
-	    }
+            if (sunlight_dirt == 1) {
+                dirty = true;
+                logprint("Sunlight dirtmapping enabled in worldspawn.\n");
+            } else if (sunlight_dirt == -1) {
+                logprint("Sunlight dirtmapping disabled in worldspawn.\n");
+            }
 
-	    if (sunlight2_dirt == 1) {
-		dirty = true;
-		logprint("Sunlight2 dirtmapping enabled in worldspawn.\n");
-	    } else if (sunlight2_dirt == -1) {
-		logprint("Sunlight2 dirtmapping disabled in worldspawn.\n");
-	    }
+            if (sunlight2_dirt == 1) {
+                dirty = true;
+                logprint("Sunlight2 dirtmapping enabled in worldspawn.\n");
+            } else if (sunlight2_dirt == -1) {
+                logprint("Sunlight2 dirtmapping disabled in worldspawn.\n");
+            }
 
-	    if (entity->minlight_dirt == 1) {
-		minlightDirt = true;
-		dirty = true;
-		logprint("Minlight dirtmapping enabled in worldspawn.\n");
-	    } else if (entity->minlight_dirt == -1) {
-		minlightDirt = false;
-		logprint("Minlight dirtmapping disabled in worldspawn.\n");
-	    } else {
-		minlightDirt = globalDirt;
-	    }
-	}
+            if (entity->minlight_dirt == 1) {
+                minlightDirt = true;
+                dirty = true;
+                logprint("Minlight dirtmapping enabled in worldspawn.\n");
+            } else if (entity->minlight_dirt == -1) {
+                minlightDirt = false;
+                logprint("Minlight dirtmapping disabled in worldspawn.\n");
+            } else {
+                minlightDirt = globalDirt;
+            }
+        }
     }
 
     if (!VectorCompare(sunlight.color, vec3_white) ||
-	!VectorCompare(minlight.color, vec3_white) ||
-	!VectorCompare(sunlight2.color, vec3_white) ||
+        !VectorCompare(minlight.color, vec3_white) ||
+        !VectorCompare(sunlight2.color, vec3_white) ||
         !VectorCompare(sunlight3.color, vec3_white)) {
-	if (!write_litfile) {
-	    write_litfile = true;
-	    logprint("Colored light entities detected: "
-		     ".lit output enabled.\n");
-	}
+        if (!write_litfile) {
+            write_litfile = true;
+            logprint("Colored light entities detected: "
+                     ".lit output enabled.\n");
+        }
     }
 
     logprint("%d entities read, %d are lights.\n", num_entities, num_lights);
@@ -910,8 +910,8 @@ ValueForKey(const entity_t *ent, const char *key)
     epair_t *ep;
 
     for (ep = ent->epairs; ep; ep = ep->next)
-	if (!strcmp(ep->key, key))
-	    return ep->value;
+        if (!strcmp(ep->key, key))
+            return ep->value;
     return "";
 }
 
@@ -922,12 +922,12 @@ FindEntityWithKeyPair(const char *key, const char *value)
     epair_t *ep;
 
     for (ent = entities; ent; ent = ent->next) {
-	for (ep = ent->epairs; ep; ep = ep->next)
-	    if (!strcmp(ep->key, key)) {
-		if (!strcmp(ep->value, value))
-		    return ent;
-		break;
-	    }
+        for (ep = ent->epairs; ep; ep = ep->next)
+            if (!strcmp(ep->key, key)) {
+                if (!strcmp(ep->value, value))
+                    return ent;
+                break;
+            }
     }
     return NULL;
 }
@@ -950,16 +950,16 @@ Get_EntityStringSize(const entity_t *entities)
 
     size = 0;
     for (entity = entities; entity; entity = entity->next) {
-	if (!entity->epairs)
-	    continue;
-	if (entity->generated)
-	    continue;
-	size += 2; /* "{\n" */
-	for (epair = entity->epairs; epair; epair = epair->next) {
-	    /* 6 extra chars for quotes, space and newline */
-	    size += strlen(epair->key) + strlen(epair->value) + 6;
-	}
-	size += 2; /* "}\n" */
+        if (!entity->epairs)
+            continue;
+        if (entity->generated)
+            continue;
+        size += 2; /* "{\n" */
+        for (epair = entity->epairs; epair; epair = epair->next) {
+            /* 6 extra chars for quotes, space and newline */
+            size += strlen(epair->key) + strlen(epair->value) + 6;
+        }
+        size += 2; /* "}\n" */
     }
     size += 1; /* zero terminator */
 
@@ -1004,7 +1004,7 @@ WriteEntitiesToString(bsp2_t *bsp)
     char *pos;
 
     if (bsp->dentdata)
-	free(bsp->dentdata);
+        free(bsp->dentdata);
 
     /* FIXME - why are we printing this here? */
     logprint("%i switchable light styles\n", numlighttargets);
@@ -1012,22 +1012,22 @@ WriteEntitiesToString(bsp2_t *bsp)
     bsp->entdatasize = Get_EntityStringSize(entities);
     bsp->dentdata = malloc(bsp->entdatasize);
     if (!bsp->dentdata)
-	Error("%s: allocation of %d bytes failed\n", __func__,
-	      bsp->entdatasize);
+        Error("%s: allocation of %d bytes failed\n", __func__,
+              bsp->entdatasize);
 
     space = bsp->entdatasize;
     pos = bsp->dentdata;
     for (entity = entities; entity; entity = entity->next) {
-	if (!entity->epairs)
-	    continue;
-	if (entity->generated)
-	    continue;
+        if (!entity->epairs)
+            continue;
+        if (entity->generated)
+            continue;
 
-	length = snprintf(pos, space, "{\n");
-	pos += length;
-	space -= length;
+        length = snprintf(pos, space, "{\n");
+        pos += length;
+        space -= length;
 
-	for (epair = entity->epairs; epair; epair = epair->next) {
+        for (epair = entity->epairs; epair; epair = epair->next) {
             const char *value;
             if (parse_escape_sequences) {
                 value = CopyValueWithEscapeSequencesParsed(epair->value);
@@ -1035,20 +1035,20 @@ WriteEntitiesToString(bsp2_t *bsp)
                 value = epair->value;
             }
             
-	    length = snprintf(pos, space, "\"%s\" \"%s\"\n",
-			      epair->key, value);
+            length = snprintf(pos, space, "\"%s\" \"%s\"\n",
+                              epair->key, value);
             
             if (parse_escape_sequences) {
                 free(value);
             }
             
-	    pos += length;
-	    space -= length;
-	}
+            pos += length;
+            space -= length;
+        }
 
-	length = snprintf(pos, space, "}\n");
-	pos += length;
-	space -= length;
+        length = snprintf(pos, space, "}\n");
+        pos += length;
+        space -= length;
     }
 }
 
@@ -1088,8 +1088,8 @@ static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const e
 
     /* set spotlight vector based on face normal */
     if (atoi(ValueForKey(surflight_template, "_surface_spotlight"))) {
-	entity->spotlight = true;
-	VectorCopy(normal, entity->spotvec);
+        entity->spotlight = true;
+        VectorCopy(normal, entity->spotvec);
     }
     
     /* export it to a map file for debugging */
@@ -1304,7 +1304,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
             const texinfo_t *info;
             const miptex_t *miptex;
             const modelinfo_t *face_modelinfo;
-	    int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
+            int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
 
             surf = &bsp->dfaces[facenum];
             info = &bsp->texinfo[surf->texinfo];
@@ -1320,14 +1320,14 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
             if (miptex->name[0] == '*' && underwater)
                 continue;
 
-	    /* Skip if already handled */
-	    if (face_visited[facenum])
-		continue;
-	    
-	    /* Mark as handled */
-	    face_visited[facenum] = true;
+            /* Skip if already handled */
+            if (face_visited[facenum])
+                continue;
+            
+            /* Mark as handled */
+            face_visited[facenum] = true;
 
-	    /* Generate the lights */
+            /* Generate the lights */
             GL_SubdivideSurface(surf, face_modelinfo, bsp);
         }
     }

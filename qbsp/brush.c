@@ -75,47 +75,47 @@ CheckFace(face_t *face)
 
     VectorCopy(plane->normal, facenormal);
     if (face->planeside)
-	VectorSubtract(vec3_origin, facenormal, facenormal);
+        VectorSubtract(vec3_origin, facenormal, facenormal);
 
     for (i = 0; i < face->w.numpoints; i++) {
-	p1 = face->w.points[i];
-	p2 = face->w.points[(i + 1) % face->w.numpoints];
+        p1 = face->w.points[i];
+        p2 = face->w.points[(i + 1) % face->w.numpoints];
 
-	for (j = 0; j < 3; j++)
-	    if (p1[j] > BOGUS_RANGE || p1[j] < -BOGUS_RANGE)
-		Error("%s: coordinate out of range (%f)", __func__, p1[j]);
+        for (j = 0; j < 3; j++)
+            if (p1[j] > BOGUS_RANGE || p1[j] < -BOGUS_RANGE)
+                Error("%s: coordinate out of range (%f)", __func__, p1[j]);
 
-	/* check the point is on the face plane */
-	dist = DotProduct(p1, plane->normal) - plane->dist;
-	if (dist < -ON_EPSILON || dist > ON_EPSILON)
-	    Message(msgWarning, warnPointOffPlane, p1[0], p1[1], p1[2], dist);
+        /* check the point is on the face plane */
+        dist = DotProduct(p1, plane->normal) - plane->dist;
+        if (dist < -ON_EPSILON || dist > ON_EPSILON)
+            Message(msgWarning, warnPointOffPlane, p1[0], p1[1], p1[2], dist);
 
-	/* check the edge isn't degenerate */
-	VectorSubtract(p2, p1, edgevec);
-	length = VectorLength(edgevec);
-	if (length < ON_EPSILON) {
-	    Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
-	    for (j = i + 1; j < face->w.numpoints; j++)
-		VectorCopy(face->w.points[j], face->w.points[j - 1]);
-	    face->w.numpoints--;
-	    CheckFace(face);
-	    break;
-	}
+        /* check the edge isn't degenerate */
+        VectorSubtract(p2, p1, edgevec);
+        length = VectorLength(edgevec);
+        if (length < ON_EPSILON) {
+            Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
+            for (j = i + 1; j < face->w.numpoints; j++)
+                VectorCopy(face->w.points[j], face->w.points[j - 1]);
+            face->w.numpoints--;
+            CheckFace(face);
+            break;
+        }
 
-	CrossProduct(facenormal, edgevec, edgenormal);
-	VectorNormalize(edgenormal);
-	edgedist = DotProduct(p1, edgenormal);
-	edgedist += ON_EPSILON;
+        CrossProduct(facenormal, edgevec, edgenormal);
+        VectorNormalize(edgenormal);
+        edgedist = DotProduct(p1, edgenormal);
+        edgedist += ON_EPSILON;
 
-	/* all other points must be on front side */
-	for (j = 0; j < face->w.numpoints; j++) {
-	    if (j == i)
-		continue;
-	    dist = DotProduct(face->w.points[j], edgenormal);
-	    if (dist > edgedist)
-		Error("%s: Found a non-convex face (error size %f)\n",
-		      __func__, dist - edgedist);
-	}
+        /* all other points must be on front side */
+        for (j = 0; j < face->w.numpoints; j++) {
+            if (j == i)
+                continue;
+            dist = DotProduct(face->w.points[j], edgenormal);
+            if (dist > edgedist)
+                Error("%s: Found a non-convex face (error size %f)\n",
+                      __func__, dist - edgedist);
+        }
     }
 }
 
@@ -133,10 +133,10 @@ AddToBounds(mapentity_t *entity, const vec3_t point)
     int i;
 
     for (i = 0; i < 3; i++) {
-	if (point[i] < entity->mins[i])
-	    entity->mins[i] = point[i];
-	if (point[i] > entity->maxs[i])
-	    entity->maxs[i] = point[i];
+        if (point[i] < entity->mins[i])
+            entity->mins[i] = point[i];
+        if (point[i] > entity->maxs[i])
+            entity->maxs[i] = point[i];
     }
 }
 
@@ -149,20 +149,20 @@ NormalizePlane(plane_t *p)
     vec_t ax, ay, az;
 
     for (i = 0; i < 3; i++) {
-	if (p->normal[i] == 1.0) {
-	    p->normal[(i + 1) % 3] = 0;
-	    p->normal[(i + 2) % 3] = 0;
-	    p->type = PLANE_X + i;
-	    return 0; /* no flip */
-	}
-	if (p->normal[i] == -1.0) {
-	    p->normal[i] = 1.0;
-	    p->normal[(i + 1) % 3] = 0;
-	    p->normal[(i + 2) % 3] = 0;
-	    p->dist = -p->dist;
-	    p->type = PLANE_X + i;
-	    return 1; /* plane flipped */
-	}
+        if (p->normal[i] == 1.0) {
+            p->normal[(i + 1) % 3] = 0;
+            p->normal[(i + 2) % 3] = 0;
+            p->type = PLANE_X + i;
+            return 0; /* no flip */
+        }
+        if (p->normal[i] == -1.0) {
+            p->normal[i] = 1.0;
+            p->normal[(i + 1) % 3] = 0;
+            p->normal[(i + 2) % 3] = 0;
+            p->dist = -p->dist;
+            p->type = PLANE_X + i;
+            return 1; /* plane flipped */
+        }
     }
 
     ax = fabs(p->normal[0]);
@@ -170,16 +170,16 @@ NormalizePlane(plane_t *p)
     az = fabs(p->normal[2]);
 
     if (ax >= ay && ax >= az)
-	p->type = PLANE_ANYX;
+        p->type = PLANE_ANYX;
     else if (ay >= ax && ay >= az)
-	p->type = PLANE_ANYY;
+        p->type = PLANE_ANYY;
     else
-	p->type = PLANE_ANYZ;
+        p->type = PLANE_ANYZ;
 
     if (p->normal[p->type - PLANE_ANYX] < 0) {
-	VectorSubtract(vec3_origin, p->normal, p->normal);
-	p->dist = -p->dist;
-	return 1; /* plane flipped */
+        VectorSubtract(vec3_origin, p->normal, p->normal);
+        p->dist = -p->dist;
+        return 1; /* plane flipped */
     }
     return 0; /* no flip */
 }
@@ -189,22 +189,22 @@ int
 PlaneEqual(const plane_t *p1, const plane_t *p2)
 {
     return (fabs(p1->normal[0] - p2->normal[0]) < NORMAL_EPSILON &&
-	    fabs(p1->normal[1] - p2->normal[1]) < NORMAL_EPSILON &&
-	    fabs(p1->normal[2] - p2->normal[2]) < NORMAL_EPSILON &&
-	    fabs(p1->dist - p2->dist) < DIST_EPSILON);
+            fabs(p1->normal[1] - p2->normal[1]) < NORMAL_EPSILON &&
+            fabs(p1->normal[2] - p2->normal[2]) < NORMAL_EPSILON &&
+            fabs(p1->dist - p2->dist) < DIST_EPSILON);
 }
 
 int
 PlaneInvEqual(const plane_t *p1, const plane_t *p2)
 {
     return (fabs(p1->normal[0] + p2->normal[0]) < NORMAL_EPSILON &&
-	    fabs(p1->normal[1] + p2->normal[1]) < NORMAL_EPSILON &&
-	    fabs(p1->normal[2] + p2->normal[2]) < NORMAL_EPSILON &&
-	    fabs(p1->dist + p2->dist) < DIST_EPSILON);
+            fabs(p1->normal[1] + p2->normal[1]) < NORMAL_EPSILON &&
+            fabs(p1->normal[2] + p2->normal[2]) < NORMAL_EPSILON &&
+            fabs(p1->dist + p2->dist) < DIST_EPSILON);
 }
 
 /* Plane Hashing */
-#define	PLANE_HASHES (1<<10)
+#define PLANE_HASHES (1<<10)
 static struct plane *plane_hash[PLANE_HASHES];
 
 /*
@@ -236,7 +236,7 @@ PlaneHash_Init(void)
     int i;
 
     for (i = 0; i < PLANE_HASHES; ++i)
-	plane_hash[i] = NULL;
+        plane_hash[i] = NULL;
 }
 
 /*
@@ -251,9 +251,9 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
 
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
-	Error("%s: invalid normal (vector length %.4f)", __func__, len);
+        Error("%s: invalid normal (vector length %.4f)", __func__, len);
     if (map.numplanes == map.maxplanes)
-	Error("Internal error: didn't allocate enough planes? (%s)", __func__);
+        Error("Internal error: didn't allocate enough planes? (%s)", __func__);
 
     plane = &map.planes[map.numplanes];
     VectorCopy(normal, plane->normal);
@@ -279,16 +279,16 @@ FindPlane(const plane_t *plane, int *side)
     /* search the border bins as well */
     hash = plane_hash_fn(plane);
     for (i = 0; i < 3; ++i) {
-	h = (hash + bins[i]) & (PLANE_HASHES - 1);
-	for (p = plane_hash[h]; p; p = p->hash_chain) {
-	    if (PlaneEqual(p, plane)) {
-		*side = SIDE_FRONT;
-		return p - map.planes;
-	    } else if (PlaneInvEqual(p, plane)) {
-		*side = SIDE_BACK;
-		return p - map.planes;
-	    }
-	}
+        h = (hash + bins[i]) & (PLANE_HASHES - 1);
+        for (p = plane_hash[h]; p; p = p->hash_chain) {
+            if (PlaneEqual(p, plane)) {
+                *side = SIDE_FRONT;
+                return p - map.planes;
+            } else if (PlaneInvEqual(p, plane)) {
+                *side = SIDE_BACK;
+                return p - map.planes;
+            }
+        }
     }
 
     return NewPlane(plane->normal, plane->dist, side);
@@ -298,7 +298,7 @@ FindPlane(const plane_t *plane, int *side)
 /*
 =============================================================================
 
-			TURN BRUSHES INTO GROUPS OF FACES
+                        TURN BRUSHES INTO GROUPS OF FACES
 
 =============================================================================
 */
@@ -316,9 +316,9 @@ FindTargetEntity(const char *target)
     const mapentity_t *entity;
 
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
-	name = ValueForKey(entity, "targetname");
-	if (!Q_strcasecmp(target, name))
-	    return entity;
+        name = ValueForKey(entity, "targetname");
+        if (!Q_strcasecmp(target, name))
+            return entity;
     }
 
     return NULL;
@@ -340,18 +340,18 @@ FixRotateOrigin(mapentity_t *entity)
 
     search = ValueForKey(entity, "target");
     if (search[0])
-	target = FindTargetEntity(search);
+        target = FindTargetEntity(search);
 
     if (target) {
-	GetVectorForKey(target, "origin", offset);
+        GetVectorForKey(target, "origin", offset);
     } else {
-	search = ValueForKey(entity, "classname");
-	Message(msgWarning, warnNoRotateTarget, search);
-	VectorCopy(vec3_origin, offset);
+        search = ValueForKey(entity, "classname");
+        Message(msgWarning, warnNoRotateTarget, search);
+        VectorCopy(vec3_origin, offset);
     }
 
     snprintf(value, sizeof(value), "%d %d %d", (int)offset[0],
-	     (int)offset[1], (int)offset[2]);
+             (int)offset[1], (int)offset[2]);
     SetKeyValue(entity, "origin", value);
 }
 
@@ -363,7 +363,7 @@ CreateBrushFaces
 */
 static face_t *
 CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
-		 const int hullnum)
+                 const int hullnum)
 {
     int i, j, k;
     vec_t r;
@@ -378,60 +378,60 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
     min = VECT_MAX;
     max = -VECT_MAX;
     for (i = 0; i < 3; i++) {
-	hullbrush->mins[i] = VECT_MAX;
-	hullbrush->maxs[i] = -VECT_MAX;
+        hullbrush->mins[i] = VECT_MAX;
+        hullbrush->maxs[i] = -VECT_MAX;
     }
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-	if (!hullnum) {
-	    /* Don't generate hintskip faces */
-	    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
-	    const char *texname = map.miptex[texinfo[mapface->texinfo].miptex];
-	    if (!Q_strcasecmp(texname, "hintskip"))
-		continue;
-	}
+        if (!hullnum) {
+            /* Don't generate hintskip faces */
+            const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+            const char *texname = map.miptex[texinfo[mapface->texinfo].miptex];
+            if (!Q_strcasecmp(texname, "hintskip"))
+                continue;
+        }
 
-	w = BaseWindingForPlane(&mapface->plane);
-	mapface2 = hullbrush->faces;
-	for (j = 0; j < hullbrush->numfaces && w; j++, mapface2++) {
-	    if (j == i)
-		continue;
-	    // flip the plane, because we want to keep the back side
-	    VectorSubtract(vec3_origin, mapface2->plane.normal, plane.normal);
-	    plane.dist = -mapface2->plane.dist;
+        w = BaseWindingForPlane(&mapface->plane);
+        mapface2 = hullbrush->faces;
+        for (j = 0; j < hullbrush->numfaces && w; j++, mapface2++) {
+            if (j == i)
+                continue;
+            // flip the plane, because we want to keep the back side
+            VectorSubtract(vec3_origin, mapface2->plane.normal, plane.normal);
+            plane.dist = -mapface2->plane.dist;
 
-	    w = ClipWinding(w, &plane, false);
-	}
-	if (!w)
-	    continue;		// overconstrained plane
+            w = ClipWinding(w, &plane, false);
+        }
+        if (!w)
+            continue;           // overconstrained plane
 
-	// this face is a keeper
-	f = AllocMem(FACE, 1, true);
-	f->w.numpoints = w->numpoints;
-	if (f->w.numpoints > MAXEDGES)
-	    Error("face->numpoints > MAXEDGES (%d), source face on line %d",
-		  MAXEDGES, mapface->linenum);
+        // this face is a keeper
+        f = AllocMem(FACE, 1, true);
+        f->w.numpoints = w->numpoints;
+        if (f->w.numpoints > MAXEDGES)
+            Error("face->numpoints > MAXEDGES (%d), source face on line %d",
+                  MAXEDGES, mapface->linenum);
 
-	for (j = 0; j < w->numpoints; j++) {
-	    for (k = 0; k < 3; k++) {
-		point[k] = w->points[j][k] - rotate_offset[k];
-		r = Q_rint(point[k]);
-		if (fabs(point[k] - r) < ZERO_EPSILON)
-		    f->w.points[j][k] = r;
-		else
-		    f->w.points[j][k] = point[k];
+        for (j = 0; j < w->numpoints; j++) {
+            for (k = 0; k < 3; k++) {
+                point[k] = w->points[j][k] - rotate_offset[k];
+                r = Q_rint(point[k]);
+                if (fabs(point[k] - r) < ZERO_EPSILON)
+                    f->w.points[j][k] = r;
+                else
+                    f->w.points[j][k] = point[k];
 
-		if (f->w.points[j][k] < hullbrush->mins[k])
-		    hullbrush->mins[k] = f->w.points[j][k];
-		if (f->w.points[j][k] > hullbrush->maxs[k])
-		    hullbrush->maxs[k] = f->w.points[j][k];
-		if (f->w.points[j][k] < min)
-		    min = f->w.points[j][k];
-		if (f->w.points[j][k] > max)
-		    max = f->w.points[j][k];
-	    }
-	}
+                if (f->w.points[j][k] < hullbrush->mins[k])
+                    hullbrush->mins[k] = f->w.points[j][k];
+                if (f->w.points[j][k] > hullbrush->maxs[k])
+                    hullbrush->maxs[k] = f->w.points[j][k];
+                if (f->w.points[j][k] < min)
+                    min = f->w.points[j][k];
+                if (f->w.points[j][k] > max)
+                    max = f->w.points[j][k];
+            }
+        }
 
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
@@ -453,34 +453,34 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
             mapface->texinfo = FindTexinfo( &texInfoNew );
         }
 
-	VectorCopy(mapface->plane.normal, plane.normal);
-	VectorScale(mapface->plane.normal, mapface->plane.dist, point);
-	VectorSubtract(point, rotate_offset, point);
-	plane.dist = DotProduct(plane.normal, point);
+        VectorCopy(mapface->plane.normal, plane.normal);
+        VectorScale(mapface->plane.normal, mapface->plane.dist, point);
+        VectorSubtract(point, rotate_offset, point);
+        plane.dist = DotProduct(plane.normal, point);
 
-	FreeMem(w, WINDING, 1);
+        FreeMem(w, WINDING, 1);
 
-	f->texinfo = hullnum ? 0 : mapface->texinfo;
-	f->planenum = FindPlane(&plane, &f->planeside);
-	f->next = facelist;
-	facelist = f;
-	CheckFace(f);
-	UpdateFaceSphere(f);
+        f->texinfo = hullnum ? 0 : mapface->texinfo;
+        f->planenum = FindPlane(&plane, &f->planeside);
+        f->next = facelist;
+        facelist = f;
+        CheckFace(f);
+        UpdateFaceSphere(f);
     }
 
     // Rotatable objects must have a bounding box big enough to
     // account for all its rotations
     if (rotate_offset[0] || rotate_offset[1] || rotate_offset[2]) {
-	vec_t delta;
+        vec_t delta;
 
-	delta = fabs(max);
-	if (fabs(min) > delta)
-	    delta = fabs(min);
+        delta = fabs(max);
+        if (fabs(min) > delta)
+            delta = fabs(min);
 
-	for (k = 0; k < 3; k++) {
-	    hullbrush->mins[k] = -delta;
-	    hullbrush->maxs[k] = delta;
-	}
+        for (k = 0; k < 3; k++) {
+            hullbrush->mins[k] = -delta;
+            hullbrush->maxs[k] = delta;
+        }
     }
 
     return facelist;
@@ -498,8 +498,8 @@ FreeBrushFaces(face_t *facelist)
     face_t *face, *next;
 
     for (face = facelist; face; face = next) {
-	next = face->next;
-	FreeMem(face, FACE, 1);
+        next = face->next;
+        FreeMem(face, FACE, 1);
     }
 }
 
@@ -515,9 +515,9 @@ FreeBrushes(brush_t *brushlist)
     brush_t *brush, *next;
 
     for (brush = brushlist; brush; brush = next) {
-	next = brush->next;
-	FreeBrushFaces(brush->faces);
-	FreeMem(brush, BRUSH, 1);
+        next = brush->next;
+        FreeBrushFaces(brush->faces);
+        FreeMem(brush, BRUSH, 1);
     }
 }
 
@@ -545,17 +545,17 @@ AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
 
     len = VectorLength(plane->normal);
     if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
-	Error("%s: invalid normal (vector length %.4f)", __func__, len);
+        Error("%s: invalid normal (vector length %.4f)", __func__, len);
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-	if (VectorCompare(mapface->plane.normal, plane->normal) &&
-	    fabs(mapface->plane.dist - plane->dist) < ON_EPSILON)
-	    return;
+        if (VectorCompare(mapface->plane.normal, plane->normal) &&
+            fabs(mapface->plane.dist - plane->dist) < ON_EPSILON)
+            return;
     }
     if (hullbrush->numfaces == MAX_FACES)
-	Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
-	      MAX_FACES, hullbrush->srcbrush->faces[0].linenum);
+        Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
+              MAX_FACES, hullbrush->srcbrush->faces[0].linenum);
 
     mapface->plane = *plane;
     mapface->texinfo = 0;
@@ -584,10 +584,10 @@ TestAddPlane(hullbrush_t *hullbrush, plane_t *plane)
     /* see if the plane has already been added */
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-	if (PlaneEqual(plane, &mapface->plane))
-	    return;
-	if (PlaneInvEqual(plane, &mapface->plane))
-	    return;
+        if (PlaneEqual(plane, &mapface->plane))
+            return;
+        if (PlaneInvEqual(plane, &mapface->plane))
+            return;
     }
 
     /* check all the corner points */
@@ -598,23 +598,23 @@ TestAddPlane(hullbrush_t *hullbrush, plane_t *plane)
     c = hullbrush->numpoints * 8;
 
     for (i = 0; i < c; i++, corner += 3) {
-	d = DotProduct(corner, plane->normal) - plane->dist;
-	if (d < -ON_EPSILON) {
-	    if (points_front)
-		return;
-	    points_back = 1;
-	} else if (d > ON_EPSILON) {
-	    if (points_back)
-		return;
-	    points_front = 1;
-	}
+        d = DotProduct(corner, plane->normal) - plane->dist;
+        if (d < -ON_EPSILON) {
+            if (points_front)
+                return;
+            points_back = 1;
+        } else if (d > ON_EPSILON) {
+            if (points_back)
+                return;
+            points_front = 1;
+        }
     }
 
     // the plane is a seperator
     if (points_front) {
-	VectorSubtract(vec3_origin, plane->normal, flip.normal);
-	flip.dist = -plane->dist;
-	plane = &flip;
+        VectorSubtract(vec3_origin, plane->normal, flip.normal);
+        flip.dist = -plane->dist;
+        plane = &flip;
     }
 
     AddBrushPlane(hullbrush, plane);
@@ -635,26 +635,26 @@ AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
     int x, y, z;
 
     for (i = 0; i < hullbrush->numpoints; i++)
-	if (VectorCompare(p, hullbrush->points[i]))
-	    return i;
+        if (VectorCompare(p, hullbrush->points[i]))
+            return i;
 
     if (hullbrush->numpoints == MAX_HULL_POINTS)
-	Error("hullbrush->numpoints == MAX_HULL_POINTS (%d), "
-	      "source brush on line %d",
-	      MAX_HULL_POINTS, hullbrush->srcbrush->faces[0].linenum);
+        Error("hullbrush->numpoints == MAX_HULL_POINTS (%d), "
+              "source brush on line %d",
+              MAX_HULL_POINTS, hullbrush->srcbrush->faces[0].linenum);
 
     VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
 
     c = hullbrush->corners[i * 8];
 
     for (x = 0; x < 2; x++)
-	for (y = 0; y < 2; y++)
-	    for (z = 0; z < 2; z++) {
-		c[0] = p[0] + hull_size[x][0];
-		c[1] = p[1] + hull_size[y][1];
-		c[2] = p[2] + hull_size[z][2];
-		c += 3;
-	    }
+        for (y = 0; y < 2; y++)
+            for (z = 0; z < 2; z++) {
+                c[0] = p[0] + hull_size[x][0];
+                c[1] = p[1] + hull_size[y][1];
+                c[2] = p[2] + hull_size[z][2];
+                c += 3;
+            }
 
     hullbrush->numpoints++;
 
@@ -683,14 +683,14 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     pt2 = AddHullPoint(hullbrush, p2, hull_size);
 
     for (i = 0; i < hullbrush->numedges; i++)
-	if ((hullbrush->edges[i][0] == pt1 && hullbrush->edges[i][1] == pt2)
-	    || (hullbrush->edges[i][0] == pt2 && hullbrush->edges[i][1] == pt1))
-	    return;
+        if ((hullbrush->edges[i][0] == pt1 && hullbrush->edges[i][1] == pt2)
+            || (hullbrush->edges[i][0] == pt2 && hullbrush->edges[i][1] == pt1))
+            return;
 
     if (hullbrush->numedges == MAX_HULL_EDGES)
-	Error("hullbrush->numedges == MAX_HULL_EDGES (%d), "
-	      "source brush on line %d",
-	      MAX_HULL_EDGES, hullbrush->srcbrush->faces[0].linenum);
+        Error("hullbrush->numedges == MAX_HULL_EDGES (%d), "
+              "source brush on line %d",
+              MAX_HULL_EDGES, hullbrush->srcbrush->faces[0].linenum);
 
     hullbrush->edges[i][0] = pt1;
     hullbrush->edges[i][1] = pt2;
@@ -700,29 +700,29 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     VectorNormalize(edgevec);
 
     for (a = 0; a < 3; a++) {
-	b = (a + 1) % 3;
-	c = (a + 2) % 3;
+        b = (a + 1) % 3;
+        c = (a + 2) % 3;
 
-	planevec[a] = 1;
-	planevec[b] = 0;
-	planevec[c] = 0;
-	CrossProduct(planevec, edgevec, plane.normal);
-	length = VectorLength(plane.normal);
+        planevec[a] = 1;
+        planevec[b] = 0;
+        planevec[c] = 0;
+        CrossProduct(planevec, edgevec, plane.normal);
+        length = VectorLength(plane.normal);
 
-	/* If this edge is almost parallel to the hull edge, skip it. */
-	if (length < ANGLEEPSILON)
-	    continue;
+        /* If this edge is almost parallel to the hull edge, skip it. */
+        if (length < ANGLEEPSILON)
+            continue;
 
-	VectorScale(plane.normal, 1.0 / length, plane.normal);
-	for (d = 0; d <= 1; d++) {
-	    for (e = 0; e <= 1; e++) {
-		VectorCopy(p1, planeorg);
-		planeorg[b] += hull_size[d][b];
-		planeorg[c] += hull_size[e][c];
-		plane.dist = DotProduct(planeorg, plane.normal);
-		TestAddPlane(hullbrush, &plane);
-	    }
-	}
+        VectorScale(plane.normal, 1.0 / length, plane.normal);
+        for (d = 0; d <= 1; d++) {
+            for (e = 0; e <= 1; e++) {
+                VectorCopy(p1, planeorg);
+                planeorg[b] += hull_size[d][b];
+                planeorg[c] += hull_size[e][c];
+                plane.dist = DotProduct(planeorg, plane.normal);
+                TestAddPlane(hullbrush, &plane);
+            }
+        }
     }
 }
 
@@ -747,42 +747,42 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
 
     // create all the hull points
     for (f = facelist; f; f = f->next)
-	for (i = 0; i < f->w.numpoints; i++) {
-	    AddHullPoint(hullbrush, f->w.points[i], hull_size);
-	    cBevEdge++;
-	}
+        for (i = 0; i < f->w.numpoints; i++) {
+            AddHullPoint(hullbrush, f->w.points[i], hull_size);
+            cBevEdge++;
+        }
 
     // expand all of the planes
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-	VectorCopy(vec3_origin, corner);
-	for (x = 0; x < 3; x++) {
-	    if (mapface->plane.normal[x] > 0)
-		corner[x] = hull_size[1][x];
-	    else if (mapface->plane.normal[x] < 0)
-		corner[x] = hull_size[0][x];
-	}
-	mapface->plane.dist += DotProduct(corner, mapface->plane.normal);
+        VectorCopy(vec3_origin, corner);
+        for (x = 0; x < 3; x++) {
+            if (mapface->plane.normal[x] > 0)
+                corner[x] = hull_size[1][x];
+            else if (mapface->plane.normal[x] < 0)
+                corner[x] = hull_size[0][x];
+        }
+        mapface->plane.dist += DotProduct(corner, mapface->plane.normal);
     }
 
     // add any axis planes not contained in the brush to bevel off corners
     for (x = 0; x < 3; x++)
-	for (s = -1; s <= 1; s += 2) {
-	    // add the plane
-	    VectorCopy(vec3_origin, plane.normal);
-	    plane.normal[x] = (vec_t)s;
-	    if (s == -1)
-		plane.dist = -hullbrush->mins[x] + -hull_size[0][x];
-	    else
-		plane.dist = hullbrush->maxs[x] + hull_size[1][x];
-	    AddBrushPlane(hullbrush, &plane);
-	}
+        for (s = -1; s <= 1; s += 2) {
+            // add the plane
+            VectorCopy(vec3_origin, plane.normal);
+            plane.normal[x] = (vec_t)s;
+            if (s == -1)
+                plane.dist = -hullbrush->mins[x] + -hull_size[0][x];
+            else
+                plane.dist = hullbrush->maxs[x] + hull_size[1][x];
+            AddBrushPlane(hullbrush, &plane);
+        }
 
     // add all of the edge bevels
     for (f = facelist; f; f = f->next)
-	for (i = 0; i < f->w.numpoints; i++)
-	    AddHullEdge(hullbrush, f->w.points[i],
-			f->w.points[(i + 1) % f->w.numpoints], hull_size);
+        for (i = 0; i < f->w.numpoints; i++)
+            AddHullEdge(hullbrush, f->w.points[i],
+                        f->w.points[(i + 1) % f->w.numpoints], hull_size);
 }
 
 //============================================================================
@@ -798,20 +798,20 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     texname = map.miptex[texinfo[mapface->texinfo].miptex];
 
     if (!Q_strcasecmp(texname, "hint") || !Q_strcasecmp(texname, "hintskip"))
-	return CONTENTS_HINT;
+        return CONTENTS_HINT;
     if (!Q_strcasecmp(texname, "clip"))
-	return CONTENTS_CLIP;
+        return CONTENTS_CLIP;
 
     if (texname[0] == '*') {
-	if (!Q_strncasecmp(texname + 1, "lava", 4))
-	    return CONTENTS_LAVA;
-	if (!Q_strncasecmp(texname + 1, "slime", 5))
-	    return CONTENTS_SLIME;
-	return CONTENTS_WATER;
+        if (!Q_strncasecmp(texname + 1, "lava", 4))
+            return CONTENTS_LAVA;
+        if (!Q_strncasecmp(texname + 1, "slime", 5))
+            return CONTENTS_SLIME;
+        return CONTENTS_WATER;
     }
 
     if (!Q_strncasecmp(texname, "sky", 3))
-	return CONTENTS_SKY;
+        return CONTENTS_SKY;
 
     return CONTENTS_SOLID;
 }
@@ -826,7 +826,7 @@ Converts a mapbrush to a bsp brush
 */
 static brush_t *
 LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
-	  const int hullnum)
+          const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -834,78 +834,78 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
 
     // create the faces
     if (mapbrush->numfaces > MAX_FACES)
-	Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
-	      MAX_FACES, mapbrush->faces[0].linenum);
+        Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
+              MAX_FACES, mapbrush->faces[0].linenum);
 
     hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
     memcpy(hullbrush.faces, mapbrush->faces,
-	   mapbrush->numfaces * sizeof(mapface_t));
+           mapbrush->numfaces * sizeof(mapface_t));
 
     facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
     if (!facelist) {
-	Message(msgWarning, warnNoBrushFaces);
-	return NULL;
+        Message(msgWarning, warnNoBrushFaces);
+        return NULL;
     }
 
     if (options.hexen2)
     {
-	if (hullnum == 1) {
-	    vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
-	    ExpandBrush(&hullbrush, size, facelist);
-	    FreeBrushFaces(facelist);
-	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	}
-	else	if (hullnum == 2) {
-	    vec3_t size[2] = { {-24, -24, -20}, {24, 24, 20} };
-	    ExpandBrush(&hullbrush, size, facelist);
-	    FreeBrushFaces(facelist);
-	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	}
-	else	if (hullnum == 3) {
-	    vec3_t size[2] = { {-16, -16, -12}, {16, 16, 16} };
-	    ExpandBrush(&hullbrush, size, facelist);
-	    FreeBrushFaces(facelist);
-	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	}
-	else	if (hullnum == 4) {
+        if (hullnum == 1) {
+            vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+        else    if (hullnum == 2) {
+            vec3_t size[2] = { {-24, -24, -20}, {24, 24, 20} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+        else    if (hullnum == 3) {
+            vec3_t size[2] = { {-16, -16, -12}, {16, 16, 16} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+        else    if (hullnum == 4) {
 #if 0
-	    if (options.hexen2 == 1) { /*original game*/
-		vec3_t size[2] = { {-40, -40, -42}, {40, 40, 42} };
-		ExpandBrush(&hullbrush, size, facelist);
-		FreeBrushFaces(facelist);
-		facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	    } else
+            if (options.hexen2 == 1) { /*original game*/
+                vec3_t size[2] = { {-40, -40, -42}, {40, 40, 42} };
+                ExpandBrush(&hullbrush, size, facelist);
+                FreeBrushFaces(facelist);
+                facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            } else
 #endif
-	    {	/*mission pack*/
-		    vec3_t size[2] = { {-8, -8, -8}, {8, 8, 8} };
-		    ExpandBrush(&hullbrush, size, facelist);
-		    FreeBrushFaces(facelist);
-		    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	    }
-	}
-	else	if (hullnum == 5) {
-	    vec3_t size[2] = { {-48, -48, -50}, {48, 48, 50} };
-	    ExpandBrush(&hullbrush, size, facelist);
-	    FreeBrushFaces(facelist);
-	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	}
+            {   /*mission pack*/
+                    vec3_t size[2] = { {-8, -8, -8}, {8, 8, 8} };
+                    ExpandBrush(&hullbrush, size, facelist);
+                    FreeBrushFaces(facelist);
+                    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            }
+        }
+        else    if (hullnum == 5) {
+            vec3_t size[2] = { {-48, -48, -50}, {48, 48, 50} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
     }
     else
     {
-	if (hullnum == 1) {
-	    vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
+        if (hullnum == 1) {
+            vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
 
-	    ExpandBrush(&hullbrush, size, facelist);
-	    FreeBrushFaces(facelist);
-	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	} else if (hullnum == 2) {
-	    vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        } else if (hullnum == 2) {
+            vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
-	    ExpandBrush(&hullbrush, size, facelist);
-	    FreeBrushFaces(facelist);
-	    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
-	}
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
     }
 
     // create the brush
@@ -953,115 +953,115 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     /* Hipnotic rotation */
     VectorCopy(vec3_origin, rotate_offset);
     if (!strncmp(classname, "rotate_", 7)) {
-	FixRotateOrigin(dst);
-	GetVectorForKey(dst, "origin", rotate_offset);
+        FixRotateOrigin(dst);
+        GetVectorForKey(dst, "origin", rotate_offset);
     }
 
     /* If the source entity is func_detail, set the content flag */
     if (!Q_strcasecmp(classname, "func_detail"))
-	cflags |= CFLAGS_DETAIL;
+        cflags |= CFLAGS_DETAIL;
 
     mapbrush = src->mapbrushes;
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
-	contents = Brush_GetContents(mapbrush);
+        contents = Brush_GetContents(mapbrush);
 
-	/*
-	 * "clip" brushes don't show up in the draw hull, but we still want to
-	 * include them in the model bounds so collision detection works
-	 * correctly.
-	 */
-	if (contents == CONTENTS_CLIP) {
-	    if (!hullnum) {
-		brush = LoadBrush(mapbrush, rotate_offset, hullnum);
-		if (brush) {
-		    AddToBounds(dst, brush->mins);
-		    AddToBounds(dst, brush->maxs);
-		    FreeBrushFaces(brush->faces);
-		    FreeMem(brush, BRUSH, 1);
-		}
-		continue;
-	    }
-	    contents = CONTENTS_SOLID;
-	}
+        /*
+         * "clip" brushes don't show up in the draw hull, but we still want to
+         * include them in the model bounds so collision detection works
+         * correctly.
+         */
+        if (contents == CONTENTS_CLIP) {
+            if (!hullnum) {
+                brush = LoadBrush(mapbrush, rotate_offset, hullnum);
+                if (brush) {
+                    AddToBounds(dst, brush->mins);
+                    AddToBounds(dst, brush->maxs);
+                    FreeBrushFaces(brush->faces);
+                    FreeMem(brush, BRUSH, 1);
+                }
+                continue;
+            }
+            contents = CONTENTS_SOLID;
+        }
 
-	/* "hint" brushes don't affect the collision hulls */
-	if (contents == CONTENTS_HINT) {
-	    if (hullnum)
-		continue;
-	    contents = CONTENTS_EMPTY;
-	}
+        /* "hint" brushes don't affect the collision hulls */
+        if (contents == CONTENTS_HINT) {
+            if (hullnum)
+                continue;
+            contents = CONTENTS_EMPTY;
+        }
 
-	/* entities never use water merging */
-	if (dst != pWorldEnt)
-	    contents = CONTENTS_SOLID;
+        /* entities never use water merging */
+        if (dst != pWorldEnt)
+            contents = CONTENTS_SOLID;
 
-	/* nonsolid brushes don't show up in clipping hulls */
-	if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
-	    continue;
+        /* nonsolid brushes don't show up in clipping hulls */
+        if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
+            continue;
 
-	/* sky brushes are solid in the collision hulls */
-	if (hullnum && contents == CONTENTS_SKY)
-	    contents = CONTENTS_SOLID;
+        /* sky brushes are solid in the collision hulls */
+        if (hullnum && contents == CONTENTS_SKY)
+            contents = CONTENTS_SOLID;
 
-	brush = LoadBrush(mapbrush, rotate_offset, hullnum);
-	if (!brush)
-	    continue;
+        brush = LoadBrush(mapbrush, rotate_offset, hullnum);
+        if (!brush)
+            continue;
 
-	dst->numbrushes++;
-	brush->contents = contents;
-	brush->cflags = cflags;
-	if (brush->contents != CONTENTS_SOLID) {
-	    brush->next = nonsolid;
-	    nonsolid = brush;
-	} else {
-	    brush->next = solid;
-	    solid = brush;
-	}
+        dst->numbrushes++;
+        brush->contents = contents;
+        brush->cflags = cflags;
+        if (brush->contents != CONTENTS_SOLID) {
+            brush->next = nonsolid;
+            nonsolid = brush;
+        } else {
+            brush->next = solid;
+            solid = brush;
+        }
 
-	AddToBounds(dst, brush->mins);
-	AddToBounds(dst, brush->maxs);
+        AddToBounds(dst, brush->mins);
+        AddToBounds(dst, brush->maxs);
 
-	Message(msgPercent, i + 1, src->nummapbrushes);
+        Message(msgPercent, i + 1, src->nummapbrushes);
     }
 
     if (!nonsolid) {
-	/* No non-solids and no dst brushes */
-	dst->brushes = solid;
-	return;
+        /* No non-solids and no dst brushes */
+        dst->brushes = solid;
+        return;
     }
     if (nonsolid->contents == CONTENTS_SOLID) {
-	/* No non-solids added */
-	if (!solid)
-	    return;
+        /* No non-solids added */
+        if (!solid)
+            return;
 
-	/* Add the new solids to the head of the dst list */
-	brush = dst->brushes;
-	dst->brushes = solid;
-	next = solid->next;
-	while (next) {
-	    solid = next;
-	    next = next->next;
-	}
-	solid->next = brush;
-	return;
+        /* Add the new solids to the head of the dst list */
+        brush = dst->brushes;
+        dst->brushes = solid;
+        next = solid->next;
+        while (next) {
+            solid = next;
+            next = next->next;
+        }
+        solid->next = brush;
+        return;
     }
 
     /* Insert the non-solids at the dst head */
     dst->brushes = nonsolid;
     next = nonsolid->next;
     while (next && next->contents != CONTENTS_SOLID) {
-	nonsolid = next;
-	next = next->next;
+        nonsolid = next;
+        next = next->next;
     }
     /* If no new solids to add, we are done */
     if (!solid)
-	return;
+        return;
 
     /* Insert new solids and re-attach the existing solids list (next) */
     nonsolid->next = solid;
     if (next) {
-	while (solid->next)
-	    solid = solid->next;
-	solid->next = next;
+        while (solid->next)
+            solid = solid->next;
+        solid->next = next;
     }
 }

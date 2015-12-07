@@ -75,17 +75,17 @@ Error(const char *error, ...)
 /*
  * qdir will hold the path up to the base directory (basedir), including the
  * slash:
- *	c:\quake\
- *	/usr/local/games/quake/
+ *      c:\quake\
+ *      /usr/local/games/quake/
  *
  * gamedir will hold qdir + the game directory (id1, hipnotic, etc).
  * SetQdirFromPath requires an input containing both the basedir and the
  * gamedir:
- *	c:\quake\id1\somefile.dat
- *	/usr/local/games/quake/id1/somefile.dat
+ *      c:\quake\id1\somefile.dat
+ *      /usr/local/games/quake/id1/somefile.dat
  * or similar partials:
- *	id1\somefile.dat
- *	quake/id1/somefile.dat
+ *      id1\somefile.dat
+ *      quake/id1/somefile.dat
  *
  */
 
@@ -100,38 +100,38 @@ SetQdirFromPath(char *path)
     char *c, *mark;
 
     if (!(path[0] == '/' || path[0] == '\\' || path[1] == ':')) {
-	/* path is partial */
-	Q_getwd(temp);
-	strcat(temp, path);
-	path = temp;
+        /* path is partial */
+        Q_getwd(temp);
+        strcat(temp, path);
+        path = temp;
     }
 
     c = path + strlen(path);
     while (c > path && *c != '/' && *c != '\\')
-	c--;
+        c--;
     if (c == path)
-	goto out_err;
+        goto out_err;
     mark = c + 1;
     c--;
 
     /* search for the basedir in path */
     while (c != path) {
-	if (!Q_strncasecmp(c, basedir, sizeof(basedir) - 1)) {
-	    strncpy (qdir, path, c + sizeof(basedir) - path);
-	    logprint("qdir: %s\n", qdir);
-	    /* now search for a gamedir in path */
-	    c += sizeof(basedir);
-	    while (c < mark) {
-		if (*c == '/' || *c == '\\') {
-		    strncpy(gamedir, path, c + 1 - path);
-		    logprint("gamedir: %s\n", gamedir);
-		    return;
-		}
-		c++;
-	    }
-	    Error("No gamedir in %s", path);
-	}
-	c--;
+        if (!Q_strncasecmp(c, basedir, sizeof(basedir) - 1)) {
+            strncpy (qdir, path, c + sizeof(basedir) - path);
+            logprint("qdir: %s\n", qdir);
+            /* now search for a gamedir in path */
+            c += sizeof(basedir);
+            while (c < mark) {
+                if (*c == '/' || *c == '\\') {
+                    strncpy(gamedir, path, c + 1 - path);
+                    logprint("gamedir: %s\n", gamedir);
+                    return;
+                }
+                c++;
+            }
+            Error("No gamedir in %s", path);
+        }
+        c--;
     }
 out_err:
     Error("%s: no '%s' in %s", __func__, basedir, path);
@@ -143,9 +143,9 @@ ExpandPath(char *path)
     static char full[1024];
 
     if (!qdir[0])
-	Error("ExpandPath called without qdir set");
+        Error("ExpandPath called without qdir set");
     if (path[0] == '/' || path[0] == '\\' || path[1] == ':')
-	return path;
+        return path;
     sprintf(full, "%s%s", qdir, path);
     return full;
 }
@@ -159,8 +159,8 @@ ExpandPathAndArchive(char *path)
     expanded = ExpandPath(path);
 
     if (archive) {
-	sprintf(archivename, "%s/%s", archivedir, path);
-	Q_CopyFile(expanded, archivename);
+        sprintf(archivename, "%s/%s", archivedir, path);
+        Q_CopyFile(expanded, archivename);
     }
     return expanded;
 }
@@ -185,11 +185,11 @@ double
 I_FloatTime(void)
 {
 #ifdef WIN32
-	FILETIME ft;
-	uint64_t hundred_ns;
-	GetSystemTimeAsFileTime(&ft);
-	hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
-	return (double)hundred_ns / 10000000.0;
+        FILETIME ft;
+        uint64_t hundred_ns;
+        GetSystemTimeAsFileTime(&ft);
+        hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
+        return (double)hundred_ns / 10000000.0;
 #else
     struct timeval tv;
     
@@ -213,11 +213,11 @@ Q_getwd(char *out)
 
     pwd = getenv("PWD");
     if (!pwd)
-	Error("Couldn't get working directory - "
-	      "PWD not set in environment\n");
+        Error("Couldn't get working directory - "
+              "PWD not set in environment\n");
     len = strlen(pwd);
     if (len > 255)
-	Error("Not enough space to hold working dir\n");
+        Error("Not enough space to hold working dir\n");
     strcpy(out, pwd);
 
 #else
@@ -231,13 +231,13 @@ Q_mkdir(const char *path)
 {
 #ifdef WIN32
     if (_mkdir(path) != -1)
-	return;
+        return;
 #else
     if (mkdir(path, 0777) != -1)
-	return;
+        return;
 #endif
     if (errno != EEXIST)
-	Error("mkdir %s: %s", path, strerror(errno));
+        Error("mkdir %s: %s", path, strerror(errno));
 }
 
 /*
@@ -252,7 +252,7 @@ FileTime(const char *path)
     struct stat buf;
 
     if (stat(path, &buf) == -1)
-	return -1;
+        return -1;
 
     return buf.st_mtime;
 }
@@ -273,68 +273,68 @@ COM_Parse(char *data)
     com_token[0] = 0;
 
     if (!data)
-	return NULL;
+        return NULL;
 
     /* skip whitespace */
   skipwhite:
     while ((c = *data) <= ' ') {
-	if (c == 0) {
-	    com_eof = true;
-	    return NULL;	/* end of file; */
-	}
-	data++;
+        if (c == 0) {
+            com_eof = true;
+            return NULL;        /* end of file; */
+        }
+        data++;
     }
 
     /* skip // (double forward slash) comments */
     if (c == '/' && data[1] == '/') {
-	while (*data && *data != '\n')
-	    data++;
-	goto skipwhite;
+        while (*data && *data != '\n')
+            data++;
+        goto skipwhite;
     }
 
     /* skip C-style comments */
     if (c == '/' && data[1] == '*') {
-	data += 2;
-	while (*data && !(*data == '*' && data[1] == '/'))
-	    data++;
-	if (*data)
-	    data += 2;
-	goto skipwhite;
+        data += 2;
+        while (*data && !(*data == '*' && data[1] == '/'))
+            data++;
+        if (*data)
+            data += 2;
+        goto skipwhite;
     }
 
     /* handle quoted strings specially */
     if (c == '\"') {
-	data++;
-	do {
-	    c = *data;
-	    if (c)
-		data++;
-	    if (c == '\"') {
-		com_token[len] = 0;
-		return data;
-	    }
-	    com_token[len] = c;
-	    len++;
-	} while (1);
+        data++;
+        do {
+            c = *data;
+            if (c)
+                data++;
+            if (c == '\"') {
+                com_token[len] = 0;
+                return data;
+            }
+            com_token[len] = c;
+            len++;
+        } while (1);
     }
 
     /* parse single characters */
     if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ':') {
-	com_token[len] = c;
-	len++;
-	com_token[len] = 0;
-	return data + 1;
+        com_token[len] = c;
+        len++;
+        com_token[len] = 0;
+        return data + 1;
     }
 
     /* parse a regular word */
     do {
-	com_token[len] = c;
-	data++;
-	len++;
-	c = *data;
-	if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\''
-	    || c == ':')
-	    break;
+        com_token[len] = c;
+        data++;
+        len++;
+        c = *data;
+        if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\''
+            || c == ':')
+            break;
     } while (c > 32);
 
     com_token[len] = 0;
@@ -347,22 +347,22 @@ Q_strncasecmp(const char *s1, const char *s2, int n)
     int c1, c2;
 
     while (1) {
-	c1 = *s1++;
-	c2 = *s2++;
+        c1 = *s1++;
+        c2 = *s2++;
 
-	if (!n--)
-	    return 0;		/* strings are equal until end point */
+        if (!n--)
+            return 0;           /* strings are equal until end point */
 
-	if (c1 != c2) {
-	    if (c1 >= 'a' && c1 <= 'z')
-		c1 -= ('a' - 'A');
-	    if (c2 >= 'a' && c2 <= 'z')
-		c2 -= ('a' - 'A');
-	    if (c1 != c2)
-		return -1;	/* strings not equal */
-	}
-	if (!c1)
-	    return 0;		/* strings are equal */
+        if (c1 != c2) {
+            if (c1 >= 'a' && c1 <= 'z')
+                c1 -= ('a' - 'A');
+            if (c2 >= 'a' && c2 <= 'z')
+                c2 -= ('a' - 'A');
+            if (c1 != c2)
+                return -1;      /* strings not equal */
+        }
+        if (!c1)
+            return 0;           /* strings are equal */
     }
 
     return -1;
@@ -381,8 +381,8 @@ Q_strupr(char *start)
 
     in = start;
     while (*in) {
-	*in = toupper(*in);
-	in++;
+        *in = toupper(*in);
+        in++;
     }
     return start;
 }
@@ -394,8 +394,8 @@ Q_strlower(char *start)
 
     in = start;
     while (*in) {
-	*in = tolower(*in);
-	in++;
+        *in = tolower(*in);
+        in++;
     }
     return start;
 }
@@ -419,8 +419,8 @@ CheckParm(const char *check)
     int i;
 
     for (i = 1; i < myargc; i++) {
-	if (!Q_strcasecmp(check, myargv[i]))
-	    return i;
+        if (!Q_strcasecmp(check, myargv[i]))
+            return i;
     }
 
     return 0;
@@ -454,7 +454,7 @@ SafeOpenWrite(const char *filename)
     f = fopen(filename, "wb");
 
     if (!f)
-	Error("Error opening %s: %s", filename, strerror(errno));
+        Error("Error opening %s: %s", filename, strerror(errno));
 
     return f;
 }
@@ -467,7 +467,7 @@ SafeOpenRead(const char *filename)
     f = fopen(filename, "rb");
 
     if (!f)
-	Error("Error opening %s: %s", filename, strerror(errno));
+        Error("Error opening %s: %s", filename, strerror(errno));
 
     return f;
 }
@@ -476,14 +476,14 @@ void
 SafeRead(FILE *f, void *buffer, int count)
 {
     if (fread(buffer, 1, count, f) != (size_t) count)
-	Error("File read failure");
+        Error("File read failure");
 }
 
 void
 SafeWrite(FILE *f, const void *buffer, int count)
 {
     if (fwrite(buffer, 1, count, f) != (size_t) count)
-	Error("File read failure");
+        Error("File read failure");
 }
 
 /*
@@ -503,7 +503,7 @@ LoadFile(const char *filename, void *destptr)
     length = Sys_filelength(file);
     buffer = *bufferptr = malloc(length + 1);
     if (!buffer)
-	Error("%s: allocation of %i bytes failed.", __func__, length);
+        Error("%s: allocation of %i bytes failed.", __func__, length);
 
     SafeRead(file, buffer, length);
     fclose(file);
@@ -537,9 +537,9 @@ DefaultExtension(char *path, const char *extension)
     src = path + strlen(path) - 1;
 
     while (*src != PATHSEPERATOR && src != path) {
-	if (*src == '.')
-	    return;		/* it has an extension */
-	src--;
+        if (*src == '.')
+            return;             /* it has an extension */
+        src--;
     }
 
     strcat(path, extension);
@@ -551,7 +551,7 @@ DefaultPath(char *path, const char *basepath)
     char temp[128];
 
     if (path[0] == PATHSEPERATOR)
-	return;			/* absolute path location */
+        return;                 /* absolute path location */
     strcpy(temp, path);
     strcpy(path, basepath);
     strcat(path, temp);
@@ -564,7 +564,7 @@ StripFilename(char *path)
 
     length = strlen(path) - 1;
     while (length > 0 && path[length] != PATHSEPERATOR)
-	length--;
+        length--;
     path[length] = '\0';
 }
 
@@ -575,12 +575,12 @@ StripExtension(char *path)
 
     length = strlen(path) - 1;
     while (length > 0 && path[length] != '.') {
-	length--;
-	if (path[length] == '/')
-	    return;		/* no extension */
+        length--;
+        if (path[length] == '/')
+            return;             /* no extension */
     }
     if (length)
-	path[length] = 0;
+        path[length] = 0;
 }
 
 
@@ -598,7 +598,7 @@ ExtractFilePath(char *path, char *dest)
 
     /* back up until a \ or the start */
     while (src != path && *(src - 1) != PATHSEPERATOR)
-	src--;
+        src--;
 
     memcpy(dest, path, src - path);
     dest[src - path] = 0;
@@ -613,10 +613,10 @@ ExtractFileBase(char *path, char *dest)
 
     /* back up until a \ or the start */
     while (src != path && *(src - 1) != PATHSEPERATOR)
-	src--;
+        src--;
 
     while (*src && *src != '.') {
-	*dest++ = *src++;
+        *dest++ = *src++;
     }
     *dest = 0;
 }
@@ -630,10 +630,10 @@ ExtractFileExtension(char *path, char *dest)
 
     /* back up until a . or the start */
     while (src != path && *(src - 1) != '.')
-	src--;
+        src--;
     if (src == path) {
-	*dest = 0;		/* no extension */
-	return;
+        *dest = 0;              /* no extension */
+        return;
     }
 
     strcpy(dest, src);
@@ -654,16 +654,16 @@ ParseHex(char *hex)
     str = hex;
 
     while (*str) {
-	num <<= 4;
-	if (*str >= '0' && *str <= '9')
-	    num += *str - '0';
-	else if (*str >= 'a' && *str <= 'f')
-	    num += 10 + *str - 'a';
-	else if (*str >= 'A' && *str <= 'F')
-	    num += 10 + *str - 'A';
-	else
-	    Error("Bad hex number: %s", hex);
-	str++;
+        num <<= 4;
+        if (*str >= '0' && *str <= '9')
+            num += *str - '0';
+        else if (*str >= 'a' && *str <= 'f')
+            num += 10 + *str - 'a';
+        else if (*str >= 'A' && *str <= 'F')
+            num += 10 + *str - 'A';
+        else
+            Error("Bad hex number: %s", hex);
+        str++;
     }
 
     return num;
@@ -673,9 +673,9 @@ int
 ParseNum(char *str)
 {
     if (str[0] == '$')
-	return ParseHex(str + 1);
+        return ParseHex(str + 1);
     if (str[0] == '0' && str[1] == 'x')
-	return ParseHex(str + 2);
+        return ParseHex(str + 2);
     return atol(str);
 }
 
@@ -733,8 +733,8 @@ float
 LittleFloat(float l)
 {
     union {
-	byte b[4];
-	float f;
+        byte b[4];
+        float f;
     } in , out;
 
     in.f = l;
@@ -796,8 +796,8 @@ float
 BigFloat(float l)
 {
     union {
-	byte b[4];
-	float f;
+        byte b[4];
+        float f;
     } in , out;
 
     in.f = l;
@@ -898,12 +898,12 @@ CreatePath(char *path)
     char *ofs, c;
 
     for (ofs = path + 1; *ofs; ofs++) {
-	c = *ofs;
-	if (c == '/' || c == '\\') {	/* create the directory */
-	    *ofs = 0;
-	    Q_mkdir(path);
-	    *ofs = c;
-	}
+        c = *ofs;
+        if (c == '/' || c == '\\') {    /* create the directory */
+            *ofs = 0;
+            Q_mkdir(path);
+            *ofs = c;
+        }
     }
 }
 
