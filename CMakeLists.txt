@@ -22,6 +22,11 @@ if (CMAKE_USE_PTHREADS_INIT)
 	add_definitions(-DUSE_PTHREADS)
 endif (CMAKE_USE_PTHREADS_INIT)
 
+# (see http://sourceforge.net/p/mingw-w64/wiki2/printf%20and%20scanf%20family/)
+if (MINGW)
+	add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
+endif (MINGW)
+
 set(STACKSIZE 8388608)
 add_definitions(-DQ_STACKSIZE=${STACKSIZE})
 
