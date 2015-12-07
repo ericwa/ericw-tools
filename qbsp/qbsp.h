@@ -182,7 +182,7 @@ void StripExtension(char *path);
 void StripFilename(char *path);
 int IsAbsolutePath(const char *path);
 int Q_strcasecmp(const char *s1, const char *s2);
-
+int Q_strncasecmp(const char *s1, const char *s2, int n);
 char *copystring(const char *s);
 
 //===== mathlib.h
