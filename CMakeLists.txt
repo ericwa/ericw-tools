@@ -35,8 +35,11 @@ if (WIN32)
 	set(CMAKE_EXE_LINKER_FLAGS -Wl,--stack,${STACKSIZE})
 endif (WIN32)
 
+#MSVC: /MT is to static link the CRT.
 if (MSVC)
-	set(CMAKE_EXE_LINKER_FLAGS /STACK:${STACKSIZE} )
+	set(CMAKE_EXE_LINKER_FLAGS "/STACK:${STACKSIZE}")
+	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 endif (MSVC)
 
 add_subdirectory(bspinfo)
