@@ -24,10 +24,10 @@
 #include <math.h>
 
 #ifdef DOUBLEVEC_T
-typedef double vec_t;
+#define vec_t double
 #define VECT_MAX DBL_MAX;
 #else
-typedef float vec_t;
+#define vec_t float
 #define VECT_MAX FLT_MAX;
 #endif
 typedef vec_t vec3_t[3];

@@ -44,6 +44,7 @@
 
 #ifdef _MSC_VER
 #define __func__ __FUNCTION__
+#define inline __inline
 #endif
 
 #ifndef __GNUC__
@@ -188,10 +189,10 @@ char *copystring(const char *s);
 //===== mathlib.h
 
 #ifdef DOUBLEVEC_T
-typedef double vec_t;
+#define vec_t double
 #define VECT_MAX DBL_MAX
 #else
-typedef float vec_t;
+#define vec_t float
 #define VECT_MAX FLT_MAX
 #endif
 typedef vec_t vec3_t[3];

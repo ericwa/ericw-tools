@@ -41,6 +41,7 @@ typedef unsigned char byte;
 
 #ifdef _MSC_VER
 #define __func__ __FUNCTION__
+#define inline __inline
 #endif
 
 #ifdef __GNUC__
