@@ -42,6 +42,14 @@
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #endif
 
+#ifdef _MSC_VER
+#define __func__ __FUNCTION__
+#endif
+
+#ifndef __GNUC__
+#define __attribute__(x)
+#endif
+
 //===== cmdlib.h
 
 /*
@@ -173,6 +181,7 @@ void DefaultExtension(char *path, const char *extension);
 void StripExtension(char *path);
 void StripFilename(char *path);
 int IsAbsolutePath(const char *path);
+int Q_strcasecmp(const char *s1, const char *s2);
 
 char *copystring(const char *s);
 
@@ -207,18 +216,24 @@ vec_t VectorNormalize(vec3_t v);
 void VectorInverse(vec3_t v);
 void VectorScale(const vec3_t v, const vec_t scale, vec3_t out);
 
-#define min(a,b) ({		\
-	typeof(a) a_ = (a);	\
-	typeof(b) b_ = (b);	\
-	(void)(&a_ == &b_);	\
-	(a_ < b_) ? a_ : b_;	\
+#ifdef __GNUC__
+/* min and max macros with type checking */
+#define qmax(a,b) ({      \
+    typeof(a) a_ = (a);   \
+    typeof(b) b_ = (b);   \
+    (void)(&a_ == &b_);   \
+    (a_ > b_) ? a_ : b_;  \
 })
-#define max(a,b) ({		\
-	typeof(a) a_ = (a);	\
-	typeof(b) b_ = (b);	\
-	(void)(&a_ == &b_);	\
-	(a_ > b_) ? a_ : b_;	\
+#define qmin(a,b) ({      \
+    typeof(a) a_ = (a);   \
+    typeof(b) b_ = (b);   \
+    (void)(&a_ == &b_);   \
+    (a_ < b_) ? a_ : b_;  \
 })
+#else
+#define qmax(a,b) (((a)>(b)) ? (a) : (b))
+#define qmin(a,b) (((a)>(b)) ? (b) : (a))
+#endif
 
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)

@@ -111,15 +111,15 @@ CalcAmbientSounds(bsp2_t *bsp)
 		ofs = bsp->dtexdata.header->dataofs[info->miptex];
 		miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
 
-		if (!strncasecmp(miptex->name, "sky", 3) && ambientsky)
+		if (!Q_strncasecmp(miptex->name, "sky", 3) && ambientsky)
 		    ambient_type = AMBIENT_SKY;
-		else if (!strncasecmp(miptex->name, "*water", 6) && ambientwater)
+		else if (!Q_strncasecmp(miptex->name, "*water", 6) && ambientwater)
 		    ambient_type = AMBIENT_WATER;
-		else if (!strncasecmp(miptex->name, "*04water", 8) && ambientwater)
+		else if (!Q_strncasecmp(miptex->name, "*04water", 8) && ambientwater)
 		    ambient_type = AMBIENT_WATER;
-		else if (!strncasecmp(miptex->name, "*slime", 6) && ambientslime)
+		else if (!Q_strncasecmp(miptex->name, "*slime", 6) && ambientslime)
 		    ambient_type = AMBIENT_WATER;	// AMBIENT_SLIME;
-		else if (!strncasecmp(miptex->name, "*lava", 5) && ambientlava)
+		else if (!Q_strncasecmp(miptex->name, "*lava", 5) && ambientlava)
 		    ambient_type = AMBIENT_LAVA;
 		else
 		    continue;

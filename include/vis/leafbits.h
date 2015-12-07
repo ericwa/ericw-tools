@@ -24,9 +24,19 @@
 #include <string.h>
 
 /* Use some GCC builtins */
-#ifndef ffsl
+#if !defined(ffsl) && defined(__GNUC__)
 #define ffsl __builtin_ffsl
+#elif defined(WIN32)
+inline int ffsl(long int val)
+{
+	unsigned long indexout;
+	unsigned char res = _BitScanForward(&indexout, val);
+	if (!res) return 0;
+	else return indexout + 1;
+}
 #endif
+
+
 #ifndef offsetof
 #define offsetof(type, member)  __builtin_offsetof(type, member)
 #endif

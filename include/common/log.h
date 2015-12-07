@@ -30,6 +30,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#ifndef __GNUC__
+#define __attribute__(x)
+#endif
+
 void init_log(const char *filename);
 void close_log();
 

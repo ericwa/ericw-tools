@@ -157,8 +157,8 @@ DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
 		mid *= (dist1 / (dist1 - dist2));
 		mid += bounds[0][a];
 
-		split_mins = max(min(mid, split_mins), mins[a]);
-		split_maxs = min(max(mid, split_maxs), maxs[a]);
+		split_mins = qmax(qmin(mid, split_mins), mins[a]);
+		split_maxs = qmin(qmax(mid, split_maxs), maxs[a]);
 	    }
 	}
 	if (split->normal[a] > 0) {

@@ -30,6 +30,10 @@ if (WIN32)
 	set(CMAKE_EXE_LINKER_FLAGS -Wl,--stack,${STACKSIZE})
 endif (WIN32)
 
+if (MSVC)
+	set(CMAKE_EXE_LINKER_FLAGS /STACK:${STACKSIZE} )
+endif (MSVC)
+
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)

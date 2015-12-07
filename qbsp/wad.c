@@ -147,7 +147,7 @@ WADList_FindTexture(const wad_t *wadlist, const char *name)
 
     for (wad = wadlist; wad; wad = wad->next)
 	for (i = 0; i < wad->header.numlumps; i++)
-	    if (!strcasecmp(name, wad->lumps[i].name))
+	    if (!Q_strcasecmp(name, wad->lumps[i].name))
 		return &wad->lumps[i];
 
     return NULL;
@@ -225,7 +225,7 @@ WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
     int size;
 
     for (i = 0; i < wad->header.numlumps; i++) {
-	if (!strcasecmp(name, wad->lumps[i].name)) {
+	if (!Q_strcasecmp(name, wad->lumps[i].name)) {
 	    fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
 	    size = fread(dest, 1, wad->lumps[i].disksize, wad->file);
 	    if (size != wad->lumps[i].disksize)
