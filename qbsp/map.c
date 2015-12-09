@@ -846,7 +846,6 @@ WriteEntitiesToString(void)
 {
     char *pCur;
     epair_t *ep;
-    char szLine[129];
     int i;
     int cLen;
     struct lumpdata *entities;
@@ -867,10 +866,7 @@ WriteEntitiesToString(void)
         cLen = 0;
         for (ep = entity->epairs; ep; ep = ep->next) {
             int i = strlen(ep->key) + strlen(ep->value) + 6;
-            if (i <= 128)
-                cLen += i;
-            else
-                cLen += 128;
+            cLen += i;
         }
         // Add 4 for {\n and }\n
         cLen += 4;
@@ -885,10 +881,9 @@ WriteEntitiesToString(void)
 
         for (ep = entity->epairs; ep; ep = ep->next) {
             // Limit on Quake's strings of 128 bytes
-            sprintf(szLine, "\"%.*s\" \"%.*s\"\n", MAX_KEY, ep->key,
-                    122 - (int)strlen(ep->key), ep->value);
-            strcat(pCur, szLine);
-            pCur += strlen(szLine);
+            // TODO: Warn when limit is exceeded
+            int chars_printed = sprintf(pCur, "\"%s\" \"%s\"\n", ep->key, ep->value);
+            pCur += chars_printed;
         }
 
         // No terminating null on this string
