@@ -36,6 +36,10 @@ if (MINGW)
 	add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
 endif (MINGW)
 
+if (UNIX)
+	add_definitions(-DLINUX)
+endif (UNIX)
+
 set(STACKSIZE 8388608)
 add_definitions(-DQ_STACKSIZE=${STACKSIZE})
 add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
