@@ -1,7 +1,5 @@
-Updated 2015-07-13
-
 --------------------------
- tyrutils-ericw (v0.15.1)
+ tyrutils-ericw (v0.15.4)
 --------------------------
   Website:         http://ericwa.github.io/tyrutils-ericw
   Maintainer:      Eric Wasylishen (AKA ericw)
@@ -37,7 +35,7 @@ Included utilities:
 
 See the doc/ directory for more detailed descriptions of the various
 tools capabilities.  See changelog.txt for a brief overview of recent
-changes or git://disenchant.net/tyrutils for the full changelog and
+changes or https://github.com/ericwa/tyrutils-ericw for the full changelog and
 source code.
 
 ---------
