@@ -57,3 +57,10 @@ add_subdirectory(bsputil)
 add_subdirectory(light)
 add_subdirectory(qbsp)
 add_subdirectory(vis)
+
+#CPack configuration
+
+set(CPACK_GENERATOR ZIP)
+set(CPACK_PACKAGE_NAME tyrutils)
+set(CPACK_PACKAGE_VERSION ${GIT_DESCRIBE})
+include(CPack)

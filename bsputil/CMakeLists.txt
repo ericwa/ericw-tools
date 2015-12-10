@@ -10,3 +10,5 @@ set(BSPUTIL_SOURCES
 	${COMMON_INCLUDES})
 
 add_executable(bsputil ${BSPUTIL_SOURCES})
+
+install(TARGETS bsputil RUNTIME DESTINATION bin)

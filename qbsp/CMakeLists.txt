@@ -37,3 +37,5 @@ set(QBSP_SOURCES
 add_definitions(-DDOUBLEVEC_T)
 
 add_executable(qbsp ${QBSP_SOURCES})
+
+install(TARGETS qbsp RUNTIME DESTINATION bin)

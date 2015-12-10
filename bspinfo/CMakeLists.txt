@@ -10,3 +10,5 @@ set(BSPINFO_SOURCES
 	${COMMON_INCLUDES})
 
 add_executable(bspinfo ${BSPINFO_SOURCES})
+
+install(TARGETS bspinfo RUNTIME DESTINATION bin)

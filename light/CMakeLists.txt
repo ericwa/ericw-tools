@@ -22,3 +22,5 @@ set(LIGHT_SOURCES
 
 add_executable(light ${LIGHT_SOURCES})
 target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
+
+install(TARGETS light RUNTIME DESTINATION bin)

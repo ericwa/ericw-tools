@@ -20,3 +20,5 @@ set(VIS_SOURCES
 
 add_executable(vis ${VIS_SOURCES})
 target_link_libraries (vis ${CMAKE_THREAD_LIBS_INIT})
+
+install(TARGETS vis RUNTIME DESTINATION bin)
