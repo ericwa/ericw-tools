@@ -19,7 +19,7 @@ Bugfixes:
 * light: fix _mincolor to accept 0-1 float colors
 * light: fix surface lights on rotating bmodels from incorrectly spawning
          lights near the origin
-* qbsp: log coordinates for "CheckFace: too few points" error
+* qbsp: log coordinates for CheckFace errors
 * qbsp: round texture coordinates that are close to integers, for Darkplaces
         compatibility
 * qbsp: remove 128 char limit on entity key/value values 
