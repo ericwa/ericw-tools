@@ -1,6 +1,15 @@
 cmake_minimum_required (VERSION 2.6)
 project (tyrutils)
 
+# Grab the git describe output and store it in GIT_DESCRIBE
+# Thanks to http://xit0.org/2013/04/cmake-use-git-branch-and-commit-details-in-project/
+execute_process(
+  COMMAND git describe --dirty
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_DESCRIBE
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 include_directories(
 	"${CMAKE_SOURCE_DIR}/include")
 
@@ -29,6 +38,7 @@ endif (MINGW)
 
 set(STACKSIZE 8388608)
 add_definitions(-DQ_STACKSIZE=${STACKSIZE})
+add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
 
 #request 8MB stack
 if (WIN32)
