@@ -404,8 +404,12 @@ SetupSkyDome()
 
         /* calc individual sun brightness */
         numSuns = angleSteps * elevationSteps + 1;
-        logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.light, sunlight2.color[0], sunlight2.color[1], sunlight2.color[2]);
-        logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.light, sunlight3.color[0], sunlight3.color[1], sunlight3.color[2]);
+        if (sunlight2.light > 0) {
+            logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.light, sunlight2.color[0], sunlight2.color[1], sunlight2.color[2]);
+        }
+        if (sunlight3.light > 0) {
+            logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.light, sunlight3.color[0], sunlight3.color[1], sunlight3.color[2]);
+        }
         sunlight2.light /= numSuns;
         sunlight3.light /= numSuns;
 
@@ -422,12 +426,15 @@ SetupSkyDome()
                         direction[ 1 ] = sin( angle ) * cos( elevation );
                         direction[ 2 ] = -sin( elevation );
 
-                        AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+                        /* insert top hemisphere light */
+                        if (sunlight2.light > 0) {
+                            AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+                        }
 
-                        /* create bottom hemisphere */
+                        direction[ 2 ] = -direction[ 2 ];
+                    
+                        /* insert bottom hemisphere light */
                         if (sunlight3.light > 0) {
-                            direction[ 2 ] = -direction[ 2 ];
-                            
                             AddSun(direction, sunlight3, 0.0, sunlight2_dirt);
                         }
                     
@@ -443,11 +450,13 @@ SetupSkyDome()
         /* create vertical sun */
         VectorSet( direction, 0.0f, 0.0f, 1.0f );
 
-        AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+        if (sunlight2.light > 0) {
+            AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+        }
+    
+        VectorSet( direction, 0.0f, 0.0f, -1.0f );
     
         if (sunlight3.light > 0) {
-            VectorSet( direction, 0.0f, 0.0f, -1.0f );
-            
             AddSun(direction, sunlight3, 0.0, sunlight2_dirt);
         }
 }
