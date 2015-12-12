@@ -82,6 +82,7 @@ typedef struct {
     const dmodel_t *model;
     qboolean shadowself;
     lightsample_t minlight;
+    float lightmapscale;
     vec3_t offset;
     qboolean nodirt;    
 } modelinfo_t;
@@ -97,8 +98,10 @@ typedef struct sun_s {
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const dmodel_t *const *tracelist;
 
-void LightFace(bsp2_dface_t *face, const modelinfo_t *modelinfo,
-	       const bsp2_t *bsp);
+struct ltface_ctx;
+struct ltface_ctx *LightFaceInit(const bsp2_t *bsp);
+void LightFaceShutdown(struct ltface_ctx *ctx);
+void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
 void MakeTnodes(const bsp2_t *bsp);
 
 extern float scaledist;
@@ -147,8 +150,8 @@ extern byte *lit_filebase;
 extern byte *lux_filebase;
 
 extern int oversample;
-extern qboolean write_litfile;
-extern qboolean write_luxfile;
+extern int write_litfile;
+extern int write_luxfile;
 extern qboolean onlyents;
 
 void SetupDirt();

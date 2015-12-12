@@ -25,11 +25,25 @@
 #define LIT_VERSION 1
 
 typedef struct litheader_s {
+	struct {
     char ident[4];
     int version;
+	} v1;
+	struct {
+		int numsurfs;
+		int lmsamples;
+	} v2;
 } litheader_t;
 
-void WriteLitFile(const bsp2_t *bsp, const char *filename, int version);
+/* internal representation for bspx/lit2 */
+typedef struct {
+    float lmscale;
+    uint8_t styles[MAXLIGHTMAPS];	/* scaled styles */
+    int32_t lightofs;		/* scaled lighting */
+    unsigned short extent[2];
+} facesup_t;
+
+void WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int version);
 void WriteLuxFile(const bsp2_t *bsp, const char *filename, int version);
 
 #endif /* __LIGHT_LITFILE_H__ */

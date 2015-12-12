@@ -479,6 +479,112 @@ SafeWrite(FILE *f, const void *buffer, int count)
 	Error("File read failure");
 }
 
+typedef struct {
+	char magic[4];
+	unsigned int tableofs;
+	unsigned int numfiles;
+} pakheader_t;
+typedef struct {
+	char name[56];
+	unsigned int offset;
+	unsigned int length;
+} pakfile_t;
+
+/*
+ * ==============
+ * LoadFilePak
+ * reads a file directly out of a pak, to make re-lighting friendlier
+ * writes to the filename, stripping the pak part of the name
+ * ==============
+ */
+int
+LoadFilePak(char *filename, void *destptr)
+{
+    byte **bufferptr = destptr;
+    byte *buffer;
+    FILE *file;
+    int length;
+    char *e = NULL;
+
+    file = fopen(filename, "rb");
+    if (!file)
+    {
+	e = filename + strlen(filename);
+	for(;;)
+	{
+	    while(e > filename)
+		if (*--e == '/')
+			break;
+	    if (*e == '/')
+	    {
+		*e = 0;
+		file = fopen(filename, "rb");
+		if (file)
+		{
+		    byte **bufferptr = destptr;
+		    pakheader_t header;
+		    unsigned int i;
+		    const char *innerfile = e+1;
+		    length = -1;
+		    SafeRead(file, &header, sizeof(header));
+
+		    header.numfiles = LittleLong(header.numfiles) / sizeof(pakfile_t);
+		    header.tableofs = LittleLong(header.tableofs);
+
+		    if (!strncmp(header.magic, "PACK", 4))
+		    {
+			pakfile_t *files = malloc(header.numfiles * sizeof(*files));
+//			printf("%s: %u files\n", pakfilename, header.numfiles);
+			fseek(file, header.tableofs, SEEK_SET);
+			SafeRead(file, files, header.numfiles * sizeof(*files));
+
+			for (i = 0; i < header.numfiles; i++)
+			{
+				if (!strcmp(files[i].name, innerfile))
+				{
+					fseek(file, files[i].offset, SEEK_SET);
+					*bufferptr = malloc(files[i].length + 1);
+					SafeRead(file, *bufferptr, files[i].length);
+					length = files[i].length;
+					break;
+				}
+			}
+			free(files);
+		    }
+
+		    fclose(file);
+		    if (length < 0)
+			Error("Unable to find %s inside %s", innerfile, filename);
+
+		    while(e > filename)
+			if (*--e == '/')
+			{
+			    strcpy(e+1, innerfile);
+			    return length;
+			}
+		    strcpy(filename, innerfile);
+		    return length;
+		}
+		*e = '/';
+	    }
+	}
+	Error("Error opening %s: %s", filename, strerror(errno));
+    }
+
+
+    file = SafeOpenRead(filename);
+    length = Sys_filelength(file);
+    buffer = *bufferptr = malloc(length + 1);
+    if (!buffer)
+	Error("%s: allocation of %i bytes failed.", __func__, length);
+
+    SafeRead(file, buffer, length);
+    fclose(file);
+    buffer[length] = 0;
+
+    return length;
+}
+
 /*
  * ==============
  * LoadFile

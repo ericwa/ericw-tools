@@ -278,7 +278,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
     tracestack_t tracestack[MAX_TSTACK];
     tracestack_t *tstack, *crossnode;
     tnode_t *tnode;
-    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
+//    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
     qboolean isbmodel;
     
     if (traceflags <= 0)

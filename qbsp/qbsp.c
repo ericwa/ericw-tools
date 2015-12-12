@@ -244,6 +244,218 @@ UpdateEntLump(void)
 
 
 /*
+Actually writes out the final bspx BRUSHLIST lump
+This lump replaces the clipnodes stuff for custom collision sizes.
+*/
+void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx)
+{
+	BSPX_AddLump("BRUSHLIST", ctx->lumpinfo, ctx->lumpsize);
+
+//	free(ctx->lumpinfo);
+}
+void BSPX_Brushes_Init(struct bspxbrushes_s *ctx)
+{
+	memset(ctx, 0, sizeof(*ctx));
+}
+/*
+WriteBrushes
+Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific hull sizes
+*/
+#define LittleLong(x) x // FIXME
+#define LittleShort(x) x // FIXME
+#define LittleFloat(x) x // FIXME
+void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes)
+{
+	brush_t *b;
+	face_t *f;
+
+	struct
+	{
+		int ver;
+		int modelnum;
+		int numbrushes;
+		int numfaces;
+	} permodel;
+	struct
+	{
+		float mins[3];
+		float maxs[3];
+		short contents;
+		unsigned short numfaces;
+	} perbrush;
+	struct
+	{
+		float normal[3];
+		float dist;
+	} perface;
+
+	permodel.numbrushes = 0;
+	permodel.numfaces = 0;
+	for (b = brushes; b; b = b->next)
+	{
+		permodel.numbrushes++;
+		for (f = b->faces; f; f = f->next)
+		{
+			/*skip axial*/
+			if (fabs(map.planes[f->planenum].normal[0]) == 1 ||
+				fabs(map.planes[f->planenum].normal[1]) == 1 ||
+				fabs(map.planes[f->planenum].normal[2]) == 1)
+				continue;
+			permodel.numfaces++;
+		}
+	}
+
+	if (ctx->lumpmaxsize < ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))
+	{
+		ctx->lumpmaxsize = (ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))*2;
+		ctx->lumpinfo = realloc(ctx->lumpinfo, ctx->lumpmaxsize);
+	}
+
+	permodel.ver = LittleLong(1);
+	permodel.modelnum = LittleLong(modelnum);
+	permodel.numbrushes = LittleLong(permodel.numbrushes);
+	permodel.numfaces = LittleLong(permodel.numfaces);
+	memcpy(ctx->lumpinfo+ctx->lumpsize, &permodel, sizeof(permodel));
+	ctx->lumpsize += sizeof(permodel);
+
+	for (b = brushes; b; b = b->next)
+	{
+		perbrush.numfaces = 0;
+		for (f = b->faces; f; f = f->next)
+		{
+			/*skip axial*/
+			if (fabs(map.planes[f->planenum].normal[0]) == 1 ||
+				fabs(map.planes[f->planenum].normal[1]) == 1 ||
+				fabs(map.planes[f->planenum].normal[2]) == 1)
+				continue;
+			perbrush.numfaces++;
+		}
+
+		perbrush.mins[0] = LittleFloat(b->mins[0]);
+		perbrush.mins[1] = LittleFloat(b->mins[1]);
+		perbrush.mins[2] = LittleFloat(b->mins[2]);
+		perbrush.maxs[0] = LittleFloat(b->maxs[0]);
+		perbrush.maxs[1] = LittleFloat(b->maxs[1]);
+		perbrush.maxs[2] = LittleFloat(b->maxs[2]);
+		switch(b->contents)
+		{
+		case CONTENTS_EMPTY:	//really an error, but whatever
+		case CONTENTS_SOLID:	//these are okay
+		case CONTENTS_WATER:
+		case CONTENTS_SLIME:
+		case CONTENTS_LAVA:
+		case CONTENTS_SKY:
+			perbrush.contents = b->contents;
+			break;
+		//contents should match the engine.
+		case CONTENTS_CLIP:
+			perbrush.contents = -8;
+			break;
+//		case CONTENTS_LADDER:
+//			perbrush.contents = -16;
+//			break;
+		default:
+			Message(msgWarning, "Uknown contents: %i. Translating to solid.", b->contents);
+			perbrush.contents = CONTENTS_SOLID;
+			break;
+		}
+		perbrush.contents = LittleShort(perbrush.contents);
+		perbrush.numfaces = LittleShort(perbrush.numfaces);
+		memcpy(ctx->lumpinfo+ctx->lumpsize, &perbrush, sizeof(perbrush));
+		ctx->lumpsize += sizeof(perbrush);
+		
+		for (f = b->faces; f; f = f->next)
+		{
+			/*skip axial*/
+			if (fabs(map.planes[f->planenum].normal[0]) == 1 ||
+				fabs(map.planes[f->planenum].normal[1]) == 1 ||
+				fabs(map.planes[f->planenum].normal[2]) == 1)
+				continue;
+
+			if (f->planeside)
+			{
+				perface.normal[0] = -map.planes[f->planenum].normal[0];
+				perface.normal[1] = -map.planes[f->planenum].normal[1];
+				perface.normal[2] = -map.planes[f->planenum].normal[2];
+				perface.dist      = -map.planes[f->planenum].dist;
+			}
+			else
+			{
+				perface.normal[0] = map.planes[f->planenum].normal[0];
+				perface.normal[1] = map.planes[f->planenum].normal[1];
+				perface.normal[2] = map.planes[f->planenum].normal[2];
+				perface.dist      = map.planes[f->planenum].dist;
+			}
+
+			memcpy(ctx->lumpinfo+ctx->lumpsize, &perface, sizeof(perface));
+			ctx->lumpsize += sizeof(perface);
+		}
+	}
+}
+/* for generating BRUSHLIST bspx lump */
+static void BSPX_CreateBrushList(void)
+{
+	mapentity_t *ent;
+	int entnum;
+	int modelnum;
+	const char *mod;
+	struct bspxbrushes_s ctx;
+
+	if (!options.fbspx_brushes)
+		return;
+
+	BSPX_Brushes_Init(&ctx);
+
+	for (entnum = 0, ent = map.entities; entnum < map.numentities; entnum++, ent++)
+	{
+		if (ent == pWorldEnt)
+			modelnum = 0;
+		else
+		{
+			mod = ValueForKey(ent, "model");
+			if (*mod != '*')
+				continue;
+			modelnum = atoi(mod+1);
+		}
+
+		ent->brushes = NULL;
+		ent->numbrushes = 0;
+		Brush_LoadEntity (ent, ent, -1);
+		if (!ent->brushes)
+			continue;		// non-bmodel entity
+
+		/*
+		 * If this is the world entity, find all func_group and func_detail
+		 * entities and add their brushes with the appropriate contents flag set.
+		*/
+		if (ent == pWorldEnt) {
+			const char *classname;
+			const mapentity_t *source;
+			int i;
+			/* Add func_group brushes first */
+			source = map.entities + 1;
+			for (i = 1; i < map.numentities; i++, source++) {
+				classname = ValueForKey(source, "classname");
+				if (!strcasecmp(classname, "func_group"))
+					Brush_LoadEntity(ent, source, -1);
+			}
+			/* Add detail brushes next */
+			source = map.entities + 1;
+			for (i = 1; i < map.numentities; i++, source++) {
+				classname = ValueForKey(source, "classname");
+				if (!strcasecmp(classname, "func_detail"))
+					Brush_LoadEntity(ent, source, -1);
+			}
+		}
+
+		BSPX_Brushes_AddModel(&ctx, modelnum , ent->brushes);
+		FreeBrushes(ent->brushes);
+	}
+
+	BSPX_Brushes_Finalize(&ctx);
+}
+
+/*
 =================
 CreateSingleHull
 
@@ -350,6 +562,7 @@ ProcessFile(void)
 
     WriteEntitiesToString();
     WADList_Process(wadlist);
+    BSPX_CreateBrushList();
     FinishBSPFile();
 
     WADList_Free(wadlist);
@@ -378,11 +591,15 @@ PrintOptions(void)
 	   "   -splitspecial   Doesn't combine sky and water faces into one large face\n"
 	   "   -notranswater   Computes portal information for opaque water\n"
 	   "   -transsky       Computes portal information for transparent sky\n"
+	   "   -notex          Write only placeholder textures, to depend upon replacements, to keep file sizes down, or to skirt copyrights\n"
 	   "   -nooldaxis      Uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older\n"
 	   "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
 	   "   -bspleak        Creates a .POR file, used in the BSP editor for leaky maps\n"
 	   "   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n"
 	   "   -nopercent      Prevents output of percent completion information\n"
+	   "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
+	   "   -wrbrushes      (bspx) Includes a list of brushes for brush-based collision\n"
+	   "   -wrbrushesonly  -wrbrushes with -noclip\n"
 	   "   -bsp2           Request output in bsp2 format\n"
 	   "   -2psb           Request output in 2psb format (RMQ compatible)\n"
 	   "   -leakdist  [n]  Space between leakfile points (default 2)\n"
@@ -497,6 +714,8 @@ ParseOptions(char *szOptions)
 		options.fTranswater = true;
 	    else if (!strcasecmp(szTok, "transsky"))
 		options.fTranssky = true;
+	    else if (!strcasecmp(szTok, "notex"))
+		options.fNoTextures = true;
 	    else if (!strcasecmp(szTok, "oldaxis"))
 		logprint("-oldaxis is now the default and the flag is ignored.\nUse -nooldaxis to get the alternate behaviour.\n");
 	    else if (!strcasecmp(szTok, "nooldaxis"))
@@ -513,6 +732,12 @@ ParseOptions(char *szOptions)
 		options.fNopercent = true;
 	    else if (!strcasecmp(szTok, "hexen2"))
 		options.hexen2 = true;
+	    else if (!strcasecmp(szTok, "wrbrushes") || !strcasecmp(szTok, "bspx"))
+		options.fbspx_brushes = true;
+	    else if (!strcasecmp(szTok, "wrbrushesonly") || !strcasecmp(szTok, "bspxonly")) {
+		options.fbspx_brushes = true;
+		options.fNoclip = true;
+	    }
 	    else if (!strcasecmp(szTok, "bsp2")) {
 		options.BSPVersion = BSP2VERSION;
 		MemSize = MemSize_BSP2;

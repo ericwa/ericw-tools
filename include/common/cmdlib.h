@@ -81,6 +81,7 @@ FILE *SafeOpenRead(const char *filename);
 void SafeRead(FILE *f, void *buffer, int count);
 void SafeWrite(FILE *f, const void *buffer, int count);
 
+int LoadFilePak(char *filename, void *destptr);
 int LoadFile(const char *filename, void *destptr);
 void SaveFile(const char *filename, const void *buffer, int count);
 

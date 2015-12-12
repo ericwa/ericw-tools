@@ -707,7 +707,7 @@ CleanBSPTexinfoFlags(void)
     int i;
 
     for (i = 0; i < num_texinfo; i++, texinfo++)
-	texinfo->flags &= TEX_SPECIAL;
+	texinfo->flags &= TEX_SPECIAL|TEX_CURVED;
 }
 
 /*
@@ -744,9 +744,9 @@ FinishBSPFile(void)
         texinfo->count = texinfo->index;
     }
 
-    PrintBSPFileSizes();
     CleanBSPTexinfoFlags();
     WriteBSPFile();
+    PrintBSPFileSizes();
 
     options.fVerbose = options.fAllverbose;
 }

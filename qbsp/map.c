@@ -147,22 +147,14 @@ Returns a global texinfo number
 ===============
 */
 int
-FindTexinfo(texinfo_t *texinfo)
+FindTexinfo(texinfo_t *texinfo, unsigned int flags)
 {
     int index, j;
     texinfo_t *target;
-    const char *texname;
     const int num_texinfo = pWorldEnt->lumps[LUMP_TEXINFO].index;
 
     /* Set the texture flags */
-    texinfo->flags = 0;
-    texname = map.miptex[texinfo->miptex];
-    if (IsSkipName(texname))
-	texinfo->flags |= TEX_SKIP;
-    if (IsHintName(texname))
-	texinfo->flags |= TEX_HINT;
-    if (IsSplitName(texname))
-	texinfo->flags |= TEX_SPECIAL;
+    texinfo->flags = flags;
 
     target = pWorldEnt->lumps[LUMP_TEXINFO].data;
     for (index = 0; index < num_texinfo; index++, target++) {
@@ -198,6 +190,22 @@ FindTexinfo(texinfo_t *texinfo)
     return index;
 }
 
+int
+FindTexinfoEnt(texinfo_t *texinfo, mapentity_t *entity)
+{
+    unsigned int flags = 0;
+    const char *texname = map.miptex[texinfo->miptex];
+    if (IsSkipName(texname))
+	flags |= TEX_SKIP;
+    if (IsHintName(texname))
+	flags |= TEX_HINT;
+    if (IsSplitName(texname))
+	flags |= TEX_SPECIAL;
+    if (entity->smoothedtexture && !strcasecmp(texname, entity->smoothedtexture->value))
+	flags |= TEX_CURVED;
+    return FindTexinfo(texinfo, flags);
+}
+
 
 static void
 ParseEpair(parser_t *parser, mapentity_t *entity)
@@ -218,6 +226,8 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 
     if (!strcasecmp(epair->key, "origin")) {
 	GetVectorForKey(entity, epair->key, entity->origin);
+    } else if (!strcasecmp(epair->key, "_smooth")) {
+	entity->smoothedtexture = epair;
     } else if (!strcasecmp(epair->key, "classname")) {
 	if (!strcasecmp(epair->value, "info_player_start")) {
 	    if (rgfStartSpots & info_player_start)
@@ -528,7 +538,7 @@ ParseTextureDef(parser_t *parser, texinfo_t *tx,
 }
 
 static bool
-ParseBrushFace(parser_t *parser, mapface_t *face)
+ParseBrushFace(parser_t *parser, mapface_t *face, mapentity_t *entity)
 {
     vec3_t planepts[3], planevecs[2];
     vec_t length;
@@ -553,13 +563,13 @@ ParseBrushFace(parser_t *parser, mapface_t *face)
 	return false;
     }
 
-    face->texinfo = FindTexinfo(&tx);
+    face->texinfo = FindTexinfoEnt(&tx, entity);
 
     return true;
 }
 
 static void
-ParseBrush(parser_t *parser, mapbrush_t *brush)
+ParseBrush(parser_t *parser, mapbrush_t *brush, mapentity_t *entity)
 {
     const mapface_t *check;
     mapface_t *face;
@@ -573,7 +583,7 @@ ParseBrush(parser_t *parser, mapbrush_t *brush)
 	if (map.numfaces == map.maxfaces)
 	    Error("Internal error: didn't allocate enough faces?");
 
-	faceok = ParseBrushFace(parser, face);
+	faceok = ParseBrushFace(parser, face, entity);
 	if (!faceok)
 	    continue;
 
@@ -615,6 +625,7 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     if (map.numentities == map.maxentities)
 	Error("Internal error: didn't allocate enough entities?");
 
+    entity->smoothedtexture = NULL;
     entity->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
 	if (!ParseToken(parser, PARSE_NORMAL))
@@ -624,7 +635,7 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
 	else if (!strcmp(parser->token, "{")) {
 	    if (map.numbrushes == map.maxbrushes)
 		Error("Internal error: didn't allocate enough brushes?");
-	    ParseBrush(parser, brush++);
+	    ParseBrush(parser, brush++, entity);
 	    map.numbrushes++;
 	} else
 	    ParseEpair(parser, entity);

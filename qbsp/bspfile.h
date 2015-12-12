@@ -55,6 +55,20 @@ typedef struct {
 
 #define BSP_LUMPS         15
 
+//these are private to the qbsp
+#define BSPX_LMSHIFT      15
+#define BSPX_LUMPS        16
+
+typedef struct {
+	char id[4]; //'BSPX'
+	uint32_t numlumps;
+} bspx_header_t;
+typedef struct {
+	char lumpname[24];
+	uint32_t fileofs;
+	uint32_t filelen;
+} bspx_lump_t;
+
 typedef struct {
 #define MAX_MAP_HULLS_Q1 4
     float mins[3], maxs[3];
@@ -227,5 +241,6 @@ typedef struct {
 void LoadBSPFile(void);
 void WriteBSPFile(void);
 void PrintBSPFileSizes(void);
+void BSPX_AddLump(const char *xname, const void *xdata, size_t xsize);
 
 #endif /* __BSPFILE_H__ */

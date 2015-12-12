@@ -1,3 +1,31 @@
+tyrutils-ericw-spike
+
+Added features:
+qbsp:
+	parser: string escape verification.
+	arg: -wrbrushes		(bspx) Includes a list of brushes for brush-based collision
+	arg: -wrbrushesonly	-wrbrushes combined with -noclip argument
+	arg: -notex		Write only placeholder textures, to depend upon replacements
+	field: _smooth		Names a texture within the entity for which lighting should be smoothed (softens columns etc).
+	field: _lmscale		Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled and unscaled lighting will normally be used.
+
+light:
+	worldfield: _lightmap_scale	Forces all surfaces+submodels to use this specific lightmap scale. Removes LMSHIFT field.
+	arg: -lmscale				Equivelent to _lightmap_scale worldspawn key.
+	field: _project_texture		Specifies that a light should project this texture.
+	field: _project_mangle		Specifies the pitch+yaw+roll angles for a texture projection (overriding mangle).
+	field: _project_fov			Specifies the fov angle for a texture projection.
+	arg:	-bspxlit				Writes rgb data into the bsp itself.
+	arg: -bspx					Writes both rgb and directions data into the bsp itself.
+	arg: -novanilla				Fallback scaled lighting will be omitted. Standard grey lighting will be ommitted if there are coloured lights. Implies -bspxlit. -lit will no longer be implied by the presence of coloured lights.
+
+bspinfo:
+	displays bspx lumps.
+
+vis:
+	no changes
+
+
 Updated 2015-07-13
 
 --------------------------
