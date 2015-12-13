@@ -262,6 +262,13 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     tracelist = shadowmodels;
 }
 
+static vec_t clamp(vec_t low, vec_t val, vec_t high)
+{
+    if (val < low) return low;
+    if (val > high) return high;
+    return val;
+}
+
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts */
 static void
 AddTriangleNormals(vec_t *norm, dvertex_t *verts, int v1, int v2, int v3)
@@ -274,17 +281,17 @@ AddTriangleNormals(vec_t *norm, dvertex_t *verts, int v1, int v2, int v3)
 
 	VectorSubtract(p2, p1, d1);
 	VectorSubtract(p3, p1, d2);
-	weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+	weight = acos(clamp(-1, DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)), 1));
 	VectorMA(vertex_normals[v1], weight, norm, vertex_normals[v1]);
 
 	VectorSubtract(p1, p2, d1);
 	VectorSubtract(p3, p2, d2);
-	weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+	weight = acos(clamp(-1, DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)), 1));
 	VectorMA(vertex_normals[v2], weight, norm, vertex_normals[v2]);
 
 	VectorSubtract(p1, p3, d1);
 	VectorSubtract(p2, p3, d2);
-	weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+	weight = acos(clamp(-1, DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)), 1));
 	VectorMA(vertex_normals[v3], weight, norm, vertex_normals[v3]);
 }
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
