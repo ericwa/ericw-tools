@@ -83,6 +83,8 @@ int oversample = 1;
 int write_litfile = 0;	/* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;	/* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
+qboolean phongDebug = false;
+
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
@@ -582,7 +584,11 @@ main(int argc, const char **argv)
 	} else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
 	    onlyents = true;
 	    logprint( "Onlyents mode enabled\n" );
-	} else if (argv[i][0] == '-')
+        } else if ( !strcmp( argv[ i ], "-phongdebug" ) ) {
+            phongDebug = true;
+            write_litfile |= 1;
+            logprint( "Phong shading debug mode enabled\n" );
+        } else if (argv[i][0] == '-')
 	    Error("Unknown option \"%s\"", argv[i]);
 	else
 	    break;
@@ -594,7 +600,7 @@ main(int argc, const char **argv)
 	       "             [-lightturb] [-lightwater] [-lightslime] [-lightlava] [-lighttele]\n"
 	       "             [-dist n] [-range n] [-gate n] [-lit|-lit2] [-lux] [-bspx] [-lmscale n]\n"
 	       "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] [-sunsamples n] bspfile\n");
+	       "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-onlyents] [-sunsamples n] [-phongdebug] bspfile\n");
 	exit(1);
     }
 

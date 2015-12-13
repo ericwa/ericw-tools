@@ -1846,6 +1846,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     if (dirtDebug)
 	LightFace_DirtDebug(lightsurf, lightmaps);
 
+    if (phongDebug)
+        LightFace_PhongDebug(lightsurf, lightmaps);
+    
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {
 	if (lightmaps[i].style == 255)

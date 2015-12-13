@@ -160,5 +160,6 @@ void SetupDirt();
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 
 extern qboolean testFenceTextures;
+extern qboolean phongDebug;
 
 #endif /* __LIGHT_LIGHT_H__ */
