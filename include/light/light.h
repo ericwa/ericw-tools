@@ -165,6 +165,7 @@ void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 
 extern qboolean testFenceTextures;
 extern qboolean surflight_dump;
+extern qboolean phongDebug;
 
 extern char mapfilename[1024];
 

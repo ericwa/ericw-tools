@@ -1416,7 +1416,7 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     lightmap_t *lightmap;
     
     /* use a style 0 light map */
-    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf->numpoints);
+    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
     /* Overwrite each point with the normal for that sample... */
     sample = lightmap->samples;
@@ -1898,6 +1898,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     if (dirtDebug)
         LightFace_DirtDebug(lightsurf, lightmaps);
 
+    if (phongDebug)
+        LightFace_PhongDebug(lightsurf, lightmaps);
+    
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {
         if (lightmaps[i].style == 255)

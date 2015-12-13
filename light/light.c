@@ -84,6 +84,7 @@ int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
+qboolean phongDebug = false;
 qboolean parse_escape_sequences = false;
 
 char mapfilename[1024];
@@ -599,6 +600,10 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-parse_escape_sequences" ) ) {
             parse_escape_sequences = true;
             logprint( "Parsing escape sequences enabled\n" );
+        } else if ( !strcmp( argv[ i ], "-phongdebug" ) ) {
+            phongDebug = true;
+            write_litfile |= 1;
+            logprint( "Phong shading debug mode enabled\n" );
         } else if (argv[i][0] == '-')
             Error("Unknown option \"%s\"", argv[i]);
         else
@@ -611,7 +616,7 @@ main(int argc, const char **argv)
                "             [-lightturb] [-lightwater] [-lightslime] [-lightlava] [-lighttele]\n"
                "             [-dist n] [-range n] [-gate n] [-lit|-lit2] [-lux] [-bspx] [-lmscale n]\n"
                "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-parse_escape_sequences] bspfile\n");
+               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-parse_escape_sequences] [-phongdebug] bspfile\n");
         exit(1);
     }
 
