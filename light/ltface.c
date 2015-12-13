@@ -529,12 +529,12 @@ static void CalcBarycentric(vec_t *p, vec_t *a, vec_t *b, vec_t *c, vec_t *res)
 	VectorSubtract(b, a, v0);
 	VectorSubtract(c, a, v1);
 	VectorSubtract(p, a, v2);
-	float d00 = DotProduct(v0, v0);
-	float d01 = DotProduct(v0, v1);
-	float d11 = DotProduct(v1, v1);
-	float d20 = DotProduct(v2, v0);
-	float d21 = DotProduct(v2, v1);
-	float invDenom = (d00 * d11 - d01 * d01);
+	double d00 = DotProduct(v0, v0);
+	double d01 = DotProduct(v0, v1);
+	double d11 = DotProduct(v1, v1);
+	double d20 = DotProduct(v2, v0);
+	double d21 = DotProduct(v2, v1);
+	double invDenom = (d00 * d11 - d01 * d01);
 	invDenom = 1.0/invDenom;
 	res[1] = (d11 * d20 - d01 * d21) * invDenom;
 	res[2] = (d00 * d21 - d01 * d20) * invDenom;
