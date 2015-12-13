@@ -1403,6 +1403,39 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
+/*
+ * =============
+ * LightFace_PhongDebug
+ * =============
+ */
+static void
+LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+{
+    int i;
+    lightsample_t *sample;
+    lightmap_t *lightmap;
+    
+    /* use a style 0 light map */
+    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf->numpoints);
+    
+    /* Overwrite each point with the normal for that sample... */
+    sample = lightmap->samples;
+    for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+        const vec3_t vec3_one = { 1.0f, 1.0f, 1.0f };
+        vec3_t normal_as_color;
+        // scale from [-1..1] to [0..1], then multiply by 255
+        VectorCopy(lightsurf->normals[i], normal_as_color);
+        VectorAdd(normal_as_color, vec3_one, normal_as_color);
+        VectorScale(normal_as_color, 0.5, normal_as_color);
+        VectorScale(normal_as_color, 255, normal_as_color);
+        
+        sample->light = 255;
+        VectorCopy(normal_as_color, sample->color);
+    }
+    
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
+
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
 
 #define DIRT_NUM_ANGLE_STEPS        16
