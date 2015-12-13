@@ -1294,16 +1294,17 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
     const dmodel_t *shadowself;
-    const vec_t *surfpoint;
+    const vec_t *surfpoint, *surfnorm;
     int i;
     qboolean hit;
     vec3_t incoming;
     vec_t angle;
     lightsample_t *sample;
     lightmap_t *lightmap;
+    qboolean curved = lightsurf->curved;
 
     /* Don't bother if surface facing away from sun */
-    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON)
+    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !curved)
         return;
 
     /* if sunlight is set, use a style 0 light map */
@@ -1311,18 +1312,22 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
 
     VectorCopy(sun->sunvec, incoming);
     VectorNormalize(incoming);
-    angle = DotProduct(incoming, plane->normal);
-    angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
-
+    
     /* Check each point... */
     hit = false;
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
     sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
-    for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3) {
+    surfnorm = lightsurf->normals[0];
+    for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3, surfnorm += 3) {
         vec_t value;
         if (!TestSky(surfpoint, sun->sunvec, shadowself))
             continue;
+
+        angle = DotProduct(incoming, surfnorm);
+        if (angle < 0) angle = 0;
+
+        angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         value = angle * sun->sunlight.light;
         if (sun->dirt)
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
