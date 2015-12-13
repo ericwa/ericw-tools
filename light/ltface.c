@@ -582,10 +582,8 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const v
 	v1 = GetSurfaceVertexPoint(bsp, face, 0);
 	v2 = GetSurfaceVertexPoint(bsp, face, best-1);
 	v3 = GetSurfaceVertexPoint(bsp, face, best);
+	CalcBarycentric(point, v1, v2, v3, barry);
 
-        // ericw -- calculate barycentric coords using the point clipped to the triangle
-        ClipPointToTriangle(point, clipped, surfnorm, v1, v2, v3);
-        CalcBarycentric(clipped, v1, v2, v3, barry);
 	v1 = GetSurfaceVertexNormal(bsp, face, 0);
 	v2 = GetSurfaceVertexNormal(bsp, face, best-1);
 	v3 = GetSurfaceVertexNormal(bsp, face, best);
