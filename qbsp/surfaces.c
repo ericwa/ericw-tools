@@ -607,7 +607,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     }
 
     if (map.cTotal[LUMP_VERTEXES] > 65535 && options.BSPVersion == BSPVERSION)
-        Error("Too many vertices (%d > 65535)", map.cTotal[LUMP_VERTEXES]);
+        Error("Too many vertices (%d > 65535). Recompile with the \"-bsp2\" flag to lift this restriction.", map.cTotal[LUMP_VERTEXES]);
 
     surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
     faces->data = AllocMem(BSP_FACE, faces->count, true);
