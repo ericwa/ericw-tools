@@ -169,8 +169,12 @@ WADList_Process(const wad_t *wadlist)
     /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex; i++) {
         texture = WADList_FindTexture(wadlist, map.miptex[i]);
-        if (texture)
+        if (texture) {
+            if (options.fNoTextures)
+                texdata->count += sizeof(dmiptex_t);
+            else
             texdata->count += texture->disksize;
+    }
     }
 
     /* Default texture data to store in worldmodel */
@@ -227,6 +231,15 @@ WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
     for (i = 0; i < wad->header.numlumps; i++) {
         if (!Q_strcasecmp(name, wad->lumps[i].name)) {
             fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
+            if (options.fNoTextures)
+            {
+                size = fread(dest, 1, sizeof(dmiptex_t), wad->file);
+                if (size != sizeof(dmiptex_t))
+                    Error("Failure reading from file");
+                for (i = 0; i < MIPLEVELS; i++)
+                    ((dmiptex_t*)dest)->offsets[i] = 0;
+                return sizeof(dmiptex_t);
+            }
             size = fread(dest, 1, wad->lumps[i].disksize, wad->file);
             if (size != wad->lumps[i].disksize)
                 Error("Failure reading from file");

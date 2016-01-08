@@ -32,6 +32,8 @@ float lightmapgamma = 1.0;
 const vec3_t vec3_white = { 255, 255, 255 };
 float surflight_subdivide = 128.0f;
 int sunsamples = 64;
+qboolean scaledonly = false;
+unsigned int lightturb; //water, slime, lava, tele
 
 qboolean addminlight = false;
 lightsample_t minlight = { 0, { 255, 255, 255 } };
@@ -59,6 +61,9 @@ qboolean dirtAngleSetOnCmdline = false;
 qboolean testFenceTextures = false;
 qboolean surflight_dump = false;
 
+static facesup_t *faces_sup;    //lit2/bspx stuff
+vec3_t *vertex_normals;
+
 byte *filebase;                 // start of lightmap data
 static byte *file_p;            // start of free space after data
 static byte *file_end;          // end of free space for lightmap data
@@ -76,8 +81,8 @@ static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
 
 int oversample = 1;
-qboolean write_litfile = false;
-qboolean write_luxfile = false;
+int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
+int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean parse_escape_sequences = false;
 
@@ -139,9 +144,17 @@ const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
 static void *
 LightThread(void *arg)
 {
-    int facenum;
+    int facenum, i;
     const bsp2_t *bsp = arg;
     const modelinfo_t *face_modelinfo;
+    struct ltface_ctx *ctx;
+
+    ctx = LightFaceInit(bsp);
+    if (!ctx)
+    {
+        logprint("warning: not enough memory for thread context\n");
+        return NULL;
+    }
 
     while (1) {
         facenum = GetThreadWork();
@@ -156,14 +169,34 @@ LightThread(void *arg)
             continue;
         }
 
-        LightFace(bsp->dfaces + facenum, face_modelinfo, bsp);
+        if (!faces_sup)
+            LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
+        else if (scaledonly)
+        {
+            bsp->dfaces[facenum].lightofs = -1;
+            bsp->dfaces[facenum].styles[0] = 255;
+            LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
+        }
+        else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale)
+        {
+            LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
+            faces_sup[facenum].lightofs = bsp->dfaces[facenum].lightofs;
+            for (i = 0; i < MAXLIGHTMAPS; i++)
+                faces_sup[facenum].styles[i] = bsp->dfaces[facenum].styles[i];
+        }
+        else
+        {
+            LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
+            LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
+        }
     }
+    LightFaceShutdown(ctx);
 
     return NULL;
 }
 
 static void
-FindModelInfo(const bsp2_t *bsp)
+FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
     int i, shadow, numshadowmodels;
     entity_t *entity;
@@ -171,6 +204,7 @@ FindModelInfo(const bsp2_t *bsp)
     const char *attribute;
     const dmodel_t **shadowmodels;
     modelinfo_t *info;
+    float lightmapscale;
 
     shadowmodels = malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
     memset(shadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
@@ -182,8 +216,26 @@ FindModelInfo(const bsp2_t *bsp)
     memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
     modelinfo[0].model = &bsp->dmodels[0];
 
+    if (lmscaleoverride)
+        SetWorldKeyValue("_lightmap_scale", lmscaleoverride);
+
+    lightmapscale = atoi(WorldValueForKey("_lightmap_scale"));
+    if (!lightmapscale)
+        lightmapscale = 16; /* the default */
+    if (lightmapscale <= 0)
+        Error("lightmap scale is 0 or negative\n");
+    if (lmscaleoverride || lightmapscale != 16)
+        logprint("Forcing lightmap scale of %gqu\n", lightmapscale);
+    /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software ones that might be able to just do some mip hacks). This tool doesn't really care.*/
+    for (i = 1; i < lightmapscale;)
+        i++;
+    if (i != lightmapscale)
+        logprint("WARNING: lightmap scale is not a power of 2\n");
+    modelinfo[0].lightmapscale = lightmapscale;
+
     for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
         info->model = &bsp->dmodels[i];
+        info->lightmapscale = lightmapscale;
 
         /* Find the entity for the model */
         snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -215,7 +267,7 @@ FindModelInfo(const bsp2_t *bsp)
         normalize_color_format(info->minlight.color);
         if (!VectorCompare(info->minlight.color, vec3_origin)) {
             if (!write_litfile)
-                write_litfile = true;
+                write_litfile = scaledonly?2:1;
         } else {
             VectorCopy(vec3_white, info->minlight.color);
         }
@@ -229,14 +281,90 @@ FindModelInfo(const bsp2_t *bsp)
     tracelist = shadowmodels;
 }
 
+/* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts */
+static void
+AddTriangleNormals(vec_t *norm, dvertex_t *verts, int v1, int v2, int v3)
+{
+        vec_t *p1 = verts[v1].point;
+        vec_t *p2 = verts[v2].point;
+        vec_t *p3 = verts[v3].point;
+        vec3_t d1, d2;
+        float weight;
+
+        VectorSubtract(p2, p1, d1);
+        VectorSubtract(p3, p1, d2);
+        weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+        VectorMA(vertex_normals[v1], weight, norm, vertex_normals[v1]);
+
+        VectorSubtract(p1, p2, d1);
+        VectorSubtract(p3, p2, d2);
+        weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+        VectorMA(vertex_normals[v2], weight, norm, vertex_normals[v2]);
+
+        VectorSubtract(p1, p3, d1);
+        VectorSubtract(p2, p3, d2);
+        weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+        VectorMA(vertex_normals[v3], weight, norm, vertex_normals[v3]);
+}
+/* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
+static int GetSurfaceVertex(bsp2_t *const bsp, bsp2_dface_t *f, int v)
+{
+        int edge = f->firstedge + v;
+        edge = bsp->dsurfedges[edge];
+        if (edge < 0)
+                return bsp->dedges[-edge].v[1];
+        return bsp->dedges[edge].v[0];
+}
+
+static void
+CalcualateVertexNormals(bsp2_t *const bsp)
+{
+        int i, j, v1, v2, v3;
+        bsp2_dface_t *f;
+        vec3_t norm;
+
+        vertex_normals = malloc(sizeof(vec3_t) * bsp->numvertexes);
+        memset(vertex_normals, 0, sizeof(vec3_t) * bsp->numvertexes);
+
+        for (i = 0; i < bsp->numfaces; i++)
+        {
+                f = &bsp->dfaces[i];
+                if (!(bsp->texinfo[f->texinfo].flags & TEX_CURVED))     /* we only care about smoothed faces. unsmoothed stuff shouldn't blend. */
+                        continue;
+
+                if (f->side)
+                        VectorSubtract(vec3_origin, bsp->dplanes[f->planenum].normal, norm);
+                else
+                        VectorCopy(bsp->dplanes[f->planenum].normal, norm);
+
+                /* now just walk around the surface as a triangle fan */
+                v1 = GetSurfaceVertex(bsp, f, 0);
+                v2 = GetSurfaceVertex(bsp, f, 1);
+                for (j = 2; j < f->numedges; j++)
+                {
+                        v3 = GetSurfaceVertex(bsp, f, j);
+                        AddTriangleNormals(norm, bsp->dvertexes, v1, v2, v3);
+                        v2 = v3;
+                }
+        }
+
+        for (i = 0; i < bsp->numvertexes; i++)
+        {
+                VectorNormalize(vertex_normals[i]);
+        }
+}
+
 /*
  * =============
  *  LightWorld
  * =============
  */
 static void
-LightWorld(bsp2_t *bsp)
+LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 {
+    bsp2_t *const bsp = &bspdata->data.bsp2;
+    const unsigned char *lmshift_lump;
+    int i, j;
     if (bsp->dlightdata)
         free(bsp->dlightdata);
     if (lux_buffer)
@@ -266,11 +394,56 @@ LightWorld(bsp2_t *bsp)
     lux_file_p = lux_filebase;
     lux_file_end = lux_filebase + 3 * (MAX_MAP_LIGHTING / 4);
 
+
+    if (forcedscale)
+        BSPX_AddLump(bspdata, "LMSHIFT", NULL, 0);
+
+    lmshift_lump = BSPX_GetLump(bspdata, "LMSHIFT", NULL);
+    if (!lmshift_lump && write_litfile != ~0)
+        faces_sup = NULL; //no scales, no lit2
+    else
+    {   //we have scales or lit2 output. yay...
+        faces_sup = malloc(sizeof(*faces_sup) * bsp->numfaces);
+        memset(faces_sup, 0, sizeof(*faces_sup) * bsp->numfaces);
+        if (lmshift_lump)
+        {
+            for (i = 0; i < bsp->numfaces; i++)
+                faces_sup[i].lmscale = 1<<lmshift_lump[i];
+        }
+        else
+        {
+            for (i = 0; i < bsp->numfaces; i++)
+                faces_sup[i].lmscale = modelinfo[0].lightmapscale;
+        }
+    }
+
+    CalcualateVertexNormals(bsp);
+
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
     logprint("Lighting Completed.\n\n");
 
     bsp->lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
+
+
+    if (faces_sup)
+    {
+        uint8_t *styles = malloc(sizeof(*styles)*4*bsp->numfaces);
+        int32_t *offsets = malloc(sizeof(*offsets)*bsp->numfaces);
+        for (i = 0; i < bsp->numfaces; i++)
+        {
+            offsets[i] = faces_sup[i].lightofs;
+            for (j = 0; j < MAXLIGHTMAPS; j++)
+                styles[i*4+j] = faces_sup[i].styles[j];
+        }
+        BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles)*4*bsp->numfaces);
+        BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets)*bsp->numfaces);
+    }
+    else
+    { //kill this stuff if its somehow found.
+        BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
+        BSPX_AddLump(bspdata, "LMOFFSET", NULL, 0);
+    }
 }
 
 /*
@@ -289,6 +462,7 @@ main(int argc, const char **argv)
     double start;
     double end;
     char source[1024];
+    const char *lmscaleoverride = NULL;
 
     init_log("light.log");
     logprint("---- light / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
@@ -319,9 +493,36 @@ main(int argc, const char **argv)
             lightmapgamma = atof(argv[++i]);
             logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma );
         } else if (!strcmp(argv[i], "-lit")) {
-            write_litfile = true;
+            write_litfile |= 1;
+        } else if (!strcmp(argv[i], "-lit2")) {
+            write_litfile = ~0;
         } else if (!strcmp(argv[i], "-lux")) {
-            write_luxfile = true;
+            write_luxfile |= 1;
+        } else if (!strcmp(argv[i], "-bspxlit")) {
+            write_litfile |= 2;
+        } else if (!strcmp(argv[i], "-bspxlux")) {
+            write_luxfile |= 2;
+        } else if (!strcmp(argv[i], "-bspxonly")) {
+            write_litfile = 2;
+            write_luxfile = 2;
+            scaledonly = true;
+        } else if (!strcmp(argv[i], "-bspx")) {
+            write_litfile |= 2;
+            write_luxfile |= 2;
+        } else if (!strcmp(argv[i], "-novanilla")) {
+            scaledonly = true;
+        } else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
+            lmscaleoverride = argv[++i];
+        } else if ( !strcmp( argv[ i ], "-lightturb" ) ) {
+            lightturb |= 15;
+        } else if ( !strcmp( argv[ i ], "-lightwater" ) ) {
+            lightturb |= 1;
+        } else if ( !strcmp( argv[ i ], "-lightslime" ) ) {
+            lightturb |= 2;
+        } else if ( !strcmp( argv[ i ], "-lightlava" ) ) {
+            lightturb |= 4;
+        } else if ( !strcmp( argv[ i ], "-lighttele" ) ) {
+            lightturb |= 8;
         } else if (!strcmp(argv[i], "-soft")) {
             if (i < argc - 2 && isdigit(argv[i + 1][0]))
                 softsamples = atoi(argv[++i]);
@@ -407,7 +608,8 @@ main(int argc, const char **argv)
     if (i != argc - 1) {
         printf("usage: light [-threads num] [-extra|-extra4]\n"
                "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
-               "             [-dist n] [-range n] [-gate n] [-lit] [-lux]\n"
+               "             [-lightturb] [-lightwater] [-lightslime] [-lightlava] [-lighttele]\n"
+               "             [-dist n] [-range n] [-gate n] [-lit|-lit2] [-lux] [-bspx] [-lmscale n]\n"
                "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
                "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-parse_escape_sequences] bspfile\n");
         exit(1);
@@ -415,10 +617,21 @@ main(int argc, const char **argv)
 
     if (numthreads > 1)
         logprint("running with %d threads\n", numthreads);
-    if (write_litfile)
+
+    if (write_litfile == ~0)
+        logprint("generating lit2 output only.\n");
+    else
+    {
+        if (write_litfile & 1)
         logprint(".lit colored light output requested on command line.\n");
-    if (write_luxfile)
+        if (write_litfile & 2)
+            logprint("BSPX colored light output requested on command line.\n");
+        if (write_luxfile & 1)
         logprint(".lux light directions output requested on command line.\n");
+        if (write_luxfile & 2)
+            logprint("BSPX light directions output requested on command line.\n");
+    }
+
     if (softsamples == -1) {
         switch (oversample) {
         case 2:
@@ -446,36 +659,57 @@ main(int argc, const char **argv)
         ConvertBSPFormat(BSP2VERSION, &bspdata);
 
     LoadEntities(bsp);
+
     modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
-    FindModelInfo(bsp);
+    FindModelInfo(bsp, lmscaleoverride);
     SetupLights(bsp);
     
-    if (!onlyents) {
+    if (!onlyents)
+    {
         if (dirty)
             SetupDirt();
 
         MakeTnodes(bsp);
-        LightWorld(bsp);
-        free(modelinfo);
+        LightWorld(&bspdata, !!lmscaleoverride);
+        
+        /*invalidate any bspx lighting info early*/
+        BSPX_AddLump(&bspdata, "RGBLIGHTING", NULL, 0);
+        BSPX_AddLump(&bspdata, "LIGHTINGDIR", NULL, 0);
 
-        if (write_litfile)
-            WriteLitFile(bsp, source, LIT_VERSION);
-        if (write_luxfile)
-            WriteLuxFile(bsp, source, LIT_VERSION);     
+        if (write_litfile == ~0)
+        {
+            WriteLitFile(bsp, faces_sup, source, 2);
+            return 0;   //run away before any files are written
+        }
+        else
+        {
+            /*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
+            if (write_litfile & 1)
+                WriteLitFile(bsp, faces_sup, source, LIT_VERSION);
+            if (write_litfile & 2)
+                BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp->lightdatasize*3);
+            if (write_luxfile & 1)
+                WriteLuxFile(bsp, source, LIT_VERSION);
+            if (write_luxfile & 2)
+                BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp->lightdatasize*3);
+        }
     }
 
-    WriteEntitiesToString(bsp);
+    /* -novanilla + internal lighting = no grey lightmap */
+    if (scaledonly && (write_litfile & 2))
+        bsp->lightdatasize = 0;
 
+    WriteEntitiesToString(bsp);
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
         ConvertBSPFormat(loadversion, &bspdata);
-
     WriteBSPFile(source, &bspdata);
-
     end = I_FloatTime();
     logprint("%5.1f seconds elapsed\n", end - start);
 
     close_log();
 
+    free(modelinfo);
+    
     return 0;
 }

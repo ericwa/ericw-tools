@@ -501,6 +501,7 @@ CalcSurfaceInfo(surface_t *surf)
         if (f->contents[0] >= 0 || f->contents[1] >= 0)
             Error("Bad contents in face (%s)", __func__);
 
+        surf->lmshift = (f->lmshift[0]<f->lmshift[1])?f->lmshift[0]:f->lmshift[1];
         if ((f->cflags[0] & CFLAGS_DETAIL)
             || (f->cflags[1] & CFLAGS_DETAIL))
             surf->has_detail = true;

@@ -30,6 +30,8 @@ static int num_lights;
 
 entity_t *lights[MAX_LIGHTS];
 
+extern qboolean scaledonly;
+
 /* surface lights */
 #define MAX_SURFLIGHT_TEMPLATES 256
 entity_t *surfacelight_templates[MAX_SURFLIGHT_TEMPLATES];
@@ -73,6 +75,15 @@ SetKeyValue(entity_t *ent, const char *key, const char *value)
     ent->epairs = ep;
     strcpy(ep->key, key);
     strcpy(ep->value, value);
+}
+
+void SetWorldKeyValue(const char *key, const char *value)
+{
+        SetKeyValue(entities, key, value);
+}
+const char *WorldValueForKey(const char *key)
+{
+        return ValueForKey(entities, key);
 }
 
 static int
@@ -202,8 +213,6 @@ normalize_color_format(vec3_t color)
     }
 }
 
-#define SQR(x) ((x)*(x))
-
 static void
 CheckEntityFields(entity_t *entity)
 {
@@ -227,7 +236,7 @@ CheckEntityFields(entity_t *entity)
         }
         entity->formula = LF_LINEAR;
     }
-    
+
     /* set up deviance and samples defaults */
     if (entity->deviance > 0 && entity->num_samples == 0) {
         entity->num_samples = 16;
@@ -248,9 +257,18 @@ CheckEntityFields(entity_t *entity)
 
     if (!VectorCompare(entity->light.color, vec3_origin)) {
         if (!write_litfile) {
-            write_litfile = true;
+            if (scaledonly)
+            {
+                write_litfile = 2;
             logprint("Colored light entities detected: "
+                     "bspxlit output enabled.\n");
+            }
+            else
+            {
+                write_litfile = 1;
+                logprint("Colored light entities detected: "
                      ".lit output enabled.\n");
+        }
         }
     } else {
         VectorCopy(vec3_white, entity->light.color);
@@ -597,7 +615,194 @@ JitterEntities()
         
         if (entity == old_tail)
             break;
+}
+}
+
+void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float neard)
+{
+    float xmin, xmax, ymin, ymax;
+    float nudge = 1;
+
+    //proj
+    ymax = neard * tan( fovy * M_PI / 360.0 );
+    ymin = -ymax;
+
+    if (fovx == fovy)
+    {
+        xmax = ymax;
+        xmin = ymin;
     }
+    else
+    {
+        xmax = neard * tan( fovx * M_PI / 360.0 );
+        xmin = -xmax;
+    }
+
+    proj[0] = (2*neard) / (xmax - xmin);
+    proj[4] = 0;
+    proj[8] = (xmax + xmin) / (xmax - xmin);
+    proj[12] = 0;
+
+    proj[1] = 0;
+    proj[5] = (2*neard) / (ymax - ymin);
+    proj[9] = (ymax + ymin) / (ymax - ymin);
+    proj[13] = 0;
+
+    proj[2] = 0;
+    proj[6] = 0;
+    proj[10] = -1  * ((float)(1<<21)/(1<<22));
+    proj[14] = -2*neard * nudge;
+
+    proj[3] = 0;
+    proj[7] = 0;
+    proj[11] = -1;
+    proj[15] = 0;
+}
+float *Matrix4x4_CM_NewRotation(float ret[16], float a, float x, float y, float z)
+{
+    float c = cos(a* M_PI / 180.0);
+    float s = sin(a* M_PI / 180.0);
+
+    ret[0] = x*x*(1-c)+c;
+    ret[4] = x*y*(1-c)-z*s;
+    ret[8] = x*z*(1-c)+y*s;
+    ret[12] = 0;
+
+    ret[1] = y*x*(1-c)+z*s;
+    ret[5] = y*y*(1-c)+c;
+    ret[9] = y*z*(1-c)-x*s;
+    ret[13] = 0;
+
+    ret[2] = x*z*(1-c)-y*s;
+    ret[6] = y*z*(1-c)+x*s;
+    ret[10] = z*z*(1-c)+c;
+    ret[14] = 0;
+
+    ret[3] = 0;
+    ret[7] = 0;
+    ret[11] = 0;
+    ret[15] = 1;
+    return ret;
+}
+float *Matrix4x4_CM_NewTranslation(float ret[16], float x, float y, float z)
+{
+    ret[0] = 1;
+    ret[4] = 0;
+    ret[8] = 0;
+    ret[12] = x;
+
+    ret[1] = 0;
+    ret[5] = 1;
+    ret[9] = 0;
+    ret[13] = y;
+
+    ret[2] = 0;
+    ret[6] = 0;
+    ret[10] = 1;
+    ret[14] = z;
+
+    ret[3] = 0;
+    ret[7] = 0;
+    ret[11] = 0;
+    ret[15] = 1;
+    return ret;
+}
+void Matrix4_Multiply(const float *a, const float *b, float *out)
+{
+    out[0]  = a[0] * b[0] + a[4] * b[1] + a[8] * b[2] + a[12] * b[3];
+    out[1]  = a[1] * b[0] + a[5] * b[1] + a[9] * b[2] + a[13] * b[3];
+    out[2]  = a[2] * b[0] + a[6] * b[1] + a[10] * b[2] + a[14] * b[3];
+    out[3]  = a[3] * b[0] + a[7] * b[1] + a[11] * b[2] + a[15] * b[3];
+
+    out[4]  = a[0] * b[4] + a[4] * b[5] + a[8] * b[6] + a[12] * b[7];
+    out[5]  = a[1] * b[4] + a[5] * b[5] + a[9] * b[6] + a[13] * b[7];
+    out[6]  = a[2] * b[4] + a[6] * b[5] + a[10] * b[6] + a[14] * b[7];
+    out[7]  = a[3] * b[4] + a[7] * b[5] + a[11] * b[6] + a[15] * b[7];
+
+    out[8]  = a[0] * b[8] + a[4] * b[9] + a[8] * b[10] + a[12] * b[11];
+    out[9]  = a[1] * b[8] + a[5] * b[9] + a[9] * b[10] + a[13] * b[11];
+    out[10] = a[2] * b[8] + a[6] * b[9] + a[10] * b[10] + a[14] * b[11];
+    out[11] = a[3] * b[8] + a[7] * b[9] + a[11] * b[10] + a[15] * b[11];
+
+    out[12] = a[0] * b[12] + a[4] * b[13] + a[8] * b[14] + a[12] * b[15];
+    out[13] = a[1] * b[12] + a[5] * b[13] + a[9] * b[14] + a[13] * b[15];
+    out[14] = a[2] * b[12] + a[6] * b[13] + a[10] * b[14] + a[14] * b[15];
+    out[15] = a[3] * b[12] + a[7] * b[13] + a[11] * b[14] + a[15] * b[15];
+}
+void Matrix4x4_CM_ModelViewMatrix(float *modelview, const vec3_t viewangles, const vec3_t vieworg)
+{
+    float t2[16];
+    float tempmat[16];
+    //load identity.
+    memset(modelview, 0, sizeof(*modelview)*16);
+#if FULLYGL
+    modelview[0] = 1;
+    modelview[5] = 1;
+    modelview[10] = 1;
+    modelview[15] = 1;
+
+    Matrix4_Multiply(modelview, Matrix4_CM_NewRotation(-90,  1, 0, 0), tempmat);            // put Z going up
+    Matrix4_Multiply(tempmat, Matrix4_CM_NewRotation(90,  0, 0, 1), modelview);     // put Z going up
+#else
+    //use this lame wierd and crazy identity matrix..
+    modelview[2] = -1;
+    modelview[4] = -1;
+    modelview[9] = 1;
+    modelview[15] = 1;
+#endif
+    //figure out the current modelview matrix
+
+    //I would if some of these, but then I'd still need a couple of copys
+    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[2],  1, 0, 0), tempmat);
+    Matrix4_Multiply(tempmat, Matrix4x4_CM_NewRotation(t2, -viewangles[0],  0, 1, 0), modelview);
+    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[1],  0, 0, 1), tempmat);
+
+    Matrix4_Multiply(tempmat, Matrix4x4_CM_NewTranslation(t2, -vieworg[0],  -vieworg[1],  -vieworg[2]), modelview);         // put Z going up
+}
+void Matrix4x4_CM_MakeModelViewProj (const vec3_t viewangles, const vec3_t vieworg, float fovx, float fovy, float *modelviewproj)
+{
+    float modelview[16];
+    float proj[16];
+
+    Matrix4x4_CM_ModelViewMatrix(modelview, viewangles, vieworg);
+    Matrix4x4_CM_Projection_Inf(proj, fovx, fovy, 4);
+    Matrix4_Multiply(proj, modelview, modelviewproj);
+}
+float CalcFov (float fov_x, float width, float height)
+{
+    float   a;
+    float   x;
+
+    if (fov_x < 1 || fov_x > 179)
+        Error ("Bad fov: %f", fov_x);
+
+    x = fov_x/360*M_PI;
+    x = tan(x);
+    x = width/x;
+
+    a = atan (height/x);
+
+    a = a*360/M_PI;
+
+    return a;
+}
+
+/*
+finds the texture that is meant to be projected.
+*/
+static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
+{
+    dmiptexlump_t *miplump = bsp->dtexdata.header;
+    miptex_t *miptex;
+    int texnum;
+    /*outer loop finds the textures*/
+    for (texnum = 0; texnum< miplump->nummiptex; texnum++)
+    {
+        miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[texnum]);
+        if (!Q_strcasecmp(miptex->name, texname))
+            return miptex;
+    }
+    return NULL;
 }
 
 static void
@@ -615,7 +820,7 @@ FindLights()
             lights[totallights++] = entity;
         }
     }
-    
+
     logprint("FindLights: %d total lights\n", totallights);
 }
 
@@ -631,7 +836,9 @@ LoadEntities(const bsp2_t *bsp)
     entity_t *entity;
     char key[MAX_ENT_KEY];
     epair_t *epair;
-    vec3_t vec;
+    vec3_t vec, projangle;
+    vec_t projfov;
+    qboolean projangleknown;
 
     /* start parsing */
     num_entities = 0;
@@ -657,6 +864,12 @@ LoadEntities(const bsp2_t *bsp)
         /* Init some fields... */
         entity->anglescale = -1;
 
+        projangle[0] = 20;
+        projangle[1] = 0;
+        projangle[2] = 0;
+        projfov = 90;
+        projangleknown = false;
+
         /* go through all the keys in this entity */
         while (1) {
             int c;
@@ -680,6 +893,12 @@ LoadEntities(const bsp2_t *bsp)
                 Error("%s: closing brace without data", __func__);
             if (strlen(com_token) > MAX_ENT_VALUE - 1)
                 Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
+
+            if (!strcmp(key, "lightmap_scale"))
+            { /*this is parsed by the engine. make sure we're consistent*/
+                strcpy(key, "_lightmap_scale");
+                logprint("lightmap_scale should be _lightmap_scale\n");
+            }
 
             epair = malloc(sizeof(epair_t));
             memset(epair, 0, sizeof(epair_t));
@@ -711,6 +930,8 @@ LoadEntities(const bsp2_t *bsp)
             else if (!strcmp(key, "delay"))
                 entity->formula = atoi(com_token);
             else if (!strcmp(key, "mangle")) {
+                if (!projangleknown)
+                        scan_vec3(projangle, com_token, key);
                 scan_vec3(vec, com_token, "mangle");
                 vec_from_mangle(entity->spotvec, vec);
                 entity->spotlight = true;
@@ -764,6 +985,17 @@ LoadEntities(const bsp2_t *bsp)
                     dirty = true;
                 }
             }
+            else if (!strcmp(key, "_project_texture"))
+                entity->projectedmip = FindProjectionTexture(bsp, com_token);
+            else if (!strcmp(key, "_project_mangle"))
+            {
+                projangleknown = true;
+                scan_vec3(projangle, com_token, key);
+            }
+            else if (!strcmp(key, "_project_fov"))
+            {
+                projfov = atof(com_token);
+            }
             else if (!strcmp(key, "_sunlight_penumbra")) {
                 sun_deviance = atof(com_token);
             }
@@ -789,6 +1021,13 @@ LoadEntities(const bsp2_t *bsp)
          * Check light entity fields and any global settings in worldspawn.
          */
         if (!strncmp(entity->classname, "light", 5)) {
+            if (entity->projectedmip) {
+                if (entity->projectedmip->width > entity->projectedmip->height)
+                    Matrix4x4_CM_MakeModelViewProj (projangle, entity->origin, projfov, CalcFov(projfov, entity->projectedmip->width, entity->projectedmip->height), entity->projectionmatrix);
+                else
+                    Matrix4x4_CM_MakeModelViewProj (projangle, entity->origin, CalcFov(projfov, entity->projectedmip->height, entity->projectedmip->width), projfov, entity->projectionmatrix);
+            }
+
             CheckEntityFields(entity);
             num_lights++;
         }

@@ -113,6 +113,7 @@
 #define TEX_SPECIAL (1U << 0)   /* sky or liquid (no lightmap or subdivision */
 #define TEX_SKIP    (1U << 1)   /* an invisible surface */
 #define TEX_HINT    (1U << 2)   /* hint surface */
+#define TEX_CURVED      (1U << 11)              /* surface is meant to have smoothed lighting, to hide angular edges, giving a curved appearance */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -282,6 +283,7 @@ typedef struct visfacet_s {
     int texinfo;
     short contents[2];          // 0 = front side
     short cflags[2];            // contents flags
+    short lmshift[2];           //lightmap scale.
 
     struct visfacet_s *original;        // face on node
     int outputnumber;           // only valid for original faces after
@@ -305,6 +307,7 @@ typedef struct surface_s {
     face_t *faces;              // links to all faces on either side of the surf
     bool has_detail;            // 1 if the surface has detail brushes
     bool has_struct;            // 1 if the surface has non-detail brushes
+    short lmshift;
 } surface_t;
 
 
@@ -342,6 +345,7 @@ typedef struct brush_s {
     face_t *faces;
     short contents;             /* BSP contents */
     short cflags;               /* Compiler internal contents flags */
+    short lmshift;              /* lightmap scaling (qu/lightmap pixel), passed to the light util */
 } brush_t;
 
 void FreeBrushes(brush_t *brushlist);
@@ -466,6 +470,8 @@ typedef struct options_s {
     bool fNopercent;
     bool forceGoodTree;
     bool fixRotateObjTexture;
+    bool fbspx_brushes;
+    bool fNoTextures;
     int hexen2;/*2 if the worldspawn mission pack flag was set*/
     int BSPVersion;
     int dxSubdivide;
@@ -508,13 +514,14 @@ struct lumpdata {
 
 typedef struct mapentity_s {
     vec3_t origin;
+    epair_t *smoothedtexture;
     mapbrush_t *mapbrushes;     /* Array */
     int nummapbrushes;
     epair_t *epairs;
     vec3_t mins, maxs;
     brush_t *brushes;           /* NULL terminated list */
     int numbrushes;
-    struct lumpdata lumps[BSP_LUMPS];
+    struct lumpdata lumps[BSPX_LUMPS];
 } mapentity_t;
 
 typedef struct mapdata_s {
@@ -541,7 +548,7 @@ typedef struct mapdata_s {
     miptex_t *miptex;
 
     /* Totals for BSP data items -> TODO: move to a bspdata struct? */
-    int cTotal[BSP_LUMPS];
+    int cTotal[BSPX_LUMPS];
 
     /* Misc other global state for the compile process */
     int fillmark;       /* For marking leaves while outside filling */
@@ -554,7 +561,7 @@ extern mapentity_t *pWorldEnt;
 void LoadMapFile(void);
 
 int FindMiptex(const char *name);
-int FindTexinfo(texinfo_t *texinfo);
+int FindTexinfo(texinfo_t *texinfo, unsigned int flags);
 
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);
@@ -576,6 +583,16 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit);
 int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
+
+struct bspxbrushes_s
+{
+        byte *lumpinfo;
+        size_t lumpsize;
+        size_t lumpmaxsize;
+};
+void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
+void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
+void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes);
 
 // util.c
 

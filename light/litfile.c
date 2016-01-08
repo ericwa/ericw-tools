@@ -23,7 +23,7 @@
 #include <common/cmdlib.h>
 
 void
-WriteLitFile(const bsp2_t *bsp, const char *filename, int version)
+WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int version)
 {
     FILE *litfile;
     char litname[1024];
@@ -33,15 +33,47 @@ WriteLitFile(const bsp2_t *bsp, const char *filename, int version)
     StripExtension(litname);
     DefaultExtension(litname, ".lit");
 
-    header.ident[0] = 'Q';
-    header.ident[1] = 'L';
-    header.ident[2] = 'I';
-    header.ident[3] = 'T';
-    header.version = LittleLong(version);
+    header.v1.ident[0] = 'Q';
+    header.v1.ident[1] = 'L';
+    header.v1.ident[2] = 'I';
+    header.v1.ident[3] = 'T';
+    header.v1.version = LittleLong(version);
+    header.v2.numsurfs = LittleLong(bsp->numfaces);
+    header.v2.lmsamples = LittleLong(bsp->lightdatasize);
 
     litfile = SafeOpenWrite(litname);
-    SafeWrite(litfile, &header, sizeof(header));
+    SafeWrite(litfile, &header.v1, sizeof(header.v1));
+    if (version == 2)
+    {
+        unsigned int i, j;
+        unsigned int *offsets = malloc(bsp->numfaces * sizeof(*offsets));
+        unsigned short *extents = malloc(2*bsp->numfaces * sizeof(*extents));
+        unsigned char *styles = malloc(4*bsp->numfaces * sizeof(*styles));
+        unsigned char *shifts = malloc(bsp->numfaces * sizeof(*shifts));
+        for (i = 0; i < bsp->numfaces; i++)
+        {
+            offsets[i] = LittleLong(facesup[i].lightofs);
+            styles[i*4+0] = LittleShort(facesup[i].styles[0]);
+            styles[i*4+1] = LittleShort(facesup[i].styles[1]);
+            styles[i*4+2] = LittleShort(facesup[i].styles[2]);
+            styles[i*4+3] = LittleShort(facesup[i].styles[3]);
+            extents[i*2+0] = LittleShort(facesup[i].extent[0]);
+            extents[i*2+1] = LittleShort(facesup[i].extent[1]);
+            j = 0;
+            while ((1u<<j) < facesup[i].lmscale)
+                j++;
+            shifts[i] = j;
+        }
+        SafeWrite(litfile, &header.v2, sizeof(header.v2));
+        SafeWrite(litfile, offsets, bsp->numfaces * sizeof(*offsets));
+        SafeWrite(litfile, extents, 2*bsp->numfaces * sizeof(*extents));
+        SafeWrite(litfile, styles, 4*bsp->numfaces * sizeof(*styles));
+        SafeWrite(litfile, shifts, bsp->numfaces * sizeof(*shifts));
     SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
+        SafeWrite(litfile, lux_filebase, bsp->lightdatasize * 3);
+    }
+    else
+        SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
     fclose(litfile);
 }
 
@@ -56,14 +88,14 @@ WriteLuxFile(const bsp2_t *bsp, const char *filename, int version)
     StripExtension(luxname);
     DefaultExtension(luxname, ".lux");
 
-    header.ident[0] = 'Q';
-    header.ident[1] = 'L';
-    header.ident[2] = 'I';
-    header.ident[3] = 'T';
-    header.version = LittleLong(version);
+    header.v1.ident[0] = 'Q';
+    header.v1.ident[1] = 'L';
+    header.v1.ident[2] = 'I';
+    header.v1.ident[3] = 'T';
+    header.v1.version = LittleLong(version);
 
     luxfile = SafeOpenWrite(luxname);
-    SafeWrite(luxfile, &header, sizeof(header));
+    SafeWrite(luxfile, &header.v1, sizeof(header.v1));
     SafeWrite(luxfile, lux_filebase, bsp->lightdatasize * 3);
     fclose(luxfile);
 }

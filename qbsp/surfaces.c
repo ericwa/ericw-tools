@@ -22,6 +22,7 @@
 #include "qbsp.h"
 
 static hashvert_t *pHashverts;
+static int needlmshifts;
 
 /*
 ===============
@@ -41,11 +42,35 @@ SubdivideFace(face_t *f, face_t **prevptr)
     face_t *front, *back, *next;
     texinfo_t *tex;
     vec3_t tmp;
+    vec_t subdiv;
+    vec_t extent;
+    int lmshift;
+
+
 
     /* special (non-surface cached) faces don't need subdivision */
     tex = (texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data + f->texinfo;
     if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
         return;
+
+//subdivision is pretty much pointless other than because of lightmap block limits
+//one lightmap block will always be added at the end, for smooth interpolation
+
+    //engines that do support scaling will support 256*256 blocks (at whatever scale).
+    lmshift = f->lmshift[0];
+    if (lmshift > 4)
+        lmshift = 4;    //no bugging out with legacy lighting
+    subdiv = 255<<lmshift;
+
+//legacy engines support 18*18 max blocks (at 1:16 scale).
+//the 18*18 limit can be relaxed in certain engines, and doing so will generally give a performance boost.
+    if (subdiv >= options.dxSubdivide)
+        subdiv = options.dxSubdivide;
+
+//      subdiv += 8;
+
+//floating point precision from clipping means we should err on the low side
+//the bsp is possibly going to be used in both engines that support scaling and those that do not. this means we always over-estimate by 16 rathern than 1<<lmscale
 
     for (axis = 0; axis < 2; axis++) {
         while (1) {
@@ -64,18 +89,27 @@ SubdivideFace(face_t *f, face_t **prevptr)
                     maxs = v;
             }
 
-            if (maxs - mins <= options.dxSubdivide)
+            extent = ceil(maxs) - floor(mins);
+//          extent = maxs - mins;
+            if (extent <= subdiv)
                 break;
 
             // split it
             VectorCopy(tmp, plane.normal);
             v = VectorLength(plane.normal);
             VectorNormalize(plane.normal);
-            plane.dist = (mins + options.dxSubdivide - 16) / v;
+            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this should balance the load slightly */
+                plane.dist = (mins + subdiv/2) / v;
+            else
+                plane.dist = (mins + subdiv) / v;
             next = f->next;
             SplitFace(f, &plane, &front, &back);
             if (!front || !back)
-                Error("Didn't split the polygon (%s)", __func__);
+{
+printf("didn't split\n");
+                break;
+//              Error("Didn't split the polygon (%s)", __func__);
+}
             *prevptr = back;
             back->next = front;
             front->next = next;
@@ -424,6 +458,7 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
     const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
+    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
     bsp29_dface_t *out;
     face_t *face;
     int i;
@@ -439,6 +474,8 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 
         // emit a region
         face->outputnumber = map.cTotal[LUMP_FACES];
+        if (lmshifts->data)
+            ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
         out = (bsp29_dface_t *)faces->data + faces->index;
         out->planenum = node->outputplanenum;
         out->side = face->planeside;
@@ -473,6 +510,7 @@ GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
     const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
+    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
     bsp2_dface_t *out;
     face_t *face;
     int i;
@@ -488,6 +526,8 @@ GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
 
         // emit a region
         face->outputnumber = map.cTotal[LUMP_FACES];
+        if (lmshifts->data)
+            ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
         out = (bsp2_dface_t *)faces->data + faces->index;
         out->planenum = node->outputplanenum;
         out->side = face->planeside;
@@ -533,6 +573,9 @@ CountData_r(mapentity_t *entity, node_t *node)
     for (f = node->faces; f; f = f->next) {
         if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
             continue;
+
+        if (f->lmshift[1] != 4)
+                needlmshifts = true;
         entity->lumps[LUMP_FACES].count++;
         entity->lumps[LUMP_VERTEXES].count += f->w.numpoints;
     }
@@ -555,9 +598,11 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     struct lumpdata *vertices = &entity->lumps[LUMP_VERTEXES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
+    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
 
     Message(msgProgress, "MakeFaceEdges");
 
+    needlmshifts = false;
     cStartEdge = 0;
     for (i = 0; i < entity - map.entities; i++)
         cStartEdge += map.entities[i].lumps[LUMP_EDGES].count;
@@ -611,6 +656,9 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
     faces->data = AllocMem(BSP_FACE, faces->count, true);
+
+    lmshifts->count = needlmshifts?faces->count:0;
+    lmshifts->data = needlmshifts?AllocMem(OTHER, sizeof(byte) * lmshifts->count, true):NULL;
 
     Message(msgProgress, "GrowRegions");
 

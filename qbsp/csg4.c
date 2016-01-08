@@ -57,6 +57,8 @@ NewFaceFromFace(face_t *in)
     newf->contents[1] = in->contents[1];
     newf->cflags[0] = in->cflags[0];
     newf->cflags[1] = in->cflags[1];
+    newf->lmshift[0] = in->lmshift[0];
+    newf->lmshift[1] = in->lmshift[1];
 
     VectorCopy(in->origin, newf->origin);
     newf->radius = in->radius;
@@ -306,6 +308,8 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, face_t **planefaces)
             newface->contents[1] = face->contents[0];
             newface->cflags[0] = face->cflags[1];
             newface->cflags[1] = face->cflags[0];
+            newface->lmshift[0] = face->lmshift[1];
+            newface->lmshift[1] = face->lmshift[0];
 
             for (i = 0; i < face->w.numpoints; i++)
                 VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
@@ -421,6 +425,8 @@ CopyBrushFaces(const brush_t *brush)
         newface->contents[1] = brush->contents;
         newface->cflags[0] = 0;
         newface->cflags[1] = brush->cflags;
+        newface->lmshift[0] = brush->lmshift;
+        newface->lmshift[1] = brush->lmshift;
         newface->next = facelist;
         facelist = newface;
     }

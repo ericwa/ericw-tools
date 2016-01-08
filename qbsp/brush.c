@@ -450,7 +450,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
             texInfoNew.vecs[0][3] += DotProduct( rotate_offset, vecs[0] );
             texInfoNew.vecs[1][3] += DotProduct( rotate_offset, vecs[1] );
 
-            mapface->texinfo = FindTexinfo( &texInfoNew );
+            mapface->texinfo = FindTexinfo( &texInfoNew, texInfoNew.flags );
         }
 
         VectorCopy(mapface->plane.normal, plane.normal);
@@ -924,6 +924,9 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
 /*
 ============
 Brush_LoadEntity
+
+hullnum -1 should contain ALL brushes.
+hullnum 0 does not contain clip brushes.
 ============
 */
 void
@@ -934,6 +937,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     mapbrush_t *mapbrush;
     vec3_t rotate_offset;
     int i, contents, cflags = 0;
+    int lmshift;
 
     /*
      * The brush list needs to be ordered:
@@ -946,6 +950,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
      * always just put nonsolid on the head of the list, but will need to insert
      * solid brushes between any existing nonsolid and solids on the list.
      */
+
     solid = NULL;
     nonsolid = dst->brushes;
     classname = ValueForKey(src, "classname");
@@ -961,6 +966,16 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     if (!Q_strcasecmp(classname, "func_detail"))
         cflags |= CFLAGS_DETAIL;
 
+    /* entities with custom lmscales are important for the qbsp to know about */
+    i = 16 * atof(ValueForKey(src, "_lmscale"));
+    if (!i) i = 16;     //if 0, pick a suitable default
+    lmshift = 0;
+    while (i > 1)
+    {
+        lmshift++;      //only allow power-of-two scales
+        i /= 2;
+    }
+
     mapbrush = src->mapbrushes;
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         contents = Brush_GetContents(mapbrush);
@@ -971,7 +986,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
          * correctly.
          */
         if (contents == CONTENTS_CLIP) {
-            if (!hullnum) {
+            if (hullnum <= 0) {
                 brush = LoadBrush(mapbrush, rotate_offset, hullnum);
                 if (brush) {
                     AddToBounds(dst, brush->mins);
@@ -1009,6 +1024,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
         dst->numbrushes++;
         brush->contents = contents;
+        brush->lmshift = lmshift;
         brush->cflags = cflags;
         if (brush->contents != CONTENTS_SOLID) {
             brush->next = nonsolid;

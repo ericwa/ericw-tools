@@ -60,6 +60,8 @@ typedef struct entity_s {
     float spotfalloff;
     float spotangle2;
     float spotfalloff2;
+    miptex_t *projectedmip; /*projected texture*/
+    float projectionmatrix[16]; /*matrix used to project the specified texture. already contains origin.*/
 
     lightsample_t light;
     light_formula_t formula;
@@ -118,6 +120,9 @@ void normalize_color_format(vec3_t color);
 entity_t *FindEntityWithKeyPair(const char *key, const char *value);
 const char *ValueForKey(const entity_t *ent, const char *key);
 void GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec);
+
+void SetWorldKeyValue(const char *key, const char *value);
+const char *WorldValueForKey(const char *key);
 
 void LoadEntities(const bsp2_t *bsp);
 void SetupLights(const bsp2_t *bsp);

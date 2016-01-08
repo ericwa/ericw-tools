@@ -26,6 +26,16 @@
 
 static dheader_t *header;
 
+typedef struct bspxentry_s
+{
+        char lumpname[24];
+        const void *lumpdata;
+        size_t lumpsize;
+
+        struct bspxentry_s *next;
+} bspxentry_t;
+static bspxentry_t *bspxentries;
+
 /*
 =============
 LoadBSPFile
@@ -176,6 +186,52 @@ AddLump(FILE *f, int Type)
     }
 }
 
+static void
+GenLump(const char *bspxlump, int Type, size_t sz)
+{
+    int cLen = 0;
+    int i;
+    const struct lumpdata *entities;
+    const mapentity_t *entity;
+    char *out;
+
+    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+        entities = &entity->lumps[Type];
+        cLen += entities->count*sz; 
+    }
+    if (!cLen)
+        return;
+    out = malloc(cLen);
+    cLen = 0;
+    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+        entities = &entity->lumps[Type];
+        memcpy(out+cLen, entities->data, entities->count*sz);
+        cLen += entities->count*sz;
+    }
+    BSPX_AddLump(bspxlump, out, cLen);
+}
+
+void BSPX_AddLump(const char *xname, const void *xdata, size_t xsize)
+{
+        bspxentry_t *e;
+        for (e = bspxentries; e; e = e->next)
+        {
+                if (!strcmp(e->lumpname, xname))
+                        break;
+        }
+        if (!e)
+        {
+                e = malloc(sizeof(*e));
+                memset(e, 0, sizeof(*e));
+                strncpy(e->lumpname, xname, sizeof(e->lumpname));
+                e->next = bspxentries;
+                bspxentries = e;
+        }
+
+        e->lumpdata = xdata;
+        e->lumpsize = xsize;
+}
+
 /*
 =============
 WriteBSPFile
@@ -218,6 +274,50 @@ WriteBSPFile(void)
     AddLump(f, LUMP_VISIBILITY);
     AddLump(f, LUMP_ENTITIES);
     AddLump(f, LUMP_TEXTURES);
+
+    GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
+
+    /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
+    if (bspxentries)
+    {
+#define LittleLong(x) x
+#define SafeWrite(f,p,l) fwrite(p, 1, l, f);
+        bspx_header_t xheader;
+        bspxentry_t *x; 
+        bspx_lump_t xlumps[64];
+        uint32_t l;
+        uint32_t bspxheader = ftell(f);
+        if (bspxheader & 3)
+            Error("BSPX header is misaligned");
+        xheader.id[0] = 'B';
+        xheader.id[1] = 'S';
+        xheader.id[2] = 'P';
+        xheader.id[3] = 'X';
+        xheader.numlumps = 0;
+        for (x = bspxentries; x; x = x->next)
+            xheader.numlumps++;
+
+        if (xheader.numlumps > sizeof(xlumps)/sizeof(xlumps[0]))        /*eep*/
+            xheader.numlumps = sizeof(xlumps)/sizeof(xlumps[0]);
+
+        SafeWrite(f, &xheader, sizeof(xheader));
+        SafeWrite(f, xlumps, xheader.numlumps * sizeof(xlumps[0]));
+
+        for (x = bspxentries, l = 0; x && l < xheader.numlumps; x = x->next, l++)
+        {
+            byte pad[4] = {0};
+            xlumps[l].filelen = LittleLong(x->lumpsize);
+            xlumps[l].fileofs = LittleLong(ftell(f));
+            strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));
+            SafeWrite(f, x->lumpdata, x->lumpsize);
+            if (x->lumpsize % 4)
+                SafeWrite(f, pad, x->lumpsize % 4);
+        }
+
+        fseek(f, bspxheader, SEEK_SET);
+        SafeWrite(f, &xheader, sizeof(xheader));
+        SafeWrite(f, xlumps, xheader.numlumps * sizeof(xlumps[0]));
+    }
 
     fseek(f, 0, SEEK_SET);
     ret = fwrite(header, sizeof(dheader_t), 1, f);
@@ -273,4 +373,13 @@ PrintBSPFileSizes(void)
     Message(msgStat, "         lightdata    %10d", map.cTotal[LUMP_LIGHTING]);
     Message(msgStat, "         visdata      %10d", map.cTotal[LUMP_VISIBILITY]);
     Message(msgStat, "         entdata      %10d", map.cTotal[LUMP_ENTITIES] + 1);
+
+        if (bspxentries)
+        {
+                bspxentry_t *x;
+                for (x = bspxentries; x; x = x->next)
+                {
+                        Message(msgStat, "%8s %-12s %10i", "BSPX", x->lumpname, x->lumpsize);
+                }
+        }
 }

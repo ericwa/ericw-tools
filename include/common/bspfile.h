@@ -44,7 +44,7 @@
 #define MAX_MAP_EDGES         256000
 #define MAX_MAP_SURFEDGES     512000
 #define MAX_MAP_MIPTEX     0x0800000
-#define MAX_MAP_LIGHTING   0x1000000
+#define MAX_MAP_LIGHTING   0x8000000
 #define MAX_MAP_VISIBILITY 0x8000000
 
 /* key / value pair sizes */
@@ -77,6 +77,16 @@ typedef struct {
 #define LUMP_MODELS       14
 
 #define BSP_LUMPS         15
+
+typedef struct {
+        char id[4]; //'BSPX'
+        uint32_t numlumps;
+} bspx_header_t;
+typedef struct {
+        char lumpname[24];
+        uint32_t fileofs;
+        uint32_t filelen;
+} bspx_lump_t;
 
 typedef struct {
     const char *name;
@@ -197,6 +207,7 @@ typedef struct texinfo_s {
 } texinfo_t;
 
 #define TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
+#define TEX_CURVED      0x800           /* surface is meant to have smoothed lighting, to hide angular edges, giving a curved appearance */
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for
@@ -282,6 +293,15 @@ typedef union {
 } dtexdata_t;
 
 /* ========================================================================= */
+
+typedef struct bspxentry_s
+{
+        char lumpname[24];
+        const void *lumpdata;
+        size_t lumpsize;
+
+        struct bspxentry_s *next;
+} bspxentry_t;
 
 typedef struct {
     int nummodels;
@@ -437,11 +457,15 @@ typedef struct {
         bsp2rmq_t bsp2rmq;
         bsp2_t bsp2;
     } data;
+
+        bspxentry_t *bspxentries;
 } bspdata_t;
 
-void LoadBSPFile(const char *filename, bspdata_t *bsp);
+void LoadBSPFile(char *filename, bspdata_t *bsp);       //returns the filename as contained inside a bsp
 void WriteBSPFile(const char *filename, bspdata_t *bsp);
 void PrintBSPFileSizes(const bspdata_t *bsp);
 void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
+void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
+const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
 
 #endif /* __COMMON_BSPFILE_H__ */
