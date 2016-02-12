@@ -37,6 +37,8 @@
 #define TRACE_HIT_LAVA  (1 << 3)
 #define TRACE_HIT_SKY   (1 << 4)
 
+int Light_PointContents( const vec3_t point );
+
 typedef struct {
     const dplane_t *dplane;
     int side;

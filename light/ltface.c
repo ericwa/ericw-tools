@@ -284,6 +284,7 @@ TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
 
     rhs[0] = s - texorg->texinfo->vecs[0][3];
     rhs[1] = t - texorg->texinfo->vecs[1][3];
+    // FIXME: This could be more or less than one unit in world space?
     rhs[2] = texorg->planedist + 1; /* one "unit" in front of surface */
 
     Solve3(&texorg->transform, rhs, world);
@@ -448,6 +449,35 @@ WarnBadMidpoint(const vec3_t point)
 
 /*
  * =================
+ * NearWall
+ * 
+ * returns true if any of the 6 points up/down/left/right/front/back
+ * within 0.1 units of 'point' are in CONTENTS_SOLID
+ * =================
+ */
+bool NearWall(const vec3_t point)
+{
+    int i;
+    int insolid = 0;
+    
+    for (i = 0; i < 6; i++) {
+        vec3_t testpoint;
+        VectorCopy(point, testpoint);
+        
+        int axis = i/2;
+        bool add = i%2;
+        testpoint[axis] += (add ? 0.1 : -0.1);
+        
+        if (Light_PointContents(testpoint) == CONTENTS_SOLID) {
+            insolid++;
+        }
+    }
+    
+    return insolid > 0;
+}
+
+/*
+ * =================
  * CalcPoints
  * For each texture aligned grid point, back project onto the plane
  * to get the world xyz value of the sample point
@@ -486,6 +516,13 @@ CalcPoints(const dmodel_t *model, const vec3_t offset, const texorg_t *texorg, l
 
             TexCoordToWorld(us, ut, texorg, point);
             VectorAdd(point, offset, point);
+            
+            // Is the point already unbostructed? Skip doing the traceline.
+            // There could be an obstruction near the face that would block most of the traces
+            // (e.g. beveled walkways in telefragged.bsp touch a wall along one edge, but don't split the wall)
+            if (!NearWall(point))
+                continue; // all good
+            
             for (i = 0; i < 6; i++) {
                 const int flags = TRACE_HIT_SOLID;
                 tracepoint_t hit;
