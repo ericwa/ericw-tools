@@ -828,7 +828,7 @@ Lightmaps_Init(lightmap_t *lightmaps, const int count)
  * allocated since it may not be kept if no lights hit.
  */
 static lightmap_t *
-Lightmap_ForStyle(lightmap_t *lightmaps, const int style, int numpoints)
+Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lightsurf)
 {
     lightmap_t *lightmap = lightmaps;
     int i;
@@ -841,7 +841,7 @@ Lightmap_ForStyle(lightmap_t *lightmaps, const int style, int numpoints)
     }
 
     /*clear only the data that is going to be merged to it. there's no point clearing more*/
-    memset(lightmap->samples, 0, sizeof(*lightmap->samples)*numpoints);
+    memset(lightmap->samples, 0, sizeof(*lightmap->samples)*lightsurf->numpoints);
     lightmap->style = 255;
 
     return lightmap;
@@ -1192,7 +1192,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
      * Check it for real
      */
     hit = false;
-    lightmap = Lightmap_ForStyle(lightmaps, entity->style, lightsurf->numpoints);
+    lightmap = Lightmap_ForStyle(lightmaps, entity->style, lightsurf);
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
     sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
@@ -1279,7 +1279,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
         return;
 
     /* if sunlight is set, use a style 0 light map */
-    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf->numpoints);
+    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
     VectorCopy(sun->sunvec, incoming);
     VectorNormalize(incoming);
@@ -1326,7 +1326,7 @@ LightFace_Min(const lightsample_t *light,
     lightmap_t *lightmap;
 
     /* Find a style 0 lightmap */
-    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf->numpoints);
+    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
     hit = false;
     sample = lightmap->samples;
@@ -1351,7 +1351,7 @@ LightFace_Min(const lightsample_t *light,
         if ((*entity)->formula != LF_LOCALMIN)
             continue;
 
-        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style, lightsurf->numpoints);
+        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style, lightsurf);
 
         hit = false;
         sample = lightmap->samples;
@@ -1391,7 +1391,7 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     lightmap_t *lightmap;
 
     /* use a style 0 light map */
-    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf->numpoints);
+    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
     /* Overwrite each point with the dirt value for that sample... */
     sample = lightmap->samples;
