@@ -296,11 +296,11 @@ typedef union {
 
 typedef struct bspxentry_s
 {
-        char lumpname[24];
-        const void *lumpdata;
-        size_t lumpsize;
+    char lumpname[24];
+    const void *lumpdata;
+    size_t lumpsize;
 
-        struct bspxentry_s *next;
+    struct bspxentry_s *next;
 } bspxentry_t;
 
 typedef struct {
@@ -451,14 +451,15 @@ typedef struct {
 
 typedef struct {
     int32_t version;
-        int hullcount;
+    int hullcount;
+    
     union {
         bsp29_t bsp29;
         bsp2rmq_t bsp2rmq;
         bsp2_t bsp2;
     } data;
 
-        bspxentry_t *bspxentries;
+    bspxentry_t *bspxentries;
 } bspdata_t;
 
 void LoadBSPFile(char *filename, bspdata_t *bsp);       //returns the filename as contained inside a bsp

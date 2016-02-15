@@ -25,14 +25,14 @@
 #define LIT_VERSION 1
 
 typedef struct litheader_s {
-        struct {
-    char ident[4];
-    int version;
-        } v1;
-        struct {
-                int numsurfs;
-                int lmsamples;
-        } v2;
+    struct {
+        char ident[4];
+        int version;
+    } v1;
+    struct {
+        int numsurfs;
+        int lmsamples;
+    } v2;
 } litheader_t;
 
 /* internal representation for bspx/lit2 */

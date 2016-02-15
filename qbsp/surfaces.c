@@ -105,11 +105,11 @@ SubdivideFace(face_t *f, face_t **prevptr)
             next = f->next;
             SplitFace(f, &plane, &front, &back);
             if (!front || !back)
-{
-printf("didn't split\n");
+            {
+                printf("didn't split\n");
                 break;
 //              Error("Didn't split the polygon (%s)", __func__);
-}
+            }
             *prevptr = back;
             back->next = front;
             front->next = next;

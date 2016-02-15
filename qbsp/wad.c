@@ -173,8 +173,8 @@ WADList_Process(const wad_t *wadlist)
             if (options.fNoTextures)
                 texdata->count += sizeof(dmiptex_t);
             else
-            texdata->count += texture->disksize;
-    }
+                texdata->count += texture->disksize;
+        }
     }
 
     /* Default texture data to store in worldmodel */

@@ -482,143 +482,143 @@ static vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, i
 
 static int ClipPointToTriangle(const vec_t *orig, vec_t *point, const vec_t *norm_, const vec_t *v1, const vec_t *v2, const vec_t *v3)
 {
-        vec3_t d1, d2;
-        float dist;
+    vec3_t d1, d2;
+    float dist;
 
-        vec3_t norm;
-        /*wastefully calculate the normal*/
-        VectorSubtract(v1, v2, d1);
-        VectorSubtract(v3, v2, d2);
-        CrossProduct(d2, d1, norm);
+    vec3_t norm;
+    /*wastefully calculate the normal*/
+    VectorSubtract(v1, v2, d1);
+    VectorSubtract(v3, v2, d2);
+    CrossProduct(d2, d1, norm);
 
 //VectorCopy(norm_, norm);
-        VectorNormalize(norm);
+    VectorNormalize(norm);
 
-        if (!norm[0] && !norm[1] && !norm[2])
-                return 0;       //degenerate
+    if (!norm[0] && !norm[1] && !norm[2])
+        return 0;       //degenerate
 
-        dist = DotProduct(orig, norm) - DotProduct(v1, norm);
-        VectorMA(orig, -dist, norm, point);
+    dist = DotProduct(orig, norm) - DotProduct(v1, norm);
+    VectorMA(orig, -dist, norm, point);
 
-        VectorSubtract(v1, v2, d1);
-        CrossProduct(d1, norm, d2);
-        VectorNormalize(d2);
-        dist = DotProduct(point, d2) - DotProduct(v1, d2);
-        if (dist < 0)
-                VectorMA(point, -dist, d2, point);
+    VectorSubtract(v1, v2, d1);
+    CrossProduct(d1, norm, d2);
+    VectorNormalize(d2);
+    dist = DotProduct(point, d2) - DotProduct(v1, d2);
+    if (dist < 0)
+        VectorMA(point, -dist, d2, point);
 
-        VectorSubtract(v2, v3, d1);
-        CrossProduct(d1, norm, d2);
-        VectorNormalize(d2);
-        dist = DotProduct(point, d2) - DotProduct(v2, d2);
-        if (dist < 0)
-                VectorMA(point, -dist, d2, point);      
+    VectorSubtract(v2, v3, d1);
+    CrossProduct(d1, norm, d2);
+    VectorNormalize(d2);
+    dist = DotProduct(point, d2) - DotProduct(v2, d2);
+    if (dist < 0)
+        VectorMA(point, -dist, d2, point);
 
-        VectorSubtract(v3, v1, d1);
-        CrossProduct(d1, norm, d2);
-        VectorNormalize(d2);
-        dist = DotProduct(point, d2) - DotProduct(v3, d2);
-        if (dist < 0)
-                VectorMA(point, -dist, d2, point);
+    VectorSubtract(v3, v1, d1);
+    CrossProduct(d1, norm, d2);
+    VectorNormalize(d2);
+    dist = DotProduct(point, d2) - DotProduct(v3, d2);
+    if (dist < 0)
+        VectorMA(point, -dist, d2, point);
 
-        return 1;
+    return 1;
 }
 
 static void CalcBarycentric(vec_t *p, vec_t *a, vec_t *b, vec_t *c, vec_t *res)
 {
-        vec3_t v0,v1,v2;
-        VectorSubtract(b, a, v0);
-        VectorSubtract(c, a, v1);
-        VectorSubtract(p, a, v2);
-        float d00 = DotProduct(v0, v0);
-        float d01 = DotProduct(v0, v1);
-        float d11 = DotProduct(v1, v1);
-        float d20 = DotProduct(v2, v0);
-        float d21 = DotProduct(v2, v1);
-        float invDenom = (d00 * d11 - d01 * d01);
-        invDenom = 1.0/invDenom;
-        res[1] = (d11 * d20 - d01 * d21) * invDenom;
-        res[2] = (d00 * d21 - d01 * d20) * invDenom;
-        res[0] = 1.0f - res[1] - res[2];
+    vec3_t v0,v1,v2;
+    VectorSubtract(b, a, v0);
+    VectorSubtract(c, a, v1);
+    VectorSubtract(p, a, v2);
+    float d00 = DotProduct(v0, v0);
+    float d01 = DotProduct(v0, v1);
+    float d11 = DotProduct(v1, v1);
+    float d20 = DotProduct(v2, v0);
+    float d21 = DotProduct(v2, v1);
+    float invDenom = (d00 * d11 - d01 * d01);
+    invDenom = 1.0/invDenom;
+    res[1] = (d11 * d20 - d01 * d21) * invDenom;
+    res[2] = (d00 * d21 - d01 * d20) * invDenom;
+    res[0] = 1.0f - res[1] - res[2];
 }
 
 static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const vec_t *surfnorm, vec_t *norm, vec_t *point)
 {
 #if 1
-        int j;
-        vec_t *v1, *v2, *v3;
-        int best; //3rd point
-        vec3_t clipped, t;
+    int j;
+    vec_t *v1, *v2, *v3;
+    int best; //3rd point
+    vec3_t clipped, t;
 //      vec3_t bestp = {point[0],point[1],point[2]};
-        vec3_t barry;
-        vec_t bestcost = INFINITY, cost;
+    vec3_t barry;
+    vec_t bestcost = INFINITY, cost;
 
-        /* now just walk around the surface as a triangle fan */
-        v1 = GetSurfaceVertexPoint(bsp, face, 0);
-        v2 = GetSurfaceVertexPoint(bsp, face, 1);
-        for (best = 0,j = 2; j < face->numedges; j++)
+    /* now just walk around the surface as a triangle fan */
+    v1 = GetSurfaceVertexPoint(bsp, face, 0);
+    v2 = GetSurfaceVertexPoint(bsp, face, 1);
+    for (best = 0,j = 2; j < face->numedges; j++)
+    {
+        v3 = GetSurfaceVertexPoint(bsp, face, j);
+        if (ClipPointToTriangle(point, clipped, surfnorm, v1, v2, v3))
         {
-                v3 = GetSurfaceVertexPoint(bsp, face, j);
-                if (ClipPointToTriangle(point, clipped, surfnorm, v1, v2, v3))
-                {
-                        VectorSubtract(clipped, point, t);
-                        cost = VectorLength(t);
-                        if (cost < bestcost)
-                        {
-                                best = j;
-                                bestcost = cost;
+            VectorSubtract(clipped, point, t);
+            cost = VectorLength(t);
+            if (cost < bestcost)
+            {
+                best = j;
+                bestcost = cost;
 //                              VectorCopy(clipped, bestp);
-                                if (!cost)      //looks like we're already inside this triangle.
-                                        break;
-                        }
-                }
-                v2 = v3;
+                if (!cost)      //looks like we're already inside this triangle.
+                    break;
+            }
         }
+        v2 = v3;
+    }
 #if 0
-        norm[0] = (best & 1)?1:-1;
-        norm[1] = (best & 2)?1:-1;
-        norm[2] = (best & 4)?1:-1;
-        return;
+    norm[0] = (best & 1)?1:-1;
+    norm[1] = (best & 2)?1:-1;
+    norm[2] = (best & 4)?1:-1;
+    return;
 #else
-        v1 = GetSurfaceVertexPoint(bsp, face, 0);
-        v2 = GetSurfaceVertexPoint(bsp, face, best-1);
-        v3 = GetSurfaceVertexPoint(bsp, face, best);
-        CalcBarycentric(point, v1, v2, v3, barry);
+    v1 = GetSurfaceVertexPoint(bsp, face, 0);
+    v2 = GetSurfaceVertexPoint(bsp, face, best-1);
+    v3 = GetSurfaceVertexPoint(bsp, face, best);
+    CalcBarycentric(point, v1, v2, v3, barry);
 
-        v1 = GetSurfaceVertexNormal(bsp, face, 0);
-        v2 = GetSurfaceVertexNormal(bsp, face, best-1);
-        v3 = GetSurfaceVertexNormal(bsp, face, best);
-        VectorScale(v1, barry[0], norm);
-        VectorMA(norm, barry[1], v2, norm);
-        VectorMA(norm, barry[2], v3, norm);
+    v1 = GetSurfaceVertexNormal(bsp, face, 0);
+    v2 = GetSurfaceVertexNormal(bsp, face, best-1);
+    v3 = GetSurfaceVertexNormal(bsp, face, best);
+    VectorScale(v1, barry[0], norm);
+    VectorMA(norm, barry[1], v2, norm);
+    VectorMA(norm, barry[2], v3, norm);
 #endif
 #else
-        /*utterly crap, just for testing. just grab closest vertex*/
-        int i;
-        float dist, bestd;
-        int v, bestv;
-        vec3_t t;
+    /*utterly crap, just for testing. just grab closest vertex*/
+    int i;
+    float dist, bestd;
+    int v, bestv;
+    vec3_t t;
 
-        bestv = GetSurfaceVertex(bsp, face, 0);
-        VectorSubtract(point, bsp->dvertexes[bestv].point, t);
-        bestd = VectorLength(t);
-        for (i = 1; i < face->numedges; i++)
+    bestv = GetSurfaceVertex(bsp, face, 0);
+    VectorSubtract(point, bsp->dvertexes[bestv].point, t);
+    bestd = VectorLength(t);
+    for (i = 1; i < face->numedges; i++)
+    {
+        v = GetSurfaceVertex(bsp, face, i);
+        VectorSubtract(point, bsp->dvertexes[v].point, t);
+        dist = VectorLength(t);
+        if (dist < bestd)
         {
-                v = GetSurfaceVertex(bsp, face, i);
-                VectorSubtract(point, bsp->dvertexes[v].point, t);
-                dist = VectorLength(t);
-                if (dist < bestd)
-                {
-                        bestd = dist;
-                        bestv = v;
-                }
+            bestd = dist;
+            bestv = v;
         }
-        VectorCopy(vertex_normals[bestv], norm);
-//      VectorMA(norm, frac, t, norm);
+    }
+    VectorCopy(vertex_normals[bestv], norm);
+//  VectorMA(norm, frac, t, norm);
 #endif
 //norm[0] = norm[1] = norm[2] = 0;
 //norm[2] = 1;
-        VectorNormalize(norm);
+    VectorNormalize(norm);
 }
 
 /*
@@ -1087,35 +1087,35 @@ static byte thepalette[768] =
 };
 static void Matrix4x4_CM_Transform4(const float *matrix, const float *vector, float *product)
 {
-        product[0] = matrix[0]*vector[0] + matrix[4]*vector[1] + matrix[8]*vector[2] + matrix[12]*vector[3];
-        product[1] = matrix[1]*vector[0] + matrix[5]*vector[1] + matrix[9]*vector[2] + matrix[13]*vector[3];
-        product[2] = matrix[2]*vector[0] + matrix[6]*vector[1] + matrix[10]*vector[2] + matrix[14]*vector[3];
-        product[3] = matrix[3]*vector[0] + matrix[7]*vector[1] + matrix[11]*vector[2] + matrix[15]*vector[3];
+    product[0] = matrix[0]*vector[0] + matrix[4]*vector[1] + matrix[8]*vector[2] + matrix[12]*vector[3];
+    product[1] = matrix[1]*vector[0] + matrix[5]*vector[1] + matrix[9]*vector[2] + matrix[13]*vector[3];
+    product[2] = matrix[2]*vector[0] + matrix[6]*vector[1] + matrix[10]*vector[2] + matrix[14]*vector[3];
+    product[3] = matrix[3]*vector[0] + matrix[7]*vector[1] + matrix[11]*vector[2] + matrix[15]*vector[3];
 }
 static qboolean Matrix4x4_CM_Project (const vec3_t in, vec3_t out, const float *modelviewproj)
 {
-        qboolean result = true;
+    qboolean result = true;
 
-        float v[4], tempv[4];
-        tempv[0] = in[0];
-        tempv[1] = in[1];
-        tempv[2] = in[2];
-        tempv[3] = 1;
+    float v[4], tempv[4];
+    tempv[0] = in[0];
+    tempv[1] = in[1];
+    tempv[2] = in[2];
+    tempv[3] = 1;
 
-        Matrix4x4_CM_Transform4(modelviewproj, tempv, v);
+    Matrix4x4_CM_Transform4(modelviewproj, tempv, v);
 
-        v[0] /= v[3];
-        v[1] /= v[3];
-        if (v[2] < 0)
-                result = false; //too close to the view
-        v[2] /= v[3];
+    v[0] /= v[3];
+    v[1] /= v[3];
+    if (v[2] < 0)
+        result = false; //too close to the view
+    v[2] /= v[3];
 
-        out[0] = (1+v[0])/2;
-        out[1] = (1+v[1])/2;
-        out[2] = (1+v[2])/2;
-        if (out[2] > 1)
-                result = false; //beyond far clip plane
-        return result;
+    out[0] = (1+v[0])/2;
+    out[1] = (1+v[1])/2;
+    out[2] = (1+v[2])/2;
+    if (out[2] > 1)
+        result = false; //beyond far clip plane
+    return result;
 }
 static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix, const vec3_t point, float *result)
 {

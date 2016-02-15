@@ -257,18 +257,15 @@ CheckEntityFields(entity_t *entity)
 
     if (!VectorCompare(entity->light.color, vec3_origin)) {
         if (!write_litfile) {
-            if (scaledonly)
-            {
+            if (scaledonly) {
                 write_litfile = 2;
-            logprint("Colored light entities detected: "
-                     "bspxlit output enabled.\n");
-            }
-            else
-            {
+                logprint("Colored light entities detected: "
+                         "bspxlit output enabled.\n");
+            } else {
                 write_litfile = 1;
                 logprint("Colored light entities detected: "
-                     ".lit output enabled.\n");
-        }
+                         ".lit output enabled.\n");
+            }
         }
     } else {
         VectorCopy(vec3_white, entity->light.color);
@@ -615,7 +612,7 @@ JitterEntities()
         
         if (entity == old_tail)
             break;
-}
+    }
 }
 
 void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float neard)

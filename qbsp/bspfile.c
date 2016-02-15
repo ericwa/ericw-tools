@@ -28,11 +28,11 @@ static dheader_t *header;
 
 typedef struct bspxentry_s
 {
-        char lumpname[24];
-        const void *lumpdata;
-        size_t lumpsize;
+    char lumpname[24];
+    const void *lumpdata;
+    size_t lumpsize;
 
-        struct bspxentry_s *next;
+    struct bspxentry_s *next;
 } bspxentry_t;
 static bspxentry_t *bspxentries;
 
@@ -213,23 +213,23 @@ GenLump(const char *bspxlump, int Type, size_t sz)
 
 void BSPX_AddLump(const char *xname, const void *xdata, size_t xsize)
 {
-        bspxentry_t *e;
-        for (e = bspxentries; e; e = e->next)
-        {
-                if (!strcmp(e->lumpname, xname))
-                        break;
-        }
-        if (!e)
-        {
-                e = malloc(sizeof(*e));
-                memset(e, 0, sizeof(*e));
-                strncpy(e->lumpname, xname, sizeof(e->lumpname));
-                e->next = bspxentries;
-                bspxentries = e;
-        }
+    bspxentry_t *e;
+    for (e = bspxentries; e; e = e->next)
+    {
+        if (!strcmp(e->lumpname, xname))
+            break;
+    }
+    if (!e)
+    {
+        e = malloc(sizeof(*e));
+        memset(e, 0, sizeof(*e));
+        strncpy(e->lumpname, xname, sizeof(e->lumpname));
+        e->next = bspxentries;
+        bspxentries = e;
+    }
 
-        e->lumpdata = xdata;
-        e->lumpsize = xsize;
+    e->lumpdata = xdata;
+    e->lumpsize = xsize;
 }
 
 /*
@@ -374,12 +374,10 @@ PrintBSPFileSizes(void)
     Message(msgStat, "         visdata      %10d", map.cTotal[LUMP_VISIBILITY]);
     Message(msgStat, "         entdata      %10d", map.cTotal[LUMP_ENTITIES] + 1);
 
-        if (bspxentries)
-        {
-                bspxentry_t *x;
-                for (x = bspxentries; x; x = x->next)
-                {
-                        Message(msgStat, "%8s %-12s %10i", "BSPX", x->lumpname, x->lumpsize);
-                }
+    if (bspxentries) {
+        bspxentry_t *x;
+        for (x = bspxentries; x; x = x->next) {
+            Message(msgStat, "%8s %-12s %10i", "BSPX", x->lumpname, x->lumpsize);
         }
+    }
 }

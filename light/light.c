@@ -285,73 +285,73 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 static void
 AddTriangleNormals(vec_t *norm, dvertex_t *verts, int v1, int v2, int v3)
 {
-        vec_t *p1 = verts[v1].point;
-        vec_t *p2 = verts[v2].point;
-        vec_t *p3 = verts[v3].point;
-        vec3_t d1, d2;
-        float weight;
+    vec_t *p1 = verts[v1].point;
+    vec_t *p2 = verts[v2].point;
+    vec_t *p3 = verts[v3].point;
+    vec3_t d1, d2;
+    float weight;
 
-        VectorSubtract(p2, p1, d1);
-        VectorSubtract(p3, p1, d2);
-        weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
-        VectorMA(vertex_normals[v1], weight, norm, vertex_normals[v1]);
+    VectorSubtract(p2, p1, d1);
+    VectorSubtract(p3, p1, d2);
+    weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+    VectorMA(vertex_normals[v1], weight, norm, vertex_normals[v1]);
 
-        VectorSubtract(p1, p2, d1);
-        VectorSubtract(p3, p2, d2);
-        weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
-        VectorMA(vertex_normals[v2], weight, norm, vertex_normals[v2]);
+    VectorSubtract(p1, p2, d1);
+    VectorSubtract(p3, p2, d2);
+    weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+    VectorMA(vertex_normals[v2], weight, norm, vertex_normals[v2]);
 
-        VectorSubtract(p1, p3, d1);
-        VectorSubtract(p2, p3, d2);
-        weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
-        VectorMA(vertex_normals[v3], weight, norm, vertex_normals[v3]);
+    VectorSubtract(p1, p3, d1);
+    VectorSubtract(p2, p3, d2);
+    weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+    VectorMA(vertex_normals[v3], weight, norm, vertex_normals[v3]);
 }
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
 static int GetSurfaceVertex(bsp2_t *const bsp, bsp2_dface_t *f, int v)
 {
-        int edge = f->firstedge + v;
-        edge = bsp->dsurfedges[edge];
-        if (edge < 0)
-                return bsp->dedges[-edge].v[1];
-        return bsp->dedges[edge].v[0];
+    int edge = f->firstedge + v;
+    edge = bsp->dsurfedges[edge];
+    if (edge < 0)
+        return bsp->dedges[-edge].v[1];
+    return bsp->dedges[edge].v[0];
 }
 
 static void
 CalcualateVertexNormals(bsp2_t *const bsp)
 {
-        int i, j, v1, v2, v3;
-        bsp2_dface_t *f;
-        vec3_t norm;
+    int i, j, v1, v2, v3;
+    bsp2_dface_t *f;
+    vec3_t norm;
 
-        vertex_normals = malloc(sizeof(vec3_t) * bsp->numvertexes);
-        memset(vertex_normals, 0, sizeof(vec3_t) * bsp->numvertexes);
+    vertex_normals = malloc(sizeof(vec3_t) * bsp->numvertexes);
+    memset(vertex_normals, 0, sizeof(vec3_t) * bsp->numvertexes);
 
-        for (i = 0; i < bsp->numfaces; i++)
+    for (i = 0; i < bsp->numfaces; i++)
+    {
+        f = &bsp->dfaces[i];
+        if (!(bsp->texinfo[f->texinfo].flags & TEX_CURVED))     /* we only care about smoothed faces. unsmoothed stuff shouldn't blend. */
+            continue;
+
+        if (f->side)
+            VectorSubtract(vec3_origin, bsp->dplanes[f->planenum].normal, norm);
+        else
+            VectorCopy(bsp->dplanes[f->planenum].normal, norm);
+
+        /* now just walk around the surface as a triangle fan */
+        v1 = GetSurfaceVertex(bsp, f, 0);
+        v2 = GetSurfaceVertex(bsp, f, 1);
+        for (j = 2; j < f->numedges; j++)
         {
-                f = &bsp->dfaces[i];
-                if (!(bsp->texinfo[f->texinfo].flags & TEX_CURVED))     /* we only care about smoothed faces. unsmoothed stuff shouldn't blend. */
-                        continue;
-
-                if (f->side)
-                        VectorSubtract(vec3_origin, bsp->dplanes[f->planenum].normal, norm);
-                else
-                        VectorCopy(bsp->dplanes[f->planenum].normal, norm);
-
-                /* now just walk around the surface as a triangle fan */
-                v1 = GetSurfaceVertex(bsp, f, 0);
-                v2 = GetSurfaceVertex(bsp, f, 1);
-                for (j = 2; j < f->numedges; j++)
-                {
-                        v3 = GetSurfaceVertex(bsp, f, j);
-                        AddTriangleNormals(norm, bsp->dvertexes, v1, v2, v3);
-                        v2 = v3;
-                }
+            v3 = GetSurfaceVertex(bsp, f, j);
+            AddTriangleNormals(norm, bsp->dvertexes, v1, v2, v3);
+            v2 = v3;
         }
+    }
 
-        for (i = 0; i < bsp->numvertexes; i++)
-        {
-                VectorNormalize(vertex_normals[i]);
-        }
+    for (i = 0; i < bsp->numvertexes; i++)
+    {
+        VectorNormalize(vertex_normals[i]);
+    }
 }
 
 /*
