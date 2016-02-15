@@ -1047,12 +1047,18 @@ LightFace_Min(const lightsample_t *light,
             hit = true;
     }
 
+    if (hit)
+        Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    
     /* Cast rays for local minlight entities */
     shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
     for (entity = lights; *entity; entity++) {
         if ((*entity)->formula != LF_LOCALMIN)
             continue;
 
+        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style, lightsurf);
+
+        hit = false;
         sample = lightmap->samples;
         surfpoint = lightsurf->points[0];
         for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
@@ -1070,10 +1076,10 @@ LightFace_Min(const lightsample_t *light,
             if (!hit && sample->light >= 1)
                 hit = true;
         }
+        
+        if (hit)
+            Lightmap_Save(lightmaps, lightsurf, lightmap, (*entity)->style);
     }
-
-    if (hit)
-        Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 /*
