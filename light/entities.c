@@ -77,13 +77,21 @@ SetKeyValue(entity_t *ent, const char *key, const char *value)
     strcpy(ep->value, value);
 }
 
+static entity_t *WorldEnt()
+{
+    if (0 != strcmp("worldspawn", ValueForKey(entities, "classname"))) {
+        Error("WorldEnt() failed to get worldspawn");
+    }
+    return entities;
+}
+
 void SetWorldKeyValue(const char *key, const char *value)
 {
-        SetKeyValue(entities, key, value);
+    SetKeyValue(WorldEnt(), key, value);
 }
 const char *WorldValueForKey(const char *key)
 {
-        return ValueForKey(entities, key);
+    return ValueForKey(WorldEnt(), key);
 }
 
 static int
