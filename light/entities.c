@@ -1284,7 +1284,7 @@ WriteEntitiesToString(bsp2_t *bsp)
                               epair->key, value);
             
             if (parse_escape_sequences) {
-                free(value);
+                free((void *)value);
             }
             
             pos += length;

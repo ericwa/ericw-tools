@@ -1227,7 +1227,7 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
     /*okay, so that's where it *should* be if it exists */
     if (bspxofs + sizeof(*bspx) <= flen)
     {
-        uint32_t xlumps;
+        int xlumps;
         const bspx_lump_t *xlump;
         bspx = (const bspx_header_t*)((const byte*)header + bspxofs);
         xlump = (const bspx_lump_t*)(bspx+1);
@@ -1561,7 +1561,7 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
     {
         bspxentry_t *x;
         for (x = bspdata->bspxentries; x; x = x->next) {
-            logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, x->lumpsize);
+            logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, (int)x->lumpsize);
         }
     }
 }
