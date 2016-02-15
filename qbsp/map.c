@@ -576,7 +576,7 @@ ParseBrushFace(parser_t *parser, mapface_t *face, mapentity_t *entity)
         }
 
 
-    face->texinfo = FindTexinfo(&tx, entity);
+    face->texinfo = FindTexinfoEnt(&tx, entity);
 
     return true;
 }

@@ -624,7 +624,7 @@ void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float near
     float nudge = 1;
 
     //proj
-    ymax = neard * tan( fovy * M_PI / 360.0 );
+    ymax = neard * tan( fovy * Q_PI / 360.0 );
     ymin = -ymax;
 
     if (fovx == fovy)
@@ -634,7 +634,7 @@ void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float near
     }
     else
     {
-        xmax = neard * tan( fovx * M_PI / 360.0 );
+        xmax = neard * tan( fovx * Q_PI / 360.0 );
         xmin = -xmax;
     }
 
@@ -660,8 +660,8 @@ void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float near
 }
 float *Matrix4x4_CM_NewRotation(float ret[16], float a, float x, float y, float z)
 {
-    float c = cos(a* M_PI / 180.0);
-    float s = sin(a* M_PI / 180.0);
+    float c = cos(a* Q_PI / 180.0);
+    float s = sin(a* Q_PI / 180.0);
 
     ret[0] = x*x*(1-c)+c;
     ret[4] = x*y*(1-c)-z*s;
@@ -776,13 +776,13 @@ float CalcFov (float fov_x, float width, float height)
     if (fov_x < 1 || fov_x > 179)
         Error ("Bad fov: %f", fov_x);
 
-    x = fov_x/360*M_PI;
+    x = fov_x/360*Q_PI;
     x = tan(x);
     x = width/x;
 
     a = atan (height/x);
 
-    a = a*360/M_PI;
+    a = a*360/Q_PI;
 
     return a;
 }

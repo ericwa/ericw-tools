@@ -1351,7 +1351,7 @@ LightFace_Min(const lightsample_t *light,
         if ((*entity)->formula != LF_LOCALMIN)
             continue;
 
-        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style, lightsurf);
+        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style, lightsurf->numpoints);
 
         hit = false;
         sample = lightmap->samples;
@@ -1807,11 +1807,11 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         if (*miptex->name != '*')
             return;     //non-water surfaces should still not be lit
         //texture name starts with a *, so light it anyway.
-        if (!strncasecmp(miptex->name, "*tele", 5))
+        if (!Q_strncasecmp(miptex->name, "*tele", 5))
                 turbtype = 3;
-        else if (!strncasecmp(miptex->name, "*lava", 5))
+        else if (!Q_strncasecmp(miptex->name, "*lava", 5))
                 turbtype = 2;
-        else if (!strncasecmp(miptex->name, "*slime", 6))
+        else if (!Q_strncasecmp(miptex->name, "*slime", 6))
                 turbtype = 1;
         else
                 turbtype = 0;

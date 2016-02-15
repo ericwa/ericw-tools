@@ -562,6 +562,7 @@ void LoadMapFile(void);
 
 int FindMiptex(const char *name);
 int FindTexinfo(texinfo_t *texinfo, unsigned int flags);
+int FindTexinfoEnt(texinfo_t *texinfo, mapentity_t *entity);
 
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);
