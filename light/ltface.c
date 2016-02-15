@@ -1626,7 +1626,6 @@ WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lights
                const lightmap_t *lightmaps)
 {
     int numstyles, size, mapnum, width, s, t, i, j;
-    const lightsample_t *sample;
     vec_t light, maxcolor;
     vec3_t color, direction;
     byte *out, *lit, *lux;
@@ -1667,14 +1666,13 @@ WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lights
     if (facesup)
         facesup->lightofs = out - filebase;
     else
-    face->lightofs = out - filebase;
+        face->lightofs = out - filebase;
 
     width = (lightsurf->texsize[0] + 1) * oversample;
     for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
         if (lightmaps[mapnum].style == 255)
             break;
 
-        sample = lightmaps[mapnum].samples;
         for (t = 0; t <= lightsurf->texsize[1]; t++) {
             for (s = 0; s <= lightsurf->texsize[0]; s++) {
 
@@ -1683,11 +1681,14 @@ WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lights
                 VectorCopy(vec3_origin, direction);
                 for (i = 0; i < oversample; i++) {
                     for (j = 0; j < oversample; j++) {
+                        const int col = (s*oversample) + j;
+                        const int row = (t*oversample) + i;
+
+                        const lightsample_t *sample = lightmaps[mapnum].samples + (row * width) + col;
+
                         VectorAdd(color, sample->color, color);
                         VectorAdd(direction, sample->direction, direction);
-                        sample++;
                     }
-                    sample += width - oversample;
                 }
                 VectorScale(color, 1.0 / oversample / oversample, color);
 
@@ -1733,9 +1734,7 @@ WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lights
                         v = (temp[1]+1)*128;  *lux++ = (v>255)?255:v;
                         v = (temp[2]+1)*128;  *lux++ = (v>255)?255:v;
                 }
-                sample -= width * oversample - oversample;
             }
-            sample += width * oversample - width;
         }
     }
 }
