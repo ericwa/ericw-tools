@@ -879,14 +879,13 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
     int s, t, starts, startt, ends, endt;
     const lightsample_t *src;
     lightsample_t *dst;
-    lightmap_t softmap;
+    lightmap_t *softmap = calloc(1, sizeof(lightmap_t));
 
     const int width = (lightsurf->texsize[0] + 1) * oversample;
     const int height = (lightsurf->texsize[1] + 1) * oversample;
     const int fullsamples = (2 * softsamples + 1) * (2 * softsamples + 1);
 
-    memset(&softmap, 0, sizeof(softmap));
-    dst = softmap.samples;
+    dst = softmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, dst++) {
         startt = qmax((i / width) - softsamples, 0);
         endt = qmin((i / width) + softsamples + 1, height);
@@ -921,8 +920,9 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
         VectorScale(dst->direction, 1.0 / samples, dst->direction);
     }
 
-    softmap.style = lightmap->style;
-    memcpy(lightmap, &softmap, sizeof(softmap));
+    softmap->style = lightmap->style;
+    memcpy(lightmap, softmap, sizeof(*softmap));
+    free(softmap);
 }
 
 
