@@ -1273,8 +1273,7 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
     size_t size;
 
     /* FIXME - bad API, needing to byte swap back and forth... */
-        switch (LittleLong(bspfile->header.version))
-        {
+    switch (LittleLong(bspfile->header.version)) {
     case BSPVERSION:
         size = lumpspec_bsp29[lumpnum].size * count;
         break;
@@ -1291,9 +1290,9 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
 
     lump->fileofs = LittleLong(ftell(bspfile->file));
     lump->filelen = LittleLong(size);
-        SafeWrite(bspfile->file, data, size);
-        if (size & 3)
-                SafeWrite(bspfile->file, pad, 4 - (size & 3));
+    SafeWrite(bspfile->file, data, size);
+    if (size % 4)
+        SafeWrite(bspfile->file, pad, 4 - (size % 4));
 }
 
 static void
@@ -1446,7 +1445,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
             strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));
             SafeWrite(bspfile.file, x->lumpdata, x->lumpsize);
             if (x->lumpsize % 4)
-                SafeWrite(bspfile.file, pad, x->lumpsize % 4);
+                SafeWrite(bspfile.file, pad, 4 - (x->lumpsize % 4));
         }
 
         fseek(bspfile.file, bspxheader, SEEK_SET);

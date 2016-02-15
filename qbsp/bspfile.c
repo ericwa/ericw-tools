@@ -311,7 +311,7 @@ WriteBSPFile(void)
             strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));
             SafeWrite(f, x->lumpdata, x->lumpsize);
             if (x->lumpsize % 4)
-                SafeWrite(f, pad, x->lumpsize % 4);
+                SafeWrite(f, pad, 4 - (x->lumpsize % 4));
         }
 
         fseek(f, bspxheader, SEEK_SET);
