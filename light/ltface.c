@@ -524,7 +524,19 @@ static int ClipPointToTriangle(const vec_t *orig, vec_t *point, const vec_t *nor
     return 1;
 }
 
-static void CalcBarycentric(vec_t *p, vec_t *a, vec_t *b, vec_t *c, vec_t *res)
+static vec_t
+TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
+{
+    vec3_t edge0, edge1, cross;
+    VectorSubtract(v2, v0, edge0);
+    VectorSubtract(v1, v0, edge1);
+    CrossProduct(edge0, edge1, cross);
+    
+    return VectorLength(cross) * 0.5;
+}
+
+
+static void CalcBarycentric(const vec_t *p, const vec_t *a, const vec_t *b, const vec_t *c, vec_t *res)
 {
     vec3_t v0,v1,v2;
     VectorSubtract(b, a, v0);
@@ -542,8 +554,15 @@ static void CalcBarycentric(vec_t *p, vec_t *a, vec_t *b, vec_t *c, vec_t *res)
     res[0] = 1.0f - res[1] - res[2];
 }
 
-static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const vec_t *surfnorm, vec_t *norm, vec_t *point)
+static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t surfplane, vec_t *norm, const vec_t *point)
 {
+    // project `point` onto the surface plane (it's hovering 1 unit above)
+    vec3_t pointOnPlane;
+    {
+        vec_t dist = DotProduct(point, surfplane.normal) - surfplane.dist;
+        VectorMA(point, -dist, surfplane.normal, pointOnPlane);
+    }
+    
 #if 1
     int j;
     vec_t *v1, *v2, *v3;
@@ -559,11 +578,14 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const v
     for (best = 0,j = 2; j < face->numedges; j++)
     {
         v3 = GetSurfaceVertexPoint(bsp, face, j);
-        if (ClipPointToTriangle(point, clipped, surfnorm, v1, v2, v3))
+        
+        vec_t triarea = TriangleArea(v1, v2, v3);
+        
+        if (ClipPointToTriangle(pointOnPlane, clipped, surfplane.normal, v1, v2, v3))
         {
-            VectorSubtract(clipped, point, t);
+            VectorSubtract(clipped, pointOnPlane, t);
             cost = VectorLength(t);
-            if (cost < bestcost)
+            if (cost < bestcost && triarea >= 1)
             {
                 best = j;
                 bestcost = cost;
@@ -583,7 +605,13 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const v
     v1 = GetSurfaceVertexPoint(bsp, face, 0);
     v2 = GetSurfaceVertexPoint(bsp, face, best-1);
     v3 = GetSurfaceVertexPoint(bsp, face, best);
-    CalcBarycentric(point, v1, v2, v3, barry);
+    
+    if (TriangleArea(v1, v2, v3) < 1) {
+        VectorCopy(surfplane.normal, norm);
+        return;
+    }
+    
+    CalcBarycentric(pointOnPlane, v1, v2, v3, barry);
 
     v1 = GetSurfaceVertexNormal(bsp, face, 0);
     v2 = GetSurfaceVertexNormal(bsp, face, best-1);
@@ -695,7 +723,7 @@ CalcPoints(const dmodel_t *model, const vec3_t offset, const texorg_t *texorg, l
             
             if (surf->curved)
             {
-                CalcPointNormal(bsp, face, surf->plane.normal, norm, point);
+                CalcPointNormal(bsp, face, surf->plane, norm, point);
             }
             else
             {
