@@ -282,33 +282,48 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     tracelist = shadowmodels;
 }
 
-/* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts */
-static void
-AddTriangleNormals(vec_t *norm, dvertex_t *verts, int v1, int v2, int v3)
+static float
+AngleBetweenVectors(const vec3_t d1, const vec3_t d2)
 {
-    vec_t *p1 = verts[v1].point;
-    vec_t *p2 = verts[v2].point;
-    vec_t *p3 = verts[v3].point;
+    float cosangle = DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2));
+    if (cosangle < -1) cosangle = -1;
+    if (cosangle > 1) cosangle = 1;
+    
+    float angle = acos(cosangle);
+    return angle;
+}
+
+/* returns the angle between vectors p2->p1 and p2->p3 */
+static float
+AngleBetweenPoints(const vec3_t p1, const vec3_t p2, const vec3_t p3)
+{
     vec3_t d1, d2;
-    float weight;
-
-    VectorSubtract(p2, p1, d1);
-    VectorSubtract(p3, p1, d2);
-    weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
-    VectorMA(vertex_normals[v1], weight, norm, vertex_normals[v1]);
-
     VectorSubtract(p1, p2, d1);
     VectorSubtract(p3, p2, d2);
-    weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+    float result = AngleBetweenVectors(d1, d2);
+    return result;
+}
+
+/* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts */
+static void
+AddTriangleNormals(const vec_t *norm, const dvertex_t *verts, int v1, int v2, int v3)
+{
+    const vec_t *p1 = verts[v1].point;
+    const vec_t *p2 = verts[v2].point;
+    const vec_t *p3 = verts[v3].point;
+    float weight;
+    
+    weight = AngleBetweenPoints(p2, p1, p3);
+    VectorMA(vertex_normals[v1], weight, norm, vertex_normals[v1]);
+
+    weight = AngleBetweenPoints(p1, p2, p3);
     VectorMA(vertex_normals[v2], weight, norm, vertex_normals[v2]);
 
-    VectorSubtract(p1, p3, d1);
-    VectorSubtract(p2, p3, d2);
-    weight = acos(DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2)));
+    weight = AngleBetweenPoints(p1, p3, p2);
     VectorMA(vertex_normals[v3], weight, norm, vertex_normals[v3]);
 }
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
-static int GetSurfaceVertex(bsp2_t *const bsp, bsp2_dface_t *f, int v)
+static int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
     int edge = f->firstedge + v;
     edge = bsp->dsurfedges[edge];
@@ -318,7 +333,7 @@ static int GetSurfaceVertex(bsp2_t *const bsp, bsp2_dface_t *f, int v)
 }
 
 static void
-CalcualateVertexNormals(bsp2_t *const bsp)
+CalcualateVertexNormals(const bsp2_t *bsp)
 {
     int i, j, v1, v2, v3;
     bsp2_dface_t *f;
