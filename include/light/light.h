@@ -107,7 +107,7 @@ typedef struct {
 #define MAXDIMENSION (255+1)
 
 /* Allow space for 4x4 oversampling */
-#define SINGLEMAP (MAXDIMENSION*MAXDIMENSION*4*4)
+//#define SINGLEMAP (MAXDIMENSION*MAXDIMENSION*4*4)
 
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
@@ -125,14 +125,14 @@ typedef struct {
     vec_t exactmid[2];
     
     int numpoints;
-    vec3_t points[SINGLEMAP];
-    vec3_t normals[SINGLEMAP];
+    vec3_t *points; // malloc'ed array of numpoints
+    vec3_t *normals; // malloc'ed array of numpoints
     
     /*
      raw ambient occlusion amount per sample point, 0-1, where 1 is
      fully occluded. dirtgain/dirtscale are not applied yet
      */
-    vec_t occlusion[SINGLEMAP];
+    vec_t *occlusion; // malloc'ed array of numpoints
     
     /* for sphere culling */
     vec3_t origin;
@@ -141,7 +141,7 @@ typedef struct {
 
 typedef struct {
     int style;
-    lightsample_t samples[SINGLEMAP];   //FIXME: this is stupid, we shouldn't need to allocate extra data here for -extra4
+    lightsample_t *samples; // malloc'ed array of numpoints   //FIXME: this is stupid, we shouldn't need to allocate extra data here for -extra4
 } lightmap_t;
 
 struct ltface_ctx

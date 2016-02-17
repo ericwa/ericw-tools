@@ -150,18 +150,13 @@ LightThread(void *arg)
     const modelinfo_t *face_modelinfo;
     struct ltface_ctx *ctx;
 
-    ctx = LightFaceInit(bsp);
-    if (!ctx)
-    {
-        logprint("warning: not enough memory for thread context\n");
-        return NULL;
-    }
-
     while (1) {
         facenum = GetThreadWork();
         if (facenum == -1)
             break;
 
+        ctx = LightFaceInit(bsp);
+        
         /* Find the correct model offset */
         face_modelinfo = ModelInfoForFace(bsp, facenum);
         if (face_modelinfo == NULL) {
@@ -190,8 +185,9 @@ LightThread(void *arg)
             LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
             LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
         }
+        
+        LightFaceShutdown(ctx);
     }
-    LightFaceShutdown(ctx);
 
     return NULL;
 }

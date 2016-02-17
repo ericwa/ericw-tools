@@ -663,9 +663,12 @@ CalcPoints(const dmodel_t *model, const vec3_t offset, const texorg_t *texorg, l
     startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
     step = surf->lightmapscale / oversample;
 
+    /* Allocate surf->points */
+    surf->numpoints = width * height;
+    surf->points = calloc(surf->numpoints, sizeof(vec3_t));
+    surf->normals = calloc(surf->numpoints, sizeof(vec3_t));
     point = surf->points[0];
     norm = surf->normals[0];
-    surf->numpoints = width * height;
     for (t = 0; t < height; t++) {
         for (s = 0; s < width; s++, point += 3, norm += 3) {
             us = starts + s * step;
@@ -787,10 +790,13 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     
     /* Correct bounding sphere */
     VectorAdd(lightsurf->origin, modelinfo->offset, lightsurf->origin);
+    
+    /* Allocate occlusion array */
+    lightsurf->occlusion = calloc(lightsurf->numpoints, sizeof(float));
 }
 
 static void
-Lightmaps_Init(lightmap_t *lightmaps, const int count)
+Lightmaps_Init(const lightsurf_t *lightsurf, lightmap_t *lightmaps, const int count)
 {
     int i;
 
@@ -798,7 +804,10 @@ Lightmaps_Init(lightmap_t *lightmaps, const int count)
      memset(lightmaps, 0, sizeof(lightmap_t) * count); */
 
     for (i = 0; i < count; i++)
+    {
         lightmaps[i].style = 255;
+        lightmaps[i].samples = NULL;
+    }
 }
 
 /*
@@ -821,8 +830,13 @@ Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lig
             break;
     }
 
-    /*clear only the data that is going to be merged to it. there's no point clearing more*/
-    memset(lightmap->samples, 0, sizeof(*lightmap->samples)*lightsurf->numpoints);
+    if (lightmap->samples == NULL) {
+        /* first use of this lightmap, allocate the storage for it. */
+        lightmap->samples = calloc(lightsurf->numpoints, sizeof(lightsample_t));
+    } else {
+        /* clear only the data that is going to be merged to it. there's no point clearing more */
+        memset(lightmap->samples, 0, sizeof(*lightmap->samples)*lightsurf->numpoints);
+    }
     lightmap->style = 255;
 
     return lightmap;
@@ -860,13 +874,15 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
     int s, t, starts, startt, ends, endt;
     const lightsample_t *src;
     lightsample_t *dst;
-    lightmap_t *softmap = calloc(1, sizeof(lightmap_t));
+    lightsample_t *softmap;
 
     const int width = (lightsurf->texsize[0] + 1) * oversample;
     const int height = (lightsurf->texsize[1] + 1) * oversample;
     const int fullsamples = (2 * softsamples + 1) * (2 * softsamples + 1);
 
-    dst = softmap->samples;
+    softmap = calloc(lightsurf->numpoints, sizeof(lightsample_t));
+    
+    dst = softmap;
     for (i = 0; i < lightsurf->numpoints; i++, dst++) {
         startt = qmax((i / width) - softsamples, 0);
         endt = qmin((i / width) + softsamples + 1, height);
@@ -901,8 +917,7 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
         VectorScale(dst->direction, 1.0 / samples, dst->direction);
     }
 
-    softmap->style = lightmap->style;
-    memcpy(lightmap, softmap, sizeof(*softmap));
+    memcpy(lightmap->samples, softmap, lightsurf->numpoints * sizeof(lightsample_t));
     free(softmap);
 }
 
@@ -1762,13 +1777,29 @@ struct ltface_ctx *LightFaceInit(const bsp2_t *bsp)
 {
     //windows stack probes can get expensive when its 64mb...
     //also, this avoids stack overflows, or the need to guess stack sizes.
-    struct ltface_ctx *ctx = malloc(sizeof(*ctx));
+    struct ltface_ctx *ctx = calloc(1, sizeof(*ctx));
     if (ctx)
         ctx->bsp = bsp;
     return ctx;
 }
 void LightFaceShutdown(struct ltface_ctx *ctx)
 {
+    int i;
+    for (i = 0; i < MAXLIGHTMAPS + 1; i++)
+    {
+        if (ctx->lightmaps[i].samples)
+            free(ctx->lightmaps[i].samples);
+    }
+    
+    if (ctx->lightsurf.points)
+        free(ctx->lightsurf.points);
+    
+    if (ctx->lightsurf.normals)
+        free(ctx->lightsurf.normals);
+    
+    if (ctx->lightsurf.occlusion)
+        free(ctx->lightsurf.occlusion);
+    
     free(ctx);
 }
 
@@ -1832,7 +1863,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
 
     Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup);
-    Lightmaps_Init(lightmaps, MAXLIGHTMAPS + 1);
+    Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
     if (dirty)
