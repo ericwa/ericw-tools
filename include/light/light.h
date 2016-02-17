@@ -97,6 +97,60 @@ typedef struct sun_s {
     float anglescale;
 } sun_t;
 
+typedef struct {
+    vec3_t normal;
+    vec_t dist;
+} plane_t;
+
+/* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap resolution. */
+/*with extra sampling, lit+lux etc, we need at least 46mb stack space per thread. yes, that's a lot. on the plus side, it doesn't affect bsp complexity (actually, can simplify it a little)*/
+#define MAXDIMENSION (255+1)
+
+/* Allow space for 4x4 oversampling */
+#define SINGLEMAP (MAXDIMENSION*MAXDIMENSION*4*4)
+
+/*Warning: this stuff needs explicit initialisation*/
+typedef struct {
+    const modelinfo_t *modelinfo;
+    plane_t plane;
+    vec3_t snormal;
+    vec3_t tnormal;
+    
+    /* 16 in vanilla. engines will hate you if this is not power-of-two-and-at-least-one */
+    float lightmapscale;
+    qboolean curved; /*normals are interpolated for smooth lighting*/
+    
+    int texmins[2];
+    int texsize[2];
+    vec_t exactmid[2];
+    
+    int numpoints;
+    vec3_t points[SINGLEMAP];
+    vec3_t normals[SINGLEMAP];
+    
+    /*
+     raw ambient occlusion amount per sample point, 0-1, where 1 is
+     fully occluded. dirtgain/dirtscale are not applied yet
+     */
+    vec_t occlusion[SINGLEMAP];
+    
+    /* for sphere culling */
+    vec3_t origin;
+    vec_t radius;
+} lightsurf_t;
+
+typedef struct {
+    int style;
+    lightsample_t samples[SINGLEMAP];   //FIXME: this is stupid, we shouldn't need to allocate extra data here for -extra4
+} lightmap_t;
+
+struct ltface_ctx
+{
+    const bsp2_t *bsp;
+    lightsurf_t lightsurf;
+    lightmap_t lightmaps[MAXLIGHTMAPS + 1];
+};
+
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const dmodel_t *const *tracelist;
 
