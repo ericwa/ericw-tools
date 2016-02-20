@@ -1,0 +1,12 @@
+version: 1.0.{build}
+build_script:
+- ps: >-
+    mkdir cmakebuild
+
+    cd cmakebuild
+
+    cmake ..
+
+    msbuild PACKAGE.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+artifacts:
+- path: cmakebuild\*.zip
