@@ -30,7 +30,13 @@ typedef struct tnode_s {
 } tnode_t;
 
 typedef struct faceinfo_s {
+    int numedges;
     plane_t *edgeplanes;
+    
+    // sphere culling
+    vec3_t origin;
+    vec_t radiusSquared;
+    
 } faceinfo_t;
 
 static tnode_t *tnodes;
@@ -122,14 +128,25 @@ static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *
     }
 }
 
+static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
+{
+    vec3_t delta;
+    vec_t deltaLengthSquared;
+    VectorSubtract(point, info->origin, delta);
+    deltaLengthSquared = DotProduct(delta, delta);
+    return deltaLengthSquared > info->radiusSquared;
+}
+
 void
 MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
+    info->numedges = face->numedges;
     info->edgeplanes = calloc(face->numedges, sizeof(plane_t));
     
     plane_t surfplane;
     GetFaceNormal(bsp, face, &surfplane);
     
+    // make edge planes
     for (int i=0; i<face->numedges; i++)
     {
         plane_t *dest = &info->edgeplanes[i];
@@ -145,6 +162,50 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
         
         dest->dist = DotProduct(dest->normal, v0);
     }
+    
+    // make sphere that bounds the face
+    vec3_t centroid = {0,0,0};
+    for (int i=0; i<face->numedges; i++)
+    {
+        const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
+        VectorAdd(centroid, v, centroid);
+    }
+    VectorScale(centroid, 1.0f/face->numedges, centroid);
+    VectorCopy(centroid, info->origin);
+    
+    // calculate radius
+    vec_t maxRadiusSq = 0;
+    for (int i=0; i<face->numedges; i++)
+    {
+        vec3_t delta;
+        vec_t radiusSq;
+        const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
+        VectorSubtract(v, centroid, delta);
+        radiusSq = DotProduct(delta, delta);
+        if (radiusSq > maxRadiusSq)
+            maxRadiusSq = radiusSq;
+    }
+    info->radiusSquared = maxRadiusSq;
+    
+#if 0
+    //test
+    for (int i=0; i<face->numedges; i++)
+    {
+        const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
+        assert(!SphereCullPoint(info, v));
+    }
+    //test
+    {
+        vec_t radius = sqrt(maxRadiusSq);
+        radius ++;
+        
+        vec3_t test;
+        vec3_t n = {1, 0, 0};
+        VectorMA(centroid, radius, n, test);
+        
+        assert(SphereCullPoint(info, test));
+    }
+#endif
 }
 
 void
@@ -224,13 +285,10 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
 }
 
 /* assumes point is on the same plane as face */
-static qboolean
-TestHitFace(bsp2_dface_t *face, const vec3_t point)
+static inline qboolean
+TestHitFace(const faceinfo_t *fi, const vec3_t point)
 {
-    int facenum = face - bsp_static->dfaces;
-    const faceinfo_t *fi = &faceinfos[facenum];
-
-    for (int i=0; i<face->numedges; i++)
+    for (int i=0; i<fi->numedges; i++)
     {
         /* faces toward the center of the face */
         const plane_t *edgeplane = &fi->edgeplanes[i];
@@ -242,18 +300,21 @@ TestHitFace(bsp2_dface_t *face, const vec3_t point)
     return true;
 }
 
-static bsp2_dface_t *
+static inline bsp2_dface_t *
 SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t point)
 {
     // search the faces on this node
     int i;
     for (i=0; i<bspnode->numfaces; i++)
     {
-        bsp2_dface_t *face;
-        face = &bsp_static->dfaces[bspnode->firstface + i];
+        int facenum = bspnode->firstface + i;
+        const faceinfo_t *fi = &faceinfos[facenum];
         
-        if (TestHitFace(face, point)) {
-            return face;   
+        if (SphereCullPoint(fi, point))
+            continue;
+        
+        if (TestHitFace(fi, point)) {
+            return &bsp_static->dfaces[facenum];
         }
     }
     return NULL;
