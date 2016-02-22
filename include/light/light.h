@@ -37,6 +37,15 @@
 #define TRACE_HIT_LAVA  (1 << 3)
 #define TRACE_HIT_SKY   (1 << 4)
 
+
+typedef struct traceinfo_s {
+    vec3_t			point;
+    const bsp2_dface_t          *face;
+} traceinfo_t;
+
+bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
+
+
 int Light_PointContents( const vec3_t point );
 
 typedef struct {
@@ -62,6 +71,12 @@ typedef struct {
  *
  * TraceLine will return a negative traceflag if the point 'start' resides
  * inside a leaf with one of the contents types which stop the trace.
+ *
+ * ericw -- note, this should only be used for testing occlusion.
+ * the hitpoint is not accurate, imagine a solid cube floating in a room, 
+ * only one of the 6 sides will be a node with a solid leaf child.
+ * Yet, which side is the node with the solid leaf child determines
+ * what the hit point will be.
  */
 int TraceLine(const dmodel_t *model, const int traceflags,
               const vec3_t start, const vec3_t end, tracepoint_t *hitpoint);

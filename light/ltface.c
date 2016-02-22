@@ -423,11 +423,11 @@ static int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
                 return bsp->dedges[-edge].v[1];
         return bsp->dedges[edge].v[0];
 }
-static vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
         return bsp->dvertexes[GetSurfaceVertex(bsp, f, v)].point;
 }
-static vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
         return vertex_normals[GetSurfaceVertex(bsp, f, v)];
 }

@@ -29,9 +29,15 @@ typedef struct tnode_s {
     const bsp2_dnode_t *node;
 } tnode_t;
 
+typedef struct faceinfo_s {
+    plane_t *edgeplanes;
+} faceinfo_t;
+
 static tnode_t *tnodes;
 static tnode_t *tnode_p;
 static const bsp2_t *bsp_static;
+
+static faceinfo_t *faceinfos;
 
 // from hmap2
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
@@ -101,6 +107,46 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     }
 }
 
+vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
+
+static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *plane)
+{
+    const dplane_t *dplane = &bsp->dplanes[face->planenum];
+    
+    if (face->side) {
+        VectorSubtract(vec3_origin, dplane->normal, plane->normal);
+        plane->dist = -dplane->dist;
+    } else {
+        VectorCopy(dplane->normal, plane->normal);
+        plane->dist = dplane->dist;
+    }
+}
+
+void
+MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
+{
+    info->edgeplanes = calloc(face->numedges, sizeof(plane_t));
+    
+    plane_t surfplane;
+    GetFaceNormal(bsp, face, &surfplane);
+    
+    for (int i=0; i<face->numedges; i++)
+    {
+        plane_t *dest = &info->edgeplanes[i];
+        
+        const vec_t *v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const vec_t *v1 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
+        
+        vec3_t edgevec;
+        VectorSubtract(v1, v0, edgevec);
+        VectorNormalize(edgevec);
+        
+        CrossProduct(edgevec, surfplane.normal, dest->normal);
+        
+        dest->dist = DotProduct(dest->normal, v0);
+    }
+}
+
 void
 MakeTnodes(const bsp2_t *bsp)
 {
@@ -109,6 +155,10 @@ MakeTnodes(const bsp2_t *bsp)
     tnode_p = tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
     for (i = 0; i < bsp->nummodels; i++)
         MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
+    
+    faceinfos = malloc(bsp->numfaces * sizeof(faceinfo_t));
+    for (i = 0; i < bsp->numfaces; i++)
+        MakeFaceInfo(bsp, &bsp->dfaces[i], &faceinfos[i]);
 }
 
 /*
@@ -116,79 +166,6 @@ MakeTnodes(const bsp2_t *bsp)
  * FENCE TEXTURE TESTING
  * ============================================================================
  */
-
-static qboolean
-PointInTri(const vec3_t v0, 
-        const vec3_t v1, 
-        const vec3_t v2, 
-        const vec3_t point,
-        const vec3_t facenormal)
-{
-        vec3_t temp;
-        vec3_t normal[3];
-        vec_t dist[3];
-
-        VectorSubtract (v1, v0, temp);
-        VectorNormalize (temp);
-        CrossProduct (temp, facenormal, normal[0]);
-        dist[0] = DotProduct (v0, normal[0]);
-
-        VectorSubtract (v2, v1, temp);
-        VectorNormalize (temp);
-        CrossProduct (temp, facenormal, normal[1]);
-        dist[1] = DotProduct (v1, normal[1]);
-
-        VectorSubtract (v0, v2, temp);
-        VectorNormalize (temp);
-        CrossProduct (temp, facenormal, normal[2]);
-        dist[2] = DotProduct (v2, normal[2]);
-
-        // check each plane
-
-        if (DotProduct (normal[0], point) - dist[0] < 0) return false;
-        if (DotProduct (normal[1], point) - dist[1] < 0) return false;
-        if (DotProduct (normal[2], point) - dist[2] < 0) return false;
-
-        return true;
-}
-
-static qboolean
-PointInFace(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
-{
-    int i, edgenum;
-    dvertex_t *v0, *v1, *v2;
-    
-    edgenum = bsp->dsurfedges[face->firstedge];
-    if (edgenum >= 0)
-        v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-    else
-        v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-
-    for (i = 1; i < face->numedges - 1; i++) {
-        edgenum = bsp->dsurfedges[face->firstedge + i];
-        if (edgenum >= 0) {
-            v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-            v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
-        } else {
-            v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-            v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
-        }
-
-        vec3_t p0 = {v0->point[0], v0->point[1], v0->point[2]};
-        vec3_t p1 = {v1->point[0], v1->point[1], v1->point[2]};
-        vec3_t p2 = {v2->point[0], v2->point[1], v2->point[2]};
-
-        vec3_t facenormal;
-        VectorCopy(bsp->dplanes[face->planenum].normal, facenormal);
-        if (face->side) {
-            VectorSubtract(vec3_origin, facenormal, facenormal);
-        }
-
-        if (PointInTri(p0, p1, p2, point, facenormal)) return true;
-    }
-
-    return false;
-}
 
 static miptex_t *
 MiptexForFace(const bsp2_dface_t *face, const bsp2_t *bsp)
@@ -246,20 +223,23 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
     return sample;
 }
 
+/* assumes point is on the same plane as face */
 static qboolean
 TestHitFace(bsp2_dface_t *face, const vec3_t point)
 {
-    const dplane_t *plane;
-    vec_t d;
-    plane = &bsp_static->dplanes[face->planenum];
-    d = DotProduct(point, plane->normal) - plane->dist;
-    if (d >= -ON_EPSILON && d <= ON_EPSILON)
+    int facenum = face - bsp_static->dfaces;
+    const faceinfo_t *fi = &faceinfos[facenum];
+
+    for (int i=0; i<face->numedges; i++)
     {
-        int val = PointInFace(face, bsp_static, point);
-        if (val)
-            return true;
+        /* faces toward the center of the face */
+        const plane_t *edgeplane = &fi->edgeplanes[i];
+        
+        vec_t dist = DotProduct(point, edgeplane->normal) - edgeplane->dist;
+        if (dist < 0)
+            return false;
     }
-    return false;
+    return true;
 }
 
 static bsp2_dface_t *
@@ -271,8 +251,9 @@ SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t point)
     {
         bsp2_dface_t *face;
         face = &bsp_static->dfaces[bspnode->firstface + i];
+        
         if (TestHitFace(face, point)) {
-            return face;
+            return face;   
         }
     }
     return NULL;
@@ -311,14 +292,11 @@ TraceLine(const dmodel_t *model, const int traceflags,
     tracestack_t *tstack, *crossnode;
     tnode_t *tnode;
 //    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
-    qboolean isbmodel;
     
     if (traceflags <= 0)
         Error("Internal error: %s - bad traceflags (%d)",
               __func__, traceflags);
 
-    isbmodel = (model != tracelist[0]);
-    
     VectorCopy(start, front);
     VectorCopy(stop, back);
 
@@ -354,40 +332,17 @@ TraceLine(const dmodel_t *model, const int traceflags,
                 break;
             }
             if (tracehit != TRACE_HIT_NONE) {
-                qboolean done = true;
-                
                 /* If we haven't crossed, start was inside flagged contents */
                 if (!crossnode)
                     return -tracehit;
 
-                if (isbmodel && testFenceTextures) {
-                    const bsp2_dnode_t *bspnode = tnodes[crossnode->node].node;
-                    bsp2_dface_t *face = SearchNodeForHitFace(bspnode, crossnode->front);
-                    
-                    if (face) {
-                        miptex_t *mt = MiptexForFace(face, bsp_static);
-                        if (mt && mt->name[0] == '{') {
-                            int sample = SampleTexture(face, bsp_static, crossnode->front);
-                            done = (sample != 255);
-                        } else {
-                            /* Non-fence texture was hit, we are done */
-                            done = true;
-                        }
-                    } else {
-                        /* Continue tracing until we find the face we hit */
-                        done = false;
-                    }
+                if (hitpoint) {
+                    hitpoint->dplane = crossnode->plane;
+                    hitpoint->side = crossnode->side;
+                    VectorCopy(crossnode->front, hitpoint->point);
                 }
 
-                if (done) {
-                    if (hitpoint) {
-                        hitpoint->dplane = crossnode->plane;
-                        hitpoint->side = crossnode->side;
-                        VectorCopy(crossnode->front, hitpoint->point);
-                    }
-
-                    return tracehit;
-                }
+                return tracehit;
             }
 
             /* If the stack is empty, no obstructions were hit */
@@ -504,4 +459,65 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
     }
 
     return true;
+}
+
+
+/*
+=============
+TraceFaces
+ 
+From lordhavoc, johnfitz (RecursiveLightPoint)
+=============
+*/
+bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
+{
+    float		front, back, frac;
+    vec3_t		mid;
+    tnode_t             *tnode;
+    
+    if (node < 0)
+        return false;		// didn't hit anything
+    
+    tnode = &tnodes[node]; //ericw
+    
+    // calculate mid point
+    if (tnode->type < 3)
+    {
+        front = start[tnode->type] - tnode->dist;
+        back = end[tnode->type] - tnode->dist;
+    }
+    else
+    {
+        front = DotProduct(start, tnode->normal) - tnode->dist;
+        back = DotProduct(end, tnode->normal) - tnode->dist;
+    }
+    
+    if ((back < 0) == (front < 0))
+        return TraceFaces (ti, tnode->children[front < 0], start, end);
+    
+    frac = front / (front-back);
+    mid[0] = start[0] + (end[0] - start[0])*frac;
+    mid[1] = start[1] + (end[1] - start[1])*frac;
+    mid[2] = start[2] + (end[2] - start[2])*frac;
+    
+    // go down front side
+    if (TraceFaces (ti, tnode->children[front < 0], start, mid))
+        return true;	// hit something
+    else
+    {
+        // check for impact on this node
+        VectorCopy (mid, ti->point);
+        //ti->lightplane = tnode->plane;
+        
+        bsp2_dface_t *face = SearchNodeForHitFace(tnode->node, mid);
+        if (face) {
+            ti->face = face;
+            return true;
+        }
+
+        //ericw -- no impact found on this node.
+        
+        // go down back side
+        return TraceFaces (ti, tnode->children[front >= 0], mid, end);
+    }
 }
