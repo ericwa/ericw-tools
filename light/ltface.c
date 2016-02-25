@@ -685,28 +685,7 @@ CalcPoints(const dmodel_t *model, const vec3_t offset, const texorg_t *texorg, l
             {
                 VectorCopy(surf->plane.normal, norm);
             }
-            
-            // Is the point already unbostructed? Skip doing the traceline.
-            // There could be an obstruction near the face that would block most of the traces
-            // (e.g. beveled walkways in telefragged.bsp touch a wall along one edge, but don't split the wall)
-            if (!NearWall(point))
-                continue; // all good
-            
-            // First try fudging by 0.25
-            bool good = false;
-            for (i = 0; i < 6; i++) {
-                vec3_t testpoint;
-                VectorCopy(point, testpoint);
-                testpoint[i/2] += (i%2) ? 0.25 : -0.25;
-                if (!NearWall(testpoint)) {
-                    VectorCopy(testpoint, point);
-                    good = true;
-                }
-            }
-            if (good)
-                continue;
-            
-            // Next try a trace
+
             for (i = 0; i < 6; i++) {
                 const int flags = TRACE_HIT_SOLID;
                 tracepoint_t hit;
