@@ -517,7 +517,7 @@ LoadFilePak(char *filename, void *destptr)
     if (!file)
     {
         e = filename + strlen(filename);
-        for(;;)
+        for( ; e>filename ; )
         {
             while(e > filename)
                 if (*--e == '/')
