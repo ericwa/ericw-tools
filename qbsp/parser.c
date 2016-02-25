@@ -84,6 +84,7 @@ ParseToken(parser_t *p, parseflags_t flags)
                 return false;
             }
         }
+        p->linenum++; // count the \n the preceding while() loop just consumed
         goto skipspace;
     }
     if (flags & PARSE_COMMENT)
