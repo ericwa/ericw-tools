@@ -1133,6 +1133,13 @@ static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix,
     }
 }
 
+static void
+ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
+{
+    vec_t dist = DotProduct(point, plane->normal) - plane->dist;
+    VectorMA(point, -dist, plane->normal, out);
+}
+
 /*
  * ================
  * LightFace_Entity
@@ -1173,9 +1180,14 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
     surfpoint = lightsurf->points[0];
     surfnorm = lightsurf->normals[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3, surfnorm += 3) {
-        vec3_t ray;
+        vec3_t surfpoint_actual, ray;
 
-        VectorSubtract(entity->origin, surfpoint, ray);
+        // surfpoint is hovering above the face by 1 unit (see CalcPoints).
+        // We the point exactly on the plane for calculating the light angle,
+        // otherwise lights within 1 unit of a surface don't work
+        ProjectPointOntoPlane(surfpoint, &lightsurf->plane, surfpoint_actual);
+        
+        VectorSubtract(entity->origin, surfpoint_actual, ray);
         dist = VectorLength(ray);
 
         /* Quick distance check first */
@@ -1213,7 +1225,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
             vec3_t col;
             VectorCopy(light->color, col);
             VectorScale(ray, 255, col);
-            LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
+            LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint_actual, col);
             Light_Add(sample, add, col, ray);           
         }
         else
