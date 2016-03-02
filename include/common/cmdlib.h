@@ -29,6 +29,10 @@
 #include <stdarg.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
 
@@ -140,5 +144,9 @@ void Q_CopyFile(const char *from, char *to);
 
 extern qboolean archive;
 extern char archivedir[1024];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __COMMON_CMDLIB_H__ */

@@ -22,6 +22,10 @@
 
 #include <common/bspfile.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define LIT_VERSION 1
 
 typedef struct litheader_s {
@@ -45,5 +49,9 @@ typedef struct {
 
 void WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int version);
 void WriteLuxFile(const bsp2_t *bsp, const char *filename, int version);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIGHT_LITFILE_H__ */

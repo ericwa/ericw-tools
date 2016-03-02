@@ -23,6 +23,10 @@
 #include <float.h>
 #include <math.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef DOUBLEVEC_T
 #define vec_t double
 #define VECT_MAX DBL_MAX;
@@ -134,5 +138,9 @@ double VectorLength(const vec3_t v);
 /* Shortcut for output of warnings/errors */
 const char *VecStr(const vec3_t vec);
 const char *VecStrf(const vec3_t vec);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __COMMON_MATHLIB_H__ */

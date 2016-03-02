@@ -30,6 +30,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef __GNUC__
 #define __attribute__(x)
 #endif
@@ -50,5 +54,9 @@ void logprint_silent(const char *fmt, ...)
 /* Only called from the threads code */
 void logprint_locked__(const char *fmt, ...)
     __attribute__((format(printf,1,2)));
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __COMMON_LOG_H__ */

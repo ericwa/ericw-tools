@@ -27,6 +27,10 @@
 #include <common/threads.h>
 #include <light/litfile.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
@@ -237,5 +241,9 @@ extern qboolean surflight_dump;
 extern qboolean phongDebug;
 
 extern char mapfilename[1024];
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIGHT_LIGHT_H__ */

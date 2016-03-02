@@ -25,6 +25,10 @@
 #include <common/cmdlib.h>
 #include <common/log.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* upper design bounds */
 
 #define MAX_MAP_HULLS_Q1              4
@@ -468,5 +472,9 @@ void PrintBSPFileSizes(const bspdata_t *bsp);
 void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __COMMON_BSPFILE_H__ */

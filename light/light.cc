@@ -146,7 +146,7 @@ static void *
 LightThread(void *arg)
 {
     int facenum, i;
-    const bsp2_t *bsp = arg;
+    const bsp2_t *bsp = (const bsp2_t *)arg;
     const modelinfo_t *face_modelinfo;
     struct ltface_ctx *ctx;
 
@@ -203,7 +203,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     modelinfo_t *info;
     float lightmapscale;
 
-    shadowmodels = malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
+    shadowmodels = (const dmodel_t **)malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
     memset(shadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
 
     /* The world always casts shadows */
@@ -335,7 +335,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     bsp2_dface_t *f;
     vec3_t norm;
 
-    vertex_normals = malloc(sizeof(vec3_t) * bsp->numvertexes);
+    vertex_normals = (vec3_t *)malloc(sizeof(vec3_t) * bsp->numvertexes);
     memset(vertex_normals, 0, sizeof(vec3_t) * bsp->numvertexes);
 
     for (i = 0; i < bsp->numfaces; i++)
@@ -384,7 +384,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     /* FIXME - remove this limit */
     bsp->lightdatasize = MAX_MAP_LIGHTING;
-    bsp->dlightdata = malloc(bsp->lightdatasize + 16); /* for alignment */
+    bsp->dlightdata = (byte *)malloc(bsp->lightdatasize + 16); /* for alignment */
     if (!bsp->dlightdata)
         Error("%s: allocation of %i bytes failed.",
               __func__, bsp->lightdatasize);
@@ -401,7 +401,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
 
     /* lux data stored in a separate buffer */
-    lux_buffer = malloc(bsp->lightdatasize*3);
+    lux_buffer = (byte *)malloc(bsp->lightdatasize*3);
     lux_filebase = lux_buffer + 12 - ((uintptr_t)lux_buffer % 12);
     lux_file_p = lux_filebase;
     lux_file_end = lux_filebase + 3 * (MAX_MAP_LIGHTING / 4);
@@ -410,12 +410,12 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     if (forcedscale)
         BSPX_AddLump(bspdata, "LMSHIFT", NULL, 0);
 
-    lmshift_lump = BSPX_GetLump(bspdata, "LMSHIFT", NULL);
+    lmshift_lump = (const unsigned char *)BSPX_GetLump(bspdata, "LMSHIFT", NULL);
     if (!lmshift_lump && write_litfile != ~0)
         faces_sup = NULL; //no scales, no lit2
     else
     {   //we have scales or lit2 output. yay...
-        faces_sup = malloc(sizeof(*faces_sup) * bsp->numfaces);
+        faces_sup = (facesup_t *)malloc(sizeof(*faces_sup) * bsp->numfaces);
         memset(faces_sup, 0, sizeof(*faces_sup) * bsp->numfaces);
         if (lmshift_lump)
         {
@@ -440,8 +440,8 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     if (faces_sup)
     {
-        uint8_t *styles = malloc(sizeof(*styles)*4*bsp->numfaces);
-        int32_t *offsets = malloc(sizeof(*offsets)*bsp->numfaces);
+        uint8_t *styles = (uint8_t *)malloc(sizeof(*styles)*4*bsp->numfaces);
+        int32_t *offsets = (int32_t *)malloc(sizeof(*offsets)*bsp->numfaces);
         for (i = 0; i < bsp->numfaces; i++)
         {
             offsets[i] = faces_sup[i].lightofs;
@@ -676,7 +676,7 @@ main(int argc, const char **argv)
 
     LoadEntities(bsp);
 
-    modelinfo = malloc(bsp->nummodels * sizeof(*modelinfo));
+    modelinfo = (modelinfo_t *)malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp, lmscaleoverride);
     SetupLights(bsp);
     

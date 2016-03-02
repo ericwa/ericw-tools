@@ -24,6 +24,10 @@
 #include <common/bspfile.h>
 #include <light/light.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+    
 #define DEFAULTLIGHTLEVEL 300
 
 typedef struct epair_s {
@@ -127,5 +131,9 @@ const char *WorldValueForKey(const char *key);
 void LoadEntities(const bsp2_t *bsp);
 void SetupLights(const bsp2_t *bsp);
 void WriteEntitiesToString(bsp2_t *bsp);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __LIGHT_ENTITIES_H__ */

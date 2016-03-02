@@ -11,7 +11,7 @@ set(LIGHT_SOURCES
 	litfile.c
 	ltface.c
 	trace.c
-	light.c
+	light.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.c
 	${CMAKE_SOURCE_DIR}/common/cmdlib.c
 	${CMAKE_SOURCE_DIR}/common/mathlib.c
@@ -22,5 +22,7 @@ set(LIGHT_SOURCES
 
 add_executable(light ${LIGHT_SOURCES})
 target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
+set_property(TARGET light PROPERTY CXX_STANDARD 11)
+set_property(TARGET light PROPERTY CXX_STANDARD_REQUIRED ON)
 
 install(TARGETS light RUNTIME DESTINATION bin)
