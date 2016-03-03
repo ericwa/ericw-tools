@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (light)
+project (light CXX)
 
 set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/entities.h
