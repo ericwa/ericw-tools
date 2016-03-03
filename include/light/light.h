@@ -180,6 +180,9 @@ const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
 void MakeTnodes(const bsp2_t *bsp);
 
+/* access the final phong-shaded vertex normal */
+const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
+    
 extern float scaledist;
 extern float rangescale;
 extern float anglescale;

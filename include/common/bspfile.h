@@ -211,7 +211,8 @@ typedef struct texinfo_s {
 } texinfo_t;
 
 #define TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
-#define TEX_CURVED      0x800           /* surface is meant to have smoothed lighting, to hide angular edges, giving a curved appearance */
+#define TEX_PHONG_ANGLE_SHIFT   11
+#define TEX_PHONG_ANGLE_MASK    (255U << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for

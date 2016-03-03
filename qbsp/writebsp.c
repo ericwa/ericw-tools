@@ -707,7 +707,7 @@ CleanBSPTexinfoFlags(void)
     int i;
 
     for (i = 0; i < num_texinfo; i++, texinfo++)
-        texinfo->flags &= TEX_SPECIAL|TEX_CURVED;
+        texinfo->flags &= TEX_SPECIAL|TEX_PHONG_ANGLE_MASK; // still write TEX_PHONG_ANGLE_MASK
 }
 
 /*

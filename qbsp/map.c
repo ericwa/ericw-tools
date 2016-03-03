@@ -201,8 +201,23 @@ FindTexinfoEnt(texinfo_t *texinfo, mapentity_t *entity)
         flags |= TEX_HINT;
     if (IsSplitName(texname))
         flags |= TEX_SPECIAL;
-    if (entity->smoothedtexture && !Q_strcasecmp(texname, entity->smoothedtexture->value))
-        flags |= TEX_CURVED;
+    
+    vec_t phongangle = atof(ValueForKey(entity, "_phong_angle"));
+    int phong = atoi(ValueForKey(entity, "_phong"));
+    
+    if (phong && (phongangle == 0.0)) {
+        phongangle = 89.0; // default _phong_angle
+    }
+    
+    if (phongangle) {
+        int phongangle_int = rint(phongangle);
+        
+        if (phongangle_int < 0) phongangle_int = 0;
+        if (phongangle_int > 255) phongangle_int = 255;
+        
+        flags |= (phongangle_int << TEX_PHONG_ANGLE_SHIFT);
+    }
+
     return FindTexinfo(texinfo, flags);
 }
 
@@ -226,8 +241,6 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 
     if (!Q_strcasecmp(epair->key, "origin")) {
         GetVectorForKey(entity, epair->key, entity->origin);
-    } else if (!Q_strcasecmp(epair->key, "_smooth")) {
-        entity->smoothedtexture = epair;
     } else if (!Q_strcasecmp(epair->key, "classname")) {
         if (!Q_strcasecmp(epair->value, "info_player_start")) {
             if (rgfStartSpots & info_player_start)
@@ -638,7 +651,6 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     if (map.numentities == map.maxentities)
         Error("Internal error: didn't allocate enough entities?");
 
-    entity->smoothedtexture = NULL;
     entity->mapbrushes = brush = map.brushes + map.numbrushes;
     do {
         if (!ParseToken(parser, PARSE_NORMAL))

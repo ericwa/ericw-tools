@@ -20,7 +20,6 @@
 #include <light/light.h>
 #include <light/entities.h>
 
-extern vec3_t *vertex_normals;
 extern unsigned int lightturb;
 
 /* ======================================================================== */
@@ -427,10 +426,6 @@ vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
         return bsp->dvertexes[GetSurfaceVertex(bsp, f, v)].point;
 }
-vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
-{
-        return vertex_normals[GetSurfaceVertex(bsp, f, v)];
-}
 
 
 static int ClipPointToTriangle(const vec_t *orig, vec_t *point, const vec_t *norm_, const vec_t *v1, const vec_t *v2, const vec_t *v3)
@@ -518,7 +513,7 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
     
 #if 1
     int j;
-    vec_t *v1, *v2, *v3;
+    const vec_t *v1, *v2, *v3;
     int best; //3rd point
     vec3_t clipped, t;
 //      vec3_t bestp = {point[0],point[1],point[2]};
@@ -729,7 +724,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     else
         lightsurf->lightmapscale = modelinfo->lightmapscale;
 
-    if (bsp->texinfo[face->texinfo].flags & TEX_CURVED)
+    if (bsp->texinfo[face->texinfo].flags & TEX_PHONG_ANGLE_MASK)
         lightsurf->curved = true;
     else
         lightsurf->curved = false;

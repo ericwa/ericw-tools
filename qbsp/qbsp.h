@@ -113,7 +113,9 @@
 #define TEX_SPECIAL (1U << 0)   /* sky or liquid (no lightmap or subdivision */
 #define TEX_SKIP    (1U << 1)   /* an invisible surface */
 #define TEX_HINT    (1U << 2)   /* hint surface */
-#define TEX_CURVED      (1U << 11)              /* surface is meant to have smoothed lighting, to hide angular edges, giving a curved appearance */
+
+#define TEX_PHONG_ANGLE_SHIFT   11
+#define TEX_PHONG_ANGLE_MASK    (255U << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -514,7 +516,6 @@ struct lumpdata {
 
 typedef struct mapentity_s {
     vec3_t origin;
-    epair_t *smoothedtexture;
     mapbrush_t *mapbrushes;     /* Array */
     int nummapbrushes;
     epair_t *epairs;
