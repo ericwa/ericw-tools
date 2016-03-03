@@ -30,8 +30,6 @@ static int num_lights;
 
 entity_t *lights[MAX_LIGHTS];
 
-extern qboolean scaledonly;
-
 /* surface lights */
 #define MAX_SURFLIGHT_TEMPLATES 256
 entity_t *surfacelight_templates[MAX_SURFLIGHT_TEMPLATES];

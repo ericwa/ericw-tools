@@ -233,6 +233,8 @@ extern int write_litfile;
 extern int write_luxfile;
 extern qboolean onlyents;
 extern qboolean parse_escape_sequences;
+extern qboolean scaledonly;
+extern unsigned int lightturb;
 
 void SetupDirt();
 

@@ -20,8 +20,6 @@
 #include <light/light.h>
 #include <light/entities.h>
 
-extern unsigned int lightturb;
-
 /* ======================================================================== */
 
 typedef struct {
