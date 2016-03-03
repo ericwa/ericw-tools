@@ -409,11 +409,15 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         }
     }
     
-    // finally do the smoothing
+    // finally do the smoothing for each face
     for (int i = 0; i < bsp->numfaces; i++)
     {
         const bsp2_dface_t *f = &bsp->dfaces[i];
         const auto &neighboursToSmooth = smoothFaces[f];
+        vec3_t f_norm;
+        
+        // get the face normal
+        Face_Normal(bsp, f, f_norm);
         
         // gather up f and neighboursToSmooth
         std::vector<const bsp2_dface_t *> fPlusNeighbours;
@@ -442,17 +446,23 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             }
         }
         
-        for (auto &vertIndexNormalPair : smoothedNormals)
-        {
-            VectorNormalize(vertIndexNormalPair.second.v);
+        // normalize vertex normals
+        for (auto &pair : smoothedNormals) {
+            const int vertIndex = pair.first;
+            vec_t *vertNormal = pair.second.v;
+            if (0 == VectorNormalize(vertNormal)) {
+                logprint("Failed to calculate normal for vertex %d at (%f %f %f)\n",
+                         vertIndex,
+                         bsp->dvertexes[vertIndex].point[0],
+                         bsp->dvertexes[vertIndex].point[1],
+                         bsp->dvertexes[vertIndex].point[2]);
+                VectorCopy(f_norm, vertNormal);
+            }
         }
         
         // sanity check
         if (!neighboursToSmooth.size()) {
-            vec3_t f_norm;
-            Face_Normal(bsp, f, f_norm);
-            for (auto vertIndexNormalPair : smoothedNormals)
-            {
+            for (auto vertIndexNormalPair : smoothedNormals) {
                 assert(VectorCompare(vertIndexNormalPair.second.v, f_norm));
             }
         }
