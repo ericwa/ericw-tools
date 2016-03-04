@@ -33,7 +33,7 @@ static byte *vismap_end;        // past visfile
 
 int originalvismapsize;
 
-byte *uncompressed;             // [leafbytes_real*portalleafs_real]
+byte *uncompressed;             // [leafbytes_real*portalleafs]
 
 int leafbytes;                  // (portalleafs+63)>>3
 int leaflongs;
@@ -1275,8 +1275,7 @@ main(int argc, char **argv)
     StripExtension(statetmpfile);
     DefaultExtension(statetmpfile, ".vi0");
 
-    uncompressed = malloc(leafbytes_real * portalleafs_real);
-    memset(uncompressed, 0, leafbytes_real * portalleafs_real);
+    uncompressed = calloc(portalleafs, leafbytes_real);
 
 //    CalcPassages ();
 

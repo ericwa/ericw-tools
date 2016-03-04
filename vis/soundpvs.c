@@ -94,7 +94,11 @@ CalcAmbientSounds(bsp2_t *bsp)
         for (j = 0; j < NUM_AMBIENTS; j++)
             dists[j] = 1020;
 
-        vis = &uncompressed[i * leafbytes_real];
+        if (portalleafs != portalleafs_real) {
+            vis = &uncompressed[clustermap[i] * leafbytes_real];
+        } else {
+            vis = &uncompressed[i * leafbytes_real];
+        }
 
         for (j = 0; j < portalleafs_real; j++) {
             if (!(vis[j >> 3] & (1 << (j & 7))))

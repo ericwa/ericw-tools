@@ -110,6 +110,7 @@ typedef struct {
 extern int numportals;
 extern int portalleafs;
 extern int portalleafs_real;
+extern int *clustermap;
 
 extern portal_t *portals;
 extern leaf_t *leafs;
