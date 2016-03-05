@@ -37,6 +37,8 @@ typedef struct faceinfo_s {
     vec3_t origin;
     vec_t radiusSquared;
     
+    int content;
+    plane_t plane;
 } faceinfo_t;
 
 static tnode_t *tnodes;
@@ -137,14 +139,43 @@ static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
     return deltaLengthSquared > info->radiusSquared;
 }
 
+static int
+Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    if (face->texinfo < 0)
+        return CONTENTS_SOLID;
+    
+    if (!(bsp->texinfo[face->texinfo].flags & TEX_SPECIAL))
+        return CONTENTS_SOLID;
+    
+    int texnum = bsp->texinfo[face->texinfo].miptex;
+    const dmiptexlump_t *miplump = bsp->dtexdata.header;
+    const miptex_t *miptex;
+    
+    if (!miplump->dataofs[texnum])
+        return CONTENTS_SOLID; //sometimes the texture just wasn't written. including its name.
+    
+    miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[texnum]);
+    
+    if (!Q_strncasecmp(miptex->name, "sky", 3))
+        return CONTENTS_SKY;
+    else if (!Q_strncasecmp(miptex->name, "*lava", 5))
+        return CONTENTS_LAVA;
+    else if (!Q_strncasecmp(miptex->name, "*slime", 6))
+        return CONTENTS_SLIME;
+    else if (miptex->name[0] == '*')
+        return CONTENTS_WATER;
+    else
+        return CONTENTS_SOLID;
+}
+
 void
 MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
     info->numedges = face->numedges;
     info->edgeplanes = calloc(face->numedges, sizeof(plane_t));
     
-    plane_t surfplane;
-    GetFaceNormal(bsp, face, &surfplane);
+    GetFaceNormal(bsp, face, &info->plane);
     
     // make edge planes
     for (int i=0; i<face->numedges; i++)
@@ -158,7 +189,7 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
         VectorSubtract(v1, v0, edgevec);
         VectorNormalize(edgevec);
         
-        CrossProduct(edgevec, surfplane.normal, dest->normal);
+        CrossProduct(edgevec, info->plane.normal, dest->normal);
         
         dest->dist = DotProduct(dest->normal, v0);
     }
@@ -186,6 +217,8 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
             maxRadiusSq = radiusSq;
     }
     info->radiusSquared = maxRadiusSq;
+    
+    info->content = Face_Contents(bsp, face);
     
 #if 0
     //test
@@ -572,8 +605,19 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
         
         bsp2_dface_t *face = SearchNodeForHitFace(tnode->node, mid);
         if (face) {
-            ti->face = face;
-            return true;
+            int facenum = face - bsp_static->dfaces;
+            const faceinfo_t *fi = &faceinfos[facenum];
+            
+            // only solid and sky faces stop the trace.
+            if (fi->content == CONTENTS_SOLID || fi->content == CONTENTS_SKY) {
+                ti->face = face;
+                ti->hitsky = (fi->content == CONTENTS_SKY);
+                
+                // check if we hit the back side
+                ti->hitback = (DotProduct(ti->dir, fi->plane.normal) >= 0);
+                
+                return true;
+            }
         }
 
         //ericw -- no impact found on this node.

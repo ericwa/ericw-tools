@@ -679,25 +679,18 @@ CalcPoints(const dmodel_t *model, const vec3_t offset, const texorg_t *texorg, l
                 VectorCopy(surf->plane.normal, norm);
             }
 
-            for (i = 0; i < 6; i++) {
-                const int flags = TRACE_HIT_SOLID;
-                tracepoint_t hit;
-                int result;
-                vec_t dist;
-
-                result = TraceLine(model, flags, midpoint, point, &hit);
-                if (result == TRACE_HIT_NONE)
-                    break;
-                if (result != TRACE_HIT_SOLID) {
-                    WarnBadMidpoint(midpoint);
-                    break;
-                }
-
-                /* Move the point 1 unit above the obstructing surface */
-                dist = DotProduct(point, hit.dplane->normal) - hit.dplane->dist;
-                dist = hit.side ? -dist - 1 : -dist + 1;
-                VectorScale(hit.dplane->normal, dist, move);
-                VectorAdd(point, move, point);
+            vec3_t tracedir;
+            VectorSubtract(point, midpoint, tracedir);
+            VectorNormalize(tracedir);
+            
+            // trace 1 unit further than we need to go to ensure 1 unit clearance
+            vec3_t dest;
+            VectorMA(point, 1, tracedir, dest);
+            
+            vec3_t hitpoint = {0};
+            if (DirtTrace(midpoint, dest, model, hitpoint)) {
+                // we hit a solid. pull back 1 unit from the hitpoint and hope that's in empty space.
+                VectorMA(hitpoint, -1, tracedir, point);
             }
         }
     }
@@ -1484,22 +1477,20 @@ qboolean
 DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out)
 {
     const dmodel_t *const *model;
-    const int traceflags = TRACE_HIT_SOLID | TRACE_HIT_SKY;
-    int result = TRACE_HIT_NONE;
-    tracepoint_t hitpoint;
-
+    traceinfo_t ti = {0};
+    
+    VectorSubtract(stop, start, ti.dir);
+    VectorNormalize(ti.dir);
+    
     if (self) {
-        result = TraceLine(self, traceflags, start, stop, &hitpoint);
-        if (result == -TRACE_HIT_SOLID) {
-            /* We started in the void, which ideally wouldn't happen, 
-               but does (say on e1m1). Return the start point as the hitpoint,
-               which will make fully black dirt.
-             */
-            VectorCopy(start, hitpoint_out);
-            return true;
-        } else if (result == TRACE_HIT_SOLID) {
-            VectorCopy(hitpoint.point, hitpoint_out);
-            return true;
+        if (TraceFaces (&ti, self->headnode[0], start, stop)) {
+            VectorCopy(ti.point, hitpoint_out);
+
+            if (ti.hitback) {
+                VectorCopy(start, hitpoint_out);
+            }
+
+            return !ti.hitsky;
         }
     }
 
@@ -1507,13 +1498,14 @@ DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hi
     for (model = tracelist; *model; model++) {
         if (*model == self)
             continue;
-        result = TraceLine(*model, traceflags, start, stop, &hitpoint);
-        if (result == -TRACE_HIT_SOLID) {
-            VectorCopy(start, hitpoint_out);
-            return true;
-        } else if (result == TRACE_HIT_SOLID) {
-            VectorCopy(hitpoint.point, hitpoint_out);
-            return true;
+        if (TraceFaces (&ti, (*model)->headnode[0], start, stop)) {
+            VectorCopy(ti.point, hitpoint_out);
+            
+            if (ti.hitback) {
+                VectorCopy(start, hitpoint_out);
+            }
+            
+            return !ti.hitsky;
         }
     }
 
