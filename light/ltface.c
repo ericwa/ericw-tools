@@ -1489,11 +1489,6 @@ DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hi
     if (self) {
         if (TraceFaces (&ti, self->headnode[0], start, stop)) {
             VectorCopy(ti.point, hitpoint_out);
-
-            if (ti.hitback) {
-                VectorCopy(start, hitpoint_out);
-            }
-
             return !ti.hitsky;
         }
     }
@@ -1504,11 +1499,6 @@ DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hi
             continue;
         if (TraceFaces (&ti, (*model)->headnode[0], start, stop)) {
             VectorCopy(ti.point, hitpoint_out);
-            
-            if (ti.hitback) {
-                VectorCopy(start, hitpoint_out);
-            }
-            
             return !ti.hitsky;
         }
     }
