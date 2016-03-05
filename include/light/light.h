@@ -139,6 +139,10 @@ typedef struct {
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
     const modelinfo_t *modelinfo;
+    /* these take precedence the values in modelinfo */
+    lightsample_t minlight;
+    qboolean nodirt;
+    
     plane_t plane;
     vec3_t snormal;
     vec3_t tnormal;
@@ -243,6 +247,7 @@ extern qboolean onlyents;
 extern qboolean parse_escape_sequences;
 extern qboolean scaledonly;
 extern unsigned int lightturb;
+extern uint32_t *extended_texinfo_flags;
 
 void SetupDirt();
 

@@ -91,6 +91,8 @@ qboolean onlyents = false;
 qboolean phongDebug = false;
 qboolean parse_escape_sequences = false;
 
+uint32_t *extended_texinfo_flags = NULL;
+
 char mapfilename[1024];
 
 void
@@ -380,7 +382,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         Face_Normal(bsp, f, f_norm);
         
         // any face normal within this many degrees can be smoothed with this face
-        const int f_smoothangle = (bsp->texinfo[f->texinfo].flags & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
+        const int f_smoothangle = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
         if (!f_smoothangle)
             continue;
         
@@ -391,7 +393,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
                 if (f2 == f)
                     continue;
                 
-                const int f2_smoothangle = (bsp->texinfo[f2->texinfo].flags & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
+                const int f2_smoothangle = (extended_texinfo_flags[f2->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
                 if (!f2_smoothangle)
                     continue;
                 
@@ -567,6 +569,36 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
         BSPX_AddLump(bspdata, "LMOFFSET", NULL, 0);
     }
+}
+
+static void
+LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
+{
+    char filename[1024];
+    
+    // always create the zero'ed array
+    extended_texinfo_flags = (uint32_t *) calloc(bsp->numtexinfo, sizeof(uint32_t));
+    
+    strcpy(filename, sourcefilename);
+    StripExtension(filename);
+    DefaultExtension(filename, ".texinfo");
+
+    FILE *texinfofile = fopen(filename, "rt");
+    if (!texinfofile)
+        return;
+    
+    logprint("Loaded extended texinfo flags from %s\n", filename);
+    
+    for (int i = 0; i < bsp->numtexinfo; i++) {
+        int cnt = fscanf(texinfofile, "%u\n", &extended_texinfo_flags[i]);
+        if (cnt != 1) {
+            logprint("Error reading extended texinfo flags from %s\n", filename);
+            fclose(texinfofile);
+            memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
+            return;
+        }
+    }
+    fclose(texinfofile);
 }
 
 /*
@@ -785,6 +817,7 @@ main(int argc, const char **argv)
     if (bspdata.version != BSP2VERSION)
         ConvertBSPFormat(BSP2VERSION, &bspdata);
 
+    LoadExtendedTexinfoFlags(source, bsp);
     LoadEntities(bsp);
 
     modelinfo = (modelinfo_t *)malloc(bsp->nummodels * sizeof(*modelinfo));

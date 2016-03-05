@@ -715,11 +715,15 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     else
         lightsurf->lightmapscale = modelinfo->lightmapscale;
 
-    if (bsp->texinfo[face->texinfo].flags & TEX_PHONG_ANGLE_MASK)
-        lightsurf->curved = true;
-    else
-        lightsurf->curved = false;
-
+    lightsurf->curved = !!(extended_texinfo_flags[face->texinfo] & TEX_PHONG_ANGLE_MASK);
+    lightsurf->nodirt = !!(extended_texinfo_flags[face->texinfo] & TEX_NODIRT);
+    lightsurf->minlight = modelinfo->minlight;
+    lightsurf->minlight.light = (extended_texinfo_flags[face->texinfo] & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT;
+    /* fixup minlight color */
+    if (lightsurf->minlight.light > 0 && VectorCompare(lightsurf->minlight.color, vec3_origin)) {
+        VectorSet(lightsurf->minlight.color, 255, 255, 255);
+    }
+    
     /* Set up the plane, including model offset */
     plane = &lightsurf->plane;
     VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
@@ -950,7 +954,7 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
  * ============
  */
 static inline vec_t
-Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const modelinfo_t *modelinfo)
+Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *surf)
 {
     vec_t light_dirtgain = dirtGain;
     vec_t light_dirtscale = dirtScale;
@@ -960,7 +964,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const modelinfo_t *
     /* is dirt processing disabled entirely? */
     if (!dirty)
         return 1.0f;
-    if (modelinfo != NULL && modelinfo->nodirt)
+    if (surf->nodirt)
         return 1.0f;
 
     /* should this light be affected by dirt? */
@@ -1204,7 +1208,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
         if (dist >= 0)  //anglescale normally lights the surface more than it otherwise should, meaning the dark side would be visible if there were no occlusion. naturally, this doesn't work when we're relaxing occlusion to faciliate curves.
         angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
         add = GetLightValue(light, entity, dist) * angle * spotscale;
-        add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, modelinfo);
+        add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, lightsurf);
 
         if (entity->projectedmip)
         {
@@ -1275,7 +1279,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         value = angle * sun->sunlight.light;
         if (sun->dirt)
-            value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
+            value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
         Light_Add(sample, value, sun->sunlight.color, sun->sunvec);
         if (!hit/* && (sample->light >= 1)*/)
             hit = true;
@@ -1311,7 +1315,7 @@ LightFace_Min(const lightsample_t *light,
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
         vec_t value = light->light;
         if (minlightDirt)
-            value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
+            value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
         if (addminlight)
             Light_Add(sample, value, light->color, vec3_origin);
         else
@@ -1340,7 +1344,7 @@ LightFace_Min(const lightsample_t *light,
                 trace = TestLight((*entity)->origin, surfpoint, shadowself);
                 if (!trace)
                     continue;
-                value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), modelinfo);
+                value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), lightsurf);
                 if (addminlight)
                     Light_Add(sample, value, (*entity)->light.color, vec3_origin);
                 else
@@ -1374,7 +1378,7 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     /* Overwrite each point with the dirt value for that sample... */
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
-        sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, modelinfo);
+        sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
         VectorSet(sample->color, sample->light, sample->light, sample->light);
     }
 
@@ -1864,8 +1868,8 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             LightFace_Sky (sun, lightsurf, lightmaps);
 
     /* minlight - Use the greater of global or model minlight. */
-    if (modelinfo->minlight.light > minlight.light)
-        LightFace_Min(&modelinfo->minlight, lightsurf, lightmaps);
+    if (lightsurf->minlight.light > minlight.light)
+        LightFace_Min(&lightsurf->minlight, lightsurf, lightmaps);
     else
         LightFace_Min(&minlight, lightsurf, lightmaps);
 

@@ -109,13 +109,15 @@
 // Special contents flags for the compiler only
 #define CFLAGS_DETAIL   (1U << 0)
 
-// Texture flags
+// Texture flags. Only TEX_SPECIAL is written to the .bsp.
 #define TEX_SPECIAL (1U << 0)   /* sky or liquid (no lightmap or subdivision */
 #define TEX_SKIP    (1U << 1)   /* an invisible surface */
 #define TEX_HINT    (1U << 2)   /* hint surface */
-
-#define TEX_PHONG_ANGLE_SHIFT   11
+#define TEX_NODIRT  (1U << 3)   /* don't receive dirtmapping */
+#define TEX_PHONG_ANGLE_SHIFT   4
 #define TEX_PHONG_ANGLE_MASK    (255U << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
+#define TEX_MINLIGHT_SHIFT      12
+#define TEX_MINLIGHT_MASK       (255U << TEX_MINLIGHT_SHIFT)    /* 8 bit value, minlight value for this face. */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.

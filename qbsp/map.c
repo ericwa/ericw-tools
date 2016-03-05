@@ -201,21 +201,27 @@ FindTexinfoEnt(texinfo_t *texinfo, mapentity_t *entity)
         flags |= TEX_HINT;
     if (IsSplitName(texname))
         flags |= TEX_SPECIAL;
-    
+    if (atoi(ValueForKey(entity, "_dirt")) == -1)
+        flags |= TEX_NODIRT;
+
+    // handle "_phong" and "_phong_angle"
     vec_t phongangle = atof(ValueForKey(entity, "_phong_angle"));
-    int phong = atoi(ValueForKey(entity, "_phong"));
+    const int phong = atoi(ValueForKey(entity, "_phong"));
     
     if (phong && (phongangle == 0.0)) {
         phongangle = 89.0; // default _phong_angle
     }
     
     if (phongangle) {
-        int phongangle_int = rint(phongangle);
-        
-        if (phongangle_int < 0) phongangle_int = 0;
-        if (phongangle_int > 255) phongangle_int = 255;
-        
-        flags |= (phongangle_int << TEX_PHONG_ANGLE_SHIFT);
+        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(phongangle)));
+        flags |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
+    }
+    
+    // handle "_minlight"
+    const vec_t minlight = atof(ValueForKey(entity, "_minlight"));
+    if (minlight > 0) {
+        const uint8_t minlight_byte = (uint8_t) qmax(0, qmin(255, (int)rint(minlight)));
+        flags |= (minlight_byte << TEX_MINLIGHT_SHIFT);
     }
 
     return FindTexinfo(texinfo, flags);

@@ -696,6 +696,42 @@ BeginBSPFile(void)
 }
 
 /*
+ * Writes extended texinfo flags to a file so they can be read by the light tool.
+ * Used for phong shading and other lighting settings on func_detail.
+ */
+static void
+WriteExtendedTexinfoFlags(void)
+{
+    bool needwrite = false;
+    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const int num_texinfo = pWorldEnt->lumps[LUMP_TEXINFO].index;
+    int i;
+    
+    for (i = 0; i < num_texinfo; i++) {
+        if (texinfo[i].flags & ~(TEX_SPECIAL | TEX_SKIP | TEX_HINT)) {
+            // this texinfo uses some extended flags, write them to a file
+            needwrite = true;
+            break;
+        }
+    }
+
+    if (!needwrite)
+        return;
+    
+    FILE *texinfofile;
+    StripExtension(options.szBSPName);
+    strcat(options.szBSPName, ".texinfo");
+    texinfofile = fopen(options.szBSPName, "wt");
+    if (!texinfofile)
+        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+    
+    for (i = 0; i < num_texinfo; i++) {
+        fprintf(texinfofile, "%u\n", texinfo[i].flags);
+    }
+    fclose(texinfofile);
+}
+
+/*
  * Remove any extra texinfo flags we added that are not normally written
  * Standard quake utils only ever write the TEX_SPECIAL flag.
  */
@@ -707,7 +743,7 @@ CleanBSPTexinfoFlags(void)
     int i;
 
     for (i = 0; i < num_texinfo; i++, texinfo++)
-        texinfo->flags &= TEX_SPECIAL|TEX_PHONG_ANGLE_MASK; // still write TEX_PHONG_ANGLE_MASK
+        texinfo->flags &= TEX_SPECIAL;
 }
 
 /*
@@ -744,6 +780,7 @@ FinishBSPFile(void)
         texinfo->count = texinfo->index;
     }
 
+    WriteExtendedTexinfoFlags();
     CleanBSPTexinfoFlags();
     WriteBSPFile();
     PrintBSPFileSizes();
