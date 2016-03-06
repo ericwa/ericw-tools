@@ -127,7 +127,7 @@ below).
 .IP "\fB""_sunlight_mangle"" ""x y z""\fP | \fB""_sun_mangle"" ""x y z""\fP"
 Specifies the direction of sunlight using yaw(x), pitch(y) and roll(z) in
 degrees. Yaw specifies the angle around the Z-axis from 0 to 359 degrees and
-pitch specifies the angle from 90 (straight up) to -90 (straight down). Roll
+pitch specifies the angle from 90 (shining straight up) to -90 (shining straight down from above). Roll
 has no effect, so use any value (e.g. 0).  Default is straight down ("0 -90
 0").
 
@@ -198,7 +198,9 @@ Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is darker.
 .SS "Model Entity Keys"
 
 .PP
-The following keys can be used on any entity with a brush model:
+The following keys can be used on any entity with a brush model.
+"_minlight", "_dirt", "_phong", and "_phong_angle" are supported on func_detail/func_group as well, if
+qbsp from these tools is used.
 
 .IP "\fB""_minlight"" ""n""\fP"
 Set the minimum light level for any surface of the brush model.  Default 0.
@@ -224,6 +226,14 @@ for moving models than full shadowing.  Default 0.
 For brush models, -1 prevents dirtmapping on the brush model. Useful it the
 bmodel touches or sticks into the world, and you want to those ares from
 turning black. Default 0.
+
+.IP "\fB""_phong"" ""n""\fP"
+1 enables phong shading on this model with a default _phong_angle of 89 (softens columns etc).
+
+.IP "\fB""_phong_angle"" ""n""\fP"
+Enables phong shading on faces of this model with a custom angle. Adjacent faces with normals this many degrees apart (or less) will be smoothed.
+Consider setting "_anglescale" to "1" on lights or worldspawn to make the effect of phong shading more visible.
+Use the "-phongdebug" command-line flag to save the interpolated normals to the lightmap for previewing (use "r_lightmap 1" or "gl_lightmaps 1" in your engine to preview.)
 
 
 .SH "LIGHT ENTITY KEYS"
