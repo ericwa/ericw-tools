@@ -113,7 +113,8 @@ typedef struct {
     lightsample_t minlight;
     float lightmapscale;
     vec3_t offset;
-    qboolean nodirt;    
+    qboolean nodirt;
+    vec_t phongangle;
 } modelinfo_t;
 
 typedef struct sun_s {

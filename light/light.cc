@@ -279,6 +279,15 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         if (atoi(ValueForKey(entity, "_dirt")) == -1) {
             info->nodirt = true;
         }
+        
+        /* Check for phong shading */
+        // handle "_phong" and "_phong_angle"
+        info->phongangle = atof(ValueForKey(entity, "_phong_angle"));
+        const int phong = atoi(ValueForKey(entity, "_phong"));
+        
+        if (phong && (info->phongangle == 0.0)) {
+            info->phongangle = 89.0; // default _phong_angle
+        }
     }
 
     tracelist = shadowmodels;
@@ -363,6 +372,26 @@ const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, co
 static void
 CalcualateVertexNormals(const bsp2_t *bsp)
 {
+    // clear in case we are run twice
+    vertex_normals.clear();
+    
+    // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
+    // support on func_detail/func_group
+    for (int i=0; i<bsp->nummodels; i++) {
+        const modelinfo_t *info = &modelinfo[i];
+        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(info->phongangle)));
+
+        if (!phongangle_byte)
+            continue;
+        
+        for (int j=info->model->firstface; j < info->model->firstface + info->model->numfaces; j++) {
+            const bsp2_dface_t *f = &bsp->dfaces[j];
+            
+            extended_texinfo_flags[f->texinfo] &= ~(TEX_PHONG_ANGLE_MASK);
+            extended_texinfo_flags[f->texinfo] |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
+        }
+    }
+    
     // build "vert index -> faces" map
     std::map<int, std::vector<const bsp2_dface_t *>> vertsToFaces;
     for (int i = 0; i < bsp->numfaces; i++) {
@@ -592,12 +621,21 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
     for (int i = 0; i < bsp->numtexinfo; i++) {
         int cnt = fscanf(texinfofile, "%u\n", &extended_texinfo_flags[i]);
         if (cnt != 1) {
-            logprint("Error reading extended texinfo flags from %s\n", filename);
+            logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
             fclose(texinfofile);
             memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
             return;
         }
     }
+    
+    // fail if there are more lines in the file
+    if (fgetc(texinfofile) != EOF) {
+        logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
+        fclose(texinfofile);
+        memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
+        return;
+    }
+    
     fclose(texinfofile);
 }
 
