@@ -6,7 +6,8 @@ qbsp:
 	arg: -wrbrushes		(bspx) Includes a list of brushes for brush-based collision
 	arg: -wrbrushesonly	-wrbrushes combined with -noclip argument
 	arg: -notex		Write only placeholder textures, to depend upon replacements
-	field: _smooth		Names a texture within the entity for which lighting should be smoothed (softens columns etc).
+	field: _phong		1 enables phong shading with a default _phong_angle of 89 (softens columns etc).
+	field: _phong_angle	enables phong shading with a custom angle. Adjacent faces with normals this many degrees apart (or less) will be smoothed
 	field: _lmscale		Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled and unscaled lighting will normally be used.
 
 light:
