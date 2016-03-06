@@ -1270,12 +1270,14 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     surfnorm = lightsurf->normals[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3, surfnorm += 3) {
         vec_t value;
-        if (!TestSky(surfpoint, sun->sunvec, shadowself))
-            continue;
 
         angle = DotProduct(incoming, surfnorm);
-        if (angle < 0) angle = 0;
+        if (angle < 0)
+            continue;
 
+        if (!TestSky(surfpoint, sun->sunvec, shadowself))
+            continue;
+        
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         value = angle * sun->sunlight.light;
         if (sun->dirt)
