@@ -485,6 +485,7 @@ typedef struct options_s {
     char szBSPName[512];
     char wadPath[512];
     vec_t on_epsilon;
+    bool fObjExport;
 } options_t;
 
 extern options_t options;
@@ -597,6 +598,8 @@ struct bspxbrushes_s
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes);
+
+void ExportObj(const surface_t *surfaces);
 
 // util.c
 

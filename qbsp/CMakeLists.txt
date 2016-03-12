@@ -32,6 +32,7 @@ set(QBSP_SOURCES
 	wad.c
 	winding.c
 	writebsp.c
+	exportobj.c
 	${QBSP_INCLUDES})
 
 add_definitions(-DDOUBLEVEC_T)

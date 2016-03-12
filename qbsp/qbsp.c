@@ -133,6 +133,10 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     surfs = CSGFaces(entity);
     FreeBrushes(entity->brushes);
 
+    if (options.fObjExport && entity == pWorldEnt && hullnum == 0) {
+        ExportObj(surfs);
+    }
+    
     if (hullnum != 0) {
         nodes = SolidBSP(entity, surfs, true);
         if (entity == pWorldEnt && !options.fNofill) {
@@ -608,6 +612,7 @@ PrintOptions(void)
            "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
            "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
            "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
+           "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
 
@@ -779,6 +784,8 @@ ParseOptions(char *szOptions)
                     Error("Invalid argument to option %s", szTok);
                 options.on_epsilon= atof(szTok2);
                 szTok = szTok2;
+            } else if (!Q_strcasecmp(szTok, "objexport")) {
+                options.fObjExport = true;
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
                 PrintOptions();
             else
