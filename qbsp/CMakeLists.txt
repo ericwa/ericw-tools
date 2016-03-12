@@ -12,27 +12,27 @@ set(QBSP_INCLUDES
 set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/common/threads.c
 	${CMAKE_SOURCE_DIR}/common/log.c
-	brush.c
-	bspfile.c
-	cmdlib.c
-	csg4.c
-	file.c
-	globals.c
-	map.c
-	mathlib.c
-	merge.c
-	outside.c
-	parser.c
-	portals.c
+	brush.cc
+	bspfile.cc
+	cmdlib.cc
+	csg4.cc
+	file.cc
+	globals.cc
+	map.cc
+	mathlib.cc
+	merge.cc
+	outside.cc
+	parser.cc
+	portals.cc
 	qbsp.cc
-	solidbsp.c
-	surfaces.c
-	tjunc.c
-	util.c
-	wad.c
-	winding.c
-	writebsp.c
-	exportobj.c
+	solidbsp.cc
+	surfaces.cc
+	tjunc.cc
+	util.cc
+	wad.cc
+	winding.cc
+	writebsp.cc
+	exportobj.cc
 	${QBSP_INCLUDES})
 
 add_definitions(-DDOUBLEVEC_T)
