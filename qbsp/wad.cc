@@ -185,10 +185,10 @@ WADList_Process(const wad_t *wadlist)
     WADList_AddAnimationFrames(wadlist);
 
     /* Count space for miptex header/offsets */
-    texdata->count = offsetof(dmiptexlump_t, dataofs[map.nummiptex]);
+    texdata->count = offsetof(dmiptexlump_t, dataofs[map.nummiptex()]);
 
     /* Count texture size.  Slower, but saves memory. */
-    for (i = 0; i < map.nummiptex; i++) {
+    for (i = 0; i < map.nummiptex(); i++) {
         texture = WADList_FindTexture(wadlist, map.miptex[i]);
         if (texture) {
             if (options.fNoTextures)
@@ -201,12 +201,12 @@ WADList_Process(const wad_t *wadlist)
     /* Default texture data to store in worldmodel */
     texdata->data = AllocMem(BSP_TEX, texdata->count, true);
     miptexlump = (dmiptexlump_t *)texdata->data;
-    miptexlump->nummiptex = map.nummiptex;
+    miptexlump->nummiptex = map.nummiptex();
 
     WADList_LoadTextures(wadlist, miptexlump);
 
     /* Last pass, mark unfound textures as such */
-    for (i = 0; i < map.nummiptex; i++) {
+    for (i = 0; i < map.nummiptex(); i++) {
         if (miptexlump->dataofs[i] == 0) {
             miptexlump->dataofs[i] = -1;
             Message(msgWarning, warnTextureNotFound, map.miptex[i]);
@@ -222,9 +222,9 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
     const wad_t *wad;
     struct lumpdata *texdata = &pWorldEnt->lumps[LUMP_TEXTURES];
 
-    data = (byte *)&lump->dataofs[map.nummiptex];
+    data = (byte *)&lump->dataofs[map.nummiptex()];
 
-    for (i = 0; i < map.nummiptex; i++) {
+    for (i = 0; i < map.nummiptex(); i++) {
         if (lump->dataofs[i])
             continue;
         size = 0;
@@ -277,7 +277,7 @@ WADList_AddAnimationFrames(const wad_t *wadlist)
     int oldcount, i, j;
     miptex_t name;
 
-    oldcount = map.nummiptex;
+    oldcount = map.nummiptex();
 
     for (i = 0; i < oldcount; i++) {
         if (map.miptex[i][0] != '+')
@@ -292,7 +292,7 @@ WADList_AddAnimationFrames(const wad_t *wadlist)
         }
     }
 
-    Message(msgStat, "%8d texture frames added", map.nummiptex - oldcount);
+    Message(msgStat, "%8d texture frames added", map.nummiptex() - oldcount);
 }
 
 const texture_t *WADList_GetTexture(const char *name)

@@ -59,17 +59,17 @@ AddAnimTex(const char *name)
     snprintf(framename, sizeof(framename), "%s", name);
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
-        for (j = 0; j < map.nummiptex; j++) {
+        for (j = 0; j < map.nummiptex(); j++) {
             if (!Q_strcasecmp(framename, map.miptex[j]))
                 break;
         }
-        if (j < map.nummiptex)
+        if (j < map.nummiptex())
             continue;
-        if (map.nummiptex == map.maxmiptex)
+        if (map.nummiptex() == map.maxmiptex)
             Error("Internal error: map.nummiptex > map.maxmiptex");
 
         snprintf(map.miptex[j], sizeof(map.miptex[j]), "%s", framename);
-        map.nummiptex++;
+        map._nummiptex++;
     }
 }
 
@@ -84,21 +84,21 @@ FindMiptex(const char *name)
     if (pathsep)
         name = pathsep + 1;
 
-    for (i = 0; i < map.nummiptex; i++) {
+    for (i = 0; i < map.nummiptex(); i++) {
         if (!Q_strcasecmp(name, map.miptex[i]))
             return i;
     }
-    if (map.nummiptex == map.maxmiptex)
+    if (map.nummiptex() == map.maxmiptex)
         Error("Internal error: map.nummiptex > map.maxmiptex");
 
     /* Handle animating textures carefully */
     if (name[0] == '+') {
         AddAnimTex(name);
-        i = map.nummiptex;
+        i = map.nummiptex();
     }
 
     snprintf(map.miptex[i], sizeof(map.miptex[i]), "%s", name);
-    map.nummiptex++;
+    map._nummiptex++;
 
     return i;
 }
@@ -620,12 +620,12 @@ ParseBrush(parser_t *parser, mapbrush_t *brush, mapentity_t *entity)
     mapface_t *face;
     bool faceok;
 
-    brush->faces = face = map.faces + map.numfaces;
+    brush->faces = face = map.faces + map.numfaces();
     while (ParseToken(parser, PARSE_NORMAL)) {
         if (!strcmp(parser->token, "}"))
             break;
 
-        if (map.numfaces == map.maxfaces)
+        if (map.numfaces() == map.maxfaces)
             Error("Internal error: didn't allocate enough faces?");
 
         faceok = ParseBrushFace(parser, face, entity);
@@ -646,8 +646,8 @@ ParseBrush(parser_t *parser, mapbrush_t *brush, mapentity_t *entity)
         }
 
         /* Save the face, update progress */
-        map.numfaces++;
-        Message(msgPercent, map.numfaces, map.maxfaces);
+        map._numfaces++;
+        Message(msgPercent, map.numfaces(), map.maxfaces);
         face++;
     }
 
@@ -667,20 +667,20 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     if (strcmp(parser->token, "{"))
         Error("line %d: Invalid entity format, { not found", parser->linenum);
 
-    if (map.numentities == map.maxentities)
+    if (map.numentities() == map.maxentities)
         Error("Internal error: didn't allocate enough entities?");
 
-    entity->mapbrushes = brush = map.brushes + map.numbrushes;
+    entity->mapbrushes = brush = map.brushes + map.numbrushes();
     do {
         if (!ParseToken(parser, PARSE_NORMAL))
             Error("Unexpected EOF (no closing brace)");
         if (!strcmp(parser->token, "}"))
             break;
         else if (!strcmp(parser->token, "{")) {
-            if (map.numbrushes == map.maxbrushes)
+            if (map.numbrushes() == map.maxbrushes)
                 Error("Internal error: didn't allocate enough brushes?");
             ParseBrush(parser, brush++, entity);
-            map.numbrushes++;
+            map._numbrushes++;
         } else
             ParseEpair(parser, entity);
     } while (1);
@@ -788,15 +788,15 @@ LoadMapFile(void)
     PreParseFile(buf);
     ParserInit(&parser, buf);
 
-    map.numfaces = map.numbrushes = map.numentities = 0;
+    map._numfaces = map._numbrushes = map._numentities = 0;
     entity = map.entities;
     while (ParseEntity(&parser, entity)) {
-        map.numentities++;
+        map._numentities++;
         entity++;
     }
 
     /* Double check the entity count matches our pre-parse count */
-    if (map.numentities != map.maxentities)
+    if (map.numentities() != map.maxentities)
         Error("Internal error: mismatched entity count?");
 
     FreeMem(buf, OTHER, length + 1);
@@ -814,10 +814,10 @@ LoadMapFile(void)
     map.maxplanes = MAX_MAP_PLANES;
     map.planes = (plane_t *)AllocMem(PLANE, map.maxplanes, true);
 
-    Message(msgStat, "%8d faces", map.numfaces);
-    Message(msgStat, "%8d brushes", map.numbrushes);
-    Message(msgStat, "%8d entities", map.numentities);
-    Message(msgStat, "%8d unique texnames", map.nummiptex);
+    Message(msgStat, "%8d faces", map.numfaces());
+    Message(msgStat, "%8d brushes", map.numbrushes());
+    Message(msgStat, "%8d entities", map.numentities());
+    Message(msgStat, "%8d unique texnames", map.nummiptex());
     Message(msgStat, "%8d texinfo", texinfo->count);
     Message(msgLiteral, "\n");
 }
@@ -893,7 +893,7 @@ WriteEntitiesToString(void)
 
     map.cTotal[LUMP_ENTITIES] = 0;
 
-    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
         entities = &map.entities[i].lumps[LUMP_ENTITIES];
 
         /* Check if entity needs to be removed */

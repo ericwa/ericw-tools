@@ -23,6 +23,8 @@
 #ifndef QBSP_H
 #define QBSP_H
 
+#include <vector>
+
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
@@ -540,11 +542,16 @@ typedef struct mapdata_s {
     int maxmiptex;
 
     /* Number of items currently used */
-    int numfaces;
-    int numbrushes;
-    int numentities;
-    int numplanes;
-    int nummiptex;
+    int _numfaces;
+    int _numbrushes;
+    int _numentities;
+    int _numplanes;
+    int _nummiptex;
+    int numfaces() const { return _numfaces; };
+    int numbrushes() const { return _numbrushes; };
+    int numentities() const { return _numentities; };
+    int numplanes() const { return _numplanes; };
+    int nummiptex() const { return _nummiptex; };
 
     /* Arrays of actual items */
     mapface_t *faces;

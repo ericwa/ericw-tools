@@ -135,7 +135,7 @@ AddLump(FILE *f, int Type)
     lump = &header->lumps[Type];
     lump->fileofs = ftell(f);
 
-    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
         entities = &entity->lumps[Type];
         if (entities->data) {
             if (Type == LUMP_MODELS && !options.hexen2) {
@@ -195,7 +195,7 @@ GenLump(const char *bspxlump, int Type, size_t sz)
     const mapentity_t *entity;
     char *out;
 
-    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
         entities = &entity->lumps[Type];
         cLen += entities->count*sz; 
     }
@@ -203,7 +203,7 @@ GenLump(const char *bspxlump, int Type, size_t sz)
         return;
     out = (char *)malloc(cLen);
     cLen = 0;
-    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
         entities = &entity->lumps[Type];
         memcpy(out+cLen, entities->data, entities->count*sz);
         cLen += entities->count*sz;

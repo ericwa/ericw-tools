@@ -102,7 +102,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
         /* Add func_group brushes first */
         source = map.entities + 1;
-        for (i = 1; i < map.numentities; i++, source++) {
+        for (i = 1; i < map.numentities(); i++, source++) {
             classname = ValueForKey(source, "classname");
             if (!Q_strcasecmp(classname, "func_group"))
                 Brush_LoadEntity(entity, source, hullnum);
@@ -111,7 +111,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         /* Add detail brushes next */
         detailcount = 0;
         source = map.entities + 1;
-        for (i = 1; i < map.numentities; i++, source++) {
+        for (i = 1; i < map.numentities(); i++, source++) {
             classname = ValueForKey(source, "classname");
             if (!Q_strcasecmp(classname, "func_detail")) {
                 int detailstart = entity->numbrushes;
@@ -220,7 +220,7 @@ UpdateEntLump(void)
     Message(msgStat, "Updating entities lump...");
 
     modnum = 1;
-    for (i = 1, entity = map.entities + 1; i < map.numentities; i++, entity++) {
+    for (i = 1, entity = map.entities + 1; i < map.numentities(); i++, entity++) {
         if (!entity->nummapbrushes)
             continue;
         classname = ValueForKey(entity, "classname");
@@ -410,7 +410,7 @@ static void BSPX_CreateBrushList(void)
 
         BSPX_Brushes_Init(&ctx);
 
-        for (entnum = 0, ent = map.entities; entnum < map.numentities; entnum++, ent++)
+        for (entnum = 0, ent = map.entities; entnum < map.numentities(); entnum++, ent++)
         {
                 if (ent == pWorldEnt)
                         modelnum = 0;
@@ -438,14 +438,14 @@ static void BSPX_CreateBrushList(void)
                         int i;
                         /* Add func_group brushes first */
                         source = map.entities + 1;
-                        for (i = 1; i < map.numentities; i++, source++) {
+                        for (i = 1; i < map.numentities(); i++, source++) {
                                 classname = ValueForKey(source, "classname");
                                 if (!Q_strcasecmp(classname, "func_group"))
                                         Brush_LoadEntity(ent, source, -1);
                         }
                         /* Add detail brushes next */
                         source = map.entities + 1;
-                        for (i = 1; i < map.numentities; i++, source++) {
+                        for (i = 1; i < map.numentities(); i++, source++) {
                                 classname = ValueForKey(source, "classname");
                                 if (!Q_strcasecmp(classname, "func_detail"))
                                         Brush_LoadEntity(ent, source, -1);
@@ -475,7 +475,7 @@ CreateSingleHull(const int hullnum)
     map.cTotal[LUMP_MODELS] = 0;
 
     // for each entity in the map file that has geometry
-    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
         ProcessEntity(entity, hullnum);
         if (!options.fAllverbose)
             options.fVerbose = false;   // don't print rest of entities

@@ -384,7 +384,7 @@ BuildSurfaces(face_t **planefaces)
     face_t *face;
 
     surfaces = NULL;
-    for (i = 0; i < map.numplanes; i++, planefaces++) {
+    for (i = 0; i < map.numplanes(); i++, planefaces++) {
         if (!*planefaces)
             continue;
 

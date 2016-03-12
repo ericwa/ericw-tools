@@ -252,16 +252,16 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         Error("%s: invalid normal (vector length %.4f)", __func__, len);
-    if (map.numplanes == map.maxplanes)
+    if (map.numplanes() == map.maxplanes)
         Error("Internal error: didn't allocate enough planes? (%s)", __func__);
 
-    plane = &map.planes[map.numplanes];
+    plane = &map.planes[map.numplanes()];
     VectorCopy(normal, plane->normal);
     plane->dist = dist;
     *side = NormalizePlane(plane) ? SIDE_BACK : SIDE_FRONT;
     PlaneHash_Add(plane);
 
-    return map.numplanes++;
+    return map._numplanes++;
 }
 
 /*
@@ -315,7 +315,7 @@ FindTargetEntity(const char *target)
     const char *name;
     const mapentity_t *entity;
 
-    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
+    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
         name = ValueForKey(entity, "targetname");
         if (!Q_strcasecmp(target, name))
             return entity;
