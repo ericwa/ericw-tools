@@ -161,7 +161,7 @@ GatherNodeFaces(node_t *headnode)
     face_t **planefaces;
     surface_t *surfaces;
 
-    planefaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
+    planefaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
     GatherNodeFaces_r(headnode, planefaces);
     surfaces = BuildSurfaces(planefaces);
     FreeMem(planefaces, OTHER, sizeof(face_t *) * map.maxplanes);
@@ -243,7 +243,7 @@ HashEdge(unsigned v1, unsigned v2)
 static void
 AddHashEdge(unsigned v1, unsigned v2, unsigned i)
 {
-    hashedge_t *he = AllocMem(OTHER, sizeof(hashedge_t), true);
+    hashedge_t *he = (hashedge_t *)AllocMem(OTHER, sizeof(hashedge_t), true);
     unsigned slot = HashEdge(v1, v2);
     
     he->i = i;
@@ -411,7 +411,7 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
         Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
 
     memsize = face->w.numpoints * sizeof(face->edges[0]);
-    face->edges = AllocMem(OTHER, memsize, true);
+    face->edges = (int *)AllocMem(OTHER, memsize, true);
     for (i = 0; i < face->w.numpoints; i++) {
         const vec_t *p1 = face->w.points[i];
         const vec_t *p2 = face->w.points[(i + 1) % face->w.numpoints];
@@ -428,7 +428,7 @@ MakeFaceEdges_r
 static int
 MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
@@ -455,7 +455,7 @@ GrowNodeRegion
 static void
 GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
@@ -507,7 +507,7 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 static void
 GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
@@ -564,7 +564,7 @@ CountData_r
 static void
 CountData_r(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
@@ -622,9 +622,9 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     edges->data = AllocMem(BSP_EDGE, edges->count, true);
 
     // Accessory data
-    pHashverts = AllocMem(HASHVERT, vertices->count, true);
-    pEdgeFaces0 = AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
-    pEdgeFaces1 = AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
+    pHashverts = (hashvert_t *)AllocMem(HASHVERT, vertices->count, true);
+    pEdgeFaces0 = (const face_t **)AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
+    pEdgeFaces1 = (const face_t **)AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
 
     InitHash();
 
@@ -637,7 +637,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     /* Free any excess allocated memory */
     if (vertices->index < vertices->count) {
-        dvertex_t *temp = AllocMem(BSP_VERTEX, vertices->index, true);
+        dvertex_t *temp = (dvertex_t *)AllocMem(BSP_VERTEX, vertices->index, true);
         memcpy(temp, vertices->data, sizeof(*temp) * vertices->index);
         FreeMem(vertices->data, BSP_VERTEX, vertices->count);
         vertices->data = temp;

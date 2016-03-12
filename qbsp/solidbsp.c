@@ -326,7 +326,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     vec_t distribution, bestdistribution;
     const plane_t *plane, *plane2;
     const face_t *face;
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
 
     /* pick the plane that splits the least */
     minsplits = INT_MAX - 1;
@@ -547,7 +547,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
             in->onnode = true;
 
             // divide the facets to the front and back sides
-            newsurf = AllocMem(SURFACE, 1, true);
+            newsurf = (surface_t *)AllocMem(SURFACE, 1, true);
             *newsurf = *in;
 
             // Prepend each face in facet list to either in or newsurf lists
@@ -618,7 +618,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
     }
 
     // stuff got split, so allocate one new plane and reuse in
-    newsurf = AllocMem(SURFACE, 1, true);
+    newsurf = (surface_t *)AllocMem(SURFACE, 1, true);
     *newsurf = *in;
     newsurf->faces = backlist;
     *back = newsurf;
@@ -734,7 +734,7 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 
     // write the list of faces, and free the originals
     leaffaces += count;
-    leafnode->markfaces = AllocMem(OTHER, sizeof(face_t *) * (count + 1), true);
+    leafnode->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * (count + 1), true);
 
     i = 0;
     for (surf = planelist; surf; surf = pnext) {
@@ -776,7 +776,7 @@ LinkNodeFaces(surface_t *surface)
     // copy
     for (f = surface->faces; f; f = f->next) {
         nodefaces++;
-        newf = AllocMem(FACE, 1, true);
+        newf = (face_t *)AllocMem(FACE, 1, true);
         *newf = *f;
         f->original = newf;
         newf->next = list;
@@ -811,8 +811,8 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     Message(msgPercent, splitnodes, csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
-    node->children[0] = AllocMem(NODE, 1, true);
-    node->children[1] = AllocMem(NODE, 1, true);
+    node->children[0] = (node_t *)AllocMem(NODE, 1, true);
+    node->children[1] = (node_t *)AllocMem(NODE, 1, true);
     node->planenum = split->planenum;
     node->detail_separator = split->detail_separator;
 
@@ -871,26 +871,26 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        headnode = AllocMem(NODE, 1, true);
+        headnode = (node_t *)AllocMem(NODE, 1, true);
         for (i = 0; i < 3; i++) {
             headnode->mins[i] = entity->mins[i] - SIDESPACE;
             headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
         }
-        headnode->children[0] = AllocMem(NODE, 1, true);
+        headnode->children[0] = (node_t *)AllocMem(NODE, 1, true);
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = CONTENTS_EMPTY;
-        headnode->children[0]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
-        headnode->children[1] = AllocMem(NODE, 1, true);
+        headnode->children[0]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
+        headnode->children[1] = (node_t *)AllocMem(NODE, 1, true);
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = CONTENTS_EMPTY;
-        headnode->children[1]->markfaces = AllocMem(OTHER, sizeof(face_t *), true);
+        headnode->children[1]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
 
         return headnode;
     }
 
     Message(msgProgress, "SolidBSP");
 
-    headnode = AllocMem(NODE, 1, true);
+    headnode = (node_t *)AllocMem(NODE, 1, true);
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model

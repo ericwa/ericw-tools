@@ -393,7 +393,7 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         for (j = 0; j < 2; j++) {
             n = j * 3 + i;
 
-            p = AllocMem(PORTAL, 1, true);
+            p = (portal_t *)AllocMem(PORTAL, 1, true);
             portals[n] = p;
 
             pl = &bplanes[n];
@@ -563,7 +563,7 @@ CutNodePortals_r(node_t *node)
      * create the new portal by taking the full plane winding for the cutting
      * plane and clipping it by all of the planes from the other portals
      */
-    new_portal = AllocMem(PORTAL, 1, true);
+    new_portal = (portal_t *)AllocMem(PORTAL, 1, true);
     new_portal->planenum = node->planenum;
 
     winding = BaseWindingForPlane(plane);
@@ -627,7 +627,7 @@ CutNodePortals_r(node_t *node)
         }
 
         /* the winding is split */
-        new_portal = AllocMem(PORTAL, 1, true);
+        new_portal = (portal_t *)AllocMem(PORTAL, 1, true);
         *new_portal = *portal;
         new_portal->winding = backwinding;
         FreeMem(portal->winding, WINDING, 1);

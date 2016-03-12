@@ -32,7 +32,7 @@ ParserInit(parser_t *p, const char *data)
 
 
 bool
-ParseToken(parser_t *p, parseflags_t flags)
+ParseToken(parser_t *p, int flags)
 {
     char *token_p;
 

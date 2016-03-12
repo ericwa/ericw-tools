@@ -52,7 +52,7 @@ WAD_LoadInfo(wad_t *wad)
 
     lumpinfosize = sizeof(lumpinfo_t) * hdr->numlumps;
     fseek(wad->file, hdr->infotableofs, SEEK_SET);
-    wad->lumps = AllocMem(OTHER, lumpinfosize, true);
+    wad->lumps = (lumpinfo_t *)AllocMem(OTHER, lumpinfosize, true);
     len = fread(wad->lumps, 1, lumpinfosize, wad->file);
     if (len != lumpinfosize)
         return false;
@@ -63,7 +63,7 @@ WAD_LoadInfo(wad_t *wad)
         len = fread(&miptex, 1, sizeof(miptex), wad->file);
         if (len == sizeof(miptex))
         {
-            tex = AllocMem(OTHER, sizeof(texture_t), true);
+            tex = (texture_t *)AllocMem(OTHER, sizeof(texture_t), true);
             tex->next = textures;
             textures = tex;
             memcpy(tex->name, miptex.name, 16);
@@ -118,11 +118,11 @@ WADList_Init(const char *wadstring)
             pos++;
 
         if (!options.wadPath[0] || IsAbsolutePath(fname)) {
-            fpath = AllocMem(OTHER, (pos - fname) + 1, false);
+            fpath = (char *)AllocMem(OTHER, (pos - fname) + 1, false);
             snprintf(fpath, (pos - fname) + 1, "%s", fname);
         } else {
             pathlen = strlen(options.wadPath) + 1 + (pos - fname);
-            fpath = AllocMem(OTHER, pathlen + 1, true);
+            fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
             snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
         }
         wad.file = fopen(fpath, "rb");
@@ -130,7 +130,7 @@ WADList_Init(const char *wadstring)
             if (options.fVerbose)
                 Message(msgLiteral, "Opened WAD: %s\n", fpath);
             if (WAD_LoadInfo(&wad)) {
-                newwad = AllocMem(OTHER, sizeof(wad), true);
+                newwad = (wad_t *)AllocMem(OTHER, sizeof(wad), true);
                 memcpy(newwad, &wad, sizeof(wad));
                 newwad->next = wadlist;
                 wadlist = newwad;

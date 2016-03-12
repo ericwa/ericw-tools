@@ -485,7 +485,7 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     /* Set up state for the recursive fill */
     memset(&leak, 0, sizeof(leak));
     if (!map.leakfile) {
-        leak.portals = AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
+        leak.portals = (const portal_t **)AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
         leak.maxportals = numportals;
     }
 

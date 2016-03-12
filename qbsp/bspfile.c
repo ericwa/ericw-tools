@@ -139,7 +139,7 @@ AddLump(FILE *f, int Type)
         entities = &entity->lumps[Type];
         if (entities->data) {
             if (Type == LUMP_MODELS && !options.hexen2) {
-                const dmodel_t *in = entities->data;
+                const dmodel_t *in = (const dmodel_t *)entities->data;
                 dmodelq1_t out;
                 int j, k;
                 for (j = 0; j < entities->count; j++)
@@ -201,7 +201,7 @@ GenLump(const char *bspxlump, int Type, size_t sz)
     }
     if (!cLen)
         return;
-    out = malloc(cLen);
+    out = (char *)malloc(cLen);
     cLen = 0;
     for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
         entities = &entity->lumps[Type];
@@ -221,7 +221,7 @@ void BSPX_AddLump(const char *xname, const void *xdata, size_t xsize)
     }
     if (!e)
     {
-        e = malloc(sizeof(*e));
+        e = (bspxentry_t *)malloc(sizeof(*e));
         memset(e, 0, sizeof(*e));
         strncpy(e->lumpname, xname, sizeof(e->lumpname));
         e->next = bspxentries;
@@ -243,7 +243,7 @@ WriteBSPFile(void)
     FILE *f;
     size_t ret;
 
-    header = AllocMem(OTHER, sizeof(dheader_t), true);
+    header = (dheader_t *)AllocMem(OTHER, sizeof(dheader_t), true);
     header->version = options.BSPVersion;
 
     StripExtension(options.szBSPName);

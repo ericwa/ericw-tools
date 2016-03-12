@@ -44,7 +44,7 @@ typedef struct parser {
     char token[MAXTOKEN];
 } parser_t;
 
-bool ParseToken(parser_t *p, parseflags_t flags);
+bool ParseToken(parser_t *p, int flags);
 void ParserInit(parser_t *p, const char *data);
 
 #ifdef __cplusplus

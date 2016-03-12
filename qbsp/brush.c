@@ -386,7 +386,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
         if (!hullnum) {
             /* Don't generate hintskip faces */
-            const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
             const char *texname = map.miptex[texinfo[mapface->texinfo].miptex];
             if (!Q_strcasecmp(texname, "hintskip"))
                 continue;
@@ -407,7 +407,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
             continue;           // overconstrained plane
 
         // this face is a keeper
-        f = AllocMem(FACE, 1, true);
+        f = (face_t *)AllocMem(FACE, 1, true);
         f->w.numpoints = w->numpoints;
         if (f->w.numpoints > MAXEDGES)
             Error("face->numpoints > MAXEDGES (%d), source face on line %d",
@@ -435,7 +435,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
-            const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
             texinfo_t texInfoNew;
             vec3_t vecs[2];
             int k, l;
@@ -792,7 +792,7 @@ Brush_GetContents(const mapbrush_t *mapbrush)
 {
     const mapface_t *mapface;
     const char *texname;
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
 
     mapface = mapbrush->faces;
     texname = map.miptex[texinfo[mapface->texinfo].miptex];
@@ -909,7 +909,7 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
     }
 
     // create the brush
-    brush = AllocMem(BRUSH, 1, true);
+    brush = (brush_t *)AllocMem(BRUSH, 1, true);
 
     brush->faces = facelist;
     VectorCopy(hullbrush.mins, brush->mins);

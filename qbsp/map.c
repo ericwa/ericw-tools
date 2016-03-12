@@ -156,7 +156,7 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
     /* Set the texture flags */
     texinfo->flags = flags;
 
-    target = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    target = (texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     for (index = 0; index < num_texinfo; index++, target++) {
         if (texinfo->miptex != target->miptex)
             continue;
@@ -183,9 +183,9 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
     {
         /* Enlarge the array */
         struct lumpdata *lump = &pWorldEnt->lumps[LUMP_TEXINFO];
-        texinfo_t *olddata = lump->data;
+        texinfo_t *olddata = (texinfo_t *)lump->data;
         int newcount = lump->count * 2;
-        texinfo_t *newdata = AllocMem(BSP_TEXINFO, newcount, true);
+        texinfo_t *newdata = (texinfo_t *)AllocMem(BSP_TEXINFO, newcount, true);
         
         memcpy(newdata, olddata, lump->index * sizeof(texinfo_t));
         FreeMem(olddata, BSP_TEXINFO, lump->count);
@@ -246,7 +246,7 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 {
     epair_t *epair;
 
-    epair = AllocMem(OTHER, sizeof(epair_t), true);
+    epair = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
     epair->next = entity->epairs;
     entity->epairs = epair;
 
@@ -735,9 +735,9 @@ PreParseFile(const char *buf)
         Message(msgWarning, warnBadMapFaceCount);
     map.maxfaces /= 3;
 
-    map.faces = AllocMem(MAPFACE, map.maxfaces, true);
-    map.brushes = AllocMem(MAPBRUSH, map.maxbrushes, true);
-    map.entities = AllocMem(MAPENTITY, map.maxentities, true);
+    map.faces = (mapface_t *)AllocMem(MAPFACE, map.maxfaces, true);
+    map.brushes = (mapbrush_t *)AllocMem(MAPBRUSH, map.maxbrushes, true);
+    map.entities = (mapentity_t *)AllocMem(MAPENTITY, map.maxentities, true);
 
     // While we're here...
     pWorldEnt = map.entities;
@@ -748,7 +748,7 @@ PreParseFile(const char *buf)
      * Plus a few extra for animations
      */
     map.maxmiptex = map.maxfaces + 100;
-    map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
+    map.miptex = (miptex_t *)AllocMem(MIPTEX, map.maxmiptex, true);
 
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
     texinfo->data = AllocMem(BSP_TEXINFO, 1024, true);
@@ -812,7 +812,7 @@ LoadMapFile(void)
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
 
     map.maxplanes = MAX_MAP_PLANES;
-    map.planes = AllocMem(PLANE, map.maxplanes, true);
+    map.planes = (plane_t *)AllocMem(PLANE, map.maxplanes, true);
 
     Message(msgStat, "%8d faces", map.numfaces);
     Message(msgStat, "%8d brushes", map.numbrushes);
@@ -857,7 +857,7 @@ SetKeyValue(mapentity_t *entity, const char *key, const char *value)
             ep->value = copystring(value);
             return;
         }
-    ep = AllocMem(OTHER, sizeof(epair_t), true);
+    ep = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
     ep->next = entity->epairs;
     entity->epairs = ep;
     ep->key = copystring(key);
@@ -913,7 +913,7 @@ WriteEntitiesToString(void)
 
         entities->count = cLen;
         map.cTotal[LUMP_ENTITIES] += cLen;
-        entities->data = pCur = AllocMem(BSP_ENT, cLen, true);
+        entities->data = pCur = (char *)AllocMem(BSP_ENT, cLen, true);
         *pCur = 0;
 
         strcat(pCur, "{\n");

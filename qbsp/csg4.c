@@ -47,7 +47,7 @@ NewFaceFromFace(face_t *in)
 {
     face_t *newf;
 
-    newf = AllocMem(FACE, 1, true);
+    newf = (face_t *)AllocMem(FACE, 1, true);
 
     newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;
@@ -389,7 +389,7 @@ BuildSurfaces(face_t **planefaces)
             continue;
 
         /* create a new surface to hold the faces on this plane */
-        surf = AllocMem(SURFACE, 1, true);
+        surf = (surface_t *)AllocMem(SURFACE, 1, true);
         surf->planenum = i;
         surf->next = surfaces;
         surfaces = surf;
@@ -419,7 +419,7 @@ CopyBrushFaces(const brush_t *brush)
     facelist = NULL;
     for (face = brush->faces; face; face = face->next) {
         brushfaces++;
-        newface = AllocMem(FACE, 1, true);
+        newface = (face_t *)AllocMem(FACE, 1, true);
         *newface = *face;
         newface->contents[0] = CONTENTS_EMPTY;
         newface->contents[1] = brush->contents;
@@ -455,7 +455,7 @@ CSGFaces(const mapentity_t *entity)
 
     Message(msgProgress, "CSGFaces");
 
-    planefaces = AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
+    planefaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
     csgfaces = brushfaces = csgmergefaces = 0;
 
     /*

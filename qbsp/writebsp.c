@@ -92,7 +92,7 @@ ExportNodePlanes(node_t *nodes)
         planes->data = AllocMem(BSP_PLANE, planes->count, true);
     }
     // TODO: make one-time allocation?
-    planemap = AllocMem(OTHER, sizeof(int) * planes->count, true);
+    planemap = (int *)AllocMem(OTHER, sizeof(int) * planes->count, true);
     memset(planemap, -1, sizeof(int) * planes->count);
     ExportNodePlanes_r(nodes, planemap);
     FreeMem(planemap, OTHER, sizeof(int) * planes->count);
@@ -238,7 +238,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
             for (i = 1; i < hullnum; i++)
                 model->headnode[i] += diff;
             if (options.BSPVersion == BSPVERSION) {
-                bsp29_dclipnode_t *clipnode = clipnodes->data;
+                bsp29_dclipnode_t *clipnode = (bsp29_dclipnode_t *)clipnodes->data;
                 for (i = 0; i < oldcount; i++, clipnode++) {
                     if (clipnode->children[0] < MAX_BSP_CLIPNODES)
                         clipnode->children[0] += diff;
@@ -246,7 +246,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
                         clipnode->children[1] += diff;
                 }
             } else {
-                bsp2_dclipnode_t *clipnode = clipnodes->data;
+                bsp2_dclipnode_t *clipnode = (bsp2_dclipnode_t *)clipnodes->data;
                 for (i = 0; i < oldcount; i++, clipnode++) {
                     if (clipnode->children[0] >= 0)
                         clipnode->children[0] += diff;
@@ -276,7 +276,7 @@ static void
 CountLeaves(mapentity_t *entity, node_t *node)
 {
     face_t **markfaces, *face;
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
 
     entity->lumps[LUMP_LEAFS].count++;
     for (markfaces = node->markfaces; *markfaces; markfaces++) {
@@ -330,10 +330,10 @@ ExportLeaf
 static void
 ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
-    uint16_t *marksurfnums = marksurfs->data;
+    uint16_t *marksurfnums = (uint16_t *)marksurfs->data;
     face_t **markfaces, *face;
     bsp29_dleaf_t *dleaf;
 
@@ -380,10 +380,10 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
 static void
 ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
-    uint32_t *marksurfnums = marksurfs->data;
+    uint32_t *marksurfnums = (uint32_t *)marksurfs->data;
     face_t **markfaces, *face;
     bsp2_dleaf_t *dleaf;
 
@@ -430,10 +430,10 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 static void
 ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
-    uint32_t *marksurfnums = marksurfs->data;
+    uint32_t *marksurfnums = (uint32_t *)marksurfs->data;
     face_t **markfaces, *face;
     bsp2rmq_dleaf_t *dleaf;
 
@@ -630,13 +630,13 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
      * BeginBSPFile.
      */
     if (options.BSPVersion == BSP2VERSION) {
-        bsp2_dleaf_t *leaf = pWorldEnt->lumps[LUMP_LEAFS].data;
+        bsp2_dleaf_t *leaf = (bsp2_dleaf_t *)pWorldEnt->lumps[LUMP_LEAFS].data;
         leaf->contents = CONTENTS_SOLID;
     } else if (options.BSPVersion == BSP2RMQVERSION) {
-        bsp2rmq_dleaf_t *leaf = pWorldEnt->lumps[LUMP_LEAFS].data;
+        bsp2rmq_dleaf_t *leaf = (bsp2rmq_dleaf_t *)pWorldEnt->lumps[LUMP_LEAFS].data;
         leaf->contents = CONTENTS_SOLID;
     } else {
-        bsp29_dleaf_t *leaf = pWorldEnt->lumps[LUMP_LEAFS].data;
+        bsp29_dleaf_t *leaf = (bsp29_dleaf_t *)pWorldEnt->lumps[LUMP_LEAFS].data;
         leaf->contents = CONTENTS_SOLID;
     }
 
@@ -703,7 +703,7 @@ static void
 WriteExtendedTexinfoFlags(void)
 {
     bool needwrite = false;
-    const texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     const int num_texinfo = pWorldEnt->lumps[LUMP_TEXINFO].index;
     int i;
     
@@ -738,7 +738,7 @@ WriteExtendedTexinfoFlags(void)
 static void
 CleanBSPTexinfoFlags(void)
 {
-    texinfo_t *texinfo = pWorldEnt->lumps[LUMP_TEXINFO].data;
+    texinfo_t *texinfo = (texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
     const int num_texinfo = pWorldEnt->lumps[LUMP_TEXINFO].index;
     int i;
 
@@ -761,7 +761,7 @@ FinishBSPFile(void)
     Message(msgProgress, "WriteBSPFile");
 
     // TODO: Fix this somewhere else?
-    newdata = AllocMem(BSP_PLANE, map.cTotal[LUMP_PLANES], true);
+    newdata = (dplane_t *)AllocMem(BSP_PLANE, map.cTotal[LUMP_PLANES], true);
     memcpy(newdata, planes->data, map.cTotal[LUMP_PLANES] * MemSize[BSP_PLANE]);
     FreeMem(planes->data, BSP_PLANE, planes->count);
     planes->data = newdata;

@@ -40,7 +40,7 @@ copystring(const char *s)
 {
     char *b;
 
-    b = AllocMem(OTHER, strlen(s) + 1, true);
+    b = (char *)AllocMem(OTHER, strlen(s) + 1, true);
     strcpy(b, s);
     return b;
 }

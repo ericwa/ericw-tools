@@ -73,7 +73,7 @@ BaseWindingForPlane(const plane_t *p)
     VectorScale(vright, 8192, vright);
 
     // project a really big axis aligned box onto the plane
-    w = AllocMem(WINDING, 4, true);
+    w = (winding_t *)AllocMem(WINDING, 4, true);
 
     VectorSubtract(org, vright, w->points[0]);
     VectorAdd(w->points[0], vup, w->points[0]);
@@ -105,7 +105,7 @@ CopyWinding(const winding_t *w)
     int size;
     winding_t *c;
 
-    c = AllocMem(WINDING, w->numpoints, false);
+    c = (winding_t *)AllocMem(WINDING, w->numpoints, false);
     size = offsetof(winding_t, points[w->numpoints]);
     memcpy(c, w, size);
 
@@ -193,7 +193,7 @@ ClipWinding(winding_t *in, const plane_t *split, bool keepon)
 
     /*  can't use maxpoints = counts[0] + 2 because of fp grouping errors */
     maxpts = in->numpoints + 4;
-    neww = AllocMem(WINDING, maxpts, true);
+    neww = (winding_t *)AllocMem(WINDING, maxpts, true);
 
     for (i = 0; i < in->numpoints; i++) {
         p1 = in->points[i];
@@ -287,8 +287,8 @@ DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
 
     /*  can't use maxpoints = counts[0] + 2 because of fp grouping errors */
     maxpts = in->numpoints + 4;
-    *front = f = AllocMem(WINDING, maxpts, true);
-    *back = b = AllocMem(WINDING, maxpts, true);
+    *front = f = (winding_t *)AllocMem(WINDING, maxpts, true);
+    *back = b = (winding_t *)AllocMem(WINDING, maxpts, true);
 
     for (i = 0; i < in->numpoints; i++) {
         p1 = in->points[i];

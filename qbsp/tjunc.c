@@ -478,8 +478,8 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     cWEdges = cWVerts;
     cWVerts *= 2;
 
-    pWVerts = AllocMem(WVERT, cWVerts, true);
-    pWEdges = AllocMem(WEDGE, cWEdges, true);
+    pWVerts = (wvert_t *)AllocMem(WVERT, cWVerts, true);
+    pWEdges = (wedge_t *)AllocMem(WEDGE, cWEdges, true);
 
     /*
      * identify all points on common edges
@@ -503,7 +503,7 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     Message(msgStat, "%8d edge points", numwverts);
 
     superface_bytes = offsetof(face_t, w.points[MAX_SUPERFACE_POINTS]);
-    superface = AllocMem(OTHER, superface_bytes, true);
+    superface = (face_t*)AllocMem(OTHER, superface_bytes, true);
 
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
