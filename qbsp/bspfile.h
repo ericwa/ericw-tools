@@ -23,6 +23,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* FIXME - put this typedef elsewhere */
 typedef uint8_t byte;
 
@@ -243,4 +247,8 @@ void WriteBSPFile(void);
 void PrintBSPFileSizes(void);
 void BSPX_AddLump(const char *xname, const void *xdata, size_t xsize);
 
+#ifdef __cplusplus
+}
+#endif
+    
 #endif /* __BSPFILE_H__ */

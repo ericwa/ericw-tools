@@ -20,6 +20,10 @@
 */
 // warnerr.h
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
     warnNoWadKey,               // 0
     warnNoValidWads,
@@ -49,3 +53,7 @@ enum {
     warnMixedFaceContents,
     cWarnings
 };
+
+#ifdef __cplusplus
+}
+#endif

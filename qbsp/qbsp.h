@@ -38,13 +38,16 @@
 #include "file.h"
 #include "warnerr.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef offsetof
 #define offsetof(type, member) __builtin_offsetof(type, member)
 #endif
 
 #ifdef _MSC_VER
 #define __func__ __FUNCTION__
-#define inline __inline
 #endif
 
 #ifndef __GNUC__
@@ -625,5 +628,9 @@ void PrintMem(void);
 void Message(int MsgType, ...);
 void Error(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -312,7 +312,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
         if (ctx->lumpmaxsize < ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))
         {
                 ctx->lumpmaxsize = (ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))*2;
-                ctx->lumpinfo = realloc(ctx->lumpinfo, ctx->lumpmaxsize);
+                ctx->lumpinfo = (byte *) realloc(ctx->lumpinfo, ctx->lumpmaxsize);
         }
 
         permodel.ver = LittleLong(1);
@@ -547,7 +547,7 @@ ProcessFile(void)
         if (wadstring[0])
             Message(msgWarning, warnNoValidWads);
         /* Try the default wad name */
-        defaultwad = AllocMem(OTHER, strlen(options.szMapName) + 5, false);
+        defaultwad = (char *) AllocMem(OTHER, strlen(options.szMapName) + 5, false);
         strcpy(defaultwad, options.szMapName);
         StripExtension(defaultwad);
         DefaultExtension(defaultwad, ".wad");
@@ -829,7 +829,7 @@ InitQBSP(int argc, char **argv)
         if (argv[i][0] != '-')
             length += 2; /* quotes */
     }
-    szBuf = AllocMem(OTHER, length, true);
+    szBuf = (char *) AllocMem(OTHER, length, true);
     for (i = 1; i < argc; i++) {
         /* Quote filenames for the parsing function */
         if (argv[i][0] != '-')

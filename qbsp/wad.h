@@ -24,6 +24,10 @@
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     char identification[4];     // should be WAD2
     int numlumps;
@@ -66,5 +70,9 @@ void WADList_Process(const wad_t *wadlist);
 void WADList_Free(wad_t *wadlist);
 const texture_t *WADList_GetTexture(const char *name);
 // for getting a texture width/height
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* WAD_H */

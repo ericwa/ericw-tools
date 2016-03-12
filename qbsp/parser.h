@@ -24,6 +24,10 @@
 
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MAXTOKEN 1024
 
 typedef enum parseflags {
@@ -42,5 +46,9 @@ typedef struct parser {
 
 bool ParseToken(parser_t *p, parseflags_t flags);
 void ParserInit(parser_t *p, const char *data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PARSER_H */
