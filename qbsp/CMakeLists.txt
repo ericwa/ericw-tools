@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (qbsp)
+project (qbsp CXX)
 
 set(QBSP_INCLUDES
 	bspfile.h
@@ -24,7 +24,7 @@ set(QBSP_SOURCES
 	outside.c
 	parser.c
 	portals.c
-	qbsp.c
+	qbsp.cc
 	solidbsp.c
 	surfaces.c
 	tjunc.c
@@ -38,5 +38,7 @@ set(QBSP_SOURCES
 add_definitions(-DDOUBLEVEC_T)
 
 add_executable(qbsp ${QBSP_SOURCES})
+set_property(TARGET qbsp PROPERTY CXX_STANDARD 11)
+set_property(TARGET qbsp PROPERTY CXX_STANDARD_REQUIRED ON)
 
 install(TARGETS qbsp RUNTIME DESTINATION bin)
