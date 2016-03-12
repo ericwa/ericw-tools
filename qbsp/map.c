@@ -180,9 +180,22 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
     }
 
     if (index >= pWorldEnt->lumps[LUMP_TEXINFO].count)
-        Error("Internal error: didn't allocate enough texinfos?");
+    {
+        /* Enlarge the array */
+        struct lumpdata *lump = &pWorldEnt->lumps[LUMP_TEXINFO];
+        texinfo_t *olddata = lump->data;
+        int newcount = lump->count * 2;
+        texinfo_t *newdata = AllocMem(BSP_TEXINFO, newcount, true);
+        
+        memcpy(newdata, olddata, lump->index * sizeof(texinfo_t));
+        FreeMem(olddata, BSP_TEXINFO, lump->count);
+        
+        lump->data = newdata;
+        lump->count = newcount;
+    }
 
     /* Allocate a new texinfo at the end of the array */
+    target = ((texinfo_t *) pWorldEnt->lumps[LUMP_TEXINFO].data) + index;
     *target = *texinfo;
     pWorldEnt->lumps[LUMP_TEXINFO].index++;
     map.cTotal[LUMP_TEXINFO]++;
@@ -737,11 +750,9 @@ PreParseFile(const char *buf)
     map.maxmiptex = map.maxfaces + 100;
     map.miptex = AllocMem(MIPTEX, map.maxmiptex, true);
 
-    /* Fixing textures on rotate_object requires an extra texinfo per face */
-    map.maxtexinfo = map.maxfaces * 2;
     texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
-    texinfo->data = AllocMem(BSP_TEXINFO, map.maxtexinfo, true);
-    texinfo->count = map.maxtexinfo;
+    texinfo->data = AllocMem(BSP_TEXINFO, 1024, true);
+    texinfo->count = 1024;
 }
 
 /*

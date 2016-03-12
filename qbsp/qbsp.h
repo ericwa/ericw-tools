@@ -538,7 +538,6 @@ typedef struct mapdata_s {
     int maxentities;
     int maxplanes;
     int maxmiptex;
-    int maxtexinfo;
 
     /* Number of items currently used */
     int numfaces;
