@@ -24,6 +24,7 @@
 #define QBSP_H
 
 #include <vector>
+#include <map>
 
 #include <assert.h>
 #include <ctype.h>
@@ -371,7 +372,7 @@ int PlaneInvEqual(const plane_t *p1, const plane_t *p2);
 extern int csgmergefaces;
 
 // build surfaces is also used by GatherNodeFaces
-surface_t *BuildSurfaces(face_t **planefaces);
+surface_t *BuildSurfaces(std::map<int, face_t *> &planefaces);
 face_t *NewFaceFromFace(face_t *in);
 void SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back);
 void UpdateFaceSphere(face_t *in);

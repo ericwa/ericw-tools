@@ -291,14 +291,14 @@ This plane map is later used to build up the surfaces for creating the BSP.
 ==================
 */
 static void
-SaveFacesToPlaneList(face_t *facelist, bool mirror, face_t **planefaces)
+SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &planefaces)
 {
-    face_t *face, *next, *newface, **planeface;
+    face_t *face, *next, *newface;
     int i;
 
     for (face = facelist; face; face = next) {
+        const int plane = face->planenum;
         next = face->next;
-        planeface = &planefaces[face->planenum];
 
         if (mirror) {
             newface = NewFaceFromFace(face);
@@ -314,10 +314,10 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, face_t **planefaces)
             for (i = 0; i < face->w.numpoints; i++)
                 VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
 
-            *planeface = MergeFaceToList(newface, *planeface);
+            planefaces[plane] = MergeFaceToList(newface, planefaces[plane]);
         }
-        *planeface = MergeFaceToList(face, *planeface);
-        *planeface = FreeMergeListScraps(*planeface);
+        planefaces[plane] = MergeFaceToList(face, planefaces[plane]);
+        planefaces[plane] = FreeMergeListScraps(planefaces[plane]);
 
         csgfaces++;
     }
@@ -377,15 +377,15 @@ visible face.
 ==================
 */
 surface_t *
-BuildSurfaces(face_t **planefaces)
+BuildSurfaces(std::map<int, face_t *> &planefaces)
 {
     int i;
     surface_t *surf, *surfaces;
     face_t *face;
 
     surfaces = NULL;
-    for (i = 0; i < map.numplanes(); i++, planefaces++) {
-        if (!*planefaces)
+    for (i = 0; i < map.numplanes(); i++) {
+        if (planefaces[i] == nullptr)
             continue;
 
         /* create a new surface to hold the faces on this plane */
@@ -393,7 +393,7 @@ BuildSurfaces(face_t **planefaces)
         surf->planenum = i;
         surf->next = surfaces;
         surfaces = surf;
-        surf->faces = *planefaces;
+        surf->faces = planefaces[i];
         for (face = surf->faces; face; face = face->next)
             csgmergefaces++;
 
@@ -448,14 +448,14 @@ CSGFaces(const mapentity_t *entity)
     int i;
     const brush_t *brush, *clipbrush;
     const face_t *clipface;
-    face_t *inside, *outside, **planefaces;
+    face_t *inside, *outside;
     bool overwrite, mirror;
     surface_t *surfaces;
     int progress = 0;
 
     Message(msgProgress, "CSGFaces");
 
-    planefaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
+    std::map<int, face_t *> planefaces;
     csgfaces = brushfaces = csgmergefaces = 0;
 
     /*
@@ -525,7 +525,6 @@ CSGFaces(const mapentity_t *entity)
     }
 
     surfaces = BuildSurfaces(planefaces);
-    FreeMem(planefaces, OTHER, sizeof(face_t *) * map.maxplanes);
 
     Message(msgStat, "%8d brushfaces", brushfaces);
     Message(msgStat, "%8d csgfaces", csgfaces);

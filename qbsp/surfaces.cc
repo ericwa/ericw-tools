@@ -129,7 +129,7 @@ have inside faces.
 */
 
 static void
-GatherNodeFaces_r(node_t *node, face_t **planefaces)
+GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
 {
     face_t *f, *next;
 
@@ -158,13 +158,11 @@ GatherNodeFaces
 surface_t *
 GatherNodeFaces(node_t *headnode)
 {
-    face_t **planefaces;
     surface_t *surfaces;
 
-    planefaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * map.maxplanes, true);
+    std::map<int, face_t *> planefaces;
     GatherNodeFaces_r(headnode, planefaces);
     surfaces = BuildSurfaces(planefaces);
-    FreeMem(planefaces, OTHER, sizeof(face_t *) * map.maxplanes);
 
     return surfaces;
 }
