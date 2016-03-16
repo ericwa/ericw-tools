@@ -40,5 +40,5 @@ add_definitions(-DDOUBLEVEC_T)
 add_executable(qbsp ${QBSP_SOURCES})
 set_property(TARGET qbsp PROPERTY CXX_STANDARD 11)
 set_property(TARGET qbsp PROPERTY CXX_STANDARD_REQUIRED ON)
-
+target_link_libraries(qbsp ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS qbsp RUNTIME DESTINATION bin)

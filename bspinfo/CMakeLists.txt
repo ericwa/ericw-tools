@@ -10,5 +10,5 @@ set(BSPINFO_SOURCES
 	${COMMON_INCLUDES})
 
 add_executable(bspinfo ${BSPINFO_SOURCES})
-
+target_link_libraries(bspinfo ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS bspinfo RUNTIME DESTINATION bin)

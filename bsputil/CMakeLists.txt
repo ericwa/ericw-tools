@@ -10,5 +10,5 @@ set(BSPUTIL_SOURCES
 	${COMMON_INCLUDES})
 
 add_executable(bsputil ${BSPUTIL_SOURCES})
-
+target_link_libraries(bsputil ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS bsputil RUNTIME DESTINATION bin)
