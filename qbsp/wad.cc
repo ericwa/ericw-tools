@@ -186,7 +186,7 @@ WADList_Process(const wad_t *wadlist)
     WADList_AddAnimationFrames(wadlist);
 
     /* Count space for miptex header/offsets */
-    texdata->count = offsetof(dmiptexlump_t, dataofs[map.nummiptex()]);
+    texdata->count = offsetof(dmiptexlump_t, dataofs[0]) + (map.nummiptex() * sizeof(uint32_t));
 
     /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex(); i++) {
