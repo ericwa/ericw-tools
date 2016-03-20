@@ -19,6 +19,8 @@
     See file, 'COPYING', for details.
 */
 
+#include <string>
+
 #include <ctype.h>
 #include <string.h>
 
@@ -30,6 +32,14 @@
 #define info_player_coop        4
 
 static int rgfStartSpots;
+
+const mapface_t &mapbrush_t::face(int i) const {
+    return map.faces.at(this->firstface + i);
+}
+
+const mapbrush_t &mapentity_t::mapbrush(int i) const {
+    return map.brushes.at(this->firstmapbrush + i);
+}
 
 static void
 AddAnimTex(const char *name)
@@ -60,16 +70,13 @@ AddAnimTex(const char *name)
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
         for (j = 0; j < map.nummiptex(); j++) {
-            if (!Q_strcasecmp(framename, map.miptex[j]))
+            if (!Q_strcasecmp(framename, map.miptex[j].c_str()))
                 break;
         }
         if (j < map.nummiptex())
             continue;
-        if (map.nummiptex() == map.maxmiptex)
-            Error("Internal error: map.nummiptex > map.maxmiptex");
 
-        snprintf(map.miptex[j], sizeof(map.miptex[j]), "%s", framename);
-        map._nummiptex++;
+        map.miptex.push_back(framename);
     }
 }
 
@@ -85,11 +92,9 @@ FindMiptex(const char *name)
         name = pathsep + 1;
 
     for (i = 0; i < map.nummiptex(); i++) {
-        if (!Q_strcasecmp(name, map.miptex[i]))
+        if (!Q_strcasecmp(name, map.miptex[i].c_str()))
             return i;
     }
-    if (map.nummiptex() == map.maxmiptex)
-        Error("Internal error: map.nummiptex > map.maxmiptex");
 
     /* Handle animating textures carefully */
     if (name[0] == '+') {
@@ -97,9 +102,7 @@ FindMiptex(const char *name)
         i = map.nummiptex();
     }
 
-    snprintf(map.miptex[i], sizeof(map.miptex[i]), "%s", name);
-    map._nummiptex++;
-
+    map.miptex.push_back(name);
     return i;
 }
 
@@ -151,12 +154,12 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
 {
     int index, j;
     texinfo_t *target;
-    const int num_texinfo = pWorldEnt->lumps[LUMP_TEXINFO].index;
+    const int num_texinfo = pWorldEnt()->lumps[LUMP_TEXINFO].index;
 
     /* Set the texture flags */
     texinfo->flags = flags;
 
-    target = (texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+    target = (texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     for (index = 0; index < num_texinfo; index++, target++) {
         if (texinfo->miptex != target->miptex)
             continue;
@@ -179,10 +182,10 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
         return index;
     }
 
-    if (index >= pWorldEnt->lumps[LUMP_TEXINFO].count)
+    if (index >= pWorldEnt()->lumps[LUMP_TEXINFO].count)
     {
         /* Enlarge the array */
-        struct lumpdata *lump = &pWorldEnt->lumps[LUMP_TEXINFO];
+        struct lumpdata *lump = &pWorldEnt()->lumps[LUMP_TEXINFO];
         texinfo_t *olddata = (texinfo_t *)lump->data;
         int newcount = lump->count * 2;
         texinfo_t *newdata = (texinfo_t *)AllocMem(BSP_TEXINFO, newcount, true);
@@ -195,19 +198,19 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
     }
 
     /* Allocate a new texinfo at the end of the array */
-    target = ((texinfo_t *) pWorldEnt->lumps[LUMP_TEXINFO].data) + index;
+    target = ((texinfo_t *) pWorldEnt()->lumps[LUMP_TEXINFO].data) + index;
     *target = *texinfo;
-    pWorldEnt->lumps[LUMP_TEXINFO].index++;
+    pWorldEnt()->lumps[LUMP_TEXINFO].index++;
     map.cTotal[LUMP_TEXINFO]++;
 
     return index;
 }
 
 int
-FindTexinfoEnt(texinfo_t *texinfo, mapentity_t *entity)
+FindTexinfoEnt(texinfo_t *texinfo, const mapentity_t *entity)
 {
     unsigned int flags = 0;
-    const char *texname = map.miptex[texinfo->miptex];
+    const char *texname = map.miptex[texinfo->miptex].c_str();
     if (IsSkipName(texname))
         flags |= TEX_SKIP;
     if (IsHintName(texname))
@@ -569,14 +572,15 @@ ParseTextureDef(parser_t *parser, texinfo_t *tx,
     }
 }
 
-static bool
-ParseBrushFace(parser_t *parser, mapface_t *face, mapentity_t *entity)
+static std::unique_ptr<mapface_t>
+ParseBrushFace(parser_t *parser, const mapentity_t *entity)
 {
     vec3_t planepts[3], planevecs[2];
     vec_t length;
     plane_t *plane;
     texinfo_t tx;
         int i, j;
+    std::unique_ptr<mapface_t> face { new mapface_t };
 
     face->linenum = parser->linenum;
     ParsePlaneDef(parser, planepts);
@@ -593,7 +597,7 @@ ParseBrushFace(parser_t *parser, mapface_t *face, mapentity_t *entity)
 
     if (length < NORMAL_EPSILON) {
         Message(msgWarning, warnNoPlaneNormal, parser->linenum);
-        return false;
+        return nullptr;
     }
 
         // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
@@ -610,35 +614,30 @@ ParseBrushFace(parser_t *parser, mapface_t *face, mapentity_t *entity)
 
     face->texinfo = FindTexinfoEnt(&tx, entity);
 
-    return true;
+    return face;
 }
 
-static void
-ParseBrush(parser_t *parser, mapbrush_t *brush, mapentity_t *entity)
+mapbrush_t
+ParseBrush(parser_t *parser, const mapentity_t *entity)
 {
-    const mapface_t *check;
-    mapface_t *face;
-    bool faceok;
-
-    brush->faces = face = map.faces + map.numfaces();
+    mapbrush_t brush;
+    
     while (ParseToken(parser, PARSE_NORMAL)) {
         if (!strcmp(parser->token, "}"))
             break;
 
-        if (map.numfaces() == map.maxfaces)
-            Error("Internal error: didn't allocate enough faces?");
-
-        faceok = ParseBrushFace(parser, face, entity);
-        if (!faceok)
+        std::unique_ptr<mapface_t> face = ParseBrushFace(parser, entity);
+        if (face.get() == nullptr)
             continue;
 
         /* Check for duplicate planes */
-        for (check = brush->faces; check < face; check++) {
-            if (PlaneEqual(&check->plane, &face->plane)) {
+        for (int i = 0; i<brush.numfaces; i++) {
+            const mapface_t &check = brush.face(i);
+            if (PlaneEqual(&check.plane, &face->plane)) {
                 Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
                 continue;
             }
-            if (PlaneInvEqual(&check->plane, &face->plane)) {
+            if (PlaneInvEqual(&check.plane, &face->plane)) {
                 /* FIXME - this is actually an invalid brush */
                 Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
                 continue;
@@ -646,113 +645,43 @@ ParseBrush(parser_t *parser, mapbrush_t *brush, mapentity_t *entity)
         }
 
         /* Save the face, update progress */
-        map._numfaces++;
-        Message(msgPercent, map.numfaces(), map.maxfaces);
-        face++;
+        
+        if (0 == brush.numfaces)
+            brush.firstface = map.faces.size();
+        brush.numfaces++;
+        map.faces.push_back(*face);
     }
-
-    brush->numfaces = face - brush->faces;
-    if (!brush->numfaces)
-        brush->faces = NULL;
+    return brush;
 }
 
 static bool
 ParseEntity(parser_t *parser, mapentity_t *entity)
 {
-    mapbrush_t *brush;
-
     if (!ParseToken(parser, PARSE_NORMAL))
-        return false;
+        return nullptr;
 
     if (strcmp(parser->token, "{"))
         Error("line %d: Invalid entity format, { not found", parser->linenum);
 
-    if (map.numentities() == map.maxentities)
-        Error("Internal error: didn't allocate enough entities?");
-
-    entity->mapbrushes = brush = map.brushes + map.numbrushes();
+    entity->nummapbrushes = 0;
     do {
         if (!ParseToken(parser, PARSE_NORMAL))
             Error("Unexpected EOF (no closing brace)");
         if (!strcmp(parser->token, "}"))
             break;
         else if (!strcmp(parser->token, "{")) {
-            if (map.numbrushes() == map.maxbrushes)
-                Error("Internal error: didn't allocate enough brushes?");
-            ParseBrush(parser, brush++, entity);
-            map._numbrushes++;
+            mapbrush_t brush = ParseBrush(parser, entity);
+            
+            if (0 == entity->nummapbrushes)
+                entity->firstmapbrush = map.brushes.size();
+            entity->nummapbrushes++;
+            
+            map.brushes.push_back(brush);
         } else
             ParseEpair(parser, entity);
     } while (1);
 
-    entity->nummapbrushes = brush - entity->mapbrushes;
-    if (!entity->nummapbrushes)
-        entity->mapbrushes = NULL;
-
-    return true;
-}
-
-
-static void
-PreParseFile(const char *buf)
-{
-    int braces = 0;
-    struct lumpdata *texinfo;
-
-    map.maxentities = map.maxbrushes = map.maxfaces = 0;
-
-    // Very simple... we just want numbers here.  Invalid formats are
-    // detected later.  Problems with deviant .MAP formats.
-    while (*buf != 0) {
-        if (*buf == '\"') {
-            buf++;
-            // Quoted string... skip to end of quote
-            while (*buf != '\"' && *buf)
-                buf++;
-            if (!*buf)
-                break;
-        } else if (*buf == '/' && *(buf + 1) == '/') {
-            // Comment... skip to end of line
-            while (*buf != '\n' && *buf)
-                buf++;
-            if (!*buf)
-                break;
-        } else if (*buf == '{' && (isspace(buf[1]) || !buf[1])) {
-            if (braces == 0)
-                map.maxentities++;
-            else if (braces == 1)
-                map.maxbrushes++;
-            braces++;
-        } else if (*buf == '}' && (isspace(buf[1]) || !buf[1])) {
-            braces--;
-        } else if (*buf == '(') {
-            map.maxfaces++;
-        }
-        buf++;
-    }
-
-    if (map.maxfaces % 3 != 0)
-        Message(msgWarning, warnBadMapFaceCount);
-    map.maxfaces /= 3;
-
-    map.faces = (mapface_t *)AllocMem(MAPFACE, map.maxfaces, true);
-    map.brushes = (mapbrush_t *)AllocMem(MAPBRUSH, map.maxbrushes, true);
-    map.entities = (mapentity_t *)AllocMem(MAPENTITY, map.maxentities, true);
-
-    // While we're here...
-    pWorldEnt = map.entities;
-
-    /*
-     * Allocate maximum memory here, copy over later
-     * Maximum possible is one miptex/texinfo per face
-     * Plus a few extra for animations
-     */
-    map.maxmiptex = map.maxfaces + 100;
-    map.miptex = (miptex_t *)AllocMem(MIPTEX, map.maxmiptex, true);
-
-    texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
-    texinfo->data = AllocMem(BSP_TEXINFO, 1024, true);
-    texinfo->count = 1024;
+    return entity;
 }
 
 /*
@@ -780,24 +709,26 @@ LoadMapFile(void)
     char *buf;
     int length;
     struct lumpdata *texinfo;
-    mapentity_t *entity;
 
     Message(msgProgress, "LoadMapFile");
 
     length = LoadFile(options.szMapName, &buf, true);
-    PreParseFile(buf);
     ParserInit(&parser, buf);
 
-    map._numfaces = map._numbrushes = map._numentities = 0;
-    entity = map.entities;
-    while (ParseEntity(&parser, entity)) {
-        map._numentities++;
-        entity++;
+    for (int i=0; ; i++) {
+        map.entities.push_back(mapentity_t {});
+        mapentity_t *entity = &map.entities.at(i);
+        
+        if (i == 0) {
+            texinfo = &entity->lumps[LUMP_TEXINFO];
+            texinfo->data = AllocMem(BSP_TEXINFO, 1024, true);
+            texinfo->count = 1024;
+        }
+        
+        if (!ParseEntity(&parser, entity)) {
+            break;
+        }
     }
-
-    /* Double check the entity count matches our pre-parse count */
-    if (map.numentities() != map.maxentities)
-        Error("Internal error: mismatched entity count?");
 
     FreeMem(buf, OTHER, length + 1);
 
@@ -809,10 +740,7 @@ LoadMapFile(void)
 //      if (!(rgfStartSpots & info_player_coop))
 //              Message(msgWarning, warnNoPlayerCoop);
 
-    texinfo = &pWorldEnt->lumps[LUMP_TEXINFO];
-
-    map.maxplanes = MAX_MAP_PLANES;
-    map.planes = (plane_t *)AllocMem(PLANE, map.maxplanes, true);
+    texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
 
     Message(msgStat, "%8d faces", map.numfaces());
     Message(msgStat, "%8d brushes", map.numbrushes());
@@ -889,12 +817,13 @@ WriteEntitiesToString(void)
     int i;
     int cLen;
     struct lumpdata *entities;
-    const mapentity_t *entity;
+    mapentity_t *entity;
 
     map.cTotal[LUMP_ENTITIES] = 0;
 
-    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
-        entities = &map.entities[i].lumps[LUMP_ENTITIES];
+    for (i = 0; i < map.numentities(); i++) {
+        entity = &map.entities.at(i);
+        entities = &entity->lumps[LUMP_ENTITIES];
 
         /* Check if entity needs to be removed */
         if (!entity->epairs || IsWorldBrushEntity(entity)) {

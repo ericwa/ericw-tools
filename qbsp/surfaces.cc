@@ -49,7 +49,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
 
 
     /* special (non-surface cached) faces don't need subdivision */
-    tex = (texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data + f->texinfo;
+    tex = (texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data + f->texinfo;
     if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
         return;
 
@@ -426,7 +426,7 @@ MakeFaceEdges_r
 static int
 MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
@@ -453,7 +453,7 @@ GrowNodeRegion
 static void
 GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
@@ -505,7 +505,7 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 static void
 GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
@@ -562,7 +562,7 @@ CountData_r
 static void
 CountData_r(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
@@ -602,7 +602,8 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     needlmshifts = false;
     cStartEdge = 0;
-    for (i = 0; i < entity - map.entities; i++)
+    const int entnum = entity - &map.entities.at(0);
+    for (i = 0; i < entnum; i++)
         cStartEdge += map.entities[i].lumps[LUMP_EDGES].count;
 
     CountData_r(entity, headnode);

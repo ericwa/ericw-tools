@@ -58,10 +58,10 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     if (!Q_strcasecmp(classname, "func_detail"))
         return;
 
-    if (entity != pWorldEnt) {
+    if (entity != pWorldEnt()) {
         char mod[20];
 
-        if (entity == pWorldEnt + 1)
+        if (entity == pWorldEnt() + 1)
             Message(msgProgress, "Internal Entities");
         snprintf(mod, sizeof(mod), "*%d", map.cTotal[LUMP_MODELS]);
         if (options.fVerbose)
@@ -96,13 +96,13 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      * If this is the world entity, find all func_group and func_detail
      * entities and add their brushes with the appropriate contents flag set.
      */
-    if (entity == pWorldEnt) {
+    if (entity == pWorldEnt()) {
         const mapentity_t *source;
         int detailcount;
 
         /* Add func_group brushes first */
-        source = map.entities + 1;
-        for (i = 1; i < map.numentities(); i++, source++) {
+        for (i = 1; i < map.numentities(); i++) {
+            source = &map.entities.at(i);
             classname = ValueForKey(source, "classname");
             if (!Q_strcasecmp(classname, "func_group"))
                 Brush_LoadEntity(entity, source, hullnum);
@@ -110,8 +110,8 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
         /* Add detail brushes next */
         detailcount = 0;
-        source = map.entities + 1;
         for (i = 1; i < map.numentities(); i++, source++) {
+            source = &map.entities.at(i);
             classname = ValueForKey(source, "classname");
             if (!Q_strcasecmp(classname, "func_detail")) {
                 int detailstart = entity->numbrushes;
@@ -133,13 +133,13 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     surfs = CSGFaces(entity);
     FreeBrushes(entity->brushes);
 
-    if (options.fObjExport && entity == pWorldEnt && hullnum == 0) {
+    if (options.fObjExport && entity == pWorldEnt() && hullnum == 0) {
         ExportObj(surfs);
     }
     
     if (hullnum != 0) {
         nodes = SolidBSP(entity, surfs, true);
-        if (entity == pWorldEnt && !options.fNofill) {
+        if (entity == pWorldEnt() && !options.fNofill) {
             // assume non-world bmodels are simple
             numportals = PortalizeWorld(entity, nodes, hullnum);
             if (FillOutside(nodes, hullnum, numportals)) {
@@ -167,11 +167,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         if (options.forceGoodTree)
             nodes = SolidBSP(entity, surfs, false);
         else
-            nodes = SolidBSP(entity, surfs, entity == pWorldEnt);
+            nodes = SolidBSP(entity, surfs, entity == pWorldEnt());
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        if (entity == pWorldEnt && !options.fNofill) {
+        if (entity == pWorldEnt() && !options.fNofill) {
             // assume non-world bmodels are simple
             numportals = PortalizeWorld(entity, nodes, hullnum);
             if (FillOutside(nodes, hullnum, numportals)) {
@@ -220,7 +220,8 @@ UpdateEntLump(void)
     Message(msgStat, "Updating entities lump...");
 
     modnum = 1;
-    for (i = 1, entity = map.entities + 1; i < map.numentities(); i++, entity++) {
+    for (i = 1; i < map.numentities(); i++) {
+        entity = &map.entities.at(i);
         if (!entity->nummapbrushes)
             continue;
         classname = ValueForKey(entity, "classname");
@@ -410,9 +411,10 @@ static void BSPX_CreateBrushList(void)
 
         BSPX_Brushes_Init(&ctx);
 
-        for (entnum = 0, ent = map.entities; entnum < map.numentities(); entnum++, ent++)
+        for (entnum = 0; entnum < map.numentities(); entnum++)
         {
-                if (ent == pWorldEnt)
+                ent = &map.entities.at(entnum);
+                if (ent == pWorldEnt())
                         modelnum = 0;
                 else
                 {
@@ -432,20 +434,20 @@ static void BSPX_CreateBrushList(void)
                  * If this is the world entity, find all func_group and func_detail
                  * entities and add their brushes with the appropriate contents flag set.
                 */
-                if (ent == pWorldEnt) {
+                if (ent == pWorldEnt()) {
                         const char *classname;
                         const mapentity_t *source;
                         int i;
                         /* Add func_group brushes first */
-                        source = map.entities + 1;
-                        for (i = 1; i < map.numentities(); i++, source++) {
+                        for (i = 1; i < map.numentities(); i++) {
+                                source = &map.entities.at(i);
                                 classname = ValueForKey(source, "classname");
                                 if (!Q_strcasecmp(classname, "func_group"))
                                         Brush_LoadEntity(ent, source, -1);
                         }
                         /* Add detail brushes next */
-                        source = map.entities + 1;
-                        for (i = 1; i < map.numentities(); i++, source++) {
+                        for (i = 1; i < map.numentities(); i++) {
+                                source = &map.entities.at(i);
                                 classname = ValueForKey(source, "classname");
                                 if (!Q_strcasecmp(classname, "func_detail"))
                                         Brush_LoadEntity(ent, source, -1);
@@ -475,7 +477,8 @@ CreateSingleHull(const int hullnum)
     map.cTotal[LUMP_MODELS] = 0;
 
     // for each entity in the map file that has geometry
-    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
+    for (i = 0; i < map.numentities(); i++) {
+        entity = &map.entities.at(i);
         ProcessEntity(entity, hullnum);
         if (!options.fAllverbose)
             options.fVerbose = false;   // don't print rest of entities
@@ -491,8 +494,6 @@ CreateHulls
 static void
 CreateHulls(void)
 {
-    PlaneHash_Init();
-
     /* create the hulls sequentially */
     if (!options.fNoverbose)
         options.fVerbose = true;
@@ -535,9 +536,9 @@ ProcessFile(void)
     }
 
     wadlist = NULL;
-    wadstring = ValueForKey(pWorldEnt, "_wad");
+    wadstring = ValueForKey(pWorldEnt(), "_wad");
     if (!wadstring[0])
-        wadstring = ValueForKey(pWorldEnt, "wad");
+        wadstring = ValueForKey(pWorldEnt(), "wad");
     if (!wadstring[0])
         Message(msgWarning, warnNoWadKey);
     else

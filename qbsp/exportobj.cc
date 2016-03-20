@@ -45,9 +45,9 @@ GetUV(const texinfo_t *texinfo, const vec_t *pos, const int width, const int hei
 static void
 ExportObjFace(FILE *f, const face_t *face, int *vertcount)
 {
-    const texinfo_t *texinfos = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfos = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     const texinfo_t *texinfo = &texinfos[face->texinfo];
-    const char *texname = map.miptex[texinfo->miptex];
+    const char *texname = map.miptex[texinfo->miptex].c_str();
     
     const texture_t *texture = WADList_GetTexture(texname);
     const int width = texture ? texture->width : 64;

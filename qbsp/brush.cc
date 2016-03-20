@@ -204,39 +204,18 @@ PlaneInvEqual(const plane_t *p1, const plane_t *p2)
 }
 
 /* Plane Hashing */
-#define PLANE_HASHES (1<<10)
-static struct plane *plane_hash[PLANE_HASHES];
 
-/*
- * Choice of hash function:
- * - Begin with abs(dist), very rarely > 4096
- * - Many maps probably won't go beyond 2048 units
- * - Low 3 bits also very commonly zero (axial planes on multiples of 8 units)
- */
 static inline int
-plane_hash_fn(const struct plane *p)
+plane_hash_fn(const plane_t *p)
 {
-    const int dist = floor(fabs(p->dist) + 0.5);
-
-    return (dist ^ (dist >> 3)) & (PLANE_HASHES - 1);
+    return Q_rint(fabs(p->dist));
 }
 
 static void
-PlaneHash_Add(struct plane *p)
+PlaneHash_Add(const plane_t *p, int index)
 {
     const int hash = plane_hash_fn(p);
-
-    p->hash_chain = plane_hash[hash];
-    plane_hash[hash] = p;
-}
-
-void
-PlaneHash_Init(void)
-{
-    int i;
-
-    for (i = 0; i < PLANE_HASHES; ++i)
-        plane_hash[i] = NULL;
+    map.planehash[hash].push_back(index);
 }
 
 /*
@@ -246,22 +225,21 @@ PlaneHash_Init(void)
 static int
 NewPlane(const vec3_t normal, const vec_t dist, int *side)
 {
-    plane_t *plane;
     vec_t len;
 
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         Error("%s: invalid normal (vector length %.4f)", __func__, len);
-    if (map.numplanes() == map.maxplanes)
-        Error("Internal error: didn't allocate enough planes? (%s)", __func__);
 
-    plane = &map.planes[map.numplanes()];
-    VectorCopy(normal, plane->normal);
-    plane->dist = dist;
-    *side = NormalizePlane(plane) ? SIDE_BACK : SIDE_FRONT;
-    PlaneHash_Add(plane);
-
-    return map._numplanes++;
+    plane_t plane;
+    VectorCopy(normal, plane.normal);
+    plane.dist = dist;
+    *side = NormalizePlane(&plane) ? SIDE_BACK : SIDE_FRONT;
+    
+    int index = map.planes.size();
+    map.planes.push_back(plane);
+    PlaneHash_Add(&plane, index);
+    return index;
 }
 
 /*
@@ -271,26 +249,16 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
 int
 FindPlane(const plane_t *plane, int *side)
 {
-    const int bins[] = { 0, 1, -1 };
-    const plane_t *p;
-    int hash, h;
-    int i;
-
-    /* search the border bins as well */
-    hash = plane_hash_fn(plane);
-    for (i = 0; i < 3; ++i) {
-        h = (hash + bins[i]) & (PLANE_HASHES - 1);
-        for (p = plane_hash[h]; p; p = p->hash_chain) {
-            if (PlaneEqual(p, plane)) {
-                *side = SIDE_FRONT;
-                return p - map.planes;
-            } else if (PlaneInvEqual(p, plane)) {
-                *side = SIDE_BACK;
-                return p - map.planes;
-            }
+    for (int i : map.planehash[plane_hash_fn(plane)]) {
+        const plane_t &p = map.planes.at(i);
+        if (PlaneEqual(&p, plane)) {
+            *side = SIDE_FRONT;
+            return i;
+        } else if (PlaneInvEqual(&p, plane)) {
+            *side = SIDE_BACK;
+            return i;
         }
     }
-
     return NewPlane(plane->normal, plane->dist, side);
 }
 
@@ -315,7 +283,8 @@ FindTargetEntity(const char *target)
     const char *name;
     const mapentity_t *entity;
 
-    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
+    for (i = 0; i < map.numentities(); i++) {
+        entity = &map.entities.at(i);
         name = ValueForKey(entity, "targetname");
         if (!Q_strcasecmp(target, name))
             return entity;
@@ -386,8 +355,8 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
         if (!hullnum) {
             /* Don't generate hintskip faces */
-            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
-            const char *texname = map.miptex[texinfo[mapface->texinfo].miptex];
+            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
+            const char *texname = map.miptex[texinfo[mapface->texinfo].miptex].c_str();
             if (!Q_strcasecmp(texname, "hintskip"))
                 continue;
         }
@@ -435,7 +404,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
-            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
             texinfo_t texInfoNew;
             vec3_t vecs[2];
             int k, l;
@@ -555,7 +524,7 @@ AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
     }
     if (hullbrush->numfaces == MAX_FACES)
         Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
-              MAX_FACES, hullbrush->srcbrush->faces[0].linenum);
+              MAX_FACES, hullbrush->srcbrush->face(0).linenum);
 
     mapface->plane = *plane;
     mapface->texinfo = 0;
@@ -641,7 +610,7 @@ AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
     if (hullbrush->numpoints == MAX_HULL_POINTS)
         Error("hullbrush->numpoints == MAX_HULL_POINTS (%d), "
               "source brush on line %d",
-              MAX_HULL_POINTS, hullbrush->srcbrush->faces[0].linenum);
+              MAX_HULL_POINTS, hullbrush->srcbrush->face(0).linenum);
 
     VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
 
@@ -690,7 +659,7 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     if (hullbrush->numedges == MAX_HULL_EDGES)
         Error("hullbrush->numedges == MAX_HULL_EDGES (%d), "
               "source brush on line %d",
-              MAX_HULL_EDGES, hullbrush->srcbrush->faces[0].linenum);
+              MAX_HULL_EDGES, hullbrush->srcbrush->face(0).linenum);
 
     hullbrush->edges[i][0] = pt1;
     hullbrush->edges[i][1] = pt2;
@@ -790,12 +759,11 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
 static int
 Brush_GetContents(const mapbrush_t *mapbrush)
 {
-    const mapface_t *mapface;
     const char *texname;
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt->lumps[LUMP_TEXINFO].data;
+    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
 
-    mapface = mapbrush->faces;
-    texname = map.miptex[texinfo[mapface->texinfo].miptex];
+    const mapface_t &mapface = mapbrush->face(0);
+    texname = map.miptex[texinfo[mapface.texinfo].miptex].c_str();
 
     if (!Q_strcasecmp(texname, "hint") || !Q_strcasecmp(texname, "hintskip"))
         return CONTENTS_HINT;
@@ -835,12 +803,12 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
     // create the faces
     if (mapbrush->numfaces > MAX_FACES)
         Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
-              MAX_FACES, mapbrush->faces[0].linenum);
+              MAX_FACES, mapbrush->face(0).linenum);
 
     hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
-    memcpy(hullbrush.faces, mapbrush->faces,
-           mapbrush->numfaces * sizeof(mapface_t));
+    for (int i=0; i<mapbrush->numfaces; i++)
+        hullbrush.faces[i] = mapbrush->face(i);
 
     facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
     if (!facelist) {
@@ -934,7 +902,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 {
     const char *classname;
     brush_t *brush, *next, *nonsolid, *solid;
-    mapbrush_t *mapbrush;
+    const mapbrush_t *mapbrush;
     vec3_t rotate_offset;
     int i, contents, cflags = 0;
     int lmshift;
@@ -975,9 +943,9 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         lmshift++;      //only allow power-of-two scales
         i /= 2;
     }
-
-    mapbrush = src->mapbrushes;
+    
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
+        mapbrush = &src->mapbrush(i);
         contents = Brush_GetContents(mapbrush);
 
         /*
@@ -1007,7 +975,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         }
 
         /* entities never use water merging */
-        if (dst != pWorldEnt)
+        if (dst != pWorldEnt())
             contents = CONTENTS_SOLID;
 
         /* nonsolid brushes don't show up in clipping hulls */

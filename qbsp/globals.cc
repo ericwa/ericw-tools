@@ -113,7 +113,9 @@ const int MemSize_BSP2rmq[] = {
 mapdata_t map;
 
 // Useful shortcuts
-mapentity_t *pWorldEnt;
+mapentity_t *pWorldEnt() {
+    return &map.entities.at(0);
+}
 
 // Mathlib.c
 const vec3_t vec3_origin = { 0, 0, 0 };

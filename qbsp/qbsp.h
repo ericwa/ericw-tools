@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <map>
+#include <unordered_map>
 
 #include <assert.h>
 #include <ctype.h>
@@ -360,7 +361,6 @@ typedef struct brush_s {
 
 void FreeBrushes(brush_t *brushlist);
 
-void PlaneHash_Init(void);
 int FindPlane(const plane_t *plane, int *side);
 int PlaneEqual(const plane_t *p1, const plane_t *p2);
 int PlaneInvEqual(const plane_t *p1, const plane_t *p2);
@@ -512,10 +512,14 @@ typedef struct mapface_s {
     int linenum;
 } mapface_t;
 
-typedef struct mapbrush_s {
-    mapface_t *faces;
+class mapbrush_t {
+public:
+    int firstface;
     int numfaces;
-} mapbrush_t;
+    
+    mapbrush_t() : firstface(0), numfaces(0) {}
+    const mapface_t &face(int i) const;
+} ;
 
 struct lumpdata {
     int count;
@@ -525,41 +529,36 @@ struct lumpdata {
 
 typedef struct mapentity_s {
     vec3_t origin;
-    mapbrush_t *mapbrushes;     /* Array */
+
+    int firstmapbrush;
     int nummapbrushes;
+    
     epair_t *epairs;
     vec3_t mins, maxs;
     brush_t *brushes;           /* NULL terminated list */
     int numbrushes;
     struct lumpdata lumps[BSPX_LUMPS];
+    
+    const mapbrush_t &mapbrush(int i) const;
 } mapentity_t;
 
 typedef struct mapdata_s {
-    /* Maximum space available for items */
-    int maxfaces;
-    int maxbrushes;
-    int maxentities;
-    int maxplanes;
-    int maxmiptex;
-
-    /* Number of items currently used */
-    int _numfaces;
-    int _numbrushes;
-    int _numentities;
-    int _numplanes;
-    int _nummiptex;
-    int numfaces() const { return _numfaces; };
-    int numbrushes() const { return _numbrushes; };
-    int numentities() const { return _numentities; };
-    int numplanes() const { return _numplanes; };
-    int nummiptex() const { return _nummiptex; };
-
     /* Arrays of actual items */
-    mapface_t *faces;
-    mapbrush_t *brushes;
-    mapentity_t *entities;
-    plane_t *planes;
-    miptex_t *miptex;
+    std::vector<mapface_t> faces;
+    std::vector<mapbrush_t> brushes;
+    std::vector<mapentity_t> entities;
+    std::vector<plane_t> planes;
+    std::vector<miptex_t> miptex;
+    
+    /* map from plane hash code to list of indicies in `planes` vector */
+    std::unordered_map<int, std::vector<int>> planehash;
+    
+    /* Number of items currently used */
+    int numfaces() const { return faces.size(); };
+    int numbrushes() const { return brushes.size(); };
+    int numentities() const { return entities.size(); };
+    int numplanes() const { return planes.size(); };
+    int nummiptex() const { return miptex.size(); };
 
     /* Totals for BSP data items -> TODO: move to a bspdata struct? */
     int cTotal[BSPX_LUMPS];
@@ -570,7 +569,7 @@ typedef struct mapdata_s {
 } mapdata_t;
 
 extern mapdata_t map;
-extern mapentity_t *pWorldEnt;
+extern mapentity_t *pWorldEnt();
 
 void LoadMapFile(void);
 

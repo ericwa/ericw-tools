@@ -20,6 +20,7 @@
 */
 
 #include <string.h>
+#include <string>
 
 #include "qbsp.h"
 #include "wad.h"
@@ -180,7 +181,7 @@ WADList_Process(const wad_t *wadlist)
     int i;
     lumpinfo_t *texture;
     dmiptexlump_t *miptexlump;
-    struct lumpdata *texdata = &pWorldEnt->lumps[LUMP_TEXTURES];
+    struct lumpdata *texdata = &pWorldEnt()->lumps[LUMP_TEXTURES];
 
     WADList_AddAnimationFrames(wadlist);
 
@@ -189,7 +190,7 @@ WADList_Process(const wad_t *wadlist)
 
     /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex(); i++) {
-        texture = WADList_FindTexture(wadlist, map.miptex[i]);
+        texture = WADList_FindTexture(wadlist, map.miptex[i].c_str());
         if (texture) {
             if (options.fNoTextures)
                 texdata->count += sizeof(dmiptex_t);
@@ -209,7 +210,7 @@ WADList_Process(const wad_t *wadlist)
     for (i = 0; i < map.nummiptex(); i++) {
         if (miptexlump->dataofs[i] == 0) {
             miptexlump->dataofs[i] = -1;
-            Message(msgWarning, warnTextureNotFound, map.miptex[i]);
+            Message(msgWarning, warnTextureNotFound, map.miptex[i].c_str());
         }
     }
 }
@@ -220,7 +221,7 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
     int i, size;
     byte *data;
     const wad_t *wad;
-    struct lumpdata *texdata = &pWorldEnt->lumps[LUMP_TEXTURES];
+    struct lumpdata *texdata = &pWorldEnt()->lumps[LUMP_TEXTURES];
 
     data = (byte *)&lump->dataofs[map.nummiptex()];
 
@@ -229,7 +230,7 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
             continue;
         size = 0;
         for (wad = wadlist; wad; wad = wad->next) {
-            size = WAD_LoadLump(wad, map.miptex[i], data);
+            size = WAD_LoadLump(wad, map.miptex[i].c_str(), data);
             if (size)
                 break;
         }
@@ -282,13 +283,13 @@ WADList_AddAnimationFrames(const wad_t *wadlist)
     for (i = 0; i < oldcount; i++) {
         if (map.miptex[i][0] != '+')
             continue;
-        snprintf(name, sizeof(name), "%s", map.miptex[i]);
+        name = map.miptex[i];
 
         /* Search for all animations (0-9) and alt-animations (A-J) */
         for (j = 0; j < 20; j++) {
             name[1] = (j < 10) ? '0' + j : 'a' + j - 10;
-            if (WADList_FindTexture(wadlist, name))
-                FindMiptex(name);
+            if (WADList_FindTexture(wadlist, name.c_str()))
+                FindMiptex(name.c_str());
         }
     }
 

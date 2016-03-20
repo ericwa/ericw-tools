@@ -470,7 +470,8 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
     }
 
     inside = false;
-    for (i = 1, entity = map.entities + 1; i < map.numentities(); i++, entity++) {
+    for (i = 1; i < map.numentities(); i++) {
+        entity = &map.entities.at(i);
         if (!VectorCompare(entity->origin, vec3_origin)) {
             if (PlaceOccupant(i, entity->origin, node))
                 inside = true;

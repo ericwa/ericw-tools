@@ -46,7 +46,6 @@ LoadBSPFile(void)
 {
     int i;
     int cFileSize, cLumpSize, iLumpOff;
-    mapentity_t *entity;
 
     // Load the file header
     StripExtension(options.szBSPName);
@@ -70,7 +69,8 @@ LoadBSPFile(void)
     options.BSPVersion = header->version;
 
     /* Throw all of the data into the first entity to be written out later */
-    entity = map.entities;
+    mapentity_t first;
+    mapentity_t *entity = &first;
     for (i = 0; i < BSP_LUMPS; i++) {
         map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
         iLumpOff = header->lumps[i].fileofs;
@@ -116,6 +116,9 @@ LoadBSPFile(void)
         }
     }
 
+    map.entities.clear();
+    map.entities.push_back(first);
+    
     FreeMem(header, OTHER, cFileSize + 1);
 }
 
@@ -135,7 +138,8 @@ AddLump(FILE *f, int Type)
     lump = &header->lumps[Type];
     lump->fileofs = ftell(f);
 
-    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
+    for (i = 0; i < map.numentities(); i++) {
+        entity = &map.entities[i];
         entities = &entity->lumps[Type];
         if (entities->data) {
             if (Type == LUMP_MODELS && !options.hexen2) {
@@ -195,7 +199,8 @@ GenLump(const char *bspxlump, int Type, size_t sz)
     const mapentity_t *entity;
     char *out;
 
-    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
+    for (i = 0; i < map.numentities(); i++) {
+        entity = &map.entities[i];
         entities = &entity->lumps[Type];
         cLen += entities->count*sz; 
     }
@@ -203,7 +208,8 @@ GenLump(const char *bspxlump, int Type, size_t sz)
         return;
     out = (char *)malloc(cLen);
     cLen = 0;
-    for (i = 0, entity = map.entities; i < map.numentities(); i++, entity++) {
+    for (i = 0; i < map.numentities(); i++) {
+        entity = &map.entities[i];
         entities = &entity->lumps[Type];
         memcpy(out+cLen, entities->data, entities->count*sz);
         cLen += entities->count*sz;
@@ -363,7 +369,7 @@ PrintBSPFileSizes(void)
     Message(msgStat, "%8d edges        %10d", map.cTotal[LUMP_EDGES],
             map.cTotal[LUMP_EDGES] * MemSize[BSP_EDGE]);
 
-    lump = &pWorldEnt->lumps[LUMP_TEXTURES];
+    lump = &pWorldEnt()->lumps[LUMP_TEXTURES];
     if (lump->data)
         Message(msgStat, "%8d textures     %10d",
                 ((dmiptexlump_t *)lump->data)->nummiptex, lump->count);

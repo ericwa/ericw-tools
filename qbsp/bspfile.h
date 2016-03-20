@@ -21,6 +21,8 @@
 #ifndef __BSPFILE_H__
 #define __BSPFILE_H__
 
+#include <string>
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -33,8 +35,6 @@ typedef uint8_t byte;
 #define BSPVERSION     29
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 #define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
-
-#define MAX_MAP_PLANES     262144
 
 typedef struct {
     int32_t fileofs;
@@ -101,7 +101,7 @@ typedef struct {
     int32_t dataofs[];          /* [nummiptex] */
 } dmiptexlump_t;
 
-typedef char miptex_t[16];
+typedef std::string miptex_t;
 
 typedef struct {
     float point[3];
