@@ -35,10 +35,14 @@
 static int rgfStartSpots;
 
 const mapface_t &mapbrush_t::face(int i) const {
+    if (i < 0 || i >= this->numfaces)
+        Error("mapbrush_t::face: %d out of bounds (numfaces %d)", i, this->numfaces);
     return map.faces.at(this->firstface + i);
 }
 
 const mapbrush_t &mapentity_t::mapbrush(int i) const {
+    if (i < 0 || i >= this->nummapbrushes)
+        Error("mapentity_t::mapbrush: %d out of bounds (nummapbrushes %d)", i, this->nummapbrushes);
     return map.brushes.at(this->firstmapbrush + i);
 }
 
