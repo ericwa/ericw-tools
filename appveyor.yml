@@ -1,11 +1,14 @@
 version: 1.0.{build}
 build_script:
 - ps: >-
+    curl -fsSL -o embree.zip https://github.com/embree/embree/releases/download/v2.9.0/embree-2.9.0.win32.windows.zip
+    7z x embree.zip
+
     mkdir cmakebuild
 
     cd cmakebuild
 
-    cmake ..
+    cmake .. -Dembree_DIR=..\embree-2.9.0.win32.windows\lib\cmake\embree-2.9.0
 
     msbuild PACKAGE.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 artifacts:
