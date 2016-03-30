@@ -53,12 +53,6 @@ typedef struct traceinfo_s {
     vec3_t dir;
 } traceinfo_t;
 
-/* Stopped by solid and sky */
-bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
-
-
-int Light_PointContents( const vec3_t point );
-
 typedef struct {
     const dplane_t *dplane;
     int side;
@@ -116,7 +110,31 @@ typedef struct {
     qboolean nodirt;
     vec_t phongangle;
 } modelinfo_t;
+    
+void MakeTnodes_embree(const bsp2_t *bsp);
+    
+// returns true if un-occluded. dir is the direction to trace in (doesn't need to be normalized)
+qboolean
+TestLight_embree(const vec3_t start, const vec3_t dir, vec_t dist, const modelinfo_t *model);
 
+// returns true if sky is visible. dirn must be the normalized direction _away_ from the sun
+qboolean
+TestSky_embree(const vec3_t start, const vec3_t dirn, const modelinfo_t *model);
+
+// returns true if occluded
+qboolean
+DirtTrace_embree(const vec3_t start, const vec3_t dir, vec_t dist, vec_t *hitdist, vec_t *normal, const modelinfo_t *model);
+
+qboolean
+FaceTrace_embree(const vec3_t start, const vec3_t dir, vec3_t hitpoint, const bsp2_dface_t **hitface);
+
+    
+// returns true if the trace from start to stop hits something solid.
+// only tests the selfshadow model.
+qboolean
+CalcPointsTrace_embree(const vec3_t start, const vec3_t dir, vec_t dist, vec_t *hitdist, vec_t *normal, const modelinfo_t *model);
+
+    
 typedef struct sun_s {
     vec3_t sunvec;
     lightsample_t sunlight;
@@ -137,6 +155,18 @@ typedef struct {
 /* Allow space for 4x4 oversampling */
 //#define SINGLEMAP (MAXDIMENSION*MAXDIMENSION*4*4)
 
+typedef struct {
+    vec3_t data[3];     /* permuted 3x3 matrix */
+    int row[3];         /* row permutations */
+    int col[3];         /* column permutations */
+} pmatrix3_t;
+    
+typedef struct {
+    pmatrix3_t transform;
+    const texinfo_t *texinfo;
+    vec_t planedist;
+} texorg_t;
+    
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
     const modelinfo_t *modelinfo;
@@ -155,6 +185,7 @@ typedef struct {
     int texmins[2];
     int texsize[2];
     vec_t exactmid[2];
+    vec3_t midpoint;
     
     int numpoints;
     vec3_t *points; // malloc'ed array of numpoints
@@ -169,6 +200,10 @@ typedef struct {
     /* for sphere culling */
     vec3_t origin;
     vec_t radius;
+    
+    /* stuff used by CalcPoint */
+    vec_t starts, startt, st_step;
+    texorg_t texorg;
 } lightsurf_t;
 
 typedef struct {
@@ -185,6 +220,7 @@ struct ltface_ctx
 
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const dmodel_t *const *tracelist;
+extern const dmodel_t *const *selfshadowlist;
 
 struct ltface_ctx;
 struct ltface_ctx *LightFaceInit(const bsp2_t *bsp);

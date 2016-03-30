@@ -23,6 +23,9 @@
 #include <light/light.h>
 #include <light/entities.h>
 
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+
 #include <vector>
 #include <map>
 #include <set>
@@ -83,6 +86,7 @@ static byte *lux_file_end;      // end of space for luxfile data
 
 static modelinfo_t *modelinfo;
 const dmodel_t *const *tracelist;
+const dmodel_t *const *selfshadowlist;
 
 int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
@@ -156,6 +160,9 @@ LightThread(void *arg)
     const modelinfo_t *face_modelinfo;
     struct ltface_ctx *ctx;
 
+    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+    
     while (1) {
         facenum = GetThreadWork();
         if (facenum == -1)
@@ -201,20 +208,25 @@ LightThread(void *arg)
 static void
 FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
-    int i, shadow, numshadowmodels;
+    int i, shadow, numshadowmodels, numselfshadowmodels;
     entity_t *entity;
     char modelname[20];
     const char *attribute;
     const dmodel_t **shadowmodels;
+    const dmodel_t **selfshadowmodels;
     modelinfo_t *info;
     float lightmapscale;
 
     shadowmodels = (const dmodel_t **)malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
     memset(shadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
 
+    selfshadowmodels = (const dmodel_t **)malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
+    memset(selfshadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
+    
     /* The world always casts shadows */
     shadowmodels[0] = &bsp->dmodels[0];
     numshadowmodels = 1;
+    numselfshadowmodels = 0;
 
     memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
     modelinfo[0].model = &bsp->dmodels[0];
@@ -253,8 +265,10 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
             shadowmodels[numshadowmodels++] = &bsp->dmodels[i];
         } else {
             shadow = atoi(ValueForKey(entity, "_shadowself"));
-            if (shadow)
+            if (shadow) {
                 info->shadowself = true;
+                selfshadowmodels[numselfshadowmodels++] = &bsp->dmodels[i];
+            }
         }
 
         /* Set up the offset for rotate_* entities */
@@ -291,6 +305,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     }
 
     tracelist = shadowmodels;
+    selfshadowlist = selfshadowmodels;
 }
 
 static float
@@ -867,7 +882,7 @@ main(int argc, const char **argv)
         if (dirty)
             SetupDirt();
 
-        MakeTnodes(bsp);
+        MakeTnodes_embree(bsp);
         LightWorld(&bspdata, !!lmscaleoverride);
         
         /*invalidate any bspx lighting info early*/
