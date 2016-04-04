@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <stdio.h>
 
 #include <light/light.h>
 #include <light/entities.h>
@@ -862,6 +863,12 @@ main(int argc, const char **argv)
 
     strcpy(source, argv[i]);
     strcpy(mapfilename, argv[i]);
+    
+    // delete previous litfile
+    StripExtension(source);
+    DefaultExtension(source, ".lit");
+    remove(source);
+    
     StripExtension(source);
     DefaultExtension(source, ".bsp");
     LoadBSPFile(source, &bspdata);
