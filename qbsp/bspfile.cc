@@ -69,8 +69,11 @@ LoadBSPFile(void)
     options.BSPVersion = header->version;
 
     /* Throw all of the data into the first entity to be written out later */
-    mapentity_t first;
-    mapentity_t *entity = &first;
+    if (map.entities.empty()) {
+        map.entities.push_back(mapentity_t {});
+    }
+    
+    mapentity_t *entity = &map.entities.at(0);
     for (i = 0; i < BSP_LUMPS; i++) {
         map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
         iLumpOff = header->lumps[i].fileofs;
@@ -116,9 +119,6 @@ LoadBSPFile(void)
         }
     }
 
-    map.entities.clear();
-    map.entities.push_back(first);
-    
     FreeMem(header, OTHER, cFileSize + 1);
 }
 
