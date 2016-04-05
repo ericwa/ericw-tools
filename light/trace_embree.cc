@@ -151,7 +151,7 @@ MakeTnodes_embree(const bsp2_t *bsp)
     rtcInit(NULL);
     rtcSetErrorFunction(ErrorCallback);
 
-    scene = rtcNewScene(RTC_SCENE_STATIC, RTC_INTERSECT1);
+    scene = rtcNewScene(RTC_SCENE_STATIC | RTC_SCENE_COHERENT | RTC_SCENE_HIGH_QUALITY | RTC_SCENE_ROBUST, RTC_INTERSECT1);
     skygeom = CreateGeometry(bsp, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
     
@@ -174,7 +174,7 @@ MakeTnodes_embree(const bsp2_t *bsp)
             faces.push_back(face);
         }
         
-        RTCScene selfshadowscene = rtcNewScene(RTC_SCENE_STATIC | RTC_SCENE_HIGH_QUALITY | RTC_SCENE_ROBUST, RTC_INTERSECT1);
+        RTCScene selfshadowscene = rtcNewScene(RTC_SCENE_STATIC | RTC_SCENE_COHERENT | RTC_SCENE_HIGH_QUALITY | RTC_SCENE_ROBUST, RTC_INTERSECT1);
         CreateGeometry(bsp, selfshadowscene, faces);
         rtcCommit (selfshadowscene);
         selfshadowSceneForDModel[model] = selfshadowscene;
