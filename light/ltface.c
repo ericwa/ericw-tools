@@ -1144,7 +1144,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
         /* Check spotlight cone */
         VectorScale(ray, 1.0 / dist, ray);
         angle = DotProduct(ray, surfnorm);
-        if (angle <= 0)
+        if (angle < 0)
                 continue;       //curved surfaces are allowed to have the light 'behind' the surface. omitting this check results in erroneous darkening on these surfaces
         spotscale = 1;
         if (entity->spotlight) {
