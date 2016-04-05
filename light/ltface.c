@@ -1158,6 +1158,9 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
                 spotscale = 1.0 - spotscale;
             }
         }
+        
+        /* HACK: support lights lying exactly on a face by only tracing up to 0.1 units from the light */
+        dist = qmax(0.0f, dist - 0.1f);
 
         if (!TestLight_embree(surfpoint, ray, dist, modelinfo))
             continue;
