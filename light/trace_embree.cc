@@ -60,7 +60,7 @@ public:
 };
 
 sceneinfo
-CreateGeometry(const bsp2_t *bsp, RTCScene scene, const std::unordered_set<const bsp2_dface_t *> &faces)
+CreateGeometry(const bsp2_t *bsp, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
 {
     // count triangles
     int numtris = 0;
@@ -132,7 +132,7 @@ MakeTnodes_embree(const bsp2_t *bsp)
 {
     assert(tracelist != NULL);
     
-    std::unordered_set<const bsp2_dface_t *> skyfaces, solidfaces;
+    std::vector<const bsp2_dface_t *> skyfaces, solidfaces;
     
     /* Check against the list of global shadow casters */
     for (const dmodel_t *const *model = tracelist; *model; model++) {
@@ -141,9 +141,9 @@ MakeTnodes_embree(const bsp2_t *bsp)
             const miptex_t *miptex = MiptexForFace(bsp, face);
             
             if (miptex != NULL && !strncmp("sky", miptex->name, 3)) {
-                skyfaces.insert(face);
+                skyfaces.push_back(face);
             } else {
-                solidfaces.insert(face);
+                solidfaces.push_back(face);
             }
         }
     }
@@ -168,10 +168,10 @@ MakeTnodes_embree(const bsp2_t *bsp)
 
         // N.B. All faces are considered opaque for the selfshadow models
         
-        std::unordered_set<const bsp2_dface_t *> faces;
+        std::vector<const bsp2_dface_t *> faces;
         for (int j=0; j<model->numfaces; j++) {
             const bsp2_dface_t *face = &bsp->dfaces[model->firstface + j];
-            faces.insert(face);
+            faces.push_back(face);
         }
         
         RTCScene selfshadowscene = rtcNewScene(RTC_SCENE_STATIC | RTC_SCENE_HIGH_QUALITY | RTC_SCENE_ROBUST, RTC_INTERSECT1);
