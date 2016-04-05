@@ -331,6 +331,17 @@ AngleBetweenPoints(const vec3_t p1, const vec3_t p2, const vec3_t p3)
     return result;
 }
 
+static vec_t
+TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
+{
+    vec3_t edge0, edge1, cross;
+    VectorSubtract(v2, v0, edge0);
+    VectorSubtract(v1, v0, edge1);
+    CrossProduct(edge0, edge1, cross);
+    
+    return VectorLength(cross) * 0.5;
+}
+
 class vec3_struct_t {
 public:
     vec3_t v;
@@ -350,14 +361,15 @@ AddTriangleNormals(std::map<int, vec3_struct_t> &smoothed_normals, const vec_t *
     const vec_t *p2 = verts[v2].point;
     const vec_t *p3 = verts[v3].point;
     float weight;
+    float area = TriangleArea(p1, p2, p3);
     
-    weight = AngleBetweenPoints(p2, p1, p3);
+    weight = AngleBetweenPoints(p2, p1, p3) * area;
     VectorMA(smoothed_normals[v1].v, weight, norm, smoothed_normals[v1].v);
 
-    weight = AngleBetweenPoints(p1, p2, p3);
+    weight = AngleBetweenPoints(p1, p2, p3) * area;
     VectorMA(smoothed_normals[v2].v, weight, norm, smoothed_normals[v2].v);
 
-    weight = AngleBetweenPoints(p1, p3, p2);
+    weight = AngleBetweenPoints(p1, p3, p2) * area;
     VectorMA(smoothed_normals[v3].v, weight, norm, smoothed_normals[v3].v);
 }
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
