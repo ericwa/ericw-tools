@@ -1102,15 +1102,15 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
     const vec_t *surfpoint, *surfnorm;
     int i;
     qboolean hit;
-    vec_t dist, add, angle, spotscale;
+    vec_t planedist, add, angle, spotscale;
     lightsample_t *sample;
     lightmap_t *lightmap;
     qboolean curved = lightsurf->curved;
 
-    dist = DotProduct(entity->origin, plane->normal) - plane->dist;
+    planedist = DotProduct(entity->origin, plane->normal) - plane->dist;
 
     /* don't bother with lights behind the surface */
-    if (dist < 0 && !curved)
+    if (planedist < 0 && !curved)
         return;
 
     /* sphere cull surface and light */
@@ -1127,28 +1127,21 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
     surfpoint = lightsurf->points[0];
     surfnorm = lightsurf->normals[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3, surfnorm += 3) {
-        vec3_t surfpoint_actual, ray;
-
-        // surfpoint is hovering above the face by 1 unit (see CalcPoints).
-        // We the point exactly on the plane for calculating the light angle,
-        // otherwise lights within 1 unit of a surface don't work
-        ProjectPointOntoPlane(surfpoint, &lightsurf->plane, surfpoint_actual);
-        
-        VectorSubtract(entity->origin, surfpoint_actual, ray);
-        dist = VectorLength(ray);
+        vec3_t surfpointToLightDir;
+        VectorSubtract(entity->origin, surfpoint, surfpointToLightDir);
+        vec_t surfpointToLightDist = VectorNormalize(surfpointToLightDir);
 
         /* Quick distance check first */
-        if (fabs(GetLightValue(&entity->light, entity, dist)) <= fadegate)
+        if (fabs(GetLightValue(&entity->light, entity, surfpointToLightDist)) <= fadegate)
             continue;
 
+        angle = DotProduct(surfpointToLightDir, surfnorm);
+        angle = qmax(0.0f, angle); // light can be behind sample point if the light is right on the face
+
         /* Check spotlight cone */
-        VectorScale(ray, 1.0 / dist, ray);
-        angle = DotProduct(ray, surfnorm);
-        if (angle < 0)
-                continue;       //curved surfaces are allowed to have the light 'behind' the surface. omitting this check results in erroneous darkening on these surfaces
         spotscale = 1;
         if (entity->spotlight) {
-            vec_t falloff = DotProduct(entity->spotvec, ray);
+            vec_t falloff = DotProduct(entity->spotvec, surfpointToLightDir);
             if (falloff > entity->spotfalloff)
                 continue;
             if (falloff > entity->spotfalloff2) {
@@ -1160,26 +1153,25 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
         }
         
         /* HACK: support lights lying exactly on a face by only tracing up to 0.1 units from the light */
-        dist = qmax(0.0f, dist - 0.1f);
+        surfpointToLightDist = qmax(0.0f, surfpointToLightDist - 0.01f);
 
-        if (!TestLight_embree(surfpoint, ray, dist, modelinfo))
+        if (!TestLight_embree(surfpoint, surfpointToLightDir, surfpointToLightDist, modelinfo))
             continue;
 
-        if (dist >= 0)  //anglescale normally lights the surface more than it otherwise should, meaning the dark side would be visible if there were no occlusion. naturally, this doesn't work when we're relaxing occlusion to faciliate curves.
         angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
-        add = GetLightValue(light, entity, dist) * angle * spotscale;
+        add = GetLightValue(light, entity, surfpointToLightDist) * angle * spotscale;
         add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, lightsurf);
 
         if (entity->projectedmip)
         {
             vec3_t col;
             VectorCopy(light->color, col);
-            VectorScale(ray, 255, col);
-            LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint_actual, col);
-            Light_Add(sample, add, col, ray);           
+            VectorScale(surfpointToLightDir, 255, col);
+            LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
+            Light_Add(sample, add, col, surfpointToLightDir);
+        } else {
+            Light_Add(sample, add, light->color, surfpointToLightDir);
         }
-        else
-        Light_Add(sample, add, light->color, ray);
 
         /* Check if we really hit, ignore tiny lights */
         /* ericw -- never ignore generated lights, which can be tiny and need
