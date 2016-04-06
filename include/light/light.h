@@ -219,8 +219,8 @@ struct ltface_ctx
 };
 
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
-extern const dmodel_t *const *tracelist;
-extern const dmodel_t *const *selfshadowlist;
+extern const modelinfo_t *const *tracelist;
+extern const modelinfo_t *const *selfshadowlist;
 
 struct ltface_ctx;
 struct ltface_ctx *LightFaceInit(const bsp2_t *bsp);

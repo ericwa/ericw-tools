@@ -86,8 +86,8 @@ static byte *lux_file_p;        // start of free space after luxfile data
 static byte *lux_file_end;      // end of space for luxfile data
 
 static modelinfo_t *modelinfo;
-const dmodel_t *const *tracelist;
-const dmodel_t *const *selfshadowlist;
+const modelinfo_t *const *tracelist;
+const modelinfo_t *const *selfshadowlist;
 
 int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
@@ -213,19 +213,19 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     entity_t *entity;
     char modelname[20];
     const char *attribute;
-    const dmodel_t **shadowmodels;
-    const dmodel_t **selfshadowmodels;
+    const modelinfo_t **shadowmodels;
+    const modelinfo_t **selfshadowmodels;
     modelinfo_t *info;
     float lightmapscale;
 
-    shadowmodels = (const dmodel_t **)malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
-    memset(shadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
+    shadowmodels = (const modelinfo_t **)malloc(sizeof(modelinfo_t *) * (bsp->nummodels + 1));
+    memset(shadowmodels, 0, sizeof(modelinfo_t *) * (bsp->nummodels + 1));
 
-    selfshadowmodels = (const dmodel_t **)malloc(sizeof(dmodel_t *) * (bsp->nummodels + 1));
-    memset(selfshadowmodels, 0, sizeof(dmodel_t *) * (bsp->nummodels + 1));
+    selfshadowmodels = (const modelinfo_t **)malloc(sizeof(modelinfo_t *) * (bsp->nummodels + 1));
+    memset(selfshadowmodels, 0, sizeof(modelinfo_t *) * (bsp->nummodels + 1));
     
     /* The world always casts shadows */
-    shadowmodels[0] = &bsp->dmodels[0];
+    shadowmodels[0] = &modelinfo[0];
     numshadowmodels = 1;
     numselfshadowmodels = 0;
 
@@ -263,12 +263,12 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         /* Check if this model will cast shadows (shadow => shadowself) */
         shadow = atoi(ValueForKey(entity, "_shadow"));
         if (shadow) {
-            shadowmodels[numshadowmodels++] = &bsp->dmodels[i];
+            shadowmodels[numshadowmodels++] = info;
         } else {
             shadow = atoi(ValueForKey(entity, "_shadowself"));
             if (shadow) {
                 info->shadowself = true;
-                selfshadowmodels[numselfshadowmodels++] = &bsp->dmodels[i];
+                selfshadowmodels[numselfshadowmodels++] = info;
             }
         }
 

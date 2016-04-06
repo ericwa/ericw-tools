@@ -135,9 +135,9 @@ MakeTnodes_embree(const bsp2_t *bsp)
     std::vector<const bsp2_dface_t *> skyfaces, solidfaces;
     
     /* Check against the list of global shadow casters */
-    for (const dmodel_t *const *model = tracelist; *model; model++) {
-        for (int i=0; i<(*model)->numfaces; i++) {
-            const bsp2_dface_t *face = &bsp->dfaces[(*model)->firstface + i];
+    for (const modelinfo_t *const *model = tracelist; *model; model++) {
+        for (int i=0; i<(*model)->model->numfaces; i++) {
+            const bsp2_dface_t *face = &bsp->dfaces[(*model)->model->firstface + i];
             const miptex_t *miptex = MiptexForFace(bsp, face);
             
             if (miptex != NULL && !strncmp("sky", miptex->name, 3)) {
@@ -258,7 +258,7 @@ DirtTrace_embree(const vec3_t start, const vec3_t dir, vec_t dist, vec_t *hitdis
     
     if (ray.geomID != solidgeom.geomID) {
         // don't re-check the world's self-shadow model because it's already part of 'scene'
-        if (model->model != tracelist[0]) {
+        if (model->model != tracelist[0]->model) {
             RTCScene selfshadowscene = selfshadowSceneForDModel[model->model];
             ray = SetupRay(start, dir, dist);
             rtcIntersect(selfshadowscene, ray);
@@ -322,7 +322,7 @@ CalcPointsTrace_embree(const vec3_t start, const vec3_t dir, vec_t dist, vec_t *
     
     // if there is no hit, but we were tracning on a submodel, also test against the world.
     if (ray.geomID == RTC_INVALID_GEOMETRY_ID
-        && model->model != tracelist[0]) {
+        && model->model != tracelist[0]->model) {
         ray = SetupRay(start, dir, dist);
         rtcIntersect(scene, ray);
     }
