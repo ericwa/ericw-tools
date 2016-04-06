@@ -595,10 +595,6 @@ __attribute__((noinline))
 static void
 CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *texorg, lightsurf_t *surf, const bsp2_t *bsp, const bsp2_dface_t *face)
 {
-    int s, t;
-    int width, height;
-    vec_t *point, *norm;
-
     /*
      * Fill in the surface points. The points are biased towards the center of
      * the surface to help avoid edge cases just inside walls
@@ -606,8 +602,8 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *te
     TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], texorg, surf->midpoint);
     VectorAdd(surf->midpoint, offset, surf->midpoint);
 
-    width  = (surf->texsize[0] + 1) * oversample;
-    height = (surf->texsize[1] + 1) * oversample;
+    const int width  = (surf->texsize[0] + 1) * oversample;
+    const int height = (surf->texsize[1] + 1) * oversample;
     surf->starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
     surf->startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
     surf->st_step = surf->lightmapscale / oversample;
@@ -616,10 +612,14 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *te
     surf->numpoints = width * height;
     surf->points = calloc(surf->numpoints, sizeof(vec3_t));
     surf->normals = calloc(surf->numpoints, sizeof(vec3_t));
-    point = surf->points[0];
-    norm = surf->normals[0];
-    for (t = 0; t < height; t++) {
-        for (s = 0; s < width; s++, point += 3, norm += 3) {
+    surf->occluded = (bool *)calloc(surf->numpoints, sizeof(bool));
+    
+    for (int t = 0; t < height; t++) {
+        for (int s = 0; s < width; s++) {
+            const int i = t*width + s;
+            vec_t *point = surf->points[i];
+            vec_t *norm = surf->normals[i];
+            
             const vec_t us = surf->starts + s * surf->st_step;
             const vec_t ut = surf->startt + t * surf->st_step;
 
@@ -1683,6 +1683,9 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     
     if (ctx->lightsurf.occlusion)
         free(ctx->lightsurf.occlusion);
+    
+    if (ctx->lightsurf.occluded)
+        free(ctx->lightsurf.occluded);
     
     free(ctx);
 }
