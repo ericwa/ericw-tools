@@ -635,9 +635,13 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *te
                 VectorCopy(surf->plane.normal, norm);
             }
 
-            for (int tries=0; tries<5; tries++) {
+            for (int s_offset = -1; s_offset <= 1; s_offset++) {
+                vec3_t testpoint;
+                TexCoordToWorld(us + s_offset, ut, texorg, testpoint);
+                VectorAdd(testpoint, offset, testpoint);
+                
                 vec3_t tracevec, tracedir;
-                VectorSubtract(point, surf->midpoint, tracevec);
+                VectorSubtract(testpoint, surf->midpoint, tracevec);
                 VectorCopy(tracevec, tracedir);
                 VectorNormalize(tracedir);
                 
@@ -651,7 +655,6 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *te
                     vec3_t hitpoint;
                     VectorMA(surf->midpoint, hitdist, tracedir, hitpoint);
                     VectorMA(hitpoint, 1, hitnormal, point);
-                } else {
                     break;
                 }
             }
