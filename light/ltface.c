@@ -593,37 +593,37 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
  */
 __attribute__((noinline))
 static void
-CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *texorg, lightsurf_t *surf, const bsp2_t *bsp, const bsp2_dface_t *face)
+CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf, const bsp2_t *bsp, const bsp2_dface_t *face)
 {
     /*
      * Fill in the surface points. The points are biased towards the center of
      * the surface to help avoid edge cases just inside walls
      */
-    TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], texorg, surf->midpoint);
+    TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg, surf->midpoint);
     VectorAdd(surf->midpoint, offset, surf->midpoint);
 
-    const int width  = (surf->texsize[0] + 1) * oversample;
-    const int height = (surf->texsize[1] + 1) * oversample;
+    surf->width  = (surf->texsize[0] + 1) * oversample;
+    surf->height = (surf->texsize[1] + 1) * oversample;
     surf->starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
     surf->startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
     surf->st_step = surf->lightmapscale / oversample;
 
     /* Allocate surf->points */
-    surf->numpoints = width * height;
+    surf->numpoints = surf->width * surf->height;
     surf->points = calloc(surf->numpoints, sizeof(vec3_t));
     surf->normals = calloc(surf->numpoints, sizeof(vec3_t));
     surf->occluded = (bool *)calloc(surf->numpoints, sizeof(bool));
     
-    for (int t = 0; t < height; t++) {
-        for (int s = 0; s < width; s++) {
-            const int i = t*width + s;
+    for (int t = 0; t < surf->height; t++) {
+        for (int s = 0; s < surf->width; s++) {
+            const int i = t*surf->width + s;
             vec_t *point = surf->points[i];
             vec_t *norm = surf->normals[i];
             
             const vec_t us = surf->starts + s * surf->st_step;
             const vec_t ut = surf->startt + t * surf->st_step;
 
-            TexCoordToWorld(us, ut, texorg, point);
+            TexCoordToWorld(us, ut, &surf->texorg, point);
             VectorAdd(point, offset, point);
             
             if (surf->curved)
@@ -637,7 +637,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *te
 
             for (int s_offset = -1; s_offset <= 1; s_offset++) {
                 vec3_t testpoint;
-                TexCoordToWorld(us + s_offset, ut, texorg, testpoint);
+                TexCoordToWorld(us + s_offset, ut, &surf->texorg, testpoint);
                 VectorAdd(testpoint, offset, testpoint);
                 
                 vec3_t tracevec, tracedir;
@@ -714,7 +714,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 
     /* Set up the surface points */
     CalcFaceExtents(face, bsp, lightsurf);
-    CalcPoints(modelinfo, modelinfo->offset, &lightsurf->texorg, lightsurf, bsp, face);
+    CalcPoints(modelinfo, modelinfo->offset, lightsurf, bsp, face);
     
     /* Correct the plane for the model offset (must be done last, 
        calculation of face extents / points needs the uncorrected plane) */

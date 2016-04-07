@@ -205,6 +205,7 @@ typedef struct {
     /* stuff used by CalcPoint */
     vec_t starts, startt, st_step;
     texorg_t texorg;
+    int width, height;
 } lightsurf_t;
 
 typedef struct {
