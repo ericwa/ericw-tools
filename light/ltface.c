@@ -635,20 +635,25 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, const texorg_t *te
                 VectorCopy(surf->plane.normal, norm);
             }
 
-            vec3_t tracevec, tracedir;
-            VectorSubtract(point, surf->midpoint, tracevec);
-            VectorCopy(tracevec, tracedir);
-            VectorNormalize(tracedir);
-            
-            // trace 1 unit further than we need to go to ensure 1 unit clearance
-            const vec_t dist = VectorLength(tracevec) + 1;
-            
-            vec_t hitdist = 0;
-            vec3_t hitnormal = {0};
-            if (CalcPointsTrace_embree(surf->midpoint, tracedir, dist, &hitdist, hitnormal, surf->modelinfo)) {
-                // we hit a solid. pull back 1 unit from the hitpoint and hope that's in empty space.
-                hitdist = qmax(0.0f, hitdist - 1.0f);
-                VectorMA(surf->midpoint, hitdist, tracedir, point);
+            for (int tries=0; tries<5; tries++) {
+                vec3_t tracevec, tracedir;
+                VectorSubtract(point, surf->midpoint, tracevec);
+                VectorCopy(tracevec, tracedir);
+                VectorNormalize(tracedir);
+                
+                // trace 1 unit further than we need to go to ensure 1 unit clearance
+                const vec_t dist = VectorLength(tracevec) + 1;
+                
+                vec_t hitdist = 0;
+                vec3_t hitnormal = {0};
+                if (CalcPointsTrace_embree(surf->midpoint, tracedir, dist, &hitdist, hitnormal, surf->modelinfo)) {
+                    // we hit a solid. pull back 1 unit in the direction of the hit normal
+                    vec3_t hitpoint;
+                    VectorMA(surf->midpoint, hitdist, tracedir, hitpoint);
+                    VectorMA(hitpoint, 1, hitnormal, point);
+                } else {
+                    break;
+                }
             }
         }
     }

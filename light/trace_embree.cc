@@ -329,8 +329,10 @@ CalcPointsTrace_embree(const vec3_t start, const vec3_t dir, vec_t dist, vec_t *
     
     if (hitdist)
         *hitdist = ray.tfar;
-    if (normal)
+    if (normal) {
         VectorCopy(ray.Ng, normal);
+        VectorNormalize(normal);
+    }
 
     return ray.geomID != RTC_INVALID_GEOMETRY_ID;
 }
