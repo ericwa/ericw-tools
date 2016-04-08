@@ -510,11 +510,16 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             const int vertIndex = pair.first;
             vec_t *vertNormal = pair.second.v;
             if (0 == VectorNormalize(vertNormal)) {
+                // this happens when there are colinear vertices, which give zero-area triangles,
+                // so there is no contribution to the normal of the triangle in the middle of the
+                // line. Not really an error, just set it to use the face normal.
+#if 0
                 logprint("Failed to calculate normal for vertex %d at (%f %f %f)\n",
                          vertIndex,
                          bsp->dvertexes[vertIndex].point[0],
                          bsp->dvertexes[vertIndex].point[1],
                          bsp->dvertexes[vertIndex].point[2]);
+#endif
                 VectorCopy(f_norm, vertNormal);
             }
         }
