@@ -663,7 +663,7 @@ static bool
 ParseEntity(parser_t *parser, mapentity_t *entity)
 {
     if (!ParseToken(parser, PARSE_NORMAL))
-        return nullptr;
+        return false;
 
     if (strcmp(parser->token, "{"))
         Error("line %d: Invalid entity format, { not found", parser->linenum);
@@ -686,7 +686,7 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
             ParseEpair(parser, entity);
     } while (1);
 
-    return entity;
+    return true;
 }
 
 /*
