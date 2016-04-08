@@ -584,6 +584,31 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
     VectorNormalize(norm);
 }
 
+static bool
+CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, const vec_t ut, vec3_t corrected)
+{
+    for (int x = -1; x <= 1; x += 2) {
+        for (int y = -1; y <= 1; y += 2) {
+            vec3_t testpoint;
+            TexCoordToWorld(us + (x/10.0), ut + (y/10.0), &surf->texorg, testpoint);
+            VectorAdd(testpoint, offset, testpoint);
+            
+            vec3_t tracedir;
+            VectorSubtract(testpoint, surf->midpoint, tracedir);
+            const vec_t dist = VectorNormalize(tracedir);
+            
+            vec_t hitdist = 0;
+            vec3_t hitnormal = {0};
+            if (CalcPointsTrace_embree(surf->midpoint, tracedir, dist, &hitdist, hitnormal, surf->modelinfo)) {
+                // make a corrected point
+                VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.1f), tracedir, corrected);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 /*
  * =================
  * CalcPoints
@@ -634,30 +659,8 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             {
                 VectorCopy(surf->plane.normal, norm);
             }
-
-            for (int s_offset = -1; s_offset <= 1; s_offset++) {
-                vec3_t testpoint;
-                TexCoordToWorld(us + s_offset, ut, &surf->texorg, testpoint);
-                VectorAdd(testpoint, offset, testpoint);
-                
-                vec3_t tracevec, tracedir;
-                VectorSubtract(testpoint, surf->midpoint, tracevec);
-                VectorCopy(tracevec, tracedir);
-                VectorNormalize(tracedir);
-                
-                // trace 1 unit further than we need to go to ensure 1 unit clearance
-                const vec_t dist = VectorLength(tracevec) + 1;
-                
-                vec_t hitdist = 0;
-                vec3_t hitnormal = {0};
-                if (CalcPointsTrace_embree(surf->midpoint, tracedir, dist, &hitdist, hitnormal, surf->modelinfo)) {
-                    // we hit a solid. pull back 1 unit in the direction of the hit normal
-                    vec3_t hitpoint;
-                    VectorMA(surf->midpoint, hitdist, tracedir, hitpoint);
-                    VectorMA(hitpoint, 1, hitnormal, point);
-                    break;
-                }
-            }
+            
+            CheckObstructed(surf, offset, us, ut, point);
         }
     }
 }
