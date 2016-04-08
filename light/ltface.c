@@ -1698,6 +1698,17 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     free(ctx);
 }
 
+static const char *
+Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    int texnum = bsp->texinfo[face->texinfo].miptex;
+    const dmiptexlump_t *miplump = bsp->dtexdata.header;
+    if (!miplump->dataofs[texnum])
+        return ""; //sometimes the texture just wasn't written. including its name.
+    const miptex_t *miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[texnum]);
+    return miptex->name;
+}
+
 /*
  * ============
  * LightFace
@@ -1715,7 +1726,8 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     const bsp2_t *bsp = ctx->bsp;
     lightmap_t *lightmaps = ctx->lightmaps;
     lightsurf_t *lightsurf = &ctx->lightsurf;
-
+    const char *texname = Face_TextureName(bsp, face);
+    
     /* One extra lightmap is allocated to simplify handling overflow */
 
     /* some surfaces don't need lightmaps */
@@ -1733,29 +1745,29 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
     if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL)
     {
-        int texnum = bsp->texinfo[face->texinfo].miptex;
-        dmiptexlump_t *miplump = bsp->dtexdata.header;
-        miptex_t *miptex;
         int turbtype;
         if (!lightturb)
-        return;
-        if (!miplump->dataofs[texnum])
+            return;
+        if (*texname == '\0')
                 return; //sometimes the texture just wasn't written. including its name.
-        miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[texnum]);
-        if (*miptex->name != '*')
+        if (*texname != '*')
             return;     //non-water surfaces should still not be lit
         //texture name starts with a *, so light it anyway.
-        if (!Q_strncasecmp(miptex->name, "*tele", 5))
+        if (!Q_strncasecmp(texname, "*tele", 5))
                 turbtype = 3;
-        else if (!Q_strncasecmp(miptex->name, "*lava", 5))
+        else if (!Q_strncasecmp(texname, "*lava", 5))
                 turbtype = 2;
-        else if (!Q_strncasecmp(miptex->name, "*slime", 6))
+        else if (!Q_strncasecmp(texname, "*slime", 6))
                 turbtype = 1;
         else
                 turbtype = 0;
         if (!(lightturb & (1u<<turbtype)))
                 return;
     }
+    
+    /* don't save lightmaps for "trigger" texture */
+    if (!Q_strcasecmp(texname, "trigger"))
+        return;
 
     Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup);
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
