@@ -229,6 +229,10 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     numshadowmodels = 1;
     numselfshadowmodels = 0;
 
+    if (!bsp->nummodels) {
+        Error("Corrupt .BSP: bsp->nummodels is 0!");
+    }
+    
     memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
     modelinfo[0].model = &bsp->dmodels[0];
 
