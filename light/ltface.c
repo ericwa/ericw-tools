@@ -692,13 +692,10 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
         VectorSet(lightsurf->minlight.color, 255, 255, 255);
     }
     
-    /* Set up the plane, including model offset */
+    /* Set up the plane, not including model offset */
     plane = &lightsurf->plane;
     VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
     plane->dist = bsp->dplanes[face->planenum].dist;
-    VectorScale(plane->normal, plane->dist, planepoint);
-    VectorAdd(planepoint, modelinfo->offset, planepoint);
-    plane->dist = DotProduct(plane->normal, planepoint);
     if (face->side) {
         VectorSubtract(vec3_origin, plane->normal, plane->normal);
         plane->dist = -plane->dist;
