@@ -94,7 +94,7 @@ int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean phongDebug = false;
-qboolean parse_escape_sequences = false;
+qboolean parse_escape_sequences = true;
 
 uint32_t *extended_texinfo_flags = NULL;
 
@@ -822,9 +822,9 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
             onlyents = true;
             logprint( "Onlyents mode enabled\n" );
-        } else if ( !strcmp( argv[ i ], "-parse_escape_sequences" ) ) {
-            parse_escape_sequences = true;
-            logprint( "Parsing escape sequences enabled\n" );
+        } else if ( !strcmp( argv[ i ], "-no_parse_escape_sequences" ) ) {
+            parse_escape_sequences = false;
+            logprint( "Parsing escape sequences disabled\n" );
         } else if ( !strcmp( argv[ i ], "-phongdebug" ) ) {
             phongDebug = true;
             write_litfile |= 1;
@@ -841,7 +841,7 @@ main(int argc, const char **argv)
                "             [-lightturb] [-lightwater] [-lightslime] [-lightlava] [-lighttele]\n"
                "             [-dist n] [-range n] [-gate n] [-lit|-lit2] [-lux] [-bspx] [-lmscale n]\n"
                "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-parse_escape_sequences] [-phongdebug] bspfile\n");
+               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-no_parse_escape_sequences] [-phongdebug] bspfile\n");
         exit(1);
     }
 
