@@ -4,7 +4,6 @@ install:
 - ps: 7z x embree.zip -oc:\
 build_script:
 - ps: >-
-    # for groff
     $env:Path += ";C:\cygwin64\bin"
 
     mkdir cmakebuild
