@@ -65,6 +65,9 @@ add_subdirectory(qbsp)
 add_subdirectory(vis)
 add_subdirectory(man)
 
+install(FILES README.txt DESTINATION bin)
+install(FILES changelog.txt DESTINATION bin)
+
 #CPack configuration
 
 set(CPACK_GENERATOR ZIP)
