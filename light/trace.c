@@ -612,7 +612,7 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
             if (fi->content == CONTENTS_SOLID || fi->content == CONTENTS_SKY) {
                 ti->face = face;
                 ti->hitsky = (fi->content == CONTENTS_SKY);
-                
+                VectorCopy(fi->plane.normal, ti->hitnormal);
                 // check if we hit the back side
                 ti->hitback = (DotProduct(ti->dir, fi->plane.normal) >= 0);
                 

@@ -45,6 +45,7 @@ extern "C" {
 typedef struct traceinfo_s {
     vec3_t			point;
     const bsp2_dface_t          *face;
+    vec3_t  hitnormal;
     /* returns true if sky was hit. */
     bool hitsky;
     bool hitback;
@@ -99,7 +100,7 @@ int TraceLine(const dmodel_t *model, const int traceflags,
  */
 qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out);
+qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, vec3_t hitnormal_out);
 
 typedef struct {
     vec_t light;
