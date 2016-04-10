@@ -25,18 +25,4 @@ target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
 set_property(TARGET light PROPERTY CXX_STANDARD 11)
 set_property(TARGET light PROPERTY CXX_STANDARD_REQUIRED ON)
 
-if(WIN32)
-    file(GLOB EMBREE_DLLS "${embree_DIR}/../../*.dll")
-    foreach(EMBREE_DLL ${EMBREE_DLLS})
-        add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_DLL} $<TARGET_FILE_DIR:light>)
-    endforeach(EMBREE_DLL)
-    
-    set(EMBREE_LICENSE "${embree_DIR}/../../../doc/LICENSE.txt")
-    add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_LICENSE} $<TARGET_FILE_DIR:light>/LICENSE-embree.txt)
-endif()
-
 install(TARGETS light RUNTIME DESTINATION bin)
-if(WIN32)
-    install(FILES ${EMBREE_DLLS} DESTINATION bin)
-    install(FILES LICENSE-embree.txt DESTINATION bin)
-endif()
