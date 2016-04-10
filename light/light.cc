@@ -24,9 +24,6 @@
 #include <light/light.h>
 #include <light/entities.h>
 
-#include <xmmintrin.h>
-#include <pmmintrin.h>
-
 #include <vector>
 #include <map>
 #include <set>
@@ -161,9 +158,6 @@ LightThread(void *arg)
     const modelinfo_t *face_modelinfo;
     struct ltface_ctx *ctx;
 
-    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
-    
     while (1) {
         facenum = GetThreadWork();
         if (facenum == -1)
@@ -898,7 +892,7 @@ main(int argc, const char **argv)
         if (dirty)
             SetupDirt();
 
-        MakeTnodes_embree(bsp);
+        MakeTnodes(bsp);
         LightWorld(&bspdata, !!lmscaleoverride);
         
         /*invalidate any bspx lighting info early*/

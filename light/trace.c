@@ -500,15 +500,15 @@ TraceLine(const dmodel_t *model, const int traceflags,
 qboolean
 TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 {
-    const dmodel_t *const *model;
+    const modelinfo_t *const *model;
     const int traceflags = TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
 
     /* Check against the list of global shadow casters */
     for (model = tracelist; *model; model++) {
-        if (*model == self)
+        if ((*model)->model == self)
             continue;
-        result = TraceLine(*model, traceflags, start, stop, NULL);
+        result = TraceLine((*model)->model, traceflags, start, stop, NULL);
         if (result != TRACE_HIT_NONE)
             break;
     }
@@ -523,7 +523,7 @@ TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 qboolean
 TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 {
-    const dmodel_t *const *model;
+    const modelinfo_t *const *model;
     int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
     vec3_t stop;
@@ -531,16 +531,16 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 
     /* Trace towards the sunlight for a sky brush */
     VectorAdd(dirn, start, stop);
-    result = TraceLine(tracelist[0], traceflags, start, stop, &hit);
+    result = TraceLine(tracelist[0]->model, traceflags, start, stop, &hit);
     if (result != TRACE_HIT_SKY)
         return false;
 
     /* If good, check it isn't shadowed by another model */
     traceflags = TRACE_HIT_SOLID;
     for (model = tracelist + 1; *model; model++) {
-        if (*model == self)
+        if ((*model)->model == self)
             continue;
-        result = TraceLine(*model, traceflags, start, hit.point, NULL);
+        result = TraceLine((*model)->model, traceflags, start, hit.point, NULL);
         if (result != TRACE_HIT_NONE)
             return false;
     }

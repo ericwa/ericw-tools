@@ -10,7 +10,7 @@ set(LIGHT_SOURCES
 	entities.c
 	litfile.c
 	ltface.c
-	trace_embree.cc
+	trace.c
 	light.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.c
 	${CMAKE_SOURCE_DIR}/common/cmdlib.c
@@ -20,11 +20,8 @@ set(LIGHT_SOURCES
 	${COMMON_INCLUDES}
 	${LIGHT_INCLUDES})
 
-FIND_PACKAGE(embree 2.0 REQUIRED)
-INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
-
 add_executable(light ${LIGHT_SOURCES})
-target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT} ${EMBREE_LIBRARY})
+target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
 set_property(TARGET light PROPERTY CXX_STANDARD 11)
 set_property(TARGET light PROPERTY CXX_STANDARD_REQUIRED ON)
 

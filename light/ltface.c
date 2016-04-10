@@ -593,14 +593,14 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             TexCoordToWorld(us + (x/10.0), ut + (y/10.0), &surf->texorg, testpoint);
             VectorAdd(testpoint, offset, testpoint);
             
-            vec3_t tracedir;
-            VectorSubtract(testpoint, surf->midpoint, tracedir);
-            const vec_t dist = VectorNormalize(tracedir);
-            
-            vec_t hitdist = 0;
-            vec3_t hitnormal = {0};
-            if (CalcPointsTrace_embree(surf->midpoint, tracedir, dist, &hitdist, hitnormal, surf->modelinfo)) {
+            vec3_t hitpoint = {0};
+            if (DirtTrace(surf->midpoint, testpoint, surf->modelinfo->model, hitpoint)) {
                 // make a corrected point
+                
+                vec3_t tracedir;
+                VectorSubtract(hitpoint, surf->midpoint, tracedir);
+                const vec_t hitdist = VectorNormalize(tracedir);
+                
                 VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.1f), tracedir, corrected);
                 return true;
             }
@@ -1163,7 +1163,7 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
         /* HACK: support lights lying exactly on a face by only tracing up to 0.1 units from the light */
         surfpointToLightDist = qmax(0.0f, surfpointToLightDist - 0.01f);
 
-        if (!TestLight_embree(surfpoint, surfpointToLightDir, surfpointToLightDist, modelinfo))
+        if (!TestLight(entity->origin, surfpoint, shadowself))
             continue;
 
         angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
@@ -1230,16 +1230,12 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     surfnorm = lightsurf->normals[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3, surfnorm += 3) {
         vec_t value;
-        
-        // FIXME: slow
-        vec3_t sundir;
-        VectorCopy(sun->sunvec, sundir);
-        VectorNormalize(sundir);
-        if (!TestSky_embree(surfpoint, sundir, modelinfo))
-            continue;
 
         angle = DotProduct(incoming, surfnorm);
         if (angle < 0)
+            continue;
+
+        if (!TestSky(surfpoint, sun->sunvec, shadowself))
             continue;
         
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
@@ -1307,10 +1303,7 @@ LightFace_Min(const lightsample_t *light,
         for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
             if (addminlight || sample->light < (*entity)->light.light) {
                 vec_t value = (*entity)->light.light;
-                vec3_t ray;
-                VectorSubtract(surfpoint, (*entity)->origin, ray);
-                vec_t dist = VectorNormalize(ray);
-                trace = TestLight_embree((*entity)->origin, ray, dist, modelinfo);
+                trace = TestLight((*entity)->origin, surfpoint, shadowself);
                 if (!trace)
                     continue;
                 value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), lightsurf);
@@ -1440,14 +1433,52 @@ void SetupDirt( void ) {
 
 /*
  * ============
+ * DirtTrace
+ *
+ * returns true if the trace from start to stop hits something solid,
+ * or if it started in the void.
+ * ============
+ */
+qboolean
+DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out)
+{
+    const modelinfo_t *const *model;
+    traceinfo_t ti = {0};
+    
+    VectorSubtract(stop, start, ti.dir);
+    VectorNormalize(ti.dir);
+    
+    if (self) {
+        if (TraceFaces (&ti, self->headnode[0], start, stop)) {
+            VectorCopy(ti.point, hitpoint_out);
+            return !ti.hitsky;
+        }
+    }
+
+    /* Check against the list of global shadow casters */
+    for (model = tracelist; *model; model++) {
+        if ((*model)->model == self)
+            continue;
+        if (TraceFaces (&ti, (*model)->model->headnode[0], start, stop)) {
+            VectorCopy(ti.point, hitpoint_out);
+            return !ti.hitsky;
+        }
+    }
+
+    return false;
+}
+
+/*
+ * ============
  * DirtForSample
  * ============
  */
 static vec_t
-DirtForSample(const modelinfo_t *modelinfo, const vec3_t origin, const vec3_t normal){
+DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     int i;
     float gatherDirt, angle, elevation, ooDepth;
-    vec3_t worldUp, myUp, myRt, temp, direction;
+    vec3_t worldUp, myUp, myRt, temp, direction, displacement;
+    vec3_t traceEnd, traceHitpoint;
 
     /* dummy check */
     if ( !dirty ) {
@@ -1491,10 +1522,13 @@ DirtForSample(const modelinfo_t *modelinfo, const vec3_t origin, const vec3_t no
             direction[ 1 ] = myRt[ 1 ] * temp[ 0 ] + myUp[ 1 ] * temp[ 1 ] + normal[ 1 ] * temp[ 2 ];
             direction[ 2 ] = myRt[ 2 ] * temp[ 0 ] + myUp[ 2 ] * temp[ 1 ] + normal[ 2 ] * temp[ 2 ];
 
+            /* set endpoint */
+            VectorMA( origin, dirtDepth, direction, traceEnd );
+
             /* trace */
-            vec_t displacement_len;
-            if (DirtTrace_embree(origin, direction, dirtDepth, &displacement_len, NULL, modelinfo)) {
-                gatherDirt += 1.0f - ooDepth * displacement_len;
+            if (DirtTrace(origin, traceEnd, model, traceHitpoint)) {
+                VectorSubtract( traceHitpoint, origin, displacement );
+                gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
         }
     } else {
@@ -1505,18 +1539,24 @@ DirtForSample(const modelinfo_t *modelinfo, const vec3_t origin, const vec3_t no
             direction[ 1 ] = myRt[ 1 ] * dirtVectors[ i ][ 0 ] + myUp[ 1 ] * dirtVectors[ i ][ 1 ] + normal[ 1 ] * dirtVectors[ i ][ 2 ];
             direction[ 2 ] = myRt[ 2 ] * dirtVectors[ i ][ 0 ] + myUp[ 2 ] * dirtVectors[ i ][ 1 ] + normal[ 2 ] * dirtVectors[ i ][ 2 ];
 
+            /* set endpoint */
+            VectorMA( origin, dirtDepth, direction, traceEnd );
+            
             /* trace */
-            vec_t displacement_len;
-            if (DirtTrace_embree(origin, direction, dirtDepth, &displacement_len, NULL, modelinfo)) {
-                gatherDirt += 1.0f - ooDepth * displacement_len;
+            if (DirtTrace(origin, traceEnd, model, traceHitpoint)) {
+                VectorSubtract( traceHitpoint, origin, displacement );
+                gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
         }
     }
 
     /* direct ray */
-    vec_t displacement_len;
-    if (DirtTrace_embree(origin, normal, dirtDepth, &displacement_len, NULL, modelinfo)) {
-        gatherDirt += 1.0f - ooDepth * displacement_len;
+    VectorMA( origin, dirtDepth, normal, traceEnd );
+    
+    /* trace */
+    if (DirtTrace(origin, traceEnd, model, traceHitpoint)) {
+        VectorSubtract( traceHitpoint, origin, displacement );
+        gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
     }
 
     /* save gatherDirt, the rest of the scaling of the dirt value is done
@@ -1542,7 +1582,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
     /* Check each point... */
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
-        lightsurf->occlusion[i] = DirtForSample(modelinfo, surfpoint, plane->normal);
+        lightsurf->occlusion[i] = DirtForSample(modelinfo->model, surfpoint, plane->normal);
     }
 }
 
