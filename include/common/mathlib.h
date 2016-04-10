@@ -29,10 +29,10 @@ extern "C" {
 
 #ifdef DOUBLEVEC_T
 #define vec_t double
-#define VECT_MAX DBL_MAX;
+#define VECT_MAX DBL_MAX
 #else
 #define vec_t float
-#define VECT_MAX FLT_MAX;
+#define VECT_MAX FLT_MAX
 #endif
 typedef vec_t vec3_t[3];
 
