@@ -1749,6 +1749,8 @@ static const char *
 Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
     int texnum = bsp->texinfo[face->texinfo].miptex;
+    if (!bsp->texdatasize)
+        return "";
     const dmiptexlump_t *miplump = bsp->dtexdata.header;
     if (!miplump->dataofs[texnum])
         return ""; //sometimes the texture just wasn't written. including its name.

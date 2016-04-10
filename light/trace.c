@@ -148,6 +148,9 @@ Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
     if (!(bsp->texinfo[face->texinfo].flags & TEX_SPECIAL))
         return CONTENTS_SOLID;
     
+    if (!bsp->texdatasize)
+        return CONTENTS_SOLID; // no textures in bsp
+
     int texnum = bsp->texinfo[face->texinfo].miptex;
     const dmiptexlump_t *miplump = bsp->dtexdata.header;
     const miptex_t *miptex;
