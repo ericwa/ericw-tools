@@ -290,10 +290,12 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
         const float *point = bsp->dvertexes[vert].point;
-
-        logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: edge %d\n",
+        const float *norm = GetSurfaceVertexNormal(bsp, face, i);
+        logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: normal (%3.3f, %3.3f, %3.3f) :: edge %d\n",
                  i ? "          " : "    verts ", vert,
-                 point[0], point[1], point[2], edge);
+                 point[0], point[1], point[2],
+                 norm[0], norm[1], norm[2],
+                 edge);
     }
 }
 
