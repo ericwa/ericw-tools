@@ -557,26 +557,22 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
 #endif
 #else
     /*utterly crap, just for testing. just grab closest vertex*/
-    int i;
-    float dist, bestd;
-    int v, bestv;
-    vec3_t t;
-
-    bestv = GetSurfaceVertex(bsp, face, 0);
-    VectorSubtract(point, bsp->dvertexes[bestv].point, t);
-    bestd = VectorLength(t);
-    for (i = 1; i < face->numedges; i++)
+    vec_t bestd = VECT_MAX;
+    int bestv = -1;
+    VectorSet(norm, 0, 0, 0);
+    for (int i = 0; i < face->numedges; i++)
     {
-        v = GetSurfaceVertex(bsp, face, i);
+        vec3_t t;
+        int v = GetSurfaceVertex(bsp, face, i);
         VectorSubtract(point, bsp->dvertexes[v].point, t);
-        dist = VectorLength(t);
+        const vec_t dist = VectorLength(t);
         if (dist < bestd)
         {
             bestd = dist;
             bestv = v;
+            VectorCopy(GetSurfaceVertexNormal(bsp, face, i), norm);
         }
     }
-    VectorCopy(vertex_normals[bestv], norm);
 //  VectorMA(norm, frac, t, norm);
 #endif
 //norm[0] = norm[1] = norm[2] = 0;
