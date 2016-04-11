@@ -1832,36 +1832,38 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * clamp any values that may have gone negative.
      */
 
-    /* positive lights */
-    for (lighte = lights; (entity = *lighte); lighte++)
-    {
-        if (entity->formula == LF_LOCALMIN)
-            continue;
-        if (entity->light.light > 0)
-            LightFace_Entity(entity, &entity->light, lightsurf, lightmaps);
+    if (!dirtDebug && !phongDebug) {
+        /* positive lights */
+        for (lighte = lights; (entity = *lighte); lighte++)
+        {
+            if (entity->formula == LF_LOCALMIN)
+                continue;
+            if (entity->light.light > 0)
+                LightFace_Entity(entity, &entity->light, lightsurf, lightmaps);
+        }
+        for ( sun = suns; sun; sun = sun->next )
+            if (sun->sunlight.light > 0)
+                LightFace_Sky (sun, lightsurf, lightmaps);
+
+        /* minlight - Use the greater of global or model minlight. */
+        if (lightsurf->minlight.light > minlight.light)
+            LightFace_Min(&lightsurf->minlight, lightsurf, lightmaps);
+        else
+            LightFace_Min(&minlight, lightsurf, lightmaps);
+
+        /* negative lights */
+        for (lighte = lights; (entity = *lighte); lighte++)
+        {
+            if (entity->formula == LF_LOCALMIN)
+                continue;
+            if (entity->light.light < 0)
+                LightFace_Entity(entity, &entity->light, lightsurf, lightmaps);
+        }
+        for ( sun = suns; sun; sun = sun->next )
+            if (sun->sunlight.light < 0)
+                LightFace_Sky (sun, lightsurf, lightmaps);
     }
-    for ( sun = suns; sun; sun = sun->next )
-        if (sun->sunlight.light > 0)
-            LightFace_Sky (sun, lightsurf, lightmaps);
-
-    /* minlight - Use the greater of global or model minlight. */
-    if (lightsurf->minlight.light > minlight.light)
-        LightFace_Min(&lightsurf->minlight, lightsurf, lightmaps);
-    else
-        LightFace_Min(&minlight, lightsurf, lightmaps);
-
-    /* negative lights */
-    for (lighte = lights; (entity = *lighte); lighte++)
-    {
-        if (entity->formula == LF_LOCALMIN)
-            continue;
-        if (entity->light.light < 0)
-            LightFace_Entity(entity, &entity->light, lightsurf, lightmaps);
-    }
-    for ( sun = suns; sun; sun = sun->next )
-        if (sun->sunlight.light < 0)
-            LightFace_Sky (sun, lightsurf, lightmaps);
-
+    
     /* replace lightmaps with AO for debugging */
     if (dirtDebug)
         LightFace_DirtDebug(lightsurf, lightmaps);
