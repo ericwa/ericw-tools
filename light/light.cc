@@ -657,6 +657,65 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
     fclose(texinfofile);
 }
 
+//obj
+
+static FILE *
+InitObjFile(const char *filename)
+{
+    FILE *objfile;
+    char objfilename[1024];
+    strcpy(objfilename, filename);
+    StripExtension(objfilename);
+    DefaultExtension(objfilename, ".obj");
+    
+    objfile = fopen(objfilename, "wt");
+    if (!objfile)
+        Error("Failed to open %s: %s", objfilename, strerror(errno));
+    
+    return objfile;
+}
+
+static void
+ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcount)
+{
+    // export the vertices and uvs
+    for (int i=0; i<face->numedges; i++)
+    {
+        int vertnum = GetSurfaceVertex(bsp, face, i);
+        const vec_t *normal = GetSurfaceVertexNormal(bsp, face, i);
+        const float *pos = bsp->dvertexes[vertnum].point;
+        fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
+        fprintf(f, "vn %.9g %.9g %.9g\n", normal[0], normal[1], normal[2]);
+    }
+    
+    fprintf(f, "f");
+    for (int i=0; i<face->numedges; i++) {
+        // .obj vertexes start from 1
+        // .obj faces are CCW, quake is CW, so reverse the order
+        const int vertindex = *vertcount + (face->numedges - 1 - i) + 1;
+        fprintf(f, " %d//%d", vertindex, vertindex);
+    }
+    fprintf(f, "\n");
+    
+    *vertcount += face->numedges;
+}
+
+void
+ExportObj(const char *filename, const bsp2_t *bsp)
+{
+    FILE *objfile = InitObjFile(filename);
+    int vertcount = 0;
+    
+    for (int i=0; i<bsp->numfaces; i++) {
+        ExportObjFace(objfile, bsp, &bsp->dfaces[i], &vertcount);
+    }
+    
+    fclose(objfile);
+}
+
+
+//obj
+
 /*
  * ==================
  * main
@@ -922,6 +981,8 @@ main(int argc, const char **argv)
     if (scaledonly && (write_litfile & 2))
         bsp->lightdatasize = 0;
 
+    ExportObj(source, bsp);
+    
     WriteEntitiesToString(bsp);
     /* Convert data format back if necessary */
     if (loadversion != BSP2VERSION)
