@@ -219,8 +219,7 @@ const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, co
     
 extern float scaledist;
 extern float rangescale;
-extern float anglescale;
-extern float sun_anglescale;
+extern float global_anglescale;
 extern float fadegate;
 extern int softsamples;
 extern float lightmapgamma;

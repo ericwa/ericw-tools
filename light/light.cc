@@ -30,8 +30,7 @@
 
 float scaledist = 1.0;
 float rangescale = 0.5;
-float anglescale = 0.5;
-float sun_anglescale = 0.5;
+float global_anglescale = 0.5;
 float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
 float lightmapgamma = 1.0;
@@ -741,9 +740,10 @@ main(int argc, const char **argv)
             else
                 softsamples = -1; /* auto, based on oversampling */
         } else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
-            if (i < argc - 2 && isdigit(argv[i + 1][0]))
-                anglescale = sun_anglescale = atoi(argv[++i]);
-            else
+            if (i < argc - 2 && isdigit(argv[i + 1][0])) {
+                global_anglescale = atof(argv[++i]);
+                logprint("Using global anglescale value of %f from command line.\n", global_anglescale);
+            } else
                 Error("-anglesense requires a numeric argument (0.0 - 1.0)");
         } else if ( !strcmp( argv[ i ], "-dirt" ) || !strcmp( argv[ i ], "-dirty" ) ) {
             dirty = true;

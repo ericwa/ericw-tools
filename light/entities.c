@@ -228,7 +228,7 @@ CheckEntityFields(entity_t *entity)
     if (entity->atten <= 0.0)
         entity->atten = 1.0;
     if (entity->anglescale < 0 || entity->anglescale > 1.0)
-        entity->anglescale = anglescale;
+        entity->anglescale = global_anglescale;
 
     if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
         static qboolean warned_once = true;
@@ -299,7 +299,7 @@ Dirt_ResolveFlag(int dirtInt)
  * =============
  */
 static void
-AddSun(vec3_t sunvec, lightsample_t sunlight, float anglescale, int dirtInt)
+AddSun(vec3_t sunvec, lightsample_t sunlight, int dirtInt)
 {
     sun_t *sun = malloc(sizeof(sun_t));
     memset(sun, 0, sizeof(*sun));
@@ -307,7 +307,7 @@ AddSun(vec3_t sunvec, lightsample_t sunlight, float anglescale, int dirtInt)
     VectorNormalize(sun->sunvec);
     VectorScale(sun->sunvec, -16384, sun->sunvec);
     sun->sunlight = sunlight;    
-    sun->anglescale = anglescale;
+    sun->anglescale = global_anglescale;
     sun->dirt = Dirt_ResolveFlag(dirtInt);
 
     // add to list
@@ -384,7 +384,7 @@ SetupSuns()
 
         //printf( "sun %d is using vector %f %f %f\n", i, direction[0], direction[1], direction[2]);
 
-        AddSun(direction, sunlight, sun_anglescale, sunlight_dirt);
+        AddSun(direction, sunlight, sunlight_dirt);
     }
 }
 
@@ -449,14 +449,14 @@ SetupSkyDome()
 
                         /* insert top hemisphere light */
                         if (sunlight2.light > 0) {
-                            AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+                            AddSun(direction, sunlight2, sunlight2_dirt);
                         }
 
                         direction[ 2 ] = -direction[ 2 ];
                     
                         /* insert bottom hemisphere light */
                         if (sunlight3.light > 0) {
-                            AddSun(direction, sunlight3, 0.0, sunlight2_dirt);
+                            AddSun(direction, sunlight3, sunlight2_dirt);
                         }
                     
                         /* move */
@@ -472,13 +472,13 @@ SetupSkyDome()
         VectorSet( direction, 0.0f, 0.0f, 1.0f );
 
         if (sunlight2.light > 0) {
-            AddSun(direction, sunlight2, 0.0, sunlight2_dirt);
+            AddSun(direction, sunlight2, sunlight2_dirt);
         }
     
         VectorSet( direction, 0.0f, 0.0f, -1.0f );
     
         if (sunlight3.light > 0) {
-            AddSun(direction, sunlight3, 0.0, sunlight2_dirt);
+            AddSun(direction, sunlight3, sunlight2_dirt);
         }
 }
 
@@ -1052,9 +1052,9 @@ LoadEntities(const bsp2_t *bsp)
                          (int)minlight.light);
             }
             if (entity->anglescale >= 0 && entity->anglescale <= 1.0) {
-                sun_anglescale = entity->anglescale;
-                logprint("using sunlight anglescale value %f from worldspawn.\n",
-                         sun_anglescale);
+                global_anglescale = entity->anglescale;
+                logprint("using global anglescale value %f from worldspawn.\n",
+                         global_anglescale);
             }
 
             if (entity->dist != 0.0) {
