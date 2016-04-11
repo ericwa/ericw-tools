@@ -442,7 +442,8 @@ CalcualateVertexNormals(const bsp2_t *bsp)
                 vec3_t f2_norm;
                 Face_Normal(bsp, f2, f2_norm);
 
-                const vec_t angle = acos(DotProduct(f_norm, f2_norm));
+                const vec_t cosangle = DotProduct(f_norm, f2_norm);
+                const vec_t angle = acos(qmax(qmin(1.0f, cosangle), 0.0f));
                 const vec_t max_angle = DEG2RAD(qmin(f_smoothangle, f2_smoothangle));
                 
                 // check the angle between the face normals
