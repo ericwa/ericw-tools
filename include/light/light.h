@@ -41,11 +41,15 @@ extern "C" {
 #define TRACE_HIT_LAVA  (1 << 3)
 #define TRACE_HIT_SKY   (1 << 4)
 
+typedef struct {
+    vec3_t normal;
+    vec_t dist;
+} plane_t;
 
 typedef struct traceinfo_s {
     vec3_t			point;
     const bsp2_dface_t          *face;
-    vec3_t  hitnormal;
+    plane_t  hitplane;
     /* returns true if sky was hit. */
     bool hitsky;
     bool hitback;
@@ -100,7 +104,7 @@ int TraceLine(const dmodel_t *model, const int traceflags,
  */
 qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, vec3_t hitnormal_out);
+qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out);
 
 typedef struct {
     vec_t light;
@@ -125,11 +129,6 @@ typedef struct sun_s {
     qboolean dirt;
     float anglescale;
 } sun_t;
-
-typedef struct {
-    vec3_t normal;
-    vec_t dist;
-} plane_t;
 
 /* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap resolution. */
 /*with extra sampling, lit+lux etc, we need at least 46mb stack space per thread. yes, that's a lot. on the plus side, it doesn't affect bsp complexity (actually, can simplify it a little)*/
