@@ -274,6 +274,9 @@ void SetupDirt();
 /* Used by fence texture sampling */
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 
+vec_t
+TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2);
+    
 extern qboolean testFenceTextures;
 extern qboolean surflight_dump;
 extern qboolean phongDebug;

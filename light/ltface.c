@@ -459,7 +459,7 @@ static int ClipPointToTriangle(const vec_t *orig, vec_t *point, const vec_t *nor
     return 1;
 }
 
-static vec_t
+vec_t
 TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
 {
     vec3_t edge0, edge1, cross;
