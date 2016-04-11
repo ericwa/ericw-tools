@@ -1559,6 +1559,11 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
 
             surf = &bsp->dfaces[facenum];
             info = &bsp->texinfo[surf->texinfo];
+            
+            /* Don't crash if there are no textuers */
+            if (!bsp->texdatasize)
+                continue;
+            
             ofs = bsp->dtexdata.header->dataofs[info->miptex];
             miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
             face_modelinfo = ModelInfoForFace(bsp, facenum);
@@ -1568,6 +1573,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
                 continue;
             
             /* Ignore the underwater side of liquid surfaces */
+            // FIXME: Use a Face_TextureName function for this
             if (miptex->name[0] == '*' && underwater)
                 continue;
 
