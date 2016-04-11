@@ -651,6 +651,9 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
 
             TexCoordToWorld(us, ut, &surf->texorg, point);
             VectorAdd(point, offset, point);
+
+            // corrects point
+            CheckObstructed(surf, offset, us, ut, point);
             
             if (surf->curved)
             {
@@ -660,8 +663,6 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             {
                 VectorCopy(surf->plane.normal, norm);
             }
-            
-            CheckObstructed(surf, offset, us, ut, point);
         }
     }
 }
