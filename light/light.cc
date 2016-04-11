@@ -981,7 +981,9 @@ main(int argc, const char **argv)
     if (scaledonly && (write_litfile & 2))
         bsp->lightdatasize = 0;
 
+#if 0
     ExportObj(source, bsp);
+#endif
     
     WriteEntitiesToString(bsp);
     /* Convert data format back if necessary */
