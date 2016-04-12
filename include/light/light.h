@@ -283,6 +283,9 @@ extern qboolean phongDebug;
 
 extern char mapfilename[1024];
 
+void
+PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
+    
 #ifdef __cplusplus
 }
 #endif

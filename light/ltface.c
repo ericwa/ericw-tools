@@ -192,9 +192,6 @@ FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
     VectorScale(poly_centroid, 1.0 / poly_area, out);
 }
 
-static void
-PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
-
 /*
  * ================
  * CreateFaceTransform
@@ -271,7 +268,7 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 }
 
 /* Debug helper - move elsewhere? */
-static void
+void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     const texinfo_t *tex = &bsp->texinfo[face->texinfo];
