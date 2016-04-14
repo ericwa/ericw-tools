@@ -337,6 +337,8 @@ public:
 };
 
 std::map<const bsp2_dface_t *, std::vector<vec3_struct_t>> vertex_normals;
+std::set<int> interior_verts;
+
 
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts.
  * v1, v2, v3 are global vertex indices */
@@ -382,11 +384,27 @@ const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, co
     return face_normals_vector[vertindex].v;
 }
 
+static bool
+FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
+{
+    if (faces.empty()) {
+        return false;
+    }
+    const int32_t planenum = faces.at(0)->planenum;
+    for (auto face : faces) {
+        if (face->planenum != planenum) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void
 CalcualateVertexNormals(const bsp2_t *bsp)
 {
     // clear in case we are run twice
     vertex_normals.clear();
+    interior_verts.clear();
     
     // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
     // support on func_detail/func_group
@@ -414,6 +432,15 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             vertsToFaces[v].push_back(f);
         }
     }
+    
+    // track "interior" verts, these are in the middle of a face, and mess up normal interpolation
+    for (int i=0; i<bsp->numvertexes; i++) {
+        auto &faces = vertsToFaces[i];
+        if (faces.size() > 1 && FacesOnSamePlane(faces)) {
+            interior_verts.insert(i);
+        }
+    }
+    printf("CalcualateVertexNormals: %d interior verts\n", (int)interior_verts.size());
     
     // build the "face -> faces to smooth with" map
     std::map<const bsp2_dface_t *, std::set<const bsp2_dface_t *>> smoothFaces;
