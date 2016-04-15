@@ -97,6 +97,8 @@ typedef struct entity_s {
 
     qboolean generated;     // if true, don't write to the bsp
 
+    const bsp2_dleaf_t *leaf;    // for vis testing
+    
     struct entity_s *next;
 } entity_t;
 

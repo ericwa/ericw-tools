@@ -662,6 +662,96 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     }
 }
 
+
+/*
+ ===================
+ DecompressVis
+ ===================
+ */
+static void
+DecompressVis (const bsp2_t *bsp, const byte *in, byte *decompressed)
+{
+    //static byte	decompressed[(bsp->numleafs+7)/8];
+    int		c;
+    byte	*out;
+    int		row;
+
+    row = (bsp->numleafs+7)>>3;
+    out = decompressed;
+
+    if (!in)
+    {	// no vis info, so make all visible
+        while (row)
+        {
+            *out++ = 0xff;
+            row--;
+        }
+        return;
+    }
+
+    do
+    {
+        if (*in)
+        {
+            if (!(out - decompressed < row)) return;
+            *out++ = *in++;
+            continue;
+        }
+
+        c = in[1];
+        in += 2;
+        while (c)
+        {
+            if (!(out - decompressed < row)) return;
+            *out++ = 0;
+            c--;
+        }
+    } while (out - decompressed < row);
+}
+
+static void
+CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
+{
+    const int pvssize = (bsp->numleafs+7)/8;
+    byte *pointpvs;
+    const vec_t *surfpoint;
+    int i, j;
+    const bsp2_dleaf_t *lastleaf = NULL;
+
+    if (!bsp->visdatasize) return;
+    
+    pointpvs = calloc(pvssize, 1);
+    lightsurf->pvs = calloc(pvssize, 1);
+    
+    surfpoint = lightsurf->points[0];
+    for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
+	const bsp2_dleaf_t *leaf = Light_PointInLeaf (bsp, surfpoint);
+
+	if (leaf == NULL)
+	    continue;
+	
+	/* most/all of the surface points are probably in the same leaf */
+	if (leaf == lastleaf)
+	    continue;
+	
+	lastleaf = leaf;
+	
+	/* copy the pvs for this leaf into pointpvs */
+	if (leaf == bsp->dleafs)
+	    memset (pointpvs, 255, pvssize );
+	else
+	    DecompressVis (bsp, bsp->dvisdata + leaf->visofs, pointpvs);
+
+	/* merge the pvs for this sample point into lightsurf->pvs */
+        for (j=0; j<pvssize; j++)
+        {
+            lightsurf->pvs[j] |= pointpvs[j];
+        }
+    }
+    
+    free(pointpvs);
+}
+
 __attribute__((noinline))
 static void
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
@@ -724,6 +814,9 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     
     /* Allocate occlusion array */
     lightsurf->occlusion = calloc(lightsurf->numpoints, sizeof(float));
+
+    /* Setup vis data */
+    CalcPvs(bsp, lightsurf);
 }
 
 static void
@@ -1092,13 +1185,36 @@ ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
     VectorMA(point, -dist, plane->normal, out);
 }
 
+static qboolean
+VisCullEntity(const bsp2_t *bsp, const lightsurf_t *lightsurf, const entity_t *entity)
+{
+    int i;
+
+    if (lightsurf->pvs == NULL) return false;
+    if (entity->leaf == NULL) return false;
+    
+    if (entity->leaf->contents == CONTENTS_SOLID
+        || entity->leaf->contents == CONTENTS_SKY)
+        return false;
+
+    i = entity->leaf - bsp->dleafs;
+    if (lightsurf->pvs[i>>3] & (1<<(i&7))) return false;
+    
+    return true;
+}
+
+extern int totalhit;
+extern int totalmissed;
+
+
 /*
  * ================
  * LightFace_Entity
  * ================
  */
 static void
-LightFace_Entity(const entity_t *entity, const lightsample_t *light,
+LightFace_Entity(const bsp2_t *bsp,
+                 const entity_t *entity, const lightsample_t *light,
                  const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1111,6 +1227,11 @@ LightFace_Entity(const entity_t *entity, const lightsample_t *light,
     lightsample_t *sample;
     lightmap_t *lightmap;
     qboolean curved = lightsurf->curved;
+
+    /* vis cull */
+    if (VisCullEntity(bsp, lightsurf, entity)) {
+        return;
+    }
 
     planedist = DotProduct(entity->origin, plane->normal) - plane->dist;
 
@@ -1738,6 +1859,9 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     if (ctx->lightsurf.occluded)
         free(ctx->lightsurf.occluded);
     
+    if (ctx->lightsurf.pvs)
+        free(ctx->lightsurf.pvs);
+    
     free(ctx);
 }
 
@@ -1834,7 +1958,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             if (entity->formula == LF_LOCALMIN)
                 continue;
             if (entity->light.light > 0)
-                LightFace_Entity(entity, &entity->light, lightsurf, lightmaps);
+                LightFace_Entity(bsp, entity, &entity->light, lightsurf, lightmaps);
         }
         for ( sun = suns; sun; sun = sun->next )
             if (sun->sunlight.light > 0)
@@ -1852,7 +1976,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             if (entity->formula == LF_LOCALMIN)
                 continue;
             if (entity->light.light < 0)
-                LightFace_Entity(entity, &entity->light, lightsurf, lightmaps);
+                LightFace_Entity(bsp, entity, &entity->light, lightsurf, lightmaps);
         }
         for ( sun = suns; sun; sun = sun->next )
             if (sun->sunlight.light < 0)

@@ -827,6 +827,16 @@ FindLights()
     logprint("FindLights: %d total lights\n", totallights);
 }
 
+static void
+SetupLightLeafnums(const bsp2_t *bsp)
+{
+    entity_t *entity;
+
+    for (entity = entities; entity; entity = entity->next) {
+        entity->leaf = Light_PointInLeaf(bsp, entity->origin);
+    }
+}
+
 /*
  * ==================
  * LoadEntities
@@ -1153,6 +1163,7 @@ SetupLights(const bsp2_t *bsp)
     SetupSuns();
     SetupSkyDome();
     FindLights();
+    SetupLightLeafnums(bsp);
 }
 
 const char *

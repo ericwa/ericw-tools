@@ -57,14 +57,15 @@ Light_PointInLeaf
 from hmap2
 ==============
 */
-bsp2_dleaf_t *Light_PointInLeaf( const vec3_t point )
+const bsp2_dleaf_t *
+Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point )
 {
     int num = 0;
     
     while( num >= 0 )
-        num = bsp_static->dnodes[num].children[PlaneDiff(point, &bsp_static->dplanes[bsp_static->dnodes[num].planenum]) < 0];
+        num = bsp->dnodes[num].children[PlaneDiff(point, &bsp->dplanes[bsp->dnodes[num].planenum]) < 0];
     
-    return bsp_static->dleafs + (-1 - num);
+    return bsp->dleafs + (-1 - num);
 }
 
 /*
@@ -74,9 +75,9 @@ Light_PointContents
 from hmap2
 ==============
 */
-int Light_PointContents( const vec3_t point )
+int Light_PointContents( const bsp2_t *bsp, const vec3_t point )
 {
-    return Light_PointInLeaf(point)->contents;
+    return Light_PointInLeaf(bsp, point)->contents;
 }
 
 /*
