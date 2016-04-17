@@ -128,11 +128,13 @@ IsSkipName(const char *name)
 }
 
 static bool
-IsSplitName(const char *name)
+IsSpecialName(const char *name)
 {
     if (options.fSplitspecial)
         return false;
-    if (name[0] == '*' || !Q_strncasecmp(name, "sky", 3))
+    if (name[0] == '*' && !options.fSplitturb)
+        return true;
+    if (!Q_strncasecmp(name, "sky", 3) && !options.fSplitsky)
         return true;
     return false;
 }
@@ -220,7 +222,7 @@ FindTexinfoEnt(texinfo_t *texinfo, const mapentity_t *entity)
         flags |= TEX_SKIP;
     if (IsHintName(texname))
         flags |= TEX_HINT;
-    if (IsSplitName(texname))
+    if (IsSpecialName(texname))
         flags |= TEX_SPECIAL;
     if (atoi(ValueForKey(entity, "_dirt")) == -1)
         flags |= TEX_NODIRT;

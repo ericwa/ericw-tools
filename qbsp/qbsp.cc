@@ -594,6 +594,8 @@ PrintOptions(void)
            "   -verbose        Print out more .MAP information\n"
            "   -noverbose      Print out almost no information at all\n"
            "   -splitspecial   Doesn't combine sky and water faces into one large face\n"
+           "   -splitsky       Doesn't combine sky faces into one large face\n"
+           "   -splitturb      Doesn't combine water faces into one large face\n"
            "   -notranswater   Computes portal information for opaque water\n"
            "   -transsky       Computes portal information for transparent sky\n"
            "   -notex          Write only placeholder textures, to depend upon replacements, to keep file sizes down, or to skirt copyrights\n"
@@ -714,6 +716,10 @@ ParseOptions(char *szOptions)
                 options.fAllverbose = true;
             else if (!Q_strcasecmp(szTok, "splitspecial"))
                 options.fSplitspecial = true;
+            else if (!Q_strcasecmp(szTok, "splitsky"))
+                options.fSplitsky = true;
+            else if (!Q_strcasecmp(szTok, "splitturb"))
+                options.fSplitturb = true;
             else if (!Q_strcasecmp(szTok, "notranswater"))
                 options.fTranswater = false;
             else if (!Q_strcasecmp(szTok, "transwater"))

@@ -471,6 +471,8 @@ typedef struct options_s {
     bool fVerbose;
     bool fAllverbose;
     bool fSplitspecial;
+    bool fSplitturb;
+    bool fSplitsky;
     bool fTranswater;
     bool fTranssky;
     bool fOldaxis;
