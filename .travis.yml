@@ -9,4 +9,4 @@ before_install:
 script:
   - mkdir build
   - cd build
-  - cmake .. && make
+  - cmake .. && make VERBOSE=1
