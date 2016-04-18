@@ -11,4 +11,5 @@ set(BSPINFO_SOURCES
 
 add_executable(bspinfo ${BSPINFO_SOURCES})
 target_link_libraries(bspinfo ${CMAKE_THREAD_LIBS_INIT})
+set_property(TARGET bspinfo PROPERTY C_STANDARD 99)
 install(TARGETS bspinfo RUNTIME DESTINATION bin)

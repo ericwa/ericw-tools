@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (light CXX)
+project (light CXX C)
 
 set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/entities.h
@@ -24,5 +24,5 @@ add_executable(light ${LIGHT_SOURCES})
 target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
 set_property(TARGET light PROPERTY CXX_STANDARD 11)
 set_property(TARGET light PROPERTY CXX_STANDARD_REQUIRED ON)
-
+set_property(TARGET light PROPERTY C_STANDARD 99)
 install(TARGETS light RUNTIME DESTINATION bin)

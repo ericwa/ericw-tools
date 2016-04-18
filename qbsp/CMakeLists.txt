@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.6)
-project (qbsp CXX)
+project (qbsp CXX C)
 
 set(QBSP_INCLUDES
 	bspfile.h
@@ -40,5 +40,6 @@ add_definitions(-DDOUBLEVEC_T)
 add_executable(qbsp ${QBSP_SOURCES})
 set_property(TARGET qbsp PROPERTY CXX_STANDARD 11)
 set_property(TARGET qbsp PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET qbsp PROPERTY C_STANDARD 99)
 target_link_libraries(qbsp ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS qbsp RUNTIME DESTINATION bin)
