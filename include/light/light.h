@@ -114,6 +114,7 @@ typedef struct {
     const dmodel_t *model;
     qboolean shadowself;
     lightsample_t minlight;
+    char minlight_exclude[16]; /* texture name to exclude from minlight */
     float lightmapscale;
     vec3_t offset;
     qboolean nodirt;
@@ -289,6 +290,9 @@ extern char mapfilename[1024];
 
 void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
+    
+const char *
+Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
     
 #ifdef __cplusplus
 }

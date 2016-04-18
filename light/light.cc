@@ -278,6 +278,11 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         attribute = ValueForKey(entity, "_minlight");
         if (attribute[0])
             info->minlight.light = atoi(attribute);
+        const char *minlight_exclude = ValueForKey(entity, "_minlight_exclude");
+        if (minlight_exclude[0] != '\0') {
+            strncpy(info->minlight_exclude, minlight_exclude, 15);
+            info->minlight_exclude[15] = '\0';
+        }
         GetVectorForKey(entity, "_mincolor", info->minlight.color);
         normalize_color_format(info->minlight.color);
         if (!VectorCompare(info->minlight.color, vec3_origin)) {

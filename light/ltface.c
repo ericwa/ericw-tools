@@ -1375,7 +1375,8 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
  * ============
  */
 static void
-LightFace_Min(const lightsample_t *light,
+LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
+              const lightsample_t *light,
               const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1387,6 +1388,10 @@ LightFace_Min(const lightsample_t *light,
     lightsample_t *sample;
     lightmap_t *lightmap;
 
+    const char *texname = Face_TextureName(bsp, face);
+    if (texname[0] != '\0' && !strcmp(texname, modelinfo->minlight_exclude))
+        return; /* this texture is excluded from minlight */
+    
     /* Find a style 0 lightmap */
     lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
@@ -1865,7 +1870,7 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     free(ctx);
 }
 
-static const char *
+const char *
 Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
     int texnum = bsp->texinfo[face->texinfo].miptex;
@@ -1966,9 +1971,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
 
         /* minlight - Use the greater of global or model minlight. */
         if (lightsurf->minlight.light > minlight.light)
-            LightFace_Min(&lightsurf->minlight, lightsurf, lightmaps);
+            LightFace_Min(bsp, face, &lightsurf->minlight, lightsurf, lightmaps);
         else
-            LightFace_Min(&minlight, lightsurf, lightmaps);
+            LightFace_Min(bsp, face, &minlight, lightsurf, lightmaps);
 
         /* negative lights */
         for (lighte = lights; (entity = *lighte); lighte++)
