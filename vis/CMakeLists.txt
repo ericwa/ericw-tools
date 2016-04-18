@@ -20,6 +20,9 @@ set(VIS_SOURCES
 
 add_executable(vis ${VIS_SOURCES})
 target_link_libraries (vis ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries (vis m)
+find_library(M_LIB m)
+if (M_LIB)
+    target_link_libraries (vis ${M_LIB})
+endif (M_LIB)
 set_property(TARGET vis PROPERTY C_STANDARD 99)
 install(TARGETS vis RUNTIME DESTINATION bin)
