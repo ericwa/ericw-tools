@@ -953,7 +953,7 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
  * ============================================================================
  */
 
-static vec_t
+vec_t
 GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist)
 {
     vec_t value;

@@ -134,6 +134,8 @@ void LoadEntities(const bsp2_t *bsp);
 void SetupLights(const bsp2_t *bsp);
 void WriteEntitiesToString(bsp2_t *bsp);
 
+vec_t GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist);
+    
 #ifdef __cplusplus
 }
 #endif
