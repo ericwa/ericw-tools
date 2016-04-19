@@ -590,7 +590,7 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             
             vec3_t hitpoint = {0};
             plane_t hitplane = {0};
-            if (DirtTrace(surf->midpoint, testpoint, surf->modelinfo->model, hitpoint, &hitplane)) {
+            if (DirtTrace(surf->midpoint, testpoint, surf->modelinfo->model, hitpoint, &hitplane, NULL)) {
                 // make a corrected point
                 
                 vec3_t tracedir;
@@ -1563,7 +1563,7 @@ void SetupDirt( void ) {
  * ============
  */
 qboolean
-DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out)
+DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     const modelinfo_t *const *model;
     traceinfo_t ti = {0};
@@ -1577,6 +1577,9 @@ DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hi
             if (hitplane_out) {
                 *hitplane_out = ti.hitplane;
             }
+            if (face_out) {
+                *face_out = ti.face;
+            }
             return !ti.hitsky;
         }
     }
@@ -1589,6 +1592,9 @@ DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hi
             VectorCopy(ti.point, hitpoint_out);
             if (hitplane_out) {
                 *hitplane_out = ti.hitplane;
+            }
+            if (face_out) {
+                *face_out = ti.face;
             }
             return !ti.hitsky;
         }
@@ -1655,7 +1661,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             VectorMA( origin, dirtDepth, direction, traceEnd );
 
             /* trace */
-            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL)) {
+            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
                 VectorSubtract( traceHitpoint, origin, displacement );
                 gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
@@ -1672,7 +1678,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             VectorMA( origin, dirtDepth, direction, traceEnd );
             
             /* trace */
-            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL)) {
+            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
                 VectorSubtract( traceHitpoint, origin, displacement );
                 gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
@@ -1683,7 +1689,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     VectorMA( origin, dirtDepth, normal, traceEnd );
     
     /* trace */
-    if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL)) {
+    if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
         VectorSubtract( traceHitpoint, origin, displacement );
         gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
     }
