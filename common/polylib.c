@@ -68,7 +68,7 @@ RemoveColinearPoints(winding_t * w)
  * ============
  */
 void
-WindingPlane(winding_t * w, vec3_t normal, vec_t *dist)
+WindingPlane(const winding_t * w, vec3_t normal, vec_t *dist)
 {
     vec3_t v1, v2;
 
@@ -85,7 +85,7 @@ WindingPlane(winding_t * w, vec3_t normal, vec_t *dist)
  * =============
  */
 vec_t
-WindingArea(winding_t * w)
+WindingArea(const winding_t * w)
 {
     int i;
     vec3_t d1, d2, cross;
@@ -107,7 +107,7 @@ WindingArea(winding_t * w)
  * =============
  */
 void
-WindingCenter(winding_t * w, vec3_t center)
+WindingCenter(const winding_t * w, vec3_t center)
 {
     int i;
     vec3_t d1, d2, cross;
@@ -122,12 +122,39 @@ WindingCenter(winding_t * w, vec3_t center)
 }
 
 /*
+ * =============
+ * WindingBounds
+ * =============
+ */
+void
+WindingBounds (const winding_t *w, vec3_t mins, vec3_t maxs)
+{
+    vec_t	v;
+    int		i,j;
+    
+    mins[0] = mins[1] = mins[2] = 99999;
+    maxs[0] = maxs[1] = maxs[2] = -99999;
+    
+    for (i=0 ; i<w->numpoints ; i++)
+    {
+        for (j=0 ; j<3 ; j++)
+        {
+            v = w->p[i][j];
+            if (v < mins[j])
+                mins[j] = v;
+            if (v > maxs[j])
+                maxs[j] = v;
+        }
+    }
+}
+
+/*
  * =================
  * BaseWindingForPlane
  * =================
  */
 winding_t *
-BaseWindingForPlane(vec3_t normal, float dist)
+BaseWindingForPlane(const vec3_t normal, float dist)
 {
     int i, x;
     vec_t max, v;
@@ -195,7 +222,7 @@ BaseWindingForPlane(vec3_t normal, float dist)
  * ==================
  */
 winding_t *
-CopyWinding(winding_t * w)
+CopyWinding(const winding_t * w)
 {
     int size;
     winding_t *c;
@@ -213,7 +240,7 @@ CopyWinding(winding_t * w)
  * =============
  */
 void
-ClipWinding(winding_t * in, vec3_t normal, vec_t dist,
+ClipWinding(const winding_t * in, vec3_t normal, vec_t dist,
             winding_t ** front, winding_t ** back)
 {
     vec_t dists[MAX_POINTS_ON_WINDING + 4];
@@ -221,7 +248,7 @@ ClipWinding(winding_t * in, vec3_t normal, vec_t dist,
     int counts[3];
     vec_t dot;
     int i, j;
-    vec_t *p1, *p2;
+    const vec_t *p1, *p2;
     vec3_t mid;
     winding_t *f, *b;
     int maxpts;
@@ -337,10 +364,10 @@ ChopWinding(winding_t * in, vec3_t normal, vec_t dist)
  * =================
  */
 void
-CheckWinding(winding_t * w)
+CheckWinding(const winding_t * w)
 {
     int i, j;
-    vec_t *p1, *p2;
+    const vec_t *p1, *p2;
     vec_t d, edgedist;
     vec3_t dir, edgenormal, facenormal;
     vec_t area;
