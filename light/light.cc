@@ -311,10 +311,14 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     selfshadowlist = selfshadowmodels;
 }
 
+/* return 0 if either vector is zero-length */
 static float
 AngleBetweenVectors(const vec3_t d1, const vec3_t d2)
 {
-    float cosangle = DotProduct(d1, d2)/(VectorLength(d1)*VectorLength(d2));
+    float length_product = (VectorLength(d1)*VectorLength(d2));
+    if (length_product == 0)
+        return 0;
+    float cosangle = DotProduct(d1, d2)/length_product;
     if (cosangle < -1) cosangle = -1;
     if (cosangle > 1) cosangle = 1;
     
@@ -385,8 +389,8 @@ Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
 
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
 {
-    const auto &face_normals_vector = vertex_normals[f];
-    return face_normals_vector[vertindex].v;
+    const auto &face_normals_vector = vertex_normals.at(f);
+    return face_normals_vector.at(vertindex).v;
 }
 
 static bool

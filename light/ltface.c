@@ -547,6 +547,13 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
     
     CalcBarycentric(pointOnPlane, v1, v2, v3, barry);
 
+    if (!isfinite(barry[0])
+        || !isfinite(barry[1])
+        || !isfinite(barry[2])) {
+        VectorCopy(surfplane.normal, norm);
+        return;
+    }
+    
     v1 = GetSurfaceVertexNormal(bsp, face, 0);
     v2 = GetSurfaceVertexNormal(bsp, face, best-1);
     v3 = GetSurfaceVertexNormal(bsp, face, best);
