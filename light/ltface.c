@@ -500,7 +500,7 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
 
     // not in any triangle
     {
-        plane_t edgeplanes[face->numedges];
+        plane_t *edgeplanes = (plane_t *)calloc(face->numedges, sizeof(plane_t));
         Face_MakeInwardFacingEdgePlanes(bsp, face, edgeplanes);
         for (int i=0; i<face->numedges; i++) {
             vec_t dist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
@@ -519,9 +519,12 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
                 VectorScale(v2, t, norm);
                 VectorMA(norm, 1-t, v1, norm);
                 VectorNormalize(norm);
+                
+                free(edgeplanes);
                 return;
             }
         }
+        free(edgeplanes);
     }
 
     /*utterly crap, just for testing. just grab closest vertex*/
