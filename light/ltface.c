@@ -1953,7 +1953,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
-    if (dirty)
+    if (dirty && !phongDebug)
         LightFace_CalculateDirt(lightsurf);
 
     /*
