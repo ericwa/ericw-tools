@@ -174,17 +174,13 @@ Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
 }
 
 void
-MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
+Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out)
 {
-    info->numedges = face->numedges;
-    info->edgeplanes = calloc(face->numedges, sizeof(plane_t));
-    
-    GetFaceNormal(bsp, face, &info->plane);
-    
-    // make edge planes
+    plane_t faceplane;
+    GetFaceNormal(bsp, face, &faceplane);
     for (int i=0; i<face->numedges; i++)
     {
-        plane_t *dest = &info->edgeplanes[i];
+        plane_t *dest = &out[i];
         
         const vec_t *v0 = GetSurfaceVertexPoint(bsp, face, i);
         const vec_t *v1 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
@@ -193,10 +189,21 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
         VectorSubtract(v1, v0, edgevec);
         VectorNormalize(edgevec);
         
-        CrossProduct(edgevec, info->plane.normal, dest->normal);
-        
+        CrossProduct(edgevec, faceplane.normal, dest->normal);
         dest->dist = DotProduct(dest->normal, v0);
     }
+}
+
+void
+MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
+{
+    info->numedges = face->numedges;
+    info->edgeplanes = calloc(face->numedges, sizeof(plane_t));
+    
+    GetFaceNormal(bsp, face, &info->plane);
+    
+    // make edge planes
+    Face_MakeInwardFacingEdgePlanes(bsp, face, info->edgeplanes);
     
     // make sphere that bounds the face
     vec3_t centroid = {0,0,0};

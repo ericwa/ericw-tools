@@ -413,51 +413,6 @@ vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
         return bsp->dvertexes[GetSurfaceVertex(bsp, f, v)].point;
 }
 
-
-static int ClipPointToTriangle(const vec_t *orig, vec_t *point, const vec_t *norm_, const vec_t *v1, const vec_t *v2, const vec_t *v3)
-{
-    vec3_t d1, d2;
-    float dist;
-
-    vec3_t norm;
-    /*wastefully calculate the normal*/
-    VectorSubtract(v1, v2, d1);
-    VectorSubtract(v3, v2, d2);
-    CrossProduct(d2, d1, norm);
-
-//VectorCopy(norm_, norm);
-    VectorNormalize(norm);
-
-    if (!norm[0] && !norm[1] && !norm[2])
-        return 0;       //degenerate
-
-    dist = DotProduct(orig, norm) - DotProduct(v1, norm);
-    VectorMA(orig, -dist, norm, point);
-
-    VectorSubtract(v1, v2, d1);
-    CrossProduct(d1, norm, d2);
-    VectorNormalize(d2);
-    dist = DotProduct(point, d2) - DotProduct(v1, d2);
-    if (dist < 0)
-        VectorMA(point, -dist, d2, point);
-
-    VectorSubtract(v2, v3, d1);
-    CrossProduct(d1, norm, d2);
-    VectorNormalize(d2);
-    dist = DotProduct(point, d2) - DotProduct(v2, d2);
-    if (dist < 0)
-        VectorMA(point, -dist, d2, point);
-
-    VectorSubtract(v3, v1, d1);
-    CrossProduct(d1, norm, d2);
-    VectorNormalize(d2);
-    dist = DotProduct(point, d2) - DotProduct(v3, d2);
-    if (dist < 0)
-        VectorMA(point, -dist, d2, point);
-
-    return 1;
-}
-
 vec_t
 TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
 {
@@ -488,6 +443,23 @@ static void CalcBarycentric(const vec_t *p, const vec_t *a, const vec_t *b, cons
     res[0] = 1.0f - res[1] - res[2];
 }
 
+// from: http://stackoverflow.com/a/1501725
+// see also: http://mathworld.wolfram.com/Projection.html
+static vec_t
+FractionOfLine(const vec3_t v, const vec3_t w, const vec3_t p) {
+    vec3_t vp, vw;
+    VectorSubtract(p, v, vp);
+    VectorSubtract(w, v, vw);
+    
+    const float l2 = DotProduct(vw, vw);
+    if (l2 == 0) {
+        return 0;
+    }
+    
+    const vec_t t = DotProduct(vp, vw) / l2;
+    return t;
+}
+
 static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t surfplane, vec_t *norm, const vec_t *point)
 {
     // project `point` onto the surface plane (it's hovering 1 unit above)
@@ -497,71 +469,61 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
         VectorMA(point, -dist, surfplane.normal, pointOnPlane);
     }
     
-#if 1
-    int j;
     const vec_t *v1, *v2, *v3;
-    int best; //3rd point
-    vec3_t clipped, t;
-//      vec3_t bestp = {point[0],point[1],point[2]};
-    vec3_t barry;
-    vec_t bestcost = INFINITY, cost;
 
     /* now just walk around the surface as a triangle fan */
     v1 = GetSurfaceVertexPoint(bsp, face, 0);
     v2 = GetSurfaceVertexPoint(bsp, face, 1);
-    for (best = 0,j = 2; j < face->numedges; j++)
+    for (int j = 2; j < face->numedges; j++)
     {
         v3 = GetSurfaceVertexPoint(bsp, face, j);
+  
+        vec3_t bary;
+        CalcBarycentric(pointOnPlane, v1, v2, v3, bary);
         
-        vec_t triarea = TriangleArea(v1, v2, v3);
-        
-        if (ClipPointToTriangle(pointOnPlane, clipped, surfplane.normal, v1, v2, v3))
+        if ((bary[0] > -ON_EPSILON) && (bary[1] > -ON_EPSILON) && (bary[0] + bary[1] < 1+ON_EPSILON))
         {
-            VectorSubtract(clipped, pointOnPlane, t);
-            cost = VectorLength(t);
-            if (cost < bestcost && triarea >= 1)
-            {
-                best = j;
-                bestcost = cost;
-//                              VectorCopy(clipped, bestp);
-                if (!cost)      //looks like we're already inside this triangle.
-                    break;
+            if (TriangleArea(v1, v2, v3) >= 1) {
+                
+                v1 = GetSurfaceVertexNormal(bsp, face, 0);
+                v2 = GetSurfaceVertexNormal(bsp, face, j-1);
+                v3 = GetSurfaceVertexNormal(bsp, face, j);
+                VectorScale(v1, bary[0], norm);
+                VectorMA(norm, bary[1], v2, norm);
+                VectorMA(norm, bary[2], v3, norm);
+                VectorNormalize(norm);
+                return;
             }
         }
         v2 = v3;
     }
-#if 0
-    norm[0] = (best & 1)?1:-1;
-    norm[1] = (best & 2)?1:-1;
-    norm[2] = (best & 4)?1:-1;
-    return;
-#else
-    v1 = GetSurfaceVertexPoint(bsp, face, 0);
-    v2 = GetSurfaceVertexPoint(bsp, face, best-1);
-    v3 = GetSurfaceVertexPoint(bsp, face, best);
-    
-    if (TriangleArea(v1, v2, v3) < 1) {
-        VectorCopy(surfplane.normal, norm);
-        return;
-    }
-    
-    CalcBarycentric(pointOnPlane, v1, v2, v3, barry);
 
-    if (!isfinite(barry[0])
-        || !isfinite(barry[1])
-        || !isfinite(barry[2])) {
-        VectorCopy(surfplane.normal, norm);
-        return;
+    // not in any triangle
+    {
+        plane_t edgeplanes[face->numedges];
+        Face_MakeInwardFacingEdgePlanes(bsp, face, edgeplanes);
+        for (int i=0; i<face->numedges; i++) {
+            vec_t dist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
+            if (dist < ON_EPSILON) {
+                // behind this plane
+                
+                v1 = GetSurfaceVertexPoint(bsp, face, i);
+                v2 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
+                
+                vec_t t = FractionOfLine(v1, v2, point);
+                t = qmax(qmin(t, 1.0f), 0.0f);
+                
+                v1 = GetSurfaceVertexNormal(bsp, face, i);
+                v2 = GetSurfaceVertexNormal(bsp, face, (i+1)%face->numedges);
+                
+                VectorScale(v2, t, norm);
+                VectorMA(norm, 1-t, v1, norm);
+                VectorNormalize(norm);
+                return;
+            }
+        }
     }
-    
-    v1 = GetSurfaceVertexNormal(bsp, face, 0);
-    v2 = GetSurfaceVertexNormal(bsp, face, best-1);
-    v3 = GetSurfaceVertexNormal(bsp, face, best);
-    VectorScale(v1, barry[0], norm);
-    VectorMA(norm, barry[1], v2, norm);
-    VectorMA(norm, barry[2], v3, norm);
-#endif
-#else
+
     /*utterly crap, just for testing. just grab closest vertex*/
     vec_t bestd = VECT_MAX;
     int bestv = -1;
@@ -579,10 +541,6 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
             VectorCopy(GetSurfaceVertexNormal(bsp, face, i), norm);
         }
     }
-//  VectorMA(norm, frac, t, norm);
-#endif
-//norm[0] = norm[1] = norm[2] = 0;
-//norm[2] = 1;
     VectorNormalize(norm);
 }
 

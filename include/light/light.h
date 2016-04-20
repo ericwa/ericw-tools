@@ -293,6 +293,9 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
     
 const char *
 Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
+
+void
+Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out);
     
 #ifdef __cplusplus
 }
