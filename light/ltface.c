@@ -630,51 +630,67 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     }
 }
 
+static int
+DecompressedVisSize(const bsp2_t *bsp)
+{
+    return (bsp->numleafs + 7) / 8;
+}
+
+static void
+WriteDefaultVis(const bsp2_t *bsp, byte *out)
+{
+    const int size = DecompressedVisSize(bsp);
+    memset(out, 0xff, size);
+}
 
 /*
  ===================
  DecompressVis
+
+ reads enough input to fill the output buffer
  ===================
  */
 static void
-DecompressVis (const bsp2_t *bsp, const byte *in, byte *decompressed)
+DecompressVis (const bsp2_t *bsp, const byte *in, const byte *in_end, byte *decompressed)
 {
-    //static byte	decompressed[(bsp->numleafs+7)/8];
-    int		c;
-    byte	*out;
-    int		row;
+    const int size = DecompressedVisSize(bsp);
+    byte *out = decompressed;
+    const byte *out_end = out + size;
 
-    row = (bsp->numleafs+7)>>3;
-    out = decompressed;
-
-    if (!in)
-    {	// no vis info, so make all visible
-        while (row)
-        {
-            *out++ = 0xff;
-            row--;
-        }
-        return;
-    }
-
-    do
+    while (out < out_end)
     {
-        if (*in)
+        // check for input underrun
+        if (in >= in_end)
         {
-            if (!(out - decompressed < row)) return;
+            WriteDefaultVis(bsp, decompressed);
+            return;
+        }
+
+        if (*in != 0)
+        {
             *out++ = *in++;
             continue;
         }
+        in++; // skip the 0 byte
 
-        c = in[1];
-        in += 2;
-        while (c)
+        // check for input underrun
+        if (in >= in_end)
         {
-            if (!(out - decompressed < row)) return;
-            *out++ = 0;
-            c--;
+            WriteDefaultVis(bsp, decompressed);
+            return;
         }
-    } while (out - decompressed < row);
+
+        int zerocount = *in++; // read the count of zeros to insert
+
+        // check for output overrun
+        if (out + zerocount > out_end) {
+            // this seems to happen even though it is wrong...
+            zerocount = out_end - out;
+        }
+
+        memset(out, 0, zerocount);
+        out += zerocount;
+    }
 }
 
 static void
@@ -708,7 +724,7 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 	if (leaf == bsp->dleafs)
 	    memset (pointpvs, 255, pvssize );
 	else
-	    DecompressVis (bsp, bsp->dvisdata + leaf->visofs, pointpvs);
+	    DecompressVis (bsp, bsp->dvisdata + leaf->visofs, bsp->dvisdata + bsp->visdatasize, pointpvs);
 
 	/* merge the pvs for this sample point into lightsurf->pvs */
         for (j=0; j<pvssize; j++)
