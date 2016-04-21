@@ -1174,6 +1174,7 @@ VisCullEntity(const bsp2_t *bsp, const lightsurf_t *lightsurf, const entity_t *e
 {
     int i;
 
+    if (novis) return false;
     if (lightsurf->pvs == NULL) return false;
     if (entity->leaf == NULL) return false;
     

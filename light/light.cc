@@ -91,6 +91,7 @@ int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean phongDebug = false;
 qboolean parse_escape_sequences = true;
+qboolean novis = false; /* if true, don't use vis data */
 
 uint32_t *extended_texinfo_flags = NULL;
 
@@ -911,6 +912,9 @@ main(int argc, const char **argv)
             phongDebug = true;
             write_litfile |= 1;
             logprint( "Phong shading debug mode enabled\n" );
+        } else if ( !strcmp( argv[ i ], "-novis" ) ) {
+            novis = true;
+            logprint( "Skipping use of vis data to optimize lighting\n" );
         } else if (argv[i][0] == '-')
             Error("Unknown option \"%s\"", argv[i]);
         else
