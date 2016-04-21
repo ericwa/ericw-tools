@@ -710,7 +710,8 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
     surfpoint = lightsurf->points[0];
     for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
 	const bsp2_dleaf_t *leaf = Light_PointInLeaf (bsp, surfpoint);
-
+        const int leafnum = leaf - bsp->dleafs;
+        
 	if (leaf == NULL)
 	    continue;
 	
@@ -726,6 +727,9 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 	else
 	    DecompressVis (bsp, bsp->dvisdata + leaf->visofs, bsp->dvisdata + bsp->visdatasize, pointpvs);
 
+        /* mark this leaf as visible to itself (why is this not the case in the visdata!?!) */
+        pointpvs[leafnum>>3] |= (1<<(leafnum&7));
+        
 	/* merge the pvs for this sample point into lightsurf->pvs */
         for (j=0; j<pvssize; j++)
         {
