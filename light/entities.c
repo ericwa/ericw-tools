@@ -39,11 +39,13 @@ static void MakeSurfaceLights(const bsp2_t *bsp);
 /* temporary storage for sunlight settings before the sun_t objects are
    created. */
 static lightsample_t sunlight = { 0, { 255, 255, 255 } };
-static lightsample_t sunlight2 = { 0, { 255, 255, 255 } };
-static lightsample_t sunlight3 = { 0, { 255, 255, 255 } };
+static lightsample_t sun2 = { 0, { 255, 255, 255 } }; /* second sun */
+static lightsample_t sunlight2 = { 0, { 255, 255, 255 } }; /* top sky dome */
+static lightsample_t sunlight3 = { 0, { 255, 255, 255 } }; /* bottom sky dome */
 static int sunlight_dirt = 0;
 static int sunlight2_dirt = 0;
 static vec3_t sunvec = { 0, 0, -1 };            /* defaults to straight down */
+static vec3_t sun2vec = { 0, 0, -1 };            /* defaults to straight down */
 static vec_t sun_deviance = 0;
 
 /*
@@ -333,8 +335,9 @@ AddSun(vec3_t sunvec, lightsample_t sunlight, int dirtInt)
  * =============
  */
 static void
-SetupSuns()
+SetupSun(lightsample_t sunlight, const vec3_t sunvec_in)
 {
+    vec3_t sunvec;
     int i;
     int sun_num_samples = sunsamples;
 
@@ -344,6 +347,7 @@ SetupSuns()
         logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", sun_deviance);
     }
 
+    VectorCopy(sunvec_in, sunvec);
     VectorNormalize(sunvec);
 
     //printf( "input sunvec %f %f %f. deviance is %f, %d samples\n",sunvec[0],sunvec[1], sunvec[2], sun_deviance, sun_num_samples);
@@ -385,6 +389,17 @@ SetupSuns()
         //printf( "sun %d is using vector %f %f %f\n", i, direction[0], direction[1], direction[2]);
 
         AddSun(direction, sunlight, sunlight_dirt);
+    }
+}
+
+static void
+SetupSuns()
+{
+    SetupSun(sunlight, sunvec);
+    
+    if (sun2.light != 0) {
+        logprint("creating sun2\n");
+        SetupSun(sun2, sun2vec);
     }
 }
 
@@ -959,6 +974,14 @@ LoadEntities(const bsp2_t *bsp)
             } else if (!strcmp(key, "_sunlight_color")) {
                 scan_vec3(sunlight.color, com_token, "_sunlight_color");
                 normalize_color_format(sunlight.color);
+            } else if (!strcmp(key, "_sun2"))
+                sun2.light = atof(com_token);
+            else if (!strcmp(key, "_sun2_mangle")) {
+                scan_vec3(vec, com_token, "_sun2_mangle");
+                vec_from_mangle(sun2vec, vec);
+            } else if (!strcmp(key, "_sun2_color")) {
+                scan_vec3(sun2.color, com_token, "_sun2_color");
+                normalize_color_format(sun2.color);
             } else if (!strcmp(key, "_sunlight2"))
                 sunlight2.light = atof(com_token);
             else if (!strcmp(key, "_sunlight3"))
