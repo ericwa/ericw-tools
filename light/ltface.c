@@ -633,84 +633,100 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
 static int
 DecompressedVisSize(const bsp2_t *bsp)
 {
-    return (bsp->numleafs + 7) / 8;
+    return (bsp->dmodels[0].visleafs + 7) / 8;
 }
 
-static void
-WriteDefaultVis(const bsp2_t *bsp, byte *out)
+// from DarkPlaces
+static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
 {
-    const int size = DecompressedVisSize(bsp);
-    memset(out, 0xff, size);
-}
-
-/*
- ===================
- DecompressVis
-
- reads enough input to fill the output buffer
- ===================
- */
-static void
-DecompressVis (const bsp2_t *bsp, const byte *in, const byte *in_end, byte *decompressed)
-{
-    const int size = DecompressedVisSize(bsp);
-    byte *out = decompressed;
-    const byte *out_end = out + size;
-
-    while (out < out_end)
+    int c;
+    unsigned char *outstart = out;
+    while (out < outend)
     {
-        // check for input underrun
-        if (in >= in_end)
+        if (in == inend)
         {
-            WriteDefaultVis(bsp, decompressed);
+            logprint("Mod_Q1BSP_DecompressVis: input underrun (decompressed %i of %i output bytes)\n", (int)(out - outstart), (int)(outend - outstart));
             return;
         }
-
-        if (*in != 0)
+        c = *in++;
+        if (c)
+            *out++ = c;
+        else
         {
-            *out++ = *in++;
-            continue;
+            if (in == inend)
+            {
+                logprint("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n", (int)(out - outstart), (int)(outend - outstart));
+                return;
+            }
+            for (c = *in++;c > 0;c--)
+            {
+                if (out == outend)
+                {
+                    logprint("Mod_Q1BSP_DecompressVis: output overrun (decompressed %i of %i output bytes)\n", (int)(out - outstart), (int)(outend - outstart));
+                    return;
+                }
+                *out++ = 0;
+            }
         }
-        in++; // skip the 0 byte
-
-        // check for input underrun
-        if (in >= in_end)
-        {
-            WriteDefaultVis(bsp, decompressed);
-            return;
-        }
-
-        int zerocount = *in++; // read the count of zeros to insert
-
-        // check for output overrun
-        if (out + zerocount > out_end) {
-            // this seems to happen even though it is wrong...
-            zerocount = out_end - out;
-        }
-
-        memset(out, 0, zerocount);
-        out += zerocount;
     }
+}
+
+static void
+Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
+{
+    const int num_pvsclusterbytes = DecompressedVisSize(bsp);
+    
+    // init to all visible
+    memset(out, 0xFF, num_pvsclusterbytes);
+    
+    // this is confusing.. "visleaf numbers" are the leaf number minus 1.
+    // they also don't go as high, bsp->dmodels[0].visleafs instead of bsp->numleafs
+    const int leafnum = (leaf - bsp->dleafs);
+    const int visleaf = leafnum - 1;
+    if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs)
+        return;
+    
+    if (leaf->visofs < 0)
+        return;
+    
+    if (leaf->visofs >= bsp->visdatasize) {
+        logprint("Mod_LeafPvs: invalid visofs for leaf %d\n", leafnum);
+        return;
+    }
+    
+    Mod_Q1BSP_DecompressVis(bsp->dvisdata + leaf->visofs,
+                            bsp->dvisdata + bsp->visdatasize,
+                            out,
+                            out + num_pvsclusterbytes);
+}
+
+// returns true if pvs can see leaf
+static bool
+Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf)
+{
+    const int leafnum = (leaf - bsp->dleafs);
+    const int visleaf = leafnum - 1;
+    if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs)
+        return false;
+    
+    return !!(pvs[visleaf>>3] & (1<<(visleaf&7)));
 }
 
 static void
 CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 {
-    const int pvssize = (bsp->numleafs+7)/8;
-    byte *pointpvs;
+    const int pvssize = DecompressedVisSize(bsp);
     const vec_t *surfpoint;
-    int i, j;
     const bsp2_dleaf_t *lastleaf = NULL;
 
     if (!bsp->visdatasize) return;
     
-    pointpvs = calloc(pvssize, 1);
+    byte *pointpvs = calloc(pvssize, 1);
     lightsurf->pvs = calloc(pvssize, 1);
     
     surfpoint = lightsurf->points[0];
-    for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
+    for (int i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
 	const bsp2_dleaf_t *leaf = Light_PointInLeaf (bsp, surfpoint);
-        const int leafnum = leaf - bsp->dleafs;
         
 	if (leaf == NULL)
 	    continue;
@@ -722,16 +738,10 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 	lastleaf = leaf;
 	
 	/* copy the pvs for this leaf into pointpvs */
-	if (leaf == bsp->dleafs)
-	    memset (pointpvs, 255, pvssize );
-	else
-	    DecompressVis (bsp, bsp->dvisdata + leaf->visofs, bsp->dvisdata + bsp->visdatasize, pointpvs);
-
-        /* mark this leaf as visible to itself (why is this not the case in the visdata!?!) */
-        pointpvs[leafnum>>3] |= (1<<(leafnum&7));
+        Mod_LeafPvs(bsp, leaf, pointpvs);
         
 	/* merge the pvs for this sample point into lightsurf->pvs */
-        for (j=0; j<pvssize; j++)
+        for (int j=0; j<pvssize; j++)
         {
             lightsurf->pvs[j] |= pointpvs[j];
         }
@@ -1177,8 +1187,6 @@ ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
 static qboolean
 VisCullEntity(const bsp2_t *bsp, const lightsurf_t *lightsurf, const entity_t *entity)
 {
-    int i;
-
     if (novis) return false;
     if (lightsurf->pvs == NULL) return false;
     if (entity->leaf == NULL) return false;
@@ -1187,8 +1195,8 @@ VisCullEntity(const bsp2_t *bsp, const lightsurf_t *lightsurf, const entity_t *e
         || entity->leaf->contents == CONTENTS_SKY)
         return false;
 
-    i = entity->leaf - bsp->dleafs;
-    if (lightsurf->pvs[i>>3] & (1<<(i&7))) return false;
+    if (Pvs_LeafVisible(bsp, lightsurf->pvs, entity->leaf))
+        return false;
     
     return true;
 }
