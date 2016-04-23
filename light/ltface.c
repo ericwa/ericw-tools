@@ -744,7 +744,8 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
         }
     }
     
-    free(leafpvs);
+    free(leafpvs); leafpvs = NULL;
+    free(faceleafs); faceleafs = NULL;
     
     // set lightsurf->skyvisible
     lightsurf->skyvisible = false;
