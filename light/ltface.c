@@ -712,7 +712,7 @@ Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf)
     return !!(pvs[visleaf>>3] & (1<<(visleaf&7)));
 }
 
-static void
+void
 CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 {
     const int pvssize = DecompressedVisSize(bsp);
@@ -764,6 +764,24 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
     free(leafpvs);
     
     // set lightsurf->skyvisible
+    lightsurf->skyvisible = false;
+    for (int i = 0; i < bsp->numleafs; i++) {
+        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
+        if (Pvs_LeafVisible(bsp, lightsurf->pvs, leaf)) {
+            // we can see this leaf, search for sky faces in it
+            for (int k = 0; k < leaf->nummarksurfaces; k++) {
+                const bsp2_dface_t *surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
+                const char *texname = Face_TextureName(bsp, surf);
+                if (!strncmp("sky", texname, 3)) {
+                    lightsurf->skyvisible = true;
+                    break;
+                }
+            }
+        }
+        
+        if (lightsurf->skyvisible)
+            break; // we are done
+    }
 }
 
 __attribute__((noinline))
@@ -1344,6 +1362,10 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     lightmap_t *lightmap;
     qboolean curved = lightsurf->curved;
 
+    /* If vis data says we can't see any sky faces, skip raytracing */
+    if (!lightsurf->skyvisible)
+        return;
+    
     /* Don't bother if surface facing away from sun */
     if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !curved)
         return;
