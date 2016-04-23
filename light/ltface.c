@@ -1235,7 +1235,6 @@ LightFace_Entity(const bsp2_t *bsp,
     vec_t planedist, add, angle, spotscale;
     lightsample_t *sample;
     lightmap_t *lightmap;
-    qboolean curved = lightsurf->curved;
 
     /* vis cull */
     if (VisCullEntity(bsp, lightsurf, entity)) {
@@ -1245,7 +1244,7 @@ LightFace_Entity(const bsp2_t *bsp,
     planedist = DotProduct(entity->origin, plane->normal) - plane->dist;
 
     /* don't bother with lights behind the surface */
-    if (planedist < 0 && !curved)
+    if (planedist < 0)
         return;
 
     /* sphere cull surface and light */
