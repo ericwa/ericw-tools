@@ -28,6 +28,8 @@
 #include <map>
 #include <set>
 
+using namespace std;
+
 float scaledist = 1.0;
 float rangescale = 0.5;
 float global_anglescale = 0.5;
@@ -754,6 +756,57 @@ ExportObj(const char *filename, const bsp2_t *bsp)
 
 //obj
 
+vector<vector<const bsp2_dleaf_t *>> faceleafs;
+vector<bool> leafhassky;
+
+// index some stuff from the bsp
+void BuildPvsIndex(const bsp2_t *bsp)
+{
+    // build leafsForFace
+    faceleafs.resize(bsp->numfaces);
+    for (int i = 0; i < bsp->numleafs; i++) {
+        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
+        for (int k = 0; k < leaf->nummarksurfaces; k++) {
+            const int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
+            faceleafs.at(facenum).push_back(leaf);
+        }
+    }
+    
+    // build leafhassky
+    leafhassky.resize(bsp->numleafs, false);
+    for (int i = 0; i < bsp->numleafs; i++) {
+        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
+        
+        // search for sky faces in it
+        for (int k = 0; k < leaf->nummarksurfaces; k++) {
+            const bsp2_dface_t *surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
+            const char *texname = Face_TextureName(bsp, surf);
+            if (!strncmp("sky", texname, 3)) {
+                leafhassky.at(i) = true;
+                break;
+            }
+        }
+    }
+}
+
+bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf)
+{
+    const int leafnum = leaf - bsp->dleafs;
+    return leafhassky.at(leafnum);
+}
+
+const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    const int facenum = face - bsp->dfaces;
+    auto &leafs = faceleafs.at(facenum);
+    
+    const bsp2_dleaf_t **result = (const bsp2_dleaf_t **) calloc(leafs.size() + 1, sizeof(const bsp2_dleaf_t *));
+    for (int i = 0; i<leafs.size(); i++) {
+        result[i] = leafs.at(i);
+    }
+    return result;
+}
+
 /*
  * ==================
  * main
@@ -980,6 +1033,7 @@ main(int argc, const char **argv)
     if (bspdata.version != BSP2VERSION)
         ConvertBSPFormat(BSP2VERSION, &bspdata);
 
+    BuildPvsIndex(bsp);
     LoadExtendedTexinfoFlags(source, bsp);
     LoadEntities(bsp);
 

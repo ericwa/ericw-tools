@@ -630,7 +630,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     }
 }
 
-static int
+int
 DecompressedVisSize(const bsp2_t *bsp)
 {
     return (bsp->dmodels[0].visleafs + 7) / 8;
@@ -671,7 +671,7 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
     }
 }
 
-static void
+void
 Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
 {
     const int num_pvsclusterbytes = DecompressedVisSize(bsp);
@@ -701,7 +701,7 @@ Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
 }
 
 // returns true if pvs can see leaf
-static bool
+bool
 Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf)
 {
     const int leafnum = (leaf - bsp->dleafs);
@@ -712,7 +712,7 @@ Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf)
     return !!(pvs[visleaf>>3] & (1<<(visleaf&7)));
 }
 
-void
+static void
 CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 {
     const int pvssize = DecompressedVisSize(bsp);
@@ -724,39 +724,22 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
     if (!bsp->visdatasize) return;
     
     // gather the leafs this face is in
-    int numfaceleafs = 0;
-    const bsp2_dleaf_t *faceleafs[64];
-    
-    for (int i = 0; i < bsp->numleafs; i++) {
-        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
-        
-        for (int k = 0; k < leaf->nummarksurfaces; k++) {
-            const bsp2_dface_t *surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
-            
-            if (surf == lightsurf->face) {
-                // store it
-                if (numfaceleafs < 64) {
-                    faceleafs[numfaceleafs++] = leaf;
-                } else {
-                    logprint("CalcPvs: warning: numfaceleafs == 64\n");
-                }
-            }
-        }
-    }
+    const bsp2_dleaf_t **faceleafs = Face_CopyLeafList(bsp, lightsurf->face);
     
     // set lightsurf->pvs
     byte *leafpvs = calloc(pvssize, 1);
     lightsurf->pvs = calloc(pvssize, 1);
     
-    for (int i = 0; i < numfaceleafs; i++) {
+    for (int i = 0; ; i++) {
         const bsp2_dleaf_t *leaf = faceleafs[i];
+        if (!leaf)
+            break;
 	
 	/* copy the pvs for this leaf into leafpvs */
         Mod_LeafPvs(bsp, leaf, leafpvs);
         
 	/* merge the pvs for this leaf into lightsurf->pvs */
-        for (int j=0; j<pvssize; j++)
-        {
+        for (int j=0; j<pvssize; j++) {
             lightsurf->pvs[j] |= leafpvs[j];
         }
     }
@@ -769,18 +752,11 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
         const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
         if (Pvs_LeafVisible(bsp, lightsurf->pvs, leaf)) {
             // we can see this leaf, search for sky faces in it
-            for (int k = 0; k < leaf->nummarksurfaces; k++) {
-                const bsp2_dface_t *surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
-                const char *texname = Face_TextureName(bsp, surf);
-                if (!strncmp("sky", texname, 3)) {
-                    lightsurf->skyvisible = true;
-                    break;
-                }
+            if (Leaf_HasSky(bsp, leaf)) {
+                lightsurf->skyvisible = true;
+                break;
             }
         }
-        
-        if (lightsurf->skyvisible)
-            break; // we are done
     }
 }
 

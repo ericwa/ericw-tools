@@ -299,15 +299,20 @@ Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
 
 void
 Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out);
+
+/* vis testing */
+const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
+int Light_PointContents( const bsp2_t *bsp, const vec3_t point );
+void Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out);
+int DecompressedVisSize(const bsp2_t *bsp);
+bool Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf);
+    
+/* PVS index (light.cc) */
+bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
+const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face);
     
 #ifdef __cplusplus
 }
 #endif
-
-/* vis testing */
-const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
-int PointInLeafnum (const bsp2_t *bsp, const vec3_t point);
-void PvsForOrigin (const bsp2_t *bsp, const vec3_t org, byte *pvs);
-int Light_PointContents( const bsp2_t *bsp, const vec3_t point );
 
 #endif /* __LIGHT_LIGHT_H__ */
