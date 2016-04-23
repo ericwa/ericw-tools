@@ -185,6 +185,7 @@ typedef struct {
      the pvs at each of the sample points
      */
     byte *pvs;
+    bool skyvisible;
     
     /* for sphere culling */
     vec3_t origin;

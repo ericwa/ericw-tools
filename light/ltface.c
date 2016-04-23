@@ -716,38 +716,54 @@ static void
 CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 {
     const int pvssize = DecompressedVisSize(bsp);
-    const vec_t *surfpoint;
-    const bsp2_dleaf_t *lastleaf = NULL;
 
+    // set defaults
+    lightsurf->pvs = NULL;
+    lightsurf->skyvisible = true;
+    
     if (!bsp->visdatasize) return;
     
-    byte *pointpvs = calloc(pvssize, 1);
-    lightsurf->pvs = calloc(pvssize, 1);
+    // gather the leafs this face is in
+    int numfaceleafs = 0;
+    const bsp2_dleaf_t *faceleafs[64];
     
-    surfpoint = lightsurf->points[0];
-    for (int i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
-	const bsp2_dleaf_t *leaf = Light_PointInLeaf (bsp, surfpoint);
+    for (int i = 0; i < bsp->numleafs; i++) {
+        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
         
-	if (leaf == NULL)
-	    continue;
-	
-	/* most/all of the surface points are probably in the same leaf */
-	if (leaf == lastleaf)
-	    continue;
-	
-	lastleaf = leaf;
-	
-	/* copy the pvs for this leaf into pointpvs */
-        Mod_LeafPvs(bsp, leaf, pointpvs);
-        
-	/* merge the pvs for this sample point into lightsurf->pvs */
-        for (int j=0; j<pvssize; j++)
-        {
-            lightsurf->pvs[j] |= pointpvs[j];
+        for (int k = 0; k < leaf->nummarksurfaces; k++) {
+            const bsp2_dface_t *surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
+            
+            if (surf == lightsurf->face) {
+                // store it
+                if (numfaceleafs < 64) {
+                    faceleafs[numfaceleafs++] = leaf;
+                } else {
+                    logprint("CalcPvs: warning: numfaceleafs == 64\n");
+                }
+            }
         }
     }
     
-    free(pointpvs);
+    // set lightsurf->pvs
+    byte *leafpvs = calloc(pvssize, 1);
+    lightsurf->pvs = calloc(pvssize, 1);
+    
+    for (int i = 0; i < numfaceleafs; i++) {
+        const bsp2_dleaf_t *leaf = faceleafs[i];
+	
+	/* copy the pvs for this leaf into leafpvs */
+        Mod_LeafPvs(bsp, leaf, leafpvs);
+        
+	/* merge the pvs for this leaf into lightsurf->pvs */
+        for (int j=0; j<pvssize; j++)
+        {
+            lightsurf->pvs[j] |= leafpvs[j];
+        }
+    }
+    
+    free(leafpvs);
+    
+    // set lightsurf->skyvisible
 }
 
 __attribute__((noinline))
