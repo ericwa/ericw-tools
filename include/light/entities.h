@@ -72,6 +72,7 @@ typedef struct entity_s {
     float atten;
     float anglescale;
     int style;
+    qboolean bleed;
 
     /* worldspawn only */
     vec_t dirtdepth;

@@ -1032,6 +1032,9 @@ LoadEntities(const bsp2_t *bsp)
             {
                 projfov = atof(com_token);
             }
+            else if (!strcmp(key, "_bleed")) {
+                entity->bleed = atoi(com_token);
+            }
             else if (!strcmp(key, "_sunlight_penumbra")) {
                 sun_deviance = atof(com_token);
             }

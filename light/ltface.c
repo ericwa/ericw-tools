@@ -1244,7 +1244,7 @@ LightFace_Entity(const bsp2_t *bsp,
     planedist = DotProduct(entity->origin, plane->normal) - plane->dist;
 
     /* don't bother with lights behind the surface */
-    if (planedist < 0)
+    if (planedist < 0 && !entity->bleed)
         return;
 
     /* sphere cull surface and light */
@@ -1270,6 +1270,11 @@ LightFace_Entity(const bsp2_t *bsp,
             continue;
 
         angle = DotProduct(surfpointToLightDir, surfnorm);
+        if (entity->bleed) {
+            if (angle < 0) {
+                angle = -angle; // ericw -- support "_bleed" option
+            }
+        }
         angle = qmax(0.0f, angle); // light can be behind sample point if the light is right on the face
 
         /* Check spotlight cone */
