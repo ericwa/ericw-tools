@@ -671,7 +671,7 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
     }
 }
 
-void
+bool
 Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
 {
     const int num_pvsclusterbytes = DecompressedVisSize(bsp);
@@ -684,20 +684,21 @@ Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
     const int leafnum = (leaf - bsp->dleafs);
     const int visleaf = leafnum - 1;
     if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs)
-        return;
+        return false;
     
     if (leaf->visofs < 0)
-        return;
+        return false;
     
     if (leaf->visofs >= bsp->visdatasize) {
         logprint("Mod_LeafPvs: invalid visofs for leaf %d\n", leafnum);
-        return;
+        return false;
     }
     
     Mod_Q1BSP_DecompressVis(bsp->dvisdata + leaf->visofs,
                             bsp->dvisdata + bsp->visdatasize,
                             out,
                             out + num_pvsclusterbytes);
+    return true;
 }
 
 // returns true if pvs can see leaf

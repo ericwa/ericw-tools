@@ -303,7 +303,7 @@ Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, pla
 /* vis testing */
 const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
 int Light_PointContents( const bsp2_t *bsp, const vec3_t point );
-void Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out);
+bool Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out);
 int DecompressedVisSize(const bsp2_t *bsp);
 bool Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf);
     
