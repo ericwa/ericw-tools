@@ -717,6 +717,7 @@ static void
 CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
 {
     const int pvssize = DecompressedVisSize(bsp);
+    const bsp2_dleaf_t *lastleaf = NULL;
 
     // set defaults
     lightsurf->pvs = NULL;
@@ -724,29 +725,29 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
     
     if (!bsp->visdatasize) return;
     
-    // gather the leafs this face is in
-    const bsp2_dleaf_t **faceleafs = Face_CopyLeafList(bsp, lightsurf->face);
-    
     // set lightsurf->pvs
-    byte *leafpvs = calloc(pvssize, 1);
+    byte *pointpvs = calloc(pvssize, 1);
     lightsurf->pvs = calloc(pvssize, 1);
     
-    for (int i = 0; ; i++) {
-        const bsp2_dleaf_t *leaf = faceleafs[i];
-        if (!leaf)
-            break;
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        const bsp2_dleaf_t *leaf = Light_PointInLeaf (bsp, lightsurf->points[i]);
 	
-	/* copy the pvs for this leaf into leafpvs */
-        Mod_LeafPvs(bsp, leaf, leafpvs);
+	/* most/all of the surface points are probably in the same leaf */
+	if (leaf == lastleaf)
+	    continue;
+	
+	lastleaf = leaf;
+	
+	/* copy the pvs for this leaf into pointpvs */
+        Mod_LeafPvs(bsp, leaf, pointpvs);
         
-	/* merge the pvs for this leaf into lightsurf->pvs */
+        /* merge the pvs for this sample point into lightsurf->pvs */
         for (int j=0; j<pvssize; j++) {
-            lightsurf->pvs[j] |= leafpvs[j];
+            lightsurf->pvs[j] |= pointpvs[j];
         }
     }
     
-    free(leafpvs); leafpvs = NULL;
-    free(faceleafs); faceleafs = NULL;
+    free(pointpvs); pointpvs = NULL;
     
     // set lightsurf->skyvisible
     lightsurf->skyvisible = false;
