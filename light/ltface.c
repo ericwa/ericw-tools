@@ -1543,6 +1543,34 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
+static void
+GetIndirectLighting(const bsp2_t *bsp, const bsp2_dface_t *face, const vec3_t point, const vec3_t normal, vec3_t out)
+{
+    VectorSet(out, 0,0,0);
+}
+
+static void
+LightFace_BounceDebug(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+{
+    lightsample_t *sample;
+    lightmap_t *lightmap;
+    
+    /* use a style 0 light map */
+    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    
+    /* Overwrite each point with the indirect lighting for that sample... */
+    sample = lightmap->samples;
+    for (int i = 0; i < lightsurf->numpoints; i++, sample++) {
+        vec3_t indirect = {0};
+        GetIndirectLighting(bsp, face, lightsurf->points[i], lightsurf->normals[i], indirect);
+        VectorCopy(indirect, sample->color);
+        sample->light = 255;
+    }
+    
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
+
+
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
 
 #define DIRT_NUM_ANGLE_STEPS        16
@@ -2040,6 +2068,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
 
     if (phongDebug)
         LightFace_PhongDebug(lightsurf, lightmaps);
+    
+    if (bouncedebug)
+        LightFace_BounceDebug(bsp, face, lightsurf, lightmaps);
     
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {

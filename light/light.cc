@@ -66,6 +66,11 @@ qboolean dirtScaleSetOnCmdline = false;
 qboolean dirtGainSetOnCmdline = false;
 qboolean dirtAngleSetOnCmdline = false;
 
+/* bounce */
+qboolean bounce = false;
+qboolean bouncedebug = false;
+vec_t bouncescale = 1.0f;
+
 qboolean testFenceTextures = false;
 qboolean surflight_dump = false;
 
@@ -996,6 +1001,17 @@ main(int argc, const char **argv)
             dirtAngleSetOnCmdline = true;
             dirtAngle = atof( argv[ ++i ] );
             logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle );
+        } else if ( !strcmp( argv[ i ], "-bounce" ) ) {
+            bounce = true;
+            logprint( "Bounce enabled on command line\n" );
+        } else if ( !strcmp( argv[ i ], "-bouncedebug" ) ) {
+            bounce = true;
+            bouncedebug = true;
+            logprint( "Bounce debugging mode enabled on command line\n" );
+        } else if ( !strcmp( argv[ i ], "-bouncescale" ) ) {
+            bounce = true;
+            bouncescale = atof( argv[ ++i ] );
+            logprint( "Bounce scale factor set to %f on command line\n", bouncescale );
         } else if ( !strcmp( argv[ i ], "-fence" ) ) {
             testFenceTextures = true;
             logprint( "Fence texture tracing enabled on command line\n" );

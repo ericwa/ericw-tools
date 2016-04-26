@@ -260,6 +260,12 @@ extern qboolean dirtScaleSetOnCmdline;
 extern qboolean dirtGainSetOnCmdline;
 extern qboolean dirtAngleSetOnCmdline;
 
+/* bounce */
+
+extern qboolean bounce;
+extern qboolean bouncedebug;
+extern vec_t bouncescale;
+
 /*
  * Return space for the lightmap and colourmap at the same time so it can
  * be done in a thread-safe manner.

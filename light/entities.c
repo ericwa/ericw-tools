@@ -1054,6 +1054,14 @@ LoadEntities(const bsp2_t *bsp)
                 lightmapgamma = atof(com_token);
                 logprint("using lightmap gamma value %f\n", lightmapgamma);
             }
+            else if (!strcmp(key, "_bounce")) {
+                bounce = atoi(com_token);
+                logprint("_bounce set to %d\n", bounce);
+            }
+            else if (!strcmp(key, "_bouncescale")) {
+                bouncescale = atof(com_token);
+                logprint("_bouncescale set to %f\n", bouncescale);
+            }
         }
 
         /*
