@@ -1260,8 +1260,14 @@ LightFace_Entity(const bsp2_t *bsp,
 
     planedist = DotProduct(entity->origin, plane->normal) - plane->dist;
 
-    /* don't bother with lights behind the surface */
-    if (planedist < 0 && !entity->bleed)
+    /* don't bother with lights behind the surface.
+     
+       if the surface is curved, the light may be behind the surface, but it may
+       still have a line of sight to a samplepoint, and that sample point's 
+       normal may be facing such that it receives some light, so we can't use this 
+       test in the curved case.
+    */
+    if (planedist < 0 && !entity->bleed && !lightsurf->curved)
         return;
 
     /* sphere cull surface and light */
