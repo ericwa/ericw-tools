@@ -629,9 +629,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             TexCoordToWorld(us, ut, &surf->texorg, point);
             VectorAdd(point, offset, point);
 
-            // corrects point
-            CheckObstructed(surf, offset, us, ut, point);
-            
+            // do this before correcting the point, so we can wrap around the inside of pipes
             if (surf->curved)
             {
                 CalcPointNormal(bsp, face, norm, point, 0);
@@ -640,6 +638,9 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             {
                 VectorCopy(surf->plane.normal, norm);
             }
+            
+            // corrects point
+            CheckObstructed(surf, offset, us, ut, point);
         }
     }
 }
