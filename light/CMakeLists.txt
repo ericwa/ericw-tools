@@ -17,6 +17,7 @@ set(LIGHT_SOURCES
 	${CMAKE_SOURCE_DIR}/common/mathlib.c
 	${CMAKE_SOURCE_DIR}/common/log.c
 	${CMAKE_SOURCE_DIR}/common/threads.c
+	${CMAKE_SOURCE_DIR}/common/polylib.c
 	${COMMON_INCLUDES}
 	${LIGHT_INCLUDES})
 
