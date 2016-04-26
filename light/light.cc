@@ -746,7 +746,10 @@ ExportObj(const char *filename, const bsp2_t *bsp)
     FILE *objfile = InitObjFile(filename);
     int vertcount = 0;
     
-    for (int i=0; i<bsp->numfaces; i++) {
+    const int start = bsp->dmodels[0].firstface;
+    const int end = bsp->dmodels[0].firstface + bsp->dmodels[0].numfaces;
+    
+    for (int i=start; i<end; i++) {
         ExportObjFace(objfile, bsp, &bsp->dfaces[i], &vertcount);
     }
     
