@@ -222,6 +222,9 @@ void MakeTnodes(const bsp2_t *bsp);
 
 /* access the final phong-shaded vertex normal */
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
+
+const bsp2_dface_t *
+Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
     
 extern float scaledist;
 extern float rangescale;
@@ -299,6 +302,9 @@ Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
 
 void
 Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out);
+
+plane_t Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f);
+void Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm);
 
 /* vis testing */
 const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );

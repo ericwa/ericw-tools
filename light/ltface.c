@@ -19,6 +19,7 @@
 
 #include <light/light.h>
 #include <light/entities.h>
+#include <assert.h>
 
 /* ======================================================================== */
 
@@ -460,8 +461,10 @@ FractionOfLine(const vec3_t v, const vec3_t w, const vec3_t p) {
     return t;
 }
 
-static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t surfplane, vec_t *norm, const vec_t *point)
+static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *norm, const vec_t *point, int inside)
 {
+    plane_t surfplane = Face_Plane(bsp, face);
+    
     // project `point` onto the surface plane (it's hovering 1 unit above)
     vec3_t pointOnPlane;
     {
@@ -507,6 +510,17 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t
             if (dist < ON_EPSILON) {
                 // behind this plane
                 
+                const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, i);
+                if (smoothed) {
+                    if (inside < 3) {
+                        free(edgeplanes);
+                        
+                        // call recursively to look up normal in the adjacent face
+                        CalcPointNormal(bsp, smoothed, norm, point, inside + 1);
+                        return;
+                    }
+                }
+
                 v1 = GetSurfaceVertexPoint(bsp, face, i);
                 v2 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
                 
@@ -620,7 +634,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             
             if (surf->curved)
             {
-                CalcPointNormal(bsp, face, surf->plane, norm, point);
+                CalcPointNormal(bsp, face, norm, point, 0);
             }
             else
             {

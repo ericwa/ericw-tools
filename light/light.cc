@@ -350,7 +350,8 @@ public:
 
 std::map<const bsp2_dface_t *, std::vector<vec3_struct_t>> vertex_normals;
 std::set<int> interior_verts;
-
+map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
+map<int, vector<const bsp2_dface_t *>> vertsToFaces;
 
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts.
  * v1, v2, v3 are global vertex indices */
@@ -381,7 +382,7 @@ static int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
     return bsp->dedges[edge].v[0];
 }
 
-static void
+void
 Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
 {
     if (f->side)
@@ -412,11 +413,62 @@ FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
 }
 
 static void
+Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
+{
+    assert(num >= 0 && num < bsp->numvertexes);
+    const dvertex_t *v = &bsp->dvertexes[num];
+    
+    for (int i=0; i<3; i++)
+        out[i] = v->point[i];
+}
+
+plane_t
+Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    const int vertnum = GetSurfaceVertex(bsp, f, 0);
+    vec3_t vertpos;
+    Vertex_GetPos(bsp, vertnum, vertpos);
+    
+    plane_t res;
+    Face_Normal(bsp, f, res.normal);
+    res.dist = DotProduct(vertpos, res.normal);
+    return res;
+}
+
+const bsp2_dface_t *
+Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex) 
+{
+    if (smoothFaces.find(f) == smoothFaces.end()) {
+        return nullptr;
+    }
+    
+    int v0 = GetSurfaceVertex(bsp, f, edgeindex);
+    int v1 = GetSurfaceVertex(bsp, f, (edgeindex + 1) % f->numedges);
+    
+    const auto &v0_faces = vertsToFaces.at(v0);
+    const auto &v1_faces = vertsToFaces.at(v1);
+    
+    // find a face f2 that has both verts v0 and v1
+    for (auto f2 : v0_faces) {
+        if (f2 == f)
+            continue;
+        if (find(v1_faces.begin(), v1_faces.end(), f2) != v1_faces.end()) {
+            const auto &f_smoothfaces = smoothFaces.at(f);
+            bool smoothed = (f_smoothfaces.find(f2) != f_smoothfaces.end());
+            return smoothed ? f2 : nullptr;
+        }
+    }
+    return nullptr;
+}
+
+static void
 CalcualateVertexNormals(const bsp2_t *bsp)
 {
     // clear in case we are run twice
     vertex_normals.clear();
     interior_verts.clear();
+    smoothFaces.clear();
+    vertsToFaces.clear();
     
     // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
     // support on func_detail/func_group
@@ -436,7 +488,6 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     }
     
     // build "vert index -> faces" map
-    std::map<int, std::vector<const bsp2_dface_t *>> vertsToFaces;
     for (int i = 0; i < bsp->numfaces; i++) {
         const bsp2_dface_t *f = &bsp->dfaces[i];
         for (int j = 0; j < f->numedges; j++) {
@@ -455,7 +506,6 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     printf("CalcualateVertexNormals: %d interior verts\n", (int)interior_verts.size());
     
     // build the "face -> faces to smooth with" map
-    std::map<const bsp2_dface_t *, std::set<const bsp2_dface_t *>> smoothFaces;
     for (int i = 0; i < bsp->numfaces; i++) {
         bsp2_dface_t *f = &bsp->dfaces[i];
         
