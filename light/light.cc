@@ -24,8 +24,11 @@
 #include <light/light.h>
 #include <light/entities.h>
 
+#include <common/polylib.h>
+
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <set>
 #include <algorithm>
 
@@ -752,6 +755,290 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
     fclose(texinfofile);
 }
 
+// radiosity
+
+class light_t{
+public:
+    vec3_t pos;
+    vec3_t color;
+    vec3_t surfnormal;
+    vec_t area;
+};
+
+std::vector<light_t> radlights;
+
+class patch_t {
+public:
+    winding_t *w;
+    vec3_t center;
+    vec3_t samplepoint; // 1 unit above center
+    plane_t plane;
+    vec3_t directlight;
+    std::vector<plane_t> edgeplanes;
+    
+    vec3_t indirectlight;
+    
+    bool pointInPatch(const vec3_t point) {
+        for (const auto &edgeplane : edgeplanes)
+        {
+            /* faces toward the center of the face */
+            vec_t dist = DotProduct(point, edgeplane.normal) - edgeplane.dist;
+            if (dist < 0)
+                return false;
+        }
+        return true;
+    }
+};
+
+void
+GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
+{
+    const entity_t *entity;
+    entity_t **lighte;
+    
+    VectorSet(colorout, 0, 0, 0);
+    
+    for (lighte = lights; (entity = *lighte); lighte++)
+    {
+        if (!TestLight(entity->origin, origin, NULL))
+            continue;
+        
+        vec3_t originLightDir;
+        VectorSubtract(entity->origin, origin, originLightDir);
+        vec_t dist = VectorNormalize(originLightDir);
+            
+        vec_t cosangle = DotProduct(originLightDir, normal);
+        if (cosangle < 0)
+            continue;
+        
+        vec_t lightval = GetLightValue(&entity->light, entity, dist);
+        VectorMA(colorout, lightval * cosangle / 255.0f, entity->light.color, colorout);
+    }
+    
+    for ( sun_t *sun = suns; sun; sun = sun->next )
+    {
+        if (!TestSky(origin, sun->sunvec, NULL))
+            continue;
+        VectorMA(colorout, sun->sunlight.light, sun->sunlight.color, colorout);
+    }
+}
+
+std::vector<patch_t *> triangleIndexToPatch;
+std::unordered_map<int, std::vector<patch_t *>> facenumToPatches;
+
+/*
+=============
+WindingFromFace
+From q2 tools
+=============
+*/
+winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    int			i;
+    int			se;
+    dvertex_t	*dv;
+    int			v;
+    winding_t	*w;
+    
+    w = AllocWinding (f->numedges);
+    w->numpoints = f->numedges;
+    
+    for (i=0 ; i<f->numedges ; i++)
+    {
+        se = bsp->dsurfedges[f->firstedge + i];
+        if (se < 0)
+            v = bsp->dedges[-se].v[1];
+        else
+            v = bsp->dedges[se].v[0];
+        
+        dv = &bsp->dvertexes[v];
+        for (int j=0; j<3; j++) {
+            w->p[i][j] = dv->point[j];
+        }
+    }
+    
+    RemoveColinearPoints (w);
+    
+    return w;
+}
+
+
+void SavePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w)
+{
+    int i = sourceface - bsp->dfaces;
+    
+    patch_t *p = new patch_t;
+    p->w = w;
+    
+    // cache some stuff
+    WindingCenter(p->w, p->center);
+    WindingPlane(p->w, p->plane.normal, &p->plane.dist);
+    
+    // HACK: flip the plane
+    p->plane.dist = -p->plane.dist;
+    VectorScale(p->plane.normal, -1, p->plane.normal);
+    
+    VectorMA(p->center, 1, p->plane.normal, p->samplepoint);
+    
+    // calculate direct light
+    if (bsp->texinfo[sourceface->texinfo].flags & TEX_SPECIAL) {
+        VectorSet(p->directlight, 0, 0, 0);
+    } else {
+        GetDirectLighting(p->center, p->plane.normal, p->directlight);
+        VectorScale(p->directlight, 1/255.0, p->directlight);
+    }
+    
+    // make edge planes
+    for (int i=0; i<p->w->numpoints; i++)
+    {
+        plane_t dest;
+        
+        const vec_t *v0 = p->w->p[i];
+        const vec_t *v1 = p->w->p[(i + 1) % p->w->numpoints];
+        
+        vec3_t edgevec;
+        VectorSubtract(v1, v0, edgevec);
+        VectorNormalize(edgevec);
+        
+        CrossProduct(edgevec, p->plane.normal, dest.normal);
+        dest.dist = DotProduct(dest.normal, v0);
+        
+        p->edgeplanes.push_back(dest);
+    }
+    
+    // save
+    facenumToPatches[i].push_back(p);
+}
+
+/*
+=============
+DicePatch
+
+Chops the patch by a global grid
+From q3rad
+=============
+*/
+void	DicePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w, vec_t subdiv)
+{
+    winding_t   *o1, *o2;
+    vec3_t	mins, maxs;
+    vec3_t	split;
+    vec_t	dist;
+    int		i;
+    
+    if (!w)
+        return;
+    
+    WindingBounds (w, mins, maxs);
+    for (i=0 ; i<3 ; i++)
+        if (floor((mins[i]+1)/subdiv) < floor((maxs[i]-1)/subdiv))
+            break;
+    if (i == 3)
+    {
+        // no splitting needed
+        SavePatch(bsp, sourceface, w);
+        return;
+    }
+    
+    //
+    // split the winding
+    //
+    VectorCopy (vec3_origin, split);
+    split[i] = 1;
+    dist = subdiv*(1+floor((mins[i]+1)/subdiv));
+    ClipWinding (w, split, dist, &o1, &o2);
+    free(w);
+    
+    //
+    // create a new patch
+    //
+    DicePatch(bsp, sourceface, o1, subdiv);
+    DicePatch(bsp, sourceface, o2, subdiv);
+}
+
+void MakeBounceLights (const bsp2_t *bsp)
+{
+    const dmodel_t *model = &bsp->dmodels[0];
+    for (int i=model->firstface; i<model->firstface + model->numfaces; i++) {
+        const bsp2_dface_t *face = &bsp->dfaces[i];
+        if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL) {
+            continue;
+        }
+        
+        winding_t *winding = WindingFromFace(bsp, face);
+        DicePatch(bsp, face, winding, 1024);
+    }
+    
+    int patches  =0;
+    
+    for (auto mapentry : facenumToPatches) {
+        for (auto patch : mapentry.second) {
+            patches++;
+
+            // create VPL
+            if (patch->directlight[0] > 0
+                && patch->directlight[1] > 0
+                && patch->directlight[2] > 0) {
+                light_t l;
+                VectorCopy(patch->samplepoint, l.pos);
+                VectorCopy(patch->directlight, l.color);
+                VectorCopy(patch->plane.normal, l.surfnormal);
+                l.area = WindingArea(patch->w);
+                radlights.push_back(l);
+            }
+        }
+    }
+    logprint("created %d patches\n", patches);
+    logprint("created %d bounce lights\n", (int)radlights.size());
+}
+
+
+
+// returns color in [0,255]
+void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const vec3_t origin, const vec3_t normal, vec3_t colorout)
+{
+    VectorSet(colorout, 0, 0, 0);
+    
+    // sample vpls
+    for (const auto &vpl : radlights) {
+        vec3_t dir;
+        VectorSubtract(origin, vpl.pos, dir); // vpl -> sample point
+        vec_t dist = VectorNormalize(dir);
+        
+        const vec_t dp1 = DotProduct(vpl.surfnormal, dir);
+        if (dp1 < 0)
+            continue; // sample point behind vpl
+        
+        vec3_t sp_vpl;
+        VectorScale(dir, -1, sp_vpl);
+        
+        const vec_t dp2 = DotProduct(sp_vpl, normal);
+        if (dp2 < 0)
+            continue; // vpl behind sample face
+        
+        if (TestLight(vpl.pos, origin, NULL)) {
+            vec3_t color;
+            VectorScale(vpl.color, vpl.area, color);
+            
+            // clamp away hotspots
+            if (dist < 128) {
+                dist = 128;
+            }
+            
+            const vec_t dist2 = (dist * dist);
+            const vec_t scale = dp1 * dp2 * (1.0/dist2) * bouncescale;
+            
+            // no occlusion
+            VectorMA(colorout, scale, color, colorout);
+        }
+    }
+    
+    VectorScale(colorout, 255, colorout);
+    return;
+}
+
+// end radiosity
+
 //obj
 
 static FILE *
@@ -1116,6 +1403,10 @@ main(int argc, const char **argv)
             SetupDirt();
 
         MakeTnodes(bsp);
+        
+        if (bounce)
+            MakeBounceLights(bsp);
+        
         LightWorld(&bspdata, !!lmscaleoverride);
         
         /*invalidate any bspx lighting info early*/

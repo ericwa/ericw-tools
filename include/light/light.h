@@ -300,6 +300,8 @@ extern qboolean phongDebug;
 
 extern char mapfilename[1024];
 
+void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const vec3_t origin, const vec3_t normal, vec3_t colorout);
+
 void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
     

@@ -1544,26 +1544,32 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 }
 
 static void
-GetIndirectLighting(const bsp2_t *bsp, const bsp2_dface_t *face, const vec3_t point, const vec3_t normal, vec3_t out)
-{
-    VectorSet(out, 0,0,0);
-}
-
-static void
-LightFace_BounceDebug(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     lightsample_t *sample;
     lightmap_t *lightmap;
     
+    if (!bounce)
+        return;
+    
     /* use a style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
-    /* Overwrite each point with the indirect lighting for that sample... */
     sample = lightmap->samples;
     for (int i = 0; i < lightsurf->numpoints; i++, sample++) {
         vec3_t indirect = {0};
         GetIndirectLighting(bsp, face, lightsurf->points[i], lightsurf->normals[i], indirect);
-        VectorCopy(indirect, sample->color);
+        
+        /* Use dirt scaling on the indirect lighting. */
+        const vec_t dirtscale = Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
+        VectorScale(indirect, dirtscale, indirect);
+        
+        if (bouncedebug) {
+            /* Overwrite each point with the indirect lighting for that sample... */
+            VectorCopy(indirect, sample->color);
+        } else {
+            VectorAdd(sample->color, indirect, sample->color);
+        }
         sample->light = 255;
     }
     
@@ -2069,8 +2075,8 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     if (phongDebug)
         LightFace_PhongDebug(lightsurf, lightmaps);
     
-    if (bouncedebug)
-        LightFace_BounceDebug(bsp, face, lightsurf, lightmaps);
+    /* add indirect lighting */
+    LightFace_Bounce(bsp, face, lightsurf, lightmaps);
     
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {
