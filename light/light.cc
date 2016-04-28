@@ -1026,7 +1026,8 @@ void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const vec
             }
             
             const vec_t dist2 = (dist * dist);
-            const vec_t scale = dp1 * dp2 * (1.0/dist2) * bouncescale;
+            const vec_t scale = dp1 /* * dp2 */ * (1.0/dist2) * bouncescale;
+            // dp2 makes things too angle-dependent
             
             // no occlusion
             VectorMA(colorout, scale, color, colorout);
