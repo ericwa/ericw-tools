@@ -821,7 +821,7 @@ GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
     {
         if (!TestSky(origin, sun->sunvec, NULL))
             continue;
-        VectorMA(colorout, sun->sunlight.light, sun->sunlight.color, colorout);
+        VectorMA(colorout, sun->sunlight.light / 255.0f, sun->sunlight.color, colorout);
     }
 }
 
