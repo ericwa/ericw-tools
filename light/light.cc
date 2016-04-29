@@ -31,6 +31,7 @@
 #include <unordered_map>
 #include <set>
 #include <algorithm>
+#include <mutex>
 
 using namespace std;
 
@@ -826,6 +827,7 @@ GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
 
 std::vector<patch_t *> triangleIndexToPatch;
 std::unordered_map<int, std::vector<patch_t *>> facenumToPatches;
+mutex facenumToPatches_mutex;
 
 /*
 =============
@@ -908,6 +910,7 @@ void SavePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w)
     }
     
     // save
+    unique_lock<mutex> lck { facenumToPatches_mutex };
     facenumToPatches[i].push_back(p);
 }
 
@@ -957,10 +960,16 @@ void	DicePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w,
     DicePatch(bsp, sourceface, o2, subdiv);
 }
 
-void MakeBounceLights (const bsp2_t *bsp)
+static void *
+MakeBounceLightsThread (void *arg)
 {
-    const dmodel_t *model = &bsp->dmodels[0];
-    for (int i=model->firstface; i<model->firstface + model->numfaces; i++) {
+    const bsp2_t *bsp = (const bsp2_t *)arg;
+    
+    while (1) {
+        int i = GetThreadWork();
+        if (i == -1)
+            break;
+    
         const bsp2_dface_t *face = &bsp->dfaces[i];
         if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL) {
             continue;
@@ -970,7 +979,17 @@ void MakeBounceLights (const bsp2_t *bsp)
         DicePatch(bsp, face, winding, 1024);
     }
     
-    int patches  =0;
+    return NULL;
+}
+
+void MakeBounceLights (const bsp2_t *bsp)
+{
+    logprint("--- MakeBounceLights ---\n");
+    
+    const dmodel_t *model = &bsp->dmodels[0];
+    RunThreadsOn(model->firstface, model->firstface + model->numfaces, MakeBounceLightsThread, (void *)bsp);
+    
+    int patches  = 0;
     
     for (auto mapentry : facenumToPatches) {
         for (auto patch : mapentry.second) {
