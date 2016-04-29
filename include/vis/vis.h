@@ -26,6 +26,7 @@
 
 #define  PORTALFILE  "PRT1"
 #define  PORTALFILE2 "PRT2"
+#define  PORTALFILEAM "PRT1-AM"
 #define  ON_EPSILON  0.1
 
 typedef struct {

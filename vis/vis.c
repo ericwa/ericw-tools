@@ -1060,6 +1060,13 @@ LoadPortals(char *name, bsp2_t *bsp)
         logprint("%6d leafs\n", portalleafs_real);
         logprint("%6d clusters\n", portalleafs);
         logprint("%6d portals\n", numportals);
+    } else if (!strcmp(magic, PORTALFILEAM)) {
+        count = fscanf(f, "%i\n%i\n%i\n", &portalleafs, &numportals, &portalleafs_real);
+        if (count != 3)
+            Error("%s: unable to parse %s HEADER\n", __func__, PORTALFILE);
+        logprint("%6d leafs\n", portalleafs_real);
+        logprint("%6d clusters\n", portalleafs);
+        logprint("%6d portals\n", numportals);
     } else {
         Error("%s: unknown header: %s\n", __func__, magic);
     }
@@ -1152,24 +1159,40 @@ LoadPortals(char *name, bsp2_t *bsp)
     /* Load the cluster expansion map if needed */
     if (portalleafs != portalleafs_real) {
         clustermap = malloc(portalleafs_real * sizeof(int));
-        for (i = 0; i < portalleafs; i++) {
-            while (1) {
-                int leafnum;
-                count = fscanf(f, "%i", &leafnum);
-                if (!count || count == EOF)
+        if (!strcmp(magic, PORTALFILE2)) {
+            for (i = 0; i < portalleafs; i++) {
+                while (1) {
+                    int leafnum;
+                    count = fscanf(f, "%i", &leafnum);
+                    if (!count || count == EOF)
+                        break;
+                    if (leafnum < 0)
+                        break;
+                    if (leafnum >= portalleafs_real)
+                        Error("Invalid leaf number in cluster map (%d >= %d",
+                              leafnum, portalleafs_real);
+                    clustermap[leafnum] = i;
+                }
+                if (count == EOF)
                     break;
-                if (leafnum < 0)
-                    break;
-                if (leafnum >= portalleafs_real)
-                    Error("Invalid leaf number in cluster map (%d >= %d",
-                          leafnum, portalleafs_real);
-                clustermap[leafnum] = i;
             }
-            if (count == EOF)
-                break;
+            if (i < portalleafs)
+                Error("Couldn't read cluster map (%d / %d)\n", i, portalleafs);
+        } else if (!strcmp(magic, PORTALFILEAM)) {
+            for (i = 0; i < portalleafs_real; i++) {
+                int clusternum;
+                count = fscanf(f, "%i", &clusternum);
+                if (!count || count == EOF) {
+                    Error("Unexpected end of cluster map\n");
+                }
+                if (clusternum < 0 || clusternum >= portalleafs) {
+                    Error("Invalid cluster number %d in cluster map, number of clusters: %d\n", clusternum, portalleafs);
+                }
+                clustermap[i] = clusternum;
+            }
+        } else {
+            Error("Unknown header %s\n", magic);
         }
-        if (i < portalleafs)
-            Error("Couldn't read cluster map (%d / %d)\n", i, portalleafs);
     }
 
     fclose(f);
