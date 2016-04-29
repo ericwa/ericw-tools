@@ -300,7 +300,7 @@ extern qboolean phongDebug;
 
 extern char mapfilename[1024];
 
-void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const vec3_t origin, const vec3_t normal, vec3_t colorout);
+void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
 
 void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
@@ -323,7 +323,8 @@ bool Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *lea
     
 /* PVS index (light.cc) */
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
-const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face);
+const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face);    
+qboolean VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf);
     
 #ifdef __cplusplus
 }

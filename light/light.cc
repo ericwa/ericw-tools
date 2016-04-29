@@ -763,6 +763,7 @@ public:
     vec3_t color;
     vec3_t surfnormal;
     vec_t area;
+    const bsp2_dleaf_t *leaf;
 };
 
 std::vector<light_t> radlights;
@@ -984,6 +985,7 @@ void MakeBounceLights (const bsp2_t *bsp)
                 VectorCopy(patch->directlight, l.color);
                 VectorCopy(patch->plane.normal, l.surfnormal);
                 l.area = WindingArea(patch->w);
+                l.leaf = Light_PointInLeaf(bsp, l.pos);
                 radlights.push_back(l);
             }
         }
@@ -995,12 +997,15 @@ void MakeBounceLights (const bsp2_t *bsp)
 
 
 // returns color in [0,255]
-void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const vec3_t origin, const vec3_t normal, vec3_t colorout)
+void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
 {
     VectorSet(colorout, 0, 0, 0);
     
     // sample vpls
     for (const auto &vpl : radlights) {
+        if (VisCullEntity(bsp, pvs, vpl.leaf))
+            continue;
+        
         vec3_t dir;
         VectorSubtract(origin, vpl.pos, dir); // vpl -> sample point
         vec_t dist = VectorNormalize(dir);

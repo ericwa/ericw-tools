@@ -1212,18 +1212,18 @@ ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
     VectorMA(point, -dist, plane->normal, out);
 }
 
-static qboolean
-VisCullEntity(const bsp2_t *bsp, const lightsurf_t *lightsurf, const entity_t *entity)
+qboolean
+VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf)
 {
     if (novis) return false;
-    if (lightsurf->pvs == NULL) return false;
-    if (entity->leaf == NULL) return false;
+    if (pvs == NULL) return false;
+    if (entleaf == NULL) return false;
     
-    if (entity->leaf->contents == CONTENTS_SOLID
-        || entity->leaf->contents == CONTENTS_SKY)
+    if (entleaf->contents == CONTENTS_SOLID
+        || entleaf->contents == CONTENTS_SKY)
         return false;
 
-    if (Pvs_LeafVisible(bsp, lightsurf->pvs, entity->leaf))
+    if (Pvs_LeafVisible(bsp, pvs, entleaf))
         return false;
     
     return true;
@@ -1254,7 +1254,7 @@ LightFace_Entity(const bsp2_t *bsp,
     lightmap_t *lightmap;
 
     /* vis cull */
-    if (VisCullEntity(bsp, lightsurf, entity)) {
+    if (VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
         return;
     }
 
@@ -1558,7 +1558,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     sample = lightmap->samples;
     for (int i = 0; i < lightsurf->numpoints; i++, sample++) {
         vec3_t indirect = {0};
-        GetIndirectLighting(bsp, face, lightsurf->points[i], lightsurf->normals[i], indirect);
+        GetIndirectLighting(bsp, face, lightsurf->pvs, lightsurf->points[i], lightsurf->normals[i], indirect);
         
         /* Use dirt scaling on the indirect lighting. */
         const vec_t dirtscale = Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
