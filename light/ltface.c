@@ -2036,7 +2036,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * clamp any values that may have gone negative.
      */
 
-    if (!dirtDebug && !phongDebug) {
+    if (!dirtDebug && !phongDebug && !bouncedebug) {
         /* positive lights */
         for (lighte = lights; (entity = *lighte); lighte++)
         {
