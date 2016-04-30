@@ -1544,7 +1544,7 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 }
 
 // returns color in [0,255]
-static void GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t color)
+void GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t color)
 {
     VectorSet(color, 0, 0, 0);
     
@@ -1579,7 +1579,7 @@ static void GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, co
 
 }
 
-static bool
+bool
 BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
 {
     vec3_t color = {0};
@@ -1609,7 +1609,7 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
     return false;
 }
 
-static void
+void
 LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     
