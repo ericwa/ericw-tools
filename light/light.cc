@@ -992,6 +992,8 @@ void MakeBounceLights (const bsp2_t *bsp)
     
     int patches  = 0;
     
+    //FILE *f = fopen("bounce.map", "w");
+    
     for (auto mapentry : facenumToPatches) {
         for (auto patch : mapentry.second) {
             patches++;
@@ -1007,9 +1009,13 @@ void MakeBounceLights (const bsp2_t *bsp)
                 l.area = WindingArea(patch->w);
                 l.leaf = Light_PointInLeaf(bsp, l.pos);
                 radlights.push_back(l);
+                
+                //fprintf(f, "{\n\"classname\" \"light\"\n\"origin\" \"%f %f %f\"\n}\n", l.pos[0], l.pos[1], l.pos[2]);
             }
         }
     }
+    //fclose(f);
+    
     logprint("created %d patches\n", patches);
     logprint("created %d bounce lights\n", (int)radlights.size());
     
