@@ -1645,13 +1645,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             VectorScale(indirect, dirtscale, indirect);
             
             lightsample_t *sample = &lightmap->samples[i];
-            if (bouncedebug) {
-                /* Overwrite each point with the indirect lighting for that sample... */
-                VectorCopy(indirect, sample->color);
-            } else {
-                VectorAdd(sample->color, indirect, sample->color);
-            }
-            sample->light = 255;
+            VectorAdd(sample->color, indirect, sample->color);
         }
     }
     
