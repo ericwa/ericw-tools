@@ -1563,7 +1563,7 @@ BounceLight_ColorAtDist(const bouncelight_t *vpl, vec_t dist, vec3_t color)
 
 // returns color in [0,255]
 void
-GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t color)
+GetIndirectLighting (const bouncelight_t *vpl, const vec3_t origin, const vec3_t normal, vec3_t color)
 {
     VectorSet(color, 0, 0, 0);
     
@@ -1600,8 +1600,6 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
     vec_t dist = VectorNormalize(dir) + lightsurf->radius;
     
     // get light contribution
-    
-    VectorScale(vpl->color, vpl->area, color);
     BounceLight_ColorAtDist(vpl, dist, color);
     
     if (((color[0] + color[1] + color[2]) / 3) < 0.25)
@@ -1633,7 +1631,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
         
         for (int i = 0; i < lightsurf->numpoints; i++) {
             vec3_t indirect = {0};
-            GetIndirectLighting(bsp, vpl, face, lightsurf->pvs, lightsurf->points[i], lightsurf->normals[i], indirect);
+            GetIndirectLighting(vpl, lightsurf->points[i], lightsurf->normals[i], indirect);
             
             if (((indirect[0] + indirect[1] + indirect[2]) / 3) < 0.25)
                 continue;
