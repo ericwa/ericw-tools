@@ -1586,7 +1586,7 @@ GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp2_dfa
     BounceLight_ColorAtDist(vpl, dist, color);
     
     // apply angle scale
-    VectorScale(color, dp1, color);
+    VectorScale(color, dp1 * dp2, color);
 }
 
 bool
