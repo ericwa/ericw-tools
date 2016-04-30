@@ -45,7 +45,6 @@ const vec3_t vec3_white = { 255, 255, 255 };
 float surflight_subdivide = 128.0f;
 int sunsamples = 64;
 qboolean scaledonly = false;
-unsigned int lightturb; //water, slime, lava, tele
 
 qboolean addminlight = false;
 lightsample_t minlight = { 0, { 255, 255, 255 } };
@@ -1205,16 +1204,6 @@ main(int argc, const char **argv)
             scaledonly = true;
         } else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
             lmscaleoverride = argv[++i];
-        } else if ( !strcmp( argv[ i ], "-lightturb" ) ) {
-            lightturb |= 15;
-        } else if ( !strcmp( argv[ i ], "-lightwater" ) ) {
-            lightturb |= 1;
-        } else if ( !strcmp( argv[ i ], "-lightslime" ) ) {
-            lightturb |= 2;
-        } else if ( !strcmp( argv[ i ], "-lightlava" ) ) {
-            lightturb |= 4;
-        } else if ( !strcmp( argv[ i ], "-lighttele" ) ) {
-            lightturb |= 8;
         } else if (!strcmp(argv[i], "-soft")) {
             if (i < argc - 2 && isdigit(argv[i + 1][0]))
                 softsamples = atoi(argv[++i]);
@@ -1319,7 +1308,6 @@ main(int argc, const char **argv)
     if (i != argc - 1) {
         printf("usage: light [-threads num] [-extra|-extra4]\n"
                "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
-               "             [-lightturb] [-lightwater] [-lightslime] [-lightlava] [-lighttele]\n"
                "             [-dist n] [-range n] [-gate n] [-lit|-lit2] [-lux] [-bspx] [-lmscale n]\n"
                "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
                "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-no_parse_escape_sequences] [-phongdebug] bspfile\n");

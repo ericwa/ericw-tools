@@ -2074,26 +2074,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         face->styles[i] = 255;
     }
     if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL)
-    {
-        int turbtype;
-        if (!lightturb)
-            return;
-        if (*texname == '\0')
-                return; //sometimes the texture just wasn't written. including its name.
-        if (*texname != '*')
-            return;     //non-water surfaces should still not be lit
-        //texture name starts with a *, so light it anyway.
-        if (!Q_strncasecmp(texname, "*tele", 5))
-                turbtype = 3;
-        else if (!Q_strncasecmp(texname, "*lava", 5))
-                turbtype = 2;
-        else if (!Q_strncasecmp(texname, "*slime", 6))
-                turbtype = 1;
-        else
-                turbtype = 0;
-        if (!(lightturb & (1u<<turbtype)))
-                return;
-    }
+        return;
     
     /* don't save lightmaps for "trigger" texture */
     if (!Q_strcasecmp(texname, "trigger"))

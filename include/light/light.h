@@ -295,7 +295,6 @@ extern int write_luxfile;
 extern qboolean onlyents;
 extern qboolean parse_escape_sequences;
 extern qboolean scaledonly;
-extern unsigned int lightturb;
 extern uint32_t *extended_texinfo_flags;
 extern qboolean novis;
     
