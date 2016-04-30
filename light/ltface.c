@@ -2098,6 +2098,10 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     /* don't save lightmaps for "trigger" texture */
     if (!Q_strcasecmp(texname, "trigger"))
         return;
+    
+    /* don't save lightmaps for "skip" texture */
+    if (!Q_strcasecmp(texname, "skip"))
+        return;
 
     Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup);
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
