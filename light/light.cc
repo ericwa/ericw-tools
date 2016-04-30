@@ -970,6 +970,10 @@ MakeBounceLightsThread (void *arg)
             continue;
         }
         
+        if (!strcmp("skip", Face_TextureName(bsp, face))) {
+            continue;
+        }
+        
         winding_t *winding = WindingFromFace(bsp, face);
         DicePatch(bsp, face, winding, 1024);
     }
