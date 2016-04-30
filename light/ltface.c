@@ -1544,62 +1544,75 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 }
 
 // returns color in [0,255]
-static void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
+static void GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t color)
 {
-    VectorSet(colorout, 0, 0, 0);
+    VectorSet(color, 0, 0, 0);
     
-    // sample vpls
-    for (int i=0; i<numbouncelights; i++) {
-        const bouncelight_t *vpl = &bouncelights[i];
-        
-        if (VisCullEntity(bsp, pvs, vpl->leaf))
-            continue;
-        
-        vec3_t dir;
-        VectorSubtract(origin, vpl->pos, dir); // vpl -> sample point
-        vec_t dist = VectorNormalize(dir);
-        
-        const vec_t dp1 = DotProduct(vpl->surfnormal, dir);
-        if (dp1 < 0)
-            continue; // sample point behind vpl
-        
-        vec3_t sp_vpl;
-        VectorScale(dir, -1, sp_vpl);
-        
-        const vec_t dp2 = DotProduct(sp_vpl, normal);
-        if (dp2 < 0)
-            continue; // vpl behind sample face
-        
-        // get light contribution
-        vec3_t color;
-        VectorScale(vpl->color, vpl->area, color);
-        
-        // clamp away hotspots
-        if (dist < 128) {
-            dist = 128;
-        }
-        
-        const vec_t dist2 = (dist * dist);
-        const vec_t scale = dp1 /* * dp2 */ * (1.0/dist2) * bouncescale;
-        // dp2 makes things too angle-dependent
-        
-        VectorScale(color, 255 * scale, color);
-        
-        if (((color[0] + color[1] + color[2]) / 3) < 0.25)
-            continue; // too dim
-        
-        if (TestLight(vpl->pos, origin, NULL)) {
-            VectorAdd(colorout, color, colorout);
-        }
+    vec3_t dir;
+    VectorSubtract(origin, vpl->pos, dir); // vpl -> sample point
+    vec_t dist = VectorNormalize(dir);
+    
+    const vec_t dp1 = DotProduct(vpl->surfnormal, dir);
+    if (dp1 < 0)
+        return; // sample point behind vpl
+    
+    vec3_t sp_vpl;
+    VectorScale(dir, -1, sp_vpl);
+    
+    const vec_t dp2 = DotProduct(sp_vpl, normal);
+    if (dp2 < 0)
+        return; // vpl behind sample face
+    
+    // get light contribution
+    VectorScale(vpl->color, vpl->area, color);
+    
+    // clamp away hotspots
+    if (dist < 128) {
+        dist = 128;
     }
     
-    return;
+    const vec_t dist2 = (dist * dist);
+    const vec_t scale = dp1 /* * dp2 */ * (1.0/dist2) * bouncescale;
+    // dp2 makes things too angle-dependent
+    
+    VectorScale(color, 255 * scale, color);
+
+}
+
+static bool
+BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
+{
+    vec3_t color = {0};
+    //GetIndirectLighting(bsp, vpl, lightsurf->face, lightsurf->pvs, lightsurf->origin, lightsurf->plane.normal, color);
+    
+    vec3_t dir;
+    VectorSubtract(lightsurf->origin, vpl->pos, dir); // vpl -> sample point
+    vec_t dist = VectorNormalize(dir) + lightsurf->radius;
+    
+    // get light contribution
+    VectorScale(vpl->color, vpl->area, color);
+    
+    // clamp away hotspots
+    if (dist < 128) {
+        dist = 128;
+    }
+    
+    const vec_t dist2 = (dist * dist);
+    const vec_t scale = (1.0/dist2) * bouncescale;
+    // dp2 makes things too angle-dependent
+    
+    VectorScale(color, 255 * scale, color);
+    
+    if (((color[0] + color[1] + color[2]) / 3) < 0.25)
+        return true;
+    
+    return false;
 }
 
 static void
 LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
-    lightsample_t *sample;
+    
     lightmap_t *lightmap;
     
     if (!bounce)
@@ -1608,22 +1621,38 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     /* use a style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
-    sample = lightmap->samples;
-    for (int i = 0; i < lightsurf->numpoints; i++, sample++) {
-        vec3_t indirect = {0};
-        GetIndirectLighting(bsp, face, lightsurf->pvs, lightsurf->points[i], lightsurf->normals[i], indirect);
+    for (int j=0; j<numbouncelights; j++) {
+        const bouncelight_t *vpl = &bouncelights[j];
         
-        /* Use dirt scaling on the indirect lighting. */
-        const vec_t dirtscale = Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
-        VectorScale(indirect, dirtscale, indirect);
+        if (VisCullEntity(bsp, lightsurf->pvs, vpl->leaf))
+            continue;
         
-        if (bouncedebug) {
-            /* Overwrite each point with the indirect lighting for that sample... */
-            VectorCopy(indirect, sample->color);
-        } else {
-            VectorAdd(sample->color, indirect, sample->color);
+        if (BounceLight_SphereCull(bsp, vpl, lightsurf))
+            continue;
+        
+        for (int i = 0; i < lightsurf->numpoints; i++) {
+            vec3_t indirect = {0};
+            GetIndirectLighting(bsp, vpl, face, lightsurf->pvs, lightsurf->points[i], lightsurf->normals[i], indirect);
+            
+            if (((indirect[0] + indirect[1] + indirect[2]) / 3) < 0.25)
+                continue;
+            
+            if (!TestLight(vpl->pos, lightsurf->points[i], NULL))
+                continue;
+
+            /* Use dirt scaling on the indirect lighting. */
+            const vec_t dirtscale = Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
+            VectorScale(indirect, dirtscale, indirect);
+            
+            lightsample_t *sample = &lightmap->samples[i];
+            if (bouncedebug) {
+                /* Overwrite each point with the indirect lighting for that sample... */
+                VectorCopy(indirect, sample->color);
+            } else {
+                VectorAdd(sample->color, indirect, sample->color);
+            }
+            sample->light = 255;
         }
-        sample->light = 255;
     }
     
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
