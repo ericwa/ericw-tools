@@ -1544,7 +1544,26 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 }
 
 // returns color in [0,255]
-void GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t color)
+static void
+BounceLight_ColorAtDist(const bouncelight_t *vpl, vec_t dist, vec3_t color)
+{
+    // get light contribution
+    VectorScale(vpl->color, vpl->area, color);
+    
+    // clamp away hotspots
+    if (dist < 128) {
+        dist = 128;
+    }
+    
+    const vec_t dist2 = (dist * dist);
+    const vec_t scale = (1.0/dist2) * bouncescale;
+    
+    VectorScale(color, 255 * scale, color);
+}
+
+// returns color in [0,255]
+void
+GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t color)
 {
     VectorSet(color, 0, 0, 0);
     
@@ -1564,19 +1583,10 @@ void GetIndirectLighting (const bsp2_t *bsp, const bouncelight_t *vpl, const bsp
         return; // vpl behind sample face
     
     // get light contribution
-    VectorScale(vpl->color, vpl->area, color);
+    BounceLight_ColorAtDist(vpl, dist, color);
     
-    // clamp away hotspots
-    if (dist < 128) {
-        dist = 128;
-    }
-    
-    const vec_t dist2 = (dist * dist);
-    const vec_t scale = dp1 /* * dp2 */ * (1.0/dist2) * bouncescale;
-    // dp2 makes things too angle-dependent
-    
-    VectorScale(color, 255 * scale, color);
-
+    // apply angle scale
+    VectorScale(color, dp1, color);
 }
 
 bool
@@ -1590,18 +1600,9 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
     vec_t dist = VectorNormalize(dir) + lightsurf->radius;
     
     // get light contribution
+    
     VectorScale(vpl->color, vpl->area, color);
-    
-    // clamp away hotspots
-    if (dist < 128) {
-        dist = 128;
-    }
-    
-    const vec_t dist2 = (dist * dist);
-    const vec_t scale = (1.0/dist2) * bouncescale;
-    // dp2 makes things too angle-dependent
-    
-    VectorScale(color, 255 * scale, color);
+    BounceLight_ColorAtDist(vpl, dist, color);
     
     if (((color[0] + color[1] + color[2]) / 3) < 0.25)
         return true;
