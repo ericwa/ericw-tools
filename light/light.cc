@@ -633,6 +633,8 @@ CalcualateVertexNormals(const bsp2_t *bsp)
 static void
 LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 {
+    logprint("--- LightWorld ---\n" );
+    
     bsp2_t *const bsp = &bspdata->data.bsp2;
     const unsigned char *lmshift_lump;
     int i, j;
