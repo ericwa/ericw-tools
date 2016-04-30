@@ -2128,15 +2128,17 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                 LightFace_Sky (sun, lightsurf, lightmaps);
     }
     
+    if (!dirtDebug && !phongDebug) {
+        /* add indirect lighting */
+        LightFace_Bounce(bsp, face, lightsurf, lightmaps);
+    }
+    
     /* replace lightmaps with AO for debugging */
     if (dirtDebug)
         LightFace_DirtDebug(lightsurf, lightmaps);
 
     if (phongDebug)
         LightFace_PhongDebug(lightsurf, lightmaps);
-    
-    /* add indirect lighting */
-    LightFace_Bounce(bsp, face, lightsurf, lightmaps);
     
     /* Fix any negative values */
     for (i = 0; i < MAXLIGHTMAPS; i++) {
