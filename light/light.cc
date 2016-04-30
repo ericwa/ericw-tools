@@ -758,16 +758,11 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
 
 // radiosity
 
-class light_t{
-public:
-    vec3_t pos;
-    vec3_t color;
-    vec3_t surfnormal;
-    vec_t area;
-    const bsp2_dleaf_t *leaf;
-};
+std::vector<bouncelight_t> radlights;
 
-std::vector<light_t> radlights;
+// for access from C
+const bouncelight_t *bouncelights;
+int numbouncelights;
 
 class patch_t {
 public:
@@ -999,7 +994,7 @@ void MakeBounceLights (const bsp2_t *bsp)
             if (patch->directlight[0] > 0
                 && patch->directlight[1] > 0
                 && patch->directlight[2] > 0) {
-                light_t l;
+                bouncelight_t l;
                 VectorCopy(patch->samplepoint, l.pos);
                 VectorCopy(patch->directlight, l.color);
                 VectorCopy(patch->plane.normal, l.surfnormal);
@@ -1011,59 +1006,9 @@ void MakeBounceLights (const bsp2_t *bsp)
     }
     logprint("created %d patches\n", patches);
     logprint("created %d bounce lights\n", (int)radlights.size());
-}
-
-
-
-// returns color in [0,255]
-void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
-{
-    VectorSet(colorout, 0, 0, 0);
     
-    // sample vpls
-    for (const auto &vpl : radlights) {
-        if (VisCullEntity(bsp, pvs, vpl.leaf))
-            continue;
-        
-        vec3_t dir;
-        VectorSubtract(origin, vpl.pos, dir); // vpl -> sample point
-        vec_t dist = VectorNormalize(dir);
-        
-        const vec_t dp1 = DotProduct(vpl.surfnormal, dir);
-        if (dp1 < 0)
-            continue; // sample point behind vpl
-        
-        vec3_t sp_vpl;
-        VectorScale(dir, -1, sp_vpl);
-        
-        const vec_t dp2 = DotProduct(sp_vpl, normal);
-        if (dp2 < 0)
-            continue; // vpl behind sample face
-        
-        // get light contribution
-        vec3_t color;
-        VectorScale(vpl.color, vpl.area, color);
-        
-        // clamp away hotspots
-        if (dist < 128) {
-            dist = 128;
-        }
-        
-        const vec_t dist2 = (dist * dist);
-        const vec_t scale = dp1 /* * dp2 */ * (1.0/dist2) * bouncescale;
-        // dp2 makes things too angle-dependent
-        
-        VectorScale(color, 255 * scale, color);
-        
-        if (((color[0] + color[1] + color[2]) / 3) < 0.25)
-            continue; // too dim
-        
-        if (TestLight(vpl.pos, origin, NULL)) {
-            VectorAdd(colorout, color, colorout);
-        }
-    }
-    
-    return;
+    bouncelights = radlights.data();
+    numbouncelights = radlights.size();
 }
 
 // end radiosity

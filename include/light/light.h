@@ -209,6 +209,19 @@ struct ltface_ctx
     lightmap_t lightmaps[MAXLIGHTMAPS + 1];
 };
 
+/* bounce lights */
+    
+typedef struct {
+    vec3_t pos;
+    vec3_t color;
+    vec3_t surfnormal;
+    vec_t area;
+    const bsp2_dleaf_t *leaf;
+} bouncelight_t;
+    
+extern const bouncelight_t *bouncelights;
+extern int numbouncelights;
+    
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const modelinfo_t *const *tracelist;
 extern const modelinfo_t *const *selfshadowlist;
@@ -299,8 +312,6 @@ extern qboolean surflight_dump;
 extern qboolean phongDebug;
 
 extern char mapfilename[1024];
-
-void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
 
 void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);

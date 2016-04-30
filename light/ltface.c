@@ -1543,6 +1543,59 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
+// returns color in [0,255]
+static void GetIndirectLighting (const bsp2_t *bsp, const bsp2_dface_t *face, const byte *pvs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
+{
+    VectorSet(colorout, 0, 0, 0);
+    
+    // sample vpls
+    for (int i=0; i<numbouncelights; i++) {
+        const bouncelight_t *vpl = &bouncelights[i];
+        
+        if (VisCullEntity(bsp, pvs, vpl->leaf))
+            continue;
+        
+        vec3_t dir;
+        VectorSubtract(origin, vpl->pos, dir); // vpl -> sample point
+        vec_t dist = VectorNormalize(dir);
+        
+        const vec_t dp1 = DotProduct(vpl->surfnormal, dir);
+        if (dp1 < 0)
+            continue; // sample point behind vpl
+        
+        vec3_t sp_vpl;
+        VectorScale(dir, -1, sp_vpl);
+        
+        const vec_t dp2 = DotProduct(sp_vpl, normal);
+        if (dp2 < 0)
+            continue; // vpl behind sample face
+        
+        // get light contribution
+        vec3_t color;
+        VectorScale(vpl->color, vpl->area, color);
+        
+        // clamp away hotspots
+        if (dist < 128) {
+            dist = 128;
+        }
+        
+        const vec_t dist2 = (dist * dist);
+        const vec_t scale = dp1 /* * dp2 */ * (1.0/dist2) * bouncescale;
+        // dp2 makes things too angle-dependent
+        
+        VectorScale(color, 255 * scale, color);
+        
+        if (((color[0] + color[1] + color[2]) / 3) < 0.25)
+            continue; // too dim
+        
+        if (TestLight(vpl->pos, origin, NULL)) {
+            VectorAdd(colorout, color, colorout);
+        }
+    }
+    
+    return;
+}
+
 static void
 LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
