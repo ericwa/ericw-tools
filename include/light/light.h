@@ -165,6 +165,7 @@ typedef struct {
     
 extern const bouncelight_t *bouncelights;
 extern int numbouncelights;
+extern byte thepalette[768];
     
 /* tracelist is a null terminated array of BSP models to use for LOS tests */
 extern const modelinfo_t *const *tracelist;

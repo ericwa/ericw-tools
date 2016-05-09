@@ -32,6 +32,7 @@
 #include <set>
 #include <algorithm>
 #include <mutex>
+#include <string>
 
 using namespace std;
 
@@ -759,6 +760,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
 
 // radiosity
 
+map<string, vec3_struct_t> texturecolors;
 std::vector<bouncelight_t> radlights;
 
 // for access from C
@@ -982,6 +984,49 @@ MakeBounceLightsThread (void *arg)
     return NULL;
 }
 
+// Returns color in [0,1]
+void Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
+{
+    VectorSet(color, 0, 0, 0);
+    if (!bsp->texdatasize)
+        return;
+    
+    const byte *data = (byte*)miptex + miptex->offsets[0];
+    for (int y=0; y<miptex->height; y++) {
+        for (int x=0; x<miptex->width; x++) {
+            const int i = data[(miptex->width * y) + x];
+            
+            vec3_t samplecolor = { (float)thepalette[3*i], (float)thepalette[3*i + 1], (float)thepalette[3*i + 2] };
+            VectorAdd(color, samplecolor, color);
+        }
+    }
+    VectorScale(color, 1.0 / (miptex->width * miptex->height), color);
+    VectorScale(color, 1.0 / 255.0, color);
+}
+
+void MakeTextureColors (const bsp2_t *bsp)
+{
+    logprint("--- MakeTextureColors ---\n");
+ 
+    if (!bsp->texdatasize)
+        return;
+    
+    for (int i=0; i<bsp->dtexdata.header->nummiptex; i++) {
+        const int ofs = bsp->dtexdata.header->dataofs[i];
+        if (ofs < 0)
+            continue;
+        
+        const miptex_t *miptex = (miptex_t *)(bsp->dtexdata.base + ofs);
+        
+        string name { miptex->name };
+        vec3_struct_t color;
+        Texture_AvgColor(bsp, miptex, color.v);
+        
+        printf("%s has color %f %f %f\n", name.c_str(), color.v[0], color.v[1], color.v[2]);
+        texturecolors[name] = color;
+    }
+}
+
 void MakeBounceLights (const bsp2_t *bsp)
 {
     logprint("--- MakeBounceLights ---\n");
@@ -1007,8 +1052,17 @@ void MakeBounceLights (const bsp2_t *bsp)
                 VectorCopy(patch->plane.normal, l.surfnormal);
                 l.area = WindingArea(patch->w);
                 l.leaf = Light_PointInLeaf(bsp, l.pos);
-                radlights.push_back(l);
                 
+                // scale by texture color
+                const bsp2_dface_t *f = &bsp->dfaces[mapentry.first];
+                const char *facename = Face_TextureName(bsp, f);
+                if (texturecolors.find(facename) != texturecolors.end()) {
+                    vec3_struct_t texcolor = texturecolors.at(facename);
+                    for (int i=0; i<3; i++)
+                        l.color[i] *= texcolor.v[i];
+                }
+                
+                radlights.push_back(l);
                 //fprintf(f, "{\n\"classname\" \"light\"\n\"origin\" \"%f %f %f\"\n}\n", l.pos[0], l.pos[1], l.pos[2]);
             }
         }
@@ -1378,8 +1432,10 @@ main(int argc, const char **argv)
 
         MakeTnodes(bsp);
         
-        if (bounce)
+        if (bounce) {
+            MakeTextureColors(bsp);
             MakeBounceLights(bsp);
+        }
         
         LightWorld(&bspdata, !!lmscaleoverride);
         
