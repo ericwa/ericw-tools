@@ -1705,55 +1705,6 @@ void SetupDirt( void ) {
 
 /*
  * ============
- * DirtTrace
- *
- * returns true if the trace from start to stop hits something solid,
- * or if it started in the void.
- * ============
- */
-qboolean
-DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
-{
-    const modelinfo_t *const *model;
-    traceinfo_t ti = {0};
-    
-    VectorSubtract(stop, start, ti.dir);
-    VectorNormalize(ti.dir);
-    
-    if (self) {
-        if (TraceFaces (&ti, self->headnode[0], start, stop)) {
-            VectorCopy(ti.point, hitpoint_out);
-            if (hitplane_out) {
-                *hitplane_out = ti.hitplane;
-            }
-            if (face_out) {
-                *face_out = ti.face;
-            }
-            return !ti.hitsky;
-        }
-    }
-
-    /* Check against the list of global shadow casters */
-    for (model = tracelist; *model; model++) {
-        if ((*model)->model == self)
-            continue;
-        if (TraceFaces (&ti, (*model)->model->headnode[0], start, stop)) {
-            VectorCopy(ti.point, hitpoint_out);
-            if (hitplane_out) {
-                *hitplane_out = ti.hitplane;
-            }
-            if (face_out) {
-                *face_out = ti.face;
-            }
-            return !ti.hitsky;
-        }
-    }
-
-    return false;
-}
-
-/*
- * ============
  * DirtForSample
  * ============
  */
