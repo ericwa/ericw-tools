@@ -19,6 +19,13 @@
 
 #include <light/light.h>
 
+#define TRACE_HIT_NONE  0
+#define TRACE_HIT_SOLID (1 << 0)
+#define TRACE_HIT_WATER (1 << 1)
+#define TRACE_HIT_SLIME (1 << 2)
+#define TRACE_HIT_LAVA  (1 << 3)
+#define TRACE_HIT_SKY   (1 << 4)
+
 typedef struct traceinfo_s {
     vec3_t			point;
     const bsp2_dface_t          *face;

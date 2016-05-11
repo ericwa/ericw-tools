@@ -34,13 +34,6 @@ extern "C" {
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
-#define TRACE_HIT_NONE  0
-#define TRACE_HIT_SOLID (1 << 0)
-#define TRACE_HIT_WATER (1 << 1)
-#define TRACE_HIT_SLIME (1 << 2)
-#define TRACE_HIT_LAVA  (1 << 3)
-#define TRACE_HIT_SKY   (1 << 4)
-
 typedef struct {
     vec3_t normal;
     vec_t dist;
