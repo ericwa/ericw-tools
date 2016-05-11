@@ -41,26 +41,18 @@ typedef struct traceinfo_s {
 /* Stopped by solid and sky */
 bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
 
-typedef struct {
-    const dplane_t *dplane;
-    int side;
-    vec3_t point;
-} tracepoint_t;
-
 /*
  * ---------
  * TraceLine
  * ---------
  * Generic BSP model ray tracing function. Traces a ray from start towards
  * stop. If the trace line hits one of the flagged contents along the way, the
- * corresponding TRACE flag will be returned. Furthermore, if hitpoint is
- * non-null, information about the point the ray hit will be filled in.
+ * corresponding TRACE flag will be returned.
  *
  *  model    - The bsp model to trace against
  *  flags    - contents which will stop the trace (must be > 0)
  *  start    - coordinates to start trace
  *  stop     - coordinates to end the trace
- *  hitpoint - filled in if result > 0 and hitpoint is non-NULL
  *
  * TraceLine will return a negative traceflag if the point 'start' resides
  * inside a leaf with one of the contents types which stop the trace.
@@ -72,7 +64,7 @@ typedef struct {
  * what the hit point will be.
  */
 int TraceLine(const dmodel_t *model, const int traceflags,
-              const vec3_t start, const vec3_t end, tracepoint_t *hitpoint);
+              const vec3_t start, const vec3_t end);
 
 typedef struct tnode_s {
     vec3_t normal;
@@ -443,7 +435,7 @@ typedef struct {
 #define MAX_TSTACK 128
 int
 TraceLine(const dmodel_t *model, const int traceflags,
-          const vec3_t start, const vec3_t stop, tracepoint_t *hitpoint)
+          const vec3_t start, const vec3_t stop)
 {
     int node, side, tracehit;
     vec3_t front, back;
@@ -495,12 +487,6 @@ TraceLine(const dmodel_t *model, const int traceflags,
                 /* If we haven't crossed, start was inside flagged contents */
                 if (!crossnode)
                     return -tracehit;
-
-                if (hitpoint) {
-                    hitpoint->dplane = crossnode->plane;
-                    hitpoint->side = crossnode->side;
-                    VectorCopy(crossnode->front, hitpoint->point);
-                }
 
                 return tracehit;
             }
@@ -574,14 +560,14 @@ TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
     for (model = tracelist; *model; model++) {
         if ((*model)->model == self)
             continue;
-        result = TraceLine((*model)->model, traceflags, start, stop, NULL);
+        result = TraceLine((*model)->model, traceflags, start, stop);
         if (result != TRACE_HIT_NONE)
             break;
     }
 
     /* If not yet obscured, check against the self-shadow model */
     if (result == TRACE_HIT_NONE && self)
-        result = TraceLine(self, traceflags, start, stop, NULL);
+        result = TraceLine(self, traceflags, start, stop);
 
     return (result == TRACE_HIT_NONE);
 }
@@ -593,11 +579,10 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
     int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
     vec3_t stop;
-    tracepoint_t hit;
 
     /* Trace towards the sunlight for a sky brush */
     VectorAdd(dirn, start, stop);
-    result = TraceLine(tracelist[0]->model, traceflags, start, stop, &hit);
+    result = TraceLine(tracelist[0]->model, traceflags, start, stop);
     if (result != TRACE_HIT_SKY)
         return false;
 
@@ -606,14 +591,14 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
     for (model = tracelist + 1; *model; model++) {
         if ((*model)->model == self)
             continue;
-        result = TraceLine((*model)->model, traceflags, start, hit.point, NULL);
+        result = TraceLine((*model)->model, traceflags, start, stop);
         if (result != TRACE_HIT_NONE)
             return false;
     }
 
     /* Check for self-shadowing */
     if (self) {
-        result = TraceLine(self, traceflags, start, hit.point, NULL);
+        result = TraceLine(self, traceflags, start, stop);
         if (result != TRACE_HIT_NONE)
             return false;
     }
