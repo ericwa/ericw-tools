@@ -19,6 +19,54 @@
 
 #include <light/light.h>
 
+typedef struct traceinfo_s {
+    vec3_t			point;
+    const bsp2_dface_t          *face;
+    plane_t  hitplane;
+    /* returns true if sky was hit. */
+    bool hitsky;
+    bool hitback;
+    
+    // internal
+    vec3_t dir;
+} traceinfo_t;
+
+/* Stopped by solid and sky */
+bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
+
+typedef struct {
+    const dplane_t *dplane;
+    int side;
+    vec3_t point;
+} tracepoint_t;
+
+/*
+ * ---------
+ * TraceLine
+ * ---------
+ * Generic BSP model ray tracing function. Traces a ray from start towards
+ * stop. If the trace line hits one of the flagged contents along the way, the
+ * corresponding TRACE flag will be returned. Furthermore, if hitpoint is
+ * non-null, information about the point the ray hit will be filled in.
+ *
+ *  model    - The bsp model to trace against
+ *  flags    - contents which will stop the trace (must be > 0)
+ *  start    - coordinates to start trace
+ *  stop     - coordinates to end the trace
+ *  hitpoint - filled in if result > 0 and hitpoint is non-NULL
+ *
+ * TraceLine will return a negative traceflag if the point 'start' resides
+ * inside a leaf with one of the contents types which stop the trace.
+ *
+ * ericw -- note, this should only be used for testing occlusion.
+ * the hitpoint is not accurate, imagine a solid cube floating in a room,
+ * only one of the 6 sides will be a node with a solid leaf child.
+ * Yet, which side is the node with the solid leaf child determines
+ * what the hit point will be.
+ */
+int TraceLine(const dmodel_t *model, const int traceflags,
+              const vec3_t start, const vec3_t end, tracepoint_t *hitpoint);
+
 typedef struct tnode_s {
     vec3_t normal;
     vec_t dist;
