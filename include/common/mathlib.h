@@ -132,8 +132,39 @@ VectorMA(const vec3_t va, vec_t scale, const vec3_t vb, vec3_t vc)
 
 
 void CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross);
-vec_t VectorNormalize(vec3_t v);
-double VectorLength(const vec3_t v);
+    
+static inline double
+VectorLength(const vec3_t v)
+{
+    int i;
+    double length;
+    
+    length = 0;
+    for (i = 0; i < 3; i++)
+        length += v[i] * v[i];
+    length = sqrt(length);
+    
+    return length;
+}
+
+static inline vec_t
+VectorNormalize(vec3_t v)
+{
+    int i;
+    double length;
+    
+    length = 0;
+    for (i = 0; i < 3; i++)
+        length += v[i] * v[i];
+    length = sqrt(length);
+    if (length == 0)
+        return 0;
+    
+    for (i = 0; i < 3; i++)
+        v[i] /= (vec_t)length;
+    
+    return (vec_t)length;
+}
 
 /* Shortcut for output of warnings/errors */
 const char *VecStr(const vec3_t vec);

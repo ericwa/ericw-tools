@@ -22,21 +22,6 @@
 
 const vec3_t vec3_origin = { 0, 0, 0 };
 
-
-double
-VectorLength(const vec3_t v)
-{
-    int i;
-    double length;
-
-    length = 0;
-    for (i = 0; i < 3; i++)
-        length += v[i] * v[i];
-    length = sqrt(length);
-
-    return length;
-}
-
 qboolean
 VectorCompare(const vec3_t v1, const vec3_t v2)
 {
@@ -55,25 +40,6 @@ CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross)
     cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
     cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
     cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
-}
-
-vec_t
-VectorNormalize(vec3_t v)
-{
-    int i;
-    double length;
-
-    length = 0;
-    for (i = 0; i < 3; i++)
-        length += v[i] * v[i];
-    length = sqrt(length);
-    if (length == 0)
-        return 0;
-
-    for (i = 0; i < 3; i++)
-        v[i] /= (vec_t)length;
-
-    return (vec_t)length;
 }
 
 /*
