@@ -1544,7 +1544,7 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 }
 
 // returns color in [0,255]
-static void
+static inline void
 BounceLight_ColorAtDist(const bouncelight_t *vpl, vec_t dist, vec3_t color)
 {
     // get light contribution
@@ -1562,7 +1562,7 @@ BounceLight_ColorAtDist(const bouncelight_t *vpl, vec_t dist, vec3_t color)
 }
 
 // returns color in [0,255]
-void
+static inline void
 GetIndirectLighting (const bouncelight_t *vpl, const vec3_t origin, const vec3_t normal, vec3_t color)
 {
     VectorSet(color, 0, 0, 0);
@@ -1589,7 +1589,7 @@ GetIndirectLighting (const bouncelight_t *vpl, const vec3_t origin, const vec3_t
     VectorScale(color, dp1 * dp2, color);
 }
 
-bool
+static inline bool
 BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
 {
     vec3_t color = {0};
@@ -1597,7 +1597,7 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
     
     vec3_t dir;
     VectorSubtract(lightsurf->origin, vpl->pos, dir); // vpl -> sample point
-    vec_t dist = VectorNormalize(dir) + lightsurf->radius;
+    vec_t dist = VectorLength(dir) + lightsurf->radius;
     
     // get light contribution
     BounceLight_ColorAtDist(vpl, dist, color);
