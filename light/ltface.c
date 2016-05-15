@@ -1809,15 +1809,8 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
 static void
 LightFace_CalculateDirt(lightsurf_t *lightsurf)
 {
-    const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    const plane_t *plane = &lightsurf->plane;
-    const vec_t *surfpoint;
-    int i;
-
-    /* Check each point... */
-    surfpoint = lightsurf->points[0];
-    for (i = 0; i < lightsurf->numpoints; i++, surfpoint += 3) {
-        lightsurf->occlusion[i] = DirtForSample(modelinfo->model, surfpoint, plane->normal);
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        lightsurf->occlusion[i] = DirtForSample(lightsurf->modelinfo->model, lightsurf->points[i], lightsurf->normals[i]);
     }
 }
 
