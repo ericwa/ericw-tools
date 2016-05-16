@@ -48,6 +48,9 @@ qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 
+int
+SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
+    
 typedef struct {
     vec_t light;
     vec3_t color;
@@ -134,6 +137,11 @@ typedef struct {
     /* for sphere culling */
     vec3_t origin;
     vec_t radius;
+
+    // for radiosity
+    vec3_t radiosity; // direct light
+    vec3_t texturecolor;
+    vec3_t indirectlight; // indirect light
     
     /* stuff used by CalcPoint */
     vec_t starts, startt, st_step;
@@ -151,7 +159,10 @@ struct ltface_ctx
     const bsp2_t *bsp;
     lightsurf_t lightsurf;
     lightmap_t lightmaps[MAXLIGHTMAPS + 1];
+    lightmap_t lightmaps_bounce1[MAXLIGHTMAPS + 1];
 };
+
+extern struct ltface_ctx *ltface_ctxs;
 
 /* bounce lights */
     
@@ -171,11 +182,12 @@ extern byte thepalette[768];
 extern const modelinfo_t *const *tracelist;
 extern const modelinfo_t *const *selfshadowlist;
 
-struct ltface_ctx;
-struct ltface_ctx *LightFaceInit(const bsp2_t *bsp);
+void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
 void LightFaceShutdown(struct ltface_ctx *ctx);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
+void LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
+void FinishLightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
 void MakeTnodes(const bsp2_t *bsp);
 
 /* access the final phong-shaded vertex normal */

@@ -1703,6 +1703,21 @@ void SetupDirt( void ) {
     logprint("%9d dirtmap vectors\n", numDirtVectors );
 }
 
+static const lightmap_t *
+Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
+{
+    const lightmap_t *lightmap = ctx->lightmaps;
+    int i;
+    
+    for (i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
+        if (lightmap->style == style)
+            return lightmap;
+        if (lightmap->style == 255)
+            break;
+    }
+    return NULL;
+}
+
 /*
  * ============
  * DirtForSample
@@ -1933,15 +1948,21 @@ WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lights
     }
 }
 
-struct ltface_ctx *LightFaceInit(const bsp2_t *bsp)
+void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx)
 {
-    //windows stack probes can get expensive when its 64mb...
-    //also, this avoids stack overflows, or the need to guess stack sizes.
-    struct ltface_ctx *ctx = calloc(1, sizeof(*ctx));
-    if (ctx)
-        ctx->bsp = bsp;
-    return ctx;
+    int i;
+    
+    memset(ctx, 0, sizeof(*ctx));
+    
+    ctx->bsp = bsp;
+    
+    for (i = 0; i < MAXLIGHTMAPS + 1; i++)
+        ctx->lightmaps[i].style = 255;
+    
+    for (i = 0; i < MAXLIGHTMAPS + 1; i++)
+        ctx->lightmaps_bounce1[i].style = 255;
 }
+
 void LightFaceShutdown(struct ltface_ctx *ctx)
 {
     int i;
@@ -1949,6 +1970,9 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     {
         if (ctx->lightmaps[i].samples)
             free(ctx->lightmaps[i].samples);
+        
+        if (ctx->lightmaps_bounce1[i].samples)
+            free(ctx->lightmaps_bounce1[i].samples);
     }
     
     if (ctx->lightsurf.points)
@@ -1965,8 +1989,6 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     
     if (ctx->lightsurf.pvs)
         free(ctx->lightsurf.pvs);
-    
-    free(ctx);
 }
 
 const char *
@@ -2039,7 +2061,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * minlight levels, then cast all negative lights. Finally, we
      * clamp any values that may have gone negative.
      */
-
+#if 0
     if (!dirtDebug && !phongDebug && !bouncedebug) {
         /* positive lights */
         for (lighte = lights; (entity = *lighte); lighte++)
@@ -2108,6 +2130,351 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             Lightmap_Soften(&lightmaps[i], lightsurf);
         }
     }
+    
+    /* Calc average brightness */
+    // FIXME: don't count occluded samples
+    VectorSet(lightsurf->radiosity, 0, 0, 0);
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    sample = lightmap->samples;
+    for (j = 0; j < lightsurf->numpoints; j++, sample++) {
+        vec3_t color;
+        VectorCopy(sample->color, color);
+        VectorAdd(lightsurf->radiosity, color, lightsurf->radiosity);
+    }
+    VectorScale(lightsurf->radiosity, 1.0/lightsurf->numpoints, lightsurf->radiosity);
 
+    // clamp components at 512
+    for (int i=0;i<3;i++)
+        lightsurf->radiosity[i] = qmin(512.0f, lightsurf->radiosity[i]);
+
+    /* Calc average texture color */
+    VectorSet(lightsurf->texturecolor, 0, 0, 0);
+    for (j = 0; j < lightsurf->numpoints; j++) {
+        int palidx = SampleTexture(face, bsp, lightsurf->points[j]);
+        vec3_t texcolor = {thepalette[3*palidx], thepalette[3*palidx + 1], thepalette[3*palidx + 2]};
+        VectorAdd(lightsurf->texturecolor, texcolor, lightsurf->texturecolor);
+    }
+    VectorScale(lightsurf->texturecolor, 1.0f/lightsurf->numpoints, lightsurf->texturecolor);
+#endif
+}
+
+void
+WorldToLM(const vec3_t world, const lightsurf_t *surf, const bsp2_t *bsp, const bsp2_dface_t *face, int st[2])
+{
+    vec_t step, starts, startt;
+    starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
+    startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
+    step = surf->lightmapscale / oversample;
+    
+    // subtract model offset
+    vec3_t worldOriginal;
+    VectorSubtract(world, surf->modelinfo->offset, worldOriginal);
+    
+    vec_t tc[2];
+    WorldToTexCoord(worldOriginal, &bsp->texinfo[face->texinfo], tc);
+    
+    st[0] = rint((tc[0] - starts) / step);
+    st[1] = rint((tc[1] - startt) / step);
+}
+
+void
+LightAtPoint(const bsp2_t *bsp, const vec3_t point, const bsp2_dface_t *face, vec3_t light)
+{
+    int facenum = face - bsp->dfaces;
+    int lmcoord[2];
+    const texinfo_t *tex;
+    
+    if (facenum < 0 || facenum >= bsp->numfaces) {
+        logprint("LightAtPoint: invalid face\n");
+        VectorCopy(vec3_origin, light);
+        return;
+    }
+    
+    const struct ltface_ctx *ctx = &ltface_ctxs[facenum];
+    if (!ctx->lightsurf.numpoints) {
+        const char *texname = Face_TextureName(bsp, bsp->dfaces + facenum);
+        if (!(!strcmp(texname, "skip")
+              || !strncmp(texname, "sky", 3)
+              || !strcmp(texname, "trigger"))) {
+            logprint("LightAtPoint: lightsurf not allocated\n");
+        }
+        VectorCopy(vec3_origin, light);
+        return;
+    }
+    
+    if (face->texinfo < 0 || face->texinfo >= bsp->numtexinfo) {
+        logprint("LightAtPoint: invalid texinfo\n");
+        VectorCopy(vec3_origin, light);
+        return;
+    }
+    
+    // convert to LM coords
+    WorldToLM(point, &ctx->lightsurf, bsp, face, lmcoord);
+    
+    int width = (ctx->lightsurf.texsize[0] + 1) * oversample;
+    int closet_point_index = (lmcoord[1] * width) + lmcoord[0];
+    
+    if (closet_point_index < 0
+        || closet_point_index >= ctx->lightsurf.numpoints) {
+        printf("LightAtPoint: point out of range\n");
+        VectorCopy(vec3_origin, light);
+        return;
+    }
+    
+    const vec_t *closest_samplepoint = ctx->lightsurf.points[closet_point_index];
+    
+    vec3_t distvec;
+    VectorSubtract(closest_samplepoint, point, distvec);
+    vec_t dist;
+    dist = VectorLength(distvec);
+    
+    //printf("sample point is %f from impatc point. \n", dist);
+    
+    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(ctx, 0);
+    if (lm == NULL) {
+        //printf("LightAtPoint: style 0 not filled\n");
+        VectorCopy(vec3_origin, light);
+        return; // style 0 not filled
+    }
+    
+    VectorCopy(lm->samples[closet_point_index].color, light);
+    //printf("Got color: %f %f %f\n", light[0], light[1], light[2]);
+}
+
+// u1 and u2 are the input uniform random values in [0, 1]
+// http://mathworld.wolfram.com/DiskPointPicking.html
+static void
+RandomPointInUnitCircle(vec_t u1, vec_t u2, vec_t *xout, vec_t *yout)
+{
+    vec_t angle = 2 * Q_PI * u1;
+    vec_t sqrt_radius = sqrtf(u2);
+    *xout = cosf(angle) * sqrt_radius;
+    *yout = sinf(angle) * sqrt_radius;
+}
+
+// returns a cosine-weighted vector, facing up
+static void
+CosineWeightedHemisphereSample(int i, int N, vec3_t randomout)
+{
+    // convert i and N into a pair of values in [0, 1]
+#if 1
+    int sqrt_N = (int)ceil(sqrt(N));
+    vec_t u1 = ((i/sqrt_N) + 0) / (vec_t)sqrt_N;
+    vec_t u2 = ((i%sqrt_N) + 0) / (vec_t)sqrt_N;
+#else
+    vec_t u1 = Random();
+    vec_t u2 = Random();
+#endif
+    
+    vec_t x, y, z;
+    RandomPointInUnitCircle(u1, u2, &x, &y);
+    
+    // triangle base squared
+    const vec_t base_sq= x*x + y*y;
+    
+    // project the point upwards onto the sphere. solve:
+    //    1 = sqrt(base_sq + height_sq)
+    //    1 = base_sq + height_sq
+    //    1 - base_sq = height_sq
+    //    sqrt(1 - base_sq) = height
+    
+    // guard against FP error
+    z = sqrtf(qmax(0.0f, 1.0f - base_sq));
+    
+    VectorSet(randomout, x, y, z);
+}
+
+static void
+GetUpRtVecs(const vec3_t normal, vec3_t myUp, vec3_t myRt)
+{
+    /* check if the normal is aligned to the world-up */
+    if ( normal[ 0 ] == 0.0f && normal[ 1 ] == 0.0f ) {
+        if ( normal[ 2 ] == 1.0f ) {
+            VectorSet( myRt, 1.0f, 0.0f, 0.0f );
+            VectorSet( myUp, 0.0f, 1.0f, 0.0f );
+        } else if ( normal[ 2 ] == -1.0f ) {
+            VectorSet( myRt, -1.0f, 0.0f, 0.0f );
+            VectorSet( myUp,  0.0f, 1.0f, 0.0f );
+        }
+    } else {
+        vec3_t worldUp;
+        VectorSet( worldUp, 0.0f, 0.0f, 1.0f );
+        CrossProduct( normal, worldUp, myRt );
+        VectorNormalize( myRt );
+        CrossProduct( myRt, normal, myUp );
+        VectorNormalize( myUp );
+    }
+}
+
+static void
+TransformToTangentSpace(const vec3_t normal, const vec3_t myUp, const vec3_t myRt, const vec3_t inputvec, vec3_t outputvec)
+{
+    for (int i=0; i<3; i++)
+        outputvec[i] = myRt[i] * inputvec[0] + myUp[i] * inputvec[1] + normal[i] * inputvec[2];
+}
+
+//static void
+//CosineWeightedHemisphereSampleForNormal(const vec3_t normal, const vec3_t myUp, const vec3_t myRt, vec3_t randomout)
+//{
+//    vec3_t vec;
+//    CosineWeightedHemisphereSample(vec);
+//    TransformToTangentSpace(normal, myUp, myRt, vec, randomout);
+//}
+
+// Inderpolate odd rows & odd columns, except never the last row/column.
+// We don't interpolate the last row/col because it makes seams between
+// faces more visible
+bool ShouldInterpolate(const lightsurf_t *lightsurf, int x, int y)
+{
+    if ((x % 2) == 1 && x != (lightsurf->width - 1)) return true;
+    if ((y % 2) == 1 && y != (lightsurf->height - 1)) return true;
+    return false;
+}
+
+static inline int
+SampIdx(const lightsurf_t *lightsurf, int x, int y)
+{
+    return x + (lightsurf->width * y);
+}
+
+void IndirectLightAtPoint(const bsp2_t *bsp, const vec3_t origin, const vec3_t normal, const dmodel_t *self, bool sampledirect, vec3_t colorout)
+{
+//    const int j = SampIdx(lightsurf, x, y);
+//    lightsample_t *sample = &lightmap->samples[j];
+//    const vec_t *normal = lightsurf->normals[j];
+//    const vec_t *origin = lightsurf->points[j];
+    vec3_t myUp, myRt;
+    GetUpRtVecs(normal, myUp, myRt);
+    
+    vec3_t indirect = {0,0,0};
+    //printf("tracing:\n");
+    const int numsamples = 64;
+    for (int i = 0; i < numsamples; i++ ) {
+        // relative to a normal facing straight up
+        vec3_t random_dir;
+        CosineWeightedHemisphereSample(i, numsamples, random_dir);
+        //VectorCopy(dirtVectors[ i ], random_dir);
+        
+        assert(VectorLength(random_dir) <= 1.01);
+        assert(VectorLength(normal) <= 1.01);
+        
+        /* transform vector into tangent space */
+        vec3_t direction;
+        TransformToTangentSpace(normal, myUp, myRt, random_dir, direction);
+        
+        vec_t cosangle = DotProduct(direction, normal);
+        assert(cosangle <= 1.01);
+        assert(cosangle >= -0.01);
+
+        
+        /* set endpoint */
+        vec3_t traceEnd;
+        VectorMA( origin, 1024, direction, traceEnd );
+        
+        /* trace */
+        const bsp2_dface_t *hitface = NULL;
+        vec3_t traceHitpoint = {0,0,0};
+        if (DirtTrace(origin, traceEnd, self, traceHitpoint, NULL, &hitface)) {
+            const int facenum = hitface - bsp->dfaces;
+            const struct ltface_ctx *ctx = &ltface_ctxs[facenum];
+            
+            vec3_t contrib;
+#if 1
+            // use face avg.
+            //scale by face color
+            for (int k=0; k<3; k++) {
+                vec_t src = sampledirect ? ctx->lightsurf.radiosity[k] : ctx->lightsurf.indirectlight[k];
+                
+                if (!sampledirect) {
+                    // clamp if sampling 2nd bounce
+                    src = qmin(512.0f, src);
+                }
+                
+                contrib[k] = src;// * (ctx->lightsurf.texturecolor[k] / 255.0f);
+            }
+#else
+            // use sample point
+            //
+            // noisier overall, only helps avoid issues with shadows emitting light due to averaging across a face
+            vec3_t pointLight = {0,0,0};
+            LightAtPoint(ctx->bsp, traceHitpoint, hitface, pointLight);
+            for (int k=0; k<3; k++)
+                contrib[k] = pointLight[k] * (ctx->lightsurf.texturecolor[k] / 255.0f);
+#endif
+            VectorAdd(indirect, contrib, indirect);
+            //printf("    contrib: %f %f %f\n", contrib[0], contrib[1], contrib[2]);
+        }
+    }
+    // divide by (# of samples * pdf)
+    // see: http://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
+    VectorScale(indirect, 1.0 / numsamples, indirect);
+    VectorCopy(indirect, colorout);
+}
+
+
+void
+LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
+{
+    lightsurf_t *lightsurf = &ctx->lightsurf;
+    
+    if (!lightsurf->numpoints)
+        return;
+    
+    // sample indirect lighting in the middle of the face
+//    const int mid_idx = SampIdx(lightsurf, lightsurf->width/2, lightsurf->height/2);
+//    IndirectLightAtPoint(ctx->bsp, lightsurf->points[mid_idx], lightsurf->normals[mid_idx], lightsurf->modelinfo->model, true, lightsurf->indirectlight);
+    
+    VectorSet(lightsurf->indirectlight, 512, 512, 512);
+}
+
+
+void
+FinishLightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
+{
+    lightmap_t *lightmaps = ctx->lightmaps_bounce1;
+    lightsurf_t *lightsurf = &ctx->lightsurf;
+    
+    /* use a style 0 light map */
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+
+    for (int x = 0; x < lightsurf->width; x++) {
+        for (int y = 0; y < lightsurf->height; y++) {
+            const int i = SampIdx(lightsurf, x, y);
+            lightsample_t *sample = &lightmap->samples[SampIdx(lightsurf, x, y)];
+            
+            // just copy the indirect lighting value
+            //VectorCopy(lightsurf->indirectlight, sample->color);
+            
+            IndirectLightAtPoint(ctx->bsp, lightsurf->points[i], lightsurf->normals[i], lightsurf->modelinfo->model, false, sample->color);
+        }
+    }
+    
+    // add direct light for style 0
+#if 0
+    const lightmap_t *lightmap_direct = Lightmap_ForStyle_ReadOnly(ctx, 0);
+    if (lightmap_direct->samples) {
+        for (int x = 0; x < lightsurf->width; x++) {
+            for (int y = 0; y < lightsurf->height; y++) {
+                const int i = SampIdx(lightsurf, x, y);
+                const lightsample_t *sample_direct = &lightmap_direct->samples[i];
+                lightsample_t *sample = &lightmap->samples[i];
+                
+                VectorAdd(sample_direct->color, sample->color, sample->color);
+            }
+        }
+    }
+#endif
+    
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    
+    /* Perform post-processing if requested */
+    if (softsamples > 0) {
+        for (int i = 0; i < MAXLIGHTMAPS; i++) {
+            if (lightmaps[i].style == 255)
+                break;
+            Lightmap_Soften(&lightmaps[i], lightsurf);
+        }
+    }
+    
     WriteLightmaps(face, facesup, lightsurf, lightmaps);
 }

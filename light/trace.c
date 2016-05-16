@@ -345,7 +345,7 @@ vec_t fix_coord(vec_t in, int width)
     }
 }
 
-static int
+int
 SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
 {
     vec_t texcoord[2];

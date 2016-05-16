@@ -109,6 +109,8 @@ uint32_t *extended_texinfo_flags = NULL;
 
 char mapfilename[1024];
 
+struct ltface_ctx *ltface_ctxs;
+
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
@@ -175,7 +177,9 @@ LightThread(void *arg)
         if (facenum == -1)
             break;
 
-        ctx = LightFaceInit(bsp);
+        ctx = &ltface_ctxs[facenum];
+
+        LightFaceInit(bsp, ctx);
         
         /* Find the correct model offset */
         face_modelinfo = ModelInfoForFace(bsp, facenum);
@@ -205,10 +209,61 @@ LightThread(void *arg)
             LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
             LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
         }
-        
-        LightFaceShutdown(ctx);
     }
 
+    return NULL;
+}
+
+static void *
+LightThreadIndirect(void *arg)
+{
+    int facenum;
+    const bsp2_t *bsp = (const bsp2_t *) arg;
+    const modelinfo_t *face_modelinfo;
+    struct ltface_ctx *ctx;
+    
+    while (1) {
+        facenum = GetThreadWork();
+        if (facenum == -1)
+            break;
+        
+        ctx = &ltface_ctxs[facenum];
+        
+        /* Find the correct model offset */
+        face_modelinfo = ModelInfoForFace(bsp, facenum);
+        if (face_modelinfo == NULL)
+            continue;
+        
+        LightFaceIndirect(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
+    }
+    
+    return NULL;
+}
+
+static void *
+LightThreadSaveAndFree(void *arg)
+{
+    int facenum;
+    const bsp2_t *bsp = (const bsp2_t *) arg;
+    const modelinfo_t *face_modelinfo;
+    struct ltface_ctx *ctx;
+    
+    while (1) {
+        facenum = GetThreadWork();
+        if (facenum == -1)
+            break;
+        
+        ctx = &ltface_ctxs[facenum];
+        
+        /* Find the correct model offset */
+        face_modelinfo = ModelInfoForFace(bsp, facenum);
+        if (face_modelinfo == NULL)
+            continue;
+
+        FinishLightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
+        LightFaceShutdown(ctx);
+    }
+    
     return NULL;
 }
 
@@ -692,9 +747,19 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     CalcualateVertexNormals(bsp);
 
+    /* ericw -- alloc memory */
+    ltface_ctxs = (struct ltface_ctx *)calloc(bsp->numfaces, sizeof(struct ltface_ctx));
+    
+    logprint("==LightThread==\n");
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
-    logprint("Lighting Completed.\n\n");
 
+    logprint("==LightThreadIndirect==\n");
+    RunThreadsOn(0, bsp->numfaces, LightThreadIndirect, bsp);
+    
+    logprint("==LightThreadSaveAndFree==\n");
+    RunThreadsOn(0, bsp->numfaces, LightThreadSaveAndFree, bsp);
+
+    logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 
@@ -1427,7 +1492,7 @@ main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (dirty)
+        //if (dirty)
             SetupDirt();
 
         MakeTnodes(bsp);
