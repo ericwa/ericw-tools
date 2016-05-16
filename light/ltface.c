@@ -2258,9 +2258,17 @@ CosineWeightedHemisphereSample(int i, int N, vec3_t randomout)
 {
     // convert i and N into a pair of values in [0, 1]
 #if 1
-    int sqrt_N = (int)ceil(sqrt(N));
-    vec_t u1 = ((i/sqrt_N) + 0) / (vec_t)sqrt_N;
-    vec_t u2 = ((i%sqrt_N) + 0) / (vec_t)sqrt_N;
+    int sqrt_N = (int)sqrt(N);
+    assert((sqrt_N * sqrt_N) == N); // require N to be a square number
+    int i1 = i / sqrt_N; // [0, sqrt_N)
+    int i2 = i % sqrt_N; // [0, sqrt_N)
+
+    //vec_t r = (Random() * 2) - 1; // [-1, 1]
+
+    vec_t u1 = (i1 + Random()) / (vec_t)sqrt_N;
+    vec_t u2 = (i2 + Random()) / (vec_t)sqrt_N;
+
+    //printf("%f %f\n", u1, u2);
 #else
     vec_t u1 = Random();
     vec_t u2 = Random();
