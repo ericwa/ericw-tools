@@ -2460,7 +2460,7 @@ FinishLightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *model
     // add direct light for style 0
 #if 0
     const lightmap_t *lightmap_direct = Lightmap_ForStyle_ReadOnly(ctx, 0);
-    if (lightmap_direct->samples) {
+    if (lightmap_direct && lightmap_direct->samples) {
         for (int x = 0; x < lightsurf->width; x++) {
             for (int y = 0; y < lightsurf->height; y++) {
                 const int i = SampIdx(lightsurf, x, y);
