@@ -894,6 +894,18 @@ Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lig
 }
 
 /*
+ * Lightmap_ClearAll
+ * 
+ * Sets all styles to 255, doesn't actually clear the data.
+ */
+void Lightmap_ClearAll(lightmap_t *lightmaps)
+{
+    for (int i = 0; i <= MAXLIGHTMAPS; i++) {
+        lightmaps[i].style = 255;
+    }
+}
+
+/*
  * Lightmap_Save
  *
  * As long as we have space for the style, mark as allocated,
@@ -2461,31 +2473,32 @@ FinishLightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *model
     
     // add the indirect lighting style 0 to the main lightmap style 0
     {
-        lightmap_t *main_lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+        if (bouncedebug) {
+            // to erase any styled lights
+            Lightmap_ClearAll(lightmaps);
+        }
+        
+        lightmap_t *lightmap_direct = Lightmap_ForStyle(lightmaps, 0, lightsurf);
         const lightmap_t *lightmap_indirect = Lightmap_ForStyle_ReadOnly(ctx, 0, false);
         
-        for (int x = 0; x < lightsurf->width; x++) {
-            for (int y = 0; y < lightsurf->height; y++) {
-                const int i = SampIdx(lightsurf, x, y);
-                
-                lightsample_t *sample_main = &main_lightmap->samples[i];
-                
-                if (lightmap_indirect && lightmap_indirect->samples) {
-                    const lightsample_t *sample_indirect = &lightmap_indirect->samples[i];
-                    if (bouncedebug) {
-                        VectorCopy(sample_indirect->color, sample_main->color);
-                    } else {
-                        VectorAdd(sample_indirect->color, sample_main->color, sample_main->color);
-                    }
-                } else {
-                    if (bouncedebug) {
-                        VectorSet(sample_main->color, 0, 0, 0);
-                    }
-                }
+        for (int i=0; i<lightsurf->numpoints; i++) {
+            const vec_t *src = vec3_origin;
+            vec_t *dst = lightmap_direct->samples[i].color;
+            
+            if (lightmap_indirect && lightmap_indirect->samples) {
+                src = lightmap_indirect->samples[i].color;
+            }
+            
+            if (bouncedebug) {
+                VectorCopy(src, dst);
+            } else {
+                VectorAdd(dst, src, dst);
             }
         }
-        Lightmap_Save(lightmaps, lightsurf, main_lightmap, 0);
+
+        Lightmap_Save(lightmaps, lightsurf, lightmap_direct, 0);
     }
+
     
     /* Perform post-processing if requested */
     if (softsamples > 0) {
