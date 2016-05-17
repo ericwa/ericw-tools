@@ -2388,7 +2388,7 @@ void IndirectLightAtPoint(const bsp2_t *bsp, const vec3_t origin, const vec3_t n
             const struct ltface_ctx *ctx = &ltface_ctxs[facenum];
             
             vec3_t contrib;
-#if 1
+#if 0
             // use face avg.
             //scale by face color
             for (int k=0; k<3; k++) {
