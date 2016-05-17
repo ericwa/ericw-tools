@@ -2061,7 +2061,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * minlight levels, then cast all negative lights. Finally, we
      * clamp any values that may have gone negative.
      */
-#if 0
+#if 1
     if (!dirtDebug && !phongDebug && !bouncedebug) {
         /* positive lights */
         for (lighte = lights; (entity = *lighte); lighte++)
@@ -2407,8 +2407,8 @@ void IndirectLightAtPoint(const bsp2_t *bsp, const vec3_t origin, const vec3_t n
             // noisier overall, only helps avoid issues with shadows emitting light due to averaging across a face
             vec3_t pointLight = {0,0,0};
             LightAtPoint(ctx->bsp, traceHitpoint, hitface, pointLight);
-            for (int k=0; k<3; k++)
-                contrib[k] = pointLight[k] * (ctx->lightsurf.texturecolor[k] / 255.0f);
+            for (int k = 0; k < 3; k++)
+                contrib[k] = qmin(512.0f, pointLight[k]);// *(ctx->lightsurf.texturecolor[k] / 255.0f);
 #endif
             VectorAdd(indirect, contrib, indirect);
             //printf("    contrib: %f %f %f\n", contrib[0], contrib[1], contrib[2]);
@@ -2434,6 +2434,23 @@ LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *mod
 //    IndirectLightAtPoint(ctx->bsp, lightsurf->points[mid_idx], lightsurf->normals[mid_idx], lightsurf->modelinfo->model, true, lightsurf->indirectlight);
     
     VectorSet(lightsurf->indirectlight, 512, 512, 512);
+
+#if 1
+    lightmap_t *lightmaps = ctx->lightmaps_bounce1;
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    for (int x = 0; x < lightsurf->width; x++) {
+        for (int y = 0; y < lightsurf->height; y++) {
+            const int i = SampIdx(lightsurf, x, y);
+            lightsample_t *sample = &lightmap->samples[SampIdx(lightsurf, x, y)];
+            
+            // just copy the indirect lighting value
+            //VectorCopy(lightsurf->indirectlight, sample->color);
+
+            IndirectLightAtPoint(ctx->bsp, lightsurf->points[i], lightsurf->normals[i], lightsurf->modelinfo->model, true, sample->color);
+        }
+    }
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+#endif
 }
 
 
@@ -2445,18 +2462,6 @@ FinishLightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *model
     
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-
-    for (int x = 0; x < lightsurf->width; x++) {
-        for (int y = 0; y < lightsurf->height; y++) {
-            const int i = SampIdx(lightsurf, x, y);
-            lightsample_t *sample = &lightmap->samples[SampIdx(lightsurf, x, y)];
-            
-            // just copy the indirect lighting value
-            //VectorCopy(lightsurf->indirectlight, sample->color);
-            
-            IndirectLightAtPoint(ctx->bsp, lightsurf->points[i], lightsurf->normals[i], lightsurf->modelinfo->model, false, sample->color);
-        }
-    }
     
     // add direct light for style 0
 #if 0
