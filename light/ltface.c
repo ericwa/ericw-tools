@@ -2357,6 +2357,7 @@ void IndirectLightAtPoint(const bsp2_t *bsp, const vec3_t origin, const vec3_t n
     vec3_t indirect = {0,0,0};
     //printf("tracing:\n");
     const int numsamples = 64;
+    const int maxdist = 4096; // maximum distance to shoot final gather rays
     for (int i = 0; i < numsamples; i++ ) {
         // relative to a normal facing straight up
         vec3_t random_dir;
@@ -2377,7 +2378,7 @@ void IndirectLightAtPoint(const bsp2_t *bsp, const vec3_t origin, const vec3_t n
         
         /* set endpoint */
         vec3_t traceEnd;
-        VectorMA( origin, 1024, direction, traceEnd );
+        VectorMA( origin, maxdist, direction, traceEnd );
         
         /* trace */
         const bsp2_dface_t *hitface = NULL;
