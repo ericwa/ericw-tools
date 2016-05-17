@@ -1543,6 +1543,7 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
+#if 0
 // returns color in [0,255]
 static inline void
 BounceLight_ColorAtDist(const bouncelight_t *vpl, vec_t dist, vec3_t color)
@@ -1650,7 +1651,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
-
+#endif
 
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
 
@@ -1704,9 +1705,9 @@ void SetupDirt( void ) {
 }
 
 static const lightmap_t *
-Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
+Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style, bool sampledirect)
 {
-    const lightmap_t *lightmap = ctx->lightmaps;
+    const lightmap_t *lightmap = sampledirect ? ctx->lightmaps : ctx->lightmaps_bounce1;
     int i;
     
     for (i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
@@ -2061,8 +2062,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * minlight levels, then cast all negative lights. Finally, we
      * clamp any values that may have gone negative.
      */
-#if 1
-    if (!dirtDebug && !phongDebug && !bouncedebug) {
+    if (!dirtDebug && !phongDebug) {
         /* positive lights */
         for (lighte = lights; (entity = *lighte); lighte++)
         {
@@ -2093,12 +2093,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             if (sun->sunlight.light < 0)
                 LightFace_Sky (sun, lightsurf, lightmaps);
     }
-    
-    if (!dirtDebug && !phongDebug) {
-        /* add indirect lighting */
-        LightFace_Bounce(bsp, face, lightsurf, lightmaps);
-    }
-    
+        
     /* replace lightmaps with AO for debugging */
     if (dirtDebug)
         LightFace_DirtDebug(lightsurf, lightmaps);
@@ -2155,7 +2150,10 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         VectorAdd(lightsurf->texturecolor, texcolor, lightsurf->texturecolor);
     }
     VectorScale(lightsurf->texturecolor, 1.0f/lightsurf->numpoints, lightsurf->texturecolor);
-#endif
+    
+    if (!bounce) {
+        WriteLightmaps(face, facesup, lightsurf, lightmaps);
+    }
 }
 
 void
@@ -2230,7 +2228,7 @@ LightAtPoint(const bsp2_t *bsp, const vec3_t point, const bsp2_dface_t *face, ve
     
     //printf("sample point is %f from impatc point. \n", dist);
     
-    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(ctx, 0);
+    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(ctx, 0, true);
     if (lm == NULL) {
         //printf("LightAtPoint: style 0 not filled\n");
         VectorCopy(vec3_origin, light);
@@ -2435,6 +2433,7 @@ LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *mod
     
     VectorSet(lightsurf->indirectlight, 512, 512, 512);
 
+    // write indirect lighting into lightmaps_bounce1 style 0
 #if 1
     lightmap_t *lightmaps = ctx->lightmaps_bounce1;
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -2457,29 +2456,36 @@ LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *mod
 void
 FinishLightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
 {
-    lightmap_t *lightmaps = ctx->lightmaps_bounce1;
+    lightmap_t *lightmaps = ctx->lightmaps;
     lightsurf_t *lightsurf = &ctx->lightsurf;
     
-    /* use a style 0 light map */
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-    
-    // add direct light for style 0
-#if 0
-    const lightmap_t *lightmap_direct = Lightmap_ForStyle_ReadOnly(ctx, 0);
-    if (lightmap_direct && lightmap_direct->samples) {
+    // add the indirect lighting style 0 to the main lightmap style 0
+    {
+        lightmap_t *main_lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+        const lightmap_t *lightmap_indirect = Lightmap_ForStyle_ReadOnly(ctx, 0, false);
+        
         for (int x = 0; x < lightsurf->width; x++) {
             for (int y = 0; y < lightsurf->height; y++) {
                 const int i = SampIdx(lightsurf, x, y);
-                const lightsample_t *sample_direct = &lightmap_direct->samples[i];
-                lightsample_t *sample = &lightmap->samples[i];
                 
-                VectorAdd(sample_direct->color, sample->color, sample->color);
+                lightsample_t *sample_main = &main_lightmap->samples[i];
+                
+                if (lightmap_indirect && lightmap_indirect->samples) {
+                    const lightsample_t *sample_indirect = &lightmap_indirect->samples[i];
+                    if (bouncedebug) {
+                        VectorCopy(sample_indirect->color, sample_main->color);
+                    } else {
+                        VectorAdd(sample_indirect->color, sample_main->color, sample_main->color);
+                    }
+                } else {
+                    if (bouncedebug) {
+                        VectorSet(sample_main->color, 0, 0, 0);
+                    }
+                }
             }
         }
+        Lightmap_Save(lightmaps, lightsurf, main_lightmap, 0);
     }
-#endif
-    
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
     
     /* Perform post-processing if requested */
     if (softsamples > 0) {

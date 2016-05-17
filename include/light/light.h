@@ -165,7 +165,7 @@ struct ltface_ctx
 extern struct ltface_ctx *ltface_ctxs;
 
 /* bounce lights */
-    
+#if 0
 typedef struct {
     vec3_t pos;
     vec3_t color;
@@ -176,6 +176,7 @@ typedef struct {
     
 extern const bouncelight_t *bouncelights;
 extern int numbouncelights;
+#endif
 extern byte thepalette[768];
     
 /* tracelist is a null terminated array of BSP models to use for LOS tests */

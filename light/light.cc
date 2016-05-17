@@ -209,6 +209,10 @@ LightThread(void *arg)
             LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
             LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
         }
+        
+        if (!bounce) {
+            LightFaceShutdown(ctx);
+        }
     }
 
     return NULL;
@@ -753,11 +757,13 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     logprint("==LightThread==\n");
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 
-    logprint("==LightThreadIndirect==\n");
-    RunThreadsOn(0, bsp->numfaces, LightThreadIndirect, bsp);
-    
-    logprint("==LightThreadSaveAndFree==\n");
-    RunThreadsOn(0, bsp->numfaces, LightThreadSaveAndFree, bsp);
+    if (bounce) {
+        logprint("==LightThreadIndirect==\n");
+        RunThreadsOn(0, bsp->numfaces, LightThreadIndirect, bsp);
+        
+        logprint("==LightThreadSaveAndFree==\n");
+        RunThreadsOn(0, bsp->numfaces, LightThreadSaveAndFree, bsp);
+    }
 
     logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
@@ -825,6 +831,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
 
 // radiosity
 
+#if 0
 map<string, vec3_struct_t> texturecolors;
 std::vector<bouncelight_t> radlights;
 
@@ -1141,6 +1148,7 @@ void MakeBounceLights (const bsp2_t *bsp)
     numbouncelights = radlights.size();
 }
 
+#endif
 // end radiosity
 
 //obj
@@ -1496,12 +1504,7 @@ main(int argc, const char **argv)
             SetupDirt();
 
         MakeTnodes(bsp);
-        
-        if (bounce) {
-            MakeTextureColors(bsp);
-            MakeBounceLights(bsp);
-        }
-        
+                
         LightWorld(&bspdata, !!lmscaleoverride);
         
         /*invalidate any bspx lighting info early*/
