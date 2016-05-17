@@ -2356,7 +2356,7 @@ void IndirectLightAtPoint(const bsp2_t *bsp, const vec3_t origin, const vec3_t n
     
     vec3_t indirect = {0,0,0};
     //printf("tracing:\n");
-    const int numsamples = 64;
+    const int numsamples = 256;
     const int maxdist = 4096; // maximum distance to shoot final gather rays
     for (int i = 0; i < numsamples; i++ ) {
         // relative to a normal facing straight up
