@@ -2418,15 +2418,20 @@ void IndirectLightAtPoint(const bsp2_t *bsp, const vec3_t origin, const vec3_t n
             vec3_t pointLight = {0,0,0};
             LightAtPoint(ctx->bsp, traceHitpoint, hitface, pointLight);
             for (int k = 0; k < 3; k++)
-                contrib[k] = qmin(512.0f, pointLight[k]);// *(ctx->lightsurf.texturecolor[k] / 255.0f);
+                contrib[k] = qmin(512.0f, pointLight[k] * (ctx->lightsurf.texturecolor[k] / 255.0f));
 #endif
             VectorAdd(indirect, contrib, indirect);
             //printf("    contrib: %f %f %f\n", contrib[0], contrib[1], contrib[2]);
         }
     }
+    
+    // this is the pdf for picking a uniformly distributed solid angle on a hemisphere.
+    // we're actually picking from a consine-weighted distribution.
+    const vec_t pdf = (1/(2 * Q_PI));
+    
     // divide by (# of samples * pdf)
     // see: http://www.scratchapixel.com/lessons/3d-basic-rendering/global-illumination-path-tracing/global-illumination-path-tracing-practical-implementation
-    VectorScale(indirect, 1.0 / numsamples, indirect);
+    VectorScale(indirect, 1.0 / (numsamples * pdf), indirect);
     VectorCopy(indirect, colorout);
 }
 
