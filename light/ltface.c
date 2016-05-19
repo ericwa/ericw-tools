@@ -894,6 +894,18 @@ Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lig
 }
 
 /*
+ * Lightmap_ClearAll
+ * 
+ * Sets all styles to 255, doesn't actually clear the data.
+ */
+void Lightmap_ClearAll(lightmap_t *lightmaps)
+{
+    for (int i = 0; i <= MAXLIGHTMAPS; i++) {
+        lightmaps[i].style = 255;
+    }
+}
+
+/*
  * Lightmap_Save
  *
  * As long as we have space for the style, mark as allocated,
