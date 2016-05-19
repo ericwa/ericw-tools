@@ -176,7 +176,6 @@ typedef struct {
 void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp);
 int NumBounceLights();
 const bouncelight_t *BounceLightAtIndex(int i);
-winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
 
 extern const bouncelight_t *bouncelights;
 extern int numbouncelights;

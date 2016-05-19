@@ -24,6 +24,7 @@
 
 #include <common/cmdlib.h>
 #include <common/log.h>
+#include <common/polylib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -480,6 +481,8 @@ void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
 
+winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
+    
 #ifdef __cplusplus
 }
 #endif
