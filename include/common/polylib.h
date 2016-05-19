@@ -3,6 +3,9 @@
 #ifndef __COMMON_POLYLIB_H__
 #define __COMMON_POLYLIB_H__
 
+#include <common/mathlib.h>
+#include <common/bspfile.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,6 +33,8 @@ void RemoveColinearPoints(winding_t * w);
 
 typedef void (*save_winding_fn_t)(winding_t *w);
 void DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn);
+    
+winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
     
 #ifdef __cplusplus
 }

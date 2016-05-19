@@ -467,3 +467,39 @@ void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn)
     DiceWinding(o1, subdiv, save_fn);
     DiceWinding(o2, subdiv, save_fn);
 }
+
+/*
+ =============
+ WindingFromFace
+ From q2 tools
+ =============
+ */
+winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    int			i;
+    int			se;
+    dvertex_t	*dv;
+    int			v;
+    winding_t	*w;
+    
+    w = AllocWinding (f->numedges);
+    w->numpoints = f->numedges;
+    
+    for (i=0 ; i<f->numedges ; i++)
+    {
+        se = bsp->dsurfedges[f->firstedge + i];
+        if (se < 0)
+            v = bsp->dedges[-se].v[1];
+        else
+            v = bsp->dedges[se].v[0];
+        
+        dv = &bsp->dvertexes[v];
+        for (int j=0; j<3; j++) {
+            w->p[i][j] = dv->point[j];
+        }
+    }
+    
+    RemoveColinearPoints (w);
+    
+    return w;
+}
