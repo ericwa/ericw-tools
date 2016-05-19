@@ -35,11 +35,6 @@ extern "C" {
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
-typedef struct {
-    vec3_t normal;
-    vec_t dist;
-} plane_t;
-
 /*
  * Convenience functions TestLight and TestSky will test against all shadow
  * casting bmodels and self-shadow the model 'self' if self != NULL. Returns

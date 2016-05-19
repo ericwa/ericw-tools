@@ -29,11 +29,6 @@
 #define  PORTALFILEAM "PRT1-AM"
 #define  ON_EPSILON  0.1
 
-typedef struct {
-    vec3_t normal;
-    float dist;
-} plane_t;
-
 #define MAX_WINDING 64
 #define MAX_WINDING_FIXED 24
 
