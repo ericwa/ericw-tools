@@ -958,52 +958,6 @@ void SavePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w)
     facenumToPatches[i].push_back(p);
 }
 
-/*
-=============
-DicePatch
-
-Chops the patch by a global grid
-From q3rad
-=============
-*/
-void	DicePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w, vec_t subdiv)
-{
-    winding_t   *o1, *o2;
-    vec3_t	mins, maxs;
-    vec3_t	split;
-    vec_t	dist;
-    int		i;
-    
-    if (!w)
-        return;
-    
-    WindingBounds (w, mins, maxs);
-    for (i=0 ; i<3 ; i++)
-        if (floor((mins[i]+1)/subdiv) < floor((maxs[i]-1)/subdiv))
-            break;
-    if (i == 3)
-    {
-        // no splitting needed
-        SavePatch(bsp, sourceface, w);
-        return;
-    }
-    
-    //
-    // split the winding
-    //
-    VectorCopy (vec3_origin, split);
-    split[i] = 1;
-    dist = subdiv*(1+floor((mins[i]+1)/subdiv));
-    ClipWinding (w, split, dist, &o1, &o2);
-    free(w);
-    
-    //
-    // create a new patch
-    //
-    DicePatch(bsp, sourceface, o1, subdiv);
-    DicePatch(bsp, sourceface, o2, subdiv);
-}
-
 static void *
 MakeBounceLightsThread (void *arg)
 {

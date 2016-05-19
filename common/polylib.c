@@ -418,3 +418,52 @@ CheckWinding(const winding_t * w)
         }
     }
 }
+
+/*
+ =============
+ DiceWinding
+ 
+ Chops the winding by a global grid.
+ Calls save_fn on each subdivided chunk.
+ Frees w.
+ 
+ From q3rad (DicePatch)
+ =============
+ */
+void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn)
+{
+    winding_t   *o1, *o2;
+    vec3_t	mins, maxs;
+    vec3_t	split;
+    vec_t	dist;
+    int		i;
+    
+    if (!w)
+        return;
+    
+    WindingBounds (w, mins, maxs);
+    for (i=0 ; i<3 ; i++)
+        if (floor((mins[i]+1)/subdiv) < floor((maxs[i]-1)/subdiv))
+            break;
+    if (i == 3)
+    {
+        // no splitting needed
+        save_fn(w);
+        return;
+    }
+    
+    //
+    // split the winding
+    //
+    VectorCopy (vec3_origin, split);
+    split[i] = 1;
+    dist = subdiv*(1+floor((mins[i]+1)/subdiv));
+    ClipWinding (w, split, dist, &o1, &o2);
+    free(w);
+    
+    //
+    // create a new patch
+    //
+    DiceWinding(o1, subdiv, save_fn);
+    DiceWinding(o2, subdiv, save_fn);
+}
