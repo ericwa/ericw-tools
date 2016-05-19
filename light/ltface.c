@@ -2195,25 +2195,19 @@ LightAtPoint(const bsp2_t *bsp, const vec3_t point, const bsp2_dface_t *face, ve
     const texinfo_t *tex;
     
     if (facenum < 0 || facenum >= bsp->numfaces) {
-        logprint("LightAtPoint: invalid face\n");
+        logprint("LightAtPoint: invalid face %d\n", facenum);
         VectorCopy(vec3_origin, light);
         return;
     }
     
     const struct ltface_ctx *ctx = &ltface_ctxs[facenum];
     if (!ctx->lightsurf.numpoints) {
-        const char *texname = Face_TextureName(bsp, bsp->dfaces + facenum);
-        if (!(!strcmp(texname, "skip")
-              || !strncmp(texname, "sky", 3)
-              || !strcmp(texname, "trigger"))) {
-            logprint("LightAtPoint: lightsurf not allocated\n");
-        }
         VectorCopy(vec3_origin, light);
         return;
     }
     
     if (face->texinfo < 0 || face->texinfo >= bsp->numtexinfo) {
-        logprint("LightAtPoint: invalid texinfo\n");
+        logprint("LightAtPoint: face %d has invalid texinfo %d\n", facenum, face->texinfo);
         VectorCopy(vec3_origin, light);
         return;
     }
