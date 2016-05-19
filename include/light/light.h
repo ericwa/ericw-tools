@@ -25,6 +25,7 @@
 #include <common/bspfile.h>
 #include <common/log.h>
 #include <common/threads.h>
+#include <common/polylib.h>
 #include <light/litfile.h>
 
 #ifdef __cplusplus
@@ -48,6 +49,9 @@ qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 
+int
+SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
+    
 typedef struct {
     vec_t light;
     vec3_t color;
@@ -134,6 +138,10 @@ typedef struct {
     /* for sphere culling */
     vec3_t origin;
     vec_t radius;
+
+    // for radiosity
+    vec3_t radiosity;
+    vec3_t texturecolor;
     
     /* stuff used by CalcPoint */
     vec_t starts, startt, st_step;
@@ -153,6 +161,8 @@ struct ltface_ctx
     lightmap_t lightmaps[MAXLIGHTMAPS + 1];
 };
 
+extern struct ltface_ctx *ltface_ctxs;
+
 /* bounce lights */
     
 typedef struct {
@@ -162,7 +172,12 @@ typedef struct {
     vec_t area;
     const bsp2_dleaf_t *leaf;
 } bouncelight_t;
-    
+
+void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp);
+int NumBounceLights();
+const bouncelight_t *BounceLightAtIndex(int i);
+winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
+
 extern const bouncelight_t *bouncelights;
 extern int numbouncelights;
 extern byte thepalette[768];
@@ -171,11 +186,11 @@ extern byte thepalette[768];
 extern const modelinfo_t *const *tracelist;
 extern const modelinfo_t *const *selfshadowlist;
 
-struct ltface_ctx;
-struct ltface_ctx *LightFaceInit(const bsp2_t *bsp);
+void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
 void LightFaceShutdown(struct ltface_ctx *ctx);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
+void LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
 void MakeTnodes(const bsp2_t *bsp);
 
 /* access the final phong-shaded vertex normal */

@@ -109,6 +109,8 @@ uint32_t *extended_texinfo_flags = NULL;
 
 char mapfilename[1024];
 
+struct ltface_ctx *ltface_ctxs;
+
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
@@ -175,7 +177,9 @@ LightThread(void *arg)
         if (facenum == -1)
             break;
 
-        ctx = LightFaceInit(bsp);
+        ctx = &ltface_ctxs[facenum];
+
+        LightFaceInit(bsp, ctx);
         
         /* Find the correct model offset */
         face_modelinfo = ModelInfoForFace(bsp, facenum);
@@ -206,9 +210,41 @@ LightThread(void *arg)
             LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
         }
         
-        LightFaceShutdown(ctx);
+        /* If bouncing, keep lightmaps in memory because we run a second lighting pass.
+         * Otherwise free memory now, so only (# threads) lightmaps are in memory at a time.
+         */
+        if (!bounce) {
+            LightFaceShutdown(ctx);
+        }
     }
 
+    return NULL;
+}
+
+static void *
+LightThreadBounce(void *arg)
+{
+    int facenum;
+    const bsp2_t *bsp = (const bsp2_t *) arg;
+    const modelinfo_t *face_modelinfo;
+    struct ltface_ctx *ctx;
+    
+    while (1) {
+        facenum = GetThreadWork();
+        if (facenum == -1)
+            break;
+        
+        ctx = &ltface_ctxs[facenum];
+        
+        /* Find the correct model offset */
+        face_modelinfo = ModelInfoForFace(bsp, facenum);
+        if (face_modelinfo == NULL)
+            continue;
+        
+        LightFaceIndirect(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
+        LightFaceShutdown(ctx);
+    }
+    
     return NULL;
 }
 
@@ -692,9 +728,18 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     CalcualateVertexNormals(bsp);
 
+    /* ericw -- alloc memory */
+    ltface_ctxs = (struct ltface_ctx *)calloc(bsp->numfaces, sizeof(struct ltface_ctx));
+    
+    logprint("==LightThread==\n");
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
-    logprint("Lighting Completed.\n\n");
 
+    if (bounce) {
+        logprint("==LightThreadBounce==\n");
+        RunThreadsOn(0, bsp->numfaces, LightThreadBounce, bsp);
+    }
+
+    logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 
@@ -760,12 +805,11 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
 
 // radiosity
 
+
+mutex radlights_lock;
 map<string, vec3_struct_t> texturecolors;
 std::vector<bouncelight_t> radlights;
 
-// for access from C
-const bouncelight_t *bouncelights;
-int numbouncelights;
 
 class patch_t {
 public:
@@ -790,6 +834,7 @@ public:
     }
 };
 
+#if 0
 void
 GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
 {
@@ -826,6 +871,7 @@ GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
 std::vector<patch_t *> triangleIndexToPatch;
 std::unordered_map<int, std::vector<patch_t *>> facenumToPatches;
 mutex facenumToPatches_mutex;
+#endif
 
 /*
 =============
@@ -863,7 +909,7 @@ winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
     return w;
 }
 
-
+#if 0
 void SavePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w)
 {
     int i = sourceface - bsp->dfaces;
@@ -983,6 +1029,32 @@ MakeBounceLightsThread (void *arg)
     
     return NULL;
 }
+#endif
+
+void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
+{
+    bouncelight_t l;
+    VectorCopy(pos, l.pos);
+    VectorCopy(color, l.color);
+    VectorCopy(surfnormal, l.surfnormal);
+    l.area = area;
+    l.leaf = Light_PointInLeaf(bsp, pos);
+    
+    unique_lock<mutex> lck { radlights_lock };
+    radlights.push_back(l);
+}
+
+int NumBounceLights()
+{
+    return radlights.size();
+}
+
+const bouncelight_t *BounceLightAtIndex(int i)
+{
+    return &radlights.at(i);
+}
+
+#if 0
 
 // Returns color in [0,1]
 void Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
@@ -1075,6 +1147,7 @@ void MakeBounceLights (const bsp2_t *bsp)
     bouncelights = radlights.data();
     numbouncelights = radlights.size();
 }
+#endif
 
 // end radiosity
 
@@ -1431,12 +1504,6 @@ main(int argc, const char **argv)
             SetupDirt();
 
         MakeTnodes(bsp);
-        
-        if (bounce) {
-            MakeTextureColors(bsp);
-            MakeBounceLights(bsp);
-        }
-        
         LightWorld(&bspdata, !!lmscaleoverride);
         
         /*invalidate any bspx lighting info early*/

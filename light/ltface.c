@@ -1632,8 +1632,9 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     /* use a style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
+    const int numbouncelights = NumBounceLights();
     for (int j=0; j<numbouncelights; j++) {
-        const bouncelight_t *vpl = &bouncelights[j];
+        const bouncelight_t *vpl = BounceLightAtIndex(j);
         
         if (VisCullEntity(bsp, lightsurf->pvs, vpl->leaf))
             continue;
@@ -1713,6 +1714,21 @@ void SetupDirt( void ) {
 
     /* emit some statistics */
     logprint("%9d dirtmap vectors\n", numDirtVectors );
+}
+
+static const lightmap_t *
+Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
+{
+    const lightmap_t *lightmap = ctx->lightmaps;
+    int i;
+    
+    for (i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
+        if (lightmap->style == style)
+            return lightmap;
+        if (lightmap->style == 255)
+            break;
+    }
+    return NULL;
 }
 
 /*
@@ -1945,15 +1961,18 @@ WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lights
     }
 }
 
-struct ltface_ctx *LightFaceInit(const bsp2_t *bsp)
+void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx)
 {
-    //windows stack probes can get expensive when its 64mb...
-    //also, this avoids stack overflows, or the need to guess stack sizes.
-    struct ltface_ctx *ctx = calloc(1, sizeof(*ctx));
-    if (ctx)
-        ctx->bsp = bsp;
-    return ctx;
+    int i;
+    
+    memset(ctx, 0, sizeof(*ctx));
+    
+    ctx->bsp = bsp;
+    
+    for (i = 0; i < MAXLIGHTMAPS + 1; i++)
+        ctx->lightmaps[i].style = 255;
 }
+
 void LightFaceShutdown(struct ltface_ctx *ctx)
 {
     int i;
@@ -1977,8 +1996,6 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     
     if (ctx->lightsurf.pvs)
         free(ctx->lightsurf.pvs);
-    
-    free(ctx);
 }
 
 const char *
@@ -2052,7 +2069,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * clamp any values that may have gone negative.
      */
 
-    if (!dirtDebug && !phongDebug && !bouncedebug) {
+    if (!dirtDebug && !phongDebug) {
         /* positive lights */
         for (lighte = lights; (entity = *lighte); lighte++)
         {
@@ -2082,11 +2099,6 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         for ( sun = suns; sun; sun = sun->next )
             if (sun->sunlight.light < 0)
                 LightFace_Sky (sun, lightsurf, lightmaps);
-    }
-    
-    if (!dirtDebug && !phongDebug) {
-        /* add indirect lighting */
-        LightFace_Bounce(bsp, face, lightsurf, lightmaps);
     }
     
     /* replace lightmaps with AO for debugging */
@@ -2120,6 +2132,58 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             Lightmap_Soften(&lightmaps[i], lightsurf);
         }
     }
+    
+    /* Calc average brightness */
+    // FIXME: don't count occluded samples
+    VectorSet(lightsurf->radiosity, 0, 0, 0);
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    sample = lightmap->samples;
+    for (j = 0; j < lightsurf->numpoints; j++, sample++) {
+        vec3_t color;
+        VectorCopy(sample->color, color);
+        VectorAdd(lightsurf->radiosity, color, lightsurf->radiosity);
+    }
+    VectorScale(lightsurf->radiosity, 1.0/lightsurf->numpoints, lightsurf->radiosity);
 
+    // clamp components at 512
+//    for (int i=0;i<3;i++)
+//        lightsurf->radiosity[i] = qmin(512.0f, lightsurf->radiosity[i]);
+
+    /* Calc average texture color */
+    VectorSet(lightsurf->texturecolor, 0, 0, 0);
+    for (j = 0; j < lightsurf->numpoints; j++) {
+        int palidx = SampleTexture(face, bsp, lightsurf->points[j]);
+        vec3_t texcolor = {thepalette[3*palidx], thepalette[3*palidx + 1], thepalette[3*palidx + 2]};
+        VectorAdd(lightsurf->texturecolor, texcolor, lightsurf->texturecolor);
+    }
+    VectorScale(lightsurf->texturecolor, 1.0f/lightsurf->numpoints, lightsurf->texturecolor);
+    
+    // make bounce light
+    if (bounce) {
+        vec3_t emitcolor;
+        for (int k=0; k<3; k++) {
+            emitcolor[k] = (lightsurf->radiosity[k] / 255.0f) * (lightsurf->texturecolor[k] / 255.0f);
+        }
+        winding_t *w = WindingFromFace(bsp, face);
+        AddBounceLight(lightsurf->midpoint, emitcolor, lightsurf->plane.normal, WindingArea(w), bsp);
+        free(w);
+    } else {
+        WriteLightmaps(face, facesup, lightsurf, lightmaps);
+    }
+}
+
+void
+LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
+{
+    lightmap_t *lightmaps = ctx->lightmaps;
+    lightsurf_t *lightsurf = &ctx->lightsurf;
+    if (bouncedebug)
+    {
+        Lightmap_ClearAll(lightmaps);
+    }
+    
+    /* add indirect lighting */
+    LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+    
     WriteLightmaps(face, facesup, lightsurf, lightmaps);
 }
