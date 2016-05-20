@@ -295,6 +295,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     if (i != lightmapscale)
         logprint("WARNING: lightmap scale is not a power of 2\n");
     modelinfo[0].lightmapscale = lightmapscale;
+    modelinfo[0].shadow = true; /* world always casts shadows */
 
     for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
         info->model = &bsp->dmodels[i];
@@ -311,6 +312,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         shadow = atoi(ValueForKey(entity, "_shadow"));
         if (shadow) {
             shadowmodels[numshadowmodels++] = info;
+            info->shadow = true;
         } else {
             shadow = atoi(ValueForKey(entity, "_shadowself"));
             if (shadow) {

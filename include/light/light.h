@@ -55,7 +55,8 @@ typedef struct {
 
 typedef struct {
     const dmodel_t *model;
-    qboolean shadowself;
+    qboolean shadowself; /* is it shadow casting only on itself? */
+    qboolean shadow; /* is it shadow casting? */
     lightsample_t minlight;
     char minlight_exclude[16]; /* texture name to exclude from minlight */
     float lightmapscale;
