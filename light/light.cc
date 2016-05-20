@@ -1401,9 +1401,11 @@ main(int argc, const char **argv)
     strcpy(mapfilename, argv[i]);
     
     // delete previous litfile
-    StripExtension(source);
-    DefaultExtension(source, ".lit");
-    remove(source);
+    if (!onlyents) {
+        StripExtension(source);
+        DefaultExtension(source, ".lit");
+        remove(source);
+    }
     
     StripExtension(source);
     DefaultExtension(source, ".bsp");
