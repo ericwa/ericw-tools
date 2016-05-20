@@ -1062,6 +1062,10 @@ LoadEntities(const bsp2_t *bsp)
                 bouncescale = atof(com_token);
                 logprint("_bouncescale set to %f\n", bouncescale);
             }
+            else if (!strcmp(key, "_bouncecolorscale")) {
+                bouncecolorscale = atof(com_token);
+                logprint("_bouncecolorscale set to %f\n", bouncecolorscale);
+            }
         }
 
         /*

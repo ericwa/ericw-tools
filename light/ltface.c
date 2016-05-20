@@ -2164,9 +2164,16 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     
     // make bounce light
     if (bounce) {
+        vec3_t gray = {127, 127, 127};
+        
+        // lerp between gray and the texture color according to `bouncecolorscale`
+        vec3_t blendedcolor = {0, 0, 0};
+        VectorMA(blendedcolor, bouncecolorscale, lightsurf->texturecolor, blendedcolor);
+        VectorMA(blendedcolor, 1-bouncecolorscale, gray, blendedcolor);
+        
         vec3_t emitcolor;
         for (int k=0; k<3; k++) {
-            emitcolor[k] = (lightsurf->radiosity[k] / 255.0f) * (lightsurf->texturecolor[k] / 255.0f);
+            emitcolor[k] = (lightsurf->radiosity[k] / 255.0f) * (blendedcolor[k] / 255.0f);
         }
         winding_t *w = WindingFromFace(bsp, face);
         AddBounceLight(lightsurf->midpoint, emitcolor, lightsurf->plane.normal, WindingArea(w), bsp);

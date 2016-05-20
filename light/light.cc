@@ -74,6 +74,7 @@ qboolean dirtAngleSetOnCmdline = false;
 qboolean bounce = false;
 qboolean bouncedebug = false;
 vec_t bouncescale = 1.0f;
+vec_t bouncecolorscale = 0.0f;
 
 qboolean testFenceTextures = false;
 qboolean surflight_dump = false;
@@ -1318,6 +1319,10 @@ main(int argc, const char **argv)
             bounce = true;
             bouncescale = atof( argv[ ++i ] );
             logprint( "Bounce scale factor set to %f on command line\n", bouncescale );
+        } else if ( !strcmp( argv[ i ], "-bouncecolorscale" ) ) {
+            bounce = true;
+            bouncecolorscale = atof( argv[ ++i ] );
+            logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale );
         } else if ( !strcmp( argv[ i ], "-fence" ) ) {
             testFenceTextures = true;
             logprint( "Fence texture tracing enabled on command line\n" );
