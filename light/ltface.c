@@ -1652,9 +1652,13 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             if (!TestLight(vpl->pos, lightsurf->points[i], NULL))
                 continue;
 
-            /* Use dirt scaling on the indirect lighting. */
-            const vec_t dirtscale = Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
-            VectorScale(indirect, dirtscale, indirect);
+            /* Use dirt scaling on the indirect lighting.
+             * Except, not in bouncedebug mode.
+             */
+            if (!bouncedebug) {
+                const vec_t dirtscale = Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
+                VectorScale(indirect, dirtscale, indirect);
+            }
             
             lightsample_t *sample = &lightmap->samples[i];
             VectorAdd(sample->color, indirect, sample->color);
