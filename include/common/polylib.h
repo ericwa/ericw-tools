@@ -15,6 +15,11 @@ typedef struct {
     vec3_t p[4];                /* variable sized */
 } winding_t;
 
+typedef struct {
+    int numedges;
+    plane_t *planes;
+} winding_edges_t;
+    
 #define MAX_POINTS_ON_WINDING 64
 #define ON_EPSILON 0.1
 
@@ -35,6 +40,10 @@ typedef void (*save_winding_fn_t)(winding_t *w);
 void DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn);
     
 winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
+
+winding_edges_t *AllocWindingEdges(const winding_t *w);
+void FreeWindingEdges(winding_edges_t *wi);
+bool PointInWindingEdges(const winding_edges_t *wi, const vec3_t point);
     
 #ifdef __cplusplus
 }

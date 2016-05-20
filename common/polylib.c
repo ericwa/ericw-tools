@@ -503,3 +503,53 @@ winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
     
     return w;
 }
+
+winding_edges_t *
+AllocWindingEdges(const winding_t *w)
+{
+    plane_t p;
+    WindingPlane(w, p.normal, &p.dist);
+    
+    winding_edges_t *result = (winding_edges_t *) calloc(1, sizeof(winding_edges_t));
+    result->numedges = w->numpoints;
+    result->planes = (plane_t *) calloc(w->numpoints, sizeof(plane_t));
+    
+    for (int i=0; i<w->numpoints; i++)
+    {
+        plane_t *dest = &result->planes[i];
+        
+        const vec_t *v0 = w->p[i];
+        const vec_t *v1 = w->p[(i+1)%w->numpoints];
+        
+        vec3_t edgevec;
+        VectorSubtract(v1, v0, edgevec);
+        VectorNormalize(edgevec);
+        
+        CrossProduct(edgevec, p.normal, dest->normal);
+        dest->dist = DotProduct(dest->normal, v0);
+    }
+    
+    return result;
+}
+
+void
+FreeWindingEdges(winding_edges_t *wi)
+{
+    free(wi->planes);
+    free(wi);
+}
+
+bool
+PointInWindingEdges(const winding_edges_t *wi, const vec3_t point)
+{
+    for (int i=0; i<wi->numedges; i++)
+    {
+        /* faces toward the center of the face */
+        const plane_t *edgeplane = &wi->planes[i];
+        
+        vec_t dist = DotProduct(point, edgeplane->normal) - edgeplane->dist;
+        if (dist < 0)
+            return false;
+    }
+    return true;
+}
