@@ -72,8 +72,8 @@ WindingPlane(const winding_t * w, vec3_t normal, vec_t *dist)
 {
     vec3_t v1, v2;
 
-    VectorSubtract(w->p[1], w->p[0], v1);
-    VectorSubtract(w->p[2], w->p[0], v2);
+    VectorSubtract(w->p[0], w->p[1], v1);
+    VectorSubtract(w->p[2], w->p[1], v2);
     CrossProduct(v1, v2, normal);
     VectorNormalize(normal);
     *dist = DotProduct(w->p[0], normal);
