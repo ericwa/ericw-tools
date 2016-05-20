@@ -430,7 +430,7 @@ CheckWinding(const winding_t * w)
  From q3rad (DicePatch)
  =============
  */
-void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn)
+void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn, void *userinfo)
 {
     winding_t   *o1, *o2;
     vec3_t	mins, maxs;
@@ -448,7 +448,7 @@ void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn)
     if (i == 3)
     {
         // no splitting needed
-        save_fn(w);
+        save_fn(w, userinfo);
         return;
     }
     
@@ -464,8 +464,8 @@ void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn)
     //
     // create a new patch
     //
-    DiceWinding(o1, subdiv, save_fn);
-    DiceWinding(o2, subdiv, save_fn);
+    DiceWinding(o1, subdiv, save_fn, userinfo);
+    DiceWinding(o2, subdiv, save_fn, userinfo);
 }
 
 /*
