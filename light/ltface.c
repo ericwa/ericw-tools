@@ -501,43 +501,72 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
         v2 = v3;
     }
 
-    // not in any triangle
+    // not in any triangle. among the edges this point is _behind_,
+    // search for the one that the point is least past the endpoints of the edge
     {
         plane_t *edgeplanes = (plane_t *)calloc(face->numedges, sizeof(plane_t));
         Face_MakeInwardFacingEdgePlanes(bsp, face, edgeplanes);
+        
+        int bestplane = -1;
+        vec_t bestdist = VECT_MAX;
+        
         for (int i=0; i<face->numedges; i++) {
-            vec_t dist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
-            if (dist < ON_EPSILON) {
-                // behind this plane
+            vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
+            if (planedist < ON_EPSILON) {
+                // behind this plane. check whether we're between the endpoints.
                 
-                const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, i);
-                if (smoothed) {
-                    if (inside < 3) {
-                        free(edgeplanes);
-                        
-                        // call recursively to look up normal in the adjacent face
-                        CalcPointNormal(bsp, smoothed, norm, point, inside + 1);
-                        return;
-                    }
-                }
-
                 v1 = GetSurfaceVertexPoint(bsp, face, i);
                 v2 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
                 
-                vec_t t = FractionOfLine(v1, v2, point);
-                t = qmax(qmin(t, 1.0f), 0.0f);
+                vec3_t v1v2;
+                VectorSubtract(v2, v1, v1v2);
+                const vec_t v1v2dist = VectorLength(v1v2);
                 
-                v1 = GetSurfaceVertexNormal(bsp, face, i);
-                v2 = GetSurfaceVertexNormal(bsp, face, (i+1)%face->numedges);
+                const vec_t t = FractionOfLine(v1, v2, point); // t=0 for point=v1, t=1 for point=v2.
                 
-                VectorScale(v2, t, norm);
-                VectorMA(norm, 1-t, v1, norm);
-                VectorNormalize(norm);
+                vec_t edgedist;
+                if (t < 0) edgedist = fabs(t) * v1v2dist;
+                else if (t > 1) edgedist = t * v1v2dist;
+                else edgedist = 0;
                 
-                free(edgeplanes);
-                return;
+                if (edgedist < bestdist) {
+                    bestplane = i;
+                    bestdist = edgedist;
+                }
             }
         }
+        
+        
+        if (bestplane != -1) {
+            const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, bestplane);
+            if (smoothed) {
+                // try recursive search
+                if (inside < 3) {
+                    free(edgeplanes);
+                    
+                    // call recursively to look up normal in the adjacent face
+                    CalcPointNormal(bsp, smoothed, norm, point, inside + 1);
+                    return;
+                }
+            }
+
+            v1 = GetSurfaceVertexPoint(bsp, face, bestplane);
+            v2 = GetSurfaceVertexPoint(bsp, face, (bestplane+1)%face->numedges);
+            
+            vec_t t = FractionOfLine(v1, v2, point);
+            t = qmax(qmin(t, 1.0f), 0.0f);
+            
+            v1 = GetSurfaceVertexNormal(bsp, face, bestplane);
+            v2 = GetSurfaceVertexNormal(bsp, face, (bestplane+1)%face->numedges);
+            
+            VectorScale(v2, t, norm);
+            VectorMA(norm, 1-t, v1, norm);
+            VectorNormalize(norm);
+            
+            free(edgeplanes);
+            return;
+        }
+        
         free(edgeplanes);
     }
 
