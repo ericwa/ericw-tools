@@ -53,7 +53,6 @@ sun_t *suns = NULL;
 
 /* dirt */
 qboolean dirty = false;
-qboolean dirtDebug = false;
 int dirtMode = 0;
 float dirtDepth = 128.0f;
 float dirtScale = 1.0f;
@@ -72,7 +71,6 @@ qboolean dirtAngleSetOnCmdline = false;
 
 /* bounce */
 qboolean bounce = false;
-qboolean bouncedebug = false;
 vec_t bouncescale = 1.0f;
 vec_t bouncecolorscale = 0.0f;
 
@@ -102,9 +100,9 @@ int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
-qboolean phongDebug = false;
 qboolean parse_escape_sequences = true;
 qboolean novis = false; /* if true, don't use vis data */
+debugmode_t debugmode = debugmode_none;
 
 uint32_t *extended_texinfo_flags = NULL;
 
@@ -1185,6 +1183,14 @@ const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *fa
     return result;
 }
 
+static void
+CheckNoDebugModeSet()
+{
+    if (debugmode != debugmode_none) {
+        Error("Only one debug mode is allowed at a time");
+    }
+}
+
 /*
  * ==================
  * main
@@ -1269,9 +1275,10 @@ main(int argc, const char **argv)
             minlightDirt = true;
             logprint( "Dirtmapping enabled globally\n" );
         } else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
+            CheckNoDebugModeSet();
             dirty = true;
             globalDirt = true;
-            dirtDebug = true;
+            debugmode = debugmode_dirt;
             logprint( "Dirtmap debugging enabled\n" );
         } else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
             dirtModeSetOnCmdline = true;
@@ -1314,8 +1321,9 @@ main(int argc, const char **argv)
             bounce = true;
             logprint( "Bounce enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-bouncedebug" ) ) {
+            CheckNoDebugModeSet();
             bounce = true;
-            bouncedebug = true;
+            debugmode = debugmode_bounce;
             logprint( "Bounce debugging mode enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-bouncescale" ) ) {
             bounce = true;
@@ -1345,7 +1353,8 @@ main(int argc, const char **argv)
             parse_escape_sequences = false;
             logprint( "Parsing escape sequences disabled\n" );
         } else if ( !strcmp( argv[ i ], "-phongdebug" ) ) {
-            phongDebug = true;
+            CheckNoDebugModeSet();
+            debugmode = debugmode_phong;
             write_litfile |= 1;
             logprint( "Phong shading debug mode enabled\n" );
         } else if ( !strcmp( argv[ i ], "-novis" ) ) {

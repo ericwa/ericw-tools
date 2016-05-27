@@ -1684,7 +1684,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             /* Use dirt scaling on the indirect lighting.
              * Except, not in bouncedebug mode.
              */
-            if (!bouncedebug) {
+            if (debugmode != debugmode_bounce) {
                 const vec_t dirtscale = Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
                 VectorScale(indirect, dirtscale, indirect);
             }
@@ -2093,7 +2093,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
-    if (dirty && !phongDebug)
+    if (dirty && (debugmode != debugmode_phong))
         LightFace_CalculateDirt(lightsurf);
 
     /*
@@ -2102,7 +2102,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * clamp any values that may have gone negative.
      */
 
-    if (!dirtDebug && !phongDebug) {
+    if (!(debugmode == debugmode_dirt || debugmode == debugmode_phong)) {
         /* positive lights */
         for (lighte = lights; (entity = *lighte); lighte++)
         {
@@ -2135,10 +2135,10 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
     
     /* replace lightmaps with AO for debugging */
-    if (dirtDebug)
+    if (debugmode == debugmode_dirt)
         LightFace_DirtDebug(lightsurf, lightmaps);
 
-    if (phongDebug)
+    if (debugmode == debugmode_phong)
         LightFace_PhongDebug(lightsurf, lightmaps);
     
     /* Fix any negative values */
@@ -2219,7 +2219,7 @@ LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *mod
 {
     lightmap_t *lightmaps = ctx->lightmaps;
     lightsurf_t *lightsurf = &ctx->lightsurf;
-    if (bouncedebug)
+    if (debugmode == debugmode_bounce)
     {
         Lightmap_ClearAll(lightmaps);
     }

@@ -159,6 +159,17 @@ struct ltface_ctx
 
 extern struct ltface_ctx *ltface_ctxs;
 
+/* debug */
+
+typedef enum {
+    debugmode_none = 0,
+    debugmode_phong,
+    debugmode_dirt,
+    debugmode_bounce
+} debugmode_t;
+
+extern debugmode_t debugmode;
+    
 /* bounce lights */
     
 typedef struct {
@@ -212,7 +223,6 @@ extern sun_t *suns;
 /* dirt */
 
 extern qboolean dirty;          // should any dirtmapping take place?
-extern qboolean dirtDebug;
 extern int dirtMode;
 extern float dirtDepth;
 extern float dirtScale;
@@ -231,7 +241,6 @@ extern qboolean dirtAngleSetOnCmdline;
 /* bounce */
 
 extern qboolean bounce;
-extern qboolean bouncedebug;
 extern vec_t bouncescale;
 extern vec_t bouncecolorscale;
     
@@ -264,7 +273,6 @@ TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2);
     
 extern qboolean testFenceTextures;
 extern qboolean surflight_dump;
-extern qboolean phongDebug;
 
 extern char mapfilename[1024];
 
