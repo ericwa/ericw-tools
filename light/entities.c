@@ -1015,10 +1015,10 @@ LoadEntities(const bsp2_t *bsp)
                 entity->dirtgain = atof(com_token);
             else if (!strcmp(key, "_dirt")) {
                 entity->dirt = atoi(com_token);
-                if (entity->dirt == 1 && !dirty) {
+                if (entity->dirt == 1 && !dirty.value && !dirty.locked) {
                     logprint("entity with \"_dirt\" \"1\" detected, enabling "
                         "dirtmapping.\n");
-                    dirty = true;
+                    dirty.value = true;
                 }
             }
             else if (!strcmp(key, "_project_texture"))
@@ -1144,19 +1144,25 @@ LoadEntities(const bsp2_t *bsp)
             }
             if (entity->dirt == 1) {
                 globalDirt = true;
-                dirty = true;
+                if (!dirty.locked) {
+                    dirty.value = true;
+                }
                 logprint("Global dirtmapping enabled in worldspawn.\n");
             }
 
             if (sunlight_dirt == 1) {
-                dirty = true;
+                if (!dirty.locked) {
+                    dirty.value = true;
+                }
                 logprint("Sunlight dirtmapping enabled in worldspawn.\n");
             } else if (sunlight_dirt == -1) {
                 logprint("Sunlight dirtmapping disabled in worldspawn.\n");
             }
 
             if (sunlight2_dirt == 1) {
-                dirty = true;
+                if (!dirty.locked) {
+                    dirty.value = true;
+                }
                 logprint("Sunlight2 dirtmapping enabled in worldspawn.\n");
             } else if (sunlight2_dirt == -1) {
                 logprint("Sunlight2 dirtmapping disabled in worldspawn.\n");
@@ -1164,7 +1170,9 @@ LoadEntities(const bsp2_t *bsp)
 
             if (entity->minlight_dirt == 1) {
                 minlightDirt = true;
-                dirty = true;
+                if (!dirty.locked) {
+                    dirty.value = true;
+                }
                 logprint("Minlight dirtmapping enabled in worldspawn.\n");
             } else if (entity->minlight_dirt == -1) {
                 minlightDirt = false;

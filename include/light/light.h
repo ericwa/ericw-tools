@@ -229,7 +229,7 @@ typedef struct {
 
 /* dirt */
 
-extern qboolean dirty;          // should any dirtmapping take place?
+extern lockable_vec_t dirty;          // should any dirtmapping take place?
 extern lockable_vec_t dirtMode;
 extern lockable_vec_t dirtDepth;
 extern lockable_vec_t dirtScale;

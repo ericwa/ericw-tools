@@ -52,7 +52,7 @@ lightsample_t minlight = { 0, { 255, 255, 255 } };
 sun_t *suns = NULL;
 
 /* dirt */
-qboolean dirty = false;
+lockable_vec_t dirty = {0, false};
 lockable_vec_t dirtMode = {0, false};
 lockable_vec_t dirtDepth = {128.0f, false};
 lockable_vec_t dirtScale = {1.0f, false};
@@ -1260,14 +1260,31 @@ main(int argc, const char **argv)
                 logprint("Using global anglescale value of %f from command line.\n", global_anglescale);
             } else
                 Error("-anglesense requires a numeric argument (0.0 - 1.0)");
-        } else if ( !strcmp( argv[ i ], "-dirt" ) || !strcmp( argv[ i ], "-dirty" ) ) {
-            dirty = true;
-            globalDirt = true;
-            minlightDirt = true;
-            logprint( "Dirtmapping enabled globally\n" );
+        } else if ( !strcmp( argv[ i ], "-dirt" ) ) {
+            int dirt_param = 1;
+            
+            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
+                dirt_param = atoi( argv[ ++i ] );
+            }
+            
+            if (dirt_param) {
+                dirty.value = true;
+                dirty.locked = true;
+                globalDirt = true;
+                minlightDirt = true;
+                logprint( "Dirtmapping enabled globally\n" );
+            } else {
+                dirty.value = false;
+                dirty.locked = true;
+                logprint( "Dirtmapping disabled\n" );
+            }
         } else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
             CheckNoDebugModeSet();
-            dirty = true;
+            
+            if (!dirty.locked) {
+                dirty.value = true;
+            }
+            
             globalDirt = true;
             debugmode = debugmode_dirt;
             logprint( "Dirtmap debugging enabled\n" );
@@ -1421,7 +1438,7 @@ main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (dirty)
+        if (dirty.value)
             SetupDirt();
 
         MakeTnodes(bsp);

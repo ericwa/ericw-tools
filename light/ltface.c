@@ -1085,7 +1085,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *
     qboolean usedirt;
 
     /* is dirt processing disabled entirely? */
-    if (!dirty)
+    if (!dirty.value)
         return 1.0f;
     if (surf->nodirt)
         return 1.0f;
@@ -1781,7 +1781,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     vec3_t traceEnd, traceHitpoint;
 
     /* dummy check */
-    if ( !dirty ) {
+    if ( !dirty.value ) {
         return 1.0f;
     }
     
@@ -2097,7 +2097,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
-    if (dirty && (debugmode != debugmode_phong))
+    if (dirty.value && (debugmode != debugmode_phong))
         LightFace_CalculateDirt(lightsurf);
 
     /*
