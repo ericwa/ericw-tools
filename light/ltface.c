@@ -1658,6 +1658,10 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     if (!bounce)
         return;
     
+    if (!(debugmode == debugmode_bounce
+          || debugmode == debugmode_none))
+        return;
+    
     /* use a style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
