@@ -67,7 +67,6 @@ qboolean bounce = false;
 vec_t bouncescale = 1.0f;
 vec_t bouncecolorscale = 0.0f;
 
-qboolean testFenceTextures = false;
 qboolean surflight_dump = false;
 
 static facesup_t *faces_sup;    //lit2/bspx stuff
@@ -1326,9 +1325,6 @@ main(int argc, const char **argv)
             bounce = true;
             bouncecolorscale = atof( argv[ ++i ] );
             logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale );
-        } else if ( !strcmp( argv[ i ], "-fence" ) ) {
-            testFenceTextures = true;
-            logprint( "Fence texture tracing enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
             surflight_subdivide = atof( argv[ ++i ] );
             surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
