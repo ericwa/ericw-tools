@@ -1252,12 +1252,12 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
             lmscaleoverride = argv[++i];
         } else if (!strcmp(argv[i], "-soft")) {
-            if (i < argc - 2 && isdigit(argv[i + 1][0]))
+            if ((i + 1) < argc && isdigit(argv[i + 1][0]))
                 softsamples = atoi(argv[++i]);
             else
                 softsamples = -1; /* auto, based on oversampling */
         } else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
-            if (i < argc - 2 && isdigit(argv[i + 1][0])) {
+            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
                 global_anglescale = atof(argv[++i]);
                 logprint("Using global anglescale value of %f from command line.\n", global_anglescale);
             } else
