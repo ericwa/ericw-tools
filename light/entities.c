@@ -1329,6 +1329,7 @@ WriteEntitiesToString(bsp2_t *bsp)
 
         for (epair = entity->epairs; epair; epair = epair->next) {
             const char *value;
+            const bool parse_escape_sequences = true;
             if (parse_escape_sequences) {
                 value = CopyValueWithEscapeSequencesParsed(epair->value);
             } else {

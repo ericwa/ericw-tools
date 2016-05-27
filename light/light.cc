@@ -92,7 +92,6 @@ int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
-qboolean parse_escape_sequences = true;
 qboolean novis = false; /* if true, don't use vis data */
 debugmode_t debugmode = debugmode_none;
 
@@ -1338,9 +1337,6 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
             onlyents = true;
             logprint( "Onlyents mode enabled\n" );
-        } else if ( !strcmp( argv[ i ], "-no_parse_escape_sequences" ) ) {
-            parse_escape_sequences = false;
-            logprint( "Parsing escape sequences disabled\n" );
         } else if ( !strcmp( argv[ i ], "-phongdebug" ) ) {
             CheckNoDebugModeSet();
             debugmode = debugmode_phong;
@@ -1360,7 +1356,7 @@ main(int argc, const char **argv)
                "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
                "             [-dist n] [-range n] [-gate n] [-lit|-lit2] [-lux] [-bspx] [-lmscale n]\n"
                "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-no_parse_escape_sequences] [-phongdebug] bspfile\n");
+               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-phongdebug] bspfile\n");
         exit(1);
     }
 
