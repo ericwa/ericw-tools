@@ -220,23 +220,24 @@ extern lightsample_t minlight;
 
 extern sun_t *suns;
 
+/* command-line options */
+
+typedef struct {
+    vec_t value;
+    bool locked;
+} lockable_vec_t;
+
 /* dirt */
 
 extern qboolean dirty;          // should any dirtmapping take place?
-extern int dirtMode;
-extern float dirtDepth;
-extern float dirtScale;
-extern float dirtGain;
-extern float dirtAngle;
+extern lockable_vec_t dirtMode;
+extern lockable_vec_t dirtDepth;
+extern lockable_vec_t dirtScale;
+extern lockable_vec_t dirtGain;
+extern lockable_vec_t dirtAngle;
 
 extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
 extern qboolean minlightDirt;   // apply dirt to minlight?
-
-extern qboolean dirtModeSetOnCmdline;
-extern qboolean dirtDepthSetOnCmdline;
-extern qboolean dirtScaleSetOnCmdline;
-extern qboolean dirtGainSetOnCmdline;
-extern qboolean dirtAngleSetOnCmdline;
 
 /* bounce */
 

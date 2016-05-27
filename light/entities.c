@@ -1117,30 +1117,30 @@ LoadEntities(const bsp2_t *bsp)
                          rangescale);
             }
 
-            if (entity->dirtdepth && !dirtDepthSetOnCmdline) {
-                dirtDepth = entity->dirtdepth;
+            if (entity->dirtdepth && !dirtDepth.locked) {
+                dirtDepth.value = entity->dirtdepth;
                 logprint("Using dirtdepth value %f from worldspawn.\n", 
-                        dirtDepth);
+                        dirtDepth.value);
             }
-            if (entity->dirtmode && !dirtModeSetOnCmdline) {
-                dirtMode = entity->dirtmode;
+            if (entity->dirtmode && !dirtMode.locked) {
+                dirtMode.value = entity->dirtmode;
                 logprint("Using dirtmode value %i from worldspawn.\n", 
-                        dirtMode);
+                        (int)dirtMode.value);
             }
-            if (entity->dirtscale && !dirtScaleSetOnCmdline) {
-                dirtScale = entity->dirtscale;
+            if (entity->dirtscale && !dirtScale.locked) {
+                dirtScale.value = entity->dirtscale;
                 logprint("Using dirtscale value %f from worldspawn.\n", 
-                        dirtScale);
+                        dirtScale.value);
             }
-            if (entity->dirtgain && !dirtGainSetOnCmdline) {
-                dirtGain = entity->dirtgain;
+            if (entity->dirtgain && !dirtGain.locked) {
+                dirtGain.value = entity->dirtgain;
                 logprint("Using dirtgain value %f from worldspawn.\n", 
-                        dirtGain);
+                        dirtGain.value);
             }
-            if (entity->dirtangle && !dirtAngleSetOnCmdline) {
-                dirtAngle = entity->dirtangle;
+            if (entity->dirtangle && !dirtAngle.locked) {
+                dirtAngle.value = entity->dirtangle;
                 logprint("Using dirtangle value %f from worldspawn.\n",
-                         dirtAngle);
+                         dirtAngle.value);
             }
             if (entity->dirt == 1) {
                 globalDirt = true;

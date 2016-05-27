@@ -1079,8 +1079,8 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
 static inline vec_t
 Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *surf)
 {
-    vec_t light_dirtgain = dirtGain;
-    vec_t light_dirtscale = dirtScale;
+    vec_t light_dirtgain = dirtGain.value;
+    vec_t light_dirtscale = dirtScale.value;
     vec_t outDirt;
     qboolean usedirt;
 
@@ -1726,16 +1726,16 @@ void SetupDirt( void ) {
     logprint("--- SetupDirt ---\n" );
 
     /* clamp dirtAngle */
-    if ( dirtAngle <= 1.0f ) {
-        dirtAngle = 1.0f;
+    if ( dirtAngle.value <= 1.0f ) {
+        dirtAngle.value = 1.0f;
     }
-    if ( dirtAngle >= 90.0f) {
-        dirtAngle = 90.0f;
+    if ( dirtAngle.value >= 90.0f) {
+        dirtAngle.value = 90.0f;
     }
     
     /* calculate angular steps */
     angleStep = DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
-    elevationStep = DEG2RAD( dirtAngle / DIRT_NUM_ELEVATION_STEPS );
+    elevationStep = DEG2RAD( dirtAngle.value / DIRT_NUM_ELEVATION_STEPS );
 
     /* iterate angle */
     angle = 0.0f;
@@ -1787,7 +1787,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     
     /* setup */
     gatherDirt = 0.0f;
-    ooDepth = 1.0f / dirtDepth;
+    ooDepth = 1.0f / dirtDepth.value;
 
     /* check if the normal is aligned to the world-up */
     if ( normal[ 0 ] == 0.0f && normal[ 1 ] == 0.0f ) {
@@ -1807,12 +1807,12 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     }
 
     /* 1 = random mode, 0 (well everything else) = non-random mode */
-    if ( dirtMode == 1 ) {
+    if ( dirtMode.value == 1 ) {
         /* iterate */
         for ( i = 0; i < numDirtVectors; i++ ) {
             /* get random vector */
             angle = Random() * DEG2RAD( 360.0f );
-            elevation = Random() * DEG2RAD( dirtAngle );
+            elevation = Random() * DEG2RAD( dirtAngle.value );
             temp[ 0 ] = cos( angle ) * sin( elevation );
             temp[ 1 ] = sin( angle ) * sin( elevation );
             temp[ 2 ] = cos( elevation );
@@ -1823,7 +1823,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 2 ] = myRt[ 2 ] * temp[ 0 ] + myUp[ 2 ] * temp[ 1 ] + normal[ 2 ] * temp[ 2 ];
 
             /* set endpoint */
-            VectorMA( origin, dirtDepth, direction, traceEnd );
+            VectorMA( origin, dirtDepth.value, direction, traceEnd );
 
             /* trace */
             if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
@@ -1840,7 +1840,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 2 ] = myRt[ 2 ] * dirtVectors[ i ][ 0 ] + myUp[ 2 ] * dirtVectors[ i ][ 1 ] + normal[ 2 ] * dirtVectors[ i ][ 2 ];
 
             /* set endpoint */
-            VectorMA( origin, dirtDepth, direction, traceEnd );
+            VectorMA( origin, dirtDepth.value, direction, traceEnd );
             
             /* trace */
             if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
@@ -1851,7 +1851,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     }
 
     /* direct ray */
-    VectorMA( origin, dirtDepth, normal, traceEnd );
+    VectorMA( origin, dirtDepth.value, normal, traceEnd );
     
     /* trace */
     if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {

@@ -53,21 +53,14 @@ sun_t *suns = NULL;
 
 /* dirt */
 qboolean dirty = false;
-int dirtMode = 0;
-float dirtDepth = 128.0f;
-float dirtScale = 1.0f;
-float dirtGain = 1.0f;
-float dirtAngle = 88.0f;
+lockable_vec_t dirtMode = {0, false};
+lockable_vec_t dirtDepth = {128.0f, false};
+lockable_vec_t dirtScale = {1.0f, false};
+lockable_vec_t dirtGain = {1.0f, false};
+lockable_vec_t dirtAngle = {88.0f, false};
 
 qboolean globalDirt = false;
 qboolean minlightDirt = false;
-
-qboolean dirtSetOnCmdline = false;
-qboolean dirtModeSetOnCmdline = false;
-qboolean dirtDepthSetOnCmdline = false;
-qboolean dirtScaleSetOnCmdline = false;
-qboolean dirtGainSetOnCmdline = false;
-qboolean dirtAngleSetOnCmdline = false;
 
 /* bounce */
 qboolean bounce = false;
@@ -1281,42 +1274,42 @@ main(int argc, const char **argv)
             debugmode = debugmode_dirt;
             logprint( "Dirtmap debugging enabled\n" );
         } else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
-            dirtModeSetOnCmdline = true;
-            dirtMode = atoi( argv[ ++i ] );
-            if ( dirtMode != 0 && dirtMode != 1 ) {
-                dirtMode = 0;
+            dirtMode.locked = true;
+            dirtMode.value = atoi( argv[ ++i ] );
+            if ( dirtMode.value != 0 && dirtMode.value != 1 ) {
+                dirtMode.value = 0;
             }
-            if ( dirtMode == 1 ) {
+            if ( dirtMode.value == 1 ) {
                 logprint( "Enabling randomized dirtmapping\n" );
             }
             else{
                 logprint( "Enabling ordered dirtmapping\n" );
             }
         } else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
-            dirtDepthSetOnCmdline = true;
-            dirtDepth = atof( argv[ ++i ] );
-            if ( dirtDepth <= 0.0f ) {
-                dirtDepth = 128.0f;
+            dirtDepth.locked = true;
+            dirtDepth.value = atof( argv[ ++i ] );
+            if ( dirtDepth.value <= 0.0f ) {
+                dirtDepth.value = 128.0f;
             }
-            logprint( "Dirtmapping depth set to %.1f\n", dirtDepth );
+            logprint( "Dirtmapping depth set to %.1f\n", dirtDepth.value );
         } else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
-            dirtScaleSetOnCmdline = true;
-            dirtScale = atof( argv[ ++i ] );
-            if ( dirtScale <= 0.0f ) {
-                dirtScale = 1.0f;
+            dirtScale.locked = true;
+            dirtScale.value = atof( argv[ ++i ] );
+            if ( dirtScale.value <= 0.0f ) {
+                dirtScale.value = 1.0f;
             }
-            logprint( "Dirtmapping scale set to %.1f\n", dirtScale );
+            logprint( "Dirtmapping scale set to %.1f\n", dirtScale.value );
         } else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
-            dirtGainSetOnCmdline = true;
-            dirtGain = atof( argv[ ++i ] );
-            if ( dirtGain <= 0.0f ) {
-                dirtGain = 1.0f;
+            dirtGain.locked = true;
+            dirtGain.value = atof( argv[ ++i ] );
+            if ( dirtGain.value <= 0.0f ) {
+                dirtGain.value = 1.0f;
             }
-            logprint( "Dirtmapping gain set to %.1f\n", dirtGain );
+            logprint( "Dirtmapping gain set to %.1f\n", dirtGain.value );
         } else if ( !strcmp( argv[ i ], "-dirtangle" ) ) {
-            dirtAngleSetOnCmdline = true;
-            dirtAngle = atof( argv[ ++i ] );
-            logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle );
+            dirtAngle.locked = true;
+            dirtAngle.value = atof( argv[ ++i ] );
+            logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle.value );
         } else if ( !strcmp( argv[ i ], "-bounce" ) ) {
             bounce = true;
             logprint( "Bounce enabled on command line\n" );
