@@ -484,8 +484,11 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
         vec3_t bary;
         CalcBarycentric(pointOnPlane, v1, v2, v3, bary);
         
-        if ((bary[0] > -ON_EPSILON) && (bary[1] > -ON_EPSILON) && (bary[0] + bary[1] < 1+ON_EPSILON))
+        // N.B. need a small epsilon here because the barycentric coordinates are normalized to 0-1
+        const vec_t BARY_EPSILON = 0.001;
+        if ((bary[0] > -BARY_EPSILON) && (bary[1] > -BARY_EPSILON) && (bary[0] + bary[1] < 1+BARY_EPSILON))
         {
+            // area test rejects the case when v1, v2, v3 are colinear
             if (TriangleArea(v1, v2, v3) >= 1) {
                 
                 v1 = GetSurfaceVertexNormal(bsp, face, 0);
