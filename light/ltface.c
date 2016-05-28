@@ -1342,7 +1342,10 @@ LightFace_Entity(const bsp2_t *bsp,
                 angle = -angle; // ericw -- support "_bleed" option
             }
         }
-        angle = qmax(0.0f, angle); // light can be behind sample point if the light is right on the face
+        
+        /* Light behind sample point? Zero contribution, period. */
+        if (angle < 0)
+            continue;
 
         /* Check spotlight cone */
         spotscale = 1;
