@@ -1361,9 +1361,6 @@ LightFace_Entity(const bsp2_t *bsp,
             }
         }
         
-        /* HACK: support lights lying exactly on a face by only tracing up to 0.1 units from the light */
-        surfpointToLightDist = qmax(0.0f, surfpointToLightDist - 0.01f);
-
         if (!TestLight(entity->origin, surfpoint, shadowself))
             continue;
 
