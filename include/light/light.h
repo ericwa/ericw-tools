@@ -245,9 +245,9 @@ extern lockable_vec_t phongallowed;
     
 /* bounce */
 
-extern qboolean bounce;
-extern vec_t bouncescale;
-extern vec_t bouncecolorscale;
+extern lockable_vec_t bounce;
+extern lockable_vec_t bouncescale;
+extern lockable_vec_t bouncecolorscale;
     
 /*
  * Return space for the lightmap and colourmap at the same time so it can

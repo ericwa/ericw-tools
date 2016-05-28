@@ -1055,16 +1055,22 @@ LoadEntities(const bsp2_t *bsp)
                 logprint("using lightmap gamma value %f\n", lightmapgamma);
             }
             else if (!strcmp(key, "_bounce")) {
-                bounce = atoi(com_token);
-                logprint("_bounce set to %d\n", bounce);
+                if (!bounce.locked) {
+                    bounce.value = atoi(com_token);
+                    logprint("_bounce set to %d\n", (int)bounce.value);
+                }
             }
             else if (!strcmp(key, "_bouncescale")) {
-                bouncescale = atof(com_token);
-                logprint("_bouncescale set to %f\n", bouncescale);
+                if (!bouncescale.locked) {
+                    bouncescale.value = atof(com_token);
+                    logprint("_bouncescale set to %f\n", bouncescale.value);
+                }
             }
             else if (!strcmp(key, "_bouncecolorscale")) {
-                bouncecolorscale = atof(com_token);
-                logprint("_bouncecolorscale set to %f\n", bouncecolorscale);
+                if (!bouncecolorscale.locked) {
+                    bouncecolorscale.value = atof(com_token);
+                    logprint("_bouncecolorscale set to %f\n", bouncecolorscale.value);
+                }
             }
         }
 

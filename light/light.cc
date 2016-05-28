@@ -66,9 +66,9 @@ qboolean minlightDirt = false;
 lockable_vec_t phongallowed = {1, false};
 
 /* bounce */
-qboolean bounce = false;
-vec_t bouncescale = 1.0f;
-vec_t bouncecolorscale = 0.0f;
+lockable_vec_t bounce = {0, false};
+lockable_vec_t bouncescale = {1.0f, false};
+lockable_vec_t bouncecolorscale = {0.0f, false};
 
 qboolean surflight_dump = false;
 
@@ -206,7 +206,7 @@ LightThread(void *arg)
         /* If bouncing, keep lightmaps in memory because we run a second lighting pass.
          * Otherwise free memory now, so only (# threads) lightmaps are in memory at a time.
          */
-        if (!bounce) {
+        if (!bounce.value) {
             LightFaceShutdown(ctx);
         }
     }
@@ -729,7 +729,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     logprint("==LightThread==\n");
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 
-    if (bounce) {
+    if (bounce.value) {
         logprint("==LightThreadBounce==\n");
         RunThreadsOn(0, bsp->numfaces, LightThreadBounce, bsp);
     }
@@ -1343,21 +1343,36 @@ main(int argc, const char **argv)
                 logprint( "Phong shading disabled\n" );
             }
         } else if ( !strcmp( argv[ i ], "-bounce" ) ) {
-            bounce = true;
-            logprint( "Bounce enabled on command line\n" );
+            int bounce_param = 1;
+            
+            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
+                bounce_param = atoi( argv[ ++i ] );
+            }
+            
+            bounce.value = bounce_param;
+            bounce.locked = true;
+            if (bounce_param)
+                logprint( "Bounce enabled on command line\n");
+            else
+                logprint( "Bounce disabled on command line\n");
         } else if ( !strcmp( argv[ i ], "-bouncedebug" ) ) {
             CheckNoDebugModeSet();
-            bounce = true;
+            bounce.value = true;
+            bounce.locked = true;
             debugmode = debugmode_bounce;
             logprint( "Bounce debugging mode enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-bouncescale" ) ) {
-            bounce = true;
-            bouncescale = atof( argv[ ++i ] );
-            logprint( "Bounce scale factor set to %f on command line\n", bouncescale );
+            bounce.value = true;
+            bounce.locked = true;
+            bouncescale.value = atof( argv[ ++i ] );
+            bouncescale.locked = true;
+            logprint( "Bounce scale factor set to %f on command line\n", bouncescale.value );
         } else if ( !strcmp( argv[ i ], "-bouncecolorscale" ) ) {
-            bounce = true;
-            bouncecolorscale = atof( argv[ ++i ] );
-            logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale );
+            bounce.value = true;
+            bounce.locked = true;
+            bouncecolorscale.value = atof( argv[ ++i ] );
+            bouncecolorscale.locked = true;
+            logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale.value );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
             surflight_subdivide = atof( argv[ ++i ] );
             surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);

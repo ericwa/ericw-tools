@@ -1597,7 +1597,7 @@ BounceLight_ColorAtDist(const bouncelight_t *vpl, vec_t dist, vec3_t color)
     }
     
     const vec_t dist2 = (dist * dist);
-    const vec_t scale = (1.0/dist2) * bouncescale;
+    const vec_t scale = (1.0/dist2) * bouncescale.value;
     
     VectorScale(color, 255 * scale, color);
 }
@@ -1655,7 +1655,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     
     lightmap_t *lightmap;
     
-    if (!bounce)
+    if (!bounce.value)
         return;
     
     if (!(debugmode == debugmode_bounce
@@ -2195,15 +2195,15 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
     VectorScale(lightsurf->texturecolor, 1.0f/lightsurf->numpoints, lightsurf->texturecolor);
     
-    if (bounce) {
+    if (bounce.value) {
         // make bounce light, only if this face is shadow casting
         if (modelinfo->shadow) {
             vec3_t gray = {127, 127, 127};
             
             // lerp between gray and the texture color according to `bouncecolorscale`
             vec3_t blendedcolor = {0, 0, 0};
-            VectorMA(blendedcolor, bouncecolorscale, lightsurf->texturecolor, blendedcolor);
-            VectorMA(blendedcolor, 1-bouncecolorscale, gray, blendedcolor);
+            VectorMA(blendedcolor, bouncecolorscale.value, lightsurf->texturecolor, blendedcolor);
+            VectorMA(blendedcolor, 1-bouncecolorscale.value, gray, blendedcolor);
             
             vec3_t emitcolor;
             for (int k=0; k<3; k++) {
