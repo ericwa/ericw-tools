@@ -1203,6 +1203,94 @@ LoadEntities(const bsp2_t *bsp)
     logprint("%d entities read, %d are lights.\n", num_entities, num_lights);
 }
 
+static vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
+{
+    switch (plane->type)
+    {
+        case PLANE_X: return point[0] - plane->dist;
+        case PLANE_Y: return point[1] - plane->dist;
+        case PLANE_Z: return point[2] - plane->dist;
+        default: return DotProduct(point, plane->normal) - plane->dist;
+    }
+}
+
+static bool Light_PointInSolid_r(const bsp2_t *bsp, int nodenum, const vec3_t point )
+{
+    if (nodenum < 0) {
+        bsp2_dleaf_t *leaf = bsp->dleafs + (-1 - nodenum);
+        
+        return leaf->contents == CONTENTS_SOLID
+        || leaf->contents == CONTENTS_SKY;
+    }
+    
+    const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
+    vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
+    
+    if (dist > 0.1)
+        return Light_PointInSolid_r(bsp, node->children[0], point);
+    else if (dist < -0.1)
+        return Light_PointInSolid_r(bsp, node->children[1], point);
+    else {
+        // too close to the plane, check both sides
+        return Light_PointInSolid_r(bsp, node->children[0], point)
+        || Light_PointInSolid_r(bsp, node->children[1], point);
+    }
+}
+
+static bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
+{
+    /* check all models */
+    for (int i=0; i<bsp->nummodels; i++) {
+        
+        // TODO: Take the model offset into account
+        
+        if (Light_PointInSolid_r(bsp, bsp->dmodels[i].headnode[0], point))
+            return true;
+    }
+    
+    return false;
+}
+
+static void
+FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
+{
+    if (!Light_PointInSolid(bsp, point)) {
+        VectorCopy(point, point_out);
+        return;
+    }
+    
+    for (int i = 0; i < 6; i++) {
+        vec3_t testpoint;
+        VectorCopy(point, testpoint);
+        
+        int axis = i/2;
+        bool add = i%2;
+        testpoint[axis] += (add ? 2 : -2); // sample points are 1 unit off faces. so nudge by 2 units, so the lights are above the sample points
+        
+        if (!Light_PointInSolid(bsp, testpoint)) {
+            VectorCopy(testpoint, point_out);
+            return;
+        }
+    }
+    
+    logprint("WARNING: couldn't nudge light in solid at %f %f %f\n",
+             point[0], point[1], point[2]);
+    VectorCopy(point, point_out);
+    return;
+}
+
+void
+FixLightsOnFaces(const bsp2_t *bsp)
+{
+    entity_t *entity;
+    
+    for (entity = entities; entity; entity = entity->next) {
+        if (entity->light.light != 0) {
+            FixLightOnFace(bsp, entity->origin, entity->origin);
+        }
+    }
+}
+
 void
 SetupLights(const bsp2_t *bsp)
 {
@@ -1215,6 +1303,7 @@ SetupLights(const bsp2_t *bsp)
     SetupSuns();
     SetupSkyDome();
     FindLights();
+    FixLightsOnFaces(bsp);
     SetupLightLeafnums(bsp);
 }
 
