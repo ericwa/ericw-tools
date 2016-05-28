@@ -239,6 +239,10 @@ extern lockable_vec_t dirtAngle;
 extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
 extern qboolean minlightDirt;   // apply dirt to minlight?
 
+/* phong */
+
+extern lockable_vec_t phongallowed;
+    
 /* bounce */
 
 extern qboolean bounce;

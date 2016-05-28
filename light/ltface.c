@@ -659,7 +659,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             VectorAdd(point, offset, point);
 
             // do this before correcting the point, so we can wrap around the inside of pipes
-            if (surf->curved)
+            if (surf->curved && phongallowed.value)
             {
                 CalcPointNormal(bsp, face, norm, point, 0);
             }

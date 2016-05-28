@@ -62,6 +62,9 @@ lockable_vec_t dirtAngle = {88.0f, false};
 qboolean globalDirt = false;
 qboolean minlightDirt = false;
 
+/* phong */
+lockable_vec_t phongallowed = {1, false};
+
 /* bounce */
 qboolean bounce = false;
 vec_t bouncescale = 1.0f;
@@ -1325,6 +1328,20 @@ main(int argc, const char **argv)
             dirtAngle.locked = true;
             dirtAngle.value = atof( argv[ ++i ] );
             logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle.value );
+        } else if ( !strcmp( argv[ i ], "-phong" ) ) {
+            int phong_param = 1;
+            
+            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
+                phong_param = atoi( argv[ ++i ] );
+            }
+            
+            if (phong_param) {
+                logprint( "NOTE: -phong 1 has no effect\n" );
+            } else {
+                phongallowed.value = false;
+                phongallowed.locked = true;
+                logprint( "Phong shading disabled\n" );
+            }
         } else if ( !strcmp( argv[ i ], "-bounce" ) ) {
             bounce = true;
             logprint( "Bounce enabled on command line\n" );
@@ -1373,7 +1390,7 @@ main(int argc, const char **argv)
                "             [-light num] [-addmin] [-anglescale|-anglesense]\n"
                "             [-dist n] [-range n] [-gate n] [-lit|-lit2] [-lux] [-bspx] [-lmscale n]\n"
                "             [-dirt] [-dirtdebug] [-dirtmode n] [-dirtdepth n] [-dirtscale n] [-dirtgain n] [-dirtangle n]\n"
-               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-phongdebug] bspfile\n");
+               "             [-soft [n]] [-fence] [-gamma n] [-surflight_subdivide n] [-surflight_dump] [-onlyents] [-sunsamples n] [-phongdebug] -[phong 0] bspfile\n");
         exit(1);
     }
 
