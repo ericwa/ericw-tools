@@ -143,6 +143,9 @@ typedef struct {
     vec_t starts, startt, st_step;
     texorg_t texorg;
     int width, height;
+    
+    /* for lit water. receive light from either front or back. */
+    bool twosided;
 } lightsurf_t;
 
 typedef struct {

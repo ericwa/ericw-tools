@@ -1311,7 +1311,7 @@ LightFace_Entity(const bsp2_t *bsp,
        normal may be facing such that it receives some light, so we can't use this 
        test in the curved case.
     */
-    if (planedist < 0 && !entity->bleed && !lightsurf->curved)
+    if (planedist < 0 && !entity->bleed && !lightsurf->curved && !lightsurf->twosided)
         return;
 
     /* sphere cull surface and light */
@@ -1337,7 +1337,7 @@ LightFace_Entity(const bsp2_t *bsp,
             continue;
 
         angle = DotProduct(surfpointToLightDir, surfnorm);
-        if (entity->bleed) {
+        if (entity->bleed || lightsurf->twosided) {
             if (angle < 0) {
                 angle = -angle; // ericw -- support "_bleed" option
             }
@@ -1415,7 +1415,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
         return;
     
     /* Don't bother if surface facing away from sun */
-    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !curved)
+    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !curved && !lightsurf->twosided)
         return;
 
     /* if sunlight is set, use a style 0 light map */
@@ -1434,6 +1434,12 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
         vec_t value;
 
         angle = DotProduct(incoming, surfnorm);
+        if (lightsurf->twosided) {
+            if (angle < 0) {
+                angle = -angle;
+            }
+        }
+        
         if (angle < 0)
             continue;
 
@@ -2095,6 +2101,14 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     /* don't save lightmaps for "skip" texture */
     if (!Q_strcasecmp(texname, "skip"))
         return;
+    
+    /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
+     * lit water in mind. In that case receive light from both top and bottom.
+     * (lit will only be rendered in compatible engines, but degrades gracefully.)
+     */
+    if (texname[0] == '*') {
+        lightsurf->twosided = true;
+    }
 
     Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup);
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
