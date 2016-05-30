@@ -855,6 +855,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
         /*FIXME: memset can be slow on large datasets*/
 //    memset(lightsurf, 0, sizeof(*lightsurf));
     lightsurf->modelinfo = modelinfo;
+    lightsurf->bsp = bsp;
     lightsurf->face = face;
     
     if (facesup)

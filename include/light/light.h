@@ -95,6 +95,7 @@ typedef struct {
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
     const modelinfo_t *modelinfo;
+    const bsp2_t *bsp;
     const bsp2_dface_t *face;
     /* these take precedence the values in modelinfo */
     lightsample_t minlight;
