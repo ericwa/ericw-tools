@@ -1237,7 +1237,7 @@ static bool Light_PointInSolid_r(const bsp2_t *bsp, int nodenum, const vec3_t po
     }
 }
 
-static bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
+bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
 {
     /* check all models */
     for (int i=0; i<bsp->nummodels; i++) {

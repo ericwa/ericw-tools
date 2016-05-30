@@ -137,6 +137,8 @@ void WriteEntitiesToString(bsp2_t *bsp);
 
 vec_t GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist);
     
+bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
+    
 #ifdef __cplusplus
 }
 #endif
