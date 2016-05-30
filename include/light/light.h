@@ -223,6 +223,9 @@ extern lightsample_t minlight;
 
 extern sun_t *suns;
 
+extern int dump_facenum;
+extern bool dump_face;
+    
 /* command-line options */
 
 typedef struct {
@@ -294,6 +297,8 @@ Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, pla
 plane_t Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f);
 void Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm);
 
+void FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out);
+    
 /* vis testing */
 const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
 int Light_PointContents( const bsp2_t *bsp, const vec3_t point );

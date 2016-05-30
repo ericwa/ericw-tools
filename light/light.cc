@@ -104,6 +104,10 @@ char mapfilename[1024];
 
 struct ltface_ctx *ltface_ctxs;
 
+int dump_facenum = -1;
+bool dump_face;
+vec3_t dump_face_point = {0,0,0};
+
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
@@ -1185,6 +1189,47 @@ CheckNoDebugModeSet()
     }
 }
 
+// returns the face with a centroid nearest the given point.
+static const bsp2_dface_t *
+Face_NearestCentroid(const bsp2_t *bsp, const vec3_t point)
+{
+    const bsp2_dface_t *nearest_face = NULL;
+    vec_t nearest_dist = VECT_MAX;
+    
+    for (int i=0; i<bsp->numfaces; i++) {
+        const bsp2_dface_t *f = &bsp->dfaces[i];
+        
+        vec3_t fc;
+        FaceCentroid(f, bsp, fc);
+        
+        vec3_t distvec;
+        VectorSubtract(fc, point, distvec);
+        vec_t dist = VectorLength(distvec);
+        
+        if (dist < nearest_dist) {
+            nearest_dist = dist;
+            nearest_face = f;
+        }
+    }
+    
+    return nearest_face;
+}
+
+void FindDebugFace(const bsp2_t *bsp)
+{
+    if (!dump_face)
+        return;
+    
+    const bsp2_dface_t *f = Face_NearestCentroid(bsp, dump_face_point);
+    if (f == NULL)
+        Error("FindDebugFace: f == NULL\n");
+
+    const int facenum = f - bsp->dfaces;
+    
+    logprint("FindDebugFace: dumping face %d\n", facenum);
+    dump_facenum = facenum;
+}
+
 /*
  * ==================
  * main
@@ -1394,6 +1439,20 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-novis" ) ) {
             novis = true;
             logprint( "Skipping use of vis data to optimize lighting\n" );
+        } else if ( !strcmp( argv[ i ], "-debugface" ) ) {
+            
+            vec3_t point;
+            if ((i + 3) < argc) {
+                point[0] = atof( argv[ ++i ] );
+                point[1] = atof( argv[ ++i ] );
+                point[2] = atof( argv[ ++i ] );
+            } else {
+                Error("-debugface requires x y z coordinates\n");
+            }
+            
+            VectorCopy(point, dump_face_point);
+            dump_face = true;
+            
         } else if (argv[i][0] == '-')
             Error("Unknown option \"%s\"", argv[i]);
         else
@@ -1514,6 +1573,8 @@ main(int argc, const char **argv)
     LoadExtendedTexinfoFlags(source, bsp);
     LoadEntities(bsp);
 
+    FindDebugFace(bsp);
+    
     modelinfo = (modelinfo_t *)malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp, lmscaleoverride);
     SetupLights(bsp);

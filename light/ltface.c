@@ -156,7 +156,7 @@ TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
     return VectorLength(cross) * 0.5;
 }
 
-static void
+void
 FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
 {
     int i, edgenum;
@@ -619,6 +619,34 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
     return false;
 }
 
+// Dump points to a .map file
+void
+CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
+{
+    const int facenum = surf->face - bsp->dfaces;
+    FILE *f = fopen("calcpoints.map", "w");
+    
+    for (int t = 0; t < surf->height; t++) {
+        for (int s = 0; s < surf->width; s++) {
+            const int i = t*surf->width + s;
+            const vec_t *point = surf->points[i];
+            
+            fprintf(f, "{\n");
+            fprintf(f, "\"classname\" \"light\"\n");
+            fprintf(f, "\"origin\" \"%f %f %f\"\n", point[0], point[1], point[2]);
+            fprintf(f, "\"face\" \"%d\"\n", facenum);
+            fprintf(f, "\"s\" \"%d\"\n", s);
+            fprintf(f, "\"t\" \"%d\"\n", t);
+            fprintf(f, "}\n");
+        }
+    }
+    
+    fclose(f);
+    
+    logprint("wrote face %d's sample points (%dx%d) to calcpoints.map\n",
+             facenum, surf->width, surf->height);
+}
+
 /*
  * =================
  * CalcPoints
@@ -674,6 +702,11 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             // corrects point
             CheckObstructed(surf, offset, us, ut, point);
         }
+    }
+    
+    const int facenum = (face - bsp->dfaces);
+    if (dump_facenum == facenum) {
+        CalcPoints_Debug(surf, bsp);
     }
 }
 
