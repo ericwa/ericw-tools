@@ -611,7 +611,7 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
                 VectorSubtract(hitpoint, surf->midpoint, tracedir);
                 const vec_t hitdist = VectorNormalize(tracedir);
                 
-                VectorMA(surf->midpoint, qmax(0.0f, hitdist - 1.0f), tracedir, corrected);
+                VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), tracedir, corrected);
                 return true;
             }
         }
