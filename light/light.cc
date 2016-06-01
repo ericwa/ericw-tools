@@ -730,11 +730,10 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     /* ericw -- alloc memory */
     ltface_ctxs = (struct ltface_ctx *)calloc(bsp->numfaces, sizeof(struct ltface_ctx));
     
-    logprint("==LightThread==\n");
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 
     if (bounce.value) {
-        logprint("==LightThreadBounce==\n");
+        logprint("--- LightThreadBounce ---\n");
         RunThreadsOn(0, bsp->numfaces, LightThreadBounce, bsp);
     }
 
