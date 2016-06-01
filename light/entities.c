@@ -1237,18 +1237,10 @@ static bool Light_PointInSolid_r(const bsp2_t *bsp, int nodenum, const vec3_t po
     }
 }
 
+// only check hull 0 of model 0 (world)
 bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
 {
-    /* check all models */
-    for (int i=0; i<bsp->nummodels; i++) {
-        
-        // TODO: Take the model offset into account
-        
-        if (Light_PointInSolid_r(bsp, bsp->dmodels[i].headnode[0], point))
-            return true;
-    }
-    
-    return false;
+    return Light_PointInSolid_r(bsp, bsp->dmodels[0].headnode[0], point);
 }
 
 static void
