@@ -1230,6 +1230,66 @@ void FindDebugFace(const bsp2_t *bsp)
     dump_facenum = facenum;
 }
 
+static void PrintUsage()
+{
+    printf("usage: light [options] mapname.bsp\n"
+"\n"
+"* means available as a worldspawn key prefixed by an underscore\n"
+"  e.g. -light becomes \"_light\"\n"
+"\n"
+"Performance options:\n"
+"  -threads n          set the number of threads\n"
+"  -extra              2x supersampling\n"
+"  -extra4             4x supersampling, slowest, use for final compile\n"
+"  -gate n             cutoff lights at this brightness level\n"
+"  -sunsamples n       set samples for _sunlight2, default 64\n"
+"  -surflight_subdivide  surface light subdivision size\n"
+"\n"
+"Output format options:\n"
+"  -lit                write .lit file\n"
+"  -onlyents           only update entities\n"
+"\n"
+"Global options:\n"
+"* -light n            sets global minlight level n\n"
+"  -addmin             additive minlight\n"
+"* -anglescale n       set weight of cosine term, default 0.5, 1=realistic\n"
+"  -anglesense n       same as -anglescale n\n"
+"* -dist n             scale fade distance of all lights, default 1\n"
+"* -range n            scale brightness of all lights, default 0.5\n"
+"  -phong n            0=disable phong shading\n"
+"\n"
+"Dirtmapping (ambient occlusion) options:\n"
+"* -dirt [n]           enable global AO, 0=disable even if set in worldspawn\n"
+"* -dirtmode n         0=ordered (default), 1=random AO\n"
+"* -dirtdepth n        distance for occlusion test, default 128\n"
+"* -dirtscale n        scale factor for AO, default 1, higher values are darker\n"
+"* -dirtgain n         exponent for AO, default 1, lower values are darker\n"
+"* -dirtangle n        maximum angle for AO rays, default 88\n"
+"\n"
+"Bounce options:\n"
+"* -bounce [n]         enables 1 bounce, 0=disable even if set in worldspawn\n"
+"* -bouncescale n      scales brightness of bounce lighting, default 1\n"
+"* -bouncecolorscale n amount to use texture color in bounce lighting, 0=none (default), 1=fully\n"
+"\n"
+"Postprocessing options:\n"
+"* -gamma n            gamma correct final lightmap, default 1.0\n"
+"  -soft [n]           blurs the lightmap, n=blur radius in samples\n"
+"\n"
+"Debug modes:\n"
+"  -dirtdebug          only save the AO values to the lightmap\n"
+"  -phongdebug         only save the normals to the lightmap\n"
+"  -bouncedebug        only save bounced lighting to the lightmap\n"
+"  -surflight_dump     dump surface lights to a .map file\n"
+"\n"
+"Experimental options:\n"
+"  -lit2               write .lit2 file\n"
+"* -lmscale n          change lightmap scale, vanilla engines only allow 16\n"
+"  -lux                write .lux file\n"
+"  -bspxlit            writes rgb data into the bsp itself\n"
+"  -bspx               writes both rgb and directions data into the bsp itself\n"
+"  -novanilla          implies -bspxlit. don't write vanilla lighting\n");
+}
+
 /*
  * ==================
  * main
@@ -1455,69 +1515,18 @@ main(int argc, const char **argv)
             
             VectorCopy(point, dump_face_point);
             dump_face = true;
-            
-        } else if (argv[i][0] == '-')
+        } else if ( !strcmp( argv[ i ], "-help" ) ) {
+            PrintUsage();
+            exit(0);
+        } else if (argv[i][0] == '-') {
+            PrintUsage();
             Error("Unknown option \"%s\"", argv[i]);
-        else
+        } else
             break;
     }
 
     if (i != argc - 1) {
-        printf(
-"usage: light [options] mapname.bsp\n" 
-"\n"
-"Performance options:\n"
-"-threads n          set the number of threads\n"
-"-extra              2x supersampling\n"
-"-extra4             4x supersampling, slowest, use for final compile\n"
-"-gate n             cutoff lights at this brightness level\n"
-"-sunsamples n       set samples for _sunlight2, default 64\n"
-"-surflight_subdivide  surface light subdivision size\n"
-"\n"
-"Output format options:\n"
-"-lit                write .lit file\n"
-"-onlyents           only update entities\n"
-"\n"
-"Global options:\n"
-"-light n            sets global minlight level n\n"
-"-addmin             additive minlight\n"
-"-anglescale n       set weight of cosine term, default 0.5, 1=realistic\n"
-"-anglesense n       same as -anglescale n\n"
-"-dist n             scale fade distance of all lights, default 1\n"
-"-range n            scale brightness of all lights, default 0.5\n"
-"-phong n            0=disable phong shading\n"
-"\n"
-"Dirtmapping (ambient occlusion) options:\n"
-"-dirt [n]           enable global AO, 0=disable even if set in worldspawn\n"
-"-dirtmode n         0=ordered (default), 1=random AO\n"
-"-dirtdepth n        distance for occlusion test, default 128\n"
-"-dirtscale n        scale factor for AO, default 1, higher values are darker\n"
-"-dirtgain n         exponent for AO, default 1, lower values are darker\n"
-"-dirtangle n        maximum angle for AO rays, default 88\n"
-"\n"
-"Bounce options:\n"
-"-bounce [n]         enables 1 bounce, 0=disable even if set in worldspawn\n"
-"-bouncescale n      scales brightness of bounce lighting, default 1\n"
-"-bouncecolorscale n amount to use texture color in bounce lighting, 0=none (default), 1=fully\n" 
-"\n"
-"Postprocessing options:\n"
-"-gamma n            gamma correct final lightmap, default 1.0\n"
-"-soft [n]           blurs the lightmap, not recommended\n"
-"\n"
-"Debug modes:\n"
-"-dirtdebug          only save the AO values to the lightmap\n"
-"-phongdebug         only save the normals to the lightmap\n"
-"-bouncedebug        only save bounced lighting to the lightmap\n"
-"-surflight_dump     dump surface lights to a .map file\n"
-"\n"
-"Experimental options:\n"
-"-lit2               write .lit2 file\n"
-"-lmscale n          change lightmap scale, vanilla engines only allow 16\n"
-"-lux                write .lux file\n"
-"-bspxlit            writes rgb data into the bsp itself\n"
-"-bspx               writes both rgb and directions data into the bsp itself\n"
-"-novanilla          implies -bspxlit. don't write vanilla lighting\n"
-        );
+        PrintUsage();
         exit(1);
     }
 
