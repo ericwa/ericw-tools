@@ -548,7 +548,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             interior_verts.insert(i);
         }
     }
-    printf("CalcualateVertexNormals: %d interior verts\n", (int)interior_verts.size());
+    //printf("CalcualateVertexNormals: %d interior verts\n", (int)interior_verts.size());
     
     // build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
