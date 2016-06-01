@@ -1241,8 +1241,7 @@ static void PrintUsage()
 {
     printf("usage: light [options] mapname.bsp\n"
 "\n"
-"* means available as a worldspawn key prefixed by an underscore\n"
-"  e.g. -light becomes \"_light\"\n"
+"* = also a worldspawn key with underscore prefix; -light becomes \"_light\"\n"
 "\n"
 "Performance options:\n"
 "  -threads n          set the number of threads\n"
@@ -1276,7 +1275,7 @@ static void PrintUsage()
 "Bounce options:\n"
 "* -bounce [n]         enables 1 bounce, 0=disable even if set in worldspawn\n"
 "* -bouncescale n      scales brightness of bounce lighting, default 1\n"
-"* -bouncecolorscale n amount to use texture color in bounce lighting, 0=none (default), 1=fully\n"
+"* -bouncecolorscale n how much to use texture colors, 0=none (default), 1=full\n"
 "\n"
 "Postprocessing options:\n"
 "* -gamma n            gamma correct final lightmap, default 1.0\n"
