@@ -1269,6 +1269,9 @@ main(int argc, const char **argv)
             rangescale = atof(argv[++i]);
         } else if (!strcmp(argv[i], "-gate")) {
             fadegate = atof(argv[++i]);
+            if (fadegate > 1) {
+                logprint( "WARNING: -gate value greater than 1 may cause artifacts\n" );
+            }
         } else if (!strcmp(argv[i], "-light")) {
             minlight.light = atof(argv[++i]);
         } else if (!strcmp(argv[i], "-addmin")) {
