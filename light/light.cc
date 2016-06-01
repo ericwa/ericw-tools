@@ -1136,6 +1136,14 @@ vector<bool> leafhassky;
 // index some stuff from the bsp
 void BuildPvsIndex(const bsp2_t *bsp)
 {
+    if (bsp->visdatasize != 0) {
+        if (novis) {
+            logprint("skipping visdata optimization because of -novis\n");
+        } else {
+            logprint("using visdata optimization\n");
+        }
+    }
+    
     // build leafsForFace
     faceleafs.resize(bsp->numfaces);
     for (int i = 0; i < bsp->numleafs; i++) {
