@@ -1021,9 +1021,12 @@ LoadEntities(const bsp2_t *bsp)
                     dirty.value = true;
                 }
             }
-            else if (!strcmp(key, "_project_texture"))
+            else if (!strcmp(key, "_project_texture")) {
                 entity->projectedmip = FindProjectionTexture(bsp, com_token);
-            else if (!strcmp(key, "_project_mangle"))
+                if (entity->projectedmip == NULL) {
+                    logprint("WARNING: light has \"_project_texture\" \"%s\", but this texture is not present in the bsp\n", com_token);
+                }
+            } else if (!strcmp(key, "_project_mangle"))
             {
                 projangleknown = true;
                 scan_vec3(projangle, com_token, key);
