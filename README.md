@@ -16,9 +16,6 @@
 ###light:
  - worldfield: `_lightmap_scale`: Forces all surfaces+submodels to use this specific lightmap scale. Removes `LMSHIFT` field.
  - arg: `-lmscale`:	Equivelent to `_lightmap_scale` worldspawn key.
- - field: `_project_texture`: Specifies that a light should project this texture.
- - field: `_project_mangle`: Specifies the pitch+yaw+roll angles for a texture projection (overriding mangle).
- - field: `_project_fov`: Specifies the fov angle for a texture projection.
  - arg: `-bspxlit`: Writes rgb data into the bsp itself.
  - arg: `-bspx`: Writes both rgb and directions data into the bsp itself.
  - arg: `-novanilla`: Fallback scaled lighting will be omitted. Standard grey lighting will be ommitted if there are coloured lights. Implies `-bspxlit`. `-lit` will no longer be implied by the presence of coloured lights.
