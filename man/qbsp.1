@@ -74,6 +74,12 @@ times on large maps and should generate better bsp trees as well.
 From txqbsp-xt, thanks rebb. (default 1024, 0 to disable)
 .IP "\fB\-hexen2\fP"
 Generate a hexen2 bsp.
+.IP "\fB\-wrbrushes\fP"
+(bspx) Includes a list of brushes for brush-based collision.
+.IP "\fB\-wrbrushesonly\fP"
+"-wrbrushes" combined with "-noclip" argument.
+.IP "\fB\-notex\fP"
+Write only placeholder textures, to depend upon replacements.
 
 .SH "SPECIAL TEXTURE NAMES"
 .PP
@@ -175,6 +181,11 @@ with the header PRT2 (default is PRT1).  This portal file contains extra
 information needed by vis to compute the potentially visible set (PVS) for the
 map/bsp.  So you will also need a vis util capable of processing the PRT2 file
 format.
+
+.SH "Model Entity Keys"
+
+.IP "\fB""_lmscale"" ""n""\fP"
+Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled and unscaled lighting will normally be used.
 
 .SH MAP COMPATIBILITY
 In addition to standard Quake 1 .map files, TyrUtils QBSP is compatible with:

@@ -1,35 +1,3 @@
-# tyrutils-ericw-spike
-
-[![Build Status](https://travis-ci.org/ericwa/tyrutils-ericw.svg?branch=master)](https://travis-ci.org/ericwa/tyrutils-ericw)
-[![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/tyrutils-ericw)
-
-##Added features:
-###qbsp:
- - parser: string escape verification.
- - arg: `-wrbrushes`: (bspx) Includes a list of brushes for brush-based collision
- - arg: `-wrbrushesonly`: `-wrbrushes` combined with `-noclip` argument
- - arg: `-notex`: Write only placeholder textures, to depend upon replacements
- - field: `_phong`: 1 enables phong shading with a default `_phong_angle` of 89 (softens columns etc).
- - field: `_phong_angle`: enables phong shading with a custom angle. Adjacent faces with normals this many degrees apart (or less) will be smoothed
- - field: `_lmscale`: Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled and unscaled lighting will normally be used.
-
-###light:
- - worldfield: `_lightmap_scale`: Forces all surfaces+submodels to use this specific lightmap scale. Removes `LMSHIFT` field.
- - arg: `-lmscale`:	Equivelent to `_lightmap_scale` worldspawn key.
- - arg: `-bspxlit`: Writes rgb data into the bsp itself.
- - arg: `-bspx`: Writes both rgb and directions data into the bsp itself.
- - arg: `-novanilla`: Fallback scaled lighting will be omitted. Standard grey lighting will be ommitted if there are coloured lights. Implies `-bspxlit`. `-lit` will no longer be implied by the presence of coloured lights.
-
-### bspinfo:
- - displays bspx lumps.
-
-### vis:
- - no changes
-
-
-Updated 2015-07-13
-
-
 ## tyrutils-ericw (v0.15.4)
  - Website:         http://ericwa.github.io/tyrutils-ericw
  - Maintainer:      Eric Wasylishen (AKA ericw)
@@ -40,6 +8,9 @@ Updated 2015-07-13
  - Website: http://disenchant.net
  - Author:  Kevin Shanahan (AKA Tyrann)
  - Email:   tyrann@disenchant.net
+
+[![Build Status](https://travis-ci.org/ericwa/tyrutils-ericw.svg?branch=master)](https://travis-ci.org/ericwa/tyrutils-ericw)
+[![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/tyrutils-ericw)
 
 tyrutils-ericw is a branch of Tyrann's quake 1 tools, focused on
 adding lighting features, mostly borrowed from q3map2. There are a few
