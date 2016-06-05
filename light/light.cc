@@ -1286,6 +1286,7 @@ static void PrintUsage()
 "  -phongdebug         only save the normals to the lightmap\n"
 "  -bouncedebug        only save bounced lighting to the lightmap\n"
 "  -surflight_dump     dump surface lights to a .map file\n"
+"  -novis              disable vis acceleration\n"
 "\n"
 "Experimental options:\n"
 "  -lit2               write .lit2 file\n"
