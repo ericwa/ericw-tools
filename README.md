@@ -12,6 +12,8 @@
 [![Build Status](https://travis-ci.org/ericwa/tyrutils-ericw.svg?branch=master)](https://travis-ci.org/ericwa/tyrutils-ericw)
 [![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/tyrutils-ericw)
 
+## About
+
 tyrutils-ericw is a branch of Tyrann's quake 1 tools, focused on
 adding lighting features, mostly borrowed from q3map2. There are a few
 bugfixes for qbsp as well. Original readme follows:
@@ -38,6 +40,23 @@ tools capabilities.  See changelog.txt for a brief overview of recent
 changes or https://github.com/ericwa/tyrutils-ericw for the full changelog and
 source code.
 
+## Compiling
+
+Requires CMake and a compiler with C99 and C++11 support.  
+
+Tested on:
+ - Ubuntu 14.04 / Clang 3.5.0
+ - Ubuntu 14.04 / gcc 4.8.4
+ - OS X 10.11 / Xcode 7.3
+ - Windows 10 / Visual Studio 2015 Community
+
+Typical Unix build command:
+```
+mkdir build
+cd build
+cmake ..
+make
+```
 
 ## License
 
