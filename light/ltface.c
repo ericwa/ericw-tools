@@ -1924,7 +1924,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
 
 
 static void
-WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
+WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmap_t *lightmaps)
 {
     int numstyles, size, mapnum, width, s, t, i, j;
@@ -1970,6 +1970,14 @@ WriteLightmaps(bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lights
     else
         face->lightofs = out - filebase;
 
+    // sanity check that we don't save a lightmap for a non-lightmapped face
+    {
+        const char *texname = Face_TextureName(bsp, face);
+        assert(!(bsp->texinfo[face->texinfo].flags & TEX_SPECIAL));
+        assert(Q_strcasecmp(texname, "skip") != 0);
+        assert(Q_strcasecmp(texname, "trigger") != 0);
+    }
+    
     width = (lightsurf->texsize[0] + 1) * oversample;
     for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
         if (lightmaps[mapnum].style == 255)
@@ -2265,7 +2273,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             free(w);
         }
     } else {
-        WriteLightmaps(face, facesup, lightsurf, lightmaps);
+        WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
     }
 }
 
@@ -2282,5 +2290,5 @@ LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *mod
     /* add indirect lighting */
     LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
     
-    WriteLightmaps(face, facesup, lightsurf, lightmaps);
+    WriteLightmaps(ctx->bsp, face, facesup, lightsurf, lightmaps);
 }
