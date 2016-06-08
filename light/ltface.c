@@ -2070,20 +2070,25 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
             free(ctx->lightmaps[i].samples);
     }
     
-    if (ctx->lightsurf.points)
-        free(ctx->lightsurf.points);
+    if (!ctx->lightsurf)
+        return;
     
-    if (ctx->lightsurf.normals)
-        free(ctx->lightsurf.normals);
+    if (ctx->lightsurf->points)
+        free(ctx->lightsurf->points);
     
-    if (ctx->lightsurf.occlusion)
-        free(ctx->lightsurf.occlusion);
+    if (ctx->lightsurf->normals)
+        free(ctx->lightsurf->normals);
     
-    if (ctx->lightsurf.occluded)
-        free(ctx->lightsurf.occluded);
+    if (ctx->lightsurf->occlusion)
+        free(ctx->lightsurf->occlusion);
     
-    if (ctx->lightsurf.pvs)
-        free(ctx->lightsurf.pvs);
+    if (ctx->lightsurf->occluded)
+        free(ctx->lightsurf->occluded);
+    
+    if (ctx->lightsurf->pvs)
+        free(ctx->lightsurf->pvs);
+    
+    free(ctx->lightsurf);
 }
 
 const char *
@@ -2115,7 +2120,6 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
 
     const bsp2_t *bsp = ctx->bsp;
     lightmap_t *lightmaps = ctx->lightmaps;
-    lightsurf_t *lightsurf = &ctx->lightsurf;
     const char *texname = Face_TextureName(bsp, face);
     
     /* One extra lightmap is allocated to simplify handling overflow */
@@ -2129,9 +2133,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
     else
     {
-    face->lightofs = -1;
-    for (i = 0; i < MAXLIGHTMAPS; i++)
-        face->styles[i] = 255;
+        face->lightofs = -1;
+        for (i = 0; i < MAXLIGHTMAPS; i++)
+            face->styles[i] = 255;
     }
     if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL)
         return;
@@ -2143,6 +2147,11 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     /* don't save lightmaps for "skip" texture */
     if (!Q_strcasecmp(texname, "skip"))
         return;
+    
+    /* all good, this face is going to be lightmapped. */
+    ctx->lightsurf = (lightsurf_t *) calloc(1, sizeof(lightsurf_t));
+    lightsurf_t *lightsurf = ctx->lightsurf;
+    
     
     /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
      * lit water in mind. In that case receive light from both top and bottom.
@@ -2281,7 +2290,11 @@ void
 LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
 {
     lightmap_t *lightmaps = ctx->lightmaps;
-    lightsurf_t *lightsurf = &ctx->lightsurf;
+    lightsurf_t *lightsurf = ctx->lightsurf;
+    
+    if (lightsurf == NULL)
+        return; /* this face is not lightmapped */
+    
     if (debugmode == debugmode_bounce)
     {
         Lightmap_ClearAll(lightmaps);

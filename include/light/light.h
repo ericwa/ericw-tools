@@ -157,7 +157,7 @@ typedef struct {
 struct ltface_ctx
 {
     const bsp2_t *bsp;
-    lightsurf_t lightsurf;
+    lightsurf_t *lightsurf;
     lightmap_t lightmaps[MAXLIGHTMAPS + 1];
 };
 
