@@ -56,9 +56,47 @@
 
       <h1>Features</h1>
 
-      <p>
-        Screeshots below use <a href="http://www.simonoc.com/pages/design/sp/1000cuts.htm"><i>One Thousand Cuts</i></a> by <a href="http://www.simonoc.com">sock</a>.
-      </p>
+      <h2>Phong shading</h2>
+
+      <p>Phong shading is enabled on a brush entity using <code>&quot;_phong&quot; &quot;1&quot;</code></p>
+      <p>Screenshot of ad_crucial by mfx:</p>
+
+      <div class="row">
+        <!-- Tab panes -->
+        <div class="col-md-10 tab-content">
+          <div role="tabpanel" class="tab-pane active" id="phong1">
+            <div class="row">
+              <div class="col-md-6">
+                <img src="phong_1_normals.jpg" class="img-responsive" />
+                <br>
+                With <code>-phongdebug</code> to render normals to the lightmap.
+              </div>
+              <div class="col-md-6">
+                <img src="phong_1_lightmap.jpg" class="img-responsive" />
+              </div>
+            </div>
+          </div>
+          <div role="tabpanel" class="tab-pane" id="phong0">
+            <div class="row">
+              <div class="col-md-6">
+                <img src="phong_0_normals.jpg" class="img-responsive" />
+                <br>
+                With <code>-phongdebug</code> to render normals to the lightmap.
+              </div>
+              <div class="col-md-6">
+                <img src="phong_0_lightmap.jpg" class="img-responsive" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nav tabs -->
+        <ul class="col-md-2 nav nav-pills nav-stacked" role="tablist">
+          <li role="presentation" class="active"><a href="#phong1" aria-controls="phong1" role="tab" data-toggle="tab">"_phong" "1"</a></li>
+          <li role="presentation"><a href="#phong0" aria-controls="phong0" role="tab" data-toggle="tab">without</a></li>
+        </ul>
+      </div>
+
 
       <h2>Ambient occlusion (aka dirtmapping)</h2>
 
@@ -66,6 +104,7 @@
       <p><code>-dirtdepth</code> controls the distance tested for occlusion, in quake units. You can see at 512+ the palace rooms start to self-shadow.</p>
       <p><code>-dirtgain</code> controls the intensity of the dirt with an exponential scale while <code>-dirtscale</code> is a simple multiplier.</p>
       <p>Once you are happy with the command-line settings, you can transfer them to worldspawn keys; see the light documentation for details.</p>
+      <p>Screeshots of <a href="http://www.simonoc.com/pages/design/sp/1000cuts.htm"><i>One Thousand Cuts</i></a> by <a href="http://www.simonoc.com">SimonOC</a>:</p>
 
       <div class="row">
         <!-- Tab panes -->
