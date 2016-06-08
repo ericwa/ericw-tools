@@ -98,5 +98,18 @@ make_screenshot phong_0_lightmap.jpg "$PHONG_MAP" "-phong 0" "$PHONG_POS" 1
 make_screenshot phong_1_normals.jpg "$PHONG_MAP" "-phongdebug" "$PHONG_POS" 1
 make_screenshot phong_0_normals.jpg "$PHONG_MAP" "-phongdebug -phong 0" "$PHONG_POS" 1
 
+# bounce
 
+BOUNCE_POS="-346 -1215 1763 -10 21 0"
+BOUNCE_MAP="ad_azad.map"
+
+make_screenshot bouncescale0.0.jpg "$BOUNCE_MAP" "" "$BOUNCE_POS" 1
+make_screenshot bouncescale0.5.jpg "$BOUNCE_MAP" "-bounce -bouncescale 0.5" "$BOUNCE_POS" 1
+make_screenshot bouncescale1.0.jpg "$BOUNCE_MAP" "-bounce -bouncescale 1" "$BOUNCE_POS" 1
+make_screenshot bouncescale2.0.jpg "$BOUNCE_MAP" "-bounce -bouncescale 2" "$BOUNCE_POS" 1
+
+make_screenshot bouncescale0.0_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 0" "$BOUNCE_POS" 1
+make_screenshot bouncescale0.5_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 0.5" "$BOUNCE_POS" 1
+make_screenshot bouncescale1.0_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 1" "$BOUNCE_POS" 1
+make_screenshot bouncescale2.0_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 2" "$BOUNCE_POS" 1
 
