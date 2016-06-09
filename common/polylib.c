@@ -6,7 +6,7 @@
 #include <common/mathlib.h>
 #include <common/polylib.h>
 
-#define BOGUS_RANGE 8192
+#define BOGUS_RANGE 65536
 
 /*
  * =============

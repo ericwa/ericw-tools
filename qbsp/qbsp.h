@@ -144,7 +144,7 @@ extern "C" {
 #define T_EPSILON               0.0002
 #define CONTINUOUS_EPSILON      0.0005
 
-#define BOGUS_RANGE     18000
+#define BOGUS_RANGE     65536
 
 // the exact bounding box of the brushes is expanded some for the headnode
 // volume.  is this still needed?

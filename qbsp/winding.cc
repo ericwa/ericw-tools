@@ -69,8 +69,8 @@ BaseWindingForPlane(const plane_t *p)
 
     CrossProduct(vup, p->normal, vright);
 
-    VectorScale(vup, 8192, vup);
-    VectorScale(vright, 8192, vright);
+    VectorScale(vup, BOGUS_RANGE, vup);
+    VectorScale(vright, BOGUS_RANGE, vright);
 
     // project a really big axis aligned box onto the plane
     w = (winding_t *)AllocMem(WINDING, 4, true);
