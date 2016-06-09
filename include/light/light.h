@@ -234,6 +234,16 @@ typedef struct {
     bool locked;
 } lockable_vec_t;
 
+typedef struct {
+    vec3_t value;
+    bool locked;
+} lockable_vec3_t;
+    
+typedef struct {
+    lightsample_t value;
+    bool locked;
+} lockable_lightsample_t;
+
 /* dirt */
 
 extern lockable_vec_t dirty;          // should any dirtmapping take place?
@@ -255,6 +265,18 @@ extern lockable_vec_t phongallowed;
 extern lockable_vec_t bounce;
 extern lockable_vec_t bouncescale;
 extern lockable_vec_t bouncecolorscale;
+  
+/* sunlight */
+    
+extern lockable_lightsample_t sunlight;
+extern lockable_lightsample_t sun2;
+extern lockable_lightsample_t sunlight2;
+extern lockable_lightsample_t sunlight3;
+extern lockable_vec_t sunlight_dirt;
+extern lockable_vec_t sunlight2_dirt;
+extern lockable_vec3_t sunvec;
+extern lockable_vec3_t sun2vec;
+extern lockable_vec_t sun_deviance;
     
 /*
  * Return space for the lightmap and colourmap at the same time so it can

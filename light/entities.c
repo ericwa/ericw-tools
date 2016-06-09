@@ -36,17 +36,16 @@ entity_t *surfacelight_templates[MAX_SURFLIGHT_TEMPLATES];
 int num_surfacelight_templates;
 static void MakeSurfaceLights(const bsp2_t *bsp);
 
-/* temporary storage for sunlight settings before the sun_t objects are
-   created. */
-static lightsample_t sunlight = { 0, { 255, 255, 255 } };
-static lightsample_t sun2 = { 0, { 255, 255, 255 } }; /* second sun */
-static lightsample_t sunlight2 = { 0, { 255, 255, 255 } }; /* top sky dome */
-static lightsample_t sunlight3 = { 0, { 255, 255, 255 } }; /* bottom sky dome */
-static int sunlight_dirt = 0;
-static int sunlight2_dirt = 0;
-static vec3_t sunvec = { 0, 0, -1 };            /* defaults to straight down */
-static vec3_t sun2vec = { 0, 0, -1 };            /* defaults to straight down */
-static vec_t sun_deviance = 0;
+/* temporary storage for sunlight settings before the sun_t objects are created. */
+lockable_lightsample_t sunlight  = { .value = { 0, { 255, 255, 255 } }, .locked = false }; /* main sun */
+lockable_lightsample_t sun2      = { .value = { 0, { 255, 255, 255 } }, .locked = false }; /* second sun */
+lockable_lightsample_t sunlight2 = { .value = { 0, { 255, 255, 255 } }, .locked = false }; /* top sky dome */
+lockable_lightsample_t sunlight3 = { .value = { 0, { 255, 255, 255 } }, .locked = false }; /* bottom sky dome */
+lockable_vec_t sunlight_dirt     = { .value = 0.0f, .locked = false };
+lockable_vec_t sunlight2_dirt    = { .value = 0.0f, .locked = false };
+lockable_vec3_t sunvec           = { .value = { 0, 0, -1 }, .locked = false };  /* defaults to straight down */
+lockable_vec3_t sun2vec          = { .value = { 0, 0, -1 }, .locked = false }; /* defaults to straight down */
+lockable_vec_t sun_deviance      = { .value = 0.0f, .locked = false };
 
 /*
  * ============================================================================
@@ -341,10 +340,10 @@ SetupSun(lightsample_t sunlight, const vec3_t sunvec_in)
     int i;
     int sun_num_samples = sunsamples;
 
-    if (sun_deviance == 0) {
+    if (sun_deviance.value == 0) {
         sun_num_samples = 1;
     } else {
-        logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", sun_deviance);
+        logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", sun_deviance.value);
     }
 
     VectorCopy(sunvec_in, sunvec);
@@ -373,10 +372,10 @@ SetupSun(lightsample_t sunlight, const vec3_t sunvec_in)
             /* jitter the angles (loop to keep random sample within sun->deviance steridians) */
             do
             {
-                da = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance);
-                de = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance);
+                da = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance.value);
+                de = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance.value);
             }
-            while ( ( da * da + de * de ) > ( sun_deviance * sun_deviance ) );
+            while ( ( da * da + de * de ) > ( sun_deviance.value * sun_deviance.value ) );
             angle += da;
             elevation += de;
 
@@ -388,18 +387,18 @@ SetupSun(lightsample_t sunlight, const vec3_t sunvec_in)
 
         //printf( "sun %d is using vector %f %f %f\n", i, direction[0], direction[1], direction[2]);
 
-        AddSun(direction, sunlight, sunlight_dirt);
+        AddSun(direction, sunlight, (int)sunlight_dirt.value);
     }
 }
 
 static void
 SetupSuns()
 {
-    SetupSun(sunlight, sunvec);
+    SetupSun(sunlight.value, sunvec.value);
     
-    if (sun2.light != 0) {
+    if (sun2.value.light != 0) {
         logprint("creating sun2\n");
-        SetupSun(sun2, sun2vec);
+        SetupSun(sun2.value, sun2vec.value);
     }
 }
 
@@ -427,7 +426,7 @@ SetupSkyDome()
         iterations = qmax(iterations, 2);
     
         /* dummy check */
-        if ( sunlight2.light <= 0.0f && sunlight3.light <= 0.0f ) {
+        if ( sunlight2.value.light <= 0.0f && sunlight3.value.light <= 0.0f ) {
                 return;
         }
     
@@ -440,14 +439,15 @@ SetupSkyDome()
 
         /* calc individual sun brightness */
         numSuns = angleSteps * elevationSteps + 1;
-        if (sunlight2.light > 0) {
-            logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.light, sunlight2.color[0], sunlight2.color[1], sunlight2.color[2]);
+        if (sunlight2.value.light > 0) {
+            logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.value.light, sunlight2.value.color[0], sunlight2.value.color[1], sunlight2.value.color[2]);
         }
-        if (sunlight3.light > 0) {
-            logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.light, sunlight3.color[0], sunlight3.color[1], sunlight3.color[2]);
+        if (sunlight3.value.light > 0) {
+            logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.value.light, sunlight3.value.color[0], sunlight3.value.color[1], sunlight3.value.color[2]);
         }
-        sunlight2.light /= numSuns;
-        sunlight3.light /= numSuns;
+        // FIXME: Don't modify setting, make a copy
+        sunlight2.value.light /= numSuns;
+        sunlight3.value.light /= numSuns;
 
         /* iterate elevation */
         elevation = elevationStep * 0.5f;
@@ -463,15 +463,15 @@ SetupSkyDome()
                         direction[ 2 ] = -sin( elevation );
 
                         /* insert top hemisphere light */
-                        if (sunlight2.light > 0) {
-                            AddSun(direction, sunlight2, sunlight2_dirt);
+                        if (sunlight2.value.light > 0) {
+                            AddSun(direction, sunlight2.value, sunlight2_dirt.value);
                         }
 
                         direction[ 2 ] = -direction[ 2 ];
                     
                         /* insert bottom hemisphere light */
-                        if (sunlight3.light > 0) {
-                            AddSun(direction, sunlight3, sunlight2_dirt);
+                        if (sunlight3.value.light > 0) {
+                            AddSun(direction, sunlight3.value, sunlight2_dirt.value);
                         }
                     
                         /* move */
@@ -486,14 +486,14 @@ SetupSkyDome()
         /* create vertical sun */
         VectorSet( direction, 0.0f, 0.0f, 1.0f );
 
-        if (sunlight2.light > 0) {
-            AddSun(direction, sunlight2, sunlight2_dirt);
+        if (sunlight2.value.light > 0) {
+            AddSun(direction, sunlight2.value, sunlight2_dirt.value);
         }
     
         VectorSet( direction, 0.0f, 0.0f, -1.0f );
     
-        if (sunlight3.light > 0) {
-            AddSun(direction, sunlight3, sunlight2_dirt);
+        if (sunlight3.value.light > 0) {
+            AddSun(direction, sunlight3.value, sunlight2_dirt.value);
         }
 }
 
@@ -966,32 +966,50 @@ LoadEntities(const bsp2_t *bsp)
             } else if (!strcmp(key, "_color") || !strcmp(key, "color")) {
                 scan_vec3(entity->light.color, com_token, "color");
                 normalize_color_format(entity->light.color);
-            } else if (!strcmp(key, "_sunlight"))
-                sunlight.light = atof(com_token);
-            else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
+            } else if (!strcmp(key, "_sunlight")) {
+                if (!sunlight.locked) {
+                    sunlight.value.light = atof(com_token);
+                }
+            } else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
                 scan_vec3(vec, com_token, "_sun_mangle");
-                vec_from_mangle(sunvec, vec);
+                vec_from_mangle(sunvec.value, vec);
             } else if (!strcmp(key, "_sunlight_color")) {
-                scan_vec3(sunlight.color, com_token, "_sunlight_color");
-                normalize_color_format(sunlight.color);
-            } else if (!strcmp(key, "_sun2"))
-                sun2.light = atof(com_token);
-            else if (!strcmp(key, "_sun2_mangle")) {
-                scan_vec3(vec, com_token, "_sun2_mangle");
-                vec_from_mangle(sun2vec, vec);
+                if (!sunlight.locked) {
+                    scan_vec3(sunlight.value.color, com_token, "_sunlight_color");
+                    normalize_color_format(sunlight.value.color);
+                }
+            } else if (!strcmp(key, "_sun2")) {
+                if (!sun2.locked) {
+                    sun2.value.light = atof(com_token);
+                }
+            } else if (!strcmp(key, "_sun2_mangle")) {
+                if (!sun2vec.locked) {
+                    scan_vec3(vec, com_token, "_sun2_mangle");
+                    vec_from_mangle(sun2vec.value, vec);
+                }
             } else if (!strcmp(key, "_sun2_color")) {
-                scan_vec3(sun2.color, com_token, "_sun2_color");
-                normalize_color_format(sun2.color);
-            } else if (!strcmp(key, "_sunlight2"))
-                sunlight2.light = atof(com_token);
-            else if (!strcmp(key, "_sunlight3"))
-                sunlight3.light = atof(com_token);
-            else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
-                scan_vec3(sunlight2.color, com_token, key);
-                normalize_color_format(sunlight2.color);
+                if (!sun2.locked) {
+                    scan_vec3(sun2.value.color, com_token, "_sun2_color");
+                    normalize_color_format(sun2.value.color);
+                }
+            } else if (!strcmp(key, "_sunlight2")) {
+                if (!sunlight2.locked) {
+                    sunlight2.value.light = atof(com_token);
+                }
+            } else if (!strcmp(key, "_sunlight3")) {
+                if (!sunlight3.locked) {
+                    sunlight3.value.light = atof(com_token);
+                }
+            } else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
+                if (!sunlight2.locked) {
+                    scan_vec3(sunlight2.value.color, com_token, key);
+                    normalize_color_format(sunlight2.value.color);
+                }
             } else if (!strcmp(key, "_sunlight3_color") || !strcmp(key, "_sunlight_color3")) {
-                scan_vec3(sunlight3.color, com_token, key);
-                normalize_color_format(sunlight3.color);
+                if (!sunlight3.locked) {
+                    scan_vec3(sunlight3.value.color, com_token, key);
+                    normalize_color_format(sunlight3.value.color);
+                }
             } else if (!strcmp(key, "_minlight_color")) {
                 scan_vec3(minlight.color, com_token, "_minlight_color");
                 normalize_color_format(minlight.color);
@@ -1003,11 +1021,15 @@ LoadEntities(const bsp2_t *bsp)
                 entity->dirtmode = atoi(com_token);
             else if (!strcmp(key, "_dirtangle"))
                 entity->dirtangle = atoi(com_token);
-            else if (!strcmp(key, "_sunlight_dirt"))
-                sunlight_dirt = atoi(com_token);
-            else if (!strcmp(key, "_sunlight2_dirt"))
-                sunlight2_dirt = atoi(com_token);
-            else if (!strcmp(key, "_minlight_dirt"))
+            else if (!strcmp(key, "_sunlight_dirt")) {
+                if (!sunlight_dirt.locked) {
+                    sunlight_dirt.value = atoi(com_token);
+                }
+            } else if (!strcmp(key, "_sunlight2_dirt")) {
+                if (!sunlight2_dirt.locked) {
+                    sunlight2_dirt.value = atoi(com_token);
+                }
+            } else if (!strcmp(key, "_minlight_dirt"))
                 entity->minlight_dirt = atoi(com_token);
             else if (!strcmp(key, "_dirtscale"))
                 entity->dirtscale = atof(com_token);
@@ -1039,7 +1061,9 @@ LoadEntities(const bsp2_t *bsp)
                 entity->bleed = atoi(com_token);
             }
             else if (!strcmp(key, "_sunlight_penumbra")) {
-                sun_deviance = atof(com_token);
+                if (!sun_deviance.locked) {
+                    sun_deviance.value = atof(com_token);
+                }
             }
             else if (!strcmp(key, "_deviance")) {
                 entity->deviance = atof(com_token);
@@ -1159,21 +1183,21 @@ LoadEntities(const bsp2_t *bsp)
                 logprint("Global dirtmapping enabled in worldspawn.\n");
             }
 
-            if (sunlight_dirt == 1) {
+            if (sunlight_dirt.value == 1) {
                 if (!dirty.locked) {
                     dirty.value = true;
                 }
                 logprint("Sunlight dirtmapping enabled in worldspawn.\n");
-            } else if (sunlight_dirt == -1) {
+            } else if (sunlight_dirt.value == -1) {
                 logprint("Sunlight dirtmapping disabled in worldspawn.\n");
             }
 
-            if (sunlight2_dirt == 1) {
+            if (sunlight2_dirt.value == 1) {
                 if (!dirty.locked) {
                     dirty.value = true;
                 }
                 logprint("Sunlight2 dirtmapping enabled in worldspawn.\n");
-            } else if (sunlight2_dirt == -1) {
+            } else if (sunlight2_dirt.value == -1) {
                 logprint("Sunlight2 dirtmapping disabled in worldspawn.\n");
             }
 
@@ -1192,10 +1216,10 @@ LoadEntities(const bsp2_t *bsp)
         }
     }
 
-    if (!VectorCompare(sunlight.color, vec3_white) ||
+    if (!VectorCompare(sunlight.value.color, vec3_white) ||
         !VectorCompare(minlight.color, vec3_white) ||
-        !VectorCompare(sunlight2.color, vec3_white) ||
-        !VectorCompare(sunlight3.color, vec3_white)) {
+        !VectorCompare(sunlight2.value.color, vec3_white) ||
+        !VectorCompare(sunlight3.value.color, vec3_white)) {
         if (!write_litfile) {
             write_litfile = true;
             logprint("Colored light entities detected: "
