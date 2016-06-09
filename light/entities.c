@@ -1096,6 +1096,7 @@ LoadEntities(const bsp2_t *bsp)
             else if (!strcmp(key, "_bouncecolorscale")) {
                 if (!bouncecolorscale.locked) {
                     bouncecolorscale.value = atof(com_token);
+                    bouncecolorscale.value = qmin(qmax(bouncecolorscale.value, 0.0f), 1.0f);
                     logprint("_bouncecolorscale set to %f\n", bouncecolorscale.value);
                 }
             }

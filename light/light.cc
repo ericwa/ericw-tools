@@ -1487,6 +1487,7 @@ main(int argc, const char **argv)
             bounce.locked = true;
             bouncecolorscale.value = atof( argv[ ++i ] );
             bouncecolorscale.locked = true;
+            bouncecolorscale.value = qmin(qmax(bouncecolorscale.value, 0.0f), 1.0f);
             logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale.value );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
             surflight_subdivide = atof( argv[ ++i ] );
