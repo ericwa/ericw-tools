@@ -1573,29 +1573,29 @@ main(int argc, const char **argv)
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
         } else if ( !strcmp( argv[ i ], "-sunlight" ) ) {
-            sunlight.value.light = ParseVec(&i, argc, argv);
+            sunlight.value = ParseVec(&i, argc, argv);
             sunlight.locked = true;
         } else if ( !strcmp( argv[ i ], "-sunlight_color" ) ) {
-            ParseVec3(sunlight.value.color, &i, argc, argv);
-            sunlight.locked = true;
+            ParseVec3(sunlight_color.value, &i, argc, argv);
+            sunlight_color.locked = true;
         } else if ( !strcmp( argv[ i ], "-sun2" ) ) {
-            sun2.value.light = ParseVec(&i, argc, argv);
+            sun2.value = ParseVec(&i, argc, argv);
             sun2.locked = true;
         } else if ( !strcmp( argv[ i ], "-sun2_color" ) ) {
-            ParseVec3(sun2.value.color, &i, argc, argv);
-            sun2.locked = true;
+            ParseVec3(sun2_color.value, &i, argc, argv);
+            sun2_color.locked = true;
         } else if ( !strcmp( argv[ i ], "-sunlight2" ) ) {
-            sunlight2.value.light = ParseVec(&i, argc, argv);
+            sunlight2.value = ParseVec(&i, argc, argv);
             sunlight2.locked = true;
         } else if ( !strcmp( argv[ i ], "-sunlight2_color" ) ) {
-            ParseVec3(sunlight2.value.color, &i, argc, argv);
-            sunlight2.locked = true;
+            ParseVec3(sunlight2_color.value, &i, argc, argv);
+            sunlight2_color.locked = true;
         } else if ( !strcmp( argv[ i ], "-sunlight3" ) ) {
-            sunlight3.value.light = ParseVec(&i, argc, argv);
+            sunlight3.value = ParseVec(&i, argc, argv);
             sunlight3.locked = true;
         } else if ( !strcmp( argv[ i ], "-sunlight3_color" ) ) {
-            ParseVec3(sunlight3.value.color, &i, argc, argv);
-            sunlight3.locked = true;
+            ParseVec3(sunlight3_color.value, &i, argc, argv);
+            sunlight3_color.locked = true;
         } else if ( !strcmp( argv[ i ], "-sunlight_dirt" ) ) {
             sunlight_dirt.value = ParseInt(&i, argc, argv);
             sunlight_dirt.locked = true;
