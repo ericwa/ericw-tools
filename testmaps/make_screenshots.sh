@@ -100,7 +100,7 @@ make_screenshot phong_0_normals.jpg "$PHONG_MAP" "-phongdebug -phong 0" "$PHONG_
 
 # bounce
 
-BOUNCE_POS="-346 -1215 1763 -10 21 0"
+BOUNCE_POS="1186 -1926 2601 20 144 0"
 BOUNCE_MAP="ad_azad.map"
 
 make_screenshot bouncescale0.0.jpg "$BOUNCE_MAP" "" "$BOUNCE_POS" 1
