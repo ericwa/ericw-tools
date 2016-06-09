@@ -443,6 +443,10 @@ TraceLine(const dmodel_t *model, const int traceflags,
     tracestack_t tracestack[MAX_TSTACK];
     tracestack_t *tstack, *crossnode;
     tnode_t *tnode;
+    
+    // TODO: if -fence mode is enabled, and model is not the world,
+    // instead test with TraceFaces
+    
 //    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
     
     if (traceflags <= 0)
@@ -707,6 +711,8 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
         if (face) {
             int facenum = face - bsp_static->dfaces;
             const faceinfo_t *fi = &faceinfos[facenum];
+            
+            // TODO: handle -fence here
             
             // only solid and sky faces stop the trace.
             if (fi->content == CONTENTS_SOLID || fi->content == CONTENTS_SKY) {
