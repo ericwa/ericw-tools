@@ -1572,6 +1572,45 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-debugface" ) ) {
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight" ) ) {
+            sunlight.value.light = ParseVec(&i, argc, argv);
+            sunlight.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight_color" ) ) {
+            ParseVec3(sunlight.value.color, &i, argc, argv);
+            sunlight.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sun2" ) ) {
+            sun2.value.light = ParseVec(&i, argc, argv);
+            sun2.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sun2_color" ) ) {
+            ParseVec3(sun2.value.color, &i, argc, argv);
+            sun2.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight2" ) ) {
+            sunlight2.value.light = ParseVec(&i, argc, argv);
+            sunlight2.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight2_color" ) ) {
+            ParseVec3(sunlight2.value.color, &i, argc, argv);
+            sunlight2.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight3" ) ) {
+            sunlight3.value.light = ParseVec(&i, argc, argv);
+            sunlight3.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight3_color" ) ) {
+            ParseVec3(sunlight3.value.color, &i, argc, argv);
+            sunlight3.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight_dirt" ) ) {
+            sunlight_dirt.value = ParseInt(&i, argc, argv);
+            sunlight_dirt.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunlight2_dirt" ) ) {
+            sunlight2_dirt.value = ParseInt(&i, argc, argv);
+            sunlight2_dirt.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sunvec" ) ) {
+            ParseVec3(sunvec.value, &i, argc, argv);
+            sunvec.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sun2vec" ) ) {
+            ParseVec3(sun2vec.value, &i, argc, argv);
+            sun2vec.locked = true;
+        } else if ( !strcmp( argv[ i ], "-sun_deviance" ) ) {
+            sun_deviance.value = ParseVec(&i, argc, argv);
+            sun_deviance.locked = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
             PrintUsage();
             exit(0);
