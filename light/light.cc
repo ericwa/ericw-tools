@@ -1297,6 +1297,77 @@ static void PrintUsage()
 "  -novanilla          implies -bspxlit. don't write vanilla lighting\n");
 }
 
+static bool ParseVec3Optional(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
+{
+    if ((*i_inout + 3) < argc) {
+        // negative numbers are rejected, they would be confused with flags.
+        if (!isdigit(argv[*i_inout + 1][0])
+            || !isdigit(argv[*i_inout + 2][0])
+            || !isdigit(argv[*i_inout + 3][0])) {
+            return false;
+        }
+        vec3_out[0] = atof( argv[ ++(*i_inout) ] );
+        vec3_out[1] = atof( argv[ ++(*i_inout) ] );
+        vec3_out[2] = atof( argv[ ++(*i_inout) ] );
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static bool ParseVecOptional(vec_t *result, int *i_inout, int argc, const char **argv)
+{
+    if ((*i_inout + 1) < argc) {
+        if (!isdigit(argv[*i_inout + 1][0])) {
+            return false;
+        }
+        *result = atof( argv[ ++(*i_inout) ] );
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static bool ParseIntOptional(int *result, int *i_inout, int argc, const char **argv)
+{
+    if ((*i_inout + 1) < argc) {
+        if (!isdigit(argv[*i_inout + 1][0])) {
+            return false;
+        }
+        *result = atoi( argv[ ++(*i_inout) ] );
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static void ParseVec3(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
+{
+    if (!ParseVec3Optional(vec3_out, i_inout, argc, argv)) {
+        Error("%s requires 3 numberic arguments\n", argv[ *i_inout ]);
+    }
+}
+
+static vec_t ParseVec(int *i_inout, int argc, const char **argv)
+{
+    vec_t result = 0;
+    if (!ParseVecOptional(&result, i_inout, argc, argv)) {
+        Error("%s requires 1 numeric argument\n", argv[ *i_inout ]);
+        return 0;
+    }
+    return result;
+}
+
+static int ParseInt(int *i_inout, int argc, const char **argv)
+{
+    int result = 0;
+    if (!ParseIntOptional(&result, i_inout, argc, argv)) {
+        Error("%s requires 1 integer argument\n", argv[ *i_inout ]);
+        return 0;
+    }
+    return result;
+}
+
 /*
  * ==================
  * main
@@ -1323,7 +1394,7 @@ main(int argc, const char **argv)
 
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-threads")) {
-            numthreads = atoi(argv[++i]);
+            numthreads = ParseInt(&i, argc, argv);
         } else if (!strcmp(argv[i], "-extra")) {
             oversample = 2;
             logprint("extra 2x2 sampling enabled\n");
@@ -1331,20 +1402,20 @@ main(int argc, const char **argv)
             oversample = 4;
             logprint("extra 4x4 sampling enabled\n");
         } else if (!strcmp(argv[i], "-dist")) {
-            scaledist = atof(argv[++i]);
+            scaledist = ParseVec(&i, argc, argv);
         } else if (!strcmp(argv[i], "-range")) {
-            rangescale = atof(argv[++i]);
+            rangescale = ParseVec(&i, argc, argv);
         } else if (!strcmp(argv[i], "-gate")) {
-            fadegate = atof(argv[++i]);
+            fadegate = ParseVec(&i, argc, argv);
             if (fadegate > 1) {
                 logprint( "WARNING: -gate value greater than 1 may cause artifacts\n" );
             }
         } else if (!strcmp(argv[i], "-light")) {
-            minlight.light = atof(argv[++i]);
+            minlight.light = ParseVec(&i, argc, argv);
         } else if (!strcmp(argv[i], "-addmin")) {
             addminlight = true;
         } else if (!strcmp(argv[i], "-gamma")) {
-            lightmapgamma = atof(argv[++i]);
+            lightmapgamma = ParseVec(&i, argc, argv);
             logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma );
         } else if (!strcmp(argv[i], "-lit")) {
             write_litfile |= 1;
@@ -1369,21 +1440,15 @@ main(int argc, const char **argv)
             lmscaleoverride = argv[++i];
         } else if (!strcmp(argv[i], "-soft")) {
             if ((i + 1) < argc && isdigit(argv[i + 1][0]))
-                softsamples = atoi(argv[++i]);
+                softsamples = ParseInt(&i, argc, argv);
             else
                 softsamples = -1; /* auto, based on oversampling */
         } else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
-            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
-                global_anglescale = atof(argv[++i]);
-                logprint("Using global anglescale value of %f from command line.\n", global_anglescale);
-            } else
-                Error("-anglesense requires a numeric argument (0.0 - 1.0)");
+            global_anglescale = ParseVec(&i, argc, argv);
+            logprint("Using global anglescale value of %f from command line.\n", global_anglescale);
         } else if ( !strcmp( argv[ i ], "-dirt" ) ) {
             int dirt_param = 1;
-            
-            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
-                dirt_param = atoi( argv[ ++i ] );
-            }
+            ParseIntOptional(&dirt_param, &i, argc, argv);
             
             if (dirt_param) {
                 dirty.value = true;
@@ -1408,7 +1473,7 @@ main(int argc, const char **argv)
             logprint( "Dirtmap debugging enabled\n" );
         } else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
             dirtMode.locked = true;
-            dirtMode.value = atoi( argv[ ++i ] );
+            dirtMode.value = ParseInt(&i, argc, argv);
             if ( dirtMode.value != 0 && dirtMode.value != 1 ) {
                 dirtMode.value = 0;
             }
@@ -1420,35 +1485,32 @@ main(int argc, const char **argv)
             }
         } else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
             dirtDepth.locked = true;
-            dirtDepth.value = atof( argv[ ++i ] );
+            dirtDepth.value = ParseVec(&i, argc, argv);
             if ( dirtDepth.value <= 0.0f ) {
                 dirtDepth.value = 128.0f;
             }
             logprint( "Dirtmapping depth set to %.1f\n", dirtDepth.value );
         } else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
             dirtScale.locked = true;
-            dirtScale.value = atof( argv[ ++i ] );
+            dirtScale.value = ParseVec(&i, argc, argv);
             if ( dirtScale.value <= 0.0f ) {
                 dirtScale.value = 1.0f;
             }
             logprint( "Dirtmapping scale set to %.1f\n", dirtScale.value );
         } else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
             dirtGain.locked = true;
-            dirtGain.value = atof( argv[ ++i ] );
+            dirtGain.value = ParseVec(&i, argc, argv);
             if ( dirtGain.value <= 0.0f ) {
                 dirtGain.value = 1.0f;
             }
             logprint( "Dirtmapping gain set to %.1f\n", dirtGain.value );
         } else if ( !strcmp( argv[ i ], "-dirtangle" ) ) {
             dirtAngle.locked = true;
-            dirtAngle.value = atof( argv[ ++i ] );
+            dirtAngle.value = ParseVec(&i, argc, argv);
             logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle.value );
         } else if ( !strcmp( argv[ i ], "-phong" ) ) {
             int phong_param = 1;
-            
-            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
-                phong_param = atoi( argv[ ++i ] );
-            }
+            ParseIntOptional(&phong_param, &i, argc, argv);
             
             if (phong_param) {
                 logprint( "NOTE: -phong 1 has no effect\n" );
@@ -1459,10 +1521,7 @@ main(int argc, const char **argv)
             }
         } else if ( !strcmp( argv[ i ], "-bounce" ) ) {
             int bounce_param = 1;
-            
-            if ((i + 1) < argc && isdigit(argv[i + 1][0])) {
-                bounce_param = atoi( argv[ ++i ] );
-            }
+            ParseIntOptional(&bounce_param, &i, argc, argv);
             
             bounce.value = bounce_param;
             bounce.locked = true;
@@ -1479,24 +1538,24 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-bouncescale" ) ) {
             bounce.value = true;
             bounce.locked = true;
-            bouncescale.value = atof( argv[ ++i ] );
+            bouncescale.value = ParseVec(&i, argc, argv);
             bouncescale.locked = true;
             logprint( "Bounce scale factor set to %f on command line\n", bouncescale.value );
         } else if ( !strcmp( argv[ i ], "-bouncecolorscale" ) ) {
             bounce.value = true;
             bounce.locked = true;
-            bouncecolorscale.value = atof( argv[ ++i ] );
+            bouncecolorscale.value = ParseVec(&i, argc, argv);
             bouncecolorscale.locked = true;
             bouncecolorscale.value = qmin(qmax(bouncecolorscale.value, 0.0f), 1.0f);
             logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale.value );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
-            surflight_subdivide = atof( argv[ ++i ] );
+            surflight_subdivide = ParseVec(&i, argc, argv);
             surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
             logprint( "Using surface light subdivision size of %f\n", surflight_subdivide);
         } else if ( !strcmp( argv[ i ], "-surflight_dump" ) ) {
             surflight_dump = true;
         } else if ( !strcmp( argv[ i ], "-sunsamples" ) ) {
-            sunsamples = atof( argv[ ++i ] );
+            sunsamples = ParseInt(&i, argc, argv);
             sunsamples = qmin(qmax(sunsamples, 8), 2048);
             logprint( "Using sunsamples of %d\n", sunsamples);
         } else if ( !strcmp( argv[ i ], "-onlyents" ) ) {
@@ -1511,17 +1570,7 @@ main(int argc, const char **argv)
             novis = true;
             logprint( "Skipping use of vis data to optimize lighting\n" );
         } else if ( !strcmp( argv[ i ], "-debugface" ) ) {
-            
-            vec3_t point;
-            if ((i + 3) < argc) {
-                point[0] = atof( argv[ ++i ] );
-                point[1] = atof( argv[ ++i ] );
-                point[2] = atof( argv[ ++i ] );
-            } else {
-                Error("-debugface requires x y z coordinates\n");
-            }
-            
-            VectorCopy(point, dump_face_point);
+            ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
             PrintUsage();
