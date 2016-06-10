@@ -86,6 +86,8 @@ typedef struct faceinfo_s {
     
     int content;
     plane_t plane;
+    
+    const char *texturename;
 } faceinfo_t;
 
 static tnode_t *tnodes;
@@ -277,6 +279,8 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
     info->radiusSquared = maxRadiusSq;
     
     info->content = Face_Contents(bsp, face);
+    
+    info->texturename = Face_TextureName(bsp, face);
     
 #if 0
     //test
@@ -712,10 +716,16 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
             int facenum = face - bsp_static->dfaces;
             const faceinfo_t *fi = &faceinfos[facenum];
             
-            // TODO: handle -fence here
+            // check fence
+            bool passedThroughFence = false;
+            if (fi->texturename[0] == '{') {
+                int sample = SampleTexture(face, bsp_static, mid);
+                passedThroughFence = (sample = 255);
+            }
             
             // only solid and sky faces stop the trace.
-            if (fi->content == CONTENTS_SOLID || fi->content == CONTENTS_SKY) {
+            if (!passedThroughFence &&
+                (fi->content == CONTENTS_SOLID || fi->content == CONTENTS_SKY)) {
                 ti->face = face;
                 ti->hitsky = (fi->content == CONTENTS_SKY);
                 VectorCopy(fi->plane.normal, ti->hitplane.normal);
