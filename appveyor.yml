@@ -1,3 +1,7 @@
+platform:
+- x86
+- x64
+
 version: 1.0.{build}
 build_script:
 - ps: >-
@@ -7,7 +11,7 @@ build_script:
 
     cd cmakebuild
 
-    cmake ..
+    cmake .. -DCMAKE_GENERATOR_PLATFORM=$env:platform
 
     msbuild PACKAGE.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 artifacts:
