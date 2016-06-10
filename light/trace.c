@@ -95,6 +95,7 @@ static tnode_t *tnode_p;
 static const bsp2_t *bsp_static;
 
 static faceinfo_t *faceinfos;
+static bool *fence_dmodels; // bsp_static->nummodels bools, true if model contains a fence texture
 
 // from hmap2
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
@@ -303,18 +304,40 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 #endif
 }
 
+static bool
+Model_HasFence(const bsp2_t *bsp, const dmodel_t *model)
+{
+    for (int j = model->firstface; j < model->firstface + model->numfaces; j++) {
+        const bsp2_dface_t *face = &bsp->dfaces[j];
+        if (Face_TextureName(bsp, face)[0] == '{') {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void
+MakeFenceInfo(const bsp2_t *bsp)
+{
+    fence_dmodels = calloc(bsp->nummodels, sizeof(bool));
+    for (int i = 0; i < bsp->nummodels; i++) {
+        fence_dmodels[i] = Model_HasFence(bsp, &bsp->dmodels[i]);
+    }
+}
+
 void
 MakeTnodes(const bsp2_t *bsp)
 {
-    int i;
     bsp_static = bsp;
     tnode_p = tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
-    for (i = 0; i < bsp->nummodels; i++)
+    for (int i = 0; i < bsp->nummodels; i++)
         MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
     
     faceinfos = malloc(bsp->numfaces * sizeof(faceinfo_t));
-    for (i = 0; i < bsp->numfaces; i++)
+    for (int i = 0; i < bsp->numfaces; i++)
         MakeFaceInfo(bsp, &bsp->dfaces[i], &faceinfos[i]);
+    
+    MakeFenceInfo(bsp);
 }
 
 /*
@@ -448,8 +471,18 @@ TraceLine(const dmodel_t *model, const int traceflags,
     tracestack_t *tstack, *crossnode;
     tnode_t *tnode;
     
-    // TODO: if -fence mode is enabled, and model is not the world,
-    // instead test with TraceFaces
+    // Special case for bmodels with fence textures
+    const int modelnum = model - &bsp_static->dmodels[0];
+    if (modelnum != 0 && fence_dmodels[modelnum]) {
+        traceinfo_t ti = {0};
+        bool hit = TraceFaces(&ti, model->headnode[0], start, stop);
+        if (hit && ti.hitsky && (traceflags & TRACE_HIT_SKY)) {
+            return TRACE_HIT_SKY;
+        } else if (hit && !ti.hitsky && (traceflags & TRACE_HIT_SOLID)) {
+            return TRACE_HIT_SOLID;
+        }
+        return TRACE_HIT_NONE;
+    }
     
 //    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
     
@@ -719,8 +752,10 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
             // check fence
             bool passedThroughFence = false;
             if (fi->texturename[0] == '{') {
-                int sample = SampleTexture(face, bsp_static, mid);
-                passedThroughFence = (sample = 255);
+                const int sample = SampleTexture(face, bsp_static, mid);
+                if (sample == 255) {
+                    passedThroughFence = true;
+                }
             }
             
             // only solid and sky faces stop the trace.
