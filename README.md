@@ -26,8 +26,7 @@ Included utilities:
 
  - qbsp    - Used for turning a .map file into a playable .bsp file.
 
- - light   - Used for lighting a level after the bsp stage.
-            This util was previously known as TyrLite
+ - light   - Used for lighting a level after the bsp stage. This util was previously known as TyrLite
 
  - vis     - Creates the potentially visible set (PVS) for a bsp.
 
@@ -57,6 +56,16 @@ cd build
 cmake ..
 make
 ```
+## Credits
+
+- Kevin Shanahan (AKA Tyrann) for the original [tyrutils](http://disenchant.net/utils)
+- id Software (original release of these tools is at https://github.com/id-Software/quake-tools) 
+- rebb (ambient occlusion, qbsp improvements)
+- q3map2 authors (AO, sunlight2, penumbra, deviance are from [q3map2](https://github.com/TTimo/GtkRadiant/tree/master/tools/quake3/q3map2))
+- Spike (hexen 2 support, phong shading, various features)
+- MH (surface lights based on MHColour)
+- mfx, sock, Lunaran (testing)
+- Thanks to users at [func_msgboard](http://www.celephais.net/board/forum.php) for feedback and testing
 
 ## License
 
