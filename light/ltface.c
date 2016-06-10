@@ -604,7 +604,7 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             
             vec3_t hitpoint = {0};
             plane_t hitplane = {0};
-            if (DirtTrace(surf->midpoint, testpoint, surf->modelinfo->model, true, hitpoint, &hitplane, NULL)) {
+            if (DirtTrace(surf->midpoint, testpoint, surf->modelinfo->model, hitpoint, &hitplane, NULL)) {
                 // make a corrected point
                 
                 vec3_t tracedir;
@@ -1869,7 +1869,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             VectorMA( origin, dirtDepth.value, direction, traceEnd );
 
             /* trace */
-            if (DirtTrace(origin, traceEnd, model, false, traceHitpoint, NULL, NULL)) {
+            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
                 VectorSubtract( traceHitpoint, origin, displacement );
                 gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
@@ -1886,7 +1886,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             VectorMA( origin, dirtDepth.value, direction, traceEnd );
             
             /* trace */
-            if (DirtTrace(origin, traceEnd, model, false, traceHitpoint, NULL, NULL)) {
+            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
                 VectorSubtract( traceHitpoint, origin, displacement );
                 gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
@@ -1897,7 +1897,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     VectorMA( origin, dirtDepth.value, normal, traceEnd );
     
     /* trace */
-    if (DirtTrace(origin, traceEnd, model, false, traceHitpoint, NULL, NULL)) {
+    if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
         VectorSubtract( traceHitpoint, origin, displacement );
         gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
     }

@@ -30,8 +30,6 @@ typedef struct traceinfo_s {
     vec3_t			point;
     const bsp2_dface_t          *face;
     plane_t  hitplane;
-    bool option_cull_backface;
-    
     /* returns true if sky was hit. */
     bool hitsky;
     bool hitback;
@@ -655,18 +653,13 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
  *
  * returns true if the trace from start to stop hits something solid,
  * or if it started in the void.
- *
- * cull_backfaces is a hack used by CalcPoints, to handle the case when a
- * shadow-casting bmodel is obstructing the midpoint of a face.
- * probably should be removed and CalcPoints made more robust.
  * ============
  */
 qboolean
-DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, bool cull_backfaces, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     const modelinfo_t *const *model;
     traceinfo_t ti = {0};
-    ti.option_cull_backface = cull_backfaces;
     
     VectorSubtract(stop, start, ti.dir);
     VectorNormalize(ti.dir);
@@ -776,9 +769,7 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
                 // check if we hit the back side
                 ti->hitback = (DotProduct(ti->dir, fi->plane.normal) >= 0);
                 
-                if (!(ti->option_cull_backface && ti->hitback)) {
-                    return true;
-                }
+                return true;
             }
         }
 

@@ -42,7 +42,7 @@ extern "C" {
  */
 qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, bool cull_backfaces, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 
 int
 SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
