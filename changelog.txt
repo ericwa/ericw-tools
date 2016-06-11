@@ -1,3 +1,19 @@
+2016-06-10 TyrUtils-ericw 0.15.5 release
+
+New features:
+
+- light: bounce, phong shading, projected textures (see "_project_texture" key)
+- light: use vis data to accelerate lighting
+- light: "_minlight_exclude" key to exclude a texture from receiving minlight
+- light: add "_sun2" "_sun2_color" "_sun2_mangle" which creates a second sun
+         (unrelated to "_sunlight2" which is the sky dome light)
+- vis: support .prt files written by bjptools-xt
+- qbsp: add -objexport flag
+
+Bugfixes:
+
+- vis: fix ambient sounds when using func_detail, broken in tyrutils-ericw-v0.15.3
+
 2015-12-10 TyrUtils-ericw 0.15.4 release
 
 New features:
