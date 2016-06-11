@@ -42,6 +42,8 @@ r_lightmap $showlightmap
 r_drawviewmodel 0
 r_drawentities 0
 viewsize 120
+fov 110
+gamma 1
 wait
 wait
 wait
@@ -51,7 +53,7 @@ quit
 EOF
 
     #launch quake
-    $QUAKE_EXE -basedir $QUAKEDIR -nolauncher -window -width 1024 -height 768 -game tyrutils-screenshots
+    $QUAKE_EXE -basedir $QUAKEDIR -nolauncher -window -width 1024 -height 768 -fsaa 8 -game tyrutils-screenshots
 
     #convert the screenshot to jpg
     convert $QUAKEDIR/tyrutils-screenshots/spasm0000.tga $imagename
@@ -100,16 +102,11 @@ make_screenshot phong_0_normals.jpg "$PHONG_MAP" "-phongdebug -phong 0" "$PHONG_
 
 # bounce
 
-BOUNCE_POS="1186 -1926 2601 20 144 0"
+BOUNCE_POS="1043 -1704 2282 12 134 0"
 BOUNCE_MAP="ad_azad.map"
 
 make_screenshot bouncescale0.0.jpg "$BOUNCE_MAP" "" "$BOUNCE_POS" 1
 make_screenshot bouncescale0.5.jpg "$BOUNCE_MAP" "-bounce -bouncescale 0.5" "$BOUNCE_POS" 1
 make_screenshot bouncescale1.0.jpg "$BOUNCE_MAP" "-bounce -bouncescale 1" "$BOUNCE_POS" 1
 make_screenshot bouncescale2.0.jpg "$BOUNCE_MAP" "-bounce -bouncescale 2" "$BOUNCE_POS" 1
-
-make_screenshot bouncescale0.0_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 0" "$BOUNCE_POS" 1
-make_screenshot bouncescale0.5_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 0.5" "$BOUNCE_POS" 1
-make_screenshot bouncescale1.0_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 1" "$BOUNCE_POS" 1
-make_screenshot bouncescale2.0_debug.jpg "$BOUNCE_MAP" "-bounce -bouncedebug -bouncescale 2" "$BOUNCE_POS" 1
 
