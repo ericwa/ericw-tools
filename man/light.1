@@ -92,6 +92,18 @@ Writes rgb data into the bsp itself.
 Writes both rgb and directions data into the bsp itself.
 .IP "\fB\-novanilla\fP
 Fallback scaled lighting will be omitted. Standard grey lighting will be ommitted if there are coloured lights. Implies "-bspxlit". "-lit" will no longer be implied by the presence of coloured lights.
+.IP "\fB\-bounce n\fP"
+Enables 1 bounce, 0=disable even if set in worldspawn. Available as a worldspawn key.
+.IP "\fB\-bouncescale n\fP"
+Scales brightness of bounce lighting, default 1. Available as a worldspawn key.
+.IP "\fB\-bouncecolorscale n\fP"
+Weight for bounce lighting to use texture colors from the map: 0=ignore map textures (default), 1=multiply bounce light color by texture color. Available as a worldspawn key.
+.IP "\fB\-phongdebug\fP"
+Write normals to lit file for debugging phong shading.
+.IP "\fB\-bouncedebug\fP"
+Write bounced lighting only to the lightmap for debugging / previewing -bounce.
+.IP "\fB\-novis\fP"
+Disable vis acceleration for debugging.
 
 .SH "MODEL ENTITY KEYS"
 
