@@ -2,7 +2,8 @@
 
 New features:
 
-- light: bounce, phong shading, projected textures (see "_project_texture" key)
+- light: added a better options summary with the -help flag
+- light: added -bounce option, "_phong", "_project_texture" key
 - light: use vis data to accelerate lighting
 - light: "_minlight_exclude" key to exclude a texture from receiving minlight
 - light: add "_sun2" "_sun2_color" "_sun2_mangle" which creates a second sun
