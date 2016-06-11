@@ -2258,8 +2258,10 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     VectorSet(lightsurf->texturecolor, 0, 0, 0);
     for (j = 0; j < lightsurf->numpoints; j++) {
         int palidx = SampleTexture(face, bsp, lightsurf->points[j]);
-        vec3_t texcolor = {thepalette[3*palidx], thepalette[3*palidx + 1], thepalette[3*palidx + 2]};
-        VectorAdd(lightsurf->texturecolor, texcolor, lightsurf->texturecolor);
+        if (palidx >= 0) {
+            vec3_t texcolor = {thepalette[3*palidx], thepalette[3*palidx + 1], thepalette[3*palidx + 2]};
+            VectorAdd(lightsurf->texturecolor, texcolor, lightsurf->texturecolor);
+        }
     }
     VectorScale(lightsurf->texturecolor, 1.0f/lightsurf->numpoints, lightsurf->texturecolor);
     

@@ -383,6 +383,9 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
     byte *data;
     int sample;
 
+    if (!bsp->texdatasize)
+        return -1;
+    
     tex = &bsp->texinfo[face->texinfo];
 
     WorldToTexCoord(point, tex, texcoord);
