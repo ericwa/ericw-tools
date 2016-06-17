@@ -49,12 +49,12 @@ Tested on:
  - OS X 10.11 / Xcode 7.3
  - Windows 10 / Visual Studio 2015 Community
 
-Typical Unix build command:
+Typical build command:
 ```
 mkdir build
 cd build
 cmake ..
-make
+cmake --build . --config Release
 ```
 ## Credits
 
