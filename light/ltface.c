@@ -604,7 +604,10 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             
             vec3_t hitpoint = {0};
             plane_t hitplane = {0};
-            if (DirtTrace(surf->midpoint, testpoint, surf->modelinfo->model, hitpoint, &hitplane, NULL)) {
+            
+            const dmodel_t *selfshadow = (surf->modelinfo->shadowself) ? surf->modelinfo->model : NULL;
+            
+            if (DirtTrace(surf->midpoint, testpoint, selfshadow, hitpoint, &hitplane, NULL)) {
                 // make a corrected point
                 
                 vec3_t tracedir;
@@ -1917,8 +1920,9 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
 static void
 LightFace_CalculateDirt(lightsurf_t *lightsurf)
 {
+    const dmodel_t *selfshadow = lightsurf->modelinfo->shadowself ? lightsurf->modelinfo->model : NULL;
     for (int i = 0; i < lightsurf->numpoints; i++) {
-        lightsurf->occlusion[i] = DirtForSample(lightsurf->modelinfo->model, lightsurf->points[i], lightsurf->normals[i]);
+        lightsurf->occlusion[i] = DirtForSample(selfshadow, lightsurf->points[i], lightsurf->normals[i]);
     }
 }
 

@@ -26,6 +26,11 @@
 
 #include <common/polylib.h>
 
+#ifdef HAVE_EMBREE
+#include <xmmintrin.h>
+#include <pmmintrin.h>
+#endif
+
 #include <vector>
 #include <map>
 #include <unordered_map>
@@ -96,6 +101,7 @@ int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean novis = false; /* if true, don't use vis data */
+backend_t rtbackend = backend_embree;
 debugmode_t debugmode = debugmode_none;
 
 uint32_t *extended_texinfo_flags = NULL;
@@ -168,6 +174,11 @@ LightThread(void *arg)
     const bsp2_t *bsp = (const bsp2_t *)arg;
     const modelinfo_t *face_modelinfo;
     struct ltface_ctx *ctx;
+
+#ifdef HAVE_EMBREE
+    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
 
     while (1) {
         facenum = GetThreadWork();
@@ -1341,6 +1352,15 @@ static bool ParseIntOptional(int *result, int *i_inout, int argc, const char **a
     }
 }
 
+static const char *ParseStringOptional(int *i_inout, int argc, const char **argv)
+{
+    if ((*i_inout + 1) < argc) {
+        return argv[ ++(*i_inout) ];
+    } else {
+        return NULL;
+    }
+}
+
 static void ParseVec3(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
 {
     if (!ParseVec3Optional(vec3_out, i_inout, argc, argv)) {
@@ -1364,6 +1384,15 @@ static int ParseInt(int *i_inout, int argc, const char **argv)
     if (!ParseIntOptional(&result, i_inout, argc, argv)) {
         Error("%s requires 1 integer argument\n", argv[ *i_inout ]);
         return 0;
+    }
+    return result;
+}
+
+static const char *ParseString(int *i_inout, int argc, const char **argv)
+{
+    const char *result = NULL;
+    if (!(result = ParseStringOptional(i_inout, argc, argv))) {
+        Error("%s requires 1 string argument\n", argv[ *i_inout ]);
     }
     return result;
 }
@@ -1569,6 +1598,15 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-novis" ) ) {
             novis = true;
             logprint( "Skipping use of vis data to optimize lighting\n" );
+        } else if ( !strcmp( argv[ i ], "-backend" ) ) {
+            const char *requested = ParseString(&i, argc, argv);
+            if (!strcmp(requested, "bsp")) {
+                rtbackend = backend_bsp;
+            } else if (!strcmp(requested, "embree")) {
+                rtbackend = backend_embree;
+            } else {
+                Error("unknown backend %s", requested);
+            }
         } else if ( !strcmp( argv[ i ], "-debugface" ) ) {
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
@@ -1626,6 +1664,18 @@ main(int argc, const char **argv)
         exit(1);
     }
 
+#ifndef HAVE_EMBREE
+    if (rtbackend == backend_embree) {
+        rtbackend = backend_bsp;
+    }
+#endif
+    
+    logprint("Raytracing backend: ");
+    switch (rtbackend) {
+        case backend_bsp: logprint("BSP\n"); break;
+        case backend_embree: logprint("Embree\n"); break;
+    }
+    
     if (numthreads > 1)
         logprint("running with %d threads\n", numthreads);
 

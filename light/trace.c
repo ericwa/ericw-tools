@@ -326,7 +326,7 @@ MakeFenceInfo(const bsp2_t *bsp)
 }
 
 void
-MakeTnodes(const bsp2_t *bsp)
+BSP_MakeTnodes(const bsp2_t *bsp)
 {
     bsp_static = bsp;
     tnode_p = tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
@@ -593,8 +593,8 @@ TraceLine(const dmodel_t *model, const int traceflags,
     }
 }
 
-qboolean
-TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
+static qboolean
+BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 {
     const modelinfo_t *const *model;
     const int traceflags = TRACE_HIT_SOLID;
@@ -616,8 +616,8 @@ TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
     return (result == TRACE_HIT_NONE);
 }
 
-qboolean
-TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
+static qboolean
+BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 {
     const modelinfo_t *const *model;
     int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
@@ -659,7 +659,7 @@ TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
  * ============
  */
 qboolean
-DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+BSP_DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     const modelinfo_t *const *model;
     traceinfo_t ti = {0};
@@ -781,4 +781,63 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
         // go down back side
         return TraceFaces (ti, tnode->children[front >= 0], mid, end);
     }
+}
+
+//
+// Embree wrappers
+//
+
+qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
+{
+#ifdef HAVE_EMBREE
+    if (rtbackend == backend_embree) {
+        return Embree_TestSky(start, dirn, self);
+    }
+#endif
+    if (rtbackend == backend_bsp) {
+        return BSP_TestSky(start, dirn, self);
+    }
+    Error("no backend available");
+}
+
+qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
+{
+#ifdef HAVE_EMBREE
+    if (rtbackend == backend_embree) {
+        return Embree_TestLight(start, stop, self);
+    }
+#endif
+    if (rtbackend == backend_bsp) {
+        return BSP_TestLight(start, stop, self);
+    }
+    Error("no backend available");
+}
+
+
+qboolean DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+{
+#ifdef HAVE_EMBREE
+    if (rtbackend == backend_embree) {
+        return Embree_DirtTrace(start, stop, self, hitpoint_out, hitplane_out, face_out);
+    }
+#endif
+    if (rtbackend == backend_bsp) {
+        return BSP_DirtTrace(start, stop, self, hitpoint_out, hitplane_out, face_out);
+    }
+    Error("no backend available");
+}
+
+void MakeTnodes(const bsp2_t *bsp)
+{
+#ifdef HAVE_EMBREE
+    if (rtbackend == backend_embree) {
+        Embree_TraceInit(bsp);
+        return;
+    }
+#endif
+    if (rtbackend == backend_bsp) {
+        BSP_MakeTnodes(bsp);
+        return;
+    }
+    Error("no backend available");
 }
