@@ -58,6 +58,9 @@ if (MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 endif (MSVC)
 
+#minimum version that supports unordered_map
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
+
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)
