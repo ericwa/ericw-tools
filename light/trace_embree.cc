@@ -24,6 +24,8 @@
 #include <cassert>
 #include <limits>
 
+static constexpr float MAX_SKY_RAY_DEPTH = 8192.0f;
+
 /**
  * i is between 0 and face->numedges - 1
  */
@@ -208,7 +210,7 @@ Embree_TraceInit(const bsp2_t *bsp)
         Error("embree must be built with ray masks disabled");
     }
 
-    scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT | RTC_SCENE_HIGH_QUALITY | RTC_SCENE_ROBUST, RTC_INTERSECT1);
+    scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1);
     skygeom = CreateGeometry(bsp, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
     fencegeom = CreateGeometry(bsp, scene, fencefaces);
@@ -279,7 +281,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
     VectorCopy(dirn, dir_normalized);
     VectorNormalize(dir_normalized);
     
-    RTCRay ray = SetupRay(start, dir_normalized, std::numeric_limits<float>::infinity(), self);
+    RTCRay ray = SetupRay(start, dir_normalized, MAX_SKY_RAY_DEPTH, self);
     rtcIntersect(scene, ray);
 
     qboolean hit_sky = (ray.geomID == skygeom.geomID);
