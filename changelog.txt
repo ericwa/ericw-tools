@@ -1,3 +1,7 @@
+2016-06-17 TyrUtils-ericw 0.15.6 release
+
+- rebuild OS X binary as it was built in debug mode by accident
+
 2016-06-10 TyrUtils-ericw 0.15.5 release
 
 New features:
