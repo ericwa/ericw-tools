@@ -79,7 +79,12 @@ IF (TYRUTILS_USE_EMBREE)
 	set(EMBREE_GEOMETRY_USER NO CACHE BOOL "")
 	set(EMBREE_RAY_PACKETS NO CACHE BOOL "")
 
-	add_subdirectory(thirdparty/embree EXCLUDE_FROM_ALL)
+	if(CMAKE_GENERATOR STREQUAL "Xcode")
+		MESSAGE(WARNING "Working around https://gitlab.kitware.com/cmake/cmake/issues/16101 will break CPack. Use the makefile generator for packaging.")
+		add_subdirectory(thirdparty/embree)
+	else()
+		add_subdirectory(thirdparty/embree EXCLUDE_FROM_ALL)
+	endif()
 
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3")
