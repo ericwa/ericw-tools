@@ -24,7 +24,7 @@ build_script:
 
     cmake --build . --config Release
 
-    cpack .
+    cpack
 
 artifacts:
 - path: cmakebuild\*.zip
