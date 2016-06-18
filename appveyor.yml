@@ -23,6 +23,8 @@ build_script:
     }
 
     cmake --build . --config Release
+
     cpack .
+
 artifacts:
 - path: cmakebuild\*.zip
