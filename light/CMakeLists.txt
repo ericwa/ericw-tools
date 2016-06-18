@@ -35,6 +35,7 @@ set_property(TARGET light PROPERTY CXX_STANDARD_REQUIRED ON)
 set_property(TARGET light PROPERTY C_STANDARD 99)
 
 if (TYRUTILS_USE_EMBREE)
+	add_dependencies (light embree)
 	target_link_libraries (light PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)
 	add_definitions(-DENABLE_STATIC_LIB)
