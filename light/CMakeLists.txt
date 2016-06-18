@@ -42,4 +42,6 @@ if (TYRUTILS_USE_EMBREE)
 endif()
 
 install(TARGETS light RUNTIME DESTINATION bin)
+install(FILES ${CMAKE_SOURCE_DIR}/thirdparty/embree/LICENSE.txt DESTINATION bin RENAME LICENSE-embree.txt)
+install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
 
