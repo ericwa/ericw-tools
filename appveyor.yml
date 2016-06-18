@@ -4,6 +4,7 @@ platform:
 
 version: 1.0.{build}
 install:
+- ps: git submodule update --init --recursive
 - ps: Invoke-WebRequest 'https://github.com/embree/embree/releases/download/v2.10.0/embree-2.10.0.x64.windows.zip' -OutFile 'embree64.zip'
 - ps: 7z x embree64.zip -oc:\
 - ps: Invoke-WebRequest 'https://github.com/embree/embree/releases/download/v2.10.0/embree-2.10.0.win32.windows.zip' -OutFile 'embree.zip'
