@@ -1,4 +1,4 @@
-## tyrutils-ericw (v0.15.4)
+## tyrutils-ericw
  - Website:         http://ericwa.github.io/tyrutils-ericw
  - Maintainer:      Eric Wasylishen (AKA ericw)
  - Email:           ewasylishen@gmail.com
