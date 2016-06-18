@@ -53,10 +53,11 @@ Typical build command:
 ```
 mkdir build
 cd build
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release
 cpack .
 ```
+
 ## Credits
 
 - Kevin Shanahan (AKA Tyrann) for the original [tyrutils](http://disenchant.net/utils)
