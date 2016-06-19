@@ -607,7 +607,15 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             
             const dmodel_t *selfshadow = (surf->modelinfo->shadowself) ? surf->modelinfo->model : NULL;
             
-            if (DirtTrace(surf->midpoint, testpoint, selfshadow, hitpoint, &hitplane, NULL)) {
+            vec3_t dirn;
+            VectorSubtract(testpoint, surf->midpoint, dirn);
+            vec_t dist = VectorNormalize(dirn);
+            if (dist == 0.0f) {
+                continue; // testpoint == surf->midpoint
+            }
+            
+            // trace from surf->midpoint to testpoint
+            if (DirtTrace(surf->midpoint, dirn, dist, selfshadow, hitpoint, &hitplane, NULL)) {
                 // make a corrected point
                 
                 vec3_t tracedir;
@@ -1824,7 +1832,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     int i;
     float gatherDirt, angle, elevation, ooDepth;
     vec3_t worldUp, myUp, myRt, temp, direction, displacement;
-    vec3_t traceEnd, traceHitpoint;
+    vec3_t traceHitpoint;
 
     /* dummy check */
     if ( !dirty.value ) {
@@ -1868,11 +1876,8 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 1 ] = myRt[ 1 ] * temp[ 0 ] + myUp[ 1 ] * temp[ 1 ] + normal[ 1 ] * temp[ 2 ];
             direction[ 2 ] = myRt[ 2 ] * temp[ 0 ] + myUp[ 2 ] * temp[ 1 ] + normal[ 2 ] * temp[ 2 ];
 
-            /* set endpoint */
-            VectorMA( origin, dirtDepth.value, direction, traceEnd );
-
             /* trace */
-            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
+            if (DirtTrace(origin, direction, dirtDepth.value, model, traceHitpoint, NULL, NULL)) {
                 VectorSubtract( traceHitpoint, origin, displacement );
                 gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
@@ -1885,22 +1890,16 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 1 ] = myRt[ 1 ] * dirtVectors[ i ][ 0 ] + myUp[ 1 ] * dirtVectors[ i ][ 1 ] + normal[ 1 ] * dirtVectors[ i ][ 2 ];
             direction[ 2 ] = myRt[ 2 ] * dirtVectors[ i ][ 0 ] + myUp[ 2 ] * dirtVectors[ i ][ 1 ] + normal[ 2 ] * dirtVectors[ i ][ 2 ];
 
-            /* set endpoint */
-            VectorMA( origin, dirtDepth.value, direction, traceEnd );
-            
             /* trace */
-            if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
+            if (DirtTrace(origin, direction, dirtDepth.value, model, traceHitpoint, NULL, NULL)) {
                 VectorSubtract( traceHitpoint, origin, displacement );
                 gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
             }
         }
     }
-
-    /* direct ray */
-    VectorMA( origin, dirtDepth.value, normal, traceEnd );
     
     /* trace */
-    if (DirtTrace(origin, traceEnd, model, traceHitpoint, NULL, NULL)) {
+    if (DirtTrace(origin, direction, dirtDepth.value, model, traceHitpoint, NULL, NULL)) {
         VectorSubtract( traceHitpoint, origin, displacement );
         gatherDirt += 1.0f - ooDepth * VectorLength( displacement );
     }

@@ -289,13 +289,9 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
 }
 
 //public
-qboolean Embree_DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+qboolean Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
-    vec3_t dir;
-    VectorSubtract(stop, start, dir);
-    const vec_t dist = VectorNormalize(dir);
-    
-    RTCRay ray = SetupRay(start, dir, dist, self);
+    RTCRay ray = SetupRay(start, dirn, dist, self);
     rtcIntersect(scene, ray);
     
     if (ray.geomID == RTC_INVALID_GEOMETRY_ID
@@ -304,7 +300,7 @@ qboolean Embree_DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t 
     
     // compute hitpoint_out
     if (hitpoint_out) {
-        VectorMA(start, ray.tfar, dir, hitpoint_out);
+        VectorMA(start, ray.tfar, dirn, hitpoint_out);
     }
     if (hitplane_out) {
         for (int i=0; i<3; i++) {
@@ -313,7 +309,7 @@ qboolean Embree_DirtTrace(const vec3_t start, const vec3_t stop, const dmodel_t 
         VectorNormalize(hitplane_out->normal);
         
         vec3_t hitpoint;
-        VectorMA(start, ray.tfar, dir, hitpoint);
+        VectorMA(start, ray.tfar, dirn, hitpoint);
         
         hitplane_out->dist = DotProduct(hitplane_out->normal, hitpoint);
     }
