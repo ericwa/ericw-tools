@@ -659,7 +659,7 @@ BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
  * ============
  */
 qboolean
-BSP_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     vec3_t stop;
     VectorMA(start, dist, dirn, stop);
@@ -669,7 +669,11 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t 
     
     if (self) {
         if (TraceFaces (&ti, self->headnode[0], start, stop)) {
-            VectorCopy(ti.point, hitpoint_out);
+            if (hitdist_out) {
+                vec3_t delta;
+                VectorSubtract(ti.point, start, delta);
+                *hitdist_out = VectorLength(delta);
+            }
             if (hitplane_out) {
                 *hitplane_out = ti.hitplane;
             }
@@ -686,7 +690,11 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t 
         if ((*model)->model == self)
             continue;
         if (TraceFaces (&ti, (*model)->model->headnode[0], start, stop)) {
-            VectorCopy(ti.point, hitpoint_out);
+            if (hitdist_out) {
+                vec3_t delta;
+                VectorSubtract(ti.point, start, delta);
+                *hitdist_out = VectorLength(delta);
+            }
             if (hitplane_out) {
                 *hitplane_out = ti.hitplane;
             }
@@ -815,15 +823,15 @@ qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 }
 
 
-qboolean DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+qboolean DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
-        return Embree_DirtTrace(start, dirn, dist, self, hitpoint_out, hitplane_out, face_out);
+        return Embree_DirtTrace(start, dirn, dist, self, hitdist_out, hitplane_out, face_out);
     }
 #endif
     if (rtbackend == backend_bsp) {
-        return BSP_DirtTrace(start, dirn, dist, self, hitpoint_out, hitplane_out, face_out);
+        return BSP_DirtTrace(start, dirn, dist, self, hitdist_out, hitplane_out, face_out);
     }
     Error("no backend available");
 }

@@ -289,7 +289,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
 }
 
 //public
-qboolean Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec3_t hitpoint_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+qboolean Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     RTCRay ray = SetupRay(start, dirn, dist, self);
     rtcIntersect(scene, ray);
@@ -298,9 +298,8 @@ qboolean Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, con
         || ray.geomID == skygeom.geomID)
         return false;
     
-    // compute hitpoint_out
-    if (hitpoint_out) {
-        VectorMA(start, ray.tfar, dirn, hitpoint_out);
+    if (hitdist_out) {
+        *hitdist_out = ray.tfar;
     }
     if (hitplane_out) {
         for (int i=0; i<3; i++) {
