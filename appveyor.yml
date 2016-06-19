@@ -12,9 +12,9 @@ build_script:
     cd cmakebuild
 
     If ($env:Platform -Match "x64") {
-      cmake .. -DCMAKE_GENERATOR_PLATFORM=x64
+      cmake .. -T v140_xp -DCMAKE_GENERATOR_PLATFORM=x64
     } Else {
-      cmake ..
+      cmake .. -T v140_xp
     }
 
     msbuild PACKAGE.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
