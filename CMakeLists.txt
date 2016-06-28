@@ -61,35 +61,6 @@ endif (MSVC)
 #minimum version that supports unordered_map
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 
-OPTION(TYRUTILS_USE_EMBREE "Use embree raytracing backend" ON)
-
-IF (TYRUTILS_USE_EMBREE)
-	MESSAGE(STATUS "Using embree")
-
-	set(EMBREE_ISPC_SUPPORT NO CACHE BOOL "")
-	set(EMBREE_STATIC_LIB YES CACHE BOOL "")
-	set(EMBREE_TUTORIALS NO CACHE BOOL "")
-	set(EMBREE_TASKING_SYSTEM INTERNAL CACHE STRING "")
-	set(EMBREE_MAX_ISA SSE3 CACHE STRING "")
-	set(EMBREE_GEOMETRY_TRIANGLES YES CACHE BOOL "")
-	set(EMBREE_GEOMETRY_QUADS NO CACHE BOOL "")
-	set(EMBREE_GEOMETRY_LINES NO CACHE BOOL "")
-	set(EMBREE_GEOMETRY_HAIR NO CACHE BOOL "")
-	set(EMBREE_GEOMETRY_SUBDIV NO CACHE BOOL "")
-	set(EMBREE_GEOMETRY_USER NO CACHE BOOL "")
-	set(EMBREE_RAY_PACKETS NO CACHE BOOL "")
-
-	if(CMAKE_GENERATOR STREQUAL "Xcode")
-		MESSAGE(WARNING "Working around https://gitlab.kitware.com/cmake/cmake/issues/16101 will break CPack. Use the makefile generator for packaging.")
-		add_subdirectory(thirdparty/embree)
-	else()
-		add_subdirectory(thirdparty/embree EXCLUDE_FROM_ALL)
-	endif()
-
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse3")
-ENDIF()
-
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)
