@@ -25,7 +25,7 @@ set(LIGHT_SOURCES
 FIND_PACKAGE(embree 2.0)
 
 if (embree_FOUND)
-	MESSAGE(STATUS "Embree found")
+	MESSAGE(STATUS "Embree library found: ${EMBREE_LIBRARY}")
 	INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
 	set(LIGHT_SOURCES
 		trace_embree.cc
