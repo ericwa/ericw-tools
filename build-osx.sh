@@ -11,6 +11,7 @@ if [ -d "$BUILD_DIR" ]; then
   exit 1
 fi
 
+mkdir "$BUILD_DIR"
 cd "$BUILD_DIR"
 wget "$EMBREE_TGZ"
 tar xf "$EMBREE_TGZ_NAME"
