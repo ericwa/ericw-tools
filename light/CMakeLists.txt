@@ -42,24 +42,42 @@ set_property(TARGET light PROPERTY C_STANDARD 99)
 if (embree_FOUND)
 	target_link_libraries (light ${EMBREE_LIBRARY})
 	add_definitions(-DHAVE_EMBREE)
+	
+	set(EMBREE_LICENSE "${embree_DIR}/../../../doc/LICENSE.txt")
+
 	if(WIN32)
 		file(GLOB EMBREE_DLLS "${embree_DIR}/../../*.dll")
 		foreach(EMBREE_DLL ${EMBREE_DLLS})
 			add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_DLL} $<TARGET_FILE_DIR:light>)
 		endforeach(EMBREE_DLL)
 		
-		set(EMBREE_LICENSE "${embree_DIR}/../../../doc/LICENSE.txt")
 		add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_LICENSE} $<TARGET_FILE_DIR:light>/LICENSE-embree.txt)
+
+		install(FILES ${EMBREE_DLLS} DESTINATION bin)
 	endif()
+	if(APPLE)
+		file(GLOB EMBREE_DYLIBS_WITH_SYMLINKS "${embree_DIR}/../../*.dylib")
+
+		# Gather all .dylib's that are not symlinks
+		foreach(EMBREE_DYLIB ${EMBREE_DYLIBS_WITH_SYMLINKS})
+			if(NOT IS_SYMLINK ${EMBREE_DYLIB})
+				list(APPEND EMBREE_DYLIBS ${EMBREE_DYLIB})
+			endif()
+		endforeach()
+
+		foreach(EMBREE_DYLIB ${EMBREE_DYLIBS})
+			message(STATUS "Copying dylib: ${EMBREE_DYLIB}")
+			add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_DYLIB} $<TARGET_FILE_DIR:light>)
+		endforeach()
+
+		# so the executable will search for dylib's in the same directory as the executable 
+		add_custom_command(TARGET light POST_BUILD COMMAND install_name_tool ARGS -add_rpath @loader_path $<TARGET_FILE:light>)
+
+		install(FILES ${EMBREE_DYLIBS} DESTINATION bin)
+	endif()
+
+	install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
 endif(embree_FOUND)
 
 install(TARGETS light RUNTIME DESTINATION bin)
-
-if (embree_FOUND)
-	if(WIN32)
-		install(FILES ${EMBREE_DLLS} DESTINATION bin)
-		install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
-	endif()
-endif(embree_FOUND)
-
 install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
