@@ -71,7 +71,7 @@ if (embree_FOUND)
 		endforeach()
 
 		# so the executable will search for dylib's in the same directory as the executable 
-		add_custom_command(TARGET light POST_BUILD COMMAND install_name_tool ARGS -add_rpath @loader_path $<TARGET_FILE:light>)
+		add_custom_command(TARGET light POST_BUILD COMMAND bash ARGS -c "install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true")
 
 		install(FILES ${EMBREE_DYLIBS} DESTINATION bin)
 	endif()
