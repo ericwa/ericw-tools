@@ -1300,12 +1300,21 @@ static void PrintUsage()
 static bool ParseVec3Optional(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
 {
     if ((*i_inout + 3) < argc) {
-        // negative numbers are rejected, they would be confused with flags.
-        if (!isdigit(argv[*i_inout + 1][0])
-            || !isdigit(argv[*i_inout + 2][0])
-            || !isdigit(argv[*i_inout + 3][0])) {
-            return false;
+        const int start = (*i_inout + 1);
+        const int end = (*i_inout + 3);
+        
+        // validate that there are 3 numbers
+        for (int j=start; j <= end; j++) {
+            if (argv[j][0] == '-' && isdigit(argv[j][1])) {
+                continue; // accept '-' followed by a digit for negative numbers
+            }
+            
+            // otherwise, reject if the first character is not a digit
+            if (!isdigit(argv[j][0])) {
+                return false;
+            }
         }
+
         vec3_out[0] = atof( argv[ ++(*i_inout) ] );
         vec3_out[1] = atof( argv[ ++(*i_inout) ] );
         vec3_out[2] = atof( argv[ ++(*i_inout) ] );
