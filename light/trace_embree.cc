@@ -188,6 +188,8 @@ Embree_TraceInit(const bsp2_t *bsp)
                 skyfaces.push_back(face);
             } else if (texname[0] == '{') {
                 fencefaces.push_back(face);
+            } else if (texname[0] == '*') {
+                // ignore liquids
             } else {
                 solidfaces.push_back(face);
             }
