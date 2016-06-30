@@ -846,6 +846,11 @@ FindLights()
         if (totallights == MAX_LIGHTS) {
             Error("totallights == MAX_LIGHTS");
         }
+        if (!strcmp(entity->classname, "worldspawn")) {
+            // HACK: workaround https://github.com/ericwa/tyrutils-ericw/issues/67
+            // LoadEntities and FindLights need to be completely rewritten.
+            continue;
+        }
         if (entity->light.light != 0) {
             lights[totallights++] = entity;
         }
