@@ -4,7 +4,7 @@ set -x
 
 LIGHT_EXE=~/dev/tyrutils/build-ninja/light/light
 QUAKEDIR=~/quake
-QUAKE_EXE=~/Library/Developer/Xcode/DerivedData/QuakeSpasm-alpgyufxkvrsawhefxaskvlihpyd/Build/Products/Debug/QuakeSpasm-SDL2.app/Contents/MacOS/QuakeSpasm-SDL2
+QUAKE_EXE=~/quake/QuakeSpasm-SDL2.app/Contents/MacOS/QuakeSpasm
 
 imagename="$1"
 mapname="$2"
