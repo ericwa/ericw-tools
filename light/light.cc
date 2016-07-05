@@ -1791,7 +1791,7 @@ main(int argc, const char **argv)
         ConvertBSPFormat(loadversion, &bspdata);
     WriteBSPFile(source, &bspdata);
     end = I_FloatTime();
-    logprint("%5.1f seconds elapsed\n", end - start);
+    logprint("%5.3f seconds elapsed\n", end - start);
 
     close_log();
 
