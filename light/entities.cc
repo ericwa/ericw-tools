@@ -839,7 +839,7 @@ SetupLightLeafnums(const bsp2_t *bsp)
 void
 LoadEntities(const bsp2_t *bsp)
 {
-    char *data;
+    const char *data;
     entity_t *entity;
     char key[MAX_ENT_KEY];
     vec3_t vec, projangle;

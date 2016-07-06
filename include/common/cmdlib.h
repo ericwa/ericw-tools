@@ -127,7 +127,7 @@ float BigFloat(float l);
 float LittleFloat(float l);
 
 
-char *COM_Parse(char *data);
+const char *COM_Parse(const char *data);
 
 extern char com_token[1024];
 extern qboolean com_eof;

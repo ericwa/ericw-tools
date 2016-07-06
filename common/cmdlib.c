@@ -263,8 +263,8 @@ FileTime(const char *path)
  * Parse a token out of a string
  * ==============
  */
-char *
-COM_Parse(char *data)
+const char *
+COM_Parse(const char *data)
 {
     int c;
     int len;
