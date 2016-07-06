@@ -20,17 +20,14 @@
 #ifndef __LIGHT_ENTITIES_H__
 #define __LIGHT_ENTITIES_H__
 
+#include <map>
+#include <string>
+
 #include <common/mathlib.h>
 #include <common/bspfile.h>
 #include <light/light.hh>
 
 #define DEFAULTLIGHTLEVEL 300
-
-typedef struct epair_s {
-    struct epair_s *next;
-    char key[MAX_ENT_KEY];
-    char value[MAX_ENT_VALUE];
-} epair_t;
 
 /*
  * Light attenuation formalae
@@ -89,7 +86,9 @@ typedef struct entity_s {
 
     char target[MAX_ENT_VALUE];
     char targetname[MAX_ENT_VALUE];
-    struct epair_s *epairs;
+    
+    std::map<std::string, std::string> epairs;
+    
     const struct entity_s *targetent;
 
     qboolean generated;     // if true, don't write to the bsp

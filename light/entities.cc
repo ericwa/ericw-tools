@@ -66,18 +66,7 @@ static char lighttargets[MAX_LIGHT_TARGETS][MAX_ENT_VALUE];
 static void
 SetKeyValue(entity_t *ent, const char *key, const char *value)
 {
-    epair_t *ep;
-
-    for (ep = ent->epairs; ep; ep = ep->next)
-        if (!strcmp(ep->key, key)) {
-            strcpy(ep->value, value);
-            return;
-        }
-    ep = (epair_t *) malloc(sizeof(*ep));
-    ep->next = ent->epairs;
-    ent->epairs = ep;
-    strcpy(ep->key, key);
-    strcpy(ep->value, value);
+    ent->epairs[key] = value;
 }
 
 static entity_t *WorldEnt()
@@ -577,15 +566,8 @@ Entities_Insert(entity_t *entity)
 static entity_t *
 DuplicateEntity(const entity_t *src)
 {
-    epair_t *ep;
-    entity_t *entity = (entity_t *)malloc(sizeof(entity_t));
-    memcpy(entity, src, sizeof(entity_t));
-    
-    /* also copy epairs */
-    entity->epairs = NULL;
-    for (ep = src->epairs; ep; ep = ep->next)
-        SetKeyValue(entity, ep->key, ep->value);
-    
+    entity_t *entity = new entity_t {*src};
+
     /* also insert into the entity list */
     entity->next = NULL;
     Entities_Insert(entity);
@@ -873,7 +855,6 @@ LoadEntities(const bsp2_t *bsp)
     char *data;
     entity_t *entity;
     char key[MAX_ENT_KEY];
-    epair_t *epair;
     vec3_t vec, projangle;
     vec_t projfov;
     qboolean projangleknown;
@@ -895,8 +876,8 @@ LoadEntities(const bsp2_t *bsp)
             Error("%s: found %s when expecting {", __func__, com_token);
 
         /* Allocate a new entity */
-        entity = (entity_t *)malloc(sizeof(entity_t));
-        memset(entity, 0, sizeof(*entity));
+        entity = new entity_t;
+        
         Entities_Insert(entity);
 
         /* Init some fields... */
@@ -938,12 +919,7 @@ LoadEntities(const bsp2_t *bsp)
                 logprint("lightmap_scale should be _lightmap_scale\n");
             }
 
-            epair = (epair_t *) malloc(sizeof(epair_t));
-            memset(epair, 0, sizeof(epair_t));
-            strcpy(epair->key, key);
-            strcpy(epair->value, com_token);
-            epair->next = entity->epairs;
-            entity->epairs = epair;
+            entity->epairs[key] = com_token;
 
             if (!strcmp(key, "classname"))
                 strcpy(entity->classname, com_token);
@@ -1340,27 +1316,27 @@ SetupLights(const bsp2_t *bsp)
 const char *
 ValueForKey(const entity_t *ent, const char *key)
 {
-    epair_t *ep;
-
-    for (ep = ent->epairs; ep; ep = ep->next)
-        if (!strcmp(ep->key, key))
-            return ep->value;
-    return "";
+    auto iter = ent->epairs.find(key);
+    if (iter != ent->epairs.end()) {
+        return (*iter).second.c_str();
+    } else {
+        return "";
+    }
 }
 
 entity_t *
 FindEntityWithKeyPair(const char *key, const char *value)
 {
     entity_t *ent;
-    epair_t *ep;
+    std::string value_stdstring { value };
 
     for (ent = entities; ent; ent = ent->next) {
-        for (ep = ent->epairs; ep; ep = ep->next)
-            if (!strcmp(ep->key, key)) {
-                if (!strcmp(ep->value, value))
-                    return ent;
-                break;
+        auto iter = ent->epairs.find(key);
+        if (iter != ent->epairs.end()) {
+            if ((*iter).second == value_stdstring) {
+                return ent;
             }
+        }
     }
     return NULL;
 }
@@ -1378,19 +1354,18 @@ static size_t
 Get_EntityStringSize(const entity_t *entities)
 {
     const entity_t *entity;
-    const epair_t *epair;
     size_t size;
 
     size = 0;
     for (entity = entities; entity; entity = entity->next) {
-        if (!entity->epairs)
+        if (!entity->epairs.size())
             continue;
         if (entity->generated)
             continue;
         size += 2; /* "{\n" */
-        for (epair = entity->epairs; epair; epair = epair->next) {
+        for (auto epair : entity->epairs) {
             /* 6 extra chars for quotes, space and newline */
-            size += strlen(epair->key) + strlen(epair->value) + 6;
+            size += strlen(epair.first.c_str()) + strlen(epair.second.c_str()) + 6;
         }
         size += 2; /* "}\n" */
     }
@@ -1432,7 +1407,6 @@ void
 WriteEntitiesToString(bsp2_t *bsp)
 {
     const entity_t *entity;
-    const epair_t *epair;
     size_t space, length;
     char *pos;
 
@@ -1451,7 +1425,7 @@ WriteEntitiesToString(bsp2_t *bsp)
     space = bsp->entdatasize;
     pos = bsp->dentdata;
     for (entity = entities; entity; entity = entity->next) {
-        if (!entity->epairs)
+        if (!entity->epairs.size())
             continue;
         if (entity->generated)
             continue;
@@ -1460,17 +1434,17 @@ WriteEntitiesToString(bsp2_t *bsp)
         pos += length;
         space -= length;
 
-        for (epair = entity->epairs; epair; epair = epair->next) {
+        for (auto epair : entity->epairs) {
             const char *value;
             const bool parse_escape_sequences = true;
             if (parse_escape_sequences) {
-                value = CopyValueWithEscapeSequencesParsed(epair->value);
+                value = CopyValueWithEscapeSequencesParsed(epair.second.c_str());
             } else {
-                value = epair->value;
+                value = epair.second.c_str();
             }
             
             length = snprintf(pos, space, "\"%s\" \"%s\"\n",
-                              epair->key, value);
+                              epair.first.c_str(), value);
             
             if (parse_escape_sequences) {
                 free((void *)value);
@@ -1499,14 +1473,12 @@ char surflights_dump_filename[1024];
 void
 WriteEntityToFile(FILE *f, entity_t *entity)
 {
-    const epair_t *epair;
-    
-    if (!entity->epairs)
+    if (!entity->epairs.size())
         return;
     
     fprintf(f, "{\n");
-    for (epair = entity->epairs; epair; epair = epair->next) {
-        fprintf(f, "\"%s\" \"%s\"\n", epair->key, epair->value);
+    for (auto epair : entity->epairs) {
+        fprintf(f, "\"%s\" \"%s\"\n", epair.first.c_str(), epair.second.c_str());
     }
     fprintf(f, "}\n");
 }
