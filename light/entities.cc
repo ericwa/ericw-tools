@@ -51,6 +51,12 @@ lockable_vec3_t sunvec          { 0.0f, 0.0f, -1.0f };  /* defaults to straight 
 lockable_vec3_t sun2vec         { 0.0f, 0.0f, -1.0f };  /* defaults to straight down */
 lockable_vec_t sun_deviance     { 0.0f };
 
+// entity_t
+
+const char * entity_t::classname() const {
+    return ValueForKey(this, "classname");
+}
+
 /*
  * ============================================================================
  * ENTITY FILE PARSING
@@ -124,7 +130,7 @@ MatchTargets(void)
         if (target == NULL) {
             logprint("WARNING: entity at (%s) (%s) has unmatched "
                      "target (%s)\n", VecStr(entity->origin),
-                     entity->classname, ValueForKey(entity, "target"));
+                     entity->classname(), ValueForKey(entity, "target"));
             continue;
         }
     }
@@ -136,7 +142,7 @@ SetupSpotlights(void)
     entity_t *entity;
 
     for (entity = entities; entity; entity = entity->next) {
-        if (strncmp(entity->classname, "light", 5))
+        if (strncmp(entity->classname(), "light", 5))
             continue;
         if (entity->targetent) {
             VectorSubtract(entity->targetent->origin, entity->origin,
@@ -212,7 +218,7 @@ CheckEntityFields(entity_t *entity)
             logprint("WARNING: unknown formula number (%d) in delay field\n"
                      "   %s at (%s)\n"
                      "   (further formula warnings will be supressed)\n",
-                     entity->formula, entity->classname,
+                     entity->formula, entity->classname(),
                      VecStr(entity->origin));
         }
         entity->formula = LF_LINEAR;
@@ -595,7 +601,7 @@ JitterEntities()
     old_tail = entities_tail;
     
     for (entity = entities; entity; entity = entity->next) {
-        if (!strncmp(entity->classname, "light", 5)) {
+        if (!strncmp(entity->classname(), "light", 5)) {
             JitterEntity(entity);
         }
         
@@ -802,7 +808,7 @@ FindLights()
         if (totallights == MAX_LIGHTS) {
             Error("totallights == MAX_LIGHTS");
         }
-        if (!strcmp(entity->classname, "worldspawn")) {
+        if (!strcmp(entity->classname(), "worldspawn")) {
             // HACK: workaround https://github.com/ericwa/tyrutils-ericw/issues/67
             // LoadEntities and FindLights need to be completely rewritten.
             continue;
@@ -902,9 +908,7 @@ LoadEntities(const bsp2_t *bsp)
 
             entity->epairs[key] = com_token;
 
-            if (!strcmp(key, "classname"))
-                strcpy(entity->classname, com_token);
-            else if (!strcmp(key, "origin"))
+            if (!strcmp(key, "origin"))
                 scan_vec3(entity->origin, com_token, "origin");
             else if (!strncmp(key, "light", 5) || !strcmp(key, "_light"))
                 entity->light.light = atof(com_token);
@@ -1068,7 +1072,7 @@ LoadEntities(const bsp2_t *bsp)
         /*
          * Check light entity fields and any global settings in worldspawn.
          */
-        if (!strncmp(entity->classname, "light", 5)) {
+        if (!strncmp(entity->classname(), "light", 5)) {
             if (entity->projectedmip) {
                 if (entity->projectedmip->width > entity->projectedmip->height)
                     Matrix4x4_CM_MakeModelViewProj (projangle, entity->origin, projfov, CalcFov(projfov, entity->projectedmip->width, entity->projectedmip->height), entity->projectionmatrix);
@@ -1079,7 +1083,7 @@ LoadEntities(const bsp2_t *bsp)
             CheckEntityFields(entity);
             num_lights++;
         }
-        if (!strncmp(entity->classname, "light", 5)) {
+        if (!strncmp(entity->classname(), "light", 5)) {
             if (ValueForKey(entity, "targetname")[0] && !entity->style) {
                 char style[16];
                 entity->style = LightStyleForTargetname(ValueForKey(entity, "targetname"));
@@ -1087,7 +1091,7 @@ LoadEntities(const bsp2_t *bsp)
                 SetKeyValue(entity, "style", style);
             }
         }
-        if (!strcmp(entity->classname, "worldspawn")) {
+        if (!strcmp(entity->classname(), "worldspawn")) {
             if (entity->light.light > 0 && !minlight.light) {
                 minlight.light = entity->light.light;
                 logprint("using minlight value %i from worldspawn.\n",

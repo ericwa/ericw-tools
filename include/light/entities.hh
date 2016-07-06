@@ -49,7 +49,6 @@ typedef enum {
 } light_formula_t;
 
 typedef struct entity_s {
-    char classname[MAX_ENT_VALUE];
     vec3_t origin;
 
     qboolean spotlight;
@@ -94,6 +93,8 @@ typedef struct entity_s {
     const bsp2_dleaf_t *leaf;    // for vis testing
     
     struct entity_s *next;
+    
+    const char *classname() const;
 } entity_t;
 
 /*
