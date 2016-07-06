@@ -37,19 +37,19 @@ int num_surfacelight_templates;
 static void MakeSurfaceLights(const bsp2_t *bsp);
 
 /* temporary storage for sunlight settings before the sun_t objects are created. */
-lockable_vec_t sunlight         = { .value = 0,                 .locked = false };  /* main sun */
-lockable_vec3_t sunlight_color  = { .value = { 255, 255, 255 }, .locked = false };
-lockable_vec_t sun2             = { .value = 0,                 .locked = false };  /* second sun */
-lockable_vec3_t sun2_color      = { .value = { 255, 255, 255 }, .locked = false };
-lockable_vec_t sunlight2        = { .value = 0,                 .locked = false };  /* top sky dome */
-lockable_vec3_t sunlight2_color = { .value = { 255, 255, 255 }, .locked = false };
-lockable_vec_t sunlight3        = { .value = 0,                 .locked = false };  /* bottom sky dome */
-lockable_vec3_t sunlight3_color = { .value = { 255, 255, 255 }, .locked = false };
-lockable_vec_t sunlight_dirt    = { .value = 0.0f,              .locked = false };
-lockable_vec_t sunlight2_dirt   = { .value = 0.0f,              .locked = false };
-lockable_vec3_t sunvec          = { .value = { 0, 0, -1 },      .locked = false };  /* defaults to straight down */
-lockable_vec3_t sun2vec         = { .value = { 0, 0, -1 },      .locked = false };  /* defaults to straight down */
-lockable_vec_t sun_deviance     = { .value = 0.0f,              .locked = false };
+lockable_vec_t sunlight         { 0.0f };                   /* main sun */
+lockable_vec3_t sunlight_color  { 255.0f, 255.0f, 255.0f };
+lockable_vec_t sun2             { 0.0f };                   /* second sun */
+lockable_vec3_t sun2_color      { 255.0f, 255.0f, 255.0f };
+lockable_vec_t sunlight2        { 0.0f };                   /* top sky dome */
+lockable_vec3_t sunlight2_color { 255.0f, 255.0f, 255.0f };
+lockable_vec_t sunlight3        { 0.0f };                   /* bottom sky dome */
+lockable_vec3_t sunlight3_color { 255.0f, 255.0f, 255.0f };
+lockable_vec_t sunlight_dirt    { 0.0f };
+lockable_vec_t sunlight2_dirt   { 0.0f };
+lockable_vec3_t sunvec          { 0.0f, 0.0f, -1.0f };  /* defaults to straight down */
+lockable_vec3_t sun2vec         { 0.0f, 0.0f, -1.0f };  /* defaults to straight down */
+lockable_vec_t sun_deviance     { 0.0f };
 
 /*
  * ============================================================================

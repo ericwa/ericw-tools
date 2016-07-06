@@ -234,15 +234,28 @@ extern bool dump_face;
     
 /* command-line options */
 
-typedef struct {
+class lockable_vec_t {
+public:
     vec_t value;
     bool locked;
-} lockable_vec_t;
+    
+    lockable_vec_t(vec_t v, bool l = false) : value(v), locked(l) {}
+    lockable_vec_t() : lockable_vec_t(0.0f, false) {}
+};
 
-typedef struct {
+class lockable_vec3_t {
+public:
     vec3_t value;
     bool locked;
-} lockable_vec3_t;
+    
+    lockable_vec3_t(const vec3_t v, bool l = false) : locked(l) {
+        VectorCopy(v, value);
+    }
+    lockable_vec3_t(vec_t a, vec_t b, vec_t c, bool l = false) : locked(l) {
+        VectorSet(value, a, b, c);
+    }
+    lockable_vec3_t() : lockable_vec3_t(0.0f, 0.0f, 0.0f, false) {}
+};
 
 /* dirt */
 

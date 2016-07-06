@@ -57,23 +57,23 @@ lightsample_t minlight = { 0, { 255, 255, 255 } };
 sun_t *suns = NULL;
 
 /* dirt */
-lockable_vec_t dirty = {0, false};
-lockable_vec_t dirtMode = {0, false};
-lockable_vec_t dirtDepth = {128.0f, false};
-lockable_vec_t dirtScale = {1.0f, false};
-lockable_vec_t dirtGain = {1.0f, false};
-lockable_vec_t dirtAngle = {88.0f, false};
+lockable_vec_t dirty {0.0f};
+lockable_vec_t dirtMode {0.0f};
+lockable_vec_t dirtDepth {128.0f};
+lockable_vec_t dirtScale {1.0f};
+lockable_vec_t dirtGain {1.0f};
+lockable_vec_t dirtAngle {88.0f};
 
 qboolean globalDirt = false;
 qboolean minlightDirt = false;
 
 /* phong */
-lockable_vec_t phongallowed = {1, false};
+lockable_vec_t phongallowed {1.0f};
 
 /* bounce */
-lockable_vec_t bounce = {0, false};
-lockable_vec_t bouncescale = {1.0f, false};
-lockable_vec_t bouncecolorscale = {0.0f, false};
+lockable_vec_t bounce {0.0f};
+lockable_vec_t bouncescale {1.0f};
+lockable_vec_t bouncecolorscale {0.0f};
 
 qboolean surflight_dump = false;
 
