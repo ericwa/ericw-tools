@@ -17,7 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <light/light.h>
+#include <light/light.hh>
 #include <embree2/rtcore.h>
 #include <embree2/rtcore_ray.h>
 #include <vector>

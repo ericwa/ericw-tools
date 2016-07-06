@@ -17,11 +17,11 @@
     See file, 'COPYING', for details.
 */
 
-#include <string.h>
+#include <cstring>
 #include <common/cmdlib.h>
 
-#include <light/light.h>
-#include <light/entities.h>
+#include <light/light.hh>
+#include <light/entities.hh>
 
 entity_t *entities;
 static entity_t *entities_tail;

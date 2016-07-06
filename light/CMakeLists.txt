@@ -2,9 +2,9 @@ cmake_minimum_required (VERSION 2.6)
 project (light CXX C)
 
 set(LIGHT_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/light/entities.h
-	${CMAKE_SOURCE_DIR}/include/light/light.h
-	${CMAKE_SOURCE_DIR}/include/light/litfile.h)
+	${CMAKE_SOURCE_DIR}/include/light/entities.hh
+	${CMAKE_SOURCE_DIR}/include/light/light.hh
+	${CMAKE_SOURCE_DIR}/include/light/litfile.hh)
 
 set(LIGHT_SOURCES
 	entities.cc

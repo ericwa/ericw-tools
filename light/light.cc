@@ -17,12 +17,12 @@
     See file, 'COPYING', for details.
 */
 
-#include <stdint.h>
-#include <assert.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cassert>
+#include <cstdio>
 
-#include <light/light.h>
-#include <light/entities.h>
+#include <light/light.hh>
+#include <light/entities.hh>
 
 #include <common/polylib.h>
 

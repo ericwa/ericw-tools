@@ -17,8 +17,9 @@
     See file, 'COPYING', for details.
 */
 
-#include <light/litfile.h>
-#include <light/light.h>
+#include <light/litfile.hh>
+#include <light/light.hh>
+
 #include <common/bspfile.h>
 #include <common/cmdlib.h>
 

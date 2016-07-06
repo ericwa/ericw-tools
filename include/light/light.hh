@@ -26,11 +26,8 @@
 #include <common/log.h>
 #include <common/threads.h>
 #include <common/polylib.h>
-#include <light/litfile.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <light/litfile.hh>
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
@@ -357,9 +354,5 @@ bool Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *lea
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
 const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face);    
 qboolean VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf);
-    
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __LIGHT_LIGHT_H__ */

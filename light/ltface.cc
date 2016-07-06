@@ -17,9 +17,10 @@
     See file, 'COPYING', for details.
 */
 
-#include <light/light.h>
-#include <light/entities.h>
-#include <assert.h>
+#include <light/light.hh>
+#include <light/entities.hh>
+
+#include <cassert>
 
 /* ======================================================================== */
 

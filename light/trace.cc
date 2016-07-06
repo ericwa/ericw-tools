@@ -17,7 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <light/light.h>
+#include <light/light.hh>
 
 #define TRACE_HIT_NONE  0
 #define TRACE_HIT_SOLID (1 << 0)
