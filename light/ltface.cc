@@ -679,8 +679,8 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
 
     /* Allocate surf->points */
     surf->numpoints = surf->width * surf->height;
-    surf->points = calloc(surf->numpoints, sizeof(vec3_t));
-    surf->normals = calloc(surf->numpoints, sizeof(vec3_t));
+    surf->points = (vec3_t *) calloc(surf->numpoints, sizeof(vec3_t));
+    surf->normals = (vec3_t *) calloc(surf->numpoints, sizeof(vec3_t));
     surf->occluded = (bool *)calloc(surf->numpoints, sizeof(bool));
     
     for (int t = 0; t < surf->height; t++) {
@@ -812,8 +812,8 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
     if (!bsp->visdatasize) return;
     
     // set lightsurf->pvs
-    byte *pointpvs = calloc(pvssize, 1);
-    lightsurf->pvs = calloc(pvssize, 1);
+    byte *pointpvs = (byte *) calloc(pvssize, 1);
+    lightsurf->pvs = (byte *) calloc(pvssize, 1);
     
     for (int i = 0; i < lightsurf->numpoints; i++) {
         const bsp2_dleaf_t *leaf = Light_PointInLeaf (bsp, lightsurf->points[i]);
@@ -912,7 +912,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     VectorAdd(lightsurf->origin, modelinfo->offset, lightsurf->origin);
     
     /* Allocate occlusion array */
-    lightsurf->occlusion = calloc(lightsurf->numpoints, sizeof(float));
+    lightsurf->occlusion = (float *) calloc(lightsurf->numpoints, sizeof(float));
 
     /* Setup vis data */
     CalcPvs(bsp, lightsurf);
@@ -955,7 +955,7 @@ Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lig
 
     if (lightmap->samples == NULL) {
         /* first use of this lightmap, allocate the storage for it. */
-        lightmap->samples = calloc(lightsurf->numpoints, sizeof(lightsample_t));
+        lightmap->samples = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
     } else {
         /* clear only the data that is going to be merged to it. there's no point clearing more */
         memset(lightmap->samples, 0, sizeof(*lightmap->samples)*lightsurf->numpoints);
@@ -1015,7 +1015,7 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
     const int height = (lightsurf->texsize[1] + 1) * oversample;
     const int fullsamples = (2 * softsamples + 1) * (2 * softsamples + 1);
 
-    softmap = calloc(lightsurf->numpoints, sizeof(lightsample_t));
+    softmap = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
     
     dst = softmap;
     for (i = 0; i < lightsurf->numpoints; i++, dst++) {
@@ -2254,7 +2254,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     for (j = 0; j < lightsurf->numpoints; j++) {
         int palidx = SampleTexture(face, bsp, lightsurf->points[j]);
         if (palidx >= 0) {
-            vec3_t texcolor = {thepalette[3*palidx], thepalette[3*palidx + 1], thepalette[3*palidx + 2]};
+            vec3_t texcolor = {static_cast<float>(thepalette[3*palidx]), static_cast<float>(thepalette[3*palidx + 1]), static_cast<float>(thepalette[3*palidx + 2])};
             VectorAdd(lightsurf->texturecolor, texcolor, lightsurf->texturecolor);
         }
     }

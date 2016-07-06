@@ -46,10 +46,10 @@ WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int ve
     if (version == 2)
     {
         unsigned int i, j;
-        unsigned int *offsets = malloc(bsp->numfaces * sizeof(*offsets));
-        unsigned short *extents = malloc(2*bsp->numfaces * sizeof(*extents));
-        unsigned char *styles = malloc(4*bsp->numfaces * sizeof(*styles));
-        unsigned char *shifts = malloc(bsp->numfaces * sizeof(*shifts));
+        unsigned int *offsets = (unsigned int *) malloc(bsp->numfaces * sizeof(*offsets));
+        unsigned short *extents = (unsigned short *) malloc(2*bsp->numfaces * sizeof(*extents));
+        unsigned char *styles = (unsigned char *) malloc(4*bsp->numfaces * sizeof(*styles));
+        unsigned char *shifts = (unsigned char *) malloc(bsp->numfaces * sizeof(*shifts));
         for (i = 0; i < bsp->numfaces; i++)
         {
             offsets[i] = LittleLong(facesup[i].lightofs);

@@ -7,10 +7,10 @@ set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/litfile.h)
 
 set(LIGHT_SOURCES
-	entities.c
-	litfile.c
-	ltface.c
-	trace.c
+	entities.cc
+	litfile.cc
+	ltface.cc
+	trace.cc
 	light.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.c
 	${CMAKE_SOURCE_DIR}/common/cmdlib.c

@@ -73,7 +73,7 @@ SetKeyValue(entity_t *ent, const char *key, const char *value)
             strcpy(ep->value, value);
             return;
         }
-    ep = malloc(sizeof(*ep));
+    ep = (epair_t *) malloc(sizeof(*ep));
     ep->next = ent->epairs;
     ent->epairs = ep;
     strcpy(ep->key, key);
@@ -306,7 +306,7 @@ Dirt_ResolveFlag(int dirtInt)
 static void
 AddSun(vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt)
 {
-    sun_t *sun = malloc(sizeof(sun_t));
+    sun_t *sun = (sun_t *) malloc(sizeof(sun_t));
     memset(sun, 0, sizeof(*sun));
     VectorCopy(sunvec, sun->sunvec);
     VectorNormalize(sun->sunvec);
@@ -938,7 +938,7 @@ LoadEntities(const bsp2_t *bsp)
                 logprint("lightmap_scale should be _lightmap_scale\n");
             }
 
-            epair = malloc(sizeof(epair_t));
+            epair = (epair_t *) malloc(sizeof(epair_t));
             memset(epair, 0, sizeof(epair_t));
             strcpy(epair->key, key);
             strcpy(epair->value, com_token);
@@ -966,7 +966,7 @@ LoadEntities(const bsp2_t *bsp)
             else if (!strcmp(key, "wait"))
                 entity->atten = atof(com_token);
             else if (!strcmp(key, "delay"))
-                entity->formula = atoi(com_token);
+                entity->formula = static_cast<light_formula_t>(atoi(com_token));
             else if (!strcmp(key, "mangle")) {
                 if (!projangleknown)
                         scan_vec3(projangle, com_token, key);
@@ -1443,7 +1443,7 @@ WriteEntitiesToString(bsp2_t *bsp)
     logprint("%i switchable light styles\n", numlighttargets);
 
     bsp->entdatasize = Get_EntityStringSize(entities);
-    bsp->dentdata = malloc(bsp->entdatasize);
+    bsp->dentdata = (char *) malloc(bsp->entdatasize);
     if (!bsp->dentdata)
         Error("%s: allocation of %d bytes failed\n", __func__,
               bsp->entdatasize);

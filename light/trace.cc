@@ -248,7 +248,7 @@ void
 MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
     info->numedges = face->numedges;
-    info->edgeplanes = calloc(face->numedges, sizeof(plane_t));
+    info->edgeplanes = (plane_t *) calloc(face->numedges, sizeof(plane_t));
     
     GetFaceNormal(bsp, face, &info->plane);
     
@@ -319,7 +319,7 @@ Model_HasFence(const bsp2_t *bsp, const dmodel_t *model)
 static void
 MakeFenceInfo(const bsp2_t *bsp)
 {
-    fence_dmodels = calloc(bsp->nummodels, sizeof(bool));
+    fence_dmodels = (bool *) calloc(bsp->nummodels, sizeof(bool));
     for (int i = 0; i < bsp->nummodels; i++) {
         fence_dmodels[i] = Model_HasFence(bsp, &bsp->dmodels[i]);
     }
@@ -329,11 +329,11 @@ void
 BSP_MakeTnodes(const bsp2_t *bsp)
 {
     bsp_static = bsp;
-    tnode_p = tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
+    tnode_p = tnodes = (tnode_t *) malloc(bsp->numnodes * sizeof(tnode_t));
     for (int i = 0; i < bsp->nummodels; i++)
         MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
     
-    faceinfos = malloc(bsp->numfaces * sizeof(faceinfo_t));
+    faceinfos = (faceinfo_t *) malloc(bsp->numfaces * sizeof(faceinfo_t));
     for (int i = 0; i < bsp->numfaces; i++)
         MakeFaceInfo(bsp, &bsp->dfaces[i], &faceinfos[i]);
     
