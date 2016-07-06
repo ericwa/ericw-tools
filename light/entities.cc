@@ -18,6 +18,7 @@
 */
 
 #include <cstring>
+#include <sstream>
 #include <common/cmdlib.h>
 
 #include <light/light.hh>
@@ -829,6 +830,86 @@ SetupLightLeafnums(const bsp2_t *bsp)
     for (entity = entities; entity; entity = entity->next) {
         entity->leaf = Light_PointInLeaf(bsp, entity->origin);
     }
+}
+
+using entdict_t = std::map<std::string, std::string>;
+
+/*
+ * ==================
+ * EntData_Parse
+ * ==================
+ */
+std::vector<entdict_t>
+EntData_Parse(const char *entdata)
+{
+    std::vector<entdict_t> result;
+    const char *data = entdata;
+    
+    /* go through all the entities */
+    while (1) {
+        /* parse the opening brace */
+        data = COM_Parse(data);
+        if (!data)
+            break;
+        if (com_token[0] != '{')
+            Error("%s: found %s when expecting {", __func__, com_token);
+        
+        /* Allocate a new entity */
+        entdict_t entity;
+        
+        /* go through all the keys in this entity */
+        while (1) {
+            /* parse key */
+            data = COM_Parse(data);
+            if (!data)
+                Error("%s: EOF without closing brace", __func__);
+            
+            std::string keystr { com_token };
+            
+            if (keystr == "}")
+                break;
+            if (keystr.length() > MAX_ENT_KEY - 1)
+                Error("%s: Key length > %i", __func__, MAX_ENT_KEY - 1);
+            
+            /* parse value */
+            data = COM_Parse(data);
+            if (!data)
+                Error("%s: EOF without closing brace", __func__);
+            
+            std::string valstring { com_token };
+            
+            if (valstring[0] == '}')
+                Error("%s: closing brace without data", __func__);
+            if (valstring.length() > MAX_ENT_VALUE - 1)
+                Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
+            
+            entity[keystr] = valstring;
+        }
+        
+        result.push_back(entity);
+    }
+    
+    logprint("%d entities read", static_cast<int>(result.size()));
+    return result;
+}
+
+/*
+ * ================
+ * EntData_Write
+ * ================
+ */
+std::string
+EntData_Write(const std::vector<entdict_t> &ents)
+{
+    std::stringstream out;
+    for (const auto &ent : ents) {
+        out << "{\n";
+        for (const auto &epair : ent) {
+            out << "\"" << epair.first << "\" \"" << epair.second << "\"\n";
+        }
+        out << "}\n";
+    }
+    return out.str();
 }
 
 /*
