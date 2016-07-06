@@ -112,10 +112,11 @@ MatchTargets(void)
     const entity_t *target;
 
     for (entity = entities; entity; entity = entity->next) {
-        if (!entity->target[0])
+        std::string targetstr { ValueForKey(entity, "target") };
+        if (!targetstr.length())
             continue;
         for (target = entities; target; target = target->next) {
-            if (!strcmp(target->targetname, entity->target)) {
+            if (targetstr == ValueForKey(target, "targetname")) {
                 entity->targetent = target;
                 break;
             }
@@ -123,26 +124,9 @@ MatchTargets(void)
         if (target == NULL) {
             logprint("WARNING: entity at (%s) (%s) has unmatched "
                      "target (%s)\n", VecStr(entity->origin),
-                     entity->classname, entity->target);
+                     entity->classname, ValueForKey(entity, "target"));
             continue;
         }
-
-        /* set the style on the source ent for switchable lights */
-
-        // ericw -- this seems completely useless, why would the
-        // triggering entity need to have the light's style key?
-        //
-        // disabling because it can cause problems, e.g. if the
-        // triggering entity is a monster, and the style key is used
-        // by the mod.
-#if 0
-        if (target->style) {
-            char style[10];
-            entity->style = target->style;
-            snprintf(style, sizeof(style), "%d", entity->style);
-            SetKeyValue(entity, "style", style);
-        }
-#endif
     }
 }
 
@@ -920,10 +904,6 @@ LoadEntities(const bsp2_t *bsp)
 
             if (!strcmp(key, "classname"))
                 strcpy(entity->classname, com_token);
-            else if (!strcmp(key, "target"))
-                strcpy(entity->target, com_token);
-            else if (!strcmp(key, "targetname"))
-                strcpy(entity->targetname, com_token);
             else if (!strcmp(key, "origin"))
                 scan_vec3(entity->origin, com_token, "origin");
             else if (!strncmp(key, "light", 5) || !strcmp(key, "_light"))
@@ -1100,9 +1080,9 @@ LoadEntities(const bsp2_t *bsp)
             num_lights++;
         }
         if (!strncmp(entity->classname, "light", 5)) {
-            if (entity->targetname[0] && !entity->style) {
+            if (ValueForKey(entity, "targetname")[0] && !entity->style) {
                 char style[16];
-                entity->style = LightStyleForTargetname(entity->targetname);
+                entity->style = LightStyleForTargetname(ValueForKey(entity, "targetname"));
                 snprintf(style, sizeof(style), "%i", entity->style);
                 SetKeyValue(entity, "style", style);
             }

@@ -84,9 +84,6 @@ typedef struct entity_s {
     /* light entities: q3map2 penumbra */
     vec_t deviance;
     int num_samples;
-
-    char target[MAX_ENT_VALUE];
-    char targetname[MAX_ENT_VALUE];
     
     std::map<std::string, std::string> epairs;
     
