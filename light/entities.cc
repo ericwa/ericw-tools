@@ -60,8 +60,7 @@ lockable_vec_t sun_deviance     { 0.0f };
 
 #define MAX_LIGHT_TARGETS 32
 
-static int numlighttargets;
-static char lighttargets[MAX_LIGHT_TARGETS][MAX_ENT_VALUE];
+static std::vector<std::string> lighttargetnames;
 
 static void
 SetKeyValue(entity_t *ent, const char *key, const char *value)
@@ -87,20 +86,18 @@ const char *WorldValueForKey(const char *key)
 }
 
 static int
-LightStyleForTargetname(const char *targetname)
+LightStyleForTargetname(const std::string &targetname)
 {
     int i;
 
-    for (i = 0; i < numlighttargets; i++)
-        if (!strcmp(lighttargets[i], targetname))
+    for (i = 0; i < lighttargetnames.size(); i++)
+        if (lighttargetnames.at(i) == targetname)
             return 32 + i;
     if (i == MAX_LIGHT_TARGETS)
         Error("%s: Too many unique light targetnames\n", __func__);
 
-    strcpy(lighttargets[i], targetname);
-    numlighttargets++;
-
-    return numlighttargets - 1 + 32;
+    lighttargetnames.push_back(targetname);
+    return static_cast<int>(lighttargetnames.size()) - 1 + 32;
 }
 
 /*
@@ -1414,7 +1411,7 @@ WriteEntitiesToString(bsp2_t *bsp)
         free(bsp->dentdata);
 
     /* FIXME - why are we printing this here? */
-    logprint("%i switchable light styles\n", numlighttargets);
+    logprint("%i switchable light styles\n", static_cast<int>(lighttargetnames.size()));
 
     bsp->entdatasize = Get_EntityStringSize(entities);
     bsp->dentdata = (char *) malloc(bsp->entdatasize);

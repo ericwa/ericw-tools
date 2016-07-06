@@ -22,6 +22,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #include <common/mathlib.h>
 #include <common/bspfile.h>
