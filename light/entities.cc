@@ -554,7 +554,7 @@ Entities_Insert(entity_t *entity)
 static entity_t *
 DuplicateEntity(const entity_t *src)
 {
-    entity_t *entity = new entity_t {*src};
+    entity_t *entity = new entity_t(*src);
 
     /* also insert into the entity list */
     entity->next = NULL;
