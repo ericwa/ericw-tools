@@ -310,6 +310,9 @@ extern char mapfilename[1024];
 void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
     
+const miptex_t *
+Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face);
+    
 const char *
 Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
 

@@ -202,22 +202,18 @@ Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
     if (!bsp->texdatasize)
         return CONTENTS_SOLID; // no textures in bsp
 
-    int texnum = bsp->texinfo[face->texinfo].miptex;
-    const dmiptexlump_t *miplump = bsp->dtexdata.header;
-    const miptex_t *miptex;
-    
-    if (!miplump->dataofs[texnum])
+    const char *texname = Face_TextureName(bsp, face);
+
+    if (texname[0] == '\0')
         return CONTENTS_SOLID; //sometimes the texture just wasn't written. including its name.
     
-    miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[texnum]);
-    
-    if (!Q_strncasecmp(miptex->name, "sky", 3))
+    if (!Q_strncasecmp(texname, "sky", 3))
         return CONTENTS_SKY;
-    else if (!Q_strncasecmp(miptex->name, "*lava", 5))
+    else if (!Q_strncasecmp(texname, "*lava", 5))
         return CONTENTS_LAVA;
-    else if (!Q_strncasecmp(miptex->name, "*slime", 6))
+    else if (!Q_strncasecmp(texname, "*slime", 6))
         return CONTENTS_SLIME;
-    else if (miptex->name[0] == '*')
+    else if (texname[0] == '*')
         return CONTENTS_WATER;
     else
         return CONTENTS_SOLID;
@@ -346,18 +342,6 @@ MakeTnodes(const bsp2_t *bsp)
  * ============================================================================
  */
 
-static miptex_t *
-MiptexForFace(const bsp2_dface_t *face, const bsp2_t *bsp)
-{
-    const texinfo_t *tex;
-    dmiptexlump_t *miplump = bsp->dtexdata.header;
-    miptex_t *miptex; 
-    tex = &bsp->texinfo[face->texinfo];    
-
-    miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[tex->miptex]);
-    return miptex;
-}
-
 vec_t fix_coord(vec_t in, int width)
 {
     if (in > 0)
@@ -377,8 +361,7 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
 {
     vec_t texcoord[2];
     const texinfo_t *tex;
-    dmiptexlump_t *miplump = bsp->dtexdata.header;
-    miptex_t *miptex; 
+    const miptex_t *miptex;
     int x, y;
     byte *data;
     int sample;
@@ -386,15 +369,14 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
     if (!bsp->texdatasize)
         return -1;
     
+    miptex = Face_Miptex(bsp, face);
+    
+    if (miptex == NULL)
+        return -1;
+    
     tex = &bsp->texinfo[face->texinfo];
 
     WorldToTexCoord(point, tex, texcoord);
-
-    if (miplump->dataofs[tex->miptex] == -1) {
-        return -1;
-    }
-
-    miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[tex->miptex]);
 
     x = fix_coord(texcoord[0], miptex->width);
     y = fix_coord(texcoord[1], miptex->height);
