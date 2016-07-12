@@ -951,7 +951,7 @@ LoadEntities(const bsp2_t *bsp)
             Error("%s: found %s when expecting {", __func__, com_token);
 
         /* Allocate a new entity */
-        entity = new entity_t;
+        entity = new entity_t {};
         
         Entities_Insert(entity);
 
