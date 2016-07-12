@@ -444,7 +444,7 @@ typedef struct {
  * TraceLine
  * ==============
  */
-#define MAX_TSTACK 128
+#define MAX_TSTACK 256
 int
 TraceLine(const dmodel_t *model, const int traceflags,
           const vec3_t start, const vec3_t stop)
@@ -469,6 +469,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
         return TRACE_HIT_NONE;
     }
     
+    // FIXME: check for stack overflow
 //    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
     
     if (traceflags <= 0)
