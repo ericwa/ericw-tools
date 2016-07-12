@@ -785,13 +785,20 @@ finds the texture that is meant to be projected.
 */
 static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
 {
+    if (!bsp->texdatasize)
+        return NULL;
+    
     dmiptexlump_t *miplump = bsp->dtexdata.header;
     miptex_t *miptex;
     int texnum;
     /*outer loop finds the textures*/
     for (texnum = 0; texnum< miplump->nummiptex; texnum++)
     {
-        miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[texnum]);
+        int offset = miplump->dataofs[texnum];
+        if (offset < 0)
+            continue;
+        
+        miptex = (miptex_t*)(bsp->dtexdata.base + offset);
         if (!Q_strcasecmp(miptex->name, texname))
             return miptex;
     }
@@ -1696,10 +1703,7 @@ static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_
         return;
     }
 
-    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
-    const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
-    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
-    const char *texname = miptex->name;
+    const char *texname = Face_TextureName(bsp, face);
 
     for (i=0; i<num_surfacelight_templates; i++) {
         if (!Q_strcasecmp(texname, ValueForKey(surfacelight_templates[i], "_surface"))) {
@@ -1765,24 +1769,15 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
     for (i=0; i<bsp->numleafs; i++) {
         const bsp2_dleaf_t *leaf = bsp->dleafs + i;
         const bsp2_dface_t *surf;
-        int ofs;
         qboolean underwater = leaf->contents != CONTENTS_EMPTY;
 
         for (k = 0; k < leaf->nummarksurfaces; k++) {
-            const texinfo_t *info;
-            const miptex_t *miptex;
             const modelinfo_t *face_modelinfo;
             int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
 
             surf = &bsp->dfaces[facenum];
-            info = &bsp->texinfo[surf->texinfo];
-            
-            /* Don't crash if there are no textuers */
-            if (!bsp->texdatasize)
-                continue;
-            
-            ofs = bsp->dtexdata.header->dataofs[info->miptex];
-            miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
+            const char *texname = Face_TextureName(bsp, surf);
+
             face_modelinfo = ModelInfoForFace(bsp, facenum);
             
             /* Skip face with no modelinfo */
@@ -1791,7 +1786,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
             
             /* Ignore the underwater side of liquid surfaces */
             // FIXME: Use a Face_TextureName function for this
-            if (miptex->name[0] == '*' && underwater)
+            if (texname[0] == '*' && underwater)
                 continue;
 
             /* Skip if already handled */

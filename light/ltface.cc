@@ -274,14 +274,13 @@ void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     const texinfo_t *tex = &bsp->texinfo[face->texinfo];
-    const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
-    const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
+    const char *texname = Face_TextureName(bsp, face);
     int i;
 
     logprint("face %d, texture %s, %d edges...\n"
              "  vectors (%3.3f, %3.3f, %3.3f) (%3.3f)\n"
              "          (%3.3f, %3.3f, %3.3f) (%3.3f)\n",
-             (int)(face - bsp->dfaces), miptex->name, face->numedges,
+             (int)(face - bsp->dfaces), texname, face->numedges,
              tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2], tex->vecs[0][3],
              tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
 
@@ -365,14 +364,13 @@ CalcFaceExtents(const bsp2_dface_t *face,
         surf->texsize[i] = maxs[i] - mins[i];
         if (surf->texsize[i] >= MAXDIMENSION) {
             const dplane_t *plane = bsp->dplanes + face->planenum;
-            const int offset = bsp->dtexdata.header->dataofs[tex->miptex];
-            const miptex_t *miptex = (const miptex_t *)(bsp->dtexdata.base + offset);
+            const char *texname = Face_TextureName(bsp, face);
             Error("Bad surface extents:\n"              
                   "   surface %d, %s extents = %d, scale = %g\n"
                   "   texture %s at (%s)\n"
                   "   surface normal (%s)\n",
                   (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i], surf->lightmapscale,
-                  miptex->name, VecStr(worldpoint), VecStrf(plane->normal));
+                  texname, VecStr(worldpoint), VecStrf(plane->normal));
         }
     }
 }
@@ -2087,17 +2085,31 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     free(ctx->lightsurf);
 }
 
+const miptex_t *
+Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    if (!bsp->texdatasize)
+        return NULL;
+    
+    int texnum = bsp->texinfo[face->texinfo].miptex;
+    const dmiptexlump_t *miplump = bsp->dtexdata.header;
+   
+    int offset = miplump->dataofs[texnum];
+    if (offset < 0)
+        return NULL; //sometimes the texture just wasn't written. including its name.
+    
+    const miptex_t *miptex = (miptex_t*)(bsp->dtexdata.base + offset);
+    return miptex;
+}
+
 const char *
 Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
-    int texnum = bsp->texinfo[face->texinfo].miptex;
-    if (!bsp->texdatasize)
+    const miptex_t *miptex = Face_Miptex(bsp, face);
+    if (miptex)
+        return miptex->name;
+    else
         return "";
-    const dmiptexlump_t *miplump = bsp->dtexdata.header;
-    if (!miplump->dataofs[texnum])
-        return ""; //sometimes the texture just wasn't written. including its name.
-    const miptex_t *miptex = (miptex_t*)(bsp->dtexdata.base + miplump->dataofs[texnum]);
-    return miptex->name;
 }
 
 /*
