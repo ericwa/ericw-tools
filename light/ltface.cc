@@ -1528,7 +1528,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
         vec_t value = light->light;
-        if (minlightDirt)
+        if (minlightDirt.boolValue())
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
         if (addminlight.boolValue())
             Light_Add(sample, value, light->color, vec3_origin);

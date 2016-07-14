@@ -69,7 +69,7 @@ lockable_vec_t dirtGain {"dirtgain", 1.0f};
 lockable_vec_t dirtAngle {"dirtangle", 88.0f};
 
 qboolean globalDirt = false;
-qboolean minlightDirt = false;
+lockable_vec_t minlightDirt {"minlight_dirt", 0};
 
 /* phong */
 lockable_vec_t phongallowed {"phong", 1.0f};
@@ -117,6 +117,59 @@ struct ltface_ctx *ltface_ctxs;
 int dump_facenum = -1;
 bool dump_face;
 vec3_t dump_face_point = {0,0,0};
+
+std::map<std::string, lockable_setting_t *> settingsmap;
+
+static void RegisterSettings(std::vector<lockable_setting_t *> settings)
+{
+    for (lockable_setting_t *setting : settings) {
+        assert(!setting->isRegistered());
+        for (const auto &name : setting->names()) {
+            assert(settingsmap.find(name) == settingsmap.end());
+            
+            settingsmap[name] = setting;
+        }
+        
+        setting->setRegistered();
+    }
+}
+
+void InitSettings()
+{
+    std::vector<lockable_setting_t *> settings {
+        &minlight,
+        &addminlight,
+        &lightmapgamma,
+        &bounce,
+        &bouncescale,
+        &bouncecolorscale,
+        &minlight_color,
+        &minlightDirt,
+        &scaledist,
+        &rangescale,
+        &global_anglescale,
+        &dirtDepth,
+        &dirtMode,
+        &dirtScale,
+        &dirtGain,
+        &dirtAngle,
+        &dirty,
+        &sunlight,
+        &sunvec,
+        &sunlight_color,
+        &sun_deviance,
+        &sunlight_dirt,
+        &sun2,
+        &sun2vec,
+        &sun2_color,
+        &sunlight2,
+        &sunlight2_color,
+        &sunlight2_dirt,
+        &sunlight3,
+        &sunlight3_color
+    };
+    RegisterSettings(settings);
+}
 
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
@@ -1427,13 +1480,14 @@ main(int argc, const char **argv)
     double end;
     char source[1024];
     const char *lmscaleoverride = NULL;
-
+    
     init_log("light.log");
     logprint("---- light / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
 
     LowerProcessPriority();
     numthreads = GetDefaultThreads();
-
+    InitSettings();
+    
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-threads")) {
             numthreads = ParseInt(&i, argc, argv);
@@ -1496,7 +1550,7 @@ main(int argc, const char **argv)
                 dirty.value = true;
                 dirty.locked = true;
                 globalDirt = true;
-                minlightDirt = true;
+                minlightDirt.value = true;
                 logprint( "Dirtmapping enabled globally\n" );
             } else {
                 dirty.value = false;

@@ -216,9 +216,21 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
 
 /* command-line options */
 
-class lockable_vec_t {
-private:
+class lockable_setting_t {
+protected:
+    bool _registered;
     std::vector<std::string> _names;
+
+public:
+    const std::vector<std::string> &names() const { return _names; }
+    lockable_setting_t(std::vector<std::string> names)
+    : _registered(false), _names(names) {}
+    
+    bool isRegistered() { return _registered; }
+    void setRegistered() { _registered = true; }
+};
+
+class lockable_vec_t : public lockable_setting_t {
 public:
     vec_t value;
     bool locked;
@@ -232,22 +244,19 @@ public:
     }
     
     lockable_vec_t(std::vector<std::string> names, vec_t v, bool l = false)
-    : _names(names), value(v), locked(l) {}
+    : lockable_setting_t(names), value(v), locked(l) {}
     
     lockable_vec_t(std::string name, vec_t v, bool l = false)
     : lockable_vec_t(std::vector<std::string> { name }, v, l) {}
 };
 
-class lockable_vec3_t {
-private:
-    std::vector<std::string> _names;
-    
+class lockable_vec3_t : public lockable_setting_t {
 public:
     vec3_t value;
     bool locked;
     
     lockable_vec3_t(std::vector<std::string> names, vec_t a, vec_t b, vec_t c, bool l = false)
-    : _names(names), locked(l)
+    : lockable_setting_t(names), locked(l)
     {
         VectorSet(value, a, b, c);
     }
@@ -285,7 +294,7 @@ extern lockable_vec_t dirtGain;
 extern lockable_vec_t dirtAngle;
 
 extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
-extern qboolean minlightDirt;   // apply dirt to minlight?
+extern lockable_vec_t minlightDirt;   // apply dirt to minlight?
 
 /* phong */
 

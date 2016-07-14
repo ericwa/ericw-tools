@@ -1260,16 +1260,16 @@ LoadEntities(const bsp2_t *bsp)
             }
 
             if (entity->minlight_dirt == 1) {
-                minlightDirt = true;
+                minlightDirt.value = true;
                 if (!dirty.locked) {
                     dirty.value = true;
                 }
                 logprint("Minlight dirtmapping enabled in worldspawn.\n");
             } else if (entity->minlight_dirt == -1) {
-                minlightDirt = false;
+                minlightDirt.value = false;
                 logprint("Minlight dirtmapping disabled in worldspawn.\n");
             } else {
-                minlightDirt = globalDirt;
+                minlightDirt.value = globalDirt;
             }
         }
     }
