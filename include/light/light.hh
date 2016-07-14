@@ -29,6 +29,9 @@
 
 #include <light/litfile.hh>
 
+#include <vector>
+#include <string>
+
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
@@ -232,26 +235,35 @@ extern bool dump_face;
 /* command-line options */
 
 class lockable_vec_t {
+private:
+    std::vector<std::string> _names;
 public:
     vec_t value;
     bool locked;
     
-    lockable_vec_t(vec_t v, bool l = false) : value(v), locked(l) {}
-    lockable_vec_t() : lockable_vec_t(0.0f, false) {}
+    lockable_vec_t(std::vector<std::string> names, vec_t v, bool l = false)
+    : _names(names), value(v), locked(l) {}
+    
+    lockable_vec_t(std::string name, vec_t v, bool l = false)
+    : lockable_vec_t(std::vector<std::string> { name }, v, l) {}
 };
 
 class lockable_vec3_t {
+private:
+    std::vector<std::string> _names;
+
 public:
     vec3_t value;
     bool locked;
     
-    lockable_vec3_t(const vec3_t v, bool l = false) : locked(l) {
-        VectorCopy(v, value);
-    }
-    lockable_vec3_t(vec_t a, vec_t b, vec_t c, bool l = false) : locked(l) {
+    lockable_vec3_t(std::vector<std::string> names, vec_t a, vec_t b, vec_t c, bool l = false)
+        : _names(names), locked(l)
+    {
         VectorSet(value, a, b, c);
     }
-    lockable_vec3_t() : lockable_vec3_t(0.0f, 0.0f, 0.0f, false) {}
+    
+    lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c, bool l = false)
+    : lockable_vec3_t(std::vector<std::string> { name }, a,b,c,l) {}
 };
 
 /* dirt */

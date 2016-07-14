@@ -56,24 +56,26 @@ qboolean addminlight = false;
 lightsample_t minlight = { 0, { 255, 255, 255 } };
 sun_t *suns = NULL;
 
+using strings = std::vector<std::string>;
+
 /* dirt */
-lockable_vec_t dirty {0.0f};
-lockable_vec_t dirtMode {0.0f};
-lockable_vec_t dirtDepth {128.0f};
-lockable_vec_t dirtScale {1.0f};
-lockable_vec_t dirtGain {1.0f};
-lockable_vec_t dirtAngle {88.0f};
+lockable_vec_t dirty {strings{"dirt", "dirty"}, 0.0f};
+lockable_vec_t dirtMode {"dirtmode", 0.0f};
+lockable_vec_t dirtDepth {"dirtdepth", 128.0f};
+lockable_vec_t dirtScale {"dirtscale", 1.0f};
+lockable_vec_t dirtGain {"dirtgain", 1.0f};
+lockable_vec_t dirtAngle {"dirtangle", 88.0f};
 
 qboolean globalDirt = false;
 qboolean minlightDirt = false;
 
 /* phong */
-lockable_vec_t phongallowed {1.0f};
+lockable_vec_t phongallowed {"phong", 1.0f};
 
 /* bounce */
-lockable_vec_t bounce {0.0f};
-lockable_vec_t bouncescale {1.0f};
-lockable_vec_t bouncecolorscale {0.0f};
+lockable_vec_t bounce {"bounce", 0.0f};
+lockable_vec_t bouncescale {"bouncescale", 1.0f};
+lockable_vec_t bouncecolorscale {"bouncecolorscale", 0.0f};
 
 qboolean surflight_dump = false;
 
