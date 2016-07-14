@@ -32,6 +32,7 @@
 #include <vector>
 #include <string>
 #include <cassert>
+#include <limits>
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
