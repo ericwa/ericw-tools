@@ -1071,7 +1071,7 @@ GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist)
     if (entity->formula == LF_INFINITE || entity->formula == LF_LOCALMIN)
         return light->light;
 
-    value = scaledist * entity->atten * dist;
+    value = scaledist.floatValue() * entity->atten * dist;
     switch (entity->formula) {
     case LF_INVERSE:
         return light->light / (value / LF_SCALE);
@@ -1530,7 +1530,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         vec_t value = light->light;
         if (minlightDirt)
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
-        if (addminlight)
+        if (addminlight.boolValue())
             Light_Add(sample, value, light->color, vec3_origin);
         else
             Light_ClampMin(sample, value, light->color);
@@ -1553,13 +1553,13 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         sample = lightmap->samples;
         surfpoint = lightsurf->points[0];
         for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
-            if (addminlight || sample->light < (*entity)->light.light) {
+            if (addminlight.boolValue() || sample->light < (*entity)->light.light) {
                 vec_t value = (*entity)->light.light;
                 trace = TestLight((*entity)->origin, surfpoint, shadowself);
                 if (!trace)
                     continue;
                 value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), lightsurf);
-                if (addminlight)
+                if (addminlight.boolValue())
                     Light_Add(sample, value, (*entity)->light.color, vec3_origin);
                 else
                     Light_ClampMin(sample, value, (*entity)->light.color);
@@ -1998,9 +1998,9 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
 
                 /* Scale and clamp any out-of-range samples */
                 maxcolor = 0;
-                VectorScale(color, rangescale, color);
+                VectorScale(color, rangescale.floatValue(), color);
                 for (i = 0; i < 3; i++)
-                    color[i] = pow( color[i] / 255.0f, 1.0 / lightmapgamma ) * 255.0f;
+                    color[i] = pow( color[i] / 255.0f, 1.0 / lightmapgamma.floatValue() ) * 255.0f;
                 for (i = 0; i < 3; i++)
                     if (color[i] > maxcolor)
                         maxcolor = color[i];
@@ -2196,10 +2196,16 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                 LightFace_Sky (sun, lightsurf, lightmaps);
 
         /* minlight - Use the greater of global or model minlight. */
-        if (lightsurf->minlight.light > minlight.light)
+        if (lightsurf->minlight.light > minlight.value)
             LightFace_Min(bsp, face, &lightsurf->minlight, lightsurf, lightmaps);
-        else
-            LightFace_Min(bsp, face, &minlight, lightsurf, lightmaps);
+        else {
+            lightsample_t ls;
+            ls.light = minlight.value;
+            VectorCopy(minlight_color.value, ls.color);
+            VectorSet(ls.direction, 0, 0, 0);
+            
+            LightFace_Min(bsp, face, &ls, lightsurf, lightmaps);
+        }
 
         /* negative lights */
         for (lighte = lights; (entity = *lighte); lighte++)

@@ -212,7 +212,7 @@ CheckEntityFields(entity_t *entity)
     if (entity->atten <= 0.0)
         entity->atten = 1.0;
     if (entity->anglescale < 0 || entity->anglescale > 1.0)
-        entity->anglescale = global_anglescale;
+        entity->anglescale = global_anglescale.floatValue();
 
     if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
         static qboolean warned_once = true;
@@ -240,7 +240,7 @@ CheckEntityFields(entity_t *entity)
     if (entity->formula == LF_INVERSE
         || entity->formula == LF_INVERSE2
         || entity->formula == LF_INFINITE
-        || (entity->formula == LF_LOCALMIN && addminlight)
+        || (entity->formula == LF_LOCALMIN && addminlight.boolValue())
         || entity->formula == LF_INVERSE2A) {
         entity->light.light /= entity->num_samples;
     }
@@ -292,7 +292,7 @@ AddSun(vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt)
     VectorScale(sun->sunvec, -16384, sun->sunvec);
     sun->sunlight.light = light;
     VectorCopy(color, sun->sunlight.color);
-    sun->anglescale = global_anglescale;
+    sun->anglescale = global_anglescale.floatValue();
     sun->dirt = Dirt_ResolveFlag(dirtInt);
 
     // add to list
@@ -1068,8 +1068,8 @@ LoadEntities(const bsp2_t *bsp)
                     normalize_color_format(sunlight3_color.value);
                 }
             } else if (!strcmp(key, "_minlight_color")) {
-                scan_vec3(minlight.color, com_token, "_minlight_color");
-                normalize_color_format(minlight.color);
+                scan_vec3(minlight_color.value, com_token, "_minlight_color");
+                normalize_color_format(minlight_color.value);
             } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
                 entity->anglescale = atof(com_token);
             else if (!strcmp(key, "_dirtdepth"))
@@ -1135,8 +1135,8 @@ LoadEntities(const bsp2_t *bsp)
                 entity->range = atof(com_token);
             }
             else if (!strcmp(key, "_gamma")) {
-                lightmapgamma = atof(com_token);
-                logprint("using lightmap gamma value %f\n", lightmapgamma);
+                lightmapgamma.value = atof(com_token);
+                logprint("using lightmap gamma value %f\n", lightmapgamma.floatValue());
             }
             else if (!strcmp(key, "_bounce")) {
                 if (!bounce.locked) {
@@ -1182,30 +1182,30 @@ LoadEntities(const bsp2_t *bsp)
             }
         }
         if (!strcmp(entity->classname(), "worldspawn")) {
-            if (entity->light.light > 0 && !minlight.light) {
-                minlight.light = entity->light.light;
+            if (entity->light.light > 0 && !minlight.value) {
+                minlight.value = entity->light.light;
                 logprint("using minlight value %i from worldspawn.\n",
-                         (int)minlight.light);
-            } else if (minlight.light) {
+                         (int)minlight.value);
+            } else if (minlight.value) {
                 logprint("Using minlight value %i from command line.\n",
-                         (int)minlight.light);
+                         (int)minlight.value);
             }
             if (entity->anglescale >= 0 && entity->anglescale <= 1.0) {
-                global_anglescale = entity->anglescale;
+                global_anglescale.value = entity->anglescale;
                 logprint("using global anglescale value %f from worldspawn.\n",
-                         global_anglescale);
+                         global_anglescale.floatValue());
             }
 
             if (entity->dist != 0.0) {
-                scaledist = entity->dist;
+                scaledist.value = entity->dist;
                 logprint("using _dist value %f from worldspawn.\n",
-                         scaledist);
+                         scaledist.floatValue());
             }
 
             if (entity->range != 0.0) {
-                rangescale = entity->range;
+                rangescale.value = entity->range;
                 logprint("using _range value %f from worldspawn.\n",
-                         rangescale);
+                         rangescale.floatValue());
             }
 
             if (entity->dirtdepth && !dirtDepth.locked) {
@@ -1275,7 +1275,7 @@ LoadEntities(const bsp2_t *bsp)
     }
 
     if (!VectorCompare(sunlight_color.value, vec3_white) ||
-        !VectorCompare(minlight.color, vec3_white) ||
+        !VectorCompare(minlight_color.value, vec3_white) ||
         !VectorCompare(sunlight2_color.value, vec3_white) ||
         !VectorCompare(sunlight3_color.value, vec3_white)) {
         if (!write_litfile) {

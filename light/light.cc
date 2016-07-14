@@ -41,22 +41,24 @@
 
 using namespace std;
 
-float scaledist = 1.0;
-float rangescale = 0.5;
-float global_anglescale = 0.5;
+using strings = std::vector<std::string>;
+
+lockable_vec_t scaledist {"dist", 1.0};
+lockable_vec_t rangescale {"range", 0.5};
+lockable_vec_t global_anglescale {strings{"anglescale", "anglesense"}, 0.5};
 float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
-float lightmapgamma = 1.0;
+lockable_vec_t lightmapgamma {"gamma", 1.0};
 const vec3_t vec3_white = { 255, 255, 255 };
 float surflight_subdivide = 128.0f;
 int sunsamples = 64;
 qboolean scaledonly = false;
 
-qboolean addminlight = false;
-lightsample_t minlight = { 0, { 255, 255, 255 } };
-sun_t *suns = NULL;
+lockable_vec_t addminlight {"addmin", 0};
+lockable_vec_t minlight {"light", 0};
+lockable_vec3_t minlight_color {strings{"minlight_color", "min_color"}, 255.0f, 255.0f, 255.0f};
 
-using strings = std::vector<std::string>;
+sun_t *suns = NULL;
 
 /* dirt */
 lockable_vec_t dirty {strings{"dirt", "dirty"}, 0.0f};
@@ -1442,21 +1444,21 @@ main(int argc, const char **argv)
             oversample = 4;
             logprint("extra 4x4 sampling enabled\n");
         } else if (!strcmp(argv[i], "-dist")) {
-            scaledist = ParseVec(&i, argc, argv);
+            scaledist.value = ParseVec(&i, argc, argv);
         } else if (!strcmp(argv[i], "-range")) {
-            rangescale = ParseVec(&i, argc, argv);
+            rangescale.value = ParseVec(&i, argc, argv);
         } else if (!strcmp(argv[i], "-gate")) {
             fadegate = ParseVec(&i, argc, argv);
             if (fadegate > 1) {
                 logprint( "WARNING: -gate value greater than 1 may cause artifacts\n" );
             }
         } else if (!strcmp(argv[i], "-light")) {
-            minlight.light = ParseVec(&i, argc, argv);
+            minlight.value = ParseVec(&i, argc, argv);
         } else if (!strcmp(argv[i], "-addmin")) {
-            addminlight = true;
+            addminlight.value = true;
         } else if (!strcmp(argv[i], "-gamma")) {
-            lightmapgamma = ParseVec(&i, argc, argv);
-            logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma );
+            lightmapgamma.value = ParseVec(&i, argc, argv);
+            logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma.floatValue() );
         } else if (!strcmp(argv[i], "-lit")) {
             write_litfile |= 1;
         } else if (!strcmp(argv[i], "-lit2")) {
@@ -1484,8 +1486,8 @@ main(int argc, const char **argv)
             else
                 softsamples = -1; /* auto, based on oversampling */
         } else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
-            global_anglescale = ParseVec(&i, argc, argv);
-            logprint("Using global anglescale value of %f from command line.\n", global_anglescale);
+            global_anglescale.value = ParseVec(&i, argc, argv);
+            logprint("Using global anglescale value of %f from command line.\n", global_anglescale.floatValue());
         } else if ( !strcmp( argv[ i ], "-dirt" ) ) {
             int dirt_param = 1;
             ParseIntOptional(&dirt_param, &i, argc, argv);

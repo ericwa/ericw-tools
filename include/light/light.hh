@@ -213,25 +213,7 @@ const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, co
 
 const bsp2_dface_t *
 Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
-    
-extern float scaledist;
-extern float rangescale;
-extern float global_anglescale;
-extern float fadegate;
-extern int softsamples;
-extern float lightmapgamma;
-extern const vec3_t vec3_white;
-extern float surflight_subdivide;
-extern int sunsamples;
 
-extern qboolean addminlight;
-extern lightsample_t minlight;
-
-extern sun_t *suns;
-
-extern int dump_facenum;
-extern bool dump_face;
-    
 /* command-line options */
 
 class lockable_vec_t {
@@ -240,6 +222,14 @@ private:
 public:
     vec_t value;
     bool locked;
+    
+    bool boolValue() const {
+        return static_cast<bool>(value);
+    }
+    
+    float floatValue() const {
+        return value;
+    }
     
     lockable_vec_t(std::vector<std::string> names, vec_t v, bool l = false)
     : _names(names), value(v), locked(l) {}
@@ -251,13 +241,13 @@ public:
 class lockable_vec3_t {
 private:
     std::vector<std::string> _names;
-
+    
 public:
     vec3_t value;
     bool locked;
     
     lockable_vec3_t(std::vector<std::string> names, vec_t a, vec_t b, vec_t c, bool l = false)
-        : _names(names), locked(l)
+    : _names(names), locked(l)
     {
         VectorSet(value, a, b, c);
     }
@@ -265,6 +255,25 @@ public:
     lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c, bool l = false)
     : lockable_vec3_t(std::vector<std::string> { name }, a,b,c,l) {}
 };
+
+extern lockable_vec_t scaledist;
+extern lockable_vec_t rangescale;
+extern lockable_vec_t global_anglescale;
+extern float fadegate;
+extern int softsamples;
+extern lockable_vec_t lightmapgamma;
+extern const vec3_t vec3_white;
+extern float surflight_subdivide;
+extern int sunsamples;
+
+extern lockable_vec_t addminlight;
+extern lockable_vec_t minlight;
+extern lockable_vec3_t minlight_color;
+
+extern sun_t *suns;
+
+extern int dump_facenum;
+extern bool dump_face;
 
 /* dirt */
 
