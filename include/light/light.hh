@@ -233,6 +233,8 @@ public:
     const std::string &primaryName() const { return _names.at(0); }
     const std::vector<std::string> &names() const { return _names; }
     
+    virtual void setStringValue(const std::string &str, bool locked = false) = 0;
+    
     bool isRegistered() { return _registered; }
     void setRegistered() { _registered = true; }
 };
@@ -280,6 +282,12 @@ public:
         _locked = true;
     }
     
+    virtual void setStringValue(const std::string &str, bool locked = false) {
+        const float f = std::stof(str);
+        if (locked) setFloatValueLocked(f);
+        else setFloatValue(f);
+    }
+    
     lockable_vec_t(std::vector<std::string> names, float v,
                    float minval=-std::numeric_limits<float>::infinity(),
                    float maxval=std::numeric_limits<float>::infinity())
@@ -325,6 +333,21 @@ public:
         assert(_registered);
         VectorCopy(val, _value);
         _locked = true;
+    }
+    
+    virtual void setStringValue(const std::string &str, bool locked = false) {
+        double vec[3] = { 0.0, 0.0, 0.0 };
+        
+        if (sscanf(str.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]) != 3) {
+            logprint("WARNING: Not 3 values for %s\n", primaryName().c_str());
+        }
+        
+        vec3_t vec3t;
+        for (int i = 0; i < 3; ++i)
+            vec3t[i] = vec[i];
+        
+        if (locked) setVec3ValueLocked(vec3t);
+        else setVec3Value(vec3t);
     }
 };
 
