@@ -31,6 +31,7 @@
 
 #include <vector>
 #include <string>
+#include <cassert>
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
@@ -218,51 +219,86 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
 
 class lockable_setting_t {
 protected:
+    bool _locked;
     bool _registered;
     std::vector<std::string> _names;
 
 public:
     const std::vector<std::string> &names() const { return _names; }
     lockable_setting_t(std::vector<std::string> names)
-    : _registered(false), _names(names) {}
+    : _locked(false), _registered(false), _names(names) {}
     
     bool isRegistered() { return _registered; }
     void setRegistered() { _registered = true; }
 };
 
 class lockable_vec_t : public lockable_setting_t {
-public:
-    vec_t value;
-    bool locked;
+private:
+    vec_t _value;
     
+public:
     bool boolValue() const {
-        return static_cast<bool>(value);
+        return static_cast<bool>(_value);
+    }
+    
+    int intValue() const {
+        return static_cast<int>(_value);
     }
     
     float floatValue() const {
-        return value;
+        return _value;
     }
     
-    lockable_vec_t(std::vector<std::string> names, vec_t v, bool l = false)
-    : lockable_setting_t(names), value(v), locked(l) {}
+    void setFloatValue(float f) {
+        assert(_registered);
+        if (!_locked) {
+            _value = f;
+        }
+    }
     
-    lockable_vec_t(std::string name, vec_t v, bool l = false)
-    : lockable_vec_t(std::vector<std::string> { name }, v, l) {}
+    void setFloatValueLocked(float f) {
+        assert(_registered);
+        _value = f;
+        _locked = true;
+    }
+    
+    lockable_vec_t(std::vector<std::string> names, vec_t v)
+    : lockable_setting_t(names), _value(v) {}
+    
+    lockable_vec_t(std::string name, vec_t v)
+    : lockable_vec_t(std::vector<std::string> { name }, v) {}
 };
 
 class lockable_vec3_t : public lockable_setting_t {
-public:
-    vec3_t value;
-    bool locked;
+private:
+    vec3_t _value;
     
-    lockable_vec3_t(std::vector<std::string> names, vec_t a, vec_t b, vec_t c, bool l = false)
-    : lockable_setting_t(names), locked(l)
+public:
+    lockable_vec3_t(std::vector<std::string> names, vec_t a, vec_t b, vec_t c)
+    : lockable_setting_t(names)
     {
-        VectorSet(value, a, b, c);
+        VectorSet(_value, a, b, c);
     }
     
-    lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c, bool l = false)
-    : lockable_vec3_t(std::vector<std::string> { name }, a,b,c,l) {}
+    lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c)
+        : lockable_vec3_t(std::vector<std::string> { name }, a,b,c) {}
+    
+    const vec3_t *vec3Value() const {
+        return &_value;
+    }
+    
+    void setVec3Value(const vec3_t val) {
+        assert(_registered);
+        if (!_locked) {
+            VectorCopy(val, _value);
+        }
+    }
+    
+    void setVec3ValueLocked(const vec3_t val) {
+        assert(_registered);
+        VectorCopy(val, _value);
+        _locked = true;
+    }
 };
 
 extern lockable_vec_t scaledist;

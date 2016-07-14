@@ -695,7 +695,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             VectorAdd(point, offset, point);
 
             // do this before correcting the point, so we can wrap around the inside of pipes
-            if (surf->curved && phongallowed.value)
+            if (surf->curved && phongallowed.boolValue())
             {
                 CalcPointNormal(bsp, face, norm, point, 0);
             }
@@ -1121,13 +1121,13 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
 static inline vec_t
 Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *surf)
 {
-    vec_t light_dirtgain = dirtGain.value;
-    vec_t light_dirtscale = dirtScale.value;
+    vec_t light_dirtgain = dirtGain.floatValue();
+    vec_t light_dirtscale = dirtScale.floatValue();
     vec_t outDirt;
     qboolean usedirt;
 
     /* is dirt processing disabled entirely? */
-    if (!dirty.value)
+    if (!dirty.boolValue())
         return 1.0f;
     if (surf->nodirt)
         return 1.0f;
@@ -1645,7 +1645,7 @@ BounceLight_ColorAtDist(const bouncelight_t *vpl, vec_t dist, vec3_t color)
     }
     
     const vec_t dist2 = (dist * dist);
-    const vec_t scale = (1.0/dist2) * bouncescale.value;
+    const vec_t scale = (1.0/dist2) * bouncescale.floatValue();
     
     VectorScale(color, 255 * scale, color);
 }
@@ -1703,7 +1703,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     
     lightmap_t *lightmap;
     
-    if (!bounce.value)
+    if (!bounce.boolValue())
         return;
     
     if (!(debugmode == debugmode_bounce
@@ -1774,16 +1774,16 @@ void SetupDirt( void ) {
     logprint("--- SetupDirt ---\n" );
 
     /* clamp dirtAngle */
-    if ( dirtAngle.value <= 1.0f ) {
-        dirtAngle.value = 1.0f;
+    if ( dirtAngle.floatValue() <= 1.0f ) {
+        dirtAngle.setFloatValueLocked(1.0f); // FIXME: add clamping API
     }
-    if ( dirtAngle.value >= 90.0f) {
-        dirtAngle.value = 90.0f;
+    if ( dirtAngle.floatValue() >= 90.0f) {
+        dirtAngle.setFloatValueLocked(90.0f);
     }
     
     /* calculate angular steps */
     angleStep = DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
-    elevationStep = DEG2RAD( dirtAngle.value / DIRT_NUM_ELEVATION_STEPS );
+    elevationStep = DEG2RAD( dirtAngle.floatValue() / DIRT_NUM_ELEVATION_STEPS );
 
     /* iterate angle */
     angle = 0.0f;
@@ -1829,13 +1829,13 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     vec_t traceHitdist;
 
     /* dummy check */
-    if ( !dirty.value ) {
+    if ( !dirty.boolValue() ) {
         return 1.0f;
     }
     
     /* setup */
     gatherDirt = 0.0f;
-    ooDepth = 1.0f / dirtDepth.value;
+    ooDepth = 1.0f / dirtDepth.floatValue();
 
     /* check if the normal is aligned to the world-up */
     if ( normal[ 0 ] == 0.0f && normal[ 1 ] == 0.0f ) {
@@ -1855,12 +1855,12 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     }
 
     /* 1 = random mode, 0 (well everything else) = non-random mode */
-    if ( dirtMode.value == 1 ) {
+    if ( dirtMode.intValue() == 1 ) {
         /* iterate */
         for ( i = 0; i < numDirtVectors; i++ ) {
             /* get random vector */
             angle = Random() * DEG2RAD( 360.0f );
-            elevation = Random() * DEG2RAD( dirtAngle.value );
+            elevation = Random() * DEG2RAD( dirtAngle.floatValue() );
             temp[ 0 ] = cos( angle ) * sin( elevation );
             temp[ 1 ] = sin( angle ) * sin( elevation );
             temp[ 2 ] = cos( elevation );
@@ -1871,7 +1871,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 2 ] = myRt[ 2 ] * temp[ 0 ] + myUp[ 2 ] * temp[ 1 ] + normal[ 2 ] * temp[ 2 ];
 
             /* trace */
-            if (DirtTrace(origin, direction, dirtDepth.value, model, &traceHitdist, NULL, NULL)) {
+            if (DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
                 gatherDirt += 1.0f - ooDepth * traceHitdist;
             }
         }
@@ -1884,14 +1884,14 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 2 ] = myRt[ 2 ] * dirtVectors[ i ][ 0 ] + myUp[ 2 ] * dirtVectors[ i ][ 1 ] + normal[ 2 ] * dirtVectors[ i ][ 2 ];
 
             /* trace */
-            if (DirtTrace(origin, direction, dirtDepth.value, model, &traceHitdist, NULL, NULL)) {
+            if (DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
                 gatherDirt += 1.0f - ooDepth * traceHitdist;
             }
         }
     }
     
     /* trace */
-    if (DirtTrace(origin, direction, dirtDepth.value, model, &traceHitdist, NULL, NULL)) {
+    if (DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
         gatherDirt += 1.0f - ooDepth * traceHitdist;
     }
 
@@ -2173,7 +2173,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
-    if (dirty.value && (debugmode != debugmode_phong))
+    if (dirty.boolValue() && (debugmode != debugmode_phong))
         LightFace_CalculateDirt(lightsurf);
 
     /*
@@ -2196,12 +2196,12 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                 LightFace_Sky (sun, lightsurf, lightmaps);
 
         /* minlight - Use the greater of global or model minlight. */
-        if (lightsurf->minlight.light > minlight.value)
+        if (lightsurf->minlight.light > minlight.floatValue())
             LightFace_Min(bsp, face, &lightsurf->minlight, lightsurf, lightmaps);
         else {
             lightsample_t ls;
-            ls.light = minlight.value;
-            VectorCopy(minlight_color.value, ls.color);
+            ls.light = minlight.floatValue();
+            VectorCopy(*minlight_color.vec3Value(), ls.color);
             VectorSet(ls.direction, 0, 0, 0);
             
             LightFace_Min(bsp, face, &ls, lightsurf, lightmaps);
@@ -2279,15 +2279,15 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
     VectorScale(lightsurf->texturecolor, 1.0f/lightsurf->numpoints, lightsurf->texturecolor);
     
-    if (bounce.value) {
+    if (bounce.boolValue()) {
         // make bounce light, only if this face is shadow casting
         if (modelinfo->shadow) {
             vec3_t gray = {127, 127, 127};
             
             // lerp between gray and the texture color according to `bouncecolorscale`
             vec3_t blendedcolor = {0, 0, 0};
-            VectorMA(blendedcolor, bouncecolorscale.value, lightsurf->texturecolor, blendedcolor);
-            VectorMA(blendedcolor, 1-bouncecolorscale.value, gray, blendedcolor);
+            VectorMA(blendedcolor, bouncecolorscale.floatValue(), lightsurf->texturecolor, blendedcolor);
+            VectorMA(blendedcolor, 1-bouncecolorscale.floatValue(), gray, blendedcolor);
             
             vec3_t emitcolor;
             for (int k=0; k<3; k++) {

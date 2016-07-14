@@ -324,10 +324,10 @@ SetupSun(vec_t light, const vec3_t color, const vec3_t sunvec_in)
     int i;
     int sun_num_samples = sunsamples;
 
-    if (sun_deviance.value == 0) {
+    if (sun_deviance.floatValue() == 0) {
         sun_num_samples = 1;
     } else {
-        logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", sun_deviance.value);
+        logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", sun_deviance.floatValue());
     }
 
     VectorCopy(sunvec_in, sunvec);
@@ -356,10 +356,10 @@ SetupSun(vec_t light, const vec3_t color, const vec3_t sunvec_in)
             /* jitter the angles (loop to keep random sample within sun->deviance steridians) */
             do
             {
-                da = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance.value);
-                de = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance.value);
+                da = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance.floatValue());
+                de = ( Random() * 2.0f - 1.0f ) * DEG2RAD(sun_deviance.floatValue());
             }
-            while ( ( da * da + de * de ) > ( sun_deviance.value * sun_deviance.value ) );
+            while ( ( da * da + de * de ) > ( sun_deviance.floatValue() * sun_deviance.floatValue() ) );
             angle += da;
             elevation += de;
 
@@ -371,18 +371,18 @@ SetupSun(vec_t light, const vec3_t color, const vec3_t sunvec_in)
 
         //printf( "sun %d is using vector %f %f %f\n", i, direction[0], direction[1], direction[2]);
 
-        AddSun(direction, light, color, (int)sunlight_dirt.value);
+        AddSun(direction, light, color, (int)sunlight_dirt.intValue());
     }
 }
 
 static void
 SetupSuns()
 {
-    SetupSun(sunlight.value, sunlight_color.value, sunvec.value);
+    SetupSun(sunlight.floatValue(), *sunlight_color.vec3Value(), *sunvec.vec3Value());
     
-    if (sun2.value != 0) {
+    if (sun2.floatValue() != 0) {
         logprint("creating sun2\n");
-        SetupSun(sun2.value, sun2_color.value, sun2vec.value);
+        SetupSun(sun2.floatValue(), *sun2_color.vec3Value(), *sun2vec.vec3Value());
     }
 }
 
@@ -410,7 +410,7 @@ SetupSkyDome()
         iterations = qmax(iterations, 2);
     
         /* dummy check */
-        if ( sunlight2.value <= 0.0f && sunlight3.value <= 0.0f ) {
+        if ( sunlight2.floatValue() <= 0.0f && sunlight3.floatValue() <= 0.0f ) {
                 return;
         }
     
@@ -423,15 +423,15 @@ SetupSkyDome()
 
         /* calc individual sun brightness */
         numSuns = angleSteps * elevationSteps + 1;
-        if (sunlight2.value > 0) {
-            logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.value, sunlight2_color.value[0], sunlight2_color.value[1], sunlight2_color.value[2]);
+        if (sunlight2.floatValue() > 0) {
+            logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, sunlight2.floatValue(), (*sunlight2_color.vec3Value())[0], (*sunlight2_color.vec3Value())[1], (*sunlight2_color.vec3Value())[2]);
         }
-        if (sunlight3.value > 0) {
-            logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.value, sunlight3_color.value[0], sunlight3_color.value[1], sunlight3_color.value[2]);
+        if (sunlight3.floatValue() > 0) {
+            logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, sunlight3.floatValue(), (*sunlight3_color.vec3Value())[0], (*sunlight3_color.vec3Value())[1], (*sunlight3_color.vec3Value())[2]);
         }
         // FIXME: Don't modify setting, make a copy
-        sunlight2.value /= numSuns;
-        sunlight3.value /= numSuns;
+        float sunlight2value = sunlight2.floatValue() / numSuns;
+        float sunlight3value = sunlight3.floatValue() / numSuns;
 
         /* iterate elevation */
         elevation = elevationStep * 0.5f;
@@ -447,15 +447,15 @@ SetupSkyDome()
                         direction[ 2 ] = -sin( elevation );
 
                         /* insert top hemisphere light */
-                        if (sunlight2.value > 0) {
-                            AddSun(direction, sunlight2.value, sunlight2_color.value, sunlight2_dirt.value);
+                        if (sunlight2value > 0) {
+                            AddSun(direction, sunlight2value, *sunlight2_color.vec3Value(), sunlight2_dirt.intValue());
                         }
 
                         direction[ 2 ] = -direction[ 2 ];
                     
                         /* insert bottom hemisphere light */
-                        if (sunlight3.value > 0) {
-                            AddSun(direction, sunlight3.value, sunlight3_color.value, sunlight2_dirt.value);
+                        if (sunlight3value > 0) {
+                            AddSun(direction, sunlight3value, *sunlight3_color.vec3Value(), sunlight2_dirt.intValue());
                         }
                     
                         /* move */
@@ -470,14 +470,14 @@ SetupSkyDome()
         /* create vertical sun */
         VectorSet( direction, 0.0f, 0.0f, 1.0f );
 
-        if (sunlight2.value > 0) {
-            AddSun(direction, sunlight2.value, sunlight2_color.value, sunlight2_dirt.value);
+        if (sunlight2value > 0) {
+            AddSun(direction, sunlight2value, *sunlight2_color.vec3Value(), sunlight2_dirt.intValue());
         }
     
         VectorSet( direction, 0.0f, 0.0f, -1.0f );
     
-        if (sunlight3.value > 0) {
-            AddSun(direction, sunlight3.value, sunlight3_color.value, sunlight2_dirt.value);
+        if (sunlight3value > 0) {
+            AddSun(direction, sunlight3value, *sunlight3_color.vec3Value(), sunlight2_dirt.intValue());
         }
 }
 
@@ -1024,52 +1024,48 @@ LoadEntities(const bsp2_t *bsp)
                 scan_vec3(entity->light.color, com_token, "color");
                 normalize_color_format(entity->light.color);
             } else if (!strcmp(key, "_sunlight")) {
-                if (!sunlight.locked) {
-                    sunlight.value = atof(com_token);
-                }
+                sunlight.setFloatValue(atof(com_token));
             } else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
+                vec3_t tmp;
                 scan_vec3(vec, com_token, "_sun_mangle");
-                vec_from_mangle(sunvec.value, vec);
+                vec_from_mangle(tmp, vec);
+                sunvec.setVec3Value(tmp);
             } else if (!strcmp(key, "_sunlight_color")) {
-                if (!sunlight_color.locked) {
-                    scan_vec3(sunlight_color.value, com_token, "_sunlight_color");
-                    normalize_color_format(sunlight_color.value);
-                }
+                vec3_t tmp;
+                scan_vec3(tmp, com_token, "_sunlight_color");
+                normalize_color_format(tmp);
+                sunlight_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_sun2")) {
-                if (!sun2.locked) {
-                    sun2.value = atof(com_token);
-                }
+                sun2.setFloatValue(atof(com_token));
             } else if (!strcmp(key, "_sun2_mangle")) {
-                if (!sun2vec.locked) {
-                    scan_vec3(vec, com_token, "_sun2_mangle");
-                    vec_from_mangle(sun2vec.value, vec);
-                }
+                scan_vec3(vec, com_token, "_sun2_mangle");
+                vec3_t tmp;
+                vec_from_mangle(tmp, vec);
+                sun2vec.setVec3Value(tmp);
             } else if (!strcmp(key, "_sun2_color")) {
-                if (!sun2_color.locked) {
-                    scan_vec3(sun2_color.value, com_token, "_sun2_color");
-                    normalize_color_format(sun2_color.value);
-                }
+                vec3_t tmp;
+                scan_vec3(tmp, com_token, "_sun2_color");
+                normalize_color_format(tmp);
+                sun2_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_sunlight2")) {
-                if (!sunlight2.locked) {
-                    sunlight2.value = atof(com_token);
-                }
+                sunlight2.setFloatValue(atof(com_token));
             } else if (!strcmp(key, "_sunlight3")) {
-                if (!sunlight3.locked) {
-                    sunlight3.value = atof(com_token);
-                }
+                sunlight3.setFloatValue(atof(com_token));
             } else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
-                if (!sunlight2_color.locked) {
-                    scan_vec3(sunlight2_color.value, com_token, key);
-                    normalize_color_format(sunlight2_color.value);
-                }
+                vec3_t tmp;
+                scan_vec3(tmp, com_token, key);
+                normalize_color_format(tmp);
+                sunlight2_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_sunlight3_color") || !strcmp(key, "_sunlight_color3")) {
-                if (!sunlight3_color.locked) {
-                    scan_vec3(sunlight3_color.value, com_token, key);
-                    normalize_color_format(sunlight3_color.value);
-                }
+                vec3_t tmp;
+                scan_vec3(tmp, com_token, key);
+                normalize_color_format(tmp);
+                sunlight3_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_minlight_color")) {
-                scan_vec3(minlight_color.value, com_token, "_minlight_color");
-                normalize_color_format(minlight_color.value);
+                vec3_t tmp;
+                scan_vec3(tmp, com_token, "_minlight_color");
+                normalize_color_format(tmp);
+                minlight_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
                 entity->anglescale = atof(com_token);
             else if (!strcmp(key, "_dirtdepth"))
@@ -1079,13 +1075,9 @@ LoadEntities(const bsp2_t *bsp)
             else if (!strcmp(key, "_dirtangle"))
                 entity->dirtangle = atoi(com_token);
             else if (!strcmp(key, "_sunlight_dirt")) {
-                if (!sunlight_dirt.locked) {
-                    sunlight_dirt.value = atoi(com_token);
-                }
+                sunlight_dirt.setFloatValue(atoi(com_token));
             } else if (!strcmp(key, "_sunlight2_dirt")) {
-                if (!sunlight2_dirt.locked) {
-                    sunlight2_dirt.value = atoi(com_token);
-                }
+                sunlight2_dirt.setFloatValue(atoi(com_token));
             } else if (!strcmp(key, "_minlight_dirt"))
                 entity->minlight_dirt = atoi(com_token);
             else if (!strcmp(key, "_dirtscale"))
@@ -1094,10 +1086,10 @@ LoadEntities(const bsp2_t *bsp)
                 entity->dirtgain = atof(com_token);
             else if (!strcmp(key, "_dirt")) {
                 entity->dirt = atoi(com_token);
-                if (entity->dirt == 1 && !dirty.value && !dirty.locked) {
+                if (entity->dirt == 1 && !dirty.boolValue()) {
                     logprint("entity with \"_dirt\" \"1\" detected, enabling "
                         "dirtmapping.\n");
-                    dirty.value = true;
+                    dirty.setFloatValue(1.0f);
                 }
             }
             else if (!strcmp(key, "_project_texture")) {
@@ -1118,9 +1110,7 @@ LoadEntities(const bsp2_t *bsp)
                 entity->bleed = atoi(com_token);
             }
             else if (!strcmp(key, "_sunlight_penumbra")) {
-                if (!sun_deviance.locked) {
-                    sun_deviance.value = atof(com_token);
-                }
+                sun_deviance.setFloatValue(atof(com_token));
             }
             else if (!strcmp(key, "_deviance")) {
                 entity->deviance = atof(com_token);
@@ -1135,27 +1125,22 @@ LoadEntities(const bsp2_t *bsp)
                 entity->range = atof(com_token);
             }
             else if (!strcmp(key, "_gamma")) {
-                lightmapgamma.value = atof(com_token);
+                lightmapgamma.setFloatValue(atof(com_token));
                 logprint("using lightmap gamma value %f\n", lightmapgamma.floatValue());
             }
             else if (!strcmp(key, "_bounce")) {
-                if (!bounce.locked) {
-                    bounce.value = atoi(com_token);
-                    logprint("_bounce set to %d\n", (int)bounce.value);
-                }
+                bounce.setFloatValue(atoi(com_token));
+                logprint("_bounce set to %d\n", bounce.intValue());
             }
             else if (!strcmp(key, "_bouncescale")) {
-                if (!bouncescale.locked) {
-                    bouncescale.value = atof(com_token);
-                    logprint("_bouncescale set to %f\n", bouncescale.value);
-                }
+                bouncescale.setFloatValue(atof(com_token));
+                logprint("_bouncescale set to %f\n", bouncescale.floatValue());
             }
             else if (!strcmp(key, "_bouncecolorscale")) {
-                if (!bouncecolorscale.locked) {
-                    bouncecolorscale.value = atof(com_token);
-                    bouncecolorscale.value = qmin(qmax(bouncecolorscale.value, 0.0f), 1.0f);
-                    logprint("_bouncecolorscale set to %f\n", bouncecolorscale.value);
-                }
+                float tmp = atof(com_token);
+                tmp = qmin(qmax(tmp, 0.0f), 1.0f);
+                bouncecolorscale.setFloatValue(tmp);
+                logprint("_bouncecolorscale set to %f\n", bouncecolorscale.floatValue());
             }
         }
 
@@ -1182,102 +1167,94 @@ LoadEntities(const bsp2_t *bsp)
             }
         }
         if (!strcmp(entity->classname(), "worldspawn")) {
-            if (entity->light.light > 0 && !minlight.value) {
-                minlight.value = entity->light.light;
+            if (entity->light.light > 0 && !minlight.floatValue()) {
+                minlight.setFloatValue(entity->light.light);
                 logprint("using minlight value %i from worldspawn.\n",
-                         (int)minlight.value);
-            } else if (minlight.value) {
+                         (int)minlight.floatValue());
+            } else if (minlight.floatValue()) {
                 logprint("Using minlight value %i from command line.\n",
-                         (int)minlight.value);
+                         (int)minlight.floatValue());
             }
             if (entity->anglescale >= 0 && entity->anglescale <= 1.0) {
-                global_anglescale.value = entity->anglescale;
+                global_anglescale.setFloatValue(entity->anglescale);
                 logprint("using global anglescale value %f from worldspawn.\n",
                          global_anglescale.floatValue());
             }
 
             if (entity->dist != 0.0) {
-                scaledist.value = entity->dist;
+                scaledist.setFloatValue(entity->dist);
                 logprint("using _dist value %f from worldspawn.\n",
                          scaledist.floatValue());
             }
 
             if (entity->range != 0.0) {
-                rangescale.value = entity->range;
+                rangescale.setFloatValue(entity->range);
                 logprint("using _range value %f from worldspawn.\n",
                          rangescale.floatValue());
             }
 
-            if (entity->dirtdepth && !dirtDepth.locked) {
-                dirtDepth.value = entity->dirtdepth;
+            if (entity->dirtdepth) {
+                dirtDepth.setFloatValue(entity->dirtdepth);
                 logprint("Using dirtdepth value %f from worldspawn.\n", 
-                        dirtDepth.value);
+                        dirtDepth.floatValue());
             }
-            if (entity->dirtmode && !dirtMode.locked) {
-                dirtMode.value = entity->dirtmode;
+            if (entity->dirtmode) {
+                dirtMode.setFloatValue(entity->dirtmode);
                 logprint("Using dirtmode value %i from worldspawn.\n", 
-                        (int)dirtMode.value);
+                        (int)dirtMode.intValue());
             }
-            if (entity->dirtscale && !dirtScale.locked) {
-                dirtScale.value = entity->dirtscale;
+            if (entity->dirtscale) {
+                dirtScale.setFloatValue(entity->dirtscale);
                 logprint("Using dirtscale value %f from worldspawn.\n", 
-                        dirtScale.value);
+                        dirtScale.floatValue());
             }
-            if (entity->dirtgain && !dirtGain.locked) {
-                dirtGain.value = entity->dirtgain;
+            if (entity->dirtgain) {
+                dirtGain.setFloatValue(entity->dirtgain);
                 logprint("Using dirtgain value %f from worldspawn.\n", 
-                        dirtGain.value);
+                        dirtGain.floatValue());
             }
-            if (entity->dirtangle && !dirtAngle.locked) {
-                dirtAngle.value = entity->dirtangle;
+            if (entity->dirtangle) {
+                dirtAngle.setFloatValue(entity->dirtangle);
                 logprint("Using dirtangle value %f from worldspawn.\n",
-                         dirtAngle.value);
+                         dirtAngle.floatValue());
             }
             if (entity->dirt == 1) {
                 globalDirt = true;
-                if (!dirty.locked) {
-                    dirty.value = true;
-                }
+                dirty.setFloatValue(true);
                 logprint("Global dirtmapping enabled in worldspawn.\n");
             }
 
-            if (sunlight_dirt.value == 1) {
-                if (!dirty.locked) {
-                    dirty.value = true;
-                }
+            if (sunlight_dirt.intValue() == 1) {
+                dirty.setFloatValue(true);
                 logprint("Sunlight dirtmapping enabled in worldspawn.\n");
-            } else if (sunlight_dirt.value == -1) {
+            } else if (sunlight_dirt.intValue() == -1) {
                 logprint("Sunlight dirtmapping disabled in worldspawn.\n");
             }
 
-            if (sunlight2_dirt.value == 1) {
-                if (!dirty.locked) {
-                    dirty.value = true;
-                }
+            if (sunlight2_dirt.intValue() == 1) {
+                dirty.setFloatValue(true);
                 logprint("Sunlight2 dirtmapping enabled in worldspawn.\n");
-            } else if (sunlight2_dirt.value == -1) {
+            } else if (sunlight2_dirt.intValue() == -1) {
                 logprint("Sunlight2 dirtmapping disabled in worldspawn.\n");
             }
 
             if (entity->minlight_dirt == 1) {
-                minlightDirt.value = true;
-                if (!dirty.locked) {
-                    dirty.value = true;
-                }
+                minlightDirt.setFloatValue(true);
+                dirty.setFloatValue(true);
                 logprint("Minlight dirtmapping enabled in worldspawn.\n");
             } else if (entity->minlight_dirt == -1) {
-                minlightDirt.value = false;
+                minlightDirt.setFloatValue(false);
                 logprint("Minlight dirtmapping disabled in worldspawn.\n");
             } else {
-                minlightDirt.value = globalDirt;
+                minlightDirt.setFloatValue(globalDirt);
             }
         }
     }
 
-    if (!VectorCompare(sunlight_color.value, vec3_white) ||
-        !VectorCompare(minlight_color.value, vec3_white) ||
-        !VectorCompare(sunlight2_color.value, vec3_white) ||
-        !VectorCompare(sunlight3_color.value, vec3_white)) {
+    if (!VectorCompare(*sunlight_color.vec3Value(), vec3_white) ||
+        !VectorCompare(*minlight_color.vec3Value(), vec3_white) ||
+        !VectorCompare(*sunlight2_color.vec3Value(), vec3_white) ||
+        !VectorCompare(*sunlight3_color.vec3Value(), vec3_white)) {
         if (!write_litfile) {
             write_litfile = true;
             logprint("Colored light entities detected: "

@@ -278,7 +278,7 @@ LightThread(void *arg)
         /* If bouncing, keep lightmaps in memory because we run a second lighting pass.
          * Otherwise free memory now, so only (# threads) lightmaps are in memory at a time.
          */
-        if (!bounce.value) {
+        if (!bounce.boolValue()) {
             LightFaceShutdown(ctx);
         }
     }
@@ -800,7 +800,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 
-    if (bounce.value) {
+    if (bounce.boolValue()) {
         logprint("--- LightThreadBounce ---\n");
         RunThreadsOn(0, bsp->numfaces, LightThreadBounce, bsp);
     }
@@ -1498,20 +1498,20 @@ main(int argc, const char **argv)
             oversample = 4;
             logprint("extra 4x4 sampling enabled\n");
         } else if (!strcmp(argv[i], "-dist")) {
-            scaledist.value = ParseVec(&i, argc, argv);
+            scaledist.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if (!strcmp(argv[i], "-range")) {
-            rangescale.value = ParseVec(&i, argc, argv);
+            rangescale.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if (!strcmp(argv[i], "-gate")) {
             fadegate = ParseVec(&i, argc, argv);
             if (fadegate > 1) {
                 logprint( "WARNING: -gate value greater than 1 may cause artifacts\n" );
             }
         } else if (!strcmp(argv[i], "-light")) {
-            minlight.value = ParseVec(&i, argc, argv);
+            minlight.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if (!strcmp(argv[i], "-addmin")) {
-            addminlight.value = true;
+            addminlight.setFloatValueLocked(true);
         } else if (!strcmp(argv[i], "-gamma")) {
-            lightmapgamma.value = ParseVec(&i, argc, argv);
+            lightmapgamma.setFloatValueLocked(ParseVec(&i, argc, argv));
             logprint( "Lightmap gamma %f specified on command-line.\n", lightmapgamma.floatValue() );
         } else if (!strcmp(argv[i], "-lit")) {
             write_litfile |= 1;
@@ -1540,70 +1540,60 @@ main(int argc, const char **argv)
             else
                 softsamples = -1; /* auto, based on oversampling */
         } else if (!strcmp(argv[i], "-anglescale") || !strcmp(argv[i], "-anglesense")) {
-            global_anglescale.value = ParseVec(&i, argc, argv);
+            global_anglescale.setFloatValueLocked(ParseVec(&i, argc, argv));
             logprint("Using global anglescale value of %f from command line.\n", global_anglescale.floatValue());
         } else if ( !strcmp( argv[ i ], "-dirt" ) ) {
             int dirt_param = 1;
             ParseIntOptional(&dirt_param, &i, argc, argv);
             
             if (dirt_param) {
-                dirty.value = true;
-                dirty.locked = true;
+                dirty.setFloatValueLocked(true);
                 globalDirt = true;
-                minlightDirt.value = true;
+                minlightDirt.setFloatValue(true);
                 logprint( "Dirtmapping enabled globally\n" );
             } else {
-                dirty.value = false;
-                dirty.locked = true;
+                dirty.setFloatValueLocked(false);
                 logprint( "Dirtmapping disabled\n" );
             }
         } else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
             CheckNoDebugModeSet();
             
-            if (!dirty.locked) {
-                dirty.value = true;
-            }
-            
+            dirty.setFloatValueLocked(true);
             globalDirt = true;
             debugmode = debugmode_dirt;
             logprint( "Dirtmap debugging enabled\n" );
         } else if ( !strcmp( argv[ i ], "-dirtmode" ) ) {
-            dirtMode.locked = true;
-            dirtMode.value = ParseInt(&i, argc, argv);
-            if ( dirtMode.value != 0 && dirtMode.value != 1 ) {
-                dirtMode.value = 0;
+            dirtMode.setFloatValueLocked(ParseInt(&i, argc, argv));
+            if ( dirtMode.intValue() != 0 && dirtMode.intValue() != 1 ) {
+                dirtMode.setFloatValueLocked(0);
             }
-            if ( dirtMode.value == 1 ) {
+            if ( dirtMode.intValue() == 1 ) {
                 logprint( "Enabling randomized dirtmapping\n" );
             }
             else{
                 logprint( "Enabling ordered dirtmapping\n" );
             }
         } else if ( !strcmp( argv[ i ], "-dirtdepth" ) ) {
-            dirtDepth.locked = true;
-            dirtDepth.value = ParseVec(&i, argc, argv);
-            if ( dirtDepth.value <= 0.0f ) {
-                dirtDepth.value = 128.0f;
+            dirtDepth.setFloatValueLocked(ParseVec(&i, argc, argv));
+            if ( dirtDepth.floatValue() <= 0.0f ) {
+                dirtDepth.setFloatValueLocked(128.0f);
             }
-            logprint( "Dirtmapping depth set to %.1f\n", dirtDepth.value );
+            logprint( "Dirtmapping depth set to %.1f\n", dirtDepth.floatValue() );
         } else if ( !strcmp( argv[ i ], "-dirtscale" ) ) {
-            dirtScale.locked = true;
-            dirtScale.value = ParseVec(&i, argc, argv);
-            if ( dirtScale.value <= 0.0f ) {
-                dirtScale.value = 1.0f;
+            dirtScale.setFloatValueLocked(ParseVec(&i, argc, argv));
+            if ( dirtScale.floatValue() <= 0.0f ) {
+                dirtScale.setFloatValueLocked(1.0f);
             }
-            logprint( "Dirtmapping scale set to %.1f\n", dirtScale.value );
+            logprint( "Dirtmapping scale set to %.1f\n", dirtScale.floatValue() );
         } else if ( !strcmp( argv[ i ], "-dirtgain" ) ) {
-            dirtGain.locked = true;
-            dirtGain.value = ParseVec(&i, argc, argv);
-            if ( dirtGain.value <= 0.0f ) {
-                dirtGain.value = 1.0f;
+            dirtGain.setFloatValueLocked(ParseVec(&i, argc, argv));
+            if ( dirtGain.floatValue() <= 0.0f ) {
+                dirtGain.setFloatValueLocked(1.0f);
             }
-            logprint( "Dirtmapping gain set to %.1f\n", dirtGain.value );
+            logprint( "Dirtmapping gain set to %.1f\n", dirtGain.floatValue());
         } else if ( !strcmp( argv[ i ], "-dirtangle" ) ) {
-            dirtAngle.locked = true;
-            dirtAngle.value = ParseVec(&i, argc, argv);
-            logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle.value );
+            dirtAngle.setFloatValueLocked(ParseVec(&i, argc, argv));
+            logprint( "Dirtmapping cone angle set to %.1f\n", dirtAngle.floatValue() );
         } else if ( !strcmp( argv[ i ], "-phong" ) ) {
             int phong_param = 1;
             ParseIntOptional(&phong_param, &i, argc, argv);
@@ -1611,39 +1601,33 @@ main(int argc, const char **argv)
             if (phong_param) {
                 logprint( "NOTE: -phong 1 has no effect\n" );
             } else {
-                phongallowed.value = false;
-                phongallowed.locked = true;
+                phongallowed.setFloatValueLocked(false);
                 logprint( "Phong shading disabled\n" );
             }
         } else if ( !strcmp( argv[ i ], "-bounce" ) ) {
             int bounce_param = 1;
             ParseIntOptional(&bounce_param, &i, argc, argv);
             
-            bounce.value = bounce_param;
-            bounce.locked = true;
+            bounce.setFloatValueLocked(bounce_param);
             if (bounce_param)
                 logprint( "Bounce enabled on command line\n");
             else
                 logprint( "Bounce disabled on command line\n");
         } else if ( !strcmp( argv[ i ], "-bouncedebug" ) ) {
             CheckNoDebugModeSet();
-            bounce.value = true;
-            bounce.locked = true;
+            bounce.setFloatValueLocked(true);
             debugmode = debugmode_bounce;
             logprint( "Bounce debugging mode enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-bouncescale" ) ) {
-            bounce.value = true;
-            bounce.locked = true;
-            bouncescale.value = ParseVec(&i, argc, argv);
-            bouncescale.locked = true;
-            logprint( "Bounce scale factor set to %f on command line\n", bouncescale.value );
+            bounce.setFloatValueLocked(true);
+            bouncescale.setFloatValueLocked(ParseVec(&i, argc, argv));
+            logprint( "Bounce scale factor set to %f on command line\n", bouncescale.floatValue() );
         } else if ( !strcmp( argv[ i ], "-bouncecolorscale" ) ) {
-            bounce.value = true;
-            bounce.locked = true;
-            bouncecolorscale.value = ParseVec(&i, argc, argv);
-            bouncecolorscale.locked = true;
-            bouncecolorscale.value = qmin(qmax(bouncecolorscale.value, 0.0f), 1.0f);
-            logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale.value );
+            bounce.setFloatValueLocked(true);
+            float tmp = ParseVec(&i, argc, argv);
+            tmp = qmin(qmax(tmp, 0.0f), 1.0f);
+            bouncecolorscale.setFloatValueLocked(tmp);
+            logprint( "Bounce color scale factor set to %f on command line\n", bouncecolorscale.floatValue() );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
             surflight_subdivide = ParseVec(&i, argc, argv);
             surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
@@ -1678,44 +1662,43 @@ main(int argc, const char **argv)
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
         } else if ( !strcmp( argv[ i ], "-sunlight" ) ) {
-            sunlight.value = ParseVec(&i, argc, argv);
-            sunlight.locked = true;
+            sunlight.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-sunlight_color" ) ) {
-            ParseVec3(sunlight_color.value, &i, argc, argv);
-            sunlight_color.locked = true;
+            vec3_t tmp;
+            ParseVec3(tmp, &i, argc, argv);
+            sunlight_color.setVec3ValueLocked(tmp);
         } else if ( !strcmp( argv[ i ], "-sun2" ) ) {
-            sun2.value = ParseVec(&i, argc, argv);
-            sun2.locked = true;
+            sun2.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-sun2_color" ) ) {
-            ParseVec3(sun2_color.value, &i, argc, argv);
-            sun2_color.locked = true;
+            vec3_t tmp;
+            ParseVec3(tmp, &i, argc, argv);
+            sun2_color.setVec3ValueLocked(tmp);
         } else if ( !strcmp( argv[ i ], "-sunlight2" ) ) {
-            sunlight2.value = ParseVec(&i, argc, argv);
-            sunlight2.locked = true;
+            sunlight2.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-sunlight2_color" ) ) {
-            ParseVec3(sunlight2_color.value, &i, argc, argv);
-            sunlight2_color.locked = true;
+            vec3_t tmp;
+            ParseVec3(tmp, &i, argc, argv);
+            sunlight2_color.setVec3ValueLocked(tmp);
         } else if ( !strcmp( argv[ i ], "-sunlight3" ) ) {
-            sunlight3.value = ParseVec(&i, argc, argv);
-            sunlight3.locked = true;
+            sunlight3.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-sunlight3_color" ) ) {
-            ParseVec3(sunlight3_color.value, &i, argc, argv);
-            sunlight3_color.locked = true;
+            vec3_t tmp;
+            ParseVec3(tmp, &i, argc, argv);
+            sunlight3_color.setVec3ValueLocked(tmp);
         } else if ( !strcmp( argv[ i ], "-sunlight_dirt" ) ) {
-            sunlight_dirt.value = ParseInt(&i, argc, argv);
-            sunlight_dirt.locked = true;
+            sunlight_dirt.setFloatValueLocked(ParseInt(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-sunlight2_dirt" ) ) {
-            sunlight2_dirt.value = ParseInt(&i, argc, argv);
-            sunlight2_dirt.locked = true;
+            sunlight2_dirt.setFloatValueLocked(ParseInt(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-sunvec" ) ) {
-            ParseVec3(sunvec.value, &i, argc, argv);
-            sunvec.locked = true;
+            vec3_t tmp;
+            ParseVec3(tmp, &i, argc, argv);
+            sunvec.setVec3ValueLocked(tmp);
         } else if ( !strcmp( argv[ i ], "-sun2vec" ) ) {
-            ParseVec3(sun2vec.value, &i, argc, argv);
-            sun2vec.locked = true;
+            vec3_t tmp;
+            ParseVec3(tmp, &i, argc, argv);
+            sun2vec.setVec3ValueLocked(tmp);
         } else if ( !strcmp( argv[ i ], "-sun_deviance" ) ) {
-            sun_deviance.value = ParseVec(&i, argc, argv);
-            sun_deviance.locked = true;
+            sun_deviance.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
             PrintUsage();
             exit(0);
@@ -1806,7 +1789,7 @@ main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (dirty.value)
+        if (dirty.boolValue())
             SetupDirt();
 
         MakeTnodes(bsp);
