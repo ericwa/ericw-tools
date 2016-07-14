@@ -222,11 +222,15 @@ protected:
     bool _locked;
     bool _registered;
     std::vector<std::string> _names;
-
-public:
-    const std::vector<std::string> &names() const { return _names; }
+    
     lockable_setting_t(std::vector<std::string> names)
-    : _locked(false), _registered(false), _names(names) {}
+    : _locked(false), _registered(false), _names(names) {
+        assert(_names.size() > 0);
+    }
+    
+public:
+    const std::string &primaryName() const { return _names.at(0); }
+    const std::vector<std::string> &names() const { return _names; }
     
     bool isRegistered() { return _registered; }
     void setRegistered() { _registered = true; }
@@ -234,7 +238,22 @@ public:
 
 class lockable_vec_t : public lockable_setting_t {
 private:
-    vec_t _value;
+    float _value, _min, _max;
+    
+    void setFloatInternal(float f) {
+        assert(_registered);
+        if (f < _min) {
+            logprint("WARNING: '%s': %f is less than minimum value %f.\n",
+                     primaryName().c_str(), f, _min);
+            f = _min;
+        }
+        if (f > _max) {
+            logprint("WARNING: '%s': %f is greater than maximum value %f.\n",
+                     primaryName().c_str(), f, _max);
+            f = _max;
+        }
+        _value = f;
+    }
     
 public:
     bool boolValue() const {
@@ -250,23 +269,30 @@ public:
     }
     
     void setFloatValue(float f) {
-        assert(_registered);
         if (!_locked) {
-            _value = f;
+            setFloatInternal(f);
         }
     }
     
     void setFloatValueLocked(float f) {
-        assert(_registered);
-        _value = f;
+        setFloatInternal(f);
         _locked = true;
     }
     
-    lockable_vec_t(std::vector<std::string> names, vec_t v)
-    : lockable_setting_t(names), _value(v) {}
+    lockable_vec_t(std::vector<std::string> names, float v,
+                   float minval=-std::numeric_limits<float>::infinity(),
+                   float maxval=std::numeric_limits<float>::infinity())
+    : lockable_setting_t(names), _value(v), _min(minval), _max(maxval) {
+        // check the default value is valid
+        assert(_min < _max);
+        assert(_value >= _min);
+        assert(_value <= _max);
+    }
     
-    lockable_vec_t(std::string name, vec_t v)
-    : lockable_vec_t(std::vector<std::string> { name }, v) {}
+    lockable_vec_t(std::string name, float v,
+                   float minval=-std::numeric_limits<float>::infinity(),
+                   float maxval=std::numeric_limits<float>::infinity())
+    : lockable_vec_t(std::vector<std::string> { name }, v, minval, maxval) {}
 };
 
 class lockable_vec3_t : public lockable_setting_t {

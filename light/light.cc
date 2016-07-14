@@ -43,12 +43,12 @@ using namespace std;
 
 using strings = std::vector<std::string>;
 
-lockable_vec_t scaledist {"dist", 1.0};
-lockable_vec_t rangescale {"range", 0.5};
-lockable_vec_t global_anglescale {strings{"anglescale", "anglesense"}, 0.5};
+lockable_vec_t scaledist {"dist", 1.0, 0.0f, 100.0f};
+lockable_vec_t rangescale {"range", 0.5f, 0.0f, 100.0f};
+lockable_vec_t global_anglescale {strings{"anglescale", "anglesense"}, 0.5, 0.0f, 1.0f};
 float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
-lockable_vec_t lightmapgamma {"gamma", 1.0};
+lockable_vec_t lightmapgamma {"gamma", 1.0, 0.0f, 100.0f};
 const vec3_t vec3_white = { 255, 255, 255 };
 float surflight_subdivide = 128.0f;
 int sunsamples = 64;
@@ -63,10 +63,10 @@ sun_t *suns = NULL;
 /* dirt */
 lockable_vec_t dirty {strings{"dirt", "dirty"}, 0.0f};
 lockable_vec_t dirtMode {"dirtmode", 0.0f};
-lockable_vec_t dirtDepth {"dirtdepth", 128.0f};
-lockable_vec_t dirtScale {"dirtscale", 1.0f};
-lockable_vec_t dirtGain {"dirtgain", 1.0f};
-lockable_vec_t dirtAngle {"dirtangle", 88.0f};
+lockable_vec_t dirtDepth {"dirtdepth", 128.0f, 1.0f, std::numeric_limits<float>::infinity()};
+lockable_vec_t dirtScale {"dirtscale", 1.0f, 0.0f, 100.0f};
+lockable_vec_t dirtGain {"dirtgain", 1.0f, 0.0f, 100.0f};
+lockable_vec_t dirtAngle {"dirtangle", 88.0f, 0.0f, 90.0f};
 
 qboolean globalDirt = false;
 lockable_vec_t minlightDirt {"minlight_dirt", 0};
@@ -76,8 +76,8 @@ lockable_vec_t phongallowed {"phong", 1.0f};
 
 /* bounce */
 lockable_vec_t bounce {"bounce", 0.0f};
-lockable_vec_t bouncescale {"bouncescale", 1.0f};
-lockable_vec_t bouncecolorscale {"bouncecolorscale", 0.0f};
+lockable_vec_t bouncescale {"bouncescale", 1.0f, 0.0f, 100.0f};
+lockable_vec_t bouncecolorscale {"bouncecolorscale", 0.0f, 0.0f, 1.0f};
 
 qboolean surflight_dump = false;
 

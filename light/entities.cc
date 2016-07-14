@@ -52,7 +52,7 @@ lockable_vec_t sunlight_dirt    { "sunlight_dirt", 0.0f };
 lockable_vec_t sunlight2_dirt   { "sunlight2_dirt", 0.0f };
 lockable_vec3_t sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, 0.0f, -1.0f };  /* defaults to straight down */
 lockable_vec3_t sun2vec         { "sun2_mangle", 0.0f, 0.0f, -1.0f };  /* defaults to straight down */
-lockable_vec_t sun_deviance     { "sunlight_penumbra", 0.0f };
+lockable_vec_t sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f };
 
 // entity_t
 
