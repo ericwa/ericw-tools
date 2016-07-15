@@ -42,14 +42,6 @@ endif (UNIX)
 
 add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
 
-#MSVC: /MT is to static link the CRT.
-if (MSVC)
-	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-endif (MSVC)
-
 #minimum version that supports unordered_map
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 
