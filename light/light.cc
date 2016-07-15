@@ -134,6 +134,21 @@ static void RegisterSettings(std::vector<lockable_setting_t *> settings)
     }
 }
 
+lockable_setting_t *FindSetting(std::string name)
+{
+    // strip off leading underscores
+    if (name.find("_") == 0) {
+        return FindSetting(name.substr(1, name.size() - 1));
+    }
+    
+    auto it = settingsmap.find(name);
+    if (it != settingsmap.end()) {
+        return it->second;
+    } else {
+        return nullptr;
+    }
+}
+
 void InitSettings()
 {
     std::vector<lockable_setting_t *> settings {
