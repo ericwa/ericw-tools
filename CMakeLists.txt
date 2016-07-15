@@ -40,18 +40,10 @@ if (UNIX)
 	add_definitions(-DLINUX)
 endif (UNIX)
 
-set(STACKSIZE 8388608)
-add_definitions(-DQ_STACKSIZE=${STACKSIZE})
 add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
-
-#request 8MB stack
-if (WIN32)
-	set(CMAKE_EXE_LINKER_FLAGS -Wl,--stack,${STACKSIZE})
-endif (WIN32)
 
 #MSVC: /MT is to static link the CRT.
 if (MSVC)
-	set(CMAKE_EXE_LINKER_FLAGS "/STACK:${STACKSIZE}")
 	set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT")
 	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MTd")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
