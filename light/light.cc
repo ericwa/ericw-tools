@@ -149,6 +149,19 @@ lockable_setting_t *FindSetting(std::string name)
     }
 }
 
+void SetSetting(std::string name, std::string value, bool cmdline)
+{
+    lockable_setting_t *setting = FindSetting(name);
+    if (setting == nullptr) {
+        if (cmdline) {
+            Error("Unrecognized command-line option '%s'\n", name.c_str());
+        }
+        return;
+    }
+    
+    setting->setStringValue(value, cmdline);
+}
+
 void InitSettings()
 {
     std::vector<lockable_setting_t *> settings {
