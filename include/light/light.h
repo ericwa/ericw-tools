@@ -203,6 +203,8 @@ void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modeli
 void LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
 void MakeTnodes(const bsp2_t *bsp);
 
+int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
+const vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
 /* access the final phong-shaded vertex normal */
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
 

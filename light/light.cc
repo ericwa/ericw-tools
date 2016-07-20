@@ -418,7 +418,7 @@ AddTriangleNormals(std::map<int, vec3_struct_t> &smoothed_normals, const vec_t *
     VectorMA(smoothed_normals[v3].v, weight, norm, smoothed_normals[v3].v);
 }
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
-static int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
     int edge = f->firstedge + v;
     edge = bsp->dsurfedges[edge];
