@@ -633,6 +633,8 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
     
     logprint("wrote face %d's sample points (%dx%d) to calcpoints.map\n",
              facenum, surf->width, surf->height);
+
+    PrintFaceInfo(surf->face, bsp);
 }
 
 /*
