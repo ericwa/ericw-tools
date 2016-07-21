@@ -166,8 +166,6 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     }
 }
 
-vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
-
 static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *plane)
 {
     const dplane_t *dplane = &bsp->dplanes[face->planenum];

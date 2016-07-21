@@ -118,6 +118,10 @@ int dump_facenum = -1;
 bool dump_face;
 vec3_t dump_face_point = {0,0,0};
 
+int dump_vertnum = -1;
+bool dump_vert;
+vec3_t dump_vert_point = {0,0,0};
+
 std::map<std::string, lockable_setting_t *> settingsmap;
 
 static void RegisterSettings(std::vector<lockable_setting_t *> settings)
@@ -514,7 +518,7 @@ AddTriangleNormals(std::map<int, vec3_struct_t> &smoothed_normals, const vec_t *
     VectorMA(smoothed_normals[v3].v, weight, norm, smoothed_normals[v3].v);
 }
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
-static int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
     int edge = f->firstedge + v;
     edge = bsp->dsurfedges[edge];
@@ -1333,6 +1337,44 @@ void FindDebugFace(const bsp2_t *bsp)
     dump_facenum = facenum;
 }
 
+// returns the vert nearest the given point
+static int
+Vertex_NearestPoint(const bsp2_t *bsp, const vec3_t point)
+{
+    int nearest_vert = -1;
+    vec_t nearest_dist = VECT_MAX;
+    
+    for (int i=0; i<bsp->numvertexes; i++) {
+        const dvertex_t *vertex = &bsp->dvertexes[i];
+        
+        vec3_t distvec;
+        VectorSubtract(vertex->point, point, distvec);
+        vec_t dist = VectorLength(distvec);
+        
+        if (dist < nearest_dist) {
+            nearest_dist = dist;
+            nearest_vert = i;
+        }
+    }
+    
+    return nearest_vert;
+}
+
+void FindDebugVert(const bsp2_t *bsp)
+{
+    if (!dump_vert)
+        return;
+    
+    int v = Vertex_NearestPoint(bsp, dump_vert_point);
+    const dvertex_t *vertex = &bsp->dvertexes[v];
+    
+    logprint("FindDebugVert: dumping vert %d at %f %f %f\n", v,
+             vertex->point[0],
+             vertex->point[1],
+             vertex->point[2]);
+    dump_vertnum = v;
+}
+
 static void PrintUsage()
 {
     printf("usage: light [options] mapname.bsp\n"
@@ -1689,6 +1731,9 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-debugface" ) ) {
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
+        } else if ( !strcmp( argv[ i ], "-debugvert" ) ) {
+            ParseVec3(dump_vert_point, &i, argc, argv);
+            dump_vert = true;
         } else if ( !strcmp( argv[ i ], "-sunlight" ) ) {
             sunlight.setFloatValueLocked(ParseVec(&i, argc, argv));
         } else if ( !strcmp( argv[ i ], "-sunlight_color" ) ) {
@@ -1810,6 +1855,7 @@ main(int argc, const char **argv)
     LoadEntities(bsp);
 
     FindDebugFace(bsp);
+    FindDebugVert(bsp);
     
     modelinfo = (modelinfo_t *)malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp, lmscaleoverride);

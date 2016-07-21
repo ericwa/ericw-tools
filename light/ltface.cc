@@ -142,7 +142,7 @@ TriCentroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
         out[i] = (v0->point[i] + v1->point[i] + v2->point[i]) / 3.0;
 }
 
-static vec_t
+vec_t
 TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 {
     int i;
@@ -286,9 +286,9 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 
     for (i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
-        int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
-        const float *point = bsp->dvertexes[vert].point;
-        const float *norm = GetSurfaceVertexNormal(bsp, face, i);
+        int vert = GetSurfaceVertex(bsp, face, i);
+        const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
+        const vec_t *norm = GetSurfaceVertexNormal(bsp, face, i);
         logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: normal (%3.3f, %3.3f, %3.3f) :: edge %d\n",
                  i ? "          " : "    verts ", vert,
                  point[0], point[1], point[2],
@@ -398,17 +398,7 @@ WarnBadMidpoint(const vec3_t point)
 #endif
 }
 
-
-/* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
-static int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
-{
-        int edge = f->firstedge + v;
-        edge = bsp->dsurfedges[edge];
-        if (edge < 0)
-                return bsp->dedges[-edge].v[1];
-        return bsp->dedges[edge].v[0];
-}
-vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+const vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
         return bsp->dvertexes[GetSurfaceVertex(bsp, f, v)].point;
 }
@@ -650,6 +640,8 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
     
     logprint("wrote face %d's sample points (%dx%d) to calcpoints.map\n",
              facenum, surf->width, surf->height);
+
+    PrintFaceInfo(surf->face, bsp);
 }
 
 /*
@@ -692,7 +684,6 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             const vec_t ut = surf->startt + t * surf->st_step;
 
             TexCoordToWorld(us, ut, &surf->texorg, point);
-            VectorAdd(point, offset, point);
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             if (surf->curved && phongallowed.boolValue())
@@ -703,6 +694,9 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             {
                 VectorCopy(surf->plane.normal, norm);
             }
+            
+            // apply model offset after calling CalcPointNormal
+            VectorAdd(point, offset, point);
             
             // corrects point
             CheckObstructed(surf, offset, us, ut, point);
