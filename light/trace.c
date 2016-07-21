@@ -18,6 +18,7 @@
 */
 
 #include <light/light.h>
+#include <assert.h>
 
 #define TRACE_HIT_NONE  0
 #define TRACE_HIT_SOLID (1 << 0)
@@ -91,7 +92,6 @@ typedef struct faceinfo_s {
 } faceinfo_t;
 
 static tnode_t *tnodes;
-static tnode_t *tnode_p;
 static const bsp2_t *bsp_static;
 
 static faceinfo_t *faceinfos;
@@ -144,7 +144,9 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     bsp2_dnode_t *node;
     bsp2_dleaf_t *leaf;
 
-    tnode = tnode_p++;
+    assert(nodenum >= 0);
+    assert(nodenum < bsp->numnodes);
+    tnode = &tnodes[nodenum];
 
     node = bsp->dnodes + nodenum;
     tnode->plane = bsp->dplanes + node->planenum;
@@ -155,13 +157,14 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     tnode->dist = tnode->plane->dist;
 
     for (i = 0; i < 2; i++) {
-        if (node->children[i] < 0) {
-            leaf = &bsp->dleafs[-node->children[i] - 1];
+        int childnum = node->children[i];
+        if (childnum < 0) {
+            leaf = &bsp->dleafs[-childnum - 1];
             tnode->children[i] = leaf->contents;
             tnode->childleafs[i] = leaf;
         } else {
-            tnode->children[i] = tnode_p - tnodes;
-            MakeTnodes_r(node->children[i], bsp);
+            tnode->children[i] = childnum;
+            MakeTnodes_r(childnum, bsp);
         }
     }
 }
@@ -323,7 +326,7 @@ void
 MakeTnodes(const bsp2_t *bsp)
 {
     bsp_static = bsp;
-    tnode_p = tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
+    tnodes = malloc(bsp->numnodes * sizeof(tnode_t));
     for (int i = 0; i < bsp->nummodels; i++)
         MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
     
