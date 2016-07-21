@@ -141,7 +141,7 @@ TriCentroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
         out[i] = (v0->point[i] + v1->point[i] + v2->point[i]) / 3.0;
 }
 
-static vec_t
+vec_t
 TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 {
     int i;
