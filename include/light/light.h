@@ -228,6 +228,9 @@ extern sun_t *suns;
 
 extern int dump_facenum;
 extern bool dump_face;
+
+extern int dump_vertnum;
+extern bool dump_vert;
     
 /* command-line options */
 
