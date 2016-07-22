@@ -306,34 +306,67 @@ public:
     : lockable_vec_t(std::vector<std::string> { name }, v, minval, maxval) {}
 };
 
+enum class vec3_transformer_t {
+    NONE,
+    MANGLE_TO_VEC,
+    NORMALIZE_COLOR_TO_255
+};
+
+
+void vec_from_mangle(vec3_t v, const vec3_t m);
+
+/* detect colors with components in 0-1 and scale them to 0-255 */
+void normalize_color_format(vec3_t color);
+
+
 class lockable_vec3_t : public lockable_setting_t {
 private:
     vec3_t _value;
-    
-public:
-    lockable_vec3_t(std::vector<std::string> names, vec_t a, vec_t b, vec_t c)
-    : lockable_setting_t(names)
-    {
-        VectorSet(_value, a, b, c);
+    vec3_transformer_t _transformer;
+
+    void transformAndSetVec3Value(const vec3_t val) {
+        // apply transform
+        switch (_transformer) {
+            case vec3_transformer_t::NONE:
+                VectorCopy(val, _value);
+                break;
+            case vec3_transformer_t::MANGLE_TO_VEC:
+                vec_from_mangle(_value, val);
+                break;
+            case vec3_transformer_t::NORMALIZE_COLOR_TO_255:
+                VectorCopy(val, _value);
+                normalize_color_format(_value);
+                break;
+        }
     }
     
-    lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c)
-        : lockable_vec3_t(std::vector<std::string> { name }, a,b,c) {}
+public:
+    lockable_vec3_t(std::vector<std::string> names, vec_t a, vec_t b, vec_t c,
+                    vec3_transformer_t t = vec3_transformer_t::NONE)
+    : lockable_setting_t(names), _transformer(t)
+    {
+        vec3_t tmp = { a, b, c };
+        transformAndSetVec3Value(tmp);
+    }
+    
+    lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c,
+                    vec3_transformer_t t = vec3_transformer_t::NONE)
+        : lockable_vec3_t(std::vector<std::string> { name }, a,b,c,t) {}
     
     const vec3_t *vec3Value() const {
         return &_value;
     }
-    
+
     void setVec3Value(const vec3_t val) {
         assert(_registered);
         if (!_locked) {
-            VectorCopy(val, _value);
+            transformAndSetVec3Value(val);
         }
     }
     
     void setVec3ValueLocked(const vec3_t val) {
         assert(_registered);
-        VectorCopy(val, _value);
+        transformAndSetVec3Value(val);
         _locked = true;
     }
     

@@ -41,17 +41,17 @@ using strings = std::vector<std::string>;
 
 /* temporary storage for sunlight settings before the sun_t objects are created. */
 lockable_vec_t sunlight         { "sunlight", 0.0f };                   /* main sun */
-lockable_vec3_t sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f };
+lockable_vec3_t sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
 lockable_vec_t sun2             { "sun2", 0.0f };                   /* second sun */
-lockable_vec3_t sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f };
+lockable_vec3_t sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
 lockable_vec_t sunlight2        { "sunlight2", 0.0f };                   /* top sky dome */
-lockable_vec3_t sunlight2_color { strings{"sunlight2_color", "sunlight_color2"}, 255.0f, 255.0f, 255.0f };
+lockable_vec3_t sunlight2_color { strings{"sunlight2_color", "sunlight_color2"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
 lockable_vec_t sunlight3        { "sunlight3", 0.0f };                   /* bottom sky dome */
-lockable_vec3_t sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f };
+lockable_vec3_t sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
 lockable_vec_t sunlight_dirt    { "sunlight_dirt", 0.0f };
 lockable_vec_t sunlight2_dirt   { "sunlight2_dirt", 0.0f };
-lockable_vec3_t sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, 0.0f, -1.0f };  /* defaults to straight down */
-lockable_vec3_t sun2vec         { "sun2_mangle", 0.0f, 0.0f, -1.0f };  /* defaults to straight down */
+lockable_vec3_t sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
+lockable_vec3_t sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
 lockable_vec_t sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f };
 
 // entity_t
@@ -180,7 +180,7 @@ scan_vec3(vec3_t dest, const char *buf, const char *name)
         dest[i] = vec[i];
 }
 
-static void
+void
 vec_from_mangle(vec3_t v, const vec3_t m)
 {
     vec3_t tmp;
@@ -1026,26 +1026,20 @@ LoadEntities(const bsp2_t *bsp)
             } else if (!strcmp(key, "_sunlight")) {
                 sunlight.setFloatValue(atof(com_token));
             } else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
-                vec3_t tmp;
                 scan_vec3(vec, com_token, "_sun_mangle");
-                vec_from_mangle(tmp, vec);
-                sunvec.setVec3Value(tmp);
+                sunvec.setVec3Value(vec);
             } else if (!strcmp(key, "_sunlight_color")) {
                 vec3_t tmp;
                 scan_vec3(tmp, com_token, "_sunlight_color");
-                normalize_color_format(tmp);
                 sunlight_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_sun2")) {
                 sun2.setFloatValue(atof(com_token));
             } else if (!strcmp(key, "_sun2_mangle")) {
                 scan_vec3(vec, com_token, "_sun2_mangle");
-                vec3_t tmp;
-                vec_from_mangle(tmp, vec);
-                sun2vec.setVec3Value(tmp);
+                sun2vec.setVec3Value(vec);
             } else if (!strcmp(key, "_sun2_color")) {
                 vec3_t tmp;
                 scan_vec3(tmp, com_token, "_sun2_color");
-                normalize_color_format(tmp);
                 sun2_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_sunlight2")) {
                 sunlight2.setFloatValue(atof(com_token));
@@ -1054,17 +1048,14 @@ LoadEntities(const bsp2_t *bsp)
             } else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
                 vec3_t tmp;
                 scan_vec3(tmp, com_token, key);
-                normalize_color_format(tmp);
                 sunlight2_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_sunlight3_color") || !strcmp(key, "_sunlight_color3")) {
                 vec3_t tmp;
                 scan_vec3(tmp, com_token, key);
-                normalize_color_format(tmp);
                 sunlight3_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_minlight_color")) {
                 vec3_t tmp;
                 scan_vec3(tmp, com_token, "_minlight_color");
-                normalize_color_format(tmp);
                 minlight_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
                 entity->anglescale = atof(com_token);
