@@ -1123,6 +1123,8 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
     uint32_t bspxofs, flen;
     const bspx_header_t *bspx;
 
+    logprint("LoadBSPFile: '%s'\n", filename);
+    
     /* load the file header */
     flen = LoadFilePak(filename, &header);
 
