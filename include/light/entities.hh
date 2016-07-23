@@ -28,8 +28,6 @@
 #include <common/bspfile.h>
 #include <light/light.hh>
 
-#define DEFAULTLIGHTLEVEL 300
-
 /*
  * Light attenuation formalae
  * (relative to distance 'x' from the light source)

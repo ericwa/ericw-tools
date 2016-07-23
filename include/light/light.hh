@@ -445,7 +445,44 @@ extern lockable_vec_t sunlight2_dirt;
 extern lockable_vec3_t sunvec;
 extern lockable_vec3_t sun2vec;
 extern lockable_vec_t sun_deviance;
+
+// light
+
+#define DEFAULTLIGHTLEVEL 300.0f
+
+class lightsettings_t {
+public:
+    lockable_vec_t light, wait, delay, angle, softangle, style, anglescale;
+    lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples;
+    lockable_vec3_t color, mangle;
+private:
+    std::vector<lockable_setting_t *> allsettings;
     
+public:
+    lightsettings_t(void) :
+        light { "light", DEFAULTLIGHTLEVEL },
+        wait { "wait", 1.0f },
+        delay { "delay", 0.0f },
+        angle { "angle", 40.0f },
+        softangle { "softangle", 0.0f },
+        style { "style", 0.0f },
+        anglescale { "anglescale", 0.0f },
+        dirtscale { "dirtscale", 0.0f },
+        dirtgain { "dirtgain", 0 },
+        dirt { "dirt", 0 },
+        deviance { "deviance", 0 },
+        samples { "samples", 16 },
+        color { "color", 255.0f, 255.0f, 255.0f },
+        mangle { "mangle", 0, 0, 0 },
+        allsettings {
+            &light, &wait, &delay, &angle, &softangle, &style, &anglescale,
+            &dirtscale, &dirtgain, &dirt, &deviance, &samples,
+            &color, &mangle
+        }
+    {}
+};
+
+
 /*
  * Return space for the lightmap and colourmap at the same time so it can
  * be done in a thread-safe manner.
