@@ -576,8 +576,7 @@ class lightsettings_t {
 public:
     lockable_vec_t light, wait, delay, angle, softangle, style, anglescale;
     lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples;
-    lockable_vec3_t color, mangle;
-private:
+    lockable_vec3_t origin, color, mangle;
     settingsdict_t settings;
     
 public:
@@ -594,12 +593,13 @@ public:
         dirt { "dirt", 0 },
         deviance { "deviance", 0 },
         samples { "samples", 16 },
-        color { "color", 255.0f, 255.0f, 255.0f },
+        origin { "origin", 0, 0, 0 },
+        color { "color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         mangle { "mangle", 0, 0, 0 },
         settings {{
             &light, &wait, &delay, &angle, &softangle, &style, &anglescale,
             &dirtscale, &dirtgain, &dirt, &deviance, &samples,
-            &color, &mangle
+            &origin, &color, &mangle
         }}
     {}
 };
