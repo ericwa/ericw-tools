@@ -904,8 +904,12 @@ EntDict_StringForKey(const entdict_t &dict, const std::string key)
 static float
 EntDict_FloatForKey(const entdict_t &dict, const std::string key)
 {
+    auto s = EntDict_StringForKey(dict, key);
+    if (s == "")
+        return 0;
+    
     try {
-        return std::stof(EntDict_StringForKey(dict, key));
+        return std::stof(s);
     } catch (std::exception &e) {
         return 0.0f;
     }
