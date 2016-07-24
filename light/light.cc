@@ -351,7 +351,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     if (lmscaleoverride)
         SetWorldKeyValue("_lightmap_scale", lmscaleoverride);
 
-    lightmapscale = atoi(WorldValueForKey("_lightmap_scale"));
+    lightmapscale = atoi(WorldValueForKey("_lightmap_scale").c_str());
     if (!lightmapscale)
         lightmapscale = 16; /* the default */
     if (lightmapscale <= 0)

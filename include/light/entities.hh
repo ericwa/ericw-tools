@@ -155,8 +155,8 @@ void GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec);
 std::string EntDict_StringForKey(const entdict_t &dict, const std::string key);
 float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
 
-void SetWorldKeyValue(const char *key, const char *value);
-const char *WorldValueForKey(const char *key);
+void SetWorldKeyValue(const std::string &key, const std::string &value);
+std::string WorldValueForKey(const std::string &key);
 
 void LoadEntities(const bsp2_t *bsp);
 void SetupLights(const bsp2_t *bsp);

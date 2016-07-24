@@ -79,21 +79,22 @@ SetKeyValue(entity_t *ent, const char *key, const char *value)
     ent->epairs[key] = value;
 }
 
-static entity_t *WorldEnt()
+static entdict_t &WorldEnt()
 {
-    if (0 != strcmp("worldspawn", ValueForKey(entities, "classname"))) {
+    if (entdicts.size() == 0
+        || entdicts.at(0)["classname"] != "worldspawn") {
         Error("WorldEnt() failed to get worldspawn");
     }
-    return entities;
+    return entdicts.at(0);
 }
 
-void SetWorldKeyValue(const char *key, const char *value)
+void SetWorldKeyValue(const std::string &key, const std::string &value)
 {
-    SetKeyValue(WorldEnt(), key, value);
+    WorldEnt()[key] = value;
 }
-const char *WorldValueForKey(const char *key)
+std::string WorldValueForKey(const std::string &key)
 {
-    return ValueForKey(WorldEnt(), key);
+    return EntDict_StringForKey(WorldEnt(), key);
 }
 
 static int
