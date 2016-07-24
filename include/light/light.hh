@@ -386,6 +386,8 @@ public:
     }
 };
 
+void SetGlobalSetting(std::string name, std::string value, bool cmdline);
+
 extern lockable_vec_t scaledist;
 extern lockable_vec_t rangescale;
 extern lockable_vec_t global_anglescale;

@@ -153,7 +153,7 @@ lockable_setting_t *FindSetting(std::string name)
     }
 }
 
-void SetSetting(std::string name, std::string value, bool cmdline)
+void SetGlobalSetting(std::string name, std::string value, bool cmdline)
 {
     lockable_setting_t *setting = FindSetting(name);
     if (setting == nullptr) {
@@ -162,6 +162,9 @@ void SetSetting(std::string name, std::string value, bool cmdline)
         }
         return;
     }
+ 
+    logprint("setting '%s' to '%s' from %s\n",
+             name.c_str(), value.c_str(), cmdline ? "command line" : "worldspawn");
     
     setting->setStringValue(value, cmdline);
 }

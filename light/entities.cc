@@ -1023,40 +1023,6 @@ LoadEntities(const bsp2_t *bsp)
             } else if (!strcmp(key, "_color") || !strcmp(key, "color")) {
                 scan_vec3(entity->light.color, com_token, "color");
                 normalize_color_format(entity->light.color);
-            } else if (!strcmp(key, "_sunlight")) {
-                sunlight.setFloatValue(atof(com_token));
-            } else if (!strcmp(key, "_sunlight_mangle") || !strcmp(key, "_sun_mangle")) {
-                scan_vec3(vec, com_token, "_sun_mangle");
-                sunvec.setVec3Value(vec);
-            } else if (!strcmp(key, "_sunlight_color")) {
-                vec3_t tmp;
-                scan_vec3(tmp, com_token, "_sunlight_color");
-                sunlight_color.setVec3Value(tmp);
-            } else if (!strcmp(key, "_sun2")) {
-                sun2.setFloatValue(atof(com_token));
-            } else if (!strcmp(key, "_sun2_mangle")) {
-                scan_vec3(vec, com_token, "_sun2_mangle");
-                sun2vec.setVec3Value(vec);
-            } else if (!strcmp(key, "_sun2_color")) {
-                vec3_t tmp;
-                scan_vec3(tmp, com_token, "_sun2_color");
-                sun2_color.setVec3Value(tmp);
-            } else if (!strcmp(key, "_sunlight2")) {
-                sunlight2.setFloatValue(atof(com_token));
-            } else if (!strcmp(key, "_sunlight3")) {
-                sunlight3.setFloatValue(atof(com_token));
-            } else if (!strcmp(key, "_sunlight2_color") || !strcmp(key, "_sunlight_color2")) {
-                vec3_t tmp;
-                scan_vec3(tmp, com_token, key);
-                sunlight2_color.setVec3Value(tmp);
-            } else if (!strcmp(key, "_sunlight3_color") || !strcmp(key, "_sunlight_color3")) {
-                vec3_t tmp;
-                scan_vec3(tmp, com_token, key);
-                sunlight3_color.setVec3Value(tmp);
-            } else if (!strcmp(key, "_minlight_color")) {
-                vec3_t tmp;
-                scan_vec3(tmp, com_token, "_minlight_color");
-                minlight_color.setVec3Value(tmp);
             } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
                 entity->anglescale = atof(com_token);
             else if (!strcmp(key, "_dirtdepth"))
@@ -1065,11 +1031,7 @@ LoadEntities(const bsp2_t *bsp)
                 entity->dirtmode = atoi(com_token);
             else if (!strcmp(key, "_dirtangle"))
                 entity->dirtangle = atoi(com_token);
-            else if (!strcmp(key, "_sunlight_dirt")) {
-                sunlight_dirt.setFloatValue(atoi(com_token));
-            } else if (!strcmp(key, "_sunlight2_dirt")) {
-                sunlight2_dirt.setFloatValue(atoi(com_token));
-            } else if (!strcmp(key, "_minlight_dirt"))
+            else if (!strcmp(key, "_minlight_dirt"))
                 entity->minlight_dirt = atoi(com_token);
             else if (!strcmp(key, "_dirtscale"))
                 entity->dirtscale = atof(com_token);
@@ -1100,9 +1062,6 @@ LoadEntities(const bsp2_t *bsp)
             else if (!strcmp(key, "_bleed")) {
                 entity->bleed = atoi(com_token);
             }
-            else if (!strcmp(key, "_sunlight_penumbra")) {
-                sun_deviance.setFloatValue(atof(com_token));
-            }
             else if (!strcmp(key, "_deviance")) {
                 entity->deviance = atof(com_token);
             }
@@ -1114,24 +1073,6 @@ LoadEntities(const bsp2_t *bsp)
             }
             else if (!strcmp(key, "_range")) {
                 entity->range = atof(com_token);
-            }
-            else if (!strcmp(key, "_gamma")) {
-                lightmapgamma.setFloatValue(atof(com_token));
-                logprint("using lightmap gamma value %f\n", lightmapgamma.floatValue());
-            }
-            else if (!strcmp(key, "_bounce")) {
-                bounce.setFloatValue(atoi(com_token));
-                logprint("_bounce set to %d\n", bounce.intValue());
-            }
-            else if (!strcmp(key, "_bouncescale")) {
-                bouncescale.setFloatValue(atof(com_token));
-                logprint("_bouncescale set to %f\n", bouncescale.floatValue());
-            }
-            else if (!strcmp(key, "_bouncecolorscale")) {
-                float tmp = atof(com_token);
-                tmp = qmin(qmax(tmp, 0.0f), 1.0f);
-                bouncecolorscale.setFloatValue(tmp);
-                logprint("_bouncecolorscale set to %f\n", bouncecolorscale.floatValue());
             }
         }
 
@@ -1158,86 +1099,9 @@ LoadEntities(const bsp2_t *bsp)
             }
         }
         if (!strcmp(entity->classname(), "worldspawn")) {
-            if (entity->light.light > 0 && !minlight.floatValue()) {
-                minlight.setFloatValue(entity->light.light);
-                logprint("using minlight value %i from worldspawn.\n",
-                         (int)minlight.floatValue());
-            } else if (minlight.floatValue()) {
-                logprint("Using minlight value %i from command line.\n",
-                         (int)minlight.floatValue());
-            }
-            if (entity->anglescale >= 0 && entity->anglescale <= 1.0) {
-                global_anglescale.setFloatValue(entity->anglescale);
-                logprint("using global anglescale value %f from worldspawn.\n",
-                         global_anglescale.floatValue());
-            }
-
-            if (entity->dist != 0.0) {
-                scaledist.setFloatValue(entity->dist);
-                logprint("using _dist value %f from worldspawn.\n",
-                         scaledist.floatValue());
-            }
-
-            if (entity->range != 0.0) {
-                rangescale.setFloatValue(entity->range);
-                logprint("using _range value %f from worldspawn.\n",
-                         rangescale.floatValue());
-            }
-
-            if (entity->dirtdepth) {
-                dirtDepth.setFloatValue(entity->dirtdepth);
-                logprint("Using dirtdepth value %f from worldspawn.\n", 
-                        dirtDepth.floatValue());
-            }
-            if (entity->dirtmode) {
-                dirtMode.setFloatValue(entity->dirtmode);
-                logprint("Using dirtmode value %i from worldspawn.\n", 
-                        (int)dirtMode.intValue());
-            }
-            if (entity->dirtscale) {
-                dirtScale.setFloatValue(entity->dirtscale);
-                logprint("Using dirtscale value %f from worldspawn.\n", 
-                        dirtScale.floatValue());
-            }
-            if (entity->dirtgain) {
-                dirtGain.setFloatValue(entity->dirtgain);
-                logprint("Using dirtgain value %f from worldspawn.\n", 
-                        dirtGain.floatValue());
-            }
-            if (entity->dirtangle) {
-                dirtAngle.setFloatValue(entity->dirtangle);
-                logprint("Using dirtangle value %f from worldspawn.\n",
-                         dirtAngle.floatValue());
-            }
-            if (entity->dirt == 1) {
-                globalDirt = true;
-                dirty.setFloatValue(true);
-                logprint("Global dirtmapping enabled in worldspawn.\n");
-            }
-
-            if (sunlight_dirt.intValue() == 1) {
-                dirty.setFloatValue(true);
-                logprint("Sunlight dirtmapping enabled in worldspawn.\n");
-            } else if (sunlight_dirt.intValue() == -1) {
-                logprint("Sunlight dirtmapping disabled in worldspawn.\n");
-            }
-
-            if (sunlight2_dirt.intValue() == 1) {
-                dirty.setFloatValue(true);
-                logprint("Sunlight2 dirtmapping enabled in worldspawn.\n");
-            } else if (sunlight2_dirt.intValue() == -1) {
-                logprint("Sunlight2 dirtmapping disabled in worldspawn.\n");
-            }
-
-            if (entity->minlight_dirt == 1) {
-                minlightDirt.setFloatValue(true);
-                dirty.setFloatValue(true);
-                logprint("Minlight dirtmapping enabled in worldspawn.\n");
-            } else if (entity->minlight_dirt == -1) {
-                minlightDirt.setFloatValue(false);
-                logprint("Minlight dirtmapping disabled in worldspawn.\n");
-            } else {
-                minlightDirt.setFloatValue(globalDirt);
+            // handle worldspawn keys
+            for (const auto &epair : entity->epairs) {
+                SetGlobalSetting(epair.first, epair.second, false);
             }
         }
     }
