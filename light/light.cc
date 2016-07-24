@@ -330,7 +330,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
     int i, numshadowmodels, numselfshadowmodels;
     entity_t *entity;
-    char modelname[20];
     const char *attribute;
     const modelinfo_t **shadowmodels;
     const modelinfo_t **selfshadowmodels;
@@ -382,14 +381,17 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         info.lightmapscale = lightmapscale;
 
         /* Find the entity for the model */
-        snprintf(modelname, sizeof(modelname), "*%d", i);
-        entity = FindEntityWithKeyPair("model", modelname);
-        if (!entity)
+        std::stringstream ss;
+        ss << "*" << i;
+        std::string modelname = ss.str();
+        
+        const entdict_t *entdict = FindEntDictWithKeyPair("model", modelname);
+        if (entdict == nullptr)
             Error("%s: Couldn't find entity for model %s.\n", __func__,
-                  modelname);
+                  modelname.c_str());
 
         // apply settings
-        info.settings.setSettings(entity->epairs, false);
+        info.settings.setSettings(*entdict, false);
         
         /* Check if this model will cast shadows (shadow => shadowself) */
         if (info.shadow.boolValue()) {

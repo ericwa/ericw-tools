@@ -38,7 +38,6 @@ int num_surfacelight_templates;
 static void MakeSurfaceLights(const bsp2_t *bsp);
 
 using strings = std::vector<std::string>;
-using entdict_t = std::map<std::string, std::string>;
 
 std::vector<entdict_t> entdicts;
 
@@ -891,7 +890,7 @@ EntData_Write(const std::vector<entdict_t> &ents)
     return out.str();
 }
 
-static std::string
+std::string
 EntDict_StringForKey(const entdict_t &dict, const std::string key)
 {
     auto it = dict.find(key);
@@ -901,7 +900,7 @@ EntDict_StringForKey(const entdict_t &dict, const std::string key)
     return "";
 }
 
-static float
+float
 EntDict_FloatForKey(const entdict_t &dict, const std::string key)
 {
     auto s = EntDict_StringForKey(dict, key);
@@ -1164,21 +1163,14 @@ ValueForKey(const entity_t *ent, const char *key)
     }
 }
 
-entity_t *
-FindEntityWithKeyPair(const char *key, const char *value)
+const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value)
 {
-    entity_t *ent;
-    std::string value_stdstring { value };
-
-    for (ent = entities; ent; ent = ent->next) {
-        auto iter = ent->epairs.find(key);
-        if (iter != ent->epairs.end()) {
-            if ((*iter).second == value_stdstring) {
-                return ent;
-            }
+    for (const auto &entdict : entdicts) {
+        if (EntDict_StringForKey(entdict, key) == value) {
+            return &entdict;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 void

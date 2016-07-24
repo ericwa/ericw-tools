@@ -30,6 +30,8 @@
 
 #define DEFAULTLIGHTLEVEL 300.0f
 
+using entdict_t = std::map<std::string, std::string>;
+
 /*
  * Light attenuation formalae
  * (relative to distance 'x' from the light source)
@@ -146,9 +148,12 @@ public:
 #define MAX_LIGHTS 65536
 extern entity_t *lights[MAX_LIGHTS];
 
-entity_t *FindEntityWithKeyPair(const char *key, const char *value);
+const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
 const char *ValueForKey(const entity_t *ent, const char *key);
 void GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec);
+
+std::string EntDict_StringForKey(const entdict_t &dict, const std::string key);
+float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
 
 void SetWorldKeyValue(const char *key, const char *value);
 const char *WorldValueForKey(const char *key);
