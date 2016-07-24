@@ -564,41 +564,6 @@ public:
     const std::vector<lockable_setting_t *> &allSettings() const { return _allsettings; }
 };
 
-// light
-
-#define DEFAULTLIGHTLEVEL 300.0f
-
-class lightsettings_t {
-public:
-    lockable_vec_t light, wait, delay, angle, softangle, style, anglescale;
-    lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples;
-    lockable_vec3_t origin, color, mangle;
-    settingsdict_t settings;
-    
-public:
-    lightsettings_t(void) :
-        light { "light", DEFAULTLIGHTLEVEL },
-        wait { "wait", 1.0f },
-        delay { "delay", 0.0f },
-        angle { "angle", 40.0f },
-        softangle { "softangle", 0.0f },
-        style { "style", 0.0f },
-        anglescale { "anglescale", 0.0f },
-        dirtscale { "dirtscale", 0.0f },
-        dirtgain { "dirtgain", 0 },
-        dirt { "dirt", 0 },
-        deviance { "deviance", 0 },
-        samples { "samples", 16 },
-        origin { "origin", 0, 0, 0 },
-        color { "color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
-        mangle { "mangle", 0, 0, 0 },
-        settings {{
-            &light, &wait, &delay, &angle, &softangle, &style, &anglescale,
-            &dirtscale, &dirtgain, &dirt, &deviance, &samples,
-            &origin, &color, &mangle
-        }}
-    {}
-};
 
 class modelinfo_t {
 public:

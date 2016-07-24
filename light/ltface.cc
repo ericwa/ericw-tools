@@ -1059,27 +1059,27 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
  */
 
 vec_t
-GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist)
+GetLightValue(const float light, const entity_t *entity, vec_t dist)
 {
     vec_t value;
 
-    if (entity->formula == LF_INFINITE || entity->formula == LF_LOCALMIN)
-        return light->light;
+    if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
+        return light;
 
-    value = scaledist.floatValue() * entity->atten * dist;
-    switch (entity->formula) {
+    value = scaledist.floatValue() * entity->atten.floatValue() * dist;
+    switch (entity->getFormula()) {
     case LF_INVERSE:
-        return light->light / (value / LF_SCALE);
+        return light / (value / LF_SCALE);
     case LF_INVERSE2A:
         value += LF_SCALE;
         /* Fall through */
     case LF_INVERSE2:
-        return light->light / ((value * value) / (LF_SCALE * LF_SCALE));
+        return light / ((value * value) / (LF_SCALE * LF_SCALE));
     case LF_LINEAR:
-        if (light->light > 0)
-            return (light->light - value > 0) ? light->light - value : 0;
+        if (light > 0)
+            return (light - value > 0) ? light - value : 0;
         else
-            return (light->light + value < 0) ? light->light + value : 0;
+            return (light + value < 0) ? light + value : 0;
     default:
         Error("Internal error: unknown light formula");
     }
@@ -1129,9 +1129,9 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *
 
     /* should this light be affected by dirt? */
     if (entity) {
-        if (entity->dirt == -1) {
+        if (entity->dirt.intValue() == -1) {
             usedirt = false;
-        } else if (entity->dirt == 1) {
+        } else if (entity->dirt.intValue() == 1) {
             usedirt = true;
         } else {
             usedirt = globalDirt;
@@ -1148,10 +1148,10 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *
     /* override the global scale and gain values with the light-specific
        values, if present */
     if (entity) {
-        if (entity->dirtgain)
-            light_dirtgain = entity->dirtgain;
-        if (entity->dirtscale)
-            light_dirtscale = entity->dirtscale;
+        if (entity->dirtgain.floatValue())
+            light_dirtgain = entity->dirtgain.floatValue();
+        if (entity->dirtscale.floatValue())
+            light_dirtscale = entity->dirtscale.floatValue();
     }
 
     /* early out */
@@ -1188,7 +1188,7 @@ CullLight(const entity_t *entity, const lightsurf_t *lightsurf)
     vec3_t distvec;
     vec_t dist;
     
-    VectorSubtract(entity->origin, lightsurf->origin, distvec);
+    VectorSubtract(*entity->origin.vec3Value(), lightsurf->origin, distvec);
     dist = VectorLength(distvec) - lightsurf->radius;
     
     /* light is inside surface bounding sphere => can't cull */
@@ -1198,7 +1198,7 @@ CullLight(const entity_t *entity, const lightsurf_t *lightsurf)
     /* return true if the light level at the closest point on the
      surface bounding sphere to the light source is <= fadegate.
      need fabs to handle antilights. */
-    return fabs(GetLightValue(&entity->light, entity, dist)) <= fadegate;
+    return fabs(GetLightValue(entity->light.floatValue(), entity, dist)) <= fadegate;
 }
 
 byte thepalette[768] =
@@ -1318,7 +1318,7 @@ extern int totalmissed;
  */
 static void
 LightFace_Entity(const bsp2_t *bsp,
-                 const entity_t *entity, const lightsample_t *light,
+                 const entity_t *entity,
                  const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1336,7 +1336,7 @@ LightFace_Entity(const bsp2_t *bsp,
         return;
     }
 
-    planedist = DotProduct(entity->origin, plane->normal) - plane->dist;
+    planedist = DotProduct(*entity->origin.vec3Value(), plane->normal) - plane->dist;
 
     /* don't bother with lights behind the surface.
      
@@ -1345,7 +1345,7 @@ LightFace_Entity(const bsp2_t *bsp,
        normal may be facing such that it receives some light, so we can't use this 
        test in the curved case.
     */
-    if (planedist < 0 && !entity->bleed && !lightsurf->curved && !lightsurf->twosided)
+    if (planedist < 0 && !entity->bleed.boolValue() && !lightsurf->curved && !lightsurf->twosided)
         return;
 
     /* sphere cull surface and light */
@@ -1356,22 +1356,22 @@ LightFace_Entity(const bsp2_t *bsp,
      * Check it for real
      */
     hit = false;
-    lightmap = Lightmap_ForStyle(lightmaps, entity->style, lightsurf);
+    lightmap = Lightmap_ForStyle(lightmaps, entity->style.intValue(), lightsurf);
     shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
     surfnorm = lightsurf->normals[0];
     for (i = 0; i < lightsurf->numpoints; i++, sample++, surfpoint += 3, surfnorm += 3) {
         vec3_t surfpointToLightDir;
-        VectorSubtract(entity->origin, surfpoint, surfpointToLightDir);
+        VectorSubtract(*entity->origin.vec3Value(), surfpoint, surfpointToLightDir);
         vec_t surfpointToLightDist = VectorNormalize(surfpointToLightDir);
 
         /* Quick distance check first */
-        if (fabs(GetLightValue(&entity->light, entity, surfpointToLightDist)) <= fadegate)
+        if (fabs(GetLightValue(entity->light.floatValue(), entity, surfpointToLightDist)) <= fadegate)
             continue;
 
         angle = DotProduct(surfpointToLightDir, surfnorm);
-        if (entity->bleed || lightsurf->twosided) {
+        if (entity->bleed.boolValue() || lightsurf->twosided) {
             if (angle < 0) {
                 angle = -angle; // ericw -- support "_bleed" option
             }
@@ -1395,22 +1395,22 @@ LightFace_Entity(const bsp2_t *bsp,
             }
         }
         
-        if (!TestLight(entity->origin, surfpoint, shadowself))
+        if (!TestLight(*entity->origin.vec3Value(), surfpoint, shadowself))
             continue;
 
-        angle = (1.0 - entity->anglescale) + entity->anglescale * angle;
-        add = GetLightValue(light, entity, surfpointToLightDist) * angle * spotscale;
+        angle = (1.0 - entity->anglescale.floatValue()) + entity->anglescale.floatValue() * angle;
+        add = GetLightValue(entity->light.floatValue(), entity, surfpointToLightDist) * angle * spotscale;
         add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, lightsurf);
 
         if (entity->projectedmip)
         {
             vec3_t col;
-            VectorCopy(light->color, col);
+            VectorCopy(*entity->color.vec3Value(), col);
             VectorScale(surfpointToLightDir, 255, col);
             LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
             Light_Add(sample, add, col, surfpointToLightDir);
         } else {
-            Light_Add(sample, add, light->color, surfpointToLightDir);
+            Light_Add(sample, add, *entity->color.vec3Value(), surfpointToLightDir);
         }
 
         /* Check if we really hit, ignore tiny lights */
@@ -1421,7 +1421,7 @@ LightFace_Entity(const bsp2_t *bsp,
     }
 
     if (hit)
-        Lightmap_Save(lightmaps, lightsurf, lightmap, entity->style);
+        Lightmap_Save(lightmaps, lightsurf, lightmap, entity->style.intValue());
 }
 
 /*
@@ -1539,32 +1539,32 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
     /* Cast rays for local minlight entities */
     shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     for (entity = lights; *entity; entity++) {
-        if ((*entity)->formula != LF_LOCALMIN)
+        if ((*entity)->getFormula() != LF_LOCALMIN)
             continue;
 
-        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style, lightsurf);
+        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style.intValue(), lightsurf);
 
         hit = false;
         sample = lightmap->samples;
         surfpoint = lightsurf->points[0];
         for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
-            if (addminlight.boolValue() || sample->light < (*entity)->light.light) {
-                vec_t value = (*entity)->light.light;
-                trace = TestLight((*entity)->origin, surfpoint, shadowself);
+            if (addminlight.boolValue() || sample->light < (*entity)->light.floatValue()) {
+                vec_t value = (*entity)->light.floatValue();
+                trace = TestLight(*(*entity)->origin.vec3Value(), surfpoint, shadowself);
                 if (!trace)
                     continue;
                 value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), lightsurf);
                 if (addminlight.boolValue())
-                    Light_Add(sample, value, (*entity)->light.color, vec3_origin);
+                    Light_Add(sample, value, *(*entity)->color.vec3Value(), vec3_origin);
                 else
-                    Light_ClampMin(sample, value, (*entity)->light.color);
+                    Light_ClampMin(sample, value, *(*entity)->color.vec3Value());
             }
             if (!hit && sample->light >= 1)
                 hit = true;
         }
         
         if (hit)
-            Lightmap_Save(lightmaps, lightsurf, lightmap, (*entity)->style);
+            Lightmap_Save(lightmaps, lightsurf, lightmap, (*entity)->style.intValue());
     }
 }
 
@@ -2181,10 +2181,10 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         /* positive lights */
         for (lighte = lights; (entity = *lighte); lighte++)
         {
-            if (entity->formula == LF_LOCALMIN)
+            if (entity->getFormula() == LF_LOCALMIN)
                 continue;
-            if (entity->light.light > 0)
-                LightFace_Entity(bsp, entity, &entity->light, lightsurf, lightmaps);
+            if (entity->light.floatValue() > 0)
+                LightFace_Entity(bsp, entity, lightsurf, lightmaps);
         }
         for ( sun = suns; sun; sun = sun->next )
             if (sun->sunlight.light > 0)
@@ -2205,10 +2205,10 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         /* negative lights */
         for (lighte = lights; (entity = *lighte); lighte++)
         {
-            if (entity->formula == LF_LOCALMIN)
+            if (entity->getFormula() == LF_LOCALMIN)
                 continue;
-            if (entity->light.light < 0)
-                LightFace_Entity(bsp, entity, &entity->light, lightsurf, lightmaps);
+            if (entity->light.floatValue() < 0)
+                LightFace_Entity(bsp, entity, lightsurf, lightmaps);
         }
         for ( sun = suns; sun; sun = sun->next )
             if (sun->sunlight.light < 0)

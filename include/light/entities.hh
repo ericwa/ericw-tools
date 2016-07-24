@@ -28,6 +28,8 @@
 #include <common/bspfile.h>
 #include <light/light.hh>
 
+#define DEFAULTLIGHTLEVEL 300.0f
+
 /*
  * Light attenuation formalae
  * (relative to distance 'x' from the light source)
@@ -46,46 +48,66 @@ typedef enum {
     LF_COUNT
 } light_formula_t;
 
-typedef struct entity_s {
-    vec3_t origin;
-
+class entity_t {
+public:
     qboolean spotlight;
-    vec3_t spotvec;
-    float spotangle;
+    vec3_t spotvec; // computed
     float spotfalloff;
-    float spotangle2;
     float spotfalloff2;
     miptex_t *projectedmip; /*projected texture*/
     float projectionmatrix[16]; /*matrix used to project the specified texture. already contains origin.*/
 
-    lightsample_t light;
-    light_formula_t formula;
-    float atten;
-    float anglescale;
-    int style;
-    qboolean bleed;
-
-    /* worldspawn, light entities */
-    vec_t dirtscale;
-    vec_t dirtgain;
-    int dirt;
-
-    /* light entities: q3map2 penumbra */
-    vec_t deviance;
-    int num_samples;
-    
     std::map<std::string, std::string> epairs;
     
-    const struct entity_s *targetent;
+    const entity_t *targetent;
 
     qboolean generated;     // if true, don't write to the bsp
 
     const bsp2_dleaf_t *leaf;    // for vis testing
     
-    struct entity_s *next;
+    entity_t *next;
     
     const char *classname() const;
-} entity_t;
+    
+public:
+    lockable_vec_t light, atten, formula, spotangle, spotangle2, style, bleed, anglescale;
+    lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples, projfov;
+    lockable_vec3_t origin, color, mangle, projangle;
+    lockable_string_t project_texture;
+    settingsdict_t settings;
+
+    light_formula_t getFormula() const { return static_cast<light_formula_t>(formula.intValue()); }
+    
+public:
+    using strings = std::vector<std::string>;
+    
+    entity_t(void) :
+        light { "light", DEFAULTLIGHTLEVEL },
+        atten { "wait", 1.0f, 0.0f, std::numeric_limits<float>::infinity() },
+        formula { "delay", 0.0f },
+        spotangle { "angle", 40.0f },
+        spotangle2 { "softangle", 0.0f },
+        style { "style", 0.0f },
+        bleed { "bleed", 0 },
+        anglescale {strings{"anglesense", "anglescale"}, -1.0f }, // fallback to worldspawn
+        dirtscale { "dirtscale", 0.0f },
+        dirtgain { "dirtgain", 0 },
+        dirt { "dirt", 0 },
+        deviance { "deviance", 0 },
+        samples { "samples", 16 },
+        projfov { "project_fov", 90 },
+        origin { "origin", 0, 0, 0 },
+        color { "color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        mangle { "mangle", 0, 0, 0 }, // not transformed to vec
+        projangle { "project_mangle", 20, 0, 0 }, // not transformed to vec
+        project_texture { "project_texture", "" },
+        settings {{
+            &light, &atten, &formula, &spotangle, &spotangle2, &style, &bleed, &anglescale,
+            &dirtscale, &dirtgain, &dirt, &deviance, &samples, &projfov,
+            &origin, &color, &mangle, &projangle, &project_texture
+        }}
+    {}
+};
 
 /*
  * atten:

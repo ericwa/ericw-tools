@@ -132,7 +132,7 @@ MatchTargets(void)
         }
         if (target == NULL) {
             logprint("WARNING: entity at (%s) (%s) has unmatched "
-                     "target (%s)\n", VecStr(entity->origin),
+                     "target (%s)\n", VecStr(*entity->origin.vec3Value()),
                      entity->classname(), ValueForKey(entity, "target"));
             continue;
         }
@@ -148,7 +148,7 @@ SetupSpotlights(void)
         if (strncmp(entity->classname(), "light", 5))
             continue;
         if (entity->targetent) {
-            VectorSubtract(entity->targetent->origin, entity->origin,
+            VectorSubtract(*entity->targetent->origin.vec3Value(), *entity->origin.vec3Value(),
                            entity->spotvec);
             VectorNormalize(entity->spotvec);
             entity->spotlight = true;
@@ -156,10 +156,10 @@ SetupSpotlights(void)
         if (entity->spotlight) {
             vec_t angle, angle2;
 
-            angle = (entity->spotangle > 0) ? entity->spotangle : 40;
+            angle = (entity->spotangle.floatValue() > 0) ? entity->spotangle.floatValue() : 40;
             entity->spotfalloff = -cos(angle / 2 * Q_PI / 180);
 
-            angle2 = entity->spotangle2;
+            angle2 = entity->spotangle2.floatValue();
             if (angle2 <= 0 || angle2 > angle)
                 angle2 = angle;
             entity->spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
@@ -206,46 +206,46 @@ normalize_color_format(vec3_t color)
 static void
 CheckEntityFields(entity_t *entity)
 {
-    if (!entity->light.light)
-        entity->light.light = DEFAULTLIGHTLEVEL;
+    if (entity->light.floatValue() == 0.0f)
+        entity->light.setFloatValue(DEFAULTLIGHTLEVEL);
 
-    if (entity->atten <= 0.0)
-        entity->atten = 1.0;
-    if (entity->anglescale < 0 || entity->anglescale > 1.0)
-        entity->anglescale = global_anglescale.floatValue();
+    if (entity->atten.floatValue() <= 0.0)
+        entity->atten.setFloatValue(1.0);
+    if (entity->anglescale.floatValue() < 0 || entity->anglescale.floatValue() > 1.0)
+        entity->anglescale.setFloatValue(global_anglescale.floatValue());
 
-    if (entity->formula < LF_LINEAR || entity->formula >= LF_COUNT) {
+    if (entity->getFormula() < LF_LINEAR || entity->getFormula() >= LF_COUNT) {
         static qboolean warned_once = true;
         if (!warned_once) {
             warned_once = true;
             logprint("WARNING: unknown formula number (%d) in delay field\n"
                      "   %s at (%s)\n"
                      "   (further formula warnings will be supressed)\n",
-                     entity->formula, entity->classname(),
-                     VecStr(entity->origin));
+                     entity->getFormula(), entity->classname(),
+                     VecStr(*entity->origin.vec3Value()));
         }
-        entity->formula = LF_LINEAR;
+        entity->formula.setFloatValue(LF_LINEAR);
     }
 
     /* set up deviance and samples defaults */
-    if (entity->deviance > 0 && entity->num_samples == 0) {
-        entity->num_samples = 16;
+    if (entity->deviance.floatValue() > 0 && entity->samples.intValue() == 0) {
+        entity->samples.setFloatValue(16);
     }
-    if (entity->deviance <= 0.0f || entity->num_samples <= 1) {
-        entity->deviance = 0.0f;
-        entity->num_samples = 1;
+    if (entity->deviance.floatValue() <= 0.0f || entity->samples.intValue() <= 1) {
+        entity->deviance.setFloatValue(0.0f);
+        entity->samples.setFloatValue(1);
     }
     /* For most formulas, we need to divide the light value by the number of
        samples (jittering) to keep the brightness approximately the same. */
-    if (entity->formula == LF_INVERSE
-        || entity->formula == LF_INVERSE2
-        || entity->formula == LF_INFINITE
-        || (entity->formula == LF_LOCALMIN && addminlight.boolValue())
-        || entity->formula == LF_INVERSE2A) {
-        entity->light.light /= entity->num_samples;
+    if (entity->getFormula() == LF_INVERSE
+        || entity->getFormula() == LF_INVERSE2
+        || entity->getFormula() == LF_INFINITE
+        || (entity->getFormula() == LF_LOCALMIN && addminlight.boolValue())
+        || entity->getFormula() == LF_INVERSE2A) {
+        entity->light.setFloatValue(entity->light.floatValue() / entity->samples.intValue());
     }
 
-    if (!VectorCompare(entity->light.color, vec3_origin)) {
+    if (!VectorCompare(*entity->color.vec3Value(), vec3_origin)) {
         if (!write_litfile) {
             if (scaledonly) {
                 write_litfile = 2;
@@ -258,8 +258,19 @@ CheckEntityFields(entity_t *entity)
             }
         }
     } else {
-        VectorCopy(vec3_white, entity->light.color);
+        entity->color.setStringValue("255 255 255");
     }
+    
+    if (entity->style.intValue() < 0 || entity->style.intValue() > 254) {
+        Error("Bad light style %i (must be 0-254)", entity->style.intValue());
+    }
+    
+    if (entity->dirt.intValue() == 1 && !dirty.boolValue()) {
+        logprint("entity with \"_dirt\" \"1\" detected, enabling "
+                 "dirtmapping.\n");
+        dirty.setFloatValue(1.0f);
+    }
+
 }
 
 /*
@@ -577,20 +588,23 @@ DuplicateEntity(const entity_t *src)
 static void
 JitterEntity(entity_t *entity)
 {
-        int j;
+    int j;
 
-        /* jitter the light */
-        for ( j = 1; j < entity->num_samples; j++ )
-        {
-                /* create a light */
-                entity_t *light2 = DuplicateEntity(entity);
-                light2->generated = true; // don't write generated light to bsp
+    /* jitter the light */
+    for ( j = 1; j < entity->samples.intValue(); j++ )
+    {
+        /* create a light */
+        entity_t *light2 = DuplicateEntity(entity);
+        light2->generated = true; // don't write generated light to bsp
 
-                /* jitter it */
-                light2->origin[ 0 ] = entity->origin[ 0 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
-                light2->origin[ 1 ] = entity->origin[ 1 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
-                light2->origin[ 2 ] = entity->origin[ 2 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance;
-        }
+        /* jitter it */
+        vec3_t neworigin = {
+            (*entity->origin.vec3Value())[ 0 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance.floatValue(),
+            (*entity->origin.vec3Value())[ 1 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance.floatValue(),
+            (*entity->origin.vec3Value())[ 2 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance.floatValue()
+        };
+        light2->origin.setVec3Value(neworigin);
+    }
 }
 
 static void
@@ -823,7 +837,7 @@ FindLights()
             // LoadEntities and FindLights need to be completely rewritten.
             continue;
         }
-        if (entity->light.light != 0) {
+        if (entity->light.floatValue() != 0) {
             lights[totallights++] = entity;
         }
     }
@@ -837,7 +851,7 @@ SetupLightLeafnums(const bsp2_t *bsp)
     entity_t *entity;
 
     for (entity = entities; entity; entity = entity->next) {
-        entity->leaf = Light_PointInLeaf(bsp, entity->origin);
+        entity->leaf = Light_PointInLeaf(bsp, *entity->origin.vec3Value());
     }
 }
 
@@ -932,9 +946,6 @@ LoadEntities(const bsp2_t *bsp)
     const char *data;
     entity_t *entity;
     char key[MAX_ENT_KEY];
-    vec3_t vec, projangle;
-    vec_t projfov;
-    qboolean projangleknown;
 
     /* start parsing */
     num_entities = 0;
@@ -958,13 +969,6 @@ LoadEntities(const bsp2_t *bsp)
         Entities_Insert(entity);
 
         /* Init some fields... */
-        entity->anglescale = -1;
-
-        projangle[0] = 20;
-        projangle[1] = 0;
-        projangle[2] = 0;
-        projfov = 90;
-        projangleknown = false;
 
         /* go through all the keys in this entity */
         while (1) {
@@ -997,90 +1001,49 @@ LoadEntities(const bsp2_t *bsp)
             }
 
             entity->epairs[key] = com_token;
-
-            if (!strcmp(key, "origin"))
-                scan_vec3(entity->origin, com_token, "origin");
-            else if (!strncmp(key, "light", 5) || !strcmp(key, "_light"))
-                entity->light.light = atof(com_token);
-            else if (!strcmp(key, "style")) {
-                entity->style = atof(com_token);
-                if (entity->style < 0 || entity->style > 254)
-                    Error("Bad light style %i (must be 0-254)", entity->style);
-            } else if (!strcmp(key, "angle"))
-                entity->spotangle = atof(com_token);
-            else if (!strcmp(key, "_softangle"))
-                entity->spotangle2 = atof(com_token);
-            else if (!strcmp(key, "wait"))
-                entity->atten = atof(com_token);
-            else if (!strcmp(key, "delay"))
-                entity->formula = static_cast<light_formula_t>(atoi(com_token));
-            else if (!strcmp(key, "mangle")) {
-                if (!projangleknown)
-                        scan_vec3(projangle, com_token, key);
-                scan_vec3(vec, com_token, "mangle");
-                vec_from_mangle(entity->spotvec, vec);
-                entity->spotlight = true;
-            } else if (!strcmp(key, "_color") || !strcmp(key, "color")) {
-                scan_vec3(entity->light.color, com_token, "color");
-                normalize_color_format(entity->light.color);
-            } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
-                entity->anglescale = atof(com_token);
-            else if (!strcmp(key, "_dirtscale"))
-                entity->dirtscale = atof(com_token);
-            else if (!strcmp(key, "_dirtgain"))
-                entity->dirtgain = atof(com_token);
-            else if (!strcmp(key, "_dirt")) {
-                entity->dirt = atoi(com_token);
-                if (entity->dirt == 1 && !dirty.boolValue()) {
-                    logprint("entity with \"_dirt\" \"1\" detected, enabling "
-                        "dirtmapping.\n");
-                    dirty.setFloatValue(1.0f);
-                }
-            }
-            else if (!strcmp(key, "_project_texture")) {
-                entity->projectedmip = FindProjectionTexture(bsp, com_token);
-                if (entity->projectedmip == NULL) {
-                    logprint("WARNING: light has \"_project_texture\" \"%s\", but this texture is not present in the bsp\n", com_token);
-                }
-            } else if (!strcmp(key, "_project_mangle"))
-            {
-                projangleknown = true;
-                scan_vec3(projangle, com_token, key);
-            }
-            else if (!strcmp(key, "_project_fov"))
-            {
-                projfov = atof(com_token);
-            }
-            else if (!strcmp(key, "_bleed")) {
-                entity->bleed = atoi(com_token);
-            }
-            else if (!strcmp(key, "_deviance")) {
-                entity->deviance = atof(com_token);
-            }
-            else if (!strcmp(key, "_samples")) {
-                entity->num_samples = atoi(com_token);
-            }
         }
 
         /*
          * Check light entity fields and any global settings in worldspawn.
          */
         if (!strncmp(entity->classname(), "light", 5)) {
+            
+            // populate settings
+            //entity->settings.setSettings(entity->epairs, false);
+            
+            if (entity->mangle.isChanged()) {
+                vec_from_mangle(entity->spotvec, *entity->mangle.vec3Value());
+                entity->spotlight = true;
+                
+                if (!entity->projangle.isChanged()) {
+                    // copy from mangle
+                    entity->projangle.setVec3Value(*entity->mangle.vec3Value());
+                }
+            }
+            
+            if (entity->project_texture.stringValue() != "") {
+                auto texname = entity->project_texture.stringValue();
+                entity->projectedmip = FindProjectionTexture(bsp, texname.c_str());
+                if (entity->projectedmip == NULL) {
+                    logprint("WARNING: light has \"_project_texture\" \"%s\", but this texture is not present in the bsp\n", texname.c_str());
+                }
+            }
+            
             if (entity->projectedmip) {
                 if (entity->projectedmip->width > entity->projectedmip->height)
-                    Matrix4x4_CM_MakeModelViewProj (projangle, entity->origin, projfov, CalcFov(projfov, entity->projectedmip->width, entity->projectedmip->height), entity->projectionmatrix);
+                    Matrix4x4_CM_MakeModelViewProj (*entity->projangle.vec3Value(), *entity->origin.vec3Value(), entity->projfov.floatValue(), CalcFov(entity->projfov.floatValue(), entity->projectedmip->width, entity->projectedmip->height), entity->projectionmatrix);
                 else
-                    Matrix4x4_CM_MakeModelViewProj (projangle, entity->origin, CalcFov(projfov, entity->projectedmip->height, entity->projectedmip->width), projfov, entity->projectionmatrix);
+                    Matrix4x4_CM_MakeModelViewProj (*entity->projangle.vec3Value(), *entity->origin.vec3Value(), CalcFov(entity->projfov.floatValue(), entity->projectedmip->height, entity->projectedmip->width), entity->projfov.floatValue(), entity->projectionmatrix);
             }
 
             CheckEntityFields(entity);
             num_lights++;
         }
         if (!strncmp(entity->classname(), "light", 5)) {
-            if (ValueForKey(entity, "targetname")[0] && !entity->style) {
+            if (ValueForKey(entity, "targetname")[0] && !entity->style.intValue()) {
                 char style[16];
-                entity->style = LightStyleForTargetname(ValueForKey(entity, "targetname"));
-                snprintf(style, sizeof(style), "%i", entity->style);
+                entity->style.setFloatValue(LightStyleForTargetname(ValueForKey(entity, "targetname")));
+                snprintf(style, sizeof(style), "%i", entity->style.intValue());
                 SetKeyValue(entity, "style", style);
             }
         }
@@ -1180,8 +1143,10 @@ FixLightsOnFaces(const bsp2_t *bsp)
     entity_t *entity;
     
     for (entity = entities; entity; entity = entity->next) {
-        if (entity->light.light != 0) {
-            FixLightOnFace(bsp, entity->origin, entity->origin);
+        if (entity->light.floatValue() != 0) {
+            vec3_t tmp;
+            FixLightOnFace(bsp, *entity->origin.vec3Value(), tmp);
+            entity->origin.setVec3Value(tmp);
         }
     }
 }
@@ -1376,7 +1341,7 @@ static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const e
 {
     entity_t *entity = DuplicateEntity(surflight_template);
 
-    VectorCopy(origin, entity->origin);
+    entity->origin.setVec3Value(origin);
 
     /* don't write to bsp */
     entity->generated = true;
@@ -1624,7 +1589,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
     
     /* Hack: clear templates light value to 0 so they don't cast light */
     for (i=0;i<num_surfacelight_templates;i++) {
-        surfacelight_templates[i]->light.light = 0;
+        surfacelight_templates[i]->light.setFloatValue(0);
     }
     
     if (surflights_dump_file) {
