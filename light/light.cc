@@ -96,7 +96,7 @@ byte *lux_filebase;             // start of luxfile data
 static byte *lux_file_p;        // start of free space after luxfile data
 static byte *lux_file_end;      // end of space for luxfile data
 
-static modelinfo_t *modelinfo;
+std::vector<modelinfo_t> modelinfo;
 const modelinfo_t *const *tracelist;
 const modelinfo_t *const *selfshadowlist;
 
@@ -334,7 +334,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     const char *attribute;
     const modelinfo_t **shadowmodels;
     const modelinfo_t **selfshadowmodels;
-    modelinfo_t *info;
     float lightmapscale;
 
     shadowmodels = (const modelinfo_t **)malloc(sizeof(modelinfo_t *) * (bsp->nummodels + 1));
@@ -352,9 +351,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         Error("Corrupt .BSP: bsp->nummodels is 0!");
     }
     
-    memset(modelinfo, 0, sizeof(*modelinfo) * bsp->nummodels);
-    modelinfo[0].model = &bsp->dmodels[0];
-
     if (lmscaleoverride)
         SetWorldKeyValue("_lightmap_scale", lmscaleoverride);
 
@@ -370,12 +366,19 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         i++;
     if (i != lightmapscale)
         logprint("WARNING: lightmap scale is not a power of 2\n");
-    modelinfo[0].lightmapscale = lightmapscale;
-    modelinfo[0].shadow = true; /* world always casts shadows */
-
-    for (i = 1, info = modelinfo + 1; i < bsp->nummodels; i++, info++) {
-        info->model = &bsp->dmodels[i];
-        info->lightmapscale = lightmapscale;
+    
+    modelinfo.reserve(bsp->nummodels);
+    
+    modelinfo_t world;
+    world.model = &bsp->dmodels[0];
+    world.lightmapscale = lightmapscale;
+    world.shadow.setFloatValue(1.0f); /* world always casts shadows */
+    modelinfo.push_back(world);
+    
+    for (int i = 1; i < bsp->nummodels; i++) {
+        modelinfo_t info;
+        info.model = &bsp->dmodels[i];
+        info.lightmapscale = lightmapscale;
 
         /* Find the entity for the model */
         snprintf(modelname, sizeof(modelname), "*%d", i);
@@ -387,54 +390,48 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         /* Check if this model will cast shadows (shadow => shadowself) */
         shadow = atoi(ValueForKey(entity, "_shadow"));
         if (shadow) {
-            shadowmodels[numshadowmodels++] = info;
-            info->shadow = true;
+            shadowmodels[numshadowmodels++] = &modelinfo[i];
+            info.shadow.setFloatValue(1.0f);
         } else {
             shadow = atoi(ValueForKey(entity, "_shadowself"));
             if (shadow) {
-                info->shadowself = true;
-                selfshadowmodels[numselfshadowmodels++] = info;
+                info.shadowself.setFloatValue(1.0f);
+                selfshadowmodels[numselfshadowmodels++] = &modelinfo[i];
             }
         }
 
         /* Set up the offset for rotate_* entities */
         attribute = ValueForKey(entity, "classname");
         if (!strncmp(attribute, "rotate_", 7))
-            GetVectorForKey(entity, "origin", info->offset);
+            GetVectorForKey(entity, "origin", info.offset);
 
         /* Grab the bmodel minlight values, if any */
         attribute = ValueForKey(entity, "_minlight");
         if (attribute[0])
-            info->minlight.light = atoi(attribute);
+            info.minlight.setFloatValue(atoi(attribute));
         const char *minlight_exclude = ValueForKey(entity, "_minlight_exclude");
         if (minlight_exclude[0] != '\0') {
-            strncpy(info->minlight_exclude, minlight_exclude, 15);
-            info->minlight_exclude[15] = '\0';
+            info.minlight_exclude.setStringValue(minlight_exclude);
         }
-        GetVectorForKey(entity, "_mincolor", info->minlight.color);
-        normalize_color_format(info->minlight.color);
-        if (!VectorCompare(info->minlight.color, vec3_origin)) {
-            if (!write_litfile)
+        
+        vec3_t tmp;
+        GetVectorForKey(entity, "_mincolor", tmp);
+        if (!VectorCompare(tmp, vec3_origin)) {
+            info.minlight_color.setVec3Value(tmp);
+        }
+        
+        vec3_t white = {255,255,255};
+        if (!VectorCompare(white, *info.minlight_color.vec3Value())) {
+            if (!write_litfile) {
                 write_litfile = scaledonly?2:1;
-        } else {
-            VectorCopy(vec3_white, info->minlight.color);
-        }
-
-        /* Check for disabled dirtmapping on this bmodel */
-        if (atoi(ValueForKey(entity, "_dirt")) == -1) {
-            info->nodirt = true;
+            }
         }
         
-        /* Check for phong shading */
-        // handle "_phong" and "_phong_angle"
-        info->phongangle = atof(ValueForKey(entity, "_phong_angle"));
-        const int phong = atoi(ValueForKey(entity, "_phong"));
-        
-        if (phong && (info->phongangle == 0.0)) {
-            info->phongangle = 89.0; // default _phong_angle
-        }
+        modelinfo.push_back(info);
     }
 
+    assert(modelinfo.size() == bsp->nummodels);
+    
     tracelist = shadowmodels;
     selfshadowlist = selfshadowmodels;
 }
@@ -599,7 +596,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     // support on func_detail/func_group
     for (int i=0; i<bsp->nummodels; i++) {
         const modelinfo_t *info = &modelinfo[i];
-        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(info->phongangle)));
+        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(info->phong_angle.floatValue())));
 
         if (!phongangle_byte)
             continue;
@@ -1730,7 +1727,6 @@ main(int argc, const char **argv)
     FindDebugFace(bsp);
     FindDebugVert(bsp);
     
-    modelinfo = (modelinfo_t *)malloc(bsp->nummodels * sizeof(*modelinfo));
     FindModelInfo(bsp, lmscaleoverride);
     SetupLights(bsp);
     
@@ -1782,8 +1778,6 @@ main(int argc, const char **argv)
     logprint("%5.3f seconds elapsed\n", end - start);
 
     close_log();
-
-    free(modelinfo);
     
     return 0;
 }

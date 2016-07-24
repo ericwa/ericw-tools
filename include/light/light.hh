@@ -62,18 +62,6 @@ typedef struct {
     vec3_t direction;
 } lightsample_t;
 
-typedef struct {
-    const dmodel_t *model;
-    qboolean shadowself; /* is it shadow casting only on itself? */
-    qboolean shadow; /* is it shadow casting? */
-    lightsample_t minlight;
-    char minlight_exclude[16]; /* texture name to exclude from minlight */
-    float lightmapscale;
-    vec3_t offset;
-    qboolean nodirt;
-    vec_t phongangle;
-} modelinfo_t;
-
 typedef struct sun_s {
     vec3_t sunvec;
     lightsample_t sunlight;
@@ -100,7 +88,9 @@ typedef struct {
     const texinfo_t *texinfo;
     vec_t planedist;
 } texorg_t;
-    
+
+class modelinfo_t;
+
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
     const modelinfo_t *modelinfo;
@@ -604,24 +594,28 @@ public:
     {}
 };
 
-class modelsettings_t {
+class modelinfo_t {
+public:
+    const dmodel_t *model;
+    float lightmapscale;
+    vec3_t offset;
+
 public:
     lockable_vec_t minlight, shadow, shadowself, dirt, phong, phong_angle;
     lockable_string_t minlight_exclude;
     lockable_vec3_t minlight_color;
-private:
     settingsdict_t settings;
     
 public:
-    modelsettings_t(void) :
+    modelinfo_t(void) :
         minlight { "minlight", 0 },
         shadow { "shadow", 0 },
         shadowself { "shadowself", 0 },
         dirt { "dirt", 0 },
         phong { "phong", 0 },
-        phong_angle { "phong_angle", 0 },
+        phong_angle { "phong_angle", 89 },
         minlight_exclude { "minlight_exclude", "" },
-        minlight_color { "minlight_color", 255, 255, 255 },
+        minlight_color { "minlight_color", 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         settings {{
             &minlight, &shadow, &shadowself, &dirt, &phong, &phong_angle,
             &minlight_exclude, &minlight_color

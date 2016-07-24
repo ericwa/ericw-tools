@@ -593,7 +593,7 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             
             plane_t hitplane = {0};
             
-            const dmodel_t *selfshadow = (surf->modelinfo->shadowself) ? surf->modelinfo->model : NULL;
+            const dmodel_t *selfshadow = (surf->modelinfo->shadowself.boolValue()) ? surf->modelinfo->model : NULL;
             
             vec3_t dirn;
             VectorSubtract(testpoint, surf->midpoint, dirn);
@@ -862,9 +862,10 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     else
         lightsurf->lightmapscale = modelinfo->lightmapscale;
 
+    // FIXME: is modelinfo used?!?
     lightsurf->curved = !!(extended_texinfo_flags[face->texinfo] & TEX_PHONG_ANGLE_MASK);
     lightsurf->nodirt = !!(extended_texinfo_flags[face->texinfo] & TEX_NODIRT);
-    lightsurf->minlight = modelinfo->minlight;
+    VectorCopy(*modelinfo->minlight_color.vec3Value(), lightsurf->minlight.color);
     lightsurf->minlight.light = (extended_texinfo_flags[face->texinfo] & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT;
     /* fixup minlight color */
     if (lightsurf->minlight.light > 0 && VectorCompare(lightsurf->minlight.color, vec3_origin)) {
@@ -1356,7 +1357,7 @@ LightFace_Entity(const bsp2_t *bsp,
      */
     hit = false;
     lightmap = Lightmap_ForStyle(lightmaps, entity->style, lightsurf);
-    shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
+    shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
     surfnorm = lightsurf->normals[0];
@@ -1459,7 +1460,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     
     /* Check each point... */
     hit = false;
-    shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
+    shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     sample = lightmap->samples;
     surfpoint = lightsurf->points[0];
     surfnorm = lightsurf->normals[0];
@@ -1512,7 +1513,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
     lightmap_t *lightmap;
 
     const char *texname = Face_TextureName(bsp, face);
-    if (texname[0] != '\0' && !strcmp(texname, modelinfo->minlight_exclude))
+    if (texname[0] != '\0' && modelinfo->minlight_exclude.stringValue() == std::string{ texname })
         return; /* this texture is excluded from minlight */
     
     /* Find a style 0 lightmap */
@@ -1536,7 +1537,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
     
     /* Cast rays for local minlight entities */
-    shadowself = modelinfo->shadowself ? modelinfo->model : NULL;
+    shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     for (entity = lights; *entity; entity++) {
         if ((*entity)->formula != LF_LOCALMIN)
             continue;
@@ -1904,7 +1905,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
 static void
 LightFace_CalculateDirt(lightsurf_t *lightsurf)
 {
-    const dmodel_t *selfshadow = lightsurf->modelinfo->shadowself ? lightsurf->modelinfo->model : NULL;
+    const dmodel_t *selfshadow = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsurf->occlusion[i] = DirtForSample(selfshadow, lightsurf->points[i], lightsurf->normals[i]);
     }
@@ -2275,7 +2276,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     
     if (bounce.boolValue()) {
         // make bounce light, only if this face is shadow casting
-        if (modelinfo->shadow) {
+        if (modelinfo->shadow.boolValue()) {
             vec3_t gray = {127, 127, 127};
             
             // lerp between gray and the texture color according to `bouncecolorscale`
