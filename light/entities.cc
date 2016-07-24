@@ -38,6 +38,9 @@ int num_surfacelight_templates;
 static void MakeSurfaceLights(const bsp2_t *bsp);
 
 using strings = std::vector<std::string>;
+using entdict_t = std::map<std::string, std::string>;
+
+std::vector<entdict_t> entdicts;
 
 /* temporary storage for sunlight settings before the sun_t objects are created. */
 lockable_vec_t sunlight         { "sunlight", 0.0f };                   /* main sun */
@@ -492,51 +495,6 @@ SetupSkyDome()
         }
 }
 
-#if 0
-/*
- * Quick count of entities.
- * Assumes correct syntax, etc.
- */
-static int
-CountEntities(const char *entitystring)
-{
-    const char *pos = entitystring;
-    int count = 0;
-
-    while (1) {
-        pos += strcspn(pos, "/{");
-        if (!*pos)
-            return count;
-
-        /* It's probably overkill to consider comments, but... */
-        if (*pos == '/') {
-            pos++;
-            if (*pos == '*') {
-                pos++;
-                while (1) {
-                    pos = strchr(pos, '*');
-                    if (!pos)
-                        return count;
-                    if (pos[1] == '/') {
-                        pos += 2;
-                        break;
-                    }
-                }
-            } else if (*pos == '/') {
-                pos = strchr(pos, '\n');
-                if (!pos)
-                    return count;
-            }
-            continue;
-        }
-
-        /* Add one entity for every opening brace */
-        count++;
-        pos++;
-    }
-}
-#endif
-
 /*
  * =============
  * Entities_Insert
@@ -855,8 +813,6 @@ SetupLightLeafnums(const bsp2_t *bsp)
     }
 }
 
-using entdict_t = std::map<std::string, std::string>;
-
 /*
  * ==================
  * EntData_Parse
@@ -935,6 +891,50 @@ EntData_Write(const std::vector<entdict_t> &ents)
     return out.str();
 }
 
+static std::string
+EntDict_StringForKey(const entdict_t &dict, const std::string key)
+{
+    auto it = dict.find(key);
+    if (it != dict.end()) {
+        return it->second;
+    }
+    return "";
+}
+
+static float
+EntDict_FloatForKey(const entdict_t &dict, const std::string key)
+{
+    try {
+        return std::stof(EntDict_StringForKey(dict, key));
+    } catch (std::exception &e) {
+        return 0.0f;
+    }
+}
+
+static std::string
+ParseEscapeSequences(const std::string &input)
+{
+    std::stringstream ss;
+    bool bold = false;
+    
+    for (size_t i=0; i<input.length(); i++) {
+        if (input.at(i) == '\\'
+            && (i+1) < input.length()
+            && input.at(i+1) == 'b')
+        {
+            bold = !bold;
+            i++;
+        } else {
+            uint8_t c = static_cast<uint8_t>(input.at(i));
+            if (bold) {
+                c |= 128;
+            }
+            ss.put(static_cast<char>(c));
+        }
+    }
+    return ss.str();
+}
+
 /*
  * ==================
  * LoadEntities
@@ -943,66 +943,55 @@ EntData_Write(const std::vector<entdict_t> &ents)
 void
 LoadEntities(const bsp2_t *bsp)
 {
-    const char *data;
-    entity_t *entity;
-    char key[MAX_ENT_KEY];
-
+    // First pass: make permanent changes to the bsp entdata that we will write out
+    // at the end of the light process.
+    entdicts = EntData_Parse(bsp->dentdata);
+    
+    for (auto &entdict : entdicts) {
+        
+        // fix "lightmap_scale"
+        std::string lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
+        if (lmscale != "") {
+            logprint("lightmap_scale should be _lightmap_scale\n");
+            
+            entdict.erase(entdict.find("lightmap_scale"));
+            entdict["_lightmap_scale"] = lmscale;
+        }
+        
+        // setup light styles for switchable lights
+        std::string classname = EntDict_StringForKey(entdict, "classname");
+        if (classname.find("light") == 0) {
+            std::string targetname = EntDict_StringForKey(entdict, "targetname");
+            int style = EntDict_FloatForKey(entdict, "style");
+            if (targetname != "" && !style) {
+                style = LightStyleForTargetname(targetname);
+                entdict["style"] = std::to_string(style);
+            }
+        }
+        
+        // parse escape sequences
+        for (auto &epair : entdict) {
+            epair.second = ParseEscapeSequences(epair.second);
+        }
+    }
+    
     /* start parsing */
     num_entities = 0;
     entities = NULL;
     entities_tail = NULL;
-    num_lights = 0;    
-    data = bsp->dentdata;
-
+    num_lights = 0;
+    
     /* go through all the entities */
-    while (1) {
-        /* parse the opening brace */
-        data = COM_Parse(data);
-        if (!data)
-            break;
-        if (com_token[0] != '{')
-            Error("%s: found %s when expecting {", __func__, com_token);
-
+    
+    for (auto &entdict : entdicts) {
         /* Allocate a new entity */
-        entity = new entity_t {};
+        entity_t *entity = new entity_t {};
         
         Entities_Insert(entity);
 
-        /* Init some fields... */
-
-        /* go through all the keys in this entity */
-        while (1) {
-            int c;
-
-            /* parse key */
-            data = COM_Parse(data);
-            if (!data)
-                Error("%s: EOF without closing brace", __func__);
-            if (!strcmp(com_token, "}"))
-                break;
-            if (strlen(com_token) > MAX_ENT_KEY - 1)
-                Error("%s: Key length > %i", __func__, MAX_ENT_KEY - 1);
-            strcpy(key, com_token);
-
-            /* parse value */
-            data = COM_Parse(data);
-            if (!data)
-                Error("%s: EOF without closing brace", __func__);
-            c = com_token[0];
-            if (c == '}')
-                Error("%s: closing brace without data", __func__);
-            if (strlen(com_token) > MAX_ENT_VALUE - 1)
-                Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
-
-            if (!strcmp(key, "lightmap_scale"))
-            { /*this is parsed by the engine. make sure we're consistent*/
-                strcpy(key, "_lightmap_scale");
-                logprint("lightmap_scale should be _lightmap_scale\n");
-            }
-
-            entity->epairs[key] = com_token;
-        }
-
+        // COPY the entdict
+        entity->epairs = entdict;
+        
         /*
          * Check light entity fields and any global settings in worldspawn.
          */
@@ -1039,14 +1028,7 @@ LoadEntities(const bsp2_t *bsp)
             CheckEntityFields(entity);
             num_lights++;
         }
-        if (!strncmp(entity->classname(), "light", 5)) {
-            if (ValueForKey(entity, "targetname")[0] && !entity->style.intValue()) {
-                char style[16];
-                entity->style.setFloatValue(LightStyleForTargetname(ValueForKey(entity, "targetname")));
-                snprintf(style, sizeof(style), "%i", entity->style.intValue());
-                SetKeyValue(entity, "style", style);
-            }
-        }
+        
         if (!strcmp(entity->classname(), "worldspawn")) {
             // handle worldspawn keys
             for (const auto &epair : entity->epairs) {
@@ -1204,114 +1186,31 @@ GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec)
     sscanf(value, "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
-static size_t
-Get_EntityStringSize(const entity_t *entities)
-{
-    const entity_t *entity;
-    size_t size;
-
-    size = 0;
-    for (entity = entities; entity; entity = entity->next) {
-        if (!entity->epairs.size())
-            continue;
-        if (entity->generated)
-            continue;
-        size += 2; /* "{\n" */
-        for (auto epair : entity->epairs) {
-            /* 6 extra chars for quotes, space and newline */
-            size += strlen(epair.first.c_str()) + strlen(epair.second.c_str()) + 6;
-        }
-        size += 2; /* "}\n" */
-    }
-    size += 1; /* zero terminator */
-
-    return size;
-}
-
-const char *
-CopyValueWithEscapeSequencesParsed(const char *value)
-{
-    char *result = copystring(value);
-    const char *inptr = value;
-    char *outptr = result;
-    qboolean bold = false;
-    
-    for ( ; *inptr; inptr++) {
-        if (inptr[0] == '\\' && inptr[1] == 'b') {
-            bold = !bold; // Toggle bold
-            inptr++;
-            continue;
-        } else {
-            int mask = bold ? 128 : 0;
-            *(outptr++) = *inptr | mask;
-        }
-    }
-    *outptr = 0;
-    
-    return result;
-}
-
 /*
  * ================
  * WriteEntitiesToString
- * FIXME - why even bother re-writing the string? Switchable lights need styles set.
+ * 
+ * Re-write the entdata BSP lump because switchable lights need styles set.
  * ================
  */
 void
 WriteEntitiesToString(bsp2_t *bsp)
 {
-    const entity_t *entity;
-    size_t space, length;
-    char *pos;
-
+    std::string entdata = EntData_Write(entdicts);
+    
     if (bsp->dentdata)
         free(bsp->dentdata);
 
     /* FIXME - why are we printing this here? */
     logprint("%i switchable light styles\n", static_cast<int>(lighttargetnames.size()));
 
-    bsp->entdatasize = Get_EntityStringSize(entities);
+    bsp->entdatasize = entdata.size();
     bsp->dentdata = (char *) malloc(bsp->entdatasize);
     if (!bsp->dentdata)
         Error("%s: allocation of %d bytes failed\n", __func__,
               bsp->entdatasize);
 
-    space = bsp->entdatasize;
-    pos = bsp->dentdata;
-    for (entity = entities; entity; entity = entity->next) {
-        if (!entity->epairs.size())
-            continue;
-        if (entity->generated)
-            continue;
-
-        length = snprintf(pos, space, "{\n");
-        pos += length;
-        space -= length;
-
-        for (auto epair : entity->epairs) {
-            const char *value;
-            const bool parse_escape_sequences = true;
-            if (parse_escape_sequences) {
-                value = CopyValueWithEscapeSequencesParsed(epair.second.c_str());
-            } else {
-                value = epair.second.c_str();
-            }
-            
-            length = snprintf(pos, space, "\"%s\" \"%s\"\n",
-                              epair.first.c_str(), value);
-            
-            if (parse_escape_sequences) {
-                free((void *)value);
-            }
-            
-            pos += length;
-            space -= length;
-        }
-
-        length = snprintf(pos, space, "}\n");
-        pos += length;
-        space -= length;
-    }
+    memcpy(bsp->dentdata, entdata.data(), entdata.size());
 }
 
 
