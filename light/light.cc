@@ -122,54 +122,19 @@ int dump_vertnum = -1;
 bool dump_vert;
 vec3_t dump_vert_point = {0,0,0};
 
-std::map<std::string, lockable_setting_t *> settingsmap;
-std::vector<lockable_setting_t *> allsettings;
+settingsdict_t globalsettings;
 
-static void RegisterSettings(std::vector<lockable_setting_t *> settings)
-{
-    for (lockable_setting_t *setting : settings) {
-        assert(!setting->isRegistered());
-        for (const auto &name : setting->names()) {
-            assert(settingsmap.find(name) == settingsmap.end());
-            
-            settingsmap[name] = setting;
-        }
-        
-        setting->setRegistered();
-    }
+lockable_setting_t *FindSetting(std::string name) {
+    return globalsettings.findSetting(name);
 }
 
-lockable_setting_t *FindSetting(std::string name)
-{
-    // strip off leading underscores
-    if (name.find("_") == 0) {
-        return FindSetting(name.substr(1, name.size() - 1));
-    }
-    
-    auto it = settingsmap.find(name);
-    if (it != settingsmap.end()) {
-        return it->second;
-    } else {
-        return nullptr;
-    }
-}
-
-void SetGlobalSetting(std::string name, std::string value, bool cmdline)
-{
-    lockable_setting_t *setting = FindSetting(name);
-    if (setting == nullptr) {
-        if (cmdline) {
-            Error("Unrecognized command-line option '%s'\n", name.c_str());
-        }
-        return;
-    }
-    
-    setting->setStringValue(value, cmdline);
+void SetGlobalSetting(std::string name, std::string value, bool cmdline) {
+    globalsettings.setSetting(name, value, cmdline);
 }
 
 void InitSettings()
 {
-     allsettings = {
+    globalsettings = {{
         &minlight,
         &addminlight,
         &lightmapgamma,
@@ -200,8 +165,7 @@ void InitSettings()
         &sunlight2_dirt,
         &sunlight3,
         &sunlight3_color
-    };
-    RegisterSettings(allsettings);
+    }};
 }
 
 static void
@@ -209,7 +173,7 @@ PrintOptionsSummary(void)
 {
     logprint("Options summary:\n");
     
-    for (lockable_setting_t *setting : allsettings) {
+    for (lockable_setting_t *setting : globalsettings.allSettings()) {
         if (setting->isChanged()) {
             logprint("    \"%s\" was set to \"%s\" from %s\n",
                      setting->primaryName().c_str(),

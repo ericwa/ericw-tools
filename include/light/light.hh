@@ -30,6 +30,7 @@
 #include <light/litfile.hh>
 
 #include <vector>
+#include <map>
 #include <string>
 #include <cassert>
 #include <limits>
@@ -319,6 +320,36 @@ public:
     : lockable_vec_t(std::vector<std::string> { name }, v, minval, maxval) {}
 };
 
+class lockable_string_t : public lockable_setting_t {
+private:
+    std::string _default, _value;
+    
+public:
+    virtual void setStringValue(const std::string &str, bool locked = false) {
+        if (!_locked || locked) {
+            _value = str;
+            
+            if (locked) {
+                _locked = true;
+            }
+        }
+    }
+    
+    virtual std::string stringValue() const {
+        return _value;
+    }
+    
+    virtual bool isChanged() const {
+        return _value != _default;
+    }
+    
+    lockable_string_t(std::vector<std::string> names, std::string v)
+    : lockable_setting_t(names), _default(v), _value(v) {}
+    
+    lockable_string_t(std::string name, std::string v)
+    : lockable_string_t(std::vector<std::string> { name }, v) {}
+};
+
 enum class vec3_transformer_t {
     NONE,
     MANGLE_TO_VEC,
@@ -483,6 +514,60 @@ extern lockable_vec3_t sunvec;
 extern lockable_vec3_t sun2vec;
 extern lockable_vec_t sun_deviance;
 
+// settings dictionary
+
+class settingsdict_t {
+private:
+    std::map<std::string, lockable_setting_t *> _settingsmap;
+    std::vector<lockable_setting_t *> _allsettings;
+
+public:
+    settingsdict_t() {}
+    
+    settingsdict_t(std::vector<lockable_setting_t *> settings)
+        : _allsettings(settings)
+    {
+        for (lockable_setting_t *setting : settings) {
+            assert(!setting->isRegistered());
+            for (const auto &name : setting->names()) {
+                assert(_settingsmap.find(name) == _settingsmap.end());
+                
+                _settingsmap[name] = setting;
+            }
+            
+            setting->setRegistered();
+        }
+    }
+    
+    lockable_setting_t *findSetting(std::string name) const {
+        // strip off leading underscores
+        if (name.find("_") == 0) {
+            return findSetting(name.substr(1, name.size() - 1));
+        }
+        
+        auto it = _settingsmap.find(name);
+        if (it != _settingsmap.end()) {
+            return it->second;
+        } else {
+            return nullptr;
+        }
+    }
+    
+    void setSetting(std::string name, std::string value, bool cmdline) {
+        lockable_setting_t *setting = findSetting(name);
+        if (setting == nullptr) {
+            if (cmdline) {
+                Error("Unrecognized command-line option '%s'\n", name.c_str());
+            }
+            return;
+        }
+        
+        setting->setStringValue(value, cmdline);
+    }
+    
+    const std::vector<lockable_setting_t *> &allSettings() const { return _allsettings; }
+};
+
 // light
 
 #define DEFAULTLIGHTLEVEL 300.0f
@@ -493,7 +578,7 @@ public:
     lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples;
     lockable_vec3_t color, mangle;
 private:
-    std::vector<lockable_setting_t *> allsettings;
+    settingsdict_t settings;
     
 public:
     lightsettings_t(void) :
@@ -511,11 +596,36 @@ public:
         samples { "samples", 16 },
         color { "color", 255.0f, 255.0f, 255.0f },
         mangle { "mangle", 0, 0, 0 },
-        allsettings {
+        settings {{
             &light, &wait, &delay, &angle, &softangle, &style, &anglescale,
             &dirtscale, &dirtgain, &dirt, &deviance, &samples,
             &color, &mangle
-        }
+        }}
+    {}
+};
+
+class modelsettings_t {
+public:
+    lockable_vec_t minlight, shadow, shadowself, dirt, phong, phong_angle;
+    lockable_string_t minlight_exclude;
+    lockable_vec3_t minlight_color;
+private:
+    settingsdict_t settings;
+    
+public:
+    modelsettings_t(void) :
+        minlight { "minlight", 0 },
+        shadow { "shadow", 0 },
+        shadowself { "shadowself", 0 },
+        dirt { "dirt", 0 },
+        phong { "phong", 0 },
+        phong_angle { "phong_angle", 0 },
+        minlight_exclude { "minlight_exclude", "" },
+        minlight_color { "minlight_color", 255, 255, 255 },
+        settings {{
+            &minlight, &shadow, &shadowself, &dirt, &phong, &phong_angle,
+            &minlight_exclude, &minlight_color
+        }}
     {}
 };
 
