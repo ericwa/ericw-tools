@@ -555,6 +555,12 @@ public:
         setting->setStringValue(value, cmdline);
     }
     
+    void setSettings(const std::map<std::string, std::string> &epairs, bool cmdline) {
+        for (const auto &epair : epairs) {
+            setSetting(epair.first, epair.second, cmdline);
+        }
+    }
+    
     const std::vector<lockable_setting_t *> &allSettings() const { return _allsettings; }
 };
 

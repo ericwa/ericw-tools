@@ -387,17 +387,14 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
             Error("%s: Couldn't find entity for model %s.\n", __func__,
                   modelname);
 
+        // apply settings
+        info.settings.setSettings(entity->epairs, false);
+        
         /* Check if this model will cast shadows (shadow => shadowself) */
-        shadow = atoi(ValueForKey(entity, "_shadow"));
-        if (shadow) {
+        if (info.shadow.boolValue()) {
             shadowmodels[numshadowmodels++] = &modelinfo[i];
-            info.shadow.setFloatValue(1.0f);
-        } else {
-            shadow = atoi(ValueForKey(entity, "_shadowself"));
-            if (shadow) {
-                info.shadowself.setFloatValue(1.0f);
-                selfshadowmodels[numselfshadowmodels++] = &modelinfo[i];
-            }
+        } else if (info.shadowself.boolValue()){
+            selfshadowmodels[numselfshadowmodels++] = &modelinfo[i];
         }
 
         /* Set up the offset for rotate_* entities */
@@ -405,21 +402,8 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         if (!strncmp(attribute, "rotate_", 7))
             GetVectorForKey(entity, "origin", info.offset);
 
-        /* Grab the bmodel minlight values, if any */
-        attribute = ValueForKey(entity, "_minlight");
-        if (attribute[0])
-            info.minlight.setFloatValue(atoi(attribute));
-        const char *minlight_exclude = ValueForKey(entity, "_minlight_exclude");
-        if (minlight_exclude[0] != '\0') {
-            info.minlight_exclude.setStringValue(minlight_exclude);
-        }
-        
-        vec3_t tmp;
-        GetVectorForKey(entity, "_mincolor", tmp);
-        if (!VectorCompare(tmp, vec3_origin)) {
-            info.minlight_color.setVec3Value(tmp);
-        }
-        
+        /* Enable .lit if needed */
+        // TODO: move elsewhere?
         vec3_t white = {255,255,255};
         if (!VectorCompare(white, *info.minlight_color.vec3Value())) {
             if (!write_litfile) {
