@@ -1025,14 +1025,6 @@ LoadEntities(const bsp2_t *bsp)
                 normalize_color_format(entity->light.color);
             } else if (!strcmp(key, "_anglesense") || !strcmp(key, "_anglescale"))
                 entity->anglescale = atof(com_token);
-            else if (!strcmp(key, "_dirtdepth"))
-                entity->dirtdepth = atof(com_token);
-            else if (!strcmp(key, "_dirtmode"))
-                entity->dirtmode = atoi(com_token);
-            else if (!strcmp(key, "_dirtangle"))
-                entity->dirtangle = atoi(com_token);
-            else if (!strcmp(key, "_minlight_dirt"))
-                entity->minlight_dirt = atoi(com_token);
             else if (!strcmp(key, "_dirtscale"))
                 entity->dirtscale = atof(com_token);
             else if (!strcmp(key, "_dirtgain"))
@@ -1067,12 +1059,6 @@ LoadEntities(const bsp2_t *bsp)
             }
             else if (!strcmp(key, "_samples")) {
                 entity->num_samples = atoi(com_token);
-            }
-            else if (!strcmp(key, "_dist")) {
-                entity->dist = atof(com_token);
-            }
-            else if (!strcmp(key, "_range")) {
-                entity->range = atof(com_token);
             }
         }
 

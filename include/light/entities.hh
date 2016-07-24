@@ -65,14 +65,6 @@ typedef struct entity_s {
     int style;
     qboolean bleed;
 
-    /* worldspawn only */
-    vec_t dirtdepth;
-    int dirtmode;
-    float dirtangle;
-    int minlight_dirt;
-    vec_t dist;
-    vec_t range;
-
     /* worldspawn, light entities */
     vec_t dirtscale;
     vec_t dirtgain;
