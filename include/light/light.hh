@@ -33,6 +33,7 @@
 #include <string>
 #include <cassert>
 #include <limits>
+#include <sstream>
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
@@ -236,6 +237,10 @@ public:
     const std::vector<std::string> &names() const { return _names; }
     
     virtual void setStringValue(const std::string &str, bool locked = false) = 0;
+    virtual std::string stringValue() const = 0;
+    
+    virtual bool isChanged() const = 0;
+    bool isLocked() const { return _locked; }
     
     bool isRegistered() { return _registered; }
     void setRegistered() { _registered = true; }
@@ -243,7 +248,7 @@ public:
 
 class lockable_vec_t : public lockable_setting_t {
 private:
-    float _value, _min, _max;
+    float _default, _value, _min, _max;
     
     void setFloatInternal(float f) {
         assert(_registered);
@@ -290,10 +295,18 @@ public:
         else setFloatValue(f);
     }
     
+    virtual std::string stringValue() const {
+        return std::to_string(_value);
+    }
+    
+    virtual bool isChanged() const {
+        return _value != _default;
+    }
+    
     lockable_vec_t(std::vector<std::string> names, float v,
                    float minval=-std::numeric_limits<float>::infinity(),
                    float maxval=std::numeric_limits<float>::infinity())
-    : lockable_setting_t(names), _value(v), _min(minval), _max(maxval) {
+    : lockable_setting_t(names), _default(v), _value(v), _min(minval), _max(maxval) {
         // check the default value is valid
         assert(_min < _max);
         assert(_value >= _min);
@@ -321,23 +334,27 @@ void normalize_color_format(vec3_t color);
 
 class lockable_vec3_t : public lockable_setting_t {
 private:
-    vec3_t _value;
+    vec3_t _default, _value;
     vec3_transformer_t _transformer;
 
-    void transformAndSetVec3Value(const vec3_t val) {
+    void transformVec3Value(const vec3_t val, vec3_t out) const {
         // apply transform
         switch (_transformer) {
             case vec3_transformer_t::NONE:
-                VectorCopy(val, _value);
+                VectorCopy(val, out);
                 break;
             case vec3_transformer_t::MANGLE_TO_VEC:
-                vec_from_mangle(_value, val);
+                vec_from_mangle(out, val);
                 break;
             case vec3_transformer_t::NORMALIZE_COLOR_TO_255:
-                VectorCopy(val, _value);
-                normalize_color_format(_value);
+                VectorCopy(val, out);
+                normalize_color_format(out);
                 break;
         }
+    }
+    
+    void transformAndSetVec3Value(const vec3_t val) {
+        transformVec3Value(val, _value);
     }
     
 public:
@@ -346,7 +363,8 @@ public:
     : lockable_setting_t(names), _transformer(t)
     {
         vec3_t tmp = { a, b, c };
-        transformAndSetVec3Value(tmp);
+        transformVec3Value(tmp, _default);
+        VectorCopy(_default, _value);
     }
     
     lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c,
@@ -383,6 +401,23 @@ public:
         
         if (locked) setVec3ValueLocked(vec3t);
         else setVec3Value(vec3t);
+    }
+    
+    virtual std::string stringValue() const {
+        std::stringstream ss;
+        ss << _value[0] << " "
+           << _value[1] << " "
+           << _value[2];
+        return ss.str();
+    }
+    
+    virtual bool isChanged() const {
+        for (int i=0; i<3; i++) {
+            if (_default[i] != _value[i]) {
+                return true;
+            }
+        }
+        return false;
     }
 };
 
