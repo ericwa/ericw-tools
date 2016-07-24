@@ -56,7 +56,7 @@ qboolean scaledonly = false;
 
 lockable_vec_t addminlight {"addmin", 0};
 lockable_vec_t minlight {"light", 0};
-lockable_vec3_t minlight_color {strings{"minlight_color", "min_color"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+lockable_vec3_t minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
 
 sun_t *suns = NULL;
 
