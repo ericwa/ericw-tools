@@ -82,6 +82,25 @@ public:
     using strings = std::vector<std::string>;
     
     entity_t(void) :
+        spotlight { false },
+        spotvec { 0, 0, 0 },
+        spotfalloff { 0 },
+        spotfalloff2 { 0 },
+        projectedmip { nullptr },
+        projectionmatrix {
+            0,0,0,0,
+            0,0,0,0,
+            0,0,0,0,
+            0,0,0,0,
+        },
+        epairs {},
+        targetent {nullptr},
+        generated {false},
+        leaf {nullptr},
+        next {nullptr},
+
+        // settings
+    
         light { "light", DEFAULTLIGHTLEVEL },
         atten { "wait", 1.0f, 0.0f, std::numeric_limits<float>::infinity() },
         formula { "delay", 0.0f },

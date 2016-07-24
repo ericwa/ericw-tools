@@ -328,7 +328,7 @@ LightThreadBounce(void *arg)
 static void
 FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
-    int i, shadow, numshadowmodels, numselfshadowmodels;
+    int i, numshadowmodels, numselfshadowmodels;
     entity_t *entity;
     char modelname[20];
     const char *attribute;
@@ -336,16 +336,14 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     const modelinfo_t **selfshadowmodels;
     float lightmapscale;
 
+    assert(modelinfo.size() == 0);
+    modelinfo.reserve(bsp->nummodels);
+    
     shadowmodels = (const modelinfo_t **)malloc(sizeof(modelinfo_t *) * (bsp->nummodels + 1));
     memset(shadowmodels, 0, sizeof(modelinfo_t *) * (bsp->nummodels + 1));
 
     selfshadowmodels = (const modelinfo_t **)malloc(sizeof(modelinfo_t *) * (bsp->nummodels + 1));
     memset(selfshadowmodels, 0, sizeof(modelinfo_t *) * (bsp->nummodels + 1));
-    
-    /* The world always casts shadows */
-    shadowmodels[0] = &modelinfo[0];
-    numshadowmodels = 1;
-    numselfshadowmodels = 0;
 
     if (!bsp->nummodels) {
         Error("Corrupt .BSP: bsp->nummodels is 0!");
@@ -367,13 +365,16 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     if (i != lightmapscale)
         logprint("WARNING: lightmap scale is not a power of 2\n");
     
-    modelinfo.reserve(bsp->nummodels);
-    
+    /* The world always casts shadows */
     modelinfo_t world;
     world.model = &bsp->dmodels[0];
     world.lightmapscale = lightmapscale;
     world.shadow.setFloatValue(1.0f); /* world always casts shadows */
     modelinfo.push_back(world);
+    
+    shadowmodels[0] = &modelinfo[0];
+    numshadowmodels = 1;
+    numselfshadowmodels = 0;
     
     for (int i = 1; i < bsp->nummodels; i++) {
         modelinfo_t info;
