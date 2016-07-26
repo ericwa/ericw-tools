@@ -479,11 +479,12 @@
 "origin" "1152 -152 152"
 "angle" "-0"
 "delay" "1"
+"light" "25"
 }
 // entity 14
 {
 "classname" "trigger_multiple"
-"message" "delay 1 (1/x)"
+"message" "light 25 delay 1 (1/x)"
 // brush 0
 {
 ( 896 -208 80 ) ( 896 -112 96 ) ( 896 -112 80 ) trigger 32 -0 -0 1 1
@@ -500,11 +501,12 @@
 "origin" "1152 -248 152"
 "angle" "-0"
 "delay" "2"
+"light" "25"
 }
 // entity 16
 {
 "classname" "trigger_multiple"
-"message" "delay 2 (1/x^2)"
+"message" "light 25 delay 2 (1/x^2)"
 // brush 0
 {
 ( 896 -304 80 ) ( 896 -208 96 ) ( 896 -208 80 ) trigger -0 -0 -0 1 1
@@ -521,11 +523,12 @@
 "origin" "1152 -344 152"
 "angle" "-0"
 "delay" "3"
+"light" "25"
 }
 // entity 18
 {
 "classname" "trigger_multiple"
-"message" "delay 3 (inf)"
+"message" "light 25 delay 3 (inf)"
 // brush 0
 {
 ( 896 -400 80 ) ( 896 -304 96 ) ( 896 -304 80 ) trigger 32 -0 -0 1 1
@@ -542,11 +545,12 @@
 "origin" "1152 -440 152"
 "angle" "-0"
 "delay" "4"
+"light" "25"
 }
 // entity 20
 {
 "classname" "trigger_multiple"
-"message" "delay 4 (localmin)"
+"message" "light 25 delay 4 (localmin)"
 // brush 0
 {
 ( 896 -496 80 ) ( 896 -400 96 ) ( 896 -400 80 ) trigger -0 -0 -0 1 1
