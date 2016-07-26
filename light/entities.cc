@@ -694,9 +694,9 @@ void Matrix4x4_CM_ModelViewMatrix(float *modelview, const vec3_t viewangles, con
     //figure out the current modelview matrix
 
     //I would if some of these, but then I'd still need a couple of copys
-    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[2],  1, 0, 0), tempmat);
-    Matrix4_Multiply(tempmat, Matrix4x4_CM_NewRotation(t2, -viewangles[0],  0, 1, 0), modelview);
-    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[1],  0, 0, 1), tempmat);
+    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[2],  1, 0, 0), tempmat); //roll
+    Matrix4_Multiply(tempmat, Matrix4x4_CM_NewRotation(t2, viewangles[1],  0, 1, 0), modelview); //pitch
+    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[0],  0, 0, 1), tempmat); //yaw
 
     Matrix4_Multiply(tempmat, Matrix4x4_CM_NewTranslation(t2, -vieworg[0],  -vieworg[1],  -vieworg[2]), modelview);         // put Z going up
 }
