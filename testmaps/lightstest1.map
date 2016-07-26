@@ -1215,3 +1215,11 @@
 ( 1184 -936 96 ) ( 1184 -888 104 ) ( 1184 -888 96 ) +0ulrichbut -8 16 -0 1 1
 }
 }
+// entity 50
+{
+"classname" "light"
+"origin" "248 -432 112"
+"angle" "-0"
+"_surface" "*lava"
+"_color" "255 128 128"
+}
