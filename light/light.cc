@@ -329,7 +329,6 @@ static void
 FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
     int i, numshadowmodels, numselfshadowmodels;
-    entity_t *entity;
     const char *attribute;
     const modelinfo_t **shadowmodels;
     const modelinfo_t **selfshadowmodels;
@@ -401,9 +400,9 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         }
 
         /* Set up the offset for rotate_* entities */
-        attribute = ValueForKey(entity, "classname");
-        if (!strncmp(attribute, "rotate_", 7))
-            GetVectorForKey(entity, "origin", info.offset);
+        if (EntDict_StringForKey(*entdict, "classname").find("rotate_") == 0) {
+            GetVectorForKey(entdict, "origin", info.offset);
+        }
 
         /* Enable .lit if needed */
         // TODO: move elsewhere?

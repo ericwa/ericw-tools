@@ -1538,33 +1538,33 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
     
     /* Cast rays for local minlight entities */
     shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
-    for (entity = lights; *entity; entity++) {
-        if ((*entity)->getFormula() != LF_LOCALMIN)
+    for (const auto &entity : GetLights()) {
+        if (entity.getFormula() != LF_LOCALMIN)
             continue;
 
-        lightmap = Lightmap_ForStyle(lightmaps, (*entity)->style.intValue(), lightsurf);
+        lightmap = Lightmap_ForStyle(lightmaps, entity.style.intValue(), lightsurf);
 
         hit = false;
         sample = lightmap->samples;
         surfpoint = lightsurf->points[0];
         for (j = 0; j < lightsurf->numpoints; j++, sample++, surfpoint += 3) {
-            if (addminlight.boolValue() || sample->light < (*entity)->light.floatValue()) {
-                vec_t value = (*entity)->light.floatValue();
-                trace = TestLight(*(*entity)->origin.vec3Value(), surfpoint, shadowself);
+            if (addminlight.boolValue() || sample->light < entity.light.floatValue()) {
+                vec_t value = entity.light.floatValue();
+                trace = TestLight(*entity.origin.vec3Value(), surfpoint, shadowself);
                 if (!trace)
                     continue;
-                value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], (*entity), lightsurf);
+                value *= Dirt_GetScaleFactor(lightsurf->occlusion[j], &entity, lightsurf);
                 if (addminlight.boolValue())
-                    Light_Add(sample, value, *(*entity)->color.vec3Value(), vec3_origin);
+                    Light_Add(sample, value, *entity.color.vec3Value(), vec3_origin);
                 else
-                    Light_ClampMin(sample, value, *(*entity)->color.vec3Value());
+                    Light_ClampMin(sample, value, *entity.color.vec3Value());
             }
             if (!hit && sample->light >= 1)
                 hit = true;
         }
         
         if (hit)
-            Lightmap_Save(lightmaps, lightsurf, lightmap, (*entity)->style.intValue());
+            Lightmap_Save(lightmaps, lightsurf, lightmap, entity.style.intValue());
     }
 }
 
@@ -2116,8 +2116,6 @@ void
 LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
 {
     int i, j, k;
-    const entity_t *entity;
-    entity_t **lighte;
     lightsample_t *sample;
     sun_t *sun;
 
@@ -2179,12 +2177,12 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
 
     if (!(debugmode == debugmode_dirt || debugmode == debugmode_phong)) {
         /* positive lights */
-        for (lighte = lights; (entity = *lighte); lighte++)
+        for (const auto &entity : GetLights())
         {
-            if (entity->getFormula() == LF_LOCALMIN)
+            if (entity.getFormula() == LF_LOCALMIN)
                 continue;
-            if (entity->light.floatValue() > 0)
-                LightFace_Entity(bsp, entity, lightsurf, lightmaps);
+            if (entity.light.floatValue() > 0)
+                LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
         }
         for ( sun = suns; sun; sun = sun->next )
             if (sun->sunlight.light > 0)
@@ -2203,12 +2201,12 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         }
 
         /* negative lights */
-        for (lighte = lights; (entity = *lighte); lighte++)
+        for (const auto &entity : GetLights())
         {
-            if (entity->getFormula() == LF_LOCALMIN)
+            if (entity.getFormula() == LF_LOCALMIN)
                 continue;
-            if (entity->light.floatValue() < 0)
-                LightFace_Entity(bsp, entity, lightsurf, lightmaps);
+            if (entity.light.floatValue() < 0)
+                LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
         }
         for ( sun = suns; sun; sun = sun->next )
             if (sun->sunlight.light < 0)

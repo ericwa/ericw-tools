@@ -24,12 +24,11 @@
 #include <light/light.hh>
 #include <light/entities.hh>
 
-entity_t *entities;
-static entity_t *entities_tail;
-static int num_entities;
-static int num_lights;
+std::vector<entity_t> all_lights;
 
-entity_t *lights[MAX_LIGHTS];
+const std::vector<entity_t>& GetLights() {
+    return all_lights;
+}
 
 /* surface lights */
 #define MAX_SURFLIGHT_TEMPLATES 256
@@ -115,28 +114,30 @@ LightStyleForTargetname(const std::string &targetname)
 /*
  * ==================
  * MatchTargets
+ *
+ * all_lights should not be modified after this (saves pointers to elements)
  * ==================
  */
 static void
 MatchTargets(void)
 {
-    entity_t *entity;
-    const entity_t *target;
-
-    for (entity = entities; entity; entity = entity->next) {
-        std::string targetstr { ValueForKey(entity, "target") };
+    for (entity_t &entity : all_lights) {
+        std::string targetstr { ValueForKey(&entity, "target") };
         if (!targetstr.length())
             continue;
-        for (target = entities; target; target = target->next) {
-            if (targetstr == ValueForKey(target, "targetname")) {
-                entity->targetent = target;
+        
+        bool found = false;
+        for (const entity_t &target : all_lights) {
+            if (targetstr == ValueForKey(&target, "targetname")) {
+                entity.targetent = &target;
+                found = true;
                 break;
             }
         }
-        if (target == NULL) {
+        if (!found) {
             logprint("WARNING: entity at (%s) (%s) has unmatched "
-                     "target (%s)\n", VecStr(*entity->origin.vec3Value()),
-                     entity->classname(), ValueForKey(entity, "target"));
+                     "target (%s)\n", VecStr(*entity.origin.vec3Value()),
+                     entity.classname(), ValueForKey(&entity, "target"));
             continue;
         }
     }
@@ -147,25 +148,25 @@ SetupSpotlights(void)
 {
     entity_t *entity;
 
-    for (entity = entities; entity; entity = entity->next) {
-        if (strncmp(entity->classname(), "light", 5))
+    for (entity_t &entity : all_lights) {
+        if (strncmp(entity.classname(), "light", 5))
             continue;
-        if (entity->targetent) {
-            VectorSubtract(*entity->targetent->origin.vec3Value(), *entity->origin.vec3Value(),
-                           entity->spotvec);
-            VectorNormalize(entity->spotvec);
-            entity->spotlight = true;
+        if (entity.targetent) {
+            VectorSubtract(*entity.targetent->origin.vec3Value(), *entity.origin.vec3Value(),
+                           entity.spotvec);
+            VectorNormalize(entity.spotvec);
+            entity.spotlight = true;
         }
-        if (entity->spotlight) {
+        if (entity.spotlight) {
             vec_t angle, angle2;
 
-            angle = (entity->spotangle.floatValue() > 0) ? entity->spotangle.floatValue() : 40;
-            entity->spotfalloff = -cos(angle / 2 * Q_PI / 180);
+            angle = (entity.spotangle.floatValue() > 0) ? entity.spotangle.floatValue() : 40;
+            entity.spotfalloff = -cos(angle / 2 * Q_PI / 180);
 
-            angle2 = entity->spotangle2.floatValue();
+            angle2 = entity.spotangle2.floatValue();
             if (angle2 <= 0 || angle2 > angle)
                 angle2 = angle;
-            entity->spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
+            entity.spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
         }
     }
 }
@@ -495,42 +496,37 @@ SetupSkyDome()
         }
 }
 
-/*
- * =============
- * Entities_Insert
- *
- * Adds the entity to the linked list
- * =============
- */
-static void
-Entities_Insert(entity_t *entity)
-{
-        /* Insert it into the tail end of the list */
-        if (num_entities == 0) {
-            entities = entity;
-            entities_tail = entity;
-        } else {
-            entities_tail->next = entity;
-            entities_tail = entity;
-        }
-        entity->next = NULL;
-        num_entities++;
-}
+///*
+// * =============
+// * Entities_Insert
+// *
+// * Adds the entity to the linked list
+// * =============
+// */
+//static void
+//Entities_Insert(entity_t *entity)
+//{
+//        /* Insert it into the tail end of the list */
+//        if (num_entities == 0) {
+//            entities = entity;
+//            entities_tail = entity;
+//        } else {
+//            entities_tail->next = entity;
+//            entities_tail = entity;
+//        }
+//        entity->next = NULL;
+//        num_entities++;
+//}
 
 /*
  * =============
  * DuplicateEntity
  * =============
  */
-static entity_t *
-DuplicateEntity(const entity_t *src)
+static entity_t
+DuplicateEntity(const entity_t &src)
 {
-    entity_t *entity = new entity_t(*src);
-
-    /* also insert into the entity list */
-    entity->next = NULL;
-    Entities_Insert(entity);
-    
+    entity_t entity { src };
     return entity;
 }
 
@@ -544,44 +540,34 @@ DuplicateEntity(const entity_t *src)
  * =============
  */
 static void
-JitterEntity(entity_t *entity)
+JitterEntity(const entity_t entity)
 {
-    int j;
-
     /* jitter the light */
-    for ( j = 1; j < entity->samples.intValue(); j++ )
+    for ( int j = 1; j < entity.samples.intValue(); j++ )
     {
         /* create a light */
-        entity_t *light2 = DuplicateEntity(entity);
-        light2->generated = true; // don't write generated light to bsp
+        entity_t light2 = DuplicateEntity(entity);
+        light2.generated = true; // don't write generated light to bsp
 
         /* jitter it */
         vec3_t neworigin = {
-            (*entity->origin.vec3Value())[ 0 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance.floatValue(),
-            (*entity->origin.vec3Value())[ 1 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance.floatValue(),
-            (*entity->origin.vec3Value())[ 2 ] + ( Random() * 2.0f - 1.0f ) * entity->deviance.floatValue()
+            (*entity.origin.vec3Value())[ 0 ] + ( Random() * 2.0f - 1.0f ) * entity.deviance.floatValue(),
+            (*entity.origin.vec3Value())[ 1 ] + ( Random() * 2.0f - 1.0f ) * entity.deviance.floatValue(),
+            (*entity.origin.vec3Value())[ 2 ] + ( Random() * 2.0f - 1.0f ) * entity.deviance.floatValue()
         };
-        light2->origin.setVec3Value(neworigin);
+        light2.origin.setVec3Value(neworigin);
+        
+        all_lights.push_back(light2);
     }
 }
 
 static void
 JitterEntities()
 {
-    entity_t *old_tail;
-    entity_t *entity;
-
-    // We will append to the list during iteration. This is the entity
-    // to stop at.
-    old_tail = entities_tail;
-    
-    for (entity = entities; entity; entity = entity->next) {
-        if (!strncmp(entity->classname(), "light", 5)) {
-            JitterEntity(entity);
-        }
-        
-        if (entity == old_tail)
-            break;
+    // We will append to the list during iteration.
+    const size_t starting_size = all_lights.size();
+    for (size_t i=0; i<starting_size; i++) {
+        JitterEntity(all_lights.at(i));
     }
 }
 
@@ -782,34 +768,32 @@ static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
 static void
 FindLights()
 {
-    int totallights;
-    entity_t *entity;
+//    int totallights;
+//    entity_t *entity;
+//
+//    totallights = 0;
+//    for (entity = entities; entity; entity = entity->next) {
+//        if (totallights == MAX_LIGHTS) {
+//            Error("totallights == MAX_LIGHTS");
+//        }
+//        if (!strcmp(entity->classname(), "worldspawn")) {
+//            // HACK: workaround https://github.com/ericwa/tyrutils-ericw/issues/67
+//            // LoadEntities and FindLights need to be completely rewritten.
+//            continue;
+//        }
+//        if (entity->light.floatValue() != 0) {
+//            lights[totallights++] = entity;
+//        }
+//    }
 
-    totallights = 0;
-    for (entity = entities; entity; entity = entity->next) {
-        if (totallights == MAX_LIGHTS) {
-            Error("totallights == MAX_LIGHTS");
-        }
-        if (!strcmp(entity->classname(), "worldspawn")) {
-            // HACK: workaround https://github.com/ericwa/tyrutils-ericw/issues/67
-            // LoadEntities and FindLights need to be completely rewritten.
-            continue;
-        }
-        if (entity->light.floatValue() != 0) {
-            lights[totallights++] = entity;
-        }
-    }
-
-    logprint("FindLights: %d total lights\n", totallights);
+    logprint("FindLights: %d total lights\n", static_cast<int>(all_lights.size()));
 }
 
 static void
 SetupLightLeafnums(const bsp2_t *bsp)
 {
-    entity_t *entity;
-
-    for (entity = entities; entity; entity = entity->next) {
-        entity->leaf = Light_PointInLeaf(bsp, *entity->origin.vec3Value());
+    for (entity_t &entity : all_lights) {
+        entity.leaf = Light_PointInLeaf(bsp, *entity.origin.vec3Value());
     }
 }
 
@@ -979,65 +963,57 @@ LoadEntities(const bsp2_t *bsp)
         }
     }
     
-    /* start parsing */
-    num_entities = 0;
-    entities = NULL;
-    entities_tail = NULL;
-    num_lights = 0;
+    /* handle worldspawn */
+    for (const auto &epair : WorldEnt()) {
+        SetGlobalSetting(epair.first, epair.second, false);
+    }
     
     /* go through all the entities */
-    
-    for (auto &entdict : entdicts) {
-        /* Allocate a new entity */
-        entity_t *entity = new entity_t {};
-        
-        Entities_Insert(entity);
-
-        // COPY the entdict
-        entity->epairs = entdict;
+    for (const auto &entdict : entdicts) {
         
         /*
          * Check light entity fields and any global settings in worldspawn.
          */
-        if (!strncmp(entity->classname(), "light", 5)) {
+        if (EntDict_StringForKey(entdict, "classname").find("light") == 0) {
+            /* Allocate a new entity */
+            entity_t entity {};
+            
+            //Entities_Insert(entity);
+            
+            // COPY the entdict
+            entity.epairs = entdict;
             
             // populate settings
-            entity->settings.setSettings(entity->epairs, false);
+            entity.settings.setSettings(entity.epairs, false);
             
-            if (entity->mangle.isChanged()) {
-                vec_from_mangle(entity->spotvec, *entity->mangle.vec3Value());
-                entity->spotlight = true;
+            if (entity.mangle.isChanged()) {
+                vec_from_mangle(entity.spotvec, *entity.mangle.vec3Value());
+                entity.spotlight = true;
                 
-                if (!entity->projangle.isChanged()) {
+                if (!entity.projangle.isChanged()) {
                     // copy from mangle
-                    entity->projangle.setVec3Value(*entity->mangle.vec3Value());
+                    entity.projangle.setVec3Value(*entity.mangle.vec3Value());
                 }
             }
             
-            if (entity->project_texture.stringValue() != "") {
-                auto texname = entity->project_texture.stringValue();
-                entity->projectedmip = FindProjectionTexture(bsp, texname.c_str());
-                if (entity->projectedmip == NULL) {
+            if (entity.project_texture.stringValue() != "") {
+                auto texname = entity.project_texture.stringValue();
+                entity.projectedmip = FindProjectionTexture(bsp, texname.c_str());
+                if (entity.projectedmip == NULL) {
                     logprint("WARNING: light has \"_project_texture\" \"%s\", but this texture is not present in the bsp\n", texname.c_str());
                 }
             }
             
-            if (entity->projectedmip) {
-                if (entity->projectedmip->width > entity->projectedmip->height)
-                    Matrix4x4_CM_MakeModelViewProj (*entity->projangle.vec3Value(), *entity->origin.vec3Value(), entity->projfov.floatValue(), CalcFov(entity->projfov.floatValue(), entity->projectedmip->width, entity->projectedmip->height), entity->projectionmatrix);
+            if (entity.projectedmip) {
+                if (entity.projectedmip->width > entity.projectedmip->height)
+                    Matrix4x4_CM_MakeModelViewProj (*entity.projangle.vec3Value(), *entity.origin.vec3Value(), entity.projfov.floatValue(), CalcFov(entity.projfov.floatValue(), entity.projectedmip->width, entity.projectedmip->height), entity.projectionmatrix);
                 else
-                    Matrix4x4_CM_MakeModelViewProj (*entity->projangle.vec3Value(), *entity->origin.vec3Value(), CalcFov(entity->projfov.floatValue(), entity->projectedmip->height, entity->projectedmip->width), entity->projfov.floatValue(), entity->projectionmatrix);
+                    Matrix4x4_CM_MakeModelViewProj (*entity.projangle.vec3Value(), *entity.origin.vec3Value(), CalcFov(entity.projfov.floatValue(), entity.projectedmip->height, entity.projectedmip->width), entity.projfov.floatValue(), entity.projectionmatrix);
             }
 
-            CheckEntityFields(entity);
-            num_lights++;
-        }
-        
-        if (!strcmp(entity->classname(), "worldspawn")) {
-            // handle worldspawn keys
-            for (const auto &epair : entity->epairs) {
-                SetGlobalSetting(epair.first, epair.second, false);
-            }
+            CheckEntityFields(&entity);
+            
+            all_lights.push_back(entity);
         }
     }
 
@@ -1052,7 +1028,7 @@ LoadEntities(const bsp2_t *bsp)
         }
     }
 
-    logprint("%d entities read, %d are lights.\n", num_entities, num_lights);
+    logprint("%d entities read, %d are lights.\n", entdicts.size(), all_lights.size());
 }
 
 static vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
@@ -1126,13 +1102,11 @@ FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
 void
 FixLightsOnFaces(const bsp2_t *bsp)
 {
-    entity_t *entity;
-    
-    for (entity = entities; entity; entity = entity->next) {
-        if (entity->light.floatValue() != 0) {
+    for (entity_t &entity : all_lights) {
+        if (entity.light.floatValue() != 0) {
             vec3_t tmp;
-            FixLightOnFace(bsp, *entity->origin.vec3Value(), tmp);
-            entity->origin.setVec3Value(tmp);
+            FixLightOnFace(bsp, *entity.origin.vec3Value(), tmp);
+            entity.origin.setVec3Value(tmp);
         }
     }
 }
@@ -1143,14 +1117,20 @@ SetupLights(const bsp2_t *bsp)
     // Creates more light entities, needs to be done before the rest
     MakeSurfaceLights(bsp);
 
-    MatchTargets();
     JitterEntities();
+    
+    MatchTargets(); // don't add lights after this
+    const size_t final_lightcount = all_lights.size();
+    
+    
     SetupSpotlights();
     SetupSuns();
     SetupSkyDome();
     FindLights();
     FixLightsOnFaces(bsp);
     SetupLightLeafnums(bsp);
+    
+    assert(final_lightcount == all_lights.size());
 }
 
 const char *
@@ -1175,12 +1155,10 @@ const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::strin
 }
 
 void
-GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec)
+GetVectorForKey(const entdict_t *ent, const char *key, vec3_t vec)
 {
-    const char *value;
-
-    value = ValueForKey(ent, key);
-    sscanf(value, "%f %f %f", &vec[0], &vec[1], &vec[2]);
+    std::string value = EntDict_StringForKey(*ent, key);
+    sscanf(value.c_str(), "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
 /*
@@ -1235,26 +1213,26 @@ WriteEntityToFile(FILE *f, entity_t *entity)
 
 static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const entity_t *surflight_template)
 {
-    entity_t *entity = DuplicateEntity(surflight_template);
+    entity_t entity = DuplicateEntity(*surflight_template);
 
-    entity->origin.setVec3Value(origin);
+    entity.origin.setVec3Value(origin);
 
     /* don't write to bsp */
-    entity->generated = true;
+    entity.generated = true;
 
     /* set spotlight vector based on face normal */
     if (atoi(ValueForKey(surflight_template, "_surface_spotlight"))) {
-        entity->spotlight = true;
-        VectorCopy(normal, entity->spotvec);
+        entity.spotlight = true;
+        VectorCopy(normal, entity.spotvec);
     }
     
     /* export it to a map file for debugging */
     if (surflight_dump) {
-        SetKeyValue(entity, "origin", VecStr(origin));
-        WriteEntityToFile(surflights_dump_file, entity);
+        SetKeyValue(&entity, "origin", VecStr(origin));
+        WriteEntityToFile(surflights_dump_file, &entity);
     }
     
-    num_lights++;
+    all_lights.push_back(entity);
 }
 
 static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const entity_t *surflight_template, const bsp2_t *bsp, int numverts, const vec_t *verts)
@@ -1419,19 +1397,18 @@ static void GL_SubdivideSurface (const bsp2_dface_t *face, const modelinfo_t *fa
 
 static void MakeSurfaceLights(const bsp2_t *bsp)
 {
-    entity_t *entity;
     int i, k;
 
-    for (entity = entities; entity; entity = entity->next) {
-        const char *tex = ValueForKey(entity, "_surface");
+    for (entity_t &entity : all_lights) {
+        const char *tex = ValueForKey(&entity, "_surface");
         if (strcmp(tex, "") != 0) {
             /* Add to template list */
             if (num_surfacelight_templates == MAX_SURFLIGHT_TEMPLATES)
                 Error("num_surfacelight_templates == MAX_SURFLIGHT_TEMPLATES");
-            surfacelight_templates[num_surfacelight_templates++] = entity;
+            surfacelight_templates[num_surfacelight_templates++] = &entity; // FIXME: this will break when lights added
             
             printf("Creating surface lights for texture \"%s\" from template at (%s)\n",
-                   tex, ValueForKey(entity, "origin"));
+                   tex, ValueForKey(&entity, "origin"));
         }
     }
 

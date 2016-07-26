@@ -145,12 +145,14 @@ public:
  *    Stores the RGB values to determine the light color
  */
 
-#define MAX_LIGHTS 65536
-extern entity_t *lights[MAX_LIGHTS];
+//#define MAX_LIGHTS 65536
+//extern entity_t *lights[MAX_LIGHTS];
+
+const std::vector<entity_t>& GetLights();
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
 const char *ValueForKey(const entity_t *ent, const char *key);
-void GetVectorForKey(const entity_t *ent, const char *key, vec3_t vec);
+void GetVectorForKey(const entdict_t *ent, const char *key, vec3_t vec);
 
 std::string EntDict_StringForKey(const entdict_t &dict, const std::string key);
 float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
