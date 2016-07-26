@@ -152,7 +152,7 @@ const std::vector<entity_t>& GetLights();
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
 const char *ValueForKey(const entity_t *ent, const char *key);
-void GetVectorForKey(const entdict_t *ent, const char *key, vec3_t vec);
+void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec);
 
 std::string EntDict_StringForKey(const entdict_t &dict, const std::string key);
 float EntDict_FloatForKey(const entdict_t &dict, const std::string key);

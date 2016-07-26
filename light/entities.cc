@@ -143,7 +143,7 @@ SetupSpotlights(void)
     for (entity_t &entity : all_lights) {
         if (entity.targetent) {
             vec3_t targetOrigin;
-            GetVectorForKey(entity.targetent, "origin", targetOrigin);
+            EntDict_VectorForKey(*entity.targetent, "origin", targetOrigin);
             VectorSubtract(targetOrigin, *entity.origin.vec3Value(), entity.spotvec);
             VectorNormalize(entity.spotvec);
             entity.spotlight = true;
@@ -1158,9 +1158,9 @@ const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::strin
 }
 
 void
-GetVectorForKey(const entdict_t *ent, const char *key, vec3_t vec)
+EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec)
 {
-    std::string value = EntDict_StringForKey(*ent, key);
+    std::string value = EntDict_StringForKey(ent, key);
     sscanf(value.c_str(), "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
