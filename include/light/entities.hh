@@ -67,8 +67,6 @@ public:
 
     const bsp2_dleaf_t *leaf;    // for vis testing
     
-    entity_t *next;
-    
     const char *classname() const;
     
 public:
@@ -99,7 +97,6 @@ public:
         targetent {nullptr},
         generated {false},
         leaf {nullptr},
-        next {nullptr},
 
         // settings
     
@@ -144,9 +141,6 @@ public:
  *  lightcolor:
  *    Stores the RGB values to determine the light color
  */
-
-//#define MAX_LIGHTS 65536
-//extern entity_t *lights[MAX_LIGHTS];
 
 const std::vector<entity_t>& GetLights();
 

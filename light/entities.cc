@@ -159,19 +159,6 @@ SetupSpotlights(void)
     }
 }
 
-/* helper function */
-static void
-scan_vec3(vec3_t dest, const char *buf, const char *name)
-{
-    int i;
-    double vec[3] = { 0.0, 0.0, 0.0 };
-
-    if (sscanf(buf, "%lf %lf %lf", &vec[0], &vec[1], &vec[2]) != 3)
-        logprint("WARNING: Not 3 values for %s\n", name);
-    for (i = 0; i < 3; ++i)
-        dest[i] = vec[i];
-}
-
 void
 vec_from_mangle(vec3_t v, const vec3_t m)
 {
