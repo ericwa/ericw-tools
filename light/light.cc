@@ -1622,8 +1622,13 @@ main(int argc, const char **argv)
             }
             
             if (lockable_vec_t *vecsetting = dynamic_cast<lockable_vec_t *>(setting)) {
-                float v = ParseVec(&i, argc, argv);
-                vecsetting->setFloatValueLocked(v);
+                float v;
+                if (ParseVecOptional(&v, &i, argc, argv)) {
+                    vecsetting->setFloatValueLocked(v);
+                } else {
+                    // FIXME: only do this for boolean settings.
+                    vecsetting->setFloatValueLocked(true);
+                }
             } else if (lockable_vec3_t *vec3setting = dynamic_cast<lockable_vec3_t *>(setting)) {
                 vec3_t temp;
                 ParseVec3(temp, &i, argc, argv);
