@@ -61,7 +61,7 @@ public:
 
     std::map<std::string, std::string> epairs;
     
-    const entity_t *targetent;
+    const entdict_t *targetent;
 
     qboolean generated;     // if true, don't write to the bsp
 

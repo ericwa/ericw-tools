@@ -115,7 +115,7 @@ LightStyleForTargetname(const std::string &targetname)
  * ==================
  * MatchTargets
  *
- * all_lights should not be modified after this (saves pointers to elements)
+ * entdicts should not be modified after this (saves pointers to elements)
  * ==================
  */
 static void
@@ -127,8 +127,8 @@ MatchTargets(void)
             continue;
         
         bool found = false;
-        for (const entity_t &target : all_lights) {
-            if (targetstr == ValueForKey(&target, "targetname")) {
+        for (const entdict_t &target : entdicts) {
+            if (targetstr == EntDict_StringForKey(target, "targetname")) {
                 entity.targetent = &target;
                 found = true;
                 break;
@@ -152,8 +152,9 @@ SetupSpotlights(void)
         if (strncmp(entity.classname(), "light", 5))
             continue;
         if (entity.targetent) {
-            VectorSubtract(*entity.targetent->origin.vec3Value(), *entity.origin.vec3Value(),
-                           entity.spotvec);
+            vec3_t targetOrigin;
+            GetVectorForKey(entity.targetent, "origin", targetOrigin);
+            VectorSubtract(targetOrigin, *entity.origin.vec3Value(), entity.spotvec);
             VectorNormalize(entity.spotvec);
             entity.spotlight = true;
         }
