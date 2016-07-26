@@ -31,9 +31,6 @@ const std::vector<entity_t>& GetLights() {
 }
 
 /* surface lights */
-#define MAX_SURFLIGHT_TEMPLATES 256
-entity_t *surfacelight_templates[MAX_SURFLIGHT_TEMPLATES];
-int num_surfacelight_templates;
 static void MakeSurfaceLights(const bsp2_t *bsp);
 
 using strings = std::vector<std::string>;
@@ -1198,6 +1195,8 @@ WriteEntitiesToString(bsp2_t *bsp)
  * =======================================================================
  */
 
+std::vector<entity_t> surfacelight_templates;
+
 FILE *surflights_dump_file;
 char surflights_dump_filename[1024];
 
@@ -1366,9 +1365,9 @@ static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_
 
     const char *texname = Face_TextureName(bsp, face);
 
-    for (i=0; i<num_surfacelight_templates; i++) {
-        if (!Q_strcasecmp(texname, ValueForKey(surfacelight_templates[i], "_surface"))) {
-            CreateSurfaceLightOnFaceSubdivision(face, face_modelinfo, surfacelight_templates[i], bsp, numverts, verts);
+    for (const auto &surflight : surfacelight_templates) {
+        if (!Q_strcasecmp(texname, ValueForKey(&surflight, "_surface"))) {
+            CreateSurfaceLightOnFaceSubdivision(face, face_modelinfo, &surflight, bsp, numverts, verts);
         }
     }
 }
@@ -1402,19 +1401,19 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
     int i, k;
 
     for (entity_t &entity : all_lights) {
-        const char *tex = ValueForKey(&entity, "_surface");
-        if (strcmp(tex, "") != 0) {
-            /* Add to template list */
-            if (num_surfacelight_templates == MAX_SURFLIGHT_TEMPLATES)
-                Error("num_surfacelight_templates == MAX_SURFLIGHT_TEMPLATES");
-            surfacelight_templates[num_surfacelight_templates++] = &entity; // FIXME: this will break when lights added
+        std::string tex = ValueForKey(&entity, "_surface");
+        if (tex != "") {
+            surfacelight_templates.push_back(entity); // makes a copy
+
+            // Hack: clear templates light value to 0 so they don't cast light
+            entity.light.setFloatValue(0);
             
-            printf("Creating surface lights for texture \"%s\" from template at (%s)\n",
-                   tex, ValueForKey(&entity, "origin"));
+            logprint("Creating surface lights for texture \"%s\" from template at (%s)\n",
+                   tex.c_str(), ValueForKey(&entity, "origin"));
         }
     }
 
-    if (!num_surfacelight_templates)
+    if (!surfacelight_templates.size())
         return;
 
     if (surflight_dump) {
@@ -1461,11 +1460,6 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
         }
     }
     free(face_visited);
-    
-    /* Hack: clear templates light value to 0 so they don't cast light */
-    for (i=0;i<num_surfacelight_templates;i++) {
-        surfacelight_templates[i]->light.setFloatValue(0);
-    }
     
     if (surflights_dump_file) {
         fclose(surflights_dump_file);
