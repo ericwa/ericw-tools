@@ -1424,7 +1424,8 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
     }
     
     /* Create the surface lights */
-    qboolean *face_visited = (qboolean *)calloc(bsp->numfaces, sizeof(qboolean));
+    std::vector<bool> face_visited(static_cast<size_t>(bsp->numfaces), false);
+    
     for (i=0; i<bsp->numleafs; i++) {
         const bsp2_dleaf_t *leaf = bsp->dleafs + i;
         const bsp2_dface_t *surf;
@@ -1449,17 +1450,16 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
                 continue;
 
             /* Skip if already handled */
-            if (face_visited[facenum])
+            if (face_visited.at(facenum))
                 continue;
             
             /* Mark as handled */
-            face_visited[facenum] = true;
+            face_visited.at(facenum) = true;
 
             /* Generate the lights */
             GL_SubdivideSurface(surf, face_modelinfo, bsp);
         }
     }
-    free(face_visited);
     
     if (surflights_dump_file) {
         fclose(surflights_dump_file);
