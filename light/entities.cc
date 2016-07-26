@@ -72,12 +72,6 @@ const char * entity_t::classname() const {
 
 static std::vector<std::string> lighttargetnames;
 
-static void
-SetKeyValue(entity_t *ent, const char *key, const char *value)
-{
-    ent->epairs[key] = value;
-}
-
 static entdict_t &WorldEnt()
 {
     if (entdicts.size() == 0
@@ -900,6 +894,16 @@ EntDict_FloatForKey(const entdict_t &dict, const std::string key)
     }
 }
 
+void
+EntDict_RemoveValueForKey(entdict_t &dict, const std::string key)
+{
+    auto it = dict.find(key);
+    if (it != dict.end()) {
+        dict.erase(it);
+    }
+    assert(dict.find(key) == dict.end());
+}
+
 static std::string
 ParseEscapeSequences(const std::string &input)
 {
@@ -981,11 +985,11 @@ LoadEntities(const bsp2_t *bsp)
             
             //Entities_Insert(entity);
             
-            // COPY the entdict
-            entity.epairs = entdict;
+            // save pointer to the entdict
+            entity.epairs = &entdict;
             
             // populate settings
-            entity.settings.setSettings(entity.epairs, false);
+            entity.settings.setSettings(*entity.epairs, false);
             
             if (entity.mangle.isChanged()) {
                 vec_from_mangle(entity.spotvec, *entity.mangle.vec3Value());
@@ -1137,8 +1141,8 @@ SetupLights(const bsp2_t *bsp)
 const char *
 ValueForKey(const entity_t *ent, const char *key)
 {
-    auto iter = ent->epairs.find(key);
-    if (iter != ent->epairs.end()) {
+    auto iter = ent->epairs->find(key);
+    if (iter != ent->epairs->end()) {
         return (*iter).second.c_str();
     } else {
         return "";
@@ -1199,17 +1203,17 @@ WriteEntitiesToString(bsp2_t *bsp)
 FILE *surflights_dump_file;
 char surflights_dump_filename[1024];
 
-void
-WriteEntityToFile(FILE *f, entity_t *entity)
+static void
+SurfLights_WriteEntityToFile(FILE *f, entity_t *entity, const vec3_t pos)
 {
-    if (!entity->epairs.size())
-        return;
+    assert(entity->epairs != nullptr);
     
-    fprintf(f, "{\n");
-    for (auto epair : entity->epairs) {
-        fprintf(f, "\"%s\" \"%s\"\n", epair.first.c_str(), epair.second.c_str());
-    }
-    fprintf(f, "}\n");
+    entdict_t epairs { *entity->epairs };
+    EntDict_RemoveValueForKey(epairs, "_surface");
+    epairs["origin"] = VecStr(pos);
+    
+    std::string entstring = EntData_Write({ epairs });
+    fwrite(entstring.data(), 1, entstring.size(), f);
 }
 
 static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const entity_t *surflight_template)
@@ -1229,8 +1233,7 @@ static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const e
     
     /* export it to a map file for debugging */
     if (surflight_dump) {
-        SetKeyValue(&entity, "origin", VecStr(origin));
-        WriteEntityToFile(surflights_dump_file, &entity);
+        SurfLights_WriteEntityToFile(surflights_dump_file, &entity, origin);
     }
     
     all_lights.push_back(entity);

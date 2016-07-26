@@ -59,7 +59,7 @@ public:
     miptex_t *projectedmip; /*projected texture*/
     float projectionmatrix[16]; /*matrix used to project the specified texture. already contains origin.*/
 
-    std::map<std::string, std::string> epairs;
+    const entdict_t *epairs;
     
     const entdict_t *targetent;
 
@@ -95,7 +95,7 @@ public:
             0,0,0,0,
             0,0,0,0,
         },
-        epairs {},
+        epairs {nullptr},
         targetent {nullptr},
         generated {false},
         leaf {nullptr},
