@@ -140,11 +140,7 @@ MatchTargets(void)
 static void
 SetupSpotlights(void)
 {
-    entity_t *entity;
-
     for (entity_t &entity : all_lights) {
-        if (strncmp(entity.classname(), "light", 5))
-            continue;
         if (entity.targetent) {
             vec3_t targetOrigin;
             GetVectorForKey(entity.targetent, "origin", targetOrigin);
@@ -1033,7 +1029,9 @@ LoadEntities(const bsp2_t *bsp)
         }
     }
 
-    logprint("%d entities read, %d are lights.\n", entdicts.size(), all_lights.size());
+    logprint("%d entities read, %d are lights.\n",
+             static_cast<int>(entdicts.size()),
+             static_cast<int>(all_lights.size()));
 }
 
 static vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
