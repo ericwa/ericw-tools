@@ -138,8 +138,8 @@ Set the scaling of sunlight brightness due to the angle of incidence with a
 surface (more detailed explanation in the "_anglescale" light entity key
 below).
 
-.IP "\fB""_sunlight_mangle"" ""x y z""\fP | \fB""_sun_mangle"" ""x y z""\fP"
-Specifies the direction of sunlight using yaw(x), pitch(y) and roll(z) in
+.IP "\fB""_sunlight_mangle"" ""yaw pitch roll""\fP | \fB""_sun_mangle"" ""yaw pitch roll""\fP"
+Specifies the direction of sunlight using yaw, pitch and roll in
 degrees. Yaw specifies the angle around the Z-axis from 0 to 359 degrees and
 pitch specifies the angle from 90 (shining straight up) to -90 (shining straight down from above). Roll
 has no effect, so use any value (e.g. 0).  Default is straight down ("0 -90
@@ -297,18 +297,12 @@ accepted). Default is white light
 Turns the light into a spotlight, with the direction of light being towards
 another entity with it's "targetname" key set to "name".
 
-.IP "\fB""mangle"" ""x y z""\fP"
+.IP "\fB""mangle"" ""yaw pitch roll""\fP"
 Turns the light into a spotlight and specifies the direction of light using
-yaw(x), pitch(y) and roll(z) in degrees. Yaw specifies the angle around the
+yaw, pitch and roll in degrees. Yaw specifies the angle around the
 Z-axis from 0 to 359 degrees and pitch specifies the angle from 90 (straight
 up) to -90 (straight down). Roll has no effect, so use any value (e.g. 0).
 Often easier than the "target" method.
-
-.IP "\fB""_surface_spotlight"" ""n""\fP"
-For a surface light template (i.e. a light with "_surface" set), setting this to
-"1" makes each instance into a spotlight, with the direction of light
-pointing along the surface normal. In other words, it automatically sets
-"mangle" on each of the generated lights.
 
 .IP "\fB""angle"" ""n""\fP"
 Specifies the angle in degrees for a spotlight cone. Default 40.
@@ -361,6 +355,12 @@ the surfaces.
 .IP "\fB""_surface_offset"" ""n""\fP"
 Controls the offset lights are placed above surfaces for "_surface". Default 2.
 
+.IP "\fB""_surface_spotlight"" ""n""\fP"
+For a surface light template (i.e. a light with "_surface" set), setting this to
+"1" makes each instance into a spotlight, with the direction of light
+pointing along the surface normal. In other words, it automatically sets
+"mangle" on each of the generated lights.
+
 .IP "\fB""_project_texture"" ""texture""\fP"
 Specifies that a light should project this texture. The texture must be used in the map somewhere.
 
@@ -368,7 +368,7 @@ Specifies that a light should project this texture. The texture must be used in 
 Specifies the yaw/pitch/roll angles for a texture projection (overriding mangle).
 
 .IP "\fB""_project_fov"" ""n""\fP"
- Specifies the fov angle for a texture projection.
+ Specifies the fov angle for a texture projection. Default 90.
 
 
 .SH AUTHOR
