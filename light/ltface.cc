@@ -1767,6 +1767,13 @@ void SetupDirt( void ) {
 
     // check if needed
     
+    if (!globalDirt.boolValue()
+        && globalDirt.isLocked()) {
+        // HACK: "-dirt 0" disables all dirtmapping even if we would otherwise use it.
+        dirt_in_use = false;
+        return;
+    }
+    
     if (globalDirt.boolValue()
         || minlightDirt.boolValue()
         || sunlight_dirt.boolValue()
