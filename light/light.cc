@@ -201,7 +201,7 @@ PrintOptionsSummary(void)
             logprint("    \"%s\" was set to \"%s\" from %s\n",
                      setting->primaryName().c_str(),
                      setting->stringValue().c_str(),
-                     setting->isLocked() ? "commandline" : "worldspawn");
+                     setting->sourceString().c_str());
         }
     }
 }
@@ -1645,14 +1645,15 @@ main(int argc, const char **argv)
                 PrintUsage();
             }
             
-            if (lockable_vec_t *vecsetting = dynamic_cast<lockable_vec_t *>(setting)) {
+            if (lockable_bool_t *boolsetting = dynamic_cast<lockable_bool_t *>(setting)) {
                 float v;
                 if (ParseVecOptional(&v, &i, argc, argv)) {
-                    vecsetting->setFloatValueLocked(v);
+                    boolsetting->setStringValue(std::to_string(v), true);
                 } else {
-                    // FIXME: only do this for boolean settings.
-                    vecsetting->setFloatValueLocked(true);
+                    boolsetting->setBoolValueLocked(true);
                 }
+            } else if (lockable_vec_t *vecsetting = dynamic_cast<lockable_vec_t *>(setting)) {
+                vecsetting->setFloatValueLocked(ParseVec(&i, argc, argv));
             } else if (lockable_vec3_t *vec3setting = dynamic_cast<lockable_vec3_t *>(setting)) {
                 vec3_t temp;
                 ParseVec3(temp, &i, argc, argv);

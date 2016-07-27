@@ -249,6 +249,14 @@ public:
     bool isChanged() const { return _source != setting_source_t::DEFAULT; }
     bool isLocked() const { return _source != setting_source_t::COMMANDLINE; }
     
+    std::string sourceString() const {
+        switch (_source) {
+            case setting_source_t::DEFAULT: return "default";
+            case setting_source_t::MAP: return "map";
+            case setting_source_t::COMMANDLINE: return "commandline";
+        }
+    }
+    
     bool isRegistered() { return _registered; }
     void setRegistered() { _registered = true; }
 };
@@ -258,9 +266,6 @@ private:
     bool _default, _value;
     
     void setBoolValueInternal(bool f, setting_source_t newsource) {
-        if (f == _value) {
-            return;
-        }
         if (changeSource(newsource)) {
             _value = f;
         }
@@ -304,9 +309,6 @@ private:
     float _default, _value, _min, _max;
     
     void setFloatInternal(float f, setting_source_t newsource) {
-        if (f == _value) {
-            return;
-        }
         if (changeSource(newsource)) {
             if (f < _min) {
                 logprint("WARNING: '%s': %f is less than minimum value %f.\n",
@@ -375,8 +377,6 @@ private:
     
 public:
     virtual void setStringValue(const std::string &str, bool locked = false) {
-        if (str == _value)
-            return;
         if (changeSource(locked ? setting_source_t::COMMANDLINE : setting_source_t::MAP)) {
             _value = str;
         }
@@ -428,13 +428,9 @@ private:
     }
     
     void transformAndSetVec3Value(const vec3_t val, setting_source_t newsource) {
-        vec3_t tmp;
-        transformVec3Value(val, tmp);
-        
-        if (VectorCompare(tmp, _value)) {
-            return;
-        }
         if (changeSource(newsource)) {
+            vec3_t tmp;
+            transformVec3Value(val, tmp);
             VectorCopy(tmp, _value);
         }
     }
