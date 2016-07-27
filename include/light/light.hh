@@ -212,6 +212,12 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
 
 /* command-line options */
 
+enum class setting_source_t {
+    DEFAULT,
+    MAP,
+    COMMANDLINE
+};
+
 class lockable_setting_t {
 protected:
     bool _locked;
@@ -235,6 +241,53 @@ public:
     
     bool isRegistered() { return _registered; }
     void setRegistered() { _registered = true; }
+};
+
+class lockable_bool_t : public lockable_setting_t {
+private:
+    bool _default, _value;
+    
+    void setBoolInternal(bool f) {
+        assert(_registered);
+        _value = f;
+    }
+    
+public:
+    
+    void setBoolValueLocked(bool f) {
+        setBoolInternal(f);
+        _locked = true;
+    }
+    
+    void setBoolValue(bool f) {
+        if (!_locked) {
+            setBoolInternal(f);
+        }
+    }
+    
+    bool boolValue() const {
+        return _value;
+    }
+    
+    virtual void setStringValue(const std::string &str, bool locked = false) {
+        const bool f = (std::stof(str) != 0);
+        if (locked) setBoolValueLocked(f);
+        else setBoolValue(f);
+    }
+    
+    virtual std::string stringValue() const {
+        return _value ? "1" : "0";
+    }
+    
+    virtual bool isChanged() const {
+        return _value != _default;
+    }
+    
+    lockable_bool_t(std::vector<std::string> names, bool v)
+    : lockable_setting_t(names), _default(v), _value(v) {}
+    
+    lockable_bool_t(std::string name, bool v)
+    : lockable_bool_t(std::vector<std::string> { name }, v) {}
 };
 
 class lockable_vec_t : public lockable_setting_t {
@@ -454,7 +507,7 @@ extern const vec3_t vec3_white;
 extern float surflight_subdivide;
 extern int sunsamples;
 
-extern lockable_vec_t addminlight;
+extern lockable_bool_t addminlight;
 extern lockable_vec_t minlight;
 extern lockable_vec3_t minlight_color;
 
@@ -468,7 +521,7 @@ extern bool dump_vert;
 
 /* dirt */
 
-extern lockable_vec_t dirty;          // should any dirtmapping take place?
+extern lockable_bool_t dirty;          // should any dirtmapping take place?
 extern lockable_vec_t dirtMode;
 extern lockable_vec_t dirtDepth;
 extern lockable_vec_t dirtScale;
@@ -476,15 +529,15 @@ extern lockable_vec_t dirtGain;
 extern lockable_vec_t dirtAngle;
 
 extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
-extern lockable_vec_t minlightDirt;   // apply dirt to minlight?
+extern lockable_bool_t minlightDirt;   // apply dirt to minlight?
 
 /* phong */
 
-extern lockable_vec_t phongallowed;
+extern lockable_bool_t phongallowed;
     
 /* bounce */
 
-extern lockable_vec_t bounce;
+extern lockable_bool_t bounce;
 extern lockable_vec_t bouncescale;
 extern lockable_vec_t bouncecolorscale;
   

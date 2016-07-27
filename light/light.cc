@@ -54,14 +54,14 @@ float surflight_subdivide = 128.0f;
 int sunsamples = 64;
 qboolean scaledonly = false;
 
-lockable_vec_t addminlight {"addmin", 0};
+lockable_bool_t addminlight {"addmin", false};
 lockable_vec_t minlight {"light", 0};
 lockable_vec3_t minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
 
 sun_t *suns = NULL;
 
 /* dirt */
-lockable_vec_t dirty {strings{"dirt", "dirty"}, 0.0f};
+lockable_bool_t dirty {strings{"dirt", "dirty"}, false};
 lockable_vec_t dirtMode {"dirtmode", 0.0f};
 lockable_vec_t dirtDepth {"dirtdepth", 128.0f, 1.0f, std::numeric_limits<float>::infinity()};
 lockable_vec_t dirtScale {"dirtscale", 1.0f, 0.0f, 100.0f};
@@ -69,13 +69,13 @@ lockable_vec_t dirtGain {"dirtgain", 1.0f, 0.0f, 100.0f};
 lockable_vec_t dirtAngle {"dirtangle", 88.0f, 0.0f, 90.0f};
 
 qboolean globalDirt = false;
-lockable_vec_t minlightDirt {"minlight_dirt", 0};
+lockable_bool_t minlightDirt {"minlight_dirt", false};
 
 /* phong */
-lockable_vec_t phongallowed {"phong", 1.0f};
+lockable_bool_t phongallowed {"phong", true};
 
 /* bounce */
-lockable_vec_t bounce {"bounce", 0.0f};
+lockable_bool_t bounce {"bounce", false};
 lockable_vec_t bouncescale {"bouncescale", 1.0f, 0.0f, 100.0f};
 lockable_vec_t bouncecolorscale {"bouncecolorscale", 0.0f, 0.0f, 1.0f};
 
@@ -1563,13 +1563,13 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
             CheckNoDebugModeSet();
             
-            dirty.setFloatValueLocked(true);
+            dirty.setBoolValueLocked(true);
             globalDirt = true;
             debugmode = debugmode_dirt;
             logprint( "Dirtmap debugging enabled\n" );
         } else if ( !strcmp( argv[ i ], "-bouncedebug" ) ) {
             CheckNoDebugModeSet();
-            bounce.setFloatValueLocked(true);
+            bounce.setBoolValueLocked(true);
             debugmode = debugmode_bounce;
             logprint( "Bounce debugging mode enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {

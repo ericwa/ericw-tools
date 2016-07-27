@@ -247,7 +247,7 @@ CheckEntityFields(light_t *entity)
     if (entity->dirt.intValue() == 1 && !dirty.boolValue()) {
         logprint("entity with \"_dirt\" \"1\" detected, enabling "
                  "dirtmapping.\n");
-        dirty.setFloatValue(1.0f);
+        dirty.setBoolValue(true);
     }
 
 }

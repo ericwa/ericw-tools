@@ -70,8 +70,9 @@ public:
     const char *classname() const;
     
 public:
-    lockable_vec_t light, atten, formula, spotangle, spotangle2, style, bleed, anglescale;
+    lockable_vec_t light, atten, formula, spotangle, spotangle2, style, anglescale;
     lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples, projfov;
+    lockable_bool_t bleed;
     lockable_vec3_t origin, color, mangle, projangle;
     lockable_string_t project_texture;
     settingsdict_t settings;
@@ -106,7 +107,7 @@ public:
         spotangle { "angle", 40.0f },
         spotangle2 { "softangle", 0.0f },
         style { "style", 0.0f },
-        bleed { "bleed", 0 },
+        bleed { "bleed", false },
         anglescale {strings{"anglesense", "anglescale"}, -1.0f }, // fallback to worldspawn
         dirtscale { "dirtscale", 0.0f },
         dirtgain { "dirtgain", 0 },
