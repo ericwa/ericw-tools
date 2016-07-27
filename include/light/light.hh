@@ -248,7 +248,7 @@ public:
     virtual std::string stringValue() const = 0;
     
     bool isChanged() const { return _source != setting_source_t::DEFAULT; }
-    bool isLocked() const { return _source != setting_source_t::COMMANDLINE; }
+    bool isLocked() const { return _source == setting_source_t::COMMANDLINE; }
     
     std::string sourceString() const {
         switch (_source) {
