@@ -355,8 +355,6 @@ SetupSuns()
         logprint("creating sun2\n");
         SetupSun(sun2.floatValue(), *sun2_color.vec3Value(), *sun2vec.vec3Value());
     }
-    
-    logprint("%d suns in use.\n", static_cast<int>(all_suns.size()));
 }
 
 /*
@@ -1041,9 +1039,16 @@ FixLightsOnFaces(const bsp2_t *bsp)
 void
 SetupLights(const bsp2_t *bsp)
 {
+    logprint("SetupLights: %d initial lights\n", static_cast<int>(all_lights.size()));
+    
     // Creates more light entities, needs to be done before the rest
     MakeSurfaceLights(bsp);
+             
+    logprint("SetupLights: %d after surface lights\n", static_cast<int>(all_lights.size()));
+    
     JitterEntities();
+                      
+    logprint("SetupLights: %d after jittering\n", static_cast<int>(all_lights.size()));
     
     const size_t final_lightcount = all_lights.size();
     
@@ -1053,6 +1058,11 @@ SetupLights(const bsp2_t *bsp)
     SetupSkyDome();
     FixLightsOnFaces(bsp);
     SetupLightLeafnums(bsp);
+    
+    logprint("Final count: %d lights %d suns in use.\n",
+             static_cast<int>(all_lights.size()),
+             static_cast<int>(all_suns.size()));
+    
     
     assert(final_lightcount == all_lights.size());
 }
