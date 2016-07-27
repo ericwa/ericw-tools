@@ -43,25 +43,20 @@ using namespace std;
 
 using strings = std::vector<std::string>;
 
+//
+// worldspawn keys / command-line settings
+//
+
 lockable_vec_t scaledist {"dist", 1.0, 0.0f, 100.0f};
 lockable_vec_t rangescale {"range", 0.5f, 0.0f, 100.0f};
 lockable_vec_t global_anglescale {strings{"anglescale", "anglesense"}, 0.5, 0.0f, 1.0f};
-float fadegate = EQUAL_EPSILON;
-int softsamples = 0;
 lockable_vec_t lightmapgamma {"gamma", 1.0, 0.0f, 100.0f};
-const vec3_t vec3_white = { 255, 255, 255 };
-float surflight_subdivide = 128.0f;
-int sunsamples = 64;
-qboolean scaledonly = false;
 
 lockable_bool_t addminlight {"addmin", false};
 lockable_vec_t minlight {"light", 0};
 lockable_vec3_t minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
 
-sun_t *suns = NULL;
-
 /* dirt */
-bool dirt_in_use = false;
 lockable_bool_t globalDirt {strings{"dirt", "dirty"}, false};
 lockable_vec_t dirtMode {"dirtmode", 0.0f};
 lockable_vec_t dirtDepth {"dirtdepth", 128.0f, 1.0f, std::numeric_limits<float>::infinity()};
@@ -77,6 +72,34 @@ lockable_bool_t phongallowed {"phong", true};
 lockable_bool_t bounce {"bounce", false};
 lockable_vec_t bouncescale {"bouncescale", 1.0f, 0.0f, 100.0f};
 lockable_vec_t bouncecolorscale {"bouncecolorscale", 0.0f, 0.0f, 1.0f};
+
+/* sun */
+lockable_vec_t sunlight         { "sunlight", 0.0f };                   /* main sun */
+lockable_vec3_t sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
+lockable_vec_t sun2             { "sun2", 0.0f };                   /* second sun */
+lockable_vec3_t sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
+lockable_vec_t sunlight2        { "sunlight2", 0.0f };                   /* top sky dome */
+lockable_vec3_t sunlight2_color { strings{"sunlight2_color", "sunlight_color2"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
+lockable_vec_t sunlight3        { "sunlight3", 0.0f };                   /* bottom sky dome */
+lockable_vec3_t sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
+lockable_vec_t sunlight_dirt    { "sunlight_dirt", 0.0f };
+lockable_vec_t sunlight2_dirt   { "sunlight2_dirt", 0.0f };
+lockable_vec3_t sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
+lockable_vec3_t sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
+lockable_vec_t sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f };
+
+
+bool dirt_in_use = false;
+
+float fadegate = EQUAL_EPSILON;
+int softsamples = 0;
+
+const vec3_t vec3_white = { 255, 255, 255 };
+float surflight_subdivide = 128.0f;
+int sunsamples = 64;
+qboolean scaledonly = false;
+
+sun_t *suns = NULL;
 
 qboolean surflight_dump = false;
 

@@ -499,31 +499,21 @@ public:
 
 void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 
+//
+// worldspawn keys / command-line settings
+//
+
 extern lockable_vec_t scaledist;
 extern lockable_vec_t rangescale;
 extern lockable_vec_t global_anglescale;
-extern float fadegate;
-extern int softsamples;
 extern lockable_vec_t lightmapgamma;
-extern const vec3_t vec3_white;
-extern float surflight_subdivide;
-extern int sunsamples;
 
 extern lockable_bool_t addminlight;
 extern lockable_vec_t minlight;
 extern lockable_vec3_t minlight_color;
 
-extern sun_t *suns;
-
-extern int dump_facenum;
-extern bool dump_face;
-
-extern int dump_vertnum;
-extern bool dump_vert;
-
 /* dirt */
 
-extern bool dirt_in_use;               // should any dirtmapping take place? set in SetupDirt
 extern lockable_bool_t globalDirt;          // apply dirt to all lights (unless they override it) + sunlight + minlight?
 extern lockable_vec_t dirtMode;
 extern lockable_vec_t dirtDepth;
@@ -558,6 +548,25 @@ extern lockable_vec_t sunlight2_dirt;
 extern lockable_vec3_t sunvec;
 extern lockable_vec3_t sun2vec;
 extern lockable_vec_t sun_deviance;
+
+// other flags
+
+extern bool dirt_in_use;               // should any dirtmapping take place? set in SetupDirt
+
+extern float fadegate;
+extern int softsamples;
+extern const vec3_t vec3_white;
+extern float surflight_subdivide;
+extern int sunsamples;
+
+extern sun_t *suns;
+
+extern int dump_facenum;
+extern bool dump_face;
+
+extern int dump_vertnum;
+extern bool dump_vert;
+
 
 // settings dictionary
 

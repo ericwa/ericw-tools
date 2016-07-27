@@ -37,21 +37,6 @@ using strings = std::vector<std::string>;
 
 std::vector<entdict_t> entdicts;
 
-/* temporary storage for sunlight settings before the sun_t objects are created. */
-lockable_vec_t sunlight         { "sunlight", 0.0f };                   /* main sun */
-lockable_vec3_t sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sun2             { "sun2", 0.0f };                   /* second sun */
-lockable_vec3_t sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sunlight2        { "sunlight2", 0.0f };                   /* top sky dome */
-lockable_vec3_t sunlight2_color { strings{"sunlight2_color", "sunlight_color2"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sunlight3        { "sunlight3", 0.0f };                   /* bottom sky dome */
-lockable_vec3_t sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sunlight_dirt    { "sunlight_dirt", 0.0f };
-lockable_vec_t sunlight2_dirt   { "sunlight2_dirt", 0.0f };
-lockable_vec3_t sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
-lockable_vec3_t sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
-lockable_vec_t sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f };
-
 // light_t
 
 const char * light_t::classname() const {
