@@ -107,7 +107,6 @@ public:
         spotangle { "angle", 40.0f },
         spotangle2 { "softangle", 0.0f },
         style { "style", 0.0f },
-        bleed { "bleed", false },
         anglescale {strings{"anglesense", "anglescale"}, -1.0f }, // fallback to worldspawn
         dirtscale { "dirtscale", 0.0f },
         dirtgain { "dirtgain", 0 },
@@ -115,6 +114,7 @@ public:
         deviance { "deviance", 0 },
         samples { "samples", 16 },
         projfov { "project_fov", 90 },
+        bleed { "bleed", false },
         origin { "origin", 0, 0, 0 },
         color { "color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         mangle { "mangle", 0, 0, 0 }, // not transformed to vec

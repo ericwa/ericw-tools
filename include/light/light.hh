@@ -213,20 +213,30 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
 /* command-line options */
 
 enum class setting_source_t {
-    DEFAULT,
-    MAP,
-    COMMANDLINE
+    DEFAULT = 0,
+    MAP = 1,
+    COMMANDLINE = 2
 };
 
 class lockable_setting_t {
 protected:
-    bool _locked;
+    setting_source_t _source;
     bool _registered;
     std::vector<std::string> _names;
     
     lockable_setting_t(std::vector<std::string> names)
-    : _locked(false), _registered(false), _names(names) {
+    : _source(setting_source_t::DEFAULT), _registered(false), _names(names) {
         assert(_names.size() > 0);
+    }
+    
+    bool changeSource(setting_source_t newSource) {
+        assert(_registered);
+        
+        if (static_cast<int>(newSource) >= static_cast<int>(_source)) {
+            _source = newSource;
+            return true;
+        }
+        return false;
     }
     
 public:
@@ -236,8 +246,8 @@ public:
     virtual void setStringValue(const std::string &str, bool locked = false) = 0;
     virtual std::string stringValue() const = 0;
     
-    virtual bool isChanged() const = 0;
-    bool isLocked() const { return _locked; }
+    bool isChanged() const { return _source != setting_source_t::DEFAULT; }
+    bool isLocked() const { return _source != setting_source_t::COMMANDLINE; }
     
     bool isRegistered() { return _registered; }
     void setRegistered() { _registered = true; }
@@ -247,22 +257,23 @@ class lockable_bool_t : public lockable_setting_t {
 private:
     bool _default, _value;
     
-    void setBoolInternal(bool f) {
-        assert(_registered);
-        _value = f;
+    void setBoolValueInternal(bool f, setting_source_t newsource) {
+        if (f == _value) {
+            return;
+        }
+        if (changeSource(newsource)) {
+            _value = f;
+        }
     }
     
 public:
     
     void setBoolValueLocked(bool f) {
-        setBoolInternal(f);
-        _locked = true;
+        setBoolValueInternal(f, setting_source_t::COMMANDLINE);
     }
     
     void setBoolValue(bool f) {
-        if (!_locked) {
-            setBoolInternal(f);
-        }
+        setBoolValueInternal(f, setting_source_t::MAP);
     }
     
     bool boolValue() const {
@@ -281,10 +292,6 @@ public:
         return _value ? "1" : "0";
     }
     
-    virtual bool isChanged() const {
-        return _value != _default;
-    }
-    
     lockable_bool_t(std::vector<std::string> names, bool v)
     : lockable_setting_t(names), _default(v), _value(v) {}
     
@@ -296,19 +303,23 @@ class lockable_vec_t : public lockable_setting_t {
 private:
     float _default, _value, _min, _max;
     
-    void setFloatInternal(float f) {
-        assert(_registered);
-        if (f < _min) {
-            logprint("WARNING: '%s': %f is less than minimum value %f.\n",
-                     primaryName().c_str(), f, _min);
-            f = _min;
+    void setFloatInternal(float f, setting_source_t newsource) {
+        if (f == _value) {
+            return;
         }
-        if (f > _max) {
-            logprint("WARNING: '%s': %f is greater than maximum value %f.\n",
-                     primaryName().c_str(), f, _max);
-            f = _max;
+        if (changeSource(newsource)) {
+            if (f < _min) {
+                logprint("WARNING: '%s': %f is less than minimum value %f.\n",
+                         primaryName().c_str(), f, _min);
+                f = _min;
+            }
+            if (f > _max) {
+                logprint("WARNING: '%s': %f is greater than maximum value %f.\n",
+                         primaryName().c_str(), f, _max);
+                f = _max;
+            }
+            _value = f;
         }
-        _value = f;
     }
     
 public:
@@ -325,14 +336,11 @@ public:
     }
     
     void setFloatValue(float f) {
-        if (!_locked) {
-            setFloatInternal(f);
-        }
+        setFloatInternal(f, setting_source_t::MAP);
     }
     
     void setFloatValueLocked(float f) {
-        setFloatInternal(f);
-        _locked = true;
+        setFloatInternal(f, setting_source_t::COMMANDLINE);
     }
     
     virtual void setStringValue(const std::string &str, bool locked = false) {
@@ -343,10 +351,6 @@ public:
     
     virtual std::string stringValue() const {
         return std::to_string(_value);
-    }
-    
-    virtual bool isChanged() const {
-        return _value != _default;
     }
     
     lockable_vec_t(std::vector<std::string> names, float v,
@@ -371,21 +375,15 @@ private:
     
 public:
     virtual void setStringValue(const std::string &str, bool locked = false) {
-        if (!_locked || locked) {
+        if (str == _value)
+            return;
+        if (changeSource(locked ? setting_source_t::COMMANDLINE : setting_source_t::MAP)) {
             _value = str;
-            
-            if (locked) {
-                _locked = true;
-            }
         }
     }
     
     virtual std::string stringValue() const {
         return _value;
-    }
-    
-    virtual bool isChanged() const {
-        return _value != _default;
     }
     
     lockable_string_t(std::vector<std::string> names, std::string v)
@@ -429,8 +427,16 @@ private:
         }
     }
     
-    void transformAndSetVec3Value(const vec3_t val) {
-        transformVec3Value(val, _value);
+    void transformAndSetVec3Value(const vec3_t val, setting_source_t newsource) {
+        vec3_t tmp;
+        transformVec3Value(val, tmp);
+        
+        if (VectorCompare(tmp, _value)) {
+            return;
+        }
+        if (changeSource(newsource)) {
+            VectorCopy(tmp, _value);
+        }
     }
     
 public:
@@ -452,16 +458,11 @@ public:
     }
 
     void setVec3Value(const vec3_t val) {
-        assert(_registered);
-        if (!_locked) {
-            transformAndSetVec3Value(val);
-        }
+        transformAndSetVec3Value(val, setting_source_t::MAP);
     }
     
     void setVec3ValueLocked(const vec3_t val) {
-        assert(_registered);
-        transformAndSetVec3Value(val);
-        _locked = true;
+        transformAndSetVec3Value(val, setting_source_t::COMMANDLINE);
     }
     
     virtual void setStringValue(const std::string &str, bool locked = false) {
@@ -485,15 +486,6 @@ public:
            << _value[1] << " "
            << _value[2];
         return ss.str();
-    }
-    
-    virtual bool isChanged() const {
-        for (int i=0; i<3; i++) {
-            if (_default[i] != _value[i]) {
-                return true;
-            }
-        }
-        return false;
     }
 };
 
