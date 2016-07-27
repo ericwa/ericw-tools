@@ -644,7 +644,7 @@ BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
  * or if it started in the void.
  * ============
  */
-qboolean
+hittype_t
 BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     vec3_t stop;
@@ -666,7 +666,7 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmo
             if (face_out) {
                 *face_out = ti.face;
             }
-            return !ti.hitsky;
+            return ti.hitsky ? hittype_t::SKY : hittype_t::SOLID;
         }
     }
     
@@ -687,11 +687,11 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmo
             if (face_out) {
                 *face_out = ti.face;
             }
-            return !ti.hitsky;
+            return ti.hitsky ? hittype_t::SKY : hittype_t::SOLID;
         }
     }
     
-    return false;
+    return hittype_t::NONE;
 }
 
 
@@ -809,7 +809,7 @@ qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 }
 
 
-qboolean DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {

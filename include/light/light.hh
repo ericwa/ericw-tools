@@ -39,6 +39,12 @@
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
+enum class hittype_t {
+    NONE,
+    SOLID,
+    SKY
+};
+
 /*
  * Convenience functions TestLight and TestSky will test against all shadow
  * casting bmodels and self-shadow the model 'self' if self != NULL. Returns
@@ -46,12 +52,12 @@
  */
 qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-qboolean DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
     
 void Embree_TraceInit(const bsp2_t *bsp);
 qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-qboolean Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 
 int
 SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);

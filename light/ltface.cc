@@ -604,7 +604,7 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             
             // trace from surf->midpoint to testpoint
             vec_t hitdist = 0;
-            if (DirtTrace(surf->midpoint, dirn, dist, selfshadow, &hitdist, &hitplane, NULL)) {
+            if (hittype_t::SOLID == DirtTrace(surf->midpoint, dirn, dist, selfshadow, &hitdist, &hitplane, NULL)) {
                 // make a corrected point
                 VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), dirn, corrected);
                 return true;
@@ -1897,7 +1897,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 2 ] = myRt[ 2 ] * temp[ 0 ] + myUp[ 2 ] * temp[ 1 ] + normal[ 2 ] * temp[ 2 ];
 
             /* trace */
-            if (DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
+            if (hittype_t::SOLID == DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
                 gatherDirt += 1.0f - ooDepth * traceHitdist;
             }
         }
@@ -1910,14 +1910,14 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
             direction[ 2 ] = myRt[ 2 ] * dirtVectors[ i ][ 0 ] + myUp[ 2 ] * dirtVectors[ i ][ 1 ] + normal[ 2 ] * dirtVectors[ i ][ 2 ];
 
             /* trace */
-            if (DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
+            if (hittype_t::SOLID == DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
                 gatherDirt += 1.0f - ooDepth * traceHitdist;
             }
         }
     }
     
     /* trace */
-    if (DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
+    if (hittype_t::SOLID == DirtTrace(origin, direction, dirtDepth.floatValue(), model, &traceHitdist, NULL, NULL)) {
         gatherDirt += 1.0f - ooDepth * traceHitdist;
     }
 
