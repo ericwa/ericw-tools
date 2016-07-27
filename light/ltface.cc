@@ -1122,7 +1122,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const light_t *entity, const lightsurf_t *s
     qboolean usedirt;
 
     /* is dirt processing disabled entirely? */
-    if (!dirty.boolValue())
+    if (!dirt_in_use)
         return 1.0f;
     if (surf->nodirt)
         return 1.0f;
@@ -1134,7 +1134,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const light_t *entity, const lightsurf_t *s
         } else if (entity->dirt.intValue() == 1) {
             usedirt = true;
         } else {
-            usedirt = globalDirt;
+            usedirt = globalDirt.boolValue();
         }
     } else {
         /* no entity is provided, assume the caller wants dirt */
@@ -1765,6 +1765,30 @@ void SetupDirt( void ) {
     int i, j;
     float angle, elevation, angleStep, elevationStep;
 
+    // check if needed
+    
+    if (globalDirt.boolValue()
+        || minlightDirt.boolValue()
+        || sunlight_dirt.boolValue()
+        || sunlight2_dirt.boolValue()) {
+        dirt_in_use = true;
+    }
+    
+    if (!dirt_in_use) {
+        // check entities, maybe only a few lights use it
+        for (const auto &light : GetLights()) {
+            if (light.dirt.boolValue()) {
+                dirt_in_use = true;
+                break;
+            }
+        }
+    }
+    
+    if (!dirt_in_use) {
+        // dirtmapping is not used by this map. 
+        return;
+    }
+    
     /* note it */
     logprint("--- SetupDirt ---\n" );
 
@@ -1824,7 +1848,7 @@ DirtForSample(const dmodel_t *model, const vec3_t origin, const vec3_t normal){
     vec_t traceHitdist;
 
     /* dummy check */
-    if ( !dirty.boolValue() ) {
+    if ( !dirt_in_use ) {
         return 1.0f;
     }
     
@@ -2166,7 +2190,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
-    if (dirty.boolValue() && (debugmode != debugmode_phong))
+    if (dirt_in_use && (debugmode != debugmode_phong))
         LightFace_CalculateDirt(lightsurf);
 
     /*

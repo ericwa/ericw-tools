@@ -270,7 +270,9 @@ public:
     }
     
     virtual void setStringValue(const std::string &str, bool locked = false) {
-        const bool f = (std::stof(str) != 0);
+        int intval = std::stoi(str);
+        
+        const bool f = (intval != 0 && intval != -1); // treat 0 and -1 as false
         if (locked) setBoolValueLocked(f);
         else setBoolValue(f);
     }
@@ -521,14 +523,14 @@ extern bool dump_vert;
 
 /* dirt */
 
-extern lockable_bool_t dirty;          // should any dirtmapping take place?
+extern bool dirt_in_use;               // should any dirtmapping take place? set in SetupDirt
+extern lockable_bool_t globalDirt;          // apply dirt to all lights (unless they override it) + sunlight + minlight?
 extern lockable_vec_t dirtMode;
 extern lockable_vec_t dirtDepth;
 extern lockable_vec_t dirtScale;
 extern lockable_vec_t dirtGain;
 extern lockable_vec_t dirtAngle;
 
-extern qboolean globalDirt;     // apply dirt to all lights (unless they override it)?
 extern lockable_bool_t minlightDirt;   // apply dirt to minlight?
 
 /* phong */

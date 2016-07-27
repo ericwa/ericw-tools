@@ -61,14 +61,13 @@ lockable_vec3_t minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 2
 sun_t *suns = NULL;
 
 /* dirt */
-lockable_bool_t dirty {strings{"dirt", "dirty"}, false};
+bool dirt_in_use = false;
+lockable_bool_t globalDirt {strings{"dirt", "dirty"}, false};
 lockable_vec_t dirtMode {"dirtmode", 0.0f};
 lockable_vec_t dirtDepth {"dirtdepth", 128.0f, 1.0f, std::numeric_limits<float>::infinity()};
 lockable_vec_t dirtScale {"dirtscale", 1.0f, 0.0f, 100.0f};
 lockable_vec_t dirtGain {"dirtgain", 1.0f, 0.0f, 100.0f};
 lockable_vec_t dirtAngle {"dirtangle", 88.0f, 0.0f, 90.0f};
-
-qboolean globalDirt = false;
 lockable_bool_t minlightDirt {"minlight_dirt", false};
 
 /* phong */
@@ -151,7 +150,7 @@ void InitSettings()
         &dirtScale,
         &dirtGain,
         &dirtAngle,
-        &dirty,
+        &globalDirt,
         &sunlight,
         &sunvec,
         &sunlight_color,
@@ -1563,8 +1562,7 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
             CheckNoDebugModeSet();
             
-            dirty.setBoolValueLocked(true);
-            globalDirt = true;
+            globalDirt.setBoolValueLocked(true);
             debugmode = debugmode_dirt;
             logprint( "Dirtmap debugging enabled\n" );
         } else if ( !strcmp( argv[ i ], "-bouncedebug" ) ) {
@@ -1722,8 +1720,7 @@ main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (dirty.boolValue())
-            SetupDirt();
+        SetupDirt();
 
         MakeTnodes(bsp);
         LightWorld(&bspdata, !!lmscaleoverride);

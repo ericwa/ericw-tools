@@ -243,13 +243,6 @@ CheckEntityFields(light_t *entity)
     if (entity->style.intValue() < 0 || entity->style.intValue() > 254) {
         Error("Bad light style %i (must be 0-254)", entity->style.intValue());
     }
-    
-    if (entity->dirt.intValue() == 1 && !dirty.boolValue()) {
-        logprint("entity with \"_dirt\" \"1\" detected, enabling "
-                 "dirtmapping.\n");
-        dirty.setBoolValue(true);
-    }
-
 }
 
 /*
@@ -264,7 +257,7 @@ Dirt_ResolveFlag(int dirtInt)
 {
         if (dirtInt == 1) return true;
         else if (dirtInt == -1) return false;
-        else return globalDirt;
+        else return globalDirt.boolValue();
 }
 
 /*
