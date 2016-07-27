@@ -329,7 +329,6 @@ static void
 FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
     int i, numshadowmodels, numselfshadowmodels;
-    const char *attribute;
     const modelinfo_t **shadowmodels;
     const modelinfo_t **selfshadowmodels;
     float lightmapscale;

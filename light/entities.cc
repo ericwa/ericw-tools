@@ -741,30 +741,6 @@ static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
 }
 
 static void
-FindLights()
-{
-//    int totallights;
-//    entity_t *entity;
-//
-//    totallights = 0;
-//    for (entity = entities; entity; entity = entity->next) {
-//        if (totallights == MAX_LIGHTS) {
-//            Error("totallights == MAX_LIGHTS");
-//        }
-//        if (!strcmp(entity->classname(), "worldspawn")) {
-//            // HACK: workaround https://github.com/ericwa/tyrutils-ericw/issues/67
-//            // LoadEntities and FindLights need to be completely rewritten.
-//            continue;
-//        }
-//        if (entity->light.floatValue() != 0) {
-//            lights[totallights++] = entity;
-//        }
-//    }
-
-    logprint("FindLights: %d total lights\n", static_cast<int>(all_lights.size()));
-}
-
-static void
 SetupLightLeafnums(const bsp2_t *bsp)
 {
     for (entity_t &entity : all_lights) {
@@ -963,8 +939,6 @@ LoadEntities(const bsp2_t *bsp)
             /* Allocate a new entity */
             entity_t entity {};
             
-            //Entities_Insert(entity);
-            
             // save pointer to the entdict
             entity.epairs = &entdict;
             
@@ -1103,17 +1077,14 @@ SetupLights(const bsp2_t *bsp)
 {
     // Creates more light entities, needs to be done before the rest
     MakeSurfaceLights(bsp);
-
     JitterEntities();
     
-    MatchTargets(); // don't add lights after this
     const size_t final_lightcount = all_lights.size();
     
-    
+    MatchTargets();
     SetupSpotlights();
     SetupSuns();
     SetupSkyDome();
-    FindLights();
     FixLightsOnFaces(bsp);
     SetupLightLeafnums(bsp);
     
