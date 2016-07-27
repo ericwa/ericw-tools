@@ -471,28 +471,6 @@ SetupSkyDome()
         }
 }
 
-///*
-// * =============
-// * Entities_Insert
-// *
-// * Adds the entity to the linked list
-// * =============
-// */
-//static void
-//Entities_Insert(light_t *entity)
-//{
-//        /* Insert it into the tail end of the list */
-//        if (num_entities == 0) {
-//            entities = entity;
-//            entities_tail = entity;
-//        } else {
-//            entities_tail->next = entity;
-//            entities_tail = entity;
-//        }
-//        entity->next = NULL;
-//        num_entities++;
-//}
-
 /*
  * =============
  * DuplicateEntity
