@@ -668,6 +668,7 @@ extern qboolean onlyents;
 extern qboolean scaledonly;
 extern uint32_t *extended_texinfo_flags;
 extern qboolean novis;
+extern bool nolights;
 
 typedef enum {
     backend_bsp,

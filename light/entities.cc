@@ -885,6 +885,11 @@ LoadEntities(const bsp2_t *bsp)
         SetGlobalSetting(epair.first, epair.second, false);
     }
     
+    assert(all_lights.size() == 0);
+    if (nolights) {
+        return;
+    }
+    
     /* go through all the entities */
     for (const auto &entdict : entdicts) {
         

@@ -127,6 +127,7 @@ int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean novis = false; /* if true, don't use vis data */
+bool nolights = false;
 backend_t rtbackend = backend_embree;
 debugmode_t debugmode = debugmode_none;
 
@@ -1614,6 +1615,9 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-novis" ) ) {
             novis = true;
             logprint( "Skipping use of vis data to optimize lighting\n" );
+        } else if ( !strcmp( argv[ i ], "-nolights" ) ) {
+            nolights = true;
+            logprint( "Skipping all light entities (sunlight / minlight only)\n" );
         } else if ( !strcmp( argv[ i ], "-backend" ) ) {
             const char *requested = ParseString(&i, argc, argv);
             if (!strcmp(requested, "bsp")) {
