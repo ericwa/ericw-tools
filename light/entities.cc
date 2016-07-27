@@ -24,18 +24,23 @@
 #include <light/light.hh>
 #include <light/entities.hh>
 
+using strings = std::vector<std::string>;
+
+
 std::vector<light_t> all_lights;
+std::vector<sun_t> all_suns;
+std::vector<entdict_t> entdicts;
 
 const std::vector<light_t>& GetLights() {
     return all_lights;
 }
 
+const std::vector<sun_t>& GetSuns() {
+    return all_suns;
+}
+
 /* surface lights */
 static void MakeSurfaceLights(const bsp2_t *bsp);
-
-using strings = std::vector<std::string>;
-
-std::vector<entdict_t> entdicts;
 
 // light_t
 
@@ -253,19 +258,17 @@ Dirt_ResolveFlag(int dirtInt)
 static void
 AddSun(vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt)
 {
-    sun_t *sun = (sun_t *) malloc(sizeof(sun_t));
-    memset(sun, 0, sizeof(*sun));
-    VectorCopy(sunvec, sun->sunvec);
-    VectorNormalize(sun->sunvec);
-    VectorScale(sun->sunvec, -16384, sun->sunvec);
-    sun->sunlight.light = light;
-    VectorCopy(color, sun->sunlight.color);
-    sun->anglescale = global_anglescale.floatValue();
-    sun->dirt = Dirt_ResolveFlag(dirtInt);
+    sun_t sun {};
+    VectorCopy(sunvec, sun.sunvec);
+    VectorNormalize(sun.sunvec);
+    VectorScale(sun.sunvec, -16384, sun.sunvec);
+    sun.sunlight.light = light;
+    VectorCopy(color, sun.sunlight.color);
+    sun.anglescale = global_anglescale.floatValue();
+    sun.dirt = Dirt_ResolveFlag(dirtInt);
 
     // add to list
-    sun->next = suns;
-    suns = sun;
+    all_suns.push_back(sun);
 
     // printf( "sun is using vector %f %f %f light %f color %f %f %f anglescale %f dirt %d resolved to %d\n", 
     //  sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
@@ -352,6 +355,8 @@ SetupSuns()
         logprint("creating sun2\n");
         SetupSun(sun2.floatValue(), *sun2_color.vec3Value(), *sun2vec.vec3Value());
     }
+    
+    logprint("%d suns in use.\n", static_cast<int>(all_suns.size()));
 }
 
 /*

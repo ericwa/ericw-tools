@@ -2208,9 +2208,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             if (entity.light.floatValue() > 0)
                 LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
         }
-        for ( sun = suns; sun; sun = sun->next )
-            if (sun->sunlight.light > 0)
-                LightFace_Sky (sun, lightsurf, lightmaps);
+        for ( const sun_t &sun : GetSuns() )
+            if (sun.sunlight.light > 0)
+                LightFace_Sky (&sun, lightsurf, lightmaps);
 
         /* minlight - Use the greater of global or model minlight. */
         if (lightsurf->minlight.light > minlight.floatValue())
@@ -2232,9 +2232,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             if (entity.light.floatValue() < 0)
                 LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
         }
-        for ( sun = suns; sun; sun = sun->next )
-            if (sun->sunlight.light < 0)
-                LightFace_Sky (sun, lightsurf, lightmaps);
+        for (const sun_t &sun : GetSuns())
+            if (sun.sunlight.light < 0)
+                LightFace_Sky (&sun, lightsurf, lightmaps);
     }
     
     /* replace lightmaps with AO for debugging */

@@ -62,13 +62,14 @@ typedef struct {
     vec3_t direction;
 } lightsample_t;
 
-typedef struct sun_s {
+class sun_t {
+public:
     vec3_t sunvec;
     lightsample_t sunlight;
     struct sun_s *next;
     qboolean dirt;
     float anglescale;
-} sun_t;
+};
 
 /* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap resolution. */
 /*with extra sampling, lit+lux etc, we need at least 46mb stack space per thread. yes, that's a lot. on the plus side, it doesn't affect bsp complexity (actually, can simplify it a little)*/
@@ -546,8 +547,6 @@ extern int softsamples;
 extern const vec3_t vec3_white;
 extern float surflight_subdivide;
 extern int sunsamples;
-
-extern sun_t *suns;
 
 extern int dump_facenum;
 extern bool dump_face;

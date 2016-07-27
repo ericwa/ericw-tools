@@ -144,6 +144,7 @@ public:
  */
 
 const std::vector<light_t>& GetLights();
+const std::vector<sun_t>& GetSuns();
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
 const char *ValueForKey(const light_t *ent, const char *key);

@@ -99,8 +99,6 @@ float surflight_subdivide = 128.0f;
 int sunsamples = 64;
 qboolean scaledonly = false;
 
-sun_t *suns = NULL;
-
 qboolean surflight_dump = false;
 
 static facesup_t *faces_sup;    //lit2/bspx stuff
