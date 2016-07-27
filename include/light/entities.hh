@@ -50,7 +50,7 @@ typedef enum {
     LF_COUNT
 } light_formula_t;
 
-class entity_t {
+class light_t {
 public:
     qboolean spotlight;
     vec3_t spotvec; // computed
@@ -81,7 +81,7 @@ public:
 public:
     using strings = std::vector<std::string>;
     
-    entity_t(void) :
+    light_t(void) :
         spotlight { false },
         spotvec { 0, 0, 0 },
         spotfalloff { 0 },
@@ -142,10 +142,10 @@ public:
  *    Stores the RGB values to determine the light color
  */
 
-const std::vector<entity_t>& GetLights();
+const std::vector<light_t>& GetLights();
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
-const char *ValueForKey(const entity_t *ent, const char *key);
+const char *ValueForKey(const light_t *ent, const char *key);
 void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec);
 
 std::string EntDict_StringForKey(const entdict_t &dict, const std::string key);
@@ -158,7 +158,7 @@ void LoadEntities(const bsp2_t *bsp);
 void SetupLights(const bsp2_t *bsp);
 void WriteEntitiesToString(bsp2_t *bsp);
 
-vec_t GetLightValue(const lightsample_t *light, const entity_t *entity, vec_t dist);
+vec_t GetLightValue(const lightsample_t *light, const light_t *entity, vec_t dist);
     
 bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
 

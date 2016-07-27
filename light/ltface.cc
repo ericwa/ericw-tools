@@ -1059,7 +1059,7 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
  */
 
 vec_t
-GetLightValue(const float light, const entity_t *entity, vec_t dist)
+GetLightValue(const float light, const light_t *entity, vec_t dist)
 {
     vec_t value;
 
@@ -1114,7 +1114,7 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
  * ============
  */
 static inline vec_t
-Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *surf)
+Dirt_GetScaleFactor(vec_t occlusion, const light_t *entity, const lightsurf_t *surf)
 {
     vec_t light_dirtgain = dirtGain.floatValue();
     vec_t light_dirtscale = dirtScale.floatValue();
@@ -1183,7 +1183,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const entity_t *entity, const lightsurf_t *
  * ================
  */
 static inline qboolean
-CullLight(const entity_t *entity, const lightsurf_t *lightsurf)
+CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     vec3_t distvec;
     vec_t dist;
@@ -1318,7 +1318,7 @@ extern int totalmissed;
  */
 static void
 LightFace_Entity(const bsp2_t *bsp,
-                 const entity_t *entity,
+                 const light_t *entity,
                  const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1505,7 +1505,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const dmodel_t *shadowself;
-    entity_t **entity;
+    light_t **entity;
     const vec_t *surfpoint;
     qboolean hit, trace;
     int i, j;

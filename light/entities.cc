@@ -24,9 +24,9 @@
 #include <light/light.hh>
 #include <light/entities.hh>
 
-std::vector<entity_t> all_lights;
+std::vector<light_t> all_lights;
 
-const std::vector<entity_t>& GetLights() {
+const std::vector<light_t>& GetLights() {
     return all_lights;
 }
 
@@ -52,9 +52,9 @@ lockable_vec3_t sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f
 lockable_vec3_t sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
 lockable_vec_t sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f };
 
-// entity_t
+// light_t
 
-const char * entity_t::classname() const {
+const char * light_t::classname() const {
     return ValueForKey(this, "classname");
 }
 
@@ -112,7 +112,7 @@ LightStyleForTargetname(const std::string &targetname)
 static void
 MatchTargets(void)
 {
-    for (entity_t &entity : all_lights) {
+    for (light_t &entity : all_lights) {
         std::string targetstr { ValueForKey(&entity, "target") };
         if (!targetstr.length())
             continue;
@@ -137,7 +137,7 @@ MatchTargets(void)
 static void
 SetupSpotlights(void)
 {
-    for (entity_t &entity : all_lights) {
+    for (light_t &entity : all_lights) {
         if (entity.targetent) {
             vec3_t targetOrigin;
             EntDict_VectorForKey(*entity.targetent, "origin", targetOrigin);
@@ -183,7 +183,7 @@ normalize_color_format(vec3_t color)
 }
 
 static void
-CheckEntityFields(entity_t *entity)
+CheckEntityFields(light_t *entity)
 {
     if (entity->light.floatValue() == 0.0f)
         entity->light.setFloatValue(DEFAULTLIGHTLEVEL);
@@ -479,7 +479,7 @@ SetupSkyDome()
 // * =============
 // */
 //static void
-//Entities_Insert(entity_t *entity)
+//Entities_Insert(light_t *entity)
 //{
 //        /* Insert it into the tail end of the list */
 //        if (num_entities == 0) {
@@ -498,10 +498,10 @@ SetupSkyDome()
  * DuplicateEntity
  * =============
  */
-static entity_t
-DuplicateEntity(const entity_t &src)
+static light_t
+DuplicateEntity(const light_t &src)
 {
-    entity_t entity { src };
+    light_t entity { src };
     return entity;
 }
 
@@ -515,13 +515,13 @@ DuplicateEntity(const entity_t &src)
  * =============
  */
 static void
-JitterEntity(const entity_t entity)
+JitterEntity(const light_t entity)
 {
     /* jitter the light */
     for ( int j = 1; j < entity.samples.intValue(); j++ )
     {
         /* create a light */
-        entity_t light2 = DuplicateEntity(entity);
+        light_t light2 = DuplicateEntity(entity);
         light2.generated = true; // don't write generated light to bsp
 
         /* jitter it */
@@ -743,7 +743,7 @@ static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
 static void
 SetupLightLeafnums(const bsp2_t *bsp)
 {
-    for (entity_t &entity : all_lights) {
+    for (light_t &entity : all_lights) {
         entity.leaf = Light_PointInLeaf(bsp, *entity.origin.vec3Value());
     }
 }
@@ -937,7 +937,7 @@ LoadEntities(const bsp2_t *bsp)
          */
         if (EntDict_StringForKey(entdict, "classname").find("light") == 0) {
             /* Allocate a new entity */
-            entity_t entity {};
+            light_t entity {};
             
             // save pointer to the entdict
             entity.epairs = &entdict;
@@ -1063,7 +1063,7 @@ FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
 void
 FixLightsOnFaces(const bsp2_t *bsp)
 {
-    for (entity_t &entity : all_lights) {
+    for (light_t &entity : all_lights) {
         if (entity.light.floatValue() != 0) {
             vec3_t tmp;
             FixLightOnFace(bsp, *entity.origin.vec3Value(), tmp);
@@ -1092,7 +1092,7 @@ SetupLights(const bsp2_t *bsp)
 }
 
 const char *
-ValueForKey(const entity_t *ent, const char *key)
+ValueForKey(const light_t *ent, const char *key)
 {
     auto iter = ent->epairs->find(key);
     if (iter != ent->epairs->end()) {
@@ -1153,13 +1153,13 @@ WriteEntitiesToString(bsp2_t *bsp)
  * =======================================================================
  */
 
-std::vector<entity_t> surfacelight_templates;
+std::vector<light_t> surfacelight_templates;
 
 FILE *surflights_dump_file;
 char surflights_dump_filename[1024];
 
 static void
-SurfLights_WriteEntityToFile(FILE *f, entity_t *entity, const vec3_t pos)
+SurfLights_WriteEntityToFile(FILE *f, light_t *entity, const vec3_t pos)
 {
     assert(entity->epairs != nullptr);
     
@@ -1171,9 +1171,9 @@ SurfLights_WriteEntityToFile(FILE *f, entity_t *entity, const vec3_t pos)
     fwrite(entstring.data(), 1, entstring.size(), f);
 }
 
-static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const entity_t *surflight_template)
+static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const light_t *surflight_template)
 {
-    entity_t entity = DuplicateEntity(*surflight_template);
+    light_t entity = DuplicateEntity(*surflight_template);
 
     entity.origin.setVec3Value(origin);
 
@@ -1194,7 +1194,7 @@ static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const e
     all_lights.push_back(entity);
 }
 
-static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const entity_t *surflight_template, const bsp2_t *bsp, int numverts, const vec_t *verts)
+static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const light_t *surflight_template, const bsp2_t *bsp, int numverts, const vec_t *verts)
 {
     int i;
     vec3_t midpoint = {0, 0, 0};
@@ -1358,7 +1358,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
 {
     int i, k;
 
-    for (entity_t &entity : all_lights) {
+    for (light_t &entity : all_lights) {
         std::string tex = ValueForKey(&entity, "_surface");
         if (tex != "") {
             surfacelight_templates.push_back(entity); // makes a copy

@@ -898,8 +898,8 @@ public:
 void
 GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
 {
-    const entity_t *entity;
-    entity_t **lighte;
+    const light_t *entity;
+    light_t **lighte;
     
     VectorSet(colorout, 0, 0, 0);
     
