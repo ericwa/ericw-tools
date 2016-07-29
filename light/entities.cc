@@ -1113,13 +1113,15 @@ WriteEntitiesToString(bsp2_t *bsp)
     /* FIXME - why are we printing this here? */
     logprint("%i switchable light styles\n", static_cast<int>(lighttargetnames.size()));
 
-    bsp->entdatasize = entdata.size();
-    bsp->dentdata = (char *) malloc(bsp->entdatasize);
+    bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
+    bsp->dentdata = (char *) calloc(bsp->entdatasize, 1);
     if (!bsp->dentdata)
         Error("%s: allocation of %d bytes failed\n", __func__,
               bsp->entdatasize);
 
     memcpy(bsp->dentdata, entdata.data(), entdata.size());
+    
+    assert(0 == bsp->dentdata[bsp->entdatasize - 1]);
 }
 
 
