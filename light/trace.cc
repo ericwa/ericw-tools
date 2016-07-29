@@ -582,15 +582,14 @@ TraceLine(const dmodel_t *model, const int traceflags,
 static qboolean
 BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 {
-    const modelinfo_t *const *model;
     const int traceflags = TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
 
     /* Check against the list of global shadow casters */
-    for (model = tracelist; *model; model++) {
-        if ((*model)->model == self)
+    for (const modelinfo_t *model : tracelist) {
+        if (model->model == self)
             continue;
-        result = TraceLine((*model)->model, traceflags, start, stop);
+        result = TraceLine(model->model, traceflags, start, stop);
         if (result != TRACE_HIT_NONE)
             break;
     }
@@ -618,10 +617,12 @@ BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 
     /* If good, check it isn't shadowed by another model */
     traceflags = TRACE_HIT_SOLID;
-    for (model = tracelist + 1; *model; model++) {
-        if ((*model)->model == self)
+    for (const modelinfo_t *model : tracelist) {
+        if (model == tracelist.at(0))
             continue;
-        result = TraceLine((*model)->model, traceflags, start, stop);
+        if (model->model == self)
+            continue;
+        result = TraceLine(model->model, traceflags, start, stop);
         if (result != TRACE_HIT_NONE)
             return false;
     }
@@ -671,11 +672,10 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmo
     }
     
     /* Check against the list of global shadow casters */
-    const modelinfo_t *const *model;
-    for (model = tracelist; *model; model++) {
-        if ((*model)->model == self)
+    for (const modelinfo_t *model : tracelist) {
+        if (model->model == self)
             continue;
-        if (TraceFaces (&ti, (*model)->model->headnode[0], start, stop)) {
+        if (TraceFaces (&ti, model->model->headnode[0], start, stop)) {
             if (hitdist_out) {
                 vec3_t delta;
                 VectorSubtract(ti.point, start, delta);

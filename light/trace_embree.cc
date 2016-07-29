@@ -173,15 +173,14 @@ void
 Embree_TraceInit(const bsp2_t *bsp)
 {
     bsp_static = bsp;
-    assert(tracelist != NULL);
     assert(device == nullptr);
     
     std::vector<const bsp2_dface_t *> skyfaces, solidfaces, fencefaces, selfshadowfaces;
     
     /* Check against the list of global shadow casters */
-    for (const modelinfo_t *const *model = tracelist; *model; model++) {
-        for (int i=0; i<(*model)->model->numfaces; i++) {
-            const bsp2_dface_t *face = &bsp->dfaces[(*model)->model->firstface + i];
+    for (const modelinfo_t *model : tracelist) {
+        for (int i=0; i<model->model->numfaces; i++) {
+            const bsp2_dface_t *face = &bsp->dfaces[model->model->firstface + i];
             const char *texname = Face_TextureName(bsp, face);
             
             if (!strncmp("sky", texname, 3)) {
@@ -197,9 +196,9 @@ Embree_TraceInit(const bsp2_t *bsp)
     }
     
     /* Self-shadow models */
-    for (const modelinfo_t *const *model = selfshadowlist; *model; model++) {
-        for (int i=0; i<(*model)->model->numfaces; i++) {
-            const bsp2_dface_t *face = &bsp->dfaces[(*model)->model->firstface + i];
+    for (const modelinfo_t *model : selfshadowlist) {
+        for (int i=0; i<model->model->numfaces; i++) {
+            const bsp2_dface_t *face = &bsp->dfaces[model->model->firstface + i];
             selfshadowfaces.push_back(face);
         }
     }

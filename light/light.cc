@@ -117,8 +117,8 @@ static byte *lux_file_p;        // start of free space after luxfile data
 static byte *lux_file_end;      // end of space for luxfile data
 
 std::vector<modelinfo_t> modelinfo;
-const modelinfo_t *const *tracelist;
-const modelinfo_t *const *selfshadowlist;
+std::vector<const modelinfo_t *> tracelist;
+std::vector<const modelinfo_t *> selfshadowlist;
 
 int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
@@ -349,20 +349,12 @@ LightThreadBounce(void *arg)
 static void
 FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
-    int i, numshadowmodels, numselfshadowmodels;
-    const modelinfo_t **shadowmodels;
-    const modelinfo_t **selfshadowmodels;
-    float lightmapscale;
-
     assert(modelinfo.size() == 0);
+    assert(tracelist.size() == 0);
+    assert(selfshadowlist.size() == 0);
+    
     modelinfo.reserve(bsp->nummodels);
     
-    shadowmodels = (const modelinfo_t **)malloc(sizeof(modelinfo_t *) * (bsp->nummodels + 1));
-    memset(shadowmodels, 0, sizeof(modelinfo_t *) * (bsp->nummodels + 1));
-
-    selfshadowmodels = (const modelinfo_t **)malloc(sizeof(modelinfo_t *) * (bsp->nummodels + 1));
-    memset(selfshadowmodels, 0, sizeof(modelinfo_t *) * (bsp->nummodels + 1));
-
     if (!bsp->nummodels) {
         Error("Corrupt .BSP: bsp->nummodels is 0!");
     }
@@ -370,7 +362,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     if (lmscaleoverride)
         SetWorldKeyValue("_lightmap_scale", lmscaleoverride);
 
-    lightmapscale = atoi(WorldValueForKey("_lightmap_scale").c_str());
+    float lightmapscale = atoi(WorldValueForKey("_lightmap_scale").c_str());
     if (!lightmapscale)
         lightmapscale = 16; /* the default */
     if (lightmapscale <= 0)
@@ -378,19 +370,22 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     if (lmscaleoverride || lightmapscale != 16)
         logprint("Forcing lightmap scale of %gqu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software ones that might be able to just do some mip hacks). This tool doesn't really care.*/
-    for (i = 1; i < lightmapscale;)
-        i++;
-    if (i != lightmapscale)
-        logprint("WARNING: lightmap scale is not a power of 2\n");
+    {
+        int i;
+        for (i = 1; i < lightmapscale;) {
+            i++;
+        }
+        if (i != lightmapscale) {
+            logprint("WARNING: lightmap scale is not a power of 2\n");
+        }
+    }
     
     /* The world always casts shadows */
     modelinfo_t world { &bsp->dmodels[0], lightmapscale };
     world.shadow.setFloatValue(1.0f); /* world always casts shadows */
     modelinfo.push_back(world);
     
-    shadowmodels[0] = &modelinfo[0];
-    numshadowmodels = 1;
-    numselfshadowmodels = 0;
+    tracelist.push_back(&modelinfo[0]);
     
     for (int i = 1; i < bsp->nummodels; i++) {
         modelinfo_t info { &bsp->dmodels[i], lightmapscale };
@@ -410,9 +405,9 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         
         /* Check if this model will cast shadows (shadow => shadowself) */
         if (info.shadow.boolValue()) {
-            shadowmodels[numshadowmodels++] = &modelinfo[i];
+            tracelist.push_back(&modelinfo[i]);
         } else if (info.shadowself.boolValue()){
-            selfshadowmodels[numselfshadowmodels++] = &modelinfo[i];
+            selfshadowlist.push_back(&modelinfo[i]);
         }
 
         /* Set up the offset for rotate_* entities */
@@ -437,9 +432,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     }
 
     assert(modelinfo.size() == bsp->nummodels);
-    
-    tracelist = shadowmodels;
-    selfshadowlist = selfshadowmodels;
 }
 
 /* return 0 if either vector is zero-length */

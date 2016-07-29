@@ -198,9 +198,10 @@ extern const bouncelight_t *bouncelights;
 extern int numbouncelights;
 extern byte thepalette[768];
     
-/* tracelist is a null terminated array of BSP models to use for LOS tests */
-extern const modelinfo_t *const *tracelist;
-extern const modelinfo_t *const *selfshadowlist;
+/* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
+extern std::vector<const modelinfo_t *> tracelist;
+extern std::vector<const modelinfo_t *> selfshadowlist;
+
 
 void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
 void LightFaceShutdown(struct ltface_ctx *ctx);
