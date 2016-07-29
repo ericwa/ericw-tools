@@ -1316,8 +1316,14 @@ void FindDebugFace(const bsp2_t *bsp)
 
     const int facenum = f - bsp->dfaces;
     
-    logprint("FindDebugFace: dumping face %d\n", facenum);
     dump_facenum = facenum;
+    
+    const modelinfo_t *mi = ModelInfoForFace(bsp, facenum);
+    int modelnum = mi - &modelinfo.front();
+    
+    const char *texname = Face_TextureName(bsp, f);
+    
+    logprint("FindDebugFace: dumping face %d (texture '%s' model %d)\n", facenum, texname, modelnum);
 }
 
 // returns the vert nearest the given point
@@ -1738,10 +1744,11 @@ main(int argc, const char **argv)
 
     PrintOptionsSummary();
     
+    FindModelInfo(bsp, lmscaleoverride);
+    
     FindDebugFace(bsp);
     FindDebugVert(bsp);
-    
-    FindModelInfo(bsp, lmscaleoverride);
+
     SetupLights(bsp);
     
     if (!onlyents)
