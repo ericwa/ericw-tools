@@ -635,7 +635,10 @@ public:
     settingsdict_t settings;
     
 public:
-    modelinfo_t(void) :
+    modelinfo_t(const dmodel_t *m, float lmscale) :
+        model { m },
+        lightmapscale { lmscale },
+        offset { 0, 0, 0 },
         minlight { "minlight", 0 },
         shadow { "shadow", 0 },
         shadowself { "shadowself", 0 },

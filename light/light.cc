@@ -384,9 +384,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         logprint("WARNING: lightmap scale is not a power of 2\n");
     
     /* The world always casts shadows */
-    modelinfo_t world;
-    world.model = &bsp->dmodels[0];
-    world.lightmapscale = lightmapscale;
+    modelinfo_t world { &bsp->dmodels[0], lightmapscale };
     world.shadow.setFloatValue(1.0f); /* world always casts shadows */
     modelinfo.push_back(world);
     
@@ -395,9 +393,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     numselfshadowmodels = 0;
     
     for (int i = 1; i < bsp->nummodels; i++) {
-        modelinfo_t info;
-        info.model = &bsp->dmodels[i];
-        info.lightmapscale = lightmapscale;
+        modelinfo_t info { &bsp->dmodels[i], lightmapscale };
 
         /* Find the entity for the model */
         std::stringstream ss;
