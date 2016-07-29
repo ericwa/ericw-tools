@@ -576,6 +576,8 @@ public:
     {
         for (lockable_setting_t *setting : settings) {
             assert(!setting->isRegistered());
+            assert(setting->names().size() > 0);
+            
             for (const auto &name : setting->names()) {
                 assert(_settingsmap.find(name) == _settingsmap.end());
                 
