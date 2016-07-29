@@ -418,6 +418,10 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         /* Set up the offset for rotate_* entities */
         if (EntDict_StringForKey(*entdict, "classname").find("rotate_") == 0) {
             EntDict_VectorForKey(*entdict, "origin", info.offset);
+        } else {
+            assert(info.offset[0] == 0);
+            assert(info.offset[1] == 0);
+            assert(info.offset[2] == 0);
         }
 
         /* Enable .lit if needed */
