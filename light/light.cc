@@ -116,7 +116,7 @@ byte *lux_filebase;             // start of luxfile data
 static byte *lux_file_p;        // start of free space after luxfile data
 static byte *lux_file_end;      // end of space for luxfile data
 
-std::vector<modelinfo_t> modelinfo;
+std::vector<modelinfo_t *> modelinfo;
 std::vector<const modelinfo_t *> tracelist;
 std::vector<const modelinfo_t *> selfshadowlist;
 
@@ -254,7 +254,7 @@ const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
     if (i == bsp->nummodels) {
         return NULL;
     }
-    return &modelinfo[i];
+    return modelinfo.at(i);
 }
 
 static void *
@@ -353,8 +353,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     assert(tracelist.size() == 0);
     assert(selfshadowlist.size() == 0);
     
-    modelinfo.reserve(bsp->nummodels);
-    
     if (!bsp->nummodels) {
         Error("Corrupt .BSP: bsp->nummodels is 0!");
     }
@@ -381,15 +379,15 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     }
     
     /* The world always casts shadows */
-    modelinfo_t world { &bsp->dmodels[0], lightmapscale };
-    world.shadow.setFloatValue(1.0f); /* world always casts shadows */
+    modelinfo_t *world = new modelinfo_t { &bsp->dmodels[0], lightmapscale };
+    world->shadow.setFloatValue(1.0f); /* world always casts shadows */
     modelinfo.push_back(world);
-    
-    tracelist.push_back(&modelinfo[0]);
+    tracelist.push_back(world);
     
     for (int i = 1; i < bsp->nummodels; i++) {
-        modelinfo_t info { &bsp->dmodels[i], lightmapscale };
-
+        modelinfo_t *info = new modelinfo_t { &bsp->dmodels[i], lightmapscale };
+        modelinfo.push_back(info);
+        
         /* Find the entity for the model */
         std::stringstream ss;
         ss << "*" << i;
@@ -401,34 +399,32 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
                   modelname.c_str());
 
         // apply settings
-        info.settings.setSettings(*entdict, false);
+        info->settings.setSettings(*entdict, false);
         
         /* Check if this model will cast shadows (shadow => shadowself) */
-        if (info.shadow.boolValue()) {
-            tracelist.push_back(&modelinfo[i]);
-        } else if (info.shadowself.boolValue()){
-            selfshadowlist.push_back(&modelinfo[i]);
+        if (info->shadow.boolValue()) {
+            tracelist.push_back(info);
+        } else if (info->shadowself.boolValue()){
+            selfshadowlist.push_back(info);
         }
 
         /* Set up the offset for rotate_* entities */
         if (EntDict_StringForKey(*entdict, "classname").find("rotate_") == 0) {
-            EntDict_VectorForKey(*entdict, "origin", info.offset);
+            EntDict_VectorForKey(*entdict, "origin", info->offset);
         } else {
-            assert(info.offset[0] == 0);
-            assert(info.offset[1] == 0);
-            assert(info.offset[2] == 0);
+            assert(info->offset[0] == 0);
+            assert(info->offset[1] == 0);
+            assert(info->offset[2] == 0);
         }
 
         /* Enable .lit if needed */
         // TODO: move elsewhere?
         vec3_t white = {255,255,255};
-        if (!VectorCompare(white, *info.minlight_color.vec3Value())) {
+        if (!VectorCompare(white, *info->minlight_color.vec3Value())) {
             if (!write_litfile) {
                 write_litfile = scaledonly?2:1;
             }
         }
-        
-        modelinfo.push_back(info);
     }
 
     assert(modelinfo.size() == bsp->nummodels);
@@ -593,7 +589,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
     // support on func_detail/func_group
     for (int i=0; i<bsp->nummodels; i++) {
-        const modelinfo_t *info = &modelinfo[i];
+        const modelinfo_t *info = modelinfo.at(i);
         const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(info->phong_angle.floatValue())));
 
         if (!phongangle_byte)
@@ -796,7 +792,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         else
         {
             for (i = 0; i < bsp->numfaces; i++)
-                faces_sup[i].lmscale = modelinfo[0].lightmapscale;
+                faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
         }
     }
 
@@ -1311,7 +1307,7 @@ void FindDebugFace(const bsp2_t *bsp)
     dump_facenum = facenum;
     
     const modelinfo_t *mi = ModelInfoForFace(bsp, facenum);
-    int modelnum = mi - &modelinfo.front();
+    int modelnum = (mi->model - bsp->dmodels);
     
     const char *texname = Face_TextureName(bsp, f);
     
