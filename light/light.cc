@@ -590,7 +590,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     // support on func_detail/func_group
     for (int i=0; i<bsp->nummodels; i++) {
         const modelinfo_t *info = modelinfo.at(i);
-        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(info->phong_angle.floatValue())));
+        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(info->getResolvedPhongAngle())));
 
         if (!phongangle_byte)
             continue;

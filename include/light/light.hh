@@ -626,6 +626,9 @@ public:
 
 
 class modelinfo_t {
+private:
+    static constexpr float DEFAULT_PHONG_ANGLE = 89.0f;
+    
 public:
     const dmodel_t *model;
     float lightmapscale;
@@ -637,6 +640,17 @@ public:
     lockable_vec3_t minlight_color;
     settingsdict_t settings;
     
+    float getResolvedPhongAngle() const {
+        const float s = phong_angle.floatValue();
+        if (s != 0) {
+            return s;
+        }
+        if (phong.boolValue()) {
+            return DEFAULT_PHONG_ANGLE;
+        }
+        return 0;
+    }
+    
 public:
     modelinfo_t(const dmodel_t *m, float lmscale) :
         model { m },
@@ -647,7 +661,7 @@ public:
         shadowself { "shadowself", 0 },
         dirt { "dirt", 0 },
         phong { "phong", 0 },
-        phong_angle { "phong_angle", 89 },
+        phong_angle { "phong_angle", 0 },
         minlight_exclude { "minlight_exclude", "" },
         minlight_color { "minlight_color", 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         settings {{
