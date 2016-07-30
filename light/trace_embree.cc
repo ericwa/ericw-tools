@@ -456,8 +456,8 @@ public:
             return;
         
         const RTCIntersectContext ctx = {
-            .flags = RTC_INTERSECT_COHERENT,
-            .userRayExt = nullptr
+            RTC_INTERSECT_COHERENT,
+            nullptr
         };
         
         rtcOccluded1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
@@ -468,8 +468,8 @@ public:
             return;
         
         const RTCIntersectContext ctx = {
-            .flags = RTC_INTERSECT_COHERENT,
-            .userRayExt = nullptr
+            RTC_INTERSECT_COHERENT,
+            nullptr
         };
         
         rtcIntersect1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
