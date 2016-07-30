@@ -39,10 +39,10 @@
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
-enum class hittype_t {
-    NONE,
-    SOLID,
-    SKY
+enum class hittype_t : uint8_t {
+    NONE = 0,
+    SOLID = 1,
+    SKY = 2
 };
 
 /*
@@ -53,11 +53,32 @@ enum class hittype_t {
 qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
-    
+
+class raystream_t {
+public:
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr) = 0;
+    virtual size_t numPushedRays() = 0;
+    virtual void tracePushedRaysOcclusion() = 0;
+    virtual void tracePushedRaysIntersection() = 0;
+    virtual bool getPushedRayOccluded(size_t j) = 0;
+    virtual float getPushedRayDist(size_t j) = 0;
+    virtual float getPushedRayHitDist(size_t j) = 0;
+    virtual hittype_t getPushedRayHitType(size_t j) = 0;
+    virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
+    virtual int getPushedRayPointIndex(size_t j) = 0;
+    virtual void getPushedRayColor(size_t j, vec3_t out) = 0;
+    virtual void clearPushedRays() = 0;
+    virtual ~raystream_t() {};
+};
+
+raystream_t *MakeRayStream(int maxrays);
+
 void Embree_TraceInit(const bsp2_t *bsp);
 qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+
+raystream_t *Embree_MakeRayStream(int maxrays);
 
 int
 SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
@@ -153,6 +174,9 @@ typedef struct {
     
     /* for lit water. receive light from either front or back. */
     bool twosided;
+    
+    // ray batch stuff
+    raystream_t *stream;
 } lightsurf_t;
 
 typedef struct {

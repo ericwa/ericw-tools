@@ -822,6 +822,128 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmo
     Error("no backend available");
 }
 
+class bsp_ray_t {
+public:
+    int _pointindex;
+    vec3_t _origin, _dir;
+    float _maxdist;
+    const dmodel_t *_selfshadow;
+    vec3_t _color;
+    
+    // hit info
+    float _hitdist;
+    hittype_t _hittype;
+    bool _hit_occluded;
+    
+    bsp_ray_t(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color) :
+        _pointindex{i},
+        _origin{origin[0], origin[1], origin[2]},
+        _dir{dir[0], dir[1], dir[2]},
+        _maxdist{dist},
+        _selfshadow{selfshadow},
+        _hitdist{dist},
+        _hittype{hittype_t::NONE},
+        _hit_occluded{false} {
+            if (color != nullptr) {
+                VectorCopy(color, _color);
+            }
+        }
+};
+
+class raystream_bsp_t : public raystream_t {
+private:
+    std::vector<bsp_ray_t> _rays;
+    int _maxrays;
+    
+public:
+    raystream_bsp_t(int maxRays) :
+    _maxrays { maxRays } {}
+    
+    raystream_bsp_t() {}
+    
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr) {
+        bsp_ray_t r { i, origin, dir, dist, selfshadow, color };
+        _rays.push_back(r);
+        assert(_rays.size() <= _maxrays);
+    }
+    
+    virtual size_t numPushedRays() {
+        return _rays.size();
+    }
+    
+    virtual void tracePushedRaysOcclusion() {
+        if (!_rays.size())
+            return;
+        
+        for (bsp_ray_t &ray : _rays) {
+            vec3_t stop;
+            VectorMA(ray._origin, ray._maxdist, ray._dir, stop);
+            ray._hit_occluded = !BSP_TestLight(ray._origin, stop, ray._selfshadow);
+        }
+    }
+    
+    virtual void tracePushedRaysIntersection() {
+        if (!_rays.size())
+            return;
+        
+        for (bsp_ray_t &ray : _rays) {
+            ray._hittype = BSP_DirtTrace(ray._origin, ray._dir, ray._maxdist, ray._selfshadow, &ray._hitdist, nullptr, nullptr);
+        }
+    }
+    
+    virtual bool getPushedRayOccluded(size_t j) {
+        return _rays.at(j)._hit_occluded;
+    }
+    
+    virtual float getPushedRayDist(size_t j) {
+        return _rays.at(j)._maxdist;
+    }
+    
+    virtual float getPushedRayHitDist(size_t j) {
+        return _rays.at(j)._hitdist;
+    }
+    
+    virtual hittype_t getPushedRayHitType(size_t j) {
+        return _rays.at(j)._hittype;
+    }
+    
+    virtual void getPushedRayDir(size_t j, vec3_t out) {
+        for (int i=0; i<3; i++) {
+            out[i] = _rays.at(j)._dir[i];
+        }
+    }
+    
+    virtual int getPushedRayPointIndex(size_t j) {
+        return _rays.at(j)._pointindex;
+    }
+    
+    virtual void getPushedRayColor(size_t j, vec3_t out) {
+        VectorCopy(_rays.at(j)._color, out);
+    }
+    
+    virtual void clearPushedRays() {
+        _rays.clear();
+    }
+};
+
+raystream_t *BSP_MakeRayStream(int maxrays)
+{
+    return new raystream_bsp_t{maxrays};
+}
+
+raystream_t *MakeRayStream(int maxrays)
+{
+#ifdef HAVE_EMBREE
+    if (rtbackend == backend_embree) {
+        return Embree_MakeRayStream(maxrays);
+    }
+#endif
+    if (rtbackend == backend_bsp) {
+        return BSP_MakeRayStream(maxrays);
+    }
+    Error("no backend available");
+}
+
 void MakeTnodes(const bsp2_t *bsp)
 {
 #ifdef HAVE_EMBREE

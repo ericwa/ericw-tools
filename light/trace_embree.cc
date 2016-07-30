@@ -22,7 +22,12 @@
 #include <embree2/rtcore_ray.h>
 #include <vector>
 #include <cassert>
+#include <cstdlib>
 #include <limits>
+
+#ifdef _MSC_VER
+#include <malloc.h>
+#endif
 
 static constexpr float MAX_SKY_RAY_DEPTH = 8192.0f;
 
@@ -130,44 +135,95 @@ const bsp2_dface_t *Embree_LookupFace(unsigned int geomID, unsigned int primID)
     return info.triToFace.at(primID);
 }
 
-void Embree_RayEndpoint(const RTCRay& ray, vec3_t endpoint)
+static void
+Embree_RayEndpoint(struct RTCRayN* ray, const struct RTCHitN* potentialHit, size_t N, size_t i, vec3_t endpoint)
 {
     vec3_t dir;
-    VectorCopy(ray.dir, dir);
+    dir[0] = RTCRayN_dir_x(ray, N, i);
+    dir[1] = RTCRayN_dir_y(ray, N, i);
+    dir[2] = RTCRayN_dir_z(ray, N, i);
+    
     VectorNormalize(dir);
     
-    VectorMA(ray.org, ray.tfar, dir, endpoint);
+    vec3_t org;
+    org[0] = RTCRayN_org_x(ray, N, i);
+    org[1] = RTCRayN_org_y(ray, N, i);
+    org[2] = RTCRayN_org_z(ray, N, i);
+    
+    // N.B.: we want the distance to the potential hit, not RTCRayN_tfar (stopping dist?)
+    float tfar = RTCHitN_t(potentialHit, N, i);
+    
+    VectorMA(org, tfar, dir, endpoint);
 }
+
+enum class filtertype_t {
+    INTERSECTION, OCCLUSION
+};
 
 // called to evaluate transparency
+template<filtertype_t filtertype>
 static void
-Embree_FilterFunc(void* userDataPtr, RTCRay&   ray)
+Embree_FilterFuncN(int* valid,
+                   void* userDataPtr,
+                   const RTCIntersectContext* context,
+                   struct RTCRayN* ray,
+                   const struct RTCHitN* potentialHit,
+                   const size_t N)
 {
-    // bail if we hit a selfshadow face, but the ray is not coming from within that model
-    if (ray.mask == 0 && ray.geomID == selfshadowgeom.geomID) {
-        // reject hit
-        ray.geomID = RTC_INVALID_GEOMETRY_ID;
-        return;
-    }
+    constexpr int VALID = -1;
+    constexpr int INVALID = 0;
     
-    // test fence texture
-    const bsp2_dface_t *face = Embree_LookupFace(ray.geomID, ray.primID);
-    
-    // bail if it's not a fence
-    const char *name = Face_TextureName(bsp_static, face);
-    if (name[0] != '{')
-        return;
-    
-    vec3_t hitpoint;
-    Embree_RayEndpoint(ray, hitpoint);
-    const int sample = SampleTexture(face, bsp_static, hitpoint);
-    
-    if (sample == 255) {
-        // reject hit
-        ray.geomID = RTC_INVALID_GEOMETRY_ID;
+    for (size_t i=0; i<N; i++) {
+        if (valid[i] != VALID) {
+            // we only need to handle valid rays
+            continue;
+        }
+        
+        const unsigned &mask = RTCRayN_mask(ray, N, i);
+        const unsigned &geomID = RTCHitN_geomID(potentialHit, N, i);
+        const unsigned &primID = RTCHitN_primID(potentialHit, N, i);
+        
+        // bail if we hit a selfshadow face, but the ray is not coming from within that model
+        if (mask == 0 && geomID == selfshadowgeom.geomID) {
+            // reject hit
+            valid[i] = INVALID;
+            continue;
+        }
+        
+        // test fence texture
+        const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
+        
+        const char *name = Face_TextureName(bsp_static, face);
+        if (name[0] == '{') {
+            vec3_t hitpoint;
+            Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
+            const int sample = SampleTexture(face, bsp_static, hitpoint);
+            
+            if (sample == 255) {
+                // reject hit
+                valid[i] = INVALID;
+                continue;
+            }
+        }
+        
+        // accept hit
+        if (filtertype == filtertype_t::OCCLUSION) {
+            RTCRayN_geomID(ray, N, i) = 0;
+        } else {
+            RTCRayN_Ng_x(ray, N, i) = RTCHitN_Ng_x(potentialHit, N, i);
+            RTCRayN_Ng_y(ray, N, i) = RTCHitN_Ng_y(potentialHit, N, i);
+            RTCRayN_Ng_z(ray, N, i) = RTCHitN_Ng_z(potentialHit, N, i);
+            
+            RTCRayN_instID(ray, N, i) = RTCHitN_instID(potentialHit, N, i);
+            RTCRayN_geomID(ray, N, i) = RTCHitN_geomID(potentialHit, N, i);
+            RTCRayN_primID(ray, N, i) = RTCHitN_primID(potentialHit, N, i);
+            
+            RTCRayN_u(ray, N, i) = RTCHitN_u(potentialHit, N, i);
+            RTCRayN_v(ray, N, i) = RTCHitN_v(potentialHit, N, i);
+            RTCRayN_tfar(ray, N, i) = RTCHitN_t(potentialHit, N, i);
+        }
     }
 }
-
 
 void
 Embree_TraceInit(const bsp2_t *bsp)
@@ -211,18 +267,18 @@ Embree_TraceInit(const bsp2_t *bsp)
         Error("embree must be built with ray masks disabled");
     }
 
-    scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1);
+    scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1 | RTC_INTERSECT_STREAM);
     skygeom = CreateGeometry(bsp, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
     fencegeom = CreateGeometry(bsp, scene, fencefaces);
     selfshadowgeom = CreateGeometry(bsp, scene, selfshadowfaces);
     
-    rtcSetIntersectionFilterFunction(scene, fencegeom.geomID, Embree_FilterFunc);
-    rtcSetOcclusionFilterFunction(scene, fencegeom.geomID, Embree_FilterFunc);
-
-    rtcSetIntersectionFilterFunction(scene, selfshadowgeom.geomID, Embree_FilterFunc);
-    rtcSetOcclusionFilterFunction(scene, selfshadowgeom.geomID, Embree_FilterFunc);
+    rtcSetIntersectionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+    rtcSetOcclusionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
     
+    rtcSetIntersectionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+    rtcSetOcclusionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
+
     rtcCommit (scene);
     
     logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces\n",
@@ -322,4 +378,155 @@ hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, co
     } else {
         return hittype_t::SOLID;
     }
+}
+
+//enum class streamstate_t {
+//    READY, DID_OCCLUDE, DID_INTERSECT
+//};
+
+static void *q_aligned_malloc(size_t align, size_t size)
+{
+#ifdef _MSC_VER
+    return _aligned_malloc(size, align);
+#else
+    void *ptr;
+    if (0 != posix_memalign(&ptr, align, size)) {
+        return nullptr;
+    }
+    return ptr;
+#endif
+}
+
+static void q_aligned_free(void *ptr)
+{
+#ifdef _MSC_VER
+    _aligned_free(ptr);
+#else
+    free(ptr);
+#endif
+}
+
+class raystream_embree_t : public raystream_t {
+private:
+    RTCRay *_rays;
+    float *_rays_maxdist;
+    int *_point_indices;
+    vec3_t *_ray_colors;
+    int _numrays;
+    int _maxrays;
+//    streamstate_t _state;
+    
+public:
+    raystream_embree_t(int maxRays) :
+        _rays { static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * maxRays)) },
+        _rays_maxdist { new float[maxRays] },
+        _point_indices { new int[maxRays] },
+        _ray_colors { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
+        _numrays { 0 },
+        _maxrays { maxRays } {}
+        //,
+        //_state { streamstate_t::READY } {}
+    
+    ~raystream_embree_t() {
+        q_aligned_free(_rays);
+        delete[] _rays_maxdist;
+        delete[] _point_indices;
+        free(_ray_colors);
+    }
+    
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr) {
+        assert(_numrays<_maxrays);
+        _rays[_numrays] = SetupRay(origin, dir, dist, selfshadow);
+        _rays_maxdist[_numrays] = dist;
+        _point_indices[_numrays] = i;
+        if (color) {
+            VectorCopy(color, _ray_colors[_numrays]);
+        }
+        _numrays++;
+    }
+    
+    virtual size_t numPushedRays() {
+        return _numrays;
+    }
+    
+    virtual void tracePushedRaysOcclusion() {
+        //assert(_state == streamstate_t::READY);
+        
+        if (!_numrays)
+            return;
+        
+        const RTCIntersectContext ctx = {
+            .flags = RTC_INTERSECT_COHERENT,
+            .userRayExt = nullptr
+        };
+        
+        rtcOccluded1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
+    }
+    
+    virtual void tracePushedRaysIntersection() {
+        if (!_numrays)
+            return;
+        
+        const RTCIntersectContext ctx = {
+            .flags = RTC_INTERSECT_COHERENT,
+            .userRayExt = nullptr
+        };
+        
+        rtcIntersect1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
+    }
+    
+    virtual bool getPushedRayOccluded(size_t j) {
+        assert(j < _maxrays);
+        return (_rays[j].geomID != RTC_INVALID_GEOMETRY_ID);
+    }
+    
+    virtual float getPushedRayDist(size_t j) {
+        assert(j < _maxrays);
+        return _rays_maxdist[j];
+    }
+    
+    virtual float getPushedRayHitDist(size_t j) {
+        assert(j < _maxrays);
+        return _rays[j].tfar;
+    }
+    
+    virtual hittype_t getPushedRayHitType(size_t j) {
+        assert(j < _maxrays);
+
+        if (_rays[j].geomID == RTC_INVALID_GEOMETRY_ID) {
+            return hittype_t::NONE;
+        } else if (_rays[j].geomID == skygeom.geomID) {
+            return hittype_t::SKY;
+        } else {
+            return hittype_t::SOLID;
+        }
+    }
+    
+    virtual void getPushedRayDir(size_t j, vec3_t out) {
+        assert(j < _maxrays);
+        for (int i=0; i<3; i++) {
+            out[i] = _rays[j].dir[i];
+        }
+    }
+    
+    virtual int getPushedRayPointIndex(size_t j) {
+       // assert(_state != streamstate_t::READY);
+        assert(j < _maxrays);
+        return _point_indices[j];
+    }
+    
+    virtual void getPushedRayColor(size_t j, vec3_t out) {
+        assert(j < _maxrays);
+        VectorCopy(_ray_colors[j], out);
+    }
+    
+    virtual void clearPushedRays() {
+        _numrays = 0;
+        //_state = streamstate_t::READY;
+    }
+};
+
+raystream_t *Embree_MakeRayStream(int maxrays)
+{
+    return new raystream_embree_t{maxrays};
 }
