@@ -160,7 +160,8 @@ void LoadEntities(const bsp2_t *bsp);
 void SetupLights(const bsp2_t *bsp);
 void WriteEntitiesToString(bsp2_t *bsp);
 
-vec_t GetLightValue(const lightsample_t *light, const light_t *entity, vec_t dist);
+// FIXME: remove light param. add normal param and dir params.
+vec_t GetLightValue(const float light, const light_t *entity, vec_t dist);
     
 bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
 

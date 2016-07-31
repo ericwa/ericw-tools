@@ -2239,10 +2239,6 @@ Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
 void
 LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
 {
-    int i, j, k;
-    lightsample_t *sample;
-    sun_t *sun;
-
     const bsp2_t *bsp = ctx->bsp;
     lightmap_t *lightmaps = ctx->lightmaps;
     const char *texname = Face_TextureName(bsp, face);
@@ -2253,13 +2249,13 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     if (facesup)
     {
         facesup->lightofs = -1;
-        for (i = 0; i < MAXLIGHTMAPS; i++)
+        for (int i = 0; i < MAXLIGHTMAPS; i++)
             facesup->styles[i] = 255;
     }
     else
     {
         face->lightofs = -1;
-        for (i = 0; i < MAXLIGHTMAPS; i++)
+        for (int i = 0; i < MAXLIGHTMAPS; i++)
             face->styles[i] = 255;
     }
     if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL)
@@ -2344,12 +2340,12 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         LightFace_PhongDebug(lightsurf, lightmaps);
     
     /* Fix any negative values */
-    for (i = 0; i < MAXLIGHTMAPS; i++) {
+    for (int i = 0; i < MAXLIGHTMAPS; i++) {
         if (lightmaps[i].style == 255)
             break;
-        sample = lightmaps[i].samples;
-        for (j = 0; j < lightsurf->numpoints; j++, sample++) {
-            for (k = 0; k < 3; k++) {
+        for (int j = 0; j < lightsurf->numpoints; j++) {
+            lightsample_t *sample = &lightmaps[i].samples[j];
+            for (int k = 0; k < 3; k++) {
                 if (sample->color[k] < 0) {
                     sample->color[k] = 0;
                 }
@@ -2359,7 +2355,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
 
     /* Perform post-processing if requested */
     if (softsamples > 0) {
-        for (i = 0; i < MAXLIGHTMAPS; i++) {
+        for (int i = 0; i < MAXLIGHTMAPS; i++) {
             if (lightmaps[i].style == 255)
                 break;
             Lightmap_Soften(&lightmaps[i], lightsurf);
@@ -2370,8 +2366,8 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     // FIXME: don't count occluded samples
     VectorSet(lightsurf->radiosity, 0, 0, 0);
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-    sample = lightmap->samples;
-    for (j = 0; j < lightsurf->numpoints; j++, sample++) {
+    for (int j = 0; j < lightsurf->numpoints; j++) {
+        lightsample_t *sample = &lightmap->samples[j];
         vec3_t color;
         VectorCopy(sample->color, color);
         VectorAdd(lightsurf->radiosity, color, lightsurf->radiosity);
@@ -2384,7 +2380,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
 
     /* Calc average texture color */
     VectorSet(lightsurf->texturecolor, 0, 0, 0);
-    for (j = 0; j < lightsurf->numpoints; j++) {
+    for (int j = 0; j < lightsurf->numpoints; j++) {
         int palidx = SampleTexture(face, bsp, lightsurf->points[j]);
         if (palidx >= 0) {
             vec3_t texcolor = {static_cast<float>(thepalette[3*palidx]), static_cast<float>(thepalette[3*palidx + 1]), static_cast<float>(thepalette[3*palidx + 2])};
