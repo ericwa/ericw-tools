@@ -84,15 +84,19 @@ int
 SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
     
 typedef struct {
-    vec_t light;
     vec3_t color;
     vec3_t direction;
 } lightsample_t;
 
+static inline float LightSample_Brightness(const vec3_t color) {
+    return ((color[0] + color[1] + color[2]) / 3.0);
+}
+
 class sun_t {
 public:
     vec3_t sunvec;
-    lightsample_t sunlight;
+    vec_t sunlight;
+    vec3_t sunlight_color;
     struct sun_s *next;
     qboolean dirt;
     float anglescale;
@@ -125,7 +129,8 @@ typedef struct {
     const bsp2_t *bsp;
     const bsp2_dface_t *face;
     /* these take precedence the values in modelinfo */
-    lightsample_t minlight;
+    vec_t minlight;
+    vec3_t minlight_color;
     qboolean nodirt;
     
     plane_t plane;

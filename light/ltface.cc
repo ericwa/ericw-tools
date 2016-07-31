@@ -865,11 +865,11 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     // FIXME: is modelinfo used?!?
     lightsurf->curved = !!(extended_texinfo_flags[face->texinfo] & TEX_PHONG_ANGLE_MASK);
     lightsurf->nodirt = !!(extended_texinfo_flags[face->texinfo] & TEX_NODIRT);
-    VectorCopy(*modelinfo->minlight_color.vec3Value(), lightsurf->minlight.color);
-    lightsurf->minlight.light = (extended_texinfo_flags[face->texinfo] & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT;
+    VectorCopy(*modelinfo->minlight_color.vec3Value(), lightsurf->minlight_color);
+    lightsurf->minlight = (extended_texinfo_flags[face->texinfo] & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT;
     /* fixup minlight color */
-    if (lightsurf->minlight.light > 0 && VectorCompare(lightsurf->minlight.color, vec3_origin)) {
-        VectorSet(lightsurf->minlight.color, 255, 255, 255);
+    if (lightsurf->minlight > 0 && VectorCompare(lightsurf->minlight_color, vec3_origin)) {
+        VectorSet(lightsurf->minlight_color, 255, 255, 255);
     }
     
     /* Set up the plane, not including model offset */
@@ -1023,7 +1023,6 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
         for (t = startt; t < endt; t++) {
             src = &lightmap->samples[t * width + starts];
             for (s = starts; s < ends; s++) {
-                dst->light += src->light;
                 VectorAdd(dst->color, src->color, dst->color);
                 VectorAdd(dst->direction, src->direction, dst->direction);
                 src++;
@@ -1038,12 +1037,10 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
         if (samples < fullsamples) {
             const int extraweight = 2 * (fullsamples - samples);
             src = &lightmap->samples[i];
-            dst->light += src->light * extraweight;
             VectorMA(dst->color, extraweight, src->color, dst->color);
             VectorMA(dst->direction, extraweight, src->direction, dst->direction);
             samples += extraweight;
         }
-        dst->light /= samples;
         VectorScale(dst->color, 1.0 / samples, dst->color);
         VectorScale(dst->direction, 1.0 / samples, dst->direction);
     }
@@ -1090,7 +1087,6 @@ GetLightValue(const float light, const light_t *entity, vec_t dist)
 static inline void
 Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color, const vec3_t direction)
 {
-    sample->light += light;
     VectorMA(sample->color, light / 255.0f, color, sample->color);
     VectorMA(sample->direction, light, direction, sample->direction);
 }
@@ -1098,14 +1094,9 @@ Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color, const ve
 static inline void
 Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
 {
-    int i;
-
-    if (sample->light < light) {
-        sample->light = light;
-        for (i = 0; i < 3; i++)
-            if (sample->color[i] < color[i] * light / 255.0f)
-                sample->color[i] = color[i] * light / 255.0f;
-    }
+    for (int i = 0; i < 3; i++)
+        if (sample->color[i] < color[i] * light / 255.0f)
+            sample->color[i] = color[i] * light / 255.0f;
 }
 
 /*
@@ -1445,7 +1436,7 @@ LightFace_Entity(const bsp2_t *bsp,
         /* Check if we really hit, ignore tiny lights */
         /* ericw -- never ignore generated lights, which can be tiny and need
            the additive effect of lots hitting */
-        if (!hit && (sample->light >= 1 || entity->generated))
+        if (!hit && (LightSample_Brightness(sample->color) >= 1 || entity->generated))
             hit = true;
     }
     
@@ -1523,12 +1514,12 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
         }
         
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
-        float value = angle * sun->sunlight.light;
+        float value = angle * sun->sunlight;
         if (sun->dirt)
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
         
         lightsample_t *sample = &lightmap->samples[i];
-        Light_Add(sample, value, sun->sunlight.color, sun->sunvec);
+        Light_Add(sample, value, sun->sunlight_color, sun->sunvec);
         if (!hit/* && (sample->light >= 1)*/)
             hit = true;
     }
@@ -1550,7 +1541,7 @@ static vec_t GetDir(const vec3_t start, const vec3_t stop, vec3_t dir)
  */
 static void
 LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
-              const lightsample_t *light,
+              const vec3_t color, vec_t light,
               const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1566,14 +1557,14 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
         
-        vec_t value = light->light;
+        vec_t value = light;
         if (minlightDirt.boolValue())
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
         if (addminlight.boolValue())
-            Light_Add(sample, value, light->color, vec3_origin);
+            Light_Add(sample, value, color, vec3_origin);
         else
-            Light_ClampMin(sample, value, light->color);
-        if (!hit && sample->light >= 1)
+            Light_ClampMin(sample, value, color);
+        if (!hit && LightSample_Brightness(sample->color) >= 1)
             hit = true;
     }
 
@@ -1595,7 +1586,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         for (int i = 0; i < lightsurf->numpoints; i++) {
             const lightsample_t *sample = &lightmap->samples[i];
             const vec_t *surfpoint = lightsurf->points[i];
-            if (addminlight.boolValue() || sample->light < entity.light.floatValue()) {
+            if (addminlight.boolValue() || LightSample_Brightness(sample->color) < entity.light.floatValue()) {
                 vec3_t surfpointToLightDir;
                 vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
                 
@@ -1620,7 +1611,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
             else
                 Light_ClampMin(sample, value, *entity.color.vec3Value());
 
-            if (!hit && sample->light >= 1)
+            if (!hit && LightSample_Brightness(sample->color) >= 1)
                 hit = true;
         }
         
@@ -1648,8 +1639,8 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     /* Overwrite each point with the dirt value for that sample... */
     sample = lightmap->samples;
     for (i = 0; i < lightsurf->numpoints; i++, sample++) {
-        sample->light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
-        VectorSet(sample->color, sample->light, sample->light, sample->light);
+        const float light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
+        VectorSet(sample->color, light, light, light);
     }
 
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
@@ -1681,7 +1672,6 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
         VectorScale(normal_as_color, 0.5, normal_as_color);
         VectorScale(normal_as_color, 255, normal_as_color);
         
-        sample->light = 255;
         VectorCopy(normal_as_color, sample->color);
     }
     
@@ -2319,19 +2309,18 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                 LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
         }
         for ( const sun_t &sun : GetSuns() )
-            if (sun.sunlight.light > 0)
+            if (sun.sunlight > 0)
                 LightFace_Sky (&sun, lightsurf, lightmaps);
 
         /* minlight - Use the greater of global or model minlight. */
-        if (lightsurf->minlight.light > minlight.floatValue())
-            LightFace_Min(bsp, face, &lightsurf->minlight, lightsurf, lightmaps);
+        if (lightsurf->minlight > minlight.floatValue())
+            LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
         else {
-            lightsample_t ls;
-            ls.light = minlight.floatValue();
-            VectorCopy(*minlight_color.vec3Value(), ls.color);
-            VectorSet(ls.direction, 0, 0, 0);
+            const float light = minlight.floatValue();
+            vec3_t color;
+            VectorCopy(*minlight_color.vec3Value(), color);
             
-            LightFace_Min(bsp, face, &ls, lightsurf, lightmaps);
+            LightFace_Min(bsp, face, color, light, lightsurf, lightmaps);
         }
 
         /* negative lights */
@@ -2343,7 +2332,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                 LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
         }
         for (const sun_t &sun : GetSuns())
-            if (sun.sunlight.light < 0)
+            if (sun.sunlight < 0)
                 LightFace_Sky (&sun, lightsurf, lightmaps);
     }
     
@@ -2360,8 +2349,6 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             break;
         sample = lightmaps[i].samples;
         for (j = 0; j < lightsurf->numpoints; j++, sample++) {
-            if (sample->light < 0)
-                sample->light = 0;
             for (k = 0; k < 3; k++) {
                 if (sample->color[k] < 0) {
                     sample->color[k] = 0;

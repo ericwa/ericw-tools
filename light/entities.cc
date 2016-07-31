@@ -262,8 +262,8 @@ AddSun(vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt)
     VectorCopy(sunvec, sun.sunvec);
     VectorNormalize(sun.sunvec);
     VectorScale(sun.sunvec, -16384, sun.sunvec);
-    sun.sunlight.light = light;
-    VectorCopy(color, sun.sunlight.color);
+    sun.sunlight = light;
+    VectorCopy(color, sun.sunlight_color);
     sun.anglescale = global_anglescale.floatValue();
     sun.dirt = Dirt_ResolveFlag(dirtInt);
 
