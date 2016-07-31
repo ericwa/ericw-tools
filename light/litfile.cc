@@ -42,6 +42,7 @@ WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int ve
     header.v2.numsurfs = LittleLong(bsp->numfaces);
     header.v2.lmsamples = LittleLong(bsp->lightdatasize);
 
+    logprint("Writing %s\n", litname);
     litfile = SafeOpenWrite(litname);
     SafeWrite(litfile, &header.v1, sizeof(header.v1));
     if (version == 2)
