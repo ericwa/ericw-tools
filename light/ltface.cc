@@ -1058,8 +1058,9 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
  */
 
 vec_t
-GetLightValue(const float light, const light_t *entity, vec_t dist)
+GetLightValue(const light_t *entity, vec_t dist)
 {
+    const float light = entity->light.floatValue();
     vec_t value;
 
     if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
@@ -1191,7 +1192,7 @@ CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     /* return true if the light level at the closest point on the
      surface bounding sphere to the light source is <= fadegate.
      need fabs to handle antilights. */
-    return fabs(GetLightValue(entity->light.floatValue(), entity, dist)) <= fadegate;
+    return fabs(GetLightValue(entity, dist)) <= fadegate;
 }
 
 byte thepalette[768] =
@@ -1361,7 +1362,7 @@ LightFace_Entity(const bsp2_t *bsp,
         vec_t surfpointToLightDist = VectorNormalize(surfpointToLightDir);
 
         /* Quick distance check first */
-        if (fabs(GetLightValue(entity->light.floatValue(), entity, surfpointToLightDist)) <= fadegate)
+        if (fabs(GetLightValue(entity, surfpointToLightDist)) <= fadegate)
             continue;
 
         float angle = DotProduct(surfpointToLightDir, surfnorm);
@@ -1419,7 +1420,7 @@ LightFace_Entity(const bsp2_t *bsp,
             }
         }
         
-        float add = GetLightValue(entity->light.floatValue(), entity, surfpointToLightDist) * angle * spotscale;
+        float add = GetLightValue(entity, surfpointToLightDist) * angle * spotscale;
         add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, lightsurf);
 
         if (entity->projectedmip)

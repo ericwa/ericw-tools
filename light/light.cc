@@ -916,7 +916,7 @@ GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
         if (cosangle < 0)
             continue;
         
-        vec_t lightval = GetLightValue(&entity->light, entity, dist);
+        vec_t lightval = GetLightValue(entity, dist);
         VectorMA(colorout, lightval * cosangle / 255.0f, entity->light.color, colorout);
     }
     
