@@ -416,15 +416,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
             assert(info->offset[1] == 0);
             assert(info->offset[2] == 0);
         }
-
-        /* Enable .lit if needed */
-        // TODO: move elsewhere?
-        vec3_t white = {255,255,255};
-        if (!VectorCompare(white, *info->minlight_color.vec3Value())) {
-            if (!write_litfile) {
-                write_litfile = scaledonly?2:1;
-            }
-        }
     }
 
     assert(modelinfo.size() == bsp->nummodels);
@@ -1352,6 +1343,45 @@ void FindDebugVert(const bsp2_t *bsp)
     dump_vertnum = v;
 }
 
+static void SetLitNeeded()
+{
+    if (!write_litfile) {
+        if (scaledonly) {
+            write_litfile = 2;
+            logprint("Colored light entities/settings detected: "
+                     "bspxlit output enabled.\n");
+        } else {
+            write_litfile = 1;
+            logprint("Colored light entities/settings detected: "
+                     ".lit output enabled.\n");
+        }
+    }
+}
+
+static void CheckLitNeeded()
+{
+    const vec3_t white = {255,255,255};
+    
+    // check lights
+    for (const auto &light : GetLights()) {
+        if (!VectorCompare(white, *light.color.vec3Value())) {
+            SetLitNeeded();
+            return;
+        }
+    }
+    
+    // check global settings
+    if (bouncecolorscale.floatValue() != 0 ||
+        !VectorCompare(*minlight_color.vec3Value(), white) ||
+        !VectorCompare(*sunlight_color.vec3Value(), white) ||
+        !VectorCompare(*sun2_color.vec3Value(), white) ||
+        !VectorCompare(*sunlight2_color.vec3Value(), white) ||
+        !VectorCompare(*sunlight3_color.vec3Value(), white)) {
+        SetLitNeeded();
+        return;
+    }
+}
+
 static void PrintUsage()
 {
     printf("usage: light [options] mapname.bsp\n"
@@ -1741,6 +1771,7 @@ main(int argc, const char **argv)
     
     if (!onlyents)
     {
+        CheckLitNeeded();
         SetupDirt();
 
         MakeTnodes(bsp);

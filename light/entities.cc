@@ -214,22 +214,6 @@ CheckEntityFields(light_t *entity)
         entity->light.setFloatValue(entity->light.floatValue() / entity->samples.intValue());
     }
 
-    if (!VectorCompare(*entity->color.vec3Value(), vec3_origin)) {
-        if (!write_litfile) {
-            if (scaledonly) {
-                write_litfile = 2;
-                logprint("Colored light entities detected: "
-                         "bspxlit output enabled.\n");
-            } else {
-                write_litfile = 1;
-                logprint("Colored light entities detected: "
-                         ".lit output enabled.\n");
-            }
-        }
-    } else {
-        entity->color.setStringValue("255 255 255");
-    }
-    
     if (entity->style.intValue() < 0 || entity->style.intValue() > 254) {
         Error("Bad light style %i (must be 0-254)", entity->style.intValue());
     }
@@ -937,17 +921,6 @@ LoadEntities(const bsp2_t *bsp)
             CheckEntityFields(&entity);
             
             all_lights.push_back(entity);
-        }
-    }
-
-    if (!VectorCompare(*sunlight_color.vec3Value(), vec3_white) ||
-        !VectorCompare(*minlight_color.vec3Value(), vec3_white) ||
-        !VectorCompare(*sunlight2_color.vec3Value(), vec3_white) ||
-        !VectorCompare(*sunlight3_color.vec3Value(), vec3_white)) {
-        if (!write_litfile) {
-            write_litfile = true;
-            logprint("Colored light entities detected: "
-                     ".lit output enabled.\n");
         }
     }
 
