@@ -1382,6 +1382,36 @@ static void CheckLitNeeded()
     }
 }
 
+static void PrintLight(const light_t &light)
+{
+    bool first = true;
+    
+    auto settings = const_cast<light_t&>(light).settings();
+    for (const auto &setting : settings.allSettings()) {
+        if (!setting->isChanged())
+            continue; // don't spam default values
+        
+        // print separator
+        if (!first) {
+            logprint("; ");
+        } else {
+            first = false;
+        }
+        
+        logprint("%s=%s", setting->primaryName().c_str(), setting->stringValue().c_str());
+    }
+    logprint("\n");
+}
+
+static void PrintLights(void)
+{
+    logprint("===PrintLights===\n");
+    
+    for (const auto &light: GetLights()) {
+        PrintLight(light);
+    }
+}
+
 static void PrintUsage()
 {
     printf("usage: light [options] mapname.bsp\n"
@@ -1768,6 +1798,8 @@ main(int argc, const char **argv)
     FindDebugVert(bsp);
 
     SetupLights(bsp);
+    
+    //PrintLights();
     
     if (!onlyents)
     {
