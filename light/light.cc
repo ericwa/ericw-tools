@@ -399,7 +399,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
                   modelname.c_str());
 
         // apply settings
-        info->settings.setSettings(*entdict, false);
+        info->settings().setSettings(*entdict, false);
         
         /* Check if this model will cast shadows (shadow => shadowself) */
         if (info->shadow.boolValue()) {

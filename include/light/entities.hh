@@ -75,7 +75,6 @@ public:
     lockable_bool_t bleed;
     lockable_vec3_t origin, color, mangle, projangle;
     lockable_string_t project_texture;
-    settingsdict_t settings;
 
     light_formula_t getFormula() const { return static_cast<light_formula_t>(formula.intValue()); }
     
@@ -119,13 +118,16 @@ public:
         color { "color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         mangle { "mangle", 0, 0, 0 }, // not transformed to vec
         projangle { "project_mangle", 20, 0, 0 }, // not transformed to vec
-        project_texture { "project_texture", "" },
-        settings {{
+        project_texture { "project_texture", "" }
+    {}
+    
+    settingsdict_t settings() {
+        return {{
             &light, &atten, &formula, &spotangle, &spotangle2, &style, &bleed, &anglescale,
             &dirtscale, &dirtgain, &dirt, &deviance, &samples, &projfov,
             &origin, &color, &mangle, &projangle, &project_texture
-        }}
-    {}
+        }};
+    }
 };
 
 /*

@@ -891,7 +891,7 @@ LoadEntities(const bsp2_t *bsp)
             entity.epairs = &entdict;
             
             // populate settings
-            entity.settings.setSettings(*entity.epairs, false);
+            entity.settings().setSettings(*entity.epairs, false);
             
             if (entity.mangle.isChanged()) {
                 vec_from_mangle(entity.spotvec, *entity.mangle.vec3Value());

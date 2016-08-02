@@ -258,17 +258,14 @@ enum class setting_source_t {
 class lockable_setting_t {
 protected:
     setting_source_t _source;
-    bool _registered;
     std::vector<std::string> _names;
     
     lockable_setting_t(std::vector<std::string> names)
-    : _source(setting_source_t::DEFAULT), _registered(false), _names(names) {
+    : _source(setting_source_t::DEFAULT), _names(names) {
         assert(_names.size() > 0);
     }
     
     bool changeSource(setting_source_t newSource) {
-        assert(_registered);
-        
         if (static_cast<int>(newSource) >= static_cast<int>(_source)) {
             _source = newSource;
             return true;
@@ -293,9 +290,6 @@ public:
             case setting_source_t::COMMANDLINE: return "commandline";
         }
     }
-    
-    bool isRegistered() { return _registered; }
-    void setRegistered() { _registered = true; }
 };
 
 class lockable_bool_t : public lockable_setting_t {
@@ -605,7 +599,6 @@ public:
         : _allsettings(settings)
     {
         for (lockable_setting_t *setting : settings) {
-            assert(!setting->isRegistered());
             assert(setting->names().size() > 0);
             
             for (const auto &name : setting->names()) {
@@ -613,8 +606,6 @@ public:
                 
                 _settingsmap[name] = setting;
             }
-            
-            setting->setRegistered();
         }
     }
     
@@ -667,7 +658,6 @@ public:
     lockable_vec_t minlight, shadow, shadowself, dirt, phong, phong_angle;
     lockable_string_t minlight_exclude;
     lockable_vec3_t minlight_color;
-    settingsdict_t settings;
     
     float getResolvedPhongAngle() const {
         const float s = phong_angle.floatValue();
@@ -692,12 +682,15 @@ public:
         phong { "phong", 0 },
         phong_angle { "phong_angle", 0 },
         minlight_exclude { "minlight_exclude", "" },
-        minlight_color { "minlight_color", 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
-        settings {{
+        minlight_color { "minlight_color", 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 }
+    {}
+    
+    settingsdict_t settings() {
+        return {{
             &minlight, &shadow, &shadowself, &dirt, &phong, &phong_angle,
             &minlight_exclude, &minlight_color
-        }}
-    {}
+        }};
+    }
 };
 
 
