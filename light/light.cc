@@ -31,6 +31,7 @@
 #include <pmmintrin.h>
 #endif
 
+#include <memory>
 #include <vector>
 #include <map>
 #include <unordered_map>
@@ -308,41 +309,9 @@ LightThread(void *arg)
             LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
         }
         
-        /* If bouncing, keep lightmaps in memory because we run a second lighting pass.
-         * Otherwise free memory now, so only (# threads) lightmaps are in memory at a time.
-         */
-        if (!bounce.boolValue()) {
-            LightFaceShutdown(ctx);
-        }
-    }
-
-    return NULL;
-}
-
-static void *
-LightThreadBounce(void *arg)
-{
-    int facenum;
-    const bsp2_t *bsp = (const bsp2_t *) arg;
-    const modelinfo_t *face_modelinfo;
-    struct ltface_ctx *ctx;
-    
-    while (1) {
-        facenum = GetThreadWork();
-        if (facenum == -1)
-            break;
-        
-        ctx = &ltface_ctxs[facenum];
-        
-        /* Find the correct model offset */
-        face_modelinfo = ModelInfoForFace(bsp, facenum);
-        if (face_modelinfo == NULL)
-            continue;
-        
-        LightFaceIndirect(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
         LightFaceShutdown(ctx);
     }
-    
+
     return NULL;
 }
 
@@ -794,11 +763,6 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 
-    if (bounce.boolValue()) {
-        logprint("--- LightThreadBounce ---\n");
-        RunThreadsOn(0, bsp->numfaces, LightThreadBounce, bsp);
-    }
-
     logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
@@ -865,11 +829,9 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
 
 // radiosity
 
-
 mutex radlights_lock;
 map<string, vec3_struct_t> texturecolors;
 std::vector<bouncelight_t> radlights;
-
 
 class patch_t {
 public:
@@ -878,108 +840,67 @@ public:
     vec3_t samplepoint; // 1 unit above center
     plane_t plane;
     vec3_t directlight;
-    std::vector<plane_t> edgeplanes;
-    
-    vec3_t indirectlight;
-    
-    bool pointInPatch(const vec3_t point) {
-        for (const auto &edgeplane : edgeplanes)
-        {
-            /* faces toward the center of the face */
-            vec_t dist = DotProduct(point, edgeplane.normal) - edgeplane.dist;
-            if (dist < 0)
-                return false;
-        }
-        return true;
-    }
 };
 
-#if 0
-void
-GetDirectLighting(const vec3_t origin, const vec3_t normal, vec3_t colorout)
+unique_ptr<patch_t> MakePatch (winding_t *w)
 {
-    const light_t *entity;
-    light_t **lighte;
-    
-    VectorSet(colorout, 0, 0, 0);
-    
-    for (lighte = lights; (entity = *lighte); lighte++)
-    {
-        if (!TestLight(entity->origin, origin, NULL))
-            continue;
-        
-        vec3_t originLightDir;
-        VectorSubtract(entity->origin, origin, originLightDir);
-        vec_t dist = VectorNormalize(originLightDir);
-            
-        vec_t cosangle = DotProduct(originLightDir, normal);
-        if (cosangle < 0)
-            continue;
-        
-        vec_t lightval = GetLightValue(entity, dist);
-        VectorMA(colorout, lightval * cosangle / 255.0f, entity->light.color, colorout);
-    }
-    
-    for ( sun_t *sun = suns; sun; sun = sun->next )
-    {
-        if (!TestSky(origin, sun->sunvec, NULL))
-            continue;
-        VectorMA(colorout, sun->sunlight.light / 255.0f, sun->sunlight.color, colorout);
-    }
-}
-
-std::vector<patch_t *> triangleIndexToPatch;
-std::unordered_map<int, std::vector<patch_t *>> facenumToPatches;
-mutex facenumToPatches_mutex;
-#endif
-
-#if 0
-void SavePatch (const bsp2_t *bsp, const bsp2_dface_t *sourceface, winding_t *w)
-{
-    int i = sourceface - bsp->dfaces;
-    
-    patch_t *p = new patch_t;
+    unique_ptr<patch_t> p { new patch_t };
     p->w = w;
     
     // cache some stuff
     WindingCenter(p->w, p->center);
     WindingPlane(p->w, p->plane.normal, &p->plane.dist);
     
-    // HACK: flip the plane
-    p->plane.dist = -p->plane.dist;
-    VectorScale(p->plane.normal, -1, p->plane.normal);
-    
-    VectorMA(p->center, 1, p->plane.normal, p->samplepoint);
+    // nudge the cernter point 1 unit off
+    VectorMA(p->center, 1.0f, p->plane.normal, p->samplepoint);
     
     // calculate direct light
-    if (bsp->texinfo[sourceface->texinfo].flags & TEX_SPECIAL) {
-        VectorSet(p->directlight, 0, 0, 0);
+    
+    raystream_t *rs = MakeRayStream(numDirtVectors);
+    GetDirectLighting(rs, p->samplepoint, p->plane.normal, p->directlight);
+    delete rs;
+    
+    return p;
+}
+
+static void SaveWindingFn(winding_t *w, void *userinfo)
+{
+    vector<unique_ptr<patch_t>> *patches = static_cast<vector<unique_ptr<patch_t>> *>(userinfo);
+    patches->push_back(MakePatch(w));
+}
+
+static bool
+Face_ShouldBounce(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    // make bounce light, only if this face is shadow casting
+    const modelinfo_t *mi = ModelInfoForFace(bsp, static_cast<int>(face - bsp->dfaces));
+    if (!mi || !mi->shadow.boolValue()) {
+        return false;
+    }
+    
+    if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL) {
+        return false;
+    }
+    
+    const char *texname = Face_TextureName(bsp, face);
+    if (!strcmp("skip", texname)) {
+        return false;
+    }
+    
+    return true;
+}
+
+static void
+Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t color)
+{
+    const char *facename = Face_TextureName(bsp, face);
+    
+    if (texturecolors.find(facename) != texturecolors.end()) {
+        vec3_struct_t texcolor = texturecolors.at(facename);
+        VectorCopy(texcolor.v, color);
     } else {
-        GetDirectLighting(p->center, p->plane.normal, p->directlight);
-        VectorScale(p->directlight, 1/255.0, p->directlight);
+        VectorSet(color, 127, 127, 127);
     }
-    
-    // make edge planes
-    for (int i=0; i<p->w->numpoints; i++)
-    {
-        plane_t dest;
-        
-        const vec_t *v0 = p->w->p[i];
-        const vec_t *v1 = p->w->p[(i + 1) % p->w->numpoints];
-        
-        vec3_t edgevec;
-        VectorSubtract(v1, v0, edgevec);
-        VectorNormalize(edgevec);
-        
-        CrossProduct(edgevec, p->plane.normal, dest.normal);
-        dest.dist = DotProduct(dest.normal, v0);
-        
-        p->edgeplanes.push_back(dest);
-    }
-    
-    // save
-    unique_lock<mutex> lck { facenumToPatches_mutex };
-    facenumToPatches[i].push_back(p);
 }
 
 static void *
@@ -993,21 +914,57 @@ MakeBounceLightsThread (void *arg)
             break;
     
         const bsp2_dface_t *face = &bsp->dfaces[i];
-        if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL) {
+        
+        if (!Face_ShouldBounce(bsp, face)) {
             continue;
         }
         
-        if (!strcmp("skip", Face_TextureName(bsp, face))) {
-            continue;
-        }
+        vector<unique_ptr<patch_t>> patches;
         
         winding_t *winding = WindingFromFace(bsp, face);
-        DicePatch(bsp, face, winding, 1024);
+        // grab some info about the face winding
+        const float facearea = WindingArea(winding);
+        
+        plane_t faceplane;
+        WindingPlane(winding, faceplane.normal, &faceplane.dist);
+        
+        vec3_t facemidpoint;
+        WindingCenter(winding, facemidpoint);
+        VectorMA(facemidpoint, 1, faceplane.normal, facemidpoint); // lift 1 unit
+        
+        DiceWinding(winding, 64.0f, SaveWindingFn, &patches);
+        winding = nullptr; // DiceWinding frees winding
+        
+        // average them
+        vec3_t sum = {0,0,0};
+        if (patches.size()) {
+            for (const auto &patch : patches) {
+                VectorAdd(sum, patch->directlight, sum);
+//              printf("  %f %f %f\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
+            }
+            VectorScale(sum, 1.0/patches.size(), sum);
+        }
+    
+        vec3_t texturecolor;
+        Face_LookupTextureColor(bsp, face, texturecolor);
+        
+        // lerp between gray and the texture color according to `bouncecolorscale`
+        const vec3_t gray = {127, 127, 127};
+        vec3_t blendedcolor = {0, 0, 0};
+        VectorMA(blendedcolor, bouncecolorscale.floatValue(), texturecolor, blendedcolor);
+        VectorMA(blendedcolor, 1-bouncecolorscale.floatValue(), gray, blendedcolor);
+        
+        // final color to emit
+        vec3_t emitcolor;
+        for (int k=0; k<3; k++) {
+            emitcolor[k] = (sum[k] / 255.0f) * (blendedcolor[k] / 255.0f);
+        }
+        
+        AddBounceLight(facemidpoint, emitcolor, faceplane.normal, facearea, bsp);
     }
     
     return NULL;
 }
-#endif
 
 void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
 {
@@ -1022,17 +979,10 @@ void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnorma
     radlights.push_back(l);
 }
 
-int NumBounceLights()
+const std::vector<bouncelight_t> &BounceLights()
 {
-    return radlights.size();
+    return radlights;
 }
-
-const bouncelight_t *BounceLightAtIndex(int i)
-{
-    return &radlights.at(i);
-}
-
-#if 0
 
 // Returns color in [0,1]
 void Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
@@ -1051,7 +1001,6 @@ void Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
         }
     }
     VectorScale(color, 1.0 / (miptex->width * miptex->height), color);
-    VectorScale(color, 1.0 / 255.0, color);
 }
 
 void MakeTextureColors (const bsp2_t *bsp)
@@ -1072,7 +1021,7 @@ void MakeTextureColors (const bsp2_t *bsp)
         vec3_struct_t color;
         Texture_AvgColor(bsp, miptex, color.v);
         
-        printf("%s has color %f %f %f\n", name.c_str(), color.v[0], color.v[1], color.v[2]);
+//        printf("%s has color %f %f %f\n", name.c_str(), color.v[0], color.v[1], color.v[2]);
         texturecolors[name] = color;
     }
 }
@@ -1083,49 +1032,7 @@ void MakeBounceLights (const bsp2_t *bsp)
     
     const dmodel_t *model = &bsp->dmodels[0];
     RunThreadsOn(model->firstface, model->firstface + model->numfaces, MakeBounceLightsThread, (void *)bsp);
-    
-    int patches  = 0;
-    
-    //FILE *f = fopen("bounce.map", "w");
-    
-    for (auto mapentry : facenumToPatches) {
-        for (auto patch : mapentry.second) {
-            patches++;
-
-            // create VPL
-            if (patch->directlight[0] > 0
-                && patch->directlight[1] > 0
-                && patch->directlight[2] > 0) {
-                bouncelight_t l;
-                VectorCopy(patch->samplepoint, l.pos);
-                VectorCopy(patch->directlight, l.color);
-                VectorCopy(patch->plane.normal, l.surfnormal);
-                l.area = WindingArea(patch->w);
-                l.leaf = Light_PointInLeaf(bsp, l.pos);
-                
-                // scale by texture color
-                const bsp2_dface_t *f = &bsp->dfaces[mapentry.first];
-                const char *facename = Face_TextureName(bsp, f);
-                if (texturecolors.find(facename) != texturecolors.end()) {
-                    vec3_struct_t texcolor = texturecolors.at(facename);
-                    for (int i=0; i<3; i++)
-                        l.color[i] *= texcolor.v[i];
-                }
-                
-                radlights.push_back(l);
-                //fprintf(f, "{\n\"classname\" \"light\"\n\"origin\" \"%f %f %f\"\n}\n", l.pos[0], l.pos[1], l.pos[2]);
-            }
-        }
-    }
-    //fclose(f);
-    
-    logprint("created %d patches\n", patches);
-    logprint("created %d bounce lights\n", (int)radlights.size());
-    
-    bouncelights = radlights.data();
-    numbouncelights = radlights.size();
 }
-#endif
 
 // end radiosity
 
@@ -1807,6 +1714,11 @@ main(int argc, const char **argv)
         SetupDirt();
 
         MakeTnodes(bsp);
+        
+        if (bounce.boolValue()) {
+            MakeTextureColors(bsp);
+            MakeBounceLights(bsp);
+        }
         LightWorld(&bspdata, !!lmscaleoverride);
         
         /*invalidate any bspx lighting info early*/

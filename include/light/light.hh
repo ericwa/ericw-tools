@@ -210,7 +210,7 @@ typedef enum {
 extern debugmode_t debugmode;
     
 /* bounce lights */
-    
+
 typedef struct {
     vec3_t pos;
     vec3_t color;
@@ -220,11 +220,8 @@ typedef struct {
 } bouncelight_t;
 
 void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp);
-int NumBounceLights();
-const bouncelight_t *BounceLightAtIndex(int i);
+const std::vector<bouncelight_t> &BounceLights();
 
-extern const bouncelight_t *bouncelights;
-extern int numbouncelights;
 extern byte thepalette[768];
     
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
@@ -236,7 +233,6 @@ void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
 void LightFaceShutdown(struct ltface_ctx *ctx);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
-void LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
 void MakeTnodes(const bsp2_t *bsp);
 
 int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
@@ -542,6 +538,8 @@ extern lockable_vec_t dirtAngle;
 
 extern lockable_bool_t minlightDirt;   // apply dirt to minlight?
 
+extern int numDirtVectors;
+
 /* phong */
 
 extern lockable_bool_t phongallowed;
@@ -762,5 +760,7 @@ bool Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *lea
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
 const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face);    
 qboolean VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf);
+
+void GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
 
 #endif /* __LIGHT_LIGHT_H__ */

@@ -1118,7 +1118,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const light_t *entity, const lightsurf_t *s
     /* is dirt processing disabled entirely? */
     if (!dirt_in_use)
         return 1.0f;
-    if (surf->nodirt)
+    if (surf && surf->nodirt)
         return 1.0f;
 
     /* should this light be affected by dirt? */
@@ -1303,6 +1303,55 @@ VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf)
 
 extern int totalhit;
 extern int totalmissed;
+
+// FIXME: factor out / merge with LightFace
+void
+GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
+{
+    VectorSet(colorout, 0, 0, 0);
+    
+    for (const light_t &entity : GetLights())
+    {
+        vec3_t originLightDir;
+        VectorSubtract(*entity.origin.vec3Value(), origin, originLightDir);
+        vec_t dist = VectorNormalize(originLightDir);
+        
+        vec_t cosangle = DotProduct(originLightDir, normal);
+        if (cosangle < 0)
+            continue;
+        
+        // apply anglescale
+        cosangle = (1.0 - entity.anglescale.floatValue()) + entity.anglescale.floatValue() * cosangle;
+        
+        vec_t lightval = GetLightValue(&entity, dist);
+        if (lightval < 0.25)
+            continue;
+        
+        if (!TestLight(*entity.origin.vec3Value(), origin, NULL))
+            continue;
+        
+        VectorMA(colorout, lightval * cosangle / 255.0f, *entity.color.vec3Value(), colorout);
+    }
+    
+    for (const sun_t &sun : GetSuns())
+    {
+        vec3_t originLightDir;
+        VectorCopy(sun.sunvec, originLightDir);
+        VectorNormalize(originLightDir);
+        
+        vec_t cosangle = DotProduct(originLightDir, normal);
+        if (cosangle < 0)
+            continue;
+        
+        // apply anglescale
+        cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
+        
+        if (!TestSky(origin, sun.sunvec, NULL))
+            continue;
+        
+        VectorMA(colorout, cosangle * sun.sunlight / 255.0f, sun.sunlight_color, colorout);
+    }
+}
 
 
 /*
@@ -1763,14 +1812,11 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     /* use a style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
-    const int numbouncelights = NumBounceLights();
-    for (int j=0; j<numbouncelights; j++) {
-        const bouncelight_t *vpl = BounceLightAtIndex(j);
-        
-        if (VisCullEntity(bsp, lightsurf->pvs, vpl->leaf))
+    for (const bouncelight_t &vpl : BounceLights()) {
+        if (VisCullEntity(bsp, lightsurf->pvs, vpl.leaf))
             continue;
         
-        if (BounceLight_SphereCull(bsp, vpl, lightsurf))
+        if (BounceLight_SphereCull(bsp, &vpl, lightsurf))
             continue;
         
         raystream_t *rs = lightsurf->stream;
@@ -1778,16 +1824,16 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
         
         for (int i = 0; i < lightsurf->numpoints; i++) {
             vec3_t dir; // vpl -> sample point
-            VectorSubtract(lightsurf->points[i], vpl->pos, dir);
+            VectorSubtract(lightsurf->points[i], vpl.pos, dir);
             vec_t dist = VectorNormalize(dir);
             
             vec3_t indirect = {0};
-            GetIndirectLighting(vpl, dir, dist, lightsurf->points[i], lightsurf->normals[i], indirect);
+            GetIndirectLighting(&vpl, dir, dist, lightsurf->points[i], lightsurf->normals[i], indirect);
             
             if (((indirect[0] + indirect[1] + indirect[2]) / 3) < 0.25)
                 continue;
             
-            rs->pushRay(i, vpl->pos, dir, dist, /*shadowself*/ nullptr, indirect);
+            rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, indirect);
         }
         
         rs->tracePushedRaysOcclusion();
@@ -1815,6 +1861,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
         }
     }
     
+    // FIXME: check if (hit)
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
@@ -1826,7 +1873,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
 #define DIRT_NUM_VECTORS            ( DIRT_NUM_ANGLE_STEPS * DIRT_NUM_ELEVATION_STEPS )
 
 static vec3_t dirtVectors[ DIRT_NUM_VECTORS ];
-static int numDirtVectors = 0;
+int numDirtVectors = 0;
 
 /*
  * ============
@@ -1963,6 +2010,57 @@ GetDirtVector(int i, vec3_t out)
     } else {
         VectorCopy(dirtVectors[i], out);
     }
+}
+
+float
+DirtAtPoint(raystream_t *rs, const vec3_t point, const vec3_t normal, const dmodel_t *selfshadow)
+{
+    if (!dirt_in_use) {
+        return 0.0f;
+    }
+    
+    vec3_t myUp, myRt;
+    float occlusion = 0;
+    
+    // this stuff is just per-point
+    
+    GetUpRtVecs(normal, myUp, myRt);
+    
+    rs->clearPushedRays();
+    
+    for (int j=0; j<numDirtVectors; j++) {
+        
+        // fill in input buffers
+    
+        vec3_t dirtvec;
+        GetDirtVector(j, dirtvec);
+        
+        vec3_t dir;
+        TransformToTangentSpace(normal, myUp, myRt, dirtvec, dir);
+        
+        rs->pushRay(j, point, dir, dirtDepth.floatValue(), selfshadow);
+    }
+    
+    assert(rs->numPushedRays() == numDirtVectors);
+    
+    // trace the batch
+    rs->tracePushedRaysIntersection();
+    
+    // accumulate hitdists
+    for (int j=0; j<numDirtVectors; j++) {
+        if (rs->getPushedRayHitType(j) == hittype_t::SOLID) {
+            float dist = rs->getPushedRayHitDist(j);
+            occlusion += qmin(dirtDepth.floatValue(), dist);
+        } else {
+            occlusion += dirtDepth.floatValue();
+        }
+    }
+    
+    // process the results.
+    
+    vec_t avgHitdist = occlusion / (float)numDirtVectors;
+    occlusion = 1 - (avgHitdist / dirtDepth.floatValue());
+    return occlusion;
 }
 
 /*
@@ -2296,7 +2394,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * clamp any values that may have gone negative.
      */
 
-    if (!(debugmode == debugmode_dirt || debugmode == debugmode_phong)) {
+    if (!(debugmode == debugmode_dirt
+          || debugmode == debugmode_phong
+          || debugmode == debugmode_bounce)) {
         /* positive lights */
         for (const auto &entity : GetLights())
         {
@@ -2333,6 +2433,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                 LightFace_Sky (&sun, lightsurf, lightmaps);
     }
     
+    /* add indirect lighting */
+    LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+    
     /* replace lightmaps with AO for debugging */
     if (debugmode == debugmode_dirt)
         LightFace_DirtDebug(lightsurf, lightmaps);
@@ -2363,72 +2466,5 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         }
     }
     
-    /* Calc average brightness */
-    // FIXME: don't count occluded samples
-    VectorSet(lightsurf->radiosity, 0, 0, 0);
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-    for (int j = 0; j < lightsurf->numpoints; j++) {
-        lightsample_t *sample = &lightmap->samples[j];
-        vec3_t color;
-        VectorCopy(sample->color, color);
-        VectorAdd(lightsurf->radiosity, color, lightsurf->radiosity);
-    }
-    VectorScale(lightsurf->radiosity, 1.0/lightsurf->numpoints, lightsurf->radiosity);
-
-    // clamp components at 512
-//    for (int i=0;i<3;i++)
-//        lightsurf->radiosity[i] = qmin(512.0f, lightsurf->radiosity[i]);
-
-    /* Calc average texture color */
-    VectorSet(lightsurf->texturecolor, 0, 0, 0);
-    for (int j = 0; j < lightsurf->numpoints; j++) {
-        int palidx = SampleTexture(face, bsp, lightsurf->points[j]);
-        if (palidx >= 0) {
-            vec3_t texcolor = {static_cast<float>(thepalette[3*palidx]), static_cast<float>(thepalette[3*palidx + 1]), static_cast<float>(thepalette[3*palidx + 2])};
-            VectorAdd(lightsurf->texturecolor, texcolor, lightsurf->texturecolor);
-        }
-    }
-    VectorScale(lightsurf->texturecolor, 1.0f/lightsurf->numpoints, lightsurf->texturecolor);
-    
-    if (bounce.boolValue()) {
-        // make bounce light, only if this face is shadow casting
-        if (modelinfo->shadow.boolValue()) {
-            vec3_t gray = {127, 127, 127};
-            
-            // lerp between gray and the texture color according to `bouncecolorscale`
-            vec3_t blendedcolor = {0, 0, 0};
-            VectorMA(blendedcolor, bouncecolorscale.floatValue(), lightsurf->texturecolor, blendedcolor);
-            VectorMA(blendedcolor, 1-bouncecolorscale.floatValue(), gray, blendedcolor);
-            
-            vec3_t emitcolor;
-            for (int k=0; k<3; k++) {
-                emitcolor[k] = (lightsurf->radiosity[k] / 255.0f) * (blendedcolor[k] / 255.0f);
-            }
-            winding_t *w = WindingFromFace(bsp, face);
-            AddBounceLight(lightsurf->midpoint, emitcolor, lightsurf->plane.normal, WindingArea(w), bsp);
-            free(w);
-        }
-    } else {
-        WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
-    }
-}
-
-void
-LightFaceIndirect(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
-{
-    lightmap_t *lightmaps = ctx->lightmaps;
-    lightsurf_t *lightsurf = ctx->lightsurf;
-    
-    if (lightsurf == NULL)
-        return; /* this face is not lightmapped */
-    
-    if (debugmode == debugmode_bounce)
-    {
-        Lightmap_ClearAll(lightmaps);
-    }
-    
-    /* add indirect lighting */
-    LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
-    
-    WriteLightmaps(ctx->bsp, face, facesup, lightsurf, lightmaps);
+    WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
 }
