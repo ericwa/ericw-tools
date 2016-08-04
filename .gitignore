@@ -1,2 +1,4 @@
 bin/
 build/
+CMakeFiles/
+*.xcodeproj
