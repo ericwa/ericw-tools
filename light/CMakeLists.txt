@@ -4,6 +4,8 @@ project (light CXX C)
 set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/entities.hh
 	${CMAKE_SOURCE_DIR}/include/light/light.hh
+	${CMAKE_SOURCE_DIR}/include/light/ltface.hh
+	${CMAKE_SOURCE_DIR}/include/light/trace.hh
 	${CMAKE_SOURCE_DIR}/include/light/litfile.hh)
 
 set(LIGHT_SOURCES
@@ -27,8 +29,12 @@ FIND_PACKAGE(embree 2.0)
 if (embree_FOUND)
 	MESSAGE(STATUS "Embree library found: ${EMBREE_LIBRARY}")
 	INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
+	set(LIGHT_INCLUDES
+		${CMAKE_SOURCE_DIR}/include/light/trace_embree.hh
+		${LIGHT_INCLUDES})
 	set(LIGHT_SOURCES
 		trace_embree.cc
+		${CMAKE_SOURCE_DIR}/include/light/trace_embree.hh
 		${LIGHT_SOURCES})
 endif(embree_FOUND)
 

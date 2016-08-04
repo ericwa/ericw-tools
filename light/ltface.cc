@@ -19,8 +19,13 @@
 
 #include <light/light.hh>
 #include <light/entities.hh>
+#include <light/trace.hh>
+#include <light/ltface.hh>
 
 #include <cassert>
+
+static void
+PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
 
 /* ======================================================================== */
 
@@ -142,7 +147,7 @@ TriCentroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
         out[i] = (v0->point[i] + v1->point[i] + v2->point[i]) / 3.0;
 }
 
-vec_t
+static vec_t
 TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 {
     int i;
@@ -270,7 +275,7 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 }
 
 /* Debug helper - move elsewhere? */
-void
+static void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     const texinfo_t *tex = &bsp->texinfo[face->texinfo];
@@ -303,7 +308,6 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
  * Fills in surf->texmins[], surf->texsize[] and sets surf->exactmid[]
  * ================
  */
-__attribute__((noinline))
 static void
 CalcFaceExtents(const bsp2_dface_t *face,
                 const bsp2_t *bsp, lightsurf_t *surf)
@@ -403,7 +407,7 @@ const vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int
         return bsp->dvertexes[GetSurfaceVertex(bsp, f, v)].point;
 }
 
-vec_t
+static vec_t
 TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
 {
     vec3_t edge0, edge1, cross;
@@ -611,7 +615,7 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
 }
 
 // Dump points to a .map file
-void
+static void
 CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
 {
     const int facenum = surf->face - bsp->dfaces;
@@ -647,7 +651,6 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
  * to get the world xyz value of the sample point
  * =================
  */
-__attribute__((noinline))
 static void
 CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf, const bsp2_t *bsp, const bsp2_dface_t *face)
 {
@@ -705,7 +708,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     }
 }
 
-int
+static int
 DecompressedVisSize(const bsp2_t *bsp)
 {
     return (bsp->dmodels[0].visleafs + 7) / 8;
@@ -746,7 +749,7 @@ static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char
     }
 }
 
-bool
+static bool
 Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
 {
     const int num_pvsclusterbytes = DecompressedVisSize(bsp);
@@ -777,7 +780,7 @@ Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
 }
 
 // returns true if pvs can see leaf
-bool
+static bool
 Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf)
 {
     const int leafnum = (leaf - bsp->dleafs);
@@ -838,7 +841,6 @@ CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
     }
 }
 
-__attribute__((noinline))
 static void
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
                const bsp2_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
@@ -962,7 +964,8 @@ Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lig
  * 
  * Sets all styles to 255, doesn't actually clear the data.
  */
-void Lightmap_ClearAll(lightmap_t *lightmaps)
+static void
+Lightmap_ClearAll(lightmap_t *lightmaps)
 {
     for (int i = 0; i <= MAXLIGHTMAPS; i++) {
         lightmaps[i].style = 255;
@@ -993,7 +996,6 @@ Lightmap_Save(lightmap_t *lightmaps, const lightsurf_t *lightsurf,
 /*
  * Average adjacent points on the grid to soften shadow edges
  */
-__attribute__((noinline))
 static void
 Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
 {
@@ -1280,7 +1282,7 @@ ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
     VectorMA(point, -dist, plane->normal, out);
 }
 
-qboolean
+static qboolean
 VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf)
 {
     if (novis) return false;
@@ -1792,7 +1794,7 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
     return false;
 }
 
-void
+static void
 LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
     //const dmodel_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
@@ -2008,7 +2010,7 @@ GetDirtVector(int i, vec3_t out)
     }
 }
 
-float
+static float
 DirtAtPoint(raystream_t *rs, const vec3_t point, const vec3_t normal, const dmodel_t *selfshadow)
 {
     if (!dirt_in_use) {

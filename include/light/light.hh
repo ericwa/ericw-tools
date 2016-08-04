@@ -28,6 +28,7 @@
 #include <common/polylib.h>
 
 #include <light/litfile.hh>
+#include <light/trace.hh>
 
 #include <vector>
 #include <map>
@@ -39,54 +40,6 @@
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
 
-enum class hittype_t : uint8_t {
-    NONE = 0,
-    SOLID = 1,
-    SKY = 2
-};
-
-/*
- * Convenience functions TestLight and TestSky will test against all shadow
- * casting bmodels and self-shadow the model 'self' if self != NULL. Returns
- * true if sky or light is visible, respectively.
- */
-qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
-qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
-
-// used for CalcPoints
-bool IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self, vec_t *hitdist_out);
-
-class raystream_t {
-public:
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr) = 0;
-    virtual size_t numPushedRays() = 0;
-    virtual void tracePushedRaysOcclusion() = 0;
-    virtual void tracePushedRaysIntersection() = 0;
-    virtual bool getPushedRayOccluded(size_t j) = 0;
-    virtual float getPushedRayDist(size_t j) = 0;
-    virtual float getPushedRayHitDist(size_t j) = 0;
-    virtual hittype_t getPushedRayHitType(size_t j) = 0;
-    virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
-    virtual int getPushedRayPointIndex(size_t j) = 0;
-    virtual void getPushedRayColor(size_t j, vec3_t out) = 0;
-    virtual void clearPushedRays() = 0;
-    virtual ~raystream_t() {};
-};
-
-raystream_t *MakeRayStream(int maxrays);
-
-void Embree_TraceInit(const bsp2_t *bsp);
-qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
-qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
-bool Embree_IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self, vec_t *hitdist_out);
-
-raystream_t *Embree_MakeRayStream(int maxrays);
-
-int
-SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
-    
 typedef struct {
     vec3_t color;
     vec3_t direction;
@@ -109,9 +62,6 @@ public:
 /* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap resolution. */
 /*with extra sampling, lit+lux etc, we need at least 46mb stack space per thread. yes, that's a lot. on the plus side, it doesn't affect bsp complexity (actually, can simplify it a little)*/
 #define MAXDIMENSION (255+1)
-
-/* Allow space for 4x4 oversampling */
-//#define SINGLEMAP (MAXDIMENSION*MAXDIMENSION*4*4)
 
 typedef struct {
     vec3_t data[3];     /* permuted 3x3 matrix */
@@ -223,29 +173,16 @@ typedef struct {
     const bsp2_dleaf_t *leaf;
 } bouncelight_t;
 
-void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp);
-const std::vector<bouncelight_t> &BounceLights();
-
 extern byte thepalette[768];
     
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
 extern std::vector<const modelinfo_t *> tracelist;
 extern std::vector<const modelinfo_t *> selfshadowlist;
 
+void vec_from_mangle(vec3_t v, const vec3_t m);
 
-void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
-void LightFaceShutdown(struct ltface_ctx *ctx);
-const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
-void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
-void MakeTnodes(const bsp2_t *bsp);
-
-int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
-const vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
-/* access the final phong-shaded vertex normal */
-const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
-
-const bsp2_dface_t *
-Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
+/* detect colors with components in 0-1 and scale them to 0-255 */
+void normalize_color_format(vec3_t color);
 
 /* command-line options */
 
@@ -431,12 +368,6 @@ enum class vec3_transformer_t {
 };
 
 
-void vec_from_mangle(vec3_t v, const vec3_t m);
-
-/* detect colors with components in 0-1 and scale them to 0-255 */
-void normalize_color_format(vec3_t color);
-
-
 class lockable_vec3_t : public lockable_setting_t {
 private:
     vec3_t _default, _value;
@@ -516,7 +447,7 @@ public:
     }
 };
 
-void SetGlobalSetting(std::string name, std::string value, bool cmdline);
+
 
 //
 // worldspawn keys / command-line settings
@@ -696,12 +627,6 @@ public:
 };
 
 
-/*
- * Return space for the lightmap and colourmap at the same time so it can
- * be done in a thread-safe manner.
- */
-void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
-
 extern byte *filebase;
 extern byte *lit_filebase;
 extern byte *lux_filebase;
@@ -721,50 +646,21 @@ typedef enum {
 } backend_t;
     
 extern backend_t rtbackend;
-    
-void SetupDirt();
-
-/* Used by fence texture sampling */
-void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
-
-vec_t
-TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2);
-    
 extern qboolean surflight_dump;
-
 extern char mapfilename[1024];
 
-void
-PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
-    
-const miptex_t *
-Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face);
-    
-const char *
-Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
+// public functions
 
-void
-Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out);
-
-plane_t Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f);
+lockable_setting_t *FindSetting(std::string name);
+void SetGlobalSetting(std::string name, std::string value, bool cmdline);
+void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
+const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
+int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
 void Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm);
-
-void FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out);
-
-vec_t TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2);
-
-/* vis testing */
-const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
-int Light_PointContents( const bsp2_t *bsp, const vec3_t point );
-bool Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out);
-int DecompressedVisSize(const bsp2_t *bsp);
-bool Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf);
-    
-/* PVS index (light.cc) */
+const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
+plane_t Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f);
+const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
+const std::vector<bouncelight_t> &BounceLights();
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
-const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face);    
-qboolean VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf);
-
-void GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
 
 #endif /* __LIGHT_LIGHT_H__ */

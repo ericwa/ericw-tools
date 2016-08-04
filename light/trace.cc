@@ -18,6 +18,11 @@
 */
 
 #include <light/light.hh>
+#include <light/trace.hh>
+#include <light/ltface.hh>
+#ifdef HAVE_EMBREE
+#include <light/trace_embree.hh>
+#endif
 #include <cassert>
 
 #define TRACE_HIT_NONE  0
@@ -40,7 +45,7 @@ typedef struct traceinfo_s {
 } traceinfo_t;
 
 /* Stopped by solid and sky */
-bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
+static bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
 
 /*
  * ---------
@@ -64,7 +69,7 @@ bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end
  * Yet, which side is the node with the solid leaf child determines
  * what the hit point will be.
  */
-int TraceLine(const dmodel_t *model, const int traceflags,
+static int TraceLine(const dmodel_t *model, const int traceflags,
               const vec3_t start, const vec3_t end);
 
 typedef struct tnode_s {
@@ -241,7 +246,7 @@ Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, pla
     }
 }
 
-void
+static void
 MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
     info->numedges = face->numedges;
@@ -322,7 +327,7 @@ MakeFenceInfo(const bsp2_t *bsp)
     }
 }
 
-void
+static void
 BSP_MakeTnodes(const bsp2_t *bsp)
 {
     bsp_static = bsp;
@@ -343,7 +348,7 @@ BSP_MakeTnodes(const bsp2_t *bsp)
  * ============================================================================
  */
 
-uint32_t fix_coord(vec_t in, uint32_t width)
+static uint32_t fix_coord(vec_t in, uint32_t width)
 {
     if (in > 0)
     {
@@ -448,7 +453,7 @@ typedef struct {
  * ==============
  */
 #define MAX_TSTACK 256
-int
+static int
 TraceLine(const dmodel_t *model, const int traceflags,
           const vec3_t start, const vec3_t stop)
 {
@@ -645,7 +650,7 @@ BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
  * or if it started in the void.
  * ============
  */
-hittype_t
+static hittype_t
 BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     vec3_t stop;
@@ -694,7 +699,8 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmo
     return hittype_t::NONE;
 }
 
-bool BSP_IntersectSingleModel(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
+static bool
+BSP_IntersectSingleModel(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
 {
     vec3_t stop;
     VectorMA(start, dist, dirn, stop);
@@ -720,7 +726,8 @@ TraceFaces
 From lordhavoc, johnfitz (RecursiveLightPoint)
 =============
 */
-bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
+static bool
+TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
 {
     float		front, back, frac;
     vec3_t		mid;

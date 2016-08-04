@@ -23,6 +23,7 @@
 
 #include <light/light.hh>
 #include <light/entities.hh>
+#include <light/ltface.hh>
 
 #include <common/polylib.h>
 
@@ -154,7 +155,8 @@ void SetGlobalSetting(std::string name, std::string value, bool cmdline) {
     globalsettings.setSetting(name, value, cmdline);
 }
 
-void InitSettings()
+static void
+InitSettings()
 {
     globalsettings = {{
         &minlight,
@@ -205,6 +207,10 @@ PrintOptionsSummary(void)
     }
 }
 
+/*
+ * Return space for the lightmap and colourmap at the same time so it can
+ * be done in a thread-safe manner.
+ */
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
@@ -467,6 +473,7 @@ Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
         VectorCopy(bsp->dplanes[f->planenum].normal, norm);
 }
 
+/* access the final phong-shaded vertex normal */
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
 {
     const auto &face_normals_vector = vertex_normals.at(f);
@@ -842,7 +849,8 @@ public:
     vec3_t directlight;
 };
 
-unique_ptr<patch_t> MakePatch (winding_t *w)
+static unique_ptr<patch_t>
+MakePatch (winding_t *w)
 {
     unique_ptr<patch_t> p { new patch_t };
     p->w = w;
@@ -902,6 +910,9 @@ Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t colo
         VectorSet(color, 127, 127, 127);
     }
 }
+
+static void
+AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp);
 
 static void *
 MakeBounceLightsThread (void *arg)
@@ -966,7 +977,8 @@ MakeBounceLightsThread (void *arg)
     return NULL;
 }
 
-void AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
+static void
+AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
 {
     bouncelight_t l;
     VectorCopy(pos, l.pos);
@@ -985,7 +997,8 @@ const std::vector<bouncelight_t> &BounceLights()
 }
 
 // Returns color in [0,1]
-void Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
+static void
+Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
 {
     VectorSet(color, 0, 0, 0);
     if (!bsp->texdatasize)
@@ -1003,7 +1016,8 @@ void Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
     VectorScale(color, 1.0 / (miptex->width * miptex->height), color);
 }
 
-void MakeTextureColors (const bsp2_t *bsp)
+static void
+MakeTextureColors (const bsp2_t *bsp)
 {
     logprint("--- MakeTextureColors ---\n");
  
@@ -1026,7 +1040,8 @@ void MakeTextureColors (const bsp2_t *bsp)
     }
 }
 
-void MakeBounceLights (const bsp2_t *bsp)
+static void
+MakeBounceLights (const bsp2_t *bsp)
 {
     logprint("--- MakeBounceLights ---\n");
     
@@ -1079,7 +1094,7 @@ ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcou
     *vertcount += face->numedges;
 }
 
-void
+static void
 ExportObj(const char *filename, const bsp2_t *bsp)
 {
     FILE *objfile = InitObjFile(filename);
@@ -1102,7 +1117,8 @@ vector<vector<const bsp2_dleaf_t *>> faceleafs;
 vector<bool> leafhassky;
 
 // index some stuff from the bsp
-void BuildPvsIndex(const bsp2_t *bsp)
+static void
+BuildPvsIndex(const bsp2_t *bsp)
 {
     if (bsp->visdatasize != 0) {
         if (novis) {
@@ -1145,7 +1161,8 @@ bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf)
     return leafhassky.at(leafnum);
 }
 
-const bsp2_dleaf_t **Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face)
+static const bsp2_dleaf_t **
+Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
     const int facenum = face - bsp->dfaces;
     auto &leafs = faceleafs.at(facenum);
@@ -1191,7 +1208,8 @@ Face_NearestCentroid(const bsp2_t *bsp, const vec3_t point)
     return nearest_face;
 }
 
-void FindDebugFace(const bsp2_t *bsp)
+static void
+FindDebugFace(const bsp2_t *bsp)
 {
     if (!dump_face)
         return;
@@ -1235,7 +1253,8 @@ Vertex_NearestPoint(const bsp2_t *bsp, const vec3_t point)
     return nearest_vert;
 }
 
-void FindDebugVert(const bsp2_t *bsp)
+static void
+FindDebugVert(const bsp2_t *bsp)
 {
     if (!dump_vert)
         return;

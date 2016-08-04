@@ -23,6 +23,7 @@
 
 #include <light/light.hh>
 #include <light/entities.hh>
+#include <light/ltface.hh>
 
 using strings = std::vector<std::string>;
 
