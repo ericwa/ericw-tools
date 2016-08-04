@@ -591,10 +591,6 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             TexCoordToWorld(us + (x/10.0), ut + (y/10.0), &surf->texorg, testpoint);
             VectorAdd(testpoint, offset, testpoint);
             
-            plane_t hitplane = {0};
-            
-            const dmodel_t *selfshadow = (surf->modelinfo->shadowself.boolValue()) ? surf->modelinfo->model : NULL;
-            
             vec3_t dirn;
             VectorSubtract(testpoint, surf->midpoint, dirn);
             vec_t dist = VectorNormalize(dirn);
@@ -604,7 +600,7 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             
             // trace from surf->midpoint to testpoint
             vec_t hitdist = 0;
-            if (hittype_t::SOLID == DirtTrace(surf->midpoint, dirn, dist, selfshadow, &hitdist, &hitplane, NULL)) {
+            if (IntersectSingleModel(surf->midpoint, dirn, dist, surf->modelinfo->model, &hitdist)) {
                 // make a corrected point
                 VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), dirn, corrected);
                 return true;

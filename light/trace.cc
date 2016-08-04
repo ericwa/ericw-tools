@@ -694,6 +694,24 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmo
     return hittype_t::NONE;
 }
 
+bool BSP_IntersectSingleModel(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
+{
+    vec3_t stop;
+    VectorMA(start, dist, dirn, stop);
+    
+    traceinfo_t ti = {0};
+    VectorCopy(dirn, ti.dir);
+
+    if (TraceFaces (&ti, self->headnode[0], start, stop)) {
+        if (hitdist_out) {
+            vec3_t delta;
+            VectorSubtract(ti.point, start, delta);
+            *hitdist_out = VectorLength(delta);
+        }
+        return true;
+    }
+    return false;
+}
 
 /*
 =============
@@ -818,6 +836,19 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmo
 #endif
     if (rtbackend == backend_bsp) {
         return BSP_DirtTrace(start, dirn, dist, self, hitdist_out, hitplane_out, face_out);
+    }
+    Error("no backend available");
+}
+
+bool IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
+{
+#ifdef HAVE_EMBREE
+    if (rtbackend == backend_embree) {
+        return Embree_IntersectSingleModel(start, dir, dist, self, hitdist_out);
+    }
+#endif
+    if (rtbackend == backend_bsp) {
+        return BSP_IntersectSingleModel(start, dir, dist, self, hitdist_out);
     }
     Error("no backend available");
 }
