@@ -74,7 +74,7 @@ InterruptThreadProgress__(void)
  *                              WIN32
  * ===================================================================
  */
-#ifdef WIN32
+#ifdef USE_WIN32THREADS
 #define HAVE_THREADS
 
 #include <windows.h>
@@ -159,7 +159,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     free(threadid);
 }
 
-#endif /* WIN32 */
+#endif /* USE_WIN32THREADS */
 
 /*
  * ===================================================================

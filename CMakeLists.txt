@@ -29,7 +29,9 @@ find_package (Threads)
 
 if (CMAKE_USE_PTHREADS_INIT)
 	add_definitions(-DUSE_PTHREADS)
-endif (CMAKE_USE_PTHREADS_INIT)
+elseif (CMAKE_USE_WIN32_THREADS_INIT)
+	add_definitions(-DUSE_WIN32THREADS)
+endif ()
 
 # (see http://sourceforge.net/p/mingw-w64/wiki2/printf%20and%20scanf%20family/)
 if (MINGW)
@@ -39,6 +41,9 @@ endif (MINGW)
 if (UNIX)
 	add_definitions(-DLINUX)
 endif (UNIX)
+
+set (CMAKE_C_FLAGS "--std=gnu99 ${CMAKE_C_FLAGS}")
+set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
 
 add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
 
