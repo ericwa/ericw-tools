@@ -1,7 +1,5 @@
 version: 1.0.{build}
 build_script:
-- ps: |
-$env:Path += ";C:\cygwin64\bin"
-& build-win32.ps1
+- ps: & build-win32.ps1
 artifacts:
 - path: cmakebuild\*.zip

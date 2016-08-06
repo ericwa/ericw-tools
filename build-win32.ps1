@@ -11,6 +11,7 @@ cd ..
 cd ..
 
 # build tyrutils
+$env:Path += ";C:\cygwin64\bin" # for groff, used for manuals
 mkdir cmakebuild
 cd cmakebuild
 cmake .. -T v140_xp -Dembree_DIR="$EmbreeInstallDir"
