@@ -875,13 +875,13 @@ public:
     
     bsp_ray_t(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color) :
         _pointindex{i},
-        _origin{origin[0], origin[1], origin[2]},
-        _dir{dir[0], dir[1], dir[2]},
         _maxdist{dist},
         _selfshadow{selfshadow},
         _hitdist{dist},
         _hittype{hittype_t::NONE},
         _hit_occluded{false} {
+			VectorCopy(origin, _origin);
+			VectorCopy(dir, _dir);
             if (color != nullptr) {
                 VectorCopy(color, _color);
             }

@@ -83,16 +83,9 @@ public:
     
     light_t(void) :
         spotlight { false },
-        spotvec { 0, 0, 0 },
         spotfalloff { 0 },
         spotfalloff2 { 0 },
         projectedmip { nullptr },
-        projectionmatrix {
-            0,0,0,0,
-            0,0,0,0,
-            0,0,0,0,
-            0,0,0,0,
-        },
         epairs {nullptr},
         targetent {nullptr},
         generated {false},
@@ -119,7 +112,13 @@ public:
         mangle { "mangle", 0, 0, 0 }, // not transformed to vec
         projangle { "project_mangle", 20, 0, 0 }, // not transformed to vec
         project_texture { "project_texture", "" }
-    {}
+    {
+		VectorSet(spotvec, 0, 0, 0);
+		
+		for (int i = 0; i < 16; i++) {
+			projectionmatrix[i] = 0;
+		}
+	}
     
     settingsdict_t settings() {
         return {{

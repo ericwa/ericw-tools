@@ -22,6 +22,7 @@
 
 #include <float.h>
 #include <math.h>
+#include <common/cmdlib.h>
 
 #ifdef __cplusplus
 extern "C" {

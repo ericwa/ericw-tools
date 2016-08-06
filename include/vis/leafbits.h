@@ -22,6 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <common/cmdlib.h>
 
 /* Use some GCC builtins */
 #if !defined(ffsl) && defined(__GNUC__)
@@ -73,7 +74,8 @@ ClearLeafBit(leafbits_t *bits, int leafnum)
 static inline size_t
 LeafbitsSize(int numleafs)
 {
-    return offsetof(leafbits_t, bits[(numleafs + LEAFMASK) >> LEAFSHIFT]);
+	int numblocks = (numleafs + LEAFMASK) >> LEAFSHIFT;
+	return sizeof(leafbits_t) + (sizeof(leafblock_t) * numblocks);
 }
 
 #endif /* VIS_LEAFBITS_H */

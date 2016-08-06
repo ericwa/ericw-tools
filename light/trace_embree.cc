@@ -33,7 +33,7 @@
 
 using namespace std;
 
-static constexpr float MAX_SKY_RAY_DEPTH = 8192.0f;
+static const float MAX_SKY_RAY_DEPTH = 8192.0f;
 
 /**
  * i is between 0 and face->numedges - 1
@@ -197,8 +197,8 @@ Embree_FilterFuncN(int* valid,
                    const struct RTCHitN* potentialHit,
                    const size_t N)
 {
-    constexpr int VALID = -1;
-    constexpr int INVALID = 0;
+    const int VALID = -1;
+	const int INVALID = 0;
     
     for (size_t i=0; i<N; i++) {
         if (valid[i] != VALID) {
