@@ -147,6 +147,8 @@ void Q_CopyFile(const char *from, char *to);
 extern qboolean archive;
 extern char archivedir[1024];
 
+int q_snprintf(char *str, size_t size, const char *format, ...);
+
 #ifdef __cplusplus
 }
 #endif

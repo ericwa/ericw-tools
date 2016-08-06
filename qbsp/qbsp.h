@@ -637,6 +637,8 @@ void Message(int MsgType, ...);
 void Error(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
 
+int q_snprintf(char *str, size_t size, const char *format, ...);
+
 #ifdef __cplusplus
 }
 #endif

@@ -121,11 +121,11 @@ MemString(int bytes)
     static char buf[20];
 
     if (bytes > 1024 * 1024 * 1024 / 2)
-        snprintf(buf, 20, "%0.1fG", (float)bytes / (1024 * 1024 * 1024));
+        q_snprintf(buf, 20, "%0.1fG", (float)bytes / (1024 * 1024 * 1024));
     else if (bytes > 1024 * 1024 / 2)
-        snprintf(buf, 20, "%0.1fM", (float)bytes / (1024 * 1024));
+        q_snprintf(buf, 20, "%0.1fM", (float)bytes / (1024 * 1024));
     else if (bytes > 1024 / 2)
-        snprintf(buf, 20, "%0.1fk", (float)bytes / 1024);
+        q_snprintf(buf, 20, "%0.1fk", (float)bytes / 1024);
     else
         buf[0] = 0;
 
@@ -328,4 +328,43 @@ Message(int msgType, ...)
     }
 
     va_end(argptr);
+}
+
+// from QuakeSpasm
+
+/* platform dependant (v)snprintf function names: */
+#if defined(_WIN32)
+#define	snprintf_func		_snprintf
+#define	vsnprintf_func		_vsnprintf
+#else
+#define	snprintf_func		snprintf
+#define	vsnprintf_func		vsnprintf
+#endif
+
+int q_vsnprintf(char *str, size_t size, const char *format, va_list args)
+{
+	int		ret;
+
+	ret = vsnprintf_func(str, size, format, args);
+
+	if (ret < 0)
+		ret = (int)size;
+	if (size == 0)	/* no buffer */
+		return ret;
+	if ((size_t)ret >= size)
+		str[size - 1] = '\0';
+
+	return ret;
+}
+
+int q_snprintf(char *str, size_t size, const char *format, ...)
+{
+	int		ret;
+	va_list		argptr;
+
+	va_start(argptr, format);
+	ret = q_vsnprintf(str, size, format, argptr);
+	va_end(argptr);
+
+	return ret;
 }

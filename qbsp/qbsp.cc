@@ -63,7 +63,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
         if (entity == pWorldEnt() + 1)
             Message(msgProgress, "Internal Entities");
-        snprintf(mod, sizeof(mod), "*%d", map.cTotal[LUMP_MODELS]);
+        q_snprintf(mod, sizeof(mod), "*%d", map.cTotal[LUMP_MODELS]);
         if (options.fVerbose)
             PrintEntity(entity);
 
@@ -230,7 +230,7 @@ UpdateEntLump(void)
         if (!Q_strcasecmp(classname, "func_group"))
             continue;
 
-        snprintf(modname, sizeof(modname), "*%d", modnum);
+        q_snprintf(modname, sizeof(modname), "*%d", modnum);
         SetKeyValue(entity, "model", modname);
         modnum++;
 

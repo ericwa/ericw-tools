@@ -120,11 +120,11 @@ WADList_Init(const char *wadstring)
 
         if (!options.wadPath[0] || IsAbsolutePath(fname)) {
             fpath = (char *)AllocMem(OTHER, (pos - fname) + 1, false);
-            snprintf(fpath, (pos - fname) + 1, "%s", fname);
+            q_snprintf(fpath, (pos - fname) + 1, "%s", fname);
         } else {
             pathlen = strlen(options.wadPath) + 1 + (pos - fname);
             fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
-            snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
+            q_snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
         }
         wad.file = fopen(fpath, "rb");
         if (wad.file) {

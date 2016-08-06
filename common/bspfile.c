@@ -35,7 +35,7 @@ BSPVersionString(int32_t version)
         return "BSP2";
     default:
         buffer = buffers[1 & ++index];
-        snprintf(buffer, sizeof(buffers[0]), "%d", version);
+        q_snprintf(buffer, sizeof(buffers[0]), "%d", version);
         return buffer;
     }
 }

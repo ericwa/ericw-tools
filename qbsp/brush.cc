@@ -319,7 +319,7 @@ FixRotateOrigin(mapentity_t *entity)
         VectorCopy(vec3_origin, offset);
     }
 
-    snprintf(value, sizeof(value), "%d %d %d", (int)offset[0],
+    q_snprintf(value, sizeof(value), "%d %d %d", (int)offset[0],
              (int)offset[1], (int)offset[2]);
     SetKeyValue(entity, "origin", value);
 }

@@ -53,7 +53,7 @@ VecStr(const vec3_t vec)
     char *buf;
 
     buf = buffers[current++ & 7];
-    snprintf(buf, sizeof(buffers[0]), "%i %i %i",
+    q_snprintf(buf, sizeof(buffers[0]), "%i %i %i",
              (int)vec[0], (int)vec[1], (int)vec[2]);
 
     return buf;
@@ -67,7 +67,7 @@ VecStrf(const vec3_t vec)
     char *buf;
 
     buf = buffers[current++ & 7];
-    snprintf(buf, sizeof(buffers[0]), "%.2f %.2f %.2f",
+    q_snprintf(buf, sizeof(buffers[0]), "%.2f %.2f %.2f",
              vec[0], vec[1], vec[2]);
 
     return buf;

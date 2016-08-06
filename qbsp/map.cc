@@ -71,7 +71,7 @@ AddAnimTex(const char *name)
      * Always add the lower numbered animation frames first, otherwise
      * many Quake engines will exit with an error loading the bsp.
      */
-    snprintf(framename, sizeof(framename), "%s", name);
+    q_snprintf(framename, sizeof(framename), "%s", name);
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
         for (j = 0; j < map.nummiptex(); j++) {

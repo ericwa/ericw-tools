@@ -84,7 +84,7 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
         lump.disksize = lump.size;
         lump.compression = 0;
         lump.pad1 = lump.pad2 = 0;
-        snprintf(lump.name, sizeof(lump.name), "%s", miptex->name);
+        q_snprintf(lump.name, sizeof(lump.name), "%s", miptex->name);
 
         filepos += lump.disksize;
 
