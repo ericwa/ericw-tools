@@ -1321,6 +1321,20 @@ GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec
         // apply anglescale
         cosangle = (1.0 - entity.anglescale.floatValue()) + entity.anglescale.floatValue() * cosangle;
         
+        /* Check spotlight cone */
+        float spotscale = 1;
+        if (entity.spotlight) {
+            vec_t falloff = DotProduct(entity.spotvec, originLightDir);
+            if (falloff > entity.spotfalloff)
+                continue;
+            if (falloff > entity.spotfalloff2) {
+                /* Interpolate between the two spotlight falloffs */
+                spotscale = falloff - entity.spotfalloff2;
+                spotscale /= entity.spotfalloff - entity.spotfalloff2;
+                spotscale = 1.0 - spotscale;
+            }
+        }
+        
         vec_t lightval = GetLightValue(&entity, dist);
         if (lightval < 0.25)
             continue;
@@ -1328,7 +1342,7 @@ GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec
         if (!TestLight(*entity.origin.vec3Value(), origin, NULL))
             continue;
         
-        VectorMA(colorout, lightval * cosangle / 255.0f, *entity.color.vec3Value(), colorout);
+        VectorMA(colorout, lightval * cosangle * spotscale / 255.0f, *entity.color.vec3Value(), colorout);
     }
     
     for (const sun_t &sun : GetSuns())
