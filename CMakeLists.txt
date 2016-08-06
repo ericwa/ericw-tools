@@ -47,6 +47,13 @@ set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
 
 add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
 
+if (MSVC)
+	# TODO: remove these 
+	add_definitions("/D_CRT_SECURE_NO_WARNINGS")
+	add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
+	add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
+endif (MSVC)
+
 #minimum version that supports unordered_map
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 
