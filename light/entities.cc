@@ -243,6 +243,9 @@ Dirt_ResolveFlag(int dirtInt)
 static void
 AddSun(vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt)
 {
+    if (light == 0.0f)
+        return;
+    
     sun_t sun {};
     VectorCopy(sunvec, sun.sunvec);
     VectorNormalize(sun.sunvec);
