@@ -20,6 +20,7 @@ set(LIGHT_SOURCES
 	${CMAKE_SOURCE_DIR}/common/log.c
 	${CMAKE_SOURCE_DIR}/common/threads.c
 	${CMAKE_SOURCE_DIR}/common/polylib.c
+	${CMAKE_SOURCE_DIR}/common/bsputils.cc
 	${COMMON_INCLUDES}
 	${LIGHT_INCLUDES})
 

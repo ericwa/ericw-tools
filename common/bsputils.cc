@@ -1,0 +1,63 @@
+/*  Copyright (C) 1996-1997  Id Software, Inc.
+ 
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2 of the License, or
+ (at your option) any later version.
+ 
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ 
+ See file, 'COPYING', for details.
+ */
+
+#include <common/bsputils.h>
+#include <assert.h>
+
+/* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
+int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+{
+    int edge = f->firstedge + v;
+    edge = bsp->dsurfedges[edge];
+    if (edge < 0)
+        return bsp->dedges[-edge].v[1];
+    return bsp->dedges[edge].v[0];
+}
+
+static void
+Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
+{
+    assert(num >= 0 && num < bsp->numvertexes);
+    const dvertex_t *v = &bsp->dvertexes[num];
+    
+    for (int i=0; i<3; i++)
+        out[i] = v->point[i];
+}
+
+void
+Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
+{
+    if (f->side)
+        VectorSubtract(vec3_origin, bsp->dplanes[f->planenum].normal, norm);
+    else
+        VectorCopy(bsp->dplanes[f->planenum].normal, norm);
+}
+
+plane_t
+Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    const int vertnum = GetSurfaceVertex(bsp, f, 0);
+    vec3_t vertpos;
+    Vertex_GetPos(bsp, vertnum, vertpos);
+    
+    plane_t res;
+    Face_Normal(bsp, f, res.normal);
+    res.dist = DotProduct(vertpos, res.normal);
+    return res;
+}

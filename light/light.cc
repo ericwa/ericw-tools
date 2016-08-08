@@ -26,6 +26,7 @@
 #include <light/ltface.hh>
 
 #include <common/polylib.h>
+#include <common/bsputils.h>
 
 #ifdef HAVE_EMBREE
 #include <xmmintrin.h>
@@ -454,24 +455,6 @@ AddTriangleNormals(std::map<int, vec3_struct_t> &smoothed_normals, const vec_t *
     weight = AngleBetweenPoints(p1, p3, p2);
     VectorMA(smoothed_normals[v3].v, weight, norm, smoothed_normals[v3].v);
 }
-/* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
-int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
-{
-    int edge = f->firstedge + v;
-    edge = bsp->dsurfedges[edge];
-    if (edge < 0)
-        return bsp->dedges[-edge].v[1];
-    return bsp->dedges[edge].v[0];
-}
-
-void
-Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
-{
-    if (f->side)
-        VectorSubtract(vec3_origin, bsp->dplanes[f->planenum].normal, norm);
-    else
-        VectorCopy(bsp->dplanes[f->planenum].normal, norm);
-}
 
 /* access the final phong-shaded vertex normal */
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
@@ -493,29 +476,6 @@ FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
         }
     }
     return true;
-}
-
-static void
-Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
-{
-    assert(num >= 0 && num < bsp->numvertexes);
-    const dvertex_t *v = &bsp->dvertexes[num];
-    
-    for (int i=0; i<3; i++)
-        out[i] = v->point[i];
-}
-
-plane_t
-Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
-{
-    const int vertnum = GetSurfaceVertex(bsp, f, 0);
-    vec3_t vertpos;
-    Vertex_GetPos(bsp, vertnum, vertpos);
-    
-    plane_t res;
-    Face_Normal(bsp, f, res.normal);
-    res.dist = DotProduct(vertpos, res.normal);
-    return res;
 }
 
 const bsp2_dface_t *

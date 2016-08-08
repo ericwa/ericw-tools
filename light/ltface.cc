@@ -22,6 +22,8 @@
 #include <light/trace.hh>
 #include <light/ltface.hh>
 
+#include <common/bsputils.h>
+
 #include <cassert>
 
 static void

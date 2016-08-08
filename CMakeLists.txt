@@ -23,7 +23,8 @@ set(COMMON_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/common/scriplib.h
 	${CMAKE_SOURCE_DIR}/include/common/threads.h 
 	${CMAKE_SOURCE_DIR}/include/common/trilib.h 
-	${CMAKE_SOURCE_DIR}/include/common/wadlib.h)
+	${CMAKE_SOURCE_DIR}/include/common/wadlib.h
+	${CMAKE_SOURCE_DIR}/include/common/bsputils.h)
 
 find_package (Threads)
 
