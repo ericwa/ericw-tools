@@ -21,7 +21,7 @@
 #include <assert.h>
 
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
-int GetSurfaceVertex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
     int edge = f->firstedge + v;
     edge = bsp->dsurfedges[edge];
@@ -52,7 +52,7 @@ Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
 plane_t
 Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
-    const int vertnum = GetSurfaceVertex(bsp, f, 0);
+    const int vertnum = Face_VertexAtIndex(bsp, f, 0);
     vec3_t vertpos;
     Vertex_GetPos(bsp, vertnum, vertpos);
     

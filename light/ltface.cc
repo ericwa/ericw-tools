@@ -293,7 +293,7 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 
     for (i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
-        int vert = GetSurfaceVertex(bsp, face, i);
+        int vert = Face_VertexAtIndex(bsp, face, i);
         const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
         const vec_t *norm = GetSurfaceVertexNormal(bsp, face, i);
         logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: normal (%3.3f, %3.3f, %3.3f) :: edge %d\n",
@@ -406,7 +406,7 @@ WarnBadMidpoint(const vec3_t point)
 
 const vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
-        return bsp->dvertexes[GetSurfaceVertex(bsp, f, v)].point;
+        return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)].point;
 }
 
 static vec_t
@@ -575,7 +575,7 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
     for (int i = 0; i < face->numedges; i++)
     {
         vec3_t t;
-        int v = GetSurfaceVertex(bsp, face, i);
+        int v = Face_VertexAtIndex(bsp, face, i);
         VectorSubtract(point, bsp->dvertexes[v].point, t);
         const vec_t dist = VectorLength(t);
         if (dist < bestd)

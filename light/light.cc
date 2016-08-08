@@ -485,8 +485,8 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
         return nullptr;
     }
     
-    int v0 = GetSurfaceVertex(bsp, f, edgeindex);
-    int v1 = GetSurfaceVertex(bsp, f, (edgeindex + 1) % f->numedges);
+    int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
+    int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
     
     const auto &v0_faces = vertsToFaces.at(v0);
     const auto &v1_faces = vertsToFaces.at(v1);
@@ -534,7 +534,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     for (int i = 0; i < bsp->numfaces; i++) {
         const bsp2_dface_t *f = &bsp->dfaces[i];
         for (int j = 0; j < f->numedges; j++) {
-            const int v = GetSurfaceVertex(bsp, f, j);
+            const int v = Face_VertexAtIndex(bsp, f, j);
             vertsToFaces[v].push_back(f);
         }
     }
@@ -561,7 +561,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             continue;
         
         for (int j = 0; j < f->numedges; j++) {
-            const int v = GetSurfaceVertex(bsp, f, j);
+            const int v = Face_VertexAtIndex(bsp, f, j);
             // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
             for (const bsp2_dface_t *f2 : vertsToFaces[v]) {
                 if (f2 == f)
@@ -612,11 +612,11 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             
             /* now just walk around the surface as a triangle fan */
             int v1, v2, v3;
-            v1 = GetSurfaceVertex(bsp, f2, 0);
-            v2 = GetSurfaceVertex(bsp, f2, 1);
+            v1 = Face_VertexAtIndex(bsp, f2, 0);
+            v2 = Face_VertexAtIndex(bsp, f2, 1);
             for (int j = 2; j < f2->numedges; j++)
             {
-                v3 = GetSurfaceVertex(bsp, f2, j);
+                v3 = Face_VertexAtIndex(bsp, f2, j);
                 AddTriangleNormals(smoothedNormals, f2_norm, bsp->dvertexes, v1, v2, v3);
                 v2 = v3;
             }
@@ -650,7 +650,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         
         // now, record all of the smoothed normals that are actually part of `f`
         for (int j=0; j<f->numedges; j++) {
-            int v = GetSurfaceVertex(bsp, f, j);
+            int v = Face_VertexAtIndex(bsp, f, j);
             assert(smoothedNormals.find(v) != smoothedNormals.end());
             
             vertex_normals[f].push_back(smoothedNormals[v]);
@@ -1035,7 +1035,7 @@ ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcou
     // export the vertices and uvs
     for (int i=0; i<face->numedges; i++)
     {
-        int vertnum = GetSurfaceVertex(bsp, face, i);
+        int vertnum = Face_VertexAtIndex(bsp, face, i);
         const vec_t *normal = GetSurfaceVertexNormal(bsp, face, i);
         const float *pos = bsp->dvertexes[vertnum].point;
         fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
