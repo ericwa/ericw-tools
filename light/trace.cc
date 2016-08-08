@@ -20,6 +20,7 @@
 #include <light/light.hh>
 #include <light/trace.hh>
 #include <light/ltface.hh>
+#include <common/bsputils.h>
 #ifdef HAVE_EMBREE
 #include <light/trace_embree.hh>
 #endif

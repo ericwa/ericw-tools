@@ -24,6 +24,7 @@
 #include <light/light.hh>
 #include <light/entities.hh>
 #include <light/ltface.hh>
+#include <common/bsputils.h>
 
 using strings = std::vector<std::string>;
 

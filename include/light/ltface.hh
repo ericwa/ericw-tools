@@ -40,14 +40,11 @@
 
 void FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out);
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
-const vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
 vec_t GetLightValue(const light_t *entity, vec_t dist);
 void GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
 void SetupDirt();
 void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
 void LightFaceShutdown(struct ltface_ctx *ctx);
-const miptex_t *Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face);
-const char *Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
 void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
 
 #endif /* __LIGHT_LTFACE_H__ */

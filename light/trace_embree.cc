@@ -20,6 +20,7 @@
 #include <light/light.hh>
 #include <light/trace_embree.hh>
 #include <light/ltface.hh>
+#include <common/bsputils.h>
 #include <embree2/rtcore.h>
 #include <embree2/rtcore_ray.h>
 #include <vector>
@@ -34,17 +35,6 @@
 using namespace std;
 
 static const float MAX_SKY_RAY_DEPTH = 8192.0f;
-
-/**
- * i is between 0 and face->numedges - 1
- */
-// TODO: move elsewhere
-static int VertAtIndex(const bsp2_t *bsp, const bsp2_dface_t *face, const int i)
-{
-        int edge = bsp->dsurfedges[face->firstedge + i];
-        int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
-        return vert;
-}
 
 class sceneinfo {
 public:
@@ -92,9 +82,9 @@ CreateGeometry(const bsp2_t *bsp, RTCScene scene, const std::vector<const bsp2_d
         
         for (int j = 2; j < face->numedges; j++) {
             Triangle *tri = &triangles[tri_index];
-            tri->v0 = VertAtIndex(bsp, face, j-1);
-            tri->v1 = VertAtIndex(bsp, face, j);
-            tri->v2 = VertAtIndex(bsp, face, 0);
+            tri->v0 = Face_VertexAtIndex(bsp, face, j-1);
+            tri->v1 = Face_VertexAtIndex(bsp, face, j);
+            tri->v2 = Face_VertexAtIndex(bsp, face, 0);
             tri_index++;
             
             s.triToFace.push_back(face);

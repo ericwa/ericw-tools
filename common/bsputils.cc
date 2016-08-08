@@ -23,6 +23,9 @@
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
 int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
+    assert(v >= 0);
+    assert(v < f->numedges);
+    
     int edge = f->firstedge + v;
     edge = bsp->dsurfedges[edge];
     if (edge < 0)
@@ -60,4 +63,36 @@ Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
     Face_Normal(bsp, f, res.normal);
     res.dist = DotProduct(vertpos, res.normal);
     return res;
+}
+
+const miptex_t *
+Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    if (!bsp->texdatasize)
+        return NULL;
+    
+    int texnum = bsp->texinfo[face->texinfo].miptex;
+    const dmiptexlump_t *miplump = bsp->dtexdata.header;
+    
+    int offset = miplump->dataofs[texnum];
+    if (offset < 0)
+        return NULL; //sometimes the texture just wasn't written. including its name.
+    
+    const miptex_t *miptex = (miptex_t*)(bsp->dtexdata.base + offset);
+    return miptex;
+}
+
+const char *
+Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    const miptex_t *miptex = Face_Miptex(bsp, face);
+    if (miptex)
+        return miptex->name;
+    else
+        return "";
+}
+
+const float *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+{
+    return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)].point;
 }

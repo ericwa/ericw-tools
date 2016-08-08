@@ -404,11 +404,6 @@ WarnBadMidpoint(const vec3_t point)
 #endif
 }
 
-const vec_t *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
-{
-        return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)].point;
-}
-
 static vec_t
 TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
 {
@@ -2315,33 +2310,6 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     delete ctx->lightsurf->stream;
     
     free(ctx->lightsurf);
-}
-
-const miptex_t *
-Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
-{
-    if (!bsp->texdatasize)
-        return NULL;
-    
-    int texnum = bsp->texinfo[face->texinfo].miptex;
-    const dmiptexlump_t *miplump = bsp->dtexdata.header;
-   
-    int offset = miplump->dataofs[texnum];
-    if (offset < 0)
-        return NULL; //sometimes the texture just wasn't written. including its name.
-    
-    const miptex_t *miptex = (miptex_t*)(bsp->dtexdata.base + offset);
-    return miptex;
-}
-
-const char *
-Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
-{
-    const miptex_t *miptex = Face_Miptex(bsp, face);
-    if (miptex)
-        return miptex->name;
-    else
-        return "";
 }
 
 /*
