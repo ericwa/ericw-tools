@@ -428,13 +428,13 @@ SetupSkyDome()
         }
 
         /* create vertical sun */
-        VectorSet( direction, 0.0f, 0.0f, 1.0f );
+        VectorSet( direction, 0.0f, 0.0f, -1.0f );
 
         if (sunlight2value > 0) {
             AddSun(direction, sunlight2value, *sunlight2_color.vec3Value(), sunlight2_dirt.intValue());
         }
     
-        VectorSet( direction, 0.0f, 0.0f, -1.0f );
+        VectorSet( direction, 0.0f, 0.0f, 1.0f );
     
         if (sunlight3value > 0) {
             AddSun(direction, sunlight3value, *sunlight3_color.vec3Value(), sunlight2_dirt.intValue());
