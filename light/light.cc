@@ -1738,11 +1738,15 @@ main(int argc, const char **argv)
     WriteBSPFile(source, &bspdata);
     end = I_FloatTime();
     logprint("%5.3f seconds elapsed\n", end - start);
-    logprint("%f lights tested per sample point\n",
-             static_cast<double>(total_light_rays) / static_cast<double>(total_samplepoints));
-    logprint("%f lights hit per sample point\n",
+    logprint("\n");
+    logprint("stats:\n");
+    logprint("%f lights tested, %f hits per sample point\n",
+             static_cast<double>(total_light_rays) / static_cast<double>(total_samplepoints),
              static_cast<double>(total_light_ray_hits) / static_cast<double>(total_samplepoints));
-
+    logprint("%f bounce lights tested, %f hits per sample point\n",
+             static_cast<double>(total_bounce_rays) / static_cast<double>(total_samplepoints),
+             static_cast<double>(total_bounce_ray_hits) / static_cast<double>(total_samplepoints));
+    
     close_log();
     
     return 0;

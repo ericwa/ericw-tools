@@ -27,6 +27,7 @@
 #include <cassert>
 
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
+std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
 static void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
@@ -1847,6 +1848,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, indirect);
         }
         
+        total_bounce_rays += rs->numPushedRays();
         rs->tracePushedRaysOcclusion();
         
         const int N = rs->numPushedRays();
@@ -1869,6 +1871,8 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             
             lightsample_t *sample = &lightmap->samples[i];
             VectorAdd(sample->color, indirect, sample->color);
+            
+            total_bounce_ray_hits++;
         }
     }
     

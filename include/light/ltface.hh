@@ -40,6 +40,7 @@
 #include <atomic>
 
 extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
+extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
 void FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out);
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
