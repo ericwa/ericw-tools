@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.1)
 project (light CXX C)
 
 set(LIGHT_INCLUDES
@@ -42,12 +42,6 @@ endif(embree_FOUND)
 
 add_executable(light ${LIGHT_SOURCES})
 target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
-#set_property(TARGET light PROPERTY CXX_STANDARD 11)
-#set_property(TARGET light PROPERTY CXX_STANDARD_REQUIRED ON)
-#set_property(TARGET light PROPERTY C_STANDARD 99)
-
-#set (CMAKE_C_FLAGS "--std=gnu99 ${CMAKE_C_FLAGS}")
-#set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
 
 if (embree_FOUND)
 	target_link_libraries (light ${EMBREE_LIBRARY})

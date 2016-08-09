@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.6)
+cmake_minimum_required (VERSION 3.1)
 project (tyrutils)
 
 # Grab the git describe output and store it in GIT_DESCRIBE
@@ -43,8 +43,10 @@ if (UNIX)
 	add_definitions(-DLINUX)
 endif (UNIX)
 
-set (CMAKE_C_FLAGS "--std=gnu99 ${CMAKE_C_FLAGS}")
-set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
+# set our C/C++ dialects
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 99)
 
 add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
 
