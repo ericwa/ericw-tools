@@ -92,3 +92,25 @@ RandomDir(vec3_t dir)
         assert(dir[i] <=  1.001);
     }
 }
+
+bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA,
+                   const vec3_t minsB, const vec3_t maxsB)
+{
+    for (int i=0; i<3; i++) {
+        if (maxsA[i] < minsB[i]) return true;
+        if (minsA[i] > maxsB[i]) return true;
+    }
+    return false;
+}
+
+void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt) {
+    VectorCopy(pt, mins);
+    VectorCopy(pt, maxs);
+}
+
+void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt) {
+    for (int i=0; i<3; i++) {
+        mins[i] = qmin(mins[i], pt[i]);
+        maxs[i] = qmax(maxs[i], pt[i]);
+    }
+}

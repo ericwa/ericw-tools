@@ -177,6 +177,9 @@ const char *VecStr(const vec3_t vec);
 const char *VecStrf(const vec3_t vec);
 
 void RandomDir(vec3_t dir);
+bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
+void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
+void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
     
 #ifdef __cplusplus
 }
