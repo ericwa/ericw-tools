@@ -1799,7 +1799,7 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
     // get light contribution
     BounceLight_ColorAtDist(vpl, dist, color);
     
-    if (((color[0] + color[1] + color[2]) / 3) < 0.25)
+    if (LightSample_Brightness(color) < 0.25)
         return true;
     
     return false;
@@ -1839,7 +1839,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             vec3_t indirect = {0};
             GetIndirectLighting(&vpl, dir, dist, lightsurf->points[i], lightsurf->normals[i], indirect);
             
-            if (((indirect[0] + indirect[1] + indirect[2]) / 3) < 0.25)
+            if (LightSample_Brightness(indirect) < 0.25)
                 continue;
             
             rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, indirect);
@@ -1855,7 +1855,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             const int i = rs->getPushedRayPointIndex(j);
             vec3_t indirect = {0};
             rs->getPushedRayColor(j, indirect);
-            assert(((indirect[0] + indirect[1] + indirect[2]) / 3) >= 0.25);
+            assert(LightSample_Brightness(indirect) >= 0.25);
             
             /* Use dirt scaling on the indirect lighting.
              * Except, not in bouncedebug mode.
@@ -2241,7 +2241,7 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                    that require the lit and internal lightmap to have the same
                    intensity. (MarkV, some QW engines)
                  */
-                light = (color[0] + color[1] + color[2]) / 3.0;
+                light = LightSample_Brightness(color);
                 if (light < 0) light = 0;
                 if (light > 255) light = 255;
                 *out++ = light;
