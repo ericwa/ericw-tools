@@ -97,8 +97,8 @@ bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA,
                    const vec3_t minsB, const vec3_t maxsB)
 {
     for (int i=0; i<3; i++) {
-        if (maxsA[i] < minsB[i]) return true;
-        if (minsA[i] > maxsB[i]) return true;
+        if (maxsA[i] < (minsB[i] - EQUAL_EPSILON)) return true;
+        if (minsA[i] > (maxsB[i] + EQUAL_EPSILON)) return true;
     }
     return false;
 }
