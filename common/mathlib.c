@@ -19,6 +19,7 @@
 
 #include <common/cmdlib.h>
 #include <common/mathlib.h>
+#include <assert.h>
 
 const vec3_t vec3_origin = { 0, 0, 0 };
 
@@ -71,4 +72,23 @@ VecStrf(const vec3_t vec)
              vec[0], vec[1], vec[2]);
 
     return buf;
+}
+
+// from http://mathworld.wolfram.com/SpherePointPicking.html
+// eqns 6,7,8
+void
+RandomDir(vec3_t dir)
+{
+    const vec_t theta = Random() * 2.0 * M_PI;
+    const vec_t u = (2.0 * Random()) - 1.0;
+    
+    const vec_t s = sqrt(1.0 - (u * u));
+    dir[0] = s * cos(theta);
+    dir[1] = s * sin(theta);
+    dir[2] = u;
+    
+    for (int i=0; i<3; i++) {
+        assert(dir[i] >= -1.001);
+        assert(dir[i] <=  1.001);
+    }
 }

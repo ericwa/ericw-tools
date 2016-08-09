@@ -176,6 +176,8 @@ VectorNormalize(vec3_t v)
 const char *VecStr(const vec3_t vec);
 const char *VecStrf(const vec3_t vec);
 
+void RandomDir(vec3_t dir);
+    
 #ifdef __cplusplus
 }
 #endif
