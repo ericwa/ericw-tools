@@ -77,10 +77,13 @@ VecStrf(const vec3_t vec)
 // from http://mathworld.wolfram.com/SpherePointPicking.html
 // eqns 6,7,8
 void
-RandomDir(vec3_t dir)
+UniformPointOnSphere(vec3_t dir, float u1, float u2)
 {
-    const vec_t theta = Random() * 2.0 * Q_PI;
-    const vec_t u = (2.0 * Random()) - 1.0;
+    assert(u1 >= 0 && u1 <= 1);
+    assert(u2 >= 0 && u2 <= 1);
+    
+    const vec_t theta = u1 * 2.0 * Q_PI;
+    const vec_t u = (2.0 * u2) - 1.0;
     
     const vec_t s = sqrt(1.0 - (u * u));
     dir[0] = s * cos(theta);
@@ -92,6 +95,13 @@ RandomDir(vec3_t dir)
         assert(dir[i] <=  1.001);
     }
 }
+
+void
+RandomDir(vec3_t dir)
+{
+    UniformPointOnSphere(dir, Random(), Random());
+}
+
 
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA,
                    const vec3_t minsB, const vec3_t maxsB)
