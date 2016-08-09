@@ -26,6 +26,8 @@
 
 #include <cassert>
 
+std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
+
 static void
 PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
 
@@ -1296,9 +1298,6 @@ VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf)
     return true;
 }
 
-extern int totalhit;
-extern int totalmissed;
-
 // FIXME: factor out / merge with LightFace
 void
 GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
@@ -1438,12 +1437,15 @@ LightFace_Entity(const bsp2_t *bsp,
     }
     
     rs->tracePushedRaysOcclusion();
+    total_light_rays += rs->numPushedRays();
     
     const int N = rs->numPushedRays();
     for (int j = 0; j < N; j++) {
         if (rs->getPushedRayOccluded(j))
             continue;
 
+        total_light_ray_hits++;
+        
         int i = rs->getPushedRayPointIndex(j);
         lightsample_t *sample = &lightmap->samples[i];
         const vec_t *surfpoint = lightsurf->points[i];
@@ -2379,6 +2381,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     if (!(debugmode == debugmode_dirt
           || debugmode == debugmode_phong
           || debugmode == debugmode_bounce)) {
+        
+        total_samplepoints += lightsurf->numpoints;
+        
         /* positive lights */
         for (const auto &entity : GetLights())
         {

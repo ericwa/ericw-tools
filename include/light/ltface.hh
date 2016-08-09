@@ -38,6 +38,8 @@
 #include <limits>
 #include <sstream>
 
+extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
+
 void FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out);
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 vec_t GetLightValue(const light_t *entity, vec_t dist);
