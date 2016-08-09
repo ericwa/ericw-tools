@@ -37,6 +37,7 @@
 #include <cassert>
 #include <limits>
 #include <sstream>
+#include <atomic>
 
 extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 
