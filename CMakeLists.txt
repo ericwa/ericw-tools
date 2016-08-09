@@ -55,6 +55,7 @@ if (MSVC)
 	add_definitions("/D_CRT_SECURE_NO_WARNINGS")
 	add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
 	add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
+	add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning
 endif (MSVC)
 
 #minimum version that supports unordered_map
