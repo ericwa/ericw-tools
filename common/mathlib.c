@@ -79,7 +79,7 @@ VecStrf(const vec3_t vec)
 void
 RandomDir(vec3_t dir)
 {
-    const vec_t theta = Random() * 2.0 * M_PI;
+    const vec_t theta = Random() * 2.0 * Q_PI;
     const vec_t u = (2.0 * Random()) - 1.0;
     
     const vec_t s = sqrt(1.0 - (u * u));
