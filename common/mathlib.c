@@ -124,3 +124,16 @@ void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt) {
         maxs[i] = qmax(maxs[i], pt[i]);
     }
 }
+
+void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out) {
+    for (int i=0; i<3; i++) {
+        size_out[i] = maxs[i] - mins[i];
+    }
+}
+
+void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size) {
+    for (int i=0; i<3; i++) {
+        mins[i] -= size[i];
+        maxs[i] += size[i];
+    }
+}

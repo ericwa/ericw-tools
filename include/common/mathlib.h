@@ -182,7 +182,9 @@ void RandomDir(vec3_t dir);
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
 void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
-    
+void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out);
+void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size);
+
 #ifdef __cplusplus
 }
 #endif
