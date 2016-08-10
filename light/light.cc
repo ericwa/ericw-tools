@@ -127,7 +127,6 @@ int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
-qboolean novis = false; /* if true, don't use vis data */
 qboolean novisapprox = false;
 bool nolights = false;
 backend_t rtbackend = backend_embree;
@@ -1078,67 +1077,6 @@ ExportObj(const char *filename, const bsp2_t *bsp)
 
 //obj
 
-vector<vector<const bsp2_dleaf_t *>> faceleafs;
-vector<bool> leafhassky;
-
-// index some stuff from the bsp
-static void
-BuildPvsIndex(const bsp2_t *bsp)
-{
-    if (bsp->visdatasize != 0) {
-        if (novis) {
-            logprint("skipping visdata optimization because of -novis\n");
-        } else {
-            logprint("using visdata optimization\n");
-        }
-    }
-    
-    // build leafsForFace
-    faceleafs.resize(bsp->numfaces);
-    for (int i = 0; i < bsp->numleafs; i++) {
-        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
-        for (int k = 0; k < leaf->nummarksurfaces; k++) {
-            const int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
-            faceleafs.at(facenum).push_back(leaf);
-        }
-    }
-    
-    // build leafhassky
-    leafhassky.resize(bsp->numleafs, false);
-    for (int i = 0; i < bsp->numleafs; i++) {
-        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
-        
-        // search for sky faces in it
-        for (int k = 0; k < leaf->nummarksurfaces; k++) {
-            const bsp2_dface_t *surf = &bsp->dfaces[bsp->dmarksurfaces[leaf->firstmarksurface + k]];
-            const char *texname = Face_TextureName(bsp, surf);
-            if (!strncmp("sky", texname, 3)) {
-                leafhassky.at(i) = true;
-                break;
-            }
-        }
-    }
-}
-
-bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf)
-{
-    const int leafnum = leaf - bsp->dleafs;
-    return leafhassky.at(leafnum);
-}
-
-static const bsp2_dleaf_t **
-Face_CopyLeafList(const bsp2_t *bsp, const bsp2_dface_t *face)
-{
-    const int facenum = face - bsp->dfaces;
-    auto &leafs = faceleafs.at(facenum);
-    
-    const bsp2_dleaf_t **result = (const bsp2_dleaf_t **) calloc(leafs.size() + 1, sizeof(const bsp2_dleaf_t *));
-    for (int i = 0; i<leafs.size(); i++) {
-        result[i] = leafs.at(i);
-    }
-    return result;
-}
-
 static void
 CheckNoDebugModeSet()
 {
@@ -1555,9 +1493,6 @@ main(int argc, const char **argv)
             debugmode = debugmode_phong;
             write_litfile |= 1;
             logprint( "Phong shading debug mode enabled\n" );
-        } else if ( !strcmp( argv[ i ], "-novis" ) ) {
-            novis = true;
-            logprint( "Skipping use of vis data to optimize lighting\n" );
         } else if ( !strcmp( argv[ i ], "-novisapprox" ) ) {
             novisapprox = true;
             logprint( "Skipping approximate light visibility\n" );
@@ -1680,7 +1615,6 @@ main(int argc, const char **argv)
     if (bspdata.version != BSP2VERSION)
         ConvertBSPFormat(BSP2VERSION, &bspdata);
 
-    BuildPvsIndex(bsp);
     LoadExtendedTexinfoFlags(source, bsp);
     LoadEntities(bsp);
 

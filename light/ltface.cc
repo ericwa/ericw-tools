@@ -700,139 +700,6 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     }
 }
 
-static int
-DecompressedVisSize(const bsp2_t *bsp)
-{
-    return (bsp->dmodels[0].visleafs + 7) / 8;
-}
-
-// from DarkPlaces
-static void Mod_Q1BSP_DecompressVis(const unsigned char *in, const unsigned char *inend, unsigned char *out, unsigned char *outend)
-{
-    int c;
-    unsigned char *outstart = out;
-    while (out < outend)
-    {
-        if (in == inend)
-        {
-            logprint("Mod_Q1BSP_DecompressVis: input underrun (decompressed %i of %i output bytes)\n", (int)(out - outstart), (int)(outend - outstart));
-            return;
-        }
-        c = *in++;
-        if (c)
-            *out++ = c;
-        else
-        {
-            if (in == inend)
-            {
-                logprint("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed %i of %i output bytes)\n", (int)(out - outstart), (int)(outend - outstart));
-                return;
-            }
-            for (c = *in++;c > 0;c--)
-            {
-                if (out == outend)
-                {
-                    logprint("Mod_Q1BSP_DecompressVis: output overrun (decompressed %i of %i output bytes)\n", (int)(out - outstart), (int)(outend - outstart));
-                    return;
-                }
-                *out++ = 0;
-            }
-        }
-    }
-}
-
-static bool
-Mod_LeafPvs(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, byte *out)
-{
-    const int num_pvsclusterbytes = DecompressedVisSize(bsp);
-    
-    // init to all visible
-    memset(out, 0xFF, num_pvsclusterbytes);
-    
-    // this is confusing.. "visleaf numbers" are the leaf number minus 1.
-    // they also don't go as high, bsp->dmodels[0].visleafs instead of bsp->numleafs
-    const int leafnum = (leaf - bsp->dleafs);
-    const int visleaf = leafnum - 1;
-    if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs)
-        return false;
-    
-    if (leaf->visofs < 0)
-        return false;
-    
-    if (leaf->visofs >= bsp->visdatasize) {
-        logprint("Mod_LeafPvs: invalid visofs for leaf %d\n", leafnum);
-        return false;
-    }
-    
-    Mod_Q1BSP_DecompressVis(bsp->dvisdata + leaf->visofs,
-                            bsp->dvisdata + bsp->visdatasize,
-                            out,
-                            out + num_pvsclusterbytes);
-    return true;
-}
-
-// returns true if pvs can see leaf
-static bool
-Pvs_LeafVisible(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *leaf)
-{
-    const int leafnum = (leaf - bsp->dleafs);
-    const int visleaf = leafnum - 1;
-    if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs)
-        return false;
-    
-    return !!(pvs[visleaf>>3] & (1<<(visleaf&7)));
-}
-
-static void
-CalcPvs(const bsp2_t *bsp, lightsurf_t *lightsurf)
-{
-    const int pvssize = DecompressedVisSize(bsp);
-    const bsp2_dleaf_t *lastleaf = NULL;
-
-    // set defaults
-    lightsurf->pvs = NULL;
-    lightsurf->skyvisible = true;
-    
-    if (!bsp->visdatasize) return;
-    
-    // set lightsurf->pvs
-    byte *pointpvs = (byte *) calloc(pvssize, 1);
-    lightsurf->pvs = (byte *) calloc(pvssize, 1);
-    
-    for (int i = 0; i < lightsurf->numpoints; i++) {
-        const bsp2_dleaf_t *leaf = Light_PointInLeaf (bsp, lightsurf->points[i]);
-	
-	/* most/all of the surface points are probably in the same leaf */
-	if (leaf == lastleaf)
-	    continue;
-	
-	lastleaf = leaf;
-	
-	/* copy the pvs for this leaf into pointpvs */
-        Mod_LeafPvs(bsp, leaf, pointpvs);
-        
-        /* merge the pvs for this sample point into lightsurf->pvs */
-        for (int j=0; j<pvssize; j++) {
-            lightsurf->pvs[j] |= pointpvs[j];
-        }
-    }
-    
-    free(pointpvs); pointpvs = NULL;
-    
-    // set lightsurf->skyvisible
-    lightsurf->skyvisible = false;
-    for (int i = 0; i < bsp->numleafs; i++) {
-        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
-        if (Pvs_LeafVisible(bsp, lightsurf->pvs, leaf)) {
-            // we can see this leaf, search for sky faces in it
-            if (Leaf_HasSky(bsp, leaf)) {
-                lightsurf->skyvisible = true;
-                break;
-            }
-        }
-    }
-}
-
 static void
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
                const bsp2_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
@@ -896,9 +763,6 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     
     /* Allocate occlusion array */
     lightsurf->occlusion = (float *) calloc(lightsurf->numpoints, sizeof(float));
-
-    /* Setup vis data */
-    CalcPvs(bsp, lightsurf);
     
     lightsurf->stream = MakeRayStream(lightsurf->numpoints);
 }
@@ -1266,25 +1130,6 @@ ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
     VectorMA(point, -dist, plane->normal, out);
 }
 
-static qboolean
-VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf)
-{
-    if (novis) return false;
-    if (pvs == NULL) return false;
-    if (entleaf == NULL) return false;
-    
-    if (entleaf->contents == CONTENTS_SOLID
-        || entleaf->contents == CONTENTS_SKY) {
-        return false;
-    }
-
-    if (Pvs_LeafVisible(bsp, pvs, entleaf)) {
-        return false;
-    }
-    
-    return true;
-}
-
 // FIXME: factor out / merge with LightFace
 void
 GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
@@ -1365,11 +1210,6 @@ LightFace_Entity(const bsp2_t *bsp,
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
-
-    /* vis cull */
-    if (VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
-        return;
-    }
 
     const float planedist = DotProduct(*entity->origin.vec3Value(), plane->normal) - plane->dist;
 
@@ -1508,11 +1348,6 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     const float MAX_SKY_DIST = 65536.0f;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
-    
-    /* If vis data says we can't see any sky faces, skip raytracing */
-    if (!lightsurf->skyvisible) {
-        return;
-    }
     
     /* Don't bother if surface facing away from sun */
     if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
@@ -1835,9 +1670,6 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     bool hit = false;
     
     for (const bouncelight_t &vpl : BounceLights()) {
-        if (VisCullEntity(bsp, lightsurf->pvs, vpl.leaf))
-            continue;
-        
         if (BounceLight_SphereCull(bsp, &vpl, lightsurf))
             continue;
         
@@ -2335,7 +2167,6 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     free(ctx->lightsurf->normals);
     free(ctx->lightsurf->occlusion);
     free(ctx->lightsurf->occluded);
-    free(ctx->lightsurf->pvs);
     
     delete ctx->lightsurf->stream;
     
