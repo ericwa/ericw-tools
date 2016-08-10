@@ -146,19 +146,16 @@ static void
 TriCentroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
             vec3_t out)
 {
-    int i;
-
-    for (i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
         out[i] = (v0->point[i] + v1->point[i] + v2->point[i]) / 3.0;
 }
 
 static vec_t
 TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 {
-    int i;
     vec3_t edge0, edge1, cross;
 
-    for (i =0; i < 3; i++) {
+    for (int i =0; i < 3; i++) {
         edge0[i] = v1->point[i] - v0->point[i];
         edge1[i] = v2->point[i] - v0->point[i];
     }
@@ -170,7 +167,7 @@ TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
 void
 FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
 {
-    int i, edgenum;
+    int edgenum;
     dvertex_t *v0, *v1, *v2;
     vec3_t centroid, poly_centroid;
     vec_t area, poly_area;
@@ -184,7 +181,7 @@ FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
     else
         v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
 
-    for (i = 1; i < face->numedges - 1; i++) {
+    for (int i = 1; i < face->numedges - 1; i++) {
         edgenum = bsp->dsurfedges[face->firstedge + i];
         if (edgenum >= 0) {
             v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
@@ -214,14 +211,10 @@ static void
 CreateFaceTransform(const bsp2_dface_t *face, const bsp2_t *bsp,
                     pmatrix3_t *transform)
 {
-    const dplane_t *plane;
-    const texinfo_t *tex;
-    int i;
-
     /* Prepare the transform matrix and init row/column permutations */
-    plane = &bsp->dplanes[face->planenum];
-    tex = &bsp->texinfo[face->texinfo];
-    for (i = 0; i < 3; i++) {
+    const dplane_t *plane = &bsp->dplanes[face->planenum];
+    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
+    for (int i = 0; i < 3; i++) {
         transform->data[0][i] = tex->vecs[0][i];
         transform->data[1][i] = tex->vecs[1][i];
         transform->data[2][i] = plane->normal[i];
@@ -254,8 +247,6 @@ TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
 void
 WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 {
-    int i;
-
     /*
      * The (long double) casts below are important: The original code
      * was written for x87 floating-point which uses 80-bit floats for
@@ -271,7 +262,7 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
      * Casting to (long double) keeps the intermediate values at at
      * least 64 bits of precision, probably 128.
      */
-    for (i = 0; i < 2; i++)
+    for (int i = 0; i < 2; i++)
         coord[i] =
             (long double)world[0] * tex->vecs[i][0] +
             (long double)world[1] * tex->vecs[i][1] +
@@ -285,7 +276,6 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     const texinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
-    int i;
 
     logprint("face %d, texture %s, %d edges...\n"
              "  vectors (%3.3f, %3.3f, %3.3f) (%3.3f)\n"
@@ -294,7 +284,7 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
              tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2], tex->vecs[0][3],
              tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
 
-    for (i = 0; i < face->numedges; i++) {
+    for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
         const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
@@ -318,25 +308,23 @@ CalcFaceExtents(const bsp2_dface_t *face,
                 const bsp2_t *bsp, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
-    vec3_t worldpoint, worldmaxs, worldmins;
-    int i, j, edge, vert;
-    const dvertex_t *dvertex;
-    const texinfo_t *tex;
+    vec3_t worldmaxs, worldmins;
 
     mins[0] = mins[1] = VECT_MAX;
     maxs[0] = maxs[1] = -VECT_MAX;
     worldmaxs[0] = worldmaxs[1] = worldmaxs[2] = -VECT_MAX;
     worldmins[0] = worldmins[1] = worldmins[2] = VECT_MAX;
-    tex = &bsp->texinfo[face->texinfo];
+    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
 
-    for (i = 0; i < face->numedges; i++) {
-        edge = bsp->dsurfedges[face->firstedge + i];
-        vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
-        dvertex = &bsp->dvertexes[vert];
+    for (int i = 0; i < face->numedges; i++) {
+        int edge = bsp->dsurfedges[face->firstedge + i];
+        int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
+        const dvertex_t *dvertex = &bsp->dvertexes[vert];
 
+        vec3_t worldpoint;
         VectorCopy(dvertex->point, worldpoint);
         WorldToTexCoord(worldpoint, tex, texcoord);
-        for (j = 0; j < 2; j++) {
+        for (int j = 0; j < 2; j++) {
             if (texcoord[j] < mins[j])
                 mins[j] = texcoord[j];
             if (texcoord[j] > maxs[j])
@@ -344,7 +332,7 @@ CalcFaceExtents(const bsp2_dface_t *face,
         }
         
         //ericw -- also save worldmaxs/worldmins, for calculating a bounding sphere
-        for (j = 0; j < 3; j++) {
+        for (int j = 0; j < 3; j++) {
             if (worldpoint[j] > worldmaxs[j])
                 worldmaxs[j] = worldpoint[j];
             if (worldpoint[j] < worldmins[j])
@@ -352,9 +340,10 @@ CalcFaceExtents(const bsp2_dface_t *face,
         }
     }
 
+    vec3_t worldpoint;
     FaceCentroid(face, bsp, worldpoint);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
-    
+
     // calculate a bounding sphere for the face
     {
         vec3_t radius;
@@ -369,7 +358,7 @@ CalcFaceExtents(const bsp2_dface_t *face,
         VectorCopy(worldmins, surf->mins);
     }
     
-    for (i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
         mins[i] = floor(mins[i] / surf->lightmapscale);
         maxs[i] = ceil(maxs[i] / surf->lightmapscale);
         surf->texmins[i] = mins[i];
@@ -848,10 +837,6 @@ static void
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
                const bsp2_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
 {
-    plane_t *plane;
-    const texinfo_t *tex;
-    vec3_t planepoint;
-
         /*FIXME: memset can be slow on large datasets*/
 //    memset(lightsurf, 0, sizeof(*lightsurf));
     lightsurf->modelinfo = modelinfo;
@@ -874,7 +859,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     }
     
     /* Set up the plane, not including model offset */
-    plane = &lightsurf->plane;
+    plane_t *plane = &lightsurf->plane;
     VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
     plane->dist = bsp->dplanes[face->planenum].dist;
     if (face->side) {
@@ -887,7 +872,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
     lightsurf->texorg.planedist = plane->dist;
 
-    tex = &bsp->texinfo[face->texinfo];
+    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
     VectorCopy(tex->vecs[0], lightsurf->snormal);
     VectorSubtract(vec3_origin, tex->vecs[1], lightsurf->tnormal);
     VectorNormalize(lightsurf->snormal);
@@ -899,6 +884,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     
     /* Correct the plane for the model offset (must be done last, 
        calculation of face extents / points needs the uncorrected plane) */
+    vec3_t planepoint;
     VectorScale(plane->normal, plane->dist, planepoint);
     VectorAdd(planepoint, modelinfo->offset, planepoint);
     plane->dist = DotProduct(plane->normal, planepoint);
@@ -920,13 +906,10 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 static void
 Lightmaps_Init(const lightsurf_t *lightsurf, lightmap_t *lightmaps, const int count)
 {
-    int i;
-
     /*these are cleared on demand, there's no point clearing them twice. most of these are unused anyway,
      memset(lightmaps, 0, sizeof(lightmap_t) * count); */
 
-    for (i = 0; i < count; i++)
-    {
+    for (int i = 0; i < count; i++) {
         lightmaps[i].style = 255;
         lightmaps[i].samples = NULL;
     }
@@ -943,9 +926,8 @@ static lightmap_t *
 Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lightsurf)
 {
     lightmap_t *lightmap = lightmaps;
-    int i;
-
-    for (i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
+    
+    for (int i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
         if (lightmap->style == style)
             return lightmap;
         if (lightmap->style == 255)
@@ -1004,31 +986,24 @@ Lightmap_Save(lightmap_t *lightmaps, const lightsurf_t *lightsurf,
 static void
 Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
 {
-    int i, samples;
-    int s, t, starts, startt, ends, endt;
-    const lightsample_t *src;
-    lightsample_t *dst;
-    lightsample_t *softmap;
-
     const int width = (lightsurf->texsize[0] + 1) * oversample;
     const int height = (lightsurf->texsize[1] + 1) * oversample;
     const int fullsamples = (2 * softsamples + 1) * (2 * softsamples + 1);
 
-    softmap = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
+    lightsample_t *softmap = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
     
-    dst = softmap;
-    for (i = 0; i < lightsurf->numpoints; i++, dst++) {
-        startt = qmax((i / width) - softsamples, 0);
-        endt = qmin((i / width) + softsamples + 1, height);
-        starts = qmax((i % width) - softsamples, 0);
-        ends = qmin((i % width) + softsamples + 1, width);
+    lightsample_t *dst = softmap;
+    for (int i = 0; i < lightsurf->numpoints; i++, dst++) {
+        const int startt = qmax((i / width) - softsamples, 0);
+        const int endt = qmin((i / width) + softsamples + 1, height);
+        const int starts = qmax((i % width) - softsamples, 0);
+        const int ends = qmin((i % width) + softsamples + 1, width);
 
-        for (t = startt; t < endt; t++) {
-            src = &lightmap->samples[t * width + starts];
-            for (s = starts; s < ends; s++) {
+        for (int t = startt; t < endt; t++) {
+            for (int s = starts; s < ends; s++) {
+                const lightsample_t *src = &lightmap->samples[t * width + s];
                 VectorAdd(dst->color, src->color, dst->color);
                 VectorAdd(dst->direction, src->direction, dst->direction);
-                src++;
             }
         }
         /*
@@ -1036,10 +1011,10 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
          * take extra samples from the centre point (follows old bjp tools
          * behaviour)
          */
-        samples = (endt - startt) * (ends - starts);
+        int samples = (endt - startt) * (ends - starts);
         if (samples < fullsamples) {
             const int extraweight = 2 * (fullsamples - samples);
-            src = &lightmap->samples[i];
+            const lightsample_t *src = &lightmap->samples[i];
             VectorMA(dst->color, extraweight, src->color, dst->color);
             VectorMA(dst->direction, extraweight, src->direction, dst->direction);
             samples += extraweight;
@@ -1098,9 +1073,11 @@ Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color, const ve
 static inline void
 Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
 {
-    for (int i = 0; i < 3; i++)
-        if (sample->color[i] < color[i] * light / 255.0f)
+    for (int i = 0; i < 3; i++) {
+        if (sample->color[i] < color[i] * light / 255.0f) {
             sample->color[i] = color[i] * light / 255.0f;
+        }
+    }
 }
 
 /*
@@ -1115,8 +1092,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const light_t *entity, const lightsurf_t *s
 {
     vec_t light_dirtgain = dirtGain.floatValue();
     vec_t light_dirtscale = dirtScale.floatValue();
-    vec_t outDirt;
-    qboolean usedirt;
+    bool usedirt;
 
     /* is dirt processing disabled entirely? */
     if (!dirt_in_use)
@@ -1157,7 +1133,7 @@ Dirt_GetScaleFactor(vec_t occlusion, const light_t *entity, const lightsurf_t *s
     }
 
     /* apply gain (does this even do much? heh) */
-    outDirt = pow( occlusion, light_dirtgain );
+    float outDirt = pow( occlusion, light_dirtgain );
     if ( outDirt > 1.0f ) {
         outDirt = 1.0f;
     }
@@ -1182,18 +1158,18 @@ Dirt_GetScaleFactor(vec_t occlusion, const light_t *entity, const lightsurf_t *s
 static inline qboolean
 CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
-    vec3_t distvec;
-    vec_t dist;
-    
-    if (!novisapprox && AABBsDisjoint(entity->mins, entity->maxs, lightsurf->mins, lightsurf->maxs))
+    if (!novisapprox && AABBsDisjoint(entity->mins, entity->maxs, lightsurf->mins, lightsurf->maxs)) {
         return true;
+    }
     
+    vec3_t distvec;
     VectorSubtract(*entity->origin.vec3Value(), lightsurf->origin, distvec);
-    dist = VectorLength(distvec) - lightsurf->radius;
+    float dist = VectorLength(distvec) - lightsurf->radius;
     
     /* light is inside surface bounding sphere => can't cull */
-    if (dist < 0)
+    if (dist < 0) {
         return false;
+    }
     
     /* return true if the light level at the closest point on the
      surface bounding sphere to the light source is <= fadegate.
@@ -1298,11 +1274,13 @@ VisCullEntity(const bsp2_t *bsp, const byte *pvs, const bsp2_dleaf_t *entleaf)
     if (entleaf == NULL) return false;
     
     if (entleaf->contents == CONTENTS_SOLID
-        || entleaf->contents == CONTENTS_SKY)
+        || entleaf->contents == CONTENTS_SKY) {
         return false;
+    }
 
-    if (Pvs_LeafVisible(bsp, pvs, entleaf))
+    if (Pvs_LeafVisible(bsp, pvs, entleaf)) {
         return false;
+    }
     
     return true;
 }
@@ -1313,15 +1291,15 @@ GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec
 {
     VectorSet(colorout, 0, 0, 0);
     
-    for (const light_t &entity : GetLights())
-    {
+    for (const light_t &entity : GetLights()) {
         vec3_t originLightDir;
         VectorSubtract(*entity.origin.vec3Value(), origin, originLightDir);
         vec_t dist = VectorNormalize(originLightDir);
         
         vec_t cosangle = DotProduct(originLightDir, normal);
-        if (cosangle < 0)
+        if (cosangle < 0) {
             continue;
+        }
         
         // apply anglescale
         cosangle = (1.0 - entity.anglescale.floatValue()) + entity.anglescale.floatValue() * cosangle;
@@ -1330,8 +1308,9 @@ GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec
         float spotscale = 1;
         if (entity.spotlight) {
             vec_t falloff = DotProduct(entity.spotvec, originLightDir);
-            if (falloff > entity.spotfalloff)
+            if (falloff > entity.spotfalloff) {
                 continue;
+            }
             if (falloff > entity.spotfalloff2) {
                 /* Interpolate between the two spotlight falloffs */
                 spotscale = falloff - entity.spotfalloff2;
@@ -1341,30 +1320,33 @@ GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec
         }
         
         vec_t lightval = GetLightValue(&entity, dist);
-        if (lightval < 0.25)
+        if (lightval < 0.25) {
             continue;
+        }
         
-        if (!TestLight(*entity.origin.vec3Value(), origin, NULL))
+        if (!TestLight(*entity.origin.vec3Value(), origin, NULL)) {
             continue;
+        }
         
         VectorMA(colorout, lightval * cosangle * spotscale / 255.0f, *entity.color.vec3Value(), colorout);
     }
     
-    for (const sun_t &sun : GetSuns())
-    {
+    for (const sun_t &sun : GetSuns()) {
         vec3_t originLightDir;
         VectorCopy(sun.sunvec, originLightDir);
         VectorNormalize(originLightDir);
         
         vec_t cosangle = DotProduct(originLightDir, normal);
-        if (cosangle < 0)
+        if (cosangle < 0) {
             continue;
+        }
         
         // apply anglescale
         cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
         
-        if (!TestSky(origin, sun.sunvec, NULL))
+        if (!TestSky(origin, sun.sunvec, NULL)) {
             continue;
+        }
         
         VectorMA(colorout, cosangle * sun.sunlight / 255.0f, sun.sunlight_color, colorout);
     }
@@ -1383,10 +1365,6 @@ LightFace_Entity(const bsp2_t *bsp,
 {
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
-    const dmodel_t *shadowself;
-    qboolean hit;
-    
-    lightmap_t *lightmap;
 
     /* vis cull */
     if (VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
@@ -1402,19 +1380,21 @@ LightFace_Entity(const bsp2_t *bsp,
        normal may be facing such that it receives some light, so we can't use this 
        test in the curved case.
     */
-    if (planedist < 0 && !entity->bleed.boolValue() && !lightsurf->curved && !lightsurf->twosided)
+    if (planedist < 0 && !entity->bleed.boolValue() && !lightsurf->curved && !lightsurf->twosided) {
         return;
+    }
 
     /* sphere cull surface and light */
-    if (CullLight(entity, lightsurf))
+    if (CullLight(entity, lightsurf)) {
         return;
+    }
 
     /*
      * Check it for real
      */
-    hit = false;
-    lightmap = Lightmap_ForStyle(lightmaps, entity->style.intValue(), lightsurf);
-    shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
+    bool hit = false;
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, entity->style.intValue(), lightsurf);
+    const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     
     raystream_t *rs = lightsurf->stream;
     rs->clearPushedRays();
@@ -1428,8 +1408,9 @@ LightFace_Entity(const bsp2_t *bsp,
         vec_t surfpointToLightDist = VectorNormalize(surfpointToLightDir);
 
         /* Quick distance check first */
-        if (fabs(GetLightValue(entity, surfpointToLightDist)) <= fadegate)
+        if (fabs(GetLightValue(entity, surfpointToLightDist)) <= fadegate) {
             continue;
+        }
 
         float angle = DotProduct(surfpointToLightDir, surfnorm);
         if (entity->bleed.boolValue() || lightsurf->twosided) {
@@ -1439,8 +1420,9 @@ LightFace_Entity(const bsp2_t *bsp,
         }
         
         /* Light behind sample point? Zero contribution, period. */
-        if (angle < 0)
+        if (angle < 0) {
             continue;
+        }
         
         rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself);
     }
@@ -1450,8 +1432,9 @@ LightFace_Entity(const bsp2_t *bsp,
     
     const int N = rs->numPushedRays();
     for (int j = 0; j < N; j++) {
-        if (rs->getPushedRayOccluded(j))
+        if (rs->getPushedRayOccluded(j)) {
             continue;
+        }
 
         total_light_ray_hits++;
         
@@ -1492,8 +1475,7 @@ LightFace_Entity(const bsp2_t *bsp,
         float add = GetLightValue(entity, surfpointToLightDist) * angle * spotscale;
         add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, lightsurf);
 
-        if (entity->projectedmip)
-        {
+        if (entity->projectedmip) {
             vec3_t col;
             VectorCopy(*entity->color.vec3Value(), col);
             VectorScale(surfpointToLightDir, 255, col);
@@ -1506,8 +1488,9 @@ LightFace_Entity(const bsp2_t *bsp,
         /* Check if we really hit, ignore tiny lights */
         /* ericw -- never ignore generated lights, which can be tiny and need
            the additive effect of lots hitting */
-        if (!hit && (LightSample_Brightness(sample->color) >= 1 || entity->generated))
+        if (!hit && (LightSample_Brightness(sample->color) >= 1 || entity->generated)) {
             hit = true;
+        }
     }
     
     if (hit)
@@ -1527,12 +1510,14 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     const plane_t *plane = &lightsurf->plane;
     
     /* If vis data says we can't see any sky faces, skip raytracing */
-    if (!lightsurf->skyvisible)
+    if (!lightsurf->skyvisible) {
         return;
+    }
     
     /* Don't bother if surface facing away from sun */
-    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided)
+    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
         return;
+    }
 
     /* if sunlight is set, use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -1559,8 +1544,9 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
             }
         }
         
-        if (angle < 0)
+        if (angle < 0) {
             continue;
+        }
         
         rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, shadowself);
     }
@@ -1569,8 +1555,9 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
     
     const int N = rs->numPushedRays();
     for (int j = 0; j < N; j++) {
-        if (rs->getPushedRayHitType(j) != hittype_t::SKY)
+        if (rs->getPushedRayHitType(j) != hittype_t::SKY) {
             continue;
+        }
         
         const int i = rs->getPushedRayPointIndex(j);
         const vec_t *surfnorm = lightsurf->normals[i];
@@ -1585,13 +1572,15 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
         
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         float value = angle * sun->sunlight;
-        if (sun->dirt)
+        if (sun->dirt) {
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
+        }
         
         lightsample_t *sample = &lightmap->samples[i];
         Light_Add(sample, value, sun->sunlight_color, sun->sunvec);
-        if (!hit/* && (sample->light >= 1)*/)
+        if (!hit/* && (sample->light >= 1)*/) {
             hit = true;
+        }
     }
 
     if (hit)
@@ -1617,8 +1606,9 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
     const char *texname = Face_TextureName(bsp, face);
-    if (texname[0] != '\0' && modelinfo->minlight_exclude.stringValue() == std::string{ texname })
+    if (texname[0] != '\0' && modelinfo->minlight_exclude.stringValue() == std::string{ texname }) {
         return; /* this texture is excluded from minlight */
+    }
     
     /* Find a style 0 lightmap */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -1628,27 +1618,33 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         lightsample_t *sample = &lightmap->samples[i];
         
         vec_t value = light;
-        if (minlightDirt.boolValue())
+        if (minlightDirt.boolValue()) {
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
-        if (addminlight.boolValue())
+        }
+        if (addminlight.boolValue()) {
             Light_Add(sample, value, color, vec3_origin);
-        else
+        } else {
             Light_ClampMin(sample, value, color);
-        if (!hit && LightSample_Brightness(sample->color) >= 1)
+        }
+        if (!hit && LightSample_Brightness(sample->color) >= 1) {
             hit = true;
+        }
     }
 
-    if (hit)
+    if (hit) {
         Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    }
     
     /* Cast rays for local minlight entities */
     const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     for (const auto &entity : GetLights()) {
-        if (entity.getFormula() != LF_LOCALMIN)
+        if (entity.getFormula() != LF_LOCALMIN) {
             continue;
+        }
 
-        if (CullLight(&entity, lightsurf))
+        if (CullLight(&entity, lightsurf)) {
             continue;
+        }
         
         raystream_t *rs = lightsurf->stream;
         rs->clearPushedRays();
@@ -1672,27 +1668,31 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         
         const int N = rs->numPushedRays();
         for (int j = 0; j < N; j++) {
-            if (rs->getPushedRayOccluded(j))
+            if (rs->getPushedRayOccluded(j)) {
                 continue;
+            }
             
             int i = rs->getPushedRayPointIndex(j);
             vec_t value = entity.light.floatValue();
             lightsample_t *sample = &lightmap->samples[i];
             
             value *= Dirt_GetScaleFactor(lightsurf->occlusion[i], &entity, lightsurf);
-            if (addminlight.boolValue())
+            if (addminlight.boolValue()) {
                 Light_Add(sample, value, *entity.color.vec3Value(), vec3_origin);
-            else
+            } else {
                 Light_ClampMin(sample, value, *entity.color.vec3Value());
+            }
 
-            if (!hit && LightSample_Brightness(sample->color) >= 1)
+            if (!hit && LightSample_Brightness(sample->color) >= 1) {
                 hit = true;
+            }
             
             total_light_ray_hits++;
         }
         
-        if (hit)
+        if (hit) {
             Lightmap_Save(lightmaps, lightsurf, lightmap, entity.style.intValue());
+        }
     }
 }
 
@@ -1704,17 +1704,12 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
 static void
 LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
-    const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    int i;
-    lightsample_t *sample;
-    lightmap_t *lightmap;
-
     /* use a style 0 light map */
-    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
     /* Overwrite each point with the dirt value for that sample... */
-    sample = lightmap->samples;
-    for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        lightsample_t *sample = &lightmap->samples[i];
         const float light = 255 * Dirt_GetScaleFactor(lightsurf->occlusion[i], NULL, lightsurf);
         VectorSet(sample->color, light, light, light);
     }
@@ -1730,16 +1725,12 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 static void
 LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
 {
-    int i;
-    lightsample_t *sample;
-    lightmap_t *lightmap;
-    
     /* use a style 0 light map */
-    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
     /* Overwrite each point with the normal for that sample... */
-    sample = lightmap->samples;
-    for (i = 0; i < lightsurf->numpoints; i++, sample++) {
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        lightsample_t *sample = &lightmap->samples[i];
         const vec3_t vec3_one = { 1.0f, 1.0f, 1.0f };
         vec3_t normal_as_color;
         // scale from [-1..1] to [0..1], then multiply by 255
@@ -1918,9 +1909,6 @@ int numDirtVectors = 0;
  * ============
  */
 void SetupDirt( void ) {
-    int i, j;
-    float angle, elevation, angleStep, elevationStep;
-
     // check if needed
     
     if (!globalDirt.boolValue()
@@ -1964,14 +1952,15 @@ void SetupDirt( void ) {
     }
     
     /* calculate angular steps */
-    angleStep = DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
-    elevationStep = DEG2RAD( dirtAngle.floatValue() / DIRT_NUM_ELEVATION_STEPS );
+    float angleStep = DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
+    float elevationStep = DEG2RAD( dirtAngle.floatValue() / DIRT_NUM_ELEVATION_STEPS );
 
     /* iterate angle */
-    angle = 0.0f;
-    for ( i = 0, angle = 0.0f; i < DIRT_NUM_ANGLE_STEPS; i++, angle += angleStep ) {
+    float angle = 0.0f;
+    for ( int i = 0; i < DIRT_NUM_ANGLE_STEPS; i++, angle += angleStep ) {
         /* iterate elevation */
-        for ( j = 0, elevation = elevationStep * 0.5f; j < DIRT_NUM_ELEVATION_STEPS; j++, elevation += elevationStep ) {
+        float elevation = elevationStep * 0.5f;
+        for ( int j = 0; j < DIRT_NUM_ELEVATION_STEPS; j++, elevation += elevationStep ) {
             dirtVectors[ numDirtVectors ][ 0 ] = sin( elevation ) * cos( angle );
             dirtVectors[ numDirtVectors ][ 1 ] = sin( elevation ) * sin( angle );
             dirtVectors[ numDirtVectors ][ 2 ] = cos( elevation );
@@ -1987,9 +1976,8 @@ static const lightmap_t *
 Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
 {
     const lightmap_t *lightmap = ctx->lightmaps;
-    int i;
     
-    for (i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
+    for (int i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
         if (lightmap->style == style)
             return lightmap;
         if (lightmap->style == 255)
@@ -2172,18 +2160,14 @@ static void
 WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmap_t *lightmaps)
 {
-    int numstyles, size, mapnum, width, s, t, i, j;
-    vec_t light, maxcolor;
-    vec3_t color, direction;
-    byte *out, *lit, *lux;
-
     /* count the styles */
-    numstyles = 0;
-    for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++)
+    int numstyles = 0;
+    for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++)
     {
-        if (lightmaps[mapnum].style == 255)
+        if (lightmaps[mapnum].style == 255) {
             break;
-            numstyles++;
+        }
+        numstyles++;
     }
 
     /* update face info (either core data or supplementary stuff) */
@@ -2191,29 +2175,37 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     {
         facesup->extent[0] = lightsurf->texsize[0] + 1;
         facesup->extent[1] = lightsurf->texsize[1] + 1;
-        for (mapnum = 0; mapnum < numstyles; mapnum++)
+        int mapnum;
+        for (mapnum = 0; mapnum < numstyles; mapnum++) {
             facesup->styles[mapnum] = lightmaps[mapnum].style;
-        for (; mapnum < MAXLIGHTMAPS; mapnum++)
+        }
+        for (; mapnum < MAXLIGHTMAPS; mapnum++) {
             facesup->styles[mapnum] = 255;
+        }
         facesup->lmscale = lightsurf->lightmapscale;
     }
     else
     {
-        for (mapnum = 0; mapnum < numstyles; mapnum++)
+        int mapnum;
+        for (mapnum = 0; mapnum < numstyles; mapnum++) {
             face->styles[mapnum] = lightmaps[mapnum].style;
-        for (; mapnum < MAXLIGHTMAPS; mapnum++)
+        }
+        for (; mapnum < MAXLIGHTMAPS; mapnum++) {
             face->styles[mapnum] = 255;
+        }
     }
 
     if (!numstyles)
         return;
 
-    size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
+    int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
+    byte *out, *lit, *lux;
     GetFileSpace(&out, &lit, &lux, size * numstyles);
-    if (facesup)
+    if (facesup) {
         facesup->lightofs = out - filebase;
-    else
+    } else {
         face->lightofs = out - filebase;
+    }
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
     {
@@ -2223,19 +2215,22 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         assert(Q_strcasecmp(texname, "trigger") != 0);
     }
     
-    width = (lightsurf->texsize[0] + 1) * oversample;
-    for (mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
-        if (lightmaps[mapnum].style == 255)
+    int width = (lightsurf->texsize[0] + 1) * oversample;
+    for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
+        if (lightmaps[mapnum].style == 255) {
             break;
+        }
 
-        for (t = 0; t <= lightsurf->texsize[1]; t++) {
-            for (s = 0; s <= lightsurf->texsize[0]; s++) {
+        for (int t = 0; t <= lightsurf->texsize[1]; t++) {
+            for (int s = 0; s <= lightsurf->texsize[0]; s++) {
 
                 /* Take the average of any oversampling */
+                vec3_t color, direction;
+
                 VectorCopy(vec3_origin, color);
                 VectorCopy(vec3_origin, direction);
-                for (i = 0; i < oversample; i++) {
-                    for (j = 0; j < oversample; j++) {
+                for (int i = 0; i < oversample; i++) {
+                    for (int j = 0; j < oversample; j++) {
                         const int col = (s*oversample) + j;
                         const int row = (t*oversample) + i;
 
@@ -2248,15 +2243,19 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 VectorScale(color, 1.0 / oversample / oversample, color);
 
                 /* Scale and clamp any out-of-range samples */
-                maxcolor = 0;
+                vec_t maxcolor = 0;
                 VectorScale(color, rangescale.floatValue(), color);
-                for (i = 0; i < 3; i++)
+                for (int i = 0; i < 3; i++) {
                     color[i] = pow( color[i] / 255.0f, 1.0 / lightmapgamma.floatValue() ) * 255.0f;
-                for (i = 0; i < 3; i++)
-                    if (color[i] > maxcolor)
+                }
+                for (int i = 0; i < 3; i++) {
+                    if (color[i] > maxcolor) {
                         maxcolor = color[i];
-                if (maxcolor > 255)
+                    }
+                }
+                if (maxcolor > 255) {
                     VectorScale(color, 255.0f / maxcolor, color);
+                }
 
                 *lit++ = color[0];
                 *lit++ = color[1];
@@ -2267,27 +2266,26 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                    that require the lit and internal lightmap to have the same
                    intensity. (MarkV, some QW engines)
                  */
-                light = LightSample_Brightness(color);
+                vec_t light = LightSample_Brightness(color);
                 if (light < 0) light = 0;
                 if (light > 255) light = 255;
                 *out++ = light;
 
-                if (lux)
-                {
-                        vec3_t temp;
-                        int v;
-                        temp[0] = DotProduct(direction, lightsurf->snormal);
-                        temp[1] = DotProduct(direction, lightsurf->tnormal);
-                        temp[2] = DotProduct(direction, lightsurf->plane.normal);
-                
-                        if (!temp[0] && !temp[1] && !temp[2])
-                                VectorSet(temp, 0, 0, 1);
-                        else
-                                VectorNormalize(temp);
+                if (lux) {
+                    vec3_t temp;
+                    int v;
+                    temp[0] = DotProduct(direction, lightsurf->snormal);
+                    temp[1] = DotProduct(direction, lightsurf->tnormal);
+                    temp[2] = DotProduct(direction, lightsurf->plane.normal);
+            
+                    if (!temp[0] && !temp[1] && !temp[2])
+                            VectorSet(temp, 0, 0, 1);
+                    else
+                            VectorNormalize(temp);
 
-                        v = (temp[0]+1)*128;  *lux++ = (v>255)?255:v;
-                        v = (temp[1]+1)*128;  *lux++ = (v>255)?255:v;
-                        v = (temp[2]+1)*128;  *lux++ = (v>255)?255:v;
+                    v = (temp[0]+1)*128;  *lux++ = (v>255)?255:v;
+                    v = (temp[1]+1)*128;  *lux++ = (v>255)?255:v;
+                    v = (temp[2]+1)*128;  *lux++ = (v>255)?255:v;
                 }
             }
         }
@@ -2296,20 +2294,17 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
 
 void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx)
 {
-    int i;
-    
     memset(ctx, 0, sizeof(*ctx));
     
     ctx->bsp = bsp;
     
-    for (i = 0; i < MAXLIGHTMAPS + 1; i++)
+    for (int i = 0; i < MAXLIGHTMAPS + 1; i++)
         ctx->lightmaps[i].style = 255;
 }
 
 void LightFaceShutdown(struct ltface_ctx *ctx)
 {
-    int i;
-    for (i = 0; i < MAXLIGHTMAPS + 1; i++)
+    for (int i = 0; i < MAXLIGHTMAPS + 1; i++)
     {
         if (ctx->lightmaps[i].samples)
             free(ctx->lightmaps[i].samples);
@@ -2318,20 +2313,11 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     if (!ctx->lightsurf)
         return;
     
-    if (ctx->lightsurf->points)
-        free(ctx->lightsurf->points);
-    
-    if (ctx->lightsurf->normals)
-        free(ctx->lightsurf->normals);
-    
-    if (ctx->lightsurf->occlusion)
-        free(ctx->lightsurf->occlusion);
-    
-    if (ctx->lightsurf->occluded)
-        free(ctx->lightsurf->occluded);
-    
-    if (ctx->lightsurf->pvs)
-        free(ctx->lightsurf->pvs);
+    free(ctx->lightsurf->points);
+    free(ctx->lightsurf->normals);
+    free(ctx->lightsurf->occlusion);
+    free(ctx->lightsurf->occluded);
+    free(ctx->lightsurf->pvs);
     
     delete ctx->lightsurf->stream;
     
