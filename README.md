@@ -41,13 +41,14 @@ source code.
 
 ## Compiling
 
-Requires CMake and a compiler with C99 and C++11 support.  
+Requires CMake 3.1 and a compiler with C99 and C++11 support.  
+[Embree v2.10.0+](http://embree.github.io/) is optional but recommended.
 
 Tested on:
  - Ubuntu 14.04 / Clang 3.5.0
  - Ubuntu 14.04 / gcc 4.8.4
  - OS X 10.11 / Xcode 7.3
- - Windows 10 / Visual Studio 2015 Community
+ - Windows 10 / Visual Studio 2013 Community
 
 Typical build command:
 ```
