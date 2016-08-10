@@ -1647,6 +1647,9 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         if (entity.getFormula() != LF_LOCALMIN)
             continue;
 
+        if (CullLight(&entity, lightsurf))
+            continue;
+        
         raystream_t *rs = lightsurf->stream;
         rs->clearPushedRays();
         
