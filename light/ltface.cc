@@ -1841,6 +1841,8 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     /* use a style 0 light map */
     lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
+    bool hit = false;
+    
     for (const bouncelight_t &vpl : BounceLights()) {
         if (VisCullEntity(bsp, lightsurf->pvs, vpl.leaf))
             continue;
@@ -1889,12 +1891,13 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             lightsample_t *sample = &lightmap->samples[i];
             VectorAdd(sample->color, indirect, sample->color);
             
+            hit = true;
             total_bounce_ray_hits++;
         }
     }
     
-    // FIXME: check if (hit)
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    if (hit)
+        Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 
