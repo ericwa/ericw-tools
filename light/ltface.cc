@@ -2155,6 +2155,39 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
     free(myRts);
 }
 
+// applies gamma and rangescale. clamps values over 255
+// N.B. we want to do this before smoothing / downscaling, so huge values don't mess up the averaging.
+static void
+LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+{
+    for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
+        lightmap_t *lightmap = &lightmaps[mapnum];
+        
+        if (lightmap->style == 255) {
+            break;
+        }
+        
+        for (int i = 0; i < lightsurf->numpoints; i++) {
+            vec_t *color = lightmap->samples[i].color;
+            
+            /* Scale and clamp any out-of-range samples */
+            vec_t maxcolor = 0;
+            VectorScale(color, rangescale.floatValue(), color);
+            for (int i = 0; i < 3; i++) {
+                color[i] = pow( color[i] / 255.0f, 1.0 / lightmapgamma.floatValue() ) * 255.0f;
+            }
+            for (int i = 0; i < 3; i++) {
+                if (color[i] > maxcolor) {
+                    maxcolor = color[i];
+                }
+            }
+            if (maxcolor > 255) {
+                VectorScale(color, 255.0f / maxcolor, color);
+            }
+        }
+    }
+}
+
 
 static void
 WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
@@ -2241,22 +2274,7 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                     }
                 }
                 VectorScale(color, 1.0 / oversample / oversample, color);
-
-                /* Scale and clamp any out-of-range samples */
-                vec_t maxcolor = 0;
-                VectorScale(color, rangescale.floatValue(), color);
-                for (int i = 0; i < 3; i++) {
-                    color[i] = pow( color[i] / 255.0f, 1.0 / lightmapgamma.floatValue() ) * 255.0f;
-                }
-                for (int i = 0; i < 3; i++) {
-                    if (color[i] > maxcolor) {
-                        maxcolor = color[i];
-                    }
-                }
-                if (maxcolor > 255) {
-                    VectorScale(color, 255.0f / maxcolor, color);
-                }
-
+                
                 *lit++ = color[0];
                 *lit++ = color[1];
                 *lit++ = color[2];
@@ -2454,6 +2472,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         }
     }
 
+    /* Apply gamma, rangescale, and clamp */
+    LightFace_ScaleAndClamp(lightsurf, lightmaps);
+    
     /* Perform post-processing if requested */
     if (softsamples > 0) {
         for (int i = 0; i < MAXLIGHTMAPS; i++) {
