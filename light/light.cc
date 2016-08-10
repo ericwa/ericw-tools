@@ -128,6 +128,7 @@ int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean novis = false; /* if true, don't use vis data */
+qboolean novisapprox = false;
 bool nolights = false;
 backend_t rtbackend = backend_embree;
 debugmode_t debugmode = debugmode_none;
@@ -940,12 +941,16 @@ MakeBounceLightsThread (void *arg)
 static void
 AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
 {
-    bouncelight_t l;
+    bouncelight_t l = {0};
     VectorCopy(pos, l.pos);
     VectorCopy(color, l.color);
     VectorCopy(surfnormal, l.surfnormal);
     l.area = area;
     l.leaf = Light_PointInLeaf(bsp, pos);
+    
+    if (!novisapprox) {
+        EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);
+    }
     
     unique_lock<mutex> lck { radlights_lock };
     radlights.push_back(l);
@@ -1553,6 +1558,9 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-novis" ) ) {
             novis = true;
             logprint( "Skipping use of vis data to optimize lighting\n" );
+        } else if ( !strcmp( argv[ i ], "-novisapprox" ) ) {
+            novisapprox = true;
+            logprint( "Skipping approximate light visibility\n" );
         } else if ( !strcmp( argv[ i ], "-nolights" ) ) {
             nolights = true;
             logprint( "Skipping all light entities (sunlight / minlight only)\n" );
@@ -1683,6 +1691,8 @@ main(int argc, const char **argv)
     FindDebugFace(bsp);
     FindDebugVert(bsp);
 
+    MakeTnodes(bsp);
+    
     SetupLights(bsp);
     
     //PrintLights();
@@ -1691,8 +1701,6 @@ main(int argc, const char **argv)
     {
         CheckLitNeeded();
         SetupDirt();
-
-        MakeTnodes(bsp);
         
         if (bounce.boolValue()) {
             MakeTextureColors(bsp);

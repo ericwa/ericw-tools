@@ -69,6 +69,8 @@ public:
     
     const char *classname() const;
     
+    vec3_t mins, maxs;
+    
 public:
     lockable_vec_t light, atten, formula, spotangle, spotangle2, style, anglescale;
     lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples, projfov;
@@ -127,6 +129,14 @@ public:
             &origin, &color, &mangle, &projangle, &project_texture
         }};
     }
+    
+    void initAABB() {
+        AABB_Init(mins, maxs, *origin.vec3Value());
+    }
+    
+    void expandAABB(const vec3_t pt) {
+        AABB_Expand(mins, maxs, pt);
+    }
 };
 
 /*
@@ -165,5 +175,7 @@ void WriteEntitiesToString(bsp2_t *bsp);
 vec_t GetLightValue(const light_t *entity, vec_t dist);
     
 bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
+
+void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
 
 #endif /* __LIGHT_ENTITIES_H__ */

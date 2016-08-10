@@ -121,6 +121,8 @@ typedef struct {
     /* for sphere culling */
     vec3_t origin;
     vec_t radius;
+    /* for AABB culling */
+    vec3_t mins, maxs;
 
     // for radiosity
     vec3_t radiosity;
@@ -171,6 +173,10 @@ typedef struct {
     vec3_t surfnormal;
     vec_t area;
     const bsp2_dleaf_t *leaf;
+    
+    /* estimated visible AABB culling */
+    vec3_t mins;
+    vec3_t maxs;
 } bouncelight_t;
 
 extern byte thepalette[768];
@@ -638,6 +644,7 @@ extern qboolean onlyents;
 extern qboolean scaledonly;
 extern uint32_t *extended_texinfo_flags;
 extern qboolean novis;
+extern qboolean novisapprox;
 extern bool nolights;
 
 typedef enum {

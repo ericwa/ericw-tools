@@ -364,6 +364,9 @@ CalcFaceExtents(const bsp2_dface_t *face,
         
         VectorAdd(worldmins, radius, surf->origin);
         surf->radius = VectorLength(radius);
+        
+        VectorCopy(worldmaxs, surf->maxs);
+        VectorCopy(worldmins, surf->mins);
     }
     
     for (i = 0; i < 2; i++) {
@@ -902,6 +905,8 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     
     /* Correct bounding sphere */
     VectorAdd(lightsurf->origin, modelinfo->offset, lightsurf->origin);
+    VectorAdd(lightsurf->mins, modelinfo->offset, lightsurf->mins);
+    VectorAdd(lightsurf->maxs, modelinfo->offset, lightsurf->maxs);
     
     /* Allocate occlusion array */
     lightsurf->occlusion = (float *) calloc(lightsurf->numpoints, sizeof(float));
@@ -1179,6 +1184,9 @@ CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     vec3_t distvec;
     vec_t dist;
+    
+    if (!novisapprox && AABBsDisjoint(entity->mins, entity->maxs, lightsurf->mins, lightsurf->maxs))
+        return true;
     
     VectorSubtract(*entity->origin.vec3Value(), lightsurf->origin, distvec);
     dist = VectorLength(distvec) - lightsurf->radius;
@@ -1792,6 +1800,9 @@ GetIndirectLighting (const bouncelight_t *vpl, const vec3_t dir, vec_t dist, con
 static inline bool
 BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
 {
+    if (!novisapprox && AABBsDisjoint(vpl->mins, vpl->maxs, lightsurf->mins, lightsurf->maxs))
+        return true;
+    
     vec3_t color = {0};
     //GetIndirectLighting(bsp, vpl, lightsurf->face, lightsurf->pvs, lightsurf->origin, lightsurf->plane.normal, color);
     

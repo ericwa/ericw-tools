@@ -1014,6 +1014,90 @@ FixLightsOnFaces(const bsp2_t *bsp)
     }
 }
 
+void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
+{
+    const int N = 16;
+    const int N2 = N*N;
+    
+    raystream_t *rs = MakeRayStream(N2);
+    
+    AABB_Init(mins, maxs, point);
+    for (int x=0; x<N; x++) {
+        for (int y=0; y<N; y++) {
+            const vec_t u1 = static_cast<float>(x + Random()) / static_cast<float>(N);
+            const vec_t u2 = static_cast<float>(y + Random()) / static_cast<float>(N);
+            
+            vec3_t dir;
+            UniformPointOnSphere(dir, u1, u2);
+            //RandomDir(dir);
+        
+            rs->pushRay(0, point, dir, 65536.0f, nullptr);
+        }
+    }
+    
+    rs->tracePushedRaysIntersection();
+    
+    for (int i=0; i<N2; i++) {
+        const float dist = rs->getPushedRayHitDist(i);
+        vec3_t dir;
+        rs->getPushedRayDir(i, dir);
+        
+        // get the intersection point
+        vec3_t stop;
+        VectorMA(point, dist, dir, stop);
+        
+        AABB_Expand(mins, maxs, stop);
+    }
+    
+    // grow it by 10% in each direction
+    vec3_t size;
+    AABB_Size(mins, maxs, size);
+    VectorScale(size, 0.10, size);
+    AABB_Grow(mins, maxs, size);
+    
+    /*
+    printf("light at %f %f %f has mins %f %f %f maxs %f %f %f\n",
+           point[0],
+           point[1],
+           point[2],
+           light.mins[0],
+           light.mins[1],
+           light.mins[2],
+           light.maxs[0],
+           light.maxs[1],
+           light.maxs[2]);
+    */
+    
+    delete rs;
+}
+
+static void EstimateLightAABB(light_t *light)
+{
+    EstimateVisibleBoundsAtPoint(*light->origin.vec3Value(), light->mins, light->maxs);
+}
+
+static void *EstimateLightAABBThread(void *arg)
+{
+    while (1) {
+        const int i = GetThreadWork();
+        if (i == -1)
+            break;
+        
+        EstimateLightAABB(&all_lights.at(i));
+    }
+    return nullptr;
+}
+
+void EstimateLightVisibility(void)
+{
+    if (novisapprox)
+        return;
+    
+    logprint("--- EstimateLightVisibility ---\n");
+    
+    RunThreadsOn(0, static_cast<int>(all_lights.size()), EstimateLightAABBThread, nullptr);
+}
+
 void
 SetupLights(const bsp2_t *bsp)
 {
@@ -1036,6 +1120,7 @@ SetupLights(const bsp2_t *bsp)
     SetupSkyDome();
     FixLightsOnFaces(bsp);
     SetupLightLeafnums(bsp);
+    EstimateLightVisibility();
     
     logprint("Final count: %d lights %d suns in use.\n",
              static_cast<int>(all_lights.size()),
