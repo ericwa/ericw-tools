@@ -1015,7 +1015,7 @@ FixLightsOnFaces(const bsp2_t *bsp)
 
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
 {
-    const int N = 16;
+    const int N = 32;
     const int N2 = N*N;
     
     raystream_t *rs = MakeRayStream(N2);
@@ -1023,12 +1023,11 @@ void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
     AABB_Init(mins, maxs, point);
     for (int x=0; x<N; x++) {
         for (int y=0; y<N; y++) {
-            const vec_t u1 = static_cast<float>(x + Random()) / static_cast<float>(N);
-            const vec_t u2 = static_cast<float>(y + Random()) / static_cast<float>(N);
+            const vec_t u1 = static_cast<float>(x) / static_cast<float>(N - 1);
+            const vec_t u2 = static_cast<float>(y) / static_cast<float>(N - 1);
             
             vec3_t dir;
             UniformPointOnSphere(dir, u1, u2);
-            //RandomDir(dir);
         
             rs->pushRay(0, point, dir, 65536.0f, nullptr);
         }
@@ -1048,10 +1047,10 @@ void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
         AABB_Expand(mins, maxs, stop);
     }
     
-    // grow it by 10% in each direction
+    // grow it by 1% in each direction
     vec3_t size;
     AABB_Size(mins, maxs, size);
-    VectorScale(size, 0.10, size);
+    VectorScale(size, 0.01, size);
     AABB_Grow(mins, maxs, size);
     
     /*
