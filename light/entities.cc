@@ -751,7 +751,6 @@ EntData_Parse(const char *entdata)
         result.push_back(entity);
     }
     
-    logprint("%d entities read", static_cast<int>(result.size()));
     return result;
 }
 
