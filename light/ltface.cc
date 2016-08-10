@@ -1665,6 +1665,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         }
         
         rs->tracePushedRaysOcclusion();
+        total_light_rays += rs->numPushedRays();
         
         const int N = rs->numPushedRays();
         for (int j = 0; j < N; j++) {
@@ -1683,6 +1684,8 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
 
             if (!hit && LightSample_Brightness(sample->color) >= 1)
                 hit = true;
+            
+            total_light_ray_hits++;
         }
         
         if (hit)
