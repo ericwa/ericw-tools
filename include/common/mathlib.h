@@ -172,6 +172,15 @@ VectorNormalize(vec3_t v)
     return (vec_t)length;
 }
 
+// returns the normalized direction from `start` to `stop` in the `dir` param
+// returns the distance from `start` to `stop`
+static inline vec_t
+GetDir(const vec3_t start, const vec3_t stop, vec3_t dir)
+{
+    VectorSubtract(stop, start, dir);
+    return VectorNormalize(dir);
+}
+    
 /* Shortcut for output of warnings/errors */
 const char *VecStr(const vec3_t vec);
 const char *VecStrf(const vec3_t vec);

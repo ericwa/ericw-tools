@@ -1459,12 +1459,6 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
         Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
-static vec_t GetDir(const vec3_t start, const vec3_t stop, vec3_t dir)
-{
-    VectorSubtract(stop, start, dir);
-    return VectorNormalize(dir);
-}
-
 /*
  * ============
  * LightFace_Min
