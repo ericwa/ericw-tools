@@ -899,6 +899,7 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
  * ============================================================================
  */
 
+// returns the light contribution at a given distance, without regard for angle
 vec_t
 GetLightValue(const light_t *entity, vec_t dist)
 {
@@ -925,6 +926,67 @@ GetLightValue(const light_t *entity, vec_t dist)
     default:
         Error("Internal error: unknown light formula");
     }
+}
+
+float
+GetLightValueWithAngle(const light_t *entity, const vec3_t surfnorm, const vec3_t surfpointToLightDir, float dist, bool twosided)
+{
+    float angle = DotProduct(surfpointToLightDir, surfnorm);
+    if (entity->bleed.boolValue() || twosided) {
+        if (angle < 0) {
+            angle = -angle; // ericw -- support "_bleed" option
+        }
+    }
+    
+    /* Light behind sample point? Zero contribution, period. */
+    if (angle < 0) {
+        return 0;
+    }
+    
+    /* Apply anglescale */
+    angle = (1.0 - entity->anglescale.floatValue()) + (entity->anglescale.floatValue() * angle);
+    
+    /* Check spotlight cone */
+    float spotscale = 1;
+    if (entity->spotlight) {
+        vec_t falloff = DotProduct(entity->spotvec, surfpointToLightDir);
+        if (falloff > entity->spotfalloff) {
+            return 0;
+        }
+        if (falloff > entity->spotfalloff2) {
+            /* Interpolate between the two spotlight falloffs */
+            spotscale = falloff - entity->spotfalloff2;
+            spotscale /= entity->spotfalloff - entity->spotfalloff2;
+            spotscale = 1.0 - spotscale;
+        }
+    }
+    
+    float add = GetLightValue(entity, dist) * angle * spotscale;
+    return add;
+}
+
+static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix, const vec3_t point, float *result);
+
+void
+GetLightContrib(const light_t *entity, const vec3_t surfnorm, const vec3_t surfpoint, bool twosided,
+                vec3_t color_out, vec3_t surfpointToLightDir_out, vec3_t normalmap_addition_out, float *dist_out)
+{
+    float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
+    float add = GetLightValueWithAngle(entity, surfnorm, surfpointToLightDir_out, dist, twosided);
+    
+    /* write out the final color */
+    if (entity->projectedmip) {
+        vec3_t col;
+        LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
+        VectorScale(col, add * (1.0f / 255.0f), color_out);
+    } else {
+        VectorScale(*entity->color.vec3Value(), add * (1.0f / 255.0f), color_out);
+    }
+    
+    // write normalmap contrib
+    VectorScale(surfpointToLightDir_out, add, normalmap_addition_out);
+    
+    *dist_out = dist;
 }
 
 #define SQR(x) ((x)*(x))
@@ -1281,27 +1343,17 @@ LightFace_Entity(const bsp2_t *bsp,
         const vec_t *surfnorm = lightsurf->normals[i];
         
         vec3_t surfpointToLightDir;
-        VectorSubtract(*entity->origin.vec3Value(), surfpoint, surfpointToLightDir);
-        vec_t surfpointToLightDist = VectorNormalize(surfpointToLightDir);
-
+        float surfpointToLightDist;
+        vec3_t color, normalmap_add;
+        
+        GetLightContrib(entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalmap_add, &surfpointToLightDist);
+ 
         /* Quick distance check first */
-        if (fabs(GetLightValue(entity, surfpointToLightDist)) <= fadegate) {
-            continue;
-        }
-
-        float angle = DotProduct(surfpointToLightDir, surfnorm);
-        if (entity->bleed.boolValue() || lightsurf->twosided) {
-            if (angle < 0) {
-                angle = -angle; // ericw -- support "_bleed" option
-            }
-        }
-        
-        /* Light behind sample point? Zero contribution, period. */
-        if (angle < 0) {
+        if (fabs(LightSample_Brightness(color)) <= fadegate) {
             continue;
         }
         
-        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself);
+        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself, color);
     }
     
     rs->tracePushedRaysOcclusion();
@@ -1317,55 +1369,20 @@ LightFace_Entity(const bsp2_t *bsp,
         
         int i = rs->getPushedRayPointIndex(j);
         lightsample_t *sample = &lightmap->samples[i];
-        const vec_t *surfpoint = lightsurf->points[i];
-        const vec_t *surfnorm = lightsurf->normals[i];
-        
-        float surfpointToLightDist = rs->getPushedRayDist(j);
         
         vec3_t surfpointToLightDir;
         rs->getPushedRayDir(j, surfpointToLightDir);
         
-        // FIXME: duplicated from above
-        float angle = DotProduct(surfpointToLightDir, surfnorm);
-        if (entity->bleed.boolValue() || lightsurf->twosided) {
-            if (angle < 0) {
-                angle = -angle; // ericw -- support "_bleed" option
-            }
-        }
+        vec3_t color;
+        rs->getPushedRayColor(j, color);
         
-        angle = (1.0 - entity->anglescale.floatValue()) + entity->anglescale.floatValue() * angle;
+        VectorAdd(sample->color, color, sample->color);
+        // FIXME: add to sample->dir
         
-        /* Check spotlight cone */
-        float spotscale = 1;
-        if (entity->spotlight) {
-            vec_t falloff = DotProduct(entity->spotvec, surfpointToLightDir);
-            if (falloff > entity->spotfalloff)
-                continue;
-            if (falloff > entity->spotfalloff2) {
-                /* Interpolate between the two spotlight falloffs */
-                spotscale = falloff - entity->spotfalloff2;
-                spotscale /= entity->spotfalloff - entity->spotfalloff2;
-                spotscale = 1.0 - spotscale;
-            }
-        }
-        
-        float add = GetLightValue(entity, surfpointToLightDist) * angle * spotscale;
-        add *= Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, lightsurf);
-
-        if (entity->projectedmip) {
-            vec3_t col;
-            VectorCopy(*entity->color.vec3Value(), col);
-            VectorScale(surfpointToLightDir, 255, col);
-            LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
-            Light_Add(sample, add, col, surfpointToLightDir);
-        } else {
-            Light_Add(sample, add, *entity->color.vec3Value(), surfpointToLightDir);
-        }
-
         /* Check if we really hit, ignore tiny lights */
         /* ericw -- never ignore generated lights, which can be tiny and need
            the additive effect of lots hitting */
-        if (!hit && (LightSample_Brightness(sample->color) >= 1 || entity->generated)) {
+        if ((LightSample_Brightness(color) >= 1 || entity->generated)) {
             hit = true;
         }
     }
