@@ -934,14 +934,14 @@ float
 GetLightDist(const light_t *entity, vec_t desiredLight)
 {
     float fadedist;
-    if (entity->formula.intValue() == LF_LINEAR) {
+    if (entity->getFormula() == LF_LINEAR) {
         /* Linear formula always has a falloff point */
         fadedist = fabs(entity->light.floatValue()) - desiredLight;
         fadedist = fadedist / entity->atten.floatValue() / scaledist.floatValue();
         fadedist = qmax(0.0f, fadedist);
     } else {
         /* Calculate the distance at which brightness falls to desiredLight */
-        switch (entity->formula.intValue()) {
+        switch (entity->getFormula()) {
             case LF_INFINITE:
             case LF_LOCALMIN:
                 fadedist = VECT_MAX;
@@ -952,7 +952,7 @@ GetLightDist(const light_t *entity, vec_t desiredLight)
             case LF_INVERSE2:
             case LF_INVERSE2A:
                 fadedist = sqrt(fabs(entity->light.floatValue() * SQR(LF_SCALE) / (SQR(scaledist.floatValue()) * SQR(entity->atten.floatValue()) * desiredLight)));
-                if (entity->formula.intValue() == LF_INVERSE2A) {
+                if (entity->getFormula() == LF_INVERSE2A) {
                     fadedist -= (LF_SCALE / (scaledist.floatValue() * entity->atten.floatValue()));
                 }
                 fadedist = qmax(0.0f, fadedist);
