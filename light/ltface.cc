@@ -1344,16 +1344,16 @@ LightFace_Entity(const bsp2_t *bsp,
         
         vec3_t surfpointToLightDir;
         float surfpointToLightDist;
-        vec3_t color, normalmap_add;
+        vec3_t color, normalcontrib;
         
-        GetLightContrib(entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalmap_add, &surfpointToLightDist);
+        GetLightContrib(entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
  
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= fadegate) {
             continue;
         }
         
-        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself, color);
+        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself, color, normalcontrib);
     }
     
     rs->tracePushedRaysOcclusion();
@@ -1370,14 +1370,12 @@ LightFace_Entity(const bsp2_t *bsp,
         int i = rs->getPushedRayPointIndex(j);
         lightsample_t *sample = &lightmap->samples[i];
         
-        vec3_t surfpointToLightDir;
-        rs->getPushedRayDir(j, surfpointToLightDir);
-        
-        vec3_t color;
+        vec3_t color, normalcontrib;
         rs->getPushedRayColor(j, color);
-        
+        rs->getPushedRayNormalContrib(j, normalcontrib);
+
         VectorAdd(sample->color, color, sample->color);
-        // FIXME: add to sample->dir
+        VectorAdd(sample->direction, normalcontrib, sample->direction);
         
         /* Check if we really hit, ignore tiny lights */
         /* ericw -- never ignore generated lights, which can be tiny and need
