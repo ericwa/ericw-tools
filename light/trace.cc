@@ -868,13 +868,14 @@ public:
     float _maxdist;
     const dmodel_t *_selfshadow;
     vec3_t _color;
+    vec3_t _normalcontrib;
     
     // hit info
     float _hitdist;
     hittype_t _hittype;
     bool _hit_occluded;
     
-    bsp_ray_t(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color) :
+    bsp_ray_t(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color, const vec_t *normalcontrib) :
         _pointindex{i},
         _maxdist{dist},
         _selfshadow{selfshadow},
@@ -885,6 +886,9 @@ public:
 			VectorCopy(dir, _dir);
             if (color != nullptr) {
                 VectorCopy(color, _color);
+            }
+            if (normalcontrib != nullptr) {
+                VectorCopy(normalcontrib, _normalcontrib);
             }
         }
 };
@@ -900,8 +904,8 @@ public:
     
     raystream_bsp_t() {}
     
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr) {
-        bsp_ray_t r { i, origin, dir, dist, selfshadow, color };
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+        bsp_ray_t r { i, origin, dir, dist, selfshadow, color, normalcontrib };
         _rays.push_back(r);
         assert(_rays.size() <= _maxrays);
     }
@@ -958,6 +962,10 @@ public:
     
     virtual void getPushedRayColor(size_t j, vec3_t out) {
         VectorCopy(_rays.at(j)._color, out);
+    }
+    
+    virtual void getPushedRayNormalContrib(size_t j, vec3_t out) {
+        VectorCopy(_rays.at(j)._normalcontrib, out);
     }
     
     virtual void clearPushedRays() {

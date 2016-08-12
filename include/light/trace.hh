@@ -59,7 +59,7 @@ bool IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, cons
 
 class raystream_t {
 public:
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr) = 0;
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
     virtual void tracePushedRaysOcclusion() = 0;
     virtual void tracePushedRaysIntersection() = 0;
@@ -70,6 +70,7 @@ public:
     virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
     virtual int getPushedRayPointIndex(size_t j) = 0;
     virtual void getPushedRayColor(size_t j, vec3_t out) = 0;
+    virtual void getPushedRayNormalContrib(size_t j, vec3_t out) = 0;
     virtual void clearPushedRays() = 0;
     virtual ~raystream_t() {};
 };

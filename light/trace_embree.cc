@@ -455,6 +455,7 @@ private:
     float *_rays_maxdist;
     int *_point_indices;
     vec3_t *_ray_colors;
+    vec3_t *_ray_normalcontribs;
     int _numrays;
     int _maxrays;
 //    streamstate_t _state;
@@ -465,6 +466,7 @@ public:
         _rays_maxdist { new float[maxRays] },
         _point_indices { new int[maxRays] },
         _ray_colors { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
+        _ray_normalcontribs { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
         _numrays { 0 },
         _maxrays { maxRays } {}
         //,
@@ -475,15 +477,19 @@ public:
         delete[] _rays_maxdist;
         delete[] _point_indices;
         free(_ray_colors);
+        free(_ray_normalcontribs);
     }
     
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr) {
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
         assert(_numrays<_maxrays);
         _rays[_numrays] = SetupRay(origin, dir, dist, selfshadow);
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
             VectorCopy(color, _ray_colors[_numrays]);
+        }
+        if (normalcontrib) {
+            VectorCopy(normalcontrib, _ray_normalcontribs[_numrays]);
         }
         _numrays++;
     }
@@ -561,6 +567,11 @@ public:
     virtual void getPushedRayColor(size_t j, vec3_t out) {
         assert(j < _maxrays);
         VectorCopy(_ray_colors[j], out);
+    }
+    
+    virtual void getPushedRayNormalContrib(size_t j, vec3_t out) {
+        assert(j < _maxrays);
+        VectorCopy(_ray_normalcontribs[j], out);
     }
     
     virtual void clearPushedRays() {
