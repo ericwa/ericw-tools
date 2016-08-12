@@ -1236,35 +1236,13 @@ GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec
     VectorSet(colorout, 0, 0, 0);
     
     for (const light_t &entity : GetLights()) {
-        vec3_t originLightDir;
-        VectorSubtract(*entity.origin.vec3Value(), origin, originLightDir);
-        vec_t dist = VectorNormalize(originLightDir);
+        vec3_t surfpointToLightDir;
+        float surfpointToLightDist;
+        vec3_t color, normalcontrib;
         
-        vec_t cosangle = DotProduct(originLightDir, normal);
-        if (cosangle < 0) {
-            continue;
-        }
+        GetLightContrib(&entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         
-        // apply anglescale
-        cosangle = (1.0 - entity.anglescale.floatValue()) + entity.anglescale.floatValue() * cosangle;
-        
-        /* Check spotlight cone */
-        float spotscale = 1;
-        if (entity.spotlight) {
-            vec_t falloff = DotProduct(entity.spotvec, originLightDir);
-            if (falloff > entity.spotfalloff) {
-                continue;
-            }
-            if (falloff > entity.spotfalloff2) {
-                /* Interpolate between the two spotlight falloffs */
-                spotscale = falloff - entity.spotfalloff2;
-                spotscale /= entity.spotfalloff - entity.spotfalloff2;
-                spotscale = 1.0 - spotscale;
-            }
-        }
-        
-        vec_t lightval = GetLightValue(&entity, dist);
-        if (lightval < 0.25) {
+        if (fabs(LightSample_Brightness(color)) <= fadegate) {
             continue;
         }
         
@@ -1272,7 +1250,7 @@ GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec
             continue;
         }
         
-        VectorMA(colorout, lightval * cosangle * spotscale / 255.0f, *entity.color.vec3Value(), colorout);
+        VectorAdd(colorout, color, colorout);
     }
     
     for (const sun_t &sun : GetSuns()) {
