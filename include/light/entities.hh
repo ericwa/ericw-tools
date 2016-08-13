@@ -167,13 +167,10 @@ float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
 void SetWorldKeyValue(const std::string &key, const std::string &value);
 std::string WorldValueForKey(const std::string &key);
 
-void LoadEntities(const bsp2_t *bsp);
-void SetupLights(const bsp2_t *bsp);
+void LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp);
+void SetupLights(const globalconfig_t &cfg, const bsp2_t *bsp);
 void WriteEntitiesToString(bsp2_t *bsp);
 
-// FIXME: remove light param. add normal param and dir params.
-vec_t GetLightValue(const light_t *entity, vec_t dist);
-    
 bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
 
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);

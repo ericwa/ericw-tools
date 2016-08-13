@@ -44,53 +44,7 @@
 
 using namespace std;
 
-using strings = std::vector<std::string>;
-
-//
-// worldspawn keys / command-line settings
-//
-
-lockable_vec_t scaledist {"dist", 1.0, 0.0f, 100.0f};
-lockable_vec_t rangescale {"range", 0.5f, 0.0f, 100.0f};
-lockable_vec_t global_anglescale {strings{"anglescale", "anglesense"}, 0.5, 0.0f, 1.0f};
-lockable_vec_t lightmapgamma {"gamma", 1.0, 0.0f, 100.0f};
-
-lockable_bool_t addminlight {"addmin", false};
-lockable_vec_t minlight {"light", 0};
-lockable_vec3_t minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-
-/* dirt */
-lockable_bool_t globalDirt {strings{"dirt", "dirty"}, false};
-lockable_vec_t dirtMode {"dirtmode", 0.0f};
-lockable_vec_t dirtDepth {"dirtdepth", 128.0f, 1.0f, std::numeric_limits<float>::infinity()};
-lockable_vec_t dirtScale {"dirtscale", 1.0f, 0.0f, 100.0f};
-lockable_vec_t dirtGain {"dirtgain", 1.0f, 0.0f, 100.0f};
-lockable_vec_t dirtAngle {"dirtangle", 88.0f, 0.0f, 90.0f};
-lockable_bool_t minlightDirt {"minlight_dirt", false};
-
-/* phong */
-lockable_bool_t phongallowed {"phong", true};
-
-/* bounce */
-lockable_bool_t bounce {"bounce", false};
-lockable_vec_t bouncescale {"bouncescale", 1.0f, 0.0f, 100.0f};
-lockable_vec_t bouncecolorscale {"bouncecolorscale", 0.0f, 0.0f, 1.0f};
-
-/* sun */
-lockable_vec_t sunlight         { "sunlight", 0.0f };                   /* main sun */
-lockable_vec3_t sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sun2             { "sun2", 0.0f };                   /* second sun */
-lockable_vec3_t sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sunlight2        { "sunlight2", 0.0f };                   /* top sky dome */
-lockable_vec3_t sunlight2_color { strings{"sunlight2_color", "sunlight_color2"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sunlight3        { "sunlight3", 0.0f };                   /* bottom sky dome */
-lockable_vec3_t sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 };
-lockable_vec_t sunlight_dirt    { "sunlight_dirt", 0.0f };
-lockable_vec_t sunlight2_dirt   { "sunlight2_dirt", 0.0f };
-lockable_vec3_t sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
-lockable_vec3_t sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC };  /* defaults to straight down */
-lockable_vec_t sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f };
-
+globalconfig_t cfg_static {};
 
 bool dirt_in_use = false;
 
@@ -146,51 +100,14 @@ int dump_vertnum = -1;
 bool dump_vert;
 vec3_t dump_vert_point = {0,0,0};
 
-settingsdict_t globalsettings;
-
 lockable_setting_t *FindSetting(std::string name) {
-    return globalsettings.findSetting(name);
+    settingsdict_t sd = cfg_static.settings();
+    return sd.findSetting(name);
 }
 
 void SetGlobalSetting(std::string name, std::string value, bool cmdline) {
-    globalsettings.setSetting(name, value, cmdline);
-}
-
-static void
-InitSettings()
-{
-    globalsettings = {{
-        &minlight,
-        &addminlight,
-        &lightmapgamma,
-        &bounce,
-        &bouncescale,
-        &bouncecolorscale,
-        &minlight_color,
-        &minlightDirt,
-        &scaledist,
-        &rangescale,
-        &global_anglescale,
-        &dirtDepth,
-        &dirtMode,
-        &dirtScale,
-        &dirtGain,
-        &dirtAngle,
-        &globalDirt,
-        &sunlight,
-        &sunvec,
-        &sunlight_color,
-        &sun_deviance,
-        &sunlight_dirt,
-        &sun2,
-        &sun2vec,
-        &sun2_color,
-        &sunlight2,
-        &sunlight2_color,
-        &sunlight2_dirt,
-        &sunlight3,
-        &sunlight3_color
-    }};
+    settingsdict_t sd = cfg_static.settings();
+    sd.setSetting(name, value, cmdline);
 }
 
 static void
@@ -198,7 +115,9 @@ PrintOptionsSummary(void)
 {
     logprint("Options summary:\n");
     
-    for (lockable_setting_t *setting : globalsettings.allSettings()) {
+    settingsdict_t sd = cfg_static.settings();
+    
+    for (lockable_setting_t *setting : sd.allSettings()) {
         if (setting->isChanged()) {
             logprint("    \"%s\" was set to \"%s\" from %s\n",
                      setting->primaryName().c_str(),
@@ -284,8 +203,9 @@ LightThread(void *arg)
             break;
 
         ctx = &ltface_ctxs[facenum];
-
+        
         LightFaceInit(bsp, ctx);
+        ctx->cfg = &cfg_static;
         
         /* Find the correct model offset */
         face_modelinfo = ModelInfoForFace(bsp, facenum);
@@ -810,7 +730,7 @@ public:
 };
 
 static unique_ptr<patch_t>
-MakePatch (winding_t *w)
+MakePatch (const globalconfig_t &cfg, winding_t *w)
 {
     unique_ptr<patch_t> p { new patch_t };
     p->w = w;
@@ -825,16 +745,26 @@ MakePatch (winding_t *w)
     // calculate direct light
     
     raystream_t *rs = MakeRayStream(numDirtVectors);
-    GetDirectLighting(rs, p->samplepoint, p->plane.normal, p->directlight);
+    GetDirectLighting(cfg, rs, p->samplepoint, p->plane.normal, p->directlight);
     delete rs;
     
     return p;
 }
 
+struct make_bounce_lights_args_t {
+    const bsp2_t *bsp;
+    const globalconfig_t *cfg;
+};
+
+struct save_winding_args_t {
+    vector<unique_ptr<patch_t>> *patches;
+    const globalconfig_t *cfg;
+};
+
 static void SaveWindingFn(winding_t *w, void *userinfo)
 {
-    vector<unique_ptr<patch_t>> *patches = static_cast<vector<unique_ptr<patch_t>> *>(userinfo);
-    patches->push_back(MakePatch(w));
+    save_winding_args_t *args = static_cast<save_winding_args_t *>(userinfo);
+    args->patches->push_back(MakePatch(*args->cfg, w));
 }
 
 static bool
@@ -877,7 +807,8 @@ AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, ve
 static void *
 MakeBounceLightsThread (void *arg)
 {
-    const bsp2_t *bsp = (const bsp2_t *)arg;
+    const bsp2_t *bsp = static_cast<make_bounce_lights_args_t *>(arg)->bsp;
+    const globalconfig_t &cfg = *static_cast<make_bounce_lights_args_t *>(arg)->cfg;
     
     while (1) {
         int i = GetThreadWork();
@@ -903,7 +834,11 @@ MakeBounceLightsThread (void *arg)
         WindingCenter(winding, facemidpoint);
         VectorMA(facemidpoint, 1, faceplane.normal, facemidpoint); // lift 1 unit
         
-        DiceWinding(winding, 64.0f, SaveWindingFn, &patches);
+        save_winding_args_t args;
+        args.patches = &patches;
+        args.cfg = &cfg;
+        
+        DiceWinding(winding, 64.0f, SaveWindingFn, &args);
         winding = nullptr; // DiceWinding frees winding
         
         // average them
@@ -922,8 +857,8 @@ MakeBounceLightsThread (void *arg)
         // lerp between gray and the texture color according to `bouncecolorscale`
         const vec3_t gray = {127, 127, 127};
         vec3_t blendedcolor = {0, 0, 0};
-        VectorMA(blendedcolor, bouncecolorscale.floatValue(), texturecolor, blendedcolor);
-        VectorMA(blendedcolor, 1-bouncecolorscale.floatValue(), gray, blendedcolor);
+        VectorMA(blendedcolor, cfg.bouncecolorscale.floatValue(), texturecolor, blendedcolor);
+        VectorMA(blendedcolor, 1-cfg.bouncecolorscale.floatValue(), gray, blendedcolor);
         
         // final color to emit
         vec3_t emitcolor;
@@ -1005,12 +940,17 @@ MakeTextureColors (const bsp2_t *bsp)
 }
 
 static void
-MakeBounceLights (const bsp2_t *bsp)
+MakeBounceLights (const globalconfig_t &cfg, const bsp2_t *bsp)
 {
     logprint("--- MakeBounceLights ---\n");
     
     const dmodel_t *model = &bsp->dmodels[0];
-    RunThreadsOn(model->firstface, model->firstface + model->numfaces, MakeBounceLightsThread, (void *)bsp);
+    
+    make_bounce_lights_args_t args;
+    args.bsp = bsp;
+    args.cfg = &cfg;
+    
+    RunThreadsOn(model->firstface, model->firstface + model->numfaces, MakeBounceLightsThread, (void *)&args);
 }
 
 // end radiosity
@@ -1187,7 +1127,7 @@ static void SetLitNeeded()
     }
 }
 
-static void CheckLitNeeded()
+static void CheckLitNeeded(const globalconfig_t &cfg)
 {
     const vec3_t white = {255,255,255};
     
@@ -1200,12 +1140,12 @@ static void CheckLitNeeded()
     }
     
     // check global settings
-    if (bouncecolorscale.floatValue() != 0 ||
-        !VectorCompare(*minlight_color.vec3Value(), white) ||
-        !VectorCompare(*sunlight_color.vec3Value(), white) ||
-        !VectorCompare(*sun2_color.vec3Value(), white) ||
-        !VectorCompare(*sunlight2_color.vec3Value(), white) ||
-        !VectorCompare(*sunlight3_color.vec3Value(), white)) {
+    if (cfg.bouncecolorscale.floatValue() != 0 ||
+        !VectorCompare(*cfg.minlight_color.vec3Value(), white) ||
+        !VectorCompare(*cfg.sunlight_color.vec3Value(), white) ||
+        !VectorCompare(*cfg.sun2_color.vec3Value(), white) ||
+        !VectorCompare(*cfg.sunlight2_color.vec3Value(), white) ||
+        !VectorCompare(*cfg.sunlight3_color.vec3Value(), white)) {
         SetLitNeeded();
         return;
     }
@@ -1422,7 +1362,8 @@ main(int argc, const char **argv)
 
     LowerProcessPriority();
     numthreads = GetDefaultThreads();
-    InitSettings();
+    
+    globalconfig_t &cfg = cfg_static;
     
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-threads")) {
@@ -1467,12 +1408,12 @@ main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-dirtdebug" ) || !strcmp( argv[ i ], "-debugdirt" ) ) {
             CheckNoDebugModeSet();
             
-            globalDirt.setBoolValueLocked(true);
+            cfg.globalDirt.setBoolValueLocked(true);
             debugmode = debugmode_dirt;
             logprint( "Dirtmap debugging enabled\n" );
         } else if ( !strcmp( argv[ i ], "-bouncedebug" ) ) {
             CheckNoDebugModeSet();
-            bounce.setBoolValueLocked(true);
+            cfg.bounce.setBoolValueLocked(true);
             debugmode = debugmode_bounce;
             logprint( "Bounce debugging mode enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
@@ -1616,7 +1557,7 @@ main(int argc, const char **argv)
         ConvertBSPFormat(BSP2VERSION, &bspdata);
 
     LoadExtendedTexinfoFlags(source, bsp);
-    LoadEntities(bsp);
+    LoadEntities(cfg, bsp);
 
     PrintOptionsSummary();
     
@@ -1627,18 +1568,18 @@ main(int argc, const char **argv)
 
     MakeTnodes(bsp);
     
-    SetupLights(bsp);
+    SetupLights(cfg, bsp);
     
     //PrintLights();
     
     if (!onlyents)
     {
-        CheckLitNeeded();
-        SetupDirt();
+        CheckLitNeeded(cfg);
+        SetupDirt(cfg);
         
-        if (bounce.boolValue()) {
+        if (cfg.bounce.boolValue()) {
             MakeTextureColors(bsp);
-            MakeBounceLights(bsp);
+            MakeBounceLights(cfg, bsp);
         }
         LightWorld(&bspdata, !!lmscaleoverride);
         

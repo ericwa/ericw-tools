@@ -76,9 +76,11 @@ typedef struct {
 } texorg_t;
 
 class modelinfo_t;
+class globalconfig_t;
 
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
+    const globalconfig_t *cfg;
     const modelinfo_t *modelinfo;
     const bsp2_t *bsp;
     const bsp2_dface_t *face;
@@ -142,6 +144,7 @@ struct ltface_ctx
 {
     const bsp2_t *bsp;
     lightsurf_t *lightsurf;
+    const globalconfig_t *cfg;
     lightmap_t lightmaps[MAXLIGHTMAPS + 1];
 };
 
@@ -447,58 +450,7 @@ public:
 };
 
 
-
-//
-// worldspawn keys / command-line settings
-//
-
-extern lockable_vec_t scaledist;
-extern lockable_vec_t rangescale;
-extern lockable_vec_t global_anglescale;
-extern lockable_vec_t lightmapgamma;
-
-extern lockable_bool_t addminlight;
-extern lockable_vec_t minlight;
-extern lockable_vec3_t minlight_color;
-
-/* dirt */
-
-extern lockable_bool_t globalDirt;          // apply dirt to all lights (unless they override it) + sunlight + minlight?
-extern lockable_vec_t dirtMode;
-extern lockable_vec_t dirtDepth;
-extern lockable_vec_t dirtScale;
-extern lockable_vec_t dirtGain;
-extern lockable_vec_t dirtAngle;
-
-extern lockable_bool_t minlightDirt;   // apply dirt to minlight?
-
 extern int numDirtVectors;
-
-/* phong */
-
-extern lockable_bool_t phongallowed;
-    
-/* bounce */
-
-extern lockable_bool_t bounce;
-extern lockable_vec_t bouncescale;
-extern lockable_vec_t bouncecolorscale;
-  
-/* sunlight */
-    
-extern lockable_vec_t sunlight;
-extern lockable_vec3_t sunlight_color;
-extern lockable_vec_t sun2;
-extern lockable_vec3_t sun2_color;
-extern lockable_vec_t sunlight2;
-extern lockable_vec3_t sunlight2_color;
-extern lockable_vec_t sunlight3;
-extern lockable_vec3_t sunlight3_color;
-extern lockable_vec_t sunlight_dirt;
-extern lockable_vec_t sunlight2_dirt;
-extern lockable_vec3_t sunvec;
-extern lockable_vec3_t sun2vec;
-extern lockable_vec_t sun_deviance;
 
 // other flags
 
@@ -515,7 +467,6 @@ extern bool dump_face;
 
 extern int dump_vertnum;
 extern bool dump_vert;
-
 
 // settings dictionary
 
@@ -625,6 +576,119 @@ public:
     }
 };
 
+//
+// worldspawn keys / command-line settings
+//
+
+class globalconfig_t {
+    using strings = std::vector<std::string>;
+    
+public:
+    lockable_vec_t scaledist, rangescale, global_anglescale, lightmapgamma;
+    lockable_bool_t addminlight;
+    lockable_vec_t minlight;
+    lockable_vec3_t minlight_color;
+    
+    /* dirt */
+    lockable_bool_t globalDirt;          // apply dirt to all lights (unless they override it) + sunlight + minlight?
+    lockable_vec_t dirtMode, dirtDepth, dirtScale, dirtGain, dirtAngle;
+    
+    lockable_bool_t minlightDirt;   // apply dirt to minlight?
+    
+    /* phong */
+    lockable_bool_t phongallowed;
+    
+    /* bounce */
+    lockable_bool_t bounce;
+    lockable_vec_t bouncescale, bouncecolorscale;
+    
+    /* sunlight */
+    
+    lockable_vec_t sunlight;
+    lockable_vec3_t sunlight_color;
+    lockable_vec_t sun2;
+    lockable_vec3_t sun2_color;
+    lockable_vec_t sunlight2;
+    lockable_vec3_t sunlight2_color;
+    lockable_vec_t sunlight3;
+    lockable_vec3_t sunlight3_color;
+    lockable_vec_t sunlight_dirt;
+    lockable_vec_t sunlight2_dirt;
+    lockable_vec3_t sunvec;
+    lockable_vec3_t sun2vec;
+    lockable_vec_t sun_deviance;
+    
+    globalconfig_t() :
+        scaledist {"dist", 1.0, 0.0f, 100.0f},
+        rangescale {"range", 0.5f, 0.0f, 100.0f},
+        global_anglescale {strings{"anglescale", "anglesense"}, 0.5, 0.0f, 1.0f},
+        lightmapgamma {"gamma", 1.0, 0.0f, 100.0f},
+
+        addminlight {"addmin", false},
+        minlight {"light", 0},
+        minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255},
+
+        /* dirt */
+        globalDirt {strings{"dirt", "dirty"}, false},
+        dirtMode {"dirtmode", 0.0f},
+        dirtDepth {"dirtdepth", 128.0f, 1.0f, std::numeric_limits<float>::infinity()},
+        dirtScale {"dirtscale", 1.0f, 0.0f, 100.0f},
+        dirtGain {"dirtgain", 1.0f, 0.0f, 100.0f},
+        dirtAngle {"dirtangle", 88.0f, 0.0f, 90.0f},
+        minlightDirt {"minlight_dirt", false},
+
+        /* phong */
+        phongallowed {"phong", true},
+
+        /* bounce */
+        bounce {"bounce", false},
+        bouncescale {"bouncescale", 1.0f, 0.0f, 100.0f},
+        bouncecolorscale {"bouncecolorscale", 0.0f, 0.0f, 1.0f},
+
+        /* sun */
+        sunlight         { "sunlight", 0.0f },                   /* main sun */
+        sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        sun2             { "sun2", 0.0f },                   /* second sun */
+        sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        sunlight2        { "sunlight2", 0.0f },                   /* top sky dome */
+        sunlight2_color { strings{"sunlight2_color", "sunlight_color2"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        sunlight3        { "sunlight3", 0.0f },                   /* bottom sky dome */
+        sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        sunlight_dirt    { "sunlight_dirt", 0.0f },
+        sunlight2_dirt   { "sunlight2_dirt", 0.0f },
+        sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
+        sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
+        sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f }
+    {}
+    
+    settingsdict_t settings() {
+        return {{
+            &scaledist, &rangescale, &global_anglescale, &lightmapgamma,
+            &addminlight,
+            &minlight,
+            &minlight_color,
+            &globalDirt,
+            &dirtMode, &dirtDepth, &dirtScale, &dirtGain, &dirtAngle,
+            &minlightDirt,
+            &phongallowed,
+            &bounce,
+            &bouncescale, &bouncecolorscale,
+            &sunlight,
+            &sunlight_color,
+            &sun2,
+            &sun2_color,
+            &sunlight2,
+            &sunlight2_color,
+            &sunlight3,
+            &sunlight3_color,
+            &sunlight_dirt,
+            &sunlight2_dirt,
+            &sunvec,
+            &sun2vec,
+            &sun_deviance
+        }};
+    }
+};
 
 extern byte *filebase;
 extern byte *lit_filebase;

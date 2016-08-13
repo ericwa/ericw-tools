@@ -44,9 +44,10 @@ extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
 void FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out);
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
-vec_t GetLightValue(const light_t *entity, vec_t dist);
-void GetDirectLighting(raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
-void SetupDirt();
+// FIXME: remove light param. add normal param and dir params.
+vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
+void GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
+void SetupDirt(globalconfig_t &cfg);
 void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
 void LightFaceShutdown(struct ltface_ctx *ctx);
 void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
