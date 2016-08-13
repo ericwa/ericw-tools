@@ -151,29 +151,6 @@ SetupSpotlights(void)
     }
 }
 
-void
-vec_from_mangle(vec3_t v, const vec3_t m)
-{
-    vec3_t tmp;
-
-    VectorScale(m, Q_PI / 180, tmp);
-    v[0] = cos(tmp[0]) * cos(tmp[1]);
-    v[1] = sin(tmp[0]) * cos(tmp[1]);
-    v[2] = sin(tmp[1]);
-}
-
-/* detect colors with components in 0-1 and scale them to 0-255 */
-void
-normalize_color_format(vec3_t color)
-{
-    if (color[0] >= 0 && color[0] <= 1 &&
-        color[1] >= 0 && color[1] <= 1 &&
-        color[2] >= 0 && color[2] <= 1)
-    {
-        VectorScale(color, 255, color);
-    }
-}
-
 static void
 CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
 {

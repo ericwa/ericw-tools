@@ -6,7 +6,8 @@ set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/light.hh
 	${CMAKE_SOURCE_DIR}/include/light/ltface.hh
 	${CMAKE_SOURCE_DIR}/include/light/trace.hh
-	${CMAKE_SOURCE_DIR}/include/light/litfile.hh)
+	${CMAKE_SOURCE_DIR}/include/light/litfile.hh
+	${CMAKE_SOURCE_DIR}/include/light/settings.hh)
 
 set(LIGHT_SOURCES
 	entities.cc
@@ -14,6 +15,7 @@ set(LIGHT_SOURCES
 	ltface.cc
 	trace.cc
 	light.cc
+	settings.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.c
 	${CMAKE_SOURCE_DIR}/common/cmdlib.c
 	${CMAKE_SOURCE_DIR}/common/mathlib.c
