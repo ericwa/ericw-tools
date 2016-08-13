@@ -28,6 +28,7 @@
 #include <cassert>
 #include <sstream>
 #include <map>
+#include <limits>
 
 enum class setting_source_t {
     DEFAULT = 0,
