@@ -42,7 +42,7 @@ if (embree_FOUND)
 endif(embree_FOUND)
 
 
-add_executable(light ${LIGHT_SOURCES})
+add_executable(light ${LIGHT_SOURCES} main.cc)
 target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
 
 if (embree_FOUND)
@@ -87,3 +87,22 @@ endif(embree_FOUND)
 
 install(TARGETS light RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
+
+# test
+
+set(GOOGLETEST_SOURCES ${CMAKE_SOURCE_DIR}/3rdparty/googletest/src/gtest-all.cc)
+include_directories(${CMAKE_SOURCE_DIR}/3rdparty/googletest/include)
+include_directories(${CMAKE_SOURCE_DIR}/3rdparty/googletest)
+
+set(LIGHT_TEST_SOURCE 
+	${LIGHT_SOURCES}
+	${GOOGLETEST_SOURCES}
+	test.cc)
+
+add_executable(testlight ${LIGHT_TEST_SOURCE})
+
+target_link_libraries (testlight ${CMAKE_THREAD_LIBS_INIT})
+if (embree_FOUND)
+	target_link_libraries (testlight ${EMBREE_LIBRARY})
+	add_definitions(-DHAVE_EMBREE)
+endif (embree_FOUND)

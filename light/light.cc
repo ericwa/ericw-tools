@@ -1346,7 +1346,7 @@ static const char *ParseString(int *i_inout, int argc, const char **argv)
  * ==================
  */
 int
-main(int argc, const char **argv)
+light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
     bsp2_t *const bsp = &bspdata.data.bsp2;
