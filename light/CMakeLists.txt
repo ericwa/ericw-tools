@@ -90,6 +90,9 @@ install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
 
 # test
 
+#see https://cmake.org/Wiki/CMakeEmulateMakeCheck
+add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
+
 set(GOOGLETEST_SOURCES ${CMAKE_SOURCE_DIR}/3rdparty/googletest/src/gtest-all.cc)
 include_directories(${CMAKE_SOURCE_DIR}/3rdparty/googletest/include)
 include_directories(${CMAKE_SOURCE_DIR}/3rdparty/googletest)
@@ -99,7 +102,9 @@ set(LIGHT_TEST_SOURCE
 	${GOOGLETEST_SOURCES}
 	test.cc)
 
-add_executable(testlight ${LIGHT_TEST_SOURCE})
+add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
+add_test(testlight testlight)
+add_dependencies(check testlight)
 
 target_link_libraries (testlight ${CMAKE_THREAD_LIBS_INIT})
 if (embree_FOUND)

@@ -22,6 +22,7 @@ build_script:
       cmake .. -T v140_xp -Dembree_DIR="c:/embree-2.10.0.win32.windows/lib/cmake/embree-2.10.0"
     }
 
+    msbuild check.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
     msbuild PACKAGE.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 artifacts:
 - path: cmakebuild\*.zip
