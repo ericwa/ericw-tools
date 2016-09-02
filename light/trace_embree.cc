@@ -281,6 +281,13 @@ Embree_TraceInit(const bsp2_t *bsp)
     device = rtcNewDevice();
     rtcDeviceSetErrorFunction(device, ErrorCallback);
     
+    // log version
+    const size_t ver_maj = rtcDeviceGetParameter1i(device, RTC_CONFIG_VERSION_MAJOR);
+    const size_t ver_min = rtcDeviceGetParameter1i(device, RTC_CONFIG_VERSION_MINOR);
+    const size_t ver_pat = rtcDeviceGetParameter1i(device, RTC_CONFIG_VERSION_PATCH);
+    logprint("Embree_TraceInit: Embree version: %d.%d.%d\n",
+             static_cast<int>(ver_maj), static_cast<int>(ver_min), static_cast<int>(ver_pat));
+    
     // we use the ray mask field to store the dmodel index of the self-shadow model
     if (0 != rtcDeviceGetParameter1i(device, RTC_CONFIG_RAY_MASK)) {
         Error("embree must be built with ray masks disabled");
