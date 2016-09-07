@@ -509,6 +509,11 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     for (int i = 0; i < bsp->numfaces; i++)
     {
         const bsp2_dface_t *f = &bsp->dfaces[i];
+        if (f->numedges < 3) {
+            logprint("CalcualateVertexNormals: face %d is degenerate with %d edges\n", i, f->numedges);
+            continue;
+        }
+        
         const auto &neighboursToSmooth = smoothFaces[f];
         vec3_t f_norm;
         
