@@ -167,7 +167,13 @@ public:
     }
     
     virtual void setStringValue(const std::string &str, bool locked = false) {
-        const float f = std::stof(str);
+        float f = 0.0f;
+        try {
+            f = std::stof(str);
+        } catch (std::exception &e) {
+            logprint("WARNING: couldn't parse '%s' as number for key '%s'\n",
+                     str.c_str(), primaryName().c_str());
+        }
         if (locked) setFloatValueLocked(f);
         else setFloatValue(f);
     }
