@@ -816,10 +816,22 @@ ParseEscapeSequences(const std::string &input)
 void
 LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
 {
-    // First pass: make permanent changes to the bsp entdata that we will write out
-    // at the end of the light process.
+    logprint("--- LoadEntities ---\n");
+    
     entdicts = EntData_Parse(bsp->dentdata);
     
+    // empty values warning
+    for (const auto &entdict : entdicts) {
+        for (const auto &keyval : entdict) {
+            if (keyval.first.empty() || keyval.second.empty()) {
+                logprint("WARNING: empty key/value \"%s\" \"%s\"\n",
+                         keyval.first.c_str(), keyval.second.c_str());
+            }
+        }
+    }
+    
+    // First pass: make permanent changes to the bsp entdata that we will write out
+    // at the end of the light process.
     for (auto &entdict : entdicts) {
         
         // fix "lightmap_scale"
