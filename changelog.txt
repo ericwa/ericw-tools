@@ -1,3 +1,29 @@
+2016-09-07 TyrUtils-ericw 0.15.7 release
+
+Bugfixes:
+
+- light: fix shadow-casting bmodels that touch the world from messing up
+         sample points on world faces, and prevent the world from messing up 
+         bmodel sample points (regression in 0.15.5)
+- light: clamp lightmap samples to 255 before smoothing, downscaling.
+         reduces jaggies in cases with very bright lights casting hard shadows.
+- light: fix order of "_project_mangle" value to be consistent with "mangle"
+- light: crash fixes
+
+Performance:
+
+- light: new, faster raytracing backend (Embree)
+- light: cull lights based on estimated visible bounding box of each light.
+         this speeds up light similar to the vised map support in 0.15.5,
+         without requiring the map to be vised.
+- light: bounce lighting code redesigned to use less memory
+
+Other:
+
+- all: windows builds now require MSVC 2013 runtime:
+       https://www.microsoft.com/en-ca/download/details.aspx?id=40784
+- all: restore Windows XP support
+
 2016-06-17 TyrUtils-ericw 0.15.6 release
 
 - rebuild OS X binary as it was built in debug mode by accident
