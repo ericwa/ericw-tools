@@ -1332,6 +1332,9 @@ LightFace_Entity(const bsp2_t *bsp,
         
         GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
  
+        const float occlusion = Dirt_GetScaleFactor(lightsurf->occlusion[i], entity, lightsurf);
+        VectorScale(color, occlusion, color);
+        
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= fadegate) {
             continue;
