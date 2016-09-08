@@ -864,6 +864,8 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
     for (const auto &epair : WorldEnt()) {
         SetGlobalSetting(epair.first, epair.second, false);
     }
+    /* apply side effects of settings (in particular "dirt") */
+    FixupGlobalSettings();
     
     assert(all_lights.size() == 0);
     if (nolights) {

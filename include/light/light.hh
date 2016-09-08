@@ -388,6 +388,7 @@ extern char mapfilename[1024];
 
 lockable_setting_t *FindSetting(std::string name);
 void SetGlobalSetting(std::string name, std::string value, bool cmdline);
+void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);

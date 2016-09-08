@@ -110,6 +110,31 @@ void SetGlobalSetting(std::string name, std::string value, bool cmdline) {
     sd.setSetting(name, value, cmdline);
 }
 
+void FixupGlobalSettings() {
+    static bool once = false;
+    assert(!once);
+    once = true;
+    
+    // NOTE: This is confusing.. Setting "dirt" "1" implies "minlight_dirt" "1"
+    // (and sunlight_dir/sunlight2_dirt as well), unless those variables were
+    // set by the user to "0".
+    //
+    // We can't just default "minlight_dirt" to "1" because that would enable
+    // dirtmapping by default.
+    
+    if (cfg_static.globalDirt.boolValue()) {
+        if (!cfg_static.minlightDirt.isChanged()) {
+            cfg_static.minlightDirt.setBoolValue(true);
+        }
+        if (!cfg_static.sunlight_dirt.isChanged()) {
+            cfg_static.sunlight_dirt.setFloatValue(1);
+        }
+        if (!cfg_static.sunlight2_dirt.isChanged()) {
+            cfg_static.sunlight2_dirt.setFloatValue(1);
+        }
+    }
+}
+
 static void
 PrintOptionsSummary(void)
 {
