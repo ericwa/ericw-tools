@@ -17,9 +17,9 @@ build_script:
     cd cmakebuild
 
     If ($env:Platform -Match "x64") {
-      cmake .. -T v140_xp -Dembree_DIR="c:/embree-2.11.0.x64.windows/lib/cmake/embree-2.11.0" -DCMAKE_GENERATOR_PLATFORM=x64
+      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.11.0.x64.windows/lib/cmake/embree-2.11.0" -DCMAKE_GENERATOR_PLATFORM=x64
     } Else {
-      cmake .. -T v140_xp -Dembree_DIR="c:/embree-2.11.0.win32.windows/lib/cmake/embree-2.11.0"
+      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.11.0.win32.windows/lib/cmake/embree-2.11.0"
     }
 
     msbuild check.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
