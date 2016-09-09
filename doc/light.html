@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Sat Jun 11 00:33:49 2016 -->
+<!-- CreationDate: Fri Sep  9 14:05:59 2016 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -320,24 +320,16 @@ debugging phong shading.</p>
 <p style="margin-left:22%;">Write bounced lighting only to
 the lightmap for debugging / previewing -bounce.</p>
 
-<table width="100%" border=0 rules="none" frame="void"
-       cellspacing="0" cellpadding="0">
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="9%">
+<p style="margin-left:11%;"><b>&minus;novisapprox</b></p>
 
+<p style="margin-left:22%;">Disable approximate visibility
+culling of lights, which has a small chance of introducing
+artifacts where lights cut off too soon.</p>
 
+<p style="margin-left:11%;"><b>&minus;backend b</b></p>
 
-<p style="margin-top: 1em" valign="top"><b>&minus;novis</b></p> </td>
-<td width="2%"></td>
-<td width="60%">
-
-
-<p style="margin-top: 1em" valign="top">Disable vis
-acceleration for debugging.</p></td>
-<td width="18%">
-</td>
-</table>
+<p style="margin-left:22%;">Choose a raytracing backend,
+currently available: embree, bsp.</p>
 
 <a name="MODEL ENTITY KEYS"></a>
 <h2>MODEL ENTITY KEYS</h2>
@@ -393,16 +385,16 @@ light entity key below).</p>
 
 
 <p style="margin-left:11%;"><b>&quot;_sunlight_mangle&quot;
-&quot;x y z&quot;</b> | <b>&quot;_sun_mangle&quot; &quot;x y
-z&quot;</b></p>
+&quot;yaw pitch roll&quot;</b> | <b>&quot;_sun_mangle&quot;
+&quot;yaw pitch roll&quot;</b></p>
 
 <p style="margin-left:22%;">Specifies the direction of
-sunlight using yaw(x), pitch(y) and roll(z) in degrees. Yaw
-specifies the angle around the Z-axis from 0 to 359 degrees
-and pitch specifies the angle from 90 (shining straight up)
-to -90 (shining straight down from above). Roll has no
-effect, so use any value (e.g. 0). Default is straight down
-(&quot;0 -90 0&quot;).</p>
+sunlight using yaw, pitch and roll in degrees. Yaw specifies
+the angle around the Z-axis from 0 to 359 degrees and pitch
+specifies the angle from 90 (shining straight up) to -90
+(shining straight down from above). Roll has no effect, so
+use any value (e.g. 0). Default is straight down (&quot;0
+-90 0&quot;).</p>
 
 
 <p style="margin-left:11%;"><b>&quot;_sunlight_penumbra&quot;
@@ -675,27 +667,16 @@ spotlight, with the direction of light being towards another
 entity with it&rsquo;s &quot;targetname&quot; key set to
 &quot;name&quot;.</p>
 
-<p style="margin-left:11%;"><b>&quot;mangle&quot; &quot;x y
-z&quot;</b></p>
+<p style="margin-left:11%;"><b>&quot;mangle&quot; &quot;yaw
+pitch roll&quot;</b></p>
 
 <p style="margin-left:22%;">Turns the light into a
-spotlight and specifies the direction of light using yaw(x),
-pitch(y) and roll(z) in degrees. Yaw specifies the angle
-around the Z-axis from 0 to 359 degrees and pitch specifies
-the angle from 90 (straight up) to -90 (straight down). Roll
-has no effect, so use any value (e.g. 0). Often easier than
-the &quot;target&quot; method.</p>
-
-
-<p style="margin-left:11%;"><b>&quot;_surface_spotlight&quot;
-&quot;n&quot;</b></p>
-
-<p style="margin-left:22%;">For a surface light template
-(i.e. a light with &quot;_surface&quot; set), setting this
-to &quot;1&quot; makes each instance into a spotlight, with
-the direction of light pointing along the surface normal. In
-other words, it automatically sets &quot;mangle&quot; on
-each of the generated lights.</p>
+spotlight and specifies the direction of light using yaw,
+pitch and roll in degrees. Yaw specifies the angle around
+the Z-axis from 0 to 359 degrees and pitch specifies the
+angle from 90 (straight up) to -90 (straight down). Roll has
+no effect, so use any value (e.g. 0). Often easier than the
+&quot;target&quot; method.</p>
 
 <p style="margin-left:11%;"><b>&quot;angle&quot;
 &quot;n&quot;</b></p>
@@ -793,6 +774,17 @@ placed above surfaces for &quot;_surface&quot;. Default
 2.</p>
 
 
+<p style="margin-left:11%;"><b>&quot;_surface_spotlight&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">For a surface light template
+(i.e. a light with &quot;_surface&quot; set), setting this
+to &quot;1&quot; makes each instance into a spotlight, with
+the direction of light pointing along the surface normal. In
+other words, it automatically sets &quot;mangle&quot; on
+each of the generated lights.</p>
+
+
 <p style="margin-left:11%;"><b>&quot;_project_texture&quot;
 &quot;texture&quot;</b></p>
 
@@ -810,7 +802,7 @@ angles for a texture projection (overriding mangle).</p>
 &quot;n&quot;</b></p>
 
 <p style="margin-left:22%;">Specifies the fov angle for a
-texture projection.</p>
+texture projection. Default 90.</p>
 
 <a name="AUTHOR"></a>
 <h2>AUTHOR</h2>
