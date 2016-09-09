@@ -1244,6 +1244,11 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         vec3_t surfpointToLightDir;
         float surfpointToLightDist;
         vec3_t color, normalcontrib;
+
+        // NOTE: skip styled lights
+        if (entity.style.intValue() != 0) {
+            continue;
+        }
         
         GetLightContrib(cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         
