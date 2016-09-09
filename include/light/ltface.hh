@@ -48,6 +48,7 @@ void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
 void GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout);
 void SetupDirt(globalconfig_t &cfg);
+float DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const dmodel_t *selfshadow);
 void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx);
 void LightFaceShutdown(struct ltface_ctx *ctx);
 void LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx);
