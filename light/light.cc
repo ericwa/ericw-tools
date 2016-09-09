@@ -871,14 +871,18 @@ MakeBounceLightsThread (void *arg)
         DiceWinding(winding, 64.0f, SaveWindingFn, &args);
         winding = nullptr; // DiceWinding frees winding
         
-        // average them
+        // average them, area weighted
         vec3_t sum = {0,0,0};
+        float totalarea = 0;
         if (patches.size()) {
             for (const auto &patch : patches) {
-                VectorAdd(sum, patch->directlight, sum);
+                const float patcharea = WindingArea(patch->w);
+                totalarea += patcharea;
+                
+                VectorMA(sum, patcharea, patch->directlight, sum);
 //              printf("  %f %f %f\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
             }
-            VectorScale(sum, 1.0/patches.size(), sum);
+            VectorScale(sum, 1.0/totalarea, sum);
         }
     
         vec3_t texturecolor;
