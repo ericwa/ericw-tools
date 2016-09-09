@@ -1,4 +1,4 @@
-2016-09-07 TyrUtils-ericw 0.15.7 release
+2016-09-09 TyrUtils-ericw 0.15.7 release
 
 Bugfixes:
 
@@ -8,14 +8,17 @@ Bugfixes:
 - light: clamp lightmap samples to 255 before smoothing, downscaling.
          reduces jaggies in cases with very bright lights casting hard shadows.
 - light: fix order of "_project_mangle" value to be consistent with "mangle"
-- light: crash fixes
+- light: various crash fixes
+- light: minlight no longer bounces
 
 Performance:
 
 - light: new, faster raytracing backend (Embree)
-- light: cull lights based on estimated visible bounding box of each light.
-         this speeds up light similar to the vised map support in 0.15.5,
-         without requiring the map to be vised.
+- light: estimate visible bounding box each light by shooting rays in a sphere. 
+         this gives a speedup similar to vised maps in 0.15.5, without requiring
+         the map to be vised. As a downside, there is a small chance of 
+         introducing artifacts where lights cut off too soon.
+         Disable with "-novisapprox".
 - light: bounce lighting code redesigned to use less memory
 
 Other:

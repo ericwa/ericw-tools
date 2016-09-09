@@ -102,8 +102,10 @@ Weight for bounce lighting to use texture colors from the map: 0=ignore map text
 Write normals to lit file for debugging phong shading.
 .IP "\fB\-bouncedebug\fP"
 Write bounced lighting only to the lightmap for debugging / previewing -bounce.
-.IP "\fB\-novis\fP"
-Disable vis acceleration for debugging.
+.IP "\fB\-novisapprox\fP"
+Disable approximate visibility culling of lights, which has a small chance of introducing artifacts where lights cut off too soon.
+.IP "\fB\-backend b\fP"
+Choose a raytracing backend, currently available: embree, bsp.
 
 .SH "MODEL ENTITY KEYS"
 
