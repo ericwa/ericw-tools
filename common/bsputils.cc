@@ -71,6 +71,9 @@ Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
     if (!bsp->texdatasize)
         return NULL;
     
+    if (face->texinfo < 0)
+        return NULL;
+    
     int texnum = bsp->texinfo[face->texinfo].miptex;
     const dmiptexlump_t *miplump = bsp->dtexdata.header;
     

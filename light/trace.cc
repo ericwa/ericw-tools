@@ -200,19 +200,7 @@ static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
 static int
 Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
-    if (face->texinfo < 0)
-        return CONTENTS_SOLID;
-    
-    if (!(bsp->texinfo[face->texinfo].flags & TEX_SPECIAL))
-        return CONTENTS_SOLID;
-    
-    if (!bsp->texdatasize)
-        return CONTENTS_SOLID; // no textures in bsp
-
     const char *texname = Face_TextureName(bsp, face);
-
-    if (texname[0] == '\0')
-        return CONTENTS_SOLID; //sometimes the texture just wasn't written. including its name.
     
     if (!Q_strncasecmp(texname, "sky", 3))
         return CONTENTS_SKY;
@@ -222,8 +210,8 @@ Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
         return CONTENTS_SLIME;
     else if (texname[0] == '*')
         return CONTENTS_WATER;
-    else
-        return CONTENTS_SOLID;
+    
+    return CONTENTS_SOLID;
 }
 
 void
