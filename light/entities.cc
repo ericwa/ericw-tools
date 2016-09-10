@@ -98,6 +98,8 @@ LightStyleForTargetname(const std::string &targetname)
  * ==================
  * MatchTargets
  *
+ * sets light_t.targetent
+ *
  * entdicts should not be modified after this (saves pointers to elements)
  * ==================
  */
@@ -117,11 +119,33 @@ MatchTargets(void)
                 break;
             }
         }
-        if (!found) {
-            logprint("WARNING: entity at (%s) (%s) has unmatched "
-                     "target (%s)\n", VecStr(*entity.origin.vec3Value()),
-                     entity.classname(), ValueForKey(&entity, "target"));
+    }
+}
+
+/**
+ * Checks `entdicts` for unmatched targets and prints warnings
+ */
+static void
+CheckTargets(void)
+{
+    for (entdict_t &entity : entdicts) {
+        const auto targetstr = EntDict_StringForKey(entity, "target");
+        if (!targetstr.length())
             continue;
+        
+        bool found = false;
+        for (const entdict_t &target : entdicts) {
+            if (targetstr == EntDict_StringForKey(target, "targetname")) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            logprint("WARNING: entity at (%s) (%s) has unmatched target (%s)\n",
+                     EntDict_StringForKey(entity, "origin").c_str(),
+                     EntDict_StringForKey(entity, "classname").c_str(),
+                     EntDict_StringForKey(entity, "target").c_str());
         }
     }
 }
@@ -829,6 +853,8 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
             }
         }
     }
+    
+    CheckTargets();
     
     // First pass: make permanent changes to the bsp entdata that we will write out
     // at the end of the light process.
