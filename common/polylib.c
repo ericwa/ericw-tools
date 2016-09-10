@@ -240,7 +240,7 @@ CopyWinding(const winding_t * w)
  * =============
  */
 void
-ClipWinding(const winding_t * in, vec3_t normal, vec_t dist,
+ClipWinding(const winding_t * in, const vec3_t normal, vec_t dist,
             winding_t ** front, winding_t ** back)
 {
     vec_t dists[MAX_POINTS_ON_WINDING + 4];

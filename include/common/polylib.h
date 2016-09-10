@@ -27,7 +27,7 @@ winding_t *AllocWinding(int points);
 vec_t WindingArea(const winding_t * w);
 void WindingCenter(const winding_t * w, vec3_t center);
 void WindingBounds (const winding_t *w, vec3_t mins, vec3_t maxs);
-void ClipWinding(const winding_t * in, vec3_t normal, vec_t dist,
+void ClipWinding(const winding_t * in, const vec3_t normal, vec_t dist,
                  winding_t ** front, winding_t ** back);
 winding_t *ChopWinding(winding_t * in, vec3_t normal, vec_t dist);
 winding_t *CopyWinding(const winding_t * w);
