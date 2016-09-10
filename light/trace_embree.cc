@@ -95,6 +95,60 @@ CreateGeometry(const bsp2_t *bsp, RTCScene scene, const std::vector<const bsp2_d
     return s;
 }
 
+void
+CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windings)
+{
+    if (windings.empty())
+        return;
+    
+    // count triangles
+    int numtris = 0;
+    int numverts = 0;
+    for (const auto &winding : windings) {
+        assert(winding->numpoints >= 3);
+        numtris += (winding->numpoints - 2);
+        numverts += winding->numpoints;
+    }
+    
+    const unsigned geomID = rtcNewTriangleMesh(scene, RTC_GEOMETRY_STATIC, numtris, numverts);
+    
+    struct Vertex   { float point[4]; }; //4th element is padding
+    struct Triangle { int v0, v1, v2; };
+    
+    // fill in vertices
+    Vertex* vertices = (Vertex*) rtcMapBuffer(scene, geomID, RTC_VERTEX_BUFFER);
+    {
+        int vert_index = 0;
+        for (const auto &winding : windings) {
+            for (int j=0; j<winding->numpoints; j++) {
+                for (int k=0; k<3; k++) {
+                    vertices[vert_index + j].point[k] = winding->p[j][k];
+                }
+            }
+            vert_index += winding->numpoints;
+        }
+    }
+    rtcUnmapBuffer(scene, geomID, RTC_VERTEX_BUFFER);
+    
+    // fill in triangles
+    Triangle* triangles = (Triangle*) rtcMapBuffer(scene, geomID, RTC_INDEX_BUFFER);
+    int tri_index = 0;
+    int vert_index = 0;
+    for (const auto &winding : windings) {
+        for (int j = 2; j < winding->numpoints; j++) {
+            Triangle *tri = &triangles[tri_index];
+            tri->v0 = vert_index + (j-1);
+            tri->v1 = vert_index + j;
+            tri->v2 = vert_index + 0;
+            tri_index++;
+        }
+        vert_index += winding->numpoints;
+    }
+    assert(vert_index == numverts);
+    assert(tri_index == numtris);
+    rtcUnmapBuffer(scene, geomID, RTC_INDEX_BUFFER);
+}
+
 // Creates a scene with just the faces in this model,
 // used by CalcPoints.
 // Liquids are left out but sky faces are included
@@ -244,6 +298,178 @@ Embree_FilterFuncN(int* valid,
 
 vector<RTCScene> perModelScenes;
 
+// building faces for skip-textured bmodels
+
+#if 0
+
+static FILE *
+InitObjFile(const char *filename)
+{
+    FILE *objfile;
+    char objfilename[1024];
+    strcpy(objfilename, filename);
+    StripExtension(objfilename);
+    DefaultExtension(objfilename, ".obj");
+    
+    objfile = fopen(objfilename, "wt");
+    if (!objfile)
+        Error("Failed to open %s: %s", objfilename, strerror(errno));
+    
+    return objfile;
+}
+
+static void
+ExportObjFace(FILE *f, const winding_t *winding, int *vertcount)
+{
+//    plane_t plane;
+//    WindingPlane(winding, plane.normal, &plane.dist);
+    
+    // export the vertices and uvs
+    for (int i=0; i<winding->numpoints; i++)
+    {
+        fprintf(f, "v %.9g %.9g %.9g\n", winding->p[i][0], winding->p[i][1], winding->p[i][2]);
+//        fprintf(f, "vn %.9g %.9g %.9g\n", plane.normal[0], plane.normal[1], plane.normal[2]);
+    }
+    
+    fprintf(f, "f");
+    for (int i=0; i<winding->numpoints; i++) {
+        // .obj vertexes start from 1
+        // .obj faces are CCW, quake is CW, so reverse the order
+        const int vertindex = *vertcount + (winding->numpoints - 1 - i) + 1;
+        fprintf(f, " %d//%d", vertindex, vertindex);
+    }
+    fprintf(f, "\n");
+    
+    *vertcount += winding->numpoints;
+}
+
+static void
+ExportObj(const char *filename, const vector<winding_t *> &windings)
+{
+    FILE *objfile = InitObjFile(filename);
+    int vertcount = 0;
+    
+    for (const auto &winding : windings) {
+        ExportObjFace(objfile, winding, &vertcount);
+    }
+    
+    fclose(objfile);
+}
+
+#endif
+
+plane_t Node_Plane(const bsp2_t *bsp, const bsp2_dnode_t *node, bool side)
+{
+    const dplane_t *dplane = &bsp->dplanes[node->planenum];
+    plane_t plane;
+    
+    VectorCopy(dplane->normal, plane.normal);
+    plane.dist = dplane->dist;
+    
+    if (side) {
+        VectorScale(plane.normal, -1, plane.normal);
+        plane.dist *= -1.0f;
+    }
+    
+    return plane;
+}
+
+/**
+ * `planes` all of the node planes that bound this leaf, facing inward.
+ */
+std::vector<winding_t *>
+Leaf_MakeFaces(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, const std::vector<plane_t> &planes)
+{
+    std::vector<winding_t *> result;
+    
+    for (const plane_t &plane : planes) {
+        // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
+        plane_t faceplane;
+        VectorScale(plane.normal, -1, faceplane.normal);
+        faceplane.dist = -plane.dist;
+        
+        winding_t *winding = BaseWindingForPlane(faceplane.normal, faceplane.dist);
+        
+        // clip `winding` by all of the other planes
+        for (const plane_t &plane2 : planes) {
+            if (&plane2 == &plane)
+                continue;
+            
+            winding_t *front = nullptr;
+            winding_t *back = nullptr;
+            
+            // frees winding.
+            ClipWinding(winding, plane2.normal, plane2.dist, &front, &back);
+            
+            // discard the back, continue clipping the front part
+            free(back);
+            winding = front;
+            
+            // check if everything was clipped away
+            if (winding == nullptr)
+                break;
+        }
+        
+        if (winding == nullptr) {
+            //logprint("WARNING: winding clipped away\n");
+        } else {
+            result.push_back(winding);
+        }
+    }
+    
+    return result;
+}
+
+void FreeWindings(std::vector<winding_t *> &windings)
+{
+    for (winding_t *winding : windings) {
+        free(winding);
+    }
+    windings.clear();
+}
+
+void
+MakeFaces_r(const bsp2_t *bsp, int nodenum, std::vector<plane_t> *planes, std::vector<winding_t *> *result)
+{
+    if (nodenum < 0) {
+        int leafnum = -nodenum - 1;
+        const bsp2_dleaf_t *leaf = &bsp->dleafs[leafnum];
+        
+        if (leaf->contents == CONTENTS_SOLID) {
+            std::vector<winding_t *> leaf_windings = Leaf_MakeFaces(bsp, leaf, *planes);
+            for (winding_t *w : leaf_windings) {
+                result->push_back(w);
+            }
+        }
+        return;
+    }
+ 
+    const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
+
+    // go down the front side
+    plane_t front = Node_Plane(bsp, node, false);
+    planes->push_back(front);
+    MakeFaces_r(bsp, node->children[0], planes, result);
+    planes->pop_back();
+    
+    // go down the back side
+    plane_t back = Node_Plane(bsp, node, true);
+    planes->push_back(back);
+    MakeFaces_r(bsp, node->children[1], planes, result);
+    planes->pop_back();
+}
+
+std::vector<winding_t *>
+MakeFaces(const bsp2_t *bsp, const dmodel_t *model)
+{
+    std::vector<winding_t *> result;
+    std::vector<plane_t> planes;
+    MakeFaces_r(bsp, model->headnode[0], &planes, &result);
+    assert(planes.empty());
+    
+    return result;
+}
+
 void
 Embree_TraceInit(const bsp2_t *bsp)
 {
@@ -277,6 +503,17 @@ Embree_TraceInit(const bsp2_t *bsp)
             selfshadowfaces.push_back(face);
         }
     }
+
+    /* Special handling of skip-textured bmodels */
+    std::vector<winding_t *> skipwindings;
+    for (const modelinfo_t *model : tracelist) {
+        if (model->model->numfaces == 0) {
+            std::vector<winding_t *> windings = MakeFaces(bsp, model->model);
+            for (auto &w : windings) {
+                skipwindings.push_back(w);
+            }
+        }
+    }
     
     device = rtcNewDevice();
     rtcDeviceSetErrorFunction(device, ErrorCallback);
@@ -304,6 +541,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
     fencegeom = CreateGeometry(bsp, scene, fencefaces);
     selfshadowgeom = CreateGeometry(bsp, scene, selfshadowfaces);
+    CreateGeometryFromWindings(scene, skipwindings);
     
     rtcSetIntersectionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
     rtcSetOcclusionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
@@ -313,11 +551,14 @@ Embree_TraceInit(const bsp2_t *bsp)
 
     rtcCommit (scene);
     
-    logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces\n",
+    logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces %d skipwindings\n",
            (int)skyfaces.size(),
            (int)solidfaces.size(),
            (int)fencefaces.size(),
-           (int)selfshadowfaces.size());
+           (int)selfshadowfaces.size(),
+           (int)skipwindings.size());
+    
+    FreeWindings(skipwindings);
 }
 
 static RTCRay SetupRay(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self)
