@@ -702,6 +702,13 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     }
 }
 
+static bool
+Face_IsLiquid(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    const char *name = Face_TextureName(bsp, face);
+    return name[0] == '*';
+}
+
 static void
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
                const bsp2_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
@@ -725,6 +732,11 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     /* fixup minlight color */
     if (lightsurf->minlight > 0 && VectorCompare(lightsurf->minlight_color, vec3_origin)) {
         VectorSet(lightsurf->minlight_color, 255, 255, 255);
+    }
+    
+    /* never receive dirtmapping on lit liquids */
+    if (Face_IsLiquid(bsp, face)) {
+        lightsurf->nodirt = true;
     }
     
     /* Set up the plane, not including model offset */
