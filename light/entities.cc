@@ -873,9 +873,8 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
         std::string classname = EntDict_StringForKey(entdict, "classname");
         if (classname.find("light") == 0) {
             std::string targetname = EntDict_StringForKey(entdict, "targetname");
-            int style = EntDict_FloatForKey(entdict, "style");
-            if (targetname != "" && !style) {
-                style = LightStyleForTargetname(targetname);
+            if (targetname != "") {
+                const int style = LightStyleForTargetname(targetname);
                 entdict["style"] = std::to_string(style);
             }
         }
