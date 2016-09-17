@@ -57,9 +57,15 @@ const char * light_t::classname() const {
  * ============================================================================
  */
 
+#define LIGHT_TARGETS_START 32
 #define MAX_LIGHT_TARGETS 32
 
-static std::vector<std::string> lighttargetnames;
+static std::map<std::string, int> lightstyleForTargetname;
+
+static bool IsSwitchableLightstyle(int style) {
+    return style >= LIGHT_TARGETS_START
+        && style < (LIGHT_TARGETS_START + MAX_LIGHT_TARGETS);
+}
 
 static entdict_t &WorldEnt()
 {
@@ -79,19 +85,44 @@ std::string WorldValueForKey(const std::string &key)
     return EntDict_StringForKey(WorldEnt(), key);
 }
 
+/**
+ * Assigns a lightstyle number for the given non-empty targetname string
+ * Reuses the existing lightstyle if this targetname was already assigned.
+ */
 static int
 LightStyleForTargetname(const std::string &targetname)
 {
-    int i;
-
-    for (i = 0; i < lighttargetnames.size(); i++)
-        if (lighttargetnames.at(i) == targetname)
-            return 32 + i;
-    if (i == MAX_LIGHT_TARGETS)
+    assert(targetname.size() > 0);
+    
+    // check if already assigned
+    auto it = lightstyleForTargetname.find(targetname);
+    if (it != lightstyleForTargetname.end()) {
+        return it->second;
+    }
+    
+    // check if full
+    if (lightstyleForTargetname.size() == MAX_LIGHT_TARGETS) {
         Error("%s: Too many unique light targetnames\n", __func__);
+    }
+    
+    // generate a new style number and return it
+    const int newStylenum = LIGHT_TARGETS_START + lightstyleForTargetname.size();
+    lightstyleForTargetname[targetname] = newStylenum;
+    
+    logprint("%s: Allocated %d for %s\n", __func__, newStylenum, targetname.c_str());
+    
+    return newStylenum;
+}
 
-    lighttargetnames.push_back(targetname);
-    return static_cast<int>(lighttargetnames.size()) - 1 + 32;
+std::string
+TargetnameForLightStyle(int style)
+{
+    for (const auto &pr : lightstyleForTargetname) {
+        if (pr.second == style) {
+            return pr.first;
+        }
+    }
+    return "";
 }
 
 /*
@@ -1188,7 +1219,7 @@ WriteEntitiesToString(bsp2_t *bsp)
         free(bsp->dentdata);
 
     /* FIXME - why are we printing this here? */
-    logprint("%i switchable light styles\n", static_cast<int>(lighttargetnames.size()));
+    logprint("%i switchable light styles\n", static_cast<int>(lightstyleForTargetname.size()));
 
     bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
     bsp->dentdata = (char *) calloc(bsp->entdatasize, 1);

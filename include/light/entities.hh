@@ -154,6 +154,7 @@ public:
  *    Stores the RGB values to determine the light color
  */
 
+std::string TargetnameForLightStyle(int style);
 const std::vector<light_t>& GetLights();
 const std::vector<sun_t>& GetSuns();
 
