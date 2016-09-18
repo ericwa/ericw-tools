@@ -1103,16 +1103,16 @@ void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
     AABB_Grow(mins, maxs, size);
     
     /*
-    printf("light at %f %f %f has mins %f %f %f maxs %f %f %f\n",
+    logprint("light at %f %f %f has mins %f %f %f maxs %f %f %f\n",
            point[0],
            point[1],
            point[2],
-           light.mins[0],
-           light.mins[1],
-           light.mins[2],
-           light.maxs[0],
-           light.maxs[1],
-           light.maxs[2]);
+           mins[0],
+           mins[1],
+           mins[2],
+           maxs[0],
+           maxs[1],
+           maxs[2]);
     */
     
     delete rs;
