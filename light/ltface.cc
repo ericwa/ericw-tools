@@ -2094,7 +2094,8 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     }
     
     // sort in descending order of average brightness
-    std::sort(sortable.begin(), sortable.end(), std::greater<std::pair<float, const lightmap_t *>>());
+    std::sort(sortable.begin(), sortable.end());
+    std::reverse(sortable.begin(), sortable.end());
     
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
