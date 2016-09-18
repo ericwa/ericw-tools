@@ -1871,7 +1871,7 @@ void SetupDirt(globalconfig_t &cfg) {
 static const lightmap_t *
 Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
 {
-    const lightmap_t *lightmap = ctx->lightmaps;
+    const lightmap_t *lightmap = ctx->lightsurf->lightmaps;
     
     for (int i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
         if (lightmap->style == style)
@@ -2214,22 +2214,17 @@ void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx)
 {
     memset(ctx, 0, sizeof(*ctx));
     
-    ctx->bsp = bsp;    
-    
-    for (int i = 0; i < MAXLIGHTMAPS + 1; i++)
-        ctx->lightmaps[i].style = 255;
+    ctx->bsp = bsp;
 }
 
 void LightFaceShutdown(struct ltface_ctx *ctx)
 {
-    for (int i = 0; i < MAXLIGHTMAPS + 1; i++)
-    {
-        if (ctx->lightmaps[i].samples)
-            free(ctx->lightmaps[i].samples);
-    }
-    
     if (!ctx->lightsurf)
         return;
+    
+    for (int i = 0; i < MAXLIGHTMAPS + 1; i++) {
+        free(ctx->lightsurf->lightmaps[i].samples);
+    }
     
     free(ctx->lightsurf->points);
     free(ctx->lightsurf->normals);
@@ -2250,7 +2245,6 @@ void
 LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
 {
     const bsp2_t *bsp = ctx->bsp;
-    lightmap_t *lightmaps = ctx->lightmaps;
     const char *texname = Face_TextureName(bsp, face);
     
     /* One extra lightmap is allocated to simplify handling overflow */
@@ -2293,8 +2287,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     if (texname[0] == '*') {
         lightsurf->twosided = true;
     }
-
+    
     Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup);
+    lightmap_t *lightmaps = lightsurf->lightmaps;
     Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
 
     /* calculate dirt (ambient occlusion) but don't use it yet */

@@ -79,6 +79,12 @@ typedef struct {
 class modelinfo_t;
 class globalconfig_t;
 
+class lightmap_t {
+public:
+    int style;
+    lightsample_t *samples; // malloc'ed array of numpoints   //FIXME: this is stupid, we shouldn't need to allocate extra data here for -extra4
+};
+
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
     const globalconfig_t *cfg;
@@ -134,19 +140,16 @@ typedef struct {
     
     // ray batch stuff
     raystream_t *stream;
+    
+    
+    lightmap_t lightmaps[MAXLIGHTMAPS + 1];
 } lightsurf_t;
-
-typedef struct {
-    int style;
-    lightsample_t *samples; // malloc'ed array of numpoints   //FIXME: this is stupid, we shouldn't need to allocate extra data here for -extra4
-} lightmap_t;
 
 struct ltface_ctx
 {
     const bsp2_t *bsp;
     lightsurf_t *lightsurf;
     const globalconfig_t *cfg;
-    lightmap_t lightmaps[MAXLIGHTMAPS + 1];
 };
 
 extern struct ltface_ctx *ltface_ctxs;
