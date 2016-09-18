@@ -156,12 +156,13 @@ MatchTargets(void)
 }
 
 /**
- * Checks `entdicts` for unmatched targets and prints warnings
+ * Checks `entdicts` for unmatched targets/targetnames and prints warnings
  */
 static void
 CheckTargets(void)
 {
-    for (entdict_t &entity : entdicts) {
+    // search for "target" values such that no entity has a matching "targetname"
+    for (const entdict_t &entity : entdicts) {
         const auto targetstr = EntDict_StringForKey(entity, "target");
         if (!targetstr.length())
             continue;
@@ -179,6 +180,28 @@ CheckTargets(void)
                      EntDict_StringForKey(entity, "origin").c_str(),
                      EntDict_StringForKey(entity, "classname").c_str(),
                      EntDict_StringForKey(entity, "target").c_str());
+        }
+    }
+    
+    // search for "targetname" values such that no entity has a matching "target"
+    for (const entdict_t &entity : entdicts) {
+        const auto targetnamestr = EntDict_StringForKey(entity, "targetname");
+        if (!targetnamestr.length())
+            continue;
+        
+        bool found = false;
+        for (const entdict_t &targetter : entdicts) {
+            if (targetnamestr == EntDict_StringForKey(targetter, "target")) {
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            logprint("WARNING: entity at (%s) (%s) has targetname '%s' which is not targetted by anything.\n",
+                     EntDict_StringForKey(entity, "origin").c_str(),
+                     EntDict_StringForKey(entity, "classname").c_str(),
+                     targetnamestr.c_str());
         }
     }
 }
