@@ -149,6 +149,12 @@ extern char archivedir[1024];
 
 int q_snprintf(char *str, size_t size, const char *format, ...);
 
+void Q_assert_(bool success, const char *expr, const char *file, int line);
+/**
+ * assertion macro that is used in all builds (debug/release)
+ */
+#define Q_assert(x) Q_assert_((x), stringify(x), __FILE__, __LINE__)
+    
 #ifdef __cplusplus
 }
 #endif
