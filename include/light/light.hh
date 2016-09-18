@@ -85,6 +85,8 @@ public:
     lightsample_t *samples; // malloc'ed array of numpoints   //FIXME: this is stupid, we shouldn't need to allocate extra data here for -extra4
 };
 
+using lightmapdict_t = std::vector<lightmap_t>;
+
 /*Warning: this stuff needs explicit initialisation*/
 typedef struct {
     const globalconfig_t *cfg;
@@ -141,8 +143,7 @@ typedef struct {
     // ray batch stuff
     raystream_t *stream;
     
-    
-    lightmap_t lightmaps[MAXLIGHTMAPS + 1];
+    lightmapdict_t lightmapsByStyle;
 } lightsurf_t;
 
 struct ltface_ctx

@@ -782,14 +782,14 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
 }
 
 static void
-Lightmaps_Init(const lightsurf_t *lightsurf, lightmap_t *lightmaps, const int count)
+Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *lightsurf)
 {
-    /*these are cleared on demand, there's no point clearing them twice. most of these are unused anyway,
-     memset(lightmaps, 0, sizeof(lightmap_t) * count); */
-
-    for (int i = 0; i < count; i++) {
-        lightmaps[i].style = 255;
-        lightmaps[i].samples = NULL;
+    if (lightmap->samples == NULL) {
+        /* first use of this lightmap, allocate the storage for it. */
+        lightmap->samples = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
+    } else {
+        /* clear only the data that is going to be merged to it. there's no point clearing more */
+        memset(lightmap->samples, 0, sizeof(*lightmap->samples)*lightsurf->numpoints);
     }
 }
 
@@ -801,40 +801,28 @@ Lightmaps_Init(const lightsurf_t *lightsurf, lightmap_t *lightmaps, const int co
  * allocated since it may not be kept if no lights hit.
  */
 static lightmap_t *
-Lightmap_ForStyle(lightmap_t *lightmaps, const int style, const lightsurf_t *lightsurf)
+Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t *lightsurf)
 {
-    lightmap_t *lightmap = lightmaps;
+    for (auto &lm : *lightmaps) {
+        if (lm.style == style)
+            return &lm;
+    }
     
-    for (int i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
-        if (lightmap->style == style)
-            return lightmap;
-        if (lightmap->style == 255)
-            break;
+    // no exact match, check for an unsaved one
+    for (auto &lm : *lightmaps) {
+        if (lm.style == 255) {
+            Lightmap_AllocOrClear(&lm, lightsurf);
+            return &lm;
+        }
     }
-
-    if (lightmap->samples == NULL) {
-        /* first use of this lightmap, allocate the storage for it. */
-        lightmap->samples = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
-    } else {
-        /* clear only the data that is going to be merged to it. there's no point clearing more */
-        memset(lightmap->samples, 0, sizeof(*lightmap->samples)*lightsurf->numpoints);
-    }
-    lightmap->style = 255;
-
-    return lightmap;
-}
-
-/*
- * Lightmap_ClearAll
- * 
- * Sets all styles to 255, doesn't actually clear the data.
- */
-static void
-Lightmap_ClearAll(lightmap_t *lightmaps)
-{
-    for (int i = 0; i <= MAXLIGHTMAPS; i++) {
-        lightmaps[i].style = 255;
-    }
+    
+    // add a new one to the vector (invalidates existing lightmap_t pointers)
+    lightmap_t newLightmap {};
+    newLightmap.style = 255;
+    Lightmap_AllocOrClear(&newLightmap, lightsurf);
+    lightmaps->push_back(newLightmap);
+    
+    return &lightmaps->back();
 }
 
 /*
@@ -844,18 +832,12 @@ Lightmap_ClearAll(lightmap_t *lightmaps)
  * otherwise emit a warning.
  */
 static void
-Lightmap_Save(lightmap_t *lightmaps, const lightsurf_t *lightsurf,
+Lightmap_Save(lightmapdict_t *lightmaps, const lightsurf_t *lightsurf,
               lightmap_t *lightmap, const int style)
 {
-    if (lightmap - lightmaps < MAXLIGHTMAPS) {
-        if (lightmap->style == 255)
-            lightmap->style = style;
-        return;
+    if (lightmap->style == 255) {
+        lightmap->style = style;
     }
-
-    logprint("WARNING: Too many light styles on a face\n"
-             "         lightmap point near (%s)\n",
-             VecStr(lightsurf->points[0]));
 }
 
 /*
@@ -1313,7 +1295,7 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
 static void
 LightFace_Entity(const bsp2_t *bsp,
                  const light_t *entity,
-                lightsurf_t *lightsurf, lightmap_t *lightmaps)
+                lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1407,7 +1389,7 @@ LightFace_Entity(const bsp2_t *bsp,
  * =============
  */
 static void
-LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     const float MAX_SKY_DIST = 65536.0f;
@@ -1495,7 +1477,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmap_t *lightm
 static void
 LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
               const vec3_t color, vec_t light,
-              const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+              const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1597,7 +1579,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
  * =============
  */
 static void
-LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     /* use a style 0 light map */
@@ -1619,7 +1601,7 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
  * =============
  */
 static void
-LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -1715,7 +1697,7 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
 }
 
 static void
-LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     //const dmodel_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
@@ -1868,6 +1850,7 @@ void SetupDirt(globalconfig_t &cfg) {
     logprint("%9d dirtmap vectors\n", numDirtVectors );
 }
 
+#if 0
 static const lightmap_t *
 Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
 {
@@ -1881,6 +1864,7 @@ Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
     }
     return NULL;
 }
+#endif
 
 // from q3map2
 static void
@@ -2056,19 +2040,13 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
 // applies gamma and rangescale. clamps values over 255
 // N.B. we want to do this before smoothing / downscaling, so huge values don't mess up the averaging.
 static void
-LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
+LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     
-    for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
-        lightmap_t *lightmap = &lightmaps[mapnum];
-        
-        if (lightmap->style == 255) {
-            break;
-        }
-        
+    for (lightmap_t &lightmap : *lightmaps) {
         for (int i = 0; i < lightsurf->numpoints; i++) {
-            vec_t *color = lightmap->samples[i].color;
+            vec_t *color = lightmap.samples[i].color;
             
             /* Scale and clamp any out-of-range samples */
             vec_t maxcolor = 0;
@@ -2088,20 +2066,50 @@ LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmap_t *lightmaps)
     }
 }
 
+static float
+Lightmap_AvgBrightness(const lightmap_t *lm, const lightsurf_t *lightsurf) {
+    float avgb = 0;
+    for (int j=0; j<lightsurf->numpoints; j++) {
+        avgb += LightSample_Brightness(lm->samples[j].color);
+    }
+    avgb /= lightsurf->numpoints;
+    return avgb;
+}
 
 static void
 WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
-               const lightmap_t *lightmaps)
+               const lightmapdict_t *lightmaps)
 {
-    /* count the styles */
-    int numstyles = 0;
-    for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++)
-    {
-        if (lightmaps[mapnum].style == 255) {
+    // intermediate collection for sorting lightmaps
+    std::vector<std::pair<float, const lightmap_t *>> sortable;
+    
+    for (const lightmap_t &lightmap : *lightmaps) {
+        // skip un-saved lightmaps
+        if (lightmap.style == 255)
+            continue;
+        
+        const float avgb = Lightmap_AvgBrightness(&lightmap, lightsurf);
+        sortable.push_back({ avgb, &lightmap });
+    }
+    
+    // sort in descending order of average brightness
+    std::sort(sortable.begin(), sortable.end(), std::greater<std::pair<float, const lightmap_t *>>());
+    
+    std::vector<const lightmap_t *> sorted;
+    for (const auto &pair : sortable) {
+        if (sorted.size() == MAXLIGHTMAPS) {
+            logprint("WARNING: Too many light styles on a face\n"
+                     "         lightmap point near (%s)\n",
+                     VecStr(lightsurf->points[0]));
             break;
         }
-        numstyles++;
+        
+        sorted.push_back(pair.second);
     }
+    
+    /* final number of lightmaps */
+    const int numstyles = static_cast<int>(sorted.size());
+    assert(numstyles <= MAXLIGHTMAPS);
 
     /* update face info (either core data or supplementary stuff) */
     if (facesup)
@@ -2110,7 +2118,7 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         facesup->extent[1] = lightsurf->texsize[1] + 1;
         int mapnum;
         for (mapnum = 0; mapnum < numstyles; mapnum++) {
-            facesup->styles[mapnum] = lightmaps[mapnum].style;
+            facesup->styles[mapnum] = sorted.at(mapnum)->style;
         }
         for (; mapnum < MAXLIGHTMAPS; mapnum++) {
             facesup->styles[mapnum] = 255;
@@ -2121,7 +2129,7 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     {
         int mapnum;
         for (mapnum = 0; mapnum < numstyles; mapnum++) {
-            face->styles[mapnum] = lightmaps[mapnum].style;
+            face->styles[mapnum] = sorted.at(mapnum)->style;
         }
         for (; mapnum < MAXLIGHTMAPS; mapnum++) {
             face->styles[mapnum] = 255;
@@ -2149,11 +2157,7 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     }
     
     int width = (lightsurf->texsize[0] + 1) * oversample;
-    for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
-        if (lightmaps[mapnum].style == 255) {
-            break;
-        }
-
+    for (int mapnum = 0; mapnum < numstyles; mapnum++) {
         for (int t = 0; t <= lightsurf->texsize[1]; t++) {
             for (int s = 0; s <= lightsurf->texsize[0]; s++) {
 
@@ -2167,7 +2171,7 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                         const int col = (s*oversample) + j;
                         const int row = (t*oversample) + i;
 
-                        const lightsample_t *sample = lightmaps[mapnum].samples + (row * width) + col;
+                        const lightsample_t *sample = sorted.at(mapnum)->samples + (row * width) + col;
 
                         VectorAdd(color, sample->color, color);
                         VectorAdd(direction, sample->direction, direction);
@@ -2222,8 +2226,8 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     if (!ctx->lightsurf)
         return;
     
-    for (int i = 0; i < MAXLIGHTMAPS + 1; i++) {
-        free(ctx->lightsurf->lightmaps[i].samples);
+    for (auto &lm : ctx->lightsurf->lightmapsByStyle) {
+        free(lm.samples);
     }
     
     free(ctx->lightsurf->points);
@@ -2233,7 +2237,7 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
     
     delete ctx->lightsurf->stream;
     
-    free(ctx->lightsurf);
+    delete ctx->lightsurf;
 }
 
 /*
@@ -2274,7 +2278,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         return;
     
     /* all good, this face is going to be lightmapped. */
-    ctx->lightsurf = (lightsurf_t *) calloc(1, sizeof(lightsurf_t));
+    ctx->lightsurf = new lightsurf_t {};
     lightsurf_t *lightsurf = ctx->lightsurf;
     lightsurf->cfg = ctx->cfg;
     
@@ -2289,8 +2293,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
     
     Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup);
-    lightmap_t *lightmaps = lightsurf->lightmaps;
-    Lightmaps_Init(lightsurf, lightmaps, MAXLIGHTMAPS + 1);
+    lightmapdict_t *lightmaps = &lightsurf->lightmapsByStyle;
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
     if (dirt_in_use && (debugmode != debugmode_phong))
@@ -2355,11 +2358,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         LightFace_PhongDebug(lightsurf, lightmaps);
     
     /* Fix any negative values */
-    for (int i = 0; i < MAXLIGHTMAPS; i++) {
-        if (lightmaps[i].style == 255)
-            break;
+    for (lightmap_t &lightmap : *lightmaps) {
         for (int j = 0; j < lightsurf->numpoints; j++) {
-            lightsample_t *sample = &lightmaps[i].samples[j];
+            lightsample_t *sample = &lightmap.samples[j];
             for (int k = 0; k < 3; k++) {
                 if (sample->color[k] < 0) {
                     sample->color[k] = 0;
@@ -2373,10 +2374,8 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     
     /* Perform post-processing if requested */
     if (softsamples > 0) {
-        for (int i = 0; i < MAXLIGHTMAPS; i++) {
-            if (lightmaps[i].style == 255)
-                break;
-            Lightmap_Soften(&lightmaps[i], lightsurf);
+        for (lightmap_t &lightmap : *lightmaps) {
+            Lightmap_Soften(&lightmap, lightsurf);
         }
     }
     
