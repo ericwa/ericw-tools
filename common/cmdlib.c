@@ -1070,11 +1070,3 @@ int q_snprintf(char *str, size_t size, const char *format, ...)
 
 	return ret;
 }
-
-void Q_assert_(bool success, const char *expr, const char *file, int line)
-{
-    if (!success) {
-        logprint("%s:%d: Q_assert(%s) failed.\n", file, line, expr);
-        exit(1);
-    }
-}

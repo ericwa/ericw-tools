@@ -28,6 +28,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <common/log.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -149,7 +150,14 @@ extern char archivedir[1024];
 
 int q_snprintf(char *str, size_t size, const char *format, ...);
 
-void Q_assert_(bool success, const char *expr, const char *file, int line);
+static inline void Q_assert_(bool success, const char *expr, const char *file, int line)
+{
+    if (!success) {
+        logprint("%s:%d: Q_assert(%s) failed.\n", file, line, expr);
+        exit(1);
+    }
+}
+
 /**
  * assertion macro that is used in all builds (debug/release)
  */
