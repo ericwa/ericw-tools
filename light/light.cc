@@ -85,6 +85,7 @@ qboolean novisapprox = false;
 bool nolights = false;
 backend_t rtbackend = backend_embree;
 debugmode_t debugmode = debugmode_none;
+bool verbose_log = false;
 
 uint32_t *extended_texinfo_flags = NULL;
 
@@ -1489,6 +1490,8 @@ light_main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-debugvert" ) ) {
             ParseVec3(dump_vert_point, &i, argc, argv);
             dump_vert = true;
+        } else if ( !strcmp( argv[ i ], "-verbose" ) ) {
+            verbose_log = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
             PrintUsage();
             exit(0);

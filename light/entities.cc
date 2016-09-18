@@ -109,7 +109,9 @@ LightStyleForTargetname(const std::string &targetname)
     const int newStylenum = LIGHT_TARGETS_START + lightstyleForTargetname.size();
     lightstyleForTargetname[targetname] = newStylenum;
     
-    logprint("%s: Allocated %d for %s\n", __func__, newStylenum, targetname.c_str());
+    if (verbose_log) {
+        logprint("%s: Allocated lightstyle %d for targetname '%s'\n", __func__, newStylenum, targetname.c_str());
+    }
     
     return newStylenum;
 }

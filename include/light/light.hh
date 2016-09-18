@@ -161,7 +161,8 @@ typedef enum {
 } debugmode_t;
 
 extern debugmode_t debugmode;
-    
+extern bool verbose_log;
+
 /* bounce lights */
 
 typedef struct {
