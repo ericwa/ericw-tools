@@ -1897,6 +1897,10 @@
 "origin" "-640 608 88"
 "angle" "-0"
 "_color" "255 213 123"
+"light" "750"
+"wait" "5"
+"delay" "2"
+"style" "10"
 }
 // entity 79
 {
@@ -1904,18 +1908,52 @@
 "origin" "-896 608 88"
 "angle" "-0"
 "_color" "131 255 164"
+"wait" "1"
+"light" "100"
+"delay" "2"
+"style" "8"
 }
 // entity 80
 {
 "classname" "light_globe"
-"origin" "-640 832 88"
+"origin" "-896 832 88"
 "angle" "-0"
 "_color" "144 181 255"
+"wait" "5"
+"light" "750"
+"delay" "2"
+"style" "3"
 }
 // entity 81
 {
 "classname" "light_globe"
-"origin" "-896 832 88"
+"origin" "-768 736 88"
 "angle" "-0"
 "_color" "255 148 240"
+"wait" "5"
+"light" "750"
+"delay" "2"
+"style" "11"
+}
+// entity 82
+{
+"classname" "light_globe"
+"origin" "-768 704 376"
+"angle" "-0"
+"_color" "255 0 0"
+"light" "25"
+"delay" "2"
+"style" "5"
+"wait" "0.3"
+}
+// entity 83
+{
+"classname" "light_globe"
+"origin" "-640 864 88"
+"angle" "-0"
+"_color" "1 255 22"
+"wait" "5"
+"light" "750"
+"delay" "2"
+"style" "2"
 }
