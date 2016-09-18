@@ -79,8 +79,8 @@ VecStrf(const vec3_t vec)
 void
 UniformPointOnSphere(vec3_t dir, float u1, float u2)
 {
-    assert(u1 >= 0 && u1 <= 1);
-    assert(u2 >= 0 && u2 <= 1);
+    Q_assert(u1 >= 0 && u1 <= 1);
+    Q_assert(u2 >= 0 && u2 <= 1);
     
     const vec_t theta = u1 * 2.0 * Q_PI;
     const vec_t u = (2.0 * u2) - 1.0;
@@ -91,8 +91,8 @@ UniformPointOnSphere(vec3_t dir, float u1, float u2)
     dir[2] = u;
     
     for (int i=0; i<3; i++) {
-        assert(dir[i] >= -1.001);
-        assert(dir[i] <=  1.001);
+        Q_assert(dir[i] >= -1.001);
+        Q_assert(dir[i] <=  1.001);
     }
 }
 

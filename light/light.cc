@@ -113,7 +113,7 @@ void SetGlobalSetting(std::string name, std::string value, bool cmdline) {
 
 void FixupGlobalSettings() {
     static bool once = false;
-    assert(!once);
+    Q_assert(!once);
     once = true;
     
     // NOTE: This is confusing.. Setting "dirt" "1" implies "minlight_dirt" "1"
@@ -271,9 +271,9 @@ LightThread(void *arg)
 static void
 FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 {
-    assert(modelinfo.size() == 0);
-    assert(tracelist.size() == 0);
-    assert(selfshadowlist.size() == 0);
+    Q_assert(modelinfo.size() == 0);
+    Q_assert(tracelist.size() == 0);
+    Q_assert(selfshadowlist.size() == 0);
     
     if (!bsp->nummodels) {
         Error("Corrupt .BSP: bsp->nummodels is 0!");
@@ -334,13 +334,13 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         if (EntDict_StringForKey(*entdict, "classname").find("rotate_") == 0) {
             EntDict_VectorForKey(*entdict, "origin", info->offset);
         } else {
-            assert(info->offset[0] == 0);
-            assert(info->offset[1] == 0);
-            assert(info->offset[2] == 0);
+            Q_assert(info->offset[0] == 0);
+            Q_assert(info->offset[1] == 0);
+            Q_assert(info->offset[2] == 0);
         }
     }
 
-    assert(modelinfo.size() == bsp->nummodels);
+    Q_assert(modelinfo.size() == bsp->nummodels);
 }
 
 /* return 0 if either vector is zero-length */
@@ -595,14 +595,14 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         // sanity check
         if (!neighboursToSmooth.size()) {
             for (auto vertIndexNormalPair : smoothedNormals) {
-                assert(VectorCompare(vertIndexNormalPair.second.v, f_norm));
+                Q_assert(VectorCompare(vertIndexNormalPair.second.v, f_norm));
             }
         }
         
         // now, record all of the smoothed normals that are actually part of `f`
         for (int j=0; j<f->numedges; j++) {
             int v = Face_VertexAtIndex(bsp, f, j);
-            assert(smoothedNormals.find(v) != smoothedNormals.end());
+            Q_assert(smoothedNormals.find(v) != smoothedNormals.end());
             
             vertex_normals[f].push_back(smoothedNormals[v]);
         }

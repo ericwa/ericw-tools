@@ -150,8 +150,8 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     bsp2_dnode_t *node;
     bsp2_dleaf_t *leaf;
 
-    assert(nodenum >= 0);
-    assert(nodenum < bsp->numnodes);
+    Q_assert(nodenum >= 0);
+    Q_assert(nodenum < bsp->numnodes);
     tnode = &tnodes[nodenum];
 
     node = bsp->dnodes + nodenum;
@@ -279,7 +279,7 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
     for (int i=0; i<face->numedges; i++)
     {
         const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
-        assert(!SphereCullPoint(info, v));
+        Q_assert(!SphereCullPoint(info, v));
     }
     //test
     {
@@ -290,7 +290,7 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
         vec3_t n = {1, 0, 0};
         VectorMA(centroid, radius, n, test);
         
-        assert(SphereCullPoint(info, test));
+        Q_assert(SphereCullPoint(info, test));
     }
 #endif
 }
@@ -895,7 +895,7 @@ public:
     virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
         bsp_ray_t r { i, origin, dir, dist, selfshadow, color, normalcontrib };
         _rays.push_back(r);
-        assert(_rays.size() <= _maxrays);
+        Q_assert(_rays.size() <= _maxrays);
     }
     
     virtual size_t numPushedRays() {

@@ -105,7 +105,7 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
     int numtris = 0;
     int numverts = 0;
     for (const auto &winding : windings) {
-        assert(winding->numpoints >= 3);
+        Q_assert(winding->numpoints >= 3);
         numtris += (winding->numpoints - 2);
         numverts += winding->numpoints;
     }
@@ -144,8 +144,8 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
         }
         vert_index += winding->numpoints;
     }
-    assert(vert_index == numverts);
-    assert(tri_index == numtris);
+    Q_assert(vert_index == numverts);
+    Q_assert(tri_index == numtris);
     rtcUnmapBuffer(scene, geomID, RTC_INDEX_BUFFER);
 }
 
@@ -465,7 +465,7 @@ MakeFaces(const bsp2_t *bsp, const dmodel_t *model)
     std::vector<winding_t *> result;
     std::vector<plane_t> planes;
     MakeFaces_r(bsp, model->headnode[0], &planes, &result);
-    assert(planes.empty());
+    Q_assert(planes.empty());
     
     return result;
 }
@@ -474,7 +474,7 @@ void
 Embree_TraceInit(const bsp2_t *bsp)
 {
     bsp_static = bsp;
-    assert(device == nullptr);
+    Q_assert(device == nullptr);
     
     std::vector<const bsp2_dface_t *> skyfaces, solidfaces, fencefaces, selfshadowfaces;
     
@@ -534,7 +534,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     for (int i=0; i<bsp->nummodels; i++) {
         perModelScenes.push_back(CreatePerModelScene(device, bsp, &bsp->dmodels[i]));
     }
-    assert(perModelScenes.size() == bsp->nummodels);
+    Q_assert(perModelScenes.size() == bsp->nummodels);
     
     scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1 | RTC_INTERSECT_STREAM);
     skygeom = CreateGeometry(bsp, scene, skyfaces);
@@ -729,7 +729,7 @@ public:
     }
     
     virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
-        assert(_numrays<_maxrays);
+        Q_assert(_numrays<_maxrays);
         _rays[_numrays] = SetupRay(origin, dir, dist, selfshadow);
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
@@ -747,7 +747,7 @@ public:
     }
     
     virtual void tracePushedRaysOcclusion() {
-        //assert(_state == streamstate_t::READY);
+        //Q_assert(_state == streamstate_t::READY);
         
         if (!_numrays)
             return;
@@ -773,22 +773,22 @@ public:
     }
     
     virtual bool getPushedRayOccluded(size_t j) {
-        assert(j < _maxrays);
+        Q_assert(j < _maxrays);
         return (_rays[j].geomID != RTC_INVALID_GEOMETRY_ID);
     }
     
     virtual float getPushedRayDist(size_t j) {
-        assert(j < _maxrays);
+        Q_assert(j < _maxrays);
         return _rays_maxdist[j];
     }
     
     virtual float getPushedRayHitDist(size_t j) {
-        assert(j < _maxrays);
+        Q_assert(j < _maxrays);
         return _rays[j].tfar;
     }
     
     virtual hittype_t getPushedRayHitType(size_t j) {
-        assert(j < _maxrays);
+        Q_assert(j < _maxrays);
 
         if (_rays[j].geomID == RTC_INVALID_GEOMETRY_ID) {
             return hittype_t::NONE;
@@ -800,25 +800,25 @@ public:
     }
     
     virtual void getPushedRayDir(size_t j, vec3_t out) {
-        assert(j < _maxrays);
+        Q_assert(j < _maxrays);
         for (int i=0; i<3; i++) {
             out[i] = _rays[j].dir[i];
         }
     }
     
     virtual int getPushedRayPointIndex(size_t j) {
-       // assert(_state != streamstate_t::READY);
-        assert(j < _maxrays);
+       // Q_assert(_state != streamstate_t::READY);
+        Q_assert(j < _maxrays);
         return _point_indices[j];
     }
     
     virtual void getPushedRayColor(size_t j, vec3_t out) {
-        assert(j < _maxrays);
+        Q_assert(j < _maxrays);
         VectorCopy(_ray_colors[j], out);
     }
     
     virtual void getPushedRayNormalContrib(size_t j, vec3_t out) {
-        assert(j < _maxrays);
+        Q_assert(j < _maxrays);
         VectorCopy(_ray_normalcontribs[j], out);
     }
     

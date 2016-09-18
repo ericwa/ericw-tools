@@ -92,7 +92,7 @@ std::string WorldValueForKey(const std::string &key)
 static int
 LightStyleForTargetname(const std::string &targetname)
 {
-    assert(targetname.size() > 0);
+    Q_assert(targetname.size() > 0);
     
     // check if already assigned
     auto it = lightstyleForTargetname.find(targetname);
@@ -838,7 +838,7 @@ EntDict_RemoveValueForKey(entdict_t &dict, const std::string key)
     if (it != dict.end()) {
         dict.erase(it);
     }
-    assert(dict.find(key) == dict.end());
+    Q_assert(dict.find(key) == dict.end());
 }
 
 static std::string
@@ -925,7 +925,7 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
     /* apply side effects of settings (in particular "dirt") */
     FixupGlobalSettings();
     
-    assert(all_lights.size() == 0);
+    Q_assert(all_lights.size() == 0);
     if (nolights) {
         return;
     }
@@ -1174,7 +1174,7 @@ SetupLights(const globalconfig_t &cfg, const bsp2_t *bsp)
              static_cast<int>(all_suns.size()));
     
     
-    assert(final_lightcount == all_lights.size());
+    Q_assert(final_lightcount == all_lights.size());
 }
 
 const char *
@@ -1231,7 +1231,7 @@ WriteEntitiesToString(bsp2_t *bsp)
 
     memcpy(bsp->dentdata, entdata.data(), entdata.size());
     
-    assert(0 == bsp->dentdata[bsp->entdatasize - 1]);
+    Q_assert(0 == bsp->dentdata[bsp->entdatasize - 1]);
 }
 
 
@@ -1249,7 +1249,7 @@ char surflights_dump_filename[1024];
 static void
 SurfLights_WriteEntityToFile(FILE *f, light_t *entity, const vec3_t pos)
 {
-    assert(entity->epairs != nullptr);
+    Q_assert(entity->epairs != nullptr);
     
     entdict_t epairs { *entity->epairs };
     EntDict_RemoveValueForKey(epairs, "_surface");

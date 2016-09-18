@@ -1747,7 +1747,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             const int i = rs->getPushedRayPointIndex(j);
             vec3_t indirect = {0};
             rs->getPushedRayColor(j, indirect);
-            assert(LightSample_Brightness(indirect) >= 0.25);
+            Q_assert(LightSample_Brightness(indirect) >= 0.25);
             
             /* Use dirt scaling on the indirect lighting.
              * Except, not in bouncedebug mode.
@@ -1901,7 +1901,7 @@ TransformToTangentSpace(const vec3_t normal, const vec3_t myUp, const vec3_t myR
 static inline void
 GetDirtVector(const globalconfig_t &cfg, int i, vec3_t out)
 {
-    assert(i < numDirtVectors);
+    Q_assert(i < numDirtVectors);
     
     if (cfg.dirtMode.intValue() == 1) {
         /* get random vector */
@@ -1944,7 +1944,7 @@ DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, cons
         rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), selfshadow);
     }
     
-    assert(rs->numPushedRays() == numDirtVectors);
+    Q_assert(rs->numPushedRays() == numDirtVectors);
     
     // trace the batch
     rs->tracePushedRaysIntersection();
@@ -1976,7 +1976,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     
-    assert(dirt_in_use);
+    Q_assert(dirt_in_use);
     
     const dmodel_t *selfshadow = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
     
@@ -2011,7 +2011,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
             rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue(), selfshadow);
         }
         
-        assert(rs->numPushedRays() == lightsurf->numpoints);
+        Q_assert(rs->numPushedRays() == lightsurf->numpoints);
         
         // trace the batch
         rs->tracePushedRaysIntersection();
@@ -2109,7 +2109,7 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     
     /* final number of lightmaps */
     const int numstyles = static_cast<int>(sorted.size());
-    assert(numstyles <= MAXLIGHTMAPS);
+    Q_assert(numstyles <= MAXLIGHTMAPS);
 
     /* update face info (either core data or supplementary stuff) */
     if (facesup)
@@ -2151,9 +2151,9 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     // sanity check that we don't save a lightmap for a non-lightmapped face
     {
         const char *texname = Face_TextureName(bsp, face);
-        assert(!(bsp->texinfo[face->texinfo].flags & TEX_SPECIAL));
-        assert(Q_strcasecmp(texname, "skip") != 0);
-        assert(Q_strcasecmp(texname, "trigger") != 0);
+        Q_assert(!(bsp->texinfo[face->texinfo].flags & TEX_SPECIAL));
+        Q_assert(Q_strcasecmp(texname, "skip") != 0);
+        Q_assert(Q_strcasecmp(texname, "trigger") != 0);
     }
     
     int width = (lightsurf->texsize[0] + 1) * oversample;

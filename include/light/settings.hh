@@ -52,7 +52,7 @@ protected:
     
     lockable_setting_t(std::vector<std::string> names)
     : _source(setting_source_t::DEFAULT), _names(names) {
-        assert(_names.size() > 0);
+        Q_assert(_names.size() > 0);
     }
     
     bool changeSource(setting_source_t newSource) {
@@ -187,9 +187,9 @@ public:
                    float maxval=std::numeric_limits<float>::infinity())
     : lockable_setting_t(names), _default(v), _value(v), _min(minval), _max(maxval) {
         // check the default value is valid
-        assert(_min < _max);
-        assert(_value >= _min);
-        assert(_value <= _max);
+        Q_assert(_min < _max);
+        Q_assert(_value >= _min);
+        Q_assert(_value <= _max);
     }
     
     lockable_vec_t(std::string name, float v,
@@ -313,10 +313,10 @@ public:
     : _allsettings(settings)
     {
         for (lockable_setting_t *setting : settings) {
-            assert(setting->names().size() > 0);
+            Q_assert(setting->names().size() > 0);
             
             for (const auto &name : setting->names()) {
-                assert(_settingsmap.find(name) == _settingsmap.end());
+                Q_assert(_settingsmap.find(name) == _settingsmap.end());
                 
                 _settingsmap[name] = setting;
             }

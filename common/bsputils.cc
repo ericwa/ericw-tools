@@ -23,8 +23,8 @@
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
 int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
-    assert(v >= 0);
-    assert(v < f->numedges);
+    Q_assert(v >= 0);
+    Q_assert(v < f->numedges);
     
     int edge = f->firstedge + v;
     edge = bsp->dsurfedges[edge];
@@ -36,7 +36,7 @@ int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 static void
 Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
 {
-    assert(num >= 0 && num < bsp->numvertexes);
+    Q_assert(num >= 0 && num < bsp->numvertexes);
     const dvertex_t *v = &bsp->dvertexes[num];
     
     for (int i=0; i<3; i++)
