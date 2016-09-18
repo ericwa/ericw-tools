@@ -25,6 +25,7 @@
 #include <common/bsputils.h>
 
 #include <cassert>
+#include <algorithm>
 
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
