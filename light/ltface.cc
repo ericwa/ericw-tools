@@ -1378,12 +1378,7 @@ LightFace_Entity(const bsp2_t *bsp,
         VectorAdd(sample->color, color, sample->color);
         VectorAdd(sample->direction, normalcontrib, sample->direction);
         
-        /* Check if we really hit, ignore tiny lights */
-        /* ericw -- never ignore generated lights, which can be tiny and need
-           the additive effect of lots hitting */
-        if ((LightSample_Brightness(color) >= 1 || entity->generated)) {
-            hit = true;
-        }
+        hit = true;
     }
     
     if (hit)
@@ -1467,9 +1462,8 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         
         lightsample_t *sample = &lightmap->samples[i];
         Light_Add(sample, value, sun->sunlight_color, sun->sunvec);
-        if (!hit/* && (sample->light >= 1)*/) {
-            hit = true;
-        }
+
+        hit = true;
     }
 
     if (hit)
@@ -1510,9 +1504,8 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         } else {
             Light_ClampMin(sample, value, color);
         }
-        if (!hit && LightSample_Brightness(sample->color) >= 1) {
-            hit = true;
-        }
+
+        hit = true;
     }
 
     if (hit) {
@@ -1567,10 +1560,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
                 Light_ClampMin(sample, value, *entity.color.vec3Value());
             }
 
-            if (!hit && LightSample_Brightness(sample->color) >= 1) {
-                hit = true;
-            }
-            
+            hit = true;
             total_light_ray_hits++;
         }
         
