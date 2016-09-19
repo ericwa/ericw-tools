@@ -1250,7 +1250,8 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         const float dirt = Dirt_GetScaleFactor(cfg, occlusion, &entity, /* FIXME: pass */ nullptr);
         VectorScale(color, dirt, color);
         
-        if (fabs(LightSample_Brightness(color)) <= fadegate) {
+        // NOTE: Skip negative lights, which would make no sense to bounce!
+        if (LightSample_Brightness(color) <= fadegate) {
             continue;
         }
         
@@ -1262,6 +1263,11 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
     }
     
     for (const sun_t &sun : GetSuns()) {
+        
+        // NOTE: Skip negative lights, which would make no sense to bounce!
+        if (sun.sunlight < 0)
+            continue;
+            
         vec3_t originLightDir;
         VectorCopy(sun.sunvec, originLightDir);
         VectorNormalize(originLightDir);

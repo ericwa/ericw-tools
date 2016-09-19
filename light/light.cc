@@ -914,7 +914,9 @@ MakeBounceLightsThread (void *arg)
 static void
 AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
 {
-    Q_assert(!isnan(color[0]));
+    Q_assert(color[0] >= 0);
+    Q_assert(color[1] >= 0);
+    Q_assert(color[2] >= 0);
     Q_assert(area > 0);
     
     bouncelight_t l = {0};
