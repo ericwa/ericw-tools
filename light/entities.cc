@@ -1119,10 +1119,10 @@ void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
         AABB_Expand(mins, maxs, stop);
     }
     
-    // grow it by 1% in each direction
+    // grow it by 25% in each direction
     vec3_t size;
     AABB_Size(mins, maxs, size);
-    VectorScale(size, 0.01, size);
+    VectorScale(size, 0.25, size);
     AABB_Grow(mins, maxs, size);
     
     /*
