@@ -139,7 +139,7 @@ void FixupGlobalSettings() {
 static void
 PrintOptionsSummary(void)
 {
-    logprint("Options summary:\n");
+    logprint("--- OptionsSummary ---\n");
     
     settingsdict_t sd = cfg_static.settings();
     
