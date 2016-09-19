@@ -170,52 +170,66 @@ CheckEmptyValues(const std::vector<entdict_t> &edicts)
 }
 
 /**
- * Checks `entdicts` for unmatched targets/targetnames and prints warnings
+ * Checks `edicts` for unmatched targets/targetnames and prints warnings
  */
 static void
-CheckTargets(void)
+CheckTargetsMatched(const std::vector<entdict_t> &edicts)
 {
+    const std::vector<std::string> targetKeys {
+        "target", "killtarget",
+        "target2", "angrytarget", "deathtarget" // from AD
+    };
+    
     // search for "target" values such that no entity has a matching "targetname"
-    for (const entdict_t &entity : entdicts) {
-        const auto targetstr = EntDict_StringForKey(entity, "target");
-        if (!targetstr.length())
-            continue;
-        
-        bool found = false;
-        for (const entdict_t &target : entdicts) {
-            if (targetstr == EntDict_StringForKey(target, "targetname")) {
-                found = true;
-                break;
+    for (const entdict_t &entity : edicts) {
+        for (const auto &targetKey : targetKeys) {
+            const auto targetVal = EntDict_StringForKey(entity, targetKey);
+            if (!targetVal.length())
+                continue;
+            
+            bool found = false;
+            for (const entdict_t &target : edicts) {
+                if (targetVal == EntDict_StringForKey(target, "targetname")) {
+                    found = true;
+                    break;
+                }
             }
-        }
-        
-        if (!found) {
-            logprint("WARNING: entity at (%s) (%s) has unmatched target (%s)\n",
-                     EntDict_StringForKey(entity, "origin").c_str(),
-                     EntDict_StringForKey(entity, "classname").c_str(),
-                     EntDict_StringForKey(entity, "target").c_str());
+            
+            if (!found) {
+                logprint("WARNING: entity at (%s) (%s) has unmatched \"%s\" (%s)\n",
+                         EntDict_StringForKey(entity, "origin").c_str(),
+                         EntDict_StringForKey(entity, "classname").c_str(),
+                         targetKey.c_str(),
+                         targetVal.c_str());
+            }
         }
     }
     
     // search for "targetname" values such that no entity has a matching "target"
-    for (const entdict_t &entity : entdicts) {
-        const auto targetnamestr = EntDict_StringForKey(entity, "targetname");
-        if (!targetnamestr.length())
+    for (const entdict_t &entity : edicts) {
+        const auto targetnameVal = EntDict_StringForKey(entity, "targetname");
+        if (!targetnameVal.length())
             continue;
         
         bool found = false;
-        for (const entdict_t &targetter : entdicts) {
-            if (targetnamestr == EntDict_StringForKey(targetter, "target")) {
-                found = true;
+        for (const entdict_t &targetter : edicts) {
+            for (const auto &targetKey : targetKeys) {
+                if (targetnameVal == EntDict_StringForKey(targetter, targetKey)) {
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (found) {
                 break;
             }
         }
         
         if (!found) {
-            logprint("WARNING: entity at (%s) (%s) has targetname '%s' which is not targetted by anything.\n",
+            logprint("WARNING: entity at (%s) (%s) has targetname \"%s\" which is not targetted by anything.\n",
                      EntDict_StringForKey(entity, "origin").c_str(),
                      EntDict_StringForKey(entity, "classname").c_str(),
-                     targetnamestr.c_str());
+                     targetnameVal.c_str());
         }
     }
 }
@@ -914,8 +928,8 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
     
     entdicts = EntData_Parse(bsp->dentdata);
     
-    CheckTargets();
     CheckEmptyValues(entdicts);
+    CheckTargetsMatched(entdicts);
     
     // First pass: make permanent changes to the bsp entdata that we will write out
     // at the end of the light process.
