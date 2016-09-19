@@ -155,6 +155,16 @@ MatchTargets(void)
     }
 }
 
+static std::string
+EntDict_PrettyDescription(const entdict_t &entity)
+{
+    std::stringstream s;
+    s << "entity at (" <<
+    EntDict_StringForKey(entity, "origin") << ") (" <<
+    EntDict_StringForKey(entity, "classname") << ")";
+    return s.str();
+}
+
 static void
 CheckEmptyValues(const std::vector<entdict_t> &edicts)
 {
@@ -162,7 +172,8 @@ CheckEmptyValues(const std::vector<entdict_t> &edicts)
     for (const auto &entdict : edicts) {
         for (const auto &keyval : entdict) {
             if (keyval.first.empty() || keyval.second.empty()) {
-                logprint("WARNING: empty key/value \"%s\" \"%s\"\n",
+                logprint("WARNING: %s has empty key/value \"%s\" \"%s\"\n",
+                         EntDict_PrettyDescription(entdict).c_str(),
                          keyval.first.c_str(), keyval.second.c_str());
             }
         }
@@ -196,9 +207,8 @@ CheckTargetsMatched(const std::vector<entdict_t> &edicts)
             }
             
             if (!found) {
-                logprint("WARNING: entity at (%s) (%s) has unmatched \"%s\" (%s)\n",
-                         EntDict_StringForKey(entity, "origin").c_str(),
-                         EntDict_StringForKey(entity, "classname").c_str(),
+                logprint("WARNING: %s has unmatched \"%s\" (%s)\n",
+                         EntDict_PrettyDescription(entity).c_str(),
                          targetKey.c_str(),
                          targetVal.c_str());
             }
@@ -226,9 +236,8 @@ CheckTargetsMatched(const std::vector<entdict_t> &edicts)
         }
         
         if (!found) {
-            logprint("WARNING: entity at (%s) (%s) has targetname \"%s\" which is not targetted by anything.\n",
-                     EntDict_StringForKey(entity, "origin").c_str(),
-                     EntDict_StringForKey(entity, "classname").c_str(),
+            logprint("WARNING: %s has targetname \"%s\" which is not targetted by anything.\n",
+                     EntDict_PrettyDescription(entity).c_str(),
                      targetnameVal.c_str());
         }
     }
