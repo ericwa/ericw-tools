@@ -875,15 +875,19 @@ MakeBounceLightsThread (void *arg)
         // average them, area weighted
         vec3_t sum = {0,0,0};
         float totalarea = 0;
-        if (patches.size()) {
-            for (const auto &patch : patches) {
-                const float patcharea = WindingArea(patch->w);
-                totalarea += patcharea;
-                
-                VectorMA(sum, patcharea, patch->directlight, sum);
+        
+        for (const auto &patch : patches) {
+            const float patcharea = WindingArea(patch->w);
+            totalarea += patcharea;
+            
+            VectorMA(sum, patcharea, patch->directlight, sum);
 //              printf("  %f %f %f\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
-            }
-            VectorScale(sum, 1.0/totalarea, sum);
+        }
+        VectorScale(sum, 1.0/totalarea, sum);
+        
+        // avoid small, or zero-area patches ("sum" would be nan)
+        if (totalarea < 1) {
+            continue;
         }
     
         vec3_t texturecolor;
@@ -910,6 +914,9 @@ MakeBounceLightsThread (void *arg)
 static void
 AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
 {
+    Q_assert(!isnan(color[0]));
+    Q_assert(area > 0);
+    
     bouncelight_t l = {0};
     VectorCopy(pos, l.pos);
     VectorCopy(color, l.color);
