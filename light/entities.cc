@@ -216,6 +216,8 @@ CheckTargetsMatched(const std::vector<entdict_t> &edicts)
     }
     
     // search for "targetname" values such that no entity has a matching "target"
+    // accept any key name as a target, so we don't print false positive
+    // if the map has "some_mod_specific_target" "foo"
     for (const entdict_t &entity : edicts) {
         const auto targetnameVal = EntDict_StringForKey(entity, "targetname");
         if (!targetnameVal.length())
@@ -223,8 +225,8 @@ CheckTargetsMatched(const std::vector<entdict_t> &edicts)
         
         bool found = false;
         for (const entdict_t &targetter : edicts) {
-            for (const auto &targetKey : targetKeys) {
-                if (targetnameVal == EntDict_StringForKey(targetter, targetKey)) {
+            for (const auto &targetter_keyval : targetter) {
+                if (targetnameVal == targetter_keyval.second) {
                     found = true;
                     break;
                 }
