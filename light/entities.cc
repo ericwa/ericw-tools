@@ -165,66 +165,93 @@ EntDict_PrettyDescription(const entdict_t &entity)
     return s.str();
 }
 
-static void
-CheckEmptyValues(const std::vector<entdict_t> &edicts)
+bool
+EntDict_CheckEmptyValues(const entdict_t &entdict)
 {
+    bool ok = true;
     // empty values warning
-    for (const auto &entdict : edicts) {
-        for (const auto &keyval : entdict) {
-            if (keyval.first.empty() || keyval.second.empty()) {
-                logprint("WARNING: %s has empty key/value \"%s\" \"%s\"\n",
-                         EntDict_PrettyDescription(entdict).c_str(),
-                         keyval.first.c_str(), keyval.second.c_str());
-            }
+    for (const auto &keyval : entdict) {
+        if (keyval.first.empty() || keyval.second.empty()) {
+            logprint("WARNING: %s has empty key/value \"%s\" \"%s\"\n",
+                     EntDict_PrettyDescription(entdict).c_str(),
+                     keyval.first.c_str(), keyval.second.c_str());
+            ok = false;
         }
     }
+    return ok;
 }
 
 /**
  * Checks `edicts` for unmatched targets/targetnames and prints warnings
  */
-static void
-CheckTargetsMatched(const std::vector<entdict_t> &edicts)
+bool
+EntDict_CheckTargetKeysMatched(const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
 {
+    bool ok = true;
+    
     const std::vector<std::string> targetKeys {
         "target", "killtarget",
         "target2", "angrytarget", "deathtarget" // from AD
     };
     
+    std::string targetname = EntDict_StringForKey(entity, "targetname");
+    
     // search for "target" values such that no entity has a matching "targetname"
-    for (const entdict_t &entity : edicts) {
-        for (const auto &targetKey : targetKeys) {
-            const auto targetVal = EntDict_StringForKey(entity, targetKey);
-            if (!targetVal.length())
+    
+    for (const auto &targetKey : targetKeys) {
+        const auto targetVal = EntDict_StringForKey(entity, targetKey);
+        if (!targetVal.length())
+            continue;
+        
+        if (targetVal == targetname) {
+            logprint("WARNING: %s has \"%s\" set to itself\n",
+                     EntDict_PrettyDescription(entity).c_str(),
+                     targetKey.c_str());
+            ok = false;
+            continue;
+        }
+        
+        bool found = false;
+        for (const entdict_t &target : all_edicts) {
+            if (&target == &entity) {
                 continue;
-            
-            bool found = false;
-            for (const entdict_t &target : edicts) {
-                if (targetVal == EntDict_StringForKey(target, "targetname")) {
-                    found = true;
-                    break;
-                }
             }
             
-            if (!found) {
-                logprint("WARNING: %s has unmatched \"%s\" (%s)\n",
-                         EntDict_PrettyDescription(entity).c_str(),
-                         targetKey.c_str(),
-                         targetVal.c_str());
+            if (targetVal == EntDict_StringForKey(target, "targetname")) {
+                found = true;
+                break;
             }
+        }
+        
+        if (!found) {
+            logprint("WARNING: %s has unmatched \"%s\" (%s)\n",
+                     EntDict_PrettyDescription(entity).c_str(),
+                     targetKey.c_str(),
+                     targetVal.c_str());
+            ok = false;
         }
     }
     
+    return ok;
+}
+
+bool
+EntDict_CheckTargetnameKeyMatched(const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
+{
     // search for "targetname" values such that no entity has a matching "target"
     // accept any key name as a target, so we don't print false positive
     // if the map has "some_mod_specific_target" "foo"
-    for (const entdict_t &entity : edicts) {
-        const auto targetnameVal = EntDict_StringForKey(entity, "targetname");
-        if (!targetnameVal.length())
-            continue;
-        
+
+    bool ok = true;
+    
+    const auto targetnameVal = EntDict_StringForKey(entity, "targetname");
+    if (targetnameVal.length()) {
         bool found = false;
-        for (const entdict_t &targetter : edicts) {
+        for (const entdict_t &targetter : all_edicts) {
+            if (&targetter == &entity) {
+                continue;
+            }
+            
             for (const auto &targetter_keyval : targetter) {
                 if (targetnameVal == targetter_keyval.second) {
                     found = true;
@@ -241,8 +268,11 @@ CheckTargetsMatched(const std::vector<entdict_t> &edicts)
             logprint("WARNING: %s has targetname \"%s\" which is not targetted by anything.\n",
                      EntDict_PrettyDescription(entity).c_str(),
                      targetnameVal.c_str());
+            ok = false;
         }
     }
+    
+    return ok;
 }
 
 static void
@@ -939,8 +969,12 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
     
     entdicts = EntData_Parse(bsp->dentdata);
     
-    CheckEmptyValues(entdicts);
-    CheckTargetsMatched(entdicts);
+    // Make warnings
+    for (auto &entdict : entdicts) {
+        EntDict_CheckEmptyValues(entdict);
+        EntDict_CheckTargetKeysMatched(entdict, entdicts);
+        EntDict_CheckTargetnameKeyMatched(entdict, entdicts);
+    }
     
     // First pass: make permanent changes to the bsp entdata that we will write out
     // at the end of the light process.
