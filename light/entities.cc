@@ -166,7 +166,7 @@ EntDict_PrettyDescription(const entdict_t &entity)
 }
 
 bool
-EntDict_CheckEmptyValues(const entdict_t &entdict)
+EntDict_CheckNoEmptyValues(const entdict_t &entdict)
 {
     bool ok = true;
     // empty values warning
@@ -971,7 +971,7 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
     
     // Make warnings
     for (auto &entdict : entdicts) {
-        EntDict_CheckEmptyValues(entdict);
+        EntDict_CheckNoEmptyValues(entdict);
         EntDict_CheckTargetKeysMatched(entdict, entdicts);
         EntDict_CheckTargetnameKeyMatched(entdict, entdicts);
     }

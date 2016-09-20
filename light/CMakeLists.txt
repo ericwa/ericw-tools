@@ -100,7 +100,10 @@ include_directories(${CMAKE_SOURCE_DIR}/3rdparty/googletest)
 set(LIGHT_TEST_SOURCE 
 	${LIGHT_SOURCES}
 	${GOOGLETEST_SOURCES}
-	test.cc)
+	test.cc
+	test_entities.cc
+	test_ltface.cc
+	test_light.cc)
 
 add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
 add_test(testlight testlight)

@@ -176,7 +176,7 @@ bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
 
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
 
-bool EntDict_CheckEmptyValues(const entdict_t &entdict);
+bool EntDict_CheckNoEmptyValues(const entdict_t &entdict);
 
 bool EntDict_CheckTargetKeysMatched(const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
 
