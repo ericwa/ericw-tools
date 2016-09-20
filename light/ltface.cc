@@ -2321,6 +2321,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
             if (sun.sunlight > 0)
                 LightFace_Sky (&sun, lightsurf, lightmaps);
 
+        /* add indirect lighting */
+        LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+        
         /* minlight - Use the greater of global or model minlight. */
         if (lightsurf->minlight > cfg.minlight.floatValue())
             LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
@@ -2345,8 +2348,10 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                 LightFace_Sky (&sun, lightsurf, lightmaps);
     }
     
-    /* add indirect lighting */
-    LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+    /* bounce debug */
+    // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
+    if (debugmode == debugmode_bounce)
+        LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
     
     /* replace lightmaps with AO for debugging */
     if (debugmode == debugmode_dirt)
