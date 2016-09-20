@@ -1,3 +1,15 @@
+2016-09-20 TyrUtils-ericw 0.15.8 release
+
+- light: fix black noise in some cases when using -bounce.
+- light: try to limit artifacts caused by "too many lightstyles on a face", 
+         by saving the 4 brightest lightmaps. The previous behaviour was random,
+         so you would likely get bad artifacts when that warning occurred.
+- light: restore and expand the "unmatched target" warnings.
+         Now checks "target", "killtarget", "target2", "angrytarget", "deathtarget".
+         Also checks for any "targetname" that is never targetted.
+- light: restore support for skip-textured bmodels with "_shadow" "1".
+         This is only supported on bmodels where all faces are textured with "skip".
+
 2016-09-09 TyrUtils-ericw 0.15.7 release
 
 Bugfixes:
