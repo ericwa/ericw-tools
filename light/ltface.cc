@@ -1620,6 +1620,32 @@ LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
+static void
+LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    Q_assert(debugmode == debugmode_bouncelights);
+    
+    /* use a style 0 light map */
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    
+    vec3_t patch_color = {0,0,0};
+    std::vector<bouncelight_t> vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
+    if (vpls.size()) {
+        Q_assert(vpls.size() == 1); // for now only 1 vpl per face
+        
+        const auto &vpl = vpls.at(0);
+        VectorScale(vpl.color, 255, patch_color);
+    }
+    
+    /* Overwrite each point with the emitted color... */
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        lightsample_t *sample = &lightmap->samples[i];
+        VectorCopy(patch_color, sample->color);
+    }
+    
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
+
 // returns color in [0,255]
 static inline void
 BounceLight_ColorAtDist(const globalconfig_t &cfg, const bouncelight_t *vpl, vec_t dist, vec3_t color)
@@ -2357,6 +2383,9 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
 
     if (debugmode == debugmode_phong)
         LightFace_PhongDebug(lightsurf, lightmaps);
+    
+    if (debugmode == debugmode_bouncelights)
+        LightFace_BounceLightsDebug(lightsurf, lightmaps);
     
     /* Fix any negative values */
     for (lightmap_t &lightmap : *lightmaps) {

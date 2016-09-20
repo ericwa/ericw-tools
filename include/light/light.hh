@@ -161,7 +161,8 @@ typedef enum {
     debugmode_none = 0,
     debugmode_phong,
     debugmode_dirt,
-    debugmode_bounce
+    debugmode_bounce,
+    debugmode_bouncelights
 } debugmode_t;
 
 extern debugmode_t debugmode;
@@ -398,6 +399,7 @@ const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
 const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
 const std::vector<bouncelight_t> &BounceLights();
+std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum);
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
 int light_main(int argc, const char **argv);
 

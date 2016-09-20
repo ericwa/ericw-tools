@@ -750,6 +750,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
 mutex radlights_lock;
 map<string, vec3_struct_t> texturecolors;
 std::vector<bouncelight_t> radlights;
+std::map<int, std::vector<bouncelight_t>> radlightsByFacenum; // duplicate of `radlights` but indexed by face
 
 class patch_t {
 public:
@@ -833,7 +834,7 @@ Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t colo
 }
 
 static void
-AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp);
+AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp);
 
 static void *
 MakeBounceLightsThread (void *arg)
@@ -905,14 +906,14 @@ MakeBounceLightsThread (void *arg)
             emitcolor[k] = (sum[k] / 255.0f) * (blendedcolor[k] / 255.0f);
         }
         
-        AddBounceLight(facemidpoint, emitcolor, faceplane.normal, facearea, bsp);
+        AddBounceLight(facemidpoint, emitcolor, faceplane.normal, facearea, face, bsp);
     }
     
     return NULL;
 }
 
 static void
-AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_t *bsp)
+AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     Q_assert(color[0] >= 0);
     Q_assert(color[1] >= 0);
@@ -931,11 +932,21 @@ AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, ve
     
     unique_lock<mutex> lck { radlights_lock };
     radlights.push_back(l);
+    radlightsByFacenum[Face_GetNum(bsp, face)].push_back(l);
 }
 
 const std::vector<bouncelight_t> &BounceLights()
 {
     return radlights;
+}
+
+std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum)
+{
+    const auto &vec = radlightsByFacenum.find(facenum);
+    if (vec != radlightsByFacenum.end()) {
+        return vec->second;
+    }
+    return {};
 }
 
 // Returns color in [0,1]
@@ -1459,6 +1470,11 @@ light_main(int argc, const char **argv)
             cfg.bounce.setBoolValueLocked(true);
             debugmode = debugmode_bounce;
             logprint( "Bounce debugging mode enabled on command line\n" );
+        } else if ( !strcmp( argv[ i ], "-bouncelightsdebug" ) ) {
+            CheckNoDebugModeSet();
+            cfg.bounce.setBoolValueLocked(true);
+            debugmode = debugmode_bouncelights;
+            logprint( "Bounce emitters debugging mode enabled on command line\n" );
         } else if ( !strcmp( argv[ i ], "-surflight_subdivide" ) ) {
             surflight_subdivide = ParseVec(&i, argc, argv);
             surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
