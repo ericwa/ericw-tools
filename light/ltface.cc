@@ -2303,9 +2303,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
      * clamp any values that may have gone negative.
      */
 
-    if (!(debugmode == debugmode_dirt
-          || debugmode == debugmode_phong
-          || debugmode == debugmode_bounce)) {
+    if (debugmode == debugmode_none) {
         
         total_samplepoints += lightsurf->numpoints;
         
