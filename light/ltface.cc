@@ -2099,6 +2099,18 @@ Lightmap_AvgBrightness(const lightmap_t *lm, const lightsurf_t *lightsurf) {
     return avgb;
 }
 
+static float
+Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lightsurf) {
+    float maxb = 0;
+    for (int j=0; j<lightsurf->numpoints; j++) {
+        const float b = LightSample_Brightness(lm->samples[j].color);
+        if (b > maxb) {
+            maxb = b;
+        }
+    }
+    return maxb;
+}
+
 static void
 WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmapdict_t *lightmaps)
@@ -2109,6 +2121,11 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     for (const lightmap_t &lightmap : *lightmaps) {
         // skip un-saved lightmaps
         if (lightmap.style == 255)
+            continue;
+        
+        // skip lightmaps where all samples have brightness below 1
+        const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
+        if (maxb < 1)
             continue;
         
         const float avgb = Lightmap_AvgBrightness(&lightmap, lightsurf);
