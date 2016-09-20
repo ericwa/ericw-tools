@@ -1512,6 +1512,10 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
     }
     
+    // FIXME: Refactor this?
+    if (lightsurf->modelinfo->lightignore.boolValue())
+        return;
+    
     /* Cast rays for local minlight entities */
     const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     for (const auto &entity : GetLights()) {
@@ -2351,19 +2355,21 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         total_samplepoints += lightsurf->numpoints;
         
         /* positive lights */
-        for (const auto &entity : GetLights())
-        {
-            if (entity.getFormula() == LF_LOCALMIN)
-                continue;
-            if (entity.light.floatValue() > 0)
-                LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
-        }
-        for ( const sun_t &sun : GetSuns() )
-            if (sun.sunlight > 0)
-                LightFace_Sky (&sun, lightsurf, lightmaps);
+        if (!modelinfo->lightignore.boolValue()) {
+            for (const auto &entity : GetLights())
+            {
+                if (entity.getFormula() == LF_LOCALMIN)
+                    continue;
+                if (entity.light.floatValue() > 0)
+                    LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
+            }
+            for ( const sun_t &sun : GetSuns() )
+                if (sun.sunlight > 0)
+                    LightFace_Sky (&sun, lightsurf, lightmaps);
 
-        /* add indirect lighting */
-        LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+            /* add indirect lighting */
+            LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+        }
         
         /* minlight - Use the greater of global or model minlight. */
         if (lightsurf->minlight > cfg.minlight.floatValue())
@@ -2377,16 +2383,18 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         }
 
         /* negative lights */
-        for (const auto &entity : GetLights())
-        {
-            if (entity.getFormula() == LF_LOCALMIN)
-                continue;
-            if (entity.light.floatValue() < 0)
-                LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
+        if (!modelinfo->lightignore.boolValue()) {
+            for (const auto &entity : GetLights())
+            {
+                if (entity.getFormula() == LF_LOCALMIN)
+                    continue;
+                if (entity.light.floatValue() < 0)
+                    LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
+            }
+            for (const sun_t &sun : GetSuns())
+                if (sun.sunlight < 0)
+                    LightFace_Sky (&sun, lightsurf, lightmaps);
         }
-        for (const sun_t &sun : GetSuns())
-            if (sun.sunlight < 0)
-                LightFace_Sky (&sun, lightsurf, lightmaps);
     }
     
     /* bounce debug */

@@ -217,6 +217,7 @@ public:
     lockable_vec_t minlight, shadow, shadowself, dirt, phong, phong_angle;
     lockable_string_t minlight_exclude;
     lockable_vec3_t minlight_color;
+    lockable_bool_t lightignore;
     
     float getResolvedPhongAngle() const {
         const float s = phong_angle.floatValue();
@@ -240,7 +241,9 @@ public:
         phong { "phong", 0 },
         phong_angle { "phong_angle", 0 },
         minlight_exclude { "minlight_exclude", "" },
-        minlight_color { "minlight_color", 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 }
+        minlight_color { "minlight_color", 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        lightignore { "lightignore", false }
+    
     {
 		VectorSet(offset, 0, 0, 0);
 	}
@@ -248,7 +251,7 @@ public:
     settingsdict_t settings() {
         return {{
             &minlight, &shadow, &shadowself, &dirt, &phong, &phong_angle,
-            &minlight_exclude, &minlight_color
+            &minlight_exclude, &minlight_color, &lightignore
         }};
     }
 };
