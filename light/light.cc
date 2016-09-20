@@ -924,7 +924,6 @@ AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, ve
     VectorCopy(color, l.color);
     VectorCopy(surfnormal, l.surfnormal);
     l.area = area;
-    l.leaf = Light_PointInLeaf(bsp, pos);
     
     if (!novisapprox) {
         EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);

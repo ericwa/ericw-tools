@@ -174,7 +174,6 @@ typedef struct {
     vec3_t color;
     vec3_t surfnormal;
     vec_t area;
-    const bsp2_dleaf_t *leaf;
     
     /* estimated visible AABB culling */
     vec3_t mins;

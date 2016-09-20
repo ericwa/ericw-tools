@@ -814,14 +814,6 @@ static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
     return NULL;
 }
 
-static void
-SetupLightLeafnums(const bsp2_t *bsp)
-{
-    for (light_t &entity : all_lights) {
-        entity.leaf = Light_PointInLeaf(bsp, *entity.origin.vec3Value());
-    }
-}
-
 /*
  * ==================
  * EntData_Parse
@@ -1253,7 +1245,6 @@ SetupLights(const globalconfig_t &cfg, const bsp2_t *bsp)
     SetupSuns(cfg);
     SetupSkyDome(cfg);
     FixLightsOnFaces(bsp);
-    SetupLightLeafnums(bsp);
     EstimateLightVisibility();
     
     logprint("Final count: %d lights %d suns in use.\n",

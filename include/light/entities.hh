@@ -65,8 +65,6 @@ public:
 
     qboolean generated;     // if true, don't write to the bsp
 
-    const bsp2_dleaf_t *leaf;    // for vis testing
-    
     const char *classname() const;
     
     vec3_t mins, maxs;
@@ -91,7 +89,6 @@ public:
         epairs {nullptr},
         targetent {nullptr},
         generated {false},
-        leaf {nullptr},
 
         // settings
     
