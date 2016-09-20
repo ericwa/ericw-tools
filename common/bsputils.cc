@@ -20,6 +20,11 @@
 #include <common/bsputils.h>
 #include <assert.h>
 
+int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    return f - bsp->dfaces;
+}
+
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
 int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {

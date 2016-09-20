@@ -27,6 +27,7 @@
 extern "C" {
 #endif
 
+int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f);
 int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
 void Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm);
 plane_t Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f);
