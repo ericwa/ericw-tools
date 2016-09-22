@@ -256,6 +256,9 @@ Enables phong shading on faces of this model with a custom angle. Adjacent faces
 Consider setting "_anglescale" to "1" on lights or worldspawn to make the effect of phong shading more visible.
 Use the "-phongdebug" command-line flag to save the interpolated normals to the lightmap for previewing (use "r_lightmap 1" or "gl_lightmaps 1" in your engine to preview.)
 
+.IP "\fB""_lightignore"" ""n""\fP"
+1 makes a model receive minlight only, ignoring all lights / sunlight. Could be useful on rotators / trains. 
+
 
 .SH "LIGHT ENTITY KEYS"
 

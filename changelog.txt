@@ -9,6 +9,7 @@
          Also checks for any "targetname" that is never targetted.
 - light: restore support for skip-textured bmodels with "_shadow" "1".
          This is only supported on bmodels where all faces are textured with "skip".
+- light: add "_lightignore" model key, makes a model receive minlight only.
 
 2016-09-09 TyrUtils-ericw 0.15.7 release
 
