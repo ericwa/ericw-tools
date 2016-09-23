@@ -17,6 +17,6 @@ wget "$EMBREE_TGZ"
 tar xf "$EMBREE_TGZ_NAME"
 EMBREE_CMAKE_DIR="$(pwd)/$EMBREE_DIR_NAME/lib/cmake/$EMBREE_WITH_VERSION"
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$EMBREE_CMAKE_DIR"
-make -j8
+make -j8 VERBOSE=1
 cpack
 
