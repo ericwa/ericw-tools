@@ -50,19 +50,13 @@ Tested on:
  - OS X 10.11 / Xcode 7.3
  - Windows 10 / Visual Studio 2013 Community
 
-Typical build command:
-```
-mkdir build
-cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
-cpack .
-```
-
-### Ubuntu 14.04
+### Ubuntu 14.04 x86_64
 
 ```
 sudo apt-get install git cmake build-essential groff
+
+git clone https://github.com/ericwa/tyrutils-ericw
+cd tyrutils-ericw
 
 mkdir build
 cd build
