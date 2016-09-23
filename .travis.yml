@@ -8,4 +8,4 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y groff
 script:
-  - ./build-linux.sh
+  - ./build-linux-64.sh

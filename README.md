@@ -41,7 +41,7 @@ source code.
 
 ## Compiling
 
-Requires CMake 3.1 and a compiler with C99 and C++11 support.  
+Requires CMake 2.8, groff, and a compiler with C99 and C++11 support.  
 [Embree v2.10.0+](http://embree.github.io/) is optional but recommended.
 
 Tested on:
@@ -57,6 +57,22 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release
 cpack .
+```
+
+### Ubuntu 14.04
+
+```
+sudo apt-get install git cmake build-essential groff
+
+mkdir build
+cd build
+
+wget https://github.com/embree/embree/releases/download/v2.11.0/embree-2.11.0.x86_64.linux.tar.gz -O embree.tgz
+tar xf embree.tgz
+
+cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.11.0.x86_64.linux/lib/cmake/embree-2.11.0"
+make -j8 VERBOSE=1
+cpack
 ```
 
 ## Credits
