@@ -66,8 +66,15 @@ tar xf embree.tgz
 
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.11.0.x86_64.linux/lib/cmake/embree-2.11.0"
 make -j8 VERBOSE=1
-cpack
 ```
+
+Executables will be located in:
+
+ - `tyrutils-ericw/build/qbsp/qbsp`
+ - `tyrutils-ericw/build/vis/vis`
+ - `tyrutils-ericw/build/light/light`
+ - `tyrutils-ericw/build/bspinfo/bspinfo`
+ - `tyrutils-ericw/build/bsputil/bsputil`
 
 ## Credits
 
