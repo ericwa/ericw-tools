@@ -61,8 +61,17 @@ if (embree_FOUND)
 
 		install(FILES ${EMBREE_DLLS} DESTINATION bin)
 	endif()
-	if(APPLE)
-		file(GLOB EMBREE_DYLIBS_WITH_SYMLINKS "${embree_DIR}/../../*.dylib")
+	if(UNIX)
+		if (APPLE)
+			set(SHARED_LIB_EXT dylib)
+		elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+			set(SHARED_LIB_EXT "so.*")
+		else ()
+			message(FATAL_ERROR "only Linux and macOS currently supported")	
+		endif()
+
+
+		file(GLOB EMBREE_DYLIBS_WITH_SYMLINKS "${embree_DIR}/../../*.${SHARED_LIB_EXT}")
 
 		# Gather all .dylib's that are not symlinks
 		foreach(EMBREE_DYLIB ${EMBREE_DYLIBS_WITH_SYMLINKS})
@@ -77,7 +86,11 @@ if (embree_FOUND)
 		endforeach()
 
 		# so the executable will search for dylib's in the same directory as the executable 
-		add_custom_command(TARGET light POST_BUILD COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
+		if(APPLE)
+			add_custom_command(TARGET light POST_BUILD COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
+		elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+			SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath,\$ORIGIN")
+		endif()
 
 		install(FILES ${EMBREE_DYLIBS} DESTINATION bin)
 	endif()
