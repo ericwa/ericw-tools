@@ -693,7 +693,7 @@ ParseOptions(char *szOptions)
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
     while (szTok) {
-        if (szTok[0] != '-' && szTok[0] != '/') {
+        if (szTok[0] != '-') {
             /* Treat as filename */
             if (NameCount == 0)
                 strcpy(options.szMapName, szTok);
