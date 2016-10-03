@@ -1,6 +1,6 @@
-2016-09-20 TyrUtils-ericw 0.15.8 release
+2016-10-03 TyrUtils-ericw 0.15.8 release
 
-- light: fix black noise in some cases when using -bounce.
+- light: fix black noise in some cases when using -bounce. (reported by Pritchard)
 - light: try to limit artifacts caused by "too many lightstyles on a face", 
          by saving the 4 brightest lightmaps. The previous behaviour was random,
          so you would likely get bad artifacts when that warning occurred.
@@ -10,6 +10,7 @@
 - light: restore support for skip-textured bmodels with "_shadow" "1".
          This is only supported on bmodels where all faces are textured with "skip".
 - light: add "_lightignore" model key, makes a model receive minlight only.
+- qbsp:  accept absolute path to map (reported by lurq)
 
 2016-09-09 TyrUtils-ericw 0.15.7 release
 
