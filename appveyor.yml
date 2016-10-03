@@ -27,3 +27,14 @@ build_script:
     msbuild PACKAGE.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 artifacts:
 - path: cmakebuild\*.zip
+deploy:
+  description: 'tyrutils-$APPVEYOR_REPO_TAG_NAME'
+  provider: GitHub
+  auth_token:
+    secure: 'kTa/cPIBtiixoSjXq1WoVD04ZFzbGhTPcPChAkh99Kf5Sqhy+kE8E3jUYe28nPDO'
+  artifact: cmakebuild\*.zip
+  draft: true
+  prerelease: false
+  on:
+    branch: master
+    appveyor_repo_tag: true
