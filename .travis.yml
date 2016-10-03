@@ -16,3 +16,13 @@ before_install:
 script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then ./build-osx.sh; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./build-linux-64.sh; fi
+deploy:
+  provider: releases
+  file_glob: true
+  api_key:
+    secure: EBxXqVjU7AGBOHbf9MWmmlEX7wpJwi8faLbUjKB19M5MzGSKdvSHTnRTFWLt80+1S1qr/PlZUxeyl+xGGQ1PFHvlALGUGVveVJ/5MGHP+aRhPJgvQ0A15KWQrba4Yy5rbw+DlAOznUmmn+cmnjeEdT3J9eLF73GKYtEWB6qT2E8=
+  file:
+    - "build-osx/*.zip"
+    - "build/*.zip"
+  on:
+    repo: ericwa/tyrutils-ericw
