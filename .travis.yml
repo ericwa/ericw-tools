@@ -26,3 +26,4 @@ deploy:
     - "build/*.zip"
   on:
     repo: ericwa/tyrutils-ericw
+    tags: true
