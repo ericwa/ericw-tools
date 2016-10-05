@@ -515,26 +515,20 @@ CreateHulls(void)
     }
 }
 
+wad_t *wadlist = NULL;
+static bool wadlist_tried_loading = false;
 
-/*
-=================
-ProcessFile
-=================
-*/
-static void
-ProcessFile(void)
+void
+EnsureTexturesLoaded()
 {
     const char *wadstring;
     char *defaultwad;
-    wad_t *wadlist;
-
-    // load brushes and entities
-    LoadMapFile();
-    if (options.fOnlyents) {
-        UpdateEntLump();
+    
+    if (wadlist_tried_loading)
         return;
-    }
-
+    
+    wadlist_tried_loading = true;
+    
     wadlist = NULL;
     wadstring = ValueForKey(pWorldEnt(), "_wad");
     if (!wadstring[0])
@@ -543,7 +537,7 @@ ProcessFile(void)
         Message(msgWarning, warnNoWadKey);
     else
         wadlist = WADList_Init(wadstring);
-
+    
     if (!wadlist) {
         if (wadstring[0])
             Message(msgWarning, warnNoValidWads);
@@ -557,7 +551,26 @@ ProcessFile(void)
             Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
         FreeMem(defaultwad, OTHER, strlen(options.szMapName) + 5);
     }
+}
 
+/*
+=================
+ProcessFile
+=================
+*/
+static void
+ProcessFile(void)
+{
+    // load brushes and entities
+    LoadMapFile();
+    if (options.fOnlyents) {
+        UpdateEntLump();
+        return;
+    }
+
+    // this can happen earlier if brush primitives are in use, because we need texture sizes then
+    EnsureTexturesLoaded();
+    
     // init the tables to be shared by all models
     BeginBSPFile();
 

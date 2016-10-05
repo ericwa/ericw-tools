@@ -27,6 +27,7 @@
 
 #include "qbsp.h"
 #include "parser.h"
+#include "wad.h"
 
 #define info_player_start       1
 #define info_player_deathmatch  2
@@ -325,6 +326,7 @@ typedef enum {
     TX_QUARK_TYPE1 = 1,
     TX_QUARK_TYPE2 = 2,
     TX_VALVE_220   = 3,
+    TX_BRUSHPRIM   = 4
 } texcoord_style_t;
 
 static texcoord_style_t
@@ -474,6 +476,88 @@ SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2],
     out->vecs[1][3] = shift[1];
 }
 
+/*
+ ComputeAxisBase() 
+ from q3map2
+ 
+ computes the base texture axis for brush primitive texturing
+ note: ComputeAxisBase here and in editor code must always BE THE SAME!
+ warning: special case behaviour of atan2( y, x ) <-> atan( y / x ) might not be the same everywhere when x == 0
+ rotation by (0,RotY,RotZ) assigns X to normal
+ */
+static void ComputeAxisBase( const vec3_t normal_unsanitized, vec3_t texX, vec3_t texY ){
+    vec_t RotY, RotZ;
+    
+    vec3_t normal;
+    VectorCopy(normal_unsanitized, normal);
+    
+    /* do some cleaning */
+    if ( fabs( normal[ 0 ] ) < 1e-6 ) {
+        normal[ 0 ] = 0.0f;
+    }
+    if ( fabs( normal[ 1 ] ) < 1e-6 ) {
+        normal[ 1 ] = 0.0f;
+    }
+    if ( fabs( normal[ 2 ] ) < 1e-6 ) {
+        normal[ 2 ] = 0.0f;
+    }
+    
+    /* compute the two rotations around y and z to rotate x to normal */
+    RotY = -atan2( normal[ 2 ], sqrt( normal[ 1 ] * normal[ 1 ] + normal[ 0 ] * normal[ 0 ] ) );
+    RotZ = atan2( normal[ 1 ], normal[ 0 ] );
+    
+    /* rotate (0,1,0) and (0,0,1) to compute texX and texY */
+    texX[ 0 ] = -sin( RotZ );
+    texX[ 1 ] = cos( RotZ );
+    texX[ 2 ] = 0;
+    
+    /* the texY vector is along -z (t texture coorinates axis) */
+    texY[ 0 ] = -sin( RotY ) * cos( RotZ );
+    texY[ 1 ] = -sin( RotY ) * sin( RotZ );
+    texY[ 2 ] = -cos( RotY );
+}
+
+static void
+SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, texinfo_t *out)
+{
+    vec3_t texX, texY;
+    
+    ComputeAxisBase( faceNormal, texX, texY );
+    
+/*
+ derivation of the conversion below:
+ 
+ classic BSP texture vecs to texture coordinates:
+ 
+   u = (dot(vert, out->vecs[0]) + out->vecs[3]) / texWidth
+ 
+ brush primitives: (starting with q3map2 code, then rearranging it to look like the classic formula)
+   
+   u = (texMat[0][0] * dot(vert, texX)) + (texMat[0][1] * dot(vert, texY)) + texMat[0][2]
+ 
+ factor out vert:
+  
+   u = (vert[0] * (texX[0] * texMat[0][0] + texY[0] * texMat[0][1])) 
+      + (vert[1] * (texX[1] * texMat[0][0] + texY[1] * texMat[0][1]))
+      + (vert[2] * (texX[2] * texMat[0][0] + texY[2] * texMat[0][1]))
+      + texMat[0][2];
+ 
+ multiplying that by 1 = (texWidth / texWidth) gives us something in the same shape as the classic formula,
+ so we can get out->vecs.
+ 
+ */
+    
+    out->vecs[0][0] = texWidth * ((texX[0] * texMat[0][0]) + (texY[0] * texMat[0][1]));
+    out->vecs[0][1] = texWidth * ((texX[1] * texMat[0][0]) + (texY[1] * texMat[0][1]));
+    out->vecs[0][2] = texWidth * ((texX[2] * texMat[0][0]) + (texY[2] * texMat[0][1]));
+    out->vecs[0][3] = texWidth * texMat[0][2];
+    
+    out->vecs[1][0] = texHeight * ((texX[0] * texMat[1][0]) + (texY[0] * texMat[1][1]));
+    out->vecs[1][1] = texHeight * ((texX[1] * texMat[1][0]) + (texY[1] * texMat[1][1]));
+    out->vecs[1][2] = texHeight * ((texX[2] * texMat[1][0]) + (texY[2] * texMat[1][1]));
+    out->vecs[1][3] = texHeight * texMat[1][2];
+}
+
 static void
 ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
 {
@@ -533,32 +617,83 @@ ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2],
 }
 
 static void
-ParseTextureDef(parser_t *parser, texinfo_t *tx,
+ParseBrushPrimTX(parser_t *parser, vec3_t texMat[2])
+{
+    ParseToken(parser, PARSE_SAMELINE);
+    if (strcmp(parser->token, "("))
+        goto parse_error;
+    
+    for (int i = 0; i < 2; i++) {
+        ParseToken(parser, PARSE_SAMELINE);
+        if (strcmp(parser->token, "("))
+            goto parse_error;
+        
+        for (int j = 0; j < 3; j++) {
+            ParseToken(parser, PARSE_SAMELINE);
+            texMat[i][j] = atof(parser->token);
+        }
+        
+        ParseToken(parser, PARSE_SAMELINE);
+        if (strcmp(parser->token, ")"))
+            goto parse_error;
+    }
+    
+    ParseToken(parser, PARSE_SAMELINE);
+    if (strcmp(parser->token, ")"))
+        goto parse_error;
+    
+    return;
+    
+parse_error:
+    Error("line %d: couldn't parse Brush Primitives texture info", parser->linenum);
+}
+
+static void
+ParseTextureDef(parser_t *parser, const mapbrush_t *brush, texinfo_t *tx,
                 vec3_t planepts[3], const plane_t *plane)
 {
+    vec3_t texMat[2];
     vec3_t axis[2];
     vec_t shift[2], rotate, scale[2];
     texcoord_style_t tx_type;
-
+    int width, height;
+    
     memset(tx, 0, sizeof(*tx));
-    ParseToken(parser, PARSE_SAMELINE);
-    tx->miptex = FindMiptex(parser->token);
-    ParseToken(parser, PARSE_SAMELINE);
-    if (!strcmp(parser->token, "[")) {
-        parser->unget = true;
-        ParseValve220TX(parser, axis, shift, &rotate, scale);
-        tx_type = TX_VALVE_220;
-    } else {
-        shift[0] = atof(parser->token);
+
+    if (brush->format == brushformat_t::BRUSH_PRIMITIVES) {
+        ParseBrushPrimTX(parser, texMat);
+        tx_type = TX_BRUSHPRIM;
+        
         ParseToken(parser, PARSE_SAMELINE);
-        shift[1] = atof(parser->token);
+        tx->miptex = FindMiptex(parser->token);
+        
+        EnsureTexturesLoaded();
+        const texture_t *texture = WADList_GetTexture(parser->token);
+        width = texture ? texture->width : 64;
+        height = texture ? texture->height : 64;
+        
+        // throw away 3 extra values at end of line
+        ParseExtendedTX(parser);
+    } else if (brush->format == brushformat_t::NORMAL) {
         ParseToken(parser, PARSE_SAMELINE);
-        rotate = atof(parser->token);
+        tx->miptex = FindMiptex(parser->token);
         ParseToken(parser, PARSE_SAMELINE);
-        scale[0] = atof(parser->token);
-        ParseToken(parser, PARSE_SAMELINE);
-        scale[1] = atof(parser->token);
-        tx_type = ParseExtendedTX(parser);
+        if (!strcmp(parser->token, "[")) {
+            parser->unget = true;
+            ParseValve220TX(parser, axis, shift, &rotate, scale);
+            tx_type = TX_VALVE_220;
+        } else {
+            shift[0] = atof(parser->token);
+            ParseToken(parser, PARSE_SAMELINE);
+            shift[1] = atof(parser->token);
+            ParseToken(parser, PARSE_SAMELINE);
+            rotate = atof(parser->token);
+            ParseToken(parser, PARSE_SAMELINE);
+            scale[0] = atof(parser->token);
+            ParseToken(parser, PARSE_SAMELINE);
+            scale[1] = atof(parser->token);
+            tx_type = ParseExtendedTX(parser);
+        }
     }
 
     if (!planepts || !plane)
@@ -572,6 +707,9 @@ ParseTextureDef(parser_t *parser, texinfo_t *tx,
     case TX_VALVE_220:
         SetTexinfo_Valve220(axis, shift, scale, tx);
         break;
+    case TX_BRUSHPRIM:
+        SetTexinfo_BrushPrimitives(texMat, plane->normal, width, height, tx);
+        break;
     case TX_QUAKED:
     default:
         SetTexinfo_QuakeEd(plane, shift, rotate, scale, tx);
@@ -580,7 +718,7 @@ ParseTextureDef(parser_t *parser, texinfo_t *tx,
 }
 
 static std::unique_ptr<mapface_t>
-ParseBrushFace(parser_t *parser, const mapentity_t *entity)
+ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *entity)
 {
     vec3_t planepts[3], planevecs[2];
     vec_t length;
@@ -600,7 +738,7 @@ ParseBrushFace(parser_t *parser, const mapentity_t *entity)
     length = VectorNormalize(plane->normal);
     plane->dist = DotProduct(planepts[1], plane->normal);
 
-    ParseTextureDef(parser, &tx, planepts, plane);
+    ParseTextureDef(parser, brush, &tx, planepts, plane);
 
     if (length < NORMAL_EPSILON) {
         Message(msgWarning, warnNoPlaneNormal, parser->linenum);
@@ -629,11 +767,33 @@ ParseBrush(parser_t *parser, const mapentity_t *entity)
 {
     mapbrush_t brush;
     
+    // ericw -- brush primitives
+    if (!ParseToken(parser, PARSE_NORMAL))
+        Error("Unexpected EOF after { beginning brush");
+    
+    if (!strcmp(parser->token, "(")) {
+        brush.format = brushformat_t::NORMAL;
+        parser->unget = true;
+    } else {
+        brush.format = brushformat_t::BRUSH_PRIMITIVES;
+        
+        // optional
+        if (!strcmp(parser->token, "brushDef")) {
+            if (!ParseToken(parser, PARSE_NORMAL))
+                Error("Brush primitives: unexpected EOF (nothing after brushDef)");
+        }
+        
+        // mandatory
+        if (strcmp(parser->token, "{"))
+            Error("Brush primitives: expected second { at beginning of brush, got \"%s\"", parser->token);
+    }
+    // ericw -- end brush primitives
+    
     while (ParseToken(parser, PARSE_NORMAL)) {
         if (!strcmp(parser->token, "}"))
             break;
-
-        std::unique_ptr<mapface_t> face = ParseBrushFace(parser, entity);
+        
+        std::unique_ptr<mapface_t> face = ParseBrushFace(parser, &brush, entity);
         if (face.get() == nullptr)
             continue;
 
@@ -658,6 +818,16 @@ ParseBrush(parser_t *parser, const mapentity_t *entity)
         brush.numfaces++;
         map.faces.push_back(*face);
     }
+    
+    // ericw -- brush primitives - there should be another closing }
+    if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
+        if (!ParseToken(parser, PARSE_NORMAL))
+            Error("Brush primitives: unexpected EOF (no closing brace)");
+        if (strcmp(parser->token, "}"))
+            Error("Brush primitives: Expected }, got: %s", parser->token);
+    }
+    // ericw -- end brush primitives
+    
     return brush;
 }
 

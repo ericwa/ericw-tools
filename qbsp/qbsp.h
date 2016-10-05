@@ -514,12 +514,17 @@ typedef struct mapface_s {
     int linenum;
 } mapface_t;
 
+enum class brushformat_t {
+    NORMAL, BRUSH_PRIMITIVES
+};
+    
 class mapbrush_t {
 public:
     int firstface;
     int numfaces;
+    brushformat_t format;
     
-    mapbrush_t() : firstface(0), numfaces(0) {}
+    mapbrush_t() : firstface(0), numfaces(0), format(brushformat_t::NORMAL) {}
     const mapface_t &face(int i) const;
 } ;
 
@@ -573,6 +578,7 @@ typedef struct mapdata_s {
 extern mapdata_t map;
 extern mapentity_t *pWorldEnt();
 
+void EnsureTexturesLoaded();
 void LoadMapFile(void);
 
 int FindMiptex(const char *name);
