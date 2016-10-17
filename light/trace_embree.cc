@@ -484,7 +484,7 @@ Embree_TraceInit(const bsp2_t *bsp)
             const bsp2_dface_t *face = &bsp->dfaces[model->model->firstface + i];
             const char *texname = Face_TextureName(bsp, face);
             
-            if (!strncmp("sky", texname, 3)) {
+            if (!Q_strncasecmp("sky", texname, 3)) {
                 skyfaces.push_back(face);
             } else if (texname[0] == '{') {
                 fencefaces.push_back(face);
