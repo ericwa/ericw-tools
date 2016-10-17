@@ -104,3 +104,25 @@ const float *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int
 {
     return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)].point;
 }
+
+int
+TextureName_Contents(const char *texname)
+{
+    if (!Q_strncasecmp(texname, "sky", 3))
+        return CONTENTS_SKY;
+    else if (!Q_strncasecmp(texname, "*lava", 5))
+        return CONTENTS_LAVA;
+    else if (!Q_strncasecmp(texname, "*slime", 6))
+        return CONTENTS_SLIME;
+    else if (texname[0] == '*')
+        return CONTENTS_WATER;
+    
+    return CONTENTS_SOLID;
+}
+
+int
+Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    const char *texname = Face_TextureName(bsp, face);
+    return TextureName_Contents(texname);
+}

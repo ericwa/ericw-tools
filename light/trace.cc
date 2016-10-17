@@ -197,23 +197,6 @@ static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
     return deltaLengthSquared > info->radiusSquared;
 }
 
-static int
-Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
-{
-    const char *texname = Face_TextureName(bsp, face);
-    
-    if (!Q_strncasecmp(texname, "sky", 3))
-        return CONTENTS_SKY;
-    else if (!Q_strncasecmp(texname, "*lava", 5))
-        return CONTENTS_LAVA;
-    else if (!Q_strncasecmp(texname, "*slime", 6))
-        return CONTENTS_SLIME;
-    else if (texname[0] == '*')
-        return CONTENTS_WATER;
-    
-    return CONTENTS_SOLID;
-}
-
 void
 Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out)
 {
