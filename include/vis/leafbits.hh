@@ -28,6 +28,7 @@
 #if !defined(ffsl) && defined(__GNUC__)
 #define ffsl __builtin_ffsl
 #elif defined(WIN32)
+#include <intrin.h>
 inline int ffsl(long int val)
 {
         unsigned long indexout;
@@ -48,9 +49,11 @@ typedef struct {
     leafblock_t bits[]; /* Variable Sized */
 } leafbits_t;
 
-int __ERRORLONGSIZE(void); /* to generate an error at link time */
-#define QBYTESHIFT(x) ((x) == 8 ? 6 : ((x) == 4 ? 5 : __ERRORLONGSIZE() ))
+#define QBYTESHIFT(x) ((x) == 8 ? 6 : ((x) == 4 ? 5 : 0 ))
 #define LEAFSHIFT QBYTESHIFT(sizeof(leafblock_t))
+
+static_assert(LEAFSHIFT != 0, "unsupported sizeof(unsigned long)");
+
 #define LEAFMASK  ((sizeof(leafblock_t) << 3) - 1UL)
 
 static inline int

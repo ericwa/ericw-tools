@@ -16,7 +16,7 @@ void Error(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
 
 /* Make the locks no-ops if we aren't running threads */
-static _Bool threads_active = false;
+static bool threads_active = false;
 
 static int dispatch;
 static int workcount;
@@ -128,8 +128,8 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     workcount = workcnt;
     oldpercent = -1;
 
-    threadid = malloc(sizeof(*threadid) * numthreads);
-    threadhandle = malloc(sizeof(*threadhandle) * numthreads);
+    threadid = static_cast<DWORD *>(malloc(sizeof(*threadid) * numthreads));
+    threadhandle = static_cast<HANDLE *>(malloc(sizeof(*threadhandle) * numthreads));
 
     if (!threadid || !threadhandle)
         Error("Failed to allocate memory for threads");

@@ -29,7 +29,7 @@
 #include <common/threads.hh>
 
 static FILE *logfile;
-static _Bool log_ok;
+static bool log_ok;
 
 void
 init_log(const char *filename)
