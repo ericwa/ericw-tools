@@ -151,7 +151,7 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
 
 // Creates a scene with just the faces in this model,
 // used by CalcPoints.
-// Liquids are left out but sky faces are included
+// Liquids are left out, as are sky faces
 RTCScene CreatePerModelScene(RTCDevice device, const bsp2_t *bsp, const dmodel_t *model) {
     std::vector<const bsp2_dface_t *> faces;
     
@@ -159,9 +159,9 @@ RTCScene CreatePerModelScene(RTCDevice device, const bsp2_t *bsp, const dmodel_t
         const bsp2_dface_t *face = &bsp->dfaces[model->firstface + i];
         
         const char *texname = Face_TextureName(bsp, face);
-        if (texname[0] == '*') {
-            // ignore liquids
-        } else {
+        const int contents = TextureName_Contents(texname);
+        
+        if (contents == CONTENTS_SOLID) {
             faces.push_back(face);
         }
     }
@@ -231,6 +231,16 @@ enum class filtertype_t {
     INTERSECTION, OCCLUSION
 };
 
+/**
+ * Set this bit if the ray is coming from a selfshadow model
+ */
+static const unsigned RAYMASK_FROM_SELFSHADOWGEOM = 1;
+/**
+ * Set this bit if the ray should hit sky faces. This only happens when we
+ * are testing sunlight; normal lights pass through sky faces
+ */
+static const unsigned RAYMASK_TEST_SKY_FACES = 2;
+
 // called to evaluate transparency
 template<filtertype_t filtertype>
 static void
@@ -254,27 +264,37 @@ Embree_FilterFuncN(int* valid,
         const unsigned &geomID = RTCHitN_geomID(potentialHit, N, i);
         const unsigned &primID = RTCHitN_primID(potentialHit, N, i);
         
-        // bail if we hit a selfshadow face, but the ray is not coming from within that model
-        if (mask == 0 && geomID == selfshadowgeom.geomID) {
-            // reject hit
-            valid[i] = INVALID;
-            continue;
-        }
-        
-        // test fence texture
-        const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
-        
-        const char *name = Face_TextureName(bsp_static, face);
-        if (name[0] == '{') {
-            vec3_t hitpoint;
-            Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
-            const int sample = SampleTexture(face, bsp_static, hitpoint);
-            
-            if (sample == 255) {
+        if (geomID == skygeom.geomID) {
+            if (!(mask & RAYMASK_TEST_SKY_FACES)) {
                 // reject hit
                 valid[i] = INVALID;
                 continue;
             }
+        } else if (geomID == selfshadowgeom.geomID) {
+            // bail if we hit a selfshadow face, but the ray is not coming from within that model
+            if (!(mask & RAYMASK_FROM_SELFSHADOWGEOM)) {
+                // reject hit
+                valid[i] = INVALID;
+                continue;
+            }
+        } else if (geomID == fencegeom.geomID) {
+            // test fence texture
+            const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
+            
+            const char *name = Face_TextureName(bsp_static, face);
+            if (name[0] == '{') {
+                vec3_t hitpoint;
+                Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
+                const int sample = SampleTexture(face, bsp_static, hitpoint);
+                
+                if (sample == 255) {
+                    // reject hit
+                    valid[i] = INVALID;
+                    continue;
+                }
+            }
+        } else {
+            Q_assert_unreachable();
         }
         
         // accept hit
@@ -543,12 +563,15 @@ Embree_TraceInit(const bsp2_t *bsp)
     selfshadowgeom = CreateGeometry(bsp, scene, selfshadowfaces);
     CreateGeometryFromWindings(scene, skipwindings);
     
+    rtcSetIntersectionFilterFunctionN(scene, skygeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+    rtcSetOcclusionFilterFunctionN(scene, skygeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
+    
     rtcSetIntersectionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
     rtcSetOcclusionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
     
     rtcSetIntersectionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
     rtcSetOcclusionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
-
+    
     rtcCommit (scene);
     
     logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces %d skipwindings\n",
@@ -573,8 +596,14 @@ static RTCRay SetupRay(const vec3_t start, const vec3_t dir, vec_t dist, const d
     ray.instID = RTC_INVALID_GEOMETRY_ID;
     
     // NOTE: we are not using the ray masking feature of embree, but just using
-    // this field to store whether the ray is coming from self-shadow geometry
-    ray.mask = (self == nullptr) ? 0 : 1;
+    // this field to store whether the ray is coming from self-shadow geometry.
+    // and also whether we want to hit sky faces.
+    unsigned mask = 0;
+    if (self != nullptr) {
+        mask |= RAYMASK_FROM_SELFSHADOWGEOM;
+    }
+    
+    ray.mask = mask;
     ray.time = 0.f;
     return ray;
 }
@@ -612,6 +641,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
     VectorNormalize(dir_normalized);
     
     RTCRay ray = SetupRay(start, dir_normalized, MAX_SKY_RAY_DEPTH, self);
+    ray.mask |= RAYMASK_TEST_SKY_FACES;
     rtcIntersect(scene, ray);
 
     qboolean hit_sky = (ray.geomID == skygeom.geomID);
@@ -728,9 +758,14 @@ public:
         free(_ray_normalcontribs);
     }
     
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, tracetype_t type, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
         Q_assert(_numrays<_maxrays);
         _rays[_numrays] = SetupRay(origin, dir, dist, selfshadow);
+        
+        if (type == tracetype_t::TEST_SKY) {
+            _rays[_numrays].mask |= RAYMASK_TEST_SKY_FACES;
+        }
+        
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {

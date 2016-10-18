@@ -1354,7 +1354,7 @@ LightFace_Entity(const bsp2_t *bsp,
             continue;
         }
         
-        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself, color, normalcontrib);
+        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself, tracetype_t::NORMAL, color, normalcontrib);
     }
     
     rs->tracePushedRaysOcclusion();
@@ -1432,7 +1432,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
             continue;
         }
         
-        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, shadowself);
+        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, shadowself, tracetype_t::TEST_SKY);
     }
     
     rs->tracePushedRaysIntersection();
@@ -1540,7 +1540,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
                 vec3_t surfpointToLightDir;
                 vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
                 
-                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself);
+                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself, tracetype_t::NORMAL);
             }
         }
         
@@ -1760,7 +1760,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             if (LightSample_Brightness(indirect) < 0.25)
                 continue;
             
-            rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, indirect);
+            rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, tracetype_t::NORMAL, indirect);
         }
         
         total_bounce_rays += rs->numPushedRays();
@@ -1968,7 +1968,7 @@ DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, cons
         vec3_t dir;
         TransformToTangentSpace(normal, myUp, myRt, dirtvec, dir);
         
-        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), selfshadow);
+        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), selfshadow, tracetype_t::NORMAL);
     }
     
     Q_assert(rs->numPushedRays() == numDirtVectors);
@@ -2035,7 +2035,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
             vec3_t dir;
             TransformToTangentSpace(lightsurf->normals[i], myUps[i], myRts[i], dirtvec, dir);
             
-            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue(), selfshadow);
+            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue(), selfshadow, tracetype_t::NORMAL);
         }
         
         Q_assert(rs->numPushedRays() == lightsurf->numpoints);

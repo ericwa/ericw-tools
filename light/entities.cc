@@ -1157,7 +1157,7 @@ void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
             vec3_t dir;
             UniformPointOnSphere(dir, u1, u2);
         
-            rs->pushRay(0, point, dir, 65536.0f, nullptr);
+            rs->pushRay(0, point, dir, 65536.0f, nullptr, tracetype_t::NORMAL);
         }
     }
     

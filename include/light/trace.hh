@@ -57,9 +57,14 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmo
 // used for CalcPoints
 bool IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self, vec_t *hitdist_out);
 
+enum class tracetype_t {
+    NORMAL,
+    TEST_SKY
+};
+
 class raystream_t {
 public:
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, tracetype_t type, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
     virtual void tracePushedRaysOcclusion() = 0;
     virtual void tracePushedRaysIntersection() = 0;

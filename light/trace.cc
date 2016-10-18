@@ -875,7 +875,8 @@ public:
     
     raystream_bsp_t() {}
     
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, tracetype_t type, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+        // FIXME: `type` not implemeted (sky test)
         bsp_ray_t r { i, origin, dir, dist, selfshadow, color, normalcontrib };
         _rays.push_back(r);
         Q_assert(_rays.size() <= _maxrays);
