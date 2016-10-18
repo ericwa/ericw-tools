@@ -17,15 +17,11 @@
  See file, 'COPYING', for details.
  */
 
-#ifndef __COMMON_BSPUTILS_H__
-#define __COMMON_BSPUTILS_H__
+#ifndef __COMMON_BSPUTILS_HH__
+#define __COMMON_BSPUTILS_HH__
 
-#include <common/bspfile.h>
-#include <common/mathlib.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <common/bspfile.hh>
+#include <common/mathlib.hh>
 
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f);
 int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
@@ -37,8 +33,4 @@ const float *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int
 int TextureName_Contents(const char *texname);
 int Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __COMMON_BSPUTILS_H__ */
+#endif /* __COMMON_BSPUTILS_HH__ */

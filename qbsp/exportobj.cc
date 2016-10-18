@@ -18,8 +18,8 @@
     See file, 'COPYING', for details.
 */
 
-#include "qbsp.h"
-#include "wad.h"
+#include "qbsp.hh"
+#include "wad.hh"
 
 static FILE *
 InitObjFile(void)

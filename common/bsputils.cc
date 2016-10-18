@@ -17,7 +17,7 @@
  See file, 'COPYING', for details.
  */
 
-#include <common/bsputils.h>
+#include <common/bsputils.hh>
 #include <assert.h>
 
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f)

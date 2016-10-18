@@ -20,12 +20,12 @@
 #ifndef __LIGHT_TRACE_EMBREE_H__
 #define __LIGHT_TRACE_EMBREE_H__
 
-#include <common/cmdlib.h>
-#include <common/mathlib.h>
-#include <common/bspfile.h>
-#include <common/log.h>
-#include <common/threads.h>
-#include <common/polylib.h>
+#include <common/cmdlib.hh>
+#include <common/mathlib.hh>
+#include <common/bspfile.hh>
+#include <common/log.hh>
+#include <common/threads.hh>
+#include <common/polylib.hh>
 
 void Embree_TraceInit(const bsp2_t *bsp);
 qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);

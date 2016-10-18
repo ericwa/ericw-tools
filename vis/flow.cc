@@ -1,6 +1,6 @@
-#include <common/threads.h>
-#include <vis/vis.h>
-#include <vis/leafbits.h>
+#include <common/threads.hh>
+#include <vis/vis.hh>
+#include <vis/leafbits.hh>
 
 unsigned long c_chains;
 int c_vistest, c_mighttest;
@@ -190,7 +190,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     for (i = 0; i < STACK_WINDINGS; i++)
         stack.freewindings[i] = 1;
 
-    stack.mightsee = malloc(LeafbitsSize(portalleafs));
+    stack.mightsee = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
     might = stack.mightsee->bits;
     vis = thread->leafvis->bits;
 
@@ -369,7 +369,7 @@ PortalFlow(portal_t *p)
     if (p->status != pstat_working)
         Error("%s: reflowed", __func__);
 
-    p->visbits = malloc(LeafbitsSize(portalleafs));
+    p->visbits = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
     memset(p->visbits, 0, LeafbitsSize(portalleafs));
 
     memset(&data, 0, sizeof(data));
@@ -428,7 +428,7 @@ BasePortalThread(void *dummy)
     float d;
     byte *portalsee;
 
-    portalsee = malloc(sizeof(*portalsee) * numportals * 2);
+    portalsee = static_cast<byte *>(malloc(sizeof(*portalsee) * numportals * 2));
     if (!portalsee)
         Error("%s: Out of Memory", __func__);
 
@@ -440,7 +440,7 @@ BasePortalThread(void *dummy)
         p = portals + portalnum;
         w = p->winding;
 
-        p->mightsee = malloc(LeafbitsSize(portalleafs));
+        p->mightsee = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
         memset(p->mightsee, 0, LeafbitsSize(portalleafs));
 
         memset(portalsee, 0, numportals * 2);

@@ -24,8 +24,8 @@
 #include <unistd.h>
 #endif
 
-#include <vis/vis.h>
-#include <common/cmdlib.h>
+#include <vis/vis.hh>
+#include <common/cmdlib.hh>
 
 #define VIS_STATE_VERSION ('T' << 24 | 'Y' << 16 | 'R' << 8 | '1')
 
@@ -156,8 +156,8 @@ SaveVisState(void)
     SafeWrite(outfile, &state, sizeof(state));
 
     /* Allocate memory for compressed bitstrings */
-    might = malloc((portalleafs + 7) >> 3);
-    vis = malloc((portalleafs + 7) >> 3);
+    might = static_cast<uint8_t *>(malloc((portalleafs + 7) >> 3));
+    vis = static_cast<uint8_t *>(malloc((portalleafs + 7) >> 3));
 
     for (i = 0, p = portals; i < numportals * 2; i++, p++ ) {
         might_len = CompressBits(might, p->mightsee);
@@ -244,7 +244,7 @@ LoadVisState(void)
     starttime -= state.time_elapsed;
 
     numbytes = (portalleafs + 7) >> 3;
-    compressed = malloc(numbytes);
+    compressed = static_cast<byte *>(malloc(numbytes));
 
     /* Update the portal information */
     for (i = 0, p = portals; i < numportals * 2; i++, p++) {
@@ -255,19 +255,19 @@ LoadVisState(void)
         pstate.nummightsee = LittleLong(pstate.nummightsee);
         pstate.numcansee = LittleLong(pstate.numcansee);
 
-        p->status = pstate.status;
+        p->status = static_cast<pstatus_t>(pstate.status);
         p->nummightsee = pstate.nummightsee;
         p->numcansee = pstate.numcansee;
 
         SafeRead(infile, compressed, pstate.might);
-        p->mightsee = malloc(LeafbitsSize(portalleafs));
+        p->mightsee = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
         memset(p->mightsee, 0, LeafbitsSize(portalleafs));
         if (pstate.might < numbytes)
             DecompressBits(p->mightsee, compressed);
         else
             CopyLeafBits(p->mightsee, compressed, portalleafs);
 
-        p->visbits = malloc(LeafbitsSize(portalleafs));
+        p->visbits = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
         memset(p->visbits, 0, LeafbitsSize(portalleafs));
         if (pstate.vis) {
             SafeRead(infile, compressed, pstate.vis);

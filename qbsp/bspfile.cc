@@ -21,8 +21,8 @@
 
 #include <stddef.h>
 
-#include "file.h"
-#include "qbsp.h"
+#include "file.hh"
+#include "qbsp.hh"
 
 static dheader_t *header;
 

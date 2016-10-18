@@ -20,7 +20,7 @@
 */
 // portals.c
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 node_t outside_node;    // portals outside the world face this
 

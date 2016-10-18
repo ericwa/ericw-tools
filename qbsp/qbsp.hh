@@ -38,13 +38,9 @@
 #include <string.h>
 #include <time.h>
 
-#include "bspfile.h"
-#include "file.h"
-#include "warnerr.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "bspfile.hh"
+#include "file.hh"
+#include "warnerr.hh"
 
 #ifndef offsetof
 #define offsetof(type, member) __builtin_offsetof(type, member)
@@ -644,9 +640,5 @@ void Error(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
 
 int q_snprintf(char *str, size_t size, const char *format, ...);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

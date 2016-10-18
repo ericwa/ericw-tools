@@ -20,8 +20,8 @@
 #include <light/litfile.hh>
 #include <light/light.hh>
 
-#include <common/bspfile.h>
-#include <common/cmdlib.h>
+#include <common/bspfile.hh>
+#include <common/cmdlib.hh>
 
 void
 WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int version)

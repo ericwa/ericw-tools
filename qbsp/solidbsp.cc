@@ -21,7 +21,7 @@
 
 #include <limits.h>
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 int splitnodes;
 

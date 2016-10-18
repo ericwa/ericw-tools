@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include <common/log.h>
-#include <common/threads.h>
+#include <common/log.hh>
+#include <common/threads.hh>
 
 /*
  * FIXME - Temporary hack while trying to get qbsp to use the common
@@ -235,7 +235,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     if (status)
         Error("pthread_mutexattr_init failed");
 
-    my_mutex = malloc(sizeof(*my_mutex));
+    my_mutex = static_cast<pthread_mutex_t *>(malloc(sizeof(*my_mutex)));
     if (!my_mutex)
         Error("failed to allocate memory for thread mutex");
     status = pthread_mutex_init(my_mutex, &mattrib);
@@ -246,7 +246,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     if (status)
         Error("pthread_attr_init failed");
 
-    threads = malloc(sizeof(*threads) * numthreads);
+    threads = static_cast<pthread_t *>(malloc(sizeof(*threads) * numthreads));
     if (!threads)
         Error("failed to allocate memory for threads");
 

@@ -2,9 +2,9 @@
 
 #include <stddef.h>
 
-#include <common/cmdlib.h>
-#include <common/mathlib.h>
-#include <common/polylib.h>
+#include <common/cmdlib.hh>
+#include <common/mathlib.hh>
+#include <common/polylib.hh>
 
 #define BOGUS_RANGE 65536
 
@@ -20,7 +20,7 @@ AllocWinding(int points)
     int s;
 
     s = sizeof(vec_t) * 3 * points + sizeof(int);
-    w = malloc(s);
+    w = static_cast<winding_t *>(malloc(s));
     memset(w, 0, s);
     return w;
 }
@@ -228,7 +228,7 @@ CopyWinding(const winding_t * w)
     winding_t *c;
 
     size = offsetof(winding_t, p[w->numpoints]);
-    c = malloc(size);
+    c = static_cast<winding_t *>(malloc(size));
     memcpy(c, w, size);
     return c;
 }

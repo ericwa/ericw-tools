@@ -3,10 +3,6 @@
 #ifndef __COMMON_THREADS_H__
 #define __COMMON_THREADS_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 extern int numthreads;
 
 void LowerProcessPriority(void);
@@ -20,9 +16,5 @@ void ThreadUnlock(void);
 
 /* Call if needing to print to stdout - should be called with lock held */
 void InterruptThreadProgress__(void);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __COMMON_THREADS_H__ */

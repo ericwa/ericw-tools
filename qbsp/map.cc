@@ -25,9 +25,9 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "qbsp.h"
-#include "parser.h"
-#include "wad.h"
+#include "qbsp.hh"
+#include "parser.hh"
+#include "wad.hh"
 
 #define info_player_start       1
 #define info_player_deathmatch  2

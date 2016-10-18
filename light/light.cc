@@ -25,8 +25,8 @@
 #include <light/entities.hh>
 #include <light/ltface.hh>
 
-#include <common/polylib.h>
-#include <common/bsputils.h>
+#include <common/polylib.hh>
+#include <common/bsputils.hh>
 
 #ifdef HAVE_EMBREE
 #include <xmmintrin.h>

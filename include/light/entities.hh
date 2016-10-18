@@ -24,8 +24,8 @@
 #include <string>
 #include <vector>
 
-#include <common/mathlib.h>
-#include <common/bspfile.h>
+#include <common/mathlib.hh>
+#include <common/bspfile.hh>
 #include <light/light.hh>
 
 #define DEFAULTLIGHTLEVEL 300.0f

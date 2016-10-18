@@ -28,11 +28,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <common/log.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <common/log.hh>
 
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
@@ -164,9 +160,5 @@ static inline void Q_assert_(bool success, const char *expr, const char *file, i
 #define Q_assert(x) Q_assert_((x), stringify(x), __FILE__, __LINE__)
 
 #define Q_assert_unreachable() Q_assert(false)
-    
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __COMMON_CMDLIB_H__ */

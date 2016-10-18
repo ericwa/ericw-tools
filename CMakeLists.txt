@@ -14,17 +14,17 @@ include_directories(
 	"${CMAKE_SOURCE_DIR}/include")
 
 set(COMMON_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/common/bspfile.h
-	${CMAKE_SOURCE_DIR}/include/common/cmdlib.h
-	${CMAKE_SOURCE_DIR}/include/common/lbmlib.h 
-	${CMAKE_SOURCE_DIR}/include/common/log.h
-	${CMAKE_SOURCE_DIR}/include/common/mathlib.h
-	${CMAKE_SOURCE_DIR}/include/common/polylib.h 
-	${CMAKE_SOURCE_DIR}/include/common/scriplib.h
-	${CMAKE_SOURCE_DIR}/include/common/threads.h 
-	${CMAKE_SOURCE_DIR}/include/common/trilib.h 
-	${CMAKE_SOURCE_DIR}/include/common/wadlib.h
-	${CMAKE_SOURCE_DIR}/include/common/bsputils.h)
+	${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
+	${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh
+	${CMAKE_SOURCE_DIR}/include/common/lbmlib.hh
+	${CMAKE_SOURCE_DIR}/include/common/log.hh
+	${CMAKE_SOURCE_DIR}/include/common/mathlib.hh
+	${CMAKE_SOURCE_DIR}/include/common/polylib.hh 
+	${CMAKE_SOURCE_DIR}/include/common/scriplib.hh
+	${CMAKE_SOURCE_DIR}/include/common/threads.hh 
+	${CMAKE_SOURCE_DIR}/include/common/trilib.hh 
+	${CMAKE_SOURCE_DIR}/include/common/wadlib.hh
+	${CMAKE_SOURCE_DIR}/include/common/bsputils.hh)
 
 find_package (Threads)
 

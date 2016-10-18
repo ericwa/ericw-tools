@@ -17,9 +17,9 @@
     See file, 'COPYING', for details.
 */
 
-#include <common/cmdlib.h>
-#include <common/mathlib.h>
-#include <common/bspfile.h>
+#include <common/cmdlib.hh>
+#include <common/mathlib.hh>
+#include <common/bspfile.hh>
 
 static const char *
 BSPVersionString(int32_t version)
@@ -446,7 +446,7 @@ BSP29to2_Leafs(const bsp29_t *bsp) {
     bsp2_dleaf_t *newdata, *dleaf2;
     int i, j;
 
-    newdata = dleaf2 = malloc(bsp->numleafs * sizeof(*dleaf2));
+    newdata = dleaf2 = static_cast<bsp2_dleaf_t *>(malloc(bsp->numleafs * sizeof(*dleaf2)));
 
     for (i = 0; i < bsp->numleafs; i++, dleaf29++, dleaf2++) {
         dleaf2->contents = dleaf29->contents;
@@ -472,7 +472,7 @@ BSP2to29_Leafs(const bsp2_t *bsp) {
     bsp29_dleaf_t *newdata, *dleaf29;
     int i, j;
 
-    newdata = dleaf29 = malloc(bsp->numleafs * sizeof(*dleaf29));
+    newdata = dleaf29 = static_cast<bsp29_dleaf_t *>(malloc(bsp->numleafs * sizeof(*dleaf29)));
 
     for (i = 0; i < bsp->numleafs; i++, dleaf2++, dleaf29++) {
         dleaf29->contents = dleaf2->contents;
@@ -498,7 +498,7 @@ BSP29to2_Nodes(const bsp29_t *bsp) {
     bsp2_dnode_t *newdata, *dnode2;
     int i, j;
 
-    newdata = dnode2 = malloc(bsp->numnodes * sizeof(*dnode2));
+    newdata = dnode2 = static_cast<bsp2_dnode_t *>(malloc(bsp->numnodes * sizeof(*dnode2)));
 
     for (i = 0; i < bsp->numnodes; i++, dnode29++, dnode2++) {
         dnode2->planenum = dnode29->planenum;
@@ -523,7 +523,7 @@ BSP2to29_Nodes(const bsp2_t *bsp) {
     bsp29_dnode_t *newdata, *dnode29;
     int i, j;
 
-    newdata = dnode29 = malloc(bsp->numnodes * sizeof(*dnode29));
+    newdata = dnode29 = static_cast<bsp29_dnode_t *>(malloc(bsp->numnodes * sizeof(*dnode29)));
 
     for (i = 0; i < bsp->numnodes; i++, dnode2++, dnode29++) {
         dnode29->planenum = dnode2->planenum;
@@ -548,7 +548,7 @@ BSP29to2_Faces(const bsp29_t *bsp) {
     bsp2_dface_t *newdata, *dface2;
     int i, j;
 
-    newdata = dface2 = malloc(bsp->numfaces * sizeof(*dface2));
+    newdata = dface2 = static_cast<bsp2_dface_t *>(malloc(bsp->numfaces * sizeof(*dface2)));
 
     for (i = 0; i < bsp->numfaces; i++, dface29++, dface2++) {
         dface2->planenum = dface29->planenum;
@@ -572,7 +572,7 @@ BSP2to29_Faces(const bsp2_t *bsp) {
     bsp29_dface_t *newdata, *dface29;
     int i, j;
 
-    newdata = dface29 = malloc(bsp->numfaces * sizeof(*dface29));
+    newdata = dface29 = static_cast<bsp29_dface_t *>(malloc(bsp->numfaces * sizeof(*dface29)));
 
     for (i = 0; i < bsp->numfaces; i++, dface2++, dface29++) {
         dface29->planenum = dface2->planenum;
@@ -596,7 +596,7 @@ BSP29to2_Clipnodes(const bsp29_t *bsp) {
     bsp2_dclipnode_t *newdata, *dclipnode2;
     int i, j;
 
-    newdata = dclipnode2 = malloc(bsp->numclipnodes * sizeof(*dclipnode2));
+    newdata = dclipnode2 = static_cast<bsp2_dclipnode_t *>(malloc(bsp->numclipnodes * sizeof(*dclipnode2)));
 
     for (i = 0; i < bsp->numclipnodes; i++, dclipnode29++, dclipnode2++) {
         dclipnode2->planenum = dclipnode29->planenum;
@@ -618,7 +618,7 @@ BSP2to29_Clipnodes(const bsp2_t *bsp) {
     bsp29_dclipnode_t *newdata, *dclipnode29;
     int i, j;
 
-    newdata = dclipnode29 = malloc(bsp->numclipnodes * sizeof(*dclipnode29));
+    newdata = dclipnode29 = static_cast<bsp29_dclipnode_t *>(malloc(bsp->numclipnodes * sizeof(*dclipnode29)));
 
     for (i = 0; i < bsp->numclipnodes; i++, dclipnode2++, dclipnode29++) {
         dclipnode29->planenum = dclipnode2->planenum;
@@ -641,7 +641,7 @@ BSP29to2_Edges(const bsp29_t *bsp)
     bsp2_dedge_t *newdata, *dedge2;
     int i;
 
-    newdata = dedge2 = malloc(bsp->numedges * sizeof(*dedge2));
+    newdata = dedge2 = static_cast<bsp2_dedge_t *>(malloc(bsp->numedges * sizeof(*dedge2)));
 
     for (i = 0; i < bsp->numedges; i++, dedge29++, dedge2++) {
         dedge2->v[0] = dedge29->v[0];
@@ -660,7 +660,7 @@ BSP2to29_Edges(const bsp2_t *bsp)
     bsp29_dedge_t *newdata, *dedge29;
     int i;
 
-    newdata = dedge29 = malloc(bsp->numedges * sizeof(*dedge29));
+    newdata = dedge29 = static_cast<bsp29_dedge_t *>(malloc(bsp->numedges * sizeof(*dedge29)));
 
     for (i = 0; i < bsp->numedges; i++, dedge2++, dedge29++) {
         dedge29->v[0] = dedge2->v[0];
@@ -679,7 +679,7 @@ BSP29to2_Marksurfaces(const bsp29_t *bsp)
     uint32_t *newdata, *dmarksurface2;
     int i;
 
-    newdata = dmarksurface2 = malloc(bsp->nummarksurfaces * sizeof(*dmarksurface2));
+    newdata = dmarksurface2 = static_cast<uint32_t *>(malloc(bsp->nummarksurfaces * sizeof(*dmarksurface2)));
 
     for (i = 0; i < bsp->nummarksurfaces; i++, dmarksurface29++, dmarksurface2++)
         *dmarksurface2 = *dmarksurface29;
@@ -696,7 +696,7 @@ BSP2to29_Marksurfaces(const bsp2_t *bsp)
     uint16_t *newdata, *dmarksurface29;
     int i;
 
-    newdata = dmarksurface29 = malloc(bsp->nummarksurfaces * sizeof(*dmarksurface29));
+    newdata = dmarksurface29 = static_cast<uint16_t *>(malloc(bsp->nummarksurfaces * sizeof(*dmarksurface29)));
 
     for (i = 0; i < bsp->nummarksurfaces; i++, dmarksurface2++, dmarksurface29++)
         *dmarksurface29 = *dmarksurface2;
@@ -718,7 +718,7 @@ BSP2rmqto2_Leafs(const bsp2rmq_t *bsp) {
     bsp2_dleaf_t *newdata, *dleaf2;
     int i, j;
 
-    newdata = dleaf2 = malloc(bsp->numleafs * sizeof(*dleaf2));
+    newdata = dleaf2 = static_cast<bsp2_dleaf_t *>(malloc(bsp->numleafs * sizeof(*dleaf2)));
 
     for (i = 0; i < bsp->numleafs; i++, dleaf2rmq++, dleaf2++) {
         dleaf2->contents = dleaf2rmq->contents;
@@ -744,7 +744,7 @@ BSP2to2rmq_Leafs(const bsp2_t *bsp) {
     bsp2rmq_dleaf_t *newdata, *dleaf2rmq;
     int i, j;
 
-    newdata = dleaf2rmq = malloc(bsp->numleafs * sizeof(*dleaf2rmq));
+    newdata = dleaf2rmq = static_cast<bsp2rmq_dleaf_t *>(malloc(bsp->numleafs * sizeof(*dleaf2rmq)));
 
     for (i = 0; i < bsp->numleafs; i++, dleaf2++, dleaf2rmq++) {
         dleaf2rmq->contents = dleaf2->contents;
@@ -770,7 +770,7 @@ BSP2rmqto2_Nodes(const bsp2rmq_t *bsp) {
     bsp2_dnode_t *newdata, *dnode2;
     int i, j;
 
-    newdata = dnode2 = malloc(bsp->numnodes * sizeof(*dnode2));
+    newdata = dnode2 = static_cast<bsp2_dnode_t *>(malloc(bsp->numnodes * sizeof(*dnode2)));
 
     for (i = 0; i < bsp->numnodes; i++, dnode2rmq++, dnode2++) {
         dnode2->planenum = dnode2rmq->planenum;
@@ -795,7 +795,7 @@ BSP2to2rmq_Nodes(const bsp2_t *bsp) {
     bsp2rmq_dnode_t *newdata, *dnode2rmq;
     int i, j;
 
-    newdata = dnode2rmq = malloc(bsp->numnodes * sizeof(*dnode2rmq));
+    newdata = dnode2rmq = static_cast<bsp2rmq_dnode_t *>(malloc(bsp->numnodes * sizeof(*dnode2rmq)));
 
     for (i = 0; i < bsp->numnodes; i++, dnode2++, dnode2rmq++) {
         dnode2rmq->planenum = dnode2->planenum;
@@ -979,7 +979,7 @@ static int
 CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 {
     const lumpspec_t *lumpspec;
-    byte **bufferptr = destptr;
+    byte **bufferptr = static_cast<byte **>(destptr);
     byte *buffer = *bufferptr;
     int length;
     int ofs;
@@ -1013,7 +1013,7 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
                 Error("%s: odd %s lump size", __func__, lumpspec->name);
         length /= sizeof(dmodelq1_t);
 
-        buffer = *bufferptr = malloc(length * sizeof(dmodel_t));
+        buffer = *bufferptr = static_cast<byte *>(malloc(length * sizeof(dmodel_t)));
         if (!buffer)
                 Error("%s: allocation of %i bytes failed.", __func__, length);
         out = (dmodel_t*)buffer;
@@ -1040,7 +1040,7 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
         if (length % lumpspec->size)
             Error("%s: odd %s lump size", __func__, lumpspec->name);
 
-        buffer = *bufferptr = malloc(length + 1);
+        buffer = *bufferptr = static_cast<byte *>(malloc(length + 1));
         if (!buffer)
             Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -1078,7 +1078,7 @@ void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size
     }
     if (!e)
     {
-        e = malloc(sizeof(*e));
+        e = static_cast<bspxentry_t *>(malloc(sizeof(*e)));
         memset(e, 0, sizeof(*e));
         strncpy(e->lumpname, xname, sizeof(e->lumpname));
         e->next = bspdata->bspxentries;
@@ -1303,8 +1303,8 @@ AddModelsLump(bspfile_t *bspfile, bspdata_t *bspdata, const void *data, int coun
     if (bspdata->hullcount == MAX_MAP_HULLS_Q1)
     {   /*convert in-place. no need to care about endian here.*/
         lump_t *lump = &bspfile->header.lumps[LUMP_MODELS];
-        const dmodel_t *in = data;
-        dmodelq1_t *out = malloc(count * sizeof(dmodelq1_t));
+        const dmodel_t *in = static_cast<const dmodel_t *>(data);
+        dmodelq1_t *out = static_cast<dmodelq1_t *>(malloc(count * sizeof(dmodelq1_t)));
         int i, j;
         for (i = 0; i < count; i++)
         {

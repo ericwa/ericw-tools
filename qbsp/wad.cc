@@ -22,8 +22,8 @@
 #include <string.h>
 #include <string>
 
-#include "qbsp.h"
-#include "wad.h"
+#include "qbsp.hh"
+#include "wad.hh"
 
 static void WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump);
 static int WAD_LoadLump(const wad_t *wad, const char *name, byte *dest);

@@ -20,12 +20,12 @@
 #ifndef __LIGHT_LTFACE_H__
 #define __LIGHT_LTFACE_H__
 
-#include <common/cmdlib.h>
-#include <common/mathlib.h>
-#include <common/bspfile.h>
-#include <common/log.h>
-#include <common/threads.h>
-#include <common/polylib.h>
+#include <common/cmdlib.hh>
+#include <common/mathlib.hh>
+#include <common/bspfile.hh>
+#include <common/log.hh>
+#include <common/threads.hh>
+#include <common/polylib.hh>
 
 #include <light/litfile.hh>
 #include <light/trace.hh>

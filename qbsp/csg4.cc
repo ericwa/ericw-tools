@@ -20,7 +20,7 @@
 */
 // csg4.c
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 /*
 

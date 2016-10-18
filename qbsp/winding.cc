@@ -22,7 +22,7 @@
 
 #include <stddef.h>
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 /*
 =================

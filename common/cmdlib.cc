@@ -17,9 +17,9 @@
     See file, 'COPYING', for details.
 */
 
-#include <common/cmdlib.h>
-#include <common/log.h>
-#include <common/threads.h>
+#include <common/cmdlib.hh>
+#include <common/log.hh>
+#include <common/threads.hh>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -170,7 +170,7 @@ copystring(const char *s)
 {
     char *b;
 
-    b = malloc(strlen(s) + 1);
+    b = static_cast<char *>(malloc(strlen(s) + 1));
     strcpy(b, s);
     return b;
 }
@@ -507,7 +507,7 @@ typedef struct {
 int
 LoadFilePak(char *filename, void *destptr)
 {
-    byte **bufferptr = destptr;
+    byte **bufferptr = static_cast<byte **>(destptr);
     byte *buffer;
     FILE *file;
     int length;
@@ -528,7 +528,7 @@ LoadFilePak(char *filename, void *destptr)
                 file = fopen(filename, "rb");
                 if (file)
                 {
-                    byte **bufferptr = destptr;
+                    byte **bufferptr = static_cast<byte **>(destptr);
                     pakheader_t header;
                     unsigned int i;
                     const char *innerfile = e+1;
@@ -540,7 +540,7 @@ LoadFilePak(char *filename, void *destptr)
 
                     if (!strncmp(header.magic, "PACK", 4))
                     {
-                        pakfile_t *files = malloc(header.numfiles * sizeof(*files));
+                        pakfile_t *files = static_cast<pakfile_t *>(malloc(header.numfiles * sizeof(*files)));
 //                      printf("%s: %u files\n", pakfilename, header.numfiles);
                         fseek(file, header.tableofs, SEEK_SET);
                         SafeRead(file, files, header.numfiles * sizeof(*files));
@@ -550,7 +550,7 @@ LoadFilePak(char *filename, void *destptr)
                                 if (!strcmp(files[i].name, innerfile))
                                 {
                                         fseek(file, files[i].offset, SEEK_SET);
-                                        *bufferptr = malloc(files[i].length + 1);
+                                        *bufferptr = static_cast<byte*>(malloc(files[i].length + 1));
                                         SafeRead(file, *bufferptr, files[i].length);
                                         length = files[i].length;
                                         break;
@@ -581,7 +581,7 @@ LoadFilePak(char *filename, void *destptr)
 
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = malloc(length + 1);
+    buffer = *bufferptr = static_cast<byte*>(malloc(length + 1));
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -600,14 +600,14 @@ LoadFilePak(char *filename, void *destptr)
 int
 LoadFile(const char *filename, void *destptr)
 {
-    byte **bufferptr = destptr;
+    byte **bufferptr = static_cast<byte**>(destptr);
     byte *buffer;
     FILE *file;
     int length;
 
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = malloc(length + 1);
+    buffer = *bufferptr = static_cast<byte*>(malloc(length + 1));
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 

@@ -20,7 +20,7 @@
 */
 // globals.c
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 /*
  * MemSize is used by the memory manager to allocate and track data

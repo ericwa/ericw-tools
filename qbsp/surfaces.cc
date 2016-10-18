@@ -19,7 +19,7 @@
     See file, 'COPYING', for details.
 */
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 static hashvert_t *pHashverts;
 static int needlmshifts;

@@ -19,7 +19,7 @@
 
 #include <float.h>
 
-#include <vis/vis.h>
+#include <vis/vis.hh>
 
 /*
 

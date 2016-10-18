@@ -22,11 +22,7 @@
 
 #include <float.h>
 #include <math.h>
-#include <common/cmdlib.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <common/cmdlib.hh>
 
 #ifdef DOUBLEVEC_T
 #define vec_t double
@@ -194,9 +190,5 @@ void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out);
 void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __COMMON_MATHLIB_H__ */

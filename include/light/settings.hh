@@ -20,8 +20,8 @@
 #ifndef __LIGHT_SETTINGS_H__
 #define __LIGHT_SETTINGS_H__
 
-#include <common/log.h>
-#include <common/mathlib.h>
+#include <common/log.hh>
+#include <common/mathlib.hh>
 
 #include <vector>
 #include <string>

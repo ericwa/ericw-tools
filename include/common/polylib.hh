@@ -3,12 +3,8 @@
 #ifndef __COMMON_POLYLIB_H__
 #define __COMMON_POLYLIB_H__
 
-#include <common/mathlib.h>
-#include <common/bspfile.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <common/mathlib.hh>
+#include <common/bspfile.hh>
 
 typedef struct {
     int numpoints;
@@ -44,9 +40,5 @@ winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
 winding_edges_t *AllocWindingEdges(const winding_t *w);
 void FreeWindingEdges(winding_edges_t *wi);
 bool PointInWindingEdges(const winding_edges_t *wi, const vec3_t point);
-    
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __COMMON_POLYLIB_H__ */

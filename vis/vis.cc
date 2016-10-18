@@ -4,10 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <vis/leafbits.h>
-#include <vis/vis.h>
-#include <common/log.h>
-#include <common/threads.h>
+#include <vis/leafbits.hh>
+#include <vis/vis.hh>
+#include <common/log.hh>
+#include <common/threads.hh>
 
 /*
  * If the portal file is "PRT2" format, then the leafs we are dealing with are
@@ -127,7 +127,7 @@ NewWinding(int points)
         Error("%s: %i points", __func__, points);
 
     size = offsetof(winding_t, points[points]);
-    w = malloc(size);
+    w = static_cast<winding_t *>(malloc(size));
     memset(w, 0, size);
 
     return w;
@@ -178,7 +178,7 @@ CopyWinding(const winding_t * w)
     winding_t *c;
 
     size = offsetof(winding_t, points[w->numpoints]);
-    c = malloc(size);
+    c = static_cast<winding_t *>(malloc(size));
     memcpy(c, w, size);
     return c;
 }
@@ -614,7 +614,7 @@ LeafFlow(int leafnum, bsp2_dleaf_t *dleaf)
     totalvis += numvis;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = malloc(portalleafs * 2 / 8);
+    compressed = static_cast<byte *>(malloc(portalleafs * 2 / 8));
     len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
 
     dest = vismap_p;
@@ -687,7 +687,7 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
     }
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = malloc(portalleafs_real * 2 / 8);
+    compressed = static_cast<byte *>(malloc(portalleafs_real * 2 / 8));
     len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
 
     dest = vismap_p;
@@ -772,7 +772,7 @@ CalcVis(const bsp2_t *bsp)
         leafbits_t *buffer;
 
         logprint("Expanding clusters...\n");
-        buffer = malloc(LeafbitsSize(portalleafs));
+        buffer = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
         for (i = 0; i < portalleafs; i++) {
             memset(buffer, 0, LeafbitsSize(portalleafs));
             ClusterFlow(i, buffer);
@@ -913,7 +913,7 @@ Findpassages(winding_t * source, winding_t * pass)
             //
             count_sep++;
 
-            sep = malloc(sizeof(*sep));
+            sep = static_cast<sep_t *>(malloc(sizeof(*sep)));
             sep->next = list;
             list = sep;
             sep->plane = plane;
@@ -965,11 +965,11 @@ CalcPassages(void)
                 if (!sep) {
 //                    Error ("No seperating planes found in portal pair");
                     count_sep++;
-                    sep = malloc(sizeof(*sep));
+                    sep = static_cast<sep_t *>(malloc(sizeof(*sep)));
                     sep->next = NULL;
                     sep->plane = p1->plane;
                 }
-                passages = malloc(sizeof(*passages));
+                passages = static_cast<passage_t *>(malloc(sizeof(*passages)));
                 passages->planes = sep;
                 passages->from = p1->leaf;
                 passages->to = p2->leaf;
@@ -1076,16 +1076,16 @@ LoadPortals(char *name, bsp2_t *bsp)
     leafbytes_real = ((portalleafs_real + 63) & ~63) >> 3;
 
 // each file portal is split into two memory portals
-    portals = malloc(2 * numportals * sizeof(portal_t));
+    portals = static_cast<portal_t *>(malloc(2 * numportals * sizeof(portal_t)));
     memset(portals, 0, 2 * numportals * sizeof(portal_t));
 
-    leafs = malloc(portalleafs * sizeof(leaf_t));
+    leafs = static_cast<leaf_t *>(malloc(portalleafs * sizeof(leaf_t)));
     memset(leafs, 0, portalleafs * sizeof(leaf_t));
 
     originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
 
     // FIXME - more intelligent allocation?
-    bsp->dvisdata = malloc(MAX_MAP_VISIBILITY);
+    bsp->dvisdata = static_cast<byte *>(malloc(MAX_MAP_VISIBILITY));
     if (!bsp->dvisdata)
         Error("%s: dvisdata allocation failed (%i bytes)", __func__,
               MAX_MAP_VISIBILITY);
@@ -1158,7 +1158,7 @@ LoadPortals(char *name, bsp2_t *bsp)
 
     /* Load the cluster expansion map if needed */
     if (portalleafs != portalleafs_real) {
-        clustermap = malloc(portalleafs_real * sizeof(int));
+        clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
         if (!strcmp(magic, PORTALFILE2)) {
             for (i = 0; i < portalleafs; i++) {
                 while (1) {
@@ -1298,7 +1298,7 @@ main(int argc, char **argv)
     StripExtension(statetmpfile);
     DefaultExtension(statetmpfile, ".vi0");
 
-    uncompressed = calloc(portalleafs, leafbytes_real);
+    uncompressed = static_cast<byte *>(calloc(portalleafs, leafbytes_real));
 
 //    CalcPassages ();
 

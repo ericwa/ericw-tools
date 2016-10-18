@@ -20,7 +20,7 @@
 */
 // mathlib.c -- math primitives
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 vec_t
 VectorLengthSq(const vec3_t v)

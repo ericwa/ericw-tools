@@ -19,7 +19,7 @@
     See file, 'COPYING', for details.
 */
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 typedef struct {
     bool header;                /* Flag true once header has been written */

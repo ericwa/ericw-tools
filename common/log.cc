@@ -25,8 +25,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include <common/log.h>
-#include <common/threads.h>
+#include <common/log.hh>
+#include <common/threads.hh>
 
 static FILE *logfile;
 static _Bool log_ok;

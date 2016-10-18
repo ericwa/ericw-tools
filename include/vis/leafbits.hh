@@ -22,7 +22,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <common/cmdlib.h>
+#include <common/cmdlib.hh>
 
 /* Use some GCC builtins */
 #if !defined(ffsl) && defined(__GNUC__)

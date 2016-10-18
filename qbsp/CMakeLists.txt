@@ -1,17 +1,17 @@
 cmake_minimum_required (VERSION 2.8)
-project (qbsp CXX C)
+project (qbsp CXX)
 
 set(QBSP_INCLUDES
-	bspfile.h
-	file.h
-	parser.h
-	qbsp.h
-	wad.h
-	warnerr.h)
+	bspfile.hh
+	file.hh
+	parser.hh
+	qbsp.hh
+	wad.hh
+	warnerr.hh)
 
 set(QBSP_SOURCES
-	${CMAKE_SOURCE_DIR}/common/threads.c
-	${CMAKE_SOURCE_DIR}/common/log.c
+	${CMAKE_SOURCE_DIR}/common/threads.cc
+	${CMAKE_SOURCE_DIR}/common/log.cc
 	brush.cc
 	bspfile.cc
 	cmdlib.cc
@@ -38,8 +38,5 @@ set(QBSP_SOURCES
 add_definitions(-DDOUBLEVEC_T)
 
 add_executable(qbsp ${QBSP_SOURCES})
-set_property(TARGET qbsp PROPERTY CXX_STANDARD 11)
-set_property(TARGET qbsp PROPERTY CXX_STANDARD_REQUIRED ON)
-set_property(TARGET qbsp PROPERTY C_STANDARD 99)
 target_link_libraries(qbsp ${CMAKE_THREAD_LIBS_INIT})
 install(TARGETS qbsp RUNTIME DESTINATION bin)

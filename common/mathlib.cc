@@ -17,8 +17,8 @@
     See file, 'COPYING', for details.
 */
 
-#include <common/cmdlib.h>
-#include <common/mathlib.h>
+#include <common/cmdlib.hh>
+#include <common/mathlib.hh>
 #include <assert.h>
 
 const vec3_t vec3_origin = { 0, 0, 0 };

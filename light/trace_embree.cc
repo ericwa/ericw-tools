@@ -20,7 +20,7 @@
 #include <light/light.hh>
 #include <light/trace_embree.hh>
 #include <light/ltface.hh>
-#include <common/bsputils.h>
+#include <common/bsputils.hh>
 #include <embree2/rtcore.h>
 #include <embree2/rtcore_ray.h>
 #include <vector>

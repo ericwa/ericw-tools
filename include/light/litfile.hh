@@ -20,7 +20,7 @@
 #ifndef __LIGHT_LITFILE_H__
 #define __LIGHT_LITFILE_H__
 
-#include <common/bspfile.h>
+#include <common/bspfile.hh>
 
 #define LIT_VERSION 1
 

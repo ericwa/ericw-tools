@@ -22,7 +22,7 @@
 #include <light/trace.hh>
 #include <light/ltface.hh>
 
-#include <common/bsputils.h>
+#include <common/bsputils.hh>
 
 #include <cassert>
 #include <algorithm>

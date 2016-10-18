@@ -18,8 +18,8 @@
 */
 
 
-#include <common/cmdlib.h>
-#include <common/bspfile.h>
+#include <common/cmdlib.hh>
+#include <common/bspfile.hh>
 
 int
 main(int argc, char **argv)

@@ -23,9 +23,9 @@
 #include <unistd.h>
 #endif
 
-#include <common/cmdlib.h>
-#include <common/bspfile.h>
-#include <common/mathlib.h>
+#include <common/cmdlib.hh>
+#include <common/bspfile.hh>
+#include <common/mathlib.hh>
 
 /* FIXME - share header with qbsp, etc. */
 typedef struct {

@@ -1,15 +1,14 @@
 cmake_minimum_required (VERSION 2.8)
-project (bspinfo)
+project (bspinfo CXX)
 
 set(BSPINFO_SOURCES
-	bspinfo.c
-	${CMAKE_SOURCE_DIR}/common/cmdlib.c
-	${CMAKE_SOURCE_DIR}/common/bspfile.c
-	${CMAKE_SOURCE_DIR}/common/log.c
-	${CMAKE_SOURCE_DIR}/common/threads.c
+	bspinfo.cc
+	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
+	${CMAKE_SOURCE_DIR}/common/bspfile.cc
+	${CMAKE_SOURCE_DIR}/common/log.cc
+	${CMAKE_SOURCE_DIR}/common/threads.cc
 	${COMMON_INCLUDES})
 
 add_executable(bspinfo ${BSPINFO_SOURCES})
 target_link_libraries(bspinfo ${CMAKE_THREAD_LIBS_INIT})
-set_property(TARGET bspinfo PROPERTY C_STANDARD 99)
 install(TARGETS bspinfo RUNTIME DESTINATION bin)

@@ -20,7 +20,7 @@
 */
 // cmdlib.c
 
-#include "qbsp.h"
+#include "qbsp.hh"
 
 #include <sys/types.h>
 #include <string.h>

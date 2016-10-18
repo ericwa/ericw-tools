@@ -24,14 +24,6 @@
 
 #include <stdbool.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 size_t LoadFile(const char *filename, void *bufptr, bool nofail);
-
-#ifdef __cplusplus
-}
-#endif
     
 #endif

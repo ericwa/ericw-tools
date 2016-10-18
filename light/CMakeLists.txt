@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8)
-project (light CXX C)
+project (light CXX)
 
 set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/entities.hh
@@ -16,12 +16,12 @@ set(LIGHT_SOURCES
 	trace.cc
 	light.cc
 	settings.cc
-	${CMAKE_SOURCE_DIR}/common/bspfile.c
-	${CMAKE_SOURCE_DIR}/common/cmdlib.c
-	${CMAKE_SOURCE_DIR}/common/mathlib.c
-	${CMAKE_SOURCE_DIR}/common/log.c
-	${CMAKE_SOURCE_DIR}/common/threads.c
-	${CMAKE_SOURCE_DIR}/common/polylib.c
+	${CMAKE_SOURCE_DIR}/common/bspfile.cc
+	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
+	${CMAKE_SOURCE_DIR}/common/mathlib.cc
+	${CMAKE_SOURCE_DIR}/common/log.cc
+	${CMAKE_SOURCE_DIR}/common/threads.cc
+	${CMAKE_SOURCE_DIR}/common/polylib.cc
 	${CMAKE_SOURCE_DIR}/common/bsputils.cc
 	${COMMON_INCLUDES}
 	${LIGHT_INCLUDES})

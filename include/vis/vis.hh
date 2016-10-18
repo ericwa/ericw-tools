@@ -19,10 +19,10 @@
 
 // vis.h
 
-#include <common/cmdlib.h>
-#include <common/mathlib.h>
-#include <common/bspfile.h>
-#include <vis/leafbits.h>
+#include <common/cmdlib.hh>
+#include <common/mathlib.hh>
+#include <common/bspfile.hh>
+#include <vis/leafbits.hh>
 
 #define  PORTALFILE  "PRT1"
 #define  PORTALFILE2 "PRT2"
