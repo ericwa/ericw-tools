@@ -162,6 +162,8 @@ static inline void Q_assert_(bool success, const char *expr, const char *file, i
  * assertion macro that is used in all builds (debug/release)
  */
 #define Q_assert(x) Q_assert_((x), stringify(x), __FILE__, __LINE__)
+
+#define Q_assert_unreachable() Q_assert(false)
     
 #ifdef __cplusplus
 }
