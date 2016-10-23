@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BUILD_DIR=build-osx
-EMBREE_TGZ="https://github.com/embree/embree/releases/download/v2.11.0/embree-2.11.0.x86_64.macosx.tar.gz"
+EMBREE_TGZ="https://github.com/embree/embree/releases/download/v2.12.0/embree-2.12.0.x86_64.macosx.tar.gz"
 EMBREE_TGZ_NAME=$(basename "$EMBREE_TGZ")
 EMBREE_DIR_NAME=$(basename "$EMBREE_TGZ" ".tar.gz")
 EMBREE_WITH_VERSION=$(basename "$EMBREE_TGZ" ".x86_64.macosx.tar.gz")
