@@ -384,13 +384,18 @@ surface_t *
 BuildSurfaces(const std::map<int, face_t *> &planefaces)
 {
     surface_t *surfaces = NULL;
-    for (const auto &entry : planefaces) {
+    
+    for (int i = 0; i < map.numplanes(); i++) {
+        const auto entry = planefaces.find(i);
+        if (entry == planefaces.end() || entry->second == nullptr) // FIXME: entry->second == nullptr should never happen, turn into Q_assert
+            continue;
+        
         /* create a new surface to hold the faces on this plane */
         surface_t *surf = (surface_t *)AllocMem(SURFACE, 1, true);
-        surf->planenum = entry.first;
+        surf->planenum = entry->first;
         surf->next = surfaces;
         surfaces = surf;
-        surf->faces = entry.second;
+        surf->faces = entry->second;
         for (const face_t *face = surf->faces; face; face = face->next)
             csgmergefaces++;
         
