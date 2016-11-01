@@ -377,26 +377,19 @@ visible face.
 ==================
 */
 surface_t *
-BuildSurfaces(std::map<int, face_t *> &planefaces)
+BuildSurfaces(const std::map<int, face_t *> &planefaces)
 {
-    int i;
-    surface_t *surf, *surfaces;
-    face_t *face;
-
-    surfaces = NULL;
-    for (i = 0; i < map.numplanes(); i++) {
-        if (planefaces[i] == nullptr)
-            continue;
-
+    surface_t *surfaces = NULL;
+    for (const auto &entry : planefaces) {
         /* create a new surface to hold the faces on this plane */
-        surf = (surface_t *)AllocMem(SURFACE, 1, true);
-        surf->planenum = i;
+        surface_t *surf = (surface_t *)AllocMem(SURFACE, 1, true);
+        surf->planenum = entry.first;
         surf->next = surfaces;
         surfaces = surf;
-        surf->faces = planefaces[i];
-        for (face = surf->faces; face; face = face->next)
+        surf->faces = entry.second;
+        for (const face_t *face = surf->faces; face; face = face->next)
             csgmergefaces++;
-
+        
         /* Calculate bounding box and flags */
         CalcSurfaceInfo(surf);
     }
