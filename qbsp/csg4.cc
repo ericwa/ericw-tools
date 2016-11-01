@@ -290,18 +290,19 @@ Links the given list of faces into a mapping from plane number to faces.
 This plane map is later used to build up the surfaces for creating the BSP.
 ==================
 */
-static void
+void
 SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &planefaces)
 {
-    face_t *face, *next, *newface;
-    int i;
+    face_t *face, *next;
 
     for (face = facelist; face; face = next) {
         const int plane = face->planenum;
         next = face->next;
+        
+        face_t *plane_current_facelist = planefaces[plane]; // returns `null` (and inserts it) if plane is not in the map yet
 
         if (mirror) {
-            newface = NewFaceFromFace(face);
+            face_t *newface = NewFaceFromFace(face);
             newface->w.numpoints = face->w.numpoints;
             newface->planeside = face->planeside ^ 1;
             newface->contents[0] = face->contents[1];
@@ -311,14 +312,17 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
             newface->lmshift[0] = face->lmshift[1];
             newface->lmshift[1] = face->lmshift[0];
 
-            for (i = 0; i < face->w.numpoints; i++)
+            for (int i = 0; i < face->w.numpoints; i++)
                 VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
 
-            planefaces[plane] = MergeFaceToList(newface, planefaces[plane]);
+            plane_current_facelist = MergeFaceToList(newface, plane_current_facelist);
         }
-        planefaces[plane] = MergeFaceToList(face, planefaces[plane]);
-        planefaces[plane] = FreeMergeListScraps(planefaces[plane]);
+        plane_current_facelist = MergeFaceToList(face, plane_current_facelist);
+        plane_current_facelist = FreeMergeListScraps(plane_current_facelist);
 
+        // save the new list back in the map
+        planefaces[plane] = plane_current_facelist;
+        
         csgfaces++;
     }
 }
