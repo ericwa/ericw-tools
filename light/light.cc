@@ -712,7 +712,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
     char filename[1024];
     
     // always create the zero'ed array
-    extended_texinfo_flags = (uint32_t *) calloc(bsp->numtexinfo, sizeof(uint32_t));
+    extended_texinfo_flags = static_cast<uint64_t *>(calloc(bsp->numtexinfo, sizeof(uint64_t)));
     
     strcpy(filename, sourcefilename);
     StripExtension(filename);
