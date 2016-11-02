@@ -216,6 +216,12 @@ typedef struct texinfo_s {
 #define TEX_PHONG_ANGLE_MASK    (255U << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
 #define TEX_MINLIGHT_SHIFT      12
 #define TEX_MINLIGHT_MASK       (255U << TEX_MINLIGHT_SHIFT)    /* 8 bit value, minlight value for this face. */
+#define TEX_MINLIGHT_COLOR_R_SHIFT      20
+#define TEX_MINLIGHT_COLOR_R_MASK       (255ULL << TEX_MINLIGHT_COLOR_R_SHIFT)    /* 8 bit value, red minlight color for this face. */
+#define TEX_MINLIGHT_COLOR_G_SHIFT      28
+#define TEX_MINLIGHT_COLOR_G_MASK       (255ULL << TEX_MINLIGHT_COLOR_G_SHIFT)    /* 8 bit value, green minlight color for this face. */
+#define TEX_MINLIGHT_COLOR_B_SHIFT      36
+#define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for

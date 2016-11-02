@@ -87,7 +87,7 @@ backend_t rtbackend = backend_embree;
 debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
 
-uint32_t *extended_texinfo_flags = NULL;
+uint64_t *extended_texinfo_flags = NULL;
 
 char mapfilename[1024];
 
@@ -725,7 +725,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
     logprint("Loaded extended texinfo flags from %s\n", filename);
     
     for (int i = 0; i < bsp->numtexinfo; i++) {
-        int cnt = fscanf(texinfofile, "%u\n", &extended_texinfo_flags[i]);
+        int cnt = fscanf(texinfofile, "%llu\n", &extended_texinfo_flags[i]);
         if (cnt != 1) {
             logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
             fclose(texinfofile);

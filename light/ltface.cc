@@ -726,13 +726,22 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
         lightsurf->lightmapscale = modelinfo->lightmapscale;
 
     // FIXME: is modelinfo used?!?
-    lightsurf->curved = !!(extended_texinfo_flags[face->texinfo] & TEX_PHONG_ANGLE_MASK);
-    lightsurf->nodirt = !!(extended_texinfo_flags[face->texinfo] & TEX_NODIRT);
-    VectorCopy(*modelinfo->minlight_color.vec3Value(), lightsurf->minlight_color);
-    lightsurf->minlight = (extended_texinfo_flags[face->texinfo] & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT;
-    /* fixup minlight color */
-    if (lightsurf->minlight > 0 && VectorCompare(lightsurf->minlight_color, vec3_origin)) {
-        VectorSet(lightsurf->minlight_color, 255, 255, 255);
+    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
+    lightsurf->curved = !!(extended_flags & TEX_PHONG_ANGLE_MASK);
+    lightsurf->nodirt = !!(extended_flags & TEX_NODIRT);
+    lightsurf->minlight = (extended_flags & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT;
+    if (modelinfo->minlight_color.isChanged()) {
+        VectorCopy(*modelinfo->minlight_color.vec3Value(), lightsurf->minlight_color);    
+    } else {
+        // if modelinfo mincolor not set, use the one from the .texinfo file
+        vec3_t extended_mincolor {
+            static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_R_MASK) >> TEX_MINLIGHT_COLOR_R_SHIFT),
+            static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_G_MASK) >> TEX_MINLIGHT_COLOR_G_SHIFT),
+            static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_B_MASK) >> TEX_MINLIGHT_COLOR_B_SHIFT)};
+        if (lightsurf->minlight > 0 && VectorCompare(extended_mincolor, vec3_origin)) {
+            VectorSet(extended_mincolor, 255, 255, 255);
+        }
+        VectorCopy(extended_mincolor, lightsurf->minlight_color);
     }
     
     /* never receive dirtmapping on lit liquids */
