@@ -1,0 +1,1 @@
+Example where qbsp can't decide if two brushes are touching or not, and a wrong leaf content type gets assigned as a result (the info_player_start will be standing on an invisible solid). Happens with tyrutils 0.15 as well.
