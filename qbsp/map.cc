@@ -194,6 +194,18 @@ FindTexinfo(mtexinfo_t *texinfo, uint64_t flags)
     return static_cast<int>(num_texinfo);
 }
 
+/* detect colors with components in 0-1 and scale them to 0-255 */
+static void
+normalize_color_format(vec3_t color)
+{
+    if (color[0] >= 0 && color[0] <= 1 &&
+        color[1] >= 0 && color[1] <= 1 &&
+        color[2] >= 0 && color[2] <= 1)
+    {
+        VectorScale(color, 255, color);
+    }
+}
+
 int
 FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
 {
@@ -228,7 +240,26 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         flags |= (minlight_byte << TEX_MINLIGHT_SHIFT);
     }
 
-    // TODO: handle "_minlight_color"
+    // handle "_mincolor"
+    {
+        vec3_t mincolor {0.0, 0.0, 0.0};
+    
+        GetVectorForKey(entity, "_mincolor", mincolor);
+        if (VectorCompare(vec3_origin, mincolor)) {
+            GetVectorForKey(entity, "_minlight_color", mincolor);
+        }
+    
+        normalize_color_format(mincolor);
+        if (!VectorCompare(vec3_origin, mincolor)) {
+            const uint64_t r_byte = qmax(0, qmin(255, (int)rint(mincolor[0])));
+            const uint64_t g_byte = qmax(0, qmin(255, (int)rint(mincolor[1])));
+            const uint64_t b_byte = qmax(0, qmin(255, (int)rint(mincolor[2])));
+            
+            flags |= (r_byte << TEX_MINLIGHT_COLOR_R_SHIFT);
+            flags |= (g_byte << TEX_MINLIGHT_COLOR_G_SHIFT);
+            flags |= (b_byte << TEX_MINLIGHT_COLOR_B_SHIFT);
+        }
+    }
     
     return FindTexinfo(texinfo, flags);
 }
