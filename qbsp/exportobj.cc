@@ -46,7 +46,7 @@ static void
 ExportObjFace(FILE *f, const face_t *face, int *vertcount)
 {
     const mtexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
-    const char *texname = map.miptex[texinfo.miptex].c_str();
+    const char *texname = map.miptex.at(texinfo.miptex).c_str();
     
     const texture_t *texture = WADList_GetTexture(texname);
     const int width = texture ? texture->width : 64;

@@ -364,7 +364,7 @@ FindLeaks_r(leakstate_t *leak, const int fillmark, node_t *node)
         return false;
 
     if (node->occupied) {
-        leak->entity = &map.entities[node->occupied];
+        leak->entity = &map.entities.at(node->occupied);
         leak->node = node;
         leak->backdraw = 4000;
         return true;

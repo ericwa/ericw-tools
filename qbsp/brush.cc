@@ -762,7 +762,7 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     const char *texname;
     const mapface_t &mapface = mapbrush->face(0);
     const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-    texname = map.miptex[texinfo.miptex].c_str();
+    texname = map.miptex.at(texinfo.miptex).c_str();
 
     if (!Q_strcasecmp(texname, "hint") || !Q_strcasecmp(texname, "hintskip"))
         return CONTENTS_HINT;

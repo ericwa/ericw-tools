@@ -76,7 +76,7 @@ AddAnimTex(const char *name)
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
         for (j = 0; j < map.nummiptex(); j++) {
-            if (!Q_strcasecmp(framename, map.miptex[j].c_str()))
+            if (!Q_strcasecmp(framename, map.miptex.at(j).c_str()))
                 break;
         }
         if (j < map.nummiptex())
@@ -98,7 +98,7 @@ FindMiptex(const char *name)
         name = pathsep + 1;
 
     for (i = 0; i < map.nummiptex(); i++) {
-        if (!Q_strcasecmp(name, map.miptex[i].c_str()))
+        if (!Q_strcasecmp(name, map.miptex.at(i).c_str()))
             return i;
     }
 
@@ -198,7 +198,7 @@ int
 FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
 {
     uint64_t flags = 0;
-    const char *texname = map.miptex[texinfo->miptex].c_str();
+    const char *texname = map.miptex.at(texinfo->miptex).c_str();
     if (IsSkipName(texname))
         flags |= TEX_SKIP;
     if (IsHintName(texname))

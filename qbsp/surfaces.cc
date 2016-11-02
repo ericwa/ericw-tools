@@ -598,7 +598,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     cStartEdge = 0;
     const int entnum = entity - &map.entities.at(0);
     for (i = 0; i < entnum; i++)
-        cStartEdge += map.entities[i].lumps[LUMP_EDGES].count;
+        cStartEdge += map.entities.at(i).lumps[LUMP_EDGES].count;
 
     CountData_r(entity, headnode);
 

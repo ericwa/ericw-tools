@@ -224,7 +224,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
     /* Count nodes before this one */
     const int entnum = entity - &map.entities.at(0);
     for (i = 0; i < entnum; i++)
-        clipcount += map.entities[i].lumps[LUMP_CLIPNODES].count;
+        clipcount += map.entities.at(i).lumps[LUMP_CLIPNODES].count;
     model->headnode[hullnum] = clipcount + oldcount;
 
     CountClipNodes_r(entity, nodes);

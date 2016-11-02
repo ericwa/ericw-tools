@@ -190,7 +190,7 @@ WADList_Process(const wad_t *wadlist)
 
     /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex(); i++) {
-        texture = WADList_FindTexture(wadlist, map.miptex[i].c_str());
+        texture = WADList_FindTexture(wadlist, map.miptex.at(i).c_str());
         if (texture) {
             if (options.fNoTextures)
                 texdata->count += sizeof(dmiptex_t);
@@ -210,7 +210,7 @@ WADList_Process(const wad_t *wadlist)
     for (i = 0; i < map.nummiptex(); i++) {
         if (miptexlump->dataofs[i] == 0) {
             miptexlump->dataofs[i] = -1;
-            Message(msgWarning, warnTextureNotFound, map.miptex[i].c_str());
+            Message(msgWarning, warnTextureNotFound, map.miptex.at(i).c_str());
         }
     }
 }
@@ -230,7 +230,7 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
             continue;
         size = 0;
         for (wad = wadlist; wad; wad = wad->next) {
-            size = WAD_LoadLump(wad, map.miptex[i].c_str(), data);
+            size = WAD_LoadLump(wad, map.miptex.at(i).c_str(), data);
             if (size)
                 break;
         }
@@ -276,14 +276,13 @@ static void
 WADList_AddAnimationFrames(const wad_t *wadlist)
 {
     int oldcount, i, j;
-    miptex_t name;
 
     oldcount = map.nummiptex();
 
     for (i = 0; i < oldcount; i++) {
-        if (map.miptex[i][0] != '+')
+        if (map.miptex.at(i)[0] != '+')
             continue;
-        name = map.miptex[i];
+        std::string name = map.miptex.at(i);
 
         /* Search for all animations (0-9) and alt-animations (A-J) */
         for (j = 0; j < 20; j++) {
