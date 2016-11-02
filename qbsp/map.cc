@@ -158,17 +158,15 @@ Returns a global texinfo number
 ===============
 */
 int
-FindTexinfo(texinfo_t *texinfo, unsigned int flags)
+FindTexinfo(mtexinfo_t *texinfo, uint64_t flags)
 {
-    int index, j;
-    texinfo_t *target;
-    const int num_texinfo = pWorldEnt()->lumps[LUMP_TEXINFO].index;
+    const size_t num_texinfo = map.mtexinfos.size();
 
     /* Set the texture flags */
     texinfo->flags = flags;
 
-    target = (texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-    for (index = 0; index < num_texinfo; index++, target++) {
+    for (size_t index = 0; index < num_texinfo; index++) {
+        const mtexinfo_t *target = &map.mtexinfos.at(index);
         if (texinfo->miptex != target->miptex)
             continue;
         if (texinfo->flags != target->flags)
@@ -178,6 +176,7 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
         if (texinfo->flags & (TEX_SKIP | TEX_HINT))
             return index;
 
+        int j;
         for (j = 0; j < 4; j++) {
             if (texinfo->vecs[0][j] != target->vecs[0][j])
                 break;
@@ -187,37 +186,18 @@ FindTexinfo(texinfo_t *texinfo, unsigned int flags)
         if (j != 4)
             continue;
 
-        return index;
-    }
-
-    if (index >= pWorldEnt()->lumps[LUMP_TEXINFO].count)
-    {
-        /* Enlarge the array */
-        struct lumpdata *lump = &pWorldEnt()->lumps[LUMP_TEXINFO];
-        texinfo_t *olddata = (texinfo_t *)lump->data;
-        int newcount = lump->count * 2;
-        texinfo_t *newdata = (texinfo_t *)AllocMem(BSP_TEXINFO, newcount, true);
-        
-        memcpy(newdata, olddata, lump->index * sizeof(texinfo_t));
-        FreeMem(olddata, BSP_TEXINFO, lump->count);
-        
-        lump->data = newdata;
-        lump->count = newcount;
+        return static_cast<int>(index);
     }
 
     /* Allocate a new texinfo at the end of the array */
-    target = ((texinfo_t *) pWorldEnt()->lumps[LUMP_TEXINFO].data) + index;
-    *target = *texinfo;
-    pWorldEnt()->lumps[LUMP_TEXINFO].index++;
-    map.cTotal[LUMP_TEXINFO]++;
-
-    return index;
+    map.mtexinfos.push_back(*texinfo);
+    return static_cast<int>(num_texinfo);
 }
 
 int
-FindTexinfoEnt(texinfo_t *texinfo, const mapentity_t *entity)
+FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
 {
-    unsigned int flags = 0;
+    uint64_t flags = 0;
     const char *texname = map.miptex[texinfo->miptex].c_str();
     if (IsSkipName(texname))
         flags |= TEX_SKIP;
@@ -248,6 +228,8 @@ FindTexinfoEnt(texinfo_t *texinfo, const mapentity_t *entity)
         flags |= (minlight_byte << TEX_MINLIGHT_SHIFT);
     }
 
+    // TODO: handle "_minlight_color"
+    
     return FindTexinfo(texinfo, flags);
 }
 
@@ -353,7 +335,7 @@ ParseExtendedTX(parser_t *parser)
 
 static void
 SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
-                   const vec_t scale[2], texinfo_t *out)
+                   const vec_t scale[2], mtexinfo_t *out)
 {
     int i, j;
     vec3_t vecs[2];
@@ -400,7 +382,7 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
 
 static void
 SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
-                 texcoord_style_t style, texinfo_t *out)
+                 texcoord_style_t style, mtexinfo_t *out)
 {
     int i;
     vec3_t vecs[2];
@@ -464,7 +446,7 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
 
 static void
 SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2],
-                    texinfo_t *out)
+                    mtexinfo_t *out)
 {
     int i;
 
@@ -518,7 +500,7 @@ static void ComputeAxisBase( const vec3_t normal_unsanitized, vec3_t texX, vec3_
 }
 
 static void
-SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, texinfo_t *out)
+SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, mtexinfo_t *out)
 {
     vec3_t texX, texY;
     
@@ -649,7 +631,7 @@ parse_error:
 }
 
 static void
-ParseTextureDef(parser_t *parser, const mapbrush_t *brush, texinfo_t *tx,
+ParseTextureDef(parser_t *parser, const mapbrush_t *brush, mtexinfo_t *tx,
                 vec3_t planepts[3], const plane_t *plane)
 {
     vec3_t texMat[2];
@@ -723,8 +705,8 @@ ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *ent
     vec3_t planepts[3], planevecs[2];
     vec_t length;
     plane_t *plane;
-    texinfo_t tx;
-        int i, j;
+    mtexinfo_t tx;
+    int i, j;
     std::unique_ptr<mapface_t> face { new mapface_t };
 
     face->linenum = parser->linenum;
@@ -885,7 +867,6 @@ LoadMapFile(void)
     parser_t parser;
     char *buf;
     int length;
-    struct lumpdata *texinfo;
 
     Message(msgProgress, "LoadMapFile");
 
@@ -895,12 +876,6 @@ LoadMapFile(void)
     for (int i=0; ; i++) {
         map.entities.push_back(mapentity_t {});
         mapentity_t *entity = &map.entities.at(i);
-        
-        if (i == 0) {
-            texinfo = &entity->lumps[LUMP_TEXINFO];
-            texinfo->data = AllocMem(BSP_TEXINFO, 1024, true);
-            texinfo->count = 1024;
-        }
         
         if (!ParseEntity(&parser, entity)) {
             break;
@@ -917,13 +892,11 @@ LoadMapFile(void)
 //      if (!(rgfStartSpots & info_player_coop))
 //              Message(msgWarning, warnNoPlayerCoop);
 
-    texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
-
     Message(msgStat, "%8d faces", map.numfaces());
     Message(msgStat, "%8d brushes", map.numbrushes());
     Message(msgStat, "%8d entities", map.numentities());
     Message(msgStat, "%8d unique texnames", map.nummiptex());
-    Message(msgStat, "%8d texinfo", texinfo->count);
+    Message(msgStat, "%8d texinfo", map.numtexinfo());
     Message(msgLiteral, "\n");
 }
 

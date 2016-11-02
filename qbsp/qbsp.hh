@@ -113,14 +113,23 @@
 #define CFLAGS_DETAIL   (1U << 0)
 
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
-#define TEX_SPECIAL (1U << 0)   /* sky or liquid (no lightmap or subdivision */
-#define TEX_SKIP    (1U << 1)   /* an invisible surface */
-#define TEX_HINT    (1U << 2)   /* hint surface */
-#define TEX_NODIRT  (1U << 3)   /* don't receive dirtmapping */
+// Extended flags are written to a .texinfo file and read by the light tool
+#define TEX_SPECIAL (1ULL << 0)   /* sky or liquid (no lightmap or subdivision */
+#define TEX_SKIP    (1ULL << 1)   /* an invisible surface */
+#define TEX_HINT    (1ULL << 2)   /* hint surface */
+#define TEX_NODIRT  (1ULL << 3)   /* don't receive dirtmapping */
 #define TEX_PHONG_ANGLE_SHIFT   4
-#define TEX_PHONG_ANGLE_MASK    (255U << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
+#define TEX_PHONG_ANGLE_MASK    (255ULL << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
 #define TEX_MINLIGHT_SHIFT      12
-#define TEX_MINLIGHT_MASK       (255U << TEX_MINLIGHT_SHIFT)    /* 8 bit value, minlight value for this face. */
+#define TEX_MINLIGHT_MASK       (255ULL << TEX_MINLIGHT_SHIFT)    /* 8 bit value, minlight value for this face. */
+#define TEX_MINLIGHT_COLOR_R_SHIFT      20
+#define TEX_MINLIGHT_COLOR_R_MASK       (255ULL << TEX_MINLIGHT_COLOR_R_SHIFT)    /* 8 bit value, red minlight color for this face. */
+#define TEX_MINLIGHT_COLOR_G_SHIFT      28
+#define TEX_MINLIGHT_COLOR_G_MASK       (255ULL << TEX_MINLIGHT_COLOR_G_SHIFT)    /* 8 bit value, green minlight color for this face. */
+#define TEX_MINLIGHT_COLOR_B_SHIFT      36
+#define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
+
+
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -281,6 +290,11 @@ void CalcSides(const winding_t *in, const plane_t *split, int *sides,
 
 //============================================================================
 
+typedef struct mtexinfo_s {
+    float vecs[2][4];           /* [s/t][xyz offset] */
+    int32_t miptex;
+    uint64_t flags;
+} mtexinfo_t;
 
 typedef struct visfacet_s {
     struct visfacet_s *next;
@@ -552,6 +566,7 @@ typedef struct mapdata_s {
     std::vector<mapentity_t> entities;
     std::vector<plane_t> planes;
     std::vector<miptex_t> miptex;
+    std::vector<mtexinfo_t> mtexinfos;
     
     /* map from plane hash code to list of indicies in `planes` vector */
     std::unordered_map<int, std::vector<int>> planehash;
@@ -562,6 +577,7 @@ typedef struct mapdata_s {
     int numentities() const { return entities.size(); };
     int numplanes() const { return planes.size(); };
     int nummiptex() const { return miptex.size(); };
+    int numtexinfo() const { return static_cast<int>(mtexinfos.size()); };
 
     /* Totals for BSP data items -> TODO: move to a bspdata struct? */
     int cTotal[BSPX_LUMPS];
@@ -578,8 +594,8 @@ void EnsureTexturesLoaded();
 void LoadMapFile(void);
 
 int FindMiptex(const char *name);
-int FindTexinfo(texinfo_t *texinfo, unsigned int flags);
-int FindTexinfoEnt(texinfo_t *texinfo, mapentity_t *entity);
+int FindTexinfo(mtexinfo_t *texinfo, uint64_t flags); //FIXME: Make this take const texinfo
+int FindTexinfoEnt(mtexinfo_t *texinfo, mapentity_t *entity); //FIXME: Make this take const texinfo
 
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);

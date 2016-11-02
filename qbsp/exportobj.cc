@@ -36,7 +36,7 @@ InitObjFile(void)
 }
 
 static void
-GetUV(const texinfo_t *texinfo, const vec_t *pos, const int width, const int height, vec_t *u, vec_t *v)
+GetUV(const mtexinfo_t *texinfo, const vec_t *pos, const int width, const int height, vec_t *u, vec_t *v)
 {
     *u = (pos[0]*texinfo->vecs[0][0] + pos[1]*texinfo->vecs[0][1] + pos[2]*texinfo->vecs[0][2] + texinfo->vecs[0][3]) / width;
     *v = (pos[0]*texinfo->vecs[1][0] + pos[1]*texinfo->vecs[1][1] + pos[2]*texinfo->vecs[1][2] + texinfo->vecs[1][3]) / height;
@@ -45,9 +45,8 @@ GetUV(const texinfo_t *texinfo, const vec_t *pos, const int width, const int hei
 static void
 ExportObjFace(FILE *f, const face_t *face, int *vertcount)
 {
-    const texinfo_t *texinfos = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-    const texinfo_t *texinfo = &texinfos[face->texinfo];
-    const char *texname = map.miptex[texinfo->miptex].c_str();
+    const mtexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
+    const char *texname = map.miptex[texinfo.miptex].c_str();
     
     const texture_t *texture = WADList_GetTexture(texname);
     const int width = texture ? texture->width : 64;
@@ -60,7 +59,7 @@ ExportObjFace(FILE *f, const face_t *face, int *vertcount)
         fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
         
         vec_t u, v;
-        GetUV(texinfo, pos, width, height, &u, &v);
+        GetUV(&texinfo, pos, width, height, &u, &v);
         
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
         fprintf(f, "vt %.9g %.9g\n", u, -v);

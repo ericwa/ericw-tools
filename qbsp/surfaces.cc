@@ -40,16 +40,14 @@ SubdivideFace(face_t *f, face_t **prevptr)
     int axis, i;
     plane_t plane;
     face_t *front, *back, *next;
-    texinfo_t *tex;
+    const mtexinfo_t *tex;
     vec3_t tmp;
     vec_t subdiv;
     vec_t extent;
     int lmshift;
 
-
-
     /* special (non-surface cached) faces don't need subdivision */
-    tex = (texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data + f->texinfo;
+    tex = &map.mtexinfos.at(f->texinfo);
     if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
         return;
 
@@ -426,14 +424,13 @@ MakeFaceEdges_r
 static int
 MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
         return progress;
 
     for (f = node->faces; f; f = f->next) {
-        if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
+        if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
             continue;
         FindFaceEdges(entity, f);
     }
@@ -453,7 +450,6 @@ GrowNodeRegion
 static void
 GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
@@ -467,7 +463,7 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
     node->firstface = map.cTotal[LUMP_FACES];
 
     for (face = node->faces; face; face = face->next) {
-        if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
+        if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
             continue;
 
         // emit a region
@@ -505,7 +501,6 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
 static void
 GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
@@ -519,7 +514,7 @@ GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
     node->firstface = map.cTotal[LUMP_FACES];
 
     for (face = node->faces; face; face = face->next) {
-        if (texinfo[face->texinfo].flags & (TEX_SKIP | TEX_HINT))
+        if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
             continue;
 
         // emit a region
@@ -562,14 +557,13 @@ CountData_r
 static void
 CountData_r(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     face_t *f;
 
     if (node->planenum == PLANENUM_LEAF)
         return;
 
     for (f = node->faces; f; f = f->next) {
-        if (texinfo[f->texinfo].flags & (TEX_SKIP | TEX_HINT))
+        if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
             continue;
 
         if (f->lmshift[1] != 4)

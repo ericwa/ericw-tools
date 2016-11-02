@@ -326,7 +326,6 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     vec_t distribution, bestdistribution;
     const plane_t *plane, *plane2;
     const face_t *face;
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
 
     /* pick the plane that splits the least */
     minsplits = INT_MAX - 1;
@@ -345,7 +344,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
              */
              hintsplit = false;
             for (face = surf->faces; face; face = face->next) {
-                if (texinfo[face->texinfo].flags & TEX_HINT)
+                if (map.mtexinfos.at(face->texinfo).flags & TEX_HINT)
                     hintsplit = true;
             }
 
@@ -365,7 +364,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
                 if (plane->type < 3 && plane->type == plane2->type)
                     continue;
                 for (face = surf2->faces; face; face = face->next) {
-                    const int flags = texinfo[face->texinfo].flags;
+                    const uint64_t flags = map.mtexinfos.at(face->texinfo).flags;
                     /* Don't penalize for splitting skip faces */
                     if (flags & TEX_SKIP)
                         continue;

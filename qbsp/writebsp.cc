@@ -282,11 +282,10 @@ static void
 CountLeaves(mapentity_t *entity, node_t *node)
 {
     face_t **markfaces, *face;
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-
+    
     entity->lumps[LUMP_LEAFS].count++;
     for (markfaces = node->markfaces; *markfaces; markfaces++) {
-        if (texinfo[(*markfaces)->texinfo].flags & TEX_SKIP)
+        if (map.mtexinfos.at((*markfaces)->texinfo).flags & TEX_SKIP)
             continue;
         for (face = *markfaces; face; face = face->original)
             entity->lumps[LUMP_MARKSURFACES].count++;
@@ -336,7 +335,6 @@ ExportLeaf
 static void
 ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
     uint16_t *marksurfnums = (uint16_t *)marksurfs->data;
@@ -368,7 +366,7 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
 
     for (markfaces = node->markfaces; *markfaces; markfaces++) {
         face = *markfaces;
-        if (texinfo[face->texinfo].flags & TEX_SKIP)
+        if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
             continue;
 
         /* emit a marksurface */
@@ -386,7 +384,6 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
 static void
 ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
     uint32_t *marksurfnums = (uint32_t *)marksurfs->data;
@@ -418,7 +415,7 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 
     for (markfaces = node->markfaces; *markfaces; markfaces++) {
         face = *markfaces;
-        if (texinfo[face->texinfo].flags & TEX_SKIP)
+        if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
             continue;
 
         /* emit a marksurface */
@@ -436,7 +433,6 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
 static void
 ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
 {
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
     uint32_t *marksurfnums = (uint32_t *)marksurfs->data;
@@ -468,7 +464,7 @@ ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
 
     for (markfaces = node->markfaces; *markfaces; markfaces++) {
         face = *markfaces;
-        if (texinfo[face->texinfo].flags & TEX_SKIP)
+        if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
             continue;
 
         /* emit a marksurface */
@@ -709,12 +705,10 @@ static void
 WriteExtendedTexinfoFlags(void)
 {
     bool needwrite = false;
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-    const int num_texinfo = pWorldEnt()->lumps[LUMP_TEXINFO].index;
-    int i;
+    const int num_texinfo = map.numtexinfo();
     
-    for (i = 0; i < num_texinfo; i++) {
-        if (texinfo[i].flags & ~(TEX_SPECIAL | TEX_SKIP | TEX_HINT)) {
+    for (int i = 0; i < num_texinfo; i++) {
+        if (map.mtexinfos.at(i).flags & ~(TEX_SPECIAL | TEX_SKIP | TEX_HINT)) {
             // this texinfo uses some extended flags, write them to a file
             needwrite = true;
             break;
@@ -731,8 +725,8 @@ WriteExtendedTexinfoFlags(void)
     if (!texinfofile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
     
-    for (i = 0; i < num_texinfo; i++) {
-        fprintf(texinfofile, "%u\n", texinfo[i].flags);
+    for (int i = 0; i < num_texinfo; i++) {
+        fprintf(texinfofile, "%llu\n", static_cast<unsigned long long>(map.mtexinfos.at(i).flags));
     }
     fclose(texinfofile);
 }
@@ -742,14 +736,29 @@ WriteExtendedTexinfoFlags(void)
  * Standard quake utils only ever write the TEX_SPECIAL flag.
  */
 static void
-CleanBSPTexinfoFlags(void)
+ExportTexinfo(void)
 {
-    texinfo_t *texinfo = (texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-    const int num_texinfo = pWorldEnt()->lumps[LUMP_TEXINFO].index;
-    int i;
-
-    for (i = 0; i < num_texinfo; i++, texinfo++)
-        texinfo->flags &= TEX_SPECIAL;
+    const int num_texinfo = map.numtexinfo();
+    
+    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
+    texinfo->data = AllocMem(BSP_TEXINFO, num_texinfo, true);
+    texinfo->count = num_texinfo;
+    texinfo->index = num_texinfo;
+    
+    for (int i=0; i<num_texinfo; i++) {
+        const mtexinfo_t *src = &map.mtexinfos.at(i);
+        texinfo_t *dest = &(static_cast<texinfo_t *>(texinfo->data)[i]);
+        
+        dest->flags = static_cast<int32_t>(src->flags & TEX_SPECIAL);
+        dest->miptex = src->miptex;
+        for (int j=0; j<2; j++) {
+            for (int k=0; k<4; k++) {
+                dest->vecs[j][k] = src->vecs[j][k];
+            }
+        }
+    }
+    
+    map.cTotal[LUMP_TEXINFO] = num_texinfo;
 }
 
 /*
@@ -773,21 +782,8 @@ FinishBSPFile(void)
     planes->data = newdata;
     planes->count = map.cTotal[LUMP_PLANES];
 
-    // Shrink texinfo lump
-    {
-        struct lumpdata *texinfo;
-        void *pTemp;
-
-        texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
-        pTemp = texinfo->data;
-        texinfo->data = AllocMem(BSP_TEXINFO, texinfo->index, true);
-        memcpy(texinfo->data, pTemp, texinfo->index * MemSize[BSP_TEXINFO]);
-        FreeMem(pTemp, BSP_TEXINFO, texinfo->count);
-        texinfo->count = texinfo->index;
-    }
-
     WriteExtendedTexinfoFlags();
-    CleanBSPTexinfoFlags();
+    ExportTexinfo();
     WriteBSPFile();
     PrintBSPFileSizes();
 

@@ -355,8 +355,8 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
         if (!hullnum) {
             /* Don't generate hintskip faces */
-            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-            const char *texname = map.miptex[texinfo[mapface->texinfo].miptex].c_str();
+            const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
+            const char *texname = map.miptex.at(texinfo.miptex).c_str();
             if (!Q_strcasecmp(texname, "hintskip"))
                 continue;
         }
@@ -404,15 +404,15 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
-            const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-            texinfo_t texInfoNew;
+            const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
+            mtexinfo_t texInfoNew;
             vec3_t vecs[2];
             int k, l;
 
-            memcpy(&texInfoNew, &texinfo[ mapface->texinfo ], sizeof(texInfoNew));
+            memcpy(&texInfoNew, &texinfo, sizeof(texInfoNew));
             for (k=0; k<2; k++) {
                 for (l=0; l<3; l++) {
-                    vecs[k][l] = texinfo[ mapface->texinfo ].vecs[k][l];
+                    vecs[k][l] = texinfo.vecs[k][l];
                 }
             }
 
@@ -760,10 +760,9 @@ static int
 Brush_GetContents(const mapbrush_t *mapbrush)
 {
     const char *texname;
-    const texinfo_t *texinfo = (const texinfo_t *)pWorldEnt()->lumps[LUMP_TEXINFO].data;
-
     const mapface_t &mapface = mapbrush->face(0);
-    texname = map.miptex[texinfo[mapface.texinfo].miptex].c_str();
+    const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+    texname = map.miptex[texinfo.miptex].c_str();
 
     if (!Q_strcasecmp(texname, "hint") || !Q_strcasecmp(texname, "hintskip"))
         return CONTENTS_HINT;
