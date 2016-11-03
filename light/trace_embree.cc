@@ -898,6 +898,9 @@ raystream_t *Embree_MakeRayStream(int maxrays)
 void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity, const vec3_t glasscolor) {
     raystream_embree_t *rs = static_cast<raystream_embree_t *>(context->userRayExt);
     
+    // clamp opacity
+    opacity = qmin(qmax(0.0f, opacity), 1.0f);
+    
     Q_assert(rayIndex < rs->_numrays);
     
     //multiply ray color by glass color
@@ -906,12 +909,6 @@ void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float 
         tinted[i] = rs->_ray_colors[rayIndex][i] * glasscolor[i];
     }
     
-    // lerp between original ray color and fully tinted, based on opacity
-    
-    vec3_t lerped = {0.0, 0.0, 0.0};
-    VectorMA(lerped, opacity, tinted, lerped);
-    VectorMA(lerped, 1.0-opacity, rs->_ray_colors[rayIndex], lerped);
-    
-    // save out the lerped value as the new ray color
-    VectorCopy(lerped, rs->_ray_colors[rayIndex]);
+    //absorb light based on opacity
+    VectorScale(tinted, opacity, rs->_ray_colors[rayIndex]);
 }
