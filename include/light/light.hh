@@ -139,6 +139,7 @@ typedef struct {
     
     /* for lit water. receive light from either front or back. */
     bool twosided;
+    vec_t alpha;
     
     // ray batch stuff
     raystream_t *stream;
@@ -215,7 +216,7 @@ public:
     vec3_t offset;
 
 public:
-    lockable_vec_t minlight, shadow, shadowself, dirt, phong, phong_angle;
+    lockable_vec_t minlight, shadow, shadowself, dirt, phong, phong_angle, alpha;
     lockable_string_t minlight_exclude;
     lockable_vec3_t minlight_color;
     lockable_bool_t lightignore;
@@ -241,17 +242,17 @@ public:
         dirt { "dirt", 0 },
         phong { "phong", 0 },
         phong_angle { "phong_angle", 0 },
+        alpha { "alpha", 1.0f },
         minlight_exclude { "minlight_exclude", "" },
         minlight_color { strings{"minlight_color", "mincolor"}, 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         lightignore { "lightignore", false }
-    
     {
 		VectorSet(offset, 0, 0, 0);
 	}
     
     settingsdict_t settings() {
         return {{
-            &minlight, &shadow, &shadowself, &dirt, &phong, &phong_angle,
+            &minlight, &shadow, &shadowself, &dirt, &phong, &phong_angle, &alpha,
             &minlight_exclude, &minlight_color, &lightignore
         }};
     }

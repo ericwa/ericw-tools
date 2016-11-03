@@ -762,6 +762,13 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
         lightsurf->nodirt = true;
     }
     
+    /* handle alpha */
+    lightsurf->alpha = modelinfo->alpha.floatValue();
+    if (lightsurf->alpha < 1) {
+        /* skip culling of rays coming from the back side of the face */
+        lightsurf->twosided = true;
+    }
+    
     /* Set up the plane, not including model offset */
     plane_t *plane = &lightsurf->plane;
     VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
@@ -948,7 +955,7 @@ GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
 }
 
 float
-GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpointToLightDir, float dist, bool twosided)
+GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpointToLightDir, float dist, bool twosided, float alpha)
 {
     float angle = DotProduct(surfpointToLightDir, surfnorm);
     if (entity->bleed.boolValue() || twosided) {
@@ -980,7 +987,13 @@ GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const v
         }
     }
     
-    float add = GetLightValue(cfg, entity, dist) * angle * spotscale;
+    /* Check glass transparency */
+    float glass_transparency = 1;
+    if (alpha < 1) {
+        glass_transparency = (1-alpha);
+    }
+    
+    float add = GetLightValue(cfg, entity, dist) * angle * spotscale * glass_transparency;
     return add;
 }
 
@@ -988,10 +1001,10 @@ static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix,
 
 void
 GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpoint, bool twosided,
-                vec3_t color_out, vec3_t surfpointToLightDir_out, vec3_t normalmap_addition_out, float *dist_out)
+                float alpha, vec3_t color_out, vec3_t surfpointToLightDir_out, vec3_t normalmap_addition_out, float *dist_out)
 {
     float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
-    float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
+    float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided, alpha);
     
     /* write out the final color */
     if (entity->projectedmip) {
@@ -1267,7 +1280,8 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
             continue;
         }
         
-        GetLightContrib(cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
+        // FIXME: handle glass
+        GetLightContrib(cfg, &entity, normal, origin, false, 1.0f, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         
         const float dirt = Dirt_GetScaleFactor(cfg, occlusion, &entity, /* FIXME: pass */ nullptr);
         VectorScale(color, dirt, color);
@@ -1301,6 +1315,8 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         
         // apply anglescale
         cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
+        
+        // FIXME: handle glass
         
         if (!TestSky(origin, sun.sunvec, NULL)) {
             continue;
@@ -1366,7 +1382,7 @@ LightFace_Entity(const bsp2_t *bsp,
         float surfpointToLightDist;
         vec3_t color, normalcontrib;
         
-        GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
+        GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, lightsurf->alpha, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
  
         const float occlusion = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], entity, lightsurf);
         VectorScale(color, occlusion, color);
@@ -1425,6 +1441,12 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         return;
     }
 
+    /* Check glass transparency for lighting the back side of glass */
+    float glass_transparency = 1;
+    if (lightsurf->alpha < 1) {
+        glass_transparency = (1-lightsurf->alpha);
+    }
+    
     /* if sunlight is set, use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
@@ -1477,7 +1499,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         }
         
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
-        float value = angle * sun->sunlight;
+        float value = angle * sun->sunlight * glass_transparency;
         if (sun->dirt) {
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, lightsurf);
         }
