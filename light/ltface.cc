@@ -725,11 +725,24 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     else
         lightsurf->lightmapscale = modelinfo->lightmapscale;
 
-    // FIXME: is modelinfo used?!?
     const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
     lightsurf->curved = !!(extended_flags & TEX_PHONG_ANGLE_MASK);
-    lightsurf->nodirt = !!(extended_flags & TEX_NODIRT);
-    lightsurf->minlight = (extended_flags & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT;
+    
+    // nodirt
+    if (modelinfo->dirt.isChanged()) {
+        lightsurf->nodirt = (modelinfo->dirt.intValue() == -1);
+    } else {
+        lightsurf->nodirt = !!(extended_flags & TEX_NODIRT);
+    }
+    
+    // minlight
+    if (modelinfo->minlight.isChanged()) {
+        lightsurf->minlight = modelinfo->minlight.floatValue();
+    } else {
+        lightsurf->minlight = static_cast<vec_t>((extended_flags & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT);
+    }
+    
+    // minlight_color
     if (modelinfo->minlight_color.isChanged()) {
         VectorCopy(*modelinfo->minlight_color.vec3Value(), lightsurf->minlight_color);    
     } else {
