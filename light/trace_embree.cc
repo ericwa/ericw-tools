@@ -287,15 +287,36 @@ Embree_FilterFuncN(int* valid,
             const int sample = SampleTexture(face, bsp_static, hitpoint);
             
             float alpha = 1.0f;
-            if  (modelinfo != nullptr) {
+            if (modelinfo != nullptr) {
                 alpha = modelinfo->alpha.floatValue();
                 if (alpha < 1.0f) {
-                    vec3_t samplecolor;
-                    Palette_GetColor(sample, samplecolor);
-                    VectorScale(samplecolor, 1/255.0, samplecolor);
+                    // hit glass...
                     
-                    // FIXME: Occluding twice (once for each side of the glass brush)
-                    AddGlassToRay(context, rayIndex, alpha, samplecolor);
+                    vec3_t rayDir = {
+                        RTCRayN_dir_x(ray, N, i),
+                        RTCRayN_dir_y(ray, N, i),
+                        RTCRayN_dir_z(ray, N, i)
+                    };
+                    vec3_t potentialHitGeometryNormal = {
+                        RTCHitN_Ng_x(potentialHit, N, i),
+                        RTCHitN_Ng_y(potentialHit, N, i),
+                        RTCHitN_Ng_z(potentialHit, N, i)
+                    };
+                    
+                    VectorNormalize(rayDir);
+                    VectorNormalize(potentialHitGeometryNormal);
+                    
+                    const vec_t raySurfaceCosAngle = DotProduct(rayDir, potentialHitGeometryNormal);
+                    
+                    // only pick up the color of the glass on the _exiting_ side of the glass.
+                    // (we currently trace "backwards", from surface point --> light source)
+                    if (raySurfaceCosAngle < 0) {
+                        vec3_t samplecolor;
+                        Palette_GetColor(sample, samplecolor);
+                        VectorScale(samplecolor, 1/255.0, samplecolor);
+                        
+                        AddGlassToRay(context, rayIndex, alpha, samplecolor);
+                    }
                     
                     // reject hit
                     valid[i] = INVALID;

@@ -72,10 +72,11 @@
 // entity 2
 {
 "classname" "light_globe"
-"origin" "-584 512 72"
+"origin" "-584 496 104"
 "angle" "-0"
 "target" "t1"
-"delay" "2"
+"delay" "3"
+"_anglesense" "0"
 }
 // entity 3
 {
@@ -102,10 +103,11 @@
 // entity 5
 {
 "classname" "light_globe"
-"origin" "-328 512 72"
+"origin" "-328 496 104"
 "angle" "-0"
 "target" "t2"
-"delay" "2"
+"delay" "3"
+"_anglesense" "0"
 }
 // entity 6
 {
@@ -147,10 +149,11 @@
 // entity 9
 {
 "classname" "light_globe"
-"origin" "-72 512 72"
+"origin" "-72 496 104"
 "angle" "-0"
 "target" "t3"
-"delay" "2"
+"delay" "3"
+"_anglesense" "0"
 }
 // entity 10
 {
@@ -162,10 +165,11 @@
 // entity 11
 {
 "classname" "light_globe"
-"origin" "248 512 72"
+"origin" "248 496 104"
 "angle" "-0"
 "target" "t4"
-"delay" "2"
+"delay" "3"
+"_anglesense" "0"
 }
 // entity 12
 {
@@ -207,10 +211,11 @@
 // entity 15
 {
 "classname" "light_globe"
-"origin" "-840 512 72"
+"origin" "-840 496 104"
 "angle" "-0"
 "target" "t0"
-"delay" "2"
+"delay" "3"
+"_anglesense" "0"
 }
 // entity 16
 {
