@@ -175,7 +175,7 @@
 {
 "classname" "func_wall"
 "_shadow" "1"
-"alpha" "1"
+"alpha" "0.99"
 // brush 0
 {
 ( 184 440 16 ) ( 184 424 32 ) ( 184 424 16 ) spipe2 8 -0 180 1 -1
