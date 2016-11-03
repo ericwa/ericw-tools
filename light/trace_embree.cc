@@ -241,7 +241,7 @@ enum class filtertype_t {
     INTERSECTION, OCCLUSION
 };
 
-void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity);
+void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity, const vec3_t glasscolor);
 
 // called to evaluate transparency
 template<filtertype_t filtertype>
@@ -282,12 +282,20 @@ Embree_FilterFuncN(int* valid,
             const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
             const modelinfo_t *modelinfo = Embree_LookupModelinfo(geomID, primID);
             
+            vec3_t hitpoint;
+            Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
+            const int sample = SampleTexture(face, bsp_static, hitpoint);
+            
             float alpha = 1.0f;
             if  (modelinfo != nullptr) {
                 alpha = modelinfo->alpha.floatValue();
                 if (alpha < 1.0f) {
+                    vec3_t samplecolor;
+                    Palette_GetColor(sample, samplecolor);
+                    VectorScale(samplecolor, 1/255.0, samplecolor);
+                    
                     // FIXME: Occluding twice (once for each side of the glass brush)
-                    AddGlassToRay(context, rayIndex, alpha);
+                    AddGlassToRay(context, rayIndex, alpha, samplecolor);
                     
                     // reject hit
                     valid[i] = INVALID;
@@ -297,10 +305,6 @@ Embree_FilterFuncN(int* valid,
             
             const char *name = Face_TextureName(bsp_static, face);
             if (name[0] == '{') {
-                vec3_t hitpoint;
-                Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
-                const int sample = SampleTexture(face, bsp_static, hitpoint);
-                
                 if (sample == 255) {
                     // reject hit
                     valid[i] = INVALID;
@@ -870,10 +874,23 @@ raystream_t *Embree_MakeRayStream(int maxrays)
     return new raystream_embree_t{maxrays};
 }
 
-void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity) {
+void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity, const vec3_t glasscolor) {
     raystream_embree_t *rs = static_cast<raystream_embree_t *>(context->userRayExt);
     
     Q_assert(rayIndex < rs->_numrays);
     
-    VectorScale(rs->_ray_colors[rayIndex], 1.0 - opacity, rs->_ray_colors[rayIndex]);
+    //multiply ray color by glass color
+    vec3_t tinted;
+    for (int i=0; i<3; i++) {
+        tinted[i] = rs->_ray_colors[rayIndex][i] * glasscolor[i];
+    }
+    
+    // lerp between original ray color and fully tinted, based on opacity
+    
+    vec3_t lerped = {0.0, 0.0, 0.0};
+    VectorMA(lerped, opacity, tinted, lerped);
+    VectorMA(lerped, 1.0-opacity, rs->_ray_colors[rayIndex], lerped);
+    
+    // save out the lerped value as the new ray color
+    VectorCopy(lerped, rs->_ray_colors[rayIndex]);
 }
