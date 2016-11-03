@@ -1476,7 +1476,22 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
             continue;
         }
         
-        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, shadowself);
+        angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
+        float value = angle * sun->sunlight * glass_transparency;
+        if (sun->dirt) {
+            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, lightsurf);
+        }
+        
+        vec3_t color, normalcontrib;
+        VectorScale(sun->sunlight_color, value / 255.0, color);
+        VectorScale(sun->sunvec, value, normalcontrib);
+        
+        /* Quick distance check first */
+        if (fabs(LightSample_Brightness(color)) <= fadegate) {
+            continue;
+        }
+        
+        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, shadowself, color, normalcontrib);
     }
     
     rs->tracePushedRaysIntersection();
@@ -1488,25 +1503,15 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         }
         
         const int i = rs->getPushedRayPointIndex(j);
-        const vec_t *surfnorm = lightsurf->normals[i];
-        
-        // FIXME: don't recompute this: compute before tracing, check gate, and store color in ray
-        float angle = DotProduct(incoming, surfnorm);
-        if (lightsurf->twosided) {
-            if (angle < 0) {
-                angle = -angle;
-            }
-        }
-        
-        angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
-        float value = angle * sun->sunlight * glass_transparency;
-        if (sun->dirt) {
-            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, lightsurf);
-        }
-        
         lightsample_t *sample = &lightmap->samples[i];
-        Light_Add(sample, value, sun->sunlight_color, sun->sunvec);
-
+        
+        vec3_t color, normalcontrib;
+        rs->getPushedRayColor(j, color);
+        rs->getPushedRayNormalContrib(j, normalcontrib);
+        
+        VectorAdd(sample->color, color, sample->color);
+        VectorAdd(sample->direction, normalcontrib, sample->direction);
+        
         hit = true;
     }
 
