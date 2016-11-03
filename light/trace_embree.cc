@@ -41,6 +41,7 @@ public:
     unsigned geomID;
 
     std::vector<const bsp2_dface_t *> triToFace;
+    std::vector<const modelinfo_t *> triToModelinfo;
 };
 
 sceneinfo
@@ -80,6 +81,8 @@ CreateGeometry(const bsp2_t *bsp, RTCScene scene, const std::vector<const bsp2_d
         if (face->numedges < 3)
             continue;
         
+        const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
+        
         for (int j = 2; j < face->numedges; j++) {
             Triangle *tri = &triangles[tri_index];
             tri->v0 = Face_VertexAtIndex(bsp, face, j-1);
@@ -88,6 +91,7 @@ CreateGeometry(const bsp2_t *bsp, RTCScene scene, const std::vector<const bsp2_d
             tri_index++;
             
             s.triToFace.push_back(face);
+            s.triToModelinfo.push_back(modelinfo);
         }
     }
     rtcUnmapBuffer(scene, geomID, RTC_INDEX_BUFFER);
@@ -206,6 +210,12 @@ const bsp2_dface_t *Embree_LookupFace(unsigned int geomID, unsigned int primID)
     return info.triToFace.at(primID);
 }
 
+const modelinfo_t *Embree_LookupModelinfo(unsigned int geomID, unsigned int primID)
+{
+    const sceneinfo &info = Embree_SceneinfoForGeomID(geomID);
+    return info.triToModelinfo.at(primID);
+}
+
 static void
 Embree_RayEndpoint(struct RTCRayN* ray, const struct RTCHitN* potentialHit, size_t N, size_t i, vec3_t endpoint)
 {
@@ -231,6 +241,8 @@ enum class filtertype_t {
     INTERSECTION, OCCLUSION
 };
 
+void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity);
+
 // called to evaluate transparency
 template<filtertype_t filtertype>
 static void
@@ -254,26 +266,46 @@ Embree_FilterFuncN(int* valid,
         const unsigned &geomID = RTCHitN_geomID(potentialHit, N, i);
         const unsigned &primID = RTCHitN_primID(potentialHit, N, i);
         
+        // unpack ray index
+        const unsigned rayIndex = (mask >> 1);
+        
         // bail if we hit a selfshadow face, but the ray is not coming from within that model
-        if (mask == 0 && geomID == selfshadowgeom.geomID) {
-            // reject hit
-            valid[i] = INVALID;
-            continue;
-        }
-        
-        // test fence texture
-        const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
-        
-        const char *name = Face_TextureName(bsp_static, face);
-        if (name[0] == '{') {
-            vec3_t hitpoint;
-            Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
-            const int sample = SampleTexture(face, bsp_static, hitpoint);
-            
-            if (sample == 255) {
+        if (geomID == selfshadowgeom.geomID) {
+            const bool from_selfshadow = ((mask & 1) == 1);
+            if (!from_selfshadow) {
                 // reject hit
                 valid[i] = INVALID;
                 continue;
+            }
+        } else {
+            // test fence textures and glass
+            const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
+            const modelinfo_t *modelinfo = Embree_LookupModelinfo(geomID, primID);
+            
+            float alpha = 1.0f;
+            if  (modelinfo != nullptr) {
+                alpha = modelinfo->alpha.floatValue();
+                if (alpha < 1.0f) {
+                    // FIXME: Occluding twice (once for each side of the glass brush)
+                    AddGlassToRay(context, rayIndex, alpha);
+                    
+                    // reject hit
+                    valid[i] = INVALID;
+                    continue;
+                }
+            }
+            
+            const char *name = Face_TextureName(bsp_static, face);
+            if (name[0] == '{') {
+                vec3_t hitpoint;
+                Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
+                const int sample = SampleTexture(face, bsp_static, hitpoint);
+                
+                if (sample == 255) {
+                    // reject hit
+                    valid[i] = INVALID;
+                    continue;
+                }
             }
         }
         
@@ -483,8 +515,10 @@ Embree_TraceInit(const bsp2_t *bsp)
         for (int i=0; i<model->model->numfaces; i++) {
             const bsp2_dface_t *face = &bsp->dfaces[model->model->firstface + i];
             const char *texname = Face_TextureName(bsp, face);
-            
-            if (!Q_strncasecmp("sky", texname, 3)) {
+
+            if (model->alpha.floatValue() < 1.0f) {
+                fencefaces.push_back(face);
+            } else if (!Q_strncasecmp("sky", texname, 3)) {
                 skyfaces.push_back(face);
             } else if (texname[0] == '{') {
                 fencefaces.push_back(face);
@@ -561,7 +595,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     FreeWindings(skipwindings);
 }
 
-static RTCRay SetupRay(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self)
+static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self)
 {
     RTCRay ray;
     VectorCopy(start, ray.org);
@@ -575,6 +609,9 @@ static RTCRay SetupRay(const vec3_t start, const vec3_t dir, vec_t dist, const d
     // NOTE: we are not using the ray masking feature of embree, but just using
     // this field to store whether the ray is coming from self-shadow geometry
     ray.mask = (self == nullptr) ? 0 : 1;
+    // pack the ray index into the rest of the mask
+    ray.mask |= (rayindex << 1);
+    
     ray.time = 0.f;
     return ray;
 }
@@ -585,7 +622,7 @@ static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop, const dm
     VectorSubtract(stop, start, dir);
     vec_t dist = VectorNormalize(dir);
     
-    return SetupRay(start, dir, dist, self);
+    return SetupRay(0, start, dir, dist, self);
 }
 
 //public
@@ -611,7 +648,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
     VectorCopy(dirn, dir_normalized);
     VectorNormalize(dir_normalized);
     
-    RTCRay ray = SetupRay(start, dir_normalized, MAX_SKY_RAY_DEPTH, self);
+    RTCRay ray = SetupRay(0, start, dir_normalized, MAX_SKY_RAY_DEPTH, self);
     rtcIntersect(scene, ray);
 
     qboolean hit_sky = (ray.geomID == skygeom.geomID);
@@ -621,7 +658,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
 //public
 hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
-    RTCRay ray = SetupRay(start, dirn, dist, self);
+    RTCRay ray = SetupRay(0, start, dirn, dist, self);
     rtcIntersect(scene, ray);
     
     if (ray.geomID == RTC_INVALID_GEOMETRY_ID)
@@ -659,7 +696,7 @@ bool Embree_IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dis
     const int modelnum = self - bsp_static->dmodels;
     RTCScene singleModelScene = perModelScenes.at(modelnum);
     
-    RTCRay ray = SetupRay(start, dir, dist, nullptr);
+    RTCRay ray = SetupRay(0, start, dir, dist, nullptr);
     rtcIntersect(singleModelScene, ray);
     
     if (ray.geomID == RTC_INVALID_GEOMETRY_ID)
@@ -698,7 +735,7 @@ static void q_aligned_free(void *ptr)
 }
 
 class raystream_embree_t : public raystream_t {
-private:
+public:
     RTCRay *_rays;
     float *_rays_maxdist;
     int *_point_indices;
@@ -730,7 +767,7 @@ public:
     
     virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
         Q_assert(_numrays<_maxrays);
-        _rays[_numrays] = SetupRay(origin, dir, dist, selfshadow);
+        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist, selfshadow);
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
@@ -754,7 +791,7 @@ public:
         
         const RTCIntersectContext ctx = {
             RTC_INTERSECT_COHERENT,
-            nullptr
+            static_cast<void *>(this)
         };
         
         rtcOccluded1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
@@ -766,7 +803,7 @@ public:
         
         const RTCIntersectContext ctx = {
             RTC_INTERSECT_COHERENT,
-            nullptr
+            static_cast<void *>(this)
         };
         
         rtcIntersect1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
@@ -831,4 +868,12 @@ public:
 raystream_t *Embree_MakeRayStream(int maxrays)
 {
     return new raystream_embree_t{maxrays};
+}
+
+void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity) {
+    raystream_embree_t *rs = static_cast<raystream_embree_t *>(context->userRayExt);
+    
+    Q_assert(rayIndex < rs->_numrays);
+    
+    VectorScale(rs->_ray_colors[rayIndex], 1.0 - opacity, rs->_ray_colors[rayIndex]);
 }
