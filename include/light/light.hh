@@ -206,6 +206,7 @@ extern int dump_vertnum;
 extern bool dump_vert;
 
 class modelinfo_t {
+    using strings = std::vector<std::string>;
 #define DEFAULT_PHONG_ANGLE 89.0f
     
 public:
@@ -241,7 +242,7 @@ public:
         phong { "phong", 0 },
         phong_angle { "phong_angle", 0 },
         minlight_exclude { "minlight_exclude", "" },
-        minlight_color { "minlight_color", 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        minlight_color { strings{"minlight_color", "mincolor"}, 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         lightignore { "lightignore", false }
     
     {
