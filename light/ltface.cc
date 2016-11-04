@@ -1260,7 +1260,12 @@ ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
 void
 GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
 {
-    const float occlusion = DirtAtPoint(cfg, rs, origin, normal, /* FIXME: pass selfshadow? */ nullptr);
+    float occlusion = DirtAtPoint(cfg, rs, origin, normal, /* FIXME: pass selfshadow? */ nullptr);
+    if (isnan(occlusion)) {
+        // HACK: getting an invalid normal of (0, 0, 0).
+        occlusion = 0.0f;
+    }
+    
     VectorSet(colorout, 0, 0, 0);
     
     for (const light_t &entity : GetLights()) {
