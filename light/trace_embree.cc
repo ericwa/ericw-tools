@@ -896,6 +896,12 @@ raystream_t *Embree_MakeRayStream(int maxrays)
 }
 
 void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity, const vec3_t glasscolor) {
+    if (context == nullptr) {
+        // FIXME: remove this..
+        // happens for bounce lights, e.g. Embree_TestSky
+        return;
+    }
+    
     raystream_embree_t *rs = static_cast<raystream_embree_t *>(context->userRayExt);
     
     // clamp opacity
