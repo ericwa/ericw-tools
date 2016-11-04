@@ -1812,7 +1812,8 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             const int i = rs->getPushedRayPointIndex(j);
             vec3_t indirect = {0};
             rs->getPushedRayColor(j, indirect);
-            Q_assert(LightSample_Brightness(indirect) >= 0.25);
+            
+            Q_assert(!isnan(indirect[0]));
             
             /* Use dirt scaling on the indirect lighting.
              * Except, not in bouncedebug mode.
