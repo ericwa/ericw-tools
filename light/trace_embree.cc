@@ -903,12 +903,24 @@ void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float 
     
     Q_assert(rayIndex < rs->_numrays);
     
+    Q_assert(glasscolor[0] >= 0.0 && glasscolor[0] <= 1.0);
+    Q_assert(glasscolor[1] >= 0.0 && glasscolor[1] <= 1.0);
+    Q_assert(glasscolor[2] >= 0.0 && glasscolor[2] <= 1.0);
+    
     //multiply ray color by glass color
     vec3_t tinted;
     for (int i=0; i<3; i++) {
         tinted[i] = rs->_ray_colors[rayIndex][i] * glasscolor[i];
     }
     
-    //absorb light based on opacity
-    VectorScale(tinted, opacity, rs->_ray_colors[rayIndex]);
+    // lerp between original ray color and fully tinted, based on opacity
+    vec3_t lerped = {0.0, 0.0, 0.0};
+    VectorMA(lerped, opacity, tinted, lerped);
+    VectorMA(lerped, 1.0-opacity, rs->_ray_colors[rayIndex], lerped);
+    
+    // use the lerped color, scaled by (1-opacity) as the new ray color
+  //  VectorScale(lerped, (1.0f - opacity), rs->_ray_colors[rayIndex]);
+    
+    // use the lerped color
+    VectorCopy(lerped, rs->_ray_colors[rayIndex]);
 }

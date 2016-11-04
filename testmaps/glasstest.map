@@ -5,7 +5,7 @@
 "classname" "worldspawn"
 "wad" "free_wad.wad"
 "_sun_mangle" "330 -60 0"
-"_sunlight" "100"
+"_sunlight" "512"
 "_sunlight_color" "100 150 255"
 "light" "15"
 // brush 0
