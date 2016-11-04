@@ -139,7 +139,6 @@ typedef struct {
     
     /* for lit water. receive light from either front or back. */
     bool twosided;
-    vec_t alpha;
     
     // ray batch stuff
     raystream_t *stream;
