@@ -537,6 +537,9 @@ Embree_TraceInit(const bsp2_t *bsp)
     
     /* Check against the list of global shadow casters */
     for (const modelinfo_t *model : tracelist) {
+        // TODO: factor out
+        const bool isWorld = (model->model == &bsp->dmodels[0]);
+        
         for (int i=0; i<model->model->numfaces; i++) {
             const bsp2_dface_t *face = &bsp->dfaces[model->model->firstface + i];
             const char *texname = Face_TextureName(bsp, face);
@@ -548,7 +551,10 @@ Embree_TraceInit(const bsp2_t *bsp)
             } else if (texname[0] == '{') {
                 fencefaces.push_back(face);
             } else if (texname[0] == '*') {
-                // ignore liquids
+                if (!isWorld) {
+                    // world liquids never cast shadows; shadow casting bmodel liquids do
+                    solidfaces.push_back(face);
+                }
             } else {
                 solidfaces.push_back(face);
             }
