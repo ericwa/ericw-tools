@@ -596,23 +596,11 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
             }
             
             // trace from surf->midpoint to testpoint
-            {
-                vec_t hitdist = 0;
-                if (IntersectSingleModel(surf->midpoint, dirn, dist, surf->modelinfo->model, &hitdist)) {
-                    // make a corrected point
-                    VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), dirn, corrected);
-                    return true;
-                }
-            }
-            
-            // also check against the world, fixes https://github.com/ericwa/tyrutils-ericw/issues/115
-            if (surf->modelinfo->model != &surf->bsp->dmodels[0]) {
-                vec_t hitdist = 0;
-                if (IntersectSingleModel(surf->midpoint, dirn, dist, &surf->bsp->dmodels[0], &hitdist)) {
-                    // make a corrected point
-                    VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), dirn, corrected);
-                    return true;
-                }
+            vec_t hitdist = 0;
+            if (IntersectSingleModel(surf->midpoint, dirn, dist, surf->modelinfo->model, &hitdist)) {
+                // make a corrected point
+                VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), dirn, corrected);
+                return true;
             }
         }
     }
