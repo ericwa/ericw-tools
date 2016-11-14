@@ -725,13 +725,15 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
     logprint("Loaded extended texinfo flags from %s\n", filename);
     
     for (int i = 0; i < bsp->numtexinfo; i++) {
-        int cnt = fscanf(texinfofile, "%llu\n", &extended_texinfo_flags[i]);
+        long long unsigned int flags = 0;
+        const int cnt = fscanf(texinfofile, "%llu\n", &flags);
         if (cnt != 1) {
             logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
             fclose(texinfofile);
             memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
             return;
         }
+        extended_texinfo_flags[i] = flags;
     }
     
     // fail if there are more lines in the file
