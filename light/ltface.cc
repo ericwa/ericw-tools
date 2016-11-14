@@ -25,6 +25,7 @@
 #include <common/bsputils.hh>
 
 #include <cassert>
+#include <cmath>
 #include <algorithm>
 
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
@@ -1261,7 +1262,7 @@ void
 GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
 {
     float occlusion = DirtAtPoint(cfg, rs, origin, normal, /* FIXME: pass selfshadow? */ nullptr);
-    if (isnan(occlusion)) {
+    if (std::isnan(occlusion)) {
         // HACK: getting an invalid normal of (0, 0, 0).
         occlusion = 0.0f;
     }
@@ -1813,7 +1814,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             vec3_t indirect = {0};
             rs->getPushedRayColor(j, indirect);
             
-            Q_assert(!isnan(indirect[0]));
+            Q_assert(!std::isnan(indirect[0]));
             
             /* Use dirt scaling on the indirect lighting.
              * Except, not in bouncedebug mode.
