@@ -1,3 +1,12 @@
+2016-11-20 TyrUtils-ericw 0.15.9 release
+
+- light: fix black fringes on bmodels that are touching against the world
+- light: light passing through glass lights up the back side
+- light: bmodels with "_alpha" < 1 and "_shadow" "1" set cast tinted shadows
+- qbsp: support Quake 3 "Brush Primitives" .MAP format
+- qbsp: save "_mincolor" for func_detail/group to the .texinfo file, now used by light 
+- qbsp: performance improvements
+
 2016-10-03 TyrUtils-ericw 0.15.8 release
 
 - light: fix black noise in some cases when using -bounce. (reported by Pritchard)
