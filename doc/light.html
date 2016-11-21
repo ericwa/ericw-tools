@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Mon Oct  3 11:21:54 2016 -->
+<!-- CreationDate: Wed Nov  2 18:19:47 2016 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -532,10 +532,11 @@ to use this specific lightmap scale. Removes
 <p style="margin-left:11%; margin-top: 1em"><b>Model Entity
 Keys</b> <br>
 The following keys can be used on any entity with a brush
-model. &quot;_minlight&quot;, &quot;_dirt&quot;,
-&quot;_phong&quot;, and &quot;_phong_angle&quot; are
-supported on func_detail/func_group as well, if qbsp from
-these tools is used. <b><br>
+model. &quot;_minlight&quot;, &quot;_mincolor&quot;,
+&quot;_dirt&quot;, &quot;_phong&quot;, and
+&quot;_phong_angle&quot; are supported on
+func_detail/func_group as well, if qbsp from these tools is
+used. <b><br>
 &quot;_minlight&quot; &quot;n&quot;</b></p>
 
 <p style="margin-left:22%;">Set the minimum light level for
@@ -549,8 +550,9 @@ any surface of the brush model. Default 0.</p>
 are excluded from receiving minlight on this brush
 model.</p>
 
-<p style="margin-left:11%;"><b>&quot;_mincolor&quot;
-&quot;r g b&quot;</b></p>
+<p style="margin-left:11%;"><b>&quot;_minlight_color&quot;
+&quot;r g b&quot;</b> | <b>&quot;_mincolor&quot; &quot;r g
+b&quot;</b></p>
 
 <p style="margin-left:22%;">Specify red(r), green(g) and
 blue(b) components for the colour of the minlight. RGB
