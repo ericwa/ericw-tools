@@ -156,8 +156,28 @@ MatchTargets(void)
 }
 
 static std::string
-EntDict_PrettyDescription(const entdict_t &entity)
+EntDict_PrettyDescription(const bsp2_t *bsp, const entdict_t &entity)
 {
+    // get the submodel's bbox if it's a brush entity
+    if (bsp != nullptr
+        && EntDict_StringForKey(entity, "origin") == ""
+        && EntDict_StringForKey(entity, "model") != "") {
+        
+        const std::string submodel_str = EntDict_StringForKey(entity, "model");
+        const dmodel_t *info = BSP_DModelForModelString(bsp, submodel_str);
+        
+        if (info) {
+            std::stringstream s;
+            s << "brush entity with mins (";
+            s << VecStrf(info->mins);
+            s << ") maxs (";
+            s << VecStrf(info->maxs);
+            s << ") (" <<
+            EntDict_StringForKey(entity, "classname") << ")";
+            return s.str();
+        }
+    }
+    
     std::stringstream s;
     s << "entity at (" <<
     EntDict_StringForKey(entity, "origin") << ") (" <<
@@ -166,14 +186,14 @@ EntDict_PrettyDescription(const entdict_t &entity)
 }
 
 bool
-EntDict_CheckNoEmptyValues(const entdict_t &entdict)
+EntDict_CheckNoEmptyValues(const bsp2_t *bsp, const entdict_t &entdict)
 {
     bool ok = true;
     // empty values warning
     for (const auto &keyval : entdict) {
         if (keyval.first.empty() || keyval.second.empty()) {
             logprint("WARNING: %s has empty key/value \"%s\" \"%s\"\n",
-                     EntDict_PrettyDescription(entdict).c_str(),
+                     EntDict_PrettyDescription(bsp, entdict).c_str(),
                      keyval.first.c_str(), keyval.second.c_str());
             ok = false;
         }
@@ -185,7 +205,7 @@ EntDict_CheckNoEmptyValues(const entdict_t &entdict)
  * Checks `edicts` for unmatched targets/targetnames and prints warnings
  */
 bool
-EntDict_CheckTargetKeysMatched(const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
+EntDict_CheckTargetKeysMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
 {
     bool ok = true;
     
@@ -205,7 +225,7 @@ EntDict_CheckTargetKeysMatched(const entdict_t &entity, const std::vector<entdic
         
         if (targetVal == targetname) {
             logprint("WARNING: %s has \"%s\" set to itself\n",
-                     EntDict_PrettyDescription(entity).c_str(),
+                     EntDict_PrettyDescription(bsp, entity).c_str(),
                      targetKey.c_str());
             ok = false;
             continue;
@@ -225,7 +245,7 @@ EntDict_CheckTargetKeysMatched(const entdict_t &entity, const std::vector<entdic
         
         if (!found) {
             logprint("WARNING: %s has unmatched \"%s\" (%s)\n",
-                     EntDict_PrettyDescription(entity).c_str(),
+                     EntDict_PrettyDescription(bsp, entity).c_str(),
                      targetKey.c_str(),
                      targetVal.c_str());
             ok = false;
@@ -236,7 +256,7 @@ EntDict_CheckTargetKeysMatched(const entdict_t &entity, const std::vector<entdic
 }
 
 bool
-EntDict_CheckTargetnameKeyMatched(const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
+EntDict_CheckTargetnameKeyMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
 {
     // search for "targetname" values such that no entity has a matching "target"
     // accept any key name as a target, so we don't print false positive
@@ -266,7 +286,7 @@ EntDict_CheckTargetnameKeyMatched(const entdict_t &entity, const std::vector<ent
         
         if (!found) {
             logprint("WARNING: %s has targetname \"%s\" which is not targetted by anything.\n",
-                     EntDict_PrettyDescription(entity).c_str(),
+                     EntDict_PrettyDescription(bsp, entity).c_str(),
                      targetnameVal.c_str());
             ok = false;
         }
@@ -963,9 +983,9 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
     
     // Make warnings
     for (auto &entdict : entdicts) {
-        EntDict_CheckNoEmptyValues(entdict);
-        EntDict_CheckTargetKeysMatched(entdict, entdicts);
-        EntDict_CheckTargetnameKeyMatched(entdict, entdicts);
+        EntDict_CheckNoEmptyValues(bsp, entdict);
+        EntDict_CheckTargetKeysMatched(bsp, entdict, entdicts);
+        EntDict_CheckTargetnameKeyMatched(bsp, entdict, entdicts);
     }
     
     // First pass: make permanent changes to the bsp entdata that we will write out

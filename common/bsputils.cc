@@ -126,3 +126,18 @@ Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
     const char *texname = Face_TextureName(bsp, face);
     return TextureName_Contents(texname);
 }
+
+const dmodel_t *BSP_DModelForModelString(const bsp2_t *bsp, const std::string &submodel_str)
+{
+    int submodel = -1;
+    if (1 == sscanf(submodel_str.c_str(), "*%d", &submodel)) {
+        
+        if (submodel < 0 || submodel >= bsp->nummodels) {
+            return nullptr;
+        }
+        
+        return &bsp->dmodels[submodel];
+        
+    }
+    return nullptr;
+}
