@@ -1081,46 +1081,6 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
              static_cast<int>(all_lights.size()));
 }
 
-static vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
-{
-    switch (plane->type)
-    {
-        case PLANE_X: return point[0] - plane->dist;
-        case PLANE_Y: return point[1] - plane->dist;
-        case PLANE_Z: return point[2] - plane->dist;
-        default: return DotProduct(point, plane->normal) - plane->dist;
-    }
-}
-
-static bool Light_PointInSolid_r(const bsp2_t *bsp, int nodenum, const vec3_t point )
-{
-    if (nodenum < 0) {
-        bsp2_dleaf_t *leaf = bsp->dleafs + (-1 - nodenum);
-        
-        return leaf->contents == CONTENTS_SOLID
-        || leaf->contents == CONTENTS_SKY;
-    }
-    
-    const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
-    
-    if (dist > 0.1)
-        return Light_PointInSolid_r(bsp, node->children[0], point);
-    else if (dist < -0.1)
-        return Light_PointInSolid_r(bsp, node->children[1], point);
-    else {
-        // too close to the plane, check both sides
-        return Light_PointInSolid_r(bsp, node->children[0], point)
-        || Light_PointInSolid_r(bsp, node->children[1], point);
-    }
-}
-
-// only check hull 0 of model 0 (world)
-bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
-{
-    return Light_PointInSolid_r(bsp, bsp->dmodels[0].headnode[0], point);
-}
-
 static void
 FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
 {
