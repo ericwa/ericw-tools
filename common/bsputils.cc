@@ -217,3 +217,15 @@ Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, pla
         dest->dist = DotProduct(dest->normal, v0);
     }
 }
+
+bool
+EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point)
+{
+    for (int i=0; i<face->numedges; i++) {
+        vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
+        if (planedist < 0) {
+            return false;
+        }
+    }
+    return true;
+}

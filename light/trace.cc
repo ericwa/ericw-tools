@@ -95,6 +95,7 @@ typedef struct faceinfo_s {
     plane_t plane;
     
     const char *texturename;
+    const bsp2_dface_t *face;
 } faceinfo_t;
 
 static tnode_t *tnodes;
@@ -187,6 +188,7 @@ static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
 static void
 MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
+    info->face = face;
     info->numedges = face->numedges;
     info->edgeplanes = (plane_t *) calloc(face->numedges, sizeof(plane_t));
     
@@ -337,16 +339,7 @@ SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
 static inline qboolean
 TestHitFace(const faceinfo_t *fi, const vec3_t point)
 {
-    for (int i=0; i<fi->numedges; i++)
-    {
-        /* faces toward the center of the face */
-        const plane_t *edgeplane = &fi->edgeplanes[i];
-        
-        vec_t dist = DotProduct(point, edgeplane->normal) - edgeplane->dist;
-        if (dist < 0)
-            return false;
-    }
-    return true;
+    return EdgePlanes_PointInside(fi->face, fi->edgeplanes, point);
 }
 
 static inline bsp2_dface_t *

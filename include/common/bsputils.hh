@@ -37,5 +37,6 @@ const dmodel_t *BSP_DModelForModelString(const bsp2_t *bsp, const std::string &s
 vec_t Plane_Dist(const vec3_t point, const dplane_t *plane);
 bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
 void Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out);
+bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point);
 
 #endif /* __COMMON_BSPUTILS_HH__ */
