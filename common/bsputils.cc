@@ -70,6 +70,22 @@ Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
     return res;
 }
 
+//FIXME: Any reason to prefer this implementation vs the above one?
+#if 0
+static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *plane)
+{
+    const dplane_t *dplane = &bsp->dplanes[face->planenum];
+    
+    if (face->side) {
+        VectorSubtract(vec3_origin, dplane->normal, plane->normal);
+        plane->dist = -dplane->dist;
+    } else {
+        VectorCopy(dplane->normal, plane->normal);
+        plane->dist = dplane->dist;
+    }
+}
+#endif
+
 const miptex_t *
 Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
@@ -180,4 +196,24 @@ static bool Light_PointInSolid_r(const bsp2_t *bsp, int nodenum, const vec3_t po
 bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
 {
     return Light_PointInSolid_r(bsp, bsp->dmodels[0].headnode[0], point);
+}
+
+void
+Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out)
+{
+    const plane_t faceplane = Face_Plane(bsp, face);
+    for (int i=0; i<face->numedges; i++)
+    {
+        plane_t *dest = &out[i];
+        
+        const vec_t *v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const vec_t *v1 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
+        
+        vec3_t edgevec;
+        VectorSubtract(v1, v0, edgevec);
+        VectorNormalize(edgevec);
+        
+        CrossProduct(edgevec, faceplane.normal, dest->normal);
+        dest->dist = DotProduct(dest->normal, v0);
+    }
 }

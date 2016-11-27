@@ -175,19 +175,6 @@ MakeTnodes_r(int nodenum, const bsp2_t *bsp)
     }
 }
 
-static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *plane)
-{
-    const dplane_t *dplane = &bsp->dplanes[face->planenum];
-    
-    if (face->side) {
-        VectorSubtract(vec3_origin, dplane->normal, plane->normal);
-        plane->dist = -dplane->dist;
-    } else {
-        VectorCopy(dplane->normal, plane->normal);
-        plane->dist = dplane->dist;
-    }
-}
-
 static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
 {
     vec3_t delta;
@@ -197,34 +184,13 @@ static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
     return deltaLengthSquared > info->radiusSquared;
 }
 
-void
-Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out)
-{
-    plane_t faceplane;
-    GetFaceNormal(bsp, face, &faceplane);
-    for (int i=0; i<face->numedges; i++)
-    {
-        plane_t *dest = &out[i];
-        
-        const vec_t *v0 = GetSurfaceVertexPoint(bsp, face, i);
-        const vec_t *v1 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
-        
-        vec3_t edgevec;
-        VectorSubtract(v1, v0, edgevec);
-        VectorNormalize(edgevec);
-        
-        CrossProduct(edgevec, faceplane.normal, dest->normal);
-        dest->dist = DotProduct(dest->normal, v0);
-    }
-}
-
 static void
 MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
     info->numedges = face->numedges;
     info->edgeplanes = (plane_t *) calloc(face->numedges, sizeof(plane_t));
     
-    GetFaceNormal(bsp, face, &info->plane);
+    info->plane = Face_Plane(bsp, face);
     
     // make edge planes
     Face_MakeInwardFacingEdgePlanes(bsp, face, info->edgeplanes);
