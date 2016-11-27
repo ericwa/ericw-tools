@@ -494,8 +494,7 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
     // not in any triangle. among the edges this point is _behind_,
     // search for the one that the point is least past the endpoints of the edge
     {
-        plane_t *edgeplanes = (plane_t *)calloc(face->numedges, sizeof(plane_t));
-        Face_MakeInwardFacingEdgePlanes(bsp, face, edgeplanes);
+        plane_t *edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
         
         int bestplane = -1;
         vec_t bestdist = VECT_MAX;

@@ -190,12 +190,9 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
     info->face = face;
     info->numedges = face->numedges;
-    info->edgeplanes = (plane_t *) calloc(face->numedges, sizeof(plane_t));
+    info->edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
     
     info->plane = Face_Plane(bsp, face);
-    
-    // make edge planes
-    Face_MakeInwardFacingEdgePlanes(bsp, face, info->edgeplanes);
     
     // make sphere that bounds the face
     vec3_t centroid = {0,0,0};

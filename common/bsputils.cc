@@ -198,9 +198,11 @@ bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
     return Light_PointInSolid_r(bsp, bsp->dmodels[0].headnode[0], point);
 }
 
-void
-Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out)
+plane_t *
+Face_AllocInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
+    plane_t *out = (plane_t *)calloc(face->numedges, sizeof(plane_t));
+    
     const plane_t faceplane = Face_Plane(bsp, face);
     for (int i=0; i<face->numedges; i++)
     {
@@ -216,6 +218,8 @@ Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, pla
         CrossProduct(edgevec, faceplane.normal, dest->normal);
         dest->dist = DotProduct(dest->normal, v0);
     }
+    
+    return out;
 }
 
 bool
