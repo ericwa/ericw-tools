@@ -2279,61 +2279,91 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         Q_assert(Q_strcasecmp(texname, "trigger") != 0);
     }
     
-    int width = (lightsurf->texsize[0] + 1) * oversample;
+    const int actual_width = lightsurf->texsize[0] + 1;
+    const int actual_height = lightsurf->texsize[1] + 1;
+    
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
-        for (int t = 0; t <= lightsurf->texsize[1]; t++) {
-            for (int s = 0; s <= lightsurf->texsize[0]; s++) {
+        
+        // allocate new float buffers for the output colors and directions
+        // these are the actual output width*height, without oversampling.
+        vec3_t *output_color = static_cast<vec3_t *>(calloc(size, sizeof(vec3_t)));
+        vec3_t *output_dir = static_cast<vec3_t *>(calloc(size, sizeof(vec3_t)));
+        
+        for (int t = 0; t < actual_height; t++) {
+            for (int s = 0; s < actual_width; s++) {
 
                 /* Take the average of any oversampling */
                 vec3_t color, direction;
 
                 VectorCopy(vec3_origin, color);
                 VectorCopy(vec3_origin, direction);
+                
                 for (int i = 0; i < oversample; i++) {
                     for (int j = 0; j < oversample; j++) {
                         const int col = (s*oversample) + j;
                         const int row = (t*oversample) + i;
-
-                        const lightsample_t *sample = sorted.at(mapnum)->samples + (row * width) + col;
+                        const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
+                        const int sample_index = (row * oversampled_width) + col;
+                        
+                        const lightsample_t *sample = &sorted.at(mapnum)->samples[sample_index];
 
                         VectorAdd(color, sample->color, color);
                         VectorAdd(direction, sample->direction, direction);
                     }
                 }
+                
                 VectorScale(color, 1.0 / oversample / oversample, color);
+                
+                // save in the temporary float buffers
+                const int actual_sampleindex = (t * actual_width) + s;
+                VectorCopy(color, output_color[actual_sampleindex]);
+                VectorCopy(direction, output_dir[actual_sampleindex]);
+            }
+        }
+        
+        // copy from the float buffers to byte buffers in .bsp / .lit / .lux
+        
+        for (int t = 0; t < actual_height; t++) {
+            for (int s = 0; s < actual_width; s++) {
+                const int sampleindex = (t * actual_width) + s;
+                const vec_t *color = static_cast<const vec_t *>(output_color[sampleindex]);
+                const vec_t *direction = static_cast<const vec_t *>(output_dir[sampleindex]);
                 
                 *lit++ = color[0];
                 *lit++ = color[1];
                 *lit++ = color[2];
-
+                
                 /* Average the color to get the value to write to the
-                   .bsp lightmap. this avoids issues with some engines
-                   that require the lit and internal lightmap to have the same
-                   intensity. (MarkV, some QW engines)
+                 .bsp lightmap. this avoids issues with some engines
+                 that require the lit and internal lightmap to have the same
+                 intensity. (MarkV, some QW engines)
                  */
                 vec_t light = LightSample_Brightness(color);
                 if (light < 0) light = 0;
                 if (light > 255) light = 255;
                 *out++ = light;
-
+                
                 if (lux) {
                     vec3_t temp;
                     int v;
                     temp[0] = DotProduct(direction, lightsurf->snormal);
                     temp[1] = DotProduct(direction, lightsurf->tnormal);
                     temp[2] = DotProduct(direction, lightsurf->plane.normal);
-            
+                    
                     if (!temp[0] && !temp[1] && !temp[2])
-                            VectorSet(temp, 0, 0, 1);
+                        VectorSet(temp, 0, 0, 1);
                     else
-                            VectorNormalize(temp);
-
+                        VectorNormalize(temp);
+                    
                     v = (temp[0]+1)*128;  *lux++ = (v>255)?255:v;
                     v = (temp[1]+1)*128;  *lux++ = (v>255)?255:v;
                     v = (temp[2]+1)*128;  *lux++ = (v>255)?255:v;
                 }
             }
         }
+        
+        free(output_color);
+        free(output_dir);
     }
 }
 
