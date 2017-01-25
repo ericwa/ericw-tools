@@ -811,7 +811,14 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
     for (int i=0; i<mapbrush->numfaces; i++)
         hullbrush.faces[i] = mapbrush->face(i);
 
-    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+    if (hullnum == 0) {
+        facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+    } else {
+        // for clipping hulls, don't apply rotation offset yet..
+        // it will be applied below
+        facelist = CreateBrushFaces(&hullbrush, vec3_origin, hullnum);
+    }
+    
     if (!facelist) {
         Message(msgWarning, warnNoBrushFaces);
         return NULL;
