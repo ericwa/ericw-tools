@@ -151,5 +151,6 @@ const char *rgszWarnings[cWarnings] = {
     "Healing degenerate edge (%f) at (%.3f %.3f %.3f)",
     "No target for rotation entity \"%s\"",
     "line %d: Face with degenerate QuArK-style texture axes",
-    "Mixed face contents (%s, %s) near (%.2f %.2f %.2f)"
+    "Mixed face contents (%s, %s) near (%.2f %.2f %.2f)",
+    "Ignoring origin brush in worldspawn"
 };

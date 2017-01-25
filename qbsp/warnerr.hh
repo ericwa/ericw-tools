@@ -51,6 +51,7 @@ enum {
     warnNoRotateTarget,
     warnDegenerateQuArKTX,
     warnMixedFaceContents,
+    warnOriginBrushInWorld,
     cWarnings
 };
 

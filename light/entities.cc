@@ -1300,6 +1300,8 @@ void
 EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec)
 {
     std::string value = EntDict_StringForKey(ent, key);
+    
+    VectorSet(vec, 0, 0, 0);
     sscanf(value.c_str(), "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
