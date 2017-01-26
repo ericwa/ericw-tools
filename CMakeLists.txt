@@ -11,7 +11,8 @@ execute_process(
 )
 
 include_directories(
-	"${CMAKE_SOURCE_DIR}/include")
+	"${CMAKE_SOURCE_DIR}/include"
+	"${CMAKE_SOURCE_DIR}/3rdparty/glm")
 
 set(COMMON_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
