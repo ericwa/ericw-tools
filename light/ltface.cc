@@ -1081,6 +1081,13 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
     }
 }
 
+static float fraction(float min, float val, float max) {
+    if (val >= max) return 1.0;
+    if (val <= min) return 0.0;
+    
+    return (val - min) / (max - min);
+}
+
 /*
  * ============
  * Dirt_GetScaleFactor
@@ -1089,7 +1096,7 @@ Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
  * ============
  */
 static inline vec_t
-Dirt_GetScaleFactor(const globalconfig_t &cfg, vec_t occlusion, const light_t *entity, const lightsurf_t *surf)
+Dirt_GetScaleFactor(const globalconfig_t &cfg, vec_t occlusion, const light_t *entity, const vec_t entitydist, const lightsurf_t *surf)
 {
     vec_t light_dirtgain = cfg.dirtGain.floatValue();
     vec_t light_dirtscale = cfg.dirtScale.floatValue();
@@ -1145,6 +1152,26 @@ Dirt_GetScaleFactor(const globalconfig_t &cfg, vec_t occlusion, const light_t *e
         outDirt = 1.0f;
     }
 
+    /* lerp based on distance to light */
+    if (entity) {
+        // From 0 to _dirt_off_radius units, no dirt.
+        // From _dirt_off_radius to _dirt_on_radius, the dirt linearly ramps from 0 to full, and after _dirt_on_radius, it's full dirt.
+        
+        if (entity->dirt_on_radius.isChanged()
+            && entity->dirt_off_radius.isChanged()) {
+            
+            const float onRadius = entity->dirt_on_radius.floatValue();
+            const float offRadius = entity->dirt_off_radius.floatValue();
+            
+            if (entitydist < offRadius) {
+                outDirt = 0.0;
+            } else if (entitydist >= offRadius && entitydist < onRadius) {
+                const float frac = fraction(offRadius, entitydist, onRadius);
+                outDirt = frac * outDirt;
+            }
+        }
+    }
+    
     /* return to sender */
     return 1.0f - outDirt;
 }
@@ -1293,7 +1320,7 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         
         GetLightContrib(cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         
-        const float dirt = Dirt_GetScaleFactor(cfg, occlusion, &entity, /* FIXME: pass */ nullptr);
+        const float dirt = Dirt_GetScaleFactor(cfg, occlusion, &entity, surfpointToLightDist, /* FIXME: pass */ nullptr);
         VectorScale(color, dirt, color);
         
         // NOTE: Skip negative lights, which would make no sense to bounce!
@@ -1332,7 +1359,7 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         
         float dirt = 1;
         if (sun.dirt) {
-            dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, /* FIXME: pass */ nullptr);
+            dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, 0.0, /* FIXME: pass */ nullptr);
         }
         
         VectorMA(colorout, dirt * cosangle * sun.sunlight / 255.0f, sun.sunlight_color, colorout);
@@ -1392,7 +1419,7 @@ LightFace_Entity(const bsp2_t *bsp,
         
         GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
  
-        const float occlusion = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], entity, lightsurf);
+        const float occlusion = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], entity, surfpointToLightDist, lightsurf);
         VectorScale(color, occlusion, color);
         
         /* Quick distance check first */
@@ -1481,7 +1508,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         float value = angle * sun->sunlight;
         if (sun->dirt) {
-            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, lightsurf);
+            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
         
         vec3_t color, normalcontrib;
@@ -1548,7 +1575,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         
         vec_t value = light;
         if (cfg.minlightDirt.boolValue()) {
-            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, lightsurf);
+            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
         if (cfg.addminlight.boolValue()) {
             Light_Add(sample, value, color, vec3_origin);
@@ -1608,7 +1635,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
             vec_t value = entity.light.floatValue();
             lightsample_t *sample = &lightmap->samples[i];
             
-            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], &entity, lightsurf);
+            value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], &entity, 0.0 /* TODO: pass distance */, lightsurf);
             if (cfg.addminlight.boolValue()) {
                 Light_Add(sample, value, *entity.color.vec3Value(), vec3_origin);
             } else {
@@ -1640,7 +1667,7 @@ LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     /* Overwrite each point with the dirt value for that sample... */
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
-        const float light = 255 * Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, lightsurf);
+        const float light = 255 * Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         VectorSet(sample->color, light, light, light);
     }
 
@@ -1832,7 +1859,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
              * Except, not in bouncedebug mode.
              */
             if (debugmode != debugmode_bounce) {
-                const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, lightsurf);
+                const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
                 VectorScale(indirect, dirtscale, indirect);
             }
             
