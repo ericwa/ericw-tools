@@ -71,7 +71,7 @@ public:
     
 public:
     lockable_vec_t light, atten, formula, spotangle, spotangle2, style, anglescale;
-    lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples, projfov;
+    lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples, projfov, bouncescale;
     lockable_bool_t bleed;
     lockable_vec3_t origin, color, mangle, projangle;
     lockable_string_t project_texture;
@@ -105,6 +105,7 @@ public:
         deviance { "deviance", 0 },
         samples { "samples", 16 },
         projfov { "project_fov", 90 },
+        bouncescale { "bouncescale", 1.0f },
         bleed { "bleed", false },
         origin { "origin", 0, 0, 0 },
         color { "color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
@@ -122,7 +123,7 @@ public:
     settingsdict_t settings() {
         return {{
             &light, &atten, &formula, &spotangle, &spotangle2, &style, &bleed, &anglescale,
-            &dirtscale, &dirtgain, &dirt, &deviance, &samples, &projfov,
+            &dirtscale, &dirtgain, &dirt, &deviance, &samples, &projfov, &bouncescale,
             &origin, &color, &mangle, &projangle, &project_texture
         }};
     }

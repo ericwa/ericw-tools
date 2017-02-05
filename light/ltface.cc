@@ -1295,6 +1295,7 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         
         const float dirt = Dirt_GetScaleFactor(cfg, occlusion, &entity, /* FIXME: pass */ nullptr);
         VectorScale(color, dirt, color);
+        VectorScale(color, entity.bouncescale.floatValue(), color);
         
         // NOTE: Skip negative lights, which would make no sense to bounce!
         if (LightSample_Brightness(color) <= fadegate) {
