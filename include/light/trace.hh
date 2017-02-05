@@ -42,7 +42,6 @@ enum class hittype_t : uint8_t {
 
 const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
 int Light_PointContents( const bsp2_t *bsp, const vec3_t point );
-void Face_MakeInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *out);
 int SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
 
 /*

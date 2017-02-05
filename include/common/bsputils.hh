@@ -22,6 +22,7 @@
 
 #include <common/bspfile.hh>
 #include <common/mathlib.hh>
+#include <string>
 
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f);
 int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
@@ -32,5 +33,10 @@ const char *Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
 const float *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
 int TextureName_Contents(const char *texname);
 int Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face);
+const dmodel_t *BSP_DModelForModelString(const bsp2_t *bsp, const std::string &submodel_str);
+vec_t Plane_Dist(const vec3_t point, const dplane_t *plane);
+bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
+plane_t *Face_AllocInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face);
+bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point);
 
 #endif /* __COMMON_BSPUTILS_HH__ */

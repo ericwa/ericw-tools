@@ -331,13 +331,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         }
 
         /* Set up the offset for rotate_* entities */
-        if (EntDict_StringForKey(*entdict, "classname").find("rotate_") == 0) {
-            EntDict_VectorForKey(*entdict, "origin", info->offset);
-        } else {
-            Q_assert(info->offset[0] == 0);
-            Q_assert(info->offset[1] == 0);
-            Q_assert(info->offset[2] == 0);
-        }
+        EntDict_VectorForKey(*entdict, "origin", info->offset);
     }
 
     Q_assert(modelinfo.size() == bsp->nummodels);

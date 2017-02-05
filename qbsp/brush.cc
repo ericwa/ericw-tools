@@ -764,6 +764,8 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
     texname = map.miptex.at(texinfo.miptex).c_str();
 
+    if (!Q_strcasecmp(texname, "origin"))
+        return CONTENTS_ORIGIN;
     if (!Q_strcasecmp(texname, "hint") || !Q_strcasecmp(texname, "hintskip"))
         return CONTENTS_HINT;
     if (!Q_strcasecmp(texname, "clip"))
@@ -809,7 +811,14 @@ LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
     for (int i=0; i<mapbrush->numfaces; i++)
         hullbrush.faces[i] = mapbrush->face(i);
 
-    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+    if (hullnum == 0) {
+        facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+    } else {
+        // for clipping hulls, don't apply rotation offset yet..
+        // it will be applied below
+        facelist = CreateBrushFaces(&hullbrush, vec3_origin, hullnum);
+    }
+    
     if (!facelist) {
         Message(msgWarning, warnNoBrushFaces);
         return NULL;
@@ -922,11 +931,43 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     nonsolid = dst->brushes;
     classname = ValueForKey(src, "classname");
 
-    /* Hipnotic rotation */
+    /* Origin brush support */
+    bool usesOriginBrush = false;
     VectorCopy(vec3_origin, rotate_offset);
-    if (!strncmp(classname, "rotate_", 7)) {
-        FixRotateOrigin(dst);
-        GetVectorForKey(dst, "origin", rotate_offset);
+    
+    for (int i = 0; i < src->nummapbrushes; i++) {
+        const mapbrush_t *mapbrush = &src->mapbrush(i);
+        const int contents = Brush_GetContents(mapbrush);
+        if (contents == CONTENTS_ORIGIN) {
+            if (dst == pWorldEnt()) {
+                Message(msgWarning, warnOriginBrushInWorld);
+                continue;
+            }
+            
+            brush_t *brush = LoadBrush(mapbrush, vec3_origin, 0);
+            if (brush) {
+                vec3_t origin;
+                VectorAdd(brush->mins, brush->maxs, origin);
+                VectorScale(origin, 0.5, origin);
+                
+                char value[1024];
+                q_snprintf(value, sizeof(value), "%.2f %.2f %.2f", origin[0], origin[1], origin[2]);
+                SetKeyValue(dst, "origin", value);
+                
+                VectorCopy(origin, rotate_offset);
+                usesOriginBrush = true;
+                
+                FreeMem(brush, BRUSH, 1);
+            }
+        }
+    }
+    
+    /* Hipnotic rotation */
+    if (!usesOriginBrush) {
+        if (!strncmp(classname, "rotate_", 7)) {
+            FixRotateOrigin(dst);
+            GetVectorForKey(dst, "origin", rotate_offset);
+        }
     }
 
     /* If the source entity is func_detail, set the content flag */
@@ -947,6 +988,10 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         mapbrush = &src->mapbrush(i);
         contents = Brush_GetContents(mapbrush);
 
+        /* "origin" brushes always discarded */
+        if (contents == CONTENTS_ORIGIN)
+            continue;
+        
         /*
          * "clip" brushes don't show up in the draw hull, but we still want to
          * include them in the model bounds so collision detection works

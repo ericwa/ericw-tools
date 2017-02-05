@@ -70,6 +70,22 @@ Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
     return res;
 }
 
+//FIXME: Any reason to prefer this implementation vs the above one?
+#if 0
+static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *plane)
+{
+    const dplane_t *dplane = &bsp->dplanes[face->planenum];
+    
+    if (face->side) {
+        VectorSubtract(vec3_origin, dplane->normal, plane->normal);
+        plane->dist = -dplane->dist;
+    } else {
+        VectorCopy(dplane->normal, plane->normal);
+        plane->dist = dplane->dist;
+    }
+}
+#endif
+
 const miptex_t *
 Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
@@ -125,4 +141,95 @@ Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
     const char *texname = Face_TextureName(bsp, face);
     return TextureName_Contents(texname);
+}
+
+const dmodel_t *BSP_DModelForModelString(const bsp2_t *bsp, const std::string &submodel_str)
+{
+    int submodel = -1;
+    if (1 == sscanf(submodel_str.c_str(), "*%d", &submodel)) {
+        
+        if (submodel < 0 || submodel >= bsp->nummodels) {
+            return nullptr;
+        }
+        
+        return &bsp->dmodels[submodel];
+        
+    }
+    return nullptr;
+}
+
+vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
+{
+    switch (plane->type)
+    {
+        case PLANE_X: return point[0] - plane->dist;
+        case PLANE_Y: return point[1] - plane->dist;
+        case PLANE_Z: return point[2] - plane->dist;
+        default: return DotProduct(point, plane->normal) - plane->dist;
+    }
+}
+
+static bool Light_PointInSolid_r(const bsp2_t *bsp, int nodenum, const vec3_t point )
+{
+    if (nodenum < 0) {
+        bsp2_dleaf_t *leaf = bsp->dleafs + (-1 - nodenum);
+        
+        return leaf->contents == CONTENTS_SOLID
+        || leaf->contents == CONTENTS_SKY;
+    }
+    
+    const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
+    vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
+    
+    if (dist > 0.1)
+        return Light_PointInSolid_r(bsp, node->children[0], point);
+    else if (dist < -0.1)
+        return Light_PointInSolid_r(bsp, node->children[1], point);
+    else {
+        // too close to the plane, check both sides
+        return Light_PointInSolid_r(bsp, node->children[0], point)
+        || Light_PointInSolid_r(bsp, node->children[1], point);
+    }
+}
+
+// only check hull 0 of model 0 (world)
+bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point )
+{
+    return Light_PointInSolid_r(bsp, bsp->dmodels[0].headnode[0], point);
+}
+
+plane_t *
+Face_AllocInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    plane_t *out = (plane_t *)calloc(face->numedges, sizeof(plane_t));
+    
+    const plane_t faceplane = Face_Plane(bsp, face);
+    for (int i=0; i<face->numedges; i++)
+    {
+        plane_t *dest = &out[i];
+        
+        const vec_t *v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const vec_t *v1 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
+        
+        vec3_t edgevec;
+        VectorSubtract(v1, v0, edgevec);
+        VectorNormalize(edgevec);
+        
+        CrossProduct(edgevec, faceplane.normal, dest->normal);
+        dest->dist = DotProduct(dest->normal, v0);
+    }
+    
+    return out;
+}
+
+bool
+EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point)
+{
+    for (int i=0; i<face->numedges; i++) {
+        vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
+        if (planedist < 0) {
+            return false;
+        }
+    }
+    return true;
 }

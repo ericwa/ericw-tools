@@ -108,6 +108,7 @@
 #define CONTENTS_SKY    -6
 #define CONTENTS_CLIP   -7      /* compiler internal use only */
 #define CONTENTS_HINT   -8      /* compiler internal use only */
+#define CONTENTS_ORIGIN -9      /* compiler internal use only */
 
 // Special contents flags for the compiler only
 #define CFLAGS_DETAIL   (1U << 0)

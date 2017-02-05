@@ -72,6 +72,7 @@ public:
 public:
     lockable_vec_t light, atten, formula, spotangle, spotangle2, style, anglescale;
     lockable_vec_t dirtscale, dirtgain, dirt, deviance, samples, projfov, bouncescale;
+    lockable_vec_t dirt_off_radius, dirt_on_radius;
     lockable_bool_t bleed;
     lockable_vec3_t origin, color, mangle, projangle;
     lockable_string_t project_texture;
@@ -106,6 +107,8 @@ public:
         samples { "samples", 16 },
         projfov { "project_fov", 90 },
         bouncescale { "bouncescale", 1.0f },
+        dirt_off_radius { "dirt_off_radius", 0.0f },
+        dirt_on_radius { "dirt_on_radius", 0.0f },
         bleed { "bleed", false },
         origin { "origin", 0, 0, 0 },
         color { "color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
@@ -124,6 +127,7 @@ public:
         return {{
             &light, &atten, &formula, &spotangle, &spotangle2, &style, &bleed, &anglescale,
             &dirtscale, &dirtgain, &dirt, &deviance, &samples, &projfov, &bouncescale,
+            &dirt_off_radius, &dirt_on_radius,
             &origin, &color, &mangle, &projangle, &project_texture
         }};
     }
@@ -174,10 +178,10 @@ bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
 
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
 
-bool EntDict_CheckNoEmptyValues(const entdict_t &entdict);
+bool EntDict_CheckNoEmptyValues(const bsp2_t *bsp, const entdict_t &entdict);
 
-bool EntDict_CheckTargetKeysMatched(const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
+bool EntDict_CheckTargetKeysMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
 
-bool EntDict_CheckTargetnameKeyMatched(const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
+bool EntDict_CheckTargetnameKeyMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
 
 #endif /* __LIGHT_ENTITIES_H__ */
