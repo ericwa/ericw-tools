@@ -412,7 +412,7 @@ const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
 bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2);
 const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face);
 const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face);
-const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
+const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
 const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
 const std::vector<bouncelight_t> &BounceLights();
 std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum);

@@ -290,7 +290,7 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
         const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
-        const vec_t *norm = GetSurfaceVertexNormal(bsp, face, i);
+        const glm::vec3 norm = GetSurfaceVertexNormal(bsp, face, i);
         logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: normal (%3.3f, %3.3f, %3.3f) :: edge %d\n",
                  i ? "          " : "    verts ", vert,
                  point[0], point[1], point[2],
@@ -466,13 +466,13 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
             // area test rejects the case when v1, v2, v3 are colinear
             if (TriangleArea(v1, v2, v3) >= 1) {
                 
-                v1 = GetSurfaceVertexNormal(bsp, face, 0);
-                v2 = GetSurfaceVertexNormal(bsp, face, j-1);
-                v3 = GetSurfaceVertexNormal(bsp, face, j);
-                VectorScale(v1, bary[0], norm);
-                VectorMA(norm, bary[1], v2, norm);
-                VectorMA(norm, bary[2], v3, norm);
-                VectorNormalize(norm);
+                const glm::vec3 v1 = GetSurfaceVertexNormal(bsp, face, 0);
+                const glm::vec3 v2 = GetSurfaceVertexNormal(bsp, face, j-1);
+                const glm::vec3 v3 = GetSurfaceVertexNormal(bsp, face, j);
+                
+                const glm::vec3 glmnorm = normalize((bary[0] * v1) + (bary[1] * v2) + (bary[2] * v3));
+                
+                VectorCopyFromGLM(glmnorm, norm);
                 return;
             }
         }
@@ -533,12 +533,11 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
             vec_t t = FractionOfLine(v1, v2, point);
             t = qmax(qmin(t, 1.0f), 0.0f);
             
-            v1 = GetSurfaceVertexNormal(bsp, face, bestplane);
-            v2 = GetSurfaceVertexNormal(bsp, face, (bestplane+1)%face->numedges);
+            const glm::vec3 v1 = GetSurfaceVertexNormal(bsp, face, bestplane);
+            const glm::vec3 v2 = GetSurfaceVertexNormal(bsp, face, (bestplane+1)%face->numedges);
             
-            VectorScale(v2, t, norm);
-            VectorMA(norm, 1-t, v1, norm);
-            VectorNormalize(norm);
+            const glm::vec3 glmnorm = normalize((v2 * t) + (1-t)*v1);
+            VectorCopyFromGLM(glmnorm, norm);
             
             free(edgeplanes);
             return;
@@ -561,7 +560,7 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
         {
             bestd = dist;
             bestv = v;
-            VectorCopy(GetSurfaceVertexNormal(bsp, face, i), norm);
+            VectorCopyFromGLM(GetSurfaceVertexNormal(bsp, face, i), norm);
         }
     }
     VectorNormalize(norm);

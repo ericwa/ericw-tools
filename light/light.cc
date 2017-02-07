@@ -45,7 +45,10 @@
 #include <mutex>
 #include <string>
 
+#include <glm/glm.hpp>
+
 using namespace std;
+using namespace glm;
 
 globalconfig_t cfg_static {};
 
@@ -342,12 +345,12 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
 
 /* return 0 if either vector is zero-length */
 static float
-AngleBetweenVectors(const vec3_t d1, const vec3_t d2)
+AngleBetweenVectors(const vec3 &d1, const vec3 &d2)
 {
-    float length_product = (VectorLength(d1)*VectorLength(d2));
+    float length_product = (length(d1)*length(d2));
     if (length_product == 0)
         return 0;
-    float cosangle = DotProduct(d1, d2)/length_product;
+    float cosangle = dot(d1, d2)/length_product;
     if (cosangle < -1) cosangle = -1;
     if (cosangle > 1) cosangle = 1;
     
@@ -357,24 +360,15 @@ AngleBetweenVectors(const vec3_t d1, const vec3_t d2)
 
 /* returns the angle between vectors p2->p1 and p2->p3 */
 static float
-AngleBetweenPoints(const vec3_t p1, const vec3_t p2, const vec3_t p3)
+AngleBetweenPoints(const vec3 &p1, const vec3 &p2, const vec3 &p3)
 {
-    vec3_t d1, d2;
-    VectorSubtract(p1, p2, d1);
-    VectorSubtract(p3, p2, d2);
+    const vec3 d1 = p1 - p2;
+    const vec3 d2 = p3 - p2;
     float result = AngleBetweenVectors(d1, d2);
     return result;
 }
 
-class vec3_struct_t {
-public:
-    vec3_t v;
-    vec3_struct_t() {
-        VectorSet(v, 0, 0, 0);
-    }
-};
-
-std::map<const bsp2_dface_t *, std::vector<vec3_struct_t>> vertex_normals;
+std::map<const bsp2_dface_t *, std::vector<vec3>> vertex_normals;
 std::set<int> interior_verts;
 map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
 map<int, vector<const bsp2_dface_t *>> vertsToFaces;
@@ -418,28 +412,28 @@ const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face)
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts.
  * v1, v2, v3 are global vertex indices */
 static void
-AddTriangleNormals(std::map<int, vec3_struct_t> &smoothed_normals, const vec_t *norm, const dvertex_t *verts, int v1, int v2, int v3)
+AddTriangleNormals(std::map<int, vec3> &smoothed_normals, const vec3 &norm, const bsp2_t *bsp, int v1, int v2, int v3)
 {
-    const vec_t *p1 = verts[v1].point;
-    const vec_t *p2 = verts[v2].point;
-    const vec_t *p3 = verts[v3].point;
+    const vec3 p1 = Vertex_GetPos_E(bsp, v1);
+    const vec3 p2 = Vertex_GetPos_E(bsp, v2);
+    const vec3 p3 = Vertex_GetPos_E(bsp, v3);
     float weight;
     
     weight = AngleBetweenPoints(p2, p1, p3);
-    VectorMA(smoothed_normals[v1].v, weight, norm, smoothed_normals[v1].v);
+    smoothed_normals[v1] = smoothed_normals[v1] + (weight * norm);
 
     weight = AngleBetweenPoints(p1, p2, p3);
-    VectorMA(smoothed_normals[v2].v, weight, norm, smoothed_normals[v2].v);
+    smoothed_normals[v2] = smoothed_normals[v2] + (weight * norm);
 
     weight = AngleBetweenPoints(p1, p3, p2);
-    VectorMA(smoothed_normals[v3].v, weight, norm, smoothed_normals[v3].v);
+    smoothed_normals[v3] = smoothed_normals[v3] + (weight * norm);
 }
 
 /* access the final phong-shaded vertex normal */
-const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
+const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
 {
     const auto &face_normals_vector = vertex_normals.at(f);
-    return face_normals_vector.at(vertindex).v;
+    return face_normals_vector.at(vertindex);
 }
 
 static bool
@@ -537,8 +531,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     for (int i = 0; i < bsp->numfaces; i++) {
         bsp2_dface_t *f = &bsp->dfaces[i];
         
-        vec3_t f_norm;
-        Face_Normal(bsp, f, f_norm);
+        const vec3 f_norm = Face_Normal_E(bsp, f);
         
         // any face normal within this many degrees can be smoothed with this face
         const int f_smoothangle = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
@@ -556,10 +549,9 @@ CalcualateVertexNormals(const bsp2_t *bsp)
                 if (!f2_smoothangle)
                     continue;
                 
-                vec3_t f2_norm;
-                Face_Normal(bsp, f2, f2_norm);
+                const vec3 f2_norm = Face_Normal_E(bsp, f2);
 
-                const vec_t cosangle = DotProduct(f_norm, f2_norm);
+                const vec_t cosangle = dot(f_norm, f2_norm);
                 const vec_t cosmaxangle = cos(DEG2RAD(qmin(f_smoothangle, f2_smoothangle)));
                 
                 // check the angle between the face normals
@@ -580,10 +572,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         }
         
         const auto &neighboursToSmooth = smoothFaces[f];
-        vec3_t f_norm;
-        
-        // get the face normal
-        Face_Normal(bsp, f, f_norm);
+        const vec3 f_norm = Face_Normal_E(bsp, f); // get the face normal
         
         // gather up f and neighboursToSmooth
         std::vector<const bsp2_dface_t *> fPlusNeighbours;
@@ -593,12 +582,11 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         }
         
         // global vertex index -> smoothed normal
-        std::map<int, vec3_struct_t> smoothedNormals;
+        std::map<int, vec3> smoothedNormals;
 
         // walk fPlusNeighbours
         for (auto f2 : fPlusNeighbours) {
-            vec3_t f2_norm;
-            Face_Normal(bsp, f2, f2_norm);
+            const vec3 f2_norm = Face_Normal_E(bsp, f2);
             
             /* now just walk around the surface as a triangle fan */
             int v1, v2, v3;
@@ -607,16 +595,16 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             for (int j = 2; j < f2->numedges; j++)
             {
                 v3 = Face_VertexAtIndex(bsp, f2, j);
-                AddTriangleNormals(smoothedNormals, f2_norm, bsp->dvertexes, v1, v2, v3);
+                AddTriangleNormals(smoothedNormals, f2_norm, bsp, v1, v2, v3);
                 v2 = v3;
             }
         }
         
-        // normalize vertex normals
+        // normalize vertex normals (NOTE: updates smoothedNormals map)
         for (auto &pair : smoothedNormals) {
             const int vertIndex = pair.first;
-            vec_t *vertNormal = pair.second.v;
-            if (0 == VectorNormalize(vertNormal)) {
+            const vec3 vertNormal = pair.second;
+            if (0 == length(vertNormal)) {
                 // this happens when there are colinear vertices, which give zero-area triangles,
                 // so there is no contribution to the normal of the triangle in the middle of the
                 // line. Not really an error, just set it to use the face normal.
@@ -627,14 +615,18 @@ CalcualateVertexNormals(const bsp2_t *bsp)
                          bsp->dvertexes[vertIndex].point[1],
                          bsp->dvertexes[vertIndex].point[2]);
 #endif
-                VectorCopy(f_norm, vertNormal);
+                pair.second = f_norm;
+            }
+            else
+            {
+                pair.second = normalize(vertNormal);
             }
         }
         
         // sanity check
         if (!neighboursToSmooth.size()) {
             for (auto vertIndexNormalPair : smoothedNormals) {
-                Q_assert(VectorCompare(vertIndexNormalPair.second.v, f_norm));
+                Q_assert(GLMVectorCompare(vertIndexNormalPair.second, f_norm));
             }
         }
         
@@ -797,7 +789,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
 // radiosity
 
 mutex radlights_lock;
-map<string, vec3_struct_t> texturecolors;
+map<string, vec3> texturecolors;
 std::vector<bouncelight_t> radlights;
 std::map<int, std::vector<bouncelight_t>> radlightsByFacenum; // duplicate of `radlights` but indexed by face
 
@@ -875,8 +867,8 @@ Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t colo
     const char *facename = Face_TextureName(bsp, face);
     
     if (texturecolors.find(facename) != texturecolors.end()) {
-        vec3_struct_t texcolor = texturecolors.at(facename);
-        VectorCopy(texcolor.v, color);
+        const vec3 texcolor = texturecolors.at(facename);
+        VectorCopyFromGLM(texcolor, color);
     } else {
         VectorSet(color, 127, 127, 127);
     }
@@ -1042,11 +1034,11 @@ MakeTextureColors (const bsp2_t *bsp)
         const miptex_t *miptex = (miptex_t *)(bsp->dtexdata.base + ofs);
         
         string name { miptex->name };
-        vec3_struct_t color;
-        Texture_AvgColor(bsp, miptex, color.v);
+        vec3_t color;
+        Texture_AvgColor(bsp, miptex, color);
         
 //        printf("%s has color %f %f %f\n", name.c_str(), color.v[0], color.v[1], color.v[2]);
-        texturecolors[name] = color;
+        texturecolors[name] = VectorToGLM(color);
     }
 }
 
@@ -1091,7 +1083,7 @@ ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcou
     for (int i=0; i<face->numedges; i++)
     {
         int vertnum = Face_VertexAtIndex(bsp, face, i);
-        const vec_t *normal = GetSurfaceVertexNormal(bsp, face, i);
+        const vec3 normal = GetSurfaceVertexNormal(bsp, face, i);
         const float *pos = bsp->dvertexes[vertnum].point;
         fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
         fprintf(f, "vn %.9g %.9g %.9g\n", normal[0], normal[1], normal[2]);

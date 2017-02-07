@@ -60,6 +60,15 @@ extern const vec3_t vec3_origin;
 
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2);
 
+static inline bool
+GLMVectorCompare(const glm::vec3 &v1, const glm::vec3 &v2)
+{
+    for (int i = 0; i < 3; i++)
+        if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
+            return false;
+    return true;
+}
+
 static inline vec_t
 DotProduct(const vec3_t x, const vec3_t y)
 {
@@ -112,6 +121,20 @@ VectorSet(vec3_t out, vec_t x, vec_t y, vec_t z)
     out[0] = x;
     out[1] = y;
     out[2] = z;
+}
+
+static inline void
+VectorCopyFromGLM(const glm::vec3 &in, vec3_t out)
+{
+    out[0] = in.x;
+    out[1] = in.y;
+    out[2] = in.z;
+}
+
+static inline glm::vec3
+VectorToGLM(const vec3_t in)
+{
+    return glm::vec3(in[0], in[1], in[2]);
 }
 
 static inline vec_t
