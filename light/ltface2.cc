@@ -82,11 +82,6 @@ private:
     
 public:
     faceextents_t() = default;
-    faceextents_t(const faceextents_t &) = default;
-    faceextents_t(faceextents_t &&) = default;
-    faceextents_t& operator=(const faceextents_t &) = default;
-    faceextents_t& operator=(faceextents_t &&) = default;
-    ~faceextents_t() = default;
     
     faceextents_t(const bsp2_dface_t *face, const bsp2_t *bsp, float lmscale)
     : m_lightmapscale(lmscale)
