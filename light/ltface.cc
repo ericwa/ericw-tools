@@ -19,6 +19,7 @@
 
 #include <light/light.hh>
 #include <light/phong.hh>
+#include <light/bounce.hh>
 #include <light/entities.hh>
 #include <light/trace.hh>
 #include <light/ltface.hh>

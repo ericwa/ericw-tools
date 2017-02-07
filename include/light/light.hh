@@ -177,19 +177,6 @@ typedef enum {
 extern debugmode_t debugmode;
 extern bool verbose_log;
 
-/* bounce lights */
-
-typedef struct {
-    vec3_t pos;
-    vec3_t color;
-    vec3_t surfnormal;
-    vec_t area;
-    
-    /* estimated visible AABB culling */
-    vec3_t mins;
-    vec3_t maxs;
-} bouncelight_t;
-
 extern byte thepalette[768];
     
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
@@ -410,8 +397,6 @@ void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
 const modelinfo_t *ModelInfoForModel(const bsp2_t *bsp, int modelnum);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
-const std::vector<bouncelight_t> &BounceLights();
-std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum);
 void Palette_GetColor(int i, vec3_t samplecolor);
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
 int light_main(int argc, const char **argv);
