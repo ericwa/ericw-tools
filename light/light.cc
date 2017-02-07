@@ -20,10 +20,13 @@
 #include <cstdint>
 #include <cassert>
 #include <cstdio>
+#include <iostream>
 
 #include <light/light.hh>
+#include <light/light2.hh>
 #include <light/entities.hh>
 #include <light/ltface.hh>
+#include <light/ltface2.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
@@ -375,6 +378,42 @@ std::map<const bsp2_dface_t *, std::vector<vec3_struct_t>> vertex_normals;
 std::set<int> interior_verts;
 map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
 map<int, vector<const bsp2_dface_t *>> vertsToFaces;
+map<int, vector<const bsp2_dface_t *>> planesToFaces;
+
+// Uses `smoothFaces` static var
+bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2)
+{
+    const auto &facesIt = smoothFaces.find(f1);
+    if (facesIt == smoothFaces.end())
+        return false;
+    
+    const set<const bsp2_dface_t *> &faceSet = facesIt->second;
+    if (faceSet.find(f2) == faceSet.end())
+        return false;
+    
+    return true;
+}
+
+const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face) {
+    static std::set<const bsp2_dface_t *> empty;
+    const auto it = smoothFaces.find(face);
+    
+    if (it == smoothFaces.end())
+        return empty;
+    
+    return it->second;
+}
+
+const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face) {
+    static std::vector<const bsp2_dface_t *> empty;
+    const auto it = planesToFaces.find(face->planenum);
+    
+    if (it == planesToFaces.end())
+        return empty;
+    
+    return it->second;
+}
+
 
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts.
  * v1, v2, v3 are global vertex indices */
@@ -468,6 +507,12 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             extended_texinfo_flags[f->texinfo] &= ~(TEX_PHONG_ANGLE_MASK);
             extended_texinfo_flags[f->texinfo] |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
         }
+    }
+    
+    // build "plane -> faces" map
+    for (int i = 0; i < bsp->numfaces; i++) {
+        const bsp2_dface_t *f = &bsp->dfaces[i];
+        planesToFaces[f->planenum].push_back(f);
     }
     
     // build "vert index -> faces" map
@@ -673,7 +718,15 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     /* ericw -- alloc memory */
     ltface_ctxs = (struct ltface_ctx *)calloc(bsp->numfaces, sizeof(struct ltface_ctx));
     
+#if 0
+    lightbatchthread_info_t info;
+    info.all_batches = MakeLightingBatches(bsp);
+    info.all_contribFaces = MakeContributingFaces(bsp);
+    info.bsp = bsp;
+    RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
+#else
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
+#endif
 
     logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;

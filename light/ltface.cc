@@ -401,18 +401,6 @@ WarnBadMidpoint(const vec3_t point)
 #endif
 }
 
-static vec_t
-TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
-{
-    vec3_t edge0, edge1, cross;
-    VectorSubtract(v2, v0, edge0);
-    VectorSubtract(v1, v0, edge1);
-    CrossProduct(edge0, edge1, cross);
-    
-    return VectorLength(cross) * 0.5;
-}
-
-
 static void CalcBarycentric(const vec_t *p, const vec_t *a, const vec_t *b, const vec_t *c, vec_t *res)
 {
     vec3_t v0,v1,v2;

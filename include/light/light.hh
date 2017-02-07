@@ -33,10 +33,15 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include <cassert>
 #include <limits>
 #include <sstream>
+
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
@@ -47,6 +52,10 @@ typedef struct {
 } lightsample_t;
 
 static inline float LightSample_Brightness(const vec3_t color) {
+    return ((color[0] + color[1] + color[2]) / 3.0);
+}
+
+static inline float LightSample_Brightness(const glm::vec3 color) {
     return ((color[0] + color[1] + color[2]) / 3.0);
 }
 
@@ -400,6 +409,9 @@ void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
+bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2);
+const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face);
+const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face);
 const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
 const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
 const std::vector<bouncelight_t> &BounceLights();

@@ -23,6 +23,10 @@
 #include <float.h>
 #include <math.h>
 #include <common/cmdlib.hh>
+#include <vector>
+
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 
 #ifdef DOUBLEVEC_T
 #define vec_t double
@@ -50,6 +54,9 @@ typedef struct {
 extern const vec3_t vec3_origin;
 
 #define EQUAL_EPSILON 0.001
+
+#define ZERO_TRI_AREA_EPSILON 0.01f
+#define POINT_EQUAL_EPSILON 0.01f
 
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2);
 
@@ -190,5 +197,95 @@ void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out);
 void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size);
+
+template <class V>
+class aabb {
+private:
+    V m_mins, m_maxs;
+    
+public:
+    aabb() : m_mins(FLT_MAX), m_maxs(-FLT_MAX) {}
+    aabb(const V &mins, const V &maxs) : m_mins(mins), m_maxs(maxs) {}
+    aabb(const aabb<V> &other) : m_mins(other.m_mins), m_maxs(other.m_maxs) {}
+    
+    int length() const { return m_mins.length(); }
+    
+    bool disjoint(const aabb<V> &other) const {
+        for (int i=0; i<length(); i++) {
+            if (m_maxs[i] < other.m_mins[i]) return true;
+            if (m_mins[i] > other.m_maxs[i]) return true;
+        }
+        return false;
+    }
+    
+    bool contains(const V &p) const {
+        for (int i=0; i<length(); i++) {
+            if (!(p[i] >= m_mins[i] && p[i] <= m_maxs[i])) return false;
+        }
+        return true;
+    }
+    
+    aabb<V> expand(const V &pt) const {
+        V mins, maxs;
+        for (int i=0; i<length(); i++) {
+            mins[i] = qmin(m_mins[i], pt[i]);
+            maxs[i] = qmax(m_maxs[i], pt[i]);
+        }
+        return aabb<V>(mins, maxs);
+    }
+    
+    V size() const {
+        V result;
+        for (int i=0; i<length(); i++) {
+            result[i] = m_maxs[i] - m_mins[i];
+        }
+        return result;
+    }
+    
+    aabb<V> grow(const V &size) const {
+        V mins = m_mins;
+        V maxs = m_maxs;
+        for (int i=0; i<length(); i++) {
+            mins[i] -= size[i];
+            maxs[i] += size[i];
+        }
+        return aabb<V>(mins, maxs);
+    }
+};
+
+using aabb3 = aabb<glm::vec3>;
+using aabb2 = aabb<glm::vec2>;
+
+/// abc - clockwise ordered triangle
+/// p - point to get the barycentric coords of
+glm::vec2 Barycentric_FromPoint(const glm::vec3 &p, const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c);
+glm::vec2 Barycentric_Random(const float r1, const float r2);
+
+/// Evaluates the given barycentric coord for the given triangle
+glm::vec3 Barycentric_ToPoint(const glm::vec2 &bary,
+                              const glm::vec3 &a,
+                              const glm::vec3 &b,
+                              const glm::vec3 &c);
+
+vec_t TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2);
+
+// noramlizes the given pdf so it sums to 1, then converts to a cdf
+std::vector<float> MakeCDF(const std::vector<float> &pdf);
+
+int SampleCDF(const std::vector<float> &cdf, float sample);
+
+// filtering
+
+// width (height) are the filter "radius" (not "diameter")
+float Filter_Gaussian(float width, float height, float x, float y);
+
+// glm geometry
+
+glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);
+std::vector<glm::vec4> GLM_MakeInwardFacingEdgePlanes(std::vector<glm::vec3> points);
+bool GLM_EdgePlanes_PointInside(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
+float GLM_EdgePlanes_PointInsideDist(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
+float GLM_TriangleArea(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
+float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point);
 
 #endif /* __COMMON_MATHLIB_H__ */

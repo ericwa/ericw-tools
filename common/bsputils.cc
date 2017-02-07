@@ -20,6 +20,8 @@
 #include <common/bsputils.hh>
 #include <assert.h>
 
+#include <glm/glm.hpp>
+
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     return f - bsp->dfaces;
@@ -38,7 +40,7 @@ int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
     return bsp->dedges[edge].v[0];
 }
 
-static void
+void
 Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
 {
     Q_assert(num >= 0 && num < bsp->numvertexes);
@@ -46,6 +48,12 @@ Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
     
     for (int i=0; i<3; i++)
         out[i] = v->point[i];
+}
+
+void Face_PointAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v, vec3_t out)
+{
+    const int vertnum = Face_VertexAtIndex(bsp, f, v);
+    Vertex_GetPos(bsp, vertnum, out);
 }
 
 void
@@ -86,16 +94,25 @@ static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *
 }
 #endif
 
+const texinfo_t *Face_Texinfo(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    if (face->texinfo < 0 || face->texinfo >= bsp->numtexinfo)
+        return nullptr;
+
+    return &bsp->texinfo[face->texinfo];
+}
+
 const miptex_t *
 Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
     if (!bsp->texdatasize)
-        return NULL;
+        return nullptr;
     
-    if (face->texinfo < 0)
-        return NULL;
+    const texinfo_t *texinfo = Face_Texinfo(bsp, face);
+    if (texinfo == nullptr)
+        return nullptr;
     
-    int texnum = bsp->texinfo[face->texinfo].miptex;
+    const int texnum = texinfo->miptex;
     const dmiptexlump_t *miplump = bsp->dtexdata.header;
     
     int offset = miplump->dataofs[texnum];
@@ -114,6 +131,18 @@ Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face)
         return miptex->name;
     else
         return "";
+}
+
+bool Face_IsLightmapped(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    const texinfo_t *texinfo = Face_Texinfo(bsp, face);
+    if (texinfo == nullptr)
+        return false;
+    
+    if (texinfo->flags & TEX_SPECIAL)
+        return false;
+    
+    return true;
 }
 
 const float *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
@@ -232,4 +261,48 @@ EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, cons
         }
     }
     return true;
+}
+
+// glm stuff
+
+using namespace glm;
+
+static glm::vec3 vec3_t_to_glm(const vec3_t vec) {
+    return glm::vec3(vec[0], vec[1], vec[2]);
+}
+
+glm::vec4 Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    const vec3 p0 = Face_PointAtIndex_E(bsp, f, 0);
+    const vec3 norm = Face_Normal_E(bsp, f);
+    const vec4 plane(norm, dot(norm, p0));
+    return plane;
+}
+
+glm::vec3 Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+{
+    return Vertex_GetPos_E(bsp, Face_VertexAtIndex(bsp, f, v));
+}
+
+glm::vec3 Vertex_GetPos_E(const bsp2_t *bsp, int num)
+{
+    vec3_t temp;
+    Vertex_GetPos(bsp, num, temp);
+    return vec3_t_to_glm(temp);
+}
+
+glm::vec3 Face_Normal_E(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    vec3_t temp;
+    Face_Normal(bsp, f, temp);
+    return vec3_t_to_glm(temp);
+}
+
+std::vector<glm::vec3> GLM_FacePoints(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    std::vector<glm::vec3> points;
+    for (int j = 0; j < f->numedges; j++) {
+        points.push_back(Face_PointAtIndex_E(bsp, f, j));
+    }
+    return points;
 }
