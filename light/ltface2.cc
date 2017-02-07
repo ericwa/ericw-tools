@@ -119,8 +119,7 @@ public:
             
             if (m_texsize[i] >= MAXDIMENSION) {
                 const plane_t plane = Face_Plane(bsp, face);
-                vec3_t point;
-                Face_PointAtIndex(bsp, face, 0, point); // grab first vert
+                const glm::vec3 point = Face_PointAtIndex_E(bsp, face, 0); // grab first vert
                 const char *texname = Face_TextureName(bsp, face);
                 
                 Error("Bad surface extents:\n"
@@ -128,7 +127,7 @@ public:
                       "   texture %s at (%s)\n"
                       "   surface normal (%s)\n",
                       Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale,
-                      texname, VecStrf(point),
+                      texname, glm::to_string(point).c_str(),
                       VecStrf(plane.normal));
             }
         }
@@ -270,12 +269,11 @@ face_tris_t Face_MakeTris(const bsp2_t *bsp, const bsp2_dface_t *f)
     {
         v3 = Face_VertexAtIndex(bsp, f, j);
         
-        vec3_t p1, p2, p3;
-        Vertex_GetPos(bsp, v1, p1);
-        Vertex_GetPos(bsp, v2, p2);
-        Vertex_GetPos(bsp, v3, p3);
+        const glm::vec3 p1 = Vertex_GetPos_E(bsp, v1);
+        const glm::vec3 p2 = Vertex_GetPos_E(bsp, v2);
+        const glm::vec3 p3 = Vertex_GetPos_E(bsp, v3);
         
-        const float area = TriangleArea(p1, p2, p3);
+        const float area = GLM_TriangleArea(p1, p2, p3);
         Q_assert(!isnan(area));
         
         res.areas.push_back(area);

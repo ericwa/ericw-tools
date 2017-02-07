@@ -40,7 +40,7 @@ int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
     return bsp->dedges[edge].v[0];
 }
 
-void
+static void
 Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
 {
     Q_assert(num >= 0 && num < bsp->numvertexes);
@@ -48,12 +48,6 @@ Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
     
     for (int i=0; i<3; i++)
         out[i] = v->point[i];
-}
-
-void Face_PointAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v, vec3_t out)
-{
-    const int vertnum = Face_VertexAtIndex(bsp, f, v);
-    Vertex_GetPos(bsp, vertnum, out);
 }
 
 void
