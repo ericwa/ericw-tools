@@ -302,6 +302,9 @@ int SampleCDF(const std::vector<float> &cdf, float sample);
 // width (height) are the filter "radius" (not "diameter")
 float Filter_Gaussian(float width, float height, float x, float y);
 
+// sqrt(x^2 + y^2) should be <= a, returns 0 outside that range.
+float Lanczos2D(float x, float y, float a);
+
 // glm geometry
 
 glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);

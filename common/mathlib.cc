@@ -244,6 +244,27 @@ float Filter_Gaussian(float width, float height, float x, float y)
         * Gaussian1D(height, y, alpha);
 }
 
+// from https://en.wikipedia.org/wiki/Lanczos_resampling
+static float Lanczos1D(float x, float a)
+{
+    if (x == 0)
+        return 1;
+    
+    if (x < -a || x >= a)
+        return 0;
+    
+    float lanczos = (a * sinf(M_PI * x) * sinf(M_PI * x / a)) / (M_PI * M_PI * x * x);
+    return lanczos;
+}
+
+// from https://en.wikipedia.org/wiki/Lanczos_resampling#Multidimensional_interpolation
+float Lanczos2D(float x, float y, float a)
+{
+    float dist = sqrtf((x*x) + (y*y));
+    float lanczos = Lanczos1D(dist, a);
+    return lanczos;
+}
+
 using namespace glm;
 using namespace std;
 
