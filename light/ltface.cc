@@ -2242,6 +2242,27 @@ LightmapToGLMVector(const bsp2_t *bsp, const lightsurf_t *lightsurf)
     return std::vector<glm::vec3>();
 }
 
+static glm::vec3
+LinearToGamma22(const glm::vec3 &c) {
+    return glm::pow(c, glm::vec3(1/2.2f));
+}
+
+static glm::vec3
+Gamma22ToLinear(const glm::vec3 &c) {
+    return glm::pow(c, glm::vec3(2.2f));
+}
+
+void GLMVector_GammaToLinear(std::vector<glm::vec3> &vec) {
+    for (auto &v : vec) {
+        v = Gamma22ToLinear(v);
+    }
+}
+
+void GLMVector_LinearToGamma(std::vector<glm::vec3> &vec) {
+    for (auto &v : vec) {
+        v = LinearToGamma22(v);
+    }
+}
 
 static std::vector<glm::vec3>
 IntegerDownsampleImage(const std::vector<glm::vec3> &input, int w, int h, int factor)
