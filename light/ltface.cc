@@ -2311,6 +2311,8 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     const int actual_width = lightsurf->texsize[0] + 1;
     const int actual_height = lightsurf->texsize[1] + 1;
     
+    const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
+    
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
         
         // allocate new float buffers for the output colors and directions
@@ -2327,21 +2329,29 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 VectorCopy(vec3_origin, color);
                 VectorCopy(vec3_origin, direction);
                 
+                float totalWeight = 0.0f;
+                
                 for (int i = 0; i < oversample; i++) {
                     for (int j = 0; j < oversample; j++) {
                         const int col = (s*oversample) + j;
                         const int row = (t*oversample) + i;
-                        const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
+                        
                         const int sample_index = (row * oversampled_width) + col;
                         
                         const lightsample_t *sample = &sorted.at(mapnum)->samples[sample_index];
 
-                        VectorAdd(color, sample->color, color);
-                        VectorAdd(direction, sample->direction, direction);
+
+                        float weight = 1.0f; // box filter
+
+                        VectorMA(color, weight, sample->color, color);
+                        VectorMA(direction, weight, sample->direction, direction);
+                        
+                        totalWeight += weight;
                     }
                 }
                 
-                VectorScale(color, 1.0 / oversample / oversample, color);
+                VectorScale(color, 1.0 / totalWeight, color);
+                VectorScale(direction, 1.0 / totalWeight, direction);
                 
                 // save in the temporary float buffers
                 const int actual_sampleindex = (t * actual_width) + s;
