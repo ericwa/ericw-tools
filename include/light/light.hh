@@ -190,7 +190,7 @@ extern int numDirtVectors;
 extern bool dirt_in_use;               // should any dirtmapping take place? set in SetupDirt
 
 extern float fadegate;
-extern int softsamples;
+extern int softsamples; // this many samples away from the reference sample are averaged. basically filter radius.
 extern const vec3_t vec3_white;
 extern float surflight_subdivide;
 extern int sunsamples;
