@@ -261,10 +261,6 @@ EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, cons
 
 using namespace glm;
 
-static glm::vec3 vec3_t_to_glm(const vec3_t vec) {
-    return glm::vec3(vec[0], vec[1], vec[2]);
-}
-
 glm::vec4 Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     const vec3 p0 = Face_PointAtIndex_E(bsp, f, 0);
