@@ -2176,6 +2176,23 @@ DumpFullSizeLightmap(const bsp2_t *bsp, const lightsurf_t *lightsurf)
 }
 
 static void
+DumpGLMVector(std::string fname, std::vector<glm::vec3> vec, int width, int height)
+{
+    std::vector<uint8_t> rgbdata;
+    for (int y=0; y<height; y++) {
+        for (int x=0; x<width; x++) {
+            const glm::vec3 sample = vec.at((y * width) + x);
+            for (int j=0; j<3; j++) {
+                int intval = static_cast<int>(glm::clamp(sample[j], 0.0f, 255.0f));
+                rgbdata.push_back(static_cast<uint8_t>(intval));
+            }
+        }
+    }
+    Q_assert(rgbdata.size() == (width * height * 3));
+    WritePPM(fname, width, height, rgbdata.data());
+}
+
+static void
 DumpDownscaledLightmap(const bsp2_t *bsp, const bsp2_dface_t *face, int w, int h, const vec3_t *colors)
 {
     int fnum = Face_GetNum(bsp, face);
@@ -2191,6 +2208,97 @@ DumpDownscaledLightmap(const bsp2_t *bsp, const bsp2_dface_t *face, int w, int h
     }
     
     WritePPM(std::string{fname}, w, h, rgbdata.data());
+}
+
+static std::vector<glm::vec3>
+LightmapColorsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)
+{
+    std::vector<glm::vec3> res;
+    for (int i=0; i<lightsurf->numpoints; i++) {
+        const vec_t *color = lm->samples[i].color;
+        res.push_back(glm::vec3(color[0], color[1], color[2]));
+    }
+    return res;
+}
+
+static std::vector<glm::vec3>
+LightmapNormalsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)
+{
+    std::vector<glm::vec3> res;
+    for (int i=0; i<lightsurf->numpoints; i++) {
+        const vec_t *color = lm->samples[i].direction;
+        res.push_back(glm::vec3(color[0], color[1], color[2]));
+    }
+    return res;
+}
+
+static std::vector<glm::vec3>
+LightmapToGLMVector(const bsp2_t *bsp, const lightsurf_t *lightsurf)
+{
+    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(lightsurf, 0);
+    if (lm != nullptr) {
+        return LightmapColorsToGLMVector(lightsurf, lm);
+    }
+    return std::vector<glm::vec3>();
+}
+
+
+static std::vector<glm::vec3>
+IntegerDownsampleImage(const std::vector<glm::vec3> &input, int w, int h, int factor)
+{
+    Q_assert(factor >= 1);
+    if (factor == 1)
+        return input;
+    
+    int outw = w/factor;
+    int outh = h/factor;
+    
+    std::vector<glm::vec3> res(static_cast<size_t>(outw * outh));
+    
+    for (int y=0; y<outh; y++) {
+        for (int x=0; x<outw; x++) {
+
+            float totalWeight = 0.0f;
+            glm::vec3 totalColor(0);
+            
+            const int extraradius = 0;
+            const int kernelextent = factor + (2 * extraradius);
+            
+            for (int y0 = 0; y0 < kernelextent; y0++) {
+                for (int x0 = 0; x0 < kernelextent; x0++) {
+                    const int x1 = (x * factor) - extraradius + x0;
+                    const int y1 = (y * factor) - extraradius + y0;
+                    
+                    // check if the kernel goes outside of the source image
+                    if (x1 < 0 || x1 >= w)
+                        continue;
+                    if (y1 < 0 || y1 >= h)
+                        continue;
+
+                    // read the input sample
+                    const glm::vec3 inSample = input.at((y1 * w) + x1);
+                    
+                    const float kernelextent_float = kernelextent + 1.0f;
+                    const float x_in_kernel_float = x0 + 0.5f;
+                    const float y_in_kernel_float = y0 + 0.5f;
+                    
+                    Q_assert(x_in_kernel_float >= 0 && x_in_kernel_float <= kernelextent_float);
+                    Q_assert(y_in_kernel_float >= 0 && y_in_kernel_float <= kernelextent_float);
+                    
+                    const float weight = 1.0f;
+                    totalColor += weight * inSample;
+                    
+                    totalWeight += weight;
+                }
+            }
+            
+            totalColor /= totalWeight;
+            
+            res[(y * outw) + x] = totalColor;
+        }
+    }
+    
+    return res;
 }
 
 static void
@@ -2286,64 +2394,20 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     const int oversampled_height = (lightsurf->texsize[1] + 1) * oversample;
     
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
+        const lightmap_t *lm = sorted.at(mapnum);
         
         // allocate new float buffers for the output colors and directions
         // these are the actual output width*height, without oversampling.
-        vec3_t *output_color = static_cast<vec3_t *>(calloc(size, sizeof(vec3_t)));
-        vec3_t *output_dir = static_cast<vec3_t *>(calloc(size, sizeof(vec3_t)));
-        
-        for (int t = 0; t < actual_height; t++) {
-            for (int s = 0; s < actual_width; s++) {
-
-                /* Take the average of any oversampling */
-                vec3_t color, direction;
-
-                VectorCopy(vec3_origin, color);
-                VectorCopy(vec3_origin, direction);
-                
-                float totalWeight = 0.0f;
-                
-                for (int i = -softsamples; i < oversample + softsamples; i++) {
-                    for (int j = -softsamples; j < oversample + softsamples; j++) {
-                        const int col = (s*oversample) + j;
-                        const int row = (t*oversample) + i;
-                        
-                        if (col < 0 || col >= oversampled_width)
-                            continue;
-                        if (row < 0 || row >= oversampled_height)
-                            continue;
-                        
-                        const int sample_index = (row * oversampled_width) + col;
-                        
-                        const lightsample_t *sample = &sorted.at(mapnum)->samples[sample_index];
-
-
-                        float weight = 1.0f; // box filter
-
-                        VectorMA(color, weight, sample->color, color);
-                        VectorMA(direction, weight, sample->direction, direction);
-                        
-                        totalWeight += weight;
-                    }
-                }
-                
-                VectorScale(color, 1.0 / totalWeight, color);
-                VectorScale(direction, 1.0 / totalWeight, direction);
-                
-                // save in the temporary float buffers
-                const int actual_sampleindex = (t * actual_width) + s;
-                VectorCopy(color, output_color[actual_sampleindex]);
-                VectorCopy(direction, output_dir[actual_sampleindex]);
-            }
-        }
+        std::vector<glm::vec3> output_color = IntegerDownsampleImage(LightmapColorsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
+        std::vector<glm::vec3> output_dir = IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
         
         // copy from the float buffers to byte buffers in .bsp / .lit / .lux
         
         for (int t = 0; t < actual_height; t++) {
             for (int s = 0; s < actual_width; s++) {
                 const int sampleindex = (t * actual_width) + s;
-                const vec_t *color = static_cast<const vec_t *>(output_color[sampleindex]);
-                const vec_t *direction = static_cast<const vec_t *>(output_dir[sampleindex]);
+                const glm::vec3 &color = output_color.at(sampleindex);
+                const glm::vec3 &direction = output_dir.at(sampleindex);
                 
                 *lit++ = color[0];
                 *lit++ = color[1];
@@ -2362,9 +2426,9 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 if (lux) {
                     vec3_t temp;
                     int v;
-                    temp[0] = DotProduct(direction, lightsurf->snormal);
-                    temp[1] = DotProduct(direction, lightsurf->tnormal);
-                    temp[2] = DotProduct(direction, lightsurf->plane.normal);
+                    temp[0] = glm::dot(direction, vec3_t_to_glm(lightsurf->snormal));
+                    temp[1] = glm::dot(direction, vec3_t_to_glm(lightsurf->tnormal));
+                    temp[2] = glm::dot(direction, vec3_t_to_glm(lightsurf->plane.normal));
                     
                     if (!temp[0] && !temp[1] && !temp[2])
                         VectorSet(temp, 0, 0, 1);
@@ -2377,9 +2441,6 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 }
             }
         }
-        
-        free(output_color);
-        free(output_dir);
     }
 }
 
