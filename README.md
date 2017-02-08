@@ -61,10 +61,10 @@ cd tyrutils-ericw
 mkdir build
 cd build
 
-wget https://github.com/embree/embree/releases/download/v2.12.0/embree-2.12.0.x86_64.linux.tar.gz -O embree.tgz
+wget https://github.com/embree/embree/releases/download/v2.13.0/embree-2.13.0.x86_64.linux.tar.gz -O embree.tgz
 tar xf embree.tgz
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.12.0.x86_64.linux/lib/cmake/embree-2.12.0"
+cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.13.0.x86_64.linux/lib/cmake/embree-2.13.0"
 make -j8 VERBOSE=1
 ```
 
