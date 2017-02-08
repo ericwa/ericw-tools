@@ -2177,6 +2177,45 @@ Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lightsurf) {
 }
 
 static void
+WritePPM(FILE *file, int width, int height, const uint8_t *rgbdata)
+{
+    // see: http://netpbm.sourceforge.net/doc/ppm.html
+    fprintf(file, "P6 %d %d 255 ", width, height);
+    int bytes = width*height*3;
+    Q_assert(bytes == fwrite(rgbdata, 1, bytes, file));
+}
+
+static void
+DumpFullSizeLightmap(const bsp2_t *bsp, const lightsurf_t *lightsurf)
+{
+    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(lightsurf, 0);
+    if (lm != nullptr) {
+        int fnum = Face_GetNum(bsp, lightsurf->face);
+        
+        char fname[1024];
+        sprintf(fname, "face%04d.ppm", fnum);
+        
+        std::vector<uint8_t> rgbdata;
+        for (int i=0; i<lightsurf->numpoints; i++) {
+            const vec_t *color = lm->samples[i].color;
+            for (int j=0; j<3; j++) {
+                int intval = static_cast<int>(glm::clamp(color[j], 0.0f, 255.0f));
+                rgbdata.push_back(static_cast<uint8_t>(intval));
+            }
+        }
+        
+        const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
+        const int oversampled_height = (lightsurf->texsize[1] + 1) * oversample;
+        
+        Q_assert(lightsurf->numpoints == (oversampled_height * oversampled_width));
+        
+        FILE *file = fopen(fname, "wb");
+        WritePPM(file, oversampled_width, oversampled_height, rgbdata.data());
+        fclose(file);
+    }
+}
+
+static void
 WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmapdict_t *lightmaps)
 {
