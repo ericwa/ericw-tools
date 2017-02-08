@@ -2125,7 +2125,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
     free(myRts);
 }
 
-// applies gamma and rangescale. clamps values over 255
+// clamps negative values. applies gamma and rangescale. clamps values over 255
 // N.B. we want to do this before smoothing / downscaling, so huge values don't mess up the averaging.
 static void
 LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
@@ -2135,6 +2135,13 @@ LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     for (lightmap_t &lightmap : *lightmaps) {
         for (int i = 0; i < lightsurf->numpoints; i++) {
             vec_t *color = lightmap.samples[i].color;
+            
+            /* Fix any negative values */
+            for (int k = 0; k < 3; k++) {
+                if (color[k] < 0) {
+                    color[k] = 0;
+                }
+            }
             
             /* Scale and clamp any out-of-range samples */
             vec_t maxcolor = 0;
@@ -2541,18 +2548,6 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     
     if (debugmode == debugmode_bouncelights)
         LightFace_BounceLightsDebug(lightsurf, lightmaps);
-    
-    /* Fix any negative values */
-    for (lightmap_t &lightmap : *lightmaps) {
-        for (int j = 0; j < lightsurf->numpoints; j++) {
-            lightsample_t *sample = &lightmap.samples[j];
-            for (int k = 0; k < 3; k++) {
-                if (sample->color[k] < 0) {
-                    sample->color[k] = 0;
-                }
-            }
-        }
-    }
 
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf, lightmaps);
