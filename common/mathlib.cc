@@ -253,7 +253,7 @@ static float Lanczos1D(float x, float a)
     if (x < -a || x >= a)
         return 0;
     
-    float lanczos = (a * sinf(M_PI * x) * sinf(M_PI * x / a)) / (M_PI * M_PI * x * x);
+    float lanczos = (a * sinf(Q_PI * x) * sinf(Q_PI * x / a)) / (Q_PI * Q_PI * x * x);
     return lanczos;
 }
 
