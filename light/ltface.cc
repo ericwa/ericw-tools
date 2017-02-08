@@ -823,6 +823,16 @@ Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *lightsurf)
     }
 }
 
+static const lightmap_t *
+Lightmap_ForStyle_ReadOnly(const lightsurf_t *lightsurf, const int style)
+{
+    for (const auto &lm : lightsurf->lightmapsByStyle) {
+        if (lm.style == style)
+            return &lm;
+    }
+    return nullptr;
+}
+
 /*
  * Lightmap_ForStyle
  *
@@ -1943,22 +1953,6 @@ void SetupDirt(globalconfig_t &cfg) {
     /* emit some statistics */
     logprint("%9d dirtmap vectors\n", numDirtVectors );
 }
-
-#if 0
-static const lightmap_t *
-Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
-{
-    const lightmap_t *lightmap = ctx->lightsurf->lightmaps;
-    
-    for (int i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
-        if (lightmap->style == style)
-            return lightmap;
-        if (lightmap->style == 255)
-            break;
-    }
-    return NULL;
-}
-#endif
 
 // from q3map2
 static void
