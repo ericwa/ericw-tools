@@ -99,8 +99,6 @@ uint64_t *extended_texinfo_flags = NULL;
 
 char mapfilename[1024];
 
-struct ltface_ctx *ltface_ctxs;
-
 int dump_facenum = -1;
 bool dump_face;
 vec3_t dump_face_point = {0,0,0};
@@ -228,10 +226,7 @@ const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
 static void *
 LightThread(void *arg)
 {
-    int facenum, i;
     const bsp2_t *bsp = (const bsp2_t *)arg;
-    const modelinfo_t *face_modelinfo;
-    struct ltface_ctx *ctx;
 
 #ifdef HAVE_EMBREE
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -239,45 +234,40 @@ LightThread(void *arg)
 #endif
 
     while (1) {
-        facenum = GetThreadWork();
+        const int facenum = GetThreadWork();
         if (facenum == -1)
             break;
 
-        ctx = &ltface_ctxs[facenum];
-        
-        LightFaceInit(bsp, ctx);
-        ctx->cfg = &cfg_static;
+        bsp2_dface_t *f = &bsp->dfaces[facenum];
         
         /* Find the correct model offset */
-        face_modelinfo = ModelInfoForFace(bsp, facenum);
+        const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
         if (face_modelinfo == NULL) {
             // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
             //logprint("warning: no model has face %d\n", facenum);
             continue;
         }
-
+        
         if (!faces_sup)
-            LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
+            LightFace(bsp, f, nullptr, cfg_static);
         else if (scaledonly)
         {
-            bsp->dfaces[facenum].lightofs = -1;
-            bsp->dfaces[facenum].styles[0] = 255;
-            LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
+            f->lightofs = -1;
+            f->styles[0] = 255;
+            LightFace(bsp, f, faces_sup + facenum, cfg_static);
         }
         else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale)
         {
-            LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
-            faces_sup[facenum].lightofs = bsp->dfaces[facenum].lightofs;
-            for (i = 0; i < MAXLIGHTMAPS; i++)
-                faces_sup[facenum].styles[i] = bsp->dfaces[facenum].styles[i];
+            LightFace(bsp, f, nullptr, cfg_static);
+            faces_sup[facenum].lightofs = f->lightofs;
+            for (int i = 0; i < MAXLIGHTMAPS; i++)
+                faces_sup[facenum].styles[i] = f->styles[i];
         }
         else
         {
-            LightFace(bsp->dfaces + facenum, NULL, face_modelinfo, ctx);
-            LightFace(bsp->dfaces + facenum, faces_sup + facenum, face_modelinfo, ctx);
+            LightFace(bsp, f, nullptr, cfg_static);
+            LightFace(bsp, f, faces_sup + facenum, cfg_static);
         }
-        
-        LightFaceShutdown(ctx);
     }
 
     return NULL;
@@ -419,9 +409,6 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     EdgeToFaceMap = MakeEdgeToFaceMap(bsp);
     CalcualateVertexNormals(bsp);
-
-    /* ericw -- alloc memory */
-    ltface_ctxs = (struct ltface_ctx *)calloc(bsp->numfaces, sizeof(struct ltface_ctx));
     
 #if 0
     lightbatchthread_info_t info;

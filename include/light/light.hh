@@ -150,15 +150,6 @@ typedef struct {
     lightmapdict_t lightmapsByStyle;
 } lightsurf_t;
 
-struct ltface_ctx
-{
-    const bsp2_t *bsp;
-    lightsurf_t *lightsurf;
-    const globalconfig_t *cfg;
-};
-
-extern struct ltface_ctx *ltface_ctxs;
-
 /* debug */
 
 typedef enum {

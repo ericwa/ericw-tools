@@ -2330,30 +2330,20 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     }
 }
 
-void LightFaceInit(const bsp2_t *bsp, struct ltface_ctx *ctx)
+static void LightFaceShutdown(lightsurf_t *lightsurf)
 {
-    memset(ctx, 0, sizeof(*ctx));
-    
-    ctx->bsp = bsp;
-}
-
-void LightFaceShutdown(struct ltface_ctx *ctx)
-{
-    if (!ctx->lightsurf)
-        return;
-    
-    for (auto &lm : ctx->lightsurf->lightmapsByStyle) {
+    for (auto &lm : lightsurf->lightmapsByStyle) {
         free(lm.samples);
     }
     
-    free(ctx->lightsurf->points);
-    free(ctx->lightsurf->normals);
-    free(ctx->lightsurf->occlusion);
-    free(ctx->lightsurf->occluded);
+    free(lightsurf->points);
+    free(lightsurf->normals);
+    free(lightsurf->occlusion);
+    free(lightsurf->occluded);
     
-    delete ctx->lightsurf->stream;
+    delete lightsurf->stream;
     
-    delete ctx->lightsurf;
+    delete lightsurf;
 }
 
 /*
@@ -2362,9 +2352,14 @@ void LightFaceShutdown(struct ltface_ctx *ctx)
  * ============
  */
 void
-LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, struct ltface_ctx *ctx)
+LightFace(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
 {
-    const bsp2_t *bsp = ctx->bsp;
+    /* Find the correct model offset */
+    const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
+    if (modelinfo == nullptr) {
+        return;
+    }    
+    
     const char *texname = Face_TextureName(bsp, face);
     
     /* One extra lightmap is allocated to simplify handling overflow */
@@ -2394,11 +2389,8 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
         return;
     
     /* all good, this face is going to be lightmapped. */
-    ctx->lightsurf = new lightsurf_t {};
-    lightsurf_t *lightsurf = ctx->lightsurf;
-    lightsurf->cfg = ctx->cfg;
-    
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    lightsurf_t *lightsurf = new lightsurf_t {};
+    lightsurf->cfg = &cfg;
     
     /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
      * lit water in mind. In that case receive light from both top and bottom.
@@ -2439,7 +2431,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
                     LightFace_Sky (&sun, lightsurf, lightmaps);
 
             /* add indirect lighting */
-            LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+            LightFace_Bounce(bsp, face, lightsurf, lightmaps);
         }
         
         /* minlight - Use the greater of global or model minlight. */
@@ -2471,7 +2463,7 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     /* bounce debug */
     // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
     if (debugmode == debugmode_bounce)
-        LightFace_Bounce(ctx->bsp, face, lightsurf, lightmaps);
+        LightFace_Bounce(bsp, face, lightsurf, lightmaps);
     
     /* replace lightmaps with AO for debugging */
     if (debugmode == debugmode_dirt)
@@ -2494,4 +2486,6 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     }
     
     WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
+    
+    LightFaceShutdown(lightsurf);
 }
