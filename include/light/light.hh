@@ -74,12 +74,6 @@ public:
 #define MAXDIMENSION (255+1)
 
 typedef struct {
-    vec3_t data[3];     /* permuted 3x3 matrix */
-    int row[3];         /* row permutations */
-    int col[3];         /* column permutations */
-} pmatrix3_t;
-    
-typedef struct {
     glm::mat4x4 texSpaceToWorld;
     const texinfo_t *texinfo;
     vec_t planedist;
