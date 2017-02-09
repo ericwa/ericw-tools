@@ -1076,7 +1076,7 @@ light_main(int argc, const char **argv)
             softsamples = 1;
             break;
         case 4:
-            softsamples = 1;
+            softsamples = 2;
             break;
         default:
             softsamples = 0;
