@@ -107,8 +107,6 @@ glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f)
 }
 
 edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp) {
-    logprint("--- MakeEdgeToFaceMap ---\n");
-    
     edgeToFaceMap_t result;
     
     for (int i = 0; i < bsp->numfaces; i++) {
