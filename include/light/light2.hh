@@ -47,6 +47,8 @@
 
 using batch_t = std::vector<int>;
 using batches_t = std::vector<batch_t>;
+/// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
+using edgeToFaceMap_t = std::map<std::pair<int,int>, std::vector<const bsp2_dface_t *>>;
 
 class contributing_face_t {
 public:
@@ -71,8 +73,10 @@ struct lightbatchthread_info_t {
 
 void *LightBatchThread(void *arg);
 
+edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp);
 batches_t MakeLightingBatches(const bsp2_t *bsp);
 all_contrib_faces_t MakeContributingFaces(const bsp2_t *bsp);
+std::vector<contributing_face_t> SetupContributingFaces(const bsp2_t *bsp, const bsp2_dface_t *face, const edgeToFaceMap_t &edgeToFaceMap);
 
 std::pair<bool, glm::mat4x4> RotationAboutLineSegment(glm::vec3 p0, glm::vec3 p1,
                                                       glm::vec3 face0Norm, glm::vec3 face1Norm);

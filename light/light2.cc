@@ -106,9 +106,6 @@ glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f)
     return glm::inverse(T);
 }
 
-// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
-using edgeToFaceMap_t = map<pair<int,int>, vector<const bsp2_dface_t *>>;
-
 edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp) {
     logprint("--- MakeEdgeToFaceMap ---\n");
     
