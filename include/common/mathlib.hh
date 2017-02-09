@@ -311,6 +311,12 @@ static inline glm::vec3 vec3_t_to_glm(const vec3_t vec) {
     return glm::vec3(vec[0], vec[1], vec[2]);
 }
 
+static inline void glm_to_vec3_t(const glm::vec3 &glm, vec3_t out) {
+    out[0] = glm.x;
+    out[1] = glm.y;
+    out[2] = glm.z;
+}
+
 glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);
 std::vector<glm::vec4> GLM_MakeInwardFacingEdgePlanes(std::vector<glm::vec3> points);
 bool GLM_EdgePlanes_PointInside(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);

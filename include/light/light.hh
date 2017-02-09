@@ -80,7 +80,7 @@ typedef struct {
 } pmatrix3_t;
     
 typedef struct {
-    pmatrix3_t transform;
+    glm::mat4x4 texSpaceToWorld;
     const texinfo_t *texinfo;
     vec_t planedist;
 } texorg_t;

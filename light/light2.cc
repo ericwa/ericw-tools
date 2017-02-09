@@ -96,6 +96,13 @@ pair<bool, glm::mat4x4> RotationAboutLineSegment(glm::vec3 p0, glm::vec3 p1,
 glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     const glm::mat4x4 T = WorldToTexSpace(bsp, f);
+    
+    if (glm::determinant(T) == 0) {
+        logprint("Bad texture axes on face:\n");
+        PrintFaceInfo(f, bsp);
+        Error("CreateFaceTransform");
+    }
+    
     return glm::inverse(T);
 }
 

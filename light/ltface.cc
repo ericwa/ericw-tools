@@ -23,6 +23,7 @@
 #include <light/entities.hh>
 #include <light/trace.hh>
 #include <light/ltface.hh>
+#include <light/light2.hh>
 
 #include <common/bsputils.hh>
 
@@ -33,96 +34,7 @@
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
-static void
-PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
-
 /* ======================================================================== */
-
-
-/*
- * To do arbitrary transformation of texture coordinates to world
- * coordinates requires solving for three simultaneous equations. We
- * set up the LU decomposed form of the transform matrix here.
- */
-#define ZERO_EPSILON (0.001)
-static qboolean
-PMatrix3_LU_Decompose(pmatrix3_t *matrix)
-{
-    int i, j, k, tmp;
-    vec_t max;
-    int max_r, max_c;
-
-    /* Do gauss elimination */
-    for (i = 0; i < 3; ++i) {
-        max = 0;
-        max_r = max_c = i;
-        for (j = i; j < 3; ++j) {
-            for (k = i; k < 3; ++k) {
-                if (fabs(matrix->data[j][k]) > max) {
-                    max = fabs(matrix->data[j][k]);
-                    max_r = j;
-                    max_c = k;
-                }
-            }
-        }
-
-        /* Check for parallel planes */
-        if (max < ZERO_EPSILON)
-            return false;
-
-        /* Swap rows/columns if necessary */
-        if (max_r != i) {
-            for (j = 0; j < 3; ++j) {
-                max = matrix->data[i][j];
-                matrix->data[i][j] = matrix->data[max_r][j];
-                matrix->data[max_r][j] = max;
-            }
-            tmp = matrix->row[i];
-            matrix->row[i] = matrix->row[max_r];
-            matrix->row[max_r] = tmp;
-        }
-        if (max_c != i) {
-            for (j = 0; j < 3; ++j) {
-                max = matrix->data[j][i];
-                matrix->data[j][i] = matrix->data[j][max_c];
-                matrix->data[j][max_c] = max;
-            }
-            tmp = matrix->col[i];
-            matrix->col[i] = matrix->col[max_c];
-            matrix->col[max_c] = tmp;
-        }
-
-        /* Do pivot */
-        for (j = i + 1; j < 3; ++j) {
-            matrix->data[j][i] /= matrix->data[i][i];
-            for (k = i + 1; k < 3; ++k)
-                matrix->data[j][k] -= matrix->data[j][i] * matrix->data[i][k];
-        }
-    }
-
-    return true;
-}
-
-static void
-Solve3(const pmatrix3_t *matrix, const vec3_t rhs, vec3_t out)
-{
-    /* Use local short names just for readability (should optimize away) */
-    const vec3_t *data = matrix->data;
-    const int *r = matrix->row;
-    const int *c = matrix->col;
-    vec3_t tmp;
-
-    /* forward-substitution */
-    tmp[0] = rhs[r[0]];
-    tmp[1] = rhs[r[1]] - data[1][0] * tmp[0];
-    tmp[2] = rhs[r[2]] - data[2][0] * tmp[0] - data[2][1] * tmp[1];
-
-    /* back-substitution */
-    out[c[2]] = tmp[2] / data[2][2];
-    out[c[1]] = (tmp[1] - data[1][2] * out[c[2]]) / data[1][1];
-    out[c[0]] = (tmp[0] - data[0][1] * out[c[1]] - data[0][2] * out[c[2]])
-        / data[0][0];
-}
 
 /*
  * ============================================================================
@@ -205,47 +117,12 @@ FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
     VectorScale(poly_centroid, 1.0 / poly_area, out);
 }
 
-/*
- * ================
- * CreateFaceTransform
- * Fills in the transform matrix for converting tex coord <-> world coord
- * ================
- */
-static void
-CreateFaceTransform(const bsp2_dface_t *face, const bsp2_t *bsp,
-                    pmatrix3_t *transform)
-{
-    /* Prepare the transform matrix and init row/column permutations */
-    const dplane_t *plane = &bsp->dplanes[face->planenum];
-    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
-    for (int i = 0; i < 3; i++) {
-        transform->data[0][i] = tex->vecs[0][i];
-        transform->data[1][i] = tex->vecs[1][i];
-        transform->data[2][i] = plane->normal[i];
-        transform->row[i] = transform->col[i] = i;
-    }
-    if (face->side)
-        VectorSubtract(vec3_origin, transform->data[2], transform->data[2]);
-
-    /* Decompose the matrix. If we can't, texture axes are invalid. */
-    if (!PMatrix3_LU_Decompose(transform)) {
-        logprint("Bad texture axes on face:\n");
-        PrintFaceInfo(face, bsp);
-        Error("CreateFaceTransform");
-    }
-}
-
 static void
 TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
 {
-    vec3_t rhs;
-
-    rhs[0] = s - texorg->texinfo->vecs[0][3];
-    rhs[1] = t - texorg->texinfo->vecs[1][3];
-    // FIXME: This could be more or less than one unit in world space?
-    rhs[2] = texorg->planedist + 1; /* one "unit" in front of surface */
-
-    Solve3(&texorg->transform, rhs, world);
+    glm::vec4 worldPos = texorg->texSpaceToWorld * glm::vec4(s, t, /* one "unit" in front of surface */ 1.0, 1.0);
+    
+    glm_to_vec3_t(glm::vec3(worldPos), world);
 }
 
 void
@@ -275,8 +152,7 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 }
 
 /* Debug helper - move elsewhere? */
-static void
-PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
+void PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     const texinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
@@ -779,7 +655,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     }
 
     /* Set up the texorg for coordinate transformation */
-    CreateFaceTransform(face, bsp, &lightsurf->texorg.transform);
+    lightsurf->texorg.texSpaceToWorld = TexSpaceToWorld(bsp, face);
     lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
     lightsurf->texorg.planedist = plane->dist;
 
