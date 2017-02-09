@@ -47,5 +47,6 @@ glm::vec3 Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
 glm::vec3 Vertex_GetPos_E(const bsp2_t *bsp, int num);
 glm::vec3 Face_Normal_E(const bsp2_t *bsp, const bsp2_dface_t *f);
 std::vector<glm::vec3> GLM_FacePoints(const bsp2_t *bsp, const bsp2_dface_t *face);
+glm::vec3 Face_Centroid(const bsp2_t *bsp, const bsp2_dface_t *face);
 
 #endif /* __COMMON_BSPUTILS_HH__ */

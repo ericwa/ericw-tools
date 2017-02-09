@@ -568,20 +568,18 @@ CheckNoDebugModeSet()
 
 // returns the face with a centroid nearest the given point.
 static const bsp2_dface_t *
-Face_NearestCentroid(const bsp2_t *bsp, const vec3_t point)
+Face_NearestCentroid(const bsp2_t *bsp, const glm::vec3 &point)
 {
     const bsp2_dface_t *nearest_face = NULL;
-    vec_t nearest_dist = VECT_MAX;
+    float nearest_dist = VECT_MAX;
     
     for (int i=0; i<bsp->numfaces; i++) {
         const bsp2_dface_t *f = &bsp->dfaces[i];
         
-        vec3_t fc;
-        FaceCentroid(f, bsp, fc);
+        const glm::vec3 fc = Face_Centroid(bsp, f);
         
-        vec3_t distvec;
-        VectorSubtract(fc, point, distvec);
-        vec_t dist = VectorLength(distvec);
+        const glm::vec3 distvec = fc - point;
+        const float dist = glm::length(distvec);
         
         if (dist < nearest_dist) {
             nearest_dist = dist;
@@ -598,7 +596,7 @@ FindDebugFace(const bsp2_t *bsp)
     if (!dump_face)
         return;
     
-    const bsp2_dface_t *f = Face_NearestCentroid(bsp, dump_face_point);
+    const bsp2_dface_t *f = Face_NearestCentroid(bsp, vec3_t_to_glm(dump_face_point));
     if (f == NULL)
         Error("FindDebugFace: f == NULL\n");
 

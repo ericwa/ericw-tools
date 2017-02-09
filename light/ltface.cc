@@ -23,6 +23,7 @@
 #include <light/entities.hh>
 #include <light/trace.hh>
 #include <light/ltface.hh>
+#include <light/ltface2.hh>
 #include <light/light2.hh>
 
 #include <common/bsputils.hh>
@@ -54,68 +55,6 @@ std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
  *        the light point to the nearst sample point that is on the polygon;
  * ============================================================================
  */
-
-/*
- * Functions to aid in calculation of polygon centroid
- */
-static void
-TriCentroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
-            vec3_t out)
-{
-    for (int i = 0; i < 3; i++)
-        out[i] = (v0->point[i] + v1->point[i] + v2->point[i]) / 3.0;
-}
-
-static vec_t
-TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
-{
-    vec3_t edge0, edge1, cross;
-
-    for (int i =0; i < 3; i++) {
-        edge0[i] = v1->point[i] - v0->point[i];
-        edge1[i] = v2->point[i] - v0->point[i];
-    }
-    CrossProduct(edge0, edge1, cross);
-
-    return VectorLength(cross) * 0.5;
-}
-
-void
-FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
-{
-    int edgenum;
-    dvertex_t *v0, *v1, *v2;
-    vec3_t centroid, poly_centroid;
-    vec_t area, poly_area;
-
-    VectorCopy(vec3_origin, poly_centroid);
-    poly_area = 0;
-
-    edgenum = bsp->dsurfedges[face->firstedge];
-    if (edgenum >= 0)
-        v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-    else
-        v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-
-    for (int i = 1; i < face->numedges - 1; i++) {
-        edgenum = bsp->dsurfedges[face->firstedge + i];
-        if (edgenum >= 0) {
-            v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-            v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
-        } else {
-            v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-            v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
-        }
-
-        area = TriArea(v0, v1, v2);
-        poly_area += area;
-
-        TriCentroid(v0, v1, v2, centroid);
-        VectorMA(poly_centroid, area, centroid, poly_centroid);
-    }
-
-    VectorScale(poly_centroid, 1.0 / poly_area, out);
-}
 
 static void
 TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
@@ -221,7 +160,7 @@ CalcFaceExtents(const bsp2_dface_t *face,
     }
 
     vec3_t worldpoint;
-    FaceCentroid(face, bsp, worldpoint);
+    glm_to_vec3_t(Face_Centroid(bsp, face), worldpoint);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
 
     // calculate a bounding sphere for the face

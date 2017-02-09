@@ -36,6 +36,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 using namespace std;
+using namespace glm;
 
 static glm::vec2
 WorldToTexCoord_HighPrecision(const bsp2_t *bsp, const bsp2_dface_t *face,
@@ -345,18 +346,6 @@ glm::vec4 extendTo4(const glm::vec3 &v) {
 
 static glm::vec3 randomColor() {
     return glm::vec3(Random(), Random(), Random()) * 255.0f;
-}
-
-static glm::vec3 Face_Centroid(const bsp2_t *bsp, const bsp2_dface_t *face) {
-    glm::vec3 res(0);
-    
-    for (int i=0; i<face->numedges; i++) {
-        res += Face_PointAtIndex_E(bsp, face, i);
-    }
-    
-    res /= static_cast<float>(face->numedges);
-    
-    return res;
 }
 
 struct sample_pos_t {

@@ -296,3 +296,8 @@ std::vector<glm::vec3> GLM_FacePoints(const bsp2_t *bsp, const bsp2_dface_t *f)
     }
     return points;
 }
+
+glm::vec3 Face_Centroid(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    return GLM_PolyCentroid(GLM_FacePoints(bsp, face));
+}

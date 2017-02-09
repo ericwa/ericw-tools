@@ -321,7 +321,9 @@ glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);
 std::vector<glm::vec4> GLM_MakeInwardFacingEdgePlanes(std::vector<glm::vec3> points);
 bool GLM_EdgePlanes_PointInside(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
 float GLM_EdgePlanes_PointInsideDist(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
+glm::vec3 GLM_TriangleCentroid(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 float GLM_TriangleArea(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point);
+glm::vec3 GLM_PolyCentroid(std::vector<glm::vec3> points);
 
 #endif /* __COMMON_MATHLIB_H__ */

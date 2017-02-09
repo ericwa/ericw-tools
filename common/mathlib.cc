@@ -350,6 +350,12 @@ GLM_EdgePlanes_PointInside(const vector<vec4> &edgeplanes, const vec3 &point)
     return minDist >= -POINT_EQUAL_EPSILON;
 }
 
+vec3
+GLM_TriangleCentroid(const vec3 &v0, const vec3 &v1, const vec3 &v2)
+{
+    return (v0 + v1 + v2) / 3.0f;
+}
+
 float
 GLM_TriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2)
 {
@@ -359,4 +365,28 @@ GLM_TriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2)
 float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point)
 {
     return dot(vec3(plane), point) - plane.w;
+}
+
+glm::vec3 GLM_PolyCentroid(std::vector<vec3> points)
+{
+    Q_assert(points.size() >= 3);
+    
+    vec3 poly_centroid(0);
+    float poly_area = 0;
+    
+    const vec3 v0 = points.at(0);
+    for (int i = 2; i < points.size(); i++) {
+        const vec3 v1 = points.at(i-1);
+        const vec3 v2 = points.at(i);
+        
+        const float triarea = GLM_TriangleArea(v0, v1, v2);
+        const vec3 tricentroid = GLM_TriangleCentroid(v0, v1, v2);
+        
+        poly_area += triarea;
+        poly_centroid = poly_centroid + (triarea * tricentroid);
+    }
+    
+    poly_centroid /= poly_area;
+    
+    return poly_centroid;
 }
