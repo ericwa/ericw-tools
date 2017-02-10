@@ -18,9 +18,13 @@
 */
 
 #include <light/light.hh>
+#include <light/phong.hh>
+#include <light/bounce.hh>
 #include <light/entities.hh>
 #include <light/trace.hh>
 #include <light/ltface.hh>
+#include <light/ltface2.hh>
+#include <light/light2.hh>
 
 #include <common/bsputils.hh>
 
@@ -31,96 +35,7 @@
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
-static void
-PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
-
 /* ======================================================================== */
-
-
-/*
- * To do arbitrary transformation of texture coordinates to world
- * coordinates requires solving for three simultaneous equations. We
- * set up the LU decomposed form of the transform matrix here.
- */
-#define ZERO_EPSILON (0.001)
-static qboolean
-PMatrix3_LU_Decompose(pmatrix3_t *matrix)
-{
-    int i, j, k, tmp;
-    vec_t max;
-    int max_r, max_c;
-
-    /* Do gauss elimination */
-    for (i = 0; i < 3; ++i) {
-        max = 0;
-        max_r = max_c = i;
-        for (j = i; j < 3; ++j) {
-            for (k = i; k < 3; ++k) {
-                if (fabs(matrix->data[j][k]) > max) {
-                    max = fabs(matrix->data[j][k]);
-                    max_r = j;
-                    max_c = k;
-                }
-            }
-        }
-
-        /* Check for parallel planes */
-        if (max < ZERO_EPSILON)
-            return false;
-
-        /* Swap rows/columns if necessary */
-        if (max_r != i) {
-            for (j = 0; j < 3; ++j) {
-                max = matrix->data[i][j];
-                matrix->data[i][j] = matrix->data[max_r][j];
-                matrix->data[max_r][j] = max;
-            }
-            tmp = matrix->row[i];
-            matrix->row[i] = matrix->row[max_r];
-            matrix->row[max_r] = tmp;
-        }
-        if (max_c != i) {
-            for (j = 0; j < 3; ++j) {
-                max = matrix->data[j][i];
-                matrix->data[j][i] = matrix->data[j][max_c];
-                matrix->data[j][max_c] = max;
-            }
-            tmp = matrix->col[i];
-            matrix->col[i] = matrix->col[max_c];
-            matrix->col[max_c] = tmp;
-        }
-
-        /* Do pivot */
-        for (j = i + 1; j < 3; ++j) {
-            matrix->data[j][i] /= matrix->data[i][i];
-            for (k = i + 1; k < 3; ++k)
-                matrix->data[j][k] -= matrix->data[j][i] * matrix->data[i][k];
-        }
-    }
-
-    return true;
-}
-
-static void
-Solve3(const pmatrix3_t *matrix, const vec3_t rhs, vec3_t out)
-{
-    /* Use local short names just for readability (should optimize away) */
-    const vec3_t *data = matrix->data;
-    const int *r = matrix->row;
-    const int *c = matrix->col;
-    vec3_t tmp;
-
-    /* forward-substitution */
-    tmp[0] = rhs[r[0]];
-    tmp[1] = rhs[r[1]] - data[1][0] * tmp[0];
-    tmp[2] = rhs[r[2]] - data[2][0] * tmp[0] - data[2][1] * tmp[1];
-
-    /* back-substitution */
-    out[c[2]] = tmp[2] / data[2][2];
-    out[c[1]] = (tmp[1] - data[1][2] * out[c[2]]) / data[1][1];
-    out[c[0]] = (tmp[0] - data[0][1] * out[c[1]] - data[0][2] * out[c[2]])
-        / data[0][0];
-}
 
 /*
  * ============================================================================
@@ -141,109 +56,12 @@ Solve3(const pmatrix3_t *matrix, const vec3_t rhs, vec3_t out)
  * ============================================================================
  */
 
-/*
- * Functions to aid in calculation of polygon centroid
- */
-static void
-TriCentroid(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2,
-            vec3_t out)
-{
-    for (int i = 0; i < 3; i++)
-        out[i] = (v0->point[i] + v1->point[i] + v2->point[i]) / 3.0;
-}
-
-static vec_t
-TriArea(const dvertex_t *v0, const dvertex_t *v1, const dvertex_t *v2)
-{
-    vec3_t edge0, edge1, cross;
-
-    for (int i =0; i < 3; i++) {
-        edge0[i] = v1->point[i] - v0->point[i];
-        edge1[i] = v2->point[i] - v0->point[i];
-    }
-    CrossProduct(edge0, edge1, cross);
-
-    return VectorLength(cross) * 0.5;
-}
-
-void
-FaceCentroid(const bsp2_dface_t *face, const bsp2_t *bsp, vec3_t out)
-{
-    int edgenum;
-    dvertex_t *v0, *v1, *v2;
-    vec3_t centroid, poly_centroid;
-    vec_t area, poly_area;
-
-    VectorCopy(vec3_origin, poly_centroid);
-    poly_area = 0;
-
-    edgenum = bsp->dsurfedges[face->firstedge];
-    if (edgenum >= 0)
-        v0 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-    else
-        v0 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-
-    for (int i = 1; i < face->numedges - 1; i++) {
-        edgenum = bsp->dsurfedges[face->firstedge + i];
-        if (edgenum >= 0) {
-            v1 = bsp->dvertexes + bsp->dedges[edgenum].v[0];
-            v2 = bsp->dvertexes + bsp->dedges[edgenum].v[1];
-        } else {
-            v1 = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
-            v2 = bsp->dvertexes + bsp->dedges[-edgenum].v[0];
-        }
-
-        area = TriArea(v0, v1, v2);
-        poly_area += area;
-
-        TriCentroid(v0, v1, v2, centroid);
-        VectorMA(poly_centroid, area, centroid, poly_centroid);
-    }
-
-    VectorScale(poly_centroid, 1.0 / poly_area, out);
-}
-
-/*
- * ================
- * CreateFaceTransform
- * Fills in the transform matrix for converting tex coord <-> world coord
- * ================
- */
-static void
-CreateFaceTransform(const bsp2_dface_t *face, const bsp2_t *bsp,
-                    pmatrix3_t *transform)
-{
-    /* Prepare the transform matrix and init row/column permutations */
-    const dplane_t *plane = &bsp->dplanes[face->planenum];
-    const texinfo_t *tex = &bsp->texinfo[face->texinfo];
-    for (int i = 0; i < 3; i++) {
-        transform->data[0][i] = tex->vecs[0][i];
-        transform->data[1][i] = tex->vecs[1][i];
-        transform->data[2][i] = plane->normal[i];
-        transform->row[i] = transform->col[i] = i;
-    }
-    if (face->side)
-        VectorSubtract(vec3_origin, transform->data[2], transform->data[2]);
-
-    /* Decompose the matrix. If we can't, texture axes are invalid. */
-    if (!PMatrix3_LU_Decompose(transform)) {
-        logprint("Bad texture axes on face:\n");
-        PrintFaceInfo(face, bsp);
-        Error("CreateFaceTransform");
-    }
-}
-
 static void
 TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
 {
-    vec3_t rhs;
-
-    rhs[0] = s - texorg->texinfo->vecs[0][3];
-    rhs[1] = t - texorg->texinfo->vecs[1][3];
-    // FIXME: This could be more or less than one unit in world space?
-    rhs[2] = texorg->planedist + 1; /* one "unit" in front of surface */
-
-    Solve3(&texorg->transform, rhs, world);
+    glm::vec4 worldPos = texorg->texSpaceToWorld * glm::vec4(s, t, /* one "unit" in front of surface */ 1.0, 1.0);
+    
+    glm_to_vec3_t(glm::vec3(worldPos), world);
 }
 
 void
@@ -273,8 +91,7 @@ WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2])
 }
 
 /* Debug helper - move elsewhere? */
-static void
-PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
+void PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     const texinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
@@ -290,7 +107,7 @@ PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp)
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
         const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
-        const vec_t *norm = GetSurfaceVertexNormal(bsp, face, i);
+        const glm::vec3 norm = GetSurfaceVertexNormal(bsp, face, i);
         logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: normal (%3.3f, %3.3f, %3.3f) :: edge %d\n",
                  i ? "          " : "    verts ", vert,
                  point[0], point[1], point[2],
@@ -343,7 +160,7 @@ CalcFaceExtents(const bsp2_dface_t *face,
     }
 
     vec3_t worldpoint;
-    FaceCentroid(face, bsp, worldpoint);
+    glm_to_vec3_t(Face_Centroid(bsp, face), worldpoint);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
 
     // calculate a bounding sphere for the face
@@ -400,18 +217,6 @@ WarnBadMidpoint(const vec3_t point)
              VecStr(point));
 #endif
 }
-
-static vec_t
-TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
-{
-    vec3_t edge0, edge1, cross;
-    VectorSubtract(v2, v0, edge0);
-    VectorSubtract(v1, v0, edge1);
-    CrossProduct(edge0, edge1, cross);
-    
-    return VectorLength(cross) * 0.5;
-}
-
 
 static void CalcBarycentric(const vec_t *p, const vec_t *a, const vec_t *b, const vec_t *c, vec_t *res)
 {
@@ -478,13 +283,13 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
             // area test rejects the case when v1, v2, v3 are colinear
             if (TriangleArea(v1, v2, v3) >= 1) {
                 
-                v1 = GetSurfaceVertexNormal(bsp, face, 0);
-                v2 = GetSurfaceVertexNormal(bsp, face, j-1);
-                v3 = GetSurfaceVertexNormal(bsp, face, j);
-                VectorScale(v1, bary[0], norm);
-                VectorMA(norm, bary[1], v2, norm);
-                VectorMA(norm, bary[2], v3, norm);
-                VectorNormalize(norm);
+                const glm::vec3 v1 = GetSurfaceVertexNormal(bsp, face, 0);
+                const glm::vec3 v2 = GetSurfaceVertexNormal(bsp, face, j-1);
+                const glm::vec3 v3 = GetSurfaceVertexNormal(bsp, face, j);
+                
+                const glm::vec3 glmnorm = normalize((bary[0] * v1) + (bary[1] * v2) + (bary[2] * v3));
+                
+                VectorCopyFromGLM(glmnorm, norm);
                 return;
             }
         }
@@ -545,12 +350,11 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
             vec_t t = FractionOfLine(v1, v2, point);
             t = qmax(qmin(t, 1.0f), 0.0f);
             
-            v1 = GetSurfaceVertexNormal(bsp, face, bestplane);
-            v2 = GetSurfaceVertexNormal(bsp, face, (bestplane+1)%face->numedges);
+            const glm::vec3 v1 = GetSurfaceVertexNormal(bsp, face, bestplane);
+            const glm::vec3 v2 = GetSurfaceVertexNormal(bsp, face, (bestplane+1)%face->numedges);
             
-            VectorScale(v2, t, norm);
-            VectorMA(norm, 1-t, v1, norm);
-            VectorNormalize(norm);
+            const glm::vec3 glmnorm = normalize((v2 * t) + (1-t)*v1);
+            VectorCopyFromGLM(glmnorm, norm);
             
             free(edgeplanes);
             return;
@@ -573,7 +377,7 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
         {
             bestd = dist;
             bestv = v;
-            VectorCopy(GetSurfaceVertexNormal(bsp, face, i), norm);
+            VectorCopyFromGLM(GetSurfaceVertexNormal(bsp, face, i), norm);
         }
     }
     VectorNormalize(norm);
@@ -790,7 +594,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     }
 
     /* Set up the texorg for coordinate transformation */
-    CreateFaceTransform(face, bsp, &lightsurf->texorg.transform);
+    lightsurf->texorg.texSpaceToWorld = TexSpaceToWorld(bsp, face);
     lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
     lightsurf->texorg.planedist = plane->dist;
 
@@ -832,6 +636,16 @@ Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *lightsurf)
         /* clear only the data that is going to be merged to it. there's no point clearing more */
         memset(lightmap->samples, 0, sizeof(*lightmap->samples)*lightsurf->numpoints);
     }
+}
+
+static const lightmap_t *
+Lightmap_ForStyle_ReadOnly(const lightsurf_t *lightsurf, const int style)
+{
+    for (const auto &lm : lightsurf->lightmapsByStyle) {
+        if (lm.style == style)
+            return &lm;
+    }
+    return nullptr;
 }
 
 /*
@@ -1956,22 +1770,6 @@ void SetupDirt(globalconfig_t &cfg) {
     logprint("%9d dirtmap vectors\n", numDirtVectors );
 }
 
-#if 0
-static const lightmap_t *
-Lightmap_ForStyle_ReadOnly(const struct ltface_ctx *ctx, const int style)
-{
-    const lightmap_t *lightmap = ctx->lightsurf->lightmaps;
-    
-    for (int i = 0; i < MAXLIGHTMAPS; i++, lightmap++) {
-        if (lightmap->style == style)
-            return lightmap;
-        if (lightmap->style == 255)
-            break;
-    }
-    return NULL;
-}
-#endif
-
 // from q3map2
 static void
 GetUpRtVecs(const vec3_t normal, vec3_t myUp, vec3_t myRt)
@@ -2143,7 +1941,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
     free(myRts);
 }
 
-// applies gamma and rangescale. clamps values over 255
+// clamps negative values. applies gamma and rangescale. clamps values over 255
 // N.B. we want to do this before smoothing / downscaling, so huge values don't mess up the averaging.
 static void
 LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
@@ -2153,6 +1951,13 @@ LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     for (lightmap_t &lightmap : *lightmaps) {
         for (int i = 0; i < lightsurf->numpoints; i++) {
             vec_t *color = lightmap.samples[i].color;
+            
+            /* Fix any negative values */
+            for (int k = 0; k < 3; k++) {
+                if (color[k] < 0) {
+                    color[k] = 0;
+                }
+            }
             
             /* Scale and clamp any out-of-range samples */
             vec_t maxcolor = 0;
@@ -2192,6 +1997,194 @@ Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lightsurf) {
         }
     }
     return maxb;
+}
+
+static void
+WritePPM(std::string fname, int width, int height, const uint8_t *rgbdata)
+{
+    FILE *file = fopen(fname.c_str(), "wb");
+    
+    // see: http://netpbm.sourceforge.net/doc/ppm.html
+    fprintf(file, "P6 %d %d 255 ", width, height);
+    int bytes = width*height*3;
+    Q_assert(bytes == fwrite(rgbdata, 1, bytes, file));
+    
+    fclose(file);
+}
+
+static void
+DumpFullSizeLightmap(const bsp2_t *bsp, const lightsurf_t *lightsurf)
+{
+    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(lightsurf, 0);
+    if (lm != nullptr) {
+        int fnum = Face_GetNum(bsp, lightsurf->face);
+        
+        char fname[1024];
+        sprintf(fname, "face%04d.ppm", fnum);
+        
+        std::vector<uint8_t> rgbdata;
+        for (int i=0; i<lightsurf->numpoints; i++) {
+            const vec_t *color = lm->samples[i].color;
+            for (int j=0; j<3; j++) {
+                int intval = static_cast<int>(glm::clamp(color[j], 0.0f, 255.0f));
+                rgbdata.push_back(static_cast<uint8_t>(intval));
+            }
+        }
+        
+        const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
+        const int oversampled_height = (lightsurf->texsize[1] + 1) * oversample;
+        
+        Q_assert(lightsurf->numpoints == (oversampled_height * oversampled_width));
+
+        WritePPM(std::string{fname}, oversampled_width, oversampled_height, rgbdata.data());
+    }
+}
+
+static void
+DumpGLMVector(std::string fname, std::vector<glm::vec3> vec, int width, int height)
+{
+    std::vector<uint8_t> rgbdata;
+    for (int y=0; y<height; y++) {
+        for (int x=0; x<width; x++) {
+            const glm::vec3 sample = vec.at((y * width) + x);
+            for (int j=0; j<3; j++) {
+                int intval = static_cast<int>(glm::clamp(sample[j], 0.0f, 255.0f));
+                rgbdata.push_back(static_cast<uint8_t>(intval));
+            }
+        }
+    }
+    Q_assert(rgbdata.size() == (width * height * 3));
+    WritePPM(fname, width, height, rgbdata.data());
+}
+
+static void
+DumpDownscaledLightmap(const bsp2_t *bsp, const bsp2_dface_t *face, int w, int h, const vec3_t *colors)
+{
+    int fnum = Face_GetNum(bsp, face);
+    char fname[1024];
+    sprintf(fname, "face-small%04d.ppm", fnum);
+        
+    std::vector<uint8_t> rgbdata;
+    for (int i=0; i<(w*h); i++) {
+        for (int j=0; j<3; j++) {
+            int intval = static_cast<int>(glm::clamp(colors[i][j], 0.0f, 255.0f));
+            rgbdata.push_back(static_cast<uint8_t>(intval));
+        }
+    }
+    
+    WritePPM(std::string{fname}, w, h, rgbdata.data());
+}
+
+static std::vector<glm::vec3>
+LightmapColorsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)
+{
+    std::vector<glm::vec3> res;
+    for (int i=0; i<lightsurf->numpoints; i++) {
+        const vec_t *color = lm->samples[i].color;
+        res.push_back(glm::vec3(color[0], color[1], color[2]));
+    }
+    return res;
+}
+
+static std::vector<glm::vec3>
+LightmapNormalsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)
+{
+    std::vector<glm::vec3> res;
+    for (int i=0; i<lightsurf->numpoints; i++) {
+        const vec_t *color = lm->samples[i].direction;
+        res.push_back(glm::vec3(color[0], color[1], color[2]));
+    }
+    return res;
+}
+
+static std::vector<glm::vec3>
+LightmapToGLMVector(const bsp2_t *bsp, const lightsurf_t *lightsurf)
+{
+    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(lightsurf, 0);
+    if (lm != nullptr) {
+        return LightmapColorsToGLMVector(lightsurf, lm);
+    }
+    return std::vector<glm::vec3>();
+}
+
+static glm::vec3
+LinearToGamma22(const glm::vec3 &c) {
+    return glm::pow(c, glm::vec3(1/2.2f));
+}
+
+static glm::vec3
+Gamma22ToLinear(const glm::vec3 &c) {
+    return glm::pow(c, glm::vec3(2.2f));
+}
+
+void GLMVector_GammaToLinear(std::vector<glm::vec3> &vec) {
+    for (auto &v : vec) {
+        v = Gamma22ToLinear(v);
+    }
+}
+
+void GLMVector_LinearToGamma(std::vector<glm::vec3> &vec) {
+    for (auto &v : vec) {
+        v = LinearToGamma22(v);
+    }
+}
+
+static std::vector<glm::vec3>
+IntegerDownsampleImage(const std::vector<glm::vec3> &input, int w, int h, int factor)
+{
+    Q_assert(factor >= 1);
+    if (factor == 1)
+        return input;
+    
+    int outw = w/factor;
+    int outh = h/factor;
+    
+    std::vector<glm::vec3> res(static_cast<size_t>(outw * outh));
+    
+    for (int y=0; y<outh; y++) {
+        for (int x=0; x<outw; x++) {
+
+            float totalWeight = 0.0f;
+            glm::vec3 totalColor(0);
+            
+            const int extraradius = 0;
+            const int kernelextent = factor + (2 * extraradius);
+            
+            for (int y0 = 0; y0 < kernelextent; y0++) {
+                for (int x0 = 0; x0 < kernelextent; x0++) {
+                    const int x1 = (x * factor) - extraradius + x0;
+                    const int y1 = (y * factor) - extraradius + y0;
+                    
+                    // check if the kernel goes outside of the source image
+                    if (x1 < 0 || x1 >= w)
+                        continue;
+                    if (y1 < 0 || y1 >= h)
+                        continue;
+
+                    // read the input sample
+                    const glm::vec3 inSample = input.at((y1 * w) + x1);
+                    
+                    const float kernelextent_float = kernelextent + 1.0f;
+                    const float x_in_kernel_float = x0 + 0.5f;
+                    const float y_in_kernel_float = y0 + 0.5f;
+                    
+                    Q_assert(x_in_kernel_float >= 0 && x_in_kernel_float <= kernelextent_float);
+                    Q_assert(y_in_kernel_float >= 0 && y_in_kernel_float <= kernelextent_float);
+                    
+                    const float weight = 1.0f;
+                    totalColor += weight * inSample;
+                    
+                    totalWeight += weight;
+                }
+            }
+            
+            totalColor /= totalWeight;
+            
+            res[(y * outw) + x] = totalColor;
+        }
+    }
+    
+    return res;
 }
 
 static void
@@ -2283,52 +2276,24 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     const int actual_width = lightsurf->texsize[0] + 1;
     const int actual_height = lightsurf->texsize[1] + 1;
     
+    const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
+    const int oversampled_height = (lightsurf->texsize[1] + 1) * oversample;
+    
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
+        const lightmap_t *lm = sorted.at(mapnum);
         
         // allocate new float buffers for the output colors and directions
         // these are the actual output width*height, without oversampling.
-        vec3_t *output_color = static_cast<vec3_t *>(calloc(size, sizeof(vec3_t)));
-        vec3_t *output_dir = static_cast<vec3_t *>(calloc(size, sizeof(vec3_t)));
-        
-        for (int t = 0; t < actual_height; t++) {
-            for (int s = 0; s < actual_width; s++) {
-
-                /* Take the average of any oversampling */
-                vec3_t color, direction;
-
-                VectorCopy(vec3_origin, color);
-                VectorCopy(vec3_origin, direction);
-                
-                for (int i = 0; i < oversample; i++) {
-                    for (int j = 0; j < oversample; j++) {
-                        const int col = (s*oversample) + j;
-                        const int row = (t*oversample) + i;
-                        const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
-                        const int sample_index = (row * oversampled_width) + col;
-                        
-                        const lightsample_t *sample = &sorted.at(mapnum)->samples[sample_index];
-
-                        VectorAdd(color, sample->color, color);
-                        VectorAdd(direction, sample->direction, direction);
-                    }
-                }
-                
-                VectorScale(color, 1.0 / oversample / oversample, color);
-                
-                // save in the temporary float buffers
-                const int actual_sampleindex = (t * actual_width) + s;
-                VectorCopy(color, output_color[actual_sampleindex]);
-                VectorCopy(direction, output_dir[actual_sampleindex]);
-            }
-        }
+        std::vector<glm::vec3> output_color = IntegerDownsampleImage(LightmapColorsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
+        std::vector<glm::vec3> output_dir = IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
         
         // copy from the float buffers to byte buffers in .bsp / .lit / .lux
         
         for (int t = 0; t < actual_height; t++) {
             for (int s = 0; s < actual_width; s++) {
                 const int sampleindex = (t * actual_width) + s;
-                const vec_t *color = static_cast<const vec_t *>(output_color[sampleindex]);
-                const vec_t *direction = static_cast<const vec_t *>(output_dir[sampleindex]);
+                const glm::vec3 &color = output_color.at(sampleindex);
+                const glm::vec3 &direction = output_dir.at(sampleindex);
                 
                 *lit++ = color[0];
                 *lit++ = color[1];
@@ -2347,9 +2312,9 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 if (lux) {
                     vec3_t temp;
                     int v;
-                    temp[0] = DotProduct(direction, lightsurf->snormal);
-                    temp[1] = DotProduct(direction, lightsurf->tnormal);
-                    temp[2] = DotProduct(direction, lightsurf->plane.normal);
+                    temp[0] = glm::dot(direction, vec3_t_to_glm(lightsurf->snormal));
+                    temp[1] = glm::dot(direction, vec3_t_to_glm(lightsurf->tnormal));
+                    temp[2] = glm::dot(direction, vec3_t_to_glm(lightsurf->plane.normal));
                     
                     if (!temp[0] && !temp[1] && !temp[2])
                         VectorSet(temp, 0, 0, 1);
@@ -2362,9 +2327,6 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 }
             }
         }
-        
-        free(output_color);
-        free(output_dir);
     }
 }
 
@@ -2520,18 +2482,6 @@ LightFace(bsp2_dface_t *face, facesup_t *facesup, const modelinfo_t *modelinfo, 
     
     if (debugmode == debugmode_bouncelights)
         LightFace_BounceLightsDebug(lightsurf, lightmaps);
-    
-    /* Fix any negative values */
-    for (lightmap_t &lightmap : *lightmaps) {
-        for (int j = 0; j < lightsurf->numpoints; j++) {
-            lightsample_t *sample = &lightmap.samples[j];
-            for (int k = 0; k < 3; k++) {
-                if (sample->color[k] < 0) {
-                    sample->color[k] = 0;
-                }
-            }
-        }
-    }
 
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf, lightmaps);

@@ -33,10 +33,15 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <string>
 #include <cassert>
 #include <limits>
 #include <sstream>
+
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <glm/mat4x4.hpp>
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
@@ -47,6 +52,10 @@ typedef struct {
 } lightsample_t;
 
 static inline float LightSample_Brightness(const vec3_t color) {
+    return ((color[0] + color[1] + color[2]) / 3.0);
+}
+
+static inline float LightSample_Brightness(const glm::vec3 color) {
     return ((color[0] + color[1] + color[2]) / 3.0);
 }
 
@@ -65,13 +74,7 @@ public:
 #define MAXDIMENSION (255+1)
 
 typedef struct {
-    vec3_t data[3];     /* permuted 3x3 matrix */
-    int row[3];         /* row permutations */
-    int col[3];         /* column permutations */
-} pmatrix3_t;
-    
-typedef struct {
-    pmatrix3_t transform;
+    glm::mat4x4 texSpaceToWorld;
     const texinfo_t *texinfo;
     vec_t planedist;
 } texorg_t;
@@ -167,19 +170,6 @@ typedef enum {
 
 extern debugmode_t debugmode;
 extern bool verbose_log;
-
-/* bounce lights */
-
-typedef struct {
-    vec3_t pos;
-    vec3_t color;
-    vec3_t surfnormal;
-    vec_t area;
-    
-    /* estimated visible AABB culling */
-    vec3_t mins;
-    vec3_t maxs;
-} bouncelight_t;
 
 extern byte thepalette[768];
     
@@ -399,11 +389,8 @@ lockable_setting_t *FindSetting(std::string name);
 void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
+const modelinfo_t *ModelInfoForModel(const bsp2_t *bsp, int modelnum);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
-const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
-const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
-const std::vector<bouncelight_t> &BounceLights();
-std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum);
 void Palette_GetColor(int i, vec3_t samplecolor);
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
 int light_main(int argc, const char **argv);

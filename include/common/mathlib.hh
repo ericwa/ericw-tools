@@ -23,6 +23,10 @@
 #include <float.h>
 #include <math.h>
 #include <common/cmdlib.hh>
+#include <vector>
+
+#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 
 #ifdef DOUBLEVEC_T
 #define vec_t double
@@ -51,7 +55,19 @@ extern const vec3_t vec3_origin;
 
 #define EQUAL_EPSILON 0.001
 
+#define ZERO_TRI_AREA_EPSILON 0.01f
+#define POINT_EQUAL_EPSILON 0.01f
+
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2);
+
+static inline bool
+GLMVectorCompare(const glm::vec3 &v1, const glm::vec3 &v2)
+{
+    for (int i = 0; i < 3; i++)
+        if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
+            return false;
+    return true;
+}
 
 static inline vec_t
 DotProduct(const vec3_t x, const vec3_t y)
@@ -105,6 +121,20 @@ VectorSet(vec3_t out, vec_t x, vec_t y, vec_t z)
     out[0] = x;
     out[1] = y;
     out[2] = z;
+}
+
+static inline void
+VectorCopyFromGLM(const glm::vec3 &in, vec3_t out)
+{
+    out[0] = in.x;
+    out[1] = in.y;
+    out[2] = in.z;
+}
+
+static inline glm::vec3
+VectorToGLM(const vec3_t in)
+{
+    return glm::vec3(in[0], in[1], in[2]);
 }
 
 static inline vec_t
@@ -190,5 +220,110 @@ void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out);
 void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size);
+
+template <class V>
+class aabb {
+private:
+    V m_mins, m_maxs;
+    
+public:
+    aabb() : m_mins(FLT_MAX), m_maxs(-FLT_MAX) {}
+    aabb(const V &mins, const V &maxs) : m_mins(mins), m_maxs(maxs) {}
+    aabb(const aabb<V> &other) : m_mins(other.m_mins), m_maxs(other.m_maxs) {}
+    
+    int length() const { return m_mins.length(); }
+    
+    bool disjoint(const aabb<V> &other) const {
+        for (int i=0; i<length(); i++) {
+            if (m_maxs[i] < other.m_mins[i]) return true;
+            if (m_mins[i] > other.m_maxs[i]) return true;
+        }
+        return false;
+    }
+    
+    bool contains(const V &p) const {
+        for (int i=0; i<length(); i++) {
+            if (!(p[i] >= m_mins[i] && p[i] <= m_maxs[i])) return false;
+        }
+        return true;
+    }
+    
+    aabb<V> expand(const V &pt) const {
+        V mins, maxs;
+        for (int i=0; i<length(); i++) {
+            mins[i] = qmin(m_mins[i], pt[i]);
+            maxs[i] = qmax(m_maxs[i], pt[i]);
+        }
+        return aabb<V>(mins, maxs);
+    }
+    
+    V size() const {
+        V result;
+        for (int i=0; i<length(); i++) {
+            result[i] = m_maxs[i] - m_mins[i];
+        }
+        return result;
+    }
+    
+    aabb<V> grow(const V &size) const {
+        V mins = m_mins;
+        V maxs = m_maxs;
+        for (int i=0; i<length(); i++) {
+            mins[i] -= size[i];
+            maxs[i] += size[i];
+        }
+        return aabb<V>(mins, maxs);
+    }
+};
+
+using aabb3 = aabb<glm::vec3>;
+using aabb2 = aabb<glm::vec2>;
+
+/// abc - clockwise ordered triangle
+/// p - point to get the barycentric coords of
+glm::vec2 Barycentric_FromPoint(const glm::vec3 &p, const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c);
+glm::vec2 Barycentric_Random(const float r1, const float r2);
+
+/// Evaluates the given barycentric coord for the given triangle
+glm::vec3 Barycentric_ToPoint(const glm::vec2 &bary,
+                              const glm::vec3 &a,
+                              const glm::vec3 &b,
+                              const glm::vec3 &c);
+
+vec_t TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2);
+
+// noramlizes the given pdf so it sums to 1, then converts to a cdf
+std::vector<float> MakeCDF(const std::vector<float> &pdf);
+
+int SampleCDF(const std::vector<float> &cdf, float sample);
+
+// filtering
+
+// width (height) are the filter "radius" (not "diameter")
+float Filter_Gaussian(float width, float height, float x, float y);
+
+// sqrt(x^2 + y^2) should be <= a, returns 0 outside that range.
+float Lanczos2D(float x, float y, float a);
+
+// glm geometry
+
+static inline glm::vec3 vec3_t_to_glm(const vec3_t vec) {
+    return glm::vec3(vec[0], vec[1], vec[2]);
+}
+
+static inline void glm_to_vec3_t(const glm::vec3 &glm, vec3_t out) {
+    out[0] = glm.x;
+    out[1] = glm.y;
+    out[2] = glm.z;
+}
+
+glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);
+std::vector<glm::vec4> GLM_MakeInwardFacingEdgePlanes(std::vector<glm::vec3> points);
+bool GLM_EdgePlanes_PointInside(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
+float GLM_EdgePlanes_PointInsideDist(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
+glm::vec3 GLM_TriangleCentroid(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
+float GLM_TriangleArea(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
+float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point);
+glm::vec3 GLM_PolyCentroid(std::vector<glm::vec3> points);
 
 #endif /* __COMMON_MATHLIB_H__ */

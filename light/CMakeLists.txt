@@ -4,7 +4,11 @@ project (light CXX)
 set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/entities.hh
 	${CMAKE_SOURCE_DIR}/include/light/light.hh
+	${CMAKE_SOURCE_DIR}/include/light/phong.hh
+	${CMAKE_SOURCE_DIR}/include/light/bounce.hh
 	${CMAKE_SOURCE_DIR}/include/light/ltface.hh
+	${CMAKE_SOURCE_DIR}/include/light/light2.hh
+	${CMAKE_SOURCE_DIR}/include/light/ltface2.hh
 	${CMAKE_SOURCE_DIR}/include/light/trace.hh
 	${CMAKE_SOURCE_DIR}/include/light/litfile.hh
 	${CMAKE_SOURCE_DIR}/include/light/settings.hh)
@@ -15,6 +19,10 @@ set(LIGHT_SOURCES
 	ltface.cc
 	trace.cc
 	light.cc
+	phong.cc
+	bounce.cc
+	ltface2.cc
+	light2.cc
 	settings.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.cc
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc

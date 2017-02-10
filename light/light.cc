@@ -20,10 +20,15 @@
 #include <cstdint>
 #include <cassert>
 #include <cstdio>
+#include <iostream>
 
 #include <light/light.hh>
+#include <light/phong.hh>
+#include <light/bounce.hh>
+#include <light/light2.hh>
 #include <light/entities.hh>
 #include <light/ltface.hh>
+#include <light/ltface2.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
@@ -42,7 +47,10 @@
 #include <mutex>
 #include <string>
 
+#include <glm/glm.hpp>
+
 using namespace std;
+using namespace glm;
 
 globalconfig_t cfg_static {};
 
@@ -192,6 +200,11 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
         Error("%s: overrun", __func__);
 }
 
+const modelinfo_t *ModelInfoForModel(const bsp2_t *bsp, int modelnum)
+{
+    return modelinfo.at(modelnum);
+}
+
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
 {
     int i;
@@ -337,272 +350,6 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     Q_assert(modelinfo.size() == bsp->nummodels);
 }
 
-/* return 0 if either vector is zero-length */
-static float
-AngleBetweenVectors(const vec3_t d1, const vec3_t d2)
-{
-    float length_product = (VectorLength(d1)*VectorLength(d2));
-    if (length_product == 0)
-        return 0;
-    float cosangle = DotProduct(d1, d2)/length_product;
-    if (cosangle < -1) cosangle = -1;
-    if (cosangle > 1) cosangle = 1;
-    
-    float angle = acos(cosangle);
-    return angle;
-}
-
-/* returns the angle between vectors p2->p1 and p2->p3 */
-static float
-AngleBetweenPoints(const vec3_t p1, const vec3_t p2, const vec3_t p3)
-{
-    vec3_t d1, d2;
-    VectorSubtract(p1, p2, d1);
-    VectorSubtract(p3, p2, d2);
-    float result = AngleBetweenVectors(d1, d2);
-    return result;
-}
-
-class vec3_struct_t {
-public:
-    vec3_t v;
-    vec3_struct_t() {
-        VectorSet(v, 0, 0, 0);
-    }
-};
-
-std::map<const bsp2_dface_t *, std::vector<vec3_struct_t>> vertex_normals;
-std::set<int> interior_verts;
-map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
-map<int, vector<const bsp2_dface_t *>> vertsToFaces;
-
-/* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts.
- * v1, v2, v3 are global vertex indices */
-static void
-AddTriangleNormals(std::map<int, vec3_struct_t> &smoothed_normals, const vec_t *norm, const dvertex_t *verts, int v1, int v2, int v3)
-{
-    const vec_t *p1 = verts[v1].point;
-    const vec_t *p2 = verts[v2].point;
-    const vec_t *p3 = verts[v3].point;
-    float weight;
-    
-    weight = AngleBetweenPoints(p2, p1, p3);
-    VectorMA(smoothed_normals[v1].v, weight, norm, smoothed_normals[v1].v);
-
-    weight = AngleBetweenPoints(p1, p2, p3);
-    VectorMA(smoothed_normals[v2].v, weight, norm, smoothed_normals[v2].v);
-
-    weight = AngleBetweenPoints(p1, p3, p2);
-    VectorMA(smoothed_normals[v3].v, weight, norm, smoothed_normals[v3].v);
-}
-
-/* access the final phong-shaded vertex normal */
-const vec_t *GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
-{
-    const auto &face_normals_vector = vertex_normals.at(f);
-    return face_normals_vector.at(vertindex).v;
-}
-
-static bool
-FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
-{
-    if (faces.empty()) {
-        return false;
-    }
-    const int32_t planenum = faces.at(0)->planenum;
-    for (auto face : faces) {
-        if (face->planenum != planenum) {
-            return false;
-        }
-    }
-    return true;
-}
-
-const bsp2_dface_t *
-Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex) 
-{
-    if (smoothFaces.find(f) == smoothFaces.end()) {
-        return nullptr;
-    }
-    
-    int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
-    int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
-    
-    const auto &v0_faces = vertsToFaces.at(v0);
-    const auto &v1_faces = vertsToFaces.at(v1);
-    
-    // find a face f2 that has both verts v0 and v1
-    for (auto f2 : v0_faces) {
-        if (f2 == f)
-            continue;
-        if (find(v1_faces.begin(), v1_faces.end(), f2) != v1_faces.end()) {
-            const auto &f_smoothfaces = smoothFaces.at(f);
-            bool smoothed = (f_smoothfaces.find(f2) != f_smoothfaces.end());
-            return smoothed ? f2 : nullptr;
-        }
-    }
-    return nullptr;
-}
-
-static void
-CalcualateVertexNormals(const bsp2_t *bsp)
-{
-    // clear in case we are run twice
-    vertex_normals.clear();
-    interior_verts.clear();
-    smoothFaces.clear();
-    vertsToFaces.clear();
-    
-    // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
-    // support on func_detail/func_group
-    for (int i=0; i<bsp->nummodels; i++) {
-        const modelinfo_t *info = modelinfo.at(i);
-        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(info->getResolvedPhongAngle())));
-
-        if (!phongangle_byte)
-            continue;
-        
-        for (int j=info->model->firstface; j < info->model->firstface + info->model->numfaces; j++) {
-            const bsp2_dface_t *f = &bsp->dfaces[j];
-            
-            extended_texinfo_flags[f->texinfo] &= ~(TEX_PHONG_ANGLE_MASK);
-            extended_texinfo_flags[f->texinfo] |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
-        }
-    }
-    
-    // build "vert index -> faces" map
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
-        for (int j = 0; j < f->numedges; j++) {
-            const int v = Face_VertexAtIndex(bsp, f, j);
-            vertsToFaces[v].push_back(f);
-        }
-    }
-    
-    // track "interior" verts, these are in the middle of a face, and mess up normal interpolation
-    for (int i=0; i<bsp->numvertexes; i++) {
-        auto &faces = vertsToFaces[i];
-        if (faces.size() > 1 && FacesOnSamePlane(faces)) {
-            interior_verts.insert(i);
-        }
-    }
-    //printf("CalcualateVertexNormals: %d interior verts\n", (int)interior_verts.size());
-    
-    // build the "face -> faces to smooth with" map
-    for (int i = 0; i < bsp->numfaces; i++) {
-        bsp2_dface_t *f = &bsp->dfaces[i];
-        
-        vec3_t f_norm;
-        Face_Normal(bsp, f, f_norm);
-        
-        // any face normal within this many degrees can be smoothed with this face
-        const int f_smoothangle = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
-        if (!f_smoothangle)
-            continue;
-        
-        for (int j = 0; j < f->numedges; j++) {
-            const int v = Face_VertexAtIndex(bsp, f, j);
-            // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
-            for (const bsp2_dface_t *f2 : vertsToFaces[v]) {
-                if (f2 == f)
-                    continue;
-                
-                const int f2_smoothangle = (extended_texinfo_flags[f2->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
-                if (!f2_smoothangle)
-                    continue;
-                
-                vec3_t f2_norm;
-                Face_Normal(bsp, f2, f2_norm);
-
-                const vec_t cosangle = DotProduct(f_norm, f2_norm);
-                const vec_t cosmaxangle = cos(DEG2RAD(qmin(f_smoothangle, f2_smoothangle)));
-                
-                // check the angle between the face normals
-                if (cosangle >= cosmaxangle) {
-                    smoothFaces[f].insert(f2);
-                }
-            }
-        }
-    }
-    
-    // finally do the smoothing for each face
-    for (int i = 0; i < bsp->numfaces; i++)
-    {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
-        if (f->numedges < 3) {
-            logprint("CalcualateVertexNormals: face %d is degenerate with %d edges\n", i, f->numedges);
-            continue;
-        }
-        
-        const auto &neighboursToSmooth = smoothFaces[f];
-        vec3_t f_norm;
-        
-        // get the face normal
-        Face_Normal(bsp, f, f_norm);
-        
-        // gather up f and neighboursToSmooth
-        std::vector<const bsp2_dface_t *> fPlusNeighbours;
-        fPlusNeighbours.push_back(f);
-        for (auto neighbour : neighboursToSmooth) {
-            fPlusNeighbours.push_back(neighbour);
-        }
-        
-        // global vertex index -> smoothed normal
-        std::map<int, vec3_struct_t> smoothedNormals;
-
-        // walk fPlusNeighbours
-        for (auto f2 : fPlusNeighbours) {
-            vec3_t f2_norm;
-            Face_Normal(bsp, f2, f2_norm);
-            
-            /* now just walk around the surface as a triangle fan */
-            int v1, v2, v3;
-            v1 = Face_VertexAtIndex(bsp, f2, 0);
-            v2 = Face_VertexAtIndex(bsp, f2, 1);
-            for (int j = 2; j < f2->numedges; j++)
-            {
-                v3 = Face_VertexAtIndex(bsp, f2, j);
-                AddTriangleNormals(smoothedNormals, f2_norm, bsp->dvertexes, v1, v2, v3);
-                v2 = v3;
-            }
-        }
-        
-        // normalize vertex normals
-        for (auto &pair : smoothedNormals) {
-            const int vertIndex = pair.first;
-            vec_t *vertNormal = pair.second.v;
-            if (0 == VectorNormalize(vertNormal)) {
-                // this happens when there are colinear vertices, which give zero-area triangles,
-                // so there is no contribution to the normal of the triangle in the middle of the
-                // line. Not really an error, just set it to use the face normal.
-#if 0
-                logprint("Failed to calculate normal for vertex %d at (%f %f %f)\n",
-                         vertIndex,
-                         bsp->dvertexes[vertIndex].point[0],
-                         bsp->dvertexes[vertIndex].point[1],
-                         bsp->dvertexes[vertIndex].point[2]);
-#endif
-                VectorCopy(f_norm, vertNormal);
-            }
-        }
-        
-        // sanity check
-        if (!neighboursToSmooth.size()) {
-            for (auto vertIndexNormalPair : smoothedNormals) {
-                Q_assert(VectorCompare(vertIndexNormalPair.second.v, f_norm));
-            }
-        }
-        
-        // now, record all of the smoothed normals that are actually part of `f`
-        for (int j=0; j<f->numedges; j++) {
-            int v = Face_VertexAtIndex(bsp, f, j);
-            Q_assert(smoothedNormals.find(v) != smoothedNormals.end());
-            
-            vertex_normals[f].push_back(smoothedNormals[v]);
-        }
-    }
-}
-
 /*
  * =============
  *  LightWorld
@@ -673,7 +420,15 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     /* ericw -- alloc memory */
     ltface_ctxs = (struct ltface_ctx *)calloc(bsp->numfaces, sizeof(struct ltface_ctx));
     
+#if 0
+    lightbatchthread_info_t info;
+    info.all_batches = MakeLightingBatches(bsp);
+    info.all_contribFaces = MakeContributingFaces(bsp);
+    info.bsp = bsp;
+    RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
+#else
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
+#endif
 
     logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
@@ -741,278 +496,6 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
     fclose(texinfofile);
 }
 
-// radiosity
-
-mutex radlights_lock;
-map<string, vec3_struct_t> texturecolors;
-std::vector<bouncelight_t> radlights;
-std::map<int, std::vector<bouncelight_t>> radlightsByFacenum; // duplicate of `radlights` but indexed by face
-
-class patch_t {
-public:
-    winding_t *w;
-    vec3_t center;
-    vec3_t samplepoint; // 1 unit above center
-    plane_t plane;
-    vec3_t directlight;
-};
-
-static unique_ptr<patch_t>
-MakePatch (const globalconfig_t &cfg, winding_t *w)
-{
-    unique_ptr<patch_t> p { new patch_t };
-    p->w = w;
-    
-    // cache some stuff
-    WindingCenter(p->w, p->center);
-    WindingPlane(p->w, p->plane.normal, &p->plane.dist);
-    
-    // nudge the cernter point 1 unit off
-    VectorMA(p->center, 1.0f, p->plane.normal, p->samplepoint);
-    
-    // calculate direct light
-    
-    raystream_t *rs = MakeRayStream(numDirtVectors);
-    GetDirectLighting(cfg, rs, p->samplepoint, p->plane.normal, p->directlight);
-    delete rs;
-    
-    return p;
-}
-
-struct make_bounce_lights_args_t {
-    const bsp2_t *bsp;
-    const globalconfig_t *cfg;
-};
-
-struct save_winding_args_t {
-    vector<unique_ptr<patch_t>> *patches;
-    const globalconfig_t *cfg;
-};
-
-static void SaveWindingFn(winding_t *w, void *userinfo)
-{
-    save_winding_args_t *args = static_cast<save_winding_args_t *>(userinfo);
-    args->patches->push_back(MakePatch(*args->cfg, w));
-}
-
-static bool
-Face_ShouldBounce(const bsp2_t *bsp, const bsp2_dface_t *face)
-{
-    // make bounce light, only if this face is shadow casting
-    const modelinfo_t *mi = ModelInfoForFace(bsp, static_cast<int>(face - bsp->dfaces));
-    if (!mi || !mi->shadow.boolValue()) {
-        return false;
-    }
-    
-    if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL) {
-        return false;
-    }
-    
-    const char *texname = Face_TextureName(bsp, face);
-    if (!strcmp("skip", texname)) {
-        return false;
-    }
-    
-    return true;
-}
-
-static void
-Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t color)
-{
-    const char *facename = Face_TextureName(bsp, face);
-    
-    if (texturecolors.find(facename) != texturecolors.end()) {
-        vec3_struct_t texcolor = texturecolors.at(facename);
-        VectorCopy(texcolor.v, color);
-    } else {
-        VectorSet(color, 127, 127, 127);
-    }
-}
-
-static void
-AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp);
-
-static void *
-MakeBounceLightsThread (void *arg)
-{
-    const bsp2_t *bsp = static_cast<make_bounce_lights_args_t *>(arg)->bsp;
-    const globalconfig_t &cfg = *static_cast<make_bounce_lights_args_t *>(arg)->cfg;
-    
-    while (1) {
-        int i = GetThreadWork();
-        if (i == -1)
-            break;
-    
-        const bsp2_dface_t *face = &bsp->dfaces[i];
-        
-        if (!Face_ShouldBounce(bsp, face)) {
-            continue;
-        }
-        
-        vector<unique_ptr<patch_t>> patches;
-        
-        winding_t *winding = WindingFromFace(bsp, face);
-        // grab some info about the face winding
-        const float facearea = WindingArea(winding);
-        
-        plane_t faceplane;
-        WindingPlane(winding, faceplane.normal, &faceplane.dist);
-        
-        vec3_t facemidpoint;
-        WindingCenter(winding, facemidpoint);
-        VectorMA(facemidpoint, 1, faceplane.normal, facemidpoint); // lift 1 unit
-        
-        save_winding_args_t args;
-        args.patches = &patches;
-        args.cfg = &cfg;
-        
-        DiceWinding(winding, 64.0f, SaveWindingFn, &args);
-        winding = nullptr; // DiceWinding frees winding
-        
-        // average them, area weighted
-        vec3_t sum = {0,0,0};
-        float totalarea = 0;
-        
-        for (const auto &patch : patches) {
-            const float patcharea = WindingArea(patch->w);
-            totalarea += patcharea;
-            
-            VectorMA(sum, patcharea, patch->directlight, sum);
-//              printf("  %f %f %f\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
-        }
-        VectorScale(sum, 1.0/totalarea, sum);
-        
-        // avoid small, or zero-area patches ("sum" would be nan)
-        if (totalarea < 1) {
-            continue;
-        }
-    
-        vec3_t texturecolor;
-        Face_LookupTextureColor(bsp, face, texturecolor);
-        
-        // lerp between gray and the texture color according to `bouncecolorscale`
-        const vec3_t gray = {127, 127, 127};
-        vec3_t blendedcolor = {0, 0, 0};
-        VectorMA(blendedcolor, cfg.bouncecolorscale.floatValue(), texturecolor, blendedcolor);
-        VectorMA(blendedcolor, 1-cfg.bouncecolorscale.floatValue(), gray, blendedcolor);
-        
-        // final color to emit
-        vec3_t emitcolor;
-        for (int k=0; k<3; k++) {
-            emitcolor[k] = (sum[k] / 255.0f) * (blendedcolor[k] / 255.0f);
-        }
-        
-        AddBounceLight(facemidpoint, emitcolor, faceplane.normal, facearea, face, bsp);
-    }
-    
-    return NULL;
-}
-
-static void
-AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp)
-{
-    Q_assert(color[0] >= 0);
-    Q_assert(color[1] >= 0);
-    Q_assert(color[2] >= 0);
-    Q_assert(area > 0);
-    
-    bouncelight_t l = {0};
-    VectorCopy(pos, l.pos);
-    VectorCopy(color, l.color);
-    VectorCopy(surfnormal, l.surfnormal);
-    l.area = area;
-    
-    if (!novisapprox) {
-        EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);
-    }
-    
-    unique_lock<mutex> lck { radlights_lock };
-    radlights.push_back(l);
-    radlightsByFacenum[Face_GetNum(bsp, face)].push_back(l);
-}
-
-const std::vector<bouncelight_t> &BounceLights()
-{
-    return radlights;
-}
-
-std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum)
-{
-    const auto &vec = radlightsByFacenum.find(facenum);
-    if (vec != radlightsByFacenum.end()) {
-        return vec->second;
-    }
-    return {};
-}
-
-void Palette_GetColor(int i, vec3_t samplecolor)
-{
-    samplecolor[0] = (float)thepalette[3*i];
-    samplecolor[1] = (float)thepalette[3*i + 1];
-    samplecolor[2] = (float)thepalette[3*i + 2];
-}
-
-// Returns color in [0,1]
-static void
-Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
-{
-    VectorSet(color, 0, 0, 0);
-    if (!bsp->texdatasize)
-        return;
-    
-    const byte *data = (byte*)miptex + miptex->offsets[0];
-    for (int y=0; y<miptex->height; y++) {
-        for (int x=0; x<miptex->width; x++) {
-            const int i = data[(miptex->width * y) + x];
-            
-            vec3_t samplecolor;
-            Palette_GetColor(i, samplecolor);
-            VectorAdd(color, samplecolor, color);
-        }
-    }
-    VectorScale(color, 1.0 / (miptex->width * miptex->height), color);
-}
-
-static void
-MakeTextureColors (const bsp2_t *bsp)
-{
-    logprint("--- MakeTextureColors ---\n");
- 
-    if (!bsp->texdatasize)
-        return;
-    
-    for (int i=0; i<bsp->dtexdata.header->nummiptex; i++) {
-        const int ofs = bsp->dtexdata.header->dataofs[i];
-        if (ofs < 0)
-            continue;
-        
-        const miptex_t *miptex = (miptex_t *)(bsp->dtexdata.base + ofs);
-        
-        string name { miptex->name };
-        vec3_struct_t color;
-        Texture_AvgColor(bsp, miptex, color.v);
-        
-//        printf("%s has color %f %f %f\n", name.c_str(), color.v[0], color.v[1], color.v[2]);
-        texturecolors[name] = color;
-    }
-}
-
-static void
-MakeBounceLights (const globalconfig_t &cfg, const bsp2_t *bsp)
-{
-    logprint("--- MakeBounceLights ---\n");
-    
-    const dmodel_t *model = &bsp->dmodels[0];
-    
-    make_bounce_lights_args_t args;
-    args.bsp = bsp;
-    args.cfg = &cfg;
-    
-    RunThreadsOn(model->firstface, model->firstface + model->numfaces, MakeBounceLightsThread, (void *)&args);
-}
-
-// end radiosity
-
 //obj
 
 static FILE *
@@ -1038,7 +521,7 @@ ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcou
     for (int i=0; i<face->numedges; i++)
     {
         int vertnum = Face_VertexAtIndex(bsp, face, i);
-        const vec_t *normal = GetSurfaceVertexNormal(bsp, face, i);
+        const vec3 normal = GetSurfaceVertexNormal(bsp, face, i);
         const float *pos = bsp->dvertexes[vertnum].point;
         fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
         fprintf(f, "vn %.9g %.9g %.9g\n", normal[0], normal[1], normal[2]);
@@ -1085,20 +568,18 @@ CheckNoDebugModeSet()
 
 // returns the face with a centroid nearest the given point.
 static const bsp2_dface_t *
-Face_NearestCentroid(const bsp2_t *bsp, const vec3_t point)
+Face_NearestCentroid(const bsp2_t *bsp, const glm::vec3 &point)
 {
     const bsp2_dface_t *nearest_face = NULL;
-    vec_t nearest_dist = VECT_MAX;
+    float nearest_dist = VECT_MAX;
     
     for (int i=0; i<bsp->numfaces; i++) {
         const bsp2_dface_t *f = &bsp->dfaces[i];
         
-        vec3_t fc;
-        FaceCentroid(f, bsp, fc);
+        const glm::vec3 fc = Face_Centroid(bsp, f);
         
-        vec3_t distvec;
-        VectorSubtract(fc, point, distvec);
-        vec_t dist = VectorLength(distvec);
+        const glm::vec3 distvec = fc - point;
+        const float dist = glm::length(distvec);
         
         if (dist < nearest_dist) {
             nearest_dist = dist;
@@ -1115,7 +596,7 @@ FindDebugFace(const bsp2_t *bsp)
     if (!dump_face)
         return;
     
-    const bsp2_dface_t *f = Face_NearestCentroid(bsp, dump_face_point);
+    const bsp2_dface_t *f = Face_NearestCentroid(bsp, vec3_t_to_glm(dump_face_point));
     if (f == NULL)
         Error("FindDebugFace: f == NULL\n");
 
