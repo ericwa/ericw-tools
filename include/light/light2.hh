@@ -59,8 +59,11 @@ public:
     // assuming the mesh connecting contribFace to refFace has been "unfolded"
     // so they lie on the same plane.
     glm::mat4x4 contribWorldToRefWorld;
+    glm::mat4x4 refWorldToContribWorld;
     glm::mat4x4 contribTexToRefTex;
     glm::mat4x4 contribWorldToRefTex;
+    
+    std::vector<glm::vec4> contribFaceEdgePlanes;
 };
 
 using all_contrib_faces_t = std::map<const bsp2_dface_t *, std::vector<contributing_face_t>>;

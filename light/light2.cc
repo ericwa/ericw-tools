@@ -203,8 +203,10 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
     resAddition.contribFace = f;
     resAddition.refFace = refFace;
     resAddition.contribWorldToRefWorld = FWorldToRefWorld;
+    resAddition.refWorldToContribWorld = glm::inverse(FWorldToRefWorld);
     resAddition.contribTexToRefTex = FTexToRefTex;
     resAddition.contribWorldToRefTex = FWorldToRefTex;
+    resAddition.contribFaceEdgePlanes = GLM_MakeInwardFacingEdgePlanes(GLM_FacePoints(bsp, f));
     result->push_back(resAddition);
     
     // walk edges
