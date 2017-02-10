@@ -259,7 +259,6 @@ Use the "-phongdebug" command-line flag to save the interpolated normals to the 
 .IP "\fB""_lightignore"" ""n""\fP"
 1 makes a model receive minlight only, ignoring all lights / sunlight. Could be useful on rotators / trains. 
 
-
 .SH "LIGHT ENTITY KEYS"
 
 .PP
@@ -374,6 +373,9 @@ Specifies the yaw/pitch/roll angles for a texture projection (overriding mangle)
 
 .IP "\fB""_project_fov"" ""n""\fP"
  Specifies the fov angle for a texture projection. Default 90.
+
+.IP "\fB""_bouncescale"" ""n""\fP"
+Scales the amount of light that is contributed by bounces.  Default is 1.0, 0.0 disables bounce lighting for this light.
 
 
 .SH AUTHOR
