@@ -38,7 +38,8 @@ int TextureName_Contents(const char *texname);
 int Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face);
 const dmodel_t *BSP_DModelForModelString(const bsp2_t *bsp, const std::string &submodel_str);
 vec_t Plane_Dist(const vec3_t point, const dplane_t *plane);
-bool Light_PointInSolid(const bsp2_t *bsp, const vec3_t point );
+bool Light_PointInSolid(const bsp2_t *bsp, const dmodel_t *model, const vec3_t point);
+bool Light_PointInWorld(const bsp2_t *bsp, const vec3_t point);
 plane_t *Face_AllocInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face);
 bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point);
 

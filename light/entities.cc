@@ -1084,7 +1084,8 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
 static void
 FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
 {
-    if (!Light_PointInSolid(bsp, point)) {
+    // FIXME: Check all shadow casters
+    if (!Light_PointInWorld(bsp, point)) {
         VectorCopy(point, point_out);
         return;
     }
@@ -1096,8 +1097,9 @@ FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
         int axis = i/2;
         bool add = i%2;
         testpoint[axis] += (add ? 2 : -2); // sample points are 1 unit off faces. so nudge by 2 units, so the lights are above the sample points
-        
-        if (!Light_PointInSolid(bsp, testpoint)) {
+    
+        // FIXME: Check all shadow casters
+        if (!Light_PointInWorld(bsp, testpoint)) {
             VectorCopy(testpoint, point_out);
             return;
         }
