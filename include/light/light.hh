@@ -137,7 +137,6 @@ typedef struct {
     vec3_t texturecolor;
     
     /* stuff used by CalcPoint */
-    vec_t starts, startt, st_step;
     texorg_t texorg;
     int width, height;
     

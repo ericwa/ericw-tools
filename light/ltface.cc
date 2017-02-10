@@ -474,9 +474,9 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
 
     surf->width  = (surf->texsize[0] + 1) * oversample;
     surf->height = (surf->texsize[1] + 1) * oversample;
-    surf->starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
-    surf->startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
-    surf->st_step = surf->lightmapscale / oversample;
+    const float starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
+    const float startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
+    const float st_step = surf->lightmapscale / oversample;
 
     /* Allocate surf->points */
     surf->numpoints = surf->width * surf->height;
@@ -490,8 +490,8 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             vec_t *point = surf->points[i];
             vec_t *norm = surf->normals[i];
             
-            const vec_t us = surf->starts + s * surf->st_step;
-            const vec_t ut = surf->startt + t * surf->st_step;
+            const vec_t us = starts + s * st_step;
+            const vec_t ut = startt + t * st_step;
 
             TexCoordToWorld(us, ut, &surf->texorg, point);
 
