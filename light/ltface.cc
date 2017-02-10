@@ -471,6 +471,9 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
      */
     TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg, surf->midpoint);
     VectorAdd(surf->midpoint, offset, surf->midpoint);
+ 
+    // Get faces which could contribute to this one.
+    const auto contribFaces = SetupContributingFaces(bsp, face, EdgeToFaceMap);
 
     surf->width  = (surf->texsize[0] + 1) * oversample;
     surf->height = (surf->texsize[1] + 1) * oversample;
