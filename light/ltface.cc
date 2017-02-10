@@ -439,6 +439,7 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
             fprintf(f, "\"classname\" \"light\"\n");
             fprintf(f, "\"origin\" \"%f %f %f\"\n", point[0], point[1], point[2]);
             fprintf(f, "\"face\" \"%d\"\n", facenum);
+            fprintf(f, "\"occluded\" \"%d\"\n", (int)surf->occluded[i]);
             fprintf(f, "\"s\" \"%d\"\n", s);
             fprintf(f, "\"t\" \"%d\"\n", t);
             fprintf(f, "}\n");
