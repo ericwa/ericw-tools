@@ -275,3 +275,21 @@ TEST(mathlib, RotTest4) {
      */
     
 }
+
+TEST(mathlib, ClosestPointOnPolyBoundary) {
+    // clockwise
+    const vector<vec3> poly {
+        { 0,0,0 },   // edge 0 start, edge 3 end
+        { 0,64,0 },  // edge 1 start, edge 0 end
+        { 64,64,0 }, // edge 2 start, edge 1 end
+        { 64,0,0 }   // edge 3 start, edge 2 end
+    };
+    
+    EXPECT_EQ(make_pair(0, vec3(0,0,0)), GLM_ClosestPointOnPolyBoundary(poly, vec3(0,0,0)));
+    
+    // Either edge 1 or 2 contain the point vec3(64,64,0), but we expect the first edge to be returned
+    EXPECT_EQ(make_pair(1, vec3(64,64,0)), GLM_ClosestPointOnPolyBoundary(poly, vec3(100,100,100)));
+    EXPECT_EQ(make_pair(2, vec3(64,32,0)), GLM_ClosestPointOnPolyBoundary(poly, vec3(100,32,0)));
+    
+    EXPECT_EQ(make_pair(0, vec3(0,0,0)), GLM_ClosestPointOnPolyBoundary(poly, vec3(-1,-1,0)));
+}

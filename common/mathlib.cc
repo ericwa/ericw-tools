@@ -23,6 +23,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <glm/gtx/closest_point.hpp>
 
 const vec3_t vec3_origin = { 0, 0, 0 };
 
@@ -367,7 +368,7 @@ float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point)
     return dot(vec3(plane), point) - plane.w;
 }
 
-glm::vec3 GLM_PolyCentroid(std::vector<vec3> points)
+glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points)
 {
     Q_assert(points.size() >= 3);
     
@@ -390,3 +391,32 @@ glm::vec3 GLM_PolyCentroid(std::vector<vec3> points)
     
     return poly_centroid;
 }
+
+std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::vec3> &poly, const vec3 &point)
+{
+    const int N = static_cast<int>(poly.size());
+    
+    int bestI = -1;
+    float bestDist = FLT_MAX;
+    glm::vec3 bestPointOnPoly(0);
+    
+    for (int i=0; i<N; i++) {
+        const glm::vec3 p0 = poly.at(i);
+        const glm::vec3 p1 = poly.at((i + 1) % N);
+        
+        const glm::vec3 c = closestPointOnLine(point, p0, p1);
+        const float distToC = length(c - point);
+        
+        if (distToC < bestDist) {
+            bestI = i;
+            bestDist = distToC;
+            bestPointOnPoly = c;
+        }
+    }
+    
+    Q_assert(bestI != -1);
+    
+    return make_pair(bestI, bestPointOnPoly);
+}
+
+
