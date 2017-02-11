@@ -293,3 +293,78 @@ TEST(mathlib, ClosestPointOnPolyBoundary) {
     
     EXPECT_EQ(make_pair(0, vec3(0,0,0)), GLM_ClosestPointOnPolyBoundary(poly, vec3(-1,-1,0)));
 }
+
+TEST(mathlib, PolygonCentroid) {
+    // poor test.. but at least checks that the colinear point is treated correctly
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 0,32,0 }, // colinear
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    
+    EXPECT_EQ(vec3(32,32,0), GLM_PolyCentroid(poly));
+}
+
+TEST(mathlib, BarycentricFromPoint) {
+    const tri_t tri = make_tuple<vec3,vec3,vec3>( // clockwise
+                                                 { 0,0,0 },
+                                                 { 0,64,0 },
+                                                 { 64,0,0 }
+                                                 );
+    
+    EXPECT_EQ(vec3(1,0,0), Barycentric_FromPoint(get<0>(tri), tri));
+    EXPECT_EQ(vec3(0,1,0), Barycentric_FromPoint(get<1>(tri), tri));
+    EXPECT_EQ(vec3(0,0,1), Barycentric_FromPoint(get<2>(tri), tri));
+    
+    EXPECT_EQ(vec3(0.5, 0.5, 0.0), Barycentric_FromPoint(vec3(0,32,0), tri));
+    EXPECT_EQ(vec3(0.0, 0.5, 0.5), Barycentric_FromPoint(vec3(32,32,0), tri));
+    EXPECT_EQ(vec3(0.5, 0.0, 0.5), Barycentric_FromPoint(vec3(32,0,0), tri));
+}
+
+TEST(mathlib, BarycentricToPoint) {
+    const tri_t tri = make_tuple<vec3,vec3,vec3>( // clockwise
+                                                 { 0,0,0 },
+                                                 { 0,64,0 },
+                                                 { 64,0,0 }
+                                                 );
+    
+    EXPECT_EQ(get<0>(tri), Barycentric_ToPoint(vec3(1,0,0), tri));
+    EXPECT_EQ(get<1>(tri), Barycentric_ToPoint(vec3(0,1,0), tri));
+    EXPECT_EQ(get<2>(tri), Barycentric_ToPoint(vec3(0,0,1), tri));
+    
+    EXPECT_EQ(vec3(0,32,0), Barycentric_ToPoint(vec3(0.5, 0.5, 0.0), tri));
+    EXPECT_EQ(vec3(32,32,0), Barycentric_ToPoint(vec3(0.0, 0.5, 0.5), tri));
+    EXPECT_EQ(vec3(32,0,0), Barycentric_ToPoint(vec3(0.5, 0.0, 0.5), tri));
+}
+
+TEST(mathlib, BarycentricRandom) {
+    const tri_t tri = make_tuple<vec3,vec3,vec3>( // clockwise
+                                                 { 0,0,0 },
+                                                 { 0,64,0 },
+                                                 { 64,0,0 }
+                                                 );
+    
+    const auto triAsVec = vector<vec3>{get<0>(tri), get<1>(tri), get<2>(tri)};
+    const auto edges = GLM_MakeInwardFacingEdgePlanes(triAsVec);
+    const auto plane = GLM_PolyPlane(triAsVec);
+    
+    for (int i=0; i<100; i++) {
+        const float r0 = Random();
+        const float r1 = Random();
+        
+        ASSERT_GE(r0, 0);
+        ASSERT_GE(r1, 0);
+        ASSERT_LE(r0, 1);
+        ASSERT_LE(r1, 1);
+        
+        const auto bary = Barycentric_Random(r0, r1);
+        EXPECT_FLOAT_EQ(1.0f, bary.x + bary.y + bary.z);
+        
+        const vec3 point = Barycentric_ToPoint(bary, tri);
+        EXPECT_TRUE(GLM_EdgePlanes_PointInside(edges, point));
+        
+        EXPECT_FLOAT_EQ(0.0f, GLM_DistAbovePlane(plane, point));
+    }
+}

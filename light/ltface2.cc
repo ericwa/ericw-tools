@@ -251,9 +251,9 @@ struct face_tris_t {
                                                                    Vertex_GetPos_E(bsp, get<1>(tri)),
                                                                    Vertex_GetPos_E(bsp, get<2>(tri)));
         
-        const glm::vec2 randomBary = Barycentric_Random(Random(), Random());
+        const glm::vec3 randomBary = Barycentric_Random(Random(), Random());
         
-        const glm::vec3 pt = Barycentric_ToPoint(randomBary, get<0>(triPts), get<1>(triPts), get<2>(triPts));
+        const glm::vec3 pt = Barycentric_ToPoint(randomBary, triPts);
         return pt;
     }
 };

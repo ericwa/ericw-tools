@@ -142,11 +142,13 @@ void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size) {
     }
 }
 
-glm::vec2 Barycentric_FromPoint(const glm::vec3 &p, const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c)
+glm::vec3 Barycentric_FromPoint(const glm::vec3 &p, const tri_t &tri)
 {
-    const glm::vec3 v0 = b - a;
-    const glm::vec3 v1 = c - a;
-    const glm::vec3 v2 = p - a;
+    using std::get;
+    
+    const glm::vec3 v0 = get<1>(tri) - get<0>(tri);
+    const glm::vec3 v1 = get<2>(tri) - get<0>(tri);
+    const glm::vec3 v2 =           p - get<0>(tri);
     float d00 = glm::dot(v0, v0);
     float d01 = glm::dot(v0, v1);
     float d11 = glm::dot(v1, v1);
@@ -155,26 +157,34 @@ glm::vec2 Barycentric_FromPoint(const glm::vec3 &p, const glm::vec3 &a, const gl
     float invDenom = (d00 * d11 - d01 * d01);
     invDenom = 1.0/invDenom;
     
-    glm::vec2 res((d11 * d20 - d01 * d21) * invDenom,
-                  (d00 * d21 - d01 * d20) * invDenom);
+    glm::vec3 res;
+    res[1] = (d11 * d20 - d01 * d21) * invDenom;
+    res[2] = (d00 * d21 - d01 * d20) * invDenom;
+    res[0] = 1.0f - res[1] - res[2];
     return res;
 }
 
 // from global illumination total compendium p. 12
-glm::vec2 Barycentric_Random(const float r1, const float r2)
+glm::vec3 Barycentric_Random(const float r1, const float r2)
 {
-    glm::vec2 res(1.0f - sqrtf(r1),
-                  r2 * sqrtf(r1));
+    glm::vec3 res;
+    res.x = 1.0f - sqrtf(r1);
+    res.y = r2 * sqrtf(r1);
+    res.z = 1.0f - res.x - res.y;
     return res;
 }
 
 /// Evaluates the given barycentric coord for the given triangle
-glm::vec3 Barycentric_ToPoint(const glm::vec2 &bary,
-                              const glm::vec3 &a,
-                              const glm::vec3 &b,
-                              const glm::vec3 &c)
+glm::vec3 Barycentric_ToPoint(const glm::vec3 &bary,
+                              const tri_t &tri)
 {
-    const glm::vec3 pt = a + (bary.s * (b - a)) + (bary.t * (c - a));
+    using std::get;
+    
+    const glm::vec3 pt = \
+          (bary.x * get<0>(tri))
+        + (bary.y * get<1>(tri))
+        + (bary.z * get<2>(tri));
+    
     return pt;
 }
 
@@ -295,6 +305,13 @@ glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points)
     const vec3 p2 = points[bestI];
     const vec3 normal = normalize(cross(p2 - p0, p1 - p0));
     return normal;
+}
+
+glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points)
+{
+    const vec3 normal = GLM_FaceNormal(points);
+    const float dist = dot(points.at(0), normal);
+    return vec4(normal, dist);
 }
 
 vector<vec4>

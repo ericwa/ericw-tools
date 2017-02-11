@@ -279,16 +279,16 @@ public:
 using aabb3 = aabb<glm::vec3>;
 using aabb2 = aabb<glm::vec2>;
 
+using tri_t = std::tuple<glm::vec3, glm::vec3, glm::vec3>;
+
 /// abc - clockwise ordered triangle
 /// p - point to get the barycentric coords of
-glm::vec2 Barycentric_FromPoint(const glm::vec3 &p, const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c);
-glm::vec2 Barycentric_Random(const float r1, const float r2);
+glm::vec3 Barycentric_FromPoint(const glm::vec3 &p, const tri_t &tri);
+glm::vec3 Barycentric_Random(const float r1, const float r2);
 
 /// Evaluates the given barycentric coord for the given triangle
-glm::vec3 Barycentric_ToPoint(const glm::vec2 &bary,
-                              const glm::vec3 &a,
-                              const glm::vec3 &b,
-                              const glm::vec3 &c);
+glm::vec3 Barycentric_ToPoint(const glm::vec3 &bary,
+                              const tri_t &tri);
 
 vec_t TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2);
 
@@ -325,6 +325,7 @@ glm::vec3 GLM_TriangleCentroid(const glm::vec3 &v0, const glm::vec3 &v1, const g
 float GLM_TriangleArea(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point);
 glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points);
+glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points);
 /// Returns the index of the polygon edge, and the closest point on that edge, to the given point
 std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::vec3> &poly, const glm::vec3 &point);
 
