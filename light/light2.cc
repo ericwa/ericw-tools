@@ -198,16 +198,18 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
     const glm::mat4x4 FTexToFWorld = TexSpaceToWorld(bsp, f);
     const glm::mat4x4 FTexToRefTex = RefWorldToRefTex * FWorldToRefWorld * FTexToFWorld;
     
-    // add to result
-    contributing_face_t resAddition;
-    resAddition.contribFace = f;
-    resAddition.refFace = refFace;
-    resAddition.contribWorldToRefWorld = FWorldToRefWorld;
-    resAddition.refWorldToContribWorld = glm::inverse(FWorldToRefWorld);
-    resAddition.contribTexToRefTex = FTexToRefTex;
-    resAddition.contribWorldToRefTex = FWorldToRefTex;
-    resAddition.contribFaceEdgePlanes = GLM_MakeInwardFacingEdgePlanes(GLM_FacePoints(bsp, f));
-    result->push_back(resAddition);
+    // add to result (don't add the starting face though)
+    if (f != refFace) {
+        contributing_face_t resAddition;
+        resAddition.contribFace = f;
+        resAddition.refFace = refFace;
+        resAddition.contribWorldToRefWorld = FWorldToRefWorld;
+        resAddition.refWorldToContribWorld = glm::inverse(FWorldToRefWorld);
+        resAddition.contribTexToRefTex = FTexToRefTex;
+        resAddition.contribWorldToRefTex = FWorldToRefTex;
+        resAddition.contribFaceEdgePlanes = GLM_MakeInwardFacingEdgePlanes(GLM_FacePoints(bsp, f));
+        result->push_back(resAddition);
+    }
     
     // walk edges
     const glm::vec3 fNormal = Face_Normal_E(bsp, f);
