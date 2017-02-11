@@ -1729,6 +1729,26 @@ LightFace_ContribFacesDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
+static void
+LightFace_OccludedDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    Q_assert(debugmode == debugmode_debugoccluded);
+    
+    /* use a style 0 light map */
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    
+    /* Overwrite each point, red=occluded, green=ok */
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        lightsample_t *sample = &lightmap->samples[i];
+        if (lightsurf->occluded[i])
+            glm_to_vec3_t(glm::vec3(255,0,0), sample->color);
+        else
+            glm_to_vec3_t(glm::vec3(0,255,0), sample->color);
+    }
+    
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
+
 
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
 
@@ -2517,6 +2537,9 @@ LightFace(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
 
     if (debugmode == debugmode_contribfaces)
         LightFace_ContribFacesDebug(lightsurf, lightmaps);
+    
+    if (debugmode == debugmode_debugoccluded)
+        LightFace_OccludedDebug(lightsurf, lightmaps);
     
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf, lightmaps);

@@ -995,6 +995,9 @@ light_main(int argc, const char **argv)
             
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
+        } else if ( !strcmp( argv[ i ], "-debugoccluded" ) ) {
+            CheckNoDebugModeSet();
+            debugmode = debugmode_debugoccluded;
         } else if ( !strcmp( argv[ i ], "-verbose" ) ) {
             verbose_log = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
