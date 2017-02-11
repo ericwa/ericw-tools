@@ -328,5 +328,8 @@ glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points);
 glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points);
 /// Returns the index of the polygon edge, and the closest point on that edge, to the given point
 std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::vec3> &poly, const glm::vec3 &point);
-
+/// Returns `true` and the interpolated normal if `point` is in the polygon, otherwise returns false.
+std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &points,
+                                                 const std::vector<glm::vec3> &normals,
+                                                 const glm::vec3 &point);
 #endif /* __COMMON_MATHLIB_H__ */

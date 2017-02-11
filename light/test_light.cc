@@ -6,6 +6,7 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtc/epsilon.hpp>
 
 using namespace glm;
 using namespace std;
@@ -367,4 +368,46 @@ TEST(mathlib, BarycentricRandom) {
         
         EXPECT_FLOAT_EQ(0.0f, GLM_DistAbovePlane(plane, point));
     }
+}
+
+TEST(mathlib, InterpolateNormals) {
+    // This test relies on the way GLM_InterpolateNormal is implemented
+    
+    // o--o--o
+    // | / / |
+    // |//   |
+    // o-----o
+    
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 0,64,0 },
+        { 32,64,0 }, // colinear
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    
+    const vector<vec3> normals {
+        { 1,0,0 },
+        { 0,1,0 },
+        { 0,0,1 }, // colinear
+        { 0,0,0 },
+        { -1,0,0 }
+    };
+    
+    // First try all the known points
+    for (int i=0; i<poly.size(); i++) {
+        const auto res = GLM_InterpolateNormal(poly, normals, poly.at(i));
+        EXPECT_EQ(true, res.first);
+        EXPECT_TRUE(all(epsilonEqual(normals.at(i), res.second, vec3(POINT_EQUAL_EPSILON))));
+    }
+    
+    {
+        const vec3 firstTriCentroid = (poly[0] + poly[1] + poly[2]) / 3.0f;
+        const auto res = GLM_InterpolateNormal(poly, normals, firstTriCentroid);
+        EXPECT_EQ(true, res.first);
+        EXPECT_TRUE(all(epsilonEqual(vec3(1/3.0f), res.second, vec3(POINT_EQUAL_EPSILON))));
+    }
+    
+    // Outside poly
+    EXPECT_FALSE(GLM_InterpolateNormal(poly, normals, vec3(-0.1, 0, 0)).first);
 }

@@ -314,6 +314,20 @@ glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points)
     return vec4(normal, dist);
 }
 
+std::pair<bool, vec4>
+GLM_MakeEdgePlane(const vec3 &v0, const vec3 &v1, const vec3 &faceNormal)
+{
+    const float v0v1len = length(v1-v0);
+    if (v0v1len < POINT_EQUAL_EPSILON)
+        return make_pair(false, vec4(0));
+    
+    const vec3 edgedir = (v1 - v0) / v0v1len;
+    const vec3 edgeplane_normal = cross(edgedir, faceNormal);
+    const float edgeplane_dist = dot(edgeplane_normal, v0);
+    
+    return make_pair(true, vec4(edgeplane_normal, edgeplane_dist));
+}
+
 vector<vec4>
 GLM_MakeInwardFacingEdgePlanes(std::vector<vec3> points)
 {
@@ -331,15 +345,11 @@ GLM_MakeInwardFacingEdgePlanes(std::vector<vec3> points)
         const vec3 v0 = points.at(i);
         const vec3 v1 = points.at((i+1) % points.size());
         
-        const float v0v1len = length(v1-v0);
-        if (v0v1len < POINT_EQUAL_EPSILON)
+        const auto edgeplane = GLM_MakeEdgePlane(v0, v1, faceNormal);
+        if (!edgeplane.first)
             continue;
         
-        const vec3 edgedir = (v1 - v0) / v0v1len;
-        const vec3 edgeplane_normal = cross(edgedir, faceNormal);
-        const float edgeplane_dist = dot(edgeplane_normal, v0);
-        
-        result.push_back(vec4(edgeplane_normal, edgeplane_dist));
+        result.push_back(edgeplane.second);
     }
     
     return result;
@@ -436,4 +446,37 @@ std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::
     return make_pair(bestI, bestPointOnPoly);
 }
 
+std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &points,
+                                                 const std::vector<glm::vec3> &normals,
+                                                 const glm::vec3 &point)
+{
+    Q_assert(points.size() == normals.size());
+    
+    // Step through the triangles, being careful to handle zero-size ones
 
+    const vec3 &p0 = points.at(0);
+    const vec3 &n0 = normals.at(0);
+    
+    const int N = points.size();
+    for (int i=2; i<N; i++) {
+        const vec3 &p1 = points.at(i-1);
+        const vec3 &n1 = normals.at(i-1);
+        const vec3 &p2 = points.at(i);
+        const vec3 &n2 = normals.at(i);
+     
+        const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes({p0, p1, p2});
+        if (edgeplanes.empty())
+            continue;
+        
+        if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
+            // Found the correct triangle
+            
+            const vec3 bary = Barycentric_FromPoint(point, make_tuple(p0, p1, p2));
+            const vec3 interpolatedNormal = Barycentric_ToPoint(bary, make_tuple(n0, n1, n2));
+            
+            return make_pair(true, interpolatedNormal);
+        }
+    }
+    
+    return make_pair(false, vec3(0));
+}
