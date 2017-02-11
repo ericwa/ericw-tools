@@ -21,6 +21,8 @@
 #include <common/mathlib.hh>
 #include <assert.h>
 
+#include <tuple>
+
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 #include <glm/gtx/closest_point.hpp>
