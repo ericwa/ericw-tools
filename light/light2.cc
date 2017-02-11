@@ -55,13 +55,11 @@ using namespace std;
 
 glm::mat4x4 WorldToTexSpace(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
-    if (f->texinfo < 0 || f->texinfo >= bsp->numtexinfo) {
+    const texinfo_t *tex = Face_Texinfo(bsp, f);
+    if (tex == nullptr) {
         Q_assert_unreachable();
-        
         return glm::mat4x4();
     }
-    
-    const texinfo_t *tex = &bsp->texinfo[f->texinfo];
     const plane_t plane = Face_Plane(bsp, f);
     const vec_t *norm = plane.normal;
     
