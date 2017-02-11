@@ -227,8 +227,8 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
                 const int neighbourFNum = Face_GetNum(bsp, neighbour);
                 Q_assert(neighbour != f);
                 
-                // Check if these faces are smoothed
-                if (!FacesSmoothed(f, neighbour)) {
+                // Check if these faces are smoothed or on the same plane
+                if (!(FacesSmoothed(f, neighbour) || neighbour->planenum == f->planenum)) {
                     // Never visit this face. Since we are exploring breadth-first from the reference face,
                     // once we have a non-smoothed edge, we don't want to "loop around" and include it later.
                     faceidx_handled->at(neighbourFNum) = true;
