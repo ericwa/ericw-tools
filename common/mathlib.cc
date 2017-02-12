@@ -28,6 +28,8 @@
 #include <glm/ext.hpp>
 #include <glm/gtx/closest_point.hpp>
 
+using namespace polylib;
+
 const vec3_t vec3_origin = { 0, 0, 0 };
 
 qboolean

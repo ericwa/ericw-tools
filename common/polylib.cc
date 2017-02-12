@@ -13,8 +13,8 @@
  * AllocWinding
  * =============
  */
-winding_t *
-AllocWinding(int points)
+polylib::winding_t *
+polylib::AllocWinding(int points)
 {
     winding_t *w;
     int s;
@@ -30,10 +30,10 @@ AllocWinding(int points)
  * RemoveColinearPoints
  * ============
  */
-int c_removed;
+static int c_removed;
 
 void
-RemoveColinearPoints(winding_t * w)
+polylib::RemoveColinearPoints(winding_t * w)
 {
     int i, j, k;
     vec3_t v1, v2;
@@ -68,7 +68,7 @@ RemoveColinearPoints(winding_t * w)
  * ============
  */
 void
-WindingPlane(const winding_t * w, vec3_t normal, vec_t *dist)
+polylib::WindingPlane(const winding_t * w, vec3_t normal, vec_t *dist)
 {
     vec3_t v1, v2;
 
@@ -85,7 +85,7 @@ WindingPlane(const winding_t * w, vec3_t normal, vec_t *dist)
  * =============
  */
 vec_t
-WindingArea(const winding_t * w)
+polylib::WindingArea(const winding_t * w)
 {
     int i;
     vec3_t d1, d2, cross;
@@ -107,7 +107,7 @@ WindingArea(const winding_t * w)
  * =============
  */
 void
-WindingCenter(const winding_t * w, vec3_t center)
+polylib::WindingCenter(const winding_t * w, vec3_t center)
 {
     int i;
     vec3_t d1, d2, cross;
@@ -127,7 +127,7 @@ WindingCenter(const winding_t * w, vec3_t center)
  * =============
  */
 void
-WindingBounds (const winding_t *w, vec3_t mins, vec3_t maxs)
+polylib::WindingBounds (const winding_t *w, vec3_t mins, vec3_t maxs)
 {
     vec_t	v;
     int		i,j;
@@ -153,8 +153,8 @@ WindingBounds (const winding_t *w, vec3_t mins, vec3_t maxs)
  * BaseWindingForPlane
  * =================
  */
-winding_t *
-BaseWindingForPlane(const vec3_t normal, float dist)
+polylib::winding_t *
+polylib::BaseWindingForPlane(const vec3_t normal, float dist)
 {
     int i, x;
     vec_t max, v;
@@ -221,8 +221,8 @@ BaseWindingForPlane(const vec3_t normal, float dist)
  * CopyWinding
  * ==================
  */
-winding_t *
-CopyWinding(const winding_t * w)
+polylib::winding_t *
+polylib::CopyWinding(const winding_t * w)
 {
     int size;
     winding_t *c;
@@ -240,7 +240,7 @@ CopyWinding(const winding_t * w)
  * =============
  */
 void
-ClipWinding(const winding_t * in, const vec3_t normal, vec_t dist,
+polylib::ClipWinding(const winding_t * in, const vec3_t normal, vec_t dist,
             winding_t ** front, winding_t ** back)
 {
     vec_t dists[MAX_POINTS_ON_WINDING + 4];
@@ -346,8 +346,8 @@ ClipWinding(const winding_t * in, const vec3_t normal, vec_t dist,
  * of the cliping plane.  The original is freed.
  * =================
  */
-winding_t *
-ChopWinding(winding_t * in, vec3_t normal, vec_t dist)
+polylib::winding_t *
+polylib::ChopWinding(winding_t * in, vec3_t normal, vec_t dist)
 {
     winding_t *f, *b;
 
@@ -364,7 +364,7 @@ ChopWinding(winding_t * in, vec3_t normal, vec_t dist)
  * =================
  */
 void
-CheckWinding(const winding_t * w)
+polylib::CheckWinding(const winding_t * w)
 {
     int i, j;
     const vec_t *p1, *p2;
@@ -430,7 +430,7 @@ CheckWinding(const winding_t * w)
  From q3rad (DicePatch)
  =============
  */
-void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn, void *userinfo)
+void	polylib::DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn, void *userinfo)
 {
     winding_t   *o1, *o2;
     vec3_t	mins, maxs;
@@ -474,7 +474,7 @@ void	DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn, void *u
  From q2 tools
  =============
  */
-winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
+polylib::winding_t *polylib::WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     int			i;
     int			se;
@@ -504,8 +504,8 @@ winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
     return w;
 }
 
-winding_edges_t *
-AllocWindingEdges(const winding_t *w)
+polylib::winding_edges_t *
+polylib::AllocWindingEdges(const winding_t *w)
 {
     plane_t p;
     WindingPlane(w, p.normal, &p.dist);
@@ -533,14 +533,14 @@ AllocWindingEdges(const winding_t *w)
 }
 
 void
-FreeWindingEdges(winding_edges_t *wi)
+polylib::FreeWindingEdges(winding_edges_t *wi)
 {
     free(wi->planes);
     free(wi);
 }
 
 bool
-PointInWindingEdges(const winding_edges_t *wi, const vec3_t point)
+polylib::PointInWindingEdges(const winding_edges_t *wi, const vec3_t point)
 {
     for (int i=0; i<wi->numedges; i++)
     {

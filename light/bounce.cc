@@ -43,6 +43,7 @@
 
 using namespace std;
 using namespace glm;
+using namespace polylib;
 
 mutex radlights_lock;
 map<string, vec3> texturecolors;

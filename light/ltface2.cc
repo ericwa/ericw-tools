@@ -37,6 +37,7 @@
 
 using namespace std;
 using namespace glm;
+using namespace polylib;
 
 glm::vec2 WorldToTexCoord_HighPrecision(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &world)
 {

@@ -21,6 +21,7 @@
 #include <light/trace_embree.hh>
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
+#include <common/polylib.hh>
 #include <embree2/rtcore.h>
 #include <embree2/rtcore_ray.h>
 #include <vector>
@@ -33,6 +34,7 @@
 #endif
 
 using namespace std;
+using namespace polylib;
 
 static const float MAX_SKY_RAY_DEPTH = 8192.0f;
 

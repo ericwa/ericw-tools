@@ -6,6 +6,8 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 
+namespace polylib {
+
 typedef struct {
     int numpoints;
     vec3_t p[4];                /* variable sized */
@@ -40,5 +42,7 @@ winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
 winding_edges_t *AllocWindingEdges(const winding_t *w);
 void FreeWindingEdges(winding_edges_t *wi);
 bool PointInWindingEdges(const winding_edges_t *wi, const vec3_t point);
+
+};
 
 #endif /* __COMMON_POLYLIB_H__ */
