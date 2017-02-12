@@ -332,4 +332,8 @@ std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::
 std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &points,
                                                  const std::vector<glm::vec3> &normals,
                                                  const glm::vec3 &point);
+std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const float amount);
+/// Returns (front part, back part)
+std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std::vector<glm::vec3> &poly, const glm::vec4 &plane);
+
 #endif /* __COMMON_MATHLIB_H__ */

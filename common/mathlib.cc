@@ -19,6 +19,7 @@
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
+#include <common/polylib.hh>
 #include <assert.h>
 
 #include <tuple>
@@ -481,4 +482,59 @@ std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &p
     }
     
     return make_pair(false, vec3(0));
+}
+
+static winding_t *glm_to_winding(const std::vector<glm::vec3> &poly)
+{
+    const int N = poly.size();
+    winding_t *winding = AllocWinding(N);
+    for (int i=0; i<N; i++) {
+        glm_to_vec3_t(poly.at(i), winding->p[i]);
+    }
+    winding->numpoints = N;
+    return winding;
+}
+
+static std::vector<glm::vec3> winding_to_glm(const winding_t *w)
+{
+    if (w == nullptr)
+        return {};
+    std::vector<glm::vec3> res;
+    for (int i=0; i<w->numpoints; i++) {
+        res.push_back(vec3_t_to_glm(w->p[i]));
+    }
+    return res;
+}
+
+/// Returns (front part, back part)
+std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std::vector<glm::vec3> &poly, const glm::vec4 &plane)
+{
+    vec3_t normal;
+    winding_t *front = nullptr;
+    winding_t *back = nullptr;
+    
+    if (poly.empty())
+        return make_pair(vector<vec3>(),vector<vec3>());
+    
+    winding_t *w = glm_to_winding(poly);
+    glm_to_vec3_t(vec3(plane), normal);
+    ClipWinding(w, normal, plane.w, &front, &back);
+    
+    const auto res = make_pair(winding_to_glm(front), winding_to_glm(back));
+    free(front);
+    free(back);
+    return res;
+}
+
+std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const float amount) {
+    const vector<vec4> edgeplanes = GLM_MakeInwardFacingEdgePlanes(poly);
+    
+    vector<vec3> clipped = poly;
+    
+    for (const vec4 &edge : edgeplanes) {
+        const vec4 shrunkEdgePlane(vec3(edge), edge.w + 1);
+        clipped = GLM_ClipPoly(clipped, shrunkEdgePlane).first;
+    }
+    
+    return clipped;
 }

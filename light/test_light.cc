@@ -411,3 +411,83 @@ TEST(mathlib, InterpolateNormals) {
     // Outside poly
     EXPECT_FALSE(GLM_InterpolateNormal(poly, normals, vec3(-0.1, 0, 0)).first);
 }
+
+static bool pointsEqualEpsilon(const vec3 &a, const vec3 &b) {
+    return all(epsilonEqual(a, b, vec3(POINT_EQUAL_EPSILON)));
+}
+
+static bool polysEqual(const vector<vec3> &p1, const vector<vec3> &p2) {
+    if (p1.size() != p2.size())
+        return false;
+    for (int i=0; i<p1.size(); i++) {
+        if (!pointsEqualEpsilon(p1[i], p2[i]))
+            return false;
+    }
+    return true;
+}
+
+TEST(mathlib, ClipPoly1) {
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    
+    const vector<vec3> frontRes {
+        { 0,0,0 },
+        { 0,64,0 },
+        { 32,64,0 },
+        { 32,0,0 }
+    };
+
+    const vector<vec3> backRes {
+        { 32,64,0 },
+        { 64,64,0 },
+        { 64,0,0 },
+        { 32,0,0 }
+    };
+    
+    auto clipRes = GLM_ClipPoly(poly, vec4(-1,0,0,-32));
+    
+    EXPECT_TRUE(polysEqual(frontRes, clipRes.first));
+    EXPECT_TRUE(polysEqual(backRes, clipRes.second));
+}
+
+TEST(mathlib, ShrinkPoly1) {
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    
+    const vector<vec3> shrunkPoly {
+        { 1,1,0 },
+        { 1,63,0 },
+        { 63,63,0 },
+        { 63,1,0 }
+    };
+    
+    const auto actualShrunk = GLM_ShrinkPoly(poly, 1.0f);
+    
+    EXPECT_TRUE(polysEqual(shrunkPoly, actualShrunk));
+}
+
+TEST(mathlib, ShrinkPoly2) {
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    
+    const vector<vec3> shrunkPoly {
+        { 1.0f + sqrtf(2.0f), 1.0f, 0.0f },
+        { 63.0f, 63.0f - sqrtf(2.0f), 0.0f },
+        { 63,1,0 },
+    };
+    
+    const auto actualShrunk = GLM_ShrinkPoly(poly, 1.0f);
+    
+    EXPECT_TRUE(polysEqual(shrunkPoly, actualShrunk));
+}
