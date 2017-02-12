@@ -320,7 +320,7 @@ glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points)
 }
 
 std::pair<bool, vec4>
-GLM_MakeEdgePlane(const vec3 &v0, const vec3 &v1, const vec3 &faceNormal)
+GLM_MakeInwardFacingEdgePlane(const vec3 &v0, const vec3 &v1, const vec3 &faceNormal)
 {
     const float v0v1len = length(v1-v0);
     if (v0v1len < POINT_EQUAL_EPSILON)
@@ -350,7 +350,7 @@ GLM_MakeInwardFacingEdgePlanes(std::vector<vec3> points)
         const vec3 v0 = points.at(i);
         const vec3 v1 = points.at((i+1) % points.size());
         
-        const auto edgeplane = GLM_MakeEdgePlane(v0, v1, faceNormal);
+        const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, faceNormal);
         if (!edgeplane.first)
             continue;
         

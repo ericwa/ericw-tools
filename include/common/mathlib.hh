@@ -318,6 +318,7 @@ static inline void glm_to_vec3_t(const glm::vec3 &glm, vec3_t out) {
 }
 
 glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);
+std::pair<bool, glm::vec4> GLM_MakeInwardFacingEdgePlane(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &faceNormal);
 std::vector<glm::vec4> GLM_MakeInwardFacingEdgePlanes(std::vector<glm::vec3> points);
 bool GLM_EdgePlanes_PointInside(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
 float GLM_EdgePlanes_PointInsideDist(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
