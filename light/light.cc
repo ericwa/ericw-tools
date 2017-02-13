@@ -556,28 +556,28 @@ CheckNoDebugModeSet()
     }
 }
 
-// returns the face with a centroid nearest the given point.
+// returns the face that this point is on, or nullptr.
+// meant to be used with the "tracepos" console command.
 static const bsp2_dface_t *
-Face_NearestCentroid(const bsp2_t *bsp, const glm::vec3 &point)
+Face_Pick(const bsp2_t *bsp, const glm::vec3 &point)
 {
-    const bsp2_dface_t *nearest_face = NULL;
-    float nearest_dist = VECT_MAX;
-    
     for (int i=0; i<bsp->numfaces; i++) {
         const bsp2_dface_t *f = &bsp->dfaces[i];
+        const auto plane = Face_Plane_E(bsp, f);
+        const float planedist = GLM_DistAbovePlane(plane, point);
+
+        if (fabs(planedist) > ON_EPSILON)
+            continue;
         
-        const glm::vec3 fc = Face_Centroid(bsp, f);
+        const auto points = GLM_FacePoints(bsp, f);
+        const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
+        if (!GLM_EdgePlanes_PointInside(edgeplanes, point))
+            continue;
         
-        const glm::vec3 distvec = fc - point;
-        const float dist = glm::length(distvec);
-        
-        if (dist < nearest_dist) {
-            nearest_dist = dist;
-            nearest_face = f;
-        }
+        return f;
     }
     
-    return nearest_face;
+    return nullptr;
 }
 
 static void
@@ -586,7 +586,7 @@ FindDebugFace(const bsp2_t *bsp)
     if (!dump_face)
         return;
     
-    const bsp2_dface_t *f = Face_NearestCentroid(bsp, vec3_t_to_glm(dump_face_point));
+    const bsp2_dface_t *f = Face_Pick(bsp, vec3_t_to_glm(dump_face_point));
     if (f == NULL)
         Error("FindDebugFace: f == NULL\n");
 
