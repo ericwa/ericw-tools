@@ -713,6 +713,8 @@ Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
 
     lightsample_t *softmap = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
     
+    // FIXME: Handle occluded points
+    
     lightsample_t *dst = softmap;
     for (int i = 0; i < lightsurf->numpoints; i++, dst++) {
         const int startt = qmax((i / width) - softsamples, 0);
@@ -1233,6 +1235,9 @@ LightFace_Entity(const bsp2_t *bsp,
         const vec_t *surfpoint = lightsurf->points[i];
         const vec_t *surfnorm = lightsurf->normals[i];
         
+        if (lightsurf->occluded[i])
+            continue;
+        
         vec3_t surfpointToLightDir;
         float surfpointToLightDist;
         vec3_t color, normalcontrib;
@@ -1313,6 +1318,9 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     for (int i = 0; i < lightsurf->numpoints; i++) {
         const vec_t *surfpoint = lightsurf->points[i];
         const vec_t *surfnorm = lightsurf->normals[i];
+        
+        if (lightsurf->occluded[i])
+            continue;
         
         float angle = DotProduct(incoming, surfnorm);
         if (lightsurf->twosided) {
@@ -1432,6 +1440,9 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
 
         hit = false;
         for (int i = 0; i < lightsurf->numpoints; i++) {
+            if (lightsurf->occluded[i])
+                continue;
+            
             const lightsample_t *sample = &lightmap->samples[i];
             const vec_t *surfpoint = lightsurf->points[i];
             if (cfg.addminlight.boolValue() || LightSample_Brightness(sample->color) < entity.light.floatValue()) {
@@ -1648,6 +1659,9 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
         rs->clearPushedRays();
         
         for (int i = 0; i < lightsurf->numpoints; i++) {
+            if (lightsurf->occluded[i])
+                continue;
+            
             vec3_t dir; // vpl -> sample point
             VectorSubtract(lightsurf->points[i], vpl.pos, dir);
             vec_t dist = VectorNormalize(dir);
@@ -1968,6 +1982,9 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
         // fill in input buffers
         
         for (int i = 0; i < lightsurf->numpoints; i++) {
+            if (lightsurf->occluded[i])
+                continue;
+            
             vec3_t dirtvec;
             GetDirtVector(cfg, j, dirtvec);
             
@@ -1977,15 +1994,14 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
             rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue(), selfshadow);
         }
         
-        Q_assert(rs->numPushedRays() == lightsurf->numpoints);
-        
         // trace the batch
         rs->tracePushedRaysIntersection();
         
         // accumulate hitdists
-        for (int i = 0; i < lightsurf->numpoints; i++) {
-            if (rs->getPushedRayHitType(i) == hittype_t::SOLID) {
-                float dist = rs->getPushedRayHitDist(i);
+        for (int k = 0; k < rs->numPushedRays(); k++) {
+            const int i = rs->getPushedRayPointIndex(k);
+            if (rs->getPushedRayHitType(k) == hittype_t::SOLID) {
+                float dist = rs->getPushedRayHitDist(k);
                 lightsurf->occlusion[i] += qmin(cfg.dirtDepth.floatValue(), dist);
             } else {
                 lightsurf->occlusion[i] += cfg.dirtDepth.floatValue();
