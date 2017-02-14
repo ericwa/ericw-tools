@@ -702,57 +702,6 @@ Lightmap_Save(lightmapdict_t *lightmaps, const lightsurf_t *lightsurf,
 }
 
 /*
- * Average adjacent points on the grid to soften shadow edges
- */
-static void
-Lightmap_Soften(lightmap_t *lightmap, const lightsurf_t *lightsurf)
-{
-    const int width = (lightsurf->texsize[0] + 1) * oversample;
-    const int height = (lightsurf->texsize[1] + 1) * oversample;
-    const int fullsamples = (2 * softsamples + 1) * (2 * softsamples + 1);
-
-    lightsample_t *softmap = (lightsample_t *) calloc(lightsurf->numpoints, sizeof(lightsample_t));
-    
-    // FIXME: Handle occluded points
-    
-    lightsample_t *dst = softmap;
-    for (int i = 0; i < lightsurf->numpoints; i++, dst++) {
-        const int startt = qmax((i / width) - softsamples, 0);
-        const int endt = qmin((i / width) + softsamples + 1, height);
-        const int starts = qmax((i % width) - softsamples, 0);
-        const int ends = qmin((i % width) + softsamples + 1, width);
-
-        for (int t = startt; t < endt; t++) {
-            for (int s = starts; s < ends; s++) {
-                const lightsample_t *src = &lightmap->samples[t * width + s];
-                VectorAdd(dst->color, src->color, dst->color);
-                VectorAdd(dst->direction, src->direction, dst->direction);
-            }
-        }
-        /*
-         * For cases where we are softening near the edge of the lightmap,
-         * take extra samples from the centre point (follows old bjp tools
-         * behaviour)
-         */
-        int samples = (endt - startt) * (ends - starts);
-        if (samples < fullsamples) {
-            const int extraweight = 2 * (fullsamples - samples);
-            const lightsample_t *src = &lightmap->samples[i];
-            VectorMA(dst->color, extraweight, src->color, dst->color);
-            VectorMA(dst->direction, extraweight, src->direction, dst->direction);
-            samples += extraweight;
-        }
-        VectorScale(dst->color, 1.0 / samples, dst->color);
-        VectorScale(dst->direction, 1.0 / samples, dst->direction);
-    }
-
-    memcpy(lightmap->samples, softmap, lightsurf->numpoints * sizeof(lightsample_t));
-    free(softmap);
-}
-
-
-
-/*
  * ============================================================================
  * FACE LIGHTING
  * ============================================================================
@@ -2276,6 +2225,53 @@ IntegerDownsampleImage(const std::vector<glm::vec4> &input, int w, int h, int fa
     return res;
 }
 
+static std::vector<glm::vec4>
+BoxBlurImage(const std::vector<glm::vec4> &input, int w, int h, int radius)
+{
+    std::vector<glm::vec4> res(input.size());
+    
+    for (int y=0; y<h; y++) {
+        for (int x=0; x<w; x++) {
+            
+            float totalWeight = 0.0f;
+            glm::vec3 totalColor(0);
+            
+            for (int y0 = -radius; y0 <= radius; y0++) {
+                for (int x0 = -radius; x0 <= radius; x0++) {
+                    const int x1 = x + x0;
+                    const int y1 = y + y0;
+                    
+                    // check if the kernel goes outside of the source image
+                    if (x1 < 0 || x1 >= w)
+                        continue;
+                    if (y1 < 0 || y1 >= h)
+                        continue;
+                    
+                    // read the input sample
+                    const glm::vec4 inSample = input.at((y1 * w) + x1);
+                    
+                    if (inSample.a == 0.0f)
+                        continue;
+                    
+                    const float weight = 1.0f;
+                    totalColor += weight * glm::vec3(inSample);
+                    totalWeight += weight;
+                }
+            }
+            
+            const int outIndex = (y * w) + x;
+            if (totalWeight > 0.0f) {
+                const vec4 resultColor = glm::vec4(totalColor / totalWeight, 1.0f);
+                res[outIndex] = resultColor;
+            } else {
+                res[outIndex] = glm::vec4(0.0f);
+            }
+        }
+    }
+    
+    return res;
+}
+
 static void
 WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmapdict_t *lightmaps)
@@ -2373,7 +2369,13 @@ WriteLightmaps(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         
         // allocate new float buffers for the output colors and directions
         // these are the actual output width*height, without oversampling.
-        const std::vector<glm::vec4> output_color = IntegerDownsampleImage(LightmapColorsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
+        
+        std::vector<glm::vec4> fullres = LightmapColorsToGLMVector(lightsurf, lm);
+        if (softsamples > 0) {
+            fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, softsamples);
+        }
+        
+        const std::vector<glm::vec4> output_color = IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, oversample);
         const std::vector<glm::vec4> output_dir = IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
         
         // copy from the float buffers to byte buffers in .bsp / .lit / .lux
@@ -2572,13 +2574,6 @@ LightFace(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
     
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf, lightmaps);
-    
-    /* Perform post-processing if requested */
-    if (softsamples > 0) {
-        for (lightmap_t &lightmap : *lightmaps) {
-            Lightmap_Soften(&lightmap, lightsurf);
-        }
-    }
     
     WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
     
