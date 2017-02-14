@@ -2669,7 +2669,7 @@
 {
 "classname" "func_door"
 "angle" "-1"
-"_minlight" "100"
+"_minlight" "35"
 "_minlight_color" "252 119 112"
 // brush 0
 {
@@ -2705,12 +2705,12 @@
 // entity 113
 {
 "classname" "light_flame_small_white"
-"origin" "480 -152 172"
+"origin" "480 -152 92"
 "angle" "-0"
 }
 // entity 114
 {
 "classname" "light_flame_small_white"
-"origin" "352 -152 172"
+"origin" "352 -152 92"
 "angle" "-0"
 }
