@@ -566,7 +566,7 @@ Face_Pick(const bsp2_t *bsp, const glm::vec3 &point)
         const auto plane = Face_Plane_E(bsp, f);
         const float planedist = GLM_DistAbovePlane(plane, point);
 
-        if (fabs(planedist) > 1)
+        if (fabs(planedist) > ON_EPSILON)
             continue;
         
         const auto points = GLM_FacePoints(bsp, f);
