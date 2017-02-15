@@ -357,18 +357,6 @@ GLM_MakeInwardFacingEdgePlanes(std::vector<vec3> points)
         result.push_back(edgeplane.second);
     }
     
-    // For each edge plane, check that every point in `points` is on or above it
-    // If this fails, the polygon is not convex.
-    for (const vec4 &edgeplane : result) {
-        for (const vec3 &point : points) {
-            const float distAbove = GLM_DistAbovePlane(edgeplane, point);
-            if (distAbove < -POINT_EQUAL_EPSILON) {
-                // Non-convex polygon
-                return {};
-            }
-        }
-    }
-    
     return result;
 }
 
