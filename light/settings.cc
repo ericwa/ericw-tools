@@ -37,7 +37,7 @@ glm::vec3 mangle_from_vec(const glm::vec3 &v)
     const glm::vec3 east(1, 0, 0);
     const glm::quat rotationQuat = glm::rotation(east, v);
     const glm::vec3 eulerAngles = glm::eulerAngles(rotationQuat);
-    const glm::vec3 mangle = glm::vec3(eulerAngles.x, -eulerAngles.y, 0) * static_cast<float>(180.0f / Q_PI);
+    const glm::vec3 mangle = glm::vec3(eulerAngles.z, -eulerAngles.y, 0) * static_cast<float>(180.0f / Q_PI);
     return mangle;
 }
 

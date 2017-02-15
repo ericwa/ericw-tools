@@ -505,7 +505,7 @@ TEST(mathlib, ShrinkPoly2) {
     EXPECT_TRUE(polysEqual(shrunkPoly, actualShrunk));
 }
 
-constexpr float MANGLE_EPSILON = 0.05f;
+constexpr float MANGLE_EPSILON = 0.1f;
 
 TEST(light, vec_from_mangle) {
     EXPECT_TRUE(pointsEqualEpsilon(vec3(1,0,0), vec_from_mangle(vec3(0,0,0)), MANGLE_EPSILON));
@@ -519,5 +519,14 @@ TEST(light, mangle_from_vec) {
     EXPECT_TRUE(pointsEqualEpsilon(vec3(180,0,0), mangle_from_vec(vec3(-1,0,0)), MANGLE_EPSILON));
     EXPECT_TRUE(pointsEqualEpsilon(vec3(0,90,0), mangle_from_vec(vec3(0,0,1)), MANGLE_EPSILON));
     EXPECT_TRUE(pointsEqualEpsilon(vec3(0,-90,0), mangle_from_vec(vec3(0,0,-1)), MANGLE_EPSILON));
+    
+    for (int yaw = -179; yaw <= 179; yaw++) {
+        for (int pitch = -89; pitch <= 89; pitch++) {
+            const vec3 origMangle = vec3(yaw, pitch, 0);
+            const vec3 vec = vec_from_mangle(origMangle);
+            const vec3 roundtrip = mangle_from_vec(vec);
+            EXPECT_TRUE(pointsEqualEpsilon(origMangle, roundtrip, MANGLE_EPSILON));
+        }
+    }
 }
 
