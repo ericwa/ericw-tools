@@ -2159,7 +2159,14 @@ void GLMVector_LinearToGamma(std::vector<glm::vec3> &vec) {
 }
 
 // Special handling of alpha channel:
-// alpha channel is expected to be 0 or 1, 0 = never take samples from this pixel
+// - "alpha channel" is expected to be 0 or 1. This gets set to 0 if the sample
+// point is occluded (bmodel sticking outside of the world, or inside a shadow-
+// casting bmodel that is overlapping a world face), otherwise it's 1.
+//
+// - If alpha is 0 the sample doesn't contribute to the filter kernel.
+// - If all the samples in the filter kernel have alpha=0, write a sample with alpha=0
+//   (but still average the colors, important so that minlight still works properly
+//    for bmodels that go outside of the world).
 static std::vector<glm::vec4>
 IntegerDownsampleImage(const std::vector<glm::vec4> &input, int w, int h, int factor)
 {
@@ -2178,6 +2185,10 @@ IntegerDownsampleImage(const std::vector<glm::vec4> &input, int w, int h, int fa
             float totalWeight = 0.0f;
             glm::vec3 totalColor(0);
             
+            // These are only used if all the samples in the kernel have alpha = 0
+            float totalWeightIgnoringOcclusion = 0.0f;
+            glm::vec3 totalColorIgnoringOcclusion(0);
+            
             const int extraradius = 0;
             const int kernelextent = factor + (2 * extraradius);
             
@@ -2193,21 +2204,17 @@ IntegerDownsampleImage(const std::vector<glm::vec4> &input, int w, int h, int fa
                         continue;
                     
                     // read the input sample
+                    const float weight = 1.0f;
                     const glm::vec4 inSample = input.at((y1 * w) + x1);
                     
+                    totalColorIgnoringOcclusion += weight * glm::vec3(inSample);
+                    totalWeightIgnoringOcclusion += weight;
+                    
+                    // Occluded sample points don't contribute to the filter
                     if (inSample.a == 0.0f)
                         continue;
                     
-                    const float kernelextent_float = kernelextent + 1.0f;
-                    const float x_in_kernel_float = x0 + 0.5f;
-                    const float y_in_kernel_float = y0 + 0.5f;
-                    
-                    Q_assert(x_in_kernel_float >= 0 && x_in_kernel_float <= kernelextent_float);
-                    Q_assert(y_in_kernel_float >= 0 && y_in_kernel_float <= kernelextent_float);
-                    
-                    const float weight = 1.0f;
                     totalColor += weight * glm::vec3(inSample);
-                    
                     totalWeight += weight;
                 }
             }
@@ -2217,7 +2224,8 @@ IntegerDownsampleImage(const std::vector<glm::vec4> &input, int w, int h, int fa
                 const vec4 resultColor = glm::vec4(totalColor / totalWeight, 1.0f);
                 res[outIndex] = resultColor;
             } else {
-                res[outIndex] = glm::vec4(0.0f);
+                const vec4 resultColor = glm::vec4(totalColorIgnoringOcclusion / totalWeightIgnoringOcclusion, 0.0f);
+                res[outIndex] = resultColor;
             }
         }
     }
@@ -2236,6 +2244,10 @@ BoxBlurImage(const std::vector<glm::vec4> &input, int w, int h, int radius)
             float totalWeight = 0.0f;
             glm::vec3 totalColor(0);
             
+            // These are only used if all the samples in the kernel have alpha = 0
+            float totalWeightIgnoringOcclusion = 0.0f;
+            glm::vec3 totalColorIgnoringOcclusion(0);
+            
             for (int y0 = -radius; y0 <= radius; y0++) {
                 for (int x0 = -radius; x0 <= radius; x0++) {
                     const int x1 = x + x0;
@@ -2248,12 +2260,16 @@ BoxBlurImage(const std::vector<glm::vec4> &input, int w, int h, int radius)
                         continue;
                     
                     // read the input sample
+                    const float weight = 1.0f;
                     const glm::vec4 inSample = input.at((y1 * w) + x1);
                     
+                    totalColorIgnoringOcclusion += weight * glm::vec3(inSample);
+                    totalWeightIgnoringOcclusion += weight;
+                    
+                    // Occluded sample points don't contribute to the filter
                     if (inSample.a == 0.0f)
                         continue;
                     
-                    const float weight = 1.0f;
                     totalColor += weight * glm::vec3(inSample);
                     totalWeight += weight;
                 }
@@ -2264,7 +2280,8 @@ BoxBlurImage(const std::vector<glm::vec4> &input, int w, int h, int radius)
                 const vec4 resultColor = glm::vec4(totalColor / totalWeight, 1.0f);
                 res[outIndex] = resultColor;
             } else {
-                res[outIndex] = glm::vec4(0.0f);
+                const vec4 resultColor = glm::vec4(totalColorIgnoringOcclusion / totalWeightIgnoringOcclusion, 0.0f);
+                res[outIndex] = resultColor;
             }
         }
     }
