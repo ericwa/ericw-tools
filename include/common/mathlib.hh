@@ -320,6 +320,7 @@ static inline void glm_to_vec3_t(const glm::vec3 &glm, vec3_t out) {
     out[2] = glm.z;
 }
 
+// Returns (0 0 0) if we couldn't determine the normal
 glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);
 std::pair<bool, glm::vec4> GLM_MakeInwardFacingEdgePlane(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &faceNormal);
 std::vector<glm::vec4> GLM_MakeInwardFacingEdgePlanes(std::vector<glm::vec3> points);
