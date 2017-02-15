@@ -230,7 +230,10 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
         if (it != edgeToFaceMap.end()) {
             for (const bsp2_dface_t *neighbour : it->second) {
                 const int neighbourFNum = Face_GetNum(bsp, neighbour);
-                Q_assert(neighbour != f);
+                if (neighbour == f) {
+                    // Invalid face, e.g. with vertex numbers: [0, 1, 0, 2]
+                    continue;
+                }
                 
                 // Check if these faces are smoothed or on the same plane
                 if (!(FacesSmoothed(f, neighbour) || neighbour->planenum == f->planenum)) {
