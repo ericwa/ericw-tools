@@ -156,6 +156,19 @@ static void checkBox(const vector<vec4> &edges, const vector<vec3> &poly) {
 
 }
 
+TEST(mathlib, EdgePlanesOfNonConvexPoly) {
+    // hourglass, non-convex
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 64,64,0 },
+        { 0,64,0 },
+        { 64,0,0 }
+    };
+    
+    const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
+    EXPECT_EQ(vector<vec4>(), edges);
+}
+
 TEST(mathlib, PointInPolygon) {
     // clockwise
     const vector<vec3> poly {
