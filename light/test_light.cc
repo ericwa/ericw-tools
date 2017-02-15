@@ -169,6 +169,25 @@ TEST(mathlib, EdgePlanesOfNonConvexPoly) {
 //    EXPECT_EQ(vector<vec4>(), edges);
 }
 
+TEST(mathlib, SlightlyConcavePoly) {
+    const vector<vec3> poly {
+        {225.846161, -1744, 1774},
+        {248, -1744, 1798},
+        {248, -1763.82605, 1799.65222},
+        {248, -1764, 1799.66663},
+        {248, -1892, 1810.33337},
+        {248, -1893.21741, 1810.43481},
+        {248, -1921.59998, 1812.80005},
+        {248, -1924, 1813},
+        {80, -1924, 1631},
+        {80, -1744, 1616}
+    };
+    
+    const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
+    ASSERT_FALSE(edges.empty());
+    EXPECT_TRUE(GLM_EdgePlanes_PointInside(edges, vec3(152.636963, -1814, 1702)));
+}
+
 TEST(mathlib, PointInPolygon) {
     // clockwise
     const vector<vec3> poly {
