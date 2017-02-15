@@ -504,3 +504,18 @@ TEST(mathlib, ShrinkPoly2) {
     
     EXPECT_TRUE(polysEqual(shrunkPoly, actualShrunk));
 }
+
+TEST(light, vec_from_mangle) {
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(1,0,0), vec_from_mangle(vec3(0,0,0))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(-1,0,0), vec_from_mangle(vec3(180,0,0))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,1), vec_from_mangle(vec3(0,90,0))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,-1), vec_from_mangle(vec3(0,-90,0))));
+}
+
+TEST(light, mangle_from_vec) {
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,0), mangle_from_vec(vec3(1,0,0))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(180,0,0), mangle_from_vec(vec3(-1,0,0))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,90,0), mangle_from_vec(vec3(0,0,1))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,-90,0), mangle_from_vec(vec3(0,0,-1))));
+}
+

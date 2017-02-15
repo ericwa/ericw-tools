@@ -20,15 +20,25 @@
 
 #include <light/settings.hh>
 
-void
-vec_from_mangle(vec3_t v, const vec3_t m)
+#include <glm/gtx/quaternion.hpp>
+
+glm::vec3 vec_from_mangle(const glm::vec3 &m)
 {
-    vec3_t tmp;
-    
-    VectorScale(m, Q_PI / 180, tmp);
-    v[0] = cos(tmp[0]) * cos(tmp[1]);
-    v[1] = sin(tmp[0]) * cos(tmp[1]);
-    v[2] = sin(tmp[1]);
+    const glm::vec3 tmp = m * static_cast<float>(Q_PI / 180.0f);
+
+    const glm::vec3 v(cos(tmp[0]) * cos(tmp[1]),
+                      sin(tmp[0]) * cos(tmp[1]),
+                      sin(tmp[1]));
+    return v;
+}
+
+glm::vec3 mangle_from_vec(const glm::vec3 &v)
+{
+    const glm::vec3 east(1, 0, 0);
+    const glm::quat rotationQuat = glm::rotation(east, v);
+    const glm::vec3 eulerAngles = glm::eulerAngles(rotationQuat);
+    const glm::vec3 mangle = glm::vec3(eulerAngles.x, -eulerAngles.y, 0) * static_cast<float>(180.0f / Q_PI);
+    return mangle;
 }
 
 /* detect colors with components in 0-1 and scale them to 0-255 */

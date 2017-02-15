@@ -42,7 +42,8 @@ enum class vec3_transformer_t {
     NORMALIZE_COLOR_TO_255
 };
 
-void vec_from_mangle(vec3_t v, const vec3_t m);
+glm::vec3 vec_from_mangle(const glm::vec3 &m);
+glm::vec3 mangle_from_vec(const glm::vec3 &v);
 void normalize_color_format(vec3_t color);
 
 class lockable_setting_t {
@@ -232,7 +233,7 @@ private:
                 VectorCopy(val, out);
                 break;
             case vec3_transformer_t::MANGLE_TO_VEC:
-                vec_from_mangle(out, val);
+                glm_to_vec3_t(vec_from_mangle(vec3_t_to_glm(val)), out);
                 break;
             case vec3_transformer_t::NORMALIZE_COLOR_TO_255:
                 VectorCopy(val, out);
