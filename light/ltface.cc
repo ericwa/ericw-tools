@@ -434,10 +434,12 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
         for (int s = 0; s < surf->width; s++) {
             const int i = t*surf->width + s;
             const vec_t *point = surf->points[i];
+            const glm::vec3 mangle = mangle_from_vec(vec3_t_to_glm(surf->normals[i]));
             
             fprintf(f, "{\n");
             fprintf(f, "\"classname\" \"light\"\n");
             fprintf(f, "\"origin\" \"%f %f %f\"\n", point[0], point[1], point[2]);
+            fprintf(f, "\"mangle\" \"%f %f %f\"\n", mangle[0], mangle[1], mangle[2]);
             fprintf(f, "\"face\" \"%d\"\n", facenum);
             fprintf(f, "\"occluded\" \"%d\"\n", (int)surf->occluded[i]);
             fprintf(f, "\"s\" \"%d\"\n", s);
