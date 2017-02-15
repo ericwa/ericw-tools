@@ -115,6 +115,11 @@ edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp) {
             const int v0 = Face_VertexAtIndex(bsp, f, j);
             const int v1 = Face_VertexAtIndex(bsp, f, (j + 1) % f->numedges);
             
+            if (v0 == v1) {
+                // ad_swampy.bsp has faces with repeated verts...
+                continue;
+            }
+            
             const auto edge = make_pair(v0, v1);
             auto &edgeFacesRef = result[edge];
             
