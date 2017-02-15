@@ -425,15 +425,15 @@ TEST(mathlib, InterpolateNormals) {
     EXPECT_FALSE(GLM_InterpolateNormal(poly, normals, vec3(-0.1, 0, 0)).first);
 }
 
-static bool pointsEqualEpsilon(const vec3 &a, const vec3 &b) {
-    return all(epsilonEqual(a, b, vec3(POINT_EQUAL_EPSILON)));
+static bool pointsEqualEpsilon(const vec3 &a, const vec3 &b, const float epsilon) {
+    return all(epsilonEqual(a, b, vec3(epsilon)));
 }
 
 static bool polysEqual(const vector<vec3> &p1, const vector<vec3> &p2) {
     if (p1.size() != p2.size())
         return false;
     for (int i=0; i<p1.size(); i++) {
-        if (!pointsEqualEpsilon(p1[i], p2[i]))
+        if (!pointsEqualEpsilon(p1[i], p2[i], POINT_EQUAL_EPSILON))
             return false;
     }
     return true;
@@ -505,17 +505,19 @@ TEST(mathlib, ShrinkPoly2) {
     EXPECT_TRUE(polysEqual(shrunkPoly, actualShrunk));
 }
 
+constexpr float MANGLE_EPSILON = 0.05f;
+
 TEST(light, vec_from_mangle) {
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(1,0,0), vec_from_mangle(vec3(0,0,0))));
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(-1,0,0), vec_from_mangle(vec3(180,0,0))));
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,1), vec_from_mangle(vec3(0,90,0))));
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,-1), vec_from_mangle(vec3(0,-90,0))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(1,0,0), vec_from_mangle(vec3(0,0,0)), MANGLE_EPSILON));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(-1,0,0), vec_from_mangle(vec3(180,0,0)), MANGLE_EPSILON));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,1), vec_from_mangle(vec3(0,90,0)), MANGLE_EPSILON));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,-1), vec_from_mangle(vec3(0,-90,0)), MANGLE_EPSILON));
 }
 
 TEST(light, mangle_from_vec) {
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,0), mangle_from_vec(vec3(1,0,0))));
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(180,0,0), mangle_from_vec(vec3(-1,0,0))));
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,90,0), mangle_from_vec(vec3(0,0,1))));
-    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,-90,0), mangle_from_vec(vec3(0,0,-1))));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,0,0), mangle_from_vec(vec3(1,0,0)), MANGLE_EPSILON));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(180,0,0), mangle_from_vec(vec3(-1,0,0)), MANGLE_EPSILON));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,90,0), mangle_from_vec(vec3(0,0,1)), MANGLE_EPSILON));
+    EXPECT_TRUE(pointsEqualEpsilon(vec3(0,-90,0), mangle_from_vec(vec3(0,0,-1)), MANGLE_EPSILON));
 }
 
