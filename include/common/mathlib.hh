@@ -55,8 +55,8 @@ extern const vec3_t vec3_origin;
 
 #define EQUAL_EPSILON 0.001
 
-#define ZERO_TRI_AREA_EPSILON 0.01f
-#define POINT_EQUAL_EPSILON 0.01f
+#define ZERO_TRI_AREA_EPSILON 0.05f
+#define POINT_EQUAL_EPSILON 0.05f
 
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2);
 
