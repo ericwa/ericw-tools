@@ -549,3 +549,43 @@ TEST(light, mangle_from_vec) {
     }
 }
 
+TEST(mathlib, bilinearInterpolate) {
+    const vec4 v1(0,1,2,3);
+    const vec4 v2(4,5,6,7);
+    const vec4 v3(1,1,1,1);
+    const vec4 v4(2,2,2,2);
+    
+    EXPECT_EQ(v1, bilinearInterpolate(v1, v2, v3, v4, 0.0f, 0.0f));
+    EXPECT_EQ(v2, bilinearInterpolate(v1, v2, v3, v4, 1.0f, 0.0f));
+    EXPECT_EQ(v3, bilinearInterpolate(v1, v2, v3, v4, 0.0f, 1.0f));
+    EXPECT_EQ(v4, bilinearInterpolate(v1, v2, v3, v4, 1.0f, 1.0f));
+    
+    EXPECT_EQ(vec4(1.5,  1.5,  1.5,  1.5),  bilinearInterpolate(v1, v2, v3, v4, 0.5f, 1.0f));
+    EXPECT_EQ(vec4(2,    3,    4,    5),    bilinearInterpolate(v1, v2, v3, v4, 0.5f, 0.0f));
+    EXPECT_EQ(vec4(1.75, 2.25, 2.75, 3.25), bilinearInterpolate(v1, v2, v3, v4, 0.5f, 0.5f));
+}
+
+TEST(mathlib, bilinearWeightsAndCoords) {
+    const auto res = bilinearWeightsAndCoords(vec2(1.5, 1.25), ivec2(2,2));
+    
+    vec2 sum(0);
+    for (int i=0; i<4; i++) {
+        const float weight = res[i].second;
+        const ivec2 intPos = res[i].first;
+        sum += vec2(intPos) * weight;
+    }
+    EXPECT_EQ(vec2(1.5, 1.25), sum);
+}
+
+TEST(mathlib, bilinearWeightsAndCoords2) {
+    const auto res = bilinearWeightsAndCoords(vec2(2, 1.5), ivec2(2,2));
+    
+    vec2 sum(0);
+    for (int i=0; i<4; i++) {
+        const float weight = res[i].second;
+        const ivec2 intPos = res[i].first;
+        sum += vec2(intPos) * weight;
+    }
+    EXPECT_EQ(vec2(2, 1.5), sum);
+}
+

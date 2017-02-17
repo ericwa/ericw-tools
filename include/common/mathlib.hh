@@ -24,9 +24,12 @@
 #include <math.h>
 #include <common/cmdlib.hh>
 #include <vector>
+#include <array>
 
+#include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include <glm/glm.hpp>
 
 #ifdef DOUBLEVEC_T
 #define vec_t double
@@ -336,5 +339,61 @@ std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &p
 std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const float amount);
 /// Returns (front part, back part)
 std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std::vector<glm::vec3> &poly, const glm::vec4 &plane);
+
+// Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
+// from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
+static inline glm::vec4 bilinearWeights(const float x, const float y) {
+    return glm::vec4((1-x) * (1-y), x * (1-y), (1-x)*y, x*y);
+}
+
+static inline std::array<std::pair<glm::ivec2, float>, 4>
+bilinearWeightsAndCoords(const glm::vec2 &pos, const glm::ivec2 &size)
+{
+    Q_assert(pos.x >= 0.0f && pos.x <= static_cast<float>(size.x));
+    Q_assert(pos.y >= 0.0f && pos.y <= static_cast<float>(size.y));
+    
+    glm::ivec2 integerPart(glm::floor(pos));
+    glm::vec2 fractionalPart(pos - glm::floor(pos));
+    
+    // Special case: if pos.x or y == size.x or y
+    for (int i=0; i<2; i++) {
+        if (pos[i] == size[i]) {
+            integerPart[i] -= 1;
+            fractionalPart[i] = 1.0f;
+        }
+    }
+    
+    Q_assert(glm::vec2(integerPart) + fractionalPart == pos);
+    
+    // f(0,0), f(1,0), f(0,1), f(1,1)
+    const glm::vec4 weights = bilinearWeights(fractionalPart.x, fractionalPart.y);
+    
+    std::array<std::pair<glm::ivec2, float>, 4> result;
+    for (int i=0; i<4; i++) {
+        const float weight = weights[i];
+        glm::ivec2 pos(integerPart);
+    
+        if ((i % 2) == 1)
+            pos.x += 1;
+        if (i >= 2)
+            pos.y += 1;
+        
+        result[i] = std::make_pair(pos, weight);
+    }
+    return result;
+}
+
+template <typename V>
+V bilinearInterpolate(const V &f00, const V &f10, const V &f01, const V &f11, const float x, const float y)
+{
+    glm::vec4 weights = bilinearWeights(x,y);
+    
+    const V fxy = f00 * weights[0] + \
+                    f10 * weights[1] + \
+                    f01 * weights[2] + \
+                    f11 * weights[3];
+    
+    return fxy;
+}
 
 #endif /* __COMMON_MATHLIB_H__ */
