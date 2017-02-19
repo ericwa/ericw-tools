@@ -73,10 +73,9 @@ glm::vec2 WorldToTexCoord_HighPrecision(const bsp2_t *bsp, const bsp2_dface_t *f
 
 class faceextents_t {
 private:
-    std::array<int, 2> m_texmins;
-    std::array<int, 2> m_texsize;
+    glm::ivec2 m_texmins;
+    glm::ivec2 m_texsize;
     float m_lightmapscale;
-    
     glm::mat4x4 m_worldToTexCoord;
     glm::mat4x4 m_texCoordToWorld;
     
@@ -114,8 +113,8 @@ public:
         for (int i = 0; i < 2; i++) {
             mins[i] = floor(mins[i] / m_lightmapscale);
             maxs[i] = ceil(maxs[i] / m_lightmapscale);
-            m_texmins[i] = mins[i];
-            m_texsize[i] = maxs[i] - mins[i];
+            m_texmins[i] = static_cast<int>(mins[i]);
+            m_texsize[i] = static_cast<int>(maxs[i] - mins[i]);
             
             if (m_texsize[i] >= MAXDIMENSION) {
                 const plane_t plane = Face_Plane(bsp, face);
@@ -137,18 +136,21 @@ public:
     int height() const { return m_texsize[1] + 1; }
     int numsamples() const { return width() * height(); }
     
-    int indexOf(int x, int y) const {
-        Q_assert(x >= 0 && x < width());
-        Q_assert(y >= 0 && y < height());
-        return x + (width() * y);
+    int indexOf(const glm::ivec2 &lm) const {
+        Q_assert(lm.x >= 0 && lm.x < width());
+        Q_assert(lm.y >= 0 && lm.y < height());
+        return lm.x + (width() * lm.y);
     }
     
-    glm::vec2 getTexCoordAtIndex(int x, int y) const {
-        Q_assert(x >= 0 && x < width());
-        Q_assert(y >= 0 && y < height());
-        
-        const glm::vec2 res(m_lightmapscale * (m_texmins[0] + x),
-                            m_lightmapscale * (m_texmins[1] + y));
+    glm::vec2 LMCoordToTexCoord(const glm::vec2 &LMCoord) const {
+        const glm::vec2 res(m_lightmapscale * (m_texmins[0] + LMCoord.x),
+                            m_lightmapscale * (m_texmins[1] + LMCoord.y));
+        return res;
+    }
+    
+    glm::vec2 TexCoordToLMCoord(const glm::vec2 &tc) const {
+        const glm::vec2 res((tc.x / m_lightmapscale) - m_texmins[0],
+                            (tc.y / m_lightmapscale) - m_texmins[1]);
         return res;
     }
     
@@ -230,7 +232,7 @@ public:
     }
     
     sample_t &mutableSampleAt(int x, int y) {
-        const int i = faceextents.indexOf(x, y);
+        const int i = faceextents.indexOf(glm::ivec2(x, y));
         return samples.at(i);
     }
 };
@@ -319,7 +321,7 @@ WriteLightmap_Minimal(const bsp2_t *bsp, bsp2_dface_t *face, const faceextents_t
     
     for (int t = 0; t < extents.height(); t++) {
         for (int s = 0; s < extents.width(); s++) {
-            const int sampleindex = extents.indexOf(s, t);
+            const int sampleindex = extents.indexOf(glm::ivec2(s, t));
             const glm::vec3 &color = samples.at(sampleindex);
             
             *lit++ = color[0];
@@ -536,7 +538,7 @@ LightBatch(bsp2_t *bsp, const batch_t &batch, const all_contrib_faces_t &all_con
         for (int y=0; y<extents.height(); y++) {
             for (int x=0; x<extents.width(); x++) {
                 sample_t &mutableSample = fs.mutableSampleAt(x, y);
-                const glm::vec2 texCoord = extents.getTexCoordAtIndex(x, y);
+                const glm::vec2 texCoord = extents.LMCoordToTexCoord(glm::vec2(x, y));
                 
                 // loop thru samples
                 for (const auto &pr : contributingSamplesInTexSpace) {
