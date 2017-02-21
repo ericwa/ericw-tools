@@ -135,6 +135,7 @@ public:
     int width() const { return m_texsize[0] + 1; }
     int height() const { return m_texsize[1] + 1; }
     int numsamples() const { return width() * height(); }
+    glm::ivec2 texsize() const { return glm::ivec2(width(), height()); }
     
     int indexOf(const glm::ivec2 &lm) const {
         Q_assert(lm.x >= 0 && lm.x < width());
@@ -170,6 +171,14 @@ public:
         Q_assert(fabs(res[3] - 1.0f) < 0.01f);
         
         return glm::vec3( res[0], res[1], res[2] );
+    }
+    
+    glm::vec2 worldToLMCoord(glm::vec3 world) const {
+        return TexCoordToLMCoord(worldToTexCoord(world));
+    }
+    
+    glm::vec3 LMCoordToWorld(glm::vec2 lm) const {
+        return texCoordToWorld(LMCoordToTexCoord(lm));
     }
 };
 
