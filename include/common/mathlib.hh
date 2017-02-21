@@ -397,6 +397,22 @@ V bilinearInterpolate(const V &f00, const V &f10, const V &f01, const V &f11, co
     return fxy;
 }
 
-std::vector<glm::vec3> PointsAlongLine(const glm::vec3 &start, const glm::vec3 &end, const float step);
+template <typename V>
+std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
+{
+    const V linesegment = end - start;
+    const float len = glm::length(linesegment);
+    if (len == 0)
+        return {};
+    
+    std::vector<V> result;
+    const V dir = linesegment / len;
+    const int stepCount = static_cast<int>(len / step);
+    for (int i=0; i<=stepCount; i++) {
+        const V pt = start + (dir * (step * i));
+        result.push_back(pt);
+    }
+    return result;
+}
 
 #endif /* __COMMON_MATHLIB_H__ */

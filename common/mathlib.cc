@@ -540,20 +540,3 @@ std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const 
     
     return clipped;
 }
-
-std::vector<glm::vec3> PointsAlongLine(const glm::vec3 &start, const glm::vec3 &end, const float step)
-{
-    const vec3 linesegment = end - start;
-    const float len = length(linesegment);
-    if (len == 0)
-        return {};
-    
-    vector<vec3> result;
-    const vec3 dir = linesegment / len;
-    const int stepCount = static_cast<int>(len / step);
-    for (int i=0; i<=stepCount; i++) {
-        vec3 pt = start + (dir * (step * i));
-        result.push_back(pt);
-    }
-    return result;
-}
