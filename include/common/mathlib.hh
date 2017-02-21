@@ -397,4 +397,6 @@ V bilinearInterpolate(const V &f00, const V &f10, const V &f01, const V &f11, co
     return fxy;
 }
 
+std::vector<glm::vec3> PointsAlongLine(const glm::vec3 &start, const glm::vec3 &end, const float step);
+
 #endif /* __COMMON_MATHLIB_H__ */

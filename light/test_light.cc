@@ -589,3 +589,10 @@ TEST(mathlib, bilinearWeightsAndCoords2) {
     EXPECT_EQ(vec2(2, 1.5), sum);
 }
 
+TEST(mathlib, pointsAlongLine) {
+    const auto res = PointsAlongLine(vec3(1,0,0), vec3(3.5, 0, 0), 1.5f);
+
+    ASSERT_EQ(2, res.size());
+    ASSERT_TRUE(pointsEqualEpsilon(vec3(1,0,0), res[0], POINT_EQUAL_EPSILON));
+    ASSERT_TRUE(pointsEqualEpsilon(vec3(2.5,0,0), res[1], POINT_EQUAL_EPSILON));
+}
