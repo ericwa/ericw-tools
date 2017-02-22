@@ -159,6 +159,13 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
     if (!Face_IsLightmapped(bsp, f))
         return {};
     
+    // Check angle between reference face and this face
+    const glm::vec3 refNormal = Face_Normal_E(bsp, refFace);
+    const glm::vec3 fNormal = Face_Normal_E(bsp, f);
+    if (dot(fNormal, refNormal) <= 0)
+        return {};
+    
+    
     //printf("%s\n", Face_TextureName(bsp, f));
     
     // transformFromRefFace will rotate `f` so it lies on the same plane as the reference face
@@ -215,7 +222,6 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
     }
     
     // walk edges
-    const glm::vec3 fNormal = Face_Normal_E(bsp, f);
     
     vector<contribface_stackframe_t> nextframes;
     
