@@ -143,6 +143,15 @@ public:
         return lm.x + (width() * lm.y);
     }
     
+    glm::ivec2 intCoordsFromIndex(int index) const {
+        Q_assert(index >= 0);
+        Q_assert(index < numsamples());
+        
+        glm::ivec2 res(index % width(), index / width());
+        Q_assert(indexOf(res) == index);
+        return res;
+    }
+    
     glm::vec2 LMCoordToTexCoord(const glm::vec2 &LMCoord) const {
         const glm::vec2 res(m_lightmapscale * (m_texmins[0] + LMCoord.x),
                             m_lightmapscale * (m_texmins[1] + LMCoord.y));
