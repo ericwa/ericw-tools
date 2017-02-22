@@ -566,7 +566,7 @@ TEST(mathlib, bilinearInterpolate) {
 }
 
 TEST(mathlib, bilinearWeightsAndCoords) {
-    const auto res = bilinearWeightsAndCoords(vec2(1.5, 1.25), ivec2(2,2));
+    const auto res = bilinearWeightsAndCoords(vec2(0.5, 0.25), ivec2(2,2));
     
     vec2 sum(0);
     for (int i=0; i<4; i++) {
@@ -574,11 +574,11 @@ TEST(mathlib, bilinearWeightsAndCoords) {
         const ivec2 intPos = res[i].first;
         sum += vec2(intPos) * weight;
     }
-    EXPECT_EQ(vec2(1.5, 1.25), sum);
+    EXPECT_EQ(vec2(0.5, 0.25), sum);
 }
 
 TEST(mathlib, bilinearWeightsAndCoords2) {
-    const auto res = bilinearWeightsAndCoords(vec2(2, 1.5), ivec2(2,2));
+    const auto res = bilinearWeightsAndCoords(vec2(1.5, 0.5), ivec2(2,2));
     
     vec2 sum(0);
     for (int i=0; i<4; i++) {
@@ -586,7 +586,7 @@ TEST(mathlib, bilinearWeightsAndCoords2) {
         const ivec2 intPos = res[i].first;
         sum += vec2(intPos) * weight;
     }
-    EXPECT_EQ(vec2(2, 1.5), sum);
+    EXPECT_EQ(vec2(1.0, 0.5), sum);
 }
 
 TEST(mathlib, pointsAlongLine) {

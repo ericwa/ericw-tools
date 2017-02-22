@@ -344,25 +344,47 @@ std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std:
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
 static inline glm::vec4 bilinearWeights(const float x, const float y) {
-    return glm::vec4((1-x) * (1-y), x * (1-y), (1-x)*y, x*y);
+    Q_assert(x >= 0.0f);
+    Q_assert(x <= 1.0f);
+    
+    Q_assert(y >= 0.0f);
+    Q_assert(y <= 1.0f);
+    
+    return glm::vec4((1.0f - x) * (1.0f - y), x * (1.0f - y), (1.0f - x) * y, x * y);
 }
 
+// This uses a coordinate system where the pixel centers are on integer coords.
+// e.g. the corners of a 3x3 pixel bitmap are at (-0.5, -0.5) and (2.5, 2.5).
 static inline std::array<std::pair<glm::ivec2, float>, 4>
-bilinearWeightsAndCoords(const glm::vec2 &pos, const glm::ivec2 &size)
+bilinearWeightsAndCoords(glm::vec2 pos, const glm::ivec2 &size)
 {
-    Q_assert(pos.x >= 0.0f && pos.x <= static_cast<float>(size.x));
-    Q_assert(pos.y >= 0.0f && pos.y <= static_cast<float>(size.y));
+    Q_assert(pos.x >= -0.5f && pos.x <= (size.x - 0.5f));
+    Q_assert(pos.y >= -0.5f && pos.y <= (size.y - 0.5f));
+    
+    // Handle extrapolation.
+    for (int i=0; i<2; i++) {
+        if (pos[i] < 0)
+            pos[i] = 0;
+        
+        if (pos[i] > (size[i] - 1))
+            pos[i] = (size[i] - 1);
+    }
+    
+    Q_assert(pos.x >= 0.f && pos.x <= (size.x - 1));
+    Q_assert(pos.y >= 0.f && pos.y <= (size.y - 1));
     
     glm::ivec2 integerPart(glm::floor(pos));
     glm::vec2 fractionalPart(pos - glm::floor(pos));
     
-    // Special case: if pos.x or y == size.x or y
+    // ensure integerPart + (1, 1) is still in bounds
     for (int i=0; i<2; i++) {
-        if (pos[i] == size[i]) {
+        if (fractionalPart[i] == 0.0f && integerPart[i] > 0) {
             integerPart[i] -= 1;
             fractionalPart[i] = 1.0f;
         }
     }
+    Q_assert(integerPart.x + 1 < size.x);
+    Q_assert(integerPart.y + 1 < size.y);
     
     Q_assert(glm::vec2(integerPart) + fractionalPart == pos);
     
@@ -378,6 +400,12 @@ bilinearWeightsAndCoords(const glm::vec2 &pos, const glm::ivec2 &size)
             pos.x += 1;
         if (i >= 2)
             pos.y += 1;
+        
+        Q_assert(pos.x >= 0);
+        Q_assert(pos.x < size.x);
+        
+        Q_assert(pos.y >= 0);
+        Q_assert(pos.y < size.y);
         
         result[i] = std::make_pair(pos, weight);
     }
