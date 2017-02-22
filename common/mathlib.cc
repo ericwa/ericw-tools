@@ -400,6 +400,14 @@ float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point)
     return dot(vec3(plane), point) - plane.w;
 }
 
+glm::vec3 GLM_ProjectPointOntoPlane(const glm::vec4 &plane, const glm::vec3 &point)
+{
+    float dist = GLM_DistAbovePlane(plane, point);
+    vec3 move = -dist * vec3(plane);
+    return point + move;
+}
+
+
 glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points)
 {
     Q_assert(points.size() >= 3);

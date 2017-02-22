@@ -402,6 +402,22 @@ TEST(mathlib, BarycentricRandom) {
     }
 }
 
+TEST(mathlib, DistAbovePlane) {
+    vec4 plane(0, 0, 1, 10);
+    vec3 point(100, 100, 100);
+    EXPECT_FLOAT_EQ(90, GLM_DistAbovePlane(plane, point));
+}
+
+TEST(mathlib, ProjectPointOntoPlane) {
+    vec4 plane(0, 0, 1, 10);
+    vec3 point(100, 100, 100);
+    
+    vec3 projected = GLM_ProjectPointOntoPlane(plane, point);
+    EXPECT_FLOAT_EQ(100, projected.x);
+    EXPECT_FLOAT_EQ(100, projected.y);
+    EXPECT_FLOAT_EQ(10, projected.z);
+}
+
 TEST(mathlib, InterpolateNormals) {
     // This test relies on the way GLM_InterpolateNormal is implemented
     
