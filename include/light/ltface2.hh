@@ -23,6 +23,7 @@
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
+#include <common/bsputils.hh>
 #include <common/log.hh>
 #include <common/threads.hh>
 #include <common/polylib.hh>
@@ -31,5 +32,30 @@
 
 glm::vec2 WorldToTexCoord_HighPrecision(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &world);
 void LightBatch(bsp2_t *bsp, const batch_t &batch, const all_contrib_faces_t &all_contrib_faces);
+
+class faceextents_t {
+private:
+    glm::ivec2 m_texmins;
+    glm::ivec2 m_texsize;
+    float m_lightmapscale;
+    glm::mat4x4 m_worldToTexCoord;
+    glm::mat4x4 m_texCoordToWorld;
+    
+public:
+    faceextents_t() = default;
+    faceextents_t(const bsp2_dface_t *face, const bsp2_t *bsp, float lmscale);
+    int width() const;
+    int height() const;
+    int numsamples() const;
+    glm::ivec2 texsize() const;
+    int indexOf(const glm::ivec2 &lm) const;
+    glm::ivec2 intCoordsFromIndex(int index) const;
+    glm::vec2 LMCoordToTexCoord(const glm::vec2 &LMCoord) const;
+    glm::vec2 TexCoordToLMCoord(const glm::vec2 &tc) const;
+    glm::vec2 worldToTexCoord(glm::vec3 world) const;
+    glm::vec3 texCoordToWorld(glm::vec2 tc) const;
+    glm::vec2 worldToLMCoord(glm::vec3 world) const;
+    glm::vec3 LMCoordToWorld(glm::vec2 lm) const;
+};
 
 #endif /* __LIGHT_LTFACE2_H__ */
