@@ -1969,7 +1969,7 @@ LightFace_ContribFacesDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
 }
 
 static void
-LightFace_OccludedDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     Q_assert(debugmode == debugmode_debugoccluded);
     
@@ -1979,10 +1979,13 @@ LightFace_OccludedDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     /* Overwrite each point, red=occluded, green=ok */
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
-        if (lightsurf->occluded[i])
+        if (lightsurf->occluded[i]) {
             glm_to_vec3_t(glm::vec3(255,0,0), sample->color);
-        else
+        } else {
             glm_to_vec3_t(glm::vec3(0,255,0), sample->color);
+        }
+        // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
+        lightsurf->occluded[i] = false;
     }
     
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
