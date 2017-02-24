@@ -752,6 +752,8 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             surf->occluded[i] = !get<0>(res);
             glm_to_vec3_t(std::get<2>(res), point);
             glm_to_vec3_t(std::get<3>(res), norm);
+            
+            VectorAdd(point, offset, point);
 #else
             // do this before correcting the point, so we can wrap around the inside of pipes
             if (surf->curved && cfg.phongallowed.boolValue())
@@ -762,12 +764,13 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             {
                 VectorCopy(surf->plane.normal, norm);
             }
-#endif
+            
             // apply model offset after calling CalcPointNormal
             VectorAdd(point, offset, point);
             
             // corrects point
             CheckObstructed(surf, offset, us, ut, point);
+#endif
         }
     }
     
