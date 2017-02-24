@@ -393,6 +393,7 @@ void
 LightBatch(bsp2_t *bsp, const batch_t &batch, const all_contrib_faces_t &all_contrib_faces)
 {
     // self test for contributing faces
+#if 0
     for (int fnum : batch) {
         const bsp2_dface_t *face = &bsp->dfaces[fnum];
         const plane_t facePlane = Face_Plane(bsp, face);
@@ -418,6 +419,7 @@ LightBatch(bsp2_t *bsp, const batch_t &batch, const all_contrib_faces_t &all_con
             }
         }
     }
+#endif
     
     // good test case: give every face a random color
     // => there should be smooth seams (without aliasing) between faces on the
@@ -523,12 +525,11 @@ LightBatch(bsp2_t *bsp, const batch_t &batch, const all_contrib_faces_t &all_con
                 Q_assert(face == contributingFace.refFace);
                 Q_assert(samplePos.face == contributingFace.contribFace);
                 
-                const glm::vec4 faceTC = contributingFace.contribWorldToRefTex * extendTo4(samplePos.worldpos);
+                const glm::vec4 refPlane = Face_Plane_E(bsp, face);
+                const glm::vec3 refWorld = GLM_ProjectPointOntoPlane(refPlane, samplePos.worldpos);
+                const glm::vec2 faceTC = WorldToTexCoord_HighPrecision(bsp, face, refWorld);
                 
-                Q_assert(fabs(faceTC.z - 0.0) < 0.01);
-                Q_assert(fabs(faceTC.w - 1.0) < 0.01);
-                
-                contributingSamplesInTexSpace.push_back(make_pair(glm::vec2(faceTC.x, faceTC.y), samplePos));
+                contributingSamplesInTexSpace.push_back(make_pair(faceTC, samplePos));
             }
         }
         

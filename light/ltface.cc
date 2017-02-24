@@ -32,6 +32,9 @@
 #include <cmath>
 #include <algorithm>
 
+#include <glm/glm.hpp>
+
+using namespace std;
 using namespace glm;
 
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
@@ -458,6 +461,238 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
     PrintFaceInfo(surf->face, bsp);
 }
 
+/// Checks if the point is in any solid (solid or sky leaf)
+/// 1. the world
+/// 2. any shadow-casting bmodel
+/// 3. the `self` model (regardless of whether it's selfshadowing)
+bool
+Light_PointInAnySolid(const bsp2_t *bsp, const dmodel_t *self, const glm::vec3 &point)
+{
+    vec3_t v3;
+    glm_to_vec3_t(point, v3);
+    
+    if (Light_PointInSolid(bsp, self, v3))
+        return true;
+    
+    if (Light_PointInWorld(bsp, v3))
+        return true;
+    
+    for (const auto &modelinfo : tracelist) {
+        if (Light_PointInSolid(bsp, modelinfo->model, v3))
+            return true;
+    }
+    
+    return false;
+}
+
+using position_t = std::tuple<bool, const bsp2_dface_t *, glm::vec3, glm::vec3>;
+
+vector<vec3> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    vector<vec3> normals;
+    for (int i=0; i<face->numedges; i++) {
+        const glm::vec3 n = GetSurfaceVertexNormal(bsp, face, i);
+        normals.push_back(n);
+    }
+    return normals;
+}
+
+constexpr float sampleOffPlaneDist = 1.0f;
+
+// precondition: `point` is on the same plane as `face` and within the bounds.
+static position_t
+PositionSamplePointOnFace(const bsp2_t *bsp,
+                          const bsp2_dface_t *face,
+                          const bool phongShaded,
+                          const glm::vec3 &point)
+{
+    const auto points = GLM_FacePoints(bsp, face);
+    const auto normals = Face_VertexNormals(bsp, face);
+    
+    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
+    if (edgeplanes.empty()) {
+        // degenerate polygon
+        return {false, nullptr, point, vec3(0)};
+    }
+    
+    const auto plane = Face_Plane_E(bsp, face);
+    const float planedist = GLM_DistAbovePlane(plane, point);
+    Q_assert(fabs(planedist - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
+    
+    const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+    if (insideDist < -POINT_EQUAL_EPSILON) {
+        // Non-convex polygon
+        return {false, nullptr, point, vec3(0)};
+    }
+    
+    const modelinfo_t *mi = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
+    
+    // Get the point normal
+    vec3 pointNormal;
+    if (phongShaded) {
+        const auto interpNormal = GLM_InterpolateNormal(points, normals, point);
+        // We already know the point is in the face, so this should always succeed
+        if(!interpNormal.first)
+            return {false, nullptr, point, vec3(0)};
+        pointNormal = interpNormal.second;
+    } else {
+        pointNormal = vec3(plane);
+    }
+    
+    const bool inSolid = Light_PointInAnySolid(bsp, mi->model, point);
+    if (inSolid) {
+        // Check distance to border
+        const float distanceInside = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+        if (distanceInside < 1.0f) {
+            // Point is too close to the border. Try nudging it inside.
+            const auto shrunk = GLM_ShrinkPoly(points, 1.0f);
+            if (!shrunk.empty()) {
+                const pair<int, vec3> closest = GLM_ClosestPointOnPolyBoundary(shrunk, point);
+                const vec3 newPoint = closest.second + (sampleOffPlaneDist * vec3(plane));
+                if (!Light_PointInAnySolid(bsp, mi->model, newPoint))
+                    return {true, face, newPoint, pointNormal};
+            }
+        }
+
+        return {false, nullptr, point, vec3(0)};
+    }
+    
+    return {true, face, point, pointNormal};
+}
+
+static float
+TexSpaceDist(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &p0, const glm::vec3 &p1)
+{
+    const vec2 p0_tex = WorldToTexCoord_HighPrecision(bsp, face, p0);
+    const vec2 p1_tex = WorldToTexCoord_HighPrecision(bsp, face, p1);
+    
+    return length(p1_tex - p0_tex);
+}
+
+static bool
+PointAboveAllPlanes(const vector<blocking_plane_t> &planes, const glm::vec3 &point)
+{
+    for (const blocking_plane_t &plane : planes) {
+        if (GLM_DistAbovePlane(plane, point) < -POINT_EQUAL_EPSILON) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// returns false if the sample is in the void / couldn't be tweaked, true otherwise
+// also returns the face the point was wrapped on to, and the output point
+
+// postconditions: the returned point will be inside the returned face,
+// so the caller can interpolate the normal.
+
+static position_t
+PositionSamplePoint(const bsp2_t *bsp,
+                    const bsp2_dface_t *face,
+                    const float face_lmscale,
+                    const bool phongshaded,
+                    const std::vector<glm::vec3> &facepoints,
+                    const vector<vec4> &edgeplanes,
+                    const vector<contributing_face_t> &contribfaces,
+                    const vector<blocking_plane_t> &blockers,
+                    const glm::vec3 &point)
+{
+    // Cases to handle:
+    //
+    // 0. inside polygon (or on border)?
+    //    a) in solid (world (only possible if the face is a bmodel) or shadow-caster)
+    //       or on the border of a solid?
+    //       => if on border of the polygon, nudge 1 unit inwards. check in solid again, use or drop.
+    //    b) all good, use the point.
+    //
+    // 1. else, inside polygon of a "contributing" face?
+    //    contributing faces are on the same plane (and reachable without leaving the plane to cross walls)
+    //    or else reachable by crossing phong shaded neighbours.
+    //
+    //    a) if we are allocating points for face Y, we may want to
+    //       discard points that cross plane X to avoid light leaking around corners.
+    //     _______________
+    //    |              | <-- "contributing face" for Y
+    //    | o o o o x    |
+    //    |______________|
+    //    | o o o o|
+    //    |        |   <-- solid
+    //    | face Y |<- plane X
+    //    |________|
+    //
+    //    b) if still OK, goto 0.
+    //
+    // 2. Now the point is either in a solid or floating over a gap.
+    //
+    //    a) < 1 sample from polygon edge => snap to polygon edge + nudge 1 unit inwards.
+    //       => goto 0.
+    //    b) >= 1 sample => drop
+    //
+    // NOTE: we will need to apply minlight after downsampling, to avoid introducing fringes.
+    //
+    // Cases that should work:
+    // - thin geometry where no sample points are in the polygon
+    // - door touching world
+    // - door partly stuck into world with minlight
+    // - shadowcasting light fixture in middle of world face
+    // - world light fixture prone to leaking around
+    // - window (bmodel) with world bars crossing through it
+    
+    if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
+        // 0. Inside polygon.
+        return PositionSamplePointOnFace(bsp, face, phongshaded, point);
+    }
+    
+    // OK: we are outside of the polygon
+    
+    // self check
+    const vec4 facePlane = Face_Plane_E(bsp, face);
+    Q_assert(fabs(GLM_DistAbovePlane(facePlane, point) - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
+    // end self check
+    
+    // Loop through all contributing faces, and "wrap" the point onto it.
+    // Check if the "wrapped" point is within that contributing face.
+    
+    int inside = 0;
+    
+    for (const auto &cf : contribfaces) {
+        // This "bends" point to be on the contributing face
+        const vec4 contribFacePlane = Face_Plane_E(bsp, cf.contribFace);
+        const vec3 wrappedPoint = GLM_ProjectPointOntoPlane(contribFacePlane, point)
+            + (sampleOffPlaneDist * vec3(contribFacePlane));
+        
+        // self check
+        Q_assert(fabs(GLM_DistAbovePlane(contribFacePlane, wrappedPoint) - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
+        // end self check
+        
+        if (GLM_EdgePlanes_PointInside(cf.contribFaceEdgePlanes, wrappedPoint)) {
+            inside++;
+            
+            // Check for light bleed
+            if (PointAboveAllPlanes(blockers, wrappedPoint)) {
+                // 1.
+                return PositionSamplePointOnFace(bsp, cf.contribFace, phongshaded, wrappedPoint);
+            }
+        }
+    }
+    
+    // 2. Try snapping to poly
+    
+    const pair<int, vec3> closest = GLM_ClosestPointOnPolyBoundary(facepoints, point);
+    const float texSpaceDist = TexSpaceDist(bsp, face, closest.second, point);
+    
+    if (texSpaceDist <= face_lmscale) {
+        // Snap it to the face edge. Add the 1 unit off plane.
+        const vec3 snapped = closest.second + (sampleOffPlaneDist * vec3(facePlane));
+        return PositionSamplePointOnFace(bsp, face, phongshaded, snapped);
+    }
+    
+    // This point is too far from the polygon to be visible in game, so don't bother calculating lighting for it.
+    // Dont contribute to interpolating.
+    // We could safely colour it in pink for debugging. 
+    return { false, nullptr, point, glm::vec3() };
+}
+
 /*
  * =================
  * CalcPoints
@@ -479,7 +714,10 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
  
     // Get faces which could contribute to this one.
     const auto contribFaces = SetupContributingFaces(bsp, face, EdgeToFaceMap);
-
+    // Get edge planes of this face which will block light for the purposes of placing the sample points
+    // to avoid light leaks.
+    const auto blockers = BlockingPlanes(bsp, face, EdgeToFaceMap);
+    
     surf->width  = (surf->texsize[0] + 1) * oversample;
     surf->height = (surf->texsize[1] + 1) * oversample;
     const float starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
@@ -492,6 +730,9 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     surf->normals = (vec3_t *) calloc(surf->numpoints, sizeof(vec3_t));
     surf->occluded = (bool *)calloc(surf->numpoints, sizeof(bool));
     
+    const auto points = GLM_FacePoints(bsp, face);
+    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
+    
     for (int t = 0; t < surf->height; t++) {
         for (int s = 0; s < surf->width; s++) {
             const int i = t*surf->width + s;
@@ -503,6 +744,15 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
 
             TexCoordToWorld(us, ut, &surf->texorg, point);
 
+#if 0
+            const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
+            const auto res = PositionSamplePoint(bsp, face, surf->lightmapscale, phongshaded,
+                                                 points, edgeplanes, contribFaces, blockers, vec3_t_to_glm(point));
+            
+            surf->occluded[i] = !get<0>(res);
+            glm_to_vec3_t(std::get<2>(res), point);
+            glm_to_vec3_t(std::get<3>(res), norm);
+#else
             // do this before correcting the point, so we can wrap around the inside of pipes
             if (surf->curved && cfg.phongallowed.boolValue())
             {
@@ -512,7 +762,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             {
                 VectorCopy(surf->plane.normal, norm);
             }
-            
+#endif
             // apply model offset after calling CalcPointNormal
             VectorAdd(point, offset, point);
             
@@ -1669,28 +1919,50 @@ LightFace_ContribFacesDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
     
     const auto contribFaces = SetupContributingFaces(lightsurf->bsp, dumpface, EdgeToFaceMap);
     
+    const auto blockers = BlockingPlanes(lightsurf->bsp, dumpface, EdgeToFaceMap);
+    
     glm::vec3 color(0);
+    bool contribOrRef = false;
     
     if (lightsurf->face == dumpface) {
         color = glm::vec3(0,255,0);
+        contribOrRef = true;
     } else {
         for (const auto &cf : contribFaces) {
             Q_assert(cf.refFace == dumpface);
             Q_assert(cf.contribFace != cf.refFace);
             if (cf.contribFace == lightsurf->face) {
                 color = glm::vec3(255,0,0);
+                contribOrRef = true;
                 break;
             }
         }
     }
+    
+    if (contribOrRef == false)
+        return;
     
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
     
     /* Overwrite each point with the debug color... */
     for (int i = 0; i < lightsurf->numpoints; i++) {
+        const vec3 point = vec3_t_to_glm(lightsurf->points[i]);
         lightsample_t *sample = &lightmap->samples[i];
-        glm_to_vec3_t(color, sample->color);
+        
+        // Check blockers
+        bool ok = true;
+        for (const auto &blocker : blockers) {
+            if (GLM_DistAbovePlane(blocker, point) < -POINT_EQUAL_EPSILON) {
+                ok = false;
+                break;
+            }
+        }
+        
+        if (ok)
+            glm_to_vec3_t(color, sample->color);
+        else
+            VectorSet(sample->color, 0, 0, 255); // blue for "behind blocker"
     }
     
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);

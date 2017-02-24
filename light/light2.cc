@@ -134,7 +134,7 @@ edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp) {
 using bbox2 = pair<glm::vec2, glm::vec2>;
 using bbox3 = pair<glm::vec3, glm::vec3>;
 
-using contribface_stackframe_t = pair<const bsp2_dface_t *, glm::mat4x4>;
+using contribface_stackframe_t = const bsp2_dface_t *;
 
 // Returns the next stack frames to process
 vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stackframe_t &frame,
@@ -146,8 +146,7 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
                                                           vector<bool> *faceidx_handled,
                                                           vector<contributing_face_t> *result)
 {
-    const bsp2_dface_t *f = frame.first;
-    const glm::mat4x4 &FWorldToRefWorld = frame.second;
+    const bsp2_dface_t *f = frame;
     
     const int currFnum = Face_GetNum(bsp, f);
     if (faceidx_handled->at(currFnum))
@@ -160,39 +159,30 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
         return {};
     
     // Check angle between reference face and this face
-    const glm::vec3 refNormal = Face_Normal_E(bsp, refFace);
+    const glm::vec4 refPlane = Face_Plane_E(bsp, refFace);
+    const glm::vec3 refNormal = glm::vec3(refPlane);
     const glm::vec3 fNormal = Face_Normal_E(bsp, f);
     if (dot(fNormal, refNormal) <= 0)
         return {};
     
-    
     //printf("%s\n", Face_TextureName(bsp, f));
     
-    // transformFromRefFace will rotate `f` so it lies on the same plane as the reference face
-    
-    // convert `f` texture space to world space, apply transformFromRefFace
-    // to rotate `f` onto the same plane as `f`,
-    // then convert that from refFace's world space to texture space
-    
-    const glm::mat4x4 RefWorldToRefTex = WorldToTexSpace(bsp, refFace);
-    
-    // now check each vertex's position in refFace's texture space.
+    // now check each vertex's position projected onto refFace.
     // if no verts are within the range that could contribute to a sample in refFace
     // we can stop recursion and skip adding `f` to the result vector.
-    const glm::mat4x4 FWorldToRefTex = RefWorldToRefTex * FWorldToRefWorld;
+    
     bool foundNearVert = false;
     for (int j = 0; j < f->numedges; j++) {
         const int v0 = Face_VertexAtIndex(bsp, f, j);
         const glm::vec3 v0_position = Vertex_GetPos_E(bsp, v0);
         
-        const glm::vec4 v0InRefTex = FWorldToRefTex * glm::vec4(v0_position[0], v0_position[1], v0_position[2], 1.0);
-        const glm::vec2 v0InRefTex2f = glm::vec2(v0InRefTex);
+        const glm::vec3 v0InRefWorld = GLM_ProjectPointOntoPlane(refPlane, v0_position);
+        const glm::vec2 v0InRefTex2f = WorldToTexCoord_HighPrecision(bsp, refFace, v0InRefWorld);
         
         // check distance to box
         const bool near = refFaceTexBounds.grow(glm::vec2(16, 16)).contains(v0InRefTex2f);
         if (near) {
             
-            const glm::vec3 v0InRefWorld = glm::vec3(FWorldToRefWorld * glm::vec4(v0_position[0], v0_position[1], v0_position[2], 1.0));
             //const float worldDist = refFaceWorldBounds.exteriorDistance(v0InRefWorld);
             
             //printf ("world distance: %f, tex dist: %f\n", worldDist, dist);
@@ -205,18 +195,11 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
         return {};
     }
     
-    const glm::mat4x4 FTexToFWorld = TexSpaceToWorld(bsp, f);
-    const glm::mat4x4 FTexToRefTex = RefWorldToRefTex * FWorldToRefWorld * FTexToFWorld;
-    
     // add to result (don't add the starting face though)
     if (f != refFace) {
         contributing_face_t resAddition;
         resAddition.contribFace = f;
         resAddition.refFace = refFace;
-        resAddition.contribWorldToRefWorld = FWorldToRefWorld;
-        resAddition.refWorldToContribWorld = glm::inverse(FWorldToRefWorld);
-        resAddition.contribTexToRefTex = FTexToRefTex;
-        resAddition.contribWorldToRefTex = FWorldToRefTex;
         resAddition.contribFaceEdgePlanes = GLM_MakeInwardFacingEdgePlanes(GLM_FacePoints(bsp, f));
         result->push_back(resAddition);
     }
@@ -249,14 +232,7 @@ vector<contribface_stackframe_t> SetupContributingFaces_R(const contribface_stac
                     continue;
                 }
                 
-                const glm::vec3 neighbourNormal = Face_Normal_E(bsp, neighbour);
-                
-                const auto success = RotationAboutLineSegment(v0pos, v1pos, fNormal, neighbourNormal);
-                Q_assert(success.first);
-                const glm::mat4x4 NeighbourWorldToFWorld = success.second;
-                const glm::mat4x4 NeighbourWorldToRefWorld = FWorldToRefWorld * NeighbourWorldToFWorld;
-                
-                nextframes.push_back(make_pair(neighbour, NeighbourWorldToRefWorld));
+                nextframes.push_back(neighbour);
             }
         }
     }
@@ -297,6 +273,43 @@ aabb3 FaceWorldBounds(const bsp2_t *bsp, const bsp2_dface_t *f)
     return result;
 }
 
+std::vector<blocking_plane_t> BlockingPlanes(const bsp2_t *bsp, const bsp2_dface_t *f, const edgeToFaceMap_t &edgeToFaceMap)
+{
+    vector<blocking_plane_t> blockers;
+    
+    const glm::vec3 fNormal = Face_Normal_E(bsp, f);
+    
+    for (int j = 0; j < f->numedges; j++) {
+        const int v0 = Face_VertexAtIndex(bsp, f, j);
+        const int v1 = Face_VertexAtIndex(bsp, f, (j + 1) % f->numedges);
+        
+        const glm::vec3 v0pos = Vertex_GetPos_E(bsp, v0);
+        const glm::vec3 v1pos = Vertex_GetPos_E(bsp, v1);
+        
+        auto it = edgeToFaceMap.find(make_pair(v1, v0));
+        if (it != edgeToFaceMap.end()) {
+            for (const bsp2_dface_t *neighbour : it->second) {
+                if (neighbour == f) {
+                    // Invalid face, e.g. with vertex numbers: [0, 1, 0, 2]
+                    continue;
+                }
+                
+                // Check if these faces are smoothed or on the same plane
+                if (!(FacesSmoothed(f, neighbour) || neighbour->planenum == f->planenum)) {
+                    
+                    // Not smoothed; add a blocker
+                    pair<bool, glm::vec4> blocker = GLM_MakeInwardFacingEdgePlane(v0pos, v1pos, fNormal);
+                    if (blocker.first) {
+                        blockers.push_back(blocker.second);
+                    }
+                }
+            }
+        }
+    }
+    
+    return blockers;
+}
+
 /**
  * For the given face, find all other faces that can contribute samples.
  *
@@ -323,7 +336,7 @@ vector<contributing_face_t> SetupContributingFaces(const bsp2_t *bsp, const bsp2
     //        << refFaceWorldBounds.max() << std::endl;
     
     // Breadth-first search, starting with `face`.
-    list<contribface_stackframe_t> queue { make_pair(face, glm::mat4x4()) };
+    list<contribface_stackframe_t> queue { face };
     
     while (!queue.empty()) {
         const contribface_stackframe_t frame = queue.front();

@@ -55,18 +55,11 @@ public:
     const bsp2_dface_t *contribFace;
     const bsp2_dface_t *refFace;
     
-    // mapping from contribFace world space -> refFace world space,
-    // assuming the mesh connecting contribFace to refFace has been "unfolded"
-    // so they lie on the same plane.
-    glm::mat4x4 contribWorldToRefWorld;
-    glm::mat4x4 refWorldToContribWorld;
-    glm::mat4x4 contribTexToRefTex;
-    glm::mat4x4 contribWorldToRefTex;
-    
     std::vector<glm::vec4> contribFaceEdgePlanes;
 };
 
 using all_contrib_faces_t = std::map<const bsp2_dface_t *, std::vector<contributing_face_t>>;
+using blocking_plane_t = glm::vec4;
 
 struct lightbatchthread_info_t {
     batches_t all_batches;
@@ -76,6 +69,7 @@ struct lightbatchthread_info_t {
 
 void *LightBatchThread(void *arg);
 
+std::vector<blocking_plane_t> BlockingPlanes(const bsp2_t *bsp, const bsp2_dface_t *f, const edgeToFaceMap_t &edgeToFaceMap);
 edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp);
 batches_t MakeLightingBatches(const bsp2_t *bsp);
 all_contrib_faces_t MakeContributingFaces(const bsp2_t *bsp);
