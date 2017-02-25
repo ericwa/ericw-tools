@@ -432,7 +432,6 @@ CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, co
 static void
 CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
 {
-    const int facenum = surf->face - bsp->dfaces;
     FILE *f = fopen("calcpoints.map", "w");
     
     for (int t = 0; t < surf->height; t++) {
@@ -445,7 +444,7 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
             fprintf(f, "\"classname\" \"light\"\n");
             fprintf(f, "\"origin\" \"%f %f %f\"\n", point[0], point[1], point[2]);
             fprintf(f, "\"mangle\" \"%f %f %f\"\n", mangle[0], mangle[1], mangle[2]);
-            fprintf(f, "\"face\" \"%d\"\n", facenum);
+            fprintf(f, "\"face\" \"%d\"\n", surf->realfacenums[i]);
             fprintf(f, "\"occluded\" \"%d\"\n", (int)surf->occluded[i]);
             fprintf(f, "\"s\" \"%d\"\n", s);
             fprintf(f, "\"t\" \"%d\"\n", t);
@@ -456,7 +455,7 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
     fclose(f);
     
     logprint("wrote face %d's sample points (%dx%d) to calcpoints.map\n",
-             facenum, surf->width, surf->height);
+             Face_GetNum(bsp, surf->face), surf->width, surf->height);
 
     PrintFaceInfo(surf->face, bsp);
 }
@@ -729,6 +728,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     surf->points = (vec3_t *) calloc(surf->numpoints, sizeof(vec3_t));
     surf->normals = (vec3_t *) calloc(surf->numpoints, sizeof(vec3_t));
     surf->occluded = (bool *)calloc(surf->numpoints, sizeof(bool));
+    surf->realfacenums = (int *)calloc(surf->numpoints, sizeof(int));
     
     const auto points = GLM_FacePoints(bsp, face);
     const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
@@ -738,6 +738,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             const int i = t*surf->width + s;
             vec_t *point = surf->points[i];
             vec_t *norm = surf->normals[i];
+            int *realfacenum = &surf->realfacenums[i];
             
             const vec_t us = starts + s * st_step;
             const vec_t ut = startt + t * st_step;
@@ -752,6 +753,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             surf->occluded[i] = !get<0>(res);
             glm_to_vec3_t(std::get<2>(res), point);
             glm_to_vec3_t(std::get<3>(res), norm);
+            *realfacenum = Face_GetNum(bsp, std::get<1>(res));
             
             VectorAdd(point, offset, point);
 #else
