@@ -223,109 +223,86 @@ WarnBadMidpoint(const vec3_t point)
 #endif
 }
 
-static void CalcBarycentric(const vec_t *p, const vec_t *a, const vec_t *b, const vec_t *c, vec_t *res)
-{
-    vec3_t v0,v1,v2;
-    VectorSubtract(b, a, v0);
-    VectorSubtract(c, a, v1);
-    VectorSubtract(p, a, v2);
-    float d00 = DotProduct(v0, v0);
-    float d01 = DotProduct(v0, v1);
-    float d11 = DotProduct(v1, v1);
-    float d20 = DotProduct(v2, v0);
-    float d21 = DotProduct(v2, v1);
-    float invDenom = (d00 * d11 - d01 * d01);
-    invDenom = 1.0/invDenom;
-    res[1] = (d11 * d20 - d01 * d21) * invDenom;
-    res[2] = (d00 * d21 - d01 * d20) * invDenom;
-    res[0] = 1.0f - res[1] - res[2];
-}
-
 // from: http://stackoverflow.com/a/1501725
 // see also: http://mathworld.wolfram.com/Projection.html
-static vec_t
-FractionOfLine(const vec3_t v, const vec3_t w, const vec3_t p) {
-    vec3_t vp, vw;
-    VectorSubtract(p, v, vp);
-    VectorSubtract(w, v, vw);
+static float
+FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p) {
+    const glm::vec3 vp = p - v;
+    const glm::vec3 vw = w - v;
     
-    const float l2 = DotProduct(vw, vw);
+    const float l2 = glm::dot(vw, vw);
     if (l2 == 0) {
         return 0;
     }
     
-    const vec_t t = DotProduct(vp, vw) / l2;
+    const float t = glm::dot(vp, vw) / l2;
     return t;
 }
 
-static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *norm, const vec_t *point, int inside)
+vector<vec3> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
-    plane_t surfplane = Face_Plane(bsp, face);
+    vector<vec3> normals;
+    for (int i=0; i<face->numedges; i++) {
+        const glm::vec3 n = GetSurfaceVertexNormal(bsp, face, i);
+        normals.push_back(n);
+    }
+    return normals;
+}
+
+glm::vec3 CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &point, bool phongShaded, int recursiondepth)
+{
+    const glm::vec4 surfplane = Face_Plane_E(bsp, face);
+    const auto points = GLM_FacePoints(bsp, face);
+    const auto normals = Face_VertexNormals(bsp, face);
+    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
     
     // project `point` onto the surface plane (it's hovering 1 unit above)
-    vec3_t pointOnPlane;
-    {
-        vec_t dist = DotProduct(point, surfplane.normal) - surfplane.dist;
-        VectorMA(point, -dist, surfplane.normal, pointOnPlane);
-    }
+    const glm::vec3 pointOnPlane = GLM_ProjectPointOntoPlane(surfplane, point);
     
-    const vec_t *v1, *v2, *v3;
-
-    /* now just walk around the surface as a triangle fan */
-    v1 = GetSurfaceVertexPoint(bsp, face, 0);
-    v2 = GetSurfaceVertexPoint(bsp, face, 1);
-    for (int j = 2; j < face->numedges; j++)
-    {
-        v3 = GetSurfaceVertexPoint(bsp, face, j);
-  
-        vec3_t bary;
-        CalcBarycentric(pointOnPlane, v1, v2, v3, bary);
-        
-        // N.B. need a small epsilon here because the barycentric coordinates are normalized to 0-1
-        const vec_t BARY_EPSILON = 0.001;
-        if ((bary[0] > -BARY_EPSILON) && (bary[1] > -BARY_EPSILON) && (bary[0] + bary[1] < 1+BARY_EPSILON))
-        {
-            // area test rejects the case when v1, v2, v3 are colinear
-            if (TriangleArea(v1, v2, v3) >= 1) {
+    // check if in face..
+    if (!edgeplanes.empty()) {
+        const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+        if (insideDist > -POINT_EQUAL_EPSILON) {
+            if (!phongShaded)
+                return vec3(surfplane);
+            
+            // Get the point normal
+            const auto interpNormal = GLM_InterpolateNormal(points, normals, point);
+            
+            // We already know the point is in the face, so this should never happen
+            if(!interpNormal.first)
+                return vec3(surfplane);
                 
-                const glm::vec3 v1 = GetSurfaceVertexNormal(bsp, face, 0);
-                const glm::vec3 v2 = GetSurfaceVertexNormal(bsp, face, j-1);
-                const glm::vec3 v3 = GetSurfaceVertexNormal(bsp, face, j);
-                
-                const glm::vec3 glmnorm = normalize((bary[0] * v1) + (bary[1] * v2) + (bary[2] * v3));
-                
-                VectorCopyFromGLM(glmnorm, norm);
-                return;
-            }
+            return interpNormal.second;
         }
-        v2 = v3;
     }
 
     // not in any triangle. among the edges this point is _behind_,
     // search for the one that the point is least past the endpoints of the edge
     {
-        plane_t *edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
-        
         int bestplane = -1;
-        vec_t bestdist = VECT_MAX;
+        float bestdist = FLT_MAX;
         
         for (int i=0; i<face->numedges; i++) {
-            vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
-            if (planedist < ON_EPSILON) {
+            const vec3 v0 = points.at(i);
+            const vec3 v1 = points.at((i+1) % points.size());
+            
+            const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, vec3(surfplane));
+            if (!edgeplane.first)
+                continue; // degenerate edge
+            
+            float planedist = GLM_DistAbovePlane(edgeplane.second, point);
+            if (planedist < POINT_EQUAL_EPSILON) {
                 // behind this plane. check whether we're between the endpoints.
                 
-                v1 = GetSurfaceVertexPoint(bsp, face, i);
-                v2 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
+                const vec3 v0v1 = v1 - v0;
+                const float v0v1dist = length(v0v1);
                 
-                vec3_t v1v2;
-                VectorSubtract(v2, v1, v1v2);
-                const vec_t v1v2dist = VectorLength(v1v2);
+                const float t = FractionOfLine(v0, v1, point); // t=0 for point=v0, t=1 for point=v1
                 
-                const vec_t t = FractionOfLine(v1, v2, point); // t=0 for point=v1, t=1 for point=v2.
-                
-                vec_t edgedist;
-                if (t < 0) edgedist = fabs(t) * v1v2dist;
-                else if (t > 1) edgedist = t * v1v2dist;
+                float edgedist;
+                if (t < 0) edgedist = fabs(t) * v0v1dist;
+                else if (t > 1) edgedist = t * v0v1dist;
                 else edgedist = 0;
                 
                 if (edgedist < bestdist) {
@@ -335,57 +312,49 @@ static void CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, vec_t *
             }
         }
         
-        
         if (bestplane != -1) {
             const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, bestplane);
             if (smoothed) {
                 // try recursive search
-                if (inside < 3) {
-                    free(edgeplanes);
-                    
+                if (recursiondepth < 3) {
                     // call recursively to look up normal in the adjacent face
-                    CalcPointNormal(bsp, smoothed, norm, point, inside + 1);
-                    return;
+                    return CalcPointNormal(bsp, smoothed, point, phongShaded, recursiondepth + 1);
                 }
             }
 
-            v1 = GetSurfaceVertexPoint(bsp, face, bestplane);
-            v2 = GetSurfaceVertexPoint(bsp, face, (bestplane+1)%face->numedges);
+            const vec3 v0 = points.at(bestplane);
+            const vec3 v1 = points.at((bestplane+1) % points.size());
             
-            vec_t t = FractionOfLine(v1, v2, point);
+            float t = FractionOfLine(v0, v1, point); // t=0 for point=v0, t=1 for point=v1
             t = qmax(qmin(t, 1.0f), 0.0f);
             
-            const glm::vec3 v1 = GetSurfaceVertexNormal(bsp, face, bestplane);
-            const glm::vec3 v2 = GetSurfaceVertexNormal(bsp, face, (bestplane+1)%face->numedges);
+            const glm::vec3 n0 = GetSurfaceVertexNormal(bsp, face, bestplane);
+            const glm::vec3 n1 = GetSurfaceVertexNormal(bsp, face, (bestplane+1)%face->numedges);
             
-            const glm::vec3 glmnorm = normalize((v2 * t) + (1-t)*v1);
-            VectorCopyFromGLM(glmnorm, norm);
-            
-            free(edgeplanes);
-            return;
+            const glm::vec3 glmnorm = normalize((n1 * t) + (1-t)*n0);
+            return glmnorm;
         }
-        
-        free(edgeplanes);
     }
 
     /*utterly crap, just for testing. just grab closest vertex*/
-    vec_t bestd = VECT_MAX;
+    float bestd = VECT_MAX;
     int bestv = -1;
-    VectorSet(norm, 0, 0, 0);
+    
+    glm::vec3 norm(0);
     for (int i = 0; i < face->numedges; i++)
     {
-        vec3_t t;
-        int v = Face_VertexAtIndex(bsp, face, i);
-        VectorSubtract(point, bsp->dvertexes[v].point, t);
-        const vec_t dist = VectorLength(t);
+        const int v = Face_VertexAtIndex(bsp, face, i);
+        const glm::vec3 t = point - points.at(i);
+        const float dist = length(t);
         if (dist < bestd)
         {
             bestd = dist;
             bestv = v;
-            VectorCopyFromGLM(GetSurfaceVertexNormal(bsp, face, i), norm);
+            norm = GetSurfaceVertexNormal(bsp, face, i);
         }
     }
-    VectorNormalize(norm);
+    norm = normalize(norm);
+    return norm;
 }
 
 static bool
@@ -485,16 +454,6 @@ Light_PointInAnySolid(const bsp2_t *bsp, const dmodel_t *self, const glm::vec3 &
 }
 
 using position_t = std::tuple<bool, const bsp2_dface_t *, glm::vec3, glm::vec3>;
-
-vector<vec3> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
-{
-    vector<vec3> normals;
-    for (int i=0; i<face->numedges; i++) {
-        const glm::vec3 n = GetSurfaceVertexNormal(bsp, face, i);
-        normals.push_back(n);
-    }
-    return normals;
-}
 
 constexpr float sampleOffPlaneDist = 1.0f;
 
@@ -758,14 +717,9 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             VectorAdd(point, offset, point);
 #else
             // do this before correcting the point, so we can wrap around the inside of pipes
-            if (surf->curved && cfg.phongallowed.boolValue())
-            {
-                CalcPointNormal(bsp, face, norm, point, 0);
-            }
-            else
-            {
-                VectorCopy(surf->plane.normal, norm);
-            }
+            const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
+            vec3 n = CalcPointNormal(bsp, face, vec3_t_to_glm(point), phongshaded, 0);
+            glm_to_vec3_t(n, norm);
             
             // apply model offset after calling CalcPointNormal
             VectorAdd(point, offset, point);
