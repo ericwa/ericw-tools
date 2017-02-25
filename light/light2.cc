@@ -104,33 +104,6 @@ glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f)
     return glm::inverse(T);
 }
 
-edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp) {
-    edgeToFaceMap_t result;
-    
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
-        
-        // walk edges
-        for (int j = 0; j < f->numedges; j++) {
-            const int v0 = Face_VertexAtIndex(bsp, f, j);
-            const int v1 = Face_VertexAtIndex(bsp, f, (j + 1) % f->numedges);
-            
-            if (v0 == v1) {
-                // ad_swampy.bsp has faces with repeated verts...
-                continue;
-            }
-            
-            const auto edge = make_pair(v0, v1);
-            auto &edgeFacesRef = result[edge];
-            
-            Q_assert(find(begin(edgeFacesRef), end(edgeFacesRef), f) == end(edgeFacesRef));
-            edgeFacesRef.push_back(f);
-        }
-    }
-    
-    return result;
-}
-
 using bbox2 = pair<glm::vec2, glm::vec2>;
 using bbox3 = pair<glm::vec3, glm::vec3>;
 
@@ -356,7 +329,7 @@ vector<contributing_face_t> SetupContributingFaces(const bsp2_t *bsp, const bsp2
 
 all_contrib_faces_t MakeContributingFaces(const bsp2_t *bsp)
 {
-    const edgeToFaceMap_t edgeToFaceMap = MakeEdgeToFaceMap(bsp);
+    const edgeToFaceMap_t &edgeToFaceMap = GetEdgeToFaceMap();
     
     logprint("--- MakeContributingFaces ---\n");
     

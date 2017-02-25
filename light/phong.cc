@@ -67,11 +67,17 @@ AngleBetweenPoints(const vec3 &p1, const vec3 &p2, const vec3 &p3)
     return result;
 }
 
-std::map<const bsp2_dface_t *, std::vector<vec3>> vertex_normals;
-std::set<int> interior_verts;
-map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
-map<int, vector<const bsp2_dface_t *>> vertsToFaces;
-map<int, vector<const bsp2_dface_t *>> planesToFaces;
+static std::map<const bsp2_dface_t *, std::vector<vec3>> vertex_normals;
+static std::set<int> interior_verts;
+static map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
+static map<int, vector<const bsp2_dface_t *>> vertsToFaces;
+static map<int, vector<const bsp2_dface_t *>> planesToFaces;
+static edgeToFaceMap_t EdgeToFaceMap;
+
+const edgeToFaceMap_t &GetEdgeToFaceMap()
+{
+    return EdgeToFaceMap;
+}
 
 // Uses `smoothFaces` static var
 bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2)
@@ -176,9 +182,39 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
     return nullptr;
 }
 
+static edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp)
+{
+    edgeToFaceMap_t result;
+    
+    for (int i = 0; i < bsp->numfaces; i++) {
+        const bsp2_dface_t *f = &bsp->dfaces[i];
+        
+        // walk edges
+        for (int j = 0; j < f->numedges; j++) {
+            const int v0 = Face_VertexAtIndex(bsp, f, j);
+            const int v1 = Face_VertexAtIndex(bsp, f, (j + 1) % f->numedges);
+            
+            if (v0 == v1) {
+                // ad_swampy.bsp has faces with repeated verts...
+                continue;
+            }
+            
+            const auto edge = make_pair(v0, v1);
+            auto &edgeFacesRef = result[edge];
+            
+            Q_assert(find(begin(edgeFacesRef), end(edgeFacesRef), f) == end(edgeFacesRef));
+            edgeFacesRef.push_back(f);
+        }
+    }
+    
+    return result;
+}
+
 void
 CalcualateVertexNormals(const bsp2_t *bsp)
 {
+    EdgeToFaceMap = MakeEdgeToFaceMap(bsp);
+    
     // clear in case we are run twice
     vertex_normals.clear();
     interior_verts.clear();

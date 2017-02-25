@@ -30,7 +30,6 @@
 #include <light/litfile.hh>
 #include <light/trace.hh>
 #include <light/settings.hh>
-#include <light/light2.hh>
 
 #include <vector>
 #include <map>
@@ -376,7 +375,6 @@ typedef enum {
 extern backend_t rtbackend;
 extern qboolean surflight_dump;
 extern char mapfilename[1024];
-extern edgeToFaceMap_t EdgeToFaceMap;
 
 // public functions
 

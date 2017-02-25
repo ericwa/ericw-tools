@@ -107,8 +107,6 @@ int dump_vertnum = -1;
 bool dump_vert;
 vec3_t dump_vert_point = {0,0,0};
 
-edgeToFaceMap_t EdgeToFaceMap;
-
 lockable_setting_t *FindSetting(std::string name) {
     settingsdict_t sd = cfg_static.settings();
     return sd.findSetting(name);
@@ -407,7 +405,6 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         }
     }
 
-    EdgeToFaceMap = MakeEdgeToFaceMap(bsp);
     CalcualateVertexNormals(bsp);
     
 #if 0

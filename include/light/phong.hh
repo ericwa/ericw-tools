@@ -28,6 +28,10 @@
 
 #include <light/light.hh>
 
+#include <set>
+#include <map>
+#include <vector>
+
 #include <glm/vec3.hpp>
 
 void CalcualateVertexNormals(const bsp2_t *bsp);
@@ -37,5 +41,10 @@ const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face);
 const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face);
 const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
 const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
+
+/// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
+using edgeToFaceMap_t = std::map<std::pair<int,int>, std::vector<const bsp2_dface_t *>>;
+
+const edgeToFaceMap_t &GetEdgeToFaceMap();
 
 #endif /* __LIGHT_PHONG_H__ */

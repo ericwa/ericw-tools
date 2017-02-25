@@ -671,10 +671,10 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     VectorAdd(surf->midpoint, offset, surf->midpoint);
  
     // Get faces which could contribute to this one.
-    const auto contribFaces = SetupContributingFaces(bsp, face, EdgeToFaceMap);
+    const auto contribFaces = SetupContributingFaces(bsp, face, GetEdgeToFaceMap());
     // Get edge planes of this face which will block light for the purposes of placing the sample points
     // to avoid light leaks.
-    const auto blockers = BlockingPlanes(bsp, face, EdgeToFaceMap);
+    const auto blockers = BlockingPlanes(bsp, face, GetEdgeToFaceMap());
     
     surf->width  = (surf->texsize[0] + 1) * oversample;
     surf->height = (surf->texsize[1] + 1) * oversample;
@@ -1876,9 +1876,9 @@ LightFace_ContribFacesDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
     
     const bsp2_dface_t *dumpface = &lightsurf->bsp->dfaces[dump_facenum];
     
-    const auto contribFaces = SetupContributingFaces(lightsurf->bsp, dumpface, EdgeToFaceMap);
+    const auto contribFaces = SetupContributingFaces(lightsurf->bsp, dumpface, GetEdgeToFaceMap());
     
-    const auto blockers = BlockingPlanes(lightsurf->bsp, dumpface, EdgeToFaceMap);
+    const auto blockers = BlockingPlanes(lightsurf->bsp, dumpface, GetEdgeToFaceMap());
     
     glm::vec3 color(0);
     bool contribOrRef = false;
