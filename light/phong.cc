@@ -159,6 +159,28 @@ FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
 const bsp2_dface_t *
 Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex) 
 {
+    const int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
+    const int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
+
+    auto it = EdgeToFaceMap.find(make_pair(v1, v0));
+    if (it != EdgeToFaceMap.end()) {
+        for (const bsp2_dface_t *neighbour : it->second) {
+            if (neighbour == f) {
+                // Invalid face, e.g. with vertex numbers: [0, 1, 0, 2]
+                continue;
+            }
+            
+            // Check if these faces are smoothed or on the same plane
+            if (!(FacesSmoothed(f, neighbour) || neighbour->planenum == f->planenum)) {
+                continue;
+            }
+
+            return neighbour;
+        }
+    }
+    return nullptr;
+    
+#if 0
     if (smoothFaces.find(f) == smoothFaces.end()) {
         return nullptr;
     }
@@ -180,6 +202,7 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
         }
     }
     return nullptr;
+#endif
 }
 
 static edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp)
