@@ -73,6 +73,7 @@ static map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
 static map<int, vector<const bsp2_dface_t *>> vertsToFaces;
 static map<int, vector<const bsp2_dface_t *>> planesToFaces;
 static edgeToFaceMap_t EdgeToFaceMap;
+static vector<face_cache_t> FaceCache;
 
 const edgeToFaceMap_t &GetEdgeToFaceMap()
 {
@@ -230,6 +231,26 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp)
         }
     }
     
+    return result;
+}
+
+static vector<vec3> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
+{
+    vector<vec3> normals;
+    for (int i=0; i<face->numedges; i++) {
+        const glm::vec3 n = GetSurfaceVertexNormal(bsp, face, i);
+        normals.push_back(n);
+    }
+    return normals;
+}
+
+static vector<face_cache_t> MakeFaceCache(const bsp2_t *bsp)
+{
+    vector<face_cache_t> result;
+    for (int i=0; i<bsp->numfaces; i++) {
+        const bsp2_dface_t *face = &bsp->dfaces[i];
+        result.push_back(face_cache_t{bsp, face, Face_VertexNormals(bsp, face)});
+    }
     return result;
 }
 
@@ -396,4 +417,10 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             vertex_normals[f].push_back(smoothedNormals[v]);
         }
     }
+    
+    FaceCache = MakeFaceCache(bsp);
+}
+
+const face_cache_t &FaceCacheForFNum(int fnum) {
+    return FaceCache.at(fnum);
 }

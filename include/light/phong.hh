@@ -23,6 +23,7 @@
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
+#include <common/bsputils.hh>
 #include <common/bspfile.hh>
 #include <common/log.hh>
 
@@ -33,6 +34,7 @@
 #include <vector>
 
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 void CalcualateVertexNormals(const bsp2_t *bsp);
 const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex);
@@ -46,5 +48,44 @@ const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t
 using edgeToFaceMap_t = std::map<std::pair<int,int>, std::vector<const bsp2_dface_t *>>;
 
 const edgeToFaceMap_t &GetEdgeToFaceMap();
+
+class face_cache_t {
+private:
+    std::vector<glm::vec3> m_points;
+    std::vector<glm::vec3> m_normals;
+    glm::vec4 m_plane;
+    std::vector<glm::vec4> m_edgePlanes;
+    std::vector<glm::vec3> m_pointsShrunkBy1Unit;
+    
+public:
+    face_cache_t(const bsp2_t *bsp, const bsp2_dface_t *face, const std::vector<glm::vec3> &normals) :
+        m_points(GLM_FacePoints(bsp, face)),
+        m_normals(normals),
+        m_plane(Face_Plane_E(bsp, face)),
+        m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)),
+        m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f))
+    { }
+    
+    const std::vector<glm::vec3> &points() const {
+        return m_points;
+    }
+    const std::vector<glm::vec3> &normals() const {
+        return m_normals;
+    }
+    const glm::vec4 &plane() const {
+        return m_plane;
+    }
+    const glm::vec3 normal() const {
+        return glm::vec3(m_plane);
+    }
+    const std::vector<glm::vec4> &edgePlanes() const {
+        return m_edgePlanes;
+    }
+    const std::vector<glm::vec3> &pointsShrunkBy1Unit() const {
+        return m_pointsShrunkBy1Unit;
+    }
+};
+
+const face_cache_t &FaceCacheForFNum(int fnum);
 
 #endif /* __LIGHT_PHONG_H__ */

@@ -334,21 +334,24 @@ GLM_MakeInwardFacingEdgePlane(const vec3 &v0, const vec3 &v1, const vec3 &faceNo
 }
 
 vector<vec4>
-GLM_MakeInwardFacingEdgePlanes(std::vector<vec3> points)
+GLM_MakeInwardFacingEdgePlanes(const std::vector<vec3> &points)
 {
-    if (points.size() < 3)
+    const int N = points.size();
+    if (N < 3)
         return {};
     
     vector<vec4> result;
+    result.reserve(points.size());
+    
     const vec3 faceNormal = GLM_FaceNormal(points);
     
     if (faceNormal == vec3(0,0,0))
         return {};
     
-    for (int i=0; i<points.size(); i++)
+    for (int i=0; i<N; i++)
     {
-        const vec3 v0 = points.at(i);
-        const vec3 v1 = points.at((i+1) % points.size());
+        const vec3 v0 = points[i];
+        const vec3 v1 = points[(i+1) % N];
         
         const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, faceNormal);
         if (!edgeplane.first)

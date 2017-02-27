@@ -239,16 +239,6 @@ FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p) {
     return t;
 }
 
-vector<vec3> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
-{
-    vector<vec3> normals;
-    for (int i=0; i<face->numedges; i++) {
-        const glm::vec3 n = GetSurfaceVertexNormal(bsp, face, i);
-        normals.push_back(n);
-    }
-    return normals;
-}
-
 using position_t = std::tuple<bool, const bsp2_dface_t *, glm::vec3, glm::vec3>;
 
 constexpr float sampleOffPlaneDist = 1.0f;
@@ -270,10 +260,10 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
 
 position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &origPoint, bool phongShaded, float face_lmscale, int recursiondepth)
 {
-    const glm::vec4 surfplane = Face_Plane_E(bsp, face);
-    const auto points = GLM_FacePoints(bsp, face);
-    const auto normals = Face_VertexNormals(bsp, face);
-    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
+    const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
+    const glm::vec4 &surfplane = facecache.plane();
+    const auto &points = facecache.points();
+    const auto &edgeplanes = facecache.edgePlanes();
     
     // project `point` onto the surface plane, then lift it off again
     const glm::vec3 point = GLM_ProjectPointOntoPlane(surfplane, origPoint) + (vec3(surfplane) * sampleOffPlaneDist);
@@ -473,16 +463,17 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
                           const bool phongShaded,
                           const glm::vec3 &point)
 {
-    const auto points = GLM_FacePoints(bsp, face);
-    const auto normals = Face_VertexNormals(bsp, face);
+    const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
+    const auto &points = facecache.points();
+    const auto &normals = facecache.normals();
+    const auto &edgeplanes = facecache.edgePlanes();
+    const auto &plane = facecache.plane();
     
-    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
     if (edgeplanes.empty()) {
         // degenerate polygon
         return {false, nullptr, point, vec3(0)};
     }
     
-    const auto plane = Face_Plane_E(bsp, face);
     const float planedist = GLM_DistAbovePlane(plane, point);
     Q_assert(fabs(planedist - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
     
@@ -512,7 +503,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
         const float distanceInside = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
         if (distanceInside < 1.0f) {
             // Point is too close to the border. Try nudging it inside.
-            const auto shrunk = GLM_ShrinkPoly(points, 1.0f);
+            const auto &shrunk = facecache.pointsShrunkBy1Unit();
             if (!shrunk.empty()) {
                 const pair<int, vec3> closest = GLM_ClosestPointOnPolyBoundary(shrunk, point);
                 const vec3 newPoint = closest.second + (sampleOffPlaneDist * vec3(plane));
@@ -670,11 +661,13 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg, surf->midpoint);
     VectorAdd(surf->midpoint, offset, surf->midpoint);
  
+#if 0
     // Get faces which could contribute to this one.
     const auto contribFaces = SetupContributingFaces(bsp, face, GetEdgeToFaceMap());
     // Get edge planes of this face which will block light for the purposes of placing the sample points
     // to avoid light leaks.
     const auto blockers = BlockingPlanes(bsp, face, GetEdgeToFaceMap());
+#endif
     
     surf->width  = (surf->texsize[0] + 1) * oversample;
     surf->height = (surf->texsize[1] + 1) * oversample;
