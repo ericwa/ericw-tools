@@ -491,7 +491,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
         const auto interpNormal = GLM_InterpolateNormal(points, normals, point);
         // We already know the point is in the face, so this should always succeed
         if(!interpNormal.first)
-            return {false, nullptr, point, vec3(0)};
+            return make_tuple(false, nullptr, point, vec3(0));
         pointNormal = interpNormal.second;
     } else {
         pointNormal = vec3(plane);
@@ -639,7 +639,7 @@ PositionSamplePoint(const bsp2_t *bsp,
     // This point is too far from the polygon to be visible in game, so don't bother calculating lighting for it.
     // Dont contribute to interpolating.
     // We could safely colour it in pink for debugging. 
-    return { false, nullptr, point, glm::vec3() };
+    return make_tuple(false, nullptr, point, glm::vec3());
 }
 
 /*
