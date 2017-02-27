@@ -505,6 +505,7 @@ typedef struct options_s {
     char wadPath[512];
     vec_t on_epsilon;
     bool fObjExport;
+    bool fOmitDetail;
 } options_t;
 
 extern options_t options;

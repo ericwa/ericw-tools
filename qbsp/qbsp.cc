@@ -629,6 +629,7 @@ PrintOptions(void)
            "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
            "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
            "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
+           "   -omitdetail     Detail brushes are omitted from the compile\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
 
@@ -806,6 +807,8 @@ ParseOptions(char *szOptions)
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "objexport")) {
                 options.fObjExport = true;
+            } else if (!Q_strcasecmp(szTok, "omitdetail")) {
+                options.fOmitDetail = true;
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
                 PrintOptions();
             else

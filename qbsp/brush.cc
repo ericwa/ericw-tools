@@ -992,6 +992,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         if (contents == CONTENTS_ORIGIN)
             continue;
         
+        /* -omitdetail option */
+        if (options.fOmitDetail
+            && ((cflags & CFLAGS_DETAIL) == CFLAGS_DETAIL))
+            continue;
+        
         /*
          * "clip" brushes don't show up in the draw hull, but we still want to
          * include them in the model bounds so collision detection works
