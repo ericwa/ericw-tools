@@ -335,7 +335,7 @@ position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const gl
     // This point is too far from the polygon to be visible in game, so don't bother calculating lighting for it.
     // Dont contribute to interpolating.
     // We could safely colour it in pink for debugging.
-    return { false, nullptr, point, glm::vec3() };
+    return make_tuple(false, nullptr, point, glm::vec3());
 
 #if 0
     /*utterly crap, just for testing. just grab closest vertex*/
@@ -471,7 +471,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
     
     if (edgeplanes.empty()) {
         // degenerate polygon
-        return {false, nullptr, point, vec3(0)};
+        return make_tuple(false, nullptr, point, vec3(0));
     }
     
     const float planedist = GLM_DistAbovePlane(plane, point);
@@ -480,7 +480,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
     const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
     if (insideDist < -POINT_EQUAL_EPSILON) {
         // Non-convex polygon
-        return {false, nullptr, point, vec3(0)};
+        return make_tuple(false, nullptr, point, vec3(0));
     }
     
     const modelinfo_t *mi = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -508,14 +508,14 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
                 const pair<int, vec3> closest = GLM_ClosestPointOnPolyBoundary(shrunk, point);
                 const vec3 newPoint = closest.second + (sampleOffPlaneDist * vec3(plane));
                 if (!Light_PointInAnySolid(bsp, mi->model, newPoint))
-                    return {true, face, newPoint, pointNormal};
+                    return make_tuple(true, face, newPoint, pointNormal);
             }
         }
 
-        return {false, nullptr, point, vec3(0)};
+        return make_tuple(false, nullptr, point, vec3(0));
     }
     
-    return {true, face, point, pointNormal};
+    return make_tuple(true, face, point, pointNormal);
 }
 
 static bool
