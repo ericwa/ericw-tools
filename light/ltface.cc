@@ -241,7 +241,7 @@ FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p) {
 
 using position_t = std::tuple<bool, const bsp2_dface_t *, glm::vec3, glm::vec3>;
 
-constexpr float sampleOffPlaneDist = 1.0f;
+static const float sampleOffPlaneDist = 1.0f;
 
 static float
 TexSpaceDist(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &p0, const glm::vec3 &p1)
