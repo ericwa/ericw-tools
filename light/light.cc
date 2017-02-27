@@ -986,12 +986,6 @@ light_main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-debugvert" ) ) {
             ParseVec3(dump_vert_point, &i, argc, argv);
             dump_vert = true;
-        } else if ( !strcmp( argv[ i ], "-debugcontribfaces" ) ) {
-            CheckNoDebugModeSet();
-            debugmode = debugmode_contribfaces;
-            
-            ParseVec3(dump_face_point, &i, argc, argv);
-            dump_face = true;
         } else if ( !strcmp( argv[ i ], "-debugoccluded" ) ) {
             CheckNoDebugModeSet();
             debugmode = debugmode_debugoccluded;

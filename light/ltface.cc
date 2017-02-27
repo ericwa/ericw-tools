@@ -42,25 +42,6 @@ std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
 /* ======================================================================== */
 
-/*
- * ============================================================================
- * SAMPLE POINT DETERMINATION
- * void SetupBlock (bsp2_dface_t *f) Returns with surfpt[] set
- *
- * This is a little tricky because the lightmap covers more area than the face.
- * If done in the straightforward fashion, some of the sample points will be
- * inside walls or on the other side of walls, causing false shadows and light
- * bleeds.
- *
- * To solve this, I only consider a sample point valid if a line can be drawn
- * between it and the exact midpoint of the face.  If invalid, it is adjusted
- * towards the center until it is valid.
- *
- * FIXME: This doesn't completely work; I think what we really want is to move
- *        the light point to the nearst sample point that is on the polygon;
- * ============================================================================
- */
-
 static void
 TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
 {
@@ -200,29 +181,6 @@ CalcFaceExtents(const bsp2_dface_t *face,
     }
 }
 
-/*
- * Print warning for CalcPoint where the midpoint of a polygon, one
- * unit above the surface is covered by a solid brush.
- */
-static void
-WarnBadMidpoint(const vec3_t point)
-{
-#if 0
-    static qboolean warned = false;
-
-    if (warned)
-        return;
-
-    warned = true;
-    logprint("WARNING: unable to lightmap surface near (%s)\n"
-             "   This is usually caused by an unintentional tiny gap between\n"
-             "   two solid brushes which doesn't leave enough room for the\n"
-             "   lightmap to fit (one world unit). Further instances of this\n"
-             "   warning during this compile will be supressed.\n",
-             VecStr(point));
-#endif
-}
-
 // from: http://stackoverflow.com/a/1501725
 // see also: http://mathworld.wolfram.com/Projection.html
 static float
@@ -360,46 +318,6 @@ position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const gl
 #endif
 }
 
-static bool
-CheckObstructed(const lightsurf_t *surf, const vec3_t offset, const vec_t us, const vec_t ut, vec3_t corrected)
-{
-    for (int x = -1; x <= 1; x += 2) {
-        for (int y = -1; y <= 1; y += 2) {
-            vec3_t testpoint;
-            TexCoordToWorld(us + (x/10.0), ut + (y/10.0), &surf->texorg, testpoint);
-            VectorAdd(testpoint, offset, testpoint);
-            
-            vec3_t dirn;
-            VectorSubtract(testpoint, surf->midpoint, dirn);
-            vec_t dist = VectorNormalize(dirn);
-            if (dist == 0.0f) {
-                continue; // testpoint == surf->midpoint
-            }
-            
-            // trace from surf->midpoint to testpoint
-            {
-                vec_t hitdist = 0;
-                if (IntersectSingleModel(surf->midpoint, dirn, dist, surf->modelinfo->model, &hitdist)) {
-                    // make a corrected point
-                    VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), dirn, corrected);
-                    return true;
-                }
-            }
-            
-            // also check against the world, fixes https://github.com/ericwa/tyrutils-ericw/issues/115
-            if (surf->modelinfo->model != &surf->bsp->dmodels[0]) {
-                vec_t hitdist = 0;
-                if (IntersectSingleModel(surf->midpoint, dirn, dist, &surf->bsp->dmodels[0], &hitdist)) {
-                    // make a corrected point
-                    VectorMA(surf->midpoint, qmax(0.0f, hitdist - 0.25f), dirn, corrected);
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
 // Dump points to a .map file
 static void
 CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
@@ -518,130 +436,6 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
     return make_tuple(true, face, point, pointNormal);
 }
 
-static bool
-PointAboveAllPlanes(const vector<blocking_plane_t> &planes, const glm::vec3 &point)
-{
-    for (const blocking_plane_t &plane : planes) {
-        if (GLM_DistAbovePlane(plane, point) < -POINT_EQUAL_EPSILON) {
-            return false;
-        }
-    }
-    return true;
-}
-
-// returns false if the sample is in the void / couldn't be tweaked, true otherwise
-// also returns the face the point was wrapped on to, and the output point
-
-// postconditions: the returned point will be inside the returned face,
-// so the caller can interpolate the normal.
-
-static position_t
-PositionSamplePoint(const bsp2_t *bsp,
-                    const bsp2_dface_t *face,
-                    const float face_lmscale,
-                    const bool phongshaded,
-                    const std::vector<glm::vec3> &facepoints,
-                    const vector<vec4> &edgeplanes,
-                    const vector<contributing_face_t> &contribfaces,
-                    const vector<blocking_plane_t> &blockers,
-                    const glm::vec3 &point)
-{
-    // Cases to handle:
-    //
-    // 0. inside polygon (or on border)?
-    //    a) in solid (world (only possible if the face is a bmodel) or shadow-caster)
-    //       or on the border of a solid?
-    //       => if on border of the polygon, nudge 1 unit inwards. check in solid again, use or drop.
-    //    b) all good, use the point.
-    //
-    // 1. else, inside polygon of a "contributing" face?
-    //    contributing faces are on the same plane (and reachable without leaving the plane to cross walls)
-    //    or else reachable by crossing phong shaded neighbours.
-    //
-    //    a) if we are allocating points for face Y, we may want to
-    //       discard points that cross plane X to avoid light leaking around corners.
-    //     _______________
-    //    |              | <-- "contributing face" for Y
-    //    | o o o o x    |
-    //    |______________|
-    //    | o o o o|
-    //    |        |   <-- solid
-    //    | face Y |<- plane X
-    //    |________|
-    //
-    //    b) if still OK, goto 0.
-    //
-    // 2. Now the point is either in a solid or floating over a gap.
-    //
-    //    a) < 1 sample from polygon edge => snap to polygon edge + nudge 1 unit inwards.
-    //       => goto 0.
-    //    b) >= 1 sample => drop
-    //
-    // NOTE: we will need to apply minlight after downsampling, to avoid introducing fringes.
-    //
-    // Cases that should work:
-    // - thin geometry where no sample points are in the polygon
-    // - door touching world
-    // - door partly stuck into world with minlight
-    // - shadowcasting light fixture in middle of world face
-    // - world light fixture prone to leaking around
-    // - window (bmodel) with world bars crossing through it
-    
-    if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
-        // 0. Inside polygon.
-        return PositionSamplePointOnFace(bsp, face, phongshaded, point);
-    }
-    
-    // OK: we are outside of the polygon
-    
-    // self check
-    const vec4 facePlane = Face_Plane_E(bsp, face);
-    Q_assert(fabs(GLM_DistAbovePlane(facePlane, point) - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
-    // end self check
-    
-    // Loop through all contributing faces, and "wrap" the point onto it.
-    // Check if the "wrapped" point is within that contributing face.
-    
-    int inside = 0;
-    
-    for (const auto &cf : contribfaces) {
-        // This "bends" point to be on the contributing face
-        const vec4 contribFacePlane = Face_Plane_E(bsp, cf.contribFace);
-        const vec3 wrappedPoint = GLM_ProjectPointOntoPlane(contribFacePlane, point)
-            + (sampleOffPlaneDist * vec3(contribFacePlane));
-        
-        // self check
-        Q_assert(fabs(GLM_DistAbovePlane(contribFacePlane, wrappedPoint) - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
-        // end self check
-        
-        if (GLM_EdgePlanes_PointInside(cf.contribFaceEdgePlanes, wrappedPoint)) {
-            inside++;
-            
-            // Check for light bleed
-            if (PointAboveAllPlanes(blockers, wrappedPoint)) {
-                // 1.
-                return PositionSamplePointOnFace(bsp, cf.contribFace, phongshaded, wrappedPoint);
-            }
-        }
-    }
-    
-    // 2. Try snapping to poly
-    
-    const pair<int, vec3> closest = GLM_ClosestPointOnPolyBoundary(facepoints, point);
-    const float texSpaceDist = TexSpaceDist(bsp, face, closest.second, point);
-    
-    if (texSpaceDist <= face_lmscale) {
-        // Snap it to the face edge. Add the 1 unit off plane.
-        const vec3 snapped = closest.second + (sampleOffPlaneDist * vec3(facePlane));
-        return PositionSamplePointOnFace(bsp, face, phongshaded, snapped);
-    }
-    
-    // This point is too far from the polygon to be visible in game, so don't bother calculating lighting for it.
-    // Dont contribute to interpolating.
-    // We could safely colour it in pink for debugging. 
-    return make_tuple(false, nullptr, point, glm::vec3());
-}
-
 /*
  * =================
  * CalcPoints
@@ -660,14 +454,6 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
      */
     TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg, surf->midpoint);
     VectorAdd(surf->midpoint, offset, surf->midpoint);
- 
-#if 0
-    // Get faces which could contribute to this one.
-    const auto contribFaces = SetupContributingFaces(bsp, face, GetEdgeToFaceMap());
-    // Get edge planes of this face which will block light for the purposes of placing the sample points
-    // to avoid light leaks.
-    const auto blockers = BlockingPlanes(bsp, face, GetEdgeToFaceMap());
-#endif
     
     surf->width  = (surf->texsize[0] + 1) * oversample;
     surf->height = (surf->texsize[1] + 1) * oversample;
@@ -697,18 +483,6 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
 
             TexCoordToWorld(us, ut, &surf->texorg, point);
 
-#if 0
-            const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
-            const auto res = PositionSamplePoint(bsp, face, surf->lightmapscale, phongshaded,
-                                                 points, edgeplanes, contribFaces, blockers, vec3_t_to_glm(point));
-            
-            surf->occluded[i] = !get<0>(res);
-            glm_to_vec3_t(std::get<2>(res), point);
-            glm_to_vec3_t(std::get<3>(res), norm);
-            *realfacenum = Face_GetNum(bsp, std::get<1>(res));
-            
-            VectorAdd(point, offset, point);
-#else
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
             const auto res = CalcPointNormal(bsp, face, vec3_t_to_glm(point), phongshaded, surf->lightmapscale, 0);
@@ -720,10 +494,6 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             
             // apply model offset after calling CalcPointNormal
             VectorAdd(point, offset, point);
-            
-            // corrects point
-            //CheckObstructed(surf, offset, us, ut, point);
-#endif
         }
     }
     
@@ -1265,13 +1035,6 @@ static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix,
         result[2] += weight[3] * pi[3][2];
         VectorScale(result, 2, result);
     }
-}
-
-static void
-ProjectPointOntoPlane(const vec3_t point, const plane_t *plane, vec3_t out)
-{
-    vec_t dist = DotProduct(point, plane->normal) - plane->dist;
-    VectorMA(point, -dist, plane->normal, out);
 }
 
 // FIXME: factor out / merge with LightFace
@@ -1864,64 +1627,6 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     
     if (hit)
         Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
-}
-
-static void
-LightFace_ContribFacesDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
-{
-    Q_assert(debugmode == debugmode_contribfaces);
-    
-    const bsp2_dface_t *dumpface = &lightsurf->bsp->dfaces[dump_facenum];
-    
-    const auto contribFaces = SetupContributingFaces(lightsurf->bsp, dumpface, GetEdgeToFaceMap());
-    
-    const auto blockers = BlockingPlanes(lightsurf->bsp, dumpface, GetEdgeToFaceMap());
-    
-    glm::vec3 color(0);
-    bool contribOrRef = false;
-    
-    if (lightsurf->face == dumpface) {
-        color = glm::vec3(0,255,0);
-        contribOrRef = true;
-    } else {
-        for (const auto &cf : contribFaces) {
-            Q_assert(cf.refFace == dumpface);
-            Q_assert(cf.contribFace != cf.refFace);
-            if (cf.contribFace == lightsurf->face) {
-                color = glm::vec3(255,0,0);
-                contribOrRef = true;
-                break;
-            }
-        }
-    }
-    
-    if (contribOrRef == false)
-        return;
-    
-    /* use a style 0 light map */
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-    
-    /* Overwrite each point with the debug color... */
-    for (int i = 0; i < lightsurf->numpoints; i++) {
-        const vec3 point = vec3_t_to_glm(lightsurf->points[i]);
-        lightsample_t *sample = &lightmap->samples[i];
-        
-        // Check blockers
-        bool ok = true;
-        for (const auto &blocker : blockers) {
-            if (GLM_DistAbovePlane(blocker, point) < -POINT_EQUAL_EPSILON) {
-                ok = false;
-                break;
-            }
-        }
-        
-        if (ok)
-            glm_to_vec3_t(color, sample->color);
-        else
-            VectorSet(sample->color, 0, 0, 255); // blue for "behind blocker"
-    }
-    
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 static void
@@ -2815,9 +2520,6 @@ LightFace(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
     
     if (debugmode == debugmode_bouncelights)
         LightFace_BounceLightsDebug(lightsurf, lightmaps);
-
-    if (debugmode == debugmode_contribfaces)
-        LightFace_ContribFacesDebug(lightsurf, lightmaps);
     
     if (debugmode == debugmode_debugoccluded)
         LightFace_OccludedDebug(lightsurf, lightmaps);
