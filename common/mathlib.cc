@@ -485,8 +485,11 @@ std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &p
             // Found the correct triangle
             
             const vec3 bary = Barycentric_FromPoint(point, make_tuple(p0, p1, p2));
-            const vec3 interpolatedNormal = Barycentric_ToPoint(bary, make_tuple(n0, n1, n2));
             
+            if (isnan(bary[0]) || isnan(bary[1]) || isnan(bary[2]))
+                continue;
+
+            const vec3 interpolatedNormal = Barycentric_ToPoint(bary, make_tuple(n0, n1, n2));
             return make_pair(true, interpolatedNormal);
         }
     }
