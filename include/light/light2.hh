@@ -45,9 +45,6 @@
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
 
-std::pair<bool, glm::mat4x4> RotationAboutLineSegment(glm::vec3 p0, glm::vec3 p1,
-                                                      glm::vec3 face0Norm, glm::vec3 face1Norm);
-
 glm::mat4x4 WorldToTexSpace(const bsp2_t *bsp, const bsp2_dface_t *f);
 glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f);
 

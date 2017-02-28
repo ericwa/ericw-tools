@@ -76,21 +76,6 @@ glm::mat4x4 WorldToTexSpace(const bsp2_t *bsp, const bsp2_dface_t *f)
     return T;
 }
 
-// Rotates face1Norm about the line segment p0 <-> p1 so it is aligned with face0Norm
-pair<bool, glm::mat4x4> RotationAboutLineSegment(glm::vec3 p0, glm::vec3 p1,
-                                                 glm::vec3 face0Norm, glm::vec3 face1Norm)
-{
-    // Get rotation angle. Quaternion rotates face1Norm to face0Norm
-    const glm::quat rotationQuat = glm::rotation(face1Norm, face0Norm);
-    
-    // Any point on the line p0-p1 will work, so just use p0
-    const glm::mat4x4 toOrigin = glm::translate(-p0);
-    const glm::mat4x4 fromOrigin = glm::translate(p0);
-    
-    const glm::mat4x4 composed = fromOrigin * glm::toMat4(rotationQuat) * toOrigin;
-    return make_pair(true, composed);
-}
-
 glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     const glm::mat4x4 T = WorldToTexSpace(bsp, f);
