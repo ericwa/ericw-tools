@@ -28,8 +28,6 @@
 #include <common/threads.hh>
 #include <common/polylib.hh>
 
-#include <light/light2.hh>
-
 glm::vec2 WorldToTexCoord_HighPrecision(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &world);
 
 class faceextents_t {

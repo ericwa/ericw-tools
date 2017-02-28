@@ -19,10 +19,10 @@
  */
 
 #include <light/light.hh>
-#include <light/light2.hh>
 #include <light/entities.hh>
 #include <light/trace.hh>
 #include <light/ltface2.hh>
+#include <light/ltface.hh>
 
 #include <common/bsputils.hh>
 

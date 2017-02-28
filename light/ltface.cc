@@ -24,7 +24,6 @@
 #include <light/trace.hh>
 #include <light/ltface.hh>
 #include <light/ltface2.hh>
-#include <light/light2.hh>
 
 #include <common/bsputils.hh>
 
@@ -41,6 +40,42 @@ std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
 /* ======================================================================== */
+
+glm::mat4x4 WorldToTexSpace(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    const texinfo_t *tex = Face_Texinfo(bsp, f);
+    if (tex == nullptr) {
+        Q_assert_unreachable();
+        return glm::mat4x4();
+    }
+    const plane_t plane = Face_Plane(bsp, f);
+    const vec_t *norm = plane.normal;
+    
+    //           [s]
+    // T * vec = [t]
+    //           [distOffPlane]
+    //           [?]
+    
+    glm::mat4x4 T(tex->vecs[0][0], tex->vecs[1][0], norm[0], 0, // col 0
+                  tex->vecs[0][1], tex->vecs[1][1], norm[1], 0, // col 1
+                  tex->vecs[0][2], tex->vecs[1][2], norm[2], 0, // col 2
+                  tex->vecs[0][3], tex->vecs[1][3], -plane.dist, 1 // col 3
+                  );
+    return T;
+}
+
+glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f)
+{
+    const glm::mat4x4 T = WorldToTexSpace(bsp, f);
+    
+    if (glm::determinant(T) == 0) {
+        logprint("Bad texture axes on face:\n");
+        PrintFaceInfo(f, bsp);
+        Error("CreateFaceTransform");
+    }
+    
+    return glm::inverse(T);
+}
 
 static void
 TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)

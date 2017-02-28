@@ -25,7 +25,6 @@
 #include <light/light.hh>
 #include <light/phong.hh>
 #include <light/bounce.hh>
-#include <light/light2.hh>
 #include <light/entities.hh>
 #include <light/ltface.hh>
 #include <light/ltface2.hh>

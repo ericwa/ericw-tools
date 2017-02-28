@@ -31,6 +31,8 @@
 #include <light/trace.hh>
 #include <light/entities.hh>
 
+#include <glm/mat4x4.hpp>
+
 #include <vector>
 #include <map>
 #include <string>
@@ -42,6 +44,8 @@
 extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
+glm::mat4x4 WorldToTexSpace(const bsp2_t *bsp, const bsp2_dface_t *f);
+glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f);
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 void PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
 // FIXME: remove light param. add normal param and dir params.

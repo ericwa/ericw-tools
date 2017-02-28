@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 
 #include <light/light.hh>
-#include <light/light2.hh>
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
