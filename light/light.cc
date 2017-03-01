@@ -27,7 +27,6 @@
 #include <light/bounce.hh>
 #include <light/entities.hh>
 #include <light/ltface.hh>
-#include <light/ltface2.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
