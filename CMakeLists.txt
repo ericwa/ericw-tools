@@ -58,6 +58,7 @@ endif ()
 add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
 
 if (MSVC)
+	add_definitions("/DWIN32")
 	# TODO: remove these 
 	add_definitions("/D_CRT_SECURE_NO_WARNINGS")
 	add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
