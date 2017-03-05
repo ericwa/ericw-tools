@@ -43,8 +43,12 @@ if (embree_FOUND)
 		trace_embree.cc
 		${CMAKE_SOURCE_DIR}/include/light/trace_embree.hh
 		${LIGHT_SOURCES})
-endif(embree_FOUND)
 
+	# This needs to be before the add_executable
+	if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+		SET(CMAKE_INSTALL_RPATH "$ORIGIN")
+	endif ()
+endif(embree_FOUND)
 
 add_executable(light ${LIGHT_SOURCES} main.cc)
 target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
@@ -92,8 +96,6 @@ if (embree_FOUND)
 		# so the executable will search for dylib's in the same directory as the executable 
 		if(APPLE)
 			add_custom_command(TARGET light POST_BUILD COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
-		elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-			SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-rpath,\$ORIGIN")
 		endif()
 
 		install(FILES ${EMBREE_DYLIBS} DESTINATION bin)
