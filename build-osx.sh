@@ -18,8 +18,8 @@ tar xf "$EMBREE_TGZ_NAME"
 EMBREE_CMAKE_DIR="$(pwd)/$EMBREE_DIR_NAME/lib/cmake/$EMBREE_WITH_VERSION"
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$EMBREE_CMAKE_DIR"
 make -j8
-make -j8 check
+make -j8 testlight
 cpack
 
 # run tests
-./testlight/testlight || exit 1
+./light/testlight || exit 1
