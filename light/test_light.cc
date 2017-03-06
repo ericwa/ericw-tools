@@ -459,7 +459,3 @@ TEST(mathlib, pointsAlongLine) {
     ASSERT_TRUE(pointsEqualEpsilon(vec3(1,0,0), res[0], POINT_EQUAL_EPSILON));
     ASSERT_TRUE(pointsEqualEpsilon(vec3(2.5,0,0), res[1], POINT_EQUAL_EPSILON));
 }
-
-TEST(mathlib, forcefail) {
-    ASSERT_FALSE(true);
-}
