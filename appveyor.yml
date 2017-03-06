@@ -22,9 +22,9 @@ build_script:
       cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.14.0.win32.windows/lib/cmake/embree-2.14.0"
     }
 
-    msbuild /target:testlight /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
+    msbuild /target:testlight /p:Configuration=Release /p:Platform=$env:Platform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
 
-    msbuild /target:PACKAGE /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
+    msbuild /target:PACKAGE /p:Configuration=Release /p:Platform=$env:Platform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
 
     .\Release\testlight.exe
 artifacts:
