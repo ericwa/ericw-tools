@@ -387,7 +387,7 @@ TEST(mathlib, ShrinkPoly2) {
     EXPECT_TRUE(polysEqual(shrunkPoly, actualShrunk));
 }
 
-constexpr float MANGLE_EPSILON = 0.1f;
+static const float MANGLE_EPSILON = 0.1f;
 
 TEST(light, vec_from_mangle) {
     EXPECT_TRUE(pointsEqualEpsilon(vec3(1,0,0), vec_from_mangle(vec3(0,0,0)), MANGLE_EPSILON));
