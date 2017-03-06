@@ -18,13 +18,13 @@ build_script:
 
     If ($env:Platform -Match "x64") {
       cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.14.0.x64.windows/lib/cmake/embree-2.14.0" -DCMAKE_GENERATOR_PLATFORM=x64
+
+      msbuild /target:testlight;PACKAGE /p:Configuration=Release /p:Platform=x64 /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
     } Else {
       cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.14.0.win32.windows/lib/cmake/embree-2.14.0"
+
+      msbuild /target:testlight;PACKAGE /p:Configuration=Release /p:Platform=win32 /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
     }
-
-    msbuild /target:testlight /p:Configuration=Release /p:Platform=$env:Platform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
-
-    msbuild /target:PACKAGE /p:Configuration=Release /p:Platform=$env:Platform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" tyrutils.sln
 
     .\Release\testlight.exe
 artifacts:
