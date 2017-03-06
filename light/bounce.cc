@@ -56,7 +56,7 @@ public:
     vec3_t center;
     vec3_t samplepoint; // 1 unit above center
     plane_t plane;
-    vec3_t directlight;
+    std::map<int, glm::vec3> lightByStyle;
 };
 
 static unique_ptr<patch_t>
@@ -75,7 +75,7 @@ MakePatch (const globalconfig_t &cfg, winding_t *w)
     // calculate direct light
     
     raystream_t *rs = MakeRayStream(numDirtVectors);
-    GetDirectLighting(cfg, rs, p->samplepoint, p->plane.normal, p->directlight);
+    p->lightByStyle = GetDirectLighting(cfg, rs, p->samplepoint, p->plane.normal);
     delete rs;
     
     return p;
@@ -132,7 +132,7 @@ Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t colo
 }
 
 static void
-AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp);
+AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp);
 
 static void *
 MakeBounceLightsThread (void *arg)
@@ -172,17 +172,22 @@ MakeBounceLightsThread (void *arg)
         winding = nullptr; // DiceWinding frees winding
         
         // average them, area weighted
-        vec3_t sum = {0,0,0};
+        map<int, glm::vec3> sum;
         float totalarea = 0;
         
         for (const auto &patch : patches) {
             const float patcharea = WindingArea(patch->w);
             totalarea += patcharea;
             
-            VectorMA(sum, patcharea, patch->directlight, sum);
+            for (const auto &styleColor : patch->lightByStyle) {
+                sum[styleColor.first] = sum[styleColor.first] + (patcharea * styleColor.second);
+            }
 //              printf("  %f %f %f\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
         }
-        VectorScale(sum, 1.0/totalarea, sum);
+        
+        for (auto &styleColor : sum) {
+            styleColor.second *= (1.0/totalarea);
+        }
         
         // avoid small, or zero-area patches ("sum" would be nan)
         if (totalarea < 1) {
@@ -198,29 +203,35 @@ MakeBounceLightsThread (void *arg)
         VectorMA(blendedcolor, cfg.bouncecolorscale.floatValue(), texturecolor, blendedcolor);
         VectorMA(blendedcolor, 1-cfg.bouncecolorscale.floatValue(), gray, blendedcolor);
         
-        // final color to emit
-        vec3_t emitcolor;
-        for (int k=0; k<3; k++) {
-            emitcolor[k] = (sum[k] / 255.0f) * (blendedcolor[k] / 255.0f);
+        // final colors to emit
+        map<int, glm::vec3> emitcolors;
+        for (const auto &styleColor : sum) {
+            glm::vec3 emitcolor(0);
+            for (int k=0; k<3; k++) {
+                emitcolor[k] = (styleColor.second[k] / 255.0f) * (blendedcolor[k] / 255.0f);
+            }
+            emitcolors[styleColor.first] = emitcolor;
         }
-        
-        AddBounceLight(facemidpoint, emitcolor, faceplane.normal, facearea, face, bsp);
+
+        AddBounceLight(facemidpoint, emitcolors, faceplane.normal, facearea, face, bsp);
     }
     
     return NULL;
 }
 
 static void
-AddBounceLight(const vec3_t pos, const vec3_t color, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp)
+AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp)
 {
-    Q_assert(color[0] >= 0);
-    Q_assert(color[1] >= 0);
-    Q_assert(color[2] >= 0);
+    for (const auto &styleColor : colorByStyle) {
+        Q_assert(styleColor.second[0] >= 0);
+        Q_assert(styleColor.second[1] >= 0);
+        Q_assert(styleColor.second[2] >= 0);
+    }
     Q_assert(area > 0);
     
     bouncelight_t l = {0};
     VectorCopy(pos, l.pos);
-    VectorCopy(color, l.color);
+    l.colorByStyle = colorByStyle;
     VectorCopy(surfnormal, l.surfnormal);
     l.area = area;
     

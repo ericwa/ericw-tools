@@ -840,6 +840,14 @@ Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t 
     return &lightmaps->back();
 }
 
+static void
+Lightmap_ClearAll(lightmapdict_t *lightmaps)
+{
+    for (auto &lm : *lightmaps) {
+        lm.style = 255;
+    }
+}
+
 /*
  * Lightmap_Save
  *
@@ -1214,26 +1222,21 @@ static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix,
 }
 
 // FIXME: factor out / merge with LightFace
-void
-GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal, vec3_t colorout)
+std::map<int, glm::vec3>
+GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal)
 {
+    std::map<int, glm::vec3> result;
+
     float occlusion = DirtAtPoint(cfg, rs, origin, normal, /* FIXME: pass selfshadow? */ nullptr);
     if (std::isnan(occlusion)) {
         // HACK: getting an invalid normal of (0, 0, 0).
         occlusion = 0.0f;
     }
     
-    VectorSet(colorout, 0, 0, 0);
-    
     for (const light_t &entity : GetLights()) {
         vec3_t surfpointToLightDir;
         float surfpointToLightDist;
         vec3_t color, normalcontrib;
-
-        // NOTE: skip styled lights
-        if (entity.style.intValue() != 0) {
-            continue;
-        }
         
         GetLightContrib(cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         
@@ -1250,7 +1253,7 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
             continue;
         }
         
-        VectorAdd(colorout, color, colorout);
+        result[entity.style.intValue()] += vec3_t_to_glm(color);
     }
     
     for (const sun_t &sun : GetSuns()) {
@@ -1280,8 +1283,12 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
             dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, 0.0, /* FIXME: pass */ nullptr);
         }
         
-        VectorMA(colorout, dirt * cosangle * sun.sunlight / 255.0f, sun.sunlight_color, colorout);
+        const int sunstyle = 0;
+        const glm::vec3 sunContrib = (dirt * cosangle * sun.sunlight / 255.0f) * vec3_t_to_glm(sun.sunlight_color);
+        result[sunstyle] += sunContrib;
     }
+    
+    return result;
 }
 
 
@@ -1633,34 +1640,37 @@ static void
 LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     Q_assert(debugmode == debugmode_bouncelights);
+ 
+    // reset all lightmaps to black (lazily)
+    Lightmap_ClearAll(lightmaps);
     
-    /* use a style 0 light map */
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-    
-    vec3_t patch_color = {0,0,0};
     std::vector<bouncelight_t> vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
     if (vpls.size()) {
         Q_assert(vpls.size() == 1); // for now only 1 vpl per face
         
         const auto &vpl = vpls.at(0);
-        VectorScale(vpl.color, 255, patch_color);
+        for (const auto &styleColor : vpl.colorByStyle) {
+            const glm::vec3 patch_color = styleColor.second * 255.0f;
+            
+            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, styleColor.first, lightsurf);
+            
+            /* Overwrite each point with the emitted color... */
+            for (int i = 0; i < lightsurf->numpoints; i++) {
+                lightsample_t *sample = &lightmap->samples[i];
+                glm_to_vec3_t(patch_color, sample->color);
+            }
+            
+            Lightmap_Save(lightmaps, lightsurf, lightmap, styleColor.first);
+        }
     }
-    
-    /* Overwrite each point with the emitted color... */
-    for (int i = 0; i < lightsurf->numpoints; i++) {
-        lightsample_t *sample = &lightmap->samples[i];
-        VectorCopy(patch_color, sample->color);
-    }
-    
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 // returns color in [0,255]
 static inline void
-BounceLight_ColorAtDist(const globalconfig_t &cfg, const bouncelight_t *vpl, vec_t dist, vec3_t color)
+BounceLight_ColorAtDist(const globalconfig_t &cfg, const bouncelight_t *vpl, int style, vec_t dist, vec3_t color)
 {
     // get light contribution
-    VectorScale(vpl->color, vpl->area, color);
+    glm_to_vec3_t(vpl->colorByStyle.at(style) * vpl->area, color);
     
     // clamp away hotspots
     if (dist < 128) {
@@ -1676,7 +1686,7 @@ BounceLight_ColorAtDist(const globalconfig_t &cfg, const bouncelight_t *vpl, vec
 // dir: vpl -> sample point direction
 // returns color in [0,255]
 static inline void
-GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, const vec3_t dir, vec_t dist, const vec3_t origin, const vec3_t normal, vec3_t color)
+GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, int style, const vec3_t dir, vec_t dist, const vec3_t origin, const vec3_t normal, vec3_t color)
 {
     VectorSet(color, 0, 0, 0);
     
@@ -1698,14 +1708,14 @@ GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, const 
         return; // vpl behind sample face
     
     // get light contribution
-    BounceLight_ColorAtDist(cfg, vpl, dist, color);
+    BounceLight_ColorAtDist(cfg, vpl, style, dist, color);
     
     // apply angle scale
     VectorScale(color, dp1 * dp2, color);
 }
 
 static inline bool
-BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
+BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, int style, const lightsurf_t *lightsurf)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     
@@ -1720,7 +1730,7 @@ BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lights
     vec_t dist = VectorLength(dir) + lightsurf->radius;
     
     // get light contribution
-    BounceLight_ColorAtDist(cfg, vpl, dist, color);
+    BounceLight_ColorAtDist(cfg, vpl, style, dist, color);
     
     if (LightSample_Brightness(color) < 0.25)
         return true;
@@ -1733,7 +1743,6 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     //const dmodel_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
-    lightmap_t *lightmap;
     
     if (!cfg.bounce.boolValue())
         return;
@@ -1742,67 +1751,71 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
           || debugmode == debugmode_none))
         return;
     
-    /* use a style 0 light map */
-    lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-    
-    bool hit = false;
-    
     for (const bouncelight_t &vpl : BounceLights()) {
-        if (BounceLight_SphereCull(bsp, &vpl, lightsurf))
-            continue;
-        
-        raystream_t *rs = lightsurf->stream;
-        rs->clearPushedRays();
-        
-        for (int i = 0; i < lightsurf->numpoints; i++) {
-            if (lightsurf->occluded[i])
+        // FIXME: This will trace the same ray multiple times, once per style,
+        // if the bouncelight is hitting a face with multiple styles.
+        for (const auto &styleColor : vpl.colorByStyle) {
+            bool hit = false;
+            const int style = styleColor.first;
+            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
+            
+            if (BounceLight_SphereCull(bsp, &vpl, style, lightsurf))
                 continue;
             
-            vec3_t dir; // vpl -> sample point
-            VectorSubtract(lightsurf->points[i], vpl.pos, dir);
-            vec_t dist = VectorNormalize(dir);
+            raystream_t *rs = lightsurf->stream;
+            rs->clearPushedRays();
             
-            vec3_t indirect = {0};
-            GetIndirectLighting(cfg, &vpl, dir, dist, lightsurf->points[i], lightsurf->normals[i], indirect);
-            
-            if (LightSample_Brightness(indirect) < 0.25)
-                continue;
-            
-            rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, indirect);
-        }
-        
-        total_bounce_rays += rs->numPushedRays();
-        rs->tracePushedRaysOcclusion();
-        
-        const int N = rs->numPushedRays();
-        for (int j = 0; j < N; j++) {
-            if (rs->getPushedRayOccluded(j))
-                continue;
-            
-            const int i = rs->getPushedRayPointIndex(j);
-            vec3_t indirect = {0};
-            rs->getPushedRayColor(j, indirect);
-            
-            Q_assert(!std::isnan(indirect[0]));
-            
-            /* Use dirt scaling on the indirect lighting.
-             * Except, not in bouncedebug mode.
-             */
-            if (debugmode != debugmode_bounce) {
-                const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
-                VectorScale(indirect, dirtscale, indirect);
+            for (int i = 0; i < lightsurf->numpoints; i++) {
+                if (lightsurf->occluded[i])
+                    continue;
+                
+                vec3_t dir; // vpl -> sample point
+                VectorSubtract(lightsurf->points[i], vpl.pos, dir);
+                vec_t dist = VectorNormalize(dir);
+                
+                vec3_t indirect = {0};
+                GetIndirectLighting(cfg, &vpl, style, dir, dist, lightsurf->points[i], lightsurf->normals[i], indirect);
+                
+                if (LightSample_Brightness(indirect) < 0.25)
+                    continue;
+                
+                rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, indirect);
             }
             
-            lightsample_t *sample = &lightmap->samples[i];
-            VectorAdd(sample->color, indirect, sample->color);
+            total_bounce_rays += rs->numPushedRays();
+            rs->tracePushedRaysOcclusion();
             
-            hit = true;
-            total_bounce_ray_hits++;
+            const int N = rs->numPushedRays();
+            for (int j = 0; j < N; j++) {
+                if (rs->getPushedRayOccluded(j))
+                    continue;
+                
+                const int i = rs->getPushedRayPointIndex(j);
+                vec3_t indirect = {0};
+                rs->getPushedRayColor(j, indirect);
+                
+                Q_assert(!std::isnan(indirect[0]));
+                
+                /* Use dirt scaling on the indirect lighting.
+                 * Except, not in bouncedebug mode.
+                 */
+                if (debugmode != debugmode_bounce) {
+                    const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
+                    VectorScale(indirect, dirtscale, indirect);
+                }
+                
+                lightsample_t *sample = &lightmap->samples[i];
+                VectorAdd(sample->color, indirect, sample->color);
+                
+                hit = true;
+                total_bounce_ray_hits++;
+            }
+            
+            // If this style of this bounce light contributed anything, save.
+            if (hit)
+                Lightmap_Save(lightmaps, lightsurf, lightmap, style);
         }
     }
-    
-    if (hit)
-        Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 static void

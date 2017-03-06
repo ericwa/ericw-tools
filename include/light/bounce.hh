@@ -25,12 +25,13 @@
 #include <common/mathlib.hh>
 
 #include <vector>
+#include <map>
 
 #include <glm/vec3.hpp>
 
 typedef struct {
     vec3_t pos;
-    vec3_t color;
+    std::map<int, glm::vec3> colorByStyle;
     vec3_t surfnormal;
     vec_t area;
     
