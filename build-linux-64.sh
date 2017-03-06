@@ -13,7 +13,11 @@ wget https://github.com/embree/embree/releases/download/v2.14.0/embree-2.14.0.x8
 tar xf embree.tgz
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.14.0.x86_64.linux/lib/cmake/embree-2.14.0"
 make -j8 VERBOSE=1
+make -j8 VERBOSE=1 check
 cpack
+
+# run tests
+./testlight/testlight || exit 1
 
 # check rpath
 readelf -d ./light/light

@@ -25,6 +25,8 @@ build_script:
     msbuild check.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
     msbuild PACKAGE.vcxproj /p:Configuration=Release /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
+    .\Release\testlight.exe
 artifacts:
 - path: cmakebuild\*.zip
 deploy:
