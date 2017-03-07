@@ -30,10 +30,11 @@
 #include <glm/vec3.hpp>
 
 typedef struct {
-    vec3_t pos;
+    glm::vec3 pos;
     std::map<int, glm::vec3> colorByStyle;
-    vec3_t surfnormal;
-    vec_t area;
+    glm::vec3 componentwiseMaxColor; // cached maximum color in the colorByStyle, used for culling so we don't need to loop through colorByStyle
+    glm::vec3 surfnormal;
+    float area;
     
     /* estimated visible AABB culling */
     vec3_t mins;

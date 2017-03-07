@@ -1666,73 +1666,68 @@ LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
 }
 
 // returns color in [0,255]
-static inline void
-BounceLight_ColorAtDist(const globalconfig_t &cfg, const bouncelight_t *vpl, int style, vec_t dist, vec3_t color)
+static inline glm::vec3
+BounceLight_ColorAtDist(const globalconfig_t &cfg, float area, const glm::vec3 &bounceLightColor, float dist)
 {
-    // get light contribution
-    glm_to_vec3_t(vpl->colorByStyle.at(style) * vpl->area, color);
-    
     // clamp away hotspots
-    if (dist < 128) {
-        dist = 128;
+    if (dist < 128.0f) {
+        dist = 128.0f;
     }
     
-    const vec_t dist2 = (dist * dist);
-    const vec_t scale = (1.0/dist2) * cfg.bouncescale.floatValue();
+    const float dist2 = (dist * dist);
+    const float scale = (1.0f/dist2) * cfg.bouncescale.floatValue();
     
-    VectorScale(color, 255 * scale, color);
+    // get light contribution
+    const glm::vec3 result = bounceLightColor * area * (255.0f * scale);
+    return result;
 }
 
 // dir: vpl -> sample point direction
 // returns color in [0,255]
-static inline void
-GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, int style, const vec3_t dir, vec_t dist, const vec3_t origin, const vec3_t normal, vec3_t color)
+static inline glm::vec3
+GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, const glm::vec3 &bounceLightColor, const glm::vec3 &dir, float dist, const glm::vec3 &origin, const glm::vec3 &normal)
 {
-    VectorSet(color, 0, 0, 0);
+    const float dp1 = glm::dot(vpl->surfnormal, dir);
+    if (dp1 < 0.0f)
+        return glm::vec3(0); // sample point behind vpl
     
-#if 0
-    vec3_t dir;
-    VectorSubtract(origin, vpl->pos, dir); // vpl -> sample point
-    vec_t dist = VectorNormalize(dir);
-#endif
-    
-    const vec_t dp1 = DotProduct(vpl->surfnormal, dir);
-    if (dp1 < 0)
-        return; // sample point behind vpl
-    
-    vec3_t sp_vpl;
-    VectorScale(dir, -1, sp_vpl);
-    
-    const vec_t dp2 = DotProduct(sp_vpl, normal);
-    if (dp2 < 0)
-        return; // vpl behind sample face
+    const glm::vec3 sp_vpl = dir * -1.0f;
+    const float dp2 = glm::dot(sp_vpl, normal);
+    if (dp2 < 0.0f)
+        return glm::vec3(0); // vpl behind sample face
     
     // get light contribution
-    BounceLight_ColorAtDist(cfg, vpl, style, dist, color);
+    const glm::vec3 result = BounceLight_ColorAtDist(cfg, vpl->area, bounceLightColor, dist);
     
     // apply angle scale
-    VectorScale(color, dp1 * dp2, color);
+    const glm::vec3 resultscaled = result * dp1 * dp2;
+    
+    if (dp1 < 0) {
+        Q_assert(!std::isnan(dp1));
+    }
+    
+    Q_assert(!std::isnan(resultscaled.x));
+    Q_assert(!std::isnan(resultscaled.y));
+    Q_assert(!std::isnan(resultscaled.z));
+    
+    return resultscaled;
 }
 
 static inline bool
-BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, int style, const lightsurf_t *lightsurf)
+BounceLight_SphereCull(const bsp2_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     
     if (!novisapprox && AABBsDisjoint(vpl->mins, vpl->maxs, lightsurf->mins, lightsurf->maxs))
         return true;
     
-    vec3_t color = {0};
-    //GetIndirectLighting(bsp, vpl, lightsurf->face, lightsurf->pvs, lightsurf->origin, lightsurf->plane.normal, color);
-    
-    vec3_t dir;
-    VectorSubtract(lightsurf->origin, vpl->pos, dir); // vpl -> sample point
-    vec_t dist = VectorLength(dir) + lightsurf->radius;
+    const glm::vec3 dir = vec3_t_to_glm(lightsurf->origin) - vpl->pos; // vpl -> sample point
+    const float dist = glm::length(dir) + lightsurf->radius;
     
     // get light contribution
-    BounceLight_ColorAtDist(cfg, vpl, style, dist, color);
+    const glm::vec3 color = BounceLight_ColorAtDist(cfg, vpl->area, vpl->componentwiseMaxColor, dist);
     
-    if (LightSample_Brightness(color) < 0.25)
+    if (LightSample_Brightness(color) < 0.25f)
         return true;
     
     return false;
@@ -1752,15 +1747,15 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
         return;
     
     for (const bouncelight_t &vpl : BounceLights()) {
+        if (BounceLight_SphereCull(bsp, &vpl, lightsurf))
+            continue;
+            
         // FIXME: This will trace the same ray multiple times, once per style,
         // if the bouncelight is hitting a face with multiple styles.
         for (const auto &styleColor : vpl.colorByStyle) {
             bool hit = false;
             const int style = styleColor.first;
-            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
-            
-            if (BounceLight_SphereCull(bsp, &vpl, style, lightsurf))
-                continue;
+            const glm::vec3 &color = styleColor.second;
             
             raystream_t *rs = lightsurf->stream;
             rs->clearPushedRays();
@@ -1769,21 +1764,32 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 if (lightsurf->occluded[i])
                     continue;
                 
-                vec3_t dir; // vpl -> sample point
-                VectorSubtract(lightsurf->points[i], vpl.pos, dir);
-                vec_t dist = VectorNormalize(dir);
+                glm::vec3 dir = vec3_t_to_glm(lightsurf->points[i]) - vpl.pos; // vpl -> sample point
+                const float dist = glm::length(dir);
+                if (dist == 0.0f)
+                    continue; // FIXME: nudge or something
+                dir /= dist;
                 
-                vec3_t indirect = {0};
-                GetIndirectLighting(cfg, &vpl, style, dir, dist, lightsurf->points[i], lightsurf->normals[i], indirect);
+                const glm::vec3 indirect = GetIndirectLighting(cfg, &vpl, color, dir, dist, vec3_t_to_glm(lightsurf->points[i]), vec3_t_to_glm(lightsurf->normals[i]));
                 
                 if (LightSample_Brightness(indirect) < 0.25)
                     continue;
                 
-                rs->pushRay(i, vpl.pos, dir, dist, /*shadowself*/ nullptr, indirect);
+                vec3_t vplPos, vplDir, vplColor;
+                glm_to_vec3_t(vpl.pos, vplPos);
+                glm_to_vec3_t(dir, vplDir);
+                glm_to_vec3_t(indirect, vplColor);
+                
+                rs->pushRay(i, vplPos, vplDir, dist, /*shadowself*/ nullptr, vplColor);
             }
+            
+            if (!rs->numPushedRays())
+                continue;
             
             total_bounce_rays += rs->numPushedRays();
             rs->tracePushedRaysOcclusion();
+            
+            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
             
             const int N = rs->numPushedRays();
             for (int j = 0; j < N; j++) {

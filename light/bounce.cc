@@ -229,11 +229,23 @@ AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, c
     }
     Q_assert(area > 0);
     
-    bouncelight_t l = {0};
-    VectorCopy(pos, l.pos);
+    bouncelight_t l;
+    l.pos = vec3_t_to_glm(pos);
     l.colorByStyle = colorByStyle;
-    VectorCopy(surfnormal, l.surfnormal);
+    
+    glm::vec3 componentwiseMaxColor(0);
+    for (const auto &styleColor : colorByStyle) {
+        for (int i=0; i<3; i++) {
+            if (styleColor.second[i] > componentwiseMaxColor[i]) {
+                componentwiseMaxColor[i] = styleColor.second[i];
+            }
+        }
+    }
+    l.componentwiseMaxColor = componentwiseMaxColor;
+    l.surfnormal = vec3_t_to_glm(surfnormal);
     l.area = area;
+    VectorSet(l.mins, 0, 0, 0);
+    VectorSet(l.maxs, 0, 0, 0);
     
     if (!novisapprox) {
         EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);
