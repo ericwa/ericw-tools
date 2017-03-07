@@ -800,6 +800,7 @@ public:
     // hit info
     float _hitdist;
     hittype_t _hittype;
+    const bsp2_dface_t *_hitface;
     bool _hit_occluded;
     
     bsp_ray_t(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color, const vec_t *normalcontrib) :
@@ -808,6 +809,7 @@ public:
         _selfshadow{selfshadow},
         _hitdist{dist},
         _hittype{hittype_t::NONE},
+        _hitface(nullptr),
         _hit_occluded{false} {
 			VectorCopy(origin, _origin);
 			VectorCopy(dir, _dir);
@@ -857,7 +859,7 @@ public:
             return;
         
         for (bsp_ray_t &ray : _rays) {
-            ray._hittype = BSP_DirtTrace(ray._origin, ray._dir, ray._maxdist, ray._selfshadow, &ray._hitdist, nullptr, nullptr);
+            ray._hittype = BSP_DirtTrace(ray._origin, ray._dir, ray._maxdist, ray._selfshadow, &ray._hitdist, nullptr, &ray._hitface);
         }
     }
     
@@ -875,6 +877,10 @@ public:
     
     virtual hittype_t getPushedRayHitType(size_t j) {
         return _rays.at(j)._hittype;
+    }
+    
+    virtual const bsp2_dface_t *getPushedRayHitFace(size_t j) {
+        return _rays.at(j)._hitface;
     }
     
     virtual void getPushedRayDir(size_t j, vec3_t out) {

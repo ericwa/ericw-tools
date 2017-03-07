@@ -66,6 +66,7 @@ public:
     virtual float getPushedRayDist(size_t j) = 0;
     virtual float getPushedRayHitDist(size_t j) = 0;
     virtual hittype_t getPushedRayHitType(size_t j) = 0;
+    virtual const bsp2_dface_t *getPushedRayHitFace(size_t j) = 0;
     virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
     virtual int getPushedRayPointIndex(size_t j) = 0;
     virtual void getPushedRayColor(size_t j, vec3_t out) = 0;

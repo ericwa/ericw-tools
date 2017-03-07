@@ -869,6 +869,21 @@ public:
         }
     }
     
+    virtual const bsp2_dface_t *getPushedRayHitFace(size_t j) {
+        Q_assert(j < _maxrays);
+        
+        const RTCRay &ray = _rays[j];
+        
+        if (ray.geomID == RTC_INVALID_GEOMETRY_ID)
+            return nullptr;
+        
+        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.geomID);
+        const bsp2_dface_t *face = si.triToFace.at(ray.primID);
+        Q_assert(face != nullptr);
+        
+        return face;
+    }
+    
     virtual void getPushedRayDir(size_t j, vec3_t out) {
         Q_assert(j < _maxrays);
         for (int i=0; i<3; i++) {
