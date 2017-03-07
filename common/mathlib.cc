@@ -111,6 +111,30 @@ RandomDir(vec3_t dir)
     UniformPointOnSphere(dir, Random(), Random());
 }
 
+glm::vec3 CosineWeightedHemisphereSample(float u1, float u2)
+{
+    Q_assert(u1 >= 0.0f && u1 <= 1.0f);
+    Q_assert(u2 >= 0.0f && u2 <= 1.0f);
+    
+    // Generate a uniform sample on the unit disk
+    // http://mathworld.wolfram.com/DiskPointPicking.html
+    const float sqrt_u1 = sqrt(u1);
+    const float theta = 2.0f * Q_PI * u2;
+    
+    const float x = sqrt_u1 * cos(theta);
+    const float y = sqrt_u1 * sin(theta);
+    
+    // Project it up onto the sphere (calculate z)
+    //
+    // We know sqrt(x^2 + y^2 + z^2) = 1
+    // so      x^2 + y^2 + z^2 = 1
+    //         z = sqrt(1 - x^2 - y^2)
+    
+    const float temp = 1.0f - x*x - y*y;
+    const float z = sqrt(qmax(0.0f, temp));
+    
+    return glm::vec3(x, y, z);
+}
 
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA,
                    const vec3_t minsB, const vec3_t maxsB)

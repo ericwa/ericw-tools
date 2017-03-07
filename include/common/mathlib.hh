@@ -218,6 +218,7 @@ const char *VecStrf(const vec3_t vec);
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
 void UniformPointOnSphere(vec3_t dir, float u, float v);
 void RandomDir(vec3_t dir);
+glm::vec3 CosineWeightedHemisphereSample(float u1, float u2);
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
 void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
