@@ -136,6 +136,12 @@ glm::vec3 CosineWeightedHemisphereSample(float u1, float u2)
     return glm::vec3(x, y, z);
 }
 
+// Returns a 3x3 matrix that rotates (0,0,1) to the given surface normal.
+glm::mat3x3 RotateFromUpToSurfaceNormal(const glm::vec3 &surfaceNormal)
+{
+    return glm::toMat3(glm::rotation(glm::vec3(0,0,1), surfaceNormal));
+}
+
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA,
                    const vec3_t minsB, const vec3_t maxsB)
 {
