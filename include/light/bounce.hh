@@ -30,6 +30,7 @@
 #include <glm/vec3.hpp>
 
 typedef struct {
+    std::vector<glm::vec3> poly;
     glm::vec3 pos;
     std::map<int, glm::vec3> colorByStyle;
     glm::vec3 componentwiseMaxColor; // cached maximum color in the colorByStyle, used for culling so we don't need to loop through colorByStyle
