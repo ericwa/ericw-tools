@@ -1736,6 +1736,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
           || debugmode == debugmode_none))
         return;
     
+#if 1
     for (const bouncelight_t &vpl : BounceLights()) {
         if (BounceLight_SphereCull(bsp, &vpl, lightsurf))
             continue;
@@ -1812,6 +1813,110 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 Lightmap_Save(lightmaps, lightsurf, lightmap, style);
         }
     }
+
+#else
+
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+
+    const int N=1024;
+    raystream_t *rs = MakeRayStream(N);
+
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        if (lightsurf->occluded[i])
+            continue;
+        
+        const glm::vec3 surfpoint = vec3_t_to_glm(lightsurf->points[i]);
+        const glm::vec3 surfnormal = vec3_t_to_glm(lightsurf->normals[i]);
+        
+        const glm::mat3x3 rotationMatrix = RotateFromUpToSurfaceNormal(surfnormal);
+        
+        rs->clearPushedRays();
+        
+        
+        for (int j=0; j<N; j++) {
+            const glm::vec3 randomDirInUpCoordSystem = CosineWeightedHemisphereSample(Random(), Random());
+            const glm::vec3 rayDir = rotationMatrix * randomDirInUpCoordSystem;
+            
+            if (!(glm::dot(rayDir, surfnormal) > -0.01)) {
+                //printf("bad dot\n");
+            }
+            
+            rs->pushRay(i, surfpoint, rayDir, 8192, /*selfshadow */nullptr);
+        }
+        
+        rs->tracePushedRaysIntersection();
+        
+        glm::vec3 colorAvg(0);
+        int Nhits = 0;
+        
+        for (int j=0; j<N; j++) {
+            if (rs->getPushedRayHitType(j) == hittype_t::SKY)
+                continue;
+        
+            const bsp2_dface_t *face = rs->getPushedRayHitFace(j);
+            if (face == nullptr)
+                continue;
+            
+            const int fnum = Face_GetNum(bsp, face);
+            const auto lights = BounceLightsForFaceNum(fnum); // FIXME: Slow
+            if (lights.empty())
+                continue;
+            
+            Q_assert(lights.size() == 1);
+            const bouncelight_t &vpl = lights[0];
+            
+            const auto it = vpl.colorByStyle.find(0);
+            if (it == vpl.colorByStyle.end())
+                continue;
+            const glm::vec3 color = it->second;
+            
+            const glm::vec3 raydir = rs->getPushedRayDir(j);
+            if (!(glm::dot(raydir, surfnormal) > -0.01)) {
+                //printf("bad dot\n");
+                continue;
+            }
+            
+            if (!(fabs(1.0f - glm::length(raydir)) < 0.1)) {
+                //printf("bad raydir: %f %f %f (len %f)\n", raydir.x, raydir.y, raydir.z, glm::length(raydir));
+                continue;
+            }
+            
+            const float dist = rs->getPushedRayHitDist(j);
+            if (dist <= 0) {
+                //printf("bad dist\n");
+                continue;
+            }
+            
+            const glm::vec4 plane = Face_Plane_E(bsp, face);
+            float scale = glm::dot(glm::vec3(plane), -raydir);
+            if (scale < 0)
+                scale = 0;
+            
+            //const glm::vec3 indirect = GetIndirectLighting(cfg, &vpl, color, -raydir, dist, surfpoint, surfnormal);
+            
+            Q_assert(!std::isnan(color.x));
+            Q_assert(!std::isnan(color.y));
+            Q_assert(!std::isnan(color.z));
+            
+            colorAvg += (color * scale * 255.0f);
+            Nhits++;
+        }
+        
+        if (Nhits) {
+            colorAvg /= Nhits;
+        
+            lightsample_t *sample = &lightmap->samples[i];
+        
+            vec3_t indirectTmp;
+            glm_to_vec3_t(colorAvg, indirectTmp);
+            VectorAdd(sample->color, indirectTmp, sample->color);
+        }
+    }
+    
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    delete rs;
+
+#endif
 }
 
 static void
