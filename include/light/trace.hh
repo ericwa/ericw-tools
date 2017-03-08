@@ -73,6 +73,19 @@ public:
     virtual void getPushedRayNormalContrib(size_t j, vec3_t out) = 0;
     virtual void clearPushedRays() = 0;
     virtual ~raystream_t() {};
+    
+    void pushRay(int i, const glm::vec3 &origin, const glm::vec3 &dir, float dist, const dmodel_t *selfshadow) {
+        vec3_t originTemp, dirTemp;
+        glm_to_vec3_t(origin, originTemp);
+        glm_to_vec3_t(dir, dirTemp);
+        this->pushRay(i, originTemp, dirTemp, dist, selfshadow);
+    }
+    
+    glm::vec3 getPushedRayDir(size_t j) {
+        vec3_t temp;
+        this->getPushedRayDir(j, temp);
+        return vec3_t_to_glm(temp);
+    }
 };
 
 raystream_t *MakeRayStream(int maxrays);
