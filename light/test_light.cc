@@ -459,3 +459,42 @@ TEST(mathlib, pointsAlongLine) {
     ASSERT_TRUE(pointsEqualEpsilon(vec3(1,0,0), res[0], POINT_EQUAL_EPSILON));
     ASSERT_TRUE(pointsEqualEpsilon(vec3(2.5,0,0), res[1], POINT_EQUAL_EPSILON));
 }
+
+TEST(mathlib, RandomPointInPoly) {
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 0,32,0 }, // colinear point
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    
+    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(poly);
+    
+    glm::vec3 min(FLT_MAX);
+    glm::vec3 max(-FLT_MAX);
+    glm::vec3 avg(0);
+    
+    const int N=100;
+    for (int i=0; i<N; i++) {
+        const glm::vec3 point = GLM_PolyRandomPoint(poly);
+        ASSERT_TRUE(GLM_EdgePlanes_PointInside(edgeplanes, point));
+        
+        //std::cout << "point: " << glm::to_string(point) << std::endl;
+        
+        min = glm::min(min, point);
+        max = glm::max(max, point);
+        avg += point;
+    }
+    avg /= N;
+    
+    ASSERT_LT(min.x, 4);
+    ASSERT_LT(min.y, 4);
+    ASSERT_EQ(min.z, 0);
+    
+    ASSERT_GT(max.x, 60);
+    ASSERT_GT(max.y, 60);
+    ASSERT_EQ(max.z, 0);
+    
+    ASSERT_LT(glm::length(avg - glm::vec3(32, 32, 0)), 4);
+}

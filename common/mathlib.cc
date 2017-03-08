@@ -465,6 +465,42 @@ glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points)
     return poly_centroid;
 }
 
+glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points)
+{
+    Q_assert(points.size() >= 3);
+    
+    // FIXME: Precompute this
+    float poly_area = 0;
+    std::vector<float> triareas;
+    
+    const vec3 v0 = points.at(0);
+    for (int i = 2; i < points.size(); i++) {
+        const vec3 v1 = points.at(i-1);
+        const vec3 v2 = points.at(i);
+        
+        const float triarea = GLM_TriangleArea(v0, v1, v2);
+        Q_assert(triarea >= 0.0f);
+        
+        triareas.push_back(triarea);
+        poly_area += triarea;
+    }
+    
+    // Pick a random triangle, with probability proportional to triangle area
+    const float uniformRandom = Random();
+    const std::vector<float> cdf = MakeCDF(triareas);
+    const int whichTri = SampleCDF(cdf, uniformRandom);
+    
+    Q_assert(whichTri >= 0 && whichTri < triareas.size());
+
+    const tri_t tri { points.at(0), points.at(1 + whichTri), points.at(2 + whichTri) };
+    
+    // Pick random barycentric coords.
+    const glm::vec3 bary = Barycentric_Random(Random(), Random());
+    const glm::vec3 point = Barycentric_ToPoint(bary, tri);
+    
+    return point;
+}
+
 std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::vec3> &poly, const vec3 &point)
 {
     const int N = static_cast<int>(poly.size());

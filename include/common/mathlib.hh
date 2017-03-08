@@ -343,6 +343,7 @@ std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &p
 std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const float amount);
 /// Returns (front part, back part)
 std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std::vector<glm::vec3> &poly, const glm::vec4 &plane);
+glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points);
 
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
