@@ -18,6 +18,7 @@
 */
 
 #include <light/light.hh>
+#include <light/bounce.hh>
 #include <light/trace_embree.hh>
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
@@ -291,7 +292,7 @@ Embree_FilterFuncN(int* valid,
                     // (we currently trace "backwards", from surface point --> light source)
                     if (raySurfaceCosAngle < 0) {
                         vec3_t samplecolor;
-                        Palette_GetColor(sample, samplecolor);
+                        glm_to_vec3_t(Palette_GetColor(sample), samplecolor);
                         VectorScale(samplecolor, 1/255.0, samplecolor);
                         
                         AddGlassToRay(context, rayIndex, alpha, samplecolor);

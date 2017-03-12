@@ -383,7 +383,6 @@ void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
 const modelinfo_t *ModelInfoForModel(const bsp2_t *bsp, int modelnum);
 const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
-void Palette_GetColor(int i, vec3_t samplecolor);
 bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
 int light_main(int argc, const char **argv);
 

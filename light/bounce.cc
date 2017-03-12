@@ -270,11 +270,11 @@ std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum)
     return {};
 }
 
-void Palette_GetColor(int i, vec3_t samplecolor)
+glm::vec3 Palette_GetColor(int i)
 {
-    samplecolor[0] = (float)thepalette[3*i];
-    samplecolor[1] = (float)thepalette[3*i + 1];
-    samplecolor[2] = (float)thepalette[3*i + 2];
+    return glm::vec3((float)thepalette[3*i],
+                     (float)thepalette[3*i + 1],
+                     (float)thepalette[3*i + 2]);
 }
 
 // Returns color in [0,1]
@@ -291,7 +291,7 @@ Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
             const int i = data[(miptex->width * y) + x];
             
             vec3_t samplecolor;
-            Palette_GetColor(i, samplecolor);
+            glm_to_vec3_t(Palette_GetColor(i), samplecolor);
             VectorAdd(color, samplecolor, color);
         }
     }

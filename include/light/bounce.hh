@@ -47,5 +47,7 @@ const std::vector<bouncelight_t> &BounceLights();
 std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum);
 void MakeTextureColors (const bsp2_t *bsp);
 void MakeBounceLights (const globalconfig_t &cfg, const bsp2_t *bsp);
+/** Returns color components in [0, 255] */
+glm::vec3 Palette_GetColor(int i);
 
 #endif /* __LIGHT_BOUNCe_H__ */
