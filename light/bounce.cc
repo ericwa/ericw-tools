@@ -277,25 +277,25 @@ glm::vec3 Palette_GetColor(int i)
                      (float)thepalette[3*i + 2]);
 }
 
-// Returns color in [0,1]
-static void
-Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex, vec3_t color)
+// Returns color in [0,255]
+static glm::vec3
+Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex)
 {
-    VectorSet(color, 0, 0, 0);
     if (!bsp->texdatasize)
-        return;
-    
+        return glm::vec3(0);
+
+    glm::vec3 color(0);
     const byte *data = (byte*)miptex + miptex->offsets[0];
     for (int y=0; y<miptex->height; y++) {
         for (int x=0; x<miptex->width; x++) {
             const int i = data[(miptex->width * y) + x];
             
-            vec3_t samplecolor;
-            glm_to_vec3_t(Palette_GetColor(i), samplecolor);
-            VectorAdd(color, samplecolor, color);
+            color += Palette_GetColor(i);
         }
     }
-    VectorScale(color, 1.0 / (miptex->width * miptex->height), color);
+    color /= (miptex->width * miptex->height);
+    
+    return color;
 }
 
 void
@@ -314,11 +314,10 @@ MakeTextureColors (const bsp2_t *bsp)
         const miptex_t *miptex = (miptex_t *)(bsp->dtexdata.base + ofs);
         
         string name { miptex->name };
-        vec3_t color;
-        Texture_AvgColor(bsp, miptex, color);
+        const glm::vec3 color = Texture_AvgColor(bsp, miptex);
         
-//        printf("%s has color %f %f %f\n", name.c_str(), color.v[0], color.v[1], color.v[2]);
-        texturecolors[name] = VectorToGLM(color);
+//        printf("%s has color %f %f %f\n", name.c_str(), color[0], color[1], color[2]);
+        texturecolors[name] = color;
     }
 }
 
