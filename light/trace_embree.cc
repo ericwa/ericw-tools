@@ -155,29 +155,6 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
     rtcUnmapBuffer(scene, geomID, RTC_INDEX_BUFFER);
 }
 
-// Creates a scene with just the faces in this model,
-// used by CalcPoints.
-// Liquids are left out but sky faces are included
-RTCScene CreatePerModelScene(RTCDevice device, const bsp2_t *bsp, const dmodel_t *model) {
-    std::vector<const bsp2_dface_t *> faces;
-    
-    for (int i=0; i<model->numfaces; i++) {
-        const bsp2_dface_t *face = &bsp->dfaces[model->firstface + i];
-        
-        const char *texname = Face_TextureName(bsp, face);
-        if (texname[0] == '*') {
-            // ignore liquids
-        } else {
-            faces.push_back(face);
-        }
-    }
-    
-    RTCScene scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1);
-    sceneinfo geom = CreateGeometry(bsp, scene, faces);
-    rtcCommit(scene);
-    return scene;
-}
-
 RTCDevice device;
 RTCScene scene;
 /* global shadow casters */
@@ -354,8 +331,6 @@ Embree_FilterFuncN(int* valid,
         }
     }
 }
-
-vector<RTCScene> perModelScenes;
 
 // building faces for skip-textured bmodels
 
@@ -597,12 +572,6 @@ Embree_TraceInit(const bsp2_t *bsp)
         Error("embree must be built with ray masks disabled");
     }
 
-    // set up per-model scenes, used for CalcPoints
-    for (int i=0; i<bsp->nummodels; i++) {
-        perModelScenes.push_back(CreatePerModelScene(device, bsp, &bsp->dmodels[i]));
-    }
-    Q_assert(perModelScenes.size() == bsp->nummodels);
-    
     scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1 | RTC_INTERSECT_STREAM);
     skygeom = CreateGeometry(bsp, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
@@ -721,24 +690,6 @@ hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, co
     } else {
         return hittype_t::SOLID;
     }
-}
-
-// used for CalcPoints
-bool Embree_IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
-{
-    const int modelnum = self - bsp_static->dmodels;
-    RTCScene singleModelScene = perModelScenes.at(modelnum);
-    
-    RTCRay ray = SetupRay(0, start, dir, dist, nullptr);
-    rtcIntersect(singleModelScene, ray);
-    
-    if (ray.geomID == RTC_INVALID_GEOMETRY_ID)
-        return false; // no obstruction
-    
-    if (hitdist_out) {
-        *hitdist_out = ray.tfar;
-    }
-    return true;
 }
 
 //enum class streamstate_t {

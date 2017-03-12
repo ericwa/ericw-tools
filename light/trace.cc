@@ -775,19 +775,6 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmo
     Error("no backend available");
 }
 
-bool IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
-{
-#ifdef HAVE_EMBREE
-    if (rtbackend == backend_embree) {
-        return Embree_IntersectSingleModel(start, dir, dist, self, hitdist_out);
-    }
-#endif
-    if (rtbackend == backend_bsp) {
-        return BSP_IntersectSingleModel(start, dir, dist, self, hitdist_out);
-    }
-    Error("no backend available");
-}
-
 class bsp_ray_t {
 public:
     int _pointindex;

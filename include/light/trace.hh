@@ -53,9 +53,6 @@ qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
 hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 
-// used for CalcPoints
-bool IntersectSingleModel(const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self, vec_t *hitdist_out);
-
 class raystream_t {
 public:
     virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
