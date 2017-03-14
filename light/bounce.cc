@@ -261,13 +261,15 @@ const std::vector<bouncelight_t> &BounceLights()
     return radlights;
 }
 
-std::vector<bouncelight_t> BounceLightsForFaceNum(int facenum)
+const std::vector<bouncelight_t> &BounceLightsForFaceNum(int facenum)
 {
     const auto &vec = radlightsByFacenum.find(facenum);
     if (vec != radlightsByFacenum.end()) {
         return vec->second;
     }
-    return {};
+    
+    static std::vector<bouncelight_t> empty;
+    return empty;
 }
 
 glm::vec3 Palette_GetColor(int i)

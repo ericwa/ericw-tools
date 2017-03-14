@@ -1644,7 +1644,7 @@ LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
     // reset all lightmaps to black (lazily)
     Lightmap_ClearAll(lightmaps);
     
-    std::vector<bouncelight_t> vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
+    const std::vector<bouncelight_t> &vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
     if (vpls.size()) {
         Q_assert(vpls.size() == 1); // for now only 1 vpl per face
         
