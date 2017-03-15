@@ -2584,6 +2584,7 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
     free(lightsurf->normals);
     free(lightsurf->occlusion);
     free(lightsurf->occluded);
+    free(lightsurf->realfacenums);
     
     delete lightsurf->stream;
     

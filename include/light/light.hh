@@ -118,7 +118,7 @@ typedef struct {
     vec3_t *points; // malloc'ed array of numpoints
     vec3_t *normals; // malloc'ed array of numpoints
     bool *occluded; // malloc'ed array of numpoints
-    int *realfacenums;
+    int *realfacenums; // malloc'ed array of numpoints
     
     /*
      raw ambient occlusion amount per sample point, 0-1, where 1 is
