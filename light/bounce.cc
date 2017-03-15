@@ -231,6 +231,7 @@ AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, c
     
     bouncelight_t l;
     l.poly = GLM_FacePoints(bsp, face);
+    l.poly_edgeplanes = GLM_MakeInwardFacingEdgePlanes(l.poly);
     l.pos = vec3_t_to_glm(pos);
     l.colorByStyle = colorByStyle;
     
