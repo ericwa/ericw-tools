@@ -1645,22 +1645,25 @@ LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
     Lightmap_ClearAll(lightmaps);
     
     const std::vector<bouncelight_t> &vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
-    if (vpls.size()) {
-        Q_assert(vpls.size() == 1); // for now only 1 vpl per face
+    
+    /* Overwrite each point with the emitted color... */
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        if (lightsurf->occluded[i])
+            continue;
         
-        const auto &vpl = vpls.at(0);
-        for (const auto &styleColor : vpl.colorByStyle) {
-            const glm::vec3 patch_color = styleColor.second * 255.0f;
+        for (const auto &vpl : vpls) {
+            // check for point in polygon (note: could be on the edge of more than one)
+            if (!GLM_EdgePlanes_PointInside(vpl.poly_edgeplanes, vec3_t_to_glm(lightsurf->points[i])))
+                continue;
             
-            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, styleColor.first, lightsurf);
-            
-            /* Overwrite each point with the emitted color... */
-            for (int i = 0; i < lightsurf->numpoints; i++) {
+            for (const auto &styleColor : vpl.colorByStyle) {
+                const glm::vec3 patch_color = styleColor.second * 255.0f;
+                
+                lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, styleColor.first, lightsurf);
                 lightsample_t *sample = &lightmap->samples[i];
                 glm_to_vec3_t(patch_color, sample->color);
+                Lightmap_Save(lightmaps, lightsurf, lightmap, styleColor.first);
             }
-            
-            Lightmap_Save(lightmaps, lightsurf, lightmap, styleColor.first);
         }
     }
 }
