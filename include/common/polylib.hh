@@ -43,6 +43,8 @@ winding_edges_t *AllocWindingEdges(const winding_t *w);
 void FreeWindingEdges(winding_edges_t *wi);
 bool PointInWindingEdges(const winding_edges_t *wi, const vec3_t point);
 
+std::vector<glm::vec3> GLM_WindingPoints(const winding_t *w);
+    
 };
 
 #endif /* __COMMON_POLYLIB_H__ */
