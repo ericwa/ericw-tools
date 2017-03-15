@@ -46,7 +46,7 @@ typedef struct {
 // public functions
 
 const std::vector<bouncelight_t> &BounceLights();
-const std::vector<bouncelight_t> &BounceLightsForFaceNum(int facenum);
+const std::vector<int> &BounceLightsForFaceNum(int facenum);
 void MakeTextureColors (const bsp2_t *bsp);
 void MakeBounceLights (const globalconfig_t &cfg, const bsp2_t *bsp);
 /** Returns color components in [0, 255] */

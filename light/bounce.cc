@@ -48,7 +48,7 @@ using namespace polylib;
 mutex radlights_lock;
 map<string, vec3> texturecolors;
 std::vector<bouncelight_t> radlights;
-std::map<int, std::vector<bouncelight_t>> radlightsByFacenum; // duplicate of `radlights` but indexed by face
+std::map<int, std::vector<int>> radlightsByFacenum;
 
 class patch_t {
 public:
@@ -255,7 +255,9 @@ AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, c
     
     unique_lock<mutex> lck { radlights_lock };
     radlights.push_back(l);
-    radlightsByFacenum[Face_GetNum(bsp, face)].push_back(l);
+    
+    const int lastBounceLightIndex = static_cast<int>(radlights.size()) - 1;
+    radlightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
 }
 
 const std::vector<bouncelight_t> &BounceLights()
@@ -263,14 +265,14 @@ const std::vector<bouncelight_t> &BounceLights()
     return radlights;
 }
 
-const std::vector<bouncelight_t> &BounceLightsForFaceNum(int facenum)
+const std::vector<int> &BounceLightsForFaceNum(int facenum)
 {
     const auto &vec = radlightsByFacenum.find(facenum);
     if (vec != radlightsByFacenum.end()) {
         return vec->second;
     }
     
-    static std::vector<bouncelight_t> empty;
+    static std::vector<int> empty;
     return empty;
 }
 

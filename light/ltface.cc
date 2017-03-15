@@ -1644,14 +1644,17 @@ LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightm
     // reset all lightmaps to black (lazily)
     Lightmap_ClearAll(lightmaps);
     
-    const std::vector<bouncelight_t> &vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
+    const std::vector<int> &vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
+    const std::vector<bouncelight_t> &all_vpls = BounceLights();
     
     /* Overwrite each point with the emitted color... */
     for (int i = 0; i < lightsurf->numpoints; i++) {
         if (lightsurf->occluded[i])
             continue;
         
-        for (const auto &vpl : vpls) {
+        for (const auto &vplnum : vpls) {
+            const bouncelight_t &vpl = all_vpls[vplnum];
+            
             // check for point in polygon (note: could be on the edge of more than one)
             if (!GLM_EdgePlanes_PointInside(vpl.poly_edgeplanes, vec3_t_to_glm(lightsurf->points[i])))
                 continue;
