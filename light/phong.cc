@@ -67,6 +67,7 @@ AngleBetweenPoints(const vec3 &p1, const vec3 &p2, const vec3 &p3)
     return result;
 }
 
+static bool s_builtPhongCaches;
 static std::map<const bsp2_dface_t *, std::vector<vec3>> vertex_normals;
 static std::set<int> interior_verts;
 static map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
@@ -77,12 +78,15 @@ static vector<face_cache_t> FaceCache;
 
 const edgeToFaceMap_t &GetEdgeToFaceMap()
 {
+    Q_assert(s_builtPhongCaches);
     return EdgeToFaceMap;
 }
 
 // Uses `smoothFaces` static var
 bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2)
 {
+    Q_assert(s_builtPhongCaches);
+    
     const auto &facesIt = smoothFaces.find(f1);
     if (facesIt == smoothFaces.end())
         return false;
@@ -94,7 +98,10 @@ bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2)
     return true;
 }
 
-const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face) {
+const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face)
+{
+    Q_assert(s_builtPhongCaches);
+    
     static std::set<const bsp2_dface_t *> empty;
     const auto it = smoothFaces.find(face);
     
@@ -104,7 +111,10 @@ const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face) {
     return it->second;
 }
 
-const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face) {
+const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face)
+{
+    Q_assert(s_builtPhongCaches);
+    
     static std::vector<const bsp2_dface_t *> empty;
     const auto it = planesToFaces.find(face->planenum);
     
@@ -138,6 +148,8 @@ AddTriangleNormals(std::map<int, vec3> &smoothed_normals, const vec3 &norm, cons
 /* access the final phong-shaded vertex normal */
 const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
 {
+    Q_assert(s_builtPhongCaches);
+    
     const auto &face_normals_vector = vertex_normals.at(f);
     return face_normals_vector.at(vertindex);
 }
@@ -160,6 +172,8 @@ FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
 const bsp2_dface_t *
 Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex) 
 {
+    Q_assert(s_builtPhongCaches);
+    
     const int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
     const int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
 
@@ -257,13 +271,9 @@ static vector<face_cache_t> MakeFaceCache(const bsp2_t *bsp)
 void
 CalcualateVertexNormals(const bsp2_t *bsp)
 {
-    EdgeToFaceMap = MakeEdgeToFaceMap(bsp);
+    Q_assert(!s_builtPhongCaches);
     
-    // clear in case we are run twice
-    vertex_normals.clear();
-    interior_verts.clear();
-    smoothFaces.clear();
-    vertsToFaces.clear();
+    EdgeToFaceMap = MakeEdgeToFaceMap(bsp);
     
     // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
     // support on func_detail/func_group
@@ -419,8 +429,12 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     }
     
     FaceCache = MakeFaceCache(bsp);
+    
+    s_builtPhongCaches = true;
 }
 
-const face_cache_t &FaceCacheForFNum(int fnum) {
+const face_cache_t &FaceCacheForFNum(int fnum)
+{
+    Q_assert(s_builtPhongCaches);
     return FaceCache.at(fnum);
 }
