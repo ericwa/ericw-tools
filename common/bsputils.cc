@@ -19,12 +19,18 @@
 
 #include <common/bsputils.hh>
 #include <assert.h>
+#include <cstddef>
 
 #include <glm/glm.hpp>
 
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
-    return f - bsp->dfaces;
+    Q_assert(f != nullptr);
+    
+    const ptrdiff_t diff = f - bsp->dfaces;
+    Q_assert(diff >= 0 && diff < bsp->numfaces);
+    
+    return static_cast<int>(diff);
 }
 
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */

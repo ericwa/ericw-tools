@@ -664,7 +664,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             const auto res = CalcPointNormal(bsp, face, vec3_t_to_glm(point), phongshaded, surf->lightmapscale, 0);
             
             surf->occluded[i] = !get<0>(res);
-            *realfacenum = Face_GetNum(bsp, std::get<1>(res));
+            *realfacenum = std::get<1>(res) != nullptr ? Face_GetNum(bsp, std::get<1>(res)) : -1;
             glm_to_vec3_t(std::get<2>(res), point);
             glm_to_vec3_t(std::get<3>(res), norm);
             
