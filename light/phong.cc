@@ -211,7 +211,7 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp)
     edgeToFaceMap_t result;
     
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
+        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         
         // walk edges
         for (int j = 0; j < f->numedges; j++) {
@@ -248,7 +248,7 @@ static vector<face_cache_t> MakeFaceCache(const bsp2_t *bsp)
 {
     vector<face_cache_t> result;
     for (int i=0; i<bsp->numfaces; i++) {
-        const bsp2_dface_t *face = &bsp->dfaces[i];
+        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
         result.push_back(face_cache_t{bsp, face, Face_VertexNormals(bsp, face)});
     }
     return result;
@@ -275,7 +275,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             continue;
         
         for (int j=info->model->firstface; j < info->model->firstface + info->model->numfaces; j++) {
-            const bsp2_dface_t *f = &bsp->dfaces[j];
+            const bsp2_dface_t *f = BSP_GetFace(bsp, j);
             
             extended_texinfo_flags[f->texinfo] &= ~(TEX_PHONG_ANGLE_MASK);
             extended_texinfo_flags[f->texinfo] |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
@@ -284,13 +284,13 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     
     // build "plane -> faces" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
+        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         planesToFaces[f->planenum].push_back(f);
     }
     
     // build "vert index -> faces" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
+        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         for (int j = 0; j < f->numedges; j++) {
             const int v = Face_VertexAtIndex(bsp, f, j);
             vertsToFaces[v].push_back(f);
@@ -308,7 +308,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     
     // build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        bsp2_dface_t *f = &bsp->dfaces[i];
+        bsp2_dface_t *f = BSP_GetFace(const_cast<bsp2_t *>(bsp), i);
         
         const vec3 f_norm = Face_Normal_E(bsp, f);
         
@@ -344,7 +344,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     // finally do the smoothing for each face
     for (int i = 0; i < bsp->numfaces; i++)
     {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
+        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         if (f->numedges < 3) {
             logprint("CalcualateVertexNormals: face %d is degenerate with %d edges\n", i, f->numedges);
             continue;

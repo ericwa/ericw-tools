@@ -1544,7 +1544,7 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
             const modelinfo_t *face_modelinfo;
             int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
 
-            surf = &bsp->dfaces[facenum];
+            surf = BSP_GetFace(bsp, facenum);
             const char *texname = Face_TextureName(bsp, surf);
 
             face_modelinfo = ModelInfoForFace(bsp, facenum);

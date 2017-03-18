@@ -519,7 +519,7 @@ Embree_TraceInit(const bsp2_t *bsp)
         const bool isWorld = (model->model == &bsp->dmodels[0]);
         
         for (int i=0; i<model->model->numfaces; i++) {
-            const bsp2_dface_t *face = &bsp->dfaces[model->model->firstface + i];
+            const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
             const char *texname = Face_TextureName(bsp, face);
 
             if (model->alpha.floatValue() < 1.0f) {
@@ -542,7 +542,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     /* Self-shadow models */
     for (const modelinfo_t *model : selfshadowlist) {
         for (int i=0; i<model->model->numfaces; i++) {
-            const bsp2_dface_t *face = &bsp->dfaces[model->model->firstface + i];
+            const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
             selfshadowfaces.push_back(face);
         }
     }

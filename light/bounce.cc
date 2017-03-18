@@ -145,7 +145,7 @@ MakeBounceLightsThread (void *arg)
         if (i == -1)
             break;
     
-        const bsp2_dface_t *face = &bsp->dfaces[i];
+        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
         
         if (!Face_ShouldBounce(bsp, face)) {
             continue;

@@ -247,7 +247,7 @@ static bool
 Model_HasFence(const bsp2_t *bsp, const dmodel_t *model)
 {
     for (int j = model->firstface; j < model->firstface + model->numfaces; j++) {
-        const bsp2_dface_t *face = &bsp->dfaces[j];
+        const bsp2_dface_t *face = BSP_GetFace(bsp, j);
         if (Face_TextureName(bsp, face)[0] == '{') {
             return true;
         }
@@ -274,7 +274,7 @@ BSP_MakeTnodes(const bsp2_t *bsp)
     
     faceinfos = (faceinfo_t *) malloc(bsp->numfaces * sizeof(faceinfo_t));
     for (int i = 0; i < bsp->numfaces; i++)
-        MakeFaceInfo(bsp, &bsp->dfaces[i], &faceinfos[i]);
+        MakeFaceInfo(bsp, BSP_GetFace(bsp, i), &faceinfos[i]);
     
     MakeFenceInfo(bsp);
 }

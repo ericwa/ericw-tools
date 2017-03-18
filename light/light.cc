@@ -234,7 +234,7 @@ LightThread(void *arg)
         if (facenum == -1)
             break;
 
-        bsp2_dface_t *f = &bsp->dfaces[facenum];
+        bsp2_dface_t *f = BSP_GetFace(const_cast<bsp2_t *>(bsp), facenum);
         
         /* Find the correct model offset */
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
@@ -534,7 +534,7 @@ ExportObj(const char *filename, const bsp2_t *bsp)
     const int end = bsp->dmodels[0].firstface + bsp->dmodels[0].numfaces;
     
     for (int i=start; i<end; i++) {
-        ExportObjFace(objfile, bsp, &bsp->dfaces[i], &vertcount);
+        ExportObjFace(objfile, bsp, BSP_GetFace(bsp, i), &vertcount);
     }
     
     fclose(objfile);
@@ -559,7 +559,7 @@ Face_NearestCentroid(const bsp2_t *bsp, const glm::vec3 &point)
     float nearest_dist = VECT_MAX;
     
     for (int i=0; i<bsp->numfaces; i++) {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
+        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         
         const glm::vec3 fc = Face_Centroid(bsp, f);
         

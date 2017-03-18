@@ -33,6 +33,18 @@ int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f)
     return static_cast<int>(diff);
 }
 
+const bsp2_dface_t *BSP_GetFace(const bsp2_t *bsp, int fnum)
+{
+    Q_assert(fnum >= 0 && fnum < bsp->numfaces);
+    return &bsp->dfaces[fnum];
+}
+
+bsp2_dface_t *BSP_GetFace(bsp2_t *bsp, int fnum)
+{
+    Q_assert(fnum >= 0 && fnum < bsp->numfaces);
+    return &bsp->dfaces[fnum];
+}
+
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
 int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {

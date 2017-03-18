@@ -25,6 +25,7 @@
 
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
+#include <common/bsputils.hh>
 #include <common/mathlib.hh>
 
 /* FIXME - share header with qbsp, etc. */
@@ -126,14 +127,14 @@ PrintModelInfo(const bsp2_t *bsp)
  * Quick hack to check verticies of faces lie on the correct plane
  */
 #define ON_EPSILON 0.01
-const vec3_t vec3_origin = { 0, 0, 0 };
+
 static void
 CheckBSPFacesPlanar(const bsp2_t *bsp)
 {
     int i, j;
 
     for (i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *face = &bsp->dfaces[i];
+        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
         dplane_t plane = bsp->dplanes[face->planenum];
 
         if (face->side) {
@@ -161,7 +162,7 @@ CheckBSPFile(const bsp2_t *bsp)
 
     /* faces */
     for (i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *face = &bsp->dfaces[i];
+        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
 
         /* texinfo bounds check */
         if (face->texinfo < 0)

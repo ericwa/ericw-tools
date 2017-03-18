@@ -20,6 +20,7 @@
 #include <float.h>
 
 #include <vis/vis.hh>
+#include <common/bsputils.hh>
 
 /*
 
@@ -110,7 +111,7 @@ CalcAmbientSounds(bsp2_t *bsp)
             hit = &bsp->dleafs[j + 1];
 
             for (k = 0; k < hit->nummarksurfaces; k++) {
-                surf = &bsp->dfaces[bsp->dmarksurfaces[hit->firstmarksurface + k]];
+                surf = BSP_GetFace(bsp, bsp->dmarksurfaces[hit->firstmarksurface + k]);
                 info = &bsp->texinfo[surf->texinfo];
                 ofs = bsp->dtexdata.header->dataofs[info->miptex];
                 miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
