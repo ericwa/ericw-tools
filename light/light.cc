@@ -405,6 +405,11 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     CalcualateVertexNormals(bsp);
     
+    if (cfg_static.bounce.boolValue()) {
+        MakeTextureColors(bsp);
+        MakeBounceLights(cfg_static, bsp);
+    }
+    
 #if 0
     lightbatchthread_info_t info;
     info.all_batches = MakeLightingBatches(bsp);
@@ -1115,10 +1120,6 @@ light_main(int argc, const char **argv)
         CheckLitNeeded(cfg);
         SetupDirt(cfg);
         
-        if (cfg.bounce.boolValue()) {
-            MakeTextureColors(bsp);
-            MakeBounceLights(cfg, bsp);
-        }
         LightWorld(&bspdata, !!lmscaleoverride);
         
         /*invalidate any bspx lighting info early*/
