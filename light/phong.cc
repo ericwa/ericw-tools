@@ -272,6 +272,7 @@ void
 CalcualateVertexNormals(const bsp2_t *bsp)
 {
     Q_assert(!s_builtPhongCaches);
+    s_builtPhongCaches = true;
     
     EdgeToFaceMap = MakeEdgeToFaceMap(bsp);
     
@@ -429,8 +430,6 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     }
     
     FaceCache = MakeFaceCache(bsp);
-    
-    s_builtPhongCaches = true;
 }
 
 const face_cache_t &FaceCacheForFNum(int fnum)
