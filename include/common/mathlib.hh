@@ -332,6 +332,7 @@ glm::vec3 GLM_TriangleCentroid(const glm::vec3 &v0, const glm::vec3 &v1, const g
 float GLM_TriangleArea(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
 float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point);
 glm::vec3 GLM_ProjectPointOntoPlane(const glm::vec4 &plane, const glm::vec3 &point);
+float GLM_PolyArea(const std::vector<glm::vec3> &points);
 glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points);
 glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points);
 /// Returns the index of the polygon edge, and the closest point on that edge, to the given point

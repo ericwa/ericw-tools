@@ -187,6 +187,19 @@ TEST(mathlib, PolygonCentroid) {
     EXPECT_EQ(vec3(32,32,0), GLM_PolyCentroid(poly));
 }
 
+TEST(mathlib, PolygonArea) {
+    // poor test.. but at least checks that the colinear point is treated correctly
+    const vector<vec3> poly {
+        { 0,0,0 },
+        { 0,32,0 }, // colinear
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    
+    EXPECT_EQ(64.0f * 64.0f, GLM_PolyArea(poly));
+}
+
 TEST(mathlib, BarycentricFromPoint) {
     const tri_t tri = make_tuple<vec3,vec3,vec3>( // clockwise
                                                  { 0,0,0 },

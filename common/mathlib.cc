@@ -440,6 +440,24 @@ glm::vec3 GLM_ProjectPointOntoPlane(const glm::vec4 &plane, const glm::vec3 &poi
     return point + move;
 }
 
+float GLM_PolyArea(const std::vector<glm::vec3> &points)
+{
+    Q_assert(points.size() >= 3);
+    
+    float poly_area = 0;
+    
+    const vec3 v0 = points.at(0);
+    for (int i = 2; i < points.size(); i++) {
+        const vec3 v1 = points.at(i-1);
+        const vec3 v2 = points.at(i);
+        
+        const float triarea = GLM_TriangleArea(v0, v1, v2);
+        
+        poly_area += triarea;
+    }
+    
+    return poly_area;
+}
 
 glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points)
 {
