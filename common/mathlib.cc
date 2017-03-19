@@ -638,3 +638,19 @@ std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const 
     
     return clipped;
 }
+
+// from: http://stackoverflow.com/a/1501725
+// see also: http://mathworld.wolfram.com/Projection.html
+float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+{
+    const glm::vec3 vp = p - v;
+    const glm::vec3 vw = w - v;
+    
+    const float l2 = glm::dot(vw, vw);
+    if (l2 == 0) {
+        return 0;
+    }
+    
+    const float t = glm::dot(vp, vw) / l2;
+    return t;
+}

@@ -357,22 +357,6 @@ CalcFaceExtents(const bsp2_dface_t *face,
     }
 }
 
-// from: http://stackoverflow.com/a/1501725
-// see also: http://mathworld.wolfram.com/Projection.html
-static float
-FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p) {
-    const glm::vec3 vp = p - v;
-    const glm::vec3 vw = w - v;
-    
-    const float l2 = glm::dot(vw, vw);
-    if (l2 == 0) {
-        return 0;
-    }
-    
-    const float t = glm::dot(vp, vw) / l2;
-    return t;
-}
-
 using position_t = std::tuple<bool, const bsp2_dface_t *, glm::vec3, glm::vec3>;
 
 static const float sampleOffPlaneDist = 1.0f;

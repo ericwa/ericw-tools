@@ -511,3 +511,11 @@ TEST(mathlib, RandomPointInPoly) {
     
     ASSERT_LT(glm::length(avg - glm::vec3(32, 32, 0)), 4);
 }
+
+TEST(mathlib, FractionOfLine) {
+    ASSERT_FLOAT_EQ(0, FractionOfLine(vec3(0,0,0), vec3(1,1,1), vec3(0,0,0)));
+    ASSERT_FLOAT_EQ(0.5, FractionOfLine(vec3(0,0,0), vec3(1,1,1), vec3(0.5, 0.5, 0.5)));
+    ASSERT_FLOAT_EQ(1, FractionOfLine(vec3(0,0,0), vec3(1,1,1), vec3(1,1,1)));
+    ASSERT_FLOAT_EQ(2, FractionOfLine(vec3(0,0,0), vec3(1,1,1), vec3(2,2,2)));
+    ASSERT_FLOAT_EQ(-1, FractionOfLine(vec3(0,0,0), vec3(1,1,1), vec3(-1,-1,-1)));
+}

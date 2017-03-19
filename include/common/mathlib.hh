@@ -346,6 +346,10 @@ std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const 
 std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std::vector<glm::vec3> &poly, const glm::vec4 &plane);
 glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points);
 
+/// projects p onto the vw line.
+/// returns 0 for p==v, 1 for p==w
+float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
+
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
 static inline glm::vec4 bilinearWeights(const float x, const float y) {
