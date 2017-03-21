@@ -758,17 +758,16 @@ ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *ent
         return nullptr;
     }
 
-        // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
-        // to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
-        // (it uses 32 bit precision in CalcSurfaceExtents)
-        for (i = 0; i < 2; i++) {
-                for (j = 0; j < 4; j++) {
-                        vec_t r = Q_rint(tx.vecs[i][j]);
-                        if (fabs(tx.vecs[i][j] - r) < ZERO_EPSILON)
-                                tx.vecs[i][j] = r;
-                }
+    // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
+    // to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
+    // (it uses 32 bit precision in CalcSurfaceExtents)
+    for (i = 0; i < 2; i++) {
+        for (j = 0; j < 4; j++) {
+            vec_t r = Q_rint(tx.vecs[i][j]);
+            if (fabs(tx.vecs[i][j] - r) < ZERO_EPSILON)
+                tx.vecs[i][j] = r;
         }
-
+    }
 
     face->texinfo = FindTexinfoEnt(&tx, entity);
 
