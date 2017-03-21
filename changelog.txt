@@ -1,3 +1,12 @@
+2017-03-21 TyrUtils-ericw 0.15.10 release
+
+- light: fix Linux binary
+- light: lights with a lightstyle now bounce
+- light: new sample point positioning code
+- light: per-light "_bouncescale" key
+- qbsp: origin brush support
+- qbsp: add -omitdetail option, strips out all func_detail brushes
+
 2016-11-20 TyrUtils-ericw 0.15.9 release
 
 - light: fix black fringes on bmodels that are touching against the world
