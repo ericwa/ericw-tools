@@ -304,7 +304,7 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 
 
 static void
-TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv)
+TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv, vec3_t snapped_normal)
 {
     vec3_t baseaxis[18] = {
         {0, 0, 1}, {1, 0, 0}, {0, -1, 0},       // floor
@@ -332,6 +332,7 @@ TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv)
 
     VectorCopy(baseaxis[bestaxis * 3 + 1], xv);
     VectorCopy(baseaxis[bestaxis * 3 + 2], yv);
+    VectorCopy(baseaxis[bestaxis * 3], snapped_normal);
 }
 
 static texcoord_style_t
@@ -365,8 +366,10 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
     int sv, tv;
     vec_t ang, sinv, cosv;
     vec_t ns, nt;
+    vec3_t unused;
+    
+    TextureAxisFromPlane(plane, vecs[0], vecs[1], unused);
 
-    TextureAxisFromPlane(plane, vecs[0], vecs[1]);
 
     /* Rotate axis */
     ang = rotate / 180.0 * Q_PI;
