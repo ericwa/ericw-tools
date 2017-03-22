@@ -235,6 +235,8 @@ vec_t VectorNormalize(vec3_t v);
 void VectorInverse(vec3_t v);
 void VectorScale(const vec3_t v, const vec_t scale, vec3_t out);
 
+float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, const vec3_t normal);
+
 #ifdef __GNUC__
 /* min and max macros with type checking */
 #define qmax(a,b) ({      \
