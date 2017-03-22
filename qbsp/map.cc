@@ -1026,12 +1026,6 @@ LoadMapFile(void)
 }
 
 static std::string
-TexDefToString_QuakeEd(const mapface_t &mapface, const mtexinfo_t &texinfo)
-{
-    return mapface.texname + " 0 0 0 1 1";
-}
-
-static std::string
 TexDefToString_QuarkType1(const mapface_t &mapface, const mtexinfo_t &texinfo)
 {
     Error("Unimplemented\n");
@@ -1098,9 +1092,17 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
     const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
     
     switch(format) {
-        case texcoord_style_t::TX_QUAKED:
-            Error("Unimplemented");
+        case texcoord_style_t::TX_QUAKED: {
+            const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texinfo.vecs);
+            
+            fprintf(f, "%0.17f %0.17f %0.17f %0.17f %0.17f",
+                    quakeed.shift[0],
+                    quakeed.shift[1],
+                    quakeed.rotate,
+                    quakeed.scale[0],
+                    quakeed.scale[1]);
             break;
+        }
         case texcoord_style_t::TX_QUARK_TYPE1:
             Error("Unimplemented");
             break;
@@ -1173,6 +1175,9 @@ void ConvertMapFile(void)
     std::string filename = stripExt(options.szBSPName);
     
     switch(options.convertMapTexFormat) {
+        case texcoord_style_t::TX_QUAKED:
+            filename += "-quake.map";
+            break;
         case texcoord_style_t::TX_VALVE_220:
             filename += "-valve220.map";
             break;
