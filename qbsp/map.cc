@@ -357,6 +357,103 @@ ParseExtendedTX(parser_t *parser)
     return style;
 }
 
+class texdef_quake_ed_t {
+public:
+    vec_t rotate;
+    vec_t scale[2];
+    vec_t shift[2];
+};
+
+static texdef_quake_ed_t
+TexDef_BSPToQuakeEd(const plane_t &faceplane, const float in_vecs[2][4])
+{
+    // First get the un-rotated, un-scaled texture vecs (based on the face plane).
+    vec3_t snapped_normal;
+    vec3_t unrotated_vecs[2];
+    TextureAxisFromPlane(&faceplane, unrotated_vecs[0], unrotated_vecs[1], snapped_normal);
+    
+    // These axes rotate counterclockwise
+    const vec3_t posX { 1,0,0};
+    const vec3_t negY { 0,-1,0};
+    const vec3_t posZ { 0,0,1};
+    
+    const bool ccw = (VectorCompare(posX, snapped_normal)
+                      || VectorCompare(negY, snapped_normal)
+                      || VectorCompare(posZ, snapped_normal));
+    
+    // Extract the final scale (magnitude only, we don't know the sign yet) and shift values
+    // Also normalize the BSP texture axes and store in rotated_vec.
+    vec_t scale[2], shift[2];
+    vec3_t rotated_vec[2];
+    for (int i=0; i<2; i++) {
+        for (int j=0; j<3; j++) {
+            rotated_vec[i][j] = in_vecs[i][j];
+        }
+        const vec_t length = VectorNormalize(rotated_vec[i]);
+        scale[i] = 1.0 / length;
+        shift[i] = in_vecs[i][3];
+    }
+    
+    // We know that both unrotated_vecs were rotated by the same amount,
+    // then each possibly was multiplied by -1, to get rotated_vecs.
+    //
+    // To figure out the signs on the scales, try all 4 possibilities.
+    float angles[4][2];
+    for (int sign_index=0; sign_index<4; sign_index++) {
+        float sign0 = (sign_index / 2) == 1 ? -1.0 : 1.0;
+        float sign1 = (sign_index % 2) == 1 ? -1.0 : 1.0;
+        
+        vec3_t rotated_flipped_vec[2];
+        VectorScale(rotated_vec[0], sign0, rotated_flipped_vec[0]);
+        VectorScale(rotated_vec[1], sign1, rotated_flipped_vec[1]);
+        
+        // Try to reproduce the rotation
+        for (int i=0; i<2; i++)
+        {
+            float angle = SignedDegreesBetweenUnitVectors(unrotated_vecs[i], rotated_flipped_vec[i], snapped_normal);
+            
+            if (ccw)
+                angle *= -1;
+            
+            angles[sign_index][i] = angle;
+        }
+    }
+    
+    float bestangle = 0;
+    
+    float closest_angle_dist = FLT_MAX;
+    int best_signindex = -1;
+    
+    // There should be a combination of signs that give both vectors the same amount of rotation
+    for (int i=0; i<4; i++) {
+        const float dist = fabs(angles[i][0] - angles[i][1]);
+        if (dist < closest_angle_dist) {
+            closest_angle_dist = dist;
+            bestangle = angles[i][0];
+            best_signindex = i;
+        }
+    }
+    
+    if (closest_angle_dist > 0.01) {
+//        printf("unequal rotation detected\n");
+    }
+    
+    float sign0 = (best_signindex / 2) == 1 ? -1.0 : 1.0;
+    float sign1 = (best_signindex % 2) == 1 ? -1.0 : 1.0;
+    
+    scale[0] *= sign0;
+    scale[1] *= sign1;
+    
+    texdef_quake_ed_t res;
+    res.rotate = bestangle;
+    for (int i=0; i<2; i++) {
+        res.scale[i] = scale[i];
+        res.shift[i] = shift[i];
+    }
+    
+    return res;
+}
+
 static void
 SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
                    const vec_t scale[2], mtexinfo_t *out)
