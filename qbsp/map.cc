@@ -554,7 +554,7 @@ SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3],
     } else {
         for (i = 0; i < 3; i++) {
             out->vecs[0][i] = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
-            out->vecs[1][i] = (a * vecs[1][i] - c * vecs[0][i]) / determinant;
+            out->vecs[1][i] = -(a * vecs[1][i] - c * vecs[0][i]) / determinant;
         }
     }
 
