@@ -378,10 +378,10 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
     else if (vecs[0][1])
         sv = 1;
     else
-        sv = 2;
+        sv = 2; // unreachable, due to TextureAxisFromPlane lookup table
 
     if (vecs[1][0])
-        tv = 0;
+        tv = 0; // unreachable, due to TextureAxisFromPlane lookup table
     else if (vecs[1][1])
         tv = 1;
     else
