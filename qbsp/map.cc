@@ -623,7 +623,7 @@ static void ComputeAxisBase( const vec3_t normal_unsanitized, vec3_t texX, vec3_
 }
 
 static void
-SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, mtexinfo_t *out)
+SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, float vecs[2][4])
 {
     vec3_t texX, texY;
     
@@ -652,15 +652,15 @@ SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int 
  
  */
     
-    out->vecs[0][0] = texWidth * ((texX[0] * texMat[0][0]) + (texY[0] * texMat[0][1]));
-    out->vecs[0][1] = texWidth * ((texX[1] * texMat[0][0]) + (texY[1] * texMat[0][1]));
-    out->vecs[0][2] = texWidth * ((texX[2] * texMat[0][0]) + (texY[2] * texMat[0][1]));
-    out->vecs[0][3] = texWidth * texMat[0][2];
+    vecs[0][0] = texWidth * ((texX[0] * texMat[0][0]) + (texY[0] * texMat[0][1]));
+    vecs[0][1] = texWidth * ((texX[1] * texMat[0][0]) + (texY[1] * texMat[0][1]));
+    vecs[0][2] = texWidth * ((texX[2] * texMat[0][0]) + (texY[2] * texMat[0][1]));
+    vecs[0][3] = texWidth * texMat[0][2];
     
-    out->vecs[1][0] = texHeight * ((texX[0] * texMat[1][0]) + (texY[0] * texMat[1][1]));
-    out->vecs[1][1] = texHeight * ((texX[1] * texMat[1][0]) + (texY[1] * texMat[1][1]));
-    out->vecs[1][2] = texHeight * ((texX[2] * texMat[1][0]) + (texY[2] * texMat[1][1]));
-    out->vecs[1][3] = texHeight * texMat[1][2];
+    vecs[1][0] = texHeight * ((texX[0] * texMat[1][0]) + (texY[0] * texMat[1][1]));
+    vecs[1][1] = texHeight * ((texX[1] * texMat[1][0]) + (texY[1] * texMat[1][1]));
+    vecs[1][2] = texHeight * ((texX[2] * texMat[1][0]) + (texY[2] * texMat[1][1]));
+    vecs[1][3] = texHeight * texMat[1][2];
 }
 
 static void
@@ -816,7 +816,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
         SetTexinfo_Valve220(axis, shift, scale, tx);
         break;
     case TX_BRUSHPRIM:
-        SetTexinfo_BrushPrimitives(texMat, plane->normal, width, height, tx);
+        SetTexinfo_BrushPrimitives(texMat, plane->normal, width, height, tx->vecs);
         break;
     case TX_QUAKED:
     default:
