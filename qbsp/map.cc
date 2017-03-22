@@ -663,6 +663,59 @@ SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int 
     vecs[1][3] = texHeight * texMat[1][2];
 }
 
+class texdef_brush_primitives_t {
+public:
+    vec3_t texMat[2];
+};
+
+static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const float in_vecs[2][4], vec_t *st_out)
+{
+    for (int i=0; i<2; i++) {
+        st_out[i] = (point[0] * in_vecs[i][0]
+                     + point[1] * in_vecs[i][1]
+                     + point[2] * in_vecs[i][2]
+                     +            in_vecs[i][3]) / static_cast<vec_t>(texSize[i]);
+    }
+}
+
+// From FaceToBrushPrimitFace in GtkRadiant
+static texdef_brush_primitives_t
+TexDef_BSPToBrushPrimitives(const plane_t plane, const int texSize[2], const float in_vecs[2][4])
+{
+    vec3_t texX, texY;
+    ComputeAxisBase( plane.normal, texX, texY );
+    
+    // ST of (0,0) (1,0) (0,1)
+    vec_t ST[3][5]; // [ point index ] [ xyz ST ]
+    
+    // compute projection vector
+    vec3_t proj;
+    VectorCopy( plane.normal,proj );
+    VectorScale( proj,plane.dist,proj );
+    
+    // (0,0) in plane axis base is (0,0,0) in world coordinates + projection on the affine plane
+    // (1,0) in plane axis base is texX in world coordinates + projection on the affine plane
+    // (0,1) in plane axis base is texY in world coordinates + projection on the affine plane
+    // use old texture code to compute the ST coords of these points
+    VectorCopy( proj,ST[0] );
+    BSP_GetSTCoordsForPoint(&ST[0][0], texSize, in_vecs, &ST[0][3]);
+    VectorCopy( texX,ST[1] );
+    VectorAdd( ST[1],proj,ST[1] );
+    BSP_GetSTCoordsForPoint(&ST[1][0], texSize, in_vecs, &ST[1][3]);
+    VectorCopy( texY,ST[2] );
+    VectorAdd( ST[2],proj,ST[2] );
+    BSP_GetSTCoordsForPoint(&ST[2][0], texSize, in_vecs, &ST[2][3]);
+    // compute texture matrix
+    texdef_brush_primitives_t res;
+    res.texMat[0][2] = ST[0][3];
+    res.texMat[1][2] = ST[0][4];
+    res.texMat[0][0] = ST[1][3] - res.texMat[0][2];
+    res.texMat[1][0] = ST[1][4] - res.texMat[1][2];
+    res.texMat[0][1] = ST[2][3] - res.texMat[0][2];
+    res.texMat[1][1] = ST[2][4] - res.texMat[1][2];
+    return res;
+}
+
 static void
 ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
 {
@@ -1087,15 +1140,14 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
         fprintf(f, ") ");
     }
     
-    fprintf(f, "%s ", mapface.texname.c_str());
-    
     const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
     
     switch(format) {
         case texcoord_style_t::TX_QUAKED: {
             const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texinfo.vecs);
             
-            fprintf(f, "%0.17f %0.17f %0.17f %0.17f %0.17f",
+            fprintf(f, "%s %0.17f %0.17f %0.17f %0.17f %0.17f",
+                    mapface.texname.c_str(),
                     quakeed.shift[0],
                     quakeed.shift[1],
                     quakeed.rotate,
@@ -1109,7 +1161,8 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
         case texcoord_style_t::TX_VALVE_220: {
             const texdef_valve_t valve = TexDef_BSPToValve(mapface, texinfo);
             
-            fprintf(f, "[ %0.17f %0.17f %0.17f %0.17f ] [ %0.17f %0.17f %0.17f %0.17f ] 0 %0.17f %0.17f",
+            fprintf(f, "%s [ %0.17f %0.17f %0.17f %0.17f ] [ %0.17f %0.17f %0.17f %0.17f ] 0 %0.17f %0.17f",
+                    mapface.texname.c_str(),
                     valve.axis[0][0],
                     valve.axis[0][1],
                     valve.axis[0][2],
@@ -1122,9 +1175,25 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
                     valve.scale[1]);
             break;
         }
-        case texcoord_style_t::TX_BRUSHPRIM:
-            Error("Unimplemented");
+        case texcoord_style_t::TX_BRUSHPRIM: {
+            EnsureTexturesLoaded();
+            
+            const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
+            int texSize[2];
+            texSize[0] = texture ? texture->width : 64;
+            texSize[1] = texture ? texture->height : 64;
+            
+            const texdef_brush_primitives_t bp = TexDef_BSPToBrushPrimitives(mapface.plane, texSize, texinfo.vecs);
+            fprintf(f, "( ( %0.17f %0.17f %0.17f ) ( %0.17f %0.17f %0.17f ) ) %s",
+                    bp.texMat[0][0],
+                    bp.texMat[0][1],
+                    bp.texMat[0][2],
+                    bp.texMat[1][0],
+                    bp.texMat[1][1],
+                    bp.texMat[1][2],
+                    mapface.texname.c_str());
             break;
+        }
         default:
             Error("Internal error: unknown texcoord_style_t\n");
     }
@@ -1180,6 +1249,9 @@ void ConvertMapFile(void)
             break;
         case texcoord_style_t::TX_VALVE_220:
             filename += "-valve220.map";
+            break;
+        case texcoord_style_t::TX_BRUSHPRIM:
+            filename += "-brushprimitives.map";
             break;
         default:
             Error("Internal error: unknown texcoord_style_t\n");
