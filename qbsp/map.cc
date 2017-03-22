@@ -24,6 +24,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <regex>
 
 #include "qbsp.hh"
 #include "parser.hh"
@@ -332,15 +333,6 @@ TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv)
     VectorCopy(baseaxis[bestaxis * 3 + 1], xv);
     VectorCopy(baseaxis[bestaxis * 3 + 2], yv);
 }
-
-
-typedef enum {
-    TX_QUAKED      = 0,
-    TX_QUARK_TYPE1 = 1,
-    TX_QUARK_TYPE2 = 2,
-    TX_VALVE_220   = 3,
-    TX_BRUSHPRIM   = 4
-} texcoord_style_t;
 
 static texcoord_style_t
 ParseExtendedTX(parser_t *parser)
@@ -662,7 +654,7 @@ parse_error:
 }
 
 static void
-ParseTextureDef(parser_t *parser, const mapbrush_t *brush, mtexinfo_t *tx,
+ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, mtexinfo_t *tx,
                 vec3_t planepts[3], const plane_t *plane)
 {
     vec3_t texMat[2];
@@ -679,6 +671,7 @@ ParseTextureDef(parser_t *parser, const mapbrush_t *brush, mtexinfo_t *tx,
         
         ParseToken(parser, PARSE_SAMELINE);
         tx->miptex = FindMiptex(parser->token);
+        mapface.texname = std::string(parser->token);
         
         EnsureTexturesLoaded();
         const texture_t *texture = WADList_GetTexture(parser->token);
@@ -690,6 +683,8 @@ ParseTextureDef(parser_t *parser, const mapbrush_t *brush, mtexinfo_t *tx,
     } else if (brush->format == brushformat_t::NORMAL) {
         ParseToken(parser, PARSE_SAMELINE);
         tx->miptex = FindMiptex(parser->token);
+        mapface.texname = std::string(parser->token);
+        
         ParseToken(parser, PARSE_SAMELINE);
         if (!strcmp(parser->token, "[")) {
             parser->unget = true;
@@ -733,7 +728,7 @@ ParseTextureDef(parser_t *parser, const mapbrush_t *brush, mtexinfo_t *tx,
 static std::unique_ptr<mapface_t>
 ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *entity)
 {
-    vec3_t planepts[3], planevecs[2];
+    vec3_t planevecs[2];
     vec_t length;
     plane_t *plane;
     mtexinfo_t tx;
@@ -741,17 +736,17 @@ ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *ent
     std::unique_ptr<mapface_t> face { new mapface_t };
 
     face->linenum = parser->linenum;
-    ParsePlaneDef(parser, planepts);
+    ParsePlaneDef(parser, face->planepts);
 
     /* calculate the normal/dist plane equation */
-    VectorSubtract(planepts[0], planepts[1], planevecs[0]);
-    VectorSubtract(planepts[2], planepts[1], planevecs[1]);
+    VectorSubtract(face->planepts[0], face->planepts[1], planevecs[0]);
+    VectorSubtract(face->planepts[2], face->planepts[1], planevecs[1]);
     plane = &face->plane;
     CrossProduct(planevecs[0], planevecs[1], plane->normal);
     length = VectorNormalize(plane->normal);
-    plane->dist = DotProduct(planepts[1], plane->normal);
+    plane->dist = DotProduct(face->planepts[1], plane->normal);
 
-    ParseTextureDef(parser, brush, &tx, planepts, plane);
+    ParseTextureDef(parser, *face, brush, &tx, face->planepts, plane);
 
     if (length < NORMAL_EPSILON) {
         Message(msgWarning, warnNoPlaneNormal, parser->linenum);
@@ -930,6 +925,176 @@ LoadMapFile(void)
     Message(msgLiteral, "\n");
 }
 
+static std::string
+TexDefToString_QuakeEd(const mapface_t &mapface, const mtexinfo_t &texinfo)
+{
+    return mapface.texname + " 0 0 0 1 1";
+}
+
+static std::string
+TexDefToString_QuarkType1(const mapface_t &mapface, const mtexinfo_t &texinfo)
+{
+    Error("Unimplemented\n");
+    return "";
+}
+
+class texdef_valve_t {
+public:
+    vec3_t axis[2];
+    vec_t scale[2];
+    vec_t shift[2];
+};
+
+static texdef_valve_t
+TexDef_BSPToValve(const mapface_t &mapface, const mtexinfo_t &in)
+{
+    texdef_valve_t res;
+    
+// From the valve -> bsp code,
+//
+//    for (i = 0; i < 3; i++) {
+//        out->vecs[0][i] = axis[0][i] / scale[0];
+//        out->vecs[1][i] = axis[1][i] / scale[1];
+//    }
+//
+// We'll generate axis vectors of length 1 and pick the necessary scale
+    
+    for (int i=0; i<2; i++) {
+        vec3_t axis;
+        for (int j=0; j<3; j++) {
+            axis[j] = in.vecs[i][j];
+        }
+        const vec_t length = VectorNormalize(axis);
+        res.scale[i] = 1.0 / length;
+        res.shift[i] = in.vecs[i][3];
+        VectorCopy(axis, res.axis[i]);
+    }
+    
+    return res;
+}
+
+static std::string
+TexDefToString_BrushPrimitive(const mapface_t &mapface, const mtexinfo_t &texinfo)
+{
+    Error("Unimplemented\n");
+    return "";
+}
+
+static void
+ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
+{
+    // All formats write the plane points the same way
+    // FIXME: Not QaArK
+    for (int i=0; i<3; i++) {
+        fprintf(f, " ( ");
+        for (int j=0; j<3; j++) {
+            fprintf(f, "%0.17f ", mapface.planepts[i][j]);
+        }
+        fprintf(f, ") ");
+    }
+    
+    fprintf(f, "%s ", mapface.texname.c_str());
+    
+    const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+    
+    switch(format) {
+        case texcoord_style_t::TX_QUAKED:
+            Error("Unimplemented");
+            break;
+        case texcoord_style_t::TX_QUARK_TYPE1:
+            Error("Unimplemented");
+            break;
+        case texcoord_style_t::TX_VALVE_220: {
+            const texdef_valve_t valve = TexDef_BSPToValve(mapface, texinfo);
+            
+            fprintf(f, "[ %0.17f %0.17f %0.17f %0.17f ] [ %0.17f %0.17f %0.17f %0.17f ] 0 %0.17f %0.17f",
+                    valve.axis[0][0],
+                    valve.axis[0][1],
+                    valve.axis[0][2],
+                    valve.shift[0],
+                    valve.axis[1][0],
+                    valve.axis[1][1],
+                    valve.axis[1][2],
+                    valve.shift[1],
+                    valve.scale[0],
+                    valve.scale[1]);
+            break;
+        }
+        case texcoord_style_t::TX_BRUSHPRIM:
+            Error("Unimplemented");
+            break;
+        default:
+            Error("Internal error: unknown texcoord_style_t\n");
+    }
+    
+    fprintf(f, "\n");
+}
+
+static void
+ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const texcoord_style_t format)
+{
+    fprintf(f, "{\n");
+    if (format == texcoord_style_t::TX_BRUSHPRIM) {
+        fprintf(f, "brushDef\n");
+        fprintf(f, "{\n");
+    }
+    for (int i=0; i<mapbrush.numfaces; i++) {
+        ConvertMapFace(f, mapbrush.face(i), format);
+    }
+    if (format == texcoord_style_t::TX_BRUSHPRIM) {
+        fprintf(f, "}\n");
+    }
+    fprintf(f, "}\n");
+}
+
+static void
+ConvertEntity(FILE *f, const mapentity_t *entity, const texcoord_style_t format)
+{
+    fprintf(f, "{\n");
+    for (const epair_t *epair = entity->epairs; epair; epair = epair->next) {
+        fprintf(f, "\"%s\" \"%s\"\n", epair->key, epair->value);
+    }
+    for (int i=0; i<entity->nummapbrushes; i++) {
+        ConvertMapBrush(f, entity->mapbrush(i), format);
+    }
+    fprintf(f, "}\n");
+}
+
+static std::string stripExt(const std::string &filename) {
+    const std::regex extension_regex(R"(\.[^.\/]+$)");
+    const std::string result = std::regex_replace(filename, extension_regex, "");
+    return result;
+}
+
+void ConvertMapFile(void)
+{
+    Message(msgProgress, "ConvertMapFile");
+    
+    std::string filename = stripExt(options.szBSPName);
+    
+    switch(options.convertMapTexFormat) {
+        case texcoord_style_t::TX_VALVE_220:
+            filename += "-valve220.map";
+            break;
+        default:
+            Error("Internal error: unknown texcoord_style_t\n");
+    }
+    
+    FILE *f = fopen(filename.c_str(), "wb");
+    if (f == nullptr)
+        Error("Couldn't open file\n");
+    
+    for (const mapentity_t &entity : map.entities) {
+        ConvertEntity(f, &entity, options.convertMapTexFormat);
+    }
+    
+    fclose(f);
+    
+    std::string msg("Conversion saved to " + filename + "\n");
+    Message(msgLiteral, msg.c_str());
+    
+    options.fVerbose = false;
+}
 
 void
 PrintEntity(const mapentity_t *entity)

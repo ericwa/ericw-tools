@@ -474,11 +474,21 @@ bool FillOutside(node_t *node, const int hullnum, const int numportals);
 
 //=============================================================================
 
+typedef enum {
+    TX_QUAKED      = 0,
+    TX_QUARK_TYPE1 = 1,
+    TX_QUARK_TYPE2 = 2,
+    TX_VALVE_220   = 3,
+    TX_BRUSHPRIM   = 4
+} texcoord_style_t;
+
 typedef struct options_s {
     bool fNofill;
     bool fNoclip;
     bool fNoskip;
     bool fOnlyents;
+    bool fConvertMapFormat;
+    texcoord_style_t convertMapTexFormat;
     bool fVerbose;
     bool fAllverbose;
     bool fSplitspecial;
@@ -522,6 +532,8 @@ typedef struct epair_s {
 
 typedef struct mapface_s {
     plane_t plane;
+    vec3_t planepts[3];
+    std::string texname;
     int texinfo;
     int linenum;
 } mapface_t;
@@ -594,6 +606,7 @@ extern mapentity_t *pWorldEnt();
 
 void EnsureTexturesLoaded();
 void LoadMapFile(void);
+void ConvertMapFile(void);
 
 int FindMiptex(const char *name);
 int FindTexinfo(mtexinfo_t *texinfo, uint64_t flags); //FIXME: Make this take const texinfo

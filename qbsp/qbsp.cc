@@ -563,6 +563,10 @@ ProcessFile(void)
 {
     // load brushes and entities
     LoadMapFile();
+    if (options.fConvertMapFormat) {
+        ConvertMapFile();
+        return;
+    }
     if (options.fOnlyents) {
         UpdateEntLump();
         return;
@@ -809,6 +813,25 @@ ParseOptions(char *szOptions)
                 options.fObjExport = true;
             } else if (!Q_strcasecmp(szTok, "omitdetail")) {
                 options.fOmitDetail = true;
+            } else if (!Q_strcasecmp(szTok, "convert")) {
+                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+                if (!szTok2)
+                    Error("Invalid argument to option %s", szTok);
+                
+                if (!Q_strcasecmp(szTok2, "quake")) {
+                    options.convertMapTexFormat = texcoord_style_t::TX_QUAKED;
+                } else if (!Q_strcasecmp(szTok2, "etp")) {
+                    options.convertMapTexFormat = texcoord_style_t::TX_QUARK_TYPE1;
+                } else if (!Q_strcasecmp(szTok2, "valve220")) {
+                    options.convertMapTexFormat = texcoord_style_t::TX_VALVE_220;
+                } else if (!Q_strcasecmp(szTok2, "brushprimitives")) {
+                    options.convertMapTexFormat = texcoord_style_t::TX_BRUSHPRIM;
+                } else {
+                    Error("Invalid argument to option %s", szTok);
+                }
+                
+                options.fConvertMapFormat = true;
+                szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
                 PrintOptions();
             else
@@ -891,7 +914,7 @@ InitQBSP(int argc, char **argv)
     }
 
     // Remove already existing files
-    if (!options.fOnlyents) {
+    if (!options.fOnlyents && !options.fConvertMapFormat) {
         StripExtension(options.szBSPName);
         strcat(options.szBSPName, ".bsp");
         remove(options.szBSPName);
