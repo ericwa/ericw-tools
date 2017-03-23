@@ -824,7 +824,7 @@ ParseOptions(char *szOptions)
                     options.convertMapTexFormat = texcoord_style_t::TX_QUARK_TYPE1;
                 } else if (!Q_strcasecmp(szTok2, "valve220")) {
                     options.convertMapTexFormat = texcoord_style_t::TX_VALVE_220;
-                } else if (!Q_strcasecmp(szTok2, "brushprimitives")) {
+                } else if (!Q_strcasecmp(szTok2, "bp")) {
                     options.convertMapTexFormat = texcoord_style_t::TX_BRUSHPRIM;
                 } else {
                     Error("Invalid argument to option %s", szTok);

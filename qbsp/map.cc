@@ -1266,7 +1266,7 @@ void ConvertMapFile(void)
             filename += "-valve220.map";
             break;
         case texcoord_style_t::TX_BRUSHPRIM:
-            filename += "-brushprimitives.map";
+            filename += "-bp.map";
             break;
         default:
             Error("Internal error: unknown texcoord_style_t\n");
