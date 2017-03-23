@@ -1103,7 +1103,7 @@ public:
 };
 
 static texdef_valve_t
-TexDef_BSPToValve(const mapface_t &mapface, const mtexinfo_t &in)
+TexDef_BSPToValve(const float in_vecs[2][4])
 {
     texdef_valve_t res;
     
@@ -1119,7 +1119,7 @@ TexDef_BSPToValve(const mapface_t &mapface, const mtexinfo_t &in)
     for (int i=0; i<2; i++) {
         vec3_t axis;
         for (int j=0; j<3; j++) {
-            axis[j] = in.vecs[i][j];
+            axis[j] = in_vecs[i][j];
         }
         const vec_t length = VectorNormalize(axis);
         // avoid division by 0
@@ -1128,7 +1128,7 @@ TexDef_BSPToValve(const mapface_t &mapface, const mtexinfo_t &in)
         } else {
             res.scale[i] = 0.0;
         }
-        res.shift[i] = in.vecs[i][3];
+        res.shift[i] = in_vecs[i][3];
         VectorCopy(axis, res.axis[i]);
     }
     
@@ -1174,7 +1174,7 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
             Error("Unimplemented");
             break;
         case texcoord_style_t::TX_VALVE_220: {
-            const texdef_valve_t valve = TexDef_BSPToValve(mapface, texinfo);
+            const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
             
             fprintf(f, "%s [ %0.17f %0.17f %0.17f %0.17f ] [ %0.17f %0.17f %0.17f %0.17f ] 0 %0.17f %0.17f",
                     mapface.texname.c_str(),
