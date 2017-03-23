@@ -1135,13 +1135,6 @@ TexDef_BSPToValve(const float in_vecs[2][4])
     return res;
 }
 
-static std::string
-TexDefToString_BrushPrimitive(const mapface_t &mapface, const mtexinfo_t &texinfo)
-{
-    Error("Unimplemented\n");
-    return "";
-}
-
 static void
 ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
 {
