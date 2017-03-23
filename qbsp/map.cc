@@ -390,7 +390,13 @@ TexDef_BSPToQuakeEd(const plane_t &faceplane, const float in_vecs[2][4])
             rotated_vec[i][j] = in_vecs[i][j];
         }
         const vec_t length = VectorNormalize(rotated_vec[i]);
-        scale[i] = 1.0 / length;
+        if (length == 0.0) {
+            // Hack around bad input
+            scale[i] = 0.0;
+        } else {
+            scale[i] = 1.0 / length;
+        }
+        
         shift[i] = in_vecs[i][3];
     }
     
@@ -1112,7 +1118,12 @@ TexDef_BSPToValve(const mapface_t &mapface, const mtexinfo_t &in)
             axis[j] = in.vecs[i][j];
         }
         const vec_t length = VectorNormalize(axis);
-        res.scale[i] = 1.0 / length;
+        // avoid division by 0
+        if (length != 0.0) {
+            res.scale[i] = 1.0 / length;
+        } else {
+            res.scale[i] = 0.0;
+        }
         res.shift[i] = in.vecs[i][3];
         VectorCopy(axis, res.axis[i]);
     }
