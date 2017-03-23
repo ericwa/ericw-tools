@@ -1065,6 +1065,10 @@ LoadMapFile(void)
             break;
         }
     }
+    // Remove dummy entity inserted above 
+    assert(map.entities.back().epairs == nullptr);
+    assert(map.entities.back().numbrushes == 0);
+    map.entities.pop_back();
 
     FreeMem(buf, OTHER, length + 1);
 
