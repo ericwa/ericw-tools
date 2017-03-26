@@ -528,8 +528,22 @@ void checkEq(const glm::vec2 &a, const glm::vec2 &b, float epsilon)
     }
 }
 
+glm::vec2 normalizeShift(const texture_t *texture, const glm::vec2 &in)
+{
+    if (texture == nullptr)
+        return in; // can't do anything without knowing the texture size.
+    
+    int fullWidthOffsets = static_cast<int>(in[0]) / texture->width;
+    int fullHeightOffsets = static_cast<int>(in[1]) / texture->height;
+    
+    glm::vec2 result(in[0] - static_cast<float>(fullWidthOffsets * texture->width),
+                     in[1] - static_cast<float>(fullHeightOffsets * texture->height));
+    return result;
+}
+
+/// `texture` is optional. If given, the "shift" values can be normalized
 static texdef_quake_ed_t
-TexDef_BSPToQuakeEd(const plane_t &faceplane, const float in_vecs[2][4], const vec3_t facepoints[3])
+TexDef_BSPToQuakeEd(const plane_t &faceplane, const texture_t *texture, const float in_vecs[2][4], const vec3_t facepoints[3])
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
     vec3_t snapped_normal;
@@ -606,14 +620,17 @@ TexDef_BSPToQuakeEd(const plane_t &faceplane, const float in_vecs[2][4], const v
     }
     
     const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, &faceplane, false);
-        
+    
     // figure out shift based on facepoints[0]
     glm::vec3 testpoint = vec3_t_to_glm(facepoints[0]);
-        glm::vec2 uv0_actual = evalTexDefAtPoint(addShift(res, glm::vec2(0,0)), &faceplane, testpoint);
-        glm::vec2 uv0_desired = glm::vec2(worldToTexSpace * glm::vec4(testpoint, 1.0f));
-        glm::vec2 shift = uv0_desired - uv0_actual;
-        
-        const texdef_quake_ed_t res2 = addShift(res, shift);
+    glm::vec2 uv0_actual = evalTexDefAtPoint(addShift(res, glm::vec2(0,0)), &faceplane, testpoint);
+    glm::vec2 uv0_desired = glm::vec2(worldToTexSpace * glm::vec4(testpoint, 1.0f));
+    glm::vec2 shift = uv0_desired - uv0_actual;
+    
+    // sometime we have very large shift values, normalize them to be smaller
+    shift = normalizeShift(texture, shift);
+    
+    const texdef_quake_ed_t res2 = addShift(res, shift);
     return res2;
 }
 
@@ -938,7 +955,7 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec3_t planepts[3], const vec_t s
 
     if (false) {
         // Self-test of TexDef_BSPToQuakeEd
-        texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(*plane, out->vecs, planepts);
+        texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(*plane, nullptr, out->vecs, planepts);
     
         if (!EqualDegrees(reversed.rotate, rotate)) {
             reversed.rotate += 180;
@@ -1594,6 +1611,9 @@ TexDef_BSPToValve(const float in_vecs[2][4])
 static void
 ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
 {
+    EnsureTexturesLoaded();
+    const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
+    
     const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
     bool tx2 = false;
@@ -1625,7 +1645,7 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
         case texcoord_style_t::TX_QUARK_TYPE1:
             // fallthrough
         case texcoord_style_t::TX_QUAKED: {
-            const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texinfo.vecs, mapface.planepts);
+            const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texture, texinfo.vecs, mapface.planepts);
             
             fprintf(f, "%s %0.17f %0.17f %0.17f %0.17f %0.17f",
                     mapface.texname.c_str(),
@@ -1654,9 +1674,6 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
             break;
         }
         case texcoord_style_t::TX_BRUSHPRIM: {
-            EnsureTexturesLoaded();
-            
-            const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
             int texSize[2];
             texSize[0] = texture ? texture->width : 64;
             texSize[1] = texture ? texture->height : 64;
