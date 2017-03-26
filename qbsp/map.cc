@@ -1645,7 +1645,6 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
             fprintf(f, "%s ", mapface.texname.c_str());
             fprintDoubleAndSpc(f, quakeed.shift[0]);
             fprintDoubleAndSpc(f, quakeed.shift[1]);
-            fprintDoubleAndSpc(f, quakeed.shift[1]);
             fprintDoubleAndSpc(f, quakeed.rotate);
             fprintDoubleAndSpc(f, quakeed.scale[0]);
             fprintDoubleAndSpc(f, quakeed.scale[1]);
