@@ -827,6 +827,11 @@ Reverse_QuakeEd(glm::mat2x2 M, const plane_t *plane, bool preserveX)
 static void
 SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4])
 {
+    vec_t sanitized_scale[2];
+    for (int i=0; i<2; i++) {
+        sanitized_scale[i] = (scale[i] != 0.0) ? scale[i] : 1.0;
+    }
+    
     vec3_t vecs[2];
     vec3_t snapped_normal;
     TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
@@ -839,7 +844,7 @@ SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate,
                            sAxis[1], tAxis[1]); // col1
     
     glm::mat2x2 rotateM = rotation2x2_deg(rotate);
-    glm::mat2x2 scaleM = scale2x2(1.0/scale[0], 1.0/scale[1]);
+    glm::mat2x2 scaleM = scale2x2(1.0/sanitized_scale[0], 1.0/sanitized_scale[1]);
     
     glm::mat2x2 M = scaleM * rotateM * axisFlipsM;
     
@@ -859,11 +864,11 @@ SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate,
                 reversed.rotate, rotate);
         }
         
-        if (fabs(reversed.scale[0] - scale[0]) > 0.001
-            || fabs(reversed.scale[1] - scale[1]) > 0.001) {
+        if (fabs(reversed.scale[0] - sanitized_scale[0]) > 0.001
+            || fabs(reversed.scale[1] - sanitized_scale[1]) > 0.001) {
             Error("wrong scale, got %f %f exp %f %f\n",
                 reversed.scale[0], reversed.scale[1],
-                scale[0], scale[1]);
+                sanitized_scale[0], sanitized_scale[1]);
         }
     }
     
