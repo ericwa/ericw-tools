@@ -820,9 +820,7 @@ ParseOptions(char *szOptions)
                 
                 if (!Q_strcasecmp(szTok2, "quake")) {
                     options.convertMapTexFormat = texcoord_style_t::TX_QUAKED;
-                } else if (!Q_strcasecmp(szTok2, "etp")) {
-                    options.convertMapTexFormat = texcoord_style_t::TX_QUARK_TYPE1;
-                } else if (!Q_strcasecmp(szTok2, "valve220")) {
+                } else if (!Q_strcasecmp(szTok2, "valve")) {
                     options.convertMapTexFormat = texcoord_style_t::TX_VALVE_220;
                 } else if (!Q_strcasecmp(szTok2, "bp")) {
                     options.convertMapTexFormat = texcoord_style_t::TX_BRUSHPRIM;

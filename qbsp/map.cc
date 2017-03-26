@@ -1736,14 +1736,11 @@ void ConvertMapFile(void)
     std::string filename = stripExt(options.szBSPName);
     
     switch(options.convertMapTexFormat) {
-        case texcoord_style_t::TX_QUARK_TYPE1:
-            filename += "-etp.map";
-            break;
         case texcoord_style_t::TX_QUAKED:
             filename += "-quake.map";
             break;
         case texcoord_style_t::TX_VALVE_220:
-            filename += "-valve220.map";
+            filename += "-valve.map";
             break;
         case texcoord_style_t::TX_BRUSHPRIM:
             filename += "-bp.map";
