@@ -1608,6 +1608,19 @@ TexDef_BSPToValve(const float in_vecs[2][4])
     return res;
 }
 
+static void fprintDoubleAndSpc(FILE *f, double v)
+{
+    int rounded = rint(v);
+    if (static_cast<double>(rounded) == v) {
+        fprintf(f, "%d ", rounded);
+    } else if (std::isfinite(v)) {
+        fprintf(f, "%0.17g ", v);
+    } else {
+        printf("WARNING: suppressing nan or infinity\n");
+        fprintf(f, "0 ");
+    }
+}
+
 static void
 ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
 {
@@ -1615,62 +1628,45 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
     const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
     
     const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-
-    bool tx2 = false;
-    
     
     // Write plane points
-    if (format == texcoord_style_t::TX_QUARK_TYPE1) {
-        const texdef_etp_t etp = TexDef_BSPToETP(mapface.plane, texinfo.vecs);
-        tx2 = etp.tx2;
-        
-        for (int i=0; i<3; i++) {
-            fprintf(f, " ( ");
-            for (int j=0; j<3; j++) {
-                fprintf(f, "%0.17f ", etp.planepoints[i][j]);
-            }
-            fprintf(f, ") ");
+    for (int i=0; i<3; i++) {
+        fprintf(f, " ( ");
+        for (int j=0; j<3; j++) {
+            fprintDoubleAndSpc(f, mapface.planepts[i][j]);
         }
-    } else {
-        for (int i=0; i<3; i++) {
-            fprintf(f, " ( ");
-            for (int j=0; j<3; j++) {
-                fprintf(f, "%0.17f ", mapface.planepts[i][j]);
-            }
-            fprintf(f, ") ");
-        }
+        fprintf(f, ") ");
     }
     
     switch(format) {
-        case texcoord_style_t::TX_QUARK_TYPE1:
-            // fallthrough
         case texcoord_style_t::TX_QUAKED: {
             const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texture, texinfo.vecs, mapface.planepts);
             
-            fprintf(f, "%s %0.17f %0.17f %0.17f %0.17f %0.17f",
-                    mapface.texname.c_str(),
-                    quakeed.shift[0],
-                    quakeed.shift[1],
-                    quakeed.rotate,
-                    quakeed.scale[0],
-                    quakeed.scale[1]);
+            fprintf(f, "%s ", mapface.texname.c_str());
+            fprintDoubleAndSpc(f, quakeed.shift[0]);
+            fprintDoubleAndSpc(f, quakeed.shift[1]);
+            fprintDoubleAndSpc(f, quakeed.shift[1]);
+            fprintDoubleAndSpc(f, quakeed.rotate);
+            fprintDoubleAndSpc(f, quakeed.scale[0]);
+            fprintDoubleAndSpc(f, quakeed.scale[1]);
             break;
         }
         case texcoord_style_t::TX_VALVE_220: {
             const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
             
-            fprintf(f, "%s [ %0.17f %0.17f %0.17f %0.17f ] [ %0.17f %0.17f %0.17f %0.17f ] 0 %0.17f %0.17f",
-                    mapface.texname.c_str(),
-                    valve.axis[0][0],
-                    valve.axis[0][1],
-                    valve.axis[0][2],
-                    valve.shift[0],
-                    valve.axis[1][0],
-                    valve.axis[1][1],
-                    valve.axis[1][2],
-                    valve.shift[1],
-                    valve.scale[0],
-                    valve.scale[1]);
+            fprintf(f, "%s [ ", mapface.texname.c_str());
+            fprintDoubleAndSpc(f, valve.axis[0][0]);
+            fprintDoubleAndSpc(f, valve.axis[0][1]);
+            fprintDoubleAndSpc(f, valve.axis[0][2]);
+            fprintDoubleAndSpc(f, valve.shift[0]);
+            fprintf(f, "] [ ");
+            fprintDoubleAndSpc(f, valve.axis[1][0]);
+            fprintDoubleAndSpc(f, valve.axis[1][1]);
+            fprintDoubleAndSpc(f, valve.axis[1][2]);
+            fprintDoubleAndSpc(f, valve.shift[1]);
+            fprintf(f, "] 0 ");
+            fprintDoubleAndSpc(f, valve.scale[0]);
+            fprintDoubleAndSpc(f, valve.scale[1]);
             break;
         }
         case texcoord_style_t::TX_BRUSHPRIM: {
@@ -1679,22 +1675,19 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
             texSize[1] = texture ? texture->height : 64;
             
             const texdef_brush_primitives_t bp = TexDef_BSPToBrushPrimitives(mapface.plane, texSize, texinfo.vecs);
-            fprintf(f, "( ( %0.17f %0.17f %0.17f ) ( %0.17f %0.17f %0.17f ) ) %s",
-                    bp.texMat[0][0],
-                    bp.texMat[0][1],
-                    bp.texMat[0][2],
-                    bp.texMat[1][0],
-                    bp.texMat[1][1],
-                    bp.texMat[1][2],
-                    mapface.texname.c_str());
+            fprintf(f, "( ( ");
+            fprintDoubleAndSpc(f, bp.texMat[0][0]);
+            fprintDoubleAndSpc(f, bp.texMat[0][1]);
+            fprintDoubleAndSpc(f, bp.texMat[0][2]);
+            fprintf(f, ") ( ");
+            fprintDoubleAndSpc(f, bp.texMat[1][0]);
+            fprintDoubleAndSpc(f, bp.texMat[1][1]);
+            fprintDoubleAndSpc(f, bp.texMat[1][2]);
+            fprintf(f, ") ) %s", mapface.texname.c_str());
             break;
         }
         default:
             Error("Internal error: unknown texcoord_style_t\n");
-    }
-    
-    if (format == texcoord_style_t::TX_QUARK_TYPE1) {
-        fprintf(f, (tx2 ? " //TX2" : " //TX1"));
     }
     
     fprintf(f, "\n");
