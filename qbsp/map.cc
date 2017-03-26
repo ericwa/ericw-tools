@@ -24,7 +24,6 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <regex>
 
 #include "qbsp.hh"
 #include "parser.hh"
@@ -1731,9 +1730,12 @@ ConvertEntity(FILE *f, const mapentity_t *entity, const conversion_t format)
 }
 
 static std::string stripExt(const std::string &filename) {
-    const std::regex extension_regex(R"(\.[^.\/]+$)");
-    const std::string result = std::regex_replace(filename, extension_regex, "");
-    return result;
+    char filenameCstr[1024];
+    strncpy(filenameCstr, filename.c_str(), sizeof(filenameCstr));
+    filenameCstr[1023] = '\0';
+    
+    StripExtension(filenameCstr);
+    return std::string(filenameCstr);
 }
 
 void ConvertMapFile(void)
