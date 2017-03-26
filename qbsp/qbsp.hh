@@ -484,6 +484,10 @@ typedef enum {
     TX_BRUSHPRIM   = 4
 } texcoord_style_t;
 
+typedef enum {
+    q1, q2
+} mapformat_t;
+
 typedef struct options_s {
     bool fNofill;
     bool fNoclip;
@@ -491,6 +495,7 @@ typedef struct options_s {
     bool fOnlyents;
     bool fConvertMapFormat;
     texcoord_style_t convertMapTexFormat;
+    mapformat_t convertMapFormat;
     bool fVerbose;
     bool fAllverbose;
     bool fSplitspecial;

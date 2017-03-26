@@ -1622,7 +1622,7 @@ static void fprintDoubleAndSpc(FILE *f, double v)
 }
 
 static void
-ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
+ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format, const mapformat_t mapformat)
 {
     EnsureTexturesLoaded();
     const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
@@ -1648,6 +1648,11 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
             fprintDoubleAndSpc(f, quakeed.rotate);
             fprintDoubleAndSpc(f, quakeed.scale[0]);
             fprintDoubleAndSpc(f, quakeed.scale[1]);
+            
+            if (mapformat == mapformat_t::q2) {
+                fprintf(f, "0 0 0");
+            }
+            
             break;
         }
         case texcoord_style_t::TX_VALVE_220: {
@@ -1682,6 +1687,8 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
             fprintDoubleAndSpc(f, bp.texMat[1][0]);
             fprintDoubleAndSpc(f, bp.texMat[1][1]);
             fprintDoubleAndSpc(f, bp.texMat[1][2]);
+            
+            // N.B.: always print the Q2/Q3 flags
             fprintf(f, ") ) %s 0 0 0", mapface.texname.c_str());
             break;
         }
@@ -1693,7 +1700,7 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
 }
 
 static void
-ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const texcoord_style_t format)
+ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const texcoord_style_t format, const mapformat_t mapformat)
 {
     fprintf(f, "{\n");
     if (format == texcoord_style_t::TX_BRUSHPRIM) {
@@ -1701,7 +1708,7 @@ ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const texcoord_style_t form
         fprintf(f, "{\n");
     }
     for (int i=0; i<mapbrush.numfaces; i++) {
-        ConvertMapFace(f, mapbrush.face(i), format);
+        ConvertMapFace(f, mapbrush.face(i), format, mapformat);
     }
     if (format == texcoord_style_t::TX_BRUSHPRIM) {
         fprintf(f, "}\n");
@@ -1710,14 +1717,14 @@ ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const texcoord_style_t form
 }
 
 static void
-ConvertEntity(FILE *f, const mapentity_t *entity, const texcoord_style_t format)
+ConvertEntity(FILE *f, const mapentity_t *entity, const texcoord_style_t format, const mapformat_t mapformat)
 {
     fprintf(f, "{\n");
     for (const epair_t *epair = entity->epairs; epair; epair = epair->next) {
         fprintf(f, "\"%s\" \"%s\"\n", epair->key, epair->value);
     }
     for (int i=0; i<entity->nummapbrushes; i++) {
-        ConvertMapBrush(f, entity->mapbrush(i), format);
+        ConvertMapBrush(f, entity->mapbrush(i), format, mapformat);
     }
     fprintf(f, "}\n");
 }
@@ -1753,7 +1760,7 @@ void ConvertMapFile(void)
         Error("Couldn't open file\n");
     
     for (const mapentity_t &entity : map.entities) {
-        ConvertEntity(f, &entity, options.convertMapTexFormat);
+        ConvertEntity(f, &entity, options.convertMapTexFormat, options.convertMapFormat);
     }
     
     fclose(f);
