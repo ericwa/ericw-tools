@@ -484,9 +484,9 @@ typedef enum {
     TX_BRUSHPRIM   = 4
 } texcoord_style_t;
 
-typedef enum {
-    q1, q2
-} mapformat_t;
+enum class conversion_t {
+    quake, quake2, valve, bp
+};
 
 typedef struct options_s {
     bool fNofill;
@@ -494,8 +494,7 @@ typedef struct options_s {
     bool fNoskip;
     bool fOnlyents;
     bool fConvertMapFormat;
-    texcoord_style_t convertMapTexFormat;
-    mapformat_t convertMapFormat;
+    conversion_t convertMapFormat;
     bool fVerbose;
     bool fAllverbose;
     bool fSplitspecial;

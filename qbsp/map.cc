@@ -1622,7 +1622,7 @@ static void fprintDoubleAndSpc(FILE *f, double v)
 }
 
 static void
-ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format, const mapformat_t mapformat)
+ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t format)
 {
     EnsureTexturesLoaded();
     const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
@@ -1639,7 +1639,8 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format,
     }
     
     switch(format) {
-        case texcoord_style_t::TX_QUAKED: {
+        case conversion_t::quake:
+        case conversion_t::quake2: {
             const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texture, texinfo.vecs, mapface.planepts);
             
             fprintf(f, "%s ", mapface.texname.c_str());
@@ -1649,13 +1650,13 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format,
             fprintDoubleAndSpc(f, quakeed.scale[0]);
             fprintDoubleAndSpc(f, quakeed.scale[1]);
             
-            if (mapformat == mapformat_t::q2) {
+            if (format == conversion_t::quake2) {
                 fprintf(f, "0 0 0");
             }
             
             break;
         }
-        case texcoord_style_t::TX_VALVE_220: {
+        case conversion_t::valve: {
             const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
             
             fprintf(f, "%s [ ", mapface.texname.c_str());
@@ -1673,7 +1674,7 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format,
             fprintDoubleAndSpc(f, valve.scale[1]);
             break;
         }
-        case texcoord_style_t::TX_BRUSHPRIM: {
+        case conversion_t::bp: {
             int texSize[2];
             texSize[0] = texture ? texture->width : 64;
             texSize[1] = texture ? texture->height : 64;
@@ -1700,31 +1701,31 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format,
 }
 
 static void
-ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const texcoord_style_t format, const mapformat_t mapformat)
+ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const conversion_t format)
 {
     fprintf(f, "{\n");
-    if (format == texcoord_style_t::TX_BRUSHPRIM) {
+    if (format == conversion_t::bp) {
         fprintf(f, "brushDef\n");
         fprintf(f, "{\n");
     }
     for (int i=0; i<mapbrush.numfaces; i++) {
-        ConvertMapFace(f, mapbrush.face(i), format, mapformat);
+        ConvertMapFace(f, mapbrush.face(i), format);
     }
-    if (format == texcoord_style_t::TX_BRUSHPRIM) {
+    if (format == conversion_t::bp) {
         fprintf(f, "}\n");
     }
     fprintf(f, "}\n");
 }
 
 static void
-ConvertEntity(FILE *f, const mapentity_t *entity, const texcoord_style_t format, const mapformat_t mapformat)
+ConvertEntity(FILE *f, const mapentity_t *entity, const conversion_t format)
 {
     fprintf(f, "{\n");
     for (const epair_t *epair = entity->epairs; epair; epair = epair->next) {
         fprintf(f, "\"%s\" \"%s\"\n", epair->key, epair->value);
     }
     for (int i=0; i<entity->nummapbrushes; i++) {
-        ConvertMapBrush(f, entity->mapbrush(i), format, mapformat);
+        ConvertMapBrush(f, entity->mapbrush(i), format);
     }
     fprintf(f, "}\n");
 }
@@ -1741,18 +1742,21 @@ void ConvertMapFile(void)
     
     std::string filename = stripExt(options.szBSPName);
     
-    switch(options.convertMapTexFormat) {
-        case texcoord_style_t::TX_QUAKED:
+    switch(options.convertMapFormat) {
+        case conversion_t::quake:
             filename += "-quake.map";
             break;
-        case texcoord_style_t::TX_VALVE_220:
+        case conversion_t::quake2:
+            filename += "-quake2.map";
+            break;
+        case conversion_t::valve:
             filename += "-valve.map";
             break;
-        case texcoord_style_t::TX_BRUSHPRIM:
+        case conversion_t::bp:
             filename += "-bp.map";
             break;
         default:
-            Error("Internal error: unknown texcoord_style_t\n");
+            Error("Internal error: unknown conversion_t\n");
     }
     
     FILE *f = fopen(filename.c_str(), "wb");
@@ -1760,7 +1764,7 @@ void ConvertMapFile(void)
         Error("Couldn't open file\n");
     
     for (const mapentity_t &entity : map.entities) {
-        ConvertEntity(f, &entity, options.convertMapTexFormat, options.convertMapFormat);
+        ConvertEntity(f, &entity, options.convertMapFormat);
     }
     
     fclose(f);

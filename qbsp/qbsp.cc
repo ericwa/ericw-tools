@@ -819,17 +819,13 @@ ParseOptions(char *szOptions)
                     Error("Invalid argument to option %s", szTok);
                 
                 if (!Q_strcasecmp(szTok2, "quake")) {
-                    options.convertMapFormat = mapformat_t::q1;
-                    options.convertMapTexFormat = texcoord_style_t::TX_QUAKED;
+                    options.convertMapFormat = conversion_t::quake;
                 } else if (!Q_strcasecmp(szTok2, "quake2")) {
-                    options.convertMapFormat = mapformat_t::q2;
-                    options.convertMapTexFormat = texcoord_style_t::TX_QUAKED;
+                    options.convertMapFormat = conversion_t::quake2;
                 } else if (!Q_strcasecmp(szTok2, "valve")) {
-                    options.convertMapFormat = mapformat_t::q1;
-                    options.convertMapTexFormat = texcoord_style_t::TX_VALVE_220;
+                    options.convertMapFormat = conversion_t::valve;
                 } else if (!Q_strcasecmp(szTok2, "bp")) {
-                    options.convertMapFormat = mapformat_t::q2;
-                    options.convertMapTexFormat = texcoord_style_t::TX_BRUSHPRIM;
+                    options.convertMapFormat = conversion_t::bp;
                 } else {
                     Error("Invalid argument to option %s", szTok);
                 }
