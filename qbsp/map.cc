@@ -30,11 +30,85 @@
 #include "parser.hh"
 #include "wad.hh"
 
+#include <glm/glm.hpp>
+
 #define info_player_start       1
 #define info_player_deathmatch  2
 #define info_player_coop        4
 
 static int rgfStartSpots;
+
+class texdef_valve_t {
+public:
+    vec3_t axis[2];
+    vec_t scale[2];
+    vec_t shift[2];
+    
+    texdef_valve_t() {
+        for (int i=0;i<2;i++)
+            for (int j=0;j<3;j++)
+                axis[i][j] = 0;
+        
+        for (int i=0;i<2;i++)
+            scale[i] = 0;
+        
+        for (int i=0;i<2;i++)
+            shift[i] = 0;
+    }
+};
+
+class texdef_quake_ed_t {
+public:
+    vec_t rotate;
+    vec_t scale[2];
+    vec_t shift[2];
+    
+    texdef_quake_ed_t() : rotate(0) {
+        scale[0] = 0;
+        scale[1] = 0;
+        shift[0] = 0;
+        shift[1] = 0;
+    }
+};
+
+class texdef_quake_ed_noshift_t {
+public:
+    vec_t rotate;
+    vec_t scale[2];
+    
+    texdef_quake_ed_noshift_t() : rotate(0) {
+        scale[0] = 0;
+        scale[1] = 0;
+    }
+};
+
+class texdef_etp_t {
+public:
+    vec3_t planepoints[3];
+    bool tx2;
+    
+    texdef_etp_t() : tx2(false) {
+        for (int i=0;i<3;i++)
+            for (int j=0;j<3;j++)
+                planepoints[i][j] = 0;
+    }
+};
+
+class texdef_brush_primitives_t {
+public:
+    vec3_t texMat[2];
+    
+    texdef_brush_primitives_t() {
+        for (int i=0;i<2;i++)
+            for (int j=0;j<3;j++)
+                texMat[i][j] = 0;
+    }
+};
+
+static texdef_valve_t TexDef_BSPToValve(const float in_vecs[2][4]);
+static glm::vec2 projectToAxisPlane(const vec3_t snapped_normal, glm::vec3 point);
+static texdef_quake_ed_noshift_t Reverse_QuakeEd(glm::mat2x2 M, const plane_t *plane, bool preserveX);
+static void SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4]);
 
 const mapface_t &mapbrush_t::face(int i) const {
     if (i < 0 || i >= this->numfaces)
@@ -357,111 +431,466 @@ ParseExtendedTX(parser_t *parser)
     return style;
 }
 
-class texdef_quake_ed_t {
-public:
-    vec_t rotate;
-    vec_t scale[2];
-    vec_t shift[2];
-};
+static glm::mat4x4 texVecsTo4x4Matrix(const plane_t &faceplane, const float in_vecs[2][4])
+{
+    //           [s]
+    // T * vec = [t]
+    //           [distOffPlane]
+    //           [?]
+    
+    glm::mat4x4 T(in_vecs[0][0], in_vecs[1][0], faceplane.normal[0], 0, // col 0
+                  in_vecs[0][1], in_vecs[1][1], faceplane.normal[1], 0, // col 1
+                  in_vecs[0][2], in_vecs[1][2], faceplane.normal[2], 0, // col 2
+                  in_vecs[0][3], in_vecs[1][3], -faceplane.dist, 1 // col 3
+                  );
+    return T;
+}
+
+static inline glm::vec3 vec3_t_to_glm(const vec3_t vec) {
+    return glm::vec3(vec[0], vec[1], vec[2]);
+}
+
+static glm::mat2x2 scale2x2(float xscale, float yscale)
+{
+    glm::mat2x2 M( xscale, 0,  // col 0
+                   0, yscale); // col1
+    return M;
+}
+
+static glm::mat2x2 rotation2x2_deg(float degrees)
+{
+    float r = degrees * (Q_PI / 180.0);
+    float cosr = cos(r);
+    float sinr = sin(r);
+    
+    // [ cosTh -sinTh ]
+    // [ sinTh cosTh  ]
+    
+    glm::mat2x2 M( cosr, sinr, // col 0
+                   -sinr, cosr); // col1
+    
+    return M;
+}
+
+static float extractRotation(glm::mat2x2 m) {
+    glm::vec2 point = m * glm::vec2(1, 0); // choice of this matters if there's shearing
+    float rotation = atan2(point.y, point.x) * 180.0 / Q_PI;
+    return rotation;
+}
+
+static glm::vec2 evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const plane_t *faceplane, const glm::vec3 point)
+{
+    float temp[2][4];
+    SetTexinfo_QuakeEd_New(faceplane, texdef.shift, texdef.rotate, texdef.scale, temp);
+    
+    const glm::mat4x4 worldToTexSpace_res = texVecsTo4x4Matrix(*faceplane, temp);
+    const glm::vec2 uv = glm::vec2(worldToTexSpace_res * glm::vec4(point, 1.0f));
+    return uv;
+}
+
+static float
+TexDefRMSE(const texdef_quake_ed_t &texdef, const plane_t *faceplane, const glm::mat4x4 referenceXform, const vec3_t facepoints[3])
+{
+    float avgSquaredDist = 0;
+    for (int i=0; i<3; i++) {
+        glm::vec3 worldPoint = vec3_t_to_glm(facepoints[i]);
+        glm::vec2 observed = evalTexDefAtPoint(texdef, faceplane, worldPoint);
+        glm::vec2 expected = glm::vec2(referenceXform * glm::vec4(worldPoint, 1.0f));
+        
+        glm::vec2 distVec = observed - expected;
+        float dist2 = glm::dot(distVec, distVec);
+        avgSquaredDist += dist2;
+    }
+    avgSquaredDist /= 3.0;
+    return sqrt(avgSquaredDist);
+}
+
+static texdef_quake_ed_t addShift(const texdef_quake_ed_noshift_t &texdef, const glm::vec2 shift)
+{
+    texdef_quake_ed_t res2;
+    res2.rotate = texdef.rotate;
+    res2.scale[0] = texdef.scale[0];
+    res2.scale[1] = texdef.scale[1];
+    
+    res2.shift[0] = shift.x;
+    res2.shift[1] = shift.y;
+    return res2;
+}
+
+void checkEq(const glm::vec2 &a, const glm::vec2 &b, float epsilon)
+{
+    for (int i=0; i<2; i++) {
+        if (fabs(a[i] - b[i]) > epsilon) {
+            printf("warning, checkEq failed\n");
+        }
+    }
+}
 
 static texdef_quake_ed_t
-TexDef_BSPToQuakeEd(const plane_t &faceplane, const float in_vecs[2][4])
+TexDef_BSPToQuakeEd(const plane_t &faceplane, const float in_vecs[2][4], const vec3_t facepoints[3])
 {
-    // First get the un-rotated, un-scaled texture vecs (based on the face plane).
+    // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
     vec3_t snapped_normal;
     vec3_t unrotated_vecs[2];
     TextureAxisFromPlane(&faceplane, unrotated_vecs[0], unrotated_vecs[1], snapped_normal);
+
+    const glm::mat4x4 worldToTexSpace = texVecsTo4x4Matrix(faceplane, in_vecs);
     
-    // These axes rotate counterclockwise
-    const vec3_t posX { 1,0,0};
-    const vec3_t negY { 0,-1,0};
-    const vec3_t posZ { 0,0,1};
-    
-    const bool ccw = (VectorCompare(posX, snapped_normal)
-                      || VectorCompare(negY, snapped_normal)
-                      || VectorCompare(posZ, snapped_normal));
-    
-    // Extract the final scale (magnitude only, we don't know the sign yet) and shift values
-    // Also normalize the BSP texture axes and store in rotated_vec.
-    vec_t scale[2], shift[2];
-    vec3_t rotated_vec[2];
-    for (int i=0; i<2; i++) {
-        for (int j=0; j<3; j++) {
-            rotated_vec[i][j] = in_vecs[i][j];
-        }
-        const vec_t length = VectorNormalize(rotated_vec[i]);
-        if (length == 0.0) {
-            // Hack around bad input
-            scale[i] = 0.0;
-        } else {
-            scale[i] = 1.0 / length;
-        }
-        
-        shift[i] = in_vecs[i][3];
+    // Grab the UVs of the 3 reference points
+    glm::vec2 facepoints_uvs[3];
+    for (int i=0; i<3; i++) {
+        facepoints_uvs[i] = glm::vec2(worldToTexSpace * glm::vec4(facepoints[i][0], facepoints[i][1], facepoints[i][2], 1.0));
     }
     
-    // We know that both unrotated_vecs were rotated by the same amount,
-    // then each possibly was multiplied by -1, to get rotated_vecs.
+    // Project the 3 reference points onto the axis plane. They are now 2d points.
+    glm::vec2 facepoints_projected[3];
+    for (int i=0; i<3; i++) {
+        facepoints_projected[i] = projectToAxisPlane(snapped_normal, vec3_t_to_glm(facepoints[i]));
+    }
+    
+    // Now make 2 vectors out of our 3 points (so we are ignoring translation for now)
+    const glm::vec2 p0p1 = facepoints_projected[1] - facepoints_projected[0];
+    const glm::vec2 p0p2 = facepoints_projected[2] - facepoints_projected[0];
+    
+    const glm::vec2 p0p1_uv = facepoints_uvs[1] - facepoints_uvs[0];
+    const glm::vec2 p0p2_uv = facepoints_uvs[2] - facepoints_uvs[0];
+    
+    /*
+    Find a 2x2 transformation matrix that maps p0p1 to p0p1_uv, and p0p2 to p0p2_uv
+    
+        [ a b ] [ p0p1.x ] = [ p0p1_uv.x ]
+        [ c d ] [ p0p1.y ]   [ p0p1_uv.y ]
+        
+        [ a b ] [ p0p2.x ] = [ p0p1_uv.x ]
+        [ c d ] [ p0p2.y ]   [ p0p2_uv.y ]
+    
+    writing as a system of equations:
+    
+        a * p0p1.x + b * p0p1.y = p0p1_uv.x
+        c * p0p1.x + d * p0p1.y = p0p1_uv.y
+        a * p0p2.x + b * p0p2.y = p0p2_uv.x
+        c * p0p2.x + d * p0p2.y = p0p2_uv.y
+
+    back to a matrix equation, with the unknowns in a column vector:
+    
+       [ p0p1_uv.x ]   [ p0p1.x p0p1.y 0       0      ] [ a ]
+       [ p0p1_uv.y ] = [ 0       0     p0p1.x p0p1.y  ] [ b ]
+       [ p0p2_uv.x ]   [ p0p2.x p0p2.y 0       0      ] [ c ]
+       [ p0p2_uv.y ]   [ 0       0     p0p2.x p0p2.y  ] [ d ]
+     
+     */
+       
+    const glm::mat4x4 M(p0p1.x, 0,      p0p2.x, 0,      // col 0
+                        p0p1.y, 0,      p0p2.y, 0,      // col 1
+                        0,      p0p1.x, 0,      p0p2.x, // col 2
+                        0,      p0p1.y, 0,      p0p2.y  // col 3
+                       );
+    
+    const glm::mat4x4 Minv = glm::inverse(M);
+    const glm::vec4 abcd = Minv * glm::vec4(p0p1_uv.x,
+                                            p0p1_uv.y,
+                                            p0p2_uv.x,
+                                            p0p2_uv.y);
+    
+    const glm::mat2x2 texPlaneToUV(abcd[0], abcd[2], // col 0
+                                abcd[1], abcd[3]);// col 1
+    
+    {
+        // self check
+        glm::vec2 uv01_test = texPlaneToUV * p0p1;
+        glm::vec2 uv02_test = texPlaneToUV * p0p2;
+        checkEq(uv01_test, p0p1_uv, 0.01);
+        checkEq(uv02_test, p0p2_uv, 0.01);
+    }
+    
+    // Generate 2 scenarios, snapping to X and Y, and see which is better
+    // (they are the same unless there is shearing involved)
+    texdef_quake_ed_t texdefs[2];
+    
+    for (int i=0; i<2; i++) {
+        const bool preserveX = (i == 0);
+        const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, &faceplane, preserveX);
+        
+        // figure out shift based on the average of the facepoints, which is hopefully in the middle of the face
+
+        glm::vec3 testpoint = (vec3_t_to_glm(facepoints[0])
+                               + vec3_t_to_glm(facepoints[1])
+                               + vec3_t_to_glm(facepoints[2])) / 3.0f;
+        
+        glm::vec2 uv0_actual = evalTexDefAtPoint(addShift(res, glm::vec2(0,0)), &faceplane, testpoint);
+        glm::vec2 uv0_desired = glm::vec2(worldToTexSpace * glm::vec4(testpoint, 1.0f));
+        glm::vec2 shift = uv0_desired - uv0_actual;
+        
+        const texdef_quake_ed_t res2 = addShift(res, shift);
+        texdefs[i] = res2;
+    }
+    
+    // See which has less distortion
+    float rmse[2];
+    for (int i=0; i<2; i++)
+        rmse[i] = TexDefRMSE(texdefs[i], &faceplane, worldToTexSpace, facepoints);
+    
+    if (rmse[0] < rmse[1]) {
+        return texdefs[0];
+    } else {
+        return texdefs[1];
+    }
+}
+
+float NormalizeDegrees(float degs)
+{
+    while (degs < 0)
+        degs += 360;
+    
+    while (degs > 360)
+        degs -= 360;
+    
+    if (fabs(degs - 360.0) < 0.001)
+        degs = 0;
+    
+    return degs;
+}
+
+bool EqualDegrees(float a, float b) {
+    return fabs(NormalizeDegrees(a) - NormalizeDegrees(b)) < 0.001;
+}
+
+static std::pair<int,int> getSTAxes(const vec3_t snapped_normal)
+{
+    if (snapped_normal[0]) {
+        return std::make_pair(1,2);
+    } else if (snapped_normal[1]) {
+        return std::make_pair(0,2);
+    } else {
+        return std::make_pair(0,1);
+    }
+}
+
+static glm::vec2 projectToAxisPlane(const vec3_t snapped_normal, glm::vec3 point)
+{
+    const std::pair<int,int> axes = getSTAxes(snapped_normal);
+    
+    const glm::vec2 proj(point[axes.first],
+                         point[axes.second]);
+    return proj;
+}
+
+float clockwiseDegreesBetween(glm::vec2 start, glm::vec2 end)
+{
+    start = glm::normalize(start);
+    end = glm::normalize(end);
+    
+    const float cosAngle = qmax(-1.0f, qmin(1.0f, glm::dot(start, end)));
+    const float unsigned_degrees = acos(cosAngle) * (360.0 / (2.0 * Q_PI));
+    
+    if (unsigned_degrees < ANGLEEPSILON)
+        return 0;
+    
+    // get a normal for the rotation plane using the right-hand rule
+    // if this is pointing up (glm::vec3(0,0,1)), it's counterclockwise rotation.
+    // if this is pointing down (glm::vec3(0,0,-1)), it's clockwise rotation.
+    glm::vec3 rotationNormal = glm::normalize(glm::cross(glm::vec3(start, 0.0f), glm::vec3(end, 0.0f)));
+    
+    const float normalsCosAngle = glm::dot(rotationNormal, glm::vec3(0,0,1));
+    if (normalsCosAngle >= 0) {
+        // counterclockwise rotation
+        return -unsigned_degrees;
+    }
+    // clockwise rotation
+    return unsigned_degrees;
+}
+
+static texdef_quake_ed_noshift_t
+Reverse_QuakeEd(glm::mat2x2 M, const plane_t *plane, bool preserveX)
+{
+    // Check for shear, because we might tweak M to remove it
+    {
+        glm::vec2 Xvec = glm::vec2(M[0][0], M[1][0]);
+        glm::vec2 Yvec = glm::vec2(M[0][1], M[1][1]);
+        double cosAngle = glm::dot(glm::normalize(Xvec), glm::normalize(Yvec));
+        
+        //const double oldXscale = sqrt(pow(M[0][0], 2.0) + pow(M[1][0], 2.0));
+        //const double oldYscale = sqrt(pow(M[0][1], 2.0) + pow(M[1][1], 2.0));
+        
+        if (fabs(cosAngle) > 0.001) {
+            // Detected shear
+            
+            if (preserveX) {
+                const float degreesToY = clockwiseDegreesBetween(Xvec, Yvec);
+                const bool CW = (degreesToY > 0);
+                
+                // turn 90 degrees from Xvec
+                const glm::vec2 newYdir = glm::normalize(
+                     glm::vec2(glm::cross(glm::vec3(0, 0, CW ? -1.0f : 1.0f), glm::vec3(Xvec, 0.0))));
+                
+                // scalar projection of the old Yvec onto newYDir to get the new Yscale
+                const float newYscale = glm::dot(Yvec, newYdir);
+                Yvec = newYdir * static_cast<float>(newYscale);
+            } else {
+                // Preserve Y.
+                
+                const float degreesToX = clockwiseDegreesBetween(Yvec, Xvec);
+                const bool CW = (degreesToX > 0);
+                
+                // turn 90 degrees from Yvec
+                const glm::vec2 newXdir = glm::normalize(
+                    glm::vec2(glm::cross(glm::vec3(0, 0, CW ? -1.0f : 1.0f), glm::vec3(Yvec, 0.0))));
+                
+                // scalar projection of the old Xvec onto newXDir to get the new Xscale
+                const float newXscale = glm::dot(Xvec, newXdir);
+                Xvec = newXdir * static_cast<float>(newXscale);
+            }
+            
+            // recheck
+            cosAngle = glm::dot(glm::normalize(Xvec), glm::normalize(Yvec));
+            if (fabs(cosAngle) > 0.001) {
+                Error("SHEAR correction failed\n");
+            }
+            
+            // update M
+            M[0][0] = Xvec[0];
+            M[1][0] = Xvec[1];
+            
+            M[0][1] = Yvec[0];
+            M[1][1] = Yvec[1];
+        }
+    }
+    
+    // extract abs(scale)
+    const double absXscale = sqrt(pow(M[0][0], 2.0) + pow(M[1][0], 2.0));
+    const double absYscale = sqrt(pow(M[0][1], 2.0) + pow(M[1][1], 2.0));
+    const glm::mat2x2 applyAbsScaleM(absXscale, // col0
+                                     0,
+                                     0, // col1
+                                     absYscale);
+    
+    vec3_t vecs[2];
+    vec3_t snapped_normal;
+    TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
+
+    const glm::vec2 sAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[0]));
+    const glm::vec2 tAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[1]));
+
+    // This is an identity matrix possibly with negative signs.
+    const glm::mat2x2 axisFlipsM(sAxis[0], tAxis[0],  // col0
+                                 sAxis[1], tAxis[1]); // col1
+
+    // N.B. this is how M is built in SetTexinfo_QuakeEd_New and guides how we
+    // strip off components of it later in this function.
     //
-    // To figure out the signs on the scales, try all 4 possibilities.
-    float angles[4][2];
-    for (int sign_index=0; sign_index<4; sign_index++) {
-        float sign0 = (sign_index / 2) == 1 ? -1.0 : 1.0;
-        float sign1 = (sign_index % 2) == 1 ? -1.0 : 1.0;
-        
-        vec3_t rotated_flipped_vec[2];
-        VectorScale(rotated_vec[0], sign0, rotated_flipped_vec[0]);
-        VectorScale(rotated_vec[1], sign1, rotated_flipped_vec[1]);
-        
-        // Try to reproduce the rotation
-        for (int i=0; i<2; i++)
-        {
-            float angle = SignedDegreesBetweenUnitVectors(unrotated_vecs[i], rotated_flipped_vec[i], snapped_normal);
+    //    glm::mat2x2 M = scaleM * rotateM * axisFlipsM;
+    
+    // strip off the magnitude component of the scale, and `axisFlipsM`.
+    const glm::mat2x2 flipRotate = glm::inverse(applyAbsScaleM) * M * glm::inverse(axisFlipsM);
+    
+    // We don't know the signs on the scales, which will mess up figuring out the rotation, so try all 4 combinations
+    for (float xScaleSgn : std::vector<float>{ -1.0, 1.0 }) {
+        for (float yScaleSgn : std::vector<float>{ -1.0, 1.0 }) {
             
-            if (ccw)
-                angle *= -1;
+            // "apply" - matrix constructed to apply a guessed value
+            // "guess" - this matrix might not be what we think
             
-            angles[sign_index][i] = angle;
+            const glm::mat2x2 applyGuessedFlipM(
+                                     xScaleSgn, // col0
+                                     0,
+                                     0, // col1
+                                     yScaleSgn);
+            
+            const glm::mat2x2 rotateMGuess = glm::inverse(applyGuessedFlipM) * flipRotate;
+            const float angleGuess = extractRotation(rotateMGuess);
+            
+            const glm::mat2x2 Mident = rotateMGuess * rotation2x2_deg(-angleGuess);
+
+            const glm::mat2x2 applyAngleGuessM = rotation2x2_deg(angleGuess);
+            const glm::mat2x2 Mguess = applyGuessedFlipM * applyAbsScaleM * applyAngleGuessM * axisFlipsM;
+            
+            if (fabs(M[0][0] - Mguess[0][0]) < 0.001
+                && fabs(M[0][1] - Mguess[0][1]) < 0.001
+                && fabs(M[1][0] - Mguess[1][0]) < 0.001
+                && fabs(M[1][1] - Mguess[1][1]) < 0.001) {
+                
+                texdef_quake_ed_noshift_t reversed;
+                reversed.rotate = angleGuess;
+                reversed.scale[0] = xScaleSgn / absXscale;
+                reversed.scale[1] = yScaleSgn / absYscale;
+                return reversed;
+            }
         }
     }
+
+    printf("Warning, Reverse_QuakeEd failed\n");
     
-    float bestangle = 0;
-    
-    float closest_angle_dist = FLT_MAX;
-    int best_signindex = -1;
-    
-    // There should be a combination of signs that give both vectors the same amount of rotation
-    for (int i=0; i<4; i++) {
-        const float dist = fabs(angles[i][0] - angles[i][1]);
-        if (dist < closest_angle_dist) {
-            closest_angle_dist = dist;
-            bestangle = angles[i][0];
-            best_signindex = i;
-        }
-    }
-    
-    if (closest_angle_dist > 0.01) {
-//        printf("unequal rotation detected\n");
-    }
-    
-    float sign0 = (best_signindex / 2) == 1 ? -1.0 : 1.0;
-    float sign1 = (best_signindex % 2) == 1 ? -1.0 : 1.0;
-    
-    scale[0] *= sign0;
-    scale[1] *= sign1;
-    
-    texdef_quake_ed_t res;
-    res.rotate = bestangle;
-    for (int i=0; i<2; i++) {
-        res.scale[i] = scale[i];
-        res.shift[i] = shift[i];
-    }
-    
-    return res;
+    texdef_quake_ed_noshift_t fail;
+    return fail;
 }
 
 static void
-SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
+SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4])
+{
+    vec3_t vecs[2];
+    vec3_t snapped_normal;
+    TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
+
+    glm::vec2 sAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[0]));
+    glm::vec2 tAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[1]));
+
+    // This is an identity matrix possibly with negative signs.
+    glm::mat2x2 axisFlipsM(sAxis[0], tAxis[0],  // col0
+                           sAxis[1], tAxis[1]); // col1
+    
+    glm::mat2x2 rotateM = rotation2x2_deg(rotate);
+    glm::mat2x2 scaleM = scale2x2(1.0/scale[0], 1.0/scale[1]);
+    
+    glm::mat2x2 M = scaleM * rotateM * axisFlipsM;
+    
+    if (false) {
+        // Self-test for Reverse_QuakeEd
+        texdef_quake_ed_noshift_t reversed = Reverse_QuakeEd(M, plane, false);
+        
+        // normalize
+        if (!EqualDegrees(reversed.rotate, rotate)) {
+            reversed.rotate += 180;
+            reversed.scale[0] *= -1;
+            reversed.scale[1] *= -1;
+        }
+ 
+        if (!EqualDegrees(reversed.rotate, rotate)) {
+            Error("wrong rotat got %f expected %f\n",
+                reversed.rotate, rotate);
+        }
+        
+        if (fabs(reversed.scale[0] - scale[0]) > 0.001
+            || fabs(reversed.scale[1] - scale[1]) > 0.001) {
+            Error("wrong scale, got %f %f exp %f %f\n",
+                reversed.scale[0], reversed.scale[1],
+                scale[0], scale[1]);
+        }
+    }
+    
+    // copy M into the output vectors
+    
+    for (int i=0; i<2; i++) {
+        for (int j=0; j<4; j++) {
+            out_vecs[i][j] = 0.0;
+        }
+    }
+
+    const std::pair<int,int> axes = getSTAxes(snapped_normal);
+    
+    //                        M[col][row]
+    // S
+    out_vecs[0][axes.first] = M[0][0];
+    out_vecs[0][axes.second] = M[1][0];
+    out_vecs[0][3] = shift[0];
+    
+    // T
+    out_vecs[1][axes.first] = M[0][1];
+    out_vecs[1][axes.second] = M[1][1];
+    out_vecs[1][3] = shift[1];
+}
+
+static void
+SetTexinfo_QuakeEd(const plane_t *plane, const vec3_t planepts[3], const vec_t shift[2], vec_t rotate,
                    const vec_t scale[2], mtexinfo_t *out)
 {
     int i, j;
@@ -507,6 +936,58 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec_t shift[2], vec_t rotate,
 
     out->vecs[0][3] = shift[0];
     out->vecs[1][3] = shift[1];
+    
+    if (false) {
+        // Self-test of SetTexinfo_QuakeEd_New
+        float check[2][4];
+        SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
+        for (int i=0; i<2; i++) {
+            for (int j=0; j<4; j++) {
+                if (fabs(check[i][j] - out->vecs[i][j]) > 0.001) {
+                    SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
+                    Error("fail");
+                }
+            }
+        }
+    }
+
+    if (false) {
+        // Self-test of TexDef_BSPToQuakeEd
+        texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(*plane, out->vecs, planepts);
+    
+        if (!EqualDegrees(reversed.rotate, rotate)) {
+            reversed.rotate += 180;
+            reversed.scale[0] *= -1;
+            reversed.scale[1] *= -1;
+        }
+ 
+        if (!EqualDegrees(reversed.rotate, rotate)) {
+            printf("wrong rotat got %f expected %f\n",
+                reversed.rotate, rotate);
+        }
+        
+        if (fabs(reversed.scale[0] - scale[0]) > 0.001
+            || fabs(reversed.scale[1] - scale[1]) > 0.001) {
+            printf("wrong scale, got %f %f exp %f %f\n",
+                reversed.scale[0], reversed.scale[1],
+                scale[0], scale[1]);
+        }
+        
+        if (fabs(reversed.shift[0] - shift[0]) > 0.1
+            || fabs(reversed.shift[1] - shift[1]) > 0.1) {
+            printf("wrong shift, got %f %f exp %f %f\n",
+                reversed.shift[0], reversed.shift[1],
+                shift[0], shift[1]);
+        }
+    }
+}
+
+static
+texdef_etp_t TexDef_BSPToETP(const plane_t &faceplane, const float in_vecs[2][4])
+{
+    Error("unimplemented");
+    texdef_etp_t res;
+    return res;
 }
 
 static void
@@ -668,11 +1149,6 @@ SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int 
     vecs[1][2] = texHeight * ((texX[2] * texMat[1][0]) + (texY[2] * texMat[1][1]));
     vecs[1][3] = texHeight * texMat[1][2];
 }
-
-class texdef_brush_primitives_t {
-public:
-    vec3_t texMat[2];
-};
 
 static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const float in_vecs[2][4], vec_t *st_out)
 {
@@ -879,7 +1355,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
         break;
     case TX_QUAKED:
     default:
-        SetTexinfo_QuakeEd(plane, shift, rotate, scale, tx);
+        SetTexinfo_QuakeEd(plane, planepts, shift, rotate, scale, tx);
         break;
     }
 }
@@ -1095,12 +1571,7 @@ TexDefToString_QuarkType1(const mapface_t &mapface, const mtexinfo_t &texinfo)
     return "";
 }
 
-class texdef_valve_t {
-public:
-    vec3_t axis[2];
-    vec_t scale[2];
-    vec_t shift[2];
-};
+
 
 static texdef_valve_t
 TexDef_BSPToValve(const float in_vecs[2][4])
@@ -1138,21 +1609,38 @@ TexDef_BSPToValve(const float in_vecs[2][4])
 static void
 ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
 {
-    // All formats write the plane points the same way
-    // FIXME: Not QaArK
-    for (int i=0; i<3; i++) {
-        fprintf(f, " ( ");
-        for (int j=0; j<3; j++) {
-            fprintf(f, "%0.17f ", mapface.planepts[i][j]);
+    const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+
+    bool tx2 = false;
+    
+    
+    // Write plane points
+    if (format == texcoord_style_t::TX_QUARK_TYPE1) {
+        const texdef_etp_t etp = TexDef_BSPToETP(mapface.plane, texinfo.vecs);
+        tx2 = etp.tx2;
+        
+        for (int i=0; i<3; i++) {
+            fprintf(f, " ( ");
+            for (int j=0; j<3; j++) {
+                fprintf(f, "%0.17f ", etp.planepoints[i][j]);
+            }
+            fprintf(f, ") ");
         }
-        fprintf(f, ") ");
+    } else {
+        for (int i=0; i<3; i++) {
+            fprintf(f, " ( ");
+            for (int j=0; j<3; j++) {
+                fprintf(f, "%0.17f ", mapface.planepts[i][j]);
+            }
+            fprintf(f, ") ");
+        }
     }
     
-    const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-    
     switch(format) {
+        case texcoord_style_t::TX_QUARK_TYPE1:
+            // fallthrough
         case texcoord_style_t::TX_QUAKED: {
-            const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texinfo.vecs);
+            const texdef_quake_ed_t quakeed = TexDef_BSPToQuakeEd(mapface.plane, texinfo.vecs, mapface.planepts);
             
             fprintf(f, "%s %0.17f %0.17f %0.17f %0.17f %0.17f",
                     mapface.texname.c_str(),
@@ -1163,9 +1651,6 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
                     quakeed.scale[1]);
             break;
         }
-        case texcoord_style_t::TX_QUARK_TYPE1:
-            Error("Unimplemented");
-            break;
         case texcoord_style_t::TX_VALVE_220: {
             const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
             
@@ -1204,6 +1689,10 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
         }
         default:
             Error("Internal error: unknown texcoord_style_t\n");
+    }
+    
+    if (format == texcoord_style_t::TX_QUARK_TYPE1) {
+        fprintf(f, (tx2 ? " //TX2" : " //TX1"));
     }
     
     fprintf(f, "\n");
@@ -1252,6 +1741,9 @@ void ConvertMapFile(void)
     std::string filename = stripExt(options.szBSPName);
     
     switch(options.convertMapTexFormat) {
+        case texcoord_style_t::TX_QUARK_TYPE1:
+            filename += "-etp.map";
+            break;
         case texcoord_style_t::TX_QUAKED:
             filename += "-quake.map";
             break;
