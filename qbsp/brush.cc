@@ -793,9 +793,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-static brush_t *
-LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset,
-          const int hullnum)
+brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;

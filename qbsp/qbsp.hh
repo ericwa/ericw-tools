@@ -372,6 +372,9 @@ typedef struct brush_s {
     short lmshift;              /* lightmap scaling (qu/lightmap pixel), passed to the light util */
 } brush_t;
 
+class mapbrush_t;
+
+brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const int hullnum);
 void FreeBrushes(brush_t *brushlist);
 
 int FindPlane(const plane_t *plane, int *side);
