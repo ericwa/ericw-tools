@@ -1683,7 +1683,7 @@ ConvertMapFace(FILE *f, const mapface_t &mapface, const texcoord_style_t format)
             fprintDoubleAndSpc(f, bp.texMat[1][0]);
             fprintDoubleAndSpc(f, bp.texMat[1][1]);
             fprintDoubleAndSpc(f, bp.texMat[1][2]);
-            fprintf(f, ") ) %s", mapface.texname.c_str());
+            fprintf(f, ") ) %s 0 0 0", mapface.texname.c_str());
             break;
         }
         default:
