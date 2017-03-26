@@ -634,6 +634,7 @@ PrintOptions(void)
            "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
            "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
            "   -omitdetail     Detail brushes are omitted from the compile\n"
+           "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
 
@@ -827,7 +828,7 @@ ParseOptions(char *szOptions)
                 } else if (!Q_strcasecmp(szTok2, "bp")) {
                     options.convertMapFormat = conversion_t::bp;
                 } else {
-                    Error("Invalid argument to option %s", szTok);
+                    Error("'-convert' requires one of: quake,quake2,valve,bp");
                 }
                 
                 options.fConvertMapFormat = true;

@@ -82,6 +82,10 @@ Generate a hexen2 bsp.
 Write only placeholder textures, to depend upon replacements.
 .IP "\fB\-omitdetail\fP"
 Detail brushes are omitted from the compile.
+.IP "\fB\-convert <fmt>\fP"
+Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).
+Conversions to "quake" or "quake2" format may not be able to match the texture alignment in the source map, other conversions are lossless.
+The converted map is saved to <source map name>-<fmt>.map.
 
 .SH "SPECIAL TEXTURE NAMES"
 .PP
