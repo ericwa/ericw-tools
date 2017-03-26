@@ -488,6 +488,7 @@ static glm::vec2 evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const plane_
     return uv;
 }
 
+#if 0
 static float
 TexDefRMSE(const texdef_quake_ed_t &texdef, const plane_t *faceplane, const glm::mat4x4 referenceXform, const vec3_t facepoints[3])
 {
@@ -504,6 +505,7 @@ TexDefRMSE(const texdef_quake_ed_t &texdef, const plane_t *faceplane, const glm:
     avgSquaredDist /= 3.0;
     return sqrt(avgSquaredDist);
 }
+#endif
 
 static texdef_quake_ed_t addShift(const texdef_quake_ed_noshift_t &texdef, const glm::vec2 shift)
 {
@@ -603,38 +605,16 @@ TexDef_BSPToQuakeEd(const plane_t &faceplane, const float in_vecs[2][4], const v
         checkEq(uv02_test, p0p2_uv, 0.01);
     }
     
-    // Generate 2 scenarios, snapping to X and Y, and see which is better
-    // (they are the same unless there is shearing involved)
-    texdef_quake_ed_t texdefs[2];
-    
-    for (int i=0; i<2; i++) {
-        const bool preserveX = (i == 0);
-        const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, &faceplane, preserveX);
+    const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, &faceplane, false);
         
-        // figure out shift based on the average of the facepoints, which is hopefully in the middle of the face
-
-        glm::vec3 testpoint = (vec3_t_to_glm(facepoints[0])
-                               + vec3_t_to_glm(facepoints[1])
-                               + vec3_t_to_glm(facepoints[2])) / 3.0f;
-        
+    // figure out shift based on facepoints[0]
+    glm::vec3 testpoint = vec3_t_to_glm(facepoints[0]);
         glm::vec2 uv0_actual = evalTexDefAtPoint(addShift(res, glm::vec2(0,0)), &faceplane, testpoint);
         glm::vec2 uv0_desired = glm::vec2(worldToTexSpace * glm::vec4(testpoint, 1.0f));
         glm::vec2 shift = uv0_desired - uv0_actual;
         
         const texdef_quake_ed_t res2 = addShift(res, shift);
-        texdefs[i] = res2;
-    }
-    
-    // See which has less distortion
-    float rmse[2];
-    for (int i=0; i<2; i++)
-        rmse[i] = TexDefRMSE(texdefs[i], &faceplane, worldToTexSpace, facepoints);
-    
-    if (rmse[0] < rmse[1]) {
-        return texdefs[0];
-    } else {
-        return texdefs[1];
-    }
+    return res2;
 }
 
 float NormalizeDegrees(float degs)
