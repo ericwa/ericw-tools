@@ -1205,7 +1205,14 @@ static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix,
     }
 }
 
-// FIXME: factor out / merge with LightFace
+/*
+ * ================
+ * GetDirectLighting
+ *
+ * Mesaures direct lighting at a point, currently only used for bounce lighting.
+ * FIXME: factor out / merge with LightFace
+ * ================
+ */
 std::map<int, glm::vec3>
 GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal)
 {
@@ -1221,6 +1228,11 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         vec3_t surfpointToLightDir;
         float surfpointToLightDist;
         vec3_t color, normalcontrib;
+        
+        // Skip styled lights if "bouncestyled" setting is off.
+        if (entity.style.intValue() != 0 && !cfg.bouncestyled.boolValue()) {
+            continue;
+        }
         
         GetLightContrib(cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         

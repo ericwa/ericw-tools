@@ -1,3 +1,7 @@
+2017-03-27 TyrUtils-ericw 0.15.10-beta2
+
+- light: styled lights no longer bounce by default, set "_bouncestyled" "1" to enable.
+
 2017-03-26 TyrUtils-ericw 0.15.10-beta1
 
 - light: fix Linux binary

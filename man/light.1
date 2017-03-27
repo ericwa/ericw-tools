@@ -213,6 +213,19 @@ Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is darker.
 .IP "\fB""_lightmap_scale"" ""n""\fP"
 Forces all surfaces+submodels to use this specific lightmap scale. Removes "LMSHIFT" field.
 
+.IP "\fB""_bounce"" ""n""\fP"
+1 enables bounce lighting, disabled by default.
+
+.IP "\fB""_bouncescale"" ""n""\fP"
+Scales brightness of bounce lighting, default 1.
+
+.IP "\fB""_bouncecolorscale"" ""n""\fP"
+Weight for bounce lighting to use texture colors from the map: 0=ignore map textures (default), 1=multiply bounce light color by texture color.
+
+.IP "\fB""_bouncestyled"" ""n""\fP"
+1 makes styled lights bounce (e.g. flickering or switchable lights), default is 0, they do not bounce.
+
+
 .SS "Model Entity Keys"
 
 .PP

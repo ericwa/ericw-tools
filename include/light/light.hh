@@ -263,6 +263,7 @@ public:
     
     /* bounce */
     lockable_bool_t bounce;
+    lockable_bool_t bouncestyled;
     lockable_vec_t bouncescale, bouncecolorscale;
     
     /* sunlight */
@@ -305,6 +306,7 @@ public:
 
         /* bounce */
         bounce {"bounce", false},
+        bouncestyled {"bouncestyled", false},
         bouncescale {"bouncescale", 1.0f, 0.0f, 100.0f},
         bouncecolorscale {"bouncecolorscale", 0.0f, 0.0f, 1.0f},
 
@@ -334,8 +336,7 @@ public:
             &dirtMode, &dirtDepth, &dirtScale, &dirtGain, &dirtAngle,
             &minlightDirt,
             &phongallowed,
-            &bounce,
-            &bouncescale, &bouncecolorscale,
+            &bounce, &bouncestyled, &bouncescale, &bouncecolorscale,
             &sunlight,
             &sunlight_color,
             &sun2,
