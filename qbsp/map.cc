@@ -21,6 +21,8 @@
 
 #include <string>
 #include <memory>
+#include <list>
+#include <utility>
 
 #include <ctype.h>
 #include <string.h>
@@ -1725,9 +1727,16 @@ static void
 ConvertEntity(FILE *f, const mapentity_t *entity, const conversion_t format)
 {
     fprintf(f, "{\n");
+    
+    // put the epairs in a temporary list to reverse the order, so we can print them in the same order as the .MAP file
+    std::list<std::pair<std::string, std::string>> epairs;
     for (const epair_t *epair = entity->epairs; epair; epair = epair->next) {
-        fprintf(f, "\"%s\" \"%s\"\n", epair->key, epair->value);
+        epairs.push_front(std::make_pair(std::string(epair->key), std::string(epair->value)));
     }
+    for (const auto &epair : epairs) {
+        fprintf(f, "\"%s\" \"%s\"\n", epair.first.c_str(), epair.second.c_str());
+    }
+    
     for (int i=0; i<entity->nummapbrushes; i++) {
         ConvertMapBrush(f, entity->mapbrush(i), format);
     }
