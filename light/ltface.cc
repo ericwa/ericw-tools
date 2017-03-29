@@ -357,7 +357,27 @@ CalcFaceExtents(const bsp2_dface_t *face,
     }
 }
 
-using position_t = std::tuple<bool, const bsp2_dface_t *, glm::vec3, glm::vec3>;
+class position_t {
+public:
+    bool m_unoccluded;
+    const bsp2_dface_t *m_actualFace;
+    glm::vec3 m_position;
+    glm::vec3 m_interpolatedNormal;
+    
+    position_t(glm::vec3 position)
+      : m_unoccluded(false),
+        m_actualFace(nullptr),
+        m_position(position),
+        m_interpolatedNormal(glm::vec3(0,0,0)) {}
+    
+    position_t(const bsp2_dface_t *actualFace,
+               glm::vec3 position,
+               glm::vec3 interpolatedNormal)
+        : m_unoccluded(true),
+          m_actualFace(actualFace),
+          m_position(position),
+          m_interpolatedNormal(interpolatedNormal) {};
+};
 
 static const float sampleOffPlaneDist = 1.0f;
 
@@ -453,29 +473,7 @@ position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const gl
     // This point is too far from the polygon to be visible in game, so don't bother calculating lighting for it.
     // Dont contribute to interpolating.
     // We could safely colour it in pink for debugging.
-    return make_tuple(false, nullptr, point, glm::vec3());
-
-#if 0
-    /*utterly crap, just for testing. just grab closest vertex*/
-    float bestd = VECT_MAX;
-    int bestv = -1;
-    
-    glm::vec3 norm(0);
-    for (int i = 0; i < face->numedges; i++)
-    {
-        const int v = Face_VertexAtIndex(bsp, face, i);
-        const glm::vec3 t = point - points.at(i);
-        const float dist = length(t);
-        if (dist < bestd)
-        {
-            bestd = dist;
-            bestv = v;
-            norm = GetSurfaceVertexNormal(bsp, face, i);
-        }
-    }
-    norm = normalize(norm);
-    return norm;
-#endif
+    return position_t(point);
 }
 
 // Dump points to a .map file
@@ -549,7 +547,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
     
     if (edgeplanes.empty()) {
         // degenerate polygon
-        return make_tuple(false, nullptr, point, vec3(0));
+        return position_t(point);
     }
     
     const float planedist = GLM_DistAbovePlane(plane, point);
@@ -558,7 +556,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
     const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
     if (insideDist < -POINT_EQUAL_EPSILON) {
         // Non-convex polygon
-        return make_tuple(false, nullptr, point, vec3(0));
+        return position_t(point);
     }
     
     const modelinfo_t *mi = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -569,7 +567,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
         const auto interpNormal = GLM_InterpolateNormal(points, normals, point);
         // We already know the point is in the face, so this should always succeed
         if(!interpNormal.first)
-            return make_tuple(false, nullptr, point, vec3(0));
+            return position_t(point);
         pointNormal = interpNormal.second;
     } else {
         pointNormal = vec3(plane);
@@ -586,14 +584,14 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
                 const pair<int, vec3> closest = GLM_ClosestPointOnPolyBoundary(shrunk, point);
                 const vec3 newPoint = closest.second + (sampleOffPlaneDist * vec3(plane));
                 if (!Light_PointInAnySolid(bsp, mi->model, newPoint))
-                    return make_tuple(true, face, newPoint, pointNormal);
+                    return position_t(face, newPoint, pointNormal);
             }
         }
 
-        return make_tuple(false, nullptr, point, vec3(0));
+        return position_t(point);
     }
     
-    return make_tuple(true, face, point, pointNormal);
+    return position_t(face, point, pointNormal);
 }
 
 /*
@@ -647,10 +645,10 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
             const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
             const auto res = CalcPointNormal(bsp, face, vec3_t_to_glm(point), phongshaded, surf->lightmapscale, 0);
             
-            surf->occluded[i] = !get<0>(res);
-            *realfacenum = std::get<1>(res) != nullptr ? Face_GetNum(bsp, std::get<1>(res)) : -1;
-            glm_to_vec3_t(std::get<2>(res), point);
-            glm_to_vec3_t(std::get<3>(res), norm);
+            surf->occluded[i] = !res.m_unoccluded;
+            *realfacenum = res.m_actualFace != nullptr ? Face_GetNum(bsp, res.m_actualFace) : -1;
+            glm_to_vec3_t(res.m_position, point);
+            glm_to_vec3_t(res.m_interpolatedNormal, norm);
             
             // apply model offset after calling CalcPointNormal
             VectorAdd(point, offset, point);
