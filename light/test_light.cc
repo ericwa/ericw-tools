@@ -519,3 +519,76 @@ TEST(mathlib, FractionOfLine) {
     ASSERT_FLOAT_EQ(2, FractionOfLine(vec3(0,0,0), vec3(1,1,1), vec3(2,2,2)));
     ASSERT_FLOAT_EQ(-1, FractionOfLine(vec3(0,0,0), vec3(1,1,1), vec3(-1,-1,-1)));
 }
+
+// mesh_t
+
+TEST(mathlib, meshCreate) {
+    const vector<vec3> poly1 {
+        { 0,0,0 },
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    const vector<vec3> poly2 {
+        { 64,0,0 },
+        { 64,64,0 },
+        { 128,64,0 },
+        { 128,0,0 }
+    };
+    const vector<vector<vec3>> polys { poly1, poly2 };
+    
+    const mesh_t m = buildMesh(polys);
+    ASSERT_EQ(6, m.verts.size());
+    ASSERT_EQ(2, m.faces.size());
+    ASSERT_EQ(polys, meshToFaces(m));
+}
+
+TEST(mathlib, meshFixTJuncs) {
+    /*
+     
+     poly1
+     
+   x=0 x=64 x=128
+     
+     |---|--| y=64  poly2
+     |   +--| y=32
+     |---|--| y=0   poly3
+     
+     poly1 should get a vertex inserted at the +
+     
+     */
+    const vector<vec3> poly1 {
+        { 0,0,0 },
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,0,0 }
+    };
+    const vector<vec3> poly2 {
+        { 64,32,0 },
+        { 64,64,0 },
+        { 128,64,0 },
+        { 128,32,0 }
+    };
+    const vector<vec3> poly3 {
+        { 64,0,0 },
+        { 64,32,0 },
+        { 128,32,0 },
+        { 128,0,0 }
+    };
+    
+    const vector<vector<vec3>> polys { poly1, poly2, poly3 };
+    
+    mesh_t m = buildMesh(polys);
+    ASSERT_EQ(8, m.verts.size());
+    ASSERT_EQ(3, m.faces.size());
+    ASSERT_EQ(polys, meshToFaces(m));
+    
+    cleanupMesh(m);
+    
+    const auto newFaces = meshToFaces(m);
+#if 0
+    EXPECT_NE(poly1, newFaces.at(0));
+#endif
+    EXPECT_EQ(poly2, newFaces.at(1));
+    EXPECT_EQ(poly3, newFaces.at(2));
+}

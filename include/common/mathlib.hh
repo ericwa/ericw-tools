@@ -452,4 +452,19 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     return result;
 }
 
+class mesh_t {
+public:
+    std::vector<glm::vec3> verts;
+    std::vector<std::vector<int>> faces;
+};
+
+// Welds vertices at exactly the same position
+mesh_t buildMesh(const std::vector<std::vector<glm::vec3>> &faces);
+std::vector<std::vector<glm::vec3>> meshToFaces(const mesh_t &mesh);
+
+// Preserves the number and order of faces.
+// doesn't merge verts.
+// adds verts to fix t-juncs
+void cleanupMesh(mesh_t &mesh);
+
 #endif /* __COMMON_MATHLIB_H__ */
