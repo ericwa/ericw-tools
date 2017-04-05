@@ -24,7 +24,9 @@
 #include <math.h>
 #include <common/cmdlib.hh>
 #include <vector>
+#include <set>
 #include <array>
+#include <utility>
 
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
@@ -226,63 +228,210 @@ void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out);
 void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size);
 
-template <class V>
+/**
+ * touching a side/edge/corner is considered touching
+ */
+template <int N, class T>
+class qvec {
+protected:
+    T v[N];
+    
+public:
+    qvec() {
+        for (int i=0; i<N; i++)
+            v[i] = 0;
+    }
+
+    qvec(const T &a) {
+        for (int i=0; i<N; i++)
+            v[i] = a;
+    }
+    
+    qvec(const T &a, const T &b) {
+        v[0] = a;
+        v[1] = b;
+        for (int i=2; i<N; i++)
+            v[i] = 0;
+    }
+    
+    qvec(const T &a, const T &b, const T &c) {
+        v[0] = a;
+        v[1] = b;
+        v[2] = c;
+        for (int i=3; i<N; i++)
+            v[i] = 0;
+    }
+    
+    qvec(const T &a, const T &b, const T &c, const T &d) {
+        v[0] = a;
+        v[1] = b;
+        v[2] = c;
+        v[3] = d;
+        for (int i=4; i<N; i++)
+            v[i] = 0;
+    }
+
+    bool operator==(const qvec<N,T> &other) const {
+        for (int i=0; i<N; i++)
+            if (v[i] != other.v[i])
+                return false;
+        return true;
+    }
+    
+    T operator[](const size_t idx) const {
+        return v[idx];
+    }
+    
+    T &operator[](const size_t idx) {
+        return v[idx];
+    }
+    
+    void operator+=(const qvec<N,T> &other) {
+        for (int i=0; i<N; i++)
+            v[i] += other.v[i];
+    }
+    void operator-=(const qvec<N,T> &other) {
+        for (int i=0; i<N; i++)
+            v[i] -= other.v[i];
+    }
+    void operator*=(const T &scale) {
+        for (int i=0; i<N; i++)
+            v[i] *= scale;
+    }
+    void operator/=(const T &scale) {
+        for (int i=0; i<N; i++)
+            v[i] /= scale;
+    }
+    
+    qvec<N,T> operator+(const qvec<N,T> &other) const {
+        qvec<N,T> res(*this);
+        res += other;
+        return res;
+    }
+    
+    qvec<N,T> operator-(const qvec<N,T> &other) const {
+        qvec<N,T> res(*this);
+        res -= other;
+        return res;
+    }
+    
+    qvec<N,T> operator*(const T &scale) const {
+        qvec<N,T> res(*this);
+        res *= scale;
+        return res;
+    }
+    
+    qvec<N,T> operator/(const T &scale) const {
+        qvec<N,T> res(*this);
+        res /= scale;
+        return res;
+    }
+};
+
+using qvec2f = qvec<2, float>;
+using qvec3f = qvec<3, float>;
+
+/**
+ * touching a side/edge/corner is considered touching
+ */
+template <int N, class V>
 class aabb {
 private:
     V m_mins, m_maxs;
     
+    void fix() {
+        for (int i=0; i<N; i++) {
+            if (m_maxs[i] < m_mins[i]) {
+                m_maxs[i] = m_mins[i];
+            }
+        }
+    }
+    
 public:
-    aabb() : m_mins(FLT_MAX), m_maxs(-FLT_MAX) {}
-    aabb(const V &mins, const V &maxs) : m_mins(mins), m_maxs(maxs) {}
-    aabb(const aabb<V> &other) : m_mins(other.m_mins), m_maxs(other.m_maxs) {}
+    aabb(const V &mins, const V &maxs) : m_mins(mins), m_maxs(maxs) {
+        fix();
+    }
     
-    int length() const { return m_mins.length(); }
+    aabb(const aabb<N,V> &other) : m_mins(other.m_mins), m_maxs(other.m_maxs) {
+        fix();
+    }
     
-    bool disjoint(const aabb<V> &other) const {
-        for (int i=0; i<length(); i++) {
+    bool operator==(const aabb<N,V> &other) const {
+        return m_mins == other.m_mins
+            && m_maxs == other.m_maxs;
+    }
+    
+    const V &mins() const {
+        return m_mins;
+    }
+    
+    const V &maxs() const {
+        return m_maxs;
+    }
+    
+    bool disjoint(const aabb<N,V> &other) const {
+        for (int i=0; i<N; i++) {
             if (m_maxs[i] < other.m_mins[i]) return true;
             if (m_mins[i] > other.m_maxs[i]) return true;
         }
         return false;
     }
     
-    bool contains(const V &p) const {
-        for (int i=0; i<length(); i++) {
-            if (!(p[i] >= m_mins[i] && p[i] <= m_maxs[i])) return false;
+    bool contains(const aabb<N,V> &other) const {
+        for (int i=0; i<3; i++) {
+            if (other.m_mins[i] < m_mins[i])
+                return false;
+            if (other.m_maxs[i] > m_maxs[i])
+                return false;
         }
         return true;
     }
     
-    aabb<V> expand(const V &pt) const {
+    bool containsPoint(const V &p) const {
+        for (int i=0; i<N; i++) {
+            if (!(p[i] >= m_mins[i] && p[i] <= m_maxs[i])) return false;
+        }
+        return true;
+    }
+
+    aabb<N,V> expand(const V &pt) const {
         V mins, maxs;
-        for (int i=0; i<length(); i++) {
+        for (int i=0; i<N; i++) {
             mins[i] = qmin(m_mins[i], pt[i]);
             maxs[i] = qmax(m_maxs[i], pt[i]);
         }
-        return aabb<V>(mins, maxs);
+        return aabb<N,V>(mins, maxs);
+    }
+    
+    aabb<N,V> unionWith(const aabb<N,V> &other) const {
+        return expand(other.m_mins).expand(other.m_maxs);
+    }
+
+    std::pair<bool, aabb<N,V>> intersectWith(const aabb<N,V> &other) const {
+        V mins, maxs;
+        for (int i=0; i<N; i++) {
+            mins[i] = qmax(m_mins[i], other.m_mins[i]);
+            maxs[i] = qmin(m_maxs[i], other.m_maxs[i]);
+            if (mins[i] > maxs[i]) {
+                // empty intersection
+                return std::make_pair(false, aabb<N,V>(qvec3f(0), qvec3f(0)));
+            }
+        }
+        return std::make_pair(true, aabb<N,V>(mins, maxs));
     }
     
     V size() const {
-        V result;
-        for (int i=0; i<length(); i++) {
-            result[i] = m_maxs[i] - m_mins[i];
-        }
+        V result = m_maxs - m_mins;
         return result;
     }
     
-    aabb<V> grow(const V &size) const {
-        V mins = m_mins;
-        V maxs = m_maxs;
-        for (int i=0; i<length(); i++) {
-            mins[i] -= size[i];
-            maxs[i] += size[i];
-        }
-        return aabb<V>(mins, maxs);
+    aabb<N,V> grow(const V &size) const {
+        return aabb<N,V>(m_mins - size, m_maxs + size);
     }
 };
 
-using aabb3 = aabb<glm::vec3>;
-using aabb2 = aabb<glm::vec2>;
+using aabb3 = aabb<3, qvec3f>;
+using aabb2 = aabb<2, qvec2f>;
 
 using tri_t = std::tuple<glm::vec3, glm::vec3, glm::vec3>;
 
@@ -451,6 +600,133 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     }
     return result;
 }
+
+// octree
+
+aabb3 bboxOctant(const aabb3 &box, int i);
+
+#define MAX_OCTREE_DEPTH 3
+
+template <typename T>
+class octree_node_t {
+private:
+    int m_depth;
+    aabb3 m_bbox;
+    bool m_leafNode;
+    std::vector<std::pair<aabb3, T>> m_leafObjects; // only nonempty if m_leafNode
+    std::unique_ptr<octree_node_t<T>> m_children[8]; // only use if !m_leafNode
+    
+private:
+    octree_node_t *createChild(int i) const {
+        const aabb3 childBox = bboxOctant(m_bbox, i);
+        return new octree_node_t<T>(childBox, m_depth + 1);
+    }
+    
+    void toNode() {
+        Q_assert(m_leafNode);
+        Q_assert(m_leafObjects.empty()); // we always convert leafs to nodes before adding anything
+        for (int i=0; i<8; i++) {
+            Q_assert(m_children[i].get() == nullptr);
+            m_children[i] = std::unique_ptr<octree_node_t<T>> { createChild(i) };
+        }
+        m_leafNode = false;
+    }
+
+    void queryTouchingBBox(const aabb3 &query, std::set<T> &dest) const {
+        if (m_leafNode) {
+            // Test all objects
+            for (const auto &boxObjPair : m_leafObjects) {
+                if (!query.disjoint(boxObjPair.first)) {
+                    dest.insert(boxObjPair.second);
+                }
+            }
+            return;
+        }
+        
+        // Test all children that intersect the query
+        for (int i=0; i<8; i++) {
+            const std::pair<bool, aabb3> intersection = query.intersectWith(m_children[i]->m_bbox);
+            if (intersection.first) {
+                m_children[i]->queryTouchingBBox(intersection.second, dest);
+            }
+        }
+    }
+
+public:
+    octree_node_t(const aabb3 &box, const int depth) :
+        m_depth(depth),
+        m_bbox(box),
+        m_leafNode(true),
+        m_leafObjects()
+    {
+        Q_assert(m_depth <= MAX_OCTREE_DEPTH);
+    }
+    
+    void insert(const aabb3 &objBox, const T &obj) {
+        Q_assert(m_bbox.contains(objBox));
+        
+        if (m_leafNode && m_depth < MAX_OCTREE_DEPTH) {
+            toNode();
+        }
+        
+        if (m_leafNode) {
+            m_leafObjects.push_back(std::make_pair(objBox, obj));
+            return;
+        }
+        
+        // inserting into a non-leaf node
+        for (int i=0; i<8; i++) {
+            const std::pair<bool, aabb3> intersection = objBox.intersectWith(m_children[i]->m_bbox);
+            if (intersection.first) {
+                m_children[i]->insert(intersection.second, obj);
+            }
+        }
+    }
+    
+    std::vector<T> queryTouchingBBox(const aabb3 &query) const {
+        std::set<T> res;
+        queryTouchingBBox(query, res);
+        
+        std::vector<T> res_vec;
+        for (const auto &item : res) {
+            res_vec.push_back(item);
+        }
+        return res_vec;
+    }
+    
+    int nodeCount() const {
+        int result = 1;
+        if (!m_leafNode) {
+            for (int i=0; i<8; i++) {
+                result += m_children[i]->nodeCount();
+            }
+        }
+        return result;
+    }
+};
+
+template <typename T>
+octree_node_t<T> makeOctree(const std::vector<std::pair<aabb3, T>> &objects)
+{
+    if (objects.empty()) {
+        octree_node_t<T> empty { aabb3 { qvec3f(), qvec3f() }, 0 };
+        return empty;
+    }
+    
+    // take bbox of objects
+    aabb3 box = objects.at(0).first;
+    for (const auto &pr : objects) {
+        box = box.unionWith(pr.first);
+    }
+    
+    octree_node_t<T> res { box, 0 };
+    for (const auto &pr : objects) {
+        res.insert(pr.first, pr.second);
+    }
+    return res;
+}
+
+// mesh_t
 
 class mesh_t {
 public:

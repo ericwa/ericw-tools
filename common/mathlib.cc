@@ -656,6 +656,30 @@ float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
     return t;
 }
 
+// octree
+
+aabb3 bboxOctant(const aabb3 &box, int i)
+{
+    const qvec3f mid = (box.mins() + box.maxs()) * 0.5f;
+    
+    const qvec3f octantSigns((i & 1) ? 1.0f : -1.0f,
+                             (i & 2) ? 1.0f : -1.0f,
+                             (i & 4) ? 1.0f : -1.0f);
+    
+    qvec3f mins, maxs;
+    for (int j=0; j<3; j++) {
+        if (octantSigns[j] == -1.0f) {
+            mins[j] = box.mins()[j];
+            maxs[j] = mid[j];
+        } else {
+            mins[j] = mid[j];
+            maxs[j] = box.maxs()[j];
+        }
+    }
+    
+    return aabb3(mins, maxs);
+}
+
 // mesh_t
 
 mesh_t buildMesh(const vector<vector<glm::vec3>> &faces)

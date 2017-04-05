@@ -2,6 +2,8 @@
 
 #include <light/light.hh>
 
+#include <random>
+
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -591,4 +593,177 @@ TEST(mathlib, meshFixTJuncs) {
 #endif
     EXPECT_EQ(poly2, newFaces.at(1));
     EXPECT_EQ(poly3, newFaces.at(2));
+}
+
+TEST(mathlib, aabb_basic) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    
+    EXPECT_EQ(qvec3f(1,1,1), b1.mins());
+    EXPECT_EQ(qvec3f(10,10,10), b1.maxs());
+    EXPECT_EQ(qvec3f(9,9,9), b1.size());
+}
+
+TEST(mathlib, aabb_grow) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+
+    EXPECT_EQ(aabb3(qvec3f(0,0,0), qvec3f(11,11,11)), b1.grow(qvec3f(1,1,1)));
+}
+
+TEST(mathlib, aabb_unionwith) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3 b2(qvec3f(11,11,11), qvec3f(12,12,12));
+    
+    EXPECT_EQ(aabb3(qvec3f(1,1,1), qvec3f(12,12,12)), b1.unionWith(b2));
+}
+
+TEST(mathlib, aabb_expand) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    
+    EXPECT_EQ(b1, b1.expand(qvec3f(1,1,1)));
+    EXPECT_EQ(b1, b1.expand(qvec3f(5,5,5)));
+    EXPECT_EQ(b1, b1.expand(qvec3f(10,10,10)));
+    
+    const aabb3 b2(qvec3f(1,1,1), qvec3f(100,10,10));
+    EXPECT_EQ(b2, b1.expand(qvec3f(100,10,10)));
+    
+    const aabb3 b3(qvec3f(0,1,1), qvec3f(10,10,10));
+    EXPECT_EQ(b3, b1.expand(qvec3f(0,1,1)));
+}
+
+TEST(mathlib, aabb_disjoint) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    
+    const aabb3 yes1(qvec3f(-1,-1,-1), qvec3f(0,0,0));
+    const aabb3 yes2(qvec3f(11,1,1), qvec3f(12,10,10));
+    
+    const aabb3 no1(qvec3f(-1,-1,-1), qvec3f(1,1,1));
+    const aabb3 no2(qvec3f(10,10,10), qvec3f(10.5,10.5,10.5));
+    const aabb3 no3(qvec3f(5,5,5), qvec3f(100,6,6));
+    
+    EXPECT_TRUE(b1.disjoint(yes1));
+    EXPECT_TRUE(b1.disjoint(yes2));
+    EXPECT_FALSE(b1.disjoint(no1));
+    EXPECT_FALSE(b1.disjoint(no2));
+    EXPECT_FALSE(b1.disjoint(no3));
+    
+    EXPECT_FALSE(b1.intersectWith(yes1).first);
+    EXPECT_FALSE(b1.intersectWith(yes2).first);
+    
+    // these intersections are single points
+    EXPECT_EQ(make_pair(true, aabb3(qvec3f(1,1,1), qvec3f(1,1,1))), b1.intersectWith(no1));
+    EXPECT_EQ(make_pair(true, aabb3(qvec3f(10,10,10), qvec3f(10,10,10))), b1.intersectWith(no2));
+    
+    // an intersection with a volume
+    EXPECT_EQ(make_pair(true, aabb3(qvec3f(5,5,5), qvec3f(10,6,6))), b1.intersectWith(no3));
+}
+
+TEST(mathlib, aabb_contains) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    
+    const aabb3 yes1(qvec3f(1,1,1), qvec3f(2,2,2));
+    const aabb3 yes2(qvec3f(9,9,9), qvec3f(10,10,10));
+    
+    const aabb3 no1(qvec3f(-1,1,1), qvec3f(2,2,2));
+    const aabb3 no2(qvec3f(9,9,9), qvec3f(10.5,10,10));
+    
+    EXPECT_TRUE(b1.contains(yes1));
+    EXPECT_TRUE(b1.contains(yes2));
+    EXPECT_FALSE(b1.contains(no1));
+    EXPECT_FALSE(b1.contains(no2));
+}
+
+TEST(mathlib, aabb_containsPoint) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    
+    const qvec3f yes1(1,1,1);
+    const qvec3f yes2(2,2,2);
+    const qvec3f yes3(10,10,10);
+    
+    const qvec3f no1(0,0,0);
+    const qvec3f no2(1,1,0);
+    const qvec3f no3(10.1,10.1,10.1);
+    
+    EXPECT_TRUE(b1.containsPoint(yes1));
+    EXPECT_TRUE(b1.containsPoint(yes2));
+    EXPECT_TRUE(b1.containsPoint(yes3));
+    EXPECT_FALSE(b1.containsPoint(no1));
+    EXPECT_FALSE(b1.containsPoint(no2));
+    EXPECT_FALSE(b1.containsPoint(no3));
+}
+
+TEST(mathlib, aabb_create_invalid) {
+    const aabb3 b1(qvec3f(1,1,1), qvec3f(-1,-1,-1));
+    const aabb3 fixed(qvec3f(1,1,1), qvec3f(1,1,1));
+    
+    EXPECT_EQ(fixed, b1);
+    EXPECT_EQ(qvec3f(0,0,0), b1.size());
+}
+
+// octree
+
+TEST(mathlib, octree_basic) {
+    std::mt19937 engine(0);
+    std::uniform_int_distribution<> dis(-4096, 4096);
+    
+    const qvec3f boxsize(64,64,64);
+    const int N = 20000;
+    
+    // generate some objects
+    vector<pair<aabb3, int>> objs;
+    for (int i=0; i<N; i++) {
+        int x = dis(engine);
+        int y = dis(engine);
+        int z = dis(engine);
+        qvec3f center(x,y,z);
+        qvec3f mins = center - boxsize;
+        qvec3f maxs = center + boxsize;
+        
+        aabb3 bbox(mins, maxs);
+        objs.push_back(make_pair(bbox, i));
+    }
+    
+    // build octree
+    const double insert_start = I_FloatTime();
+    auto octree = makeOctree(objs);
+    const double insert_end = I_FloatTime();
+    printf("inserting %d cubes took %f seconds\n", N, (insert_end - insert_start));
+    
+    // query for objects overlapping objs[0]'s bbox
+    const double exhaustive_query_start = I_FloatTime();
+    vector<vector<int>> objsTouchingObjs;
+    for (int i=0; i<N; i++) {
+        const aabb3 obj_iBBox = objs[i].first;
+        
+        vector<int> objsTouchingObj_i;
+        for (int j=0; j<N; j++) {
+            if (!obj_iBBox.disjoint(objs[j].first)) {
+                objsTouchingObj_i.push_back(objs[j].second);
+            }
+        }
+        objsTouchingObjs.push_back(objsTouchingObj_i);
+    }
+    const double exhaustive_query_end = I_FloatTime();
+    printf("exhaustive query took %f ms\n", 1000.0 * (exhaustive_query_end - exhaustive_query_start));
+    
+    // now repeat the same query using the octree
+    const double octree_query_start = I_FloatTime();
+    vector<vector<int>> objsTouchingObjs_octree;
+    for (int i=0; i<N; i++) {
+        const aabb3 obj_iBBox = objs[i].first;
+        
+        vector<int> objsTouchingObj_i = octree.queryTouchingBBox(obj_iBBox);
+        objsTouchingObjs_octree.push_back(objsTouchingObj_i);
+    }
+    const double octree_query_end = I_FloatTime();
+    printf("octree query took %f ms\n", 1000.0 * (octree_query_end - octree_query_start));
+    
+    // compare result
+    for (int i=0; i<N; i++) {
+        vector<int> &objsTouchingObj_i = objsTouchingObjs[i];
+        vector<int> &objsTouchingObj_i_octree = objsTouchingObjs_octree[i];
+        
+        std::sort(objsTouchingObj_i.begin(), objsTouchingObj_i.end());
+        std::sort(objsTouchingObj_i_octree.begin(), objsTouchingObj_i_octree.end());
+        EXPECT_EQ(objsTouchingObj_i, objsTouchingObj_i_octree);
+    }
 }
