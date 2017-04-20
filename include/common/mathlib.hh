@@ -735,9 +735,9 @@ public:
         return res_vec;
     }
     
-    octree_t(const aabb3 &box)
-    : m_nodes { octree_node_t<T>(box, 0) }
-    {}
+    octree_t(const aabb3 &box) {
+        this->m_nodes.push_back(octree_node_t<T>(box, 0));
+    }
 };
 
 template <typename T>
