@@ -596,6 +596,62 @@ TEST(mathlib, meshFixTJuncs) {
     EXPECT_EQ(poly3, newFaces.at(2));
 }
 
+// qvec
+
+TEST(mathlib, qvec_expand) {
+    const qvec2f test(1,2);
+    const qvec4f test2(test);
+    
+    EXPECT_EQ(1, test2[0]);
+    EXPECT_EQ(2, test2[1]);
+    EXPECT_EQ(0, test2[2]);
+    EXPECT_EQ(0, test2[3]);
+}
+
+TEST(mathlib, qvec_contract) {
+    const qvec4f test(1,2,0,0);
+    const qvec2f test2(test);
+    
+    EXPECT_EQ(1, test2[0]);
+    EXPECT_EQ(2, test2[1]);
+}
+
+TEST(mathlib, qvec_copy) {
+    const qvec2f test(1,2);
+    const qvec2f test2(test);
+    
+    EXPECT_EQ(1, test2[0]);
+    EXPECT_EQ(2, test2[1]);
+}
+
+TEST(mathlib, qvec_constructor_0) {
+    const qvec2f test;
+    EXPECT_EQ(0, test[0]);
+    EXPECT_EQ(0, test[1]);
+}
+
+TEST(mathlib, qvec_constructor_1) {
+    const qvec2f test(42);
+    EXPECT_EQ(42, test[0]);
+    EXPECT_EQ(42, test[1]);
+}
+
+TEST(mathlib, qvec_constructor_fewer) {
+    const qvec4f test(1,2,3);
+    EXPECT_EQ(1, test[0]);
+    EXPECT_EQ(2, test[1]);
+    EXPECT_EQ(3, test[2]);
+    EXPECT_EQ(0, test[3]);
+}
+
+TEST(mathlib, qvec_constructor_extra) {
+    const qvec2f test(1,2,3);
+    EXPECT_EQ(1, test[0]);
+    EXPECT_EQ(2, test[1]);
+}
+
+// aabb3
+
 TEST(mathlib, aabb_basic) {
     const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
     
