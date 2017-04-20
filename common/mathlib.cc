@@ -660,6 +660,8 @@ float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
 
 aabb3 bboxOctant(const aabb3 &box, int i)
 {
+    Q_assert(i >= 0 && i < 8);
+    
     const qvec3f mid = (box.mins() + box.maxs()) * 0.5f;
     
     const qvec3f octantSigns((i & 1) ? 1.0f : -1.0f,
@@ -753,6 +755,6 @@ void cleanupMesh(mesh_t &mesh)
     
     std::vector<std::pair<aabb3, facenum_t>> faces;
     
-    octree_node_t<facenum_t> octree = makeOctree(faces);
+    octree_t<facenum_t> octree = makeOctree(faces);
     
 }

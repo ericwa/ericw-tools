@@ -608,35 +608,69 @@ aabb3 bboxOctant(const aabb3 &box, int i);
 
 #define MAX_OCTREE_DEPTH 3
 
+using octree_nodeid = int;
+
 template <typename T>
 class octree_node_t {
-private:
+public:
     int m_depth;
     aabb3 m_bbox;
     bool m_leafNode;
     std::vector<std::pair<aabb3, T>> m_leafObjects; // only nonempty if m_leafNode
-    std::unique_ptr<octree_node_t<T>> m_children[8]; // only use if !m_leafNode
+    octree_nodeid m_children[8]; // only use if !m_leafNode
     
-private:
-    octree_node_t *createChild(int i) const {
-        const aabb3 childBox = bboxOctant(m_bbox, i);
-        return new octree_node_t<T>(childBox, m_depth + 1);
-    }
-    
-    void toNode() {
-        Q_assert(m_leafNode);
-        Q_assert(m_leafObjects.empty()); // we always convert leafs to nodes before adding anything
-        for (int i=0; i<8; i++) {
-            Q_assert(m_children[i].get() == nullptr);
-            m_children[i] = std::unique_ptr<octree_node_t<T>> { createChild(i) };
+    octree_node_t(const aabb3 &box, const int depth) :
+        m_depth(depth),
+        m_bbox(box),
+        m_leafNode(true),
+        m_leafObjects()
+        {
+            Q_assert(m_depth <= MAX_OCTREE_DEPTH);
         }
-        m_leafNode = false;
-    }
+};
 
-    void queryTouchingBBox(const aabb3 &query, std::set<T> &dest) const {
-        if (m_leafNode) {
+template <typename T>
+class octree_t {
+private:
+    std::vector<octree_node_t<T>> m_nodes;
+
+    /**
+     * helper for toNode().
+     *
+     * creates the ith octant child of `thisNode`, and adds it to the end of `octree`.
+     * returns the nodeid.
+     */
+    octree_nodeid createChild(octree_nodeid thisNode, int i) {
+        octree_node_t<T> *node = &m_nodes[thisNode];
+        
+        const aabb3 childBox = bboxOctant(node->m_bbox, i);
+        octree_node_t<T> newNode(childBox, node->m_depth + 1);
+        
+        m_nodes.push_back(newNode); // invalidates `node` reference
+        return static_cast<int>(m_nodes.size() - 1);
+    }
+    
+    void toNode(octree_nodeid thisNode) {
+        octree_nodeid newNodeIds[8];
+        for (int i=0; i<8; i++) {
+            newNodeIds[i] = createChild(thisNode, i);
+        }
+        
+        octree_node_t<T> *node = &m_nodes[thisNode];
+        Q_assert(node->m_leafNode);
+        Q_assert(node->m_leafObjects.empty()); // we always convert leafs to nodes before adding anything
+        for (int i=0; i<8; i++) {
+            node->m_children[i] = newNodeIds[i];
+        }
+        node->m_leafNode = false;
+    }
+    
+    void queryTouchingBBox(octree_nodeid thisNode, const aabb3 &query, std::set<T> &dest) const {
+        const octree_node_t<T> *node = &m_nodes[thisNode];
+        
+        if (node->m_leafNode) {
             // Test all objects
-            for (const auto &boxObjPair : m_leafObjects) {
+            for (const auto &boxObjPair : node->m_leafObjects) {
                 if (!query.disjoint(boxObjPair.first)) {
                     dest.insert(boxObjPair.second);
                 }
@@ -646,47 +680,53 @@ private:
         
         // Test all children that intersect the query
         for (int i=0; i<8; i++) {
-            const std::pair<bool, aabb3> intersection = query.intersectWith(m_children[i]->m_bbox);
+            const octree_nodeid child_i_index = node->m_children[i];
+            const octree_node_t<T> *child_i_node = &m_nodes[child_i_index];
+            
+            const std::pair<bool, aabb3> intersection = query.intersectWith(child_i_node->m_bbox);
             if (intersection.first) {
-                m_children[i]->queryTouchingBBox(intersection.second, dest);
+                queryTouchingBBox(child_i_index, intersection.second, dest);
             }
         }
     }
-
-public:
-    octree_node_t(const aabb3 &box, const int depth) :
-        m_depth(depth),
-        m_bbox(box),
-        m_leafNode(true),
-        m_leafObjects()
-    {
-        Q_assert(m_depth <= MAX_OCTREE_DEPTH);
-    }
     
-    void insert(const aabb3 &objBox, const T &obj) {
-        Q_assert(m_bbox.contains(objBox));
+    void insert(octree_nodeid thisNode, const aabb3 &objBox, const T &obj) {
+        octree_node_t<T> *node = &m_nodes[thisNode];
+        Q_assert(node->m_bbox.contains(objBox));
         
-        if (m_leafNode && m_depth < MAX_OCTREE_DEPTH) {
-            toNode();
+        if (node->m_leafNode && node->m_depth < MAX_OCTREE_DEPTH) {
+            toNode(thisNode);
+            // N.B.: `node` pointer was invalidated
+            node = &m_nodes[thisNode];
         }
         
-        if (m_leafNode) {
-            m_leafObjects.push_back(std::make_pair(objBox, obj));
+        if (node->m_leafNode) {
+            node->m_leafObjects.push_back(std::make_pair(objBox, obj));
             return;
         }
         
         // inserting into a non-leaf node
         for (int i=0; i<8; i++) {
-            const std::pair<bool, aabb3> intersection = objBox.intersectWith(m_children[i]->m_bbox);
+            const octree_nodeid child_i_index = node->m_children[i];
+            octree_node_t<T> *child_i_node = &m_nodes[child_i_index];
+            const std::pair<bool, aabb3> intersection = objBox.intersectWith(child_i_node->m_bbox);
             if (intersection.first) {
-                m_children[i]->insert(intersection.second, obj);
+                insert(child_i_index, intersection.second, obj);
+                
+                // N.B.: `node` pointer was invalidated
+                node = &m_nodes[thisNode];
             }
         }
     }
     
+public:
+    void insert(const aabb3 &objBox, const T &obj) {
+        insert(0, objBox, obj);
+    }
+    
     std::vector<T> queryTouchingBBox(const aabb3 &query) const {
         std::set<T> res;
-        queryTouchingBBox(query, res);
+        queryTouchingBBox(0, query, res);
         
         std::vector<T> res_vec;
         for (const auto &item : res) {
@@ -695,22 +735,16 @@ public:
         return res_vec;
     }
     
-    int nodeCount() const {
-        int result = 1;
-        if (!m_leafNode) {
-            for (int i=0; i<8; i++) {
-                result += m_children[i]->nodeCount();
-            }
-        }
-        return result;
-    }
+    octree_t(const aabb3 &box)
+    : m_nodes { octree_node_t<T>(box, 0) }
+    {}
 };
 
 template <typename T>
-octree_node_t<T> makeOctree(const std::vector<std::pair<aabb3, T>> &objects)
+octree_t<T> makeOctree(const std::vector<std::pair<aabb3, T>> &objects)
 {
     if (objects.empty()) {
-        octree_node_t<T> empty { aabb3 { qvec3f(), qvec3f() }, 0 };
+        octree_t<T> empty{aabb3{qvec3f(), qvec3f()}};
         return empty;
     }
     
@@ -720,7 +754,7 @@ octree_node_t<T> makeOctree(const std::vector<std::pair<aabb3, T>> &objects)
         box = box.unionWith(pr.first);
     }
     
-    octree_node_t<T> res { box, 0 };
+    octree_t<T> res(box);
     for (const auto &pr : objects) {
         res.insert(pr.first, pr.second);
     }
