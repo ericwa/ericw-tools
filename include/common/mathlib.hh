@@ -27,6 +27,7 @@
 #include <set>
 #include <array>
 #include <utility>
+#include <memory> // for unique_ptr
 
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
