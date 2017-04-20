@@ -3,6 +3,7 @@
 #include <light/light.hh>
 
 #include <random>
+#include <algorithm> // for std::sort
 
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
