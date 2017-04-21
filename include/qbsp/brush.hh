@@ -22,6 +22,8 @@
 #ifndef QBSP_BRUSH_HH
 #define QBSP_BRUSH_HH
 
+#include <qbsp/winding.hh>
+
 typedef struct brush_s {
     struct brush_s *next;
     vec3_t mins, maxs;

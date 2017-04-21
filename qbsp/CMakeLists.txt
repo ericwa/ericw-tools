@@ -13,6 +13,7 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/mathlib.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/winding.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/outside.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/portals.hh

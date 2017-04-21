@@ -75,35 +75,4 @@ float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, cons
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
 
-//====== bsp5.h
-
-typedef struct plane {
-    vec3_t normal;
-    vec_t dist;
-    int type;
-    struct plane *hash_chain;
-} plane_t;
-
-//============================================================================
-
-
-typedef struct {
-    int numpoints;
-    vec3_t points[MAXEDGES];            // variable sized
-} winding_t;
-
-winding_t *BaseWindingForPlane(const plane_t *p);
-void CheckWinding(const winding_t *w);
-winding_t *NewWinding(int points);
-void FreeWinding(winding_t *w);
-winding_t *CopyWinding(const winding_t *w);
-winding_t *ClipWinding(winding_t *in, const plane_t *split, bool keepon);
-void DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
-                   winding_t **back);
-void MidpointWinding(const winding_t *w, vec3_t v);
-
-/* Helper function for ClipWinding and it's variants */
-void CalcSides(const winding_t *in, const plane_t *split, int *sides,
-               vec_t *dists, int counts[3]);
-
 #endif
