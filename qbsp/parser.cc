@@ -19,8 +19,8 @@
     See file, 'COPYING', for details.
 */
 
-#include "qbsp.hh"
-#include "parser.hh"
+#include <qbsp/qbsp.hh>
+#include <qbsp/parser.hh>
 
 void
 ParserInit(parser_t *p, const char *data)

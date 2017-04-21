@@ -27,9 +27,9 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "qbsp.hh"
-#include "parser.hh"
-#include "wad.hh"
+#include <qbsp/qbsp.hh>
+#include <qbsp/parser.hh>
+#include <qbsp/wad.hh>
 
 #include <glm/glm.hpp>
 

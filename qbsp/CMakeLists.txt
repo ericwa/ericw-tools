@@ -2,12 +2,12 @@ cmake_minimum_required (VERSION 2.8)
 project (qbsp CXX)
 
 set(QBSP_INCLUDES
-	bspfile.hh
-	file.hh
-	parser.hh
-	qbsp.hh
-	wad.hh
-	warnerr.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/bspfile.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/file.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/parser.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/wad.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/warnerr.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/cmdlib.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh

@@ -22,8 +22,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "qbsp.hh"
-#include "file.hh"
+#include <qbsp/qbsp.hh>
+#include <qbsp/file.hh>
 
 /*
 ==============

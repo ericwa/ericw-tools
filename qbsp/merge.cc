@@ -20,7 +20,7 @@
 */
 // merge.c
 
-#include "qbsp.hh"
+#include <qbsp/qbsp.hh>
 
 #ifdef PARANOID
 static void

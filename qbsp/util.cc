@@ -23,10 +23,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-#include "common/threads.hh"
-#include "common/log.hh"
+#include <common/threads.hh>
+#include <common/log.hh>
 
-#include "qbsp.hh"
+#include <qbsp/qbsp.hh>
 
 static int rgMemTotal[GLOBAL + 1];
 static int rgMemActive[GLOBAL + 1];

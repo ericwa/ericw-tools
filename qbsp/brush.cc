@@ -21,7 +21,7 @@
 
 #include <string.h>
 
-#include "qbsp.hh"
+#include <qbsp/qbsp.hh>
 
 /*
  * Beveled clipping hull can generate many extra faces

@@ -20,7 +20,7 @@
 */
 // tjunc.c
 
-#include "qbsp.hh"
+#include <qbsp/qbsp.hh>
 
 static int numwedges, numwverts;
 static int tjuncs;

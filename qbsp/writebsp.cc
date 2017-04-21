@@ -20,8 +20,8 @@
 */
 // writebsp.c
 
-#include "qbsp.hh"
-#include "wad.hh"
+#include <qbsp/qbsp.hh>
+#include <qbsp/wad.hh>
 
 static void
 ExportNodePlanes_r(node_t *node, int *planemap)

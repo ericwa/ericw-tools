@@ -21,9 +21,9 @@
 
 #include <string.h>
 
-#include "common/log.hh"
-#include "qbsp.hh"
-#include "wad.hh"
+#include <common/log.hh>
+#include <qbsp/qbsp.hh>
+#include <qbsp/wad.hh>
 
 static const char *IntroString =
     "---- qbsp / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n";
