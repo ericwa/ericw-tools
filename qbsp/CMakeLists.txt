@@ -7,7 +7,21 @@ set(QBSP_INCLUDES
 	parser.hh
 	qbsp.hh
 	wad.hh
-	warnerr.hh)
+	warnerr.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/cmdlib.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/mathlib.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/outside.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/portals.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/region.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/solidbsp.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/surfaces.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/tjunc.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/util.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
 
 set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/common/threads.cc
