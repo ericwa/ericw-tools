@@ -23,6 +23,7 @@
 #include <memory>
 #include <list>
 #include <utility>
+#include <cassert>
 
 #include <ctype.h>
 #include <string.h>
@@ -236,38 +237,31 @@ Returns a global texinfo number
 int
 FindTexinfo(mtexinfo_t *texinfo, uint64_t flags)
 {
-    const size_t num_texinfo = map.mtexinfos.size();
-
     /* Set the texture flags */
     texinfo->flags = flags;
-
-    for (size_t index = 0; index < num_texinfo; index++) {
-        const mtexinfo_t *target = &map.mtexinfos.at(index);
-        if (texinfo->miptex != target->miptex)
-            continue;
-        if (texinfo->flags != target->flags)
-            continue;
-
-        /* Don't worry about texture alignment on skip or hint surfaces */
-        if (texinfo->flags & (TEX_SKIP | TEX_HINT))
-            return index;
-
-        int j;
-        for (j = 0; j < 4; j++) {
-            if (texinfo->vecs[0][j] != target->vecs[0][j])
-                break;
-            if (texinfo->vecs[1][j] != target->vecs[1][j])
-                break;
-        }
-        if (j != 4)
-            continue;
-
-        return static_cast<int>(index);
+    
+    /* Don't worry about texture alignment on skip or hint surfaces */
+    if (texinfo->flags & (TEX_SKIP | TEX_HINT)) {
+        for (int i=0; i<2; i++)
+            for (int j=0; j<4; j++)
+                texinfo->vecs[i][j] = 0.0f;
     }
-
+    
+    // check for an exact match in the reverse lookup
+    const auto it = map.mtexinfo_lookup.find(*texinfo);
+    if (it != map.mtexinfo_lookup.end()) {
+        return it->second;
+    }
+    
     /* Allocate a new texinfo at the end of the array */
+    const int num_texinfo = static_cast<int>(map.mtexinfos.size());
     map.mtexinfos.push_back(*texinfo);
-    return static_cast<int>(num_texinfo);
+    map.mtexinfo_lookup[*texinfo] = num_texinfo;
+    
+    // catch broken < implementations in mtexinfo_t
+    assert(map.mtexinfo_lookup.find(*texinfo) != map.mtexinfo_lookup.end());
+    
+    return num_texinfo;
 }
 
 /* detect colors with components in 0-1 and scale them to 0-255 */

@@ -200,6 +200,29 @@ typedef struct mtexinfo_s {
     float vecs[2][4];           /* [s/t][xyz offset] */
     int32_t miptex;
     uint64_t flags;
+    
+    bool operator<(const mtexinfo_s &other) const {
+        if (this->miptex < other.miptex)
+            return true;
+        if (this->miptex > other.miptex)
+            return false;
+        
+        if (this->flags < other.flags)
+            return true;
+        if (this->flags > other.flags)
+            return false;
+        
+        for (int i=0; i<2; i++) {
+            for (int j=0; j<4; j++) {
+                if (this->vecs[i][j] < other.vecs[i][j])
+                    return true;
+                if (this->vecs[i][j] > other.vecs[i][j])
+                    return false;
+            }
+        }
+        
+        return false;
+    }
 } mtexinfo_t;
 
 typedef struct visfacet_s {

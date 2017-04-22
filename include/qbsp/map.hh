@@ -80,6 +80,9 @@ typedef struct mapdata_s {
     std::vector<miptex_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
     
+    /* quick lookup for texinfo */
+    std::map<mtexinfo_t, int> mtexinfo_lookup;
+    
     /* map from plane hash code to list of indicies in `planes` vector */
     std::unordered_map<int, std::vector<int>> planehash;
     
