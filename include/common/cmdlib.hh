@@ -29,6 +29,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <common/log.hh>
+#include <common/qvec.hh> // FIXME: For qmax/qmin
 
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
@@ -45,25 +46,6 @@ typedef unsigned char byte;
 #ifndef __cplusplus
 #define inline _inline
 #endif
-#endif
-
-#ifdef __GNUC__
-/* min and max macros with type checking */
-#define qmax(a,b) ({      \
-    typeof(a) a_ = (a);   \
-    typeof(b) b_ = (b);   \
-    (void)(&a_ == &b_);   \
-    (a_ > b_) ? a_ : b_;  \
-})
-#define qmin(a,b) ({      \
-    typeof(a) a_ = (a);   \
-    typeof(b) b_ = (b);   \
-    (void)(&a_ == &b_);   \
-    (a_ < b_) ? a_ : b_;  \
-})
-#else
-#define qmax(a,b) (((a)>(b)) ? (a) : (b))
-#define qmin(a,b) (((a)>(b)) ? (b) : (a))
 #endif
 
 #ifdef _MSC_VER

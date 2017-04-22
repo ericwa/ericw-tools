@@ -20,9 +20,10 @@ set(LIGHT_SOURCES
 	phong.cc
 	bounce.cc
 	settings.cc
-	${CMAKE_SOURCE_DIR}/common/bspfile.cc
+	${CMAKE_SOURCE_DIR}/common/bspfile.cc	
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc
+	${CMAKE_SOURCE_DIR}/common/mesh.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/threads.cc
 	${CMAKE_SOURCE_DIR}/common/polylib.cc
