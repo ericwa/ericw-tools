@@ -140,7 +140,10 @@ public:
     }
 };
 
-using aabb3 = aabb<3, qvec3f>;
-using aabb2 = aabb<2, qvec2f>;
+using aabb3d = aabb<3, qvec3d>;
+using aabb2d = aabb<2, qvec2d>;
+
+using aabb3f = aabb<3, qvec3f>;
+using aabb2f = aabb<2, qvec2f>;
 
 #endif /* __COMMON_AABB_HH__ */

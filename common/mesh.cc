@@ -84,7 +84,7 @@ std::vector<std::vector<glm::vec3>> meshToFaces(const mesh_t &mesh)
 }
 
 
-static aabb3 mesh_face_bbox(const mesh_t &mesh, int facenum)
+static aabb3f mesh_face_bbox(const mesh_t &mesh, int facenum)
 {
     const std::vector<int> &face = mesh.faces.at(facenum);
     
@@ -94,7 +94,7 @@ void cleanupMesh(mesh_t &mesh)
 {
     using facenum_t = int;
     
-    std::vector<std::pair<aabb3, facenum_t>> faces;
+    std::vector<std::pair<aabb3f, facenum_t>> faces;
     
     octree_t<facenum_t> octree = makeOctree(faces);
     

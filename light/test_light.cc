@@ -654,10 +654,10 @@ TEST(mathlib, qvec_constructor_extra) {
     EXPECT_EQ(2, test[1]);
 }
 
-// aabb3
+// aabb3f
 
 TEST(mathlib, aabb_basic) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(10,10,10));
     
     EXPECT_EQ(qvec3f(1,1,1), b1.mins());
     EXPECT_EQ(qvec3f(10,10,10), b1.maxs());
@@ -665,41 +665,41 @@ TEST(mathlib, aabb_basic) {
 }
 
 TEST(mathlib, aabb_grow) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(10,10,10));
 
-    EXPECT_EQ(aabb3(qvec3f(0,0,0), qvec3f(11,11,11)), b1.grow(qvec3f(1,1,1)));
+    EXPECT_EQ(aabb3f(qvec3f(0,0,0), qvec3f(11,11,11)), b1.grow(qvec3f(1,1,1)));
 }
 
 TEST(mathlib, aabb_unionwith) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
-    const aabb3 b2(qvec3f(11,11,11), qvec3f(12,12,12));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3f b2(qvec3f(11,11,11), qvec3f(12,12,12));
     
-    EXPECT_EQ(aabb3(qvec3f(1,1,1), qvec3f(12,12,12)), b1.unionWith(b2));
+    EXPECT_EQ(aabb3f(qvec3f(1,1,1), qvec3f(12,12,12)), b1.unionWith(b2));
 }
 
 TEST(mathlib, aabb_expand) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(10,10,10));
     
     EXPECT_EQ(b1, b1.expand(qvec3f(1,1,1)));
     EXPECT_EQ(b1, b1.expand(qvec3f(5,5,5)));
     EXPECT_EQ(b1, b1.expand(qvec3f(10,10,10)));
     
-    const aabb3 b2(qvec3f(1,1,1), qvec3f(100,10,10));
+    const aabb3f b2(qvec3f(1,1,1), qvec3f(100,10,10));
     EXPECT_EQ(b2, b1.expand(qvec3f(100,10,10)));
     
-    const aabb3 b3(qvec3f(0,1,1), qvec3f(10,10,10));
+    const aabb3f b3(qvec3f(0,1,1), qvec3f(10,10,10));
     EXPECT_EQ(b3, b1.expand(qvec3f(0,1,1)));
 }
 
 TEST(mathlib, aabb_disjoint) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(10,10,10));
     
-    const aabb3 yes1(qvec3f(-1,-1,-1), qvec3f(0,0,0));
-    const aabb3 yes2(qvec3f(11,1,1), qvec3f(12,10,10));
+    const aabb3f yes1(qvec3f(-1,-1,-1), qvec3f(0,0,0));
+    const aabb3f yes2(qvec3f(11,1,1), qvec3f(12,10,10));
     
-    const aabb3 no1(qvec3f(-1,-1,-1), qvec3f(1,1,1));
-    const aabb3 no2(qvec3f(10,10,10), qvec3f(10.5,10.5,10.5));
-    const aabb3 no3(qvec3f(5,5,5), qvec3f(100,6,6));
+    const aabb3f no1(qvec3f(-1,-1,-1), qvec3f(1,1,1));
+    const aabb3f no2(qvec3f(10,10,10), qvec3f(10.5,10.5,10.5));
+    const aabb3f no3(qvec3f(5,5,5), qvec3f(100,6,6));
     
     EXPECT_TRUE(b1.disjoint(yes1));
     EXPECT_TRUE(b1.disjoint(yes2));
@@ -711,21 +711,21 @@ TEST(mathlib, aabb_disjoint) {
     EXPECT_FALSE(b1.intersectWith(yes2).valid);
     
     // these intersections are single points
-    EXPECT_EQ(aabb3::intersection_t(aabb3(qvec3f(1,1,1), qvec3f(1,1,1))), b1.intersectWith(no1));
-    EXPECT_EQ(aabb3::intersection_t(aabb3(qvec3f(10,10,10), qvec3f(10,10,10))), b1.intersectWith(no2));
+    EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(1,1,1), qvec3f(1,1,1))), b1.intersectWith(no1));
+    EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(10,10,10), qvec3f(10,10,10))), b1.intersectWith(no2));
     
     // an intersection with a volume
-    EXPECT_EQ(aabb3::intersection_t(aabb3(qvec3f(5,5,5), qvec3f(10,6,6))), b1.intersectWith(no3));
+    EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(5,5,5), qvec3f(10,6,6))), b1.intersectWith(no3));
 }
 
 TEST(mathlib, aabb_contains) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(10,10,10));
     
-    const aabb3 yes1(qvec3f(1,1,1), qvec3f(2,2,2));
-    const aabb3 yes2(qvec3f(9,9,9), qvec3f(10,10,10));
+    const aabb3f yes1(qvec3f(1,1,1), qvec3f(2,2,2));
+    const aabb3f yes2(qvec3f(9,9,9), qvec3f(10,10,10));
     
-    const aabb3 no1(qvec3f(-1,1,1), qvec3f(2,2,2));
-    const aabb3 no2(qvec3f(9,9,9), qvec3f(10.5,10,10));
+    const aabb3f no1(qvec3f(-1,1,1), qvec3f(2,2,2));
+    const aabb3f no2(qvec3f(9,9,9), qvec3f(10.5,10,10));
     
     EXPECT_TRUE(b1.contains(yes1));
     EXPECT_TRUE(b1.contains(yes2));
@@ -734,7 +734,7 @@ TEST(mathlib, aabb_contains) {
 }
 
 TEST(mathlib, aabb_containsPoint) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(10,10,10));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(10,10,10));
     
     const qvec3f yes1(1,1,1);
     const qvec3f yes2(2,2,2);
@@ -753,8 +753,8 @@ TEST(mathlib, aabb_containsPoint) {
 }
 
 TEST(mathlib, aabb_create_invalid) {
-    const aabb3 b1(qvec3f(1,1,1), qvec3f(-1,-1,-1));
-    const aabb3 fixed(qvec3f(1,1,1), qvec3f(1,1,1));
+    const aabb3f b1(qvec3f(1,1,1), qvec3f(-1,-1,-1));
+    const aabb3f fixed(qvec3f(1,1,1), qvec3f(1,1,1));
     
     EXPECT_EQ(fixed, b1);
     EXPECT_EQ(qvec3f(0,0,0), b1.size());
@@ -770,7 +770,7 @@ TEST(mathlib, octree_basic) {
     const int N = 20000;
     
     // generate some objects
-    vector<pair<aabb3, int>> objs;
+    vector<pair<aabb3f, int>> objs;
     for (int i=0; i<N; i++) {
         int x = dis(engine);
         int y = dis(engine);
@@ -779,7 +779,7 @@ TEST(mathlib, octree_basic) {
         qvec3f mins = center - boxsize;
         qvec3f maxs = center + boxsize;
         
-        aabb3 bbox(mins, maxs);
+        aabb3f bbox(mins, maxs);
         objs.push_back(make_pair(bbox, i));
     }
     
@@ -793,7 +793,7 @@ TEST(mathlib, octree_basic) {
     const double exhaustive_query_start = I_FloatTime();
     vector<vector<int>> objsTouchingObjs;
     for (int i=0; i<N; i++) {
-        const aabb3 obj_iBBox = objs[i].first;
+        const aabb3f obj_iBBox = objs[i].first;
         
         vector<int> objsTouchingObj_i;
         for (int j=0; j<N; j++) {
@@ -810,7 +810,7 @@ TEST(mathlib, octree_basic) {
     const double octree_query_start = I_FloatTime();
     vector<vector<int>> objsTouchingObjs_octree;
     for (int i=0; i<N; i++) {
-        const aabb3 obj_iBBox = objs[i].first;
+        const aabb3f obj_iBBox = objs[i].first;
         
         vector<int> objsTouchingObj_i = octree.queryTouchingBBox(obj_iBBox);
         objsTouchingObjs_octree.push_back(objsTouchingObj_i);

@@ -27,7 +27,7 @@
 #include <set>
 #include <cassert>
 
-static inline aabb3 bboxOctant(const aabb3 &box, int i)
+static inline aabb3f bboxOctant(const aabb3f &box, int i)
 {
     assert(i >= 0 && i < 8);
     
@@ -48,7 +48,7 @@ static inline aabb3 bboxOctant(const aabb3 &box, int i)
         }
     }
     
-    return aabb3(mins, maxs);
+    return aabb3f(mins, maxs);
 }
 
 #define MAX_OCTREE_DEPTH 3
@@ -59,12 +59,12 @@ template <typename T>
 class octree_node_t {
 public:
     int m_depth;
-    aabb3 m_bbox;
+    aabb3f m_bbox;
     bool m_leafNode;
-    std::vector<std::pair<aabb3, T>> m_leafObjects; // only nonempty if m_leafNode
+    std::vector<std::pair<aabb3f, T>> m_leafObjects; // only nonempty if m_leafNode
     octree_nodeid m_children[8]; // only use if !m_leafNode
     
-    octree_node_t(const aabb3 &box, const int depth) :
+    octree_node_t(const aabb3f &box, const int depth) :
         m_depth(depth),
         m_bbox(box),
         m_leafNode(true),
@@ -88,7 +88,7 @@ private:
     octree_nodeid createChild(octree_nodeid thisNode, int i) {
         octree_node_t<T> *node = &m_nodes[thisNode];
         
-        const aabb3 childBox = bboxOctant(node->m_bbox, i);
+        const aabb3f childBox = bboxOctant(node->m_bbox, i);
         octree_node_t<T> newNode(childBox, node->m_depth + 1);
         
         m_nodes.push_back(newNode); // invalidates `node` reference
@@ -110,7 +110,7 @@ private:
         node->m_leafNode = false;
     }
     
-    void queryTouchingBBox(octree_nodeid thisNode, const aabb3 &query, std::set<T> &dest) const {
+    void queryTouchingBBox(octree_nodeid thisNode, const aabb3f &query, std::set<T> &dest) const {
         const octree_node_t<T> *node = &m_nodes[thisNode];
         
         if (node->m_leafNode) {
@@ -128,14 +128,14 @@ private:
             const octree_nodeid child_i_index = node->m_children[i];
             const octree_node_t<T> *child_i_node = &m_nodes[child_i_index];
             
-            const aabb3::intersection_t intersection = query.intersectWith(child_i_node->m_bbox);
+            const aabb3f::intersection_t intersection = query.intersectWith(child_i_node->m_bbox);
             if (intersection.valid) {
                 queryTouchingBBox(child_i_index, intersection.bbox, dest);
             }
         }
     }
     
-    void insert(octree_nodeid thisNode, const aabb3 &objBox, const T &obj) {
+    void insert(octree_nodeid thisNode, const aabb3f &objBox, const T &obj) {
         octree_node_t<T> *node = &m_nodes[thisNode];
         assert(node->m_bbox.contains(objBox));
         
@@ -154,7 +154,7 @@ private:
         for (int i=0; i<8; i++) {
             const octree_nodeid child_i_index = node->m_children[i];
             octree_node_t<T> *child_i_node = &m_nodes[child_i_index];
-            const aabb3::intersection_t intersection = objBox.intersectWith(child_i_node->m_bbox);
+            const aabb3f::intersection_t intersection = objBox.intersectWith(child_i_node->m_bbox);
             if (intersection.valid) {
                 insert(child_i_index, intersection.bbox, obj);
                 
@@ -165,11 +165,11 @@ private:
     }
     
 public:
-    void insert(const aabb3 &objBox, const T &obj) {
+    void insert(const aabb3f &objBox, const T &obj) {
         insert(0, objBox, obj);
     }
     
-    std::vector<T> queryTouchingBBox(const aabb3 &query) const {
+    std::vector<T> queryTouchingBBox(const aabb3f &query) const {
         std::set<T> res;
         queryTouchingBBox(0, query, res);
         
@@ -180,21 +180,21 @@ public:
         return res_vec;
     }
     
-    octree_t(const aabb3 &box) {
+    octree_t(const aabb3f &box) {
         this->m_nodes.push_back(octree_node_t<T>(box, 0));
     }
 };
 
 template <typename T>
-octree_t<T> makeOctree(const std::vector<std::pair<aabb3, T>> &objects)
+octree_t<T> makeOctree(const std::vector<std::pair<aabb3f, T>> &objects)
 {
     if (objects.empty()) {
-        octree_t<T> empty{aabb3{qvec3f(), qvec3f()}};
+        octree_t<T> empty{aabb3f{qvec3f(), qvec3f()}};
         return empty;
     }
     
     // take bbox of objects
-    aabb3 box = objects.at(0).first;
+    aabb3f box = objects.at(0).first;
     for (const auto &pr : objects) {
         box = box.unionWith(pr.first);
     }
