@@ -20,8 +20,10 @@
 #ifndef __COMMON_QVEC_HH__
 #define __COMMON_QVEC_HH__
 
+#ifndef qmax // FIXME: Remove this ifdef
 #define qmax(a,b) (((a)>(b)) ? (a) : (b))
 #define qmin(a,b) (((a)>(b)) ? (b) : (a))
+#endif
 
 template <int N, class T>
 class qvec {
