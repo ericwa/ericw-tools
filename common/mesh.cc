@@ -17,8 +17,13 @@
     See file, 'COPYING', for details.
 */
 
+#include <common/cmdlib.hh>
 #include <common/mesh.hh>
 #include <common/octree.hh>
+
+#include <map>
+
+using namespace std;
 
 mesh_t buildMesh(const vector<vector<glm::vec3>> &faces)
 {

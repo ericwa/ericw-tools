@@ -22,24 +22,30 @@
 
 #include <common/qvec.hh>
 
-template <int N, class V>
-struct intersection_res_t {
-    bool valid;
-    aabb<N,V> intersection;
-
-    intersection_res_t()
-        : valid(false) {}
-
-    intersection_res_t(const aabb<N,V> &i)
-        : valid(true),
-          intersection(i) {}
-};
-
 /**
  * touching a side/edge/corner is considered touching
  */
 template <int N, class V>
 class aabb {
+public:
+    class intersection_t {
+    public:
+        bool valid;
+        aabb<N,V> bbox;
+        
+        intersection_t()
+        : valid(false),
+          bbox(V(0), V(0)) {}
+        
+        intersection_t(const aabb<N,V> &i)
+        : valid(true),
+          bbox(i) {}
+        
+        bool operator==(const intersection_t &other) const {
+            return valid == other.valid && bbox == other.bbox;
+        }
+    };
+    
 private:
     V m_mins, m_maxs;
     
@@ -111,17 +117,17 @@ public:
         return expand(other.m_mins).expand(other.m_maxs);
     }
 
-    intersection_res_t<N,V> intersectWith(const aabb<N,V> &other) const {
+    intersection_t intersectWith(const aabb<N,V> &other) const {
         V mins, maxs;
         for (int i=0; i<N; i++) {
             mins[i] = qmax(m_mins[i], other.m_mins[i]);
             maxs[i] = qmin(m_maxs[i], other.m_maxs[i]);
             if (mins[i] > maxs[i]) {
                 // empty intersection
-                return intersection_res_t<N,V>();
+                return intersection_t();
             }
         }
-        return intersection_res_t<N,V>(aabb<N,V>(mins, maxs));
+        return intersection_t(aabb<N,V>(mins, maxs));
     }
     
     V size() const {

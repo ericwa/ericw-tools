@@ -10,6 +10,10 @@
 #include <glm/gtx/string_cast.hpp>
 #include <glm/gtc/epsilon.hpp>
 
+#include <common/mesh.hh>
+#include <common/aabb.hh>
+#include <common/octree.hh>
+
 using namespace glm;
 using namespace std;
 
@@ -703,15 +707,15 @@ TEST(mathlib, aabb_disjoint) {
     EXPECT_FALSE(b1.disjoint(no2));
     EXPECT_FALSE(b1.disjoint(no3));
     
-    EXPECT_FALSE(b1.intersectWith(yes1).first);
-    EXPECT_FALSE(b1.intersectWith(yes2).first);
+    EXPECT_FALSE(b1.intersectWith(yes1).valid);
+    EXPECT_FALSE(b1.intersectWith(yes2).valid);
     
     // these intersections are single points
-    EXPECT_EQ(make_pair(true, aabb3(qvec3f(1,1,1), qvec3f(1,1,1))), b1.intersectWith(no1));
-    EXPECT_EQ(make_pair(true, aabb3(qvec3f(10,10,10), qvec3f(10,10,10))), b1.intersectWith(no2));
+    EXPECT_EQ(aabb3::intersection_t(aabb3(qvec3f(1,1,1), qvec3f(1,1,1))), b1.intersectWith(no1));
+    EXPECT_EQ(aabb3::intersection_t(aabb3(qvec3f(10,10,10), qvec3f(10,10,10))), b1.intersectWith(no2));
     
     // an intersection with a volume
-    EXPECT_EQ(make_pair(true, aabb3(qvec3f(5,5,5), qvec3f(10,6,6))), b1.intersectWith(no3));
+    EXPECT_EQ(aabb3::intersection_t(aabb3(qvec3f(5,5,5), qvec3f(10,6,6))), b1.intersectWith(no3));
 }
 
 TEST(mathlib, aabb_contains) {

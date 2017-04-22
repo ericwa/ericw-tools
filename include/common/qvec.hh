@@ -41,24 +41,30 @@ public:
     
     qvec(const T &a, const T &b) {
         v[0] = a;
-        v[1] = b;
+        if (1 < N)
+            v[1] = b;
         for (int i=2; i<N; i++)
             v[i] = 0;
     }
     
     qvec(const T &a, const T &b, const T &c) {
         v[0] = a;
-        v[1] = b;
-        v[2] = c;
+        if (1 < N)
+            v[1] = b;
+        if (2 < N)
+            v[2] = c;
         for (int i=3; i<N; i++)
             v[i] = 0;
     }
     
     qvec(const T &a, const T &b, const T &c, const T &d) {
         v[0] = a;
-        v[1] = b;
-        v[2] = c;
-        v[3] = d;
+        if (1 < N)
+            v[1] = b;
+        if (2 < N)
+            v[2] = c;
+        if (3 < N)
+            v[3] = d;
         for (int i=4; i<N; i++)
             v[i] = 0;
     }

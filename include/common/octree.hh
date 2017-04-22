@@ -25,10 +25,11 @@
 #include <utility> // for std::pair
 #include <vector>
 #include <set>
+#include <cassert>
 
 static inline aabb3 bboxOctant(const aabb3 &box, int i)
 {
-    Q_assert(i >= 0 && i < 8);
+    assert(i >= 0 && i < 8);
     
     const qvec3f mid = (box.mins() + box.maxs()) * 0.5f;
     
@@ -69,7 +70,7 @@ public:
         m_leafNode(true),
         m_leafObjects()
         {
-            Q_assert(m_depth <= MAX_OCTREE_DEPTH);
+            assert(m_depth <= MAX_OCTREE_DEPTH);
         }
 };
 
@@ -101,8 +102,8 @@ private:
         }
         
         octree_node_t<T> *node = &m_nodes[thisNode];
-        Q_assert(node->m_leafNode);
-        Q_assert(node->m_leafObjects.empty()); // we always convert leafs to nodes before adding anything
+        assert(node->m_leafNode);
+        assert(node->m_leafObjects.empty()); // we always convert leafs to nodes before adding anything
         for (int i=0; i<8; i++) {
             node->m_children[i] = newNodeIds[i];
         }
@@ -127,16 +128,16 @@ private:
             const octree_nodeid child_i_index = node->m_children[i];
             const octree_node_t<T> *child_i_node = &m_nodes[child_i_index];
             
-            const std::pair<bool, aabb3> intersection = query.intersectWith(child_i_node->m_bbox);
-            if (intersection.first) {
-                queryTouchingBBox(child_i_index, intersection.second, dest);
+            const aabb3::intersection_t intersection = query.intersectWith(child_i_node->m_bbox);
+            if (intersection.valid) {
+                queryTouchingBBox(child_i_index, intersection.bbox, dest);
             }
         }
     }
     
     void insert(octree_nodeid thisNode, const aabb3 &objBox, const T &obj) {
         octree_node_t<T> *node = &m_nodes[thisNode];
-        Q_assert(node->m_bbox.contains(objBox));
+        assert(node->m_bbox.contains(objBox));
         
         if (node->m_leafNode && node->m_depth < MAX_OCTREE_DEPTH) {
             toNode(thisNode);
@@ -153,9 +154,9 @@ private:
         for (int i=0; i<8; i++) {
             const octree_nodeid child_i_index = node->m_children[i];
             octree_node_t<T> *child_i_node = &m_nodes[child_i_index];
-            const std::pair<bool, aabb3> intersection = objBox.intersectWith(child_i_node->m_bbox);
-            if (intersection.first) {
-                insert(child_i_index, intersection.second, obj);
+            const aabb3::intersection_t intersection = objBox.intersectWith(child_i_node->m_bbox);
+            if (intersection.valid) {
+                insert(child_i_index, intersection.bbox, obj);
                 
                 // N.B.: `node` pointer was invalidated
                 node = &m_nodes[thisNode];
