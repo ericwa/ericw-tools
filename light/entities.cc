@@ -57,9 +57,6 @@ const char * light_t::classname() const {
  * ============================================================================
  */
 
-#define LIGHT_TARGETS_START 32
-#define MAX_LIGHT_TARGETS 32
-
 static std::map<std::string, int> lightstyleForTargetname;
 
 static bool IsSwitchableLightstyle(int style) {
@@ -1284,7 +1281,9 @@ WriteEntitiesToString(bsp2_t *bsp)
         free(bsp->dentdata);
 
     /* FIXME - why are we printing this here? */
-    logprint("%i switchable light styles\n", static_cast<int>(lightstyleForTargetname.size()));
+    logprint("%i switchable light styles (%d max)\n",
+             static_cast<int>(lightstyleForTargetname.size()),
+             MAX_LIGHT_TARGETS);
 
     bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
     bsp->dentdata = (char *) calloc(bsp->entdatasize, 1);

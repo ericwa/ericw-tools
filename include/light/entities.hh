@@ -29,6 +29,8 @@
 #include <light/light.hh>
 
 #define DEFAULTLIGHTLEVEL 300.0f
+#define LIGHT_TARGETS_START 32
+#define MAX_LIGHT_TARGETS 32
 
 using entdict_t = std::map<std::string, std::string>;
 
