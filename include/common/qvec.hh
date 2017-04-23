@@ -22,6 +22,7 @@
 
 #include <initializer_list>
 #include <cassert>
+#include <cmath>
 
 #ifndef qmax // FIXME: Remove this ifdef
 #define qmax(a,b) (((a)>(b)) ? (a) : (b))
@@ -72,6 +73,15 @@ public:
             v[3] = d;
         for (int i=4; i<N; i++)
             v[i] = 0;
+    }
+    
+    /**
+     * Casting from another vector type of the same length
+     */
+    template <class T2>
+    qvec(const qvec<N, T2> &other) {
+        for (int i=0; i<N; i++)
+            v[i] = static_cast<T>(other[i]);
     }
     
     template <int N2>
@@ -146,21 +156,57 @@ public:
     }
 };
 
-template <class T>
-qvec<3,T> cross(const qvec<3,T> &v1, const qvec<3,T> &v2) {
-    return qvec<3,T>(v1[1] * v2[2] - v1[2] * v2[1],
-                     v1[2] * v2[0] - v1[0] * v2[2],
-                     v1[0] * v2[1] - v1[1] * v2[0]);
-}
-
-template <int N, class T>
-T dot(const qvec<N,T> &v1, const qvec<N,T> &v2) {
-    T result = 0;
-    for (int i=0; i<N; i++) {
-        result += v1[i] * v2[i];
+namespace qv {
+    template <class T>
+    qvec<3,T> cross(const qvec<3,T> &v1, const qvec<3,T> &v2) {
+        return qvec<3,T>(v1[1] * v2[2] - v1[2] * v2[1],
+                         v1[2] * v2[0] - v1[0] * v2[2],
+                         v1[0] * v2[1] - v1[1] * v2[0]);
     }
-    return result;
-}
+
+    template <int N, class T>
+    T dot(const qvec<N,T> &v1, const qvec<N,T> &v2) {
+        T result = 0;
+        for (int i=0; i<N; i++) {
+            result += v1[i] * v2[i];
+        }
+        return result;
+    }
+
+    template <int N, class T>
+    qvec<N,T> floor(const qvec<N,T> &v1) {
+        qvec<N,T> res;
+        for (int i=0; i<N; i++) {
+            res[i] = std::floor(v1[i]);
+        }
+        return res;
+    }
+    
+    template <int N, class T>
+    T length2(const qvec<N,T> &v1) {
+        T len2 = 0;
+        for (int i=0; i<N; i++) {
+            len2 += (v1[i] * v1[i]);
+        }
+        return len2;
+    }
+    
+    template <int N, class T>
+    T length(const qvec<N,T> &v1) {
+        return std::sqrt(length2(v1));
+    }
+    
+    template <int N, class T>
+    qvec<N,T> normalize(const qvec<N,T> &v1) {
+        return v1 / length(v1);
+    }
+    
+    template <int N, class T>
+    T distance(const qvec<N,T> &v1, const qvec<N,T> &v2) {
+        return length(v2 - v1);
+    }
+};
+
 
 using qvec2f = qvec<2, float>;
 using qvec3f = qvec<3, float>;
@@ -169,6 +215,8 @@ using qvec4f = qvec<4, float>;
 using qvec2d = qvec<2, double>;
 using qvec3d = qvec<3, double>;
 using qvec4d = qvec<4, double>;
+
+using qvec2i = qvec<2, int>;
 
 template <class T>
 class qplane3 {
@@ -181,7 +229,7 @@ public:
     : m_normal(normal),
       m_dist(dist) {}
         
-    T distAbove(const qvec<3, T> &pt) const { return dot(pt, m_normal) - m_dist; }
+    T distAbove(const qvec<3, T> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
     const qvec<3, T> &normal() const { return m_normal; }
     const T dist() const { return m_dist; }
 };
