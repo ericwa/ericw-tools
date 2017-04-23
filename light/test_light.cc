@@ -767,7 +767,7 @@ TEST(mathlib, octree_basic) {
     std::uniform_int_distribution<> dis(-4096, 4096);
     
     const qvec3f boxsize(64,64,64);
-    const int N = 20000;
+    const int N = 2000;
     
     // generate some objects
     vector<pair<aabb3f, int>> objs;
@@ -787,7 +787,7 @@ TEST(mathlib, octree_basic) {
     const double insert_start = I_FloatTime();
     auto octree = makeOctree(objs);
     const double insert_end = I_FloatTime();
-    printf("inserting %d cubes took %f seconds\n", N, (insert_end - insert_start));
+    printf("inserting %d cubes took %f ms\n", N, 1000.0 * (insert_end - insert_start));
     
     // query for objects overlapping objs[0]'s bbox
     const double exhaustive_query_start = I_FloatTime();
