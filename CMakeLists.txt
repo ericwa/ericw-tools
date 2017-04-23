@@ -15,6 +15,10 @@ include_directories(
 	"${CMAKE_SOURCE_DIR}/3rdparty/glm")
 
 set(COMMON_INCLUDES
+	${CMAKE_SOURCE_DIR}/include/common/aabb.hh
+	${CMAKE_SOURCE_DIR}/include/common/mesh.hh
+	${CMAKE_SOURCE_DIR}/include/common/octree.hh
+	${CMAKE_SOURCE_DIR}/include/common/qvec.hh
 	${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
 	${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh
 	${CMAKE_SOURCE_DIR}/include/common/lbmlib.hh
