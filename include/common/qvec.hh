@@ -20,6 +20,9 @@
 #ifndef __COMMON_QVEC_HH__
 #define __COMMON_QVEC_HH__
 
+#include <initializer_list>
+#include <cassert>
+
 #ifndef qmax // FIXME: Remove this ifdef
 #define qmax(a,b) (((a)>(b)) ? (a) : (b))
 #define qmin(a,b) (((a)>(b)) ? (b) : (a))
@@ -92,10 +95,12 @@ public:
     }
     
     T operator[](const size_t idx) const {
+        assert(idx < N);
         return v[idx];
     }
     
     T &operator[](const size_t idx) {
+        assert(idx < N);
         return v[idx];
     }
     
@@ -143,7 +148,6 @@ public:
 
 template <class T>
 qvec<3,T> cross(const qvec<3,T> &v1, const qvec<3,T> &v2) {
-    
     return qvec<3,T>(v1[1] * v2[2] - v1[2] * v2[1],
                      v1[2] * v2[0] - v1[0] * v2[2],
                      v1[0] * v2[1] - v1[1] * v2[0]);
@@ -165,5 +169,119 @@ using qvec4f = qvec<4, float>;
 using qvec2d = qvec<2, double>;
 using qvec3d = qvec<3, double>;
 using qvec4d = qvec<4, double>;
+
+/**
+ * M row, N column matrix
+ */
+template <int M, int N, class T>
+class qmat {
+protected:
+    qvec<M, T> m_cols[N];
+    
+public:
+    /**
+     * Identity matrix if square, otherwise fill with 0
+     */
+    qmat() {
+        for (int i=0; i<N; i++)
+            m_cols[i] = qvec<M, T>(0);
+        
+        if (M == N) {
+            // identity matrix
+            for (int i=0; i<N; i++) {
+                m_cols[i][i] = 1;
+            }
+        }
+    }
+    
+    // copy constructor
+    qmat(const qmat<M,N,T> &other) {
+        for (int i=0; i<N; i++)
+            this->m_cols[i] = other.m_cols[i];
+    }
+
+    // initializer list
+    qmat(std::initializer_list<T> list) {
+        assert(list.size() == M*N);
+        const T *listPtr = list.begin();
+        
+        for (int j=0; j<N; j++) {
+            for (int i=0; i<M; i++) {
+                this->m_cols[j][i] = listPtr[(j*M)+i];
+            }
+        }
+    }
+
+    bool operator==(const qmat<M,N,T> &other) const {
+        for (int i=0; i<N; i++)
+            if (this->m_cols[i] != other.m_cols[i])
+                return false;
+        return true;
+    }
+    
+    // access to columns
+    
+    qvec<M, T> operator[](const size_t idx) const {
+        assert(idx >= 0 && idx < N);
+        return m_cols[idx];
+    }
+    
+    qvec<M, T> &operator[](const size_t idx) {
+        assert(idx >= 0 && idx < N);
+        return m_cols[idx];
+    }
+    
+    // multiplication by a vector
+    
+    qvec<M,T> operator*(const qvec<N, T> &vec) const {
+        qvec<M,T> res;
+        for (int j=0; j<N; j++) {
+            res += this->m_cols[j] * vec[j];
+        }
+        return res;
+    }
+    
+    // multiplication by a matrix
+    
+    template<int P>
+    qmat<M,P,T> operator*(const qmat<N, P, T> &other) const {
+        qmat<M,P,T> res;
+        for (int i=0; i<M; i++) {
+            for (int j=0; j<P; j++) {
+                T val = 0;
+                for (int k=0; k<N; k++) {
+                    val += (*this)[i][k] * other[k][j];
+                }
+                res[i][j] = val;
+            }
+        }
+        return res;
+    }
+};
+
+using qmat2x2f = qmat<2, 2, float>;
+using qmat2x3f = qmat<2, 3, float>;
+using qmat2x4f = qmat<2, 4, float>;
+
+using qmat3x2f = qmat<3, 2, float>;
+using qmat3x3f = qmat<3, 3, float>;
+using qmat3x4f = qmat<3, 4, float>;
+
+using qmat4x2f = qmat<4, 2, float>;
+using qmat4x3f = qmat<4, 3, float>;
+using qmat4x4f = qmat<4, 4, float>;
+
+
+using qmat2x2d = qmat<2, 2, double>;
+using qmat2x3d = qmat<2, 3, double>;
+using qmat2x4d = qmat<2, 4, double>;
+
+using qmat3x2d = qmat<3, 2, double>;
+using qmat3x3d = qmat<3, 3, double>;
+using qmat3x4d = qmat<3, 4, double>;
+
+using qmat4x2d = qmat<4, 2, double>;
+using qmat4x3d = qmat<4, 3, double>;
+using qmat4x4d = qmat<4, 4, double>;
 
 #endif /* __COMMON_QVEC_HH__ */
