@@ -104,22 +104,9 @@ static bool gluInvertMatrixd(const double m[16], double invOut[16])
 
 qmat4x4d qv::invert(const qmat4x4d &input, bool *ok)
 {
-    double flat_in[16];
-    double flat_out[16];
-    
-    for (int i=0; i<4; i++)
-        for (int j=0; j<4; j++)
-            flat_in[4*i+j] = input[i][j];
-    
-    *ok = gluInvertMatrixd(flat_in, flat_out);
-    if (!*ok)
-        return qmat4x4d();
-    
-    qmat4x4d result;
-    for (int i=0; i<4; i++)
-        for (int j=0; j<4; j++)
-            result[i][j] = flat_out[4*i+j];
-    return result;
+    qmat4x4d res;
+    *ok = gluInvertMatrixd(input.m_values, res.m_values);
+    return res;
 }
 
 qmat4x4f qv::invert(const qmat4x4f &input, bool *ok)
@@ -129,10 +116,11 @@ qmat4x4f qv::invert(const qmat4x4f &input, bool *ok)
 
 qmat2x2f qv::invert(const qmat2x2f &m, bool *ok)
 {
-    float a = m[0][0];
-    float b = m[1][0];
-    float c = m[0][1];
-    float d = m[1][1];
+    // http://www.mathwords.com/i/inverse_of_a_matrix.htm
+    float a = m.at(0,0);
+    float b = m.at(0,1);
+    float c = m.at(1,0);
+    float d = m.at(1,1);
     
     float det = a*d - b*c;
     if (det == 0) {

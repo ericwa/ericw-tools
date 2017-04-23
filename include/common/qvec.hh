@@ -238,33 +238,36 @@ using qplane3f = qplane3<float>;
 using qplane3d = qplane3<double>;
 
 /**
- * M row, N column matrix
+ * M row, N column matrix.
  */
 template <int M, int N, class T>
 class qmat {
-protected:
-    qvec<M, T> m_cols[N];
+public:
+    /** 
+     * Column-major order. [ (row0,col0), (row1,col0), .. ]
+     */
+    T m_values[M*N];
     
 public:
     /**
      * Identity matrix if square, otherwise fill with 0
      */
     qmat() {
-        for (int i=0; i<N; i++)
-            m_cols[i] = qvec<M, T>(0);
+        for (int i=0; i<M*N; i++)
+            m_values[i] = 0;
         
         if (M == N) {
             // identity matrix
             for (int i=0; i<N; i++) {
-                m_cols[i][i] = 1;
+                this->at(i,i) = 1;
             }
         }
     }
     
     // copy constructor
     qmat(const qmat<M,N,T> &other) {
-        for (int i=0; i<N; i++)
-            this->m_cols[i] = other.m_cols[i];
+        for (int i=0; i<M*N; i++)
+            this->m_values[i] = other.m_values[i];
     }
 
     /**
@@ -272,47 +275,49 @@ public:
      */
     template <class T2>
     qmat(const qmat<M, N, T2> &other) {
-        for (int i=0; i<N; i++)
-            m_cols[i] = qvec<M, T>(other[i]);
+        for (int i=0; i<M*N; i++)
+            this->m_values[i] = static_cast<T>(other.m_values[i]);
     }
 
-    // initializer list
+    // initializer list, column-major order
     qmat(std::initializer_list<T> list) {
         assert(list.size() == M*N);
         const T *listPtr = list.begin();
         
-        for (int j=0; j<N; j++) {
-            for (int i=0; i<M; i++) {
-                this->m_cols[j][i] = listPtr[(j*M)+i];
-            }
+        for (int i=0; i<M*N; i++) {
+            this->m_values[i] = listPtr[i];
         }
     }
 
     bool operator==(const qmat<M,N,T> &other) const {
-        for (int i=0; i<N; i++)
-            if (this->m_cols[i] != other.m_cols[i])
+        for (int i=0; i<M*N; i++)
+            if (this->m_values[i] != other.m_values[i])
                 return false;
         return true;
     }
     
-    // access to columns
+    // access to elements
     
-    qvec<M, T> operator[](const size_t idx) const {
-        assert(idx >= 0 && idx < N);
-        return m_cols[idx];
+    T& at(int row, int col) {
+        assert(row >= 0 && row < M);
+        assert(col >= 0 && col < N);
+        return m_values[col * M + row];
     }
     
-    qvec<M, T> &operator[](const size_t idx) {
-        assert(idx >= 0 && idx < N);
-        return m_cols[idx];
+    T at(int row, int col) const {
+        assert(row >= 0 && row < M);
+        assert(col >= 0 && col < N);
+        return m_values[col * M + row];
     }
     
     // multiplication by a vector
     
     qvec<M,T> operator*(const qvec<N, T> &vec) const {
-        qvec<M,T> res;
-        for (int j=0; j<N; j++) {
-            res += this->m_cols[j] * vec[j];
+        qvec<M,T> res(0);
+        for (int i=0; i<M; i++) { // for each row
+            for (int j=0; j<N; j++) { // for each col
+                res[i] += this->at(i, j) * vec[j];
+            }
         }
         return res;
     }
@@ -326,9 +331,9 @@ public:
             for (int j=0; j<P; j++) {
                 T val = 0;
                 for (int k=0; k<N; k++) {
-                    val += (*this)[i][k] * other[k][j];
+                    val += this->at(i,k) * other.at(k,j);
                 }
-                res[i][j] = val;
+                res.at(i,j) = val;
             }
         }
         return res;
@@ -337,9 +342,9 @@ public:
     // multiplication by a scalar
     
     qmat<M,N,T> operator*(const T scalar) const {
-        qmat<M,N,T> res;
-        for (int j=0; j<N; j++) {
-            res[j] = this->m_cols[j] * scalar;
+        qmat<M,N,T> res(*this);
+        for (int i=0; i<M*N; i++) {
+            res.m_values[i] *= scalar;
         }
         return res;
     }

@@ -875,7 +875,7 @@ TEST(qvec, matrix2x2inv) {
     qmat2x2f randMat;
     for (int i=0; i<2; i++)
         for (int j=0; j<2; j++)
-            randMat[i][j] = dis(engine);
+            randMat.at(i,j) = dis(engine);
     
     bool ok;
     qmat2x2f randInv = qv::invert(randMat, &ok);
@@ -885,7 +885,7 @@ TEST(qvec, matrix2x2inv) {
     for (int i=0; i<2; i++) {
         for (int j=0; j<2; j++) {
             float exp = (i == j) ? 1.0f : 0.0f;
-            ASSERT_TRUE(fabs(exp - prod[i][j]) < 0.001);
+            ASSERT_TRUE(fabs(exp - prod.at(i,j)) < 0.001);
         }
     }
 }
@@ -897,7 +897,7 @@ TEST(qvec, matrix4x4inv) {
     qmat4x4f randMat;
     for (int i=0; i<4; i++)
         for (int j=0; j<4; j++)
-            randMat[i][j] = dis(engine);
+            randMat.at(i,j) = dis(engine);
     
     bool ok;
     qmat4x4f randInv = qv::invert(randMat, &ok);
@@ -907,7 +907,7 @@ TEST(qvec, matrix4x4inv) {
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             float exp = (i == j) ? 1.0f : 0.0f;
-            ASSERT_TRUE(fabs(exp - prod[i][j]) < 0.001);
+            ASSERT_TRUE(fabs(exp - prod.at(i,j)) < 0.001);
         }
     }
 }
