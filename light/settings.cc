@@ -20,8 +20,6 @@
 
 #include <light/settings.hh>
 
-#include <glm/gtx/quaternion.hpp>
-
 glm::vec3 vec_from_mangle(const glm::vec3 &m)
 {
     const glm::vec3 tmp = m * static_cast<float>(Q_PI / 180.0f);
@@ -34,10 +32,21 @@ glm::vec3 vec_from_mangle(const glm::vec3 &m)
 
 glm::vec3 mangle_from_vec(const glm::vec3 &v)
 {
+    const glm::vec3 up(0, 0, 1);
     const glm::vec3 east(1, 0, 0);
-    const glm::quat rotationQuat = glm::rotation(east, v);
-    const glm::vec3 eulerAngles = glm::eulerAngles(rotationQuat);
-    const glm::vec3 mangle = glm::vec3(eulerAngles.z, -eulerAngles.y, 0) * static_cast<float>(180.0f / Q_PI);
+    const glm::vec3 north(0, 1, 0);
+    
+    // get rotation about Z axis
+    float x = glm::dot(east, v);
+    float y = glm::dot(north, v);
+    float theta = atan2f(y, x);
+    
+    // get angle away from Z axis
+    float cosangleFromUp = glm::dot(up, v);
+    cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
+    float radiansFromUp = acosf(cosangleFromUp);
+    
+    const glm::vec3 mangle = glm::vec3(theta, -(radiansFromUp - Q_PI/2.0), 0) * static_cast<float>(180.0f / Q_PI);
     return mangle;
 }
 
