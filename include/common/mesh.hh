@@ -22,16 +22,27 @@
 
 #include <vector>
 #include <common/qvec.hh>
+#include <common/aabb.hh>
+
+using facenum_t = int;
+using vertnum_t = int;
+using meshface_t = std::vector<vertnum_t>;
+
+#define TJUNC_DIST_EPSILON 0.01
 
 class mesh_t {
 public:
     std::vector<qvec3f> verts;
-    std::vector<std::vector<int>> faces;
+    std::vector<meshface_t> faces;
+    // this is redundant data with the verts, but we know the planes in advance
+    // and this saves having to estimate them from the verts
+    std::vector<qplane3f> faceplanes;
 };
 
 // Welds vertices at exactly the same position
 mesh_t buildMesh(const std::vector<std::vector<qvec3f>> &faces);
 std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh);
+aabb3f mesh_face_bbox(const mesh_t &mesh, facenum_t facenum);
 
 // Preserves the number and order of faces.
 // doesn't merge verts.

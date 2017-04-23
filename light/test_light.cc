@@ -616,16 +616,25 @@ TEST(mathlib, meshFixTJuncs) {
     const vector<vector<qvec3f>> polys { poly1, poly2, poly3 };
     
     mesh_t m = buildMesh(polys);
+    
+    ASSERT_EQ(aabb3f(qvec3f(0,0,0), qvec3f(64,64,0)), mesh_face_bbox(m, 0));
+    
     ASSERT_EQ(8, m.verts.size());
     ASSERT_EQ(3, m.faces.size());
     ASSERT_EQ(polys, meshToFaces(m));
     
     cleanupMesh(m);
+
+    const vector<qvec3f> poly1_fixed {
+        { 0,0,0 },
+        { 0,64,0 },
+        { 64,64,0 },
+        { 64,32,0 },
+        { 64,0,0 }
+    };
     
     const auto newFaces = meshToFaces(m);
-#if 0
-    EXPECT_NE(poly1, newFaces.at(0));
-#endif
+    EXPECT_EQ(poly1_fixed, newFaces.at(0));
     EXPECT_EQ(poly2, newFaces.at(1));
     EXPECT_EQ(poly3, newFaces.at(2));
 }

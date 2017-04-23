@@ -21,9 +21,24 @@
 #include <common/mesh.hh>
 #include <common/octree.hh>
 
+// FIXME: Remove
+#include <glm/glm.hpp>
+#include <common/mathlib.hh>
+
+#include <iterator>
+#include <set>
 #include <map>
 
 using namespace std;
+
+// FIXME: Remove
+std::vector<glm::vec3> qvecsToGlm(std::vector<qvec3f> qvecs) {
+    std::vector<glm::vec3> res;
+    for (const auto &qvec : qvecs) {
+        res.push_back(glm::vec3(qvec[0], qvec[1], qvec[2]));
+    }
+    return res;
+}
 
 mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
 {
@@ -33,11 +48,21 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
     int nextVert = 0;
     map<pos_t, int> posToVertIndex;
     
+    vector<qplane3f> faceplanes;
     vector<vector<int>> facesWithIndices;
     for (const auto &face : faces) {
         vector<int> vertIndices;
         
+        // compute face plane
+        const auto glmvecs = qvecsToGlm(face);
+        glm::vec4 gp = GLM_PolyPlane(glmvecs);
+        qplane3f qp(qvec3f(gp.x, gp.y, gp.z), gp.w);
+        faceplanes.push_back(qp);
+        
         for (const auto &vert : face) {
+            float distOff = qp.distAbove(vert);
+            Q_assert(fabs(distOff) < 0.001);
+            
             const pos_t pos = make_tuple(vert[0], vert[1], vert[2]);
             const auto it = posToVertIndex.find(pos);
             
@@ -65,6 +90,7 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
     mesh_t res;
     res.verts = vertsVec;
     res.faces = facesWithIndices;
+    res.faceplanes = faceplanes;
     return res;
 }
 
@@ -83,19 +109,118 @@ std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh)
     return res;
 }
 
-
-static aabb3f mesh_face_bbox(const mesh_t &mesh, int facenum)
+aabb3f mesh_face_bbox(const mesh_t &mesh, facenum_t facenum)
 {
     const std::vector<int> &face = mesh.faces.at(facenum);
     
+    const qvec3f vert0 = mesh.verts.at(face.at(0));
+    aabb3f bbox(vert0, vert0);
+    
+    for (int vert_i : face) {
+        const qvec3f vert = mesh.verts.at(vert_i);
+        bbox = bbox.expand(vert);
+    }
+    return bbox;
+}
+
+static octree_t<vertnum_t> build_vert_octree(const mesh_t &mesh)
+{
+    std::vector<std::pair<aabb3f, vertnum_t>> vertBboxNumPairs;
+
+    for (int i=0; i<mesh.verts.size(); i++) {
+        const qvec3f vert = mesh.verts[i];
+        const aabb3f bbox(vert, vert);
+        
+        vertBboxNumPairs.push_back(make_pair(bbox, i));
+    }
+
+    return makeOctree(vertBboxNumPairs);
+}
+
+glm::vec3 qToG(qvec3f in) {
+    return glm::vec3(in[0], in[1], in[2]);
+}
+
+qvec3f gToQ(glm::vec3 in) {
+    return qvec3f(in[0], in[1], in[2]);
+}
+
+/**
+ * Possibly insert vert `vnum` on one of the edges of face `fnum`, if it happens
+ * to lie on one of the edges.
+ */
+void face_InsertVertIfNeeded(mesh_t &mesh, facenum_t fnum, vertnum_t vnum)
+{
+    meshface_t &face = mesh.faces.at(fnum);
+    const qplane3f &faceplane = mesh.faceplanes.at(fnum);
+    const qvec3f potentialVertPos = mesh.verts.at(vnum);
+    
+    const float distOff = faceplane.distAbove(potentialVertPos);
+    if (fabs(distOff) > TJUNC_DIST_EPSILON)
+        return; // not on the face plane
+    
+    // N.B. we will modify the `face` std::vector within this loop
+    for (int i=0; i<face.size(); i++) {
+        const qvec3f v0 = mesh.verts.at(i);
+        const qvec3f v1 = mesh.verts.at((i+1)%face.size());
+        
+        // does `potentialVertPos` lie on the line between `v0` and `v1`?
+        float distToLine = DistToLine(qToG(v0), qToG(v1), qToG(potentialVertPos));
+        if (distToLine > TJUNC_DIST_EPSILON)
+            continue;
+        
+        // N.B.: not a distance
+        float fracOfLine = FractionOfLine(qToG(v0), qToG(v1), qToG(potentialVertPos));
+        if (fracOfLine < 0 || fracOfLine > 1)
+            continue;
+        
+        // do it
+        auto it = face.begin();
+        std::advance(it, i + 1);
+        face.insert(it, vnum);
+        Q_assert(face.at(i + 1) == vnum);
+        return;
+    }
+    
+    // didn't do it
+    return;
+}
+
+template<class T>
+static set<T> vecToSet(const vector<T> &vec) {
+    set<T> res;
+    for (const auto &item : vec) {
+        res.insert(item);
+    }
+    return res;
+}
+
+void cleanupFace(mesh_t &mesh,
+                 facenum_t i,
+                 const octree_t<vertnum_t> &vertoctree) {
+
+    aabb3f facebbox = mesh_face_bbox(mesh, i);
+    facebbox = facebbox.grow(qvec3f(1,1,1));
+    
+    const set<vertnum_t> face_vert_set = vecToSet(mesh.faces.at(i));
+    const vector<vertnum_t> nearbyverts = vertoctree.queryTouchingBBox(facebbox);
+    
+    for (vertnum_t vnum : nearbyverts) {
+        // skip verts that are already on the face
+        if (face_vert_set.find(vnum) != face_vert_set.end()) {
+            continue;
+        }
+        
+        // possibly add this vert
+        face_InsertVertIfNeeded(mesh, i, vnum);
+    }
 }
 
 void cleanupMesh(mesh_t &mesh)
 {
-    using facenum_t = int;
+    const octree_t<vertnum_t> vertoctree = build_vert_octree(mesh);
     
-    std::vector<std::pair<aabb3f, facenum_t>> faces;
-    
-    octree_t<facenum_t> octree = makeOctree(faces);
-    
+    for (int i=0; i<mesh.faces.size(); i++) {
+        cleanupFace(mesh, i, vertoctree);
+    }
 }
