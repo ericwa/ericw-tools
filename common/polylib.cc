@@ -554,9 +554,9 @@ polylib::PointInWindingEdges(const winding_edges_t *wi, const vec3_t point)
     return true;
 }
 
-std::vector<glm::vec3> polylib::GLM_WindingPoints(const winding_t *w)
+std::vector<qvec3f> polylib::GLM_WindingPoints(const winding_t *w)
 {
-    std::vector<glm::vec3> points;
+    std::vector<qvec3f> points;
     for (int j = 0; j < w->numpoints; j++) {
         points.push_back(vec3_t_to_glm(w->p[j]));
     }

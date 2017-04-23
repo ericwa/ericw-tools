@@ -37,19 +37,18 @@
 #include <mutex>
 #include <string>
 
-#include <glm/glm.hpp>
+#include <common/qvec.hh>
 
 using namespace std;
-using namespace glm;
 
 /* return 0 if either vector is zero-length */
 static float
-AngleBetweenVectors(const vec3 &d1, const vec3 &d2)
+AngleBetweenVectors(const qvec3f &d1, const qvec3f &d2)
 {
-    float length_product = (length(d1)*length(d2));
+    float length_product = (qv::length(d1)*qv::length(d2));
     if (length_product == 0)
         return 0;
-    float cosangle = dot(d1, d2)/length_product;
+    float cosangle = qv::dot(d1, d2)/length_product;
     if (cosangle < -1) cosangle = -1;
     if (cosangle > 1) cosangle = 1;
     
@@ -59,16 +58,16 @@ AngleBetweenVectors(const vec3 &d1, const vec3 &d2)
 
 /* returns the angle between vectors p2->p1 and p2->p3 */
 static float
-AngleBetweenPoints(const vec3 &p1, const vec3 &p2, const vec3 &p3)
+AngleBetweenPoints(const qvec3f &p1, const qvec3f &p2, const qvec3f &p3)
 {
-    const vec3 d1 = p1 - p2;
-    const vec3 d2 = p3 - p2;
+    const qvec3f d1 = p1 - p2;
+    const qvec3f d2 = p3 - p2;
     float result = AngleBetweenVectors(d1, d2);
     return result;
 }
 
 static bool s_builtPhongCaches;
-static std::map<const bsp2_dface_t *, std::vector<vec3>> vertex_normals;
+static std::map<const bsp2_dface_t *, std::vector<qvec3f>> vertex_normals;
 static std::set<int> interior_verts;
 static map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
 static map<int, vector<const bsp2_dface_t *>> vertsToFaces;
@@ -128,25 +127,25 @@ const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face)
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts.
  * v1, v2, v3 are global vertex indices */
 static void
-AddTriangleNormals(std::map<int, vec3> &smoothed_normals, const vec3 &norm, const bsp2_t *bsp, int v1, int v2, int v3)
+AddTriangleNormals(std::map<int, qvec3f> &smoothed_normals, const qvec3f &norm, const bsp2_t *bsp, int v1, int v2, int v3)
 {
-    const vec3 p1 = Vertex_GetPos_E(bsp, v1);
-    const vec3 p2 = Vertex_GetPos_E(bsp, v2);
-    const vec3 p3 = Vertex_GetPos_E(bsp, v3);
+    const qvec3f p1 = Vertex_GetPos_E(bsp, v1);
+    const qvec3f p2 = Vertex_GetPos_E(bsp, v2);
+    const qvec3f p3 = Vertex_GetPos_E(bsp, v3);
     float weight;
     
     weight = AngleBetweenPoints(p2, p1, p3);
-    smoothed_normals[v1] = smoothed_normals[v1] + (weight * norm);
+    smoothed_normals[v1] = smoothed_normals[v1] + (norm * weight);
 
     weight = AngleBetweenPoints(p1, p2, p3);
-    smoothed_normals[v2] = smoothed_normals[v2] + (weight * norm);
+    smoothed_normals[v2] = smoothed_normals[v2] + (norm * weight);
 
     weight = AngleBetweenPoints(p1, p3, p2);
-    smoothed_normals[v3] = smoothed_normals[v3] + (weight * norm);
+    smoothed_normals[v3] = smoothed_normals[v3] + (norm * weight);
 }
 
 /* access the final phong-shaded vertex normal */
-const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
+const qvec3f GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
 {
     Q_assert(s_builtPhongCaches);
     
@@ -248,11 +247,11 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp)
     return result;
 }
 
-static vector<vec3> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
+static vector<qvec3f> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
-    vector<vec3> normals;
+    vector<qvec3f> normals;
     for (int i=0; i<face->numedges; i++) {
-        const glm::vec3 n = GetSurfaceVertexNormal(bsp, face, i);
+        const qvec3f n = GetSurfaceVertexNormal(bsp, face, i);
         normals.push_back(n);
     }
     return normals;
@@ -321,7 +320,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     for (int i = 0; i < bsp->numfaces; i++) {
         bsp2_dface_t *f = BSP_GetFace(const_cast<bsp2_t *>(bsp), i);
         
-        const vec3 f_norm = Face_Normal_E(bsp, f);
+        const qvec3f f_norm = Face_Normal_E(bsp, f);
         
         // any face normal within this many degrees can be smoothed with this face
         const int f_smoothangle = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
@@ -339,9 +338,9 @@ CalcualateVertexNormals(const bsp2_t *bsp)
                 if (!f2_smoothangle)
                     continue;
                 
-                const vec3 f2_norm = Face_Normal_E(bsp, f2);
+                const qvec3f f2_norm = Face_Normal_E(bsp, f2);
 
-                const vec_t cosangle = dot(f_norm, f2_norm);
+                const vec_t cosangle = qv::dot(f_norm, f2_norm);
                 const vec_t cosmaxangle = cos(DEG2RAD(qmin(f_smoothangle, f2_smoothangle)));
                 
                 // check the angle between the face normals
@@ -362,7 +361,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         }
         
         const auto &neighboursToSmooth = smoothFaces[f];
-        const vec3 f_norm = Face_Normal_E(bsp, f); // get the face normal
+        const qvec3f f_norm = Face_Normal_E(bsp, f); // get the face normal
         
         // gather up f and neighboursToSmooth
         std::vector<const bsp2_dface_t *> fPlusNeighbours;
@@ -372,11 +371,11 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         }
         
         // global vertex index -> smoothed normal
-        std::map<int, vec3> smoothedNormals;
+        std::map<int, qvec3f> smoothedNormals;
 
         // walk fPlusNeighbours
         for (auto f2 : fPlusNeighbours) {
-            const vec3 f2_norm = Face_Normal_E(bsp, f2);
+            const qvec3f f2_norm = Face_Normal_E(bsp, f2);
             
             /* now just walk around the surface as a triangle fan */
             int v1, v2, v3;
@@ -393,8 +392,8 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         // normalize vertex normals (NOTE: updates smoothedNormals map)
         for (auto &pair : smoothedNormals) {
             const int vertIndex = pair.first;
-            const vec3 vertNormal = pair.second;
-            if (0 == length(vertNormal)) {
+            const qvec3f vertNormal = pair.second;
+            if (0 == qv::length(vertNormal)) {
                 // this happens when there are colinear vertices, which give zero-area triangles,
                 // so there is no contribution to the normal of the triangle in the middle of the
                 // line. Not really an error, just set it to use the face normal.
@@ -409,7 +408,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
             }
             else
             {
-                pair.second = normalize(vertNormal);
+                pair.second = qv::normalize(vertNormal);
             }
         }
         

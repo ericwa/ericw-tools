@@ -21,7 +21,7 @@
 #include <assert.h>
 #include <cstddef>
 
-#include <glm/glm.hpp>
+#include <common/qvec.hh>
 
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
@@ -282,45 +282,43 @@ EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, cons
 
 // glm stuff
 
-using namespace glm;
-
-glm::vec4 Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f)
+qvec4f Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
-    const vec3 p0 = Face_PointAtIndex_E(bsp, f, 0);
-    const vec3 norm = Face_Normal_E(bsp, f);
-    const vec4 plane(norm, dot(norm, p0));
+    const qvec3f p0 = Face_PointAtIndex_E(bsp, f, 0);
+    const qvec3f norm = Face_Normal_E(bsp, f);
+    const qvec4f plane(norm[0], norm[1], norm[2], qv::dot(norm, p0));
     return plane;
 }
 
-glm::vec3 Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
+qvec3f Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
 {
     return Vertex_GetPos_E(bsp, Face_VertexAtIndex(bsp, f, v));
 }
 
-glm::vec3 Vertex_GetPos_E(const bsp2_t *bsp, int num)
+qvec3f Vertex_GetPos_E(const bsp2_t *bsp, int num)
 {
     vec3_t temp;
     Vertex_GetPos(bsp, num, temp);
     return vec3_t_to_glm(temp);
 }
 
-glm::vec3 Face_Normal_E(const bsp2_t *bsp, const bsp2_dface_t *f)
+qvec3f Face_Normal_E(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     vec3_t temp;
     Face_Normal(bsp, f, temp);
     return vec3_t_to_glm(temp);
 }
 
-std::vector<glm::vec3> GLM_FacePoints(const bsp2_t *bsp, const bsp2_dface_t *f)
+std::vector<qvec3f> GLM_FacePoints(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
-    std::vector<glm::vec3> points;
+    std::vector<qvec3f> points;
     for (int j = 0; j < f->numedges; j++) {
         points.push_back(Face_PointAtIndex_E(bsp, f, j));
     }
     return points;
 }
 
-glm::vec3 Face_Centroid(const bsp2_t *bsp, const bsp2_dface_t *face)
+qvec3f Face_Centroid(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
     return GLM_PolyCentroid(GLM_FacePoints(bsp, face));
 }

@@ -39,14 +39,13 @@
 #include <mutex>
 #include <string>
 
-#include <glm/glm.hpp>
+#include <common/qvec.hh>
 
 using namespace std;
-using namespace glm;
 using namespace polylib;
 
 mutex radlights_lock;
-map<string, vec3> texturecolors;
+map<string, qvec3f> texturecolors;
 std::vector<bouncelight_t> radlights;
 std::map<int, std::vector<int>> radlightsByFacenum;
 
@@ -56,7 +55,7 @@ public:
     vec3_t center;
     vec3_t samplepoint; // 1 unit above center
     plane_t plane;
-    std::map<int, glm::vec3> lightByStyle;
+    std::map<int, qvec3f> lightByStyle;
 };
 
 static unique_ptr<patch_t>
@@ -124,7 +123,7 @@ Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t colo
     const char *facename = Face_TextureName(bsp, face);
     
     if (texturecolors.find(facename) != texturecolors.end()) {
-        const vec3 texcolor = texturecolors.at(facename);
+        const qvec3f texcolor = texturecolors.at(facename);
         VectorCopyFromGLM(texcolor, color);
     } else {
         VectorSet(color, 127, 127, 127);
@@ -132,7 +131,7 @@ Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t colo
 }
 
 static void
-AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp);
+AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp);
 
 static void *
 MakeBounceLightsThread (void *arg)
@@ -172,7 +171,7 @@ MakeBounceLightsThread (void *arg)
         winding = nullptr; // DiceWinding frees winding
         
         // average them, area weighted
-        map<int, glm::vec3> sum;
+        map<int, qvec3f> sum;
         float totalarea = 0;
         
         for (const auto &patch : patches) {
@@ -180,7 +179,7 @@ MakeBounceLightsThread (void *arg)
             totalarea += patcharea;
             
             for (const auto &styleColor : patch->lightByStyle) {
-                sum[styleColor.first] = sum[styleColor.first] + (patcharea * styleColor.second);
+                sum[styleColor.first] = sum[styleColor.first] + (styleColor.second * patcharea);
             }
 //              printf("  %f %f %f\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
         }
@@ -204,9 +203,9 @@ MakeBounceLightsThread (void *arg)
         VectorMA(blendedcolor, 1-cfg.bouncecolorscale.floatValue(), gray, blendedcolor);
         
         // final colors to emit
-        map<int, glm::vec3> emitcolors;
+        map<int, qvec3f> emitcolors;
         for (const auto &styleColor : sum) {
-            glm::vec3 emitcolor(0);
+            qvec3f emitcolor(0);
             for (int k=0; k<3; k++) {
                 emitcolor[k] = (styleColor.second[k] / 255.0f) * (blendedcolor[k] / 255.0f);
             }
@@ -220,7 +219,7 @@ MakeBounceLightsThread (void *arg)
 }
 
 static void
-AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp)
+AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
         Q_assert(styleColor.second[0] >= 0);
@@ -235,7 +234,7 @@ AddBounceLight(const vec3_t pos, const std::map<int, glm::vec3> &colorByStyle, c
     l.pos = vec3_t_to_glm(pos);
     l.colorByStyle = colorByStyle;
     
-    glm::vec3 componentwiseMaxColor(0);
+    qvec3f componentwiseMaxColor(0);
     for (const auto &styleColor : colorByStyle) {
         for (int i=0; i<3; i++) {
             if (styleColor.second[i] > componentwiseMaxColor[i]) {
@@ -276,21 +275,21 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
     return empty;
 }
 
-glm::vec3 Palette_GetColor(int i)
+qvec3f Palette_GetColor(int i)
 {
-    return glm::vec3((float)thepalette[3*i],
+    return qvec3f((float)thepalette[3*i],
                      (float)thepalette[3*i + 1],
                      (float)thepalette[3*i + 2]);
 }
 
 // Returns color in [0,255]
-static glm::vec3
+static qvec3f
 Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex)
 {
     if (!bsp->texdatasize)
-        return glm::vec3(0);
+        return qvec3f(0);
 
-    glm::vec3 color(0);
+    qvec3f color(0);
     const byte *data = (byte*)miptex + miptex->offsets[0];
     for (int y=0; y<miptex->height; y++) {
         for (int x=0; x<miptex->width; x++) {
@@ -320,7 +319,7 @@ MakeTextureColors (const bsp2_t *bsp)
         const miptex_t *miptex = (miptex_t *)(bsp->dtexdata.base + ofs);
         
         string name { miptex->name };
-        const glm::vec3 color = Texture_AvgColor(bsp, miptex);
+        const qvec3f color = Texture_AvgColor(bsp, miptex);
         
 //        printf("%s has color %f %f %f\n", name.c_str(), color[0], color[1], color[2]);
         texturecolors[name] = color;

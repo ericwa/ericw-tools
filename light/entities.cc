@@ -1043,7 +1043,7 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
             entity.settings().setSettings(*entity.epairs, false);
             
             if (entity.mangle.isChanged()) {
-                const glm::vec3 temp = vec_from_mangle(vec3_t_to_glm(*entity.mangle.vec3Value()));
+                const qvec3f temp = vec_from_mangle(vec3_t_to_glm(*entity.mangle.vec3Value()));
                 glm_to_vec3_t(temp, entity.spotvec);
                 entity.spotlight = true;
                 

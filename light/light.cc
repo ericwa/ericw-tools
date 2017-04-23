@@ -45,10 +45,9 @@
 #include <mutex>
 #include <string>
 
-#include <glm/glm.hpp>
+#include <common/qvec.hh>
 
 using namespace std;
-using namespace glm;
 
 globalconfig_t cfg_static {};
 
@@ -511,7 +510,7 @@ ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcou
     for (int i=0; i<face->numedges; i++)
     {
         int vertnum = Face_VertexAtIndex(bsp, face, i);
-        const vec3 normal = GetSurfaceVertexNormal(bsp, face, i);
+        const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i);
         const float *pos = bsp->dvertexes[vertnum].point;
         fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
         fprintf(f, "vn %.9g %.9g %.9g\n", normal[0], normal[1], normal[2]);
@@ -558,7 +557,7 @@ CheckNoDebugModeSet()
 
 // returns the face with a centroid nearest the given point.
 static const bsp2_dface_t *
-Face_NearestCentroid(const bsp2_t *bsp, const glm::vec3 &point)
+Face_NearestCentroid(const bsp2_t *bsp, const qvec3f &point)
 {
     const bsp2_dface_t *nearest_face = NULL;
     float nearest_dist = VECT_MAX;
@@ -566,10 +565,10 @@ Face_NearestCentroid(const bsp2_t *bsp, const glm::vec3 &point)
     for (int i=0; i<bsp->numfaces; i++) {
         const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         
-        const glm::vec3 fc = Face_Centroid(bsp, f);
+        const qvec3f fc = Face_Centroid(bsp, f);
         
-        const glm::vec3 distvec = fc - point;
-        const float dist = glm::length(distvec);
+        const qvec3f distvec = fc - point;
+        const float dist = qv::length(distvec);
         
         if (dist < nearest_dist) {
             nearest_dist = dist;

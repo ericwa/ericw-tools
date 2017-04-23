@@ -25,7 +25,7 @@
 #include <tuple>
 #include <map>
 
-#include <glm/glm.hpp>
+#include <common/qvec.hh>
 
 using namespace polylib;
 
@@ -110,7 +110,7 @@ RandomDir(vec3_t dir)
     UniformPointOnSphere(dir, Random(), Random());
 }
 
-glm::vec3 CosineWeightedHemisphereSample(float u1, float u2)
+qvec3f CosineWeightedHemisphereSample(float u1, float u2)
 {
     Q_assert(u1 >= 0.0f && u1 <= 1.0f);
     Q_assert(u2 >= 0.0f && u2 <= 1.0f);
@@ -132,69 +132,69 @@ glm::vec3 CosineWeightedHemisphereSample(float u1, float u2)
     const float temp = 1.0f - x*x - y*y;
     const float z = sqrt(qmax(0.0f, temp));
     
-    return glm::vec3(x, y, z);
+    return qvec3f(x, y, z);
 }
 
-glm::vec3 vec_from_mangle(const glm::vec3 &m)
+qvec3f vec_from_mangle(const qvec3f &m)
 {
-    const glm::vec3 mRadians = m * static_cast<float>(Q_PI / 180.0f);
-    const glm::mat3x3 rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
-    const glm::vec3 v = rotations * glm::vec3(1,0,0);
+    const qvec3f mRadians = m * static_cast<float>(Q_PI / 180.0f);
+    const qmat3x3f rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
+    const qvec3f v = rotations * qvec3f(1,0,0);
     return v;
 }
 
-glm::vec3 mangle_from_vec(const glm::vec3 &v)
+qvec3f mangle_from_vec(const qvec3f &v)
 {
-    const glm::vec3 up(0, 0, 1);
-    const glm::vec3 east(1, 0, 0);
-    const glm::vec3 north(0, 1, 0);
+    const qvec3f up(0, 0, 1);
+    const qvec3f east(1, 0, 0);
+    const qvec3f north(0, 1, 0);
     
     // get rotation about Z axis
-    float x = glm::dot(east, v);
-    float y = glm::dot(north, v);
+    float x = qv::dot(east, v);
+    float y = qv::dot(north, v);
     float theta = atan2f(y, x);
     
     // get angle away from Z axis
-    float cosangleFromUp = glm::dot(up, v);
+    float cosangleFromUp = qv::dot(up, v);
     cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
     float radiansFromUp = acosf(cosangleFromUp);
     
-    const glm::vec3 mangle = glm::vec3(theta, -(radiansFromUp - Q_PI/2.0), 0) * static_cast<float>(180.0f / Q_PI);
+    const qvec3f mangle = qvec3f(theta, -(radiansFromUp - Q_PI/2.0), 0) * static_cast<float>(180.0f / Q_PI);
     return mangle;
 }
 
-glm::mat3x3 RotateAboutX(float t)
+qmat3x3f RotateAboutX(float t)
 {
     //https://en.wikipedia.org/wiki/Rotation_matrix#Examples
 
     const float cost = cos(t);
     const float sint = sin(t);
     
-    return glm::mat3x3 {
+    return qmat3x3f {
         1, 0, 0, //col0
         0, cost, sint, // col1
         0, -sint, cost // col1
     };
 }
 
-glm::mat3x3 RotateAboutY(float t)
+qmat3x3f RotateAboutY(float t)
 {
     const float cost = cos(t);
     const float sint = sin(t);
     
-    return glm::mat3x3{
+    return qmat3x3f{
         cost, 0, -sint, // col0
         0, 1, 0, // col1
         sint, 0, cost //col2
     };
 }
 
-glm::mat3x3 RotateAboutZ(float t)
+qmat3x3f RotateAboutZ(float t)
 {
     const float cost = cos(t);
     const float sint = sin(t);
     
-    return glm::mat3x3{
+    return qmat3x3f{
         cost, sint, 0, // col0
         -sint, cost, 0, // col1
         0, 0, 1 //col2
@@ -202,23 +202,23 @@ glm::mat3x3 RotateAboutZ(float t)
 }
 
 // Returns a 3x3 matrix that rotates (0,0,1) to the given surface normal.
-glm::mat3x3 RotateFromUpToSurfaceNormal(const glm::vec3 &surfaceNormal)
+qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
 {
-    const glm::vec3 up(0, 0, 1);
-    const glm::vec3 east(1, 0, 0);
-    const glm::vec3 north(0, 1, 0);
+    const qvec3f up(0, 0, 1);
+    const qvec3f east(1, 0, 0);
+    const qvec3f north(0, 1, 0);
     
     // get rotation about Z axis
-    float x = glm::dot(east, surfaceNormal);
-    float y = glm::dot(north, surfaceNormal);
+    float x = qv::dot(east, surfaceNormal);
+    float y = qv::dot(north, surfaceNormal);
     float theta = atan2f(y, x);
     
     // get angle away from Z axis
-    float cosangleFromUp = glm::dot(up, surfaceNormal);
+    float cosangleFromUp = qv::dot(up, surfaceNormal);
     cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
     float radiansFromUp = acosf(cosangleFromUp);
     
-    const glm::mat3x3 rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
+    const qmat3x3f rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
     return rotations;
 }
 
@@ -257,22 +257,22 @@ void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size) {
     }
 }
 
-glm::vec3 Barycentric_FromPoint(const glm::vec3 &p, const tri_t &tri)
+qvec3f Barycentric_FromPoint(const qvec3f &p, const tri_t &tri)
 {
     using std::get;
     
-    const glm::vec3 v0 = get<1>(tri) - get<0>(tri);
-    const glm::vec3 v1 = get<2>(tri) - get<0>(tri);
-    const glm::vec3 v2 =           p - get<0>(tri);
-    float d00 = glm::dot(v0, v0);
-    float d01 = glm::dot(v0, v1);
-    float d11 = glm::dot(v1, v1);
-    float d20 = glm::dot(v2, v0);
-    float d21 = glm::dot(v2, v1);
+    const qvec3f v0 = get<1>(tri) - get<0>(tri);
+    const qvec3f v1 = get<2>(tri) - get<0>(tri);
+    const qvec3f v2 =           p - get<0>(tri);
+    float d00 = qv::dot(v0, v0);
+    float d01 = qv::dot(v0, v1);
+    float d11 = qv::dot(v1, v1);
+    float d20 = qv::dot(v2, v0);
+    float d21 = qv::dot(v2, v1);
     float invDenom = (d00 * d11 - d01 * d01);
     invDenom = 1.0/invDenom;
     
-    glm::vec3 res;
+    qvec3f res;
     res[1] = (d11 * d20 - d01 * d21) * invDenom;
     res[2] = (d00 * d21 - d01 * d20) * invDenom;
     res[0] = 1.0f - res[1] - res[2];
@@ -280,25 +280,25 @@ glm::vec3 Barycentric_FromPoint(const glm::vec3 &p, const tri_t &tri)
 }
 
 // from global illumination total compendium p. 12
-glm::vec3 Barycentric_Random(const float r1, const float r2)
+qvec3f Barycentric_Random(const float r1, const float r2)
 {
-    glm::vec3 res;
-    res.x = 1.0f - sqrtf(r1);
-    res.y = r2 * sqrtf(r1);
-    res.z = 1.0f - res.x - res.y;
+    qvec3f res;
+    res[0] = 1.0f - sqrtf(r1);
+    res[1] = r2 * sqrtf(r1);
+    res[2] = 1.0f - res[0] - res[1];
     return res;
 }
 
 /// Evaluates the given barycentric coord for the given triangle
-glm::vec3 Barycentric_ToPoint(const glm::vec3 &bary,
+qvec3f Barycentric_ToPoint(const qvec3f &bary,
                               const tri_t &tri)
 {
     using std::get;
     
-    const glm::vec3 pt = \
-          (bary.x * get<0>(tri))
-        + (bary.y * get<1>(tri))
-        + (bary.z * get<2>(tri));
+    const qvec3f pt = \
+          (get<0>(tri) * bary[0])
+        + (get<1>(tri) * bary[1])
+        + (get<2>(tri) * bary[2]);
     
     return pt;
 }
@@ -391,20 +391,19 @@ float Lanczos2D(float x, float y, float a)
     return lanczos;
 }
 
-using namespace glm;
 using namespace std;
 
-glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points)
+qvec3f GLM_FaceNormal(std::vector<qvec3f> points)
 {
     const int N = static_cast<int>(points.size());
     float maxArea = -FLT_MAX;
     int bestI = -1;
     
-    const vec3 p0 = points[0];
+    const qvec3f p0 = points[0];
     
     for (int i=2; i<N; i++) {
-        const vec3 p1 = points[i-1];
-        const vec3 p2 = points[i];
+        const qvec3f p1 = points[i-1];
+        const qvec3f p2 = points[i];
         
         const float area = GLM_TriangleArea(p0, p1, p2);
         if (area > maxArea) {
@@ -414,54 +413,54 @@ glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points)
     }
     
     if (bestI == -1 || maxArea < ZERO_TRI_AREA_EPSILON)
-        return vec3(0);
+        return qvec3f(0);
     
-    const vec3 p1 = points[bestI-1];
-    const vec3 p2 = points[bestI];
-    const vec3 normal = normalize(cross(p2 - p0, p1 - p0));
+    const qvec3f p1 = points[bestI-1];
+    const qvec3f p2 = points[bestI];
+    const qvec3f normal = qv::normalize(qv::cross(p2 - p0, p1 - p0));
     return normal;
 }
 
-glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points)
+qvec4f GLM_PolyPlane(const std::vector<qvec3f> &points)
 {
-    const vec3 normal = GLM_FaceNormal(points);
-    const float dist = dot(points.at(0), normal);
-    return vec4(normal, dist);
+    const qvec3f normal = GLM_FaceNormal(points);
+    const float dist = qv::dot(points.at(0), normal);
+    return qvec4f(normal[0], normal[1], normal[2], dist);
 }
 
-std::pair<bool, vec4>
-GLM_MakeInwardFacingEdgePlane(const vec3 &v0, const vec3 &v1, const vec3 &faceNormal)
+std::pair<bool, qvec4f>
+GLM_MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f &v1, const qvec3f &faceNormal)
 {
-    const float v0v1len = length(v1-v0);
+    const float v0v1len = qv::length(v1-v0);
     if (v0v1len < POINT_EQUAL_EPSILON)
-        return make_pair(false, vec4(0));
+        return make_pair(false, qvec4f(0));
     
-    const vec3 edgedir = (v1 - v0) / v0v1len;
-    const vec3 edgeplane_normal = cross(edgedir, faceNormal);
-    const float edgeplane_dist = dot(edgeplane_normal, v0);
+    const qvec3f edgedir = (v1 - v0) / v0v1len;
+    const qvec3f edgeplane_normal = qv::cross(edgedir, faceNormal);
+    const float edgeplane_dist = qv::dot(edgeplane_normal, v0);
     
-    return make_pair(true, vec4(edgeplane_normal, edgeplane_dist));
+    return make_pair(true, qvec4f(edgeplane_normal[0], edgeplane_normal[1], edgeplane_normal[2], edgeplane_dist));
 }
 
-vector<vec4>
-GLM_MakeInwardFacingEdgePlanes(const std::vector<vec3> &points)
+vector<qvec4f>
+GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
 {
     const int N = points.size();
     if (N < 3)
         return {};
     
-    vector<vec4> result;
+    vector<qvec4f> result;
     result.reserve(points.size());
     
-    const vec3 faceNormal = GLM_FaceNormal(points);
+    const qvec3f faceNormal = GLM_FaceNormal(points);
     
-    if (faceNormal == vec3(0,0,0))
+    if (faceNormal == qvec3f(0,0,0))
         return {};
     
     for (int i=0; i<N; i++)
     {
-        const vec3 v0 = points[i];
-        const vec3 v1 = points[(i+1) % N];
+        const qvec3f v0 = points[i];
+        const qvec3f v1 = points[(i+1) % N];
         
         const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, faceNormal);
         if (!edgeplane.first)
@@ -473,7 +472,7 @@ GLM_MakeInwardFacingEdgePlanes(const std::vector<vec3> &points)
     return result;
 }
 
-float GLM_EdgePlanes_PointInsideDist(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point)
+float GLM_EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point)
 {
     float min = FLT_MAX;
     
@@ -487,7 +486,7 @@ float GLM_EdgePlanes_PointInsideDist(const std::vector<glm::vec4> &edgeplanes, c
 }
 
 bool
-GLM_EdgePlanes_PointInside(const vector<vec4> &edgeplanes, const vec3 &point)
+GLM_EdgePlanes_PointInside(const vector<qvec4f> &edgeplanes, const qvec3f &point)
 {
     if (edgeplanes.empty())
         return false;
@@ -496,40 +495,40 @@ GLM_EdgePlanes_PointInside(const vector<vec4> &edgeplanes, const vec3 &point)
     return minDist >= -POINT_EQUAL_EPSILON;
 }
 
-vec3
-GLM_TriangleCentroid(const vec3 &v0, const vec3 &v1, const vec3 &v2)
+qvec3f
+GLM_TriangleCentroid(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2)
 {
     return (v0 + v1 + v2) / 3.0f;
 }
 
 float
-GLM_TriangleArea(const vec3 &v0, const vec3 &v1, const vec3 &v2)
+GLM_TriangleArea(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2)
 {
-    return 0.5f * length(cross(v2 - v0, v1 - v0));
+    return 0.5f * qv::length(qv::cross(v2 - v0, v1 - v0));
 }
 
-float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point)
+float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point)
 {
-    return dot(vec3(plane), point) - plane.w;
+    return qv::dot(qvec3f(plane), point) - plane[3];
 }
 
-glm::vec3 GLM_ProjectPointOntoPlane(const glm::vec4 &plane, const glm::vec3 &point)
+qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point)
 {
     float dist = GLM_DistAbovePlane(plane, point);
-    vec3 move = -dist * vec3(plane);
+    qvec3f move = qvec3f(plane[0], plane[1], plane[2]) * -dist;
     return point + move;
 }
 
-float GLM_PolyArea(const std::vector<glm::vec3> &points)
+float GLM_PolyArea(const std::vector<qvec3f> &points)
 {
     Q_assert(points.size() >= 3);
     
     float poly_area = 0;
     
-    const vec3 v0 = points.at(0);
+    const qvec3f v0 = points.at(0);
     for (int i = 2; i < points.size(); i++) {
-        const vec3 v1 = points.at(i-1);
-        const vec3 v2 = points.at(i);
+        const qvec3f v1 = points.at(i-1);
+        const qvec3f v2 = points.at(i);
         
         const float triarea = GLM_TriangleArea(v0, v1, v2);
         
@@ -539,23 +538,23 @@ float GLM_PolyArea(const std::vector<glm::vec3> &points)
     return poly_area;
 }
 
-glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points)
+qvec3f GLM_PolyCentroid(const std::vector<qvec3f> &points)
 {
     Q_assert(points.size() >= 3);
     
-    vec3 poly_centroid(0);
+    qvec3f poly_centroid(0);
     float poly_area = 0;
     
-    const vec3 v0 = points.at(0);
+    const qvec3f v0 = points.at(0);
     for (int i = 2; i < points.size(); i++) {
-        const vec3 v1 = points.at(i-1);
-        const vec3 v2 = points.at(i);
+        const qvec3f v1 = points.at(i-1);
+        const qvec3f v2 = points.at(i);
         
         const float triarea = GLM_TriangleArea(v0, v1, v2);
-        const vec3 tricentroid = GLM_TriangleCentroid(v0, v1, v2);
+        const qvec3f tricentroid = GLM_TriangleCentroid(v0, v1, v2);
         
         poly_area += triarea;
-        poly_centroid = poly_centroid + (triarea * tricentroid);
+        poly_centroid = poly_centroid + (tricentroid * triarea);
     }
     
     poly_centroid /= poly_area;
@@ -563,7 +562,7 @@ glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points)
     return poly_centroid;
 }
 
-glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points)
+qvec3f GLM_PolyRandomPoint(const std::vector<qvec3f> &points)
 {
     Q_assert(points.size() >= 3);
     
@@ -571,10 +570,10 @@ glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points)
     float poly_area = 0;
     std::vector<float> triareas;
     
-    const vec3 v0 = points.at(0);
+    const qvec3f v0 = points.at(0);
     for (int i = 2; i < points.size(); i++) {
-        const vec3 v1 = points.at(i-1);
-        const vec3 v2 = points.at(i);
+        const qvec3f v1 = points.at(i-1);
+        const qvec3f v2 = points.at(i);
         
         const float triarea = GLM_TriangleArea(v0, v1, v2);
         Q_assert(triarea >= 0.0f);
@@ -593,26 +592,26 @@ glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points)
     const tri_t tri { points.at(0), points.at(1 + whichTri), points.at(2 + whichTri) };
     
     // Pick random barycentric coords.
-    const glm::vec3 bary = Barycentric_Random(Random(), Random());
-    const glm::vec3 point = Barycentric_ToPoint(bary, tri);
+    const qvec3f bary = Barycentric_Random(Random(), Random());
+    const qvec3f point = Barycentric_ToPoint(bary, tri);
     
     return point;
 }
 
-std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::vec3> &poly, const vec3 &point)
+std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point)
 {
     const int N = static_cast<int>(poly.size());
     
     int bestI = -1;
     float bestDist = FLT_MAX;
-    glm::vec3 bestPointOnPoly(0);
+    qvec3f bestPointOnPoly(0);
     
     for (int i=0; i<N; i++) {
-        const glm::vec3 p0 = poly.at(i);
-        const glm::vec3 p1 = poly.at((i + 1) % N);
+        const qvec3f p0 = poly.at(i);
+        const qvec3f p1 = poly.at((i + 1) % N);
         
-        const glm::vec3 c = ClosestPointOnLineSegment(p0, p1, point);
-        const float distToC = length(c - point);
+        const qvec3f c = ClosestPointOnLineSegment(p0, p1, point);
+        const float distToC = qv::length(c - point);
         
         if (distToC < bestDist) {
             bestI = i;
@@ -626,23 +625,23 @@ std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::
     return make_pair(bestI, bestPointOnPoly);
 }
 
-std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &points,
-                                                 const std::vector<glm::vec3> &normals,
-                                                 const glm::vec3 &point)
+std::pair<bool, qvec3f> GLM_InterpolateNormal(const std::vector<qvec3f> &points,
+                                                 const std::vector<qvec3f> &normals,
+                                                 const qvec3f &point)
 {
     Q_assert(points.size() == normals.size());
     
     // Step through the triangles, being careful to handle zero-size ones
 
-    const vec3 &p0 = points.at(0);
-    const vec3 &n0 = normals.at(0);
+    const qvec3f &p0 = points.at(0);
+    const qvec3f &n0 = normals.at(0);
     
     const int N = points.size();
     for (int i=2; i<N; i++) {
-        const vec3 &p1 = points.at(i-1);
-        const vec3 &n1 = normals.at(i-1);
-        const vec3 &p2 = points.at(i);
-        const vec3 &n2 = normals.at(i);
+        const qvec3f &p1 = points.at(i-1);
+        const qvec3f &n1 = normals.at(i-1);
+        const qvec3f &p2 = points.at(i);
+        const qvec3f &n2 = normals.at(i);
      
         const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes({p0, p1, p2});
         if (edgeplanes.empty())
@@ -651,20 +650,20 @@ std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &p
         if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
             // Found the correct triangle
             
-            const vec3 bary = Barycentric_FromPoint(point, make_tuple(p0, p1, p2));
+            const qvec3f bary = Barycentric_FromPoint(point, make_tuple(p0, p1, p2));
             
             if (isnan(bary[0]) || isnan(bary[1]) || isnan(bary[2]))
                 continue;
 
-            const vec3 interpolatedNormal = Barycentric_ToPoint(bary, make_tuple(n0, n1, n2));
+            const qvec3f interpolatedNormal = Barycentric_ToPoint(bary, make_tuple(n0, n1, n2));
             return make_pair(true, interpolatedNormal);
         }
     }
     
-    return make_pair(false, vec3(0));
+    return make_pair(false, qvec3f(0));
 }
 
-static winding_t *glm_to_winding(const std::vector<glm::vec3> &poly)
+static winding_t *glm_to_winding(const std::vector<qvec3f> &poly)
 {
     const int N = poly.size();
     winding_t *winding = AllocWinding(N);
@@ -675,11 +674,11 @@ static winding_t *glm_to_winding(const std::vector<glm::vec3> &poly)
     return winding;
 }
 
-static std::vector<glm::vec3> winding_to_glm(const winding_t *w)
+static std::vector<qvec3f> winding_to_glm(const winding_t *w)
 {
     if (w == nullptr)
         return {};
-    std::vector<glm::vec3> res;
+    std::vector<qvec3f> res;
     for (int i=0; i<w->numpoints; i++) {
         res.push_back(vec3_t_to_glm(w->p[i]));
     }
@@ -687,18 +686,18 @@ static std::vector<glm::vec3> winding_to_glm(const winding_t *w)
 }
 
 /// Returns (front part, back part)
-std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std::vector<glm::vec3> &poly, const glm::vec4 &plane)
+std::pair<std::vector<qvec3f>,std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane)
 {
     vec3_t normal;
     winding_t *front = nullptr;
     winding_t *back = nullptr;
     
     if (poly.empty())
-        return make_pair(vector<vec3>(),vector<vec3>());
+        return make_pair(vector<qvec3f>(),vector<qvec3f>());
     
     winding_t *w = glm_to_winding(poly);
-    glm_to_vec3_t(vec3(plane), normal);
-    ClipWinding(w, normal, plane.w, &front, &back);
+    glm_to_vec3_t(qvec3f(plane), normal);
+    ClipWinding(w, normal, plane[3], &front, &back);
     
     const auto res = make_pair(winding_to_glm(front), winding_to_glm(back));
     free(front);
@@ -706,13 +705,13 @@ std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std:
     return res;
 }
 
-std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const float amount) {
-    const vector<vec4> edgeplanes = GLM_MakeInwardFacingEdgePlanes(poly);
+std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount) {
+    const vector<qvec4f> edgeplanes = GLM_MakeInwardFacingEdgePlanes(poly);
     
-    vector<vec3> clipped = poly;
+    vector<qvec3f> clipped = poly;
     
-    for (const vec4 &edge : edgeplanes) {
-        const vec4 shrunkEdgePlane(vec3(edge), edge.w + 1);
+    for (const qvec4f &edge : edgeplanes) {
+        const qvec4f shrunkEdgePlane(edge[0], edge[1], edge[2], edge[3] + 1);
         clipped = GLM_ClipPoly(clipped, shrunkEdgePlane).first;
     }
     
@@ -721,45 +720,45 @@ std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const 
 
 // from: http://stackoverflow.com/a/1501725
 // see also: http://mathworld.wolfram.com/Projection.html
-float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+float FractionOfLine(const qvec3f &v, const qvec3f &w, const qvec3f& p)
 {
-    const glm::vec3 vp = p - v;
-    const glm::vec3 vw = w - v;
+    const qvec3f vp = p - v;
+    const qvec3f vw = w - v;
     
-    const float l2 = glm::dot(vw, vw);
+    const float l2 = qv::dot(vw, vw);
     if (l2 == 0) {
         return 0;
     }
     
-    const float t = glm::dot(vp, vw) / l2;
+    const float t = qv::dot(vp, vw) / l2;
     return t;
 }
 
-float DistToLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+float DistToLine(const qvec3f &v, const qvec3f &w, const qvec3f& p)
 {
-    const glm::vec3 closest = ClosestPointOnLine(v,w,p);
-    return glm::distance(p, closest);
+    const qvec3f closest = ClosestPointOnLine(v,w,p);
+    return qv::distance(p, closest);
 }
 
-glm::vec3 ClosestPointOnLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+qvec3f ClosestPointOnLine(const qvec3f &v, const qvec3f &w, const qvec3f& p)
 {
-    const glm::vec3 vp = p - v;
-    const glm::vec3 vw_norm = glm::normalize(w - v);
+    const qvec3f vp = p - v;
+    const qvec3f vw_norm = qv::normalize(w - v);
     
-    const float vp_scalarproj = glm::dot(vp, vw_norm);
+    const float vp_scalarproj = qv::dot(vp, vw_norm);
     
-    const glm::vec3 p_projected_on_vw = v + (vw_norm * vp_scalarproj);
+    const qvec3f p_projected_on_vw = v + (vw_norm * vp_scalarproj);
     
     return p_projected_on_vw;
 }
 
-float DistToLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+float DistToLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f& p)
 {
-    const glm::vec3 closest = ClosestPointOnLineSegment(v,w,p);
-    return glm::distance(p, closest);
+    const qvec3f closest = ClosestPointOnLineSegment(v,w,p);
+    return qv::distance(p, closest);
 }
 
-glm::vec3 ClosestPointOnLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f& p)
 {
     const float frac = FractionOfLine(v, w, p);
     if (frac > 1)

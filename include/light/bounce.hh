@@ -27,15 +27,15 @@
 #include <vector>
 #include <map>
 
-#include <glm/vec3.hpp>
+#include <common/qvec.hh>
 
 typedef struct {
-    std::vector<glm::vec3> poly;
-    std::vector<glm::vec4> poly_edgeplanes;
-    glm::vec3 pos;
-    std::map<int, glm::vec3> colorByStyle;
-    glm::vec3 componentwiseMaxColor; // cached maximum color in the colorByStyle, used for culling so we don't need to loop through colorByStyle
-    glm::vec3 surfnormal;
+    std::vector<qvec3f> poly;
+    std::vector<qvec4f> poly_edgeplanes;
+    qvec3f pos;
+    std::map<int, qvec3f> colorByStyle;
+    qvec3f componentwiseMaxColor; // cached maximum color in the colorByStyle, used for culling so we don't need to loop through colorByStyle
+    qvec3f surfnormal;
     float area;
     
     /* estimated visible AABB culling */
@@ -50,6 +50,6 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum);
 void MakeTextureColors (const bsp2_t *bsp);
 void MakeBounceLights (const globalconfig_t &cfg, const bsp2_t *bsp);
 /** Returns color components in [0, 255] */
-glm::vec3 Palette_GetColor(int i);
+qvec3f Palette_GetColor(int i);
 
 #endif /* __LIGHT_BOUNCe_H__ */

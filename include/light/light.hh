@@ -39,9 +39,7 @@
 #include <limits>
 #include <sstream>
 
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#include <glm/mat4x4.hpp>
+#include <common/qvec.hh>
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
@@ -55,7 +53,7 @@ static inline float LightSample_Brightness(const vec3_t color) {
     return ((color[0] + color[1] + color[2]) / 3.0);
 }
 
-static inline float LightSample_Brightness(const glm::vec3 color) {
+static inline float LightSample_Brightness(const qvec3f color) {
     return ((color[0] + color[1] + color[2]) / 3.0);
 }
 
@@ -74,7 +72,7 @@ public:
 #define MAXDIMENSION (255+1)
 
 typedef struct {
-    glm::mat4x4 texSpaceToWorld;
+    qmat4x4f texSpaceToWorld;
     const texinfo_t *texinfo;
     vec_t planedist;
 } texorg_t;

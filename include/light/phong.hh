@@ -33,15 +33,14 @@
 #include <map>
 #include <vector>
 
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
+#include <common/qvec.hh>
 
 void CalcualateVertexNormals(const bsp2_t *bsp);
-const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex);
+const qvec3f GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex);
 bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2);
 const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face);
 const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face);
-const glm::vec3 GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
+const qvec3f GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
 const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
 
 /// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
@@ -51,14 +50,14 @@ const edgeToFaceMap_t &GetEdgeToFaceMap();
 
 class face_cache_t {
 private:
-    std::vector<glm::vec3> m_points;
-    std::vector<glm::vec3> m_normals;
-    glm::vec4 m_plane;
-    std::vector<glm::vec4> m_edgePlanes;
-    std::vector<glm::vec3> m_pointsShrunkBy1Unit;
+    std::vector<qvec3f> m_points;
+    std::vector<qvec3f> m_normals;
+    qvec4f m_plane;
+    std::vector<qvec4f> m_edgePlanes;
+    std::vector<qvec3f> m_pointsShrunkBy1Unit;
     
 public:
-    face_cache_t(const bsp2_t *bsp, const bsp2_dface_t *face, const std::vector<glm::vec3> &normals) :
+    face_cache_t(const bsp2_t *bsp, const bsp2_dface_t *face, const std::vector<qvec3f> &normals) :
         m_points(GLM_FacePoints(bsp, face)),
         m_normals(normals),
         m_plane(Face_Plane_E(bsp, face)),
@@ -66,22 +65,22 @@ public:
         m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f))
     { }
     
-    const std::vector<glm::vec3> &points() const {
+    const std::vector<qvec3f> &points() const {
         return m_points;
     }
-    const std::vector<glm::vec3> &normals() const {
+    const std::vector<qvec3f> &normals() const {
         return m_normals;
     }
-    const glm::vec4 &plane() const {
+    const qvec4f &plane() const {
         return m_plane;
     }
-    const glm::vec3 normal() const {
-        return glm::vec3(m_plane);
+    const qvec3f normal() const {
+        return qvec3f(m_plane);
     }
-    const std::vector<glm::vec4> &edgePlanes() const {
+    const std::vector<qvec4f> &edgePlanes() const {
         return m_edgePlanes;
     }
-    const std::vector<glm::vec3> &pointsShrunkBy1Unit() const {
+    const std::vector<qvec3f> &pointsShrunkBy1Unit() const {
         return m_pointsShrunkBy1Unit;
     }
 };

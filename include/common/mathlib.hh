@@ -29,10 +29,7 @@
 #include <utility>
 #include <memory> // for unique_ptr
 
-#include <glm/vec4.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec2.hpp>
-#include <glm/glm.hpp>
+#include <common/qvec.hh>
 
 #ifdef DOUBLEVEC_T
 #define vec_t double
@@ -67,7 +64,7 @@ extern const vec3_t vec3_origin;
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2);
 
 static inline bool
-GLMVectorCompare(const glm::vec3 &v1, const glm::vec3 &v2)
+GLMVectorCompare(const qvec3f &v1, const qvec3f &v2)
 {
     for (int i = 0; i < 3; i++)
         if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
@@ -130,17 +127,17 @@ VectorSet(vec3_t out, vec_t x, vec_t y, vec_t z)
 }
 
 static inline void
-VectorCopyFromGLM(const glm::vec3 &in, vec3_t out)
+VectorCopyFromGLM(const qvec3f &in, vec3_t out)
 {
-    out[0] = in.x;
-    out[1] = in.y;
-    out[2] = in.z;
+    out[0] = in[0];
+    out[1] = in[1];
+    out[2] = in[2];
 }
 
-static inline glm::vec3
+static inline qvec3f
 VectorToGLM(const vec3_t in)
 {
-    return glm::vec3(in[0], in[1], in[2]);
+    return qvec3f(in[0], in[1], in[2]);
 }
 
 static inline vec_t
@@ -221,28 +218,29 @@ const char *VecStrf(const vec3_t vec);
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
 void UniformPointOnSphere(vec3_t dir, float u, float v);
 void RandomDir(vec3_t dir);
-glm::vec3 CosineWeightedHemisphereSample(float u1, float u2);
-glm::vec3 vec_from_mangle(const glm::vec3 &m);
-glm::vec3 mangle_from_vec(const glm::vec3 &v);
-glm::mat3x3 RotateAboutX(float t);
-glm::mat3x3 RotateAboutY(float t);
-glm::mat3x3 RotateAboutZ(float t);
-glm::mat3x3 RotateFromUpToSurfaceNormal(const glm::vec3 &surfaceNormal);
+qvec3f CosineWeightedHemisphereSample(float u1, float u2);
+qvec3f vec_from_mangle(const qvec3f &m);
+qvec3f mangle_from_vec(const qvec3f &v);
+qmat3x3f RotateAboutX(float t);
+qmat3x3f RotateAboutY(float t);
+qmat3x3f RotateAboutZ(float t);
+qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal);
+
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
 void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out);
 void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size);
 
-using tri_t = std::tuple<glm::vec3, glm::vec3, glm::vec3>;
+using tri_t = std::tuple<qvec3f, qvec3f, qvec3f>;
 
 /// abc - clockwise ordered triangle
 /// p - point to get the barycentric coords of
-glm::vec3 Barycentric_FromPoint(const glm::vec3 &p, const tri_t &tri);
-glm::vec3 Barycentric_Random(const float r1, const float r2);
+qvec3f Barycentric_FromPoint(const qvec3f &p, const tri_t &tri);
+qvec3f Barycentric_Random(const float r1, const float r2);
 
 /// Evaluates the given barycentric coord for the given triangle
-glm::vec3 Barycentric_ToPoint(const glm::vec3 &bary,
+qvec3f Barycentric_ToPoint(const qvec3f &bary,
                               const tri_t &tri);
 
 vec_t TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2);
@@ -262,78 +260,78 @@ float Lanczos2D(float x, float y, float a);
 
 // glm geometry
 
-static inline glm::vec3 vec3_t_to_glm(const vec3_t vec) {
-    return glm::vec3(vec[0], vec[1], vec[2]);
+static inline qvec3f vec3_t_to_glm(const vec3_t vec) {
+    return qvec3f(vec[0], vec[1], vec[2]);
 }
 
-static inline void glm_to_vec3_t(const glm::vec3 &glm, vec3_t out) {
-    out[0] = glm.x;
-    out[1] = glm.y;
-    out[2] = glm.z;
+static inline void glm_to_vec3_t(const qvec3f &glm, vec3_t out) {
+    out[0] = glm[0];
+    out[1] = glm[1];
+    out[2] = glm[2];
 }
 
 // Returns (0 0 0) if we couldn't determine the normal
-glm::vec3 GLM_FaceNormal(std::vector<glm::vec3> points);
-std::pair<bool, glm::vec4> GLM_MakeInwardFacingEdgePlane(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &faceNormal);
-std::vector<glm::vec4> GLM_MakeInwardFacingEdgePlanes(const std::vector<glm::vec3> &points);
-bool GLM_EdgePlanes_PointInside(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
-float GLM_EdgePlanes_PointInsideDist(const std::vector<glm::vec4> &edgeplanes, const glm::vec3 &point);
-glm::vec3 GLM_TriangleCentroid(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
-float GLM_TriangleArea(const glm::vec3 &v0, const glm::vec3 &v1, const glm::vec3 &v2);
-float GLM_DistAbovePlane(const glm::vec4 &plane, const glm::vec3 &point);
-glm::vec3 GLM_ProjectPointOntoPlane(const glm::vec4 &plane, const glm::vec3 &point);
-float GLM_PolyArea(const std::vector<glm::vec3> &points);
-glm::vec3 GLM_PolyCentroid(const std::vector<glm::vec3> &points);
-glm::vec4 GLM_PolyPlane(const std::vector<glm::vec3> &points);
+qvec3f GLM_FaceNormal(std::vector<qvec3f> points);
+std::pair<bool, qvec4f> GLM_MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f &v1, const qvec3f &faceNormal);
+std::vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points);
+bool GLM_EdgePlanes_PointInside(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
+float GLM_EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
+qvec3f GLM_TriangleCentroid(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2);
+float GLM_TriangleArea(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2);
+float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point);
+qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point);
+float GLM_PolyArea(const std::vector<qvec3f> &points);
+qvec3f GLM_PolyCentroid(const std::vector<qvec3f> &points);
+qvec4f GLM_PolyPlane(const std::vector<qvec3f> &points);
 /// Returns the index of the polygon edge, and the closest point on that edge, to the given point
-std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::vec3> &poly, const glm::vec3 &point);
+std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point);
 /// Returns `true` and the interpolated normal if `point` is in the polygon, otherwise returns false.
-std::pair<bool, glm::vec3> GLM_InterpolateNormal(const std::vector<glm::vec3> &points,
-                                                 const std::vector<glm::vec3> &normals,
-                                                 const glm::vec3 &point);
-std::vector<glm::vec3> GLM_ShrinkPoly(const std::vector<glm::vec3> &poly, const float amount);
+std::pair<bool, qvec3f> GLM_InterpolateNormal(const std::vector<qvec3f> &points,
+                                                 const std::vector<qvec3f> &normals,
+                                                 const qvec3f &point);
+std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount);
 /// Returns (front part, back part)
-std::pair<std::vector<glm::vec3>,std::vector<glm::vec3>> GLM_ClipPoly(const std::vector<glm::vec3> &poly, const glm::vec4 &plane);
-glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points);
+std::pair<std::vector<qvec3f>,std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane);
+qvec3f GLM_PolyRandomPoint(const std::vector<qvec3f> &points);
 
 /// projects p onto the vw line.
 /// returns 0 for p==v, 1 for p==w
-float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
+float FractionOfLine(const qvec3f &v, const qvec3f &w, const qvec3f& p);
 
 /**
  * Distance from `p` to the line v<->w (extending infinitely in either direction)
  */
-float DistToLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
+float DistToLine(const qvec3f &v, const qvec3f &w, const qvec3f& p);
 
-glm::vec3 ClosestPointOnLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
+qvec3f ClosestPointOnLine(const qvec3f &v, const qvec3f &w, const qvec3f &p);
 
 /**
  * Distance from `p` to the line segment v<->w.
  * i.e., 0 if `p` is between v and w.
  */
-float DistToLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
+float DistToLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
 
-glm::vec3 ClosestPointOnLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
+qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
 
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
-static inline glm::vec4 bilinearWeights(const float x, const float y) {
+static inline qvec4f bilinearWeights(const float x, const float y) {
     Q_assert(x >= 0.0f);
     Q_assert(x <= 1.0f);
     
     Q_assert(y >= 0.0f);
     Q_assert(y <= 1.0f);
     
-    return glm::vec4((1.0f - x) * (1.0f - y), x * (1.0f - y), (1.0f - x) * y, x * y);
+    return qvec4f((1.0f - x) * (1.0f - y), x * (1.0f - y), (1.0f - x) * y, x * y);
 }
 
 // This uses a coordinate system where the pixel centers are on integer coords.
 // e.g. the corners of a 3x3 pixel bitmap are at (-0.5, -0.5) and (2.5, 2.5).
-static inline std::array<std::pair<glm::ivec2, float>, 4>
-bilinearWeightsAndCoords(glm::vec2 pos, const glm::ivec2 &size)
+static inline std::array<std::pair<qvec2i, float>, 4>
+bilinearWeightsAndCoords(qvec2f pos, const qvec2i &size)
 {
-    Q_assert(pos.x >= -0.5f && pos.x <= (size.x - 0.5f));
-    Q_assert(pos.y >= -0.5f && pos.y <= (size.y - 0.5f));
+    Q_assert(pos[0] >= -0.5f && pos[0] <= (size[0] - 0.5f));
+    Q_assert(pos[1] >= -0.5f && pos[1] <= (size[1] - 0.5f));
     
     // Handle extrapolation.
     for (int i=0; i<2; i++) {
@@ -344,11 +342,11 @@ bilinearWeightsAndCoords(glm::vec2 pos, const glm::ivec2 &size)
             pos[i] = (size[i] - 1);
     }
     
-    Q_assert(pos.x >= 0.f && pos.x <= (size.x - 1));
-    Q_assert(pos.y >= 0.f && pos.y <= (size.y - 1));
+    Q_assert(pos[0] >= 0.f && pos[0] <= (size[0] - 1));
+    Q_assert(pos[1] >= 0.f && pos[1] <= (size[1] - 1));
     
-    glm::ivec2 integerPart(glm::floor(pos));
-    glm::vec2 fractionalPart(pos - glm::floor(pos));
+    qvec2i integerPart{qv::floor(pos)[0], qv::floor(pos)[1]};
+    qvec2f fractionalPart(pos - qv::floor(pos));
     
     // ensure integerPart + (1, 1) is still in bounds
     for (int i=0; i<2; i++) {
@@ -357,29 +355,29 @@ bilinearWeightsAndCoords(glm::vec2 pos, const glm::ivec2 &size)
             fractionalPart[i] = 1.0f;
         }
     }
-    Q_assert(integerPart.x + 1 < size.x);
-    Q_assert(integerPart.y + 1 < size.y);
+    Q_assert(integerPart[0] + 1 < size[0]);
+    Q_assert(integerPart[1] + 1 < size[1]);
     
-    Q_assert(glm::vec2(integerPart) + fractionalPart == pos);
+    Q_assert(qvec2f(integerPart) + fractionalPart == pos);
     
     // f(0,0), f(1,0), f(0,1), f(1,1)
-    const glm::vec4 weights = bilinearWeights(fractionalPart.x, fractionalPart.y);
+    const qvec4f weights = bilinearWeights(fractionalPart[0], fractionalPart[1]);
     
-    std::array<std::pair<glm::ivec2, float>, 4> result;
+    std::array<std::pair<qvec2i, float>, 4> result;
     for (int i=0; i<4; i++) {
         const float weight = weights[i];
-        glm::ivec2 pos(integerPart);
+        qvec2i pos(integerPart);
     
         if ((i % 2) == 1)
-            pos.x += 1;
+            pos[0] += 1;
         if (i >= 2)
-            pos.y += 1;
+            pos[1] += 1;
         
-        Q_assert(pos.x >= 0);
-        Q_assert(pos.x < size.x);
+        Q_assert(pos[0] >= 0);
+        Q_assert(pos[0] < size[0]);
         
-        Q_assert(pos.y >= 0);
-        Q_assert(pos.y < size.y);
+        Q_assert(pos[1] >= 0);
+        Q_assert(pos[1] < size[1]);
         
         result[i] = std::make_pair(pos, weight);
     }
@@ -389,7 +387,7 @@ bilinearWeightsAndCoords(glm::vec2 pos, const glm::ivec2 &size)
 template <typename V>
 V bilinearInterpolate(const V &f00, const V &f10, const V &f01, const V &f11, const float x, const float y)
 {
-    glm::vec4 weights = bilinearWeights(x,y);
+    qvec4f weights = bilinearWeights(x,y);
     
     const V fxy = f00 * weights[0] + \
                     f10 * weights[1] + \
@@ -403,7 +401,7 @@ template <typename V>
 std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
 {
     const V linesegment = end - start;
-    const float len = glm::length(linesegment);
+    const float len = qv::length(linesegment);
     if (len == 0)
         return {};
     

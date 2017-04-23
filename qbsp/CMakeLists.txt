@@ -27,6 +27,7 @@ set(QBSP_INCLUDES
 set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/common/threads.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
+	${CMAKE_SOURCE_DIR}/common/qvec.cc
 	brush.cc
 	bspfile.cc
 	cmdlib.cc

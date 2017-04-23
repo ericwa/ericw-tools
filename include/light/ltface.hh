@@ -26,12 +26,11 @@
 #include <common/log.hh>
 #include <common/threads.hh>
 #include <common/polylib.hh>
+#include <common/qvec.hh>
 
 #include <light/litfile.hh>
 #include <light/trace.hh>
 #include <light/entities.hh>
-
-#include <glm/mat4x4.hpp>
 
 #include <vector>
 #include <map>
@@ -46,11 +45,11 @@ extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 
 class faceextents_t {
 private:
-    glm::ivec2 m_texmins;
-    glm::ivec2 m_texsize;
+    qvec2i m_texmins;
+    qvec2i m_texsize;
     float m_lightmapscale;
-    glm::mat4x4 m_worldToTexCoord;
-    glm::mat4x4 m_texCoordToWorld;
+    qmat4x4f m_worldToTexCoord;
+    qmat4x4f m_texCoordToWorld;
     
 public:
     faceextents_t() = default;
@@ -58,25 +57,25 @@ public:
     int width() const;
     int height() const;
     int numsamples() const;
-    glm::ivec2 texsize() const;
-    int indexOf(const glm::ivec2 &lm) const;
-    glm::ivec2 intCoordsFromIndex(int index) const;
-    glm::vec2 LMCoordToTexCoord(const glm::vec2 &LMCoord) const;
-    glm::vec2 TexCoordToLMCoord(const glm::vec2 &tc) const;
-    glm::vec2 worldToTexCoord(glm::vec3 world) const;
-    glm::vec3 texCoordToWorld(glm::vec2 tc) const;
-    glm::vec2 worldToLMCoord(glm::vec3 world) const;
-    glm::vec3 LMCoordToWorld(glm::vec2 lm) const;
+    qvec2i texsize() const;
+    int indexOf(const qvec2i &lm) const;
+    qvec2i intCoordsFromIndex(int index) const;
+    qvec2f LMCoordToTexCoord(const qvec2f &LMCoord) const;
+    qvec2f TexCoordToLMCoord(const qvec2f &tc) const;
+    qvec2f worldToTexCoord(qvec3f world) const;
+    qvec3f texCoordToWorld(qvec2f tc) const;
+    qvec2f worldToLMCoord(qvec3f world) const;
+    qvec3f LMCoordToWorld(qvec2f lm) const;
 };
 
-glm::vec2 WorldToTexCoord_HighPrecision(const bsp2_t *bsp, const bsp2_dface_t *face, const glm::vec3 &world);
-glm::mat4x4 WorldToTexSpace(const bsp2_t *bsp, const bsp2_dface_t *f);
-glm::mat4x4 TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f);
+qvec2f WorldToTexCoord_HighPrecision(const bsp2_t *bsp, const bsp2_dface_t *face, const qvec3f &world);
+qmat4x4f WorldToTexSpace(const bsp2_t *bsp, const bsp2_dface_t *f);
+qmat4x4f TexSpaceToWorld(const bsp2_t *bsp, const bsp2_dface_t *f);
 void WorldToTexCoord(const vec3_t world, const texinfo_t *tex, vec_t coord[2]);
 void PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
-std::map<int, glm::vec3> GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal);
+std::map<int, qvec3f> GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal);
 void SetupDirt(globalconfig_t &cfg);
 float DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const dmodel_t *selfshadow);
 void LightFace(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg);

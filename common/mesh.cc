@@ -21,8 +21,6 @@
 #include <common/mesh.hh>
 #include <common/octree.hh>
 
-// FIXME: Remove
-#include <glm/glm.hpp>
 #include <common/mathlib.hh>
 
 #include <iterator>
@@ -32,10 +30,10 @@
 using namespace std;
 
 // FIXME: Remove
-std::vector<glm::vec3> qvecsToGlm(std::vector<qvec3f> qvecs) {
-    std::vector<glm::vec3> res;
+std::vector<qvec3f> qvecsToGlm(std::vector<qvec3f> qvecs) {
+    std::vector<qvec3f> res;
     for (const auto &qvec : qvecs) {
-        res.push_back(glm::vec3(qvec[0], qvec[1], qvec[2]));
+        res.push_back(qvec3f(qvec[0], qvec[1], qvec[2]));
     }
     return res;
 }
@@ -55,8 +53,8 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
         
         // compute face plane
         const auto glmvecs = qvecsToGlm(face);
-        glm::vec4 gp = GLM_PolyPlane(glmvecs);
-        qplane3f qp(qvec3f(gp.x, gp.y, gp.z), gp.w);
+        qvec4f gp = GLM_PolyPlane(glmvecs);
+        qplane3f qp(qvec3f(gp[0], gp[1], gp[2]), gp[3]);
         faceplanes.push_back(qp);
         
         for (const auto &vert : face) {
@@ -137,11 +135,11 @@ static octree_t<vertnum_t> build_vert_octree(const mesh_t &mesh)
     return makeOctree(vertBboxNumPairs);
 }
 
-glm::vec3 qToG(qvec3f in) {
-    return glm::vec3(in[0], in[1], in[2]);
+qvec3f qToG(qvec3f in) {
+    return qvec3f(in[0], in[1], in[2]);
 }
 
-qvec3f gToQ(glm::vec3 in) {
+qvec3f gToQ(qvec3f in) {
     return qvec3f(in[0], in[1], in[2]);
 }
 
