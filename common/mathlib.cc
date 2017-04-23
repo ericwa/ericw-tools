@@ -658,6 +658,12 @@ float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
 
 float DistToLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
 {
+    const glm::vec3 closest = ClosestPointOnLine(v,w,p);
+    return glm::distance(p, closest);
+}
+
+glm::vec3 ClosestPointOnLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+{
     const glm::vec3 vp = p - v;
     const glm::vec3 vw_norm = glm::normalize(w - v);
     
@@ -665,16 +671,22 @@ float DistToLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
     
     const glm::vec3 p_projected_on_vw = v + (vw_norm * vp_scalarproj);
     
-    return glm::distance(p, p_projected_on_vw);
+    return p_projected_on_vw;
 }
 
 float DistToLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
 {
+    const glm::vec3 closest = ClosestPointOnLineSegment(v,w,p);
+    return glm::distance(p, closest);
+}
+
+glm::vec3 ClosestPointOnLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+{
     const float frac = FractionOfLine(v, w, p);
     if (frac > 1)
-        return glm::distance(w, p);
+        return w;
     if (frac < 0)
-        return glm::distance(v, p);
+        return v;
     
-    return DistToLine(v, w, p);
+    return ClosestPointOnLine(v, w, p);
 }
