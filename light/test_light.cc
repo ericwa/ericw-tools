@@ -542,6 +542,21 @@ TEST(mathlib, DistToLine) {
     ASSERT_TRUE(fabs(0.5 - DistToLine(vec3(10,0,0), vec3(10,0,100), vec3(9.5,0,0))) < epsilon);
 }
 
+TEST(mathlib, DistToLineSegment) {
+    const float epsilon = 0.001;
+    
+    ASSERT_TRUE(fabs(0 - DistToLineSegment(vec3(0,0,0), vec3(1,1,1), vec3(0,0,0))) < epsilon);
+    ASSERT_TRUE(fabs(0 - DistToLineSegment(vec3(0,0,0), vec3(1,1,1), vec3(0.5, 0.5, 0.5))) < epsilon);
+    ASSERT_TRUE(fabs(0 - DistToLineSegment(vec3(0,0,0), vec3(1,1,1), vec3(1,1,1))) < epsilon);
+    ASSERT_TRUE(fabs(sqrt(3) - DistToLineSegment(vec3(0,0,0), vec3(1,1,1), vec3(2,2,2))) < epsilon);
+    ASSERT_TRUE(fabs(sqrt(3) - DistToLineSegment(vec3(0,0,0), vec3(1,1,1), vec3(-1,-1,-1))) < epsilon);
+    
+    ASSERT_TRUE(fabs(sqrt(2)/2 - DistToLineSegment(vec3(0,0,0), vec3(1,1,0), vec3(0,1,0))) < epsilon);
+    ASSERT_TRUE(fabs(sqrt(2)/2 - DistToLineSegment(vec3(0,0,0), vec3(1,1,0), vec3(1,0,0))) < epsilon);
+    
+    ASSERT_TRUE(fabs(0.5 - DistToLineSegment(vec3(10,0,0), vec3(10,0,100), vec3(9.5,0,0))) < epsilon);
+}
+
 // mesh_t
 
 TEST(mathlib, meshCreate) {

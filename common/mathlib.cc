@@ -667,3 +667,14 @@ float DistToLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
     
     return glm::distance(p, p_projected_on_vw);
 }
+
+float DistToLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p)
+{
+    const float frac = FractionOfLine(v, w, p);
+    if (frac > 1)
+        return glm::distance(w, p);
+    if (frac < 0)
+        return glm::distance(v, p);
+    
+    return DistToLine(v, w, p);
+}

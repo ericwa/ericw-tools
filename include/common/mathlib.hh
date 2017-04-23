@@ -296,9 +296,15 @@ glm::vec3 GLM_PolyRandomPoint(const std::vector<glm::vec3> &points);
 float FractionOfLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
 
 /**
- * Distance from `p` to the line v<->w
+ * Distance from `p` to the line v<->w (extending infinitely in either direction)
  */
 float DistToLine(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
+
+/**
+ * Distance from `p` to the line segment v<->w.
+ * i.e., 0 if `p` is between v and w.
+ */
+float DistToLineSegment(const glm::vec3 &v, const glm::vec3 &w, const glm::vec3& p);
 
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
