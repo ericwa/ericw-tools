@@ -154,7 +154,7 @@ qvec<3,T> cross(const qvec<3,T> &v1, const qvec<3,T> &v2) {
 }
 
 template <int N, class T>
-qvec<N,T> dot(const qvec<N,T> &v1, const qvec<N,T> &v2) {
+T dot(const qvec<N,T> &v1, const qvec<N,T> &v2) {
     T result = 0;
     for (int i=0; i<N; i++) {
         result += v1[i] * v2[i];
@@ -169,6 +169,25 @@ using qvec4f = qvec<4, float>;
 using qvec2d = qvec<2, double>;
 using qvec3d = qvec<3, double>;
 using qvec4d = qvec<4, double>;
+
+template <class T>
+class qplane3 {
+private:
+    qvec<3, T> m_normal;
+    T m_dist;
+    
+public:
+    qplane3(const qvec<3, T> &normal, const T &dist)
+    : m_normal(normal),
+      m_dist(dist) {}
+        
+    T distAbove(const qvec<3, T> &pt) const { return dot(pt, m_normal) - m_dist; }
+    const qvec<3, T> &normal() const { return m_normal; }
+    const T dist() const { return m_dist; }
+};
+
+using qplane3f = qplane3<float>;
+using qplane3d = qplane3<double>;
 
 /**
  * M row, N column matrix
