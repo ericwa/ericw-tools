@@ -25,7 +25,7 @@
 
 using namespace std;
 
-mesh_t buildMesh(const vector<vector<glm::vec3>> &faces)
+mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
 {
     // FIXME: this is ugly
     using pos_t = tuple<float, float, float>;
@@ -55,11 +55,11 @@ mesh_t buildMesh(const vector<vector<glm::vec3>> &faces)
     }
     
     // convert posToVertIndex to a vector
-    vector<glm::vec3> vertsVec;
+    vector<qvec3f> vertsVec;
     vertsVec.resize(posToVertIndex.size());
     for (const auto &posIndex : posToVertIndex) {
         const pos_t &pos = posIndex.first;
-        vertsVec.at(posIndex.second) = glm::vec3(std::get<0>(pos), std::get<1>(pos), std::get<2>(pos));
+        vertsVec.at(posIndex.second) = qvec3f(std::get<0>(pos), std::get<1>(pos), std::get<2>(pos));
     }
     
     mesh_t res;
@@ -68,13 +68,13 @@ mesh_t buildMesh(const vector<vector<glm::vec3>> &faces)
     return res;
 }
 
-std::vector<std::vector<glm::vec3>> meshToFaces(const mesh_t &mesh)
+std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh)
 {
-    std::vector<std::vector<glm::vec3>> res;
+    std::vector<std::vector<qvec3f>> res;
     for (const auto &meshFace : mesh.faces) {
-        std::vector<glm::vec3> points;
+        std::vector<qvec3f> points;
         for (int vertIndex : meshFace) {
-            const glm::vec3 point = mesh.verts.at(vertIndex);
+            const qvec3f point = mesh.verts.at(vertIndex);
             points.push_back(point);
         }
         res.push_back(points);

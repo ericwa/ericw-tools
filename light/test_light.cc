@@ -530,19 +530,19 @@ TEST(mathlib, FractionOfLine) {
 // mesh_t
 
 TEST(mathlib, meshCreate) {
-    const vector<vec3> poly1 {
+    const vector<qvec3f> poly1 {
         { 0,0,0 },
         { 0,64,0 },
         { 64,64,0 },
         { 64,0,0 }
     };
-    const vector<vec3> poly2 {
+    const vector<qvec3f> poly2 {
         { 64,0,0 },
         { 64,64,0 },
         { 128,64,0 },
         { 128,0,0 }
     };
-    const vector<vector<vec3>> polys { poly1, poly2 };
+    const vector<vector<qvec3f>> polys { poly1, poly2 };
     
     const mesh_t m = buildMesh(polys);
     ASSERT_EQ(6, m.verts.size());
@@ -564,26 +564,26 @@ TEST(mathlib, meshFixTJuncs) {
      poly1 should get a vertex inserted at the +
      
      */
-    const vector<vec3> poly1 {
+    const vector<qvec3f> poly1 {
         { 0,0,0 },
         { 0,64,0 },
         { 64,64,0 },
         { 64,0,0 }
     };
-    const vector<vec3> poly2 {
+    const vector<qvec3f> poly2 {
         { 64,32,0 },
         { 64,64,0 },
         { 128,64,0 },
         { 128,32,0 }
     };
-    const vector<vec3> poly3 {
+    const vector<qvec3f> poly3 {
         { 64,0,0 },
         { 64,32,0 },
         { 128,32,0 },
         { 128,0,0 }
     };
     
-    const vector<vector<vec3>> polys { poly1, poly2, poly3 };
+    const vector<vector<qvec3f>> polys { poly1, poly2, poly3 };
     
     mesh_t m = buildMesh(polys);
     ASSERT_EQ(8, m.verts.size());

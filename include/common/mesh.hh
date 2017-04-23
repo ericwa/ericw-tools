@@ -21,17 +21,17 @@
 #define __COMMON_MESH_HH__
 
 #include <vector>
-#include <glm/glm.hpp> // FIXME: switch to qvec
+#include <common/qvec.hh>
 
 class mesh_t {
 public:
-    std::vector<glm::vec3> verts;
+    std::vector<qvec3f> verts;
     std::vector<std::vector<int>> faces;
 };
 
 // Welds vertices at exactly the same position
-mesh_t buildMesh(const std::vector<std::vector<glm::vec3>> &faces);
-std::vector<std::vector<glm::vec3>> meshToFaces(const mesh_t &mesh);
+mesh_t buildMesh(const std::vector<std::vector<qvec3f>> &faces);
+std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh);
 
 // Preserves the number and order of faces.
 // doesn't merge verts.
