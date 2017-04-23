@@ -267,6 +267,15 @@ public:
             this->m_cols[i] = other.m_cols[i];
     }
 
+    /**
+     * Casting from another matrix type of the same size
+     */
+    template <class T2>
+    qmat(const qmat<M, N, T2> &other) {
+        for (int i=0; i<N; i++)
+            m_cols[i] = qvec<M, T>(other[i]);
+    }
+
     // initializer list
     qmat(std::initializer_list<T> list) {
         assert(list.size() == M*N);
@@ -324,6 +333,16 @@ public:
         }
         return res;
     }
+    
+    // multiplication by a scalar
+    
+    qmat<M,N,T> operator*(const T scalar) const {
+        qmat<M,N,T> res;
+        for (int j=0; j<N; j++) {
+            res[j] = this->m_cols[j] * scalar;
+        }
+        return res;
+    }
 };
 
 using qmat2x2f = qmat<2, 2, float>;
@@ -350,5 +369,12 @@ using qmat3x4d = qmat<3, 4, double>;
 using qmat4x2d = qmat<4, 2, double>;
 using qmat4x3d = qmat<4, 3, double>;
 using qmat4x4d = qmat<4, 4, double>;
+
+namespace qv {
+    qmat4x4f invert(const qmat4x4f &input, bool *ok);
+    qmat4x4d invert(const qmat4x4d &input, bool *ok);
+    
+    qmat2x2f invert(const qmat2x2f &input, bool *ok);
+};
 
 #endif /* __COMMON_QVEC_HH__ */

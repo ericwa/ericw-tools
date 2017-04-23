@@ -7,6 +7,7 @@ set(BSPUTIL_SOURCES
 	${CMAKE_SOURCE_DIR}/common/bspfile.cc
 	${CMAKE_SOURCE_DIR}/common/bsputils.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc
+	${CMAKE_SOURCE_DIR}/common/qvec.cc
 	${CMAKE_SOURCE_DIR}/common/polylib.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/threads.cc
