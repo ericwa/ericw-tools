@@ -27,6 +27,7 @@
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
+#include <common/mesh.hh>
 
 #include <memory>
 #include <vector>

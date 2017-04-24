@@ -17,6 +17,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <common/bsputils.hh>
 #include <common/cmdlib.hh>
 #include <common/mesh.hh>
 #include <common/octree.hh>
@@ -89,6 +90,35 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
     res.verts = vertsVec;
     res.faces = facesWithIndices;
     res.faceplanes = faceplanes;
+    return res;
+}
+
+mesh_t buildMeshFromBSP(const bsp2_t *bsp)
+{
+    mesh_t res;
+    for (int i=0; i<bsp->numvertexes; i++) {
+        const dvertex_t *vert = &bsp->dvertexes[i];
+        res.verts.push_back(qvec3f(vert->point[0],
+                                   vert->point[1],
+                                   vert->point[2]));
+    }
+    
+    for (int i=0; i<bsp->numfaces; i++) {
+        const bsp2_dface_t *f = &bsp->dfaces[i];
+        
+        // grab face verts
+        std::vector<vertnum_t> face;
+        for (int j=0; j<f->numedges; j++){
+            int vnum = Face_VertexAtIndex(bsp, f, j);
+            face.push_back(vnum);
+        }
+        res.faces.push_back(face);
+        
+        // grab exact plane
+        const qplane3f plane = Face_Plane_E(bsp, f);
+        res.faceplanes.push_back(plane);
+    }
+    
     return res;
 }
 
