@@ -1894,8 +1894,8 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 continue;
             }
             
-            const qvec4f plane = Face_Plane_E(bsp, face);
-            float scale = qv::dot(qvec3f(plane), -raydir);
+            const qplane3f plane = Face_Plane_E(bsp, face);
+            float scale = qv::dot(plane.normal(), -raydir);
             if (scale < 0)
                 scale = 0;
             

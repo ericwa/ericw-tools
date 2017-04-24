@@ -60,7 +60,7 @@ public:
     face_cache_t(const bsp2_t *bsp, const bsp2_dface_t *face, const std::vector<qvec3f> &normals) :
         m_points(GLM_FacePoints(bsp, face)),
         m_normals(normals),
-        m_plane(Face_Plane_E(bsp, face)),
+        m_plane(Face_Plane_E(bsp, face).vec4()),
         m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)),
         m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f))
     { }

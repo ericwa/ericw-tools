@@ -273,6 +273,8 @@ public:
     T distAbove(const qvec<3, T> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
     const qvec<3, T> &normal() const { return m_normal; }
     const T dist() const { return m_dist; }
+    
+    const qvec<4, T> vec4() const { return qvec<4, T>(m_normal[0], m_normal[1], m_normal[2], m_dist); }
 };
 
 using qplane3f = qplane3<float>;

@@ -45,7 +45,7 @@ bool Light_PointInWorld(const bsp2_t *bsp, const vec3_t point);
 plane_t *Face_AllocInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face);
 bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point);
 
-qvec4f Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f);
+qplane3f Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f);
 qvec3f Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
 qvec3f Vertex_GetPos_E(const bsp2_t *bsp, int num);
 qvec3f Face_Normal_E(const bsp2_t *bsp, const bsp2_dface_t *f);

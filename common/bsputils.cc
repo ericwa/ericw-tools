@@ -268,10 +268,10 @@ EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, cons
 
 // glm stuff
 
-qvec4f Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f)
+qplane3f Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     const plane_t pl = Face_Plane(bsp, f);
-    return qvec4f(pl.normal[0], pl.normal[1], pl.normal[2], pl.dist);
+    return qplane3f(qvec3f(pl.normal[0], pl.normal[1], pl.normal[2]), pl.dist);
 }
 
 qvec3f Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
