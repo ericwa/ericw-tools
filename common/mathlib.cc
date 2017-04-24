@@ -613,7 +613,7 @@ std::pair<int, glm::vec3> GLM_ClosestPointOnPolyBoundary(const std::vector<glm::
         const glm::vec3 p0 = poly.at(i);
         const glm::vec3 p1 = poly.at((i + 1) % N);
         
-        const glm::vec3 c = closestPointOnLine(point, p0, p1);
+        const glm::vec3 c = ClosestPointOnLineSegment(p0, p1, point);
         const float distToC = length(c - point);
         
         if (distToC < bestDist) {
