@@ -28,6 +28,7 @@
 #ifndef qmax // FIXME: Remove this ifdef
 #define qmax(a,b) (((a)>(b)) ? (a) : (b))
 #define qmin(a,b) (((a)>(b)) ? (b) : (a))
+#define qclamp(val, min, max) (qmax(qmin((val), (max)), (min)))
 #endif
 
 template <int N, class T>
