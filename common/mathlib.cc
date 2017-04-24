@@ -167,6 +167,44 @@ glm::vec3 mangle_from_vec(const glm::vec3 &v)
     return mangle;
 }
 
+glm::mat3x3 RotateAboutX(float t)
+{
+    //https://en.wikipedia.org/wiki/Rotation_matrix#Examples
+
+    const float cost = cos(t);
+    const float sint = sin(t);
+    
+    return glm::mat3x3 {
+        1, 0, 0, //col0
+        0, cost, sint, // col1
+        0, -sint, cost // col1
+    };
+}
+
+glm::mat3x3 RotateAboutY(float t)
+{
+    const float cost = cos(t);
+    const float sint = sin(t);
+    
+    return glm::mat3x3{
+        cost, 0, -sint, // col0
+        0, 1, 0, // col1
+        sint, 0, cost //col2
+    };
+}
+
+glm::mat3x3 RotateAboutZ(float t)
+{
+    const float cost = cos(t);
+    const float sint = sin(t);
+    
+    return glm::mat3x3{
+        cost, sint, 0, // col0
+        -sint, cost, 0, // col1
+        0, 0, 1 //col2
+    };
+}
+
 // Returns a 3x3 matrix that rotates (0,0,1) to the given surface normal.
 glm::mat3x3 RotateFromUpToSurfaceNormal(const glm::vec3 &surfaceNormal)
 {
