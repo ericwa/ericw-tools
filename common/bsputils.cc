@@ -71,40 +71,26 @@ Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
 void
 Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
 {
-    if (f->side)
-        VectorSubtract(vec3_origin, bsp->dplanes[f->planenum].normal, norm);
-    else
-        VectorCopy(bsp->dplanes[f->planenum].normal, norm);
+    plane_t pl = Face_Plane(bsp, f);
+    VectorCopy(pl.normal, norm);
 }
 
 plane_t
 Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
-    const int vertnum = Face_VertexAtIndex(bsp, f, 0);
-    vec3_t vertpos;
-    Vertex_GetPos(bsp, vertnum, vertpos);
+    Q_assert(f->planenum >= 0 && f->planenum < bsp->numplanes);
+    const dplane_t *dplane = &bsp->dplanes[f->planenum];
     
-    plane_t res;
-    Face_Normal(bsp, f, res.normal);
-    res.dist = DotProduct(vertpos, res.normal);
-    return res;
-}
-
-//FIXME: Any reason to prefer this implementation vs the above one?
-#if 0
-static void GetFaceNormal(const bsp2_t *bsp, const bsp2_dface_t *face, plane_t *plane)
-{
-    const dplane_t *dplane = &bsp->dplanes[face->planenum];
-    
-    if (face->side) {
-        VectorSubtract(vec3_origin, dplane->normal, plane->normal);
-        plane->dist = -dplane->dist;
+    plane_t result;
+    if (f->side) {
+        VectorSubtract(vec3_origin, dplane->normal, result.normal);
+        result.dist = -dplane->dist;
     } else {
-        VectorCopy(dplane->normal, plane->normal);
-        plane->dist = dplane->dist;
+        VectorCopy(dplane->normal, result.normal);
+        result.dist = dplane->dist;
     }
+    return result;
 }
-#endif
 
 const texinfo_t *Face_Texinfo(const bsp2_t *bsp, const bsp2_dface_t *face)
 {
@@ -284,10 +270,8 @@ EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, cons
 
 qvec4f Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
-    const qvec3f p0 = Face_PointAtIndex_E(bsp, f, 0);
-    const qvec3f norm = Face_Normal_E(bsp, f);
-    const qvec4f plane(norm[0], norm[1], norm[2], qv::dot(norm, p0));
-    return plane;
+    const plane_t pl = Face_Plane(bsp, f);
+    return qvec4f(pl.normal[0], pl.normal[1], pl.normal[2], pl.dist);
 }
 
 qvec3f Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v)
