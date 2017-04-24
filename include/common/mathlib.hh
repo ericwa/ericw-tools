@@ -345,7 +345,8 @@ bilinearWeightsAndCoords(qvec2f pos, const qvec2i &size)
     Q_assert(pos[0] >= 0.f && pos[0] <= (size[0] - 1));
     Q_assert(pos[1] >= 0.f && pos[1] <= (size[1] - 1));
     
-    qvec2i integerPart{qv::floor(pos)[0], qv::floor(pos)[1]};
+    qvec2i integerPart{static_cast<int>(qv::floor(pos)[0]),
+                       static_cast<int>(qv::floor(pos)[1])};
     qvec2f fractionalPart(pos - qv::floor(pos));
     
     // ensure integerPart + (1, 1) is still in bounds
