@@ -352,6 +352,11 @@ public:
     }
     
     // hacky accessor for mat[col][row] access
+    const T* operator[](int col) const {
+        assert(col >= 0 && col < N);
+        return &m_values[col * M];
+    }
+    
     T* operator[](int col) {
         assert(col >= 0 && col < N);
         return &m_values[col * M];
