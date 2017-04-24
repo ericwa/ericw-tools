@@ -305,6 +305,14 @@ public:
         }
     }
     
+    /**
+     * Fill with a value
+     */
+    qmat(T val) {
+        for (int i=0; i<M*N; i++)
+            m_values[i] = val;
+    }
+    
     // copy constructor
     qmat(const qmat<M,N,T> &other) {
         for (int i=0; i<M*N; i++)
@@ -428,10 +436,13 @@ using qmat4x3d = qmat<4, 3, double>;
 using qmat4x4d = qmat<4, 4, double>;
 
 namespace qv {
-    qmat4x4f invert(const qmat4x4f &input, bool *ok);
-    qmat4x4d invert(const qmat4x4d &input, bool *ok);
+    /**
+     * These return a matrix filled with NaN if there is no inverse.
+     */
+    qmat4x4f inverse(const qmat4x4f &input);
+    qmat4x4d inverse(const qmat4x4d &input);
     
-    qmat2x2f invert(const qmat2x2f &input, bool *ok);
+    qmat2x2f inverse(const qmat2x2f &input);
 };
 
 #endif /* __COMMON_QVEC_HH__ */

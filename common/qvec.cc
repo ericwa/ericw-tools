@@ -19,6 +19,7 @@
 
 #include <common/qvec.hh>
 
+#include <cmath> // for NAN
 #include <sstream>
 
 /*
@@ -104,19 +105,22 @@ static bool gluInvertMatrixd(const double m[16], double invOut[16])
     return true;
 }
 
-qmat4x4d qv::invert(const qmat4x4d &input, bool *ok)
+qmat4x4d qv::inverse(const qmat4x4d &input)
 {
     qmat4x4d res;
-    *ok = gluInvertMatrixd(input.m_values, res.m_values);
+    bool ok = gluInvertMatrixd(input.m_values, res.m_values);
+    if (!ok) {
+        res = qmat4x4d(NAN);
+    }
     return res;
 }
 
-qmat4x4f qv::invert(const qmat4x4f &input, bool *ok)
+qmat4x4f qv::inverse(const qmat4x4f &input)
 {
-    return qmat4x4f(qv::invert(qmat4x4d(input), ok));
+    return qmat4x4f(qv::inverse(qmat4x4d(input)));
 }
 
-qmat2x2f qv::invert(const qmat2x2f &m, bool *ok)
+qmat2x2f qv::inverse(const qmat2x2f &m)
 {
     // http://www.mathwords.com/i/inverse_of_a_matrix.htm
     float a = m.at(0,0);
@@ -126,11 +130,9 @@ qmat2x2f qv::invert(const qmat2x2f &m, bool *ok)
     
     float det = a*d - b*c;
     if (det == 0) {
-        *ok = false;
-        return qmat2x2f();
+        return qmat2x2f(NAN);
     }
     
-    *ok = true;
     qmat2x2f result {
         d, -c, // col 0
         -b, a  // col 1

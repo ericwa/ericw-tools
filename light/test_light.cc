@@ -890,9 +890,8 @@ TEST(qvec, matrix2x2inv) {
         for (int j=0; j<2; j++)
             randMat.at(i,j) = dis(engine);
     
-    bool ok;
-    qmat2x2f randInv = qv::invert(randMat, &ok);
-    ASSERT_TRUE(ok);
+    qmat2x2f randInv = qv::inverse(randMat);
+    ASSERT_FALSE(std::isnan(randInv.at(0, 0)));
     
     qmat2x2f prod = randMat * randInv;
     for (int i=0; i<2; i++) {
@@ -901,6 +900,10 @@ TEST(qvec, matrix2x2inv) {
             ASSERT_TRUE(fabs(exp - prod.at(i,j)) < 0.001);
         }
     }
+    
+    // check non-invertible gives nan
+    qmat2x2f nanMat = qv::inverse(qmat2x2f(0));
+    ASSERT_TRUE(std::isnan(nanMat.at(0, 0)));
 }
 
 TEST(qvec, matrix4x4inv) {
@@ -912,9 +915,8 @@ TEST(qvec, matrix4x4inv) {
         for (int j=0; j<4; j++)
             randMat.at(i,j) = dis(engine);
     
-    bool ok;
-    qmat4x4f randInv = qv::invert(randMat, &ok);
-    ASSERT_TRUE(ok);
+    qmat4x4f randInv = qv::inverse(randMat);
+    ASSERT_FALSE(std::isnan(randInv.at(0, 0)));
     
     qmat4x4f prod = randMat * randInv;
     for (int i=0; i<4; i++) {
@@ -923,4 +925,8 @@ TEST(qvec, matrix4x4inv) {
             ASSERT_TRUE(fabs(exp - prod.at(i,j)) < 0.001);
         }
     }
+    
+    // check non-invertible gives nan
+    qmat4x4f nanMat = qv::inverse(qmat4x4f(0));
+    ASSERT_TRUE(std::isnan(nanMat.at(0, 0)));
 }
