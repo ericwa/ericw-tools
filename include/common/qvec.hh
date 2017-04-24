@@ -185,6 +185,33 @@ namespace qv {
     }
     
     template <int N, class T>
+    qvec<N,T> pow(const qvec<N,T> &v1, const qvec<N,T> &v2) {
+        qvec<N,T> res;
+        for (int i=0; i<N; i++) {
+            res[i] = std::pow(v1[i], v2[i]);
+        }
+        return res;
+    }
+    
+    template <int N, class T>
+    qvec<N,T> min(const qvec<N,T> &v1, const qvec<N,T> &v2) {
+        qvec<N,T> res;
+        for (int i=0; i<N; i++) {
+            res[i] = qmin(v1[i], v2[i]);
+        }
+        return res;
+    }
+    
+    template <int N, class T>
+    qvec<N,T> max(const qvec<N,T> &v1, const qvec<N,T> &v2) {
+        qvec<N,T> res;
+        for (int i=0; i<N; i++) {
+            res[i] = qmax(v1[i], v2[i]);
+        }
+        return res;
+    }
+    
+    template <int N, class T>
     T length2(const qvec<N,T> &v1) {
         T len2 = 0;
         for (int i=0; i<N; i++) {
