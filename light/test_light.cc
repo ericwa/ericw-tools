@@ -17,6 +17,10 @@
 using namespace glm;
 using namespace std;
 
+static bool pointsEqualEpsilon(const vec3 &a, const vec3 &b, const float epsilon) {
+    return all(epsilonEqual(a, b, vec3(epsilon)));
+}
+
 static glm::vec4 extendTo4(const glm::vec3 &v) {
     return glm::vec4(v[0], v[1], v[2], 1.0);
 }
@@ -269,6 +273,19 @@ TEST(mathlib, BarycentricRandom) {
     }
 }
 
+TEST(mathlib, RotateFromUpToSurfaceNormal) {
+    std::mt19937 engine(0);
+    std::uniform_real_distribution<float> dis(-4096, 4096);
+    
+    for (int i=0; i<100; i++) {
+        const glm::vec3 randvec = glm::normalize(glm::vec3(dis(engine), dis(engine), dis(engine)));
+        const glm::mat3x3 m = RotateFromUpToSurfaceNormal(randvec);
+        
+        const glm::vec3 roundtrip = m * glm::vec3(0,0,1);
+        ASSERT_TRUE(pointsEqualEpsilon(randvec, roundtrip, 0.01));
+    }
+}
+
 TEST(mathlib, DistAbovePlane) {
     vec4 plane(0, 0, 1, 10);
     vec3 point(100, 100, 100);
@@ -325,10 +342,6 @@ TEST(mathlib, InterpolateNormals) {
     
     // Outside poly
     EXPECT_FALSE(GLM_InterpolateNormal(poly, normals, vec3(-0.1, 0, 0)).first);
-}
-
-static bool pointsEqualEpsilon(const vec3 &a, const vec3 &b, const float epsilon) {
-    return all(epsilonEqual(a, b, vec3(epsilon)));
 }
 
 static bool polysEqual(const vector<vec3> &p1, const vector<vec3> &p2) {
