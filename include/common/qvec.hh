@@ -104,13 +104,13 @@ public:
         return true;
     }
     
-    T operator[](const size_t idx) const {
-        assert(idx < N);
+    T operator[](const int idx) const {
+        assert(idx >= 0 && idx < N);
         return v[idx];
     }
     
-    T &operator[](const size_t idx) {
-        assert(idx < N);
+    T &operator[](const int idx) {
+        assert(idx >= 0 && idx < N);
         return v[idx];
     }
     
