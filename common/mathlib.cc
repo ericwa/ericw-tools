@@ -26,8 +26,6 @@
 #include <map>
 
 #include <glm/glm.hpp>
-#include <glm/ext.hpp>
-#include <glm/gtx/closest_point.hpp>
 
 using namespace polylib;
 

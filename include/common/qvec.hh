@@ -23,6 +23,7 @@
 #include <initializer_list>
 #include <cassert>
 #include <cmath>
+#include <string>
 
 #ifndef qmax // FIXME: Remove this ifdef
 #define qmax(a,b) (((a)>(b)) ? (a) : (b))
@@ -205,6 +206,8 @@ namespace qv {
     T distance(const qvec<N,T> &v1, const qvec<N,T> &v2) {
         return length(v2 - v1);
     }
+    
+    std::string to_string(const qvec<3,float> &v1);
 };
 
 

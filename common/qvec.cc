@@ -19,6 +19,8 @@
 
 #include <common/qvec.hh>
 
+#include <sstream>
+
 /*
  * SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
  * Copyright (C) 1991-2000 Silicon Graphics, Inc. All Rights Reserved.
@@ -135,4 +137,11 @@ qmat2x2f qv::invert(const qmat2x2f &m, bool *ok)
     };
     
     return result * (1.0f/det);
+}
+
+std::string qv::to_string(const qvec<3,float> &v1)
+{
+    std::stringstream ss;
+    ss << v1[0] << " " << v1[1] << " " << v1[2];
+    return ss.str();
 }
