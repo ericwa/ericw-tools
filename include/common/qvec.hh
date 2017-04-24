@@ -208,6 +208,16 @@ namespace qv {
     }
     
     std::string to_string(const qvec<3,float> &v1);
+    
+    template <int N, class T>
+    bool epsilonEqual(const qvec<N,T> &v1, const qvec<N,T> &v2, T epsilon) {
+        for (int i=0; i<N; i++) {
+            T diff = v1[i] - v2[i];
+            if (fabs(diff) > epsilon)
+                return false;
+        }
+        return true;
+    }
 };
 
 
