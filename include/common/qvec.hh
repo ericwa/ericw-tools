@@ -351,6 +351,12 @@ public:
         return m_values[col * M + row];
     }
     
+    // hacky accessor for mat[col][row] access
+    T* operator[](int col) {
+        assert(col >= 0 && col < N);
+        return &m_values[col * M];
+    }
+    
     // multiplication by a vector
     
     qvec<M,T> operator*(const qvec<N, T> &vec) const {
