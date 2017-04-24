@@ -139,11 +139,9 @@ glm::vec3 CosineWeightedHemisphereSample(float u1, float u2)
 
 glm::vec3 vec_from_mangle(const glm::vec3 &m)
 {
-    const glm::vec3 tmp = m * static_cast<float>(Q_PI / 180.0f);
-    
-    const glm::vec3 v(cos(tmp[0]) * cos(tmp[1]),
-                      sin(tmp[0]) * cos(tmp[1]),
-                      sin(tmp[1]));
+    const glm::vec3 mRadians = m * static_cast<float>(Q_PI / 180.0f);
+    const glm::mat3x3 rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
+    const glm::vec3 v = rotations * glm::vec3(1,0,0);
     return v;
 }
 
@@ -208,7 +206,22 @@ glm::mat3x3 RotateAboutZ(float t)
 // Returns a 3x3 matrix that rotates (0,0,1) to the given surface normal.
 glm::mat3x3 RotateFromUpToSurfaceNormal(const glm::vec3 &surfaceNormal)
 {
-    return glm::toMat3(glm::rotation(glm::vec3(0,0,1), surfaceNormal));
+    const glm::vec3 up(0, 0, 1);
+    const glm::vec3 east(1, 0, 0);
+    const glm::vec3 north(0, 1, 0);
+    
+    // get rotation about Z axis
+    float x = glm::dot(east, surfaceNormal);
+    float y = glm::dot(north, surfaceNormal);
+    float theta = atan2f(y, x);
+    
+    // get angle away from Z axis
+    float cosangleFromUp = glm::dot(up, surfaceNormal);
+    cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
+    float radiansFromUp = acosf(cosangleFromUp);
+    
+    const glm::mat3x3 rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
+    return rotations;
 }
 
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA,
