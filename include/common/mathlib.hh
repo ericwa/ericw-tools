@@ -222,6 +222,8 @@ const char *VecStrf(const vec3_t vec);
 void UniformPointOnSphere(vec3_t dir, float u, float v);
 void RandomDir(vec3_t dir);
 glm::vec3 CosineWeightedHemisphereSample(float u1, float u2);
+glm::vec3 vec_from_mangle(const glm::vec3 &m);
+glm::vec3 mangle_from_vec(const glm::vec3 &v);
 glm::mat3x3 RotateFromUpToSurfaceNormal(const glm::vec3 &surfaceNormal);
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
 void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);

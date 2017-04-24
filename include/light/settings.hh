@@ -42,8 +42,6 @@ enum class vec3_transformer_t {
     NORMALIZE_COLOR_TO_255
 };
 
-glm::vec3 vec_from_mangle(const glm::vec3 &m);
-glm::vec3 mangle_from_vec(const glm::vec3 &v);
 void normalize_color_format(vec3_t color);
 
 class lockable_setting_t {
