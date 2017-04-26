@@ -192,7 +192,7 @@ enum {
     GLOBAL
 };
 
-#include <qbsp/cmdlib.hh>
+#include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <qbsp/winding.hh>
 

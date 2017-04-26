@@ -9,7 +9,6 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/wad.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/warnerr.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/cmdlib.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/winding.hh
@@ -25,13 +24,13 @@ set(QBSP_INCLUDES
 
 set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/common/threads.cc
+	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/qvec.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc
 	${CMAKE_SOURCE_DIR}/common/polylib.cc
 	brush.cc
 	bspfile.cc
-	cmdlib.cc
 	csg4.cc
 	file.cc
 	globals.cc
