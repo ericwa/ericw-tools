@@ -689,6 +689,11 @@ StripExtension(char *path)
         path[length] = 0;
 }
 
+int
+IsAbsolutePath(const char *path)
+{
+    return path[0] == PATHSEPERATOR || (isalpha(path[0]) && path[1] == ':');
+}
 
 /*
  * ====================
