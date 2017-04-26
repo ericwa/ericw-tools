@@ -167,18 +167,21 @@ VectorMA(const vec3_t va, vec_t scale, const vec3_t vb, vec3_t vc)
 
 
 void CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross);
-    
+
+static inline double
+VectorLengthSq(const vec3_t v)
+{
+    double length = 0;
+    for (int i = 0; i < 3; i++)
+        length += v[i] * v[i];
+    return length;
+}
+
 static inline double
 VectorLength(const vec3_t v)
 {
-    int i;
-    double length;
-    
-    length = 0;
-    for (i = 0; i < 3; i++)
-        length += v[i] * v[i];
+    double length = VectorLengthSq(v);
     length = sqrt(length);
-    
     return length;
 }
 
