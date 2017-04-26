@@ -117,9 +117,6 @@ mapentity_t *pWorldEnt() {
     return &map.entities.at(0);
 }
 
-// Mathlib.c
-const vec3_t vec3_origin = { 0, 0, 0 };
-
 // util.c
 FILE *logfile;
 

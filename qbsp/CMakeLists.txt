@@ -28,6 +28,7 @@ set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/qvec.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc
+	${CMAKE_SOURCE_DIR}/common/polylib.cc
 	brush.cc
 	bspfile.cc
 	cmdlib.cc
