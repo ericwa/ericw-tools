@@ -91,7 +91,7 @@ SplitFace
 ==================
 */
 void
-SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back)
+SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **back)
 {
     vec_t dists[MAXEDGES + 1];
     int sides[MAXEDGES + 1];
@@ -196,7 +196,7 @@ time in mergefaces later on (and sometimes a lot of memory)
 static void
 RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **outside)
 {
-    plane_t clipplane;
+    qbsp_plane_t clipplane;
     const face_t *clipface;
     face_t *face, *next;
     winding_t *w;
@@ -244,7 +244,7 @@ ClipInside(const face_t *clipface, bool precedence,
            face_t **inside, face_t **outside)
 {
     face_t *face, *next, *frags[2];
-    const plane_t *splitplane;
+    const qbsp_plane_t *splitplane;
 
     splitplane = &map.planes[clipface->planenum];
 

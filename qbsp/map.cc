@@ -109,8 +109,8 @@ public:
 
 static texdef_valve_t TexDef_BSPToValve(const float in_vecs[2][4]);
 static qvec2f projectToAxisPlane(const vec3_t snapped_normal, qvec3f point);
-static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const plane_t *plane, bool preserveX);
-static void SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4]);
+static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t *plane, bool preserveX);
+static void SetTexinfo_QuakeEd_New(const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4]);
 
 const mapface_t &mapbrush_t::face(int i) const {
     if (i < 0 || i >= this->numfaces)
@@ -373,7 +373,7 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 
 
 static void
-TextureAxisFromPlane(const plane_t *plane, vec3_t xv, vec3_t yv, vec3_t snapped_normal)
+TextureAxisFromPlane(const qbsp_plane_t *plane, vec3_t xv, vec3_t yv, vec3_t snapped_normal)
 {
     vec3_t baseaxis[18] = {
         {0, 0, 1}, {1, 0, 0}, {0, -1, 0},       // floor
@@ -426,7 +426,7 @@ ParseExtendedTX(parser_t *parser)
     return style;
 }
 
-static qmat4x4f texVecsTo4x4Matrix(const plane_t &faceplane, const float in_vecs[2][4])
+static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const float in_vecs[2][4])
 {
     //           [s]
     // T * vec = [t]
@@ -471,7 +471,7 @@ static float extractRotation(qmat2x2f m) {
     return rotation;
 }
 
-static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const plane_t *faceplane, const qvec3f point)
+static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plane_t *faceplane, const qvec3f point)
 {
     float temp[2][4];
     SetTexinfo_QuakeEd_New(faceplane, texdef.shift, texdef.rotate, texdef.scale, temp);
@@ -483,7 +483,7 @@ static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const plane_t *
 
 #if 0
 static float
-TexDefRMSE(const texdef_quake_ed_t &texdef, const plane_t *faceplane, const qmat4x4f referenceXform, const vec3_t facepoints[3])
+TexDefRMSE(const texdef_quake_ed_t &texdef, const qbsp_plane_t *faceplane, const qmat4x4f referenceXform, const vec3_t facepoints[3])
 {
     float avgSquaredDist = 0;
     for (int i=0; i<3; i++) {
@@ -536,7 +536,7 @@ qvec2f normalizeShift(const texture_t *texture, const qvec2f &in)
 
 /// `texture` is optional. If given, the "shift" values can be normalized
 static texdef_quake_ed_t
-TexDef_BSPToQuakeEd(const plane_t &faceplane, const texture_t *texture, const float in_vecs[2][4], const vec3_t facepoints[3])
+TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const texture_t *texture, const float in_vecs[2][4], const vec3_t facepoints[3])
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
     vec3_t snapped_normal;
@@ -693,7 +693,7 @@ float clockwiseDegreesBetween(qvec2f start, qvec2f end)
 }
 
 static texdef_quake_ed_noshift_t
-Reverse_QuakeEd(qmat2x2f M, const plane_t *plane, bool preserveX)
+Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t *plane, bool preserveX)
 {
     // Check for shear, because we might tweak M to remove it
     {
@@ -820,7 +820,7 @@ Reverse_QuakeEd(qmat2x2f M, const plane_t *plane, bool preserveX)
 }
 
 static void
-SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4])
+SetTexinfo_QuakeEd_New(const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4])
 {
     vec_t sanitized_scale[2];
     for (int i=0; i<2; i++) {
@@ -890,7 +890,7 @@ SetTexinfo_QuakeEd_New(const plane_t *plane, const vec_t shift[2], vec_t rotate,
 }
 
 static void
-SetTexinfo_QuakeEd(const plane_t *plane, const vec3_t planepts[3], const vec_t shift[2], vec_t rotate,
+SetTexinfo_QuakeEd(const qbsp_plane_t *plane, const vec3_t planepts[3], const vec_t shift[2], vec_t rotate,
                    const vec_t scale[2], mtexinfo_t *out)
 {
     int i, j;
@@ -983,7 +983,7 @@ SetTexinfo_QuakeEd(const plane_t *plane, const vec3_t planepts[3], const vec_t s
 }
 
 static
-texdef_etp_t TexDef_BSPToETP(const plane_t &faceplane, const float in_vecs[2][4])
+texdef_etp_t TexDef_BSPToETP(const qbsp_plane_t &faceplane, const float in_vecs[2][4])
 {
     Error("unimplemented");
     texdef_etp_t res;
@@ -1162,7 +1162,7 @@ static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], co
 
 // From FaceToBrushPrimitFace in GtkRadiant
 static texdef_brush_primitives_t
-TexDef_BSPToBrushPrimitives(const plane_t plane, const int texSize[2], const float in_vecs[2][4])
+TexDef_BSPToBrushPrimitives(const qbsp_plane_t plane, const int texSize[2], const float in_vecs[2][4])
 {
     vec3_t texX, texY;
     ComputeAxisBase( plane.normal, texX, texY );
@@ -1290,7 +1290,7 @@ parse_error:
 
 static void
 ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, mtexinfo_t *tx,
-                vec3_t planepts[3], const plane_t *plane)
+                vec3_t planepts[3], const qbsp_plane_t *plane)
 {
     vec3_t texMat[2];
     vec3_t axis[2];
@@ -1365,7 +1365,7 @@ ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *ent
 {
     vec3_t planevecs[2];
     vec_t length;
-    plane_t *plane;
+    qbsp_plane_t *plane;
     mtexinfo_t tx;
     int i, j;
     std::unique_ptr<mapface_t> face { new mapface_t };

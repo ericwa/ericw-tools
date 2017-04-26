@@ -43,7 +43,7 @@ static node_t *
 PointInLeaf(node_t *node, const vec3_t point)
 {
     vec_t dist;
-    const plane_t *plane;
+    const qbsp_plane_t *plane;
 
     while (!node->contents) {
         plane = &map.planes[node->planenum];
@@ -234,7 +234,7 @@ LineIntersect_Leafnode(const node_t *node,
 
     for (markfaces = node->markfaces; *markfaces; markfaces++) {
         for (face = *markfaces; face; face = face->original) {
-            const plane_t *const plane = &map.planes[face->planenum];
+            const qbsp_plane_t *const plane = &map.planes[face->planenum];
             const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
             const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
             vec3_t mid, mins, maxs;
@@ -292,7 +292,7 @@ LineIntersect_r(const node_t *node, const vec3_t point1, const vec3_t point2)
     if (node->contents)
         return LineIntersect_Leafnode(node, point1, point2);
 
-    const plane_t *const plane = &map.planes[node->planenum];
+    const qbsp_plane_t *const plane = &map.planes[node->planenum];
     const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
     const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
 

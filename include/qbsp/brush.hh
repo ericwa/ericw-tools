@@ -38,8 +38,8 @@ class mapbrush_t;
 brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const int hullnum);
 void FreeBrushes(brush_t *brushlist);
 
-int FindPlane(const plane_t *plane, int *side);
-int PlaneEqual(const plane_t *p1, const plane_t *p2);
-int PlaneInvEqual(const plane_t *p1, const plane_t *p2);
+int FindPlane(const qbsp_plane_t *plane, int *side);
+int PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
+int PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
 
 #endif

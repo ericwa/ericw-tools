@@ -24,7 +24,7 @@
 
 extern int splitnodes;
 
-void DivideFacet(face_t *in, plane_t *split, face_t **front, face_t **back);
+void DivideFacet(face_t *in, qbsp_plane_t *split, face_t **front, face_t **back);
 void CalcSurfaceInfo(surface_t *surf);
 void SubdivideFace(face_t *f, face_t **prevptr);
 

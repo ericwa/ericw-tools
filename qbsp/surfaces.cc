@@ -38,7 +38,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
     vec_t mins, maxs;
     vec_t v;
     int axis, i;
-    plane_t plane;
+    qbsp_plane_t plane;
     face_t *front, *back, *next;
     const mtexinfo_t *tex;
     vec3_t tmp;

@@ -37,7 +37,7 @@ const int *MemSize = MemSize_BSP29;
     sizeof(mapentity_t),                                \
     1,                          /* Winding */           \
     sizeof(face_t),                                     \
-    sizeof(plane_t),                                    \
+    sizeof(qbsp_plane_t),                                    \
     sizeof(portal_t),                                   \
     sizeof(surface_t),                                  \
     sizeof(node_t),                                     \

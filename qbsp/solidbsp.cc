@@ -40,7 +40,7 @@ For BSP hueristic
 ==================
 */
 static int
-FaceSide__(const face_t *in, const plane_t *split)
+FaceSide__(const face_t *in, const qbsp_plane_t *split)
 {
     bool have_front, have_back;
     int i;
@@ -87,7 +87,7 @@ FaceSide__(const face_t *in, const plane_t *split)
 }
 
 static int
-FaceSide(const face_t *in, const plane_t *split)
+FaceSide(const face_t *in, const qbsp_plane_t *split)
 {
     vec_t dist;
     int ret;
@@ -110,7 +110,7 @@ FaceSide(const face_t *in, const plane_t *split)
  * non-axial, then the returned bounds will overlap.
  */
 static void
-DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
+DivideBounds(const vec3_t mins, const vec3_t maxs, const qbsp_plane_t *split,
              vec3_t front_mins, vec3_t front_maxs,
              vec3_t back_mins, vec3_t back_maxs)
 {
@@ -175,7 +175,7 @@ DivideBounds(const vec3_t mins, const vec3_t maxs, const plane_t *split,
  * Calculate the split plane metric for axial planes
  */
 static vec_t
-SplitPlaneMetric_Axial(const plane_t *p, vec3_t mins, vec3_t maxs)
+SplitPlaneMetric_Axial(const qbsp_plane_t *p, vec3_t mins, vec3_t maxs)
 {
     vec_t value, dist;
     int i;
@@ -198,7 +198,7 @@ SplitPlaneMetric_Axial(const plane_t *p, vec3_t mins, vec3_t maxs)
  * Calculate the split plane metric for non-axial planes
  */
 static vec_t
-SplitPlaneMetric_NonAxial(const plane_t *p, vec3_t mins, vec3_t maxs)
+SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, vec3_t mins, vec3_t maxs)
 {
     vec3_t fmins, fmaxs, bmins, bmaxs;
     vec_t value = 0.0;
@@ -214,7 +214,7 @@ SplitPlaneMetric_NonAxial(const plane_t *p, vec3_t mins, vec3_t maxs)
 }
 
 static inline vec_t
-SplitPlaneMetric(const plane_t *p, vec3_t mins, vec3_t maxs)
+SplitPlaneMetric(const qbsp_plane_t *p, vec3_t mins, vec3_t maxs)
 {
     vec_t value;
 
@@ -238,7 +238,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
     surface_t *surf, *bestsurface;
     vec_t metric, bestmetric;
-    plane_t *plane;
+    qbsp_plane_t *plane;
     int pass;
 
     /* pick the plane that splits the least */
@@ -324,7 +324,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     bool hintsplit;
     surface_t *surf, *surf2, *bestsurface;
     vec_t distribution, bestdistribution;
-    const plane_t *plane, *plane2;
+    const qbsp_plane_t *plane, *plane2;
     const face_t *face;
 
     /* pick the plane that splits the least */
@@ -525,14 +525,14 @@ DividePlane
 ==================
 */
 static void
-DividePlane(surface_t *in, plane_t *split, surface_t **front,
+DividePlane(surface_t *in, qbsp_plane_t *split, surface_t **front,
             surface_t **back)
 {
     face_t *facet, *next;
     face_t *frontlist, *backlist;
     face_t *frontfrag, *backfrag;
     surface_t *newsurf;
-    plane_t *inplane;
+    qbsp_plane_t *inplane;
 
     inplane = &map.planes[in->planenum];
     *front = *back = NULL;
@@ -636,7 +636,7 @@ DivideNodeBounds
 ==================
 */
 static void
-DivideNodeBounds(node_t *node, plane_t *split)
+DivideNodeBounds(node_t *node, qbsp_plane_t *split)
 {
     DivideBounds(node->mins, node->maxs, split,
                  node->children[0]->mins, node->children[0]->maxs,
@@ -797,7 +797,7 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     surface_t *split, *surf, *next;
     surface_t *frontlist, *backlist;
     surface_t *frontfrag, *backfrag;
-    plane_t *splitplane;
+    qbsp_plane_t *splitplane;
 
     split = SelectPartition(surfaces);
     if (!split) {               // this is a leaf node

@@ -54,7 +54,7 @@ Note: this will not catch 0 area polygons
 void
 CheckFace(face_t *face)
 {
-    const plane_t *plane = &map.planes[face->planenum];
+    const qbsp_plane_t *plane = &map.planes[face->planenum];
     const vec_t *p1, *p2;
     vec_t length, dist, edgedist;
     vec3_t edgevec, edgenormal, facenormal;
@@ -143,7 +143,7 @@ AddToBounds(mapentity_t *entity, const vec3_t point)
 //===========================================================================
 
 static int
-NormalizePlane(plane_t *p)
+NormalizePlane(qbsp_plane_t *p)
 {
     int i;
     vec_t ax, ay, az;
@@ -186,7 +186,7 @@ NormalizePlane(plane_t *p)
 
 
 int
-PlaneEqual(const plane_t *p1, const plane_t *p2)
+PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 {
     return (fabs(p1->normal[0] - p2->normal[0]) < NORMAL_EPSILON &&
             fabs(p1->normal[1] - p2->normal[1]) < NORMAL_EPSILON &&
@@ -195,7 +195,7 @@ PlaneEqual(const plane_t *p1, const plane_t *p2)
 }
 
 int
-PlaneInvEqual(const plane_t *p1, const plane_t *p2)
+PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 {
     return (fabs(p1->normal[0] + p2->normal[0]) < NORMAL_EPSILON &&
             fabs(p1->normal[1] + p2->normal[1]) < NORMAL_EPSILON &&
@@ -206,13 +206,13 @@ PlaneInvEqual(const plane_t *p1, const plane_t *p2)
 /* Plane Hashing */
 
 static inline int
-plane_hash_fn(const plane_t *p)
+plane_hash_fn(const qbsp_plane_t *p)
 {
     return Q_rint(fabs(p->dist));
 }
 
 static void
-PlaneHash_Add(const plane_t *p, int index)
+PlaneHash_Add(const qbsp_plane_t *p, int index)
 {
     const int hash = plane_hash_fn(p);
     map.planehash[hash].push_back(index);
@@ -231,7 +231,7 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         Error("%s: invalid normal (vector length %.4f)", __func__, len);
 
-    plane_t plane;
+    qbsp_plane_t plane;
     VectorCopy(normal, plane.normal);
     plane.dist = dist;
     *side = NormalizePlane(&plane) ? SIDE_BACK : SIDE_FRONT;
@@ -247,10 +247,10 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
  * - Returns a global plane number and the side that will be the front
  */
 int
-FindPlane(const plane_t *plane, int *side)
+FindPlane(const qbsp_plane_t *plane, int *side)
 {
     for (int i : map.planehash[plane_hash_fn(plane)]) {
-        const plane_t &p = map.planes.at(i);
+        const qbsp_plane_t &p = map.planes.at(i);
         if (PlaneEqual(&p, plane)) {
             *side = SIDE_FRONT;
             return i;
@@ -338,7 +338,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
     vec_t r;
     face_t *f;
     winding_t *w;
-    plane_t plane;
+    qbsp_plane_t plane;
     face_t *facelist = NULL;
     mapface_t *mapface, *mapface2;
     vec3_t point;
@@ -506,7 +506,7 @@ AddBrushPlane
 =============
 */
 static void
-AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
+AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
 {
     int i;
     mapface_t *mapface;
@@ -541,13 +541,13 @@ vertexes can be put on the front side
 =============
 */
 static void
-TestAddPlane(hullbrush_t *hullbrush, plane_t *plane)
+TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
 {
     int i, c;
     vec_t d;
     mapface_t *mapface;
     vec_t *corner;
-    plane_t flip;
+    qbsp_plane_t flip;
     int points_front, points_back;
 
     /* see if the plane has already been added */
@@ -645,7 +645,7 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     int i;
     int a, b, c, d, e;
     vec3_t edgevec, planeorg, planevec;
-    plane_t plane;
+    qbsp_plane_t plane;
     vec_t length;
 
     pt1 = AddHullPoint(hullbrush, p1, hull_size);
@@ -707,7 +707,7 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
     int i, x, s;
     vec3_t corner;
     face_t *f;
-    plane_t plane;
+    qbsp_plane_t plane;
     mapface_t *mapface;
     int cBevEdge = 0;
 

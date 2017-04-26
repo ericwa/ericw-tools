@@ -38,7 +38,7 @@ PORTAL FILE GENERATION
 ==============================================================================
 */
 
-static void PlaneFromWinding(const winding_t *w, plane_t *plane);
+static void PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane);
 
 static void
 WriteFloat(vec_t v)
@@ -124,9 +124,9 @@ WritePortals_r(node_t *node, bool clusters)
 {
     const portal_t *p, *next;
     const winding_t *w;
-    const plane_t *pl;
+    const qbsp_plane_t *pl;
     int i, front, back;
-    plane_t plane2;
+    qbsp_plane_t plane2;
 
     if (!node->contents && !node->detail_separator) {
         WritePortals_r(node->children[0], clusters);
@@ -377,7 +377,7 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
     vec3_t bounds[2];
     int i, j, n;
     portal_t *p, *portals[6];
-    plane_t bplanes[6], *pl;
+    qbsp_plane_t bplanes[6], *pl;
     int side;
 
     // pad with some space so there will never be null volume leafs
@@ -426,7 +426,7 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
 }
 
 static void
-PlaneFromWinding(const winding_t *w, plane_t *plane)
+PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane)
 {
     vec3_t v1, v2;
 
@@ -482,7 +482,7 @@ CheckLeafPortalConsistancy(node_t *node)
 {
     int side, side2;
     portal_t *p, *p2;
-    plane_t plane, plane2;
+    qbsp_plane_t plane, plane2;
     int i;
     winding_t *w;
     vec_t dist;
@@ -536,8 +536,8 @@ CutNodePortals_r
 static void
 CutNodePortals_r(node_t *node)
 {
-    const plane_t *plane;
-    plane_t clipplane;
+    const qbsp_plane_t *plane;
+    qbsp_plane_t clipplane;
     node_t *front, *back, *other_node;
     portal_t *portal, *new_portal, *next_portal;
     winding_t *winding, *frontwinding, *backwinding;

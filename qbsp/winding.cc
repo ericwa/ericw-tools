@@ -30,7 +30,7 @@ BaseWindingForPlane
 =================
 */
 winding_t *
-BaseWindingForPlane(const plane_t *p)
+BaseWindingForPlane(const qbsp_plane_t *p)
 {
     int i, x;
     vec_t max, v;
@@ -128,7 +128,7 @@ CheckWinding(const winding_t *w)
 
 
 void
-CalcSides(const winding_t *in, const plane_t *split, int *sides, vec_t *dists,
+CalcSides(const winding_t *in, const qbsp_plane_t *split, int *sides, vec_t *dists,
           int counts[3])
 {
     int i;
@@ -162,7 +162,7 @@ it will be clipped away.
 ==================
 */
 winding_t *
-ClipWinding(winding_t *in, const plane_t *split, bool keepon)
+ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon)
 {
     vec_t dists[MAX_POINTS_ON_WINDING + 1];
     int sides[MAX_POINTS_ON_WINDING + 1];
@@ -255,7 +255,7 @@ new windings will be created.
 ==================
 */
 void
-DivideWinding(winding_t *in, const plane_t *split, winding_t **front,
+DivideWinding(winding_t *in, const qbsp_plane_t *split, winding_t **front,
               winding_t **back)
 {
     vec_t dists[MAX_POINTS_ON_WINDING + 1];

@@ -65,7 +65,7 @@ TryMerge(face_t *f1, face_t *f2)
     int i, j, k, l;
     vec3_t normal, delta, planenormal;
     vec_t dot;
-    plane_t *plane;
+    qbsp_plane_t *plane;
     bool keep1, keep2;
 
     if (f1->w.numpoints == -1 ||

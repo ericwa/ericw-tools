@@ -27,7 +27,7 @@ static void
 ExportNodePlanes_r(node_t *node, int *planemap)
 {
     struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];
-    plane_t *plane;
+    qbsp_plane_t *plane;
     dplane_t *dplane;
     int i;
 

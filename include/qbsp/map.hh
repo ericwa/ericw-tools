@@ -29,7 +29,7 @@ typedef struct epair_s {
 } epair_t;
 
 typedef struct mapface_s {
-    plane_t plane;
+    qbsp_plane_t plane;
     vec3_t planepts[3];
     std::string texname;
     int texinfo;
@@ -76,7 +76,7 @@ typedef struct mapdata_s {
     std::vector<mapface_t> faces;
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
-    std::vector<plane_t> planes;
+    std::vector<qbsp_plane_t> planes;
     std::vector<miptex_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
     

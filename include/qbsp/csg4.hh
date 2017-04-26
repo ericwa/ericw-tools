@@ -27,7 +27,7 @@ extern int csgmergefaces;
 // build surfaces is also used by GatherNodeFaces
 surface_t *BuildSurfaces(const std::map<int, face_t *> &planefaces);
 face_t *NewFaceFromFace(face_t *in);
-void SplitFace(face_t *in, const plane_t *split, face_t **front, face_t **back);
+void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **back);
 void UpdateFaceSphere(face_t *in);
 
 #endif
