@@ -416,7 +416,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         // sanity check
         if (!neighboursToSmooth.size()) {
             for (auto vertIndexNormalPair : smoothedNormals) {
-                Q_assert(GLMVectorCompare(vertIndexNormalPair.second, f_norm));
+                Q_assert(GLMVectorCompare(vertIndexNormalPair.second, f_norm, EQUAL_EPSILON));
             }
         }
         

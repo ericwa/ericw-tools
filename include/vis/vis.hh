@@ -28,6 +28,7 @@
 #define  PORTALFILE2 "PRT2"
 #define  PORTALFILEAM "PRT1-AM"
 #define  ON_EPSILON  0.1
+#define  EQUAL_EPSILON 0.001
 
 #define MAX_WINDING 64
 #define MAX_WINDING_FIXED 24

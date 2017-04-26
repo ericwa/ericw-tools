@@ -222,12 +222,13 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
     return rotations;
 }
 
+// FIXME: remove these
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA,
                    const vec3_t minsB, const vec3_t maxsB)
 {
     for (int i=0; i<3; i++) {
-        if (maxsA[i] < (minsB[i] - EQUAL_EPSILON)) return true;
-        if (minsA[i] > (maxsB[i] + EQUAL_EPSILON)) return true;
+        if (maxsA[i] < (minsB[i] - 0.001)) return true;
+        if (minsA[i] > (maxsB[i] + 0.001)) return true;
     }
     return false;
 }

@@ -43,6 +43,7 @@
 
 #define ON_EPSILON    0.1
 #define ANGLE_EPSILON 0.001
+#define EQUAL_EPSILON 0.001
 
 typedef struct {
     vec3_t color;

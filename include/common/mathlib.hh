@@ -56,7 +56,6 @@ typedef struct {
 
 extern const vec3_t vec3_origin;
 
-#define EQUAL_EPSILON 0.001
 #define ANGLEEPSILON            0.000001
 #define ZERO_TRI_AREA_EPSILON 0.05f
 #define POINT_EQUAL_EPSILON 0.05f
@@ -64,10 +63,10 @@ extern const vec3_t vec3_origin;
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon);
 
 static inline bool
-GLMVectorCompare(const qvec3f &v1, const qvec3f &v2)
+GLMVectorCompare(const qvec3f &v1, const qvec3f &v2, float epsilon)
 {
     for (int i = 0; i < 3; i++)
-        if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
+        if (fabs(v1[i] - v2[i]) > epsilon)
             return false;
     return true;
 }
