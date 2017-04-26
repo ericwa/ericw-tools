@@ -12,7 +12,6 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/cmdlib.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/mathlib.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/winding.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/outside.hh
@@ -28,6 +27,7 @@ set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/common/threads.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/qvec.cc
+	${CMAKE_SOURCE_DIR}/common/mathlib.cc
 	brush.cc
 	bspfile.cc
 	cmdlib.cc
@@ -35,7 +35,6 @@ set(QBSP_SOURCES
 	file.cc
 	globals.cc
 	map.cc
-	mathlib.cc
 	merge.cc
 	outside.cc
 	parser.cc
@@ -49,6 +48,7 @@ set(QBSP_SOURCES
 	winding.cc
 	writebsp.cc
 	exportobj.cc
+	${COMMON_INCLUDES}
 	${QBSP_INCLUDES})
 
 add_definitions(-DDOUBLEVEC_T)

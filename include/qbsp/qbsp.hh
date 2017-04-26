@@ -193,7 +193,7 @@ enum {
 };
 
 #include <qbsp/cmdlib.hh>
-#include <qbsp/mathlib.hh>
+#include <common/mathlib.hh>
 #include <qbsp/winding.hh>
 
 typedef struct mtexinfo_s {

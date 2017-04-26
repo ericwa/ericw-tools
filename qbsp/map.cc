@@ -441,10 +441,6 @@ static qmat4x4f texVecsTo4x4Matrix(const plane_t &faceplane, const float in_vecs
     return T;
 }
 
-static inline qvec3f vec3_t_to_glm(const vec3_t vec) {
-    return qvec3f(vec[0], vec[1], vec[2]);
-}
-
 static qmat2x2f scale2x2(float xscale, float yscale)
 {
     qmat2x2f M {
