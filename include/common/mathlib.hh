@@ -57,7 +57,7 @@ typedef struct {
 extern const vec3_t vec3_origin;
 
 #define EQUAL_EPSILON 0.001
-
+#define ANGLEEPSILON            0.000001
 #define ZERO_TRI_AREA_EPSILON 0.05f
 #define POINT_EQUAL_EPSILON 0.05f
 
@@ -312,6 +312,8 @@ qvec3f ClosestPointOnLine(const qvec3f &v, const qvec3f &w, const qvec3f &p);
 float DistToLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
 
 qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
+
+float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, const vec3_t normal);
 
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square

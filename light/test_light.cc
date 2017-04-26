@@ -412,6 +412,15 @@ TEST(mathlib, ShrinkPoly2) {
     EXPECT_TRUE(polysEqual(shrunkPoly, actualShrunk));
 }
 
+TEST(mathlib, SignedDegreesBetweenUnitVectors) {
+    const vec3_t up = {0, 0, 1};
+    const vec3_t fwd = {0, 1, 0};
+    const vec3_t right = {1, 0, 0};
+    
+    EXPECT_FLOAT_EQ(-90, SignedDegreesBetweenUnitVectors(right, fwd, up));
+    EXPECT_FLOAT_EQ(90, SignedDegreesBetweenUnitVectors(fwd, right, up));
+}
+
 static const float MANGLE_EPSILON = 0.1f;
 
 TEST(light, vec_from_mangle) {

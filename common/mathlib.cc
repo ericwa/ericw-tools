@@ -768,3 +768,26 @@ qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f&
     
     return ClosestPointOnLine(v, w, p);
 }
+
+/// Returns degrees of clockwise rotation from start to end, assuming `normal` is pointing towards the viewer
+float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, const vec3_t normal)
+{
+    const float cosangle = qmax(-1.0, qmin(1.0, DotProduct(start, end)));
+    const float unsigned_degrees = acos(cosangle) * (360.0 / (2.0 * Q_PI));
+    
+    if (unsigned_degrees < ANGLEEPSILON)
+        return 0;
+    
+    // get a normal for the rotation plane using the right-hand rule
+    vec3_t rotationNormal;
+    CrossProduct(start, end, rotationNormal);
+    VectorNormalize(rotationNormal);
+    
+    const float normalsCosAngle = DotProduct(rotationNormal, normal);
+    if (normalsCosAngle >= 0) {
+        // counterclockwise rotation
+        return -unsigned_degrees;
+    }
+    // clockwise rotation
+    return unsigned_degrees;
+}
