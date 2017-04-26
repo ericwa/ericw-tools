@@ -538,7 +538,7 @@ DividePlane(surface_t *in, plane_t *split, surface_t **front,
     *front = *back = NULL;
 
     // parallel case is easy
-    if (VectorCompare(inplane->normal, split->normal)) {
+    if (VectorCompare(inplane->normal, split->normal, EQUAL_EPSILON)) {
         // check for exactly on node
         if (inplane->dist == split->dist) {
             facet = in->faces;

@@ -61,7 +61,7 @@ extern const vec3_t vec3_origin;
 #define ZERO_TRI_AREA_EPSILON 0.05f
 #define POINT_EQUAL_EPSILON 0.05f
 
-qboolean VectorCompare(const vec3_t v1, const vec3_t v2);
+qboolean VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon);
 
 static inline bool
 GLMVectorCompare(const qvec3f &v1, const qvec3f &v2)

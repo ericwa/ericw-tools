@@ -32,12 +32,12 @@ using namespace polylib;
 const vec3_t vec3_origin = { 0, 0, 0 };
 
 qboolean
-VectorCompare(const vec3_t v1, const vec3_t v2)
+VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon)
 {
     int i;
 
     for (i = 0; i < 3; i++)
-        if (fabs(v1[i] - v2[i]) > EQUAL_EPSILON)
+        if (fabs(v1[i] - v2[i]) > epsilon)
             return false;
 
     return true;

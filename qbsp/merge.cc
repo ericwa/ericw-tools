@@ -40,7 +40,7 @@ CheckColinear(face_t *f)
         VectorSubtract(f->w.points[j], f->w.points[i], v2);
         VectorNormalize(v2);
 
-        if (VectorCompare(v1, v2))
+        if (VectorCompare(v1, v2, EQUAL_EPSILON))
             Error("Colinear edge (%s)", __func__);
     }
 }

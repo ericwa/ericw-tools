@@ -315,12 +315,12 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         vec3_t mincolor {0.0, 0.0, 0.0};
     
         GetVectorForKey(entity, "_mincolor", mincolor);
-        if (VectorCompare(vec3_origin, mincolor)) {
+        if (VectorCompare(vec3_origin, mincolor, EQUAL_EPSILON)) {
             GetVectorForKey(entity, "_minlight_color", mincolor);
         }
     
         normalize_color_format(mincolor);
-        if (!VectorCompare(vec3_origin, mincolor)) {
+        if (!VectorCompare(vec3_origin, mincolor, EQUAL_EPSILON)) {
             const uint64_t r_byte = qmax(0, qmin(255, (int)rint(mincolor[0])));
             const uint64_t g_byte = qmax(0, qmin(255, (int)rint(mincolor[1])));
             const uint64_t b_byte = qmax(0, qmin(255, (int)rint(mincolor[2])));

@@ -518,7 +518,7 @@ AddBrushPlane(hullbrush_t *hullbrush, plane_t *plane)
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (VectorCompare(mapface->plane.normal, plane->normal) &&
+        if (VectorCompare(mapface->plane.normal, plane->normal, EQUAL_EPSILON) &&
             fabs(mapface->plane.dist - plane->dist) < ON_EPSILON)
             return;
     }
@@ -604,7 +604,7 @@ AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
     int x, y, z;
 
     for (i = 0; i < hullbrush->numpoints; i++)
-        if (VectorCompare(p, hullbrush->points[i]))
+        if (VectorCompare(p, hullbrush->points[i], EQUAL_EPSILON))
             return i;
 
     if (hullbrush->numpoints == MAX_HULL_POINTS)

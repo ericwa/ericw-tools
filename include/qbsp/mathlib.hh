@@ -33,7 +33,7 @@ typedef vec_t vec3_t[3];
 
 extern const vec3_t vec3_origin;
 
-bool VectorCompare(const vec3_t v1, const vec3_t v2);
+bool VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon);
 
 vec_t Q_rint(vec_t in);
 extern vec_t DotProduct(const vec3_t v1, const vec3_t v2);

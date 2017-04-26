@@ -661,7 +661,7 @@ static void CheckLitNeeded(const globalconfig_t &cfg)
     
     // check lights
     for (const auto &light : GetLights()) {
-        if (!VectorCompare(white, *light.color.vec3Value())) {
+        if (!VectorCompare(white, *light.color.vec3Value(), EQUAL_EPSILON)) {
             SetLitNeeded();
             return;
         }
@@ -669,11 +669,11 @@ static void CheckLitNeeded(const globalconfig_t &cfg)
     
     // check global settings
     if (cfg.bouncecolorscale.floatValue() != 0 ||
-        !VectorCompare(*cfg.minlight_color.vec3Value(), white) ||
-        !VectorCompare(*cfg.sunlight_color.vec3Value(), white) ||
-        !VectorCompare(*cfg.sun2_color.vec3Value(), white) ||
-        !VectorCompare(*cfg.sunlight2_color.vec3Value(), white) ||
-        !VectorCompare(*cfg.sunlight3_color.vec3Value(), white)) {
+        !VectorCompare(*cfg.minlight_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(*cfg.sunlight_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(*cfg.sun2_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(*cfg.sunlight2_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(*cfg.sunlight3_color.vec3Value(), white, EQUAL_EPSILON)) {
         SetLitNeeded();
         return;
     }

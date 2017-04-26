@@ -706,7 +706,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
             static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_R_MASK) >> TEX_MINLIGHT_COLOR_R_SHIFT),
             static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_G_MASK) >> TEX_MINLIGHT_COLOR_G_SHIFT),
             static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_B_MASK) >> TEX_MINLIGHT_COLOR_B_SHIFT)};
-        if (lightsurf->minlight > 0 && VectorCompare(extended_mincolor, vec3_origin)) {
+        if (lightsurf->minlight > 0 && VectorCompare(extended_mincolor, vec3_origin, EQUAL_EPSILON)) {
             VectorSet(extended_mincolor, 255, 255, 255);
         }
         VectorCopy(extended_mincolor, lightsurf->minlight_color);

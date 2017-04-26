@@ -228,7 +228,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
         VectorSubtract(vec3_origin, p->plane.normal, backplane.normal);
         backplane.dist = -p->plane.dist;
 
-        if (VectorCompare(prevstack->portalplane.normal, backplane.normal))
+        if (VectorCompare(prevstack->portalplane.normal, backplane.normal, EQUAL_EPSILON))
             continue;           // can't go out a coplanar face
 
         c_portalcheck++;
