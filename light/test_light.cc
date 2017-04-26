@@ -419,6 +419,7 @@ TEST(mathlib, SignedDegreesBetweenUnitVectors) {
     
     EXPECT_FLOAT_EQ(-90, SignedDegreesBetweenUnitVectors(right, fwd, up));
     EXPECT_FLOAT_EQ(90, SignedDegreesBetweenUnitVectors(fwd, right, up));
+    EXPECT_FLOAT_EQ(0, SignedDegreesBetweenUnitVectors(right, right, up));
 }
 
 static const float MANGLE_EPSILON = 0.1f;

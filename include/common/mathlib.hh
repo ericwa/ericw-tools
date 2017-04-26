@@ -56,7 +56,6 @@ typedef struct {
 
 extern const vec3_t vec3_origin;
 
-#define ANGLEEPSILON            0.000001
 #define ZERO_TRI_AREA_EPSILON 0.05f
 #define POINT_EQUAL_EPSILON 0.05f
 

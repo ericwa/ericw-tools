@@ -775,10 +775,7 @@ float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, cons
 {
     const float cosangle = qmax(-1.0, qmin(1.0, DotProduct(start, end)));
     const float unsigned_degrees = acos(cosangle) * (360.0 / (2.0 * Q_PI));
-    
-    if (unsigned_degrees < ANGLEEPSILON)
-        return 0;
-    
+
     // get a normal for the rotation plane using the right-hand rule
     vec3_t rotationNormal;
     CrossProduct(start, end, rotationNormal);
