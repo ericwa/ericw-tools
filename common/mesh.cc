@@ -252,3 +252,177 @@ void cleanupMesh(mesh_t &mesh)
         cleanupFace(mesh, i, vertoctree);
     }
 }
+
+// sample point positioning
+
+class position_t {
+public:
+    bool m_unoccluded;
+    const bsp2_dface_t *m_actualFace;
+    qvec3f m_position;
+    qvec3f m_interpolatedNormal;
+    
+    position_t(qvec3f position)
+    : m_unoccluded(false),
+    m_actualFace(nullptr),
+    m_position(position),
+    m_interpolatedNormal(qvec3f(0,0,0)) {}
+    
+    position_t(const bsp2_dface_t *actualFace,
+               qvec3f position,
+               qvec3f interpolatedNormal)
+    : m_unoccluded(true),
+    m_actualFace(actualFace),
+    m_position(position),
+    m_interpolatedNormal(interpolatedNormal) {};
+};
+
+static const float sampleOffPlaneDist = 1.0f;
+
+// precondition: `point` is on the same plane as `face` and within the bounds.
+static position_t
+PositionSamplePointOnFace(const bsp2_t *bsp,
+                          const bsp2_dface_t *face,
+                          const bool phongShaded,
+                          const qvec3f &point)
+{
+    const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
+    const auto &points = facecache.points();
+    const auto &normals = facecache.normals();
+    const auto &edgeplanes = facecache.edgePlanes();
+    const auto &plane = facecache.plane();
+    
+    if (edgeplanes.empty()) {
+        // degenerate polygon
+        return position_t(point);
+    }
+    
+    const float planedist = GLM_DistAbovePlane(plane, point);
+    Q_assert(fabs(planedist - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
+    
+    const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+    if (insideDist < -POINT_EQUAL_EPSILON) {
+        // Non-convex polygon
+        return position_t(point);
+    }
+    
+    const modelinfo_t *mi = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
+    
+    // Get the point normal
+    qvec3f pointNormal;
+    if (phongShaded) {
+        const auto interpNormal = GLM_InterpolateNormal(points, normals, point);
+        // We already know the point is in the face, so this should always succeed
+        if(!interpNormal.first)
+            return position_t(point);
+        pointNormal = interpNormal.second;
+    } else {
+        pointNormal = qvec3f(plane);
+    }
+    
+    const bool inSolid = Light_PointInAnySolid(bsp, mi->model, point);
+    if (inSolid) {
+        // Check distance to border
+        const float distanceInside = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+        if (distanceInside < 1.0f) {
+            // Point is too close to the border. Try nudging it inside.
+            const auto &shrunk = facecache.pointsShrunkBy1Unit();
+            if (!shrunk.empty()) {
+                const pair<int, qvec3f> closest = GLM_ClosestPointOnPolyBoundary(shrunk, point);
+                const qvec3f newPoint = closest.second + (qvec3f(plane) * sampleOffPlaneDist);
+                if (!Light_PointInAnySolid(bsp, mi->model, newPoint))
+                    return position_t(face, newPoint, pointNormal);
+            }
+        }
+        
+        return position_t(point);
+    }
+    
+    return position_t(face, point, pointNormal);
+}
+
+static position_t positionSample_r(const mesh_t &mesh, facenum_t startingFace, const qvec3f &startingPos, int recursionDepth)
+{
+    const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
+    const qvec4f &surfplane = facecache.plane();
+    const auto &points = facecache.points();
+    const auto &edgeplanes = facecache.edgePlanes();
+    
+    // project `point` onto the surface plane, then lift it off again
+    const qvec3f point = GLM_ProjectPointOntoPlane(surfplane, origPoint) + (qvec3f(surfplane) * sampleOffPlaneDist);
+    
+    // check if in face..
+    if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
+        return PositionSamplePointOnFace(bsp, face, phongShaded, point);
+    }
+    
+    // not in any triangle. among the edges this point is _behind_,
+    // search for the one that the point is least past the endpoints of the edge
+    {
+        int bestplane = -1;
+        float bestdist = FLT_MAX;
+        
+        for (int i=0; i<face->numedges; i++) {
+            const qvec3f v0 = points.at(i);
+            const qvec3f v1 = points.at((i+1) % points.size());
+            
+            const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, qvec3f(surfplane));
+            if (!edgeplane.first)
+                continue; // degenerate edge
+            
+            float planedist = GLM_DistAbovePlane(edgeplane.second, point);
+            if (planedist < POINT_EQUAL_EPSILON) {
+                // behind this plane. check whether we're between the endpoints.
+                
+                const qvec3f v0v1 = v1 - v0;
+                const float v0v1dist = qv::length(v0v1);
+                
+                const float t = FractionOfLine(v0, v1, point); // t=0 for point=v0, t=1 for point=v1
+                
+                float edgedist;
+                if (t < 0) edgedist = fabs(t) * v0v1dist;
+                else if (t > 1) edgedist = t * v0v1dist;
+                else edgedist = 0;
+                
+                if (edgedist < bestdist) {
+                    bestplane = i;
+                    bestdist = edgedist;
+                }
+            }
+        }
+        
+        if (bestplane != -1) {
+            // FIXME: Also need to handle non-smoothed but same plane
+            const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, bestplane);
+            if (smoothed) {
+                // try recursive search
+                if (recursiondepth < 3) {
+                    // call recursively to look up normal in the adjacent face
+                    return CalcPointNormal(bsp, smoothed, point, phongShaded, face_lmscale, recursiondepth + 1);
+                }
+            }
+        }
+    }
+    
+    // 2. Try snapping to poly
+    
+    const pair<int, qvec3f> closest = GLM_ClosestPointOnPolyBoundary(points, point);
+    const float texSpaceDist = TexSpaceDist(bsp, face, closest.second, point);
+    
+    if (texSpaceDist <= face_lmscale) {
+        // Snap it to the face edge. Add the 1 unit off plane.
+        const qvec3f snapped = closest.second + (qvec3f(surfplane) * sampleOffPlaneDist);
+        return PositionSamplePointOnFace(bsp, face, phongShaded, snapped);
+    }
+    
+    // This point is too far from the polygon to be visible in game, so don't bother calculating lighting for it.
+    // Dont contribute to interpolating.
+    // We could safely colour it in pink for debugging.
+    return position_t(point);
+}
+
+sample_position_t positionSample(const mesh_t &mesh, facenum_t startingFace, const qvec3f &startingPos)
+{
+    // call the recursive version
+    return positionSample_r(mesh, startingFace, startingPos, 0);
+}

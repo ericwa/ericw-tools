@@ -52,4 +52,28 @@ aabb3f mesh_face_bbox(const mesh_t &mesh, facenum_t facenum);
 // adds verts to fix t-juncs
 void cleanupMesh(mesh_t &mesh);
 
+class sample_position_t {
+public:
+    bool m_occluded;
+    facenum_t m_face;
+    qvec3f m_position;
+    qvec3f m_interpolatedNormal;
+    
+    sample_position_t(qvec3f position)
+    : m_occluded(false),
+      m_face(-1),
+      m_position(position),
+      m_interpolatedNormal(qvec3f(0,0,0)) {}
+    
+    sample_position_t(facenum_t actualFace,
+                      qvec3f position,
+                      qvec3f interpolatedNormal)
+    : m_occluded(false),
+      m_face(actualFace),
+      m_position(position),
+      m_interpolatedNormal(interpolatedNormal) {};
+};
+
+sample_position_t positionSample(const mesh_t &mesh, facenum_t startingFace, const qvec3f &startingPos);
+
 #endif /* __COMMON_MESH_HH__ */
