@@ -44,7 +44,6 @@ class GLView : public QOpenGLWidget,
 private:
     uint32_t m_keysPressed;
     int m_keymoveUpdateTimer;
-    //QElapsedTimer m_timer;
     QPointF m_lastMouseDownPos;
     
     // camera stuff

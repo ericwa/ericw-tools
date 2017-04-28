@@ -28,16 +28,18 @@ See file, 'COPYING', for details.
 #include <QTime>
 
 GLView::GLView(QWidget *parent)
-    : m_keymoveUpdateTimer(0),
-      QOpenGLWidget(parent),
-      m_program(nullptr)
+    : QOpenGLWidget(parent),
+    m_keysPressed(0),
+    m_keymoveUpdateTimer(0),
+    m_lastMouseDownPos(0,0),
+    m_displayAspect(1),
+    m_cameraOrigin(0, 0, 0),
+    m_cameraFwd(0, 1, 0),
+    m_vao(),
+    m_program(nullptr),
+    m_program_mvp_location(0)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
-    
-    //m_timer.start(); // for measuring elapsed time
-    
-    m_cameraOrigin = QVector3D(0, 0, 0);
-    m_cameraFwd = QVector3D(0, 1, 0);
 }
 
 GLView::~GLView()
