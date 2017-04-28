@@ -43,7 +43,8 @@ class GLView : public QOpenGLWidget,
 {
 private:
     uint32_t m_keysPressed;
-    QElapsedTimer m_timer;
+    int m_keymoveUpdateTimer;
+    //QElapsedTimer m_timer;
     QPointF m_lastMouseDownPos;
     
     // camera stuff
@@ -67,14 +68,22 @@ public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
 
+    
 protected:
     void initializeGL() override;
     void paintGL() override;
     void resizeGL(int width, int height) override;
+
+private:
+    void startMovementTimer();
+    void stopMovementTimer();
+    
+protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
+    void wheelEvent (QWheelEvent *event) override;
     
 protected:
     /** animation timer */

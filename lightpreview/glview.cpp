@@ -23,16 +23,18 @@ See file, 'COPYING', for details.
 #include <cassert>
 
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QKeyEvent>
+#include <QTime>
 
 GLView::GLView(QWidget *parent)
-    : QOpenGLWidget(parent),
+    : m_keymoveUpdateTimer(0),
+      QOpenGLWidget(parent),
       m_program(nullptr)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
     
-    startTimer(10); // repaint timer, calls timerEvent()
-    m_timer.start(); // for measuring elapsed time
+    //m_timer.start(); // for measuring elapsed time
     
     m_cameraOrigin = QVector3D(0, 0, 0);
     m_cameraFwd = QVector3D(0, 1, 0);
@@ -151,6 +153,8 @@ void GLView::mouseMoveEvent(QMouseEvent *event)
     
     // now rotate m_cameraFwd and m_cameraUp by mouseRotation
     m_cameraFwd = mouseRotation * m_cameraFwd;
+    
+    repaint();
 }
 
 static keys_t Qt_Key_To_keys_t(int key)
@@ -164,11 +168,29 @@ static keys_t Qt_Key_To_keys_t(int key)
     return keys_t::none;
 }
 
+void GLView::startMovementTimer()
+{
+    if (m_keymoveUpdateTimer)
+        return;
+    
+    m_keymoveUpdateTimer = startTimer(10); // repaint timer, calls timerEvent()
+}
+
+void GLView::stopMovementTimer()
+{
+    if (m_keymoveUpdateTimer != 0) {
+        killTimer(m_keymoveUpdateTimer);
+        m_keymoveUpdateTimer = 0;
+    }
+}
+
 void GLView::keyPressEvent(QKeyEvent *event)
 {
     keys_t key = Qt_Key_To_keys_t(event->key());
     
     m_keysPressed |= static_cast<uint32_t>(key);
+    
+    startMovementTimer();
 }
 
 void GLView::keyReleaseEvent(QKeyEvent *event)
@@ -176,11 +198,23 @@ void GLView::keyReleaseEvent(QKeyEvent *event)
     keys_t key = Qt_Key_To_keys_t(event->key());
     
     m_keysPressed &= ~static_cast<uint32_t>(key);
+    
+    if (!m_keysPressed)
+        stopMovementTimer();
+}
+
+void GLView::wheelEvent(QWheelEvent *event)
+{
+    static float speed = 0.02;
+    m_cameraOrigin += m_cameraFwd * event->angleDelta().y() * speed;
+    update();
 }
 
 void GLView::timerEvent(QTimerEvent *event)
 {
-    static float speed = 0.1;
+    printf("key movement %s\n", QTime::currentTime().toString().toStdString().c_str());
+    
+    const float speed = 0.1;
     
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))
         m_cameraOrigin += m_cameraFwd * speed;
