@@ -349,4 +349,8 @@ extern options_t options;
 #include <qbsp/map.hh>
 #include <qbsp/util.hh>
 
+void ProcessEntity(mapentity_t *entity, const int hullnum);
+void CreateSingleHull(const int hullnum);
+void CreateHulls(void);
+
 #endif

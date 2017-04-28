@@ -36,7 +36,7 @@ options_t options;
 ProcessEntity
 ===============
 */
-static void
+void
 ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     int i, numportals, firstface;
@@ -467,7 +467,7 @@ CreateSingleHull
 
 =================
 */
-static void
+void
 CreateSingleHull(const int hullnum)
 {
     int i;
@@ -491,7 +491,7 @@ CreateHulls
 
 =================
 */
-static void
+void
 CreateHulls(void)
 {
     /* create the hulls sequentially */
