@@ -31,6 +31,56 @@ set(COMMON_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/common/wadlib.hh
 	${CMAKE_SOURCE_DIR}/include/common/bsputils.hh)
 
+set(QBSP_INCLUDES
+	${CMAKE_SOURCE_DIR}/include/qbsp/bspfile.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/file.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/parser.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/wad.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/warnerr.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/winding.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/outside.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/portals.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/region.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/solidbsp.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/surfaces.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/tjunc.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/util.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
+
+set(QBSP_SOURCES
+	${CMAKE_SOURCE_DIR}/common/threads.cc
+	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
+	${CMAKE_SOURCE_DIR}/common/log.cc
+	${CMAKE_SOURCE_DIR}/common/qvec.cc
+	${CMAKE_SOURCE_DIR}/common/mathlib.cc
+	${CMAKE_SOURCE_DIR}/common/polylib.cc
+	${CMAKE_SOURCE_DIR}/qbsp/brush.cc
+	${CMAKE_SOURCE_DIR}/qbsp/bspfile.cc
+	${CMAKE_SOURCE_DIR}/qbsp/csg4.cc
+	${CMAKE_SOURCE_DIR}/qbsp/file.cc
+	${CMAKE_SOURCE_DIR}/qbsp/globals.cc
+	${CMAKE_SOURCE_DIR}/qbsp/map.cc
+	${CMAKE_SOURCE_DIR}/qbsp/merge.cc
+	${CMAKE_SOURCE_DIR}/qbsp/outside.cc
+	${CMAKE_SOURCE_DIR}/qbsp/parser.cc
+	${CMAKE_SOURCE_DIR}/qbsp/portals.cc
+	${CMAKE_SOURCE_DIR}/qbsp/qbsp.cc
+	${CMAKE_SOURCE_DIR}/qbsp/solidbsp.cc
+	${CMAKE_SOURCE_DIR}/qbsp/surfaces.cc
+	${CMAKE_SOURCE_DIR}/qbsp/tjunc.cc
+	${CMAKE_SOURCE_DIR}/qbsp/util.cc
+	${CMAKE_SOURCE_DIR}/qbsp/wad.cc
+	${CMAKE_SOURCE_DIR}/qbsp/winding.cc
+	${CMAKE_SOURCE_DIR}/qbsp/writebsp.cc
+	${CMAKE_SOURCE_DIR}/qbsp/exportobj.cc
+	${COMMON_INCLUDES}
+	${QBSP_INCLUDES})
+
 find_package (Threads)
 
 if (CMAKE_USE_PTHREADS_INIT)

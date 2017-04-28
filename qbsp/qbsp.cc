@@ -849,7 +849,7 @@ InitQBSP
 ==================
 */
 static void
-InitQBSP(int argc, char **argv)
+InitQBSP(int argc, const char **argv)
 {
     int i;
     char *szBuf;
@@ -944,8 +944,7 @@ InitQBSP(int argc, char **argv)
 main
 ==================
 */
-int
-main(int argc, char **argv)
+int qbsp_main(int argc, const char **argv)
 {
     double start, end;
 
