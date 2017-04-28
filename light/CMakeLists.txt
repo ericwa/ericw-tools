@@ -81,7 +81,7 @@ if (embree_FOUND)
 		endif()
 
 
-		file(GLOB EMBREE_DYLIBS_WITH_SYMLINKS "${embree_DIR}/../../*.${SHARED_LIB_EXT}")
+		file(GLOB EMBREE_DYLIBS_WITH_SYMLINKS "${embree_DIR}/bin/*.${SHARED_LIB_EXT}")
 
 		# Gather all .dylib's that are not symlinks
 		foreach(EMBREE_DYLIB ${EMBREE_DYLIBS_WITH_SYMLINKS})
