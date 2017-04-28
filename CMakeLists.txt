@@ -125,6 +125,11 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)
+
+if (ENABLE_LIGHTPREVIEW)
+	add_subdirectory(lightpreview)
+endif ()
+
 add_subdirectory(qbsp)
 add_subdirectory(vis)
 add_subdirectory(man)
