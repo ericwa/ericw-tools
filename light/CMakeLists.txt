@@ -59,10 +59,10 @@ if (embree_FOUND)
 	target_link_libraries (light ${EMBREE_LIBRARY})
 	add_definitions(-DHAVE_EMBREE)
 	
-	set(EMBREE_LICENSE "${embree_DIR}/../../../doc/LICENSE.txt")
+	set(EMBREE_LICENSE "${embree_DIR}/doc/LICENSE.txt")
 
 	if(WIN32)
-		file(GLOB EMBREE_DLLS "${embree_DIR}/../../*.dll")
+		file(GLOB EMBREE_DLLS "${embree_DIR}/bin/*.dll")
 		foreach(EMBREE_DLL ${EMBREE_DLLS})
 			add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_DLL} $<TARGET_FILE_DIR:light>)
 		endforeach(EMBREE_DLL)
