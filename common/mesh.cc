@@ -39,18 +39,53 @@ std::vector<qvec3f> qvecsToGlm(std::vector<qvec3f> qvecs) {
     return res;
 }
 
-mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
-{
+class vertex_uniquer {
+private:
     // FIXME: this is ugly
     using pos_t = tuple<float, float, float>;
     
-    int nextVert = 0;
+    int nextVert;
     map<pos_t, int> posToVertIndex;
+    
+public:
+    vertex_uniquer() : nextVert(0), posToVertIndex() {}
+    
+    int addExactPoint(const qvec3f &point) {
+        const pos_t pos = make_tuple(vert[0], vert[1], vert[2]);
+        const auto it = posToVertIndex.find(pos);
+        
+        if (it == posToVertIndex.end()) {
+            posToVertIndex[pos] = nextVert;
+            return nextVert++;
+        } else {
+            int vertIndex = it->second;
+            return vertIndex;
+        }
+    }
+    
+    vector<qvec3f> getVerts() const {
+        // convert posToVertIndex to a vector
+        vector<qvec3f> vertsVec;
+        vertsVec.resize(posToVertIndex.size());
+        for (const auto &posIndex : posToVertIndex) {
+            const pos_t &pos = posIndex.first;
+            vertsVec.at(posIndex.second) = qvec3f(std::get<0>(pos), std::get<1>(pos), std::get<2>(pos));
+        }
+    }
+};
+
+mesh_t buildMeshWithNormals(const std::vector<std::vector<qvec3f>> &faces,
+                            const std::vector<std::vector<qvec3f>> *faceVertNormals=nullptr)
+{
+    vertex_uniquer uniquer;
     
     vector<qplane3f> faceplanes;
     vector<vector<int>> facesWithIndices;
+    vector<vector<qvec3f>> facesWithNormals;
+    
     for (const auto &face : faces) {
         vector<int> vertIndices;
+        vector<qvec3f> vertNormals;
         
         // compute face plane
         const auto glmvecs = qvecsToGlm(face);
@@ -58,39 +93,35 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
         qplane3f qp(qvec3f(gp[0], gp[1], gp[2]), gp[3]);
         faceplanes.push_back(qp);
         
-        for (const auto &vert : face) {
+        for (const qvec3f &vert : face) {
+            const qvec3f &vert = vertNormalPair.first;
+            const qvec3f &normal = vertNormalPair.second;
+            
             float distOff = qp.distAbove(vert);
             Q_assert(fabs(distOff) < 0.001);
             
-            const pos_t pos = make_tuple(vert[0], vert[1], vert[2]);
-            const auto it = posToVertIndex.find(pos);
-            
-            if (it == posToVertIndex.end()) {
-                posToVertIndex[pos] = nextVert;
-                vertIndices.push_back(nextVert);
-                nextVert++;
-            } else {
-                int vertIndex = it->second;
-                vertIndices.push_back(vertIndex);
-            }
+            int vertIndex = uniquer.addExactPoint(vert)
+            vertIndices.push_back(vertIndex);
+            vertNormals.push_back(normal);
         }
         
         facesWithIndices.push_back(vertIndices);
-    }
-    
-    // convert posToVertIndex to a vector
-    vector<qvec3f> vertsVec;
-    vertsVec.resize(posToVertIndex.size());
-    for (const auto &posIndex : posToVertIndex) {
-        const pos_t &pos = posIndex.first;
-        vertsVec.at(posIndex.second) = qvec3f(std::get<0>(pos), std::get<1>(pos), std::get<2>(pos));
+        facesWithNormals.push_back(vertNormals);
     }
     
     mesh_t res;
     res.verts = vertsVec;
     res.faces = facesWithIndices;
     res.faceplanes = faceplanes;
+    res.facevertnormals = facesWithNormals;
+    
     return res;
+}
+
+// wrapper around buildMesh
+mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
+{
+    std::vector<std::vector<std::pair<qvec3f, qvec3f>>>
 }
 
 mesh_t buildMeshFromBSP(const bsp2_t *bsp)
@@ -255,6 +286,7 @@ void cleanupMesh(mesh_t &mesh)
 
 // sample point positioning
 
+#if 0
 class position_t {
 public:
     bool m_unoccluded;
@@ -426,3 +458,4 @@ sample_position_t positionSample(const mesh_t &mesh, facenum_t startingFace, con
     // call the recursive version
     return positionSample_r(mesh, startingFace, startingPos, 0);
 }
+#endif

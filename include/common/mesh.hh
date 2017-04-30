@@ -34,14 +34,17 @@ using meshface_t = std::vector<vertnum_t>;
 class mesh_t {
 public:
     std::vector<qvec3f> verts;
-    std::vector<meshface_t> faces;
+    std::vector<meshface_t> faceverts;
+    std::vector<std::vector<qvec3f>> facevertnormals;
+    
     // this is redundant data with the verts, but we know the planes in advance
     // and this saves having to estimate them from the verts
     std::vector<qplane3f> faceplanes;
 };
 
 // Welds vertices at exactly the same position
-mesh_t buildMesh(const std::vector<std::vector<qvec3f>> &faces);
+mesh_t buildMeshWithNormals(const std::vector<std::vector<qvec3f>> &faces,
+                            const std::vector<std::vector<qvec3f>> *faceVertNormals=nullptr);
 mesh_t buildMeshFromBSP(const bsp2_t *bsp);
 
 std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh);
@@ -74,6 +77,12 @@ public:
       m_interpolatedNormal(interpolatedNormal) {};
 };
 
+#if 0
+/**
+ * "Corrects" a point so it's on the front side of the
+ * mesh
+ */
 sample_position_t positionSample(const mesh_t &mesh, facenum_t startingFace, const qvec3f &startingPos);
+#endif
 
 #endif /* __COMMON_MESH_HH__ */
