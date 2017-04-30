@@ -476,6 +476,10 @@ CSGFaces(const mapentity_t *entity)
                 overwrite = true;
                 continue;
             }
+            if (clipbrush->contents == CONTENTS_EMPTY) {
+                /* Ensure hint never clips anything */
+                continue;
+            }
 
             /* check bounding box first */
             for (i = 0; i < 3; i++) {
