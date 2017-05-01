@@ -819,6 +819,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const
     
     if (!facelist) {
         Message(msgWarning, warnNoBrushFaces);
+        logprint("^ brush at line %d of .map file\n", mapbrush->face(0).linenum);
         return NULL;
     }
 
