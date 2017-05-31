@@ -504,7 +504,10 @@ CSGFaces(const mapentity_t *entity)
             clipface = clipbrush->faces;
             for (; clipface; clipface = clipface->next)
                 ClipInside(clipface, overwrite, &inside, &outside);
-
+            
+            // inside = parts of `brush` that are inside `clipbrush`
+            // outside = parts of `brush` that are outside `clipbrush`
+            
             /*
              * If the brush is solid and the clipbrush is not, then we need to
              * keep the inside faces and set the outside contents to those of
