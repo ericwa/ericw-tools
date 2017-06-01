@@ -607,6 +607,7 @@ PrintOptions(void)
            "   -nofill         Doesn't perform outside filling\n"
            "   -noclip         Doesn't build clip hulls\n"
            "   -noskip         Doesn't remove faces with the 'skip' texture\n"
+           "   -nodetail       Convert func_detail to structural\n"
            "   -onlyents       Only updates .MAP entities\n"
            "   -verbose        Print out more .MAP information\n"
            "   -noverbose      Print out almost no information at all\n"
@@ -730,6 +731,8 @@ ParseOptions(char *szOptions)
                 options.fNoclip = true;
             else if (!Q_strcasecmp(szTok, "noskip"))
                 options.fNoskip = true;
+            else if (!Q_strcasecmp(szTok, "nodetail"))
+                options.fNodetail = true;
             else if (!Q_strcasecmp(szTok, "onlyents"))
                 options.fOnlyents = true;
             else if (!Q_strcasecmp(szTok, "verbose"))

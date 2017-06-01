@@ -312,6 +312,7 @@ typedef struct options_s {
     bool fNofill;
     bool fNoclip;
     bool fNoskip;
+    bool fNodetail;
     bool fOnlyents;
     bool fConvertMapFormat;
     conversion_t convertMapFormat;

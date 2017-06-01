@@ -970,8 +970,9 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
 
     /* If the source entity is func_detail, set the content flag */
-    if (!Q_strcasecmp(classname, "func_detail"))
+    if (!Q_strcasecmp(classname, "func_detail") && !options.fNodetail) {
         cflags |= CFLAGS_DETAIL;
+    }
 
     /* entities with custom lmscales are important for the qbsp to know about */
     i = 16 * atof(ValueForKey(src, "_lmscale"));
