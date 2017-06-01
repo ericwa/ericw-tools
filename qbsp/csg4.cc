@@ -343,26 +343,33 @@ FreeFaces(face_t *face)
 ==================
 SaveInsideFaces
 
+`face` is the list of faces from `brush` (solid) that are inside `clipbrush` (nonsolid)
+ 
 Save the list of faces onto the output list, modifying the outside contents to
 match given brush. If the inside contents are empty, the given brush's
 contents override the face inside contents.
 ==================
 */
 static void
-SaveInsideFaces(face_t *face, const brush_t *brush, face_t **savelist)
+SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
 {
+    Q_assert(clipbrush->contents != CONTENTS_SOLID);
+    
     face_t *next;
 
     while (face) {
+        // the back side of `face` is a solid
+        Q_assert(face->contents[1] == CONTENTS_SOLID);
+        
         next = face->next;
-        face->contents[0] = brush->contents;
-        face->cflags[0] = brush->cflags;
+        face->contents[0] = clipbrush->contents;
+        face->cflags[0] = clipbrush->cflags;
         /*
          * If the inside brush is empty space, inherit the outside contents.
          * The only brushes with empty contents currently are hint brushes.
          */
         if (face->contents[1] == CONTENTS_EMPTY)
-            face->contents[1] = brush->contents;
+            face->contents[1] = clipbrush->contents;
         face->next = *savelist;
         *savelist = face;
         face = next;
