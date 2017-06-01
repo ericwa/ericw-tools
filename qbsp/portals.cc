@@ -29,6 +29,7 @@ static int num_visleafs;        // leafs the player can be in
 static int num_visclusters;     // clusters of leafs
 static int iNodesDone;
 static FILE *PortalFile;
+static bool uses_detail;
 
 /*
 ==============================================================================
@@ -232,6 +233,7 @@ NumberLeafs_r(node_t *node, int cluster)
         node->visleafnum = -99;
         node->viscluster = -99;
         if (cluster < 0 && node->detail_separator) {
+            uses_detail = true;
             cluster = num_visclusters++;
             node->viscluster = cluster;
             CountPortals(node);
@@ -271,6 +273,7 @@ WritePortalfile(node_t *headnode)
     num_visleafs = 0;
     num_visclusters = 0;
     num_visportals = 0;
+    uses_detail = false;
     NumberLeafs_r(headnode, -1);
 
     // write the file
@@ -282,7 +285,7 @@ WritePortalfile(node_t *headnode)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
     /* If no detail clusters, just use a normal PRT1 format */
-    if (num_visclusters == num_visleafs) {
+    if (!uses_detail) {
         fprintf(PortalFile, "PRT1\n");
         fprintf(PortalFile, "%d\n", num_visleafs);
         fprintf(PortalFile, "%d\n", num_visportals);
