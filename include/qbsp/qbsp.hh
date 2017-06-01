@@ -342,6 +342,7 @@ typedef struct options_s {
     vec_t on_epsilon;
     bool fObjExport;
     bool fOmitDetail;
+    bool fForcePRT1;
 } options_t;
 
 extern options_t options;

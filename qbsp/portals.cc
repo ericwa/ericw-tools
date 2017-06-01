@@ -288,15 +288,24 @@ WritePortalfile(node_t *headnode)
         fprintf(PortalFile, "%d\n", num_visportals);
         WritePortals_r(headnode, false);
     } else {
-        fprintf(PortalFile, "PRT2\n");
-        fprintf(PortalFile, "%d\n", num_visleafs);
-        fprintf(PortalFile, "%d\n", num_visclusters);
-        fprintf(PortalFile, "%d\n", num_visportals);
-        WritePortals_r(headnode, true);
-        check = WriteClusters_r(headnode, 0);
-        if (check != num_visclusters - 1)
-            Error("Internal error: Detail cluster mismatch (%s)", __func__);
-        fprintf(PortalFile, "-1\n");
+        if (options.fForcePRT1) {
+            /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
+            fprintf(PortalFile, "PRT1\n");
+            fprintf(PortalFile, "%d\n", num_visclusters);
+            fprintf(PortalFile, "%d\n", num_visportals);
+            WritePortals_r(headnode, true);
+        } else {
+            /* Write a PRT2 */
+            fprintf(PortalFile, "PRT2\n");
+            fprintf(PortalFile, "%d\n", num_visleafs);
+            fprintf(PortalFile, "%d\n", num_visclusters);
+            fprintf(PortalFile, "%d\n", num_visportals);
+            WritePortals_r(headnode, true);
+            check = WriteClusters_r(headnode, 0);
+            if (check != num_visclusters - 1)
+                Error("Internal error: Detail cluster mismatch (%s)", __func__);
+            fprintf(PortalFile, "-1\n");
+        }
     }
 
     fclose(PortalFile);

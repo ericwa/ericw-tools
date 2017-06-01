@@ -632,6 +632,7 @@ PrintOptions(void)
            "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
            "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
            "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
+           "   -forceprt1      Create a PRT1 file for loading in editors, even if PRT2 is required to run vis.\n"
            "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
            "   -omitdetail     Detail brushes are omitted from the compile\n"
            "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
@@ -833,6 +834,10 @@ ParseOptions(char *szOptions)
                 
                 options.fConvertMapFormat = true;
                 szTok = szTok2;
+            } else if (!strcasecmp(szTok, "forceprt1")) {
+                options.fForcePRT1 = true;
+                logprint("WARNING: Forcing creation of PRT1.\n");
+                logprint("         Only use this for viewing portals in a map editor.\n");
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
                 PrintOptions();
             else
