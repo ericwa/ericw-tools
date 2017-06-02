@@ -521,12 +521,13 @@ CSGFaces(const mapentity_t *entity)
              * the clipbrush. Otherwise, these inside surfaces are hidden and
              * should be discarded.
              */
-            if (brush->contents != CONTENTS_SOLID)
-                FreeFaces(inside);
-            else if (clipbrush->contents == CONTENTS_SOLID)
-                FreeFaces(inside);
-            else
+            if (brush->contents == CONTENTS_SOLID
+                && clipbrush->contents != CONTENTS_SOLID)
+            {
                 SaveInsideFaces(inside, clipbrush, &outside);
+            } else {
+                FreeFaces(inside);
+            }
         }
 
         /*
