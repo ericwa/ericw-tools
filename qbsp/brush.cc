@@ -911,17 +911,20 @@ Brush_ListTail(brush_t *brush)
 }
 
 int
-Brush_ListCount(const brush_t *brush)
+Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
 {
-    if (brush == nullptr) {
-        return 0;
-    }
-    int cnt = 1;
-    while (brush->next != nullptr) {
-        brush = brush->next;
-        cnt++;
+    int cnt = 0;
+    for (const brush_t *b = brush; b; b = b->next) {
+        if (cflags == (b->cflags & cflags))
+            cnt++;
     }
     return cnt;
+}
+
+int
+Brush_ListCount(const brush_t *brush)
+{
+    return Brush_ListCountWithCFlags(brush, 0);
 }
 
 void

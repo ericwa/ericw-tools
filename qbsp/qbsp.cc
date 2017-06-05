@@ -110,15 +110,23 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     {
         int solidcount = Brush_ListCount(entity->solid);
         int skycount = Brush_ListCount(entity->sky);
-        int detailcount = Brush_ListCount(entity->detail);
+        int detail_all_count = Brush_ListCount(entity->detail); /* including CFLAGS_DETAIL_NOSURFACEFRAGMENT */
+        int detail_nosurfacefragment_count = Brush_ListCountWithCFlags(entity->detail, CFLAGS_DETAIL_NOSURFACEFRAGMENT);
         int detail_illusionarycount = Brush_ListCount(entity->detail_illusionary);
         int liquidcount = Brush_ListCount(entity->liquid);
     
         int nondetailcount = (solidcount + skycount + liquidcount);
+        int detailcount = detail_all_count - detail_nosurfacefragment_count;
         
         Message(msgStat, "%8d brushes", nondetailcount);
-        if ((detailcount + detail_illusionarycount) > 0) {
-            Message(msgStat, "%8d detail", detailcount + detail_illusionarycount);
+        if (detailcount > 0) {
+            Message(msgStat, "%8d detail", detailcount);
+        }
+        if (detail_nosurfacefragment_count > 0) {
+            Message(msgStat, "%8d detail nosurfacefragment", detail_nosurfacefragment_count);
+        }
+        if (detail_illusionarycount > 0) {
+            Message(msgStat, "%8d detail illusionary", detail_illusionarycount);
         }
     }
     

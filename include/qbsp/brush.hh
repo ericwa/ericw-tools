@@ -35,6 +35,7 @@ typedef struct brush_s {
 
 class mapbrush_t;
 
+int Brush_ListCountWithCFlags(const brush_t *brush, int cflags);
 int Brush_ListCount(const brush_t *brush);
 
 brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const int hullnum);

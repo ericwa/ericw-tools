@@ -27,7 +27,7 @@ int splitnodes;
 
 static int leaffaces;
 static int nodefaces;
-static int c_solid, c_empty, c_water, c_detail;
+static int c_solid, c_empty, c_water, c_detail, c_detail_illusionary;
 static bool usemidsplit;
 
 //============================================================================
@@ -795,8 +795,10 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
         c_water++;
         break;
     case CONTENTS_DETAIL:
-    case CONTENTS_DETAIL_ILLUSIONARY:
         c_detail++;
+        break;
+    case CONTENTS_DETAIL_ILLUSIONARY:
+        c_detail_illusionary++;
         break;
     default:
         Error("Bad contents in face (%s)", __func__);
@@ -977,6 +979,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     c_empty = 0;
     c_water = 0;
     c_detail = 0;
+    c_detail_illusionary = 0;
 
     PartitionSurfaces(surfhead, headnode);
 
@@ -985,6 +988,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     Message(msgStat, "%8d empty leafs", c_empty);
     Message(msgStat, "%8d water leafs", c_water);
     Message(msgStat, "%8d detail leafs", c_detail);
+    Message(msgStat, "%8d detail illusionary leafs", c_detail_illusionary);
     Message(msgStat, "%8d leaffaces", leaffaces);
     Message(msgStat, "%8d nodefaces", nodefaces);
 
