@@ -391,9 +391,11 @@ static position_t
 PositionSamplePointOnFace(const bsp2_t *bsp,
                           const bsp2_dface_t *face,
                           const bool phongShaded,
-                          const qvec3f &point);
+                          const qvec3f &point,
+                          const qvec3f &modelOffset);
 
-position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const qvec3f &origPoint, bool phongShaded, float face_lmscale, int recursiondepth)
+position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const qvec3f &origPoint, bool phongShaded, float face_lmscale, int recursiondepth,
+                           const qvec3f &modelOffset)
 {
     const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
     const qvec4f &surfplane = facecache.plane();
@@ -405,7 +407,7 @@ position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const qv
     
     // check if in face..
     if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
-        return PositionSamplePointOnFace(bsp, face, phongShaded, point);
+        return PositionSamplePointOnFace(bsp, face, phongShaded, point, modelOffset);
     }
 
     // not in any triangle. among the edges this point is _behind_,
@@ -450,7 +452,7 @@ position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const qv
                 // try recursive search
                 if (recursiondepth < 3) {
                     // call recursively to look up normal in the adjacent face
-                    return CalcPointNormal(bsp, smoothed, point, phongShaded, face_lmscale, recursiondepth + 1);
+                    return CalcPointNormal(bsp, smoothed, point, phongShaded, face_lmscale, recursiondepth + 1, modelOffset);
                 }
             }
         }
@@ -464,7 +466,7 @@ position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const qv
     if (texSpaceDist <= face_lmscale) {
         // Snap it to the face edge. Add the 1 unit off plane.
         const qvec3f snapped = closest.second + (qvec3f(surfplane) * sampleOffPlaneDist);
-        return PositionSamplePointOnFace(bsp, face, phongShaded, snapped);
+        return PositionSamplePointOnFace(bsp, face, phongShaded, snapped, modelOffset);
     }
     
     // This point is too far from the polygon to be visible in game, so don't bother calculating lighting for it.
@@ -534,7 +536,8 @@ static position_t
 PositionSamplePointOnFace(const bsp2_t *bsp,
                           const bsp2_dface_t *face,
                           const bool phongShaded,
-                          const qvec3f &point)
+                          const qvec3f &point,
+                          const qvec3f &modelOffset)
 {
     const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
     const auto &points = facecache.points();
@@ -570,7 +573,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
         pointNormal = qvec3f(plane);
     }
     
-    const bool inSolid = Light_PointInAnySolid(bsp, mi->model, point);
+    const bool inSolid = Light_PointInAnySolid(bsp, mi->model, point + modelOffset);
     if (inSolid) {
         // Check distance to border
         const float distanceInside = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
@@ -580,7 +583,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
             if (!shrunk.empty()) {
                 const pair<int, qvec3f> closest = GLM_ClosestPointOnPolyBoundary(shrunk, point);
                 const qvec3f newPoint = closest.second + (qvec3f(plane) * sampleOffPlaneDist);
-                if (!Light_PointInAnySolid(bsp, mi->model, newPoint))
+                if (!Light_PointInAnySolid(bsp, mi->model, newPoint + modelOffset))
                     return position_t(face, newPoint, pointNormal);
             }
         }
@@ -640,7 +643,7 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
-            const auto res = CalcPointNormal(bsp, face, vec3_t_to_glm(point), phongshaded, surf->lightmapscale, 0);
+            const auto res = CalcPointNormal(bsp, face, vec3_t_to_glm(point), phongshaded, surf->lightmapscale, 0, vec3_t_to_glm(offset));
             
             surf->occluded[i] = !res.m_unoccluded;
             *realfacenum = res.m_actualFace != nullptr ? Face_GetNum(bsp, res.m_actualFace) : -1;
