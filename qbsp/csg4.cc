@@ -36,6 +36,26 @@ int csgmergefaces;
 
 /*
 ==================
+MakeSkipTexinfo
+==================
+*/
+static int
+MakeSkipTexinfo()
+{
+    int texinfo;
+    mtexinfo_t mt;
+    
+    mt.miptex = FindMiptex("skip");
+    mt.flags = TEX_SKIP;
+    memset(&mt.vecs, 0, sizeof(mt.vecs));
+    
+    texinfo = FindTexinfo(&mt, mt.flags);
+    
+    return texinfo;
+}
+
+/*
+==================
 NewFaceFromFace
 
 Duplicates the non point information of a face, used by SplitFace and
@@ -299,6 +319,12 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
         const int plane = face->planenum;
         next = face->next;
         
+        // Handy for debugging CSGFaces issues, throw out detail faces and export obj.
+#if 0
+        if (face->contents[1] == CONTENTS_DETAIL)
+            continue;
+#endif
+        
         face_t *plane_current_facelist = planefaces[plane]; // returns `null` (and inserts it) if plane is not in the map yet
 
         if (mirror) {
@@ -312,6 +338,23 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
             newface->lmshift[0] = face->lmshift[1];
             newface->lmshift[1] = face->lmshift[0];
 
+            // e.g. for a water volume:
+            // the face facing the air:
+            //   - face->contents[0] is CONTENTS_EMPTY
+            //   - face->contents[1] is CONTENTS_WATER
+            // the face facing the water:
+            //   - newface->contents[0] is CONTENTS_WATER
+            //   - newface->contents[1] is CONTENTS_EMPTY
+            
+            // HACK: We only want this mirrored face for CONTENTS_DETAIL
+            // to force the right content type for the leaf, but we don't actually
+            // want the face. So just set the texinfo to "skip" so it gets deleted.
+            if (face->contents[1] == CONTENTS_DETAIL
+                || face->contents[1] == CONTENTS_DETAIL_ILLUSIONARY
+                || (face->cflags[1] & CFLAGS_WAS_ILLUSIONARY)) {
+                newface->texinfo = MakeSkipTexinfo();
+            }
+            
             for (int i = 0; i < face->w.numpoints; i++)
                 VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
 
@@ -359,17 +402,51 @@ SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
 
     while (face) {
         // the back side of `face` is a solid
-        Q_assert(face->contents[1] == CONTENTS_SOLID);
+        //Q_assert(face->contents[1] == CONTENTS_SOLID);
         
         next = face->next;
         face->contents[0] = clipbrush->contents;
         face->cflags[0] = clipbrush->cflags;
+        
+        if ((face->contents[1] == CONTENTS_SOLID || face->contents[1] == CONTENTS_SKY)
+             && clipbrush->contents == CONTENTS_DETAIL) {
+            // This case is when a structural and detail brush are touching,
+            // and we want to save the sturctural face that is
+            // touching detail.
+            //
+            // We just marked face->contents[0] as CONTENTS_DETAIL which will
+            // break things, because this is turning a structural face into
+            // detail.
+            //
+            // As a sort-of-hack, mark it as empty. Example:
+            // a detail light fixture touching a structural wall.
+            // The covered-up structural face on the wall has it's "front"
+            // marked as empty here, and the detail faces have their "back"
+            // marked as detail.
+            
+            face->contents[0] = CONTENTS_EMPTY;
+            face->cflags[0] = CFLAGS_STRUCTURAL_COVERED_BY_DETAIL;
+            face->texinfo = MakeSkipTexinfo();
+        }
+        
+        // N.B.: We don't need a hack like above for when clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY.
+        
+        // These would create leaks
+        Q_assert(!(face->contents[1] == CONTENTS_SOLID && face->contents[0] == CONTENTS_DETAIL));
+        Q_assert(!(face->contents[1] == CONTENTS_SKY && face->contents[0] == CONTENTS_DETAIL));
+        
         /*
          * If the inside brush is empty space, inherit the outside contents.
          * The only brushes with empty contents currently are hint brushes.
          */
         if (face->contents[1] == CONTENTS_EMPTY)
             face->contents[1] = clipbrush->contents;
+        
+        if (face->contents[1] == CONTENTS_DETAIL_ILLUSIONARY) {
+            face->contents[1] = clipbrush->contents;
+            face->cflags[1] |= CFLAGS_WAS_ILLUSIONARY;
+        }
+
         face->next = *savelist;
         *savelist = face;
         face = next;
@@ -443,7 +520,12 @@ CopyBrushFaces(const brush_t *brush)
     return facelist;
 }
 
-
+static bool IsLiquid(int contents)
+{
+    return contents == CONTENTS_WATER
+        || contents == CONTENTS_LAVA
+        || contents == CONTENTS_SLIME;
+}
 /*
 ==================
 CSGFaces
@@ -467,6 +549,13 @@ CSGFaces(const mapentity_t *entity)
     std::map<int, face_t *> planefaces;
     csgfaces = brushfaces = csgmergefaces = 0;
 
+#if 0
+    logprint("CSGFaces brush order:\n");
+    for (brush = entity->brushes; brush; brush = brush->next) {
+        logprint("    %s (%s)\n", map.texinfoTextureName(brush->faces->texinfo).c_str(), GetContentsName(brush->contents));
+    }
+#endif
+    
     /*
      * For each brush, clip away the parts that are inside other brushes.
      * Solid brushes override non-solid brushes.
@@ -485,6 +574,18 @@ CSGFaces(const mapentity_t *entity)
             }
             if (clipbrush->contents == CONTENTS_EMPTY) {
                 /* Ensure hint never clips anything */
+                continue;
+            }
+            
+            if (clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY
+                && brush->contents != CONTENTS_DETAIL_ILLUSIONARY) {
+                /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
+                continue;
+            }
+            
+            if (clipbrush->contents == CONTENTS_DETAIL && (clipbrush->cflags & CFLAGS_DETAIL_NOSURFACEFRAGMENT)
+                && brush->contents != CONTENTS_DETAIL) {
+                /* CONTENTS_DETAIL never clips anything but itself, if CFLAGS_DETAIL_NOSURFACEFRAGMENT set */
                 continue;
             }
 
@@ -521,8 +622,14 @@ CSGFaces(const mapentity_t *entity)
              * the clipbrush. Otherwise, these inside surfaces are hidden and
              * should be discarded.
              */
-            if (brush->contents == CONTENTS_SOLID
-                && clipbrush->contents != CONTENTS_SOLID)
+            if ((brush->contents == CONTENTS_SOLID && clipbrush->contents != CONTENTS_SOLID)
+                || (brush->contents == CONTENTS_SKY && (clipbrush->contents != CONTENTS_SOLID
+                                                        && clipbrush->contents != CONTENTS_SKY))
+                || (brush->contents == CONTENTS_DETAIL && (clipbrush->contents != CONTENTS_SOLID
+                                                           && clipbrush->contents != CONTENTS_SKY
+                                                           && clipbrush->contents != CONTENTS_DETAIL))
+                || (IsLiquid(brush->contents)          && clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY)
+                || (brush->contents == CONTENTS_DETAIL_ILLUSIONARY && IsLiquid(clipbrush->contents)))
             {
                 SaveInsideFaces(inside, clipbrush, &outside);
             } else {

@@ -27,10 +27,27 @@ int splitnodes;
 
 static int leaffaces;
 static int nodefaces;
-static int c_solid, c_empty, c_water;
+static int c_solid, c_empty, c_water, c_detail;
 static bool usemidsplit;
 
 //============================================================================
+
+void
+DetailToSolid(node_t *node)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        // We need to remap CONTENTS_DETAIL to a standard quake content type
+        if (node->contents == CONTENTS_DETAIL) {
+            node->contents = CONTENTS_SOLID;
+        } else if (node->contents == CONTENTS_DETAIL_ILLUSIONARY) {
+            node->contents = CONTENTS_EMPTY;
+        }
+        return;
+    } else {
+        DetailToSolid(node->children[0]);
+        DetailToSolid(node->children[1]);
+    }
+}
 
 /*
 ==================
@@ -501,8 +518,21 @@ CalcSurfaceInfo(surface_t *surf)
             Error("Bad contents in face (%s)", __func__);
 
         surf->lmshift = (f->lmshift[0]<f->lmshift[1])?f->lmshift[0]:f->lmshift[1];
-        if ((f->cflags[0] & CFLAGS_DETAIL)
-            || (f->cflags[1] & CFLAGS_DETAIL))
+        
+        bool faceIsDetail = false;
+        if ((f->contents[0] == CONTENTS_DETAIL)
+            || (f->contents[1] == CONTENTS_DETAIL))
+            faceIsDetail = true;
+        
+        if ((f->contents[0] == CONTENTS_DETAIL_ILLUSIONARY)
+            || (f->contents[1] == CONTENTS_DETAIL_ILLUSIONARY))
+            faceIsDetail = true;
+        
+        if ((f->cflags[0] & CFLAGS_WAS_ILLUSIONARY)
+            || (f->cflags[1] & CFLAGS_WAS_ILLUSIONARY))
+            faceIsDetail = true;
+
+        if (faceIsDetail)
             surf->has_detail = true;
         else
             surf->has_struct = true;
@@ -668,9 +698,39 @@ GetContentsName( int Contents ) {
             
         case CONTENTS_SKY:
             return "Sky";
+        
+        case CONTENTS_DETAIL:
+            return "Detail";
+        
+        case CONTENTS_DETAIL_ILLUSIONARY:
+            return "DetailIllusionary";
             
         default:
             return "Error";
+    }
+}
+
+static int Contents_Priority(int contents)
+{
+    switch (contents) {
+        case CONTENTS_SOLID:  return 6;
+            
+        case CONTENTS_SKY:    return 5;
+            
+        case CONTENTS_DETAIL: return 4;
+        
+        case CONTENTS_DETAIL_ILLUSIONARY: return 3;
+            
+        case CONTENTS_WATER:  return 2;
+        case CONTENTS_SLIME:  return 2;
+        case CONTENTS_LAVA:   return 2;
+            
+        case CONTENTS_EMPTY:  return 1;
+        case 0:               return 0;
+        
+        default:
+            Error("Bad contents in face (%s)", __func__);
+            return 0;
     }
 }
 
@@ -697,23 +757,30 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     for (surf = planelist; surf; surf = surf->next) {
         for (f = surf->faces; f; f = f->next) {
             count++;
-            if (!leafnode->contents)
+            
+            int currentpri = Contents_Priority(leafnode->contents);
+            int fpri = Contents_Priority(f->contents[0]);
+            if (fpri > currentpri) {
                 leafnode->contents = f->contents[0];
-            else if (leafnode->contents != f->contents[0]) {
-                const bool OnlyWarn = leafnode->contents == CONTENTS_EMPTY || f->contents[ 0 ] == CONTENTS_EMPTY;
-                Message(msgWarning, warnMixedFaceContents,
-                        GetContentsName( leafnode->contents ), GetContentsName( f->contents[ 0 ] ),
-                        f->w.points[0][0], f->w.points[0][1], f->w.points[0][2]);
-                if (!OnlyWarn) {
-                    Error("Last mixed face contents was fatal");
+            }
+            
+            // HACK: Handle structural covered by detail.
+            if (f->cflags[0] & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
+                Q_assert(f->contents[0] == CONTENTS_EMPTY);
+
+                if (Contents_Priority(CONTENTS_DETAIL) > currentpri) {
+                    leafnode->contents = CONTENTS_DETAIL;
                 }
             }
         }
     }
 
+    // NOTE: This is crazy..
+    // Liquid leafs get assigned liquid content types because of the
+    // "cosmetic" mirrored faces.
     if (!leafnode->contents)
-        leafnode->contents = CONTENTS_SOLID;
-
+        leafnode->contents = CONTENTS_SOLID; // FIXME: Need to create CONTENTS_DETAIL sometimes?
+    
     switch (leafnode->contents) {
     case CONTENTS_EMPTY:
         c_empty++;
@@ -726,6 +793,10 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     case CONTENTS_LAVA:
     case CONTENTS_SKY:
         c_water++;
+        break;
+    case CONTENTS_DETAIL:
+    case CONTENTS_DETAIL_ILLUSIONARY:
+        c_detail++;
         break;
     default:
         Error("Bad contents in face (%s)", __func__);
@@ -902,7 +973,10 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     splitnodes = 0;
     leaffaces = 0;
     nodefaces = 0;
-    c_solid = c_empty = c_water = 0;
+    c_solid = 0;
+    c_empty = 0;
+    c_water = 0;
+    c_detail = 0;
 
     PartitionSurfaces(surfhead, headnode);
 
@@ -910,6 +984,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     Message(msgStat, "%8d solid leafs", c_solid);
     Message(msgStat, "%8d empty leafs", c_empty);
     Message(msgStat, "%8d water leafs", c_water);
+    Message(msgStat, "%8d detail leafs", c_detail);
     Message(msgStat, "%8d leaffaces", leaffaces);
     Message(msgStat, "%8d nodefaces", nodefaces);
 

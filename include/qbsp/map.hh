@@ -62,6 +62,9 @@ typedef struct mapentity_s {
     int firstmapbrush;
     int nummapbrushes;
     
+    // Temporary lists used to build `brushes` in the correct order.
+    brush_t *solid, *sky, *detail, *detail_illusionary, *liquid;
+    
     epair_t *epairs;
     vec3_t mins, maxs;
     brush_t *brushes;           /* NULL terminated list */
@@ -100,12 +103,19 @@ typedef struct mapdata_s {
     /* Misc other global state for the compile process */
     int fillmark;       /* For marking leaves while outside filling */
     bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
+    
+    // helpers
+    std::string texinfoTextureName(int texinfo) const {
+        int mt = mtexinfos.at(texinfo).miptex;
+        return miptex.at(mt);
+    }
 } mapdata_t;
 
 extern mapdata_t map;
 extern mapentity_t *pWorldEnt();
 
 void EnsureTexturesLoaded();
+bool IsWorldBrushEntity(const mapentity_t *entity);
 void LoadMapFile(void);
 void ConvertMapFile(void);
 
@@ -125,6 +135,10 @@ void FixRotateOrigin(mapentity_t *entity);
 /* Create BSP brushes from map brushes in src and save into dst */
 void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src,
                       const int hullnum);
+
+/* Builds the dst->brushes list. Call after Brush_LoadEntity. */
+void Entity_SortBrushes(mapentity_t *dst);
+
 
 surface_t *CSGFaces(const mapentity_t *entity);
 int PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);

@@ -895,6 +895,68 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const
 
 //=============================================================================
 
+static brush_t *
+Brush_ListTail(brush_t *brush)
+{
+    if (brush == nullptr) {
+        return nullptr;
+    }
+ 
+    while (brush->next != nullptr) {
+        brush = brush->next;
+    }
+    
+    Q_assert(brush->next == nullptr);
+    return brush;
+}
+
+int
+Brush_ListCount(const brush_t *brush)
+{
+    if (brush == nullptr) {
+        return 0;
+    }
+    int cnt = 1;
+    while (brush->next != nullptr) {
+        brush = brush->next;
+        cnt++;
+    }
+    return cnt;
+}
+
+void
+Entity_SortBrushes(mapentity_t *dst)
+{
+    Q_assert(dst->brushes == nullptr);
+    
+    brush_t **nextLink = &dst->brushes;
+    
+    if (dst->detail_illusionary) {
+        brush_t *last = Brush_ListTail(dst->detail_illusionary);
+        *nextLink = dst->detail_illusionary;
+        nextLink = &last->next;
+    }
+    if (dst->liquid) {
+        brush_t *last = Brush_ListTail(dst->liquid);
+        *nextLink = dst->liquid;
+        nextLink = &last->next;
+    }
+    if (dst->detail) {
+        brush_t *last = Brush_ListTail(dst->detail);
+        *nextLink = dst->detail;
+        nextLink = &last->next;
+    }
+    if (dst->sky) {
+        brush_t *last = Brush_ListTail(dst->sky);
+        *nextLink = dst->sky;
+        nextLink = &last->next;
+    }
+    if (dst->solid) {
+        brush_t *last = Brush_ListTail(dst->solid);
+        *nextLink = dst->solid;
+        nextLink = &last->next;
+    }    
+}
 
 /*
 ============
@@ -908,26 +970,21 @@ void
 Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 {
     const char *classname;
-    brush_t *brush, *next, *nonsolid, *solid;
     const mapbrush_t *mapbrush;
     vec3_t rotate_offset;
     int i, contents, cflags = 0;
     int lmshift;
+    bool detail, detail_illusionary;
 
     /*
-     * The brush list needs to be ordered:
-     * 1. detail nonsolid
-     * 2. nonsolid
-     * 3. detail solid
-     * 4. solid
-     *
-     * We will add func_group brushes first and detail brushes last, so we can
-     * always just put nonsolid on the head of the list, but will need to insert
-     * solid brushes between any existing nonsolid and solids on the list.
+     * The brush list needs to be ordered (lowest to highest priority):
+     * - detail_illusionary (which is saved as empty)
+     * - liquid
+     * - detail (which is solid)
+     * - sky
+     * - solid
      */
 
-    solid = NULL;
-    nonsolid = dst->brushes;
     classname = ValueForKey(src, "classname");
 
     /* Origin brush support */
@@ -970,8 +1027,18 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
 
     /* If the source entity is func_detail, set the content flag */
+    detail = false;
     if (!Q_strcasecmp(classname, "func_detail") && !options.fNodetail) {
-        cflags |= CFLAGS_DETAIL;
+        detail = true;
+        
+        if (atoi(ValueForKey(src, "_nosurfacefragment"))) {
+            cflags |= CFLAGS_DETAIL_NOSURFACEFRAGMENT;
+        }
+    }
+    
+    detail_illusionary = false;
+    if (!Q_strcasecmp(classname, "func_detail_illusionary") && !options.fNodetail) {
+        detail_illusionary = true;
     }
 
     /* entities with custom lmscales are important for the qbsp to know about */
@@ -993,9 +1060,24 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         
         /* -omitdetail option */
-        if (options.fOmitDetail
-            && ((cflags & CFLAGS_DETAIL) == CFLAGS_DETAIL))
+        if (options.fOmitDetail && detail)
             continue;
+        if (options.fOmitDetail && detail_illusionary)
+            continue;
+        
+        /* turn solid brushes into detail, if we're in hull0 */
+        if (hullnum == 0 && contents == CONTENTS_SOLID) {
+            if (detail) {
+                contents = CONTENTS_DETAIL;
+            } else if (detail_illusionary) {
+                contents = CONTENTS_DETAIL_ILLUSIONARY;
+            }
+        }
+        
+        /* func_detail_illusionary don't exist in the collision hull */
+        if (hullnum && detail_illusionary) {
+            continue;
+        }
         
         /*
          * "clip" brushes don't show up in the draw hull, but we still want to
@@ -1004,7 +1086,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
          */
         if (contents == CONTENTS_CLIP) {
             if (hullnum <= 0) {
-                brush = LoadBrush(mapbrush, rotate_offset, hullnum);
+                brush_t *brush = LoadBrush(mapbrush, rotate_offset, hullnum);
                 if (brush) {
                     AddToBounds(dst, brush->mins);
                     AddToBounds(dst, brush->maxs);
@@ -1034,8 +1116,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         /* sky brushes are solid in the collision hulls */
         if (hullnum && contents == CONTENTS_SKY)
             contents = CONTENTS_SOLID;
-
-        brush = LoadBrush(mapbrush, rotate_offset, hullnum);
+        
+        brush_t *brush = LoadBrush(mapbrush, rotate_offset, hullnum);
         if (!brush)
             continue;
 
@@ -1043,58 +1125,27 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         brush->contents = contents;
         brush->lmshift = lmshift;
         brush->cflags = cflags;
-        if (brush->contents != CONTENTS_SOLID) {
-            brush->next = nonsolid;
-            nonsolid = brush;
+        
+        if (brush->contents == CONTENTS_SOLID) {
+            brush->next = dst->solid;
+            dst->solid = brush;
+        } else if (brush->contents == CONTENTS_SKY) {
+            brush->next = dst->sky;
+            dst->sky = brush;
+        } else if (brush->contents == CONTENTS_DETAIL) {
+            brush->next = dst->detail;
+            dst->detail = brush;
+        } else if (brush->contents == CONTENTS_DETAIL_ILLUSIONARY) {
+            brush->next = dst->detail_illusionary;
+            dst->detail_illusionary = brush;
         } else {
-            brush->next = solid;
-            solid = brush;
+            brush->next = dst->liquid;
+            dst->liquid = brush;
         }
 
         AddToBounds(dst, brush->mins);
         AddToBounds(dst, brush->maxs);
 
         Message(msgPercent, i + 1, src->nummapbrushes);
-    }
-
-    if (!nonsolid) {
-        /* No non-solids and no dst brushes */
-        dst->brushes = solid;
-        return;
-    }
-    if (nonsolid->contents == CONTENTS_SOLID) {
-        /* No non-solids added */
-        if (!solid)
-            return;
-
-        /* Add the new solids to the head of the dst list */
-        brush = dst->brushes;
-        dst->brushes = solid;
-        next = solid->next;
-        while (next) {
-            solid = next;
-            next = next->next;
-        }
-        solid->next = brush;
-        return;
-    }
-
-    /* Insert the non-solids at the dst head */
-    dst->brushes = nonsolid;
-    next = nonsolid->next;
-    while (next && next->contents != CONTENTS_SOLID) {
-        nonsolid = next;
-        next = next->next;
-    }
-    /* If no new solids to add, we are done */
-    if (!solid)
-        return;
-
-    /* Insert new solids and re-attach the existing solids list (next) */
-    nonsolid->next = solid;
-    if (next) {
-        while (solid->next)
-            solid = solid->next;
-        solid->next = next;
     }
 }

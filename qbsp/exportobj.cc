@@ -35,6 +35,20 @@ InitObjFile(void)
     return objfile;
 }
 
+static FILE *
+InitMtlFile(void)
+{
+    FILE *file;
+    
+    StripExtension(options.szBSPName);
+    strcat(options.szBSPName, ".mtl");
+    file = fopen(options.szBSPName, "wt");
+    if (!file)
+        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+    
+    return file;
+}
+
 static void
 GetUV(const mtexinfo_t *texinfo, const vec_t *pos, const int width, const int height, vec_t *u, vec_t *v)
 {
@@ -43,7 +57,7 @@ GetUV(const mtexinfo_t *texinfo, const vec_t *pos, const int width, const int he
 }
 
 static void
-ExportObjFace(FILE *f, const face_t *face, int *vertcount)
+ExportObjFace(FILE *f, FILE *mtlF, const face_t *face, int *vertcount)
 {
     const mtexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
     const char *texname = map.miptex.at(texinfo.miptex).c_str();
@@ -65,7 +79,8 @@ ExportObjFace(FILE *f, const face_t *face, int *vertcount)
         fprintf(f, "vt %.9g %.9g\n", u, -v);
     }
     
-    fprintf(f, "usemtl %s\n", texname);
+    //fprintf(f, "usemtl %s\n", texname);
+    fprintf(f, "usemtl contents%d\n", face->contents[1]);
     fprintf(f, "f");
     for (int i=0; i<face->w.numpoints; i++) {
         // .obj vertexes start from 1
@@ -78,19 +93,57 @@ ExportObjFace(FILE *f, const face_t *face, int *vertcount)
     *vertcount += face->w.numpoints;
 }
 
+static void
+WriteContentsMaterial(FILE *mtlf, int contents, float r, float g, float b)
+{
+    fprintf(mtlf, "newmtl contents%d\n", contents);
+    fprintf(mtlf, "Ka 0 0 0\n");
+    fprintf(mtlf, "Kd %f %f %f\n", r, g, b);
+    fprintf(mtlf, "Ks 0 0 0\n");
+    fprintf(mtlf, "illum 0\n");
+}
+
+#define CONTENTS_EMPTY  -1
+#define CONTENTS_SOLID  -2
+#define CONTENTS_WATER  -3
+#define CONTENTS_SLIME  -4
+#define CONTENTS_LAVA   -5
+#define CONTENTS_SKY    -6
+#define CONTENTS_CLIP   -7      /* compiler internal use only */
+#define CONTENTS_HINT   -8      /* compiler internal use only */
+#define CONTENTS_ORIGIN -9      /* compiler internal use only */
+#define CONTENTS_DETAIL -10     /* compiler internal use only */
+
 void
 ExportObj(const surface_t *surfaces)
 {
     FILE *objfile = InitObjFile();
+    FILE *mtlfile = InitMtlFile();
+    
+    WriteContentsMaterial(mtlfile, 0, 0, 0, 0);
+    WriteContentsMaterial(mtlfile, CONTENTS_EMPTY, 0, 1, 0);
+    WriteContentsMaterial(mtlfile, CONTENTS_SOLID, 0.2, 0.2, 0.2);
+    
+    WriteContentsMaterial(mtlfile, CONTENTS_WATER, 0.0, 0.0, 0.2);
+    WriteContentsMaterial(mtlfile, CONTENTS_SLIME, 0.0, 0.2, 0.0);
+    WriteContentsMaterial(mtlfile, CONTENTS_LAVA,  0.2, 0.0, 0.0);
+    
+    WriteContentsMaterial(mtlfile, CONTENTS_SKY,  0.8, 0.8, 1.0);
+    WriteContentsMaterial(mtlfile, CONTENTS_CLIP,  1, 0.8, 0.8);
+    WriteContentsMaterial(mtlfile, CONTENTS_HINT,  1, 1, 1);
+    
+    WriteContentsMaterial(mtlfile, CONTENTS_DETAIL,  0.5, 0.5, 0.5);
+    
     int vertcount = 0;
     
     const surface_t *surf;
     for (surf = surfaces; surf; surf = surf->next) {
         const face_t *face;
         for (face = surf->faces; face; face = face->next) {
-            ExportObjFace(objfile, face, &vertcount);
+            ExportObjFace(objfile, mtlfile, face, &vertcount);
         }
     }
     
     fclose(objfile);
+    fclose(mtlfile);
 }

@@ -281,6 +281,7 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
 {
     uint64_t flags = 0;
     const char *texname = map.miptex.at(texinfo->miptex).c_str();
+    const int shadow = atoi(ValueForKey(entity, "_shadow"));
     if (IsSkipName(texname))
         flags |= TEX_SKIP;
     if (IsHintName(texname))
@@ -289,8 +290,14 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         flags |= TEX_SPECIAL;
     if (atoi(ValueForKey(entity, "_dirt")) == -1)
         flags |= TEX_NODIRT;
-    if (atoi(ValueForKey(entity, "_shadow")) == -1)
+    if (shadow == -1)
         flags |= TEX_NOSHADOW;
+    if (!Q_strcasecmp("func_detail_illusionary", ValueForKey(entity, "classname"))) {
+        /* Mark these entities as TEX_NOSHADOW unless the mapper set "_shadow" "1" */
+        if (shadow != 1) {
+            flags |= TEX_NOSHADOW;
+        }
+    }
     
     // handle "_phong" and "_phong_angle"
     vec_t phongangle = atof(ValueForKey(entity, "_phong_angle"));
@@ -1510,7 +1517,7 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
  * world before being removed from the map. Currently func_detail and
  * func_group.
  */
-static bool
+bool
 IsWorldBrushEntity(const mapentity_t *entity)
 {
     const char *classname = ValueForKey(entity, "classname");
@@ -1518,6 +1525,8 @@ IsWorldBrushEntity(const mapentity_t *entity)
     if (!Q_strcasecmp(classname, "func_detail"))
         return true;
     if (!Q_strcasecmp(classname, "func_group"))
+        return true;
+    if (!Q_strcasecmp(classname, "func_detail_illusionary"))
         return true;
     return false;
 }

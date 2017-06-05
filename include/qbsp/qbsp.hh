@@ -107,9 +107,13 @@
 #define CONTENTS_CLIP   -7      /* compiler internal use only */
 #define CONTENTS_HINT   -8      /* compiler internal use only */
 #define CONTENTS_ORIGIN -9      /* compiler internal use only */
+#define CONTENTS_DETAIL -10     /* compiler internal use only */
+#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
 
 // Special contents flags for the compiler only
-#define CFLAGS_DETAIL   (1U << 0)
+#define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
+#define CFLAGS_WAS_ILLUSIONARY           (1U << 1) /* was illusionary, got changed to something else */
+#define CFLAGS_DETAIL_NOSURFACEFRAGMENT  (1U << 2) /* don't clip world if the mapper sets "_nosurfacefragment" "1" */
 
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
 // Extended flags are written to a .texinfo file and read by the light tool

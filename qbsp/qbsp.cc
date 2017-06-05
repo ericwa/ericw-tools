@@ -42,7 +42,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     int i, numportals, firstface;
     surface_t *surfs;
     node_t *nodes;
-    const char *classname;
 
     /* No map brushes means non-bmodel entity */
     if (!entity->nummapbrushes)
@@ -52,10 +51,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      * func_group and func_detail entities get their brushes added to the
      * worldspawn
      */
-    classname = ValueForKey(entity, "classname");
-    if (!Q_strcasecmp(classname, "func_group"))
-        return;
-    if (!Q_strcasecmp(classname, "func_detail"))
+    if (IsWorldBrushEntity(entity))
         return;
 
     if (entity != pWorldEnt()) {
@@ -76,6 +72,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      * Init the entity
      */
     entity->brushes = NULL;
+    entity->solid = NULL;
+    entity->sky = NULL;
+    entity->detail = NULL;
+    entity->detail_illusionary = NULL;
+    entity->liquid = NULL;
     entity->numbrushes = 0;
     for (i = 0; i < 3; i++) {
         entity->mins[i] = VECT_MAX;
@@ -87,43 +88,45 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     Message(msgProgress, "Brush_LoadEntity");
     Brush_LoadEntity(entity, entity, hullnum);
-    if (!entity->brushes && hullnum) {
-        PrintEntity(entity);
-        Error("Entity with no valid brushes");
-    }
 
     /*
      * If this is the world entity, find all func_group and func_detail
      * entities and add their brushes with the appropriate contents flag set.
      */
     if (entity == pWorldEnt()) {
-        const mapentity_t *source;
-        int detailcount;
-
-        /* Add func_group brushes first */
+        /*
+         * We no longer care about the order of adding func_detail and func_group,
+         * Entity_SortBrushes will sort the brushes 
+         */
         for (i = 1; i < map.numentities(); i++) {
-            source = &map.entities.at(i);
-            classname = ValueForKey(source, "classname");
-            if (!Q_strcasecmp(classname, "func_group"))
+            const mapentity_t *source = &map.entities.at(i);
+            if (IsWorldBrushEntity(source)) {
                 Brush_LoadEntity(entity, source, hullnum);
-        }
-
-        /* Add detail brushes next */
-        detailcount = 0;
-        for (i = 1; i < map.numentities(); i++, source++) {
-            source = &map.entities.at(i);
-            classname = ValueForKey(source, "classname");
-            if (!Q_strcasecmp(classname, "func_detail")) {
-                int detailstart = entity->numbrushes;
-                Brush_LoadEntity(entity, source, hullnum);
-                detailcount += entity->numbrushes - detailstart;
             }
         }
-        Message(msgStat, "%8d brushes", entity->numbrushes - detailcount);
-        if (detailcount)
-            Message(msgStat, "%8d detail", detailcount);
-    } else {
-        Message(msgStat, "%8d brushes", entity->numbrushes);
+    }
+    
+    /* Print brush counts */
+    {
+        int solidcount = Brush_ListCount(entity->solid);
+        int skycount = Brush_ListCount(entity->sky);
+        int detailcount = Brush_ListCount(entity->detail);
+        int detail_illusionarycount = Brush_ListCount(entity->detail_illusionary);
+        int liquidcount = Brush_ListCount(entity->liquid);
+    
+        int nondetailcount = (solidcount + skycount + liquidcount);
+        
+        Message(msgStat, "%8d brushes", nondetailcount);
+        if ((detailcount + detail_illusionarycount) > 0) {
+            Message(msgStat, "%8d detail", detailcount + detail_illusionarycount);
+        }
+    }
+    
+    Entity_SortBrushes(entity);
+    
+    if (!entity->brushes && hullnum) {
+        PrintEntity(entity);
+        Error("Entity with no valid brushes");
     }
 
     /*
@@ -148,6 +151,8 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
                 surfs = GatherNodeFaces(nodes);
                 // make a really good tree
                 nodes = SolidBSP(entity, surfs, false);
+                
+                DetailToSolid(nodes);
             }
         }
         ExportNodePlanes(nodes);
@@ -186,6 +191,9 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
                 // make a really good tree
                 nodes = SolidBSP(entity, surfs, false);
 
+                // convert detail leafs to solid
+                DetailToSolid(nodes);
+                
                 // make the real portals for vis tracing
                 numportals = PortalizeWorld(entity, nodes, hullnum);
 
@@ -193,6 +201,9 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
             }
             FreeAllPortals(nodes);
         }
+        
+        // convert detail leafs to solid (in case we didn't make the call above)
+        DetailToSolid(nodes);
 
         ExportNodePlanes(nodes);
 
@@ -214,7 +225,6 @@ UpdateEntLump(void)
 {
     int modnum, i;
     char modname[10];
-    const char *classname;
     mapentity_t *entity;
 
     Message(msgStat, "Updating entities lump...");
@@ -224,17 +234,16 @@ UpdateEntLump(void)
         entity = &map.entities.at(i);
         if (!entity->nummapbrushes)
             continue;
-        classname = ValueForKey(entity, "classname");
-        if (!Q_strcasecmp(classname, "func_detail"))
+        
+        if (IsWorldBrushEntity(entity))
             continue;
-        if (!Q_strcasecmp(classname, "func_group"))
-            continue;
-
+        
         q_snprintf(modname, sizeof(modname), "*%d", modnum);
         SetKeyValue(entity, "model", modname);
         modnum++;
 
         /* Do extra work for rotating entities if necessary */
+        const char *classname = ValueForKey(entity, "classname");
         if (!strncmp(classname, "rotate_", 7))
             FixRotateOrigin(entity);
     }
@@ -837,7 +846,7 @@ ParseOptions(char *szOptions)
                 
                 options.fConvertMapFormat = true;
                 szTok = szTok2;
-            } else if (!strcasecmp(szTok, "forceprt1")) {
+            } else if (!Q_strcasecmp(szTok, "forceprt1")) {
                 options.fForcePRT1 = true;
                 logprint("WARNING: Forcing creation of PRT1.\n");
                 logprint("         Only use this for viewing portals in a map editor.\n");
