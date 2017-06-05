@@ -548,7 +548,7 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
     }
     
     const float planedist = GLM_DistAbovePlane(plane, point);
-    Q_assert(fabs(planedist - sampleOffPlaneDist) <= POINT_EQUAL_EPSILON);
+    Q_assert(fabs(planedist - sampleOffPlaneDist) <= 0.1);
     
     const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
     if (insideDist < -POINT_EQUAL_EPSILON) {
