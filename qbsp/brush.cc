@@ -1033,10 +1033,10 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     detail = false;
     if (!Q_strcasecmp(classname, "func_detail") && !options.fNodetail) {
         detail = true;
-        
-        if (atoi(ValueForKey(src, "_nosurfacefragment"))) {
-            cflags |= CFLAGS_DETAIL_NOSURFACEFRAGMENT;
-        }
+    }
+    if (!Q_strcasecmp(classname, "func_detail_wall") && !options.fNodetail) {
+        detail = true;
+        cflags |= CFLAGS_DETAIL_WALL;
     }
     
     detail_illusionary = false;

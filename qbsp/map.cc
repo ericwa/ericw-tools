@@ -1528,6 +1528,8 @@ IsWorldBrushEntity(const mapentity_t *entity)
         return true;
     if (!Q_strcasecmp(classname, "func_detail_illusionary"))
         return true;
+    if (!Q_strcasecmp(classname, "func_detail_wall"))
+        return true;
     return false;
 }
 
