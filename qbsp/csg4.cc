@@ -584,8 +584,10 @@ CSGFaces(const mapentity_t *entity)
             }
             
             if (clipbrush->contents == CONTENTS_DETAIL && (clipbrush->cflags & CFLAGS_DETAIL_NOSURFACEFRAGMENT)
-                && brush->contents != CONTENTS_DETAIL) {
-                /* CONTENTS_DETAIL never clips anything but itself, if CFLAGS_DETAIL_NOSURFACEFRAGMENT set */
+                && !(brush->contents == CONTENTS_DETAIL && (brush->cflags & CFLAGS_DETAIL_NOSURFACEFRAGMENT))) {
+                /* if clipbrush has CONTENTS_DETAIL and CFLAGS_DETAIL_NOSURFACEFRAGMENT are set,
+                   only clip other brushes with both CONTENTS_DETAIL and CFLAGS_DETAIL_NOSURFACEFRAGMENT.
+                 */
                 continue;
             }
 
