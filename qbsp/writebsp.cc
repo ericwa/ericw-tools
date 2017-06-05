@@ -24,6 +24,22 @@
 #include <qbsp/wad.hh>
 
 static void
+AssertVanillaContentType(int content)
+{
+    switch (content) {
+    case CONTENTS_EMPTY:
+    case CONTENTS_SOLID:
+    case CONTENTS_WATER:
+    case CONTENTS_SLIME:
+    case CONTENTS_LAVA:
+    case CONTENTS_SKY:
+        break;
+    default:
+        Error("Internal error: Tried to save compiler-internal contents type %s\n", GetContentsName(content));
+    }
+}
+
+static void
 ExportNodePlanes_r(node_t *node, int *planemap)
 {
     struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];
@@ -347,6 +363,7 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
     map.cTotal[LUMP_LEAFS]++;
 
     dleaf->contents = node->contents;
+    AssertVanillaContentType(dleaf->contents);
 
     /*
      * write bounding box info
@@ -396,7 +413,8 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
     map.cTotal[LUMP_LEAFS]++;
 
     dleaf->contents = node->contents;
-
+    AssertVanillaContentType(dleaf->contents);
+    
     /*
      * write bounding box info
      * (VectorCopy doesn't work double->float)
@@ -445,6 +463,7 @@ ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
     map.cTotal[LUMP_LEAFS]++;
 
     dleaf->contents = node->contents;
+    AssertVanillaContentType(dleaf->contents);
 
     /*
      * write bounding box info
