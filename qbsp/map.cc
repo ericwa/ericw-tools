@@ -289,7 +289,9 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         flags |= TEX_SPECIAL;
     if (atoi(ValueForKey(entity, "_dirt")) == -1)
         flags |= TEX_NODIRT;
-
+    if (atoi(ValueForKey(entity, "_shadow")) == -1)
+        flags |= TEX_NOSHADOW;
+    
     // handle "_phong" and "_phong_angle"
     vec_t phongangle = atof(ValueForKey(entity, "_phong_angle"));
     const int phong = atoi(ValueForKey(entity, "_phong"));

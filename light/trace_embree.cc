@@ -520,6 +520,12 @@ Embree_TraceInit(const bsp2_t *bsp)
         
         for (int i=0; i<model->model->numfaces; i++) {
             const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
+            
+            // check for TEX_NOSHADOW
+            const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
+            if (extended_flags & TEX_NOSHADOW)
+                continue;
+            
             const char *texname = Face_TextureName(bsp, face);
 
             if (model->alpha.floatValue() < 1.0f) {

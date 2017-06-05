@@ -222,6 +222,7 @@ typedef struct texinfo_s {
 #define TEX_MINLIGHT_COLOR_G_MASK       (255ULL << TEX_MINLIGHT_COLOR_G_SHIFT)    /* 8 bit value, green minlight color for this face. */
 #define TEX_MINLIGHT_COLOR_B_SHIFT      36
 #define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
+#define TEX_NOSHADOW  (1ULL << 44)   /* don't cast a shadow */
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for

@@ -230,7 +230,7 @@ Weight for bounce lighting to use texture colors from the map: 0=ignore map text
 
 .PP
 The following keys can be used on any entity with a brush model.
-"_minlight", "_mincolor", "_dirt", "_phong", and "_phong_angle" are supported on func_detail/func_group as well, if
+"_minlight", "_mincolor", "_dirt", "_phong", "_phong_angle", "_shadow" are supported on func_detail/func_group as well, if
 qbsp from these tools is used.
 
 .IP "\fB""_minlight"" ""n""\fP"
@@ -249,7 +249,7 @@ accepted). Default is white light
 If n is 1, this model will cast shadows on other models and itself
 (i.e. "_shadow" implies "_shadowself").  Note that this doesn't magically give
 Quake dynamic lighting powers, so the shadows will not move if the model
-moves. Default 0.
+moves. Set to -1 on func_detail/func_group to prevent them from casting shadows. Default 0.
 
 .IP "\fB""_shadowself"" ""n""\fP"
 If n is 1, this model will cast shadows on itself if one part of the model

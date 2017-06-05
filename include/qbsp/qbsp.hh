@@ -128,7 +128,7 @@
 #define TEX_MINLIGHT_COLOR_B_SHIFT      36
 #define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
 
-
+#define TEX_NOSHADOW  (1ULL << 44)   /* don't cast a shadow */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
