@@ -103,17 +103,6 @@ WriteContentsMaterial(FILE *mtlf, int contents, float r, float g, float b)
     fprintf(mtlf, "illum 0\n");
 }
 
-#define CONTENTS_EMPTY  -1
-#define CONTENTS_SOLID  -2
-#define CONTENTS_WATER  -3
-#define CONTENTS_SLIME  -4
-#define CONTENTS_LAVA   -5
-#define CONTENTS_SKY    -6
-#define CONTENTS_CLIP   -7      /* compiler internal use only */
-#define CONTENTS_HINT   -8      /* compiler internal use only */
-#define CONTENTS_ORIGIN -9      /* compiler internal use only */
-#define CONTENTS_DETAIL -10     /* compiler internal use only */
-
 void
 ExportObj(const surface_t *surfaces)
 {
