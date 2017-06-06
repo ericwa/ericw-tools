@@ -827,7 +827,11 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 ==================
 LinkNodeFaces
 
-Returns a duplicated list of all faces on surface
+First subdivides surface->faces.
+Then, duplicates the list of subdivided faces and returns it.
+
+For each surface->faces, ->original is set to the respective duplicate that 
+is returned here (why?)
 ==================
 */
 static face_t *
