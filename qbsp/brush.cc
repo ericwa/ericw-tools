@@ -1063,9 +1063,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         
         /* -omitdetail option */
-        if (options.fOmitDetail && detail)
+        if (options.fOmitDetail && detail && !(cflags & CFLAGS_DETAIL_WALL))
             continue;
-        if (options.fOmitDetail && detail_illusionary)
+        if (options.fOmitDetailWall && detail && (cflags & CFLAGS_DETAIL_WALL))
+            continue;
+        if (options.fOmitDetailIllusionary && detail_illusionary)
             continue;
         
         /* turn solid brushes into detail, if we're in hull0 */

@@ -652,7 +652,9 @@ PrintOptions(void)
            "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
            "   -forceprt1      Create a PRT1 file for loading in editors, even if PRT2 is required to run vis.\n"
            "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
-           "   -omitdetail     Detail brushes are omitted from the compile\n"
+           "   -omitdetail     func_detail brushes are omitted from the compile\n"
+           "   -omitdetailwall          func_detail_wall brushes are omitted from the compile\n"
+           "   -omitdetailillusionary   func_detail_illusionary brushes are omitted from the compile\n"
            "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
@@ -835,6 +837,10 @@ ParseOptions(char *szOptions)
                 options.fObjExport = true;
             } else if (!Q_strcasecmp(szTok, "omitdetail")) {
                 options.fOmitDetail = true;
+            } else if (!Q_strcasecmp(szTok, "omitdetailwall")) {
+                options.fOmitDetailWall = true;
+            } else if (!Q_strcasecmp(szTok, "omitdetailillusionary")) {
+                options.fOmitDetailIllusionary = true;
             } else if (!Q_strcasecmp(szTok, "convert")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
