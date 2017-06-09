@@ -540,6 +540,13 @@ ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
             ExportDrawNodes_BSP29(entity, node->children[i]);
         }
     }
+
+    // DarkPlaces asserts that the leaf numbers are different
+    // if mod_bsp_portalize is 1 (default)
+    // The most likely way it could fail is if both sides are the
+    // shared CONTENTS_SOLID leaf (-1)
+    Q_assert(!(dnode->children[0] == -1 && dnode->children[1] == -1));
+	Q_assert(dnode->children[0] != dnode->children[1]);
 }
 
 static void
@@ -579,6 +586,9 @@ ExportDrawNodes_BSP2(mapentity_t *entity, node_t *node)
             ExportDrawNodes_BSP2(entity, node->children[i]);
         }
     }
+    
+    Q_assert(!(dnode->children[0] == -1 && dnode->children[1] == -1));
+    Q_assert(dnode->children[0] != dnode->children[1]);
 }
 
 static void
@@ -618,6 +628,9 @@ ExportDrawNodes_BSP2rmq(mapentity_t *entity, node_t *node)
             ExportDrawNodes_BSP2rmq(entity, node->children[i]);
         }
     }
+    
+    Q_assert(!(dnode->children[0] == -1 && dnode->children[1] == -1));
+    Q_assert(dnode->children[0] != dnode->children[1]);
 }
 
 /*

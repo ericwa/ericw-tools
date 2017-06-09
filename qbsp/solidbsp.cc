@@ -33,6 +33,28 @@ static bool usemidsplit;
 //============================================================================
 
 void
+ConvertNodeToLeaf(node_t *node, int contents)
+{
+    // backup the mins/maxs
+    vec3_t mins, maxs;
+    VectorCopy(node->mins, mins);
+    VectorCopy(node->maxs, maxs);
+
+    // zero it
+    memset(node, 0, sizeof(*node));
+    
+    // restore relevant fields
+    VectorCopy(mins, node->mins);
+    VectorCopy(maxs, node->maxs);
+    
+    node->planenum = PLANENUM_LEAF;
+    node->contents = contents;
+    node->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
+
+    Q_assert(node->markfaces[0] == nullptr);
+}
+
+void
 DetailToSolid(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
@@ -46,6 +68,15 @@ DetailToSolid(node_t *node)
     } else {
         DetailToSolid(node->children[0]);
         DetailToSolid(node->children[1]);
+
+		// If both children are solid, we can merge the two leafs into one.
+        // DarkPlaces has an assertion that fails if both children are
+        // solid.
+		if (node->children[0]->contents == CONTENTS_SOLID
+			&& node->children[1]->contents == CONTENTS_SOLID) {
+            // This discards any faces on-node. Should be safe (?)
+            ConvertNodeToLeaf(node, CONTENTS_SOLID);
+		}
     }
 }
 
