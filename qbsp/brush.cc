@@ -944,6 +944,11 @@ Entity_SortBrushes(mapentity_t *dst)
         *nextLink = dst->liquid;
         nextLink = &last->next;
     }
+    if (dst->detail_fence) {
+        brush_t *last = Brush_ListTail(dst->detail_fence);
+        *nextLink = dst->detail_fence;
+        nextLink = &last->next;
+    }
     if (dst->detail) {
         brush_t *last = Brush_ListTail(dst->detail);
         *nextLink = dst->detail;
@@ -977,12 +982,13 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     vec3_t rotate_offset;
     int i, contents, cflags = 0;
     int lmshift;
-    bool detail, detail_illusionary;
+    bool detail, detail_fence, detail_illusionary;
 
     /*
      * The brush list needs to be ordered (lowest to highest priority):
      * - detail_illusionary (which is saved as empty)
      * - liquid
+     * - detail_fence
      * - detail (which is solid)
      * - sky
      * - solid
@@ -1039,6 +1045,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         cflags |= CFLAGS_DETAIL_WALL;
     }
     
+    detail_fence = false;
+    if (!Q_strcasecmp(classname, "func_detail_fence") && !options.fNodetail) {
+        detail_fence = true;
+    }
+    
     detail_illusionary = false;
     if (!Q_strcasecmp(classname, "func_detail_illusionary") && !options.fNodetail) {
         detail_illusionary = true;
@@ -1069,6 +1080,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         if (options.fOmitDetailIllusionary && detail_illusionary)
             continue;
+        if (options.fOmitDetailFence && detail_fence)
+            continue;
         
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum == 0 && contents == CONTENTS_SOLID) {
@@ -1076,6 +1089,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 contents = CONTENTS_DETAIL;
             } else if (detail_illusionary) {
                 contents = CONTENTS_DETAIL_ILLUSIONARY;
+            } else if (detail_fence) {
+                contents = CONTENTS_DETAIL_FENCE;
             }
         }
         
@@ -1143,6 +1158,9 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         } else if (brush->contents == CONTENTS_DETAIL_ILLUSIONARY) {
             brush->next = dst->detail_illusionary;
             dst->detail_illusionary = brush;
+        } else if (brush->contents == CONTENTS_DETAIL_FENCE) {
+            brush->next = dst->detail_fence;
+            dst->detail_fence = brush;
         } else {
             brush->next = dst->liquid;
             dst->liquid = brush;

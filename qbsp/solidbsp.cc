@@ -27,7 +27,7 @@ int splitnodes;
 
 static int leaffaces;
 static int nodefaces;
-static int c_solid, c_empty, c_water, c_detail, c_detail_illusionary;
+static int c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_fence;
 static bool usemidsplit;
 
 //============================================================================
@@ -64,6 +64,9 @@ DetailToSolid(node_t *node)
         } else if (node->contents == CONTENTS_DETAIL_ILLUSIONARY) {
             node->contents = CONTENTS_EMPTY;
         }
+        /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
+         * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
+         */
         return;
     } else {
         DetailToSolid(node->children[0]);
@@ -559,6 +562,10 @@ CalcSurfaceInfo(surface_t *surf)
             || (f->contents[1] == CONTENTS_DETAIL_ILLUSIONARY))
             faceIsDetail = true;
         
+        if ((f->contents[0] == CONTENTS_DETAIL_FENCE)
+            || (f->contents[1] == CONTENTS_DETAIL_FENCE))
+            faceIsDetail = true;
+        
         if ((f->cflags[0] & CFLAGS_WAS_ILLUSIONARY)
             || (f->cflags[1] & CFLAGS_WAS_ILLUSIONARY))
             faceIsDetail = true;
@@ -732,10 +739,13 @@ GetContentsName( int Contents ) {
         
         case CONTENTS_DETAIL:
             return "Detail";
-        
+            
         case CONTENTS_DETAIL_ILLUSIONARY:
             return "DetailIllusionary";
-            
+
+        case CONTENTS_DETAIL_FENCE:
+            return "DetailFence";
+
         default:
             return "Error";
     }
@@ -744,12 +754,14 @@ GetContentsName( int Contents ) {
 static int Contents_Priority(int contents)
 {
     switch (contents) {
-        case CONTENTS_SOLID:  return 6;
+        case CONTENTS_SOLID:  return 7;
             
-        case CONTENTS_SKY:    return 5;
+        case CONTENTS_SKY:    return 6;
             
-        case CONTENTS_DETAIL: return 4;
-        
+        case CONTENTS_DETAIL: return 5;
+    
+        case CONTENTS_DETAIL_FENCE: return 4;
+            
         case CONTENTS_DETAIL_ILLUSIONARY: return 3;
             
         case CONTENTS_WATER:  return 2;
@@ -830,6 +842,9 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
         break;
     case CONTENTS_DETAIL_ILLUSIONARY:
         c_detail_illusionary++;
+        break;
+    case CONTENTS_DETAIL_FENCE:
+        c_detail_fence++;
         break;
     default:
         Error("Bad contents in face (%s)", __func__);
@@ -1015,6 +1030,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     c_water = 0;
     c_detail = 0;
     c_detail_illusionary = 0;
+    c_detail_fence = 0;
 
     PartitionSurfaces(surfhead, headnode);
 
@@ -1024,6 +1040,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     Message(msgStat, "%8d water leafs", c_water);
     Message(msgStat, "%8d detail leafs", c_detail);
     Message(msgStat, "%8d detail illusionary leafs", c_detail_illusionary);
+    Message(msgStat, "%8d detail fence leafs", c_detail_fence);
     Message(msgStat, "%8d leaffaces", leaffaces);
     Message(msgStat, "%8d nodefaces", nodefaces);
 

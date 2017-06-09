@@ -39,6 +39,21 @@ AssertVanillaContentType(int content)
     }
 }
 
+static int
+RemapContentsForExport(int content)
+{
+    if (content == CONTENTS_DETAIL_FENCE) {
+        /*
+         * This is for func_detail_wall.. we want to write a solid leaf that has faces,
+         * because it may be possible to see inside (fence textures).
+         *
+         * Normally solid leafs are not written and just referenced as leaf 0.
+         */
+        return CONTENTS_SOLID;
+    }
+    return content;
+}
+
 static void
 ExportNodePlanes_r(node_t *node, int *planemap)
 {
@@ -362,7 +377,7 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
     leaves->index++;
     map.cTotal[LUMP_LEAFS]++;
 
-    dleaf->contents = node->contents;
+    dleaf->contents = RemapContentsForExport(node->contents);
     AssertVanillaContentType(dleaf->contents);
 
     /*
@@ -412,7 +427,7 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
     leaves->index++;
     map.cTotal[LUMP_LEAFS]++;
 
-    dleaf->contents = node->contents;
+    dleaf->contents = RemapContentsForExport(node->contents);
     AssertVanillaContentType(dleaf->contents);
     
     /*
@@ -462,7 +477,7 @@ ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
     leaves->index++;
     map.cTotal[LUMP_LEAFS]++;
 
-    dleaf->contents = node->contents;
+    dleaf->contents = RemapContentsForExport(node->contents);
     AssertVanillaContentType(dleaf->contents);
 
     /*

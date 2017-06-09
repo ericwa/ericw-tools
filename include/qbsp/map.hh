@@ -63,7 +63,7 @@ typedef struct mapentity_s {
     int nummapbrushes;
     
     // Temporary lists used to build `brushes` in the correct order.
-    brush_t *solid, *sky, *detail, *detail_illusionary, *liquid;
+    brush_t *solid, *sky, *detail, *detail_illusionary, *detail_fence, *liquid;
     
     epair_t *epairs;
     vec3_t mins, maxs;

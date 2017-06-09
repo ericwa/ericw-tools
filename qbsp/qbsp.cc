@@ -76,6 +76,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     entity->sky = NULL;
     entity->detail = NULL;
     entity->detail_illusionary = NULL;
+    entity->detail_fence = NULL;
     entity->liquid = NULL;
     entity->numbrushes = 0;
     for (i = 0; i < 3; i++) {
@@ -113,6 +114,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         int detail_all_count = Brush_ListCount(entity->detail); /* including CFLAGS_DETAIL_WALL */
         int detail_wall_count = Brush_ListCountWithCFlags(entity->detail, CFLAGS_DETAIL_WALL);
         int detail_illusionarycount = Brush_ListCount(entity->detail_illusionary);
+        int detail_fence_count = Brush_ListCount(entity->detail_fence);
         int liquidcount = Brush_ListCount(entity->liquid);
     
         int nondetailcount = (solidcount + skycount + liquidcount);
@@ -124,6 +126,9 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         }
         if (detail_wall_count > 0) {
             Message(msgStat, "%8d detail wall", detail_wall_count);
+        }
+        if (detail_fence_count > 0) {
+            Message(msgStat, "%8d detail fence", detail_fence_count);
         }
         if (detail_illusionarycount > 0) {
             Message(msgStat, "%8d detail illusionary", detail_illusionarycount);
@@ -655,6 +660,7 @@ PrintOptions(void)
            "   -omitdetail     func_detail brushes are omitted from the compile\n"
            "   -omitdetailwall          func_detail_wall brushes are omitted from the compile\n"
            "   -omitdetailillusionary   func_detail_illusionary brushes are omitted from the compile\n"
+           "   -omitdetailfence         func_detail_fence brushes are omitted from the compile\n"
            "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
@@ -841,6 +847,8 @@ ParseOptions(char *szOptions)
                 options.fOmitDetailWall = true;
             } else if (!Q_strcasecmp(szTok, "omitdetailillusionary")) {
                 options.fOmitDetailIllusionary = true;
+            } else if (!Q_strcasecmp(szTok, "omitdetailfence")) {
+                options.fOmitDetailFence = true;
             } else if (!Q_strcasecmp(szTok, "convert")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)

@@ -351,6 +351,7 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
             // want the face. So just set the texinfo to "skip" so it gets deleted.
             if (face->contents[1] == CONTENTS_DETAIL
                 || face->contents[1] == CONTENTS_DETAIL_ILLUSIONARY
+                || face->contents[1] == CONTENTS_DETAIL_FENCE
                 || (face->cflags[1] & CFLAGS_WAS_ILLUSIONARY)) {
                 newface->texinfo = MakeSkipTexinfo();
             }
@@ -590,6 +591,12 @@ CSGFaces(const mapentity_t *entity)
                  */
                 continue;
             }
+            
+            if (clipbrush->contents == CONTENTS_DETAIL_FENCE
+                && brush->contents != CONTENTS_DETAIL_FENCE) {
+                /* CONTENTS_DETAIL_FENCE never clips anything but itself */
+                continue;
+            }
 
             /* check bounding box first */
             for (i = 0; i < 3; i++) {
@@ -631,7 +638,8 @@ CSGFaces(const mapentity_t *entity)
                                                            && clipbrush->contents != CONTENTS_SKY
                                                            && clipbrush->contents != CONTENTS_DETAIL))
                 || (IsLiquid(brush->contents)          && clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY)
-                || (brush->contents == CONTENTS_DETAIL_ILLUSIONARY && IsLiquid(clipbrush->contents)))
+                || (brush->contents == CONTENTS_DETAIL_ILLUSIONARY && IsLiquid(clipbrush->contents))
+                || (brush->contents == CONTENTS_DETAIL_FENCE && IsLiquid(clipbrush->contents)))
             {
                 SaveInsideFaces(inside, clipbrush, &outside);
             } else {

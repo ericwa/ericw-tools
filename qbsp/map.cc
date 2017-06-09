@@ -1530,6 +1530,8 @@ IsWorldBrushEntity(const mapentity_t *entity)
         return true;
     if (!Q_strcasecmp(classname, "func_detail_wall"))
         return true;
+    if (!Q_strcasecmp(classname, "func_detail_fence"))
+        return true;
     return false;
 }
 

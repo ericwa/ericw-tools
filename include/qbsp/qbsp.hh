@@ -109,6 +109,7 @@
 #define CONTENTS_ORIGIN -9      /* compiler internal use only */
 #define CONTENTS_DETAIL -10     /* compiler internal use only */
 #define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
+#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
 
 // Special contents flags for the compiler only
 #define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
@@ -349,6 +350,7 @@ typedef struct options_s {
     bool fOmitDetail;
     bool fOmitDetailWall;
     bool fOmitDetailIllusionary;
+    bool fOmitDetailFence;
     bool fForcePRT1;
 } options_t;
 
