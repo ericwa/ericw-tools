@@ -133,6 +133,8 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         if (detail_illusionarycount > 0) {
             Message(msgStat, "%8d detail illusionary", detail_illusionarycount);
         }
+        
+        Message(msgStat, "%8d planes", map.numplanes());
     }
     
     Entity_SortBrushes(entity);
