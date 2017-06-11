@@ -17,11 +17,11 @@ build_script:
     cd cmakebuild
 
     If ($env:Platform -Match "x64") {
-      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.x64.windows" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
+      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.x64.windows" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
 
       $cmakePlatform = "x64"
     } Else {
-      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.win32.windows" -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013\lib\cmake\Qt5Widgets"
+      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.win32.windows" -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013\lib\cmake\Qt5Widgets"
 
       $cmakePlatform = "win32"
     }
