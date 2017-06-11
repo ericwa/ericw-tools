@@ -1,6 +1,29 @@
-2017-03-27 TyrUtils-ericw 0.15.10-beta2
+2017-06-10 TyrUtils-ericw 0.15.10-beta2
 
 - light: styled lights no longer bounce by default, set "_bouncestyled" "1" to enable.
+- qbsp: map format conversion: fix reversing of epairs in converted maps
+- qbsp: func_detail rewrite to fix vis issues with previous version.
+        func_detail no longer seals maps.
+- qbsp: add -omitdetail to omit all func_detail entities from the compile
+- qbsp: new func_detail_illusionary entity. func_detail variant with no collision
+        (players / monsters / gunfire) and doesn't split world faces.
+        Doesn't cast shadows unless enabled with "_shadow" "1".
+        Useful for hanging vines. Still creates BSP leafs. (Possible
+        enhancement: avoid creating new leafs and just insert marksurfaces into
+        existing leafs?)
+- qbsp: new func_detail_wall entity. func_detail variant that doesn't split
+        world faces. Useful for when you want a decoration touching a floor or wall
+        to not split the floor/wall faces (you'll get some overdraw instead.)
+        If it completely covers up a world face, that face will get clipped away, so
+        it's not suitable for fence textures; see func_detail_fence instead.
+- qbsp: new func_detail_fence entity. Similar to func_detail_wall except 
+        it's suitable for fence textures, never clips away world faces.
+        Useful for fences, grates, etc., that are solid and block gunfire.
+- qbsp: add -forceprt1 option to generate a .prt file that GTKRadiant's prtview
+        plugin can load (but will be unusable by vis). 
+        When func_detail is in use you normally get a PRT2 file that ptrview
+        can't load.
+- qbsp, light: allow _shadow -1 to stop a func_detail from casting shadows
 
 2017-03-26 TyrUtils-ericw 0.15.10-beta1
 
