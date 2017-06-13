@@ -28,6 +28,9 @@
 #include <common/bsputils.hh>
 #include <common/mathlib.hh>
 
+#include <map>
+#include <list>
+
 /* FIXME - share header with qbsp, etc. */
 typedef struct {
     char identification[4];     // should be WAD2
@@ -155,6 +158,73 @@ CheckBSPFacesPlanar(const bsp2_t *bsp)
     }
 }
 
+static int
+Node_Height(const bsp2_t *bsp, const bsp2_dnode_t *node, std::map<const bsp2_dnode_t *, int> *cache)
+{
+    // leafs have a height of 0
+    int child_heights[2] = {0, 0};
+    
+    for (int i=0; i<2; i++) {
+        const int child = node->children[i];
+        if (child >= 0) {
+            child_heights[i] = Node_Height(bsp, &bsp->dnodes[child], cache);
+        }
+    }
+
+    const int height = qmax(child_heights[0], child_heights[1]) + 1;
+    if (cache)
+        (*cache)[node] = height;
+    return height;
+}
+
+static void PrintNodeHeights(const bsp2_t *bsp)
+{
+    // get all the heights in one go.
+    const bsp2_dnode_t *headnode = &bsp->dnodes[bsp->dmodels[0].headnode[0]];
+    std::map<const bsp2_dnode_t *, int> cache;
+    Node_Height(bsp, headnode, &cache);
+    
+    const int maxlevel = 3;
+    
+    using level_t = int;
+    using visit_t = std::pair<const bsp2_dnode_t *, level_t>;
+    
+    int current_level = -1;
+    
+    std::list<visit_t> tovisit { std::make_pair(headnode, 0) };
+    while (!tovisit.empty())
+    {
+        const auto n = tovisit.front();
+        tovisit.pop_front();
+        
+        const bsp2_dnode_t *node = n.first;
+        const int level = n.second;
+        
+        Q_assert(level <= maxlevel);
+        
+        // handle this node
+        if (level != current_level)
+        {
+            current_level = level;
+            printf("\nNode heights at level %d: ", level);
+        }
+    
+        // print the level of this node
+        printf("%d, ", cache.at(node));
+        
+        // add child nodes to the bfs
+        if (level < maxlevel) {
+            for (int i=0; i<2; i++) {
+                const int child = node->children[i];
+                if (child >= 0) {
+                    tovisit.push_back(std::make_pair(&bsp->dnodes[child], level + 1));
+                }
+            }
+        }
+    }
+    printf("\n");
+}
+
 static void
 CheckBSPFile(const bsp2_t *bsp)
 {
@@ -263,6 +333,9 @@ CheckBSPFile(const bsp2_t *bsp)
     }
 
     /* TODO: finish range checks, add "unreferenced" checks... */
+    
+    /* tree balance */
+    PrintNodeHeights(bsp);
 }
 
 int
