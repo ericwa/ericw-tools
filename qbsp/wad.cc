@@ -96,6 +96,29 @@ WAD_LoadInfo(wad_t *wad)
     return true;
 }
 
+wad_t *WADList_AddWad(const char *fpath, wad_t *current_wadlist)
+{
+    wad_t wad = {0};
+    
+    wad.file = fopen(fpath, "rb");
+    if (wad.file) {
+        if (options.fVerbose)
+            Message(msgLiteral, "Opened WAD: %s\n", fpath);
+        if (WAD_LoadInfo(&wad)) {
+            wad_t *newwad = (wad_t *)AllocMem(OTHER, sizeof(wad), true);
+            memcpy(newwad, &wad, sizeof(wad));
+            newwad->next = current_wadlist;
+            
+            // FIXME: leaves file open?
+            
+            return newwad;
+        } else {
+            Message(msgWarning, warnNotWad, fpath);
+            fclose(wad.file);
+        }
+    }
+    return current_wadlist;
+}
 
 wad_t *
 WADList_Init(const char *wadstring)
@@ -126,20 +149,9 @@ WADList_Init(const char *wadstring)
             fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
             q_snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
         }
-        wad.file = fopen(fpath, "rb");
-        if (wad.file) {
-            if (options.fVerbose)
-                Message(msgLiteral, "Opened WAD: %s\n", fpath);
-            if (WAD_LoadInfo(&wad)) {
-                newwad = (wad_t *)AllocMem(OTHER, sizeof(wad), true);
-                memcpy(newwad, &wad, sizeof(wad));
-                newwad->next = wadlist;
-                wadlist = newwad;
-            } else {
-                Message(msgWarning, warnNotWad, fpath);
-                fclose(wad.file);
-            }
-        }
+        
+        wadlist = WADList_AddWad(fpath, wadlist);
+
         FreeMem(fpath, OTHER, strlen(fpath) + 1);
         pos++;
     }

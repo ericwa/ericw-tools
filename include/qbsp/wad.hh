@@ -65,6 +65,7 @@ typedef struct wad_s {
     struct wad_s *next;
 } wad_t;
 
+wad_t *WADList_AddWad(const char *fpath, wad_t *current_wadlist);
 wad_t *WADList_Init(const char *wadstring);
 void WADList_Process(const wad_t *wadlist);
 void WADList_Free(wad_t *wadlist);
