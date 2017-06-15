@@ -36,6 +36,9 @@ typedef struct mapface_s {
     int linenum;
     
     bool set_planepts(const vec3_t *pts);
+    
+    std::array<qvec4f, 2> get_texvecs(void) const;
+    void set_texvecs(const std::array<qvec4f, 2> &vecs);
 } mapface_t;
 
 enum class brushformat_t {
@@ -117,8 +120,10 @@ extern mapdata_t map;
 extern mapentity_t *pWorldEnt();
 
 void EnsureTexturesLoaded();
+void ProcessExternalMapEntity(mapentity_t *entity);
 bool IsWorldBrushEntity(const mapentity_t *entity);
 void LoadMapFile(void);
+mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);
 
 int FindMiptex(const char *name);

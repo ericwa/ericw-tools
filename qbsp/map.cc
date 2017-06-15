@@ -1392,6 +1392,35 @@ bool mapface_t::set_planepts(const vec3_t *pts)
     return true;
 }
 
+std::array<qvec4f, 2> mapface_t::get_texvecs(void) const
+{
+    const mtexinfo_t &texinfo = map.mtexinfos.at(this->texinfo);
+    
+    qvec4f res[2];
+    for (int i=0; i<2; i++) {
+        for (int j=0; j<4; j++) {
+            res[i][j] = texinfo.vecs[i][j];
+        }
+    }
+    
+    return std::array<qvec4f, 2>{{ res[0], res[1] }};
+}
+
+void mapface_t::set_texvecs(const std::array<qvec4f, 2> &vecs)
+{
+    // start with a copy of the current texinfo structure
+    mtexinfo_t texInfoNew = map.mtexinfos.at(this->texinfo);
+    
+    // update vecs
+    for (int i=0; i<2; i++) {
+        for (int j=0; j<4; j++) {
+            texInfoNew.vecs[i][j] = vecs.at(i)[j];
+        }
+    }
+    
+    this->texinfo = FindTexinfo( &texInfoNew, texInfoNew.flags );
+}
+
 static std::unique_ptr<mapface_t>
 ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *entity)
 {
@@ -1530,6 +1559,100 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     return true;
 }
 
+static void RotateMapFace(mapface_t *face, double angle)
+{
+    qmat3x3d rotation = RotateAboutZ(DEG2RAD(angle));
+    
+    vec3_t new_planepts[3];
+    for (int i=0; i<3; i++) {
+        qvec3d oldpt = qvec3d_from_vec3(face->planepts[i]);
+        qvec3d newpt = rotation * oldpt;
+        
+        glm_to_vec3_t(newpt, new_planepts[i]);
+    }
+    
+    face->set_planepts(new_planepts);
+    
+    // update texinfo
+    
+    const std::array<qvec4f, 2> texvecs = face->get_texvecs();
+    std::array<qvec4f, 2> newtexvecs;
+    
+    for (int i=0; i<2; i++) {
+        const qvec4f in = texvecs.at(i);
+        const qvec3f in_first3(in);
+        
+        const qvec3f out_first3 = rotation * in_first3;
+        const qvec4f out(out_first3[0], out_first3[1], out_first3[2], in[3]);
+        newtexvecs.at(i) = out;
+    }
+    
+    face->set_texvecs(newtexvecs);
+}
+
+static void TranslateMapFace(mapface_t *face, const vec3_t offset)
+{
+    vec3_t new_planepts[3];
+    for (int i=0; i<3; i++) {
+        VectorAdd(face->planepts[i], offset, new_planepts[i]);
+    }
+    
+    face->set_planepts(new_planepts);
+    
+    // update texinfo
+    
+    const std::array<qvec4f, 2> texvecs = face->get_texvecs();
+    std::array<qvec4f, 2> newtexvecs;
+    
+    for (int i=0; i<2; i++) {
+        qvec4f out = texvecs.at(i);
+        out[3] += qv::dot(qvec3f(out), vec3_t_to_glm(offset) * -1.0f);
+        newtexvecs.at(i) = out;
+    }
+    
+    face->set_texvecs(newtexvecs);
+}
+
+void
+ProcessExternalMapEntity(mapentity_t *entity)
+{
+    const char *classname = ValueForKey(entity, "classname");
+    if (Q_strcasecmp(classname, "misc_external_map"))
+        return;
+    
+    const char *file = ValueForKey(entity, "_external_map");
+    const char *new_classname = ValueForKey(entity, "_external_map_classname");
+    
+    Q_assert(file && file[0]);
+    Q_assert(new_classname && new_classname[0]);
+    
+    const mapentity_t external_worldspawn = LoadExternalMap(file);
+    
+    // copy the brushes into the target
+    entity->firstmapbrush = external_worldspawn.firstmapbrush;
+    entity->nummapbrushes = external_worldspawn.nummapbrushes;
+    
+    vec3_t origin;
+    GetVectorForKey(entity, "origin", origin);
+    
+    const vec_t angle = atof(ValueForKey(entity, "_external_map_angle"));
+    
+    for (int i=0; i<entity->nummapbrushes; i++) {
+        mapbrush_t *brush = const_cast<mapbrush_t *>(&entity->mapbrush(i));
+        
+        for (int j=0; j<brush->numfaces; j++) {
+            mapface_t *face = const_cast<mapface_t *>(&brush->face(j));
+            
+            RotateMapFace(face, angle);
+            TranslateMapFace(face, origin);
+        }
+    }
+    
+    SetKeyValue(entity, "classname", new_classname);
+    // FIXME: Should really just delete the origin key?
+    SetKeyValue(entity, "origin", "0 0 0");
+}
+
 /*
  * Special world entities are entities which have their brushes added to the
  * world before being removed from the map. Currently func_detail and
@@ -1540,6 +1663,12 @@ IsWorldBrushEntity(const mapentity_t *entity)
 {
     const char *classname = ValueForKey(entity, "classname");
 
+    /* 
+     These entities should have their classname remapped to the value of
+     _external_map_classname before ever calling IsWorldBrushEntity
+     */
+    Q_assert(Q_strcasecmp(classname, "misc_external_map"));
+    
     if (!Q_strcasecmp(classname, "func_detail"))
         return true;
     if (!Q_strcasecmp(classname, "func_group"))
@@ -1553,6 +1682,46 @@ IsWorldBrushEntity(const mapentity_t *entity)
     return false;
 }
 
+/**
+ * Loads an external .map file.
+ *
+ * The loaded brushes/planes/etc. will be stored in the global mapdata_t.
+ */
+mapentity_t LoadExternalMap(const char *filename)
+{
+    parser_t parser;
+    char *buf;
+    int length;
+    mapentity_t dest {};
+    
+    length = LoadFile(filename, &buf, true);
+    ParserInit(&parser, buf);
+    
+    // parse the worldspawn
+    if (!ParseEntity(&parser, &dest)) {
+        Error("LoadExternalMap: '%s': Couldn't parse worldspawn entity\n", filename);
+    }
+    const char *classname = ValueForKey(&dest, "classname");
+    if (Q_strcasecmp("worldspawn", classname)) {
+        Error("LoadExternalMap: '%s': Expected first entity to be worldspawn, got: '%s'\n", filename, classname);
+    }
+    
+    // parse the next entity, warn if there was one
+    mapentity_t dummy {};
+    if (ParseEntity(&parser, &dummy)) {
+        Message(msgStat, "LoadExternalMap: '%s': Ignoring entities after the worldspawn\n", filename);
+    }
+    
+    if (!dest.nummapbrushes) {
+        Error("Expected at least one brush for external map %s\n", filename);
+    }
+    
+    Message(msgStat, "LoadExternalMap: '%s': Loaded %d mapbrushes.\n", filename, dest.nummapbrushes);
+    
+    FreeMem(buf, OTHER, length + 1);
+    
+    return dest;
+}
 
 void
 LoadMapFile(void)

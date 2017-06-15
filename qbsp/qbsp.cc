@@ -42,11 +42,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     int i, numportals, firstface;
     surface_t *surfs;
     node_t *nodes;
-
+    
     /* No map brushes means non-bmodel entity */
     if (!entity->nummapbrushes)
         return;
-
+    
     /*
      * func_group and func_detail entities get their brushes added to the
      * worldspawn
@@ -100,7 +100,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
          * Entity_SortBrushes will sort the brushes 
          */
         for (i = 1; i < map.numentities(); i++) {
-            const mapentity_t *source = &map.entities.at(i);
+            mapentity_t *source = &map.entities.at(i);
+            
+            /* Load external .map and change the classname, if needed */
+            ProcessExternalMapEntity(source);
+            
             if (IsWorldBrushEntity(source)) {
                 Brush_LoadEntity(entity, source, hullnum);
             }
@@ -249,6 +253,9 @@ UpdateEntLump(void)
         entity = &map.entities.at(i);
         if (!entity->nummapbrushes)
             continue;
+        
+        /* Load external .map and change the classname, if needed */
+        ProcessExternalMapEntity(entity);
         
         if (IsWorldBrushEntity(entity))
             continue;
