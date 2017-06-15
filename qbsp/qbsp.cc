@@ -251,11 +251,26 @@ UpdateEntLump(void)
     modnum = 1;
     for (i = 1; i < map.numentities(); i++) {
         entity = &map.entities.at(i);
-        if (!entity->nummapbrushes)
-            continue;
         
-        /* Load external .map and change the classname, if needed */
-        ProcessExternalMapEntity(entity);
+        /* Special handling for misc_external_map.
+           Duplicates some logic from ProcessExternalMapEntity. */
+        qboolean is_misc_external_map = false;
+        if (!Q_strcasecmp(ValueForKey(entity, "classname"), "misc_external_map")) {
+            const char *new_classname = ValueForKey(entity, "_external_map_classname");
+            
+            SetKeyValue(entity, "classname", new_classname);
+            SetKeyValue(entity, "origin", "0 0 0");
+         
+            /* Note: the classname could have switched to 
+             * a IsWorldBrushEntity entity (func_group, func_detail),
+             * or a bmodel entity (func_wall 
+             */
+            is_misc_external_map = true;
+        }
+        
+        qboolean isBrushEnt = (entity->nummapbrushes > 0) || is_misc_external_map;
+        if (!isBrushEnt)
+            continue;
         
         if (IsWorldBrushEntity(entity))
             continue;

@@ -1616,6 +1616,8 @@ static void TranslateMapFace(mapface_t *face, const vec3_t offset)
 void
 ProcessExternalMapEntity(mapentity_t *entity)
 {
+    Q_assert(!options.fOnlyents);
+    
     const char *classname = ValueForKey(entity, "classname");
     if (Q_strcasecmp(classname, "misc_external_map"))
         return;
@@ -1625,6 +1627,8 @@ ProcessExternalMapEntity(mapentity_t *entity)
     
     Q_assert(file && file[0]);
     Q_assert(new_classname && new_classname[0]);
+    
+    Q_assert(0 == entity->nummapbrushes); // misc_external_map must be a point entity
     
     const mapentity_t external_worldspawn = LoadExternalMap(file);
     
