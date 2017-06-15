@@ -544,6 +544,8 @@ TEST(mathlib, FractionOfLine) {
     ASSERT_FLOAT_EQ(1, FractionOfLine(qvec3f(0,0,0), qvec3f(1,1,1), qvec3f(1,1,1)));
     ASSERT_FLOAT_EQ(2, FractionOfLine(qvec3f(0,0,0), qvec3f(1,1,1), qvec3f(2,2,2)));
     ASSERT_FLOAT_EQ(-1, FractionOfLine(qvec3f(0,0,0), qvec3f(1,1,1), qvec3f(-1,-1,-1)));
+    
+    ASSERT_FLOAT_EQ(0, FractionOfLine(qvec3f(0,0,0), qvec3f(0,0,0), qvec3f(0,0,0)));
 }
 
 TEST(mathlib, DistToLine) {
