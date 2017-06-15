@@ -762,9 +762,9 @@ float DistToLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f& p)
 qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f& p)
 {
     const float frac = FractionOfLine(v, w, p);
-    if (frac > 1)
+    if (frac >= 1)
         return w;
-    if (frac < 0)
+    if (frac <= 0)
         return v;
     
     return ClosestPointOnLine(v, w, p);
