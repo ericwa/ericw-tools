@@ -1369,30 +1369,48 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
     }
 }
 
+bool mapface_t::set_planepts(const vec3_t *pts)
+{
+    vec_t length;
+    vec3_t planevecs[2];
+    
+    for (int i=0; i<3; i++)
+        VectorCopy(pts[i], this->planepts[i]);
+    
+    /* calculate the normal/dist plane equation */
+    VectorSubtract(this->planepts[0], this->planepts[1], planevecs[0]);
+    VectorSubtract(this->planepts[2], this->planepts[1], planevecs[1]);
+    
+    CrossProduct(planevecs[0], planevecs[1], this->plane.normal);
+    length = VectorNormalize(this->plane.normal);
+    this->plane.dist = DotProduct(this->planepts[1], this->plane.normal);
+
+    if (length < NORMAL_EPSILON) {
+        return false;
+    }
+    
+    return true;
+}
+
 static std::unique_ptr<mapface_t>
 ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *entity)
 {
-    vec3_t planevecs[2];
-    vec_t length;
-    qbsp_plane_t *plane;
+    vec3_t planepts[3];
+    bool normal_ok;
+    const qbsp_plane_t *plane;
     mtexinfo_t tx;
     int i, j;
     std::unique_ptr<mapface_t> face { new mapface_t };
 
     face->linenum = parser->linenum;
-    ParsePlaneDef(parser, face->planepts);
+    ParsePlaneDef(parser, planepts);
 
-    /* calculate the normal/dist plane equation */
-    VectorSubtract(face->planepts[0], face->planepts[1], planevecs[0]);
-    VectorSubtract(face->planepts[2], face->planepts[1], planevecs[1]);
+    normal_ok = face->set_planepts(planepts);
     plane = &face->plane;
-    CrossProduct(planevecs[0], planevecs[1], plane->normal);
-    length = VectorNormalize(plane->normal);
-    plane->dist = DotProduct(face->planepts[1], plane->normal);
 
     ParseTextureDef(parser, *face, brush, &tx, face->planepts, plane);
 
-    if (length < NORMAL_EPSILON) {
+    if (!normal_ok) {
         Message(msgWarning, warnNoPlaneNormal, parser->linenum);
         return nullptr;
     }

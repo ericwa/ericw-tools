@@ -34,6 +34,8 @@ typedef struct mapface_s {
     std::string texname;
     int texinfo;
     int linenum;
+    
+    bool set_planepts(const vec3_t *pts);
 } mapface_t;
 
 enum class brushformat_t {
