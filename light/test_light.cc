@@ -159,6 +159,10 @@ TEST(mathlib, PointInPolygon_ColinearPointHandling) {
     checkBox(edges, poly);
 }
 
+TEST(mathlib, ClosestPointOnLineSegment_Degenerate) {
+    EXPECT_EQ(qvec3f(0,0,0), ClosestPointOnLineSegment(qvec3f(0,0,0), qvec3f(0,0,0), qvec3f(10,10,10)));
+}
+
 TEST(mathlib, ClosestPointOnPolyBoundary) {
     // clockwise
     const vector<qvec3f> poly {
