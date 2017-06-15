@@ -402,6 +402,10 @@ position_t CalcPointNormal(const bsp2_t *bsp, const bsp2_dface_t *face, const qv
     const auto &points = facecache.points();
     const auto &edgeplanes = facecache.edgePlanes();
     
+    // check for degenerate face
+    if (points.empty() || edgeplanes.empty())
+        return position_t(origPoint);
+    
     // project `point` onto the surface plane, then lift it off again
     const qvec3f point = GLM_ProjectPointOntoPlane(surfplane, origPoint) + (qvec3f(surfplane) * sampleOffPlaneDist);
     
@@ -551,7 +555,10 @@ PositionSamplePointOnFace(const bsp2_t *bsp,
     }
     
     const float planedist = GLM_DistAbovePlane(plane, point);
-    Q_assert(fabs(planedist - sampleOffPlaneDist) <= 0.1);
+    if (!(fabs(planedist - sampleOffPlaneDist) <= 0.1)) {
+        // something is wrong?
+        return position_t(point);
+    }
     
     const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
     if (insideDist < -POINT_EQUAL_EPSILON) {
