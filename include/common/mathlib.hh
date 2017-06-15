@@ -224,7 +224,7 @@ qvec3f vec_from_mangle(const qvec3f &m);
 qvec3f mangle_from_vec(const qvec3f &v);
 qmat3x3f RotateAboutX(float t);
 qmat3x3f RotateAboutY(float t);
-qmat3x3f RotateAboutZ(float t);
+qmat3x3d RotateAboutZ(double t);
 qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal);
 
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
@@ -265,11 +265,22 @@ static inline qvec3f vec3_t_to_glm(const vec3_t vec) {
     return qvec3f(vec[0], vec[1], vec[2]);
 }
 
+static inline qvec3d qvec3d_from_vec3(const vec3_t vec) {
+    return qvec3d(vec[0], vec[1], vec[2]);
+}
+
 static inline void glm_to_vec3_t(const qvec3f &glm, vec3_t out) {
     out[0] = glm[0];
     out[1] = glm[1];
     out[2] = glm[2];
 }
+
+static inline void glm_to_vec3_t(const qvec3d &glm, vec3_t out) {
+    out[0] = glm[0];
+    out[1] = glm[1];
+    out[2] = glm[2];
+}
+
 
 // Returns (0 0 0) if we couldn't determine the normal
 qvec3f GLM_FaceNormal(std::vector<qvec3f> points);

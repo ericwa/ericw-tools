@@ -138,7 +138,7 @@ qvec3f CosineWeightedHemisphereSample(float u1, float u2)
 qvec3f vec_from_mangle(const qvec3f &m)
 {
     const qvec3f mRadians = m * static_cast<float>(Q_PI / 180.0f);
-    const qmat3x3f rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
+    const qmat3x3f rotations = qmat3x3f(RotateAboutZ(mRadians[0])) * RotateAboutY(-mRadians[1]);
     const qvec3f v = rotations * qvec3f(1,0,0);
     return v;
 }
@@ -189,12 +189,12 @@ qmat3x3f RotateAboutY(float t)
     };
 }
 
-qmat3x3f RotateAboutZ(float t)
+qmat3x3d RotateAboutZ(double t)
 {
-    const float cost = cos(t);
-    const float sint = sin(t);
+    const double cost = cos(t);
+    const double sint = sin(t);
     
-    return qmat3x3f{
+    return qmat3x3d{
         cost, sint, 0, // col0
         -sint, cost, 0, // col1
         0, 0, 1 //col2
@@ -218,7 +218,7 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
     cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
     float radiansFromUp = acosf(cosangleFromUp);
     
-    const qmat3x3f rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
+    const qmat3x3f rotations = qmat3x3f(RotateAboutZ(theta)) * RotateAboutY(radiansFromUp);
     return rotations;
 }
 
