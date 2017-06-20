@@ -26,7 +26,6 @@ typedef struct plane {
     vec3_t normal;
     vec_t dist;
     int type;
-    struct plane *hash_chain;
 } qbsp_plane_t;
 
 typedef struct {
