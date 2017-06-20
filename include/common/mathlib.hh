@@ -59,6 +59,8 @@ extern const vec3_t vec3_origin;
 #define ZERO_TRI_AREA_EPSILON 0.05f
 #define POINT_EQUAL_EPSILON 0.05f
 
+#define NORMAL_EPSILON          0.000001
+
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon);
 
 static inline bool
@@ -225,6 +227,8 @@ ProjectPointOntoPlane(const plane_t *plane, vec3_t point)
     VectorScale(plane->normal, -dist, move);
     VectorAdd(point, move, point);
 }
+
+static bool SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist);
 
 /* Shortcut for output of warnings/errors */
 //FIXME: change from static buffers to returning std::string for thread safety

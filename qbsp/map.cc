@@ -1371,25 +1371,10 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
 
 bool mapface_t::set_planepts(const vec3_t *pts)
 {
-    vec_t length;
-    vec3_t planevecs[2];
-    
     for (int i=0; i<3; i++)
         VectorCopy(pts[i], this->planepts[i]);
     
-    /* calculate the normal/dist plane equation */
-    VectorSubtract(this->planepts[0], this->planepts[1], planevecs[0]);
-    VectorSubtract(this->planepts[2], this->planepts[1], planevecs[1]);
-    
-    CrossProduct(planevecs[0], planevecs[1], this->plane.normal);
-    length = VectorNormalize(this->plane.normal);
-    this->plane.dist = DotProduct(this->planepts[1], this->plane.normal);
-
-    if (length < NORMAL_EPSILON) {
-        return false;
-    }
-    
-    return true;
+    return SetPlanePts(pts, this->plane.normal, &this->plane.dist);
 }
 
 std::array<qvec4f, 2> mapface_t::get_texvecs(void) const

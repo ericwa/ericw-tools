@@ -142,7 +142,6 @@
  *   epsilons to be such that EQUAL_EPSILON < T_EPSILON < CONTINUOUS_EPSILON.
  *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
  */
-#define NORMAL_EPSILON          0.000001
 #define ANGLEEPSILON            0.000001
 #define DIST_EPSILON            0.0001
 #define ZERO_EPSILON            0.0001

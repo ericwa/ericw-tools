@@ -51,6 +51,26 @@ CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross)
     cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
 }
 
+static bool
+SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist)
+{
+    vec3_t planevecs[2];
+    
+    /* calculate the normal/dist plane equation */
+    VectorSubtract(planepts[0], planepts[1], planevecs[0]);
+    VectorSubtract(planepts[2], planepts[1], planevecs[1]);
+    
+    CrossProduct(planevecs[0], planevecs[1], normal);
+    vec_t length = VectorNormalize(normal);
+    *dist = DotProduct(planepts[1], normal);
+    
+    if (length < NORMAL_EPSILON) {
+        return false;
+    }
+    
+    return true;
+}
+
 /*
  * VecStr - handy shortcut for printf, not thread safe, obviously
  */
