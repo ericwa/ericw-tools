@@ -51,7 +51,7 @@ CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross)
     cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
 }
 
-static bool
+bool
 SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist)
 {
     vec3_t planevecs[2];

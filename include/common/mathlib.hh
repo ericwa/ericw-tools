@@ -228,7 +228,7 @@ ProjectPointOntoPlane(const vec3_t normal, const vec_t dist, vec3_t point)
     VectorAdd(point, move, point);
 }
 
-static bool SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist);
+bool SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist);
 
 /* Shortcut for output of warnings/errors */
 //FIXME: change from static buffers to returning std::string for thread safety
