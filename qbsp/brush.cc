@@ -185,7 +185,7 @@ NormalizePlane(qbsp_plane_t *p)
 }
 
 
-int
+bool
 PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 {
     return (fabs(p1->normal[0] - p2->normal[0]) < NORMAL_EPSILON &&
@@ -194,13 +194,13 @@ PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
             fabs(p1->dist - p2->dist) < DIST_EPSILON);
 }
 
-int
+bool
 PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 {
-    return (fabs(p1->normal[0] + p2->normal[0]) < NORMAL_EPSILON &&
-            fabs(p1->normal[1] + p2->normal[1]) < NORMAL_EPSILON &&
-            fabs(p1->normal[2] + p2->normal[2]) < NORMAL_EPSILON &&
-            fabs(p1->dist + p2->dist) < DIST_EPSILON);
+    qbsp_plane_t temp = {0};
+    VectorScale(p1->normal, -1.0, temp.normal);
+    temp.dist = -p1->dist;
+    return PlaneEqual(&temp, p2);
 }
 
 /* Plane Hashing */

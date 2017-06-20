@@ -42,7 +42,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const
 void FreeBrushes(brush_t *brushlist);
 
 int FindPlane(const qbsp_plane_t *plane, int *side);
-int PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
-int PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
+bool PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
+bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
 
 #endif
