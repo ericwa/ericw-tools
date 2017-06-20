@@ -214,17 +214,17 @@ GetDir(const vec3_t start, const vec3_t stop, vec3_t dir)
 }
 
 static inline vec_t
-DistanceAbovePlane(const plane_t *plane, const vec3_t point)
+DistanceAbovePlane(const vec3_t normal, const vec_t dist, const vec3_t point)
 {
-    return DotProduct(plane->normal, point) - plane->dist;
+    return DotProduct(normal, point) - dist;
 }
 
 static inline void
-ProjectPointOntoPlane(const plane_t *plane, vec3_t point)
+ProjectPointOntoPlane(const vec3_t normal, const vec_t dist, vec3_t point)
 {
-    vec_t dist = DistanceAbovePlane(plane, point);
+    vec_t distAbove = DistanceAbovePlane(normal, dist, point);
     vec3_t move;
-    VectorScale(plane->normal, -dist, move);
+    VectorScale(normal, -distAbove, move);
     VectorAdd(point, move, point);
 }
 
