@@ -210,7 +210,22 @@ GetDir(const vec3_t start, const vec3_t stop, vec3_t dir)
     VectorSubtract(stop, start, dir);
     return VectorNormalize(dir);
 }
-    
+
+static inline vec_t
+DistanceAbovePlane(const plane_t *plane, const vec3_t point)
+{
+    return DotProduct(plane->normal, point) - plane->dist;
+}
+
+static inline void
+ProjectPointOntoPlane(const plane_t *plane, vec3_t point)
+{
+    vec_t dist = DistanceAbovePlane(plane, point);
+    vec3_t move;
+    VectorScale(plane->normal, -dist, move);
+    VectorAdd(point, move, point);
+}
+
 /* Shortcut for output of warnings/errors */
 //FIXME: change from static buffers to returning std::string for thread safety
 const char *VecStr(const vec3_t vec);
