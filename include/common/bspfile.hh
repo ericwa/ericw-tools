@@ -157,6 +157,7 @@ typedef struct {
 #define CONTENTS_SLIME -4
 #define CONTENTS_LAVA  -5
 #define CONTENTS_SKY   -6
+#define CONTENTS_MIN   CONTENTS_SKY
 
 typedef struct {
     int32_t planenum;

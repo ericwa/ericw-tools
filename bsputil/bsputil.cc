@@ -231,6 +231,12 @@ CheckBSPFile(const bsp2_t *bsp)
 {
     int i;
 
+    // FIXME: Should do a better reachability check where we traverse the
+    // nodes/leafs to find reachable faces.
+    std::set<int32_t> referenced_texinfos;
+    std::set<int32_t> referenced_planenums;
+    std::set<uint32_t> referenced_vertexes;
+    
     /* faces */
     for (i = 0; i < bsp->numfaces; i++) {
         const bsp2_dface_t *face = BSP_GetFace(bsp, i);
@@ -242,7 +248,8 @@ CheckBSPFile(const bsp2_t *bsp)
         if (face->texinfo >= bsp->numtexinfo)
             printf("warning: face %d has texinfo out of range (%d >= %d)\n",
                    i, face->texinfo, bsp->numtexinfo);
-
+        referenced_texinfos.insert(face->texinfo);
+        
         /* planenum bounds check */
         if (face->planenum < 0)
             printf("warning: face %d has negative planenum (%d)\n",
@@ -250,6 +257,7 @@ CheckBSPFile(const bsp2_t *bsp)
         if (face->planenum >= bsp->numplanes)
             printf("warning: face %d has planenum out of range (%d >= %d)\n",
                    i, face->planenum, bsp->numplanes);
+        referenced_planenums.insert(face->planenum);
 
         /* lightofs check */
         if (face->lightofs < -1)
@@ -263,6 +271,9 @@ CheckBSPFile(const bsp2_t *bsp)
         if (face->firstedge < 0)
             printf("warning: face %d has negative firstedge (%d)\n",
                    i, face->firstedge);
+        if (face->numedges < 3)
+            printf("warning: face %d has < 3 edges (%d)\n",
+                   i, face->numedges);
         if (face->firstedge + face->numedges > bsp->numsurfedges)
             printf("warning: face %d has edges out of range (%d..%d >= %d)\n",
                    i, face->firstedge, face->firstedge + face->numedges - 1,
@@ -279,6 +290,7 @@ CheckBSPFile(const bsp2_t *bsp)
             if (vertex > bsp->numvertexes)
                 printf("warning: edge %d has vertex %d out range "
                        "(%d >= %d)\n", i, j, vertex, bsp->numvertexes);
+            referenced_vertexes.insert(vertex);
         }
     }
 
@@ -331,9 +343,72 @@ CheckBSPFile(const bsp2_t *bsp)
                 printf("warning: node %d has child %d (leaf) out of range "
                        "(%d >= %d)\n", i, j, -child - 1, bsp->numleafs);
         }
+        
+        if (node->children[0] == node->children[1]) {
+            printf("warning: node %d has both children %d\n", i, node->children[0]);
+        }
+        
+        referenced_planenums.insert(node->planenum);
+    }
+    
+    /* clipnodes */
+    for (i = 0; i < bsp->numclipnodes; i++) {
+        const bsp2_dclipnode_t *clipnode = &bsp->dclipnodes[i];
+        
+        for (int j = 0; j < 2; j++) {
+            const int32_t child = clipnode->children[j];
+            if (child >= 0 && child >= bsp->numclipnodes)
+                printf("warning: clipnode %d has child %d (clipnode) out of range "
+                       "(%d >= %d)\n", i, j, child, bsp->numclipnodes);
+            if (child < 0 && child < CONTENTS_MIN)
+                printf("warning: clipnode %d has invalid contents (%d) for child %d\n",
+                       i, child, j);
+        }
+        
+        if (clipnode->children[0] == clipnode->children[1]) {
+            printf("warning: clipnode %d has both children %d\n", i, clipnode->children[0]);
+        }
+        
+        referenced_planenums.insert(clipnode->planenum);
     }
 
     /* TODO: finish range checks, add "unreferenced" checks... */
+    
+    /* unreferenced texinfo */
+    {
+        int num_unreferenced_texinfo = 0;
+        for (i = 0; i < bsp->numtexinfo; i++) {
+            if (referenced_texinfos.find(i) == referenced_texinfos.end()) {
+                num_unreferenced_texinfo++;
+            }
+        }
+        if (num_unreferenced_texinfo)
+            printf("warning: %d texinfos are unreferenced\n", num_unreferenced_texinfo);
+    }
+    
+    /* unreferenced planes */
+    {
+        int num_unreferenced_planes = 0;
+        for (i = 0; i < bsp->numplanes; i++) {
+            if (referenced_planenums.find(i) == referenced_planenums.end()) {
+                num_unreferenced_planes++;
+            }
+        }
+        if (num_unreferenced_planes)
+            printf("warning: %d planes are unreferenced\n", num_unreferenced_planes);
+    }
+    
+    /* unreferenced vertices */
+    {
+        int num_unreferenced_vertexes = 0;
+        for (i = 0; i < bsp->numvertexes; i++) {
+            if (referenced_vertexes.find(i) == referenced_vertexes.end()) {
+                num_unreferenced_vertexes++;
+            }
+        }
+        if (num_unreferenced_vertexes)
+            printf("warning: %d vertexes are unreferenced\n", num_unreferenced_vertexes);
+    }
     
     /* tree balance */
     PrintNodeHeights(bsp);
