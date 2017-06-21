@@ -29,6 +29,7 @@
 #include <common/mathlib.hh>
 
 #include <map>
+#include <set>
 #include <list>
 
 /* FIXME - share header with qbsp, etc. */
@@ -336,6 +337,18 @@ CheckBSPFile(const bsp2_t *bsp)
     
     /* tree balance */
     PrintNodeHeights(bsp);
+    
+    /* unique visofs's */
+    std::set<int32_t> visofs_set;
+    for (i = 0; i < bsp->numleafs; i++) {
+        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
+        if (leaf->visofs >= 0) {
+            visofs_set.insert(leaf->visofs);
+        }
+    }
+    printf("%d unique visdata offsets for %d leafs\n",
+           static_cast<int>(visofs_set.size()), bsp->numleafs);
+    printf("%d visleafs in world model\n", bsp->dmodels[0].visleafs);
 }
 
 int
