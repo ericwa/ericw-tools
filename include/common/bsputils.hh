@@ -26,6 +26,7 @@
 
 #include <common/qvec.hh>
 
+const dmodel_t *BSP_GetWorldModel(const bsp2_t *bsp);
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f);
 const bsp2_dface_t *BSP_GetFace(const bsp2_t *bsp, int fnum);
 bsp2_dface_t *BSP_GetFace(bsp2_t *bsp, int fnum);

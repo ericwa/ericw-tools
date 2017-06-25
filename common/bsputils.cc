@@ -23,6 +23,15 @@
 
 #include <common/qvec.hh>
 
+const dmodel_t *BSP_GetWorldModel(const bsp2_t *bsp)
+{
+    // We only support .bsp's that have a world model
+    if (bsp->nummodels < 1) {
+        Error("BSP has no models");
+    }
+    return &bsp->dmodels[0];
+}
+
 int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f)
 {
     Q_assert(f != nullptr);
