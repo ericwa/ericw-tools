@@ -114,10 +114,15 @@ Choose a raytracing backend, currently available: embree, bsp.
 .PP
 The following keys can be added to the \fIworldspawn\fP entity:
 
-.IP "\fB""light"" ""n""\fP"
+.IP "\fB""light"" ""n""\fP | \fB""_minlight"" ""n""\fP"
 Set a global minimum light level of "n" across the whole map.  This is an easy
 way to eliminate completely dark areas of the level, however you may lose some
 contrast as a result, so use with care. Default 0.
+
+.IP "\fB""_minlight_color"" ""r g b""\fP | \fB""_mincolor"" ""r g b""\fP"
+Specify red(r), green(g) and blue(b) components for the colour of the
+minlight. RGB component values are between 0 and 255 (between 0 and 1 is also
+accepted). Default is white light ("255 255 255").
 
 .IP "\fB""_dist"" ""n""\fP"
 Scales the fade distance of all lights by a factor of n.  If n > 1 lights fade

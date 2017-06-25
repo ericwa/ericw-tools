@@ -288,7 +288,7 @@ public:
         lightmapgamma {"gamma", 1.0, 0.0f, 100.0f},
 
         addminlight {"addmin", false},
-        minlight {"light", 0},
+        minlight {strings{"light", "minlight"}, 0},
         minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255},
 
         /* dirt */
