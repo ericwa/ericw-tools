@@ -31,6 +31,7 @@
 #include <map>
 #include <set>
 #include <list>
+#include <algorithm> // std::sort
 
 /* FIXME - share header with qbsp, etc. */
 typedef struct {
@@ -236,6 +237,7 @@ CheckBSPFile(const bsp2_t *bsp)
     std::set<int32_t> referenced_texinfos;
     std::set<int32_t> referenced_planenums;
     std::set<uint32_t> referenced_vertexes;
+    std::set<uint8_t> used_lightstyles;
     
     /* faces */
     for (i = 0; i < bsp->numfaces; i++) {
@@ -278,6 +280,10 @@ CheckBSPFile(const bsp2_t *bsp)
             printf("warning: face %d has edges out of range (%d..%d >= %d)\n",
                    i, face->firstedge, face->firstedge + face->numedges - 1,
                    bsp->numsurfedges);
+        
+        for (int j=0; j<4; j++) {
+            used_lightstyles.insert(face->styles[j]);
+        }
     }
 
     /* edges */
@@ -424,6 +430,20 @@ CheckBSPFile(const bsp2_t *bsp)
     printf("%d unique visdata offsets for %d leafs\n",
            static_cast<int>(visofs_set.size()), bsp->numleafs);
     printf("%d visleafs in world model\n", bsp->dmodels[0].visleafs);
+    
+    /* unique lightstyles */
+    printf("%d lightstyles used:\n", static_cast<int>(used_lightstyles.size()));
+    {
+        std::vector<int> v;
+        for (uint8_t style : used_lightstyles) {
+            v.push_back(static_cast<int>(style));
+        }
+        std::sort(v.begin(), v.end());
+        for (int style : v) {
+            printf("\t%d\n", style);
+        }
+    }
+    
 }
 
 int
