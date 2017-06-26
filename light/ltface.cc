@@ -1328,8 +1328,6 @@ LightFace_Entity(const bsp2_t *bsp,
     /*
      * Check it for real
      */
-    bool hit = false;
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, entity->style.intValue(), lightsurf);
     const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     
     raystream_t *rs = lightsurf->stream;
@@ -1362,6 +1360,8 @@ LightFace_Entity(const bsp2_t *bsp,
     rs->tracePushedRaysOcclusion();
     total_light_rays += rs->numPushedRays();
     
+    lightmap_t *lightmap_world = Lightmap_ForStyle(lightmaps, entity->style.intValue(), lightsurf);
+    
     const int N = rs->numPushedRays();
     for (int j = 0; j < N; j++) {
         if (rs->getPushedRayOccluded(j)) {
@@ -1371,6 +1371,19 @@ LightFace_Entity(const bsp2_t *bsp,
         total_light_ray_hits++;
         
         int i = rs->getPushedRayPointIndex(j);
+        
+        // check if we hit a dynamic shadow caster
+        lightmap_t *lightmap;
+        int style;
+        if (rs->getPushedRayDynamicStyle(j) != 0) {
+            style = rs->getPushedRayDynamicStyle(j);
+            lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
+        } else {
+            // regular case
+            style = entity->style.intValue();
+            lightmap = lightmap_world;
+        }
+        
         lightsample_t *sample = &lightmap->samples[i];
         
         vec3_t color, normalcontrib;
@@ -1380,11 +1393,8 @@ LightFace_Entity(const bsp2_t *bsp,
         VectorAdd(sample->color, color, sample->color);
         VectorAdd(sample->direction, normalcontrib, sample->direction);
         
-        hit = true;
+        Lightmap_Save(lightmaps, lightsurf, lightmap, style);
     }
-    
-    if (hit)
-        Lightmap_Save(lightmaps, lightsurf, lightmap, entity->style.intValue());
 }
 
 /*
@@ -1404,16 +1414,12 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
         return;
     }
-
-    /* if sunlight is set, use a style 0 light map */
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-
+    
     vec3_t incoming;
     VectorCopy(sun->sunvec, incoming);
     VectorNormalize(incoming);
     
     /* Check each point... */
-    bool hit = false;
     const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
 
     raystream_t *rs = lightsurf->stream;
@@ -1457,6 +1463,9 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     
     rs->tracePushedRaysIntersection();
     
+    /* if sunlight is set, use a style 0 light map */
+    lightmap_t *lightmap_world = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    
     const int N = rs->numPushedRays();
     for (int j = 0; j < N; j++) {
         if (rs->getPushedRayHitType(j) != hittype_t::SKY) {
@@ -1464,6 +1473,17 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         }
         
         const int i = rs->getPushedRayPointIndex(j);
+        
+        // check if we hit a dynamic shadow caster
+        lightmap_t *lightmap;
+        const int style = rs->getPushedRayDynamicStyle(j);
+        if (style != 0) {
+            lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
+        } else {
+            // regular case
+            lightmap = lightmap_world;
+        }
+        
         lightsample_t *sample = &lightmap->samples[i];
         
         vec3_t color, normalcontrib;
@@ -1473,11 +1493,8 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         VectorAdd(sample->color, color, sample->color);
         VectorAdd(sample->direction, normalcontrib, sample->direction);
         
-        hit = true;
+        Lightmap_Save(lightmaps, lightsurf, lightmap, style);
     }
-
-    if (hit)
-        Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
 /*

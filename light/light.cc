@@ -81,6 +81,7 @@ static byte *lux_file_end;      // end of space for luxfile data
 std::vector<modelinfo_t *> modelinfo;
 std::vector<const modelinfo_t *> tracelist;
 std::vector<const modelinfo_t *> selfshadowlist;
+std::vector<const modelinfo_t *> dynamicshadowlist;
 
 int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
@@ -274,6 +275,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     Q_assert(modelinfo.size() == 0);
     Q_assert(tracelist.size() == 0);
     Q_assert(selfshadowlist.size() == 0);
+    Q_assert(dynamicshadowlist.size() == 0);
     
     if (!bsp->nummodels) {
         Error("Corrupt .BSP: bsp->nummodels is 0!");
@@ -324,7 +326,12 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
         info->settings().setSettings(*entdict, false);
         
         /* Check if this model will cast shadows (shadow => shadowself) */
-        if (info->shadow.boolValue()) {
+        if (info->dynamicshadow.boolValue()) {
+            Q_assert(info->dynshadowstyle.intValue() != 0);
+            logprint("Found a bmodel using dynamic shadow lightstyle: %d\n", info->dynshadowstyle.intValue());
+            
+            dynamicshadowlist.push_back(info);
+        } else if (info->shadow.boolValue()) {
             tracelist.push_back(info);
         } else if (info->shadowself.boolValue()){
             selfshadowlist.push_back(info);

@@ -57,7 +57,7 @@ const char * light_t::classname() const {
  * ============================================================================
  */
 
-static std::map<std::string, int> lightstyleForTargetname;
+static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 
 static bool IsSwitchableLightstyle(int style) {
     return style >= LIGHT_TARGETS_START
@@ -85,16 +85,17 @@ std::string WorldValueForKey(const std::string &key)
 /**
  * Assigns a lightstyle number for the given non-empty targetname string
  * Reuses the existing lightstyle if this targetname was already assigned.
+ * 
+ * Pass an empty string to generate a new unique lightstyle.
  */
 static int
 LightStyleForTargetname(const std::string &targetname)
 {
-    Q_assert(targetname.size() > 0);
-    
     // check if already assigned
-    auto it = lightstyleForTargetname.find(targetname);
-    if (it != lightstyleForTargetname.end()) {
-        return it->second;
+    for (const auto &pr : lightstyleForTargetname) {
+        if (pr.first == targetname && targetname.size() > 0) {
+            return pr.second;
+        }
     }
     
     // check if full
@@ -104,7 +105,7 @@ LightStyleForTargetname(const std::string &targetname)
     
     // generate a new style number and return it
     const int newStylenum = LIGHT_TARGETS_START + lightstyleForTargetname.size();
-    lightstyleForTargetname[targetname] = newStylenum;
+    lightstyleForTargetname.push_back(std::make_pair(targetname, newStylenum));
     
     if (verbose_log) {
         logprint("%s: Allocated lightstyle %d for targetname '%s'\n", __func__, newStylenum, targetname.c_str());
@@ -1006,6 +1007,15 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
                 const int style = LightStyleForTargetname(targetname);
                 entdict["style"] = std::to_string(style);
             }
+        }
+        
+        // setup light styles for dynamic shadow entities
+        if (EntDict_StringForKey(entdict, "_dynamicshadow") == "1") {
+            std::string targetname = EntDict_StringForKey(entdict, "targetname");
+            // if targetname is "", generates a new unique lightstyle
+            const int style = LightStyleForTargetname(targetname);
+            // TODO: Configurable key?
+            entdict["dynshadowstyle"] = std::to_string(style);
         }
         
         // parse escape sequences

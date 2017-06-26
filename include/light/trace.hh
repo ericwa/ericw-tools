@@ -68,6 +68,7 @@ public:
     virtual int getPushedRayPointIndex(size_t j) = 0;
     virtual void getPushedRayColor(size_t j, vec3_t out) = 0;
     virtual void getPushedRayNormalContrib(size_t j, vec3_t out) = 0;
+    virtual int getPushedRayDynamicStyle(size_t j) = 0;
     virtual void clearPushedRays() = 0;
     virtual ~raystream_t() {};
     

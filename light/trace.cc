@@ -888,6 +888,10 @@ public:
         VectorCopy(_rays.at(j)._normalcontrib, out);
     }
     
+    virtual int getPushedRayDynamicStyle(size_t j) {
+        return 0; // not supported
+    }
+    
     virtual void clearPushedRays() {
         _rays.clear();
     }

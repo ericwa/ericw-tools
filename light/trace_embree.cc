@@ -159,7 +159,7 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
 RTCDevice device;
 RTCScene scene;
 /* global shadow casters */
-sceneinfo skygeom, solidgeom, fencegeom, selfshadowgeom;
+sceneinfo skygeom, solidgeom, fencegeom, selfshadowgeom, dynamicshadowgeom;
 
 static const bsp2_t *bsp_static;
 
@@ -179,6 +179,8 @@ Embree_SceneinfoForGeomID(unsigned int geomID)
         return fencegeom;
     } else if (geomID == selfshadowgeom.geomID) {
         return selfshadowgeom;
+    } else if (geomID == dynamicshadowgeom.geomID) {
+        return dynamicshadowgeom;
     } else {
         Error("unexpected geomID");
     }
@@ -223,6 +225,8 @@ enum class filtertype_t {
 
 void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity, const vec3_t glasscolor);
 
+void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayIndex, int style);
+
 // called to evaluate transparency
 template<filtertype_t filtertype>
 static void
@@ -257,6 +261,17 @@ Embree_FilterFuncN(int* valid,
                 valid[i] = INVALID;
                 continue;
             }
+        } else if (geomID == dynamicshadowgeom.geomID) {
+            // we hit a dynamic shadow caster. reject the hit, but store the
+            // info about what we hit.
+            const modelinfo_t *modelinfo = Embree_LookupModelinfo(geomID, primID);
+            int style = modelinfo->dynshadowstyle.intValue();
+            
+            AddDynamicOccluderToRay(context, rayIndex, style);
+            
+            // reject hit
+            valid[i] = INVALID;
+            continue;
         } else {
             // test fence textures and glass
             const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
@@ -511,7 +526,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     bsp_static = bsp;
     Q_assert(device == nullptr);
     
-    std::vector<const bsp2_dface_t *> skyfaces, solidfaces, fencefaces, selfshadowfaces;
+    std::vector<const bsp2_dface_t *> skyfaces, solidfaces, fencefaces, selfshadowfaces, dynamicshadowfaces;
     
     /* Check against the list of global shadow casters */
     for (const modelinfo_t *model : tracelist) {
@@ -552,6 +567,14 @@ Embree_TraceInit(const bsp2_t *bsp)
             selfshadowfaces.push_back(face);
         }
     }
+    
+    /* Dynamic-shadow models */
+    for (const modelinfo_t *model : dynamicshadowlist) {
+        for (int i=0; i<model->model->numfaces; i++) {
+            const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
+            dynamicshadowfaces.push_back(face);
+        }
+    }
 
     /* Special handling of skip-textured bmodels */
     std::vector<winding_t *> skipwindings;
@@ -584,6 +607,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
     fencegeom = CreateGeometry(bsp, scene, fencefaces);
     selfshadowgeom = CreateGeometry(bsp, scene, selfshadowfaces);
+    dynamicshadowgeom = CreateGeometry(bsp, scene, dynamicshadowfaces);
     CreateGeometryFromWindings(scene, skipwindings);
     
     rtcSetIntersectionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
@@ -592,13 +616,17 @@ Embree_TraceInit(const bsp2_t *bsp)
     rtcSetIntersectionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
     rtcSetOcclusionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
 
+    rtcSetIntersectionFilterFunctionN(scene, dynamicshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+    rtcSetOcclusionFilterFunctionN(scene, dynamicshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
+    
     rtcCommit (scene);
     
-    logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces %d skipwindings\n",
+    logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces %d dynamicshadowfaces %d skipwindings\n",
            (int)skyfaces.size(),
            (int)solidfaces.size(),
            (int)fencefaces.size(),
            (int)selfshadowfaces.size(),
+           (int)dynamicshadowfaces.size(),
            (int)skipwindings.size());
     
     FreeWindings(skipwindings);
@@ -732,6 +760,13 @@ public:
     int *_point_indices;
     vec3_t *_ray_colors;
     vec3_t *_ray_normalcontribs;
+    
+    // This is set to the modelinfo's dynshadowstyle if the ray hit
+    // a dynamic shadow caster. (note that for rays that hit dynamic
+    // shadow casters, all of the other hit data is assuming the ray went
+    // straight through).
+    int *_ray_dynamic_styles;
+    
     int _numrays;
     int _maxrays;
 //    streamstate_t _state;
@@ -743,6 +778,7 @@ public:
         _point_indices { new int[maxRays] },
         _ray_colors { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
         _ray_normalcontribs { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
+        _ray_dynamic_styles { new int[maxRays] },
         _numrays { 0 },
         _maxrays { maxRays } {}
         //,
@@ -754,6 +790,7 @@ public:
         delete[] _point_indices;
         free(_ray_colors);
         free(_ray_normalcontribs);
+        delete[] _ray_dynamic_styles;
     }
     
     virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
@@ -767,6 +804,7 @@ public:
         if (normalcontrib) {
             VectorCopy(normalcontrib, _ray_normalcontribs[_numrays]);
         }
+        _ray_dynamic_styles[_numrays] = 0;
         _numrays++;
     }
     
@@ -865,6 +903,11 @@ public:
         VectorCopy(_ray_normalcontribs[j], out);
     }
     
+    virtual int getPushedRayDynamicStyle(size_t j) {
+        Q_assert(j < _maxrays);
+        return _ray_dynamic_styles[j];
+    }
+    
     virtual void clearPushedRays() {
         _numrays = 0;
         //_state = streamstate_t::READY;
@@ -910,4 +953,10 @@ void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float 
     
     // use the lerped color
     VectorCopy(lerped, rs->_ray_colors[rayIndex]);
+}
+
+void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayIndex, int style)
+{
+    raystream_embree_t *rs = static_cast<raystream_embree_t *>(context->userRayExt);
+    rs->_ray_dynamic_styles[rayIndex] = style;
 }
