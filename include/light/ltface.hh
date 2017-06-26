@@ -77,7 +77,7 @@ void PrintFaceInfo(const bsp2_dface_t *face, const bsp2_t *bsp);
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
 std::map<int, qvec3f> GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal);
 void SetupDirt(globalconfig_t &cfg);
-float DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const dmodel_t *selfshadow);
+float DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const modelinfo_t *selfshadow);
 void LightFace(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg);
 
 #endif /* __LIGHT_LTFACE_H__ */

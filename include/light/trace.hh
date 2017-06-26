@@ -44,18 +44,22 @@ const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
 int Light_PointContents( const bsp2_t *bsp, const vec3_t point );
 int SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
 
+class modelinfo_t;
+
 /*
  * Convenience functions TestLight and TestSky will test against all shadow
  * casting bmodels and self-shadow the model 'self' if self != NULL. Returns
  * true if sky or light is visible, respectively.
  */
-qboolean TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self);
-qboolean TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self);
-hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+qboolean TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self);
+qboolean TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
+hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+
+class modelinfo_t;
 
 class raystream_t {
 public:
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const modelinfo_t *modelinfo, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
     virtual void tracePushedRaysOcclusion() = 0;
     virtual void tracePushedRaysIntersection() = 0;
@@ -72,11 +76,11 @@ public:
     virtual void clearPushedRays() = 0;
     virtual ~raystream_t() {};
     
-    void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const dmodel_t *selfshadow) {
+    void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const modelinfo_t *modelinfo) {
         vec3_t originTemp, dirTemp;
         glm_to_vec3_t(origin, originTemp);
         glm_to_vec3_t(dir, dirTemp);
-        this->pushRay(i, originTemp, dirTemp, dist, selfshadow);
+        this->pushRay(i, originTemp, dirTemp, dist, modelinfo);
     }
     
     qvec3f getPushedRayDir(size_t j) {

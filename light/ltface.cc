@@ -1328,8 +1328,6 @@ LightFace_Entity(const bsp2_t *bsp,
     /*
      * Check it for real
      */
-    const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
-    
     raystream_t *rs = lightsurf->stream;
     rs->clearPushedRays();
     
@@ -1354,7 +1352,7 @@ LightFace_Entity(const bsp2_t *bsp,
             continue;
         }
         
-        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself, color, normalcontrib);
+        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, modelinfo, color, normalcontrib);
     }
     
     rs->tracePushedRaysOcclusion();
@@ -1421,8 +1419,6 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     VectorNormalize(incoming);
     
     /* Check each point... */
-    const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
-
     raystream_t *rs = lightsurf->stream;
     rs->clearPushedRays();
     
@@ -1459,7 +1455,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
             continue;
         }
         
-        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, shadowself, color, normalcontrib);
+        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, modelinfo, color, normalcontrib);
     }
     
     rs->tracePushedRaysIntersection();
@@ -1548,7 +1544,6 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
         return;
     
     /* Cast rays for local minlight entities */
-    const dmodel_t *shadowself = modelinfo->shadowself.boolValue() ? modelinfo->model : NULL;
     for (const auto &entity : GetLights()) {
         if (entity.getFormula() != LF_LOCALMIN) {
             continue;
@@ -1574,7 +1569,7 @@ LightFace_Min(const bsp2_t *bsp, const bsp2_dface_t *face,
                 vec3_t surfpointToLightDir;
                 vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
                 
-                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, shadowself);
+                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, modelinfo);
             }
         }
         
@@ -1809,7 +1804,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 glm_to_vec3_t(dir, vplDir);
                 glm_to_vec3_t(indirect, vplColor);
                 
-                rs->pushRay(i, vplPos, vplDir, dist, /*shadowself*/ nullptr, vplColor);
+                rs->pushRay(i, vplPos, vplDir, dist, lightsurf->modelinfo, vplColor);
             }
             
             if (!rs->numPushedRays())
@@ -1879,7 +1874,7 @@ LightFace_Bounce(const bsp2_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 //printf("bad dot\n");
             }
             
-            rs->pushRay(i, surfpoint, rayDir, 8192, /*selfshadow */nullptr);
+            rs->pushRay(i, surfpoint, rayDir, 8192, lightsurf->modelinfo);
         }
         
         rs->tracePushedRaysIntersection();
@@ -2111,7 +2106,7 @@ GetDirtVector(const globalconfig_t &cfg, int i, vec3_t out)
 }
 
 float
-DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const dmodel_t *selfshadow)
+DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const modelinfo_t *modelinfo)
 {
     if (!dirt_in_use) {
         return 0.0f;
@@ -2136,7 +2131,7 @@ DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, cons
         vec3_t dir;
         TransformToTangentSpace(normal, myUp, myRt, dirtvec, dir);
         
-        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), selfshadow);
+        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), modelinfo);
     }
     
     Q_assert(rs->numPushedRays() == numDirtVectors);
@@ -2172,9 +2167,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
     const globalconfig_t &cfg = *lightsurf->cfg;
     
     Q_assert(dirt_in_use);
-    
-    const dmodel_t *selfshadow = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
-    
+
     // batch implementation:
 
     vec3_t *myUps = (vec3_t *) calloc(lightsurf->numpoints, sizeof(vec3_t));
@@ -2206,7 +2199,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
             vec3_t dir;
             TransformToTangentSpace(lightsurf->normals[i], myUps[i], myRts[i], dirtvec, dir);
             
-            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue(), selfshadow);
+            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue(), lightsurf->modelinfo);
         }
         
         // trace the batch

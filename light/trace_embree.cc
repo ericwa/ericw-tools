@@ -632,7 +632,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     FreeWindings(skipwindings);
 }
 
-static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist, const dmodel_t *self)
+static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist, const modelinfo_t *modelinfo)
 {
     RTCRay ray;
     VectorCopy(start, ray.org);
@@ -645,7 +645,11 @@ static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, 
     
     // NOTE: we are not using the ray masking feature of embree, but just using
     // this field to store whether the ray is coming from self-shadow geometry
-    ray.mask = (self == nullptr) ? 0 : 1;
+    ray.mask = 0;
+    if (modelinfo && modelinfo->shadowself.boolValue()) {
+        ray.mask |= 1;
+    }
+
     // pack the ray index into the rest of the mask
     ray.mask |= (rayindex << 1);
     
@@ -653,7 +657,7 @@ static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, 
     return ray;
 }
 
-static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop, const dmodel_t *self)
+static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
 {
     vec3_t dir;
     VectorSubtract(stop, start, dir);
@@ -663,7 +667,7 @@ static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop, const dm
 }
 
 //public
-qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
+qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
 {
     RTCRay ray = SetupRay_StartStop(start, stop, self);
     rtcOccluded(scene, ray);
@@ -676,7 +680,7 @@ qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t 
 }
 
 //public
-qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
+qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -693,7 +697,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
 }
 
 //public
-hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     RTCRay ray = SetupRay(0, start, dirn, dist, self);
     rtcIntersect(scene, ray);
@@ -793,9 +797,9 @@ public:
         delete[] _ray_dynamic_styles;
     }
     
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const dmodel_t *selfshadow, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const modelinfo_t *modelinfo, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
         Q_assert(_numrays<_maxrays);
-        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist, selfshadow);
+        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist, modelinfo);
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
