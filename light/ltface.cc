@@ -1360,7 +1360,8 @@ LightFace_Entity(const bsp2_t *bsp,
     rs->tracePushedRaysOcclusion();
     total_light_rays += rs->numPushedRays();
     
-    lightmap_t *lightmap_world = Lightmap_ForStyle(lightmaps, entity->style.intValue(), lightsurf);
+    int cached_style = entity->style.intValue();
+    lightmap_t *cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
     
     const int N = rs->numPushedRays();
     for (int j = 0; j < N; j++) {
@@ -1373,18 +1374,18 @@ LightFace_Entity(const bsp2_t *bsp,
         int i = rs->getPushedRayPointIndex(j);
         
         // check if we hit a dynamic shadow caster
-        lightmap_t *lightmap;
-        int style;
+        int desired_style = entity->style.intValue();
         if (rs->getPushedRayDynamicStyle(j) != 0) {
-            style = rs->getPushedRayDynamicStyle(j);
-            lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
-        } else {
-            // regular case
-            style = entity->style.intValue();
-            lightmap = lightmap_world;
+            desired_style = rs->getPushedRayDynamicStyle(j);
         }
         
-        lightsample_t *sample = &lightmap->samples[i];
+        // if necessary, switch which lightmap we are writing to.
+        if (desired_style != cached_style) {
+            cached_style = desired_style;
+            cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
+        }
+        
+        lightsample_t *sample = &cached_lightmap->samples[i];
         
         vec3_t color, normalcontrib;
         rs->getPushedRayColor(j, color);
@@ -1393,7 +1394,7 @@ LightFace_Entity(const bsp2_t *bsp,
         VectorAdd(sample->color, color, sample->color);
         VectorAdd(sample->direction, normalcontrib, sample->direction);
         
-        Lightmap_Save(lightmaps, lightsurf, lightmap, style);
+        Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
     }
 }
 
@@ -1464,7 +1465,8 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     rs->tracePushedRaysIntersection();
     
     /* if sunlight is set, use a style 0 light map */
-    lightmap_t *lightmap_world = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    int cached_style = 0;
+    lightmap_t *cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
     
     const int N = rs->numPushedRays();
     for (int j = 0; j < N; j++) {
@@ -1475,16 +1477,18 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         const int i = rs->getPushedRayPointIndex(j);
         
         // check if we hit a dynamic shadow caster
-        lightmap_t *lightmap;
-        const int style = rs->getPushedRayDynamicStyle(j);
-        if (style != 0) {
-            lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
-        } else {
-            // regular case
-            lightmap = lightmap_world;
+        int desired_style = 0;
+        if (rs->getPushedRayDynamicStyle(j) != 0) {
+            desired_style = rs->getPushedRayDynamicStyle(j);
         }
         
-        lightsample_t *sample = &lightmap->samples[i];
+        // if necessary, switch which lightmap we are writing to.
+        if (desired_style != cached_style) {
+            cached_style = desired_style;
+            cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
+        }
+
+        lightsample_t *sample = &cached_lightmap->samples[i];
         
         vec3_t color, normalcontrib;
         rs->getPushedRayColor(j, color);
@@ -1493,7 +1497,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         VectorAdd(sample->color, color, sample->color);
         VectorAdd(sample->direction, normalcontrib, sample->direction);
         
-        Lightmap_Save(lightmaps, lightsurf, lightmap, style);
+        Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
     }
 }
 
