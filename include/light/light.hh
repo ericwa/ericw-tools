@@ -167,7 +167,7 @@ extern byte thepalette[768];
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
 extern std::vector<const modelinfo_t *> tracelist;
 extern std::vector<const modelinfo_t *> selfshadowlist;
-extern std::vector<const modelinfo_t *> dynamicshadowlist;
+extern std::vector<const modelinfo_t *> switchableshadowlist;
 
 extern int numDirtVectors;
 
@@ -197,7 +197,7 @@ public:
     vec3_t offset;
 
 public:
-    lockable_vec_t minlight, shadow, shadowself, dynamicshadow, dynshadowstyle, dirt, phong, phong_angle, alpha;
+    lockable_vec_t minlight, shadow, shadowself, switchableshadow, switchshadstyle, dirt, phong, phong_angle, alpha;
     lockable_string_t minlight_exclude;
     lockable_vec3_t minlight_color;
     lockable_bool_t lightignore;
@@ -220,8 +220,8 @@ public:
         minlight { "minlight", 0 },
         shadow { "shadow", 0 },
         shadowself { "shadowself", 0 },
-        dynamicshadow { "dynamicshadow", 0 },
-        dynshadowstyle { "dynshadowstyle", 0},
+        switchableshadow { "switchableshadow", 0 },
+        switchshadstyle { "switchshadstyle", 0},
         dirt { "dirt", 0 },
         phong { "phong", 0 },
         phong_angle { "phong_angle", 0 },
@@ -235,7 +235,7 @@ public:
     
     settingsdict_t settings() {
         return {{
-            &minlight, &shadow, &shadowself, &dynamicshadow, &dynshadowstyle, &dirt, &phong, &phong_angle, &alpha,
+            &minlight, &shadow, &shadowself, &switchableshadow, &switchshadstyle, &dirt, &phong, &phong_angle, &alpha,
             &minlight_exclude, &minlight_color, &lightignore
         }};
     }

@@ -159,7 +159,7 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
 RTCDevice device;
 RTCScene scene;
 /* global shadow casters */
-sceneinfo skygeom, solidgeom, fencegeom, selfshadowgeom, dynamicshadowgeom;
+sceneinfo skygeom, solidgeom, fencegeom, selfshadowgeom, switchableshadowgeom;
 
 static const bsp2_t *bsp_static;
 
@@ -179,8 +179,8 @@ Embree_SceneinfoForGeomID(unsigned int geomID)
         return fencegeom;
     } else if (geomID == selfshadowgeom.geomID) {
         return selfshadowgeom;
-    } else if (geomID == dynamicshadowgeom.geomID) {
-        return dynamicshadowgeom;
+    } else if (geomID == switchableshadowgeom.geomID) {
+        return switchableshadowgeom;
     } else {
         Error("unexpected geomID");
     }
@@ -261,11 +261,11 @@ Embree_FilterFuncN(int* valid,
                 valid[i] = INVALID;
                 continue;
             }
-        } else if (geomID == dynamicshadowgeom.geomID) {
+        } else if (geomID == switchableshadowgeom.geomID) {
             // we hit a dynamic shadow caster. reject the hit, but store the
             // info about what we hit.
             const modelinfo_t *modelinfo = Embree_LookupModelinfo(geomID, primID);
-            int style = modelinfo->dynshadowstyle.intValue();
+            int style = modelinfo->switchshadstyle.intValue();
             
             AddDynamicOccluderToRay(context, rayIndex, style);
             
@@ -526,7 +526,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     bsp_static = bsp;
     Q_assert(device == nullptr);
     
-    std::vector<const bsp2_dface_t *> skyfaces, solidfaces, fencefaces, selfshadowfaces, dynamicshadowfaces;
+    std::vector<const bsp2_dface_t *> skyfaces, solidfaces, fencefaces, selfshadowfaces, switchableshadowfaces;
     
     /* Check against the list of global shadow casters */
     for (const modelinfo_t *model : tracelist) {
@@ -569,10 +569,10 @@ Embree_TraceInit(const bsp2_t *bsp)
     }
     
     /* Dynamic-shadow models */
-    for (const modelinfo_t *model : dynamicshadowlist) {
+    for (const modelinfo_t *model : switchableshadowlist) {
         for (int i=0; i<model->model->numfaces; i++) {
             const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
-            dynamicshadowfaces.push_back(face);
+            switchableshadowfaces.push_back(face);
         }
     }
 
@@ -607,7 +607,7 @@ Embree_TraceInit(const bsp2_t *bsp)
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
     fencegeom = CreateGeometry(bsp, scene, fencefaces);
     selfshadowgeom = CreateGeometry(bsp, scene, selfshadowfaces);
-    dynamicshadowgeom = CreateGeometry(bsp, scene, dynamicshadowfaces);
+    switchableshadowgeom = CreateGeometry(bsp, scene, switchableshadowfaces);
     CreateGeometryFromWindings(scene, skipwindings);
     
     rtcSetIntersectionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
@@ -616,17 +616,17 @@ Embree_TraceInit(const bsp2_t *bsp)
     rtcSetIntersectionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
     rtcSetOcclusionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
 
-    rtcSetIntersectionFilterFunctionN(scene, dynamicshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
-    rtcSetOcclusionFilterFunctionN(scene, dynamicshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
+    rtcSetIntersectionFilterFunctionN(scene, switchableshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+    rtcSetOcclusionFilterFunctionN(scene, switchableshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
     
     rtcCommit (scene);
     
-    logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces %d dynamicshadowfaces %d skipwindings\n",
+    logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces %d switchableshadowfaces %d skipwindings\n",
            (int)skyfaces.size(),
            (int)solidfaces.size(),
            (int)fencefaces.size(),
            (int)selfshadowfaces.size(),
-           (int)dynamicshadowfaces.size(),
+           (int)switchableshadowfaces.size(),
            (int)skipwindings.size());
     
     FreeWindings(skipwindings);
@@ -761,7 +761,7 @@ public:
     vec3_t *_ray_colors;
     vec3_t *_ray_normalcontribs;
     
-    // This is set to the modelinfo's dynshadowstyle if the ray hit
+    // This is set to the modelinfo's switchshadstyle if the ray hit
     // a dynamic shadow caster. (note that for rays that hit dynamic
     // shadow casters, all of the other hit data is assuming the ray went
     // straight through).

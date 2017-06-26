@@ -1010,12 +1010,12 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
         }
         
         // setup light styles for dynamic shadow entities
-        if (EntDict_StringForKey(entdict, "_dynamicshadow") == "1") {
+        if (EntDict_StringForKey(entdict, "_switchableshadow") == "1") {
             std::string targetname = EntDict_StringForKey(entdict, "targetname");
             // if targetname is "", generates a new unique lightstyle
             const int style = LightStyleForTargetname(targetname);
             // TODO: Configurable key?
-            entdict["dynshadowstyle"] = std::to_string(style);
+            entdict["switchshadstyle"] = std::to_string(style);
         }
         
         // parse escape sequences
