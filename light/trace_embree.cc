@@ -158,8 +158,10 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
 
 RTCDevice device;
 RTCScene scene;
-/* global shadow casters */
-sceneinfo skygeom, solidgeom, fencegeom, selfshadowgeom, switchableshadowgeom;
+
+sceneinfo skygeom;    // sky. always occludes.
+sceneinfo solidgeom;  // solids. always occludes.
+sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
 
 static const bsp2_t *bsp_static;
 
@@ -175,12 +177,8 @@ Embree_SceneinfoForGeomID(unsigned int geomID)
         return skygeom;
     } else if (geomID == solidgeom.geomID) {
         return solidgeom;
-    } else if (geomID == fencegeom.geomID) {
-        return fencegeom;
-    } else if (geomID == selfshadowgeom.geomID) {
-        return selfshadowgeom;
-    } else if (geomID == switchableshadowgeom.geomID) {
-        return switchableshadowgeom;
+    } else if (geomID == filtergeom.geomID) {
+        return filtergeom;
     } else {
         Error("unexpected geomID");
     }
@@ -227,6 +225,15 @@ void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float 
 
 void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayIndex, int style);
 
+static const unsigned RAYMASK_HASMODEL_SHIFT = 0;
+static const unsigned RAYMASK_HASMODEL_MASK = (1 << RAYMASK_HASMODEL_SHIFT);
+
+static const unsigned RAYMASK_MODELINDEX_SHIFT = 1;
+static const unsigned RAYMASK_MODELINDEX_MASK = (0xffff << RAYMASK_MODELINDEX_SHIFT);
+
+static const unsigned RAYMASK_RAYINDEX_SHIFT = 17;
+static const unsigned RAYMASK_RAYINDEX_MASK = (0x7fff << RAYMASK_RAYINDEX_SHIFT);
+
 // called to evaluate transparency
 template<filtertype_t filtertype>
 static void
@@ -251,76 +258,94 @@ Embree_FilterFuncN(int* valid,
         const unsigned &primID = RTCHitN_primID(potentialHit, N, i);
         
         // unpack ray index
-        const unsigned rayIndex = (mask >> 1);
+        const bool     hasmodel = static_cast<bool>((mask & RAYMASK_HASMODEL_MASK) >> RAYMASK_HASMODEL_SHIFT);
+        const unsigned raySourceModelindex = (mask & RAYMASK_MODELINDEX_MASK) >> RAYMASK_MODELINDEX_SHIFT;
+        const unsigned rayIndex = (mask & RAYMASK_RAYINDEX_MASK) >> RAYMASK_RAYINDEX_SHIFT;
         
-        // bail if we hit a selfshadow face, but the ray is not coming from within that model
-        if (geomID == selfshadowgeom.geomID) {
-            const bool from_selfshadow = ((mask & 1) == 1);
-            if (!from_selfshadow) {
+        const modelinfo_t *source_modelinfo = hasmodel ? ModelInfoForModel(bsp_static, raySourceModelindex) : nullptr;
+        const modelinfo_t *hit_modelinfo = Embree_LookupModelinfo(geomID, primID);
+        Q_assert(hit_modelinfo != nullptr);
+        
+        if (hit_modelinfo->shadowworldonly.boolValue()) {
+            // we hit "_shadowworldonly" "1" geometry. Ignore the hit unless we are from world.
+            if (!source_modelinfo || !source_modelinfo->isWorld()) {
                 // reject hit
                 valid[i] = INVALID;
                 continue;
             }
-        } else if (geomID == switchableshadowgeom.geomID) {
+        }
+        
+        if (hit_modelinfo->shadowself.boolValue()) {
+            // only casts shadows on itself
+            if (source_modelinfo != hit_modelinfo) {
+                // reject hit
+                valid[i] = INVALID;
+                continue;
+            }
+        }
+        
+        if (hit_modelinfo->switchableshadow.boolValue()) {
             // we hit a dynamic shadow caster. reject the hit, but store the
             // info about what we hit.
-            const modelinfo_t *modelinfo = Embree_LookupModelinfo(geomID, primID);
-            int style = modelinfo->switchshadstyle.intValue();
+            
+            int style = hit_modelinfo->switchshadstyle.intValue();
             
             AddDynamicOccluderToRay(context, rayIndex, style);
             
             // reject hit
             valid[i] = INVALID;
             continue;
-        } else {
-            // test fence textures and glass
-            const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
-            const modelinfo_t *modelinfo = Embree_LookupModelinfo(geomID, primID);
-            
+        }
+        
+        // test fence textures and glass
+        const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
+        const char *name = Face_TextureName(bsp_static, face);
+        
+        const float alpha = hit_modelinfo->alpha.floatValue();
+        const bool isFence = (name[0] == '{');
+        const bool isGlass = (alpha < 1.0f);
+        
+        if (isFence || isGlass) {
             vec3_t hitpoint;
             Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
             const int sample = SampleTexture(face, bsp_static, hitpoint);
-            
-            float alpha = 1.0f;
-            if (modelinfo != nullptr) {
-                alpha = modelinfo->alpha.floatValue();
-                if (alpha < 1.0f) {
-                    // hit glass...
+        
+            if (isGlass) {
+                // hit glass...
+                
+                vec3_t rayDir = {
+                    RTCRayN_dir_x(ray, N, i),
+                    RTCRayN_dir_y(ray, N, i),
+                    RTCRayN_dir_z(ray, N, i)
+                };
+                vec3_t potentialHitGeometryNormal = {
+                    RTCHitN_Ng_x(potentialHit, N, i),
+                    RTCHitN_Ng_y(potentialHit, N, i),
+                    RTCHitN_Ng_z(potentialHit, N, i)
+                };
+                
+                VectorNormalize(rayDir);
+                VectorNormalize(potentialHitGeometryNormal);
+                
+                const vec_t raySurfaceCosAngle = DotProduct(rayDir, potentialHitGeometryNormal);
+                
+                // only pick up the color of the glass on the _exiting_ side of the glass.
+                // (we currently trace "backwards", from surface point --> light source)
+                if (raySurfaceCosAngle < 0) {
+                    vec3_t samplecolor;
+                    glm_to_vec3_t(Palette_GetColor(sample), samplecolor);
+                    VectorScale(samplecolor, 1/255.0, samplecolor);
                     
-                    vec3_t rayDir = {
-                        RTCRayN_dir_x(ray, N, i),
-                        RTCRayN_dir_y(ray, N, i),
-                        RTCRayN_dir_z(ray, N, i)
-                    };
-                    vec3_t potentialHitGeometryNormal = {
-                        RTCHitN_Ng_x(potentialHit, N, i),
-                        RTCHitN_Ng_y(potentialHit, N, i),
-                        RTCHitN_Ng_z(potentialHit, N, i)
-                    };
-                    
-                    VectorNormalize(rayDir);
-                    VectorNormalize(potentialHitGeometryNormal);
-                    
-                    const vec_t raySurfaceCosAngle = DotProduct(rayDir, potentialHitGeometryNormal);
-                    
-                    // only pick up the color of the glass on the _exiting_ side of the glass.
-                    // (we currently trace "backwards", from surface point --> light source)
-                    if (raySurfaceCosAngle < 0) {
-                        vec3_t samplecolor;
-                        glm_to_vec3_t(Palette_GetColor(sample), samplecolor);
-                        VectorScale(samplecolor, 1/255.0, samplecolor);
-                        
-                        AddGlassToRay(context, rayIndex, alpha, samplecolor);
-                    }
-                    
-                    // reject hit
-                    valid[i] = INVALID;
-                    continue;
+                    AddGlassToRay(context, rayIndex, alpha, samplecolor);
                 }
+                
+                // reject hit
+                valid[i] = INVALID;
+                continue;
             }
             
-            const char *name = Face_TextureName(bsp_static, face);
-            if (name[0] == '{') {
+            
+            if (isFence) {
                 if (sample == 255) {
                     // reject hit
                     valid[i] = INVALID;
@@ -526,53 +551,72 @@ Embree_TraceInit(const bsp2_t *bsp)
     bsp_static = bsp;
     Q_assert(device == nullptr);
     
-    std::vector<const bsp2_dface_t *> skyfaces, solidfaces, fencefaces, selfshadowfaces, switchableshadowfaces;
+    std::vector<const bsp2_dface_t *> skyfaces, solidfaces, filterfaces;
     
-    /* Check against the list of global shadow casters */
-    for (const modelinfo_t *model : tracelist) {
-        // TODO: factor out
-        const bool isWorld = (model->model == &bsp->dmodels[0]);
+    // check all modelinfos
+    for (int mi = 0; mi<bsp->nummodels; mi++) {
+        const modelinfo_t *model = ModelInfoForModel(bsp, mi);
+        
+        const bool isWorld = model->isWorld();
+        const bool shadow = model->shadow.boolValue();
+        const bool shadowself = model->shadowself.boolValue();
+        const bool shadowworldonly = model->shadowworldonly.boolValue();
+        const bool switchableshadow = model->switchableshadow.boolValue();
+
+        if (!(isWorld || shadow || shadowself || shadowworldonly || switchableshadow))
+            continue;
         
         for (int i=0; i<model->model->numfaces; i++) {
             const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
+            const char *texname = Face_TextureName(bsp, face);
             
             // check for TEX_NOSHADOW
             const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
             if (extended_flags & TEX_NOSHADOW)
                 continue;
             
-            const char *texname = Face_TextureName(bsp, face);
-
+            // handle switchableshadow
+            if (switchableshadow) {
+                filterfaces.push_back(face);
+                continue;
+            }
+            
+            // handle glass
             if (model->alpha.floatValue() < 1.0f) {
-                fencefaces.push_back(face);
-            } else if (!Q_strncasecmp("sky", texname, 3)) {
+                filterfaces.push_back(face);
+                continue;
+            }
+            
+            // fence
+            if (texname[0] == '{') {
+                filterfaces.push_back(face);
+                continue;
+            }
+            
+            // handle sky
+            if (!Q_strncasecmp("sky", texname, 3)) {
                 skyfaces.push_back(face);
-            } else if (texname[0] == '{') {
-                fencefaces.push_back(face);
-            } else if (texname[0] == '*') {
+                continue;
+            }
+            
+            // liquids
+            if (texname[0] == '*') {
                 if (!isWorld) {
                     // world liquids never cast shadows; shadow casting bmodel liquids do
                     solidfaces.push_back(face);
                 }
-            } else {
-                solidfaces.push_back(face);
+                continue;
             }
-        }
-    }
-    
-    /* Self-shadow models */
-    for (const modelinfo_t *model : selfshadowlist) {
-        for (int i=0; i<model->model->numfaces; i++) {
-            const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
-            selfshadowfaces.push_back(face);
-        }
-    }
-    
-    /* Dynamic-shadow models */
-    for (const modelinfo_t *model : switchableshadowlist) {
-        for (int i=0; i<model->model->numfaces; i++) {
-            const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
-            switchableshadowfaces.push_back(face);
+            
+            // solid faces
+            
+            if (isWorld || shadow){
+                solidfaces.push_back(face);
+            } else {
+                // shadowself or shadowworldonly
+                Q_assert(shadowself || shadowworldonly);
+                filterfaces.push_back(face);
+            }
         }
     }
 
@@ -605,29 +649,19 @@ Embree_TraceInit(const bsp2_t *bsp)
     scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1 | RTC_INTERSECT_STREAM);
     skygeom = CreateGeometry(bsp, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
-    fencegeom = CreateGeometry(bsp, scene, fencefaces);
-    selfshadowgeom = CreateGeometry(bsp, scene, selfshadowfaces);
-    switchableshadowgeom = CreateGeometry(bsp, scene, switchableshadowfaces);
+    filtergeom = CreateGeometry(bsp, scene, filterfaces);
     CreateGeometryFromWindings(scene, skipwindings);
     
-    rtcSetIntersectionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
-    rtcSetOcclusionFilterFunctionN(scene, fencegeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
-    
-    rtcSetIntersectionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
-    rtcSetOcclusionFilterFunctionN(scene, selfshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
-
-    rtcSetIntersectionFilterFunctionN(scene, switchableshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
-    rtcSetOcclusionFilterFunctionN(scene, switchableshadowgeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
+    rtcSetIntersectionFilterFunctionN(scene, filtergeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+    rtcSetOcclusionFilterFunctionN(scene, filtergeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
     
     rtcCommit (scene);
     
-    logprint("Embree_TraceInit: %d skyfaces %d solidfaces %d fencefaces %d selfshadowfaces %d switchableshadowfaces %d skipwindings\n",
-           (int)skyfaces.size(),
-           (int)solidfaces.size(),
-           (int)fencefaces.size(),
-           (int)selfshadowfaces.size(),
-           (int)switchableshadowfaces.size(),
-           (int)skipwindings.size());
+    logprint("Embree_TraceInit:\n");
+    logprint("\t%d sky faces\n", (int)skyfaces.size());
+    logprint("\t%d solid faces\n", (int)solidfaces.size());
+    logprint("\t%d filtered faces\n", (int)filterfaces.size());
+    logprint("\t%d shadow-casting skip faces\n", (int)skipwindings.size());
     
     FreeWindings(skipwindings);
 }
@@ -646,12 +680,21 @@ static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, 
     // NOTE: we are not using the ray masking feature of embree, but just using
     // this field to store whether the ray is coming from self-shadow geometry
     ray.mask = 0;
-    if (modelinfo && modelinfo->shadowself.boolValue()) {
-        ray.mask |= 1;
+    
+    if (modelinfo) {
+        ray.mask |= RAYMASK_HASMODEL_MASK;
+        
+        // Hacky..
+        const int modelindex = (modelinfo->model - bsp_static->dmodels);
+        Q_assert(modelindex >= 0 && modelindex < bsp_static->nummodels);
+        Q_assert(modelindex <= 65535);
+        
+        ray.mask |= (static_cast<unsigned>(modelindex) << RAYMASK_MODELINDEX_SHIFT);
     }
-
+    
     // pack the ray index into the rest of the mask
-    ray.mask |= (rayindex << 1);
+    Q_assert(rayindex <= 32767);
+    ray.mask |= (rayindex << RAYMASK_RAYINDEX_SHIFT);
     
     ray.time = 0.f;
     return ray;
