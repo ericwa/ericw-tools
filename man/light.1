@@ -84,8 +84,6 @@ Write normals to lit file for debugging phong shading.
 Write bounced lighting only to the lightmap for debugging / previewing -bounce.
 .IP "\fB\-novisapprox\fP"
 Disable approximate visibility culling of lights, which has a small chance of introducing artifacts where lights cut off too soon.
-.IP "\fB\-backend b\fP"
-Choose a raytracing backend, currently available: embree, bsp.
 
 .SH "MODEL ENTITY KEYS"
 
@@ -236,10 +234,19 @@ If n is 1, this model will cast shadows on other models and itself
 Quake dynamic lighting powers, so the shadows will not move if the model
 moves. Set to -1 on func_detail/func_group to prevent them from casting shadows. Default 0.
 
-.IP "\fB""_shadowself"" ""n""\fP"
+.IP "\fB""_shadowself"" ""n""\fP | \fB""_selfshadow"" ""n""\fP"
 If n is 1, this model will cast shadows on itself if one part of the model
 blocks the light from another model surface. This can be a better compromise
 for moving models than full shadowing.  Default 0.
+
+.IP "\fB""_shadowworldonly"" ""n""\fP"
+If n is 1, this model will cast shadows on the world only (not other bmodels).
+
+.IP "\fB""_switchableshadow"" ""n""\fP"
+If n is 1, this model casts a shadow that can be switched on/off using QuakeC.
+To make this work, a lightstyle is automatically assigned and stored in a key called "switchshadstyle",
+which the QuakeC will need to read and call the "lightstyle()" builtin with "a" or "m" to switch the shadow on or off.
+Entities sharing the same targetname, and with "_switchableshadow" set to 1, will share the same lightstyle.
 
 .IP "\fB""_dirt"" ""n""\fP"
 For brush models, -1 prevents dirtmapping on the brush model. Useful it the
