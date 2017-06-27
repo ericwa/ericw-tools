@@ -197,7 +197,7 @@ public:
     vec3_t offset;
 
 public:
-    lockable_vec_t minlight, shadow, shadowself, switchableshadow, switchshadstyle, dirt, phong, phong_angle, alpha;
+    lockable_vec_t minlight, shadow, shadowself, shadowworldonly, switchableshadow, switchshadstyle, dirt, phong, phong_angle, alpha;
     lockable_string_t minlight_exclude;
     lockable_vec3_t minlight_color;
     lockable_bool_t lightignore;
@@ -220,6 +220,7 @@ public:
         minlight { "minlight", 0 },
         shadow { "shadow", 0 },
         shadowself { strings{"shadowself", "selfshadow"}, 0 },
+        shadowworldonly { "shadowworldonly", 0 },
         switchableshadow { "switchableshadow", 0 },
         switchshadstyle { "switchshadstyle", 0},
         dirt { "dirt", 0 },
@@ -235,7 +236,7 @@ public:
     
     settingsdict_t settings() {
         return {{
-            &minlight, &shadow, &shadowself, &switchableshadow, &switchshadstyle, &dirt, &phong, &phong_angle, &alpha,
+            &minlight, &shadow, &shadowself, &shadowworldonly, &switchableshadow, &switchshadstyle, &dirt, &phong, &phong_angle, &alpha,
             &minlight_exclude, &minlight_color, &lightignore
         }};
     }
