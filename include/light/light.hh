@@ -219,7 +219,7 @@ public:
         lightmapscale { lmscale },
         minlight { "minlight", 0 },
         shadow { "shadow", 0 },
-        shadowself { "shadowself", 0 },
+        shadowself { strings{"shadowself", "selfshadow"}, 0 },
         switchableshadow { "switchableshadow", 0 },
         switchshadstyle { "switchshadstyle", 0},
         dirt { "dirt", 0 },
