@@ -167,6 +167,7 @@ extern byte thepalette[768];
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
 extern std::vector<const modelinfo_t *> tracelist;
 extern std::vector<const modelinfo_t *> selfshadowlist;
+extern std::vector<const modelinfo_t *> shadowworldonlylist;
 extern std::vector<const modelinfo_t *> switchableshadowlist;
 
 extern int numDirtVectors;

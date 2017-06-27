@@ -81,6 +81,7 @@ static byte *lux_file_end;      // end of space for luxfile data
 std::vector<modelinfo_t *> modelinfo;
 std::vector<const modelinfo_t *> tracelist;
 std::vector<const modelinfo_t *> selfshadowlist;
+std::vector<const modelinfo_t *> shadowworldonlylist;
 std::vector<const modelinfo_t *> switchableshadowlist;
 
 int oversample = 1;
@@ -275,6 +276,7 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     Q_assert(modelinfo.size() == 0);
     Q_assert(tracelist.size() == 0);
     Q_assert(selfshadowlist.size() == 0);
+    Q_assert(shadowworldonlylist.size() == 0);
     Q_assert(switchableshadowlist.size() == 0);
     
     if (!bsp->nummodels) {
@@ -333,6 +335,8 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
             tracelist.push_back(info);
         } else if (info->shadowself.boolValue()){
             selfshadowlist.push_back(info);
+        } else if (info->shadowworldonly.boolValue()){
+            shadowworldonlylist.push_back(info);
         }
 
         /* Set up the offset for rotate_* entities */
