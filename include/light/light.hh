@@ -192,6 +192,7 @@ class modelinfo_t {
 #define DEFAULT_PHONG_ANGLE 89.0f
     
 public:
+    const bsp2_t *bsp;
     const dmodel_t *model;
     float lightmapscale;
     vec3_t offset;
@@ -213,8 +214,13 @@ public:
         return 0;
     }
     
+    bool isWorld() const {
+        return &bsp->dmodels[0] == model;
+    }
+    
 public:
-    modelinfo_t(const dmodel_t *m, float lmscale) :
+    modelinfo_t(const bsp2_t *b, const dmodel_t *m, float lmscale) :
+        bsp { b },
         model { m },
         lightmapscale { lmscale },
         minlight { "minlight", 0 },

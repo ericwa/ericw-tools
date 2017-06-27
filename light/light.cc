@@ -303,13 +303,13 @@ FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
     }
     
     /* The world always casts shadows */
-    modelinfo_t *world = new modelinfo_t { &bsp->dmodels[0], lightmapscale };
+    modelinfo_t *world = new modelinfo_t { bsp, &bsp->dmodels[0], lightmapscale };
     world->shadow.setFloatValue(1.0f); /* world always casts shadows */
     modelinfo.push_back(world);
     tracelist.push_back(world);
     
     for (int i = 1; i < bsp->nummodels; i++) {
-        modelinfo_t *info = new modelinfo_t { &bsp->dmodels[i], lightmapscale };
+        modelinfo_t *info = new modelinfo_t { bsp, &bsp->dmodels[i], lightmapscale };
         modelinfo.push_back(info);
         
         /* Find the entity for the model */
