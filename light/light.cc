@@ -722,8 +722,6 @@ static void PrintUsage()
 {
     printf("usage: light [options] mapname.bsp\n"
 "\n"
-"* = also a worldspawn key with underscore prefix; -light becomes \"_light\"\n"
-"\n"
 "Performance options:\n"
 "  -threads n          set the number of threads\n"
 "  -extra              2x supersampling\n"
@@ -736,30 +734,7 @@ static void PrintUsage()
 "  -lit                write .lit file\n"
 "  -onlyents           only update entities\n"
 "\n"
-"Global options:\n"
-"* -light n            sets global minlight level n\n"
-"  -addmin             additive minlight\n"
-"* -anglescale n       set weight of cosine term, default 0.5, 1=realistic\n"
-"  -anglesense n       same as -anglescale n\n"
-"* -dist n             scale fade distance of all lights, default 1\n"
-"* -range n            scale brightness of all lights, default 0.5\n"
-"  -phong n            0=disable phong shading\n"
-"\n"
-"Dirtmapping (ambient occlusion) options:\n"
-"* -dirt [n]           enable global AO, 0=disable even if set in worldspawn\n"
-"* -dirtmode n         0=ordered (default), 1=random AO\n"
-"* -dirtdepth n        distance for occlusion test, default 128\n"
-"* -dirtscale n        scale factor for AO, default 1, higher values are darker\n"
-"* -dirtgain n         exponent for AO, default 1, lower values are darker\n"
-"* -dirtangle n        maximum angle for AO rays, default 88\n"
-"\n"
-"Bounce options:\n"
-"* -bounce [n]         enables 1 bounce, 0=disable even if set in worldspawn\n"
-"* -bouncescale n      scales brightness of bounce lighting, default 1\n"
-"* -bouncecolorscale n how much to use texture colors, 0=none (default), 1=full\n"
-"\n"
 "Postprocessing options:\n"
-"* -gamma n            gamma correct final lightmap, default 1.0\n"
 "  -soft [n]           blurs the lightmap, n=blur radius in samples\n"
 "\n"
 "Debug modes:\n"
@@ -771,11 +746,40 @@ static void PrintUsage()
 "\n"
 "Experimental options:\n"
 "  -lit2               write .lit2 file\n"
-"* -lmscale n          change lightmap scale, vanilla engines only allow 16\n"
+"  -lmscale n          change lightmap scale, vanilla engines only allow 16\n"
 "  -lux                write .lux file\n"
 "  -bspxlit            writes rgb data into the bsp itself\n"
 "  -bspx               writes both rgb and directions data into the bsp itself\n"
 "  -novanilla          implies -bspxlit. don't write vanilla lighting\n");
+    
+    printf("\n");
+    printf("Overridable worldspawn keys:\n");
+    settingsdict_t dict = cfg_static.settings();
+    for (const auto &s : dict.allSettings()) {
+        printf("  ");
+        for (int i=0; i<s->names().size(); i++) {
+            const auto &name = s->names().at(i);
+            
+            printf("-%s ", name.c_str());
+            
+            if (dynamic_cast<lockable_vec_t *>(s)) {
+                printf("[n] ");
+            } else if (dynamic_cast<lockable_bool_t *>(s)) {
+                printf("[0,1] ");
+            } else if (dynamic_cast<lockable_vec3_t *>(s)) {
+                printf("[n n n] ");
+            } else if (dynamic_cast<lockable_string_t *>(s)) {
+                printf("\"str\" ");
+            } else {
+                Q_assert_unreachable();
+            }
+            
+            if ((i+1) < s->names().size()) {
+                printf("| ");
+            }
+        }
+        printf("\n");
+    }
 }
 
 static bool ParseVec3Optional(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
