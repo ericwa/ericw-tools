@@ -148,6 +148,8 @@ NormalizePlane(qbsp_plane_t *p)
     int i;
     vec_t ax, ay, az;
 
+    p->outputplanenum = -1;
+    
     for (i = 0; i < 3; i++) {
         if (p->normal[i] == 1.0) {
             p->normal[(i + 1) % 3] = 0;

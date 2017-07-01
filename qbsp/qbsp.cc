@@ -174,7 +174,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
                 DetailToSolid(nodes);
             }
         }
-        ExportNodePlanes(nodes);
+        AllocBSPPlanes();
         ExportClipNodes(entity, nodes, hullnum);
     } else {
         /*
@@ -224,7 +224,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         // convert detail leafs to solid (in case we didn't make the call above)
         DetailToSolid(nodes);
 
-        ExportNodePlanes(nodes);
+        AllocBSPPlanes();
 
         firstface = MakeFaceEdges(entity, nodes);
         ExportDrawNodes(entity, nodes, firstface);

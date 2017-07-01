@@ -26,6 +26,7 @@ typedef struct plane {
     vec3_t normal;
     vec_t dist;
     int type;
+    int outputplanenum;         // -1=unassigned, only valid after ExportNodePlanes
 } qbsp_plane_t;
 
 typedef struct {

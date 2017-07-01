@@ -471,7 +471,7 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
         if (lmshifts->data)
             ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
         out = (bsp29_dface_t *)faces->data + faces->index;
-        out->planenum = node->outputplanenum;
+        out->planenum = ExportMapPlane(node->planenum);
         out->side = face->planeside;
         out->texinfo = face->texinfo;
         for (i = 0; i < MAXLIGHTMAPS; i++)
@@ -522,7 +522,7 @@ GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
         if (lmshifts->data)
             ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
         out = (bsp2_dface_t *)faces->data + faces->index;
-        out->planenum = node->outputplanenum;
+        out->planenum = ExportMapPlane(node->planenum);
         out->side = face->planeside;
         out->texinfo = face->texinfo;
         for (i = 0; i < MAXLIGHTMAPS; i++)

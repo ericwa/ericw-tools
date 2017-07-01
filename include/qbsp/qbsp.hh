@@ -272,7 +272,7 @@ typedef struct node_s {
 
     // information for decision nodes
     int planenum;               // -1 = leaf node
-    int outputplanenum;         // only valid after WriteNodePlanes
+    //outputplanenum moved to qbsp_plane_t
     int firstface;              // decision node only
     int numfaces;               // decision node only
     struct node_s *children[2]; // only valid for decision nodes

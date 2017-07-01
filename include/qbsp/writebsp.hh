@@ -22,7 +22,9 @@
 #ifndef QBSP_WRITEBSP_HH
 #define QBSP_WRITEBSP_HH
 
-void ExportNodePlanes(node_t *headnode);
+int ExportMapPlane(int planenum);
+
+void AllocBSPPlanes();
 
 void BeginBSPFile(void);
 void FinishBSPFile(void);

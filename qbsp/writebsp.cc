@@ -54,67 +54,47 @@ RemapContentsForExport(int content)
     return content;
 }
 
-static void
-ExportNodePlanes_r(node_t *node, int *planemap)
+/**
+ * Returns the output plane number
+ */
+int
+ExportMapPlane(int planenum)
 {
+    qbsp_plane_t *plane = &map.planes.at(planenum);
+
+    if (plane->outputplanenum != -1)
+        return plane->outputplanenum; // already output.
+    
     struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];
-    qbsp_plane_t *plane;
-    dplane_t *dplane;
-    int i;
+    
+    if (planes->index >= planes->count)
+        Error("Internal error: plane count mismatch (%s)", __func__);
+    
+    const int newIndex = planes->index;
+    
+    dplane_t *dplane = &((dplane_t *)planes->data)[newIndex];
+    dplane->normal[0] = plane->normal[0];
+    dplane->normal[1] = plane->normal[1];
+    dplane->normal[2] = plane->normal[2];
+    dplane->dist = plane->dist;
+    dplane->type = plane->type;
+    
+    planes->index++;
+    map.cTotal[LUMP_PLANES]++;
 
-    if (node->planenum == -1)
-        return;
-    if (planemap[node->planenum] == -1) {
-        plane = &map.planes[node->planenum];
-        dplane = (dplane_t *)planes->data;
-
-        // search for an equivalent plane
-        for (i = 0; i < planes->index; i++, dplane++) {
-            vec3_t normal;
-            normal[0] = dplane->normal[0];
-            normal[1] = dplane->normal[1];
-            normal[2] = dplane->normal[2];
-            if (DotProduct(normal, plane->normal) > 1 - 0.00001 &&
-                fabs(dplane->dist - plane->dist) < 0.01 &&
-                dplane->type == plane->type)
-                break;
-        }
-
-        // a new plane
-        planemap[node->planenum] = i;
-
-        if (i == planes->index) {
-            if (planes->index >= planes->count)
-                Error("Internal error: plane count mismatch (%s)", __func__);
-            plane = &map.planes[node->planenum];
-            dplane = (dplane_t *)planes->data + planes->index;
-            dplane->normal[0] = plane->normal[0];
-            dplane->normal[1] = plane->normal[1];
-            dplane->normal[2] = plane->normal[2];
-            dplane->dist = plane->dist;
-            dplane->type = plane->type;
-
-            planes->index++;
-            map.cTotal[LUMP_PLANES]++;
-        }
-    }
-
-    node->outputplanenum = planemap[node->planenum];
-
-    ExportNodePlanes_r(node->children[0], planemap);
-    ExportNodePlanes_r(node->children[1], planemap);
+    plane->outputplanenum = newIndex;
+    return newIndex;
 }
 
 /*
 ==================
-ExportNodePlanes
+AllocBSPPlanes
 ==================
 */
 void
-ExportNodePlanes(node_t *nodes)
+AllocBSPPlanes()
 {
     struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];
-    int *planemap;
 
     // OK just need one plane array, stick it in worldmodel
     if (map.numplanes() > planes->count) {
@@ -127,11 +107,6 @@ ExportNodePlanes(node_t *nodes)
         planes->count = newcount;
         planes->data = newplanes;
     }
-    // TODO: make one-time allocation?
-    planemap = (int *)AllocMem(OTHER, sizeof(int) * planes->count, true);
-    memset(planemap, -1, sizeof(int) * planes->count);
-    ExportNodePlanes_r(nodes, planemap);
-    FreeMem(planemap, OTHER, sizeof(int) * planes->count);
 }
 
 //===========================================================================
@@ -180,7 +155,7 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
     nodenum = map.cTotal[LUMP_CLIPNODES];
     map.cTotal[LUMP_CLIPNODES]++;
 
-    clipnode->planenum = node->outputplanenum;
+    clipnode->planenum = ExportMapPlane(node->planenum);
     clipnode->children[0] = ExportClipNodes_BSP29(entity, node->children[0]);
     clipnode->children[1] = ExportClipNodes_BSP29(entity, node->children[1]);
 
@@ -215,7 +190,7 @@ ExportClipNodes_BSP2(mapentity_t *entity, node_t *node)
     nodenum = map.cTotal[LUMP_CLIPNODES];
     map.cTotal[LUMP_CLIPNODES]++;
 
-    clipnode->planenum = node->outputplanenum;
+    clipnode->planenum = ExportMapPlane(node->planenum);
     clipnode->children[0] = ExportClipNodes_BSP2(entity, node->children[0]);
     clipnode->children[1] = ExportClipNodes_BSP2(entity, node->children[1]);
 
@@ -537,7 +512,7 @@ ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
     dnode->maxs[1] = (short)node->maxs[1];
     dnode->maxs[2] = (short)node->maxs[2];
 
-    dnode->planenum = node->outputplanenum;
+    dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
     dnode->numfaces = node->numfaces;
 
@@ -583,7 +558,7 @@ ExportDrawNodes_BSP2(mapentity_t *entity, node_t *node)
     dnode->maxs[1] = node->maxs[1];
     dnode->maxs[2] = node->maxs[2];
 
-    dnode->planenum = node->outputplanenum;
+    dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
     dnode->numfaces = node->numfaces;
 
@@ -625,7 +600,7 @@ ExportDrawNodes_BSP2rmq(mapentity_t *entity, node_t *node)
     dnode->maxs[1] = node->maxs[1];
     dnode->maxs[2] = node->maxs[2];
 
-    dnode->planenum = node->outputplanenum;
+    dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
     dnode->numfaces = node->numfaces;
 
