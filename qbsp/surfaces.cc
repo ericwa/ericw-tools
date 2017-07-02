@@ -449,7 +449,7 @@ EmitFace
 */
 template <class DFACE>
 static void
-EmitFace(mapentity_t *entity, face_t *face)
+EmitFace_Internal(mapentity_t *entity, face_t *face)
 {
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
@@ -461,6 +461,7 @@ EmitFace(mapentity_t *entity, face_t *face)
         return;
     
     // emit a region
+    Q_assert(face->outputnumber == -1);
     face->outputnumber = map.cTotal[LUMP_FACES];
     if (lmshifts->data)
         ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
@@ -486,33 +487,39 @@ EmitFace(mapentity_t *entity, face_t *face)
     faces->index++;
 }
 
+static void
+EmitFace(mapentity_t *entity, face_t *face)
+{
+    if (options.BSPVersion == BSPVERSION)
+        EmitFace_Internal<bsp29_dface_t>(entity, face);
+    else
+        EmitFace_Internal<bsp2_dface_t>(entity, face);
+}
+
 /*
 ==============
 GrowNodeRegion
 ==============
 */
-template <class DFACE>
 static void
 GrowNodeRegion(mapentity_t *entity, node_t *node)
 {
-    face_t *face;
-
     if (node->planenum == PLANENUM_LEAF)
         return;
 
     node->firstface = map.cTotal[LUMP_FACES];
 
-    for (face = node->faces; face; face = face->next) {
+    for (face_t *face = node->faces; face; face = face->next) {
         Q_assert(face->planenum == node->planenum);
         
         // emit a region
-        EmitFace<DFACE>(entity, face);
+        EmitFace(entity, face);
     }
 
     node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
 
-    GrowNodeRegion<DFACE>(entity, node->children[0]);
-    GrowNodeRegion<DFACE>(entity, node->children[1]);
+    GrowNodeRegion(entity, node->children[0]);
+    GrowNodeRegion(entity, node->children[1]);
 }
 
 /*
@@ -620,11 +627,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     lmshifts->data = needlmshifts?AllocMem(OTHER, sizeof(byte) * lmshifts->count, true):NULL;
 
     Message(msgProgress, "GrowRegions");
-
-    if (options.BSPVersion == BSPVERSION)
-        GrowNodeRegion<bsp29_dface_t>(entity, headnode);
-    else
-        GrowNodeRegion<bsp2_dface_t>(entity, headnode);
+    GrowNodeRegion(entity, headnode);
 
     return firstface;
 }
