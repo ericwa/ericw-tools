@@ -444,18 +444,58 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 
 /*
 ==============
+EmitFace
+==============
+*/
+template <class DFACE>
+static void
+EmitFace(mapentity_t *entity, face_t *face)
+{
+    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
+    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
+    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
+    DFACE *out;
+    int i;
+
+    if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
+        return;
+    
+    // emit a region
+    face->outputnumber = map.cTotal[LUMP_FACES];
+    if (lmshifts->data)
+        ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
+    out = (DFACE *)faces->data + faces->index;
+    out->planenum = ExportMapPlane(face->planenum);
+    out->side = face->planeside;
+    out->texinfo = face->texinfo;
+    for (i = 0; i < MAXLIGHTMAPS; i++)
+        out->styles[i] = 255;
+    out->lightofs = -1;
+    
+    out->firstedge = map.cTotal[LUMP_SURFEDGES];
+    for (i = 0; i < face->w.numpoints; i++) {
+        ((int *)surfedges->data)[surfedges->index] = face->edges[i];
+        surfedges->index++;
+        map.cTotal[LUMP_SURFEDGES]++;
+    }
+    FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
+    
+    out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
+    
+    map.cTotal[LUMP_FACES]++;
+    faces->index++;
+}
+
+/*
+==============
 GrowNodeRegion
 ==============
 */
+template <class DFACE>
 static void
-GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
+GrowNodeRegion(mapentity_t *entity, node_t *node)
 {
-    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
-    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
-    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
-    bsp29_dface_t *out;
     face_t *face;
-    int i;
 
     if (node->planenum == PLANENUM_LEAF)
         return;
@@ -463,90 +503,16 @@ GrowNodeRegion_BSP29(mapentity_t *entity, node_t *node)
     node->firstface = map.cTotal[LUMP_FACES];
 
     for (face = node->faces; face; face = face->next) {
-        if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
-            continue;
-
+        Q_assert(face->planenum == node->planenum);
+        
         // emit a region
-        face->outputnumber = map.cTotal[LUMP_FACES];
-        if (lmshifts->data)
-            ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
-        out = (bsp29_dface_t *)faces->data + faces->index;
-        out->planenum = ExportMapPlane(node->planenum);
-        out->side = face->planeside;
-        out->texinfo = face->texinfo;
-        for (i = 0; i < MAXLIGHTMAPS; i++)
-            out->styles[i] = 255;
-        out->lightofs = -1;
-
-        out->firstedge = map.cTotal[LUMP_SURFEDGES];
-        for (i = 0; i < face->w.numpoints; i++) {
-            ((int *)surfedges->data)[surfedges->index] = face->edges[i];
-            surfedges->index++;
-            map.cTotal[LUMP_SURFEDGES]++;
-        }
-        FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
-
-        out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
-
-        map.cTotal[LUMP_FACES]++;
-        faces->index++;
+        EmitFace<DFACE>(entity, face);
     }
 
     node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
 
-    GrowNodeRegion_BSP29(entity, node->children[0]);
-    GrowNodeRegion_BSP29(entity, node->children[1]);
-}
-
-static void
-GrowNodeRegion_BSP2(mapentity_t *entity, node_t *node)
-{
-    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
-    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
-    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
-    bsp2_dface_t *out;
-    face_t *face;
-    int i;
-
-    if (node->planenum == PLANENUM_LEAF)
-        return;
-
-    node->firstface = map.cTotal[LUMP_FACES];
-
-    for (face = node->faces; face; face = face->next) {
-        if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
-            continue;
-
-        // emit a region
-        face->outputnumber = map.cTotal[LUMP_FACES];
-        if (lmshifts->data)
-            ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
-        out = (bsp2_dface_t *)faces->data + faces->index;
-        out->planenum = ExportMapPlane(node->planenum);
-        out->side = face->planeside;
-        out->texinfo = face->texinfo;
-        for (i = 0; i < MAXLIGHTMAPS; i++)
-            out->styles[i] = 255;
-        out->lightofs = -1;
-
-        out->firstedge = map.cTotal[LUMP_SURFEDGES];
-        for (i = 0; i < face->w.numpoints; i++) {
-            ((int *)surfedges->data)[surfedges->index] = face->edges[i];
-            surfedges->index++;
-            map.cTotal[LUMP_SURFEDGES]++;
-        }
-        FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
-
-        out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
-
-        map.cTotal[LUMP_FACES]++;
-        faces->index++;
-    }
-
-    node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
-
-    GrowNodeRegion_BSP2(entity, node->children[0]);
-    GrowNodeRegion_BSP2(entity, node->children[1]);
+    GrowNodeRegion<DFACE>(entity, node->children[0]);
+    GrowNodeRegion<DFACE>(entity, node->children[1]);
 }
 
 /*
@@ -656,9 +622,9 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     Message(msgProgress, "GrowRegions");
 
     if (options.BSPVersion == BSPVERSION)
-        GrowNodeRegion_BSP29(entity, headnode);
+        GrowNodeRegion<bsp29_dface_t>(entity, headnode);
     else
-        GrowNodeRegion_BSP2(entity, headnode);
+        GrowNodeRegion<bsp2_dface_t>(entity, headnode);
 
     return firstface;
 }
