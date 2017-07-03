@@ -23,6 +23,9 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 
+#include <vector>
+#include <algorithm>
+
 static void
 AssertVanillaContentType(int content)
 {
@@ -82,8 +85,42 @@ ExportMapPlane(int planenum)
     planes->index++;
     map.cTotal[LUMP_PLANES]++;
 
+    Q_assert(planes->index == map.cTotal[LUMP_PLANES]);
+    
     plane->outputplanenum = newIndex;
     return newIndex;
+}
+
+int
+ExportMapTexinfo(int texinfonum)
+{
+    mtexinfo_t *src = &map.mtexinfos.at(texinfonum);
+    if (src->outputnum != -1)
+        return src->outputnum;
+    
+    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
+    
+    if (texinfo->index >= texinfo->count)
+        Error("Internal error: texinfo count mismatch (%s)", __func__);
+    
+    const int i = texinfo->index;
+    
+    texinfo_t *dest = &(static_cast<texinfo_t *>(texinfo->data)[i]);
+    dest->flags = static_cast<int32_t>(src->flags & TEX_SPECIAL);
+    dest->miptex = src->miptex;
+    for (int j=0; j<2; j++) {
+        for (int k=0; k<4; k++) {
+            dest->vecs[j][k] = src->vecs[j][k];
+        }
+    }
+    
+    texinfo->index++;
+    map.cTotal[LUMP_TEXINFO]++;
+    
+    Q_assert(texinfo->index == map.cTotal[LUMP_TEXINFO]);
+    
+    src->outputnum = i;
+    return i;
 }
 
 /*
@@ -106,6 +143,29 @@ AllocBSPPlanes()
         
         planes->count = newcount;
         planes->data = newplanes;
+    }
+}
+
+/*
+==================
+AllocBSPTexinfo
+==================
+*/
+void
+AllocBSPTexinfo()
+{
+    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
+    
+    // OK just need one plane array, stick it in worldmodel
+    if (map.numtexinfo() > texinfo->count) {
+        int newcount = map.numtexinfo();
+        struct lumpdata *newtexinfo = (struct lumpdata *)AllocMem(BSP_TEXINFO, newcount, true);
+        
+        memcpy(newtexinfo, texinfo->data, MemSize[BSP_TEXINFO] * texinfo->count);
+        FreeMem(texinfo->data, BSP_TEXINFO, texinfo->count);
+        
+        texinfo->count = newcount;
+        texinfo->data = newtexinfo;
     }
 }
 
@@ -738,6 +798,12 @@ WriteExtendedTexinfoFlags(void)
     if (!needwrite)
         return;
     
+    // sort by output texinfo number
+    std::vector<mtexinfo_t> texinfos_sorted(map.mtexinfos);
+    std::sort(texinfos_sorted.begin(), texinfos_sorted.end(), [](const mtexinfo_t &a, const mtexinfo_t &b) {
+        return a.outputnum < b.outputnum;
+    });
+    
     FILE *texinfofile;
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".texinfo");
@@ -745,40 +811,19 @@ WriteExtendedTexinfoFlags(void)
     if (!texinfofile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
     
-    for (int i = 0; i < num_texinfo; i++) {
-        fprintf(texinfofile, "%llu\n", static_cast<unsigned long long>(map.mtexinfos.at(i).flags));
-    }
-    fclose(texinfofile);
-}
-
-/*
- * Remove any extra texinfo flags we added that are not normally written
- * Standard quake utils only ever write the TEX_SPECIAL flag.
- */
-static void
-ExportTexinfo(void)
-{
-    const int num_texinfo = map.numtexinfo();
-    
-    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
-    texinfo->data = AllocMem(BSP_TEXINFO, num_texinfo, true);
-    texinfo->count = num_texinfo;
-    texinfo->index = num_texinfo;
-    
-    for (int i=0; i<num_texinfo; i++) {
-        const mtexinfo_t *src = &map.mtexinfos.at(i);
-        texinfo_t *dest = &(static_cast<texinfo_t *>(texinfo->data)[i]);
+    int count = 0;
+    for (const auto &tx : texinfos_sorted) {
+        if (tx.outputnum == -1)
+            continue;
         
-        dest->flags = static_cast<int32_t>(src->flags & TEX_SPECIAL);
-        dest->miptex = src->miptex;
-        for (int j=0; j<2; j++) {
-            for (int k=0; k<4; k++) {
-                dest->vecs[j][k] = src->vecs[j][k];
-            }
-        }
+        Q_assert(count == tx.outputnum); // check we are outputting them in the proper sequence
+        
+        fprintf(texinfofile, "%llu\n", static_cast<unsigned long long>(tx.flags));
+        count++;
     }
+    Q_assert(count == map.cTotal[LUMP_TEXINFO]);
     
-    map.cTotal[LUMP_TEXINFO] = num_texinfo;
+    fclose(texinfofile);
 }
 
 /*
@@ -789,21 +834,17 @@ FinishBSPFile
 void
 FinishBSPFile(void)
 {
-    struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];
-    dplane_t *newdata;
-
     options.fVerbose = true;
     Message(msgProgress, "WriteBSPFile");
 
     // TODO: Fix this somewhere else?
-    newdata = (dplane_t *)AllocMem(BSP_PLANE, map.cTotal[LUMP_PLANES], true);
-    memcpy(newdata, planes->data, map.cTotal[LUMP_PLANES] * MemSize[BSP_PLANE]);
-    FreeMem(planes->data, BSP_PLANE, planes->count);
-    planes->data = newdata;
+    struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];    
     planes->count = map.cTotal[LUMP_PLANES];
 
+    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
+    texinfo->count = map.cTotal[LUMP_TEXINFO];
+    
     WriteExtendedTexinfoFlags();
-    ExportTexinfo();
     WriteBSPFile();
     PrintBSPFileSizes();
 

@@ -239,6 +239,7 @@ FindTexinfo(mtexinfo_t *texinfo, uint64_t flags)
 {
     /* Set the texture flags */
     texinfo->flags = flags;
+    texinfo->outputnum = -1;
     
     /* Don't worry about texture alignment on skip or hint surfaces */
     if (texinfo->flags & (TEX_SKIP | TEX_HINT)) {

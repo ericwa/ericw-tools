@@ -175,6 +175,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
             }
         }
         AllocBSPPlanes();
+        AllocBSPTexinfo();
         ExportClipNodes(entity, nodes, hullnum);
     } else {
         /*
@@ -225,6 +226,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         DetailToSolid(nodes);
 
         AllocBSPPlanes();
+        AllocBSPTexinfo();
 
         firstface = MakeFaceEdges(entity, nodes, std::vector<face_t *> {});
         ExportDrawNodes(entity, nodes, firstface);

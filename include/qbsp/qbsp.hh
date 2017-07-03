@@ -204,6 +204,7 @@ typedef struct mtexinfo_s {
     float vecs[2][4];           /* [s/t][xyz offset] */
     int32_t miptex;
     uint64_t flags;
+    int outputnum; // -1 until added to bsp
     
     bool operator<(const mtexinfo_s &other) const {
         if (this->miptex < other.miptex)

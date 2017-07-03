@@ -469,7 +469,7 @@ EmitFace_Internal(mapentity_t *entity, face_t *face)
     out = (DFACE *)faces->data + faces->index;
     out->planenum = ExportMapPlane(face->planenum);
     out->side = face->planeside;
-    out->texinfo = face->texinfo;
+    out->texinfo = ExportMapTexinfo(face->texinfo);
     for (i = 0; i < MAXLIGHTMAPS; i++)
         out->styles[i] = 255;
     out->lightofs = -1;
