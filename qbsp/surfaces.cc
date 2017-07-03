@@ -402,6 +402,9 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
 {
     int i, memsize;
 
+    if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
+        return;
+    
     face->outputnumber = -1;
     if (face->w.numpoints > MAXEDGES)
         Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
@@ -430,8 +433,6 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
         return progress;
 
     for (f = node->faces; f; f = f->next) {
-        if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
-            continue;
         FindFaceEdges(entity, f);
     }
 
@@ -522,6 +523,18 @@ GrowNodeRegion(mapentity_t *entity, node_t *node)
     GrowNodeRegion(entity, node->children[1]);
 }
 
+static void
+CountFace(mapentity_t *entity, face_t *f)
+{
+    if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
+        return;
+    
+    if (f->lmshift[1] != 4)
+        needlmshifts = true;
+    entity->lumps[LUMP_FACES].count++;
+    entity->lumps[LUMP_VERTEXES].count += f->w.numpoints;
+}
+
 /*
 ==============
 CountData_r
@@ -536,19 +549,20 @@ CountData_r(mapentity_t *entity, node_t *node)
         return;
 
     for (f = node->faces; f; f = f->next) {
-        if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
-            continue;
-
-        if (f->lmshift[1] != 4)
-                needlmshifts = true;
-        entity->lumps[LUMP_FACES].count++;
-        entity->lumps[LUMP_VERTEXES].count += f->w.numpoints;
+        CountFace(entity, f);
     }
 
     CountData_r(entity, node->children[0]);
     CountData_r(entity, node->children[1]);
 }
 
+static void
+CountData_extra(mapentity_t *entity, const std::vector<face_t *> &extrafaces)
+{
+    for (face_t *f : extrafaces) {
+        CountFace(entity, f);
+    }
+}
 
 /*
 ================
@@ -556,7 +570,7 @@ MakeFaceEdges
 ================
 */
 int
-MakeFaceEdges(mapentity_t *entity, node_t *headnode)
+MakeFaceEdges(mapentity_t *entity, node_t *headnode, const std::vector<face_t *> &extrafaces)
 {
     int i, firstface;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
@@ -574,6 +588,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
         cStartEdge += map.entities.at(i).lumps[LUMP_EDGES].count;
 
     CountData_r(entity, headnode);
+    CountData_extra(entity, extrafaces);
 
     /*
      * Remember edges are +1 in BeginBSPFile.  Often less than half
@@ -596,7 +611,10 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     firstface = map.cTotal[LUMP_FACES];
     MakeFaceEdges_r(entity, headnode, 0);
-
+    for (face_t *f : extrafaces) {
+        FindFaceEdges(entity, f);
+    }
+    
     FreeMem(pHashverts, HASHVERT, vertices->count);
     FreeMem(pEdgeFaces0, OTHER, sizeof(face_t *) * edges->count);
     FreeMem(pEdgeFaces1, OTHER, sizeof(face_t *) * edges->count);
@@ -629,5 +647,10 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion(entity, headnode);
 
+    // emit extra faces
+    for (face_t *f : extrafaces) {
+        EmitFace(entity, f);
+    }
+    
     return firstface;
 }

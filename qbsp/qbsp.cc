@@ -226,7 +226,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
         AllocBSPPlanes();
 
-        firstface = MakeFaceEdges(entity, nodes);
+        firstface = MakeFaceEdges(entity, nodes, std::vector<face_t *> {});
         ExportDrawNodes(entity, nodes, firstface);
     }
 
