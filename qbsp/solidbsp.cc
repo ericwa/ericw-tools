@@ -849,7 +849,8 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
         Error("Bad contents in face (%s)", __func__);
     }
 
-    // write the list of faces, and free the originals
+    // write the list of the original faces to the leaf's markfaces
+    // free surf and the surf->faces list.
     leaffaces += count;
     
     Q_assert(leafnode->markfaces.empty());
@@ -922,6 +923,9 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     split = SelectPartition(surfaces);
     if (!split) {               // this is a leaf node
         node->planenum = PLANENUM_LEAF;
+        
+        // frees `surfaces` and the faces on it.
+        // saves pointers to face->original in the leaf's markfaces list.
         LinkConvexFaces(surfaces, node);
         return;
     }

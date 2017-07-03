@@ -108,6 +108,8 @@ UpdateFaceSphere(face_t *in)
 /*
 ==================
 SplitFace
+ 
+Frees in.
 ==================
 */
 void
