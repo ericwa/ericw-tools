@@ -145,7 +145,7 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
     // FIXME: free more stuff?
     if (node->planenum == -1) {
         int contents = node->contents;
-        FreeMem(node, NODE, 1);
+        delete node;
         return contents;
     }
 
@@ -164,7 +164,7 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
         memset(face, 0, sizeof(face_t));
         FreeMem(face, FACE, 1);
     }
-    FreeMem(node, NODE, 1);
+    delete node;
 
     return nodenum;
 }
@@ -180,7 +180,7 @@ ExportClipNodes_BSP2(mapentity_t *entity, node_t *node)
     // FIXME: free more stuff?
     if (node->planenum == -1) {
         int contents = node->contents;
-        FreeMem(node, NODE, 1);
+        delete node;
         return contents;
     }
 
@@ -199,7 +199,7 @@ ExportClipNodes_BSP2(mapentity_t *entity, node_t *node)
         memset(face, 0, sizeof(face_t));
         FreeMem(face, FACE, 1);
     }
-    FreeMem(node, NODE, 1);
+    delete node;
 
     return nodenum;
 }
@@ -287,13 +287,11 @@ CountLeaves
 static void
 CountLeaves(mapentity_t *entity, node_t *node)
 {
-    face_t **markfaces, *face;
-    
     entity->lumps[LUMP_LEAFS].count++;
-    for (markfaces = node->markfaces; *markfaces; markfaces++) {
-        if (map.mtexinfos.at((*markfaces)->texinfo).flags & TEX_SKIP)
+    for (face_t *markface : node->markfaces) {
+        if (map.mtexinfos.at(markface->texinfo).flags & TEX_SKIP)
             continue;
-        for (face = *markfaces; face; face = face->original)
+        for (face_t *face = markface; face; face = face->original)
             entity->lumps[LUMP_MARKSURFACES].count++;
     }
 }
@@ -344,7 +342,7 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
     uint16_t *marksurfnums = (uint16_t *)marksurfs->data;
-    face_t **markfaces, *face;
+    face_t *face;
     bsp29_dleaf_t *dleaf;
 
     // ptr arithmetic to get correct leaf in memory
@@ -371,8 +369,8 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
     // write the marksurfaces
     dleaf->firstmarksurface = map.cTotal[LUMP_MARKSURFACES];
 
-    for (markfaces = node->markfaces; *markfaces; markfaces++) {
-        face = *markfaces;
+    for (face_t *markface : node->markfaces) {
+        face = markface;
         if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
             continue;
 
@@ -394,7 +392,7 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
     uint32_t *marksurfnums = (uint32_t *)marksurfs->data;
-    face_t **markfaces, *face;
+    face_t *face;
     bsp2_dleaf_t *dleaf;
 
     // ptr arithmetic to get correct leaf in memory
@@ -421,8 +419,8 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
     // write the marksurfaces
     dleaf->firstmarksurface = map.cTotal[LUMP_MARKSURFACES];
 
-    for (markfaces = node->markfaces; *markfaces; markfaces++) {
-        face = *markfaces;
+    for (face_t *markface : node->markfaces) {
+        face = markface;
         if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
             continue;
 
@@ -444,7 +442,7 @@ ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
     struct lumpdata *leaves = &entity->lumps[LUMP_LEAFS];
     struct lumpdata *marksurfs = &entity->lumps[LUMP_MARKSURFACES];
     uint32_t *marksurfnums = (uint32_t *)marksurfs->data;
-    face_t **markfaces, *face;
+    face_t *face;
     bsp2rmq_dleaf_t *dleaf;
 
     // ptr arithmetic to get correct leaf in memory
@@ -471,8 +469,8 @@ ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
     // write the marksurfaces
     dleaf->firstmarksurface = map.cTotal[LUMP_MARKSURFACES];
 
-    for (markfaces = node->markfaces; *markfaces; markfaces++) {
-        face = *markfaces;
+    for (face_t *markface : node->markfaces) {
+        face = markface;
         if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
             continue;
 

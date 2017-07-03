@@ -49,9 +49,8 @@ ConvertNodeToLeaf(node_t *node, int contents)
     
     node->planenum = PLANENUM_LEAF;
     node->contents = contents;
-    node->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
-
-    Q_assert(node->markfaces[0] == nullptr);
+    node->markfaces.clear();
+    Q_assert(node->markfaces.empty());
 }
 
 void
@@ -790,7 +789,7 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 {
     face_t *f, *next;
     surface_t *surf, *pnext;
-    int i, count;
+    int count;
 
     leafnode->faces = NULL;
     leafnode->contents = 0;
@@ -852,20 +851,18 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 
     // write the list of faces, and free the originals
     leaffaces += count;
-    leafnode->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * (count + 1), true);
+    
+    Q_assert(leafnode->markfaces.empty());
 
-    i = 0;
     for (surf = planelist; surf; surf = pnext) {
         pnext = surf->next;
         for (f = surf->faces; f; f = next) {
             next = f->next;
-            leafnode->markfaces[i] = f->original;
-            i++;
+            leafnode->markfaces.push_back(f->original);
             FreeMem(f, FACE, 1);
         }
         FreeMem(surf, SURFACE, 1);
     }
-    leafnode->markfaces[i] = NULL;      // sentinal
 }
 
 
@@ -933,8 +930,8 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     Message(msgPercent, splitnodes, csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
-    node->children[0] = (node_t *)AllocMem(NODE, 1, true);
-    node->children[1] = (node_t *)AllocMem(NODE, 1, true);
+    node->children[0] = new node_t();
+    node->children[1] = new node_t();
     node->planenum = split->planenum;
     node->detail_separator = split->detail_separator;
 
@@ -993,26 +990,26 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        headnode = (node_t *)AllocMem(NODE, 1, true);
+        headnode = new node_t();
         for (i = 0; i < 3; i++) {
             headnode->mins[i] = entity->mins[i] - SIDESPACE;
             headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
         }
-        headnode->children[0] = (node_t *)AllocMem(NODE, 1, true);
+        headnode->children[0] = new node_t();
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = CONTENTS_EMPTY;
-        headnode->children[0]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
-        headnode->children[1] = (node_t *)AllocMem(NODE, 1, true);
+        Q_assert(headnode->children[0]->markfaces.empty());
+        headnode->children[1] = new node_t();
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = CONTENTS_EMPTY;
-        headnode->children[1]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
+        Q_assert(headnode->children[1]->markfaces.empty());
 
         return headnode;
     }
 
     Message(msgProgress, "SolidBSP");
 
-    headnode = (node_t *)AllocMem(NODE, 1, true);
+    headnode = new node_t();
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model
