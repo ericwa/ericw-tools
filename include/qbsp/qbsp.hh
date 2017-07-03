@@ -275,7 +275,7 @@ typedef struct node_s {
     //outputplanenum moved to qbsp_plane_t
     int firstface;              // decision node only
     int numfaces;               // decision node only
-    struct node_s *children[2]; // only valid for decision nodes
+    struct node_s *children[2]; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     face_t *faces;              // decision nodes only, list for both sides
 
     // information for leafs
