@@ -1545,9 +1545,13 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     return true;
 }
 
-static void RotateMapFace(mapface_t *face, double angle)
+static void RotateMapFace(mapface_t *face, const vec3_t angles)
 {
-    qmat3x3d rotation = RotateAboutZ(DEG2RAD(angle));
+    const double pitch = DEG2RAD(angles[0]);
+    const double yaw = DEG2RAD(angles[1]);
+    const double roll = DEG2RAD(angles[2]);
+    
+    qmat3x3d rotation = RotateAboutZ(yaw) * RotateAboutY(pitch) * RotateAboutX(roll);
     
     vec3_t new_planepts[3];
     for (int i=0; i<3; i++) {
@@ -1625,7 +1629,11 @@ ProcessExternalMapEntity(mapentity_t *entity)
     vec3_t origin;
     GetVectorForKey(entity, "origin", origin);
     
-    const vec_t angle = atof(ValueForKey(entity, "_external_map_angle"));
+    vec3_t angles;
+    GetVectorForKey(entity, "_external_map_angles", angles);
+    if (VectorCompare(angles, vec3_origin, EQUAL_EPSILON)) {
+        angles[1] = atof(ValueForKey(entity, "_external_map_angle"));
+    }
     
     for (int i=0; i<entity->nummapbrushes; i++) {
         mapbrush_t *brush = const_cast<mapbrush_t *>(&entity->mapbrush(i));
@@ -1633,7 +1641,7 @@ ProcessExternalMapEntity(mapentity_t *entity)
         for (int j=0; j<brush->numfaces; j++) {
             mapface_t *face = const_cast<mapface_t *>(&brush->face(j));
             
-            RotateMapFace(face, angle);
+            RotateMapFace(face, angles);
             TranslateMapFace(face, origin);
         }
     }
