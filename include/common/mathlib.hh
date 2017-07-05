@@ -241,9 +241,9 @@ void RandomDir(vec3_t dir);
 qvec3f CosineWeightedHemisphereSample(float u1, float u2);
 qvec3f vec_from_mangle(const qvec3f &m);
 qvec3f mangle_from_vec(const qvec3f &v);
-qmat3x3f RotateAboutX(float t);
-qmat3x3f RotateAboutY(float t);
-qmat3x3d RotateAboutZ(double t);
+qmat3x3d RotateAboutX(double radians);
+qmat3x3d RotateAboutY(double radians);
+qmat3x3d RotateAboutZ(double radians);
 qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal);
 
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);

@@ -158,8 +158,8 @@ qvec3f CosineWeightedHemisphereSample(float u1, float u2)
 qvec3f vec_from_mangle(const qvec3f &m)
 {
     const qvec3f mRadians = m * static_cast<float>(Q_PI / 180.0f);
-    const qmat3x3f rotations = qmat3x3f(RotateAboutZ(mRadians[0])) * RotateAboutY(-mRadians[1]);
-    const qvec3f v = rotations * qvec3f(1,0,0);
+    const qmat3x3d rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
+    const qvec3f v = qvec3f(rotations * qvec3d(1,0,0));
     return v;
 }
 
@@ -183,26 +183,26 @@ qvec3f mangle_from_vec(const qvec3f &v)
     return mangle;
 }
 
-qmat3x3f RotateAboutX(float t)
+qmat3x3d RotateAboutX(double t)
 {
     //https://en.wikipedia.org/wiki/Rotation_matrix#Examples
 
-    const float cost = cos(t);
-    const float sint = sin(t);
+    const double cost = cos(t);
+    const double sint = sin(t);
     
-    return qmat3x3f {
+    return qmat3x3d {
         1, 0, 0, //col0
         0, cost, sint, // col1
         0, -sint, cost // col1
     };
 }
 
-qmat3x3f RotateAboutY(float t)
+qmat3x3d RotateAboutY(double t)
 {
-    const float cost = cos(t);
-    const float sint = sin(t);
+    const double cost = cos(t);
+    const double sint = sin(t);
     
-    return qmat3x3f{
+    return qmat3x3d {
         cost, 0, -sint, // col0
         0, 1, 0, // col1
         sint, 0, cost //col2
@@ -214,7 +214,7 @@ qmat3x3d RotateAboutZ(double t)
     const double cost = cos(t);
     const double sint = sin(t);
     
-    return qmat3x3d{
+    return qmat3x3d {
         cost, sint, 0, // col0
         -sint, cost, 0, // col1
         0, 0, 1 //col2
@@ -238,8 +238,8 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
     cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
     float radiansFromUp = acosf(cosangleFromUp);
     
-    const qmat3x3f rotations = qmat3x3f(RotateAboutZ(theta)) * RotateAboutY(radiansFromUp);
-    return rotations;
+    const qmat3x3d rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
+    return qmat3x3f(rotations);
 }
 
 // FIXME: remove these
