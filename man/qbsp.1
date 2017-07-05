@@ -123,6 +123,37 @@ brush which you don't want to generate bsp splits or portals.  All
 surfaces of a hint brush must use either the \fIhint\fP or
 \fIhintskip\fP texture name.
 
+.SH "EXTERNAL MAP PREFAB SUPPORT"
+.PP
+This qbsp has a prefab system using a point entity named "misc_external_map".
+The idea is, each "misc_external_map" imports brushes from an external .map file,
+applies rotations specified by the "_external_map_angles" key, then translates them
+to the "origin" key of the "misc_external_map" entity. Finally, the classname of the
+"misc_external_map" is switched to the one provided by the mapper in the "_external_map_classname"
+key. (The "origin" key is also cleared to "0 0 0" before saving the .bsp).
+
+.PP
+The external .map file should consist of worldspawn brushes only. All worldspawn keys,
+and any entities aside from worldspawn in the external map are ignored.
+Currently, this means that the "wad" key is not handled, so you need to add
+any texture wads required by the external .map file to your main map.
+
+.PP
+Note that you can set other entity keys on the "misc_external_map" to configure the
+final entity type. e.g. if you set "_external_map_classname" to "func_door", you can
+also set a "targetname" key on the "misc_external_map", or any other keys for "func_door".
+
+.IP "\fB_external_map\fP"
+Specifies the filename of the .map to import.
+.IP "\fB_external_map_classname\fP"
+What entity you want the external map to turn in to.
+You can use internal qbsp entity types such as "func_detail",
+or a regular bmodel classname like "func_wall" or "func_door". 
+.IP "\fB_external_map_angles\fP"
+Rotation for the prefab, "pitch yaw roll" format.
+.IP "\fB_external_map_angle\fP"
+Short version of "_external_map_angles" for when you want to specify just a yaw rotation.
+
 .SH "DETAIL BRUSH SUPPORT"
 .PP
 This version of qbsp supports detail brushes which are similar in concept to
@@ -188,7 +219,20 @@ information needed by vis to compute the potentially visible set (PVS) for the
 map/bsp.  So you will also need a vis util capable of processing the PRT2 file
 format.
 
-.SH "Model Entity Keys"
+.SH "DETAIL VARIANTS"
+
+.SS "func_detail_illusionary"
+.PP
+func_detail variant with no collision (players / monsters / gunfire) and doesn't split world faces. Doesn't cast shadows unless enabled with "_shadow" "1". Useful for hanging vines. Still creates BSP leafs, which is unavoidable without a new .bsp file format.
+
+.SS "func_detail_wall"
+.PP
+func_detail variant that doesn't split world faces. Useful for when you want a decoration touching a floor or wall to not split the floor/wall faces (you'll get some overdraw instead.) If it completely covers up a world face, that face will get clipped away, so it's not suitable for fence textures; see func_detail_fence instead.
+
+.SS "func_detail_fence"
+Similar to func_detail_wall except it's suitable for fence textures, never clips away world faces. Useful for fences, grates, etc., that are solid and block gunfire.
+
+.SH "MODEL ENTITY KEYS"
 
 .IP "\fB""_lmscale"" ""n""\fP"
 Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled and unscaled lighting will normally be used.
@@ -205,6 +249,8 @@ Extended texture positioning as supported by the \fIQuArK\fP editor
 .IP \(bu
 Standard Quake 2 map format (leading paths in texture names are
 stripped and any extra surface properties are ignored)
+.IP \(bu
+Brush Primitives produce by Radiant editors (normally a Quake 3 format)
 
 .SH AUTHOR
 Written by Kevin Shanahan (aka Tyrann)
