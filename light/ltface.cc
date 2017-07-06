@@ -2760,6 +2760,10 @@ LightFace(const bsp2_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
     if (!Q_strcasecmp(texname, "skip"))
         return;
     
+    /* don't bother with degenerate faces */
+    if (face->numedges < 3)
+        return;
+    
     /* all good, this face is going to be lightmapped. */
     lightsurf_t *lightsurf = new lightsurf_t {};
     lightsurf->cfg = &cfg;

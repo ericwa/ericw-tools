@@ -150,8 +150,13 @@ const qvec3f GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, co
 {
     Q_assert(s_builtPhongCaches);
     
-    const auto &face_normals_vector = vertex_normals.at(f);
-    return face_normals_vector.at(vertindex);
+    // handle degenerate faces
+    const auto it = vertex_normals.find(f);
+    if (it == vertex_normals.end()) {
+        return qvec3f(0,0,0);
+    }
+    const auto &face_normals_vec = it->second;
+    return face_normals_vec.at(vertindex);
 }
 
 static bool
