@@ -150,14 +150,14 @@ What entity you want the external map to turn in to.
 You can use internal qbsp entity types such as "func_detail",
 or a regular bmodel classname like "func_wall" or "func_door". 
 .IP "\fB_external_map_angles\fP"
-Rotation for the prefab, "pitch yaw roll" format.
+Rotation for the prefab, "pitch yaw roll" format. Negative pitch is down.
 .IP "\fB_external_map_angle\fP"
 Short version of "_external_map_angles" for when you want to specify just a yaw rotation.
 
 .SH "DETAIL BRUSH SUPPORT"
 .PP
 This version of qbsp supports detail brushes which are similar in concept to
-Quake 2's detail brushes.
+Quake 2's detail brushes. They don't seal the map (previous versions did).
 .PP
 To be compatible with existing Quake 1 mapping tools, detail brushes can be
 added by creating an entity with classname "func_detail".  When qbsp reads the
