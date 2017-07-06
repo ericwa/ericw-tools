@@ -268,8 +268,7 @@ typedef struct surface_s {
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
-class node_t {
-public:
+typedef struct node_s {
     vec3_t mins, maxs;          // bounding volume, not just points inside
 
     // information for decision nodes
@@ -277,19 +276,19 @@ public:
     //outputplanenum moved to qbsp_plane_t
     int firstface;              // decision node only
     int numfaces;               // decision node only
-    node_t *children[2]; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
+    struct node_s *children[2]; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     face_t *faces;              // decision nodes only, list for both sides
 
     // information for leafs
     int contents;               // leaf nodes (0 for decision nodes)
-    std::vector<face_t *> markfaces;         // leaf nodes only, point to node faces
+    face_t **markfaces;         // leaf nodes only, point to node faces
     struct portal_s *portals;
     int visleafnum;             // -1 = solid
     int viscluster;             // detail cluster for faster vis
     int fillmark;               // for flood filling
     int occupied;               // entity number in leaf for outside filling
-    bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
-};
+    bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail. 
+} node_t;
 
 #include <qbsp/brush.hh>
 #include <qbsp/csg4.hh>

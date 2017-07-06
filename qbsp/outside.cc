@@ -229,8 +229,11 @@ static bool
 LineIntersect_Leafnode(const node_t *node,
                        const vec3_t point1, const vec3_t point2)
 {
-    for (const face_t *markface : node->markfaces) {
-        for (const face_t *face = markface; face; face = face->original) {
+    face_t *const *markfaces;
+    const face_t *face;
+
+    for (markfaces = node->markfaces; *markfaces; markfaces++) {
+        for (face = *markfaces; face; face = face->original) {
             const qbsp_plane_t *const plane = &map.planes[face->planenum];
             const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
             const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
@@ -424,6 +427,8 @@ ClearOutFaces
 static void
 ClearOutFaces(node_t *node)
 {
+    face_t **markfaces;
+
     if (node->planenum != -1) {
         ClearOutFaces(node->children[0]);
         ClearOutFaces(node->children[1]);
@@ -432,9 +437,9 @@ ClearOutFaces(node_t *node)
     if (node->contents != CONTENTS_SOLID)
         return;
 
-    for (face_t *markface : node->markfaces) {
+    for (markfaces = node->markfaces; *markfaces; markfaces++) {
         // mark all the original faces that are removed
-        markface->w.numpoints = 0;
+        (*markfaces)->w.numpoints = 0;
     }
     node->faces = NULL;
 }

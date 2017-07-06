@@ -145,7 +145,7 @@ GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
         GatherNodeFaces_r(node->children[0], planefaces);
         GatherNodeFaces_r(node->children[1], planefaces);
     }
-    delete node;
+    FreeMem(node, NODE, 1);
 }
 
 /*
