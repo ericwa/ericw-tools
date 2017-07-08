@@ -19,7 +19,9 @@ EMBREE_CMAKE_DIR="$(pwd)/$EMBREE_DIR_NAME"
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$EMBREE_CMAKE_DIR"
 make -j8
 make -j8 testlight
+make -j8 testqbsp
 cpack
 
 # run tests
 ./light/testlight || exit 1
+./qbsp/testqbsp || exit 1

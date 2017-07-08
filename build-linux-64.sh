@@ -14,10 +14,12 @@ tar xf embree.tgz
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.15.0.x86_64.linux"
 make -j8 VERBOSE=1
 make -j8 VERBOSE=1 testlight
+make -j8 VERBOSE=1 testqbsp
 cpack
 
 # run tests
 ./light/testlight || exit 1
+./qbsp/testqbsp || exit 1
 
 # check rpath
 readelf -d ./light/light

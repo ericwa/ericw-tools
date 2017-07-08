@@ -31,6 +31,8 @@ build_script:
     msbuild /p:Configuration=Release /p:Platform=$cmakePlatform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" PACKAGE.vcxproj
 
     .\light\Release\testlight.exe
+
+    .\qbsp\Release\testqbsp.exe
 artifacts:
 - path: cmakebuild\*.zip
 deploy:
