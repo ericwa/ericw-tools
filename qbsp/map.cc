@@ -1515,7 +1515,7 @@ ParseBrush(parser_t *parser, const mapentity_t *entity)
     return brush;
 }
 
-static bool
+bool
 ParseEntity(parser_t *parser, mapentity_t *entity)
 {
     if (!ParseToken(parser, PARSE_NORMAL))

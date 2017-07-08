@@ -313,7 +313,8 @@ enum class conversion_t {
     quake, quake2, valve, bp
 };
 
-typedef struct options_s {
+class options_t {
+public:
     bool fNofill;
     bool fNoclip;
     bool fNoskip;
@@ -352,7 +353,27 @@ typedef struct options_s {
     bool fOmitDetailIllusionary;
     bool fOmitDetailFence;
     bool fForcePRT1;
-} options_t;
+    
+    options_t() {
+        memset(this, 0, sizeof(options_t));
+        
+        // Initial values
+        this->dxLeakDist = 2;
+        this->dxSubdivide = 240;
+        this->fVerbose = true;
+        this->szMapName[0] = 0;
+        this->szBSPName[0] = 0;
+        this->wadPath[0] = 0;
+        
+        /* Default to the original Quake BSP Version... */
+        this->BSPVersion = BSPVERSION;
+        this->fTranswater = true;
+        this->fixRotateObjTexture = true;
+        this->fOldaxis = true;
+        this->maxNodeSize = 1024;
+        this->on_epsilon = 0.0001;
+    }
+};
 
 extern options_t options;
 

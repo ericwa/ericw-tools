@@ -754,14 +754,6 @@ ParseOptions(char *szOptions)
     char *szEnd;
     int NameCount = 0;
 
-    /* Default to the original Quake BSP Version... */
-    options.BSPVersion = BSPVERSION;
-    options.fTranswater = true;
-    options.fixRotateObjTexture = true;
-    options.fOldaxis = true;
-    options.maxNodeSize = 1024;
-    options.on_epsilon = 0.0001;
-
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
     while (szTok) {
@@ -919,12 +911,6 @@ InitQBSP(int argc, const char **argv)
     int i;
     char *szBuf;
     int length;
-
-    // Initial values
-    options.dxLeakDist = 2;
-    options.dxSubdivide = 240;
-    options.fVerbose = true;
-    options.szMapName[0] = options.szBSPName[0] = options.wadPath[0] = 0;
 
     length = LoadFile("qbsp.ini", &szBuf, false);
     if (length) {

@@ -22,6 +22,8 @@
 #ifndef QBSP_MAP_HH
 #define QBSP_MAP_HH
 
+#include <qbsp/parser.hh>
+
 typedef struct epair_s {
     struct epair_s *next;
     char *key;
@@ -61,7 +63,8 @@ struct lumpdata {
     void *data;
 };
 
-typedef struct mapentity_s {
+class mapentity_t {
+public:
     vec3_t origin;
 
     int firstmapbrush;
@@ -77,7 +80,25 @@ typedef struct mapentity_s {
     struct lumpdata lumps[BSPX_LUMPS];
     
     const mapbrush_t &mapbrush(int i) const;
-} mapentity_t;
+    
+    mapentity_t() :
+    firstmapbrush(0),
+    nummapbrushes(0),
+    solid(nullptr),
+    sky(nullptr),
+    detail(nullptr),
+    detail_illusionary(nullptr),
+    detail_fence(nullptr),
+    liquid(nullptr),
+    epairs(nullptr),
+    brushes(nullptr),
+    numbrushes(0) {
+        VectorSet(origin,0,0,0);
+        VectorSet(mins,0,0,0);
+        VectorSet(maxs,0,0,0);
+        memset(lumps, 0, sizeof(lumps));
+    }
+};
 
 typedef struct mapdata_s {
     /* Arrays of actual items */
@@ -118,6 +139,8 @@ typedef struct mapdata_s {
 
 extern mapdata_t map;
 extern mapentity_t *pWorldEnt();
+
+bool ParseEntity(parser_t *parser, mapentity_t *entity);
 
 void EnsureTexturesLoaded();
 void ProcessExternalMapEntity(mapentity_t *entity);
