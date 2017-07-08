@@ -133,8 +133,10 @@ to the "origin" key of the "misc_external_map" entity. Finally, the classname of
 key. (The "origin" key is also cleared to "0 0 0" before saving the .bsp).
 
 .PP
-The external .map file should consist of worldspawn brushes only. All worldspawn keys,
-and any entities aside from worldspawn in the external map are ignored.
+The external .map file should consist of worldspawn brushes only, although 
+you can use func_group for editing convenience. Brush entities are merged 
+with the worldspawn brushes during import. All worldspawn keys, and any point 
+entities are ignored.
 Currently, this means that the "wad" key is not handled, so you need to add
 any texture wads required by the external .map file to your main map.
 

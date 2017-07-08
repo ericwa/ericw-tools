@@ -1704,10 +1704,13 @@ mapentity_t LoadExternalMap(const char *filename)
         Error("LoadExternalMap: '%s': Expected first entity to be worldspawn, got: '%s'\n", filename, classname);
     }
     
-    // parse the next entity, warn if there was one
+    // parse any subsequent entities, move any brushes to worldspawn
     mapentity_t dummy {};
-    if (ParseEntity(&parser, &dummy)) {
-        Message(msgStat, "LoadExternalMap: '%s': Ignoring entities after the worldspawn\n", filename);
+    while (ParseEntity(&parser, &dummy)) {
+        // this is kind of fragile, but move the brushes to the worldspawn.
+        if (dummy.nummapbrushes) {
+            dest.nummapbrushes += dummy.nummapbrushes;
+        }
     }
     
     if (!dest.nummapbrushes) {
