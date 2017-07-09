@@ -215,7 +215,6 @@ CountPortals(const node_t *node, portal_state_t *state)
             portal = portal->next[1];
         }
     }
-
 }
 
 /*
@@ -672,7 +671,7 @@ PortalizeWorld
 Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
-int
+void
 PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
 {
     Message(msgProgress, "Portalize");
@@ -693,8 +692,6 @@ PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
         Message(msgStat, "%8d vis clusters", state.num_visclusters);
         Message(msgStat, "%8d vis portals", state.num_visportals);
     }
-
-    return state.num_visportals;
 }
 
 

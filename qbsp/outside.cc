@@ -447,6 +447,26 @@ ClearOutFaces(node_t *node)
 
 //=============================================================================
 
+static void
+CountPortals_r(node_t *node, int *count)
+{
+    /* decision node */
+    if (!node->contents) {
+        CountPortals_r(node->children[0], count);
+        CountPortals_r(node->children[1], count);
+        return;
+    }
+    
+    /* leaf */
+    for (const portal_t *portal = node->portals; portal;) {
+        const bool isFront = (portal->nodes[0] == node);
+        /* only write out from front leafs, so we don't count portals twice */
+        if (isFront)
+            *count += 1;
+        portal = portal->next[isFront ? 0 : 1];
+    }
+}
+
 /*
 ===========
 FillOutside
@@ -454,16 +474,16 @@ FillOutside
 ===========
 */
 bool
-FillOutside(node_t *node, const int hullnum, const int numportals)
+FillOutside(node_t *node, const int hullnum)
 {
     int i, side, outleafs;
     bool inside, leak_found;
     leakstate_t leak;
     const mapentity_t *entity;
     node_t *fillnode;
-
+    
     Message(msgProgress, "FillOutside");
-
+    
     if (options.fNofill) {
         Message(msgStat, "skipped");
         return false;
@@ -483,6 +503,10 @@ FillOutside(node_t *node, const int hullnum, const int numportals)
         return false;
     }
 
+    /* Count portals */
+    int numportals = 0;
+    CountPortals_r(node, &numportals);
+    
     /* Set up state for the recursive fill */
     memset(&leak, 0, sizeof(leak));
     if (!map.leakfile) {

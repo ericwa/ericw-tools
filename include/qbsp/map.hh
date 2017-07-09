@@ -171,7 +171,7 @@ void Entity_SortBrushes(mapentity_t *dst);
 
 
 surface_t *CSGFaces(const mapentity_t *entity);
-int PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
+void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *entity, node_t *headnode);
 node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit);
 int MakeFaceEdges(mapentity_t *entity, node_t *headnode, const std::vector<face_t *> &extrafaces);

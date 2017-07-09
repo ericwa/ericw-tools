@@ -22,6 +22,6 @@
 #ifndef QBSP_OUTSIDE_HH
 #define QBSP_OUTSIDE_HH
 
-bool FillOutside(node_t *node, const int hullnum, const int numportals);
+bool FillOutside(node_t *node, const int hullnum);
 
 #endif
