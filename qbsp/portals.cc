@@ -24,12 +24,14 @@
 
 node_t outside_node;    // portals outside the world face this
 
-static int num_visportals;
-static int num_visleafs;        // leafs the player can be in
-static int num_visclusters;     // clusters of leafs
-static int iNodesDone;
-static FILE *PortalFile;
-static bool uses_detail;
+class portal_state_t {
+public:
+    int num_visportals;
+    int num_visleafs;        // leafs the player can be in
+    int num_visclusters;     // clusters of leafs
+    int iNodesDone;
+    bool uses_detail;
+};
 
 /*
 ==============================================================================
@@ -42,12 +44,12 @@ PORTAL FILE GENERATION
 static void PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane);
 
 static void
-WriteFloat(vec_t v)
+WriteFloat(FILE *portalFile, vec_t v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
-        fprintf(PortalFile, "%d ", (int)Q_rint(v));
+        fprintf(portalFile, "%d ", (int)Q_rint(v));
     else
-        fprintf(PortalFile, "%f ", v);
+        fprintf(portalFile, "%f ", v);
 }
 
 static int
@@ -121,7 +123,7 @@ PortalThru(const portal_t *p)
 }
 
 static void
-WritePortals_r(node_t *node, bool clusters)
+WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
 {
     const portal_t *p, *next;
     const winding_t *w;
@@ -130,8 +132,8 @@ WritePortals_r(node_t *node, bool clusters)
     qbsp_plane_t plane2;
 
     if (!node->contents && !node->detail_separator) {
-        WritePortals_r(node->children[0], clusters);
-        WritePortals_r(node->children[1], clusters);
+        WritePortals_r(node->children[0], portalFile, clusters);
+        WritePortals_r(node->children[1], portalFile, clusters);
         return;
     }
     if (node->contents == CONTENTS_SOLID)
@@ -156,27 +158,27 @@ WritePortals_r(node_t *node, bool clusters)
         pl = &map.planes[p->planenum];
         PlaneFromWinding(w, &plane2);
         if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
-            fprintf(PortalFile, "%d %d %d ", w->numpoints, back, front);
+            fprintf(portalFile, "%d %d %d ", w->numpoints, back, front);
         else
-            fprintf(PortalFile, "%d %d %d ", w->numpoints, front, back);
+            fprintf(portalFile, "%d %d %d ", w->numpoints, front, back);
 
         for (i = 0; i < w->numpoints; i++) {
-            fprintf(PortalFile, "(");
-            WriteFloat(w->points[i][0]);
-            WriteFloat(w->points[i][1]);
-            WriteFloat(w->points[i][2]);
-            fprintf(PortalFile, ") ");
+            fprintf(portalFile, "(");
+            WriteFloat(portalFile, w->points[i][0]);
+            WriteFloat(portalFile, w->points[i][1]);
+            WriteFloat(portalFile, w->points[i][2]);
+            fprintf(portalFile, ") ");
         }
-        fprintf(PortalFile, "\n");
+        fprintf(portalFile, "\n");
     }
 }
 
 static int
-WriteClusters_r(node_t *node, int viscluster)
+WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
 {
     if (!node->contents) {
-        viscluster = WriteClusters_r(node->children[0], viscluster);
-        viscluster = WriteClusters_r(node->children[1], viscluster);
+        viscluster = WriteClusters_r(node->children[0], portalFile, viscluster);
+        viscluster = WriteClusters_r(node->children[1], portalFile, viscluster);
         return viscluster;
     }
     if (node->contents == CONTENTS_SOLID)
@@ -184,7 +186,7 @@ WriteClusters_r(node_t *node, int viscluster)
 
     /* If we're in the next cluster, start a new line */
     if (node->viscluster != viscluster) {
-        fprintf(PortalFile, "-1\n");
+        fprintf(portalFile, "-1\n");
         viscluster++;
     }
 
@@ -192,15 +194,14 @@ WriteClusters_r(node_t *node, int viscluster)
     if (node->viscluster != viscluster)
         Error("Internal error: Detail cluster mismatch (%s)", __func__);
 
-    fprintf(PortalFile, "%d ", node->visleafnum);
+    fprintf(portalFile, "%d ", node->visleafnum);
 
     return viscluster;
 }
 
 
-/* FIXME - bleh, incrementing global counts */
 static void
-CountPortals(const node_t *node)
+CountPortals(const node_t *node, portal_state_t *state)
 {
     const portal_t *portal;
 
@@ -208,7 +209,7 @@ CountPortals(const node_t *node)
         /* only write out from first leaf */
         if (portal->nodes[0] == node) {
             if (PortalThru(portal))
-                num_visportals++;
+                state->num_visportals++;
             portal = portal->next[0];
         } else {
             portal = portal->next[1];
@@ -226,20 +227,20 @@ NumberLeafs_r
 ================
 */
 static void
-NumberLeafs_r(node_t *node, int cluster)
+NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
 {
     /* decision node */
     if (!node->contents) {
         node->visleafnum = -99;
         node->viscluster = -99;
         if (cluster < 0 && node->detail_separator) {
-            uses_detail = true;
-            cluster = num_visclusters++;
+            state->uses_detail = true;
+            cluster = state->num_visclusters++;
             node->viscluster = cluster;
-            CountPortals(node);
+            CountPortals(node, state);
         }
-        NumberLeafs_r(node->children[0], cluster);
-        NumberLeafs_r(node->children[1], cluster);
+        NumberLeafs_r(node->children[0], state, cluster);
+        NumberLeafs_r(node->children[1], state, cluster);
         return;
     }
 
@@ -250,9 +251,9 @@ NumberLeafs_r(node_t *node, int cluster)
         return;
     }
 
-    node->visleafnum = num_visleafs++;
-    node->viscluster = (cluster < 0) ? num_visclusters++ : cluster;
-    CountPortals(node);
+    node->visleafnum = state->num_visleafs++;
+    node->viscluster = (cluster < 0) ? state->num_visclusters++ : cluster;
+    CountPortals(node, state);
 }
 
 
@@ -262,56 +263,57 @@ WritePortalfile
 ================
 */
 static void
-WritePortalfile(node_t *headnode)
+WritePortalfile(node_t *headnode, portal_state_t *state)
 {
     int check;
+    FILE *portalFile;
 
     /*
      * Set the visleafnum and viscluster field in every leaf and count the
      * total number of portals.
      */
-    num_visleafs = 0;
-    num_visclusters = 0;
-    num_visportals = 0;
-    uses_detail = false;
-    NumberLeafs_r(headnode, -1);
+    state->num_visleafs = 0;
+    state->num_visclusters = 0;
+    state->num_visportals = 0;
+    state->uses_detail = false;
+    NumberLeafs_r(headnode, state, -1);
 
     // write the file
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".prt");
 
-    PortalFile = fopen(options.szBSPName, "wt");
-    if (!PortalFile)
+    portalFile = fopen(options.szBSPName, "wt");
+    if (!portalFile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
-
+    
     /* If no detail clusters, just use a normal PRT1 format */
-    if (!uses_detail) {
-        fprintf(PortalFile, "PRT1\n");
-        fprintf(PortalFile, "%d\n", num_visleafs);
-        fprintf(PortalFile, "%d\n", num_visportals);
-        WritePortals_r(headnode, false);
+    if (!state->uses_detail) {
+        fprintf(portalFile, "PRT1\n");
+        fprintf(portalFile, "%d\n", state->num_visleafs);
+        fprintf(portalFile, "%d\n", state->num_visportals);
+        WritePortals_r(headnode, portalFile, false);
     } else {
         if (options.fForcePRT1) {
             /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
-            fprintf(PortalFile, "PRT1\n");
-            fprintf(PortalFile, "%d\n", num_visclusters);
-            fprintf(PortalFile, "%d\n", num_visportals);
-            WritePortals_r(headnode, true);
+            fprintf(portalFile, "PRT1\n");
+            fprintf(portalFile, "%d\n", state->num_visclusters);
+            fprintf(portalFile, "%d\n", state->num_visportals);
+            WritePortals_r(headnode, portalFile, true);
         } else {
             /* Write a PRT2 */
-            fprintf(PortalFile, "PRT2\n");
-            fprintf(PortalFile, "%d\n", num_visleafs);
-            fprintf(PortalFile, "%d\n", num_visclusters);
-            fprintf(PortalFile, "%d\n", num_visportals);
-            WritePortals_r(headnode, true);
-            check = WriteClusters_r(headnode, 0);
-            if (check != num_visclusters - 1)
+            fprintf(portalFile, "PRT2\n");
+            fprintf(portalFile, "%d\n", state->num_visleafs);
+            fprintf(portalFile, "%d\n", state->num_visclusters);
+            fprintf(portalFile, "%d\n", state->num_visportals);
+            WritePortals_r(headnode, portalFile, true);
+            check = WriteClusters_r(headnode, portalFile, 0);
+            if (check != state->num_visclusters - 1)
                 Error("Internal error: Detail cluster mismatch (%s)", __func__);
-            fprintf(PortalFile, "-1\n");
+            fprintf(portalFile, "-1\n");
         }
     }
 
-    fclose(PortalFile);
+    fclose(portalFile);
 }
 
 
@@ -546,7 +548,7 @@ CutNodePortals_r
 ================
 */
 static void
-CutNodePortals_r(node_t *node)
+CutNodePortals_r(node_t *node, portal_state_t *state)
 {
     const qbsp_plane_t *plane;
     qbsp_plane_t clipplane;
@@ -655,11 +657,11 @@ CutNodePortals_r(node_t *node)
     }
 
     /* Display progress */
-    iNodesDone++;
-    Message(msgPercent, iNodesDone, splitnodes);
+    state->iNodesDone++;
+    Message(msgPercent, state->iNodesDone, splitnodes);
 
-    CutNodePortals_r(front);
-    CutNodePortals_r(back);
+    CutNodePortals_r(front, state);
+    CutNodePortals_r(back, state);
 }
 
 
@@ -675,21 +677,24 @@ PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
 {
     Message(msgProgress, "Portalize");
 
-    iNodesDone = 0;
+    portal_state_t state;
+    memset(&state, 0, sizeof(state));
+    
+    state.iNodesDone = 0;
 
     MakeHeadnodePortals(entity, headnode);
-    CutNodePortals_r(headnode);
+    CutNodePortals_r(headnode, &state);
 
     if (!hullnum) {
         /* save portal file for vis tracing */
-        WritePortalfile(headnode);
+        WritePortalfile(headnode, &state);
 
-        Message(msgStat, "%8d vis leafs", num_visleafs);
-        Message(msgStat, "%8d vis clusters", num_visclusters);
-        Message(msgStat, "%8d vis portals", num_visportals);
+        Message(msgStat, "%8d vis leafs", state.num_visleafs);
+        Message(msgStat, "%8d vis clusters", state.num_visclusters);
+        Message(msgStat, "%8d vis portals", state.num_visportals);
     }
 
-    return num_visportals;
+    return state.num_visportals;
 }
 
 
