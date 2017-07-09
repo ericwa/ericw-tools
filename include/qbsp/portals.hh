@@ -25,7 +25,7 @@
 typedef struct portal_s {
     int planenum;
     node_t *nodes[2];           // [0] = front side of planenum
-    struct portal_s *next[2];
+    struct portal_s *next[2];   // [0] = next portal in nodes[0]'s list of portals
     winding_t *winding;
 } portal_t;
 
