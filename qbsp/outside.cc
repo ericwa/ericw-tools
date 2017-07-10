@@ -21,18 +21,10 @@
 
 #include <qbsp/qbsp.hh>
 
-typedef struct {
-    bool header;                /* Flag true once header has been written */
-    int backdraw;               /* Limit the length of the leak line */
-    int numwritten;             /* Number of portals written to .por file */
-    const mapentity_t *entity;  /* Entity that outside filling reached */
-    const node_t *node;         /* Node where entity was reached */
-    const portal_t **portals;   /* Portals traversed by leak line */
-    int numportals;
-    int maxportals;
-    FILE *ptsfile;
-    FILE *porfile;
-} leakstate_t;
+#include <vector>
+#include <set>
+#include <list>
+#include <utility>
 
 /*
 ===========
@@ -54,39 +46,6 @@ PointInLeaf(node_t *node, const vec3_t point)
     return node;
 }
 
-/*
-===========
-PlaceOccupant
-===========
-*/
-static bool
-PlaceOccupant(int num, const vec3_t point, node_t *headnode)
-{
-    node_t *node;
-
-    node = PointInLeaf(headnode, point);
-    if (node->contents == CONTENTS_SOLID)
-        return false;
-    node->occupied = num;
-    return true;
-}
-
-static FILE *
-InitPorFile(void)
-{
-    FILE *porfile;
-
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".por");
-    porfile = fopen(options.szBSPName, "wt");
-    if (!porfile)
-        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
-
-    fprintf(porfile, "PLACEHOLDER\r\n");
-
-    return porfile;
-}
-
 static FILE *
 InitPtsFile(void)
 {
@@ -101,45 +60,138 @@ InitPtsFile(void)
     return ptsfile;
 }
 
+// new code
+
 static void
-WriteLeakNode(FILE *porfile, const node_t *node)
+ClearOccupied_r(node_t *node)
 {
-    const portal_t *portal;
-    int i, side, count;
-
-    if (!node)
-        Error("Internal error: no leak node! (%s)", __func__);
-
-    count = 0;
-    for (portal = node->portals; portal; portal = portal->next[!side]) {
-        side = (portal->nodes[0] == node);
-        if (portal->nodes[side]->contents == CONTENTS_SOLID)
-            continue;
-        if (portal->nodes[side]->contents == CONTENTS_SKY)
-            continue;
-        count++;
+    if (node->planenum != PLANENUM_LEAF) {
+        ClearOccupied_r(node->children[0]);
+        ClearOccupied_r(node->children[1]);
+        return;
     }
+    
+    /* leaf node */
+    node->occupied = 0;
+    node->occupant = nullptr;
+}
 
-    if (options.fBspleak)
-        fprintf(porfile, "%d\n", count);
+/*
+=============
+Portal_Passable
 
-    for (portal = node->portals; portal; portal = portal->next[!side]) {
-        side = (portal->nodes[0] == node);
-        if (portal->nodes[side]->contents == CONTENTS_SOLID)
-            continue;
-        if (portal->nodes[side]->contents == CONTENTS_SKY)
-            continue;
-        if (options.fBspleak) {
-            fprintf(porfile, "%d ", portal->winding->numpoints);
-            for (i = 0; i < portal->winding->numpoints; i++) {
-                const vec_t *point = portal->winding->points[i];
-                fprintf(porfile, "%f %f %f ", point[0], point[1], point[2]);
+Returns true if the portal has non-opaque leafs on both sides
+ 
+from q3map
+=============
+*/
+static bool Portal_Passable(const portal_t *p)
+{
+    if (p->nodes[0] == &outside_node
+        || p->nodes[1] == &outside_node) {
+        // FIXME: need this because the outside_node doesn't have PLANENUM_LEAF set
+        return false;
+    }
+    
+    Q_assert(p->nodes[0]->planenum == PLANENUM_LEAF);
+    Q_assert(p->nodes[1]->planenum == PLANENUM_LEAF);
+
+    if (p->nodes[0]->opaque()
+        || p->nodes[1]->opaque())
+        return false;
+    
+    return true;
+}
+
+/*
+==================
+precondition: all leafs have occupied set to 0
+==================
+*/
+static void
+BFSFloodFillFromOccupiedLeafs(const std::vector<node_t *> &occupied_leafs)
+{
+    std::list<std::pair<node_t *, int>> queue;
+    for (node_t *leaf : occupied_leafs) {
+        queue.push_back(std::make_pair(leaf, 1));
+    }
+    
+    while (!queue.empty()) {
+        auto pair = queue.front();
+        queue.pop_front();
+        
+        node_t *node = pair.first;
+        const int dist = pair.second;
+        
+        if (node->occupied == 0) {
+            // we haven't visited this node yet
+            node->occupied = dist;
+            
+            // push neighbouring nodes onto the back of the queue
+            int side;
+            for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
+                side = (portal->nodes[0] == node);
+                
+                if (!Portal_Passable(portal))
+                    continue;
+                
+                node_t *neighbour = portal->nodes[side];
+                queue.push_back(std::make_pair(neighbour, dist + 1));
             }
-            fprintf(porfile, "\n");
         }
     }
 }
 
+static std::pair<std::vector<portal_t *>, node_t*>
+MakeLeakLine(node_t *outleaf)
+{
+    std::vector<portal_t *> result;
+    
+    Q_assert(outleaf->occupied > 0);
+    
+    node_t *node = outleaf;
+    while (1)
+    {
+        // exit?
+        if (node->occupied == 1)
+            break; // this node contains an entity
+        
+        // find the next node...
+        
+        node_t *bestneighbour = nullptr;
+        portal_t *bestportal = nullptr;
+        int bestoccupied = node->occupied;
+        
+        int side;
+        for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
+            side = (portal->nodes[0] == node);
+            
+            if (!Portal_Passable(portal))
+                continue;
+            
+            node_t *neighbour = portal->nodes[side];
+            Q_assert(neighbour != node);
+            Q_assert(neighbour->occupied > 0);
+            
+            if (neighbour->occupied < bestoccupied) {
+                bestneighbour = neighbour;
+                bestportal = portal;
+                bestoccupied = neighbour->occupied;
+            }
+        }
+        
+        Q_assert(bestneighbour != nullptr);
+        Q_assert(bestoccupied < node->occupied);
+        
+        // go through bestportal
+        result.push_back(bestportal);
+        node = bestneighbour;
+    }
+    
+    Q_assert(node->occupant != nullptr);
+    Q_assert(node->occupied == 1);
+    return std::make_pair(result, node);
+}
 
 /*
 ===============
@@ -151,10 +203,10 @@ WriteLeakTrail(FILE *leakfile, const vec3_t point1, const vec3_t point2)
 {
     vec3_t vector, trail;
     vec_t dist;
-
+    
     VectorSubtract(point2, point1, vector);
     dist = VectorNormalize(vector);
-
+    
     VectorCopy(point1, trail);
     while (dist > options.dxLeakDist) {
         fprintf(leakfile, "%f %f %f\n", trail[0], trail[1], trail[2]);
@@ -163,259 +215,62 @@ WriteLeakTrail(FILE *leakfile, const vec3_t point1, const vec3_t point2)
     }
 }
 
-/*
-==============
-MarkLeakTrail
-==============
-*/
-__attribute__((noinline))
 static void
-MarkLeakTrail(leakstate_t *leak, const portal_t *portal2)
+WriteLeakLine(const std::pair<std::vector<portal_t *>, node_t*> &leakline)
 {
-    int i;
-    vec3_t point1, point2;
-    const portal_t *portal1;
-
-    if (leak->numportals >= leak->maxportals)
-        Error("Internal error: numportals > maxportals (%s)", __func__);
-
-    leak->portals[leak->numportals++] = portal2;
-
-    MidpointWinding(portal2->winding, point1);
-
-    if (options.fBspleak) {
-        if (!leak->porfile)
-            leak->porfile = InitPorFile();
-
-        /* Write the header if needed */
-        if (!leak->header) {
-            const vec_t *origin = leak->entity->origin;
-            fprintf(leak->porfile, "%f %f %f\n", origin[0], origin[1], origin[2]);
-            WriteLeakNode(leak->porfile, leak->node);
-            leak->header = true;
-        }
-
-        /* Write the portal center and winding */
-        fprintf(leak->porfile, "%f %f %f ", point1[0], point1[1], point1[2]);
-        fprintf(leak->porfile, "%d ", portal2->winding->numpoints);
-        for (i = 0; i < portal2->winding->numpoints; i++) {
-            const vec_t *point = portal2->winding->points[i];
-            fprintf(leak->porfile, "%f %f %f ", point[0], point[1], point[2]);
-        }
-        fprintf(leak->porfile, "\n");
-        leak->numwritten++;
+    FILE *ptsfile = InitPtsFile();
+    
+    vec3_t prevpt, currpt;
+    VectorCopy(leakline.second->occupant->origin, prevpt);
+    
+    for (auto it = leakline.first.rbegin(); it != leakline.first.rend(); ++it) {
+        portal_t *portal = *it;
+        MidpointWinding(portal->winding, currpt);
+        
+        // draw dots from prevpt to currpt
+        WriteLeakTrail(ptsfile, prevpt, currpt);
+        
+        VectorCopy(currpt, prevpt);
     }
-
-    if (leak->numportals < 2 || !options.fOldleak)
-        return;
-
-    if (!leak->ptsfile)
-        leak->ptsfile = InitPtsFile();
-
-    portal1 = leak->portals[leak->numportals - 2];
-    MidpointWinding(portal1->winding, point2);
-    WriteLeakTrail(leak->ptsfile, point1, point2);
-}
-
-/*
-=================
-LineIntersect_r
-
-Returns true if the line segment from point1 to point2 does not intersect any
-of the faces in the node, false if it does.
-=================
-*/
-static bool
-LineIntersect_Leafnode(const node_t *node,
-                       const vec3_t point1, const vec3_t point2)
-{
-    face_t *const *markfaces;
-    const face_t *face;
-
-    for (markfaces = node->markfaces; *markfaces; markfaces++) {
-        for (face = *markfaces; face; face = face->original) {
-            const qbsp_plane_t *const plane = &map.planes[face->planenum];
-            const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
-            const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
-            vec3_t mid, mins, maxs;
-            int i, j;
-
-            // Line segment doesn't cross the plane
-            if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
-                continue;
-            if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
-                continue;
-
-            if (fabs(dist1) < ON_EPSILON) {
-                if (fabs(dist2) < ON_EPSILON)
-                    return false; /* too short/close */
-                VectorCopy(point1, mid);
-            } else if (fabs(dist2) < ON_EPSILON) {
-                VectorCopy(point2, mid);
-            } else {
-                /* Find the midpoint on the plane of the face */
-                vec3_t pointvec;
-                VectorSubtract(point2, point1, pointvec);
-                VectorMA(point1, dist1 / (dist1 - dist2), pointvec, mid);
-            }
-
-            // Do test here for point in polygon (face)
-            // Quick hack
-            mins[0] = mins[1] = mins[2] = VECT_MAX;
-            maxs[0] = maxs[1] = maxs[2] = -VECT_MAX;
-            for (i = 0; i < face->w.numpoints; i++)
-                for (j = 0; j < 3; j++) {
-                    if (face->w.points[i][j] < mins[j])
-                        mins[j] = face->w.points[i][j];
-                    if (face->w.points[i][j] > maxs[j])
-                        maxs[j] = face->w.points[i][j];
-                }
-
-            if (mid[0] < mins[0] - ON_EPSILON ||
-                mid[1] < mins[1] - ON_EPSILON ||
-                mid[2] < mins[2] - ON_EPSILON ||
-                mid[0] > maxs[0] + ON_EPSILON ||
-                mid[1] > maxs[1] + ON_EPSILON ||
-                mid[2] > maxs[2] + ON_EPSILON)
-                continue;
-
-            return false;
-        }
-    }
-
-    return true;
-}
-
-static bool
-LineIntersect_r(const node_t *node, const vec3_t point1, const vec3_t point2)
-{
-    if (node->contents)
-        return LineIntersect_Leafnode(node, point1, point2);
-
-    const qbsp_plane_t *const plane = &map.planes[node->planenum];
-    const vec_t dist1 = DotProduct(point1, plane->normal) - plane->dist;
-    const vec_t dist2 = DotProduct(point2, plane->normal) - plane->dist;
-
-    if (dist1 < -ON_EPSILON && dist2 < -ON_EPSILON)
-        return LineIntersect_r(node->children[1], point1, point2);
-    if (dist1 > ON_EPSILON && dist2 > ON_EPSILON)
-        return LineIntersect_r(node->children[0], point1, point2);
-    if (!LineIntersect_r(node->children[0], point1, point2))
-        return false;
-    if (!LineIntersect_r(node->children[1], point1, point2))
-        return false;
-
-    return true;
-}
-
-
-/*
-=================
-SimplifyLeakline
-=================
-*/
-static void
-SimplifyLeakline(leakstate_t *leak, node_t *headnode)
-{
-    int i, j;
-    const portal_t *portal1, *portal2;
-    vec3_t point1, point2;
-
-    if (leak->numportals < 2)
-        return;
-
-    i = 0;
-    portal1 = leak->portals[i];
-
-    while (i < leak->numportals - 1) {
-        MidpointWinding(portal1->winding, point1);
-        j = leak->numportals - 1;
-        while (j > i + 1) {
-            portal2 = leak->portals[j];
-            MidpointWinding(portal2->winding, point2);
-            if (LineIntersect_r(headnode, point1, point2))
-                break;
-            else
-                j--;
-        }
-
-        if (!leak->ptsfile)
-            leak->ptsfile = InitPtsFile();
-
-        portal2 = leak->portals[j];
-        MidpointWinding(portal2->winding, point2);
-        WriteLeakTrail(leak->ptsfile, point1, point2);
-
-        i = j;
-        portal1 = leak->portals[i];
-    }
-}
-
-static bool
-FindLeaks_r(leakstate_t *leak, const int fillmark, node_t *node)
-{
-    portal_t *portal;
-    int side;
-    bool leak_found;
-
-    if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
-        return false;
-    if (node->fillmark == fillmark)
-        return false;
-
-    if (node->occupied) {
-        leak->entity = &map.entities.at(node->occupied);
-        leak->node = node;
-        leak->backdraw = 4000;
-        return true;
-    }
-
-    /* Mark this node so we don't visit it again */
-    node->fillmark = fillmark;
-
-    for (portal = node->portals; portal; portal = portal->next[!side]) {
-        side = (portal->nodes[0] == node);
-        leak_found = FindLeaks_r(leak, fillmark, portal->nodes[side]);
-        if (leak_found) {
-            /* If we're already written or written too much, bail */
-            if (map.leakfile || !leak->backdraw)
-                return true;
-            leak->backdraw--;
-            MarkLeakTrail(leak, portal);
-            return true;
-        }
-    }
-
-    return false;
+    
+    fclose(ptsfile);
+    Message(msgLiteral, "Leak file written to %s\n", options.szBSPName);
 }
 
 /*
 ==================
-RecursiveFillOutside
-Already assumed here that we have checked for leaks, so just fill
+FindOccupiedLeafs
+
+sets node->occupant
 ==================
 */
-static int
-FillOutside_r(node_t *node, const int fillmark, int outleafs)
+static std::vector<node_t *>
+FindOccupiedLeafs(node_t *headnode)
 {
-    portal_t *portal;
-    int side;
-
-    if (node->contents == CONTENTS_SOLID || node->contents == CONTENTS_SKY)
-        return outleafs;
-    if (node->fillmark == fillmark)
-        return outleafs;
-
-    node->fillmark = fillmark;
-    node->contents = CONTENTS_SOLID;
-    outleafs++;
-
-    for (portal = node->portals; portal; portal = portal->next[!side]) {
-        side = (portal->nodes[0] == node);
-        outleafs = FillOutside_r(portal->nodes[side], fillmark, outleafs);
+    std::vector<node_t *> result;
+    
+    for (int i = 1; i < map.numentities(); i++) {
+        mapentity_t *entity = &map.entities.at(i);
+        
+        /* skip entities at (0 0 0) (bmodels) */
+        if (VectorCompare(entity->origin, vec3_origin, EQUAL_EPSILON))
+            continue;
+        
+        /* find the leaf it's in. Skip opqaue leafs */
+        node_t *leaf = PointInLeaf(headnode, entity->origin);
+        if (leaf->opaque())
+            continue;
+        
+        /* did we already find an entity for this leaf? */
+        if (leaf->occupant != nullptr)
+            continue;
+        
+        leaf->occupant = entity;
+        
+        result.push_back(leaf);
     }
-
-    return outleafs;
+    
+    return result;
 }
 
 /*
@@ -429,7 +284,7 @@ ClearOutFaces(node_t *node)
 {
     face_t **markfaces;
 
-    if (node->planenum != -1) {
+    if (node->planenum != PLANENUM_LEAF) {
         ClearOutFaces(node->children[0]);
         ClearOutFaces(node->children[1]);
         return;
@@ -437,6 +292,7 @@ ClearOutFaces(node_t *node)
     if (node->contents != CONTENTS_SOLID)
         return;
 
+    // FIXME: Hacky, should delete these faces from the nodes they belong to as well (?)
     for (markfaces = node->markfaces; *markfaces; markfaces++) {
         // mark all the original faces that are removed
         (*markfaces)->w.numpoints = 0;
@@ -444,28 +300,37 @@ ClearOutFaces(node_t *node)
     node->faces = NULL;
 }
 
-
-//=============================================================================
-
 static void
-CountPortals_r(node_t *node, int *count)
+OutLeafsToSolid_r(node_t *node, int *outleafs_count)
 {
-    /* decision node */
-    if (!node->contents) {
-        CountPortals_r(node->children[0], count);
-        CountPortals_r(node->children[1], count);
+    if (node->planenum != PLANENUM_LEAF) {
+        OutLeafsToSolid_r(node->children[0], outleafs_count);
+        OutLeafsToSolid_r(node->children[1], outleafs_count);
         return;
     }
     
-    /* leaf */
-    for (const portal_t *portal = node->portals; portal;) {
-        const bool isFront = (portal->nodes[0] == node);
-        /* only write out from front leafs, so we don't count portals twice */
-        if (isFront)
-            *count += 1;
-        portal = portal->next[isFront ? 0 : 1];
-    }
+    // skip leafs reachable from entities
+    if (node->occupied > 0)
+        return;
+    
+    // Don't fill sky, or count solids as outleafs
+    if (node->contents == CONTENTS_SKY
+        || node->contents == CONTENTS_SOLID)
+        return;
+    
+    node->contents = CONTENTS_SOLID;
+    *outleafs_count += 1;
 }
+
+static int
+OutLeafsToSolid(node_t *node)
+{
+    int count = 0;
+    OutLeafsToSolid_r(node, &count);
+    return count;
+}
+
+//=============================================================================
 
 /*
 ===========
@@ -476,87 +341,54 @@ FillOutside
 bool
 FillOutside(node_t *node, const int hullnum)
 {
-    int i, side, outleafs;
-    bool inside, leak_found;
-    leakstate_t leak;
-    const mapentity_t *entity;
-    node_t *fillnode;
-    
     Message(msgProgress, "FillOutside");
     
     if (options.fNofill) {
         Message(msgStat, "skipped");
         return false;
     }
+    
+    /* Clear the node->occupied on all leafs to 0 */
+    ClearOccupied_r(node);
+    
+    const std::vector<node_t *> occupied_leafs = FindOccupiedLeafs(node);
 
-    inside = false;
-    for (i = 1; i < map.numentities(); i++) {
-        entity = &map.entities.at(i);
-        if (!VectorCompare(entity->origin, vec3_origin, EQUAL_EPSILON)) {
-            if (PlaceOccupant(i, entity->origin, node))
-                inside = true;
-        }
-    }
-
-    if (!inside) {
+    if (occupied_leafs.empty()) {
         Message(msgWarning, warnNoFilling, hullnum);
         return false;
     }
 
-    /* Count portals */
-    int numportals = 0;
-    CountPortals_r(node, &numportals);
-    
-    /* Set up state for the recursive fill */
-    memset(&leak, 0, sizeof(leak));
-    if (!map.leakfile) {
-        leak.portals = (const portal_t **)AllocMem(OTHER, sizeof(portal_t *) * numportals, true);
-        leak.maxportals = numportals;
-    }
+    BFSFloodFillFromOccupiedLeafs(occupied_leafs);
 
     /* first check to see if an occupied leaf is hit */
-    side = (outside_node.portals->nodes[0] == &outside_node);
-    fillnode = outside_node.portals->nodes[side];
-    leak_found = FindLeaks_r(&leak, ++map.fillmark, fillnode);
-    if (leak_found) {
-        const vec_t *origin = leak.entity->origin;
+    const int side = (outside_node.portals->nodes[0] == &outside_node);
+    node_t *fillnode = outside_node.portals->nodes[side];
+    
+    if (fillnode->occupied > 0) {
+        const auto leakline = MakeLeakLine(fillnode);
+        Q_assert(!leakline.first.empty());
+        
+        mapentity_t *leakentity = leakline.second->occupant;
+        Q_assert(leakentity != nullptr);
+        
+        const vec_t *origin = leakentity->origin;
         Message(msgWarning, warnMapLeak, origin[0], origin[1], origin[2]);
         if (map.leakfile)
             return false;
-
-        if (!options.fOldleak)
-            SimplifyLeakline(&leak, node);
-
-        StripExtension(options.szBSPName);
-        if (leak.ptsfile) {
-            fclose(leak.ptsfile);
-            Message(msgLiteral, "Leak file written to %s.pts\n",
-                    options.szBSPName);
-        }
-        if (options.fBspleak && leak.porfile) {
-            fseek(leak.porfile, 0, SEEK_SET);
-            fprintf(leak.porfile, "%11d", leak.numwritten);
-            fclose(leak.porfile);
-            Message(msgLiteral, "BSP portal file written to %s.por\n",
-                    options.szBSPName);
-        }
-        FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
+        
+        WriteLeakLine(leakline);
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
+        StripExtension(options.szBSPName);
         strcat(options.szBSPName, ".prt");
         remove(options.szBSPName);
 
         return false;
     }
-    if (leak.portals) {
-        FreeMem(leak.portals, OTHER, sizeof(portal_t *) * numportals);
-        leak.portals = NULL;
-    }
 
     /* now go back and fill outside with solid contents */
-    fillnode = outside_node.portals->nodes[side];
-    outleafs = FillOutside_r(fillnode, ++map.fillmark, 0);
+    const int outleafs = OutLeafsToSolid(node);
 
     /* remove faces from filled in leafs */
     ClearOutFaces(node);

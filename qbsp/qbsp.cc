@@ -667,8 +667,6 @@ PrintOptions(void)
            "   -notex          Write only placeholder textures, to depend upon replacements, to keep file sizes down, or to skirt copyrights\n"
            "   -nooldaxis      Uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older\n"
            "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
-           "   -bspleak        Creates a .POR file, used in the BSP editor for leaky maps\n"
-           "   -oldleak        Create an old-style QBSP .PTS file (default is new style)\n"
            "   -nopercent      Prevents output of percent completion information\n"
            "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
            "   -wrbrushes      (bspx) Includes a list of brushes for brush-based collision\n"
@@ -800,12 +798,8 @@ ParseOptions(char *szOptions)
                 options.fOldaxis = false;
             else if (!Q_strcasecmp(szTok, "forcegoodtree"))
                 options.forceGoodTree = true;
-            else if (!Q_strcasecmp(szTok, "bspleak"))
-                options.fBspleak = true;
             else if (!Q_strcasecmp(szTok, "noverbose"))
                 options.fNoverbose = true;
-            else if (!Q_strcasecmp(szTok, "oldleak"))
-                options.fOldleak = true;
             else if (!Q_strcasecmp(szTok, "nopercent"))
                 options.fNopercent = true;
             else if (!Q_strcasecmp(szTok, "hexen2"))

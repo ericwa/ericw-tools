@@ -268,6 +268,8 @@ typedef struct surface_s {
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
+class mapentity_t;
+
 typedef struct node_s {
     vec3_t mins, maxs;          // bounding volume, not just points inside
 
@@ -285,9 +287,14 @@ typedef struct node_s {
     struct portal_s *portals;
     int visleafnum;             // -1 = solid
     int viscluster;             // detail cluster for faster vis
-    int fillmark;               // for flood filling
-    int occupied;               // entity number in leaf for outside filling
-    bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail. 
+    int occupied;               // 0=can't reach entity, 1 = has entity, >1 = distance from leaf with entity
+    mapentity_t *occupant;      // example occupant, for leak hunting
+    bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
+    
+    bool opaque() const {
+        return contents == CONTENTS_SOLID
+            || contents == CONTENTS_SKY;
+    }
 } node_t;
 
 #include <qbsp/brush.hh>
@@ -330,9 +337,7 @@ public:
     bool fTranswater;
     bool fTranssky;
     bool fOldaxis;
-    bool fBspleak;
     bool fNoverbose;
-    bool fOldleak;
     bool fNopercent;
     bool forceGoodTree;
     bool fixRotateObjTexture;

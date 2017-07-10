@@ -127,7 +127,6 @@ typedef struct mapdata_s {
     int cTotal[BSPX_LUMPS];
 
     /* Misc other global state for the compile process */
-    int fillmark;       /* For marking leaves while outside filling */
     bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
     
     // helpers
