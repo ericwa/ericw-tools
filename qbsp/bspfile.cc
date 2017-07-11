@@ -330,7 +330,11 @@ WriteBSPFile(void)
     if (ret != 1)
         Error("Failure writing to file");
 
-    fclose(f);
+    if (fclose(f) != 0)
+        Error("Failure closing file");
+    
+    logprint("Wrote %s\n", options.szBSPName);
+    
     FreeMem(header, OTHER, sizeof(dheader_t));
 }
 
