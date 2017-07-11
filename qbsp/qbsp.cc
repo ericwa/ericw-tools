@@ -686,6 +686,7 @@ PrintOptions(void)
            "   -omitdetailillusionary   func_detail_illusionary brushes are omitted from the compile\n"
            "   -omitdetailfence         func_detail_fence brushes are omitted from the compile\n"
            "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
+           "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
 
@@ -884,6 +885,8 @@ ParseOptions(char *szOptions)
                 options.fForcePRT1 = true;
                 logprint("WARNING: Forcing creation of PRT1.\n");
                 logprint("         Only use this for viewing portals in a map editor.\n");
+            } else if (!Q_strcasecmp(szTok, "expand")) {
+                options.fTestExpand = true;
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
                 PrintOptions();
             else

@@ -358,6 +358,7 @@ public:
     bool fOmitDetailIllusionary;
     bool fOmitDetailFence;
     bool fForcePRT1;
+    bool fTestExpand;
     
     options_t() {
         memset(this, 0, sizeof(options_t));

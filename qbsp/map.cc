@@ -1,6 +1,7 @@
 /*
     Copyright (C) 1996-1997  Id Software, Inc.
     Copyright (C) 1997       Greg Lewis
+    Copyright (C) 1999-2005  Id Software, Inc.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -111,6 +112,7 @@ static texdef_valve_t TexDef_BSPToValve(const float in_vecs[2][4]);
 static qvec2f projectToAxisPlane(const vec3_t snapped_normal, qvec3f point);
 static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t *plane, bool preserveX);
 static void SetTexinfo_QuakeEd_New(const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4]);
+static void TestExpandBrushes(const mapentity_t *src);
 
 const mapface_t &mapbrush_t::face(int i) const {
     if (i < 0 || i >= this->numfaces)
@@ -1757,6 +1759,10 @@ LoadMapFile(void)
     Message(msgStat, "%8d unique texnames", map.nummiptex());
     Message(msgStat, "%8d texinfo", map.numtexinfo());
     Message(msgLiteral, "\n");
+    
+    if (options.fTestExpand) {
+        TestExpandBrushes (pWorldEnt());
+    }
 }
 
 static texdef_valve_t
@@ -2077,4 +2083,80 @@ WriteEntitiesToString(void)
         pCur[0] = '}';
         pCur[1] = '\n';
     }
+}
+
+//====================================================================
+
+/*
+==================
+WriteBspBrushMap
+
+from q3map
+==================
+*/
+static void
+WriteBspBrushMap(char *name, const std::vector<brush_t *> &list)
+{
+    FILE	*f;
+    
+    logprint ("writing %s\n", name);
+    f = fopen (name, "wb");
+    if (!f)
+        Error ("Can't write %s\b", name);
+    
+    fprintf (f, "{\n\"classname\" \"worldspawn\"\n");
+    
+    for (brush_t *brush : list)
+    {
+        fprintf (f, "{\n");
+        for (face_t *face = brush->faces; face; face = face->next)
+        {
+            // FIXME: Factor out this mess
+            qbsp_plane_t plane = map.planes.at(face->planenum);
+            if (face->planeside) {
+                VectorScale(plane.normal, -1, plane.normal);
+                plane.dist = -plane.dist;
+            }
+            
+            winding_t	*w = BaseWindingForPlane(&plane);
+            
+            fprintf (f,"( %g %g %g ) ", w->points[0][0], w->points[0][1], w->points[0][2]);
+            fprintf (f,"( %g %g %g ) ", w->points[1][0], w->points[1][1], w->points[1][2]);
+            fprintf (f,"( %g %g %g ) ", w->points[2][0], w->points[2][1], w->points[2][2]);
+            
+            fprintf (f, "notexture 0 0 0 1 1\n" );
+            
+            FreeMem(w, WINDING, 1);
+        }
+        fprintf (f, "}\n");
+    }
+    fprintf (f, "}\n");
+    
+    fclose (f);
+}
+
+/*
+================
+TestExpandBrushes
+
+Expands all the brush planes and saves a new map out to
+allow visual inspection of the clipping bevels
+
+from q3map
+================
+*/
+static void
+TestExpandBrushes(const mapentity_t *src)
+{
+    std::vector<brush_t *> hull1brushes;
+    
+    for (int i = 0; i < src->nummapbrushes; i++) {
+        const mapbrush_t *mapbrush = &src->mapbrush(i);
+        brush_t *hull1brush = LoadBrush(mapbrush, vec3_origin, 1);
+        
+        if (hull1brush != nullptr)
+            hull1brushes.push_back(hull1brush);
+    }
+    
+    WriteBspBrushMap("expanded.map", hull1brushes);
 }
