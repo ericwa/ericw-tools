@@ -560,21 +560,13 @@ CountData_r(mapentity_t *entity, node_t *node)
     CountData_r(entity, node->children[1]);
 }
 
-static void
-CountData_extra(mapentity_t *entity, const std::vector<face_t *> &extrafaces)
-{
-    for (face_t *f : extrafaces) {
-        CountFace(entity, f);
-    }
-}
-
 /*
 ================
 MakeFaceEdges
 ================
 */
 int
-MakeFaceEdges(mapentity_t *entity, node_t *headnode, const std::vector<face_t *> &extrafaces)
+MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
@@ -592,7 +584,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode, const std::vector<face_t *>
         cStartEdge += map.entities.at(i).lumps[LUMP_EDGES].count;
 
     CountData_r(entity, headnode);
-    CountData_extra(entity, extrafaces);
 
     /*
      * Remember edges are +1 in BeginBSPFile.  Often less than half
@@ -615,9 +606,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode, const std::vector<face_t *>
 
     firstface = map.cTotal[LUMP_FACES];
     MakeFaceEdges_r(entity, headnode, 0);
-    for (face_t *f : extrafaces) {
-        FindFaceEdges(entity, f);
-    }
     
     FreeMem(pHashverts, HASHVERT, vertices->count);
     FreeMem(pEdgeFaces0, OTHER, sizeof(face_t *) * edges->count);
@@ -650,11 +638,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode, const std::vector<face_t *>
 
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion(entity, headnode);
-
-    // emit extra faces
-    for (face_t *f : extrafaces) {
-        EmitFace(entity, f);
-    }
     
     return firstface;
 }
