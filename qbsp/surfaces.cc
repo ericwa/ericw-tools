@@ -96,10 +96,14 @@ SubdivideFace(face_t *f, face_t **prevptr)
             VectorCopy(tmp, plane.normal);
             v = VectorLength(plane.normal);
             VectorNormalize(plane.normal);
-            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this should balance the load slightly */
-                plane.dist = (mins + subdiv/2) / v;
-            else
-                plane.dist = (mins + subdiv) / v;
+            
+            // ericw -- reverted this, was causing https://github.com/ericwa/tyrutils-ericw/issues/160
+//            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this should balance the load slightly */
+//                plane.dist = (mins + subdiv/2) / v;
+//            else
+//                plane.dist = (mins + subdiv) / v;
+            plane.dist = (mins + subdiv - 16) / v;
+            
             next = f->next;
             SplitFace(f, &plane, &front, &back);
             if (!front || !back)
