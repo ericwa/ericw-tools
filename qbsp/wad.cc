@@ -124,7 +124,7 @@ wad_t *
 WADList_Init(const char *wadstring)
 {
     int len;
-    wad_t wad, *wadlist, *newwad;
+    wad_t *wadlist;
     const char *fname;
     char *fpath;
     const char *pos;

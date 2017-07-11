@@ -110,7 +110,6 @@ void
 polylib::WindingCenter(const winding_t * w, vec3_t center)
 {
     int i;
-    vec3_t d1, d2, cross;
     float scale;
 
     VectorCopy(vec3_origin, center);

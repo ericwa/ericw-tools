@@ -616,8 +616,8 @@ TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const texture_t *texture, con
     
     {
         // self check
-        qvec2f uv01_test = texPlaneToUV * p0p1;
-        qvec2f uv02_test = texPlaneToUV * p0p2;
+//        qvec2f uv01_test = texPlaneToUV * p0p1;
+//        qvec2f uv02_test = texPlaneToUV * p0p2;
         
         // these fail if one of the texture axes is 0 length.
 //        checkEq(uv01_test, p0p1_uv, 0.01);
@@ -801,7 +801,7 @@ Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t *plane, bool preserveX)
             const qmat2x2f rotateMGuess = qv::inverse(applyGuessedFlipM) * flipRotate;
             const float angleGuess = extractRotation(rotateMGuess);
             
-            const qmat2x2f Mident = rotateMGuess * rotation2x2_deg(-angleGuess);
+//            const qmat2x2f Mident = rotateMGuess * rotation2x2_deg(-angleGuess);
 
             const qmat2x2f applyAngleGuessM = rotation2x2_deg(angleGuess);
             const qmat2x2f Mguess = applyGuessedFlipM * applyAbsScaleM * applyAngleGuessM * axisFlipsM;
@@ -990,14 +990,6 @@ SetTexinfo_QuakeEd(const qbsp_plane_t *plane, const vec3_t planepts[3], const ve
                 shift[0], shift[1]);
         }
     }
-}
-
-static
-texdef_etp_t TexDef_BSPToETP(const qbsp_plane_t &faceplane, const float in_vecs[2][4])
-{
-    Error("unimplemented");
-    texdef_etp_t res;
-    return res;
 }
 
 static void
@@ -1766,15 +1758,6 @@ LoadMapFile(void)
     Message(msgStat, "%8d texinfo", map.numtexinfo());
     Message(msgLiteral, "\n");
 }
-
-static std::string
-TexDefToString_QuarkType1(const mapface_t &mapface, const mtexinfo_t &texinfo)
-{
-    Error("Unimplemented\n");
-    return "";
-}
-
-
 
 static texdef_valve_t
 TexDef_BSPToValve(const float in_vecs[2][4])
