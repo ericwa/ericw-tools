@@ -1476,10 +1476,12 @@ ParseBrush(parser_t *parser, const mapentity_t *entity)
             continue;
 
         /* Check for duplicate planes */
+        bool discardFace = false;
         for (int i = 0; i<brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
             if (PlaneEqual(&check.plane, &face->plane)) {
                 Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
+                discardFace = true;
                 continue;
             }
             if (PlaneInvEqual(&check.plane, &face->plane)) {
@@ -1488,6 +1490,8 @@ ParseBrush(parser_t *parser, const mapentity_t *entity)
                 continue;
             }
         }
+        if (discardFace)
+            continue;
 
         /* Save the face, update progress */
         

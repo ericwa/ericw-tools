@@ -929,6 +929,19 @@ Brush_ListCount(const brush_t *brush)
     return Brush_ListCountWithCFlags(brush, 0);
 }
 
+static int FaceListCount(const face_t *facelist)
+{
+    if (facelist)
+        return 1 + FaceListCount(facelist->next);
+    else
+        return 0;
+}
+
+int Brush_NumFaces(const brush_t *brush)
+{
+    return FaceListCount(brush->faces);
+}
+
 void
 Entity_SortBrushes(mapentity_t *dst)
 {

@@ -37,6 +37,7 @@ class mapbrush_t;
 
 int Brush_ListCountWithCFlags(const brush_t *brush, int cflags);
 int Brush_ListCount(const brush_t *brush);
+int Brush_NumFaces(const brush_t *brush);
 
 brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const int hullnum);
 void FreeBrushes(brush_t *brushlist);

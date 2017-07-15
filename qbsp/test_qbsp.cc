@@ -23,8 +23,8 @@ static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brus
     return nullptr;
 }
 
-static std::array<qvec4f, 2>
-GetTexvecs(const char *map, const char *texname)
+static mapentity_t
+LoadMap(const char *map)
 {
     parser_t parser;
     ParserInit(&parser, map);
@@ -32,6 +32,14 @@ GetTexvecs(const char *map, const char *texname)
     mapentity_t worldspawn;
     // FIXME: adds the brush to the global map...
     Q_assert(ParseEntity(&parser, &worldspawn));
+    
+    return worldspawn;
+}
+
+static std::array<qvec4f, 2>
+GetTexvecs(const char *map, const char *texname)
+{
+    mapentity_t worldspawn = LoadMap(map);
     
     const mapbrush_t *mapbrush = &worldspawn.mapbrush(0);
     const mapface_t *mapface = Mapbrush_FirstFaceWithTextureName(mapbrush, "tech02_1");
@@ -83,4 +91,32 @@ TEST(qbsp, testTextureIssue) {
         }
     }
 #endif
+}
+
+TEST(qbsp, duplicatePlanes) {
+    // a brush from e1m4.map with 7 planes, only 6 unique.
+    const char *mapWithDuplicatePlanes = R"(
+    {
+        "classname"	"worldspawn"
+        {
+            ( 512 120 1184 ) ( 512 104 1184 ) ( 512 8 1088 ) WBRICK1_5 0 0 0 1.000000 1.000000
+            ( 1072 104 1184 ) ( 176 104 1184 ) ( 176 8 1088 ) WBRICK1_5 0 0 0 1.000000 1.000000
+            ( 896 56 1184 ) ( 896 72 1184 ) ( 896 -24 1088 ) WBRICK1_5 0 0 0 1.000000 1.000000
+            ( 176 88 1184 ) ( 1072 88 1184 ) ( 1072 -8 1088 ) WBRICK1_5 0 0 0 1.000000 1.000000
+            ( 176 88 1184 ) ( 176 104 1184 ) ( 1072 104 1184 ) WBRICK1_5 0 0 0 1.000000 1.000000
+            ( 1072 8 1088 ) ( 176 8 1088 ) ( 176 -8 1088 ) WBRICK1_5 0 0 0 1.000000 1.000000
+            ( 960 8 1088 ) ( 864 104 1184 ) ( 848 104 1184 ) WBRICK1_5 0 0 0 1.000000 1.000000
+        }
+    }
+    )";
+    
+    mapentity_t worldspawn = LoadMap(mapWithDuplicatePlanes);
+    ASSERT_EQ(1, worldspawn.nummapbrushes);
+    EXPECT_EQ(0, worldspawn.numbrushes);
+    EXPECT_EQ(6, worldspawn.mapbrush(0).numfaces);
+    
+    brush_t *brush = LoadBrush(&worldspawn.mapbrush(0), vec3_origin, 0);
+    ASSERT_NE(nullptr, brush);
+    EXPECT_EQ(6, Brush_NumFaces(brush));
+    FreeMem(brush, BRUSH, 1);
 }
