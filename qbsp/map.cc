@@ -2095,7 +2095,7 @@ from q3map
 ==================
 */
 static void
-WriteBspBrushMap(char *name, const std::vector<brush_t *> &list)
+WriteBspBrushMap(const char *name, const std::vector<brush_t *> &list)
 {
     FILE	*f;
     
