@@ -25,3 +25,8 @@ cpack
 # run tests
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
+
+# test id1 maps for leaks
+cd ..
+cd testmaps/quake_map_source
+PATH=../../$BUILD_DIR/qbsp ./leaktest.sh || exit 1
