@@ -383,7 +383,12 @@ FillOutside(node_t *node, const int hullnum)
         StripExtension(options.szBSPName);
         strcat(options.szBSPName, ".prt");
         remove(options.szBSPName);
-
+        
+        if (options.fLeakTest) {
+            logprint("Aborting because -leaktest was used.\n");
+            exit(1);
+        }
+        
         return false;
     }
 

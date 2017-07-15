@@ -359,6 +359,7 @@ public:
     bool fOmitDetailFence;
     bool fForcePRT1;
     bool fTestExpand;
+    bool fLeakTest;
     
     options_t() {
         memset(this, 0, sizeof(options_t));
