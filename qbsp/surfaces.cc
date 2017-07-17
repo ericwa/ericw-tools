@@ -20,6 +20,8 @@
 */
 
 #include <qbsp/qbsp.hh>
+#include <map>
+#include <list>
 
 static hashvert_t *pHashverts;
 static int needlmshifts;
@@ -185,12 +187,9 @@ static int cStartEdge;
 static hashvert_t *hashverts[NUM_HASH];
 static vec3_t hash_min, hash_scale;
 
-typedef struct hashedge_s {
-    unsigned i;
-    struct hashedge_s *next;
-} hashedge_t;
-
-static hashedge_t *hashedges[NUM_HASH];
+using vertidx_t = int;
+using edgeidx_t = int;
+static std::map<std::pair<vertidx_t, vertidx_t>, std::list<edgeidx_t>> hashedges;
 
 static void
 InitHash(void)
@@ -222,33 +221,13 @@ InitHash(void)
     hvert_p = pHashverts;
     
     /* edges hash table */
-    for (i=0; i<NUM_HASH; i++) {
-        hashedge_t *he;
-        for (he = hashedges[i]; he; )
-        {
-            hashedge_t *to_free = he;
-            he = he->next;
-            FreeMem(to_free, OTHER, sizeof(hashedge_t));
-        }
-    }
-    memset(hashedges, 0, sizeof(hashedges));
-}
-
-static unsigned
-HashEdge(unsigned v1, unsigned v2)
-{
-    return (v1 + v2) % NUM_HASH;
+    hashedges.clear();
 }
 
 static void
-AddHashEdge(unsigned v1, unsigned v2, unsigned i)
+AddHashEdge(int v1, int v2, int i)
 {
-    hashedge_t *he = (hashedge_t *)AllocMem(OTHER, sizeof(hashedge_t), true);
-    unsigned slot = HashEdge(v1, v2);
-    
-    he->i = i;
-    he->next = hashedges[slot];
-    hashedges[slot] = he;
+    hashedges[std::make_pair(v1, v2)].push_front(i);
 }
 
 static unsigned
@@ -322,7 +301,9 @@ GetVertex(mapentity_t *entity, const vec3_t in)
 ==================
 GetEdge
 
-Don't allow four way edges
+Don't allow four way edges (FIXME: What is this?)
+ 
+Returns a global edge number, possibly negative to indicate a backwards edge.
 ==================
 */
 static int
@@ -332,8 +313,6 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     int v1, v2;
     int i;
-    unsigned edge_hash_key;
-    hashedge_t *he;
 
     if (!face->contents[0])
         Error("Face with 0 contents (%s)", __func__);
@@ -341,19 +320,22 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
 
-    edge_hash_key = HashEdge(v1, v2);
+    // search for an existing edge from v2->v1
+    const std::pair<int,int> edge_hash_key = std::make_pair(v2, v1);
 
     if (options.BSPVersion == BSPVERSION) {
         bsp29_dedge_t *edge;
 
-        for (he = hashedges[edge_hash_key]; he; he = he->next) {
-            i = he->i;
-            edge = (bsp29_dedge_t *)edges->data + i;
-            if (v1 == edge->v[1] && v2 == edge->v[0]
-                && pEdgeFaces1[i] == NULL
-                && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
-                pEdgeFaces1[i] = face;
-                return -(i + cStartEdge);
+        auto it = hashedges.find(edge_hash_key);
+        if (it != hashedges.end()) {
+            for (const int i : it->second) {
+                edge = (bsp29_dedge_t *)edges->data + i;
+                Q_assert(v1 == edge->v[1] && v2 == edge->v[0]);
+                if (pEdgeFaces1[i] == NULL
+                    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+                    pEdgeFaces1[i] = face;
+                    return -(i + cStartEdge);
+                }
             }
         }
 
@@ -365,16 +347,18 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
         edge->v[0] = v1;
         edge->v[1] = v2;
     } else {
-        bsp2_dedge_t *edge = (bsp2_dedge_t *)edges->data;
+        bsp2_dedge_t *edge;
 
-        for (he = hashedges[edge_hash_key]; he; he = he->next) {
-            i = he->i;
-            edge = (bsp2_dedge_t *)edges->data + i;
-            if (v1 == edge->v[1] && v2 == edge->v[0]
-                && pEdgeFaces1[i] == NULL
-                && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
-                pEdgeFaces1[i] = face;
-                return -(i + cStartEdge);
+        auto it = hashedges.find(edge_hash_key);
+        if (it != hashedges.end()) {
+            for (const int i : it->second) {
+                edge = (bsp2_dedge_t *)edges->data + i;
+                Q_assert(v1 == edge->v[1] && v2 == edge->v[0]);
+                if (pEdgeFaces1[i] == NULL
+                    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+                    pEdgeFaces1[i] = face;
+                    return -(i + cStartEdge);
+                }
             }
         }
 
