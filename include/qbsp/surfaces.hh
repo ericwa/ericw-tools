@@ -23,10 +23,8 @@
 #define QBSP_SURFACES_HH
 
 typedef struct hashvert_s {
-    struct hashvert_s *next;
     vec3_t point;
     int num;
-    int numedges;
 } hashvert_t;
 
 surface_t *GatherNodeFaces(node_t *headnode);

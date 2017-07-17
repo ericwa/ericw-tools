@@ -23,7 +23,6 @@
 #include <map>
 #include <list>
 
-static hashvert_t *pHashverts;
 static int needlmshifts;
 
 /*
@@ -173,8 +172,6 @@ GatherNodeFaces(node_t *headnode)
 
 //===========================================================================
 
-static hashvert_t *hvert_p;
-
 // This is a kludge.   Should be pEdgeFaces[2].
 static const face_t **pEdgeFaces0;
 static const face_t **pEdgeFaces1;
@@ -182,45 +179,15 @@ static int cStartEdge;
 
 //============================================================================
 
-#define NUM_HASH        4096
-
-static hashvert_t *hashverts[NUM_HASH];
-static vec3_t hash_min, hash_scale;
-
 using vertidx_t = int;
 using edgeidx_t = int;
 static std::map<std::pair<vertidx_t, vertidx_t>, std::list<edgeidx_t>> hashedges;
+static std::map<std::tuple<int,int,int>, std::list<hashvert_t>> hashverts;
 
 static void
 InitHash(void)
 {
-    vec3_t size;
-    vec_t volume;
-    vec_t scale;
-    int newsize[2];
-    int i;
-
-    memset(hashverts, 0, sizeof(hashverts));
-
-    for (i = 0; i < 3; i++) {
-        hash_min[i] = -8000;
-        size[i] = 16000;
-    }
-
-    volume = size[0] * size[1];
-
-    scale = sqrt(volume / NUM_HASH);
-
-    newsize[0] = size[0] / scale;
-    newsize[1] = size[1] / scale;
-
-    hash_scale[0] = newsize[0] / size[0];
-    hash_scale[1] = newsize[1] / size[1];
-    hash_scale[2] = (vec_t)newsize[1];
-
-    hvert_p = pHashverts;
-    
-    /* edges hash table */
+    hashverts.clear();
     hashedges.clear();
 }
 
@@ -230,32 +197,35 @@ AddHashEdge(int v1, int v2, int i)
     hashedges[std::make_pair(v1, v2)].push_front(i);
 }
 
-static unsigned
+static std::tuple<int,int,int>
 HashVec(const vec3_t vec)
 {
-    unsigned h;
-
-    h = (unsigned)(hash_scale[0] * (vec[0] - hash_min[0]) * hash_scale[2] +
-                   hash_scale[1] * (vec[1] - hash_min[1]));
-    if (h >= NUM_HASH)
-        return NUM_HASH - 1;
-    return h;
+    return std::make_tuple(static_cast<int>(floor(vec[0])),
+                           static_cast<int>(floor(vec[1])),
+                           static_cast<int>(floor(vec[2])));
 }
 
 static void
 AddHashVert(const vec3_t vert, const int global_vert_num)
 {
-    hashvert_t *hv;
-    unsigned h;
+    hashvert_t hv;
+    VectorCopy(vert, hv.point);
+    hv.num = global_vert_num;
     
-    h = HashVec(vert);
+    // insert each vert at floor(pos[axis]) and floor(pos[axis]) + 1 (for each axis)
+    // so e.g. a vert at (0.99, 0.99, 0.99) shows up if we search at (1.01, 1.01, 1.01)
+    // this is a bit wasteful, since it inserts 8 copies of each vert.
     
-    hv = hvert_p++;
-    hv->num = global_vert_num;
-    hv->numedges = 1;
-    hv->next = hashverts[h];
-    hashverts[h] = hv;
-    VectorCopy(vert, hv->point);
+    for (int x=0; x<=1; x++) {
+        for (int y=0; y<=1; y++) {
+            for (int z=0; z<=1; z++) {
+                const auto h = std::make_tuple(static_cast<int>(floor(vert[0])) + x,
+                                               static_cast<int>(floor(vert[1])) + y,
+                                               static_cast<int>(floor(vert[2])) + z);
+                hashverts[h].push_front(hv);
+            }
+        }
+    }
 }
 
 /*
@@ -266,9 +236,7 @@ GetVertex
 static int
 GetVertex(mapentity_t *entity, const vec3_t in)
 {
-    int h;
     int i;
-    hashvert_t *hv;
     vec3_t vert;
     struct lumpdata *vertices = &entity->lumps[LUMP_VERTEXES];
     dvertex_t *dvertex;
@@ -280,13 +248,16 @@ GetVertex(mapentity_t *entity, const vec3_t in)
             vert[i] = in[i];
     }
 
-    h = HashVec(vert);
-    for (hv = hashverts[h]; hv; hv = hv->next) {
-        if (fabs(hv->point[0] - vert[0]) < POINT_EPSILON &&
-            fabs(hv->point[1] - vert[1]) < POINT_EPSILON &&
-            fabs(hv->point[2] - vert[2]) < POINT_EPSILON) {
-            hv->numedges++;
-            return hv->num;
+    const auto h = HashVec(vert);
+    auto it = hashverts.find(h);
+    if (it != hashverts.end()) {
+        for (hashvert_t &hv : it->second) {
+            if (fabs(hv.point[0] - vert[0]) < POINT_EPSILON &&
+                fabs(hv.point[1] - vert[1]) < POINT_EPSILON &&
+                fabs(hv.point[2] - vert[2]) < POINT_EPSILON) {
+
+                return hv.num;
+            }
         }
     }
 
@@ -594,7 +565,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     edges->data = AllocMem(BSP_EDGE, edges->count, true);
 
     // Accessory data
-    pHashverts = (hashvert_t *)AllocMem(HASHVERT, vertices->count, true);
     pEdgeFaces0 = (const face_t **)AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
     pEdgeFaces1 = (const face_t **)AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
 
@@ -603,7 +573,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     firstface = map.cTotal[LUMP_FACES];
     MakeFaceEdges_r(entity, headnode, 0);
     
-    FreeMem(pHashverts, HASHVERT, vertices->count);
     FreeMem(pEdgeFaces0, OTHER, sizeof(face_t *) * edges->count);
     FreeMem(pEdgeFaces1, OTHER, sizeof(face_t *) * edges->count);
 
