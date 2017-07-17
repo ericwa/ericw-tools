@@ -231,7 +231,7 @@ AddHashEdge(int v1, int v2, int i)
 }
 
 static unsigned
-HashVec(vec3_t vec)
+HashVec(const vec3_t vec)
 {
     unsigned h;
 
@@ -242,6 +242,21 @@ HashVec(vec3_t vec)
     return h;
 }
 
+static void
+AddHashVert(const vec3_t vert, const int global_vert_num)
+{
+    hashvert_t *hv;
+    unsigned h;
+    
+    h = HashVec(vert);
+    
+    hv = hvert_p++;
+    hv->num = global_vert_num;
+    hv->numedges = 1;
+    hv->next = hashverts[h];
+    hashverts[h] = hv;
+    VectorCopy(vert, hv->point);
+}
 
 /*
 =============
@@ -275,13 +290,10 @@ GetVertex(mapentity_t *entity, const vec3_t in)
         }
     }
 
-    hv = hvert_p++;
-    hv->num = map.cTotal[LUMP_VERTEXES]++;
-    hv->numedges = 1;
-    hv->next = hashverts[h];
-    hashverts[h] = hv;
-    VectorCopy(vert, hv->point);
+    const int global_vert_num = map.cTotal[LUMP_VERTEXES]++;
 
+    AddHashVert(vert, global_vert_num);
+    
     if (vertices->index == vertices->count)
         Error("Internal error: didn't allocate enough vertices?");
 
@@ -292,7 +304,7 @@ GetVertex(mapentity_t *entity, const vec3_t in)
     dvertex->point[2] = vert[2];
     vertices->index++;
 
-    return hv->num;
+    return global_vert_num;
 }
 
 //===========================================================================
