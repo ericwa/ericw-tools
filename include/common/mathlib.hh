@@ -127,6 +127,14 @@ VectorSet(vec3_t out, vec_t x, vec_t y, vec_t z)
 }
 
 static inline void
+VectorClear(vec3_t out)
+{
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+}
+
+static inline void
 VectorCopyFromGLM(const qvec3f &in, vec3_t out)
 {
     out[0] = in[0];
