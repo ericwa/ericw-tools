@@ -249,19 +249,23 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
  * - Returns a global plane number and the side that will be the front
  */
 int
-FindPlane(const qbsp_plane_t *plane, int *side)
+FindPlane(const vec3_t normal, const vec_t dist, int *side)
 {
-    for (int i : map.planehash[plane_hash_fn(plane)]) {
+    qbsp_plane_t plane = {0};
+    VectorCopy(normal, plane.normal);
+    plane.dist = dist;
+    
+    for (int i : map.planehash[plane_hash_fn(&plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
-        if (PlaneEqual(&p, plane)) {
+        if (PlaneEqual(&p, &plane)) {
             *side = SIDE_FRONT;
             return i;
-        } else if (PlaneInvEqual(&p, plane)) {
+        } else if (PlaneInvEqual(&p, &plane)) {
             *side = SIDE_BACK;
             return i;
         }
     }
-    return NewPlane(plane->normal, plane->dist, side);
+    return NewPlane(plane.normal, plane.dist, side);
 }
 
 
@@ -432,7 +436,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
         FreeMem(w, WINDING, 1);
 
         f->texinfo = hullnum ? 0 : mapface->texinfo;
-        f->planenum = FindPlane(&plane, &f->planeside);
+        f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
         f->next = facelist;
         facelist = f;
         CheckFace(f);
