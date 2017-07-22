@@ -46,6 +46,28 @@ typedef struct hullbrush_s {
 
 /*
 =================
+Face_Plane
+=================
+*/
+plane_t
+Face_Plane(const face_t *face)
+{
+    const qbsp_plane_t *plane = &map.planes.at(face->planenum);
+    plane_t result;
+    
+    result.dist = plane->dist;
+    VectorCopy(plane->normal, result.normal);
+    
+    if (face->planeside) {
+        VectorScale(result.normal, -1.0, result.normal);
+        result.dist = -result.dist;
+    }
+    
+    return result;
+}
+
+/*
+=================
 CheckFace
 
 Note: this will not catch 0 area polygons

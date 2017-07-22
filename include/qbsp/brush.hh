@@ -35,6 +35,8 @@ typedef struct brush_s {
 
 class mapbrush_t;
 
+plane_t Face_Plane(const face_t *face);
+
 int Brush_ListCountWithCFlags(const brush_t *brush, int cflags);
 int Brush_ListCount(const brush_t *brush);
 int Brush_NumFaces(const brush_t *brush);
