@@ -120,3 +120,19 @@ TEST(qbsp, duplicatePlanes) {
     EXPECT_EQ(6, Brush_NumFaces(brush));
     FreeMem(brush, BRUSH, 1);
 }
+
+TEST(mathlib, WindingArea) {
+    winding_t w;
+    w.numpoints = 5;
+    
+    // poor test.. but at least checks that the colinear point is treated correctly
+    VectorSet(w.points[0], 0,0,0);
+    VectorSet(w.points[1], 0,32,0); // colinear
+    VectorSet(w.points[2], 0,64,0);
+    VectorSet(w.points[3], 64,64,0);
+    VectorSet(w.points[4], 64,0,0);
+
+    
+    EXPECT_EQ(64.0f * 64.0f, WindingArea(&w));
+}
+

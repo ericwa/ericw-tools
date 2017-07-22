@@ -47,4 +47,6 @@ void MidpointWinding(const winding_t *w, vec3_t v);
 void CalcSides(const winding_t *in, const qbsp_plane_t *split, int *sides,
                vec_t *dists, int counts[3]);
 
+vec_t WindingArea(const winding_t * w);
+
 #endif

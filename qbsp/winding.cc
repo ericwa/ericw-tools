@@ -371,3 +371,26 @@ MidpointWinding(const winding_t *w, vec3_t v)
     if (w->numpoints)
         VectorScale(v, 1.0 / w->numpoints, v);
 }
+
+/*
+==================
+WindingArea
+==================
+*/
+vec_t
+WindingArea(const winding_t * w)
+{
+    int i;
+    vec3_t d1, d2, cross;
+    vec_t total;
+    
+    total = 0;
+    for (i = 2; i < w->numpoints; i++) {
+        VectorSubtract(w->points[i - 1], w->points[0], d1);
+        VectorSubtract(w->points[i], w->points[0], d2);
+        CrossProduct(d1, d2, cross);
+        vec_t triarea = 0.5 * VectorLength(cross);
+        total += triarea;
+    }
+    return total;
+}
