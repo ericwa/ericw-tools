@@ -152,7 +152,13 @@
 #define T_EPSILON               0.0002
 #define CONTINUOUS_EPSILON      0.0005
 
+// FIXME: replace with MAX_WORLD_COORD/MIN_WORLD_COORD/WORLD_SIZE
 #define BOGUS_RANGE     65536
+
+// from q3map
+#define MAX_WORLD_COORD		( 128*1024 )
+#define MIN_WORLD_COORD		( -128*1024 )
+#define WORLD_SIZE			( MAX_WORLD_COORD - MIN_WORLD_COORD )
 
 // the exact bounding box of the brushes is expanded some for the headnode
 // volume.  is this still needed?

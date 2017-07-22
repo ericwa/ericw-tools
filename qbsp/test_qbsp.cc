@@ -177,6 +177,24 @@ TEST(qbsp, BrushMostlyOnSide2) {
     FreeMem(brush, BRUSH, 1);
 }
 
+TEST(qbsp, BoundBrush) {
+    brush_t *brush = load128x128x32Brush();
+    
+    ClearBounds(brush->mins, brush->maxs);
+    
+    EXPECT_EQ(true, BoundBrush(brush));
+    
+    EXPECT_FLOAT_EQ(-64, brush->mins[0]);
+    EXPECT_FLOAT_EQ(-64, brush->mins[1]);
+    EXPECT_FLOAT_EQ(-16, brush->mins[2]);
+    
+    EXPECT_FLOAT_EQ(64, brush->maxs[0]);
+    EXPECT_FLOAT_EQ(64, brush->maxs[1]);
+    EXPECT_FLOAT_EQ(16, brush->maxs[2]);
+    
+    FreeMem(brush, BRUSH, 1);
+}
+
 TEST(mathlib, WindingArea) {
     winding_t w;
     w.numpoints = 5;

@@ -1214,6 +1214,38 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
 }
 
+//============================================================
+
+/*
+==================
+BoundBrush
+
+Sets the mins/maxs based on the windings
+returns false if the brush doesn't enclose a valid volume
+
+from q3map
+==================
+*/
+bool BoundBrush (brush_t *brush)
+{
+    ClearBounds (brush->mins, brush->maxs);
+    
+    for (face_t *face = brush->faces; face; face = face->next) {
+        const winding_t *w = &face->w;
+        for (int j=0 ; j<w->numpoints ; j++)
+            AddPointToBounds (w->points[j], brush->mins, brush->maxs);
+    }
+    
+    for (int i=0 ; i<3 ; i++) {
+        if (brush->mins[i] < MIN_WORLD_COORD || brush->maxs[i] > MAX_WORLD_COORD
+            || brush->mins[i] >= brush->maxs[i] ) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 /*
 ==================
 BrushVolume
