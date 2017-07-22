@@ -121,7 +121,8 @@ TEST(qbsp, duplicatePlanes) {
     FreeMem(brush, BRUSH, 1);
 }
 
-TEST(qbsp, brushVolume) {
+static brush_t *load128x128x32Brush()
+{
     /* 128x128x32 rectangular brush */
     const char *map = R"(
     {
@@ -138,12 +139,40 @@ TEST(qbsp, brushVolume) {
     )";
     
     mapentity_t worldspawn = LoadMap(map);
-    ASSERT_EQ(1, worldspawn.nummapbrushes);
+    Q_assert(1 == worldspawn.nummapbrushes);
     
     brush_t *brush = LoadBrush(&worldspawn.mapbrush(0), vec3_origin, 0);
-    ASSERT_NE(nullptr, brush);
+    Q_assert(nullptr != brush);
+    
+    return brush;
+}
+
+TEST(qbsp, BrushVolume) {
+    brush_t *brush = load128x128x32Brush();
     
     EXPECT_FLOAT_EQ((128*128*32), BrushVolume(brush));
+}
+
+TEST(qbsp, BrushMostlyOnSide1) {
+    brush_t *brush = load128x128x32Brush();
+    
+    plane_t plane1;
+    VectorSet(plane1.normal, -1, 0, 0);
+    plane1.dist = -100;
+    
+    EXPECT_EQ(SIDE_FRONT, BrushMostlyOnSide(brush, &plane1));
+    
+    FreeMem(brush, BRUSH, 1);
+}
+
+TEST(qbsp, BrushMostlyOnSide2) {
+    brush_t *brush = load128x128x32Brush();
+    
+    plane_t plane2;
+    VectorSet(plane2.normal, 1, 0, 0);
+    plane2.dist = 100;
+    
+    EXPECT_EQ(SIDE_BACK, BrushMostlyOnSide(brush, &plane2));
     
     FreeMem(brush, BRUSH, 1);
 }

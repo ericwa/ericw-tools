@@ -1243,3 +1243,38 @@ vec_t BrushVolume (const brush_t *brush)
     return volume;
 }
 
+/*
+==================
+BrushMostlyOnSide
+
+from q3map
+==================
+*/
+int BrushMostlyOnSide (const brush_t *brush, const plane_t *plane)
+{
+    vec_t max;
+    int side;
+    
+    max = 0;
+    side = SIDE_FRONT;
+    
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        const winding_t *w = &face->w;
+        if (!w->numpoints)
+            continue;
+        
+        for (int j=0 ; j<w->numpoints ; j++) {
+            const vec_t d = DotProduct (w->points[j], plane->normal) - plane->dist;
+            if (d > max) {
+                max = d;
+                side = SIDE_FRONT;
+            }
+            if (-d > max) {
+                max = -d;
+                side = SIDE_BACK;
+            }
+        }
+    }
+    
+    return side;
+}

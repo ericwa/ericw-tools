@@ -49,5 +49,6 @@ bool PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
 bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
 
 vec_t BrushVolume (const brush_t *brush);
+int BrushMostlyOnSide (const brush_t *brush, const plane_t *plane);
 
 #endif
