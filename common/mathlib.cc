@@ -102,6 +102,26 @@ VecStrf(const vec3_t vec)
     return buf;
 }
 
+void ClearBounds(vec3_t mins, vec3_t maxs)
+{
+    for (int i=0; i<3; i++) {
+        mins[i] = VECT_MAX;
+        maxs[i] = -VECT_MAX;
+    }
+}
+
+void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
+{
+    for (int i=0; i<3; i++) {
+        const vec_t val = v[i];
+        
+        if (val < mins[i])
+            mins[i] = val;
+        if (val > maxs[i])
+            maxs[i] = val;
+    }
+}
+
 // from http://mathworld.wolfram.com/SpherePointPicking.html
 // eqns 6,7,8
 void
