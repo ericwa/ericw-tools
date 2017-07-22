@@ -121,6 +121,33 @@ TEST(qbsp, duplicatePlanes) {
     FreeMem(brush, BRUSH, 1);
 }
 
+TEST(qbsp, brushVolume) {
+    /* 128x128x32 rectangular brush */
+    const char *map = R"(
+    {
+        "classname" "worldspawn"
+        {
+            ( -64 -64 -16 ) ( -64 -63 -16 ) ( -64 -64 -15 ) __TB_empty 0 0 0 1 1
+            ( 64 64 16 ) ( 64 64 17 ) ( 64 65 16 ) __TB_empty 0 0 0 1 1
+            ( -64 -64 -16 ) ( -64 -64 -15 ) ( -63 -64 -16 ) __TB_empty 0 0 0 1 1
+            ( 64 64 16 ) ( 65 64 16 ) ( 64 64 17 ) __TB_empty 0 0 0 1 1
+            ( 64 64 16 ) ( 64 65 16 ) ( 65 64 16 ) __TB_empty 0 0 0 1 1
+            ( -64 -64 -16 ) ( -63 -64 -16 ) ( -64 -63 -16 ) __TB_empty 0 0 0 1 1
+        }
+    }
+    )";
+    
+    mapentity_t worldspawn = LoadMap(map);
+    ASSERT_EQ(1, worldspawn.nummapbrushes);
+    
+    brush_t *brush = LoadBrush(&worldspawn.mapbrush(0), vec3_origin, 0);
+    ASSERT_NE(nullptr, brush);
+    
+    EXPECT_FLOAT_EQ((128*128*32), BrushVolume(brush));
+    
+    FreeMem(brush, BRUSH, 1);
+}
+
 TEST(mathlib, WindingArea) {
     winding_t w;
     w.numpoints = 5;

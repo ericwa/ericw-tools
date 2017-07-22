@@ -1213,3 +1213,33 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         Message(msgPercent, i + 1, src->nummapbrushes);
     }
 }
+
+/*
+==================
+BrushVolume
+
+from q3map
+modified to follow https://en.wikipedia.org/wiki/Polyhedron#Volume
+==================
+*/
+vec_t BrushVolume (const brush_t *brush)
+{
+    if (!brush)
+        return 0;
+    
+    vec_t volume = 0;
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        if (!face->w.numpoints)
+            continue;
+        
+        const vec_t area = WindingArea(&face->w);
+        const plane_t faceplane = Face_Plane(face);
+        
+        volume += DotProduct(faceplane.normal, face->w.points[0]) * area;
+    }
+    
+    volume /= 3.0;
+    
+    return volume;
+}
+
