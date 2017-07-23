@@ -38,6 +38,7 @@ winding_t *BaseWindingForPlane(const qbsp_plane_t *p);
 void CheckWinding(const winding_t *w);
 winding_t *NewWinding(int points);
 winding_t *CopyWinding(const winding_t *w);
+void CopyWindingInto(winding_t *dest, const winding_t *src); // FIXME: get rid of this
 winding_t *FlipWinding(const winding_t *w);
 winding_t *ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon);
 void DivideWinding(const winding_t *in, const qbsp_plane_t *split, winding_t **front,

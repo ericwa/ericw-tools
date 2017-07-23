@@ -1564,7 +1564,7 @@ void SplitBrush (const brush_t *brush,
              */
             
             face_t *newface = CopyFace(face);
-            newface->w = *cw[j];
+            CopyWindingInto(&newface->w, cw[j]);
             UpdateFaceSphere(newface);
             
             // link it into the front or back brush we are building
@@ -1624,16 +1624,14 @@ void SplitBrush (const brush_t *brush,
         
         if (i == 0) {
             winding_t *newwinding = FlipWinding(midwinding);
-            newface->w = *newwinding;
+            CopyWindingInto(&newface->w, newwinding);
             newface->planenum = planenum;
             newface->planeside = !planeside;
             FreeMem(newwinding, WINDING, 1);
         } else {
-            winding_t *newwinding = CopyWinding(midwinding);
-            newface->w = *newwinding;
+            CopyWindingInto(&newface->w, midwinding);
             newface->planenum = planenum;
             newface->planeside = planeside;
-            FreeMem(newwinding, WINDING, 1);
         }
         
         UpdateFaceSphere(newface);

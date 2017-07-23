@@ -112,6 +112,12 @@ CopyWinding(const winding_t *w)
     return c;
 }
 
+void CopyWindingInto(winding_t *dest, const winding_t *src) // FIXME: get rid of this
+{
+    dest->numpoints = src->numpoints;
+    memcpy(dest->points, src->points, sizeof(vec3_t) * src->numpoints);
+}
+
 /*
 ==================
 FlipWinding
