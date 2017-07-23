@@ -144,6 +144,8 @@ static brush_t *load128x128x32Brush()
     brush_t *brush = LoadBrush(&worldspawn.mapbrush(0), vec3_origin, 0);
     Q_assert(nullptr != brush);
     
+    brush->contents = CONTENTS_SOLID;
+    
     return brush;
 }
 
@@ -227,6 +229,8 @@ static void checkCube(const brush_t *brush)
     EXPECT_EQ(6, Brush_NumFaces(brush));
     
     checkForAllCubeNormals(brush);
+    
+    EXPECT_EQ(CONTENTS_SOLID, brush->contents);
 }
 
 TEST(qbsp, SplitBrush) {
