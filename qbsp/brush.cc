@@ -1,6 +1,7 @@
 /*
     Copyright (C) 1996-1997  Id Software, Inc.
     Copyright (C) 1997       Greg Lewis
+    Copyright (C) 1999-2005  Id Software, Inc.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -518,6 +519,17 @@ FreeBrushes(brush_t *brushlist)
     }
 }
 
+/*
+=====================
+FreeBrush
+=====================
+*/
+void
+FreeBrush(brush_t *brush)
+{
+    Q_assert(brush->next == nullptr);
+    FreeMem(brush, BRUSH, 1);
+}
 
 /*
 ==============================================================================
@@ -1311,6 +1323,21 @@ int BrushMostlyOnSide (const brush_t *brush, const vec3_t planenormal, vec_t pla
     return side;
 }
 
+face_t *CopyFace(const face_t *face)
+{
+    face_t *newface = (face_t *)AllocMem(FACE, 1, true);
+    
+    memcpy(newface, face, sizeof(face_t));
+    
+    // clear stuff that shouldn't be copied.
+    newface->original = nullptr;
+    newface->outputnumber = -1;
+    newface->edges = nullptr;
+    newface->next = nullptr;
+    
+    return newface;
+}
+
 /*
 ==================
 CopyBrush
@@ -1331,14 +1358,7 @@ brush_t *CopyBrush (const brush_t *brush)
     
     for (const face_t *face = brush->faces; face; face = face->next) {
         
-        face_t *newface = (face_t *)AllocMem(FACE, 1, true);
-        
-        memcpy(newface, face, sizeof(face_t));
-        
-        // clear stuff that shouldn't be copied.
-        newface->original = nullptr;
-        newface->outputnumber = -1;
-        newface->edges = nullptr;
+        face_t *newface = CopyFace(face);
         
         // link into newbrush
         newface->next = newbrush->faces;
@@ -1346,5 +1366,296 @@ brush_t *CopyBrush (const brush_t *brush)
     }
     
     return newbrush;
+}
+
+/*
+================
+WindingIsTiny
+
+Returns true if the winding would be crunched out of
+existance by the vertex snapping.
+
+from q3map
+================
+*/
+#define	EDGE_LENGTH	0.2
+static qboolean
+WindingIsTiny (const winding_t *w)
+{
+    /*
+     if (WindingArea (w) < 1)
+     return qtrue;
+     return qfalse;
+     */
+    int		i, j;
+    vec_t	len;
+    vec3_t	delta;
+    int		edges;
+    
+    edges = 0;
+    for (i=0 ; i<w->numpoints ; i++)
+    {
+        j = i == w->numpoints - 1 ? 0 : i+1;
+        VectorSubtract (w->points[j], w->points[i], delta);
+        len = VectorLength (delta);
+        if (len > EDGE_LENGTH)
+        {
+            if (++edges == 3)
+                return false;
+        }
+    }
+    return true;
+}
+
+/*
+================
+WindingIsHuge
+
+Returns true if the winding still has one of the points
+from basewinding for plane
+ 
+from q3map
+================
+*/
+qboolean WindingIsHuge (winding_t *w)
+{
+    int		i, j;
+    
+    for (i=0 ; i<w->numpoints ; i++) {
+        for (j=0 ; j<3 ; j++)
+            if (w->points[i][j] <= MIN_WORLD_COORD || w->points[i][j] >= MAX_WORLD_COORD)
+                return true;
+    }
+    return false;
+}
+
+static int
+Brush_FaceCount (const brush_t *brush)
+{
+    int i=0;
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        i++;
+    }
+    return i;
+}
+
+/*
+================
+SplitBrush
+
+Generates two new brushes, leaving the original
+unchanged
+ 
+from q3map
+================
+*/
+void SplitBrush (const brush_t *brush,
+                 int planenum,
+                 int planeside,
+                 brush_t **front, brush_t **back)
+{
+    *front = nullptr;
+    *back = nullptr;
+    
+    const qbsp_plane_t	*plane = &map.planes.at(planenum);
+    
+    // check all points
+    vec_t d_front = 0;
+    vec_t d_back = 0;
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        const winding_t *w = &face->w;
+        if (!w->numpoints)
+            continue;
+        
+        for (int j=0 ; j<w->numpoints ; j++) {
+            const vec_t d = DotProduct (w->points[j], plane->normal) - plane->dist;
+            if (d > 0 && d > d_front)
+                d_front = d;
+            if (d < 0 && d < d_back)
+                d_back = d;
+        }
+    }
+    
+    if (d_front < 0.1) // PLANESIDE_EPSILON)
+    {	// only on back
+        *back = CopyBrush (brush);
+        return;
+    }
+    if (d_back > -0.1) // PLANESIDE_EPSILON)
+    {	// only on front
+        *front = CopyBrush (brush);
+        return;
+    }
+    
+    // create a new winding from the split plane    
+    winding_t *w = BaseWindingForPlane (plane);
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        plane_t plane2 = Face_Plane(face);
+        ChopWindingInPlace (&w, plane2.normal, plane2.dist, 0); // PLANESIDE_EPSILON);
+    }
+
+    if (!w || WindingIsTiny (w) )
+    {	// the brush isn't really split
+        int		side;
+        
+        if (w)
+            FreeMem(w, WINDING, 1);
+        
+        side = BrushMostlyOnSide (brush, plane->normal, plane->dist);
+        if (side == SIDE_FRONT)
+            *front = CopyBrush (brush);
+        if (side == SIDE_BACK)
+            *back = CopyBrush (brush);
+        return;
+    }
+    
+    if (WindingIsHuge (w))
+    {
+        logprint ("WARNING: huge winding\n");
+    }
+    
+    winding_t *midwinding = w;
+    brush_t	*b[2];
+    
+    // split it for real
+    
+    // first, make two empty brushes (for the front and back side of the plane)
+    
+    for (int i=0 ; i<2 ; i++)
+    {
+        b[i] = (brush_t *) AllocMem (BRUSH, 1, true);
+        //memcpy( b[i], brush, sizeof( brush_t ) );
+
+        // NOTE: brush copying
+        b[i]->contents = brush->contents;
+        b[i]->cflags = brush->cflags;
+        b[i]->lmshift = brush->lmshift;
+        b[i]->faces = nullptr;
+        b[i]->next = nullptr;
+
+        // FIXME:
+        //b[i]->original = brush->original;
+    }
+    
+    // split all the current windings
+    
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        const winding_t *w = &face->w;
+        if (!w->numpoints)
+            continue;
+        
+        winding_t *cw[2];
+        DivideWinding(w, plane, &cw[0], &cw[1]);
+        
+        for (int j=0 ; j<2 ; j++)
+        {
+            if (!cw[j])
+                continue;
+            /*
+             if (WindingIsTiny (cw[j]))
+             {
+             FreeWinding (cw[j]);
+             continue;
+             }
+             */
+            
+            face_t *newface = CopyFace(face);
+            newface->w = *cw[j];
+            UpdateFaceSphere(newface);
+            
+            // link it into the front or back brush we are building
+            newface->next = b[j]->faces;
+            b[j]->faces = newface;
+        }
+    }
+    
+    
+    // see if we have valid polygons on both sides
+    
+    for (int i=0 ; i<2 ; i++)
+    {
+        BoundBrush (b[i]);
+        
+        int j;
+        for (j=0 ; j<3 ; j++)
+        {
+            if (b[i]->mins[j] < MIN_WORLD_COORD || b[i]->maxs[j] > MAX_WORLD_COORD)
+            {
+                logprint ("bogus brush after clip\n");
+                break;
+            }
+        }
+        
+        if (Brush_FaceCount(b[i]) < 4 /* was 3 */ || j < 3)
+        {
+            FreeBrush (b[i]);
+            b[i] = nullptr;
+        }
+    }
+    
+    if ( !(b[0] && b[1]) )
+    {
+        if (!b[0] && !b[1])
+            logprint ("split removed brush\n");
+        else
+            logprint ("split not on both sides\n");
+        if (b[0])
+        {
+            FreeBrush (b[0]);
+            *front = CopyBrush (brush);
+        }
+        if (b[1])
+        {
+            FreeBrush (b[1]);
+            *back = CopyBrush (brush);
+        }
+        return;
+    }
+    
+    // add the midwinding to both sides
+    for (int i=0 ; i<2 ; i++)
+    {
+        // clone the first face (arbitrarily)
+        face_t *newface = CopyFace(b[i]->faces);
+        
+        if (i == 0) {
+            winding_t *newwinding = FlipWinding(midwinding);
+            newface->w = *newwinding;
+            newface->planenum = planenum;
+            newface->planeside = !planeside;
+            FreeMem(newwinding, WINDING, 1);
+        } else {
+            winding_t *newwinding = CopyWinding(midwinding);
+            newface->w = *newwinding;
+            newface->planenum = planenum;
+            newface->planeside = planeside;
+            FreeMem(newwinding, WINDING, 1);
+        }
+        
+        UpdateFaceSphere(newface);
+        
+        // link it into the front or back brush
+        newface->next = b[i]->faces;
+        b[i]->faces = newface;
+    }
+    
+    {
+        vec_t	v1;
+        int		i;
+        
+        for (i=0 ; i<2 ; i++)
+        {
+            v1 = BrushVolume (b[i]);
+            if (v1 < 1.0)
+            {
+                FreeMem (b[i], BRUSH, 1);
+                b[i] = nullptr;
+                logprint ("tiny volume after clip\n");
+            }
+        }
+    }
+    
+    *front = b[0];
+    *back = b[1];
 }
 
