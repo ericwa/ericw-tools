@@ -275,6 +275,7 @@ typedef struct surface_s {
 // there is a node_t structure for every node and leaf in the bsp tree
 
 class mapentity_t;
+typedef struct brush_s brush_t;
 
 typedef struct node_s {
     vec3_t mins, maxs;          // bounding volume, not just points inside
@@ -296,6 +297,10 @@ typedef struct node_s {
     int occupied;               // 0=can't reach entity, 1 = has entity, >1 = distance from leaf with entity
     mapentity_t *occupant;      // example occupant, for leak hunting
     bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
+    
+    // experimental q3map stuff
+    brush_t *q3map_brushlist;
+    int q3map_contents;
     
     bool opaque() const {
         return contents == CONTENTS_SOLID

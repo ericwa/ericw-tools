@@ -1667,3 +1667,74 @@ void SplitBrush (const brush_t *brush,
     FreeMem(midwinding, WINDING, 1);
 }
 
+/*
+====================
+FilterBrushIntoTree_r
+
+from q3map
+ 
+returns the number of fragments the brush was split into
+frees brush
+====================
+*/
+int FilterBrushIntoTree_r( brush_t *b, node_t *node )
+{
+    if ( !b ) {
+        return 0;
+    }
+    
+    // add it to the leaf list
+    if ( node->planenum == PLANENUM_LEAF ) {
+        
+        Q_assert(b->next == nullptr);
+        b->next = node->q3map_brushlist;
+        node->q3map_brushlist = b;
+        
+        // FIXME: set node->q3map_contents
+        
+        return 1;
+    }
+    
+    // split it by the node plane
+    brush_t		*front, *back;
+    SplitBrush ( b, node->planenum, 0, &front, &back );
+    FreeBrush( b );
+    
+    int c = 0;
+    c += FilterBrushIntoTree_r( front, node->children[0] );
+    c += FilterBrushIntoTree_r( back, node->children[1] );
+    
+    return c;
+}
+
+/*
+=====================
+FilterStructuralBrushesIntoTree
+
+Mark the leafs as opaque and areaportals
+ 
+from q3map
+=====================
+*/
+void FilterStructuralBrushesIntoTree( const mapentity_t *e, node_t *headnode )
+{
+    logprint( "----- FilterStructuralBrushesIntoTree -----\n");
+    
+    double st = I_FloatTime();
+    
+    int c_unique = 0;
+    int c_clusters = 0;
+    for ( const brush_t *b = e->brushes ; b ; b = b->next ) {
+        c_unique++;
+        brush_t *newb = CopyBrush( b );
+        
+        int r = FilterBrushIntoTree_r( newb, headnode );
+        c_clusters += r;
+        
+        // mark all sides as visible so drawsurfs are created
+    }
+    
+    logprint( "%5i structural brushes\n", c_unique );
+    logprint( "%5i cluster references\n", c_clusters );
+    logprint( "took %f seconds\n", I_FloatTime() - st );
+}
