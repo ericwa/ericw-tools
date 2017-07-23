@@ -193,4 +193,6 @@ void ExportObj_Faces(const std::vector<const face_t *> &faces);
 void ExportObj_Brushes(const std::vector<const brush_t *> &brushes);
 void ExportObj_Surfaces(const surface_t *surfaces);
 
+void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list);
+
 #endif

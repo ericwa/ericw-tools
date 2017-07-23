@@ -2098,8 +2098,8 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-static void
-WriteBspBrushMap(const char *name, const std::vector<brush_t *> &list)
+void
+WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list)
 {
     FILE	*f;
     
@@ -2110,10 +2110,10 @@ WriteBspBrushMap(const char *name, const std::vector<brush_t *> &list)
     
     fprintf (f, "{\n\"classname\" \"worldspawn\"\n");
     
-    for (brush_t *brush : list)
+    for (const brush_t *brush : list)
     {
         fprintf (f, "{\n");
-        for (face_t *face = brush->faces; face; face = face->next)
+        for (const face_t *face = brush->faces; face; face = face->next)
         {
             // FIXME: Factor out this mess
             qbsp_plane_t plane = map.planes.at(face->planenum);
@@ -2152,7 +2152,7 @@ from q3map
 static void
 TestExpandBrushes(const mapentity_t *src)
 {
-    std::vector<brush_t *> hull1brushes;
+    std::vector<const brush_t *> hull1brushes;
     
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
