@@ -118,7 +118,7 @@ TEST(qbsp, duplicatePlanes) {
     brush_t *brush = LoadBrush(&worldspawn.mapbrush(0), vec3_origin, 0);
     ASSERT_NE(nullptr, brush);
     EXPECT_EQ(6, Brush_NumFaces(brush));
-    FreeMem(brush, BRUSH, 1);
+    FreeBrush(brush);
 }
 
 static brush_t *load128x128x32Brush()
@@ -163,7 +163,7 @@ TEST(qbsp, BrushMostlyOnSide1) {
     
     EXPECT_EQ(SIDE_FRONT, BrushMostlyOnSide(brush, plane1normal, plane1dist));
     
-    FreeMem(brush, BRUSH, 1);
+    FreeBrush(brush);
 }
 
 TEST(qbsp, BrushMostlyOnSide2) {
@@ -174,7 +174,7 @@ TEST(qbsp, BrushMostlyOnSide2) {
     
     EXPECT_EQ(SIDE_BACK, BrushMostlyOnSide(brush, plane1normal, plane1dist));
     
-    FreeMem(brush, BRUSH, 1);
+    FreeBrush(brush);
 }
 
 TEST(qbsp, BoundBrush) {
@@ -192,7 +192,7 @@ TEST(qbsp, BoundBrush) {
     EXPECT_FLOAT_EQ(64, brush->maxs[1]);
     EXPECT_FLOAT_EQ(16, brush->maxs[2]);
     
-    FreeMem(brush, BRUSH, 1);
+    FreeBrush(brush);
 }
 
 static void checkForAllCubeNormals(const brush_t *brush)
@@ -268,7 +268,7 @@ TEST(qbsp, SplitBrush) {
     
     checkCube(back);
     
-    FreeMem(brush, BRUSH, 1);
+    FreeBrush(brush);
     FreeMem(front, BRUSH, 1);
     FreeMem(back, BRUSH, 1);
 }
@@ -288,6 +288,24 @@ TEST(qbsp, SplitBrushOnSide) {
     
     EXPECT_EQ(nullptr, back);
 }
+
+#if 0
+TEST(qbsp, MemLeaks) {
+    brush_t *brush = load128x128x32Brush();
+    
+    const vec3_t planenormal = { -1, 0, 0 };
+    int planeside;
+    const int planenum = FindPlane(planenormal, 0.0, &planeside);
+    
+    for (int i=0; i<1000000; i++) {
+        brush_t *front, *back;
+        SplitBrush(brush, planenum, planeside, &front, &back);
+        
+        FreeBrush(front);
+        FreeBrush(back);
+    }
+}
+#endif
 
 TEST(mathlib, WindingArea) {
     winding_t w;

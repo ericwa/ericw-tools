@@ -514,8 +514,7 @@ FreeBrushes(mapentity_t *ent)
 
     for (brush = ent->brushes; brush; brush = next) {
         next = brush->next;
-        FreeBrushFaces(brush->faces);
-        FreeMem(brush, BRUSH, 1);
+        FreeBrush(brush);
     }
     ent->brushes = nullptr;
 }
@@ -528,7 +527,7 @@ FreeBrush
 void
 FreeBrush(brush_t *brush)
 {
-    Q_assert(brush->next == nullptr);
+    FreeBrushFaces(brush->faces);
     FreeMem(brush, BRUSH, 1);
 }
 
@@ -1076,7 +1075,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 VectorCopy(origin, rotate_offset);
                 usesOriginBrush = true;
                 
-                FreeMem(brush, BRUSH, 1);
+                FreeBrush(brush);
             }
         }
     }
@@ -1164,8 +1163,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 if (brush) {
                     AddToBounds(dst, brush->mins);
                     AddToBounds(dst, brush->maxs);
-                    FreeBrushFaces(brush->faces);
-                    FreeMem(brush, BRUSH, 1);
+                    FreeBrush(brush);
                 }
                 continue;
             }
@@ -1572,6 +1570,11 @@ void SplitBrush (const brush_t *brush,
             newface->next = b[j]->faces;
             b[j]->faces = newface;
         }
+        
+        if (cw[0])
+            FreeMem(cw[0], WINDING, 1);
+        if (cw[1])
+            FreeMem(cw[1], WINDING, 1);
     }
     
     
@@ -1651,7 +1654,7 @@ void SplitBrush (const brush_t *brush,
             v1 = BrushVolume (b[i]);
             if (v1 < 1.0)
             {
-                FreeMem (b[i], BRUSH, 1);
+                FreeBrush(b[i]);
                 b[i] = nullptr;
                 logprint ("tiny volume after clip\n");
             }
@@ -1660,5 +1663,7 @@ void SplitBrush (const brush_t *brush,
     
     *front = b[0];
     *back = b[1];
+    
+    FreeMem(midwinding, WINDING, 1);
 }
 

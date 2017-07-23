@@ -53,4 +53,6 @@ vec_t BrushVolume (const brush_t *brush);
 int BrushMostlyOnSide (const brush_t *brush, const vec3_t normal, vec_t dist);
 void SplitBrush (const brush_t *brush, int planenum, int planeside, brush_t **front, brush_t **back);
 
+void FreeBrush(brush_t *brush);
+
 #endif
