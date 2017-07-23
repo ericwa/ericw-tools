@@ -1429,16 +1429,6 @@ qboolean WindingIsHuge (winding_t *w)
     return false;
 }
 
-static int
-Brush_FaceCount (const brush_t *brush)
-{
-    int i=0;
-    for (const face_t *face = brush->faces; face; face = face->next) {
-        i++;
-    }
-    return i;
-}
-
 /*
 ================
 SplitBrush
@@ -1457,7 +1447,19 @@ void SplitBrush (const brush_t *brush,
     *front = nullptr;
     *back = nullptr;
     
-    const qbsp_plane_t	*plane = &map.planes.at(planenum);
+    qbsp_plane_t plane;
+    {
+        const qbsp_plane_t *globalplane = &map.planes.at(planenum);
+        VectorCopy(globalplane->normal, plane.normal);
+        plane.dist = globalplane->dist;
+        if (planeside) {
+            VectorScale(plane.normal, -1, plane.normal);
+            plane.dist = -plane.dist;
+        }
+        // FIXME: dangerous..
+        plane.type = -1000;
+        plane.outputplanenum = -1;
+    }
     
     // check all points
     vec_t d_front = 0;
@@ -1468,7 +1470,7 @@ void SplitBrush (const brush_t *brush,
             continue;
         
         for (int j=0 ; j<w->numpoints ; j++) {
-            const vec_t d = DotProduct (w->points[j], plane->normal) - plane->dist;
+            const vec_t d = DotProduct (w->points[j], plane.normal) - plane.dist;
             if (d > 0 && d > d_front)
                 d_front = d;
             if (d < 0 && d < d_back)
@@ -1488,9 +1490,11 @@ void SplitBrush (const brush_t *brush,
     }
     
     // create a new winding from the split plane    
-    winding_t *w = BaseWindingForPlane (plane);
+    winding_t *w = BaseWindingForPlane (&plane);
     for (const face_t *face = brush->faces; face; face = face->next) {
-        plane_t plane2 = Face_Plane(face);
+        if (!w)
+            break;
+        const plane_t plane2 = FlipPlane(Face_Plane(face));
         ChopWindingInPlace (&w, plane2.normal, plane2.dist, 0); // PLANESIDE_EPSILON);
     }
 
@@ -1501,7 +1505,7 @@ void SplitBrush (const brush_t *brush,
         if (w)
             FreeMem(w, WINDING, 1);
         
-        side = BrushMostlyOnSide (brush, plane->normal, plane->dist);
+        side = BrushMostlyOnSide (brush, plane.normal, plane.dist);
         if (side == SIDE_FRONT)
             *front = CopyBrush (brush);
         if (side == SIDE_BACK)
@@ -1545,7 +1549,7 @@ void SplitBrush (const brush_t *brush,
             continue;
         
         winding_t *cw[2];
-        DivideWinding(w, plane, &cw[0], &cw[1]);
+        DivideWinding(w, &plane, &cw[0], &cw[1]);
         
         for (int j=0 ; j<2 ; j++)
         {
@@ -1586,7 +1590,7 @@ void SplitBrush (const brush_t *brush,
             }
         }
         
-        if (Brush_FaceCount(b[i]) < 4 /* was 3 */ || j < 3)
+        if (Brush_NumFaces(b[i]) < 4 /* was 3 */ || j < 3)
         {
             FreeBrush (b[i]);
             b[i] = nullptr;

@@ -145,6 +145,8 @@ VectorCopyFromGLM(const qvec3f &in, vec3_t out)
 void ClearBounds(vec3_t mins, vec3_t maxs);
 void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
 
+plane_t FlipPlane(plane_t input);
+
 static inline qvec3f
 VectorToGLM(const vec3_t in)
 {

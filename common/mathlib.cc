@@ -122,6 +122,16 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
     }
 }
 
+plane_t FlipPlane(plane_t input)
+{
+    plane_t result;
+    
+    VectorScale(input.normal, -1, result.normal);
+    result.dist = -input.dist;
+    
+    return result;
+}
+
 // from http://mathworld.wolfram.com/SpherePointPicking.html
 // eqns 6,7,8
 void

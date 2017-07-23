@@ -193,6 +193,94 @@ TEST(qbsp, BoundBrush) {
     FreeMem(brush, BRUSH, 1);
 }
 
+static void checkForAllCubeNormals(const brush_t *brush)
+{
+    const vec3_t wanted[6] = {
+        { -1, 0, 0 },{ 1, 0, 0 },
+        {  0,-1, 0 },{ 0, 1, 0 },
+        {  0, 0,-1 },{ 0, 0, 1 }
+    };
+    
+    bool found[6];
+    for (int i=0; i<6; i++) {
+        found[i] = false;
+    }
+    
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        const plane_t faceplane = Face_Plane(face);
+        
+        for (int i=0; i<6; i++) {
+            if (VectorCompare(wanted[i], faceplane.normal, NORMAL_EPSILON)) {
+                EXPECT_FALSE(found[i]);
+                found[i] = true;
+            }
+        }
+    }
+    
+    for (int i=0; i<6; i++) {
+        EXPECT_TRUE(found[i]);
+    }
+}
+
+TEST(qbsp, SplitBrush) {
+    brush_t *brush = load128x128x32Brush();
+    
+    const vec3_t planenormal = { -1, 0, 0 };
+    int planeside;
+    const int planenum = FindPlane(planenormal, 0.0, &planeside);
+    
+    brush_t *front, *back;
+    SplitBrush(brush, planenum, planeside, &front, &back);
+    
+    ASSERT_NE(nullptr, front);
+    ASSERT_NE(nullptr, back);
+    
+    // front
+    EXPECT_FLOAT_EQ(-64, front->mins[0]);
+    EXPECT_FLOAT_EQ(-64, front->mins[1]);
+    EXPECT_FLOAT_EQ(-16, front->mins[2]);
+    
+    EXPECT_FLOAT_EQ(0,  front->maxs[0]);
+    EXPECT_FLOAT_EQ(64, front->maxs[1]);
+    EXPECT_FLOAT_EQ(16, front->maxs[2]);
+    
+    EXPECT_EQ(6, Brush_NumFaces(front));
+    checkForAllCubeNormals(front);
+    
+    // back
+    EXPECT_FLOAT_EQ(0,   back->mins[0]);
+    EXPECT_FLOAT_EQ(-64, back->mins[1]);
+    EXPECT_FLOAT_EQ(-16, back->mins[2]);
+    
+    EXPECT_FLOAT_EQ(64, back->maxs[0]);
+    EXPECT_FLOAT_EQ(64, back->maxs[1]);
+    EXPECT_FLOAT_EQ(16, back->maxs[2]);
+    
+    EXPECT_EQ(6, Brush_NumFaces(back));
+    checkForAllCubeNormals(back);
+    
+    FreeMem(brush, BRUSH, 1);
+    FreeMem(front, BRUSH, 1);
+    FreeMem(back, BRUSH, 1);
+}
+
+TEST(qbsp, SplitBrushOnSide) {
+    brush_t *brush = load128x128x32Brush();
+    
+    const vec3_t planenormal = { -1, 0, 0 };
+    int planeside;
+    const int planenum = FindPlane(planenormal, -64.0, &planeside);
+    
+    brush_t *front, *back;
+    SplitBrush(brush, planenum, planeside, &front, &back);
+    
+    EXPECT_NE(nullptr, front);
+    EXPECT_EQ(6, Brush_NumFaces(front));
+    checkForAllCubeNormals(front);
+    
+    EXPECT_EQ(nullptr, back);
+}
+
 TEST(mathlib, WindingArea) {
     winding_t w;
     w.numpoints = 5;
