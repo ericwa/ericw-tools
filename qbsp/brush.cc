@@ -1310,3 +1310,41 @@ int BrushMostlyOnSide (const brush_t *brush, const plane_t *plane)
     
     return side;
 }
+
+/*
+==================
+CopyBrush
+
+from q3map
+
+Duplicates the brush, the sides, and the windings
+==================
+*/
+brush_t *CopyBrush (const brush_t *brush)
+{
+    brush_t *newbrush = (brush_t *)AllocMem(BRUSH, 1, true);
+    
+    memcpy(newbrush, brush, sizeof(brush_t));
+    
+    newbrush->next = nullptr;
+    newbrush->faces = nullptr;
+    
+    for (const face_t *face = brush->faces; face; face = face->next) {
+        
+        face_t *newface = (face_t *)AllocMem(FACE, 1, true);
+        
+        memcpy(newface, face, sizeof(face_t));
+        
+        // clear stuff that shouldn't be copied.
+        newface->original = nullptr;
+        newface->outputnumber = -1;
+        newface->edges = nullptr;
+        
+        // link into newbrush
+        newface->next = newbrush->faces;
+        newbrush->faces = newface;
+    }
+    
+    return newbrush;
+}
+
