@@ -112,7 +112,19 @@ CopyWinding(const winding_t *w)
     return c;
 }
 
-
+/*
+==================
+FlipWinding
+==================
+*/
+winding_t *FlipWinding(const winding_t *w)
+{
+    winding_t *result = CopyWinding(w);
+    for (int i=0; i<w->numpoints; i++) {
+        VectorCopy(w->points[i], result->points[w->numpoints - 1 - i]);
+    }
+    return result;
+}
 
 /*
 ==================
