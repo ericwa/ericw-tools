@@ -508,15 +508,16 @@ FreeBrushes
 =====================
 */
 void
-FreeBrushes(brush_t *brushlist)
+FreeBrushes(mapentity_t *ent)
 {
     brush_t *brush, *next;
 
-    for (brush = brushlist; brush; brush = next) {
+    for (brush = ent->brushes; brush; brush = next) {
         next = brush->next;
         FreeBrushFaces(brush->faces);
         FreeMem(brush, BRUSH, 1);
     }
+    ent->brushes = nullptr;
 }
 
 /*

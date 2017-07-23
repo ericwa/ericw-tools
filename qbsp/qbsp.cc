@@ -153,8 +153,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      * leaving a perfect skin of the model with no hidden faces
      */
     surfs = CSGFaces(entity);
-    FreeBrushes(entity->brushes);
-
+    
     if (options.fObjExport && entity == pWorldEnt() && hullnum == 0) {
         ExportObj(surfs);
     }
@@ -232,6 +231,8 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         ExportDrawNodes(entity, nodes, firstface);
     }
 
+    FreeBrushes(entity);
+    
     map.cTotal[LUMP_MODELS]++;
 }
 
@@ -503,7 +504,7 @@ static void BSPX_CreateBrushList(void)
                 }
 
                 BSPX_Brushes_AddModel(&ctx, modelnum , ent->brushes);
-                FreeBrushes(ent->brushes);
+                FreeBrushes(ent);
         }
 
         BSPX_Brushes_Finalize(&ctx);
