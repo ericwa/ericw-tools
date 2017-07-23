@@ -751,7 +751,7 @@ GetContentsName( int Contents ) {
     }
 }
 
-static int Contents_Priority(int contents)
+int Contents_Priority(int contents)
 {
     switch (contents) {
         case CONTENTS_SOLID:  return 7;
