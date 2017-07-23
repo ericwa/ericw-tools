@@ -394,3 +394,107 @@ WindingArea(const winding_t * w)
     }
     return total;
 }
+
+/*
+=============
+ChopWindingInPlace
+ 
+from q3map
+=============
+*/
+void ChopWindingInPlace (winding_t **inout, const vec3_t normal, vec_t dist, vec_t epsilon)
+{
+    winding_t	*in;
+    vec_t	dists[MAX_POINTS_ON_WINDING+4];
+    int		sides[MAX_POINTS_ON_WINDING+4];
+    int		counts[3];
+    vec_t	dot;
+    int		i, j;
+    vec_t	*p1, *p2;
+    vec3_t	mid;
+    winding_t	*f;
+    int		maxpts;
+    
+    in = *inout;
+    counts[0] = counts[1] = counts[2] = 0;
+    
+    // determine sides for each point
+    for (i=0 ; i<in->numpoints ; i++)
+    {
+        dot = DotProduct (in->points[i], normal);
+        dot -= dist;
+        dists[i] = dot;
+        if (dot > epsilon)
+            sides[i] = SIDE_FRONT;
+        else if (dot < -epsilon)
+            sides[i] = SIDE_BACK;
+        else
+        {
+            sides[i] = SIDE_ON;
+        }
+        counts[sides[i]]++;
+    }
+    sides[i] = sides[0];
+    dists[i] = dists[0];
+    
+    if (!counts[0])
+    {
+        FreeMem (in, WINDING, 1);
+        *inout = nullptr;
+        return;
+    }
+    if (!counts[1])
+        return;		// inout stays the same
+    
+    maxpts = in->numpoints+4;	// cant use counts[0]+2 because
+    // of fp grouping errors
+    
+    f = (winding_t*)AllocMem (WINDING, maxpts, true);
+    
+    for (i=0 ; i<in->numpoints ; i++)
+    {
+        p1 = in->points[i];
+        
+        if (sides[i] == SIDE_ON)
+        {
+            VectorCopy (p1, f->points[f->numpoints]);
+            f->numpoints++;
+            continue;
+        }
+        
+        if (sides[i] == SIDE_FRONT)
+        {
+            VectorCopy (p1, f->points[f->numpoints]);
+            f->numpoints++;
+        }
+        
+        if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+            continue;
+        
+        // generate a split point
+        p2 = in->points[(i+1)%in->numpoints];
+        
+        dot = dists[i] / (dists[i]-dists[i+1]);
+        for (j=0 ; j<3 ; j++)
+        {	// avoid round off error when possible
+            if (normal[j] == 1)
+                mid[j] = dist;
+            else if (normal[j] == -1)
+                mid[j] = -dist;
+            else
+                mid[j] = p1[j] + dot*(p2[j]-p1[j]);
+        }
+        
+        VectorCopy (mid, f->points[f->numpoints]);
+        f->numpoints++;
+    }
+    
+    if (f->numpoints > maxpts)
+        Error ("ClipWinding: points exceeded estimate");
+    if (f->numpoints > MAX_POINTS_ON_WINDING)
+        Error ("ClipWinding: MAX_POINTS_ON_WINDING");
+    
+    FreeMem (in, WINDING, 1);
+    
+    *inout = f;
+}
