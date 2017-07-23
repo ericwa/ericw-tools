@@ -156,11 +156,10 @@ TEST(qbsp, BrushVolume) {
 TEST(qbsp, BrushMostlyOnSide1) {
     brush_t *brush = load128x128x32Brush();
     
-    plane_t plane1;
-    VectorSet(plane1.normal, -1, 0, 0);
-    plane1.dist = -100;
+    vec3_t plane1normal = { -1, 0, 0 };
+    vec_t plane1dist = -100;
     
-    EXPECT_EQ(SIDE_FRONT, BrushMostlyOnSide(brush, &plane1));
+    EXPECT_EQ(SIDE_FRONT, BrushMostlyOnSide(brush, plane1normal, plane1dist));
     
     FreeMem(brush, BRUSH, 1);
 }
@@ -168,11 +167,10 @@ TEST(qbsp, BrushMostlyOnSide1) {
 TEST(qbsp, BrushMostlyOnSide2) {
     brush_t *brush = load128x128x32Brush();
     
-    plane_t plane2;
-    VectorSet(plane2.normal, 1, 0, 0);
-    plane2.dist = 100;
+    vec3_t plane1normal = { 1, 0, 0 };
+    vec_t plane1dist = 100;
     
-    EXPECT_EQ(SIDE_BACK, BrushMostlyOnSide(brush, &plane2));
+    EXPECT_EQ(SIDE_BACK, BrushMostlyOnSide(brush, plane1normal, plane1dist));
     
     FreeMem(brush, BRUSH, 1);
 }

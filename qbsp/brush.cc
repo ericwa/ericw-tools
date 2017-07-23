@@ -1282,7 +1282,7 @@ BrushMostlyOnSide
 from q3map
 ==================
 */
-int BrushMostlyOnSide (const brush_t *brush, const plane_t *plane)
+int BrushMostlyOnSide (const brush_t *brush, const vec3_t planenormal, vec_t planedist)
 {
     vec_t max;
     int side;
@@ -1296,7 +1296,7 @@ int BrushMostlyOnSide (const brush_t *brush, const plane_t *plane)
             continue;
         
         for (int j=0 ; j<w->numpoints ; j++) {
-            const vec_t d = DotProduct (w->points[j], plane->normal) - plane->dist;
+            const vec_t d = DotProduct (w->points[j], planenormal) - planedist;
             if (d > max) {
                 max = d;
                 side = SIDE_FRONT;

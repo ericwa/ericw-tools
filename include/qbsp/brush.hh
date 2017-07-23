@@ -50,6 +50,6 @@ bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
 
 bool BoundBrush (brush_t *brush);
 vec_t BrushVolume (const brush_t *brush);
-int BrushMostlyOnSide (const brush_t *brush, const plane_t *plane);
+int BrushMostlyOnSide (const brush_t *brush, const vec3_t normal, vec_t dist);
 
 #endif
