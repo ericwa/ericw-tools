@@ -250,12 +250,12 @@ DivideWinding
 
 Divides a winding by a plane, producing one or two windings.  The
 original winding is not damaged or freed.  If only on one side, the
-returned winding will be the input winding.  If on both sides, two
+returned winding will be a copy of the input winding.  If on both sides, two
 new windings will be created.
 ==================
 */
 void
-DivideWinding(winding_t *in, const qbsp_plane_t *split, winding_t **front,
+DivideWinding(const winding_t *in, const qbsp_plane_t *split, winding_t **front,
               winding_t **back)
 {
     vec_t dists[MAX_POINTS_ON_WINDING + 1];
@@ -263,7 +263,7 @@ DivideWinding(winding_t *in, const qbsp_plane_t *split, winding_t **front,
     int counts[3];
     vec_t fraction;
     int i, j;
-    vec_t *p1, *p2;
+    const vec_t *p1, *p2;
     vec3_t mid;
     winding_t *f, *b;
     int maxpts;
@@ -277,11 +277,11 @@ DivideWinding(winding_t *in, const qbsp_plane_t *split, winding_t **front,
     *front = *back = NULL;
 
     if (!counts[0]) {
-        *back = in;
+        *back = CopyWinding(in);
         return;
     }
     if (!counts[1]) {
-        *front = in;
+        *front = CopyWinding(in);
         return;
     }
 

@@ -39,7 +39,7 @@ void CheckWinding(const winding_t *w);
 winding_t *NewWinding(int points);
 winding_t *CopyWinding(const winding_t *w);
 winding_t *ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon);
-void DivideWinding(winding_t *in, const qbsp_plane_t *split, winding_t **front,
+void DivideWinding(const winding_t *in, const qbsp_plane_t *split, winding_t **front,
                    winding_t **back);
 void MidpointWinding(const winding_t *w, vec3_t v);
 

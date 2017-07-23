@@ -625,6 +625,9 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
         DivideWinding(portal->winding, plane, &frontwinding, &backwinding);
 
         if (!frontwinding) {
+            if (backwinding)
+                FreeMem(backwinding, WINDING, 1);
+            
             if (side == 0)
                 AddPortalToNodes(portal, back, other_node);
             else
@@ -632,6 +635,9 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
             continue;
         }
         if (!backwinding) {
+            if (frontwinding)
+                FreeMem(frontwinding, WINDING, 1);
+            
             if (side == 0)
                 AddPortalToNodes(portal, front, other_node);
             else
