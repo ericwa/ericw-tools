@@ -222,6 +222,13 @@ static void checkForAllCubeNormals(const brush_t *brush)
     }
 }
 
+static void checkCube(const brush_t *brush)
+{
+    EXPECT_EQ(6, Brush_NumFaces(brush));
+    
+    checkForAllCubeNormals(brush);
+}
+
 TEST(qbsp, SplitBrush) {
     brush_t *brush = load128x128x32Brush();
     
@@ -244,8 +251,7 @@ TEST(qbsp, SplitBrush) {
     EXPECT_FLOAT_EQ(64, front->maxs[1]);
     EXPECT_FLOAT_EQ(16, front->maxs[2]);
     
-    EXPECT_EQ(6, Brush_NumFaces(front));
-    checkForAllCubeNormals(front);
+    checkCube(front);
     
     // back
     EXPECT_FLOAT_EQ(0,   back->mins[0]);
@@ -256,8 +262,7 @@ TEST(qbsp, SplitBrush) {
     EXPECT_FLOAT_EQ(64, back->maxs[1]);
     EXPECT_FLOAT_EQ(16, back->maxs[2]);
     
-    EXPECT_EQ(6, Brush_NumFaces(back));
-    checkForAllCubeNormals(back);
+    checkCube(back);
     
     FreeMem(brush, BRUSH, 1);
     FreeMem(front, BRUSH, 1);
@@ -274,9 +279,8 @@ TEST(qbsp, SplitBrushOnSide) {
     brush_t *front, *back;
     SplitBrush(brush, planenum, planeside, &front, &back);
     
-    EXPECT_NE(nullptr, front);
-    EXPECT_EQ(6, Brush_NumFaces(front));
-    checkForAllCubeNormals(front);
+    ASSERT_NE(nullptr, front);
+    checkCube(front);
     
     EXPECT_EQ(nullptr, back);
 }
