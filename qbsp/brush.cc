@@ -1594,7 +1594,8 @@ void SplitBrush (const brush_t *brush,
             }
         }
         
-        if (Brush_NumFaces(b[i]) < 4 /* was 3 */ || j < 3)
+        // 3 faces is ok because we add a 4th face below
+        if (Brush_NumFaces(b[i]) < 3 || j < 3)
         {
             FreeBrush (b[i]);
             b[i] = nullptr;
