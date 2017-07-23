@@ -155,7 +155,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     surfs = CSGFaces(entity);
     
     if (options.fObjExport && entity == pWorldEnt() && hullnum == 0) {
-        ExportObj(surfs);
+        ExportObj_Surfaces(surfs);
     }
     
     if (hullnum != 0) {

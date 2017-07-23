@@ -24,6 +24,8 @@
 
 #include <qbsp/parser.hh>
 
+#include <vector>
+
 typedef struct epair_s {
     struct epair_s *next;
     char *key;
@@ -187,6 +189,8 @@ void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes);
 
-void ExportObj(const surface_t *surfaces);
+void ExportObj_Faces(const std::vector<const face_t *> &faces);
+void ExportObj_Brushes(const std::vector<const brush_t *> &brushes);
+void ExportObj_Surfaces(const surface_t *surfaces);
 
 #endif

@@ -104,7 +104,7 @@ WriteContentsMaterial(FILE *mtlf, int contents, float r, float g, float b)
 }
 
 void
-ExportObj(const surface_t *surfaces)
+ExportObj_Faces(const std::vector<const face_t *> &faces)
 {
     FILE *objfile = InitObjFile();
     FILE *mtlfile = InitMtlFile();
@@ -124,15 +124,36 @@ ExportObj(const surface_t *surfaces)
     WriteContentsMaterial(mtlfile, CONTENTS_DETAIL,  0.5, 0.5, 0.5);
     
     int vertcount = 0;
-    
-    const surface_t *surf;
-    for (surf = surfaces; surf; surf = surf->next) {
-        const face_t *face;
-        for (face = surf->faces; face; face = face->next) {
-            ExportObjFace(objfile, mtlfile, face, &vertcount);
-        }
+    for (const face_t *face : faces) {
+        ExportObjFace(objfile, mtlfile, face, &vertcount);
     }
     
     fclose(objfile);
     fclose(mtlfile);
+}
+
+void
+ExportObj_Brushes(const std::vector<const brush_t *> &brushes)
+{
+    std::vector<const face_t *> faces;
+    
+    for (const brush_t *brush : brushes)
+        for (const face_t *face = brush->faces; face; face = face->next)
+            faces.push_back(face);
+    
+    ExportObj_Faces(faces);
+}
+
+void
+ExportObj_Surfaces(const surface_t *surfaces)
+{
+    std::vector<const face_t *> faces;
+    
+    for (const surface_t *surf = surfaces; surf; surf = surf->next) {
+        for (const face_t *face = surf->faces; face; face = face->next) {
+            faces.push_back(face);
+        }
+    }
+    
+    ExportObj_Faces(faces);
 }
