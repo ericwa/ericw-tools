@@ -298,10 +298,6 @@ typedef struct node_s {
     mapentity_t *occupant;      // example occupant, for leak hunting
     bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
     
-    // experimental q3map stuff
-    brush_t *q3map_brushlist;
-    int q3map_contents;
-    
     bool opaque() const {
         return contents == CONTENTS_SOLID
             || contents == CONTENTS_SKY;

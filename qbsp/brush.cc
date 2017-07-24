@@ -1668,6 +1668,7 @@ void SplitBrush (const brush_t *brush,
     FreeMem(midwinding, WINDING, 1);
 }
 
+#if 0
 /*
 ====================
 FilterBrushIntoTree_r
@@ -1739,3 +1740,4 @@ void FilterStructuralBrushesIntoTree( const mapentity_t *e, node_t *headnode )
     logprint( "%5i cluster references\n", c_clusters );
     logprint( "took %f seconds\n", I_FloatTime() - st );
 }
+#endif
