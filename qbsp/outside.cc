@@ -366,7 +366,6 @@ FillOutside(node_t *node, const int hullnum)
     
     if (fillnode->occupied > 0) {
         const auto leakline = MakeLeakLine(fillnode);
-        Q_assert(!leakline.first.empty());
         
         mapentity_t *leakentity = leakline.second->occupant;
         Q_assert(leakentity != nullptr);
