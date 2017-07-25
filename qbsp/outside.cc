@@ -31,7 +31,7 @@
 PointInLeaf
 ===========
 */
-static node_t *
+node_t *
 PointInLeaf(node_t *node, const vec3_t point)
 {
     vec_t dist;
