@@ -354,7 +354,8 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
             if (face->contents[1] == CONTENTS_DETAIL
                 || face->contents[1] == CONTENTS_DETAIL_ILLUSIONARY
                 || face->contents[1] == CONTENTS_DETAIL_FENCE
-                || (face->cflags[1] & CFLAGS_WAS_ILLUSIONARY)) {
+                || (face->cflags[1] & CFLAGS_WAS_ILLUSIONARY)
+                || face->contents[1] == CONTENTS_SOLID) {
                 newface->texinfo = MakeSkipTexinfo();
             }
             
@@ -653,7 +654,7 @@ CSGFaces(const mapentity_t *entity)
          * All of the faces left on the outside list are real surface faces
          * If the brush is non-solid, mirror faces for the inside view
          */
-        mirror = (brush->contents != CONTENTS_SOLID);
+        mirror = true;//brush->contents != CONTENTS_SOLID);
         SaveFacesToPlaneList(outside, mirror, planefaces);
 
         progress++;
