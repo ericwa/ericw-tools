@@ -1,3 +1,22 @@
+2017-07-30 TyrUtils-ericw 0.15.10-beta3
+
+- light: add "_shadowworldonly" bmodel key - only cast shadows on world, not other bmodels.
+- light: switchable bmodel shadows (requires QuakeC support, see light manual).
+- light: accept "_minlight" in worldspawn as an alias for "light"
+- light: handle degenerate faces, print out the vertex coordinates
+- qbsp: misc_external_map prefab system (see qbsp manual)
+- qbsp: don't write unused texinfo
+- qbsp: rewrite outside filling similar to q3map
+- qbsp: revert change to SubdivideFace which was increasing faces a bit (see 53743dd)
+- qbsp: add -expand option to dump the hull expansion to a "expanded.map", from q3map
+- qbsp: add -leaktest option to abort compilation when a leak is found, from qbsp3
+- qbsp: fix handling of duplicate planes, which was causing id1 maps to leak
+- qbsp: try to get more reliable leaf content assignment (see a910dd8)
+- bsputil: --check: print BSP tree heights at the first few levels of the tree
+- bsputil: --check: check for unreferenced texinfo, vertices, planes
+- bsputil: --check: print number of used lightstyles
+- misc: travis-ci now runs qbsp on all id1 maps, the build fails if any maps leak
+
 2017-06-10 TyrUtils-ericw 0.15.10-beta2
 
 - light: styled lights no longer bounce by default, set "_bouncestyled" "1" to enable.
