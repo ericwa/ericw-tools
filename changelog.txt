@@ -1,4 +1,4 @@
-2017-07-30 TyrUtils-ericw 0.15.10-beta3
+2017-07-30 TyrUtils-ericw 0.15.10
 
 - light: add "_shadowworldonly" bmodel key - only cast shadows on world, not other bmodels.
 - light: switchable bmodel shadows (requires QuakeC support, see light manual).
