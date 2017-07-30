@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Wed Nov  2 18:19:47 2016 -->
+<!-- CreationDate: Sun Jul 30 19:40:16 2017 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -25,6 +25,7 @@
 <a href="#OPTIONS">OPTIONS</a><br>
 <a href="#MODEL ENTITY KEYS">MODEL ENTITY KEYS</a><br>
 <a href="#LIGHT ENTITY KEYS">LIGHT ENTITY KEYS</a><br>
+<a href="#OTHER INFORMATION">OTHER INFORMATION</a><br>
 <a href="#AUTHOR">AUTHOR</a><br>
 <a href="#REPORTING BUGS">REPORTING BUGS</a><br>
 <a href="#COPYRIGHT">COPYRIGHT</a><br>
@@ -61,9 +62,11 @@ completion, overwriting any existing lighting data.</p>
 <h2>OPTIONS</h2>
 
 
-
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;threads
-n</b></p>
+<p style="margin-left:11%; margin-top: 1em">Note, any of
+the Worldspawn Keys listed in the next section can be
+supplied as command-line options, which will override any
+setting in worldspawn. <b><br>
+&minus;threads n</b></p>
 
 <p style="margin-left:22%;">Set number of threads
 explicitly. By default light will attempt to detect the
@@ -92,12 +95,6 @@ shadows.</p> </td>
 <p style="margin-left:22%;">Calculate even more samples
 (4x4) and average the results for smoother shadows.</p>
 
-<p style="margin-left:11%;"><b>&minus;light n</b></p>
-
-<p style="margin-left:22%;">Set a global minimum light
-level for style 0 (default) lightmaps. Overrides default
-light level set in worldspawn.</p>
-
 <p style="margin-left:11%;"><b>&minus;addmin</b></p>
 
 <p style="margin-left:22%;">Changes the behaviour of
@@ -105,18 +102,6 @@ light level set in worldspawn.</p>
 the global minimum, add the global minimum light level to
 all style 0 lightmaps. This may help reducing the sometimes
 uniform minlight effect.</p>
-
-<p style="margin-left:11%;"><b>&minus;dist n</b></p>
-
-<p style="margin-left:22%;">Scales the fade distance of all
-lights by a factor of n. See &quot;_dist&quot; worldspawn
-key.</p>
-
-<p style="margin-left:11%;"><b>&minus;range n</b></p>
-
-<p style="margin-left:22%;">Scales the brightness range of
-all lights without affecting their fade discance. See
-&quot;_range&quot; worldspawn key.</p>
 
 <p style="margin-left:11%;"><b>&minus;gate n</b></p>
 
@@ -141,24 +126,16 @@ oversampling requested. If no oversampling, then the implied
 value is 1. &minus;extra implies a value of 2 and
 &minus;extra4 implies 3. Default 0 (off).</p>
 
-<p style="margin-left:11%;"><b>&minus;anglescale</b> |
-<b>&minus;anglesense</b></p>
-
-<p style="margin-left:22%;">Set the scaling of sunlight
-brightness due to the angle of incidence with a surface
-(more detailed explanation in the &quot;_anglescale&quot;
-key below).</p>
-
 <table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
-<td width="7%">
+<td width="6%">
 
 
 
 <p style="margin-top: 1em" valign="top"><b>&minus;lit</b></p> </td>
-<td width="4%"></td>
+<td width="5%"></td>
 <td width="78%">
 
 
@@ -166,21 +143,6 @@ key below).</p>
 a .lit file, even if your map does not have any coloured
 lights. By default, light will automatically generate the
 .lit file when needed.</p></td>
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="7%">
-
-
-
-<p style="margin-top: 1em" valign="top"><b>&minus;dirt</b></p> </td>
-<td width="4%"></td>
-<td width="78%">
-
-
-<p style="margin-top: 1em" valign="top">Globally enables
-dirtmapping (ambient occlusion), overriding the
-&quot;_dirt&quot; worldspawn key. See &quot;_dirt&quot; for
-more details.</p></td>
 </table>
 
 <p style="margin-left:11%;"><b>&minus;dirtdebug</b></p>
@@ -189,20 +151,6 @@ more details.</p></td>
 renders just the dirtmap against a fullbright background,
 ignoring all lights in the map. Useful for previewing and
 turning the dirt settings.</p>
-
-<p style="margin-left:11%;"><b>&minus;dirtmode n</b> |
-<b>&minus;dirtdepth n</b> | <b>&minus;dirtscale n</b> |
-<b>&minus;dirtgain n</b> | <b>&minus;dirtangle n</b></p>
-
-<p style="margin-left:22%;">Fine-tune the dirtmapping,
-overriding the corresponding worldspawn keys. See the
-worldspawn keys below.</p>
-
-<p style="margin-left:11%;"><b>&minus;gamma [n]</b></p>
-
-<p style="margin-left:22%;">Adjust brightness of final
-lightmap. Default 1, &gt;1 is brighter, &lt;1 is darker. See
-&quot;_gamma&quot; worldspawn key.</p>
 
 <table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
@@ -244,10 +192,7 @@ does is assign style numbers to each switchable light.</p>
 use for &quot;_sunlight_penumbra&quot; and
 &quot;_sunlight2&quot; (sunlight2 may use more or less
 because of how the suns are set up in a sphere). Default
-100. The &quot;\b&quot; escape sequence toggles red text
-on/off, you can use this in any strings in the map file.
-e.g. &quot;message&quot; &quot;Here is \bsome red
-text\b...&quot;</p>
+100.</p>
 
 
 <p style="margin-left:11%;"><b>&minus;surflight_dump</b></p>
@@ -291,25 +236,6 @@ are coloured lights. Implies &quot;-bspxlit&quot;.
 &quot;-lit&quot; will no longer be implied by the presence
 of coloured lights.</p>
 
-<p style="margin-left:11%;"><b>&minus;bounce n</b></p>
-
-<p style="margin-left:22%;">Enables 1 bounce, 0=disable
-even if set in worldspawn. Available as a worldspawn
-key.</p>
-
-<p style="margin-left:11%;"><b>&minus;bouncescale n</b></p>
-
-<p style="margin-left:22%;">Scales brightness of bounce
-lighting, default 1. Available as a worldspawn key.</p>
-
-<p style="margin-left:11%;"><b>&minus;bouncecolorscale
-n</b></p>
-
-<p style="margin-left:22%;">Weight for bounce lighting to
-use texture colors from the map: 0=ignore map textures
-(default), 1=multiply bounce light color by texture color.
-Available as a worldspawn key.</p>
-
 <p style="margin-left:11%;"><b>&minus;phongdebug</b></p>
 
 <p style="margin-left:22%;">Write normals to lit file for
@@ -326,11 +252,6 @@ the lightmap for debugging / previewing -bounce.</p>
 culling of lights, which has a small chance of introducing
 artifacts where lights cut off too soon.</p>
 
-<p style="margin-left:11%;"><b>&minus;backend b</b></p>
-
-<p style="margin-left:22%;">Choose a raytracing backend,
-currently available: embree, bsp.</p>
-
 <a name="MODEL ENTITY KEYS"></a>
 <h2>MODEL ENTITY KEYS</h2>
 
@@ -339,13 +260,24 @@ currently available: embree, bsp.</p>
 Keys</b> <br>
 The following keys can be added to the <i>worldspawn</i>
 entity: <b><br>
-&quot;light&quot; &quot;n&quot;</b></p>
+&quot;light&quot; &quot;n&quot;</b> |
+<b>&quot;_minlight&quot; &quot;n&quot;</b></p>
 
 <p style="margin-left:22%;">Set a global minimum light
 level of &quot;n&quot; across the whole map. This is an easy
 way to eliminate completely dark areas of the level, however
 you may lose some contrast as a result, so use with care.
 Default 0.</p>
+
+<p style="margin-left:11%;"><b>&quot;_minlight_color&quot;
+&quot;r g b&quot;</b> | <b>&quot;_mincolor&quot; &quot;r g
+b&quot;</b></p>
+
+<p style="margin-left:22%;">Specify red(r), green(g) and
+blue(b) components for the colour of the minlight. RGB
+component values are between 0 and 255 (between 0 and 1 is
+also accepted). Default is white light (&quot;255 255
+255&quot;).</p>
 
 <p style="margin-left:11%;"><b>&quot;_dist&quot;
 &quot;n&quot;</b></p>
@@ -529,14 +461,42 @@ lightmap. Default 1, &gt;1 is brighter, &lt;1 is darker.</p>
 to use this specific lightmap scale. Removes
 &quot;LMSHIFT&quot; field.</p>
 
+<p style="margin-left:11%;"><b>&quot;_bounce&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">1 enables bounce lighting,
+disabled by default.</p>
+
+<p style="margin-left:11%;"><b>&quot;_bouncescale&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Scales brightness of bounce
+lighting, default 1.</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_bouncecolorscale&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Weight for bounce lighting to
+use texture colors from the map: 0=ignore map textures
+(default), 1=multiply bounce light color by texture
+color.</p>
+
+<p style="margin-left:11%;"><b>&quot;_bouncestyled&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">1 makes styled lights bounce
+(e.g. flickering or switchable lights), default is 0, they
+do not bounce.</p>
+
 <p style="margin-left:11%; margin-top: 1em"><b>Model Entity
 Keys</b> <br>
 The following keys can be used on any entity with a brush
 model. &quot;_minlight&quot;, &quot;_mincolor&quot;,
-&quot;_dirt&quot;, &quot;_phong&quot;, and
-&quot;_phong_angle&quot; are supported on
-func_detail/func_group as well, if qbsp from these tools is
-used. <b><br>
+&quot;_dirt&quot;, &quot;_phong&quot;,
+&quot;_phong_angle&quot;, &quot;_shadow&quot; are supported
+on func_detail/func_group as well, if qbsp from these tools
+is used. <b><br>
 &quot;_minlight&quot; &quot;n&quot;</b></p>
 
 <p style="margin-left:22%;">Set the minimum light level for
@@ -567,16 +527,40 @@ also accepted). Default is white light (&quot;255 255
 shadows on other models and itself (i.e. &quot;_shadow&quot;
 implies &quot;_shadowself&quot;). Note that this
 doesn&rsquo;t magically give Quake dynamic lighting powers,
-so the shadows will not move if the model moves. Default
-0.</p>
+so the shadows will not move if the model moves. Set to -1
+on func_detail/func_group to prevent them from casting
+shadows. Default 0.</p>
 
 <p style="margin-left:11%;"><b>&quot;_shadowself&quot;
+&quot;n&quot;</b> | <b>&quot;_selfshadow&quot;
 &quot;n&quot;</b></p>
 
 <p style="margin-left:22%;">If n is 1, this model will cast
 shadows on itself if one part of the model blocks the light
 from another model surface. This can be a better compromise
 for moving models than full shadowing. Default 0.</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_shadowworldonly&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">If n is 1, this model will cast
+shadows on the world only (not other bmodels).</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_switchableshadow&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">If n is 1, this model casts a
+shadow that can be switched on/off using QuakeC. To make
+this work, a lightstyle is automatically assigned and stored
+in a key called &quot;switchshadstyle&quot;, which the
+QuakeC will need to read and call the
+&quot;lightstyle()&quot; builtin with &quot;a&quot; or
+&quot;m&quot; to switch the shadow on or off. Entities
+sharing the same targetname, and with
+&quot;_switchableshadow&quot; set to 1, will share the same
+lightstyle.</p>
 
 <p style="margin-left:11%;"><b>&quot;_dirt&quot;
 &quot;n&quot;</b></p>
@@ -813,6 +797,23 @@ angles for a texture projection (overriding mangle).</p>
 <p style="margin-left:22%;">Specifies the fov angle for a
 texture projection. Default 90.</p>
 
+<p style="margin-left:11%;"><b>&quot;_bouncescale&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Scales the amount of light that
+is contributed by bounces. Default is 1.0, 0.0 disables
+bounce lighting for this light.</p>
+
+<a name="OTHER INFORMATION"></a>
+<h2>OTHER INFORMATION</h2>
+
+
+<p style="margin-left:11%; margin-top: 1em">The
+&quot;\b&quot; escape sequence toggles red text on/off, you
+can use this in any strings in the map file. e.g.
+&quot;message&quot; &quot;Here is \bsome red
+text\b...&quot;</p>
+
 <a name="AUTHOR"></a>
 <h2>AUTHOR</h2>
 
@@ -830,11 +831,9 @@ http://disenchant.net</p>
 <h2>REPORTING BUGS</h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">Please send bug
-reports for this modified build to ewasylishen@gmail.com.
+<p style="margin-left:11%; margin-top: 1em">Please post bug
+reports at https://github.com/ericwa/tyrutils-ericw/issues.
 <br>
-Original message: Please send bug reports to
-tyrann@disenchant.net. <br>
 Improvements to the documentation are welcome and
 encouraged.</p>
 
