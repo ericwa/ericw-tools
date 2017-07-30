@@ -363,6 +363,11 @@ CalcualateVertexNormals(const bsp2_t *bsp)
         const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         if (f->numedges < 3) {
             logprint("CalcualateVertexNormals: face %d is degenerate with %d edges\n", i, f->numedges);
+            for (int j = 0; j<f->numedges; j++) {
+                vec3_t pt;
+                Face_PointAtIndex(bsp, f, j, pt);
+                logprint("                         vert at %f %f %f\n", pt[0], pt[1], pt[2]);
+            }
             continue;
         }
         

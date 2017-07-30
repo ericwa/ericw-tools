@@ -77,6 +77,12 @@ Vertex_GetPos(const bsp2_t *bsp, int num, vec3_t out)
         out[i] = v->point[i];
 }
 
+void Face_PointAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v, vec3_t point_out)
+{
+    const int vertnum = Face_VertexAtIndex(bsp, f, v);
+    Vertex_GetPos(bsp, vertnum, point_out);
+}
+
 void
 Face_Normal(const bsp2_t *bsp, const bsp2_dface_t *f, vec3_t norm)
 {
