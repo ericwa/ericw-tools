@@ -329,6 +329,10 @@ CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
     if (entity->anglescale.floatValue() < 0 || entity->anglescale.floatValue() > 1.0)
         entity->anglescale.setFloatValue(cfg.global_anglescale.floatValue());
 
+    //mxd. No negative falloffs pls.
+    if(entity->falloff.floatValue() < 0.0f)
+        entity->falloff.setFloatValue(0.0f);
+
     if (entity->getFormula() < LF_LINEAR || entity->getFormula() >= LF_COUNT) {
         static qboolean warned_once = true;
         if (!warned_once) {

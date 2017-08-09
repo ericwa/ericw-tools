@@ -869,6 +869,18 @@ GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
         return light;
 
     value = cfg.scaledist.floatValue() * entity->atten.floatValue() * dist;
+
+    //mxd. Apply falloff?
+    const float lightdistance = entity->falloff.floatValue();
+    if (lightdistance > 0.0f)
+    {
+        // Light can affect surface?
+        if (lightdistance > dist)
+            value *= light / lightdistance;
+        else
+            return 0.0f; // Surface is unaffected
+    }
+
     switch (entity->getFormula()) {
     case LF_INVERSE:
         return light / (value / LF_SCALE);
