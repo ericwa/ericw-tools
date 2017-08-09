@@ -865,10 +865,29 @@ GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
     const float light = entity->light.floatValue();
     vec_t value;
 
+    //mxd. Apply falloff?
+    const float lightdistance = entity->falloff.floatValue();
+    if (lightdistance > 0.0f) {
+        if (entity->getFormula() != LF_LINEAR) {
+            logprint("WARNING: _falloff is currently only supported on linear (delay 0): light at (%f %f %f)\n",
+                     (*entity->origin.vec3Value())[0],
+                     (*entity->origin.vec3Value())[1],
+                     (*entity->origin.vec3Value())[2]);
+            // ignore _falloff key
+        } else {
+            // Light can affect surface?
+            if (lightdistance > dist)
+                return light * (1.0f - (dist / lightdistance));
+            else
+                return 0.0f; // Surface is unaffected
+        }
+    }
+    
     if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
         return light;
 
     value = cfg.scaledist.floatValue() * entity->atten.floatValue() * dist;
+
     switch (entity->getFormula()) {
     case LF_INVERSE:
         return light / (value / LF_SCALE);

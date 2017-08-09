@@ -296,6 +296,14 @@ Select an attenuation formaula for the light:
        near the source.
 .fi
 
+.IP "\fB""_falloff"" ""n""\fP"
+Sets the distance at which the light drops to 0, in map units.
+
+In this mode, "wait" is ignored and "light" only controls the brightness at the center
+of the light, and no longer affects the falloff distance.
+
+Only supported on linear attenuation (delay 0) lights currently.
+
 .IP "\fB""_color"" ""r g b""\fP"
 Specify red(r), green(g) and blue(b) components for the colour of the
 light. RGB component values are between 0 and 255 (between 0 and 1 is also
