@@ -478,72 +478,31 @@ SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_
 static void
 SetupSuns(const globalconfig_t &cfg)
 {
-    //mxd. Arghrad-style sun setup
-    bool sun_deviance_set_from_light;
-    float sunlight = cfg.sunlight.floatValue();
-    float sun_deviance = cfg.sun_deviance.floatValue();
-    float sun_anglescale = cfg.global_anglescale.floatValue();
-    int sunlight_dirt = cfg.sunlight_dirt.intValue();
-
-    vec3_t sunlight_color, sunvec;
-    VectorCopy(*cfg.sunlight_color.vec3Value(), sunlight_color);
-    VectorCopy(*cfg.sunvec.vec3Value(), sunvec);
-
     for (light_t &entity : all_lights) {
+        //mxd. Arghrad-style sun setup
         if (entity.sun.intValue() == 1 && entity.light.intValue() > 0) {
-            // Set sun light
-            if (!cfg.sunlight.isLocked())
-                sunlight = entity.light.intValue();
-
-            // Set sun anglescale
-            if (!cfg.global_anglescale.isLocked() && entity.anglescale.floatValue() > 0)
-                sun_anglescale = entity.anglescale.floatValue();
-
-            // Set sun color
-            if (!cfg.sunlight_color.isLocked() && VectorLengthSq(*entity.color.vec3Value()) > 0)
-                VectorCopy(*entity.color.vec3Value(), sunlight_color);
-
-            // Set sun dirt
-            if (!cfg.sunlight_dirt.isLocked() && entity.dirt.intValue())
-                sunlight_dirt = entity.dirt.intValue();
-
-            // Set deviance
-            if (!cfg.sun_deviance.isLocked() && entity.deviance.floatValue()) {
-                sun_deviance = entity.deviance.floatValue();
-                
-                logprint("using _sunlight_penumbra of %f degrees from light.\n", sun_deviance);
-                sun_deviance_set_from_light = true;
-            }
-
             // Set sun vector
-            if(!cfg.sunvec.isLocked()) {
-                if (entity.targetent) {
-                    vec3_t sun_t;
-                    EntDict_VectorForKey(*entity.targetent, "origin", sun_t);
-                    VectorSubtract(sun_t, *entity.origin.vec3Value(), sunvec);
-                } else if (VectorLengthSq(*entity.mangle.vec3Value()) > 0) {
-                    VectorCopy(*entity.mangle.vec3Value(), sunvec);
-                } else if (!sunvec) { // Use { 0, 0, 0 } as sun target...
-                    logprint("WARNING: sun missing target, { 0 0 0 } used.\n");
-                    VectorCopy(*entity.origin.vec3Value(), sunvec);
-                }
+            vec3_t sunvec;
+            if (entity.targetent) {
+                vec3_t target_pos;
+                EntDict_VectorForKey(*entity.targetent, "origin", target_pos);
+                VectorSubtract(target_pos, *entity.origin.vec3Value(), sunvec);
+            } else if (VectorLengthSq(*entity.mangle.vec3Value()) > 0) {
+                VectorCopy(*entity.mangle.vec3Value(), sunvec);
+            } else { // Use { 0, 0, 0 } as sun target...
+                logprint("WARNING: sun missing target, { 0 0 0 } used.\n");
+                VectorCopy(*entity.origin.vec3Value(), sunvec);
             }
-
+            
+            // Add the sun
+            SetupSun(cfg, entity.light.floatValue(), *entity.color.vec3Value(), sunvec, entity.anglescale.floatValue(), entity.deviance.floatValue(), entity.dirt.intValue());
+            
             // Disable the light itself...
             entity.light.setFloatValue(0.0f);
-
-            // One sun will suffice...
-            break;
         }
     }
 
-    if(!sun_deviance_set_from_light && cfg.sun_deviance.floatValue() != 0)
-        logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", cfg.sun_deviance.floatValue());
-
-    const vec3_t sc = { sunlight_color[0], sunlight_color[1], sunlight_color[2] };
-    const vec3_t sv = { sunvec[0], sunvec[1], sunvec[2] };
-
-    SetupSun(cfg, sunlight, sc, sv, sun_anglescale, sun_deviance, sunlight_dirt);
+    SetupSun(cfg, cfg.sunlight.floatValue(), *cfg.sunlight_color.vec3Value(), *cfg.sunvec.vec3Value(), cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue());
     
     if (cfg.sun2.floatValue() != 0) {
         logprint("creating sun2\n");
