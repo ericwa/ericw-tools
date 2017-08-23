@@ -386,7 +386,7 @@ Dirt_ResolveFlag(const globalconfig_t &cfg, int dirtInt)
  * =============
  */
 static void
-AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt)
+AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt, float sun_anglescale)
 {
     if (light == 0.0f)
         return;
@@ -397,7 +397,7 @@ AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color
     VectorScale(sun.sunvec, -16384, sun.sunvec);
     sun.sunlight = light;
     VectorCopy(color, sun.sunlight_color);
-    sun.anglescale = cfg.global_anglescale.floatValue();
+    sun.anglescale = sun_anglescale;
     sun.dirt = Dirt_ResolveFlag(cfg, dirtInt);
 
     // add to list
@@ -422,17 +422,13 @@ AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color
  * =============
  */
 static void
-SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_t sunvec_in)
+SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_t sunvec_in, const float sun_anglescale, const float sun_deviance, const int sunlight_dirt)
 {
     vec3_t sunvec;
     int i;
-    int sun_num_samples = sunsamples;
-
-    if (cfg.sun_deviance.floatValue() == 0) {
-        sun_num_samples = 1;
-    } else {
-        logprint("using _sunlight_penumbra of %f degrees from worldspawn.\n", cfg.sun_deviance.floatValue());
-    }
+    int sun_num_samples = (sun_deviance == 0 ? 1 : sunsamples); //mxd
+    float sun_deviance_rad = DEG2RAD(sun_deviance); //mxd
+    float sun_deviance_sq = sun_deviance * sun_deviance; //mxd
 
     VectorCopy(sunvec_in, sunvec);
     VectorNormalize(sunvec);
@@ -460,10 +456,10 @@ SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_
             /* jitter the angles (loop to keep random sample within sun->deviance steridians) */
             do
             {
-                da = ( Random() * 2.0f - 1.0f ) * DEG2RAD(cfg.sun_deviance.floatValue());
-                de = ( Random() * 2.0f - 1.0f ) * DEG2RAD(cfg.sun_deviance.floatValue());
+                da = ( Random() * 2.0f - 1.0f ) * sun_deviance_rad;
+                de = ( Random() * 2.0f - 1.0f ) * sun_deviance_rad;
             }
-            while ( ( da * da + de * de ) > ( cfg.sun_deviance.floatValue() * cfg.sun_deviance.floatValue() ) );
+            while ( ( da * da + de * de ) > sun_deviance_sq );
             angle += da;
             elevation += de;
 
@@ -475,18 +471,42 @@ SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_
 
         //printf( "sun %d is using vector %f %f %f\n", i, direction[0], direction[1], direction[2]);
 
-        AddSun(cfg, direction, light, color, cfg.sunlight_dirt.intValue());
+        AddSun(cfg, direction, light, color, sunlight_dirt, sun_anglescale);
     }
 }
 
 static void
 SetupSuns(const globalconfig_t &cfg)
 {
-    SetupSun(cfg, cfg.sunlight.floatValue(), *cfg.sunlight_color.vec3Value(), *cfg.sunvec.vec3Value());
+    for (light_t &entity : all_lights) {
+        //mxd. Arghrad-style sun setup
+        if (entity.sun.intValue() == 1 && entity.light.intValue() > 0) {
+            // Set sun vector
+            vec3_t sunvec;
+            if (entity.targetent) {
+                vec3_t target_pos;
+                EntDict_VectorForKey(*entity.targetent, "origin", target_pos);
+                VectorSubtract(target_pos, *entity.origin.vec3Value(), sunvec);
+            } else if (VectorLengthSq(*entity.mangle.vec3Value()) > 0) {
+                VectorCopy(*entity.mangle.vec3Value(), sunvec);
+            } else { // Use { 0, 0, 0 } as sun target...
+                logprint("WARNING: sun missing target, { 0 0 0 } used.\n");
+                VectorCopy(*entity.origin.vec3Value(), sunvec);
+            }
+            
+            // Add the sun
+            SetupSun(cfg, entity.light.floatValue(), *entity.color.vec3Value(), sunvec, entity.anglescale.floatValue(), entity.deviance.floatValue(), entity.dirt.intValue());
+            
+            // Disable the light itself...
+            entity.light.setFloatValue(0.0f);
+        }
+    }
+
+    SetupSun(cfg, cfg.sunlight.floatValue(), *cfg.sunlight_color.vec3Value(), *cfg.sunvec.vec3Value(), cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue());
     
     if (cfg.sun2.floatValue() != 0) {
         logprint("creating sun2\n");
-        SetupSun(cfg, cfg.sun2.floatValue(), *cfg.sun2_color.vec3Value(), *cfg.sun2vec.vec3Value());
+        SetupSun(cfg, cfg.sun2.floatValue(), *cfg.sun2_color.vec3Value(), *cfg.sun2vec.vec3Value(), cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue());
     }
 }
 
@@ -552,14 +572,14 @@ SetupSkyDome(const globalconfig_t &cfg)
 
                         /* insert top hemisphere light */
                         if (sunlight2value > 0) {
-                            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue());
+                            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
                         }
 
                         direction[ 2 ] = -direction[ 2 ];
                     
                         /* insert bottom hemisphere light */
                         if (sunlight3value > 0) {
-                            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue());
+                            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
                         }
                     
                         /* move */
@@ -575,13 +595,13 @@ SetupSkyDome(const globalconfig_t &cfg)
         VectorSet( direction, 0.0f, 0.0f, -1.0f );
 
         if (sunlight2value > 0) {
-            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue());
+            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
         }
     
         VectorSet( direction, 0.0f, 0.0f, 1.0f );
     
         if (sunlight3value > 0) {
-            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue());
+            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
         }
 }
 
