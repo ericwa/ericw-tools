@@ -296,6 +296,14 @@ Select an attenuation formaula for the light:
        near the source.
 .fi
 
+.IP "\fB""_falloff"" ""n""\fP"
+Sets the distance at which the light drops to 0, in map units.
+
+In this mode, "wait" is ignored and "light" only controls the brightness at the center
+of the light, and no longer affects the falloff distance.
+
+Only supported on linear attenuation (delay 0) lights currently.
+
 .IP "\fB""_color"" ""r g b""\fP"
 Specify red(r), green(g) and blue(b) components for the colour of the
 light. RGB component values are between 0 and 255 (between 0 and 1 is also
@@ -381,6 +389,21 @@ Specifies the yaw/pitch/roll angles for a texture projection (overriding mangle)
 
 .IP "\fB""_bouncescale"" ""n""\fP"
 Scales the amount of light that is contributed by bounces.  Default is 1.0, 0.0 disables bounce lighting for this light.
+
+.IP "\fB""_sun"" ""n""\fP"
+Set to 1 to make this entity a sun, as an alternative to using the sunlight worldspawn keys.
+If the light targets an info_null entity, the direction towards that entity sets sun direction.
+The light itself is disabled, so it can be placed anywhere in the map.
+
+The following light properties correspond to these sunlight settings:
+.nf
+  light       => _sunlight
+  mangle      => _sunlight_mangle
+  deviance    => _sunlight_penumbra
+  _color      => _sunlight_color
+  _dirt       => _sunlight_dirt
+  _anglescale => _anglescale
+.fi
 
 .SH "OTHER INFORMATION"
 The "\\b" escape sequence toggles red text on/off, you can use this in any strings in the map file. e.g. "message" "Here is \\bsome red text\\b..."
