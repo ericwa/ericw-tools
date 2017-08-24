@@ -261,6 +261,7 @@ public:
     lockable_bool_t addminlight;
     lockable_vec_t minlight;
     lockable_vec3_t minlight_color;
+    lockable_bool_t spotlightautofalloff; //mxd
     
     /* dirt */
     lockable_bool_t globalDirt;          // apply dirt to all lights (unless they override it) + sunlight + minlight?
@@ -301,6 +302,7 @@ public:
         addminlight {"addmin", false},
         minlight {strings{"light", "minlight"}, 0},
         minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255},
+        spotlightautofalloff { "spotlightautofalloff", false }, //mxd
 
         /* dirt */
         globalDirt {strings{"dirt", "dirty"}, false},
@@ -342,6 +344,7 @@ public:
             &addminlight,
             &minlight,
             &minlight_color,
+            &spotlightautofalloff, //mxd
             &globalDirt,
             &dirtMode, &dirtDepth, &dirtScale, &dirtGain, &dirtAngle,
             &minlightDirt,
