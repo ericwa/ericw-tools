@@ -142,11 +142,9 @@ MatchTargets(void)
         if (!targetstr.length())
             continue;
         
-        bool found = false;
         for (const entdict_t &target : entdicts) {
             if (targetstr == EntDict_StringForKey(target, "targetname")) {
                 entity.targetent = &target;
-                found = true;
                 break;
             }
         }
