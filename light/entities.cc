@@ -292,13 +292,15 @@ EntDict_CheckTargetnameKeyMatched(const bsp2_t *bsp, const entdict_t &entity, co
 }
 
 static void
-SetupSpotlights(void)
+SetupSpotlights(const globalconfig_t &cfg)
 {
     for (light_t &entity : all_lights) {
+        float targetdist; //mxd
         if (entity.targetent) {
             vec3_t targetOrigin;
             EntDict_VectorForKey(*entity.targetent, "origin", targetOrigin);
             VectorSubtract(targetOrigin, *entity.origin.vec3Value(), entity.spotvec);
+            targetdist = VectorLength(entity.spotvec); //mxd
             VectorNormalize(entity.spotvec);
             entity.spotlight = true;
         }
@@ -312,6 +314,12 @@ SetupSpotlights(void)
             if (angle2 <= 0 || angle2 > angle)
                 angle2 = angle;
             entity.spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
+
+            //mxd. Apply autofalloff?
+            if(entity.falloff.floatValue() == 0 && cfg.spotlightautofalloff.boolValue()) {
+                float coneradius = targetdist * tan(angle / 2 * Q_PI / 180);
+                entity.falloff.setFloatValue(targetdist + coneradius);
+            }
         }
     }
 }
@@ -1253,7 +1261,7 @@ SetupLights(const globalconfig_t &cfg, const bsp2_t *bsp)
     const size_t final_lightcount = all_lights.size();
     
     MatchTargets();
-    SetupSpotlights();
+    SetupSpotlights(cfg);
     SetupSuns(cfg);
     SetupSkyDome(cfg);
     FixLightsOnFaces(bsp);
