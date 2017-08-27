@@ -239,6 +239,9 @@ Similar to func_detail_wall except it's suitable for fence textures, never clips
 .IP "\fB""_lmscale"" ""n""\fP"
 Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled and unscaled lighting will normally be used.
 
+.IP "\fB""_mirrorinside"" ""n""\fP"
+Set to 1 to save mirrored inside faces for bmodels, so when the player view is inside the bmodel, they will still see the faces. (e.g. for func_water, or func_illusionary)
+
 .SH MAP COMPATIBILITY
 In addition to standard Quake 1 .map files, TyrUtils QBSP is compatible with:
 

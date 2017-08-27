@@ -115,6 +115,7 @@
 #define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
 #define CFLAGS_WAS_ILLUSIONARY           (1U << 1) /* was illusionary, got changed to something else */
 #define CFLAGS_DETAIL_WALL  (1U << 2) /* don't clip world for func_detail_wall entities */
+#define CFLAGS_BMODEL_MIRROR_INSIDE		 (1U << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
 
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
 // Extended flags are written to a .texinfo file and read by the light tool

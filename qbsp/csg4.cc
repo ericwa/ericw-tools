@@ -356,7 +356,11 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
                 || face->contents[1] == CONTENTS_DETAIL_FENCE
                 || (face->cflags[1] & CFLAGS_WAS_ILLUSIONARY)
                 || face->contents[1] == CONTENTS_SOLID) {
-                newface->texinfo = MakeSkipTexinfo();
+                
+                // if CFLAGS_BMODEL_MIRROR_INSIDE is set, never change to skip
+                if (!(face->cflags[1] & CFLAGS_BMODEL_MIRROR_INSIDE)) {
+                	newface->texinfo = MakeSkipTexinfo();
+                }
             }
             
             for (int i = 0; i < face->w.numpoints; i++)

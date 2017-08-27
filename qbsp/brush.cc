@@ -1118,6 +1118,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         i /= 2;
     }
     
+    /* _mirrorinside key (for func_water etc.) */
+    if (atoi(ValueForKey(src, "_mirrorinside"))) {
+        cflags |= CFLAGS_BMODEL_MIRROR_INSIDE;
+    }
+    
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
         contents = Brush_GetContents(mapbrush);
