@@ -502,6 +502,7 @@ SetupSuns(const globalconfig_t &cfg)
             } else { // Use { 0, 0, 0 } as sun target...
                 logprint("WARNING: sun missing target, { 0 0 0 } used.\n");
                 VectorCopy(*entity.origin.vec3Value(), sunvec);
+                VectorInverse(sunvec);
             }
             
             // Add the sun
