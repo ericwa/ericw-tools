@@ -20,7 +20,7 @@ int portalleafs_real;   /* real no. of leafs after expanding PRT2 clusters */
 int *clustermap;        /* mapping from real leaf to cluster number */
 
 portal_t *portals;
-leaf_t *leafs;
+leaf_t *leafs; // new[]/delete[]
 
 int c_portaltest, c_portalpass, c_portalcheck, c_mightseeupdate;
 int c_noclip = 0;
@@ -157,7 +157,7 @@ LogLeaf(const leaf_t *leaf)
     if (!verbose)
         return;
 
-    for (i = 0; i < leaf->numportals; i++) {
+    for (i = 0; i < leaf->numportals(); i++) {
         portal = leaf->portals[i];
         plane = &portal->plane;
         logprint("portal %4i to leaf %4i : %7.1f : (%4.2f, %4.2f, %4.2f)\n",
@@ -404,7 +404,7 @@ UpdateMightsee(const leaf_t *source, const leaf_t *dest)
     portal_t *p;
 
     leafnum = dest - leafs;
-    for (i = 0; i < source->numportals; i++) {
+    for (i = 0; i < source->numportals(); i++) {
         p = source->portals[i];
         if (p->status != pstat_none)
             continue;
@@ -446,7 +446,7 @@ PortalCompleted(portal_t *completed)
      * mightsee during the full vis so far.
      */
     myleaf = &leafs[completed->leaf];
-    for (i = 0; i < myleaf->numportals; i++) {
+    for (i = 0; i < myleaf->numportals(); i++) {
         p = myleaf->portals[i];
         if (p->status != pstat_done)
             continue;
@@ -463,7 +463,7 @@ PortalCompleted(portal_t *completed)
              * If any of these changed bits are still visible from another
              * portal, we can't update yet.
              */
-            for (k = 0; k < myleaf->numportals; k++) {
+            for (k = 0; k < myleaf->numportals(); k++) {
                 if (k == i)
                     continue;
                 p2 = myleaf->portals[k];
@@ -587,7 +587,7 @@ LeafFlow(int leafnum, bsp2_dleaf_t *dleaf)
      */
     outbuffer = uncompressed + leafnum * leafbytes;
     leaf = &leafs[leafnum];
-    for (i = 0; i < leaf->numportals; i++) {
+    for (i = 0; i < leaf->numportals(); i++) {
         p = leaf->portals[i];
         if (p->status != pstat_done)
             Error("portal not done");
@@ -647,7 +647,7 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
      */
     leaf = &leafs[clusternum];
     numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
-    for (i = 0; i < leaf->numportals; i++) {
+    for (i = 0; i < leaf->numportals(); i++) {
         p = leaf->portals[i];
         if (p->status != pstat_done)
             Error("portal not done");
@@ -946,9 +946,9 @@ CalcPassages(void)
     for (i = 0; i < portalleafs; i++) {
         l = &leafs[i];
 
-        for (j = 0; j < l->numportals; j++) {
+        for (j = 0; j < l->numportals(); j++) {
             p1 = l->portals[j];
-            for (k = 0; k < l->numportals; k++) {
+            for (k = 0; k < l->numportals(); k++) {
                 if (k == j)
                     continue;
 
@@ -1079,8 +1079,7 @@ LoadPortals(char *name, bsp2_t *bsp)
     portals = static_cast<portal_t *>(malloc(2 * numportals * sizeof(portal_t)));
     memset(portals, 0, 2 * numportals * sizeof(portal_t));
 
-    leafs = static_cast<leaf_t *>(malloc(portalleafs * sizeof(leaf_t)));
-    memset(leafs, 0, portalleafs * sizeof(leaf_t));
+    leafs = new leaf_t[portalleafs];
 
     originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
 
@@ -1124,10 +1123,7 @@ LoadPortals(char *name, bsp2_t *bsp)
 
         // create forward portal
         l = &leafs[leafnums[0]];
-        if (l->numportals == MAX_PORTALS_ON_LEAF)
-            Error("Leaf with too many portals");
-        l->portals[l->numportals] = p;
-        l->numportals++;
+        l->portals.push_back(p);
 
         p->winding = w;
         VectorSubtract(vec3_origin, plane.normal, p->plane.normal);
@@ -1138,10 +1134,7 @@ LoadPortals(char *name, bsp2_t *bsp)
 
         // create backwards portal
         l = &leafs[leafnums[1]];
-        if (l->numportals == MAX_PORTALS_ON_LEAF)
-            Error("Leaf with too many portals");
-        l->portals[l->numportals] = p;
-        l->numportals++;
+        l->portals.push_back(p);
 
         // Create a reverse winding
         p->winding = NewWinding(numpoints);
