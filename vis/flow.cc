@@ -195,7 +195,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     vis = thread->leafvis->bits;
 
     // check all portals for flowing into other leafs
-    for (i = 0; i < leaf->numportals(); i++) {
+    for (i = 0; i < leaf->numportals; i++) {
         p = leaf->portals[i];
 
         if (!TestLeafBit(prevstack->mightsee, p->leaf)) {
@@ -406,7 +406,7 @@ SimpleFlood(portal_t *srcportal, int leafnum, byte *portalsee)
     srcportal->nummightsee++;
 
     leaf = &leafs[leafnum];
-    for (i = 0; i < leaf->numportals(); i++) {
+    for (i = 0; i < leaf->numportals; i++) {
         p = leaf->portals[i];
         if (!portalsee[p - portals])
             continue;

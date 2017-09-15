@@ -24,8 +24,6 @@
 #include <common/bspfile.hh>
 #include <vis/leafbits.hh>
 
-#include <vector>
-
 #define  PORTALFILE  "PRT1"
 #define  PORTALFILE2 "PRT2"
 #define  PORTALFILEAM "PRT1-AM"
@@ -71,20 +69,15 @@ typedef struct passage_s {
     sep_t *planes;
 } passage_t;
 
-class leaf_t {
-public:
-    passage_t *passages;
-    std::vector<portal_t *> portals;
-    int numportals() const {
-        return static_cast<int>(portals.size());
-    }
-    int visofs;                 // used when writing final visdata
+/* Increased MAX_PORTALS_ON_LEAF from 128 */
+#define MAX_PORTALS_ON_LEAF 256
 
-    leaf_t() : 
-        passages{ nullptr },
-        portals{},
-        visofs{ 0 } {}
-};
+typedef struct leaf_s {
+    int numportals;
+    passage_t *passages;
+    portal_t *portals[MAX_PORTALS_ON_LEAF];
+    int visofs;                 // used when writing final visdata
+} leaf_t;
 
 #define MAX_SEPARATORS MAX_WINDING
 #define STACK_WINDINGS 3        // source, pass and a temp for clipping
