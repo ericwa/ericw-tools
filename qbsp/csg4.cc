@@ -375,7 +375,7 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
                 || face->contents[1] == CONTENTS_DETAIL_ILLUSIONARY
                 || face->contents[1] == CONTENTS_DETAIL_FENCE
                 || (face->cflags[1] & CFLAGS_WAS_ILLUSIONARY)
-                || face->contents[1] == CONTENTS_SOLID) {
+                || (options.fContentHack && face->contents[1] == CONTENTS_SOLID)) {
                 
                 // if CFLAGS_BMODEL_MIRROR_INSIDE is set, never change to skip
                 if (!(face->cflags[1] & CFLAGS_BMODEL_MIRROR_INSIDE)) {
@@ -678,7 +678,7 @@ CSGFaces(const mapentity_t *entity)
          * All of the faces left on the outside list are real surface faces
          * If the brush is non-solid, mirror faces for the inside view
          */
-        mirror = true;//brush->contents != CONTENTS_SOLID);
+        mirror = options.fContentHack ? true : (brush->contents != CONTENTS_SOLID);
         SaveFacesToPlaneList(outside, mirror, planefaces);
 
         progress++;

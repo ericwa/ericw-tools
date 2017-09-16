@@ -689,6 +689,7 @@ PrintOptions(void)
            "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
            "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
            "   -leaktest       Make compilation fail if the map leaks\n"
+           "   -contenthack    Hack to fix leaks through solids. Causes missing faces in some cases so disabled by default.\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
 
@@ -891,6 +892,8 @@ ParseOptions(char *szOptions)
                 options.fTestExpand = true;
             } else if (!Q_strcasecmp(szTok, "leaktest")) {
                 options.fLeakTest = true;
+            } else if (!Q_strcasecmp(szTok, "contenthack")) {
+                options.fContentHack = true;
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
                 PrintOptions();
             else

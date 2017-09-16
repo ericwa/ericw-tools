@@ -368,6 +368,7 @@ public:
     bool fForcePRT1;
     bool fTestExpand;
     bool fLeakTest;
+    bool fContentHack;
     
     options_t() {
         memset(this, 0, sizeof(options_t));
