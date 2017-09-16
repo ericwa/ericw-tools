@@ -2540,14 +2540,21 @@ BoxBlurImage(const std::vector<qvec4f> &input, int w, int h, int radius)
             
             for (int y0 = -radius; y0 <= radius; y0++) {
                 for (int x0 = -radius; x0 <= radius; x0++) {
-                    const int x1 = x + x0;
-                    const int y1 = y + y0;
+                    const int x1 = qclamp(x + x0, 0, w - 1);
+                    const int y1 = qclamp(y + y0, 0, h - 1);
                     
                     // check if the kernel goes outside of the source image
+                    
+                    // 2017-09-16: this is a hack, but clamping the
+                    // x/y instead of discarding the samples outside of the
+                    // kernel looks better in some cases:
+                    // https://github.com/ericwa/tyrutils-ericw/issues/171
+#if 0
                     if (x1 < 0 || x1 >= w)
                         continue;
                     if (y1 < 0 || y1 >= h)
                         continue;
+#endif
                     
                     // read the input sample
                     const float weight = 1.0f;
