@@ -275,9 +275,29 @@ ClipInside(const face_t *clipface, bool precedence,
     while (face) {
         next = face->next;
 
+        /* HACK: Check for on-plane but not the same planenum
+          ( https://github.com/ericwa/tyrutils-ericw/issues/174 )
+         */
+        bool spurious_onplane = false;
+        {
+            vec_t dists[MAXEDGES + 1];
+            int sides[MAXEDGES + 1];
+            int counts[3];
+
+            CalcSides(&face->w, splitplane, sides, dists, counts);
+            if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
+                spurious_onplane = true;
+            }
+        }
+        
         /* Handle exactly on-plane faces */
-        if (face->planenum == clipface->planenum) {
-            if (clipface->planeside != face->planeside || precedence) {
+        if (face->planenum == clipface->planenum || spurious_onplane) {
+            const plane_t faceplane = Face_Plane(face);
+            const plane_t clipfaceplane = Face_Plane(clipface);
+            const vec_t dp = DotProduct(faceplane.normal, clipfaceplane.normal);
+            const bool opposite = (dp < 0);
+            
+            if (opposite || precedence) {
                 /* always clip off opposite facing */
                 frags[clipface->planeside] = NULL;
                 frags[!clipface->planeside] = face;
