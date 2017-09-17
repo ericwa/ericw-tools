@@ -1,3 +1,19 @@
+2017-09-17 TyrUtils-ericw 0.15.11
+
+- light: add "_sun" entity key to configure sunlight in an entity instead of worldspawn.
+         More than one "_sun" entity is supported.
+- light: add "_falloff" light entity key to configure light falloff in map units.
+         Only supported on linear (delay 0) lights.
+- light: add "_spotlightautofalloff".
+- light: fix light cutoff on curved surfaces (https://github.com/ericwa/tyrutils-ericw/issues/172)
+- light: adjust -soft to fix regression in 0.15.10 (https://github.com/ericwa/tyrutils-ericw/issues/171)
+- qbsp: add "_mirrorinside" key for mirroring the outside faces of bmodels so they are visible from inside.
+        for func_water, or func_illusionary fences, etc. 
+- qbsp: fix CSG issue with overlapping off grid brushes (https://github.com/ericwa/tyrutils-ericw/issues/174)
+- qbsp: fix HOMs introduced in 0.15.10, which were caused by an attempt to fix leaks-through-solids in 0.15.10.
+        To re-enable the buggy code that may fix leaks through solids but add HOMs, use "-contenthack" 
+        (https://github.com/ericwa/tyrutils-ericw/issues/175).
+
 2017-07-30 TyrUtils-ericw 0.15.10
 
 - light: add "_shadowworldonly" bmodel key - only cast shadows on world, not other bmodels.
