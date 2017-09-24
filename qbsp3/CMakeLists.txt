@@ -5,6 +5,16 @@ add_definitions(-DDOUBLEVEC_T)
 
 include_directories("${CMAKE_SOURCE_DIR}/common")
 
+set(QBSP3_HEADERS
+    common/bspfile.h
+    common/cmdlib.h
+    common/mathlib.h
+    common/polylib.h
+    common/qfiles.h
+    common/scriplib.h
+    common/threads.h
+    qbsp.h)
+
 set(QBSP3_SOURCES
     brushbsp.c
     faces.c
@@ -28,7 +38,7 @@ set(QBSP3_SOURCES
 
 find_package (Threads)
 
-add_executable(qbsp3 ${QBSP3_SOURCES})
+add_executable(qbsp3 ${QBSP3_SOURCES} ${QBSP3_HEADERS})
 target_link_libraries(qbsp3 ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS qbsp3 RUNTIME DESTINATION bin)
