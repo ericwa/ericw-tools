@@ -515,6 +515,8 @@ CalcPoints_Debug(const lightsurf_t *surf, const bsp2_t *bsp)
 /// 1. the world
 /// 2. any shadow-casting bmodel
 /// 3. the `self` model (regardless of whether it's selfshadowing)
+///
+/// This is used for marking sample points as occluded.
 bool
 Light_PointInAnySolid(const bsp2_t *bsp, const dmodel_t *self, const qvec3f &point)
 {
@@ -528,8 +530,11 @@ Light_PointInAnySolid(const bsp2_t *bsp, const dmodel_t *self, const qvec3f &poi
         return true;
     
     for (const auto &modelinfo : tracelist) {
-        if (Light_PointInSolid(bsp, modelinfo->model, v3))
-            return true;
+        if (Light_PointInSolid(bsp, modelinfo->model, v3)) {
+            // Only mark occluded if the bmodel is fully opaque
+         	if (modelinfo->alpha.floatValue() == 1.0f)
+            	return true;
+        }
     }
     
     return false;
