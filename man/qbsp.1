@@ -17,72 +17,72 @@ the output filename will be chosen by stripping the file extension (if any)
 from \fISOURCEFILE\fP and appending the .bsp extension.
 
 .SH OPTIONS
-.IP "\fB\-nofill\fP"
+.IP "\fB-nofill\fP"
 Doesn't perform outside filling
-.IP "\fB\-noclip\fP"
+.IP "\fB-noclip\fP"
 Doesn't build clip hulls
-.IP "\fB\-noskip\fP"
+.IP "\fB-noskip\fP"
 Doesn't remove faces using the 'skip' texture
-.IP "\fB\-onlyents\fP"
+.IP "\fB-onlyents\fP"
 Only updates .map entities
-.IP "\fB\-verbose\fP"
+.IP "\fB-verbose\fP"
 Print out more .map information
-.IP "\fB\-noverbose\fP"
+.IP "\fB-noverbose\fP"
 Print out almost no information at all
-.IP "\fB\-splitspecial\fP"
+.IP "\fB-splitspecial\fP"
 Doesn't combine sky and water faces into one large face
-.IP "\fB\-transwater\fP"
+.IP "\fB-transwater\fP"
 Computes portal information for transparent water (default)
-.IP "\fB\-notranswater\fP"
+.IP "\fB-notranswater\fP"
 Computes portal information for opaque water
-.IP "\fB\-transsky\fP"
+.IP "\fB-transsky\fP"
 Computes portal information for transparent sky
-.IP "\fB\-nooldaxis\fP"
+.IP "\fB-nooldaxis\fP"
 Use alternate texture alignment algorithm. The default is to use the original
 QBSP texture alignment algorithm, which required the -oldaxis switch in
 tyrutils-ericw v0.15.1 and earlier.
-.IP "\fB\-forcegoodtree\fP (experimental)"
+.IP "\fB-forcegoodtree\fP (experimental)"
 Force use of expensive processing for SolidBSP stage.  Often results
 in a more optimal BSP file in terms of file size, at the expense of
 extra processing time.
-.IP "\fB\-bspleak\fP"
+.IP "\fB-bspleak\fP"
 Creates a .por file, used in the BSP editor
-.IP "\fB\-oldleak\fP"
+.IP "\fB-oldleak\fP"
 Create an old-style QBSP .PTS file (default is new)
-.IP "\fB\-nopercent\fP"
+.IP "\fB-nopercent\fP"
 Prevents output of percent completion information
-.IP "\fB\-bsp2\fP"
+.IP "\fB-bsp2\fP"
 Create the output BSP file in BSP2 format.  Allows the creation of much larger
 and more complex maps than the original BSP 29 format).
-.IP "\fB\-2psb\fP"
+.IP "\fB-2psb\fP"
 Create the output BSP file in 2PSB format.  This an earlier version of the
 BSP2 format, supported by the RMQ engine (and thus is also known as the
 BSP2rmq or RMQe bsp format).  original BSP 29 format).
-.IP "\fB\-leakdist [n]\fP"
+.IP "\fB-leakdist [n]\fP"
 Space between leakfile points (default 2)
-.IP "\fB\-subdivide [n]\fP"
+.IP "\fB-subdivide [n]\fP"
 Use different texture subdivision (default 240)
-.IP "\fB\-wadpath <dir>\fP"
+.IP "\fB-wadpath <dir>\fP"
 Search this directory for wad files (default is cwd)
-.IP "\fB\-oldrottex\fP"
+.IP "\fB-oldrottex\fP"
 Use old method of texturing rotate_ brushes where the mapper aligns
 textures for the object at (0 0 0).
-.IP "\fB\-maxNodeSize [n]\fP"
+.IP "\fB-maxNodeSize [n]\fP"
 Switch to the cheap spatial subdivion bsp heuristic when splitting nodes
 of this size (in any dimension). This gives much faster qbsp processing
 times on large maps and should generate better bsp trees as well.
 From txqbsp-xt, thanks rebb. (default 1024, 0 to disable)
-.IP "\fB\-hexen2\fP"
+.IP "\fB-hexen2\fP"
 Generate a hexen2 bsp.
-.IP "\fB\-wrbrushes\fP"
+.IP "\fB-wrbrushes\fP"
 (bspx) Includes a list of brushes for brush-based collision.
-.IP "\fB\-wrbrushesonly\fP"
+.IP "\fB-wrbrushesonly\fP"
 "-wrbrushes" combined with "-noclip" argument.
-.IP "\fB\-notex\fP"
+.IP "\fB-notex\fP"
 Write only placeholder textures, to depend upon replacements.
-.IP "\fB\-omitdetail\fP"
+.IP "\fB-omitdetail\fP"
 Detail brushes are omitted from the compile.
-.IP "\fB\-convert <fmt>\fP"
+.IP "\fB-convert <fmt>\fP"
 Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).
 Conversions to "quake" or "quake2" format may not be able to match the texture alignment in the source map, other conversions are lossless.
 The converted map is saved to <source map name>-<fmt>.map.
