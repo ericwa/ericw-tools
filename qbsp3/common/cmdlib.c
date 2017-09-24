@@ -28,6 +28,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 #ifdef WIN32
 #include <direct.h>
+#else
+#include <unistd.h> // for getwd()
 #endif
 
 #ifdef NeXT
