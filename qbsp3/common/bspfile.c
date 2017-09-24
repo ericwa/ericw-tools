@@ -30,7 +30,7 @@ void GetLeafNums (void);
 //=============================================================================
 
 int			nummodels;
-dmodel_t	dmodels[MAX_MAP_MODELS];
+q2_dmodel_t	dmodels[MAX_MAP_MODELS];
 
 int			visdatasize;
 byte		dvisdata[MAX_MAP_VISIBILITY];
@@ -43,7 +43,7 @@ int			entdatasize;
 char		dentdata[MAX_MAP_ENTSTRING];
 
 int			numleafs;
-dleaf_t		dleafs[MAX_MAP_LEAFS];
+q2_dleaf_t		dleafs[MAX_MAP_LEAFS];
 
 int			numplanes;
 dplane_t	dplanes[MAX_MAP_PLANES];
@@ -52,16 +52,16 @@ int			numvertexes;
 dvertex_t	dvertexes[MAX_MAP_VERTS];
 
 int			numnodes;
-dnode_t		dnodes[MAX_MAP_NODES];
+q2_dnode_t		dnodes[MAX_MAP_NODES];
 
 int			numtexinfo;
-texinfo_t	texinfo[MAX_MAP_TEXINFO];
+q2_texinfo_t	texinfo[MAX_MAP_TEXINFO];
 
 int			numfaces;
-dface_t		dfaces[MAX_MAP_FACES];
+q2_dface_t		dfaces[MAX_MAP_FACES];
 
 int			numedges;
-dedge_t		dedges[MAX_MAP_EDGES];
+q2_dedge_t		dedges[MAX_MAP_EDGES];
 
 int			numleaffaces;
 unsigned short		dleaffaces[MAX_MAP_LEAFFACES];
@@ -170,7 +170,7 @@ Byte swaps all data in a bsp file.
 void SwapBSPFile (qboolean todisk)
 {
 	int				i, j;
-	dmodel_t		*d;
+	q2_dmodel_t		*d;
 
 
 // models
@@ -392,17 +392,17 @@ void	LoadBSPFile (char *filename)
 	if (header->version != BSPVERSION)
 		Error ("%s is version %i, not %i", filename, header->version, BSPVERSION);
 
-	nummodels = CopyLump (LUMP_MODELS, dmodels, sizeof(dmodel_t));
+	nummodels = CopyLump (LUMP_MODELS, dmodels, sizeof(q2_dmodel_t));
 	numvertexes = CopyLump (LUMP_VERTEXES, dvertexes, sizeof(dvertex_t));
 	numplanes = CopyLump (LUMP_PLANES, dplanes, sizeof(dplane_t));
-	numleafs = CopyLump (LUMP_LEAFS, dleafs, sizeof(dleaf_t));
-	numnodes = CopyLump (LUMP_NODES, dnodes, sizeof(dnode_t));
-	numtexinfo = CopyLump (LUMP_TEXINFO, texinfo, sizeof(texinfo_t));
-	numfaces = CopyLump (LUMP_FACES, dfaces, sizeof(dface_t));
+	numleafs = CopyLump (LUMP_LEAFS, dleafs, sizeof(q2_dleaf_t));
+	numnodes = CopyLump (LUMP_NODES, dnodes, sizeof(q2_dnode_t));
+	numtexinfo = CopyLump (LUMP_TEXINFO, texinfo, sizeof(q2_texinfo_t));
+	numfaces = CopyLump (LUMP_FACES, dfaces, sizeof(q2_dface_t));
 	numleaffaces = CopyLump (LUMP_LEAFFACES, dleaffaces, sizeof(dleaffaces[0]));
 	numleafbrushes = CopyLump (LUMP_LEAFBRUSHES, dleafbrushes, sizeof(dleafbrushes[0]));
 	numsurfedges = CopyLump (LUMP_SURFEDGES, dsurfedges, sizeof(dsurfedges[0]));
-	numedges = CopyLump (LUMP_EDGES, dedges, sizeof(dedge_t));
+	numedges = CopyLump (LUMP_EDGES, dedges, sizeof(q2_dedge_t));
 	numbrushes = CopyLump (LUMP_BRUSHES, dbrushes, sizeof(dbrush_t));
 	numbrushsides = CopyLump (LUMP_BRUSHSIDES, dbrushsides, sizeof(dbrushside_t));
 	numareas = CopyLump (LUMP_AREAS, dareas, sizeof(darea_t));
@@ -458,7 +458,7 @@ void	LoadBSPFileTexinfo (char *filename)
 	fread (texinfo, length, 1, f);
 	fclose (f);
 
-	numtexinfo = length / sizeof(texinfo_t);
+	numtexinfo = length / sizeof(q2_texinfo_t);
 
 	free (header);		// everything has been copied out
 
@@ -503,18 +503,18 @@ void	WriteBSPFile (char *filename)
 	SafeWrite (wadfile, header, sizeof(dheader_t));	// overwritten later
 
 	AddLump (LUMP_PLANES, dplanes, numplanes*sizeof(dplane_t));
-	AddLump (LUMP_LEAFS, dleafs, numleafs*sizeof(dleaf_t));
+	AddLump (LUMP_LEAFS, dleafs, numleafs*sizeof(q2_dleaf_t));
 	AddLump (LUMP_VERTEXES, dvertexes, numvertexes*sizeof(dvertex_t));
-	AddLump (LUMP_NODES, dnodes, numnodes*sizeof(dnode_t));
-	AddLump (LUMP_TEXINFO, texinfo, numtexinfo*sizeof(texinfo_t));
-	AddLump (LUMP_FACES, dfaces, numfaces*sizeof(dface_t));
+	AddLump (LUMP_NODES, dnodes, numnodes*sizeof(q2_dnode_t));
+	AddLump (LUMP_TEXINFO, texinfo, numtexinfo*sizeof(q2_texinfo_t));
+	AddLump (LUMP_FACES, dfaces, numfaces*sizeof(q2_dface_t));
 	AddLump (LUMP_BRUSHES, dbrushes, numbrushes*sizeof(dbrush_t));
 	AddLump (LUMP_BRUSHSIDES, dbrushsides, numbrushsides*sizeof(dbrushside_t));
 	AddLump (LUMP_LEAFFACES, dleaffaces, numleaffaces*sizeof(dleaffaces[0]));
 	AddLump (LUMP_LEAFBRUSHES, dleafbrushes, numleafbrushes*sizeof(dleafbrushes[0]));
 	AddLump (LUMP_SURFEDGES, dsurfedges, numsurfedges*sizeof(dsurfedges[0]));
-	AddLump (LUMP_EDGES, dedges, numedges*sizeof(dedge_t));
-	AddLump (LUMP_MODELS, dmodels, nummodels*sizeof(dmodel_t));
+	AddLump (LUMP_EDGES, dedges, numedges*sizeof(q2_dedge_t));
+	AddLump (LUMP_MODELS, dmodels, nummodels*sizeof(q2_dmodel_t));
 	AddLump (LUMP_AREAS, dareas, numareas*sizeof(darea_t));
 	AddLump (LUMP_AREAPORTALS, dareaportals, numareaportals*sizeof(dareaportal_t));
 
@@ -543,7 +543,7 @@ void PrintBSPFileSizes (void)
 		ParseEntities ();
 
 	printf ("%5i models       %7i\n"
-		,nummodels, (int)(nummodels*sizeof(dmodel_t)));
+		,nummodels, (int)(nummodels*sizeof(q2_dmodel_t)));
 	printf ("%5i brushes      %7i\n"
 		,numbrushes, (int)(numbrushes*sizeof(dbrush_t)));
 	printf ("%5i brushsides   %7i\n"
@@ -551,7 +551,7 @@ void PrintBSPFileSizes (void)
 	printf ("%5i planes       %7i\n"
 		,numplanes, (int)(numplanes*sizeof(dplane_t)));
 	printf ("%5i texinfo      %7i\n"
-		,numtexinfo, (int)(numtexinfo*sizeof(texinfo_t)));
+		,numtexinfo, (int)(numtexinfo*sizeof(q2_texinfo_t)));
 	printf ("%5i entdata      %7i\n", num_entities, entdatasize);
 
 	printf ("\n");
@@ -559,11 +559,11 @@ void PrintBSPFileSizes (void)
 	printf ("%5i vertexes     %7i\n"
 		,numvertexes, (int)(numvertexes*sizeof(dvertex_t)));
 	printf ("%5i nodes        %7i\n"
-		,numnodes, (int)(numnodes*sizeof(dnode_t)));
+		,numnodes, (int)(numnodes*sizeof(q2_dnode_t)));
 	printf ("%5i faces        %7i\n"
-		,numfaces, (int)(numfaces*sizeof(dface_t)));
+		,numfaces, (int)(numfaces*sizeof(q2_dface_t)));
 	printf ("%5i leafs        %7i\n"
-		,numleafs, (int)(numleafs*sizeof(dleaf_t)));
+		,numleafs, (int)(numleafs*sizeof(q2_dleaf_t)));
 	printf ("%5i leaffaces    %7i\n"
 		,numleaffaces, (int)(numleaffaces*sizeof(dleaffaces[0])));
 	printf ("%5i leafbrushes  %7i\n"
@@ -571,7 +571,7 @@ void PrintBSPFileSizes (void)
 	printf ("%5i surfedges    %7i\n"
 		,numsurfedges, (int)(numsurfedges*sizeof(dsurfedges[0])));
 	printf ("%5i edges        %7i\n"
-		,numedges, (int)(numedges*sizeof(dedge_t)));
+		,numedges, (int)(numedges*sizeof(q2_dedge_t)));
 	printf ("      lightdata    %7i\n", lightdatasize);
 	printf ("      visdata      %7i\n", visdatasize);
 }

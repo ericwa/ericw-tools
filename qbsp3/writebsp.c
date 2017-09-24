@@ -65,7 +65,7 @@ void EmitPlanes (void)
 
 //========================================================
 
-void EmitMarkFace (dleaf_t *leaf_p, face_t *f)
+void EmitMarkFace (q2_dleaf_t *leaf_p, face_t *f)
 {
 	int			i;
 	int			facenum;
@@ -108,7 +108,7 @@ EmitLeaf
 */
 void EmitLeaf (node_t *node)
 {
-	dleaf_t		*leaf_p;
+	q2_dleaf_t		*leaf_p;
 	portal_t	*p;
 	int			s;
 	face_t		*f;
@@ -183,7 +183,7 @@ EmitFace
 */
 void EmitFace (face_t *f)
 {
-	dface_t	*df;
+	q2_dface_t	*df;
 	int		i;
 	int		e;
 
@@ -231,7 +231,7 @@ EmitDrawingNode_r
 */
 int EmitDrawNode_r (node_t *node)
 {
-	dnode_t	*n;
+	q2_dnode_t	*n;
 	face_t	*f;
 	int		i;
 
@@ -532,7 +532,7 @@ extern	int firstmodeledge;
 extern	int	firstmodelface;
 void BeginModel (void)
 {
-	dmodel_t	*mod;
+	q2_dmodel_t	*mod;
 	int			start, end;
 	mapbrush_t	*b;
 	int			j;
@@ -579,7 +579,7 @@ EndModel
 */
 void EndModel (void)
 {
-	dmodel_t	*mod;
+	q2_dmodel_t	*mod;
 
 	mod = &dmodels[nummodels];
 

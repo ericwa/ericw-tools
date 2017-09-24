@@ -628,7 +628,7 @@ Don't allow four way edges
 */
 int GetEdge2 (int v1, int v2,  face_t *f)
 {
-	dedge_t	*edge;
+	q2_dedge_t	*edge;
 	int		i;
 
 	c_tryedges++;
@@ -877,7 +877,7 @@ void SubdivideFace (node_t *node, face_t *f)
 	float		mins, maxs;
 	vec_t		v;
 	int			axis, i;
-	texinfo_t	*tex;
+	q2_texinfo_t	*tex;
 	vec3_t		temp;
 	vec_t		dist;
 	winding_t	*w, *frontw, *backw;

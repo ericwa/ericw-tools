@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
 extern	int			nummodels;
-extern	dmodel_t	dmodels[MAX_MAP_MODELS];
+extern	q2_dmodel_t	dmodels[MAX_MAP_MODELS];
 
 extern	int			visdatasize;
 extern	byte		dvisdata[MAX_MAP_VISIBILITY];
@@ -37,7 +37,7 @@ extern	int			entdatasize;
 extern	char		dentdata[MAX_MAP_ENTSTRING];
 
 extern	int			numleafs;
-extern	dleaf_t		dleafs[MAX_MAP_LEAFS];
+extern	q2_dleaf_t		dleafs[MAX_MAP_LEAFS];
 
 extern	int			numplanes;
 extern	dplane_t	dplanes[MAX_MAP_PLANES];
@@ -46,16 +46,16 @@ extern	int			numvertexes;
 extern	dvertex_t	dvertexes[MAX_MAP_VERTS];
 
 extern	int			numnodes;
-extern	dnode_t		dnodes[MAX_MAP_NODES];
+extern	q2_dnode_t		dnodes[MAX_MAP_NODES];
 
 extern	int			numtexinfo;
-extern	texinfo_t	texinfo[MAX_MAP_TEXINFO];
+extern	q2_texinfo_t	texinfo[MAX_MAP_TEXINFO];
 
 extern	int			numfaces;
-extern	dface_t		dfaces[MAX_MAP_FACES];
+extern	q2_dface_t		dfaces[MAX_MAP_FACES];
 
 extern	int			numedges;
-extern	dedge_t		dedges[MAX_MAP_EDGES];
+extern	q2_dedge_t		dedges[MAX_MAP_EDGES];
 
 extern	int			numleaffaces;
 extern	unsigned short	dleaffaces[MAX_MAP_LEAFFACES];

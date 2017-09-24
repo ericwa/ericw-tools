@@ -296,7 +296,7 @@ typedef struct
 	int			headnode;
 	int			firstface, numfaces;	// submodels just draw faces
 										// without walking the bsp tree
-} dmodel_t;
+} q2_dmodel_t;
 
 
 typedef struct
@@ -390,7 +390,7 @@ typedef struct
 	short		maxs[3];
 	unsigned short	firstface;
 	unsigned short	numfaces;	// counting both sides
-} dnode_t;
+} q2_dnode_t;
 
 
 typedef struct texinfo_s
@@ -400,7 +400,7 @@ typedef struct texinfo_s
 	int			value;			// light emission, etc
 	char		texture[32];	// texture name (textures/*.wal)
 	int			nexttexinfo;	// for animations, -1 = end of chain
-} texinfo_t;
+} q2_texinfo_t;
 
 
 // note that edge 0 is never used, because negative edge nums are used for
@@ -408,7 +408,7 @@ typedef struct texinfo_s
 typedef struct
 {
 	unsigned short	v[2];		// vertex numbers
-} dedge_t;
+} q2_dedge_t;
 
 #define	MAXLIGHTMAPS	4
 typedef struct
@@ -423,7 +423,7 @@ typedef struct
 // lighting info
 	byte		styles[MAXLIGHTMAPS];
 	int			lightofs;		// start of [numstyles*surfsize] samples
-} dface_t;
+} q2_dface_t;
 
 typedef struct
 {
@@ -440,7 +440,7 @@ typedef struct
 
 	unsigned short	firstleafbrush;
 	unsigned short	numleafbrushes;
-} dleaf_t;
+} q2_dleaf_t;
 
 typedef struct
 {
