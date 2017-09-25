@@ -55,6 +55,8 @@
 #define BSPVERSION     29
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 #define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
+#define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
+#define Q2_BSPVERSION  38
 
 typedef struct {
     int32_t fileofs;
@@ -79,6 +81,34 @@ typedef struct {
 
 #define BSP_LUMPS         15
 
+#define Q2_LUMP_ENTITIES    0
+#define Q2_LUMP_PLANES      1
+#define Q2_LUMP_VERTEXES    2
+#define Q2_LUMP_VISIBILITY  3
+#define Q2_LUMP_NODES       4
+#define Q2_LUMP_TEXINFO     5
+#define Q2_LUMP_FACES       6
+#define Q2_LUMP_LIGHTING    7
+#define Q2_LUMP_LEAFS       8
+#define Q2_LUMP_LEAFFACES   9
+#define Q2_LUMP_LEAFBRUSHES 10
+#define Q2_LUMP_EDGES       11
+#define Q2_LUMP_SURFEDGES   12
+#define Q2_LUMP_MODELS      13
+#define Q2_LUMP_BRUSHES     14
+#define Q2_LUMP_BRUSHSIDES  15
+#define Q2_LUMP_POP         16
+#define Q2_LUMP_AREAS       17
+#define Q2_LUMP_AREAPORTALS 18
+#define Q2_HEADER_LUMPS     19
+
+typedef struct
+{
+    int ident;
+    int version;
+    lump_t lumps[Q2_HEADER_LUMPS];
+} q2_dheader_t;
+
 typedef struct {
         char id[4]; //'BSPX'
         uint32_t numlumps;
@@ -97,6 +127,7 @@ typedef struct {
 extern const lumpspec_t lumpspec_bsp29[BSP_LUMPS];
 extern const lumpspec_t lumpspec_bsp2rmq[BSP_LUMPS];
 extern const lumpspec_t lumpspec_bsp2[BSP_LUMPS];
+extern const lumpspec_t lumpspec_q2bsp[Q2_HEADER_LUMPS];
 
 typedef struct {
     float mins[3];
@@ -107,6 +138,7 @@ typedef struct {
     int32_t firstface;
     int32_t numfaces;
 } dmodelq1_t;
+
 typedef struct {
     float mins[3];
     float maxs[3];
@@ -116,6 +148,17 @@ typedef struct {
     int32_t firstface;
     int32_t numfaces;
 } dmodelh2_t;
+
+typedef struct {
+    float mins[3];
+    float maxs[3];
+    float origin[3];         // for sounds or lights
+    int32_t headnode;
+    int32_t firstface;
+    int32_t numfaces;    // submodels just draw faces
+                         // without walking the bsp tree
+} q2_dmodel_t;
+
 typedef dmodelh2_t dmodel_t;
 
 typedef struct {
@@ -186,6 +229,15 @@ typedef struct {
     uint32_t numfaces;          /* counting both sides */
 } bsp2_dnode_t;
 
+typedef struct {
+    int32_t planenum;
+    int32_t children[2];    // negative numbers are -(leafs+1), not nodes
+    int16_t mins[3];      // for frustom culling
+    int16_t maxs[3];
+    uint16_t firstface;
+    uint16_t numfaces;    // counting both sides
+} q2_dnode_t;
+
 /*
  * Note that children are interpreted as unsigned values now, so that we can
  * handle > 32k clipnodes. Values > 0xFFF0 can be assumed to be CONTENTS
@@ -207,6 +259,14 @@ typedef struct texinfo_s {
     int32_t miptex;
     int32_t flags;
 } texinfo_t;
+
+typedef struct {
+    float vecs[2][4];     // [s/t][xyz offset]
+    int32_t flags;            // miptex flags + overrides
+    int32_t value;            // light emission, etc
+    char texture[32];     // texture name (textures/*.wal)
+    int32_t nexttexinfo;      // for animations, -1 = end of chain
+} q2_texinfo_t;
 
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
 #define TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
@@ -262,6 +322,18 @@ typedef struct {
     int32_t lightofs;           /* start of [numstyles*surfsize] samples */
 } bsp2_dface_t;
 
+typedef struct {
+    uint16_t planenum;		  // NOTE: only difference from bsp29_dface_t
+    int16_t side;
+    int32_t firstedge;        // we must support > 64k edges
+    int16_t numedges;
+    int16_t texinfo;
+    
+    // lighting info
+    uint8_t styles[MAXLIGHTMAPS];
+    int32_t lightofs;        // start of [numstyles*surfsize] samples
+} q2_dface_t;
+
 /* Ambient Sounds */
 #define AMBIENT_WATER   0
 #define AMBIENT_SKY     1
@@ -303,10 +375,60 @@ typedef struct {
     uint8_t ambient_level[NUM_AMBIENTS];
 } bsp2_dleaf_t;
 
+typedef struct {
+    int32_t contents;            // OR of all brushes (not needed?)
+    
+    int16_t cluster;
+    int16_t area;
+    
+    int16_t mins[3];            // for frustum culling
+    int16_t maxs[3];
+    
+    uint16_t firstleafface;
+    uint16_t numleaffaces;
+    
+    uint16_t firstleafbrush;
+    uint16_t numleafbrushes;
+} q2_dleaf_t;
+
 typedef union {
     byte *base;
     dmiptexlump_t *header;
 } dtexdata_t;
+
+typedef struct {
+    uint16_t planenum;        // facing out of the leaf
+    int16_t texinfo;
+} dbrushside_t;
+
+typedef struct {
+    int32_t firstside;
+    int32_t numsides;
+    int32_t contents;
+} dbrush_t;
+
+// the visibility lump consists of a header with a count, then
+// byte offsets for the PVS and PHS of each cluster, then the raw
+// compressed bit vectors
+#define    DVIS_PVS    0
+#define    DVIS_PHS    1
+typedef struct {
+    int32_t numclusters;
+    int32_t bitofs[8][2];    // bitofs[numclusters][2]
+} dvis_t;
+
+// each area has a list of portals that lead into other areas
+// when portals are closed, other areas may not be visible or
+// hearable even if the vis info says that it should be
+typedef struct {
+    int32_t portalnum;
+    int32_t otherarea;
+} dareaportal_t;
+
+typedef struct {
+    int32_t numareaportals;
+    int32_t firstareaportal;
+} darea_t;
 
 /* ========================================================================= */
 
@@ -459,6 +581,65 @@ typedef struct {
     int numsurfedges;
     int32_t *dsurfedges;
 } bsp2_t;
+
+typedef struct {
+    int nummodels;
+    q2_dmodel_t *dmodels;
+    
+    int visdatasize;
+    byte *dvisdata;
+    dvis_t *dvis;
+    
+    int lightdatasize;
+    byte *dlightdata;
+    
+    int entdatasize;
+    char *dentdata;
+    
+    int numleafs;
+    q2_dleaf_t *dleafs;
+    
+    int numplanes;
+    dplane_t *dplanes;
+    
+    int numvertexes;
+    dvertex_t *dvertexes;
+    
+    int numnodes;
+    q2_dnode_t *dnodes;
+    
+    int numtexinfo;
+    q2_texinfo_t *texinfo;
+    
+    int numfaces;
+    q2_dface_t *dfaces;
+    
+    int numedges;
+    bsp29_dedge_t *dedges;
+    
+    int numleaffaces;
+    uint16_t *dleaffaces;
+    
+    int numleafbrushes;
+    uint16_t *dleafbrushes;
+    
+    int numsurfedges;
+    int32_t *dsurfedges;
+    
+    int numareas;
+    darea_t *dareas;
+    
+    int numareaportals;
+    dareaportal_t *dareaportals;
+    
+    int numbrushes;
+    dbrush_t *dbrushes;
+    
+    int numbrushsides;
+    dbrushside_t *dbrushsides;
+    
+    byte dpop[256];
+} q2bsp_t;
 
 typedef struct {
     int32_t version;

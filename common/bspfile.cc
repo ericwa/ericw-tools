@@ -975,6 +975,28 @@ const lumpspec_t lumpspec_bsp2[] = {
     { "models",       sizeof(dmodel_t)          },
 };
 
+const lumpspec_t lumpspec_q2bsp[] = {
+    { "entities",     sizeof(char)              },
+    { "planes",       sizeof(dplane_t)          },
+    { "vertexes",     sizeof(dvertex_t)         },
+    { "visibility",   sizeof(byte)              },
+    { "nodes",        sizeof(q2_dnode_t)        },
+    { "texinfos",     sizeof(q2_texinfo_t)      },
+    { "faces",        sizeof(q2_dface_t)        },
+    { "lighting",     sizeof(byte)              },
+    { "leafs",        sizeof(q2_dleaf_t)        },
+    { "leaffaces",    sizeof(uint16_t)          },
+    { "leafbrushes",  sizeof(uint16_t)          },
+    { "edges",        sizeof(bsp29_dedge_t)     },
+    { "surfedges",    sizeof(int32_t)           },
+    { "models",       sizeof(q2_dmodel_t)       },
+    { "brushes",      sizeof(dbrush_t)          },
+    { "brushsides",   sizeof(dbrushside_t)      },
+    { "pop",          sizeof(byte)              },
+    { "areas",        sizeof(darea_t)           },
+    { "areaportals",  sizeof(dareaportal_t)     },
+};
+
 static int
 CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 {
