@@ -102,13 +102,6 @@ typedef struct {
 #define Q2_LUMP_AREAPORTALS 18
 #define Q2_HEADER_LUMPS     19
 
-typedef struct
-{
-    int ident;
-    int version;
-    lump_t lumps[Q2_HEADER_LUMPS];
-} q2_dheader_t;
-
 typedef struct {
         char id[4]; //'BSPX'
         uint32_t numlumps;
@@ -587,7 +580,6 @@ typedef struct {
     q2_dmodel_t *dmodels;
     
     int visdatasize;
-    byte *dvisdata;
     dvis_t *dvis;
     
     int lightdatasize;
@@ -647,6 +639,12 @@ typedef struct {
 } dheader_t;
 
 typedef struct {
+    int32_t ident;
+    int32_t version;
+    lump_t lumps[Q2_HEADER_LUMPS];
+} q2_dheader_t;
+
+typedef struct {
     int32_t version;
     int hullcount;
     
@@ -654,6 +652,7 @@ typedef struct {
         bsp29_t bsp29;
         bsp2rmq_t bsp2rmq;
         bsp2_t bsp2;
+        q2bsp_t q2bsp;
     } data;
 
     bspxentry_t *bspxentries;

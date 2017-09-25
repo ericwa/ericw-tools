@@ -33,6 +33,8 @@ BSPVersionString(int32_t version)
         return "BSP2rmq";
     case BSP2VERSION:
         return "BSP2";
+    case Q2_BSPVERSION:
+        return "Q2BSP";
     default:
         buffer = buffers[1 & ++index];
         q_snprintf(buffer, sizeof(buffers[0]), "%d", version);
@@ -47,6 +49,7 @@ BSPVersionSupported(int32_t version)
     case BSPVERSION:
     case BSP2VERSION:
     case BSP2RMQVERSION:
+    case Q2_BSPVERSION:
         return true;
     default:
         return false;
@@ -366,6 +369,197 @@ SwapBSPMiptex(int texdatasize, dmiptexlump_t *header, const swaptype_t swap)
 }
 
 /*
+=============
+Q2_SwapBSPFile
+
+Byte swaps all data in a bsp file.
+=============
+*/
+void Q2_SwapBSPFile (q2bsp_t *bsp, qboolean todisk)
+{
+    int                i, j;
+    q2_dmodel_t        *d;
+    
+    
+    // models
+    for (i=0 ; i<bsp->nummodels ; i++)
+    {
+        d = &bsp->dmodels[i];
+        
+        d->firstface = LittleLong (d->firstface);
+        d->numfaces = LittleLong (d->numfaces);
+        d->headnode = LittleLong (d->headnode);
+        
+        for (j=0 ; j<3 ; j++)
+        {
+            d->mins[j] = LittleFloat(d->mins[j]);
+            d->maxs[j] = LittleFloat(d->maxs[j]);
+            d->origin[j] = LittleFloat(d->origin[j]);
+        }
+    }
+    
+    //
+    // vertexes
+    //
+    for (i=0 ; i<bsp->numvertexes ; i++)
+    {
+        for (j=0 ; j<3 ; j++)
+            bsp->dvertexes[i].point[j] = LittleFloat (bsp->dvertexes[i].point[j]);
+    }
+    
+    //
+    // planes
+    //
+    for (i=0 ; i<bsp->numplanes ; i++)
+    {
+        for (j=0 ; j<3 ; j++)
+            bsp->dplanes[i].normal[j] = LittleFloat (bsp->dplanes[i].normal[j]);
+        bsp->dplanes[i].dist = LittleFloat (bsp->dplanes[i].dist);
+        bsp->dplanes[i].type = LittleLong (bsp->dplanes[i].type);
+    }
+    
+    //
+    // texinfos
+    //
+    for (i=0 ; i<bsp->numtexinfo ; i++)
+    {
+        for (j=0 ; j<8 ; j++)
+            bsp->texinfo[i].vecs[0][j] = LittleFloat (bsp->texinfo[i].vecs[0][j]);
+        bsp->texinfo[i].flags = LittleLong (bsp->texinfo[i].flags);
+        bsp->texinfo[i].value = LittleLong (bsp->texinfo[i].value);
+        bsp->texinfo[i].nexttexinfo = LittleLong (bsp->texinfo[i].nexttexinfo);
+    }
+    
+    //
+    // faces
+    //
+    for (i=0 ; i<bsp->numfaces ; i++)
+    {
+        bsp->dfaces[i].texinfo = LittleShort (bsp->dfaces[i].texinfo);
+        bsp->dfaces[i].planenum = LittleShort (bsp->dfaces[i].planenum);
+        bsp->dfaces[i].side = LittleShort (bsp->dfaces[i].side);
+        bsp->dfaces[i].lightofs = LittleLong (bsp->dfaces[i].lightofs);
+        bsp->dfaces[i].firstedge = LittleLong (bsp->dfaces[i].firstedge);
+        bsp->dfaces[i].numedges = LittleShort (bsp->dfaces[i].numedges);
+    }
+    
+    //
+    // nodes
+    //
+    for (i=0 ; i<bsp->numnodes ; i++)
+    {
+        bsp->dnodes[i].planenum = LittleLong (bsp->dnodes[i].planenum);
+        for (j=0 ; j<3 ; j++)
+        {
+            bsp->dnodes[i].mins[j] = LittleShort (bsp->dnodes[i].mins[j]);
+            bsp->dnodes[i].maxs[j] = LittleShort (bsp->dnodes[i].maxs[j]);
+        }
+        bsp->dnodes[i].children[0] = LittleLong (bsp->dnodes[i].children[0]);
+        bsp->dnodes[i].children[1] = LittleLong (bsp->dnodes[i].children[1]);
+        bsp->dnodes[i].firstface = LittleShort (bsp->dnodes[i].firstface);
+        bsp->dnodes[i].numfaces = LittleShort (bsp->dnodes[i].numfaces);
+    }
+    
+    //
+    // leafs
+    //
+    for (i=0 ; i<bsp->numleafs ; i++)
+    {
+        bsp->dleafs[i].contents = LittleLong (bsp->dleafs[i].contents);
+        bsp->dleafs[i].cluster = LittleShort (bsp->dleafs[i].cluster);
+        bsp->dleafs[i].area = LittleShort (bsp->dleafs[i].area);
+        for (j=0 ; j<3 ; j++)
+        {
+            bsp->dleafs[i].mins[j] = LittleShort (bsp->dleafs[i].mins[j]);
+            bsp->dleafs[i].maxs[j] = LittleShort (bsp->dleafs[i].maxs[j]);
+        }
+        
+        bsp->dleafs[i].firstleafface = LittleShort (bsp->dleafs[i].firstleafface);
+        bsp->dleafs[i].numleaffaces = LittleShort (bsp->dleafs[i].numleaffaces);
+        bsp->dleafs[i].firstleafbrush = LittleShort (bsp->dleafs[i].firstleafbrush);
+        bsp->dleafs[i].numleafbrushes = LittleShort (bsp->dleafs[i].numleafbrushes);
+    }
+    
+    //
+    // leaffaces
+    //
+    for (i=0 ; i<bsp->numleaffaces ; i++)
+        bsp->dleaffaces[i] = LittleShort (bsp->dleaffaces[i]);
+    
+    //
+    // leafbrushes
+    //
+    for (i=0 ; i<bsp->numleafbrushes ; i++)
+        bsp->dleafbrushes[i] = LittleShort (bsp->dleafbrushes[i]);
+    
+    //
+    // surfedges
+    //
+    for (i=0 ; i<bsp->numsurfedges ; i++)
+        bsp->dsurfedges[i] = LittleLong (bsp->dsurfedges[i]);
+    
+    //
+    // edges
+    //
+    for (i=0 ; i<bsp->numedges ; i++)
+    {
+        bsp->dedges[i].v[0] = LittleShort (bsp->dedges[i].v[0]);
+        bsp->dedges[i].v[1] = LittleShort (bsp->dedges[i].v[1]);
+    }
+    
+    //
+    // brushes
+    //
+    for (i=0 ; i<bsp->numbrushes ; i++)
+    {
+        bsp->dbrushes[i].firstside = LittleLong (bsp->dbrushes[i].firstside);
+        bsp->dbrushes[i].numsides = LittleLong (bsp->dbrushes[i].numsides);
+        bsp->dbrushes[i].contents = LittleLong (bsp->dbrushes[i].contents);
+    }
+    
+    //
+    // areas
+    //
+    for (i=0 ; i<bsp->numareas ; i++)
+    {
+        bsp->dareas[i].numareaportals = LittleLong (bsp->dareas[i].numareaportals);
+        bsp->dareas[i].firstareaportal = LittleLong (bsp->dareas[i].firstareaportal);
+    }
+    
+    //
+    // areasportals
+    //
+    for (i=0 ; i<bsp->numareaportals ; i++)
+    {
+        bsp->dareaportals[i].portalnum = LittleLong (bsp->dareaportals[i].portalnum);
+        bsp->dareaportals[i].otherarea = LittleLong (bsp->dareaportals[i].otherarea);
+    }
+    
+    //
+    // brushsides
+    //
+    for (i=0 ; i<bsp->numbrushsides ; i++)
+    {
+        bsp->dbrushsides[i].planenum = LittleShort (bsp->dbrushsides[i].planenum);
+        bsp->dbrushsides[i].texinfo = LittleShort (bsp->dbrushsides[i].texinfo);
+    }
+    
+    //
+    // visibility
+    //
+    if (todisk)
+        j = bsp->dvis->numclusters;
+    else
+        j = LittleLong(bsp->dvis->numclusters);
+    bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
+    for (i=0 ; i<j ; i++)
+    {
+        bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
+        bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+    }
+}
+
+/*
  * =============
  * SwapBSPFile
  * Byte swaps all data in a bsp file.
@@ -374,6 +568,14 @@ SwapBSPMiptex(int texdatasize, dmiptexlump_t *header, const swaptype_t swap)
 static void
 SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 {
+    if (bspdata->version == Q2_BSPVERSION) {
+        q2bsp_t *bsp = &bspdata->data.q2bsp;
+        
+        Q2_SwapBSPFile(bsp, swap == TO_DISK);
+        
+        return;
+    }
+    
     if (bspdata->version == BSPVERSION) {
         bsp29_t *bsp = &bspdata->data.bsp29;
 
@@ -1073,6 +1275,44 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
     }
 }
 
+// FIXME: Could merge this with CopyLump once the hexen 2 hack is moved elsewhere
+static int
+Q2_CopyLump(const q2_dheader_t *header, int lumpnum, void *destptr)
+{
+    const lumpspec_t *lumpspec;
+    byte **bufferptr = static_cast<byte **>(destptr);
+    byte *buffer = *bufferptr;
+    int length;
+    int ofs;
+    
+    switch (header->version) {
+        case Q2_BSPVERSION:
+            lumpspec = &lumpspec_q2bsp[lumpnum];
+            break;
+        default:
+            Error("Unsupported BSP version: %d", header->version);
+    }
+    
+    length = header->lumps[lumpnum].filelen;
+    ofs = header->lumps[lumpnum].fileofs;
+    
+    if (buffer)
+        free(buffer);
+    
+    if (length % lumpspec->size)
+        Error("%s: odd %s lump size", __func__, lumpspec->name);
+    
+    buffer = *bufferptr = static_cast<byte *>(malloc(length + 1));
+    if (!buffer)
+        Error("%s: allocation of %i bytes failed.", __func__, length);
+    
+    memcpy(buffer, (const byte *)header + ofs, length);
+    buffer[length] = 0; /* In case of corrupt entity lump */
+    
+    return length / lumpspec->size;
+}
+
+
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize)
 {
     bspxentry_t *e;
@@ -1140,39 +1380,92 @@ const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize)
 void
 LoadBSPFile(char *filename, bspdata_t *bspdata)
 {
-    dheader_t *header;
     int i;
-    uint32_t bspxofs, flen;
+    uint32_t bspxofs;
     const bspx_header_t *bspx;
 
+    bspdata->bspxentries = NULL;
+    
     logprint("LoadBSPFile: '%s'\n", filename);
     
     /* load the file header */
-    flen = LoadFilePak(filename, &header);
+    byte *file_data;
+    uint32_t flen = LoadFilePak(filename, &file_data);
 
-    bspdata->bspxentries = NULL;
+    /* transfer the header data to these variables */
+    int numlumps;
+    int32_t version;
+    lump_t *lumps;
+
+    /* check for IBSP */
+    if (LittleLong(((int *)file_data)[0]) == Q2_BSPIDENT) {
+        q2_dheader_t *q2header = (q2_dheader_t *)file_data;
+        q2header->version = LittleLong(q2header->version);
+        
+        numlumps = Q2_HEADER_LUMPS;
+        version = q2header->version;
+        lumps = q2header->lumps;
+    } else {
+        dheader_t *q1header = (dheader_t *)file_data;
+        q1header->version = LittleLong(q1header->version);
+        
+        numlumps = BSP_LUMPS;
+        version = q1header->version;
+        lumps = q1header->lumps;
+    }
+    
     /* check the file version */
-    header->version = LittleLong(header->version);
-    logprint("BSP is version %s\n", BSPVersionString(header->version));
-    if (!BSPVersionSupported(header->version))
+    logprint("BSP is version %s\n", BSPVersionString(version));
+    if (!BSPVersionSupported(version))
         Error("Sorry, this bsp version is not supported.");
 
     /* swap the lump headers */
-    for (i = 0; i < BSP_LUMPS; i++) {
-        header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
-        header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
+    for (i = 0; i < numlumps; i++) {
+        lumps[i].fileofs = LittleLong(lumps[i].fileofs);
+        lumps[i].filelen = LittleLong(lumps[i].filelen);
     }
 
-        if (isHexen2(header))
-        {
-                logprint("BSP appears to be from hexen2\n");
-                bspdata->hullcount = MAX_MAP_HULLS_H2;
-        }
-        else
-                bspdata->hullcount = MAX_MAP_HULLS_Q1;
+    if (isHexen2((dheader_t *)file_data))
+    {
+            logprint("BSP appears to be from hexen2\n");
+            bspdata->hullcount = MAX_MAP_HULLS_H2;
+    }
+    else
+            bspdata->hullcount = MAX_MAP_HULLS_Q1;
 
     /* copy the data */
-    if (header->version == BSPVERSION) {
+    if (version == Q2_BSPVERSION) {
+        q2_dheader_t *header = (q2_dheader_t *)file_data;
+        q2bsp_t *bsp = &bspdata->data.q2bsp;
+        
+        memset(bsp, 0, sizeof(*bsp));
+        bspdata->version = header->version;
+        
+        bsp->nummodels = Q2_CopyLump (header, Q2_LUMP_MODELS, &bsp->dmodels);
+        bsp->numvertexes = Q2_CopyLump (header, Q2_LUMP_VERTEXES, &bsp->dvertexes);
+        bsp->numplanes = Q2_CopyLump (header, Q2_LUMP_PLANES, &bsp->dplanes);
+        bsp->numleafs = Q2_CopyLump (header, Q2_LUMP_LEAFS, &bsp->dleafs);
+        bsp->numnodes = Q2_CopyLump (header, Q2_LUMP_NODES, &bsp->dnodes);
+        bsp->numtexinfo = Q2_CopyLump (header, Q2_LUMP_TEXINFO, &bsp->texinfo);
+        bsp->numfaces = Q2_CopyLump (header, Q2_LUMP_FACES, &bsp->dfaces);
+        bsp->numleaffaces = Q2_CopyLump (header, Q2_LUMP_LEAFFACES, &bsp->dleaffaces);
+        bsp->numleafbrushes = Q2_CopyLump (header, Q2_LUMP_LEAFBRUSHES, &bsp->dleafbrushes);
+        bsp->numsurfedges = Q2_CopyLump (header, Q2_LUMP_SURFEDGES, &bsp->dsurfedges);
+        bsp->numedges = Q2_CopyLump (header, Q2_LUMP_EDGES, &bsp->dedges);
+        bsp->numbrushes = Q2_CopyLump (header, Q2_LUMP_BRUSHES, &bsp->dbrushes);
+        bsp->numbrushsides = Q2_CopyLump (header, Q2_LUMP_BRUSHSIDES, &bsp->dbrushsides);
+        bsp->numareas = Q2_CopyLump (header, Q2_LUMP_AREAS, &bsp->dareas);
+        bsp->numareaportals = Q2_CopyLump (header, Q2_LUMP_AREAPORTALS, &bsp->dareaportals);
+        
+        bsp->visdatasize = Q2_CopyLump (header, Q2_LUMP_VISIBILITY, &bsp->dvis);
+        bsp->lightdatasize = Q2_CopyLump (header, Q2_LUMP_LIGHTING, &bsp->dlightdata);
+        bsp->entdatasize = Q2_CopyLump (header, Q2_LUMP_ENTITIES, &bsp->dentdata);
+        
+        Q2_CopyLump (header, Q2_LUMP_POP, &bsp->dpop);
+    }
+    
+    if (version == BSPVERSION) {
+        dheader_t *header = (dheader_t *)file_data;
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         memset(bsp, 0, sizeof(*bsp));
@@ -1195,7 +1488,8 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
     }
 
-    if (header->version == BSP2RMQVERSION) {
+    if (version == BSP2RMQVERSION) {
+        dheader_t *header = (dheader_t *)file_data;
         bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         memset(bsp, 0, sizeof(*bsp));
@@ -1218,7 +1512,8 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
     }
 
-    if (header->version == BSP2VERSION) {
+    if (version == BSP2VERSION) {
+        dheader_t *header = (dheader_t *)file_data;
         bsp2_t *bsp = &bspdata->data.bsp2;
 
         memset(bsp, 0, sizeof(*bsp));
@@ -1241,42 +1536,46 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
     }
 
-    /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
-    for (i = 0, bspxofs = 0; i < BSP_LUMPS; i++)
-    {
-        if (bspxofs < header->lumps[i].fileofs + header->lumps[i].filelen)
-        bspxofs = header->lumps[i].fileofs + header->lumps[i].filelen;
-    }
-    bspxofs = (bspxofs+3) & ~3;
-    /*okay, so that's where it *should* be if it exists */
-    if (bspxofs + sizeof(*bspx) <= flen)
-    {
-        int xlumps;
-        const bspx_lump_t *xlump;
-        bspx = (const bspx_header_t*)((const byte*)header + bspxofs);
-        xlump = (const bspx_lump_t*)(bspx+1);
-        xlumps = LittleLong(bspx->numlumps);
-        if (!memcmp(&bspx->id,"BSPX",4) && xlumps >= 0 && bspxofs+sizeof(*bspx)+sizeof(*xlump)*xlumps <= flen)
+    if (version != Q2_BSPVERSION) {
+        dheader_t *header = (dheader_t *)file_data;
+        
+        /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
+        for (i = 0, bspxofs = 0; i < BSP_LUMPS; i++)
         {
-            /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring that they get written out anew*/
-            while(xlumps --> 0)
+            if (bspxofs < header->lumps[i].fileofs + header->lumps[i].filelen)
+            bspxofs = header->lumps[i].fileofs + header->lumps[i].filelen;
+        }
+        bspxofs = (bspxofs+3) & ~3;
+        /*okay, so that's where it *should* be if it exists */
+        if (bspxofs + sizeof(*bspx) <= flen)
+        {
+            int xlumps;
+            const bspx_lump_t *xlump;
+            bspx = (const bspx_header_t*)((const byte*)header + bspxofs);
+            xlump = (const bspx_lump_t*)(bspx+1);
+            xlumps = LittleLong(bspx->numlumps);
+            if (!memcmp(&bspx->id,"BSPX",4) && xlumps >= 0 && bspxofs+sizeof(*bspx)+sizeof(*xlump)*xlumps <= flen)
             {
-                uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
-                uint32_t len = LittleLong(xlump[xlumps].filelen);
-                void *lumpdata = malloc(len);
-                memcpy(lumpdata, (const byte*)header + ofs, len);
-                BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
+                /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring that they get written out anew*/
+                while(xlumps --> 0)
+                {
+                    uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
+                    uint32_t len = LittleLong(xlump[xlumps].filelen);
+                    void *lumpdata = malloc(len);
+                    memcpy(lumpdata, (const byte*)header + ofs, len);
+                    BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
+                }
+            }
+            else
+            {
+                if (!memcmp(&bspx->id,"BSPX",4))
+                    printf("invalid bspx header\n");
             }
         }
-        else 
-        {
-            if (!memcmp(&bspx->id,"BSPX",4))
-                printf("invalid bspx header\n");
-        }
     }
-
+    
     /* everything has been copied out */
-    free(header);
+    free(file_data);
 
     /* swap everything */
     SwapBSPFile(bspdata, TO_CPU);
@@ -1503,6 +1802,32 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 {
     int numtextures = 0;
 
+    if (bspdata->version == Q2_BSPVERSION) {
+        const q2bsp_t *bsp = &bspdata->data.q2bsp;
+        const lumpspec_t *lumpspec = lumpspec_q2bsp;
+        
+        logprint("%7i %-12s\n", bsp->nummodels, "models");
+        
+        PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp->numplanes);
+        PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp->numvertexes);
+        PrintLumpSize(lumpspec, Q2_LUMP_NODES, bsp->numnodes);
+        PrintLumpSize(lumpspec, Q2_LUMP_TEXINFO, bsp->numtexinfo);
+        PrintLumpSize(lumpspec, Q2_LUMP_FACES, bsp->numfaces);
+        PrintLumpSize(lumpspec, Q2_LUMP_LEAFS, bsp->numleafs);
+        PrintLumpSize(lumpspec, Q2_LUMP_LEAFFACES, bsp->numleaffaces);
+        PrintLumpSize(lumpspec, Q2_LUMP_LEAFBRUSHES, bsp->numleafbrushes);
+        PrintLumpSize(lumpspec, Q2_LUMP_EDGES, bsp->numedges);
+        PrintLumpSize(lumpspec, Q2_LUMP_SURFEDGES, bsp->numsurfedges);
+        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHES, bsp->numbrushes);
+        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHSIDES, bsp->numbrushsides);
+        PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp->numareas);
+        PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp->numareaportals);
+        
+        logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
+        logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
+        logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
+    }
+    
     if (bspdata->version == BSPVERSION) {
         const bsp29_t *bsp = &bspdata->data.bsp29;
         const lumpspec_t *lumpspec = lumpspec_bsp29;
