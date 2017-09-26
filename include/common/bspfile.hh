@@ -58,6 +58,11 @@
 #define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
 #define Q2_BSPVERSION  38
 
+/* Not an actual file format, but the gbsp_t struct */
+/* TODO: Should probably separate the type tag for bspdata_t from the file
+   version numbers */
+#define GENERIC_BSP	   99
+
 typedef struct {
     int32_t fileofs;
     int32_t filelen;
@@ -261,6 +266,20 @@ typedef struct {
     int32_t nexttexinfo;      // for animations, -1 = end of chain
 } q2_texinfo_t;
 
+typedef struct {
+    float vecs[2][4];     // [s/t][xyz offset]
+    int32_t flags;            // miptex flags + overrides
+    
+    struct {
+        int32_t miptex;
+    } q1;
+    struct {
+    	int32_t value;            // light emission, etc
+    	char texture[32];     // texture name (textures/*.wal)
+    	int32_t nexttexinfo;      // for animations, -1 = end of chain
+    } q2;
+} gtexinfo_t;
+
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
 #define TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
 #define TEX_SKIP    (1U << 1)   /* an invisible surface */
@@ -383,6 +402,16 @@ typedef struct {
     uint16_t firstleafbrush;
     uint16_t numleafbrushes;
 } q2_dleaf_t;
+
+typedef struct {
+    bsp2_dleaf_t q1;
+    struct {
+        int16_t cluster;
+        int16_t area;
+        uint16_t firstleafbrush;
+        uint16_t numleafbrushes;
+    } q2;
+} gleaf_t;
 
 typedef union {
     byte *base;
@@ -632,6 +661,67 @@ typedef struct {
     
     byte dpop[256];
 } q2bsp_t;
+
+typedef struct {
+    int nummodels;
+    dmodelh2_t *dmodels;
+    
+    int visdatasize;
+    dvis_t *dvis;
+    
+    int lightdatasize;
+    byte *dlightdata;
+    
+    int texdatasize;
+    dtexdata_t dtexdata;
+    
+    int entdatasize;
+    char *dentdata;
+    
+    int numleafs;
+    gleaf_t *dleafs;
+    
+    int numplanes;
+    dplane_t *dplanes;
+    
+    int numvertexes;
+    dvertex_t *dvertexes;
+    
+    int numnodes;
+    bsp2_dnode_t *dnodes;
+    
+    int numtexinfo;
+    gtexinfo_t *texinfo;
+    
+    int numfaces;
+    bsp2_dface_t *dfaces;
+    
+    int numedges;
+    bsp2_dedge_t *dedges;
+    
+    int numleaffaces;
+    uint32_t *dleaffaces;
+    
+    int numleafbrushes;
+    uint16_t *dleafbrushes;
+    
+    int numsurfedges;
+    int32_t *dsurfedges;
+    
+    int numareas;
+    darea_t *dareas;
+    
+    int numareaportals;
+    dareaportal_t *dareaportals;
+    
+    int numbrushes;
+    dbrush_t *dbrushes;
+    
+    int numbrushsides;
+    dbrushside_t *dbrushsides;
+    
+    byte dpop[256];
+} gbsp_t; // "generic" bsp - superset of all other supported types
 
 typedef struct {
     int32_t version;
