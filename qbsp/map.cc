@@ -1543,6 +1543,49 @@ ParseEntity(parser_t *parser, mapentity_t *entity)
     return true;
 }
 
+static void ScaleMapFace(mapface_t *face, const vec3_t scale)
+{
+    const qmat3x3d scaleM {
+        // column-major...
+        static_cast<double>(scale[0]), 0.0, 0.0,
+        0.0, static_cast<double>(scale[1]), 0.0,
+        0.0, 0.0, static_cast<double>(scale[2])
+    };
+    
+    vec3_t new_planepts[3];
+    for (int i=0; i<3; i++) {
+        qvec3d oldpt = qvec3d_from_vec3(face->planepts[i]);
+        qvec3d newpt = scaleM * oldpt;
+        
+        glm_to_vec3_t(newpt, new_planepts[i]);
+    }
+    
+    face->set_planepts(new_planepts);
+    
+    // update texinfo
+    
+    const qmat3x3d inversescaleM {
+        // column-major...
+        static_cast<double>(1/scale[0]), 0.0, 0.0,
+        0.0, static_cast<double>(1/scale[1]), 0.0,
+        0.0, 0.0, static_cast<double>(1/scale[2])
+    };
+    
+    const std::array<qvec4f, 2> texvecs = face->get_texvecs();
+    std::array<qvec4f, 2> newtexvecs;
+    
+    for (int i=0; i<2; i++) {
+        const qvec4f in = texvecs.at(i);
+        const qvec3f in_first3(in);
+        
+        const qvec3f out_first3 = inversescaleM * in_first3;
+        const qvec4f out(out_first3[0], out_first3[1], out_first3[2], in[3]);
+        newtexvecs.at(i) = out;
+    }
+    
+    face->set_texvecs(newtexvecs);
+}
+
 static void RotateMapFace(mapface_t *face, const vec3_t angles)
 {
     const double pitch = DEG2RAD(angles[0]);
@@ -1633,12 +1676,24 @@ ProcessExternalMapEntity(mapentity_t *entity)
         angles[1] = atof(ValueForKey(entity, "_external_map_angle"));
     }
     
+    vec3_t scale;
+    int ncomps = GetVectorForKey(entity, "_external_map_scale", scale);
+    if (ncomps < 3) {
+        if (scale[0] == 0.0) {
+            VectorSet(scale, 1, 1, 1);
+        } else {
+        	scale[1] = scale[0];
+        	scale[2] = scale[0];
+        }
+    }
+    
     for (int i=0; i<entity->nummapbrushes; i++) {
         mapbrush_t *brush = const_cast<mapbrush_t *>(&entity->mapbrush(i));
         
         for (int j=0; j<brush->numfaces; j++) {
             mapface_t *face = const_cast<mapface_t *>(&brush->face(j));
             
+            ScaleMapFace(face, scale);
             RotateMapFace(face, angles);
             TranslateMapFace(face, origin);
         }
@@ -2020,8 +2075,10 @@ SetKeyValue(mapentity_t *entity, const char *key, const char *value)
     ep->value = copystring(value);
 }
 
-
-void
+/**
+ * returnts number of vector components read
+ */
+int
 GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec)
 {
     const char *value;
@@ -2030,10 +2087,12 @@ GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec)
     value = ValueForKey(entity, szKey);
     v1 = v2 = v3 = 0;
     // scanf into doubles, then assign, so it is vec_t size independent
-    sscanf(value, "%lf %lf %lf", &v1, &v2, &v3);
+    const int numComps = sscanf(value, "%lf %lf %lf", &v1, &v2, &v3);
     vec[0] = v1;
     vec[1] = v2;
     vec[2] = v3;
+    
+    return numComps;
 }
 
 

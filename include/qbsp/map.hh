@@ -157,7 +157,7 @@ int FindTexinfoEnt(mtexinfo_t *texinfo, mapentity_t *entity); //FIXME: Make this
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);
 void SetKeyValue(mapentity_t *entity, const char *key, const char *value);
-void GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec);
+int GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec);
 
 void WriteEntitiesToString(void);
 
