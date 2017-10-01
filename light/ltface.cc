@@ -921,7 +921,8 @@ GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const v
         }
     }
     
-    /* Light behind sample point? Zero contribution, period. */
+    /* Light behind sample point? Zero contribution, period.
+       see: https://github.com/ericwa/tyrutils-ericw/issues/181 */
     if (angle < 0) {
         return 0;
     }
