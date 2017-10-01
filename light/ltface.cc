@@ -912,7 +912,7 @@ GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
 }
 
 float
-GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpointToLightDir, float dist, bool twosided, bool curved)
+GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpointToLightDir, float dist, bool twosided)
 {
     float angle = DotProduct(surfpointToLightDir, surfnorm);
     if (entity->bleed.boolValue() || twosided) {
@@ -921,21 +921,12 @@ GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const v
         }
     }
     
-    /* Clamp negative angle factor to 0 */
+    /* Light behind sample point? Zero contribution, period. */
     if (angle < 0) {
-        angle = 0;
-    }
-    
-    /* If the angle scale factor is 0, and it's a planar surface, make the final contribution 0.
-       e.g. this stops light leaking around corners.
-       For curved surfaces, we relax this restriction.
-       e.g. for https://github.com/ericwa/tyrutils-ericw/issues/172
-     */
-    if (angle == 0 && !curved) {
         return 0;
     }
     
-    /* Apply anglescale. Note: by default, will boost angle=0 to angle=0.5 */
+    /* Apply anglescale */
     angle = (1.0 - entity->anglescale.floatValue()) + (entity->anglescale.floatValue() * angle);
     
     /* Check spotlight cone */
@@ -961,11 +952,10 @@ static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix,
 
 void
 GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpoint, bool twosided,
-                bool curved,
                 vec3_t color_out, vec3_t surfpointToLightDir_out, vec3_t normalmap_addition_out, float *dist_out)
 {
     float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
-    float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided, curved);
+    float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
     
     /* write out the final color */
     if (entity->projectedmip) {
@@ -1273,7 +1263,7 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
             continue;
         }
         
-        GetLightContrib(cfg, &entity, normal, origin, false, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
+        GetLightContrib(cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         
         const float dirt = Dirt_GetScaleFactor(cfg, occlusion, &entity, surfpointToLightDist, /* FIXME: pass */ nullptr);
         VectorScale(color, dirt, color);
@@ -1376,7 +1366,7 @@ LightFace_Entity(const bsp2_t *bsp,
         float surfpointToLightDist;
         vec3_t color, normalcontrib;
         
-        GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, lightsurf->curved, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
+        GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
  
         const float occlusion = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], entity, surfpointToLightDist, lightsurf);
         VectorScale(color, occlusion, color);
