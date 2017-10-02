@@ -668,6 +668,7 @@ typedef struct {
     int nummodels;
     dmodelh2_t *dmodels;
     
+    // FIXME: split this into q1 and q2 members, since the format is different
     int visdatasize;
     byte *dvisdata;
     
