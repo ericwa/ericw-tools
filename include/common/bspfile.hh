@@ -420,11 +420,6 @@ typedef struct {
         uint16_t numleafbrushes;
 } mleaf_t;
 
-typedef union {
-    byte *base;
-    dmiptexlump_t *header;
-} dtexdata_t;
-
 typedef struct {
     uint16_t planenum;        // facing out of the leaf
     int16_t texinfo;
@@ -481,7 +476,7 @@ typedef struct {
     byte *dlightdata;
 
     int texdatasize;
-    dtexdata_t dtexdata;
+    dmiptexlump_t *dtexdata;
 
     int entdatasize;
     char *dentdata;
@@ -528,7 +523,7 @@ typedef struct {
     byte *dlightdata;
 
     int texdatasize;
-    dtexdata_t dtexdata;
+    dmiptexlump_t *dtexdata;
 
     int entdatasize;
     char *dentdata;
@@ -575,7 +570,7 @@ typedef struct {
     byte *dlightdata;
 
     int texdatasize;
-    dtexdata_t dtexdata;
+    dmiptexlump_t *dtexdata;
 
     int entdatasize;
     char *dentdata;
@@ -680,7 +675,7 @@ typedef struct {
     byte *dlightdata;
     
     int texdatasize;
-    dtexdata_t dtexdata;
+    dmiptexlump_t *dtexdata;
     
     int entdatasize;
     char *dentdata;
@@ -745,7 +740,7 @@ typedef struct {
     int32_t version;
     int hullcount;
     
-    union {
+    struct {
         bsp29_t bsp29;
         bsp2rmq_t bsp2rmq;
         bsp2_t bsp2;

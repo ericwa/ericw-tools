@@ -311,12 +311,12 @@ MakeTextureColors (const bsp2_t *bsp)
     if (!bsp->texdatasize)
         return;
     
-    for (int i=0; i<bsp->dtexdata.header->nummiptex; i++) {
-        const int ofs = bsp->dtexdata.header->dataofs[i];
+    for (int i=0; i<bsp->dtexdata->nummiptex; i++) {
+        const int ofs = bsp->dtexdata->dataofs[i];
         if (ofs < 0)
             continue;
         
-        const miptex_t *miptex = (miptex_t *)(bsp->dtexdata.base + ofs);
+        const miptex_t *miptex = (miptex_t *)((byte *)bsp->dtexdata + ofs);
         
         string name { miptex->name };
         const qvec3f color = Texture_AvgColor(bsp, miptex);

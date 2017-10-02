@@ -126,13 +126,13 @@ Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face)
         return nullptr;
     
     const int texnum = texinfo->miptex;
-    const dmiptexlump_t *miplump = bsp->dtexdata.header;
+    const dmiptexlump_t *miplump = bsp->dtexdata;
     
     int offset = miplump->dataofs[texnum];
     if (offset < 0)
         return NULL; //sometimes the texture just wasn't written. including its name.
     
-    const miptex_t *miptex = (miptex_t*)(bsp->dtexdata.base + offset);
+    const miptex_t *miptex = (const miptex_t*)((const byte *)bsp->dtexdata + offset);
     return miptex;
 }
 

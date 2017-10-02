@@ -846,7 +846,7 @@ static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
     if (!bsp->texdatasize)
         return NULL;
     
-    dmiptexlump_t *miplump = bsp->dtexdata.header;
+    dmiptexlump_t *miplump = bsp->dtexdata;
     miptex_t *miptex;
     int texnum;
     /*outer loop finds the textures*/
@@ -856,7 +856,7 @@ static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
         if (offset < 0)
             continue;
         
-        miptex = (miptex_t*)(bsp->dtexdata.base + offset);
+        miptex = (miptex_t*)((byte *)bsp->dtexdata + offset);
         if (!Q_strcasecmp(miptex->name, texname))
             return miptex;
     }
