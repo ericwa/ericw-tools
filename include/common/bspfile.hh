@@ -272,12 +272,12 @@ typedef struct {
     int32_t flags;            // miptex flags + overrides
     
     // q1 only
-        int32_t miptex;
+    int32_t miptex;
     
     // q2 only
-    	int32_t value;            // light emission, etc
-    	char texture[32];     // texture name (textures/*.wal)
-    	int32_t nexttexinfo;      // for animations, -1 = end of chain
+    int32_t value;            // light emission, etc
+    char texture[32];     // texture name (textures/*.wal)
+    int32_t nexttexinfo;      // for animations, -1 = end of chain
 } gtexinfo_t;
 
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
@@ -669,7 +669,7 @@ typedef struct {
     dmodelh2_t *dmodels;
     
     int visdatasize;
-    dvis_t *dvis;
+    byte *dvisdata;
     
     int lightdatasize;
     byte *dlightdata;
@@ -698,6 +698,9 @@ typedef struct {
     int numfaces;
     bsp2_dface_t *dfaces;
     
+    int numclipnodes;
+    bsp2_dclipnode_t *dclipnodes;
+
     int numedges;
     bsp2_dedge_t *dedges;
     
@@ -745,6 +748,7 @@ typedef struct {
         bsp2rmq_t bsp2rmq;
         bsp2_t bsp2;
         q2bsp_t q2bsp;
+        mbsp_t mbsp;
     } data;
 
     bspxentry_t *bspxentries;

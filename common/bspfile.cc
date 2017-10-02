@@ -638,6 +638,98 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 
 /*
  * =========================================================================
+ * BSP Format Conversion (ver. 29 <-> MBSP)
+ * =========================================================================
+ */
+
+static mleaf_t *
+BSP29toM_Leafs(const bsp29_dleaf_t *dleafs29, int numleafs) {
+    const bsp29_dleaf_t *dleaf29 = dleafs29;
+    mleaf_t *newdata, *mleaf;
+    int i, j;
+    
+    newdata = mleaf = (mleaf_t *)calloc(numleafs, sizeof(*mleaf));
+    
+    for (i = 0; i < numleafs; i++, dleaf29++, mleaf++) {
+        mleaf->contents = dleaf29->contents;
+        mleaf->visofs = dleaf29->visofs;
+        for (j = 0; j < 3; j++) {
+            mleaf->mins[j] = dleaf29->mins[j];
+            mleaf->maxs[j] = dleaf29->maxs[j];
+        }
+        mleaf->firstmarksurface = dleaf29->firstmarksurface;
+        mleaf->nummarksurfaces = dleaf29->nummarksurfaces;
+        for (j = 0; j < NUM_AMBIENTS; j++)
+            mleaf->ambient_level[j] = dleaf29->ambient_level[j];
+    }
+    
+    return newdata;
+}
+
+static bsp29_dleaf_t *
+MBSPto29_Leafs(const mleaf_t *mleafs, int numleafs) {
+    const mleaf_t *mleaf = mleafs;
+    bsp29_dleaf_t *newdata, *dleaf29;
+    int i, j;
+    
+    newdata = dleaf29 = (bsp29_dleaf_t *)calloc(numleafs, sizeof(*dleaf29));
+    
+    for (i = 0; i < numleafs; i++, mleaf++, dleaf29++) {
+        dleaf29->contents = mleaf->contents;
+        dleaf29->visofs = mleaf->visofs;
+        for (j = 0; j < 3; j++) {
+            dleaf29->mins[j] = mleaf->mins[j];
+            dleaf29->maxs[j] = mleaf->maxs[j];
+        }
+        dleaf29->firstmarksurface = mleaf->firstmarksurface;
+        dleaf29->nummarksurfaces = mleaf->nummarksurfaces;
+        for (j = 0; j < NUM_AMBIENTS; j++)
+            dleaf29->ambient_level[j] = mleaf->ambient_level[j];
+    }
+    
+    return newdata;
+}
+
+static gtexinfo_t *
+BSP29toM_Texinfo(const texinfo_t *texinfos, int numtexinfo) {
+    const texinfo_t *texinfo29 = texinfos;
+    gtexinfo_t *newdata, *mtexinfo;
+    int i, j, k;
+    
+    newdata = mtexinfo = (gtexinfo_t *)calloc(numtexinfo, sizeof(*mtexinfo));
+    
+    for (i = 0; i < numtexinfo; i++, texinfo29++, mtexinfo++) {
+        for (j=0; j<2; j++)
+            for (k=0; k<4; k++)
+                mtexinfo->vecs[j][k] = texinfo29->vecs[j][k];
+        mtexinfo->flags = texinfo29->flags;
+        mtexinfo->miptex = texinfo29->miptex;
+    }
+    
+    return newdata;
+}
+
+static texinfo_t *
+MBSPto29_Texinfo(const gtexinfo_t *mtexinfos, int numtexinfo) {
+    const gtexinfo_t *mtexinfo = mtexinfos;
+    texinfo_t *newdata, *texinfo29;
+    int i, j, k;
+    
+    newdata = texinfo29 = (texinfo_t *)calloc(numtexinfo, sizeof(*texinfo29));
+    
+    for (i = 0; i < numtexinfo; i++, texinfo29++, mtexinfo++) {
+        for (j=0; j<2; j++)
+            for (k=0; k<4; k++)
+                texinfo29->vecs[j][k] = mtexinfo->vecs[j][k];
+        texinfo29->flags = mtexinfo->flags;
+        texinfo29->miptex = mtexinfo->miptex;
+    }
+    
+    return newdata;
+}
+
+/*
+ * =========================================================================
  * BSP Format Conversion (ver. 29 <-> BSP2)
  * =========================================================================
  */
@@ -1151,6 +1243,31 @@ static void FreeQ2BSP(q2bsp_t *bsp)
     memset(bsp, 0, sizeof(*bsp));
 }
 
+static void FreeMBSP(mbsp_t *bsp)
+{
+    free(bsp->dmodels);
+    free(bsp->dvisdata);
+    free(bsp->dlightdata);
+    free(bsp->dtexdata);
+    free(bsp->dentdata);
+    free(bsp->dleafs);
+    free(bsp->dplanes);
+    free(bsp->dvertexes);
+    free(bsp->dnodes);
+    free(bsp->texinfo);
+    free(bsp->dfaces);
+    free(bsp->dclipnodes);
+    free(bsp->dedges);
+    free(bsp->dleaffaces);
+    free(bsp->dleafbrushes);
+    free(bsp->dsurfedges);
+    free(bsp->dareas);
+    free(bsp->dareaportals);
+    free(bsp->dbrushes);
+    free(bsp->dbrushsides);
+    memset(bsp, 0, sizeof(*bsp));
+}
+
 /*
  * =========================================================================
  * ConvertBSPFormat
@@ -1164,6 +1281,110 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
     if (bspdata->version == version)
         return;
 
+    if (bspdata->version == BSPVERSION && version == GENERIC_BSP) {
+        const bsp29_t *bsp29 = &bspdata->data.bsp29;
+        mbsp_t *mbsp = &bspdata->data.mbsp;
+        
+        // copy counts
+        mbsp->nummodels = bsp29->nummodels;
+        mbsp->visdatasize = bsp29->visdatasize;
+        mbsp->lightdatasize = bsp29->lightdatasize;
+        mbsp->texdatasize = bsp29->texdatasize;
+        mbsp->entdatasize = bsp29->entdatasize;
+        mbsp->numleafs = bsp29->numleafs;
+        mbsp->numplanes = bsp29->numplanes;
+        mbsp->numvertexes = bsp29->numvertexes;
+        mbsp->numnodes = bsp29->numnodes;
+        mbsp->numtexinfo = bsp29->numtexinfo;
+        mbsp->numfaces = bsp29->numfaces;
+        mbsp->numclipnodes = bsp29->numclipnodes;
+        mbsp->numedges = bsp29->numedges;
+        mbsp->numleaffaces = bsp29->nummarksurfaces;
+        mbsp->numleafbrushes = 0;
+        mbsp->numsurfedges = bsp29->numsurfedges;
+        mbsp->numareas = 0;
+        mbsp->numareaportals = 0;
+        mbsp->numbrushes = 0;
+        mbsp->numbrushsides = 0;
+        
+        // copy or convert data
+        mbsp->dmodels = BSP29_CopyModels(bsp29->dmodels, bsp29->nummodels);
+        mbsp->dvisdata = BSP29_CopyVisData(bsp29->dvisdata, bsp29->visdatasize);
+        mbsp->dlightdata = BSP29_CopyLightData(bsp29->dlightdata, bsp29->lightdatasize);
+        mbsp->dtexdata = BSP29_CopyTexData(bsp29->dtexdata, bsp29->texdatasize);
+        mbsp->dentdata = BSP29_CopyEntData(bsp29->dentdata, bsp29->entdatasize);
+        mbsp->dleafs = BSP29toM_Leafs(bsp29->dleafs, bsp29->numleafs);
+        mbsp->dplanes = BSP29_CopyPlanes(bsp29->dplanes, bsp29->numplanes);
+        mbsp->dvertexes = BSP29_CopyVertexes(bsp29->dvertexes, bsp29->numvertexes);
+        mbsp->dnodes = BSP29to2_Nodes(bsp29->dnodes, bsp29->numnodes);
+        mbsp->texinfo = BSP29toM_Texinfo(bsp29->texinfo, bsp29->numtexinfo);
+        mbsp->dfaces = BSP29to2_Faces(bsp29->dfaces, bsp29->numfaces);
+        mbsp->dclipnodes = BSP29to2_Clipnodes(bsp29->dclipnodes, bsp29->numclipnodes);
+        mbsp->dedges = BSP29to2_Edges(bsp29->dedges, bsp29->numedges);
+        mbsp->dleaffaces = BSP29to2_Marksurfaces(bsp29->dmarksurfaces, bsp29->nummarksurfaces);
+        mbsp->dleafbrushes = NULL;
+        mbsp->dsurfedges = BSP29_CopySurfedges(bsp29->dsurfedges, bsp29->numsurfedges);
+        mbsp->dareas = NULL;
+        mbsp->dareaportals = NULL;
+        mbsp->dbrushes = NULL;
+        mbsp->dbrushsides = NULL;
+        
+        /* Free old data */
+        FreeBSP29((bsp29_t *)bsp29);
+        
+        /* Conversion complete! */
+        bspdata->version = version;
+        
+        return;
+    }
+    
+    if (bspdata->version == GENERIC_BSP && version == BSPVERSION) {
+        bsp29_t *bsp29 = &bspdata->data.bsp29;
+        const mbsp_t *mbsp = &bspdata->data.mbsp;
+        
+        // copy counts
+        bsp29->nummodels = mbsp->nummodels;
+        bsp29->visdatasize = mbsp->visdatasize;
+        bsp29->lightdatasize = mbsp->lightdatasize;
+        bsp29->texdatasize = mbsp->texdatasize;
+        bsp29->entdatasize = mbsp->entdatasize;
+        bsp29->numleafs = mbsp->numleafs;
+        bsp29->numplanes = mbsp->numplanes;
+        bsp29->numvertexes = mbsp->numvertexes;
+        bsp29->numnodes = mbsp->numnodes;
+        bsp29->numtexinfo = mbsp->numtexinfo;
+        bsp29->numfaces = mbsp->numfaces;
+        bsp29->numclipnodes = mbsp->numclipnodes;
+        bsp29->numedges = mbsp->numedges;
+        bsp29->nummarksurfaces = mbsp->numleaffaces;
+        bsp29->numsurfedges = mbsp->numsurfedges;
+        
+        // copy or convert data
+        bsp29->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
+        bsp29->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
+        bsp29->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
+        bsp29->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
+        bsp29->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
+        bsp29->dleafs = MBSPto29_Leafs(mbsp->dleafs, mbsp->numleafs);
+        bsp29->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
+        bsp29->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
+        bsp29->dnodes = BSP2to29_Nodes(mbsp->dnodes, mbsp->numnodes);
+        bsp29->texinfo = MBSPto29_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
+        bsp29->dfaces = BSP2to29_Faces(mbsp->dfaces, mbsp->numfaces);
+        bsp29->dclipnodes = BSP2to29_Clipnodes(mbsp->dclipnodes, mbsp->numclipnodes);
+        bsp29->dedges = BSP2to29_Edges(mbsp->dedges, mbsp->numedges);
+        bsp29->dmarksurfaces = BSP2to29_Marksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
+        bsp29->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
+        
+        /* Free old data */
+        FreeMBSP((mbsp_t *)mbsp);
+        
+        /* Conversion complete! */
+        bspdata->version = version;
+        
+        return;
+    }
+    
     if (bspdata->version == BSPVERSION && version == BSP2VERSION) {
         const bsp29_t *bsp29 = &bspdata->data.bsp29;
         bsp2_t *bsp2 = &bspdata->data.bsp2;
@@ -1206,7 +1427,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeBSP29((bsp29_t *)bsp29);
         
         /* Conversion complete! */
-        bspdata->version = BSP2VERSION;
+        bspdata->version = version;
 
         return;
     }
@@ -1253,7 +1474,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeBSP2RMQ((bsp2rmq_t *)bsp2rmq);
         
         /* Conversion complete! */
-        bspdata->version = BSP2VERSION;
+        bspdata->version = version;
 
         return;
     }
@@ -1300,7 +1521,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeBSP2((bsp2_t *)bsp2);
         
         /* Conversion complete! */
-        bspdata->version = BSPVERSION;
+        bspdata->version = version;
 
         return;
     }
@@ -1347,7 +1568,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeBSP2((bsp2_t *)bsp2);
         
         /* Conversion complete! */
-        bspdata->version = BSP2RMQVERSION;
+        bspdata->version = version;
 
         return;
     }
