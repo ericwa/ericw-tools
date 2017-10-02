@@ -58,7 +58,7 @@
 #define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
 #define Q2_BSPVERSION  38
 
-/* Not an actual file format, but the gbsp_t struct */
+/* Not an actual file format, but the mbsp_t struct */
 /* TODO: Should probably separate the type tag for bspdata_t from the file
    version numbers */
 #define GENERIC_BSP	   99
@@ -157,6 +157,7 @@ typedef struct {
                          // without walking the bsp tree
 } q2_dmodel_t;
 
+// FIXME: remove
 typedef dmodelh2_t dmodel_t;
 
 typedef struct {
@@ -270,14 +271,13 @@ typedef struct {
     float vecs[2][4];     // [s/t][xyz offset]
     int32_t flags;            // miptex flags + overrides
     
-    struct {
+    // q1 only
         int32_t miptex;
-    } q1;
-    struct {
+    
+    // q2 only
     	int32_t value;            // light emission, etc
     	char texture[32];     // texture name (textures/*.wal)
     	int32_t nexttexinfo;      // for animations, -1 = end of chain
-    } q2;
 } gtexinfo_t;
 
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
@@ -404,14 +404,21 @@ typedef struct {
 } q2_dleaf_t;
 
 typedef struct {
-    bsp2_dleaf_t q1;
-    struct {
+    // bsp2_dleaf_t
+    int32_t contents;
+    int32_t visofs;             /* -1 = no visibility info */
+    float mins[3];              /* for frustum culling     */
+    float maxs[3];
+    uint32_t firstmarksurface;
+    uint32_t nummarksurfaces;
+    uint8_t ambient_level[NUM_AMBIENTS];
+    
+    // q2 extras
         int16_t cluster;
         int16_t area;
         uint16_t firstleafbrush;
         uint16_t numleafbrushes;
-    } q2;
-} gleaf_t;
+} mleaf_t;
 
 typedef union {
     byte *base;
@@ -679,7 +686,7 @@ typedef struct {
     char *dentdata;
     
     int numleafs;
-    gleaf_t *dleafs;
+    mleaf_t *dleafs;
     
     int numplanes;
     dplane_t *dplanes;
@@ -721,7 +728,7 @@ typedef struct {
     dbrushside_t *dbrushsides;
     
     byte dpop[256];
-} gbsp_t; // "generic" bsp - superset of all other supported types
+} mbsp_t; // "generic" bsp - superset of all other supported types
 
 typedef struct {
     int32_t version;
