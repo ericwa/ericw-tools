@@ -197,12 +197,12 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
         Error("%s: overrun", __func__);
 }
 
-const modelinfo_t *ModelInfoForModel(const bsp2_t *bsp, int modelnum)
+const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum)
 {
     return modelinfo.at(modelnum);
 }
 
-const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
+const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
 {
     int i;
     dmodel_t *model;
@@ -223,7 +223,7 @@ const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum)
 static void *
 LightThread(void *arg)
 {
-    const bsp2_t *bsp = (const bsp2_t *)arg;
+    const mbsp_t *bsp = (const mbsp_t *)arg;
 
 #ifdef HAVE_EMBREE
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
@@ -235,7 +235,7 @@ LightThread(void *arg)
         if (facenum == -1)
             break;
 
-        bsp2_dface_t *f = BSP_GetFace(const_cast<bsp2_t *>(bsp), facenum);
+        bsp2_dface_t *f = const_cast<bsp2_dface_t*>(BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum));
         
         /* Find the correct model offset */
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
@@ -271,7 +271,7 @@ LightThread(void *arg)
 }
 
 static void
-FindModelInfo(const bsp2_t *bsp, const char *lmscaleoverride)
+FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
 {
     Q_assert(modelinfo.size() == 0);
     Q_assert(tracelist.size() == 0);
@@ -356,7 +356,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 {
     logprint("--- LightWorld ---\n" );
     
-    bsp2_t *const bsp = &bspdata->data.bsp2;
+    mbsp_t *const bsp = &bspdata->data.mbsp;
     const unsigned char *lmshift_lump;
     int i, j;
     if (bsp->dlightdata)
@@ -454,7 +454,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 }
 
 static void
-LoadExtendedTexinfoFlags(const char *sourcefilename, const bsp2_t *bsp)
+LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
 {
     char filename[1024];
     
@@ -513,7 +513,7 @@ InitObjFile(const char *filename)
 }
 
 static void
-ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcount)
+ExportObjFace(FILE *f, const mbsp_t *bsp, const bsp2_dface_t *face, int *vertcount)
 {
     // export the vertices and uvs
     for (int i=0; i<face->numedges; i++)
@@ -538,7 +538,7 @@ ExportObjFace(FILE *f, const bsp2_t *bsp, const bsp2_dface_t *face, int *vertcou
 }
 
 static void
-ExportObj(const char *filename, const bsp2_t *bsp)
+ExportObj(const char *filename, const mbsp_t *bsp)
 {
     FILE *objfile = InitObjFile(filename);
     int vertcount = 0;
@@ -566,7 +566,7 @@ CheckNoDebugModeSet()
 
 // returns the face with a centroid nearest the given point.
 static const bsp2_dface_t *
-Face_NearestCentroid(const bsp2_t *bsp, const qvec3f &point)
+Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &point)
 {
     const bsp2_dface_t *nearest_face = NULL;
     float nearest_dist = VECT_MAX;
@@ -589,7 +589,7 @@ Face_NearestCentroid(const bsp2_t *bsp, const qvec3f &point)
 }
 
 static void
-FindDebugFace(const bsp2_t *bsp)
+FindDebugFace(const mbsp_t *bsp)
 {
     if (!dump_face)
         return;
@@ -612,7 +612,7 @@ FindDebugFace(const bsp2_t *bsp)
 
 // returns the vert nearest the given point
 static int
-Vertex_NearestPoint(const bsp2_t *bsp, const vec3_t point)
+Vertex_NearestPoint(const mbsp_t *bsp, const vec3_t point)
 {
     int nearest_vert = -1;
     vec_t nearest_dist = VECT_MAX;
@@ -634,7 +634,7 @@ Vertex_NearestPoint(const bsp2_t *bsp, const vec3_t point)
 }
 
 static void
-FindDebugVert(const bsp2_t *bsp)
+FindDebugVert(const mbsp_t *bsp)
 {
     if (!dump_vert)
         return;
@@ -890,7 +890,7 @@ int
 light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
-    bsp2_t *const bsp = &bspdata.data.bsp2;
+    mbsp_t *const bsp = &bspdata.data.mbsp;
     int32_t loadversion;
     int i;
     double start;
@@ -1108,8 +1108,7 @@ light_main(int argc, const char **argv)
     LoadBSPFile(source, &bspdata);
 
     loadversion = bspdata.version;
-    if (bspdata.version != BSP2VERSION)
-        ConvertBSPFormat(BSP2VERSION, &bspdata);
+    ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
     LoadExtendedTexinfoFlags(source, bsp);
     LoadEntities(cfg, bsp);
@@ -1167,8 +1166,7 @@ light_main(int argc, const char **argv)
     
     WriteEntitiesToString(bsp);
     /* Convert data format back if necessary */
-    if (loadversion != BSP2VERSION)
-        ConvertBSPFormat(loadversion, &bspdata);
+    ConvertBSPFormat(loadversion, &bspdata);
     WriteBSPFile(source, &bspdata);
     end = I_FloatTime();
     logprint("%5.3f seconds elapsed\n", end - start);

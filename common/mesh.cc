@@ -93,7 +93,7 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
     return res;
 }
 
-mesh_t buildMeshFromBSP(const bsp2_t *bsp)
+mesh_t buildMeshFromBSP(const mbsp_t *bsp)
 {
     mesh_t res;
     for (int i=0; i<bsp->numvertexes; i++) {

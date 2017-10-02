@@ -178,15 +178,15 @@ float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
 void SetWorldKeyValue(const std::string &key, const std::string &value);
 std::string WorldValueForKey(const std::string &key);
 
-void LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp);
-void SetupLights(const globalconfig_t &cfg, const bsp2_t *bsp);
-void WriteEntitiesToString(bsp2_t *bsp);
+void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp);
+void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp);
+void WriteEntitiesToString(mbsp_t *bsp);
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
 
-bool EntDict_CheckNoEmptyValues(const bsp2_t *bsp, const entdict_t &entdict);
+bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
 
-bool EntDict_CheckTargetKeysMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
+bool EntDict_CheckTargetKeysMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
 
-bool EntDict_CheckTargetnameKeyMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
+bool EntDict_CheckTargetnameKeyMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
 
 #endif /* __LIGHT_ENTITIES_H__ */

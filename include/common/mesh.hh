@@ -42,7 +42,7 @@ public:
 
 // Welds vertices at exactly the same position
 mesh_t buildMesh(const std::vector<std::vector<qvec3f>> &faces);
-mesh_t buildMeshFromBSP(const bsp2_t *bsp);
+mesh_t buildMeshFromBSP(const mbsp_t *bsp);
 
 std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh);
 aabb3f mesh_face_bbox(const mesh_t &mesh, facenum_t facenum);

@@ -74,7 +74,7 @@ public:
 
 typedef struct {
     qmat4x4f texSpaceToWorld;
-    const texinfo_t *texinfo;
+    const gtexinfo_t *texinfo;
     vec_t planedist;
 } texorg_t;
 
@@ -93,7 +93,7 @@ using lightmapdict_t = std::vector<lightmap_t>;
 typedef struct {
     const globalconfig_t *cfg;
     const modelinfo_t *modelinfo;
-    const bsp2_t *bsp;
+    const mbsp_t *bsp;
     const bsp2_dface_t *face;
     /* these take precedence the values in modelinfo */
     vec_t minlight;
@@ -193,7 +193,7 @@ class modelinfo_t {
 #define DEFAULT_PHONG_ANGLE 89.0f
     
 public:
-    const bsp2_t *bsp;
+    const mbsp_t *bsp;
     const dmodel_t *model;
     float lightmapscale;
     vec3_t offset;
@@ -220,7 +220,7 @@ public:
     }
     
 public:
-    modelinfo_t(const bsp2_t *b, const dmodel_t *m, float lmscale) :
+    modelinfo_t(const mbsp_t *b, const dmodel_t *m, float lmscale) :
         bsp { b },
         model { m },
         lightmapscale { lmscale },
@@ -395,9 +395,9 @@ lockable_setting_t *FindSetting(std::string name);
 void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
-const modelinfo_t *ModelInfoForModel(const bsp2_t *bsp, int modelnum);
-const modelinfo_t *ModelInfoForFace(const bsp2_t *bsp, int facenum);
-bool Leaf_HasSky(const bsp2_t *bsp, const bsp2_dleaf_t *leaf);
+const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
+const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
+bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf);
 int light_main(int argc, const char **argv);
 
 #endif /* __LIGHT_LIGHT_H__ */

@@ -26,32 +26,32 @@
 
 #include <common/qvec.hh>
 
-const dmodel_t *BSP_GetWorldModel(const bsp2_t *bsp);
-int Face_GetNum(const bsp2_t *bsp, const bsp2_dface_t *f);
-const bsp2_dface_t *BSP_GetFace(const bsp2_t *bsp, int fnum);
+const dmodel_t *BSP_GetWorldModel(const mbsp_t *bsp);
+int Face_GetNum(const mbsp_t *bsp, const bsp2_dface_t *f);
+const bsp2_dface_t *BSP_GetFace(const mbsp_t *bsp, int fnum);
 bsp2_dface_t *BSP_GetFace(bsp2_t *bsp, int fnum);
-int Face_VertexAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
-void Face_PointAtIndex(const bsp2_t *bsp, const bsp2_dface_t *f, int v, vec3_t point_out);
-plane_t Face_Plane(const bsp2_t *bsp, const bsp2_dface_t *f);
-const texinfo_t *Face_Texinfo(const bsp2_t *bsp, const bsp2_dface_t *face);
-const miptex_t *Face_Miptex(const bsp2_t *bsp, const bsp2_dface_t *face);
-const char *Face_TextureName(const bsp2_t *bsp, const bsp2_dface_t *face);
-bool Face_IsLightmapped(const bsp2_t *bsp, const bsp2_dface_t *face);
-const float *GetSurfaceVertexPoint(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
+int Face_VertexAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
+void Face_PointAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v, vec3_t point_out);
+plane_t Face_Plane(const mbsp_t *bsp, const bsp2_dface_t *f);
+const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const bsp2_dface_t *face);
+const miptex_t *Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face);
+const char *Face_TextureName(const mbsp_t *bsp, const bsp2_dface_t *face);
+bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face);
+const float *GetSurfaceVertexPoint(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
 int TextureName_Contents(const char *texname);
-int Face_Contents(const bsp2_t *bsp, const bsp2_dface_t *face);
-const dmodel_t *BSP_DModelForModelString(const bsp2_t *bsp, const std::string &submodel_str);
+int Face_Contents(const mbsp_t *bsp, const bsp2_dface_t *face);
+const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
 vec_t Plane_Dist(const vec3_t point, const dplane_t *plane);
-bool Light_PointInSolid(const bsp2_t *bsp, const dmodel_t *model, const vec3_t point);
-bool Light_PointInWorld(const bsp2_t *bsp, const vec3_t point);
-plane_t *Face_AllocInwardFacingEdgePlanes(const bsp2_t *bsp, const bsp2_dface_t *face);
+bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point);
+bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t point);
+plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t *face);
 bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point);
 
-qplane3f Face_Plane_E(const bsp2_t *bsp, const bsp2_dface_t *f);
-qvec3f Face_PointAtIndex_E(const bsp2_t *bsp, const bsp2_dface_t *f, int v);
-qvec3f Vertex_GetPos_E(const bsp2_t *bsp, int num);
-qvec3f Face_Normal_E(const bsp2_t *bsp, const bsp2_dface_t *f);
-std::vector<qvec3f> GLM_FacePoints(const bsp2_t *bsp, const bsp2_dface_t *face);
-qvec3f Face_Centroid(const bsp2_t *bsp, const bsp2_dface_t *face);
+qplane3f Face_Plane_E(const mbsp_t *bsp, const bsp2_dface_t *f);
+qvec3f Face_PointAtIndex_E(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
+qvec3f Vertex_GetPos_E(const mbsp_t *bsp, int num);
+qvec3f Face_Normal_E(const mbsp_t *bsp, const bsp2_dface_t *f);
+std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *face);
+qvec3f Face_Centroid(const mbsp_t *bsp, const bsp2_dface_t *face);
 
 #endif /* __COMMON_BSPUTILS_HH__ */

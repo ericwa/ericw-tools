@@ -24,7 +24,7 @@
 #include <common/cmdlib.hh>
 
 void
-WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int version)
+WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, int version)
 {
     FILE *litfile;
     char litname[1024];
@@ -80,7 +80,7 @@ WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int ve
 }
 
 void
-WriteLuxFile(const bsp2_t *bsp, const char *filename, int version)
+WriteLuxFile(const mbsp_t *bsp, const char *filename, int version)
 {
     FILE *luxfile;
     char luxname[1024];

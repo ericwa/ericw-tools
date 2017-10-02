@@ -37,7 +37,7 @@ void RemoveColinearPoints(winding_t * w);
 typedef void (*save_winding_fn_t)(winding_t *w, void *userinfo);
 void DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn, void *userinfo);
     
-winding_t *WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f);
+winding_t *WindingFromFace (const mbsp_t *bsp, const bsp2_dface_t *f);
 
 winding_edges_t *AllocWindingEdges(const winding_t *w);
 void FreeWindingEdges(winding_edges_t *wi);

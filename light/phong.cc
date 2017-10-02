@@ -128,7 +128,7 @@ const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face)
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at the verts.
  * v1, v2, v3 are global vertex indices */
 static void
-AddTriangleNormals(std::map<int, qvec3f> &smoothed_normals, const qvec3f &norm, const bsp2_t *bsp, int v1, int v2, int v3)
+AddTriangleNormals(std::map<int, qvec3f> &smoothed_normals, const qvec3f &norm, const mbsp_t *bsp, int v1, int v2, int v3)
 {
     const qvec3f p1 = Vertex_GetPos_E(bsp, v1);
     const qvec3f p2 = Vertex_GetPos_E(bsp, v2);
@@ -146,7 +146,7 @@ AddTriangleNormals(std::map<int, qvec3f> &smoothed_normals, const qvec3f &norm, 
 }
 
 /* access the final phong-shaded vertex normal */
-const qvec3f GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex)
+const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int vertindex)
 {
     Q_assert(s_builtPhongCaches);
     
@@ -175,7 +175,7 @@ FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
 }
 
 const bsp2_dface_t *
-Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex) 
+Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t *f, const int edgeindex) 
 {
     Q_assert(s_builtPhongCaches);
     
@@ -225,7 +225,7 @@ Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgei
 #endif
 }
 
-static edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp)
+static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
 {
     edgeToFaceMap_t result;
     
@@ -253,7 +253,7 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const bsp2_t *bsp)
     return result;
 }
 
-static vector<qvec3f> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *face)
+static vector<qvec3f> Face_VertexNormals(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
     vector<qvec3f> normals;
     for (int i=0; i<face->numedges; i++) {
@@ -263,7 +263,7 @@ static vector<qvec3f> Face_VertexNormals(const bsp2_t *bsp, const bsp2_dface_t *
     return normals;
 }
 
-static vector<face_cache_t> MakeFaceCache(const bsp2_t *bsp)
+static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
 {
     vector<face_cache_t> result;
     for (int i=0; i<bsp->numfaces; i++) {
@@ -274,7 +274,7 @@ static vector<face_cache_t> MakeFaceCache(const bsp2_t *bsp)
 }
 
 void
-CalcualateVertexNormals(const bsp2_t *bsp)
+CalcualateVertexNormals(const mbsp_t *bsp)
 {
     Q_assert(!s_builtPhongCaches);
     s_builtPhongCaches = true;
@@ -324,7 +324,7 @@ CalcualateVertexNormals(const bsp2_t *bsp)
     
     // build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        bsp2_dface_t *f = BSP_GetFace(const_cast<bsp2_t *>(bsp), i);
+        const bsp2_dface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
         
         const qvec3f f_norm = Face_Normal_E(bsp, f);
         

@@ -51,11 +51,11 @@ typedef struct {
 } lumpinfo_t;
 
 static void
-ExportWad(FILE *wadfile, bsp2_t *bsp)
+ExportWad(FILE *wadfile, mbsp_t *bsp)
 {
     wadinfo_t header;
     lumpinfo_t lump;
-    dtexdata_t texdata;
+    dmiptexlump_t *texdata;
     miptex_t *miptex;
     int i, j, size, filepos, numvalid;
 
@@ -63,8 +63,8 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
 
     /* Count up the valid lumps */
     numvalid = 0;
-    for (i = 0; i < texdata.header->nummiptex; i++)
-        if (texdata.header->dataofs[i] >= 0)
+    for (i = 0; i < texdata->nummiptex; i++)
+        if (texdata->dataofs[i] >= 0)
             numvalid++;
 
     memcpy(&header.identification, "WAD2", 4);
@@ -78,11 +78,11 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
 
     /* Miptex data will follow the lump headers */
     filepos = sizeof(header) + numvalid * sizeof(lump);
-    for (i = 0; i < texdata.header->nummiptex; i++) {
-        if (texdata.header->dataofs[i] < 0)
+    for (i = 0; i < texdata->nummiptex; i++) {
+        if (texdata->dataofs[i] < 0)
             continue;
 
-        miptex = (miptex_t *)(texdata.base + texdata.header->dataofs[i]);
+        miptex = (miptex_t *)((byte *)texdata + texdata->dataofs[i]);
 
         lump.filepos = filepos;
         lump.size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
@@ -100,10 +100,10 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
         lump.size = LittleLong(lump.size);
         fwrite(&lump, sizeof(lump), 1, wadfile);
     }
-    for (i = 0; i < texdata.header->nummiptex; i++) {
-        if (texdata.header->dataofs[i] < 0)
+    for (i = 0; i < texdata->nummiptex; i++) {
+        if (texdata->dataofs[i] < 0)
             continue;
-        miptex = (miptex_t *)(texdata.base + texdata.header->dataofs[i]);
+        miptex = (miptex_t *)((byte *)texdata + texdata->dataofs[i]);
         size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
 
         /* Byte-swap miptex info and write out */
@@ -116,7 +116,7 @@ ExportWad(FILE *wadfile, bsp2_t *bsp)
 }
 
 static void
-PrintModelInfo(const bsp2_t *bsp)
+PrintModelInfo(const mbsp_t *bsp)
 {
     int i;
 
@@ -134,7 +134,7 @@ PrintModelInfo(const bsp2_t *bsp)
 #define ON_EPSILON 0.01
 
 static void
-CheckBSPFacesPlanar(const bsp2_t *bsp)
+CheckBSPFacesPlanar(const mbsp_t *bsp)
 {
     int i, j;
 
@@ -161,7 +161,7 @@ CheckBSPFacesPlanar(const bsp2_t *bsp)
 }
 
 static int
-Node_Height(const bsp2_t *bsp, const bsp2_dnode_t *node, std::map<const bsp2_dnode_t *, int> *cache)
+Node_Height(const mbsp_t *bsp, const bsp2_dnode_t *node, std::map<const bsp2_dnode_t *, int> *cache)
 {
     // leafs have a height of 0
     int child_heights[2] = {0, 0};
@@ -179,7 +179,7 @@ Node_Height(const bsp2_t *bsp, const bsp2_dnode_t *node, std::map<const bsp2_dno
     return height;
 }
 
-static void PrintNodeHeights(const bsp2_t *bsp)
+static void PrintNodeHeights(const mbsp_t *bsp)
 {
     // get all the heights in one go.
     const bsp2_dnode_t *headnode = &bsp->dnodes[bsp->dmodels[0].headnode[0]];
@@ -228,7 +228,7 @@ static void PrintNodeHeights(const bsp2_t *bsp)
 }
 
 static void
-CheckBSPFile(const bsp2_t *bsp)
+CheckBSPFile(const mbsp_t *bsp)
 {
     int i;
 
@@ -311,8 +311,8 @@ CheckBSPFile(const bsp2_t *bsp)
     }
 
     /* marksurfaces */
-    for (i = 0; i < bsp->nummarksurfaces; i++) {
-        const uint32_t surfnum = bsp->dmarksurfaces[i];
+    for (i = 0; i < bsp->numleaffaces; i++) {
+        const uint32_t surfnum = bsp->dleaffaces[i];
         if (surfnum >= bsp->numfaces)
             printf("warning: marksurface %d is out of range (%d >= %d)\n",
                    i, surfnum, bsp->numfaces);
@@ -320,13 +320,13 @@ CheckBSPFile(const bsp2_t *bsp)
 
     /* leafs */
     for (i = 0; i < bsp->numleafs; i++) {
-        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
+        const mleaf_t *leaf = &bsp->dleafs[i];
         const uint32_t endmarksurface =
             leaf->firstmarksurface + leaf->nummarksurfaces;
-        if (endmarksurface > bsp->nummarksurfaces)
+        if (endmarksurface > bsp->numleaffaces)
             printf("warning: leaf %d has marksurfaces out of range "
                    "(%d..%d >= %d)\n", i, leaf->firstmarksurface,
-                   endmarksurface - 1, bsp->nummarksurfaces);
+                   endmarksurface - 1, bsp->numleaffaces);
         if (leaf->visofs < -1)
             printf("warning: leaf %d has negative visdata offset (%d)\n",
                    i, leaf->visofs);
@@ -422,7 +422,7 @@ CheckBSPFile(const bsp2_t *bsp)
     /* unique visofs's */
     std::set<int32_t> visofs_set;
     for (i = 0; i < bsp->numleafs; i++) {
-        const bsp2_dleaf_t *leaf = &bsp->dleafs[i];
+        const mleaf_t *leaf = &bsp->dleafs[i];
         if (leaf->visofs >= 0) {
             visofs_set.insert(leaf->visofs);
         }
@@ -450,7 +450,7 @@ int
 main(int argc, char **argv)
 {
     bspdata_t bspdata;
-    bsp2_t *const bsp = &bspdata.data.bsp2;
+    mbsp_t *const bsp = &bspdata.data.mbsp;
     char source[1024];
     FILE *f;
     int i, err;
@@ -469,8 +469,8 @@ main(int argc, char **argv)
 
     LoadBSPFile(source, &bspdata);
 
-    if (bspdata.version != BSP2VERSION)
-        ConvertBSPFormat(BSP2VERSION, &bspdata);
+    if (bspdata.version != GENERIC_BSP)
+        ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
     for (i = 0; i < argc - 1; i++) {
         if (!strcmp(argv[i], "--extract-entities")) {

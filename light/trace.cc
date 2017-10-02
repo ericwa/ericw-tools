@@ -79,7 +79,7 @@ typedef struct tnode_s {
     int type;
     int children[2];
     const dplane_t *plane;
-    const bsp2_dleaf_t *childleafs[2];
+    const mleaf_t *childleafs[2];
     const bsp2_dnode_t *node;
 } tnode_t;
 
@@ -99,7 +99,7 @@ typedef struct faceinfo_s {
 } faceinfo_t;
 
 static tnode_t *tnodes;
-static const bsp2_t *bsp_static;
+static const mbsp_t *bsp_static;
 
 static faceinfo_t *faceinfos;
 static bool *fence_dmodels; // bsp_static->nummodels bools, true if model contains a fence texture
@@ -114,8 +114,8 @@ Light_PointInLeaf
 from hmap2
 ==============
 */
-const bsp2_dleaf_t *
-Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point )
+const mleaf_t *
+Light_PointInLeaf( const mbsp_t *bsp, const vec3_t point )
 {
     int num = 0;
     
@@ -132,7 +132,7 @@ Light_PointContents
 from hmap2
 ==============
 */
-int Light_PointContents( const bsp2_t *bsp, const vec3_t point )
+int Light_PointContents( const mbsp_t *bsp, const vec3_t point )
 {
     return Light_PointInLeaf(bsp, point)->contents;
 }
@@ -144,12 +144,12 @@ int Light_PointContents( const bsp2_t *bsp, const vec3_t point )
  * ==============
  */
 static void
-MakeTnodes_r(int nodenum, const bsp2_t *bsp)
+MakeTnodes_r(int nodenum, const mbsp_t *bsp)
 {
     tnode_t *tnode;
     int i;
     bsp2_dnode_t *node;
-    bsp2_dleaf_t *leaf;
+    mleaf_t *leaf;
 
     Q_assert(nodenum >= 0);
     Q_assert(nodenum < bsp->numnodes);
@@ -186,7 +186,7 @@ static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
 }
 
 static void
-MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
+MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
     info->face = face;
     info->numedges = face->numedges;
@@ -244,7 +244,7 @@ MakeFaceInfo(const bsp2_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 }
 
 static bool
-Model_HasFence(const bsp2_t *bsp, const dmodel_t *model)
+Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
 {
     for (int j = model->firstface; j < model->firstface + model->numfaces; j++) {
         const bsp2_dface_t *face = BSP_GetFace(bsp, j);
@@ -256,7 +256,7 @@ Model_HasFence(const bsp2_t *bsp, const dmodel_t *model)
 }
 
 static void
-MakeFenceInfo(const bsp2_t *bsp)
+MakeFenceInfo(const mbsp_t *bsp)
 {
     fence_dmodels = (bool *) calloc(bsp->nummodels, sizeof(bool));
     for (int i = 0; i < bsp->nummodels; i++) {
@@ -265,7 +265,7 @@ MakeFenceInfo(const bsp2_t *bsp)
 }
 
 static void
-BSP_MakeTnodes(const bsp2_t *bsp)
+BSP_MakeTnodes(const mbsp_t *bsp)
 {
     bsp_static = bsp;
     tnodes = (tnode_t *) malloc(bsp->numnodes * sizeof(tnode_t));
@@ -300,10 +300,10 @@ static uint32_t fix_coord(vec_t in, uint32_t width)
 }
 
 int
-SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point)
+SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
 {
     vec_t texcoord[2];
-    const texinfo_t *tex;
+    const gtexinfo_t *tex;
     const miptex_t *miptex;
     int x, y;
     byte *data;
@@ -923,7 +923,7 @@ raystream_t *MakeRayStream(int maxrays)
     Error("no backend available");
 }
 
-void MakeTnodes(const bsp2_t *bsp)
+void MakeTnodes(const mbsp_t *bsp)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {

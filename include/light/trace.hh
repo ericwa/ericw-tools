@@ -40,9 +40,9 @@ enum class hittype_t : uint8_t {
     SKY = 2
 };
 
-const bsp2_dleaf_t *Light_PointInLeaf( const bsp2_t *bsp, const vec3_t point );
-int Light_PointContents( const bsp2_t *bsp, const vec3_t point );
-int SampleTexture(const bsp2_dface_t *face, const bsp2_t *bsp, const vec3_t point);
+const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const vec3_t point );
+int Light_PointContents( const mbsp_t *bsp, const vec3_t point );
+int SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point);
 
 class modelinfo_t;
 
@@ -92,6 +92,6 @@ public:
 
 raystream_t *MakeRayStream(int maxrays);
 
-void MakeTnodes(const bsp2_t *bsp);
+void MakeTnodes(const mbsp_t *bsp);
 
 #endif /* __LIGHT_TRACE_H__ */

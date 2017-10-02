@@ -35,13 +35,13 @@
 
 #include <common/qvec.hh>
 
-void CalcualateVertexNormals(const bsp2_t *bsp);
-const qvec3f GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int vertindex);
+void CalcualateVertexNormals(const mbsp_t *bsp);
+const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int vertindex);
 bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2);
 const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face);
 const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face);
-const qvec3f GetSurfaceVertexNormal(const bsp2_t *bsp, const bsp2_dface_t *f, const int v);
-const bsp2_dface_t *Face_EdgeIndexSmoothed(const bsp2_t *bsp, const bsp2_dface_t *f, const int edgeindex);
+const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int v);
+const bsp2_dface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t *f, const int edgeindex);
 
 /// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
 using edgeToFaceMap_t = std::map<std::pair<int,int>, std::vector<const bsp2_dface_t *>>;
@@ -57,7 +57,7 @@ private:
     std::vector<qvec3f> m_pointsShrunkBy1Unit;
     
 public:
-    face_cache_t(const bsp2_t *bsp, const bsp2_dface_t *face, const std::vector<qvec3f> &normals) :
+    face_cache_t(const mbsp_t *bsp, const bsp2_dface_t *face, const std::vector<qvec3f> &normals) :
         m_points(GLM_FacePoints(bsp, face)),
         m_normals(normals),
         m_plane(Face_Plane_E(bsp, face).vec4()),

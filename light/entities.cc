@@ -42,7 +42,7 @@ const std::vector<sun_t>& GetSuns() {
 }
 
 /* surface lights */
-static void MakeSurfaceLights(const bsp2_t *bsp);
+static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 
@@ -152,7 +152,7 @@ MatchTargets(void)
 }
 
 static std::string
-EntDict_PrettyDescription(const bsp2_t *bsp, const entdict_t &entity)
+EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t &entity)
 {
     // get the submodel's bbox if it's a brush entity
     if (bsp != nullptr
@@ -182,7 +182,7 @@ EntDict_PrettyDescription(const bsp2_t *bsp, const entdict_t &entity)
 }
 
 bool
-EntDict_CheckNoEmptyValues(const bsp2_t *bsp, const entdict_t &entdict)
+EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
 {
     bool ok = true;
     // empty values warning
@@ -201,7 +201,7 @@ EntDict_CheckNoEmptyValues(const bsp2_t *bsp, const entdict_t &entdict)
  * Checks `edicts` for unmatched targets/targetnames and prints warnings
  */
 bool
-EntDict_CheckTargetKeysMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
+EntDict_CheckTargetKeysMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
 {
     bool ok = true;
     
@@ -252,7 +252,7 @@ EntDict_CheckTargetKeysMatched(const bsp2_t *bsp, const entdict_t &entity, const
 }
 
 bool
-EntDict_CheckTargetnameKeyMatched(const bsp2_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
+EntDict_CheckTargetnameKeyMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
 {
     // search for "targetname" values such that no entity has a matching "target"
     // accept any key name as a target, so we don't print false positive
@@ -841,7 +841,7 @@ float CalcFov (float fov_x, float width, float height)
 /*
 finds the texture that is meant to be projected.
 */
-static miptex_t *FindProjectionTexture(const bsp2_t *bsp, const char *texname)
+static miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texname)
 {
     if (!bsp->texdatasize)
         return NULL;
@@ -1004,7 +1004,7 @@ ParseEscapeSequences(const std::string &input)
  * ==================
  */
 void
-LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
+LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 {
     logprint("--- LoadEntities ---\n");
     
@@ -1121,7 +1121,7 @@ LoadEntities(const globalconfig_t &cfg, const bsp2_t *bsp)
 }
 
 static void
-FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
+FixLightOnFace(const mbsp_t *bsp, const vec3_t point, vec3_t point_out)
 {
     // FIXME: Check all shadow casters
     if (!Light_PointInWorld(bsp, point)) {
@@ -1151,7 +1151,7 @@ FixLightOnFace(const bsp2_t *bsp, const vec3_t point, vec3_t point_out)
 }
 
 void
-FixLightsOnFaces(const bsp2_t *bsp)
+FixLightsOnFaces(const mbsp_t *bsp)
 {
     for (light_t &entity : all_lights) {
         if (entity.light.floatValue() != 0) {
@@ -1246,7 +1246,7 @@ void EstimateLightVisibility(void)
 }
 
 void
-SetupLights(const globalconfig_t &cfg, const bsp2_t *bsp)
+SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp)
 {
     logprint("SetupLights: %d initial lights\n", static_cast<int>(all_lights.size()));
     
@@ -1314,7 +1314,7 @@ EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec)
  * ================
  */
 void
-WriteEntitiesToString(bsp2_t *bsp)
+WriteEntitiesToString(mbsp_t *bsp)
 {
     std::string entdata = EntData_Write(entdicts);
     
@@ -1385,7 +1385,7 @@ static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const l
     all_lights.push_back(entity);
 }
 
-static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const light_t *surflight_template, const bsp2_t *bsp, int numverts, const vec_t *verts)
+static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const light_t *surflight_template, const mbsp_t *bsp, int numverts, const vec_t *verts)
 {
     int i;
     vec3_t midpoint = {0, 0, 0};
@@ -1443,7 +1443,7 @@ static void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
  SubdividePolygon - from GLQuake
  ================
  */
-static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const bsp2_t *bsp, int numverts, vec_t *verts, float subdivide_size)
+static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp, int numverts, vec_t *verts, float subdivide_size)
 {
     int             i, j, k;
     vec3_t  mins, maxs;
@@ -1526,7 +1526,7 @@ static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_
  GL_SubdivideSurface - from GLQuake
  ================
  */
-static void GL_SubdivideSurface (const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const bsp2_t *bsp)
+static void GL_SubdivideSurface (const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp)
 {
     int i;
     vec3_t  verts[64];
@@ -1545,7 +1545,7 @@ static void GL_SubdivideSurface (const bsp2_dface_t *face, const modelinfo_t *fa
     SubdividePolygon (face, face_modelinfo, bsp, face->numedges, verts[0], surflight_subdivide);
 }
 
-static void MakeSurfaceLights(const bsp2_t *bsp)
+static void MakeSurfaceLights(const mbsp_t *bsp)
 {
     int i, k;
 
@@ -1576,13 +1576,13 @@ static void MakeSurfaceLights(const bsp2_t *bsp)
     std::vector<bool> face_visited(static_cast<size_t>(bsp->numfaces), false);
     
     for (i=0; i<bsp->numleafs; i++) {
-        const bsp2_dleaf_t *leaf = bsp->dleafs + i;
+        const mleaf_t *leaf = bsp->dleafs + i;
         const bsp2_dface_t *surf;
         qboolean underwater = leaf->contents != CONTENTS_EMPTY;
 
         for (k = 0; k < leaf->nummarksurfaces; k++) {
             const modelinfo_t *face_modelinfo;
-            int facenum = bsp->dmarksurfaces[leaf->firstmarksurface + k];
+            int facenum = bsp->dleaffaces[leaf->firstmarksurface + k];
 
             surf = BSP_GetFace(bsp, facenum);
             const char *texname = Face_TextureName(bsp, surf);

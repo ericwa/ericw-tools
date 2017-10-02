@@ -81,7 +81,7 @@ MakePatch (const globalconfig_t &cfg, winding_t *w)
 }
 
 struct make_bounce_lights_args_t {
-    const bsp2_t *bsp;
+    const mbsp_t *bsp;
     const globalconfig_t *cfg;
 };
 
@@ -97,7 +97,7 @@ static void SaveWindingFn(winding_t *w, void *userinfo)
 }
 
 static bool
-Face_ShouldBounce(const bsp2_t *bsp, const bsp2_dface_t *face)
+Face_ShouldBounce(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
     // make bounce light, only if this face is shadow casting
     const modelinfo_t *mi = ModelInfoForFace(bsp, static_cast<int>(face - bsp->dfaces));
@@ -118,7 +118,7 @@ Face_ShouldBounce(const bsp2_t *bsp, const bsp2_dface_t *face)
 }
 
 static void
-Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t color)
+Face_LookupTextureColor(const mbsp_t *bsp, const bsp2_dface_t *face, vec3_t color)
 {
     const char *facename = Face_TextureName(bsp, face);
     
@@ -131,12 +131,12 @@ Face_LookupTextureColor(const bsp2_t *bsp, const bsp2_dface_t *face, vec3_t colo
 }
 
 static void
-AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp);
+AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const mbsp_t *bsp);
 
 static void *
 MakeBounceLightsThread (void *arg)
 {
-    const bsp2_t *bsp = static_cast<make_bounce_lights_args_t *>(arg)->bsp;
+    const mbsp_t *bsp = static_cast<make_bounce_lights_args_t *>(arg)->bsp;
     const globalconfig_t &cfg = *static_cast<make_bounce_lights_args_t *>(arg)->cfg;
     
     while (1) {
@@ -219,7 +219,7 @@ MakeBounceLightsThread (void *arg)
 }
 
 static void
-AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const bsp2_t *bsp)
+AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal, vec_t area, const bsp2_dface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
         Q_assert(styleColor.second[0] >= 0);
@@ -284,7 +284,7 @@ qvec3f Palette_GetColor(int i)
 
 // Returns color in [0,255]
 static qvec3f
-Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex)
+Texture_AvgColor (const mbsp_t *bsp, const miptex_t *miptex)
 {
     if (!bsp->texdatasize)
         return qvec3f(0);
@@ -304,7 +304,7 @@ Texture_AvgColor (const bsp2_t *bsp, const miptex_t *miptex)
 }
 
 void
-MakeTextureColors (const bsp2_t *bsp)
+MakeTextureColors (const mbsp_t *bsp)
 {
     logprint("--- MakeTextureColors ---\n");
  
@@ -327,7 +327,7 @@ MakeTextureColors (const bsp2_t *bsp)
 }
 
 void
-MakeBounceLights (const globalconfig_t &cfg, const bsp2_t *bsp)
+MakeBounceLights (const globalconfig_t &cfg, const mbsp_t *bsp)
 {
     logprint("--- MakeBounceLights ---\n");
     

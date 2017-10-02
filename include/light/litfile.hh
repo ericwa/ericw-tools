@@ -43,7 +43,7 @@ typedef struct {
     unsigned short extent[2];
 } facesup_t;
 
-void WriteLitFile(const bsp2_t *bsp, facesup_t *facesup, const char *filename, int version);
-void WriteLuxFile(const bsp2_t *bsp, const char *filename, int version);
+void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, int version);
+void WriteLuxFile(const mbsp_t *bsp, const char *filename, int version);
 
 #endif /* __LIGHT_LITFILE_H__ */

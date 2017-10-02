@@ -47,8 +47,8 @@ typedef struct {
 
 const std::vector<bouncelight_t> &BounceLights();
 const std::vector<int> &BounceLightsForFaceNum(int facenum);
-void MakeTextureColors (const bsp2_t *bsp);
-void MakeBounceLights (const globalconfig_t &cfg, const bsp2_t *bsp);
+void MakeTextureColors (const mbsp_t *bsp);
+void MakeBounceLights (const globalconfig_t &cfg, const mbsp_t *bsp);
 /** Returns color components in [0, 255] */
 qvec3f Palette_GetColor(int i);
 

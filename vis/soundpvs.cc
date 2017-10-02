@@ -113,8 +113,8 @@ CalcAmbientSounds(bsp2_t *bsp)
             for (k = 0; k < hit->nummarksurfaces; k++) {
                 surf = BSP_GetFace(bsp, bsp->dmarksurfaces[hit->firstmarksurface + k]);
                 info = &bsp->texinfo[surf->texinfo];
-                ofs = bsp->dtexdata.header->dataofs[info->miptex];
-                miptex = (const miptex_t *)(bsp->dtexdata.base + ofs);
+                ofs = bsp->dtexdata->dataofs[info->miptex];
+                miptex = (const miptex_t *)((byte *)bsp->dtexdata + ofs);
 
                 if (!Q_strncasecmp(miptex->name, "sky", 3) && ambientsky)
                     ambient_type = AMBIENT_SKY;

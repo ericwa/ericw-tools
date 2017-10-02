@@ -48,7 +48,7 @@ public:
 };
 
 sceneinfo
-CreateGeometry(const bsp2_t *bsp, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
+CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
 {
     // count triangles
     int numtris = 0;
@@ -163,7 +163,7 @@ sceneinfo skygeom;    // sky. always occludes.
 sceneinfo solidgeom;  // solids. always occludes.
 sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
 
-static const bsp2_t *bsp_static;
+static const mbsp_t *bsp_static;
 
 void ErrorCallback(const RTCError code, const char* str)
 {
@@ -433,7 +433,7 @@ ExportObj(const char *filename, const vector<winding_t *> &windings)
 
 #endif
 
-plane_t Node_Plane(const bsp2_t *bsp, const bsp2_dnode_t *node, bool side)
+plane_t Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
 {
     const dplane_t *dplane = &bsp->dplanes[node->planenum];
     plane_t plane;
@@ -453,7 +453,7 @@ plane_t Node_Plane(const bsp2_t *bsp, const bsp2_dnode_t *node, bool side)
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
 std::vector<winding_t *>
-Leaf_MakeFaces(const bsp2_t *bsp, const bsp2_dleaf_t *leaf, const std::vector<plane_t> &planes)
+Leaf_MakeFaces(const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<plane_t> &planes)
 {
     std::vector<winding_t *> result;
     
@@ -504,11 +504,11 @@ void FreeWindings(std::vector<winding_t *> &windings)
 }
 
 void
-MakeFaces_r(const bsp2_t *bsp, int nodenum, std::vector<plane_t> *planes, std::vector<winding_t *> *result)
+MakeFaces_r(const mbsp_t *bsp, int nodenum, std::vector<plane_t> *planes, std::vector<winding_t *> *result)
 {
     if (nodenum < 0) {
         int leafnum = -nodenum - 1;
-        const bsp2_dleaf_t *leaf = &bsp->dleafs[leafnum];
+        const mleaf_t *leaf = &bsp->dleafs[leafnum];
         
         if (leaf->contents == CONTENTS_SOLID) {
             std::vector<winding_t *> leaf_windings = Leaf_MakeFaces(bsp, leaf, *planes);
@@ -535,7 +535,7 @@ MakeFaces_r(const bsp2_t *bsp, int nodenum, std::vector<plane_t> *planes, std::v
 }
 
 std::vector<winding_t *>
-MakeFaces(const bsp2_t *bsp, const dmodel_t *model)
+MakeFaces(const mbsp_t *bsp, const dmodel_t *model)
 {
     std::vector<winding_t *> result;
     std::vector<plane_t> planes;
@@ -546,7 +546,7 @@ MakeFaces(const bsp2_t *bsp, const dmodel_t *model)
 }
 
 void
-Embree_TraceInit(const bsp2_t *bsp)
+Embree_TraceInit(const mbsp_t *bsp)
 {
     bsp_static = bsp;
     Q_assert(device == nullptr);

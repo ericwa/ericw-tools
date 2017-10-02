@@ -473,7 +473,7 @@ void	polylib::DiceWinding (winding_t *w, vec_t subdiv, save_winding_fn_t save_fn
  From q2 tools
  =============
  */
-polylib::winding_t *polylib::WindingFromFace (const bsp2_t *bsp, const bsp2_dface_t *f)
+polylib::winding_t *polylib::WindingFromFace (const mbsp_t *bsp, const bsp2_dface_t *f)
 {
     int			i;
     int			se;
