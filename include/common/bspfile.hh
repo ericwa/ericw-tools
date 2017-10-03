@@ -742,6 +742,7 @@ typedef struct {
 
 typedef struct {
     int32_t version;
+    int32_t loadversion;
     int hullcount;
     
     struct {

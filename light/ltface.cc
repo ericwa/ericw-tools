@@ -2585,9 +2585,11 @@ BoxBlurImage(const std::vector<qvec4f> &input, int w, int h, int radius)
 }
 
 static void
-WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
+WriteLightmaps(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmapdict_t *lightmaps)
 {
+    mbsp_t *bsp = &bspdata->data.mbsp;
+    
     // intermediate collection for sorting lightmaps
     std::vector<std::pair<float, const lightmap_t *>> sortable;
     
@@ -2654,6 +2656,11 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         return;
 
     int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
+    
+	// q2 support
+    if (bspdata->loadversion == Q2_BSPVERSION)
+        size *= 3;
+    
     byte *out, *lit, *lux;
     GetFileSpace(&out, &lit, &lux, size * numstyles);
     if (facesup) {
@@ -2702,15 +2709,21 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 *lit++ = color[1];
                 *lit++ = color[2];
                 
-                /* Average the color to get the value to write to the
-                 .bsp lightmap. this avoids issues with some engines
-                 that require the lit and internal lightmap to have the same
-                 intensity. (MarkV, some QW engines)
-                 */
-                vec_t light = LightSample_Brightness(color);
-                if (light < 0) light = 0;
-                if (light > 255) light = 255;
-                *out++ = light;
+                if (bspdata->loadversion == Q2_BSPVERSION) {
+                    *out++ = color[0];
+                    *out++ = color[1];
+                    *out++ = color[2];
+                } else {
+                    /* Average the color to get the value to write to the
+                     .bsp lightmap. this avoids issues with some engines
+                     that require the lit and internal lightmap to have the same
+                     intensity. (MarkV, some QW engines)
+                     */
+                    vec_t light = LightSample_Brightness(color);
+                    if (light < 0) light = 0;
+                    if (light > 255) light = 255;
+                    *out++ = light;
+                }
                 
                 if (lux) {
                     vec3_t temp;
@@ -2756,8 +2769,10 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
  * ============
  */
 void
-LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
+LightFace(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
 {
+    mbsp_t *bsp = &bspdata->data.mbsp;
+    
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
     if (modelinfo == nullptr) {
@@ -2889,7 +2904,7 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf, lightmaps);
     
-    WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
+    WriteLightmaps(bspdata, face, facesup, lightsurf, lightmaps);
     
     LightFaceShutdown(lightsurf);
 }

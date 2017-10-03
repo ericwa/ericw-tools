@@ -2285,6 +2285,8 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         lumps = q1header->lumps;
     }
     
+    bspdata->loadversion = version;
+    
     /* check the file version */
     logprint("BSP is version %s\n", BSPVersionString(version));
     if (!BSPVersionSupported(version))
