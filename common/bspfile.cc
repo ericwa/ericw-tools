@@ -2438,19 +2438,22 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
 /* ========================================================================= */
 
 typedef struct {
-    dheader_t header;
+    int version;
+    
+    // which one is used depends on version
+    dheader_t q1header;
+    q2_dheader_t q2header;
+    
     FILE *file;
 } bspfile_t;
 
 static void
 AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
 {
-    lump_t *lump = &bspfile->header.lumps[lumpnum];
-    byte pad[4] = {0};
+    bool q2 = false;
     size_t size;
-
-    /* FIXME - bad API, needing to byte swap back and forth... */
-    switch (LittleLong(bspfile->header.version)) {
+    
+    switch (bspfile->version) {
     case BSPVERSION:
         size = lumpspec_bsp29[lumpnum].size * count;
         break;
@@ -2460,11 +2463,22 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
     case BSP2VERSION:
         size = lumpspec_bsp2[lumpnum].size * count;
         break;
+    case Q2_BSPVERSION:
+        size = lumpspec_q2bsp[lumpnum].size * count;
+        q2 = true;
+        break;
     default:
         Error("Unsupported BSP version: %d",
-              LittleLong(bspfile->header.version));
+              LittleLong(bspfile->version));
     }
 
+    byte pad[4] = {0};
+    lump_t *lump;
+    if (q2)
+        lump = &bspfile->q2header.lumps[lumpnum];
+    else
+        lump = &bspfile->q1header.lumps[lumpnum];
+    
     lump->fileofs = LittleLong(ftell(bspfile->file));
     lump->filelen = LittleLong(size);
     SafeWrite(bspfile->file, data, size);
@@ -2477,7 +2491,7 @@ AddModelsLump(bspfile_t *bspfile, bspdata_t *bspdata, const void *data, int coun
 {
     if (bspdata->hullcount == MAX_MAP_HULLS_Q1)
     {   /*convert in-place. no need to care about endian here.*/
-        lump_t *lump = &bspfile->header.lumps[LUMP_MODELS];
+        lump_t *lump = &bspfile->q1header.lumps[LUMP_MODELS];
         const dmodel_t *in = static_cast<const dmodel_t *>(data);
         dmodelq1_t *out = static_cast<dmodelq1_t *>(malloc(count * sizeof(dmodelq1_t)));
         int i, j;
@@ -2515,17 +2529,27 @@ void
 WriteBSPFile(const char *filename, bspdata_t *bspdata)
 {
     bspfile_t bspfile;
-
-    memset(&bspfile.header, 0, sizeof(bspfile.header));
+    memset(&bspfile, 0, sizeof(bspfile));
 
     SwapBSPFile(bspdata, TO_DISK);
 
-    bspfile.header.version = LittleLong(bspdata->version);
+    bspfile.version = bspdata->version;
+    if (bspfile.version == Q2_BSPVERSION) {
+        bspfile.q2header.ident = LittleLong(Q2_BSPIDENT);
+        bspfile.q2header.version = LittleLong(Q2_BSPVERSION);
+    } else {
+        bspfile.q1header.version = LittleLong(bspfile.version);
+    }
+    
     logprint("Writing %s as BSP version %s\n", filename, BSPVersionString(bspdata->version));
     bspfile.file = SafeOpenWrite(filename);
 
     /* Save header space, updated after adding the lumps */
-    SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
+    if (bspfile.version == Q2_BSPVERSION) {
+    	SafeWrite(bspfile.file, &bspfile.q2header, sizeof(bspfile.q2header));
+    } else {
+        SafeWrite(bspfile.file, &bspfile.q1header, sizeof(bspfile.q1header));
+    }
 
     if (bspdata->version == BSPVERSION) {
         bsp29_t *bsp = &bspdata->data.bsp29;
@@ -2546,9 +2570,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
-    }
-
-    if (bspdata->version == BSP2RMQVERSION) {
+    } else if (bspdata->version == BSP2RMQVERSION) {
         bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
@@ -2567,9 +2589,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
-    }
-
-    if (bspdata->version == BSP2VERSION) {
+    } else if (bspdata->version == BSP2VERSION) {
         bsp2_t *bsp = &bspdata->data.bsp2;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
@@ -2588,6 +2608,31 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
+    } else if (bspdata->version == Q2_BSPVERSION) {
+        q2bsp_t *bsp = &bspdata->data.q2bsp;
+
+        AddLump(&bspfile, Q2_LUMP_MODELS, bsp->dmodels, bsp->nummodels);
+        AddLump(&bspfile, Q2_LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
+        AddLump(&bspfile, Q2_LUMP_PLANES, bsp->dplanes, bsp->numplanes);
+        AddLump(&bspfile, Q2_LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
+		AddLump(&bspfile, Q2_LUMP_NODES, bsp->dnodes, bsp->numnodes);
+        AddLump(&bspfile, Q2_LUMP_TEXINFO, bsp->texinfo, bsp->numtexinfo);
+        AddLump(&bspfile, Q2_LUMP_FACES, bsp->dfaces, bsp->numfaces);
+        AddLump(&bspfile, Q2_LUMP_LEAFFACES, bsp->dleaffaces, bsp->numleaffaces);
+        AddLump(&bspfile, Q2_LUMP_LEAFBRUSHES, bsp->dleafbrushes, bsp->numleafbrushes);
+        AddLump(&bspfile, Q2_LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
+        AddLump(&bspfile, Q2_LUMP_EDGES, bsp->dedges, bsp->numedges);
+        AddLump(&bspfile, Q2_LUMP_BRUSHES, bsp->dbrushes, bsp->numbrushes);
+        AddLump(&bspfile, Q2_LUMP_BRUSHSIDES, bsp->dbrushsides, bsp->numbrushsides);
+        AddLump(&bspfile, Q2_LUMP_AREAS, bsp->dareas, bsp->numareas);
+        AddLump(&bspfile, Q2_LUMP_AREAPORTALS, bsp->dareaportals, bsp->numareaportals);
+        
+        AddLump(&bspfile, Q2_LUMP_VISIBILITY, bsp->dvis, bsp->visdatasize);
+        AddLump(&bspfile, Q2_LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
+        AddLump(&bspfile, Q2_LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
+        AddLump(&bspfile, Q2_LUMP_POP, bsp->dpop, sizeof(bsp->dpop));
+    } else {
+        Error("Unknown format");
     }
 
     /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
@@ -2631,8 +2676,14 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
     }
 
     fseek(bspfile.file, 0, SEEK_SET);
-    SafeWrite(bspfile.file, &bspfile.header, sizeof(bspfile.header));
-
+	
+    // write the real header
+    if (bspfile.version == Q2_BSPVERSION) {
+        SafeWrite(bspfile.file, &bspfile.q2header, sizeof(bspfile.q2header));
+    } else {
+        SafeWrite(bspfile.file, &bspfile.q1header, sizeof(bspfile.q1header));
+    }
+    
     fclose(bspfile.file);
 }
 
