@@ -469,8 +469,7 @@ main(int argc, char **argv)
 
     LoadBSPFile(source, &bspdata);
 
-    if (bspdata.version != GENERIC_BSP)
-        ConvertBSPFormat(GENERIC_BSP, &bspdata);
+    ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
     for (i = 0; i < argc - 1; i++) {
         if (!strcmp(argv[i], "--convert")) {

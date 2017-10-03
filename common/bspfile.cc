@@ -1408,6 +1408,11 @@ static bsp2_dnode_t *BSP2_CopyNodes(const bsp2_dnode_t *dnodes, int numnodes)
     return (bsp2_dnode_t *)CopyArray(dnodes, numnodes, sizeof(*dnodes));
 }
 
+static uint16_t *Q2BSP_CopyLeafBrushes(const uint16_t *leafbrushes, int count)
+{
+    return (uint16_t *)CopyArray(leafbrushes, count, sizeof(*leafbrushes));
+}
+
 static darea_t *Q2BSP_CopyAreas(const darea_t *areas, int count)
 {
     return (darea_t *)CopyArray(areas, count, sizeof(*areas));
@@ -1626,7 +1631,12 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         mbsp->numfaces = q2bsp->numfaces;
         mbsp->numedges = q2bsp->numedges;
         mbsp->numleaffaces = q2bsp->numleaffaces;
+        mbsp->numleafbrushes = q2bsp->numleafbrushes;
         mbsp->numsurfedges = q2bsp->numsurfedges;
+        mbsp->numareas = q2bsp->numareas;
+        mbsp->numareaportals = q2bsp->numareaportals;
+        mbsp->numbrushes = q2bsp->numbrushes;
+        mbsp->numbrushsides = q2bsp->numbrushsides;
         
         // copy or convert data
         mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
@@ -1641,6 +1651,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         mbsp->dfaces = Q2BSPto2_Faces(q2bsp->dfaces, q2bsp->numfaces);
         mbsp->dedges = BSP29to2_Edges(q2bsp->dedges, q2bsp->numedges);
         mbsp->dleaffaces = BSP29to2_Marksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
+        mbsp->dleafbrushes = Q2BSP_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
         mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
         
         mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
@@ -1826,7 +1837,12 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         q2bsp->numfaces = mbsp->numfaces;
         q2bsp->numedges = mbsp->numedges;
         q2bsp->numleaffaces = mbsp->numleaffaces;
+        q2bsp->numleafbrushes = mbsp->numleafbrushes;
         q2bsp->numsurfedges = mbsp->numsurfedges;
+        q2bsp->numareas = mbsp->numareas;
+        q2bsp->numareaportals = mbsp->numareaportals;
+        q2bsp->numbrushes = mbsp->numbrushes;
+        q2bsp->numbrushsides = mbsp->numbrushsides;
         
         // copy or convert data
         q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
@@ -1841,6 +1857,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         q2bsp->dfaces = BSP2toQ2_Faces(mbsp->dfaces, mbsp->numfaces);
         q2bsp->dedges = BSP2to29_Edges(mbsp->dedges, mbsp->numedges);
         q2bsp->dleaffaces = BSP2to29_Marksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
+        q2bsp->dleafbrushes = Q2BSP_CopyLeafBrushes(mbsp->dleafbrushes, mbsp->numleafbrushes);
         q2bsp->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
         q2bsp->dareas = Q2BSP_CopyAreas(mbsp->dareas, mbsp->numareas);
