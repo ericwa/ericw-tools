@@ -665,6 +665,8 @@ typedef struct {
 } q2bsp_t;
 
 typedef struct {
+    int32_t loadversion;
+    
     int nummodels;
     dmodelh2_t *dmodels;
     
@@ -741,8 +743,8 @@ typedef struct {
 } q2_dheader_t;
 
 typedef struct {
-    int32_t version;
     int32_t loadversion;
+    int32_t version;
     int hullcount;
     
     struct {

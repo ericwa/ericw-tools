@@ -2585,11 +2585,9 @@ BoxBlurImage(const std::vector<qvec4f> &input, int w, int h, int radius)
 }
 
 static void
-WriteLightmaps(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
+WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmapdict_t *lightmaps)
 {
-    mbsp_t *bsp = &bspdata->data.mbsp;
-    
     // intermediate collection for sorting lightmaps
     std::vector<std::pair<float, const lightmap_t *>> sortable;
     
@@ -2658,7 +2656,7 @@ WriteLightmaps(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const
     int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
     
 	// q2 support
-    if (bspdata->loadversion == Q2_BSPVERSION)
+    if (bsp->loadversion == Q2_BSPVERSION)
         size *= 3;
     
     byte *out, *lit, *lux;
@@ -2709,7 +2707,7 @@ WriteLightmaps(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const
                 *lit++ = color[1];
                 *lit++ = color[2];
                 
-                if (bspdata->loadversion == Q2_BSPVERSION) {
+                if (bsp->loadversion == Q2_BSPVERSION) {
                     *out++ = color[0];
                     *out++ = color[1];
                     *out++ = color[2];
@@ -2769,10 +2767,8 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
  * ============
  */
 void
-LightFace(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
+LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
 {
-    mbsp_t *bsp = &bspdata->data.mbsp;
-    
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
     if (modelinfo == nullptr) {
@@ -2904,7 +2900,7 @@ LightFace(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const glob
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf, lightmaps);
     
-    WriteLightmaps(bspdata, face, facesup, lightsurf, lightmaps);
+    WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
     
     LightFaceShutdown(lightsurf);
 }

@@ -223,9 +223,8 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
 static void *
 LightThread(void *arg)
 {
-    bspdata_t *bspdata = (bspdata_t *)arg;
-    mbsp_t *bsp = &bspdata->data.mbsp;
-    
+    const mbsp_t *bsp = (const mbsp_t *)arg;
+
 #ifdef HAVE_EMBREE
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 //    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
@@ -247,24 +246,24 @@ LightThread(void *arg)
         }
         
         if (!faces_sup)
-            LightFace(bspdata, f, nullptr, cfg_static);
+            LightFace(bsp, f, nullptr, cfg_static);
         else if (scaledonly)
         {
             f->lightofs = -1;
             f->styles[0] = 255;
-            LightFace(bspdata, f, faces_sup + facenum, cfg_static);
+            LightFace(bsp, f, faces_sup + facenum, cfg_static);
         }
         else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale)
         {
-            LightFace(bspdata, f, nullptr, cfg_static);
+            LightFace(bsp, f, nullptr, cfg_static);
             faces_sup[facenum].lightofs = f->lightofs;
             for (int i = 0; i < MAXLIGHTMAPS; i++)
                 faces_sup[facenum].styles[i] = f->styles[i];
         }
         else
         {
-            LightFace(bspdata, f, nullptr, cfg_static);
-            LightFace(bspdata, f, faces_sup + facenum, cfg_static);
+            LightFace(bsp, f, nullptr, cfg_static);
+            LightFace(bsp, f, faces_sup + facenum, cfg_static);
         }
     }
 
@@ -426,7 +425,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     info.bsp = bsp;
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
-    RunThreadsOn(0, bsp->numfaces, LightThread, bspdata);
+    RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 #endif
 
     logprint("Lighting Completed.\n\n");

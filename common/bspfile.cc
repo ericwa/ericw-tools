@@ -1607,6 +1607,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeBSP29((bsp29_t *)bsp29);
         
         /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
         bspdata->version = version;
         
         return;
@@ -1664,6 +1665,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeQ2BSP((q2bsp_t *)q2bsp);
         
         /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
         bspdata->version = version;
         
         return;
@@ -1713,6 +1715,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeBSP2RMQ((bsp2rmq_t *)bsp2rmq);
         
         /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
         bspdata->version = version;
         
         return;
@@ -1762,8 +1765,9 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         FreeBSP2((bsp2_t *)bsp2);
         
         /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
         bspdata->version = version;
-        
+
         return;
     }
     
