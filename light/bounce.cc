@@ -105,7 +105,7 @@ Face_ShouldBounce(const mbsp_t *bsp, const bsp2_dface_t *face)
         return false;
     }
     
-    if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL) {
+    if (!Face_IsLightmapped(bsp, face)) {
         return false;
     }
     

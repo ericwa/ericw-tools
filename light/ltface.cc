@@ -2672,7 +2672,7 @@ WriteLightmaps(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const
     // sanity check that we don't save a lightmap for a non-lightmapped face
     {
         const char *texname = Face_TextureName(bsp, face);
-        Q_assert(!(bsp->texinfo[face->texinfo].flags & TEX_SPECIAL));
+        Q_assert(Face_IsLightmapped(bsp, face));
         Q_assert(Q_strcasecmp(texname, "skip") != 0);
         Q_assert(Q_strcasecmp(texname, "trigger") != 0);
     }
@@ -2796,7 +2796,7 @@ LightFace(bspdata_t *bspdata, bsp2_dface_t *face, facesup_t *facesup, const glob
         for (int i = 0; i < MAXLIGHTMAPS; i++)
             face->styles[i] = 255;
     }
-    if (bsp->texinfo[face->texinfo].flags & TEX_SPECIAL)
+    if (!Face_IsLightmapped(bsp, face))
         return;
     
     /* don't save lightmaps for "trigger" texture */
