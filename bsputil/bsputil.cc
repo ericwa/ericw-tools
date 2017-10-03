@@ -457,7 +457,7 @@ main(int argc, char **argv)
 
     printf("---- bsputil / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
     if (argc == 1) {
-        printf("usage: bsputil [--extract-entities] [--extract-textures] "
+        printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]"
                "[--check] bspfile\n");
         exit(1);
     }
@@ -473,7 +473,35 @@ main(int argc, char **argv)
         ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
     for (i = 0; i < argc - 1; i++) {
-        if (!strcmp(argv[i], "--extract-entities")) {
+        if (!strcmp(argv[i], "--convert")) {
+            i++;
+            if (!(i < argc - 1)) {
+                Error("--convert requires an argument");
+            }
+            
+            int fmt;
+            if (!strcmp(argv[i], "bsp29")) {
+                fmt = BSPVERSION;
+            } else if (!strcmp(argv[i], "bsp2")) {
+                fmt = BSP2VERSION;
+            } else if (!strcmp(argv[i], "bsp2rmq")) {
+                fmt = BSP2RMQVERSION;
+            } else if (!strcmp(argv[i], "q2bsp")) {
+                fmt = Q2_BSPVERSION;
+            } else {
+                Error("Unsupported format %s", argv[i]);
+            }
+            
+            ConvertBSPFormat(fmt, &bspdata);
+            
+            StripExtension(source);
+            strcat(source, "-");
+            strcat(source, argv[i]);
+            strcat(source, ".bsp");
+            
+            WriteBSPFile(source, &bspdata);
+            
+        } else if (!strcmp(argv[i], "--extract-entities")) {
             StripExtension(source);
             DefaultExtension(source, ".ent");
             printf("-> writing %s... ", source);
