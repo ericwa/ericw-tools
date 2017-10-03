@@ -152,8 +152,14 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face)
     if (texinfo == nullptr)
         return false;
     
-    if (texinfo->flags & TEX_SPECIAL)
-        return false;
+    if (bsp->loadversion == Q2_BSPVERSION) {
+        if (texinfo->flags & (Q2_SURF_WARP|Q2_SURF_SKY)) {
+            return false;
+        }
+    } else {
+        if (texinfo->flags & TEX_SPECIAL)
+            return false;
+    }
     
     return true;
 }

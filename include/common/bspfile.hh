@@ -297,6 +297,21 @@ typedef struct {
 #define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
 #define TEX_NOSHADOW  (1ULL << 44)   /* don't cast a shadow */
 
+// Q2 Texture flags.
+#define    Q2_SURF_LIGHT      0x1        // value will hold the light strength
+
+#define    Q2_SURF_SLICK      0x2        // effects game physics
+
+#define    Q2_SURF_SKY        0x4        // don't draw, but add to skybox
+#define    Q2_SURF_WARP       0x8        // turbulent water warp
+#define    Q2_SURF_TRANS33    0x10
+#define    Q2_SURF_TRANS66    0x20
+#define    Q2_SURF_FLOWING    0x40    // scroll towards angle
+#define    Q2_SURF_NODRAW     0x80    // don't bother referencing the texture
+
+#define    Q2_SURF_HINT       0x100    // make a primary bsp splitter
+#define    Q2_SURF_SKIP       0x200    // completely ignore, allowing non-closed brushes
+
 /*
  * Note that edge 0 is never used, because negative edge nums are used for
  * counterclockwise use of the edge in a face
