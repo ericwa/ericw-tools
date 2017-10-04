@@ -2597,9 +2597,11 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             continue;
         
         // skip lightmaps where all samples have brightness below 1
-        const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
-        if (maxb < 1)
-            continue;
+        if (bsp->loadversion != Q2_BSPVERSION) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
+            const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
+            if (maxb < 1)
+                continue;
+        }
         
         const float avgb = Lightmap_AvgBrightness(&lightmap, lightsurf);
         sortable.push_back({ avgb, &lightmap });
