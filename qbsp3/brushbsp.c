@@ -577,10 +577,10 @@ int	TestBrushToPlanenum (bspbrush_t *brush, int planenum,
 		}
 		if (front && back)
 		{
-			if ( !(brush->sides[i].surf & SURF_SKIP) )
+			if ( !(brush->sides[i].surf & Q2_SURF_SKIP) )
 			{
 				(*numsplits)++;
-				if (brush->sides[i].surf & SURF_HINT)
+				if (brush->sides[i].surf & Q2_SURF_HINT)
 					*hintsplit = true;
 			}
 		}
@@ -684,14 +684,14 @@ void LeafNode (node_t *node, bspbrush_t *brushes)
 	{
 		// if the brush is solid and all of its sides are on nodes,
 		// it eats everything
-		if (b->original->contents & CONTENTS_SOLID)
+		if (b->original->contents & Q2_CONTENTS_SOLID)
 		{
 			for (i=0 ; i<b->numsides ; i++)
 				if (b->sides[i].texinfo != TEXINFO_NODE)
 					break;
 			if (i == b->numsides)
 			{
-				node->contents = CONTENTS_SOLID;
+				node->contents = Q2_CONTENTS_SOLID;
 				break;
 			}
 		}
@@ -768,9 +768,9 @@ side_t *SelectSplitSide (bspbrush_t *brushes, node_t *node)
 	{
 		for (brush = brushes ; brush ; brush=brush->next)
 		{
-			if ( (pass & 1) && !(brush->original->contents & CONTENTS_DETAIL) )
+			if ( (pass & 1) && !(brush->original->contents & Q2_CONTENTS_DETAIL) )
 				continue;
-			if ( !(pass & 1) && (brush->original->contents & CONTENTS_DETAIL) )
+			if ( !(pass & 1) && (brush->original->contents & Q2_CONTENTS_DETAIL) )
 				continue;
 			for (i=0 ; i<brush->numsides ; i++)
 			{
@@ -783,7 +783,7 @@ side_t *SelectSplitSide (bspbrush_t *brushes, node_t *node)
 					continue;	// allready a node splitter
 				if (side->tested)
 					continue;	// we allready have metrics for this plane
-				if (side->surf & SURF_SKIP)
+				if (side->surf & Q2_SURF_SKIP)
 					continue;	// skip surfaces are never chosen
 				if ( side->visible ^ (pass<2) )
 					continue;	// only check visible faces on first pass
@@ -841,7 +841,7 @@ side_t *SelectSplitSide (bspbrush_t *brushes, node_t *node)
 				value -= epsilonbrush*1000;	// avoid!
 
 				// never split a hint side except with another hint
-				if (hintsplit && !(side->surf & SURF_HINT) )
+				if (hintsplit && !(side->surf & Q2_SURF_HINT) )
 					value = -9999999;
 
 				// save off the side test so we don't need

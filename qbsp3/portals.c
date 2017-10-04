@@ -71,7 +71,7 @@ int VisibleContents (int contents)
 {
 	int		i;
 
-	for (i=1 ; i<=LAST_VISIBLE_CONTENTS ; i<<=1)
+	for (i=1 ; i<=Q2_LAST_VISIBLE_CONTENTS ; i<<=1)
 		if (contents & i )
 			return i;
 
@@ -97,8 +97,8 @@ int ClusterContents (node_t *node)
 
 	// a cluster may include some solid detail areas, but
 	// still be seen into
-	if ( ! (c1&CONTENTS_SOLID) || ! (c2&CONTENTS_SOLID) )
-		c &= ~CONTENTS_SOLID;
+	if ( ! (c1&Q2_CONTENTS_SOLID) || ! (c2&Q2_CONTENTS_SOLID) )
+		c &= ~Q2_CONTENTS_SOLID;
 	return c;
 }
 
@@ -125,12 +125,12 @@ qboolean Portal_VisFlood (portal_t *p)
 	if (!VisibleContents (c1^c2))
 		return true;
 
-	if (c1 & (CONTENTS_TRANSLUCENT|CONTENTS_DETAIL))
+	if (c1 & (Q2_CONTENTS_TRANSLUCENT|Q2_CONTENTS_DETAIL))
 		c1 = 0;
-	if (c2 & (CONTENTS_TRANSLUCENT|CONTENTS_DETAIL))
+	if (c2 & (Q2_CONTENTS_TRANSLUCENT|Q2_CONTENTS_DETAIL))
 		c2 = 0;
 
-	if ( (c1|c2) & CONTENTS_SOLID )
+	if ( (c1|c2) & Q2_CONTENTS_SOLID )
 		return false;		// can't see through solid
 
 	if (! (c1 ^ c2))
@@ -158,8 +158,8 @@ qboolean Portal_EntityFlood (portal_t *p, int s)
 		Error ("Portal_EntityFlood: not a leaf");
 
 	// can never cross to a solid 
-	if ( (p->nodes[0]->contents & CONTENTS_SOLID)
-	|| (p->nodes[1]->contents & CONTENTS_SOLID) )
+	if ( (p->nodes[0]->contents & Q2_CONTENTS_SOLID)
+	|| (p->nodes[1]->contents & Q2_CONTENTS_SOLID) )
 		return false;
 
 	// can flood through everything else
@@ -643,7 +643,7 @@ qboolean PlaceOccupant (node_t *headnode, vec3_t origin, entity_t *occupant)
 			node = node->children[1];
 	}
 
-	if (node->contents == CONTENTS_SOLID)
+	if (node->contents == Q2_CONTENTS_SOLID)
 		return false;
 	node->occupant = occupant;
 
@@ -745,7 +745,7 @@ void FloodAreas_r (node_t *node)
 	bspbrush_t	*b;
 	entity_t	*e;
 
-	if (node->contents == CONTENTS_AREAPORTAL)
+	if (node->contents == Q2_CONTENTS_AREAPORTAL)
 	{
 		// this node is part of an area portal
 		b = node->brushlist;
@@ -808,7 +808,7 @@ void FindAreas_r (node_t *node)
 	if (node->area)
 		return;		// allready got it
 
-	if (node->contents & CONTENTS_SOLID)
+	if (node->contents & Q2_CONTENTS_SOLID)
 		return;
 
 	if (!node->occupied)
@@ -816,7 +816,7 @@ void FindAreas_r (node_t *node)
 
 	// area portals are allways only flooded into, never
 	// out of
-	if (node->contents == CONTENTS_AREAPORTAL)
+	if (node->contents == Q2_CONTENTS_AREAPORTAL)
 		return;
 
 	c_areas++;
@@ -843,7 +843,7 @@ void SetAreaPortalAreas_r (node_t *node)
 		return;
 	}
 
-	if (node->contents == CONTENTS_AREAPORTAL)
+	if (node->contents == Q2_CONTENTS_AREAPORTAL)
 	{
 		if (node->area)
 			return;		// allready set
@@ -909,7 +909,7 @@ void EmitAreaPortals (node_t *headnode)
 =============
 FloodAreas
 
-Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
+Mark each leaf with an area, bounded by Q2_CONTENTS_AREAPORTAL
 =============
 */
 void FloodAreas (tree_t *tree)
@@ -939,10 +939,10 @@ void FillOutside_r (node_t *node)
 	// can be filled away
 	if (!node->occupied)
 	{
-		if (node->contents != CONTENTS_SOLID)
+		if (node->contents != Q2_CONTENTS_SOLID)
 		{
 			c_outside++;
-			node->contents = CONTENTS_SOLID;
+			node->contents = Q2_CONTENTS_SOLID;
 		}
 		else
 			c_solid++;

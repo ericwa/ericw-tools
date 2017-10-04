@@ -888,7 +888,7 @@ void SubdivideFace (node_t *node, face_t *f)
 // special (non-surface cached) faces don't need subdivision
 	tex = &texinfo[f->texinfo];
 
-	if ( tex->flags & (SURF_WARP|SURF_SKY) )
+	if ( tex->flags & (Q2_SURF_WARP|Q2_SURF_SKY) )
 	{
 		return;
 	}
@@ -986,8 +986,8 @@ face_t *FaceFromPortal (portal_t *p, int pside)
 	f->planenum = (side->planenum & ~1) | pside;
 	f->portal = p;
 
-	if ( (p->nodes[pside]->contents & CONTENTS_WINDOW)
-		&& VisibleContents(p->nodes[!pside]->contents^p->nodes[pside]->contents) == CONTENTS_WINDOW )
+	if ( (p->nodes[pside]->contents & Q2_CONTENTS_WINDOW)
+		&& VisibleContents(p->nodes[!pside]->contents^p->nodes[pside]->contents) == Q2_CONTENTS_WINDOW )
 		return NULL;	// don't show insides of windows
 
 	if (pside)
@@ -1038,7 +1038,7 @@ void MakeFaces_r (node_t *node)
 	}
 
 	// solid leafs never have visible faces
-	if (node->contents & CONTENTS_SOLID)
+	if (node->contents & Q2_CONTENTS_SOLID)
 		return;
 
 	// see which portals are valid

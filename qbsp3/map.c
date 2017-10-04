@@ -315,13 +315,13 @@ int	BrushContents (mapbrush_t *b)
 
 	// if any side is translucent, mark the contents
 	// and change solid to window
-	if ( trans & (SURF_TRANS33|SURF_TRANS66) )
+	if ( trans & (Q2_SURF_TRANS33|Q2_SURF_TRANS66) )
 	{
-		contents |= CONTENTS_TRANSLUCENT;
-		if (contents & CONTENTS_SOLID)
+		contents |= Q2_CONTENTS_TRANSLUCENT;
+		if (contents & Q2_CONTENTS_SOLID)
 		{
-			contents &= ~CONTENTS_SOLID;
-			contents |= CONTENTS_WINDOW;
+			contents &= ~Q2_CONTENTS_SOLID;
+			contents |= Q2_CONTENTS_WINDOW;
 		}
 	}
 
@@ -624,21 +624,21 @@ void ParseBrush (entity_t *mapent)
 		}
 
 		// translucent objects are automatically classified as detail
-		if (side->surf & (SURF_TRANS33|SURF_TRANS66) )
-			side->contents |= CONTENTS_DETAIL;
-		if (side->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP) )
-			side->contents |= CONTENTS_DETAIL;
+		if (side->surf & (Q2_SURF_TRANS33|Q2_SURF_TRANS66) )
+			side->contents |= Q2_CONTENTS_DETAIL;
+		if (side->contents & (Q2_CONTENTS_PLAYERCLIP|Q2_CONTENTS_MONSTERCLIP) )
+			side->contents |= Q2_CONTENTS_DETAIL;
 		if (fulldetail)
-			side->contents &= ~CONTENTS_DETAIL;
-		if (!(side->contents & ((LAST_VISIBLE_CONTENTS-1) 
-			| CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP|CONTENTS_MIST)  ) )
-			side->contents |= CONTENTS_SOLID;
+			side->contents &= ~Q2_CONTENTS_DETAIL;
+		if (!(side->contents & ((Q2_LAST_VISIBLE_CONTENTS-1) 
+			| Q2_CONTENTS_PLAYERCLIP|Q2_CONTENTS_MONSTERCLIP|Q2_CONTENTS_MIST)  ) )
+			side->contents |= Q2_CONTENTS_SOLID;
 
 		// hints and skips are never detail, and have no content
-		if (side->surf & (SURF_HINT|SURF_SKIP) )
+		if (side->surf & (Q2_SURF_HINT|Q2_SURF_SKIP) )
 		{
 			side->contents = 0;
-			side->surf &= ~CONTENTS_DETAIL;
+			side->surf &= ~Q2_CONTENTS_DETAIL;
 		}
 
 
@@ -696,14 +696,14 @@ void ParseBrush (entity_t *mapent)
 	b->contents = BrushContents (b);
 
 	// allow detail brushes to be removed 
-	if (nodetail && (b->contents & CONTENTS_DETAIL) )
+	if (nodetail && (b->contents & Q2_CONTENTS_DETAIL) )
 	{
 		b->numsides = 0;
 		return;
 	}
 
 	// allow water brushes to be removed
-	if (nowater && (b->contents & (CONTENTS_LAVA | CONTENTS_SLIME | CONTENTS_WATER)) )
+	if (nowater && (b->contents & (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER)) )
 	{
 		b->numsides = 0;
 		return;
@@ -714,7 +714,7 @@ void ParseBrush (entity_t *mapent)
 
 	// brushes that will not be visible at all will never be
 	// used as bsp splitters
-	if (b->contents & (CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP) )
+	if (b->contents & (Q2_CONTENTS_PLAYERCLIP|Q2_CONTENTS_MONSTERCLIP) )
 	{
 		c_clipbrushes++;
 		for (i=0 ; i<b->numsides ; i++)
@@ -728,7 +728,7 @@ void ParseBrush (entity_t *mapent)
 	// the planenums and texinfos will be adjusted for
 	// the origin brush
 	//
-	if (b->contents & CONTENTS_ORIGIN)
+	if (b->contents & Q2_CONTENTS_ORIGIN)
 	{
 		char	string[32];
 		vec3_t	origin;
@@ -901,7 +901,7 @@ qboolean	ParseMapEntity (void)
 			Error ("Entity %i: func_areaportal can only be a single brush", num_entities-1);
 
 		b = &mapbrushes[nummapbrushes-1];
-		b->contents = CONTENTS_AREAPORTAL;
+		b->contents = Q2_CONTENTS_AREAPORTAL;
 		c_areaportals++;
 		mapent->areaportalnum = c_areaportals;
 		// set the portal number as "style"

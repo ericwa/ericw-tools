@@ -67,7 +67,7 @@ void WritePortalFile_r (node_t *node)
 		return;
 	}
 	
-	if (node->contents & CONTENTS_SOLID)
+	if (node->contents & Q2_CONTENTS_SOLID)
 		return;
 
 	for (p = node->portals ; p ; p=p->next[s])
@@ -116,7 +116,7 @@ void FillLeafNumbers_r (node_t *node, int num)
 {
 	if (node->planenum == PLANENUM_LEAF)
 	{
-		if (node->contents & CONTENTS_SOLID)
+		if (node->contents & Q2_CONTENTS_SOLID)
 			node->cluster = -1;
 		else
 			node->cluster = num;
@@ -146,7 +146,7 @@ void NumberLeafs_r (node_t *node)
 	
 	// either a leaf or a detail cluster
 
-	if ( node->contents & CONTENTS_SOLID )
+	if ( node->contents & Q2_CONTENTS_SOLID )
 	{	// solid block, viewpoint never inside
 		node->cluster = -1;
 		return;

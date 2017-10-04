@@ -157,7 +157,7 @@ void EmitLeaf (node_t *node)
 	//
 	// write the leaffaces
 	//
-	if (leaf_p->contents & CONTENTS_SOLID)
+	if (leaf_p->contents & Q2_CONTENTS_SOLID)
 		return;		// no leaffaces in solids
 
 	leaf_p->firstleafface = numleaffaces;
@@ -487,7 +487,7 @@ void BeginBSPFile (void)
 
 	// leave leaf 0 as an error
 	numleafs = 1;
-	dleafs[0].contents = CONTENTS_SOLID;
+	dleafs[0].contents = Q2_CONTENTS_SOLID;
 }
 
 

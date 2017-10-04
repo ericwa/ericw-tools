@@ -177,17 +177,17 @@ void PruneNodes_r (node_t *node)
 	PruneNodes_r (node->children[0]);
 	PruneNodes_r (node->children[1]);
 
-	if ( (node->children[0]->contents & CONTENTS_SOLID)
-	&& (node->children[1]->contents & CONTENTS_SOLID) )
+	if ( (node->children[0]->contents & Q2_CONTENTS_SOLID)
+	&& (node->children[1]->contents & Q2_CONTENTS_SOLID) )
 	{
 		if (node->faces)
-			Error ("node->faces seperating CONTENTS_SOLID");
+			Error ("node->faces seperating Q2_CONTENTS_SOLID");
 		if (node->children[0]->faces || node->children[1]->faces)
 			Error ("!node->faces with children");
 
 		// FIXME: free stuff
 		node->planenum = PLANENUM_LEAF;
-		node->contents = CONTENTS_SOLID;
+		node->contents = Q2_CONTENTS_SOLID;
 		node->detail_seperator = false;
 
 		if (node->brushlist)

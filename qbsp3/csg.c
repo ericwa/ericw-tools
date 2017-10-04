@@ -185,8 +185,8 @@ int	IntersectionContents (int c1, int c2)
 
 	out = c1 | c2;
 
-	if (out & CONTENTS_SOLID)
-		out = CONTENTS_SOLID;
+	if (out & Q2_CONTENTS_SOLID)
+		out = Q2_CONTENTS_SOLID;
 
 	return out;
 }
@@ -312,7 +312,7 @@ bspbrush_t *MakeBspBrushList (int startbrush, int endbrush,
 		{
 			if (newbrush->sides[j].winding)
 				newbrush->sides[j].winding = CopyWinding (newbrush->sides[j].winding);
-			if (newbrush->sides[j].surf & SURF_HINT)
+			if (newbrush->sides[j].surf & Q2_SURF_HINT)
 				newbrush->sides[j].visible = true;	// hints are always visible
 		}
 		VectorCopy (mb->mins, newbrush->mins);
@@ -435,10 +435,10 @@ Returns true if b1 is allowed to bite b2
 qboolean BrushGE (bspbrush_t *b1, bspbrush_t *b2)
 {
 	// detail brushes never bite structural brushes
-	if ( (b1->original->contents & CONTENTS_DETAIL) 
-		&& !(b2->original->contents & CONTENTS_DETAIL) )
+	if ( (b1->original->contents & Q2_CONTENTS_DETAIL) 
+		&& !(b2->original->contents & Q2_CONTENTS_DETAIL) )
 		return false;
-	if (b1->original->contents & CONTENTS_SOLID)
+	if (b1->original->contents & Q2_CONTENTS_SOLID)
 		return true;
 	return false;
 }

@@ -74,7 +74,7 @@ node_t	*BlockTree (int xl, int yl, int xh, int yh)
 		{	// return an empty leaf
 			node = AllocNode ();
 			node->planenum = PLANENUM_LEAF;
-			node->contents = 0; //CONTENTS_SOLID;
+			node->contents = 0; //Q2_CONTENTS_SOLID;
 			return node;
 		}
 		return node;
@@ -142,7 +142,7 @@ void ProcessBlock_Thread (int blocknum)
 	{
 		node = AllocNode ();
 		node->planenum = PLANENUM_LEAF;
-		node->contents = CONTENTS_SOLID;
+		node->contents = Q2_CONTENTS_SOLID;
 		block_nodes[xblock+5][yblock+5] = node;
 		return;
 	}
