@@ -142,7 +142,7 @@ Error
 For abnormal program terminations in console apps
 =================
 */
-void Error (char *error, ...)
+void Error (const char *error, ...)
 {
 	va_list argptr;
 
@@ -159,7 +159,7 @@ void Error (char *error, ...)
 
 // only printf if in verbose mode
 qboolean verbose = false;
-void qprintf (char *format, ...)
+void qprintf (const char *format, ...)
 {
 	va_list argptr;
 
@@ -265,10 +265,10 @@ char *ExpandPathAndArchive (char *path)
 }
 
 
-char *copystring(char *s)
+char *copystring(const char *s)
 {
 	char	*b;
-	b = malloc(strlen(s)+1);
+	b = (char *) malloc(strlen(s)+1);
 	strcpy (b, s);
 	return b;
 }
@@ -430,7 +430,7 @@ skipwhite:
 }
 
 
-int Q_strncasecmp (char *s1, char *s2, int n)
+int Q_strncasecmp (const char *s1, const char *s2, int n)
 {
 	int		c1, c2;
 
@@ -456,7 +456,7 @@ int Q_strncasecmp (char *s1, char *s2, int n)
 	return 0;		// strings are equal
 }
 
-int Q_strcasecmp (char *s1, char *s2)
+int Q_strcasecmp (const char *s1, const char *s2)
 {
 	return Q_strncasecmp (s1, s2, 99999);
 }
@@ -661,7 +661,7 @@ void    SaveFile (char *filename, void *buffer, int count)
 
 
 
-void DefaultExtension (char *path, char *extension)
+void DefaultExtension (char *path, const char *extension)
 {
 	char    *src;
 //

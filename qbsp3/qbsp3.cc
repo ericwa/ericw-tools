@@ -166,7 +166,7 @@ void ProcessWorldModel (void)
 	entity_t	*e;
 	tree_t		*tree;
 	qboolean	leaked;
-	qboolean	optimize;
+	int	optimize;
 
 	e = &entities[entity_num];
 
@@ -195,7 +195,7 @@ void ProcessWorldModel (void)
 	if (block_yh > 3)
 		block_yh = 3;
 
-	for (optimize = false ; optimize <= true ; optimize++)
+	for (optimize = 0 ; optimize <= 1 ; optimize++)
 	{
 		qprintf ("--------------------------------------------\n");
 

@@ -42,11 +42,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <time.h>
 #include <stdarg.h>
 
-#ifndef __BYTEBOOL__
-#define __BYTEBOOL__
-typedef enum {false, true} qboolean;
-typedef unsigned char byte;
-#endif
+typedef bool qboolean;
+typedef uint8_t byte;
 
 // the dec offsetof macro doesnt work very well...
 #define myoffsetof(type,identifier) ((size_t)&((type *)0)->identifier)
@@ -58,8 +55,8 @@ extern char **myargv;
 
 char *strupr (char *in);
 char *strlower (char *in);
-int Q_strncasecmp (char *s1, char *s2, int n);
-int Q_strcasecmp (char *s1, char *s2);
+int Q_strncasecmp (const char *s1, const char *s2, int n);
+int Q_strcasecmp (const char *s1, const char *s2);
 void Q_getwd (char *out);
 
 int Q_filelength (FILE *f);
@@ -77,7 +74,7 @@ char *ExpandPathAndArchive (char *path);
 
 double I_FloatTime (void);
 
-void	Error (char *error, ...);
+void	Error (const char *error, ...);
 int		CheckParm (char *check);
 
 FILE	*SafeOpenWrite (char *filename);
@@ -90,7 +87,7 @@ int		TryLoadFile (char *filename, void **bufferptr);
 void	SaveFile (char *filename, void *buffer, int count);
 qboolean	FileExists (char *filename);
 
-void 	DefaultExtension (char *path, char *extension);
+void 	DefaultExtension (char *path, const char *extension);
 void 	DefaultPath (char *path, char *basepath);
 void 	StripFilename (char *path);
 void 	StripExtension (char *path);
@@ -114,7 +111,7 @@ char *COM_Parse (char *data);
 extern	char		com_token[1024];
 extern	qboolean	com_eof;
 
-char *copystring(char *s);
+char *copystring(const char *s);
 
 
 void CRC_Init(unsigned short *crcvalue);
@@ -129,7 +126,7 @@ extern	char			archivedir[1024];
 
 
 extern	qboolean verbose;
-void qprintf (char *format, ...);
+void qprintf (const char *format, ...);
 
 void ExpandWildcards (int *argc, char ***argv);
 

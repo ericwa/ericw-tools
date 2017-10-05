@@ -783,7 +783,7 @@ void MoveBrushesToWorld (entity_t *mapent)
 	newbrushes = mapent->numbrushes;
 	worldbrushes = entities[0].numbrushes;
 
-	temp = malloc(newbrushes*sizeof(mapbrush_t));
+	temp = (mapbrush_t *)malloc(newbrushes*sizeof(mapbrush_t));
 	memcpy (temp, mapbrushes + mapent->firstbrush, newbrushes*sizeof(mapbrush_t));
 
 #if	0		// let them keep their original brush numbers
@@ -976,7 +976,7 @@ void TestExpandBrushes (void)
 	side_t	*s;
 	int		i, j, bn;
 	winding_t	*w;
-	char	*name = "expanded.map";
+	const char	*name = "expanded.map";
 	mapbrush_t	*brush;
 	vec_t	dist;
 

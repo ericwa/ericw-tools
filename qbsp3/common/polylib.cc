@@ -63,7 +63,7 @@ winding_t	*AllocWinding (int points)
 			c_peak_windings = c_active_windings;
 	}
 	s = sizeof(vec_t)*3*points + sizeof(int);
-	w = malloc (s);
+	w = (winding_t *) malloc (s);
 	memset (w, 0, s);
 	return w;
 }
@@ -278,7 +278,7 @@ winding_t	*CopyWinding (winding_t *w)
 	winding_t	*c;
 
 	c = AllocWinding (w->numpoints);
-	size = (int)((winding_t *)0)->p[w->numpoints];
+	size = (size_t)((winding_t *)0)->p[w->numpoints];
 	memcpy (c, w, size);
 	return c;
 }

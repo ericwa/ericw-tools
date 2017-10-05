@@ -288,7 +288,7 @@ tree_t *AllocTree (void)
 {
 	tree_t	*tree;
 
-	tree = malloc(sizeof(*tree));
+	tree = (tree_t *) malloc(sizeof(*tree));
 	memset (tree, 0, sizeof(*tree));
 	ClearBounds (tree->mins, tree->maxs);
 
@@ -304,7 +304,7 @@ node_t *AllocNode (void)
 {
 	node_t	*node;
 
-	node = malloc(sizeof(*node));
+	node = (node_t *) malloc(sizeof(*node));
 	memset (node, 0, sizeof(*node));
 
 	return node;
@@ -321,8 +321,8 @@ bspbrush_t *AllocBrush (int numsides)
 	bspbrush_t	*bb;
 	int			c;
 
-	c = (int)&(((bspbrush_t *)0)->sides[numsides]);
-	bb = malloc(c);
+	c = (size_t)&(((bspbrush_t *)0)->sides[numsides]);
+	bb = (bspbrush_t *)malloc(c);
 	memset (bb, 0, c);
 	if (numthreads == 1)
 		c_active_brushes++;
@@ -377,7 +377,7 @@ bspbrush_t *CopyBrush (bspbrush_t *brush)
 	int			size;
 	int			i;
 	
-	size = (int)&(((bspbrush_t *)0)->sides[brush->numsides]);
+	size = (size_t)&(((bspbrush_t *)0)->sides[brush->numsides]);
 
 	newbrush = AllocBrush (brush->numsides);
 	memcpy (newbrush, brush, size);

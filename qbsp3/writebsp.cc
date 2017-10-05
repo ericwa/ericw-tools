@@ -350,7 +350,7 @@ SetLightStyles
 void SetLightStyles (void)
 {
 	int		stylenum;
-	char	*t;
+	const char	*t;
 	entity_t	*e;
 	int		i, j;
 	char	value[10];
@@ -499,9 +499,10 @@ EndBSPFile
 void EndBSPFile (void)
 {
 	char	path[1024];
-	int		len;
+#if 0
+    int		len;
 	byte	*buf;
-
+#endif
 
 	EmitBrushes ();
 	EmitPlanes ();

@@ -436,7 +436,7 @@ void	LoadBSPFileTexinfo (char *filename)
 	FILE		*f;
 	int		length, ofs;
 
-	header = malloc(sizeof(dheader_t));
+	header = (dheader_t *) malloc(sizeof(dheader_t));
 
 	f = fopen (filename, "rb");
 	fread (header, sizeof(dheader_t), 1, f);
@@ -603,7 +603,7 @@ epair_t *ParseEpair (void)
 {
 	epair_t	*e;
 
-	e = malloc (sizeof(epair_t));
+	e = (epair_t *) malloc (sizeof(epair_t));
 	memset (e, 0, sizeof(epair_t));
 
 	if (strlen(token) >= MAX_KEY-1)
@@ -736,7 +736,7 @@ void PrintEntity (entity_t *ent)
 
 }
 
-void 	SetKeyValue (entity_t *ent, char *key, char *value)
+void 	SetKeyValue (entity_t *ent, const char *key, char *value)
 {
 	epair_t	*ep;
 
@@ -747,14 +747,14 @@ void 	SetKeyValue (entity_t *ent, char *key, char *value)
 			ep->value = copystring(value);
 			return;
 		}
-	ep = malloc (sizeof(*ep));
+	ep = (epair_t*) malloc (sizeof(*ep));
 	ep->next = ent->epairs;
 	ent->epairs = ep;
 	ep->key = copystring(key);
 	ep->value = copystring(value);
 }
 
-char 	*ValueForKey (entity_t *ent, char *key)
+const char 	*ValueForKey (entity_t *ent, const char *key)
 {
 	epair_t	*ep;
 
@@ -764,17 +764,17 @@ char 	*ValueForKey (entity_t *ent, char *key)
 	return "";
 }
 
-vec_t	FloatForKey (entity_t *ent, char *key)
+vec_t	FloatForKey (entity_t *ent, const char *key)
 {
-	char	*k;
+	const char	*k;
 
 	k = ValueForKey (ent, key);
 	return atof(k);
 }
 
-void 	GetVectorForKey (entity_t *ent, char *key, vec3_t vec)
+void 	GetVectorForKey (entity_t *ent, const char *key, vec3_t vec)
 {
-	char	*k;
+	const char	*k;
 	double	v1, v2, v3;
 
 	k = ValueForKey (ent, key);
