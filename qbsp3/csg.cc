@@ -394,7 +394,7 @@ void WriteBrushMap (char *name, bspbrush_t *list)
 	FILE	*f;
 	side_t	*s;
 	int		i;
-	winding_t	*w;
+	polylib::winding_t	*w;
 
 	printf ("writing %s\n", name);
 	f = fopen (name, "wb");

@@ -55,7 +55,7 @@ void WritePortalFile_r (node_t *node)
 {
 	int			i, s;	
 	portal_t	*p;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	vec3_t		normal;
 	vec_t		dist;
 

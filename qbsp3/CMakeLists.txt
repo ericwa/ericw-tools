@@ -3,16 +3,18 @@ project (qbsp3 CXX)
 
 add_definitions(-DDOUBLEVEC_T)
 
-include_directories("${CMAKE_SOURCE_DIR}/common")
+if (UNIX)
+add_definitions(-DLINUX)
+endif (UNIX)
+
+include_directories("${CMAKE_SOURCE_DIR}/../include")
 
 set(QBSP3_HEADERS
-    common/bspfile.h
-    common/cmdlib.h
-    common/mathlib.h
-    common/polylib.h
-    common/qfiles.h
-    common/scriplib.h
-    common/threads.h
+    ../include/common/bspfile.hh
+    ../include/common/cmdlib.hh
+    ../include/common/mathlib.hh
+    ../include/common/polylib.hh
+    ../include/common/threads.hh
     qbsp.h)
 
 set(QBSP3_SOURCES
@@ -29,12 +31,11 @@ set(QBSP3_SOURCES
     textures.cc
     writebsp.cc
     csg.cc
-    common/cmdlib.cc
-    common/mathlib.cc
-    common/polylib.cc
-    common/scriplib.cc
-    common/threads.cc
-    common/bspfile.cc)
+    ../common/cmdlib.cc
+    ../common/mathlib.cc
+    ../common/polylib.cc
+    ../common/threads.cc
+    ../common/bspfile.cc)
 
 find_package (Threads)
 

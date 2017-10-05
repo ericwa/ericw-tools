@@ -20,12 +20,12 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 ===========================================================================
 */
 
-#include "cmdlib.h"
-#include "mathlib.h"
-#include "scriplib.h"
-#include "polylib.h"
-#include "threads.h"
-#include "bspfile.h"
+#include <common/cmdlib.hh>
+#include <common/mathlib.hh>
+//#include <common/scriplib.hh>
+#include <common/polylib.hh>
+#include <common/threads.hh>
+#include <common/bspfile.hh>
 
 #define	MAX_BRUSH_SIDES	128
 #define	CLIP_EPSILON	0.1
@@ -56,7 +56,7 @@ typedef struct side_s
 {
 	int			planenum;
 	int			texinfo;
-	winding_t	*winding;
+	polylib::winding_t	*winding;
 	struct side_s	*original;	// bspbrush_t sides will reference the mapbrush_t sides
 	int			contents;		// from miptex
 	int			surf;			// from miptex
@@ -97,7 +97,7 @@ typedef struct face_s
 	int				planenum;
 	int				contents;	// faces in different contents can't merge
 	int				outputnumber;
-	winding_t		*w;
+	polylib::winding_t		*w;
 	int				numpoints;
 	qboolean		badstartvert;	// tjunctions cannot be fixed without a midpoint vertex
 	int				vertexnums[MAXEDGES];
@@ -148,7 +148,7 @@ typedef struct portal_s
 	node_t		*onnode;		// NULL = outside box
 	node_t		*nodes[2];		// [0] = front side of plane
 	struct portal_s	*next[2];
-	winding_t	*winding;
+	polylib::winding_t	*winding;
 
 	qboolean	sidefound;		// false if ->side hasn't been checked
 	side_t		*side;			// NULL = non-visible
@@ -236,10 +236,10 @@ extern vec3_t	draw_mins, draw_maxs;
 extern	qboolean	drawflag;
 
 void Draw_ClearWindow (void);
-void DrawWinding (winding_t *w);
+void DrawWinding (polylib::winding_t *w);
 
 void GLS_BeginScene (void);
-void GLS_Winding (winding_t *w, int code);
+void GLS_Winding (polylib::winding_t *w, int code);
 void GLS_EndScene (void);
 
 //=============================================================================
@@ -302,7 +302,7 @@ void MakeTreePortals (tree_t *tree);
 
 // glfile.c
 
-void OutputWinding (winding_t *w, FILE *glview);
+void OutputWinding (polylib::winding_t *w, FILE *glview);
 void WriteGLView (tree_t *tree, char *source);
 
 //=============================================================================

@@ -38,7 +38,7 @@ void GLS_BeginScene (void)
 {
 }
 
-void GLS_Winding (winding_t *w, int code)
+void GLS_Winding (polylib::winding_t *w, int code)
 {
 }
 

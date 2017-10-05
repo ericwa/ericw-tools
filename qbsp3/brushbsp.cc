@@ -136,7 +136,7 @@ Sets the mins/maxs based on the windings
 void BoundBrush (bspbrush_t *brush)
 {
 	int			i, j;
-	winding_t	*w;
+	polylib::winding_t	*w;
 
 	ClearBounds (brush->mins, brush->maxs);
 	for (i=0 ; i<brush->numsides ; i++)
@@ -158,7 +158,7 @@ CreateBrushWindings
 void CreateBrushWindings (bspbrush_t *brush)
 {
 	int			i, j;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	side_t		*side;
 	plane_t		*plane;
 
@@ -225,7 +225,7 @@ BrushVolume
 vec_t BrushVolume (bspbrush_t *brush)
 {
 	int			i;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	vec3_t		corner;
 	vec_t		d, area, volume;
 	plane_t		*plane;
@@ -522,7 +522,7 @@ int	TestBrushToPlanenum (bspbrush_t *brush, int planenum,
 	int			i, j, num;
 	plane_t		*plane;
 	int			s;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	vec_t		d, d_front, d_back;
 	int			front, back;
 
@@ -616,7 +616,7 @@ existance by the vertex snapping.
 ================
 */
 #define	EDGE_LENGTH	0.2
-qboolean WindingIsTiny (winding_t *w)
+qboolean WindingIsTiny (polylib::winding_t *w)
 {
 #if 0
 	if (WindingArea (w) < 1)
@@ -652,7 +652,7 @@ Returns true if the winding still has one of the points
 from basewinding for plane
 ================
 */
-qboolean WindingIsHuge (winding_t *w)
+qboolean WindingIsHuge (polylib::winding_t *w)
 {
 	int		i, j;
 
@@ -895,7 +895,7 @@ BrushMostlyOnSide
 int BrushMostlyOnSide (bspbrush_t *brush, plane_t *plane)
 {
 	int			i, j;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	vec_t		d, max;
 	int			side;
 
@@ -937,7 +937,7 @@ void SplitBrush (bspbrush_t *brush, int planenum,
 {
 	bspbrush_t	*b[2];
 	int			i, j;
-	winding_t	*w, *cw[2], *midwinding;
+	polylib::winding_t	*w, *cw[2], *midwinding;
 	plane_t		*plane, *plane2;
 	side_t		*s, *cs;
 	float		d, d_front, d_back;

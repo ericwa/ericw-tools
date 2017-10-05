@@ -348,7 +348,7 @@ void AddBrushBevels (mapbrush_t *b)
 	side_t	*s, *s2;
 	vec3_t	normal;
 	float	dist;
-	winding_t	*w, *w2;
+	polylib::winding_t	*w, *w2;
 	vec3_t	vec, vec2;
 	float	d;
 
@@ -492,7 +492,7 @@ makes basewindigs for sides and mins / maxs for the brush
 qboolean MakeBrushWindings (mapbrush_t *ob)
 {
 	int			i, j;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	side_t		*side;
 	plane_t		*plane;
 
@@ -975,7 +975,7 @@ void TestExpandBrushes (void)
 	FILE	*f;
 	side_t	*s;
 	int		i, j, bn;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	const char	*name = "expanded.map";
 	mapbrush_t	*brush;
 	vec_t	dist;

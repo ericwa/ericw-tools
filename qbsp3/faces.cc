@@ -265,7 +265,7 @@ EmitFaceVertexes
 */
 void EmitFaceVertexes (node_t *node, face_t *f)
 {
-	winding_t	*w;
+	polylib::winding_t	*w;
 	int			i;
 
 	if (f->merged || f->split[0] || f->split[1])
@@ -688,10 +688,10 @@ Returns NULL if the faces couldn't be merged, or the new face.
 The originals will NOT be freed.
 =============
 */
-winding_t *TryMergeWinding (winding_t *f1, winding_t *f2, vec3_t planenormal)
+polylib::winding_t *TryMergeWinding (polylib::winding_t *f1, polylib::winding_t *f2, vec3_t planenormal)
 {
 	vec_t		*p1, *p2, *p3, *p4, *back;
-	winding_t	*newf;
+	polylib::winding_t	*newf;
 	int			i, j, k, l;
 	vec3_t		normal, delta;
 	vec_t		dot;
@@ -798,7 +798,7 @@ The originals will NOT be freed.
 face_t *TryMerge (face_t *f1, face_t *f2, vec3_t planenormal)
 {
 	face_t		*newf;
-	winding_t	*nw;
+	polylib::winding_t	*nw;
 
 	if (!f1->w || !f2->w)
 		return NULL;
@@ -878,7 +878,7 @@ void SubdivideFace (node_t *node, face_t *f)
 	q2_texinfo_t	*tex;
 	vec3_t		temp;
 	vec_t		dist;
-	winding_t	*w, *frontw, *backw;
+	polylib::winding_t	*w, *frontw, *backw;
 
 	if (f->merged)
 		return;

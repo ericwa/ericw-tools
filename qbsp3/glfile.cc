@@ -46,7 +46,7 @@ int PortalVisibleSides (portal_t *p)
 	return 0;
 }
 
-void OutputWinding (winding_t *w, FILE *glview)
+void OutputWinding (polylib::winding_t *w, FILE *glview)
 {
 	static	int	level = 128;
 	vec_t		light;
@@ -75,7 +75,7 @@ OutputPortal
 */
 void OutputPortal (portal_t *p, FILE *glview)
 {
-	winding_t	*w;
+	polylib::winding_t	*w;
 	int		sides;
 
 	sides = PortalVisibleSides (p);

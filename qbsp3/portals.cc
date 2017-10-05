@@ -236,7 +236,7 @@ void RemovePortalFromNode (portal_t *portal, node_t *l)
 void PrintPortal (portal_t *p)
 {
 	int			i;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	
 	w = p->winding;
 	for (i=0 ; i<w->numpoints ; i++)
@@ -322,9 +322,9 @@ BaseWindingForNode
 #define	BASE_WINDING_EPSILON	0.001
 #define	SPLIT_WINDING_EPSILON	0.001
 
-winding_t	*BaseWindingForNode (node_t *node)
+polylib::winding_t	*BaseWindingForNode (node_t *node)
 {
-	winding_t	*w;
+	polylib::winding_t	*w;
 	node_t		*n;
 	plane_t		*plane;
 	vec3_t		normal;
@@ -357,7 +357,7 @@ winding_t	*BaseWindingForNode (node_t *node)
 
 //============================================================
 
-qboolean WindingIsTiny (winding_t *w);
+qboolean WindingIsTiny (polylib::winding_t *w);
 
 /*
 ==================
@@ -370,7 +370,7 @@ and clipping it by all of parents of this node
 void MakeNodePortal (node_t *node)
 {
 	portal_t	*new_portal, *p;
-	winding_t	*w;
+	polylib::winding_t	*w;
 	vec3_t		normal;
 	float		dist;
 	int			side;
@@ -433,7 +433,7 @@ void SplitNodePortals (node_t *node)
 	node_t		*f, *b, *other_node;
 	int			side;
 	plane_t		*plane;
-	winding_t	*frontwinding, *backwinding;
+	polylib::winding_t	*frontwinding, *backwinding;
 
 	plane = &mapplanes[node->planenum];
 	f = node->children[0];

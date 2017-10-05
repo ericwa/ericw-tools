@@ -120,7 +120,7 @@ void Draw_SetBlack (void)
 	glColor3f (0,0,0);
 }
 
-void DrawWinding (winding_t *w)
+void DrawWinding (polylib::winding_t *w)
 {
 	int		i;
 
@@ -142,7 +142,7 @@ void DrawWinding (winding_t *w)
 	glFlush ();
 }
 
-void DrawAuxWinding (winding_t *w)
+void DrawAuxWinding (polylib::winding_t *w)
 {
 	int		i;
 
@@ -208,7 +208,7 @@ void GLS_BeginScene (void)
 	}
 }
 
-void GLS_Winding (winding_t *w, int code)
+void GLS_Winding (polylib::winding_t *w, int code)
 {
 	byte	buf[1024];
 	int		i, j;
