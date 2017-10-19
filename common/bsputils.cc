@@ -220,7 +220,12 @@ vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
 static bool Light_PointInSolid_r(const mbsp_t *bsp, int nodenum, const vec3_t point )
 {
     if (nodenum < 0) {
-        mleaf_t *leaf = bsp->dleafs + (-1 - nodenum);
+		// FIXME: Factor out into bounds-checked getter
+		int leafnum = (-1 - nodenum);
+		if (leafnum < 0 || leafnum >= bsp->numleafs) {
+			Error("Corrupt BSP: leaf %d is out of bounds (bsp->numleafs = %d)", leafnum, bsp->numleafs);
+		}
+        mleaf_t *leaf = &bsp->dleafs[leafnum];
         
         return leaf->contents == CONTENTS_SOLID
         || leaf->contents == CONTENTS_SKY;
