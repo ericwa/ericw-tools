@@ -1,5 +1,5 @@
-## tyrutils-ericw
- - Website:         http://ericwa.github.io/tyrutils-ericw
+## ericw-tools
+ - Website:         http://ericwa.github.io/ericw-tools
  - Maintainer:      Eric Wasylishen (AKA ericw)
  - Email:           ewasylishen@gmail.com
 
@@ -9,12 +9,12 @@
  - Author:  Kevin Shanahan (AKA Tyrann)
  - Email:   tyrann@disenchant.net
 
-[![Build Status](https://travis-ci.org/ericwa/tyrutils-ericw.svg?branch=master)](https://travis-ci.org/ericwa/tyrutils-ericw)
-[![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/tyrutils-ericw)
+[![Build Status](https://travis-ci.org/ericwa/ericw-tools.svg?branch=master)](https://travis-ci.org/ericwa/ericw-tools)
+[![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/ericw-tools)
 
 ## About
 
-tyrutils-ericw is a branch of Tyrann's quake 1 tools, focused on
+ericw-tools is a branch of Tyrann's quake 1 tools, focused on
 adding lighting features, mostly borrowed from q3map2. There are a few
 bugfixes for qbsp as well. Original readme follows:
 
@@ -36,7 +36,7 @@ Included utilities:
 
 See the doc/ directory for more detailed descriptions of the various
 tools capabilities.  See changelog.txt for a brief overview of recent
-changes or https://github.com/ericwa/tyrutils-ericw for the full changelog and
+changes or https://github.com/ericwa/ericw-tools for the full changelog and
 source code.
 
 ## Compiling
@@ -55,8 +55,8 @@ Tested on:
 ```
 sudo apt-get install git cmake build-essential groff
 
-git clone https://github.com/ericwa/tyrutils-ericw
-cd tyrutils-ericw
+git clone https://github.com/ericwa/ericw-tools
+cd ericw-tools
 
 mkdir build
 cd build
@@ -70,11 +70,11 @@ make -j8 VERBOSE=1
 
 Executables will be located in:
 
- - `tyrutils-ericw/build/qbsp/qbsp`
- - `tyrutils-ericw/build/vis/vis`
- - `tyrutils-ericw/build/light/light`
- - `tyrutils-ericw/build/bspinfo/bspinfo`
- - `tyrutils-ericw/build/bsputil/bsputil`
+ - `ericw-tools/build/qbsp/qbsp`
+ - `ericw-tools/build/vis/vis`
+ - `ericw-tools/build/light/light`
+ - `ericw-tools/build/bspinfo/bspinfo`
+ - `ericw-tools/build/bsputil/bsputil`
 
 ## Credits
 

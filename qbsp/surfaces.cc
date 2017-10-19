@@ -98,7 +98,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
             v = VectorLength(plane.normal);
             VectorNormalize(plane.normal);
             
-            // ericw -- reverted this, was causing https://github.com/ericwa/tyrutils-ericw/issues/160
+            // ericw -- reverted this, was causing https://github.com/ericwa/ericw-tools/issues/160
 //            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this should balance the load slightly */
 //                plane.dist = (mins + subdiv/2) / v;
 //            else

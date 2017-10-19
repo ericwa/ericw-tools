@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 2.8)
-project (tyrutils)
+project (ericw-tools)
 
 # Grab the git describe output and store it in GIT_DESCRIBE
 # Thanks to http://xit0.org/2013/04/cmake-use-git-branch-and-commit-details-in-project/
@@ -108,7 +108,7 @@ else ()
 	set(CMAKE_C_STANDARD 99)
 endif ()
 
-add_definitions(-DTYRUTILS_VERSION=${GIT_DESCRIBE})
+add_definitions(-DERICWTOOLS_VERSION=${GIT_DESCRIBE})
 
 if (MSVC)
 	add_definitions("/DWIN32")
@@ -140,6 +140,6 @@ install(FILES changelog.txt DESTINATION bin)
 #CPack configuration
 
 set(CPACK_GENERATOR ZIP)
-set(CPACK_PACKAGE_NAME tyrutils)
+set(CPACK_PACKAGE_NAME ericw-tools)
 set(CPACK_PACKAGE_VERSION ${GIT_DESCRIBE})
 include(CPack)

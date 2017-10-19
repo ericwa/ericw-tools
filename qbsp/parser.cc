@@ -111,7 +111,7 @@ ParseToken(parser_t *p, int flags)
                 case 'r':
                 case 't':
                 case '\\':
-                case 'b': // tyrutils-ericw extension, parsed by light, used to toggle bold text
+                case 'b': // ericw-tools extension, parsed by light, used to toggle bold text
                         //regular two-char escapes
                     *token_p++ = *p->pos++;
                     if (token_p > &p->token[MAXTOKEN - 1])

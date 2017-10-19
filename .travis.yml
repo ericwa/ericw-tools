@@ -25,5 +25,5 @@ deploy:
     - "build-osx/*.zip"
     - "build/*.zip"
   on:
-    repo: ericwa/tyrutils-ericw
+    repo: ericwa/ericw-tools
     tags: true

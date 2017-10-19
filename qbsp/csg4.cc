@@ -276,7 +276,7 @@ ClipInside(const face_t *clipface, bool precedence,
         next = face->next;
 
         /* HACK: Check for on-plane but not the same planenum
-          ( https://github.com/ericwa/tyrutils-ericw/issues/174 )
+          ( https://github.com/ericwa/ericw-tools/issues/174 )
          */
         bool spurious_onplane = false;
         {

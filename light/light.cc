@@ -899,7 +899,7 @@ light_main(int argc, const char **argv)
     const char *lmscaleoverride = NULL;
     
     init_log("light.log");
-    logprint("---- light / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
+    logprint("---- light / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
 
     LowerProcessPriority();
     numthreads = GetDefaultThreads();

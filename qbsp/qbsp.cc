@@ -26,7 +26,7 @@
 #include <qbsp/wad.hh>
 
 static const char *IntroString =
-    "---- qbsp / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n";
+    "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
 
 // command line flags
 options_t options;

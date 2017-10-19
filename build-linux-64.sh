@@ -23,6 +23,6 @@ cpack
 
 # check rpath
 readelf -d ./light/light
-unzip -X tyrutils-*.zip
-readelf -d ./tyrutils-*/bin/light
+unzip -X ericw-tools-*.zip
+readelf -d ./ericw-tools-*/bin/light
 

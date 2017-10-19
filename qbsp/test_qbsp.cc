@@ -48,7 +48,7 @@ GetTexvecs(const char *map, const char *texname)
     return mapface->get_texvecs();
 }
 
-// https://github.com/ericwa/tyrutils-ericw/issues/158
+// https://github.com/ericwa/ericw-tools/issues/158
 TEST(qbsp, testTextureIssue) {
     const char *bufActual = R"(
     {

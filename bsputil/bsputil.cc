@@ -455,7 +455,7 @@ main(int argc, char **argv)
     FILE *f;
     int i, err;
 
-    printf("---- bsputil / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
+    printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]"
                "[--check] bspfile\n");

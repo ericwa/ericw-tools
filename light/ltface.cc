@@ -922,7 +922,7 @@ GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const v
     }
     
     /* Light behind sample point? Zero contribution, period.
-       see: https://github.com/ericwa/tyrutils-ericw/issues/181 */
+       see: https://github.com/ericwa/ericw-tools/issues/181 */
     if (angle < 0) {
         return 0;
     }
@@ -2544,7 +2544,7 @@ BoxBlurImage(const std::vector<qvec4f> &input, int w, int h, int radius)
                     // 2017-09-16: this is a hack, but clamping the
                     // x/y instead of discarding the samples outside of the
                     // kernel looks better in some cases:
-                    // https://github.com/ericwa/tyrutils-ericw/issues/171
+                    // https://github.com/ericwa/ericw-tools/issues/171
 #if 0
                     if (x1 < 0 || x1 >= w)
                         continue;

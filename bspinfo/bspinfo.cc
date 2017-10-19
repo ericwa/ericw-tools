@@ -28,7 +28,7 @@ main(int argc, char **argv)
     char source[1024];
     int i;
 
-    printf("---- bspinfo / TyrUtils " stringify(TYRUTILS_VERSION) " ----\n");
+    printf("---- bspinfo / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf("usage: bspinfo bspfile [bspfiles]\n");
         exit(1);
