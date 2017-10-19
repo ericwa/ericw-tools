@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <cstdint>
 
 static void
 AssertVanillaContentType(int content)
@@ -582,11 +583,19 @@ ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
             if (node->children[i]->contents == CONTENTS_SOLID)
                 dnode->children[i] = -1;
             else {
-                dnode->children[i] = -(map.cTotal[LUMP_LEAFS] + 1);
+                int childnum = -(map.cTotal[LUMP_LEAFS] + 1);
+                if (childnum < INT16_MIN) {
+                    Error("Map exceeds BSP29 node/leaf limit. Recompile with -bsp2 flag.");
+                }
+                dnode->children[i] = childnum;
                 ExportLeaf_BSP29(entity, node->children[i]);
             }
         } else {
-            dnode->children[i] = map.cTotal[LUMP_NODES];
+            int childnum = map.cTotal[LUMP_NODES];
+            if (childnum > INT16_MAX) {
+                Error("Map exceeds BSP29 node/leaf limit. Recompile with -bsp2 flag.");
+            }
+            dnode->children[i] = childnum;
             ExportDrawNodes_BSP29(entity, node->children[i]);
         }
     }
