@@ -110,6 +110,7 @@
 #define CONTENTS_DETAIL -10     /* compiler internal use only */
 #define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
 #define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
+#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
 
 // Special contents flags for the compiler only
 #define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)

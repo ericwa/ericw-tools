@@ -55,6 +55,9 @@ RemapContentsForExport(int content)
          */
         return CONTENTS_SOLID;
     }
+    if (content == CONTENTS_ILLUSIONARY_VISBLOCKER) {
+        return CONTENTS_EMPTY;
+    }
     return content;
 }
 

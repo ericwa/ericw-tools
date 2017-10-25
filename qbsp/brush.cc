@@ -1122,10 +1122,17 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     if (atoi(ValueForKey(src, "_mirrorinside"))) {
         cflags |= CFLAGS_BMODEL_MIRROR_INSIDE;
     }
-    
+
+    const bool func_illusionary_visblocker =
+        (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
+
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
         contents = Brush_GetContents(mapbrush);
+
+        /* FIXME: move into Brush_GetContents? */
+        if (func_illusionary_visblocker)
+            contents = CONTENTS_ILLUSIONARY_VISBLOCKER;
 
         /* "origin" brushes always discarded */
         if (contents == CONTENTS_ORIGIN)

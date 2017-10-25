@@ -28,6 +28,7 @@ int splitnodes;
 static int leaffaces;
 static int nodefaces;
 static int c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_fence;
+static int c_illusionary_visblocker;
 static bool usemidsplit;
 
 //============================================================================
@@ -746,6 +747,9 @@ GetContentsName( int Contents ) {
         case CONTENTS_DETAIL_FENCE:
             return "DetailFence";
 
+        case CONTENTS_ILLUSIONARY_VISBLOCKER:
+            return "IllusionaryVisblocker";
+
         default:
             return "Error";
     }
@@ -767,7 +771,8 @@ int Contents_Priority(int contents)
         case CONTENTS_WATER:  return 2;
         case CONTENTS_SLIME:  return 2;
         case CONTENTS_LAVA:   return 2;
-            
+        case CONTENTS_ILLUSIONARY_VISBLOCKER: return 2;
+
         case CONTENTS_EMPTY:  return 1;
         case 0:               return 0;
         
@@ -845,6 +850,9 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
         break;
     case CONTENTS_DETAIL_FENCE:
         c_detail_fence++;
+        break;
+    case CONTENTS_ILLUSIONARY_VISBLOCKER:
+        c_illusionary_visblocker++;
         break;
     default:
         Error("Bad contents in face (%s)", __func__);
@@ -1035,6 +1043,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     c_detail = 0;
     c_detail_illusionary = 0;
     c_detail_fence = 0;
+    c_illusionary_visblocker = 0;
 
     PartitionSurfaces(surfhead, headnode);
 
@@ -1045,6 +1054,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     Message(msgStat, "%8d detail leafs", c_detail);
     Message(msgStat, "%8d detail illusionary leafs", c_detail_illusionary);
     Message(msgStat, "%8d detail fence leafs", c_detail_fence);
+    Message(msgStat, "%8d illusionary visblocker leafs", c_illusionary_visblocker);
     Message(msgStat, "%8d leaffaces", leaffaces);
     Message(msgStat, "%8d nodefaces", nodefaces);
 
