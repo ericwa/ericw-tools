@@ -572,7 +572,7 @@ CompressRow(const byte *vis, const int numbytes, byte *out)
 int totalvis;
 
 static void
-LeafFlow(int leafnum, bsp2_dleaf_t *dleaf)
+LeafFlow(int leafnum, mleaf_t *dleaf)
 {
     leaf_t *leaf;
     byte *outbuffer;
@@ -709,7 +709,7 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
   ==================
 */
 void
-CalcPortalVis(const bsp2_t *bsp)
+CalcPortalVis(const mbsp_t *bsp)
 {
     int i, startcount;
     portal_t *p;
@@ -748,7 +748,7 @@ CalcPortalVis(const bsp2_t *bsp)
   ==================
 */
 void
-CalcVis(const bsp2_t *bsp)
+CalcVis(const mbsp_t *bsp)
 {
     int i;
 
@@ -1015,7 +1015,7 @@ SetWindingSphere(winding_t *w)
   ============
 */
 void
-LoadPortals(char *name, bsp2_t *bsp)
+LoadPortals(char *name, mbsp_t *bsp)
 {
     int i, j, count;
     portal_t *p;
@@ -1212,7 +1212,7 @@ int
 main(int argc, char **argv)
 {
     bspdata_t bspdata;
-    bsp2_t *const bsp = &bspdata.data.bsp2;
+    mbsp_t *const bsp = &bspdata.data.mbsp;
     int32_t loadversion;
     int i;
 
@@ -1281,8 +1281,7 @@ main(int argc, char **argv)
     LoadBSPFile(sourcefile, &bspdata);
 
     loadversion = bspdata.version;
-    if (loadversion != BSP2VERSION)
-        ConvertBSPFormat(BSP2VERSION, &bspdata);
+    ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
@@ -1314,8 +1313,7 @@ main(int argc, char **argv)
     CalcAmbientSounds(bsp);
 
     /* Convert data format back if necessary */
-    if (loadversion != BSP2VERSION)
-        ConvertBSPFormat(loadversion, &bspdata);
+    ConvertBSPFormat(loadversion, &bspdata);
 
     WriteBSPFile(sourcefile, &bspdata);
 

@@ -48,7 +48,7 @@ const bsp2_dface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
     return &bsp->dfaces[fnum];
 }
 
-bsp2_dface_t *BSP_GetFace(bsp2_t *bsp, int fnum)
+bsp2_dface_t *BSP_GetFace(mbsp_t *bsp, int fnum)
 {
     Q_assert(fnum >= 0 && fnum < bsp->numfaces);
     return &bsp->dfaces[fnum];
