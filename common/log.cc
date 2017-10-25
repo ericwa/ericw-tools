@@ -27,6 +27,11 @@
 
 #include <common/log.hh>
 #include <common/threads.hh>
+#include <common/cmdlib.hh>
+
+#ifdef _WIN32
+#include <windows.h> // for OutputDebugStringA
+#endif
 
 static FILE *logfile;
 static bool log_ok;
@@ -50,15 +55,26 @@ static void
 logvprint_locked__(const char *fmt, va_list args)
 {
     va_list log_args;
+    char line[1024];
 
+    va_copy(log_args, args);
+    q_vsnprintf(line, sizeof(line), fmt, args);
+    va_end(log_args);
+
+    // print to log file
     if (log_ok) {
-        va_copy(log_args, args);
-        vfprintf(logfile, fmt, log_args);
-        va_end(log_args);
+        fprintf(logfile, "%s", line);
         fflush(logfile);
     }
-    vprintf(fmt, args);
+    
+    // print to stdout
+    printf("%s", line);
     fflush(stdout);
+
+    // print to windows console
+#ifdef _WIN32
+    OutputDebugStringA(line);
+#endif
 }
 
 void

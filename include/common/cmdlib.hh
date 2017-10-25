@@ -127,6 +127,7 @@ void Q_CopyFile(const char *from, char *to);
 extern qboolean archive;
 extern char archivedir[1024];
 
+int q_vsnprintf(char *str, size_t size, const char *format, va_list args);
 int q_snprintf(char *str, size_t size, const char *format, ...);
 
 static inline void Q_assert_(bool success, const char *expr, const char *file, int line)
