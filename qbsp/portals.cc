@@ -97,13 +97,13 @@ PortalThru(const portal_t *p)
     if (contents0 == CONTENTS_SOLID || contents1 == CONTENTS_SOLID)
         return false;
 
-    /* Can't see through func_illisionary_visblocker */
-    if (contents0 == CONTENTS_ILLUSIONARY_VISBLOCKER || contents1 == CONTENTS_ILLUSIONARY_VISBLOCKER)
-        return false;
-
     /* If contents values are the same and not solid, can see through */
     if (contents0 == contents1)
         return true;
+
+    /* Can't see through func_illisionary_visblocker */
+    if (contents0 == CONTENTS_ILLUSIONARY_VISBLOCKER || contents1 == CONTENTS_ILLUSIONARY_VISBLOCKER)
+        return false;
 
     /* If water is transparent, liquids are like empty space */
     if (options.fTranswater) {
