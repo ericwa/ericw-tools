@@ -101,7 +101,7 @@ PortalThru(const portal_t *p)
     if (contents0 == contents1)
         return true;
 
-    /* Can't see through func_illisionary_visblocker */
+    /* Can't see through func_illusionary_visblocker */
     if (contents0 == CONTENTS_ILLUSIONARY_VISBLOCKER || contents1 == CONTENTS_ILLUSIONARY_VISBLOCKER)
         return false;
 

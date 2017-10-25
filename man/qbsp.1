@@ -244,6 +244,18 @@ Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled an
 .IP "\fB""_mirrorinside"" ""n""\fP"
 Set to 1 to save mirrored inside faces for bmodels, so when the player view is inside the bmodel, they will still see the faces. (e.g. for func_water, or func_illusionary)
 
+.SH "OTHER SPECIAL-PURPOSE ENTITIES"
+
+.SS "func_illusionary_visblocker"
+.PP
+For creating vis-blocking illusionary brushes (similar to "func_detail_illusionary"
+or "func_illusionary". The player can walk through them.)
+This gives the same effect as water brushes when the "-notranswater" flag is used, except the interior of
+these brushes are saved as CONTENTS_EMPTY.
+One thing to be aware of is, if the player's view is very close to the faces of these brushes, they might
+be able to see into the void (depending on the engine). Fitzquake family engines have a workaround
+for this that is enabled if the brushes are textured with a water texture ("*" prefix).
+
 .SH MAP COMPATIBILITY
 In addition to standard Quake 1 .map files, ericw-tools QBSP is compatible with:
 
