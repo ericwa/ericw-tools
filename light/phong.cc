@@ -76,6 +76,16 @@ static map<int, vector<const bsp2_dface_t *>> planesToFaces;
 static edgeToFaceMap_t EdgeToFaceMap;
 static vector<face_cache_t> FaceCache;
 
+vector<const bsp2_dface_t *> FacesUsingVert(int vertnum)
+{
+    const auto &vertsToFaces_const = vertsToFaces;
+    
+    auto it = vertsToFaces_const.find(vertnum);
+    if (it != vertsToFaces_const.end())
+        return it->second;
+    return {};
+}
+
 const edgeToFaceMap_t &GetEdgeToFaceMap()
 {
     Q_assert(s_builtPhongCaches);

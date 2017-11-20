@@ -46,6 +46,7 @@ const bsp2_dface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t
 /// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
 using edgeToFaceMap_t = std::map<std::pair<int,int>, std::vector<const bsp2_dface_t *>>;
 
+std::vector<const bsp2_dface_t *> FacesUsingVert(int vertnum);
 const edgeToFaceMap_t &GetEdgeToFaceMap();
 
 class face_cache_t {
