@@ -246,7 +246,7 @@ typedef struct {
 
 typedef struct {
     int32_t planenum;
-    int16_t children[2];        /* negative numbers are -(leafs+1), not nodes */
+    int16_t children[2];        /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
     int16_t mins[3];            /* for sphere culling */
     int16_t maxs[3];
     uint16_t firstface;

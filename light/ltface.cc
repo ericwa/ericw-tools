@@ -387,6 +387,21 @@ TexSpaceDist(const mbsp_t *bsp, const bsp2_dface_t *face, const qvec3f &p0, cons
     return qv::length(p1_tex - p0_tex);
 }
 
+/*
+ 
+ Why this is so complicated:
+ 
+ - vanilla tools just did a trace from the face centroid to the desired location of the sample point.
+   This doesn't work because we want to allow pillars blocking parts of the face. (func_detail_wall).
+ 
+ - must avoid solutions that leak light through walls (e.g. having an interior wall
+   pick up light from outside), and avoid light leaks e.g. in V-shaped sconces
+   that have a light inside the "V".
+ 
+ - it's critical to allow sample points to extend onto neighbouring faces,
+   both for phong shading to look good, as well as general light quality
+ 
+ */
 static position_t
 PositionSamplePointOnFace(const mbsp_t *bsp,
                           const bsp2_dface_t *face,

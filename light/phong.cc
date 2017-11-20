@@ -42,6 +42,73 @@
 
 using namespace std;
 
+static bool
+FaceOverlapsEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const bsp2_dface_t *f)
+{
+    for (int edgeindex = 0; edgeindex < f->numedges; edgeindex++) {
+        const int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
+        const int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
+        
+        const qvec3f v0point = Vertex_GetPos_E(bsp, v0);
+        const qvec3f v1point = Vertex_GetPos_E(bsp, v1);
+        if (LinesOverlap(vec3_t_to_glm(p0), vec3_t_to_glm(p1), v0point, v1point)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void
+FacesOverlappingEdge_r(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, int nodenum, vector<const bsp2_dface_t *> *result)
+{
+    if (nodenum < 0) {
+        // we don't do anything for leafs.
+        // faces are handled on nodes.
+        return;
+    }
+    
+    
+    const bsp2_dnode_t *node = BSP_GetNode(bsp, nodenum);
+    const dplane_t *plane = BSP_GetPlane(bsp, node->planenum);
+    const vec_t p0dist = Plane_Dist(p0, plane);
+    const vec_t p1dist = Plane_Dist(p1, plane);
+    
+    if (fabs(p0dist) < 0.1 && fabs(p1dist) < 0.1) {
+    	// check all faces on this node.
+        for (int i=0; i<node->numfaces; i++) {
+            const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+            if (FaceOverlapsEdge(p0, p1, bsp, face)) {
+                result->push_back(face);
+            }
+        }
+    }
+    
+    // recurse down front.
+    // NOTE: also do this if either point almost on-node.
+    // It could be on this plane, but also on some other plane further down
+    // the front (or back) side.
+    if (p0dist > -0.1 || p1dist > -0.1) {
+        FacesOverlappingEdge_r(p0, p1, bsp, node->children[0], result);
+    }
+    
+    // recurse down back
+    if (p0dist < 0.1 || p1dist < 0.1) {
+        FacesOverlappingEdge_r(p0, p1, bsp, node->children[1], result);
+    }
+}
+
+/**
+ * Returns faces which have an edge that overlaps the given p0-p1 edge.
+ * Uses hull 0.
+ */
+vector<const bsp2_dface_t *>
+FacesOverlappingEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const dmodel_t *model)
+{
+    vector<const bsp2_dface_t *> result;
+    FacesOverlappingEdge_r(p0, p1, bsp, model->headnode[0], &result);
+    return result;
+}
+
 /* return 0 if either vector is zero-length */
 static float
 AngleBetweenVectors(const qvec3f &d1, const qvec3f &d2)
