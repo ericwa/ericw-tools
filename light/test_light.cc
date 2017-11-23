@@ -578,6 +578,51 @@ TEST(mathlib, DistToLineSegment) {
     ASSERT_TRUE(fabs(0.5 - DistToLineSegment(qvec3f(10,0,0), qvec3f(10,0,100), qvec3f(9.5,0,0))) < epsilon);
 }
 
+TEST(mathlib, linesOverlap_points) {
+    ASSERT_TRUE(LinesOverlap({0,0,0}, {0,0,0},
+                             {0,0,0}, {0,0,0}));
+}
+
+TEST(mathlib, linesOverlap_point_line) {
+    ASSERT_TRUE(LinesOverlap({0,0,0}, {0,0,0},
+                             {0,0,0}, {0,0,1}));
+}
+
+TEST(mathlib, linesOverlap_same) {
+    ASSERT_TRUE(LinesOverlap({0,0,0}, {0,0,1},
+    						 {0,0,0}, {0,0,1}));
+}
+
+TEST(mathlib, linesOverlap_same_opposite_dir) {
+    ASSERT_TRUE(LinesOverlap({0,0,0}, {0,0,1},
+                             {0,0,1}, {0,0,0}));
+}
+
+TEST(mathlib, linesOverlap_overlap) {
+    ASSERT_TRUE(LinesOverlap({0,0,0}, {0,0,1},
+                             {0,0,0.5}, {0,0,1.5}));
+}
+
+TEST(mathlib, linesOverlap_overlap_opposite_dir) {
+    ASSERT_TRUE(LinesOverlap({0,0,0}, {0,0,1},
+                             {0,0,1.5}, {0,0,0.5}));
+}
+
+TEST(mathlib, linesOverlap_only_tips_touching) {
+    ASSERT_TRUE(LinesOverlap({0,0,0}, {0,0,1},
+                        	 {0,0,1}, {0,0,2}));
+}
+
+TEST(mathlib, linesOverlap_non_colinear) {
+    ASSERT_FALSE(LinesOverlap({0,0,0}, {0,0,1},
+                              {5,0,0}, {5,0,1}));
+}
+
+TEST(mathlib, linesOverlap_colinear_not_touching) {
+    ASSERT_FALSE(LinesOverlap({0,0,0}, {0,0,1},
+                              {0,0,2}, {0,0,3}));
+}
+
 // mesh_t
 
 TEST(mathlib, meshCreate) {

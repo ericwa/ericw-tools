@@ -839,3 +839,33 @@ float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, cons
     // clockwise rotation
     return unsigned_degrees;
 }
+
+/**
+ * do the line segments overlap at all?
+ * - if not colinear, returns false.
+ * - the direction doesn't matter.
+ * - only tips touching is enough
+ */
+bool
+LinesOverlap(const qvec3f p0, const qvec3f p1,
+             const qvec3f q0, const qvec3f q1)
+{
+    const float q0_linedist = DistToLine(p0, p1, q0);
+    if (q0_linedist > ON_EPSILON)
+        return false; // not colinear
+    
+    const float q1_linedist = DistToLine(p0, p1, q1);
+    if (q1_linedist > ON_EPSILON)
+        return false; // not colinear
+
+    const float q0_frac = FractionOfLine(p0, p1, q0);
+    const float q1_frac = FractionOfLine(p0, p1, q1);
+    
+    if (q0_frac < 0.0 && q1_frac < 0.0)
+        return false;
+    
+    if (q0_frac > 1.0 && q1_frac > 1.0)
+        return false;
+    
+    return true;
+}

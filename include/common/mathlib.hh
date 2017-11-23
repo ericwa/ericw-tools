@@ -462,4 +462,7 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     return result;
 }
 
+bool LinesOverlap(const qvec3f p0, const qvec3f p1,
+                  const qvec3f q0, const qvec3f q1);
+
 #endif /* __COMMON_MATHLIB_H__ */
