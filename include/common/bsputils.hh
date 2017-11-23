@@ -28,8 +28,13 @@
 
 const dmodel_t *BSP_GetWorldModel(const mbsp_t *bsp);
 int Face_GetNum(const mbsp_t *bsp, const bsp2_dface_t *f);
+
+// bounds-checked array access (assertion failure on out-of-bounds)
+const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum);
+const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum);
 const bsp2_dface_t *BSP_GetFace(const mbsp_t *bsp, int fnum);
 bsp2_dface_t *BSP_GetFace(mbsp_t *bsp, int fnum);
+
 int Face_VertexAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
 void Face_PointAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v, vec3_t point_out);
 plane_t Face_Plane(const mbsp_t *bsp, const bsp2_dface_t *f);

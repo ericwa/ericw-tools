@@ -42,6 +42,18 @@ int Face_GetNum(const mbsp_t *bsp, const bsp2_dface_t *f)
     return static_cast<int>(diff);
 }
 
+const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum)
+{
+    Q_assert(nodenum >= 0 && nodenum < bsp->numnodes);
+    return &bsp->dnodes[nodenum];
+}
+
+const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum)
+{
+    Q_assert(planenum >= 0 && planenum < bsp->numplanes);
+    return &bsp->dplanes[planenum];
+}
+
 const bsp2_dface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
 {
     Q_assert(fnum >= 0 && fnum < bsp->numfaces);
