@@ -409,7 +409,6 @@ PositionSamplePointOnFace(const mbsp_t *bsp,
                           const qvec3f &point,
                           const qvec3f &modelOffset);
 
-
 std::vector<const bsp2_dface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
     std::vector<const bsp2_dface_t *> result;
@@ -423,26 +422,25 @@ std::vector<const bsp2_dface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const
     return result;
 }
 
-std::vector<const bsp2_dface_t *> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dface_t *face)
+std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    std::set<const bsp2_dface_t *> resultset;
+    std::vector<neighbour_t> result;
+    std::set<const bsp2_dface_t *> used_faces;
+    
     for (int i=0; i<face->numedges; i++) {
         vec3_t p0, p1;
         Face_PointAtIndex(bsp, face, i, p0);
         Face_PointAtIndex(bsp, face, (i + 1) % face->numedges, p1);
         
-        const std::vector<const bsp2_dface_t *> tmp = FacesOverlappingEdge(p0, p1, bsp, &bsp->dmodels[0]);
-        for (const bsp2_dface_t *f : tmp) {
-            if (f != face) {
-                resultset.insert(f);
+        const std::vector<neighbour_t> tmp = FacesOverlappingEdge(p0, p1, bsp, &bsp->dmodels[0]);
+        for (const auto &neighbour : tmp) {
+            if (neighbour.face != face && used_faces.find(neighbour.face) == used_faces.end()) {
+                used_faces.insert(neighbour.face);
+                result.push_back(neighbour);
             }
     	}
     }
     
-    std::vector<const bsp2_dface_t *> result;
-    for (const bsp2_dface_t *f : resultset) {
-        result.push_back(f);
-    }
     return result;
 }
 
@@ -2062,10 +2060,10 @@ LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     
     const int fnum = Face_GetNum(lightsurf->bsp, lightsurf->face);
     
-    std::vector<const bsp2_dface_t *> neighbours = NeighbouringFaces_new(lightsurf->bsp, BSP_GetFace(lightsurf->bsp, dump_facenum));
+    std::vector<neighbour_t> neighbours = NeighbouringFaces_new(lightsurf->bsp, BSP_GetFace(lightsurf->bsp, dump_facenum));
     bool found = false;
     for (auto &f : neighbours) {
-        if (f == lightsurf->face)
+        if (f.face == lightsurf->face)
             found = true;
     }
     

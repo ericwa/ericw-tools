@@ -42,7 +42,7 @@
 
 using namespace std;
 
-static bool
+static neighbour_t
 FaceOverlapsEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const bsp2_dface_t *f)
 {
     for (int edgeindex = 0; edgeindex < f->numedges; edgeindex++) {
@@ -52,21 +52,20 @@ FaceOverlapsEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const bsp2
         const qvec3f v0point = Vertex_GetPos_E(bsp, v0);
         const qvec3f v1point = Vertex_GetPos_E(bsp, v1);
         if (LinesOverlap(vec3_t_to_glm(p0), vec3_t_to_glm(p1), v0point, v1point)) {
-            return true;
+            return  neighbour_t{f, v0point, v1point};
         }
     }
-    return false;
+    return neighbour_t{nullptr, qvec3f{}, qvec3f{}};
 }
 
 static void
-FacesOverlappingEdge_r(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, int nodenum, vector<const bsp2_dface_t *> *result)
+FacesOverlappingEdge_r(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, int nodenum, vector<neighbour_t> *result)
 {
     if (nodenum < 0) {
         // we don't do anything for leafs.
         // faces are handled on nodes.
         return;
     }
-    
     
     const bsp2_dnode_t *node = BSP_GetNode(bsp, nodenum);
     const dplane_t *plane = BSP_GetPlane(bsp, node->planenum);
@@ -77,8 +76,9 @@ FacesOverlappingEdge_r(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, int 
     	// check all faces on this node.
         for (int i=0; i<node->numfaces; i++) {
             const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
-            if (FaceOverlapsEdge(p0, p1, bsp, face)) {
-                result->push_back(face);
+            const auto neighbour = FaceOverlapsEdge(p0, p1, bsp, face);
+            if (neighbour.face != nullptr) {
+                result->push_back(neighbour);
             }
         }
     }
@@ -101,10 +101,10 @@ FacesOverlappingEdge_r(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, int 
  * Returns faces which have an edge that overlaps the given p0-p1 edge.
  * Uses hull 0.
  */
-vector<const bsp2_dface_t *>
+vector<neighbour_t>
 FacesOverlappingEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const dmodel_t *model)
 {
-    vector<const bsp2_dface_t *> result;
+    vector<neighbour_t> result;
     FacesOverlappingEdge_r(p0, p1, bsp, model->headnode[0], &result);
     return result;
 }

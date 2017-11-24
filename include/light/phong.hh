@@ -35,7 +35,19 @@
 
 #include <common/qvec.hh>
 
-std::vector<const bsp2_dface_t *> FacesOverlappingEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const dmodel_t *model);
+class neighbour_t {
+public:
+    const bsp2_dface_t *face;
+    qvec3f p0, p1;
+    
+    neighbour_t(const bsp2_dface_t *f, const qvec3f p0in, const qvec3f p1in)
+    : face(f),
+    p0(p0in),
+    p1(p1in) {
+    }
+};
+
+std::vector<neighbour_t> FacesOverlappingEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const dmodel_t *model);
 
 void CalcualateVertexNormals(const mbsp_t *bsp);
 const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int vertindex);
