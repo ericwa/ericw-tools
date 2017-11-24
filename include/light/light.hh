@@ -156,7 +156,8 @@ typedef enum {
     debugmode_dirt,
     debugmode_bounce,
     debugmode_bouncelights,
-    debugmode_debugoccluded
+    debugmode_debugoccluded,
+    debugmode_debugneighbours
 } debugmode_t;
 
 extern debugmode_t debugmode;

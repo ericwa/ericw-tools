@@ -409,6 +409,43 @@ PositionSamplePointOnFace(const mbsp_t *bsp,
                           const qvec3f &point,
                           const qvec3f &modelOffset);
 
+
+std::vector<const bsp2_dface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const bsp2_dface_t *face)
+{
+    std::vector<const bsp2_dface_t *> result;
+    for (int i=0; i<face->numedges; i++) {
+        const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, i);
+        if (smoothed != nullptr
+            && smoothed != face) {
+            result.push_back(smoothed);
+        }
+    }
+    return result;
+}
+
+std::vector<const bsp2_dface_t *> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dface_t *face)
+{
+    std::set<const bsp2_dface_t *> resultset;
+    for (int i=0; i<face->numedges; i++) {
+        vec3_t p0, p1;
+        Face_PointAtIndex(bsp, face, i, p0);
+        Face_PointAtIndex(bsp, face, (i + 1) % face->numedges, p1);
+        
+        const std::vector<const bsp2_dface_t *> tmp = FacesOverlappingEdge(p0, p1, bsp, &bsp->dmodels[0]);
+        for (const bsp2_dface_t *f : tmp) {
+            if (f != face) {
+                resultset.insert(f);
+            }
+    	}
+    }
+    
+    std::vector<const bsp2_dface_t *> result;
+    for (const bsp2_dface_t *f : resultset) {
+        result.push_back(f);
+    }
+    return result;
+}
+
 position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qvec3f &origPoint, bool phongShaded, float face_lmscale, int recursiondepth,
                            const qvec3f &modelOffset)
 {
@@ -2015,6 +2052,39 @@ LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
+static void
+LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    Q_assert(debugmode == debugmode_debugneighbours);
+    
+    /* use a style 0 light map */
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    
+    const int fnum = Face_GetNum(lightsurf->bsp, lightsurf->face);
+    
+    std::vector<const bsp2_dface_t *> neighbours = NeighbouringFaces_new(lightsurf->bsp, BSP_GetFace(lightsurf->bsp, dump_facenum));
+    bool found = false;
+    for (auto &f : neighbours) {
+        if (f == lightsurf->face)
+            found = true;
+    }
+    
+    /* Overwrite each point, red=occluded, green=ok */
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        lightsample_t *sample = &lightmap->samples[i];
+        if (fnum == dump_facenum) {//lightsurf->occluded[i]) {
+            glm_to_vec3_t(qvec3f(255,0,0), sample->color);
+        } else if (found) {
+            glm_to_vec3_t(qvec3f(0,255,0), sample->color);
+        } else {
+            glm_to_vec3_t(qvec3f(10,10,10), sample->color);
+        }
+        // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
+        lightsurf->occluded[i] = false;
+    }
+    
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
 
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
 
@@ -2913,6 +2983,9 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
     
     if (debugmode == debugmode_debugoccluded)
         LightFace_OccludedDebug(lightsurf, lightmaps);
+    
+    if (debugmode == debugmode_debugneighbours)
+        LightFace_DebugNeighbours(lightsurf, lightmaps);
     
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf, lightmaps);
