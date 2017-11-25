@@ -613,11 +613,10 @@ qvec3f GLM_PolyCentroid(const std::vector<qvec3f> &points)
     return poly_centroid;
 }
 
-qvec3f GLM_PolyRandomPoint(const std::vector<qvec3f> &points)
+poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &points)
 {
     Q_assert(points.size() >= 3);
-    
-    // FIXME: Precompute this
+
     float poly_area = 0;
     std::vector<float> triareas;
     
@@ -632,18 +631,28 @@ qvec3f GLM_PolyRandomPoint(const std::vector<qvec3f> &points)
         triareas.push_back(triarea);
         poly_area += triarea;
     }
-    
-    // Pick a random triangle, with probability proportional to triangle area
-    const float uniformRandom = Random();
     const std::vector<float> cdf = MakeCDF(triareas);
-    const int whichTri = SampleCDF(cdf, uniformRandom);
     
-    Q_assert(whichTri >= 0 && whichTri < triareas.size());
+    poly_random_point_state_t result;
+    result.points = points;
+    result.triareas = triareas;
+    result.triareas_cdf = cdf;
+    return result;
+}
 
-    const tri_t tri { points.at(0), points.at(1 + whichTri), points.at(2 + whichTri) };
+// r1, r2, r3 must be in [0, 1]
+qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, float r2, float r3)
+{
+    // Pick a random triangle, with probability proportional to triangle area
+    const float uniformRandom = r1;
+    const int whichTri = SampleCDF(state.triareas_cdf, uniformRandom);
+    
+    Q_assert(whichTri >= 0 && whichTri < state.triareas.size());
+
+    const tri_t tri { state.points.at(0), state.points.at(1 + whichTri), state.points.at(2 + whichTri) };
     
     // Pick random barycentric coords.
-    const qvec3f bary = Barycentric_Random(Random(), Random());
+    const qvec3f bary = Barycentric_Random(r2, r3);
     const qvec3f point = Barycentric_ToPoint(bary, tri);
     
     return point;

@@ -514,9 +514,11 @@ TEST(mathlib, RandomPointInPoly) {
     qvec3f max(-FLT_MAX);
     qvec3f avg(0);
     
+    const auto randomstate = GLM_PolyRandomPoint_Setup(poly);
+    
     const int N=100;
     for (int i=0; i<N; i++) {
-        const qvec3f point = GLM_PolyRandomPoint(poly);
+        const qvec3f point = GLM_PolyRandomPoint(randomstate, Random(), Random(), Random());
         ASSERT_TRUE(GLM_EdgePlanes_PointInside(edgeplanes, point));
         
         //std::cout << "point: " << qv::to_string(point) << std::endl;

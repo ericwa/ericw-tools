@@ -336,7 +336,16 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(const std::vector<qvec3f> &points,
 std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount);
 /// Returns (front part, back part)
 std::pair<std::vector<qvec3f>,std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane);
-qvec3f GLM_PolyRandomPoint(const std::vector<qvec3f> &points);
+
+class poly_random_point_state_t {
+public:
+    std::vector<qvec3f> points;
+    std::vector<float> triareas;
+    std::vector<float> triareas_cdf;
+};
+
+poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &points);
+qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, float r2, float r3);
 
 /// projects p onto the vw line.
 /// returns 0 for p==v, 1 for p==w
