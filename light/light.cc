@@ -551,6 +551,8 @@ ExportObj(const char *filename, const mbsp_t *bsp)
     }
     
     fclose(objfile);
+    
+    logprint("Wrote %s\n", filename);
 }
 
 
@@ -980,6 +982,10 @@ light_main(int argc, const char **argv)
             debugmode = debugmode_phong;
             write_litfile |= 1;
             logprint( "Phong shading debug mode enabled\n" );
+        } else if ( !strcmp( argv[ i ], "-phongdebug_obj" ) ) {
+            CheckNoDebugModeSet();
+            debugmode = debugmode_phong_obj;
+            logprint( "Phong shading debug mode (.obj export) enabled\n" );
         } else if ( !strcmp( argv[ i ], "-novisapprox" ) ) {
             novisapprox = true;
             logprint( "Skipping approximate light visibility\n" );
@@ -1127,6 +1133,17 @@ light_main(int argc, const char **argv)
     FindDebugVert(bsp);
 
     MakeTnodes(bsp);
+    
+    if (debugmode == debugmode_phong_obj) {
+        StripExtension(source);
+        DefaultExtension(source, ".obj");
+        
+        CalcualateVertexNormals(bsp);
+        ExportObj(source, bsp);
+        
+        close_log();
+        return 0;
+    }
     
     SetupLights(cfg, bsp);
     

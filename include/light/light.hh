@@ -153,6 +153,7 @@ typedef struct {
 typedef enum {
     debugmode_none = 0,
     debugmode_phong,
+    debugmode_phong_obj,
     debugmode_dirt,
     debugmode_bounce,
     debugmode_bouncelights,
