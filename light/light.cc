@@ -413,7 +413,10 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     CalcualateVertexNormals(bsp);
     
-    if (cfg_static.bounce.boolValue()) {
+    if (cfg_static.bounce.boolValue()
+        && (debugmode == debugmode_none
+            || debugmode == debugmode_bounce
+            || debugmode == debugmode_bouncelights)) {
         MakeTextureColors(bsp);
         MakeBounceLights(cfg_static, bsp);
     }
