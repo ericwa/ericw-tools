@@ -2797,8 +2797,12 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         for (int t = 0; t < actual_height; t++) {
             for (int s = 0; s < actual_width; s++) {
                 const int sampleindex = (t * actual_width) + s;
-                const qvec4f &color = output_color.at(sampleindex);
+                qvec4f color = output_color.at(sampleindex);
                 const qvec4f &direction = output_dir.at(sampleindex);
+                
+                if (debug_highlightseams && color[3] == 0) {
+                    color = qvec4f(255, 0, 0, 1);
+                }
                 
                 *lit++ = color[0];
                 *lit++ = color[1];

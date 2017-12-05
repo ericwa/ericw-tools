@@ -91,6 +91,7 @@ qboolean onlyents = false;
 qboolean novisapprox = false;
 bool nolights = false;
 backend_t rtbackend = backend_embree;
+bool debug_highlightseams = false;
 debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
 
@@ -1019,6 +1020,9 @@ light_main(int argc, const char **argv)
             
             CheckNoDebugModeSet();
             debugmode = debugmode_debugneighbours;
+        } else if ( !strcmp( argv[ i ], "-highlightseams" ) ) {
+            logprint("Highlighting lightmap seams\n");
+            debug_highlightseams = true;
         } else if ( !strcmp( argv[ i ], "-verbose" ) ) {
             verbose_log = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {

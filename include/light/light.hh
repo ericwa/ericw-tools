@@ -150,6 +150,8 @@ typedef struct {
 
 /* debug */
 
+extern bool debug_highlightseams;
+
 typedef enum {
     debugmode_none = 0,
     debugmode_phong,
