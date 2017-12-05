@@ -2060,22 +2060,34 @@ LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
     
     const int fnum = Face_GetNum(lightsurf->bsp, lightsurf->face);
     
-    std::vector<neighbour_t> neighbours = NeighbouringFaces_new(lightsurf->bsp, BSP_GetFace(lightsurf->bsp, dump_facenum));
-    bool found = false;
-    for (auto &f : neighbours) {
-        if (f.face == lightsurf->face)
-            found = true;
+//    std::vector<neighbour_t> neighbours = NeighbouringFaces_new(lightsurf->bsp, BSP_GetFace(lightsurf->bsp, dump_facenum));
+//    bool found = false;
+//    for (auto &f : neighbours) {
+//        if (f.face == lightsurf->face)
+//            found = true;
+//    }
+    
+    bool has_sample_on_dumpface = false;
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        if (lightsurf->realfacenums[i] == dump_facenum) {
+            has_sample_on_dumpface = true;
+            break;
+        }
     }
     
-    /* Overwrite each point, red=occluded, green=ok */
+    /* Overwrite each point */
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
-        if (fnum == dump_facenum) {//lightsurf->occluded[i]) {
+        const int sample_face = lightsurf->realfacenums[i];
+        
+        if (sample_face == dump_facenum) {
+            /* Red - the sample is on the selected face */
             glm_to_vec3_t(qvec3f(255,0,0), sample->color);
-        } else if (found) {
+        } else if (has_sample_on_dumpface) {
+            /* Green - the face has some samples on the selected face */
             glm_to_vec3_t(qvec3f(0,255,0), sample->color);
         } else {
-            glm_to_vec3_t(qvec3f(10,10,10), sample->color);
+            glm_to_vec3_t(qvec3f(0,0,0), sample->color);
         }
         // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
         lightsurf->occluded[i] = false;
