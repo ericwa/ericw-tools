@@ -60,6 +60,7 @@ const bsp2_dface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t
 /// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
 using edgeToFaceMap_t = std::map<std::pair<int,int>, std::vector<const bsp2_dface_t *>>;
 
+std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dface_t *face);
 std::vector<const bsp2_dface_t *> FacesUsingVert(int vertnum);
 const edgeToFaceMap_t &GetEdgeToFaceMap();
 
@@ -70,6 +71,7 @@ private:
     qvec4f m_plane;
     std::vector<qvec4f> m_edgePlanes;
     std::vector<qvec3f> m_pointsShrunkBy1Unit;
+    std::vector<neighbour_t> m_neighbours;
     
 public:
     face_cache_t(const mbsp_t *bsp, const bsp2_dface_t *face, const std::vector<qvec3f> &normals) :
@@ -77,7 +79,8 @@ public:
         m_normals(normals),
         m_plane(Face_Plane_E(bsp, face).vec4()),
         m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)),
-        m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f))
+        m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
+    	m_neighbours(NeighbouringFaces_new(bsp, face))
     { }
     
     const std::vector<qvec3f> &points() const {

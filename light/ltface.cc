@@ -422,28 +422,6 @@ std::vector<const bsp2_dface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const
     return result;
 }
 
-std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dface_t *face)
-{
-    std::vector<neighbour_t> result;
-    std::set<const bsp2_dface_t *> used_faces;
-    
-    for (int i=0; i<face->numedges; i++) {
-        vec3_t p0, p1;
-        Face_PointAtIndex(bsp, face, i, p0);
-        Face_PointAtIndex(bsp, face, (i + 1) % face->numedges, p1);
-        
-        const std::vector<neighbour_t> tmp = FacesOverlappingEdge(p0, p1, bsp, &bsp->dmodels[0]);
-        for (const auto &neighbour : tmp) {
-            if (neighbour.face != face && used_faces.find(neighbour.face) == used_faces.end()) {
-                used_faces.insert(neighbour.face);
-                result.push_back(neighbour);
-            }
-    	}
-    }
-    
-    return result;
-}
-
 position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qvec3f &origPoint, bool phongShaded, float face_lmscale, int recursiondepth,
                            const qvec3f &modelOffset)
 {
