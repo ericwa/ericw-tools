@@ -119,7 +119,22 @@ std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dfa
         Face_PointAtIndex(bsp, face, i, p0);
         Face_PointAtIndex(bsp, face, (i + 1) % face->numedges, p1);
         
-        const std::vector<neighbour_t> tmp = FacesOverlappingEdge(p0, p1, bsp, &bsp->dmodels[0]);
+        std::vector<neighbour_t> tmp = FacesOverlappingEdge(p0, p1, bsp, &bsp->dmodels[0]);
+        
+        // ensure the neighbour_t edges are pointing the same direction as the p0->p1 edge
+        // (modifies them inplace)
+        const qvec3f p0p1dir = qv::normalize(vec3_t_to_glm(p1) - vec3_t_to_glm(p0));
+        for (auto &neighbour : tmp) {
+            qvec3f neighbourDir = qv::normalize(neighbour.p1 - neighbour.p0);
+            float dp = qv::dot(neighbourDir, p0p1dir); // should really be 1 or -1
+            if (dp < 0) {
+                std::swap(neighbour.p0, neighbour.p1);
+                
+//                float new_dp = qv::dot(qv::normalize(neighbour.p1 - neighbour.p0), p0p1dir);
+//                Q_assert(new_dp > 0);
+            }
+        }
+        
         for (const auto &neighbour : tmp) {
             if (neighbour.face != face && used_faces.find(neighbour.face) == used_faces.end()) {
                 used_faces.insert(neighbour.face);
