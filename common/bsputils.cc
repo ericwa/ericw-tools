@@ -342,5 +342,6 @@ std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *f)
 
 qvec3f Face_Centroid(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
+    // FIXME: GLM_PolyCentroid has a assertion that there are >= 3 points
     return GLM_PolyCentroid(GLM_FacePoints(bsp, face));
 }
