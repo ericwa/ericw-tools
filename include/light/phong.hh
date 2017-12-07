@@ -101,6 +101,9 @@ public:
     const std::vector<qvec3f> &pointsShrunkBy1Unit() const {
         return m_pointsShrunkBy1Unit;
     }
+    const std::vector<neighbour_t> &neighbours() const {
+        return m_neighbours;
+    }
 };
 
 const face_cache_t &FaceCacheForFNum(int fnum);

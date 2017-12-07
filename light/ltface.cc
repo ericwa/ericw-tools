@@ -429,6 +429,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
     const qvec4f &surfplane = facecache.plane();
     const auto &points = facecache.points();
     const auto &edgeplanes = facecache.edgePlanes();
+    const auto &neighbours = facecache.neighbours();
     
     // check for degenerate face
     if (points.empty() || edgeplanes.empty())
@@ -441,7 +442,27 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
     if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
         return PositionSamplePointOnFace(bsp, face, phongShaded, point, modelOffset);
     }
+    
+    // fixme: handle "not possible to compute"
+    const qvec3f centroid = Face_Centroid(bsp, face);
 
+    for (const auto &neighbour : neighbours) {
+    
+        /*
+         
+         check if in XXX area:
+         
+        \XXXX|
+         \XXX|
+          |--|----|
+          |\ |    |
+          |  *    |  * = centroid
+          |------/
+         
+         */
+        
+    }
+    
     // not in any triangle. among the edges this point is _behind_,
     // search for the one that the point is least past the endpoints of the edge
     {
