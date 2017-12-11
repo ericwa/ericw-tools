@@ -2812,12 +2812,14 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                     *out++ = color[1];
                     *out++ = color[2];
                 } else {
-                    /* Average the color to get the value to write to the
+                    /* Take the max() of the 3 components to get the value to write to the
                      .bsp lightmap. this avoids issues with some engines
                      that require the lit and internal lightmap to have the same
                      intensity. (MarkV, some QW engines)
+                     
+                     This must be max(), see LightNormalize in MarkV 1036.
                      */
-                    vec_t light = LightSample_Brightness(color);
+                    float light = qmax(qmax(color[0], color[1]), color[2]);
                     if (light < 0) light = 0;
                     if (light > 255) light = 255;
                     *out++ = light;
