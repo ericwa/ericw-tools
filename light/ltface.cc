@@ -442,16 +442,17 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
     if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
         return PositionSamplePointOnFace(bsp, face, phongShaded, point, modelOffset);
     }
-    
+
+#if 0
     // fixme: handle "not possible to compute"
     const qvec3f centroid = Face_Centroid(bsp, face);
 
-    for (const auto &neighbour : neighbours) {
-    
+    for (const neighbour_t &n : neighbours) {
         /*
          
          check if in XXX area:
          
+   "in1"     "in2"
         \XXXX|
          \XXX|
           |--|----|
@@ -461,7 +462,28 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
          
          */
         
+        const qvec3f in1_normal = qv::cross(qv::normalize(n.p0 - centroid), facecache.normal());
+        const qvec3f in2_normal = qv::cross(facecache.normal(), qv::normalize(n.p1 - centroid));
+        const qvec4f in1 = GLM_MakePlane(in1_normal, n.p0);
+        const qvec4f in2 = GLM_MakePlane(in2_normal, n.p1);
+        
+        const float in1_dist = GLM_DistAbovePlane(in1, point);
+        const float in2_dist = GLM_DistAbovePlane(in2, point);
+        if (in1_dist >= 0 && in2_dist >= 0) {
+            const auto &n_facecache = FaceCacheForFNum(Face_GetNum(bsp, n.face));
+            const qvec4f &n_surfplane = n_facecache.plane();
+            const auto &n_edgeplanes = n_facecache.edgePlanes();
+            
+            // project `point` onto the surface plane, then lift it off again
+            const qvec3f n_point = GLM_ProjectPointOntoPlane(n_surfplane, origPoint) + (qvec3f(n_surfplane) * sampleOffPlaneDist);
+            
+            // check if in face..
+            if (GLM_EdgePlanes_PointInside(n_edgeplanes, n_point)) {
+                return PositionSamplePointOnFace(bsp, n.face, phongShaded, n_point, modelOffset);
+            }
+        }
     }
+#endif
     
     // not in any triangle. among the edges this point is _behind_,
     // search for the one that the point is least past the endpoints of the edge
