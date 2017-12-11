@@ -2614,6 +2614,25 @@ IntegerDownsampleImage(const std::vector<qvec4f> &input, int w, int h, int facto
 }
 
 static std::vector<qvec4f>
+HighlightSeams(const std::vector<qvec4f> &input, int w, int h)
+{
+    std::vector<qvec4f> res(input);
+
+    for (int y=0; y<h; y++) {
+        for (int x=0; x<w; x++) {
+            const int i = (y * w) + x;
+            const qvec4f inSample = res.at(i);
+            
+            if (inSample[3] == 0) {
+                res.at(i) = qvec4f(255, 0, 0, 1);
+            }
+        }
+    }
+    
+    return res;
+}
+
+static std::vector<qvec4f>
 BoxBlurImage(const std::vector<qvec4f> &input, int w, int h, int radius)
 {
     std::vector<qvec4f> res(input.size());
@@ -2784,6 +2803,11 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         // these are the actual output width*height, without oversampling.
         
         std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
+        
+        if (debug_highlightseams) {
+            fullres = HighlightSeams(fullres, oversampled_width, oversampled_height);
+        }
+        
         if (softsamples > 0) {
             fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, softsamples);
         }
@@ -2798,10 +2822,6 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 const int sampleindex = (t * actual_width) + s;
                 qvec4f color = output_color.at(sampleindex);
                 const qvec4f &direction = output_dir.at(sampleindex);
-                
-                if (debug_highlightseams && color[3] == 0) {
-                    color = qvec4f(255, 0, 0, 1);
-                }
                 
                 *lit++ = color[0];
                 *lit++ = color[1];
