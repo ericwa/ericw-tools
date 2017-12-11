@@ -2614,6 +2614,70 @@ IntegerDownsampleImage(const std::vector<qvec4f> &input, int w, int h, int facto
 }
 
 static std::vector<qvec4f>
+FloodFillTransparent(const std::vector<qvec4f> &input, int w, int h)
+{
+    // transparent pixels take the average of their neighbours.
+    
+    std::vector<qvec4f> res(input);
+    
+    while (1) {
+        int unhandled_pixels = 0;
+        
+        for (int y=0; y<h; y++) {
+            for (int x=0; x<w; x++) {
+                const int i = (y * w) + x;
+                const qvec4f inSample = res.at(i);
+                
+                if (inSample[3] == 0) {
+                    // average the neighbouring non-transparent samples
+                    
+                    int opaque_neighbours = 0;
+                    qvec3f neighbours_sum;
+                    for (int y0 = -1; y0 <= 1; y0++) {
+                        for (int x0 = -1; x0 <= 1; x0++) {
+                            const int x1 = x + x0;
+                            const int y1 = y + y0;
+                            
+                            if (x1 < 0 || x1 >= w)
+                                continue;
+                            if (y1 < 0 || y1 >= h)
+                                continue;
+                            
+                            const qvec4f neighbourSample = res.at((y1 * w) + x1);
+                            if (neighbourSample[3] == 1) {
+                                opaque_neighbours++;
+                                neighbours_sum += qvec3f(neighbourSample);
+                            }
+                        }
+                    }
+                    
+                    if (opaque_neighbours > 0) {
+                        neighbours_sum *= (1.0f / (float)opaque_neighbours);
+                        res.at(i) = qvec4f(neighbours_sum[0], neighbours_sum[1], neighbours_sum[2], 1.0f);
+                        
+                        // this sample is now opaque
+                    } else {
+                        unhandled_pixels++;
+                        
+                        // all neighbours are transparent. need to perform more iterations (or the whole lightmap is transparent).
+                    }
+                }
+            }
+        }
+        
+        if (unhandled_pixels == input.size()) {
+            logprint("FloodFillTransparent: warning, fully transparent lightmap\n");
+            break;
+        }
+        
+        if (unhandled_pixels == 0)
+            break; // all done
+    }
+    
+    return res;
+}
+
+static std::vector<qvec4f>
 HighlightSeams(const std::vector<qvec4f> &input, int w, int h)
 {
     std::vector<qvec4f> res(input);
@@ -2807,6 +2871,9 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         if (debug_highlightseams) {
             fullres = HighlightSeams(fullres, oversampled_width, oversampled_height);
         }
+        
+        // removes all transparent pixels by averaging from adjacent pixels
+        fullres = FloodFillTransparent(fullres, oversampled_width, oversampled_height);
         
         if (softsamples > 0) {
             fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, softsamples);
