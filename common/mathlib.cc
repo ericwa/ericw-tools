@@ -558,6 +558,11 @@ GLM_TriangleArea(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2)
     return 0.5f * qv::length(qv::cross(v2 - v0, v1 - v0));
 }
 
+qvec4f GLM_MakePlane(const qvec3f &normal, const qvec3f &point)
+{
+    return qvec4f(normal[0], normal[1], normal[2], qv::dot(point, normal));
+}
+
 float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point)
 {
     return qv::dot(qvec3f(plane), point) - plane[3];

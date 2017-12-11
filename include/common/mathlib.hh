@@ -322,6 +322,7 @@ bool GLM_EdgePlanes_PointInside(const std::vector<qvec4f> &edgeplanes, const qve
 float GLM_EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
 qvec3f GLM_TriangleCentroid(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2);
 float GLM_TriangleArea(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2);
+qvec4f GLM_MakePlane(const qvec3f &normal, const qvec3f &point);
 float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point);
 qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point);
 float GLM_PolyArea(const std::vector<qvec3f> &points);

@@ -282,6 +282,11 @@ TEST(mathlib, RotateFromUpToSurfaceNormal) {
     }
 }
 
+TEST(mathlib, MakePlane) {
+    EXPECT_EQ(qvec4f(0, 0, 1, 10), GLM_MakePlane(qvec3f(0,0,1), qvec3f(0,0,10)));
+    EXPECT_EQ(qvec4f(0, 0, 1, 10), GLM_MakePlane(qvec3f(0,0,1), qvec3f(100,100,10)));
+}
+
 TEST(mathlib, DistAbovePlane) {
     qvec4f plane(0, 0, 1, 10);
     qvec3f point(100, 100, 100);
