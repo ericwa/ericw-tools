@@ -444,6 +444,13 @@ CheckBSPFile(const mbsp_t *bsp)
         }
     }
     
+    printf("world mins: %f %f %f maxs: %f %f %f\n",
+           bsp->dmodels[0].mins[0],
+           bsp->dmodels[0].mins[1],
+           bsp->dmodels[0].mins[2],
+           bsp->dmodels[0].maxs[0],
+           bsp->dmodels[0].maxs[1],
+           bsp->dmodels[0].maxs[2]);
 }
 
 int
