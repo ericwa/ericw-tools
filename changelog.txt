@@ -1,3 +1,15 @@
+2017-12-28 ericw-tools 0.16
+
+- light: add flood-filling to fix black seams in detailwall.map when no -extra/-extra4 used
+- light: fix color->greyscale conversion to be compatible with MarkV and some QuakeWorld engines
+- light: don't mark sample points inside semi-transparent shadow casters as occluded.
+- qbsp: add "_external_map_scale" key for misc_external_map
+- qbsp: experimental func_illusionary_visblocker entity
+- qbsp: better detection of when a map exceeds BSP29 limits. Previously, a corrupt BSP would be written when nodes/leafs exceeded BSP29 limits.
+- bsputil: add --convert option. Not very useful, but can convert between BSP2 and 2PSB, for example.
+- bsputil: "--check" option logs world mins/maxs
+- bsputil, bspinfo: can now read Q2 BSP files
+
 2017-09-17 TyrUtils-ericw 0.15.11
 
 - light: add "_sun" entity key to configure sunlight in an entity instead of worldspawn.
