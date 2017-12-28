@@ -35,6 +35,7 @@ using namespace std;
 
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
+std::atomic<uint32_t> fully_transparent_lightmaps;
 
 /* ======================================================================== */
 
@@ -2688,7 +2689,8 @@ FloodFillTransparent(const std::vector<qvec4f> &input, int w, int h)
         }
         
         if (unhandled_pixels == input.size()) {
-            logprint("FloodFillTransparent: warning, fully transparent lightmap\n");
+            //logprint("FloodFillTransparent: warning, fully transparent lightmap\n");
+            fully_transparent_lightmaps++;
             break;
         }
         

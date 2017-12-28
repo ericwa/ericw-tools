@@ -1208,7 +1208,7 @@ light_main(int argc, const char **argv)
     logprint("%f bounce lights tested, %f hits per sample point\n",
              static_cast<double>(total_bounce_rays) / static_cast<double>(total_samplepoints),
              static_cast<double>(total_bounce_ray_hits) / static_cast<double>(total_samplepoints));
-    
+    logprint("%d empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
     close_log();
     
     return 0;
