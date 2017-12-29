@@ -1,5 +1,5 @@
-<!-- Creator     : groff version 1.22.3 -->
-<!-- CreationDate: Sun Sep 17 13:15:31 2017 -->
+<!-- Creator     : groff version 1.19.2 -->
+<!-- CreationDate: Fri Dec 29 00:41:32 2017 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -8,17 +8,16 @@
 <meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <meta name="Content-Style" content="text/css">
 <style type="text/css">
-       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       h1      { text-align: center }
+       p     { margin-top: 0; margin-bottom: 0; }
+       pre   { margin-top: 0; margin-bottom: 0; }
+       table { margin-top: 0; margin-bottom: 0; }
 </style>
 <title>QBSP</title>
 
 </head>
 <body>
 
-<h1 align="center">QBSP</h1>
+<h1 align=center>QBSP</h1>
 
 <a href="#NAME">NAME</a><br>
 <a href="#SYNOPSIS">SYNOPSIS</a><br>
@@ -29,6 +28,7 @@
 <a href="#DETAIL BRUSH SUPPORT">DETAIL BRUSH SUPPORT</a><br>
 <a href="#DETAIL VARIANTS">DETAIL VARIANTS</a><br>
 <a href="#MODEL ENTITY KEYS">MODEL ENTITY KEYS</a><br>
+<a href="#OTHER SPECIAL-PURPOSE ENTITIES">OTHER SPECIAL-PURPOSE ENTITIES</a><br>
 <a href="#MAP COMPATIBILITY">MAP COMPATIBILITY</a><br>
 <a href="#AUTHOR">AUTHOR</a><br>
 <a href="#REPORTING BUGS">REPORTING BUGS</a><br>
@@ -38,25 +38,22 @@
 <hr>
 
 
-<h2>NAME
 <a name="NAME"></a>
-</h2>
+<h2>NAME</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">qbsp &minus;
 Compile a Quake BSP file from a MAP source file</p>
 
-<h2>SYNOPSIS
 <a name="SYNOPSIS"></a>
-</h2>
+<h2>SYNOPSIS</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>
 [OPTION]... SOURCFILE [DESTFILE]</p>
 
-<h2>DESCRIPTION
 <a name="DESCRIPTION"></a>
-</h2>
+<h2>DESCRIPTION</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>qbsp</b> is
@@ -68,69 +65,68 @@ filename will be chosen by stripping the file extension (if
 any) from <i>SOURCEFILE</i> and appending the .bsp
 extension.</p>
 
-<h2>OPTIONS
 <a name="OPTIONS"></a>
-</h2>
+<h2>OPTIONS</h2>
 
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;nofill</b></p>
+<p style="margin-left:11%; margin-top: 1em"><b>-nofill</b></p>
 
 <p style="margin-left:22%;">Doesn&rsquo;t perform outside
 filling</p>
 
-<p style="margin-left:11%;"><b>&minus;noclip</b></p>
+<p style="margin-left:11%;"><b>-noclip</b></p>
 
 <p style="margin-left:22%;">Doesn&rsquo;t build clip
 hulls</p>
 
-<p style="margin-left:11%;"><b>&minus;noskip</b></p>
+<p style="margin-left:11%;"><b>-noskip</b></p>
 
 <p style="margin-left:22%;">Doesn&rsquo;t remove faces
 using the &rsquo;skip&rsquo; texture</p>
 
-<p style="margin-left:11%;"><b>&minus;onlyents</b></p>
+<p style="margin-left:11%;"><b>-onlyents</b></p>
 
 <p style="margin-left:22%;">Only updates .map entities</p>
 
-<p style="margin-left:11%;"><b>&minus;verbose</b></p>
+<p style="margin-left:11%;"><b>-verbose</b></p>
 
 <p style="margin-left:22%;">Print out more .map
 information</p>
 
-<p style="margin-left:11%;"><b>&minus;noverbose</b></p>
+<p style="margin-left:11%;"><b>-noverbose</b></p>
 
 <p style="margin-left:22%;">Print out almost no information
 at all</p>
 
-<p style="margin-left:11%;"><b>&minus;splitspecial</b></p>
+<p style="margin-left:11%;"><b>-splitspecial</b></p>
 
 <p style="margin-left:22%;">Doesn&rsquo;t combine sky and
 water faces into one large face</p>
 
-<p style="margin-left:11%;"><b>&minus;transwater</b></p>
+<p style="margin-left:11%;"><b>-transwater</b></p>
 
 <p style="margin-left:22%;">Computes portal information for
 transparent water (default)</p>
 
-<p style="margin-left:11%;"><b>&minus;notranswater</b></p>
+<p style="margin-left:11%;"><b>-notranswater</b></p>
 
 <p style="margin-left:22%;">Computes portal information for
 opaque water</p>
 
-<p style="margin-left:11%;"><b>&minus;transsky</b></p>
+<p style="margin-left:11%;"><b>-transsky</b></p>
 
 <p style="margin-left:22%;">Computes portal information for
 transparent sky</p>
 
-<p style="margin-left:11%;"><b>&minus;nooldaxis</b></p>
+<p style="margin-left:11%;"><b>-nooldaxis</b></p>
 
 <p style="margin-left:22%;">Use alternate texture alignment
 algorithm. The default is to use the original QBSP texture
 alignment algorithm, which required the -oldaxis switch in
 tyrutils-ericw v0.15.1 and earlier.</p>
 
-<p style="margin-left:11%;"><b>&minus;forcegoodtree</b>
+<p style="margin-left:11%;"><b>-forcegoodtree</b>
 (experimental)</p>
 
 <p style="margin-left:22%;">Force use of expensive
@@ -138,76 +134,75 @@ processing for SolidBSP stage. Often results in a more
 optimal BSP file in terms of file size, at the expense of
 extra processing time.</p>
 
-<p style="margin-left:11%;"><b>&minus;bspleak</b></p>
+<p style="margin-left:11%;"><b>-bspleak</b></p>
 
 <p style="margin-left:22%;">Creates a .por file, used in
 the BSP editor</p>
 
-<p style="margin-left:11%;"><b>&minus;oldleak</b></p>
+<p style="margin-left:11%;"><b>-oldleak</b></p>
 
 <p style="margin-left:22%;">Create an old-style QBSP .PTS
 file (default is new)</p>
 
-<p style="margin-left:11%;"><b>&minus;nopercent</b></p>
+<p style="margin-left:11%;"><b>-nopercent</b></p>
 
 <p style="margin-left:22%;">Prevents output of percent
 completion information</p>
 
-<table width="100%" border="0" rules="none" frame="void"
+<table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-<p><b>&minus;bsp2</b></p></td>
+<p style="margin-top: 1em" valign="top"><b>-bsp2</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p>Create the output BSP file in BSP2 format. Allows the
-creation of much larger and more complex maps than the
-original BSP 29 format).</p></td></tr>
+<p style="margin-top: 1em" valign="top">Create the output
+BSP file in BSP2 format. Allows the creation of much larger
+and more complex maps than the original BSP 29 format).</p></td>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-<p><b>&minus;2psb</b></p></td>
+<p style="margin-top: 1em" valign="top"><b>-2psb</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p>Create the output BSP file in 2PSB format. This an
-earlier version of the BSP2 format, supported by the RMQ
-engine (and thus is also known as the BSP2rmq or RMQe bsp
-format). original BSP 29 format).</p></td></tr>
+<p style="margin-top: 1em" valign="top">Create the output
+BSP file in 2PSB format. This an earlier version of the BSP2
+format, supported by the RMQ engine (and thus is also known
+as the BSP2rmq or RMQe bsp format). original BSP 29
+format).</p> </td>
 </table>
 
-<p style="margin-left:11%;"><b>&minus;leakdist [n]</b></p>
+<p style="margin-left:11%;"><b>-leakdist [n]</b></p>
 
 <p style="margin-left:22%;">Space between leakfile points
 (default 2)</p>
 
-<p style="margin-left:11%;"><b>&minus;subdivide [n]</b></p>
+<p style="margin-left:11%;"><b>-subdivide [n]</b></p>
 
 <p style="margin-left:22%;">Use different texture
 subdivision (default 240)</p>
 
-<p style="margin-left:11%;"><b>&minus;wadpath
-&lt;dir&gt;</b></p>
+<p style="margin-left:11%;"><b>-wadpath &lt;dir&gt;</b></p>
 
 <p style="margin-left:22%;">Search this directory for wad
 files (default is cwd)</p>
 
-<p style="margin-left:11%;"><b>&minus;oldrottex</b></p>
+<p style="margin-left:11%;"><b>-oldrottex</b></p>
 
 <p style="margin-left:22%;">Use old method of texturing
 rotate_ brushes where the mapper aligns textures for the
 object at (0 0 0).</p>
 
-<p style="margin-left:11%;"><b>&minus;maxNodeSize
-[n]</b></p>
+<p style="margin-left:11%;"><b>-maxNodeSize [n]</b></p>
 
 <p style="margin-left:22%;">Switch to the cheap spatial
 subdivion bsp heuristic when splitting nodes of this size
@@ -216,44 +211,42 @@ times on large maps and should generate better bsp trees as
 well. From txqbsp-xt, thanks rebb. (default 1024, 0 to
 disable)</p>
 
-<p style="margin-left:11%;"><b>&minus;hexen2</b></p>
+<p style="margin-left:11%;"><b>-hexen2</b></p>
 
 <p style="margin-left:22%;">Generate a hexen2 bsp.</p>
 
-<p style="margin-left:11%;"><b>&minus;wrbrushes</b></p>
+<p style="margin-left:11%;"><b>-wrbrushes</b></p>
 
 <p style="margin-left:22%;">(bspx) Includes a list of
 brushes for brush-based collision.</p>
 
-
-<p style="margin-left:11%;"><b>&minus;wrbrushesonly</b></p>
+<p style="margin-left:11%;"><b>-wrbrushesonly</b></p>
 
 <p style="margin-left:22%;">&quot;-wrbrushes&quot; combined
 with &quot;-noclip&quot; argument.</p>
 
-<table width="100%" border="0" rules="none" frame="void"
+<table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="9%">
 
 
-<p><b>&minus;notex</b></p></td>
+<p style="margin-top: 1em" valign="top"><b>-notex</b></p></td>
 <td width="2%"></td>
 <td width="78%">
 
 
-<p>Write only placeholder textures, to depend upon
-replacements.</p> </td></tr>
+<p style="margin-top: 1em" valign="top">Write only
+placeholder textures, to depend upon replacements.</p></td>
 </table>
 
-<p style="margin-left:11%;"><b>&minus;omitdetail</b></p>
+<p style="margin-left:11%;"><b>-omitdetail</b></p>
 
 <p style="margin-left:22%;">Detail brushes are omitted from
 the compile.</p>
 
-<p style="margin-left:11%;"><b>&minus;convert
-&lt;fmt&gt;</b></p>
+<p style="margin-left:11%;"><b>-convert &lt;fmt&gt;</b></p>
 
 <p style="margin-left:22%;">Convert a .MAP to a different
 .MAP format. fmt can be: quake, quake2, valve, bp (brush
@@ -263,9 +256,8 @@ texture alignment in the source map, other conversions are
 lossless. The converted map is saved to &lt;source map
 name&gt;-&lt;fmt&gt;.map.</p>
 
-<h2>SPECIAL TEXTURE NAMES
 <a name="SPECIAL TEXTURE NAMES"></a>
-</h2>
+<h2>SPECIAL TEXTURE NAMES</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">The contents
@@ -309,9 +301,8 @@ brush which you don&rsquo;t want to generate bsp splits or
 portals. All surfaces of a hint brush must use either the
 <i>hint</i> or <i>hintskip</i> texture name.</p>
 
-<h2>EXTERNAL MAP PREFAB SUPPORT
 <a name="EXTERNAL MAP PREFAB SUPPORT"></a>
-</h2>
+<h2>EXTERNAL MAP PREFAB SUPPORT</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">This qbsp has a
@@ -372,9 +363,14 @@ down.</p>
 &quot;_external_map_angles&quot; for when you want to
 specify just a yaw rotation.</p>
 
-<h2>DETAIL BRUSH SUPPORT
+<p style="margin-left:11%;"><b>_external_map_scale</b></p>
+
+<p style="margin-left:22%;">Scale factor for the prefab,
+defaults to 1. Either specify a single value or three
+scales, &quot;x y z&quot;.</p>
+
 <a name="DETAIL BRUSH SUPPORT"></a>
-</h2>
+<h2>DETAIL BRUSH SUPPORT</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">This version of
@@ -455,9 +451,8 @@ potentially visible set (PVS) for the map/bsp. So you will
 also need a vis util capable of processing the PRT2 file
 format.</p>
 
-<h2>DETAIL VARIANTS
 <a name="DETAIL VARIANTS"></a>
-</h2>
+<h2>DETAIL VARIANTS</h2>
 
 
 
@@ -488,9 +483,8 @@ Similar to func_detail_wall except it&rsquo;s suitable for
 fence textures, never clips away world faces. Useful for
 fences, grates, etc., that are solid and block gunfire.</p>
 
-<h2>MODEL ENTITY KEYS
 <a name="MODEL ENTITY KEYS"></a>
-</h2>
+<h2>MODEL ENTITY KEYS</h2>
 
 
 
@@ -509,108 +503,125 @@ inside faces for bmodels, so when the player view is inside
 the bmodel, they will still see the faces. (e.g. for
 func_water, or func_illusionary)</p>
 
-<h2>MAP COMPATIBILITY
+<a name="OTHER SPECIAL-PURPOSE ENTITIES"></a>
+<h2>OTHER SPECIAL-PURPOSE ENTITIES</h2>
+
+
+
+<p style="margin-left:11%; margin-top: 1em"><b>func_illusionary_visblocker</b>
+<br>
+For creating vis-blocking illusionary brushes (similar to
+&quot;func_detail_illusionary&quot; or
+&quot;func_illusionary&quot;. The player can walk through
+them.) This gives the same effect as water brushes when the
+&quot;-notranswater&quot; flag is used, except the interior
+of these brushes are saved as CONTENTS_EMPTY. One thing to
+be aware of is, if the player&rsquo;s view is very close to
+the faces of these brushes, they might be able to see into
+the void (depending on the engine). Fitzquake family engines
+have a workaround for this that is enabled if the brushes
+are textured with a water texture (&quot;*&quot;
+prefix).</p>
+
 <a name="MAP COMPATIBILITY"></a>
-</h2>
+<h2>MAP COMPATIBILITY</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">In addition to
-standard Quake 1 .map files, TyrUtils QBSP is compatible
+standard Quake 1 .map files, ericw-tools QBSP is compatible
 with:</p>
 
-<table width="100%" border="0" rules="none" frame="void"
+<table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p>&bull;</p></td>
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p>Floating point brush coordinates and texture
-alignments</p> </td></tr>
+<p style="margin-top: 1em" valign="top">Floating point
+brush coordinates and texture alignments</p></td>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p>&bull;</p></td>
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p>Valve&rsquo;s 220 map format as produced by the
-<i>Hammer</i> editor</p></td></tr>
+<p style="margin-top: 1em" valign="top">Valve&rsquo;s 220
+map format as produced by the <i>Hammer</i> editor</p></td>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p>&bull;</p></td>
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p>Extended texture positioning as supported by the
-<i>QuArK</i> editor</p></td></tr>
+<p style="margin-top: 1em" valign="top">Extended texture
+positioning as supported by the <i>QuArK</i> editor</p></td>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p>&bull;</p></td>
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p>Standard Quake 2 map format (leading paths in texture
-names are stripped and any extra surface properties are
-ignored)</p> </td></tr>
+<p style="margin-top: 1em" valign="top">Standard Quake 2
+map format (leading paths in texture names are stripped and
+any extra surface properties are ignored)</p></td>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="1%">
 
 
-<p>&bull;</p></td>
+<p style="margin-top: 1em" valign="top">&bull;</p></td>
 <td width="10%"></td>
 <td width="78%">
 
 
-<p>Brush Primitives produce by Radiant editors (normally a
-Quake 3 format)</p></td></tr>
+<p style="margin-top: 1em" valign="top">Brush Primitives
+produce by Radiant editors (normally a Quake 3 format)</p></td>
 </table>
 
-<h2>AUTHOR
 <a name="AUTHOR"></a>
-</h2>
+<h2>AUTHOR</h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">Written by
-Kevin Shanahan (aka Tyrann) <br>
-Based on source provided by id Software and Greg Lewis <br>
-http://disenchant.net</p>
+<p style="margin-left:11%; margin-top: 1em">Eric Wasylishen
+<br>
+Kevin Shanahan (aka Tyrann) - http://disenchant.net <br>
+Based on source provided by id Software and Greg Lewis</p>
 
-<h2>REPORTING BUGS
 <a name="REPORTING BUGS"></a>
-</h2>
+<h2>REPORTING BUGS</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Please post bug
-reports at https://github.com/ericwa/tyrutils-ericw/issues.
+reports at https://github.com/ericwa/ericw-tools/issues.
 <br>
 Improvements to the documentation are welcome and
 encouraged.</p>
 
-<h2>COPYRIGHT
 <a name="COPYRIGHT"></a>
-</h2>
+<h2>COPYRIGHT</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Copyright (C)
-2013 Kevin Shanahan <br>
+2017 Eric Wasylishen <br>
+Copyright (C) 2013 Kevin Shanahan <br>
 Copyright (C) 1997 Greg Lewis <br>
 Copyright (C) 1997 id Software <br>
 License GPLv2+: GNU GPL version 2 or later <br>
@@ -620,9 +631,8 @@ License GPLv2+: GNU GPL version 2 or later <br>
 software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.</p>
 
-<h2>SEE ALSO
 <a name="SEE ALSO"></a>
-</h2>
+<h2>SEE ALSO</h2>
 
 
 

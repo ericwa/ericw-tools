@@ -1,5 +1,5 @@
-<!-- Creator     : groff version 1.22.3 -->
-<!-- CreationDate: Sun Sep 17 13:15:31 2017 -->
+<!-- Creator     : groff version 1.19.2 -->
+<!-- CreationDate: Fri Dec 29 00:41:32 2017 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -8,17 +8,16 @@
 <meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
 <meta name="Content-Style" content="text/css">
 <style type="text/css">
-       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       h1      { text-align: center }
+       p     { margin-top: 0; margin-bottom: 0; }
+       pre   { margin-top: 0; margin-bottom: 0; }
+       table { margin-top: 0; margin-bottom: 0; }
 </style>
 <title>LIGHT</title>
 
 </head>
 <body>
 
-<h1 align="center">LIGHT</h1>
+<h1 align=center>LIGHT</h1>
 
 <a href="#NAME">NAME</a><br>
 <a href="#SYNOPSIS">SYNOPSIS</a><br>
@@ -35,25 +34,22 @@
 <hr>
 
 
-<h2>NAME
 <a name="NAME"></a>
-</h2>
+<h2>NAME</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">light &minus;
 Caclulate lightmap data for a Quake BSP file</p>
 
-<h2>SYNOPSIS
 <a name="SYNOPSIS"></a>
-</h2>
+<h2>SYNOPSIS</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>light</b>
 [OPTION]... BSPFILE</p>
 
-<h2>DESCRIPTION
 <a name="DESCRIPTION"></a>
-</h2>
+<h2>DESCRIPTION</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>light</b>
@@ -62,9 +58,8 @@ information based on the entity definitions contained in the
 .bsp. The .bsp file is updated with the new light data upon
 completion, overwriting any existing lighting data.</p>
 
-<h2>OPTIONS
 <a name="OPTIONS"></a>
-</h2>
+<h2>OPTIONS</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Note, any of
@@ -74,34 +69,35 @@ setting in worldspawn.</p>
 
 <p style="margin-left:11%; margin-top: 1em"><b>Performance
 options: <br>
-&minus;threads n</b></p>
+-threads n</b></p>
 
 <p style="margin-left:22%;">Set number of threads
 explicitly. By default light will attempt to detect the
 number of CPUs/cores available.</p>
 
-<table width="100%" border="0" rules="none" frame="void"
+<table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="9%">
 
 
-<p><b>&minus;extra</b></p></td>
+<p style="margin-top: 1em" valign="top"><b>-extra</b></p></td>
 <td width="2%"></td>
 <td width="78%">
 
 
-<p>Calculate extra samples (2x2) and average the results
-for smoother shadows.</p></td></tr>
+<p style="margin-top: 1em" valign="top">Calculate extra
+samples (2x2) and average the results for smoother
+shadows.</p> </td>
 </table>
 
-<p style="margin-left:11%;"><b>&minus;extra4</b></p>
+<p style="margin-left:11%;"><b>-extra4</b></p>
 
 <p style="margin-left:22%;">Calculate even more samples
 (4x4) and average the results for smoother shadows.</p>
 
-<p style="margin-left:11%;"><b>&minus;gate n</b></p>
+<p style="margin-left:11%;"><b>-gate n</b></p>
 
 <p style="margin-left:22%;">Set a minimum light level,
 below which can be considered zero brightness. This can
@@ -110,8 +106,7 @@ numbers of lights with inverse or inverse square falloff. In
 most cases, values less than 1.0 will cause no discernable
 visual differences. Default 0.001.</p>
 
-<p style="margin-left:11%;"><b>&minus;sunsamples
-[n]</b></p>
+<p style="margin-left:11%;"><b>-sunsamples [n]</b></p>
 
 <p style="margin-left:22%;">Set the number of samples to
 use for &quot;_sunlight_penumbra&quot; and
@@ -119,7 +114,7 @@ use for &quot;_sunlight_penumbra&quot; and
 because of how the suns are set up in a sphere). Default
 100.</p>
 
-<p style="margin-left:11%;"><b>&minus;surflight_subdivide
+<p style="margin-left:11%;"><b>-surflight_subdivide
 [n]</b></p>
 
 <p style="margin-left:22%;">Configure spacing of all
@@ -130,24 +125,25 @@ per-surface-light.</p>
 <p style="margin-left:11%; margin-top: 1em"><b>Output
 format options:</b></p>
 
-<table width="100%" border="0" rules="none" frame="void"
+<table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="6%">
 
 
-<p><b>&minus;lit</b></p></td>
+<p valign="top"><b>-lit</b></p></td>
 <td width="5%"></td>
 <td width="78%">
 
 
-<p>Force generation of a .lit file, even if your map does
-not have any coloured lights. By default, light will
-automatically generate the .lit file when needed.</p></td></tr>
+<p valign="top">Force generation of a .lit file, even if
+your map does not have any coloured lights. By default,
+light will automatically generate the .lit file when
+needed.</p> </td>
 </table>
 
-<p style="margin-left:11%;"><b>&minus;onlyents</b></p>
+<p style="margin-left:11%;"><b>-onlyents</b></p>
 
 <p style="margin-left:22%;">Updates the entities lump in
 the bsp. You should run this after running qbsp with
@@ -157,7 +153,7 @@ does is assign style numbers to each switchable light.</p>
 
 <p style="margin-left:11%; margin-top: 1em"><b>Postprocessing
 options: <br>
-&minus;soft [n]</b></p>
+-soft [n]</b></p>
 
 <p style="margin-left:22%;">Perform post-processing on the
 lightmap which averages adjacent samples to smooth shadow
@@ -165,39 +161,38 @@ edges. If n is specified, the algorithm will take
 &rsquo;n&rsquo; samples on each side of the sample point and
 replace the original value with the average. e.g. a value of
 1 results in averaging a 3x3 square centred on the original
-sample. 2 implies a 5x5 square and so on. If &minus;soft is
+sample. 2 implies a 5x5 square and so on. If -soft is
 specified, but n is omitted, a value will be the level of
 oversampling requested. If no oversampling, then the implied
-value is 1. &minus;extra implies a value of 2 and
-&minus;extra4 implies 3. Default 0 (off).</p>
+value is 1. -extra implies a value of 2 and -extra4 implies
+3. Default 0 (off).</p>
 
 <p style="margin-left:11%; margin-top: 1em"><b>Debug modes:
 <br>
-&minus;dirtdebug</b></p>
+-dirtdebug</b></p>
 
 <p style="margin-left:22%;">Implies &quot;-dirt&quot;, and
 renders just the dirtmap against a fullbright background,
 ignoring all lights in the map. Useful for previewing and
 turning the dirt settings.</p>
 
-<p style="margin-left:11%;"><b>&minus;phongdebug</b></p>
+<p style="margin-left:11%;"><b>-phongdebug</b></p>
 
 <p style="margin-left:22%;">Write normals to lit file for
 debugging phong shading.</p>
 
-<p style="margin-left:11%;"><b>&minus;bouncedebug</b></p>
+<p style="margin-left:11%;"><b>-bouncedebug</b></p>
 
 <p style="margin-left:22%;">Write bounced lighting only to
 the lightmap for debugging / previewing -bounce.</p>
 
-
-<p style="margin-left:11%;"><b>&minus;surflight_dump</b></p>
+<p style="margin-left:11%;"><b>-surflight_dump</b></p>
 
 <p style="margin-left:22%;">Saves the lights generated by
 surfacelights to a &quot;mapname-surflights.map&quot;
 file.</p>
 
-<p style="margin-left:11%;"><b>&minus;novisapprox</b></p>
+<p style="margin-left:11%;"><b>-novisapprox</b></p>
 
 <p style="margin-left:22%;">Disable approximate visibility
 culling of lights, which has a small chance of introducing
@@ -206,7 +201,7 @@ artifacts where lights cut off too soon.</p>
 
 <p style="margin-left:11%; margin-top: 1em"><b>Experimental
 options: <br>
-&minus;addmin</b></p>
+-addmin</b></p>
 
 <p style="margin-left:22%;">Changes the behaviour of
 <i>minlight</i>. Instead of increasing low light levels to
@@ -214,62 +209,63 @@ the global minimum, add the global minimum light level to
 all style 0 lightmaps. This may help reducing the sometimes
 uniform minlight effect.</p>
 
-<table width="100%" border="0" rules="none" frame="void"
+<table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-<p><b>&minus;lit2</b></p></td>
+<p style="margin-top: 1em" valign="top"><b>-lit2</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p>Force generation of a .lit2 file, even if your map does
-not have any coloured lights.</p></td></tr>
+<p style="margin-top: 1em" valign="top">Force generation of
+a .lit2 file, even if your map does not have any coloured
+lights.</p> </td>
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-<p><b>&minus;lux</b></p></td>
+<p style="margin-top: 1em" valign="top"><b>-lux</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p>Generate a .lux file storing average incoming light
-directions for surfaces. Usable by FTEQW with
-&quot;r_deluxemapping 1&quot;</p></td></tr>
+<p style="margin-top: 1em" valign="top">Generate a .lux
+file storing average incoming light directions for surfaces.
+Usable by FTEQW with &quot;r_deluxemapping 1&quot;</p></td>
 </table>
 
-<p style="margin-left:11%;"><b>&minus;lmscale n</b></p>
+<p style="margin-left:11%;"><b>-lmscale n</b></p>
 
 <p style="margin-left:22%;">Equivelent to
 &quot;_lightmap_scale&quot; worldspawn key.</p>
 
-<p style="margin-left:11%;"><b>&minus;bspxlit</b></p>
+<p style="margin-left:11%;"><b>-bspxlit</b></p>
 
 <p style="margin-left:22%;">Writes rgb data into the bsp
 itself.</p>
 
-<table width="100%" border="0" rules="none" frame="void"
+<table width="100%" border=0 rules="none" frame="void"
        cellspacing="0" cellpadding="0">
 <tr valign="top" align="left">
 <td width="11%"></td>
 <td width="7%">
 
 
-<p><b>&minus;bspx</b></p></td>
+<p style="margin-top: 1em" valign="top"><b>-bspx</b></p></td>
 <td width="4%"></td>
 <td width="78%">
 
 
-<p>Writes both rgb and directions data into the bsp
-itself.</p> </td></tr>
+<p style="margin-top: 1em" valign="top">Writes both rgb and
+directions data into the bsp itself.</p></td>
 </table>
 
-<p style="margin-left:11%;"><b>&minus;novanilla</b></p>
+<p style="margin-left:11%;"><b>-novanilla</b></p>
 
 <p style="margin-left:22%;">Fallback scaled lighting will
 be omitted. Standard grey lighting will be ommitted if there
@@ -277,9 +273,8 @@ are coloured lights. Implies &quot;-bspxlit&quot;.
 &quot;-lit&quot; will no longer be implied by the presence
 of coloured lights.</p>
 
-<h2>MODEL ENTITY KEYS
 <a name="MODEL ENTITY KEYS"></a>
-</h2>
+<h2>MODEL ENTITY KEYS</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>Worldspawn
@@ -632,9 +627,8 @@ previewing (use &quot;r_lightmap 1&quot; or
 minlight only, ignoring all lights / sunlight. Could be
 useful on rotators / trains.</p>
 
-<h2>LIGHT ENTITY KEYS
 <a name="LIGHT ENTITY KEYS"></a>
-</h2>
+<h2>LIGHT ENTITY KEYS</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Light entity
@@ -873,9 +867,8 @@ _color =&gt; _sunlight_color <br>
 _dirt =&gt; _sunlight_dirt <br>
 _anglescale =&gt; _anglescale</p>
 
-<h2>OTHER INFORMATION
 <a name="OTHER INFORMATION"></a>
-</h2>
+<h2>OTHER INFORMATION</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">The
@@ -884,38 +877,33 @@ can use this in any strings in the map file. e.g.
 &quot;message&quot; &quot;Here is \bsome red
 text\b...&quot;</p>
 
-<h2>AUTHOR
 <a name="AUTHOR"></a>
-</h2>
+<h2>AUTHOR</h2>
 
 
-<p style="margin-left:11%; margin-top: 1em">Written by
-Kevin Shanahan (aka Tyrann) <br>
-Modifications by Eric Wasylishen (aka ericw); many changes
-are based on code from q3map2. <br>
-Modifications by David Walton (aka spike); focusing on lux
-support and optimizations. <br>
-Based on source provided by id Software <br>
-http://disenchant.net</p>
+<p style="margin-left:11%; margin-top: 1em">Eric Wasylishen
+<br>
+Kevin Shanahan (aka Tyrann) - http://disenchant.net <br>
+David Walton (aka spike) <br>
+Based on source provided by id Software</p>
 
-<h2>REPORTING BUGS
 <a name="REPORTING BUGS"></a>
-</h2>
+<h2>REPORTING BUGS</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Please post bug
-reports at https://github.com/ericwa/tyrutils-ericw/issues.
+reports at https://github.com/ericwa/ericw-tools/issues.
 <br>
 Improvements to the documentation are welcome and
 encouraged.</p>
 
-<h2>COPYRIGHT
 <a name="COPYRIGHT"></a>
-</h2>
+<h2>COPYRIGHT</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em">Copyright (C)
-2013 Kevin Shanahan <br>
+2017 Eric Wasylishen <br>
+Copyright (C) 2013 Kevin Shanahan <br>
 Copyright (C) 1997 id Software <br>
 License GPLv2+: GNU GPL version 2 or later <br>
 &lt;http://gnu.org/licenses/gpl2.html&gt;.</p>
@@ -924,9 +912,8 @@ License GPLv2+: GNU GPL version 2 or later <br>
 software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.</p>
 
-<h2>SEE ALSO
 <a name="SEE ALSO"></a>
-</h2>
+<h2>SEE ALSO</h2>
 
 
 <p style="margin-left:11%; margin-top: 1em"><b>qbsp</b>(1)
