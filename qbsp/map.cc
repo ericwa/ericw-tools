@@ -242,14 +242,7 @@ FindTexinfo(mtexinfo_t *texinfo, uint64_t flags)
     /* Set the texture flags */
     texinfo->flags = flags;
     texinfo->outputnum = -1;
-    
-    /* Don't worry about texture alignment on skip or hint surfaces */
-    if (texinfo->flags & (TEX_SKIP | TEX_HINT)) {
-        for (int i=0; i<2; i++)
-            for (int j=0; j<4; j++)
-                texinfo->vecs[i][j] = 0.0f;
-    }
-    
+
     // check for an exact match in the reverse lookup
     const auto it = map.mtexinfo_lookup.find(*texinfo);
     if (it != map.mtexinfo_lookup.end()) {
