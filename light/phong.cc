@@ -440,11 +440,19 @@ CalcualateVertexNormals(const mbsp_t *bsp)
     for (int i = 0; i < bsp->numfaces; i++) {
         const bsp2_dface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
         
+        const auto f_points = GLM_FacePoints(bsp, f);
+        const qvec3f f_centroid = GLM_PolyCentroid(f_points);
         const qvec3f f_norm = Face_Normal_E(bsp, f);
         
         // any face normal within this many degrees can be smoothed with this face
-        const int f_smoothangle = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
-        if (!f_smoothangle)
+        const int f_phong_angle = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
+        int f_phong_angle_concave = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_CONCAVE_MASK) >> TEX_PHONG_ANGLE_CONCAVE_SHIFT;
+        if (f_phong_angle_concave == 0) {
+            f_phong_angle_concave = f_phong_angle;
+        }
+        const bool f_wants_phong = (f_phong_angle || f_phong_angle_concave);
+        
+        if (!f_wants_phong)
             continue;
         
         for (int j = 0; j < f->numedges; j++) {
@@ -454,15 +462,36 @@ CalcualateVertexNormals(const mbsp_t *bsp)
                 if (f2 == f)
                     continue;
                 
-                const int f2_smoothangle = (extended_texinfo_flags[f2->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
-                if (!f2_smoothangle)
+                // FIXME: factor out and share with above?
+                const int f2_phong_angle = (extended_texinfo_flags[f2->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
+                int f2_phong_angle_concave = (extended_texinfo_flags[f2->texinfo] & TEX_PHONG_ANGLE_CONCAVE_MASK) >> TEX_PHONG_ANGLE_CONCAVE_SHIFT;
+                if (f2_phong_angle_concave == 0) {
+                    f2_phong_angle_concave = f2_phong_angle;
+                }
+                const bool f2_wants_phong = (f2_phong_angle || f2_phong_angle_concave);
+                
+                if (!f2_wants_phong)
                     continue;
                 
+                const auto f2_points = GLM_FacePoints(bsp, f2);
+                const qvec3f f2_centroid = GLM_PolyCentroid(f2_points);
                 const qvec3f f2_norm = Face_Normal_E(bsp, f2);
 
+                const concavity_t concavity = FacePairConcavity(f_centroid,
+                                                                f_norm,
+                                                                f2_centroid,
+                                                                f2_norm);
+
                 const vec_t cosangle = qv::dot(f_norm, f2_norm);
-                const vec_t cosmaxangle = cos(DEG2RAD(qmin(f_smoothangle, f2_smoothangle)));
                 
+                vec_t cosmaxangle;
+                // FIXME: not working yet
+//                if (concavity == concavity_t::Concave) {
+//                    cosmaxangle = cos(DEG2RAD(qmin(f_phong_angle_concave, f2_phong_angle_concave)));
+//                } else {
+                    cosmaxangle = cos(DEG2RAD(qmin(f_phong_angle, f2_phong_angle)));
+//                }
+
                 // check the angle between the face normals
                 if (cosangle >= cosmaxangle) {
                     smoothFaces[f].insert(f2);
