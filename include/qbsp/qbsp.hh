@@ -134,8 +134,9 @@
 #define TEX_MINLIGHT_COLOR_G_MASK       (255ULL << TEX_MINLIGHT_COLOR_G_SHIFT)    /* 8 bit value, green minlight color for this face. */
 #define TEX_MINLIGHT_COLOR_B_SHIFT      36
 #define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
-
 #define TEX_NOSHADOW  (1ULL << 44)   /* don't cast a shadow */
+#define TEX_PHONG_ANGLE_CONCAVE_SHIFT   45
+#define TEX_PHONG_ANGLE_CONCAVE_MASK    (255ULL << TEX_PHONG_ANGLE_CONCAVE_SHIFT) /* 8 bit value. if non zero, overrides _phong_angle for concave joints. */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
