@@ -181,6 +181,22 @@ TEST(mathlib, ClosestPointOnPolyBoundary) {
     EXPECT_EQ(make_pair(0, qvec3f(0,0,0)), GLM_ClosestPointOnPolyBoundary(poly, qvec3f(-1,-1,0)));
 }
 
+TEST(mathlib, PolygonCentroid_empty) {
+    const qvec3f res = GLM_PolyCentroid({});
+    
+    for (int i=0; i<3; i++) {
+    	EXPECT_TRUE(std::isnan(res[i]));
+    }
+}
+
+TEST(mathlib, PolygonCentroid_point) {
+    EXPECT_EQ(qvec3f(1,1,1), GLM_PolyCentroid({qvec3f(1,1,1)}));
+}
+
+TEST(mathlib, PolygonCentroid_line) {
+    EXPECT_EQ(qvec3f(1,1,1), GLM_PolyCentroid({qvec3f(0,0,0), qvec3f(2,2,2)}));
+}
+
 TEST(mathlib, PolygonCentroid) {
     // poor test.. but at least checks that the colinear point is treated correctly
     const vector<qvec3f> poly {

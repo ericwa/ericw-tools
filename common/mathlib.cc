@@ -24,6 +24,7 @@
 
 #include <tuple>
 #include <map>
+#include <cmath>
 
 #include <common/qvec.hh>
 
@@ -596,6 +597,13 @@ float GLM_PolyArea(const std::vector<qvec3f> &points)
 
 qvec3f GLM_PolyCentroid(const std::vector<qvec3f> &points)
 {
+    if (points.size() == 0)
+        return qvec3f(NAN);
+    else if (points.size() == 1)
+        return points.at(0);
+    else if (points.size() == 2)
+        return (points.at(0) + points.at(1)) / 2.0;
+
     Q_assert(points.size() >= 3);
     
     qvec3f poly_centroid(0);
