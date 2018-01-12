@@ -303,7 +303,7 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         }
     }
     
-    // handle "_phong" and "_phong_angle"
+    // handle "_phong" and "_phong_angle" and "_phong_angle_concave"
     vec_t phongangle = atof(ValueForKey(entity, "_phong_angle"));
     const int phong = atoi(ValueForKey(entity, "_phong"));
     
@@ -312,8 +312,14 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
     }
     
     if (phongangle) {
-        const uint8_t phongangle_byte = (uint8_t) qmax(0, qmin(255, (int)rint(phongangle)));
+        const uint64_t phongangle_byte = (uint64_t) qmax(0, qmin(255, (int)rint(phongangle)));
         flags |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
+    }
+    
+    const vec_t phong_angle_concave = atof(ValueForKey(entity, "_phong_angle_concave"));
+    {
+        const uint64_t phong_angle_concave_byte = (uint64_t) qmax(0, qmin(255, (int)rint(phong_angle_concave)));
+        flags |= (phong_angle_concave_byte << TEX_PHONG_ANGLE_CONCAVE_SHIFT);
     }
     
     // handle "_minlight"
