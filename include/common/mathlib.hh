@@ -60,6 +60,7 @@ extern const vec3_t vec3_origin;
 #define POINT_EQUAL_EPSILON 0.05f
 
 #define NORMAL_EPSILON          0.000001
+#define DEGREES_EPSILON		0.001
 
 qboolean VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon);
 
@@ -367,7 +368,18 @@ float DistToLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
 
 qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
 
-float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, const vec3_t normal);
+float SignedDegreesBetweenUnitVectors(const qvec3f &start, const qvec3f &end, const qvec3f &normal);
+
+enum class concavity_t {
+    Coplanar,
+    Concave,
+    Convex
+};
+
+concavity_t FacePairConcavity(const qvec3f &face1Center,
+                      const qvec3f &face1Normal,
+                      const qvec3f &face2Center,
+                      const qvec3f &face2Normal);
 
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square

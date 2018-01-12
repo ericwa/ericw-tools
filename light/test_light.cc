@@ -422,15 +422,64 @@ TEST(mathlib, ShrinkPoly2) {
 }
 
 TEST(mathlib, SignedDegreesBetweenUnitVectors) {
-    const vec3_t up = {0, 0, 1};
-    const vec3_t fwd = {0, 1, 0};
-    const vec3_t right = {1, 0, 0};
+    const qvec3f up {0, 0, 1};
+    const qvec3f fwd {0, 1, 0};
+    const qvec3f right {1, 0, 0};
     
     EXPECT_FLOAT_EQ(-90, SignedDegreesBetweenUnitVectors(right, fwd, up));
     EXPECT_FLOAT_EQ(90, SignedDegreesBetweenUnitVectors(fwd, right, up));
     EXPECT_FLOAT_EQ(0, SignedDegreesBetweenUnitVectors(right, right, up));
 }
 
+TEST(mathlib, ConcavityTest_concave) {
+    const qvec3f face1center {0, 0, 10};
+    const qvec3f face2center {10, 0, 200};
+    
+    const qvec3f face1normal {0, 0, 1};
+    const qvec3f face2normal {-1, 0, 0};
+    
+    EXPECT_EQ(concavity_t::Concave, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+}
+
+TEST(mathlib, ConcavityTest_concave2) {
+    const qvec3f face1center {0, 0, 10};
+    const qvec3f face2center {-10, 0, 200};
+    
+    const qvec3f face1normal {0, 0, 1};
+    const qvec3f face2normal {1, 0, 0};
+    
+    EXPECT_EQ(concavity_t::Concave, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+}
+
+TEST(mathlib, ConcavityTest_convex) {
+    const qvec3f face1center {0, 0, 10};
+    const qvec3f face2center {10, 0, 5};
+    
+    const qvec3f face1normal {0, 0, 1};
+    const qvec3f face2normal {1, 0, 0};
+    
+    EXPECT_EQ(concavity_t::Convex, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+}
+
+TEST(mathlib, ConcavityTest_convex2) {
+    const qvec3f face1center {0, 0, 10};
+    const qvec3f face2center {-10, 0, 5};
+    
+    const qvec3f face1normal {0, 0, 1};
+    const qvec3f face2normal {-1, 0, 0};
+    
+    EXPECT_EQ(concavity_t::Convex, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+}
+
+TEST(mathlib, ConcavityTest_coplanar) {
+    const qvec3f face1center {0, 0, 10};
+    const qvec3f face2center {100, 100, 10};
+    
+    const qvec3f face1normal {0, 0, 1};
+    const qvec3f face2normal {0, 0, 1};
+    
+    EXPECT_EQ(concavity_t::Coplanar, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+}
 static const float MANGLE_EPSILON = 0.1f;
 
 TEST(light, vec_from_mangle) {

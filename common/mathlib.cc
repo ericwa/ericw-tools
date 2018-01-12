@@ -835,23 +835,39 @@ qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f&
 }
 
 /// Returns degrees of clockwise rotation from start to end, assuming `normal` is pointing towards the viewer
-float SignedDegreesBetweenUnitVectors(const vec3_t start, const vec3_t end, const vec3_t normal)
+float SignedDegreesBetweenUnitVectors(const qvec3f &start, const qvec3f &end, const qvec3f &normal)
 {
-    const float cosangle = qmax(-1.0, qmin(1.0, DotProduct(start, end)));
+    const float cosangle = qmax(-1.0, qmin(1.0, qv::dot(start, end)));
     const float unsigned_degrees = acos(cosangle) * (360.0 / (2.0 * Q_PI));
 
     // get a normal for the rotation plane using the right-hand rule
-    vec3_t rotationNormal;
-    CrossProduct(start, end, rotationNormal);
-    VectorNormalize(rotationNormal);
+    const qvec3f rotationNormal = qv::normalize(qv::cross(start, end));
     
-    const float normalsCosAngle = DotProduct(rotationNormal, normal);
+    const float normalsCosAngle = qv::dot(rotationNormal, normal);
     if (normalsCosAngle >= 0) {
         // counterclockwise rotation
         return -unsigned_degrees;
     }
     // clockwise rotation
     return unsigned_degrees;
+}
+
+concavity_t FacePairConcavity(const qvec3f &face1Center,
+                      const qvec3f &face1Normal,
+                      const qvec3f &face2Center,
+                      const qvec3f &face2Normal)
+{
+    const qvec3f face1to2_dir = qv::normalize(face2Center - face1Center);
+    const qvec3f towards_viewer_dir = qv::cross(face1to2_dir, face1Normal);
+    
+    const float degrees = SignedDegreesBetweenUnitVectors(face1Normal, face2Normal, towards_viewer_dir);
+    if (fabs(degrees) < DEGREES_EPSILON) {
+        return concavity_t::Coplanar;
+    } else if (degrees < 0.0f) {
+        return concavity_t::Concave;
+    } else {
+        return concavity_t::Convex;
+    }
 }
 
 /**
