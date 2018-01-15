@@ -206,13 +206,6 @@ qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const bsp2_dface_t *f)
 {
     const qmat4x4f T = WorldToTexSpace(bsp, f);
     const qmat4x4f inv = qv::inverse(T);
-    
-    if (std::isnan(inv.at(0,0))) {
-        logprint("Bad texture axes on face:\n");
-        PrintFaceInfo(f, bsp);
-        Error("CreateFaceTransform");
-    }
-    
     return inv;
 }
 
@@ -752,7 +745,7 @@ Face_IsLiquid(const mbsp_t *bsp, const bsp2_dface_t *face)
     return name[0] == '*';
 }
 
-static void
+static bool
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
                const mbsp_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
 {
@@ -823,6 +816,13 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     lightsurf->texorg.texSpaceToWorld = TexSpaceToWorld(bsp, face);
     lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
     lightsurf->texorg.planedist = plane->dist;
+    
+    /* Check for invalid texture axes */
+    if (std::isnan(lightsurf->texorg.texSpaceToWorld.at(0,0))) {
+        logprint("Bad texture axes on face:\n");
+        PrintFaceInfo(face, bsp);
+        return false;
+    }
 
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     VectorCopy(tex->vecs[0], lightsurf->snormal);
@@ -850,6 +850,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     lightsurf->occlusion = (float *) calloc(lightsurf->numpoints, sizeof(float));
     
     lightsurf->stream = MakeRayStream(lightsurf->numpoints);
+    return true;
 }
 
 static void
@@ -3032,7 +3033,10 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         lightsurf->twosided = true;
     }
     
-    Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup);
+    if (!Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup)) {
+        /* invalid texture axes */
+        return;
+    }
     lightmapdict_t *lightmaps = &lightsurf->lightmapsByStyle;
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
