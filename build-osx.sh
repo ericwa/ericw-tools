@@ -26,7 +26,12 @@ cpack
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
 
-# test id1 maps for leaks
+# coarse tests on real maps (only checks success/failure exit status of tool)
 cd ..
-cd testmaps/quake_map_source
-PATH=../../$BUILD_DIR/qbsp ./leaktest.sh || exit 1
+export PATH="$(pwd)/$BUILD_DIR/qbsp:$(pwd)/$BUILD_DIR/light:$PATH"
+cd testmaps
+./automatated_tests.sh || exit 1
+
+# test id1 maps for leaks
+cd quake_map_source
+./leaktest.sh || exit 1
