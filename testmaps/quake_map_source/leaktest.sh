@@ -2,7 +2,7 @@
 
 set -x
 
-for MAP in *.MAP; do
-  qbsp -leaktest "$MAP" || exit 1
+for file in *.map; do
+  qbsp -leaktest "$file" || exit 1
 done
 
