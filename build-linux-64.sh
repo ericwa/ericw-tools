@@ -1,14 +1,16 @@
 #!/bin/bash
 
-if [ -d build ]; then
-  echo "build already exists, remove it first"
+BUILD_DIR=build
+
+if [ -d "$BUILD_DIR" ]; then
+  echo "$BUILD_DIR already exists, remove it first"
   exit 1
 fi
 
 cmake --version
 
-mkdir build
-cd build
+mkdir "$BUILD_DIR"
+cd "$BUILD_DIR"
 wget https://github.com/embree/embree/releases/download/v2.15.0/embree-2.15.0.x86_64.linux.tar.gz -O embree.tgz
 tar xf embree.tgz
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.15.0.x86_64.linux"
