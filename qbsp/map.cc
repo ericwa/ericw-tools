@@ -243,6 +243,14 @@ FindTexinfo(mtexinfo_t *texinfo, uint64_t flags)
     texinfo->flags = flags;
     texinfo->outputnum = -1;
 
+    // NaN's will break mtexinfo_lookup, since they're being used as a std::map key and don't compare properly with <.
+    // They should have been stripped out already in ValidateTextureProjection.
+    for (int i=0;i<2;i++) {
+        for (int j=0;j<4;j++) {
+            Q_assert(!std::isnan(texinfo->vecs[i][j]));
+        }
+    }
+    
     // check for an exact match in the reverse lookup
     const auto it = map.mtexinfo_lookup.find(*texinfo);
     if (it != map.mtexinfo_lookup.end()) {
@@ -1414,6 +1422,37 @@ IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qv
     return true;
 }
 
+static bool
+IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t *tx)
+{
+    const qvec3f faceNormal = vec3_t_to_glm(mapface.plane.normal);
+    const qvec3f s_vec = qvec3f(tx->vecs[0][0], tx->vecs[0][1], tx->vecs[0][2]);
+    const qvec3f t_vec = qvec3f(tx->vecs[1][0], tx->vecs[1][1], tx->vecs[1][2]);
+    const bool valid = IsValidTextureProjection(faceNormal, s_vec, t_vec);
+    
+    return valid;
+}
+
+static void
+ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
+{
+    if (!IsValidTextureProjection(mapface, tx)) {
+        logprint("WARNING: repairing invalid texture projection on line %d (near %f %f %f)\n",
+                 mapface.linenum,
+                 mapface.planepts[0][0],
+                 mapface.planepts[0][1],
+                 mapface.planepts[0][2]);
+      
+        // Reset texturing to sensible defaults
+        const double shift[2] = {0,0};
+        const double rotate = 0;
+        const double scale[2] = {1,1};
+        SetTexinfo_QuakeEd(&mapface.plane, mapface.planepts, shift, rotate, scale, tx);
+        
+        Q_assert(IsValidTextureProjection(mapface, tx));
+    }
+}
+
 static std::unique_ptr<mapface_t>
 ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *entity)
 {
@@ -1447,6 +1486,8 @@ ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *ent
                 tx.vecs[i][j] = r;
         }
     }
+    
+    ValidateTextureProjection(*face, &tx);
 
     face->texinfo = FindTexinfoEnt(&tx, entity);
 
