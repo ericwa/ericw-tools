@@ -720,7 +720,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(const std::vector<qvec3f> &points,
         const qvec3f &n2 = normals.at(i);
      
         const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes({p0, p1, p2});
-        if (edgeplanes.empty())
+        if (edgeplanes.size() != 3)
             continue;
         
         if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
@@ -728,7 +728,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(const std::vector<qvec3f> &points,
             
             const qvec3f bary = Barycentric_FromPoint(point, make_tuple(p0, p1, p2));
             
-            if (isnan(bary[0]) || isnan(bary[1]) || isnan(bary[2]))
+            if (!isfinite(bary[0]) || !isfinite(bary[1]) || !isfinite(bary[2]))
                 continue;
 
             const qvec3f interpolatedNormal = Barycentric_ToPoint(bary, make_tuple(n0, n1, n2));
