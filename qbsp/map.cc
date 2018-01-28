@@ -1394,6 +1394,26 @@ void mapface_t::set_texvecs(const std::array<qvec4f, 2> &vecs)
     this->texinfo = FindTexinfo( &texInfoNew, texInfoNew.flags );
 }
 
+bool
+IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
+{
+    // TODO: This doesn't match how light does it (TexSpaceToWorld)
+    
+    const qvec3f tex_normal = qv::normalize(qv::cross(s_vec, t_vec));
+    
+    for (int i=0;i<3;i++)
+    	if (std::isnan(tex_normal[i]))
+            return false;
+    
+    const float cosangle = qv::dot(tex_normal, faceNormal);
+    if (std::isnan(cosangle))
+        return false;
+    if (fabs(cosangle) < ZERO_EPSILON)
+        return false;
+    
+    return true;
+}
+
 static std::unique_ptr<mapface_t>
 ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *entity)
 {

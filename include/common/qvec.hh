@@ -106,6 +106,10 @@ public:
         return true;
     }
     
+    bool operator!=(const qvec<N,T> &other) const {
+        return !(*this == other);
+    }
+    
     T operator[](const int idx) const {
         assert(idx >= 0 && idx < N);
         return v[idx];

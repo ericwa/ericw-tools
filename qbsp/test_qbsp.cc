@@ -307,6 +307,94 @@ TEST(qbsp, MemLeaks) {
 }
 #endif
 
+/**
+ * Test that this skip face gets auto-corrected.
+ */
+TEST(qbsp, InvalidTextureProjection) {
+    const char *map = R"(
+    // entity 0
+    {
+        "classname" "worldspawn"
+        // brush 0
+        {
+            ( -64 -64 -16 ) ( -64 -63 -16 ) ( -64 -64 -15 ) +2butn [ 0 -1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( 64 64 16 ) ( 64 64 17 ) ( 64 65 16 ) +2butn [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( -64 -64 -16 ) ( -64 -64 -15 ) ( -63 -64 -16 ) +2butn [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( 64 64 16 ) ( 65 64 16 ) ( 64 64 17 ) +2butn [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( 64 64 64 ) ( 64 65 64 ) ( 65 64 64 ) +2butn [ 1 0 0 -0 ] [ 0 -1 0 -0 ] -0 1 1
+            ( -64 -64 -0 ) ( -63 -64 -0 ) ( -64 -63 -0 ) skip [ 0 0 0 0 ] [ 0 0 0 0 ] -0 1 1
+        }
+    }
+    )";
+    
+    mapentity_t worldspawn = LoadMap(map);
+    Q_assert(1 == worldspawn.nummapbrushes);
+    
+    const mapface_t *face = &worldspawn.mapbrush(0).face(5);
+    ASSERT_EQ("skip", face->texname);
+    const auto texvecs = face->get_texvecs();
+    EXPECT_TRUE(IsValidTextureProjection(vec3_t_to_glm(face->plane.normal), texvecs.at(0), texvecs.at(1)));
+}
+
+/**
+ * Same as above but the texture scales are 0
+ */
+TEST(qbsp, InvalidTextureProjection2) {
+    const char *map = R"(
+    // entity 0
+    {
+        "classname" "worldspawn"
+        // brush 0
+        {
+            ( -64 -64 -16 ) ( -64 -63 -16 ) ( -64 -64 -15 ) +2butn [ 0 -1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( 64 64 16 ) ( 64 64 17 ) ( 64 65 16 ) +2butn [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( -64 -64 -16 ) ( -64 -64 -15 ) ( -63 -64 -16 ) +2butn [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( 64 64 16 ) ( 65 64 16 ) ( 64 64 17 ) +2butn [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+            ( 64 64 64 ) ( 64 65 64 ) ( 65 64 64 ) +2butn [ 1 0 0 -0 ] [ 0 -1 0 -0 ] -0 1 1
+            ( -64 -64 -0 ) ( -63 -64 -0 ) ( -64 -63 -0 ) skip [ 0 0 0 0 ] [ 0 0 0 0 ] -0 0 0
+        }
+    }
+    )";
+    
+    mapentity_t worldspawn = LoadMap(map);
+    Q_assert(1 == worldspawn.nummapbrushes);
+    
+    const mapface_t *face = &worldspawn.mapbrush(0).face(5);
+    ASSERT_EQ("skip", face->texname);
+    const auto texvecs = face->get_texvecs();
+    EXPECT_TRUE(IsValidTextureProjection(vec3_t_to_glm(face->plane.normal), texvecs.at(0), texvecs.at(1)));
+}
+
+/**
+ * More realistic: *lava1 has tex vecs perpendicular to face
+ */
+TEST(qbsp, InvalidTextureProjection3) {
+    const char *map = R"(
+    // entity 0
+    {
+        "classname" "worldspawn"
+        "wad" "Q.wad"
+        // brush 0
+        {
+            ( 512 512 64 ) ( 512 512 -0 ) ( 512 448 64 ) *04mwat1 [ 0 1 0 0 ] [ 0 0 -1 0 ] -0 1 1
+            ( -0 448 -0 ) ( -0 512 -0 ) ( -0 448 64 ) *04mwat1 [ 0 -1 0 0 ] [ -0 -0 -1 0 ] -0 1 1
+            ( 512 512 64 ) ( -0 512 64 ) ( 512 512 -0 ) *04mwat1 [ -1 0 0 0 ] [ 0 0 -1 0 ] -0 1 1
+            ( -0 448 -0 ) ( -0 448 64 ) ( 512 448 -0 ) *lava1 [ 0 1 0 0 ] [ 0 0 -1 0 ] -0 1 1
+            ( 512 512 64 ) ( 512 448 64 ) ( -0 512 64 ) *04mwat1 [ 1 0 0 0 ] [ 0 -1 0 0 ] -0 1 1
+            ( -0 448 -0 ) ( 512 448 -0 ) ( -0 512 -0 ) *04mwat1 [ -1 0 0 0 ] [ -0 -1 -0 -0 ] -0 1 1
+        }
+    }
+    )";
+    
+    mapentity_t worldspawn = LoadMap(map);
+    Q_assert(1 == worldspawn.nummapbrushes);
+    
+    const mapface_t *face = &worldspawn.mapbrush(0).face(3);
+    ASSERT_EQ("*lava1", face->texname);
+    const auto texvecs = face->get_texvecs();
+    EXPECT_TRUE(IsValidTextureProjection(vec3_t_to_glm(face->plane.normal), texvecs.at(0), texvecs.at(1)));
+}
+
 TEST(mathlib, WindingArea) {
     winding_t w;
     w.numpoints = 5;

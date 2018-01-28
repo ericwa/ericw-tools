@@ -195,4 +195,7 @@ void ExportObj_Surfaces(const surface_t *surfaces);
 
 void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list);
 
+bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);
+
+
 #endif

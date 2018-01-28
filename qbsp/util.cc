@@ -71,6 +71,7 @@ AllocMem(int Type, int cElements, bool fZero)
     if (Type == FACE && cElements == 1)
         ((face_t *)pTemp)->planenum = -1;
     if (Type == WINDING) {
+        // FIXME: Remove this! Causing UBSan warnings
         *(int *)pTemp = cSize;
         pTemp = (char *)pTemp + sizeof(int);
     }
