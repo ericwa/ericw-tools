@@ -319,6 +319,12 @@ TEST(mathlib, ProjectPointOntoPlane) {
     EXPECT_FLOAT_EQ(10, projected[2]);
 }
 
+TEST(mathlib, InterpolateNormalsDegenerate) {
+    EXPECT_FALSE(GLM_InterpolateNormal({}, {}, qvec3f(0,0,0)).first);
+    EXPECT_FALSE(GLM_InterpolateNormal({qvec3f(0,0,0)}, {qvec3f(0,0,1)}, qvec3f(0,0,0)).first);
+    EXPECT_FALSE(GLM_InterpolateNormal({qvec3f(0,0,0), qvec3f(10,0,0)}, {qvec3f(0,0,1), qvec3f(0,0,1)}, qvec3f(0,0,0)).first);
+}
+
 TEST(mathlib, InterpolateNormals) {
     // This test relies on the way GLM_InterpolateNormal is implemented
     

@@ -704,6 +704,9 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(const std::vector<qvec3f> &points,
 {
     Q_assert(points.size() == normals.size());
     
+    if (points.size() < 3)
+        return make_pair(false, qvec3f(0));
+    
     // Step through the triangles, being careful to handle zero-size ones
 
     const qvec3f &p0 = points.at(0);
