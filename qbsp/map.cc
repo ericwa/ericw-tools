@@ -1437,11 +1437,12 @@ static void
 ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
-        logprint("WARNING: repairing invalid texture projection on line %d (near %f %f %f)\n",
+        logprint("WARNING: repairing invalid texture projection on line %d (\"%s\" near %d %d %d)\n",
                  mapface.linenum,
-                 mapface.planepts[0][0],
-                 mapface.planepts[0][1],
-                 mapface.planepts[0][2]);
+                 mapface.texname.c_str(),
+                 (int)mapface.planepts[0][0],
+                 (int)mapface.planepts[0][1],
+                 (int)mapface.planepts[0][2]);
       
         // Reset texturing to sensible defaults
         const double shift[2] = {0,0};
