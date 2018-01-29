@@ -1,3 +1,10 @@
+2018-01-29 ericw-tools 0.17
+
+- qbsp: fix hint/skip having corrupt texturing with -convert option
+- qbsp: warn and heal invalid texture projections
+- light: warn and ignore invalid texture projections instead of aborting
+- light: make more robust against degenerate tris
+
 2017-12-28 ericw-tools 0.16
 
 - light: add flood-filling to fix black seams in detailwall.map when no -extra/-extra4 used
