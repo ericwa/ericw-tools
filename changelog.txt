@@ -2,6 +2,7 @@
 
 - qbsp: fix hint/skip having corrupt texturing with -convert option
 - qbsp: warn and heal invalid texture projections
+- qbsp: fix -omitdetail to affect all types of detail
 - light: warn and ignore invalid texture projections instead of aborting
 - light: make more robust against degenerate tris
 
