@@ -249,13 +249,21 @@ AddTriangleNormals(std::map<int, qvec3f> &smoothed_normals, const qvec3f &norm, 
     const qvec3f p3 = Vertex_GetPos_E(bsp, v3);
     float weight;
     
+    float areaweight = GLM_TriangleArea(p1, p2, p3);
+    if (!std::isfinite(areaweight)) {
+        areaweight = 0;
+    }
+    
     weight = AngleBetweenPoints(p2, p1, p3);
+    weight *= areaweight;
     smoothed_normals[v1] = smoothed_normals[v1] + (norm * weight);
 
     weight = AngleBetweenPoints(p1, p2, p3);
+    weight *= areaweight;
     smoothed_normals[v2] = smoothed_normals[v2] + (norm * weight);
 
     weight = AngleBetweenPoints(p1, p3, p2);
+    weight *= areaweight;
     smoothed_normals[v3] = smoothed_normals[v3] + (norm * weight);
 }
 
