@@ -482,8 +482,9 @@ SafeRead(FILE *f, void *buffer, int count)
 void
 SafeWrite(FILE *f, const void *buffer, int count)
 {
-    if (fwrite(buffer, 1, count, f) != (size_t) count)
-        Error("File read failure");
+    const size_t written = fwrite(buffer, 1, count, f);
+    if (written != (size_t) count)
+        Error("File write failure");
 }
 
 typedef struct {
