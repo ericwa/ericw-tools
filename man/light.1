@@ -229,7 +229,7 @@ When set to 1, spotlight falloff is calculated from the distance to the targeted
 
 .PP
 The following keys can be used on any entity with a brush model.
-"_minlight", "_mincolor", "_dirt", "_phong", "_phong_angle", "_shadow" are supported on func_detail/func_group as well, if
+"_minlight", "_mincolor", "_dirt", "_phong", "_phong_angle", "_phong_angle_concave", "_shadow" are supported on func_detail/func_group as well, if
 qbsp from these tools is used.
 
 .IP "\fB""_minlight"" ""n""\fP"
@@ -276,6 +276,13 @@ turning black. Default 0.
 Enables phong shading on faces of this model with a custom angle. Adjacent faces with normals this many degrees apart (or less) will be smoothed.
 Consider setting "_anglescale" to "1" on lights or worldspawn to make the effect of phong shading more visible.
 Use the "-phongdebug" command-line flag to save the interpolated normals to the lightmap for previewing (use "r_lightmap 1" or "gl_lightmaps 1" in your engine to preview.)
+
+.IP "\fB""_phong_angle_concave"" ""n""\fP"
+Optional key for setting a different angle threshold for concave joints.
+A pair of faces will either use "_phong_angle" or "_phong_angle_concave" as the smoothing threshold, depending on whether the joint between the faces is concave or not.
+"_phong_angle(_concave)" is the maximum angle (in degrees) between the face normals that will still cause the pair of faces to be smoothed.
+The minimum setting for "_phong_angle_concave" is 1, this should make all concave joints non-smoothed (unless they're less than 1 degree apart, almost a flat plane.)
+If it's 0 or unset, the same value as "_phong_angle" is used.
 
 .IP "\fB""_lightignore"" ""n""\fP"
 1 makes a model receive minlight only, ignoring all lights / sunlight. Could be useful on rotators / trains. 
