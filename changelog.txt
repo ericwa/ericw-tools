@@ -1,3 +1,9 @@
+2018-02-18 ericw-tools 0.18
+
+- light: tweak phong shading to use area and angle weighting
+- light: add "_phong_angle_concave" key
+- light: fix -bspx option
+
 2018-01-29 ericw-tools 0.17
 
 - qbsp: fix hint/skip having corrupt texturing with -convert option
