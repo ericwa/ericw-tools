@@ -2222,7 +2222,11 @@ void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size
         bspdata->bspxentries = e;
     }
 
-    e->lumpdata = xdata;
+    //ericw -- make a copy
+    byte *xdata_copy = (byte*) malloc(xsize);
+    memcpy(xdata_copy, xdata, xsize);
+    
+    e->lumpdata = xdata_copy;
     e->lumpsize = xsize;
 }
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize)
