@@ -1,5 +1,5 @@
 <!-- Creator     : groff version 1.19.2 -->
-<!-- CreationDate: Tue Jan 30 08:22:01 2018 -->
+<!-- CreationDate: Mon Feb 19 00:01:35 2018 -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
 "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -524,9 +524,9 @@ Keys</b> <br>
 The following keys can be used on any entity with a brush
 model. &quot;_minlight&quot;, &quot;_mincolor&quot;,
 &quot;_dirt&quot;, &quot;_phong&quot;,
-&quot;_phong_angle&quot;, &quot;_shadow&quot; are supported
-on func_detail/func_group as well, if qbsp from these tools
-is used. <b><br>
+&quot;_phong_angle&quot;, &quot;_phong_angle_concave&quot;,
+&quot;_shadow&quot; are supported on func_detail/func_group
+as well, if qbsp from these tools is used. <b><br>
 &quot;_minlight&quot; &quot;n&quot;</b></p>
 
 <p style="margin-left:22%;">Set the minimum light level for
@@ -619,6 +619,24 @@ more visible. Use the &quot;-phongdebug&quot; command-line
 flag to save the interpolated normals to the lightmap for
 previewing (use &quot;r_lightmap 1&quot; or
 &quot;gl_lightmaps 1&quot; in your engine to preview.)</p>
+
+
+<p style="margin-left:11%;"><b>&quot;_phong_angle_concave&quot;
+&quot;n&quot;</b></p>
+
+<p style="margin-left:22%;">Optional key for setting a
+different angle threshold for concave joints. A pair of
+faces will either use &quot;_phong_angle&quot; or
+&quot;_phong_angle_concave&quot; as the smoothing threshold,
+depending on whether the joint between the faces is concave
+or not. &quot;_phong_angle(_concave)&quot; is the maximum
+angle (in degrees) between the face normals that will still
+cause the pair of faces to be smoothed. The minimum setting
+for &quot;_phong_angle_concave&quot; is 1, this should make
+all concave joints non-smoothed (unless they&rsquo;re less
+than 1 degree apart, almost a flat plane.) If it&rsquo;s 0
+or unset, the same value as &quot;_phong_angle&quot; is
+used.</p>
 
 <p style="margin-left:11%;"><b>&quot;_lightignore&quot;
 &quot;n&quot;</b></p>
