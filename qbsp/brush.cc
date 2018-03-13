@@ -1193,6 +1193,14 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         if (dst != pWorldEnt())
             contents = CONTENTS_SOLID;
 
+        /* Hack to turn bmodels with "_mirrorinside" into func_detail_illusionary in hull 0.
+           this is to allow "_mirrorinside" to work on func_illusionary, etc.
+           Otherwise they would be CONTENTS_SOLID and the inside faces would be deleted.
+         */
+        if (dst != pWorldEnt() && hullnum == 0 && (cflags & CFLAGS_BMODEL_MIRROR_INSIDE)) {
+            contents = CONTENTS_DETAIL_ILLUSIONARY;
+        }
+        
         /* nonsolid brushes don't show up in clipping hulls */
         if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
             continue;
