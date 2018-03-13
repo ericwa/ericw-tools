@@ -1122,6 +1122,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     if (atoi(ValueForKey(src, "_mirrorinside"))) {
         cflags |= CFLAGS_BMODEL_MIRROR_INSIDE;
     }
+    
+    /* _noclipfaces */
+    if (atoi(ValueForKey(src, "_noclipfaces"))) {
+        cflags |= CFLAGS_NO_CLIPPING_SAME_TYPE;
+    }
 
     const bool func_illusionary_visblocker =
         (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));

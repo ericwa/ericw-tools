@@ -117,6 +117,7 @@
 #define CFLAGS_WAS_ILLUSIONARY           (1U << 1) /* was illusionary, got changed to something else */
 #define CFLAGS_DETAIL_WALL  (1U << 2) /* don't clip world for func_detail_wall entities */
 #define CFLAGS_BMODEL_MIRROR_INSIDE		 (1U << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
+#define CFLAGS_NO_CLIPPING_SAME_TYPE     (1U << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
 
 // Texture flags. Only TEX_SPECIAL is written to the .bsp.
 // Extended flags are written to a .texinfo file and read by the light tool

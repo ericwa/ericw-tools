@@ -624,6 +624,12 @@ CSGFaces(const mapentity_t *entity)
                 /* CONTENTS_DETAIL_FENCE never clips anything but itself */
                 continue;
             }
+            
+            if (clipbrush->contents == brush->contents
+                && (clipbrush->cflags & CFLAGS_NO_CLIPPING_SAME_TYPE)) {
+                /* _noclipfaces key */
+                continue;
+            }
 
             /* check bounding box first */
             for (i = 0; i < 3; i++) {
