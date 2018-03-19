@@ -569,7 +569,7 @@ CompressRow(const byte *vis, const int numbytes, byte *out)
   Builds the entire visibility list for a leaf
   ===============
 */
-int totalvis;
+int64_t totalvis;
 
 static void
 LeafFlow(int leafnum, mleaf_t *dleaf)
@@ -785,7 +785,10 @@ CalcVis(const mbsp_t *bsp)
         }
     }
 
-    logprint("average leafs visible: %i\n", totalvis / portalleafs_real);
+    int64_t avg = totalvis;
+    avg /= static_cast<int64_t>(portalleafs_real);
+    
+    logprint("average leafs visible: %i\n", static_cast<int>(avg));
 }
 
 /*
