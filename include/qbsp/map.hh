@@ -32,18 +32,35 @@ typedef struct epair_s {
     char *value;
 } epair_t;
 
-typedef struct mapface_s {
+struct mapface_t {
     qbsp_plane_t plane;
     vec3_t planepts[3];
     std::string texname;
     int texinfo;
     int linenum;
     
+    // Q2 stuff
+    int contents;
+    int flags;
+    int value;
+    
+    mapface_t() :
+    texinfo(0),
+    linenum(0),
+    contents(0),
+    flags(0),
+    value(0) {
+        memset(&plane, 0, sizeof(plane));
+        for (int i=0; i<3; i++) {
+            VectorSet(planepts[i], 0, 0, 0);
+        }
+    }
+    
     bool set_planepts(const vec3_t *pts);
     
     std::array<qvec4f, 2> get_texvecs(void) const;
     void set_texvecs(const std::array<qvec4f, 2> &vecs);
-} mapface_t;
+};
 
 enum class brushformat_t {
     NORMAL, BRUSH_PRIMITIVES

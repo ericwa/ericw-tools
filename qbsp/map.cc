@@ -423,26 +423,48 @@ TextureAxisFromPlane(const qbsp_plane_t *plane, vec3_t xv, vec3_t yv, vec3_t sna
     VectorCopy(baseaxis[bestaxis * 3], snapped_normal);
 }
 
-static texcoord_style_t
+struct extended_tx_info_t {
+    bool quark_tx1;
+    bool quark_tx2;
+    
+    int contents;
+    int flags;
+    int value;
+    
+    extended_tx_info_t() :
+    quark_tx1(false),
+    quark_tx2(false),
+    contents(0),
+    flags(0),
+    value(0) {}
+};
+
+static extended_tx_info_t
 ParseExtendedTX(parser_t *parser)
 {
-    texcoord_style_t style = TX_QUAKED;
+    extended_tx_info_t result;
 
     if (ParseToken(parser, PARSE_COMMENT | PARSE_OPTIONAL)) {
         if (!strncmp(parser->token, "//TX", 4)) {
             if (parser->token[4] == '1')
-                style = TX_QUARK_TYPE1;
+                result.quark_tx1 = true;
             else if (parser->token[4] == '2')
-                style = TX_QUARK_TYPE2;
+                result.quark_tx2 = true;
         }
     } else {
-        /* Throw away extra Quake 2 surface info */
-        ParseToken(parser, PARSE_OPTIONAL); /* contents */
-        ParseToken(parser, PARSE_OPTIONAL); /* flags */
-        ParseToken(parser, PARSE_OPTIONAL); /* value */
+        // Parse extra Quake 2 surface info
+        if (ParseToken(parser, PARSE_OPTIONAL)) {
+            result.contents = atoi(parser->token);
+        }
+        if (ParseToken(parser, PARSE_OPTIONAL)) {
+            result.flags = atoi(parser->token);
+        }
+        if (ParseToken(parser, PARSE_OPTIONAL)) {
+            result.value = atoi(parser->token);
+        }
     }
 
-    return style;
+    return result;
 }
 
 static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const float in_vecs[2][4])
@@ -1324,8 +1346,11 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
         width = texture ? texture->width : 64;
         height = texture ? texture->height : 64;
         
-        // throw away 3 extra values at end of line
-        ParseExtendedTX(parser);
+        // Read extra Q2 params
+        const auto extinfo = ParseExtendedTX(parser);
+        mapface.contents = extinfo.contents;
+        mapface.flags = extinfo.flags;
+        mapface.value = extinfo.value;
     } else if (brush->format == brushformat_t::NORMAL) {
         ParseToken(parser, PARSE_SAMELINE);
         tx->miptex = FindMiptex(parser->token);
@@ -1346,7 +1371,19 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
             scale[0] = atof(parser->token);
             ParseToken(parser, PARSE_SAMELINE);
             scale[1] = atof(parser->token);
-            tx_type = ParseExtendedTX(parser);
+            
+            // Read extra Q2 params and/or QuArK subtype
+            const auto extinfo = ParseExtendedTX(parser);
+            if (extinfo.quark_tx1) {
+                tx_type = TX_QUARK_TYPE1;
+            } else if (extinfo.quark_tx2) {
+                tx_type = TX_QUARK_TYPE2;
+            } else {
+                tx_type = TX_QUAKED;
+            }
+            mapface.contents = extinfo.contents;
+            mapface.flags = extinfo.flags;
+            mapface.value = extinfo.value;
         }
     }
 

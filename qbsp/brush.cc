@@ -796,6 +796,20 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
 
 //============================================================================
 
+static const int DetailFlag = (1 << 27);
+
+static bool
+Brush_IsDetail(const mapbrush_t *mapbrush)
+{
+    const mapface_t &mapface = mapbrush->face(0);
+    
+    if ((mapface.contents & DetailFlag) == DetailFlag) {
+        return true;
+    }
+    return false;
+}
+
+
 static int
 Brush_GetContents(const mapbrush_t *mapbrush)
 {
@@ -1035,7 +1049,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     vec3_t rotate_offset;
     int i, contents, cflags = 0;
     int lmshift;
-    bool detail, detail_fence, detail_illusionary;
+    bool all_detail, all_detail_fence, all_detail_illusionary;
 
     /*
      * The brush list needs to be ordered (lowest to highest priority):
@@ -1089,23 +1103,23 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
 
     /* If the source entity is func_detail, set the content flag */
-    detail = false;
+    all_detail = false;
     if (!Q_strcasecmp(classname, "func_detail") && !options.fNodetail) {
-        detail = true;
+        all_detail = true;
     }
     if (!Q_strcasecmp(classname, "func_detail_wall") && !options.fNodetail) {
-        detail = true;
+        all_detail = true;
         cflags |= CFLAGS_DETAIL_WALL;
     }
     
-    detail_fence = false;
+    all_detail_fence = false;
     if (!Q_strcasecmp(classname, "func_detail_fence") && !options.fNodetail) {
-        detail_fence = true;
+        all_detail_fence = true;
     }
     
-    detail_illusionary = false;
+    all_detail_illusionary = false;
     if (!Q_strcasecmp(classname, "func_detail_illusionary") && !options.fNodetail) {
-        detail_illusionary = true;
+        all_detail_illusionary = true;
     }
 
     /* entities with custom lmscales are important for the qbsp to know about */
@@ -1135,6 +1149,16 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         mapbrush = &src->mapbrush(i);
         contents = Brush_GetContents(mapbrush);
 
+        // per-brush settings
+        bool detail = Brush_IsDetail(mapbrush);
+        bool detail_illusionary = false;
+        bool detail_fence = false;
+        
+        // inherit the per-entity settings
+        detail |= all_detail;
+        detail_illusionary |= all_detail_illusionary;
+        detail_fence |= all_detail_fence;
+        
         /* FIXME: move into Brush_GetContents? */
         if (func_illusionary_visblocker)
             contents = CONTENTS_ILLUSIONARY_VISBLOCKER;
