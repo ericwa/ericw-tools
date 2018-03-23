@@ -43,8 +43,9 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     surface_t *surfs;
     node_t *nodes;
     
-    /* No map brushes means non-bmodel entity */
-    if (!entity->nummapbrushes)
+    /* No map brushes means non-bmodel entity.
+       We need to handle worldspawn containing no brushes, though. */
+    if (!entity->nummapbrushes && entity != pWorldEnt())
         return;
     
     /*
