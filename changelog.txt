@@ -1,3 +1,11 @@
+2018-03-23 ericw-tools 0.18.1
+
+- qbsp: fix crash when worldspawn has 0 brushes
+- qbsp: support reading Q2/Q3 detail flag
+- qbsp: experimental "_noclipfaces" key
+- qbsp: fix "_mirrorinside" on bmodels
+- vis: fix "average leafs visible" message overflowing
+
 2018-02-18 ericw-tools 0.18
 
 - light: tweak phong shading to use area and angle weighting
