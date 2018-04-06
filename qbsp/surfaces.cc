@@ -313,7 +313,9 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
         if (it != hashedges.end()) {
             for (const int i : it->second) {
                 edge = (bsp29_dedge_t *)edges->data + i;
-                Q_assert(v1 == edge->v[1] && v2 == edge->v[0]);
+                if (!(v1 == edge->v[1] && v2 == edge->v[0])) {
+                    Error("Too many edges for standard BSP format. Try compiling with -bsp2");
+                }
                 if (pEdgeFaces1[i] == NULL
                     && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
                     pEdgeFaces1[i] = face;
