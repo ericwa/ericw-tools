@@ -2,4 +2,3 @@ bin/
 build/
 CMakeFiles/
 *.xcodeproj
-3rdparty/embree
