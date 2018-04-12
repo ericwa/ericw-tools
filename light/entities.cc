@@ -281,7 +281,7 @@ EntDict_CheckTargetnameKeyMatched(const mbsp_t *bsp, const entdict_t &entity, co
         }
         
         if (!found) {
-            logprint("WARNING: %s has targetname \"%s\" which is not targetted by anything.\n",
+            logprint("WARNING: %s has targetname \"%s\", which is not targeted by anything.\n",
                      EntDict_PrettyDescription(bsp, entity).c_str(),
                      targetnameVal.c_str());
             ok = false;

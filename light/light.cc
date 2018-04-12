@@ -1087,11 +1087,11 @@ light_main(int argc, const char **argv)
     else
     {
         if (write_litfile & 1)
-        logprint(".lit colored light output requested on command line.\n");
+            logprint(".lit colored light output requested on command line.\n");
         if (write_litfile & 2)
             logprint("BSPX colored light output requested on command line.\n");
         if (write_luxfile & 1)
-        logprint(".lux light directions output requested on command line.\n");
+            logprint(".lux light directions output requested on command line.\n");
         if (write_luxfile & 2)
             logprint("BSPX light directions output requested on command line.\n");
     }
@@ -1158,7 +1158,8 @@ light_main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        CheckLitNeeded(cfg);
+        if (loadversion != Q2_BSPVERSION) //mxd. No lit for Quake 2
+            CheckLitNeeded(cfg);
         SetupDirt(cfg);
         
         LightWorld(&bspdata, !!lmscaleoverride);
