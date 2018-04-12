@@ -1361,6 +1361,12 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
             parser->unget = true;
             ParseValve220TX(parser, axis, shift, &rotate, scale);
             tx_type = TX_VALVE_220;
+            
+            // Read extra Q2 params
+            const auto extinfo = ParseExtendedTX(parser);
+            mapface.contents = extinfo.contents;
+            mapface.flags = extinfo.flags;
+            mapface.value = extinfo.value;
         } else {
             shift[0] = atof(parser->token);
             ParseToken(parser, PARSE_SAMELINE);
