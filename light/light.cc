@@ -1188,7 +1188,8 @@ light_main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        CheckLitNeeded(cfg);
+        if (loadversion != Q2_BSPVERSION) //mxd. No lit for Quake 2
+            CheckLitNeeded(cfg);
         SetupDirt(cfg);
         
         LightWorld(&bspdata, !!lmscaleoverride);
