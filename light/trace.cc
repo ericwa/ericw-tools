@@ -299,34 +299,29 @@ static uint32_t fix_coord(vec_t in, uint32_t width)
     }
 }
 
-int
+color_rgba //mxd. int -> color_rgba
 SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
 {
+    color_rgba sample{};
+    if (!bsp->rgbatexdatasize)
+        return sample;
+    
+    const auto *miptex = Face_Miptex(bsp, face);
+    
+    if (miptex == nullptr)
+        return sample;
+    
+    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+
     vec_t texcoord[2];
-    const gtexinfo_t *tex;
-    const miptex_t *miptex;
-    int x, y;
-    byte *data;
-    int sample;
-
-    if (!bsp->texdatasize)
-        return -1;
-    
-    miptex = Face_Miptex(bsp, face);
-    
-    if (miptex == NULL)
-        return -1;
-    
-    tex = &bsp->texinfo[face->texinfo];
-
     WorldToTexCoord(point, tex, texcoord);
 
-    x = fix_coord(texcoord[0], miptex->width);
-    y = fix_coord(texcoord[1], miptex->height);
+    const int x = fix_coord(texcoord[0], miptex->width);
+    const int y = fix_coord(texcoord[1], miptex->height);
     assert (x >= 0);
     assert (y >= 0);
     
-    data = (byte*)miptex + miptex->offsets[0];
+    color_rgba *data = (color_rgba*)((byte*)miptex + miptex->offset);
     sample = data[(miptex->width * y) + x];
 
     return sample;
@@ -537,7 +532,7 @@ BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 static qboolean
 BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 {
-    const modelinfo_t *const *model;
+    //const modelinfo_t *const *model;
     int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
     vec3_t stop;
@@ -697,23 +692,31 @@ TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
         
         bsp2_dface_t *face = SearchNodeForHitFace(tnode->node, mid);
         if (face) {
-            int facenum = face - bsp_static->dfaces;
+            const int facenum = face - bsp_static->dfaces;
             const faceinfo_t *fi = &faceinfos[facenum];
             
             // check fence
             bool passedThroughFence = false;
             if (fi->texturename[0] == '{') {
-                const int sample = SampleTexture(face, bsp_static, mid);
-                if (sample == 255) {
+                const color_rgba sample = SampleTexture(face, bsp_static, mid); //mxd. Palette index -> RGBA
+                if (sample.a < 255) {
                     passedThroughFence = true;
                 }
             }
             
             // only solid and sky faces stop the trace.
-            if (!passedThroughFence &&
-                (fi->content == CONTENTS_SOLID || fi->content == CONTENTS_SKY)) {
+            bool issolid, issky; //mxd
+            if(bsp_static->loadversion == Q2_BSPVERSION) {
+                issolid = !(fi->content & Q2_SURF_TRANSLUCENT);
+                issky = (fi->content & Q2_SURF_SKY);
+            } else {
+                issolid = (fi->content == CONTENTS_SOLID);
+                issky = (fi->content == CONTENTS_SKY);
+            }
+
+            if (!passedThroughFence && (issolid || issky)) {
                 ti->face = face;
-                ti->hitsky = (fi->content == CONTENTS_SKY);
+                ti->hitsky = issky;
                 VectorCopy(fi->plane.normal, ti->hitplane.normal);
                 ti->hitplane.dist = fi->plane.dist;
                 
@@ -748,6 +751,7 @@ qboolean TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self)
     }
 #endif
     Error("no backend available");
+    throw; //mxd. Silences compiler warning
 }
 
 qboolean TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
@@ -763,6 +767,7 @@ qboolean TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *sel
     }
 #endif
     Error("no backend available");
+    throw; //mxd. Silences compiler warning
 }
 
 
@@ -779,6 +784,7 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const mod
     }
 #endif
     Error("no backend available");
+    throw; //mxd. Silences compiler warning
 }
 
 class bsp_ray_t {
@@ -921,6 +927,7 @@ raystream_t *MakeRayStream(int maxrays)
     }
 #endif
     Error("no backend available");
+    throw; //mxd. Silences compiler warning
 }
 
 void MakeTnodes(const mbsp_t *bsp)
@@ -938,4 +945,5 @@ void MakeTnodes(const mbsp_t *bsp)
     }
 #endif
     Error("no backend available");
+    throw; //mxd. Silences compiler warning
 }

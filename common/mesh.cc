@@ -33,8 +33,9 @@ using namespace std;
 // FIXME: Remove
 std::vector<qvec3f> qvecsToGlm(std::vector<qvec3f> qvecs) {
     std::vector<qvec3f> res;
+    res.reserve(qvecs.size()); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
     for (const auto &qvec : qvecs) {
-        res.push_back(qvec3f(qvec[0], qvec[1], qvec[2]));
+        res.emplace_back(qvec[0], qvec[1], qvec[2]); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     }
     return res;
 }
@@ -98,9 +99,9 @@ mesh_t buildMeshFromBSP(const mbsp_t *bsp)
     mesh_t res;
     for (int i=0; i<bsp->numvertexes; i++) {
         const dvertex_t *vert = &bsp->dvertexes[i];
-        res.verts.push_back(qvec3f(vert->point[0],
-                                   vert->point[1],
-                                   vert->point[2]));
+        res.verts.emplace_back(vert->point[0],
+                               vert->point[1],
+                               vert->point[2]); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     }
     
     for (int i=0; i<bsp->numfaces; i++) {
@@ -159,7 +160,7 @@ static octree_t<vertnum_t> build_vert_octree(const mesh_t &mesh)
         const qvec3f vert = mesh.verts[i];
         const aabb3f bbox(vert, vert);
         
-        vertBboxNumPairs.push_back(make_pair(bbox, i));
+        vertBboxNumPairs.emplace_back(bbox, i); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     }
 
     return makeOctree(vertBboxNumPairs);

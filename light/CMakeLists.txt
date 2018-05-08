@@ -2,10 +2,12 @@ cmake_minimum_required (VERSION 2.8)
 project (light CXX)
 
 set(LIGHT_INCLUDES
+	${CMAKE_SOURCE_DIR}/include/light/imglib.hh
 	${CMAKE_SOURCE_DIR}/include/light/entities.hh
 	${CMAKE_SOURCE_DIR}/include/light/light.hh
 	${CMAKE_SOURCE_DIR}/include/light/phong.hh
 	${CMAKE_SOURCE_DIR}/include/light/bounce.hh
+	${CMAKE_SOURCE_DIR}/include/light/surflight.hh
 	${CMAKE_SOURCE_DIR}/include/light/ltface.hh
 	${CMAKE_SOURCE_DIR}/include/light/trace.hh
 	${CMAKE_SOURCE_DIR}/include/light/litfile.hh
@@ -19,7 +21,9 @@ set(LIGHT_SOURCES
 	light.cc
 	phong.cc
 	bounce.cc
+	surflight.cc
 	settings.cc
+	imglib.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.cc	
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc

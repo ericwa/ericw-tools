@@ -1529,6 +1529,7 @@ static void FreeMBSP(mbsp_t *bsp)
     free(bsp->dvisdata);
     free(bsp->dlightdata);
     free(bsp->dtexdata);
+    free(bsp->drgbatexdata); //mxd
     free(bsp->dentdata);
     free(bsp->dleafs);
     free(bsp->dplanes);

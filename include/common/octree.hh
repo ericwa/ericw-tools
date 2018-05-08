@@ -174,6 +174,7 @@ public:
         queryTouchingBBox(0, query, res);
         
         std::vector<T> res_vec;
+        res_vec.reserve(res.size()); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
         for (const auto &item : res) {
             res_vec.push_back(item);
         }

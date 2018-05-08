@@ -89,52 +89,129 @@ Error(const char *error, ...)
  *
  */
 
-const char basedir[] = "quake";
-char qdir[1024];
-char gamedir[1024];
+char qdir[1024];        // c:/Quake/, c:/Hexen II/ etc.
+char gamedir[1024];     // c:/Quake/mymod/
+char basedir[1024]; //mxd. c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
 
-void
-SetQdirFromPath(char *path)
+void //mxd
+string_replaceall(std::string& str, const std::string& from, const std::string& to)
 {
-    char temp[1024];
-    char *c, *mark;
+    if (from.empty()) return;
+    size_t start_pos = 0;
+    while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
+        str.replace(start_pos, from.length(), to);
+        start_pos += to.length(); // In case 'to' contains 'from', like replacing 'x' with 'yx'
+    }
+}
 
-    if (!(path[0] == '/' || path[0] == '\\' || path[1] == ':')) {
-        /* path is partial */
+bool //mxd
+string_iequals(const std::string& a, const std::string& b)
+{
+    const auto sz = a.size();
+    if (b.size() != sz) return false;
+    for (unsigned int i = 0; i < sz; ++i)
+        if (tolower(a[i]) != tolower(b[i]))
+            return false;
+    return true;
+}
+
+int //mxd. Returns offset in path to the next updir, sets dirname to the name of updir
+up_dir_pos(const std::string& path, std::string& dirname)
+{
+    const int pos = path.rfind(PATHSEPERATOR);
+    if (pos > -1) dirname = path.substr(pos + 1, path.size() - pos - 1);
+    return pos;
+}
+
+
+int //mxd. Finds dirname in path and returns offset to it
+find_dir(const std::string& path, const std::string& dirname)
+{
+    std::string cur_path { path };
+    std::string cur_dir {};
+    int pos = 0;
+
+    while (pos != -1) {
+        pos = up_dir_pos(cur_path, cur_dir);
+        if (pos > -1) {
+            if (string_iequals(cur_dir, dirname)) return pos;
+            cur_path = cur_path.substr(0, pos);
+        }
+    }
+
+    return pos;
+}
+
+bool //mxd
+dir_exists(const char *path)
+{
+    struct stat buf{};
+    return (stat(path, &buf) == 0 && buf.st_mode & S_IFDIR);
+}
+
+void //mxd. Expects the path to contain "maps" folder
+SetQdirFromPath(const char *basedirname, const char *path)
+{
+    if (!(path[0] == PATHSEPERATOR || path[0] == '\\' || path[1] == ':')) {
+        // path is partial
+        char temp[1024];
         Q_getwd(temp);
         strcat(temp, path);
         path = temp;
     }
 
-    c = path + strlen(path);
-    while (c > path && *c != '/' && *c != '\\')
-        c--;
-    if (c == path)
-        goto out_err;
-    mark = c + 1;
-    c--;
+    const std::string basedir_s { basedirname };
+    std::string path_s{ path };
+    string_replaceall(path_s, "\\", "/");
 
-    /* search for the basedir in path */
-    while (c != path) {
-        if (!Q_strncasecmp(c, basedir, sizeof(basedir) - 1)) {
-            strncpy (qdir, path, c + sizeof(basedir) - path);
-            logprint("qdir: %s\n", qdir);
-            /* now search for a gamedir in path */
-            c += sizeof(basedir);
-            while (c < mark) {
-                if (*c == '/' || *c == '\\') {
-                    strncpy(gamedir, path, c + 1 - path);
-                    logprint("gamedir: %s\n", gamedir);
-                    return;
-                }
-                c++;
+    int pos = find_dir(path_s, "maps");
+    if (pos == -1)
+        Error("SetQdirFromPath: no \"maps\" in '%s'", path);
+
+    // Expect mod folder to be above "maps" folder
+    path_s = path_s.substr(0, pos);
+    strcpy_s(gamedir, (path_s + PATHSEPERATOR).c_str());
+    logprint("gamedir: %s\n", gamedir);
+
+    // See if it's the main game data folder (ID1 / baseq2 / data1 etc.)
+    std::string gamename_s;
+    pos = up_dir_pos(path_s, gamename_s);
+    if (pos == -1)
+        Error("SetQdirFromPath: invalid path: '%s'", path);
+
+    // Not the main game data folder...
+    if (!string_iequals(gamename_s, basedir_s)) {
+        pos = 0;
+        while (pos != -1) {
+            const std::string checkpath_s = path_s + PATHSEPERATOR + basedir_s;
+            if (dir_exists(checkpath_s.c_str())) {
+                // Set basedir
+                strcpy_s(basedir, (checkpath_s + PATHSEPERATOR).c_str());
+                logprint("basedir: %s\n", basedir);
+                break;
             }
-            Error("No gamedir in %s", path);
+
+            pos = up_dir_pos(path_s, gamename_s);
+            path_s = path_s.substr(0, pos);
         }
-        c--;
+
+        if (pos == -1)
+            Error("SetQ2dirFromPath: failed to find %s in '%s'", basedir, path);
+
+        // qdir is already in path_s
+    } else {
+        // Set basedir
+        strcpy_s(basedir, (path_s + PATHSEPERATOR).c_str());
+        logprint("basedir: %s\n", basedir);
+
+        // qdir shound be 1 level above basedir
+        pos = up_dir_pos(path_s, gamename_s);
+        path_s = path_s.substr(0, pos);
     }
-out_err:
-    Error("%s: no '%s' in %s", __func__, basedir, path);
+
+    // Store qdir...
+    strcpy_s(qdir, (path_s + PATHSEPERATOR).c_str());
+    logprint("qdir:    %s\n", qdir);
 }
 
 char *

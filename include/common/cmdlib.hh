@@ -57,8 +57,8 @@ typedef unsigned char byte;
 extern int myargc;
 extern char **myargv;
 
-char *Q_strupr(char *in);
-char *Q_strlower(char *in);
+char *Q_strupr(char * start);
+char *Q_strlower(char * start);
 int Q_strncasecmp(const char *s1, const char *s2, int n);
 int Q_strcasecmp(const char *s1, const char *s2);
 void Q_getwd(char *out);
@@ -70,8 +70,11 @@ void Q_mkdir(const char *path);
 
 extern char qdir[1024];
 extern char gamedir[1024];
+extern char basedir[1024]; //mxd
 
-void SetQdirFromPath(char *path);
+bool string_iequals(const std::string& a, const std::string& b); //mxd
+
+void SetQdirFromPath(const char *basedirname, const char *path); //mxd
 char *ExpandPath(char *path);
 char *ExpandPathAndArchive(char *path);
 

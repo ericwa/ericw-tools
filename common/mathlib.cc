@@ -89,6 +89,12 @@ VecStr(const vec3_t vec)
     return buf;
 }
 
+const char * //mxd
+VecStr(const qvec3f vec)
+{
+    return VecStr(vec3_t {vec[0], vec[1], vec[2]});
+}
+
 const char *
 VecStrf(const vec3_t vec)
 {
@@ -101,6 +107,12 @@ VecStrf(const vec3_t vec)
              vec[0], vec[1], vec[2]);
 
     return buf;
+}
+
+const char * //mxd
+VecStrf(const qvec3f vec)
+{
+    return VecStrf(vec3_t{ vec[0], vec[1], vec[2] });
 }
 
 void ClearBounds(vec3_t mins, vec3_t maxs)
@@ -376,6 +388,7 @@ NormalizePDF(const std::vector<float> &pdf)
     }
     
     std::vector<float> normalizedPdf;
+    normalizedPdf.reserve(pdf.size()); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
     for (float val : pdf) {
         normalizedPdf.push_back(val / pdfSum);
     }
@@ -755,6 +768,7 @@ static std::vector<qvec3f> winding_to_glm(const winding_t *w)
     if (w == nullptr)
         return {};
     std::vector<qvec3f> res;
+    res.reserve(w->numpoints); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
     for (int i=0; i<w->numpoints; i++) {
         res.push_back(vec3_t_to_glm(w->p[i]));
     }

@@ -42,6 +42,7 @@
 
 extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
+extern std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; //mxd
 extern std::atomic<uint32_t> fully_transparent_lightmaps;
 
 class faceextents_t {

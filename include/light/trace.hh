@@ -20,6 +20,8 @@
 #ifndef __LIGHT_TRACE_H__
 #define __LIGHT_TRACE_H__
 
+#include <light/imglib.hh> //mxd
+
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
@@ -42,7 +44,7 @@ enum class hittype_t : uint8_t {
 
 const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const vec3_t point );
 int Light_PointContents( const mbsp_t *bsp, const vec3_t point );
-int SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point);
+color_rgba SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point); //mxd. Palette index -> RGBA
 
 class modelinfo_t;
 

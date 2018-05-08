@@ -248,6 +248,8 @@ bool SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist);
 //FIXME: change from static buffers to returning std::string for thread safety
 const char *VecStr(const vec3_t vec);
 const char *VecStrf(const vec3_t vec);
+const char *VecStr(const qvec3f vec); //mxd
+const char *VecStrf(const qvec3f vec); //mxd
 
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
 void UniformPointOnSphere(vec3_t dir, float u, float v);

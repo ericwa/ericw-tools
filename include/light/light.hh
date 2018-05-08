@@ -41,9 +41,9 @@
 
 #include <common/qvec.hh>
 
-#define ON_EPSILON    0.1
-#define ANGLE_EPSILON 0.001
-#define EQUAL_EPSILON 0.001
+#define ON_EPSILON    0.1f
+#define ANGLE_EPSILON 0.001f
+#define EQUAL_EPSILON 0.001f
 
 typedef struct {
     vec3_t color;
@@ -166,8 +166,6 @@ typedef enum {
 extern debugmode_t debugmode;
 extern bool verbose_log;
 
-extern byte thepalette[768];
-    
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
 extern std::vector<const modelinfo_t *> tracelist;
 extern std::vector<const modelinfo_t *> selfshadowlist;
@@ -191,6 +189,8 @@ extern bool dump_face;
 
 extern int dump_vertnum;
 extern bool dump_vert;
+
+extern bool arghradcompat; //mxd
 
 class modelinfo_t {
     using strings = std::vector<std::string>;
