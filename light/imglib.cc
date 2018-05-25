@@ -51,7 +51,7 @@ LoadPalette(bspdata_t *bspdata)
 
         sprintf(path, "%s%s", gamedir, colormap);
         if (FileTime(path) == -1 || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
-            if (_strcmpi(gamedir, basedir)) {
+            if (Q_strcasecmp(gamedir, basedir)) {
                 sprintf(path, "%s%s", basedir, colormap);
                 if (FileTime(path) == -1 || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
                     logprint("WARNING: failed to load palette from '%s%s' or '%s%s'.\nUsing built-in palette.\n", gamedir, colormap, basedir, colormap);
@@ -303,8 +303,8 @@ LoadTGA(const char *filename, byte **pixels, int *width, int *height)
     if (targa_header.image_type == 2) {  // Uncompressed, RGB images
         for (row = rows - 1; row >= 0; row--) {
             pixbuf = targa_rgba + row * columns * 4;
-            for (column = 0; column<columns; column++) {
-                unsigned char red, green, blue;
+            for (column = 0; column < columns; column++) {
+                unsigned char red, green, blue, alphabyte;
                 switch (targa_header.pixel_size) {
                 case 24:
                     blue = getc(fin);
@@ -319,12 +319,15 @@ LoadTGA(const char *filename, byte **pixels, int *width, int *height)
                     blue = getc(fin);
                     green = getc(fin);
                     red = getc(fin);
-                    const unsigned char alphabyte = getc(fin);
+                    alphabyte = getc(fin);
                     *pixbuf++ = red;
                     *pixbuf++ = green;
                     *pixbuf++ = blue;
                     *pixbuf++ = alphabyte;
                     break;
+                default:
+                    logprint("LoadTGA: unsupported pixel size: %i\n", targa_header.pixel_size); //mxd
+                    return false;
                 }
             }
         }
@@ -349,6 +352,9 @@ LoadTGA(const char *filename, byte **pixels, int *width, int *height)
                         red = getc(fin);
                         alphabyte = getc(fin);
                         break;
+                    default:
+                        logprint("LoadTGA: unsupported pixel size: %i\n", targa_header.pixel_size); //mxd
+                        return false;
                     }
 
                     for (j = 0; j<packetSize; j++) {
@@ -388,6 +394,9 @@ LoadTGA(const char *filename, byte **pixels, int *width, int *height)
                             *pixbuf++ = blue;
                             *pixbuf++ = alphabyte;
                             break;
+                        default:
+                            logprint("LoadTGA: unsupported pixel size: %i\n", targa_header.pixel_size); //mxd
+                            return false;
                         }
                         column++;
                         if (column == columns) { // pixel packet run spans across rows
@@ -518,7 +527,7 @@ static void AddTextureName(std::map<std::string, std::string> &texturenames, con
         return;
 
     char path[4][1024];
-    static const qboolean is_mod = _strcmpi(gamedir, basedir);
+    static const qboolean is_mod = Q_strcasecmp(gamedir, basedir);
 
     sprintf(path[0], "%stextures/%s.tga", gamedir, texture); // TGA, in mod dir...
     sprintf(path[1], "%stextures/%s.tga", basedir, texture); // TGA, in game dir...

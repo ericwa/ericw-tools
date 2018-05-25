@@ -92,7 +92,9 @@ VecStr(const vec3_t vec)
 const char * //mxd
 VecStr(const qvec3f vec)
 {
-    return VecStr(vec3_t {vec[0], vec[1], vec[2]});
+    vec3_t v;
+    glm_to_vec3_t(vec, v);
+    return VecStr(v);
 }
 
 const char *
@@ -112,7 +114,9 @@ VecStrf(const vec3_t vec)
 const char * //mxd
 VecStrf(const qvec3f vec)
 {
-    return VecStrf(vec3_t{ vec[0], vec[1], vec[2] });
+    vec3_t v;
+    glm_to_vec3_t(vec, v);
+    return VecStrf(v);
 }
 
 void ClearBounds(vec3_t mins, vec3_t maxs)
@@ -801,7 +805,7 @@ std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float 
     vector<qvec3f> clipped = poly;
     
     for (const qvec4f &edge : edgeplanes) {
-        const qvec4f shrunkEdgePlane(edge[0], edge[1], edge[2], edge[3] + 1);
+        const qvec4f shrunkEdgePlane(edge[0], edge[1], edge[2], edge[3] + amount);
         clipped = GLM_ClipPoly(clipped, shrunkEdgePlane).first;
     }
     

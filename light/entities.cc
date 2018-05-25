@@ -295,7 +295,7 @@ static void
 SetupSpotlights(const globalconfig_t &cfg)
 {
     for (light_t &entity : all_lights) {
-        float targetdist; //mxd
+        float targetdist = 0.0f; //mxd
         if (entity.targetent) {
             vec3_t targetOrigin;
             EntDict_VectorForKey(*entity.targetent, "origin", targetOrigin);
@@ -305,19 +305,17 @@ SetupSpotlights(const globalconfig_t &cfg)
             entity.spotlight = true;
         }
         if (entity.spotlight) {
-            vec_t angle, angle2;
-
-            angle = (entity.spotangle.floatValue() > 0) ? entity.spotangle.floatValue() : 40;
+            const vec_t angle = (entity.spotangle.floatValue() > 0) ? entity.spotangle.floatValue() : 40;
             entity.spotfalloff = -cos(angle / 2 * Q_PI / 180);
 
-            angle2 = entity.spotangle2.floatValue();
+            vec_t angle2 = entity.spotangle2.floatValue();
             if (angle2 <= 0 || angle2 > angle)
                 angle2 = angle;
             entity.spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
 
             //mxd. Apply autofalloff?
-            if(entity.falloff.floatValue() == 0 && cfg.spotlightautofalloff.boolValue()) {
-                float coneradius = targetdist * tan(angle / 2 * Q_PI / 180);
+            if(targetdist > 0.0f && entity.falloff.floatValue() == 0 && cfg.spotlightautofalloff.boolValue()) {
+                const float coneradius = targetdist * tan(angle / 2 * Q_PI / 180);
                 entity.falloff.setFloatValue(targetdist + coneradius);
             }
         }

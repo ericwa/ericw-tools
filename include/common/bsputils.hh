@@ -37,6 +37,7 @@ bsp2_dface_t *BSP_GetFace(mbsp_t *bsp, int fnum);
 
 int Face_VertexAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
 void Face_PointAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v, vec3_t point_out);
+void Face_Normal(const mbsp_t *bsp, const bsp2_dface_t *f, vec3_t norm); //mxd
 plane_t Face_Plane(const mbsp_t *bsp, const bsp2_dface_t *f);
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const bsp2_dface_t *face);
 const rgba_miptex_t *Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face); //mxd. miptex_t -> rgba_miptex_t

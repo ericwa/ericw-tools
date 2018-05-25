@@ -423,8 +423,11 @@ void Q2_SwapBSPFile (q2bsp_t *bsp, qboolean todisk)
     //
     for (i=0 ; i<bsp->numtexinfo ; i++)
     {
-        for (j=0 ; j<8 ; j++)
-            bsp->texinfo[i].vecs[0][j] = LittleFloat (bsp->texinfo[i].vecs[0][j]);
+        for (j=0 ; j<4 ; j++)
+        {
+            bsp->texinfo[i].vecs[0][j] = LittleFloat(bsp->texinfo[i].vecs[0][j]);
+            bsp->texinfo[i].vecs[1][j] = LittleFloat(bsp->texinfo[i].vecs[1][j]);
+        }
         bsp->texinfo[i].flags = LittleLong (bsp->texinfo[i].flags);
         bsp->texinfo[i].value = LittleLong (bsp->texinfo[i].value);
         bsp->texinfo[i].nexttexinfo = LittleLong (bsp->texinfo[i].nexttexinfo);
@@ -2096,6 +2099,7 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
         break;
     default:
         Error("Unsupported BSP version: %d", header->version);
+        throw; //mxd. Fixes "Uninitialized variable" warning
     }
 
     length = header->lumps[lumpnum].filelen;
@@ -2110,12 +2114,12 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
         dmodel_t *out;
         int i, j;
         if (length % sizeof(dmodelq1_t))
-                Error("%s: odd %s lump size", __func__, lumpspec->name);
+            Error("%s: odd %s lump size", __func__, lumpspec->name);
         length /= sizeof(dmodelq1_t);
 
         buffer = *bufferptr = static_cast<byte *>(malloc(length * sizeof(dmodel_t)));
         if (!buffer)
-                Error("%s: allocation of %i bytes failed.", __func__, length);
+            Error("%s: allocation of %i bytes failed.", __func__, length);
         out = (dmodel_t*)buffer;
         for (i = 0; i < length; i++)
         {
@@ -2167,6 +2171,7 @@ Q2_CopyLump(const q2_dheader_t *header, int lumpnum, void *destptr)
             break;
         default:
             Error("Unsupported BSP version: %d", header->version);
+            throw; //mxd. Fixes "Uninitialized variable" warning
     }
     
     length = header->lumps[lumpnum].filelen;
@@ -2496,8 +2501,8 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
         q2 = true;
         break;
     default:
-        Error("Unsupported BSP version: %d",
-              LittleLong(bspfile->version));
+        Error("Unsupported BSP version: %d", LittleLong(bspfile->version));
+        throw; //mxd. Fixes "Uninitialized variable" warning
     }
 
     byte pad[4] = {0};

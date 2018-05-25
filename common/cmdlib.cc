@@ -170,7 +170,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
 
     // Expect mod folder to be above "maps" folder
     path_s = path_s.substr(0, pos);
-    strcpy_s(gamedir, (path_s + PATHSEPERATOR).c_str());
+    strcpy(gamedir, (path_s + PATHSEPERATOR).c_str());
     logprint("gamedir: %s\n", gamedir);
 
     // See if it's the main game data folder (ID1 / baseq2 / data1 etc.)
@@ -186,7 +186,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
             const std::string checkpath_s = path_s + PATHSEPERATOR + basedir_s;
             if (dir_exists(checkpath_s.c_str())) {
                 // Set basedir
-                strcpy_s(basedir, (checkpath_s + PATHSEPERATOR).c_str());
+                strcpy(basedir, (checkpath_s + PATHSEPERATOR).c_str());
                 logprint("basedir: %s\n", basedir);
                 break;
             }
@@ -201,7 +201,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
         // qdir is already in path_s
     } else {
         // Set basedir
-        strcpy_s(basedir, (path_s + PATHSEPERATOR).c_str());
+        strcpy(basedir, (path_s + PATHSEPERATOR).c_str());
         logprint("basedir: %s\n", basedir);
 
         // qdir shound be 1 level above basedir
@@ -210,7 +210,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
     }
 
     // Store qdir...
-    strcpy_s(qdir, (path_s + PATHSEPERATOR).c_str());
+    strcpy(qdir, (path_s + PATHSEPERATOR).c_str());
     logprint("qdir:    %s\n", qdir);
 }
 

@@ -281,8 +281,12 @@ public:
     lockable_bool_t bouncestyled;
     lockable_vec_t bouncescale, bouncecolorscale;
     
-    /* sunlight */
+    /* Q2 surface lights (mxd) */
+    lockable_vec_t surflightscale;
+    lockable_vec_t surflightbouncescale;
+    lockable_vec_t surflightsubdivision;
     
+    /* sunlight */
     lockable_vec_t sunlight;
     lockable_vec3_t sunlight_color;
     lockable_vec_t sun2;
@@ -326,20 +330,25 @@ public:
         bouncescale {"bouncescale", 1.0f, 0.0f, 100.0f},
         bouncecolorscale {"bouncecolorscale", 0.0f, 0.0f, 1.0f},
 
+        /* Q2 surface lights (mxd) */
+        surflightscale       { "surflightscale", 0.3f }, // Strange defaults to match arghrad3 look...
+        surflightbouncescale { "surflightbouncescale", 0.1f },
+        surflightsubdivision { strings { "surflightsubdivision", "choplight" }, 16.0f, 1.0f, 8192.0f }, // "choplight" - arghrad3 name
+
         /* sun */
-        sunlight         { "sunlight", 0.0f },                   /* main sun */
+        sunlight        { "sunlight", 0.0f },  /* main sun */
         sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
-        sun2             { "sun2", 0.0f },                   /* second sun */
+        sun2            { "sun2", 0.0f },      /* second sun */
         sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
-        sunlight2        { "sunlight2", 0.0f },                   /* top sky dome */
+        sunlight2       { "sunlight2", 0.0f }, /* top sky dome */
         sunlight2_color { strings{"sunlight2_color", "sunlight_color2"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
-        sunlight3        { "sunlight3", 0.0f },                   /* bottom sky dome */
+        sunlight3       { "sunlight3", 0.0f }, /* bottom sky dome */
         sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
-        sunlight_dirt    { "sunlight_dirt", 0.0f },
-        sunlight2_dirt   { "sunlight2_dirt", 0.0f },
+        sunlight_dirt   { "sunlight_dirt", 0.0f },
+        sunlight2_dirt  { "sunlight2_dirt", 0.0f },
         sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
         sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
-        sun_deviance     { "sunlight_penumbra", 0.0f, 0.0f, 180.0f }
+        sun_deviance    { "sunlight_penumbra", 0.0f, 0.0f, 180.0f }
     {}
     
     settingsdict_t settings() {
@@ -354,6 +363,7 @@ public:
             &minlightDirt,
             &phongallowed,
             &bounce, &bouncestyled, &bouncescale, &bouncecolorscale,
+            &surflightscale, &surflightbouncescale, &surflightsubdivision, //mxd
             &sunlight,
             &sunlight_color,
             &sun2,
@@ -401,7 +411,7 @@ void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
-bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf);
+//bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf); //mxd. Missing definition
 int light_main(int argc, const char **argv);
 
 #endif /* __LIGHT_LIGHT_H__ */

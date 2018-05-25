@@ -24,15 +24,14 @@ See file, 'COPYING', for details.
 #include <vector>
 
 typedef struct {
-    std::vector<qvec3f> poly;
-    std::vector<qvec4f> poly_edgeplanes;
-    qvec3f pos;
+    vec3_t pos;
     qvec3f surfnormal;
-    float areascaler;
+    std::vector<qvec3f> points;
 
     // Surface light settings...
-    float value;  // Surface light strength
-    vec3_t color; // Surface color, in [0..1] range
+    float intensity;       // Surface light strength for each point
+    float totalintensity;  // Total surface light strength
+    vec3_t color;          // Surface color
 
     // Estimated visible AABB culling
     vec3_t mins;
@@ -40,6 +39,7 @@ typedef struct {
 } surfacelight_t;
 
 const std::vector<surfacelight_t> &SurfaceLights();
+int TotalSurfacelightPoints();
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
 void MakeSurfaceLights (const globalconfig_t &cfg, const mbsp_t *bsp);
 

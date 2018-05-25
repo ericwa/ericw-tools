@@ -597,8 +597,8 @@ Embree_TraceInit(const mbsp_t *bsp)
             
             const int contents = Face_Contents(bsp, face); //mxd
 
-            //mxd. Skip NODRAW faces
-            if(bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_NODRAW))
+            //mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
+            if(bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_NODRAW) && !(contents & Q2_SURF_SKY))
                 continue;
             
             // handle glass

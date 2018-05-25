@@ -43,43 +43,32 @@ using namespace polylib;
 mutex surfacelights_lock;
 std::vector<surfacelight_t> surfacelights;
 std::map<int, std::vector<int>> surfacelightsByFacenum;
+int total_surflight_points = 0;
 
 struct make_surface_lights_args_t {
     const mbsp_t *bsp;
     const globalconfig_t *cfg;
 };
 
-static void
-AddSurfaceLight(const mbsp_t *bsp, const bsp2_dface_t *face, const float area, const vec3_t pos, const vec3_t surfnormal, const vec3_t color, const float lightvalue)
+struct save_winding_points_args_t {
+    vector<qvec3f> *points;
+};
+
+static void 
+SaveWindingCenterFn(winding_t *w, void *userinfo)
 {
-    surfacelight_t l;
-    l.poly = GLM_FacePoints(bsp, face);
-    l.poly_edgeplanes = GLM_MakeInwardFacingEdgePlanes(l.poly);
-    l.pos = vec3_t_to_glm(pos);
-    l.areascaler = ((area / 4.0f) / 128.0f);
+    auto *args = static_cast<save_winding_points_args_t *>(userinfo);
 
-    // Store surfacelight settings...
-    l.value = lightvalue;
-    VectorCopy(color, l.color);
-
-    l.surfnormal = vec3_t_to_glm(surfnormal);
-    VectorSet(l.mins, 0, 0, 0);
-    VectorSet(l.maxs, 0, 0, 0);
-
-    if (!novisapprox)
-        EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);
-
-    unique_lock<mutex> lck{ surfacelights_lock };
-    surfacelights.push_back(l);
-
-    const int index = static_cast<int>(surfacelights.size()) - 1;
-    surfacelightsByFacenum[Face_GetNum(bsp, face)].push_back(index);
+    vec3_t center{};
+    WindingCenter(w, center);
+    args->points->push_back(vec3_t_to_glm(center));
 }
 
 static void *
 MakeSurfaceLightsThread(void *arg)
 {
     const mbsp_t *bsp = static_cast<make_surface_lights_args_t *>(arg)->bsp;
+    const globalconfig_t &cfg = *static_cast<make_surface_lights_args_t *>(arg)->cfg;
 
     while (true) {
         const int i = GetThreadWork();
@@ -99,31 +88,80 @@ MakeSurfaceLightsThread(void *arg)
             continue;
         }
 
-        // Grab some info about the face winding
-        winding_t *winding = WindingFromFace(bsp, face);
-        const float facearea = WindingArea(winding);
-
+        // Create face points...
+        auto poly = GLM_FacePoints(bsp, face);
+        const float facearea = GLM_PolyArea(poly);
+        
         // Avoid small, or zero-area faces
-        if (facearea < 1) continue;
+        if(GLM_PolyArea(poly) < 1) continue;
 
-        plane_t faceplane;
-        WindingPlane(winding, faceplane.normal, &faceplane.dist);
+        // Create winding...
+        const int numpoints = poly.size();
+        winding_t *winding = AllocWinding(numpoints);
+        for (int c = 0; c < numpoints; c++) 
+            glm_to_vec3_t(poly.at(c), winding->p[c]);
+        winding->numpoints = numpoints;
+        RemoveColinearPoints(winding);
 
-        vec3_t facemidpoint;
+        // Get face normal and midpoint...
+        vec3_t facenormal, facemidpoint;
+        Face_Normal(bsp, face, facenormal);
         WindingCenter(winding, facemidpoint);
-        VectorMA(facemidpoint, 1, faceplane.normal, facemidpoint); // lift 1 unit
+        VectorMA(facemidpoint, 1, facenormal, facemidpoint); // Lift 1 unit
+
+        // Dice winding...
+        vector<qvec3f> points;
+        save_winding_points_args_t args{};
+        args.points = &points;
+
+        DiceWinding(winding, cfg.surflightsubdivision.floatValue(), SaveWindingCenterFn, &args);
+        winding = nullptr; // DiceWinding frees winding
+        total_surflight_points += points.size();
 
         // Get texture color
-        vec3_t blendedcolor = { 0, 0, 0 };
         vec3_t texturecolor;
         Face_LookupTextureColor(bsp, face, texturecolor);
 
-        // Calculate Q2 surface light color and strength
-        const float scaler = info->value / 256.0f; // Playing by the eye here...
-        for (int k = 0; k < 3; k++)
-            blendedcolor[k] = texturecolor[k] * scaler / 255.0f; // Scale by light value, convert to [0..1] range...
+        // Calculate emit color and intensity...
+        VectorScale(texturecolor, 1.0f / 255.0f, texturecolor); // Convert to 0..1 range...
+        VectorScale(texturecolor, info->value, texturecolor);	// Scale by light value
 
-        AddSurfaceLight(bsp, face, facearea, facemidpoint, faceplane.normal, blendedcolor, info->value);
+        // Calculate intensity...
+        float intensity = 0.0f;
+        for (float c : texturecolor)
+            if (c > intensity) intensity = c;
+        if (intensity == 0.0f) continue;
+
+        // Normalize color...
+        if (intensity > 1.0f) VectorScale(texturecolor, 1.0f / intensity, texturecolor);
+
+        // Sanity checks...
+        Q_assert(!points.empty());
+
+        // Add surfacelight...
+        surfacelight_t l;
+        l.surfnormal = vec3_t_to_glm(facenormal);
+        l.points = points;
+        VectorCopy(facemidpoint, l.pos);
+
+        // Store surfacelight settings...
+        l.totalintensity = intensity * facearea;
+        l.intensity = l.totalintensity / points.size();
+        VectorCopy(texturecolor, l.color);
+
+        // Init bbox...
+        VectorSet(l.mins, 0, 0, 0);
+        VectorSet(l.maxs, 0, 0, 0);
+
+        if (!novisapprox)
+            EstimateVisibleBoundsAtPoint(facemidpoint, l.mins, l.maxs);
+
+        // Store light...
+        unique_lock<mutex> lck{ surfacelights_lock };
+        surfacelights.push_back(l);
+
+        const int index = static_cast<int>(surfacelights.size()) - 1;
+        surfacelightsByFacenum[Face_GetNum(bsp, face)].push_back(index);
     }
 
     return nullptr;
@@ -132,6 +170,11 @@ MakeSurfaceLightsThread(void *arg)
 const std::vector<surfacelight_t> &SurfaceLights()
 {
     return surfacelights;
+}
+
+int TotalSurfacelightPoints()
+{
+    return total_surflight_points;
 }
 
 // No surflight_debug (yet?), so unused...

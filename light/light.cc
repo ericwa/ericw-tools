@@ -432,32 +432,29 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     info.bsp = bsp;
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
+    logprint("--- LightThread ---\n"); //mxd
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 #endif
 
     if (bouncerequired || isQuake2map) //mxd. Print some extra stats...
-        logprint("Indirect lights: %d bounce lights, %d surface lights in use.\n", BounceLights().size(), SurfaceLights().size());
+        logprint("Indirect lights: %i bounce lights, %i surface lights (%i light points) in use.\n", BounceLights().size(), SurfaceLights().size(), TotalSurfacelightPoints());
 
     logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 
-
-    if (faces_sup)
-    {
+    if (faces_sup) {
         uint8_t *styles = (uint8_t *)malloc(sizeof(*styles)*4*bsp->numfaces);
         int32_t *offsets = (int32_t *)malloc(sizeof(*offsets)*bsp->numfaces);
-        for (int i = 0; i < bsp->numfaces; i++)
-        {
+        for (int i = 0; i < bsp->numfaces; i++) {
             offsets[i] = faces_sup[i].lightofs;
             for (int j = 0; j < MAXLIGHTMAPS; j++)
                 styles[i*4+j] = faces_sup[i].styles[j];
         }
         BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles)*4*bsp->numfaces);
         BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets)*bsp->numfaces);
-    }
-    else
-    { //kill this stuff if its somehow found.
+    } else { 
+        //kill this stuff if its somehow found.
         BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
         BSPX_AddLump(bspdata, "LMOFFSET", NULL, 0);
     }
