@@ -44,8 +44,7 @@ SurfaceBBox(const mbsp_t *bsp, const bsp2_dface_t *surf,
     int vertnum;
     const float *vert;
 
-    mins[0] = mins[1] = FLT_MAX;
-    maxs[0] = maxs[1] = -FLT_MAX;
+    ClearBounds(mins, maxs);
 
     for (i = 0; i < surf->numedges; i++) {
         edgenum = bsp->dsurfedges[surf->firstedge + i];
