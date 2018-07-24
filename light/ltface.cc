@@ -118,7 +118,7 @@ faceextents_t::faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float 
                   "   surface normal (%s)\n",
                   Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale,
                   texname, qv::to_string(point).c_str(),
-                  VecStrf(plane.normal));
+                  VecStrf(plane.normal).c_str());
         }
     }
 }
@@ -345,7 +345,7 @@ CalcFaceExtents(const bsp2_dface_t *face,
                   "   texture %s at (%s)\n"
                   "   surface normal (%s)\n",
                   (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i], surf->lightmapscale,
-                  texname, VecStr(worldpoint), VecStrf(plane->normal));
+                  texname, VecStr(worldpoint).c_str(), VecStrf(plane->normal).c_str());
         }
     }
 }
@@ -2985,7 +2985,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         if (sorted.size() == MAXLIGHTMAPS) {
             logprint("WARNING: Too many light styles on a face\n"
                      "         lightmap point near (%s)\n",
-                     VecStr(lightsurf->points[0]));
+                     VecStr(lightsurf->points[0]).c_str());
             break;
         }
         

@@ -73,23 +73,20 @@ SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist)
 }
 
 /*
- * VecStr - handy shortcut for printf, not thread safe, obviously
+ * VecStr - handy shortcut for printf
  */
-const char *
+std::string
 VecStr(const vec3_t vec)
 {
-    static char buffers[8][20];
-    static int current = 0;
-    char *buf;
+    char buf[128];
 
-    buf = buffers[current++ & 7];
-    q_snprintf(buf, sizeof(buffers[0]), "%i %i %i",
-             (int)vec[0], (int)vec[1], (int)vec[2]);
+    q_snprintf(buf, sizeof(buf), "%i %i %i",
+              (int)vec[0], (int)vec[1], (int)vec[2]);
 
     return buf;
 }
 
-const char * //mxd
+std::string //mxd
 VecStr(const qvec3f vec)
 {
     vec3_t v;
@@ -97,21 +94,18 @@ VecStr(const qvec3f vec)
     return VecStr(v);
 }
 
-const char *
+std::string
 VecStrf(const vec3_t vec)
 {
-    static char buffers[8][20];
-    static int current = 0;
-    char *buf;
-
-    buf = buffers[current++ & 7];
-    q_snprintf(buf, sizeof(buffers[0]), "%.2f %.2f %.2f",
+    char buf[128];
+    
+    q_snprintf(buf, sizeof(buf), "%.2f %.2f %.2f",
              vec[0], vec[1], vec[2]);
 
     return buf;
 }
 
-const char * //mxd
+std::string //mxd
 VecStrf(const qvec3f vec)
 {
     vec3_t v;

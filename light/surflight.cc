@@ -83,7 +83,7 @@ MakeSurfaceLightsThread(void *arg)
             if (info->flags & Q2_SURF_LIGHT) {
                 vec3_t wc;
                 WindingCenter(WindingFromFace(bsp, face), wc);
-                logprint("WARNING: surface light '%s' at [%s] has 0 intensity.\n", Face_TextureName(bsp, face), VecStr(wc));
+                logprint("WARNING: surface light '%s' at [%s] has 0 intensity.\n", Face_TextureName(bsp, face), VecStr(wc).c_str());
             }
             continue;
         }

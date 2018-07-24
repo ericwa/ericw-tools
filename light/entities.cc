@@ -340,7 +340,7 @@ CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
     //mxd. Warn about unsupported _falloff / delay combos...
     if(entity->falloff.floatValue() > 0.0f && entity->getFormula() != LF_LINEAR) {
         logprint("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
-            "   %s at (%s)\n", entity->classname(), VecStr(*entity->origin.vec3Value()));
+            "   %s at (%s)\n", entity->classname(), VecStr(*entity->origin.vec3Value()).c_str());
         entity->falloff.setFloatValue(0.0f);
     }
 
@@ -352,7 +352,7 @@ CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
                      "   %s at (%s)\n"
                      "   (further formula warnings will be supressed)\n",
                      entity->getFormula(), entity->classname(),
-                     VecStr(*entity->origin.vec3Value()));
+                     VecStr(*entity->origin.vec3Value()).c_str());
         }
         entity->formula.setFloatValue(LF_LINEAR);
     }
