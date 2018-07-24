@@ -19,7 +19,7 @@ typedef struct {
 } winding_edges_t;
     
 #define MAX_POINTS_ON_WINDING 64
-#define ON_EPSILON 0.1
+#define ON_EPSILON 0.1f //mxd. Changed from 0.1 to silence compiler warning
 
 winding_t *AllocWinding(int points);
 vec_t WindingArea(const winding_t * w);

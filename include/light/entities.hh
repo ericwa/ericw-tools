@@ -58,7 +58,7 @@ public:
     vec3_t spotvec; // computed
     float spotfalloff;
     float spotfalloff2;
-    miptex_t *projectedmip; /*projected texture*/
+    rgba_miptex_t *projectedmip; /*projected texture*/ //mxd. miptex_t -> rgba_miptex_t
     float projectionmatrix[16]; /*matrix used to project the specified texture. already contains origin.*/
 
     const entdict_t *epairs;
@@ -188,5 +188,7 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
 bool EntDict_CheckTargetKeysMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
 
 bool EntDict_CheckTargetnameKeyMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
+
+std::vector<entdict_t> EntData_Parse(const char *entdata); //mxd
 
 #endif /* __LIGHT_ENTITIES_H__ */

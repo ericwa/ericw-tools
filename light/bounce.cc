@@ -117,7 +117,7 @@ Face_ShouldBounce(const mbsp_t *bsp, const bsp2_dface_t *face)
     return true;
 }
 
-static void
+void
 Face_LookupTextureColor(const mbsp_t *bsp, const bsp2_dface_t *face, vec3_t color)
 {
     const char *facename = Face_TextureName(bsp, face);
@@ -275,32 +275,25 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
     return empty;
 }
 
-qvec3f Palette_GetColor(int i)
-{
-    return qvec3f((float)thepalette[3*i],
-                     (float)thepalette[3*i + 1],
-                     (float)thepalette[3*i + 2]);
-}
-
 // Returns color in [0,255]
 static qvec3f
-Texture_AvgColor (const mbsp_t *bsp, const miptex_t *miptex)
+Texture_AvgColor (const mbsp_t *bsp, const rgba_miptex_t *miptex)
 {
-    if (!bsp->texdatasize)
-        return qvec3f(0);
+    qvec4f color(0);
 
-    qvec3f color(0);
-    const byte *data = (byte*)miptex + miptex->offsets[0];
-    for (int y=0; y<miptex->height; y++) {
-        for (int x=0; x<miptex->width; x++) {
-            const int i = data[(miptex->width * y) + x];
-            
-            color += Palette_GetColor(i);
-        }
-    }
-    color /= (miptex->width * miptex->height);
+    if (!bsp->rgbatexdatasize)
+        return color;
     
-    return color;
+    //mxd
+    const auto miptexsize = miptex->width * miptex->height;
+    for(auto i = 0; i < miptexsize; i++)
+    {
+        auto c = Texture_GetColor(miptex, i);
+        if(c[3] < 128) continue; // Skip transparent pixels...
+        color += c;
+    }
+
+    return color / miptexsize;
 }
 
 void
@@ -308,20 +301,19 @@ MakeTextureColors (const mbsp_t *bsp)
 {
     logprint("--- MakeTextureColors ---\n");
  
-    if (!bsp->texdatasize)
+    if (!bsp->rgbatexdatasize) //mxd. dtexdata -> drgbatexdata
         return;
     
-    for (int i=0; i<bsp->dtexdata->nummiptex; i++) {
-        const int ofs = bsp->dtexdata->dataofs[i];
+    for (int i = 0; i<bsp->drgbatexdata->nummiptex; i++) {
+        const int ofs = bsp->drgbatexdata->dataofs[i];
         if (ofs < 0)
             continue;
         
-        const miptex_t *miptex = (miptex_t *)((byte *)bsp->dtexdata + ofs);
-        
-        string name { miptex->name };
+        const rgba_miptex_t *miptex = (rgba_miptex_t *)((byte *)bsp->drgbatexdata + ofs);
+        const string name { miptex->name };
         const qvec3f color = Texture_AvgColor(bsp, miptex);
         
-//        printf("%s has color %f %f %f\n", name.c_str(), color[0], color[1], color[2]);
+//      printf("%s has color %s\n", name.c_str(), VecStr(color));
         texturecolors[name] = color;
     }
 }
@@ -332,10 +324,7 @@ MakeBounceLights (const globalconfig_t &cfg, const mbsp_t *bsp)
     logprint("--- MakeBounceLights ---\n");
     
     const dmodel_t *model = &bsp->dmodels[0];
-    
-    make_bounce_lights_args_t args;
-    args.bsp = bsp;
-    args.cfg = &cfg;
+    make_bounce_lights_args_t args { bsp, &cfg }; //mxd. https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html
     
     RunThreadsOn(model->firstface, model->firstface + model->numfaces, MakeBounceLightsThread, (void *)&args);
 }

@@ -25,6 +25,8 @@
 #include <light/light.hh>
 #include <light/phong.hh>
 #include <light/bounce.hh>
+#include <light/surflight.hh> //mxd
+#include <light/imglib.hh> //mxd
 #include <light/entities.hh>
 #include <light/ltface.hh>
 
@@ -106,6 +108,8 @@ vec3_t dump_face_point = {0,0,0};
 int dump_vertnum = -1;
 bool dump_vert;
 vec3_t dump_vert_point = {0,0,0};
+
+qboolean arghradcompat = false; //mxd
 
 lockable_setting_t *FindSetting(std::string name) {
     settingsdict_t sd = cfg_static.settings();
@@ -358,8 +362,6 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     logprint("--- LightWorld ---\n" );
     
     mbsp_t *const bsp = &bspdata->data.mbsp;
-    const unsigned char *lmshift_lump;
-    int i, j;
     if (bsp->dlightdata)
         free(bsp->dlightdata);
     if (lux_buffer)
@@ -393,7 +395,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     if (forcedscale)
         BSPX_AddLump(bspdata, "LMSHIFT", NULL, 0);
 
-    lmshift_lump = (const unsigned char *)BSPX_GetLump(bspdata, "LMSHIFT", NULL);
+    const unsigned char *lmshift_lump = (const unsigned char *)BSPX_GetLump(bspdata, "LMSHIFT", NULL);
     if (!lmshift_lump && write_litfile != ~0)
         faces_sup = NULL; //no scales, no lit2
     else
@@ -402,24 +404,25 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         memset(faces_sup, 0, sizeof(*faces_sup) * bsp->numfaces);
         if (lmshift_lump)
         {
-            for (i = 0; i < bsp->numfaces; i++)
+            for (int i = 0; i < bsp->numfaces; i++)
                 faces_sup[i].lmscale = 1<<lmshift_lump[i];
         }
         else
         {
-            for (i = 0; i < bsp->numfaces; i++)
+            for (int i = 0; i < bsp->numfaces; i++)
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
         }
     }
 
     CalcualateVertexNormals(bsp);
     
-    if (cfg_static.bounce.boolValue()
-        && (debugmode == debugmode_none
-            || debugmode == debugmode_bounce
-            || debugmode == debugmode_bouncelights)) {
+    const qboolean bouncerequired = cfg_static.bounce.boolValue() && (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); //mxd
+    const qboolean isQuake2map = (bsp->loadversion == Q2_BSPVERSION); //mxd
+
+    if (bouncerequired || isQuake2map) {
         MakeTextureColors(bsp);
-        MakeBounceLights(cfg_static, bsp);
+        if (isQuake2map)   MakeSurfaceLights(cfg_static, bsp);
+        if (bouncerequired) MakeBounceLights(cfg_static, bsp);
     }
     
 #if 0
@@ -429,29 +432,33 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     info.bsp = bsp;
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
+    logprint("--- LightThread ---\n"); //mxd
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 #endif
+
+    if (bouncerequired || isQuake2map) { //mxd. Print some extra stats...
+        logprint("Indirect lights: %i bounce lights, %i surface lights (%i light points) in use.\n",
+                 static_cast<int>(BounceLights().size()),
+                 static_cast<int>(SurfaceLights().size()),
+                 static_cast<int>(TotalSurfacelightPoints()));
+    }
 
     logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 
-
-    if (faces_sup)
-    {
+    if (faces_sup) {
         uint8_t *styles = (uint8_t *)malloc(sizeof(*styles)*4*bsp->numfaces);
         int32_t *offsets = (int32_t *)malloc(sizeof(*offsets)*bsp->numfaces);
-        for (i = 0; i < bsp->numfaces; i++)
-        {
+        for (int i = 0; i < bsp->numfaces; i++) {
             offsets[i] = faces_sup[i].lightofs;
-            for (j = 0; j < MAXLIGHTMAPS; j++)
+            for (int j = 0; j < MAXLIGHTMAPS; j++)
                 styles[i*4+j] = faces_sup[i].styles[j];
         }
         BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles)*4*bsp->numfaces);
         BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets)*bsp->numfaces);
-    }
-    else
-    { //kill this stuff if its somehow found.
+    } else { 
+        //kill this stuff if its somehow found.
         BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
         BSPX_AddLump(bspdata, "LMOFFSET", NULL, 0);
     }
@@ -498,18 +505,27 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
     fclose(texinfofile);
 }
 
+static const char* //mxd
+GetBaseDirName(bspdata_t *bspdata)
+{
+    if (bspdata->loadversion == Q2_BSPVERSION)
+        return "BASEQ2";
+    if (bspdata->hullcount == MAX_MAP_HULLS_H2)
+        return "DATA1";
+    return "ID1";
+}
+
 //obj
 
 static FILE *
 InitObjFile(const char *filename)
 {
-    FILE *objfile;
     char objfilename[1024];
     strcpy(objfilename, filename);
     StripExtension(objfilename);
     DefaultExtension(objfilename, ".obj");
     
-    objfile = fopen(objfilename, "wt");
+    FILE *objfile = fopen(objfilename, "wt");
     if (!objfile)
         Error("Failed to open %s: %s", objfilename, strerror(errno));
     
@@ -522,7 +538,7 @@ ExportObjFace(FILE *f, const mbsp_t *bsp, const bsp2_dface_t *face, int *vertcou
     // export the vertices and uvs
     for (int i=0; i<face->numedges; i++)
     {
-        int vertnum = Face_VertexAtIndex(bsp, face, i);
+        const int vertnum = Face_VertexAtIndex(bsp, face, i);
         const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i);
         const float *pos = bsp->dvertexes[vertnum].point;
         fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
@@ -609,7 +625,7 @@ FindDebugFace(const mbsp_t *bsp)
     dump_facenum = facenum;
     
     const modelinfo_t *mi = ModelInfoForFace(bsp, facenum);
-    int modelnum = (mi->model - bsp->dmodels);
+    const int modelnum = (mi->model - bsp->dmodels);
     
     const char *texname = Face_TextureName(bsp, f);
     
@@ -676,7 +692,7 @@ static void CheckLitNeeded(const globalconfig_t &cfg)
     
     // check lights
     for (const auto &light : GetLights()) {
-        if (!VectorCompare(white, *light.color.vec3Value(), EQUAL_EPSILON)) {
+        if (!VectorCompare(white, *light.color.vec3Value(), EQUAL_EPSILON) || light.projectedmip != nullptr) { //mxd. Projected mips could also use .lit output
             SetLitNeeded();
             return;
         }
@@ -1023,6 +1039,9 @@ light_main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-highlightseams" ) ) {
             logprint("Highlighting lightmap seams\n");
             debug_highlightseams = true;
+        } else if (!strcmp(argv[i], "-arghradcompat")) { //mxd
+            logprint("Arghrad entity keys conversion enabled\n");
+            arghradcompat = true;
         } else if ( !strcmp( argv[ i ], "-verbose" ) ) {
             verbose_log = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
@@ -1129,6 +1148,18 @@ light_main(int argc, const char **argv)
     loadversion = bspdata.version;
     ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
+    //mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
+    if (loadversion == Q2_BSPVERSION && !cfg.rangescale.isChanged())
+    {
+        const auto rs = new lockable_vec_t(cfg.rangescale.primaryName(), 1.0f, 0.0f, 100.0f);
+        cfg.rangescale = *rs; // Gross hacks to avoid displaying this in OptionsSummary...
+    }
+
+    //mxd. Load or convert textures...
+    SetQdirFromPath(GetBaseDirName(&bspdata), source);
+    LoadPalette(&bspdata);
+    LoadOrConvertTextures(bsp);
+
     LoadExtendedTexinfoFlags(source, bsp);
     LoadEntities(cfg, bsp);
 
@@ -1206,6 +1237,9 @@ light_main(int argc, const char **argv)
     logprint("%f lights tested, %f hits per sample point\n",
              static_cast<double>(total_light_rays) / static_cast<double>(total_samplepoints),
              static_cast<double>(total_light_ray_hits) / static_cast<double>(total_samplepoints));
+    logprint("%f surface lights tested, %f hits per sample point\n",
+        static_cast<double>(total_surflight_rays) / static_cast<double>(total_samplepoints),
+        static_cast<double>(total_surflight_ray_hits) / static_cast<double>(total_samplepoints)); //mxd
     logprint("%f bounce lights tested, %f hits per sample point\n",
              static_cast<double>(total_bounce_rays) / static_cast<double>(total_samplepoints),
              static_cast<double>(total_bounce_ray_hits) / static_cast<double>(total_samplepoints));

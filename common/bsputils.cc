@@ -18,7 +18,6 @@
  */
 
 #include <common/bsputils.hh>
-#include <assert.h>
 #include <cstddef>
 
 #include <common/qvec.hh>
@@ -127,10 +126,10 @@ const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const bsp2_dface_t *face)
     return &bsp->texinfo[face->texinfo];
 }
 
-const miptex_t *
+const rgba_miptex_t * //mxd. miptex_t -> rgba_miptex_t
 Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    if (!bsp->texdatasize)
+    if (!bsp->rgbatexdatasize)
         return nullptr;
     
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
@@ -138,24 +137,21 @@ Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face)
         return nullptr;
     
     const int texnum = texinfo->miptex;
-    const dmiptexlump_t *miplump = bsp->dtexdata;
+    const dmiptexlump_t *miplump = bsp->drgbatexdata;
     
-    int offset = miplump->dataofs[texnum];
+    const int offset = miplump->dataofs[texnum];
     if (offset < 0)
-        return NULL; //sometimes the texture just wasn't written. including its name.
+        return nullptr; //sometimes the texture just wasn't written. including its name.
     
-    const miptex_t *miptex = (const miptex_t*)((const byte *)bsp->dtexdata + offset);
+    const rgba_miptex_t *miptex = (const rgba_miptex_t*)((const byte *)bsp->drgbatexdata + offset);
     return miptex;
 }
 
 const char *
 Face_TextureName(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    const miptex_t *miptex = Face_Miptex(bsp, face);
-    if (miptex)
-        return miptex->name;
-    else
-        return "";
+    const auto *miptex = Face_Miptex(bsp, face);
+    return (miptex ? miptex->name : "");
 }
 
 bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face)
@@ -165,7 +161,7 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face)
         return false;
     
     if (bsp->loadversion == Q2_BSPVERSION) {
-        if (texinfo->flags & (Q2_SURF_WARP|Q2_SURF_SKY)) {
+        if (texinfo->flags & (Q2_SURF_WARP|Q2_SURF_SKY|Q2_SURF_NODRAW)) { //mxd. +Q2_SURF_NODRAW
             return false;
         }
     } else {
@@ -196,11 +192,31 @@ TextureName_Contents(const char *texname)
     return CONTENTS_SOLID;
 }
 
-int
+bool //mxd
+Contents_IsTranslucent(const mbsp_t *bsp, const int contents)
+{
+    if (bsp->loadversion == Q2_BSPVERSION)
+        return (contents & Q2_SURF_TRANSLUCENT) && ((contents & Q2_SURF_TRANSLUCENT) != Q2_SURF_TRANSLUCENT); // Don't count KMQ2 fence flags combo as translucent
+    else
+        return contents == CONTENTS_WATER || contents == CONTENTS_LAVA || contents == CONTENTS_SLIME;
+}
+
+bool //mxd. Moved here from ltface.c (was Face_IsLiquid)
+Face_IsTranslucent(const mbsp_t *bsp, const bsp2_dface_t *face)
+{
+    return Contents_IsTranslucent(bsp, Face_Contents(bsp, face));
+}
+
+int //mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 Face_Contents(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    const char *texname = Face_TextureName(bsp, face);
-    return TextureName_Contents(texname);
+    if (bsp->loadversion == Q2_BSPVERSION) {
+        const gtexinfo_t *info = Face_Texinfo(bsp, face);
+        return info->flags;
+    } else {
+        const char *texname = Face_TextureName(bsp, face);
+        return TextureName_Contents(texname);
+    }
 }
 
 const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str)
@@ -229,32 +245,30 @@ vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
     }
 }
 
-static bool Light_PointInSolid_r(const mbsp_t *bsp, int nodenum, const vec3_t point )
+static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec3_t point)
 {
     if (nodenum < 0) {
-		// FIXME: Factor out into bounds-checked getter
-		int leafnum = (-1 - nodenum);
-		if (leafnum < 0 || leafnum >= bsp->numleafs) {
-			Error("Corrupt BSP: leaf %d is out of bounds (bsp->numleafs = %d)", leafnum, bsp->numleafs);
-		}
+        // FIXME: Factor out into bounds-checked getter
+        const int leafnum = (-1 - nodenum);
+        if (leafnum < 0 || leafnum >= bsp->numleafs) {
+            Error("Corrupt BSP: leaf %d is out of bounds (bsp->numleafs = %d)", leafnum, bsp->numleafs);
+        }
         mleaf_t *leaf = &bsp->dleafs[leafnum];
         
-        return leaf->contents == CONTENTS_SOLID
-        || leaf->contents == CONTENTS_SKY;
+        return (bsp->loadversion == Q2_BSPVERSION ? leaf->contents & Q2_CONTENTS_SOLID : (leaf->contents == CONTENTS_SOLID || leaf->contents == CONTENTS_SKY)); //mxd
     }
     
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
+    const vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
     
     if (dist > 0.1)
         return Light_PointInSolid_r(bsp, node->children[0], point);
-    else if (dist < -0.1)
+    if (dist < -0.1)
         return Light_PointInSolid_r(bsp, node->children[1], point);
-    else {
-        // too close to the plane, check both sides
-        return Light_PointInSolid_r(bsp, node->children[0], point)
+
+    // too close to the plane, check both sides
+    return Light_PointInSolid_r(bsp, node->children[0], point)
         || Light_PointInSolid_r(bsp, node->children[1], point);
-    }
 }
 
 // Tests model 0 of the given model
@@ -296,7 +310,7 @@ bool
 EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point)
 {
     for (int i=0; i<face->numedges; i++) {
-        vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
+        const vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
         if (planedist < 0) {
             return false;
         }
@@ -331,11 +345,12 @@ qvec3f Face_Normal_E(const mbsp_t *bsp, const bsp2_dface_t *f)
     return vec3_t_to_glm(temp);
 }
 
-std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *f)
+std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
     std::vector<qvec3f> points;
-    for (int j = 0; j < f->numedges; j++) {
-        points.push_back(Face_PointAtIndex_E(bsp, f, j));
+    points.reserve(face->numedges); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
+    for (int j = 0; j < face->numedges; j++) {
+        points.push_back(Face_PointAtIndex_E(bsp, face, j));
     }
     return points;
 }

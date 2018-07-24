@@ -37,14 +37,17 @@ bsp2_dface_t *BSP_GetFace(mbsp_t *bsp, int fnum);
 
 int Face_VertexAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
 void Face_PointAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v, vec3_t point_out);
+void Face_Normal(const mbsp_t *bsp, const bsp2_dface_t *f, vec3_t norm); //mxd
 plane_t Face_Plane(const mbsp_t *bsp, const bsp2_dface_t *f);
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const bsp2_dface_t *face);
-const miptex_t *Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face);
+const rgba_miptex_t *Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face); //mxd. miptex_t -> rgba_miptex_t
 const char *Face_TextureName(const mbsp_t *bsp, const bsp2_dface_t *face);
 bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face);
 const float *GetSurfaceVertexPoint(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
-int TextureName_Contents(const char *texname);
-int Face_Contents(const mbsp_t *bsp, const bsp2_dface_t *face);
+//int TextureName_Contents(const char *texname); //mxd
+bool Contents_IsTranslucent(const mbsp_t *bsp, int contents); //mxd
+bool Face_IsTranslucent(const mbsp_t *bsp, const bsp2_dface_t *face); //mxd
+int Face_Contents(const mbsp_t *bsp, const bsp2_dface_t *face); //mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
 vec_t Plane_Dist(const vec3_t point, const dplane_t *plane);
 bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point);

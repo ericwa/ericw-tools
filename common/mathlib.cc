@@ -73,34 +73,44 @@ SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist)
 }
 
 /*
- * VecStr - handy shortcut for printf, not thread safe, obviously
+ * VecStr - handy shortcut for printf
  */
-const char *
+std::string
 VecStr(const vec3_t vec)
 {
-    static char buffers[8][20];
-    static int current = 0;
-    char *buf;
+    char buf[128];
 
-    buf = buffers[current++ & 7];
-    q_snprintf(buf, sizeof(buffers[0]), "%i %i %i",
-             (int)vec[0], (int)vec[1], (int)vec[2]);
+    q_snprintf(buf, sizeof(buf), "%i %i %i",
+              (int)vec[0], (int)vec[1], (int)vec[2]);
 
     return buf;
 }
 
-const char *
+std::string //mxd
+VecStr(const qvec3f vec)
+{
+    vec3_t v;
+    glm_to_vec3_t(vec, v);
+    return VecStr(v);
+}
+
+std::string
 VecStrf(const vec3_t vec)
 {
-    static char buffers[8][20];
-    static int current = 0;
-    char *buf;
-
-    buf = buffers[current++ & 7];
-    q_snprintf(buf, sizeof(buffers[0]), "%.2f %.2f %.2f",
+    char buf[128];
+    
+    q_snprintf(buf, sizeof(buf), "%.2f %.2f %.2f",
              vec[0], vec[1], vec[2]);
 
     return buf;
+}
+
+std::string //mxd
+VecStrf(const qvec3f vec)
+{
+    vec3_t v;
+    glm_to_vec3_t(vec, v);
+    return VecStrf(v);
 }
 
 void ClearBounds(vec3_t mins, vec3_t maxs)
@@ -376,6 +386,7 @@ NormalizePDF(const std::vector<float> &pdf)
     }
     
     std::vector<float> normalizedPdf;
+    normalizedPdf.reserve(pdf.size()); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
     for (float val : pdf) {
         normalizedPdf.push_back(val / pdfSum);
     }
@@ -755,6 +766,7 @@ static std::vector<qvec3f> winding_to_glm(const winding_t *w)
     if (w == nullptr)
         return {};
     std::vector<qvec3f> res;
+    res.reserve(w->numpoints); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
     for (int i=0; i<w->numpoints; i++) {
         res.push_back(vec3_t_to_glm(w->p[i]));
     }
@@ -787,7 +799,7 @@ std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float 
     vector<qvec3f> clipped = poly;
     
     for (const qvec4f &edge : edgeplanes) {
-        const qvec4f shrunkEdgePlane(edge[0], edge[1], edge[2], edge[3] + 1);
+        const qvec4f shrunkEdgePlane(edge[0], edge[1], edge[2], edge[3] + amount);
         clipped = GLM_ClipPoly(clipped, shrunkEdgePlane).first;
     }
     

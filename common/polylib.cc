@@ -556,6 +556,7 @@ polylib::PointInWindingEdges(const winding_edges_t *wi, const vec3_t point)
 std::vector<qvec3f> polylib::GLM_WindingPoints(const winding_t *w)
 {
     std::vector<qvec3f> points;
+    points.reserve(w->numpoints); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
     for (int j = 0; j < w->numpoints; j++) {
         points.push_back(vec3_t_to_glm(w->p[j]));
     }

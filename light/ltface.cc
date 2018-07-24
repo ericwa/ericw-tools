@@ -20,6 +20,7 @@
 #include <light/light.hh>
 #include <light/phong.hh>
 #include <light/bounce.hh>
+#include <light/surflight.hh> //mxd
 #include <light/entities.hh>
 #include <light/trace.hh>
 #include <light/ltface.hh>
@@ -35,6 +36,7 @@ using namespace std;
 
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
+std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; //mxd
 std::atomic<uint32_t> fully_transparent_lightmaps;
 
 /* ======================================================================== */
@@ -116,7 +118,7 @@ faceextents_t::faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float 
                   "   surface normal (%s)\n",
                   Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale,
                   texname, qv::to_string(point).c_str(),
-                  VecStrf(plane.normal));
+                  VecStrf(plane.normal).c_str());
         }
     }
 }
@@ -289,8 +291,8 @@ CalcFaceExtents(const bsp2_dface_t *face,
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
 
     for (int i = 0; i < face->numedges; i++) {
-        int edge = bsp->dsurfedges[face->firstedge + i];
-        int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
+        const int edge = bsp->dsurfedges[face->firstedge + i];
+        const int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
         const dvertex_t *dvertex = &bsp->dvertexes[vert];
 
         vec3_t worldpoint;
@@ -343,7 +345,7 @@ CalcFaceExtents(const bsp2_dface_t *face,
                   "   texture %s at (%s)\n"
                   "   surface normal (%s)\n",
                   (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i], surf->lightmapscale,
-                  texname, VecStr(worldpoint), VecStrf(plane->normal));
+                  texname, VecStr(worldpoint).c_str(), VecStrf(plane->normal).c_str());
         }
     }
 }
@@ -423,7 +425,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
     const qvec4f &surfplane = facecache.plane();
     const auto &points = facecache.points();
     const auto &edgeplanes = facecache.edgePlanes();
-    const auto &neighbours = facecache.neighbours();
+    //const auto &neighbours = facecache.neighbours();
     
     // check for degenerate face
     if (points.empty() || edgeplanes.empty())
@@ -493,7 +495,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
             if (!edgeplane.first)
                 continue; // degenerate edge
             
-            float planedist = GLM_DistAbovePlane(edgeplane.second, point);
+            const float planedist = GLM_DistAbovePlane(edgeplane.second, point);
             if (planedist < POINT_EQUAL_EPSILON) {
                 // behind this plane. check whether we're between the endpoints.
                 
@@ -738,12 +740,13 @@ CalcPoints(const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf,
     }
 }
 
-static bool
+//mxd. That's Q1-specific. Also moved to bsputils.c as Face_IsTranslucent
+/*static bool
 Face_IsLiquid(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
     const char *name = Face_TextureName(bsp, face);
     return name[0] == '*';
-}
+}*/
 
 static bool
 Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
@@ -793,7 +796,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     }
     
     /* never receive dirtmapping on lit liquids */
-    if (Face_IsLiquid(bsp, face)) {
+    if (Face_IsTranslucent(bsp, face)) {
         lightsurf->nodirt = true;
     }
     
@@ -941,18 +944,11 @@ vec_t
 GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
 {
     const float light = entity->light.floatValue();
-    vec_t value;
 
     //mxd. Apply falloff?
     const float lightdistance = entity->falloff.floatValue();
     if (lightdistance > 0.0f) {
-        if (entity->getFormula() != LF_LINEAR) {
-            logprint("WARNING: _falloff is currently only supported on linear (delay 0): light at (%f %f %f)\n",
-                     (*entity->origin.vec3Value())[0],
-                     (*entity->origin.vec3Value())[1],
-                     (*entity->origin.vec3Value())[2]);
-            // ignore _falloff key
-        } else {
+        if (entity->getFormula() == LF_LINEAR) {
             // Light can affect surface?
             if (lightdistance > dist)
                 return light * (1.0f - (dist / lightdistance));
@@ -964,7 +960,7 @@ GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
     if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
         return light;
 
-    value = cfg.scaledist.floatValue() * entity->atten.floatValue() * dist;
+    vec_t value = cfg.scaledist.floatValue() * entity->atten.floatValue() * dist;
 
     switch (entity->getFormula()) {
     case LF_INVERSE:
@@ -981,6 +977,7 @@ GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
             return (light + value < 0) ? light + value : 0;
     default:
         Error("Internal error: unknown light formula");
+        throw; //mxd. Silences compiler warning
     }
 }
 
@@ -1006,7 +1003,7 @@ GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const v
     /* Check spotlight cone */
     float spotscale = 1;
     if (entity->spotlight) {
-        vec_t falloff = DotProduct(entity->spotvec, surfpointToLightDir);
+        const vec_t falloff = DotProduct(entity->spotvec, surfpointToLightDir);
         if (falloff > entity->spotfalloff) {
             return 0;
         }
@@ -1022,19 +1019,25 @@ GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const v
     return add;
 }
 
-static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix, const vec3_t point, float *result);
+static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point, float *result); //mxd. miptex_t -> rgba_miptex_t
 
 void
 GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpoint, bool twosided,
                 vec3_t color_out, vec3_t surfpointToLightDir_out, vec3_t normalmap_addition_out, float *dist_out)
 {
-    float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
-    float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
+    const float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
+    const float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
     
     /* write out the final color */
     if (entity->projectedmip) {
         vec3_t col;
-        LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col);
+        if(LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col)) {
+            //mxd. Modulate by light color...
+            const auto entcol = *entity->color.vec3Value();
+            for (int i = 0; i < 3; i++)
+                col[i] *= entcol[i] * (1.0f / 255.0f);
+        }
+        
         VectorScale(col, add * (1.0f / 255.0f), color_out);
     } else {
         VectorScale(*entity->color.vec3Value(), add * (1.0f / 255.0f), color_out);
@@ -1078,6 +1081,7 @@ GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desiredLigh
                 break;
             default:
                 Error("Internal error: formula not handled in %s", __func__);
+                throw; //mxd. Fixes "uninitialized variable" warning
         }
     }
     return fadedist;
@@ -1213,7 +1217,7 @@ CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     
     vec3_t distvec;
     VectorSubtract(*entity->origin.vec3Value(), lightsurf->origin, distvec);
-    float dist = VectorLength(distvec) - lightsurf->radius;
+    const float dist = VectorLength(distvec) - lightsurf->radius;
     
     /* light is inside surface bounding sphere => can't cull */
     if (dist < 0) {
@@ -1226,15 +1230,6 @@ CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     return fabs(GetLightValue(cfg, entity, dist)) <= fadegate;
 }
 
-byte thepalette[768] =
-{
-0,0,0,15,15,15,31,31,31,47,47,47,63,63,63,75,75,75,91,91,91,107,107,107,123,123,123,139,139,139,155,155,155,171,171,171,187,187,187,203,203,203,219,219,219,235,235,235,15,11,7,23,15,11,31,23,11,39,27,15,47,35,19,55,43,23,63,47,23,75,55,27,83,59,27,91,67,31,99,75,31,107,83,31,115,87,31,123,95,35,131,103,35,143,111,35,11,11,15,19,19,27,27,27,39,39,39,51,47,47,63,55,55,75,63,63,87,71,71,103,79,79,115,91,91,127,99,99,
-139,107,107,151,115,115,163,123,123,175,131,131,187,139,139,203,0,0,0,7,7,0,11,11,0,19,19,0,27,27,0,35,35,0,43,43,7,47,47,7,55,55,7,63,63,7,71,71,7,75,75,11,83,83,11,91,91,11,99,99,11,107,107,15,7,0,0,15,0,0,23,0,0,31,0,0,39,0,0,47,0,0,55,0,0,63,0,0,71,0,0,79,0,0,87,0,0,95,0,0,103,0,0,111,0,0,119,0,0,127,0,0,19,19,0,27,27,0,35,35,0,47,43,0,55,47,0,67,
-55,0,75,59,7,87,67,7,95,71,7,107,75,11,119,83,15,131,87,19,139,91,19,151,95,27,163,99,31,175,103,35,35,19,7,47,23,11,59,31,15,75,35,19,87,43,23,99,47,31,115,55,35,127,59,43,143,67,51,159,79,51,175,99,47,191,119,47,207,143,43,223,171,39,239,203,31,255,243,27,11,7,0,27,19,0,43,35,15,55,43,19,71,51,27,83,55,35,99,63,43,111,71,51,127,83,63,139,95,71,155,107,83,167,123,95,183,135,107,195,147,123,211,163,139,227,179,151,
-171,139,163,159,127,151,147,115,135,139,103,123,127,91,111,119,83,99,107,75,87,95,63,75,87,55,67,75,47,55,67,39,47,55,31,35,43,23,27,35,19,19,23,11,11,15,7,7,187,115,159,175,107,143,163,95,131,151,87,119,139,79,107,127,75,95,115,67,83,107,59,75,95,51,63,83,43,55,71,35,43,59,31,35,47,23,27,35,19,19,23,11,11,15,7,7,219,195,187,203,179,167,191,163,155,175,151,139,163,135,123,151,123,111,135,111,95,123,99,83,107,87,71,95,75,59,83,63,
-51,67,51,39,55,43,31,39,31,23,27,19,15,15,11,7,111,131,123,103,123,111,95,115,103,87,107,95,79,99,87,71,91,79,63,83,71,55,75,63,47,67,55,43,59,47,35,51,39,31,43,31,23,35,23,15,27,19,11,19,11,7,11,7,255,243,27,239,223,23,219,203,19,203,183,15,187,167,15,171,151,11,155,131,7,139,115,7,123,99,7,107,83,0,91,71,0,75,55,0,59,43,0,43,31,0,27,15,0,11,7,0,0,0,255,11,11,239,19,19,223,27,27,207,35,35,191,43,
-43,175,47,47,159,47,47,143,47,47,127,47,47,111,47,47,95,43,43,79,35,35,63,27,27,47,19,19,31,11,11,15,43,0,0,59,0,0,75,7,0,95,7,0,111,15,0,127,23,7,147,31,7,163,39,11,183,51,15,195,75,27,207,99,43,219,127,59,227,151,79,231,171,95,239,191,119,247,211,139,167,123,59,183,155,55,199,195,55,231,227,87,127,191,255,171,231,255,215,255,255,103,0,0,139,0,0,179,0,0,215,0,0,255,0,0,255,243,147,255,247,199,255,255,255,159,91,83
-};
 static void Matrix4x4_CM_Transform4(const float *matrix, const float *vector, float *product)
 {
     product[0] = matrix[0]*vector[0] + matrix[4]*vector[1] + matrix[8]*vector[2] + matrix[12]*vector[3];
@@ -1267,44 +1262,46 @@ static qboolean Matrix4x4_CM_Project (const vec3_t in, vec3_t out, const float *
         result = false; //beyond far clip plane
     return result;
 }
-static void LightFace_SampleMipTex(miptex_t *tex, const float *projectionmatrix, const vec3_t point, float *result)
+static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point, float *result) //mxd. miptex_t -> rgba_miptex_t
 {
     //okay, yes, this is weird, yes we're using a vec3_t for a coord...
     //this is because we're treating it like a cubemap. why? no idea.
-    float sfrac, tfrac, weight[4];
-    int sbase, tbase;
-    byte *data = (byte*)tex + tex->offsets[0], *pi[4];
+    float weight[4];
+    color_rgba pi[4];
+    color_rgba *data = (color_rgba*)((byte*)tex + tex->offset);
 
     vec3_t coord;
-    if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 || coord[1] >= 1)
+    if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 || coord[1] >= 1) {
         VectorSet(result, 0, 0, 0);
-    else
-    {
-        sfrac = (coord[0]) * tex->width;
-        sbase = sfrac;
+        return false; //mxd
+    } else {
+        float sfrac = (coord[0]) * (tex->width - 1); //mxd. We are sampling sbase+1 pixels, so multiplying by tex->width will result in an 1px overdraw, same for tbase
+        const int sbase = sfrac;
         sfrac -= sbase;
-        tfrac = (1-coord[1]) * tex->height;
-        tbase = tfrac;
+        float tfrac = (1-coord[1]) * (tex->height - 1);
+        const int tbase = tfrac;
         tfrac -= tbase;
 
-        pi[0] = thepalette + 3*data[((sbase+0)%tex->width) + (tex->width*((tbase+0)%tex->height))];     weight[0] = (1-sfrac)*(1-tfrac);
-        pi[1] = thepalette + 3*data[((sbase+1)%tex->width) + (tex->width*((tbase+0)%tex->height))];     weight[1] = (sfrac)*(1-tfrac);
-        pi[2] = thepalette + 3*data[((sbase+0)%tex->width) + (tex->width*((tbase+1)%tex->height))];     weight[2] = (1-sfrac)*(tfrac);
-        pi[3] = thepalette + 3*data[((sbase+1)%tex->width) + (tex->width*((tbase+1)%tex->height))];     weight[3] = (sfrac)*(tfrac);
+        pi[0] = data[((sbase+0)%tex->width) + (tex->width*((tbase+0)%tex->height))];     weight[0] = (1-sfrac)*(1-tfrac);
+        pi[1] = data[((sbase+1)%tex->width) + (tex->width*((tbase+0)%tex->height))];     weight[1] = (sfrac)*(1-tfrac);
+        pi[2] = data[((sbase+0)%tex->width) + (tex->width*((tbase+1)%tex->height))];     weight[2] = (1-sfrac)*(tfrac);
+        pi[3] = data[((sbase+1)%tex->width) + (tex->width*((tbase+1)%tex->height))];     weight[3] = (sfrac)*(tfrac);
         VectorSet(result, 0, 0, 0);
-        result[0]  = weight[0] * pi[0][0];
-        result[1]  = weight[0] * pi[0][1];
-        result[2]  = weight[0] * pi[0][2];
-        result[0] += weight[1] * pi[1][0];
-        result[1] += weight[1] * pi[1][1];
-        result[2] += weight[1] * pi[1][2];
-        result[0] += weight[2] * pi[2][0];
-        result[1] += weight[2] * pi[2][1];
-        result[2] += weight[2] * pi[2][2];
-        result[0] += weight[3] * pi[3][0];
-        result[1] += weight[3] * pi[3][1];
-        result[2] += weight[3] * pi[3][2];
+        result[0]  = weight[0] * pi[0].r;
+        result[1]  = weight[0] * pi[0].g;
+        result[2]  = weight[0] * pi[0].b;
+        result[0] += weight[1] * pi[1].r;
+        result[1] += weight[1] * pi[1].g;
+        result[2] += weight[1] * pi[1].b;
+        result[0] += weight[2] * pi[2].r;
+        result[1] += weight[2] * pi[2].g;
+        result[2] += weight[2] * pi[2].b;
+        result[0] += weight[3] * pi[3].r;
+        result[1] += weight[3] * pi[3].g;
+        result[2] += weight[3] * pi[3].b;
         VectorScale(result, 2, result);
+
+        return true; //mxd
     }
 }
 
@@ -1325,6 +1322,36 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
     if (std::isnan(occlusion)) {
         // HACK: getting an invalid normal of (0, 0, 0).
         occlusion = 0.0f;
+    }
+
+    //mxd. Surface lights...
+    for (const surfacelight_t &vpl : SurfaceLights()) {
+        // Bounce light falloff. Uses light surface center and intensity based on face area
+        vec3_t surfpointToLightDir;
+        const float surfpointToLightDist = qmax(128.0f, GetDir(surfpointToLightDir, vpl.pos, surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
+        const float angle = DotProduct(surfpointToLightDir, normal);
+        if (angle <= 0) continue;
+
+        // Exponential falloff
+        const float add = (vpl.totalintensity / SQR(surfpointToLightDist)) * angle;
+        if(add <= 0) continue;
+
+        // Write out the final color
+        vec3_t color;
+        VectorScale(vpl.color, add, color); // color_out is expected to be in [0..255] range, vpl->color is in [0..1] range.
+
+        const float dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, surfpointToLightDist, /* FIXME: pass */ nullptr);
+        VectorScale(color, dirt, color);
+        VectorScale(color, cfg.surflightbouncescale.floatValue(), color);
+
+        // NOTE: Skip negative lights, which would make no sense to bounce!
+        if (LightSample_Brightness(color) <= fadegate)
+            continue;
+
+        if (!TestLight(vpl.pos, origin, nullptr))
+            continue;
+
+        result[0] += vec3_t_to_glm(color);
     }
     
     for (const light_t &entity : GetLights()) {
@@ -1665,7 +1692,7 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
             const vec_t *surfpoint = lightsurf->points[i];
             if (cfg.addminlight.boolValue() || LightSample_Brightness(sample->color) < entity.light.floatValue()) {
                 vec3_t surfpointToLightDir;
-                vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
+                const vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
                 
                 rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, modelinfo);
             }
@@ -1803,10 +1830,22 @@ BounceLight_ColorAtDist(const globalconfig_t &cfg, float area, const qvec3f &bou
     return result;
 }
 
+//mxd. Surface light falloff. Returns color in [0,255]
+static qvec3f
+SurfaceLight_ColorAtDist(const globalconfig_t &cfg, const float intensity, const qvec3f color, const float dist)
+{
+    // Exponential falloff
+    const float d = qmax(dist, 16.0f); // Clamp away hotspots, also avoid division by 0...
+    const float scaledintensity = intensity * cfg.surflightscale.floatValue();
+    const float scale = (1.0f / (d * d));
+    
+    return color * scaledintensity * scale;
+}
+
 // dir: vpl -> sample point direction
 // returns color in [0,255]
 static inline qvec3f
-GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, const qvec3f &bounceLightColor, const qvec3f &dir, float dist, const qvec3f &origin, const qvec3f &normal)
+GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, const qvec3f &bounceLightColor, const qvec3f &dir, const float dist, const qvec3f &origin, const qvec3f &normal)
 {
     const float dp1 = qv::dot(vpl->surfnormal, dir);
     if (dp1 < 0.0f)
@@ -1823,14 +1862,38 @@ GetIndirectLighting (const globalconfig_t &cfg, const bouncelight_t *vpl, const 
     // apply angle scale
     const qvec3f resultscaled = result * dp1 * dp2;
     
-    if (dp1 < 0) {
+    /*if (dp1 < 0) { //mxd. But it's const and was already checked above?
         Q_assert(!std::isnan(dp1));
-    }
+    }*/
     
     Q_assert(!std::isnan(resultscaled[0]));
     Q_assert(!std::isnan(resultscaled[1]));
     Q_assert(!std::isnan(resultscaled[2]));
     
+    return resultscaled;
+}
+
+// dir: vpl -> sample point direction
+//mxd. returns color in [0,255]
+static qvec3f
+GetSurfaceLighting(const globalconfig_t &cfg, const surfacelight_t *vpl, const qvec3f &dir, const float dist, const qvec3f &normal)
+{
+    qvec3f result{0};
+    const float dp1 = qv::dot(vpl->surfnormal, dir);
+    if (dp1 < 0.0f) return result; // sample point behind vpl
+
+    const qvec3f sp_vpl = dir * -1.0f;
+    float dp2 = qv::dot(sp_vpl, normal);
+    if (dp2 < 0.0f) return result; // vpl behind sample face
+
+    // Get light contribution
+    result = SurfaceLight_ColorAtDist(cfg, vpl->intensity, vec3_t_to_glm(vpl->color), dist);
+    dp2 = 0.5f + dp2 * 0.5f; // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
+    
+    // Apply angle scale
+    const qvec3f resultscaled = result * dp1 * dp2;
+
+    Q_assert(!std::isnan(resultscaled[0]) && !std::isnan(resultscaled[1]) && !std::isnan(resultscaled[2]));
     return resultscaled;
 }
 
@@ -1848,10 +1911,23 @@ BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, const lights
     // get light contribution
     const qvec3f color = BounceLight_ColorAtDist(cfg, vpl->area, vpl->componentwiseMaxColor, dist);
     
-    if (LightSample_Brightness(color) < 0.25f)
+    return LightSample_Brightness(color) < 0.25f;
+}
+
+static bool //mxd
+SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
+{
+    if (!novisapprox && AABBsDisjoint(vpl->mins, vpl->maxs, lightsurf->mins, lightsurf->maxs))
         return true;
-    
-    return false;
+
+    const globalconfig_t &cfg = *lightsurf->cfg;
+    const qvec3f dir = vec3_t_to_glm(lightsurf->origin) - vec3_t_to_glm(vpl->pos); // vpl -> sample point
+    const float dist = qv::length(dir) + lightsurf->radius;
+
+    // Get light contribution
+    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vec3_t_to_glm(vpl->color), dist);
+
+    return LightSample_Brightness(color) < 0.25f;
 }
 
 static void
@@ -1936,7 +2012,7 @@ LightFace_Bounce(const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 VectorAdd(sample->color, indirect, sample->color);
                 
                 hit = true;
-                total_bounce_ray_hits++;
+                ++total_bounce_ray_hits;
             }
             
             // If this style of this bounce light contributed anything, save.
@@ -2048,6 +2124,98 @@ LightFace_Bounce(const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
     delete rs;
 
 #endif
+}
+
+static void //mxd
+LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    const globalconfig_t &cfg = *lightsurf->cfg;
+
+    for (const surfacelight_t &vpl : SurfaceLights()) {
+        if (SurfaceLight_SphereCull(&vpl, lightsurf))
+            continue;
+
+        raystream_t *rs = lightsurf->stream;
+
+        for (int c = 0; c < vpl.points.size(); c++) {
+            rs->clearPushedRays();
+            
+            for (int i = 0; i < lightsurf->numpoints; i++) {
+                if (lightsurf->occluded[i])
+                    continue;
+
+                const qvec3f lightsurf_pos = vec3_t_to_glm(lightsurf->points[i]);
+                const qvec3f lightsurf_normal = vec3_t_to_glm(lightsurf->normals[i]);
+
+                // Push 1 unit behind the surflight (fixes darkening near surflight face on neighbouring faces)
+                qvec3f pos = vpl.points[c] - vpl.surfnormal; 
+                qvec3f dir = lightsurf_pos - pos;
+                float dist = qv::length(dir);
+
+                if (dist == 0.0f)
+                    dir = lightsurf_normal;
+                else
+                    dir /= dist;
+
+                const qvec3f indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
+                if (LightSample_Brightness(indirect) < 0.01f) // Each point contributes very little to the final result
+                    continue;
+
+                // Push 1 unit in front of the surflight, so embree can properly process it ...
+                pos = vpl.points[c] + vpl.surfnormal;
+                dir = lightsurf_pos - pos;
+                dist = qv::length(dir);
+
+                if (dist == 0.0f)
+                    dir = lightsurf_normal;
+                else
+                    dir /= dist;
+
+                vec3_t vplPos, vplDir, vplColor;
+                glm_to_vec3_t(pos, vplPos);
+                glm_to_vec3_t(dir, vplDir);
+                glm_to_vec3_t(indirect, vplColor);
+
+                rs->pushRay(i, vplPos, vplDir, dist, lightsurf->modelinfo, vplColor);
+            }
+
+            if (!rs->numPushedRays())
+                continue;
+
+            total_surflight_rays += rs->numPushedRays();
+            rs->tracePushedRaysOcclusion();
+
+            const int lightmapstyle = 0;
+            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, lightmapstyle, lightsurf);
+
+            bool hit = false;
+            const int numrays = rs->numPushedRays();
+            for (int j = 0; j < numrays; j++) {
+                if (rs->getPushedRayOccluded(j))
+                    continue;
+
+                const int i = rs->getPushedRayPointIndex(j);
+                vec3_t indirect = { 0 };
+                rs->getPushedRayColor(j, indirect);
+
+                Q_assert(!std::isnan(indirect[0]));
+
+                // Use dirt scaling on the surface lighting.
+                const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], nullptr, 0.0, lightsurf);
+                VectorScale(indirect, dirtscale, indirect);
+
+                lightsample_t *sample = &lightmap->samples[i];
+                VectorAdd(sample->color, indirect, sample->color);
+
+                hit = true;
+                ++total_surflight_ray_hits;
+            }
+
+            // If surface light contributed anything, save.
+            if (hit)
+                Lightmap_Save(lightmaps, lightsurf, lightmap, lightmapstyle);
+        }
+    }
 }
 
 static void
@@ -2179,8 +2347,8 @@ void SetupDirt(globalconfig_t &cfg) {
     }
     
     /* calculate angular steps */
-    float angleStep = DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
-    float elevationStep = DEG2RAD( cfg.dirtAngle.floatValue() / DIRT_NUM_ELEVATION_STEPS );
+    const float angleStep = (float)DEG2RAD( 360.0f / DIRT_NUM_ANGLE_STEPS );
+    const float elevationStep = (float)DEG2RAD( cfg.dirtAngle.floatValue() / DIRT_NUM_ELEVATION_STEPS );
 
     /* iterate angle */
     float angle = 0.0f;
@@ -2249,7 +2417,7 @@ GetDirtVector(const globalconfig_t &cfg, int i, vec3_t out)
 }
 
 float
-DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const modelinfo_t *modelinfo)
+DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const modelinfo_t *selfshadow)
 {
     if (!dirt_in_use) {
         return 0.0f;
@@ -2274,7 +2442,7 @@ DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, cons
         vec3_t dir;
         TransformToTangentSpace(normal, myUp, myRt, dirtvec, dir);
         
-        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), modelinfo);
+        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), selfshadow);
     }
     
     Q_assert(rs->numPushedRays() == numDirtVectors);
@@ -2285,7 +2453,7 @@ DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, cons
     // accumulate hitdists
     for (int j=0; j<numDirtVectors; j++) {
         if (rs->getPushedRayHitType(j) == hittype_t::SOLID) {
-            float dist = rs->getPushedRayHitDist(j);
+            const float dist = rs->getPushedRayHitDist(j);
             occlusion += qmin(cfg.dirtDepth.floatValue(), dist);
         } else {
             occlusion += cfg.dirtDepth.floatValue();
@@ -2293,8 +2461,7 @@ DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, cons
     }
     
     // process the results.
-    
-    vec_t avgHitdist = occlusion / (float)numDirtVectors;
+    const vec_t avgHitdist = occlusion / numDirtVectors;
     occlusion = 1 - (avgHitdist / cfg.dirtDepth.floatValue());
     return occlusion;
 }
@@ -2391,12 +2558,12 @@ LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
             /* Scale and clamp any out-of-range samples */
             vec_t maxcolor = 0;
             VectorScale(color, cfg.rangescale.floatValue(), color);
-            for (int i = 0; i < 3; i++) {
-                color[i] = pow( color[i] / 255.0f, 1.0 / cfg.lightmapgamma.floatValue() ) * 255.0f;
+            for (int c = 0; c < 3; c++) {
+                color[c] = pow( color[c] / 255.0f, 1.0 / cfg.lightmapgamma.floatValue() ) * 255.0f;
             }
-            for (int i = 0; i < 3; i++) {
-                if (color[i] > maxcolor) {
-                    maxcolor = color[i];
+            for (int c = 0; c < 3; c++) {
+                if (color[c] > maxcolor) {
+                    maxcolor = color[c];
                 }
             }
             if (maxcolor > 255) {
@@ -2511,7 +2678,7 @@ LightmapColorsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)
     for (int i=0; i<lightsurf->numpoints; i++) {
         const vec_t *color = lm->samples[i].color;
         const float alpha = lightsurf->occluded[i] ? 0.0f : 1.0f;
-        res.push_back(qvec4f(color[0], color[1], color[2], alpha));
+        res.emplace_back(color[0], color[1], color[2], alpha); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     }
     return res;
 }
@@ -2523,7 +2690,7 @@ LightmapNormalsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)
     for (int i=0; i<lightsurf->numpoints; i++) {
         const vec_t *color = lm->samples[i].direction;
         const float alpha = lightsurf->occluded[i] ? 0.0f : 1.0f;
-        res.push_back(qvec4f(color[0], color[1], color[2], alpha));
+        res.emplace_back(color[0], color[1], color[2], alpha); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     }
     return res;
 }
@@ -2576,8 +2743,8 @@ IntegerDownsampleImage(const std::vector<qvec4f> &input, int w, int h, int facto
     if (factor == 1)
         return input;
     
-    int outw = w/factor;
-    int outh = h/factor;
+    const int outw = w/factor;
+    const int outh = h/factor;
     
     std::vector<qvec4f> res(static_cast<size_t>(outw * outh));
     
@@ -2806,7 +2973,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         }
         
         const float avgb = Lightmap_AvgBrightness(&lightmap, lightsurf);
-        sortable.push_back({ avgb, &lightmap });
+        sortable.emplace_back(avgb, &lightmap); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     }
     
     // sort in descending order of average brightness
@@ -2818,7 +2985,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         if (sorted.size() == MAXLIGHTMAPS) {
             logprint("WARNING: Too many light styles on a face\n"
                      "         lightmap point near (%s)\n",
-                     VecStr(lightsurf->points[0]));
+                     VecStr(lightsurf->points[0]).c_str());
             break;
         }
         
@@ -2905,7 +3072,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         }
         
         const std::vector<qvec4f> output_color = IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, oversample);
-        const std::vector<qvec4f> output_dir = IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
+        const std::vector<qvec4f> output_dir = (lux ? IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample) : *new std::vector<qvec4f>); //mxd. Skip when lux isn't needed
         
         // copy from the float buffers to byte buffers in .bsp / .lit / .lux
         
@@ -2913,7 +3080,6 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             for (int s = 0; s < actual_width; s++) {
                 const int sampleindex = (t * actual_width) + s;
                 qvec4f color = output_color.at(sampleindex);
-                const qvec4f &direction = output_dir.at(sampleindex);
                 
                 *lit++ = color[0];
                 *lit++ = color[1];
@@ -2940,6 +3106,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 if (lux) {
                     vec3_t temp;
                     int v;
+                    const qvec4f &direction = output_dir.at(sampleindex);
                     temp[0] = qv::dot(qvec3f(direction), vec3_t_to_glm(lightsurf->snormal));
                     temp[1] = qv::dot(qvec3f(direction), vec3_t_to_glm(lightsurf->tnormal));
                     temp[2] = qv::dot(qvec3f(direction), vec3_t_to_glm(lightsurf->plane.normal));
@@ -2989,8 +3156,6 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         return;
     }    
     
-    const char *texname = Face_TextureName(bsp, face);
-    
     /* One extra lightmap is allocated to simplify handling overflow */
 
     /* some surfaces don't need lightmaps */
@@ -3006,19 +3171,22 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         for (int i = 0; i < MAXLIGHTMAPS; i++)
             face->styles[i] = 255;
     }
+
+    /* don't bother with degenerate faces */
+    if (face->numedges < 3)
+        return;
+
     if (!Face_IsLightmapped(bsp, face))
         return;
-    
+
+    const char *texname = Face_TextureName(bsp, face);
+
     /* don't save lightmaps for "trigger" texture */
     if (!Q_strcasecmp(texname, "trigger"))
         return;
     
     /* don't save lightmaps for "skip" texture */
     if (!Q_strcasecmp(texname, "skip"))
-        return;
-    
-    /* don't bother with degenerate faces */
-    if (face->numedges < 3)
         return;
     
     /* all good, this face is going to be lightmapped. */
@@ -3029,7 +3197,7 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
      * lit water in mind. In that case receive light from both top and bottom.
      * (lit will only be rendered in compatible engines, but degrades gracefully.)
      */
-    if (texname[0] == '*') {
+    if (/* texname[0] == '*' */ Face_IsTranslucent(bsp, face)) { //mxd
         lightsurf->twosided = true;
     }
     
@@ -3066,14 +3234,22 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
                 if (sun.sunlight > 0)
                     LightFace_Sky (&sun, lightsurf, lightmaps);
 
+            //mxd. Add surface lights...
+            LightFace_SurfaceLight(lightsurf, lightmaps);
+
             /* add indirect lighting */
             LightFace_Bounce(bsp, face, lightsurf, lightmaps);
         }
         
-        /* minlight - Use the greater of global or model minlight. */
-        if (lightsurf->minlight > cfg.minlight.floatValue())
+        /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
+        const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); //mxd. Surface lights...
+        if (texinfo != nullptr && texinfo->value > 0 && texinfo->flags & Q2_SURF_LIGHT) {
+            vec3_t color;
+            Face_LookupTextureColor(bsp, face, color);
+            LightFace_Min(bsp, face, color, texinfo->value * 2.0f, lightsurf, lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface is renered fullbright, when using arghrad3
+        } else if (lightsurf->minlight > cfg.minlight.floatValue()) {
             LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
-        else {
+        } else {
             const float light = cfg.minlight.floatValue();
             vec3_t color;
             VectorCopy(*cfg.minlight_color.vec3Value(), color);

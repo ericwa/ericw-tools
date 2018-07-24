@@ -172,6 +172,13 @@ typedef struct miptex_s {
     uint32_t offsets[MIPLEVELS];        /* four mip maps stored */
 } miptex_t;
 
+//mxd. Used to store RGBA data in mbsp->drgbatexdata
+typedef struct {
+    char name[32]; // Same as in Q2
+    unsigned width, height;
+    unsigned offset; // Offset to RGBA texture pixels
+} rgba_miptex_t;
+
 typedef struct {
     float point[3];
 } dvertex_t;
@@ -212,37 +219,39 @@ typedef struct {
 // these definitions also need to be in q_shared.h!
 
 // lower bits are stronger, and will eat weaker brushes completely
-#define    Q2_CONTENTS_SOLID            1        // an eye is never valid in a solid
-#define    Q2_CONTENTS_WINDOW            2        // translucent, but not watery
-#define    Q2_CONTENTS_AUX            4
+#define    Q2_CONTENTS_SOLID           1        // an eye is never valid in a solid
+#define    Q2_CONTENTS_WINDOW          2        // translucent, but not watery
+#define    Q2_CONTENTS_AUX             4
 #define    Q2_CONTENTS_LAVA            8
-#define    Q2_CONTENTS_SLIME            16
-#define    Q2_CONTENTS_WATER            32
+#define    Q2_CONTENTS_SLIME           16
+#define    Q2_CONTENTS_WATER           32
 #define    Q2_CONTENTS_MIST            64
 #define    Q2_LAST_VISIBLE_CONTENTS    64
 
+#define    Q2_CONTENTS_LIQUID   (Q2_CONTENTS_LAVA|Q2_CONTENTS_SLIME|Q2_CONTENTS_WATER) //mxd
+
 // remaining contents are non-visible, and don't eat brushes
 
-#define    Q2_CONTENTS_AREAPORTAL        0x8000
+#define    Q2_CONTENTS_AREAPORTAL     0x8000
 
-#define    Q2_CONTENTS_PLAYERCLIP        0x10000
+#define    Q2_CONTENTS_PLAYERCLIP     0x10000
 #define    Q2_CONTENTS_MONSTERCLIP    0x20000
 
 // currents can be added to any other contents, and may be mixed
-#define    Q2_CONTENTS_CURRENT_0        0x40000
-#define    Q2_CONTENTS_CURRENT_90        0x80000
+#define    Q2_CONTENTS_CURRENT_0      0x40000
+#define    Q2_CONTENTS_CURRENT_90     0x80000
 #define    Q2_CONTENTS_CURRENT_180    0x100000
 #define    Q2_CONTENTS_CURRENT_270    0x200000
-#define    Q2_CONTENTS_CURRENT_UP        0x400000
-#define    Q2_CONTENTS_CURRENT_DOWN    0x800000
+#define    Q2_CONTENTS_CURRENT_UP     0x400000
+#define    Q2_CONTENTS_CURRENT_DOWN   0x800000
 
-#define    Q2_CONTENTS_ORIGIN            0x1000000    // removed before bsping an entity
+#define    Q2_CONTENTS_ORIGIN         0x1000000    // removed before bsping an entity
 
 #define    Q2_CONTENTS_MONSTER        0x2000000    // should never be on a brush, only in game
 #define    Q2_CONTENTS_DEADMONSTER    0x4000000
-#define    Q2_CONTENTS_DETAIL            0x8000000    // brushes to be added after vis leafs
+#define    Q2_CONTENTS_DETAIL         0x8000000    // brushes to be added after vis leafs
 #define    Q2_CONTENTS_TRANSLUCENT    0x10000000    // auto set if any surface has trans
-#define    Q2_CONTENTS_LADDER            0x20000000
+#define    Q2_CONTENTS_LADDER         0x20000000
 
 typedef struct {
     int32_t planenum;
@@ -356,6 +365,8 @@ typedef struct {
 
 #define    Q2_SURF_HINT       0x100    // make a primary bsp splitter
 #define    Q2_SURF_SKIP       0x200    // completely ignore, allowing non-closed brushes
+
+#define    Q2_SURF_TRANSLUCENT (Q2_SURF_TRANS33|Q2_SURF_TRANS66) //mxd
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for
@@ -739,6 +750,9 @@ typedef struct {
     
     int texdatasize;
     dmiptexlump_t *dtexdata;
+
+    int rgbatexdatasize; //mxd
+    dmiptexlump_t *drgbatexdata; //mxd. Followed by rgba_miptex_t structs
     
     int entdatasize;
     char *dentdata;
@@ -818,9 +832,9 @@ typedef struct {
     bspxentry_t *bspxentries;
 } bspdata_t;
 
-void LoadBSPFile(char *filename, bspdata_t *bsp);       //returns the filename as contained inside a bsp
-void WriteBSPFile(const char *filename, bspdata_t *bsp);
-void PrintBSPFileSizes(const bspdata_t *bsp);
+void LoadBSPFile(char *filename, bspdata_t *bspdata);       //returns the filename as contained inside a bsp
+void WriteBSPFile(const char *filename, bspdata_t *bspdata);
+void PrintBSPFileSizes(const bspdata_t *bspdata);
 void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);

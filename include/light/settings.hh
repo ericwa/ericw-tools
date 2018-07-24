@@ -77,6 +77,7 @@ public:
             case setting_source_t::DEFAULT: return "default";
             case setting_source_t::MAP: return "map";
             case setting_source_t::COMMANDLINE: return "commandline";
+            default: Error("Error: unknown setting source"); throw; //mxd. Silences compiler warning
         }
     }
 };
@@ -169,7 +170,7 @@ public:
         float f = 0.0f;
         try {
             f = std::stof(str);
-        } catch (std::exception &e) {
+        } catch (std::exception &) {
             logprint("WARNING: couldn't parse '%s' as number for key '%s'\n",
                      str.c_str(), primaryName().c_str());
         }
@@ -178,7 +179,9 @@ public:
     }
     
     virtual std::string stringValue() const {
-        return std::to_string(_value);
+        char setting[256];
+        q_snprintf(setting, sizeof(setting), "%g", _value);
+        return setting;
     }
     
     lockable_vec_t(std::vector<std::string> names, float v,

@@ -105,7 +105,7 @@ LightStyleForTargetname(const std::string &targetname)
     
     // generate a new style number and return it
     const int newStylenum = LIGHT_TARGETS_START + lightstyleForTargetname.size();
-    lightstyleForTargetname.push_back(std::make_pair(targetname, newStylenum));
+    lightstyleForTargetname.emplace_back(targetname, newStylenum); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     
     if (verbose_log) {
         logprint("%s: Allocated lightstyle %d for targetname '%s'\n", __func__, newStylenum, targetname.c_str());
@@ -295,7 +295,7 @@ static void
 SetupSpotlights(const globalconfig_t &cfg)
 {
     for (light_t &entity : all_lights) {
-        float targetdist; //mxd
+        float targetdist = 0.0f; //mxd
         if (entity.targetent) {
             vec3_t targetOrigin;
             EntDict_VectorForKey(*entity.targetent, "origin", targetOrigin);
@@ -305,19 +305,17 @@ SetupSpotlights(const globalconfig_t &cfg)
             entity.spotlight = true;
         }
         if (entity.spotlight) {
-            vec_t angle, angle2;
-
-            angle = (entity.spotangle.floatValue() > 0) ? entity.spotangle.floatValue() : 40;
+            const vec_t angle = (entity.spotangle.floatValue() > 0) ? entity.spotangle.floatValue() : 40;
             entity.spotfalloff = -cos(angle / 2 * Q_PI / 180);
 
-            angle2 = entity.spotangle2.floatValue();
+            vec_t angle2 = entity.spotangle2.floatValue();
             if (angle2 <= 0 || angle2 > angle)
                 angle2 = angle;
             entity.spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
 
             //mxd. Apply autofalloff?
-            if(entity.falloff.floatValue() == 0 && cfg.spotlightautofalloff.boolValue()) {
-                float coneradius = targetdist * tan(angle / 2 * Q_PI / 180);
+            if(targetdist > 0.0f && entity.falloff.floatValue() == 0 && cfg.spotlightautofalloff.boolValue()) {
+                const float coneradius = targetdist * tan(angle / 2 * Q_PI / 180);
                 entity.falloff.setFloatValue(targetdist + coneradius);
             }
         }
@@ -339,6 +337,13 @@ CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
     if(entity->falloff.floatValue() < 0.0f)
         entity->falloff.setFloatValue(0.0f);
 
+    //mxd. Warn about unsupported _falloff / delay combos...
+    if(entity->falloff.floatValue() > 0.0f && entity->getFormula() != LF_LINEAR) {
+        logprint("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
+            "   %s at (%s)\n", entity->classname(), VecStr(*entity->origin.vec3Value()).c_str());
+        entity->falloff.setFloatValue(0.0f);
+    }
+
     if (entity->getFormula() < LF_LINEAR || entity->getFormula() >= LF_COUNT) {
         static qboolean warned_once = true;
         if (!warned_once) {
@@ -347,7 +352,7 @@ CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
                      "   %s at (%s)\n"
                      "   (further formula warnings will be supressed)\n",
                      entity->getFormula(), entity->classname(),
-                     VecStr(*entity->origin.vec3Value()));
+                     VecStr(*entity->origin.vec3Value()).c_str());
         }
         entity->formula.setFloatValue(LF_LINEAR);
     }
@@ -825,7 +830,7 @@ float CalcFov (float fov_x, float width, float height)
     float   x;
 
     if (fov_x < 1 || fov_x > 179)
-        Error ("Bad fov: %f", fov_x);
+        Error ("Unsupported fov: %f. Expected a value in [1..179] range.", fov_x);
 
     x = fov_x/360*Q_PI;
     x = tan(x);
@@ -841,26 +846,26 @@ float CalcFov (float fov_x, float width, float height)
 /*
 finds the texture that is meant to be projected.
 */
-static miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texname)
+static rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texname) //mxd. miptex_t -> rgba_miptex_t
 {
-    if (!bsp->texdatasize)
-        return NULL;
+    if (!bsp->rgbatexdatasize)
+        return nullptr;
     
-    dmiptexlump_t *miplump = bsp->dtexdata;
-    miptex_t *miptex;
-    int texnum;
+    dmiptexlump_t *miplump = bsp->drgbatexdata;
+
     /*outer loop finds the textures*/
-    for (texnum = 0; texnum< miplump->nummiptex; texnum++)
+    for (int texnum = 0; texnum < miplump->nummiptex; texnum++)
     {
-        int offset = miplump->dataofs[texnum];
+        const int offset = miplump->dataofs[texnum];
         if (offset < 0)
             continue;
         
-        miptex = (miptex_t*)((byte *)bsp->dtexdata + offset);
+        rgba_miptex_t *miptex = (rgba_miptex_t*)((byte *)bsp->drgbatexdata + offset);
         if (!Q_strcasecmp(miptex->name, texname))
             return miptex;
     }
-    return NULL;
+
+    return nullptr;
 }
 
 /*
@@ -954,24 +959,34 @@ float
 EntDict_FloatForKey(const entdict_t &dict, const std::string key)
 {
     auto s = EntDict_StringForKey(dict, key);
-    if (s == "")
+    if (s.empty())
         return 0;
     
     try {
         return std::stof(s);
-    } catch (std::exception &e) {
+    } catch (std::exception &) {
         return 0.0f;
     }
 }
 
 void
-EntDict_RemoveValueForKey(entdict_t &dict, const std::string key)
+EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key)
 {
-    auto it = dict.find(key);
+    const auto it = dict.find(key);
     if (it != dict.end()) {
         dict.erase(it);
     }
     Q_assert(dict.find(key) == dict.end());
+}
+
+void //mxd
+EntDict_RenameKey(entdict_t &dict, const std::string &from, const std::string &to)
+{
+    const auto it = dict.find(from);
+    if (it != dict.end()) {
+        swap(dict[to], it->second);
+        dict.erase(it);
+    }
 }
 
 static std::string
@@ -1022,8 +1037,8 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
     for (auto &entdict : entdicts) {
         
         // fix "lightmap_scale"
-        std::string lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
-        if (lmscale != "") {
+        const std::string lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
+        if (!lmscale.empty()) {
             logprint("lightmap_scale should be _lightmap_scale\n");
             
             entdict.erase(entdict.find("lightmap_scale"));
@@ -1033,8 +1048,8 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         // setup light styles for switchable lights
         std::string classname = EntDict_StringForKey(entdict, "classname");
         if (classname.find("light") == 0) {
-            std::string targetname = EntDict_StringForKey(entdict, "targetname");
-            if (targetname != "") {
+            const std::string targetname = EntDict_StringForKey(entdict, "targetname");
+            if (!targetname.empty()) {
                 const int style = LightStyleForTargetname(targetname);
                 entdict["style"] = std::to_string(style);
             }
@@ -1042,7 +1057,7 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         
         // setup light styles for dynamic shadow entities
         if (EntDict_StringForKey(entdict, "_switchableshadow") == "1") {
-            std::string targetname = EntDict_StringForKey(entdict, "targetname");
+            const std::string targetname = EntDict_StringForKey(entdict, "targetname");
             // if targetname is "", generates a new unique lightstyle
             const int style = LightStyleForTargetname(targetname);
             // TODO: Configurable key?
@@ -1062,18 +1077,35 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
     /* apply side effects of settings (in particular "dirt") */
     FixupGlobalSettings();
     
-    Q_assert(all_lights.size() == 0);
+    Q_assert(all_lights.empty());
     if (nolights) {
         return;
     }
     
     /* go through all the entities */
-    for (const auto &entdict : entdicts) {
+    for (auto &entdict : entdicts) {
         
         /*
          * Check light entity fields and any global settings in worldspawn.
          */
         if (EntDict_StringForKey(entdict, "classname").find("light") == 0) {
+            //mxd. Convert some Arghrad3 settings...
+            if (arghradcompat) {
+                EntDict_RenameKey(entdict, "_falloff", "delay");     // _falloff -> delay
+                EntDict_RenameKey(entdict, "_distance", "_falloff"); // _distance -> _falloff
+                EntDict_RenameKey(entdict, "_fade", "wait");         // _fade -> wait
+                
+                // _angfade or _angwait -> _anglescale
+                EntDict_RenameKey(entdict, "_angfade", "_anglescale");
+                EntDict_RenameKey(entdict, "_angwait", "_anglescale");
+                const auto anglescale = entdict.find("_anglescale");
+                if(anglescale != entdict.end()) {
+                    // Convert from 0..2 to 0..1 range...
+                    const float val = qmin(1.0f, qmax(0.0f, EntDict_FloatForKey(entdict, "_anglescale") * 0.5f));
+                    entdict["_anglescale"] = std::to_string(val);
+                }
+            }
+            
             /* Allocate a new entity */
             light_t entity {};
             
@@ -1094,11 +1126,21 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
                 }
             }
             
-            if (entity.project_texture.stringValue() != "") {
+            if (!entity.project_texture.stringValue().empty()) {
                 auto texname = entity.project_texture.stringValue();
                 entity.projectedmip = FindProjectionTexture(bsp, texname.c_str());
-                if (entity.projectedmip == NULL) {
+                if (entity.projectedmip == nullptr) {
                     logprint("WARNING: light has \"_project_texture\" \"%s\", but this texture is not present in the bsp\n", texname.c_str());
+                } 
+                
+                if (!entity.projangle.isChanged()) { //mxd
+                    // Copy from angles
+                    vec3_t angles;
+                    EntDict_VectorForKey(entdict, "angles", angles);
+                    vec3_t mangle{ angles[1], -angles[0], angles[2] }; // -pitch yaw roll -> yaw pitch roll
+                    entity.projangle.setVec3Value(mangle);
+
+                    entity.spotlight = true;
                 }
             }
             
@@ -1268,7 +1310,7 @@ SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp)
     FixLightsOnFaces(bsp);
     EstimateLightVisibility();
     
-    logprint("Final count: %d lights %d suns in use.\n",
+    logprint("Final count: %d lights, %d suns in use.\n",
              static_cast<int>(all_lights.size()),
              static_cast<int>(all_suns.size()));
     
@@ -1279,7 +1321,7 @@ SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp)
 const char *
 ValueForKey(const light_t *ent, const char *key)
 {
-    auto iter = ent->epairs->find(key);
+    const auto iter = ent->epairs->find(key);
     if (iter != ent->epairs->end()) {
         return (*iter).second.c_str();
     } else {
@@ -1547,11 +1589,9 @@ static void GL_SubdivideSurface (const bsp2_dface_t *face, const modelinfo_t *fa
 
 static void MakeSurfaceLights(const mbsp_t *bsp)
 {
-    int i, k;
-
     for (light_t &entity : all_lights) {
         std::string tex = ValueForKey(&entity, "_surface");
-        if (tex != "") {
+        if (!tex.empty()) {
             surfacelight_templates.push_back(entity); // makes a copy
 
             // Hack: clear templates light value to 0 so they don't cast light
@@ -1562,7 +1602,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
         }
     }
 
-    if (!surfacelight_templates.size())
+    if (surfacelight_templates.empty())
         return;
 
     if (surflight_dump) {
@@ -1575,27 +1615,22 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     /* Create the surface lights */
     std::vector<bool> face_visited(static_cast<size_t>(bsp->numfaces), false);
     
-    for (i=0; i<bsp->numleafs; i++) {
+    for (int i = 0; i < bsp->numleafs; i++) {
         const mleaf_t *leaf = bsp->dleafs + i;
-        const bsp2_dface_t *surf;
-        qboolean underwater = leaf->contents != CONTENTS_EMPTY;
+        const qboolean underwater = (bsp->loadversion == Q2_BSPVERSION ? leaf->contents & Q2_CONTENTS_LIQUID : leaf->contents != CONTENTS_EMPTY); //mxd
 
-        for (k = 0; k < leaf->nummarksurfaces; k++) {
-            const modelinfo_t *face_modelinfo;
-            int facenum = bsp->dleaffaces[leaf->firstmarksurface + k];
-
-            surf = BSP_GetFace(bsp, facenum);
-            const char *texname = Face_TextureName(bsp, surf);
-
-            face_modelinfo = ModelInfoForFace(bsp, facenum);
+        for (int k = 0; k < leaf->nummarksurfaces; k++) {
+            const int facenum = bsp->dleaffaces[leaf->firstmarksurface + k];
+            const bsp2_dface_t *surf = BSP_GetFace(bsp, facenum);
+            const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
             
             /* Skip face with no modelinfo */
-            if (face_modelinfo == NULL)
+            if (face_modelinfo == nullptr)
                 continue;
             
             /* Ignore the underwater side of liquid surfaces */
             // FIXME: Use a Face_TextureName function for this
-            if (texname[0] == '*' && underwater)
+            if (/*texname[0] == '*' && */ underwater && Face_IsTranslucent(bsp, surf)) //mxd
                 continue;
 
             /* Skip if already handled */

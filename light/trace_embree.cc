@@ -165,7 +165,7 @@ sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection f
 
 static const mbsp_t *bsp_static;
 
-void ErrorCallback(const RTCError code, const char* str)
+void ErrorCallback(void* userptr, const RTCError code, const char* str)
 {
     printf("RTC Error %d: %s\n", code, str);
 }
@@ -181,6 +181,7 @@ Embree_SceneinfoForGeomID(unsigned int geomID)
         return filtergeom;
     } else {
         Error("unexpected geomID");
+        throw; //mxd. Added to silence compiler warning
     }
 }
 
@@ -288,7 +289,7 @@ Embree_FilterFuncN(int* valid,
             // we hit a dynamic shadow caster. reject the hit, but store the
             // info about what we hit.
             
-            int style = hit_modelinfo->switchshadstyle.intValue();
+            const int style = hit_modelinfo->switchshadstyle.intValue();
             
             AddDynamicOccluderToRay(context, rayIndex, style);
             
@@ -299,20 +300,36 @@ Embree_FilterFuncN(int* valid,
         
         // test fence textures and glass
         const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
-        const char *name = Face_TextureName(bsp_static, face);
         
-        const float alpha = hit_modelinfo->alpha.floatValue();
-        const bool isFence = (name[0] == '{');
-        const bool isGlass = (alpha < 1.0f);
+        
+        float alpha = hit_modelinfo->alpha.floatValue();
+
+        //mxd
+        bool isFence, isGlass;
+        if(bsp_static->loadversion == Q2_BSPVERSION) {
+            const int contents = Face_Contents(bsp_static, face);
+            isFence = ((contents & Q2_SURF_TRANSLUCENT) == Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
+            isGlass = !isFence && (contents & Q2_SURF_TRANSLUCENT);
+            if(isGlass)
+                alpha = (contents & Q2_SURF_TRANS33 ? 0.66f : 0.33f);
+        } else {
+            const char *name = Face_TextureName(bsp_static, face);
+            isFence = (name[0] == '{');
+            isGlass = (alpha < 1.0f);
+        }
         
         if (isFence || isGlass) {
             vec3_t hitpoint;
             Embree_RayEndpoint(ray, potentialHit, N, i, hitpoint);
-            const int sample = SampleTexture(face, bsp_static, hitpoint);
+            const color_rgba sample = SampleTexture(face, bsp_static, hitpoint); //mxd. Palette index -> color_rgba
         
             if (isGlass) {
                 // hit glass...
                 
+                //mxd. Adjust alpha by texture alpha?
+                if (sample.a < 255)
+                    alpha = sample.a / 255.0f;
+
                 vec3_t rayDir = {
                     RTCRayN_dir_x(ray, N, i),
                     RTCRayN_dir_y(ray, N, i),
@@ -332,9 +349,8 @@ Embree_FilterFuncN(int* valid,
                 // only pick up the color of the glass on the _exiting_ side of the glass.
                 // (we currently trace "backwards", from surface point --> light source)
                 if (raySurfaceCosAngle < 0) {
-                    vec3_t samplecolor;
-                    glm_to_vec3_t(Palette_GetColor(sample), samplecolor);
-                    VectorScale(samplecolor, 1/255.0, samplecolor);
+                    vec3_t samplecolor { (float)sample.r, (float)sample.g, (float)sample.b };
+                    VectorScale(samplecolor, 1/255.0f, samplecolor);
                     
                     AddGlassToRay(context, rayIndex, alpha, samplecolor);
                 }
@@ -344,9 +360,8 @@ Embree_FilterFuncN(int* valid,
                 continue;
             }
             
-            
             if (isFence) {
-                if (sample == 255) {
+                if (sample.a < 255) {
                     // reject hit
                     valid[i] = INVALID;
                     continue;
@@ -504,13 +519,13 @@ void FreeWindings(std::vector<winding_t *> &windings)
 }
 
 void
-MakeFaces_r(const mbsp_t *bsp, int nodenum, std::vector<plane_t> *planes, std::vector<winding_t *> *result)
+MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *planes, std::vector<winding_t *> *result)
 {
     if (nodenum < 0) {
-        int leafnum = -nodenum - 1;
+        const int leafnum = -nodenum - 1;
         const mleaf_t *leaf = &bsp->dleafs[leafnum];
         
-        if (leaf->contents == CONTENTS_SOLID) {
+        if (bsp->loadversion == Q2_BSPVERSION ? leaf->contents & Q2_CONTENTS_SOLID : leaf->contents == CONTENTS_SOLID) {
             std::vector<winding_t *> leaf_windings = Leaf_MakeFaces(bsp, leaf, *planes);
             for (winding_t *w : leaf_windings) {
                 result->push_back(w);
@@ -522,13 +537,13 @@ MakeFaces_r(const mbsp_t *bsp, int nodenum, std::vector<plane_t> *planes, std::v
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
 
     // go down the front side
-    plane_t front = Node_Plane(bsp, node, false);
+    const plane_t front = Node_Plane(bsp, node, false);
     planes->push_back(front);
     MakeFaces_r(bsp, node->children[0], planes, result);
     planes->pop_back();
     
     // go down the back side
-    plane_t back = Node_Plane(bsp, node, true);
+    const plane_t back = Node_Plane(bsp, node, true);
     planes->push_back(back);
     MakeFaces_r(bsp, node->children[1], planes, result);
     planes->pop_back();
@@ -568,7 +583,6 @@ Embree_TraceInit(const mbsp_t *bsp)
         
         for (int i=0; i<model->model->numfaces; i++) {
             const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
-            const char *texname = Face_TextureName(bsp, face);
             
             // check for TEX_NOSHADOW
             const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
@@ -581,26 +595,34 @@ Embree_TraceInit(const mbsp_t *bsp)
                 continue;
             }
             
+            const int contents = Face_Contents(bsp, face); //mxd
+
+            //mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
+            if(bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_NODRAW) && !(contents & Q2_SURF_SKY))
+                continue;
+            
             // handle glass
-            if (model->alpha.floatValue() < 1.0f) {
+            if (model->alpha.floatValue() < 1.0f 
+                || (bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_TRANSLUCENT))) { //mxd. Both fence and transparent textures are done using SURF_TRANS flags in Q2
                 filterfaces.push_back(face);
                 continue;
             }
             
             // fence
+            const char *texname = Face_TextureName(bsp, face);
             if (texname[0] == '{') {
                 filterfaces.push_back(face);
                 continue;
             }
             
             // handle sky
-            if (!Q_strncasecmp("sky", texname, 3)) {
+            if (/* !Q_strncasecmp("sky", texname, 3) */ bsp->loadversion == Q2_BSPVERSION ? contents & Q2_SURF_SKY : contents == CONTENTS_SKY) { //mxd
                 skyfaces.push_back(face);
                 continue;
             }
             
             // liquids
-            if (texname[0] == '*') {
+            if (/* texname[0] == '*' */ Contents_IsTranslucent(bsp, contents)) { //mxd
                 if (!isWorld) {
                     // world liquids never cast shadows; shadow casting bmodel liquids do
                     solidfaces.push_back(face);
@@ -632,7 +654,7 @@ Embree_TraceInit(const mbsp_t *bsp)
     }
     
     device = rtcNewDevice();
-    rtcDeviceSetErrorFunction(device, ErrorCallback);
+    rtcDeviceSetErrorFunction2(device, ErrorCallback, nullptr); //mxd. Changed from rtcDeviceSetErrorFunction to silence compiler warning...
     
     // log version
     const size_t ver_maj = rtcDeviceGetParameter1i(device, RTC_CONFIG_VERSION_MAJOR);
