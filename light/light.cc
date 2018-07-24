@@ -436,8 +436,12 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
 #endif
 
-    if (bouncerequired || isQuake2map) //mxd. Print some extra stats...
-        logprint("Indirect lights: %i bounce lights, %i surface lights (%i light points) in use.\n", BounceLights().size(), SurfaceLights().size(), TotalSurfacelightPoints());
+    if (bouncerequired || isQuake2map) { //mxd. Print some extra stats...
+        logprint("Indirect lights: %i bounce lights, %i surface lights (%i light points) in use.\n",
+                 static_cast<int>(BounceLights().size()),
+                 static_cast<int>(SurfaceLights().size()),
+                 static_cast<int>(TotalSurfacelightPoints()));
+    }
 
     logprint("Lighting Completed.\n\n");
     bsp->lightdatasize = file_p - filebase;
