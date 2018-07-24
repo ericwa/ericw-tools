@@ -149,13 +149,26 @@ dir_exists(const char *path)
     return (stat(path, &buf) == 0 && buf.st_mode & S_IFDIR);
 }
 
+/**
+ * It's possible to compile quake 1/hexen 2 maps without a qdir
+ */
+static void
+ClearQdir(void)
+{
+    qdir[0] = '\0';
+    gamedir[0] = '\0';
+    basedir[0] = '\0';
+}
+
 void //mxd. Expects the path to contain "maps" folder
 SetQdirFromPath(const char *basedirname, const char *path)
 {
+    char temp[1024];
+    
     if (!(path[0] == PATHSEPERATOR || path[0] == '\\' || path[1] == ':')) {
         // path is partial
-        char temp[1024];
         Q_getwd(temp);
+        strcat(temp, "/");
         strcat(temp, path);
         path = temp;
     }
@@ -165,8 +178,11 @@ SetQdirFromPath(const char *basedirname, const char *path)
     string_replaceall(path_s, "\\", "/");
 
     int pos = find_dir(path_s, "maps");
-    if (pos == -1)
-        Error("SetQdirFromPath: no \"maps\" in '%s'", path);
+    if (pos == -1) {
+        logprint("SetQdirFromPath: no \"maps\" in '%s'", path);
+        ClearQdir();
+        return;
+    }
 
     // Expect mod folder to be above "maps" folder
     path_s = path_s.substr(0, pos);
@@ -176,8 +192,11 @@ SetQdirFromPath(const char *basedirname, const char *path)
     // See if it's the main game data folder (ID1 / baseq2 / data1 etc.)
     std::string gamename_s;
     pos = up_dir_pos(path_s, gamename_s);
-    if (pos == -1)
-        Error("SetQdirFromPath: invalid path: '%s'", path);
+    if (pos == -1) {
+        logprint("SetQdirFromPath: invalid path: '%s'", path);
+        ClearQdir();
+        return;
+    }
 
     // Not the main game data folder...
     if (!string_iequals(gamename_s, basedir_s)) {
@@ -195,8 +214,11 @@ SetQdirFromPath(const char *basedirname, const char *path)
             path_s = path_s.substr(0, pos);
         }
 
-        if (pos == -1)
-            Error("SetQ2dirFromPath: failed to find %s in '%s'", basedir, path);
+        if (pos == -1) {
+            logprint("SetQ2dirFromPath: failed to find %s in '%s'", basedir, path);
+            ClearQdir();
+            return;
+        }
 
         // qdir is already in path_s
     } else {
