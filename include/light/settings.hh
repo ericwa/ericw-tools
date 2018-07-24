@@ -179,13 +179,9 @@ public:
     }
     
     virtual std::string stringValue() const {
-        //return std::to_string(_value);
-        
-        //mxd. 1.330000 -> 1.33
-        std::string str = std::to_string(_value);
-        const auto lastnonzero = str.find_last_not_of('0');
-        str.erase(lastnonzero + (lastnonzero == str.find('.') ? 0 : 1), std::string::npos);
-        return str;
+        char setting[256];
+        q_snprintf(setting, sizeof(setting), "%g", _value);
+        return setting;
     }
     
     lockable_vec_t(std::vector<std::string> names, float v,
