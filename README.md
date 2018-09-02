@@ -64,7 +64,7 @@ cd build
 wget https://github.com/embree/embree/releases/download/v2.17.5/embree-2.17.5.x86_64.linux.tar.gz -O embree.tgz
 tar xf embree.tgz
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.14.0.x86_64.linux/lib/cmake/embree-2.14.0"
+cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.17.5.x86_64.linux"
 make -j8 VERBOSE=1
 ```
 
