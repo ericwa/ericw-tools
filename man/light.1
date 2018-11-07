@@ -37,7 +37,7 @@ shadows.
 Set a minimum light level, below which can be considered zero brightness.
 This can dramatically speed up processing when there are large numbers of
 lights with inverse or inverse square falloff. In most cases, values less than
-1.0 will cause no discernable visual differences.  Default 0.001.
+1.0 will cause no discernible visual differences.  Default 0.001.
 .IP "\fB-sunsamples [n]\fP"
 Set the number of samples to use for "_sunlight_penumbra" and "_sunlight2" (sunlight2 may use more or less because of how the suns are set up in a sphere). Default 100.
 .IP "\fB-surflight_subdivide [n]\fP"
@@ -90,13 +90,13 @@ lights.
 .IP "\fB-lux\fP"
 Generate a .lux file storing average incoming light directions for surfaces. Usable by FTEQW with "r_deluxemapping 1"
 .IP "\fB-lmscale n\fP"
-Equivelent to "_lightmap_scale" worldspawn key.
+Equivalent to "_lightmap_scale" worldspawn key.
 .IP "\fB-bspxlit\fP"
 Writes rgb data into the bsp itself.
 .IP "\fB-bspx\fP"
 Writes both rgb and directions data into the bsp itself.
 .IP "\fB-novanilla\fP
-Fallback scaled lighting will be omitted. Standard grey lighting will be ommitted if there are coloured lights. Implies "-bspxlit". "-lit" will no longer be implied by the presence of coloured lights.
+Fallback scaled lighting will be omitted. Standard grey lighting will be omitted if there are coloured lights. Implies "-bspxlit". "-lit" will no longer be implied by the presence of coloured lights.
 
 .SH "MODEL ENTITY KEYS"
 
@@ -163,7 +163,7 @@ Specifies the colour of _sunlight2, same format as "_sunlight_color". Default is
 white light ("255 255 255").
 
 .IP "\fB""_sunlight3"" ""n""\fP"
-Same as "_sunlight2", but for the bottom hemisphere (i.e. ambient light, coming 
+Same as "_sunlight2", but for the bottom hemisphere (i.e. ambient light, coming
 from below the horizon). Combine "_sunlight2" and "_sunlight3" to have light coming equally
 from all directions, e.g. for levels floating in the clouds. Default 0.
 
@@ -173,7 +173,7 @@ Specifies the colour of "_sunlight3". Default is white light ("255 255 255").
 .IP "\fB""_dirt"" ""n""\fP"
 1 enables dirtmapping (ambient occlusion) on all lights, borrowed from q3map2. This adds shadows
 to corners and crevices. You can override the global setting for specific lights with the
-"_dirt" light entitiy key or "_sunlight_dirt", "_sunlight2_dirt", and "_minlight_dirt" worldspawn keys.
+"_dirt" light entity key or "_sunlight_dirt", "_sunlight2_dirt", and "_minlight_dirt" worldspawn keys.
 Default is no dirtmapping (-1).
 
 .IP "\fB""_sunlight_dirt"" ""n""\fP"
@@ -201,7 +201,7 @@ shadows darker and stretch further away from corners.
 
 .IP "\fB""_dirtangle"" ""n""\fP"
 Cone angle in degrees for occlusion testing, default 88. Allowed range 1-90.
-Lower values can avoid unwanted dirt on arches, pipe interiors, etc. 
+Lower values can avoid unwanted dirt on arches, pipe interiors, etc.
 
 .IP "\fB""_gamma"" ""n""\fP"
 Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is darker.
@@ -265,8 +265,8 @@ which the QuakeC will need to read and call the "lightstyle()" builtin with "a" 
 Entities sharing the same targetname, and with "_switchableshadow" set to 1, will share the same lightstyle.
 
 .IP "\fB""_dirt"" ""n""\fP"
-For brush models, -1 prevents dirtmapping on the brush model. Useful it the
-bmodel touches or sticks into the world, and you want to those ares from
+For brush models, -1 prevents dirtmapping on the brush model. Useful if the
+bmodel touches or sticks into the world, and you want to prevent those areas from
 turning black. Default 0.
 
 .IP "\fB""_phong"" ""n""\fP"
@@ -285,7 +285,7 @@ The minimum setting for "_phong_angle_concave" is 1, this should make all concav
 If it's 0 or unset, the same value as "_phong_angle" is used.
 
 .IP "\fB""_lightignore"" ""n""\fP"
-1 makes a model receive minlight only, ignoring all lights / sunlight. Could be useful on rotators / trains. 
+1 makes a model receive minlight only, ignoring all lights / sunlight. Could be useful on rotators / trains.
 
 .SH "LIGHT ENTITY KEYS"
 
