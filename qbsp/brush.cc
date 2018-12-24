@@ -105,7 +105,7 @@ CheckFace(face_t *face)
         p2 = face->w.points[(i + 1) % face->w.numpoints];
 
         for (j = 0; j < 3; j++)
-            if (p1[j] > BOGUS_RANGE || p1[j] < -BOGUS_RANGE)
+            if (p1[j] > options.worldExtent || p1[j] < -options.worldExtent)
                 Error("%s: coordinate out of range (%f)", __func__, p1[j]);
 
         /* check the point is on the face plane */

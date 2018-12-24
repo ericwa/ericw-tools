@@ -856,6 +856,13 @@ ParseOptions(char *szOptions)
                     Error("Invalid argument to option %s", szTok);
                 options.on_epsilon= atof(szTok2);
                 szTok = szTok2;
+            } else if (!Q_strcasecmp(szTok, "worldextent")) {
+                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+                if (!szTok2)
+                    Error("Invalid argument to option %s", szTok);
+                options.worldExtent= atof(szTok2);
+                logprint("Overriding maximum world extents to +/- %f units\n", options.worldExtent);
+                szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "objexport")) {
                 options.fObjExport = true;
             } else if (!Q_strcasecmp(szTok, "omitdetail")) {

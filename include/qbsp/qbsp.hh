@@ -156,9 +156,6 @@
 #define T_EPSILON               0.0002
 #define CONTINUOUS_EPSILON      0.0005
 
-// FIXME: replace with MAX_WORLD_COORD/MIN_WORLD_COORD/WORLD_SIZE
-#define BOGUS_RANGE     65536
-
 // from q3map
 #define MAX_WORLD_COORD		( 128*1024 )
 #define MIN_WORLD_COORD		( -128*1024 )
@@ -372,6 +369,7 @@ public:
     bool fTestExpand;
     bool fLeakTest;
     bool fContentHack;
+    vec_t worldExtent;
     
     options_t() {
         memset(this, 0, sizeof(options_t));
@@ -391,6 +389,7 @@ public:
         this->fOldaxis = true;
         this->maxNodeSize = 1024;
         this->on_epsilon = 0.0001;
+        this->worldExtent = 65536;
     }
 };
 

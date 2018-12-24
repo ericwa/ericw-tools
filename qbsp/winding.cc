@@ -38,7 +38,7 @@ BaseWindingForPlane(const qbsp_plane_t *p)
     winding_t *w;
 
     // find the major axis
-    max = -BOGUS_RANGE;
+    max = -options.worldExtent;
     x = -1;
     for (i = 0; i < 3; i++) {
         v = fabs(p->normal[i]);
@@ -69,8 +69,8 @@ BaseWindingForPlane(const qbsp_plane_t *p)
 
     CrossProduct(vup, p->normal, vright);
 
-    VectorScale(vup, BOGUS_RANGE, vup);
-    VectorScale(vright, BOGUS_RANGE, vright);
+    VectorScale(vup, options.worldExtent, vup);
+    VectorScale(vright, options.worldExtent, vright);
 
     // project a really big axis aligned box onto the plane
     w = (winding_t *)AllocMem(WINDING, 4, true);
