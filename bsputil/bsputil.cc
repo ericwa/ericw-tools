@@ -32,6 +32,7 @@
 #include <set>
 #include <list>
 #include <algorithm> // std::sort
+#include <light/light.hh>
 
 /* FIXME - share header with qbsp, etc. */
 typedef struct {
@@ -453,6 +454,49 @@ CheckBSPFile(const mbsp_t *bsp)
            bsp->dmodels[0].maxs[2]);
 }
 
+static void
+CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
+{
+    printf("comparing %d with %d faces\n", refBsp->numfaces, bsp->numfaces);
+
+    const dmodel_t *world = BSP_GetWorldModel(bsp);
+    const dmodel_t *refWorld = BSP_GetWorldModel(refBsp);
+
+    // iterate through the refBsp world faces
+    for (int i=0; i<refWorld->numfaces; i++) {
+        auto* refFace = BSP_GetFace(refBsp, refWorld->firstface + i);
+        qvec3f refFaceCentroid = Face_Centroid(refBsp, refFace);
+
+        // FIXME:   
+        vec3_t wantedPoint;
+        glm_to_vec3_t(refFaceCentroid, wantedPoint);
+
+        vec3_t wantedNormal;
+        Face_Normal(refBsp, refFace, wantedNormal);
+
+        // Search for a face in bsp touching refFaceCentroid.
+        auto* matchedFace = BSP_FindFaceAtPoint(bsp, world, wantedPoint, wantedNormal);
+        if (matchedFace == nullptr) {
+            printf("couldn't find a face at %f %f %f normal %f %f %f\n",
+                    wantedPoint[0], wantedPoint[1], wantedPoint[2],
+                    wantedNormal[0], wantedNormal[1], wantedNormal[2]);
+        }
+
+        // TODO: run on some more complex maps
+//        auto* refFaceSelfCheck = BSP_FindFaceAtPoint(refBsp, refWorld, wantedPoint, wantedNormal);
+//        if (refFaceSelfCheck == refFace) {
+//            matches ++;
+//        } else {
+//            printf("not match at %f %f %f wanted %p got %p\n", wantedPoint[0], wantedPoint[1], wantedPoint[2], refFace, refFaceSelfCheck);
+//            Face_DebugPrint(refBsp, refFace);
+//            Face_DebugPrint(refBsp, refFaceSelfCheck);
+//            notmat++;
+//        }
+    }
+
+
+}
+
 int
 main(int argc, char **argv)
 {
@@ -465,7 +509,7 @@ main(int argc, char **argv)
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]"
-               "[--check] bspfile\n");
+               "[--check] [--compare otherbsp] bspfile\n");
         exit(1);
     }
 
@@ -479,7 +523,27 @@ main(int argc, char **argv)
     ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
     for (i = 0; i < argc - 1; i++) {
-        if (!strcmp(argv[i], "--convert")) {
+        if (!strcmp(argv[i], "--compare")) {
+            i++;
+            if (i == argc - 1) {
+                Error("--compare requires two arguments");
+            }
+            // Load the reference BSP
+
+            char refbspname[1024];
+            bspdata_t refbspdata;
+            strcpy(refbspname, argv[i]);
+            DefaultExtension(refbspname, ".bsp");
+            LoadBSPFile(refbspname, &refbspdata);
+            ConvertBSPFormat(GENERIC_BSP, &refbspdata);
+
+            printf("comparing reference bsp %s with test bsp %s\n", refbspname, source);
+
+            CompareBSPFiles(&refbspdata.data.mbsp,
+                            &bspdata.data.mbsp);
+
+            break;
+        } else if (!strcmp(argv[i], "--convert")) {
             i++;
             if (!(i < argc - 1)) {
                 Error("--convert requires an argument");

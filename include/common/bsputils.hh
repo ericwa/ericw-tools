@@ -31,6 +31,8 @@ int Face_GetNum(const mbsp_t *bsp, const bsp2_dface_t *f);
 
 // bounds-checked array access (assertion failure on out-of-bounds)
 const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum);
+const mleaf_t* BSP_GetLeaf(const mbsp_t *bsp, int leafnum);
+const mleaf_t* BSP_GetLeafFromNodeNum(const mbsp_t *bsp, int nodenum);
 const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum);
 const bsp2_dface_t *BSP_GetFace(const mbsp_t *bsp, int fnum);
 bsp2_dface_t *BSP_GetFace(mbsp_t *bsp, int fnum);
@@ -52,6 +54,13 @@ const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &s
 vec_t Plane_Dist(const vec3_t point, const dplane_t *plane);
 bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point);
 bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t point);
+/**
+ * Searches for a face touching a point and facing a certain way.
+ * Sometimes (water, sky?) there will be 2 overlapping candidates facing opposite ways, the provided normal
+ * is used to disambiguate these.
+ */
+const bsp2_dface_t *BSP_FindFaceAtPoint(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point, const vec3_t wantedNormal);
+const bsp2_dface_t *BSP_FindFaceAtPoint_InWorld(const mbsp_t *bsp, const vec3_t point, const vec3_t wantedNormal);
 plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t *face);
 bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point);
 
@@ -61,5 +70,6 @@ qvec3f Vertex_GetPos_E(const mbsp_t *bsp, int num);
 qvec3f Face_Normal_E(const mbsp_t *bsp, const bsp2_dface_t *f);
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *face);
 qvec3f Face_Centroid(const mbsp_t *bsp, const bsp2_dface_t *face);
+void Face_DebugPrint(const mbsp_t *bsp, const bsp2_dface_t *face);
 
 #endif /* __COMMON_BSPUTILS_HH__ */

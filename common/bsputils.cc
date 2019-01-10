@@ -47,6 +47,20 @@ const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum)
     return &bsp->dnodes[nodenum];
 }
 
+const mleaf_t* BSP_GetLeaf(const mbsp_t *bsp, int leafnum)
+{
+    if (leafnum < 0 || leafnum >= bsp->numleafs) {
+        Error("Corrupt BSP: leaf %d is out of bounds (bsp->numleafs = %d)", leafnum, bsp->numleafs);
+    }
+    return &bsp->dleafs[leafnum];
+}
+
+const mleaf_t* BSP_GetLeafFromNodeNum(const mbsp_t *bsp, int nodenum)
+{
+    const int leafnum = (-1 - nodenum);
+    return BSP_GetLeaf(bsp, leafnum);
+}
+
 const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum)
 {
     Q_assert(planenum >= 0 && planenum < bsp->numplanes);
@@ -248,12 +262,7 @@ vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
 static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec3_t point)
 {
     if (nodenum < 0) {
-        // FIXME: Factor out into bounds-checked getter
-        const int leafnum = (-1 - nodenum);
-        if (leafnum < 0 || leafnum >= bsp->numleafs) {
-            Error("Corrupt BSP: leaf %d is out of bounds (bsp->numleafs = %d)", leafnum, bsp->numleafs);
-        }
-        mleaf_t *leaf = &bsp->dleafs[leafnum];
+        const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
         
         return (bsp->loadversion == Q2_BSPVERSION ? leaf->contents & Q2_CONTENTS_SOLID : (leaf->contents == CONTENTS_SOLID || leaf->contents == CONTENTS_SKY)); //mxd
     }
@@ -280,6 +289,63 @@ bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t p
 bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t point)
 {
     return Light_PointInSolid(bsp, &bsp->dmodels[0], point);
+}
+
+static const bsp2_dface_t *BSP_FindFaceAtPoint_r(const mbsp_t *bsp, const int nodenum, const vec3_t point, const vec3_t wantedNormal)
+{
+    if (nodenum < 0) {
+        // we're only interested in nodes, since faces are owned by nodes.
+        return nullptr;
+    }
+    
+    const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
+    const vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
+    
+    if (dist > 0.1)
+        return BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal);
+    if (dist < -0.1)
+        return BSP_FindFaceAtPoint_r(bsp, node->children[1], point, wantedNormal);
+
+    // Point is close to this node plane. Check all faces on the plane.
+    for (int i=0; i<node->numfaces; i++) {
+        const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+        // First check if it's facing the right way
+        vec3_t faceNormal;
+        Face_Normal(bsp, face, faceNormal);
+
+        if (DotProduct(faceNormal, wantedNormal) < 0) {
+            // Opposite, so not the right face.
+            continue;
+        }
+
+        // Next test if it's within the boundaries of the face
+        plane_t *edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
+        const bool insideFace = EdgePlanes_PointInside(face, edgeplanes, point);
+        free(edgeplanes);
+
+        // Found a match?
+        if (insideFace) {
+            return face;
+        }
+    }
+
+    // No match found on this plane. Check both sides of the tree.
+    const bsp2_dface_t *side0Match = BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal);
+    if (side0Match != nullptr) {
+        return side0Match;
+    } else {
+        return BSP_FindFaceAtPoint_r(bsp, node->children[1], point, wantedNormal);
+    }
+}
+
+const bsp2_dface_t * BSP_FindFaceAtPoint(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point, const vec3_t wantedNormal)
+{
+    return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
+}
+
+const bsp2_dface_t * BSP_FindFaceAtPoint_InWorld(const mbsp_t *bsp, const vec3_t point, const vec3_t wantedNormal)
+{
+    return BSP_FindFaceAtPoint(bsp, &bsp->dmodels[0], point, wantedNormal);
 }
 
 plane_t *
@@ -359,4 +425,27 @@ qvec3f Face_Centroid(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
     // FIXME: GLM_PolyCentroid has a assertion that there are >= 3 points
     return GLM_PolyCentroid(GLM_FacePoints(bsp, face));
+}
+
+void Face_DebugPrint(const mbsp_t *bsp, const bsp2_dface_t *face)
+{
+    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const char *texname = Face_TextureName(bsp, face);
+
+    logprint("face %d, texture '%s', %d edges...\n"
+             "  vectors (%3.3f, %3.3f, %3.3f) (%3.3f)\n"
+             "          (%3.3f, %3.3f, %3.3f) (%3.3f)\n",
+             (int)(face - bsp->dfaces), texname, face->numedges,
+             tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2], tex->vecs[0][3],
+             tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
+
+    for (int i = 0; i < face->numedges; i++) {
+        int edge = bsp->dsurfedges[face->firstedge + i];
+        int vert = Face_VertexAtIndex(bsp, face, i);
+        const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
+        logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: edge %d\n",
+                 i ? "          " : "    verts ", vert,
+                 point[0], point[1], point[2],
+                 edge);
+    }
 }
