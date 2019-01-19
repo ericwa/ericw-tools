@@ -275,28 +275,79 @@ FindOccupiedLeafs(node_t *headnode)
 
 /*
 ==================
+ResetFacesTouchingOccupiedLeafs
+
+Set f->touchesOccupiedLeaf=false on all faces.
+==================
+*/
+static void
+ResetFacesTouchingOccupiedLeafs(node_t *node)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        return;
+    }
+
+    for (face_t *face = node->faces; face; face = face->next) {
+        face->touchesOccupiedLeaf = false;
+    }
+
+    ResetFacesTouchingOccupiedLeafs(node->children[0]);
+    ResetFacesTouchingOccupiedLeafs(node->children[1]);
+}
+
+/*
+==================
+MarkFacesTouchingOccupiedLeafs
+
+Set f->touchesOccupiedLeaf=true on faces that are touching occupied leafs
+==================
+*/
+static void
+MarkFacesTouchingOccupiedLeafs(node_t *node)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        MarkFacesTouchingOccupiedLeafs(node->children[0]);
+        MarkFacesTouchingOccupiedLeafs(node->children[1]);
+        return;
+    }
+
+    // visit the leaf
+
+    if (node->occupied > 0) {
+        // This is an occupied leaf, so we need to keep all of the faces touching it.
+        for (face_t **markface = node->markfaces; *markface; markface++) {
+            (*markface)->touchesOccupiedLeaf = true;
+        }
+    }
+}
+
+/*
+==================
 ClearOutFaces
 
+Deletes (by setting f->w.numpoints=0) faces in solid nodes
 ==================
 */
 static void
 ClearOutFaces(node_t *node)
 {
-    face_t **markfaces;
-
     if (node->planenum != PLANENUM_LEAF) {
         ClearOutFaces(node->children[0]);
         ClearOutFaces(node->children[1]);
         return;
     }
-    if (node->contents != CONTENTS_SOLID)
-        return;
 
-    // FIXME: Hacky, should delete these faces from the nodes they belong to as well (?)
-    for (markfaces = node->markfaces; *markfaces; markfaces++) {
-        // mark all the original faces that are removed
-        (*markfaces)->w.numpoints = 0;
+    // visit the leaf
+    if (node->contents != CONTENTS_SOLID) {
+        return;
     }
+
+    for (face_t **markface = node->markfaces; *markface; markface++) {
+        // NOTE: This is how faces are deleted here, kind of ugly
+        (*markface)->w.numpoints = 0;
+    }
+
+    // FIXME: Shouldn't be needed here
     node->faces = NULL;
 }
 
@@ -317,7 +368,21 @@ OutLeafsToSolid_r(node_t *node, int *outleafs_count)
     if (node->contents == CONTENTS_SKY
         || node->contents == CONTENTS_SOLID)
         return;
-    
+
+    // Now check all faces touching the leaf. If any of them are partially going into the occupied part of the map,
+    // don't fill the leaf (see comment in FillOutside).
+    bool skipFill = false;
+    for (face_t **markface = node->markfaces; *markface; markface++) {
+        if ((*markface)->touchesOccupiedLeaf) {
+            skipFill = true;
+            break;
+        }
+    }
+    if (skipFill) {
+        return;
+    }
+
+    // Finally, we can fill it in as void.
     node->contents = CONTENTS_SOLID;
     *outleafs_count += 1;
 }
@@ -390,6 +455,28 @@ FillOutside(node_t *node, const int hullnum)
         
         return false;
     }
+
+    // At this point, leafs not reachable from entities have (node->occupied == 0).
+    // The two final tasks are:
+    // 1. Mark the leafs that are not reachable as CONTENTS_SOLID (i.e. filling them in as the void).
+    // 2. Delete faces in those leafs
+
+
+    // An annoying wrinkle here: there may be leafs with (node->occupied == 0), which means they should be filled in as void,
+    // but they have faces straddling between them and occupied leafs (i.e. leafs which will be CONTENTS_EMPTY because
+    // they're in playable space). See missing_face_simple.map for an example.
+    //
+    // The subtlety is, if we fill these leafs in as solid and delete the inward-facing faces, the only face left
+    // will be the void-and-non-void-straddling face. This face will mess up LinkConvexFaces, since we need to rebuild the
+    // BSP and recalculate the leaf contents, unaware of the fact that we wanted this leaf to be void (CONTENTS_SOLID),
+    // and this face will cause it to be marked as CONTENTS_EMPTY which will manifest as messed up hull0 collision in game
+    // (weapons shoot through the leaf.)
+    //
+    // In order to avoid this scenario, we need to detect those "void-and-non-void-straddling" faces and not fill those leafs
+    // in as solid. This will keep some extra faces around but keep the content types consistent.
+
+    ResetFacesTouchingOccupiedLeafs(node);
+    MarkFacesTouchingOccupiedLeafs(node);
 
     /* now go back and fill outside with solid contents */
     const int outleafs = OutLeafsToSolid(node);

@@ -250,6 +250,7 @@ typedef struct visfacet_s {
     struct visfacet_s *original;        // face on node
     int outputnumber;           // only valid for original faces after
                                 // write surfaces
+    bool touchesOccupiedLeaf; // internal use in outside.cc
     vec3_t origin;
     vec_t radius;
 
