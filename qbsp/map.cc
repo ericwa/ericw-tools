@@ -294,6 +294,8 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         flags |= TEX_SPECIAL;
     if (atoi(ValueForKey(entity, "_dirt")) == -1)
         flags |= TEX_NODIRT;
+    if (atoi(ValueForKey(entity, "_bounce")) == -1)
+        flags |= TEX_NOBOUNCE;
     if (shadow == -1)
         flags |= TEX_NOSHADOW;
     if (!Q_strcasecmp("func_detail_illusionary", ValueForKey(entity, "classname"))) {

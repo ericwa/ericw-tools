@@ -113,7 +113,12 @@ Face_ShouldBounce(const mbsp_t *bsp, const bsp2_dface_t *face)
     if (!strcmp("skip", texname)) {
         return false;
     }
-    
+
+    // check for "_bounce" "-1"
+    if (extended_texinfo_flags[face->texinfo] & TEX_NOBOUNCE) {
+        return false;
+    }
+
     return true;
 }
 

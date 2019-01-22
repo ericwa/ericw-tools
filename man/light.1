@@ -229,7 +229,7 @@ When set to 1, spotlight falloff is calculated from the distance to the targeted
 
 .PP
 The following keys can be used on any entity with a brush model.
-"_minlight", "_mincolor", "_dirt", "_phong", "_phong_angle", "_phong_angle_concave", "_shadow" are supported on func_detail/func_group as well, if
+"_minlight", "_mincolor", "_dirt", "_phong", "_phong_angle", "_phong_angle_concave", "_shadow", "_bounce" are supported on func_detail/func_group as well, if
 qbsp from these tools is used.
 
 .IP "\fB""_minlight"" ""n""\fP"
@@ -286,6 +286,11 @@ If it's 0 or unset, the same value as "_phong_angle" is used.
 
 .IP "\fB""_lightignore"" ""n""\fP"
 1 makes a model receive minlight only, ignoring all lights / sunlight. Could be useful on rotators / trains.
+
+.IP "\fB""_bounce"" ""n""\fP"
+Set to -1 to prevent this model from bouncing light (i.e. prevents its brushes from emitting bounced light they receive from elsewhere.) Only has an effect if "_bounce" is enabled in worldspawn.
+
+
 
 .SH "LIGHT ENTITY KEYS"
 
