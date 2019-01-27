@@ -21,14 +21,15 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 
+#include <unordered_set>
+
 static FILE *
-InitObjFile(void)
+InitObjFile(const std::string& filesuffix)
 {
     FILE *objfile;
-    
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".obj");
-    objfile = fopen(options.szBSPName, "wt");
+
+    std::string name = StrippedExtension(options.szBSPName) + "_" + filesuffix + ".obj";
+    objfile = fopen(name.c_str(), "wt");
     if (!objfile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
     
@@ -36,13 +37,12 @@ InitObjFile(void)
 }
 
 static FILE *
-InitMtlFile(void)
+InitMtlFile(const std::string& filesuffix)
 {
     FILE *file;
-    
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".mtl");
-    file = fopen(options.szBSPName, "wt");
+
+    std::string name = StrippedExtension(options.szBSPName) + "_" + filesuffix + ".mtl";
+    file = fopen(name.c_str(), "wt");
     if (!file)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
     
@@ -104,10 +104,10 @@ WriteContentsMaterial(FILE *mtlf, int contents, float r, float g, float b)
 }
 
 void
-ExportObj_Faces(const std::vector<const face_t *> &faces)
+ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces)
 {
-    FILE *objfile = InitObjFile();
-    FILE *mtlfile = InitMtlFile();
+    FILE *objfile = InitObjFile(filesuffix);
+    FILE *mtlfile = InitMtlFile(filesuffix);
     
     WriteContentsMaterial(mtlfile, 0, 0, 0, 0);
     WriteContentsMaterial(mtlfile, CONTENTS_EMPTY, 0, 1, 0);
@@ -133,7 +133,7 @@ ExportObj_Faces(const std::vector<const face_t *> &faces)
 }
 
 void
-ExportObj_Brushes(const std::vector<const brush_t *> &brushes)
+ExportObj_Brushes(const std::string &filesuffix, const std::vector<const brush_t *> &brushes)
 {
     std::vector<const face_t *> faces;
     
@@ -141,11 +141,11 @@ ExportObj_Brushes(const std::vector<const brush_t *> &brushes)
         for (const face_t *face = brush->faces; face; face = face->next)
             faces.push_back(face);
     
-    ExportObj_Faces(faces);
+    ExportObj_Faces(filesuffix, faces);
 }
 
 void
-ExportObj_Surfaces(const surface_t *surfaces)
+ExportObj_Surfaces(const std::string &filesuffix, const surface_t *surfaces)
 {
     std::vector<const face_t *> faces;
     
@@ -155,5 +155,63 @@ ExportObj_Surfaces(const surface_t *surfaces)
         }
     }
     
-    ExportObj_Faces(faces);
+    ExportObj_Faces(filesuffix, faces);
+}
+
+static void
+ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        return;
+    }
+
+    for (face_t *face = node->faces; face; face = face->next) {
+        dest->push_back(face);
+    }
+
+    ExportObj_Nodes_r(node->children[0], dest);
+    ExportObj_Nodes_r(node->children[1], dest);
+}
+
+
+void
+ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes)
+{
+    std::vector<const face_t *> faces;
+    ExportObj_Nodes_r(nodes, &faces);
+    ExportObj_Faces(filesuffix, faces);
+}
+
+static void
+ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<const face_t *> *dest)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        ExportObj_Marksurfaces_r(node->children[0], dest);
+        ExportObj_Marksurfaces_r(node->children[1], dest);
+        return;
+    }
+
+    for (face_t **markface = node->markfaces; *markface; markface++) {
+        face_t* face = *markface;
+        if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
+            continue;
+
+        // FIXME: what is the face->original list about
+        dest->insert(face);
+    }
+}
+
+void
+ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes) {
+    // many leafs will mark the same face, so collect them in an unordered_set to filter out duplicates
+    std::unordered_set<const face_t *> faces;
+    ExportObj_Marksurfaces_r(nodes, &faces);
+
+    // copy to a vector
+    std::vector<const face_t *> faces_vec;
+    faces_vec.reserve(faces.size());
+    for (const face_t* face : faces) {
+        faces_vec.push_back(face);
+    }
+    ExportObj_Faces(filesuffix, faces_vec);
 }

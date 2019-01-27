@@ -156,7 +156,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     surfs = CSGFaces(entity);
     
     if (options.fObjExport && entity == pWorldEnt() && hullnum == 0) {
-        ExportObj_Surfaces(surfs);
+        ExportObj_Surfaces("post_csg", surfs);
     }
     
     if (hullnum != 0) {
@@ -227,6 +227,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
         AllocBSPPlanes();
         AllocBSPTexinfo();
+
+        if (options.fObjExport && entity == pWorldEnt()) {
+            ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);
+            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", nodes);
+        }
 
         firstface = MakeFaceEdges(entity, nodes);
         ExportDrawNodes(entity, nodes, firstface);

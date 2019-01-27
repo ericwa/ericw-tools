@@ -97,6 +97,7 @@ void DefaultExtension(char *path, const char *extension);
 void DefaultPath(char *path, const char *basepath);
 void StripFilename(char *path);
 void StripExtension(char *path);
+std::string StrippedExtension(const std::string& path);
 int IsAbsolutePath(const char *path);
 
 void ExtractFilePath(char *path, char *dest);

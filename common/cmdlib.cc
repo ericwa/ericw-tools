@@ -789,6 +789,23 @@ StripExtension(char *path)
         path[length] = 0;
 }
 
+std::string
+StrippedExtension(const std::string& path) {
+    std::string result = path;
+
+    int length;
+    length = static_cast<int>(path.size()) - 1;
+    while (length > 0 && path[length] != '.') {
+        length--;
+        if (path[length] == '/')
+            return path;             /* no extension */
+    }
+    if (length)
+        result = result.substr(0, static_cast<size_t>(length - 1));
+
+    return result;
+}
+
 int
 IsAbsolutePath(const char *path)
 {

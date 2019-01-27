@@ -206,9 +206,11 @@ void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes);
 
-void ExportObj_Faces(const std::vector<const face_t *> &faces);
-void ExportObj_Brushes(const std::vector<const brush_t *> &brushes);
-void ExportObj_Surfaces(const surface_t *surfaces);
+void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces);
+void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const brush_t *> &brushes);
+void ExportObj_Surfaces(const std::string &filesuffix, const surface_t *surfaces);
+void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
+void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 
 void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list);
 
