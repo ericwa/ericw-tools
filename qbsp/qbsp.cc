@@ -855,6 +855,14 @@ ParseOptions(char *szOptions)
                     Error("Invalid argument to option %s", szTok);
                 options.maxNodeSize= atoi(szTok2);
                 szTok = szTok2;
+            } else if (!Q_strcasecmp(szTok, "midsplitsurffraction")) {
+                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+                if (!szTok2)
+                    Error("Invalid argument to option %s", szTok);
+                options.midsplitSurfFraction = qclamp(atof(szTok2), 0.0f, 1.0f);
+                logprint("Switching to midsplit when node contains more than fraction %f of model's surfaces\n", options.midsplitSurfFraction);
+
+                szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "epsilon")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)

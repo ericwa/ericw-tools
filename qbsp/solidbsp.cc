@@ -31,6 +31,11 @@ static int c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_f
 static int c_illusionary_visblocker;
 static bool usemidsplit;
 
+/**
+ * Total number of surfaces in the map
+ */
+static int mapsurfaces;
+
 //============================================================================
 
 void
@@ -508,13 +513,24 @@ SelectPartition(surface_t *surfaces)
                 maxs[i] = surf->maxs[i];
         }
 
-    bool largenode = false;
-    if (options.maxNodeSize >= 64) {
-        const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
+    // how much of the map are we partitioning?
+    double fractionOfMap = surfcount / (double)mapsurfaces;
 
-        largenode = (maxs[0] - mins[0]) > maxnodesize
-            || (maxs[1] - mins[1]) > maxnodesize
-            || (maxs[2] - mins[2]) > maxnodesize;
+    bool largenode = false;
+
+    // decide if we should switch to the midsplit method
+    if (options.midsplitSurfFraction != 0.0) {
+        // new way (opt-in)
+        largenode = (fractionOfMap > options.midsplitSurfFraction);
+    } else {
+        // old way (ericw-tools 0.15.2+)
+        if (options.maxNodeSize >= 64) {
+            const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
+
+            largenode = (maxs[0] - mins[0]) > maxnodesize
+                        || (maxs[1] - mins[1]) > maxnodesize
+                        || (maxs[2] - mins[2]) > maxnodesize;
+        }
     }
 
     if (usemidsplit || largenode) // do fast way for clipping hull
@@ -1044,6 +1060,11 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     c_detail_illusionary = 0;
     c_detail_fence = 0;
     c_illusionary_visblocker = 0;
+    // count map surfaces; this is used when deciding to switch between midsplit and the expensive partitioning
+    mapsurfaces = 0;
+    for (surface_t *surf = surfhead; surf; surf = surf->next) {
+        mapsurfaces++;
+    }
 
     PartitionSurfaces(surfhead, headnode);
 

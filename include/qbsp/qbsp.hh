@@ -358,6 +358,13 @@ public:
     int dxSubdivide;
     int dxLeakDist;
         int maxNodeSize;
+    /**
+     * if 0 (default), use maxNodeSize for deciding when to switch to midsplit bsp heuristic.
+     *
+     * if 0 < midsplitSurfFraction <=1, switch to midsplit if the node contains more than this fraction of the model's
+     * total surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)
+     */
+    float midsplitSurfFraction;
     char szMapName[512];
     char szBSPName[512];
     char wadPath[512];
@@ -390,6 +397,7 @@ public:
         this->fixRotateObjTexture = true;
         this->fOldaxis = true;
         this->maxNodeSize = 1024;
+        this->midsplitSurfFraction = 0;
         this->on_epsilon = 0.0001;
         this->worldExtent = 65536;
     }
