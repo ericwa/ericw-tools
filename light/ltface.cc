@@ -1533,16 +1533,18 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     const float MAX_SKY_DIST = 65536.0f;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
-    
-    /* Don't bother if surface facing away from sun */
-    if (DotProduct(sun->sunvec, plane->normal) < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
-        return;
-    }
-    
+
+    // FIXME: Normalized sun vector should be stored in the sun_t. Also clarify which way the vector points (towards or away..)
     vec3_t incoming;
     VectorCopy(sun->sunvec, incoming);
     VectorNormalize(incoming);
-    
+
+    /* Don't bother if surface facing away from sun */
+    const float dp = DotProduct(incoming, plane->normal);
+    if (dp < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
+        return;
+    }
+
     /* Check each point... */
     raystream_t *rs = lightsurf->stream;
     rs->clearPushedRays();
@@ -1560,10 +1562,8 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
                 angle = -angle;
             }
         }
-        
-        if (angle < 0) {
-            continue;
-        }
+
+        angle = qmax(0.0f, angle);
         
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         float value = angle * sun->sunlight;
