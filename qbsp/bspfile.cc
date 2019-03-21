@@ -54,6 +54,7 @@ LoadBSPFile(void)
 
     switch (header->version) {
     case BSPVERSION:
+    case BSPHLVERSION:
         MemSize = MemSize_BSP29;
         break;
     case BSP2RMQVERSION:

@@ -1189,7 +1189,7 @@ light_main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (loadversion != Q2_BSPVERSION) //mxd. No lit for Quake 2
+        if (loadversion != Q2_BSPVERSION && bsp->loadversion != BSPHLVERSION) //mxd. No lit for Quake 2
             CheckLitNeeded(cfg);
         SetupDirt(cfg);
         

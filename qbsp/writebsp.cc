@@ -298,7 +298,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
     model->headnode[hullnum] = clipcount + oldcount;
 
     CountClipNodes_r(entity, nodes);
-    if (clipnodes->count > MAX_BSP_CLIPNODES && options.BSPVersion == BSPVERSION)
+    if (clipnodes->count > MAX_BSP_CLIPNODES && (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION))
         Error("Clipnode count exceeds bsp 29 max (%d > %d)",
               clipnodes->count, MAX_BSP_CLIPNODES);
 
@@ -313,7 +313,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
         if (diff != 0) {
             for (i = 1; i < hullnum; i++)
                 model->headnode[i] += diff;
-            if (options.BSPVersion == BSPVERSION) {
+            if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION) {
                 bsp29_dclipnode_t *clipnode = (bsp29_dclipnode_t *)clipnodes->data;
                 for (i = 0; i < oldcount; i++, clipnode++) {
                     if (clipnode->children[0] < MAX_BSP_CLIPNODES)
@@ -334,7 +334,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
     }
 
     map.cTotal[LUMP_CLIPNODES] = clipcount + oldcount;
-    if (options.BSPVersion == BSPVERSION)
+    if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION)
         ExportClipNodes_BSP29(entity, nodes);
     else
         ExportClipNodes_BSP2(entity, nodes);

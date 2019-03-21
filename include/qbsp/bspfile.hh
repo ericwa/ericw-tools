@@ -33,6 +33,7 @@ extern "C" {
 typedef uint8_t byte;
 
 #define BSPVERSION     29
+#define BSPHLVERSION   30
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 #define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
 

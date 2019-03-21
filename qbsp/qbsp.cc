@@ -567,7 +567,9 @@ CreateHulls(void)
     CreateSingleHull(1);
     CreateSingleHull(2);
 
-    if (options.hexen2)
+	if (options.BSPVersion == BSPHLVERSION)
+		CreateSingleHull(3);
+    else if (options.hexen2)
     {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
         CreateSingleHull(4);
@@ -683,6 +685,7 @@ PrintOptions(void)
            "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
            "   -wrbrushes      (bspx) Includes a list of brushes for brush-based collision\n"
            "   -wrbrushesonly  -wrbrushes with -noclip\n"
+           "   -hlbsp          Request output in Half-Life bsp format\n"
            "   -bsp2           Request output in bsp2 format\n"
            "   -2psb           Request output in 2psb format (RMQ compatible)\n"
            "   -leakdist  [n]  Space between leakfile points (default 2)\n"
@@ -825,7 +828,10 @@ ParseOptions(char *szOptions)
                 options.fbspx_brushes = true;
                 options.fNoclip = true;
             }
-            else if (!Q_strcasecmp(szTok, "bsp2")) {
+            else if (!Q_strcasecmp(szTok, "hlbsp")) {
+                options.BSPVersion = BSPHLVERSION;
+                MemSize = MemSize_BSP29;
+            } else if (!Q_strcasecmp(szTok, "bsp2")) {
                 options.BSPVersion = BSP2VERSION;
                 MemSize = MemSize_BSP2;
             } else if (!Q_strcasecmp(szTok, "2psb")) {

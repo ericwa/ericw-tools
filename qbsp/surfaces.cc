@@ -306,7 +306,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     // search for an existing edge from v2->v1
     const std::pair<int,int> edge_hash_key = std::make_pair(v2, v1);
 
-    if (options.BSPVersion == BSPVERSION) {
+    if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION) {
         bsp29_dedge_t *edge;
 
         auto it = hashedges.find(edge_hash_key);
@@ -464,7 +464,7 @@ EmitFace_Internal(mapentity_t *entity, face_t *face)
 static void
 EmitFace(mapentity_t *entity, face_t *face)
 {
-    if (options.BSPVersion == BSPVERSION)
+    if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION)
         EmitFace_Internal<bsp29_dface_t>(entity, face);
     else
         EmitFace_Internal<bsp2_dface_t>(entity, face);
@@ -594,7 +594,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
         edges->count = edges->index;
     }
 
-    if (map.cTotal[LUMP_VERTEXES] > 65535 && options.BSPVersion == BSPVERSION)
+    if (map.cTotal[LUMP_VERTEXES] > 65535 && (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION))
         Error("Too many vertices (%d > 65535). Recompile with the \"-bsp2\" flag to lift this restriction.", map.cTotal[LUMP_VERTEXES]);
 
     surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);

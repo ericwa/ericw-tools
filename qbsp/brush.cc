@@ -877,7 +877,28 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const
         return NULL;
     }
 
-    if (options.hexen2)
+	if (options.BSPVersion == BSPHLVERSION)
+	{
+	     if (hullnum == 1) {
+            vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+        else    if (hullnum == 2) {
+            vec3_t size[2] = { {-32, -32, -32}, {32, 32, 32} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+        else    if (hullnum == 3) {
+            vec3_t size[2] = { {-16, -16, -18}, {16, 16, 18} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+	}
+    else if (options.hexen2)
     {
         if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
