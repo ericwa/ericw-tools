@@ -221,6 +221,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
             }
             FreeAllPortals(nodes);
         }
+
+        // bmodels
+        if (entity != pWorldEnt()) {
+            TJunc(entity, nodes);
+        }
         
         // convert detail leafs to solid (in case we didn't make the call above)
         DetailToSolid(nodes);
