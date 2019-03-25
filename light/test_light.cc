@@ -1064,3 +1064,38 @@ TEST(qvec, matrix4x4inv) {
     qmat4x4f nanMat = qv::inverse(qmat4x4f(0));
     ASSERT_TRUE(std::isnan(nanMat.at(0, 0)));
 }
+
+TEST(trace, clamp_texcoord_small) {
+    // positive
+    EXPECT_EQ(0, clamp_texcoord(0.0f, 2));
+    EXPECT_EQ(0, clamp_texcoord(0.5f, 2));
+    EXPECT_EQ(1, clamp_texcoord(1.0f, 2));
+    EXPECT_EQ(1, clamp_texcoord(1.5f, 2));
+    EXPECT_EQ(0, clamp_texcoord(2.0f, 2));
+    EXPECT_EQ(0, clamp_texcoord(2.5f, 2));
+
+    // negative
+    EXPECT_EQ(1, clamp_texcoord(-0.5f, 2));
+    EXPECT_EQ(1, clamp_texcoord(-1.0f, 2));
+    EXPECT_EQ(0, clamp_texcoord(-1.5f, 2));
+    EXPECT_EQ(0, clamp_texcoord(-2.0f, 2));
+    EXPECT_EQ(1, clamp_texcoord(-2.5f, 2));
+}
+
+TEST(trace, clamp_texcoord) {
+    // positive
+    EXPECT_EQ(0, clamp_texcoord(0.0f, 128));
+    EXPECT_EQ(64, clamp_texcoord(64.0f, 128));
+    EXPECT_EQ(64, clamp_texcoord(64.5f, 128));
+    EXPECT_EQ(127, clamp_texcoord(127.0f, 128));
+    EXPECT_EQ(0, clamp_texcoord(128.0f, 128));
+    EXPECT_EQ(1, clamp_texcoord(129.0f, 128));
+
+    // negative
+    EXPECT_EQ(127, clamp_texcoord(-0.5f, 128));
+    EXPECT_EQ(127, clamp_texcoord(-1.0f, 128));
+    EXPECT_EQ(1, clamp_texcoord(-127.0f, 128));
+    EXPECT_EQ(0, clamp_texcoord(-127.5f, 128));
+    EXPECT_EQ(0, clamp_texcoord(-128.0f, 128));
+    EXPECT_EQ(127, clamp_texcoord(-129.0f, 128));
+}

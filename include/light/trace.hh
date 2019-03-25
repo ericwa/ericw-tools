@@ -44,6 +44,7 @@ enum class hittype_t : uint8_t {
 
 const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const vec3_t point );
 int Light_PointContents( const mbsp_t *bsp, const vec3_t point );
+uint32_t clamp_texcoord(vec_t in, uint32_t width);
 color_rgba SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point); //mxd. Palette index -> RGBA
 
 class modelinfo_t;
