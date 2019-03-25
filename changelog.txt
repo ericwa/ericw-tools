@@ -1,3 +1,13 @@
+2019-02-18 ericw-tools 0.18.2
+
+- qbsp: fix "_mirrorinside" on bmodels
+- qbsp: fix a case where func_detail faces were incorrectly deleted during outside-filling
+- qbsp: support a hybrid Valve 220 texturing + q2/q3 surface flags .map format
+- qbsp: added options for large (greater than +/-64000 units):
+- qbsp: -worldextent and -midsplitsurffraction options for large maps
+- light: Add "_bounce" "-1" model entity key to prevent light from bouncing off those brushes
+- light: experimental support for lighting Quake 2 .bsp's
+
 2018-04-05 ericw-tools 0.18.1
 
 - qbsp: fix crash when worldspawn has 0 brushes
