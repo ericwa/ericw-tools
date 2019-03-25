@@ -168,8 +168,11 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
      */
     err = CheckStack(leaf, thread);
     if (err) {
-        logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
-        LogLeaf(leaf);
+        // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
+        // causes it to happen a lot.
+
+        //logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
+        //LogLeaf(leaf);
         return;
     }
 
@@ -457,7 +460,7 @@ BasePortalThread(void *dummy)
 
             for (j = 0; j < tw->numpoints; j++) {
                 d = DotProduct(tw->points[j], p->plane.normal) - p->plane.dist;
-                if (d > ON_EPSILON)
+                if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for https://github.com/ericwa/ericw-tools/issues/261
                     break;
             }
             if (j == tw->numpoints)
@@ -470,7 +473,7 @@ BasePortalThread(void *dummy)
 
             for (j = 0; j < w->numpoints; j++) {
                 d = DotProduct(w->points[j], tp->plane.normal) - tp->plane.dist;
-                if (d < -ON_EPSILON)
+                if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for https://github.com/ericwa/ericw-tools/issues/261
                     break;
             }
             if (j == w->numpoints)

@@ -283,6 +283,12 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
     sides[i] = sides[0];
     dists[i] = dists[0];
 
+    // ericw -- coplanar portals: return without clipping. Otherwise when two portals are less than ON_EPSILON apart,
+    // one will get fully clipped away and we can't see through it causing https://github.com/ericwa/ericw-tools/issues/261
+    if (counts[SIDE_ON] == in->numpoints) {
+        return in;
+    }
+
     if (!counts[0]) {
         FreeStackWinding(in, stack);
         return NULL;
@@ -654,8 +660,12 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
         for (j = 0; j < numblocks; j++)
             buffer->bits[j] |= p->visbits->bits[j];
     }
-    if (TestLeafBit(buffer, clusternum))
-        logprint("WARNING: Leaf portals saw into cluster (%i)\n", clusternum);
+
+    // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
+    // causes it to happen a lot.
+    //if (TestLeafBit(buffer, clusternum))
+    //    logprint("WARNING: Leaf portals saw into cluster (%i)\n", clusternum);
+
     SetLeafBit(buffer, clusternum);
 
     /*
