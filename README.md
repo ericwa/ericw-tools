@@ -43,6 +43,7 @@ source code.
 
 Requires CMake 2.8, groff, and a compiler with C99 and C++11 support.  
 [Embree v2.10.0+](http://embree.github.io/) is optional but recommended.
+If you do use Embree, the Thread Building Blocks (tbb) library is also required.
 
 Tested on:
  - Ubuntu 14.04 / Clang 3.5.0
@@ -63,6 +64,7 @@ cd build
 
 wget https://github.com/embree/embree/releases/download/v2.17.5/embree-2.17.5.x86_64.linux.tar.gz -O embree.tgz
 tar xf embree.tgz
+sudo apt-get install libtbb2
 
 cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.17.5.x86_64.linux"
 make -j8 VERBOSE=1
