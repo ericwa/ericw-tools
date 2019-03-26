@@ -311,9 +311,12 @@ Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t *f, const int edgei
                 // Invalid face, e.g. with vertex numbers: [0, 1, 0, 2]
                 continue;
             }
-            
+
+            const bool sameplane = (neighbour->planenum == f->planenum
+                                    && neighbour->side == f->side);
+
             // Check if these faces are smoothed or on the same plane
-            if (!(FacesSmoothed(f, neighbour) || neighbour->planenum == f->planenum)) {
+            if (!(FacesSmoothed(f, neighbour) || sameplane)) {
                 continue;
             }
 
