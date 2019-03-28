@@ -330,7 +330,7 @@ WADList_AddAnimationFrames(const wad_t *wadlist)
     oldcount = map.nummiptex();
 
     for (i = 0; i < oldcount; i++) {
-        if (map.miptex.at(i)[0] != '+')
+        if (map.miptex.at(i)[0] != '+' && (options.BSPVersion!=BSPHLVERSION||map.miptex.at(i)[0] != '-'))
             continue;
         std::string name = map.miptex.at(i);
 
