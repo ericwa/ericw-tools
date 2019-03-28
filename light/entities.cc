@@ -32,6 +32,7 @@ using strings = std::vector<std::string>;
 std::vector<light_t> all_lights;
 std::vector<sun_t> all_suns;
 std::vector<entdict_t> entdicts;
+std::vector<entdict_t> radlights;
 
 const std::vector<light_t>& GetLights() {
     return all_lights;
@@ -1587,8 +1588,53 @@ static void GL_SubdivideSurface (const bsp2_dface_t *face, const modelinfo_t *fa
     SubdividePolygon (face, face_modelinfo, bsp, face->numedges, verts[0], surflight_subdivide);
 }
 
+bool ParseLightsFile(const char *fname)
+{	//note: this creates dupes. super bright light! (and super slow, too)
+	light_t l;
+	char buf[1024];
+	char gah[256];
+	const char *t;
+	float r, g, b;
+	FILE *f = fopen(fname, "r");
+	if(!f)
+		return false;
+	while(!feof(f))
+	{
+		fgets(buf, sizeof(buf), f);
+		t = buf;
+
+		t = COM_Parse(buf);
+		if (!t)
+			continue;
+		entdict_t d = {};
+		d["_surface"] = std::string(com_token);
+		t = COM_Parse(t);
+		r = atof(com_token);
+		t = COM_Parse(t);
+		g = atof(com_token);
+		t = COM_Parse(t);
+		b = atof(com_token);
+		snprintf(gah, sizeof(gah), "%f %f %f", r,g,b);
+		d["_color"] = std::string(gah);
+		t = COM_Parse(t);
+		d["light"] = std::string(com_token);
+		//might be hdr rgbi values here
+
+		radlights.push_back(d);
+	}
+	fclose(f);
+	return true;
+}
+
 static void MakeSurfaceLights(const mbsp_t *bsp)
 {
+	for (entdict_t &l : radlights) {
+		light_t entity {};
+		entity.epairs = &l;
+		entity.settings().setSettings(*entity.epairs, false);
+		surfacelight_templates.push_back(entity);
+	}
+
     for (light_t &entity : all_lights) {
         std::string tex = ValueForKey(&entity, "_surface");
         if (!tex.empty()) {

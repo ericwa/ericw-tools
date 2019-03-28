@@ -772,7 +772,8 @@ static void PrintUsage()
 "  -lux                write .lux file\n"
 "  -bspxlit            writes rgb data into the bsp itself\n"
 "  -bspx               writes both rgb and directions data into the bsp itself\n"
-"  -novanilla          implies -bspxlit. don't write vanilla lighting\n");
+"  -novanilla          implies -bspxlit. don't write vanilla lighting\n"
+"  -light filename.rad loads a <surfacename> <r> <g> <b> <intensity> file\n");
     
     printf("\n");
     printf("Overridable worldspawn keys:\n");
@@ -961,6 +962,9 @@ light_main(int argc, const char **argv)
             write_luxfile |= 2;
         } else if (!strcmp(argv[i], "-novanilla")) {
             scaledonly = true;
+        } else if ( !strcmp( argv[ i ], "-light" ) ) {
+            if (!ParseLightsFile(argv[++i]))
+				logprint( "Unable to read surfacelights file %s\n", argv[i] );
         } else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
             lmscaleoverride = argv[++i];
         } else if (!strcmp(argv[i], "-soft")) {
@@ -1139,6 +1143,14 @@ light_main(int argc, const char **argv)
         StripExtension(source);
         DefaultExtension(source, ".lit");
         remove(source);
+    }
+
+    {
+		StripExtension(source);
+		DefaultExtension(source, ".rad");
+		if (strcmp(source, "lights.rad"))
+			ParseLightsFile("lights.rad");	//generic/default name
+		ParseLightsFile(source);			//map-specific file name
     }
     
     StripExtension(source);

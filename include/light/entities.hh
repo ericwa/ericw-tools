@@ -180,6 +180,7 @@ std::string WorldValueForKey(const std::string &key);
 
 void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp);
 void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp);
+bool ParseLightsFile(const char *fname);
 void WriteEntitiesToString(mbsp_t *bsp);
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
 
