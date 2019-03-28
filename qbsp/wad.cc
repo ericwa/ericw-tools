@@ -42,12 +42,14 @@ byte thepalette[768] = // Quake palette
 };
 
 static bool
-WAD_LoadInfo(wad_t *wad)
+WAD_LoadInfo(wad_t *wad, bool external)
 {
     wadinfo_t *hdr = &wad->header;
-    int i, len, lumpinfosize, disksize;
+    int i, len, lumpinfosize;
     dmiptex_t miptex;
     texture_t *tex;
+
+    external |= options.fNoTextures;
 
     len = fread(hdr, 1, sizeof(wadinfo_t), wad->file);
     if (len != sizeof(wadinfo_t))
@@ -80,6 +82,7 @@ WAD_LoadInfo(wad_t *wad)
 			wad->lumps[i].size = sizeof(miptex) + (w>>0)*(h>>0) + (w>>1)*(h>>1) + (w>>2)*(h>>2) + (w>>3)*(h>>3);
 			if (options.BSPVersion == BSPHLVERSION)
 				wad->lumps[i].size += 2+3*256;	//palette size+palette data
+			wad->lumps[i].size = (wad->lumps[i].size+3) & ~3;	//keep things aligned if we can.
 
             tex = (texture_t *)AllocMem(OTHER, sizeof(texture_t), true);
             tex->next = textures;
@@ -88,6 +91,10 @@ WAD_LoadInfo(wad_t *wad)
             tex->name[15] = '\0';
             tex->width = miptex.width;
             tex->height = miptex.height;
+
+            //if we're not going to embed it into the bsp, set its size now so we know how much to actually store.
+            if (external)
+				wad->lumps[i].size = wad->lumps[i].disksize = sizeof(dmiptex_t);
 
             //printf("Created texture_t %s %d %d\n", tex->name, tex->width, tex->height);
         }
@@ -98,7 +105,7 @@ WAD_LoadInfo(wad_t *wad)
     return true;
 }
 
-wad_t *WADList_AddWad(const char *fpath, wad_t *current_wadlist)
+wad_t *WADList_AddWad(const char *fpath, bool external, wad_t *current_wadlist)
 {
     wad_t wad = {0};
     
@@ -106,12 +113,13 @@ wad_t *WADList_AddWad(const char *fpath, wad_t *current_wadlist)
     if (wad.file) {
         if (options.fVerbose)
             Message(msgLiteral, "Opened WAD: %s\n", fpath);
-        if (WAD_LoadInfo(&wad)) {
+        if (WAD_LoadInfo(&wad, external)) {
             wad_t *newwad = (wad_t *)AllocMem(OTHER, sizeof(wad), true);
             memcpy(newwad, &wad, sizeof(wad));
             newwad->next = current_wadlist;
             
             // FIXME: leaves file open?
+            // (currently needed so that mips can be loaded later, as needed)
             
             return newwad;
         } else {
@@ -143,18 +151,22 @@ WADList_Init(const char *wadstring)
         while (*pos && *pos != ';')
             pos++;
 
-        if (!options.wadPath[0] || IsAbsolutePath(fname)) {
+        if (!options.wadPaths[0].path || IsAbsolutePath(fname)) {
             fpath = (char *)AllocMem(OTHER, (pos - fname) + 1, false);
             q_snprintf(fpath, (pos - fname) + 1, "%s", fname);
+            wadlist = WADList_AddWad(fpath, false, wadlist);
+            FreeMem(fpath, OTHER, strlen(fpath) + 1);
         } else {
-            pathlen = strlen(options.wadPath) + 1 + (pos - fname);
-            fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
-            q_snprintf(fpath, pathlen + 1, "%s/%s", options.wadPath, fname);
+			for (int i = 0; i < sizeof(options.wadPaths)/sizeof(options.wadPaths[0]) && options.wadPaths[i].path; i++)
+			{
+				pathlen = strlen(options.wadPaths[i].path) + 1 + (pos - fname);
+				fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
+				q_snprintf(fpath, pathlen + 1, "%s/%s", options.wadPaths[i].path, fname);
+				wadlist = WADList_AddWad(fpath, options.wadPaths[i].external, wadlist);
+				FreeMem(fpath, OTHER, strlen(fpath) + 1);
+            }
         }
-        
-        wadlist = WADList_AddWad(fpath, wadlist);
 
-        FreeMem(fpath, OTHER, strlen(fpath) + 1);
         pos++;
     }
 
@@ -206,10 +218,7 @@ WADList_Process(const wad_t *wadlist)
     for (i = 0; i < map.nummiptex(); i++) {
         texture = WADList_FindTexture(wadlist, map.miptex.at(i).c_str());
         if (texture) {
-            if (options.fNoTextures)
-                texdata->count += sizeof(dmiptex_t);
-            else
-                texdata->count += texture->size;
+            texdata->count += texture->size;
         }
     }
 
@@ -267,7 +276,7 @@ WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
     for (i = 0; i < wad->header.numlumps; i++) {
         if (!Q_strcasecmp(name, wad->lumps[i].name)) {
             fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
-            if (options.fNoTextures || wad->lumps[i].disksize == sizeof(dmiptex_t))
+            if (wad->lumps[i].disksize == sizeof(dmiptex_t))
             {
                 size = fread(dest, 1, sizeof(dmiptex_t), wad->file);
                 if (size != sizeof(dmiptex_t))

@@ -204,6 +204,18 @@ IsSkipName(const char *name)
         return true;
     if (!Q_strcasecmp(name, "*lavaskip"))
         return true;
+    if (!Q_strcasecmp(name, "bevel"))	//zhlt compat
+        return true;
+    if (!Q_strcasecmp(name, "null"))	//zhlt compat
+        return true;
+    return false;
+}
+
+static bool
+IsNoExpandName(const char *name)
+{
+    if (!Q_strcasecmp(name, "bevel"))	//zhlt compat
+        return true;
     return false;
 }
 
@@ -292,6 +304,8 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         flags |= TEX_HINT;
     if (IsSpecialName(texname))
         flags |= TEX_SPECIAL;
+    if (IsNoExpandName(texname))
+        flags |= TEX_NOEXPAND;
     if (atoi(ValueForKey(entity, "_dirt")) == -1)
         flags |= TEX_NODIRT;
     if (atoi(ValueForKey(entity, "_bounce")) == -1)
@@ -2323,7 +2337,7 @@ TestExpandBrushes(const mapentity_t *src)
     
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        brush_t *hull1brush = LoadBrush(mapbrush, vec3_origin, 1);
+        brush_t *hull1brush = LoadBrush(mapbrush, CONTENTS_SOLID, vec3_origin, 1);
         
         if (hull1brush != nullptr)
             hull1brushes.push_back(hull1brush);

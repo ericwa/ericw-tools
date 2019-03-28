@@ -682,15 +682,16 @@ PrintOptions(void)
            "   -nooldaxis      Uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older\n"
            "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
            "   -nopercent      Prevents output of percent completion information\n"
-           "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
            "   -wrbrushes      (bspx) Includes a list of brushes for brush-based collision\n"
            "   -wrbrushesonly  -wrbrushes with -noclip\n"
+           "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
            "   -hlbsp          Request output in Half-Life bsp format\n"
            "   -bsp2           Request output in bsp2 format\n"
            "   -2psb           Request output in 2psb format (RMQ compatible)\n"
            "   -leakdist  [n]  Space between leakfile points (default 2)\n"
            "   -subdivide [n]  Use different texture subdivision (default 240)\n"
-           "   -wadpath <dir>  Search this directory for wad files\n"
+           "   -wadpath <dir>  Search this directory for wad files (mips will be embedded unless -notex)\n"
+           "   -xwadpath <dir> Search this directory for wad files (mips will NOT be embedded, avoiding texture license issues)\n"
            "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
            "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
            "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
@@ -849,15 +850,25 @@ ParseOptions(char *szOptions)
                     Error("Invalid argument to option %s", szTok);
                 options.dxSubdivide = atoi(szTok2);
                 szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "wadpath")) {
+            } else if (!Q_strcasecmp(szTok, "wadpath") || !Q_strcasecmp(szTok, "xwadpath")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                strcpy(options.wadPath, szTok2);
+                int i;
+                for (i = 0; i < sizeof(options.wadPaths)/sizeof(options.wadPaths[0]); i++)
+                {
+					if (options.wadPaths[i].path)
+						continue;
+					options.wadPaths[i].external = !!Q_strcasecmp(szTok, "wadpath");
+					options.wadPaths[i].path = strdup(szTok2);
+					/* Remove trailing /, if any */
+					if (options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] == '/')
+						options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] = 0;
+					break;
+				}
+				if (i == sizeof(options.wadPaths)/sizeof(options.wadPaths[0]))
+					Error("too many -wadpath args");
                 szTok = szTok2;
-                /* Remove trailing /, if any */
-                if (options.wadPath[strlen(options.wadPath) - 1] == '/')
-                    options.wadPath[strlen(options.wadPath) - 1] = 0;
             } else if (!Q_strcasecmp(szTok, "oldrottex")) {
                 options.fixRotateObjTexture = false;
             } else if (!Q_strcasecmp(szTok, "maxnodesize")) {
@@ -996,9 +1007,10 @@ InitQBSP(int argc, const char **argv)
     Message(msgFile, IntroString);
 
     /* If no wadpath given, default to the map directory */
-    if (options.wadPath[0] == 0) {
-        strcpy(options.wadPath, options.szMapName);
-        StripFilename(options.wadPath);
+    if (!options.wadPaths[0].path) {
+		options.wadPaths[0].external = false;
+        options.wadPaths[0].path = strdup(options.szMapName);
+        StripFilename(options.wadPaths[0].path);
     }
 
     // Remove already existing files

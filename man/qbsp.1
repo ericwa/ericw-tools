@@ -30,7 +30,8 @@ Print out more .map information
 .IP "\fB-noverbose\fP"
 Print out almost no information at all
 .IP "\fB-splitspecial\fP"
-Doesn't combine sky and water faces into one large face
+Doesn't combine sky and water faces into one large face.
+This allows for statically lit water.
 .IP "\fB-transwater\fP"
 Computes portal information for transparent water (default)
 .IP "\fB-notranswater\fP"
@@ -53,19 +54,27 @@ Create an old-style QBSP .PTS file (default is new)
 Makes it a compile error if a leak is detected.
 .IP "\fB-nopercent\fP"
 Prevents output of percent completion information
+.IP "\fB-hexen2\fP"
+Generate a hexen2 bsp. This can be used in addition to -bsp2 to avoid clipnode issues.
 .IP "\fB-bsp2\fP"
 Create the output BSP file in BSP2 format.  Allows the creation of much larger
 and more complex maps than the original BSP 29 format).
 .IP "\fB-2psb\fP"
 Create the output BSP file in 2PSB format.  This an earlier version of the
 BSP2 format, supported by the RMQ engine (and thus is also known as the
-BSP2rmq or RMQe bsp format).  original BSP 29 format).
+BSP2rmq or RMQe bsp format).
+.IP "\fB-hlbsp\fP"
+Create the output BSP file in Half-Life's format.
+Note that the hull size differences prevent this from being generally usable for the vanilla quake gamecode.
+This cannot be used in combination with the -bsp2 argument.
 .IP "\fB-leakdist [n]\fP"
 Space between leakfile points (default 2)
 .IP "\fB-subdivide [n]\fP"
-Use different texture subdivision (default 240)
+Use different texture subdivision (default 240). Lower values will harm framerates. Higher values may not be supported. DP+FTEQW+QSS support up to 4080 (unless lightmap scaling is in use), but such values will cause other engines to crash-to-console.
 .IP "\fB-wadpath <dir>\fP"
-Search this directory for wad files (default is cwd)
+Search this directory for wad files (default is cwd). Multiple -wadpath args may be used. This argument is ignored for wads specified using an absolute path.
+.IP "\fB-xwadpath <dir>\fP"
+Like -wadpath, except textures found using the specified path will NOT be embedded into the bsp (equivelent to -notex, but for only textures from specific wads). You should use this for wads like halflife's standard wad files, but q1bsps require an engine extension and players are not nearly as likely to have the same wad version.
 .IP "\fB-oldrottex\fP"
 Use old method of texturing rotate_ brushes where the mapper aligns
 textures for the object at (0 0 0).
@@ -74,14 +83,13 @@ Switch to the cheap spatial subdivion bsp heuristic when splitting nodes
 of this size (in any dimension). This gives much faster qbsp processing
 times on large maps and should generate better bsp trees as well.
 From txqbsp-xt, thanks rebb. (default 1024, 0 to disable)
-.IP "\fB-hexen2\fP"
-Generate a hexen2 bsp.
 .IP "\fB-wrbrushes\fP"
 (bspx) Includes a list of brushes for brush-based collision.
+This allows for arbitrary collision sizes in engines that support it, currently only FTEQW.
 .IP "\fB-wrbrushesonly\fP"
-"-wrbrushes" combined with "-noclip" argument.
+"-wrbrushes" combined with "-noclip" argument. This is NOT backwards compatible.
 .IP "\fB-notex\fP"
-Write only placeholder textures, to depend upon replacements.
+Write only placeholder textures, to depend upon replacements. This avoids inclusion of third-party copyrighted images inside your maps, but is not backwards compatible but will work in FTEQW and QSS.
 .IP "\fB-omitdetail\fP"
 Detail brushes are omitted from the compile.
 .IP "\fB-convert <fmt>\fP"
