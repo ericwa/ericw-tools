@@ -139,6 +139,7 @@
 #define TEX_PHONG_ANGLE_CONCAVE_SHIFT   45
 #define TEX_PHONG_ANGLE_CONCAVE_MASK    (255ULL << TEX_PHONG_ANGLE_CONCAVE_SHIFT) /* 8 bit value. if non zero, overrides _phong_angle for concave joints. */
 #define TEX_NOBOUNCE  (1ULL << 53)   /* light doesn't bounce off this face */
+#define TEX_NOMINLIGHT (1ULL << 54)   /* opt out of minlight on this face */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.

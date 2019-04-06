@@ -204,7 +204,6 @@ public:
 
 public:
     lockable_vec_t minlight, shadow, shadowself, shadowworldonly, switchableshadow, switchshadstyle, dirt, phong, phong_angle, alpha;
-    lockable_string_t minlight_exclude;
     lockable_vec3_t minlight_color;
     lockable_bool_t lightignore;
     
@@ -238,7 +237,6 @@ public:
         phong { "phong", 0 },
         phong_angle { "phong_angle", 0 },
         alpha { "alpha", 1.0f },
-        minlight_exclude { "minlight_exclude", "" },
         minlight_color { strings{"minlight_color", "mincolor"}, 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         lightignore { "lightignore", false }
     {
@@ -248,7 +246,7 @@ public:
     settingsdict_t settings() {
         return {{
             &minlight, &shadow, &shadowself, &shadowworldonly, &switchableshadow, &switchshadstyle, &dirt, &phong, &phong_angle, &alpha,
-            &minlight_exclude, &minlight_color, &lightignore
+            &minlight_color, &lightignore
         }};
     }
 };
