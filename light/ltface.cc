@@ -1530,7 +1530,6 @@ static void
 LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
-    const float MAX_SKY_DIST = 65536.0f;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
 

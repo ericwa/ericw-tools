@@ -45,6 +45,9 @@
 #define ANGLE_EPSILON 0.001f
 #define EQUAL_EPSILON 0.001f
 
+// FIXME: use maximum dimension of level
+#define MAX_SKY_DIST 1000000.0f
+
 typedef struct {
     vec3_t color;
     vec3_t direction;
