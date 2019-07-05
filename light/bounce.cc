@@ -46,7 +46,7 @@ using namespace polylib;
 
 mutex radlights_lock;
 map<string, qvec3f> texturecolors;
-std::vector<bouncelight_t> radlights;
+static std::vector<bouncelight_t> radlights;
 std::map<int, std::vector<int>> radlightsByFacenum;
 
 class patch_t {

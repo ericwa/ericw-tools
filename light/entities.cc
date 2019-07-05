@@ -32,7 +32,7 @@ using strings = std::vector<std::string>;
 std::vector<light_t> all_lights;
 std::vector<sun_t> all_suns;
 std::vector<entdict_t> entdicts;
-std::vector<entdict_t> radlights;
+static std::vector<entdict_t> radlights;
 
 const std::vector<light_t>& GetLights() {
     return all_lights;
