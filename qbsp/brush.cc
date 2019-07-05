@@ -387,8 +387,9 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
             const char *texname = map.miptex.at(texinfo.miptex).c_str();
+
             if (Q_strcasecmp(texname, "hint"))
-                continue;
+                continue; // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
         }
 
         w = BaseWindingForPlane(&mapface->plane);
