@@ -33,6 +33,7 @@
 
 typedef struct hullbrush_s {
     const mapbrush_t *srcbrush;
+    int contents;
     int numfaces;
     vec3_t mins;
     vec3_t maxs;
@@ -382,12 +383,13 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (!hullnum) {
+        if (!hullnum && hullbrush->contents == CONTENTS_HINT) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
             const char *texname = map.miptex.at(texinfo.miptex).c_str();
-            if (!Q_strcasecmp(texname, "hintskip"))
-                continue;
+
+            if (Q_strcasecmp(texname, "hint"))
+                continue; // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
         }
 
         w = BaseWindingForPlane(&mapface->plane);
@@ -764,6 +766,8 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
     // expand all of the planes
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
+        if (mapface->flags & TEX_NOEXPAND)
+            continue;
         VectorCopy(vec3_origin, corner);
         for (x = 0; x < 3; x++) {
             if (mapface->plane.normal[x] > 0)
@@ -814,28 +818,33 @@ static int
 Brush_GetContents(const mapbrush_t *mapbrush)
 {
     const char *texname;
-    const mapface_t &mapface = mapbrush->face(0);
-    const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-    texname = map.miptex.at(texinfo.miptex).c_str();
 
-    if (!Q_strcasecmp(texname, "origin"))
-        return CONTENTS_ORIGIN;
-    if (!Q_strcasecmp(texname, "hint") || !Q_strcasecmp(texname, "hintskip"))
-        return CONTENTS_HINT;
-    if (!Q_strcasecmp(texname, "clip"))
-        return CONTENTS_CLIP;
+    //check for strong content indicators
+    for (int i = 0; i < mapbrush->numfaces; i++)
+    {
+        const mapface_t &mapface = mapbrush->face(i);
+        const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+        texname = map.miptex.at(texinfo.miptex).c_str();
 
-    if (texname[0] == '*') {
-        if (!Q_strncasecmp(texname + 1, "lava", 4))
-            return CONTENTS_LAVA;
-        if (!Q_strncasecmp(texname + 1, "slime", 5))
-            return CONTENTS_SLIME;
-        return CONTENTS_WATER;
+        if (!Q_strcasecmp(texname, "origin"))
+            return CONTENTS_ORIGIN;
+        if (!Q_strcasecmp(texname, "hint"))
+            return CONTENTS_HINT;
+        if (!Q_strcasecmp(texname, "clip"))
+            return CONTENTS_CLIP;
+
+        if (texname[0] == '*') {
+            if (!Q_strncasecmp(texname + 1, "lava", 4))
+                return CONTENTS_LAVA;
+            if (!Q_strncasecmp(texname + 1, "slime", 5))
+                return CONTENTS_SLIME;
+            return CONTENTS_WATER;
+        }
+
+        if (!Q_strncasecmp(texname, "sky", 3))
+            return CONTENTS_SKY;
     }
-
-    if (!Q_strncasecmp(texname, "sky", 3))
-        return CONTENTS_SKY;
-
+    //and anything else is assumed to be a regular solid.
     return CONTENTS_SOLID;
 }
 
@@ -847,7 +856,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const int hullnum)
+brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -858,6 +867,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const
         Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
               MAX_FACES, mapbrush->face(0).linenum);
 
+    hullbrush.contents = contents;
     hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
     for (int i=0; i<mapbrush->numfaces; i++)
@@ -877,7 +887,28 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const
         return NULL;
     }
 
-    if (options.hexen2)
+    if (options.BSPVersion == BSPHLVERSION)
+    {
+         if (hullnum == 1) {
+            vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+        else    if (hullnum == 2) {
+            vec3_t size[2] = { {-32, -32, -32}, {32, 32, 32} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+        else    if (hullnum == 3) {
+            vec3_t size[2] = { {-16, -16, -18}, {16, 16, 18} };
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        }
+    }
+    else if (options.hexen2)
     {
         if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
@@ -940,6 +971,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, const vec3_t rotate_offset, const
     // create the brush
     brush = (brush_t *)AllocMem(BRUSH, 1, true);
 
+    brush->contents = contents;
     brush->faces = facelist;
     VectorCopy(hullbrush.mins, brush->mins);
     VectorCopy(hullbrush.maxs, brush->maxs);
@@ -1076,7 +1108,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 continue;
             }
             
-            brush_t *brush = LoadBrush(mapbrush, vec3_origin, 0);
+            brush_t *brush = LoadBrush(mapbrush, contents, vec3_origin, 0);
             if (brush) {
                 vec3_t origin;
                 VectorAdd(brush->mins, brush->maxs, origin);
@@ -1200,7 +1232,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
          */
         if (contents == CONTENTS_CLIP) {
             if (hullnum <= 0) {
-                brush_t *brush = LoadBrush(mapbrush, rotate_offset, hullnum);
+                brush_t *brush = LoadBrush(mapbrush, contents, rotate_offset, hullnum);
                 if (brush) {
                     AddToBounds(dst, brush->mins);
                     AddToBounds(dst, brush->maxs);
@@ -1242,12 +1274,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         if (hullnum && contents == CONTENTS_SKY)
             contents = CONTENTS_SOLID;
         
-        brush_t *brush = LoadBrush(mapbrush, rotate_offset, hullnum);
+        brush_t *brush = LoadBrush(mapbrush, contents, rotate_offset, hullnum);
         if (!brush)
             continue;
 
         dst->numbrushes++;
-        brush->contents = contents;
         brush->lmshift = lmshift;
         brush->cflags = cflags;
         

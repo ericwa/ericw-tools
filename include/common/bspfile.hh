@@ -55,6 +55,7 @@
 #define BSPVERSION     29
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 #define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
+#define BSPHLVERSION   30 //24bit lighting, and private palettes in the textures lump.
 #define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
 #define Q2_BSPVERSION  38
 

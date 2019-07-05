@@ -436,7 +436,7 @@ FillOutside(node_t *node, const int hullnum)
         Q_assert(leakentity != nullptr);
         
         const vec_t *origin = leakentity->origin;
-        Message(msgWarning, warnMapLeak, origin[0], origin[1], origin[2]);
+        Message(msgWarning, warnMapLeak, ValueForKey(leakentity, "classname"), origin[0], origin[1], origin[2]);
         if (map.leakfile)
             return false;
         

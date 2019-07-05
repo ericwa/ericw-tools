@@ -3026,7 +3026,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
     
 	// q2 support
-    if (bsp->loadversion == Q2_BSPVERSION)
+    if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION)
         size *= 3;
     
     byte *out, *lit, *lux;
@@ -3084,7 +3084,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 *lit++ = color[1];
                 *lit++ = color[2];
                 
-                if (bsp->loadversion == Q2_BSPVERSION) {
+                if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION) {
                     *out++ = color[0];
                     *out++ = color[1];
                     *out++ = color[2];

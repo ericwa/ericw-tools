@@ -33,6 +33,8 @@ BSPVersionString(int32_t version)
         return "BSP2rmq";
     case BSP2VERSION:
         return "BSP2";
+    case BSPHLVERSION:
+        return "HLBSP";
     case Q2_BSPVERSION:
         return "Q2BSP";
     default:
@@ -49,6 +51,8 @@ BSPVersionSupported(int32_t version)
     case BSPVERSION:
     case BSP2VERSION:
     case BSP2RMQVERSION:
+    case BSPHLVERSION:
+        return true;
     case Q2_BSPVERSION:
         return true;
     default:
@@ -579,7 +583,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
         return;
     }
     
-    if (bspdata->version == BSPVERSION) {
+    if (bspdata->version == BSPVERSION || bspdata->version == BSPHLVERSION) {
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         SwapBSPVertexes(bsp->numvertexes, bsp->dvertexes);
@@ -1567,7 +1571,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
 
     // conversions to GENERIC_BSP
     
-    if (bspdata->version == BSPVERSION && version == GENERIC_BSP) {
+    if ((bspdata->version == BSPVERSION || bspdata->version == BSPHLVERSION) && version == GENERIC_BSP) {
         const bsp29_t *bsp29 = &bspdata->data.bsp29;
         mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -1777,7 +1781,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
     
     // conversions from GENERIC_BSP
     
-    if (bspdata->version == GENERIC_BSP && version == BSPVERSION) {
+    if (bspdata->version == GENERIC_BSP && (version == BSPVERSION || version == BSPHLVERSION)) {
         bsp29_t *bsp29 = &bspdata->data.bsp29;
         const mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2089,6 +2093,7 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 
     switch (header->version) {
     case BSPVERSION:
+    case BSPHLVERSION:
         lumpspec = &lumpspec_bsp29[lumpnum];
         break;
     case BSP2RMQVERSION:
@@ -2351,7 +2356,7 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         Q2_CopyLump (header, Q2_LUMP_POP, &bsp->dpop);
     }
     
-    if (version == BSPVERSION) {
+    if (version == BSPVERSION || version == BSPHLVERSION) {
         dheader_t *header = (dheader_t *)file_data;
         bsp29_t *bsp = &bspdata->data.bsp29;
 
@@ -2488,6 +2493,7 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
     
     switch (bspfile->version) {
     case BSPVERSION:
+    case BSPHLVERSION:
         size = lumpspec_bsp29[lumpnum].size * count;
         break;
     case BSP2RMQVERSION:
@@ -2584,7 +2590,8 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         SafeWrite(bspfile.file, &bspfile.q1header, sizeof(bspfile.q1header));
     }
 
-    if (bspdata->version == BSPVERSION) {
+    if (bspdata->version == BSPVERSION ||
+        bspdata->version == BSPHLVERSION) {
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
@@ -2766,7 +2773,7 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
     }
     
-    if (bspdata->version == BSPVERSION) {
+    if (bspdata->version == BSPVERSION || bspdata->version == BSPHLVERSION) {
         const bsp29_t *bsp = &bspdata->data.bsp29;
         const lumpspec_t *lumpspec = lumpspec_bsp29;
 

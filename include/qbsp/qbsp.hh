@@ -111,6 +111,8 @@
 #define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
 #define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
 #define CONTENTS_ILLUSIONARY_VISBLOCKER -13
+#define CONTENTS_FENCE  -15     /* compiler internal use only */
+#define CONTENTS_LADDER -16     /* reserved for engine use */
 
 // Special contents flags for the compiler only
 #define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
@@ -140,6 +142,7 @@
 #define TEX_PHONG_ANGLE_CONCAVE_MASK    (255ULL << TEX_PHONG_ANGLE_CONCAVE_SHIFT) /* 8 bit value. if non zero, overrides _phong_angle for concave joints. */
 #define TEX_NOBOUNCE  (1ULL << 53)   /* light doesn't bounce off this face */
 #define TEX_NOMINLIGHT (1ULL << 54)   /* opt out of minlight on this face */
+#define TEX_NOEXPAND  (1ULL << 55)   /* don't expand this face for larger clip hulls */
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -368,7 +371,11 @@ public:
     float midsplitSurfFraction;
     char szMapName[512];
     char szBSPName[512];
-    char wadPath[512];
+    struct
+    {
+        char *path;
+        bool external;    //wads from this path are not to be embedded into the bsp, but will instead require the engine to load them from elsewhere. strongly recommended for eg halflife.wad
+    } wadPaths[16];
     vec_t on_epsilon;
     bool fObjExport;
     bool fOmitDetail;
@@ -380,7 +387,15 @@ public:
     bool fLeakTest;
     bool fContentHack;
     vec_t worldExtent;
-    
+
+
+    ~options_t() {
+        for (int i = 0; i < sizeof(wadPaths)/sizeof(wadPaths[0]); i++)
+        {
+            free(wadPaths[i].path);
+            wadPaths[i].path = nullptr;
+        }
+    }
     options_t() {
         memset(this, 0, sizeof(options_t));
         
@@ -390,7 +405,6 @@ public:
         this->fVerbose = true;
         this->szMapName[0] = 0;
         this->szBSPName[0] = 0;
-        this->wadPath[0] = 0;
         
         /* Default to the original Quake BSP Version... */
         this->BSPVersion = BSPVERSION;
