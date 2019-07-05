@@ -37,8 +37,6 @@
 using namespace std;
 using namespace polylib;
 
-static const float MAX_SKY_RAY_DEPTH = 8192.0f;
-
 class sceneinfo {
 public:
     unsigned geomID;
@@ -754,7 +752,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
     VectorCopy(dirn, dir_normalized);
     VectorNormalize(dir_normalized);
     
-    RTCRay ray = SetupRay(0, start, dir_normalized, MAX_SKY_RAY_DEPTH, self);
+    RTCRay ray = SetupRay(0, start, dir_normalized, MAX_SKY_DIST, self);
     rtcIntersect(scene, ray);
 
     qboolean hit_sky = (ray.geomID == skygeom.geomID);

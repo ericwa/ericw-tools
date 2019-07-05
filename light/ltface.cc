@@ -1530,7 +1530,6 @@ static void
 LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
-    const float MAX_SKY_DIST = 65536.0f;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
 
@@ -1635,11 +1634,11 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
     const globalconfig_t &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
-    const char *texname = Face_TextureName(bsp, face);
-    if (texname[0] != '\0' && modelinfo->minlight_exclude.stringValue() == std::string{ texname }) {
-        return; /* this texture is excluded from minlight */
+    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
+    if ((extended_flags & TEX_NOMINLIGHT) != 0) {
+        return; /* this face is excluded from minlight */
     }
-    
+
     /* Find a style 0 lightmap */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 

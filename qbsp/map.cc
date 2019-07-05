@@ -310,6 +310,14 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         flags |= TEX_NODIRT;
     if (atoi(ValueForKey(entity, "_bounce")) == -1)
         flags |= TEX_NOBOUNCE;
+    if (atoi(ValueForKey(entity, "_minlight")) == -1)
+        flags |= TEX_NOMINLIGHT;
+
+    const char *excludeTex = ValueForKey(entity, "_minlight_exclude");
+    if (strlen(excludeTex) > 0 && !Q_strcasecmp(texname, excludeTex)) {
+        flags |= TEX_NOMINLIGHT;
+    }
+
     if (shadow == -1)
         flags |= TEX_NOSHADOW;
     if (!Q_strcasecmp("func_detail_illusionary", ValueForKey(entity, "classname"))) {

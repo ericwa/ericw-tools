@@ -469,7 +469,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
     // Rotatable objects must have a bounding box big enough to
     // account for all its rotations
-    if (rotate_offset[0] || rotate_offset[1] || rotate_offset[2]) {
+    if (0 /*rotate_offset[0] || rotate_offset[1] || rotate_offset[2]*/) {
         vec_t delta;
 
         delta = fabs(max);

@@ -328,8 +328,7 @@ MakeBounceLights (const globalconfig_t &cfg, const mbsp_t *bsp)
 {
     logprint("--- MakeBounceLights ---\n");
     
-    const dmodel_t *model = &bsp->dmodels[0];
     make_bounce_lights_args_t args { bsp, &cfg }; //mxd. https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html
     
-    RunThreadsOn(model->firstface, model->firstface + model->numfaces, MakeBounceLightsThread, (void *)&args);
+    RunThreadsOn(0, bsp->numfaces, MakeBounceLightsThread, (void *)&args);
 }

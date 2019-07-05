@@ -147,7 +147,8 @@ private:
     
 public:
     bool boolValue() const {
-        return static_cast<bool>(_value);
+        // we use -1 to mean false
+        return intValue() == 1;
     }
     
     int intValue() const {
