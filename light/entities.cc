@@ -1614,7 +1614,7 @@ bool ParseLightsFile(const char *fname)
         g = atof(com_token);
         t = COM_Parse(t);
         b = atof(com_token);
-        snprintf(gah, sizeof(gah), "%f %f %f", r,g,b);
+        q_snprintf(gah, sizeof(gah), "%f %f %f", r,g,b);
         d["_color"] = std::string(gah);
         t = COM_Parse(t);
         d["light"] = std::string(com_token);
