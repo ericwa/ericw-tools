@@ -204,9 +204,9 @@ IsSkipName(const char *name)
         return true;
     if (!Q_strcasecmp(name, "*lavaskip"))
         return true;
-    if (!Q_strcasecmp(name, "bevel"))	//zhlt compat
+    if (!Q_strcasecmp(name, "bevel"))    //zhlt compat
         return true;
-    if (!Q_strcasecmp(name, "null"))	//zhlt compat
+    if (!Q_strcasecmp(name, "null"))    //zhlt compat
         return true;
     return false;
 }
@@ -214,7 +214,7 @@ IsSkipName(const char *name)
 static bool
 IsNoExpandName(const char *name)
 {
-    if (!Q_strcasecmp(name, "bevel"))	//zhlt compat
+    if (!Q_strcasecmp(name, "bevel"))    //zhlt compat
         return true;
     return false;
 }

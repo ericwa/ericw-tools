@@ -373,8 +373,8 @@ public:
     char szBSPName[512];
     struct
     {
-		char *path;
-		bool external;	//wads from this path are not to be embedded into the bsp, but will instead require the engine to load them from elsewhere. strongly recommended for eg halflife.wad
+        char *path;
+        bool external;    //wads from this path are not to be embedded into the bsp, but will instead require the engine to load them from elsewhere. strongly recommended for eg halflife.wad
     } wadPaths[16];
     vec_t on_epsilon;
     bool fObjExport;
@@ -390,11 +390,11 @@ public:
 
 
     ~options_t() {
-		for (int i = 0; i < sizeof(wadPaths)/sizeof(wadPaths[0]); i++)
-		{
-			free(wadPaths[i].path);
-			wadPaths[i].path = nullptr;
-		}
+        for (int i = 0; i < sizeof(wadPaths)/sizeof(wadPaths[0]); i++)
+        {
+            free(wadPaths[i].path);
+            wadPaths[i].path = nullptr;
+        }
     }
     options_t() {
         memset(this, 0, sizeof(options_t));

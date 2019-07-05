@@ -567,8 +567,8 @@ CreateHulls(void)
     CreateSingleHull(1);
     CreateSingleHull(2);
 
-	if (options.BSPVersion == BSPHLVERSION)
-		CreateSingleHull(3);
+    if (options.BSPVersion == BSPHLVERSION)
+        CreateSingleHull(3);
     else if (options.hexen2)
     {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
@@ -857,17 +857,17 @@ ParseOptions(char *szOptions)
                 int i;
                 for (i = 0; i < sizeof(options.wadPaths)/sizeof(options.wadPaths[0]); i++)
                 {
-					if (options.wadPaths[i].path)
-						continue;
-					options.wadPaths[i].external = !!Q_strcasecmp(szTok, "wadpath");
-					options.wadPaths[i].path = strdup(szTok2);
-					/* Remove trailing /, if any */
-					if (options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] == '/')
-						options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] = 0;
-					break;
-				}
-				if (i == sizeof(options.wadPaths)/sizeof(options.wadPaths[0]))
-					Error("too many -wadpath args");
+                    if (options.wadPaths[i].path)
+                        continue;
+                    options.wadPaths[i].external = !!Q_strcasecmp(szTok, "wadpath");
+                    options.wadPaths[i].path = strdup(szTok2);
+                    /* Remove trailing /, if any */
+                    if (options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] == '/')
+                        options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] = 0;
+                    break;
+                }
+                if (i == sizeof(options.wadPaths)/sizeof(options.wadPaths[0]))
+                    Error("too many -wadpath args");
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "oldrottex")) {
                 options.fixRotateObjTexture = false;
@@ -1008,7 +1008,7 @@ InitQBSP(int argc, const char **argv)
 
     /* If no wadpath given, default to the map directory */
     if (!options.wadPaths[0].path) {
-		options.wadPaths[0].external = false;
+        options.wadPaths[0].external = false;
         options.wadPaths[0].path = strdup(options.szMapName);
         StripFilename(options.wadPaths[0].path);
     }

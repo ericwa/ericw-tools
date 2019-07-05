@@ -33,7 +33,7 @@ BSPVersionString(int32_t version)
         return "BSP2rmq";
     case BSP2VERSION:
         return "BSP2";
-	case BSPHLVERSION:
+    case BSPHLVERSION:
         return "HLBSP";
     case Q2_BSPVERSION:
         return "Q2BSP";
@@ -52,7 +52,7 @@ BSPVersionSupported(int32_t version)
     case BSP2VERSION:
     case BSP2RMQVERSION:
     case BSPHLVERSION:
-		return true;
+        return true;
     case Q2_BSPVERSION:
         return true;
     default:
@@ -2591,7 +2591,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
     }
 
     if (bspdata->version == BSPVERSION ||
-		bspdata->version == BSPHLVERSION) {
+        bspdata->version == BSPHLVERSION) {
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);

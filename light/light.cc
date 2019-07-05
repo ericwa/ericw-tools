@@ -964,7 +964,7 @@ light_main(int argc, const char **argv)
             scaledonly = true;
         } else if ( !strcmp( argv[ i ], "-light" ) ) {
             if (!ParseLightsFile(argv[++i]))
-				logprint( "Unable to read surfacelights file %s\n", argv[i] );
+                logprint( "Unable to read surfacelights file %s\n", argv[i] );
         } else if ( !strcmp( argv[ i ], "-lmscale" ) ) {
             lmscaleoverride = argv[++i];
         } else if (!strcmp(argv[i], "-soft")) {
@@ -1146,11 +1146,11 @@ light_main(int argc, const char **argv)
     }
 
     {
-		StripExtension(source);
-		DefaultExtension(source, ".rad");
-		if (strcmp(source, "lights.rad"))
-			ParseLightsFile("lights.rad");	//generic/default name
-		ParseLightsFile(source);			//map-specific file name
+        StripExtension(source);
+        DefaultExtension(source, ".rad");
+        if (strcmp(source, "lights.rad"))
+            ParseLightsFile("lights.rad");    //generic/default name
+        ParseLightsFile(source);            //map-specific file name
     }
     
     StripExtension(source);

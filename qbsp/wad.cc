@@ -77,12 +77,12 @@ WAD_LoadInfo(wad_t *wad, bool external)
 
         if (len == sizeof(miptex))
         {
-			int w = LittleLong(miptex.width);
-			int h = LittleLong(miptex.height);
-			wad->lumps[i].size = sizeof(miptex) + (w>>0)*(h>>0) + (w>>1)*(h>>1) + (w>>2)*(h>>2) + (w>>3)*(h>>3);
-			if (options.BSPVersion == BSPHLVERSION)
-				wad->lumps[i].size += 2+3*256;	//palette size+palette data
-			wad->lumps[i].size = (wad->lumps[i].size+3) & ~3;	//keep things aligned if we can.
+            int w = LittleLong(miptex.width);
+            int h = LittleLong(miptex.height);
+            wad->lumps[i].size = sizeof(miptex) + (w>>0)*(h>>0) + (w>>1)*(h>>1) + (w>>2)*(h>>2) + (w>>3)*(h>>3);
+            if (options.BSPVersion == BSPHLVERSION)
+                wad->lumps[i].size += 2+3*256;    //palette size+palette data
+            wad->lumps[i].size = (wad->lumps[i].size+3) & ~3;    //keep things aligned if we can.
 
             tex = (texture_t *)AllocMem(OTHER, sizeof(texture_t), true);
             tex->next = textures;
@@ -94,12 +94,12 @@ WAD_LoadInfo(wad_t *wad, bool external)
 
             //if we're not going to embed it into the bsp, set its size now so we know how much to actually store.
             if (external)
-				wad->lumps[i].size = wad->lumps[i].disksize = sizeof(dmiptex_t);
+                wad->lumps[i].size = wad->lumps[i].disksize = sizeof(dmiptex_t);
 
             //printf("Created texture_t %s %d %d\n", tex->name, tex->width, tex->height);
         }
-		else
-			wad->lumps[i].size = 0;
+        else
+            wad->lumps[i].size = 0;
     }
 
     return true;
@@ -157,13 +157,13 @@ WADList_Init(const char *wadstring)
             wadlist = WADList_AddWad(fpath, false, wadlist);
             FreeMem(fpath, OTHER, strlen(fpath) + 1);
         } else {
-			for (int i = 0; i < sizeof(options.wadPaths)/sizeof(options.wadPaths[0]) && options.wadPaths[i].path; i++)
-			{
-				pathlen = strlen(options.wadPaths[i].path) + 1 + (pos - fname);
-				fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
-				q_snprintf(fpath, pathlen + 1, "%s/%s", options.wadPaths[i].path, fname);
-				wadlist = WADList_AddWad(fpath, options.wadPaths[i].external, wadlist);
-				FreeMem(fpath, OTHER, strlen(fpath) + 1);
+            for (int i = 0; i < sizeof(options.wadPaths)/sizeof(options.wadPaths[0]) && options.wadPaths[i].path; i++)
+            {
+                pathlen = strlen(options.wadPaths[i].path) + 1 + (pos - fname);
+                fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
+                q_snprintf(fpath, pathlen + 1, "%s/%s", options.wadPaths[i].path, fname);
+                wadlist = WADList_AddWad(fpath, options.wadPaths[i].external, wadlist);
+                FreeMem(fpath, OTHER, strlen(fpath) + 1);
             }
         }
 
@@ -286,43 +286,43 @@ WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
                 return sizeof(dmiptex_t);
             }
 
-			if (wad->lumps[i].size != wad->lumps[i].disksize)
-			{
-			logprint("Texture %s is %i bytes in wad, packed to %i bytes in bsp\n", name, wad->lumps[i].disksize, wad->lumps[i].size);
-				std::vector<byte> data(wad->lumps[i].disksize);
-				size = fread(data.data(), 1, wad->lumps[i].disksize, wad->file);
-				if (size != wad->lumps[i].disksize)
-					Error("Failure reading from file");
-				auto out = (dmiptex_t *)dest;
-				auto in = (dmiptex_t *)data.data();
-				*out = *in;
-				out->offsets[0] = sizeof(*out);
-				out->offsets[1] = out->offsets[0] + (in->width>>0)*(in->height>>0);
-				out->offsets[2] = out->offsets[1] + (in->width>>1)*(in->height>>1);
-				out->offsets[3] = out->offsets[2] + (in->width>>2)*(in->height>>2);
-				auto palofs     = out->offsets[3] + (in->width>>3)*(in->height>>3);
-				memcpy(dest+out->offsets[0], data.data()+(in->offsets[0]), (in->width>>0)*(in->height>>0));
-				memcpy(dest+out->offsets[1], data.data()+(in->offsets[1]), (in->width>>1)*(in->height>>1));
-				memcpy(dest+out->offsets[2], data.data()+(in->offsets[2]), (in->width>>2)*(in->height>>2));
-				memcpy(dest+out->offsets[3], data.data()+(in->offsets[3]), (in->width>>3)*(in->height>>3));
+            if (wad->lumps[i].size != wad->lumps[i].disksize)
+            {
+            logprint("Texture %s is %i bytes in wad, packed to %i bytes in bsp\n", name, wad->lumps[i].disksize, wad->lumps[i].size);
+                std::vector<byte> data(wad->lumps[i].disksize);
+                size = fread(data.data(), 1, wad->lumps[i].disksize, wad->file);
+                if (size != wad->lumps[i].disksize)
+                    Error("Failure reading from file");
+                auto out = (dmiptex_t *)dest;
+                auto in = (dmiptex_t *)data.data();
+                *out = *in;
+                out->offsets[0] = sizeof(*out);
+                out->offsets[1] = out->offsets[0] + (in->width>>0)*(in->height>>0);
+                out->offsets[2] = out->offsets[1] + (in->width>>1)*(in->height>>1);
+                out->offsets[3] = out->offsets[2] + (in->width>>2)*(in->height>>2);
+                auto palofs     = out->offsets[3] + (in->width>>3)*(in->height>>3);
+                memcpy(dest+out->offsets[0], data.data()+(in->offsets[0]), (in->width>>0)*(in->height>>0));
+                memcpy(dest+out->offsets[1], data.data()+(in->offsets[1]), (in->width>>1)*(in->height>>1));
+                memcpy(dest+out->offsets[2], data.data()+(in->offsets[2]), (in->width>>2)*(in->height>>2));
+                memcpy(dest+out->offsets[3], data.data()+(in->offsets[3]), (in->width>>3)*(in->height>>3));
 
-				if (options.BSPVersion == BSPHLVERSION)
-				{	//palette size. 256 in little endian.
-					dest[palofs+0] = ((256>>0)&0xff);
-					dest[palofs+1] = ((256>>8)&0xff);
+                if (options.BSPVersion == BSPHLVERSION)
+                {    //palette size. 256 in little endian.
+                    dest[palofs+0] = ((256>>0)&0xff);
+                    dest[palofs+1] = ((256>>8)&0xff);
 
-					//now the palette
-					if (wad->version == 3)
-						memcpy(dest+palofs+2, data.data()+(in->offsets[3]+(in->width>>3)*(in->height>>3)+2), 3*256);
-					else
-						memcpy(dest+palofs+2, thepalette, 3*256);	//FIXME: quake palette or something.
-				}
+                    //now the palette
+                    if (wad->version == 3)
+                        memcpy(dest+palofs+2, data.data()+(in->offsets[3]+(in->width>>3)*(in->height>>3)+2), 3*256);
+                    else
+                        memcpy(dest+palofs+2, thepalette, 3*256);    //FIXME: quake palette or something.
+                }
             }
             else
             {
-				size = fread(dest, 1, wad->lumps[i].disksize, wad->file);
-				if (size != wad->lumps[i].disksize)
-					Error("Failure reading from file");
+                size = fread(dest, 1, wad->lumps[i].disksize, wad->file);
+                if (size != wad->lumps[i].disksize)
+                    Error("Failure reading from file");
             }
             return wad->lumps[i].size;
         }

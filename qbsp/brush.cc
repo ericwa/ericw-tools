@@ -765,8 +765,8 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
     // expand all of the planes
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-		if (mapface->flags & TEX_NOEXPAND)
-			continue;
+        if (mapface->flags & TEX_NOEXPAND)
+            continue;
         VectorCopy(vec3_origin, corner);
         for (x = 0; x < 3; x++) {
             if (mapface->plane.normal[x] > 0)
@@ -821,27 +821,27 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     //check for strong content indicators
     for (int i = 0; i < mapbrush->numfaces; i++)
     {
-		const mapface_t &mapface = mapbrush->face(i);
-		const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-		texname = map.miptex.at(texinfo.miptex).c_str();
+        const mapface_t &mapface = mapbrush->face(i);
+        const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+        texname = map.miptex.at(texinfo.miptex).c_str();
 
-		if (!Q_strcasecmp(texname, "origin"))
-			return CONTENTS_ORIGIN;
-		if (!Q_strcasecmp(texname, "hint"))
-			return CONTENTS_HINT;
-		if (!Q_strcasecmp(texname, "clip"))
-			return CONTENTS_CLIP;
+        if (!Q_strcasecmp(texname, "origin"))
+            return CONTENTS_ORIGIN;
+        if (!Q_strcasecmp(texname, "hint"))
+            return CONTENTS_HINT;
+        if (!Q_strcasecmp(texname, "clip"))
+            return CONTENTS_CLIP;
 
-		if (texname[0] == '*') {
-			if (!Q_strncasecmp(texname + 1, "lava", 4))
-				return CONTENTS_LAVA;
-			if (!Q_strncasecmp(texname + 1, "slime", 5))
-				return CONTENTS_SLIME;
-			return CONTENTS_WATER;
-		}
+        if (texname[0] == '*') {
+            if (!Q_strncasecmp(texname + 1, "lava", 4))
+                return CONTENTS_LAVA;
+            if (!Q_strncasecmp(texname + 1, "slime", 5))
+                return CONTENTS_SLIME;
+            return CONTENTS_WATER;
+        }
 
-		if (!Q_strncasecmp(texname, "sky", 3))
-			return CONTENTS_SKY;
+        if (!Q_strncasecmp(texname, "sky", 3))
+            return CONTENTS_SKY;
     }
     //and anything else is assumed to be a regular solid.
     return CONTENTS_SOLID;
@@ -866,7 +866,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
         Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
               MAX_FACES, mapbrush->face(0).linenum);
 
-	hullbrush.contents = contents;
+    hullbrush.contents = contents;
     hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
     for (int i=0; i<mapbrush->numfaces; i++)
@@ -886,9 +886,9 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
         return NULL;
     }
 
-	if (options.BSPVersion == BSPHLVERSION)
-	{
-	     if (hullnum == 1) {
+    if (options.BSPVersion == BSPHLVERSION)
+    {
+         if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
@@ -906,7 +906,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
             FreeBrushFaces(facelist);
             facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
         }
-	}
+    }
     else if (options.hexen2)
     {
         if (hullnum == 1) {
@@ -970,7 +970,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
     // create the brush
     brush = (brush_t *)AllocMem(BRUSH, 1, true);
 
-	brush->contents = contents;
+    brush->contents = contents;
     brush->faces = facelist;
     VectorCopy(hullbrush.mins, brush->mins);
     VectorCopy(hullbrush.maxs, brush->maxs);
