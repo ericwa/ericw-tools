@@ -904,7 +904,7 @@ EntData_Parse(const char *entdata)
             if (keystr == "}")
                 break;
             if (keystr.length() > MAX_ENT_KEY - 1)
-                Error("%s: Key length > %i", __func__, MAX_ENT_KEY - 1);
+                Error("%s: Key length > %i: '%s'", __func__, MAX_ENT_KEY - 1, keystr.c_str());
             
             /* parse value */
             data = COM_Parse(data);
