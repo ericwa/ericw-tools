@@ -313,11 +313,19 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
     if (atoi(ValueForKey(entity, "_minlight")) == -1)
         flags |= TEX_NOMINLIGHT;
 
-    const char *excludeTex = ValueForKey(entity, "_minlight_exclude");
-    if (strlen(excludeTex) > 0 && !Q_strcasecmp(texname, excludeTex)) {
-        flags |= TEX_NOMINLIGHT;
-    }
+    // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"... 
+    for (int i = 0; i <= 9; i++) {
+        std::string key = "_minlight_exclude";
+        if (i > 0) {
+            key += std::to_string(i);
+        }
 
+        const char* excludeTex = ValueForKey(entity, key.c_str());
+        if (strlen(excludeTex) > 0 && !Q_strcasecmp(texname, excludeTex)) {
+            flags |= TEX_NOMINLIGHT;
+        }
+    }
+   
     if (shadow == -1)
         flags |= TEX_NOSHADOW;
     if (!Q_strcasecmp("func_detail_illusionary", ValueForKey(entity, "classname"))) {
