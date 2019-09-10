@@ -36,10 +36,13 @@ typedef struct litheader_s {
 } litheader_t;
 
 /* internal representation for bspx/lit2 */
+#define MAXLIGHTMAPSSUP 16
+#define INVALID_LIGHTSTYLE 0xffffu
+#define INVALID_LIGHTSTYLE_OLD 0xffu
 typedef struct {
     float lmscale;
-    uint8_t styles[MAXLIGHTMAPS];       /* scaled styles */
-    int32_t lightofs;           /* scaled lighting */
+    uint16_t styles[MAXLIGHTMAPSSUP]; /* scaled styles */
+    int32_t lightofs;                 /* scaled lighting */
     unsigned short extent[2];
 } facesup_t;
 

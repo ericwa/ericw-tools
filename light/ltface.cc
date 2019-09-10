@@ -900,7 +900,7 @@ Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t 
     
     // no exact match, check for an unsaved one
     for (auto &lm : *lightmaps) {
-        if (lm.style == 255) {
+        if (lm.style == INVALID_LIGHTSTYLE) {
             Lightmap_AllocOrClear(&lm, lightsurf);
             return &lm;
         }
@@ -908,7 +908,7 @@ Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t 
     
     // add a new one to the vector (invalidates existing lightmap_t pointers)
     lightmap_t newLightmap {};
-    newLightmap.style = 255;
+    newLightmap.style = INVALID_LIGHTSTYLE;
     Lightmap_AllocOrClear(&newLightmap, lightsurf);
     lightmaps->push_back(newLightmap);
     
@@ -919,7 +919,7 @@ static void
 Lightmap_ClearAll(lightmapdict_t *lightmaps)
 {
     for (auto &lm : *lightmaps) {
-        lm.style = 255;
+        lm.style = INVALID_LIGHTSTYLE;
     }
 }
 
@@ -933,7 +933,7 @@ static void
 Lightmap_Save(lightmapdict_t *lightmaps, const lightsurf_t *lightsurf,
               lightmap_t *lightmap, const int style)
 {
-    if (lightmap->style == 255) {
+    if (lightmap->style == INVALID_LIGHTSTYLE) {
         lightmap->style = style;
     }
 }
@@ -3072,13 +3072,25 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         return;
     }
 
+    int maxfstyles = facesup?MAXLIGHTMAPSSUP:MAXLIGHTMAPS;
+    if (maxfstyles > facestyles)
+        maxfstyles = facestyles; //truncate it a little
+    int maxstyle = facesup?INVALID_LIGHTSTYLE:INVALID_LIGHTSTYLE_OLD;
+
     // intermediate collection for sorting lightmaps
     std::vector<std::pair<float, const lightmap_t *>> sortable;
     
     for (const lightmap_t &lightmap : *lightmaps) {
         // skip un-saved lightmaps
-        if (lightmap.style == 255)
+        if (lightmap.style == INVALID_LIGHTSTYLE)
             continue;
+        if (lightmap.style > maxstyle) {
+            logprint("WARNING: Style %i too high\n"
+                     "         lightmap point near (%s)\n",
+                     lightmap.style,
+                     VecStr(lightsurf->points[0]).c_str());
+            continue;
+        }
         
         // skip lightmaps where all samples have brightness below 1
         if (bsp->loadversion != Q2_BSPVERSION) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
@@ -3097,7 +3109,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
-        if (sorted.size() == MAXLIGHTMAPS) {
+        if (sorted.size() == maxfstyles) {
             logprint("WARNING: Too many light styles on a face\n"
                      "         lightmap point near (%s)\n",
                      VecStr(lightsurf->points[0]).c_str());
@@ -3109,7 +3121,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     
     /* final number of lightmaps */
     const int numstyles = static_cast<int>(sorted.size());
-    Q_assert(numstyles <= MAXLIGHTMAPS);
+    Q_assert(numstyles <= MAXLIGHTMAPSSUP);
 
     /* update face info (either core data or supplementary stuff) */
     if (facesup)
@@ -3120,8 +3132,8 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         for (mapnum = 0; mapnum < numstyles; mapnum++) {
             facesup->styles[mapnum] = sorted.at(mapnum)->style;
         }
-        for (; mapnum < MAXLIGHTMAPS; mapnum++) {
-            facesup->styles[mapnum] = 255;
+        for (; mapnum < MAXLIGHTMAPSSUP; mapnum++) {
+            facesup->styles[mapnum] = INVALID_LIGHTSTYLE;
         }
         facesup->lmscale = lightsurf->lightmapscale;
     }
@@ -3132,7 +3144,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             face->styles[mapnum] = sorted.at(mapnum)->style;
         }
         for (; mapnum < MAXLIGHTMAPS; mapnum++) {
-            face->styles[mapnum] = 255;
+            face->styles[mapnum] = INVALID_LIGHTSTYLE_OLD;
         }
     }
 
@@ -3297,14 +3309,14 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         if (facesup)
         {
             facesup->lightofs = -1;
-            for (int i = 0; i < MAXLIGHTMAPS; i++)
-                facesup->styles[i] = 255;
+            for (int i = 0; i < MAXLIGHTMAPSSUP; i++)
+                facesup->styles[i] = INVALID_LIGHTSTYLE;
         }
         else
         {
             face->lightofs = -1;
             for (int i = 0; i < MAXLIGHTMAPS; i++)
-                face->styles[i] = 255;
+                face->styles[i] = INVALID_LIGHTSTYLE_OLD;
         }
     }
 

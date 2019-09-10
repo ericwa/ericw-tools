@@ -94,6 +94,7 @@ std::vector<const modelinfo_t *> selfshadowlist;
 std::vector<const modelinfo_t *> shadowworldonlylist;
 std::vector<const modelinfo_t *> switchableshadowlist;
 
+int facestyles = 0; //max styles per face - uses bspx stuff.
 int oversample = 1;
 int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
@@ -281,15 +282,15 @@ LightThread(void *arg)
         else if (scaledonly)
         {
             f->lightofs = -1;
-            f->styles[0] = 255;
+            f->styles[0] = INVALID_LIGHTSTYLE_OLD;
             LightFace(bsp, f, faces_sup + facenum, cfg_static);
         }
         else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale)
         {
-            LightFace(bsp, f, nullptr, cfg_static);
-            faces_sup[facenum].lightofs = f->lightofs;
+            LightFace(bsp, f, faces_sup + facenum, cfg_static);
+            f->lightofs = faces_sup[facenum].lightofs;
             for (int i = 0; i < MAXLIGHTMAPS; i++)
-                faces_sup[facenum].styles[i] = f->styles[i];
+                f->styles[i] = faces_sup[facenum].styles[i];
         }
         else
         {
@@ -418,10 +419,8 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         BSPX_AddLump(bspdata, "LMSHIFT", NULL, 0);
 
     const unsigned char *lmshift_lump = (const unsigned char *)BSPX_GetLump(bspdata, "LMSHIFT", NULL);
-    if (!lmshift_lump && write_litfile != ~0)
-        faces_sup = NULL; //no scales, no lit2
-    else
-    {   //we have scales or lit2 output. yay...
+    if (lmshift_lump || (write_litfile&2) || (write_luxfile&2) || facestyles)
+    {   //we have scales/bspx/lit2 output. yay...
         faces_sup = (facesup_t *)malloc(sizeof(*faces_sup) * bsp->numfaces);
         memset(faces_sup, 0, sizeof(*faces_sup) * bsp->numfaces);
         if (lmshift_lump)
@@ -435,6 +434,10 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
         }
     }
+    else
+        faces_sup = NULL; //no scales, no lit2, no -bspx
+    if (!facestyles)
+        facestyles = 4;
 
     CalcualateVertexNormals(bsp);
     
@@ -484,20 +487,69 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     }
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 
-    if (faces_sup) {
-        uint8_t *styles = (uint8_t *)malloc(sizeof(*styles)*4*bsp->numfaces);
-        int32_t *offsets = (int32_t *)malloc(sizeof(*offsets)*bsp->numfaces);
+    //kill this stuff if it lingered from a previous light compile
+    BSPX_AddLump(bspdata, "LMSTYLE16", NULL, 0);
+    BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
+    BSPX_AddLump(bspdata, "LMOFFSET", NULL, 0);
+
+    //write out new stuff if we have it.
+    if (faces_sup)
+    {
+        bool needoffsets = false;
+        bool needstyles = false;
+        int maxstyle = 0;
+        int stylesperface = 0;
+
         for (int i = 0; i < bsp->numfaces; i++) {
-            offsets[i] = faces_sup[i].lightofs;
-            for (int j = 0; j < MAXLIGHTMAPS; j++)
-                styles[i*4+j] = faces_sup[i].styles[j];
+            if (bsp->dfaces[i].lightofs != faces_sup[i].lightofs)
+                needoffsets = true;
+            int j = 0;
+            for (; j < MAXLIGHTMAPSSUP; j++) {
+                if (faces_sup[i].styles[j] == INVALID_LIGHTSTYLE)
+                    break;
+                if (bsp->dfaces[i].styles[j] != faces_sup[i].styles[j])
+                    needstyles = true;
+                if (maxstyle < faces_sup[i].styles[j])
+                    maxstyle = faces_sup[i].styles[j];
+            }
+            if (stylesperface < j)
+                stylesperface = j;
         }
-        BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles)*4*bsp->numfaces);
-        BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets)*bsp->numfaces);
-    } else { 
-        //kill this stuff if its somehow found.
-        BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
-        BSPX_AddLump(bspdata, "LMOFFSET", NULL, 0);
+        needstyles |= (stylesperface>4);
+
+        logprint("max %i styles per face%s\n", stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD?", 16bit lightstyles":"");
+
+        if (needstyles)
+        {
+            if (maxstyle >= INVALID_LIGHTSTYLE_OLD/*needs bigger datatype*/) {
+                /*LMSTYLE16 lump provides for more than 4 styles per surface, as well as more than 255 styles*/
+                uint16_t *styles = (uint16_t *)malloc(sizeof(*styles)*stylesperface*bsp->numfaces);
+                for (int i = 0; i < bsp->numfaces; i++) {
+                    for (int j = 0; j < stylesperface; j++)
+                        styles[i*stylesperface+j] = faces_sup[i].styles[j];
+                }
+                BSPX_AddLump(bspdata, "LMSTYLE16", styles, sizeof(*styles)*stylesperface*bsp->numfaces);
+            }
+            else {
+                /*original LMSTYLE lump was just for different lmshift info*/
+                if (stylesperface < 4)
+                    stylesperface = 4; /*better compat*/
+                uint8_t *styles = (uint8_t *)malloc(sizeof(*styles)*stylesperface*bsp->numfaces);
+                for (int i = 0; i < bsp->numfaces; i++) {
+                    for (int j = 0; j < stylesperface; j++)
+                        styles[i*stylesperface+j] = faces_sup[i].styles[j];
+                }
+                BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles)*stylesperface*bsp->numfaces);
+            }
+        }
+        if (needoffsets)
+        {
+            int32_t *offsets = (int32_t *)malloc(sizeof(*offsets)*bsp->numfaces);
+            for (int i = 0; i < bsp->numfaces; i++) {
+                offsets[i] = faces_sup[i].lightofs;
+            }
+            BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets)*bsp->numfaces);
+        }
     }
 }
 
@@ -810,7 +862,8 @@ static void PrintUsage()
 "  -bspxlit            writes rgb data into the bsp itself\n"
 "  -bspx               writes both rgb and directions data into the bsp itself\n"
 "  -novanilla          implies -bspxlit. don't write vanilla lighting\n"
-"  -radlights filename.rad loads a <surfacename> <r> <g> <b> <intensity> file\n");
+"  -radlights filename.rad loads a <surfacename> <r> <g> <b> <intensity> file\n"
+"  -facestyles n       (bspx) overrides the max number of lightstyles per face\n");
     
     printf("\n");
     printf("Overridable worldspawn keys:\n");
@@ -997,6 +1050,11 @@ light_main(int argc, const char **argv)
         } else if (!strcmp(argv[i], "-bspx")) {
             write_litfile |= 2;
             write_luxfile |= 2;
+        } else if (!strcmp(argv[i], "-facestyles")) {
+            if ((i + 1) < argc && isdigit(argv[i + 1][0]))
+                facestyles = atoi(argv[++i]);
+            else
+                facestyles = 0;
         } else if (!strcmp(argv[i], "-novanilla")) {
             scaledonly = true;
         } else if ( !strcmp( argv[ i ], "-radlights" ) ) {

@@ -400,6 +400,7 @@ extern uint8_t *filebase;
 extern uint8_t *lit_filebase;
 extern uint8_t *lux_filebase;
 
+extern int facestyles;
 extern int oversample;
 extern int write_litfile;
 extern int write_luxfile;
