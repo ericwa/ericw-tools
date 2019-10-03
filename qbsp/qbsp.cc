@@ -91,6 +91,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     Message(msgProgress, "Brush_LoadEntity");
     Brush_LoadEntity(entity, entity, hullnum);
 
+    // FIXME: copied and pasted to BSPX_CreateBrushList
     /*
      * If this is the world entity, find all func_group and func_detail
      * entities and add their brushes with the appropriate contents flag set.
@@ -485,34 +486,42 @@ static void BSPX_CreateBrushList(void)
                 }
 
                 ent->brushes = NULL;
+                ent->detail_illusionary = NULL;
+                ent->liquid = NULL;
+                ent->detail_fence = NULL;
+                ent->detail = NULL;
+                ent->sky = NULL;
+                ent->solid = NULL;
+
                 ent->numbrushes = 0;
                 Brush_LoadEntity (ent, ent, -1);
-                if (!ent->brushes)
-                        continue;               // non-bmodel entity
 
+                // FIXME: copied and pasted from ProcessEntity
                 /*
                  * If this is the world entity, find all func_group and func_detail
                  * entities and add their brushes with the appropriate contents flag set.
-                */
+                 */
                 if (ent == pWorldEnt()) {
-                        const char *classname;
-                        const mapentity_t *source;
-                        int i;
-                        /* Add func_group brushes first */
-                        for (i = 1; i < map.numentities(); i++) {
-                                source = &map.entities.at(i);
-                                classname = ValueForKey(source, "classname");
-                                if (!Q_strcasecmp(classname, "func_group"))
-                                        Brush_LoadEntity(ent, source, -1);
+                    /*
+                     * We no longer care about the order of adding func_detail and func_group,
+                     * Entity_SortBrushes will sort the brushes 
+                     */
+                    for (int i = 1; i < map.numentities(); i++) {
+                        mapentity_t *source = &map.entities.at(i);
+                        
+                        /* Load external .map and change the classname, if needed */
+                        ProcessExternalMapEntity(source);
+                        
+                        if (IsWorldBrushEntity(source)) {
+                            Brush_LoadEntity(ent, source, -1);
                         }
-                        /* Add detail brushes next */
-                        for (i = 1; i < map.numentities(); i++) {
-                                source = &map.entities.at(i);
-                                classname = ValueForKey(source, "classname");
-                                if (!Q_strcasecmp(classname, "func_detail"))
-                                        Brush_LoadEntity(ent, source, -1);
-                        }
+                    }
                 }
+
+                Entity_SortBrushes(ent);
+
+                if (!ent->brushes)
+                        continue;               // non-bmodel entity
 
                 BSPX_Brushes_AddModel(&ctx, modelnum , ent->brushes);
                 FreeBrushes(ent);
