@@ -1069,7 +1069,7 @@ Entity_SortBrushes(mapentity_t *dst)
 ============
 Brush_LoadEntity
 
-hullnum -1 should contain ALL brushes.
+hullnum -1 should contain ALL brushes. (used by BSPX_CreateBrushList())
 hullnum 0 does not contain clip brushes.
 ============
 */
@@ -1220,7 +1220,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             }
         }
         
-        /* func_detail_illusionary don't exist in the collision hull */
+        /* func_detail_illusionary don't exist in the collision hull
+         * (or bspx export) */
         if (hullnum && detail_illusionary) {
             continue;
         }
@@ -1231,7 +1232,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
          * correctly.
          */
         if (contents == CONTENTS_CLIP) {
-            if (hullnum <= 0) {
+            if (hullnum == 0) {
                 brush_t *brush = LoadBrush(mapbrush, contents, rotate_offset, hullnum);
                 if (brush) {
                     AddToBounds(dst, brush->mins);
@@ -1240,7 +1241,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 }
                 continue;
             }
-            contents = CONTENTS_SOLID;
+            // for hull1, 2, etc., convert clip to CONTENTS_SOLID
+            if (hullnum > 0) {
+                contents = CONTENTS_SOLID;
+            }
+            // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
 
         /* "hint" brushes don't affect the collision hulls */
@@ -1267,11 +1272,11 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         }
         
         /* nonsolid brushes don't show up in clipping hulls */
-        if (hullnum && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
+        if (hullnum > 0 && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
             continue;
 
         /* sky brushes are solid in the collision hulls */
-        if (hullnum && contents == CONTENTS_SKY)
+        if (hullnum > 0 && contents == CONTENTS_SKY)
             contents = CONTENTS_SOLID;
         
         brush_t *brush = LoadBrush(mapbrush, contents, rotate_offset, hullnum);
