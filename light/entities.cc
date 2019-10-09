@@ -537,10 +537,13 @@ SetupSuns(const globalconfig_t &cfg)
  * Setup a dome of suns for the "_sunlight2" worldspawn key.
  *
  * From q3map2
+ *
+ * FIXME: this is becoming a mess
  * =============
  */
 static void
-SetupSkyDome(const globalconfig_t &cfg)
+SetupSkyDome(const globalconfig_t &cfg, float upperLight, const vec3_t upperColor, const int upperDirt, const float upperAnglescale, const int upperStyle, const std::string& upperSuntexture,
+                                        float lowerLight, const vec3_t lowerColor, const int lowerDirt, const float lowerAnglescale, const int lowerStyle, const std::string& lowerSuntexture)
 {
         int i, j, numSuns;
         int angleSteps, elevationSteps;
@@ -554,7 +557,7 @@ SetupSkyDome(const globalconfig_t &cfg)
         iterations = qmax(iterations, 2);
     
         /* dummy check */
-        if ( cfg.sunlight2.floatValue() <= 0.0f && cfg.sunlight3.floatValue() <= 0.0f ) {
+        if ( upperLight <= 0.0f && lowerLight <= 0.0f ) {
                 return;
         }
     
@@ -567,15 +570,9 @@ SetupSkyDome(const globalconfig_t &cfg)
 
         /* calc individual sun brightness */
         numSuns = angleSteps * elevationSteps + 1;
-        if (cfg.sunlight2.floatValue() > 0) {
-            logprint("using %d suns for _sunlight2. total light: %f color: %f %f %f\n", numSuns, cfg.sunlight2.floatValue(), (*cfg.sunlight2_color.vec3Value())[0], (*cfg.sunlight2_color.vec3Value())[1], (*cfg.sunlight2_color.vec3Value())[2]);
-        }
-        if (cfg.sunlight3.floatValue() > 0) {
-            logprint("using %d suns for _sunlight3. total light: %f color: %f %f %f\n", numSuns, cfg.sunlight3.floatValue(), (*cfg.sunlight3_color.vec3Value())[0], (*cfg.sunlight3_color.vec3Value())[1], (*cfg.sunlight3_color.vec3Value())[2]);
-        }
     
-        const float sunlight2value = cfg.sunlight2.floatValue() / numSuns;
-        const float sunlight3value = cfg.sunlight3.floatValue() / numSuns;
+        const float sunlight2value = upperLight / numSuns;
+        const float sunlight3value = lowerLight / numSuns;
 
         /* iterate elevation */
         elevation = elevationStep * 0.5f;
@@ -592,14 +589,14 @@ SetupSkyDome(const globalconfig_t &cfg)
 
                         /* insert top hemisphere light */
                         if (sunlight2value > 0) {
-                            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "");
+                            AddSun(cfg, direction, sunlight2value, upperColor, upperDirt, upperAnglescale, upperStyle, upperSuntexture);
                         }
 
                         direction[ 2 ] = -direction[ 2 ];
                     
                         /* insert bottom hemisphere light */
                         if (sunlight3value > 0) {
-                            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "");
+                            AddSun(cfg, direction, sunlight3value, lowerColor, lowerDirt, lowerAnglescale, lowerStyle, lowerSuntexture);
                         }
                     
                         /* move */
@@ -615,14 +612,58 @@ SetupSkyDome(const globalconfig_t &cfg)
         VectorSet( direction, 0.0f, 0.0f, -1.0f );
 
         if (sunlight2value > 0) {
-            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "");
+            AddSun(cfg, direction, sunlight2value, upperColor, upperDirt, upperAnglescale, upperStyle, upperSuntexture);
         }
     
         VectorSet( direction, 0.0f, 0.0f, 1.0f );
     
         if (sunlight3value > 0) {
-            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "");
+            AddSun(cfg, direction, sunlight3value, lowerColor, lowerDirt, lowerAnglescale, lowerStyle, lowerSuntexture);
         }
+}
+
+static void
+SetupSkyDomes(const globalconfig_t &cfg)
+{
+    // worldspawn "legacy" skydomes
+    SetupSkyDome(cfg, cfg.sunlight2.floatValue(), *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "",
+                      cfg.sunlight3.floatValue(), *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "");
+
+    // new "_dome" entities
+    for (light_t &entity : all_lights) {
+        if (entity.dome.intValue() == 1 && entity.light.intValue() > 0) {
+            // Set direction to dome center
+            vec3_t dirToDomeCenter;
+            if (entity.targetent) {
+                vec3_t target_pos;
+                EntDict_VectorForKey(*entity.targetent, "origin", target_pos);
+                VectorSubtract(target_pos, *entity.origin.vec3Value(), dirToDomeCenter);
+            } else if (VectorLengthSq(*entity.mangle.vec3Value()) > 0) {
+                glm_to_vec3_t(vec_from_mangle(vec3_t_to_glm(*entity.mangle.vec3Value())), dirToDomeCenter);
+            } else {
+                logprint("WARNING: dome light at (%s) missing direction. assuming dome center is downwards.\n", entity.origin.stringValue().c_str());
+                VectorSet(dirToDomeCenter, 0, 0, -1);
+            }
+
+            const vec3_t up {0, 0, 1};
+            const vec3_t down {0, 0, -1};
+
+            if (VectorCompare(dirToDomeCenter, down, EQUAL_EPSILON)) {
+                // Add the upper dome, like sunlight2 (pointing down)
+                SetupSkyDome(cfg, entity.light.floatValue(), *entity.color.vec3Value(), entity.dirt.intValue(), entity.anglescale.floatValue(), entity.style.intValue(), entity.suntexture.stringValue(), 
+                                  0, vec3_origin, 0, 0, 0, "");
+            } else if (VectorCompare(dirToDomeCenter, up, EQUAL_EPSILON)) {
+                // Add the lower dome, like sunlight3 (pointing up)
+                SetupSkyDome(cfg, 0, vec3_origin, 0, 0, 0, "",
+                                  entity.light.floatValue(), *entity.color.vec3Value(), entity.dirt.intValue(), entity.anglescale.floatValue(), entity.style.intValue(), entity.suntexture.stringValue());                
+            } else {
+                logprint("WARNING: dome lights only support up or down currently, ignoring entity at (%s).\n", entity.origin.stringValue().c_str());
+            }
+            
+            // Disable the light itself...
+            entity.light.setFloatValue(0.0f);
+        }
+    }
 }
 
 /*
@@ -1311,7 +1352,7 @@ SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp)
     MatchTargets();
     SetupSpotlights(cfg);
     SetupSuns(cfg);
-    SetupSkyDome(cfg);
+    SetupSkyDomes(cfg);
     FixLightsOnFaces(bsp);
     EstimateLightVisibility();
     
