@@ -743,7 +743,7 @@ qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo
 }
 
 //public
-qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self)
+qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -756,6 +756,12 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
     rtcIntersect(scene, ray);
 
     qboolean hit_sky = (ray.geomID == skygeom.geomID);
+
+    if (face_out) {
+        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.geomID);
+        *face_out = si.triToFace.at(ray.primID);
+    }
+
     return hit_sky;
 }
 

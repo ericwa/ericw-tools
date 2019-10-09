@@ -1314,7 +1314,7 @@ static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projecti
  * ================
  */
 std::map<int, qvec3f>
-GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal)
+GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal)
 {
     std::map<int, qvec3f> result;
 
@@ -1403,11 +1403,22 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
         
         // apply anglescale
         cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
-        
-        if (!TestSky(origin, sun.sunvec, NULL)) {
+
+        const bsp2_dface_t *face = nullptr;
+        if (!TestSky(origin, sun.sunvec, NULL, &face)) {
             continue;
         }
-        
+
+        // check if we hit the wrong texture
+        // TODO: this could be faster!
+        // TODO: deduplicate from LightFace_Sky
+        if (!sun.suntexture.empty()) {
+            const char* facetex = Face_TextureName(bsp, face);
+            if (sun.suntexture != facetex) {
+                continue;
+            }
+        }
+
         float dirt = 1;
         if (sun.dirt) {
             dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, 0.0, /* FIXME: pass */ nullptr);

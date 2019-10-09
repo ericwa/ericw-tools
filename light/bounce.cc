@@ -59,7 +59,7 @@ public:
 };
 
 static unique_ptr<patch_t>
-MakePatch (const globalconfig_t &cfg, winding_t *w)
+MakePatch (const mbsp_t *bsp, const globalconfig_t &cfg, winding_t *w)
 {
     unique_ptr<patch_t> p { new patch_t };
     p->w = w;
@@ -74,7 +74,7 @@ MakePatch (const globalconfig_t &cfg, winding_t *w)
     // calculate direct light
     
     raystream_t *rs = MakeRayStream(numDirtVectors);
-    p->lightByStyle = GetDirectLighting(cfg, rs, p->samplepoint, p->plane.normal);
+    p->lightByStyle = GetDirectLighting(bsp, cfg, rs, p->samplepoint, p->plane.normal);
     delete rs;
     
     return p;
@@ -87,13 +87,14 @@ struct make_bounce_lights_args_t {
 
 struct save_winding_args_t {
     vector<unique_ptr<patch_t>> *patches;
+    const mbsp_t *bsp;
     const globalconfig_t *cfg;
 };
 
 static void SaveWindingFn(winding_t *w, void *userinfo)
 {
     save_winding_args_t *args = static_cast<save_winding_args_t *>(userinfo);
-    args->patches->push_back(MakePatch(*args->cfg, w));
+    args->patches->push_back(MakePatch(args->bsp, *args->cfg, w));
 }
 
 static bool
@@ -170,6 +171,7 @@ MakeBounceLightsThread (void *arg)
         
         save_winding_args_t args;
         args.patches = &patches;
+        args.bsp = bsp;
         args.cfg = &cfg;
         
         DiceWinding(winding, 64.0f, SaveWindingFn, &args);

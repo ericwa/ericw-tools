@@ -54,7 +54,7 @@ class modelinfo_t;
  * casting bmodels and self-shadow the model 'self' if self != NULL. Returns
  * true if sky or light is visible, respectively.
  */
-qboolean TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self);
+qboolean TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out);
 qboolean TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
 hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 
