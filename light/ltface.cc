@@ -1383,7 +1383,11 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
     }
     
     for (const sun_t &sun : GetSuns()) {
-        
+        // Skip styled lights if "bouncestyled" setting is off.
+        if (sun.style != 0 && !cfg.bouncestyled.boolValue()) {
+            continue;
+        }
+
         // NOTE: Skip negative lights, which would make no sense to bounce!
         if (sun.sunlight < 0)
             continue;
@@ -1409,9 +1413,8 @@ GetDirectLighting(const globalconfig_t &cfg, raystream_t *rs, const vec3_t origi
             dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, 0.0, /* FIXME: pass */ nullptr);
         }
         
-        const int sunstyle = 0;
         const qvec3f sunContrib = vec3_t_to_glm(sun.sunlight_color) * (dirt * cosangle * sun.sunlight / 255.0f);
-        result[sunstyle] += sunContrib;
+        result[sun.style] += sunContrib;
     }
     
     return result;
@@ -1534,6 +1537,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     const plane_t *plane = &lightsurf->plane;
 
     // FIXME: Normalized sun vector should be stored in the sun_t. Also clarify which way the vector points (towards or away..)
+    // FIXME: Much of this is copied/pasted from LightFace_Entity, should probably be merged
     vec3_t incoming;
     VectorCopy(sun->sunvec, incoming);
     VectorNormalize(incoming);
@@ -1585,7 +1589,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     rs->tracePushedRaysIntersection();
     
     /* if sunlight is set, use a style 0 light map */
-    int cached_style = 0;
+    int cached_style = sun->style;
     lightmap_t *cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
     
     const int N = rs->numPushedRays();
@@ -1597,7 +1601,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         const int i = rs->getPushedRayPointIndex(j);
         
         // check if we hit a dynamic shadow caster
-        int desired_style = 0;
+        int desired_style = sun->style;
         if (rs->getPushedRayDynamicStyle(j) != 0) {
             desired_style = rs->getPushedRayDynamicStyle(j);
         }

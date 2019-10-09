@@ -402,7 +402,7 @@ Dirt_ResolveFlag(const globalconfig_t &cfg, int dirtInt)
  * =============
  */
 static void
-AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt, float sun_anglescale)
+AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt, float sun_anglescale, const int style)
 {
     if (light == 0.0f)
         return;
@@ -415,6 +415,7 @@ AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color
     VectorCopy(color, sun.sunlight_color);
     sun.anglescale = sun_anglescale;
     sun.dirt = Dirt_ResolveFlag(cfg, dirtInt);
+    sun.style = style;
 
     // add to list
     all_suns.push_back(sun);
@@ -438,7 +439,8 @@ AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color
  * =============
  */
 static void
-SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_t sunvec_in, const float sun_anglescale, const float sun_deviance, const int sunlight_dirt)
+SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_t sunvec_in, const float sun_anglescale, const float sun_deviance, const int sunlight_dirt,
+         const int style)
 {
     vec3_t sunvec;
     int i;
@@ -487,7 +489,7 @@ SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_
 
         //printf( "sun %d is using vector %f %f %f\n", i, direction[0], direction[1], direction[2]);
 
-        AddSun(cfg, direction, light, color, sunlight_dirt, sun_anglescale);
+        AddSun(cfg, direction, light, color, sunlight_dirt, sun_anglescale, style);
     }
 }
 
@@ -512,18 +514,18 @@ SetupSuns(const globalconfig_t &cfg)
             }
             
             // Add the sun
-            SetupSun(cfg, entity.light.floatValue(), *entity.color.vec3Value(), sunvec, entity.anglescale.floatValue(), entity.deviance.floatValue(), entity.dirt.intValue());
+            SetupSun(cfg, entity.light.floatValue(), *entity.color.vec3Value(), sunvec, entity.anglescale.floatValue(), entity.deviance.floatValue(), entity.dirt.intValue(), entity.style.intValue());
             
             // Disable the light itself...
             entity.light.setFloatValue(0.0f);
         }
     }
 
-    SetupSun(cfg, cfg.sunlight.floatValue(), *cfg.sunlight_color.vec3Value(), *cfg.sunvec.vec3Value(), cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue());
+    SetupSun(cfg, cfg.sunlight.floatValue(), *cfg.sunlight_color.vec3Value(), *cfg.sunvec.vec3Value(), cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue(), 0);
     
     if (cfg.sun2.floatValue() != 0) {
         logprint("creating sun2\n");
-        SetupSun(cfg, cfg.sun2.floatValue(), *cfg.sun2_color.vec3Value(), *cfg.sun2vec.vec3Value(), cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue());
+        SetupSun(cfg, cfg.sun2.floatValue(), *cfg.sun2_color.vec3Value(), *cfg.sun2vec.vec3Value(), cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue(), 0);
     }
 }
 
@@ -589,14 +591,14 @@ SetupSkyDome(const globalconfig_t &cfg)
 
                         /* insert top hemisphere light */
                         if (sunlight2value > 0) {
-                            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
+                            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0);
                         }
 
                         direction[ 2 ] = -direction[ 2 ];
                     
                         /* insert bottom hemisphere light */
                         if (sunlight3value > 0) {
-                            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
+                            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0);
                         }
                     
                         /* move */
@@ -612,13 +614,13 @@ SetupSkyDome(const globalconfig_t &cfg)
         VectorSet( direction, 0.0f, 0.0f, -1.0f );
 
         if (sunlight2value > 0) {
-            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
+            AddSun(cfg, direction, sunlight2value, *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0);
         }
     
         VectorSet( direction, 0.0f, 0.0f, 1.0f );
     
         if (sunlight3value > 0) {
-            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue());
+            AddSun(cfg, direction, sunlight3value, *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0);
         }
 }
 
@@ -1047,6 +1049,7 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         }
         
         // setup light styles for switchable lights
+        // NOTE: this also handles "_sun" "1" entities without any extra work.
         std::string classname = EntDict_StringForKey(entdict, "classname");
         if (classname.find("light") == 0) {
             const std::string targetname = EntDict_StringForKey(entdict, "targetname");

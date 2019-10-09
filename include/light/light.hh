@@ -61,14 +61,17 @@ static inline float LightSample_Brightness(const qvec3f color) {
     return ((color[0] + color[1] + color[2]) / 3.0);
 }
 
+/**
+ * A directional light, emitted from "sky*" textured faces.
+ */
 class sun_t {
 public:
     vec3_t sunvec;
     vec_t sunlight;
     vec3_t sunlight_color;
-    struct sun_s *next;
     qboolean dirt;
     float anglescale;
+    int style;
 };
 
 /* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap resolution. */
