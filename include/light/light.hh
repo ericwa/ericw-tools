@@ -72,6 +72,7 @@ public:
     qboolean dirt;
     float anglescale;
     int style;
+    std::string suntexture;
 };
 
 /* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap resolution. */

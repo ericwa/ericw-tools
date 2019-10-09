@@ -1597,7 +1597,17 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         if (rs->getPushedRayHitType(j) != hittype_t::SKY) {
             continue;
         }
-        
+
+        // check if we hit the wrong texture
+        // TODO: this could be faster!
+        if (!sun->suntexture.empty()) {
+            const bsp2_dface_t *face = rs->getPushedRayHitFace(j);
+            const char* facetex = Face_TextureName(lightsurf->bsp, face);
+            if (sun->suntexture != facetex) {
+                continue;
+            }
+        }
+
         const int i = rs->getPushedRayPointIndex(j);
         
         // check if we hit a dynamic shadow caster
