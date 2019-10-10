@@ -629,35 +629,17 @@ SetupSkyDomes(const globalconfig_t &cfg)
     SetupSkyDome(cfg, cfg.sunlight2.floatValue(), *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "",
                       cfg.sunlight3.floatValue(), *cfg.sunlight3_color.vec3Value(), cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "");
 
-    // new "_dome" entities
+    // new per-entity sunlight2/3 skydomes
     for (light_t &entity : all_lights) {
-        if (entity.dome.intValue() == 1 && entity.light.intValue() > 0) {
-            // Set direction to dome center
-            vec3_t dirToDomeCenter;
-            if (entity.targetent) {
-                vec3_t target_pos;
-                EntDict_VectorForKey(*entity.targetent, "origin", target_pos);
-                VectorSubtract(target_pos, *entity.origin.vec3Value(), dirToDomeCenter);
-            } else if (VectorLengthSq(*entity.mangle.vec3Value()) > 0) {
-                glm_to_vec3_t(vec_from_mangle(vec3_t_to_glm(*entity.mangle.vec3Value())), dirToDomeCenter);
-            } else {
-                logprint("WARNING: dome light at (%s) missing direction. assuming dome center is downwards.\n", entity.origin.stringValue().c_str());
-                VectorSet(dirToDomeCenter, 0, 0, -1);
-            }
-
-            const vec3_t up {0, 0, 1};
-            const vec3_t down {0, 0, -1};
-
-            if (VectorCompare(dirToDomeCenter, down, EQUAL_EPSILON)) {
+        if ((entity.sunlight2.boolValue() || entity.sunlight3.boolValue()) && entity.light.intValue() > 0) {
+            if (entity.sunlight2.boolValue()) {
                 // Add the upper dome, like sunlight2 (pointing down)
                 SetupSkyDome(cfg, entity.light.floatValue(), *entity.color.vec3Value(), entity.dirt.intValue(), entity.anglescale.floatValue(), entity.style.intValue(), entity.suntexture.stringValue(), 
                                   0, vec3_origin, 0, 0, 0, "");
-            } else if (VectorCompare(dirToDomeCenter, up, EQUAL_EPSILON)) {
+            } else {
                 // Add the lower dome, like sunlight3 (pointing up)
                 SetupSkyDome(cfg, 0, vec3_origin, 0, 0, 0, "",
                                   entity.light.floatValue(), *entity.color.vec3Value(), entity.dirt.intValue(), entity.anglescale.floatValue(), entity.style.intValue(), entity.suntexture.stringValue());                
-            } else {
-                logprint("WARNING: dome lights only support up or down currently, ignoring entity at (%s).\n", entity.origin.stringValue().c_str());
             }
             
             // Disable the light itself...

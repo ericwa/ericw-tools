@@ -436,13 +436,23 @@ The following light properties correspond to these sunlight settings:
   _suntexture => this sunlight is only emitted from faces with this texture name
 .fi
 
-.IP "\fB""_dome"" ""n""\fP"
-Set to 1 to make this entity a dome light, as an alternative to using the sunlight2 and sunlight3 worldspawn keys. Acts as an area light at infinite distance that emits from sky surfaces. 
-The light itself is disabled, so it can be placed anywhere in the map.
+.IP "\fB""_sunlight2"" ""n""\fP"
+Set to 1 to make this entity control the upper dome lighting emitted from sky faces, as an alternative to the worldspawn key "_sunlight2".
+The light entity itself is disabled, so it can be placed anywhere in the map.
 
-Set the incoming direction of the center of the dome with "mangle". For comparison, sunlight2 is straight down (0 -90 0) and sunlight3 is straight up (0 90 0). If the light targets an info_null entity, the direction towards that entity sets the direction of the center of the dome.
+The following light properties correspond to these sunlight settings:
+.nf
+  light       => _sunlight2
+  _color      => _sunlight2_color
+  _dirt       => _sunlight2_dirt
+  _anglescale => _anglescale
+  style       => flicker style for styled dome light
+  targetname  => targetname for switchable sunlight
+  _suntexture => this sunlight is only emitted from faces with this texture name
+.fi
 
-"targetname", "style", "_color", "_anglescale"/"_anglesense", "_suntexture", and dirt parameters are all supported.
+.IP "\fB""_sunlight3"" ""n""\fP"
+Same as "_sunlight2", but for the lower hemisphere.
 
 .SH "OTHER INFORMATION"
 The "\\b" escape sequence toggles red text on/off, you can use this in any strings in the map file. e.g. "message" "Here is \\bsome red text\\b..."
