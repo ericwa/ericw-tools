@@ -758,8 +758,12 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
     qboolean hit_sky = (ray.geomID == skygeom.geomID);
 
     if (face_out) {
-        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.geomID);
-        *face_out = si.triToFace.at(ray.primID);
+        if (hit_sky) {
+            const sceneinfo &si = Embree_SceneinfoForGeomID(ray.geomID);
+            *face_out = si.triToFace.at(ray.primID);
+        } else {
+            *face_out = nullptr;
+        }
     }
 
     return hit_sky;
