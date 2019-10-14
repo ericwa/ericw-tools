@@ -44,6 +44,8 @@ typedef struct hullbrush_s {
     vec3_t points[MAX_HULL_POINTS];
     vec3_t corners[MAX_HULL_POINTS * 8];
     int edges[MAX_HULL_EDGES][2];
+
+    int linenum;
 } hullbrush_t;
 
 /*
@@ -76,7 +78,7 @@ Note: this will not catch 0 area polygons
 =================
 */
 void
-CheckFace(face_t *face)
+CheckFace(face_t *face, const mapface_t *sourceface)
 {
     const qbsp_plane_t *plane = &map.planes[face->planenum];
     const vec_t *p1, *p2;
@@ -86,14 +88,14 @@ CheckFace(face_t *face)
 
     if (face->w.numpoints < 3) {
         if (face->w.numpoints == 2) {
-            Error("%s: too few points (2): (%f %f %f) (%f %f %f)\n", __func__,
+            Error("%s: line %d: too few points (2): (%f %f %f) (%f %f %f)\n", __func__, sourceface->linenum,
                   face->w.points[0][0], face->w.points[0][1], face->w.points[0][2],
                   face->w.points[1][0], face->w.points[1][1], face->w.points[1][2]);
         } else if (face->w.numpoints == 1) {
-            Error("%s: too few points (1): (%f %f %f)\n", __func__, 
+            Error("%s: line %d: too few points (1): (%f %f %f)\n", __func__, sourceface->linenum,
                   face->w.points[0][0], face->w.points[0][1], face->w.points[0][2]);
         } else {
-            Error("%s: too few points (%d)", __func__, face->w.numpoints);
+            Error("%s: line %d: too few points (%d)", __func__, sourceface->linenum, face->w.numpoints);
         }
     }
 
@@ -107,22 +109,22 @@ CheckFace(face_t *face)
 
         for (j = 0; j < 3; j++)
             if (p1[j] > options.worldExtent || p1[j] < -options.worldExtent)
-                Error("%s: coordinate out of range (%f)", __func__, p1[j]);
+                Error("%s: line %d: coordinate out of range (%f)", __func__, sourceface->linenum, p1[j]);
 
         /* check the point is on the face plane */
         dist = DotProduct(p1, plane->normal) - plane->dist;
         if (dist < -ON_EPSILON || dist > ON_EPSILON)
-            Message(msgWarning, warnPointOffPlane, p1[0], p1[1], p1[2], dist);
+            Message(msgWarning, warnPointOffPlane, sourceface->linenum, p1[0], p1[1], p1[2], dist);
 
         /* check the edge isn't degenerate */
         VectorSubtract(p2, p1, edgevec);
         length = VectorLength(edgevec);
         if (length < ON_EPSILON) {
-            Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
+            Message(msgWarning, warnDegenerateEdge, sourceface->linenum, length, p1[0], p1[1], p1[2]);
             for (j = i + 1; j < face->w.numpoints; j++)
                 VectorCopy(face->w.points[j], face->w.points[j - 1]);
             face->w.numpoints--;
-            CheckFace(face);
+            CheckFace(face, sourceface);
             break;
         }
 
@@ -137,8 +139,8 @@ CheckFace(face_t *face)
                 continue;
             dist = DotProduct(face->w.points[j], edgenormal);
             if (dist > edgedist)
-                Error("%s: Found a non-convex face (error size %f, point: %f %f %f)\n",
-                      __func__, dist - edgedist, face->w.points[j][0], face->w.points[j][1], face->w.points[j][2]);
+                Error("%s: line %d: Found a non-convex face (error size %f, point: %f %f %f)\n",
+                      __func__, sourceface->linenum, dist - edgedist, face->w.points[j][0], face->w.points[j][1], face->w.points[j][2]);
         }
     }
 }
@@ -464,7 +466,7 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
         f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
         f->next = facelist;
         facelist = f;
-        CheckFace(f);
+        CheckFace(f, mapface);
         UpdateFaceSphere(f);
     }
 
@@ -863,10 +865,12 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
     face_t *facelist;
 
     // create the faces
+
+    hullbrush.linenum =  mapbrush->face(0).linenum;
     if (mapbrush->numfaces > MAX_FACES)
         Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
-              MAX_FACES, mapbrush->face(0).linenum);
-
+              MAX_FACES, hullbrush.linenum);
+    
     hullbrush.contents = contents;
     hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
@@ -883,7 +887,7 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
     
     if (!facelist) {
         Message(msgWarning, warnNoBrushFaces);
-        logprint("^ brush at line %d of .map file\n", mapbrush->face(0).linenum);
+        logprint("^ brush at line %d of .map file\n", hullbrush.linenum);
         return NULL;
     }
 

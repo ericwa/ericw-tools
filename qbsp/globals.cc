@@ -129,7 +129,7 @@ const char *rgszWarnings[cWarnings] = {
     "No info_player_start entity in level",
     "No info_player_deathmatch entities in level",
     "No info_player_coop entities in level",
-    "Point (%.3f %.3f %.3f) off plane by %2.4f",
+    "Line %d: Point (%.3f %.3f %.3f) off plane by %2.4f",
     "Couldn't create brush faces",
 
     "Reached occupant \"%s\" at (%.0f %.0f %.0f), no filling performed.",
@@ -145,7 +145,7 @@ const char *rgszWarnings[cWarnings] = {
 
     "Strange map face count",
     "Too many edges in TryMerge",
-    "Healing degenerate edge (%f) at (%.3f %.3f %.3f)",
+    "Line %d: Healing degenerate edge (%f) at (%.3f %.3f %.3f)",
     "No target for rotation entity \"%s\"",
     "line %d: Face with degenerate QuArK-style texture axes",
     "Mixed face contents (%s, %s) near (%.2f %.2f %.2f)",
