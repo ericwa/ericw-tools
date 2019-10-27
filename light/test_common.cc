@@ -9,3 +9,10 @@ TEST(common, StripFilename) {
     
     ASSERT_EQ(std::string("/home/foo"), std::string(test));
 }
+
+TEST(common, StripFilenameFileOnly) {
+    char test[] = "bar.txt";
+    StripFilename(test);
+    
+    ASSERT_EQ(std::string(""), std::string(test));
+}
