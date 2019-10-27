@@ -128,7 +128,8 @@ set(LIGHT_TEST_SOURCE
 	test.cc
 	test_entities.cc
 	test_ltface.cc
-	test_light.cc)
+	test_light.cc
+	test_common.cc)
 
 add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
 add_test(testlight testlight)
