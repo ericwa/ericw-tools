@@ -371,11 +371,13 @@ public:
     float midsplitSurfFraction;
     char szMapName[512];
     char szBSPName[512];
-    struct
-    {
-        char *path;
+
+    struct wadpath {
+        std::string path;
         bool external;    //wads from this path are not to be embedded into the bsp, but will instead require the engine to load them from elsewhere. strongly recommended for eg halflife.wad
-    } wadPaths[16];
+    };
+
+    std::vector<wadpath> wadPathsVec;
     vec_t on_epsilon;
     bool fObjExport;
     bool fOmitDetail;
@@ -388,34 +390,47 @@ public:
     bool fContentHack;
     vec_t worldExtent;
 
-
-    ~options_t() {
-        for (int i = 0; i < sizeof(wadPaths)/sizeof(wadPaths[0]); i++)
-        {
-            free(wadPaths[i].path);
-            wadPaths[i].path = nullptr;
-        }
-    }
-    options_t() {
-        memset(this, 0, sizeof(options_t));
-        
-        // Initial values
-        this->dxLeakDist = 2;
-        this->dxSubdivide = 240;
-        this->fVerbose = true;
-        this->szMapName[0] = 0;
-        this->szBSPName[0] = 0;
-        
-        /* Default to the original Quake BSP Version... */
-        this->BSPVersion = BSPVERSION;
-        this->fTranswater = true;
-        this->fixRotateObjTexture = true;
-        this->fOldaxis = true;
-        this->maxNodeSize = 1024;
-        this->midsplitSurfFraction = 0;
-        this->on_epsilon = 0.0001;
-        this->worldExtent = 65536;
-    }
+    options_t() :
+    fNofill(false),
+    fNoclip(false),
+    fNoskip(false),
+    fNodetail(false),
+    fOnlyents(false),
+    fConvertMapFormat(false),
+    convertMapFormat(conversion_t::quake),
+    fVerbose(true),
+    fAllverbose(false),
+    fSplitspecial(false),
+    fSplitturb(false),
+    fSplitsky(false),
+    fTranswater(true),
+    fTranssky(false),
+    fOldaxis(true),
+    fNoverbose(false),
+    fNopercent(false),
+    forceGoodTree(false),
+    fixRotateObjTexture(true),
+    fbspx_brushes(false),
+    fNoTextures(false),
+    hexen2(0),
+    BSPVersion(BSPVERSION), // Default to the original Quake BSP Version...
+    dxSubdivide(240),
+    dxLeakDist(2),
+    maxNodeSize(1024),
+    midsplitSurfFraction(0.0f),
+    szMapName{},
+    szBSPName{},
+    on_epsilon(0.0001),
+    fObjExport(false),
+    fOmitDetail(false),
+    fOmitDetailWall(false),
+    fOmitDetailIllusionary(false),
+    fOmitDetailFence(false),
+    fForcePRT1(false),
+    fTestExpand(false),
+    fLeakTest(false),
+    fContentHack(false),
+    worldExtent(65536.0f) {}
 };
 
 extern options_t options;

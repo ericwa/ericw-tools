@@ -133,37 +133,29 @@ wad_t *WADList_AddWad(const char *fpath, bool external, wad_t *current_wadlist)
 wad_t *
 WADList_Init(const char *wadstring)
 {
-    int len;
-    wad_t *wadlist;
-    const char *fname;
-    char *fpath;
-    const char *pos;
-    int pathlen;
-
     if (!wadstring || !wadstring[0])
-        return NULL;
+        return nullptr;
 
-    wadlist = NULL;
-    len = strlen(wadstring);
-    pos = wadstring;
+    wad_t *wadlist = nullptr;
+    const int len = strlen(wadstring);
+    const char *pos = wadstring;
     while (pos - wadstring < len) {
-        fname = pos;
+        // split string by ';' and copy the current component into fpath
+        const char *const fname = pos;
         while (*pos && *pos != ';')
             pos++;
 
-        if (!options.wadPaths[0].path || IsAbsolutePath(fname)) {
-            fpath = (char *)AllocMem(OTHER, (pos - fname) + 1, false);
-            q_snprintf(fpath, (pos - fname) + 1, "%s", fname);
-            wadlist = WADList_AddWad(fpath, false, wadlist);
-            FreeMem(fpath, OTHER, strlen(fpath) + 1);
+        const size_t fpathLen = pos - fname;
+        std::string fpath;
+        fpath.resize(fpathLen);
+        memcpy(&fpath[0], fname, fpathLen);
+
+        if (options.wadPathsVec.empty() || IsAbsolutePath(fpath.c_str())) {
+            wadlist = WADList_AddWad(fpath.c_str(), false, wadlist);
         } else {
-            for (int i = 0; i < sizeof(options.wadPaths)/sizeof(options.wadPaths[0]) && options.wadPaths[i].path; i++)
-            {
-                pathlen = strlen(options.wadPaths[i].path) + 1 + (pos - fname);
-                fpath = (char *)AllocMem(OTHER, pathlen + 1, true);
-                q_snprintf(fpath, pathlen + 1, "%s/%s", options.wadPaths[i].path, fname);
-                wadlist = WADList_AddWad(fpath, options.wadPaths[i].external, wadlist);
-                FreeMem(fpath, OTHER, strlen(fpath) + 1);
+            for (const options_t::wadpath& wadpath : options.wadPathsVec) {
+                const std::string fullPath = wadpath.path + "/" + fpath;
+                wadlist = WADList_AddWad(fullPath.c_str(), wadpath.external, wadlist);
             }
         }
 

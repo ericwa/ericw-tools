@@ -28,6 +28,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <string>
 #include <common/log.hh>
 #include <common/qvec.hh> // FIXME: For qmax/qmin
 
@@ -95,7 +96,7 @@ void SaveFile(const char *filename, const void *buffer, int count);
 
 void DefaultExtension(char *path, const char *extension);
 void DefaultPath(char *path, const char *basepath);
-void StripFilename(char *path);
+std::string StrippedFilename(const std::string& path);
 void StripExtension(char *path);
 std::string StrippedExtension(const std::string& path);
 int IsAbsolutePath(const char *path);

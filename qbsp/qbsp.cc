@@ -863,20 +863,18 @@ ParseOptions(char *szOptions)
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                int i;
-                for (i = 0; i < sizeof(options.wadPaths)/sizeof(options.wadPaths[0]); i++)
-                {
-                    if (options.wadPaths[i].path)
-                        continue;
-                    options.wadPaths[i].external = !!Q_strcasecmp(szTok, "wadpath");
-                    options.wadPaths[i].path = strdup(szTok2);
-                    /* Remove trailing /, if any */
-                    if (options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] == '/')
-                        options.wadPaths[i].path[strlen(options.wadPaths[i].path) - 1] = 0;
-                    break;
+
+                std::string wadpath = szTok2;
+                /* Remove trailing /, if any */
+                if (wadpath.size() > 0 && wadpath[wadpath.size() - 1] == '/') {
+                    wadpath.resize(wadpath.size() - 1);
                 }
-                if (i == sizeof(options.wadPaths)/sizeof(options.wadPaths[0]))
-                    Error("too many -wadpath args");
+                    
+                options_t::wadpath wp;
+                wp.external = !!Q_strcasecmp(szTok, "wadpath");
+                wp.path = wadpath;
+                options.wadPathsVec.push_back(wp);
+
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "oldrottex")) {
                 options.fixRotateObjTexture = false;
@@ -1016,10 +1014,16 @@ InitQBSP(int argc, const char **argv)
     Message(msgFile, IntroString);
 
     /* If no wadpath given, default to the map directory */
-    if (!options.wadPaths[0].path) {
-        options.wadPaths[0].external = false;
-        options.wadPaths[0].path = strdup(options.szMapName);
-        StripFilename(options.wadPaths[0].path);
+    if (options.wadPathsVec.empty()) {
+        options_t::wadpath wp;
+        wp.external = false;
+        wp.path = StrippedFilename(options.szMapName);
+
+        // If options.szMapName is a relative path, StrippedFilename will return the empty string.
+        // In that case, don't add it as a wad path.
+        if (!wp.path.empty()) {
+            options.wadPathsVec.push_back(wp);
+        }
     }
 
     // Remove already existing files

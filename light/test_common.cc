@@ -4,15 +4,6 @@
 #include <common/cmdlib.hh>
 
 TEST(common, StripFilename) {
-    char test[] = "/home/foo/bar.txt";
-    StripFilename(test);
-    
-    ASSERT_EQ(std::string("/home/foo"), std::string(test));
-}
-
-TEST(common, StripFilenameFileOnly) {
-    char test[] = "bar.txt";
-    StripFilename(test);
-    
-    ASSERT_EQ(std::string(""), std::string(test));
+    ASSERT_EQ("/home/foo", StrippedFilename("/home/foo/bar.txt"));
+    ASSERT_EQ("", StrippedFilename("bar.txt"));
 }

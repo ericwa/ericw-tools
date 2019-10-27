@@ -37,6 +37,8 @@
 
 #include <stdint.h>
 
+#include <string>
+
 #define PATHSEPERATOR '/'
 
 /* set these before calling CheckParm */
@@ -763,15 +765,15 @@ DefaultPath(char *path, const char *basepath)
     strcat(path, temp);
 }
 
-void
-StripFilename(char *path)
+std::string
+StrippedFilename(const std::string& path)
 {
-    int length;
-
-    length = strlen(path) - 1;
-    while (length > 0 && path[length] != PATHSEPERATOR)
-        length--;
-    path[length] = '\0';
+    const size_t lastSlash = path.rfind(PATHSEPERATOR);
+    if (lastSlash == std::string::npos) {
+        return std::string();
+    }
+    // excludes the trailing slash
+    return path.substr(0, lastSlash);
 }
 
 void
