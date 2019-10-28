@@ -256,6 +256,12 @@ Generates an LMSHIFT bspx lump for use by a light util. Note that both scaled an
 .IP "\fB""_mirrorinside"" ""n""\fP"
 Set to 1 to save mirrored inside faces for bmodels, so when the player view is inside the bmodel, they will still see the faces. (e.g. for func_water, or func_illusionary)
 
+.IP "\fB""_no_bbox_rotation_expansion"" ""n""\fP"
+By default, when using Hipnotic rotation or adding an "origin" brush to an entity, qbsp will expand the model bounding box to account for all possible rotations.
+This is done because Quake doesn't take into account the model rotation when vis culling, so it needs to be done in qbsp to avoid incorrect culling. (see: https://github.com/id-Software/Quake/blob/master/WinQuake/world.c#L387 ).
+
+This behaviour can be opted out of by setting this key to 1.
+
 .SH "OTHER SPECIAL-PURPOSE ENTITIES"
 
 .SS "func_illusionary_visblocker"

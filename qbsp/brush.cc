@@ -363,7 +363,7 @@ CreateBrushFaces
 =================
 */
 static face_t *
-CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
+CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const vec3_t rotate_offset,
                  const int hullnum)
 {
     int i, j, k;
@@ -472,7 +472,10 @@ CreateBrushFaces(hullbrush_t *hullbrush, const vec3_t rotate_offset,
 
     // Rotatable objects must have a bounding box big enough to
     // account for all its rotations
-    if (0 /*rotate_offset[0] || rotate_offset[1] || rotate_offset[2]*/) {
+    const bool noExpand = static_cast<bool>(
+        atoi(ValueForKey(src, "_no_bbox_rotation_expansion"))
+    );
+    if ((rotate_offset[0] || rotate_offset[1] || rotate_offset[2]) && !noExpand) {
         vec_t delta;
 
         delta = fabs(max);
@@ -858,7 +861,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const int hullnum)
+brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -878,11 +881,11 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
         hullbrush.faces[i] = mapbrush->face(i);
 
     if (hullnum == 0) {
-        facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+        facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
     } else {
         // for clipping hulls, don't apply rotation offset yet..
         // it will be applied below
-        facelist = CreateBrushFaces(&hullbrush, vec3_origin, hullnum);
+        facelist = CreateBrushFaces(src, &hullbrush, vec3_origin, hullnum);
     }
     
     if (!facelist) {
@@ -897,19 +900,19 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
             vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
         else    if (hullnum == 2) {
             vec3_t size[2] = { {-32, -32, -32}, {32, 32, 32} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
         else    if (hullnum == 3) {
             vec3_t size[2] = { {-16, -16, -18}, {16, 16, 18} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
     }
     else if (options.hexen2)
@@ -918,19 +921,19 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
             vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
         else    if (hullnum == 2) {
             vec3_t size[2] = { {-24, -24, -20}, {24, 24, 20} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
         else    if (hullnum == 3) {
             vec3_t size[2] = { {-16, -16, -12}, {16, 16, 16} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
         else    if (hullnum == 4) {
 #if 0
@@ -938,21 +941,21 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
                 vec3_t size[2] = { {-40, -40, -42}, {40, 40, 42} };
                 ExpandBrush(&hullbrush, size, facelist);
                 FreeBrushFaces(facelist);
-                facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+                facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
             } else
 #endif
             {   /*mission pack*/
                     vec3_t size[2] = { {-8, -8, -8}, {8, 8, 8} };
                     ExpandBrush(&hullbrush, size, facelist);
                     FreeBrushFaces(facelist);
-                    facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+                    facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
             }
         }
         else    if (hullnum == 5) {
             vec3_t size[2] = { {-48, -48, -50}, {48, 48, 50} };
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
     }
     else
@@ -962,13 +965,13 @@ brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate
 
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         } else if (hullnum == 2) {
             vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
 
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(&hullbrush, rotate_offset, hullnum);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
         }
     }
 
@@ -1112,7 +1115,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 continue;
             }
             
-            brush_t *brush = LoadBrush(mapbrush, contents, vec3_origin, 0);
+            brush_t *brush = LoadBrush(src, mapbrush, contents, vec3_origin, 0);
             if (brush) {
                 vec3_t origin;
                 VectorAdd(brush->mins, brush->maxs, origin);
@@ -1237,7 +1240,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
          */
         if (contents == CONTENTS_CLIP) {
             if (hullnum == 0) {
-                brush_t *brush = LoadBrush(mapbrush, contents, rotate_offset, hullnum);
+                brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, hullnum);
                 if (brush) {
                     AddToBounds(dst, brush->mins);
                     AddToBounds(dst, brush->maxs);
@@ -1283,7 +1286,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         if (hullnum > 0 && contents == CONTENTS_SKY)
             contents = CONTENTS_SOLID;
         
-        brush_t *brush = LoadBrush(mapbrush, contents, rotate_offset, hullnum);
+        brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, hullnum);
         if (!brush)
             continue;
 

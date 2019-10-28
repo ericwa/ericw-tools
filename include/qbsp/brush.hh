@@ -41,7 +41,7 @@ int Brush_ListCountWithCFlags(const brush_t *brush, int cflags);
 int Brush_ListCount(const brush_t *brush);
 int Brush_NumFaces(const brush_t *brush);
 
-brush_t *LoadBrush(const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const int hullnum);
+brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const vec3_t normal, const vec_t dist, int *side);
