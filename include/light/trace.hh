@@ -62,10 +62,10 @@ class modelinfo_t;
 
 class raystream_t {
 public:
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const modelinfo_t *modelinfo, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
-    virtual void tracePushedRaysOcclusion() = 0;
-    virtual void tracePushedRaysIntersection() = 0;
+    virtual void tracePushedRaysOcclusion(const modelinfo_t *self) = 0;
+    virtual void tracePushedRaysIntersection(const modelinfo_t *self) = 0;
     virtual bool getPushedRayOccluded(size_t j) = 0;
     virtual float getPushedRayDist(size_t j) = 0;
     virtual float getPushedRayHitDist(size_t j) = 0;
@@ -79,11 +79,11 @@ public:
     virtual void clearPushedRays() = 0;
     virtual ~raystream_t() {};
     
-    void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const modelinfo_t *modelinfo) {
+    void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist) {
         vec3_t originTemp, dirTemp;
         glm_to_vec3_t(origin, originTemp);
         glm_to_vec3_t(dir, dirTemp);
-        this->pushRay(i, originTemp, dirTemp, dist, modelinfo);
+        this->pushRay(i, originTemp, dirTemp, dist);
     }
     
     qvec3f getPushedRayDir(size_t j) {

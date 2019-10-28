@@ -45,6 +45,18 @@ public:
     std::vector<const modelinfo_t *> triToModelinfo;
 };
 
+class raystream_embree_t;
+
+struct ray_source_info {
+    raystream_embree_t *raystream; // may be null if this ray is not from a ray stream
+    const modelinfo_t *self;
+
+    ray_source_info(raystream_embree_t *raystream_, 
+                    const modelinfo_t *self_) :
+        raystream(raystream_),
+        self(self_) {}
+};
+
 sceneinfo
 CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
 {
@@ -224,15 +236,6 @@ void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float 
 
 void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayIndex, int style);
 
-static const unsigned RAYMASK_HASMODEL_SHIFT = 0;
-static const unsigned RAYMASK_HASMODEL_MASK = (1 << RAYMASK_HASMODEL_SHIFT);
-
-static const unsigned RAYMASK_MODELINDEX_SHIFT = 1;
-static const unsigned RAYMASK_MODELINDEX_MASK = (0xffff << RAYMASK_MODELINDEX_SHIFT);
-
-static const unsigned RAYMASK_RAYINDEX_SHIFT = 17;
-static const unsigned RAYMASK_RAYINDEX_MASK = (0x7fff << RAYMASK_RAYINDEX_SHIFT);
-
 // called to evaluate transparency
 template<filtertype_t filtertype>
 static void
@@ -245,7 +248,9 @@ Embree_FilterFuncN(int* valid,
 {
     const int VALID = -1;
 	const int INVALID = 0;
-    
+
+    const ray_source_info *rsi = static_cast<const ray_source_info *>(context->userRayExt);
+
     for (size_t i=0; i<N; i++) {
         if (valid[i] != VALID) {
             // we only need to handle valid rays
@@ -257,11 +262,9 @@ Embree_FilterFuncN(int* valid,
         const unsigned &primID = RTCHitN_primID(potentialHit, N, i);
         
         // unpack ray index
-        const bool     hasmodel = static_cast<bool>((mask & RAYMASK_HASMODEL_MASK) >> RAYMASK_HASMODEL_SHIFT);
-        const unsigned raySourceModelindex = (mask & RAYMASK_MODELINDEX_MASK) >> RAYMASK_MODELINDEX_SHIFT;
-        const unsigned rayIndex = (mask & RAYMASK_RAYINDEX_MASK) >> RAYMASK_RAYINDEX_SHIFT;
+        const unsigned rayIndex = mask;
         
-        const modelinfo_t *source_modelinfo = hasmodel ? ModelInfoForModel(bsp_static, raySourceModelindex) : nullptr;
+        const modelinfo_t *source_modelinfo = rsi->self;
         const modelinfo_t *hit_modelinfo = Embree_LookupModelinfo(geomID, primID);
         Q_assert(hit_modelinfo != nullptr);
         
@@ -686,7 +689,7 @@ Embree_TraceInit(const mbsp_t *bsp)
     FreeWindings(skipwindings);
 }
 
-static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist, const modelinfo_t *modelinfo)
+static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist)
 {
     RTCRay ray;
     VectorCopy(start, ray.org);
@@ -698,41 +701,26 @@ static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, 
     ray.instID = RTC_INVALID_GEOMETRY_ID;
     
     // NOTE: we are not using the ray masking feature of embree, but just using
-    // this field to store whether the ray is coming from self-shadow geometry
-    ray.mask = 0;
-    
-    if (modelinfo) {
-        ray.mask |= RAYMASK_HASMODEL_MASK;
-        
-        // Hacky..
-        const int modelindex = (modelinfo->model - bsp_static->dmodels);
-        Q_assert(modelindex >= 0 && modelindex < bsp_static->nummodels);
-        Q_assert(modelindex <= 65535);
-        
-        ray.mask |= (static_cast<unsigned>(modelindex) << RAYMASK_MODELINDEX_SHIFT);
-    }
-    
-    // pack the ray index into the rest of the mask
-    Q_assert(rayindex <= 32767);
-    ray.mask |= (rayindex << RAYMASK_RAYINDEX_SHIFT);
+    // this field to store the ray index
+    ray.mask = rayindex;
     
     ray.time = 0.f;
     return ray;
 }
 
-static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
+static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop)
 {
     vec3_t dir;
     VectorSubtract(stop, start, dir);
     vec_t dist = VectorNormalize(dir);
     
-    return SetupRay(0, start, dir, dist, self);
+    return SetupRay(0, start, dir, dist);
 }
 
 //public
 qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
 {
-    RTCRay ray = SetupRay_StartStop(start, stop, self);
+    RTCRay ray = SetupRay_StartStop(start, stop);
     rtcOccluded(scene, ray);
     
     if (ray.geomID != RTC_INVALID_GEOMETRY_ID)
@@ -752,8 +740,14 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
     VectorCopy(dirn, dir_normalized);
     VectorNormalize(dir_normalized);
     
-    RTCRay ray = SetupRay(0, start, dir_normalized, MAX_SKY_DIST, self);
-    rtcIntersect(scene, ray);
+    RTCRay ray = SetupRay(0, start, dir_normalized, MAX_SKY_DIST);
+
+    ray_source_info ctx2(nullptr, self);
+    const RTCIntersectContext ctx = {
+            RTC_INTERSECT_COHERENT,
+            static_cast<void *>(&ctx2)
+    };
+    rtcIntersect1Ex(scene, &ctx, ray);
 
     qboolean hit_sky = (ray.geomID == skygeom.geomID);
 
@@ -772,8 +766,13 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
 //public
 hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
-    RTCRay ray = SetupRay(0, start, dirn, dist, self);
-    rtcIntersect(scene, ray);
+    RTCRay ray = SetupRay(0, start, dirn, dist);
+    ray_source_info ctx2(nullptr, self);
+    const RTCIntersectContext ctx = {
+            RTC_INTERSECT_COHERENT,
+            static_cast<void *>(&ctx2)
+    };
+    rtcIntersect1Ex(scene, &ctx, ray);
     
     if (ray.geomID == RTC_INVALID_GEOMETRY_ID)
         return hittype_t::NONE;
@@ -870,9 +869,9 @@ public:
         delete[] _ray_dynamic_styles;
     }
     
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const modelinfo_t *modelinfo, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
         Q_assert(_numrays<_maxrays);
-        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist, modelinfo);
+        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist);
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
@@ -889,27 +888,29 @@ public:
         return _numrays;
     }
     
-    virtual void tracePushedRaysOcclusion() {
+    virtual void tracePushedRaysOcclusion(const modelinfo_t *self) {
         //Q_assert(_state == streamstate_t::READY);
         
         if (!_numrays)
             return;
-        
+
+        ray_source_info ctx2(this, self);
         const RTCIntersectContext ctx = {
-            RTC_INTERSECT_COHERENT,
-            static_cast<void *>(this)
+                RTC_INTERSECT_COHERENT,
+                static_cast<void *>(&ctx2)
         };
         
         rtcOccluded1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
     }
     
-    virtual void tracePushedRaysIntersection() {
+    virtual void tracePushedRaysIntersection(const modelinfo_t *self) {
         if (!_numrays)
             return;
         
+        ray_source_info ctx2(this, self);
         const RTCIntersectContext ctx = {
-            RTC_INTERSECT_COHERENT,
-            static_cast<void *>(this)
+                RTC_INTERSECT_COHERENT,
+                static_cast<void *>(&ctx2)
         };
         
         rtcIntersect1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
@@ -997,13 +998,14 @@ raystream_t *Embree_MakeRayStream(int maxrays)
 }
 
 void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity, const vec3_t glasscolor) {
-    if (context == nullptr) {
-        // FIXME: remove this..
+    ray_source_info *ctx = static_cast<ray_source_info *>(context->userRayExt);
+    raystream_embree_t *rs = ctx->raystream;
+
+    if (rs == nullptr) {
+        // FIXME: remove this.. once all ray casts use raystreams
         // happens for bounce lights, e.g. Embree_TestSky
         return;
     }
-    
-    raystream_embree_t *rs = static_cast<raystream_embree_t *>(context->userRayExt);
     
     // clamp opacity
     opacity = qmin(qmax(0.0f, opacity), 1.0f);
@@ -1034,6 +1036,8 @@ void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float 
 
 void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayIndex, int style)
 {
-    raystream_embree_t *rs = static_cast<raystream_embree_t *>(context->userRayExt);
+    ray_source_info *ctx = static_cast<ray_source_info *>(context->userRayExt);
+    raystream_embree_t *rs = ctx->raystream;
+
     rs->_ray_dynamic_styles[rayIndex] = style;
 }

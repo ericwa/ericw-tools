@@ -1491,10 +1491,10 @@ LightFace_Entity(const mbsp_t *bsp,
             continue;
         }
         
-        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, modelinfo, color, normalcontrib);
+        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, color, normalcontrib);
     }
     
-    rs->tracePushedRaysOcclusion();
+    rs->tracePushedRaysOcclusion(modelinfo);
     total_light_rays += rs->numPushedRays();
     
     int cached_style = entity->style.intValue();
@@ -1594,10 +1594,10 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
             continue;
         }
         
-        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, modelinfo, color, normalcontrib);
+        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, color, normalcontrib);
     }
     
-    rs->tracePushedRaysIntersection();
+    rs->tracePushedRaysIntersection(modelinfo);
     
     /* if sunlight is set, use a style 0 light map */
     int cached_style = sun->style;
@@ -1718,11 +1718,11 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
                 vec3_t surfpointToLightDir;
                 const vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
                 
-                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, modelinfo);
+                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
             }
         }
         
-        rs->tracePushedRaysOcclusion();
+        rs->tracePushedRaysOcclusion(modelinfo);
         total_light_rays += rs->numPushedRays();
         
         const int N = rs->numPushedRays();
@@ -2002,14 +2002,14 @@ LightFace_Bounce(const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 glm_to_vec3_t(dir, vplDir);
                 glm_to_vec3_t(indirect, vplColor);
                 
-                rs->pushRay(i, vplPos, vplDir, dist, lightsurf->modelinfo, vplColor);
+                rs->pushRay(i, vplPos, vplDir, dist, vplColor);
             }
             
             if (!rs->numPushedRays())
                 continue;
             
             total_bounce_rays += rs->numPushedRays();
-            rs->tracePushedRaysOcclusion();
+            rs->tracePushedRaysOcclusion(lightsurf->modelinfo);
             
             lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
             
@@ -2072,10 +2072,10 @@ LightFace_Bounce(const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
                 //printf("bad dot\n");
             }
             
-            rs->pushRay(i, surfpoint, rayDir, 8192, lightsurf->modelinfo);
+            rs->pushRay(i, surfpoint, rayDir, 8192);
         }
         
-        rs->tracePushedRaysIntersection();
+        rs->tracePushedRaysIntersection(lightsurf->modelinfo);
         
         qvec3f colorAvg(0);
         int Nhits = 0;
@@ -2200,14 +2200,14 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
                 glm_to_vec3_t(dir, vplDir);
                 glm_to_vec3_t(indirect, vplColor);
 
-                rs->pushRay(i, vplPos, vplDir, dist, lightsurf->modelinfo, vplColor);
+                rs->pushRay(i, vplPos, vplDir, dist, vplColor);
             }
 
             if (!rs->numPushedRays())
                 continue;
 
             total_surflight_rays += rs->numPushedRays();
-            rs->tracePushedRaysOcclusion();
+            rs->tracePushedRaysOcclusion(lightsurf->modelinfo);
 
             const int lightmapstyle = 0;
             lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, lightmapstyle, lightsurf);
@@ -2466,13 +2466,13 @@ DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, cons
         vec3_t dir;
         TransformToTangentSpace(normal, myUp, myRt, dirtvec, dir);
         
-        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue(), selfshadow);
+        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue());
     }
     
     Q_assert(rs->numPushedRays() == numDirtVectors);
     
     // trace the batch
-    rs->tracePushedRaysIntersection();
+    rs->tracePushedRaysIntersection(selfshadow);
     
     // accumulate hitdists
     for (int j=0; j<numDirtVectors; j++) {
@@ -2533,11 +2533,11 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
             vec3_t dir;
             TransformToTangentSpace(lightsurf->normals[i], myUps[i], myRts[i], dirtvec, dir);
             
-            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue(), lightsurf->modelinfo);
+            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue());
         }
         
         // trace the batch
-        rs->tracePushedRaysIntersection();
+        rs->tracePushedRaysIntersection(lightsurf->modelinfo);
         
         // accumulate hitdists
         for (int k = 0; k < rs->numPushedRays(); k++) {
