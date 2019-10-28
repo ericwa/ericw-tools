@@ -721,7 +721,14 @@ static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop)
 qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
 {
     RTCRay ray = SetupRay_StartStop(start, stop);
-    rtcOccluded(scene, ray);
+
+    ray_source_info ctx2(nullptr, self);
+    const RTCIntersectContext ctx = {
+            RTC_INTERSECT_COHERENT,
+            static_cast<void *>(&ctx2)
+    };
+
+    rtcOccluded1Ex(scene, &ctx, ray);
     
     if (ray.geomID != RTC_INVALID_GEOMETRY_ID)
         return false; //hit
