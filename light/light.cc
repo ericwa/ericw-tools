@@ -1238,7 +1238,7 @@ light_main(int argc, const char **argv)
     ExportObj(source, bsp);
 #endif
     
-    WriteEntitiesToString(bsp);
+    WriteEntitiesToString(cfg, bsp);
     /* Convert data format back if necessary */
     ConvertBSPFormat(loadversion, &bspdata);
     WriteBSPFile(source, &bspdata);

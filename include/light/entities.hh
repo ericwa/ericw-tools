@@ -29,8 +29,6 @@
 #include <light/light.hh>
 
 #define DEFAULTLIGHTLEVEL 300.0f
-#define LIGHT_TARGETS_START 32
-#define MAX_LIGHT_TARGETS 32
 
 using entdict_t = std::map<std::string, std::string>;
 
@@ -187,7 +185,7 @@ std::string WorldValueForKey(const std::string &key);
 void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp);
 void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp);
 bool ParseLightsFile(const char *fname);
-void WriteEntitiesToString(mbsp_t *bsp);
+void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp);
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);

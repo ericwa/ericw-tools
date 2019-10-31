@@ -60,10 +60,7 @@ const char * light_t::classname() const {
 
 static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 
-static bool IsSwitchableLightstyle(int style) {
-    return style >= LIGHT_TARGETS_START
-        && style < (LIGHT_TARGETS_START + MAX_LIGHT_TARGETS);
-}
+#define MAX_SWITCHABLE_STYLES 64
 
 static entdict_t &WorldEnt()
 {
@@ -90,7 +87,7 @@ std::string WorldValueForKey(const std::string &key)
  * Pass an empty string to generate a new unique lightstyle.
  */
 static int
-LightStyleForTargetname(const std::string &targetname)
+LightStyleForTargetname(const globalconfig_t& cfg, const std::string &targetname)
 {
     // check if already assigned
     for (const auto &pr : lightstyleForTargetname) {
@@ -99,13 +96,14 @@ LightStyleForTargetname(const std::string &targetname)
         }
     }
     
-    // check if full
-    if (lightstyleForTargetname.size() == MAX_LIGHT_TARGETS) {
-        Error("%s: Too many unique light targetnames\n", __func__);
-    }
-    
     // generate a new style number and return it
-    const int newStylenum = LIGHT_TARGETS_START + lightstyleForTargetname.size();
+    const int newStylenum = cfg.compilerstyle_start.intValue() + lightstyleForTargetname.size();
+
+    // check if full
+    if (newStylenum >= MAX_SWITCHABLE_STYLES) {
+        Error("%s: Too many unique light targetnames (max=%d)\n", __func__, MAX_SWITCHABLE_STYLES);
+    }
+
     lightstyleForTargetname.emplace_back(targetname, newStylenum); //mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     
     if (verbose_log) {
@@ -1078,7 +1076,7 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         if (classname.find("light") == 0) {
             const std::string targetname = EntDict_StringForKey(entdict, "targetname");
             if (!targetname.empty()) {
-                const int style = LightStyleForTargetname(targetname);
+                const int style = LightStyleForTargetname(cfg, targetname);
                 entdict["style"] = std::to_string(style);
             }
         }
@@ -1087,7 +1085,7 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         if (EntDict_StringForKey(entdict, "_switchableshadow") == "1") {
             const std::string targetname = EntDict_StringForKey(entdict, "targetname");
             // if targetname is "", generates a new unique lightstyle
-            const int style = LightStyleForTargetname(targetname);
+            const int style = LightStyleForTargetname(cfg, targetname);
             // TODO: Configurable key?
             entdict["switchshadstyle"] = std::to_string(style);
         }
@@ -1384,7 +1382,7 @@ EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec)
  * ================
  */
 void
-WriteEntitiesToString(mbsp_t *bsp)
+WriteEntitiesToString(const globalconfig_t& cfg, mbsp_t *bsp)
 {
     std::string entdata = EntData_Write(entdicts);
     
@@ -1394,7 +1392,7 @@ WriteEntitiesToString(mbsp_t *bsp)
     /* FIXME - why are we printing this here? */
     logprint("%i switchable light styles (%d max)\n",
              static_cast<int>(lightstyleForTargetname.size()),
-             MAX_LIGHT_TARGETS);
+             MAX_SWITCHABLE_STYLES - cfg.compilerstyle_start.intValue());
 
     bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
     bsp->dentdata = (char *) calloc(bsp->entdatasize, 1);

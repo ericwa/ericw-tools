@@ -271,7 +271,8 @@ public:
     lockable_vec_t minlight;
     lockable_vec3_t minlight_color;
     lockable_bool_t spotlightautofalloff; //mxd
-    
+    lockable_vec_t compilerstyle_start; // start index for switchable light styles, default 32 (FIXME: should be int)
+
     /* dirt */
     lockable_bool_t globalDirt;          // apply dirt to all lights (unless they override it) + sunlight + minlight?
     lockable_vec_t dirtMode, dirtDepth, dirtScale, dirtGain, dirtAngle;
@@ -316,6 +317,7 @@ public:
         minlight {strings{"light", "minlight"}, 0},
         minlight_color {strings{"minlight_color", "mincolor"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255},
         spotlightautofalloff { "spotlightautofalloff", false }, //mxd
+        compilerstyle_start { "compilerstyle_start", 32 },
 
         /* dirt */
         globalDirt {strings{"dirt", "dirty"}, false},
@@ -363,6 +365,7 @@ public:
             &minlight,
             &minlight_color,
             &spotlightautofalloff, //mxd
+            &compilerstyle_start,
             &globalDirt,
             &dirtMode, &dirtDepth, &dirtScale, &dirtGain, &dirtAngle,
             &minlightDirt,
