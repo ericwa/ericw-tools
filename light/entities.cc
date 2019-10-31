@@ -1056,7 +1056,16 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         EntDict_CheckTargetKeysMatched(bsp, entdict, entdicts);
         EntDict_CheckTargetnameKeyMatched(bsp, entdict, entdicts);
     }
-    
+
+    /* handle worldspawn */
+    for (const auto &epair : WorldEnt()) {
+        SetGlobalSetting(epair.first, epair.second, false);
+    }
+    /* apply side effects of settings (in particular "dirt") */
+    FixupGlobalSettings();
+    // NOTE: cfg is not valid until now.
+
+
     // First pass: make permanent changes to the bsp entdata that we will write out
     // at the end of the light process.
     for (auto &entdict : entdicts) {
@@ -1095,13 +1104,6 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             epair.second = ParseEscapeSequences(epair.second);
         }
     }
-    
-    /* handle worldspawn */
-    for (const auto &epair : WorldEnt()) {
-        SetGlobalSetting(epair.first, epair.second, false);
-    }
-    /* apply side effects of settings (in particular "dirt") */
-    FixupGlobalSettings();
     
     Q_assert(all_lights.empty());
     if (nolights) {
