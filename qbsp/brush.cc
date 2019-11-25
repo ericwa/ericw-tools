@@ -472,9 +472,13 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const vec3_t ro
 
     // Rotatable objects must have a bounding box big enough to
     // account for all its rotations
+
+    // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
+    // the actual non-hacked bbox (it doesn't write axial planes).
     const bool noExpand = static_cast<bool>(
         atoi(ValueForKey(src, "_no_bbox_rotation_expansion"))
-    );
+    ) || (hullnum < 0);
+
     if ((rotate_offset[0] || rotate_offset[1] || rotate_offset[2]) && !noExpand) {
         vec_t delta;
 
@@ -880,10 +884,11 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int conte
     for (int i=0; i<mapbrush->numfaces; i++)
         hullbrush.faces[i] = mapbrush->face(i);
 
-    if (hullnum == 0) {
+    if (hullnum <= 0) {
+        // for hull 0 or BSPX -wrbrushes collision, apply the rotation offset now
         facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, hullnum);
     } else {
-        // for clipping hulls, don't apply rotation offset yet..
+        // for Quake-style clipping hulls, don't apply rotation offset yet..
         // it will be applied below
         facelist = CreateBrushFaces(src, &hullbrush, vec3_origin, hullnum);
     }
