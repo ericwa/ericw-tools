@@ -73,7 +73,11 @@ public:
     brushformat_t format;
     int contents;
     
-    mapbrush_t() : firstface(0), numfaces(0), format(brushformat_t::NORMAL) {}
+    mapbrush_t() :
+        firstface(0),
+        numfaces(0),
+        format(brushformat_t::NORMAL),
+        contents(0) {}
     const mapface_t &face(int i) const;
 } ;
 

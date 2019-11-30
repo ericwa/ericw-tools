@@ -1900,8 +1900,15 @@ mapentity_t LoadExternalMap(const char *filename)
     while (ParseEntity(&parser, &dummy)) {
         // this is kind of fragile, but move the brushes to the worldspawn.
         if (dummy.nummapbrushes) {
+            // special case for when the external map's worldspawn has no brushes
+            if (!dest.firstmapbrush) {
+                dest.firstmapbrush = dummy.firstmapbrush;
+            }
             dest.nummapbrushes += dummy.nummapbrushes;
         }
+
+        // clear for the next loop iteration
+        dummy = mapentity_t();
     }
     
     if (!dest.nummapbrushes) {
