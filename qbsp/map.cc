@@ -312,6 +312,8 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
         flags |= TEX_NOBOUNCE;
     if (atoi(ValueForKey(entity, "_minlight")) == -1)
         flags |= TEX_NOMINLIGHT;
+    if (atoi(ValueForKey(entity, "_lightignore")) == 1)
+        flags |= TEX_LIGHTIGNORE;
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"... 
     for (int i = 0; i <= 9; i++) {

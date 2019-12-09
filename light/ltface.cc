@@ -1689,7 +1689,8 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
     }
     
     // FIXME: Refactor this?
-    if (lightsurf->modelinfo->lightignore.boolValue())
+    if (lightsurf->modelinfo->lightignore.boolValue()
+        || (extended_flags & TEX_LIGHTIGNORE) != 0)
         return;
     
     /* Cast rays for local minlight entities */
@@ -3244,9 +3245,12 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
     if (debugmode == debugmode_none) {
         
         total_samplepoints += lightsurf->numpoints;
-        
+
+        const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
+
         /* positive lights */
-        if (!modelinfo->lightignore.boolValue()) {
+        if (!(modelinfo->lightignore.boolValue()
+              || (extended_flags & TEX_LIGHTIGNORE) != 0)) {
             for (const auto &entity : GetLights())
             {
                 if (entity.getFormula() == LF_LOCALMIN)
@@ -3282,7 +3286,8 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         }
 
         /* negative lights */
-        if (!modelinfo->lightignore.boolValue()) {
+        if (!(modelinfo->lightignore.boolValue()
+              || (extended_flags & TEX_LIGHTIGNORE) != 0)) {
             for (const auto &entity : GetLights())
             {
                 if (entity.getFormula() == LF_LOCALMIN)
