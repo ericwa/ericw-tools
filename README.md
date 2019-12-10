@@ -42,14 +42,14 @@ source code.
 ## Compiling
 
 Requires CMake 2.8, groff, and a compiler with C99 and C++11 support.  
-[Embree v2.10.0+](http://embree.github.io/) is optional but recommended.
-If you do use Embree, the Thread Building Blocks (tbb) library is also required.
+[Embree v2.10.0+](http://embree.github.io/) is required (sorry, no Embree 3.x support right now).
+The Thread Building Blocks (tbb) library (Embree dependency) may be required.
 
 Tested on:
  - Ubuntu 14.04 / Clang 3.5.0
  - Ubuntu 14.04 / gcc 4.8.4
  - OS X 10.11 / Xcode 7.3
- - Windows 10 / Visual Studio 2013 Community
+ - Windows 10 / Visual Studio 2013, 2019 Community
 
 ### Ubuntu 14.04 x86_64
 
