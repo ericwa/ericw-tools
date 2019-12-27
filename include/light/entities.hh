@@ -80,6 +80,7 @@ public:
     lockable_vec3_t origin, color, mangle, projangle;
     lockable_string_t project_texture;
     lockable_string_t suntexture;
+    lockable_bool_t nostaticlight;
 
     light_formula_t getFormula() const { return static_cast<light_formula_t>(formula.intValue()); }
     
@@ -123,7 +124,8 @@ public:
         mangle { "mangle", 0, 0, 0 }, // not transformed to vec
         projangle { "project_mangle", 20, 0, 0 }, // not transformed to vec
         project_texture { "project_texture", "" },
-        suntexture { "suntexture", "" }
+        suntexture { "suntexture", "" },
+        nostaticlight { "nostaticlight", false }
     {
 		VectorSet(spotvec, 0, 0, 0);
 		
@@ -140,7 +142,7 @@ public:
             &sun, //mxd
             &sunlight2, &sunlight3,
             &falloff, //mxd
-            &origin, &color, &mangle, &projangle, &project_texture, &suntexture
+            &origin, &color, &mangle, &projangle, &project_texture, &suntexture, &nostaticlight
         }};
     }
     

@@ -1358,6 +1358,10 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         vec3_t surfpointToLightDir;
         float surfpointToLightDist;
         vec3_t color, normalcontrib;
+
+        if (entity.nostaticlight.boolValue()) {
+            continue;
+        }
         
         // Skip styled lights if "bouncestyled" setting is off.
         if (entity.style.intValue() != 0 && !cfg.bouncestyled.boolValue()) {
@@ -1696,6 +1700,9 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
     /* Cast rays for local minlight entities */
     for (const auto &entity : GetLights()) {
         if (entity.getFormula() != LF_LOCALMIN) {
+            continue;
+        }
+        if (entity.nostaticlight.boolValue()) {
             continue;
         }
 
@@ -3255,6 +3262,8 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
             {
                 if (entity.getFormula() == LF_LOCALMIN)
                     continue;
+                if (entity.nostaticlight.boolValue())
+                    continue;
                 if (entity.light.floatValue() > 0)
                     LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
             }
@@ -3291,6 +3300,8 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
             for (const auto &entity : GetLights())
             {
                 if (entity.getFormula() == LF_LOCALMIN)
+                    continue;
+                if (entity.nostaticlight.boolValue())
                     continue;
                 if (entity.light.floatValue() < 0)
                     LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
