@@ -359,7 +359,7 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
     // handle "_minlight"
     const vec_t minlight = atof(ValueForKey(entity, "_minlight"));
     if (minlight > 0) {
-        const uint8_t minlight_byte = (uint8_t) qmax(0, qmin(255, (int)rint(minlight)));
+        const uint64_t minlight_byte = (uint64_t) qmax(0, qmin(255, (int)rint(minlight)));
         flags |= (minlight_byte << TEX_MINLIGHT_SHIFT);
     }
 
@@ -382,6 +382,14 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
             flags |= (g_byte << TEX_MINLIGHT_COLOR_G_SHIFT);
             flags |= (b_byte << TEX_MINLIGHT_COLOR_B_SHIFT);
         }
+    }
+
+    // handle "_light_alpha"
+    const vec_t lightalpha = atof(ValueForKey(entity, "_light_alpha"));
+    if (lightalpha != 0.0) {
+        const uint64_t lightalpha_u7 = (uint64_t) qmax(0, qmin(127, (int)rint(lightalpha * 127.0)));
+        Q_assert(lightalpha_u7 < 128u);
+        flags |= (lightalpha_u7 << TEX_LIGHT_ALPHA_SHIFT);
     }
     
     return FindTexinfo(texinfo, flags);

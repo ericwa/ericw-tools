@@ -301,9 +301,7 @@ Embree_FilterFuncN(int* valid,
         
         // test fence textures and glass
         const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
-        
-        
-        float alpha = hit_modelinfo->alpha.floatValue();
+        float alpha = Face_Alpha(hit_modelinfo, face);
 
         //mxd
         bool isFence, isGlass;
@@ -561,6 +559,26 @@ MakeFaces(const mbsp_t *bsp, const dmodel_t *model)
     return result;
 }
 
+/**
+ * Returns 1.0 unless a custom alpha value is set.
+ * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha"
+ */
+static float
+Face_Alpha(const modelinfo_t *modelinfo, const bsp2_dface_t *face)
+{
+    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];  
+
+    // for _light_alpha, 0 is considered unset
+    const uint64_t alpha_u7 = (extended_flags >> TEX_LIGHT_ALPHA_SHIFT) & 127ULL;
+    const float alpha_float = (float)alpha_u7 / (float)127;
+    if (alpha_float != 0.0f) {
+        return alpha_float;
+    }
+
+    // next check modelinfo alpha (defaults to 1.0)
+    return modelinfo->alpha.floatValue();
+}
+
 void
 Embree_TraceInit(const mbsp_t *bsp)
 {
@@ -602,8 +620,9 @@ Embree_TraceInit(const mbsp_t *bsp)
             if(bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_NODRAW) && !(contents & Q2_SURF_SKY))
                 continue;
             
-            // handle glass
-            if (model->alpha.floatValue() < 1.0f 
+            // handle glass / water 
+            const float alpha = Face_Alpha(model, face);
+            if (alpha < 1.0f
                 || (bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_TRANSLUCENT))) { //mxd. Both fence and transparent textures are done using SURF_TRANS flags in Q2
                 filterfaces.push_back(face);
                 continue;

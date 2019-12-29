@@ -355,6 +355,8 @@ typedef struct {
 #define TEX_NOMINLIGHT (1ULL << 54)   /* opt out of minlight on this face */
 #define TEX_NOEXPAND  (1ULL << 55)   /* don't expand this face for larger clip hulls */
 #define TEX_LIGHTIGNORE (1ULL << 56)
+#define TEX_LIGHT_ALPHA_SHIFT 57
+#define TEX_LIGHT_ALPHA_MASK  (127ULL << TEX_LIGHT_ALPHA_SHIFT) /* 7 bit unsigned value. custom opacity */
 
 // Q2 Texture flags.
 #define    Q2_SURF_LIGHT      0x1        // value will hold the light strength
