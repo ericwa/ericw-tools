@@ -57,6 +57,26 @@ struct ray_source_info {
         self(self_) {}
 };
 
+/**
+ * Returns 1.0 unless a custom alpha value is set.
+ * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha"
+ */
+static float
+Face_Alpha(const modelinfo_t *modelinfo, const bsp2_dface_t *face)
+{
+    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];  
+
+    // for _light_alpha, 0 is considered unset
+    const uint64_t alpha_u7 = (extended_flags >> TEX_LIGHT_ALPHA_SHIFT) & 127ULL;
+    const float alpha_float = (float)alpha_u7 / (float)127;
+    if (alpha_float != 0.0f) {
+        return alpha_float;
+    }
+
+    // next check modelinfo alpha (defaults to 1.0)
+    return modelinfo->alpha.floatValue();
+}
+
 sceneinfo
 CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
 {
@@ -557,26 +577,6 @@ MakeFaces(const mbsp_t *bsp, const dmodel_t *model)
     Q_assert(planes.empty());
     
     return result;
-}
-
-/**
- * Returns 1.0 unless a custom alpha value is set.
- * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha"
- */
-static float
-Face_Alpha(const modelinfo_t *modelinfo, const bsp2_dface_t *face)
-{
-    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];  
-
-    // for _light_alpha, 0 is considered unset
-    const uint64_t alpha_u7 = (extended_flags >> TEX_LIGHT_ALPHA_SHIFT) & 127ULL;
-    const float alpha_float = (float)alpha_u7 / (float)127;
-    if (alpha_float != 0.0f) {
-        return alpha_float;
-    }
-
-    // next check modelinfo alpha (defaults to 1.0)
-    return modelinfo->alpha.floatValue();
 }
 
 void
