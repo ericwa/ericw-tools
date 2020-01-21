@@ -70,7 +70,7 @@ typedef struct passage_s {
 } passage_t;
 
 /* Increased MAX_PORTALS_ON_LEAF from 128 */
-#define MAX_PORTALS_ON_LEAF 256
+#define MAX_PORTALS_ON_LEAF 512
 
 typedef struct leaf_s {
     int numportals;
