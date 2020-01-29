@@ -122,6 +122,8 @@ endif (MSVC)
 #minimum version that supports unordered_map
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 
+find_package(TBB REQUIRED)
+
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)
