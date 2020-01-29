@@ -278,6 +278,9 @@ typedef struct surface_s {
     bool has_detail;            // 1 if the surface has detail brushes
     bool has_struct;            // 1 if the surface has non-detail brushes
     short lmshift;
+
+    vec_t metric;               // temporary storage used during solidbsp
+    int splits;                 // temporary storage used during solidbsp
 } surface_t;
 
 
