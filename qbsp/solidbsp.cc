@@ -23,6 +23,8 @@
 
 #include <qbsp/qbsp.hh>
 
+#include "tbb/task_group.h"
+
 int splitnodes;
 
 static int leaffaces;
@@ -970,8 +972,10 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
         }
     }
 
-    PartitionSurfaces(frontlist, node->children[0]);
-    PartitionSurfaces(backlist, node->children[1]);
+    tbb::task_group g;
+    g.run([&](){ PartitionSurfaces(frontlist, node->children[0]); });
+    g.run([&](){ PartitionSurfaces(backlist, node->children[1]); });
+    g.wait();
 }
 
 
