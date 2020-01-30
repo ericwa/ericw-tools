@@ -8,6 +8,8 @@ install:
 - ps: 7z x embree64.zip -oc:\
 - ps: Invoke-WebRequest 'https://github.com/embree/embree/releases/download/v2.15.0/embree-2.15.0.win32.windows.zip' -OutFile 'embree.zip'
 - ps: 7z x embree.zip -oc:\
+- ps: Invoke-WebRequest 'https://github.com/intel/tbb/releases/download/2017_U7/tbb2017_20170604oss_win.zip' -OutFile 'tbb.zip'
+- ps: 7z x tbb.zip -oc:\
 build_script:
 - ps: >-
     $env:Path += ";C:\cygwin64\bin"
@@ -17,11 +19,11 @@ build_script:
     cd cmakebuild
 
     If ($env:Platform -Match "x64") {
-      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.x64.windows" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
+      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.x64.windows" -DTBB_DIR="C:/tbb2017_20170604oss/cmake" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
 
       $cmakePlatform = "x64"
     } Else {
-      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.win32.windows" -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013\lib\cmake\Qt5Widgets"
+      cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.15.0.win32.windows" -DTBB_DIR="C:/tbb2017_20170604oss/cmake" -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013\lib\cmake\Qt5Widgets"
 
       $cmakePlatform = "win32"
     }
