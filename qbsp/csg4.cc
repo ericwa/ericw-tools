@@ -222,18 +222,14 @@ time in mergefaces later on (and sometimes a lot of memory)
 static void
 RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **outside)
 {
-    qbsp_plane_t clipplane;
-    const face_t *clipface;
-    face_t *face, *next;
-    winding_t *w;
-
-    face = *inside;
+    face_t *face = *inside;
+    face_t *next = nullptr;
     *inside = NULL;
     while (face) {
         next = face->next;
-        w = CopyWinding(&face->w);
-        for (clipface = brush->faces; clipface; clipface = clipface->next) {
-            clipplane = map.planes[clipface->planenum];
+        winding_t *w = CopyWinding(&face->w);
+        for (const face_t *clipface = brush->faces; clipface; clipface = clipface->next) {
+            qbsp_plane_t clipplane = map.planes[clipface->planenum];
             if (!clipface->planeside) {
                 VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
                 clipplane.dist = -clipplane.dist;
