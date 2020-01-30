@@ -37,7 +37,7 @@ set(LIGHT_SOURCES
 	${LIGHT_INCLUDES})
 
 
-FIND_PACKAGE(embree 2.0)
+FIND_PACKAGE(embree 2.0 REQUIRED)
 
 if (embree_FOUND)
 	MESSAGE(STATUS "Embree library found: ${EMBREE_LIBRARY}")
