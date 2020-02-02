@@ -11,9 +11,11 @@ cmake --version
 
 mkdir "$BUILD_DIR"
 cd "$BUILD_DIR"
-wget https://github.com/embree/embree/releases/download/v2.15.0/embree-2.15.0.x86_64.linux.tar.gz -O embree.tgz
+wget https://github.com/embree/embree/releases/download/v2.17.7/embree-2.17.7.x86_64.linux.tar.gz -O embree.tgz
+wget https://github.com/intel/tbb/releases/download/2017_U7/tbb2017_20170604oss_lin.tgz -O tbb.tgz
 tar xf embree.tgz
-cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.15.0.x86_64.linux"
+tar xf tbb.tgz
+cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.17.7.x86_64.linux" -DTBB_DIR="$(pwd)/tbb2017_20170604oss/cmake"
 make -j8 VERBOSE=1
 make -j8 VERBOSE=1 testlight
 make -j8 VERBOSE=1 testqbsp
