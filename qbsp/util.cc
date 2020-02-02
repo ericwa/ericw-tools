@@ -70,11 +70,6 @@ AllocMem(int Type, int cElements, bool fZero)
     // Special stuff for face_t
     if (Type == FACE && cElements == 1)
         ((face_t *)pTemp)->planenum = -1;
-    if (Type == WINDING) {
-        // FIXME: Remove this! Causing UBSan warnings
-        *(int *)pTemp = cSize;
-        pTemp = (char *)pTemp + sizeof(int);
-    }
 
     rgMemTotal[Type] += cElements;
     rgMemActive[Type] += cElements;
@@ -103,14 +98,9 @@ void
 FreeMem(void *pMem, int Type, int cElements)
 {
     rgMemActive[Type] -= cElements;
-    if (Type == WINDING) {
-        pMem = (char *)pMem - sizeof(int);
-        rgMemActiveBytes[Type] -= *(int *)pMem;
-        rgMemActive[GLOBAL] -= *(int *)pMem;
-    } else {
-        rgMemActiveBytes[Type] -= cElements * MemSize[Type];
-        rgMemActive[GLOBAL] -= cElements * MemSize[Type];
-    }
+
+    rgMemActiveBytes[Type] -= cElements * MemSize[Type];
+    rgMemActive[GLOBAL] -= cElements * MemSize[Type];
 
     free(pMem);
 }

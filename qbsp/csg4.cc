@@ -22,6 +22,10 @@
 
 #include <qbsp/qbsp.hh>
 
+#include "tbb/mutex.h"
+#include "tbb/parallel_do.h"
+#include "tbb/parallel_for.h"
+
 /*
 
 NOTES
@@ -218,18 +222,14 @@ time in mergefaces later on (and sometimes a lot of memory)
 static void
 RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **outside)
 {
-    qbsp_plane_t clipplane;
-    const face_t *clipface;
-    face_t *face, *next;
-    winding_t *w;
-
-    face = *inside;
+    face_t *face = *inside;
+    face_t *next = nullptr;
     *inside = NULL;
     while (face) {
         next = face->next;
-        w = CopyWinding(&face->w);
-        for (clipface = brush->faces; clipface; clipface = clipface->next) {
-            clipplane = map.planes[clipface->planenum];
+        winding_t *w = CopyWinding(&face->w);
+        for (const face_t *clipface = brush->faces; clipface; clipface = clipface->next) {
+            qbsp_plane_t clipplane = map.planes[clipface->planenum];
             if (!clipface->planeside) {
                 VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
                 clipplane.dist = -clipplane.dist;
@@ -564,17 +564,8 @@ Returns a list of surfaces containing all of the faces
 surface_t *
 CSGFaces(const mapentity_t *entity)
 {
-    int i;
-    const brush_t *brush, *clipbrush;
-    const face_t *clipface;
-    face_t *inside, *outside;
-    bool overwrite, mirror;
-    surface_t *surfaces;
-    int progress = 0;
-
     Message(msgProgress, "CSGFaces");
 
-    std::map<int, face_t *> planefaces;
     csgfaces = brushfaces = csgmergefaces = 0;
 
 #if 0
@@ -583,17 +574,33 @@ CSGFaces(const mapentity_t *entity)
         logprint("    %s (%s)\n", map.texinfoTextureName(brush->faces->texinfo).c_str(), GetContentsName(brush->contents));
     }
 #endif
-    
+
+    // copy to vector
+    // TODO: change brush list in mapentity_t to a vector so we can skip this
+    std::vector<const brush_t*> brushvec;
+    for (const brush_t* brush = entity->brushes; brush; brush = brush->next) {
+        brushvec.push_back(brush);
+    }
+
+    // output vector for the parallel_for
+    std::vector<face_t*> brushvec_outsides;
+    brushvec_outsides.resize(brushvec.size());
+
     /*
      * For each brush, clip away the parts that are inside other brushes.
      * Solid brushes override non-solid brushes.
      *   brush     => the brush to be clipped
      *   clipbrush => the brush we are clipping against
+     *
+     * The output of this is a face list for each brush called "outside"
      */
-    for (brush = entity->brushes; brush; brush = brush->next) {
-        outside = CopyBrushFaces(brush);
-        overwrite = false;
-        clipbrush = entity->brushes;
+    tbb::parallel_for(static_cast<size_t>(0), brushvec.size(),
+                      [entity, &brushvec, &brushvec_outsides](const size_t i) {
+        const brush_t* brush = brushvec[i];
+        face_t *outside = CopyBrushFaces(brush);
+        bool overwrite = false;
+        const brush_t *clipbrush = entity->brushes;
+
         for (; clipbrush; clipbrush = clipbrush->next) {
             if (brush == clipbrush) {
                 /* Brushes further down the list overried earlier ones */
@@ -632,6 +639,7 @@ CSGFaces(const mapentity_t *entity)
             }
 
             /* check bounding box first */
+            int i;
             for (i = 0; i < 3; i++) {
                 if (brush->mins[i] > clipbrush->maxs[i])
                     break;
@@ -647,11 +655,11 @@ CSGFaces(const mapentity_t *entity)
              */
 
             // divide faces by the planes of the new brush
-            inside = outside;
+            face_t *inside = outside;
             outside = NULL;
 
             RemoveOutsideFaces(clipbrush, &inside, &outside);
-            clipface = clipbrush->faces;
+            const face_t *clipface = clipbrush->faces;
             for (; clipface; clipface = clipface->next)
                 ClipInside(clipface, overwrite, &inside, &outside);
             
@@ -680,18 +688,24 @@ CSGFaces(const mapentity_t *entity)
             }
         }
 
+        // save the result
+        brushvec_outsides[i] = outside;
+    });
+
+    // Non parallel part:
+    std::map<int, face_t *> planefaces;
+    for (size_t i = 0; i < brushvec.size(); ++i) {
+        const brush_t* brush = brushvec[i];
+        face_t* outside = brushvec_outsides[i];
+
         /*
          * All of the faces left on the outside list are real surface faces
          * If the brush is non-solid, mirror faces for the inside view
          */
-        mirror = options.fContentHack ? true : (brush->contents != CONTENTS_SOLID);
+        const bool mirror = options.fContentHack ? true : (brush->contents != CONTENTS_SOLID);
         SaveFacesToPlaneList(outside, mirror, planefaces);
-
-        progress++;
-        Message(msgPercent, progress, entity->numbrushes);
     }
-
-    surfaces = BuildSurfaces(planefaces);
+    surface_t *surfaces = BuildSurfaces(planefaces);
 
     Message(msgStat, "%8d brushfaces", brushfaces);
     Message(msgStat, "%8d csgfaces", csgfaces);
