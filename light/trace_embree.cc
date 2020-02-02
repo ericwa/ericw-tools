@@ -23,8 +23,8 @@
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
 #include <common/polylib.hh>
-#include <embree2/rtcore.h>
-#include <embree2/rtcore_ray.h>
+#include <embree3/rtcore.h>
+#include <embree3/rtcore_ray.h>
 #include <vector>
 #include <cassert>
 #include <cstdlib>
@@ -48,13 +48,29 @@ public:
 class raystream_embree_t;
 
 struct ray_source_info {
+    RTCIntersectContext embreeCtx;
+
+    static struct ray_source_info* getRaySourceInfoFromEmbreeCtx(const RTCIntersectContext* ctx) {
+        static_assert(std::is_standard_layout<ray_source_info>(), "");
+        // standard layout classes allow this conversion because embreeCtx is the first member
+        return reinterpret_cast<ray_source_info *>(const_cast<RTCIntersectContext*>(ctx));
+    }
+
+    RTCIntersectContext* castToEmbreeContext() {
+        return reinterpret_cast<RTCIntersectContext*>(this);
+    }
+
     raystream_embree_t *raystream; // may be null if this ray is not from a ray stream
     const modelinfo_t *self;
 
-    ray_source_info(raystream_embree_t *raystream_, 
+    ray_source_info(enum RTCIntersectContextFlags intersectionFlags,
+                    raystream_embree_t *raystream_,
                     const modelinfo_t *self_) :
         raystream(raystream_),
-        self(self_) {}
+        self(self_) {
+            rtcInitIntersectContext(&embreeCtx);
+            embreeCtx.flags = intersectionFlags;
+        }
 };
 
 /**
@@ -78,7 +94,7 @@ Face_Alpha(const modelinfo_t *modelinfo, const bsp2_dface_t *face)
 }
 
 sceneinfo
-CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
+CreateGeometry(const mbsp_t *bsp, RTCDevice device, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
 {
     // count triangles
     int numtris = 0;
@@ -88,13 +104,18 @@ CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_d
         numtris += (face->numedges - 2);
     }
     
-    unsigned geomID = rtcNewTriangleMesh(scene, RTC_GEOMETRY_STATIC, numtris, bsp->numvertexes);
+    unsigned int geomID;
+    RTCGeometry geom_0 = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
+    rtcSetGeometryBuildQuality(geom_0,RTC_BUILD_QUALITY_MEDIUM);
+    rtcSetGeometryTimeStepCount(geom_0,1);
+    geomID = rtcAttachGeometry(scene,geom_0);
+    rtcReleaseGeometry(geom_0);
     
     struct Vertex   { float point[4]; }; //4th element is padding
     struct Triangle { int v0, v1, v2; };
     
     // fill in vertices
-    Vertex* vertices = (Vertex*) rtcMapBuffer(scene, geomID, RTC_VERTEX_BUFFER);
+    Vertex* vertices = (Vertex*) rtcSetNewGeometryBuffer(geom_0,RTC_BUFFER_TYPE_VERTEX,0,RTC_FORMAT_FLOAT3,4*sizeof(float),bsp->numvertexes);
     for (int i=0; i<bsp->numvertexes; i++) {
         const dvertex_t *dvertex = &bsp->dvertexes[i];
         Vertex *vert = &vertices[i];
@@ -102,13 +123,13 @@ CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_d
             vert->point[j] = dvertex->point[j];
         }
     }
-    rtcUnmapBuffer(scene, geomID, RTC_VERTEX_BUFFER);
+    
     
     sceneinfo s;
     s.geomID = geomID;
     
     // fill in triangles
-    Triangle* triangles = (Triangle*) rtcMapBuffer(scene, geomID, RTC_INDEX_BUFFER);
+    Triangle* triangles = (Triangle*) rtcSetNewGeometryBuffer(geom_0,RTC_BUFFER_TYPE_INDEX,0,RTC_FORMAT_UINT3,3*sizeof(int),numtris);
     int tri_index = 0;
     for (const bsp2_dface_t *face : faces) {
         if (face->numedges < 3)
@@ -127,13 +148,14 @@ CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_d
             s.triToModelinfo.push_back(modelinfo);
         }
     }
-    rtcUnmapBuffer(scene, geomID, RTC_INDEX_BUFFER);
     
+    
+    rtcCommitGeometry(geom_0);
     return s;
 }
 
 void
-CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windings)
+CreateGeometryFromWindings(RTCDevice device, RTCScene scene, const std::vector<winding_t *> &windings)
 {
     if (windings.empty())
         return;
@@ -146,14 +168,18 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
         numtris += (winding->numpoints - 2);
         numverts += winding->numpoints;
     }
-    
-    const unsigned geomID = rtcNewTriangleMesh(scene, RTC_GEOMETRY_STATIC, numtris, numverts);
+
+    RTCGeometry geom_1 = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
+    rtcSetGeometryBuildQuality(geom_1,RTC_BUILD_QUALITY_MEDIUM);
+    rtcSetGeometryTimeStepCount(geom_1,1);
+    const unsigned int geomID = rtcAttachGeometry(scene,geom_1);
+    rtcReleaseGeometry(geom_1);
     
     struct Vertex   { float point[4]; }; //4th element is padding
     struct Triangle { int v0, v1, v2; };
     
     // fill in vertices
-    Vertex* vertices = (Vertex*) rtcMapBuffer(scene, geomID, RTC_VERTEX_BUFFER);
+    Vertex* vertices = (Vertex*) rtcSetNewGeometryBuffer(geom_1,RTC_BUFFER_TYPE_VERTEX,0,RTC_FORMAT_FLOAT3,4*sizeof(float),numverts);
     {
         int vert_index = 0;
         for (const auto &winding : windings) {
@@ -165,10 +191,10 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
             vert_index += winding->numpoints;
         }
     }
-    rtcUnmapBuffer(scene, geomID, RTC_VERTEX_BUFFER);
+    
     
     // fill in triangles
-    Triangle* triangles = (Triangle*) rtcMapBuffer(scene, geomID, RTC_INDEX_BUFFER);
+    Triangle* triangles = (Triangle*) rtcSetNewGeometryBuffer(geom_1,RTC_BUFFER_TYPE_INDEX,0,RTC_FORMAT_UINT3,3*sizeof(int),numtris);
     int tri_index = 0;
     int vert_index = 0;
     for (const auto &winding : windings) {
@@ -183,7 +209,7 @@ CreateGeometryFromWindings(RTCScene scene, const std::vector<winding_t *> &windi
     }
     Q_assert(vert_index == numverts);
     Q_assert(tri_index == numtris);
-    rtcUnmapBuffer(scene, geomID, RTC_INDEX_BUFFER);
+    
 }
 
 RTCDevice device;
@@ -242,8 +268,8 @@ Embree_RayEndpoint(struct RTCRayN* ray, const struct RTCHitN* potentialHit, size
     org[1] = RTCRayN_org_y(ray, N, i);
     org[2] = RTCRayN_org_z(ray, N, i);
     
-    // N.B.: we want the distance to the potential hit, not RTCRayN_tfar (stopping dist?)
-    float tfar = RTCHitN_t(potentialHit, N, i);
+    // N.B.: we want the distance to the potential hit
+    float tfar = RTCRayN_tfar(ray, N, i);
     
     VectorMA(org, tfar, dir, endpoint);
 }
@@ -259,17 +285,20 @@ void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayInd
 // called to evaluate transparency
 template<filtertype_t filtertype>
 static void
-Embree_FilterFuncN(int* valid,
-                   void* userDataPtr,
-                   const RTCIntersectContext* context,
-                   struct RTCRayN* ray,
-                   const struct RTCHitN* potentialHit,
-                   const size_t N)
+Embree_FilterFuncN(const struct RTCFilterFunctionNArguments* args)
 {
+    // unpack arguments
+    int* valid = args->valid;
+    void* userDataPtr = args->geometryUserPtr;
+    const struct RTCIntersectContext* context = args->context;
+    struct RTCRayN* ray = args->ray;
+    struct RTCHitN* potentialHit = args->hit;
+    const size_t N = args->N;
+
     const int VALID = -1;
 	const int INVALID = 0;
 
-    const ray_source_info *rsi = static_cast<const ray_source_info *>(context->userRayExt);
+    const ray_source_info *rsi = ray_source_info::getRaySourceInfoFromEmbreeCtx(context);
 
     for (size_t i=0; i<N; i++) {
         if (valid[i] != VALID) {
@@ -388,22 +417,7 @@ Embree_FilterFuncN(int* valid,
             }
         }
         
-        // accept hit
-        if (filtertype == filtertype_t::OCCLUSION) {
-            RTCRayN_geomID(ray, N, i) = 0;
-        } else {
-            RTCRayN_Ng_x(ray, N, i) = RTCHitN_Ng_x(potentialHit, N, i);
-            RTCRayN_Ng_y(ray, N, i) = RTCHitN_Ng_y(potentialHit, N, i);
-            RTCRayN_Ng_z(ray, N, i) = RTCHitN_Ng_z(potentialHit, N, i);
-            
-            RTCRayN_instID(ray, N, i) = RTCHitN_instID(potentialHit, N, i);
-            RTCRayN_geomID(ray, N, i) = RTCHitN_geomID(potentialHit, N, i);
-            RTCRayN_primID(ray, N, i) = RTCHitN_primID(potentialHit, N, i);
-            
-            RTCRayN_u(ray, N, i) = RTCHitN_u(potentialHit, N, i);
-            RTCRayN_v(ray, N, i) = RTCHitN_v(potentialHit, N, i);
-            RTCRayN_tfar(ray, N, i) = RTCHitN_t(potentialHit, N, i);
-        }
+        // accept hit (do nothing)
     }
 }
 
@@ -673,31 +687,33 @@ Embree_TraceInit(const mbsp_t *bsp)
         }
     }
     
-    device = rtcNewDevice();
-    rtcDeviceSetErrorFunction2(device, ErrorCallback, nullptr); //mxd. Changed from rtcDeviceSetErrorFunction to silence compiler warning...
+    device = rtcNewDevice (NULL);
+    rtcSetDeviceErrorFunction(device,ErrorCallback,nullptr); //mxd. Changed from rtcDeviceSetErrorFunction to silence compiler warning...
     
     // log version
-    const size_t ver_maj = rtcDeviceGetParameter1i(device, RTC_CONFIG_VERSION_MAJOR);
-    const size_t ver_min = rtcDeviceGetParameter1i(device, RTC_CONFIG_VERSION_MINOR);
-    const size_t ver_pat = rtcDeviceGetParameter1i(device, RTC_CONFIG_VERSION_PATCH);
+    const size_t ver_maj = rtcGetDeviceProperty (device,RTC_DEVICE_PROPERTY_VERSION_MAJOR);
+    const size_t ver_min = rtcGetDeviceProperty (device,RTC_DEVICE_PROPERTY_VERSION_MINOR);
+    const size_t ver_pat = rtcGetDeviceProperty (device,RTC_DEVICE_PROPERTY_VERSION_PATCH);
     logprint("Embree_TraceInit: Embree version: %d.%d.%d\n",
              static_cast<int>(ver_maj), static_cast<int>(ver_min), static_cast<int>(ver_pat));
     
     // we use the ray mask field to store the dmodel index of the self-shadow model
-    if (0 != rtcDeviceGetParameter1i(device, RTC_CONFIG_RAY_MASK)) {
+    if (0 != rtcGetDeviceProperty (device,RTC_DEVICE_PROPERTY_RAY_MASK_SUPPORTED)) {
         Error("embree must be built with ray masks disabled");
     }
 
-    scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1 | RTC_INTERSECT_STREAM);
-    skygeom = CreateGeometry(bsp, scene, skyfaces);
-    solidgeom = CreateGeometry(bsp, scene, solidfaces);
-    filtergeom = CreateGeometry(bsp, scene, filterfaces);
-    CreateGeometryFromWindings(scene, skipwindings);
+    scene = rtcNewScene(device);
+    rtcSetSceneFlags(scene, RTC_SCENE_FLAG_NONE);
+    rtcSetSceneBuildQuality(scene, RTC_BUILD_QUALITY_MEDIUM);
+    skygeom = CreateGeometry(bsp, device, scene, skyfaces);
+    solidgeom = CreateGeometry(bsp, device, scene, solidfaces);
+    filtergeom = CreateGeometry(bsp, device, scene, filterfaces);
+    CreateGeometryFromWindings(device, scene, skipwindings);
     
-    rtcSetIntersectionFilterFunctionN(scene, filtergeom.geomID, Embree_FilterFuncN<filtertype_t::INTERSECTION>);
-    rtcSetOcclusionFilterFunctionN(scene, filtergeom.geomID, Embree_FilterFuncN<filtertype_t::OCCLUSION>);
+    rtcSetGeometryIntersectFilterFunction(rtcGetGeometry(scene,filtergeom.geomID),Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+    rtcSetGeometryOccludedFilterFunction(rtcGetGeometry(scene,filtergeom.geomID),Embree_FilterFuncN<filtertype_t::OCCLUSION>);
     
-    rtcCommit (scene);
+    rtcCommitScene(scene);
     
     logprint("Embree_TraceInit:\n");
     logprint("\t%d sky faces\n", (int)skyfaces.size());
@@ -708,16 +724,20 @@ Embree_TraceInit(const mbsp_t *bsp)
     FreeWindings(skipwindings);
 }
 
-static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist)
+static RTCRay SetupOcclusionRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist)
 {
     RTCRay ray;
-    VectorCopy(start, ray.org);
-    VectorCopy(dir, ray.dir); // can be un-normalized
+    ray.flags = 0;
+    ray.org_x = start[0];
+    ray.org_y = start[1];
+    ray.org_z = start[2];
+    ray.dir_x = dir[0]; // can be un-normalized
+    ray.dir_y = dir[1]; // can be un-normalized
+    ray.dir_z = dir[2]; // can be un-normalized
     ray.tnear = 0.f;
     ray.tfar = dist;
-    ray.geomID = RTC_INVALID_GEOMETRY_ID;
-    ray.primID = RTC_INVALID_GEOMETRY_ID;
-    ray.instID = RTC_INVALID_GEOMETRY_ID;
+    ray.id = 0;
+    ray.flags = 0;
     
     // NOTE: we are not using the ray masking feature of embree, but just using
     // this field to store the ray index
@@ -727,13 +747,21 @@ static RTCRay SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, 
     return ray;
 }
 
+static RTCRayHit SetupIntersectionRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist)
+{
+    RTCRayHit rayhit;
+    rayhit.ray = SetupOcclusionRay(rayindex, start, dir, dist);
+    rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+    return rayhit;
+}
+
 static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop)
 {
     vec3_t dir;
     VectorSubtract(stop, start, dir);
     vec_t dist = VectorNormalize(dir);
     
-    return SetupRay(0, start, dir, dist);
+    return SetupOcclusionRay(0, start, dir, dist);
 }
 
 //public
@@ -741,15 +769,13 @@ qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo
 {
     RTCRay ray = SetupRay_StartStop(start, stop);
 
-    ray_source_info ctx2(nullptr, self);
-    const RTCIntersectContext ctx = {
-            RTC_INTERSECT_COHERENT,
-            static_cast<void *>(&ctx2)
-    };
-
-    rtcOccluded1Ex(scene, &ctx, ray);
+    ray_source_info ctx2(RTC_INTERSECT_CONTEXT_FLAG_COHERENT, nullptr, self);
+    rtcOccluded1(scene, ctx2.castToEmbreeContext(), &ray);
     
-    if (ray.geomID != RTC_INVALID_GEOMETRY_ID)
+    // from embree2 to 3 migration:
+    const bool occluded = ray.tfar < 0.0f;
+
+    if (occluded)
         return false; //hit
     
     // no obstruction
@@ -766,21 +792,20 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
     VectorCopy(dirn, dir_normalized);
     VectorNormalize(dir_normalized);
     
-    RTCRay ray = SetupRay(0, start, dir_normalized, MAX_SKY_DIST);
+    RTCRayHit ray = SetupIntersectionRay(0, start, dir_normalized, MAX_SKY_DIST);
 
-    ray_source_info ctx2(nullptr, self);
-    const RTCIntersectContext ctx = {
-            RTC_INTERSECT_COHERENT,
-            static_cast<void *>(&ctx2)
-    };
-    rtcIntersect1Ex(scene, &ctx, ray);
+    ray_source_info ctx2(RTC_INTERSECT_CONTEXT_FLAG_COHERENT, nullptr, self);
+    rtcIntersect1(scene,ctx2.castToEmbreeContext(),&ray);
+    ray.hit.Ng_x = -ray.hit.Ng_x;
+    ray.hit.Ng_y = -ray.hit.Ng_y;
+    ray.hit.Ng_z = -ray.hit.Ng_z;
 
-    qboolean hit_sky = (ray.geomID == skygeom.geomID);
+    qboolean hit_sky = (ray.hit.geomID == skygeom.geomID);
 
     if (face_out) {
         if (hit_sky) {
-            const sceneinfo &si = Embree_SceneinfoForGeomID(ray.geomID);
-            *face_out = si.triToFace.at(ray.primID);
+            const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
+            *face_out = si.triToFace.at(ray.hit.primID);
         } else {
             *face_out = nullptr;
         }
@@ -792,34 +817,33 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
 //public
 hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
-    RTCRay ray = SetupRay(0, start, dirn, dist);
-    ray_source_info ctx2(nullptr, self);
-    const RTCIntersectContext ctx = {
-            RTC_INTERSECT_COHERENT,
-            static_cast<void *>(&ctx2)
-    };
-    rtcIntersect1Ex(scene, &ctx, ray);
+    RTCRayHit ray = SetupIntersectionRay(0, start, dirn, dist);
+    ray_source_info ctx2(RTC_INTERSECT_CONTEXT_FLAG_COHERENT, nullptr, self);
+    rtcIntersect1(scene,ctx2.castToEmbreeContext(),&ray);
+    ray.hit.Ng_x = -ray.hit.Ng_x;
+    ray.hit.Ng_y = -ray.hit.Ng_y;
+    ray.hit.Ng_z = -ray.hit.Ng_z;
     
-    if (ray.geomID == RTC_INVALID_GEOMETRY_ID)
+    if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID)
         return hittype_t::NONE;
     
     if (hitdist_out) {
-        *hitdist_out = ray.tfar;
+        *hitdist_out = ray.ray.tfar;
     }
     if (hitplane_out) {
-        for (int i=0; i<3; i++) {
-            hitplane_out->normal[i] = ray.Ng[i];
-        }
+        hitplane_out->normal[0] = ray.hit.Ng_x;
+        hitplane_out->normal[1] = ray.hit.Ng_y;
+        hitplane_out->normal[2] = ray.hit.Ng_z;
         VectorNormalize(hitplane_out->normal);
         
         vec3_t hitpoint;
-        VectorMA(start, ray.tfar, dirn, hitpoint);
+        VectorMA(start, ray.ray.tfar, dirn, hitpoint);
         
         hitplane_out->dist = DotProduct(hitplane_out->normal, hitpoint);
     }
     if (face_out) {
-        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.geomID);
-        *face_out = si.triToFace.at(ray.primID);
+        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
+        *face_out = si.triToFace.at(ray.hit.primID);
     }
     
     if (ray.geomID == skygeom.geomID) {
@@ -855,9 +879,9 @@ static void q_aligned_free(void *ptr)
 #endif
 }
 
-class raystream_embree_t : public raystream_t {
+class occlusion_raystream_embree_t {
 public:
-    RTCRay *_rays;
+    RTCRay *_occlusion_rays;
     float *_rays_maxdist;
     int *_point_indices;
     vec3_t *_ray_colors;
@@ -871,11 +895,10 @@ public:
     
     int _numrays;
     int _maxrays;
-//    streamstate_t _state;
-    
+
 public:
     raystream_embree_t(int maxRays) :
-        _rays { static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * maxRays)) },
+        _occlusion_rays { static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * maxRays)) },
         _rays_maxdist { new float[maxRays] },
         _point_indices { new int[maxRays] },
         _ray_colors { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
@@ -883,11 +906,10 @@ public:
         _ray_dynamic_styles { new int[maxRays] },
         _numrays { 0 },
         _maxrays { maxRays } {}
-        //,
-        //_state { streamstate_t::READY } {}
     
     ~raystream_embree_t() {
-        q_aligned_free(_rays);
+        q_aligned_free(_intersection_rays);
+        q_aligned_free(_occlusion_rays);
         delete[] _rays_maxdist;
         delete[] _point_indices;
         free(_ray_colors);
@@ -895,7 +917,7 @@ public:
         delete[] _ray_dynamic_styles;
     }
     
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+    virtual void pushRay(RayType type, int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
         Q_assert(_numrays<_maxrays);
         _rays[_numrays] = SetupRay(_numrays, origin, dir, dist);
         _rays_maxdist[_numrays] = dist;
@@ -920,31 +942,21 @@ public:
         if (!_numrays)
             return;
 
-        ray_source_info ctx2(this, self);
-        const RTCIntersectContext ctx = {
-                RTC_INTERSECT_COHERENT,
-                static_cast<void *>(&ctx2)
-        };
-        
-        rtcOccluded1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
+        ray_source_info ctx2(RTC_INTERSECT_CONTEXT_FLAG_COHERENT, this, self);
+        rtcOccluded1M(scene, ctx2.castToEmbreeContext(), _rays, _numrays, sizeof(RTCRay));
     }
     
     virtual void tracePushedRaysIntersection(const modelinfo_t *self) {
         if (!_numrays)
             return;
         
-        ray_source_info ctx2(this, self);
-        const RTCIntersectContext ctx = {
-                RTC_INTERSECT_COHERENT,
-                static_cast<void *>(&ctx2)
-        };
-        
-        rtcIntersect1M(scene, &ctx, _rays, _numrays, sizeof(RTCRay));
+        ray_source_info ctx2(RTC_INTERSECT_CONTEXT_FLAG_COHERENT, this, self);
+        rtcIntersect1M(scene, ctx2.castToEmbreeContext(), _rays, _numrays, sizeof(RTCRay));
     }
     
     virtual bool getPushedRayOccluded(size_t j) {
         Q_assert(j < _maxrays);
-        return (_rays[j].geomID != RTC_INVALID_GEOMETRY_ID);
+        return ray.tfar < 0.0f;
     }
     
     virtual float getPushedRayDist(size_t j) {
@@ -1012,19 +1024,167 @@ public:
         return _ray_dynamic_styles[j];
     }
     
+    void clearPushedRays() {
+        _numrays = 0;
+    }
+};
+
+class raystream_embree_t : public raystream_t {
+public:
+    RTCRayHit *_intersection_rays;
+    RTCRay *_occlusion_rays;
+    float *_rays_maxdist;
+    int *_point_indices;
+    vec3_t *_ray_colors;
+    vec3_t *_ray_normalcontribs;
+
+    // This is set to the modelinfo's switchshadstyle if the ray hit
+    // a dynamic shadow caster. (note that for rays that hit dynamic
+    // shadow casters, all of the other hit data is assuming the ray went
+    // straight through).
+    int *_ray_dynamic_styles;
+
+    int _numrays;
+    int _maxrays;
+
+public:
+    raystream_embree_t(int maxRays) :
+        _intersection_rays { static_cast<RTCRayHit *>(q_aligned_malloc(16, sizeof(RTCRayHit) * maxRays)) },
+        _occlusion_rays { static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * maxRays)) },
+        _rays_maxdist { new float[maxRays] },
+        _point_indices { new int[maxRays] },
+        _ray_colors { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
+        _ray_normalcontribs { static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t))) },
+        _ray_dynamic_styles { new int[maxRays] },
+        _numrays { 0 },
+        _maxrays { maxRays } {}
+
+    ~raystream_embree_t() {
+        q_aligned_free(_intersection_rays);
+        q_aligned_free(_occlusion_rays);
+        delete[] _rays_maxdist;
+        delete[] _point_indices;
+        free(_ray_colors);
+        free(_ray_normalcontribs);
+        delete[] _ray_dynamic_styles;
+    }
+
+    virtual void pushRay(RayType type, int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) {
+        Q_assert(_numrays<_maxrays);
+        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist);
+        _rays_maxdist[_numrays] = dist;
+        _point_indices[_numrays] = i;
+        if (color) {
+            VectorCopy(color, _ray_colors[_numrays]);
+        }
+        if (normalcontrib) {
+            VectorCopy(normalcontrib, _ray_normalcontribs[_numrays]);
+        }
+        _ray_dynamic_styles[_numrays] = 0;
+        _numrays++;
+    }
+
+    virtual size_t numPushedRays() {
+        return _numrays;
+    }
+
+    virtual void tracePushedRaysOcclusion(const modelinfo_t *self) {
+        //Q_assert(_state == streamstate_t::READY);
+
+        if (!_numrays)
+            return;
+
+        ray_source_info ctx2(RTC_INTERSECT_CONTEXT_FLAG_COHERENT, this, self);
+        rtcOccluded1M(scene, ctx2.castToEmbreeContext(), _rays, _numrays, sizeof(RTCRay));
+    }
+
+    virtual void tracePushedRaysIntersection(const modelinfo_t *self) {
+        if (!_numrays)
+            return;
+
+        ray_source_info ctx2(RTC_INTERSECT_CONTEXT_FLAG_COHERENT, this, self);
+        rtcIntersect1M(scene, ctx2.castToEmbreeContext(), _rays, _numrays, sizeof(RTCRay));
+    }
+
+    virtual bool getPushedRayOccluded(size_t j) {
+        Q_assert(j < _maxrays);
+        return ray.tfar < 0.0f;
+    }
+
+    virtual float getPushedRayDist(size_t j) {
+        Q_assert(j < _maxrays);
+        return _rays_maxdist[j];
+    }
+
+    virtual float getPushedRayHitDist(size_t j) {
+        Q_assert(j < _maxrays);
+        return _rays[j].tfar;
+    }
+
+    virtual hittype_t getPushedRayHitType(size_t j) {
+        Q_assert(j < _maxrays);
+
+        if (_rays[j].geomID == RTC_INVALID_GEOMETRY_ID) {
+            return hittype_t::NONE;
+        } else if (_rays[j].geomID == skygeom.geomID) {
+            return hittype_t::SKY;
+        } else {
+            return hittype_t::SOLID;
+        }
+    }
+
+    virtual const bsp2_dface_t *getPushedRayHitFace(size_t j) {
+        Q_assert(j < _maxrays);
+
+        const RTCRay &ray = _rays[j];
+
+        if (ray.geomID == RTC_INVALID_GEOMETRY_ID)
+            return nullptr;
+
+        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.geomID);
+        const bsp2_dface_t *face = si.triToFace.at(ray.primID);
+        Q_assert(face != nullptr);
+
+        return face;
+    }
+
+    virtual void getPushedRayDir(size_t j, vec3_t out) {
+        Q_assert(j < _maxrays);
+        for (int i=0; i<3; i++) {
+            out[i] = _rays[j].dir[i];
+        }
+    }
+
+    virtual int getPushedRayPointIndex(size_t j) {
+       // Q_assert(_state != streamstate_t::READY);
+        Q_assert(j < _maxrays);
+        return _point_indices[j];
+    }
+
+    virtual void getPushedRayColor(size_t j, vec3_t out) {
+        Q_assert(j < _maxrays);
+        VectorCopy(_ray_colors[j], out);
+    }
+
+    virtual void getPushedRayNormalContrib(size_t j, vec3_t out) {
+        Q_assert(j < _maxrays);
+        VectorCopy(_ray_normalcontribs[j], out);
+    }
+
+    virtual int getPushedRayDynamicStyle(size_t j) {
+        Q_assert(j < _maxrays);
+        return _ray_dynamic_styles[j];
+    }
+
     virtual void clearPushedRays() {
         _numrays = 0;
         //_state = streamstate_t::READY;
     }
 };
 
-raystream_t *Embree_MakeRayStream(int maxrays)
-{
-    return new raystream_embree_t{maxrays};
-}
 
 void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float opacity, const vec3_t glasscolor) {
-    ray_source_info *ctx = static_cast<ray_source_info *>(context->userRayExt);
+    ray_source_info *ctx = ray_source_info::getRaySourceInfoFromEmbreeCtx(context);
     raystream_embree_t *rs = ctx->raystream;
 
     if (rs == nullptr) {
@@ -1062,7 +1222,7 @@ void AddGlassToRay(const RTCIntersectContext* context, unsigned rayIndex, float 
 
 void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayIndex, int style)
 {
-    ray_source_info *ctx = static_cast<ray_source_info *>(context->userRayExt);
+    ray_source_info *ctx = ray_source_info::getRaySourceInfoFromEmbreeCtx(context);
     raystream_embree_t *rs = ctx->raystream;
 
     rs->_ray_dynamic_styles[rayIndex] = style;
