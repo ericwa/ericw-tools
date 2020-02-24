@@ -133,6 +133,30 @@ brush which you don't want to generate bsp splits or portals.  All
 surfaces of a hint brush must use either the \fIhint\fP or
 \fIhintskip\fP texture name.
 
+.SS "ORIGIN"
+.PP
+An origin brush (all faces textured with "origin") can be added to a brush entity
+(but not detail or compiler-internal entities like func_group). Doing so causes all of
+the brushes in the brush entitiy to be translated so the center of the origin brush
+lines up with 0 0 0. The entity key "origin" is then automatically set on the
+brush entity to the original cooridnates of the center of the
+"origin" brush before it was translated to 0 0 0.
+.PP
+In Hexen 2, origin brushes are the native way of marking the center point of the
+rotation axis for rotating entities.
+.PP
+In Quake, origin brushes can be used to make some map hacks easier to set up
+that would otherwise require placing brushes at the world origin and
+entering an "origin" value by hand.
+.PP
+Note than, unlike the Hipnotic rotation support in QBSP, using origin brushes
+does not cause the model bounds to be expanded. (With Hipnotic rotation this was
+to ensure that the model is not vis culled, regardless of its rotated angle.)
+Origin brushes are useful for more than just rotation, and doing this bounds 
+expansion would break some use cases, so if you're going to rotate a model
+with an origin brush you might need to expand the bounds of it a bit using
+clip brushes so it doesn't get vis culled.
+
 .SH "EXTERNAL MAP PREFAB SUPPORT"
 .PP
 This qbsp has a prefab system using a point entity named "misc_external_map".
