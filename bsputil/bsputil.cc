@@ -32,6 +32,7 @@
 #include <set>
 #include <list>
 #include <algorithm> // std::sort
+#include <string>
 #include <light/light.hh>
 
 /* FIXME - share header with qbsp, etc. */
@@ -497,6 +498,22 @@ CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
 
 }
 
+static void
+FindFaces(const mbsp_t *bsp, const vec3_t pos, const vec3_t normal)
+{
+    for (int i = 0; i < bsp->nummodels; ++i) {
+        const dmodelh2_t* model = &bsp->dmodels[i];
+        const bsp2_dface_t* face = BSP_FindFaceAtPoint(bsp, model, pos, normal);
+
+        if (face != nullptr) {
+            printf("model %d face %d: texture '%s' texinfo %d\n",
+                i, static_cast<int>(face - bsp->dfaces), 
+                Face_TextureName(bsp, face),
+                face->texinfo);
+        }
+    }
+}
+
 int
 main(int argc, char **argv)
 {
@@ -508,8 +525,8 @@ main(int argc, char **argv)
 
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
-        printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]"
-               "[--check] [--compare otherbsp] bspfile\n");
+        printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
+               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum] bspfile\n");
         exit(1);
     }
 
@@ -612,6 +629,50 @@ main(int argc, char **argv)
             printf("Done.\n");
         } else if (!strcmp(argv[i], "--modelinfo")) {
             PrintModelInfo(bsp);
+        } else if (!strcmp(argv[i], "--findfaces")) {
+            // (i + 1) ... (i + 6) = x y z nx ny nz
+            // i + 7 = bsp file
+
+            if (i + 7 >= argc) {
+               Error("--findfaces requires 6 arguments");
+            }
+
+            try {
+                const vec3_t pos = {
+                    std::stof(argv[i + 1]),
+                    std::stof(argv[i + 2]),
+                    std::stof(argv[i + 3])
+                };
+                const vec3_t normal = {
+                    std::stof(argv[i + 4]),
+                    std::stof(argv[i + 5]),
+                    std::stof(argv[i + 6])
+                };
+                FindFaces(bsp, pos, normal);
+            } catch (const std::exception&) {
+                printf("Error reading position/normal\n");
+            }
+            return 0;
+        } else if (!strcmp(argv[i], "--settexinfo")) {
+            // (i + 1) facenum
+            // (i + 2) texinfonum
+
+            if (i + 2 >= argc) {
+               Error("--settexinfo requires 2 arguments");
+            }
+
+            const int fnum       = std::stoi(argv[i + 1]);
+            const int texinfonum = std::stoi(argv[i + 2]);
+
+            bsp2_dface_t* face = BSP_GetFace(bsp, fnum);
+            face->texinfo = texinfonum;
+
+            ConvertBSPFormat(bspdata.loadversion, &bspdata);            
+            StripExtension(source);
+            strcat(source, "-settexinfo.bsp");            
+            WriteBSPFile(source, &bspdata);
+
+            return 0;
         }
     }
 
