@@ -668,8 +668,8 @@ main(int argc, char **argv)
             face->texinfo = texinfonum;
 
             ConvertBSPFormat(bspdata.loadversion, &bspdata);            
-            StripExtension(source);
-            strcat(source, "-settexinfo.bsp");            
+
+            // Overwrite source bsp!
             WriteBSPFile(source, &bspdata);
 
             return 0;
