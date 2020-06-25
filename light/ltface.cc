@@ -1025,7 +1025,13 @@ void
 GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpoint, bool twosided,
                 vec3_t color_out, vec3_t surfpointToLightDir_out, vec3_t normalmap_addition_out, float *dist_out)
 {
-    const float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
+    float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
+    if (dist < 0.1) {
+        // Catch 0 distance between sample point and light (produces infinite brightness / nan's) and causes
+        // problems later
+        dist = 0.1;
+        VectorSet(surfpointToLightDir_out, 0, 0, 1);
+    }
     const float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
     
     /* write out the final color */
