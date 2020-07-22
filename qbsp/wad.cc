@@ -77,11 +77,22 @@ WAD_LoadInfo(wad_t *wad, bool external)
 
         if (len == sizeof(miptex))
         {
+            unsigned int magic;
             int w = LittleLong(miptex.width);
             int h = LittleLong(miptex.height);
-            wad->lumps[i].size = sizeof(miptex) + (w>>0)*(h>>0) + (w>>1)*(h>>1) + (w>>2)*(h>>2) + (w>>3)*(h>>3);
+            int m;
+
+            wad->lumps[i].size = sizeof(miptex);
+            for (m = 0; m < 4 && miptex.offsets[m] && wad->lumps[i].size < LittleLong(miptex.offsets[m])+(w>>m)*(h>>m); m++)
+                wad->lumps[i].size += (w>>m)*(h>>m);
             if (options.BSPVersion == BSPHLVERSION)
                 wad->lumps[i].size += 2+3*256;    //palette size+palette data
+
+            fseek(wad->file, wad->lumps[i].filepos+wad->lumps[i].size, SEEK_SET);
+            fread(&magic, 1, sizeof(magic), wad->file);
+            if (LittleLong(magic) == ((0x00<<8)|(0xfb<<8)|(0x2b<<16)|(0xafu<<24)) && !(wad->lumps[i].disksize&3))   //if there's extension data in there then just load it as the size its meant to be instead of messing stuff up. we don't know what's actually in there.
+                wad->lumps[i].size = wad->lumps[i].disksize;
+
             wad->lumps[i].size = (wad->lumps[i].size+3) & ~3;    //keep things aligned if we can.
 
             tex = (texture_t *)AllocMem(OTHER, sizeof(texture_t), true);
@@ -280,7 +291,6 @@ WAD_LoadLump(const wad_t *wad, const char *name, uint8_t *dest)
 
             if (wad->lumps[i].size != wad->lumps[i].disksize)
             {
-            logprint("Texture %s is %i bytes in wad, packed to %i bytes in bsp\n", name, wad->lumps[i].disksize, wad->lumps[i].size);
                 std::vector<uint8_t> data(wad->lumps[i].disksize);
                 size = fread(data.data(), 1, wad->lumps[i].disksize, wad->file);
                 if (size != wad->lumps[i].disksize)
