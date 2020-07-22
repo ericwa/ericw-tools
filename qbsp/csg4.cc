@@ -554,6 +554,12 @@ static bool IsLiquid(int contents)
         || contents == CONTENTS_LAVA
         || contents == CONTENTS_SLIME;
 }
+
+static bool IsFence(int contents) {
+    return contents == CONTENTS_DETAIL_FENCE
+        || contents == CONTENTS_DETAIL_ILLUSIONARY;
+}
+
 /*
 ==================
 CSGFaces
@@ -671,6 +677,8 @@ CSGFaces(const mapentity_t *entity)
              * keep the inside faces and set the outside contents to those of
              * the clipbrush. Otherwise, these inside surfaces are hidden and
              * should be discarded.
+             *
+             * FIXME: clean this up, the predicate seems to be "can you see 'brush' from inside 'clipbrush'"
              */
             if ((brush->contents == CONTENTS_SOLID && clipbrush->contents != CONTENTS_SOLID)
                 || (brush->contents == CONTENTS_SKY && (clipbrush->contents != CONTENTS_SOLID
@@ -679,8 +687,7 @@ CSGFaces(const mapentity_t *entity)
                                                            && clipbrush->contents != CONTENTS_SKY
                                                            && clipbrush->contents != CONTENTS_DETAIL))
                 || (IsLiquid(brush->contents)          && clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY)
-                || (brush->contents == CONTENTS_DETAIL_ILLUSIONARY && IsLiquid(clipbrush->contents))
-                || (brush->contents == CONTENTS_DETAIL_FENCE && IsLiquid(clipbrush->contents)))
+                || (IsFence(brush->contents)           && (IsLiquid(clipbrush->contents) || IsFence(clipbrush->contents))))
             {
                 SaveInsideFaces(inside, clipbrush, &outside);
             } else {
