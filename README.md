@@ -35,7 +35,7 @@ Included utilities:
  - bsputil - Simple tool for manipulation of bsp file data
 
 See the doc/ directory for more detailed descriptions of the various
-tools capabilities.  See changelog.txt for a brief overview of recent
+tools capabilities.  See changelog.md for a brief overview of recent
 changes or https://github.com/ericwa/ericw-tools for the full changelog and
 source code.
 

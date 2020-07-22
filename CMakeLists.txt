@@ -137,7 +137,7 @@ add_subdirectory(vis)
 add_subdirectory(man)
 
 install(FILES README.md DESTINATION bin)
-install(FILES changelog.txt DESTINATION bin)
+install(FILES changelog.md DESTINATION bin)
 
 #CPack configuration
 
