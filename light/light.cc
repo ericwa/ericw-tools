@@ -81,6 +81,13 @@ static int lit_file_p;
 /// offset of end of space for litfile data
 static int lit_file_end;
 
+/// start of litfile data
+uint32_t *hdr_filebase;
+/// offset of start of free space after litfile data (should be kept a multiple of 12)
+static int hdr_file_p;
+/// offset of end of space for litfile data
+static int hdr_file_end;
+
 /// start of luxfile data
 uint8_t *lux_filebase;
 /// offset of start of free space after luxfile data (should be kept a multiple of 12)
@@ -96,8 +103,8 @@ std::vector<const modelinfo_t *> switchableshadowlist;
 
 int facestyles = 0; //max styles per face - uses bspx stuff.
 int oversample = 1;
-int write_litfile = 0;  /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
-int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
+int write_litfile = 0;  /* LIT_* bitmask */
+int write_luxfile = 0;  /* LUX_* bitmask */
 qboolean onlyents = false;
 qboolean novisapprox = false;
 bool nolights = false;
@@ -181,12 +188,13 @@ PrintOptionsSummary(void)
  * and return in *lightdata
  */
 void
-GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size)
+GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint32_t **hdrdata, uint8_t **deluxdata, int size)
 {
     ThreadLock();
 
     *lightdata = filebase + file_p;
     *colordata = lit_filebase + lit_file_p;
+    *hdrdata   = hdr_filebase + hdr_file_p;
     *deluxdata = lux_filebase + lux_file_p;
 
     // if size isn't a multiple of 4, round up to the next multiple of 4
@@ -198,6 +206,7 @@ GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int 
     // and 12-uint8_t boundaries (lit_file_p/lux_file_p)
     file_p += size;
     lit_file_p += 3 * size;
+    hdr_file_p += size;
     lux_file_p += 3 * size;
 
     ThreadUnlock();
@@ -213,13 +222,17 @@ GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int 
  * Special version of GetFileSpace for when we're relighting a .bsp and can't modify it.
  * In this case the offsets are already known.
  */
-void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs) {
+void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint32_t **hdrdata, uint8_t **deluxdata, int lightofs) {
     Q_assert(lightofs >= 0);
 
     *lightdata = filebase + lightofs;
 
     if (colordata) {
         *colordata = lit_filebase + (lightofs * 3);
+    }
+
+    if (hdrdata) {
+        *hdrdata = hdr_filebase + lightofs;
     }
 
     if (deluxdata) {
@@ -266,6 +279,10 @@ LightThread(void *arg)
         const int facenum = GetThreadWork();
         if (facenum == -1)
             break;
+
+for (int i = 0; i < bsp->numfaces; i++)
+if (bsp->dfaces[i].planenum < 0)
+printf("Bad plane on face %i when processing %i\n", i, facenum);
 
         bsp2_dface_t *f = const_cast<bsp2_dface_t*>(BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum));
         
@@ -408,6 +425,13 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     lit_file_p = 0;
     lit_file_end = (MAX_MAP_LIGHTING*3);
 
+    /* hdr data stored in a separate buffer */
+    hdr_filebase = (uint32_t *)malloc(MAX_MAP_LIGHTING*sizeof(uint32_t));
+    if (!hdr_filebase)
+        Error("%s: allocation of %u bytes failed.", __func__, MAX_MAP_LIGHTING*(unsigned)sizeof(uint32_t));
+    hdr_file_p = 0;
+    hdr_file_end = MAX_MAP_LIGHTING;
+
     /* lux data stored in a separate buffer */
     lux_filebase = (uint8_t *)calloc(MAX_MAP_LIGHTING*3, 1);
     if (!lux_filebase)
@@ -419,7 +443,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         BSPX_AddLump(bspdata, "LMSHIFT", NULL, 0);
 
     const unsigned char *lmshift_lump = (const unsigned char *)BSPX_GetLump(bspdata, "LMSHIFT", NULL);
-    if (lmshift_lump || (write_litfile&2) || (write_luxfile&2) || facestyles)
+    if (lmshift_lump || (write_litfile&LIT_INTERNAL_RGB8) || (write_luxfile&LUX_INTERNAL) || facestyles)
     {   //we have scales/bspx/lit2 output. yay...
         faces_sup = (facesup_t *)malloc(sizeof(*faces_sup) * bsp->numfaces);
         memset(faces_sup, 0, sizeof(*faces_sup) * bsp->numfaces);
@@ -764,11 +788,11 @@ static void SetLitNeeded()
 {
     if (!write_litfile) {
         if (scaledonly) {
-            write_litfile = 2;
+            write_litfile = LIT_INTERNAL_RGB8;
             logprint("Colored light entities/settings detected: "
                      "bspxlit output enabled.\n");
         } else {
-            write_litfile = 1;
+            write_litfile = LIT_EXTERNAL_RGB8;
             logprint("Colored light entities/settings detected: "
                      ".lit output enabled.\n");
         }
@@ -858,12 +882,15 @@ static void PrintUsage()
 "Experimental options:\n"
 "  -lit2               write .lit2 file\n"
 "  -lmscale n          change lightmap scale, vanilla engines only allow 16\n"
-"  -lux                write .lux file\n"
-"  -bspxlit            writes rgb data into the bsp itself\n"
+"  -lux                write average light directions into a .lux file\n"
+"  -hdr                write hdr .lit file with greater range\n"
+"  -bspxhdr            writes rgb hdr data into the bsp itself (fte)\n"
+"  -bspxlit            writes rgb data into the bsp itself (fte+qss+ezquake)\n"
 "  -bspx               writes both rgb and directions data into the bsp itself\n"
 "  -novanilla          implies -bspxlit. don't write vanilla lighting\n"
 "  -radlights filename.rad loads a <surfacename> <r> <g> <b> <intensity> file\n"
-"  -facestyles n       (bspx) overrides the max number of lightstyles per face\n");
+"  -facestyles n       (bspx) overrides the max number of lightstyles per face\n"
+);
     
     printf("\n");
     printf("Overridable worldspawn keys:\n");
@@ -1033,23 +1060,28 @@ light_main(int argc, const char **argv)
             if (fadegate > 1) {
                 logprint( "WARNING: -gate value greater than 1 may cause artifacts\n" );
             }
+        } else if (!strcmp(argv[i], "-hdr")) {
+            write_litfile |= LIT_EXTERNAL_E5BGR9;
         } else if (!strcmp(argv[i], "-lit")) {
-            write_litfile |= 1;
+            write_litfile |= LIT_EXTERNAL_RGB8;
         } else if (!strcmp(argv[i], "-lit2")) {
-            write_litfile = ~0;
+            write_litfile = LIT_EXTERNAL_LIT2|LIT_EXTERNAL_RGB8;
+            write_luxfile |= LUX_EXTERNAL;
         } else if (!strcmp(argv[i], "-lux")) {
-            write_luxfile |= 1;
+            write_luxfile |= LUX_EXTERNAL;
+        } else if (!strcmp(argv[i], "-bspxhdr")) {
+            write_litfile |= LIT_INTERNAL_E5BGR9;
         } else if (!strcmp(argv[i], "-bspxlit")) {
-            write_litfile |= 2;
+            write_litfile |= LIT_INTERNAL_RGB8;
         } else if (!strcmp(argv[i], "-bspxlux")) {
-            write_luxfile |= 2;
+            write_luxfile |= LUX_INTERNAL;
         } else if (!strcmp(argv[i], "-bspxonly")) {
-            write_litfile = 2;
-            write_luxfile = 2;
+            write_litfile = LIT_INTERNAL_E5BGR9;
+            write_luxfile = LUX_INTERNAL;
             scaledonly = true;
         } else if (!strcmp(argv[i], "-bspx")) {
-            write_litfile |= 2;
-            write_luxfile |= 2;
+            write_litfile |= LIT_INTERNAL_RGB8;
+            write_luxfile |= LUX_INTERNAL;
         } else if (!strcmp(argv[i], "-facestyles")) {
             if ((i + 1) < argc && isdigit(argv[i + 1][0]))
                 facestyles = atoi(argv[++i]);
@@ -1099,7 +1131,7 @@ light_main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-phongdebug" ) ) {
             CheckNoDebugModeSet();
             debugmode = debugmode_phong;
-            write_litfile |= 1;
+            write_litfile |= LIT_EXTERNAL_RGB8;
             logprint( "Phong shading debug mode enabled\n" );
         } else if ( !strcmp( argv[ i ], "-phongdebug_obj" ) ) {
             CheckNoDebugModeSet();
@@ -1186,7 +1218,7 @@ light_main(int argc, const char **argv)
     }
 
     if (debugmode != debugmode_none) {
-        write_litfile |= 1;
+        write_litfile |= LIT_EXTERNAL_RGB8;
     }
     
 #ifndef HAVE_EMBREE
@@ -1204,17 +1236,19 @@ light_main(int argc, const char **argv)
     if (numthreads > 1)
         logprint("running with %d threads\n", numthreads);
 
-    if (write_litfile == ~0)
+    if (write_litfile & LIT_EXTERNAL_LIT2)
         logprint("generating lit2 output only.\n");
     else
     {
-        if (write_litfile & 1)
+        if (write_litfile & LIT_EXTERNAL_RGB8)
             logprint(".lit colored light output requested on command line.\n");
-        if (write_litfile & 2)
+        if (write_litfile & LIT_INTERNAL_RGB8)
             logprint("BSPX colored light output requested on command line.\n");
-        if (write_luxfile & 1)
+        if (write_litfile & LIT_INTERNAL_E5BGR9)
+            logprint("BSPX hdr light output requested on command line.\n");
+        if (write_luxfile & LUX_EXTERNAL)
             logprint(".lux light directions output requested on command line.\n");
-        if (write_luxfile & 2)
+        if (write_luxfile & LUX_INTERNAL)
             logprint("BSPX light directions output requested on command line.\n");
     }
 
@@ -1241,6 +1275,10 @@ light_main(int argc, const char **argv)
     if (!onlyents) {
         StripExtension(source);
         DefaultExtension(source, ".lit");
+        remove(source);
+
+        StripExtension(source);
+        DefaultExtension(source, ".lux");
         remove(source);
     }
 
@@ -1308,9 +1346,10 @@ light_main(int argc, const char **argv)
         
         /*invalidate any bspx lighting info early*/
         BSPX_AddLump(&bspdata, "RGBLIGHTING", NULL, 0);
+        BSPX_AddLump(&bspdata, "LIGHTING_E5BGR9", NULL, 0);
         BSPX_AddLump(&bspdata, "LIGHTINGDIR", NULL, 0);
 
-        if (write_litfile == ~0)
+        if (write_litfile & LIT_EXTERNAL_LIT2)
         {
             WriteLitFile(bsp, faces_sup, source, 2);
             return 0;   //run away before any files are written
@@ -1318,19 +1357,23 @@ light_main(int argc, const char **argv)
         else
         {
             /*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
-            if (write_litfile & 1)
+            if (write_litfile & LIT_EXTERNAL_RGB8)
                 WriteLitFile(bsp, faces_sup, source, LIT_VERSION);
-            if (write_litfile & 2)
+            else if (write_litfile & LIT_EXTERNAL_E5BGR9)
+                WriteLitFile(bsp, faces_sup, source, LIT_VERSION_E5BGR9);
+            if (write_litfile & LIT_INTERNAL_RGB8)
                 BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp->lightdatasize*3);
-            if (write_luxfile & 1)
+            if (write_litfile & LIT_INTERNAL_E5BGR9)
+                BSPX_AddLump(&bspdata, "LIGHTING_E5BGR9", hdr_filebase, bsp->lightdatasize*4);
+            if (write_luxfile & LUX_EXTERNAL)
                 WriteLuxFile(bsp, source, LIT_VERSION);
-            if (write_luxfile & 2)
+            if (write_luxfile & LUX_INTERNAL)
                 BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp->lightdatasize*3);
         }
     }
 
     /* -novanilla + internal lighting = no grey lightmap */
-    if (scaledonly && (write_litfile & 2))
+    if (scaledonly && (write_litfile & (LIT_INTERNAL_RGB8|LIT_INTERNAL_E5BGR9)))
         bsp->lightdatasize = 0;
 
 #if 0

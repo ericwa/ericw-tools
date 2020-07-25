@@ -398,12 +398,20 @@ public:
 
 extern uint8_t *filebase;
 extern uint8_t *lit_filebase;
+extern uint32_t *hdr_filebase;
 extern uint8_t *lux_filebase;
 
 extern int facestyles;
 extern int oversample;
-extern int write_litfile;
-extern int write_luxfile;
+#define LIT_EXTERNAL_RGB8   (1u<<0)
+#define LIT_INTERNAL_RGB8   (1u<<1)
+#define LIT_EXTERNAL_E5BGR9 (1u<<2)
+#define LIT_INTERNAL_E5BGR9 (1u<<3)
+#define LIT_EXTERNAL_LIT2   (1u<<4)
+extern int write_litfile;   //bitmask
+#define LUX_EXTERNAL 1
+#define LUX_INTERNAL 2
+extern int write_luxfile;   //bitmask
 extern qboolean onlyents;
 extern qboolean scaledonly;
 extern uint64_t *extended_texinfo_flags;
@@ -425,8 +433,8 @@ extern char mapfilename[1024];
 lockable_setting_t *FindSetting(std::string name);
 void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 void FixupGlobalSettings(void);
-void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size);
-void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs);
+void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint32_t **hdrdata, uint8_t **deluxdata, int size);
+void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint32_t **hdrdata, uint8_t **deluxdata, int lightofs);
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
 /**
  * returs nullptr for "skip" faces

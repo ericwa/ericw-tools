@@ -23,6 +23,7 @@
 #include <common/bspfile.hh>
 
 #define LIT_VERSION 1
+#define LIT_VERSION_E5BGR9 (0x00010000|LIT_VERSION)
 
 typedef struct litheader_s {
     struct {
