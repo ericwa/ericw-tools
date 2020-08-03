@@ -401,6 +401,7 @@ extern qboolean scaledonly;
 extern uint64_t *extended_texinfo_flags;
 extern qboolean novisapprox;
 extern bool nolights;
+extern bool litonly;
 
 typedef enum {
     backend_bsp,
@@ -417,6 +418,7 @@ lockable_setting_t *FindSetting(std::string name);
 void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
+void GetFileSpace_PreserveOffsetInBsp(byte **lightdata, byte **colordata, byte **deluxdata, int lightofs);
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 //bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf); //mxd. Missing definition

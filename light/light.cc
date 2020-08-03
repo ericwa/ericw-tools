@@ -67,18 +67,26 @@ qboolean surflight_dump = false;
 
 static facesup_t *faces_sup;    //lit2/bspx stuff
 
-byte *filebase;                 // start of lightmap data
-static byte *file_p;            // start of free space after data
-static byte *file_end;          // end of free space for lightmap data
+/// start of lightmap data
+byte *filebase;
+/// offset of start of free space after data (should be kept a multiple of 4)
+static int file_p;
+/// offset of end of free space for lightmap data
+static int file_end;
 
-byte *lit_filebase;             // start of litfile data
-static byte *lit_file_p;        // start of free space after litfile data
-static byte *lit_file_end;      // end of space for litfile data
+/// start of litfile data
+byte *lit_filebase;
+/// offset of start of free space after litfile data (should be kept a multiple of 12)
+static int lit_file_p;
+/// offset of end of space for litfile data
+static int lit_file_end;
 
-byte *lux_buffer;               // luxfile allocation (misaligned)
-byte *lux_filebase;             // start of luxfile data
-static byte *lux_file_p;        // start of free space after luxfile data
-static byte *lux_file_end;      // end of space for luxfile data
+/// start of luxfile data
+byte *lux_filebase;
+/// offset of start of free space after luxfile data (should be kept a multiple of 12)
+static int lux_file_p;
+/// offset of end of space for luxfile data
+static int lux_file_end;
 
 std::vector<modelinfo_t *> modelinfo;
 std::vector<const modelinfo_t *> tracelist;
@@ -96,6 +104,7 @@ backend_t rtbackend = backend_embree;
 bool debug_highlightseams = false;
 debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
+bool litonly = false;
 
 uint64_t *extended_texinfo_flags = NULL;
 
@@ -172,26 +181,20 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 {
     ThreadLock();
 
-    /* align to 4 byte boudaries */
-    file_p = (byte *)(((uintptr_t)file_p + 3) & ~3);
-    *lightdata = file_p;
+    *lightdata = filebase + file_p;
+    *colordata = lit_filebase + lit_file_p;
+    *deluxdata = lux_filebase + lux_file_p;
+
+    // if size isn't a multiple of 4, round up to the next multiple of 4
+    if ((size % 4) != 0) {
+        size += (4 - (size % 4));
+    }
+
+    // increment the next writing offsets, aligning them to 4 byte boundaries (file_p)
+    // and 12-byte boundaries (lit_file_p/lux_file_p)
     file_p += size;
-
-    if (colordata) {
-        /* align to 12 byte boundaries to match offets with 3 * lightdata */
-        if ((uintptr_t)lit_file_p % 12)
-            lit_file_p += 12 - ((uintptr_t)lit_file_p % 12);
-        *colordata = lit_file_p;
-        lit_file_p += size * 3;
-    }
-
-    if (deluxdata) {
-        /* align to 12 byte boundaries to match offets with 3 * lightdata */
-        if ((uintptr_t)lux_file_p % 12)
-            lux_file_p += 12 - ((uintptr_t)lux_file_p % 12);
-        *deluxdata = lux_file_p;
-        lux_file_p += size * 3;
-    }
+    lit_file_p += 3 * size;
+    lux_file_p += 3 * size;
 
     ThreadUnlock();
 
@@ -200,6 +203,26 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
 
     if (lit_file_p > lit_file_end)
         Error("%s: overrun", __func__);
+}
+
+/**
+ * Special version of GetFileSpace for when we're relighting a .bsp and can't modify it.
+ * In this case the offsets are already known.
+ */
+void GetFileSpace_PreserveOffsetInBsp(byte **lightdata, byte **colordata, byte **deluxdata, int lightofs) {
+    Q_assert(lightofs >= 0);
+
+    *lightdata = filebase + lightofs;
+
+    if (colordata) {
+        *colordata = lit_filebase + (lightofs * 3);
+    }
+
+    if (deluxdata) {
+        *deluxdata = lux_filebase + (lightofs * 3);
+    }
+
+    // NOTE: file_p et. al. are not updated, since we're not dynamically allocating the lightmaps
 }
 
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum)
@@ -362,35 +385,30 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     logprint("--- LightWorld ---\n" );
     
     mbsp_t *const bsp = &bspdata->data.mbsp;
-    if (bsp->dlightdata)
-        free(bsp->dlightdata);
-    if (lux_buffer)
-        free(lux_buffer);
+    free(filebase);
+    free(lit_filebase);
+    free(lux_filebase);
 
-    /* FIXME - remove this limit */
-    bsp->lightdatasize = MAX_MAP_LIGHTING;
-    bsp->dlightdata = (byte *)malloc(bsp->lightdatasize + 16); /* for alignment */
-    if (!bsp->dlightdata)
-        Error("%s: allocation of %i bytes failed.",
-              __func__, bsp->lightdatasize);
-    memset(bsp->dlightdata, 0, bsp->lightdatasize + 16);
-    bsp->lightdatasize /= 4;
+    /* greyscale data stored in a separate buffer */
+    filebase = (byte *)calloc(MAX_MAP_LIGHTING, 1);
+    if (!filebase)
+        Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING);
+    file_p = 0;
+    file_end = MAX_MAP_LIGHTING;
 
-    /* align filebase to a 4 byte boundary */
-    filebase = file_p = (byte *)(((uintptr_t)bsp->dlightdata + 3) & ~3);
-    file_end = filebase + bsp->lightdatasize;
-
-    /* litfile data stored in dlightdata, after the white light */
-    lit_filebase = file_end + 12 - ((uintptr_t)file_end % 12);
-    lit_file_p = lit_filebase;
-    lit_file_end = lit_filebase + 3 * (MAX_MAP_LIGHTING / 4);
+    /* litfile data stored in a separate buffer */
+    lit_filebase = (byte *)calloc(MAX_MAP_LIGHTING*3, 1);
+    if (!lit_filebase)
+        Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING*3);
+    lit_file_p = 0;
+    lit_file_end = (MAX_MAP_LIGHTING*3);
 
     /* lux data stored in a separate buffer */
-    lux_buffer = (byte *)malloc(bsp->lightdatasize*3);
-    lux_filebase = lux_buffer + 12 - ((uintptr_t)lux_buffer % 12);
-    lux_file_p = lux_filebase;
-    lux_file_end = lux_filebase + 3 * (MAX_MAP_LIGHTING / 4);
-
+    lux_filebase = (byte *)calloc(MAX_MAP_LIGHTING*3, 1);
+    if (!lux_filebase)
+        Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING*3);
+    lux_file_p = 0;
+    lux_file_end = (MAX_MAP_LIGHTING*3);
 
     if (forcedscale)
         BSPX_AddLump(bspdata, "LMSHIFT", NULL, 0);
@@ -444,7 +462,16 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     }
 
     logprint("Lighting Completed.\n\n");
-    bsp->lightdatasize = file_p - filebase;
+
+    // Transfer greyscale lightmap to the bsp and update lightdatasize
+    if (!litonly) {
+        bsp->lightdatasize = file_p;
+        free(bsp->dlightdata);
+        bsp->dlightdata = (byte *)malloc(bsp->lightdatasize);
+        memcpy(bsp->dlightdata, filebase, bsp->lightdatasize);
+    } else {
+        // NOTE: bsp->lightdatasize is already valid in the -litonly case
+    }
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 
     if (faces_sup) {
@@ -1046,6 +1073,10 @@ light_main(int argc, const char **argv)
         } else if (!strcmp(argv[i], "-arghradcompat")) { //mxd
             logprint("Arghrad entity keys conversion enabled\n");
             arghradcompat = true;
+        } else if (!strcmp(argv[i], "-litonly")) {
+            logprint("-litonly specified; .bsp file will not be modified\n");
+            litonly = true;
+            write_litfile |= 1;
         } else if ( !strcmp( argv[ i ], "-verbose" ) ) {
             verbose_log = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
@@ -1241,7 +1272,11 @@ light_main(int argc, const char **argv)
     WriteEntitiesToString(cfg, bsp);
     /* Convert data format back if necessary */
     ConvertBSPFormat(loadversion, &bspdata);
-    WriteBSPFile(source, &bspdata);
+
+    if (!litonly) {
+        WriteBSPFile(source, &bspdata);
+    }
+
     end = I_FloatTime();
     logprint("%5.3f seconds elapsed\n", end - start);
     logprint("\n");

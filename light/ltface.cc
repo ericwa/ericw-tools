@@ -2992,9 +2992,57 @@ BoxBlurImage(const std::vector<qvec4f> &input, int w, int h, int radius)
 }
 
 static void
+WriteSingleLightmap(const mbsp_t *bsp,
+                    const bsp2_dface_t *face,
+                    const lightsurf_t *lightsurf,
+                    const lightmap_t *lm,
+                    const int actual_width, const int actual_height,
+                    byte *out, byte *lit, byte *lux);
+
+static void
 WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
                const lightmapdict_t *lightmaps)
 {
+    const int actual_width = lightsurf->texsize[0] + 1;
+    const int actual_height = lightsurf->texsize[1] + 1;
+    
+    if (litonly) {
+        // special case for writing a .lit for a bsp without modifying the bsp.
+        // involves looking at which styles were written to the bsp in the previous lighting run, and then
+        // writing the same styles to the same offsets in the .lit file.
+
+        if (face->lightofs == -1) {
+            // nothing to write for this face
+            return;
+        }
+
+        byte *out, *lit, *lux;
+        GetFileSpace_PreserveOffsetInBsp(&out, &lit, &lux, face->lightofs);
+
+        for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
+            const int style = face->styles[mapnum];
+
+            if (style == 255) {
+                break; // all done for this face
+            }
+
+            // see if we have computed lighting for this style
+            for (const lightmap_t& lm : *lightmaps) {
+                if (lm.style == style) {
+                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux);
+                    break;
+                }
+            }
+            // if we didn't find a matching lightmap, just don't write anything
+
+            out += (actual_width * actual_height);
+            lit += (actual_width * actual_height * 3);
+            lux += (actual_width * actual_height * 3);
+        }
+
+        return;
+    }
+
     // intermediate collection for sorting lightmaps
     std::vector<std::pair<float, const lightmap_t *>> sortable;
     
@@ -3069,6 +3117,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         size *= 3;
     
     byte *out, *lit, *lux;
+
     GetFileSpace(&out, &lit, &lux, size * numstyles);
     if (facesup) {
         facesup->lightofs = out - filebase;
@@ -3084,15 +3133,33 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         Q_assert(Q_strcasecmp(texname, "trigger") != 0);
     }
     
-    const int actual_width = lightsurf->texsize[0] + 1;
-    const int actual_height = lightsurf->texsize[1] + 1;
-    
-    const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
-    const int oversampled_height = (lightsurf->texsize[1] + 1) * oversample;
-    
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
         const lightmap_t *lm = sorted.at(mapnum);
-        
+
+        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux);
+
+        out += (actual_width * actual_height);
+        lit += (actual_width * actual_height * 3);
+        lux += (actual_width * actual_height * 3);
+    }
+}
+
+/**
+ * - Writes (actual_width * actual_height) bytes to `out`
+ * - Writes (actual_width * actual_height * 3) bytes to `lit`
+ * - Writes (actual_width * actual_height * 3) bytes to `lux`
+ */
+static void
+WriteSingleLightmap(const mbsp_t *bsp,
+                    const bsp2_dface_t *face,
+                    const lightsurf_t *lightsurf,
+                    const lightmap_t *lm,
+                    const int actual_width, const int actual_height,
+                    byte *out, byte *lit, byte *lux)
+{
+        const int oversampled_width = actual_width * oversample;
+        const int oversampled_height = actual_height * oversample;
+
         // allocate new float buffers for the output colors and directions
         // these are the actual output width*height, without oversampling.
         
@@ -3160,7 +3227,6 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
                 }
             }
         }
-    }
 }
 
 static void LightFaceShutdown(lightsurf_t *lightsurf)
@@ -3195,19 +3261,23 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
     }    
     
     /* One extra lightmap is allocated to simplify handling overflow */
+    
+    if (!litonly) {
+        // if litonly is set we need to preserve the existing lightofs
 
-    /* some surfaces don't need lightmaps */
-    if (facesup)
-    {
-        facesup->lightofs = -1;
-        for (int i = 0; i < MAXLIGHTMAPS; i++)
-            facesup->styles[i] = 255;
-    }
-    else
-    {
-        face->lightofs = -1;
-        for (int i = 0; i < MAXLIGHTMAPS; i++)
-            face->styles[i] = 255;
+        /* some surfaces don't need lightmaps */
+        if (facesup)
+        {
+            facesup->lightofs = -1;
+            for (int i = 0; i < MAXLIGHTMAPS; i++)
+                facesup->styles[i] = 255;
+        }
+        else
+        {
+            face->lightofs = -1;
+            for (int i = 0; i < MAXLIGHTMAPS; i++)
+                face->styles[i] = 255;
+        }
     }
 
     /* don't bother with degenerate faces */
