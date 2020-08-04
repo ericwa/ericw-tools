@@ -35,6 +35,7 @@
 #include <cassert>
 #include <limits>
 #include <sstream>
+#include <utility> // for std::pair
 
 enum class hittype_t : uint8_t {
     NONE = 0,
@@ -49,14 +50,21 @@ color_rgba SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3
 
 class modelinfo_t;
 
-/*
+using style_t = int;
+
+/**
  * Convenience functions TestLight and TestSky will test against all shadow
  * casting bmodels and self-shadow the model 'self' if self != NULL. Returns
  * true if sky or light is visible, respectively.
+ *
+ * If the first element is true, and the second element of the pair is non-zero,
+ * it means light passed through a shadow-casting bmodel with the given style.
  */
-qboolean TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out);
-qboolean TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
+std::pair<qboolean, style_t> TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out);
+std::pair<qboolean, style_t> TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
+#if 0
 hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+#endif
 
 class modelinfo_t;
 

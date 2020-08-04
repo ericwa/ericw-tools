@@ -1317,12 +1317,18 @@ static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projecti
  *
  * Mesaures direct lighting at a point, currently only used for bounce lighting.
  * FIXME: factor out / merge with LightFace
+ *
+ * This gathers up how much a patch should bounce back into the level,
+ * per-lightstyle.
  * ================
  */
 std::map<int, qvec3f>
 GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal)
 {
     std::map<int, qvec3f> result;
+
+    // FIXME: probably shouldn't even calculate AO for gathering the light to bounce off a face, since
+    // AO is more of a postprocess effect?
 
     float occlusion = DirtAtPoint(cfg, rs, origin, normal, /* FIXME: pass selfshadow? */ nullptr);
     if (std::isnan(occlusion)) {
@@ -1354,7 +1360,7 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         if (LightSample_Brightness(color) <= fadegate)
             continue;
 
-        if (!TestLight(vpl.pos, origin, nullptr))
+        if (!TestLight(vpl.pos, origin, nullptr).first)
             continue;
 
         result[0] += vec3_t_to_glm(color);
@@ -1385,11 +1391,19 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
             continue;
         }
         
-        if (!TestLight(*entity.origin.vec3Value(), origin, NULL)) {
-            continue;
+        const std::pair<qboolean, style_t> hit = TestLight(*entity.origin.vec3Value(), origin, NULL);
+        if (!hit.first) {
+            continue; // blocked
         }
         
-        result[entity.style.intValue()] += vec3_t_to_glm(color);
+        int lightstyle;
+        if (hit.second != 0) {
+            lightstyle = hit.second; // switchable shadow takes precedence over the light's style
+        } else {
+            lightstyle = entity.style.intValue(); // use the style number from the light entity
+        }
+
+        result[lightstyle] += vec3_t_to_glm(color);
     }
     
     for (const sun_t &sun : GetSuns()) {
@@ -1415,8 +1429,16 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
 
         const bsp2_dface_t *face = nullptr;
-        if (!TestSky(origin, sun.sunvec, NULL, &face)) {
-            continue;
+        const std::pair<qboolean, style_t> hit = TestSky(origin, sun.sunvec, NULL, &face);
+        if (!hit.first) {
+            continue; // blocked
+        }
+
+        int lightstyle;
+        if (hit.second != 0) {
+            lightstyle = hit.second; // switchable shadow takes precedence over the light's style
+        } else {
+            lightstyle = sun.style;
         }
 
         // check if we hit the wrong texture
@@ -1435,7 +1457,7 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         }
         
         const qvec3f sunContrib = vec3_t_to_glm(sun.sunlight_color) * (dirt * cosangle * sun.sunlight / 255.0f);
-        result[sun.style] += sunContrib;
+        result[lightstyle] += sunContrib;
     }
     
     return result;

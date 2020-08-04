@@ -50,11 +50,14 @@ class raystream_embree_t;
 struct ray_source_info {
     raystream_embree_t *raystream; // may be null if this ray is not from a ray stream
     const modelinfo_t *self;
+    /// only used if raystream == null
+    int singleRayShadowStyle;
 
     ray_source_info(raystream_embree_t *raystream_, 
                     const modelinfo_t *self_) :
         raystream(raystream_),
-        self(self_) {}
+        self(self_),
+        singleRayShadowStyle(0) {}
 };
 
 /**
@@ -737,7 +740,7 @@ static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop)
 }
 
 //public
-qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
+std::pair<qboolean, style_t> Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
 {
     RTCRay ray = SetupRay_StartStop(start, stop);
 
@@ -750,14 +753,14 @@ qboolean Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo
     rtcOccluded1Ex(scene, &ctx, ray);
     
     if (ray.geomID != RTC_INVALID_GEOMETRY_ID)
-        return false; //hit
+        return std::make_pair(false, 0); //fully occluded
     
-    // no obstruction
-    return true;
+    // no obstruction (or a switchable shadow obstruction only)
+    return std::make_pair(true, ctx2.singleRayShadowStyle);
 }
 
 //public
-qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
+std::pair<qboolean, style_t> Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -786,7 +789,7 @@ qboolean Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t
         }
     }
 
-    return hit_sky;
+    return std::make_pair(hit_sky, ctx2.singleRayShadowStyle);
 }
 
 //public
@@ -1065,5 +1068,10 @@ void AddDynamicOccluderToRay(const RTCIntersectContext* context, unsigned rayInd
     ray_source_info *ctx = static_cast<ray_source_info *>(context->userRayExt);
     raystream_embree_t *rs = ctx->raystream;
 
-    rs->_ray_dynamic_styles[rayIndex] = style;
+    if (rs != nullptr) {
+        rs->_ray_dynamic_styles[rayIndex] = style;
+    } else {
+        // TestLight case
+        ctx->singleRayShadowStyle = style;
+    }
 }
