@@ -1396,11 +1396,10 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
             continue;
         }
         
-        int lightstyle;
-        if (hit.passedSwitchableShadowStyle != 0) {
-            lightstyle = hit.passedSwitchableShadowStyle; // switchable shadow takes precedence over the light's style
-        } else {
-            lightstyle = entity.style.intValue(); // use the style number from the light entity
+        int lightstyle = entity.style.intValue();
+        if (lightstyle == 0) {
+            // switchable shadow only blocks style 0 lights, otherwise switchable lights become always on when shadow is hidden
+            lightstyle = hit.passedSwitchableShadowStyle;
         }
 
         result[lightstyle] += vec3_t_to_glm(color);
@@ -1434,11 +1433,9 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
             continue;
         }
 
-        int lightstyle;
-        if (hit.passedSwitchableShadowStyle != 0) {
-            lightstyle = hit.passedSwitchableShadowStyle; // switchable shadow takes precedence over the light's style
-        } else {
-            lightstyle = sun.style;
+        int lightstyle = sun.style;
+        if (lightstyle == 0) {
+            lightstyle = hit.passedSwitchableShadowStyle; // switchable shadow only blocks style 0 suns
         }
 
         // check if we hit the wrong texture
@@ -1542,9 +1539,9 @@ LightFace_Entity(const mbsp_t *bsp,
         
         int i = rs->getPushedRayPointIndex(j);
         
-        // check if we hit a dynamic shadow caster
+        // check if we hit a dynamic shadow caster (only applies to style 0 lights)
         int desired_style = entity->style.intValue();
-        if (rs->getPushedRayDynamicStyle(j) != 0) {
+        if (desired_style == 0) {
             desired_style = rs->getPushedRayDynamicStyle(j);
         }
         
@@ -1655,7 +1652,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         
         // check if we hit a dynamic shadow caster
         int desired_style = sun->style;
-        if (rs->getPushedRayDynamicStyle(j) != 0) {
+        if (desired_style == 0) {
             desired_style = rs->getPushedRayDynamicStyle(j);
         }
         
