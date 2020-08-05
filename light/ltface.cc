@@ -1327,15 +1327,6 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
 {
     std::map<int, qvec3f> result;
 
-    // FIXME: probably shouldn't even calculate AO for gathering the light to bounce off a face, since
-    // AO is more of a postprocess effect?
-
-    float occlusion = DirtAtPoint(cfg, rs, origin, normal, /* FIXME: pass selfshadow? */ nullptr);
-    if (std::isnan(occlusion)) {
-        // HACK: getting an invalid normal of (0, 0, 0).
-        occlusion = 0.0f;
-    }
-
     //mxd. Surface lights...
     for (const surfacelight_t &vpl : SurfaceLights()) {
         // Bounce light falloff. Uses light surface center and intensity based on face area
@@ -1351,9 +1342,6 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         // Write out the final color
         vec3_t color;
         VectorScale(vpl.color, add, color); // color_out is expected to be in [0..255] range, vpl->color is in [0..1] range.
-
-        const float dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, surfpointToLightDist, /* FIXME: pass */ nullptr);
-        VectorScale(color, dirt, color);
         VectorScale(color, cfg.surflightbouncescale.floatValue(), color);
 
         // NOTE: Skip negative lights, which would make no sense to bounce!
@@ -1382,8 +1370,6 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         
         GetLightContrib(cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
         
-        const float dirt = Dirt_GetScaleFactor(cfg, occlusion, &entity, surfpointToLightDist, /* FIXME: pass */ nullptr);
-        VectorScale(color, dirt, color);
         VectorScale(color, entity.bouncescale.floatValue(), color);
         
         // NOTE: Skip negative lights, which would make no sense to bounce!
@@ -1448,12 +1434,7 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
             }
         }
 
-        float dirt = 1;
-        if (sun.dirt) {
-            dirt = Dirt_GetScaleFactor(cfg, occlusion, nullptr, 0.0, /* FIXME: pass */ nullptr);
-        }
-        
-        const qvec3f sunContrib = vec3_t_to_glm(sun.sunlight_color) * (dirt * cosangle * sun.sunlight / 255.0f);
+        const qvec3f sunContrib = vec3_t_to_glm(sun.sunlight_color) * (cosangle * sun.sunlight / 255.0f);
         result[lightstyle] += sunContrib;
     }
     
