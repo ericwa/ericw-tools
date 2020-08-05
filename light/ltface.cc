@@ -1360,7 +1360,7 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         if (LightSample_Brightness(color) <= fadegate)
             continue;
 
-        if (!TestLight(vpl.pos, origin, nullptr).first)
+        if (!TestLight(vpl.pos, origin, nullptr).blocked)
             continue;
 
         result[0] += vec3_t_to_glm(color);
@@ -1391,14 +1391,14 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
             continue;
         }
         
-        const std::pair<qboolean, style_t> hit = TestLight(*entity.origin.vec3Value(), origin, NULL);
-        if (!hit.first) {
-            continue; // blocked
+        const hitresult_t hit = TestLight(*entity.origin.vec3Value(), origin, NULL);
+        if (!hit.blocked) {
+            continue;
         }
         
         int lightstyle;
-        if (hit.second != 0) {
-            lightstyle = hit.second; // switchable shadow takes precedence over the light's style
+        if (hit.passedSwitchableShadowStyle != 0) {
+            lightstyle = hit.passedSwitchableShadowStyle; // switchable shadow takes precedence over the light's style
         } else {
             lightstyle = entity.style.intValue(); // use the style number from the light entity
         }
@@ -1429,14 +1429,14 @@ GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs,
         cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
 
         const bsp2_dface_t *face = nullptr;
-        const std::pair<qboolean, style_t> hit = TestSky(origin, sun.sunvec, NULL, &face);
-        if (!hit.first) {
-            continue; // blocked
+        const hitresult_t hit = TestSky(origin, sun.sunvec, NULL, &face);
+        if (!hit.blocked) {
+            continue;
         }
 
         int lightstyle;
-        if (hit.second != 0) {
-            lightstyle = hit.second; // switchable shadow takes precedence over the light's style
+        if (hit.passedSwitchableShadowStyle != 0) {
+            lightstyle = hit.passedSwitchableShadowStyle; // switchable shadow takes precedence over the light's style
         } else {
             lightstyle = sun.style;
         }

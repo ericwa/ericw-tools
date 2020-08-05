@@ -740,7 +740,7 @@ static RTCRay SetupRay_StartStop(const vec3_t start, const vec3_t stop)
 }
 
 //public
-std::pair<qboolean, style_t> Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
+hitresult_t Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
 {
     RTCRay ray = SetupRay_StartStop(start, stop);
 
@@ -753,14 +753,14 @@ std::pair<qboolean, style_t> Embree_TestLight(const vec3_t start, const vec3_t s
     rtcOccluded1Ex(scene, &ctx, ray);
     
     if (ray.geomID != RTC_INVALID_GEOMETRY_ID)
-        return std::make_pair(false, 0); //fully occluded
+        return {false, 0}; //fully occluded
     
     // no obstruction (or a switchable shadow obstruction only)
-    return std::make_pair(true, ctx2.singleRayShadowStyle);
+    return {true, ctx2.singleRayShadowStyle};
 }
 
 //public
-std::pair<qboolean, style_t> Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
+hitresult_t Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -789,7 +789,7 @@ std::pair<qboolean, style_t> Embree_TestSky(const vec3_t start, const vec3_t dir
         }
     }
 
-    return std::make_pair(hit_sky, ctx2.singleRayShadowStyle);
+    return {hit_sky, ctx2.singleRayShadowStyle};
 }
 
 //public

@@ -742,7 +742,7 @@ TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
 // Embree wrappers
 //
 
-std::pair<qboolean, style_t> TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
+hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
@@ -758,7 +758,7 @@ std::pair<qboolean, style_t> TestSky(const vec3_t start, const vec3_t dirn, cons
     throw; //mxd. Silences compiler warning
 }
 
-std::pair<qboolean, style_t> TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
+hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {

@@ -52,16 +52,22 @@ class modelinfo_t;
 
 using style_t = int;
 
+struct hitresult_t {
+    bool blocked;
+
+    /**
+     * non-zero means light passed through a shadow-casting bmodel with the given style.
+     * only valid if blocked == false.
+     */
+    style_t passedSwitchableShadowStyle;
+};
+
 /**
  * Convenience functions TestLight and TestSky will test against all shadow
- * casting bmodels and self-shadow the model 'self' if self != NULL. Returns
- * true if sky or light is visible, respectively.
- *
- * If the first element is true, and the second element of the pair is non-zero,
- * it means light passed through a shadow-casting bmodel with the given style.
+ * casting bmodels and self-shadow the model 'self' if self != NULL.
  */
-std::pair<qboolean, style_t> TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out);
-std::pair<qboolean, style_t> TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
+hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out);
+hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
 #if 0
 hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 #endif
