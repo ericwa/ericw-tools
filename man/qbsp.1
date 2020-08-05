@@ -265,12 +265,18 @@ format.
 .PP
 func_detail variant with no collision (players / monsters / gunfire) and doesn't split world faces. Doesn't cast shadows unless enabled with "_shadow" "1". Useful for hanging vines. Still creates BSP leafs, which is unavoidable without a new .bsp file format.
 
+Intersecting func_detail_illusionary brushes don't clip each other; this is intended to make trees/shrubs/foliage easier with "_mirrorinside" "1".
+
 .SS "func_detail_wall"
 .PP
 func_detail variant that doesn't split world faces. Useful for when you want a decoration touching a floor or wall to not split the floor/wall faces (you'll get some overdraw instead.) If it completely covers up a world face, that face will get clipped away, so it's not suitable for fence textures; see func_detail_fence instead.
 
+Intersecting func_detail_wall brushes don't clip each other.
+
 .SS "func_detail_fence"
 Similar to func_detail_wall except it's suitable for fence textures, never clips away world faces. Useful for fences, grates, etc., that are solid and block gunfire.
+
+Intersecting func_detail_fence brushes don't clip each other.
 
 .SH "MODEL ENTITY KEYS"
 

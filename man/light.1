@@ -53,6 +53,15 @@ needed.
 Updates the entities lump in the bsp. You should run this after running qbsp with -onlyents,
 if your map uses any switchable lights. All this does is assign style numbers to each
 switchable light.
+.IP "\fB-litonly\fP"
+Generate a .lit file that is compatible with the .bsp without modifying the .bsp.
+This is meant for tweaking lighting or adding colored lights when you can't modify
+an existing .bsp (e.g. for multiplayer maps.) 
+Typically you would make a temporary copy of the .bsp, update the lights in the
+entity lump (e.g. with "qbsp -onlyents"), then re-light it with "light -litonly".
+Engines may enforce a restriction that you can't make areas brighter than they originally were (cheat protection).
+Also, styled lights (flickering/switchable) can't be added in new areas or have their styles changed.
+
 .br
 .SS "Postprocessing options:"
 .IP "\fB-soft [n]\fP"
@@ -263,6 +272,10 @@ If n is 1, this model casts a shadow that can be switched on/off using QuakeC.
 To make this work, a lightstyle is automatically assigned and stored in a key called "switchshadstyle",
 which the QuakeC will need to read and call the "lightstyle()" builtin with "a" or "m" to switch the shadow on or off.
 Entities sharing the same targetname, and with "_switchableshadow" set to 1, will share the same lightstyle.
+
+These models are only able to block style 0 light (i.e., non-flickering or switchable lights).
+Flickering or switchable lights will shine through the switchable shadow casters, regardless of whether the
+shadow is off or on.
 
 .IP "\fB""_dirt"" ""n""\fP"
 For brush models, -1 prevents dirtmapping on the brush model. Useful if the
