@@ -117,6 +117,7 @@ CreateGeometry(const mbsp_t *bsp, RTCScene scene, const std::vector<const bsp2_d
         if (face->numedges < 3)
             continue;
         
+        // NOTE: can be null for "skip" faces
         const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
         
         for (int j = 2; j < face->numedges; j++) {
@@ -289,7 +290,12 @@ Embree_FilterFuncN(int* valid,
         
         const modelinfo_t *source_modelinfo = rsi->self;
         const modelinfo_t *hit_modelinfo = Embree_LookupModelinfo(geomID, primID);
-        Q_assert(hit_modelinfo != nullptr);
+        if (!hit_modelinfo) {
+            // we hit a "skip" face with no associated model
+            // reject hit (???)
+            valid[i] = INVALID;
+            continue;
+        }
         
         if (hit_modelinfo->shadowworldonly.boolValue()) {
             // we hit "_shadowworldonly" "1" geometry. Ignore the hit unless we are from world.

@@ -652,7 +652,7 @@ FindDebugFace(const mbsp_t *bsp)
     dump_facenum = facenum;
     
     const modelinfo_t *mi = ModelInfoForFace(bsp, facenum);
-    const int modelnum = (mi->model - bsp->dmodels);
+    const int modelnum = mi ? (mi->model - bsp->dmodels) : -1;
     
     const char *texname = Face_TextureName(bsp, f);
     

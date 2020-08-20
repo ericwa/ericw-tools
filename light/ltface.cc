@@ -639,7 +639,11 @@ PositionSamplePointOnFace(const mbsp_t *bsp,
     }
     
     const modelinfo_t *mi = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
-    
+    if (mi == nullptr) {
+        // missing model ("skip" faces) don't get lighting
+        return position_t(point);
+    }
+
     // Get the point normal
     qvec3f pointNormal;
     if (phongShaded) {

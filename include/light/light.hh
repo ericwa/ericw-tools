@@ -420,6 +420,9 @@ void FixupGlobalSettings(void);
 void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
 void GetFileSpace_PreserveOffsetInBsp(byte **lightdata, byte **colordata, byte **deluxdata, int lightofs);
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
+/**
+ * returs nullptr for "skip" faces
+ */
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 //bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf); //mxd. Missing definition
 int light_main(int argc, const char **argv);
