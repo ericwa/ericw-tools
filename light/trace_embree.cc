@@ -697,7 +697,7 @@ Embree_TraceInit(const mbsp_t *bsp)
         Error("embree must be built with ray masks disabled");
     }
 
-    scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT, RTC_INTERSECT1 | RTC_INTERSECT_STREAM);
+    scene = rtcDeviceNewScene(device, RTC_SCENE_STATIC | RTC_SCENE_COHERENT | RTC_SCENE_HIGH_QUALITY, RTC_INTERSECT1 | RTC_INTERSECT_STREAM);
     skygeom = CreateGeometry(bsp, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, scene, solidfaces);
     filtergeom = CreateGeometry(bsp, scene, filterfaces);
