@@ -153,7 +153,7 @@ polylib::WindingBounds (const winding_t *w, vec3_t mins, vec3_t maxs)
  * =================
  */
 polylib::winding_t *
-polylib::BaseWindingForPlane(const vec3_t normal, float dist)
+polylib::BaseWindingForPlane(const vec3_t normal, const float dist)
 {
     int i, x;
     vec_t max, v;
@@ -161,7 +161,7 @@ polylib::BaseWindingForPlane(const vec3_t normal, float dist)
     winding_t *w;
 
     /* find the major axis */
-    max = -BOGUS_RANGE;
+    max = -VECT_MAX;
     x = -1;
     for (i = 0; i < 3; i++) {
         v = fabs(normal[i]);
@@ -192,8 +192,8 @@ polylib::BaseWindingForPlane(const vec3_t normal, float dist)
 
     CrossProduct(vup, normal, vright);
 
-    VectorScale(vup, 8192, vup);
-    VectorScale(vright, 8192, vright);
+    VectorScale(vup, 10e6, vup);
+    VectorScale(vright, 10e6, vright);
 
     /* project a really big axis aligned box onto the plane */
     w = AllocWinding(4);
