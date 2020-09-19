@@ -418,6 +418,28 @@ SimpleFlood(portal_t *srcportal, int leafnum, byte *portalsee)
 }
 
 /*
+  ============================================================================
+  Used for visdist to get the distance from a winding to a portal
+  ============================================================================
+*/
+
+float
+distFromWinding(winding_t *w, portal_t *p)
+{
+    float dist, mindist;
+    mindist = 1e20;
+
+    for (int i = 0; i < w->numpoints; ++i) {
+        dist = fabs(DotProduct(w->points[i], p->plane.normal) - p->plane.dist);
+
+        if (dist < mindist)
+            mindist = dist;
+    }
+    return mindist;
+}
+
+
+/*
   ==============
   BasePortalVis
   ==============
@@ -478,6 +500,11 @@ BasePortalThread(void *dummy)
             }
             if (j == w->numpoints)
                 continue;       // no points on back
+
+            if (visdist > 0) {
+                if (distFromWinding(tp->winding, p) > visdist || distFromWinding(p->winding, tp) > visdist)
+                    continue;
+            }
 
             portalsee[i] = 1;
         }

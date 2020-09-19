@@ -124,6 +124,7 @@ extern qboolean ambientsky;
 extern qboolean ambientwater;
 extern qboolean ambientslime;
 extern qboolean ambientlava;
+extern int visdist;
 
 extern byte *uncompressed;
 extern int leafbytes;

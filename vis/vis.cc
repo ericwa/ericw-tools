@@ -47,6 +47,7 @@ qboolean ambientsky = true;
 qboolean ambientwater = true;
 qboolean ambientslime = true;
 qboolean ambientlava = true;
+int visdist = 0;
 
 #if 0
 void
@@ -1269,6 +1270,10 @@ main(int argc, char **argv)
             ambientwater = false;
             ambientslime = false;
             ambientlava = false;
+        } else if (!strcmp(argv[i], "-visdist")) {
+            visdist = atoi(argv[i+1]);
+            i++;
+            logprint("visdist = %i\n", visdist);
         } else if (argv[i][0] == '-')
             Error("Unknown option \"%s\"", argv[i]);
         else
