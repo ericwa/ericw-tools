@@ -219,7 +219,7 @@ public:
         if (s != 0) {
             return s;
         }
-        if (phong.boolValue()) {
+        if (phong.intValue() > 0) {
             return DEFAULT_PHONG_ANGLE;
         }
         return 0;
@@ -281,6 +281,7 @@ public:
     
     /* phong */
     lockable_bool_t phongallowed;
+    lockable_vec_t phongangle;
     
     /* bounce */
     lockable_bool_t bounce;
@@ -330,6 +331,7 @@ public:
 
         /* phong */
         phongallowed {"phong", true},
+        phongangle { "phong_angle", 0}, 
 
         /* bounce */
         bounce {"bounce", false},
