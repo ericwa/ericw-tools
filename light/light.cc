@@ -1078,7 +1078,7 @@ light_main(int argc, const char **argv)
             logprint("-litonly specified; .bsp file will not be modified\n");
             litonly = true;
             write_litfile |= 1;
-        } else if ( !strcmp( argv[ i ], "-verbose" ) ) {
+        } else if ( !strcmp( argv[ i ], "-verbose" ) || !strcmp( argv[ i ], "-v" ) ) { // Quark always passes -v
             verbose_log = true;
         } else if ( !strcmp( argv[ i ], "-help" ) ) {
             PrintUsage();
