@@ -307,6 +307,7 @@ public:
     lockable_vec3_t sunvec;
     lockable_vec3_t sun2vec;
     lockable_vec_t sun_deviance;
+    lockable_vec3_t sky_surface;
     
     globalconfig_t() :
         scaledist {"dist", 1.0, 0.0f, 100.0f},
@@ -358,7 +359,8 @@ public:
         sunlight2_dirt  { "sunlight2_dirt", 0.0f },
         sunvec          { strings{"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
         sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
-        sun_deviance    { "sunlight_penumbra", 0.0f, 0.0f, 180.0f }
+        sun_deviance    { "sunlight_penumbra", 0.0f, 0.0f, 180.0f },
+        sky_surface     { strings{"sky_surface", "sun_surface"}, 0, 0, 0} /* arghrad surface lights on sky faces */
     {}
     
     settingsdict_t settings() {
@@ -387,7 +389,8 @@ public:
             &sunlight2_dirt,
             &sunvec,
             &sun2vec,
-            &sun_deviance
+            &sun_deviance,
+            &sky_surface
         }};
     }
 };
