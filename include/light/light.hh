@@ -345,8 +345,9 @@ public:
         surflightsubdivision { strings { "surflightsubdivision", "choplight" }, 16.0f, 1.0f, 8192.0f }, // "choplight" - arghrad3 name
 
         /* sun */
-        sunlight        { "sunlight", 0.0f },  /* main sun */
-        sunlight_color  { "sunlight_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
+        /* sun_light, sun_color, sun_angle for http://www.bspquakeeditor.com/arghrad/ compatibility */
+        sunlight        { strings{"sunlight", "sun_light"}, 0.0f },  /* main sun */
+        sunlight_color  { strings{"sunlight_color", "sun_color"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         sun2            { "sun2", 0.0f },      /* second sun */
         sun2_color      { "sun2_color", 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         sunlight2       { "sunlight2", 0.0f }, /* top sky dome */
@@ -355,7 +356,7 @@ public:
         sunlight3_color { strings{"sunlight3_color", "sunlight_color3"}, 255.0f, 255.0f, 255.0f, vec3_transformer_t::NORMALIZE_COLOR_TO_255 },
         sunlight_dirt   { "sunlight_dirt", 0.0f },
         sunlight2_dirt  { "sunlight2_dirt", 0.0f },
-        sunvec          { strings{"sunlight_mangle", "sun_mangle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
+        sunvec          { strings{"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
         sun2vec         { "sun2_mangle", 0.0f, -90.0f, 0.0f, vec3_transformer_t::MANGLE_TO_VEC },  /* defaults to straight down */
         sun_deviance    { "sunlight_penumbra", 0.0f, 0.0f, 180.0f }
     {}
