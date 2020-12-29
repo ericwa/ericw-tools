@@ -26,6 +26,11 @@ See file, 'COPYING', for details.
 typedef struct {
     vec3_t pos;
     qvec3f surfnormal;
+    /**
+     * disables use of the surfnormal. We set this to true on sky surface lights,
+     * to avoid black seams on geometry meeting the sky
+     */
+    bool omnidirectional;
     std::vector<qvec3f> points;
 
     // Surface light settings...

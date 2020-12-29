@@ -1921,19 +1921,29 @@ static qvec3f
 GetSurfaceLighting(const globalconfig_t &cfg, const surfacelight_t *vpl, const qvec3f &dir, const float dist, const qvec3f &normal)
 {
     qvec3f result{0};
-    const float dp1 = qv::dot(vpl->surfnormal, dir);
-    if (dp1 < 0.0f) return result; // sample point behind vpl
+    float dotProductFactor = 1.0f;
 
+    const float dp1 = qv::dot(vpl->surfnormal, dir);
     const qvec3f sp_vpl = dir * -1.0f;
     float dp2 = qv::dot(sp_vpl, normal);
-    if (dp2 < 0.0f) return result; // vpl behind sample face
+
+    if (!vpl->omnidirectional) {
+        if (dp1 < 0.0f) return {0}; // sample point behind vpl
+        if (dp2 < 0.0f) return {0}; // vpl behind sample face
+
+        dp2 = 0.5f + dp2 * 0.5f; // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
+
+        dotProductFactor = dp1 * dp2;
+    } else {
+        // used for sky face surface lights
+        dotProductFactor = dp2;
+    }
 
     // Get light contribution
     result = SurfaceLight_ColorAtDist(cfg, vpl->intensity, vec3_t_to_glm(vpl->color), dist);
-    dp2 = 0.5f + dp2 * 0.5f; // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
-    
+
     // Apply angle scale
-    const qvec3f resultscaled = result * dp1 * dp2;
+    const qvec3f resultscaled = result * dotProductFactor;
 
     Q_assert(!std::isnan(resultscaled[0]) && !std::isnan(resultscaled[1]) && !std::isnan(resultscaled[2]));
     return resultscaled;

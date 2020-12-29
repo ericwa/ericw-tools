@@ -149,6 +149,7 @@ MakeSurfaceLightsThread(void *arg)
         // Add surfacelight...
         surfacelight_t l;
         l.surfnormal = vec3_t_to_glm(facenormal);
+        l.omnidirectional = (info->flags & Q2_SURF_SKY) ? true : false;
         l.points = points;
         VectorCopy(facemidpoint, l.pos);
 
