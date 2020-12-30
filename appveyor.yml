@@ -15,7 +15,7 @@ build_script:
 
     cd cmakebuild
 
-    cmake .. -T v120_xp -Dembree_DIR="c:/embree-2.17.7.x64.windows" -DTBB_DIR="C:/tbb2017_20170604oss/cmake" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
+    cmake .. -T v142 -Dembree_DIR="c:/embree-2.17.7.x64.windows" -DTBB_DIR="C:/tbb2017_20170604oss/cmake" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
 
     $cmakePlatform = "x64"
 
