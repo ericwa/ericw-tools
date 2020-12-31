@@ -398,6 +398,21 @@ static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
     return result;
 }
 
+/**
+ * Q2: Returns nonzero if phong is requested on this face, in which case that is
+ * the face tag to smooth with. Otherwise returns 0.
+ */
+static int Q2_FacePhongValue(const mbsp_t *bsp, const bsp2_dface_t *face) {
+    const gtexinfo_t* texinfo = BSP_GetTexinfo(bsp, face->texinfo);
+    if (texinfo != nullptr) {
+        if (texinfo->value != 0
+            && ((texinfo->flags & Q2_SURF_LIGHT) == 0)) {
+            return texinfo->value;
+        }
+    }
+    return 0;
+}
+
 void
 CalcualateVertexNormals(const mbsp_t *bsp)
 {
@@ -504,6 +519,30 @@ CalcualateVertexNormals(const mbsp_t *bsp)
         }
     }
     
+    // Q2: build the "face -> faces to smooth with" map
+    for (int i = 0; i < bsp->numfaces; i++) {
+        const bsp2_dface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
+        const int f_phongValue = Q2_FacePhongValue(bsp, f);
+        if (f_phongValue == 0)
+            continue;
+
+        for (int j = 0; j < f->numedges; j++) {
+            const int v = Face_VertexAtIndex(bsp, f, j);
+            // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
+            for (const bsp2_dface_t *f2 : vertsToFaces[v]) {
+                if (f2 == f)
+                    continue;
+
+                const int f2_phongValue = Q2_FacePhongValue(bsp, f2);
+                if (f_phongValue != f2_phongValue)
+                    continue;
+
+                // we've already checked f_phongValue is nonzero, so smooth these two faces.
+                smoothFaces[f].insert(f2);
+            }
+        }
+    }
+
     // finally do the smoothing for each face
     for (int i = 0; i < bsp->numfaces; i++)
     {

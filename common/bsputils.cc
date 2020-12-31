@@ -73,6 +73,17 @@ const bsp2_dface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
     return &bsp->dfaces[fnum];
 }
 
+const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo) {
+    if (texinfo < 0) {
+        return nullptr;
+    }
+    if (texinfo >= bsp->numtexinfo) {
+        return nullptr;
+    }
+    const gtexinfo_t *tex = &bsp->texinfo[texinfo];
+    return tex;
+}
+
 bsp2_dface_t *BSP_GetFace(mbsp_t *bsp, int fnum)
 {
     Q_assert(fnum >= 0 && fnum < bsp->numfaces);
