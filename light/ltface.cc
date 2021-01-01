@@ -3124,19 +3124,23 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     if (!numstyles)
         return;
 
-    int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
-    
-	// q2 support
-    if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION)
-        size *= 3;
-    
-    byte *out, *lit, *lux;
+    const int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
 
+    byte *out, *lit, *lux;
     GetFileSpace(&out, &lit, &lux, size * numstyles);
-    if (facesup) {
-        facesup->lightofs = out - filebase;
+
+    // q2 support
+    int lightofs;
+    if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION) {
+        lightofs = lit - lit_filebase;
     } else {
-        face->lightofs = out - filebase;
+        lightofs = out - filebase;
+    }
+
+    if (facesup) {
+        facesup->lightofs = lightofs;
+    } else {
+        face->lightofs = lightofs;
     }
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
@@ -3204,23 +3208,17 @@ WriteSingleLightmap(const mbsp_t *bsp,
                 *lit++ = color[1];
                 *lit++ = color[2];
                 
-                if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION) {
-                    *out++ = color[0];
-                    *out++ = color[1];
-                    *out++ = color[2];
-                } else {
-                    /* Take the max() of the 3 components to get the value to write to the
-                     .bsp lightmap. this avoids issues with some engines
-                     that require the lit and internal lightmap to have the same
-                     intensity. (MarkV, some QW engines)
+                /* Take the max() of the 3 components to get the value to write to the
+                .bsp lightmap. this avoids issues with some engines
+                that require the lit and internal lightmap to have the same
+                intensity. (MarkV, some QW engines)
                      
-                     This must be max(), see LightNormalize in MarkV 1036.
-                     */
-                    float light = qmax(qmax(color[0], color[1]), color[2]);
-                    if (light < 0) light = 0;
-                    if (light > 255) light = 255;
-                    *out++ = light;
-                }
+                This must be max(), see LightNormalize in MarkV 1036.
+                */
+                float light = qmax(qmax(color[0], color[1]), color[2]);
+                if (light < 0) light = 0;
+                if (light > 255) light = 255;
+                *out++ = light;
                 
                 if (lux) {
                     vec3_t temp;

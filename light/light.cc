@@ -175,6 +175,9 @@ PrintOptionsSummary(void)
 /*
  * Return space for the lightmap and colourmap at the same time so it can
  * be done in a thread-safe manner.
+ *
+ * size is the number of greyscale pixels = number of bytes to allocate
+ * and return in *lightdata
  */
 void
 GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
@@ -464,12 +467,18 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     logprint("Lighting Completed.\n\n");
 
-    // Transfer greyscale lightmap to the bsp and update lightdatasize
+    // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
-        bsp->lightdatasize = file_p;
         free(bsp->dlightdata);
-        bsp->dlightdata = (byte *)malloc(bsp->lightdatasize);
-        memcpy(bsp->dlightdata, filebase, bsp->lightdatasize);
+        if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION) {
+            bsp->lightdatasize = lit_file_p;
+            bsp->dlightdata = (byte *)malloc(bsp->lightdatasize);
+            memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
+        } else {
+            bsp->lightdatasize = file_p;
+            bsp->dlightdata = (byte *)malloc(bsp->lightdatasize);
+            memcpy(bsp->dlightdata, filebase, bsp->lightdatasize);
+        }
     } else {
         // NOTE: bsp->lightdatasize is already valid in the -litonly case
     }
