@@ -624,6 +624,7 @@ Embree_TraceInit(const mbsp_t *bsp)
             }
             
             const int contents = Face_Contents(bsp, face); //mxd
+            const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
             //mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
             if(bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_NODRAW) && !(contents & Q2_SURF_SKY))
@@ -645,9 +646,22 @@ Embree_TraceInit(const mbsp_t *bsp)
             }
             
             // handle sky
-            if (/* !Q_strncasecmp("sky", texname, 3) */ bsp->loadversion == Q2_BSPVERSION ? contents & Q2_SURF_SKY : contents == CONTENTS_SKY) { //mxd
-                skyfaces.push_back(face);
-                continue;
+            if (bsp->loadversion == Q2_BSPVERSION) {
+                // Q2: arghrad compat: sky faces only emit sunlight if:
+                // sky flag set, light flag set, value nonzero
+                if ((contents & Q2_SURF_SKY) != 0
+                    && (contents & Q2_SURF_LIGHT) != 0
+                    && texinfo->value != 0)
+                {
+                    skyfaces.push_back(face);
+                    continue;
+                }
+            } else {
+                // Q1
+                if (!Q_strncasecmp("sky", texname, 3)) {
+                    skyfaces.push_back(face);
+                    continue;
+                }
             }
             
             // liquids
