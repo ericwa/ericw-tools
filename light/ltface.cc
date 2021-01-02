@@ -1508,6 +1508,7 @@ LightFace_Entity(const mbsp_t *bsp,
         rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, color, normalcontrib);
     }
     
+    // don't need closest hit, just checking for occlusion between light and surface point
     rs->tracePushedRaysOcclusion(modelinfo);
     total_light_rays += rs->numPushedRays();
     
@@ -1525,6 +1526,16 @@ LightFace_Entity(const mbsp_t *bsp,
         int i = rs->getPushedRayPointIndex(j);
         
         // check if we hit a dynamic shadow caster (only applies to style 0 lights)
+        //
+        // note, this still works even though we're doing an occlusion trace - closest
+        // hit doesn't matter. All that matters is whether there is a real (solid) occluder
+        // between the ray start and end.
+        //
+        // If there is, the light is fully blocked and we bail out above, regardless of any
+        // dynamic shadow casters that also might be along the ray.
+        //
+        // If not, then we are guaranteed to detect the dynamic shadow caster in the ray filter
+        // (if any), and handle it here.
         int desired_style = entity->style.intValue();
         if (desired_style == 0) {
             desired_style = rs->getPushedRayDynamicStyle(j);
@@ -1611,6 +1622,8 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
         rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, color, normalcontrib);
     }
     
+    // We need to check if the first hit face is a sky face, so we need
+    // to test intersection (not occlusion)
     rs->tracePushedRaysIntersection(modelinfo);
     
     /* if sunlight is set, use a style 0 light map */
@@ -1740,6 +1753,7 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
             }
         }
         
+        // local minlight just needs occlusion, not closest hit
         rs->tracePushedRaysOcclusion(modelinfo);
         total_light_rays += rs->numPushedRays();
         
@@ -2564,7 +2578,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
             rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue());
         }
         
-        // trace the batch
+        // trace the batch. need closest hit for dirt, so intersection.
         rs->tracePushedRaysIntersection(lightsurf->modelinfo);
         
         // accumulate hitdists
