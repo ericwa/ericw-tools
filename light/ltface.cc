@@ -856,7 +856,8 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     /* Allocate occlusion array */
     lightsurf->occlusion = (float *) calloc(lightsurf->numpoints, sizeof(float));
     
-    lightsurf->stream = MakeRayStream(lightsurf->numpoints);
+    lightsurf->intersection_stream = MakeIntersectionRayStream(lightsurf->numpoints);
+    lightsurf->occlusion_stream = MakeOcclusionRayStream(lightsurf->numpoints);
     return true;
 }
 
@@ -1327,7 +1328,7 @@ static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projecti
  * ================
  */
 std::map<int, qvec3f>
-GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, raystream_t *rs, const vec3_t origin, const vec3_t normal)
+GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t origin, const vec3_t normal)
 {
     std::map<int, qvec3f> result;
 
@@ -1481,7 +1482,7 @@ LightFace_Entity(const mbsp_t *bsp,
     /*
      * Check it for real
      */
-    raystream_t *rs = lightsurf->stream;
+    raystream_occlusion_t *rs = lightsurf->occlusion_stream;
     rs->clearPushedRays();
     
     for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -1585,7 +1586,7 @@ LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *li
     }
 
     /* Check each point... */
-    raystream_t *rs = lightsurf->stream;
+    raystream_intersection_t *rs = lightsurf->intersection_stream;
     rs->clearPushedRays();
     
     for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -1733,7 +1734,7 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
             continue;
         }
         
-        raystream_t *rs = lightsurf->stream;
+        raystream_occlusion_t *rs = lightsurf->occlusion_stream;
         rs->clearPushedRays();
         
         lightmap = Lightmap_ForStyle(lightmaps, entity.style.intValue(), lightsurf);
@@ -2021,7 +2022,7 @@ LightFace_Bounce(const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t 
             const int style = styleColor.first;
             const qvec3f &color = styleColor.second;
             
-            raystream_t *rs = lightsurf->stream;
+            raystream_occlusion_t *rs = lightsurf->occlusion_stream;
             rs->clearPushedRays();
             
             for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -2201,7 +2202,7 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
         if (SurfaceLight_SphereCull(&vpl, lightsurf))
             continue;
 
-        raystream_t *rs = lightsurf->stream;
+        raystream_occlusion_t *rs = lightsurf->occlusion_stream;
 
         for (int c = 0; c < vpl.points.size(); c++) {
             rs->clearPushedRays();
@@ -2483,7 +2484,7 @@ GetDirtVector(const globalconfig_t &cfg, int i, vec3_t out)
 }
 
 float
-DirtAtPoint(const globalconfig_t &cfg, raystream_t *rs, const vec3_t point, const vec3_t normal, const modelinfo_t *selfshadow)
+DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t point, const vec3_t normal, const modelinfo_t *selfshadow)
 {
     if (!dirt_in_use) {
         return 0.0f;
@@ -2560,7 +2561,7 @@ LightFace_CalculateDirt(lightsurf_t *lightsurf)
     }
 
     for (int j=0; j<numDirtVectors; j++) {
-        raystream_t *rs = lightsurf->stream;
+        raystream_intersection_t *rs = lightsurf->intersection_stream;
         rs->clearPushedRays();
         
         // fill in input buffers
@@ -3267,7 +3268,8 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
     free(lightsurf->occluded);
     free(lightsurf->realfacenums);
     
-    delete lightsurf->stream;
+    delete lightsurf->occlusion_stream;
+    delete lightsurf->intersection_stream;
     
     delete lightsurf;
 }

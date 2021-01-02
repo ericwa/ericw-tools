@@ -791,41 +791,14 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const mod
     throw; //mxd. Silences compiler warning
 }
 
-raystream_t *BSP_MakeRayStream(int maxrays)
-{
-    return nullptr;
+raystream_intersection_t *MakeIntersectionRayStream(int maxrays) {
+    return Embree_MakeIntersectionRayStream(maxrays);
 }
-
-raystream_t *MakeRayStream(int maxrays)
-{
-#ifdef HAVE_EMBREE
-    if (rtbackend == backend_embree) {
-        return Embree_MakeRayStream(maxrays);
-    }
-#endif
-#if 0
-    if (rtbackend == backend_bsp) {
-        return BSP_MakeRayStream(maxrays);
-    }
-#endif
-    Error("no backend available");
-    throw; //mxd. Silences compiler warning
+raystream_occlusion_t* MakeOcclusionRayStream(int maxrays) {
+    return Embree_MakeOcclusionRayStream(maxrays);
 }
 
 void MakeTnodes(const mbsp_t *bsp)
 {
-#ifdef HAVE_EMBREE
-    if (rtbackend == backend_embree) {
-        Embree_TraceInit(bsp);
-        return;
-    }
-#endif
-#if 0
-    if (rtbackend == backend_bsp) {
-        BSP_MakeTnodes(bsp);
-        return;
-    }
-#endif
-    Error("no backend available");
-    throw; //mxd. Silences compiler warning
+    Embree_TraceInit(bsp);
 }

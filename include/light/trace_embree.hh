@@ -34,6 +34,7 @@ hitresult_t Embree_TestSky(const vec3_t start, const vec3_t dirn, const modelinf
 hitresult_t Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
 hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
 
-raystream_t *Embree_MakeRayStream(int maxrays);
+raystream_occlusion_t *Embree_MakeOcclusionRayStream(int maxrays);
+raystream_intersection_t *Embree_MakeIntersectionRayStream(int maxrays);
 
 #endif /* __LIGHT_TRACE_EMBREE_H__ */

@@ -74,32 +74,26 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const mod
 
 class modelinfo_t;
 
-class raystream_t {
+class raystream_common_t {
 public:
+    virtual ~raystream_common_t() = default;
     virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
-    virtual void tracePushedRaysOcclusion(const modelinfo_t *self) = 0;
-    virtual void tracePushedRaysIntersection(const modelinfo_t *self) = 0;
-    virtual bool getPushedRayOccluded(size_t j) = 0;
-    virtual float getPushedRayDist(size_t j) = 0;
-    virtual float getPushedRayHitDist(size_t j) = 0;
-    virtual hittype_t getPushedRayHitType(size_t j) = 0;
-    virtual const bsp2_dface_t *getPushedRayHitFace(size_t j) = 0;
     virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
     virtual int getPushedRayPointIndex(size_t j) = 0;
     virtual void getPushedRayColor(size_t j, vec3_t out) = 0;
     virtual void getPushedRayNormalContrib(size_t j, vec3_t out) = 0;
     virtual int getPushedRayDynamicStyle(size_t j) = 0;
     virtual void clearPushedRays() = 0;
-    virtual ~raystream_t() {};
-    
+
+public:
     void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist) {
         vec3_t originTemp, dirTemp;
         glm_to_vec3_t(origin, originTemp);
         glm_to_vec3_t(dir, dirTemp);
         this->pushRay(i, originTemp, dirTemp, dist);
     }
-    
+
     qvec3f getPushedRayDir(size_t j) {
         vec3_t temp;
         this->getPushedRayDir(j, temp);
@@ -107,7 +101,26 @@ public:
     }
 };
 
-raystream_t *MakeRayStream(int maxrays);
+class raystream_intersection_t : public virtual raystream_common_t {
+public:
+    virtual void tracePushedRaysIntersection(const modelinfo_t *self) = 0;
+    virtual float getPushedRayHitDist(size_t j) = 0;
+    virtual hittype_t getPushedRayHitType(size_t j) = 0;
+    virtual const bsp2_dface_t *getPushedRayHitFace(size_t j) = 0;
+
+    virtual ~raystream_intersection_t() = default;
+};
+
+class raystream_occlusion_t : public virtual raystream_common_t {
+public:
+    virtual void tracePushedRaysOcclusion(const modelinfo_t *self) = 0;
+    virtual bool getPushedRayOccluded(size_t j) = 0;
+
+    virtual ~raystream_occlusion_t() = default;
+};
+
+raystream_intersection_t *MakeIntersectionRayStream(int maxrays);
+raystream_occlusion_t *MakeOcclusionRayStream(int maxrays);
 
 void MakeTnodes(const mbsp_t *bsp);
 

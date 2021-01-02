@@ -878,7 +878,7 @@ static void q_aligned_free(void *ptr)
 #endif
 }
 
-class raystream_embree_t : public raystream_t {
+class raystream_embree_t : public raystream_occlusion_t, public raystream_intersection_t {
 public:
     RTCRay *_rays;
     float *_rays_maxdist;
@@ -969,12 +969,7 @@ public:
         Q_assert(j < _maxrays);
         return (_rays[j].geomID != RTC_INVALID_GEOMETRY_ID);
     }
-    
-    virtual float getPushedRayDist(size_t j) {
-        Q_assert(j < _maxrays);
-        return _rays_maxdist[j];
-    }
-    
+
     virtual float getPushedRayHitDist(size_t j) {
         Q_assert(j < _maxrays);
         return _rays[j].tfar;
@@ -1041,7 +1036,12 @@ public:
     }
 };
 
-raystream_t *Embree_MakeRayStream(int maxrays)
+raystream_occlusion_t *Embree_MakeOcclusionRayStream(int maxrays)
+{
+    return new raystream_embree_t{maxrays};
+}
+
+raystream_intersection_t *Embree_MakeIntersectionRayStream(int maxrays)
 {
     return new raystream_embree_t{maxrays};
 }

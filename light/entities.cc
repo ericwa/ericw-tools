@@ -1237,7 +1237,7 @@ void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
     const int N = 32;
     const int N2 = N*N;
     
-    raystream_t *rs = MakeRayStream(N2);
+    raystream_intersection_t *rs = MakeIntersectionRayStream(N2);
     
     AABB_Init(mins, maxs, point);
     for (int x=0; x<N; x++) {
