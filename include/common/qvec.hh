@@ -250,6 +250,24 @@ namespace qv {
         }
         return true;
     }
+
+    template <int N, class T>
+    int indexOfLargestMagnitudeComponent(const qvec<N,T> &v)
+    {
+        int largestIndex = 0;
+        T largestMag = 0;
+
+        for (int i=0; i<N; ++i) {
+            const T currentMag = std::fabs(v[i]);
+
+            if (currentMag > largestMag) {
+                largestMag = currentMag;
+                largestIndex = i;
+            }
+        }
+
+        return largestIndex;
+    }
 };
 
 

@@ -254,41 +254,41 @@ typedef struct {
 #define    Q2_CONTENTS_TRANSLUCENT    0x10000000    // auto set if any surface has trans
 #define    Q2_CONTENTS_LADDER         0x20000000
 
-typedef struct {
+struct bsp29_dnode_t {
     int32_t planenum;
     int16_t children[2];        /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
     int16_t mins[3];            /* for sphere culling */
     int16_t maxs[3];
     uint16_t firstface;
     uint16_t numfaces;          /* counting both sides */
-} bsp29_dnode_t;
+};
 
-typedef struct {
+struct bsp2rmq_dnode_t {
     int32_t planenum;
     int32_t children[2];        /* negative numbers are -(leafs+1), not nodes */
     int16_t mins[3];            /* for sphere culling */
     int16_t maxs[3];
     uint32_t firstface;
     uint32_t numfaces;          /* counting both sides */
-} bsp2rmq_dnode_t;
+};
 
-typedef struct {
+struct bsp2_dnode_t {
     int32_t planenum;
     int32_t children[2];        /* negative numbers are -(leafs+1), not nodes */
     float mins[3];              /* for sphere culling */
     float maxs[3];
     uint32_t firstface;
     uint32_t numfaces;          /* counting both sides */
-} bsp2_dnode_t;
+};
 
-typedef struct {
+struct q2_dnode_t {
     int32_t planenum;
     int32_t children[2];    // negative numbers are -(leafs+1), not nodes
     int16_t mins[3];      // for frustom culling
     int16_t maxs[3];
     uint16_t firstface;
     uint16_t numfaces;    // counting both sides
-} q2_dnode_t;
+};
 
 /*
  * Note that children are interpreted as unsigned values now, so that we can
@@ -742,7 +742,7 @@ typedef struct {
     byte dpop[256];
 } q2bsp_t;
 
-typedef struct {
+struct mbsp_t {
     int32_t loadversion;
     
     int nummodels;
@@ -810,7 +810,7 @@ typedef struct {
     dbrushside_t *dbrushsides;
     
     byte dpop[256];
-} mbsp_t; // "generic" bsp - superset of all other supported types
+}; // "generic" bsp - superset of all other supported types
 
 typedef struct {
     int32_t version;

@@ -28,6 +28,8 @@
 #include <common/bsputils.hh>
 #include <common/mathlib.hh>
 
+#include "decompile.h"
+
 #include <map>
 #include <set>
 #include <list>
@@ -514,6 +516,7 @@ FindFaces(const mbsp_t *bsp, const vec3_t pos, const vec3_t normal)
     }
 }
 
+
 int
 main(int argc, char **argv)
 {
@@ -526,7 +529,7 @@ main(int argc, char **argv)
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
-               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum] bspfile\n");
+               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum] [--decompile] bspfile\n");
         exit(1);
     }
 
@@ -672,6 +675,19 @@ main(int argc, char **argv)
             // Overwrite source bsp!
             WriteBSPFile(source, &bspdata);
 
+            return 0;
+        } else if (!strcmp(argv[i], "--decompile")) {
+            StripExtension(source);
+            DefaultExtension(source, "-decompile.map");
+            printf("-> writing %s... ", source);
+
+            f = fopen(source, "w");
+            if (!f)
+                Error("couldn't open %s for writing\n", source);
+
+            DecompileBSP(bsp, f);
+
+            fclose(f);
             return 0;
         }
     }

@@ -3,6 +3,8 @@ project (bsputil CXX)
 
 set(BSPUTIL_SOURCES
 	bsputil.cc
+	decompile.h
+	decompile.cpp
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.cc
 	${CMAKE_SOURCE_DIR}/common/bsputils.cc
