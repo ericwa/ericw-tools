@@ -20,6 +20,7 @@
 
 #include "decompile.h"
 
+#include <common/entdata.h>
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
@@ -308,21 +309,57 @@ AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
     }
 }
 
+static void
+DecompileEntity(const mbsp_t *bsp, FILE* file, entdict_t dict, bool isWorld)
+{
+    // we use -1 to indicate it's not a brush model
+    int modelNum = -1;
+    if (isWorld) {
+        modelNum = 0;
+    }
+
+    // First, print the key/values for this entity
+    fprintf(file, "{\n");
+    for (const auto& keyValue : dict) {
+        if (keyValue.first == "model"
+            && keyValue.second.size() > 0
+            && keyValue.second[0] == '*')
+        {
+            // strip "model" "*NNN" key/values
+
+            std::string modelNumString = keyValue.second;
+            modelNumString.erase(0, 1); // erase first character
+
+            modelNum = atoi(modelNumString.c_str());
+            continue;
+        }
+
+        fprintf(file, "\"%s\" \"%s\"\n", keyValue.first.c_str(), keyValue.second.c_str());
+    }
+
+    // Print brushes if any
+    if (modelNum >= 0) {
+        const dmodelh2_t* model = &bsp->dmodels[modelNum];
+
+        // start with hull0 of the model
+        const bsp2_dnode_t* headnode = BSP_GetNode(bsp, model->headnode[0]);
+
+        
+        std::vector<decomp_plane_t> stack;
+        AddMapBoundsToStack(&stack, bsp, headnode);
+        DecompileNode(&stack, bsp, headnode, file);
+    }
+
+    fprintf(file, "}\n");
+}
+
 void
 DecompileBSP(const mbsp_t *bsp, FILE* file)
 {
-    const dmodelh2_t* model = &bsp->dmodels[0];
+    auto entdicts = EntData_Parse(bsp->dentdata);
 
-    // start with hull0 of the world
-
-    const bsp2_dnode_t* headnode = BSP_GetNode(bsp, model->headnode[0]);
-
-    fprintf(file, "{\n");
-    fprintf(file, "\"classname\" \"worldspawn\"\n");
-
-    std::vector<decomp_plane_t> stack;
-    AddMapBoundsToStack(&stack, bsp, headnode);
-    DecompileNode(&stack, bsp, headnode, file);
-
-    fprintf(file, "}\n");
+    for (size_t i = 0; i < entdicts.size(); ++i) {
+        // entity 0 is implicitly worldspawn (model 0)
+        DecompileEntity(bsp, file, entdicts[i], i == 0);
+    }
 }
