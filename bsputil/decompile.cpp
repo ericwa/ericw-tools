@@ -30,9 +30,79 @@
 #include <utility>
 #include <tuple>
 
+// texturing
+
+class texdef_valve_t {
+public:
+    vec3_t axis[2];
+    vec_t scale[2];
+    vec_t shift[2];
+
+    texdef_valve_t() {
+        for (int i=0;i<2;i++)
+            for (int j=0;j<3;j++)
+                axis[i][j] = 0;
+
+        for (int i=0;i<2;i++)
+            scale[i] = 0;
+
+        for (int i=0;i<2;i++)
+            shift[i] = 0;
+    }
+};
+
+// FIXME: merge with map.cc copy
+static texdef_valve_t
+TexDef_BSPToValve(const float in_vecs[2][4])
+{
+    texdef_valve_t res;
+
+// From the valve -> bsp code,
+//
+//    for (i = 0; i < 3; i++) {
+//        out->vecs[0][i] = axis[0][i] / scale[0];
+//        out->vecs[1][i] = axis[1][i] / scale[1];
+//    }
+//
+// We'll generate axis vectors of length 1 and pick the necessary scale
+
+    for (int i=0; i<2; i++) {
+        vec3_t axis;
+        for (int j=0; j<3; j++) {
+            axis[j] = in_vecs[i][j];
+        }
+        const vec_t length = VectorNormalize(axis);
+        // avoid division by 0
+        if (length != 0.0) {
+            res.scale[i] = 1.0f / length;
+        } else {
+            res.scale[i] = 0.0;
+        }
+        res.shift[i] = in_vecs[i][3];
+        VectorCopy(axis, res.axis[i]);
+    }
+
+    return res;
+}
+
+static void
+WriteFaceTexdef(const mbsp_t *bsp, const bsp2_dface_t *face, FILE* file)
+{
+    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    const auto valve = TexDef_BSPToValve(texinfo->vecs);
+
+    fprintf(file, "[ %g %g %g %g ] [ %g %g %g %g ] %g %g %g",
+            valve.axis[0][0], valve.axis[0][1], valve.axis[0][2], valve.shift[0],
+            valve.axis[1][0], valve.axis[1][1], valve.axis[1][2], valve.shift[1],
+            0.0, valve.scale[0], valve.scale[1]);
+}
+
+
+//
+
 struct decomp_plane_t {
-//    const bsp2_dnode_t* node;
-//    bool front;
+    const bsp2_dnode_t* node; // can be nullptr
+    bool nodefront; // only set if node is non-null. true = we are visiting the front side of the plane
 
     qvec3d normal;
     double distance;
@@ -61,7 +131,7 @@ std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec3d& nor
     qvec3d tangent = qv::cross(normal, otherVecA);
     qvec3d bitangent = qv::cross(normal, otherVecB);
 
-    // We want test to point in the same direction as normal.
+    // We want `test` to point in the same direction as normal.
     // Swap the tangent bitangent if we got the direction wrong.
     qvec3d test = qv::cross(tangent, bitangent);
 
@@ -110,6 +180,36 @@ PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t& decompplane, FILE* fil
 }
 
 /**
+ * We can't use the markfaces from the .bsp file, because those are only
+ * set on empty leaves, and we need this to work on solid leaves.
+ *
+ * The passed-in planestack is used to help locate faces on the given leaf.
+ */
+std::vector<const bsp2_dface_t *> FindFacesOnLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf)
+{
+    std::vector<const bsp2_dface_t *> result;
+
+    for (const decomp_plane_t& decompplane : *planestack) {
+        if (decompplane.node == nullptr) {
+            continue;
+        }
+
+        const bsp2_dnode_t* node = decompplane.node;
+        for (int i=0; i<node->numfaces; i++) {
+            const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+
+            printf("face side: %d\n", face->side);
+
+            WriteFaceTexdef(bsp, face, stdout);
+            printf("\n");
+        }
+    }
+
+
+    return result;
+}
+
+/**
  * Preconditions:
  *  - The existing path of plane side choices have been pushed onto `planestack`
  *  - We've arrived at a
@@ -117,8 +217,6 @@ PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t& decompplane, FILE* fil
 static void
 DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf, FILE* file)
 {
-    //printf("got leaf %d\n", leaf->contents);
-
     if (leaf->contents == CONTENTS_SOLID) {
         fprintf(file, "{\n");
         for (const auto& decompplane : *planestack) {
@@ -127,11 +225,20 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
             fprintf(file, " __TB_empty 0 0 0 1 1\n");
         }
         fprintf(file, "}\n");
+
+        auto faces = FindFacesOnLeaf(planestack, bsp, leaf);
+        printf("got leaf contents %d with %d faces\n", leaf->contents, static_cast<int>(faces.size()));
     }
 }
 
+/**
+ * @param front whether we are visiting the front side of the node plane
+ */
 decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, const bool front) {
     decomp_plane_t result;
+
+    result.node = node;
+    result.nodefront = front;
 
     const dplane_t *dplane = BSP_GetPlane(bsp, node->planenum);
 
@@ -196,7 +303,7 @@ AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
             }
 
             // we want outward-facing planes
-            planestack->push_back({ normal, dist });
+            planestack->push_back({ nullptr, false, normal, dist });
         }
     }
 }
