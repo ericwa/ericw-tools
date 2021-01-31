@@ -24,13 +24,12 @@
 #include <string>
 #include <vector>
 
+#include <common/entdata.h>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 #include <light/light.hh>
 
 #define DEFAULTLIGHTLEVEL 300.0f
-
-using entdict_t = std::map<std::string, std::string>;
 
 /*
  * Light attenuation formalae
@@ -178,9 +177,6 @@ const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::strin
 const char *ValueForKey(const light_t *ent, const char *key);
 void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec);
 
-std::string EntDict_StringForKey(const entdict_t &dict, const std::string key);
-float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
-
 void SetWorldKeyValue(const std::string &key, const std::string &value);
 std::string WorldValueForKey(const std::string &key);
 
@@ -195,7 +191,5 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
 bool EntDict_CheckTargetKeysMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
 
 bool EntDict_CheckTargetnameKeyMatched(const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
-
-std::vector<entdict_t> EntData_Parse(const char *entdata); //mxd
 
 #endif /* __LIGHT_ENTITIES_H__ */

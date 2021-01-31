@@ -10,6 +10,7 @@ set(VIS_SOURCES
 	vis.cc
 	soundpvs.cc
 	state.cc
+	${CMAKE_SOURCE_DIR}/common/entdata.cc
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc
 	${CMAKE_SOURCE_DIR}/common/qvec.cc

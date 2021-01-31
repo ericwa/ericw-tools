@@ -24,7 +24,8 @@ set(LIGHT_SOURCES
 	surflight.cc
 	settings.cc
 	imglib.cc
-	${CMAKE_SOURCE_DIR}/common/bspfile.cc	
+	${CMAKE_SOURCE_DIR}/common/bspfile.cc
+	${CMAKE_SOURCE_DIR}/common/entdata.cc
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc
 	${CMAKE_SOURCE_DIR}/common/qvec.cc

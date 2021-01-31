@@ -3,6 +3,7 @@ project (bspinfo CXX)
 
 set(BSPINFO_SOURCES
 	bspinfo.cc
+	${CMAKE_SOURCE_DIR}/common/entdata.cc
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/bspfile.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc

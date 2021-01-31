@@ -16,6 +16,7 @@ include_directories(
 
 set(COMMON_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/common/aabb.hh
+	${CMAKE_SOURCE_DIR}/include/common/entdata.h
 	${CMAKE_SOURCE_DIR}/include/common/mesh.hh
 	${CMAKE_SOURCE_DIR}/include/common/octree.hh
 	${CMAKE_SOURCE_DIR}/include/common/qvec.hh
