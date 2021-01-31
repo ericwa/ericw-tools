@@ -25,6 +25,7 @@
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
 #include <common/mathlib.hh>
+#include <common/polylib.hh>
 
 #include <vector>
 #include <cstdio>
@@ -99,6 +100,16 @@ WriteFaceTexdef(const mbsp_t *bsp, const bsp2_dface_t *face, FILE* file)
             0.0, valve.scale[0], valve.scale[1]);
 }
 
+static void
+WriteNullTexdef(const mbsp_t *bsp, FILE* file)
+{
+    // FIXME: need to pick based on plane normal
+    fprintf(file, "[ %g %g %g %g ] [ %g %g %g %g ] %g %g %g",
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0.0, 1, 1);
+}
+
 
 //
 
@@ -106,6 +117,7 @@ struct decomp_plane_t {
     const bsp2_dnode_t* node; // can be nullptr
     bool nodefront; // only set if node is non-null. true = we are visiting the front side of the plane
 
+    // this should be an outward-facing plane
     qvec3d normal;
     double distance;
 };
@@ -115,6 +127,57 @@ struct planepoints {
     qvec3d point1;
     qvec3d point2;
 };
+
+// brush creation
+
+using namespace polylib;
+
+std::vector<decomp_plane_t>
+RemoveRedundantPlanes(const mbsp_t *bsp, std::vector<decomp_plane_t> planes)
+{
+    std::vector<decomp_plane_t> result;
+
+    for (const decomp_plane_t &plane : planes) {
+        // outward-facing plane
+        vec3_t normal;
+        glm_to_vec3_t(plane.normal, normal);
+        winding_t *winding = BaseWindingForPlane(normal, plane.distance);
+
+        // clip `winding` by all of the other planes, flipped
+        for (const decomp_plane_t &plane2 : planes) {
+            if (&plane2 == &plane)
+                continue;
+
+            // get flipped plane
+            vec3_t plane2normal;
+            glm_to_vec3_t(plane2.normal * -1.0, plane2normal);
+            float plane2dist = -plane2.distance;
+
+            // frees winding.
+            winding_t *front = nullptr;
+            winding_t *back = nullptr;
+            ClipWinding(winding, plane2normal, plane2dist, &front, &back);
+
+            // discard the back, continue clipping the front part
+            free(back);
+            winding = front;
+
+            // check if everything was clipped away
+            if (winding == nullptr)
+                break;
+        }
+
+        if (winding != nullptr) {
+            // this plane is not redundant
+            result.push_back(plane);
+        }
+
+        free(winding);
+    }
+
+    return result;
+}
+
 
 std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec3d& normal)
 {
@@ -181,13 +244,8 @@ PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t& decompplane, FILE* fil
     PrintPoint(p.point2, file);
 }
 
-/**
- * We can't use the markfaces from the .bsp file, because those are only
- * set on empty leaves, and we need this to work on solid leaves.
- *
- * The passed-in planestack is used to help locate faces on the given leaf.
- */
-std::vector<const bsp2_dface_t *> FindFacesOnLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf)
+static std::vector<const bsp2_dface_t *>
+GatherAllFacesOnNodes(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp)
 {
     std::vector<const bsp2_dface_t *> result;
 
@@ -200,13 +258,60 @@ std::vector<const bsp2_dface_t *> FindFacesOnLeaf(const std::vector<decomp_plane
         for (int i=0; i<node->numfaces; i++) {
             const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
 
-            printf("face side: %d\n", face->side);
+            result.push_back(face);
+        }
+    }
+    return result;
+}
 
-            WriteFaceTexdef(bsp, face, stdout);
-            printf("\n");
+/**
+ * We can't use the markfaces from the .bsp file, because those are only
+ * set on empty leaves, and we need this to work on solid leaves.
+ *
+ * The passed-in planestack is used to help locate faces on the given leaf.
+ */
+static std::vector<const bsp2_dface_t *>
+FindFacesOnLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf)
+{
+    // First, gather _all_ faces we encountered on the path to enclose the leaf
+    // This will include lots that aren't actually touching the leaf
+//    const std::vector<const bsp2_dface_t *> allFaces = GatherAllFacesOnNodes(planestack, bsp);
+
+    std::vector<const bsp2_dface_t *> result;
+
+    for (const decomp_plane_t& decompplane : *planestack) {
+        if (decompplane.node == nullptr) {
+            continue;
+        }
+
+        const bsp2_dnode_t* node = decompplane.node;
+        for (int i=0; i<node->numfaces; i++) {
+            const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+
+            result.push_back(face);
+//            printf("face side: %d\n", face->side);
+
+//            WriteFaceTexdef(bsp, face, stdout);
+//            printf("\n");
         }
     }
 
+
+    return result;
+}
+
+static std::vector<const bsp2_dface_t *>
+FindFacesOnNode(const bsp2_dnode_t* node, const mbsp_t *bsp)
+{
+    std::vector<const bsp2_dface_t *> result;
+
+    if (node) {
+        for (int i=0; i<node->numfaces; i++) {
+            const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+
+            result.push_back(face);
+        }
+    }
 
     return result;
 }
@@ -227,27 +332,48 @@ static std::string DefaultTextureForContents(int contents)
     }
 }
 
-
 /**
  * Preconditions:
  *  - The existing path of plane side choices have been pushed onto `planestack`
- *  - We've arrived at a
+ *  - We've arrived at a leaf
  */
 static void
 DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf, FILE* file)
 {
-    if (leaf->contents != CONTENTS_EMPTY) {
-        fprintf(file, "{\n");
-        for (const auto& decompplane : *planestack) {
-            PrintPlanePoints(bsp, decompplane, file);
-
-            fprintf(file, "%s 0 0 0 1 1\n", DefaultTextureForContents(leaf->contents).c_str());
-        }
-        fprintf(file, "}\n");
-
-        auto faces = FindFacesOnLeaf(planestack, bsp, leaf);
-        printf("got leaf contents %d with %d faces\n", leaf->contents, static_cast<int>(faces.size()));
+    if (leaf->contents == CONTENTS_EMPTY) {
+        return;
     }
+
+    auto reducedPlanes = RemoveRedundantPlanes(bsp, *planestack);
+    //printf("before: %d after %d\n", (int)planestack->size(), (int)reducedPlanes.size());
+
+    fprintf(file, "{\n");
+    for (const auto& decompplane : reducedPlanes) {
+        PrintPlanePoints(bsp, decompplane, file);
+
+        // see if we have a face
+        auto faces = FindFacesOnNode(decompplane.node, bsp);
+        if (!faces.empty()) {
+            const bsp2_dface_t *face = faces.at(0);
+            const char* name = Face_TextureName(bsp, face);
+            if (0 == strlen(name)) {
+                fprintf(file, " %s ", DefaultTextureForContents(leaf->contents).c_str());
+                WriteNullTexdef(bsp, file);
+            } else {
+                fprintf(file, " %s ", name);
+                WriteFaceTexdef(bsp, face, file);
+            }
+        } else {
+            // print a default face
+            fprintf(file, " %s ", DefaultTextureForContents(leaf->contents).c_str());
+            WriteNullTexdef(bsp, file);
+        }
+        fprintf(file, "\n");
+    }
+    fprintf(file, "}\n");
+
+//    auto faces = FindFacesOnLeaf(planestack, bsp, leaf);
+//    printf("got leaf contents %d with %d faces\n", leaf->contents, static_cast<int>(faces.size()));
 }
 
 /**
