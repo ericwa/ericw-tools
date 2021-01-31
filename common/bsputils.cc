@@ -151,10 +151,10 @@ const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const bsp2_dface_t *face)
     return &bsp->texinfo[face->texinfo];
 }
 
-const rgba_miptex_t * //mxd. miptex_t -> rgba_miptex_t
+const miptex_t *
 Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    if (!bsp->rgbatexdatasize)
+    if (!bsp->texdatasize)
         return nullptr;
     
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
@@ -162,13 +162,13 @@ Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face)
         return nullptr;
     
     const int texnum = texinfo->miptex;
-    const dmiptexlump_t *miplump = bsp->drgbatexdata;
+    const dmiptexlump_t *miplump = bsp->dtexdata;
     
     const int offset = miplump->dataofs[texnum];
     if (offset < 0)
         return nullptr; //sometimes the texture just wasn't written. including its name.
     
-    const rgba_miptex_t *miptex = (const rgba_miptex_t*)((const byte *)bsp->drgbatexdata + offset);
+    const miptex_t *miptex = (const miptex_t*)((const byte *)bsp->dtexdata + offset);
     return miptex;
 }
 
