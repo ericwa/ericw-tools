@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <cstdio>
+#include <string>
 #include <utility>
 #include <tuple>
 
@@ -210,6 +211,23 @@ std::vector<const bsp2_dface_t *> FindFacesOnLeaf(const std::vector<decomp_plane
     return result;
 }
 
+static std::string DefaultTextureForContents(int contents)
+{
+    switch (contents) {
+        case CONTENTS_WATER:
+            return "*waterskip";
+        case CONTENTS_SLIME:
+            return "*slimeskip";
+        case CONTENTS_LAVA:
+            return "*lavaskip";
+        case CONTENTS_SKY:
+            return "skyskip";
+        default:
+            return "skip";
+    }
+}
+
+
 /**
  * Preconditions:
  *  - The existing path of plane side choices have been pushed onto `planestack`
@@ -218,12 +236,12 @@ std::vector<const bsp2_dface_t *> FindFacesOnLeaf(const std::vector<decomp_plane
 static void
 DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf, FILE* file)
 {
-    if (leaf->contents == CONTENTS_SOLID) {
+    if (leaf->contents != CONTENTS_EMPTY) {
         fprintf(file, "{\n");
         for (const auto& decompplane : *planestack) {
             PrintPlanePoints(bsp, decompplane, file);
 
-            fprintf(file, " __TB_empty 0 0 0 1 1\n");
+            fprintf(file, "%s 0 0 0 1 1\n", DefaultTextureForContents(leaf->contents).c_str());
         }
         fprintf(file, "}\n");
 
@@ -344,7 +362,7 @@ DecompileEntity(const mbsp_t *bsp, FILE* file, entdict_t dict, bool isWorld)
         // start with hull0 of the model
         const bsp2_dnode_t* headnode = BSP_GetNode(bsp, model->headnode[0]);
 
-        
+
         std::vector<decomp_plane_t> stack;
         AddMapBoundsToStack(&stack, bsp, headnode);
         DecompileNode(&stack, bsp, headnode, file);
