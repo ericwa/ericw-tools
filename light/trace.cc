@@ -309,7 +309,10 @@ SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
     color_rgba sample{};
     if (!bsp->rgbatexdatasize)
         return sample;
-    
+
+    // FIXME: re-enable the following code
+    return sample;
+#if 0
     const auto *miptex = Face_Miptex(bsp, face);
     
     if (miptex == nullptr)
@@ -329,6 +332,7 @@ SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
     sample = data[(miptex->width * y) + x];
 
     return sample;
+#endif
 }
 
 /* assumes point is on the same plane as face */
