@@ -160,6 +160,12 @@ public:
         res /= scale;
         return res;
     }
+
+    qvec<N,T> operator-() const {
+        qvec<N,T> res(*this);
+        res *= -1;
+        return res;
+    }
 };
 
 namespace qv {
