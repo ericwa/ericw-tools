@@ -30,6 +30,7 @@
 #include <vector>
 #include <cstdio>
 #include <string>
+#include <memory>
 #include <utility>
 #include <tuple>
 
@@ -332,6 +333,104 @@ static std::string DefaultTextureForContents(int contents)
     }
 }
 
+// structures representing a brush
+
+#if 0
+struct decomp_brush_face_t {
+    /**
+     * The currently clipped section of the face
+     */
+    std::unique_ptr<winding_t> winding;
+    /**
+     * The face we were originally derived from
+     */
+    const bsp2_dface_t *original_face;
+};
+
+struct decomp_brush_side_t {
+    /**
+     * During decompilation, we can have multiple faces on a single plane of the brush.
+     * All vertices of these should lie on the plane.
+     */
+    std::vector<decomp_brush_face_t> faces;
+
+    decomp_plane_t plane;
+};
+
+struct decomp_brush_t {
+    std::vector<decomp_brush_side_t> sides;
+
+    std::unique_ptr<decomp_brush_t> clone() const {
+        return std::unique_ptr<decomp_brush_t>(new decomp_brush_t(*this));
+    }
+
+    /**
+     * Returns the front and back side after clipping to the given plane.
+     */
+    std::tuple<std::unique_ptr<decomp_brush_t>,
+               std::unique_ptr<decomp_brush_t>> clipToPlane(const qvec3d& normal, double distance) const {
+        // handle exact cases
+        for (auto& side : sides) {
+            if (side.plane.normal == normal && side.plane.distance == distance) {
+                // the whole brush is on/behind the plane
+                return {nullptr, clone()};
+            } else if (side.plane.normal == -normal && side.plane.distance == -distance) {
+                // the whole brush is on/in front of the plane
+                return {clone(), nullptr};
+            }
+        }
+
+        // general case.
+    }
+};
+
+static decomp_brush_t
+BuildInitialBrush(const mbsp_t *bsp, std::vector<decomp_plane_t> planes)
+{
+    std::vector<decomp_plane_t> result;
+
+    for (const decomp_plane_t &plane : planes) {
+        // outward-facing plane
+        vec3_t normal;
+        glm_to_vec3_t(plane.normal, normal);
+        winding_t *winding = BaseWindingForPlane(normal, plane.distance);
+
+        // clip `winding` by all of the other planes, flipped
+        for (const decomp_plane_t &plane2 : planes) {
+            if (&plane2 == &plane)
+                continue;
+
+            // get flipped plane
+            vec3_t plane2normal;
+            glm_to_vec3_t(plane2.normal * -1.0, plane2normal);
+            float plane2dist = -plane2.distance;
+
+            // frees winding.
+            winding_t *front = nullptr;
+            winding_t *back = nullptr;
+            ClipWinding(winding, plane2normal, plane2dist, &front, &back);
+
+            // discard the back, continue clipping the front part
+            free(back);
+            winding = front;
+
+            // check if everything was clipped away
+            if (winding == nullptr)
+                break;
+        }
+
+        if (winding != nullptr) {
+            // this plane is not redundant
+            result.push_back(plane);
+        }
+
+        free(winding);
+    }
+
+    return result;
+}
+#endif
+
 /**
  * Preconditions:
  *  - The existing path of plane side choices have been pushed onto `planestack`
@@ -345,7 +444,21 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
     }
 
     auto reducedPlanes = RemoveRedundantPlanes(bsp, *planestack);
-    //printf("before: %d after %d\n", (int)planestack->size(), (int)reducedPlanes.size());
+    if (reducedPlanes.empty()) {
+        printf("warning, skipping empty brush\n");
+        return;
+    }
+
+    printf("before: %d after %d\n", (int)planestack->size(), (int)reducedPlanes.size());
+
+    // At this point, we should gather all of the faces on `reducedPlanes` and clip away the
+    // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
+    // AFAIK it's possible that the faces are half-overlapping the leaf, so we may have to cut the
+    // faces in half.
+
+    // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
+    // texinfo, we need to clip the brush perpendicular to the face until there are no longer
+    // 2+ faces on a plane with non-equal texinfo.
 
     fprintf(file, "{\n");
     for (const auto& decompplane : reducedPlanes) {
