@@ -375,7 +375,7 @@ struct decomp_brush_side_t {
     decomp_plane_t plane;
 
     decomp_brush_side_t(const mbsp_t *bsp, const decomp_plane_t& planeIn) :
-    faces(BuildDecompFacesOnPlane(bsp, plane)),
+    faces(BuildDecompFacesOnPlane(bsp, planeIn)),
     plane(planeIn) {}
 
     decomp_brush_side_t(std::vector<decomp_brush_face_t> facesIn, const decomp_plane_t& planeIn) :
@@ -514,9 +514,9 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
             PrintPlanePoints(bsp, side.plane, file);
 
             // see if we have a face
-            auto faces = FindFacesOnNode(side.plane.node, bsp);
+            auto faces = side.faces;// FindFacesOnNode(side.plane.node, bsp);
             if (!faces.empty()) {
-                const bsp2_dface_t *face = faces.at(0);
+                const bsp2_dface_t *face = faces.at(0).original_face;
                 const char *name = Face_TextureName(bsp, face);
                 if (0 == strlen(name)) {
                     fprintf(file, " %s ", DefaultTextureForContents(leaf->contents).c_str());
