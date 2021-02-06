@@ -334,6 +334,13 @@ public:
         return std::make_pair(decomp_brush_face_t(front, original_face),
                               decomp_brush_face_t(back, original_face));
     }
+
+    qvec3d normal() const {
+        plane_t plane;
+        WindingPlane(winding, plane.normal, &plane.dist);
+
+        return vec3_t_to_glm(plane.normal);
+    }
 };
 
 /**
@@ -354,10 +361,19 @@ BuildDecompFacesOnPlane(const mbsp_t *bsp, const decomp_plane_t& plane)
     for (int i=0; i<node->numfaces; i++) {
         const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
 
-        const bool faceOnBack = face->side;
-        if (faceOnBack == plane.nodefront) {
-            continue; // mismatch
+        auto decompFace = decomp_brush_face_t(bsp, face);
+
+        const double dp = qv::dot(plane.normal, decompFace.normal());
+
+        if (dp < 0.9) {
+            printf("face on back %g, discarding\n", dp);
+            continue;
         }
+
+//        const bool faceOnBack = face->side;
+//        if (faceOnBack != plane.nodefront) {
+//            continue; // mismatch
+//        }
 
         result.emplace_back(bsp, face);
     }
@@ -435,6 +451,25 @@ struct decomp_brush_t {
 
         return {nullptr, nullptr};
     }
+
+    bool checkPoints() const {
+        for (auto& side : sides) {
+            for (auto& face : side.faces) {
+                for (int i=0; i<face.winding->numpoints; ++i) {
+                    // check against all planes
+                    const qvec3f point = vec3_t_to_glm(face.winding->p[i]);
+
+                    for (auto& otherSide : sides) {
+                        float distance = GLM_DistAbovePlane(qvec4f(qvec3f(otherSide.plane.normal), otherSide.plane.distance), point);
+                        if (distance > 0.1) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
 };
 
 /***
@@ -470,9 +505,17 @@ BuildInitialBrush(const mbsp_t *bsp, const std::vector<decomp_plane_t>& planes)
     return decomp_brush_t(sides);
 }
 
+
+
 std::vector<decomp_brush_t>
 SplitDifferentTexturedPartsOfBrush(const mbsp_t *bsp, decomp_brush_t brush)
 {
+    printf("SplitDifferentTexturedPartsOfBrush: %d sides\n", (int)brush.sides.size());
+
+    for (auto& side : brush.sides) {
+        printf("    %d faces\n", (int)side.faces.size());
+    }
+
     // FIXME: implement
     return { brush };
 }
@@ -502,6 +545,7 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
     // It's possible that the faces are half-overlapping the leaf, so we may have to cut the
     // faces in half.
     auto initialBrush = BuildInitialBrush(bsp, reducedPlanes);
+    assert(initialBrush.checkPoints());
 
     // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
     // texinfo, we need to clip the brush perpendicular to the face until there are no longer
