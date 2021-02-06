@@ -99,6 +99,16 @@ public:
             v[i] = 0;
     }
 
+    /**
+     * Extending a vector
+     */
+    qvec(const qvec<N-1, T> &other, T value) {
+        for (int i = 0; i < N - 1; ++i) {
+            v[i] = other[i];
+        }
+        v[N-1] = value;
+    }
+
     bool operator==(const qvec<N,T> &other) const {
         for (int i=0; i<N; i++)
             if (v[i] != other.v[i])
