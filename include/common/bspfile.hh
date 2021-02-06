@@ -402,7 +402,7 @@ typedef struct {
 
 typedef struct {
     int32_t planenum;
-    int32_t side;
+    int32_t side;               // if true, the face is on the back side of the plane
     int32_t firstedge;          /* we must support > 64k edges */
     int32_t numedges;
     int32_t texinfo;

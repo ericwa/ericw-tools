@@ -223,6 +223,10 @@ polylib::BaseWindingForPlane(const vec3_t normal, const float dist)
 polylib::winding_t *
 polylib::CopyWinding(const winding_t * w)
 {
+    if (w == nullptr) {
+        return nullptr;
+    }
+    
     int size;
     winding_t *c;
 
