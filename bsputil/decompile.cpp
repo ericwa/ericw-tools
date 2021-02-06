@@ -121,7 +121,13 @@ struct decomp_plane_t {
     // this should be an outward-facing plane
     qvec3d normal;
     double distance;
+
+    static decomp_plane_t make(const qvec3d& normalIn, double distanceIn) {
+        return { nullptr, false, normalIn, distanceIn };
+    }
 };
+
+
 
 struct planepoints {
     qvec3d point0;
@@ -245,22 +251,6 @@ PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t& decompplane, FILE* fil
     PrintPoint(p.point2, file);
 }
 
-static std::vector<const bsp2_dface_t *>
-FindFacesOnNode(const bsp2_dnode_t* node, const mbsp_t *bsp)
-{
-    std::vector<const bsp2_dface_t *> result;
-
-    if (node) {
-        for (int i=0; i<node->numfaces; i++) {
-            const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
-
-            result.push_back(face);
-        }
-    }
-
-    return result;
-}
-
 static std::string DefaultTextureForContents(int contents)
 {
     switch (contents) {
@@ -290,6 +280,15 @@ struct decomp_brush_face_t {
      */
     const bsp2_dface_t *original_face;
 
+    std::vector<qvec4f> inwardFacingEdgePlanes;
+private:
+    void buildInwardFacingEdgePlanes() {
+        if (winding == nullptr) {
+            return;
+        }
+        inwardFacingEdgePlanes = GLM_MakeInwardFacingEdgePlanes(GLM_WindingPoints(winding));
+    }
+
 public: // rule of three
     ~decomp_brush_face_t() {
         free(winding);
@@ -297,25 +296,32 @@ public: // rule of three
 
     decomp_brush_face_t(const decomp_brush_face_t& other) : // copy constructor
     winding(CopyWinding(other.winding)),
-    original_face(other.original_face) {}
+    original_face(other.original_face),
+    inwardFacingEdgePlanes(other.inwardFacingEdgePlanes) {}
 
     decomp_brush_face_t& operator=(const decomp_brush_face_t& other) { // copy assignment
         winding = CopyWinding(other.winding);
         original_face = other.original_face;
+        inwardFacingEdgePlanes = other.inwardFacingEdgePlanes;
         return *this;
     }
-public:
+public: // constructors
     decomp_brush_face_t() :
     winding(nullptr),
     original_face(nullptr) {}
 
     decomp_brush_face_t(const mbsp_t *bsp, const bsp2_dface_t *face) :
     winding(WindingFromFace(bsp, face)),
-    original_face(face) {}
+    original_face(face) {
+        buildInwardFacingEdgePlanes();
+    }
 
     decomp_brush_face_t(winding_t* windingToTakeOwnership, const bsp2_dface_t *face) :
     winding(windingToTakeOwnership),
-    original_face(face) {}
+    original_face(face) {
+        buildInwardFacingEdgePlanes();
+    }
+public:
 
     /**
      * Returns the { front, back } after the clip.
@@ -387,7 +393,6 @@ struct decomp_brush_side_t {
      * All vertices of these should lie on the plane.
      */
     std::vector<decomp_brush_face_t> faces;
-
     decomp_plane_t plane;
 
     decomp_brush_side_t(const mbsp_t *bsp, const decomp_plane_t& planeIn) :
@@ -397,6 +402,13 @@ struct decomp_brush_side_t {
     decomp_brush_side_t(std::vector<decomp_brush_face_t> facesIn, const decomp_plane_t& planeIn) :
     faces(std::move(facesIn)),
     plane(planeIn) {}
+
+    /**
+     * Construct a new side with no faces on it, with the given outward-facing plane
+     */
+    decomp_brush_side_t(const qvec3d& normal, double distance) :
+    faces(),
+    plane(decomp_plane_t::make(normal, distance)) {}
 
     /**
      * Returns the { front, back } after the clip.
@@ -434,22 +446,27 @@ struct decomp_brush_t {
     /**
      * Returns the front and back side after clipping to the given plane.
      */
-    std::tuple<std::unique_ptr<decomp_brush_t>,
-               std::unique_ptr<decomp_brush_t>> clipToPlane(const qvec3d& normal, double distance) const {
-        // handle exact cases
-        for (auto& side : sides) {
-            if (side.plane.normal == normal && side.plane.distance == distance) {
-                // the whole brush is on/behind the plane
-                return {nullptr, clone()};
-            } else if (side.plane.normal == -normal && side.plane.distance == -distance) {
-                // the whole brush is on/in front of the plane
-                return {clone(), nullptr};
-            }
+    std::tuple<decomp_brush_t, decomp_brush_t> clipToPlane(const qvec3d& normal, double distance) const {
+        // FIXME: this won't handle the the given plane is one of the brush planes
+
+        std::vector<decomp_brush_side_t> frontSides, backSides;
+
+        for (const auto& side : sides) {
+            auto [frontSide, backSide] = side.clipToPlane(normal, distance);
+            frontSides.push_back(frontSide);
+            backSides.push_back(backSide);
         }
 
-        // general case.
+        // NOTE: the frontSides, backSides vectors will have redundant planes at this point. Should be OK..
 
-        return {nullptr, nullptr};
+        // Now we need to add the splitting plane itself to the sides vectors
+        auto splittingPlaneForFrontBrush = decomp_brush_side_t(-normal, -distance);
+        auto splittingPlaneForBackBrush = decomp_brush_side_t(normal, distance);
+
+        frontSides.push_back(splittingPlaneForFrontBrush);
+        backSides.push_back(splittingPlaneForBackBrush);
+
+        return {decomp_brush_t(frontSides), decomp_brush_t(backSides)};
     }
 
     bool checkPoints() const {
@@ -505,19 +522,89 @@ BuildInitialBrush(const mbsp_t *bsp, const std::vector<decomp_plane_t>& planes)
     return decomp_brush_t(sides);
 }
 
-
-
-std::vector<decomp_brush_t>
-SplitDifferentTexturedPartsOfBrush(const mbsp_t *bsp, decomp_brush_t brush)
+static bool
+SideNeedsSplitting(const mbsp_t *bsp, const decomp_brush_side_t& side)
 {
-    printf("SplitDifferentTexturedPartsOfBrush: %d sides\n", (int)brush.sides.size());
-
-    for (auto& side : brush.sides) {
-        printf("    %d faces\n", (int)side.faces.size());
+    if (side.faces.size() <= 1) {
+        return false;
     }
 
-    // FIXME: implement
-    return { brush };
+    const auto& firstFace = side.faces[0];
+    for (size_t i=1; i < side.faces.size(); ++i) {
+        const auto& thisFace = side.faces[i];
+
+        if (firstFace.original_face->texinfo != thisFace.original_face->texinfo) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool
+IsValidSplit(const mbsp_t *bsp, const decomp_brush_side_t& side, const qvec4f& split)
+{
+    auto [front, back] = side.clipToPlane(qvec3d(split.xyz()), split[3]);
+
+    if (!front.faces.empty() && !back.faces.empty()) {
+        return true;
+    }
+
+    return false;
+}
+
+static qvec4f
+SuggestSplit(const mbsp_t *bsp, const decomp_brush_side_t& side)
+{
+    assert(SideNeedsSplitting(bsp, side));
+
+    // for all possible splits:
+    for (const auto& face : side.faces) {
+        for (const qvec4f& inwardFacingEdgePlane : face.inwardFacingEdgePlanes) {
+            // this is a potential splitting plane.
+
+            printf("trying split..");
+            if (IsValidSplit(bsp, side, inwardFacingEdgePlane)) {
+                printf("good\n");
+                return inwardFacingEdgePlane;
+            }
+            printf("bad\n");
+        }
+    }
+
+    // should never happen
+    assert(0);
+    return {};
+}
+
+static void
+SplitDifferentTexturedPartsOfBrush_R(const mbsp_t *bsp, const decomp_brush_t& brush, std::vector<decomp_brush_t>* out) {
+    for (auto& side : brush.sides) {
+        if (SideNeedsSplitting(bsp, side)) {
+            qvec4f split = SuggestSplit(bsp, side);
+
+            auto [front, back] = brush.clipToPlane(qvec3d(split.xyz()), split[3]);
+
+            SplitDifferentTexturedPartsOfBrush_R(bsp, front, out);
+            SplitDifferentTexturedPartsOfBrush_R(bsp, back, out);
+            return;
+        }
+    }
+
+    // nothing needed splitting
+    out->push_back(brush);
+}
+
+static std::vector<decomp_brush_t>
+SplitDifferentTexturedPartsOfBrush(const mbsp_t *bsp, const decomp_brush_t& brush)
+{
+    std::vector<decomp_brush_t> result;
+    SplitDifferentTexturedPartsOfBrush_R(bsp, brush, &result);
+
+    printf("SplitDifferentTexturedPartsOfBrush: %d sides in. split into %d brushes\n",
+           (int)brush.sides.size(),
+           (int)result.size());
+
+    return result;
 }
 
 /**
@@ -652,7 +739,7 @@ AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
             }
 
             // we want outward-facing planes
-            planestack->push_back({ nullptr, false, normal, dist });
+            planestack->push_back(decomp_plane_t::make(normal, dist));
         }
     }
 }

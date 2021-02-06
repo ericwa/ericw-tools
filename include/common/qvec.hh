@@ -176,6 +176,11 @@ public:
         res *= -1;
         return res;
     }
+
+    qvec<3, T> xyz() const {
+        static_assert(N >= 3);
+        return qvec<3, T>(*this);
+    }
 };
 
 namespace qv {
