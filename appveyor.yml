@@ -22,10 +22,19 @@ build_script:
     $cmakePlatform = "x64"
 
     msbuild /target:testlight /p:Configuration=Release /p:Platform=$cmakePlatform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" ericw-tools.sln
+    if ( $? -eq $false ) {
+      throw "testlight failed to build"
+    }
 
     msbuild /target:testqbsp /p:Configuration=Release /p:Platform=$cmakePlatform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" ericw-tools.sln
+    if ( $? -eq $false ) {
+      throw "testqbsp failed to build"
+    }
 
     msbuild /p:Configuration=Release /p:Platform=$cmakePlatform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" PACKAGE.vcxproj
+    if ( $? -eq $false ) {
+      throw "package failed"
+    }
 
     .\light\Release\testlight.exe
 
