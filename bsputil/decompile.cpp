@@ -540,40 +540,41 @@ SideNeedsSplitting(const mbsp_t *bsp, const decomp_brush_side_t& side)
     return false;
 }
 
-static bool
-IsValidSplit(const mbsp_t *bsp, const decomp_brush_side_t& side, const qvec4f& split)
-{
-    auto [front, back] = side.clipToPlane(qvec3d(split.xyz()), split[3]);
-
-    if (!front.faces.empty() && !back.faces.empty()) {
-        return true;
-    }
-
-    return false;
-}
-
 static qvec4f
 SuggestSplit(const mbsp_t *bsp, const decomp_brush_side_t& side)
 {
     assert(SideNeedsSplitting(bsp, side));
 
+    size_t bestFaceCount = SIZE_MAX;
+    qvec4f bestPlane;
+
     // for all possible splits:
     for (const auto& face : side.faces) {
-        for (const qvec4f& inwardFacingEdgePlane : face.inwardFacingEdgePlanes) {
+        for (const qvec4f& split : face.inwardFacingEdgePlanes) {
             // this is a potential splitting plane.
 
-            printf("trying split..");
-            if (IsValidSplit(bsp, side, inwardFacingEdgePlane)) {
-                printf("good\n");
-                return inwardFacingEdgePlane;
+            auto [front, back] = side.clipToPlane(qvec3d(split.xyz()), split[3]);
+
+            // we only consider splits that have at least 1 face on the front and back
+            if (front.faces.empty()) {
+                continue;
             }
-            printf("bad\n");
+            if (back.faces.empty()) {
+                continue;
+            }
+
+            const size_t totalFaceCountWithThisSplit =
+                    front.faces.size() + back.faces.size();
+
+            if (totalFaceCountWithThisSplit < bestFaceCount) {
+                bestFaceCount = totalFaceCountWithThisSplit;
+                bestPlane = split;
+            }
         }
     }
 
-    // should never happen
-    assert(0);
-    return {};
+    assert(bestPlane != qvec4f());
+    return bestPlane;
 }
 
 static void
