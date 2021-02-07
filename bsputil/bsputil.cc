@@ -529,7 +529,8 @@ main(int argc, char **argv)
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
-               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum] [--decompile] bspfile\n");
+               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
+               "[--decompile] [--decompile-geomonly] bspfile\n");
         exit(1);
     }
 
@@ -676,7 +677,9 @@ main(int argc, char **argv)
             WriteBSPFile(source, &bspdata);
 
             return 0;
-        } else if (!strcmp(argv[i], "--decompile")) {
+        } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly")) {
+            const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
+
             StripExtension(source);
             DefaultExtension(source, "-decompile.map");
             printf("-> writing %s... ", source);
@@ -685,7 +688,10 @@ main(int argc, char **argv)
             if (!f)
                 Error("couldn't open %s for writing\n", source);
 
-            DecompileBSP(bsp, f);
+            decomp_options options;
+            options.geometryOnly = geomOnly;
+
+            DecompileBSP(bsp, options, f);
 
             fclose(f);
             return 0;

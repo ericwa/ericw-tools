@@ -633,6 +633,26 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
 }
 
 static std::string
+DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const leaf_decompile_task& task)
+{
+    const mleaf_t *leaf = task.leaf;
+
+    fmt::memory_buffer file;
+    fmt::format_to(file, "{{\n");
+    for (const auto& side : task.allPlanes) {
+        PrintPlanePoints(bsp, side, file);
+
+        // print a default face
+        fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());
+        WriteNullTexdef(bsp, file);
+        fmt::format_to(file, "\n");
+    }
+    fmt::format_to(file, "}}\n");
+
+    return fmt::to_string(file);
+}
+
+static std::string
 DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task& task)
 {
     const mleaf_t *leaf = task.leaf;
@@ -767,7 +787,7 @@ AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
 }
 
 static void
-DecompileEntity(const mbsp_t *bsp, FILE* file, const entdict_t& dict, bool isWorld)
+DecompileEntity(const mbsp_t *bsp, const decomp_options& options, FILE* file, const entdict_t& dict, bool isWorld)
 {
     // we use -1 to indicate it's not a brush model
     int modelNum = -1;
@@ -811,7 +831,11 @@ DecompileEntity(const mbsp_t *bsp, FILE* file, const entdict_t& dict, bool isWor
         std::vector<std::string> leafStrings;
         leafStrings.resize(tasks.size());
         tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t i) {
-            leafStrings[i] = DecompileLeafTask(bsp, tasks[i]);
+            if (options.geometryOnly) {
+                leafStrings[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i]);
+            } else {
+                leafStrings[i] = DecompileLeafTask(bsp, tasks[i]);
+            }
         });
 
         // finally print out the leafs
@@ -824,12 +848,12 @@ DecompileEntity(const mbsp_t *bsp, FILE* file, const entdict_t& dict, bool isWor
 }
 
 void
-DecompileBSP(const mbsp_t *bsp, FILE* file)
+DecompileBSP(const mbsp_t *bsp, const decomp_options& options, FILE* file)
 {
     auto entdicts = EntData_Parse(bsp->dentdata);
 
     for (size_t i = 0; i < entdicts.size(); ++i) {
         // entity 0 is implicitly worldspawn (model 0)
-        DecompileEntity(bsp, file, entdicts[i], i == 0);
+        DecompileEntity(bsp, options, file, entdicts[i], i == 0);
     }
 }
