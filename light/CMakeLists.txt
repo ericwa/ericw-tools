@@ -1,6 +1,3 @@
-cmake_minimum_required (VERSION 2.8)
-project (light CXX)
-
 set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/imglib.hh
 	${CMAKE_SOURCE_DIR}/include/light/entities.hh
@@ -119,13 +116,8 @@ install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
 #see https://cmake.org/Wiki/CMakeEmulateMakeCheck
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 
-set(GOOGLETEST_SOURCES ${CMAKE_SOURCE_DIR}/3rdparty/googletest/src/gtest-all.cc)
-include_directories(${CMAKE_SOURCE_DIR}/3rdparty/googletest/include)
-include_directories(${CMAKE_SOURCE_DIR}/3rdparty/googletest)
-
 set(LIGHT_TEST_SOURCE 
 	${LIGHT_SOURCES}
-	${GOOGLETEST_SOURCES}
 	test.cc
 	test_entities.cc
 	test_ltface.cc
@@ -136,7 +128,7 @@ add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
 add_test(testlight testlight)
 add_dependencies(check testlight)
 
-target_link_libraries (testlight ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (testlight ${CMAKE_THREAD_LIBS_INIT} gtest)
 if (embree_FOUND)
 	target_link_libraries (testlight ${EMBREE_LIBRARY})
 	add_definitions(-DHAVE_EMBREE)

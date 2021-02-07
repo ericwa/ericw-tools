@@ -1,6 +1,3 @@
-cmake_minimum_required (VERSION 2.8)
-project (bspinfo CXX)
-
 set(BSPINFO_SOURCES
 	bspinfo.cc
 	${CMAKE_SOURCE_DIR}/common/entdata.cc

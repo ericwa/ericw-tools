@@ -1,6 +1,3 @@
-cmake_minimum_required (VERSION 2.8)
-project (bsputil CXX)
-
 set(BSPUTIL_SOURCES
 	bsputil.cc
 	decompile.h
