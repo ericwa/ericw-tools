@@ -605,15 +605,15 @@ SplitDifferentTexturedPartsOfBrush(const mbsp_t *bsp, const decomp_brush_t& brus
     std::vector<decomp_brush_t> result;
     SplitDifferentTexturedPartsOfBrush_R(bsp, brush, &result);
 
-    printf("SplitDifferentTexturedPartsOfBrush: %d sides in. split into %d brushes\n",
-           (int)brush.sides.size(),
-           (int)result.size());
+//    printf("SplitDifferentTexturedPartsOfBrush: %d sides in. split into %d brushes\n",
+//           (int)brush.sides.size(),
+//           (int)result.size());
 
     return result;
 }
 
 struct leaf_decompile_task {
-    std::vector<decomp_plane_t> reducedPlanes;
+    std::vector<decomp_plane_t> allPlanes;
     const mleaf_t *leaf;
 };
 
@@ -628,15 +628,8 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
         return;
     }
 
-    auto reducedPlanes = RemoveRedundantPlanes(bsp, *planestack);
-    if (reducedPlanes.empty()) {
-        printf("warning, skipping empty brush\n");
-        return;
-    }
-
-    printf("before: %d after %d\n", (int)planestack->size(), (int)reducedPlanes.size());
-
-    result->push_back({reducedPlanes, leaf});
+    // NOTE: copies the whole plane stack
+    result->push_back({*planestack, leaf});
 }
 
 static std::string
@@ -644,11 +637,20 @@ DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task& task)
 {
     const mleaf_t *leaf = task.leaf;
 
+    auto reducedPlanes = RemoveRedundantPlanes(bsp, task.allPlanes);
+    if (reducedPlanes.empty()) {
+        printf("warning, skipping empty brush\n");
+        return "";
+    }
+
+    //printf("before: %d after %d\n", (int)task.allPlanes.size(), (int)reducedPlanes.size());
+
+
     // At this point, we should gather all of the faces on `reducedPlanes` and clip away the
     // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
     // It's possible that the faces are half-overlapping the leaf, so we may have to cut the
     // faces in half.
-    auto initialBrush = BuildInitialBrush(bsp, task.reducedPlanes);
+    auto initialBrush = BuildInitialBrush(bsp, reducedPlanes);
     assert(initialBrush.checkPoints());
 
     // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
