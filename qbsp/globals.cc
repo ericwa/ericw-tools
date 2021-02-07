@@ -46,19 +46,19 @@ const int *MemSize = MemSize_BSP29;
     sizeof(wvert_t),                                    \
     sizeof(wedge_t),                                    \
     sizeof(hashvert_t),                                 \
-    1,                          /* Other (byte) */      \
+    1,                          /* Other (uint8_t) */      \
     1,                          /* Global (totals) */
 
 const int MemSize_BSP29[] = {
     sizeof(char),               /* Entity text */
     sizeof(dplane_t),
-    sizeof(byte),               /* Texture data */
+    sizeof(uint8_t),               /* Texture data */
     sizeof(dvertex_t),
-    sizeof(byte),               /* Visibility data */
+    sizeof(uint8_t),               /* Visibility data */
     sizeof(bsp29_dnode_t),
     sizeof(texinfo_t),
     sizeof(bsp29_dface_t),
-    sizeof(byte),               /* Light data */
+    sizeof(uint8_t),               /* Light data */
     sizeof(bsp29_dclipnode_t),
     sizeof(bsp29_dleaf_t),
     sizeof(uint16_t),           /* Marksurfaces */
@@ -71,13 +71,13 @@ const int MemSize_BSP29[] = {
 const int MemSize_BSP2[] = {
     sizeof(char),               /* Entity text */
     sizeof(dplane_t),
-    sizeof(byte),               /* Texture data */
+    sizeof(uint8_t),               /* Texture data */
     sizeof(dvertex_t),
-    sizeof(byte),               /* Visibility data */
+    sizeof(uint8_t),               /* Visibility data */
     sizeof(bsp2_dnode_t),
     sizeof(texinfo_t),
     sizeof(bsp2_dface_t),
-    sizeof(byte),               /* Light data */
+    sizeof(uint8_t),               /* Light data */
     sizeof(bsp2_dclipnode_t),
     sizeof(bsp2_dleaf_t),
     sizeof(uint32_t),           /* Marksurfaces */
@@ -90,13 +90,13 @@ const int MemSize_BSP2[] = {
 const int MemSize_BSP2rmq[] = {
     sizeof(char),               /* Entity text */
     sizeof(dplane_t),
-    sizeof(byte),               /* Texture data */
+    sizeof(uint8_t),               /* Texture data */
     sizeof(dvertex_t),
-    sizeof(byte),               /* Visibility data */
+    sizeof(uint8_t),               /* Visibility data */
     sizeof(bsp2rmq_dnode_t),
     sizeof(texinfo_t),
     sizeof(bsp2_dface_t),
-    sizeof(byte),               /* Light data */
+    sizeof(uint8_t),               /* Light data */
     sizeof(bsp2_dclipnode_t),
     sizeof(bsp2rmq_dleaf_t),
     sizeof(uint32_t),           /* Marksurfaces */

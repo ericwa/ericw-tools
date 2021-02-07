@@ -548,10 +548,10 @@ typedef struct {
     dmodel_t *dmodels;
 
     int visdatasize;
-    byte *dvisdata;
+    uint8_t *dvisdata;
 
     int lightdatasize;
-    byte *dlightdata;
+    uint8_t *dlightdata;
 
     int texdatasize;
     dmiptexlump_t *dtexdata;
@@ -595,10 +595,10 @@ typedef struct {
     dmodel_t *dmodels;
 
     int visdatasize;
-    byte *dvisdata;
+    uint8_t *dvisdata;
 
     int lightdatasize;
-    byte *dlightdata;
+    uint8_t *dlightdata;
 
     int texdatasize;
     dmiptexlump_t *dtexdata;
@@ -642,10 +642,10 @@ typedef struct {
     dmodel_t *dmodels;
 
     int visdatasize;
-    byte *dvisdata;
+    uint8_t *dvisdata;
 
     int lightdatasize;
-    byte *dlightdata;
+    uint8_t *dlightdata;
 
     int texdatasize;
     dmiptexlump_t *dtexdata;
@@ -692,7 +692,7 @@ typedef struct {
     dvis_t *dvis;
     
     int lightdatasize;
-    byte *dlightdata;
+    uint8_t *dlightdata;
     
     int entdatasize;
     char *dentdata;
@@ -739,7 +739,7 @@ typedef struct {
     int numbrushsides;
     dbrushside_t *dbrushsides;
     
-    byte dpop[256];
+    uint8_t dpop[256];
 } q2bsp_t;
 
 struct mbsp_t {
@@ -750,10 +750,10 @@ struct mbsp_t {
     
     // FIXME: split this into q1 and q2 members, since the format is different
     int visdatasize;
-    byte *dvisdata;
+    uint8_t *dvisdata;
     
     int lightdatasize;
-    byte *dlightdata;
+    uint8_t *dlightdata;
     
     int texdatasize;
     dmiptexlump_t *dtexdata;
@@ -809,7 +809,7 @@ struct mbsp_t {
     int numbrushsides;
     dbrushside_t *dbrushsides;
     
-    byte dpop[256];
+    uint8_t dpop[256];
 }; // "generic" bsp - superset of all other supported types
 
 typedef struct {

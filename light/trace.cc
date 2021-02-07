@@ -328,7 +328,7 @@ SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
     assert (x >= 0);
     assert (y >= 0);
     
-    color_rgba *data = (color_rgba*)((byte*)miptex + miptex->offset);
+    color_rgba *data = (color_rgba*)((uint8_t*)miptex + miptex->offset);
     sample = data[(miptex->width * y) + x];
 
     return sample;

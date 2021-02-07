@@ -1350,14 +1350,14 @@ static dmodel_t *BSP29_CopyModels(const dmodel_t *dmodels, int nummodels)
     return (dmodel_t *)CopyArray(dmodels, nummodels, sizeof(*dmodels));
 }
 
-static byte *BSP29_CopyVisData(const byte *dvisdata, int visdatasize)
+static uint8_t *BSP29_CopyVisData(const uint8_t *dvisdata, int visdatasize)
 {
-    return (byte *)CopyArray(dvisdata, visdatasize, 1);
+    return (uint8_t *)CopyArray(dvisdata, visdatasize, 1);
 }
 
-static byte *BSP29_CopyLightData(const byte *dlightdata, int lightdatasize)
+static uint8_t *BSP29_CopyLightData(const uint8_t *dlightdata, int lightdatasize)
 {
-    return (byte *)CopyArray(dlightdata, lightdatasize, 1);
+    return (uint8_t *)CopyArray(dlightdata, lightdatasize, 1);
 }
 
 static dmiptexlump_t *BSP29_CopyTexData(const dmiptexlump_t *dtexdata, int texdatasize)
@@ -1649,7 +1649,7 @@ ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
         
         // copy or convert data
         mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
-        mbsp->dvisdata = (byte *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
+        mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
         mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
         mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
         mbsp->dleafs = Q2BSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
@@ -1996,7 +1996,7 @@ isHexen2(const dheader_t *header)
         the world should always have some face.
         however, if the sizes are wrong then we're actually reading headnode[6]. hexen2 only used 5 hulls, so this should be 0 in hexen2, and not in quake.
         */
-        const dmodelq1_t *modelsq1 = (const dmodelq1_t*)((const byte *)header + header->lumps[LUMP_MODELS].fileofs);
+        const dmodelq1_t *modelsq1 = (const dmodelq1_t*)((const uint8_t *)header + header->lumps[LUMP_MODELS].fileofs);
         return !modelsq1->numfaces;
 }
 
@@ -2009,13 +2009,13 @@ isHexen2(const dheader_t *header)
 const lumpspec_t lumpspec_bsp29[] = {
     { "entities",     sizeof(char)              },
     { "planes",       sizeof(dplane_t)          },
-    { "texture",      sizeof(byte)              },
+    { "texture",      sizeof(uint8_t)              },
     { "vertexes",     sizeof(dvertex_t)         },
-    { "visibility",   sizeof(byte)              },
+    { "visibility",   sizeof(uint8_t)              },
     { "nodes",        sizeof(bsp29_dnode_t)     },
     { "texinfos",     sizeof(texinfo_t)         },
     { "faces",        sizeof(bsp29_dface_t)     },
-    { "lighting",     sizeof(byte)              },
+    { "lighting",     sizeof(uint8_t)              },
     { "clipnodes",    sizeof(bsp29_dclipnode_t) },
     { "leafs",        sizeof(bsp29_dleaf_t)     },
     { "marksurfaces", sizeof(uint16_t)          },
@@ -2027,13 +2027,13 @@ const lumpspec_t lumpspec_bsp29[] = {
 const lumpspec_t lumpspec_bsp2rmq[] = {
     { "entities",     sizeof(char)              },
     { "planes",       sizeof(dplane_t)          },
-    { "texture",      sizeof(byte)              },
+    { "texture",      sizeof(uint8_t)              },
     { "vertexes",     sizeof(dvertex_t)         },
-    { "visibility",   sizeof(byte)              },
+    { "visibility",   sizeof(uint8_t)              },
     { "nodes",        sizeof(bsp2rmq_dnode_t)   },
     { "texinfos",     sizeof(texinfo_t)         },
     { "faces",        sizeof(bsp2_dface_t)      },
-    { "lighting",     sizeof(byte)              },
+    { "lighting",     sizeof(uint8_t)              },
     { "clipnodes",    sizeof(bsp2_dclipnode_t ) },
     { "leafs",        sizeof(bsp2rmq_dleaf_t)   },
     { "marksurfaces", sizeof(uint32_t)          },
@@ -2045,13 +2045,13 @@ const lumpspec_t lumpspec_bsp2rmq[] = {
 const lumpspec_t lumpspec_bsp2[] = {
     { "entities",     sizeof(char)              },
     { "planes",       sizeof(dplane_t)          },
-    { "texture",      sizeof(byte)              },
+    { "texture",      sizeof(uint8_t)              },
     { "vertexes",     sizeof(dvertex_t)         },
-    { "visibility",   sizeof(byte)              },
+    { "visibility",   sizeof(uint8_t)              },
     { "nodes",        sizeof(bsp2_dnode_t)      },
     { "texinfos",     sizeof(texinfo_t)         },
     { "faces",        sizeof(bsp2_dface_t)      },
-    { "lighting",     sizeof(byte)              },
+    { "lighting",     sizeof(uint8_t)              },
     { "clipnodes",    sizeof(bsp2_dclipnode_t ) },
     { "leafs",        sizeof(bsp2_dleaf_t)      },
     { "marksurfaces", sizeof(uint32_t)          },
@@ -2064,11 +2064,11 @@ const lumpspec_t lumpspec_q2bsp[] = {
     { "entities",     sizeof(char)              },
     { "planes",       sizeof(dplane_t)          },
     { "vertexes",     sizeof(dvertex_t)         },
-    { "visibility",   sizeof(byte)              },
+    { "visibility",   sizeof(uint8_t)              },
     { "nodes",        sizeof(q2_dnode_t)        },
     { "texinfos",     sizeof(q2_texinfo_t)      },
     { "faces",        sizeof(q2_dface_t)        },
-    { "lighting",     sizeof(byte)              },
+    { "lighting",     sizeof(uint8_t)              },
     { "leafs",        sizeof(q2_dleaf_t)        },
     { "leaffaces",    sizeof(uint16_t)          },
     { "leafbrushes",  sizeof(uint16_t)          },
@@ -2077,7 +2077,7 @@ const lumpspec_t lumpspec_q2bsp[] = {
     { "models",       sizeof(q2_dmodel_t)       },
     { "brushes",      sizeof(dbrush_t)          },
     { "brushsides",   sizeof(dbrushside_t)      },
-    { "pop",          sizeof(byte)              },
+    { "pop",          sizeof(uint8_t)              },
     { "areas",        sizeof(darea_t)           },
     { "areaportals",  sizeof(dareaportal_t)     },
 };
@@ -2086,8 +2086,8 @@ static int
 CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 {
     const lumpspec_t *lumpspec;
-    byte **bufferptr = static_cast<byte **>(destptr);
-    byte *buffer = *bufferptr;
+    uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
+    uint8_t *buffer = *bufferptr;
     int length;
     int ofs;
 
@@ -2115,14 +2115,14 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 
     if (lumpnum == LUMP_MODELS && !isHexen2(header))
     {   /*convert in-place. no need to care about endian here.*/
-        const dmodelq1_t *in = (const dmodelq1_t*)((const byte *)header + ofs);
+        const dmodelq1_t *in = (const dmodelq1_t*)((const uint8_t *)header + ofs);
         dmodel_t *out;
         int i, j;
         if (length % sizeof(dmodelq1_t))
             Error("%s: odd %s lump size", __func__, lumpspec->name);
         length /= sizeof(dmodelq1_t);
 
-        buffer = *bufferptr = static_cast<byte *>(malloc(length * sizeof(dmodel_t)));
+        buffer = *bufferptr = static_cast<uint8_t *>(malloc(length * sizeof(dmodel_t)));
         if (!buffer)
             Error("%s: allocation of %i bytes failed.", __func__, length);
         out = (dmodel_t*)buffer;
@@ -2149,11 +2149,11 @@ CopyLump(const dheader_t *header, int lumpnum, void *destptr)
         if (length % lumpspec->size)
             Error("%s: odd %s lump size", __func__, lumpspec->name);
 
-        buffer = *bufferptr = static_cast<byte *>(malloc(length + 1));
+        buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
         if (!buffer)
             Error("%s: allocation of %i bytes failed.", __func__, length);
 
-        memcpy(buffer, (const byte *)header + ofs, length);
+        memcpy(buffer, (const uint8_t *)header + ofs, length);
         buffer[length] = 0; /* In case of corrupt entity lump */
 
         return length / lumpspec->size;
@@ -2165,8 +2165,8 @@ static int
 Q2_CopyLump(const q2_dheader_t *header, int lumpnum, void *destptr)
 {
     const lumpspec_t *lumpspec;
-    byte **bufferptr = static_cast<byte **>(destptr);
-    byte *buffer = *bufferptr;
+    uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
+    uint8_t *buffer = *bufferptr;
     int length;
     int ofs;
     
@@ -2188,11 +2188,11 @@ Q2_CopyLump(const q2_dheader_t *header, int lumpnum, void *destptr)
     if (length % lumpspec->size)
         Error("%s: odd %s lump size", __func__, lumpspec->name);
     
-    buffer = *bufferptr = static_cast<byte *>(malloc(length + 1));
+    buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
     
-    memcpy(buffer, (const byte *)header + ofs, length);
+    memcpy(buffer, (const uint8_t *)header + ofs, length);
     buffer[length] = 0; /* In case of corrupt entity lump */
     
     return length / lumpspec->size;
@@ -2234,7 +2234,7 @@ void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size
     }
 
     //ericw -- make a copy
-    byte *xdata_copy = (byte*) malloc(xsize);
+    uint8_t *xdata_copy = (uint8_t*) malloc(xsize);
     memcpy(xdata_copy, xdata, xsize);
     
     e->lumpdata = xdata_copy;
@@ -2279,7 +2279,7 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
     logprint("LoadBSPFile: '%s'\n", filename);
     
     /* load the file header */
-    byte *file_data;
+    uint8_t *file_data;
     uint32_t flen = LoadFilePak(filename, &file_data);
 
     /* transfer the header data to these variables */
@@ -2443,7 +2443,7 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         {
             int xlumps;
             const bspx_lump_t *xlump;
-            bspx = (const bspx_header_t*)((const byte*)header + bspxofs);
+            bspx = (const bspx_header_t*)((const uint8_t*)header + bspxofs);
             xlump = (const bspx_lump_t*)(bspx+1);
             xlumps = LittleLong(bspx->numlumps);
             if (!memcmp(&bspx->id,"BSPX",4) && xlumps >= 0 && bspxofs+sizeof(*bspx)+sizeof(*xlump)*xlumps <= flen)
@@ -2454,7 +2454,7 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
                     uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
                     uint32_t len = LittleLong(xlump[xlumps].filelen);
                     void *lumpdata = malloc(len);
-                    memcpy(lumpdata, (const byte*)header + ofs, len);
+                    memcpy(lumpdata, (const uint8_t*)header + ofs, len);
                     BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
                 }
             }
@@ -2511,7 +2511,7 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
         throw; //mxd. Fixes "Uninitialized variable" warning
     }
 
-    byte pad[4] = {0};
+    uint8_t pad[4] = {0};
     lump_t *lump;
     if (q2)
         lump = &bspfile->q2header.lumps[lumpnum];
@@ -2701,7 +2701,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
 
         for (x = bspdata->bspxentries, l = 0; x && l < xheader.numlumps; x = x->next, l++)
         {
-            byte pad[4] = {0};
+            uint8_t pad[4] = {0};
             xlumps[l].filelen = LittleLong(x->lumpsize);
             xlumps[l].fileofs = LittleLong(ftell(bspfile.file));
             strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));

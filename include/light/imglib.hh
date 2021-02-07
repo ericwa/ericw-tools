@@ -35,14 +35,14 @@ typedef struct {
 } q2_miptex_t;
 
 typedef struct {
-    byte r;
-    byte g;
-    byte b;
-    byte a;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    uint8_t a;
 } color_rgba;
 
 //mxd. Moved from ltface.cc
-extern byte thepalette[768];
+extern uint8_t thepalette[768];
 
 // Palette
 void LoadPalette(bspdata_t *bspdata);
@@ -52,9 +52,9 @@ qvec3f Palette_GetColor(const int i);
 qvec4f Texture_GetColor(const rgba_miptex_t *tex, const int i);
 
 // Image loading
-qboolean LoadPCX(const char *filename, byte **pixels, byte **palette, int *width, int *height);
-qboolean LoadTGA(const char *filename, byte **pixels, int *width, int *height);
-qboolean LoadWAL(const char *filename, byte **pixels, int *width, int *height);
+qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int *width, int *height);
+qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height);
+qboolean LoadWAL(const char *filename, uint8_t **pixels, int *width, int *height);
 
 // Texture loading
 void LoadOrConvertTextures(mbsp_t *bsp); // Loads textures from disk and stores them in bsp->drgbatexdata (Quake 2) / Converts paletted bsp->dtexdata textures to RGBA bsp->drgbatexdata textures (Quake / Hexen2)

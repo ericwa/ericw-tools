@@ -68,21 +68,21 @@ qboolean surflight_dump = false;
 static facesup_t *faces_sup;    //lit2/bspx stuff
 
 /// start of lightmap data
-byte *filebase;
+uint8_t *filebase;
 /// offset of start of free space after data (should be kept a multiple of 4)
 static int file_p;
 /// offset of end of free space for lightmap data
 static int file_end;
 
 /// start of litfile data
-byte *lit_filebase;
+uint8_t *lit_filebase;
 /// offset of start of free space after litfile data (should be kept a multiple of 12)
 static int lit_file_p;
 /// offset of end of space for litfile data
 static int lit_file_end;
 
 /// start of luxfile data
-byte *lux_filebase;
+uint8_t *lux_filebase;
 /// offset of start of free space after luxfile data (should be kept a multiple of 12)
 static int lux_file_p;
 /// offset of end of space for luxfile data
@@ -180,7 +180,7 @@ PrintOptionsSummary(void)
  * and return in *lightdata
  */
 void
-GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
+GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size)
 {
     ThreadLock();
 
@@ -193,8 +193,8 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
         size += (4 - (size % 4));
     }
 
-    // increment the next writing offsets, aligning them to 4 byte boundaries (file_p)
-    // and 12-byte boundaries (lit_file_p/lux_file_p)
+    // increment the next writing offsets, aligning them to 4 uint8_t boundaries (file_p)
+    // and 12-uint8_t boundaries (lit_file_p/lux_file_p)
     file_p += size;
     lit_file_p += 3 * size;
     lux_file_p += 3 * size;
@@ -212,7 +212,7 @@ GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size)
  * Special version of GetFileSpace for when we're relighting a .bsp and can't modify it.
  * In this case the offsets are already known.
  */
-void GetFileSpace_PreserveOffsetInBsp(byte **lightdata, byte **colordata, byte **deluxdata, int lightofs) {
+void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs) {
     Q_assert(lightofs >= 0);
 
     *lightdata = filebase + lightofs;
@@ -394,21 +394,21 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     free(lux_filebase);
 
     /* greyscale data stored in a separate buffer */
-    filebase = (byte *)calloc(MAX_MAP_LIGHTING, 1);
+    filebase = (uint8_t *)calloc(MAX_MAP_LIGHTING, 1);
     if (!filebase)
         Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING);
     file_p = 0;
     file_end = MAX_MAP_LIGHTING;
 
     /* litfile data stored in a separate buffer */
-    lit_filebase = (byte *)calloc(MAX_MAP_LIGHTING*3, 1);
+    lit_filebase = (uint8_t *)calloc(MAX_MAP_LIGHTING*3, 1);
     if (!lit_filebase)
         Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING*3);
     lit_file_p = 0;
     lit_file_end = (MAX_MAP_LIGHTING*3);
 
     /* lux data stored in a separate buffer */
-    lux_filebase = (byte *)calloc(MAX_MAP_LIGHTING*3, 1);
+    lux_filebase = (uint8_t *)calloc(MAX_MAP_LIGHTING*3, 1);
     if (!lux_filebase)
         Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING*3);
     lux_file_p = 0;
@@ -472,11 +472,11 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         free(bsp->dlightdata);
         if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION) {
             bsp->lightdatasize = lit_file_p;
-            bsp->dlightdata = (byte *)malloc(bsp->lightdatasize);
+            bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
             memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
         } else {
             bsp->lightdatasize = file_p;
-            bsp->dlightdata = (byte *)malloc(bsp->lightdatasize);
+            bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
             memcpy(bsp->dlightdata, filebase, bsp->lightdatasize);
         }
     } else {

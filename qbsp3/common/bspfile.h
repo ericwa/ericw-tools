@@ -27,11 +27,11 @@ extern	int			nummodels;
 extern	q2_dmodel_t	dmodels[MAX_MAP_MODELS];
 
 extern	int			visdatasize;
-extern	byte		dvisdata[MAX_MAP_VISIBILITY];
+extern	uint8_t		dvisdata[MAX_MAP_VISIBILITY];
 extern	dvis_t		*dvis;
 
 extern	int			lightdatasize;
-extern	byte		dlightdata[MAX_MAP_LIGHTING];
+extern	uint8_t		dlightdata[MAX_MAP_LIGHTING];
 
 extern	int			entdatasize;
 extern	char		dentdata[MAX_MAP_ENTSTRING];
@@ -78,10 +78,10 @@ extern	dbrush_t	dbrushes[MAX_MAP_BRUSHES];
 extern	int			numbrushsides;
 extern	dbrushside_t	dbrushsides[MAX_MAP_BRUSHSIDES];
 
-extern	byte		dpop[256];
+extern	uint8_t		dpop[256];
 
-void DecompressVis (byte *in, byte *decompressed);
-int CompressVis (byte *vis, byte *dest);
+void DecompressVis (uint8_t *in, uint8_t *decompressed);
+int CompressVis (uint8_t *vis, uint8_t *dest);
 
 void	LoadBSPFile (char *filename);
 void	LoadBSPFileTexinfo (char *filename);	// just for qdata

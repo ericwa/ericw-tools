@@ -885,7 +885,7 @@ static rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texna
         if (offset < 0)
             continue;
         
-        rgba_miptex_t *miptex = (rgba_miptex_t*)((byte *)bsp->drgbatexdata + offset);
+        rgba_miptex_t *miptex = (rgba_miptex_t*)((uint8_t *)bsp->drgbatexdata + offset);
         if (!Q_strcasecmp(miptex->name, texname))
             return miptex;
     }

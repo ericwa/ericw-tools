@@ -501,7 +501,7 @@ void EndBSPFile (void)
 	char	path[1024];
 #if 0
     int		len;
-	byte	*buf;
+	uint8_t	*buf;
 #endif
 
 	EmitBrushes ();

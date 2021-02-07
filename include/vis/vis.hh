@@ -126,7 +126,7 @@ extern qboolean ambientslime;
 extern qboolean ambientlava;
 extern int visdist;
 
-extern byte *uncompressed;
+extern uint8_t *uncompressed;
 extern int leafbytes;
 extern int leafbytes_real;
 extern int leaflongs;

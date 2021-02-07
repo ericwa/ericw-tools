@@ -77,7 +77,7 @@ CalcAmbientSounds(mbsp_t *bsp)
     const miptex_t *miptex;
     int i, j, k, l;
     mleaf_t *leaf, *hit;
-    byte *vis;
+    uint8_t *vis;
     vec3_t mins, maxs;
     float d, maxd;
     int ambient_type;
@@ -113,7 +113,7 @@ CalcAmbientSounds(mbsp_t *bsp)
                 surf = BSP_GetFace(bsp, bsp->dleaffaces[hit->firstmarksurface + k]);
                 info = &bsp->texinfo[surf->texinfo];
                 ofs = bsp->dtexdata->dataofs[info->miptex];
-                miptex = (const miptex_t *)((byte *)bsp->dtexdata + ofs);
+                miptex = (const miptex_t *)((uint8_t *)bsp->dtexdata + ofs);
 
                 if (!Q_strncasecmp(miptex->name, "sky", 3) && ambientsky)
                     ambient_type = AMBIENT_SKY;
@@ -156,7 +156,7 @@ CalcAmbientSounds(mbsp_t *bsp)
                 if (vol < 0)
                     vol = 0;
             }
-            leaf->ambient_level[j] = (byte)(vol * 255);
+            leaf->ambient_level[j] = (uint8_t)(vol * 255);
         }
     }
 }

@@ -33,11 +33,11 @@ int			nummodels;
 q2_dmodel_t	dmodels[MAX_MAP_MODELS];
 
 int			visdatasize;
-byte		dvisdata[MAX_MAP_VISIBILITY];
+uint8_t		dvisdata[MAX_MAP_VISIBILITY];
 dvis_t		*dvis = (dvis_t *)dvisdata;
 
 int			lightdatasize;
-byte		dlightdata[MAX_MAP_LIGHTING];
+uint8_t		dlightdata[MAX_MAP_LIGHTING];
 
 int			entdatasize;
 char		dentdata[MAX_MAP_ENTSTRING];
@@ -84,7 +84,7 @@ darea_t		dareas[MAX_MAP_AREAS];
 int			numareaportals;
 dareaportal_t	dareaportals[MAX_MAP_AREAPORTALS];
 
-byte		dpop[256];
+uint8_t		dpop[256];
 
 /*
 ===============
@@ -92,12 +92,12 @@ CompressVis
 
 ===============
 */
-int CompressVis (byte *vis, byte *dest)
+int CompressVis (uint8_t *vis, uint8_t *dest)
 {
 	int		j;
 	int		rep;
 	int		visrow;
-	byte	*dest_p;
+	uint8_t	*dest_p;
 
 	dest_p = dest;
 //	visrow = (r_numvisleafs + 7)>>3;
@@ -128,10 +128,10 @@ int CompressVis (byte *vis, byte *dest)
 DecompressVis
 ===================
 */
-void DecompressVis (byte *in, byte *decompressed)
+void DecompressVis (uint8_t *in, uint8_t *decompressed)
 {
 	int		c;
-	byte	*out;
+	uint8_t	*out;
 	int		row;
 
 //	row = (r_numvisleafs+7)>>3;
@@ -364,7 +364,7 @@ int CopyLump (int lump, void *dest, int size)
 	if (length % size)
 		Error ("LoadBSPFile: odd lump size");
 
-	memcpy (dest, (byte *)header + ofs, length);
+	memcpy (dest, (uint8_t *)header + ofs, length);
 
 	return length / size;
 }

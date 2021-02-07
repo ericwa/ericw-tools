@@ -34,9 +34,9 @@ typedef struct {
 
 extern bmhd_t bmhd;             /* will be in native byte order */
 
-void LoadLBM(char *filename, byte **picture, byte **palette);
+void LoadLBM(char *filename, uint8_t **picture, uint8_t **palette);
 
-void WriteLBMfile(char *filename, byte *data, int width, int height,
-                  byte *palette);
+void WriteLBMfile(char *filename, uint8_t *data, int width, int height,
+                  uint8_t *palette);
 
 #endif /* __COMMON_LBMLIB_H__ */

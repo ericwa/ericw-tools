@@ -36,7 +36,6 @@
 #define stringify(x) stringify__(x)
 
 typedef bool qboolean;
-typedef unsigned char byte;
 
 #ifndef __GNUC__
 #define __attribute__(x)
@@ -123,7 +122,7 @@ extern qboolean com_eof;
 char *copystring(const char *s);
 
 void CRC_Init(unsigned short *crcvalue);
-void CRC_ProcessByte(unsigned short *crcvalue, byte data);
+void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
 unsigned short CRC_Value(unsigned short crcvalue);
 
 void CreatePath(char *path);

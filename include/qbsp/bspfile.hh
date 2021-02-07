@@ -29,9 +29,6 @@
 extern "C" {
 #endif
 
-/* FIXME - put this typedef elsewhere */
-typedef uint8_t byte;
-
 #define BSPVERSION     29
 #define BSPHLVERSION   30
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')

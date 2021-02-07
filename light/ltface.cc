@@ -1279,7 +1279,7 @@ static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projecti
     //this is because we're treating it like a cubemap. why? no idea.
     float weight[4];
     color_rgba pi[4];
-    color_rgba *data = (color_rgba*)((byte*)tex + tex->offset);
+    color_rgba *data = (color_rgba*)((uint8_t*)tex + tex->offset);
 
     vec3_t coord;
     if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 || coord[1] >= 1) {
@@ -3026,7 +3026,7 @@ WriteSingleLightmap(const mbsp_t *bsp,
                     const lightsurf_t *lightsurf,
                     const lightmap_t *lm,
                     const int actual_width, const int actual_height,
-                    byte *out, byte *lit, byte *lux);
+                    uint8_t *out, uint8_t *lit, uint8_t *lux);
 
 static void
 WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
@@ -3045,7 +3045,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             return;
         }
 
-        byte *out, *lit, *lux;
+        uint8_t *out, *lit, *lux;
         GetFileSpace_PreserveOffsetInBsp(&out, &lit, &lux, face->lightofs);
 
         for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
@@ -3141,7 +3141,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
 
     const int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
 
-    byte *out, *lit, *lux;
+    uint8_t *out, *lit, *lux;
     GetFileSpace(&out, &lit, &lux, size * numstyles);
 
     // q2 support
@@ -3188,7 +3188,7 @@ WriteSingleLightmap(const mbsp_t *bsp,
                     const lightsurf_t *lightsurf,
                     const lightmap_t *lm,
                     const int actual_width, const int actual_height,
-                    byte *out, byte *lit, byte *lux)
+                    uint8_t *out, uint8_t *lit, uint8_t *lux)
 {
         const int oversampled_width = actual_width * oversample;
         const int oversampled_height = actual_height * oversample;

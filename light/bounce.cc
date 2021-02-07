@@ -314,7 +314,7 @@ MakeTextureColors (const mbsp_t *bsp)
         if (ofs < 0)
             continue;
         
-        const rgba_miptex_t *miptex = (rgba_miptex_t *)((byte *)bsp->drgbatexdata + ofs);
+        const rgba_miptex_t *miptex = (rgba_miptex_t *)((uint8_t *)bsp->drgbatexdata + ofs);
         const string name { miptex->name };
         const qvec3f color = Texture_AvgColor(bsp, miptex);
         

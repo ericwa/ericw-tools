@@ -609,8 +609,8 @@ typedef struct {
 int
 LoadFilePak(char *filename, void *destptr)
 {
-    byte **bufferptr = static_cast<byte **>(destptr);
-    byte *buffer;
+    uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
+    uint8_t *buffer;
     FILE *file;
     int length;
     char *e = NULL;
@@ -630,7 +630,7 @@ LoadFilePak(char *filename, void *destptr)
                 file = fopen(filename, "rb");
                 if (file)
                 {
-                    byte **bufferptr = static_cast<byte **>(destptr);
+                    uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
                     pakheader_t header;
                     unsigned int i;
                     const char *innerfile = e+1;
@@ -652,7 +652,7 @@ LoadFilePak(char *filename, void *destptr)
                                 if (!strcmp(files[i].name, innerfile))
                                 {
                                         fseek(file, files[i].offset, SEEK_SET);
-                                        *bufferptr = static_cast<byte*>(malloc(files[i].length + 1));
+                                        *bufferptr = static_cast<uint8_t*>(malloc(files[i].length + 1));
                                         SafeRead(file, *bufferptr, files[i].length);
                                         length = files[i].length;
                                         break;
@@ -683,7 +683,7 @@ LoadFilePak(char *filename, void *destptr)
 
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = static_cast<byte*>(malloc(length + 1));
+    buffer = *bufferptr = static_cast<uint8_t*>(malloc(length + 1));
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -702,14 +702,14 @@ LoadFilePak(char *filename, void *destptr)
 int
 LoadFile(const char *filename, void *destptr)
 {
-    byte **bufferptr = static_cast<byte**>(destptr);
-    byte *buffer;
+    uint8_t **bufferptr = static_cast<uint8_t**>(destptr);
+    uint8_t *buffer;
     FILE *file;
     int length;
 
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = static_cast<byte*>(malloc(length + 1));
+    buffer = *bufferptr = static_cast<uint8_t*>(malloc(length + 1));
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -925,7 +925,7 @@ ParseNum(char *str)
 short
 LittleShort(short l)
 {
-    byte b1, b2;
+    uint8_t b1, b2;
 
     b1 = l & 255;
     b2 = (l >> 8) & 255;
@@ -943,7 +943,7 @@ BigShort(short l)
 int
 LittleLong(int l)
 {
-    byte b1, b2, b3, b4;
+    uint8_t b1, b2, b3, b4;
 
     b1 = l & 255;
     b2 = (l >> 8) & 255;
@@ -963,7 +963,7 @@ float
 LittleFloat(float l)
 {
     union {
-        byte b[4];
+        uint8_t b[4];
         float f;
     } in , out;
 
@@ -989,7 +989,7 @@ BigFloat(float l)
 short
 BigShort(short l)
 {
-    byte b1, b2;
+    uint8_t b1, b2;
 
     b1 = l & 255;
     b2 = (l >> 8) & 255;
@@ -1006,7 +1006,7 @@ LittleShort(short l)
 int
 BigLong(int l)
 {
-    byte b1, b2, b3, b4;
+    uint8_t b1, b2, b3, b4;
 
     b1 = l & 255;
     b2 = (l >> 8) & 255;
@@ -1026,7 +1026,7 @@ float
 BigFloat(float l)
 {
     union {
-        byte b[4];
+        uint8_t b[4];
         float f;
     } in , out;
 
@@ -1104,7 +1104,7 @@ CRC_Init(unsigned short *crcvalue)
 }
 
 void
-CRC_ProcessByte(unsigned short *crcvalue, byte data)
+CRC_ProcessByte(unsigned short *crcvalue, uint8_t data)
 {
     *crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }

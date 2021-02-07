@@ -396,7 +396,7 @@ PortalFlow(portal_t *p)
 */
 
 static void
-SimpleFlood(portal_t *srcportal, int leafnum, byte *portalsee)
+SimpleFlood(portal_t *srcportal, int leafnum, uint8_t *portalsee)
 {
     int i;
     leaf_t *leaf;
@@ -451,9 +451,9 @@ BasePortalThread(void *dummy)
     portal_t *p, *tp;
     winding_t *w, *tw;
     float d;
-    byte *portalsee;
+    uint8_t *portalsee;
 
-    portalsee = static_cast<byte *>(malloc(sizeof(*portalsee) * numportals * 2));
+    portalsee = static_cast<uint8_t *>(malloc(sizeof(*portalsee) * numportals * 2));
     if (!portalsee)
         Error("%s: Out of Memory", __func__);
 

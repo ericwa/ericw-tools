@@ -108,8 +108,8 @@ typedef struct
 
 typedef struct
 {
-	byte	v[3];			// scaled byte to fit in frame mins/maxs
-	byte	lightnormalindex;
+	uint8_t	v[3];			// scaled byte to fit in frame mins/maxs
+	uint8_t	lightnormalindex;
 } dtrivertx_t;
 
 #define DTRIVERTX_V0   0
@@ -120,7 +120,7 @@ typedef struct
 
 typedef struct
 {
-	float		scale[3];	// multiply byte verts by this
+	float		scale[3];	// multiply uint8_t verts by this
 	float		translate[3];	// then add this
 	char		name[16];	// frame name from grabbing
 	dtrivertx_t	verts[1];	// variable sized
@@ -143,7 +143,7 @@ typedef struct
 
 	int			skinwidth;
 	int			skinheight;
-	int			framesize;		// byte size of each frame
+	int			framesize;		// uint8_t size of each frame
 
 	int			num_skins;
 	int			num_xyz;
@@ -153,7 +153,7 @@ typedef struct
 	int			num_frames;
 
 	int			ofs_skins;		// each skin is a MAX_SKINNAME string
-	int			ofs_st;			// byte offset from start for stverts
+	int			ofs_st;			// uint8_t offset from start for stverts
 	int			ofs_tris;		// offset for dtriangles
 	int			ofs_frames;		// offset for first frame
 	int			ofs_glcmds;
@@ -421,7 +421,7 @@ typedef struct
 	short		texinfo;
 
 // lighting info
-	byte		styles[MAXLIGHTMAPS];
+	uint8_t		styles[MAXLIGHTMAPS];
 	int			lightofs;		// start of [numstyles*surfsize] samples
 } q2_dface_t;
 

@@ -601,7 +601,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     faces->data = AllocMem(BSP_FACE, faces->count, true);
 
     lmshifts->count = needlmshifts?faces->count:0;
-    lmshifts->data = needlmshifts?AllocMem(OTHER, sizeof(byte) * lmshifts->count, true):NULL;
+    lmshifts->data = needlmshifts?AllocMem(OTHER, sizeof(uint8_t) * lmshifts->count, true):NULL;
 
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion(entity, headnode);

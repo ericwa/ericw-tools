@@ -26,12 +26,12 @@
 #include <qbsp/wad.hh>
 
 static void WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump);
-static int WAD_LoadLump(const wad_t *wad, const char *name, byte *dest);
+static int WAD_LoadLump(const wad_t *wad, const char *name, uint8_t *dest);
 static void WADList_AddAnimationFrames(const wad_t *wadlist);
 
 static texture_t *textures;
 
-byte thepalette[768] = // Quake palette
+uint8_t thepalette[768] = // Quake palette
 {
     0,0,0,15,15,15,31,31,31,47,47,47,63,63,63,75,75,75,91,91,91,107,107,107,123,123,123,139,139,139,155,155,155,171,171,171,187,187,187,203,203,203,219,219,219,235,235,235,15,11,7,23,15,11,31,23,11,39,27,15,47,35,19,55,43,23,63,47,23,75,55,27,83,59,27,91,67,31,99,75,31,107,83,31,115,87,31,123,95,35,131,103,35,143,111,35,11,11,15,19,19,27,27,27,39,39,39,51,47,47,63,55,55,75,63,63,87,71,71,103,79,79,115,91,91,127,99,99,
     139,107,107,151,115,115,163,123,123,175,131,131,187,139,139,203,0,0,0,7,7,0,11,11,0,19,19,0,27,27,0,35,35,0,43,43,7,47,47,7,55,55,7,63,63,7,71,71,7,75,75,11,83,83,11,91,91,11,99,99,11,107,107,15,7,0,0,15,0,0,23,0,0,31,0,0,39,0,0,47,0,0,55,0,0,63,0,0,71,0,0,79,0,0,87,0,0,95,0,0,103,0,0,111,0,0,119,0,0,127,0,0,19,19,0,27,27,0,35,35,0,47,43,0,55,47,0,67,
@@ -234,11 +234,11 @@ static void
 WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
 {
     int i, size;
-    byte *data;
+    uint8_t *data;
     const wad_t *wad;
     struct lumpdata *texdata = &pWorldEnt()->lumps[LUMP_TEXTURES];
 
-    data = (byte *)&lump->dataofs[map.nummiptex()];
+    data = (uint8_t *)&lump->dataofs[map.nummiptex()];
 
     for (i = 0; i < map.nummiptex(); i++) {
         if (lump->dataofs[i])
@@ -251,16 +251,16 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
         }
         if (!size)
             continue;
-        if (data + size - (byte *)texdata->data > texdata->count)
+        if (data + size - (uint8_t *)texdata->data > texdata->count)
             Error("Internal error: not enough texture memory allocated");
-        lump->dataofs[i] = data - (byte *)lump;
+        lump->dataofs[i] = data - (uint8_t *)lump;
         data += size;
     }
 }
 
 
 static int
-WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
+WAD_LoadLump(const wad_t *wad, const char *name, uint8_t *dest)
 {
     int i;
     int size;
@@ -281,7 +281,7 @@ WAD_LoadLump(const wad_t *wad, const char *name, byte *dest)
             if (wad->lumps[i].size != wad->lumps[i].disksize)
             {
             logprint("Texture %s is %i bytes in wad, packed to %i bytes in bsp\n", name, wad->lumps[i].disksize, wad->lumps[i].size);
-                std::vector<byte> data(wad->lumps[i].disksize);
+                std::vector<uint8_t> data(wad->lumps[i].disksize);
                 size = fread(data.data(), 1, wad->lumps[i].disksize, wad->file);
                 if (size != wad->lumps[i].disksize)
                     Error("Failure reading from file");

@@ -86,7 +86,7 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
         if (texdata->dataofs[i] < 0)
             continue;
 
-        miptex = (miptex_t *)((byte *)texdata + texdata->dataofs[i]);
+        miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
 
         lump.filepos = filepos;
         lump.size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
@@ -107,7 +107,7 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
     for (i = 0; i < texdata->nummiptex; i++) {
         if (texdata->dataofs[i] < 0)
             continue;
-        miptex = (miptex_t *)((byte *)texdata + texdata->dataofs[i]);
+        miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
         size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
 
         /* Byte-swap miptex info and write out */

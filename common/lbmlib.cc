@@ -32,11 +32,11 @@ Align(int l)
  * Source must be evenly aligned!
  * ================
  */
-byte *
-LBMRLEDecompress(byte *source, byte *unpacked, int bpwidth)
+uint8_t *
+LBMRLEDecompress(uint8_t *source, uint8_t *unpacked, int bpwidth)
 {
     int count;
-    byte b, rept;
+    uint8_t b, rept;
 
     count = 0;
 
@@ -67,7 +67,7 @@ LBMRLEDecompress(byte *source, byte *unpacked, int bpwidth)
 }
 
 #define BPLANESIZE 128
-byte bitplanes[9][BPLANESIZE];  /* max size 1024 by 9 bit planes */
+uint8_t bitplanes[9][BPLANESIZE];  /* max size 1024 by 9 bit planes */
 
 /*
  * =================
@@ -76,7 +76,7 @@ byte bitplanes[9][BPLANESIZE];  /* max size 1024 by 9 bit planes */
  * =================
  */
 void
-MungeBitPlanes8(int width, byte *dest)
+MungeBitPlanes8(int width, uint8_t *dest)
 {
     *dest = width;              /* shut up the compiler warning */
     Error("MungeBitPlanes8 not rewritten!");
@@ -115,7 +115,7 @@ MungeBitPlanes8(int width, byte *dest)
         asm jz done asm dec dx asm jnz mungebit asm jmp mungebyte done:
 #endif
 } void
-MungeBitPlanes4(int width, byte *dest)
+MungeBitPlanes4(int width, uint8_t *dest)
 {
     *dest = width;              /* shut up the compiler warning */
     Error("MungeBitPlanes4 not rewritten!");
@@ -148,7 +148,7 @@ MungeBitPlanes4(int width, byte *dest)
         asm jz done asm dec dx asm jnz mungebit asm jmp mungebyte done:
 #endif
 } void
-MungeBitPlanes2(int width, byte *dest)
+MungeBitPlanes2(int width, uint8_t *dest)
 {
     *dest = width;              /* shut up the compiler warning */
     Error("MungeBitPlanes2 not rewritten!");
@@ -176,7 +176,7 @@ MungeBitPlanes2(int width, byte *dest)
         asm jz done asm dec dx asm jnz mungebit asm jmp mungebyte done:
 #endif
 } void
-MungeBitPlanes1(int width, byte *dest)
+MungeBitPlanes1(int width, uint8_t *dest)
 {
     *dest = width;              /* shut up the compiler warning */
     Error("MungeBitPlanes1 not rewritten!");
@@ -207,18 +207,18 @@ MungeBitPlanes1(int width, byte *dest)
  * LoadLBM
  * =================
  */ void
-LoadLBM(char *filename, byte **picture, byte **palette)
+LoadLBM(char *filename, uint8_t **picture, uint8_t **palette)
 {
-    byte *LBMbuffer, *picbuffer, *cmapbuffer;
+    uint8_t *LBMbuffer, *picbuffer, *cmapbuffer;
     int y, p, planes;
-    byte *LBM_P, *LBMEND_P;
-    byte *pic_p;
-    byte *body_p;
+    uint8_t *LBM_P, *LBMEND_P;
+    uint8_t *pic_p;
+    uint8_t *body_p;
     unsigned rowsize;
 
     int formtype, formlength;
     int chunktype, chunklength;
-    void (*mungecall) (int, byte *);
+    void (*mungecall) (int, uint8_t *);
 
     /* quiet compiler warnings */
     picbuffer = NULL;
@@ -281,7 +281,7 @@ LoadLBM(char *filename, byte **picture, byte **palette)
                 /* unpack PBM */
                 for (y = 0; y < bmhd.h; y++, pic_p += bmhd.w) {
                     if (bmhd.compression == cm_rle1) {
-                        body_p = LBMRLEDecompress((byte *)body_p,
+                        body_p = LBMRLEDecompress((uint8_t *)body_p,
                                                   pic_p, bmhd.w);
                     } else if (bmhd.compression == cm_none) {
                         memcpy(pic_p, body_p, bmhd.w);
@@ -316,7 +316,7 @@ LoadLBM(char *filename, byte **picture, byte **palette)
                 for (y = 0; y < bmhd.h; y++, pic_p += bmhd.w) {
                     for (p = 0; p < planes; p++)
                         if (bmhd.compression == cm_rle1) {
-                            body_p = LBMRLEDecompress((byte *)body_p,
+                            body_p = LBMRLEDecompress((uint8_t *)body_p,
                                                       bitplanes[p], rowsize);
                         } else if (bmhd.compression == cm_none) {
                             memcpy(bitplanes[p], body_p, rowsize);
@@ -352,9 +352,9 @@ LoadLBM(char *filename, byte **picture, byte **palette)
  * ==============
  */
 void
-WriteLBMfile(char *filename, byte *data, int width, int height, byte *palette)
+WriteLBMfile(char *filename, uint8_t *data, int width, int height, uint8_t *palette)
 {
-    byte *lbm, *lbmptr;
+    uint8_t *lbm, *lbmptr;
     int *formlength, *bmhdlength, *cmaplength, *bodylength;
     int length;
     bmhd_t basebmhd;
@@ -397,7 +397,7 @@ WriteLBMfile(char *filename, byte *data, int width, int height, byte *palette)
     memcpy(lbmptr, &basebmhd, sizeof(basebmhd));
     lbmptr += sizeof(basebmhd);
 
-    length = lbmptr - (byte *)bmhdlength - 4;
+    length = lbmptr - (uint8_t *)bmhdlength - 4;
     *bmhdlength = BigLong(length);
     if (length & 1)
         *lbmptr++ = 0;          /* pad chunk to even offset */
@@ -414,7 +414,7 @@ WriteLBMfile(char *filename, byte *data, int width, int height, byte *palette)
     memcpy(lbmptr, palette, 768);
     lbmptr += 768;
 
-    length = lbmptr - (byte *)cmaplength - 4;
+    length = lbmptr - (uint8_t *)cmaplength - 4;
     *cmaplength = BigLong(length);
     if (length & 1)
         *lbmptr++ = 0;          /* pad chunk to even offset */
@@ -431,13 +431,13 @@ WriteLBMfile(char *filename, byte *data, int width, int height, byte *palette)
     memcpy(lbmptr, data, width * height);
     lbmptr += width * height;
 
-    length = lbmptr - (byte *)bodylength - 4;
+    length = lbmptr - (uint8_t *)bodylength - 4;
     *bodylength = BigLong(length);
     if (length & 1)
         *lbmptr++ = 0;          /* pad chunk to even offset */
 
     /* done */
-    length = lbmptr - (byte *)formlength - 4;
+    length = lbmptr - (uint8_t *)formlength - 4;
     *formlength = BigLong(length);
     if (length & 1)
         *lbmptr++ = 0;          /* pad chunk to even offset */

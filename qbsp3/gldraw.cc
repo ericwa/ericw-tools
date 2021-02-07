@@ -210,7 +210,7 @@ void GLS_BeginScene (void)
 
 void GLS_Winding (polylib::winding_t *w, int code)
 {
-	byte	buf[1024];
+	uint8_t	buf[1024];
 	int		i, j;
 
 	if (!draw_socket)

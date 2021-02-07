@@ -43,7 +43,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <stdarg.h>
 
 typedef bool qboolean;
-typedef uint8_t byte;
 
 // the dec offsetof macro doesnt work very well...
 #define myoffsetof(type,identifier) ((size_t)&((type *)0)->identifier)
@@ -115,7 +114,7 @@ char *copystring(const char *s);
 
 
 void CRC_Init(unsigned short *crcvalue);
-void CRC_ProcessByte(unsigned short *crcvalue, byte data);
+void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
 unsigned short CRC_Value(unsigned short crcvalue);
 
 void	CreatePath (char *path);
@@ -134,7 +133,7 @@ void ExpandWildcards (int *argc, char ***argv);
 // for compression routines
 typedef struct
 {
-	byte	*data;
+	uint8_t	*data;
 	int		count;
 } cblock_t;
 

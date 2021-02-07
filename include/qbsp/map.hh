@@ -203,7 +203,7 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 
 struct bspxbrushes_s
 {
-        byte *lumpinfo;
+        uint8_t *lumpinfo;
         size_t lumpsize;
         size_t lumpmaxsize;
 };

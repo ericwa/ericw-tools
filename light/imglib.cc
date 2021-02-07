@@ -10,7 +10,7 @@ PALETTE
 ============================================================================
 */
 
-byte thepalette[768] = // Quake palette
+uint8_t thepalette[768] = // Quake palette
 {
     0,0,0,15,15,15,31,31,31,47,47,47,63,63,63,75,75,75,91,91,91,107,107,107,123,123,123,139,139,139,155,155,155,171,171,171,187,187,187,203,203,203,219,219,219,235,235,235,15,11,7,23,15,11,31,23,11,39,27,15,47,35,19,55,43,23,63,47,23,75,55,27,83,59,27,91,67,31,99,75,31,107,83,31,115,87,31,123,95,35,131,103,35,143,111,35,11,11,15,19,19,27,27,27,39,39,39,51,47,47,63,55,55,75,63,63,87,71,71,103,79,79,115,91,91,127,99,99,
     139,107,107,151,115,115,163,123,123,175,131,131,187,139,139,203,0,0,0,7,7,0,11,11,0,19,19,0,27,27,0,35,35,0,43,43,7,47,47,7,55,55,7,63,63,7,71,71,7,75,75,11,83,83,11,91,91,11,99,99,11,107,107,15,7,0,0,15,0,0,23,0,0,31,0,0,39,0,0,47,0,0,55,0,0,63,0,0,71,0,0,79,0,0,87,0,0,95,0,0,103,0,0,111,0,0,119,0,0,127,0,0,19,19,0,27,27,0,35,35,0,47,43,0,55,47,0,67,
@@ -20,7 +20,7 @@ byte thepalette[768] = // Quake palette
     43,175,47,47,159,47,47,143,47,47,127,47,47,111,47,47,95,43,43,79,35,35,63,27,27,47,19,19,31,11,11,15,43,0,0,59,0,0,75,7,0,95,7,0,111,15,0,127,23,7,147,31,7,163,39,11,183,51,15,195,75,27,207,99,43,219,127,59,227,151,79,231,171,95,239,191,119,247,211,139,167,123,59,183,155,55,199,195,55,231,227,87,127,191,255,171,231,255,215,255,255,103,0,0,139,0,0,179,0,0,215,0,0,255,0,0,255,243,147,255,247,199,255,255,255,159,91,83
 };
 
-byte hexen2palette[768] = //mxd
+uint8_t hexen2palette[768] = //mxd
 {
     0,0,0,0,0,0,8,8,8,16,16,16,24,24,24,32,32,32,40,40,40,48,48,48,56,56,56,64,64,64,72,72,72,80,80,80,84,84,84,88,88,88,96,96,96,104,104,104,112,112,112,120,120,120,128,128,128,136,136,136,148,148,148,156,156,156,168,168,168,180,180,180,184,184,184,196,196,196,204,204,204,212,212,212,224,224,224,232,232,232,240,240,240,252,252,252,8,8,12,16,16,20,24,24,28,28,32,36,36,36,44,44,44,52,48,52,60,56,56,68,64,64,72,76,
     76,88,92,92,104,108,112,128,128,132,152,152,156,176,168,172,196,188,196,220,32,24,20,40,32,28,48,36,32,52,44,40,60,52,44,68,56,52,76,64,56,84,72,64,92,76,72,100,84,76,108,92,84,112,96,88,120,104,96,128,112,100,136,116,108,144,124,112,20,24,20,28,32,28,32,36,32,40,44,40,44,48,44,48,56,48,56,64,56,64,68,64,68,76,68,84,92,84,104,112,104,120,128,120,140,148,136,156,164,152,172,180,168,188,196,184,48,32,8,60,40,8,
@@ -30,7 +30,7 @@ byte hexen2palette[768] = //mxd
     60,44,80,68,48,92,76,52,100,84,60,112,92,68,120,100,72,132,112,80,144,120,88,152,128,96,160,136,104,168,148,112,36,24,12,44,32,16,52,40,20,60,44,20,72,52,24,80,60,28,88,68,28,104,76,32,148,96,56,160,108,64,172,116,72,180,124,80,192,132,88,204,140,92,216,156,108,60,20,92,100,36,116,168,72,164,204,108,192,4,84,4,4,132,4,0,180,0,0,216,0,4,4,144,16,68,204,36,132,224,88,168,232,216,4,4,244,72,0,252,128,0,252,172,24,252,252,252
 };
 
-byte quake2palette[768] = //mxd
+uint8_t quake2palette[768] = //mxd
 {
     0,0,0,15,15,15,31,31,31,47,47,47,63,63,63,75,75,75,91,91,91,107,107,107,123,123,123,139,139,139,155,155,155,171,171,171,187,187,187,203,203,203,219,219,219,235,235,235,99,75,35,91,67,31,83,63,31,79,59,27,71,55,27,63,47,23,59,43,23,51,39,19,47,35,19,43,31,19,39,27,15,35,23,15,27,19,11,23,15,11,19,15,7,15,11,7,95,95,111,91,91,103,91,83,95,87,79,91,83,75,83,79,71,75,71,63,67,63,59,59,59,55,55,51,47,47,47,43,43,
     39,39,39,35,35,35,27,27,27,23,23,23,19,19,19,143,119,83,123,99,67,115,91,59,103,79,47,207,151,75,167,123,59,139,103,47,111,83,39,235,159,39,203,139,35,175,119,31,147,99,27,119,79,23,91,59,15,63,39,11,35,23,7,167,59,43,159,47,35,151,43,27,139,39,19,127,31,15,115,23,11,103,23,7,87,19,0,75,15,0,67,15,0,59,15,0,51,11,0,43,11,0,35,11,0,27,7,0,19,7,0,123,95,75,115,87,67,107,83,63,103,79,59,95,71,55,87,67,51,83,63,
@@ -45,7 +45,7 @@ LoadPalette(bspdata_t *bspdata)
 {
     // Load Quake 2 palette
     if (bspdata->loadversion == Q2_BSPVERSION) {
-        byte *palette;
+        uint8_t *palette;
         char path[1024];
         char colormap[] = "pics/colormap.pcx";
 
@@ -82,7 +82,7 @@ qvec3f Palette_GetColor(const int i)
 
 qvec4f Texture_GetColor(const rgba_miptex_t *tex, const int i)
 {
-    const byte *data = (byte*)tex + tex->offset;
+    const uint8_t *data = (uint8_t*)tex + tex->offset;
     return qvec4f{ (float)data[i * 4], 
                    (float)data[i * 4 + 1], 
                    (float)data[i * 4 + 2],
@@ -120,9 +120,9 @@ LoadPCX
 ==============
 */
 qboolean
-LoadPCX(const char *filename, byte **pixels, byte **palette, int *width, int *height)
+LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int *width, int *height)
 {
-    byte	*raw;
+    uint8_t	*raw;
     int runLength;
 
     // Load the file
@@ -161,8 +161,8 @@ LoadPCX(const char *filename, byte **pixels, byte **palette, int *width, int *he
 
 
     if (palette) {
-        *palette = static_cast<byte*>(malloc(768));
-        memcpy(*palette, reinterpret_cast<byte *>(pcx) + len - 768, 768);
+        *palette = static_cast<uint8_t*>(malloc(768));
+        memcpy(*palette, reinterpret_cast<uint8_t *>(pcx) + len - 768, 768);
     }
 
     if (width)
@@ -174,7 +174,7 @@ LoadPCX(const char *filename, byte **pixels, byte **palette, int *width, int *he
         return true; // No target array specified, so skip reading pixels
 
     const int numbytes = (pcx->ymax + 1) * (pcx->xmax + 1); //mxd
-    byte *out = static_cast<byte*>(malloc(numbytes));
+    uint8_t *out = static_cast<uint8_t*>(malloc(numbytes));
     if (!out) {
         logprint("LoadPCX: Failed to load '%s'. Couldn't allocate %i bytes of memory.\n", filename, numbytes);
         return false; //mxd
@@ -182,7 +182,7 @@ LoadPCX(const char *filename, byte **pixels, byte **palette, int *width, int *he
 
     *pixels = out;
 
-    byte *pix = out;
+    uint8_t *pix = out;
 
     for (int y = 0; y <= pcx->ymax; y++, pix += pcx->xmax + 1) {
         for (int x = 0; x <= pcx->xmax; ) {
@@ -200,7 +200,7 @@ LoadPCX(const char *filename, byte **pixels, byte **palette, int *width, int *he
         }
     }
 
-    if (raw - reinterpret_cast<byte *>(pcx) > len) {
+    if (raw - reinterpret_cast<uint8_t *>(pcx) > len) {
         logprint("LoadPCX: File '%s' was malformed.\n", filename);
         return false; //mxd
     }
@@ -228,18 +228,18 @@ typedef struct _TargaHeader {
 int
 fgetLittleShort(FILE *f)
 {
-    const byte b1 = fgetc(f);
-    const byte b2 = fgetc(f);
+    const uint8_t b1 = fgetc(f);
+    const uint8_t b2 = fgetc(f);
     return static_cast<short>(b1 + b2 * 256);
 }
 
 int
 fgetLittleLong(FILE *f)
 {
-    const byte b1 = fgetc(f);
-    const byte b2 = fgetc(f);
-    const byte b3 = fgetc(f);
-    const byte b4 = fgetc(f);
+    const uint8_t b1 = fgetc(f);
+    const uint8_t b2 = fgetc(f);
+    const uint8_t b3 = fgetc(f);
+    const uint8_t b4 = fgetc(f);
     return b1 + (b2 << 8) + (b3 << 16) + (b4 << 24);
 }
 
@@ -249,9 +249,9 @@ LoadTGA
 =============
 */
 qboolean
-LoadTGA(const char *filename, byte **pixels, int *width, int *height)
+LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height)
 {
-    byte			*pixbuf;
+    uint8_t			*pixbuf;
     int				row, column;
     TargaHeader		targa_header;
 
@@ -294,7 +294,7 @@ LoadTGA(const char *filename, byte **pixels, int *width, int *height)
     if (height)
         *height = rows;
 
-    byte *targa_rgba = static_cast<byte*>(malloc(numPixels * 4));
+    uint8_t *targa_rgba = static_cast<uint8_t*>(malloc(numPixels * 4));
     *pixels = targa_rgba;
 
     if (targa_header.id_length != 0)
@@ -425,7 +425,7 @@ WAL IMAGE
 ============================================================================
 */
 
-qboolean LoadWAL(const char *filename, byte **pixels, int *width, int *height)
+qboolean LoadWAL(const char *filename, uint8_t **pixels, int *width, int *height)
 {
     if (FileTime(filename) == -1) {
         logprint("LoadWAL: Failed to load '%s'. File does not exist.\n", filename);
@@ -448,7 +448,7 @@ qboolean LoadWAL(const char *filename, byte **pixels, int *width, int *height)
     if (width) *width = w;
     if (height) *height = h;
 
-    byte *out = static_cast<byte*>(malloc(numpixels));
+    uint8_t *out = static_cast<uint8_t*>(malloc(numpixels));
     if (!out) {
         logprint("LoadWAL: Failed to load '%s'. Couldn't allocate %i bytes of memory.\n", filename, numpixels);
         return false;
@@ -457,7 +457,7 @@ qboolean LoadWAL(const char *filename, byte **pixels, int *width, int *height)
     *pixels = out;
 
     for (int i = 0; i < numbytes; i++) {
-        const int palindex = reinterpret_cast<byte*>(mt)[offset + i];
+        const int palindex = reinterpret_cast<uint8_t*>(mt)[offset + i];
         out[i * 4]     = thepalette[palindex * 3];
         out[i * 4 + 1] = thepalette[palindex * 3 + 1];
         out[i * 4 + 2] = thepalette[palindex * 3 + 2];
@@ -476,7 +476,7 @@ Load (Quake 2) / Convert (Quake, Hexen 2) textures from paletted to RGBA (mxd)
 */
 
 static void
-WriteRGBATextureData(mbsp_t *bsp, const std::vector<rgba_miptex_t*> &tex_mips, const std::vector<byte*> &tex_bytes)
+WriteRGBATextureData(mbsp_t *bsp, const std::vector<rgba_miptex_t*> &tex_mips, const std::vector<uint8_t*> &tex_bytes)
 {
     // Step 1: create header and write it...
     const int headersize = 4 + tex_mips.size() * 4;
@@ -495,9 +495,9 @@ WriteRGBATextureData(mbsp_t *bsp, const std::vector<rgba_miptex_t*> &tex_mips, c
         }
     }
 
-    // Step 2: write rgba_miptex_t and palette bytes to byte array
-    byte *texdata, *texdatastart;
-    texdata = texdatastart = static_cast<byte*>(malloc(totalsize));
+    // Step 2: write rgba_miptex_t and palette bytes to uint8_t array
+    uint8_t *texdata, *texdatastart;
+    texdata = texdatastart = static_cast<uint8_t*>(malloc(totalsize));
     memcpy(texdata, miplmp, headersize);
     texdata += headersize;
 
@@ -581,7 +581,7 @@ LoadTextures(mbsp_t *bsp)
     // Step 3: load and convert to miptex_t, store texturename indices...
     std::map<std::string, int> indicesbytexturename;
     std::vector<rgba_miptex_t*> tex_mips{};
-    std::vector<byte*> tex_bytes{};
+    std::vector<uint8_t*> tex_bytes{};
     const int miptexsize = sizeof(rgba_miptex_t);
     int counter = 0;
 
@@ -604,7 +604,7 @@ LoadTextures(mbsp_t *bsp)
 
         // Load images as RGBA
         int width, height;
-        byte *pixels;
+        uint8_t *pixels;
 
         if (string_iequals(ext, "tga")) {
             if (!LoadTGA(pair.second.c_str(), &pixels, &width, &height)) 
@@ -656,7 +656,7 @@ ConvertTextures(mbsp_t *bsp)
 
     std::map<int, std::string> texturenamesbyindex;
     std::vector<rgba_miptex_t*> tex_mips{};
-    std::vector<byte*> tex_bytes{};
+    std::vector<uint8_t*> tex_bytes{};
     const int miptexsize = sizeof(rgba_miptex_t);
 
     // Step 1: store texture data and RGBA bytes in temporary arrays...
@@ -670,7 +670,7 @@ ConvertTextures(mbsp_t *bsp)
             continue;
         }
 
-        miptex_t *miptex = (miptex_t *)((byte *)bsp->dtexdata + ofs);
+        miptex_t *miptex = (miptex_t *)((uint8_t *)bsp->dtexdata + ofs);
 
         // Create rgba_miptex_t...
         rgba_miptex_t *tex = static_cast<rgba_miptex_t*>(malloc(miptexsize));
@@ -684,15 +684,15 @@ ConvertTextures(mbsp_t *bsp)
 
         // Convert to RGBA
         const int numpalpixels = tex->width * tex->height;
-        byte *pixels = static_cast<byte*>(malloc(numpalpixels * 4)); //RGBA
-        const byte *data = reinterpret_cast<byte*>(miptex) + miptex->offsets[0];
+        uint8_t *pixels = static_cast<uint8_t*>(malloc(numpalpixels * 4)); //RGBA
+        const uint8_t *data = reinterpret_cast<uint8_t*>(miptex) + miptex->offsets[0];
 
         for (int c = 0; c < numpalpixels; c++) {
-            const byte palindex = data[c];
+            const uint8_t palindex = data[c];
             auto color = Palette_GetColor(palindex);
             for (int d = 0; d < 3; d++)
-                pixels[c * 4 + d] = static_cast<byte>(color[d]);
-            pixels[c * 4 + 3] = static_cast<byte>(palindex == 255 ? 0 : 255);
+                pixels[c * 4 + d] = static_cast<uint8_t>(color[d]);
+            pixels[c * 4 + 3] = static_cast<uint8_t>(palindex == 255 ? 0 : 255);
         }
 
         // Store...

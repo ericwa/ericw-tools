@@ -374,7 +374,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
         if (ctx->lumpmaxsize < ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))
         {
                 ctx->lumpmaxsize = (ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))*2;
-                ctx->lumpinfo = (byte *) realloc(ctx->lumpinfo, ctx->lumpmaxsize);
+                ctx->lumpinfo = (uint8_t *) realloc(ctx->lumpinfo, ctx->lumpmaxsize);
         }
 
         permodel.ver = LittleLong(1);

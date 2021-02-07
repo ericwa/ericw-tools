@@ -396,9 +396,9 @@ public:
     }
 };
 
-extern byte *filebase;
-extern byte *lit_filebase;
-extern byte *lux_filebase;
+extern uint8_t *filebase;
+extern uint8_t *lit_filebase;
+extern uint8_t *lux_filebase;
 
 extern int oversample;
 extern int write_litfile;
@@ -424,8 +424,8 @@ extern char mapfilename[1024];
 lockable_setting_t *FindSetting(std::string name);
 void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 void FixupGlobalSettings(void);
-void GetFileSpace(byte **lightdata, byte **colordata, byte **deluxdata, int size);
-void GetFileSpace_PreserveOffsetInBsp(byte **lightdata, byte **colordata, byte **deluxdata, int lightofs);
+void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size);
+void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs);
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
 /**
  * returs nullptr for "skip" faces

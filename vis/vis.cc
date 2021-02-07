@@ -27,13 +27,13 @@ int c_noclip = 0;
 
 qboolean showgetleaf = true;
 
-static byte *vismap;
-static byte *vismap_p;
-static byte *vismap_end;        // past visfile
+static uint8_t *vismap;
+static uint8_t *vismap_p;
+static uint8_t *vismap_end;        // past visfile
 
 int originalvismapsize;
 
-byte *uncompressed;             // [leafbytes_real*portalleafs]
+uint8_t *uncompressed;             // [leafbytes_real*portalleafs]
 
 int leafbytes;                  // (portalleafs+63)>>3
 int leaflongs;
@@ -544,10 +544,10 @@ LeafThread(void *arg)
   ===============
 */
 static int
-CompressRow(const byte *vis, const int numbytes, byte *out)
+CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
 {
     int i, rep;
-    byte *dst;
+    uint8_t *dst;
 
     dst = out;
     for (i = 0; i < numbytes; i++) {
@@ -582,11 +582,11 @@ static void
 LeafFlow(int leafnum, mleaf_t *dleaf)
 {
     leaf_t *leaf;
-    byte *outbuffer;
-    byte *compressed;
+    uint8_t *outbuffer;
+    uint8_t *compressed;
     int i, j, shift, len;
     int numvis;
-    byte *dest;
+    uint8_t *dest;
     const portal_t *p;
 
     /*
@@ -621,7 +621,7 @@ LeafFlow(int leafnum, mleaf_t *dleaf)
     totalvis += numvis;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = static_cast<byte *>(malloc(portalleafs * 2 / 8));
+    compressed = static_cast<uint8_t *>(malloc(portalleafs * 2 / 8));
     len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
 
     dest = vismap_p;
@@ -642,11 +642,11 @@ void
 ClusterFlow(int clusternum, leafbits_t *buffer)
 {
     leaf_t *leaf;
-    byte *outbuffer;
-    byte *compressed;
+    uint8_t *outbuffer;
+    uint8_t *compressed;
     int i, j, len;
     int numvis, numblocks;
-    byte *dest;
+    uint8_t *dest;
     const portal_t *p;
 
     /*
@@ -698,7 +698,7 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
     }
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = static_cast<byte *>(malloc(portalleafs_real * 2 / 8));
+    compressed = static_cast<uint8_t *>(malloc(portalleafs_real * 2 / 8));
     len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
 
     dest = vismap_p;
@@ -1099,7 +1099,7 @@ LoadPortals(char *name, mbsp_t *bsp)
     originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
 
     // FIXME - more intelligent allocation?
-    bsp->dvisdata = static_cast<byte *>(malloc(MAX_MAP_VISIBILITY));
+    bsp->dvisdata = static_cast<uint8_t *>(malloc(MAX_MAP_VISIBILITY));
     if (!bsp->dvisdata)
         Error("%s: dvisdata allocation failed (%i bytes)", __func__,
               MAX_MAP_VISIBILITY);
@@ -1315,7 +1315,7 @@ main(int argc, char **argv)
     StripExtension(statetmpfile);
     DefaultExtension(statetmpfile, ".vi0");
 
-    uncompressed = static_cast<byte *>(calloc(portalleafs, leafbytes_real));
+    uncompressed = static_cast<uint8_t *>(calloc(portalleafs, leafbytes_real));
 
 //    CalcPassages ();
 

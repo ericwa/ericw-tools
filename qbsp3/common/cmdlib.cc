@@ -840,7 +840,7 @@ int ParseNum (char *str)
 
 short   LittleShort (short l)
 {
-	byte    b1,b2;
+	uint8_t    b1,b2;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -856,7 +856,7 @@ short   BigShort (short l)
 
 int    LittleLong (int l)
 {
-	byte    b1,b2,b3,b4;
+	uint8_t    b1,b2,b3,b4;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -874,7 +874,7 @@ int    BigLong (int l)
 
 float	LittleFloat (float l)
 {
-	union {byte b[4]; float f;} in, out;
+	union {uint8_t b[4]; float f;} in, out;
 
 	in.f = l;
 	out.b[0] = in.b[3];
@@ -896,7 +896,7 @@ float	BigFloat (float l)
 
 short   BigShort (short l)
 {
-	byte    b1,b2;
+	uint8_t    b1,b2;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -912,7 +912,7 @@ short   LittleShort (short l)
 
 int    BigLong (int l)
 {
-	byte    b1,b2,b3,b4;
+	uint8_t    b1,b2,b3,b4;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -929,7 +929,7 @@ int    LittleLong (int l)
 
 float	BigFloat (float l)
 {
-	union {byte b[4]; float f;} in, out;
+	union {uint8_t b[4]; float f;} in, out;
 
 	in.f = l;
 	out.b[0] = in.b[3];
@@ -1002,7 +1002,7 @@ void CRC_Init(unsigned short *crcvalue)
 	*crcvalue = CRC_INIT_VALUE;
 }
 
-void CRC_ProcessByte(unsigned short *crcvalue, byte data)
+void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data)
 {
 	*crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }

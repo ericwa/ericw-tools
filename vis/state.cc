@@ -117,7 +117,7 @@ DecompressBits(leafbits_t *dst, const uint8_t *src)
 }
 
 static void
-CopyLeafBits(leafbits_t *dst, const byte *src, int numleafs)
+CopyLeafBits(leafbits_t *dst, const uint8_t *src, int numleafs)
 {
     int i, shift;
     int numbytes;
@@ -201,7 +201,7 @@ LoadVisState(void)
     portal_t *p;
     dvisstate_t state;
     dportal_t pstate;
-    byte *compressed;
+    uint8_t *compressed;
 
     state_time = FileTime(statefile);
     if (state_time == -1) {
@@ -244,7 +244,7 @@ LoadVisState(void)
     starttime -= state.time_elapsed;
 
     numbytes = (portalleafs + 7) >> 3;
-    compressed = static_cast<byte *>(malloc(numbytes));
+    compressed = static_cast<uint8_t *>(malloc(numbytes));
 
     /* Update the portal information */
     for (i = 0, p = portals; i < numportals * 2; i++, p++) {

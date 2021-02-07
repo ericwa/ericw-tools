@@ -94,7 +94,7 @@ LoadBSPFile(void)
             for (j=0; j<entity->lumps[i].count; j++)
             {
                 int k;
-                const dmodelq1_t *in = (dmodelq1_t *)((byte *)header + iLumpOff) + j;
+                const dmodelq1_t *in = (dmodelq1_t *)((uint8_t *)header + iLumpOff) + j;
                 dmodelh2_t *out = (dmodelh2_t *)entity->lumps[i].data + j;
                 
                 for (k = 0; k < 3; k++) {
@@ -116,7 +116,7 @@ LoadBSPFile(void)
             entity->lumps[i].count = cLumpSize / MemSize[i];
             entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
             
-            memcpy(entity->lumps[i].data, (byte *)header + iLumpOff, cLumpSize);
+            memcpy(entity->lumps[i].data, (uint8_t *)header + iLumpOff, cLumpSize);
         }
     }
 
@@ -312,7 +312,7 @@ WriteBSPFile(void)
 
         for (x = bspxentries, l = 0; x && l < xheader.numlumps; x = x->next, l++)
         {
-            byte pad[4] = {0};
+            uint8_t pad[4] = {0};
             xlumps[l].filelen = LittleLong(x->lumpsize);
             xlumps[l].fileofs = LittleLong(ftell(f));
             strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));
