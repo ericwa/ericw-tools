@@ -106,7 +106,7 @@ WriteFaceTexdef(const mbsp_t *bsp, const bsp2_dface_t *face, fmt::memory_buffer&
 }
 
 static void
-WriteNullTexdef(const mbsp_t *bsp, fmt::memory_buffer& file)
+WriteNullTexdef(fmt::memory_buffer& file)
 {
     // FIXME: need to pick based on plane normal
     fmt::format_to(file, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}",
@@ -144,7 +144,7 @@ struct planepoints {
 using namespace polylib;
 
 std::vector<decomp_plane_t>
-RemoveRedundantPlanes(const mbsp_t *bsp, std::vector<decomp_plane_t> planes)
+RemoveRedundantPlanes(const std::vector<decomp_plane_t>& planes)
 {
     std::vector<decomp_plane_t> result;
 
@@ -337,7 +337,7 @@ public:
         winding_t *temp = CopyWinding(winding);
         winding_t *front = nullptr;
         winding_t *back = nullptr;
-        ClipWinding(temp, pnormal, distance, &front, &back); // frees temp
+        ClipWinding(temp, pnormal, (float)distance, &front, &back); // frees temp
 
         // front or back may be null (if fully clipped).
         // these constructors take ownership of the winding.
@@ -369,7 +369,7 @@ BuildDecompFacesOnPlane(const mbsp_t *bsp, const decomp_plane_t& plane)
     result.reserve(static_cast<size_t>(node->numfaces));
 
     for (int i=0; i<node->numfaces; i++) {
-        const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+        const bsp2_dface_t *face = BSP_GetFace(bsp, static_cast<int>(node->firstface) + i);
 
         auto decompFace = decomp_brush_face_t(bsp, face);
 
@@ -481,7 +481,7 @@ struct decomp_brush_t {
                     const qvec3f point = vec3_t_to_glm(face.winding->p[i]);
 
                     for (auto& otherSide : sides) {
-                        float distance = GLM_DistAbovePlane(qvec4f(qvec3f(otherSide.plane.normal), otherSide.plane.distance), point);
+                        float distance = GLM_DistAbovePlane(qvec4f(qvec3f(otherSide.plane.normal), (float)otherSide.plane.distance), point);
                         if (distance > 0.1) {
                             return false;
                         }
@@ -644,7 +644,7 @@ DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const leaf_decompile_task& task
 
         // print a default face
         fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());
-        WriteNullTexdef(bsp, file);
+        WriteNullTexdef(file);
         fmt::format_to(file, "\n");
     }
     fmt::format_to(file, "}}\n");
@@ -657,7 +657,7 @@ DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task& task)
 {
     const mleaf_t *leaf = task.leaf;
 
-    auto reducedPlanes = RemoveRedundantPlanes(bsp, task.allPlanes);
+    auto reducedPlanes = RemoveRedundantPlanes(task.allPlanes);
     if (reducedPlanes.empty()) {
         printf("warning, skipping empty brush\n");
         return "";
@@ -691,7 +691,7 @@ DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task& task)
                 const char *name = Face_TextureName(bsp, face);
                 if (0 == strlen(name)) {
                     fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());
-                    WriteNullTexdef(bsp, file);
+                    WriteNullTexdef(file);
                 } else {
                     fmt::format_to(file, " {} ", name);
                     WriteFaceTexdef(bsp, face, file);
@@ -699,7 +699,7 @@ DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task& task)
             } else {
                 // print a default face
                 fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());
-                WriteNullTexdef(bsp, file);
+                WriteNullTexdef(file);
             }
             fmt::format_to(file, "\n");
         }
@@ -799,7 +799,7 @@ DecompileEntity(const mbsp_t *bsp, const decomp_options& options, FILE* file, co
     fprintf(file, "{\n");
     for (const auto& keyValue : dict) {
         if (keyValue.first == "model"
-            && keyValue.second.size() > 0
+            && !keyValue.second.empty()
             && keyValue.second[0] == '*')
         {
             // strip "model" "*NNN" key/values
