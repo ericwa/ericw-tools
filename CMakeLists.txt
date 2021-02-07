@@ -125,6 +125,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
 
 find_package(TBB REQUIRED)
 
+add_subdirectory(lib)
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)

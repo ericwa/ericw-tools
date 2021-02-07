@@ -34,6 +34,10 @@
 #include <utility>
 #include <tuple>
 
+#include <fmt/format.h>
+
+#include "tbb/parallel_for.h"
+
 // texturing
 
 class texdef_valve_t {
@@ -90,22 +94,22 @@ TexDef_BSPToValve(const float in_vecs[2][4])
 }
 
 static void
-WriteFaceTexdef(const mbsp_t *bsp, const bsp2_dface_t *face, FILE* file)
+WriteFaceTexdef(const mbsp_t *bsp, const bsp2_dface_t *face, fmt::memory_buffer& file)
 {
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
     const auto valve = TexDef_BSPToValve(texinfo->vecs);
 
-    fprintf(file, "[ %g %g %g %g ] [ %g %g %g %g ] %g %g %g",
+    fmt::format_to(file, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}",
             valve.axis[0][0], valve.axis[0][1], valve.axis[0][2], valve.shift[0],
             valve.axis[1][0], valve.axis[1][1], valve.axis[1][2], valve.shift[1],
             0.0, valve.scale[0], valve.scale[1]);
 }
 
 static void
-WriteNullTexdef(const mbsp_t *bsp, FILE* file)
+WriteNullTexdef(const mbsp_t *bsp, fmt::memory_buffer& file)
 {
     // FIXME: need to pick based on plane normal
-    fprintf(file, "[ %g %g %g %g ] [ %g %g %g %g ] %g %g %g",
+    fmt::format_to(file, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}",
             1, 0, 0, 0,
             0, 1, 0, 0,
             0.0, 1, 1);
@@ -234,20 +238,20 @@ static planepoints NormalDistanceToThreePoints(const qvec3d& normal, const doubl
     return result;
 }
 
-void PrintPoint(const qvec3d& v, FILE* file) {
-    fprintf(file, "( %0.17g %0.17g %0.17g )", v[0], v[1], v[2]);
+void PrintPoint(const qvec3d& v, fmt::memory_buffer& file) {
+    fmt::format_to(file, "( {} {} {} )", v[0], v[1], v[2]);
 }
 
 static void
-PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t& decompplane, FILE* file)
+PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t& decompplane, fmt::memory_buffer& file)
 {
     // we have a plane in (normal, distance) form;
     const planepoints p = NormalDistanceToThreePoints(decompplane.normal, decompplane.distance);
 
     PrintPoint(p.point0, file);
-    fprintf(file, " ");
+    fmt::format_to(file, " ");
     PrintPoint(p.point1, file);
-    fprintf(file, " ");
+    fmt::format_to(file, " ");
     PrintPoint(p.point2, file);
 }
 
@@ -608,14 +612,18 @@ SplitDifferentTexturedPartsOfBrush(const mbsp_t *bsp, const decomp_brush_t& brus
     return result;
 }
 
+struct leaf_decompile_task {
+    std::vector<decomp_plane_t> reducedPlanes;
+    const mleaf_t *leaf;
+};
+
 /**
  * Preconditions:
  *  - The existing path of plane side choices have been pushed onto `planestack`
  *  - We've arrived at a leaf
  */
 static void
-DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf, FILE* file)
-{
+DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const mleaf_t *leaf, std::vector<leaf_decompile_task>* result) {
     if (leaf->contents == CONTENTS_EMPTY) {
         return;
     }
@@ -628,11 +636,19 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
 
     printf("before: %d after %d\n", (int)planestack->size(), (int)reducedPlanes.size());
 
+    result->push_back({reducedPlanes, leaf});
+}
+
+static std::string
+DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task& task)
+{
+    const mleaf_t *leaf = task.leaf;
+
     // At this point, we should gather all of the faces on `reducedPlanes` and clip away the
     // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
     // It's possible that the faces are half-overlapping the leaf, so we may have to cut the
     // faces in half.
-    auto initialBrush = BuildInitialBrush(bsp, reducedPlanes);
+    auto initialBrush = BuildInitialBrush(bsp, task.reducedPlanes);
     assert(initialBrush.checkPoints());
 
     // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
@@ -640,8 +656,9 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
     // 2+ faces on a plane with non-equal texinfo.
     auto finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
 
+    fmt::memory_buffer file;
     for (const decomp_brush_t& brush : finalBrushes) {
-        fprintf(file, "{\n");
+        fmt::format_to(file, "{{\n");
         for (const auto& side : brush.sides) {
             PrintPlanePoints(bsp, side.plane, file);
 
@@ -651,21 +668,23 @@ DecompileLeaf(const std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
                 const bsp2_dface_t *face = faces.at(0).original_face;
                 const char *name = Face_TextureName(bsp, face);
                 if (0 == strlen(name)) {
-                    fprintf(file, " %s ", DefaultTextureForContents(leaf->contents).c_str());
+                    fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());
                     WriteNullTexdef(bsp, file);
                 } else {
-                    fprintf(file, " %s ", name);
+                    fmt::format_to(file, " {} ", name);
                     WriteFaceTexdef(bsp, face, file);
                 }
             } else {
                 // print a default face
-                fprintf(file, " %s ", DefaultTextureForContents(leaf->contents).c_str());
+                fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());
                 WriteNullTexdef(bsp, file);
             }
-            fprintf(file, "\n");
+            fmt::format_to(file, "\n");
         }
-        fprintf(file, "}\n");
+        fmt::format_to(file, "}}\n");
     }
+
+    return fmt::to_string(file);
 }
 
 /**
@@ -699,7 +718,7 @@ decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, cons
  *  - We're presented with a new plane, `node`
  */
 static void
-DecompileNode(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const bsp2_dnode_t *node, FILE* file)
+DecompileNode(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const bsp2_dnode_t *node, std::vector<leaf_decompile_task>* result)
 {
     auto handleSide = [&](const bool front) {
         planestack->push_back(MakeDecompPlane(bsp, node, front));
@@ -708,10 +727,10 @@ DecompileNode(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const 
 
         if (child < 0) {
             // it's a leaf on this side
-            DecompileLeaf(planestack, bsp, BSP_GetLeafFromNodeNum(bsp, child), file);
+            DecompileLeaf(planestack, bsp, BSP_GetLeafFromNodeNum(bsp, child), result);
         } else {
             // it's another node - process it recursively
-            DecompileNode(planestack, bsp, BSP_GetNode(bsp, child), file);
+            DecompileNode(planestack, bsp, BSP_GetNode(bsp, child), result);
         }
 
         planestack->pop_back();
@@ -780,10 +799,23 @@ DecompileEntity(const mbsp_t *bsp, FILE* file, const entdict_t& dict, bool isWor
         // start with hull0 of the model
         const bsp2_dnode_t* headnode = BSP_GetNode(bsp, model->headnode[0]);
 
-
+        // recursively visit the nodes to gather up a list of leafs to decompile
         std::vector<decomp_plane_t> stack;
+        std::vector<leaf_decompile_task> tasks;
         AddMapBoundsToStack(&stack, bsp, headnode);
-        DecompileNode(&stack, bsp, headnode, file);
+        DecompileNode(&stack, bsp, headnode, &tasks);
+
+        // decompile the leafs in parallel
+        std::vector<std::string> leafStrings;
+        leafStrings.resize(tasks.size());
+        tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t i) {
+            leafStrings[i] = DecompileLeafTask(bsp, tasks[i]);
+        });
+
+        // finally print out the leafs
+        for (auto& leafString : leafStrings) {
+            fprintf(file, "%s", leafString.c_str());
+        }
     }
 
     fprintf(file, "}\n");

@@ -17,5 +17,5 @@ set(BSPUTIL_SOURCES
 	${COMMON_INCLUDES})
 
 add_executable(bsputil ${BSPUTIL_SOURCES})
-target_link_libraries(bsputil ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(bsputil ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt)
 install(TARGETS bsputil RUNTIME DESTINATION bin)
