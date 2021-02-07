@@ -11,6 +11,8 @@ install:
 - ps: 7z x tbb.zip -oc:\
 build_script:
 - ps: >-
+    git submodule update --init --recursive
+    
     $env:Path += ";C:\cygwin64\bin"
 
     mkdir cmakebuild
