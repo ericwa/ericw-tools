@@ -372,7 +372,7 @@ BuildDecompFacesOnPlane(const mbsp_t *bsp, const decomp_plane_t& plane)
         const double dp = qv::dot(plane.normal, decompFace.normal());
 
         if (dp < 0.9) {
-            printf("face on back %g, discarding\n", dp);
+            //printf("face on back %g, discarding\n", dp);
             continue;
         }
 
@@ -746,7 +746,7 @@ AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
 }
 
 static void
-DecompileEntity(const mbsp_t *bsp, FILE* file, entdict_t dict, bool isWorld)
+DecompileEntity(const mbsp_t *bsp, FILE* file, const entdict_t& dict, bool isWorld)
 {
     // we use -1 to indicate it's not a brush model
     int modelNum = -1;
