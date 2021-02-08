@@ -31,6 +31,7 @@ int Face_GetNum(const mbsp_t *bsp, const bsp2_dface_t *f);
 
 // bounds-checked array access (assertion failure on out-of-bounds)
 const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum);
+const bsp2_dclipnode_t *BSP_GetClipNode(const mbsp_t *bsp, int nodenum);
 const mleaf_t* BSP_GetLeaf(const mbsp_t *bsp, int leafnum);
 const mleaf_t* BSP_GetLeafFromNodeNum(const mbsp_t *bsp, int nodenum);
 const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum);

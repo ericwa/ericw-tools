@@ -120,6 +120,7 @@ WriteNullTexdef(fmt::memory_buffer& file)
 
 struct decomp_plane_t {
     const bsp2_dnode_t* node; // can be nullptr
+    const bsp2_dclipnode_t* clipnode; // can be nullptr
     bool nodefront; // only set if node is non-null. true = we are visiting the front side of the plane
 
     // this should be an outward-facing plane
@@ -127,7 +128,7 @@ struct decomp_plane_t {
     double distance;
 
     static decomp_plane_t make(const qvec3d& normalIn, double distanceIn) {
-        return { nullptr, false, normalIn, distanceIn };
+        return { nullptr, nullptr, false, normalIn, distanceIn };
     }
 };
 
@@ -617,6 +618,11 @@ struct leaf_decompile_task {
     const mleaf_t *leaf;
 };
 
+struct clipleaf_decompile_task {
+    std::vector<decomp_plane_t> allPlanes;
+    int32_t contents;
+};
+
 /**
  * Preconditions:
  *  - The existing path of plane side choices have been pushed onto `planestack`
@@ -712,13 +718,20 @@ DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task& task)
 /**
  * @param front whether we are visiting the front side of the node plane
  */
-decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, const bool front) {
+static decomp_plane_t MakeDecompPlane(const mbsp_t *bsp,
+                               const bsp2_dnode_t *node,
+                               const bsp2_dclipnode_t *clipnode,
+                               const bool front)
+{
+    assert(node == nullptr || clipnode == nullptr);
+
     decomp_plane_t result;
 
     result.node = node;
+    result.clipnode = clipnode;
     result.nodefront = front;
 
-    const dplane_t *dplane = BSP_GetPlane(bsp, node->planenum);
+    const dplane_t *dplane = BSP_GetPlane(bsp, (node != nullptr) ? node->planenum : clipnode->planenum);
 
     result.normal = qvec3d(dplane->normal[0],
                          dplane->normal[1],
@@ -743,7 +756,7 @@ static void
 DecompileNode(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const bsp2_dnode_t *node, std::vector<leaf_decompile_task>* result)
 {
     auto handleSide = [&](const bool front) {
-        planestack->push_back(MakeDecompPlane(bsp, node, front));
+        planestack->push_back(MakeDecompPlane(bsp, node, nullptr, front));
 
         const int32_t child = node->children[front ? 0 : 1];
 
@@ -763,8 +776,37 @@ DecompileNode(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const 
     handleSide(false);
 }
 
+/**
+ * Same as above but for clipnodes
+ */
+static void
+DecompileClipNode(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const bsp2_dclipnode_t *clipnode, std::vector<clipleaf_decompile_task>* result)
+{
+    auto handleSide = [&](const bool front) {
+        planestack->push_back(MakeDecompPlane(bsp, nullptr, clipnode, front));
+
+        const int32_t child = clipnode->children[front ? 0 : 1];
+
+        if (child < 0) {
+            const int32_t contents = child;
+
+            // it's a leaf on this side
+            result->push_back(clipleaf_decompile_task{*planestack, contents});
+        } else {
+            // it's another clip node - process it recursively
+            DecompileClipNode(planestack, bsp, BSP_GetClipNode(bsp, child), result);
+        }
+
+        planestack->pop_back();
+    };
+
+    // handle the front and back
+    handleSide(true);
+    handleSide(false);
+}
+
 void
-AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const bsp2_dnode_t* headnode)
+AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, const dmodelh2_t* model)
 {
     for (int i=0; i<3; ++i) {
         for (int sign=0; sign<2; ++sign) {
@@ -775,15 +817,81 @@ AddMapBoundsToStack(std::vector<decomp_plane_t>* planestack, const mbsp_t *bsp, 
             double dist;
             if (sign == 0) {
                 // positive
-                dist = headnode->maxs[i];
+                dist = model->maxs[i];
             } else {
-                dist = -headnode->mins[i];
+                dist = -model->mins[i];
             }
 
             // we want outward-facing planes
             planestack->push_back(decomp_plane_t::make(normal, dist));
         }
     }
+}
+
+static std::vector<decomp_plane_t>
+ExpandHull1Brush(const std::vector<decomp_plane_t>& planes)
+{
+    std::vector<decomp_plane_t> result = planes;
+    for (auto& plane : result) {
+        // from LoadBrush
+        const qvec3d hull_size[2] = { {-16, -16, -32}, {16, 16, 24} };
+
+        // from ExpandBrush
+        qvec3d corner;
+        for (int x = 0; x < 3; x++) {
+            if (plane.normal[x] > 0) {
+                corner[x] = hull_size[1][x];
+            } else if (plane.normal[x] < 0) {
+                corner[x] = hull_size[0][x];
+            }
+        }
+        plane.distance += qv::dot(corner, plane.normal);
+    }
+    return result;
+}
+
+static void
+SubtractBrush(const std::vector<decomp_plane_t>& lhs,
+              const std::vector<decomp_plane_t>& rhs,
+              std::vector<std::vector<decomp_plane_t>>* results)
+{
+
+}
+
+
+
+static std::string
+DecompileHull1(const mbsp_t *bsp, const std::vector<clipleaf_decompile_task>& tasks)
+{
+    // 1. collect the empty leafs
+
+    fmt::memory_buffer file;
+
+    for (auto& task : tasks) {
+        if (task.contents == CONTENTS_EMPTY) {
+            auto reducedPlanes = RemoveRedundantPlanes(task.allPlanes);
+            if (reducedPlanes.empty()) {
+                printf("warning, skipping empty brush\n");
+                continue;
+            }
+
+            reducedPlanes = ExpandHull1Brush(reducedPlanes);
+
+            // write brush
+            fmt::format_to(file, "{{\n");
+            for (const auto& side : reducedPlanes) {
+                PrintPlanePoints(bsp, side, file);
+
+                // print a default face
+                fmt::format_to(file, " {} ", "clip");
+                WriteNullTexdef(file);
+                fmt::format_to(file, "\n");
+            }
+            fmt::format_to(file, "}}\n");
+        }
+    }
+
+    return fmt::to_string(file);
 }
 
 static void
@@ -824,7 +932,7 @@ DecompileEntity(const mbsp_t *bsp, const decomp_options& options, FILE* file, co
         // recursively visit the nodes to gather up a list of leafs to decompile
         std::vector<decomp_plane_t> stack;
         std::vector<leaf_decompile_task> tasks;
-        AddMapBoundsToStack(&stack, bsp, headnode);
+        AddMapBoundsToStack(&stack, bsp, model);
         DecompileNode(&stack, bsp, headnode, &tasks);
 
         // decompile the leafs in parallel
@@ -841,6 +949,16 @@ DecompileEntity(const mbsp_t *bsp, const decomp_options& options, FILE* file, co
         // finally print out the leafs
         for (auto& leafString : leafStrings) {
             fprintf(file, "%s", leafString.c_str());
+        }
+
+        // decompile hull1 to clip brushes
+        {
+            const bsp2_dclipnode_t *clipnode_head = BSP_GetClipNode(bsp, model->headnode[1]);
+            std::vector<decomp_plane_t> stack1;
+            std::vector<clipleaf_decompile_task> tasks1;
+            AddMapBoundsToStack(&stack1, bsp, model);
+            DecompileClipNode(&stack1, bsp, clipnode_head, &tasks1);
+            fprintf(file, "%s", DecompileHull1(bsp, tasks1).c_str());
         }
     }
 

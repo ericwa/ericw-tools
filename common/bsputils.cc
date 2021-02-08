@@ -47,6 +47,13 @@ const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum)
     return &bsp->dnodes[nodenum];
 }
 
+const bsp2_dclipnode_t *BSP_GetClipNode(const mbsp_t *bsp, int nodenum)
+{
+    Q_assert(nodenum >= 0 && nodenum < bsp->numclipnodes);
+    return &bsp->dclipnodes[nodenum];
+
+}
+
 const mleaf_t* BSP_GetLeaf(const mbsp_t *bsp, int leafnum)
 {
     if (leafnum < 0 || leafnum >= bsp->numleafs) {
