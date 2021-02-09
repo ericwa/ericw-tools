@@ -694,6 +694,7 @@ main(int argc, char **argv)
             DecompileBSP(bsp, options, f);
 
             fclose(f);
+            printf("done.\n");
             return 0;
         }
     }
