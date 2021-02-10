@@ -17,11 +17,32 @@
     See file, 'COPYING', for details.
 */
 
+#pragma once
+
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
-using entdict_t = std::map<std::string, std::string>;
+using keyvalue_t = std::pair<std::string, std::string>;
+using keyvalues_t = std::vector<keyvalue_t>;
+
+class entdict_t {
+    keyvalues_t keyvalues;
+public:
+    const std::string& get(const std::string& key) const;
+    void set(const std::string& key, const std::string& value);
+    void remove(const std::string& key);
+
+    keyvalues_t::iterator find(std::string_view key);
+    keyvalues_t::const_iterator find(std::string_view key) const;
+
+    keyvalues_t::const_iterator begin() const;
+    keyvalues_t::const_iterator end() const;
+
+    keyvalues_t::iterator begin();
+    keyvalues_t::iterator end();
+};
 
 std::vector<entdict_t> EntData_Parse(const char *entdata);
 std::string EntData_Write(const std::vector<entdict_t> &ents);

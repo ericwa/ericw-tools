@@ -65,7 +65,7 @@ static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 static entdict_t &WorldEnt()
 {
     if (entdicts.size() == 0
-        || entdicts.at(0)["classname"] != "worldspawn") {
+        || entdicts.at(0).get("classname") != "worldspawn") {
         Error("WorldEnt() failed to get worldspawn");
     }
     return entdicts.at(0);
@@ -73,7 +73,7 @@ static entdict_t &WorldEnt()
 
 void SetWorldKeyValue(const std::string &key, const std::string &value)
 {
-    WorldEnt()[key] = value;
+    WorldEnt().set(key, value);
 }
 std::string WorldValueForKey(const std::string &key)
 {
@@ -953,9 +953,9 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         const std::string lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
         if (!lmscale.empty()) {
             logprint("lightmap_scale should be _lightmap_scale\n");
-            
-            entdict.erase(entdict.find("lightmap_scale"));
-            entdict["_lightmap_scale"] = lmscale;
+
+            EntDict_RemoveValueForKey(entdict,"lightmap_scale");
+            entdict.set("_lightmap_scale", lmscale);
         }
         
         // setup light styles for switchable lights
@@ -965,7 +965,7 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             const std::string targetname = EntDict_StringForKey(entdict, "targetname");
             if (!targetname.empty()) {
                 const int style = LightStyleForTargetname(cfg, targetname);
-                entdict["style"] = std::to_string(style);
+                entdict.set("style", std::to_string(style));
             }
         }
         
@@ -975,7 +975,7 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             // if targetname is "", generates a new unique lightstyle
             const int style = LightStyleForTargetname(cfg, targetname);
             // TODO: Configurable key?
-            entdict["switchshadstyle"] = std::to_string(style);
+            entdict.set("switchshadstyle", std::to_string(style));
         }
         
         // parse escape sequences
@@ -1009,7 +1009,7 @@ LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
                 if(anglescale != entdict.end()) {
                     // Convert from 0..2 to 0..1 range...
                     const float val = qmin(1.0f, qmax(0.0f, EntDict_FloatForKey(entdict, "_anglescale") * 0.5f));
-                    entdict["_anglescale"] = std::to_string(val);
+                    entdict.set("_anglescale", std::to_string(val));
                 }
             }
             
@@ -1305,7 +1305,7 @@ SurfLights_WriteEntityToFile(FILE *f, light_t *entity, const vec3_t pos)
     
     entdict_t epairs { *entity->epairs };
     EntDict_RemoveValueForKey(epairs, "_surface");
-    epairs["origin"] = VecStr(pos);
+    epairs.set("origin", VecStr(pos));
     
     std::string entstring = EntData_Write({ epairs });
     fwrite(entstring.data(), 1, entstring.size(), f);
@@ -1513,7 +1513,7 @@ bool ParseLightsFile(const char *fname)
         if (!t)
             continue;
         entdict_t d = {};
-        d["_surface"] = std::string(com_token);
+        d.set("_surface", std::string(com_token));
         t = COM_Parse(t);
         r = atof(com_token);
         t = COM_Parse(t);
@@ -1521,9 +1521,9 @@ bool ParseLightsFile(const char *fname)
         t = COM_Parse(t);
         b = atof(com_token);
         q_snprintf(gah, sizeof(gah), "%f %f %f", r,g,b);
-        d["_color"] = std::string(gah);
+        d.set("_color", std::string(gah));
         t = COM_Parse(t);
-        d["light"] = std::string(com_token);
+        d.set("light", std::string(com_token));
         //might be hdr rgbi values here
 
         radlights.push_back(d);

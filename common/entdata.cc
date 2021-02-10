@@ -28,6 +28,71 @@
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
 
+const std::string& entdict_t::get(const std::string& key) const {
+    if (auto it = find(key); it != keyvalues.end()) {
+        return it->second;
+    }
+
+    static std::string empty;
+    return empty;
+}
+
+void entdict_t::set(const std::string& key, const std::string& value) {
+    // search for existing key to update
+    if (auto it = find(key); it != keyvalues.end()) {
+        // found existing key
+        it->second = value;
+        return;
+    }
+
+    // no existing key; add new
+    keyvalues.push_back(std::make_pair(key, value));
+}
+
+void entdict_t::remove(const std::string& key) {
+    if (auto it = find(key); it != keyvalues.end()) {
+        keyvalues.erase(it);
+    }
+}
+
+keyvalues_t::iterator entdict_t::find(std::string_view key) {
+    auto existingIt = keyvalues.end();
+    for (auto it = keyvalues.begin(); it != keyvalues.end(); ++it) {
+        if (key == it->first) {
+            existingIt = it;
+            break;
+        }
+    }
+    return existingIt;
+}
+
+keyvalues_t::const_iterator entdict_t::find(std::string_view key) const {
+    auto existingIt = keyvalues.end();
+    for (auto it = keyvalues.begin(); it != keyvalues.end(); ++it) {
+        if (key == it->first) {
+            existingIt = it;
+            break;
+        }
+    }
+    return existingIt;
+}
+
+keyvalues_t::const_iterator entdict_t::begin() const {
+    return keyvalues.begin();
+}
+
+keyvalues_t::const_iterator entdict_t::end() const {
+    return keyvalues.end();
+}
+
+keyvalues_t::iterator entdict_t::begin() {
+    return keyvalues.begin();
+}
+
+keyvalues_t::iterator entdict_t::end() {
+    return keyvalues.end();
+}
+
 /*
  * ==================
  * EntData_Parse
@@ -77,7 +142,7 @@ EntData_Parse(const char *entdata)
             if (valstring.length() > MAX_ENT_VALUE - 1)
                 Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
             
-            entity[keystr] = valstring;
+            entity.set(keystr, valstring);
         }
         
         result.push_back(entity);
@@ -108,17 +173,13 @@ EntData_Write(const std::vector<entdict_t> &ents)
 std::string
 EntDict_StringForKey(const entdict_t &dict, const std::string key)
 {
-    auto it = dict.find(key);
-    if (it != dict.end()) {
-        return it->second;
-    }
-    return "";
+    return dict.get(key);
 }
 
 float
 EntDict_FloatForKey(const entdict_t &dict, const std::string key)
 {
-    auto s = EntDict_StringForKey(dict, key);
+    auto s = dict.get(key);
     if (s.empty())
         return 0;
     
@@ -132,11 +193,7 @@ EntDict_FloatForKey(const entdict_t &dict, const std::string key)
 void
 EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key)
 {
-    const auto it = dict.find(key);
-    if (it != dict.end()) {
-        dict.erase(it);
-    }
-    Q_assert(dict.find(key) == dict.end());
+    dict.remove(key);
 }
 
 void //mxd
@@ -144,7 +201,9 @@ EntDict_RenameKey(entdict_t &dict, const std::string &from, const std::string &t
 {
     const auto it = dict.find(from);
     if (it != dict.end()) {
-        swap(dict[to], it->second);
-        dict.erase(it);
+        const auto oldValue = it->second;
+
+        dict.remove(from);
+        dict.set(to, oldValue);
     }
 }

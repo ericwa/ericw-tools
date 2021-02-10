@@ -20,6 +20,7 @@
 #ifndef __LIGHT_SETTINGS_H__
 #define __LIGHT_SETTINGS_H__
 
+#include <common/entdata.h>
 #include <common/log.hh>
 #include <common/mathlib.hh>
 
@@ -352,7 +353,7 @@ public:
         setting->setStringValue(value, cmdline);
     }
     
-    void setSettings(const std::map<std::string, std::string> &epairs, bool cmdline) {
+    void setSettings(const entdict_t &epairs, bool cmdline) {
         for (const auto &epair : epairs) {
             setSetting(epair.first, epair.second, cmdline);
         }
