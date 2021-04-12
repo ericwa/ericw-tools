@@ -1405,7 +1405,7 @@ static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_
     //glpoly_t        *poly;
     //float   s, t;
 
-    if (numverts > 60)
+    if (numverts > 64)
         Error ("numverts = %i", numverts);
 
     BoundPoly (numverts, verts, mins, maxs);
