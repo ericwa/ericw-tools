@@ -17,6 +17,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <algorithm>
 #include <cstring>
 #include <sstream>
 #include <common/cmdlib.hh>
@@ -1387,6 +1388,13 @@ static void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
         }
 }
 
+static bool FaceMatchesSurfaceLightTemplate(const mbsp_t* bsp, const bsp2_dface_t* face, const light_t& surflight)
+{
+    const char *texname = Face_TextureName(bsp, face);
+
+    return !Q_strcasecmp(texname, ValueForKey(&surflight, "_surface"));
+}
+
 /*
  ================
  SubdividePolygon - from GLQuake
@@ -1461,10 +1469,8 @@ static void SubdividePolygon (const bsp2_dface_t *face, const modelinfo_t *face_
         return;
     }
 
-    const char *texname = Face_TextureName(bsp, face);
-
     for (const auto &surflight : surfacelight_templates) {
-        if (!Q_strcasecmp(texname, ValueForKey(&surflight, "_surface"))) {
+        if (FaceMatchesSurfaceLightTemplate(bsp, face, surflight)) {
             CreateSurfaceLightOnFaceSubdivision(face, face_modelinfo, &surflight, bsp, numverts, verts);
         }
     }
@@ -1534,6 +1540,10 @@ bool ParseLightsFile(const char *fname)
 
 static void MakeSurfaceLights(const mbsp_t *bsp)
 {
+    logprint("--- MakeSurfaceLights ---\n");
+
+    Q_assert(surfacelight_templates.empty());
+
     for (entdict_t &l : radlights) {
         light_t entity {};
         entity.epairs = &l;
@@ -1591,6 +1601,10 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             
             /* Mark as handled */
             face_visited.at(facenum) = true;
+
+            /* Don't bother subdividing if it doesn't match any surface light templates */
+            if (!std::any_of(surfacelight_templates.begin(), surfacelight_templates.end(), [&](const auto &surflight) { return FaceMatchesSurfaceLightTemplate(bsp, surf, surflight); }))
+                continue;
 
             /* Generate the lights */
             GL_SubdivideSurface(surf, face_modelinfo, bsp);
