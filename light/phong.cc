@@ -416,6 +416,8 @@ static int Q2_FacePhongValue(const mbsp_t *bsp, const bsp2_dface_t *face) {
 void
 CalcualateVertexNormals(const mbsp_t *bsp)
 {
+    logprint("--- CalcualateVertexNormals ---\n");
+
     Q_assert(!s_builtPhongCaches);
     s_builtPhongCaches = true;
     
