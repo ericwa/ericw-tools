@@ -328,6 +328,8 @@ SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
     assert (x >= 0);
     assert (y >= 0);
     
+    // FIXME: this is broken - palette index? color?
+    // see: https://github.com/ericwa/ericw-tools/commit/0661098bc57d09b9961aa8314c52545a8f89a1e1#diff-dff5fe3d0288e49cabf1e7bc8fb28819c513be54cb7bbcdbea8b52ee0efd6bf5
     color_rgba *data = (color_rgba*)((uint8_t*)miptex + miptex->offset);
     sample = data[(miptex->width * y) + x];
 
