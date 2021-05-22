@@ -291,7 +291,7 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec
         || Light_PointInSolid_r(bsp, node->children[1], point);
 }
 
-// Tests model 0 of the given model
+// Tests hull 0 of the given model
 bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point)
 {
     return Light_PointInSolid_r(bsp, model->headnode[0], point);
