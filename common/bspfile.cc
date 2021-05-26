@@ -2315,6 +2315,12 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
     for (i = 0; i < numlumps; i++) {
         lumps[i].fileofs = LittleLong(lumps[i].fileofs);
         lumps[i].filelen = LittleLong(lumps[i].filelen);
+
+        if (lumps[i].fileofs + lumps[i].filelen > flen)
+        {
+            logprint("lump %i extends %i bytes beyond end of file (truncated bsp?)\n", i, lumps[i].fileofs+lumps[i].filelen-flen);
+            lumps[i].filelen = lumps[i].fileofs = 0;
+        }
     }
 
     if (isHexen2((dheader_t *)file_data))

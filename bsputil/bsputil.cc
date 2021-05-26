@@ -54,6 +54,22 @@ typedef struct {
     char name[16];              // must be null terminated
 } lumpinfo_t;
 
+static size_t
+CalcMipSize(size_t i, mbsp_t *bsp)
+{
+    size_t start = 0, end = bsp->texdatasize;
+    auto texdata = bsp->dtexdata;
+
+    start = texdata->dataofs[i];
+    while (++i < texdata->nummiptex)
+    {
+        if (texdata->dataofs[i] < 0)
+            continue;
+        end = texdata->dataofs[i];
+        break;
+    }
+    return end - start;
+}
 static void
 ExportWad(FILE *wadfile, mbsp_t *bsp)
 {
@@ -62,6 +78,7 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
     dmiptexlump_t *texdata;
     miptex_t *miptex;
     int i, j, size, filepos, numvalid;
+    size_t mipsize;
 
     texdata = bsp->dtexdata;
 
@@ -78,7 +95,8 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
     /* Byte-swap header and write out */
     header.numlumps = LittleLong(header.numlumps);
     header.infotableofs = LittleLong(header.infotableofs);
-    fwrite(&header, sizeof(header), 1, wadfile);
+    if (wadfile)
+        fwrite(&header, sizeof(header), 1, wadfile);
 
     /* Miptex data will follow the lump headers */
     filepos = sizeof(header) + numvalid * sizeof(lump);
@@ -89,7 +107,7 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
         miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
 
         lump.filepos = filepos;
-        lump.size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
+        lump.size = CalcMipSize(i, bsp);
         lump.type = 'D';
         lump.disksize = lump.size;
         lump.compression = 0;
@@ -102,20 +120,32 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
         lump.filepos = LittleLong(lump.filepos);
         lump.disksize = LittleLong(lump.disksize);
         lump.size = LittleLong(lump.size);
-        fwrite(&lump, sizeof(lump), 1, wadfile);
+
+        if (wadfile) {
+            fwrite(&lump, sizeof(lump), 1, wadfile);
+        }
     }
     for (i = 0; i < texdata->nummiptex; i++) {
         if (texdata->dataofs[i] < 0)
             continue;
         miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
-        size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
+        size = CalcMipSize(i, bsp);
 
         /* Byte-swap miptex info and write out */
         miptex->width = LittleLong(miptex->width);
         miptex->height = LittleLong(miptex->height);
         for (j = 0; j < MIPLEVELS; j++)
             miptex->offsets[j] = LittleLong(miptex->offsets[j]);
-        fwrite(miptex, size, 1, wadfile);
+        if (wadfile) {
+            fwrite(miptex, size, 1, wadfile);
+        } else {
+            auto fname = std::string(miptex->name)+".mip";
+            FILE *mipfile = fopen(fname.c_str(), "wb");
+            if (mipfile) {
+                fwrite(miptex, size, 1, mipfile);
+                fclose(mipfile);
+            }
+        }
     }
 }
 
@@ -610,6 +640,10 @@ main(int argc, char **argv)
                 Error("%s", strerror(errno));
 
             printf("done.\n");
+        } else if (!strcmp(argv[i], "--extract-mips")) {
+            ExportWad(NULL, bsp);
+
+            printf("done.\n");
         } else if (!strcmp(argv[i], "--extract-textures")) {
             StripExtension(source);
             DefaultExtension(source, ".wad");
@@ -633,6 +667,8 @@ main(int argc, char **argv)
             printf("Done.\n");
         } else if (!strcmp(argv[i], "--modelinfo")) {
             PrintModelInfo(bsp);
+        } else if (!strcmp(argv[i], "--info")) {
+            PrintBSPFileSizes(&bspdata);
         } else if (!strcmp(argv[i], "--findfaces")) {
             // (i + 1) ... (i + 6) = x y z nx ny nz
             // i + 7 = bsp file

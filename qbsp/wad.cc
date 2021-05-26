@@ -27,7 +27,7 @@
 
 static void WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump);
 static int WAD_LoadLump(const wad_t *wad, const char *name, uint8_t *dest);
-static void WADList_AddAnimationFrames(const wad_t *wadlist);
+static void WADList_AddAnimationFrames(wad_t *wadlist);
 
 static texture_t *textures;
 
@@ -40,6 +40,83 @@ uint8_t thepalette[768] = // Quake palette
     51,67,51,39,55,43,31,39,31,23,27,19,15,15,11,7,111,131,123,103,123,111,95,115,103,87,107,95,79,99,87,71,91,79,63,83,71,55,75,63,47,67,55,43,59,47,35,51,39,31,43,31,23,35,23,15,27,19,11,19,11,7,11,7,255,243,27,239,223,23,219,203,19,203,183,15,187,167,15,171,151,11,155,131,7,139,115,7,123,99,7,107,83,0,91,71,0,75,55,0,59,43,0,43,31,0,27,15,0,11,7,0,0,0,255,11,11,239,19,19,223,27,27,207,35,35,191,43,
     43,175,47,47,159,47,47,143,47,47,127,47,47,111,47,47,95,43,43,79,35,35,63,27,27,47,19,19,31,11,11,15,43,0,0,59,0,0,75,7,0,95,7,0,111,15,0,127,23,7,147,31,7,163,39,11,183,51,15,195,75,27,207,99,43,219,127,59,227,151,79,231,171,95,239,191,119,247,211,139,167,123,59,183,155,55,199,195,55,231,227,87,127,191,255,171,231,255,215,255,255,103,0,0,139,0,0,179,0,0,215,0,0,255,0,0,255,243,147,255,247,199,255,255,255,159,91,83
 };
+
+static bool
+StringEndsWith(const std::string &gah, const char *woo)
+{
+    size_t l = strlen(woo);
+    size_t gl = gah.length();
+    if (gl < l)
+        return false;
+    gl-=l;
+    while(*woo) {
+        if (tolower(gah.at(gl++)) != *woo++)
+            return false;
+    }
+    return true;
+}
+
+static bool
+WADList_AddMip(const char *fpath, wad_t *&current_wadlist)
+{
+    std::string fullPath;
+    wad_t wad = {0};
+
+    if (options.wadPathsVec.empty() || IsAbsolutePath(fpath)) {
+        fullPath = fpath;
+        wad.file = fopen(fullPath.c_str(), "rb");
+        if (!wad.file)
+        {
+            fullPath = std::string(fpath) + ".mip";
+            wad.file = fopen(fullPath.c_str(), "rb");
+        }
+    } else {
+        for (const options_t::wadpath& wadpath : options.wadPathsVec) {
+            fullPath = wadpath.path + "/" + fpath + ".mip";
+            wad.file = fopen(fullPath.c_str(), "rb");
+            if (wad.file)
+                break;
+        }
+    }
+
+    if (wad.file && StringEndsWith(fullPath, ".mip")) {
+        if (options.fVerbose)
+            Message(msgLiteral, "Opened MIP: %s\n", fullPath.c_str());
+        wad.version = 2;
+        wad.header.numlumps = 1;
+        wad.lumps = (lumpinfo_t *)AllocMem(OTHER, sizeof(*wad.lumps), true);
+
+        dmiptex_t miptex;
+        fread(&miptex, 1, sizeof(miptex), wad.file);
+        memcpy(wad.lumps->name, miptex.name, sizeof(wad.lumps->name));
+        wad.lumps->pad1 = 0;
+        wad.lumps->pad2 = 0;
+        wad.lumps->type = 0;
+        wad.lumps->filepos = 0;
+        fseek(wad.file, 0, SEEK_END);
+        wad.lumps->size = wad.lumps->disksize = ftell(wad.file);
+        wad.lumps->compression = 0;
+
+        auto tex = (texture_t *)AllocMem(OTHER, sizeof(texture_t), true);
+        tex->next = textures;
+        textures = tex;
+        memcpy(tex->name, miptex.name, 16);
+        tex->name[15] = '\0';
+        tex->width = miptex.width;
+        tex->height = miptex.height;
+
+
+        wad_t *newwad = (wad_t *)AllocMem(OTHER, sizeof(wad), true);
+        memcpy(newwad, &wad, sizeof(wad));
+        newwad->next = current_wadlist;
+        current_wadlist = newwad;
+
+        return true;
+    }
+    else if (wad.file)
+        fclose(wad.file);
+    return false;
+}
 
 static bool
 WAD_LoadInfo(wad_t *wad, bool external)
@@ -191,7 +268,7 @@ WADList_Free(wad_t *wadlist)
 }
 
 static lumpinfo_t *
-WADList_FindTexture(const wad_t *wadlist, const char *name)
+WADList_FindTexture(wad_t *&wadlist, const char *name)
 {
     int i;
     const wad_t *wad;
@@ -201,11 +278,14 @@ WADList_FindTexture(const wad_t *wadlist, const char *name)
             if (!Q_strcasecmp(name, wad->lumps[i].name))
                 return &wad->lumps[i];
 
+    if (WADList_AddMip(name, wadlist))
+        return &wadlist->lumps[0];
+
     return NULL;
 }
 
 void
-WADList_Process(const wad_t *wadlist)
+WADList_Process(wad_t *wadlist)
 {
     int i;
     lumpinfo_t *texture;
@@ -334,7 +414,7 @@ WAD_LoadLump(const wad_t *wad, const char *name, uint8_t *dest)
 }
 
 static void
-WADList_AddAnimationFrames(const wad_t *wadlist)
+WADList_AddAnimationFrames(wad_t *wadlist)
 {
     int oldcount, i, j;
 

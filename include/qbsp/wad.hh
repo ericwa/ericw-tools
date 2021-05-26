@@ -67,7 +67,7 @@ typedef struct wad_s {
 
 wad_t *WADList_AddWad(const char *fpath, bool external, wad_t *current_wadlist);
 wad_t *WADList_Init(const char *wadstring);
-void WADList_Process(const wad_t *wadlist);
+void WADList_Process(wad_t *wadlist);
 void WADList_Free(wad_t *wadlist);
 const texture_t *WADList_GetTexture(const char *name);
 // for getting a texture width/height
