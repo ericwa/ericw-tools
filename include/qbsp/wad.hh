@@ -42,7 +42,14 @@ typedef struct {
     char compression;
     char pad1, pad2;
     char name[16];              // must be null terminated
-} lumpinfo_t;
+} dlumpinfo_t;
+typedef struct {
+    int filepos;
+    int disksize;
+    int size;                   // uncompressed
+    void *mip;
+    char name[128];              // must be null terminated
+} mlumpinfo_t;
 
 typedef struct texture_s {
     char name[16];
@@ -60,7 +67,7 @@ typedef struct {
 typedef struct wad_s {
     wadinfo_t header;
     int version;
-    lumpinfo_t *lumps;
+    mlumpinfo_t *lumps;
     FILE *file;
     struct wad_s *next;
 } wad_t;

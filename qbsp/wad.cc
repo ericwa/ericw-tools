@@ -56,6 +56,357 @@ StringEndsWith(const std::string &gah, const char *woo)
     return true;
 }
 
+
+
+//Spike: Basic dds support, with a limited number of pixel formats supported.
+typedef struct {
+	unsigned int dwSize;
+	unsigned int dwFlags;
+	unsigned int dwFourCC;
+
+	unsigned int bitcount;
+	unsigned int redmask;
+	unsigned int greenmask;
+	unsigned int bluemask;
+	unsigned int alphamask;
+} ddspixelformat_t;
+
+typedef struct {
+	unsigned int dwSize;
+	unsigned int dwFlags;
+	unsigned int dwHeight;
+	unsigned int dwWidth;
+	unsigned int dwPitchOrLinearSize;
+	unsigned int dwDepth;
+	unsigned int dwMipMapCount;
+	unsigned int dwReserved1[11];
+	ddspixelformat_t ddpfPixelFormat;
+	unsigned int ddsCaps[4];
+	unsigned int dwReserved2;
+} ddsheader_t;
+typedef struct {
+	unsigned int dxgiformat;
+	unsigned int resourcetype; //0=unknown, 1=buffer, 2=1d, 3=2d, 4=3d
+	unsigned int miscflag;	//singular... yeah. 4=cubemap.
+	unsigned int arraysize;
+	unsigned int miscflags2;
+} dds10header_t;
+
+template <class t> inline t max (t a, t b) {return (a>b?a:b);}	//because macro double-expansion sucks
+
+static size_t Image_ReadDDSFile(const char *fname, const char *mipname, uint8_t *filedata, size_t filesize, void **out)
+{
+    size_t lumpsize = 0;
+    int nummips;
+    int mipnum;
+    int datasize;
+    unsigned int w, h, d;
+    unsigned int blockwidth, blockheight, blockdepth=1, blockbytes, inblockbytes=0;
+    const char *encoding;
+    int layers = 1;
+    bool swap = false;
+
+    ddsheader_t fmtheader;
+    dds10header_t fmt10header;
+    uint8_t *fileend = filedata + filesize;
+
+    if (filesize < sizeof(fmtheader) || *(int*)filedata != (('D'<<0)|('D'<<8)|('S'<<16)|(' '<<24)))
+        return 0;
+
+    memcpy(&fmtheader, filedata+4, sizeof(fmtheader));
+    if (fmtheader.dwSize != sizeof(fmtheader))
+        return 0;	//corrupt/different version
+    fmtheader.dwSize += 4;
+    memset(&fmt10header, 0, sizeof(fmt10header));
+
+    fmt10header.arraysize = (fmtheader.ddsCaps[1] & 0x200)?6:1; //cubemaps need 6 faces...
+
+    nummips = fmtheader.dwMipMapCount;
+    if (nummips < 1)
+        nummips = 1;
+
+    if (!(fmtheader.ddpfPixelFormat.dwFlags & 4))
+    {
+        #define IsPacked(bits,r,g,b,a)	fmtheader.ddpfPixelFormat.bitcount==bits&&fmtheader.ddpfPixelFormat.redmask==r&&fmtheader.ddpfPixelFormat.greenmask==g&&fmtheader.ddpfPixelFormat.bluemask==b&&fmtheader.ddpfPixelFormat.alphamask==a
+        if (IsPacked(24, 0xff0000, 0x00ff00, 0x0000ff, 0))
+            encoding = "RGB", blockbytes=3, blockwidth=blockheight=1, swap = true;
+        else if (IsPacked(24, 0x000000ff, 0x0000ff00, 0x00ff0000, 0))
+            encoding = "RGB", blockbytes=3, blockwidth=blockheight=1;
+        else if (IsPacked(32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000))
+            encoding = "RGBA", blockbytes=4, blockwidth=blockheight=1, swap = true;
+        else if (IsPacked(32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000))
+            encoding = "RGBA", blockbytes=4, blockwidth=blockheight=1;
+        else if (IsPacked(32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0))
+            encoding = "RGB", blockbytes=3, blockwidth=blockheight=1, swap=true, inblockbytes=4;
+        else if (IsPacked(32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0))
+            encoding = "RGB", blockbytes=3, blockwidth=blockheight=1, inblockbytes=4;
+//      else if (IsPacked(32, 0x000003ff, 0x000ffc00, 0x3ff00000, 0xc0000000))
+//          encoding = PTI_A2BGR10;
+        else if (IsPacked(16, 0xf800, 0x07e0, 0x001f, 0))
+            encoding = "565", blockbytes=2, blockwidth=blockheight=1;
+        else if (IsPacked(16, 0xf800, 0x07c0, 0x003e, 0x0001))
+            encoding = "5551", blockbytes=2, blockwidth=blockheight=1;
+        else if (IsPacked(16, 0xf000, 0x0f00, 0x00f0, 0x000f))
+            encoding = "4444", blockbytes=2, blockwidth=blockheight=1;
+/*      else if (IsPacked( 8, 0x000000ff, 0x00000000, 0x00000000, 0x00000000))
+            encoding = "LUM8";
+        else if (IsPacked(16, 0x000000ff, 0x00000000, 0x00000000, 0x0000ff00))
+            encoding = PTI_L8A8;
+*/      else
+        {
+            logprint("Unsupported non-fourcc dds in %s\n", fname);
+            logprint(" bits: %u\n", fmtheader.ddpfPixelFormat.bitcount);
+            logprint("  red: %08x\n", fmtheader.ddpfPixelFormat.redmask);
+            logprint("green: %08x\n", fmtheader.ddpfPixelFormat.greenmask);
+            logprint(" blue: %08x\n", fmtheader.ddpfPixelFormat.bluemask);
+            logprint("alpha: %08x\n", fmtheader.ddpfPixelFormat.alphamask);
+            logprint(" used: %08x\n", fmtheader.ddpfPixelFormat.redmask^fmtheader.ddpfPixelFormat.greenmask^fmtheader.ddpfPixelFormat.bluemask^fmtheader.ddpfPixelFormat.alphamask);
+            return 0;
+        }
+#undef IsPacked
+    }
+    else if (*(int*)&fmtheader.ddpfPixelFormat.dwFourCC == (('D'<<0)|('X'<<8)|('T'<<16)|('1'<<24)))
+        encoding = "BC1", blockbytes=8, blockwidth=blockheight=4;	//alpha or not? Assume yes, and let the drivers decide.
+    else if (*(int*)&fmtheader.ddpfPixelFormat.dwFourCC == (('D'<<0)|('X'<<8)|('T'<<16)|('2'<<24)))	//dx3 with premultiplied alpha
+        encoding = "BC2", blockbytes=16, blockwidth=blockheight=4;
+    else if (*(int*)&fmtheader.ddpfPixelFormat.dwFourCC == (('D'<<0)|('X'<<8)|('T'<<16)|('3'<<24)))
+        encoding = "BC2", blockbytes=16, blockwidth=blockheight=4;
+    else if (*(int*)&fmtheader.ddpfPixelFormat.dwFourCC == (('D'<<0)|('X'<<8)|('T'<<16)|('4'<<24)))	//dx5 with premultiplied alpha
+        encoding = "BC3", blockbytes=16, blockwidth=blockheight=4;
+    else if (*(int*)&fmtheader.ddpfPixelFormat.dwFourCC == (('D'<<0)|('X'<<8)|('T'<<16)|('5'<<24)))
+        encoding = "BC3", blockbytes=16, blockwidth=blockheight=4;
+    else if (*(int*)&fmtheader.ddpfPixelFormat.dwFourCC == (('E'<<0)|('T'<<8)|('C'<<16)|('2'<<24)))
+        encoding = "ETC2", blockbytes=8, blockwidth=blockheight=4;
+    else if (*(int*)&fmtheader.ddpfPixelFormat.dwFourCC == (('D'<<0)|('X'<<8)|('1'<<16)|('0'<<24)))
+    {
+        //this has some weird extra header with dxgi format types.
+        memcpy(&fmt10header, filedata+fmtheader.dwSize, sizeof(fmt10header));
+        fmtheader.dwSize += sizeof(fmt10header);
+        switch(fmt10header.dxgiformat)
+        {
+        //note: we don't distinguish between ldr+srgb formats here... they might end up darker than intended...
+        case 0x1c/*DXGI_FORMAT_R8G8B8A8_UNORM*/:
+        case 0x1d/*DXGI_FORMAT_R8G8B8A8_UNORM_SRGB*/:	encoding = "RGBA", blockbytes=4, blockwidth=1, blockheight=1; break;   //32bit
+        case 0x43/*DXGI_FORMAT_R9G9B9E5_SHAREDEXP*/:	encoding = "EXP5", blockbytes=4, blockwidth=1, blockheight=1; break;   //32bit
+        case 0x47/*DXGI_FORMAT_BC1_UNORM*/:
+        case 0x48/*DXGI_FORMAT_BC1_UNORM_SRGB*/:	encoding = "BC1", blockbytes=8,  blockwidth=4, blockheight=4; break;   //4 bit
+        case 0x4a/*DXGI_FORMAT_BC2_UNORM*/:
+        case 0x4b/*DXGI_FORMAT_BC2_UNORM_SRGB*/:	encoding = "BC2", blockbytes=16, blockwidth=4, blockheight=4; break;   //8 bit
+        case 0x4d/*DXGI_FORMAT_BC3_UNORM*/:
+        case 0x4e/*DXGI_FORMAT_BC3_UNORM_SRGB*/:	encoding = "BC3", blockbytes=16, blockwidth=4, blockheight=4; break;   //8 bit
+        case 0x50/*DXGI_FORMAT_BC4_UNORM*/:		encoding = "BC4", blockbytes=8,  blockwidth=4, blockheight=4; break;   //4 bit
+        case 0x53/*DXGI_FORMAT_BC5_UNORM*/:		encoding = "BC5", blockbytes=16, blockwidth=4, blockheight=4; break;   //8 bit
+        case 0x5f/*DXGI_FORMAT_BC6H_UF16*/:		encoding = "BC6", blockbytes=16, blockwidth=4, blockheight=4; break;   //8 bit
+        case 0x62/*DXGI_FORMAT_BC7_UNORM*/:
+        case 0x63/*DXGI_FORMAT_BC7_UNORM_SRGB*/:	encoding = "BC7", blockbytes=16, blockwidth=4, blockheight=4; break;   //8 bit
+        case 134:
+        case 135:	encoding = "AST4", blockbytes=16, blockwidth=4, blockheight=4; break;   //8   bit
+        case 138:
+        case 139:	encoding = "AS54", blockbytes=16, blockwidth=5, blockheight=4; break;   //6.4 bit
+        case 142:
+        case 143:	encoding = "AST5", blockbytes=16, blockwidth=5, blockheight=5; break;   //5.12bit
+        case 146:
+        case 147:	encoding = "AS65", blockbytes=16, blockwidth=6, blockheight=5; break;   //4.27bit
+        case 150:
+        case 151:	encoding = "AST6", blockbytes=16, blockwidth=6, blockheight=6; break;   //3.55bit
+        case 154:
+        case 155:	encoding = "AS85", blockbytes=16, blockwidth=8, blockheight=5; break;   //3.2 bit
+        case 158:
+        case 159:	encoding = "AS86", blockbytes=16, blockwidth=8, blockheight=6; break;   //2.67bit
+        case 162:
+        case 163:	encoding = "AST8", blockbytes=16, blockwidth=8, blockheight=8; break;   //2   bit
+        case 166:
+        case 167:	encoding = "AS05", blockbytes=16, blockwidth=10, blockheight=5; break;  //2.56bit
+        case 170:
+        case 171:	encoding = "AS06", blockbytes=16, blockwidth=10, blockheight=6; break;  //2.13bit
+        case 174:
+        case 175:	encoding = "AS08", blockbytes=16, blockwidth=10, blockheight=8; break;  //1.6 bit
+        case 178:
+        case 179:	encoding = "AST0", blockbytes=16, blockwidth=10, blockheight=10; break; //1.28bit
+        case 182:
+        case 183:	encoding = "AS20", blockbytes=16, blockwidth=12, blockheight=10; break; //1.07bit
+        case 186:
+        case 187:	encoding = "AST2", blockbytes=16, blockwidth=12, blockheight=12; break; //0.88bit
+        default:
+            logprint("Unsupported dds10 dxgi in %s - %u\n", fname, fmt10header.dxgiformat);
+            return 0;
+        }
+    }
+    else
+    {
+        logprint("Unsupported dds fourcc in %s - \"%c%c%c%c\"\n", fname,
+        ((char*)&fmtheader.ddpfPixelFormat.dwFourCC)[0],
+        ((char*)&fmtheader.ddpfPixelFormat.dwFourCC)[1],
+        ((char*)&fmtheader.ddpfPixelFormat.dwFourCC)[2],
+        ((char*)&fmtheader.ddpfPixelFormat.dwFourCC)[3]);
+        return 0;
+    }
+    if (!inblockbytes)
+        inblockbytes = blockbytes;
+
+    if ((fmtheader.ddsCaps[1] & 0x200) && (fmtheader.ddsCaps[1] & 0xfc00) != 0xfc00)
+        return 0;	//cubemap without all 6 faces defined.
+
+    if (fmtheader.dwFlags & 8)
+    {	//explicit pitch flag. we don't support any padding, so this check exists just to be sure none is required.
+        w = max(1u, fmtheader.dwWidth);
+        if (fmtheader.dwPitchOrLinearSize != inblockbytes*(w+blockwidth-1)/blockwidth)
+            return 0;
+    }
+    if (fmtheader.dwFlags & 0x80000)
+    {	//linear size flag. we don't support any padding, so this check exists just to be sure none is required.
+        //linear-size of the top-level mip.
+        size_t linearsize;
+        w = max(1u, fmtheader.dwWidth);
+        h = max(1u, fmtheader.dwHeight);
+        d = max(1u, fmtheader.dwDepth);
+        linearsize = ((w+blockwidth-1)/blockwidth)*
+                                        ((h+blockheight-1)/blockheight)*
+                                        ((d+blockdepth-1)/blockdepth)*
+                                        inblockbytes;
+        if (fmtheader.dwPitchOrLinearSize != linearsize)
+            return 0;
+    }
+
+    if (fmtheader.ddsCaps[1] & 0x200)
+        return 0;    //no cubemaps stuff
+    else if (fmtheader.ddsCaps[1] & 0x200000)
+        return 0;	//no 3d arrays
+    else
+    {
+        if (fmt10header.arraysize != 1)
+            return 0;    //no array textures
+    }
+
+    filedata += fmtheader.dwSize;
+
+    w = max(1u, fmtheader.dwWidth);
+    h = max(1u, fmtheader.dwHeight);
+    d = max(1u, fmtheader.dwDepth);
+
+    lumpsize = sizeof(dmiptex_t);
+    lumpsize += 20;
+    for (mipnum = 0; mipnum < nummips; mipnum++)
+    {
+        lumpsize += ((w+blockwidth-1)/blockwidth) * ((h+blockheight-1)/blockheight) * ((d+blockdepth-1)/blockdepth) * blockbytes;
+        w = max(1u, w>>1);
+        h = max(1u, h>>1);
+        d = max(1u, d>>1);
+    }
+
+
+    w = max(1u, fmtheader.dwWidth);
+    h = max(1u, fmtheader.dwHeight);
+    d = max(1u, fmtheader.dwDepth);
+
+    auto outdata = (uint8_t*)AllocMem(OTHER, lumpsize, false);
+    *out = outdata;
+
+    //spit out the mip header
+    {
+        auto mt = (dmiptex_t*)outdata;
+        q_snprintf(mt->name, sizeof(mt->name), "%s", mipname);
+        mt->width = w;
+        mt->height = h;
+        //no paletted data. sue me.
+        mt->offsets[0] = mt->offsets[1] = mt->offsets[2] = mt->offsets[3] = 0;
+    } outdata += sizeof(dmiptex_t);
+
+    //magic ident, extsize, pixelformat, w, h.
+    outdata[0]=0x00;
+    outdata[1]=0xfb;
+    outdata[2]=0x2b;
+    outdata[3]=0xaf;	outdata+=sizeof(int);
+    //extsize (little-endian)
+    *(int*)outdata = lumpsize-(outdata-(uint8_t*)*out); outdata+=sizeof(int);
+    //pixel format (fourcc)
+    outdata[0]=encoding[0];
+    outdata[1]=encoding[1];
+    outdata[2]=encoding[2];
+    outdata[3]=encoding[3];	outdata+=sizeof(int);
+    //width (little-endian)
+    *(int*)outdata = w;	outdata+=sizeof(int);
+    //height (little-endian)
+    *(int*)outdata = h;	outdata+=sizeof(int);
+
+    //now the mip chain.
+    //Note: dds groups by layer rather than level. we don't do cubemaps or arrays so w/e.
+    for (mipnum = 0; mipnum < nummips; mipnum++)
+    {
+        datasize = ((w+blockwidth-1)/blockwidth) * ((h+blockheight-1)/blockheight) * (layers*((d+blockdepth-1)/blockdepth)) * blockbytes;
+        if (swap || blockbytes != inblockbytes)
+        {
+            for (size_t p = 0; p < datasize/blockbytes; p++, filedata += inblockbytes, outdata += blockbytes)
+            {
+                if (swap)
+                {   //bgr->rgb
+                    outdata[0] = filedata[2];
+                    outdata[1] = filedata[1];
+                    outdata[2] = filedata[0];
+                }
+                else
+                {   //just stripping padding.
+                    outdata[0] = filedata[0];
+                    outdata[1] = filedata[1];
+                    outdata[2] = filedata[2];
+                }
+                if (blockbytes > 3)
+                    outdata[3] = filedata[3];
+            }
+        }
+        else
+        {
+            memcpy(outdata, filedata, datasize);
+            filedata += datasize;
+            outdata += datasize;
+        }
+        w = max(1u, w>>1);
+        h = max(1u, h>>1);
+        d = max(1u, d>>1);
+    }
+
+    return lumpsize;
+}
+
+static bool
+WADList_LoadImageFile(const char *fname, const char *texname, wad_t *&current_wadlist)
+{
+    auto f = fopen(fname, "rb");
+    if (!f)
+        return false; //nope no file.
+    if (options.fVerbose)
+        Message(msgLiteral, "Reading image: %s\n", fname);
+    fseek(f, 0l, SEEK_END);
+    size_t filesize = ftell(f);
+    fseek(f, 0l, SEEK_SET);
+    mlumpinfo_t l = {};
+    auto filedata = (uint8_t *)malloc(filesize);
+    if (filesize != fread(filedata, 1, filesize, f))
+        filesize = 0; //something went wrong...
+    fclose(f);
+
+    if (!l.mip)
+        l.size = l.disksize = Image_ReadDDSFile(fname, texname, filedata, filesize, &l.mip);
+    free(filedata); //no longer needed
+
+    if (l.mip)
+    {
+        auto newwad = (wad_t *)AllocMem(OTHER, sizeof(wad_t), true);
+        newwad->file = NULL;
+        newwad->version = 2;
+        newwad->header.numlumps = 1;
+        newwad->lumps = (mlumpinfo_t *)AllocMem(OTHER, sizeof(*newwad->lumps), true);
+        *newwad->lumps = l;
+        memcpy(newwad->lumps->name, texname, sizeof(newwad->lumps->name));
+        newwad->next = current_wadlist;
+        current_wadlist = newwad;
+        return true;
+    }
+    else if (options.fVerbose)
+        Message(msgLiteral, "Unknown format: %s\n", fname);
+    return false;
+}
+
 static bool
 WADList_AddMip(const char *fpath, wad_t *&current_wadlist)
 {
@@ -72,10 +423,39 @@ WADList_AddMip(const char *fpath, wad_t *&current_wadlist)
         }
     } else {
         for (const options_t::wadpath& wadpath : options.wadPathsVec) {
-            fullPath = wadpath.path + "/" + fpath + ".mip";
+            if (*fpath == '*')  //turbs are annoying
+                fullPath = wadpath.path + "/#" + (fpath+1) + ".mip";
+            else
+                fullPath = wadpath.path + "/" + fpath + ".mip";
             wad.file = fopen(fullPath.c_str(), "rb");
             if (wad.file)
                 break;
+
+            if (*fpath == '*')  //turbs are annoying
+                fullPath = wadpath.path + "/#" + (fpath+1) + ".dds";
+            else
+                fullPath = wadpath.path + "/" + fpath + ".dds";
+            if (WADList_LoadImageFile(fullPath.c_str(), fpath, current_wadlist))
+                return true;
+
+            char *lpath = strdup(fpath);
+            bool lowered = false;
+            for (auto p = lpath; *p; p++)
+                if (*p >= 'A' && *p <= 'Z')
+                    *p += 'a'-'A', lowered = true;
+            if (lowered)
+            {
+                if (*lpath == '*')  //turbs are annoying
+                    fullPath = wadpath.path + "/#" + (lpath+1) + ".dds";
+                else
+                    fullPath = wadpath.path + "/" + lpath + ".dds";
+                if (WADList_LoadImageFile(fullPath.c_str(), fpath, current_wadlist))
+                {
+                    free(lpath);
+                    return true;
+                }
+            }
+            free(lpath);
         }
     }
 
@@ -84,18 +464,14 @@ WADList_AddMip(const char *fpath, wad_t *&current_wadlist)
             Message(msgLiteral, "Opened MIP: %s\n", fullPath.c_str());
         wad.version = 2;
         wad.header.numlumps = 1;
-        wad.lumps = (lumpinfo_t *)AllocMem(OTHER, sizeof(*wad.lumps), true);
+        wad.lumps = (mlumpinfo_t *)AllocMem(OTHER, sizeof(*wad.lumps), true);
 
         dmiptex_t miptex;
         fread(&miptex, 1, sizeof(miptex), wad.file);
-        memcpy(wad.lumps->name, miptex.name, sizeof(wad.lumps->name));
-        wad.lumps->pad1 = 0;
-        wad.lumps->pad2 = 0;
-        wad.lumps->type = 0;
+        memcpy(wad.lumps->name, fpath, sizeof(wad.lumps->name));
         wad.lumps->filepos = 0;
         fseek(wad.file, 0, SEEK_END);
         wad.lumps->size = wad.lumps->disksize = ftell(wad.file);
-        wad.lumps->compression = 0;
 
         auto tex = (texture_t *)AllocMem(OTHER, sizeof(texture_t), true);
         tex->next = textures;
@@ -113,7 +489,7 @@ WADList_AddMip(const char *fpath, wad_t *&current_wadlist)
 
         return true;
     }
-    else if (wad.file)
+    if (wad.file)
         fclose(wad.file);
     return false;
 }
@@ -125,6 +501,7 @@ WAD_LoadInfo(wad_t *wad, bool external)
     int i, len, lumpinfosize;
     dmiptex_t miptex;
     texture_t *tex;
+    dlumpinfo_t *lumps;
 
     external |= options.fNoTextures;
 
@@ -140,15 +517,23 @@ WAD_LoadInfo(wad_t *wad, bool external)
     if (!wad->version)
         return false;
 
-    lumpinfosize = sizeof(lumpinfo_t) * hdr->numlumps;
+    lumpinfosize = sizeof(dlumpinfo_t) * hdr->numlumps;
     fseek(wad->file, hdr->infotableofs, SEEK_SET);
-    wad->lumps = (lumpinfo_t *)AllocMem(OTHER, lumpinfosize, true);
+    wad->lumps = (mlumpinfo_t *)AllocMem(OTHER, sizeof(mlumpinfo_t)*hdr->numlumps, true);
+    lumps = (dlumpinfo_t *)AllocMem(OTHER, lumpinfosize, true);
     len = fread(wad->lumps, 1, lumpinfosize, wad->file);
     if (len != lumpinfosize)
-        return false;
+        wad->header.numlumps = 0;
 
     /* Get the dimensions and make a texture_t */
     for (i = 0; i < wad->header.numlumps; i++) {
+        wad->lumps[i].filepos = lumps[i].filepos;
+        wad->lumps[i].disksize = lumps[i].disksize;
+        wad->lumps[i].size = lumps[i].size;
+        wad->lumps[i].mip = NULL;
+        strncpy(wad->lumps[i].name, lumps[i].name, sizeof(lumps[i].name));
+        wad->lumps[i].name[sizeof(lumps[i].name)] = 0;
+
         fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
         len = fread(&miptex, 1, sizeof(miptex), wad->file);
 
@@ -189,8 +574,8 @@ WAD_LoadInfo(wad_t *wad, bool external)
         else
             wad->lumps[i].size = 0;
     }
-
-    return true;
+    FreeMem(lumps, OTHER, lumpinfosize);
+    return wad->header.numlumps>0;
 }
 
 wad_t *WADList_AddWad(const char *fpath, bool external, wad_t *current_wadlist)
@@ -262,12 +647,12 @@ WADList_Free(wad_t *wadlist)
     for (wad = wadlist; wad; wad = next) {
         next = wad->next;
         fclose(wad->file);
-        FreeMem(wad->lumps, OTHER, sizeof(lumpinfo_t) * wad->header.numlumps);
+        FreeMem(wad->lumps, OTHER, sizeof(mlumpinfo_t) * wad->header.numlumps);
         FreeMem(wad, OTHER, sizeof(*wad));
     }
 }
 
-static lumpinfo_t *
+static mlumpinfo_t *
 WADList_FindTexture(wad_t *&wadlist, const char *name)
 {
     int i;
@@ -288,7 +673,7 @@ void
 WADList_Process(wad_t *wadlist)
 {
     int i;
-    lumpinfo_t *texture;
+    mlumpinfo_t *texture;
     dmiptexlump_t *miptexlump;
     struct lumpdata *texdata = &pWorldEnt()->lumps[LUMP_TEXTURES];
 
@@ -358,6 +743,12 @@ WAD_LoadLump(const wad_t *wad, const char *name, uint8_t *dest)
 
     for (i = 0; i < wad->header.numlumps; i++) {
         if (!Q_strcasecmp(name, wad->lumps[i].name)) {
+            if (!wad->file)
+            {   //pre-prepared mip.
+                memcpy(dest, wad->lumps[i].mip, wad->lumps[i].disksize);
+                return wad->lumps[i].disksize;
+            }
+
             fseek(wad->file, wad->lumps[i].filepos, SEEK_SET);
             if (wad->lumps[i].disksize == sizeof(dmiptex_t))
             {
