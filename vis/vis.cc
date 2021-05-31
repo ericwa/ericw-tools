@@ -127,7 +127,10 @@ NewWinding(int points)
     if (points > MAX_WINDING)
         Error("%s: %i points", __func__, points);
 
-    size = offsetof(winding_t, points[points]);
+    //size = offsetof(winding_t, points[points]);
+    size = offsetof(winding_t, points[0]);
+    size += points * sizeof(w->points[0]);
+
     w = static_cast<winding_t *>(malloc(size));
     memset(w, 0, size);
 
@@ -178,7 +181,10 @@ CopyWinding(const winding_t * w)
     int size;
     winding_t *c;
 
-    size = offsetof(winding_t, points[w->numpoints]);
+    //size = offsetof(winding_t, points[w->numpoints]);
+    size = offsetof(winding_t, points[0]);
+    size += w->numpoints * sizeof(w->points[0]);
+
     c = static_cast<winding_t *>(malloc(size));
     memcpy(c, w, size);
     return c;

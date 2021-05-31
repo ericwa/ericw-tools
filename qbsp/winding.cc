@@ -106,7 +106,9 @@ CopyWinding(const winding_t *w)
     winding_t *c;
 
     c = (winding_t *)AllocMem(WINDING, w->numpoints, false);
-    size = offsetof(winding_t, points[w->numpoints]);
+    //size = offsetof(winding_t, points[w->numpoints]);
+    size = offsetof(winding_t, points[0]);
+    size += w->numpoints * sizeof(w->points[0]);
     memcpy(c, w, size);
 
     return c;

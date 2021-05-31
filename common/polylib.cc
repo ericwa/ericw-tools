@@ -230,7 +230,10 @@ polylib::CopyWinding(const winding_t * w)
     int size;
     winding_t *c;
 
-    size = offsetof(winding_t, p[w->numpoints]);
+    //size = offsetof(winding_t, p[w->numpoints]);
+    size = offsetof(winding_t, p[0]);
+    size += w->numpoints * sizeof(w->p[0]);
+
     c = static_cast<winding_t *>(malloc(size));
     memcpy(c, w, size);
     return c;
