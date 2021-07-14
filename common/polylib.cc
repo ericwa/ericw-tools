@@ -1,6 +1,7 @@
 /* common/polylib.c */
 
 #include <stddef.h>
+#include <float.h>
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
@@ -131,8 +132,8 @@ polylib::WindingBounds (const winding_t *w, vec3_t mins, vec3_t maxs)
     vec_t	v;
     int		i,j;
     
-    mins[0] = mins[1] = mins[2] = 99999;
-    maxs[0] = maxs[1] = maxs[2] = -99999;
+    mins[0] = mins[1] = mins[2] = FLT_MAX;
+    maxs[0] = maxs[1] = maxs[2] = -FLT_MAX;
     
     for (i=0 ; i<w->numpoints ; i++)
     {
