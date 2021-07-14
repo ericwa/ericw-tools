@@ -9,7 +9,6 @@
  - Author:  Kevin Shanahan (AKA Tyrann)
  - Email:   tyrann@disenchant.net
 
-[![Build Status](https://travis-ci.org/ericwa/ericw-tools.svg?branch=master)](https://travis-ci.org/ericwa/ericw-tools)
 [![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/ericw-tools)
 
 ## About
@@ -41,42 +40,15 @@ source code.
 
 ## Compiling
 
-Requires CMake 2.8, groff, and a compiler with C99 and C++11 support.  
-[Embree v2.10.0+](http://embree.github.io/) is required (sorry, no Embree 3.x support right now).
-The Thread Building Blocks (tbb) library (Embree dependency) may be required.
+Dependencies: Embree 3.0+, TBB (TODO: version?), groff (for building manuals)
 
-Tested on:
- - Ubuntu 14.04 / Clang 3.5.0
- - Ubuntu 14.04 / gcc 4.8.4
- - OS X 10.11 / Xcode 7.3
- - Windows 10 / Visual Studio 2013, 2019 Community
+### Ubuntu
 
-### Ubuntu 14.04 x86_64
+TODO: updated instructions
 
-```
-sudo apt-get install git cmake build-essential groff
+### Windows
 
-git clone https://github.com/ericwa/ericw-tools
-cd ericw-tools
-
-mkdir build
-cd build
-
-wget https://github.com/embree/embree/releases/download/v2.17.5/embree-2.17.5.x86_64.linux.tar.gz -O embree.tgz
-tar xf embree.tgz
-sudo apt-get install libtbb2
-
-cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.17.5.x86_64.linux"
-make -j8 VERBOSE=1
-```
-
-Executables will be located in:
-
- - `ericw-tools/build/qbsp/qbsp`
- - `ericw-tools/build/vis/vis`
- - `ericw-tools/build/light/light`
- - `ericw-tools/build/bspinfo/bspinfo`
- - `ericw-tools/build/bsputil/bsputil`
+TODO: updated instructions
 
 ### macOS 10.15
 
