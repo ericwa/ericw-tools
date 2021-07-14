@@ -78,6 +78,15 @@ Executables will be located in:
  - `ericw-tools/build/bspinfo/bspinfo`
  - `ericw-tools/build/bsputil/bsputil`
 
+### macOS 10.15
+
+```
+brew install embree tbb
+mkdir build
+cd build
+cmake .. -GXcode -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)"
+```
+
 ## Credits
 
 - Kevin Shanahan (AKA Tyrann) for the original [tyrutils](http://disenchant.net/utils)
