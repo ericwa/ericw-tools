@@ -22,8 +22,6 @@
 
 #include <qbsp/qbsp.hh>
 
-#include "tbb/mutex.h"
-#include "tbb/parallel_do.h"
 #include "tbb/parallel_for.h"
 
 /*
