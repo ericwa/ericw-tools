@@ -122,8 +122,9 @@ if (MSVC)
 	add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning
 endif (MSVC)
 
-#minimum version that supports unordered_map
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.9)
+# 10.9: minimum version that supports unordered_map
+# 10.14: required by tbb 2021.3.0 (due to use of alignas)
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
 
 find_package(TBB REQUIRED)
 
