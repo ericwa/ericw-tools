@@ -2462,6 +2462,9 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
                     void *lumpdata = malloc(len);
                     memcpy(lumpdata, (const uint8_t*)header + ofs, len);
                     BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
+
+                    if (bspxofs < ofs+len)
+                        bspxofs = ofs+len;
                 }
             }
             else
@@ -2470,6 +2473,15 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
                     printf("invalid bspx header\n");
             }
         }
+
+        bspdata->zipsize = flen - bspxofs;
+        if (bspdata->zipsize>3)
+        {
+            bspdata->zip = malloc(bspdata->zipsize);
+            memcpy(bspdata->zip, (const uint8_t*)header + bspxofs, bspdata->zipsize);
+        }
+        else
+            bspdata->zipsize = 0;
     }
     
     /* everything has been copied out */
@@ -2716,10 +2728,15 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
                 SafeWrite(bspfile.file, pad, 4 - (x->lumpsize % 4));
         }
 
+        if (bspdata->zipsize)
+            SafeWrite(bspfile.file, bspdata->zip, bspdata->zipsize);
+
         fseek(bspfile.file, bspxheader, SEEK_SET);
         SafeWrite(bspfile.file, &xheader, sizeof(xheader));
         SafeWrite(bspfile.file, xlumps, xheader.numlumps * sizeof(xlumps[0]));
     }
+    else if (bspdata->zipsize)
+        SafeWrite(bspfile.file, bspdata->zip, bspdata->zipsize);
 
     fseek(bspfile.file, 0, SEEK_SET);
 	
@@ -2734,6 +2751,313 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
 }
 
 /* ========================================================================= */
+
+static uint32_t ReadRawInt(const uint8_t *blob)
+{
+    return (blob[0]<<0) | (blob[1]<<8) | (blob[2]<<16) | (blob[3]<<24);
+}
+static uint16_t ReadRawShort(const uint8_t *blob)
+{
+    return (blob[0]<<0) | (blob[1]<<8);
+}
+static int EnumerateFilesFromPackageBlob(const uint8_t *blob, size_t blobsize, void (*cb)(const char *name, const void *compdata, size_t compsize, int method, size_t plainsize))
+{
+    unsigned int cdentries;
+    unsigned int cdlen;
+    const uint8_t *eocd;
+    const uint8_t *cd;
+    int nl,el,cl;
+    int ret = 0;
+    const unsigned char *le;
+    unsigned int csize, usize, method;
+    char name[1024];
+
+    if (blobsize >= 8 && !strncmp((const char*)blob, "PACK", 4))
+    {
+        uint32_t ofs = ReadRawInt(blob+4);
+        uint32_t count = ReadRawInt(blob+8) / 64;
+        for (ret = 0; ret < count; ret++, ofs+=64)
+        {
+            uint32_t fofs = ReadRawInt(blob+ofs+56);
+            uint32_t flen = ReadRawInt(blob+ofs+60);
+            cb((const char*)blob+ofs, (const char*)blob+fofs, flen, 0, flen);
+        }
+        return ret;
+    }
+
+    if (blobsize < 22)
+        return ret;
+
+    //treat it as a zip
+    //FIXME: we don't allow for zip comments here.
+    eocd = blob;
+    eocd += blobsize-22;
+    if (ReadRawInt(eocd+0) != 0x06054b50)
+        return ret;
+    if (ReadRawShort(eocd+4) || ReadRawShort(eocd+6) || ReadRawShort(eocd+20) || ReadRawShort(eocd+8) != ReadRawShort(eocd+10))
+        return ret;
+    cd = blob;
+    cd += ReadRawInt(eocd+16);
+    cdlen = ReadRawInt(eocd+12);
+    cdentries = ReadRawShort(eocd+10);
+    if (cd+cdlen>=(const uint8_t*)blob+blobsize)
+        return ret;
+
+    for(; cdentries --> 0; cd += 46 + nl+el+cl)
+    {
+        if (ReadRawInt(cd+0) != 0x02014b50)
+            break;
+        nl = ReadRawShort(cd+28);
+        el = ReadRawShort(cd+30);
+        cl = ReadRawShort(cd+32);
+
+        //1=encrypted
+        //2,4=encoder flags
+        //8=crc etc info is dodgy
+        //10=enhanced deflate
+        //20=patchdata
+        //40=strong encryption
+        //80,100,200,400=unused
+        //800=utf-8
+        //1000=enh comp
+        //2000=masked localheader
+        //4000,8000=reserved
+        if (ReadRawShort(cd+8) & ~0x80e)
+            continue;
+
+        //use the local entry header as the definitive version of everything but name.
+        le = (const unsigned char*)blob + ReadRawInt(cd+42);
+
+        if (ReadRawInt(le+0) != 0x04034b50)
+            continue;
+        if (ReadRawShort(le+6) & ~0x80e)	//general purpose flags
+            continue;
+        method = ReadRawShort(le+8);
+        if (method != 0 && method != 8)
+            continue;
+        if (nl != ReadRawShort(le+26))
+            continue;	//name is weird...
+//      if (el != ReadRawShort(le+28))
+//          continue;	//extradata is weird...
+
+        csize = ReadRawInt(le+18);
+        usize = ReadRawInt(le+22);
+        if (nl >= sizeof(name))
+            continue;	//name is too long
+        memcpy(name, cd+46, nl);
+        name[nl] = 0;
+
+        cb(name, le+30+ReadRawShort(le+26)+ReadRawShort(le+28), csize, method, usize);
+        ret++;
+    }
+    return ret;
+}
+int EnumerateFilesFromPackage(const bspdata_t *bspdata, void (*cb)(const char *name, const void *compdata, size_t compsize, int method, size_t plainsize))
+{
+    if (bspdata->zipsize)
+        return EnumerateFilesFromPackageBlob((const uint8_t *)bspdata->zip, bspdata->zipsize, cb);
+    return 0;
+}
+
+
+struct repackContext_s
+{
+    struct repackfile_s
+    {
+        std::string name;
+        const void  *cdata;
+        size_t csize;
+        size_t usize;
+        int zipmethod;
+
+        size_t localoffset;
+    };
+    std::vector<repackfile_s> file;
+};
+
+static void *ZIP_Rewrite(repackContext_s *ctx, size_t *out_size)
+{
+    //helpers to deal with misaligned data. writes little-endian.
+#define tab8(data)  *tab++ = (data)&0xff
+#define tab16(data) *tab++ = (data)&0xff,*tab++ = ((data)>>8)&0xff
+#define tab32(data) *tab++ = (data)&0xff,*tab++ = ((data)>>8)&0xff,*tab++ = ((data)>>16)&0xff,*tab++ = ((data)>>24)&0xff
+
+    uint8_t *zip, *tab, *cd,*eocd;
+
+#define GPF_TRAILINGSIZE (1u<<3)
+#define GPF_UTF8 (1u<<11)
+
+    //compute zip size
+    size_t totalsize = 0;
+    for (size_t i = 0; i < ctx->file.size(); i++)
+    {
+        size_t nl = strlen(ctx->file[i].name.c_str());
+        totalsize += 30+nl; //local entry
+        totalsize += ctx->file[i].csize;	//data size
+        totalsize += 46+nl; //central directory entry
+    }
+    if (!totalsize)
+    {
+        *out_size = 0;
+        return NULL;
+    }
+    totalsize += 22;    //end of central dir
+
+    zip = tab = (uint8_t*)malloc(totalsize);
+    if (!zip)
+        return NULL;
+
+    //spit out the localentries (with the actual data in it)
+    for (size_t num = 0; num < ctx->file.size(); num++)
+    {
+        auto f = &ctx->file[num];
+        const char *name = f->name.c_str();
+        size_t nl = strlen(name);
+
+        f->localoffset = tab-zip;
+
+        tab32(0x04034b50);
+        tab16(45);      //minver
+        tab16(GPF_UTF8);//general purpose flags
+        tab16(f->zipmethod);
+        tab16(0);       //dostime
+        tab16(0);       //dosdate
+        tab32(0);       //crc FIXME
+        tab32(f->csize);
+        tab32(f->usize);
+        tab16(nl);
+        tab16(0);       //extradata
+        memcpy(tab, name, nl); tab += nl;
+        memcpy(tab, f->cdata, f->csize); tab += f->csize;
+    }
+
+    //now do it again for the central dir...
+    cd = tab;
+    for (size_t num = 0; num < ctx->file.size(); num++)
+    {
+        auto f = &ctx->file[num];
+        const char *name = f->name.c_str();
+        size_t nl = strlen(name);
+
+        tab32(0x02014b50);
+        tab16((3<<8)|63);   //ourver
+        tab16(45);          //minver
+        tab16(GPF_UTF8);    //general purpose flags
+        tab16(f->zipmethod);
+        tab16(0);           //dostime
+        tab16(0);           //dosdate
+        tab32(0);           //crc FIXME
+        tab32(f->csize);
+        tab32(f->usize);
+        tab16(nl);
+        tab16(0);           //extradata len
+        tab16(0);           //comment len
+        tab16(0);           //span index
+        tab16(0);           //internal attr
+        tab32(0);           //external attr
+        tab32(f->localoffset);
+        memcpy(tab, name, nl); tab += nl;
+    }
+    eocd = tab;
+    //write zip end-of-central-directory
+    tab32(0x06054b50);
+    tab16(0);               //this disk number
+    tab16(0);               //centraldir first disk
+    tab16(ctx->file.size());//centraldir entries
+    tab16(ctx->file.size());//total centraldir entries
+    tab32(eocd-cd);         //centraldir size
+    tab32(cd-zip);          //centraldir offset
+    tab16(0);               //comment length
+
+    //NOTE: the centraldir offset is meant to be an absolute offset into the final file for it to be a valid zip
+    //however, we don't take care to update it because concatenating a zip onto the end is easier and somewhat common
+    //zip tools should be able to figure it out by computing the difference between offset+size vs the actual offset of the trailer.
+    //they might complain though, however zip64 has issues with this. zip64 will likely cause other issues however.
+
+    assert(tab == zip+totalsize);
+
+    *out_size = tab-zip;
+    return zip;
+}
+
+static repackContext_s repackctx; //evil global! oh noes!
+static void ZipRepack_FoundFile(const char *name, const void *compdata, size_t compsize, int method, size_t plainsize)
+{
+    repackContext_s::repackfile_s f;
+    f.name = name;
+    f.cdata = compdata;
+    f.csize = compsize;
+    f.zipmethod = method;
+    f.usize = plainsize;
+    repackctx.file.push_back(f);
+}
+void ZipRepack_RemoveFile(const char *name)
+{
+    if (!name)
+        repackctx.file.clear();
+    else for (auto it = repackctx.file.begin(); it != repackctx.file.end(); it++)
+    {
+        if (it->name == name)
+        {
+            repackctx.file.erase(it);
+            break;
+        }
+    }
+}
+void ZipRepack_AddFile(const char *name, const void *data, size_t datasize)
+{
+    ZipRepack_RemoveFile(name);
+    //lame compressionlessness, but that's good if you're going to gzip it
+    ZipRepack_FoundFile(name, data, datasize, 0, datasize);
+}
+void Zip_StartUpdate(const bspdata_t *bspdata)
+{
+    repackctx = {};
+    EnumerateFilesFromPackage(bspdata, ZipRepack_FoundFile);
+}
+void Zip_FinishUpdate(bspdata_t *bspdata)
+{
+    void *old = bspdata->zip;
+    bspdata->zip = ZIP_Rewrite(&repackctx, &bspdata->zipsize);
+    free(old);
+    repackctx = {};
+}
+
+
+/* ========================================================================= */
+
+static void
+CountEmbedded(const char *name, const void *compdata, size_t compsize, int method, size_t plainsize)
+{
+}
+
+static void FormatSize(char *out, size_t outsize, size_t value)
+{
+    char tmp[64];
+    const char *in;
+    unsigned dig;
+    q_snprintf(tmp,sizeof(tmp),"%u", (unsigned)value);
+    in = tmp;
+    dig = strlen(tmp);
+    while (*in)
+    {
+        *out++ = *in++;
+        if (!(--dig%3) && *in)
+            *out++ = ',';
+    }
+    *out = 0;
+}
+static void
+PrintEmbeddedSize(const char *name, const void *compdata, size_t compsize, int method, size_t plainsize)
+{
+    char sz[64];
+    FormatSize(sz, sizeof(sz), plainsize);
+
+    if (method)
+        logprint("%12s %3u%% %s\n", sz, !plainsize?100u:(unsigned int)(compsize*100.0/plainsize), name);
+    else
+        logprint("%12s      %s\n", sz, name);
+}
 
 static void
 PrintLumpSize(const lumpspec_t *lumpspec, int lumptype, int count)
@@ -2863,5 +3187,13 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         for (x = bspdata->bspxentries; x; x = x->next) {
             logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, (int)x->lumpsize);
         }
+    }
+
+    if (bspdata->zipsize)
+    {
+        unsigned int count = EnumerateFilesFromPackage(bspdata, CountEmbedded);
+        logprint("%7u %-12s %10u\n", count, "archive", (unsigned)bspdata->zipsize);
+        printf("---------------------\n");
+        EnumerateFilesFromPackage(bspdata, PrintEmbeddedSize);
     }
 }

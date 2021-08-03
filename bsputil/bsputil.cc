@@ -546,6 +546,27 @@ FindFaces(const mbsp_t *bsp, const vec3_t pos, const vec3_t normal)
     }
 }
 
+void Util_PrintUsage(void)
+{
+    printf("usage: bsputil <--command [args]> <bspfile>\n\n");
+
+    printf( " --extract-entities\n"                          "    Extract the bsp's entity data as an .ent file\n"
+//          " --replace-entities entfile\n"                  "    Replaces the bsp's entity data with the specified .ent file\n"
+            " --extract-textures\n"                          "    Extract the bsp's texture data as an .wad file\n"
+//          " --replace-texture mipfile texname\n"           "    Inject the specified .mip file into the bsp\n"
+//          " --strip-textures\n"                            "    Remove all mip data for copyright compliance.\n"
+            " --convert bsp29|bsp2|bsp2rmq|q2bsp\n"          "    Convert between bsp formats\n"
+            " --check\n"                                     "    Verifies indexes and offsets within the bsp.\n"
+            " --modelinfo\n"                                 "    Prints some basic info about inline models.\n"
+            " --compare otherbsp\n"                          "    List any faces in one bsp not also in the other\n"
+            " --findfaces x y z nx ny nz\n"                  "    Lists surfaces matching the point+normal\n"
+            " --settexinfo facenum texinfonum\n"             "    Change the texinfo entry for a specific surface.\n"
+            " --decompile\n"                                 "    Decompile to .map\n"
+            " --decompile-geomonly\n"                        "    Decompile bsp tree without regard for actual faces\n"
+            " --embed file1 [file2 ...]\n"                   "    Embed a file within the bsp. The name will be embedded directly.\n"
+            " --deembed file1 [file2 ...]\n"                 "    Remove an embedded file by name.\n"
+            );
+}
 
 int
 main(int argc, char **argv)
@@ -558,9 +579,7 @@ main(int argc, char **argv)
 
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
-        printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
-               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
-               "[--decompile] [--decompile-geomonly] bspfile\n");
+        Util_PrintUsage();
         exit(1);
     }
 
@@ -601,13 +620,25 @@ main(int argc, char **argv)
             }
             
             int fmt;
-            if (!strcmp(argv[i], "bsp29")) {
+            const char *targ = argv[i];
+            if (!strncmp(targ, "quake_", 6))
+            {
+                bspdata.hullcount = MAX_MAP_HULLS_Q1;
+                targ += 6;
+            }
+            else if (!strncmp(targ, "hexen2_", 7))
+            {
+                bspdata.hullcount = MAX_MAP_HULLS_H2;
+                targ += 7;
+            }
+
+            if (!strcmp(targ, "bsp29")) {
                 fmt = BSPVERSION;
-            } else if (!strcmp(argv[i], "bsp2")) {
+            } else if (!strcmp(targ, "bsp2")) {
                 fmt = BSP2VERSION;
-            } else if (!strcmp(argv[i], "bsp2rmq")) {
+            } else if (!strcmp(targ, "bsp2rmq")) {
                 fmt = BSP2RMQVERSION;
-            } else if (!strcmp(argv[i], "q2bsp")) {
+            } else if (!strcmp(targ, "q2bsp")) {
                 fmt = Q2_BSPVERSION;
             } else {
                 Error("Unsupported format %s", argv[i]);
@@ -640,6 +671,49 @@ main(int argc, char **argv)
                 Error("%s", strerror(errno));
 
             printf("done.\n");
+        } else if (!strcmp(argv[i], "--deembed")) {
+            Zip_StartUpdate(&bspdata);
+
+            if (i == argc-2)
+                ZipRepack_RemoveFile(NULL);
+            else for (; i < argc - 1; i++)
+            {
+                int n=i+1;
+                if (argv[n][0] == '-' && argv[n][1] == '-')
+                {
+                    if (!argv[n][2])
+                        i=n;
+                    break;
+                }
+                i=n;
+                ZipRepack_RemoveFile(argv[n]);
+            }
+            Zip_FinishUpdate(&bspdata);
+
+            ConvertBSPFormat(bspdata.loadversion, &bspdata);
+            WriteBSPFile(source, &bspdata);
+        } else if (!strcmp(argv[i], "--embed")) {
+            Zip_StartUpdate(&bspdata);
+
+            for (; i < argc - 1; i++)
+            {
+                int n=i+1;
+                if (argv[n][0] == '-' && argv[n][1] == '-')
+                {
+                    if (!argv[n][2])
+                        i=n;
+                    break;
+                }
+                i=n;
+
+                void *file_data;
+                uint32_t flen = LoadFilePak(argv[i], &file_data);
+                ZipRepack_AddFile(argv[i], file_data, flen);
+            }
+            Zip_FinishUpdate(&bspdata);
+
+            ConvertBSPFormat(bspdata.loadversion, &bspdata);
+            WriteBSPFile(source, &bspdata);
         } else if (!strcmp(argv[i], "--extract-mips")) {
             ExportWad(NULL, bsp);
 
