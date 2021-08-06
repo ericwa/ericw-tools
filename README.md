@@ -44,7 +44,14 @@ Dependencies: Embree 3.0+, TBB (TODO: version?), groff (for building manuals)
 
 ### Ubuntu
 
-TODO: updated instructions
+```
+sudo apt install libembree-dev libtbb-dev groff cmake build-essential g++
+git clone --recursive https://github.com/ericwa/ericw-tools
+cd ericw-tools
+mkdir build
+cd build
+cmake ..
+```
 
 ### Windows
 
@@ -54,6 +61,8 @@ TODO: updated instructions
 
 ```
 brew install embree tbb
+git clone --recursive https://github.com/ericwa/ericw-tools
+cd ericw-tools
 mkdir build
 cd build
 cmake .. -GXcode -DCMAKE_PREFIX_PATH="$(brew --prefix embree);$(brew --prefix tbb)"
