@@ -97,6 +97,9 @@ CreateGeometry(const mbsp_t *bsp, RTCDevice g_device, RTCScene scene, const std:
     
     unsigned int geomID;
     RTCGeometry geom_0 = rtcNewGeometry (g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+    // we're not using masks, but they need to be set to something or else all rays miss
+    // if embree is compiled with them
+    rtcSetGeometryMask(geom_0, 1);
     rtcSetGeometryBuildQuality(geom_0,RTC_BUILD_QUALITY_MEDIUM);
     rtcSetGeometryTimeStepCount(geom_0,1);
     geomID = rtcAttachGeometry(scene,geom_0);
@@ -164,6 +167,7 @@ CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const std::vector
     unsigned int geomID;
     RTCGeometry geom_1 = rtcNewGeometry (g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryBuildQuality(geom_1,RTC_BUILD_QUALITY_MEDIUM);
+    rtcSetGeometryMask(geom_1, 1);
     rtcSetGeometryTimeStepCount(geom_1,1);
     geomID = rtcAttachGeometry(scene,geom_1);
     rtcReleaseGeometry(geom_1);
@@ -744,7 +748,7 @@ static RTCRayHit SetupRay(unsigned rayindex, const vec3_t start, const vec3_t di
     ray.ray.time = 0.f; // not using
 
     ray.ray.tfar = dist;
-    ray.ray.mask = 0; // not using
+    ray.ray.mask = 1; // we're not using, but needs to be set if embree is compiled with masks
     ray.ray.id = rayindex;
     ray.ray.flags = 0; // reserved
     
