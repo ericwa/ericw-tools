@@ -75,7 +75,12 @@ WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, int ve
         SafeWrite(litfile, lux_filebase, bsp->lightdatasize * 3);
     }
     else
-        SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
+    {
+        if ((version & 0xffff0000)==0x00010000)
+            SafeWrite(litfile, hdr_filebase, bsp->lightdatasize * 4);
+        else
+            SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
+    }
     fclose(litfile);
 }
 

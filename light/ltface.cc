@@ -900,7 +900,7 @@ Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t 
     
     // no exact match, check for an unsaved one
     for (auto &lm : *lightmaps) {
-        if (lm.style == 255) {
+        if (lm.style == INVALID_LIGHTSTYLE) {
             Lightmap_AllocOrClear(&lm, lightsurf);
             return &lm;
         }
@@ -908,7 +908,7 @@ Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t 
     
     // add a new one to the vector (invalidates existing lightmap_t pointers)
     lightmap_t newLightmap {};
-    newLightmap.style = 255;
+    newLightmap.style = INVALID_LIGHTSTYLE;
     Lightmap_AllocOrClear(&newLightmap, lightsurf);
     lightmaps->push_back(newLightmap);
     
@@ -919,7 +919,7 @@ static void
 Lightmap_ClearAll(lightmapdict_t *lightmaps)
 {
     for (auto &lm : *lightmaps) {
-        lm.style = 255;
+        lm.style = INVALID_LIGHTSTYLE;
     }
 }
 
@@ -933,7 +933,7 @@ static void
 Lightmap_Save(lightmapdict_t *lightmaps, const lightsurf_t *lightsurf,
               lightmap_t *lightmap, const int style)
 {
-    if (lightmap->style == 255) {
+    if (lightmap->style == INVALID_LIGHTSTYLE) {
         lightmap->style = style;
     }
 }
@@ -2623,18 +2623,9 @@ LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
             }
             
             /* Scale and clamp any out-of-range samples */
-            vec_t maxcolor = 0;
             VectorScale(color, cfg.rangescale.floatValue(), color);
             for (int c = 0; c < 3; c++) {
                 color[c] = pow( color[c] / 255.0f, 1.0 / cfg.lightmapgamma.floatValue() ) * 255.0f;
-            }
-            for (int c = 0; c < 3; c++) {
-                if (color[c] > maxcolor) {
-                    maxcolor = color[c];
-                }
-            }
-            if (maxcolor > 255) {
-                VectorScale(color, 255.0f / maxcolor, color);
             }
         }
     }
@@ -3020,13 +3011,45 @@ BoxBlurImage(const std::vector<qvec4f> &input, int w, int h, int radius)
     return res;
 }
 
+static unsigned int HDR_PackResult(qvec4f rgba)
+{
+#define HDR_ONE 128.0   //logical value for 1.0 lighting (quake's overbrights give 255).
+    //we want 0-1-like values. except that we can oversample and express smaller values too.
+    float r = rgba[0]/HDR_ONE;
+    float g = rgba[1]/HDR_ONE;
+    float b = rgba[2]/HDR_ONE;
+
+    int e = 0;
+    float m = max(max(r, g), b);
+    float scale;
+
+    if (m >= 0.5)
+    {   //positive exponent
+       while (m >= (1<<(e)) && e < 30-15)  //don't do nans.
+           e++;
+    }
+    else
+    {   //negative exponent...
+       while (m < 1/(1<<-e) && e > -15)    //don't do nans.
+           e--;
+    }
+
+    scale = pow(2, e-9);
+
+    return ((e+15)<<27) |
+       (min((int)(r/scale + 0.5), 0x1ff)<<18) |
+       (min((int)(g/scale + 0.5), 0x1ff)<<9) |
+       (min((int)(b/scale + 0.5), 0x1ff)<<0);
+}
+
+
 static void
 WriteSingleLightmap(const mbsp_t *bsp,
                     const bsp2_dface_t *face,
                     const lightsurf_t *lightsurf,
                     const lightmap_t *lm,
                     const int actual_width, const int actual_height,
-                    uint8_t *out, uint8_t *lit, uint8_t *lux);
+                    uint8_t *out, uint8_t *lit, uint32_t *hdr, uint8_t *lux);
 
 static void
 WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
@@ -3046,7 +3069,8 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         }
 
         uint8_t *out, *lit, *lux;
-        GetFileSpace_PreserveOffsetInBsp(&out, &lit, &lux, face->lightofs);
+        uint32_t *hdr;
+        GetFileSpace_PreserveOffsetInBsp(&out, &lit, &hdr, &lux, face->lightofs);
 
         for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
             const int style = face->styles[mapnum];
@@ -3058,7 +3082,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             // see if we have computed lighting for this style
             for (const lightmap_t& lm : *lightmaps) {
                 if (lm.style == style) {
-                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux);
+                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, hdr, lux);
                     break;
                 }
             }
@@ -3072,13 +3096,25 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         return;
     }
 
+    int maxfstyles = facesup?MAXLIGHTMAPSSUP:MAXLIGHTMAPS;
+    if (maxfstyles > facestyles)
+        maxfstyles = facestyles; //truncate it a little
+    int maxstyle = facesup?INVALID_LIGHTSTYLE:INVALID_LIGHTSTYLE_OLD;
+
     // intermediate collection for sorting lightmaps
     std::vector<std::pair<float, const lightmap_t *>> sortable;
     
     for (const lightmap_t &lightmap : *lightmaps) {
         // skip un-saved lightmaps
-        if (lightmap.style == 255)
+        if (lightmap.style == INVALID_LIGHTSTYLE)
             continue;
+        if (lightmap.style > maxstyle) {
+            logprint("WARNING: Style %i too high\n"
+                     "         lightmap point near (%s)\n",
+                     lightmap.style,
+                     VecStr(lightsurf->points[0]).c_str());
+            continue;
+        }
         
         // skip lightmaps where all samples have brightness below 1
         if (bsp->loadversion != Q2_BSPVERSION) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
@@ -3097,7 +3133,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
-        if (sorted.size() == MAXLIGHTMAPS) {
+        if (sorted.size() == maxfstyles) {
             logprint("WARNING: Too many light styles on a face\n"
                      "         lightmap point near (%s)\n",
                      VecStr(lightsurf->points[0]).c_str());
@@ -3109,7 +3145,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     
     /* final number of lightmaps */
     const int numstyles = static_cast<int>(sorted.size());
-    Q_assert(numstyles <= MAXLIGHTMAPS);
+    Q_assert(numstyles <= MAXLIGHTMAPSSUP);
 
     /* update face info (either core data or supplementary stuff) */
     if (facesup)
@@ -3120,8 +3156,8 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
         for (mapnum = 0; mapnum < numstyles; mapnum++) {
             facesup->styles[mapnum] = sorted.at(mapnum)->style;
         }
-        for (; mapnum < MAXLIGHTMAPS; mapnum++) {
-            facesup->styles[mapnum] = 255;
+        for (; mapnum < MAXLIGHTMAPSSUP; mapnum++) {
+            facesup->styles[mapnum] = INVALID_LIGHTSTYLE;
         }
         facesup->lmscale = lightsurf->lightmapscale;
     }
@@ -3132,7 +3168,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             face->styles[mapnum] = sorted.at(mapnum)->style;
         }
         for (; mapnum < MAXLIGHTMAPS; mapnum++) {
-            face->styles[mapnum] = 255;
+            face->styles[mapnum] = INVALID_LIGHTSTYLE_OLD;
         }
     }
 
@@ -3142,7 +3178,8 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     const int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
 
     uint8_t *out, *lit, *lux;
-    GetFileSpace(&out, &lit, &lux, size * numstyles);
+    uint32_t *hdr;
+    GetFileSpace(&out, &lit, &hdr, &lux, size * numstyles);
 
     // q2 support
     int lightofs;
@@ -3169,10 +3206,11 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
         const lightmap_t *lm = sorted.at(mapnum);
 
-        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux);
+        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, hdr, lux);
 
         out += (actual_width * actual_height);
         lit += (actual_width * actual_height * 3);
+        hdr += (actual_width * actual_height);
         lux += (actual_width * actual_height * 3);
     }
 }
@@ -3188,7 +3226,7 @@ WriteSingleLightmap(const mbsp_t *bsp,
                     const lightsurf_t *lightsurf,
                     const lightmap_t *lm,
                     const int actual_width, const int actual_height,
-                    uint8_t *out, uint8_t *lit, uint8_t *lux)
+                    uint8_t *out, uint8_t *lit, uint32_t *hdr, uint8_t *lux)
 {
         const int oversampled_width = actual_width * oversample;
         const int oversampled_height = actual_height * oversample;
@@ -3218,6 +3256,22 @@ WriteSingleLightmap(const mbsp_t *bsp,
             for (int s = 0; s < actual_width; s++) {
                 const int sampleindex = (t * actual_width) + s;
                 qvec4f color = output_color.at(sampleindex);
+
+                if (hdr)
+                    *hdr++ = HDR_PackResult(color);
+
+                vec_t maxcolor = 0;
+                for (int c = 0; c < 3; c++) {
+                    if (color[c] > maxcolor) {
+                        maxcolor = color[c];
+                    }
+                }
+                if (maxcolor>255)
+                {
+                    color[0] *= 255.0/maxcolor;
+                    color[1] *= 255.0/maxcolor;
+                    color[2] *= 255.0/maxcolor;
+                }
                 
                 *lit++ = color[0];
                 *lit++ = color[1];
@@ -3297,14 +3351,14 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         if (facesup)
         {
             facesup->lightofs = -1;
-            for (int i = 0; i < MAXLIGHTMAPS; i++)
-                facesup->styles[i] = 255;
+            for (int i = 0; i < MAXLIGHTMAPSSUP; i++)
+                facesup->styles[i] = INVALID_LIGHTSTYLE;
         }
         else
         {
             face->lightofs = -1;
             for (int i = 0; i < MAXLIGHTMAPS; i++)
-                face->styles[i] = 255;
+                face->styles[i] = INVALID_LIGHTSTYLE_OLD;
         }
     }
 

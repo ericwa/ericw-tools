@@ -42,7 +42,14 @@ typedef struct {
     char compression;
     char pad1, pad2;
     char name[16];              // must be null terminated
-} lumpinfo_t;
+} dlumpinfo_t;
+typedef struct {
+    int filepos;
+    int disksize;
+    int size;                   // uncompressed
+    void *mip;
+    char name[128];              // must be null terminated
+} mlumpinfo_t;
 
 typedef struct texture_s {
     char name[16];
@@ -60,14 +67,14 @@ typedef struct {
 typedef struct wad_s {
     wadinfo_t header;
     int version;
-    lumpinfo_t *lumps;
+    mlumpinfo_t *lumps;
     FILE *file;
     struct wad_s *next;
 } wad_t;
 
 wad_t *WADList_AddWad(const char *fpath, bool external, wad_t *current_wadlist);
 wad_t *WADList_Init(const char *wadstring);
-void WADList_Process(const wad_t *wadlist);
+void WADList_Process(wad_t *wadlist);
 void WADList_Free(wad_t *wadlist);
 const texture_t *WADList_GetTexture(const char *name);
 // for getting a texture width/height

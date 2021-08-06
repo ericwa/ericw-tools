@@ -837,6 +837,8 @@ typedef struct {
     } data;
 
     bspxentry_t *bspxentries;
+    void *zip;
+    size_t zipsize;
 } bspdata_t;
 
 void LoadBSPFile(char *filename, bspdata_t *bspdata);       //returns the filename as contained inside a bsp
@@ -845,5 +847,11 @@ void PrintBSPFileSizes(const bspdata_t *bspdata);
 void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
+
+
+void ZipRepack_AddFile(const char *name, const void *data, size_t datasize);
+void ZipRepack_RemoveFile(const char *name);
+void Zip_StartUpdate(const bspdata_t *bspdata);
+void Zip_FinishUpdate(bspdata_t *bspdata);
 
 #endif /* __COMMON_BSPFILE_H__ */

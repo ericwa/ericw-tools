@@ -172,7 +172,8 @@ typedef struct {
     uint32_t v[2];              /* vertex numbers */
 } bsp2_dedge_t;
 
-#define MAXLIGHTMAPS 4
+#define MAXLIGHTMAPS	4
+#define INVALID_LIGHTSTYLE_OLD	0xffu		/*signifies 'no more lightstyles'*/
 typedef struct {
     int16_t planenum;
     int16_t side;

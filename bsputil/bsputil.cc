@@ -54,6 +54,22 @@ typedef struct {
     char name[16];              // must be null terminated
 } lumpinfo_t;
 
+static size_t
+CalcMipSize(size_t i, mbsp_t *bsp)
+{
+    size_t start = 0, end = bsp->texdatasize;
+    auto texdata = bsp->dtexdata;
+
+    start = texdata->dataofs[i];
+    while (++i < texdata->nummiptex)
+    {
+        if (texdata->dataofs[i] < 0)
+            continue;
+        end = texdata->dataofs[i];
+        break;
+    }
+    return end - start;
+}
 static void
 ExportWad(FILE *wadfile, mbsp_t *bsp)
 {
@@ -62,6 +78,7 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
     dmiptexlump_t *texdata;
     miptex_t *miptex;
     int i, j, size, filepos, numvalid;
+    size_t mipsize;
 
     texdata = bsp->dtexdata;
 
@@ -78,7 +95,8 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
     /* Byte-swap header and write out */
     header.numlumps = LittleLong(header.numlumps);
     header.infotableofs = LittleLong(header.infotableofs);
-    fwrite(&header, sizeof(header), 1, wadfile);
+    if (wadfile)
+        fwrite(&header, sizeof(header), 1, wadfile);
 
     /* Miptex data will follow the lump headers */
     filepos = sizeof(header) + numvalid * sizeof(lump);
@@ -89,7 +107,7 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
         miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
 
         lump.filepos = filepos;
-        lump.size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
+        lump.size = CalcMipSize(i, bsp);
         lump.type = 'D';
         lump.disksize = lump.size;
         lump.compression = 0;
@@ -102,20 +120,32 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
         lump.filepos = LittleLong(lump.filepos);
         lump.disksize = LittleLong(lump.disksize);
         lump.size = LittleLong(lump.size);
-        fwrite(&lump, sizeof(lump), 1, wadfile);
+
+        if (wadfile) {
+            fwrite(&lump, sizeof(lump), 1, wadfile);
+        }
     }
     for (i = 0; i < texdata->nummiptex; i++) {
         if (texdata->dataofs[i] < 0)
             continue;
         miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
-        size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
+        size = CalcMipSize(i, bsp);
 
         /* Byte-swap miptex info and write out */
         miptex->width = LittleLong(miptex->width);
         miptex->height = LittleLong(miptex->height);
         for (j = 0; j < MIPLEVELS; j++)
             miptex->offsets[j] = LittleLong(miptex->offsets[j]);
-        fwrite(miptex, size, 1, wadfile);
+        if (wadfile) {
+            fwrite(miptex, size, 1, wadfile);
+        } else {
+            auto fname = std::string(miptex->name)+".mip";
+            FILE *mipfile = fopen(fname.c_str(), "wb");
+            if (mipfile) {
+                fwrite(miptex, size, 1, mipfile);
+                fclose(mipfile);
+            }
+        }
     }
 }
 
@@ -516,6 +546,27 @@ FindFaces(const mbsp_t *bsp, const vec3_t pos, const vec3_t normal)
     }
 }
 
+void Util_PrintUsage(void)
+{
+    printf("usage: bsputil <--command [args]> <bspfile>\n\n");
+
+    printf( " --extract-entities\n"                          "    Extract the bsp's entity data as an .ent file\n"
+//          " --replace-entities entfile\n"                  "    Replaces the bsp's entity data with the specified .ent file\n"
+            " --extract-textures\n"                          "    Extract the bsp's texture data as an .wad file\n"
+//          " --replace-texture mipfile texname\n"           "    Inject the specified .mip file into the bsp\n"
+//          " --strip-textures\n"                            "    Remove all mip data for copyright compliance.\n"
+            " --convert bsp29|bsp2|bsp2rmq|q2bsp\n"          "    Convert between bsp formats\n"
+            " --check\n"                                     "    Verifies indexes and offsets within the bsp.\n"
+            " --modelinfo\n"                                 "    Prints some basic info about inline models.\n"
+            " --compare otherbsp\n"                          "    List any faces in one bsp not also in the other\n"
+            " --findfaces x y z nx ny nz\n"                  "    Lists surfaces matching the point+normal\n"
+            " --settexinfo facenum texinfonum\n"             "    Change the texinfo entry for a specific surface.\n"
+            " --decompile\n"                                 "    Decompile to .map\n"
+            " --decompile-geomonly\n"                        "    Decompile bsp tree without regard for actual faces\n"
+            " --embed file1 [file2 ...]\n"                   "    Embed a file within the bsp. The name will be embedded directly.\n"
+            " --deembed file1 [file2 ...]\n"                 "    Remove an embedded file by name.\n"
+            );
+}
 
 int
 main(int argc, char **argv)
@@ -528,9 +579,7 @@ main(int argc, char **argv)
 
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
-        printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
-               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
-               "[--decompile] [--decompile-geomonly] bspfile\n");
+        Util_PrintUsage();
         exit(1);
     }
 
@@ -571,13 +620,25 @@ main(int argc, char **argv)
             }
             
             int fmt;
-            if (!strcmp(argv[i], "bsp29")) {
+            const char *targ = argv[i];
+            if (!strncmp(targ, "quake_", 6))
+            {
+                bspdata.hullcount = MAX_MAP_HULLS_Q1;
+                targ += 6;
+            }
+            else if (!strncmp(targ, "hexen2_", 7))
+            {
+                bspdata.hullcount = MAX_MAP_HULLS_H2;
+                targ += 7;
+            }
+
+            if (!strcmp(targ, "bsp29")) {
                 fmt = BSPVERSION;
-            } else if (!strcmp(argv[i], "bsp2")) {
+            } else if (!strcmp(targ, "bsp2")) {
                 fmt = BSP2VERSION;
-            } else if (!strcmp(argv[i], "bsp2rmq")) {
+            } else if (!strcmp(targ, "bsp2rmq")) {
                 fmt = BSP2RMQVERSION;
-            } else if (!strcmp(argv[i], "q2bsp")) {
+            } else if (!strcmp(targ, "q2bsp")) {
                 fmt = Q2_BSPVERSION;
             } else {
                 Error("Unsupported format %s", argv[i]);
@@ -610,6 +671,53 @@ main(int argc, char **argv)
                 Error("%s", strerror(errno));
 
             printf("done.\n");
+        } else if (!strcmp(argv[i], "--deembed")) {
+            Zip_StartUpdate(&bspdata);
+
+            if (i == argc-2)
+                ZipRepack_RemoveFile(NULL);
+            else for (; i < argc - 1; i++)
+            {
+                int n=i+1;
+                if (argv[n][0] == '-' && argv[n][1] == '-')
+                {
+                    if (!argv[n][2])
+                        i=n;
+                    break;
+                }
+                i=n;
+                ZipRepack_RemoveFile(argv[n]);
+            }
+            Zip_FinishUpdate(&bspdata);
+
+            ConvertBSPFormat(bspdata.loadversion, &bspdata);
+            WriteBSPFile(source, &bspdata);
+        } else if (!strcmp(argv[i], "--embed")) {
+            Zip_StartUpdate(&bspdata);
+
+            for (; i < argc - 1; i++)
+            {
+                int n=i+1;
+                if (argv[n][0] == '-' && argv[n][1] == '-')
+                {
+                    if (!argv[n][2])
+                        i=n;
+                    break;
+                }
+                i=n;
+
+                void *file_data;
+                uint32_t flen = LoadFilePak(argv[i], &file_data);
+                ZipRepack_AddFile(argv[i], file_data, flen);
+            }
+            Zip_FinishUpdate(&bspdata);
+
+            ConvertBSPFormat(bspdata.loadversion, &bspdata);
+            WriteBSPFile(source, &bspdata);
+        } else if (!strcmp(argv[i], "--extract-mips")) {
+            ExportWad(NULL, bsp);
+
+            printf("done.\n");
         } else if (!strcmp(argv[i], "--extract-textures")) {
             StripExtension(source);
             DefaultExtension(source, ".wad");
@@ -633,6 +741,8 @@ main(int argc, char **argv)
             printf("Done.\n");
         } else if (!strcmp(argv[i], "--modelinfo")) {
             PrintModelInfo(bsp);
+        } else if (!strcmp(argv[i], "--info")) {
+            PrintBSPFileSizes(&bspdata);
         } else if (!strcmp(argv[i], "--findfaces")) {
             // (i + 1) ... (i + 6) = x y z nx ny nz
             // i + 7 = bsp file
