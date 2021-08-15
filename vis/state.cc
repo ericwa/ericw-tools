@@ -203,6 +203,10 @@ LoadVisState(void)
     dportal_t pstate;
     uint8_t *compressed;
 
+    if (nostate) {
+        return false;
+    }
+
     state_time = FileTime(statefile);
     if (state_time == -1) {
         /* No state file, maybe temp file is there? */
