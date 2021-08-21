@@ -58,6 +58,7 @@
 #define BSPHLVERSION   30 //24bit lighting, and private palettes in the textures lump.
 #define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
 #define Q2_BSPVERSION  38
+#define Q2_QBSPIDENT   (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
 
 /* Not an actual file format, but the mbsp_t struct */
 /* TODO: Should probably separate the type tag for bspdata_t from the file
@@ -290,6 +291,8 @@ struct q2_dnode_t {
     uint16_t numfaces;    // counting both sides
 };
 
+using q2_dnode_qbsp_t = bsp2_dnode_t;
+
 /*
  * Note that children are interpreted as unsigned values now, so that we can
  * handle > 32k clipnodes. Values > 0xFFF0 can be assumed to be CONTENTS
@@ -387,6 +390,8 @@ typedef struct {
     uint32_t v[2];              /* vertex numbers */
 } bsp2_dedge_t;
 
+using q2_dedge_qbsp_t = bsp2_dedge_t;
+
 #define MAXLIGHTMAPS 4
 typedef struct {
     int16_t planenum;
@@ -423,6 +428,18 @@ typedef struct {
     uint8_t styles[MAXLIGHTMAPS];
     int32_t lightofs;        // start of [numstyles*surfsize] samples
 } q2_dface_t;
+
+typedef struct {
+    uint32_t planenum;		  // NOTE: only difference from bsp2_dface_t
+    int32_t side;
+    int32_t firstedge;        // we must support > 64k edges
+    int32_t numedges;
+    int32_t texinfo;
+    
+    // lighting info
+    uint8_t styles[MAXLIGHTMAPS];
+    int32_t lightofs;        // start of [numstyles*surfsize] samples
+} q2_dface_qbsp_t;
 
 /* Ambient Sounds */
 #define AMBIENT_WATER   0
@@ -482,6 +499,22 @@ typedef struct {
 } q2_dleaf_t;
 
 typedef struct {
+    int32_t contents;            // OR of all brushes (not needed?)
+    
+    int32_t cluster;
+    int32_t area;
+    
+    float mins[3];            // for frustum culling
+    float maxs[3];
+    
+    uint32_t firstleafface;
+    uint32_t numleaffaces;
+    
+    uint32_t firstleafbrush;
+    uint32_t numleafbrushes;
+} q2_dleaf_qbsp_t;
+
+typedef struct {
     // bsp2_dleaf_t
     int32_t contents;
     int32_t visofs;             /* -1 = no visibility info */
@@ -492,16 +525,21 @@ typedef struct {
     uint8_t ambient_level[NUM_AMBIENTS];
     
     // q2 extras
-        int16_t cluster;
-        int16_t area;
-        uint16_t firstleafbrush;
-        uint16_t numleafbrushes;
+    int32_t cluster;
+    int32_t area;
+    uint32_t firstleafbrush;
+    uint32_t numleafbrushes;
 } mleaf_t;
 
 typedef struct {
     uint16_t planenum;        // facing out of the leaf
     int16_t texinfo;
 } dbrushside_t;
+
+typedef struct {
+    uint32_t planenum;        // facing out of the leaf
+    int32_t texinfo;
+} q2_dbrushside_qbsp_t;
 
 typedef struct {
     int32_t firstside;
@@ -742,6 +780,64 @@ typedef struct {
     uint8_t dpop[256];
 } q2bsp_t;
 
+typedef struct {
+    int nummodels;
+    q2_dmodel_t *dmodels;
+    
+    int visdatasize;
+    dvis_t *dvis;
+    
+    int lightdatasize;
+    uint8_t *dlightdata;
+    
+    int entdatasize;
+    char *dentdata;
+    
+    int numleafs;
+    q2_dleaf_qbsp_t *dleafs;
+    
+    int numplanes;
+    dplane_t *dplanes;
+    
+    int numvertexes;
+    dvertex_t *dvertexes;
+    
+    int numnodes;
+    q2_dnode_qbsp_t *dnodes;
+    
+    int numtexinfo;
+    q2_texinfo_t *texinfo;
+    
+    int numfaces;
+    q2_dface_qbsp_t *dfaces;
+    
+    int numedges;
+    q2_dedge_qbsp_t *dedges;
+    
+    int numleaffaces;
+    uint32_t *dleaffaces;
+    
+    int numleafbrushes;
+    uint32_t *dleafbrushes;
+    
+    int numsurfedges;
+    int32_t *dsurfedges;
+    
+    int numareas;
+    darea_t *dareas;
+    
+    int numareaportals;
+    dareaportal_t *dareaportals;
+    
+    int numbrushes;
+    dbrush_t *dbrushes;
+    
+    int numbrushsides;
+    q2_dbrushside_qbsp_t *dbrushsides;
+    
+    uint8_t dpop[256];
+} q2bsp_qbsp_t;
+
 struct mbsp_t {
     int32_t loadversion;
     
@@ -792,7 +888,7 @@ struct mbsp_t {
     uint32_t *dleaffaces;
     
     int numleafbrushes;
-    uint16_t *dleafbrushes;
+    uint32_t *dleafbrushes;
     
     int numsurfedges;
     int32_t *dsurfedges;
@@ -807,7 +903,7 @@ struct mbsp_t {
     dbrush_t *dbrushes;
     
     int numbrushsides;
-    dbrushside_t *dbrushsides;
+    q2_dbrushside_qbsp_t *dbrushsides;
     
     uint8_t dpop[256];
 }; // "generic" bsp - superset of all other supported types
@@ -824,6 +920,7 @@ typedef struct {
 } q2_dheader_t;
 
 typedef struct {
+    int32_t ident;
     int32_t loadversion;
     int32_t version;
     int hullcount;
@@ -834,6 +931,7 @@ typedef struct {
         bsp2_t bsp2;
         q2bsp_t q2bsp;
         mbsp_t mbsp;
+        q2bsp_qbsp_t q2bsp_qbsp;
     } data;
 
     bspxentry_t *bspxentries;
