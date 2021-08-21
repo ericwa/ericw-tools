@@ -132,12 +132,15 @@ Face_Plane(const mbsp_t *bsp, const bsp2_dface_t *f)
     Q_assert(f->planenum >= 0 && f->planenum < bsp->numplanes);
     const dplane_t *dplane = &bsp->dplanes[f->planenum];
     
+    vec3_t planeNormal;
+    VectorCopy(dplane->normal, planeNormal); // convert from float->double if needed
+
     plane_t result;
     if (f->side) {
-        VectorSubtract(vec3_origin, dplane->normal, result.normal);
+        VectorSubtract(vec3_origin, planeNormal, result.normal);
         result.dist = -dplane->dist;
     } else {
-        VectorCopy(dplane->normal, result.normal);
+        VectorCopy(planeNormal, result.normal);
         result.dist = dplane->dist;
     }
     return result;
@@ -266,7 +269,11 @@ vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
         case PLANE_X: return point[0] - plane->dist;
         case PLANE_Y: return point[1] - plane->dist;
         case PLANE_Z: return point[2] - plane->dist;
-        default: return DotProduct(point, plane->normal) - plane->dist;
+        default: {
+            vec3_t planeNormal;
+            VectorCopy(plane->normal, planeNormal); // convert from float->double if needed
+            return DotProduct(point, planeNormal) - plane->dist;
+        }
     }
 }
 
@@ -377,15 +384,21 @@ Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t *face)
     {
         plane_t *dest = &out[i];
         
-        const vec_t *v0 = GetSurfaceVertexPoint(bsp, face, i);
-        const vec_t *v1 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
+        const float *v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const float *v1 = GetSurfaceVertexPoint(bsp, face, (i+1)%face->numedges);
         
+        vec3_t v0_vec3t;
+        vec3_t v1_vec3t;
+
+        VectorCopy(v0, v0_vec3t);
+        VectorCopy(v1, v1_vec3t); // convert float->double
+
         vec3_t edgevec;
-        VectorSubtract(v1, v0, edgevec);
+        VectorSubtract(v1_vec3t, v0_vec3t, edgevec);
         VectorNormalize(edgevec);
         
         CrossProduct(edgevec, faceplane.normal, dest->normal);
-        dest->dist = DotProduct(dest->normal, v0);
+        dest->dist = DotProduct(dest->normal, v0_vec3t);
     }
     
     return out;
@@ -461,7 +474,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const bsp2_dface_t *face)
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
-        const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
+        const float *point = GetSurfaceVertexPoint(bsp, face, i);
         logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: edge %d\n",
                  i ? "          " : "    verts ", vert,
                  point[0], point[1], point[2],

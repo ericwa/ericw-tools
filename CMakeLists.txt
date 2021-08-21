@@ -56,12 +56,16 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
 
 set(QBSP_SOURCES
+	${CMAKE_SOURCE_DIR}/common/bspfile.cc
+	${CMAKE_SOURCE_DIR}/common/entdata.cc
 	${CMAKE_SOURCE_DIR}/common/threads.cc
 	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/qvec.cc
+	${CMAKE_SOURCE_DIR}/common/mesh.cc
 	${CMAKE_SOURCE_DIR}/common/mathlib.cc
 	${CMAKE_SOURCE_DIR}/common/polylib.cc
+	${CMAKE_SOURCE_DIR}/common/bsputils.cc
 	${CMAKE_SOURCE_DIR}/qbsp/brush.cc
 	${CMAKE_SOURCE_DIR}/qbsp/bspfile.cc
 	${CMAKE_SOURCE_DIR}/qbsp/csg4.cc
