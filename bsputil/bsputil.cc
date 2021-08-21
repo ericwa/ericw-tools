@@ -541,7 +541,7 @@ main(int argc, char **argv)
 
     LoadBSPFile(source, &bspdata);
 
-    ConvertBSPFormat(GENERIC_BSP, &bspdata);
+    ConvertBSPFormat(GENERIC_BSP, -1, &bspdata);
 
     for (i = 0; i < argc - 1; i++) {
         if (!strcmp(argv[i], "--compare")) {
@@ -556,7 +556,7 @@ main(int argc, char **argv)
             strcpy(refbspname, argv[i]);
             DefaultExtension(refbspname, ".bsp");
             LoadBSPFile(refbspname, &refbspdata);
-            ConvertBSPFormat(GENERIC_BSP, &refbspdata);
+            ConvertBSPFormat(GENERIC_BSP, -1, &refbspdata);
 
             printf("comparing reference bsp %s with test bsp %s\n", refbspname, source);
 
@@ -570,7 +570,7 @@ main(int argc, char **argv)
                 Error("--convert requires an argument");
             }
             
-            int fmt;
+            int fmt, ident;
             if (!strcmp(argv[i], "bsp29")) {
                 fmt = BSPVERSION;
             } else if (!strcmp(argv[i], "bsp2")) {
@@ -579,11 +579,15 @@ main(int argc, char **argv)
                 fmt = BSP2RMQVERSION;
             } else if (!strcmp(argv[i], "q2bsp")) {
                 fmt = Q2_BSPVERSION;
+                ident = Q2_BSPIDENT;
+            } else if (!strcmp(argv[i], "q2bsp_qbsp")) {
+                fmt = Q2_BSPVERSION;
+                ident = Q2_QBSPIDENT;
             } else {
                 Error("Unsupported format %s", argv[i]);
             }
             
-            ConvertBSPFormat(fmt, &bspdata);
+            ConvertBSPFormat(fmt, ident, &bspdata);
             
             StripExtension(source);
             strcat(source, "-");
@@ -671,7 +675,7 @@ main(int argc, char **argv)
             bsp2_dface_t* face = BSP_GetFace(bsp, fnum);
             face->texinfo = texinfonum;
 
-            ConvertBSPFormat(bspdata.loadversion, &bspdata);            
+            ConvertBSPFormat(bspdata.loadversion, -1, &bspdata);            
 
             // Overwrite source bsp!
             WriteBSPFile(source, &bspdata);

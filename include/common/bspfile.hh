@@ -839,7 +839,10 @@ typedef struct {
 } q2bsp_qbsp_t;
 
 struct mbsp_t {
-    int32_t loadversion;
+    // FIXME: rather than using version/ident, a unique identifier not connected
+    // to the original ident/versions should be used, so that versions with identical
+    // identifiers and/or versions can be matched accordingly.
+    int32_t loadversion, loadident;
     
     int nummodels;
     dmodelh2_t *dmodels;
@@ -920,6 +923,10 @@ typedef struct {
 } q2_dheader_t;
 
 typedef struct {
+    // FIXME: rather than using version/ident, a unique identifier not connected
+    // to the original ident/versions should be used, so that versions with identical
+    // identifiers and/or versions can be matched accordingly.
+    int32_t loadident;
     int32_t ident;
     int32_t loadversion;
     int32_t version;
@@ -940,7 +947,7 @@ typedef struct {
 void LoadBSPFile(char *filename, bspdata_t *bspdata);       //returns the filename as contained inside a bsp
 void WriteBSPFile(const char *filename, bspdata_t *bspdata);
 void PrintBSPFileSizes(const bspdata_t *bspdata);
-void ConvertBSPFormat(int32_t version, bspdata_t *bspdata);
+void ConvertBSPFormat(int32_t version, int32_t ident, bspdata_t *bspdata);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
 
