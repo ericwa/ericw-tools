@@ -48,6 +48,7 @@ qboolean ambientwater = true;
 qboolean ambientslime = true;
 qboolean ambientlava = true;
 int visdist = 0;
+qboolean nostate = false;
 
 #if 0
 void
@@ -1280,6 +1281,9 @@ main(int argc, char **argv)
             visdist = atoi(argv[i+1]);
             i++;
             logprint("visdist = %i\n", visdist);
+        } else if (!strcmp(argv[i], "-nostate")) {
+            logprint("loading from state file disabled\n");
+            nostate = true;
         } else if (argv[i][0] == '-')
             Error("Unknown option \"%s\"", argv[i]);
         else

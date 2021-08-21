@@ -125,6 +125,7 @@ extern qboolean ambientwater;
 extern qboolean ambientslime;
 extern qboolean ambientlava;
 extern int visdist;
+extern qboolean nostate;
 
 extern uint8_t *uncompressed;
 extern int leafbytes;
