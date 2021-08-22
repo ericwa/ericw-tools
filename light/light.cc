@@ -951,7 +951,7 @@ light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
     mbsp_t *const bsp = &bspdata.data.mbsp;
-    int32_t loadversion;
+    int32_t loadversion, loadident;
     int i;
     double start;
     double end;
@@ -1199,7 +1199,8 @@ light_main(int argc, const char **argv)
     LoadBSPFile(source, &bspdata);
 
     loadversion = bspdata.version;
-    ConvertBSPFormat(GENERIC_BSP, &bspdata);
+    loadident = bspdata.ident;
+    ConvertBSPFormat(GENERIC_BSP, -1, &bspdata);
 
     //mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
     if (loadversion == Q2_BSPVERSION && !cfg.rangescale.isChanged())
@@ -1281,7 +1282,7 @@ light_main(int argc, const char **argv)
     
     WriteEntitiesToString(cfg, bsp);
     /* Convert data format back if necessary */
-    ConvertBSPFormat(loadversion, &bspdata);
+    ConvertBSPFormat(loadversion, loadident, &bspdata);
 
     if (!litonly) {
         WriteBSPFile(source, &bspdata);
