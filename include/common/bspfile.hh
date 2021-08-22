@@ -291,7 +291,7 @@ struct q2_dnode_t {
     uint16_t numfaces;    // counting both sides
 };
 
-using q2_dnode_qbsp_t = bsp2_dnode_t;
+using q2_dnode_qbism_t = bsp2_dnode_t;
 
 /*
  * Note that children are interpreted as unsigned values now, so that we can
@@ -390,7 +390,7 @@ typedef struct {
     uint32_t v[2];              /* vertex numbers */
 } bsp2_dedge_t;
 
-using q2_dedge_qbsp_t = bsp2_dedge_t;
+using q2_dedge_qbism_t = bsp2_dedge_t;
 
 #define MAXLIGHTMAPS 4
 typedef struct {
@@ -439,7 +439,7 @@ typedef struct {
     // lighting info
     uint8_t styles[MAXLIGHTMAPS];
     int32_t lightofs;        // start of [numstyles*surfsize] samples
-} q2_dface_qbsp_t;
+} q2_dface_qbism_t;
 
 /* Ambient Sounds */
 #define AMBIENT_WATER   0
@@ -512,7 +512,7 @@ typedef struct {
     
     uint32_t firstleafbrush;
     uint32_t numleafbrushes;
-} q2_dleaf_qbsp_t;
+} q2_dleaf_qbism_t;
 
 typedef struct {
     // bsp2_dleaf_t
@@ -539,7 +539,7 @@ typedef struct {
 typedef struct {
     uint32_t planenum;        // facing out of the leaf
     int32_t texinfo;
-} q2_dbrushside_qbsp_t;
+} q2_dbrushside_qbism_t;
 
 typedef struct {
     int32_t firstside;
@@ -794,7 +794,7 @@ typedef struct {
     char *dentdata;
     
     int numleafs;
-    q2_dleaf_qbsp_t *dleafs;
+    q2_dleaf_qbism_t *dleafs;
     
     int numplanes;
     dplane_t *dplanes;
@@ -803,16 +803,16 @@ typedef struct {
     dvertex_t *dvertexes;
     
     int numnodes;
-    q2_dnode_qbsp_t *dnodes;
+    q2_dnode_qbism_t *dnodes;
     
     int numtexinfo;
     q2_texinfo_t *texinfo;
     
     int numfaces;
-    q2_dface_qbsp_t *dfaces;
+    q2_dface_qbism_t *dfaces;
     
     int numedges;
-    q2_dedge_qbsp_t *dedges;
+    q2_dedge_qbism_t *dedges;
     
     int numleaffaces;
     uint32_t *dleaffaces;
@@ -833,10 +833,10 @@ typedef struct {
     dbrush_t *dbrushes;
     
     int numbrushsides;
-    q2_dbrushside_qbsp_t *dbrushsides;
+    q2_dbrushside_qbism_t *dbrushsides;
     
     uint8_t dpop[256];
-} q2bsp_qbsp_t;
+} q2bsp_qbism_t;
 
 struct mbsp_t {
     // FIXME: rather than using version/ident, a unique identifier not connected
@@ -906,7 +906,7 @@ struct mbsp_t {
     dbrush_t *dbrushes;
     
     int numbrushsides;
-    q2_dbrushside_qbsp_t *dbrushsides;
+    q2_dbrushside_qbism_t *dbrushsides;
     
     uint8_t dpop[256];
 }; // "generic" bsp - superset of all other supported types
@@ -938,7 +938,7 @@ typedef struct {
         bsp2_t bsp2;
         q2bsp_t q2bsp;
         mbsp_t mbsp;
-        q2bsp_qbsp_t q2bsp_qbsp;
+        q2bsp_qbism_t q2bsp_qbism;
     } data;
 
     bspxentry_t *bspxentries;

@@ -580,7 +580,7 @@ main(int argc, char **argv)
             } else if (!strcmp(argv[i], "q2bsp")) {
                 fmt = Q2_BSPVERSION;
                 ident = Q2_BSPIDENT;
-            } else if (!strcmp(argv[i], "q2bsp_qbsp")) {
+            } else if (!strcmp(argv[i], "q2bsp_qbism")) {
                 fmt = Q2_BSPVERSION;
                 ident = Q2_QBSPIDENT;
             } else {

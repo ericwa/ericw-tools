@@ -568,12 +568,12 @@ void Q2_SwapBSPFile (q2bsp_t *bsp, qboolean todisk)
 
 /*
 =============
-Q2_QBSP_SwapBSPFile
+Q2_Qbism_SwapBSPFile
 
 Byte swaps all data in a bsp file.
 =============
 */
-void Q2_QBSP_SwapBSPFile (q2bsp_qbsp_t *bsp, qboolean todisk)
+void Q2_Qbism_SwapBSPFile (q2bsp_qbism_t *bsp, qboolean todisk)
 {
     int                i, j;
     q2_dmodel_t        *d;
@@ -775,8 +775,8 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
             q2bsp_t *bsp = &bspdata->data.q2bsp;
             Q2_SwapBSPFile(bsp, swap == TO_DISK);
         } else if (bspdata->ident == Q2_QBSPIDENT) {
-            q2bsp_qbsp_t *bsp = &bspdata->data.q2bsp_qbsp;
-            Q2_QBSP_SwapBSPFile(bsp, swap == TO_DISK);
+            q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
+            Q2_Qbism_SwapBSPFile(bsp, swap == TO_DISK);
         }
         
         return;
@@ -1013,8 +1013,8 @@ Q2BSPtoM_Leafs(const q2_dleaf_t *dleafsq2, int numleafs) {
 }
 
 static mleaf_t *
-Q2BSP_QBSPtoM_Leafs(const q2_dleaf_qbsp_t *dleafsq2, int numleafs) {
-    const q2_dleaf_qbsp_t *dleafq2 = dleafsq2;
+Q2BSP_QBSPtoM_Leafs(const q2_dleaf_qbism_t *dleafsq2, int numleafs) {
+    const q2_dleaf_qbism_t *dleafq2 = dleafsq2;
     mleaf_t *newdata, *mleaf;
     int i, j;
     
@@ -1066,13 +1066,13 @@ MBSPtoQ2_Leafs(const mleaf_t *mleafs, int numleafs) {
     return newdata;
 }
 
-static q2_dleaf_qbsp_t *
-MBSPtoQ2_QBSP_Leafs(const mleaf_t *mleafs, int numleafs) {
+static q2_dleaf_qbism_t *
+MBSPtoQ2_Qbism_Leafs(const mleaf_t *mleafs, int numleafs) {
     const mleaf_t *mleaf = mleafs;
-    q2_dleaf_qbsp_t *newdata, *dleafq2;
+    q2_dleaf_qbism_t *newdata, *dleafq2;
     int i, j;
     
-    newdata = dleafq2 = (q2_dleaf_qbsp_t *)calloc(numleafs, sizeof(*dleafq2));
+    newdata = dleafq2 = (q2_dleaf_qbism_t *)calloc(numleafs, sizeof(*dleafq2));
     
     for (i = 0; i < numleafs; i++, mleaf++, dleafq2++) {
         dleafq2->contents = mleaf->contents;
@@ -1162,8 +1162,8 @@ Q2BSPto2_Faces(const q2_dface_t *dfacesq2, int numfaces) {
 }
 
 static bsp2_dface_t *
-Q2BSP_QBSPto2_Faces(const q2_dface_qbsp_t *dfacesq2, int numfaces) {
-    const q2_dface_qbsp_t *dfaceq2 = dfacesq2;
+Q2BSP_QBSPto2_Faces(const q2_dface_qbism_t *dfacesq2, int numfaces) {
+    const q2_dface_qbism_t *dfaceq2 = dfacesq2;
     bsp2_dface_t *newdata, *dface2;
     int i, j;
     
@@ -1205,13 +1205,13 @@ BSP2toQ2_Faces(const bsp2_dface_t *dfaces2, int numfaces) {
     return newdata;
 }
 
-static q2_dface_qbsp_t *
-BSP2toQ2_QBSP_Faces(const bsp2_dface_t *dfaces2, int numfaces) {
+static q2_dface_qbism_t *
+BSP2toQ2_Qbism_Faces(const bsp2_dface_t *dfaces2, int numfaces) {
     const bsp2_dface_t *dface2 = dfaces2;
-    q2_dface_qbsp_t *newdata, *dfaceq2;
+    q2_dface_qbism_t *newdata, *dfaceq2;
     int i, j;
     
-    newdata = dfaceq2 = static_cast<q2_dface_qbsp_t *>(malloc(numfaces * sizeof(*dfaceq2)));
+    newdata = dfaceq2 = static_cast<q2_dface_qbism_t *>(malloc(numfaces * sizeof(*dfaceq2)));
     
     for (i = 0; i < numfaces; i++, dface2++, dfaceq2++) {
         dfaceq2->planenum = dface2->planenum;
@@ -1740,7 +1740,7 @@ static uint16_t *MBSPtoQ2_CopyLeafBrushes(const uint32_t *leafbrushes, int count
     return newdata;
 }
 
-static uint32_t *Q2BSP_QBSP_CopyLeafBrushes(const uint32_t *leafbrushes, int count)
+static uint32_t *Q2BSP_Qbism_CopyLeafBrushes(const uint32_t *leafbrushes, int count)
 {
     return (uint32_t *)CopyArray(leafbrushes, count, sizeof(*leafbrushes));
 }
@@ -1760,13 +1760,13 @@ static dbrush_t *Q2BSP_CopyBrushes(const dbrush_t *brushes, int count)
     return (dbrush_t *)CopyArray(brushes, count, sizeof(*brushes));
 }
 
-static q2_dbrushside_qbsp_t *Q2BSPtoM_CopyBrushSides(const dbrushside_t *dbrushsides, int count)
+static q2_dbrushside_qbism_t *Q2BSPtoM_CopyBrushSides(const dbrushside_t *dbrushsides, int count)
 {
     const dbrushside_t *brushside = dbrushsides;
-    q2_dbrushside_qbsp_t *newdata, *brushsides2;
+    q2_dbrushside_qbism_t *newdata, *brushsides2;
     int i;
 
-    newdata = brushsides2 = static_cast<q2_dbrushside_qbsp_t *>(malloc(count * sizeof(*brushsides2)));
+    newdata = brushsides2 = static_cast<q2_dbrushside_qbism_t *>(malloc(count * sizeof(*brushsides2)));
 
     for (i = 0; i < count; i++, brushside++, brushsides2++) {
         brushsides2->planenum = brushside->planenum;
@@ -1776,14 +1776,14 @@ static q2_dbrushside_qbsp_t *Q2BSPtoM_CopyBrushSides(const dbrushside_t *dbrushs
     return newdata;
 }
 
-static q2_dbrushside_qbsp_t *Q2BSP_QBSP_CopyBrushSides(const q2_dbrushside_qbsp_t *brushsides, int count)
+static q2_dbrushside_qbism_t *Q2BSP_Qbism_CopyBrushSides(const q2_dbrushside_qbism_t *brushsides, int count)
 {
-    return (q2_dbrushside_qbsp_t *)CopyArray(brushsides, count, sizeof(*brushsides));
+    return (q2_dbrushside_qbism_t *)CopyArray(brushsides, count, sizeof(*brushsides));
 }
 
-static dbrushside_t *MBSPtoQ2_CopyBrushSides(const q2_dbrushside_qbsp_t *dbrushsides, int count)
+static dbrushside_t *MBSPtoQ2_CopyBrushSides(const q2_dbrushside_qbism_t *dbrushsides, int count)
 {
-    const q2_dbrushside_qbsp_t *brushside = dbrushsides;
+    const q2_dbrushside_qbism_t *brushside = dbrushsides;
     dbrushside_t *newdata, *brushsides2;
     int i;
 
@@ -1887,7 +1887,7 @@ static void FreeQ2BSP(q2bsp_t *bsp)
     memset(bsp, 0, sizeof(*bsp));
 }
 
-static void FreeQ2BSP_QBSP(q2bsp_qbsp_t *bsp)
+static void FreeQ2BSP_QBSP(q2bsp_qbism_t *bsp)
 {
     free(bsp->dmodels);
     free(bsp->dvis);
@@ -2064,7 +2064,7 @@ ConvertBSPFormat(int32_t version, int32_t ident, bspdata_t *bspdata)
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, &mbsp->loadident, version, ident, bspdata);
         } else if (bspdata->ident == Q2_QBSPIDENT) {
-            const q2bsp_qbsp_t *q2bsp = &bspdata->data.q2bsp_qbsp;
+            const q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2102,17 +2102,17 @@ ConvertBSPFormat(int32_t version, int32_t ident, bspdata_t *bspdata)
             mbsp->dfaces = Q2BSP_QBSPto2_Faces(q2bsp->dfaces, q2bsp->numfaces);
             mbsp->dedges = BSP2_CopyEdges(q2bsp->dedges, q2bsp->numedges);
             mbsp->dleaffaces = BSP2_CopyMarksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
-            mbsp->dleafbrushes = Q2BSP_QBSP_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
+            mbsp->dleafbrushes = Q2BSP_Qbism_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
             mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
         
             mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
             mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
         
             mbsp->dbrushes = Q2BSP_CopyBrushes(q2bsp->dbrushes, q2bsp->numbrushes);
-            mbsp->dbrushsides = Q2BSP_QBSP_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
+            mbsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
         
             /* Free old data */
-            FreeQ2BSP_QBSP((q2bsp_qbsp_t *)q2bsp);
+            FreeQ2BSP_QBSP((q2bsp_qbism_t *)q2bsp);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, &mbsp->loadident, version, ident, bspdata);
@@ -2328,7 +2328,7 @@ ConvertBSPFormat(int32_t version, int32_t ident, bspdata_t *bspdata)
             bspdata->ident = ident;
         } else if (ident == Q2_QBSPIDENT) {
             const mbsp_t *mbsp = &bspdata->data.mbsp;
-            q2bsp_qbsp_t *q2bsp = &bspdata->data.q2bsp_qbsp;
+            q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
         
             memset(q2bsp, 0, sizeof(*q2bsp));
         
@@ -2357,22 +2357,22 @@ ConvertBSPFormat(int32_t version, int32_t ident, bspdata_t *bspdata)
             q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
             q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
-            q2bsp->dleafs = MBSPtoQ2_QBSP_Leafs(mbsp->dleafs, mbsp->numleafs);
+            q2bsp->dleafs = MBSPtoQ2_Qbism_Leafs(mbsp->dleafs, mbsp->numleafs);
             q2bsp->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
             q2bsp->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
             q2bsp->dnodes = BSP2_CopyNodes(mbsp->dnodes, mbsp->numnodes);
             q2bsp->texinfo = MBSPtoQ2_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
-            q2bsp->dfaces = BSP2toQ2_QBSP_Faces(mbsp->dfaces, mbsp->numfaces);
+            q2bsp->dfaces = BSP2toQ2_Qbism_Faces(mbsp->dfaces, mbsp->numfaces);
             q2bsp->dedges = BSP2_CopyEdges(mbsp->dedges, mbsp->numedges);
             q2bsp->dleaffaces = BSP2_CopyMarksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
-            q2bsp->dleafbrushes = Q2BSP_QBSP_CopyLeafBrushes(mbsp->dleafbrushes, mbsp->numleafbrushes);
+            q2bsp->dleafbrushes = Q2BSP_Qbism_CopyLeafBrushes(mbsp->dleafbrushes, mbsp->numleafbrushes);
             q2bsp->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
             q2bsp->dareas = Q2BSP_CopyAreas(mbsp->dareas, mbsp->numareas);
             q2bsp->dareaportals = Q2BSP_CopyAreaPortals(mbsp->dareaportals, mbsp->numareaportals);
         
             q2bsp->dbrushes = Q2BSP_CopyBrushes(mbsp->dbrushes, mbsp->numbrushes);
-            q2bsp->dbrushsides = Q2BSP_QBSP_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
+            q2bsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
         
             /* Free old data */
             FreeMBSP((mbsp_t *)mbsp);
@@ -2587,18 +2587,18 @@ const lumpspec_t lumpspec_q2bsp_qbsp[] = {
     { "planes",       sizeof(dplane_t)          },
     { "vertexes",     sizeof(dvertex_t)         },
     { "visibility",   sizeof(uint8_t)              },
-    { "nodes",        sizeof(q2_dnode_qbsp_t)        },
+    { "nodes",        sizeof(q2_dnode_qbism_t)        },
     { "texinfos",     sizeof(q2_texinfo_t)      },
-    { "faces",        sizeof(q2_dface_qbsp_t)        },
+    { "faces",        sizeof(q2_dface_qbism_t)        },
     { "lighting",     sizeof(uint8_t)              },
-    { "leafs",        sizeof(q2_dleaf_qbsp_t)        },
+    { "leafs",        sizeof(q2_dleaf_qbism_t)        },
     { "leaffaces",    sizeof(uint32_t)          },
     { "leafbrushes",  sizeof(uint32_t)          },
-    { "edges",        sizeof(q2_dedge_qbsp_t)     },
+    { "edges",        sizeof(q2_dedge_qbism_t)     },
     { "surfedges",    sizeof(int32_t)           },
     { "models",       sizeof(q2_dmodel_t)       },
     { "brushes",      sizeof(dbrush_t)          },
-    { "brushsides",   sizeof(q2_dbrushside_qbsp_t)      },
+    { "brushsides",   sizeof(q2_dbrushside_qbism_t)      },
     { "pop",          sizeof(uint8_t)              },
     { "areas",        sizeof(darea_t)           },
     { "areaportals",  sizeof(dareaportal_t)     },
@@ -2887,7 +2887,7 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         
           Q2_CopyLump (header, Q2_LUMP_POP, &bsp->dpop);
         } else {
-            q2bsp_qbsp_t *bsp = &bspdata->data.q2bsp_qbsp;
+            q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
 
             memset(bsp, 0, sizeof(*bsp));
 
@@ -3244,7 +3244,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
             AddLump(&bspfile, Q2_LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
             AddLump(&bspfile, Q2_LUMP_POP, bsp->dpop, sizeof(bsp->dpop));
         } else if (bspdata->ident == Q2_QBSPIDENT) {
-            q2bsp_qbsp_t *bsp = &bspdata->data.q2bsp_qbsp;
+            q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
 
             AddLump(&bspfile, Q2_LUMP_MODELS, bsp->dmodels, bsp->nummodels);
             AddLump(&bspfile, Q2_LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
@@ -3369,7 +3369,7 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
             logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
             logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
         } else if (bspdata->ident == Q2_QBSPIDENT) {
-            const q2bsp_qbsp_t *bsp = &bspdata->data.q2bsp_qbsp;
+            const q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
             const lumpspec_t *lumpspec = lumpspec_q2bsp_qbsp;
         
             logprint("%7i %-12s\n", bsp->nummodels, "models");
