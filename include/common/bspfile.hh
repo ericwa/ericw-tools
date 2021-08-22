@@ -52,18 +52,41 @@
 #define MAX_ENT_KEY   32
 #define MAX_ENT_VALUE 1024
 
+struct bspversion_t
+{
+    /* identifier value, the first int32_t in the header */
+    int32_t ident;
+    /* version value, if supported; use NO_VERSION if a version is not required */
+    int32_t version;
+    /* short name used for command line args, etc */
+    const char *short_name;
+    /* full display name for printing */
+    const char *name;
+};
+
+#define NO_VERSION      -1
+
 #define BSPVERSION     29
 #define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
 #define BSP2VERSION    ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
 #define BSPHLVERSION   30 //24bit lighting, and private palettes in the textures lump.
 #define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
 #define Q2_BSPVERSION  38
-#define Q2_QBSPIDENT   (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
+#define Q2_QBISMIDENT  (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
 
-/* Not an actual file format, but the mbsp_t struct */
-/* TODO: Should probably separate the type tag for bspdata_t from the file
-   version numbers */
-#define GENERIC_BSP	   99
+extern const bspversion_t bspver_generic, bspver_q1, bspver_h2, bspver_bsp2, bspver_bsp2rmq, bspver_hl, bspver_q2, bspver_qbism;
+
+/* table of supported versions */
+constexpr const bspversion_t *const bspversions[] = {
+    &bspver_generic,
+    &bspver_q1,
+    &bspver_h2,
+    &bspver_bsp2,
+    &bspver_bsp2rmq,
+    &bspver_hl,
+    &bspver_q2,
+    &bspver_qbism
+};
 
 typedef struct {
     int32_t fileofs;
@@ -839,10 +862,7 @@ typedef struct {
 } q2bsp_qbism_t;
 
 struct mbsp_t {
-    // FIXME: rather than using version/ident, a unique identifier not connected
-    // to the original ident/versions should be used, so that versions with identical
-    // identifiers and/or versions can be matched accordingly.
-    int32_t loadversion, loadident;
+    const bspversion_t *loadversion;
     
     int nummodels;
     dmodelh2_t *dmodels;
@@ -923,13 +943,7 @@ typedef struct {
 } q2_dheader_t;
 
 typedef struct {
-    // FIXME: rather than using version/ident, a unique identifier not connected
-    // to the original ident/versions should be used, so that versions with identical
-    // identifiers and/or versions can be matched accordingly.
-    int32_t loadident;
-    int32_t ident;
-    int32_t loadversion;
-    int32_t version;
+    const bspversion_t *version, *loadversion;
     int hullcount;
     
     struct {
@@ -947,7 +961,7 @@ typedef struct {
 void LoadBSPFile(char *filename, bspdata_t *bspdata);       //returns the filename as contained inside a bsp
 void WriteBSPFile(const char *filename, bspdata_t *bspdata);
 void PrintBSPFileSizes(const bspdata_t *bspdata);
-void ConvertBSPFormat(int32_t version, int32_t ident, bspdata_t *bspdata);
+void ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
 

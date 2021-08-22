@@ -354,7 +354,7 @@ Embree_FilterFuncN(const struct RTCFilterFunctionNArguments* args)
 
         //mxd
         bool isFence, isGlass;
-        if(bsp_static->loadversion == Q2_BSPVERSION) {
+        if(bsp_static->loadversion == &bspver_q2 || bsp_static->loadversion == &bspver_qbism) {
             const int contents = Face_Contents(bsp_static, face);
             isFence = ((contents & Q2_SURF_TRANSLUCENT) == Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
             isGlass = !isFence && (contents & Q2_SURF_TRANSLUCENT);
@@ -559,7 +559,7 @@ MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *planes, 
         const int leafnum = -nodenum - 1;
         const mleaf_t *leaf = &bsp->dleafs[leafnum];
         
-        if (bsp->loadversion == Q2_BSPVERSION ? leaf->contents & Q2_CONTENTS_SOLID : leaf->contents == CONTENTS_SOLID) {
+        if ((bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) ? leaf->contents & Q2_CONTENTS_SOLID : leaf->contents == CONTENTS_SOLID) {
             std::vector<winding_t *> leaf_windings = Leaf_MakeFaces(bsp, leaf, *planes);
             for (winding_t *w : leaf_windings) {
                 result->push_back(w);
@@ -631,15 +631,16 @@ Embree_TraceInit(const mbsp_t *bsp)
             
             const int contents = Face_Contents(bsp, face); //mxd
             const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+            const bool is_q2 = bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism;
 
             //mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
-            if(bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_NODRAW) && !(contents & Q2_SURF_SKY))
+            if(is_q2 && (contents & Q2_SURF_NODRAW) && !(contents & Q2_SURF_SKY))
                 continue;
             
             // handle glass / water 
             const float alpha = Face_Alpha(model, face);
             if (alpha < 1.0f
-                || (bsp->loadversion == Q2_BSPVERSION && (contents & Q2_SURF_TRANSLUCENT))) { //mxd. Both fence and transparent textures are done using SURF_TRANS flags in Q2
+                || (is_q2 && (contents & Q2_SURF_TRANSLUCENT))) { //mxd. Both fence and transparent textures are done using SURF_TRANS flags in Q2
                 filterfaces.push_back(face);
                 continue;
             }
@@ -652,7 +653,7 @@ Embree_TraceInit(const mbsp_t *bsp)
             }
             
             // handle sky
-            if (bsp->loadversion == Q2_BSPVERSION) {
+            if (is_q2) {
                 // Q2: arghrad compat: sky faces only emit sunlight if:
                 // sky flag set, light flag set, value nonzero
                 if ((contents & Q2_SURF_SKY) != 0

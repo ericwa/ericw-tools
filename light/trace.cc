@@ -716,7 +716,7 @@ TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
             
             // only solid and sky faces stop the trace.
             bool issolid, issky; //mxd
-            if(bsp_static->loadversion == Q2_BSPVERSION) {
+            if(bsp_static->loadversion == &bspver_q2 || bsp_static->loadversion == &bspver_qbism) {
                 issolid = !(fi->content & Q2_SURF_TRANSLUCENT);
                 issky = (fi->content & Q2_SURF_SKY);
             } else {
