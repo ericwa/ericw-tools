@@ -299,7 +299,7 @@ WriteBSPFile(void)
     AddLumpFromBuffer(f, LUMP_NODES, map.exported_nodes_bsp29.data(), map.exported_nodes_bsp29.size() * sizeof(map.exported_nodes_bsp29[0]));
     AddLumpFromBuffer(f, LUMP_TEXINFO, map.exported_texinfos.data(), map.exported_texinfos.size() * sizeof(map.exported_texinfos[0]));
     AddLump(f, LUMP_FACES);
-    AddLump(f, LUMP_CLIPNODES);
+    AddLumpFromBuffer(f, LUMP_CLIPNODES, map.exported_clipnodes.data(), map.exported_clipnodes.size() * sizeof(map.exported_clipnodes[0]));
     AddLumpFromBuffer(f, LUMP_MARKSURFACES, map.exported_marksurfaces.data(), map.exported_marksurfaces.size() * sizeof(map.exported_marksurfaces[0]));
     AddLump(f, LUMP_SURFEDGES);
     AddLump(f, LUMP_EDGES);
@@ -386,7 +386,7 @@ PrintBSPFileSizes(void)
     Message(msgStat, "%8d nodes        %10d", static_cast<int>(map.exported_nodes_bsp29.size()), static_cast<int>(map.exported_nodes_bsp29.size()) * MemSize[BSP_NODE]);
     Message(msgStat, "%8d texinfo      %10d", static_cast<int>(map.exported_texinfos.size()), static_cast<int>(map.exported_texinfos.size()) * MemSize[BSP_TEXINFO]);
     Message(msgStat, "%8d faces        %10d", map.cTotal[LUMP_FACES],        map.cTotal[LUMP_FACES] * MemSize[BSP_FACE]);
-    Message(msgStat, "%8d clipnodes    %10d", map.cTotal[LUMP_CLIPNODES],    map.cTotal[LUMP_CLIPNODES] * MemSize[BSP_CLIPNODE]);
+    Message(msgStat, "%8d clipnodes    %10d", static_cast<int>(map.exported_clipnodes.size()), static_cast<int>(map.exported_clipnodes.size()) * MemSize[BSP_CLIPNODE]);
     Message(msgStat, "%8d leafs        %10d", static_cast<int>(map.exported_leafs_bsp29.size()), static_cast<int>(map.exported_leafs_bsp29.size()) * MemSize[BSP_LEAF]);
     Message(msgStat, "%8d marksurfaces %10d", static_cast<int>(map.exported_marksurfaces.size()), static_cast<int>(map.exported_marksurfaces.size()) * MemSize[BSP_MARKSURF]);
     Message(msgStat, "%8d surfedges    %10d", map.cTotal[LUMP_SURFEDGES],    map.cTotal[LUMP_SURFEDGES] * MemSize[BSP_SURFEDGE]);
