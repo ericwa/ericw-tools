@@ -104,6 +104,16 @@ VectorCopy(const vec3_t in, vec3_t out)
     out[2] = in[2];
 }
 
+#ifdef DOUBLEVEC_T
+static inline void
+VectorCopy(const float in[3], vec3_t out)
+{
+    out[0] = in[0];
+    out[1] = in[1];
+    out[2] = in[2];
+}
+#endif
+
 static inline void
 VectorScale(const vec3_t v, vec_t scale, vec3_t out)
 {

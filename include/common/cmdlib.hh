@@ -20,6 +20,7 @@
 #ifndef __COMMON_CMDLIB_H__
 #define __COMMON_CMDLIB_H__
 
+#include <cassert>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -138,6 +139,7 @@ static inline void Q_assert_(bool success, const char *expr, const char *file, i
 {
     if (!success) {
         logprint("%s:%d: Q_assert(%s) failed.\n", file, line, expr);
+        assert(0);
         exit(1);
     }
 }

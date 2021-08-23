@@ -22,7 +22,9 @@
 #ifndef QBSP_SOLIDBSP_HH
 #define QBSP_SOLIDBSP_HH
 
-extern int splitnodes;
+#include <atomic>
+
+extern std::atomic<int> splitnodes;
 
 void DetailToSolid(node_t *node);
 int Contents_Priority(int contents);

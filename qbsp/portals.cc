@@ -667,7 +667,7 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
 
     /* Display progress */
     state->iNodesDone++;
-    Message(msgPercent, state->iNodesDone, splitnodes);
+    Message(msgPercent, state->iNodesDone, splitnodes.load());
 
     CutNodePortals_r(front, state);
     CutNodePortals_r(back, state);
