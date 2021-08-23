@@ -102,14 +102,13 @@ ExportMapTexinfo(int texinfonum)
     if (src->outputnum != -1)
         return src->outputnum;
     
-    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
+    // this will be the index of the exported texinfo in the BSP lump
+    const int i = static_cast<int>(map.exported_texinfos.size());
     
-    if (texinfo->index >= texinfo->count)
-        Error("Internal error: texinfo count mismatch (%s)", __func__);
-    
-    const int i = texinfo->index;
-    
-    texinfo_t *dest = &(static_cast<texinfo_t *>(texinfo->data)[i]);
+    map.exported_texinfos.push_back({});
+    texinfo_t* dest = &map.exported_texinfos.back();
+    memset(dest, 0, sizeof(dest));
+
     dest->flags = static_cast<int32_t>(src->flags & TEX_SPECIAL);
     dest->miptex = src->miptex;
     for (int j=0; j<2; j++) {
@@ -117,12 +116,7 @@ ExportMapTexinfo(int texinfonum)
             dest->vecs[j][k] = src->vecs[j][k];
         }
     }
-    
-    texinfo->index++;
-    map.cTotal[LUMP_TEXINFO]++;
-    
-    Q_assert(texinfo->index == map.cTotal[LUMP_TEXINFO]);
-    
+
     src->outputnum = i;
     return i;
 }
@@ -147,29 +141,6 @@ AllocBSPPlanes()
         
         planes->count = newcount;
         planes->data = newplanes;
-    }
-}
-
-/*
-==================
-AllocBSPTexinfo
-==================
-*/
-void
-AllocBSPTexinfo()
-{
-    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
-    
-    // OK just need one plane array, stick it in worldmodel
-    if (map.numtexinfo() > texinfo->count) {
-        int newcount = map.numtexinfo();
-        struct lumpdata *newtexinfo = (struct lumpdata *)AllocMem(BSP_TEXINFO, newcount, true);
-        
-        memcpy(newtexinfo, texinfo->data, MemSize[BSP_TEXINFO] * texinfo->count);
-        FreeMem(texinfo->data, BSP_TEXINFO, texinfo->count);
-        
-        texinfo->count = newcount;
-        texinfo->data = newtexinfo;
     }
 }
 
@@ -835,7 +806,7 @@ WriteExtendedTexinfoFlags(void)
         fprintf(texinfofile, "%llu\n", static_cast<unsigned long long>(tx.flags));
         count++;
     }
-    Q_assert(count == map.cTotal[LUMP_TEXINFO]);
+    Q_assert(count == static_cast<int>(map.exported_texinfos.size()));
     
     fclose(texinfofile);
 }
@@ -854,9 +825,6 @@ FinishBSPFile(void)
     // TODO: Fix this somewhere else?
     struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];    
     planes->count = map.cTotal[LUMP_PLANES];
-
-    struct lumpdata *texinfo = &pWorldEnt()->lumps[LUMP_TEXINFO];
-    texinfo->count = map.cTotal[LUMP_TEXINFO];
     
     WriteExtendedTexinfoFlags();
     WriteBSPFile();

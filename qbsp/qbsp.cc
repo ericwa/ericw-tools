@@ -179,7 +179,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
             }
         }
         AllocBSPPlanes();
-        AllocBSPTexinfo();
         ExportClipNodes(entity, nodes, hullnum);
     } else {
         /*
@@ -235,7 +234,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         DetailToSolid(nodes);
 
         AllocBSPPlanes();
-        AllocBSPTexinfo();
 
         if (options.fObjExport && entity == pWorldEnt()) {
             ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);

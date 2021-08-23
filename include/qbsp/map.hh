@@ -153,6 +153,9 @@ typedef struct mapdata_s {
     /* Misc other global state for the compile process */
     bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
     
+    // Final, exported data
+    std::vector<texinfo_t> exported_texinfos; // FIXME: change to gtexinfo_t
+
     // helpers
     std::string texinfoTextureName(int texinfo) const {
         int mt = mtexinfos.at(texinfo).miptex;
