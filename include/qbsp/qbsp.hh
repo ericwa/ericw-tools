@@ -391,6 +391,7 @@ public:
     bool fLeakTest;
     bool fContentHack;
     vec_t worldExtent;
+    bool fNoThreads;
 
     options_t() :
     fNofill(false),
@@ -432,7 +433,8 @@ public:
     fTestExpand(false),
     fLeakTest(false),
     fContentHack(false),
-    worldExtent(65536.0f) {}
+    worldExtent(65536.0f),
+    fNoThreads(false) {}
 };
 
 extern options_t options;
