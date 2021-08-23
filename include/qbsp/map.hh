@@ -156,6 +156,9 @@ typedef struct mapdata_s {
     // Final, exported data
     std::vector<texinfo_t> exported_texinfos; // FIXME: change to gtexinfo_t
     std::vector<dplane_t> exported_planes;
+    std::vector<bsp29_dleaf_t> exported_leafs_bsp29; // FIXME: change to generic leaf
+    std::vector<bsp29_dnode_t> exported_nodes_bsp29; // FIXME: change to generic node
+    std::vector<uint16_t> exported_marksurfaces; // FIXME: change type to generic
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {
