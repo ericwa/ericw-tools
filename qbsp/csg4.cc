@@ -22,6 +22,9 @@
 
 #include <qbsp/qbsp.hh>
 
+#include <atomic>
+#include <mutex>
+
 #include "tbb/parallel_for.h"
 
 /*
@@ -32,9 +35,12 @@ Brushes that touch still need to be split at the cut point to make a tjunction
 
 */
 
-static int brushfaces;
+static std::atomic<int> brushfaces;
 static int csgfaces;
 int csgmergefaces;
+
+// acquire this for anything that can't run in parallel during CSGFaces
+std::mutex csgfaces_lock;
 
 /*
 ==================
@@ -44,6 +50,9 @@ MakeSkipTexinfo
 static int
 MakeSkipTexinfo()
 {
+    // FindMiptex, FindTexinfo not threadsafe
+    std::unique_lock<std::mutex> lck { csgfaces_lock };
+
     int texinfo;
     mtexinfo_t mt;
     
@@ -328,6 +337,8 @@ SaveFacesToPlaneList
 
 Links the given list of faces into a mapping from plane number to faces.
 This plane map is later used to build up the surfaces for creating the BSP.
+
+Not parallel.
 ==================
 */
 void
@@ -488,6 +499,8 @@ BuildSurfaces
 
 Returns a chain of all the surfaces for all the planes with one or more
 visible face.
+
+Not parallel.
 ==================
 */
 surface_t *
@@ -570,7 +583,9 @@ CSGFaces(const mapentity_t *entity)
 {
     Message(msgProgress, "CSGFaces");
 
-    csgfaces = brushfaces = csgmergefaces = 0;
+    csgfaces = 0;
+    brushfaces = 0;
+    csgmergefaces = 0;
 
 #if 0
     logprint("CSGFaces brush order:\n");
@@ -712,7 +727,7 @@ CSGFaces(const mapentity_t *entity)
     }
     surface_t *surfaces = BuildSurfaces(planefaces);
 
-    Message(msgStat, "%8d brushfaces", brushfaces);
+    Message(msgStat, "%8d brushfaces", brushfaces.load());
     Message(msgStat, "%8d csgfaces", csgfaces);
     Message(msgStat, "%8d mergedfaces", csgmergefaces);
 

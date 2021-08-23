@@ -55,13 +55,21 @@ if (embree_FOUND)
 endif(embree_FOUND)
 
 add_executable(light ${LIGHT_SOURCES} main.cc)
-target_link_libraries (light ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (light PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
 if (embree_FOUND)
-	target_link_libraries (light ${EMBREE_LIBRARY})
+	target_link_libraries (light PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)
 	
-	set(EMBREE_LICENSE "${embree_DIR}/doc/LICENSE.txt")
+	find_file(EMBREE_LICENSE LICENSE.txt 
+		"${embree_DIR}/doc"
+		"${embree_DIR}/../embree3/embree3" # vcpkg puts it here
+		NO_DEFAULT_PATH)
+	if (EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
+		message(WARNING "Couldn't find embree license")
+	else()
+		message(STATUS "Found embree license: ${EMBREE_LICENSE}")
+	endif()
 
 	if(WIN32)
 		file(GLOB EMBREE_DLLS "${embree_DIR}/bin/*.dll")
@@ -128,8 +136,8 @@ add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
 add_test(testlight testlight)
 add_dependencies(check testlight)
 
-target_link_libraries (testlight ${CMAKE_THREAD_LIBS_INIT} gtest)
+target_link_libraries (testlight PRIVATE ${CMAKE_THREAD_LIBS_INIT} gtest)
 if (embree_FOUND)
-	target_link_libraries (testlight ${EMBREE_LIBRARY})
+	target_link_libraries (testlight PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)
 endif (embree_FOUND)

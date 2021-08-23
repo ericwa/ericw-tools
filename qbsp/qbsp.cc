@@ -19,11 +19,14 @@
     See file, 'COPYING', for details.
 */
 
+#include <memory>
 #include <string.h>
 
 #include <common/log.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
+
+#include "tbb/global_control.h"
 
 static const char *IntroString =
     "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
@@ -714,6 +717,7 @@ PrintOptions(void)
            "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
            "   -leaktest       Make compilation fail if the map leaks\n"
            "   -contenthack    Hack to fix leaks through solids. Causes missing faces in some cases so disabled by default.\n"
+           "   -nothreads      Disable multithreading\n"
            "   sourcefile      .MAP file to process\n"
            "   destfile        .BSP file to output\n");
 
@@ -944,6 +948,8 @@ ParseOptions(char *szOptions)
                 options.fLeakTest = true;
             } else if (!Q_strcasecmp(szTok, "contenthack")) {
                 options.fContentHack = true;
+            } else if (!Q_strcasecmp(szTok, "nothreads")) {
+                options.fNoThreads = true;
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
                 PrintOptions();
             else
@@ -1063,6 +1069,12 @@ int qbsp_main(int argc, const char **argv)
     Message(msgScreen, IntroString);
 
     InitQBSP(argc, argv);
+
+    // disable TBB if requested
+    auto tbbOptions = std::unique_ptr<tbb::global_control>();
+    if (options.fNoThreads) {
+        tbbOptions = std::make_unique<tbb::global_control>(tbb::global_control::max_allowed_parallelism, 1);
+    }
 
     // do it!
     start = I_FloatTime();

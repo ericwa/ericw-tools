@@ -19,6 +19,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <mutex>
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -33,6 +34,8 @@ static int rgMemActive[GLOBAL + 1];
 static int rgMemPeak[GLOBAL + 1];
 static int rgMemActiveBytes[GLOBAL + 1];
 static int rgMemPeakBytes[GLOBAL + 1];
+
+std::mutex memoryStatsLock;
 
 /*
 ==========
@@ -74,6 +77,8 @@ AllocMem(int Type, int cElements, bool fZero)
     if (Type == FACE && cElements == 1)
         ((face_t *)pTemp)->planenum = -1;
 
+    std::unique_lock<std::mutex> lck { memoryStatsLock };
+
     rgMemTotal[Type] += cElements;
     rgMemActive[Type] += cElements;
     rgMemActiveBytes[Type] += cSize;
@@ -100,12 +105,14 @@ FreeMem
 void
 FreeMem(void *pMem, int Type, int cElements)
 {
+    free(pMem);
+
+    std::unique_lock<std::mutex> lck { memoryStatsLock };
+
     rgMemActive[Type] -= cElements;
 
     rgMemActiveBytes[Type] -= cElements * MemSize[Type];
     rgMemActive[GLOBAL] -= cElements * MemSize[Type];
-
-    free(pMem);
 }
 
 
@@ -199,6 +206,8 @@ FreeAllMem(void)
 /* Keep track of output state */
 static bool fInPercent = false;
 
+std::mutex messageLock;
+
 /*
 =================
 Message
@@ -209,6 +218,8 @@ Generic output of warnings, stats, etc
 void
 Message(int msgType, ...)
 {
+    std::unique_lock<std::mutex> lck { messageLock };
+
     va_list argptr;
     char szBuffer[512];
     char *szFmt;

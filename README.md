@@ -55,7 +55,24 @@ cmake ..
 
 ### Windows
 
-TODO: updated instructions
+Example using vcpkg (32-bit build):
+
+```
+git clone --recursive https://github.com/ericwa/ericw-tools
+cd ericw-tools
+git clone https://github.com/microsoft/vcpkg
+.\vcpkg\bootstrap-vcpkg.bat
+
+# NOTE: vcpkg builds for 32-bit by default
+# NOTE: takes 30+ minutes
+.\vcpkg\vcpkg install embree3
+mkdir build
+cd build
+
+# PowerShell syntax for getting current directory -
+# otherwise, replace with absolute path to "vcpkg/scripts/buildsystems/vcpkg.cmake"
+cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_GENERATOR_PLATFORM=Win32
+```
 
 ### macOS 10.15
 
