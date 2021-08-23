@@ -409,7 +409,7 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
         FindFaceEdges(entity, f);
     }
 
-    Message(msgPercent, ++progress, splitnodes);
+    Message(msgPercent, ++progress, splitnodes.load());
     progress = MakeFaceEdges_r(entity, node->children[0], progress);
     progress = MakeFaceEdges_r(entity, node->children[1], progress);
 

@@ -23,14 +23,16 @@
 
 #include <qbsp/qbsp.hh>
 
+#include <atomic>
+
 #include "tbb/task_group.h"
 
-int splitnodes;
+std::atomic<int> splitnodes;
 
-static int leaffaces;
-static int nodefaces;
-static int c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_fence;
-static int c_illusionary_visblocker;
+static std::atomic<int> leaffaces;
+static std::atomic<int> nodefaces;
+static std::atomic<int> c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_fence;
+static std::atomic<int> c_illusionary_visblocker;
 static bool usemidsplit;
 
 /**
@@ -462,6 +464,8 @@ SelectPartition
 
 Selects a surface from a linked list of surfaces to split the group on
 returns NULL if the surface list can not be divided any more (a leaf)
+
+Called in parallel.
 ==================
 */
 static surface_t *
@@ -782,7 +786,9 @@ int Contents_Priority(int contents)
 LinkConvexFaces
 
 Determines the contents of the leaf and creates the final list of
-original faces that have some fragment inside this leaf
+original faces that have some fragment inside this leaf.
+
+Called in parallel.
 ==================
 */
 static void
@@ -879,7 +885,9 @@ First subdivides surface->faces.
 Then, duplicates the list of subdivided faces and returns it.
 
 For each surface->faces, ->original is set to the respective duplicate that 
-is returned here (why?)
+is returned here (why?).
+
+Called in parallel.
 ==================
 */
 static face_t *
@@ -913,6 +921,8 @@ LinkNodeFaces(surface_t *surface)
 /*
 ==================
 PartitionSurfaces
+
+Called in parallel.
 ==================
 */
 static void
@@ -929,7 +939,7 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     }
 
     splitnodes++;
-    Message(msgPercent, splitnodes, csgmergefaces);
+    Message(msgPercent, splitnodes.load(), csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
     node->children[0] = (node_t *)AllocMem(NODE, 1, true);
@@ -1041,16 +1051,16 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 
     PartitionSurfaces(surfhead, headnode);
 
-    Message(msgStat, "%8d split nodes", splitnodes);
-    Message(msgStat, "%8d solid leafs", c_solid);
-    Message(msgStat, "%8d empty leafs", c_empty);
-    Message(msgStat, "%8d water leafs", c_water);
-    Message(msgStat, "%8d detail leafs", c_detail);
-    Message(msgStat, "%8d detail illusionary leafs", c_detail_illusionary);
-    Message(msgStat, "%8d detail fence leafs", c_detail_fence);
-    Message(msgStat, "%8d illusionary visblocker leafs", c_illusionary_visblocker);
-    Message(msgStat, "%8d leaffaces", leaffaces);
-    Message(msgStat, "%8d nodefaces", nodefaces);
+    Message(msgStat, "%8d split nodes", splitnodes.load());
+    Message(msgStat, "%8d solid leafs", c_solid.load());
+    Message(msgStat, "%8d empty leafs", c_empty.load());
+    Message(msgStat, "%8d water leafs", c_water.load());
+    Message(msgStat, "%8d detail leafs", c_detail.load());
+    Message(msgStat, "%8d detail illusionary leafs", c_detail_illusionary.load());
+    Message(msgStat, "%8d detail fence leafs", c_detail_fence.load());
+    Message(msgStat, "%8d illusionary visblocker leafs", c_illusionary_visblocker.load());
+    Message(msgStat, "%8d leaffaces", leaffaces.load());
+    Message(msgStat, "%8d nodefaces", nodefaces.load());
 
     return headnode;
 }

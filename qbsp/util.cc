@@ -206,6 +206,8 @@ FreeAllMem(void)
 /* Keep track of output state */
 static bool fInPercent = false;
 
+std::mutex messageLock;
+
 /*
 =================
 Message
@@ -216,6 +218,8 @@ Generic output of warnings, stats, etc
 void
 Message(int msgType, ...)
 {
+    std::unique_lock<std::mutex> lck { messageLock };
+
     va_list argptr;
     char szBuffer[512];
     char *szFmt;
