@@ -293,7 +293,7 @@ WriteBSPFile(void)
     if (ret != 1)
         Error("Failure writing to file");
 
-    AddLump(f, LUMP_PLANES);
+    AddLumpFromBuffer(f, LUMP_PLANES, map.exported_planes.data(), map.exported_planes.size() * sizeof(map.exported_planes[0]));
     AddLump(f, LUMP_LEAFS);
     AddLump(f, LUMP_VERTEXES);
     AddLump(f, LUMP_NODES);
@@ -381,7 +381,7 @@ PrintBSPFileSizes(void)
 {
     struct lumpdata *lump;
 
-    Message(msgStat, "%8d planes       %10d", map.cTotal[LUMP_PLANES],       map.cTotal[LUMP_PLANES] * MemSize[BSP_PLANE]);
+    Message(msgStat, "%8d planes       %10d", static_cast<int>(map.exported_planes.size()), static_cast<int>(map.exported_planes.size()) * MemSize[BSP_PLANE]);
     Message(msgStat, "%8d vertexes     %10d", map.cTotal[LUMP_VERTEXES],     map.cTotal[LUMP_VERTEXES] * MemSize[BSP_VERTEX]);
     Message(msgStat, "%8d nodes        %10d", map.cTotal[LUMP_NODES],        map.cTotal[LUMP_NODES] * MemSize[BSP_NODE]);
     Message(msgStat, "%8d texinfo      %10d", static_cast<int>(map.exported_texinfos.size()), static_cast<int>(map.exported_texinfos.size()) * MemSize[BSP_TEXINFO]);

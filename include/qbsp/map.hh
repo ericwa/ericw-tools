@@ -155,6 +155,7 @@ typedef struct mapdata_s {
     
     // Final, exported data
     std::vector<texinfo_t> exported_texinfos; // FIXME: change to gtexinfo_t
+    std::vector<dplane_t> exported_planes;
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {

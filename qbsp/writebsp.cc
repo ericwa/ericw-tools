@@ -72,24 +72,15 @@ ExportMapPlane(int planenum)
     if (plane->outputplanenum != -1)
         return plane->outputplanenum; // already output.
     
-    struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];
-    
-    if (planes->index >= planes->count)
-        Error("Internal error: plane count mismatch (%s)", __func__);
-    
-    const int newIndex = planes->index;
-    
-    dplane_t *dplane = &((dplane_t *)planes->data)[newIndex];
+    const int newIndex = static_cast<int>(map.exported_planes.size());
+    map.exported_planes.push_back({});
+
+    dplane_t *dplane = &map.exported_planes.back();
     dplane->normal[0] = plane->normal[0];
     dplane->normal[1] = plane->normal[1];
     dplane->normal[2] = plane->normal[2];
     dplane->dist = plane->dist;
     dplane->type = plane->type;
-    
-    planes->index++;
-    map.cTotal[LUMP_PLANES]++;
-
-    Q_assert(planes->index == map.cTotal[LUMP_PLANES]);
     
     plane->outputplanenum = newIndex;
     return newIndex;
@@ -119,29 +110,6 @@ ExportMapTexinfo(int texinfonum)
 
     src->outputnum = i;
     return i;
-}
-
-/*
-==================
-AllocBSPPlanes
-==================
-*/
-void
-AllocBSPPlanes()
-{
-    struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];
-
-    // OK just need one plane array, stick it in worldmodel
-    if (map.numplanes() > planes->count) {
-        int newcount = map.numplanes();
-        struct lumpdata *newplanes = (struct lumpdata *)AllocMem(BSP_PLANE, newcount, true);
-        
-        memcpy(newplanes, planes->data, MemSize[BSP_PLANE] * planes->count);
-        FreeMem(planes->data, BSP_PLANE, planes->count);
-        
-        planes->count = newcount;
-        planes->data = newplanes;
-    }
 }
 
 //===========================================================================
@@ -822,10 +790,6 @@ FinishBSPFile(void)
     options.fVerbose = true;
     Message(msgProgress, "WriteBSPFile");
 
-    // TODO: Fix this somewhere else?
-    struct lumpdata *planes = &pWorldEnt()->lumps[LUMP_PLANES];    
-    planes->count = map.cTotal[LUMP_PLANES];
-    
     WriteExtendedTexinfoFlags();
     WriteBSPFile();
     PrintBSPFileSizes();

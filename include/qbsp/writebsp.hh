@@ -25,8 +25,6 @@
 int ExportMapPlane(int planenum);
 int ExportMapTexinfo(int texinfonum);
 
-void AllocBSPPlanes();
-
 void BeginBSPFile(void);
 void FinishBSPFile(void);
 
