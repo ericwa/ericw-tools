@@ -199,24 +199,23 @@ WADList_Process(const wad_t *wadlist)
     int i;
     lumpinfo_t *texture;
     dmiptexlump_t *miptexlump;
-    struct lumpdata *texdata = &pWorldEnt()->lumps[LUMP_TEXTURES];
-
+    
     WADList_AddAnimationFrames(wadlist);
 
     /* Count space for miptex header/offsets */
-    texdata->count = offsetof(dmiptexlump_t, dataofs[0]) + (map.nummiptex() * sizeof(uint32_t));
+    size_t texdatasize = offsetof(dmiptexlump_t, dataofs[0]) + (map.nummiptex() * sizeof(uint32_t));
 
     /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex(); i++) {
         texture = WADList_FindTexture(wadlist, map.miptex.at(i).c_str());
         if (texture) {
-            texdata->count += texture->size;
+            texdatasize += texture->size;
         }
     }
 
     /* Default texture data to store in worldmodel */
-    texdata->data = AllocMem(BSP_TEX, texdata->count, true);
-    miptexlump = (dmiptexlump_t *)texdata->data;
+    map.exported_texdata = std::string(texdatasize, '\0');
+    miptexlump = (dmiptexlump_t *)map.exported_texdata.data();
     miptexlump->nummiptex = map.nummiptex();
 
     WADList_LoadTextures(wadlist, miptexlump);
@@ -236,7 +235,6 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
     int i, size;
     uint8_t *data;
     const wad_t *wad;
-    struct lumpdata *texdata = &pWorldEnt()->lumps[LUMP_TEXTURES];
 
     data = (uint8_t *)&lump->dataofs[map.nummiptex()];
 
@@ -251,7 +249,7 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
         }
         if (!size)
             continue;
-        if (data + size - (uint8_t *)texdata->data > texdata->count)
+        if (data + size - (uint8_t *)map.exported_texdata.data() > map.exported_texdata.size())
             Error("Internal error: not enough texture memory allocated");
         lump->dataofs[i] = data - (uint8_t *)lump;
         data += size;

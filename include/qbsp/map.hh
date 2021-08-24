@@ -171,6 +171,7 @@ typedef struct mapdata_s {
     std::vector<bsp29_dface_t> exported_faces;
     std::vector<dmodelq1_t> exported_models;
     std::string exported_entities;
+    std::string exported_texdata;
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {

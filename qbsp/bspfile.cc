@@ -308,7 +308,7 @@ WriteBSPFile(void)
     AddLumpFromBuffer(f, LUMP_LIGHTING, nullptr, 0);
     AddLumpFromBuffer(f, LUMP_VISIBILITY, nullptr, 0);
     AddLumpFromBuffer(f, LUMP_ENTITIES, map.exported_entities.data(), map.exported_entities.size() + 1); // +1 to write the terminating null (safe in C++11)
-    AddLump(f, LUMP_TEXTURES);
+    AddLumpFromBuffer(f, LUMP_TEXTURES, map.exported_texdata.data(), map.exported_texdata.size());
 
     GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
 
@@ -392,10 +392,9 @@ PrintBSPFileSizes(void)
     Message(msgStat, "%8d surfedges    %10d", static_cast<int>(map.exported_surfedges.size()), static_cast<int>(map.exported_surfedges.size()) * MemSize[BSP_SURFEDGE]);
     Message(msgStat, "%8d edges        %10d", static_cast<int>(map.exported_edges.size()), static_cast<int>(map.exported_edges.size()) * MemSize[BSP_EDGE]);
 
-    lump = &pWorldEnt()->lumps[LUMP_TEXTURES];
-    if (lump->data)
+    if (!map.exported_texdata.empty())
         Message(msgStat, "%8d textures     %10d",
-                ((dmiptexlump_t *)lump->data)->nummiptex, lump->count);
+                ((dmiptexlump_t *)map.exported_texdata.data())->nummiptex, map.exported_texdata.size());
     else
         Message(msgStat, "       0 textures              0");
 
