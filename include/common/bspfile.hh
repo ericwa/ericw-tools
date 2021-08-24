@@ -156,7 +156,7 @@ typedef struct {
     float mins[3];
     float maxs[3];
     float origin[3];
-    int32_t headnode[MAX_MAP_HULLS_Q1];
+    int32_t headnode[MAX_MAP_HULLS_Q1]; /* 4 for backward compat, only 3 hulls exist */
     int32_t visleafs;           /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
@@ -166,7 +166,7 @@ typedef struct {
     float mins[3];
     float maxs[3];
     float origin[3];
-    int32_t headnode[MAX_MAP_HULLS_H2];
+    int32_t headnode[MAX_MAP_HULLS_H2]; /* hexen2 only uses 6 */
     int32_t visleafs;           /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
