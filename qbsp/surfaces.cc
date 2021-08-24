@@ -301,7 +301,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     const std::pair<int,int> edge_hash_key = std::make_pair(v2, v1);
 
     {
-        bsp29_dedge_t *edge;
+        bsp2_dedge_t *edge;
 
         auto it = hashedges.find(edge_hash_key);
         if (it != hashedges.end()) {
@@ -389,7 +389,7 @@ EmitFace
 static void
 EmitFace(mapentity_t *entity, face_t *face)
 {
-    bsp29_dface_t *out;
+    bsp2_dface_t *out;
     int i;
 
     if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))

@@ -97,7 +97,7 @@ ExportMapTexinfo(int texinfonum)
     const int i = static_cast<int>(map.exported_texinfos.size());
     
     map.exported_texinfos.push_back({});
-    texinfo_t* dest = &map.exported_texinfos.back();
+    gtexinfo_t* dest = &map.exported_texinfos.back();
     memset(dest, 0, sizeof(dest));
 
     dest->flags = static_cast<int32_t>(src->flags & TEX_SPECIAL);
@@ -107,8 +107,9 @@ ExportMapTexinfo(int texinfonum)
             dest->vecs[j][k] = src->vecs[j][k];
         }
     }
+    // FIXME-Q2: fill in other attributes
 
-    src->outputnum = i;
+    src->outputnum = i;    
     return i;
 }
 
@@ -122,7 +123,7 @@ ExportClipNodes
 static int
 ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
 {
-    bsp29_dclipnode_t *clipnode;
+    bsp2_dclipnode_t *clipnode;
     face_t *face, *next;
 
     // FIXME: free more stuff?
@@ -186,7 +187,7 @@ static void
 ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
 {
     map.exported_leafs_bsp29.push_back({});
-    bsp29_dleaf_t *dleaf = &map.exported_leafs_bsp29.back();
+    mleaf_t *dleaf = &map.exported_leafs_bsp29.back();
 
     dleaf->contents = RemapContentsForExport(node->contents);
     AssertVanillaContentType(dleaf->contents);
@@ -220,6 +221,8 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
     }
     dleaf->nummarksurfaces =
         static_cast<int>(map.exported_marksurfaces.size()) - dleaf->firstmarksurface;
+
+    // FIXME-Q2: fill in other things
 }
 
 /*
@@ -230,7 +233,7 @@ ExportDrawNodes
 static void
 ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
 {
-    bsp29_dnode_t *dnode;
+    bsp2_dnode_t *dnode;
     int i;
 
     const size_t ourNodeIndex = map.exported_nodes_bsp29.size();
@@ -295,7 +298,7 @@ void
 ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 {
     int i;
-    dmodelq1_t *dmodel;
+    dmodelh2_t *dmodel;
 
     // populate model struct (which was emitted previously)
     dmodel = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
@@ -338,7 +341,7 @@ BeginBSPFile(void)
 
     // Leave room for leaf 0 (must be solid)
     map.exported_leafs_bsp29.push_back({});
-    map.exported_leafs_bsp29.back().contents = CONTENTS_SOLID;
+    map.exported_leafs_bsp29.back().contents = CONTENTS_SOLID; // FIXME-Q2: use Q2_CONTENTS_SOLID
     Q_assert(map.exported_leafs_bsp29.size() == 1);
 }
 

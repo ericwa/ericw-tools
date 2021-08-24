@@ -156,17 +156,17 @@ typedef struct mapdata_s {
     bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
     
     // Final, exported data
-    std::vector<texinfo_t> exported_texinfos; // FIXME: change to gtexinfo_t
+    std::vector<gtexinfo_t> exported_texinfos;
     std::vector<dplane_t> exported_planes;
-    std::vector<bsp29_dleaf_t> exported_leafs_bsp29; // FIXME: change to generic leaf
-    std::vector<bsp29_dnode_t> exported_nodes_bsp29; // FIXME: change to generic node
-    std::vector<uint16_t> exported_marksurfaces; // FIXME: change type to generic
-    std::vector<bsp29_dclipnode_t> exported_clipnodes;
-    std::vector<bsp29_dedge_t> exported_edges;
+    std::vector<mleaf_t> exported_leafs_bsp29;
+    std::vector<bsp2_dnode_t> exported_nodes_bsp29;
+    std::vector<uint32_t> exported_marksurfaces;
+    std::vector<bsp2_dclipnode_t> exported_clipnodes;
+    std::vector<bsp2_dedge_t> exported_edges;
     std::vector<dvertex_t> exported_vertexes;
-    std::vector<int> exported_surfedges;
-    std::vector<bsp29_dface_t> exported_faces;
-    std::vector<dmodelq1_t> exported_models;
+    std::vector<int32_t> exported_surfedges;
+    std::vector<bsp2_dface_t> exported_faces;
+    std::vector<dmodelh2_t> exported_models;
     std::string exported_entities;
     std::string exported_texdata;
 

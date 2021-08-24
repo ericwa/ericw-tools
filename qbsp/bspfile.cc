@@ -36,38 +36,29 @@ LoadBSPFile(void)
 {
 }
 
-//============================================================================
-
-// TODO: remove this once we switch to common
-static void
-AddLumpFromBuffer(FILE *f, int Type, void* src, size_t srcbytes)
-{
-    lump_t *lump;
-    size_t ret;
-    const mapentity_t *entity;
-
-    lump = &header->lumps[Type];
-    lump->fileofs = ftell(f);
-
-    if (srcbytes) {
-        ret = fwrite(src, 1, srcbytes, f);
-        if (ret != srcbytes)
-            Error("Failure writing to file");
-    }
-
-    lump->filelen = srcbytes;
-
-    // Pad to 4-byte boundary
-    if (srcbytes % 4 != 0) {
-        size_t pad = 4 - (srcbytes % 4);
-        ret = fwrite("   ", 1, pad, f);
-        if (ret != pad)
-            Error("Failure writing to file");
-    }
-}
-
 void BSPX_AddLump(const char *xname, const void *xdata, size_t xsize)
 {
+}
+
+template <class C>
+static void CopyVector(const std::vector<C>& vec, int* elementCountOut, C** arrayCopyOut)
+{
+    const size_t numBytes = sizeof(C) * vec.size();
+    void* data = (void*)malloc(numBytes);
+    memcpy(data, vec.data(), numBytes);
+
+    *elementCountOut = vec.size();
+    *arrayCopyOut = (C*)data;
+}
+
+static void CopyString(const std::string& string, bool addNullTermination, int* elementCountOut, void** arrayCopyOut)
+{
+    const size_t numBytes = addNullTermination ? string.size() + 1 : string.size();
+    void* data = malloc(numBytes);
+    memcpy(data, string.data(), numBytes); // std::string::data() has null termination, so it's safe to copy it
+
+    *elementCountOut = numBytes;
+    *arrayCopyOut = data;
 }
 
 /*
@@ -78,56 +69,37 @@ WriteBSPFile
 void
 WriteBSPFile(void)
 {
-    FILE *f;
-    size_t ret;
+    bspdata_t bspdata{};
+    
+    bspdata.version = &bspver_generic;
+    bspdata.hullcount = MAX_MAP_HULLS_Q1;
 
-    header = (dheader_t *)AllocMem(OTHER, sizeof(dheader_t), true);
-    header->version = options.BSPVersion;
+    CopyVector(map.exported_planes, &bspdata.data.mbsp.numplanes, &bspdata.data.mbsp.dplanes);
+    CopyVector(map.exported_leafs_bsp29, &bspdata.data.mbsp.numleafs, &bspdata.data.mbsp.dleafs);
+    CopyVector(map.exported_vertexes, &bspdata.data.mbsp.numvertexes, &bspdata.data.mbsp.dvertexes);
+    CopyVector(map.exported_nodes_bsp29, &bspdata.data.mbsp.numnodes, &bspdata.data.mbsp.dnodes);
+    CopyVector(map.exported_texinfos, &bspdata.data.mbsp.numtexinfo, &bspdata.data.mbsp.texinfo);
+    CopyVector(map.exported_faces, &bspdata.data.mbsp.numfaces, &bspdata.data.mbsp.dfaces);
+    CopyVector(map.exported_clipnodes, &bspdata.data.mbsp.numclipnodes, &bspdata.data.mbsp.dclipnodes);
+    CopyVector(map.exported_marksurfaces, &bspdata.data.mbsp.numleaffaces, &bspdata.data.mbsp.dleaffaces);
+    CopyVector(map.exported_surfedges, &bspdata.data.mbsp.numsurfedges, &bspdata.data.mbsp.dsurfedges);
+    CopyVector(map.exported_edges, &bspdata.data.mbsp.numedges, &bspdata.data.mbsp.dedges);
+    CopyVector(map.exported_models, &bspdata.data.mbsp.nummodels, &bspdata.data.mbsp.dmodels);
 
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".bsp");
-
-    f = fopen(options.szBSPName, "wb");
-    if (!f)
-        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
-
-    /* write placeholder, header is overwritten later */
-    ret = fwrite(header, sizeof(dheader_t), 1, f);
-    if (ret != 1)
-        Error("Failure writing to file");
-
-    AddLumpFromBuffer(f, LUMP_PLANES, map.exported_planes.data(), map.exported_planes.size() * sizeof(map.exported_planes[0]));
-    AddLumpFromBuffer(f, LUMP_LEAFS, map.exported_leafs_bsp29.data(), map.exported_leafs_bsp29.size() * sizeof(map.exported_leafs_bsp29[0]));
-    AddLumpFromBuffer(f, LUMP_VERTEXES, map.exported_vertexes.data(), map.exported_vertexes.size() * sizeof(map.exported_vertexes[0]));
-    AddLumpFromBuffer(f, LUMP_NODES, map.exported_nodes_bsp29.data(), map.exported_nodes_bsp29.size() * sizeof(map.exported_nodes_bsp29[0]));
-    AddLumpFromBuffer(f, LUMP_TEXINFO, map.exported_texinfos.data(), map.exported_texinfos.size() * sizeof(map.exported_texinfos[0]));
-    AddLumpFromBuffer(f, LUMP_FACES, map.exported_faces.data(), map.exported_faces.size() * sizeof(map.exported_faces[0]));
-    AddLumpFromBuffer(f, LUMP_CLIPNODES, map.exported_clipnodes.data(), map.exported_clipnodes.size() * sizeof(map.exported_clipnodes[0]));
-    AddLumpFromBuffer(f, LUMP_MARKSURFACES, map.exported_marksurfaces.data(), map.exported_marksurfaces.size() * sizeof(map.exported_marksurfaces[0]));
-    AddLumpFromBuffer(f, LUMP_SURFEDGES, map.exported_surfedges.data(), map.exported_surfedges.size() * sizeof(map.exported_surfedges[0]));
-    AddLumpFromBuffer(f, LUMP_EDGES, map.exported_edges.data(), map.exported_edges.size() * sizeof(map.exported_edges[0]));
-    AddLumpFromBuffer(f, LUMP_MODELS, map.exported_models.data(), map.exported_models.size() * sizeof(map.exported_models[0]));
-
-    AddLumpFromBuffer(f, LUMP_LIGHTING, nullptr, 0);
-    AddLumpFromBuffer(f, LUMP_VISIBILITY, nullptr, 0);
-    AddLumpFromBuffer(f, LUMP_ENTITIES, map.exported_entities.data(), map.exported_entities.size() + 1); // +1 to write the terminating null (safe in C++11)
-    AddLumpFromBuffer(f, LUMP_TEXTURES, map.exported_texdata.data(), map.exported_texdata.size());    
+    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
+    CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void**)&bspdata.data.mbsp.dtexdata);
 
     // TODO: pass bspx lumps to generic bsp code so they are written
 
     //GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
 
-    fseek(f, 0, SEEK_SET);
-    ret = fwrite(header, sizeof(dheader_t), 1, f);
-    if (ret != 1)
-        Error("Failure writing to file");
+    ConvertBSPFormat(&bspdata, &bspver_q1); // assume q1 for now
 
-    if (fclose(f) != 0)
-        Error("Failure closing file");
-    
+    StripExtension(options.szBSPName);
+    strcat(options.szBSPName, ".bsp");
+
+    WriteBSPFile(options.szBSPName, &bspdata);
     logprint("Wrote %s\n", options.szBSPName);
-    
-    FreeMem(header, OTHER, sizeof(dheader_t));
 }
 
 //============================================================================
