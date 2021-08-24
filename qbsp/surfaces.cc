@@ -324,32 +324,6 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
         edge->v[0] = v1;
         edge->v[1] = v2;
     }
-#if 0
-    else {
-        bsp2_dedge_t *edge;
-
-        auto it = hashedges.find(edge_hash_key);
-        if (it != hashedges.end()) {
-            for (const int i : it->second) {
-                edge = (bsp2_dedge_t *)edges->data + i;
-                Q_assert(v1 == edge->v[1] && v2 == edge->v[0]);
-                if (pEdgeFaces1[i] == NULL
-                    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
-                    pEdgeFaces1[i] = face;
-                    return -(i + cStartEdge);
-                }
-            }
-        }
-
-        /* emit an edge */
-        i = edges->index;
-        edge = (bsp2_dedge_t *)edges->data + i;
-        if (edges->index >= edges->count)
-            Error("Internal error: didn't allocate enough edges?");
-        edge->v[0] = v1;
-        edge->v[1] = v2;
-    }
-#endif
 
     AddHashEdge(v1, v2, i);
 
