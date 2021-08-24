@@ -155,43 +155,6 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
     return nodenum;
 }
 
-#if 0
-static int
-ExportClipNodes_BSP2(mapentity_t *entity, node_t *node)
-{
-    int nodenum;
-    bsp2_dclipnode_t *clipnode;
-    face_t *face, *next;
-    struct lumpdata *clipnodes = &entity->lumps[LUMP_CLIPNODES];
-
-    // FIXME: free more stuff?
-    if (node->planenum == -1) {
-        int contents = node->contents;
-        FreeMem(node, NODE, 1);
-        return contents;
-    }
-
-    /* emit a clipnode */
-    clipnode = (bsp2_dclipnode_t *)clipnodes->data + clipnodes->index;
-    clipnodes->index++;
-    nodenum = map.cTotal[LUMP_CLIPNODES];
-    map.cTotal[LUMP_CLIPNODES]++;
-
-    clipnode->planenum = ExportMapPlane(node->planenum);
-    clipnode->children[0] = ExportClipNodes_BSP2(entity, node->children[0]);
-    clipnode->children[1] = ExportClipNodes_BSP2(entity, node->children[1]);
-
-    for (face = node->faces; face; face = next) {
-        next = face->next;
-        memset(face, 0, sizeof(face_t));
-        FreeMem(face, FACE, 1);
-    }
-    FreeMem(node, NODE, 1);
-
-    return nodenum;
-}
-#endif
-
 /*
 ==================
 ExportClipNodes
