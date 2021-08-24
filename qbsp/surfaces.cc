@@ -239,7 +239,6 @@ GetVertex(mapentity_t *entity, const vec3_t in)
 {
     int i;
     vec3_t vert;
-    struct lumpdata *vertices = &entity->lumps[LUMP_VERTEXES];
     dvertex_t *dvertex;
 
     for (i = 0; i < 3; i++) {
@@ -262,19 +261,16 @@ GetVertex(mapentity_t *entity, const vec3_t in)
         }
     }
 
-    const int global_vert_num = map.cTotal[LUMP_VERTEXES]++;
+    const int global_vert_num = static_cast<int>(map.exported_vertexes.size());
 
     AddHashVert(vert, global_vert_num);
     
-    if (vertices->index == vertices->count)
-        Error("Internal error: didn't allocate enough vertices?");
-
     /* emit a vertex */
-    dvertex = (dvertex_t *)vertices->data + vertices->index;
+    map.exported_vertexes.push_back({});
+    dvertex = &map.exported_vertexes.at(global_vert_num);
     dvertex->point[0] = vert[0];
     dvertex->point[1] = vert[1];
     dvertex->point[2] = vert[2];
-    vertices->index++;
 
     return global_vert_num;
 }
@@ -494,7 +490,7 @@ GrowNodeRegion(mapentity_t *entity, node_t *node)
 }
 
 static void
-CountFace(mapentity_t *entity, face_t *f)
+CountFace(mapentity_t *entity, face_t *f, int* vertexesCount)
 {
     if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
         return;
@@ -502,7 +498,7 @@ CountFace(mapentity_t *entity, face_t *f)
     if (f->lmshift[1] != 4)
         needlmshifts = true;
     entity->lumps[LUMP_FACES].count++;
-    entity->lumps[LUMP_VERTEXES].count += f->w.numpoints;
+    (*vertexesCount) += f->w.numpoints;
 }
 
 /*
@@ -511,7 +507,7 @@ CountData_r
 ==============
 */
 static void
-CountData_r(mapentity_t *entity, node_t *node)
+CountData_r(mapentity_t *entity, node_t *node, int* vertexesCount)
 {
     face_t *f;
 
@@ -519,11 +515,11 @@ CountData_r(mapentity_t *entity, node_t *node)
         return;
 
     for (f = node->faces; f; f = f->next) {
-        CountFace(entity, f);
+        CountFace(entity, f, vertexesCount);
     }
 
-    CountData_r(entity, node->children[0]);
-    CountData_r(entity, node->children[1]);
+    CountData_r(entity, node->children[0], vertexesCount);
+    CountData_r(entity, node->children[1], vertexesCount);
 }
 
 /*
@@ -536,7 +532,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
-    struct lumpdata *vertices = &entity->lumps[LUMP_VERTEXES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
 
@@ -544,7 +539,8 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     needlmshifts = false;
 
-    CountData_r(entity, headnode);
+    int vertexesCount = 0;
+    CountData_r(entity, headnode, &vertexesCount);
 
     /*
      * Remember edges are +1 in BeginBSPFile.  Often less than half
@@ -552,9 +548,7 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
      * faces will break that assumption.  2/3 should be safe most of
      * the time without wasting too much memory...
      */
-    surfedges->count = vertices->count;
-
-    vertices->data = AllocMem(BSP_VERTEX, vertices->count, true);
+    surfedges->count = vertexesCount;
 
     // Accessory data
     InitHash();
@@ -564,18 +558,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
-
-    /* Free any excess allocated memory */
-    if (vertices->index < vertices->count) {
-        dvertex_t *temp = (dvertex_t *)AllocMem(BSP_VERTEX, vertices->index, true);
-        memcpy(temp, vertices->data, sizeof(*temp) * vertices->index);
-        FreeMem(vertices->data, BSP_VERTEX, vertices->count);
-        vertices->data = temp;
-        vertices->count = vertices->index;
-    }
-
-    if (map.cTotal[LUMP_VERTEXES] > 65535 && (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION))
-        Error("Too many vertices (%d > 65535). Recompile with the \"-bsp2\" flag to lift this restriction.", map.cTotal[LUMP_VERTEXES]);
 
     surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
     faces->data = AllocMem(BSP_FACE, faces->count, true);

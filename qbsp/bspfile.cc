@@ -295,7 +295,7 @@ WriteBSPFile(void)
 
     AddLumpFromBuffer(f, LUMP_PLANES, map.exported_planes.data(), map.exported_planes.size() * sizeof(map.exported_planes[0]));
     AddLumpFromBuffer(f, LUMP_LEAFS, map.exported_leafs_bsp29.data(), map.exported_leafs_bsp29.size() * sizeof(map.exported_leafs_bsp29[0]));
-    AddLump(f, LUMP_VERTEXES);
+    AddLumpFromBuffer(f, LUMP_VERTEXES, map.exported_vertexes.data(), map.exported_vertexes.size() * sizeof(map.exported_vertexes[0]));
     AddLumpFromBuffer(f, LUMP_NODES, map.exported_nodes_bsp29.data(), map.exported_nodes_bsp29.size() * sizeof(map.exported_nodes_bsp29[0]));
     AddLumpFromBuffer(f, LUMP_TEXINFO, map.exported_texinfos.data(), map.exported_texinfos.size() * sizeof(map.exported_texinfos[0]));
     AddLump(f, LUMP_FACES);
@@ -382,7 +382,7 @@ PrintBSPFileSizes(void)
     struct lumpdata *lump;
 
     Message(msgStat, "%8d planes       %10d", static_cast<int>(map.exported_planes.size()), static_cast<int>(map.exported_planes.size()) * MemSize[BSP_PLANE]);
-    Message(msgStat, "%8d vertexes     %10d", map.cTotal[LUMP_VERTEXES],     map.cTotal[LUMP_VERTEXES] * MemSize[BSP_VERTEX]);
+    Message(msgStat, "%8d vertexes     %10d", static_cast<int>(map.exported_vertexes.size()), static_cast<int>(map.exported_vertexes.size()) * MemSize[BSP_VERTEX]);
     Message(msgStat, "%8d nodes        %10d", static_cast<int>(map.exported_nodes_bsp29.size()), static_cast<int>(map.exported_nodes_bsp29.size()) * MemSize[BSP_NODE]);
     Message(msgStat, "%8d texinfo      %10d", static_cast<int>(map.exported_texinfos.size()), static_cast<int>(map.exported_texinfos.size()) * MemSize[BSP_TEXINFO]);
     Message(msgStat, "%8d faces        %10d", map.cTotal[LUMP_FACES],        map.cTotal[LUMP_FACES] * MemSize[BSP_FACE]);

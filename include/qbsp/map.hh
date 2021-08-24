@@ -161,6 +161,7 @@ typedef struct mapdata_s {
     std::vector<uint16_t> exported_marksurfaces; // FIXME: change type to generic
     std::vector<bsp29_dclipnode_t> exported_clipnodes;
     std::vector<bsp29_dedge_t> exported_edges;
+    std::vector<dvertex_t> exported_vertexes;
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {
