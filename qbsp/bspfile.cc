@@ -26,16 +26,6 @@
 
 static dheader_t *header;
 
-typedef struct bspxentry_s
-{
-    char lumpname[24];
-    const void *lumpdata;
-    size_t lumpsize;
-
-    struct bspxentry_s *next;
-} bspxentry_t;
-static bspxentry_t *bspxentries;
-
 /*
 =============
 LoadBSPFile
@@ -174,11 +164,4 @@ PrintBSPFileSizes(void)
     Message(msgStat, "         lightdata    %10d", 0);
     Message(msgStat, "         visdata      %10d", 0);
     Message(msgStat, "         entdata      %10d", static_cast<int>(map.exported_entities.size()) + 1);
-
-    if (bspxentries) {
-        bspxentry_t *x;
-        for (x = bspxentries; x; x = x->next) {
-            Message(msgStat, "%8s %-12s %10i", "BSPX", x->lumpname, x->lumpsize);
-        }
-    }
 }
