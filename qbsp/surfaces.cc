@@ -388,13 +388,11 @@ MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 EmitFace
 ==============
 */
-template <class DFACE>
 static void
-EmitFace_Internal(mapentity_t *entity, face_t *face)
+EmitFace(mapentity_t *entity, face_t *face)
 {
-    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
-    DFACE *out;
+    bsp29_dface_t *out;
     int i;
 
     if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
@@ -402,10 +400,15 @@ EmitFace_Internal(mapentity_t *entity, face_t *face)
     
     // emit a region
     Q_assert(face->outputnumber == -1);
-    face->outputnumber = map.cTotal[LUMP_FACES];
-    if (lmshifts->data)
-        ((unsigned char*)lmshifts->data)[faces->index] = face->lmshift[1];
-    out = (DFACE *)faces->data + faces->index;
+    face->outputnumber = static_cast<int>(map.exported_faces.size());
+    map.exported_faces.push_back({});
+
+    if (lmshifts->data) {
+        const int localfacenumber = face->outputnumber - entity->firstoutputfacenumber;
+        ((unsigned char*)lmshifts->data)[localfacenumber] = face->lmshift[1];
+    }
+
+    out = &map.exported_faces.at(face->outputnumber);
     out->planenum = ExportMapPlane(face->planenum);
     out->side = face->planeside;
     out->texinfo = ExportMapTexinfo(face->texinfo);
@@ -421,18 +424,6 @@ EmitFace_Internal(mapentity_t *entity, face_t *face)
     FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
     
     out->numedges = static_cast<int>(map.exported_surfedges.size()) - out->firstedge;
-    
-    map.cTotal[LUMP_FACES]++;
-    faces->index++;
-}
-
-static void
-EmitFace(mapentity_t *entity, face_t *face)
-{
-    if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION)
-        EmitFace_Internal<bsp29_dface_t>(entity, face);
-    else
-        EmitFace_Internal<bsp2_dface_t>(entity, face);
 }
 
 /*
@@ -446,7 +437,7 @@ GrowNodeRegion(mapentity_t *entity, node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    node->firstface = map.cTotal[LUMP_FACES];
+    node->firstface = static_cast<int>(map.exported_faces.size());
 
     for (face_t *face = node->faces; face; face = face->next) {
         Q_assert(face->planenum == node->planenum);
@@ -455,21 +446,22 @@ GrowNodeRegion(mapentity_t *entity, node_t *node)
         EmitFace(entity, face);
     }
 
-    node->numfaces = map.cTotal[LUMP_FACES] - node->firstface;
+    node->numfaces = static_cast<int>(map.exported_faces.size()) - node->firstface;
 
     GrowNodeRegion(entity, node->children[0]);
     GrowNodeRegion(entity, node->children[1]);
 }
 
 static void
-CountFace(mapentity_t *entity, face_t *f, int* vertexesCount)
+CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vertexesCount)
 {
     if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
         return;
     
     if (f->lmshift[1] != 4)
         needlmshifts = true;
-    entity->lumps[LUMP_FACES].count++;
+
+    (*facesCount)++;
     (*vertexesCount) += f->w.numpoints;
 }
 
@@ -479,7 +471,7 @@ CountData_r
 ==============
 */
 static void
-CountData_r(mapentity_t *entity, node_t *node, int* vertexesCount)
+CountData_r(mapentity_t *entity, node_t *node, int *facesCount, int *vertexesCount)
 {
     face_t *f;
 
@@ -487,11 +479,11 @@ CountData_r(mapentity_t *entity, node_t *node, int* vertexesCount)
         return;
 
     for (f = node->faces; f; f = f->next) {
-        CountFace(entity, f, vertexesCount);
+        CountFace(entity, f, facesCount, vertexesCount);
     }
 
-    CountData_r(entity, node->children[0], vertexesCount);
-    CountData_r(entity, node->children[1], vertexesCount);
+    CountData_r(entity, node->children[0], facesCount, vertexesCount);
+    CountData_r(entity, node->children[1], facesCount, vertexesCount);
 }
 
 /*
@@ -503,28 +495,29 @@ int
 MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
-    struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
 
     Message(msgProgress, "MakeFaceEdges");
 
     needlmshifts = false;
 
+    Q_assert(entity->firstoutputfacenumber == -1);
+    entity->firstoutputfacenumber = static_cast<int>(map.exported_faces.size());
+
+    int facesCount = 0;
     int vertexesCount = 0;
-    CountData_r(entity, headnode, &vertexesCount);
+    CountData_r(entity, headnode, &facesCount, &vertexesCount);
 
     // Accessory data
     InitHash();
 
-    firstface = map.cTotal[LUMP_FACES];
+    firstface = static_cast<int>(map.exported_faces.size());
     MakeFaceEdges_r(entity, headnode, 0);
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
 
-    faces->data = AllocMem(BSP_FACE, faces->count, true);
-
-    lmshifts->count = needlmshifts?faces->count:0;
+    lmshifts->count = needlmshifts?facesCount:0;
     lmshifts->data = needlmshifts?AllocMem(OTHER, sizeof(uint8_t) * lmshifts->count, true):NULL;
 
     Message(msgProgress, "GrowRegions");

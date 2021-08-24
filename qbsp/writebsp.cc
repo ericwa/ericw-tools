@@ -342,7 +342,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     dmodel = (dmodel_t *)entity->lumps[LUMP_MODELS].data;
     dmodel->headnode[0] = static_cast<int>(map.exported_nodes_bsp29.size());
     dmodel->firstface = firstface;
-    dmodel->numfaces = map.cTotal[LUMP_FACES] - firstface;
+    dmodel->numfaces = static_cast<int>(map.exported_faces.size()) - firstface;
 
     const size_t mapleafsAtStart = map.exported_leafs_bsp29.size();
 
