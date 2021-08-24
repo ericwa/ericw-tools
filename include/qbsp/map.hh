@@ -162,6 +162,7 @@ typedef struct mapdata_s {
     std::vector<bsp29_dclipnode_t> exported_clipnodes;
     std::vector<bsp29_dedge_t> exported_edges;
     std::vector<dvertex_t> exported_vertexes;
+    std::vector<int> exported_surfedges;
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {

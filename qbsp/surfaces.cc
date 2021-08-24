@@ -392,7 +392,6 @@ template <class DFACE>
 static void
 EmitFace_Internal(mapentity_t *entity, face_t *face)
 {
-    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
     DFACE *out;
@@ -414,15 +413,14 @@ EmitFace_Internal(mapentity_t *entity, face_t *face)
         out->styles[i] = 255;
     out->lightofs = -1;
     
-    out->firstedge = map.cTotal[LUMP_SURFEDGES];
+    // emit surfedges
+    out->firstedge = static_cast<int>(map.exported_surfedges.size());
     for (i = 0; i < face->w.numpoints; i++) {
-        ((int *)surfedges->data)[surfedges->index] = face->edges[i];
-        surfedges->index++;
-        map.cTotal[LUMP_SURFEDGES]++;
+        map.exported_surfedges.push_back(face->edges[i]);
     }
     FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
     
-    out->numedges = map.cTotal[LUMP_SURFEDGES] - out->firstedge;
+    out->numedges = static_cast<int>(map.exported_surfedges.size()) - out->firstedge;
     
     map.cTotal[LUMP_FACES]++;
     faces->index++;
@@ -505,7 +503,6 @@ int
 MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
-    struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
 
@@ -516,14 +513,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     int vertexesCount = 0;
     CountData_r(entity, headnode, &vertexesCount);
 
-    /*
-     * Remember edges are +1 in BeginBSPFile.  Often less than half
-     * the vertices actually are unique, although heavy use of skip
-     * faces will break that assumption.  2/3 should be safe most of
-     * the time without wasting too much memory...
-     */
-    surfedges->count = vertexesCount;
-
     // Accessory data
     InitHash();
 
@@ -533,7 +522,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
 
-    surfedges->data = AllocMem(BSP_SURFEDGE, surfedges->count, true);
     faces->data = AllocMem(BSP_FACE, faces->count, true);
 
     lmshifts->count = needlmshifts?faces->count:0;
