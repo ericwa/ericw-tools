@@ -42,7 +42,7 @@ const int *MemSize = MemSize_BSP29;
     sizeof(surface_t),                                  \
     sizeof(node_t),                                     \
     sizeof(brush_t),                                    \
-    sizeof(miptex_t),                                   \
+    sizeof(texname_t),                                  \
     sizeof(wvert_t),                                    \
     sizeof(wedge_t),                                    \
     sizeof(hashvert_t),                                 \

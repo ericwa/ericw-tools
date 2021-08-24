@@ -99,8 +99,6 @@ typedef struct {
     int32_t dataofs[];          /* [nummiptex] */
 } dmiptexlump_t;
 
-typedef std::string miptex_t;
-
 typedef struct {
     float point[3];
 } dvertex_t;

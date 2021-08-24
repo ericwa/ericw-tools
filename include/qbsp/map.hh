@@ -127,13 +127,15 @@ public:
     }
 };
 
+using texname_t = std::string;
+
 typedef struct mapdata_s {
     /* Arrays of actual items */
     std::vector<mapface_t> faces;
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
     std::vector<qbsp_plane_t> planes;
-    std::vector<miptex_t> miptex;
+    std::vector<texname_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
     
     /* quick lookup for texinfo */
