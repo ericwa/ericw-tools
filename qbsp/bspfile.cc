@@ -169,47 +169,7 @@ WriteBSPFile(void)
 
     GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
 
-    /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
-    if (bspxentries)
-    {
-#define LittleLong(x) x
-#define SafeWrite(f,p,l) fwrite(p, 1, l, f);
-        bspx_header_t xheader;
-        bspxentry_t *x; 
-        bspx_lump_t xlumps[64];
-        uint32_t l;
-        uint32_t bspxheader = ftell(f);
-        if (bspxheader & 3)
-            Error("BSPX header is misaligned");
-        xheader.id[0] = 'B';
-        xheader.id[1] = 'S';
-        xheader.id[2] = 'P';
-        xheader.id[3] = 'X';
-        xheader.numlumps = 0;
-        for (x = bspxentries; x; x = x->next)
-            xheader.numlumps++;
-
-        if (xheader.numlumps > sizeof(xlumps)/sizeof(xlumps[0]))        /*eep*/
-            xheader.numlumps = sizeof(xlumps)/sizeof(xlumps[0]);
-
-        SafeWrite(f, &xheader, sizeof(xheader));
-        SafeWrite(f, xlumps, xheader.numlumps * sizeof(xlumps[0]));
-
-        for (x = bspxentries, l = 0; x && l < xheader.numlumps; x = x->next, l++)
-        {
-            uint8_t pad[4] = {0};
-            xlumps[l].filelen = LittleLong(x->lumpsize);
-            xlumps[l].fileofs = LittleLong(ftell(f));
-            strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));
-            SafeWrite(f, x->lumpdata, x->lumpsize);
-            if (x->lumpsize % 4)
-                SafeWrite(f, pad, 4 - (x->lumpsize % 4));
-        }
-
-        fseek(f, bspxheader, SEEK_SET);
-        SafeWrite(f, &xheader, sizeof(xheader));
-        SafeWrite(f, xlumps, xheader.numlumps * sizeof(xlumps[0]));
-    }
+    // TODO: pass bspx lumps to generic bsp code so they are written
 
     fseek(f, 0, SEEK_SET);
     ret = fwrite(header, sizeof(dheader_t), 1, f);
