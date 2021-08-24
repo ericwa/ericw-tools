@@ -170,6 +170,10 @@ typedef struct mapdata_s {
     std::string exported_entities;
     std::string exported_texdata;
 
+    // bspx data
+    std::vector<uint8_t> exported_lmshifts;
+    bool needslmshifts = false;
+
     // helpers
     std::string texinfoTextureName(int texinfo) const {
         int mt = mtexinfos.at(texinfo).miptex;

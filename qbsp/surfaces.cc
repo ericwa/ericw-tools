@@ -23,8 +23,6 @@
 #include <map>
 #include <list>
 
-static int needlmshifts;
-
 /*
 ===============
 SubdivideFace
@@ -391,7 +389,6 @@ EmitFace
 static void
 EmitFace(mapentity_t *entity, face_t *face)
 {
-    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
     bsp29_dface_t *out;
     int i;
 
@@ -403,11 +400,10 @@ EmitFace(mapentity_t *entity, face_t *face)
     face->outputnumber = static_cast<int>(map.exported_faces.size());
     map.exported_faces.push_back({});
 
-    if (lmshifts->data) {
-        const int localfacenumber = face->outputnumber - entity->firstoutputfacenumber;
-        ((unsigned char*)lmshifts->data)[localfacenumber] = face->lmshift[1];
-    }
-
+    // emit lmshift
+    map.exported_lmshifts.push_back(face->lmshift[1]);
+    Q_assert(map.exported_faces.size() == map.exported_lmshifts.size());
+    
     out = &map.exported_faces.at(face->outputnumber);
     out->planenum = ExportMapPlane(face->planenum);
     out->side = face->planeside;
@@ -459,7 +455,7 @@ CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vertexesCount)
         return;
     
     if (f->lmshift[1] != 4)
-        needlmshifts = true;
+        map.needslmshifts = true;
 
     (*facesCount)++;
     (*vertexesCount) += f->w.numpoints;
@@ -499,8 +495,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     Message(msgProgress, "MakeFaceEdges");
 
-    needlmshifts = false;
-
     Q_assert(entity->firstoutputfacenumber == -1);
     entity->firstoutputfacenumber = static_cast<int>(map.exported_faces.size());
 
@@ -516,9 +510,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
-
-    lmshifts->count = needlmshifts?facesCount:0;
-    lmshifts->data = needlmshifts?AllocMem(OTHER, sizeof(uint8_t) * lmshifts->count, true):NULL;
 
     Message(msgProgress, "GrowRegions");
     GrowNodeRegion(entity, headnode);
