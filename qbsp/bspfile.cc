@@ -100,6 +100,8 @@ WriteBSPFile(void)
 
     WriteBSPFile(options.szBSPName, &bspdata);
     logprint("Wrote %s\n", options.szBSPName);
+
+    PrintBSPFileSizes(&bspdata);
 }
 
 //============================================================================
@@ -114,26 +116,4 @@ Dumps info about current file
 void
 PrintBSPFileSizes(void)
 {
-    struct lumpdata *lump;
-
-    Message(msgStat, "%8d planes       %10d", static_cast<int>(map.exported_planes.size()), static_cast<int>(map.exported_planes.size()) * MemSize[BSP_PLANE]);
-    Message(msgStat, "%8d vertexes     %10d", static_cast<int>(map.exported_vertexes.size()), static_cast<int>(map.exported_vertexes.size()) * MemSize[BSP_VERTEX]);
-    Message(msgStat, "%8d nodes        %10d", static_cast<int>(map.exported_nodes_bsp29.size()), static_cast<int>(map.exported_nodes_bsp29.size()) * MemSize[BSP_NODE]);
-    Message(msgStat, "%8d texinfo      %10d", static_cast<int>(map.exported_texinfos.size()), static_cast<int>(map.exported_texinfos.size()) * MemSize[BSP_TEXINFO]);
-    Message(msgStat, "%8d faces        %10d", static_cast<int>(map.exported_faces.size()), static_cast<int>(map.exported_faces.size()) * MemSize[BSP_FACE]);
-    Message(msgStat, "%8d clipnodes    %10d", static_cast<int>(map.exported_clipnodes.size()), static_cast<int>(map.exported_clipnodes.size()) * MemSize[BSP_CLIPNODE]);
-    Message(msgStat, "%8d leafs        %10d", static_cast<int>(map.exported_leafs_bsp29.size()), static_cast<int>(map.exported_leafs_bsp29.size()) * MemSize[BSP_LEAF]);
-    Message(msgStat, "%8d marksurfaces %10d", static_cast<int>(map.exported_marksurfaces.size()), static_cast<int>(map.exported_marksurfaces.size()) * MemSize[BSP_MARKSURF]);
-    Message(msgStat, "%8d surfedges    %10d", static_cast<int>(map.exported_surfedges.size()), static_cast<int>(map.exported_surfedges.size()) * MemSize[BSP_SURFEDGE]);
-    Message(msgStat, "%8d edges        %10d", static_cast<int>(map.exported_edges.size()), static_cast<int>(map.exported_edges.size()) * MemSize[BSP_EDGE]);
-
-    if (!map.exported_texdata.empty())
-        Message(msgStat, "%8d textures     %10d",
-                ((dmiptexlump_t *)map.exported_texdata.data())->nummiptex, map.exported_texdata.size());
-    else
-        Message(msgStat, "       0 textures              0");
-
-    Message(msgStat, "         lightdata    %10d", 0);
-    Message(msgStat, "         visdata      %10d", 0);
-    Message(msgStat, "         entdata      %10d", static_cast<int>(map.exported_entities.size()) + 1);
 }
