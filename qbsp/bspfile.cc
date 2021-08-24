@@ -303,7 +303,7 @@ WriteBSPFile(void)
     AddLumpFromBuffer(f, LUMP_MARKSURFACES, map.exported_marksurfaces.data(), map.exported_marksurfaces.size() * sizeof(map.exported_marksurfaces[0]));
     AddLumpFromBuffer(f, LUMP_SURFEDGES, map.exported_surfedges.data(), map.exported_surfedges.size() * sizeof(map.exported_surfedges[0]));
     AddLumpFromBuffer(f, LUMP_EDGES, map.exported_edges.data(), map.exported_edges.size() * sizeof(map.exported_edges[0]));
-    AddLump(f, LUMP_MODELS);
+    AddLumpFromBuffer(f, LUMP_MODELS, map.exported_models.data(), map.exported_models.size() * sizeof(map.exported_models[0]));
 
     AddLump(f, LUMP_LIGHTING);
     AddLump(f, LUMP_VISIBILITY);

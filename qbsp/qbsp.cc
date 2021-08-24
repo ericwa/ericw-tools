@@ -58,12 +58,18 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     if (IsWorldBrushEntity(entity))
         return;
 
+    // Export a blank model struct, and reserve the index (only do this once, for all hulls)
+    if (entity->outputmodelnumber == -1) {
+        entity->outputmodelnumber = static_cast<int>(map.exported_models.size());
+        map.exported_models.push_back({});
+    }
+
     if (entity != pWorldEnt()) {
         char mod[20];
 
         if (entity == pWorldEnt() + 1)
             Message(msgProgress, "Internal Entities");
-        q_snprintf(mod, sizeof(mod), "*%d", map.cTotal[LUMP_MODELS]);
+        q_snprintf(mod, sizeof(mod), "*%d", entity->outputmodelnumber);
         if (options.fVerbose)
             PrintEntity(entity);
 
@@ -242,8 +248,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     FreeBrushes(entity);
-    
-    map.cTotal[LUMP_MODELS]++;
 }
 
 /*
@@ -541,7 +545,6 @@ CreateSingleHull(const int hullnum)
     mapentity_t *entity;
 
     Message(msgLiteral, "Processing hull %d...\n", hullnum);
-    map.cTotal[LUMP_MODELS] = 0;
 
     // for each entity in the map file that has geometry
     for (i = 0; i < map.numentities(); i++) {

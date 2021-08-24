@@ -170,7 +170,7 @@ accomodate new data interleaved with old.
 void
 ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 {
-    dmodel_t *model = (dmodel_t *)entity->lumps[LUMP_MODELS].data;
+    auto *model = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
 
     model->headnode[hullnum] = ExportClipNodes_BSP29(entity, nodes);
 }
@@ -295,14 +295,10 @@ void
 ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 {
     int i;
-    dmodel_t *dmodel;
+    dmodelq1_t *dmodel;
 
-    // Allocate a model
-    entity->lumps[LUMP_MODELS].data = AllocMem(BSP_MODEL, 1, true);
-    entity->lumps[LUMP_MODELS].count = 1;
-    
-    // emit a model
-    dmodel = (dmodel_t *)entity->lumps[LUMP_MODELS].data;
+    // populate model struct (which was emitted previously)
+    dmodel = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
     dmodel->headnode[0] = static_cast<int>(map.exported_nodes_bsp29.size());
     dmodel->firstface = firstface;
     dmodel->numfaces = static_cast<int>(map.exported_faces.size()) - firstface;

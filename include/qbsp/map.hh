@@ -104,6 +104,7 @@ public:
     struct lumpdata lumps[BSPX_LUMPS];
     
     int firstoutputfacenumber;
+    int outputmodelnumber;
 
     const mapbrush_t &mapbrush(int i) const;
     
@@ -119,7 +120,8 @@ public:
     epairs(nullptr),
     brushes(nullptr),
     numbrushes(0),
-    firstoutputfacenumber(-1) {
+    firstoutputfacenumber(-1),
+    outputmodelnumber(-1) {
         VectorSet(origin,0,0,0);
         VectorSet(mins,0,0,0);
         VectorSet(maxs,0,0,0);
@@ -167,6 +169,7 @@ typedef struct mapdata_s {
     std::vector<dvertex_t> exported_vertexes;
     std::vector<int> exported_surfedges;
     std::vector<bsp29_dface_t> exported_faces;
+    std::vector<dmodelq1_t> exported_models;
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {
