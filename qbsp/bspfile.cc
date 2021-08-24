@@ -76,52 +76,8 @@ AddLumpFromBuffer(FILE *f, int Type, void* src, size_t srcbytes)
     }
 }
 
-static void
-GenLump(const char *bspxlump, int Type, size_t sz)
-{
-    int cLen = 0;
-    int i;
-    const struct lumpdata *entities;
-    const mapentity_t *entity;
-    char *out;
-
-    for (i = 0; i < map.numentities(); i++) {
-        entity = &map.entities.at(i);
-        entities = &entity->lumps[Type];
-        cLen += entities->count*sz; 
-    }
-    if (!cLen)
-        return;
-    out = (char *)malloc(cLen);
-    cLen = 0;
-    for (i = 0; i < map.numentities(); i++) {
-        entity = &map.entities.at(i);
-        entities = &entity->lumps[Type];
-        memcpy(out+cLen, entities->data, entities->count*sz);
-        cLen += entities->count*sz;
-    }
-    BSPX_AddLump(bspxlump, out, cLen);
-}
-
 void BSPX_AddLump(const char *xname, const void *xdata, size_t xsize)
 {
-    bspxentry_t *e;
-    for (e = bspxentries; e; e = e->next)
-    {
-        if (!strcmp(e->lumpname, xname))
-            break;
-    }
-    if (!e)
-    {
-        e = (bspxentry_t *)malloc(sizeof(*e));
-        memset(e, 0, sizeof(*e));
-        strncpy(e->lumpname, xname, sizeof(e->lumpname));
-        e->next = bspxentries;
-        bspxentries = e;
-    }
-
-    e->lumpdata = xdata;
-    e->lumpsize = xsize;
 }
 
 /*
@@ -165,11 +121,11 @@ WriteBSPFile(void)
     AddLumpFromBuffer(f, LUMP_LIGHTING, nullptr, 0);
     AddLumpFromBuffer(f, LUMP_VISIBILITY, nullptr, 0);
     AddLumpFromBuffer(f, LUMP_ENTITIES, map.exported_entities.data(), map.exported_entities.size() + 1); // +1 to write the terminating null (safe in C++11)
-    AddLumpFromBuffer(f, LUMP_TEXTURES, map.exported_texdata.data(), map.exported_texdata.size());
-
-    GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
+    AddLumpFromBuffer(f, LUMP_TEXTURES, map.exported_texdata.data(), map.exported_texdata.size());    
 
     // TODO: pass bspx lumps to generic bsp code so they are written
+
+    //GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
 
     fseek(f, 0, SEEK_SET);
     ret = fwrite(header, sizeof(dheader_t), 1, f);

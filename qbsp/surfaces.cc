@@ -491,7 +491,6 @@ int
 MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
-    struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
 
     Message(msgProgress, "MakeFaceEdges");
 

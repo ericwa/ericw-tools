@@ -101,7 +101,6 @@ public:
     vec3_t mins, maxs;
     brush_t *brushes;           /* NULL terminated list */
     int numbrushes;
-    struct lumpdata lumps[BSPX_LUMPS];
     
     int firstoutputfacenumber;
     int outputmodelnumber;
@@ -125,7 +124,6 @@ public:
         VectorSet(origin,0,0,0);
         VectorSet(mins,0,0,0);
         VectorSet(maxs,0,0,0);
-        memset(lumps, 0, sizeof(lumps));
     }
 };
 
