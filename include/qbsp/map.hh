@@ -152,9 +152,6 @@ typedef struct mapdata_s {
     int nummiptex() const { return miptex.size(); };
     int numtexinfo() const { return static_cast<int>(mtexinfos.size()); };
 
-    /* Totals for BSP data items -> TODO: move to a bspdata struct? */
-    int cTotal[BSPX_LUMPS];
-
     /* Misc other global state for the compile process */
     bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
     

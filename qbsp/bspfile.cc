@@ -44,83 +44,6 @@ LoadBSPFile
 void
 LoadBSPFile(void)
 {
-    int i;
-    int cFileSize, cLumpSize, iLumpOff;
-
-    // Load the file header
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".bsp");
-    cFileSize = LoadFile(options.szBSPName, &header, true);
-
-    switch (header->version) {
-    case BSPVERSION:
-    case BSPHLVERSION:
-        MemSize = MemSize_BSP29;
-        break;
-    case BSP2RMQVERSION:
-        MemSize = MemSize_BSP2rmq;
-        break;
-    case BSP2VERSION:
-        MemSize = MemSize_BSP2;
-        break;
-    default:
-        Error("%s has unknown BSP version %d",
-              options.szBSPName, header->version);
-    }
-    options.BSPVersion = header->version;
-
-    /* Throw all of the data into the first entity to be written out later */
-    if (map.entities.empty()) {
-        map.entities.push_back(mapentity_t {});
-    }
-    
-    mapentity_t *entity = &map.entities.at(0);
-    for (i = 0; i < BSP_LUMPS; i++) {
-        map.cTotal[i] = cLumpSize = header->lumps[i].filelen;
-        iLumpOff = header->lumps[i].fileofs;
-        
-        if (i == LUMP_MODELS && !options.hexen2) {
-            int j;
-
-            if (cLumpSize % sizeof(dmodelq1_t))
-                Error("Deformed lump in BSP file (size %d is not divisible by %d)",
-                      cLumpSize, (int)sizeof(dmodelq1_t));
-            
-            entity->lumps[i].count = cLumpSize / sizeof(dmodelq1_t);
-            entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
-            
-            map.cTotal[i] = entity->lumps[i].count * sizeof(dmodel_t);
-            
-            for (j=0; j<entity->lumps[i].count; j++)
-            {
-                int k;
-                const dmodelq1_t *in = (dmodelq1_t *)((uint8_t *)header + iLumpOff) + j;
-                dmodelh2_t *out = (dmodelh2_t *)entity->lumps[i].data + j;
-                
-                for (k = 0; k < 3; k++) {
-                    out->mins[k] = in->mins[k];
-                    out->maxs[k] = in->maxs[k];
-                    out->origin[k] = in->origin[k];
-                }
-                for (k = 0; k < MAX_MAP_HULLS_Q1; k++)
-                    out->headnode[k] = in->headnode[k];
-                out->visleafs = in->visleafs;
-                out->firstface = in->firstface;
-                out->numfaces = in->numfaces;
-            }
-        } else {
-            if (cLumpSize % MemSize[i])
-                Error("Deformed lump in BSP file (size %d is not divisible by %d)",
-                      cLumpSize, MemSize[i]);
-            
-            entity->lumps[i].count = cLumpSize / MemSize[i];
-            entity->lumps[i].data = AllocMem(i, entity->lumps[i].count, false);
-            
-            memcpy(entity->lumps[i].data, (uint8_t *)header + iLumpOff, cLumpSize);
-        }
-    }
-
-    FreeMem(header, OTHER, cFileSize + 1);
 }
 
 //============================================================================
@@ -332,8 +255,8 @@ PrintBSPFileSizes(void)
     else
         Message(msgStat, "       0 textures              0");
 
-    Message(msgStat, "         lightdata    %10d", map.cTotal[LUMP_LIGHTING]);
-    Message(msgStat, "         visdata      %10d", map.cTotal[LUMP_VISIBILITY]);
+    Message(msgStat, "         lightdata    %10d", 0);
+    Message(msgStat, "         visdata      %10d", 0);
     Message(msgStat, "         entdata      %10d", static_cast<int>(map.exported_entities.size()) + 1);
 
     if (bspxentries) {
