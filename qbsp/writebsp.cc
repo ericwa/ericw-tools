@@ -374,9 +374,8 @@ void
 BeginBSPFile(void)
 {
     // First edge must remain unused because 0 can't be negated
-    pWorldEnt()->lumps[LUMP_EDGES].count++;
-    pWorldEnt()->lumps[LUMP_EDGES].index++;
-    map.cTotal[LUMP_EDGES]++;
+    map.exported_edges.push_back({});
+    Q_assert(map.exported_edges.size() == 1);
 
     // Leave room for leaf 0 (must be solid)
     map.exported_leafs_bsp29.push_back({});

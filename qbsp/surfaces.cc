@@ -173,9 +173,8 @@ GatherNodeFaces(node_t *headnode)
 //===========================================================================
 
 // This is a kludge.   Should be pEdgeFaces[2].
-static const face_t **pEdgeFaces0;
-static const face_t **pEdgeFaces1;
-static int cStartEdge;
+static std::map<int, const face_t *> pEdgeFaces0;
+static std::map<int, const face_t *> pEdgeFaces1;
 
 //============================================================================
 
@@ -187,6 +186,8 @@ static std::map<std::tuple<int,int,int>, std::list<hashvert_t>> hashverts;
 static void
 InitHash(void)
 {
+    pEdgeFaces0.clear();
+    pEdgeFaces1.clear();
     hashverts.clear();
     hashedges.clear();
 }
@@ -293,7 +294,6 @@ static int
 GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
         const face_t *face)
 {
-    struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     int v1, v2;
     int i;
 
@@ -306,32 +306,30 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     // search for an existing edge from v2->v1
     const std::pair<int,int> edge_hash_key = std::make_pair(v2, v1);
 
-    if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION) {
+    {
         bsp29_dedge_t *edge;
 
         auto it = hashedges.find(edge_hash_key);
         if (it != hashedges.end()) {
             for (const int i : it->second) {
-                edge = (bsp29_dedge_t *)edges->data + i;
-                if (!(v1 == edge->v[1] && v2 == edge->v[0])) {
-                    Error("Too many edges for standard BSP format. Try compiling with -bsp2");
-                }
+                edge = &map.exported_edges.at(i);
                 if (pEdgeFaces1[i] == NULL
                     && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
                     pEdgeFaces1[i] = face;
-                    return -(i + cStartEdge);
+                    return -i;
                 }
             }
         }
 
         /* emit an edge */
-        i = edges->index;
-        edge = (bsp29_dedge_t *)edges->data + i;
-        if (edges->index >= edges->count)
-            Error("Internal error: didn't allocate enough edges?");
+        i = static_cast<int>(map.exported_edges.size());
+        map.exported_edges.push_back({});
+        edge = &map.exported_edges.at(i);
         edge->v[0] = v1;
         edge->v[1] = v2;
-    } else {
+    }
+#if 0
+    else {
         bsp2_dedge_t *edge;
 
         auto it = hashedges.find(edge_hash_key);
@@ -355,13 +353,12 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
         edge->v[0] = v1;
         edge->v[1] = v2;
     }
+#endif
 
-    AddHashEdge(v1, v2, edges->index);
+    AddHashEdge(v1, v2, i);
 
-    edges->index++;
-    map.cTotal[LUMP_EDGES]++;
     pEdgeFaces0[i] = face;
-    return i + cStartEdge;
+    return i;
 }
 
 
@@ -539,7 +536,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int i, firstface;
     struct lumpdata *surfedges = &entity->lumps[LUMP_SURFEDGES];
-    struct lumpdata *edges = &entity->lumps[LUMP_EDGES];
     struct lumpdata *vertices = &entity->lumps[LUMP_VERTEXES];
     struct lumpdata *faces = &entity->lumps[LUMP_FACES];
     struct lumpdata *lmshifts = &entity->lumps[BSPX_LMSHIFT];
@@ -547,10 +543,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     Message(msgProgress, "MakeFaceEdges");
 
     needlmshifts = false;
-    cStartEdge = 0;
-    const int entnum = entity - &map.entities.at(0);
-    for (i = 0; i < entnum; i++)
-        cStartEdge += map.entities.at(i).lumps[LUMP_EDGES].count;
 
     CountData_r(entity, headnode);
 
@@ -561,22 +553,17 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
      * the time without wasting too much memory...
      */
     surfedges->count = vertices->count;
-    edges->count += surfedges->count;
 
     vertices->data = AllocMem(BSP_VERTEX, vertices->count, true);
-    edges->data = AllocMem(BSP_EDGE, edges->count, true);
 
     // Accessory data
-    pEdgeFaces0 = (const face_t **)AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
-    pEdgeFaces1 = (const face_t **)AllocMem(OTHER, sizeof(face_t *) * edges->count, true);
-
     InitHash();
 
     firstface = map.cTotal[LUMP_FACES];
     MakeFaceEdges_r(entity, headnode, 0);
-    
-    FreeMem(pEdgeFaces0, OTHER, sizeof(face_t *) * edges->count);
-    FreeMem(pEdgeFaces1, OTHER, sizeof(face_t *) * edges->count);
+
+    pEdgeFaces0.clear();
+    pEdgeFaces1.clear();
 
     /* Free any excess allocated memory */
     if (vertices->index < vertices->count) {
@@ -585,13 +572,6 @@ MakeFaceEdges(mapentity_t *entity, node_t *headnode)
         FreeMem(vertices->data, BSP_VERTEX, vertices->count);
         vertices->data = temp;
         vertices->count = vertices->index;
-    }
-    if (edges->index < edges->count) {
-        void *temp = AllocMem(BSP_EDGE, edges->index, true);
-        memcpy(temp, edges->data, MemSize[BSP_EDGE] * edges->index);
-        FreeMem(edges->data, BSP_EDGE, edges->count);
-        edges->data = temp;
-        edges->count = edges->index;
     }
 
     if (map.cTotal[LUMP_VERTEXES] > 65535 && (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION))
