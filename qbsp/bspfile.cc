@@ -307,7 +307,7 @@ WriteBSPFile(void)
 
     AddLumpFromBuffer(f, LUMP_LIGHTING, nullptr, 0);
     AddLumpFromBuffer(f, LUMP_VISIBILITY, nullptr, 0);
-    AddLump(f, LUMP_ENTITIES);
+    AddLumpFromBuffer(f, LUMP_ENTITIES, map.exported_entities.data(), map.exported_entities.size() + 1); // +1 to write the terminating null (safe in C++11)
     AddLump(f, LUMP_TEXTURES);
 
     GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
@@ -401,7 +401,7 @@ PrintBSPFileSizes(void)
 
     Message(msgStat, "         lightdata    %10d", map.cTotal[LUMP_LIGHTING]);
     Message(msgStat, "         visdata      %10d", map.cTotal[LUMP_VISIBILITY]);
-    Message(msgStat, "         entdata      %10d", map.cTotal[LUMP_ENTITIES] + 1);
+    Message(msgStat, "         entdata      %10d", static_cast<int>(map.exported_entities.size()) + 1);
 
     if (bspxentries) {
         bspxentry_t *x;

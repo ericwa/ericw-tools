@@ -21,6 +21,7 @@
 */
 
 #include <string>
+#include <sstream>
 #include <memory>
 #include <list>
 #include <utility>
@@ -2254,53 +2255,33 @@ GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec)
 void
 WriteEntitiesToString(void)
 {
-    char *pCur;
     epair_t *ep;
     int i;
-    int cLen;
     struct lumpdata *entities;
     mapentity_t *entity;
 
-    map.cTotal[LUMP_ENTITIES] = 0;
+    std::stringstream ss;
 
     for (i = 0; i < map.numentities(); i++) {
         entity = &map.entities.at(i);
-        entities = &entity->lumps[LUMP_ENTITIES];
 
         /* Check if entity needs to be removed */
         if (!entity->epairs || IsWorldBrushEntity(entity)) {
-            entities->count = 0;
-            entities->data = NULL;
             continue;
         }
-
-        cLen = 0;
-        for (ep = entity->epairs; ep; ep = ep->next) {
-            int i = strlen(ep->key) + strlen(ep->value) + 6;
-            cLen += i;
-        }
-        // Add 4 for {\n and }\n
-        cLen += 4;
-
-        entities->count = cLen;
-        map.cTotal[LUMP_ENTITIES] += cLen;
-        entities->data = pCur = (char *)AllocMem(BSP_ENT, cLen, true);
-        *pCur = 0;
-
-        strcat(pCur, "{\n");
-        pCur += 2;
+        
+        ss << "{\n";
 
         for (ep = entity->epairs; ep; ep = ep->next) {
             // Limit on Quake's strings of 128 bytes
             // TODO: Warn when limit is exceeded
-            int chars_printed = sprintf(pCur, "\"%s\" \"%s\"\n", ep->key, ep->value);
-            pCur += chars_printed;
+            ss << "\"" << std::string(ep->key) << "\" \"" << std::string(ep->value) << "\"\n";
         }
 
-        // No terminating null on this string
-        pCur[0] = '}';
-        pCur[1] = '\n';
+        ss << "}\n";
     }
+
+    map.exported_entities = ss.str();
 }
 
 //====================================================================
