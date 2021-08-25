@@ -139,7 +139,7 @@ GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
         for (f = node->faces; f; f = next) {
             next = f->next;
             if (!f->w.numpoints) {      // face was removed outside
-                FreeMem(f, FACE, 1);
+                free(f);
             } else {
                 f->next = planefaces[f->planenum];
                 planefaces[f->planenum] = f;
@@ -148,7 +148,7 @@ GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
         GatherNodeFaces_r(node->children[0], planefaces);
         GatherNodeFaces_r(node->children[1], planefaces);
     }
-    FreeMem(node, NODE, 1);
+    free(node);
 }
 
 /*
@@ -417,7 +417,7 @@ EmitFace(mapentity_t *entity, face_t *face)
     for (i = 0; i < face->w.numpoints; i++) {
         map.exported_surfedges.push_back(face->edges[i]);
     }
-    FreeMem(face->edges, OTHER, face->w.numpoints * sizeof(int));
+    free(face->edges);
     
     out->numedges = static_cast<int>(map.exported_surfedges.size()) - out->firstedge;
 }

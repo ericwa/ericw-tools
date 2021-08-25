@@ -129,7 +129,7 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
     // FIXME: free more stuff?
     if (node->planenum == -1) {
         int contents = node->contents;
-        FreeMem(node, NODE, 1);
+        free(node);
         return contents;
     }
 
@@ -149,9 +149,9 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
     for (face = node->faces; face; face = next) {
         next = face->next;
         memset(face, 0, sizeof(face_t));
-        FreeMem(face, FACE, 1);
+        free(face);
     }
-    FreeMem(node, NODE, 1);
+    free(node);
 
     return nodenum;
 }

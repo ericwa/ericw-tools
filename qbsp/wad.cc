@@ -174,8 +174,8 @@ WADList_Free(wad_t *wadlist)
     for (wad = wadlist; wad; wad = next) {
         next = wad->next;
         fclose(wad->file);
-        FreeMem(wad->lumps, OTHER, sizeof(lumpinfo_t) * wad->header.numlumps);
-        FreeMem(wad, OTHER, sizeof(*wad));
+        free(wad->lumps);
+        free(wad);
     }
 }
 

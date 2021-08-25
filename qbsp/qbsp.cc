@@ -621,7 +621,7 @@ EnsureTexturesLoaded()
         wadlist = WADList_Init(defaultwad);
         if (wadlist)
             Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
-        FreeMem(defaultwad, OTHER, strlen(options.szMapName) + 5);
+        free(defaultwad);
     }
 }
 
@@ -975,7 +975,7 @@ InitQBSP(int argc, const char **argv)
         Message(msgLiteral, "Loading options from qbsp.ini\n");
         ParseOptions(szBuf);
 
-        FreeMem(szBuf, OTHER, length + 1);
+        free(szBuf);
     }
 
     // Concatenate command line args
@@ -998,7 +998,7 @@ InitQBSP(int argc, const char **argv)
     }
     szBuf[length - 1] = 0;
     ParseOptions(szBuf);
-    FreeMem(szBuf, OTHER, length);
+    free(szBuf);
 
     if (options.szMapName[0] == 0)
         PrintOptions();

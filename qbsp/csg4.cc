@@ -214,7 +214,7 @@ SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **back)
         Error("Internal error: numpoints > MAXEDGES (%s)", __func__);
 
     /* free the original face now that it is represented by the fragments */
-    FreeMem(in, FACE, 1);
+    free(in);
 }
 
 /*
@@ -252,7 +252,7 @@ RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **outside)
         } else {
             face->next = *inside;
             *inside = face;
-            FreeMem(w, WINDING, 1);
+            free(w);
         }
         face = next;
     }
@@ -414,7 +414,7 @@ FreeFaces(face_t *face)
 
     while (face) {
         next = face->next;
-        FreeMem(face, FACE, 1);
+        free(face);
         face = next;
     }
 }

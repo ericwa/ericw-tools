@@ -633,12 +633,12 @@ DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front,
             if (in->faces)
                 *front = in;
             else
-                FreeMem(in, SURFACE, 1);
+                free(in);
 
             if (newsurf->faces)
                 *back = newsurf;
             else
-                FreeMem(newsurf, SURFACE, 1);
+                free(newsurf);
 
             return;
         }
@@ -869,9 +869,9 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
             next = f->next;
             leafnode->markfaces[i] = f->original;
             i++;
-            FreeMem(f, FACE, 1);
+            free(f);
         }
-        FreeMem(surf, SURFACE, 1);
+        free(surf);
     }
     leafnode->markfaces[i] = NULL;      // sentinal
 }

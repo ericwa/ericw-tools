@@ -187,7 +187,7 @@ MergeFaceToList(face_t *face, face_t *list)
 #endif
         newf = TryMerge(face, f);
         if (newf) {
-            FreeMem(face, FACE, 1);
+            free(face);
             f->w.numpoints = -1;        // merged out, remove later
             face = newf;
             f = list;
@@ -215,7 +215,7 @@ FreeMergeListScraps(face_t *merged)
     for (; merged; merged = next) {
         next = merged->next;
         if (merged->w.numpoints == -1)
-            FreeMem(merged, FACE, 1);
+            free(merged);
         else {
             merged->next = head;
             head = merged;

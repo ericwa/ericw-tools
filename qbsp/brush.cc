@@ -461,7 +461,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         VectorSubtract(point, rotate_offset, point);
         plane.dist = DotProduct(plane.normal, point);
 
-        FreeMem(w, WINDING, 1);
+        free(w);
 
         f->texinfo = hullnum ? 0 : mapface->texinfo;
         f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
@@ -518,7 +518,7 @@ FreeBrushFaces(face_t *facelist)
 
     for (face = facelist; face; face = next) {
         next = face->next;
-        FreeMem(face, FACE, 1);
+        free(face);
     }
 }
 
@@ -549,7 +549,7 @@ void
 FreeBrush(brush_t *brush)
 {
     FreeBrushFaces(brush->faces);
-    FreeMem(brush, BRUSH, 1);
+    free(brush);
 }
 
 /*
@@ -1614,7 +1614,7 @@ void SplitBrush (const brush_t *brush,
         int		side;
         
         if (w)
-            FreeMem(w, WINDING, 1);
+            free(w);
         
         side = BrushMostlyOnSide (brush, plane.normal, plane.dist);
         if (side == SIDE_FRONT)
@@ -1684,9 +1684,9 @@ void SplitBrush (const brush_t *brush,
         }
         
         if (cw[0])
-            FreeMem(cw[0], WINDING, 1);
+            free(cw[0]);
         if (cw[1])
-            FreeMem(cw[1], WINDING, 1);
+            free(cw[1]);
     }
     
     
@@ -1744,7 +1744,7 @@ void SplitBrush (const brush_t *brush,
             CopyWindingInto(&newface->w, newwinding);
             newface->planenum = planenum;
             newface->planeside = !planeside;
-            FreeMem(newwinding, WINDING, 1);
+            free(newwinding);
         } else {
             CopyWindingInto(&newface->w, midwinding);
             newface->planenum = planenum;
@@ -1777,7 +1777,7 @@ void SplitBrush (const brush_t *brush,
     *front = b[0];
     *back = b[1];
     
-    FreeMem(midwinding, WINDING, 1);
+    free(midwinding);
 }
 
 #if 0

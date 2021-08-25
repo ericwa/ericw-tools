@@ -1928,7 +1928,7 @@ mapentity_t LoadExternalMap(const char *filename)
     
     Message(msgStat, "LoadExternalMap: '%s': Loaded %d mapbrushes.\n", filename, dest.nummapbrushes);
     
-    FreeMem(buf, OTHER, length + 1);
+    free(buf);
     
     return dest;
 }
@@ -1958,7 +1958,7 @@ LoadMapFile(void)
     assert(map.entities.back().numbrushes == 0);
     map.entities.pop_back();
 
-    FreeMem(buf, OTHER, length + 1);
+    free(buf);
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))
@@ -2325,7 +2325,7 @@ WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list)
             
             fprintf (f, "notexture 0 0 0 1 1\n" );
             
-            FreeMem(w, WINDING, 1);
+            free(w);
         }
         fprintf (f, "}\n");
     }

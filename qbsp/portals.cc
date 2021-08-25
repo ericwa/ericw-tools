@@ -630,7 +630,7 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
 
         if (!frontwinding) {
             if (backwinding)
-                FreeMem(backwinding, WINDING, 1);
+                free(backwinding);
             
             if (side == 0)
                 AddPortalToNodes(portal, back, other_node);
@@ -640,7 +640,7 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
         }
         if (!backwinding) {
             if (frontwinding)
-                FreeMem(frontwinding, WINDING, 1);
+                free(frontwinding);
             
             if (side == 0)
                 AddPortalToNodes(portal, front, other_node);
@@ -653,7 +653,7 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
         new_portal = (portal_t *)AllocMem(OTHER, sizeof(portal_t), true);
         *new_portal = *portal;
         new_portal->winding = backwinding;
-        FreeMem(portal->winding, WINDING, 1);
+        free(portal->winding);
         portal->winding = frontwinding;
 
         if (side == 0) {
@@ -728,8 +728,8 @@ FreeAllPortals(node_t *node)
             nextp = p->next[1];
         RemovePortalFromNode(p, p->nodes[0]);
         RemovePortalFromNode(p, p->nodes[1]);
-        FreeMem(p->winding, WINDING, 1);
-        FreeMem(p, PORTAL, 1);
+        free(p->winding);
+        free(p);
     }
     node->portals = NULL;
 }
