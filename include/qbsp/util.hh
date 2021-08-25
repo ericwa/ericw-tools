@@ -31,15 +31,8 @@
 #define msgPercent      7
 
 extern const char *rgszWarnings[cWarnings];
-extern const int *MemSize;
-extern const int MemSize_BSP29[GLOBAL + 1];
-extern const int MemSize_BSP2rmq[GLOBAL + 1];
-extern const int MemSize_BSP2[GLOBAL + 1];
 
 void *AllocMem(int Type, int cSize, bool fZero);
-void FreeMem(void *pMem, int Type, int cSize);
-void FreeAllMem(void);
-void PrintMem(void);
 
 void Message(int MsgType, ...);
 void Error(const char *error, ...)

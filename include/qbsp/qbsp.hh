@@ -141,42 +141,10 @@
 // volume.  is this still needed?
 #define SIDESPACE       24
 
-/*
- * If this enum is changed, make sure to also update MemSize and PrintMem
- */
+// AllocMem types
 enum {
-    BSP_ENT,
-    BSP_PLANE,
-    BSP_TEX,
-    BSP_VERTEX,
-    BSP_VIS,
-    BSP_NODE,
-    BSP_TEXINFO,
-    BSP_FACE,
-    BSP_LIGHT,
-    BSP_CLIPNODE,
-    BSP_LEAF,
-    BSP_MARKSURF,
-    BSP_EDGE,
-    BSP_SURFEDGE,
-    BSP_MODEL,
-
-    MAPFACE,
-    MAPBRUSH,
-    MAPENTITY,
     WINDING,
-    FACE,
-    PLANE,
-    PORTAL,
-    SURFACE,
-    NODE,
-    BRUSH,
-    MIPTEX,
-    WVERT,
-    WEDGE,
-    HASHVERT,
-    OTHER,
-    GLOBAL
+    OTHER
 };
 
 #include <common/cmdlib.hh>

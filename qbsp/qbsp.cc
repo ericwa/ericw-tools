@@ -842,13 +842,10 @@ ParseOptions(char *szOptions)
             }
             else if (!Q_strcasecmp(szTok, "hlbsp")) {
                 options.BSPVersion = BSPHLVERSION;
-                MemSize = MemSize_BSP29;
             } else if (!Q_strcasecmp(szTok, "bsp2")) {
                 options.BSPVersion = BSP2VERSION;
-                MemSize = MemSize_BSP2;
             } else if (!Q_strcasecmp(szTok, "2psb")) {
                 options.BSPVersion = BSP2RMQVERSION;
-                MemSize = MemSize_BSP2rmq;
             } else if (!Q_strcasecmp(szTok, "leakdist")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
@@ -1080,7 +1077,7 @@ int qbsp_main(int argc, const char **argv)
     end = I_FloatTime();
 
     Message(msgLiteral, "\n%5.3f seconds elapsed\n", end - start);
-    PrintMem();
+
 //      FreeAllMem();
 //      PrintMem();
 
