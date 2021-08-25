@@ -409,7 +409,8 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
             continue;           // overconstrained plane
 
         // this face is a keeper
-        f = (face_t *)AllocMem(FACE, 1, true);
+        f = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
+        f->planenum = -1;
         f->w.numpoints = w->numpoints;
         if (f->w.numpoints > MAXEDGES)
             Error("face->numpoints > MAXEDGES (%d), source face on line %d",
@@ -990,7 +991,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int conte
     }
 
     // create the brush
-    brush = (brush_t *)AllocMem(BRUSH, 1, true);
+    brush = (brush_t *)AllocMem(OTHER, sizeof(brush_t), true);
 
     brush->contents = contents;
     brush->faces = facelist;
@@ -1435,7 +1436,7 @@ int BrushMostlyOnSide (const brush_t *brush, const vec3_t planenormal, vec_t pla
 
 face_t *CopyFace(const face_t *face)
 {
-    face_t *newface = (face_t *)AllocMem(FACE, 1, true);
+    face_t *newface = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
     
     memcpy(newface, face, sizeof(face_t));
     
@@ -1459,7 +1460,7 @@ Duplicates the brush, the sides, and the windings
 */
 brush_t *CopyBrush (const brush_t *brush)
 {
-    brush_t *newbrush = (brush_t *)AllocMem(BRUSH, 1, true);
+    brush_t *newbrush = (brush_t *)AllocMem(OTHER, sizeof(brush_t), true);
     
     memcpy(newbrush, brush, sizeof(brush_t));
     
@@ -1637,7 +1638,7 @@ void SplitBrush (const brush_t *brush,
     
     for (int i=0 ; i<2 ; i++)
     {
-        b[i] = (brush_t *) AllocMem (BRUSH, 1, true);
+        b[i] = (brush_t *) AllocMem (OTHER, sizeof(brush_t), true);
         //memcpy( b[i], brush, sizeof( brush_t ) );
 
         // NOTE: brush copying

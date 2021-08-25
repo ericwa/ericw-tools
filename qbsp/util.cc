@@ -73,10 +73,6 @@ AllocMem(int Type, int cElements, bool fZero)
     if (fZero)
         memset(pTemp, 0, cSize);
 
-    // Special stuff for face_t
-    if (Type == FACE && cElements == 1)
-        ((face_t *)pTemp)->planenum = -1;
-
     std::unique_lock<std::mutex> lck { memoryStatsLock };
 
     rgMemTotal[Type] += cElements;

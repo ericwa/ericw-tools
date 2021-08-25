@@ -478,8 +478,8 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     cWEdges = cWVerts;
     cWVerts *= 2;
 
-    pWVerts = (wvert_t *)AllocMem(WVERT, cWVerts, true);
-    pWEdges = (wedge_t *)AllocMem(WEDGE, cWEdges, true);
+    pWVerts = (wvert_t *)AllocMem(OTHER, cWVerts * sizeof(wvert_t), true);
+    pWEdges = (wedge_t *)AllocMem(OTHER, cWEdges * sizeof(wedge_t), true);
 
     /*
      * identify all points on common edges

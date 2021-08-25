@@ -609,7 +609,7 @@ DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front,
             in->onnode = true;
 
             // divide the facets to the front and back sides
-            surface_t *newsurf = (surface_t *)AllocMem(SURFACE, 1, true);
+            surface_t *newsurf = (surface_t *)AllocMem(OTHER, sizeof(surface_t), true);
             *newsurf = *in;
 
             // Prepend each face in facet list to either in or newsurf lists
@@ -685,7 +685,7 @@ DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front,
     }
 
     // stuff got split, so allocate one new plane and reuse in
-    surface_t *newsurf = (surface_t *)AllocMem(SURFACE, 1, true);
+    surface_t *newsurf = (surface_t *)AllocMem(OTHER, sizeof(surface_t), true);
     *newsurf = *in;
     newsurf->faces = backlist;
     *back = newsurf;
@@ -907,7 +907,7 @@ LinkNodeFaces(surface_t *surface)
     // copy
     for (face_t *f = surface->faces; f; f = f->next) {
         nodefaces++;
-        face_t *newf = (face_t *)AllocMem(FACE, 1, true);
+        face_t *newf = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
         *newf = *f;
         f->original = newf;
         newf->next = list;
@@ -942,8 +942,8 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     Message(msgPercent, splitnodes.load(), csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
-    node->children[0] = (node_t *)AllocMem(NODE, 1, true);
-    node->children[1] = (node_t *)AllocMem(NODE, 1, true);
+    node->children[0] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
+    node->children[1] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
     node->planenum = split->planenum;
     node->detail_separator = split->detail_separator;
 
@@ -1004,16 +1004,16 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        node_t *headnode = (node_t *)AllocMem(NODE, 1, true);
+        node_t *headnode = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
         for (int i = 0; i < 3; i++) {
             headnode->mins[i] = entity->mins[i] - SIDESPACE;
             headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
         }
-        headnode->children[0] = (node_t *)AllocMem(NODE, 1, true);
+        headnode->children[0] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = CONTENTS_EMPTY;
         headnode->children[0]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
-        headnode->children[1] = (node_t *)AllocMem(NODE, 1, true);
+        headnode->children[1] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = CONTENTS_EMPTY;
         headnode->children[1]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
@@ -1023,7 +1023,7 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 
     Message(msgProgress, "SolidBSP");
 
-    node_t *headnode = (node_t *)AllocMem(NODE, 1, true);
+    node_t *headnode = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model
