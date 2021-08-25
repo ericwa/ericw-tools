@@ -302,9 +302,9 @@ UpdateEntLump(void)
             FixRotateOrigin(entity);
     }
 
-    LoadBSPFile();
-    WriteEntitiesToString();
-    WriteBSPFile();
+    //LoadBSPFile(); // FIXME: fix -onlyents
+    WriteEntitiesToString();    
+    //WriteBSPFile(); // FIXME: fix -onlyents
 
     if (!options.fAllverbose)
         options.fVerbose = false;
@@ -317,7 +317,7 @@ This lump replaces the clipnodes stuff for custom collision sizes.
 */
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx)
 {
-        BSPX_AddLump("BRUSHLIST", ctx->lumpinfo, ctx->lumpsize);
+        //BSPX_AddLump("BRUSHLIST", ctx->lumpinfo, ctx->lumpsize); // FIXME: fix bspx
 
 //      free(ctx->lumpinfo);
 }

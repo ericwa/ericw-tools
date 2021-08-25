@@ -38,7 +38,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "bspfile.hh"
+#include <common/bspfile.hh>
+
 #include "file.hh"
 #include "warnerr.hh"
 
