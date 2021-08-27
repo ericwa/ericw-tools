@@ -175,24 +175,6 @@ AllocBSPTexinfo()
 
 //===========================================================================
 
-
-/*
-==================
-CountClipNodes_r
-==================
-*/
-static void
-CountClipNodes_r(mapentity_t *entity, node_t *node)
-{
-    if (node->planenum == -1)
-        return;
-
-    entity->lumps[LUMP_CLIPNODES].count++;
-
-    CountClipNodes_r(entity, node->children[0]);
-    CountClipNodes_r(entity, node->children[1]);
-}
-
 /*
 ==================
 ExportClipNodes
@@ -201,10 +183,8 @@ ExportClipNodes
 static int
 ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
 {
-    int nodenum;
     bsp29_dclipnode_t *clipnode;
     face_t *face, *next;
-    struct lumpdata *clipnodes = &entity->lumps[LUMP_CLIPNODES];
 
     // FIXME: free more stuff?
     if (node->planenum == -1) {
@@ -214,14 +194,17 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
     }
 
     /* emit a clipnode */
-    clipnode = (bsp29_dclipnode_t *)clipnodes->data + clipnodes->index;
-    clipnodes->index++;
-    nodenum = map.cTotal[LUMP_CLIPNODES];
-    map.cTotal[LUMP_CLIPNODES]++;
+    const int nodenum = static_cast<int>(map.exported_clipnodes_bsp29.size());
+    map.exported_clipnodes_bsp29.push_back({});
 
+    const int child0 = ExportClipNodes_BSP29(entity, node->children[0]);
+    const int child1 = ExportClipNodes_BSP29(entity, node->children[1]);
+
+    // Careful not to modify the vector while using this clipnode pointer
+    clipnode = &map.exported_clipnodes_bsp29.at(nodenum);
     clipnode->planenum = ExportMapPlane(node->planenum);
-    clipnode->children[0] = ExportClipNodes_BSP29(entity, node->children[0]);
-    clipnode->children[1] = ExportClipNodes_BSP29(entity, node->children[1]);
+    clipnode->children[0] = child0;
+    clipnode->children[1] = child1;
 
     for (face = node->faces; face; face = next) {
         next = face->next;
@@ -236,10 +219,8 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
 static int
 ExportClipNodes_BSP2(mapentity_t *entity, node_t *node)
 {
-    int nodenum;
     bsp2_dclipnode_t *clipnode;
     face_t *face, *next;
-    struct lumpdata *clipnodes = &entity->lumps[LUMP_CLIPNODES];
 
     // FIXME: free more stuff?
     if (node->planenum == -1) {
@@ -249,14 +230,17 @@ ExportClipNodes_BSP2(mapentity_t *entity, node_t *node)
     }
 
     /* emit a clipnode */
-    clipnode = (bsp2_dclipnode_t *)clipnodes->data + clipnodes->index;
-    clipnodes->index++;
-    nodenum = map.cTotal[LUMP_CLIPNODES];
-    map.cTotal[LUMP_CLIPNODES]++;
+    const int nodenum = static_cast<int>(map.exported_clipnodes_bsp2.size());
+    map.exported_clipnodes_bsp2.push_back({});
 
+    const int child0 = ExportClipNodes_BSP2(entity, node->children[0]);
+    const int child1 = ExportClipNodes_BSP2(entity, node->children[1]);
+
+    // Careful not to modify the vector while using this clipnode pointer
+    clipnode = &map.exported_clipnodes_bsp2.at(nodenum);
     clipnode->planenum = ExportMapPlane(node->planenum);
-    clipnode->children[0] = ExportClipNodes_BSP2(entity, node->children[0]);
-    clipnode->children[1] = ExportClipNodes_BSP2(entity, node->children[1]);
+    clipnode->children[0] = child0;
+    clipnode->children[1] = child1;
 
     for (face = node->faces; face; face = next) {
         next = face->next;
@@ -283,61 +267,18 @@ accomodate new data interleaved with old.
 void
 ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 {
-    int oldcount, i, diff;
-    int clipcount = 0;
-    void *olddata;
-    struct lumpdata *clipnodes = &entity->lumps[LUMP_CLIPNODES];
     dmodel_t *model = (dmodel_t *)entity->lumps[LUMP_MODELS].data;
 
-    oldcount = clipnodes->count;
+    if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION) {
+        model->headnode[hullnum] = ExportClipNodes_BSP29(entity, nodes);
 
-    /* Count nodes before this one */
-    const int entnum = entity - &map.entities.at(0);
-    for (i = 0; i < entnum; i++)
-        clipcount += map.entities.at(i).lumps[LUMP_CLIPNODES].count;
-    model->headnode[hullnum] = clipcount + oldcount;
-
-    CountClipNodes_r(entity, nodes);
-    if (clipnodes->count > MAX_BSP_CLIPNODES && (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION))
-        Error("Clipnode count exceeds bsp 29 max (%d > %d)",
-              clipnodes->count, MAX_BSP_CLIPNODES);
-
-    olddata = clipnodes->data;
-    clipnodes->data = AllocMem(BSP_CLIPNODE, clipnodes->count, true);
-    if (olddata) {
-        memcpy(clipnodes->data, olddata, oldcount * MemSize[BSP_CLIPNODE]);
-        FreeMem(olddata, BSP_CLIPNODE, oldcount);
-
-        /* Worth special-casing for entity 0 (no modification needed) */
-        diff = clipcount - model->headnode[1];
-        if (diff != 0) {
-            for (i = 1; i < hullnum; i++)
-                model->headnode[i] += diff;
-            if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION) {
-                bsp29_dclipnode_t *clipnode = (bsp29_dclipnode_t *)clipnodes->data;
-                for (i = 0; i < oldcount; i++, clipnode++) {
-                    if (clipnode->children[0] < MAX_BSP_CLIPNODES)
-                        clipnode->children[0] += diff;
-                    if (clipnode->children[1] < MAX_BSP_CLIPNODES)
-                        clipnode->children[1] += diff;
-                }
-            } else {
-                bsp2_dclipnode_t *clipnode = (bsp2_dclipnode_t *)clipnodes->data;
-                for (i = 0; i < oldcount; i++, clipnode++) {
-                    if (clipnode->children[0] >= 0)
-                        clipnode->children[0] += diff;
-                    if (clipnode->children[1] >= 0)
-                        clipnode->children[1] += diff;
-                }
-            }
+        const int clipnodecount = static_cast<int>(map.exported_clipnodes_bsp29.size());
+        if (clipnodecount > MAX_BSP_CLIPNODES) {
+            Error("Clipnode count exceeds bsp 29 max (%d > %d)", clipnodecount, MAX_BSP_CLIPNODES);
         }
+    } else {
+        model->headnode[hullnum] = ExportClipNodes_BSP2(entity, nodes);
     }
-
-    map.cTotal[LUMP_CLIPNODES] = clipcount + oldcount;
-    if (options.BSPVersion == BSPVERSION || options.BSPVersion == BSPHLVERSION)
-        ExportClipNodes_BSP29(entity, nodes);
-    else
-        ExportClipNodes_BSP2(entity, nodes);
 }
 
 //===========================================================================

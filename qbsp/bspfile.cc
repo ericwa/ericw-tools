@@ -298,7 +298,13 @@ WriteBSPFile(void)
     AddLump(f, LUMP_NODES);
     AddLump(f, LUMP_TEXINFO);
     AddLump(f, LUMP_FACES);
-    AddLump(f, LUMP_CLIPNODES);
+    if (!map.exported_clipnodes_bsp2.empty()) {
+        AddLumpFromBuffer(f, LUMP_CLIPNODES, map.exported_clipnodes_bsp2.data(), map.exported_clipnodes_bsp2.size() * sizeof(map.exported_clipnodes_bsp2[0]));
+        Q_assert(map.exported_clipnodes_bsp29.empty());
+    } else {
+        AddLumpFromBuffer(f, LUMP_CLIPNODES, map.exported_clipnodes_bsp29.data(), map.exported_clipnodes_bsp29.size() * sizeof(map.exported_clipnodes_bsp29[0]));
+        Q_assert(map.exported_clipnodes_bsp2.empty());
+    }
     AddLump(f, LUMP_MARKSURFACES);
     AddLump(f, LUMP_SURFEDGES);
     AddLump(f, LUMP_EDGES);
@@ -385,7 +391,11 @@ PrintBSPFileSizes(void)
     Message(msgStat, "%8d nodes        %10d", map.cTotal[LUMP_NODES],        map.cTotal[LUMP_NODES] * MemSize[BSP_NODE]);
     Message(msgStat, "%8d texinfo      %10d", map.cTotal[LUMP_TEXINFO],      map.cTotal[LUMP_TEXINFO] * MemSize[BSP_TEXINFO]);
     Message(msgStat, "%8d faces        %10d", map.cTotal[LUMP_FACES],        map.cTotal[LUMP_FACES] * MemSize[BSP_FACE]);
-    Message(msgStat, "%8d clipnodes    %10d", map.cTotal[LUMP_CLIPNODES],    map.cTotal[LUMP_CLIPNODES] * MemSize[BSP_CLIPNODE]);
+    if (!map.exported_clipnodes_bsp2.empty()) {
+        Message(msgStat, "%8d clipnodes    %10d", static_cast<int>(map.exported_clipnodes_bsp2.size()), static_cast<int>(map.exported_clipnodes_bsp2.size()) * MemSize[BSP_CLIPNODE]);
+    } else {
+        Message(msgStat, "%8d clipnodes    %10d", static_cast<int>(map.exported_clipnodes_bsp29.size()), static_cast<int>(map.exported_clipnodes_bsp29.size()) * MemSize[BSP_CLIPNODE]);
+    }
     Message(msgStat, "%8d leafs        %10d", map.cTotal[LUMP_LEAFS],        map.cTotal[LUMP_LEAFS] * MemSize[BSP_LEAF]);
     Message(msgStat, "%8d marksurfaces %10d", map.cTotal[LUMP_MARKSURFACES], map.cTotal[LUMP_MARKSURFACES] * MemSize[BSP_MARKSURF]);
     Message(msgStat, "%8d surfedges    %10d", map.cTotal[LUMP_SURFEDGES],    map.cTotal[LUMP_SURFEDGES] * MemSize[BSP_SURFEDGE]);
