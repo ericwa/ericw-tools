@@ -122,6 +122,10 @@ if (MSVC)
 	add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
 	add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
 	add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning
+	add_definitions("/wd4264") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
+	add_definitions("/wd4267") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
+	add_definitions("/wd4305") # disable "truncation from 'double' to 'float'" warning
+	
 endif (MSVC)
 
 # 10.9: minimum version that supports unordered_map
