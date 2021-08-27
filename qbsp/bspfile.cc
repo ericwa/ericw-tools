@@ -191,6 +191,33 @@ AddLump(FILE *f, int Type)
     }
 }
 
+// TODO: remove this once we switch to common
+static void
+AddLumpFromBuffer(FILE *f, int Type, void* src, size_t srcbytes)
+{
+    lump_t *lump;
+    size_t ret;
+
+    lump = &header->lumps[Type];
+    lump->fileofs = ftell(f);
+
+    if (srcbytes) {
+        ret = fwrite(src, 1, srcbytes, f);
+        if (ret != srcbytes)
+            Error("Failure writing to file");
+    }
+
+    lump->filelen = srcbytes;
+
+    // Pad to 4-byte boundary
+    if (srcbytes % 4 != 0) {
+        size_t pad = 4 - (srcbytes % 4);
+        ret = fwrite("   ", 1, pad, f);
+        if (ret != pad)
+            Error("Failure writing to file");
+    }
+}
+
 static void
 GenLump(const char *bspxlump, int Type, size_t sz)
 {
