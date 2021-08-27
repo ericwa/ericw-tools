@@ -185,7 +185,8 @@ AddLump(FILE *f, int Type)
     // Pad to 4-byte boundary
     if (cLen % 4 != 0) {
         size_t pad = 4 - (cLen % 4);
-        ret = fwrite("   ", 1, pad, f);
+        const char zeroBytes[] = {0, 0, 0, 0};
+        ret = fwrite(zeroBytes, 1, pad, f);
         if (ret != pad)
             Error("Failure writing to file");
     }
@@ -212,7 +213,8 @@ AddLumpFromBuffer(FILE *f, int Type, void* src, size_t srcbytes)
     // Pad to 4-byte boundary
     if (srcbytes % 4 != 0) {
         size_t pad = 4 - (srcbytes % 4);
-        ret = fwrite("   ", 1, pad, f);
+        const char zeroBytes[] = {0, 0, 0, 0};
+        ret = fwrite(zeroBytes, 1, pad, f);
         if (ret != pad)
             Error("Failure writing to file");
     }
