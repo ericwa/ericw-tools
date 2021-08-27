@@ -121,7 +121,7 @@ ExportClipNodes
 ==================
 */
 static int
-ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
+ExportClipNodes(mapentity_t *entity, node_t *node)
 {
     bsp2_dclipnode_t *clipnode;
     face_t *face, *next;
@@ -137,8 +137,8 @@ ExportClipNodes_BSP29(mapentity_t *entity, node_t *node)
     const int nodenum = static_cast<int>(map.exported_clipnodes.size());
     map.exported_clipnodes.push_back({});
 
-    const int child0 = ExportClipNodes_BSP29(entity, node->children[0]);
-    const int child1 = ExportClipNodes_BSP29(entity, node->children[1]);
+    const int child0 = ExportClipNodes(entity, node->children[0]);
+    const int child1 = ExportClipNodes(entity, node->children[1]);
 
     // Careful not to modify the vector while using this clipnode pointer
     clipnode = &map.exported_clipnodes.at(nodenum);
@@ -173,7 +173,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 {
     auto *model = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
 
-    model->headnode[hullnum] = ExportClipNodes_BSP29(entity, nodes);
+    model->headnode[hullnum] = ExportClipNodes(entity, nodes);
 }
 
 //===========================================================================
@@ -184,7 +184,7 @@ ExportLeaf
 ==================
 */
 static void
-ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
+ExportLeaf(mapentity_t *entity, node_t *node)
 {
     map.exported_leafs_bsp29.push_back({});
     mleaf_t *dleaf = &map.exported_leafs_bsp29.back();
@@ -231,7 +231,7 @@ ExportDrawNodes
 ==================
 */
 static void
-ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
+ExportDrawNodes(mapentity_t *entity, node_t *node)
 {
     bsp2_dnode_t *dnode;
     int i;
@@ -265,7 +265,7 @@ ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
                     Error("Map exceeds BSP29 node/leaf limit. Recompile with -bsp2 flag.");
                 }
                 dnode->children[i] = childnum;
-                ExportLeaf_BSP29(entity, node->children[i]);
+                ExportLeaf(entity, node->children[i]);
             }
         } else {
             int childnum = static_cast<int>(map.exported_nodes_bsp29.size());
@@ -273,7 +273,7 @@ ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
                 Error("Map exceeds BSP29 node/leaf limit. Recompile with -bsp2 flag.");
             }
             dnode->children[i] = childnum;
-            ExportDrawNodes_BSP29(entity, node->children[i]);
+            ExportDrawNodes(entity, node->children[i]);
 
             // Important: our dnode pointer may be invalid after the recursive call, if the vector got resized.
             // So re-set the pointer.
@@ -310,9 +310,9 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     {
         if (headnode->contents < 0)
-            ExportLeaf_BSP29(entity, headnode);
+            ExportLeaf(entity, headnode);
         else
-            ExportDrawNodes_BSP29(entity, headnode);
+            ExportDrawNodes(entity, headnode);
     }
 
     // count how many leafs were exported by the above calls
