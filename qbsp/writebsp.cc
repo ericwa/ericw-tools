@@ -260,18 +260,12 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
                 dnode->children[i] = -1;
             else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs_bsp29.size());
-                int childnum = -(nextLeafIndex + 1);
-                if (childnum < INT16_MIN) {
-                    Error("Map exceeds BSP29 node/leaf limit. Recompile with -bsp2 flag.");
-                }
+                const int childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
                 ExportLeaf(entity, node->children[i]);
             }
         } else {
-            int childnum = static_cast<int>(map.exported_nodes_bsp29.size());
-            if (childnum > INT16_MAX) {
-                Error("Map exceeds BSP29 node/leaf limit. Recompile with -bsp2 flag.");
-            }
+            const int childnum = static_cast<int>(map.exported_nodes_bsp29.size());
             dnode->children[i] = childnum;
             ExportDrawNodes(entity, node->children[i]);
 
