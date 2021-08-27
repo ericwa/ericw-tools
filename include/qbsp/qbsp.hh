@@ -98,16 +98,6 @@
 // Pi
 #define Q_PI    3.14159265358979323846
 
-#define CONTENTS_CLIP   -7      /* compiler internal use only */
-#define CONTENTS_HINT   -8      /* compiler internal use only */
-#define CONTENTS_ORIGIN -9      /* compiler internal use only */
-#define CONTENTS_DETAIL -10     /* compiler internal use only */
-#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
-#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
-#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
-#define CONTENTS_FENCE  -15     /* compiler internal use only */
-#define CONTENTS_LADDER -16     /* reserved for engine use */
-
 // Special contents flags for the compiler only
 #define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
 #define CFLAGS_WAS_ILLUSIONARY           (1U << 1) /* was illusionary, got changed to something else */

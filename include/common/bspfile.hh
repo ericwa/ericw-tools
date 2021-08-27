@@ -235,6 +235,16 @@ typedef struct {
 #define CONTENTS_SKY   -6
 #define CONTENTS_MIN   CONTENTS_SKY
 
+#define CONTENTS_CLIP   -7      /* compiler internal use only */
+#define CONTENTS_HINT   -8      /* compiler internal use only */
+#define CONTENTS_ORIGIN -9      /* compiler internal use only */
+#define CONTENTS_DETAIL -10     /* compiler internal use only */
+#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
+#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
+#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
+#define CONTENTS_FENCE  -15     /* compiler internal use only */
+#define CONTENTS_LADDER -16     /* reserved for engine use */
+
 // Q2 contents (from qfiles.h)
 
 // contents flags are seperate bits
