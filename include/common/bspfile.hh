@@ -575,10 +575,10 @@ typedef struct {
 // compressed bit vectors
 #define    DVIS_PVS    0
 #define    DVIS_PHS    1
-typedef struct {
+struct dvis_t {
     int32_t numclusters;
-    int32_t bitofs[8][2];    // bitofs[numclusters][2]
-} dvis_t;
+    int32_t bitofs[][2];    // bitofs[numclusters][2]
+};
 
 // each area has a list of portals that lead into other areas
 // when portals are closed, other areas may not be visible or

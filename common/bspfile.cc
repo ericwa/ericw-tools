@@ -984,6 +984,39 @@ MBSPtoQ2_Models(const dmodelh2_t *dmodelsh2, int nummodels) {
     return newdata;
 }
 
+static dvis_t *
+MBSPtoQ2_Vis(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf_t *leafs) {
+    int32_t num_clusters = 0;
+    
+    for (int32_t i = 0; i < numleafs; i++) {
+        num_clusters = std::max(num_clusters, leafs[i].cluster + 1);
+    }
+
+    size_t vis_offset = sizeof(dvis_t) + (sizeof(int32_t) * num_clusters * 2);
+    dvis_t *vis = (dvis_t *)calloc(1, vis_offset + *visdatasize);
+
+    vis->numclusters = num_clusters;
+
+    // the leaves are already using a per-cluster visofs, so just find one matching
+    // cluster and note it down under bitofs.
+    // we're also not worrying about PHS currently.
+    for (int32_t i = 0; i < num_clusters; i++) {
+        for (int32_t l = 0; l < numleafs; l++) {
+            if (leafs[l].cluster == i) {
+                for (int32_t x = 0; x < 2; x++) {
+                    vis->bitofs[i][x] = leafs[l].visofs + vis_offset;
+                }
+
+                break;
+            }
+        }
+    }
+
+    memcpy(((uint8_t *) vis) + vis_offset, visdata, *visdatasize);
+    *visdatasize += vis_offset;
+    return vis;
+}
+
 static mleaf_t *
 Q2BSPtoM_Leafs(const q2_dleaf_t *dleafsq2, int numleafs) {
     const q2_dleaf_t *dleafq2 = dleafsq2;
@@ -2295,7 +2328,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
+            q2bsp->dvis = MBSPtoQ2_Vis(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
             q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
             q2bsp->dleafs = MBSPtoQ2_Leafs(mbsp->dleafs, mbsp->numleafs);
@@ -2350,7 +2383,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
+            q2bsp->dvis = MBSPtoQ2_Vis(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
             q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
             q2bsp->dleafs = MBSPtoQ2_Qbism_Leafs(mbsp->dleafs, mbsp->numleafs);
