@@ -962,6 +962,36 @@ Q2BSPtoM_Models(const q2_dmodel_t *dmodelsq2, int nummodels) {
     return newdata;
 }
 
+static uint8_t *
+Q2BSPtoM_CopyVisData(const dvis_t *dvisq2, int vissize, int *outvissize, mleaf_t *leafs, int numleafs) {
+
+    if (!*outvissize) {
+        return ((uint8_t *) dvisq2);
+    }
+
+    // FIXME: assumes PHS always follows PVS.
+    int32_t phs_start = INT_MAX, pvs_start = INT_MAX;
+    size_t header_offset = sizeof(dvis_t) + (sizeof(int32_t) * dvisq2->numclusters * 2);
+
+    for (int32_t i = 0; i < dvisq2->numclusters; i++) {
+        pvs_start = std::min(pvs_start, (int32_t) (dvisq2->bitofs[i][DVIS_PVS]));
+        phs_start = std::min(phs_start, (int32_t) (dvisq2->bitofs[i][DVIS_PHS] - header_offset));
+
+        for (int32_t l = 0; l < numleafs; l++) {
+            if (leafs[l].cluster == i) {
+                leafs[l].visofs = dvisq2->bitofs[i][DVIS_PVS] - header_offset;
+            }
+        }
+    }
+
+    // cut off the PHS and header
+    *outvissize -= header_offset + ((*outvissize - header_offset) - phs_start);
+
+    uint8_t *vis = (uint8_t *) calloc(1, *outvissize);
+    memcpy(vis, ((uint8_t *) dvisq2) + pvs_start, *outvissize);
+    return vis;
+}
+
 static q2_dmodel_t *
 MBSPtoQ2_Models(const dmodelh2_t *dmodelsh2, int nummodels) {
     const dmodelh2_t *dmodelh2 = dmodelsh2;
@@ -1062,7 +1092,7 @@ static std::vector<uint8_t> CalcPHS(int32_t portalclusters, const uint8_t *visda
 }
 
 static dvis_t *
-MBSPtoQ2_Vis(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf_t *leafs) {
+MBSPtoQ2_CopyVisData(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf_t *leafs) {
     int32_t num_clusters = 0;
     
     for (int32_t i = 0; i < numleafs; i++) {
@@ -1073,8 +1103,6 @@ MBSPtoQ2_Vis(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf
     dvis_t *vis = (dvis_t *)calloc(1, vis_offset + *visdatasize);
 
     vis->numclusters = num_clusters;
-
-    uint8_t test[99999];
 
     // the leaves are already using a per-cluster visofs, so just find one matching
     // cluster and note it down under bitofs.
@@ -2158,7 +2186,6 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
-            mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
             mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
             mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
             mbsp->dleafs = Q2BSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
@@ -2171,6 +2198,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dleaffaces = BSP29to2_Marksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
             mbsp->dleafbrushes = Q2BSPtoM_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
             mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
+
+            mbsp->dvisdata = Q2BSPtoM_CopyVisData(q2bsp->dvis, q2bsp->visdatasize, &mbsp->visdatasize, mbsp->dleafs, mbsp->numleafs);
         
             mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
             mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
@@ -2213,7 +2242,6 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
-            mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
             mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
             mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
             mbsp->dleafs = Q2BSP_QBSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
@@ -2226,6 +2254,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dleaffaces = BSP2_CopyMarksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
             mbsp->dleafbrushes = Q2BSP_Qbism_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
             mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
+            
+            mbsp->dvisdata = Q2BSPtoM_CopyVisData(q2bsp->dvis, q2bsp->visdatasize, &mbsp->visdatasize, mbsp->dleafs, mbsp->numleafs);
         
             mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
             mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
@@ -2419,7 +2449,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = MBSPtoQ2_Vis(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
+            q2bsp->dvis = MBSPtoQ2_CopyVisData(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
             q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
             q2bsp->dleafs = MBSPtoQ2_Leafs(mbsp->dleafs, mbsp->numleafs);
@@ -2474,7 +2504,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = MBSPtoQ2_Vis(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
+            q2bsp->dvis = MBSPtoQ2_CopyVisData(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
             q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
             q2bsp->dleafs = MBSPtoQ2_Qbism_Leafs(mbsp->dleafs, mbsp->numleafs);
