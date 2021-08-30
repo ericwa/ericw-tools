@@ -153,6 +153,9 @@ typedef struct mapdata_s {
     /* Misc other global state for the compile process */
     bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
     
+    std::vector<bsp29_dclipnode_t> exported_clipnodes_bsp29;
+    std::vector<bsp2_dclipnode_t> exported_clipnodes_bsp2;
+
     // helpers
     std::string texinfoTextureName(int texinfo) const {
         int mt = mtexinfos.at(texinfo).miptex;

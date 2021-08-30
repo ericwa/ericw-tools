@@ -12,7 +12,7 @@
  *         thread/logging code.  Error() would normally be defined in
  *         either common/cmdlib.h or qbsp/qbsp.h.
  */
-void Error(const char *error, ...)
+[[noreturn]] void Error(const char *error, ...)
     __attribute__((format(printf,1,2),noreturn));
 
 /* Make the locks no-ops if we aren't running threads */

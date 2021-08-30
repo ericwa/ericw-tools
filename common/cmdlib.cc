@@ -57,7 +57,7 @@ char archivedir[1024];
  * For abnormal program terminations
  * =================
  */
-void
+[[noreturn]] void
 Error(const char *error, ...)
 {
     va_list argptr;
