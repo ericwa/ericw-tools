@@ -30,7 +30,6 @@
 
 #define MAX_MAP_HULLS_Q1              4
 #define MAX_MAP_HULLS_H2              8
-#define MAX_MAP_HULLS MAX_MAP_HULLS_H2
 
 #define MAX_MAP_MODELS           256
 #define MAX_MAP_BRUSHES         4096
@@ -74,13 +73,24 @@ struct bspversion_t
 #define Q2_BSPVERSION  38
 #define Q2_QBISMIDENT  (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
 
-extern const bspversion_t bspver_generic, bspver_q1, bspver_h2, bspver_bsp2, bspver_bsp2rmq, bspver_hl, bspver_q2, bspver_qbism;
+extern const bspversion_t bspver_generic;
+extern const bspversion_t bspver_q1;
+extern const bspversion_t bspver_h2;
+extern const bspversion_t bspver_h2bsp2;
+extern const bspversion_t bspver_h2bsp2rmq;
+extern const bspversion_t bspver_bsp2;
+extern const bspversion_t bspver_bsp2rmq;
+extern const bspversion_t bspver_hl;
+extern const bspversion_t bspver_q2;
+extern const bspversion_t bspver_qbism;
 
 /* table of supported versions */
 constexpr const bspversion_t *const bspversions[] = {
     &bspver_generic,
     &bspver_q1,
     &bspver_h2,
+    &bspver_h2bsp2,
+    &bspver_h2bsp2rmq,
     &bspver_bsp2,
     &bspver_bsp2rmq,
     &bspver_hl,
@@ -614,9 +624,10 @@ typedef struct bspxentry_s
     struct bspxentry_s *next;
 } bspxentry_t;
 
-typedef struct {
+struct bsp29_t {
     int nummodels;
-    dmodel_t *dmodels;
+    dmodelq1_t *dmodels_q;
+    dmodelh2_t *dmodels_h2;
 
     int visdatasize;
     uint8_t *dvisdata;
@@ -659,11 +670,12 @@ typedef struct {
 
     int numsurfedges;
     int32_t *dsurfedges;
-} bsp29_t;
+};
 
-typedef struct {
+struct bsp2rmq_t {
     int nummodels;
-    dmodel_t *dmodels;
+    dmodelq1_t *dmodels_q;
+    dmodelh2_t *dmodels_h2;
 
     int visdatasize;
     uint8_t *dvisdata;
@@ -706,11 +718,12 @@ typedef struct {
 
     int numsurfedges;
     int32_t *dsurfedges;
-} bsp2rmq_t;
+};
 
-typedef struct {
+struct bsp2_t {
     int nummodels;
-    dmodel_t *dmodels;
+    dmodelq1_t *dmodels_q;
+    dmodelh2_t *dmodels_h2;
 
     int visdatasize;
     uint8_t *dvisdata;
@@ -753,9 +766,9 @@ typedef struct {
 
     int numsurfedges;
     int32_t *dsurfedges;
-} bsp2_t;
+};
 
-typedef struct {
+struct q2bsp_t {
     int nummodels;
     q2_dmodel_t *dmodels;
     
@@ -811,9 +824,9 @@ typedef struct {
     dbrushside_t *dbrushsides;
     
     uint8_t dpop[256];
-} q2bsp_t;
+};
 
-typedef struct {
+struct q2bsp_qbism_t {
     int nummodels;
     q2_dmodel_t *dmodels;
     
@@ -869,7 +882,7 @@ typedef struct {
     q2_dbrushside_qbism_t *dbrushsides;
     
     uint8_t dpop[256];
-} q2bsp_qbism_t;
+};
 
 struct mbsp_t {
     const bspversion_t *loadversion;
@@ -954,7 +967,6 @@ typedef struct {
 
 typedef struct {
     const bspversion_t *version, *loadversion;
-    int hullcount;
     
     struct {
         bsp29_t bsp29;

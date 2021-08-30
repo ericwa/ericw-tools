@@ -21,15 +21,17 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 
-const bspversion_t bspver_generic { NO_VERSION, NO_VERSION, "mbsp", "generic BSP" };
-const bspversion_t bspver_q1 { BSPVERSION, NO_VERSION, "bsp29", "Quake BSP" };
+const bspversion_t bspver_generic   { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP" };
+const bspversion_t bspver_q1        { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP" };
+const bspversion_t bspver_bsp2      { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2" };
+const bspversion_t bspver_bsp2rmq   { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ" };
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
-const bspversion_t bspver_h2 { BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP" };
-const bspversion_t bspver_bsp2 { BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2" };
-const bspversion_t bspver_bsp2rmq { BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ" };
-const bspversion_t bspver_hl { BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP" };
-const bspversion_t bspver_q2 { Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP" };
-const bspversion_t bspver_qbism { Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II Qbism BSP" };
+const bspversion_t bspver_h2        { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP" };
+const bspversion_t bspver_h2bsp2    { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2" };
+const bspversion_t bspver_h2bsp2rmq { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ" };
+const bspversion_t bspver_hl        { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP" };
+const bspversion_t bspver_q2        { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP" };
+const bspversion_t bspver_qbism     { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP" };
 
 static const char *
 BSPVersionString(const bspversion_t *version)
@@ -338,13 +340,33 @@ SwapBSP2Edges(int numedges, bsp2_dedge_t *dedges)
 }
 
 static void
-SwapBSPModels(int nummodels, dmodel_t *dmodels)
+SwapBSPModels(int nummodels, dmodelh2_t *dmodels)
 {
-    dmodel_t *dmodel = dmodels;
+    dmodelh2_t *dmodel = dmodels;
     int i, j;
 
     for (i = 0; i < nummodels; i++, dmodel++) {
-        for (j = 0; j < MAX_MAP_HULLS; j++)
+        for (j = 0; j < MAX_MAP_HULLS_H2; j++)
+            dmodel->headnode[j] = LittleLong(dmodel->headnode[j]);
+        dmodel->visleafs = LittleLong(dmodel->visleafs);
+        dmodel->firstface = LittleLong(dmodel->firstface);
+        dmodel->numfaces = LittleLong(dmodel->numfaces);
+        for (j = 0; j < 3; j++) {
+            dmodel->mins[j] = LittleFloat(dmodel->mins[j]);
+            dmodel->maxs[j] = LittleFloat(dmodel->maxs[j]);
+            dmodel->origin[j] = LittleFloat(dmodel->origin[j]);
+        }
+    }
+}
+
+static void
+SwapBSPModels(int nummodels, dmodelq1_t *dmodels)
+{
+    dmodelq1_t *dmodel = dmodels;
+    int i, j;
+
+    for (i = 0; i < nummodels; i++, dmodel++) {
+        for (j = 0; j < MAX_MAP_HULLS_Q1; j++)
             dmodel->headnode[j] = LittleLong(dmodel->headnode[j]);
         dmodel->visleafs = LittleLong(dmodel->visleafs);
         dmodel->firstface = LittleLong(dmodel->firstface);
@@ -795,12 +817,16 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
         SwapBSP29Marksurfaces(bsp->nummarksurfaces, bsp->dmarksurfaces);
         SwapBSPSurfedges(bsp->numsurfedges, bsp->dsurfedges);
         SwapBSP29Edges(bsp->numedges, bsp->dedges);
-        SwapBSPModels(bsp->nummodels, bsp->dmodels);
+        if (bspdata->version == &bspver_h2) {
+            SwapBSPModels(bsp->nummodels, bsp->dmodels_h2);
+        } else {
+            SwapBSPModels(bsp->nummodels, bsp->dmodels_q);
+        }
 
         return;
     }
 
-    if (bspdata->version == &bspver_bsp2rmq) {
+    if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
         bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         SwapBSPVertexes(bsp->numvertexes, bsp->dvertexes);
@@ -814,12 +840,16 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
         SwapBSP2Marksurfaces(bsp->nummarksurfaces, bsp->dmarksurfaces);
         SwapBSPSurfedges(bsp->numsurfedges, bsp->dsurfedges);
         SwapBSP2Edges(bsp->numedges, bsp->dedges);
-        SwapBSPModels(bsp->nummodels, bsp->dmodels);
+        if (bspdata->version == &bspver_h2bsp2rmq) {
+            SwapBSPModels(bsp->nummodels, bsp->dmodels_h2);
+        } else {
+            SwapBSPModels(bsp->nummodels, bsp->dmodels_q);
+        }
 
         return;
     }
 
-    if (bspdata->version == &bspver_bsp2) {
+    if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
         bsp2_t *bsp = &bspdata->data.bsp2;
 
         SwapBSPVertexes(bsp->numvertexes, bsp->dvertexes);
@@ -833,7 +863,11 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
         SwapBSP2Marksurfaces(bsp->nummarksurfaces, bsp->dmarksurfaces);
         SwapBSPSurfedges(bsp->numsurfedges, bsp->dsurfedges);
         SwapBSP2Edges(bsp->numedges, bsp->dedges);
-        SwapBSPModels(bsp->nummodels, bsp->dmodels);
+        if (bspdata->version == &bspver_h2bsp2) {
+            SwapBSPModels(bsp->nummodels, bsp->dmodels_h2);
+        } else {
+            SwapBSPModels(bsp->nummodels, bsp->dmodels_q);
+        }
 
         return;
     }
@@ -846,6 +880,54 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
  * BSP Format Conversion (ver. 29 <-> MBSP)
  * =========================================================================
  */
+
+static dmodelh2_t *
+BSPQ1toH2_Models(const dmodelq1_t *dmodelsq1, const int nummodels) {
+    const dmodelq1_t *in = dmodelsq1;
+    dmodelh2_t *out = static_cast<dmodelh2_t *>(calloc(nummodels, sizeof(dmodelh2_t)));
+    int i, j;
+
+    for (i = 0; i < nummodels; i++)
+    {
+        for (j = 0; j < 3; j++)
+        {
+            out[i].mins[j] = in[i].mins[j];
+            out[i].maxs[j] = in[i].maxs[j];
+            out[i].origin[j] = in[i].origin[j];
+        }
+        for (j = 0; j < MAX_MAP_HULLS_Q1; j++)
+            out[i].headnode[j] = in[i].headnode[j];
+        for (     ; j < MAX_MAP_HULLS_H2; j++)
+            out[i].headnode[j] = 0;
+        out[i].visleafs = in[i].visleafs;
+        out[i].firstface = in[i].firstface;
+        out[i].numfaces = in[i].numfaces;
+    }
+    return out;
+}
+
+static dmodelq1_t *
+BSPH2toQ1_Models(const dmodelh2_t *dmodelsh2, int nummodels) {
+    const dmodelh2_t *in = dmodelsh2;
+    dmodelq1_t *out = static_cast<dmodelq1_t *>(calloc(nummodels, sizeof(dmodelq1_t)));
+    int i, j;
+
+    for (i = 0; i < nummodels; i++)
+    {
+        for (j = 0; j < 3; j++)
+        {
+            out[i].mins[j] = in[i].mins[j];
+            out[i].maxs[j] = in[i].maxs[j];
+            out[i].origin[j] = in[i].origin[j];
+        }
+        for (j = 0; j < MAX_MAP_HULLS_Q1; j++)
+            out[i].headnode[j] = in[i].headnode[j];
+        out[i].visleafs = in[i].visleafs;
+        out[i].firstface = in[i].firstface;
+        out[i].numfaces = in[i].numfaces;
+    }
+    return out;
+}
 
 static mleaf_t *
 BSP29toM_Leafs(const bsp29_dleaf_t *dleafs29, int numleafs) {
@@ -1641,9 +1723,9 @@ static void *CopyArray(const void *in, int numelems, size_t elemsize)
     return out;
 }
 
-static dmodel_t *BSP29_CopyModels(const dmodel_t *dmodels, int nummodels)
+static dmodelh2_t *H2_CopyModels(const dmodelh2_t *dmodels, int nummodels)
 {
-    return (dmodel_t *)CopyArray(dmodels, nummodels, sizeof(*dmodels));
+    return (dmodelh2_t *)CopyArray(dmodels, nummodels, sizeof(*dmodels));
 }
 
 static uint8_t *BSP29_CopyVisData(const uint8_t *dvisdata, int visdatasize)
@@ -1805,7 +1887,8 @@ static dbrushside_t *MBSPtoQ2_CopyBrushSides(const q2_dbrushside_qbism_t *dbrush
 
 static void FreeBSP29(bsp29_t *bsp)
 {
-    free(bsp->dmodels);
+    free(bsp->dmodels_q);
+    free(bsp->dmodels_h2);
     free(bsp->dvisdata);
     free(bsp->dlightdata);
     free(bsp->dtexdata);
@@ -1825,7 +1908,8 @@ static void FreeBSP29(bsp29_t *bsp)
 
 static void FreeBSP2RMQ(bsp2rmq_t *bsp)
 {
-    free(bsp->dmodels);
+    free(bsp->dmodels_q);
+    free(bsp->dmodels_h2);
     free(bsp->dvisdata);
     free(bsp->dlightdata);
     free(bsp->dtexdata);
@@ -1845,7 +1929,8 @@ static void FreeBSP2RMQ(bsp2rmq_t *bsp)
 
 static void FreeBSP2(bsp2_t *bsp)
 {
-    free(bsp->dmodels);
+    free(bsp->dmodels_q);
+    free(bsp->dmodels_h2);
     free(bsp->dvisdata);
     free(bsp->dlightdata);
     free(bsp->dtexdata);
@@ -1955,9 +2040,11 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
     if (bspdata->version == to_version)
         return;
 
-    // conversions to GENERIC_BSP
+    // conversions to bspver_generic
     if (to_version == &bspver_generic) {
         if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
+            // bspver_q1, bspver_h2, bspver_hl -> bspver_generic
+
             const bsp29_t *bsp29 = &bspdata->data.bsp29;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -1981,7 +2068,11 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->numsurfedges = bsp29->numsurfedges;
         
             // copy or convert data
-            mbsp->dmodels = BSP29_CopyModels(bsp29->dmodels, bsp29->nummodels);
+            if (bspdata->version == &bspver_h2) {
+                mbsp->dmodels = H2_CopyModels(bsp29->dmodels_h2, bsp29->nummodels);
+            } else {
+                mbsp->dmodels = BSPQ1toH2_Models(bsp29->dmodels_q, bsp29->nummodels);
+            }
             mbsp->dvisdata = BSP29_CopyVisData(bsp29->dvisdata, bsp29->visdatasize);
             mbsp->dlightdata = BSP29_CopyLightData(bsp29->dlightdata, bsp29->lightdatasize);
             mbsp->dtexdata = BSP29_CopyTexData(bsp29->dtexdata, bsp29->texdatasize);
@@ -2004,9 +2095,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
         
             return;
-        }
-    
-        else if (bspdata->version == &bspver_q2) {
+        } else if (bspdata->version == &bspver_q2) {
+            // bspver_q2 -> bspver_generic
+
             const q2bsp_t *q2bsp = &bspdata->data.q2bsp;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2062,6 +2153,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
 
             return;
         } else if (bspdata->version == &bspver_qbism) {
+            // bspver_qbism -> bspver_generic
+
             const q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2116,9 +2209,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
 
             return;
-        }
-    
-        else if (bspdata->version == &bspver_bsp2rmq) {
+        } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
+            // bspver_bsp2rmq, bspver_h2bsp2rmq -> bspver_generic
+
             const bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2142,7 +2235,11 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->numsurfedges = bsp2rmq->numsurfedges;
         
             // copy or convert data
-            mbsp->dmodels = BSP29_CopyModels(bsp2rmq->dmodels, bsp2rmq->nummodels);
+            if (bspdata->version == &bspver_h2bsp2rmq) {
+                mbsp->dmodels = H2_CopyModels(bsp2rmq->dmodels_h2, bsp2rmq->nummodels);
+            } else {
+                mbsp->dmodels = BSPQ1toH2_Models(bsp2rmq->dmodels_q, bsp2rmq->nummodels);
+            }
             mbsp->dvisdata = BSP29_CopyVisData(bsp2rmq->dvisdata, bsp2rmq->visdatasize);
             mbsp->dlightdata = BSP29_CopyLightData(bsp2rmq->dlightdata, bsp2rmq->lightdatasize);
             mbsp->dtexdata = BSP29_CopyTexData(bsp2rmq->dtexdata, bsp2rmq->texdatasize);
@@ -2165,9 +2262,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
         
             return;
-        }
-    
-        else if (bspdata->version == &bspver_bsp2) {
+        } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
+            // bspver_bsp2, bspver_h2bsp2 -> bspver_generic
+
             const bsp2_t *bsp2 = &bspdata->data.bsp2;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2191,7 +2288,11 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->numsurfedges = bsp2->numsurfedges;
         
             // copy or convert data
-            mbsp->dmodels = BSP29_CopyModels(bsp2->dmodels, bsp2->nummodels);
+            if (bspdata->version == &bspver_h2bsp2) {
+                mbsp->dmodels = H2_CopyModels(bsp2->dmodels_h2, bsp2->nummodels);
+            } else {
+                mbsp->dmodels = BSPQ1toH2_Models(bsp2->dmodels_q, bsp2->nummodels);
+            }
             mbsp->dvisdata = BSP29_CopyVisData(bsp2->dvisdata, bsp2->visdatasize);
             mbsp->dlightdata = BSP29_CopyLightData(bsp2->dlightdata, bsp2->lightdatasize);
             mbsp->dtexdata = BSP29_CopyTexData(bsp2->dtexdata, bsp2->texdatasize);
@@ -2219,6 +2320,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
     // conversions from GENERIC_BSP
     else if (bspdata->version == &bspver_generic) {
         if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
+            // bspver_generic -> bspver_q1, bspver_h2, bspver_hl
+
             bsp29_t *bsp29 = &bspdata->data.bsp29;
             const mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2242,7 +2345,11 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp29->numsurfedges = mbsp->numsurfedges;
         
             // copy or convert data
-            bsp29->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
+            if (to_version == &bspver_h2) {
+                bsp29->dmodels_h2 = H2_CopyModels(mbsp->dmodels, mbsp->nummodels);
+            } else {
+                bsp29->dmodels_q = BSPH2toQ1_Models(mbsp->dmodels, mbsp->nummodels);
+            }
             bsp29->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
             bsp29->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             bsp29->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
@@ -2265,9 +2372,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bspdata->version = to_version;
         
             return;
-        }
-    
-        else if (to_version == &bspver_q2) {
+        } else if (to_version == &bspver_q2) {
+            // bspver_generic -> bspver_q2
+
             const mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_t *q2bsp = &bspdata->data.q2bsp;
         
@@ -2323,6 +2430,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
 
             return;
         } else if (to_version == &bspver_qbism) {
+            // bspver_generic -> bspver_qbism
+
             const mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
         
@@ -2377,9 +2486,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bspdata->version = to_version;
 
             return;
-        }
-    
-        else if (to_version == &bspver_bsp2rmq) {
+        } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
+            // bspver_generic -> bspver_bsp2rmq, bspver_h2bsp2rmq
+
             bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
             const mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2403,7 +2512,11 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp2rmq->numsurfedges = mbsp->numsurfedges;
         
             // copy or convert data
-            bsp2rmq->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
+            if (to_version == &bspver_h2bsp2rmq) {
+                bsp2rmq->dmodels_h2 = H2_CopyModels(mbsp->dmodels, mbsp->nummodels);
+            } else {
+                bsp2rmq->dmodels_q = BSPH2toQ1_Models(mbsp->dmodels, mbsp->nummodels);
+            }
             bsp2rmq->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
             bsp2rmq->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             bsp2rmq->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
@@ -2426,9 +2539,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bspdata->version = to_version;
         
             return;
-        }
-    
-        else if (to_version == &bspver_bsp2) {
+        } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
+            // bspver_generic -> bspver_bsp2, bspver_h2bsp2
+
             bsp2_t *bsp2 = &bspdata->data.bsp2;
             const mbsp_t *mbsp = &bspdata->data.mbsp;
         
@@ -2452,7 +2565,11 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp2->numsurfedges = mbsp->numsurfedges;
         
             // copy or convert data
-            bsp2->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
+            if (to_version == &bspver_h2bsp2) {
+                bsp2->dmodels_h2 = H2_CopyModels(mbsp->dmodels, mbsp->nummodels);
+            } else {
+                bsp2->dmodels_q = BSPH2toQ1_Models(mbsp->dmodels, mbsp->nummodels);
+            }
             bsp2->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
             bsp2->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             bsp2->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
@@ -2514,7 +2631,7 @@ const lumpspec_t lumpspec_bsp29[] = {
     { "marksurfaces", sizeof(uint16_t)          },
     { "edges",        sizeof(bsp29_dedge_t)     },
     { "surfedges",    sizeof(int32_t)           },
-    { "models",       sizeof(dmodel_t)          },
+    { "models",       sizeof(dmodelq1_t)        },
 };
 
 const lumpspec_t lumpspec_bsp2rmq[] = {
@@ -2532,7 +2649,7 @@ const lumpspec_t lumpspec_bsp2rmq[] = {
     { "marksurfaces", sizeof(uint32_t)          },
     { "edges",        sizeof(bsp2_dedge_t)      },
     { "surfedges",    sizeof(int32_t)           },
-    { "models",       sizeof(dmodel_t)          },
+    { "models",       sizeof(dmodelq1_t)        },
 };
 
 const lumpspec_t lumpspec_bsp2[] = {
@@ -2550,7 +2667,61 @@ const lumpspec_t lumpspec_bsp2[] = {
     { "marksurfaces", sizeof(uint32_t)          },
     { "edges",        sizeof(bsp2_dedge_t)      },
     { "surfedges",    sizeof(int32_t)           },
-    { "models",       sizeof(dmodel_t)          },
+    { "models",       sizeof(dmodelq1_t)        },
+};
+
+const lumpspec_t lumpspec_bsp29_h2[] = {
+    { "entities",     sizeof(char)              },
+    { "planes",       sizeof(dplane_t)          },
+    { "texture",      sizeof(uint8_t)           },
+    { "vertexes",     sizeof(dvertex_t)         },
+    { "visibility",   sizeof(uint8_t)           },
+    { "nodes",        sizeof(bsp29_dnode_t)     },
+    { "texinfos",     sizeof(texinfo_t)         },
+    { "faces",        sizeof(bsp29_dface_t)     },
+    { "lighting",     sizeof(uint8_t)           },
+    { "clipnodes",    sizeof(bsp29_dclipnode_t) },
+    { "leafs",        sizeof(bsp29_dleaf_t)     },
+    { "marksurfaces", sizeof(uint16_t)          },
+    { "edges",        sizeof(bsp29_dedge_t)     },
+    { "surfedges",    sizeof(int32_t)           },
+    { "models",       sizeof(dmodelh2_t)        },
+};
+
+const lumpspec_t lumpspec_bsp2rmq_h2[] = {
+    { "entities",     sizeof(char)              },
+    { "planes",       sizeof(dplane_t)          },
+    { "texture",      sizeof(uint8_t)           },
+    { "vertexes",     sizeof(dvertex_t)         },
+    { "visibility",   sizeof(uint8_t)           },
+    { "nodes",        sizeof(bsp2rmq_dnode_t)   },
+    { "texinfos",     sizeof(texinfo_t)         },
+    { "faces",        sizeof(bsp2_dface_t)      },
+    { "lighting",     sizeof(uint8_t)           },
+    { "clipnodes",    sizeof(bsp2_dclipnode_t ) },
+    { "leafs",        sizeof(bsp2rmq_dleaf_t)   },
+    { "marksurfaces", sizeof(uint32_t)          },
+    { "edges",        sizeof(bsp2_dedge_t)      },
+    { "surfedges",    sizeof(int32_t)           },
+    { "models",       sizeof(dmodelh2_t)        },
+};
+
+const lumpspec_t lumpspec_bsp2_h2[] = {
+    { "entities",     sizeof(char)              },
+    { "planes",       sizeof(dplane_t)          },
+    { "texture",      sizeof(uint8_t)           },
+    { "vertexes",     sizeof(dvertex_t)         },
+    { "visibility",   sizeof(uint8_t)           },
+    { "nodes",        sizeof(bsp2_dnode_t)      },
+    { "texinfos",     sizeof(texinfo_t)         },
+    { "faces",        sizeof(bsp2_dface_t)      },
+    { "lighting",     sizeof(uint8_t)           },
+    { "clipnodes",    sizeof(bsp2_dclipnode_t ) },
+    { "leafs",        sizeof(bsp2_dleaf_t)      },
+    { "marksurfaces", sizeof(uint32_t)          },
+    { "edges",        sizeof(bsp2_dedge_t)      },
+    { "surfedges",    sizeof(int32_t)           },
+    { "models",       sizeof(dmodelh2_t)        },
 };
 
 const lumpspec_t lumpspec_q2bsp[] = {
@@ -2597,29 +2768,41 @@ const lumpspec_t lumpspec_qbism[] = {
     { "areaportals",  sizeof(dareaportal_t)     },
 };
 
+static const lumpspec_t *
+LumpspecsForVersion(const bspversion_t* version) {
+    const lumpspec_t* lumpspec;
+
+    if (version == &bspver_q1 || version == &bspver_hl) {
+        lumpspec = lumpspec_bsp29;
+    } else if (version == &bspver_bsp2rmq) {
+        lumpspec = lumpspec_bsp2rmq;
+    } else if (version == &bspver_bsp2) {
+        lumpspec = lumpspec_bsp2;
+    } else if (version == &bspver_h2) {
+        lumpspec = lumpspec_bsp29_h2;
+    } else if (version == &bspver_h2bsp2rmq) {
+        lumpspec = lumpspec_bsp2rmq_h2;
+    } else if (version == &bspver_h2bsp2) {
+        lumpspec = lumpspec_bsp2_h2;
+    } else if (version == &bspver_q2) {
+        lumpspec = lumpspec_q2bsp;
+    } else if (version == &bspver_qbism) {
+        lumpspec = lumpspec_qbism;
+    } else {
+        Error("Unsupported BSP version: %s", BSPVersionString(version));
+    }
+    return lumpspec;
+}
+
 static int
 CopyLump(const void *header, const bspversion_t *version, const lump_t *lumps, int lumpnum, void *destptr)
 {
-    const lumpspec_t *lumpspec;
+    const lumpspec_t *lumpspecs = LumpspecsForVersion(version);
+    const lumpspec_t *lumpspec = &lumpspecs[lumpnum];
     uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
     uint8_t *buffer = *bufferptr;
     int length;
     int ofs;
-
-    if (version == &bspver_q1 || version == &bspver_h2 || version == &bspver_hl) {
-        lumpspec = &lumpspec_bsp29[lumpnum];
-    } else if (version == &bspver_bsp2rmq) {
-        lumpspec = &lumpspec_bsp2rmq[lumpnum];
-    } else if (version == &bspver_bsp2) {
-        lumpspec = &lumpspec_bsp2[lumpnum];
-    } else if (version == &bspver_q2) {
-        lumpspec = &lumpspec_q2bsp[lumpnum];
-    } else if (version == &bspver_qbism) {
-        lumpspec = &lumpspec_qbism[lumpnum];
-    } else {
-        Error("Unsupported BSP version: %s", BSPVersionString(version));
-        throw; //mxd. Fixes "Uninitialized variable" warning
-    }
 
     length = lumps[lumpnum].filelen;
     ofs = lumps[lumpnum].fileofs;
@@ -2627,39 +2810,6 @@ CopyLump(const void *header, const bspversion_t *version, const lump_t *lumps, i
     if (buffer)
         free(buffer);
 
-    // convert non-Hexen II BSP model hulls over to Hexen II ones
-    if (lumpnum == LUMP_MODELS && (version == &bspver_q1 || version == &bspver_hl))
-    {   /*convert in-place. no need to care about endian here.*/
-        const dmodelq1_t *in = (const dmodelq1_t*)((const uint8_t *)header + ofs);
-        dmodel_t *out;
-        int i, j;
-        if (length % sizeof(dmodelq1_t))
-            Error("%s: odd %s lump size", __func__, lumpspec->name);
-        length /= sizeof(dmodelq1_t);
-
-        buffer = *bufferptr = static_cast<uint8_t *>(malloc(length * sizeof(dmodel_t)));
-        if (!buffer)
-            Error("%s: allocation of %i bytes failed.", __func__, length);
-        out = (dmodel_t*)buffer;
-        for (i = 0; i < length; i++)
-        {
-            for (j = 0; j < 3; j++)
-            {
-                out[i].mins[j] = in[i].mins[j];
-                out[i].maxs[j] = in[i].maxs[j];
-                out[i].origin[j] = in[i].origin[j];
-            }
-            for (j = 0; j < MAX_MAP_HULLS_Q1; j++)
-                out[i].headnode[j] = in[i].headnode[j];
-            for (     ; j < MAX_MAP_HULLS_H2; j++)
-                out[i].headnode[j] = 0;
-            out[i].visleafs = in[i].visleafs;
-            out[i].firstface = in[i].firstface;
-            out[i].numfaces = in[i].numfaces;
-        }
-        return length;
-    }
-    else
     {
         if (length % lumpspec->size)
             Error("%s: odd %s lump size", __func__, lumpspec->name);
@@ -2789,6 +2939,17 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         logprint("BSP is version %s\n", BSPVersionString(&temp_version));
         Error("Sorry, this bsp version is not supported.");
     } else {
+        // special case handling for Hexen II
+        if (isHexen2((dheader_t*)file_data)) {
+            if (bspdata->version == &bspver_q1) {
+                bspdata->version = &bspver_h2;
+            } else if (bspdata->version == &bspver_bsp2) {
+                bspdata->version = &bspver_h2bsp2;
+            } else if (bspdata->version == &bspver_bsp2rmq) {
+                bspdata->version = &bspver_h2bsp2rmq;
+            }
+        }
+
         logprint("BSP is version %s\n", BSPVersionString(bspdata->version));
     }
 
@@ -2853,25 +3014,17 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->entdatasize = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_ENTITIES, &bsp->dentdata);
         
         CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_POP, &bsp->dpop);
-    } else {
-        // Only Q1-like maps need hullcount
-        if (isHexen2((dheader_t *)file_data)) {
-            logprint("BSP appears to be from hexen2\n");
-            // swap version over to H2
-            bspdata->version = &bspver_h2;
-            bspdata->hullcount = MAX_MAP_HULLS_H2;
-        } else {
-            bspdata->hullcount = MAX_MAP_HULLS_Q1;
-        }
-    }
-    
-    if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
+    } else if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
         dheader_t *header = (dheader_t *)file_data;
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         memset(bsp, 0, sizeof(*bsp));
 
-        bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels);
+        if (bspdata->version == &bspver_h2) {
+            bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels_h2);
+        } else {
+            bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels_q);
+        }
         bsp->numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp->dvertexes);
         bsp->numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp->dplanes);
         bsp->numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp->dleafs);
@@ -2887,13 +3040,17 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp->dvisdata);
         bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp->dlightdata);
         bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp->dentdata);
-    } else if (bspdata->version == &bspver_bsp2rmq) {
+    } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
         dheader_t *header = (dheader_t *)file_data;
         bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         memset(bsp, 0, sizeof(*bsp));
 
-        bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels);
+        if (bspdata->version == &bspver_h2bsp2rmq) {
+            bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels_h2);
+        } else {
+            bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels_q);
+        }
         bsp->numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp->dvertexes);
         bsp->numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp->dplanes);
         bsp->numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp->dleafs);
@@ -2909,13 +3066,17 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp->dvisdata);
         bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp->dlightdata);
         bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp->dentdata);
-    } else if (bspdata->version == &bspver_bsp2) {
+    } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
         dheader_t *header = (dheader_t *)file_data;
         bsp2_t *bsp = &bspdata->data.bsp2;
 
         memset(bsp, 0, sizeof(*bsp));
 
-        bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels);
+        if (bspdata->version == &bspver_h2bsp2) {
+            bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels_h2);
+        } else {
+            bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels_q);
+        }
         bsp->numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp->dvertexes);
         bsp->numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp->dplanes);
         bsp->numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp->dleafs);
@@ -2931,6 +3092,8 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp->dvisdata);
         bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp->dlightdata);
         bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp->dentdata);
+    } else {
+        Error("Unknown format");
     }
 
     // detect BSPX
@@ -2996,27 +3159,14 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
 {
     bool q2 = false;
     size_t size;
-    const lumpspec_t *lumpspec;
+    const lumpspec_t *lumpspecs = LumpspecsForVersion(bspfile->version);
+    const lumpspec_t *lumpspec = &lumpspecs[lumpnum];
     lump_t *lumps;
 
-    if (bspfile->version == &bspver_q1 || bspfile->version == &bspver_h2 || bspfile->version == &bspver_hl) {
-        lumpspec = &lumpspec_bsp29[lumpnum];
-        lumps = bspfile->q1header.lumps;
-    } else if (bspfile->version == &bspver_bsp2rmq) {
-        lumpspec = &lumpspec_bsp2rmq[lumpnum];
-        lumps = bspfile->q1header.lumps;
-    } else if (bspfile->version == &bspver_bsp2) {
-        lumpspec = &lumpspec_bsp2[lumpnum];
-        lumps = bspfile->q1header.lumps;
-    } else if (bspfile->version == &bspver_q2) {
-        lumpspec = &lumpspec_q2bsp[lumpnum];
-        lumps = bspfile->q2header.lumps;
-    } else if (bspfile->version == &bspver_qbism) {
-        lumpspec = &lumpspec_qbism[lumpnum];
+    if (bspfile->version->version != NO_VERSION) {
         lumps = bspfile->q2header.lumps;
     } else {
-        Error("Unsupported BSP version: %s", BSPVersionString(bspfile->version));
-        throw; //mxd. Fixes "Uninitialized variable" warning
+        lumps = bspfile->q1header.lumps;
     }
 
     size = lumpspec->size * count;
@@ -3029,39 +3179,6 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
     SafeWrite(bspfile->file, data, size);
     if (size % 4)
         SafeWrite(bspfile->file, pad, 4 - (size % 4));
-}
-
-static void
-AddModelsLump(bspfile_t *bspfile, bspdata_t *bspdata, const void *data, int count)
-{
-    if (bspdata->hullcount == MAX_MAP_HULLS_Q1)
-    {   /*convert in-place. no need to care about endian here.*/
-        lump_t *lump = &bspfile->q1header.lumps[LUMP_MODELS];
-        const dmodel_t *in = static_cast<const dmodel_t *>(data);
-        dmodelq1_t *out = static_cast<dmodelq1_t *>(malloc(count * sizeof(dmodelq1_t)));
-        int i, j;
-        for (i = 0; i < count; i++)
-        {
-            for (j = 0; j < 3; j++)
-            {
-                out[i].mins[j] = in[i].mins[j];
-                out[i].maxs[j] = in[i].maxs[j];
-                out[i].origin[j] = in[i].origin[j];
-            }
-            for (j = 0; j < MAX_MAP_HULLS_Q1; j++)
-                out[i].headnode[j] = in[i].headnode[j];
-            out[i].visleafs = in[i].visleafs;
-            out[i].firstface = in[i].firstface;
-            out[i].numfaces = in[i].numfaces;
-        }
-        lump->fileofs = LittleLong(ftell(bspfile->file));
-        lump->filelen = LittleLong(sizeof(dmodelq1_t) * count);
-        SafeWrite(bspfile->file, out, lump->filelen);
-        free(out);
-        return;
-    }
-    else
-        AddLump(bspfile, LUMP_MODELS, data, count);
 }
 
 /*
@@ -3100,7 +3217,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
     if (bspdata->version == &bspver_q1 ||
         bspdata->version == &bspver_h2 ||
         bspdata->version == &bspver_hl) {
-        bsp29_t *bsp = &bspdata->data.bsp29;
+        const bsp29_t *bsp = &bspdata->data.bsp29;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
         AddLump(&bspfile, LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
@@ -3112,14 +3229,18 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
         AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
         AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
-        AddModelsLump(&bspfile, bspdata, bsp->dmodels, bsp->nummodels);
+        if (bspdata->version == &bspver_h2) {
+            AddLump(&bspfile, LUMP_MODELS, bsp->dmodels_h2, bsp->nummodels);
+        } else {
+            AddLump(&bspfile, LUMP_MODELS, bsp->dmodels_q, bsp->nummodels);
+        }
 
         AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
-    } else if (bspdata->version == &bspver_bsp2rmq) {
-        bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
+    } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
+        const bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
         AddLump(&bspfile, LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
@@ -3131,14 +3252,18 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
         AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
         AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
-        AddModelsLump(&bspfile, bspdata, bsp->dmodels, bsp->nummodels);
+        if (bspdata->version == &bspver_h2bsp2rmq) {
+            AddLump(&bspfile, LUMP_MODELS, bsp->dmodels_h2, bsp->nummodels);
+        } else {
+            AddLump(&bspfile, LUMP_MODELS, bsp->dmodels_q, bsp->nummodels);
+        }
 
         AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
-    } else if (bspdata->version == &bspver_bsp2) {
-        bsp2_t *bsp = &bspdata->data.bsp2;
+    } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
+        const bsp2_t *bsp = &bspdata->data.bsp2;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
         AddLump(&bspfile, LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
@@ -3150,14 +3275,18 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_MARKSURFACES, bsp->dmarksurfaces, bsp->nummarksurfaces);
         AddLump(&bspfile, LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
         AddLump(&bspfile, LUMP_EDGES, bsp->dedges, bsp->numedges);
-        AddModelsLump(&bspfile, bspdata, bsp->dmodels, bsp->nummodels);
+        if (bspdata->version == &bspver_h2bsp2) {
+            AddLump(&bspfile, LUMP_MODELS, bsp->dmodels_h2, bsp->nummodels);
+        } else {
+            AddLump(&bspfile, LUMP_MODELS, bsp->dmodels_q, bsp->nummodels);
+        }
 
         AddLump(&bspfile, LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
     } else if (bspdata->version == &bspver_q2) {
-        q2bsp_t *bsp = &bspdata->data.q2bsp;
+        const q2bsp_t *bsp = &bspdata->data.q2bsp;
 
         AddLump(&bspfile, Q2_LUMP_MODELS, bsp->dmodels, bsp->nummodels);
         AddLump(&bspfile, Q2_LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
@@ -3180,7 +3309,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, Q2_LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, Q2_LUMP_POP, bsp->dpop, sizeof(bsp->dpop));
     } else if (bspdata->version == &bspver_qbism) {
-        q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
+        const q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
 
         AddLump(&bspfile, Q2_LUMP_MODELS, bsp->dmodels, bsp->nummodels);
         AddLump(&bspfile, Q2_LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
@@ -3277,11 +3406,11 @@ void
 PrintBSPFileSizes(const bspdata_t *bspdata)
 {
     int numtextures = 0;
+    const lumpspec_t *lumpspec = LumpspecsForVersion(bspdata->version);
 
     if (bspdata->version == &bspver_q2) {
         const q2bsp_t *bsp = &bspdata->data.q2bsp;
-        const lumpspec_t *lumpspec = lumpspec_q2bsp;
-        
+                
         logprint("%7i %-12s\n", bsp->nummodels, "models");
         
         PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp->numplanes);
@@ -3304,8 +3433,7 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
     } else if (bspdata->version == &bspver_qbism) {
         const q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
-        const lumpspec_t *lumpspec = lumpspec_qbism;
-        
+
         logprint("%7i %-12s\n", bsp->nummodels, "models");
         
         PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp->numplanes);
@@ -3328,7 +3456,6 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
     } else if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
         const bsp29_t *bsp = &bspdata->data.bsp29;
-        const lumpspec_t *lumpspec = lumpspec_bsp29;
 
         if (bsp->texdatasize)
             numtextures = bsp->dtexdata->nummiptex;
@@ -3358,9 +3485,8 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
                 logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, (int)x->lumpsize);
             }
         }
-    } else if (bspdata->version == &bspver_bsp2rmq) {
+    } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
         const bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
-        const lumpspec_t *lumpspec = lumpspec_bsp2rmq;
 
         if (bsp->texdatasize)
             numtextures = bsp->dtexdata->nummiptex;
@@ -3382,9 +3508,8 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
         logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
-    } else if (bspdata->version == &bspver_bsp2) {
+    } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
         const bsp2_t *bsp = &bspdata->data.bsp2;
-        const lumpspec_t *lumpspec = lumpspec_bsp2;
 
         if (bsp->texdatasize)
             numtextures = bsp->dtexdata->nummiptex;
@@ -3406,5 +3531,7 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
         logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
+    } else {
+        Error("Unsupported BSP version: %s", BSPVersionString(bspdata->version));
     }
 }
