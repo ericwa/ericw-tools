@@ -2062,7 +2062,7 @@ static void FreeMBSP(mbsp_t *bsp)
 inline void
 ConvertBSPToMFormatComplete(const bspversion_t **mbsp_loadversion, const bspversion_t *version, bspdata_t *bspdata)
 {
-    *mbsp_loadversion = bspdata->version;
+    bspdata->loadversion = *mbsp_loadversion = bspdata->version;
     bspdata->version = version;
 }
 
