@@ -965,4 +965,10 @@ void ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
 
+void
+DecompressRow (const uint8_t *in, const int numbytes, uint8_t *decompressed);
+
+int
+CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out);
+
 #endif /* __COMMON_BSPFILE_H__ */

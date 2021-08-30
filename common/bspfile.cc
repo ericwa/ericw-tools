@@ -984,6 +984,83 @@ MBSPtoQ2_Models(const dmodelh2_t *dmodelsh2, int nummodels) {
     return newdata;
 }
 
+
+/*
+================
+CalcPHS
+
+Calculate the PHS (Potentially Hearable Set)
+by ORing together all the PVS visible from a leaf
+================
+*/
+static std::vector<uint8_t> CalcPHS(int32_t portalclusters, const uint8_t *visdata, int *visdatasize, int32_t bitofs[][2])
+{
+    const int32_t leafbytes = (portalclusters + 7) >> 3;
+    const int32_t leaflongs = leafbytes / sizeof(long);
+    std::vector<uint8_t> compressed_phs;
+    uint8_t *uncompressed = (uint8_t *) calloc(1, leafbytes);
+    uint8_t *uncompressed_2 = (uint8_t *) calloc(1, leafbytes);
+    uint8_t *compressed = (uint8_t *) calloc(1, leafbytes * 2);
+    uint8_t *uncompressed_orig = (uint8_t *) calloc(1, leafbytes);
+
+    printf ("Building PHS...\n");
+
+    int32_t count = 0;
+    for (int32_t i = 0; i < portalclusters; i++)
+    {
+        const uint8_t *scan = &visdata[bitofs[i][DVIS_PVS]];
+
+        DecompressRow(scan, leafbytes, uncompressed);
+        memset(uncompressed_orig, 0, leafbytes);
+        memcpy(uncompressed_orig, uncompressed, leafbytes);
+
+        scan = uncompressed_orig;
+
+        for (int32_t j = 0; j < leafbytes; j++)
+        {
+            uint8_t bitbyte = scan[j];
+            if (!bitbyte)
+                continue;
+            for (int32_t k = 0; k < 8; k++)
+            {
+                if (! (bitbyte & (1<<k)) )
+                    continue;
+                // OR this pvs row into the phs
+                int32_t index = ((j<<3)+k);
+                if (index >= portalclusters)
+                    Error ("Bad bit in PVS");	// pad bits should be 0
+                const uint8_t *src_compressed = &visdata[bitofs[index][DVIS_PVS]];
+                DecompressRow(src_compressed, leafbytes, uncompressed_2);
+                const long *src = (long *) uncompressed_2;
+                long *dest = (long *) uncompressed;
+                for (int32_t l = 0; l < leaflongs; l++)
+                    ((long *)uncompressed)[l] |= src[l];
+            }
+        }
+        for (int32_t j = 0; j < portalclusters; j++)
+            if (uncompressed[j>>3] & (1<<(j&7)) )
+                count++;
+
+        //
+        // compress the bit string
+        //
+        int32_t j = CompressRow (uncompressed, leafbytes, compressed);
+
+        bitofs[i][DVIS_PHS] = compressed_phs.size();
+
+        compressed_phs.insert(compressed_phs.end(), compressed, compressed + j);
+    }
+
+    free(uncompressed);
+    free(uncompressed_2);
+    free(compressed);
+    free(uncompressed_orig);
+
+    printf ("Average clusters hearable: %i\n", count / portalclusters);
+
+    return compressed_phs;
+}
+
 static dvis_t *
 MBSPtoQ2_Vis(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf_t *leafs) {
     int32_t num_clusters = 0;
@@ -997,23 +1074,37 @@ MBSPtoQ2_Vis(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf
 
     vis->numclusters = num_clusters;
 
+    uint8_t test[99999];
+
     // the leaves are already using a per-cluster visofs, so just find one matching
     // cluster and note it down under bitofs.
     // we're also not worrying about PHS currently.
     for (int32_t i = 0; i < num_clusters; i++) {
         for (int32_t l = 0; l < numleafs; l++) {
             if (leafs[l].cluster == i) {
-                for (int32_t x = 0; x < 2; x++) {
-                    vis->bitofs[i][x] = leafs[l].visofs + vis_offset;
-                }
-
+                // copy PVS visofs
+                vis->bitofs[i][DVIS_PVS] = leafs[l].visofs;
                 break;
             }
         }
     }
 
+    std::vector<uint8_t> phs = CalcPHS(num_clusters, visdata, visdatasize, vis->bitofs);
+
+    vis = (dvis_t *) realloc(vis, vis_offset + *visdatasize + phs.size());
+
+    // offset the pvs/phs properly
+    for (int32_t i = 0; i < num_clusters; i++) {
+          vis->bitofs[i][DVIS_PVS] += vis_offset;
+          vis->bitofs[i][DVIS_PHS] += vis_offset + *visdatasize;
+    }
+
     memcpy(((uint8_t *) vis) + vis_offset, visdata, *visdatasize);
     *visdatasize += vis_offset;
+
+    memcpy(((uint8_t *) vis) + *visdatasize, phs.data(), phs.size());
+    *visdatasize += phs.size();
+
     return vis;
 }
 
@@ -3440,4 +3531,69 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
     }
+}
+
+/*
+  ===============
+  CompressRow
+  ===============
+*/
+int
+CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
+{
+    int i, rep;
+    uint8_t *dst;
+
+    dst = out;
+    for (i = 0; i < numbytes; i++) {
+        *dst++ = vis[i];
+        if (vis[i])
+            continue;
+
+        rep = 1;
+        for (i++; i < numbytes; i++)
+            if (vis[i] || rep == 255)
+                break;
+            else
+                rep++;
+        *dst++ = rep;
+        i--;
+    }
+
+    return dst - out;
+}
+
+/*
+===================
+DecompressRow
+===================
+*/
+void
+DecompressRow (const uint8_t *in, const int numbytes, uint8_t *decompressed)
+{
+	int		c;
+	uint8_t	*out;
+	int		row;
+
+	row = numbytes;
+	out = decompressed;
+
+	do
+	{
+		if (*in)
+		{
+			*out++ = *in++;
+			continue;
+		}
+
+		c = in[1];
+		if (!c)
+			Error ("DecompressVis: 0 repeat");
+		in += 2;
+		while (c)
+		{
+			*out++ = 0;
+			c--;
+		}
+	} while (out - decompressed < row);
 }

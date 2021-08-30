@@ -547,36 +547,6 @@ LeafThread(void *arg)
     return NULL;
 }
 
-/*
-  ===============
-  CompressRow
-  ===============
-*/
-static int
-CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
-{
-    int i, rep;
-    uint8_t *dst;
-
-    dst = out;
-    for (i = 0; i < numbytes; i++) {
-        *dst++ = vis[i];
-        if (vis[i])
-            continue;
-
-        rep = 1;
-        for (i++; i < numbytes; i++)
-            if (vis[i] || rep == 255)
-                break;
-            else
-                rep++;
-        *dst++ = rep;
-        i--;
-    }
-
-    return dst - out;
-}
-
 
 /*
   ===============
@@ -1214,7 +1184,7 @@ LoadPortals(char *name, mbsp_t *bsp)
         clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
 
         for (int32_t i = 0; i < bsp->numleafs; i++) {
-            clustermap[i] = bsp->dleafs[i].cluster;
+            clustermap[i] = bsp->dleafs[i + 1].cluster;
         }
     } else if (portalleafs != portalleafs_real) {
         clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
