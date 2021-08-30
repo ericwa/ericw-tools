@@ -422,7 +422,6 @@ WriteBSPFile()
     bspdata_t bspdata{};
     
     bspdata.version = &bspver_generic;
-    bspdata.hullcount = MAX_MAP_HULLS_Q1;
 
     CopyVector(map.exported_planes, &bspdata.data.mbsp.numplanes, &bspdata.data.mbsp.dplanes);
     CopyVector(map.exported_leafs_bsp29, &bspdata.data.mbsp.numleafs, &bspdata.data.mbsp.dleafs);
