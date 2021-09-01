@@ -370,7 +370,10 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
             const auto edge = make_pair(v0, v1);
             auto &edgeFacesRef = result[edge];
             
-            Q_assert(find(begin(edgeFacesRef), end(edgeFacesRef), f) == end(edgeFacesRef));
+            if (find(begin(edgeFacesRef), end(edgeFacesRef), f) != end(edgeFacesRef)) {
+                // another sort of degenerate face where the same edge A->B appears more than once on the face
+                continue;
+            }
             edgeFacesRef.push_back(f);
         }
     }

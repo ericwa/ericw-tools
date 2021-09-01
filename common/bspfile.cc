@@ -1044,6 +1044,36 @@ Q2BSPtoM_Models(const q2_dmodel_t *dmodelsq2, int nummodels) {
     return newdata;
 }
 
+static uint8_t *
+Q2BSPtoM_CopyVisData(const dvis_t *dvisq2, int vissize, int *outvissize, mleaf_t *leafs, int numleafs) {
+
+    if (!*outvissize) {
+        return ((uint8_t *) dvisq2);
+    }
+
+    // FIXME: assumes PHS always follows PVS.
+    int32_t phs_start = INT_MAX, pvs_start = INT_MAX;
+    size_t header_offset = sizeof(dvis_t) + (sizeof(int32_t) * dvisq2->numclusters * 2);
+
+    for (int32_t i = 0; i < dvisq2->numclusters; i++) {
+        pvs_start = std::min(pvs_start, (int32_t) (dvisq2->bitofs[i][DVIS_PVS]));
+        phs_start = std::min(phs_start, (int32_t) (dvisq2->bitofs[i][DVIS_PHS] - header_offset));
+
+        for (int32_t l = 0; l < numleafs; l++) {
+            if (leafs[l].cluster == i) {
+                leafs[l].visofs = dvisq2->bitofs[i][DVIS_PVS] - header_offset;
+            }
+        }
+    }
+
+    // cut off the PHS and header
+    *outvissize -= header_offset + ((*outvissize - header_offset) - phs_start);
+
+    uint8_t *vis = (uint8_t *) calloc(1, *outvissize);
+    memcpy(vis, ((uint8_t *) dvisq2) + pvs_start, *outvissize);
+    return vis;
+}
+
 static q2_dmodel_t *
 MBSPtoQ2_Models(const dmodelh2_t *dmodelsh2, int nummodels) {
     const dmodelh2_t *dmodelh2 = dmodelsh2;
@@ -1064,6 +1094,128 @@ MBSPtoQ2_Models(const dmodelh2_t *dmodelsh2, int nummodels) {
     }
     
     return newdata;
+}
+
+
+/*
+================
+CalcPHS
+
+Calculate the PHS (Potentially Hearable Set)
+by ORing together all the PVS visible from a leaf
+================
+*/
+static std::vector<uint8_t> CalcPHS(int32_t portalclusters, const uint8_t *visdata, int *visdatasize, int32_t bitofs[][2])
+{
+    const int32_t leafbytes = (portalclusters + 7) >> 3;
+    const int32_t leaflongs = leafbytes / sizeof(long);
+    std::vector<uint8_t> compressed_phs;
+    uint8_t *uncompressed = (uint8_t *) calloc(1, leafbytes);
+    uint8_t *uncompressed_2 = (uint8_t *) calloc(1, leafbytes);
+    uint8_t *compressed = (uint8_t *) calloc(1, leafbytes * 2);
+    uint8_t *uncompressed_orig = (uint8_t *) calloc(1, leafbytes);
+
+    printf ("Building PHS...\n");
+
+    int32_t count = 0;
+    for (int32_t i = 0; i < portalclusters; i++)
+    {
+        const uint8_t *scan = &visdata[bitofs[i][DVIS_PVS]];
+
+        DecompressRow(scan, leafbytes, uncompressed);
+        memset(uncompressed_orig, 0, leafbytes);
+        memcpy(uncompressed_orig, uncompressed, leafbytes);
+
+        scan = uncompressed_orig;
+
+        for (int32_t j = 0; j < leafbytes; j++)
+        {
+            uint8_t bitbyte = scan[j];
+            if (!bitbyte)
+                continue;
+            for (int32_t k = 0; k < 8; k++)
+            {
+                if (! (bitbyte & (1<<k)) )
+                    continue;
+                // OR this pvs row into the phs
+                int32_t index = ((j<<3)+k);
+                if (index >= portalclusters)
+                    Error ("Bad bit in PVS");	// pad bits should be 0
+                const uint8_t *src_compressed = &visdata[bitofs[index][DVIS_PVS]];
+                DecompressRow(src_compressed, leafbytes, uncompressed_2);
+                const long *src = (long *) uncompressed_2;
+                long *dest = (long *) uncompressed;
+                for (int32_t l = 0; l < leaflongs; l++)
+                    ((long *)uncompressed)[l] |= src[l];
+            }
+        }
+        for (int32_t j = 0; j < portalclusters; j++)
+            if (uncompressed[j>>3] & (1<<(j&7)) )
+                count++;
+
+        //
+        // compress the bit string
+        //
+        int32_t j = CompressRow (uncompressed, leafbytes, compressed);
+
+        bitofs[i][DVIS_PHS] = compressed_phs.size();
+
+        compressed_phs.insert(compressed_phs.end(), compressed, compressed + j);
+    }
+
+    free(uncompressed);
+    free(uncompressed_2);
+    free(compressed);
+    free(uncompressed_orig);
+
+    printf ("Average clusters hearable: %i\n", count / portalclusters);
+
+    return compressed_phs;
+}
+
+static dvis_t *
+MBSPtoQ2_CopyVisData(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf_t *leafs) {
+    int32_t num_clusters = 0;
+    
+    for (int32_t i = 0; i < numleafs; i++) {
+        num_clusters = std::max(num_clusters, leafs[i].cluster + 1);
+    }
+
+    size_t vis_offset = sizeof(dvis_t) + (sizeof(int32_t) * num_clusters * 2);
+    dvis_t *vis = (dvis_t *)calloc(1, vis_offset + *visdatasize);
+
+    vis->numclusters = num_clusters;
+
+    // the leaves are already using a per-cluster visofs, so just find one matching
+    // cluster and note it down under bitofs.
+    // we're also not worrying about PHS currently.
+    for (int32_t i = 0; i < num_clusters; i++) {
+        for (int32_t l = 0; l < numleafs; l++) {
+            if (leafs[l].cluster == i) {
+                // copy PVS visofs
+                vis->bitofs[i][DVIS_PVS] = leafs[l].visofs;
+                break;
+            }
+        }
+    }
+
+    std::vector<uint8_t> phs = CalcPHS(num_clusters, visdata, visdatasize, vis->bitofs);
+
+    vis = (dvis_t *) realloc(vis, vis_offset + *visdatasize + phs.size());
+
+    // offset the pvs/phs properly
+    for (int32_t i = 0; i < num_clusters; i++) {
+          vis->bitofs[i][DVIS_PVS] += vis_offset;
+          vis->bitofs[i][DVIS_PHS] += vis_offset + *visdatasize;
+    }
+
+    memcpy(((uint8_t *) vis) + vis_offset, visdata, *visdatasize);
+    *visdatasize += vis_offset;
+
+    memcpy(((uint8_t *) vis) + *visdatasize, phs.data(), phs.size());
+    *visdatasize += phs.size();
+
+    return vis;
 }
 
 static mleaf_t *
@@ -2023,7 +2175,7 @@ static void FreeMBSP(mbsp_t *bsp)
 inline void
 ConvertBSPToMFormatComplete(const bspversion_t **mbsp_loadversion, const bspversion_t *version, bspdata_t *bspdata)
 {
-    *mbsp_loadversion = bspdata->version;
+    bspdata->loadversion = *mbsp_loadversion = bspdata->version;
     bspdata->version = version;
 }
 
@@ -2125,7 +2277,6 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
-            mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
             mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
             mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
             mbsp->dleafs = Q2BSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
@@ -2138,6 +2289,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dleaffaces = BSP29to2_Marksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
             mbsp->dleafbrushes = Q2BSPtoM_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
             mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
+
+            mbsp->dvisdata = Q2BSPtoM_CopyVisData(q2bsp->dvis, q2bsp->visdatasize, &mbsp->visdatasize, mbsp->dleafs, mbsp->numleafs);
         
             mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
             mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
@@ -2182,7 +2335,6 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
-            mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
             mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
             mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
             mbsp->dleafs = Q2BSP_QBSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
@@ -2195,6 +2347,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dleaffaces = BSP2_CopyMarksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
             mbsp->dleafbrushes = Q2BSP_Qbism_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
             mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
+            
+            mbsp->dvisdata = Q2BSPtoM_CopyVisData(q2bsp->dvis, q2bsp->visdatasize, &mbsp->visdatasize, mbsp->dleafs, mbsp->numleafs);
         
             mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
             mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
@@ -2402,7 +2556,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
+            q2bsp->dvis = MBSPtoQ2_CopyVisData(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
             q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
             q2bsp->dleafs = MBSPtoQ2_Leafs(mbsp->dleafs, mbsp->numleafs);
@@ -2459,7 +2613,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // copy or convert data
             q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
+            q2bsp->dvis = MBSPtoQ2_CopyVisData(mbsp->dvisdata, &q2bsp->visdatasize, mbsp->numleafs, mbsp->dleafs);
             q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
             q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
             q2bsp->dleafs = MBSPtoQ2_Qbism_Leafs(mbsp->dleafs, mbsp->numleafs);
@@ -3534,4 +3688,69 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
     } else {
         Error("Unsupported BSP version: %s", BSPVersionString(bspdata->version));
     }
+}
+
+/*
+  ===============
+  CompressRow
+  ===============
+*/
+int
+CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
+{
+    int i, rep;
+    uint8_t *dst;
+
+    dst = out;
+    for (i = 0; i < numbytes; i++) {
+        *dst++ = vis[i];
+        if (vis[i])
+            continue;
+
+        rep = 1;
+        for (i++; i < numbytes; i++)
+            if (vis[i] || rep == 255)
+                break;
+            else
+                rep++;
+        *dst++ = rep;
+        i--;
+    }
+
+    return dst - out;
+}
+
+/*
+===================
+DecompressRow
+===================
+*/
+void
+DecompressRow (const uint8_t *in, const int numbytes, uint8_t *decompressed)
+{
+	int		c;
+	uint8_t	*out;
+	int		row;
+
+	row = numbytes;
+	out = decompressed;
+
+	do
+	{
+		if (*in)
+		{
+			*out++ = *in++;
+			continue;
+		}
+
+		c = in[1];
+		if (!c)
+			Error ("DecompressVis: 0 repeat");
+		in += 2;
+		while (c)
+		{
+			*out++ = 0;
+			c--;
+		}
+	} while (out - decompressed < row);
 }
