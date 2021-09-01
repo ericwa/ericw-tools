@@ -969,11 +969,6 @@ ParseOptions(char *szOptions)
             options.target_version = &bspver_h2;
         }
     }
-
-    // default to bspver_q1
-    if (options.target_version == nullptr) {
-        options.target_version = &bspver_q1;
-    }
 }
 
 

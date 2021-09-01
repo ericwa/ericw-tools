@@ -286,7 +286,7 @@ public:
     bool fixRotateObjTexture;
     bool fbspx_brushes;
     bool fNoTextures;
-    const bspversion_t *target_version = nullptr;
+    const bspversion_t *target_version = &bspver_q1;
     int dxSubdivide;
     int dxLeakDist;
         int maxNodeSize;
