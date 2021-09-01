@@ -2257,7 +2257,6 @@ WriteEntitiesToString(void)
 {
     epair_t *ep;
     int i;
-    struct lumpdata *entities;
     mapentity_t *entity;
 
     std::stringstream ss;

@@ -490,7 +490,7 @@ MakeFaceEdges
 int
 MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
-    int i, firstface;
+    int firstface;
 
     Message(msgProgress, "MakeFaceEdges");
 
