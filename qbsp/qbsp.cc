@@ -302,9 +302,8 @@ UpdateEntLump(void)
             FixRotateOrigin(entity);
     }
 
-    //LoadBSPFile(); // FIXME: fix -onlyents
-    WriteEntitiesToString();    
-    //WriteBSPFile(); // FIXME: fix -onlyents
+    WriteEntitiesToString();
+    UpdateBSPFileEntitiesLump();
 
     if (!options.fAllverbose)
         options.fVerbose = false;

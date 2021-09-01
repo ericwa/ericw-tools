@@ -27,5 +27,6 @@ int ExportMapTexinfo(int texinfonum);
 
 void BeginBSPFile(void);
 void FinishBSPFile(void);
+void UpdateBSPFileEntitiesLump();
 
 #endif

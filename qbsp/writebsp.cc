@@ -469,3 +469,29 @@ FinishBSPFile(void)
 
     options.fVerbose = options.fAllverbose;
 }
+
+/*
+==================
+UpdateBSPFileEntitiesLump
+==================
+*/
+void
+UpdateBSPFileEntitiesLump()
+{
+    bspdata_t bspdata;
+    StripExtension(options.szBSPName);
+    DefaultExtension(options.szBSPName, ".bsp");
+
+    // load the .bsp
+    LoadBSPFile(options.szBSPName, &bspdata);
+    ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    // replace the existing entities lump with map.exported_entities
+    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
+
+    // write the .bsp back to disk
+    ConvertBSPFormat(&bspdata, bspdata.loadversion);
+    WriteBSPFile(options.szBSPName, &bspdata);
+
+    logprint("Wrote %s\n", options.szBSPName);
+}
