@@ -576,9 +576,9 @@ CreateHulls(void)
     CreateSingleHull(1);
     CreateSingleHull(2);
 
-    if (options.BSPVersion == BSPHLVERSION)
+    if (options.target_version == &bspver_hl)
         CreateSingleHull(3);
-    else if (options.hexen2)
+    else if (options.target_version->hexen2)
     {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
         CreateSingleHull(4);
@@ -781,6 +781,9 @@ ParseOptions(char *szOptions)
     char *szEnd;
     int NameCount = 0;
 
+    // temporary flags
+    bool hexen2 = false;
+
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
     while (szTok) {
@@ -832,7 +835,11 @@ ParseOptions(char *szOptions)
             else if (!Q_strcasecmp(szTok, "nopercent"))
                 options.fNopercent = true;
             else if (!Q_strcasecmp(szTok, "hexen2"))
-                options.hexen2 = true;
+                hexen2 = true; // can be combined with -bsp2 or -2psb
+            else if (!Q_strcasecmp(szTok, "q2bsp"))
+                options.target_version = &bspver_q2;
+            else if (!Q_strcasecmp(szTok, "qbism"))
+                options.target_version = &bspver_qbism;
             else if (!Q_strcasecmp(szTok, "wrbrushes") || !Q_strcasecmp(szTok, "bspx"))
                 options.fbspx_brushes = true;
             else if (!Q_strcasecmp(szTok, "wrbrushesonly") || !Q_strcasecmp(szTok, "bspxonly")) {
@@ -840,11 +847,11 @@ ParseOptions(char *szOptions)
                 options.fNoclip = true;
             }
             else if (!Q_strcasecmp(szTok, "hlbsp")) {
-                options.BSPVersion = BSPHLVERSION;
+                options.target_version = &bspver_hl;
             } else if (!Q_strcasecmp(szTok, "bsp2")) {
-                options.BSPVersion = BSP2VERSION;
+                options.target_version = &bspver_bsp2;
             } else if (!Q_strcasecmp(szTok, "2psb")) {
-                options.BSPVersion = BSP2RMQVERSION;
+                options.target_version = &bspver_bsp2rmq;
             } else if (!Q_strcasecmp(szTok, "leakdist")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
@@ -950,6 +957,22 @@ ParseOptions(char *szOptions)
                 Error("Unknown option '%s'", szTok);
         }
         szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);
+    }
+
+    // combine format flags
+    if (hexen2) {
+        if (options.target_version == &bspver_bsp2) {
+            options.target_version = &bspver_h2bsp2;
+        } else if (options.target_version == &bspver_bsp2rmq) {
+            options.target_version = &bspver_h2bsp2rmq;
+        } else {
+            options.target_version = &bspver_h2;
+        }
+    }
+
+    // default to bspver_q1
+    if (options.target_version == nullptr) {
+        options.target_version = &bspver_q1;
     }
 }
 

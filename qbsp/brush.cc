@@ -487,7 +487,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
            (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0)
         && rottype == rotation_t::hipnotic
         && (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-        && !options.hexen2; // never do this in Hexen 2
+        && !options.target_version->hexen2; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t delta;
@@ -909,7 +909,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int conte
         return NULL;
     }
 
-    if (options.BSPVersion == BSPHLVERSION)
+    if (options.target_version == &bspver_hl)
     {
          if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
@@ -930,7 +930,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int conte
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
         }
     }
-    else if (options.hexen2)
+    else if (options.target_version->hexen2)
     {
         if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };

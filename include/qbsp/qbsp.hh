@@ -286,8 +286,7 @@ public:
     bool fixRotateObjTexture;
     bool fbspx_brushes;
     bool fNoTextures;
-    int hexen2;/*2 if the worldspawn mission pack flag was set*/
-    int BSPVersion;
+    const bspversion_t *target_version = nullptr;
     int dxSubdivide;
     int dxLeakDist;
         int maxNodeSize;
@@ -342,8 +341,6 @@ public:
     fixRotateObjTexture(true),
     fbspx_brushes(false),
     fNoTextures(false),
-    hexen2(0),
-    BSPVersion(BSPVERSION), // Default to the original Quake BSP Version...
     dxSubdivide(240),
     dxLeakDist(2),
     maxNodeSize(1024),

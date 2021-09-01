@@ -80,7 +80,7 @@ WAD_LoadInfo(wad_t *wad, bool external)
             int w = LittleLong(miptex.width);
             int h = LittleLong(miptex.height);
             wad->lumps[i].size = sizeof(miptex) + (w>>0)*(h>>0) + (w>>1)*(h>>1) + (w>>2)*(h>>2) + (w>>3)*(h>>3);
-            if (options.BSPVersion == BSPHLVERSION)
+            if (options.target_version == &bspver_hl)
                 wad->lumps[i].size += 2+3*256;    //palette size+palette data
             wad->lumps[i].size = (wad->lumps[i].size+3) & ~3;    //keep things aligned if we can.
 
@@ -296,7 +296,7 @@ WAD_LoadLump(const wad_t *wad, const char *name, uint8_t *dest)
                 memcpy(dest+out->offsets[2], data.data()+(in->offsets[2]), (in->width>>2)*(in->height>>2));
                 memcpy(dest+out->offsets[3], data.data()+(in->offsets[3]), (in->width>>3)*(in->height>>3));
 
-                if (options.BSPVersion == BSPHLVERSION)
+                if (options.target_version == &bspver_hl)
                 {    //palette size. 256 in little endian.
                     dest[palofs+0] = ((256>>0)&0xff);
                     dest[palofs+1] = ((256>>8)&0xff);
@@ -329,7 +329,7 @@ WADList_AddAnimationFrames(const wad_t *wadlist)
     oldcount = map.nummiptex();
 
     for (i = 0; i < oldcount; i++) {
-        if (map.miptex.at(i)[0] != '+' && (options.BSPVersion!=BSPHLVERSION||map.miptex.at(i)[0] != '-'))
+        if (map.miptex.at(i)[0] != '+' && (options.target_version != &bspver_hl || map.miptex.at(i)[0] != '-'))
             continue;
         std::string name = map.miptex.at(i);
 

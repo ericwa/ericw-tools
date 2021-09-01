@@ -61,6 +61,8 @@ struct bspversion_t
     const char *short_name;
     /* full display name for printing */
     const char *name;
+    bool hexen2;
+    bool quake2;
 };
 
 #define NO_VERSION      -1

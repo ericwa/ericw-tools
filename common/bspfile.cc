@@ -21,17 +21,18 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 
-const bspversion_t bspver_generic   { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP" };
-const bspversion_t bspver_q1        { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP" };
-const bspversion_t bspver_bsp2      { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2" };
-const bspversion_t bspver_bsp2rmq   { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ" };
-/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
-const bspversion_t bspver_h2        { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP" };
-const bspversion_t bspver_h2bsp2    { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2" };
-const bspversion_t bspver_h2bsp2rmq { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ" };
-const bspversion_t bspver_hl        { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP" };
-const bspversion_t bspver_q2        { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP" };
-const bspversion_t bspver_qbism     { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP" };
+/*                                                                                                           hexen2, quake2 */
+const bspversion_t bspver_generic   { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         false,  false };
+const bspversion_t bspver_q1        { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           false,  false };
+const bspversion_t bspver_bsp2      { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          false,  false };
+const bspversion_t bspver_bsp2rmq   { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      false,  false };
+/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */               
+const bspversion_t bspver_h2        { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        true,   false };
+const bspversion_t bspver_h2bsp2    { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       true,   false };
+const bspversion_t bspver_h2bsp2rmq { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   true,   false };
+const bspversion_t bspver_hl        { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       false,  false };
+const bspversion_t bspver_q2        { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        false,  true  };
+const bspversion_t bspver_qbism     { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  false,  true  };
 
 static const char *
 BSPVersionString(const bspversion_t *version)

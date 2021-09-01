@@ -442,7 +442,7 @@ WriteBSPFile()
 
     //GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
 
-    ConvertBSPFormat(&bspdata, &bspver_q1); // assume q1 for now
+    ConvertBSPFormat(&bspdata, options.target_version);
 
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".bsp");
