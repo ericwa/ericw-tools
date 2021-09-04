@@ -438,9 +438,9 @@ WriteBSPFile()
     CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
     CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void**)&bspdata.data.mbsp.dtexdata);
 
-    // TODO: pass bspx lumps to generic bsp code so they are written
-
-    //GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
+    if (map.needslmshifts) {
+        BSPX_AddLump(&bspdata, "LMSHIFT", map.exported_lmshifts.data(), map.exported_lmshifts.size());
+    }
 
     ConvertBSPFormat(&bspdata, options.target_version);
 
