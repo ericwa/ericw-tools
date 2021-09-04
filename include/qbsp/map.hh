@@ -173,6 +173,7 @@ typedef struct mapdata_s {
     // bspx data
     std::vector<uint8_t> exported_lmshifts;
     bool needslmshifts = false;
+    std::vector<uint8_t> exported_bspxbrushes;
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {
@@ -222,11 +223,8 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 
-struct bspxbrushes_s
-{
-        uint8_t *lumpinfo;
-        size_t lumpsize;
-        size_t lumpmaxsize;
+struct bspxbrushes_s {
+    std::vector<uint8_t> lumpdata;
 };
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);

@@ -441,6 +441,9 @@ WriteBSPFile()
     if (map.needslmshifts) {
         BSPX_AddLump(&bspdata, "LMSHIFT", map.exported_lmshifts.data(), map.exported_lmshifts.size());
     }
+    if (!map.exported_bspxbrushes.empty()) {
+        BSPX_AddLump(&bspdata, "BRUSHLIST", map.exported_bspxbrushes.data(), map.exported_bspxbrushes.size());
+    }
 
     ConvertBSPFormat(&bspdata, options.target_version);
 
