@@ -22,17 +22,17 @@
 #include <common/bspfile.hh>
 
 /*                                                                                                           hexen2, quake2 */
-const bspversion_t bspver_generic   { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         false,  false };
-const bspversion_t bspver_q1        { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           false,  false };
-const bspversion_t bspver_bsp2      { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          false,  false };
-const bspversion_t bspver_bsp2rmq   { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      false,  false };
+const bspversion_t bspver_generic    { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         false,  false };
+const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           false,  false };
+const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          false,  false };
+const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      false,  false };
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */               
-const bspversion_t bspver_h2        { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        true,   false };
-const bspversion_t bspver_h2bsp2    { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       true,   false };
-const bspversion_t bspver_h2bsp2rmq { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   true,   false };
-const bspversion_t bspver_hl        { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       false,  false };
-const bspversion_t bspver_q2        { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        false,  true  };
-const bspversion_t bspver_qbism     { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  false,  true  };
+const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        true,   false };
+const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       true,   false };
+const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   true,   false };
+const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       false,  false };
+const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        false,  true };
+const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  false,  true };
 
 static const char *
 BSPVersionString(const bspversion_t *version)
@@ -579,15 +579,17 @@ void Q2_SwapBSPFile (q2bsp_t *bsp, qboolean todisk)
     //
     // visibility
     //
-    if (todisk)
-        j = bsp->dvis->numclusters;
-    else
-        j = LittleLong(bsp->dvis->numclusters);
-    bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
-    for (i=0 ; i<j ; i++)
-    {
-        bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
-        bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+    if (bsp->dvis) {
+        if (todisk)
+            j = bsp->dvis->numclusters;
+        else
+            j = LittleLong(bsp->dvis->numclusters);
+        bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
+        for (i=0 ; i<j ; i++)
+        {
+            bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
+            bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+        }
     }
 }
 
@@ -1176,6 +1178,10 @@ static std::vector<uint8_t> CalcPHS(int32_t portalclusters, const uint8_t *visda
 
 static dvis_t *
 MBSPtoQ2_CopyVisData(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf_t *leafs) {
+    if (!*visdatasize) {
+        return nullptr;
+    }
+
     int32_t num_clusters = 0;
     
     for (int32_t i = 0; i < numleafs; i++) {

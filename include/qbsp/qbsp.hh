@@ -367,8 +367,5 @@ extern options_t options;
 #include <qbsp/util.hh>
 
 int qbsp_main(int argc, const char **argv);
-void ProcessEntity(mapentity_t *entity, const int hullnum);
-void CreateSingleHull(const int hullnum);
-void CreateHulls(void);
 
 #endif

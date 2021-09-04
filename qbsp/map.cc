@@ -418,7 +418,10 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
         GetVectorForKey(entity, epair->key, entity->origin);
     } else if (!Q_strcasecmp(epair->key, "classname")) {
         if (!Q_strcasecmp(epair->value, "info_player_start")) {
-            if (rgfStartSpots & info_player_start)
+            // Quake II uses multiple starts for level transitions/backtracking.
+            // TODO: instead, this should check targetnames. There should only be
+            // one info_player_start per targetname.
+            if (!options.target_version->quake2 && (rgfStartSpots & info_player_start))
                 Message(msgWarning, warnMultipleStarts);
             rgfStartSpots |= info_player_start;
         } else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {

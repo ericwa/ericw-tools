@@ -39,7 +39,7 @@ options_t options;
 ProcessEntity
 ===============
 */
-void
+static void
 ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     int i, firstface;
@@ -406,23 +406,21 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 perbrush.maxs[2] = LittleFloat(b->maxs[2]);
                 switch(b->contents)
                 {
+                //contents should match the engine.
                 case CONTENTS_EMPTY:    //really an error, but whatever
                 case CONTENTS_SOLID:    //these are okay
                 case CONTENTS_WATER:
                 case CONTENTS_SLIME:
                 case CONTENTS_LAVA:
                 case CONTENTS_SKY:
-                        perbrush.contents = b->contents;
-                        break;
-                //contents should match the engine.
                 case CONTENTS_CLIP:
-                        perbrush.contents = -8;
+                        perbrush.contents = b->contents;
                         break;
 //              case CONTENTS_LADDER:
 //                      perbrush.contents = -16;
 //                      break;
                 default:
-                        Message(msgWarning, "Uknown contents: %i. Translating to solid.", b->contents);
+                        Message(msgWarning, "Unknown contents: %i. Translating to solid.", b->contents);
                         perbrush.contents = CONTENTS_SOLID;
                         break;
                 }
@@ -537,7 +535,7 @@ CreateSingleHull
 
 =================
 */
-void
+static void
 CreateSingleHull(const int hullnum)
 {
     int i;
@@ -560,7 +558,7 @@ CreateHulls
 
 =================
 */
-void
+static void
 CreateHulls(void)
 {
     /* create the hulls sequentially */
@@ -600,14 +598,19 @@ EnsureTexturesLoaded()
     
     wadlist_tried_loading = true;
     
-    wadlist = NULL;
-    wadstring = ValueForKey(pWorldEnt(), "_wad");
-    if (!wadstring[0])
-        wadstring = ValueForKey(pWorldEnt(), "wad");
-    if (!wadstring[0])
-        Message(msgWarning, warnNoWadKey);
-    else
-        wadlist = WADList_Init(wadstring);
+    // Quake II doesn't use wads, .wal's are loaded from pak/loose files
+    if (!options.target_version->quake2) {
+        wadlist = NULL;
+        wadstring = ValueForKey(pWorldEnt(), "_wad");
+        if (!wadstring[0])
+            wadstring = ValueForKey(pWorldEnt(), "wad");
+        if (!wadstring[0])
+            Message(msgWarning, warnNoWadKey);
+        else
+            wadlist = WADList_Init(wadstring);
+    } else {
+        wadstring = "";
+    }
     
     if (!wadlist) {
         if (wadstring[0])
@@ -959,7 +962,7 @@ ParseOptions(char *szOptions)
         szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);
     }
 
-    // combine format flags
+    // if we wanted hexen2, update it now
     if (hexen2) {
         if (options.target_version == &bspver_bsp2) {
             options.target_version = &bspver_h2bsp2;
@@ -968,6 +971,11 @@ ParseOptions(char *szOptions)
         } else {
             options.target_version = &bspver_h2;
         }
+    }
+
+    // force specific flags for Q2
+    if (options.target_version->quake2) {
+        options.fNoclip = true;
     }
 }
 

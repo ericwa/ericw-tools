@@ -51,20 +51,6 @@
 #define MAX_ENT_KEY   32
 #define MAX_ENT_VALUE 1024
 
-struct bspversion_t
-{
-    /* identifier value, the first int32_t in the header */
-    int32_t ident;
-    /* version value, if supported; use NO_VERSION if a version is not required */
-    int32_t version;
-    /* short name used for command line args, etc */
-    const char *short_name;
-    /* full display name for printing */
-    const char *name;
-    bool hexen2;
-    bool quake2;
-};
-
 #define NO_VERSION      -1
 
 #define BSPVERSION     29
@@ -74,31 +60,6 @@ struct bspversion_t
 #define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
 #define Q2_BSPVERSION  38
 #define Q2_QBISMIDENT  (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
-
-extern const bspversion_t bspver_generic;
-extern const bspversion_t bspver_q1;
-extern const bspversion_t bspver_h2;
-extern const bspversion_t bspver_h2bsp2;
-extern const bspversion_t bspver_h2bsp2rmq;
-extern const bspversion_t bspver_bsp2;
-extern const bspversion_t bspver_bsp2rmq;
-extern const bspversion_t bspver_hl;
-extern const bspversion_t bspver_q2;
-extern const bspversion_t bspver_qbism;
-
-/* table of supported versions */
-constexpr const bspversion_t *const bspversions[] = {
-    &bspver_generic,
-    &bspver_q1,
-    &bspver_h2,
-    &bspver_h2bsp2,
-    &bspver_h2bsp2rmq,
-    &bspver_bsp2,
-    &bspver_bsp2rmq,
-    &bspver_hl,
-    &bspver_q2,
-    &bspver_qbism
-};
 
 typedef struct {
     int32_t fileofs;
@@ -247,15 +208,15 @@ typedef struct {
 #define CONTENTS_SKY   -6
 #define CONTENTS_MIN   CONTENTS_SKY
 
-#define CONTENTS_CLIP   -7      /* compiler internal use only */
-#define CONTENTS_HINT   -8      /* compiler internal use only */
+#define CONTENTS_HINT   -7      /* compiler internal use only */
+#define CONTENTS_CLIP   -8      /* compiler internal use only */
 #define CONTENTS_ORIGIN -9      /* compiler internal use only */
 #define CONTENTS_DETAIL -10     /* compiler internal use only */
 #define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
 #define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
 #define CONTENTS_ILLUSIONARY_VISBLOCKER -13
-#define CONTENTS_FENCE  -15     /* compiler internal use only */
-#define CONTENTS_LADDER -16     /* reserved for engine use */
+//#define CONTENTS_FENCE  -15     /* compiler internal use only */
+//#define CONTENTS_LADDER -16     /* reserved for engine use */
 
 // Q2 contents (from qfiles.h)
 
@@ -886,6 +847,8 @@ struct q2bsp_qbism_t {
     uint8_t dpop[256];
 };
 
+struct bspversion_t;
+
 struct mbsp_t {
     const bspversion_t *loadversion;
     
@@ -981,6 +944,46 @@ typedef struct {
 
     bspxentry_t *bspxentries;
 } bspdata_t;
+
+// BSP version struct & instances
+struct bspversion_t
+{
+    /* identifier value, the first int32_t in the header */
+    int32_t ident;
+    /* version value, if supported; use NO_VERSION if a version is not required */
+    int32_t version;
+    /* short name used for command line args, etc */
+    const char *short_name;
+    /* full display name for printing */
+    const char *name;
+    bool hexen2;
+    bool quake2;
+};
+
+extern const bspversion_t bspver_generic;
+extern const bspversion_t bspver_q1;
+extern const bspversion_t bspver_h2;
+extern const bspversion_t bspver_h2bsp2;
+extern const bspversion_t bspver_h2bsp2rmq;
+extern const bspversion_t bspver_bsp2;
+extern const bspversion_t bspver_bsp2rmq;
+extern const bspversion_t bspver_hl;
+extern const bspversion_t bspver_q2;
+extern const bspversion_t bspver_qbism;
+
+/* table of supported versions */
+constexpr const bspversion_t *const bspversions[] = {
+    &bspver_generic,
+    &bspver_q1,
+    &bspver_h2,
+    &bspver_h2bsp2,
+    &bspver_h2bsp2rmq,
+    &bspver_bsp2,
+    &bspver_bsp2rmq,
+    &bspver_hl,
+    &bspver_q2,
+    &bspver_qbism
+};
 
 void LoadBSPFile(char *filename, bspdata_t *bspdata);       //returns the filename as contained inside a bsp
 void WriteBSPFile(const char *filename, bspdata_t *bspdata);

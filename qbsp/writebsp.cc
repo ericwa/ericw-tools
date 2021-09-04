@@ -30,6 +30,10 @@
 static void
 AssertVanillaContentType(int content)
 {
+	if (options.target_version->quake2) {
+		return;
+	}
+	
     switch (content) {
     case CONTENTS_EMPTY:
     case CONTENTS_SOLID:
@@ -44,7 +48,7 @@ AssertVanillaContentType(int content)
 }
 
 static int
-RemapContentsForExport(int content)
+RemapContentsForExport_(int content)
 {
     if (content == CONTENTS_DETAIL_FENCE) {
         /*
@@ -58,6 +62,34 @@ RemapContentsForExport(int content)
     if (content == CONTENTS_ILLUSIONARY_VISBLOCKER) {
         return CONTENTS_EMPTY;
     }
+    return content;
+}
+
+static int
+RemapContentsForExport(int content)
+{
+    content = RemapContentsForExport_(content);
+
+    if (options.target_version->quake2) {
+        switch (content) {
+        case CONTENTS_EMPTY:
+            return 0;
+        case CONTENTS_SOLID:
+        case CONTENTS_SKY:
+            return Q2_CONTENTS_SOLID;
+        case CONTENTS_WATER:
+            return Q2_CONTENTS_WATER;
+        case CONTENTS_SLIME:
+            return Q2_CONTENTS_SLIME;
+        case CONTENTS_LAVA:
+            return Q2_CONTENTS_LAVA;
+        case CONTENTS_CLIP:
+            return Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP;
+        default:
+            Error("dunno what to do with contents %i\n", content);
+        }
+    }
+
     return content;
 }
 
@@ -194,14 +226,11 @@ ExportLeaf(mapentity_t *entity, node_t *node)
 
     /*
      * write bounding box info
-     * (VectorCopy doesn't work since dest are shorts)
      */
-    dleaf->mins[0] = (short)node->mins[0];
-    dleaf->mins[1] = (short)node->mins[1];
-    dleaf->mins[2] = (short)node->mins[2];
-    dleaf->maxs[0] = (short)node->maxs[0];
-    dleaf->maxs[1] = (short)node->maxs[1];
-    dleaf->maxs[2] = (short)node->maxs[2];
+    for (int32_t i = 0; i < 3; i++) {
+        dleaf->mins[i] = node->mins[i];
+        dleaf->maxs[i] = node->maxs[i];
+    }
 
     dleaf->visofs = -1; // no vis info yet
 
@@ -223,6 +252,8 @@ ExportLeaf(mapentity_t *entity, node_t *node)
         static_cast<int>(map.exported_marksurfaces.size()) - dleaf->firstmarksurface;
 
     // FIXME-Q2: fill in other things
+    dleaf->area = 0;
+    dleaf->cluster = node->viscluster;
 }
 
 /*
@@ -241,13 +272,10 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
 
     dnode = &map.exported_nodes_bsp29[ourNodeIndex];
 
-    // VectorCopy doesn't work since dest are shorts
-    dnode->mins[0] = (short)node->mins[0];
-    dnode->mins[1] = (short)node->mins[1];
-    dnode->mins[2] = (short)node->mins[2];
-    dnode->maxs[0] = (short)node->maxs[0];
-    dnode->maxs[1] = (short)node->maxs[1];
-    dnode->maxs[2] = (short)node->maxs[2];
+    for (int32_t i = 0; i < 3; i++) {
+        dnode->mins[i] = node->mins[i];
+        dnode->maxs[i] = node->maxs[i];
+    }
 
     dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
@@ -256,7 +284,9 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
     // recursively output the other nodes
     for (i = 0; i < 2; i++) {
         if (node->children[i]->planenum == -1) {
-            if (node->children[i]->contents == CONTENTS_SOLID)
+            // In Q2, all leaves must have their own ID even if they share solidity.
+            // (probably for collision purposes? makes sense given they store leafbrushes)
+            if (!options.target_version->quake2 && node->children[i]->contents == CONTENTS_SOLID)
                 dnode->children[i] = -1;
             else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs_bsp29.size());
@@ -304,9 +334,9 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     {
         if (headnode->contents < 0)
-            ExportLeaf(entity, headnode);
-        else
-            ExportDrawNodes(entity, headnode);
+        ExportLeaf(entity, headnode);
+    else
+        ExportDrawNodes(entity, headnode);
     }
 
     // count how many leafs were exported by the above calls
@@ -335,7 +365,7 @@ BeginBSPFile(void)
 
     // Leave room for leaf 0 (must be solid)
     map.exported_leafs_bsp29.push_back({});
-    map.exported_leafs_bsp29.back().contents = CONTENTS_SOLID; // FIXME-Q2: use Q2_CONTENTS_SOLID
+    map.exported_leafs_bsp29.back().contents = RemapContentsForExport(CONTENTS_SOLID);
     Q_assert(map.exported_leafs_bsp29.size() == 1);
 }
 
@@ -437,6 +467,10 @@ WriteBSPFile()
 
     CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
     CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void**)&bspdata.data.mbsp.dtexdata);
+
+    bspdata.data.mbsp.numareas = 1;
+    bspdata.data.mbsp.dareas = (darea_t *) malloc(sizeof(darea_t));
+    bspdata.data.mbsp.dareas->firstareaportal = bspdata.data.mbsp.dareas->numareaportals = 0;
 
     // TODO: pass bspx lumps to generic bsp code so they are written
 
