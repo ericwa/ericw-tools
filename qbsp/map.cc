@@ -156,13 +156,13 @@ AddAnimTex(const char *name)
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
         for (j = 0; j < map.nummiptex(); j++) {
-            if (!Q_strcasecmp(framename, map.miptex.at(j).c_str()))
+            if (!Q_strcasecmp(framename, map.miptex.at(j).name.c_str()))
                 break;
         }
         if (j < map.nummiptex())
             continue;
 
-        map.miptex.push_back(framename);
+        map.miptex.push_back({ framename });
     }
 }
 
@@ -172,23 +172,29 @@ FindMiptex(const char *name)
     const char *pathsep;
     int i;
 
-    /* Ignore leading path in texture names (Q2 map compatibility) */
-    pathsep = strrchr(name, '/');
-    if (pathsep)
-        name = pathsep + 1;
+    if (!options.target_version->quake2) {
+        /* Ignore leading path in texture names (Q2 map compatibility) */
+        pathsep = strrchr(name, '/');
+        if (pathsep)
+            name = pathsep + 1;
+    }
 
     for (i = 0; i < map.nummiptex(); i++) {
-        if (!Q_strcasecmp(name, map.miptex.at(i).c_str()))
+        if (!Q_strcasecmp(name, map.miptex.at(i).name.c_str()))
             return i;
     }
-
+    
     /* Handle animating textures carefully */
-    if (name[0] == '+') {
-        AddAnimTex(name);
-        i = map.nummiptex();
+    if (!options.target_version->quake2) {
+        if (name[0] == '+') {
+            AddAnimTex(name);
+            i = map.nummiptex();
+        }
+    } else {
+        // load data from Q2 .wal
     }
 
-    map.miptex.push_back(name);
+    map.miptex.push_back({ name });
     return i;
 }
 
@@ -297,7 +303,7 @@ int
 FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
 {
     uint64_t flags = 0;
-    const char *texname = map.miptex.at(texinfo->miptex).c_str();
+    const char *texname = map.miptex.at(texinfo->miptex).name.c_str();
     const int shadow = atoi(ValueForKey(entity, "_shadow"));
     if (IsSkipName(texname))
         flags |= TEX_SKIP;
@@ -468,22 +474,6 @@ TextureAxisFromPlane(const qbsp_plane_t *plane, vec3_t xv, vec3_t yv, vec3_t sna
     VectorCopy(baseaxis[bestaxis * 3 + 2], yv);
     VectorCopy(baseaxis[bestaxis * 3], snapped_normal);
 }
-
-struct extended_tx_info_t {
-    bool quark_tx1;
-    bool quark_tx2;
-    
-    int contents;
-    int flags;
-    int value;
-    
-    extended_tx_info_t() :
-    quark_tx1(false),
-    quark_tx2(false),
-    contents(0),
-    flags(0),
-    value(0) {}
-};
 
 static extended_tx_info_t
 ParseExtendedTX(parser_t *parser)
@@ -1375,31 +1365,27 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
     vec3_t axis[2];
     vec_t shift[2], rotate, scale[2];
     texcoord_style_t tx_type;
-    int width, height;
     
     memset(tx, 0, sizeof(*tx));
+
+    extended_tx_info_t extinfo { };
 
     if (brush->format == brushformat_t::BRUSH_PRIMITIVES) {
         ParseBrushPrimTX(parser, texMat);
         tx_type = TX_BRUSHPRIM;
         
         ParseToken(parser, PARSE_SAMELINE);
-        tx->miptex = FindMiptex(parser->token);
         mapface.texname = std::string(parser->token);
         
         EnsureTexturesLoaded();
-        const texture_t *texture = WADList_GetTexture(parser->token);
-        width = texture ? texture->width : 64;
-        height = texture ? texture->height : 64;
         
         // Read extra Q2 params
-        const auto extinfo = ParseExtendedTX(parser);
+        extinfo = ParseExtendedTX(parser);
         mapface.contents = extinfo.contents;
         mapface.flags = extinfo.flags;
         mapface.value = extinfo.value;
     } else if (brush->format == brushformat_t::NORMAL) {
         ParseToken(parser, PARSE_SAMELINE);
-        tx->miptex = FindMiptex(parser->token);
         mapface.texname = std::string(parser->token);
         
         ParseToken(parser, PARSE_SAMELINE);
@@ -1409,7 +1395,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
             tx_type = TX_VALVE_220;
             
             // Read extra Q2 params
-            const auto extinfo = ParseExtendedTX(parser);
+            extinfo = ParseExtendedTX(parser);
             mapface.contents = extinfo.contents;
             mapface.flags = extinfo.flags;
             mapface.value = extinfo.value;
@@ -1425,7 +1411,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
             scale[1] = atof(parser->token);
             
             // Read extra Q2 params and/or QuArK subtype
-            const auto extinfo = ParseExtendedTX(parser);
+            extinfo = ParseExtendedTX(parser);
             if (extinfo.quark_tx1) {
                 tx_type = TX_QUARK_TYPE1;
             } else if (extinfo.quark_tx2) {
@@ -1439,6 +1425,8 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
         }
     }
 
+    tx->miptex = FindMiptex(mapface.texname.c_str());
+
     if (!planepts || !plane)
         return;
 
@@ -1450,9 +1438,14 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
     case TX_VALVE_220:
         SetTexinfo_Valve220(axis, shift, scale, tx);
         break;
-    case TX_BRUSHPRIM:
+    case TX_BRUSHPRIM: {
+        const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
+        const int32_t width = texture ? texture->width : 64;
+        const int32_t height = texture ? texture->height : 64;
+
         SetTexinfo_BrushPrimitives(texMat, plane->normal, width, height, tx->vecs);
         break;
+    }
     case TX_QUAKED:
     default:
         SetTexinfo_QuakeEd(plane, planepts, shift, rotate, scale, tx);

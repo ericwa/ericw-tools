@@ -627,6 +627,16 @@ EnsureTexturesLoaded()
     }
 }
 
+static const char* //mxd
+GetBaseDirName(const bspversion_t *bspver)
+{
+    if (bspver == &bspver_q2 || bspver == &bspver_qbism)
+        return "BASEQ2";
+    if (bspver == &bspver_h2)
+        return "DATA1";
+    return "ID1";
+}
+
 /*
 =================
 ProcessFile
@@ -636,6 +646,7 @@ static void
 ProcessFile(void)
 {
     // load brushes and entities
+    SetQdirFromPath(GetBaseDirName(options.target_version), options.szMapName);
     LoadMapFile();
     if (options.fConvertMapFormat) {
         ConvertMapFile();

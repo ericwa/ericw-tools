@@ -207,7 +207,7 @@ WADList_Process(const wad_t *wadlist)
 
     /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex(); i++) {
-        texture = WADList_FindTexture(wadlist, map.miptex.at(i).c_str());
+        texture = WADList_FindTexture(wadlist, map.texinfoTextureName(i).c_str());
         if (texture) {
             texdatasize += texture->size;
         }
@@ -224,7 +224,7 @@ WADList_Process(const wad_t *wadlist)
     for (i = 0; i < map.nummiptex(); i++) {
         if (miptexlump->dataofs[i] == 0) {
             miptexlump->dataofs[i] = -1;
-            Message(msgWarning, warnTextureNotFound, map.miptex.at(i).c_str());
+            Message(msgWarning, warnTextureNotFound, map.texinfoTextureName(i).c_str());
         }
     }
 }
@@ -243,7 +243,7 @@ WADList_LoadTextures(const wad_t *wadlist, dmiptexlump_t *lump)
             continue;
         size = 0;
         for (wad = wadlist; wad; wad = wad->next) {
-            size = WAD_LoadLump(wad, map.miptex.at(i).c_str(), data);
+            size = WAD_LoadLump(wad, map.texinfoTextureName(i).c_str(), data);
             if (size)
                 break;
         }
@@ -329,9 +329,10 @@ WADList_AddAnimationFrames(const wad_t *wadlist)
     oldcount = map.nummiptex();
 
     for (i = 0; i < oldcount; i++) {
-        if (map.miptex.at(i)[0] != '+' && (options.target_version != &bspver_hl || map.miptex.at(i)[0] != '-'))
+        const std::string &existing_name = map.texinfoTextureName(i);
+        if (existing_name[0] != '+' && (options.target_version != &bspver_hl || existing_name[0] != '-'))
             continue;
-        std::string name = map.miptex.at(i);
+        std::string name = map.texinfoTextureName(i);
 
         /* Search for all animations (0-9) and alt-animations (A-J) */
         for (j = 0; j < 20; j++) {

@@ -101,7 +101,7 @@ ExportMapPlane(int planenum)
 {
     qbsp_plane_t *plane = &map.planes.at(planenum);
 
-    if (plane->outputplanenum != -1)
+    if (plane->outputplanenum != PLANENUM_LEAF)
         return plane->outputplanenum; // already output.
     
     const int newIndex = static_cast<int>(map.exported_planes.size());
@@ -122,7 +122,7 @@ int
 ExportMapTexinfo(int texinfonum)
 {
     mtexinfo_t *src = &map.mtexinfos.at(texinfonum);
-    if (src->outputnum != -1)
+    if (src->outputnum != PLANENUM_LEAF)
         return src->outputnum;
     
     // this will be the index of the exported texinfo in the BSP lump
@@ -139,7 +139,10 @@ ExportMapTexinfo(int texinfonum)
             dest->vecs[j][k] = src->vecs[j][k];
         }
     }
-    // FIXME-Q2: fill in other attributes
+
+    strcpy(dest->texture, map.texinfoTextureName(texinfonum).c_str());
+    dest->flags = map.miptex[src->miptex].flags;
+    dest->value = map.miptex[src->miptex].value;
 
     src->outputnum = i;    
     return i;
@@ -159,7 +162,7 @@ ExportClipNodes(mapentity_t *entity, node_t *node)
     face_t *face, *next;
 
     // FIXME: free more stuff?
-    if (node->planenum == -1) {
+    if (node->planenum == PLANENUM_LEAF) {
         int contents = node->contents;
         free(node);
         return contents;
@@ -283,7 +286,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
 
     // recursively output the other nodes
     for (i = 0; i < 2; i++) {
-        if (node->children[i]->planenum == -1) {
+        if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             // (probably for collision purposes? makes sense given they store leafbrushes)
             if (!options.target_version->quake2 && node->children[i]->contents == CONTENTS_SOLID)
@@ -332,12 +335,10 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     const size_t mapleafsAtStart = map.exported_leafs_bsp29.size();
 
-    {
-        if (headnode->contents < 0)
+    if (headnode->planenum == PLANENUM_LEAF)
         ExportLeaf(entity, headnode);
     else
         ExportDrawNodes(entity, headnode);
-    }
 
     // count how many leafs were exported by the above calls
     dmodel->visleafs = static_cast<int>(map.exported_leafs_bsp29.size() - mapleafsAtStart);

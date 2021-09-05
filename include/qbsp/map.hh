@@ -127,7 +127,10 @@ public:
     }
 };
 
-using texname_t = std::string;
+struct texdata_t {
+    std::string     name;
+    int32_t         flags, value;
+};
 
 typedef struct mapdata_s {
     /* Arrays of actual items */
@@ -135,7 +138,7 @@ typedef struct mapdata_s {
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
     std::vector<qbsp_plane_t> planes;
-    std::vector<texname_t> miptex;
+    std::vector<texdata_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
     
     /* quick lookup for texinfo */
@@ -177,7 +180,7 @@ typedef struct mapdata_s {
     // helpers
     std::string texinfoTextureName(int texinfo) const {
         int mt = mtexinfos.at(texinfo).miptex;
-        return miptex.at(mt);
+        return miptex.at(mt).name;
     }
 } mapdata_t;
 
@@ -192,6 +195,15 @@ bool IsWorldBrushEntity(const mapentity_t *entity);
 void LoadMapFile(void);
 mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);
+
+struct extended_tx_info_t {
+    bool quark_tx1 = false;
+    bool quark_tx2 = false;
+    
+    int contents = 0;
+    int flags = 0;
+    int value = 0;
+};
 
 int FindMiptex(const char *name);
 int FindTexinfo(mtexinfo_t *texinfo, uint64_t flags); //FIXME: Make this take const texinfo

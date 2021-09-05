@@ -174,7 +174,7 @@ NormalizePlane(qbsp_plane_t *p)
     int i;
     vec_t ax, ay, az;
 
-    p->outputplanenum = -1;
+    p->outputplanenum = PLANENUM_LEAF;
     
     for (i = 0; i < 3; i++) {
         if (p->normal[i] == 1.0) {
@@ -388,7 +388,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         if (!hullnum && hullbrush->contents == CONTENTS_HINT) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
-            const char *texname = map.miptex.at(texinfo.miptex).c_str();
+            const char *texname = map.texinfoTextureName(texinfo.miptex).c_str();
 
             if (Q_strcasecmp(texname, "hint"))
                 continue; // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
@@ -410,7 +410,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
 
         // this face is a keeper
         f = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
-        f->planenum = -1;
+        f->planenum = PLANENUM_LEAF;
         f->w.numpoints = w->numpoints;
         if (f->w.numpoints > MAXEDGES)
             Error("face->numpoints > MAXEDGES (%d), source face on line %d",
@@ -843,7 +843,7 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-        texname = map.miptex.at(texinfo.miptex).c_str();
+        texname = map.texinfoTextureName(texinfo.miptex).c_str();
 
         if (!Q_strcasecmp(texname, "origin"))
             return CONTENTS_ORIGIN;
@@ -1569,7 +1569,7 @@ void SplitBrush (const brush_t *brush,
         }
         // FIXME: dangerous..
         plane.type = -1000;
-        plane.outputplanenum = -1;
+        plane.outputplanenum = PLANENUM_LEAF;
     }
     
     // check all points

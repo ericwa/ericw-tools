@@ -24,14 +24,10 @@ set(COMMON_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/common/qvec.hh
 	${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
 	${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh
-	${CMAKE_SOURCE_DIR}/include/common/lbmlib.hh
 	${CMAKE_SOURCE_DIR}/include/common/log.hh
 	${CMAKE_SOURCE_DIR}/include/common/mathlib.hh
 	${CMAKE_SOURCE_DIR}/include/common/polylib.hh 
-	${CMAKE_SOURCE_DIR}/include/common/scriplib.hh
 	${CMAKE_SOURCE_DIR}/include/common/threads.hh 
-	${CMAKE_SOURCE_DIR}/include/common/trilib.hh 
-	${CMAKE_SOURCE_DIR}/include/common/wadlib.hh
 	${CMAKE_SOURCE_DIR}/include/common/bsputils.hh)
 
 set(QBSP_INCLUDES

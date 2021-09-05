@@ -1209,7 +1209,7 @@ node_t *BuildTree_r (node_t *node, bspbrush_t *brushes)
     {
         // leaf node
         node->side = NULL;
-        node->planenum = -1;
+        node->planenum = PLANENUM_LEAF;
         LeafNode (node, brushes);
         return node;
     }

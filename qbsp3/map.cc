@@ -646,7 +646,7 @@ void ParseBrush (entity_t *mapent)
 		// find the plane number
 		//
 		planenum = PlaneFromPoints (planepts[0], planepts[1], planepts[2]);
-		if (planenum == -1)
+		if (planenum == PLANENUM_LEAF)
 		{
 			printf ("Entity %i, Brush %i: plane with no normal\n"
 				, b->entitynum, b->brushnum);
