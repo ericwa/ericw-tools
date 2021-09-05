@@ -1838,8 +1838,7 @@ BSP2to29_Clipnodes_Validate(const bsp2_dclipnode_t *dclipnodes2, int numclipnode
         for (int j = 0; j < 2; j++) {
             /* Slightly tricky since we support > 32k clipnodes */
             int32_t child = dclipnode2->children[j];
-            int32_t child_bsp29 = child < 0 ? child + 0x10000 : child;
-            if (OverflowsInt16(child_bsp29)) {
+            if (child < -15 || child > 0xFFF0) {
                 return false;
             }
         }
@@ -1885,6 +1884,21 @@ BSP29to2_Edges(const bsp29_dedge_t *dedges29, int numedges)
     return newdata;
 }
 
+static bool
+BSP2to29_Edges_Validate(const bsp2_dedge_t *dedges2, int numedges)
+{
+    const bsp2_dedge_t *dedge2 = dedges2;
+    
+    for (int i = 0; i < numedges; i++, dedge2++) {
+        if (OverflowsUint16(dedge2->v[0])
+            || OverflowsUint16(dedge2->v[1])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static bsp29_dedge_t *
 BSP2to29_Edges(const bsp2_dedge_t *dedges2, int numedges)
 {
@@ -1915,6 +1929,20 @@ BSP29to2_Marksurfaces(const uint16_t *dmarksurfaces29, int nummarksurfaces)
         *dmarksurface2 = *dmarksurface29;
 
     return newdata;
+}
+
+static bool
+BSP2to29_Marksurfaces_Validate(const uint32_t *dmarksurfaces2, int nummarksurfaces)
+{
+    const uint32_t *dmarksurface2 = dmarksurfaces2;
+
+    for (int i = 0; i < nummarksurfaces; i++, dmarksurface2++) {
+        if (OverflowsUint16(*dmarksurface2)) {
+            return false;
+        }
+    }
+        
+    return true;
 }
 
 static uint16_t *
@@ -2615,6 +2643,12 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
                 return false;
             }
             if (!BSP2to29_Clipnodes_Validate(mbsp->dclipnodes, mbsp->numclipnodes)) {
+                return false;
+            }
+            if (!BSP2to29_Edges_Validate(mbsp->dedges, mbsp->numedges)) {
+                return false;
+            }
+            if (!BSP2to29_Marksurfaces_Validate(mbsp->dleaffaces, mbsp->numleaffaces)) {
                 return false;
             }
 
