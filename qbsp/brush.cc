@@ -388,7 +388,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         if (!hullnum && hullbrush->contents == CONTENTS_HINT) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
-            const char *texname = map.texinfoTextureName(texinfo.miptex).c_str();
+            const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
 
             if (Q_strcasecmp(texname, "hint"))
                 continue; // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
@@ -785,7 +785,7 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
     // expand all of the planes
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (mapface->flags & TEX_NOEXPAND)
+        if (mapface->flags.extended & TEX_EXFLAG_NOEXPAND)
             continue;
         VectorCopy(vec3_origin, corner);
         for (x = 0; x < 3; x++) {
@@ -843,7 +843,7 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-        texname = map.texinfoTextureName(texinfo.miptex).c_str();
+        texname = map.miptexTextureName(texinfo.miptex).c_str();
 
         if (!Q_strcasecmp(texname, "origin"))
             return CONTENTS_ORIGIN;

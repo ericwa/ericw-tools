@@ -38,18 +38,19 @@ struct mapface_t {
     std::string texname;
     int texinfo;
     int linenum;
+
+    surfflags_t flags;
     
     // Q2 stuff
     int contents;
-    int flags;
     int value;
     
     mapface_t() :
-    texinfo(0),
-    linenum(0),
-    contents(0),
-    flags(0),
-    value(0) {
+        texinfo(0),
+        linenum(0),
+        contents(0),
+        flags({}),
+        value(0) {
         memset(&plane, 0, sizeof(plane));
         for (int i=0; i<3; i++) {
             VectorSet(planepts[i], 0, 0, 0);
@@ -178,9 +179,12 @@ typedef struct mapdata_s {
     bool needslmshifts = false;
 
     // helpers
-    std::string texinfoTextureName(int texinfo) const {
-        int mt = mtexinfos.at(texinfo).miptex;
+    const std::string &miptexTextureName(int mt) const {
         return miptex.at(mt).name;
+    }
+
+    const std::string &texinfoTextureName(int texinfo) const {
+        return miptexTextureName(mtexinfos.at(texinfo).miptex);
     }
 } mapdata_t;
 
@@ -206,7 +210,7 @@ struct extended_tx_info_t {
 };
 
 int FindMiptex(const char *name);
-int FindTexinfo(mtexinfo_t *texinfo, uint64_t flags); //FIXME: Make this take const texinfo
+int FindTexinfo(mtexinfo_t *texinfo, surfflags_t flags); //FIXME: Make this take const texinfo
 int FindTexinfoEnt(mtexinfo_t *texinfo, mapentity_t *entity); //FIXME: Make this take const texinfo
 
 void PrintEntity(const mapentity_t *entity);

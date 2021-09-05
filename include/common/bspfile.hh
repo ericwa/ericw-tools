@@ -329,43 +329,8 @@ typedef struct {
     int32_t nexttexinfo;      // for animations, -1 = end of chain
 } q2_texinfo_t;
 
-typedef struct {
-    float vecs[2][4];     // [s/t][xyz offset]
-    int32_t flags;            // miptex flags + overrides
-    
-    // q1 only
-    int32_t miptex;
-    
-    // q2 only
-    int32_t value;            // light emission, etc
-    char texture[32];     // texture name (textures/*.wal)
-    int32_t nexttexinfo;      // for animations, -1 = end of chain
-} gtexinfo_t;
-
-// Texture flags. Only TEX_SPECIAL is written to the .bsp.
-#define TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
-#define TEX_SKIP    (1U << 1)   /* an invisible surface */
-#define TEX_HINT    (1U << 2)   /* hint surface */
-#define TEX_NODIRT  (1U << 3)   /* don't receive dirtmapping */
-#define TEX_PHONG_ANGLE_SHIFT   4
-#define TEX_PHONG_ANGLE_MASK    (255U << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
-#define TEX_MINLIGHT_SHIFT      12
-#define TEX_MINLIGHT_MASK       (255U << TEX_MINLIGHT_SHIFT)    /* 8 bit value, minlight value for this face. */
-#define TEX_MINLIGHT_COLOR_R_SHIFT      20
-#define TEX_MINLIGHT_COLOR_R_MASK       (255ULL << TEX_MINLIGHT_COLOR_R_SHIFT)    /* 8 bit value, red minlight color for this face. */
-#define TEX_MINLIGHT_COLOR_G_SHIFT      28
-#define TEX_MINLIGHT_COLOR_G_MASK       (255ULL << TEX_MINLIGHT_COLOR_G_SHIFT)    /* 8 bit value, green minlight color for this face. */
-#define TEX_MINLIGHT_COLOR_B_SHIFT      36
-#define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
-#define TEX_NOSHADOW  (1ULL << 44)   /* don't cast a shadow */
-#define TEX_PHONG_ANGLE_CONCAVE_SHIFT   45
-#define TEX_PHONG_ANGLE_CONCAVE_MASK    (255ULL << TEX_PHONG_ANGLE_CONCAVE_SHIFT) /* 8 bit value. if non zero, overrides _phong_angle for concave joints. */
-#define TEX_NOBOUNCE  (1ULL << 53)   /* light doesn't bounce off this face */
-#define TEX_NOMINLIGHT (1ULL << 54)   /* opt out of minlight on this face */
-#define TEX_NOEXPAND  (1ULL << 55)   /* don't expand this face for larger clip hulls */
-#define TEX_LIGHTIGNORE (1ULL << 56)
-#define TEX_LIGHT_ALPHA_SHIFT 57
-#define TEX_LIGHT_ALPHA_MASK  (127ULL << TEX_LIGHT_ALPHA_SHIFT) /* 7 bit unsigned value. custom opacity */
+// Q1 Texture flags.
+#define    TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
 
 // Q2 Texture flags.
 #define    Q2_SURF_LIGHT      0x1        // value will hold the light strength
@@ -383,6 +348,64 @@ typedef struct {
 #define    Q2_SURF_SKIP       0x200    // completely ignore, allowing non-closed brushes
 
 #define    Q2_SURF_TRANSLUCENT (Q2_SURF_TRANS33|Q2_SURF_TRANS66) //mxd
+
+// QBSP/LIGHT flags
+#define TEX_EXFLAG_SKIP    (1U << 0)   /* an invisible surface */
+#define TEX_EXFLAG_HINT    (1U << 1)   /* hint surface */
+#define TEX_EXFLAG_NODIRT  (1U << 2)   /* don't receive dirtmapping */
+#define TEX_EXFLAG_NOSHADOW  (1U << 3)   /* don't cast a shadow */
+#define TEX_EXFLAG_NOBOUNCE  (1U << 4)   /* light doesn't bounce off this face */
+#define TEX_EXFLAG_NOMINLIGHT (1U << 5)   /* opt out of minlight on this face */
+#define TEX_EXFLAG_NOEXPAND  (1U << 6)   /* don't expand this face for larger clip hulls */
+#define TEX_EXFLAG_LIGHTIGNORE (1U << 7)  /* PLEASE DOCUMENT ME MOMMY */
+
+struct surfflags_t {
+    // native flags value; what's written to the BSP basically
+    int32_t native;
+
+    // extra flags, specific to BSP/LIGHT only
+    uint8_t extended;
+
+    // if non zero, enables phong shading and gives the angle threshold to use
+    uint8_t phong_angle;
+
+    // minlight value for this face
+    uint8_t minlight;
+
+    // red minlight colors for this face
+    uint8_t minlight_color[3];
+    
+    // if non zero, overrides _phong_angle for concave joints
+    uint8_t phong_angle_concave;
+
+    // custom opacity
+    uint8_t light_alpha;
+
+    constexpr bool needs_write() const {
+        return (extended & ~(TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT)) || phong_angle || minlight || minlight_color[0] ||
+            minlight_color[1] || minlight_color[2] || phong_angle_concave ||
+            light_alpha;
+    }
+};
+
+// header before tightly packed surfflags_t[num_texinfo]
+struct extended_flags_header_t {
+    uint32_t    num_texinfo;
+    uint32_t    surfflags_size; // sizeof(surfflags_t)
+};
+
+typedef struct {
+    float vecs[2][4];     // [s/t][xyz offset]
+    surfflags_t flags;    // native miptex flags + extended flags
+    
+    // q1 only
+    int32_t miptex;
+    
+    // q2 only
+    int32_t value;            // light emission, etc
+    char texture[32];     // texture name (textures/*.wal)
+    int32_t nexttexinfo;      // for animations, -1 = end of chain
+} gtexinfo_t;
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for
@@ -958,6 +981,8 @@ struct bspversion_t
     const char *name;
     bool hexen2;
     bool quake2;
+    bool (*surf_is_lightmapped)(const surfflags_t &flags);
+    bool (*surf_needs_subdivision)(const surfflags_t &flags);
 };
 
 extern const bspversion_t bspver_generic;

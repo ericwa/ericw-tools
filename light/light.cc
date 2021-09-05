@@ -106,7 +106,7 @@ debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
 bool litonly = false;
 
-uint64_t *extended_texinfo_flags = NULL;
+surfflags_t *extended_texinfo_flags = NULL;
 
 char mapfilename[1024];
 
@@ -507,7 +507,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
     char filename[1024];
     
     // always create the zero'ed array
-    extended_texinfo_flags = static_cast<uint64_t *>(calloc(bsp->numtexinfo, sizeof(uint64_t)));
+    extended_texinfo_flags = static_cast<surfflags_t *>(calloc(bsp->numtexinfo, sizeof(surfflags_t)));
     
     strcpy(filename, sourcefilename);
     StripExtension(filename);
@@ -517,28 +517,20 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
     if (!texinfofile)
         return;
     
-    logprint("Loaded extended texinfo flags from %s\n", filename);
-    
-    for (int i = 0; i < bsp->numtexinfo; i++) {
-        long long unsigned int flags = 0;
-        const int cnt = fscanf(texinfofile, "%llu\n", &flags);
-        if (cnt != 1) {
-            logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
-            fclose(texinfofile);
-            memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
-            return;
-        }
-        extended_texinfo_flags[i] = flags;
-    }
-    
-    // fail if there are more lines in the file
-    if (fgetc(texinfofile) != EOF) {
+    logprint("Loading extended texinfo flags from %s...\n", filename);
+
+    extended_flags_header_t header;
+
+    if (fread(&header, 1, sizeof(extended_flags_header_t), texinfofile) != sizeof(extended_flags_header_t) ||
+        header.num_texinfo != bsp->numtexinfo ||
+        header.surfflags_size != sizeof(surfflags_t) ||
+        fread(extended_texinfo_flags, sizeof(surfflags_t), header.num_texinfo, texinfofile) != header.num_texinfo) {
         logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
         fclose(texinfofile);
         memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
         return;
     }
-    
+
     fclose(texinfofile);
 }
 

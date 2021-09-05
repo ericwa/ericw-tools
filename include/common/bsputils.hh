@@ -48,9 +48,9 @@ const char *Face_TextureName(const mbsp_t *bsp, const bsp2_dface_t *face);
 bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face);
 const float *GetSurfaceVertexPoint(const mbsp_t *bsp, const bsp2_dface_t *f, int v);
 //int TextureName_Contents(const char *texname); //mxd
-bool Contents_IsTranslucent(const mbsp_t *bsp, int contents); //mxd
+bool ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, int contents_or_surf_flags); //mxd
 bool Face_IsTranslucent(const mbsp_t *bsp, const bsp2_dface_t *face); //mxd
-int Face_Contents(const mbsp_t *bsp, const bsp2_dface_t *face); //mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
+int Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const bsp2_dface_t *face); //mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
 vec_t Plane_Dist(const vec3_t point, const dplane_t *plane);
 bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point);

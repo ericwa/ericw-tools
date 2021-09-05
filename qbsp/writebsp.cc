@@ -132,7 +132,7 @@ ExportMapTexinfo(int texinfonum)
     gtexinfo_t* dest = &map.exported_texinfos.back();
     memset(dest, 0, sizeof(dest));
 
-    dest->flags = static_cast<int32_t>(src->flags & TEX_SPECIAL);
+    dest->flags = src->flags;
     dest->miptex = src->miptex;
     for (int j=0; j<2; j++) {
         for (int k=0; k<4; k++) {
@@ -242,7 +242,7 @@ ExportLeaf(mapentity_t *entity, node_t *node)
 
     for (face_t **markfaces = node->markfaces; *markfaces; markfaces++) {
         face_t *face = *markfaces;
-        if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
+        if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP)
             continue;
 
         /* emit a marksurface */
@@ -381,7 +381,7 @@ WriteExtendedTexinfoFlags(void)
     const int num_texinfo = map.numtexinfo();
     
     for (int i = 0; i < num_texinfo; i++) {
-        if (map.mtexinfos.at(i).flags & ~(TEX_SPECIAL | TEX_SKIP | TEX_HINT)) {
+        if (map.mtexinfos.at(i).flags.needs_write()) {
             // this texinfo uses some extended flags, write them to a file
             needwrite = true;
             break;
@@ -403,6 +403,12 @@ WriteExtendedTexinfoFlags(void)
     texinfofile = fopen(options.szBSPName, "wt");
     if (!texinfofile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+
+    extended_flags_header_t header;
+    header.num_texinfo = map.exported_texinfos.size();
+    header.surfflags_size = sizeof(surfflags_t);
+
+    fwrite(&header, 1, sizeof(header), texinfofile);
     
     int count = 0;
     for (const auto &tx : texinfos_sorted) {
@@ -410,8 +416,8 @@ WriteExtendedTexinfoFlags(void)
             continue;
         
         Q_assert(count == tx.outputnum); // check we are outputting them in the proper sequence
-        
-        fprintf(texinfofile, "%llu\n", static_cast<unsigned long long>(tx.flags));
+      
+        fwrite(&tx.flags, 1, sizeof(tx.flags), texinfofile);
         count++;
     }
     Q_assert(count == static_cast<int>(map.exported_texinfos.size()));

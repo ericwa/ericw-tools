@@ -47,9 +47,10 @@ SubdivideFace(face_t *f, face_t **prevptr)
 
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
-    if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
+    // FIXME: Q2
+    if (tex->flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT) ||
+        options.target_version->surf_needs_subdivision(tex->flags))
         return;
-
 //subdivision is pretty much pointless other than because of lightmap block limits
 //one lightmap block will always be added at the end, for smooth interpolation
 
@@ -340,7 +341,7 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
 {
     int i, memsize;
 
-    if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
+    if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
     
     face->outputnumber = -1;
@@ -392,7 +393,7 @@ EmitFace(mapentity_t *entity, face_t *face)
     bsp2_dface_t *out;
     int i;
 
-    if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
+    if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
     
     // emit a region
@@ -451,7 +452,7 @@ GrowNodeRegion(mapentity_t *entity, node_t *node)
 static void
 CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vertexesCount)
 {
-    if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
+    if (map.mtexinfos.at(f->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
     
     if (f->lmshift[1] != 4)

@@ -114,7 +114,7 @@ Face_ShouldBounce(const mbsp_t *bsp, const bsp2_dface_t *face)
     }
 
     // check for "_bounce" "-1"
-    if (extended_texinfo_flags[face->texinfo] & TEX_NOBOUNCE) {
+    if (extended_texinfo_flags[face->texinfo].extended & TEX_EXFLAG_NOBOUNCE) {
         return false;
     }
 

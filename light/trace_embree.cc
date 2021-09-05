@@ -71,11 +71,10 @@ struct ray_source_info : public RTCIntersectContext {
 static float
 Face_Alpha(const modelinfo_t *modelinfo, const bsp2_dface_t *face)
 {
-    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];  
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];  
 
     // for _light_alpha, 0 is considered unset
-    const uint64_t alpha_u7 = (extended_flags >> TEX_LIGHT_ALPHA_SHIFT) & 127ULL;
-    const float alpha_float = (float)alpha_u7 / (float)127;
+    const float alpha_float = (float)extended_flags.light_alpha / (float)UCHAR_MAX;
     if (alpha_float != 0.0f) {
         return alpha_float;
     }
@@ -355,11 +354,11 @@ Embree_FilterFuncN(const struct RTCFilterFunctionNArguments* args)
         //mxd
         bool isFence, isGlass;
         if(bsp_static->loadversion == &bspver_q2 || bsp_static->loadversion == &bspver_qbism) {
-            const int contents = Face_Contents(bsp_static, face);
-            isFence = ((contents & Q2_SURF_TRANSLUCENT) == Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
-            isGlass = !isFence && (contents & Q2_SURF_TRANSLUCENT);
+            const int surf_flags = Face_ContentsOrSurfaceFlags(bsp_static, face);
+            isFence = ((surf_flags & Q2_SURF_TRANSLUCENT) == Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
+            isGlass = !isFence && (surf_flags & Q2_SURF_TRANSLUCENT);
             if(isGlass)
-                alpha = (contents & Q2_SURF_TRANS33 ? 0.66f : 0.33f);
+                alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.66f : 0.33f);
         } else {
             const char *name = Face_TextureName(bsp_static, face);
             isFence = (name[0] == '{');
@@ -619,8 +618,8 @@ Embree_TraceInit(const mbsp_t *bsp)
             const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
             
             // check for TEX_NOSHADOW
-            const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
-            if (extended_flags & TEX_NOSHADOW)
+            const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+            if (extended_flags.extended & TEX_EXFLAG_NOSHADOW)
                 continue;
             
             // handle switchableshadow
@@ -629,18 +628,18 @@ Embree_TraceInit(const mbsp_t *bsp)
                 continue;
             }
             
-            const int contents = Face_Contents(bsp, face); //mxd
+            const int contents_or_surf_flags = Face_ContentsOrSurfaceFlags(bsp, face); //mxd
             const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
             const bool is_q2 = bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism;
 
             //mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
-            if(is_q2 && (contents & Q2_SURF_NODRAW) && !(contents & Q2_SURF_SKY))
+            if(is_q2 && (contents_or_surf_flags & Q2_SURF_NODRAW) && !(contents_or_surf_flags & Q2_SURF_SKY))
                 continue;
             
             // handle glass / water 
             const float alpha = Face_Alpha(model, face);
             if (alpha < 1.0f
-                || (is_q2 && (contents & Q2_SURF_TRANSLUCENT))) { //mxd. Both fence and transparent textures are done using SURF_TRANS flags in Q2
+                || (is_q2 && (contents_or_surf_flags & Q2_SURF_TRANSLUCENT))) { //mxd. Both fence and transparent textures are done using SURF_TRANS flags in Q2
                 filterfaces.push_back(face);
                 continue;
             }
@@ -656,8 +655,8 @@ Embree_TraceInit(const mbsp_t *bsp)
             if (is_q2) {
                 // Q2: arghrad compat: sky faces only emit sunlight if:
                 // sky flag set, light flag set, value nonzero
-                if ((contents & Q2_SURF_SKY) != 0
-                    && (!arghradcompat || ((contents & Q2_SURF_LIGHT) != 0
+                if ((contents_or_surf_flags & Q2_SURF_SKY) != 0
+                    && (!arghradcompat || ((contents_or_surf_flags & Q2_SURF_LIGHT) != 0
                     && texinfo->value != 0)))
                 {
                     skyfaces.push_back(face);
@@ -672,7 +671,7 @@ Embree_TraceInit(const mbsp_t *bsp)
             }
             
             // liquids
-            if (/* texname[0] == '*' */ Contents_IsTranslucent(bsp, contents)) { //mxd
+            if (/* texname[0] == '*' */ ContentsOrSurfaceFlags_IsTranslucent(bsp, contents_or_surf_flags)) { //mxd
                 if (!isWorld) {
                     // world liquids never cast shadows; shadow casting bmodel liquids do
                     solidfaces.push_back(face);

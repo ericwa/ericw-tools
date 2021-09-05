@@ -256,7 +256,7 @@ Returns a global texinfo number
 ===============
 */
 int
-FindTexinfo(mtexinfo_t *texinfo, uint64_t flags)
+FindTexinfo(mtexinfo_t *texinfo, surfflags_t flags)
 {
     /* Set the texture flags */
     texinfo->flags = flags;
@@ -302,25 +302,28 @@ normalize_color_format(vec3_t color)
 int
 FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
 {
-    uint64_t flags = 0;
+    surfflags_t flags {};
     const char *texname = map.miptex.at(texinfo->miptex).name.c_str();
     const int shadow = atoi(ValueForKey(entity, "_shadow"));
-    if (IsSkipName(texname))
-        flags |= TEX_SKIP;
-    if (IsHintName(texname))
-        flags |= TEX_HINT;
-    if (IsSpecialName(texname))
-        flags |= TEX_SPECIAL;
+    // These flags are pulled from surf flags in Q2.
+    if (!options.target_version->quake2) {
+        if (IsSkipName(texname))
+            flags.extended |= TEX_EXFLAG_SKIP;
+        if (IsHintName(texname))
+            flags.extended |= TEX_EXFLAG_HINT;
+        if (IsSpecialName(texname))
+            flags.native |= TEX_SPECIAL;
+    }
     if (IsNoExpandName(texname))
-        flags |= TEX_NOEXPAND;
+        flags.extended |= TEX_EXFLAG_NOEXPAND;
     if (atoi(ValueForKey(entity, "_dirt")) == -1)
-        flags |= TEX_NODIRT;
+        flags.extended |= TEX_EXFLAG_NODIRT;
     if (atoi(ValueForKey(entity, "_bounce")) == -1)
-        flags |= TEX_NOBOUNCE;
+        flags.extended |= TEX_EXFLAG_NOBOUNCE;
     if (atoi(ValueForKey(entity, "_minlight")) == -1)
-        flags |= TEX_NOMINLIGHT;
+        flags.extended |= TEX_EXFLAG_NOMINLIGHT;
     if (atoi(ValueForKey(entity, "_lightignore")) == 1)
-        flags |= TEX_LIGHTIGNORE;
+        flags.extended |= TEX_EXFLAG_LIGHTIGNORE;
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"... 
     for (int i = 0; i <= 9; i++) {
@@ -331,16 +334,16 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
 
         const char* excludeTex = ValueForKey(entity, key.c_str());
         if (strlen(excludeTex) > 0 && !Q_strcasecmp(texname, excludeTex)) {
-            flags |= TEX_NOMINLIGHT;
+            flags.extended |= TEX_EXFLAG_NOMINLIGHT;
         }
     }
    
     if (shadow == -1)
-        flags |= TEX_NOSHADOW;
+        flags.extended |= TEX_EXFLAG_NOSHADOW;
     if (!Q_strcasecmp("func_detail_illusionary", ValueForKey(entity, "classname"))) {
         /* Mark these entities as TEX_NOSHADOW unless the mapper set "_shadow" "1" */
         if (shadow != 1) {
-            flags |= TEX_NOSHADOW;
+            flags.extended |= TEX_EXFLAG_NOSHADOW;
         }
     }
     
@@ -353,21 +356,18 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
     }
     
     if (phongangle) {
-        const uint64_t phongangle_byte = (uint64_t) qmax(0, qmin(255, (int)rint(phongangle)));
-        flags |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
+        flags.phong_angle = qclamp((int)rint(phongangle), 0, 255);
     }
     
     const vec_t phong_angle_concave = atof(ValueForKey(entity, "_phong_angle_concave"));
     {
-        const uint64_t phong_angle_concave_byte = (uint64_t) qmax(0, qmin(255, (int)rint(phong_angle_concave)));
-        flags |= (phong_angle_concave_byte << TEX_PHONG_ANGLE_CONCAVE_SHIFT);
+        flags.phong_angle_concave = qclamp((int)rint(phong_angle_concave), 0, 255);
     }
     
     // handle "_minlight"
     const vec_t minlight = atof(ValueForKey(entity, "_minlight"));
     if (minlight > 0) {
-        const uint64_t minlight_byte = (uint64_t) qmax(0, qmin(255, (int)rint(minlight)));
-        flags |= (minlight_byte << TEX_MINLIGHT_SHIFT);
+        flags.minlight = qclamp((int)rint(minlight), 0, 255);
     }
 
     // handle "_mincolor"
@@ -381,22 +381,17 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
     
         normalize_color_format(mincolor);
         if (!VectorCompare(vec3_origin, mincolor, EQUAL_EPSILON)) {
-            const uint64_t r_byte = qmax(0, qmin(255, (int)rint(mincolor[0])));
-            const uint64_t g_byte = qmax(0, qmin(255, (int)rint(mincolor[1])));
-            const uint64_t b_byte = qmax(0, qmin(255, (int)rint(mincolor[2])));
-            
-            flags |= (r_byte << TEX_MINLIGHT_COLOR_R_SHIFT);
-            flags |= (g_byte << TEX_MINLIGHT_COLOR_G_SHIFT);
-            flags |= (b_byte << TEX_MINLIGHT_COLOR_B_SHIFT);
+
+            for (int32_t i = 0; i < 3; i++) {
+                flags.minlight_color[i] = qclamp((int)rint(mincolor[i]), 0, 255);
+            }
         }
     }
 
     // handle "_light_alpha"
     const vec_t lightalpha = atof(ValueForKey(entity, "_light_alpha"));
     if (lightalpha != 0.0) {
-        const uint64_t lightalpha_u7 = (uint64_t) qmax(0, qmin(127, (int)rint(lightalpha * 127.0)));
-        Q_assert(lightalpha_u7 < 128u);
-        flags |= (lightalpha_u7 << TEX_LIGHT_ALPHA_SHIFT);
+        flags.light_alpha = qclamp((int)rint(lightalpha * 255.0), 0, 255);
     }
     
     return FindTexinfo(texinfo, flags);
@@ -1382,7 +1377,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
         // Read extra Q2 params
         extinfo = ParseExtendedTX(parser);
         mapface.contents = extinfo.contents;
-        mapface.flags = extinfo.flags;
+        mapface.flags = { extinfo.flags };
         mapface.value = extinfo.value;
     } else if (brush->format == brushformat_t::NORMAL) {
         ParseToken(parser, PARSE_SAMELINE);
@@ -1397,7 +1392,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
             // Read extra Q2 params
             extinfo = ParseExtendedTX(parser);
             mapface.contents = extinfo.contents;
-            mapface.flags = extinfo.flags;
+            mapface.flags = { extinfo.flags };
             mapface.value = extinfo.value;
         } else {
             shift[0] = atof(parser->token);
@@ -1420,7 +1415,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
                 tx_type = TX_QUAKED;
             }
             mapface.contents = extinfo.contents;
-            mapface.flags = extinfo.flags;
+            mapface.flags = { extinfo.flags };
             mapface.value = extinfo.value;
         }
     }

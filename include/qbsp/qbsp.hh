@@ -144,7 +144,7 @@ enum {
 typedef struct mtexinfo_s {
     float vecs[2][4];           /* [s/t][xyz offset] */
     int32_t miptex;
-    uint64_t flags;
+    surfflags_t flags;
     int outputnum; // -1 until added to bsp
     
     bool operator<(const mtexinfo_s &other) const {
@@ -153,9 +153,10 @@ typedef struct mtexinfo_s {
         if (this->miptex > other.miptex)
             return false;
         
-        if (this->flags < other.flags)
+        // CHECK: is it worth sorting by all members?
+        if (this->flags.native < other.flags.native)
             return true;
-        if (this->flags > other.flags)
+        if (this->flags.native > other.flags.native)
             return false;
         
         for (int i=0; i<2; i++) {

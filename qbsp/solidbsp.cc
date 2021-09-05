@@ -389,7 +389,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
              */
             bool hintsplit = false;
             for (const face_t *face = surf->faces; face; face = face->next) {
-                if (map.mtexinfos.at(face->texinfo).flags & TEX_HINT)
+                if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_HINT)
                     hintsplit = true;
             }
 
@@ -409,13 +409,13 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
                 if (plane->type < 3 && plane->type == plane2->type)
                     continue;
                 for (const face_t *face = surf2->faces; face; face = face->next) {
-                    const uint64_t flags = map.mtexinfos.at(face->texinfo).flags;
+                    const surfflags_t &flags = map.mtexinfos.at(face->texinfo).flags;
                     /* Don't penalize for splitting skip faces */
-                    if (flags & TEX_SKIP)
+                    if (flags.extended & TEX_EXFLAG_SKIP)
                         continue;
                     if (FaceSide(face, plane) == SIDE_ON) {
                         /* Never split a hint face except with a hint */
-                        if (!hintsplit && (flags & TEX_HINT)) {
+                        if (!hintsplit && (flags.extended & TEX_EXFLAG_HINT)) {
                             splits = INT_MAX;
                             break;
                         }

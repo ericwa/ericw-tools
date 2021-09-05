@@ -253,7 +253,7 @@ WADList_LoadTextures(dmiptexlump_t *lump)
             continue;
         size = 0;
         for (auto &wad : wadlist) {
-            size = WAD_LoadLump(wad, map.texinfoTextureName(i).c_str(), data);
+            size = WAD_LoadLump(wad, map.miptexTextureName(i).c_str(), data);
             if (size)
                 break;
         }
@@ -274,10 +274,10 @@ WADList_AddAnimationFrames()
     oldcount = map.nummiptex();
 
     for (i = 0; i < oldcount; i++) {
-        const std::string &existing_name = map.texinfoTextureName(i);
+        const std::string &existing_name = map.miptexTextureName(i);
         if (existing_name[0] != '+' && (options.target_version != &bspver_hl || existing_name[0] != '-'))
             continue;
-        std::string name = map.texinfoTextureName(i);
+        std::string name = map.miptexTextureName(i);
 
         /* Search for all animations (0-9) and alt-animations (A-J) */
         for (j = 0; j < 20; j++) {
@@ -304,7 +304,7 @@ WADList_Process()
 
     /* Count texture size.  Slower, but saves memory. */
     for (i = 0; i < map.nummiptex(); i++) {
-        texture = WADList_FindTexture(map.texinfoTextureName(i).c_str());
+        texture = WADList_FindTexture(map.miptexTextureName(i).c_str());
         if (texture) {
             texdatasize += texture->size;
         }
@@ -321,7 +321,7 @@ WADList_Process()
     for (i = 0; i < map.nummiptex(); i++) {
         if (miptexlump->dataofs[i] == 0) {
             miptexlump->dataofs[i] = -1;
-            Message(msgWarning, warnTextureNotFound, map.texinfoTextureName(i).c_str());
+            Message(msgWarning, warnTextureNotFound, map.miptexTextureName(i).c_str());
         }
     }
 }

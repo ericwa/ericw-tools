@@ -91,7 +91,7 @@ typedef struct faceinfo_s {
     vec3_t origin;
     vec_t radiusSquared;
     
-    int content;
+    int content_or_surf_flags;
     plane_t plane;
     
     const char *texturename;
@@ -218,7 +218,7 @@ MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
     }
     info->radiusSquared = maxRadiusSq;
     
-    info->content = Face_Contents(bsp, face);
+    info->content_or_surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
     
     info->texturename = Face_TextureName(bsp, face);
     
@@ -717,11 +717,11 @@ TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
             // only solid and sky faces stop the trace.
             bool issolid, issky; //mxd
             if(bsp_static->loadversion == &bspver_q2 || bsp_static->loadversion == &bspver_qbism) {
-                issolid = !(fi->content & Q2_SURF_TRANSLUCENT);
-                issky = (fi->content & Q2_SURF_SKY);
+                issolid = !(fi->content_or_surf_flags & Q2_SURF_TRANSLUCENT);
+                issky = (fi->content_or_surf_flags & Q2_SURF_SKY);
             } else {
-                issolid = (fi->content == CONTENTS_SOLID);
-                issky = (fi->content == CONTENTS_SKY);
+                issolid = (fi->content_or_surf_flags == CONTENTS_SOLID);
+                issky = (fi->content_or_surf_flags == CONTENTS_SKY);
             }
 
             if (!passedThroughFence && (issolid || issky)) {

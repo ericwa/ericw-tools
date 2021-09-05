@@ -60,7 +60,7 @@ static void
 ExportObjFace(FILE *f, FILE *mtlF, const face_t *face, int *vertcount)
 {
     const mtexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
-    const char *texname = map.texinfoTextureName(texinfo.miptex).c_str();
+    const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
     
     const texture_t *texture = WADList_GetTexture(texname);
     const int width = texture ? texture->width : 64;
@@ -193,7 +193,7 @@ ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<const face_t *> 
 
     for (face_t **markface = node->markfaces; *markface; markface++) {
         face_t* face = *markface;
-        if (map.mtexinfos.at(face->texinfo).flags & TEX_SKIP)
+        if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP)
             continue;
 
         // FIXME: what is the face->original list about

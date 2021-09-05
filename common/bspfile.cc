@@ -21,18 +21,34 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 
-/*                                                                                                           hexen2, quake2 */
+bool q1_surf_is_lightmapped(const surfflags_t &flags) {
+    return !(flags.native & TEX_SPECIAL);
+}
+
+bool q2_surf_is_lightmapped(const surfflags_t &flags) {
+    return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY | Q2_SURF_NODRAW)); // mxd. +Q2_SURF_NODRAW
+}
+
+bool q1_surf_needs_subdivision(const surfflags_t &flags) {
+    return flags.native & TEX_SPECIAL;
+}
+
+bool q2_surf_needs_subdivision(const surfflags_t &flags) {
+    return flags.native & (Q2_SURF_WARP | Q2_SURF_SKY);
+}
+
+/*                                                                                                           hexen2, quake2, surf_is_lightmapped     surf_needs_subdivision    */
 const bspversion_t bspver_generic    { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         false,  false };
-const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           false,  false };
-const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          false,  false };
-const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      false,  false };
+const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */               
-const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        true,   false };
-const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       true,   false };
-const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   true,   false };
-const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       false,  false };
-const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        false,  true };
-const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  false,  true };
+const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        true,   false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       true,   false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   true,   false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        false,  true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
+const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  false,  true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
 
 static const char *
 BSPVersionString(const bspversion_t *version)
@@ -992,7 +1008,7 @@ BSP29toM_Texinfo(const texinfo_t *texinfos, int numtexinfo) {
         for (j=0; j<2; j++)
             for (k=0; k<4; k++)
                 mtexinfo->vecs[j][k] = texinfo29->vecs[j][k];
-        mtexinfo->flags = texinfo29->flags;
+        mtexinfo->flags = { texinfo29->flags };
         mtexinfo->miptex = texinfo29->miptex;
     }
     
@@ -1011,7 +1027,7 @@ MBSPto29_Texinfo(const gtexinfo_t *mtexinfos, int numtexinfo) {
         for (j=0; j<2; j++)
             for (k=0; k<4; k++)
                 texinfo29->vecs[j][k] = mtexinfo->vecs[j][k];
-        texinfo29->flags = mtexinfo->flags;
+        texinfo29->flags = mtexinfo->flags.native;
         texinfo29->miptex = mtexinfo->miptex;
     }
     
@@ -1479,7 +1495,7 @@ Q2BSPtoM_Texinfo(const q2_texinfo_t *dtexinfosq2, int numtexinfos) {
         for (j = 0; j < 2; j++)
             for (k = 0; k < 4; k++)
                 dtexinfo2->vecs[j][k] = dtexinfoq2->vecs[j][k];
-        dtexinfo2->flags = dtexinfoq2->flags;
+        dtexinfo2->flags = { dtexinfoq2->flags };
         memcpy(dtexinfo2->texture, dtexinfoq2->texture, sizeof(dtexinfo2->texture));
         dtexinfo2->value = dtexinfoq2->value;
         dtexinfo2->nexttexinfo = dtexinfoq2->nexttexinfo;
@@ -1500,7 +1516,7 @@ MBSPtoQ2_Texinfo(const gtexinfo_t *dtexinfos2, int numtexinfos) {
         for (j = 0; j < 2; j++)
             for (k = 0; k < 4; k++)
                 dtexinfoq2->vecs[j][k] = dtexinfo2->vecs[j][k];
-        dtexinfoq2->flags = dtexinfo2->flags;
+        dtexinfoq2->flags = dtexinfo2->flags.native;
         memcpy(dtexinfoq2->texture, dtexinfo2->texture, sizeof(dtexinfo2->texture));
         dtexinfoq2->value = dtexinfo2->value;
         dtexinfoq2->nexttexinfo = dtexinfo2->nexttexinfo;

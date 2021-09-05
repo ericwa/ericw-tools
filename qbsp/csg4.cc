@@ -57,7 +57,7 @@ MakeSkipTexinfo()
     mtexinfo_t mt;
     
     mt.miptex = FindMiptex("skip");
-    mt.flags = TEX_SKIP;
+    mt.flags = { 0, TEX_EXFLAG_SKIP };
     memset(&mt.vecs, 0, sizeof(mt.vecs));
     
     texinfo = FindTexinfo(&mt, mt.flags);
