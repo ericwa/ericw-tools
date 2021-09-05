@@ -1830,6 +1830,24 @@ BSP29to2_Clipnodes(const bsp29_dclipnode_t *dclipnodes29, int numclipnodes) {
     return newdata;
 }
 
+static bool
+BSP2to29_Clipnodes_Validate(const bsp2_dclipnode_t *dclipnodes2, int numclipnodes) {
+    const bsp2_dclipnode_t *dclipnode2 = dclipnodes2;
+
+    for (int i = 0; i < numclipnodes; i++, dclipnode2++) {
+        for (int j = 0; j < 2; j++) {
+            /* Slightly tricky since we support > 32k clipnodes */
+            int32_t child = dclipnode2->children[j];
+            int32_t child_bsp29 = child < 0 ? child + 0x10000 : child;
+            if (OverflowsInt16(child_bsp29)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 static bsp29_dclipnode_t *
 BSP2to29_Clipnodes(const bsp2_dclipnode_t *dclipnodes2, int numclipnodes) {
     const bsp2_dclipnode_t *dclipnode2 = dclipnodes2;
@@ -2594,6 +2612,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
                 return false;
             }
             if (!BSP2to29_Faces_Validate(mbsp->dfaces, mbsp->numfaces)) {
+                return false;
+            }
+            if (!BSP2to29_Clipnodes_Validate(mbsp->dclipnodes, mbsp->numclipnodes)) {
                 return false;
             }
 
