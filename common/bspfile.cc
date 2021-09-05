@@ -1067,7 +1067,7 @@ static uint8_t *
 Q2BSPtoM_CopyVisData(const dvis_t *dvisq2, int vissize, int *outvissize, mleaf_t *leafs, int numleafs) {
 
     if (!*outvissize) {
-        return ((uint8_t *) dvisq2);
+        return nullptr;
     }
 
     // FIXME: assumes PHS always follows PVS.
@@ -2220,7 +2220,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
             // bspver_q1, bspver_h2, bspver_hl -> bspver_generic
 
-            const bsp29_t *bsp29 = &bspdata->data.bsp29;
+            bsp29_t *bsp29 = &bspdata->data.bsp29;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2264,7 +2264,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dsurfedges = BSP29_CopySurfedges(bsp29->dsurfedges, bsp29->numsurfedges);
         
             /* Free old data */
-            FreeBSP29((bsp29_t *)bsp29);
+            FreeBSP29(bsp29);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2273,7 +2273,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_q2) {
             // bspver_q2 -> bspver_generic
 
-            const q2bsp_t *q2bsp = &bspdata->data.q2bsp;
+            q2bsp_t *q2bsp = &bspdata->data.q2bsp;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2322,7 +2322,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dbrushsides = Q2BSPtoM_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
         
             /* Free old data */
-            FreeQ2BSP((q2bsp_t *)q2bsp);
+            FreeQ2BSP(q2bsp);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2331,7 +2331,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_qbism) {
             // bspver_qbism -> bspver_generic
 
-            const q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
+            q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2380,7 +2380,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
         
             /* Free old data */
-            FreeQ2BSP_QBSP((q2bsp_qbism_t *)q2bsp);
+            FreeQ2BSP_QBSP(q2bsp);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2389,7 +2389,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
             // bspver_bsp2rmq, bspver_h2bsp2rmq -> bspver_generic
 
-            const bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
+            bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2433,7 +2433,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dsurfedges = BSP29_CopySurfedges(bsp2rmq->dsurfedges, bsp2rmq->numsurfedges);
         
             /* Free old data */
-            FreeBSP2RMQ((bsp2rmq_t *)bsp2rmq);
+            FreeBSP2RMQ(bsp2rmq);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2442,7 +2442,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
             // bspver_bsp2, bspver_h2bsp2 -> bspver_generic
 
-            const bsp2_t *bsp2 = &bspdata->data.bsp2;
+            bsp2_t *bsp2 = &bspdata->data.bsp2;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2486,7 +2486,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dsurfedges = BSP29_CopySurfedges(bsp2->dsurfedges, bsp2->numsurfedges);
         
             /* Free old data */
-            FreeBSP2((bsp2_t *)bsp2);
+            FreeBSP2(bsp2);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2500,7 +2500,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             // bspver_generic -> bspver_q1, bspver_h2, bspver_hl
 
             bsp29_t *bsp29 = &bspdata->data.bsp29;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(bsp29, 0, sizeof(*bsp29));
         
@@ -2543,7 +2543,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp29->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2552,7 +2552,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (to_version == &bspver_q2) {
             // bspver_generic -> bspver_q2
 
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_t *q2bsp = &bspdata->data.q2bsp;
         
             memset(q2bsp, 0, sizeof(*q2bsp));
@@ -2600,7 +2600,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             q2bsp->dbrushsides = MBSPtoQ2_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2609,7 +2609,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (to_version == &bspver_qbism) {
             // bspver_generic -> bspver_qbism
 
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
         
             memset(q2bsp, 0, sizeof(*q2bsp));
@@ -2657,7 +2657,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             q2bsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2667,7 +2667,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             // bspver_generic -> bspver_bsp2rmq, bspver_h2bsp2rmq
 
             bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(bsp2rmq, 0, sizeof(*bsp2rmq));
         
@@ -2710,7 +2710,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp2rmq->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2720,7 +2720,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             // bspver_generic -> bspver_bsp2, bspver_h2bsp2
 
             bsp2_t *bsp2 = &bspdata->data.bsp2;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(bsp2, 0, sizeof(*bsp2));
         
@@ -2763,7 +2763,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp2->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;

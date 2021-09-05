@@ -106,7 +106,7 @@ debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
 bool litonly = false;
 
-surfflags_t *extended_texinfo_flags = NULL;
+surfflags_t *extended_texinfo_flags = nullptr;
 
 char mapfilename[1024];
 
@@ -436,7 +436,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         }
     }
 
-    CalcualateVertexNormals(bsp);
+    CalculateVertexNormals(bsp);
     
     const qboolean bouncerequired = cfg_static.bounce.boolValue() && (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); //mxd
     const qboolean isQuake2map = (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism); //mxd
@@ -1221,7 +1221,7 @@ light_main(int argc, const char **argv)
         StripExtension(source);
         DefaultExtension(source, ".obj");
         
-        CalcualateVertexNormals(bsp);
+        CalculateVertexNormals(bsp);
         ExportObj(source, bsp);
         
         close_log();

@@ -417,9 +417,9 @@ static int Q2_FacePhongValue(const mbsp_t *bsp, const bsp2_dface_t *face) {
 }
 
 void
-CalcualateVertexNormals(const mbsp_t *bsp)
+CalculateVertexNormals(const mbsp_t *bsp)
 {
-    logprint("--- CalcualateVertexNormals ---\n");
+    logprint("--- %s ---\n", __func__);
 
     Q_assert(!s_builtPhongCaches);
     s_builtPhongCaches = true;
@@ -464,7 +464,7 @@ CalcualateVertexNormals(const mbsp_t *bsp)
             interior_verts.insert(i);
         }
     }
-    //printf("CalcualateVertexNormals: %d interior verts\n", (int)interior_verts.size());
+    //printf("CalculateVertexNormals: %d interior verts\n", (int)interior_verts.size());
     
     // build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
@@ -552,7 +552,7 @@ CalcualateVertexNormals(const mbsp_t *bsp)
     {
         const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         if (f->numedges < 3) {
-            logprint("CalcualateVertexNormals: face %d is degenerate with %d edges\n", i, f->numedges);
+            logprint("%s: face %d is degenerate with %d edges\n", __func__, i, f->numedges);
             for (int j = 0; j<f->numedges; j++) {
                 vec3_t pt;
                 Face_PointAtIndex(bsp, f, j, pt);
