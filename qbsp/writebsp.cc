@@ -141,7 +141,7 @@ ExportMapTexinfo(int texinfonum)
     }
 
     strcpy(dest->texture, map.texinfoTextureName(texinfonum).c_str());
-    dest->flags = map.miptex[src->miptex].flags;
+    //dest->flags = map.miptex[src->miptex].flags;
     dest->value = map.miptex[src->miptex].value;
 
     src->outputnum = i;    

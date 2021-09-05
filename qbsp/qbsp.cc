@@ -584,7 +584,6 @@ CreateHulls(void)
     }
 }
 
-wad_t *wadlist = NULL;
 static bool wadlist_tried_loading = false;
 
 void
@@ -600,19 +599,18 @@ EnsureTexturesLoaded()
     
     // Quake II doesn't use wads, .wal's are loaded from pak/loose files
     if (!options.target_version->quake2) {
-        wadlist = NULL;
         wadstring = ValueForKey(pWorldEnt(), "_wad");
         if (!wadstring[0])
             wadstring = ValueForKey(pWorldEnt(), "wad");
         if (!wadstring[0])
             Message(msgWarning, warnNoWadKey);
         else
-            wadlist = WADList_Init(wadstring);
+            WADList_Init(wadstring);
     } else {
         wadstring = "";
     }
     
-    if (!wadlist) {
+    if (!wadlist.size()) {
         if (wadstring[0])
             Message(msgWarning, warnNoValidWads);
         /* Try the default wad name */
@@ -620,8 +618,8 @@ EnsureTexturesLoaded()
         strcpy(defaultwad, options.szMapName);
         StripExtension(defaultwad);
         DefaultExtension(defaultwad, ".wad");
-        wadlist = WADList_Init(defaultwad);
-        if (wadlist)
+        WADList_Init(defaultwad);
+        if (wadlist.size())
             Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
         free(defaultwad);
     }
@@ -668,11 +666,11 @@ ProcessFile(void)
     CreateHulls();
 
     WriteEntitiesToString();
-    WADList_Process(wadlist);
+    WADList_Process();
     BSPX_CreateBrushList();
     FinishBSPFile();
 
-    WADList_Free(wadlist);
+    wadlist.clear();
 }
 
 
