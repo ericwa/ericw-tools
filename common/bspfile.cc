@@ -971,6 +971,17 @@ OverflowsInt16(float input) {
 }
 
 static bool
+OverflowsInt16(int32_t input) {
+    if (input < INT16_MIN) {
+        return true;
+    }
+    if (input > INT16_MAX) {
+        return true;
+    }
+    return false;
+}
+
+static bool
 OverflowsUint16(uint32_t input) {
     if (input > INT16_MAX) {
         return true;
@@ -1685,6 +1696,31 @@ BSP29to2_Nodes(const bsp29_dnode_t *dnodes29, int numnodes) {
     return newdata;
 }
 
+static bool
+BSP2to29_Nodes_Validate(const bsp2_dnode_t *dnodes2, int numnodes) {
+    const bsp2_dnode_t *dnode2 = dnodes2;
+    
+    for (int i = 0; i < numnodes; i++, dnode2++) {
+        if (OverflowsInt16(dnode2->children[0]) || OverflowsInt16(dnode2->children[1])) {
+            return false;
+        }
+        for (int j = 0; j < 3; j++) {
+            const float min_j = floor(dnode2->mins[j]);
+            const float max_j = ceil(dnode2->maxs[j]);
+
+            if (OverflowsInt16(min_j) || OverflowsInt16(max_j)) {
+                return false;
+            }
+        }
+        if (OverflowsUint16(dnode2->firstface)
+            || OverflowsUint16(dnode2->numfaces)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static bsp29_dnode_t *
 BSP2to29_Nodes(const bsp2_dnode_t *dnodes2, int numnodes) {
     const bsp2_dnode_t *dnode2 = dnodes2;
@@ -1698,8 +1734,8 @@ BSP2to29_Nodes(const bsp2_dnode_t *dnodes2, int numnodes) {
         dnode29->children[0] = dnode2->children[0];
         dnode29->children[1] = dnode2->children[1];
         for (j = 0; j < 3; j++) {
-            dnode29->mins[j] = dnode2->mins[j];
-            dnode29->maxs[j] = dnode2->maxs[j];
+            dnode29->mins[j] = floor(dnode2->mins[j]);
+            dnode29->maxs[j] = ceil(dnode2->maxs[j]);
         }
         dnode29->firstface = dnode2->firstface;
         dnode29->numfaces = dnode2->numfaces;
@@ -1728,6 +1764,28 @@ BSP29to2_Faces(const bsp29_dface_t *dfaces29, int numfaces) {
     }
 
     return newdata;
+}
+
+static bool
+BSP2to29_Faces_Validate(const bsp2_dface_t *dfaces2, int numfaces) {
+    const bsp2_dface_t *dface2 = dfaces2;
+
+    for (int i = 0; i < numfaces; i++, dface2++) {
+        if (OverflowsInt16(dface2->planenum)) {
+            return false;
+        }
+        if (OverflowsInt16(dface2->side)) {
+            return false;
+        }
+        if (OverflowsInt16(dface2->numedges)) {
+            return false;
+        }
+        if (OverflowsInt16(dface2->texinfo)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static bsp29_dface_t *
@@ -2530,6 +2588,12 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         
             // validate that the conversion is possible
             if (!MBSPto29_Leafs_Validate(mbsp->dleafs, mbsp->numleafs)) {
+                return false;
+            }
+            if (!BSP2to29_Nodes_Validate(mbsp->dnodes, mbsp->numnodes)) {
+                return false;
+            }
+            if (!BSP2to29_Faces_Validate(mbsp->dfaces, mbsp->numfaces)) {
                 return false;
             }
 
