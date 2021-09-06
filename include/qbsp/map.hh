@@ -158,8 +158,8 @@ typedef struct mapdata_s {
     // Final, exported data
     std::vector<gtexinfo_t> exported_texinfos;
     std::vector<dplane_t> exported_planes;
-    std::vector<mleaf_t> exported_leafs_bsp29;
-    std::vector<bsp2_dnode_t> exported_nodes_bsp29;
+    std::vector<mleaf_t> exported_leafs;
+    std::vector<bsp2_dnode_t> exported_nodes;
     std::vector<uint32_t> exported_marksurfaces;
     std::vector<bsp2_dclipnode_t> exported_clipnodes;
     std::vector<bsp2_dedge_t> exported_edges;

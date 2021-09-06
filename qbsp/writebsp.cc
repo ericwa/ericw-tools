@@ -186,8 +186,8 @@ ExportLeaf
 static void
 ExportLeaf(mapentity_t *entity, node_t *node)
 {
-    map.exported_leafs_bsp29.push_back({});
-    mleaf_t *dleaf = &map.exported_leafs_bsp29.back();
+    map.exported_leafs.push_back({});
+    mleaf_t *dleaf = &map.exported_leafs.back();
 
     dleaf->contents = RemapContentsForExport(node->contents);
     AssertVanillaContentType(dleaf->contents);
@@ -236,10 +236,10 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
     bsp2_dnode_t *dnode;
     int i;
 
-    const size_t ourNodeIndex = map.exported_nodes_bsp29.size();
-    map.exported_nodes_bsp29.push_back({});
+    const size_t ourNodeIndex = map.exported_nodes.size();
+    map.exported_nodes.push_back({});
 
-    dnode = &map.exported_nodes_bsp29[ourNodeIndex];
+    dnode = &map.exported_nodes[ourNodeIndex];
 
     // VectorCopy doesn't work since dest are shorts
     dnode->mins[0] = (short)node->mins[0];
@@ -259,19 +259,19 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
             if (node->children[i]->contents == CONTENTS_SOLID)
                 dnode->children[i] = -1;
             else {
-                int nextLeafIndex = static_cast<int>(map.exported_leafs_bsp29.size());
+                int nextLeafIndex = static_cast<int>(map.exported_leafs.size());
                 const int childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
                 ExportLeaf(entity, node->children[i]);
             }
         } else {
-            const int childnum = static_cast<int>(map.exported_nodes_bsp29.size());
+            const int childnum = static_cast<int>(map.exported_nodes.size());
             dnode->children[i] = childnum;
             ExportDrawNodes(entity, node->children[i]);
 
             // Important: our dnode pointer may be invalid after the recursive call, if the vector got resized.
             // So re-set the pointer.
-            dnode = &map.exported_nodes_bsp29[ourNodeIndex];
+            dnode = &map.exported_nodes[ourNodeIndex];
         }
     }
 
@@ -296,11 +296,11 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     // populate model struct (which was emitted previously)
     dmodel = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
-    dmodel->headnode[0] = static_cast<int>(map.exported_nodes_bsp29.size());
+    dmodel->headnode[0] = static_cast<int>(map.exported_nodes.size());
     dmodel->firstface = firstface;
     dmodel->numfaces = static_cast<int>(map.exported_faces.size()) - firstface;
 
-    const size_t mapleafsAtStart = map.exported_leafs_bsp29.size();
+    const size_t mapleafsAtStart = map.exported_leafs.size();
 
     {
         if (headnode->contents < 0)
@@ -310,7 +310,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     }
 
     // count how many leafs were exported by the above calls
-    dmodel->visleafs = static_cast<int>(map.exported_leafs_bsp29.size() - mapleafsAtStart);
+    dmodel->visleafs = static_cast<int>(map.exported_leafs.size() - mapleafsAtStart);
 
     /* remove the headnode padding */
     for (i = 0; i < 3; i++) {
@@ -334,9 +334,9 @@ BeginBSPFile(void)
     Q_assert(map.exported_edges.size() == 1);
 
     // Leave room for leaf 0 (must be solid)
-    map.exported_leafs_bsp29.push_back({});
-    map.exported_leafs_bsp29.back().contents = CONTENTS_SOLID; // FIXME-Q2: use Q2_CONTENTS_SOLID
-    Q_assert(map.exported_leafs_bsp29.size() == 1);
+    map.exported_leafs.push_back({});
+    map.exported_leafs.back().contents = CONTENTS_SOLID; // FIXME-Q2: use Q2_CONTENTS_SOLID
+    Q_assert(map.exported_leafs.size() == 1);
 }
 
 /*
@@ -424,9 +424,9 @@ WriteBSPFile()
     bspdata.version = &bspver_generic;
 
     CopyVector(map.exported_planes, &bspdata.data.mbsp.numplanes, &bspdata.data.mbsp.dplanes);
-    CopyVector(map.exported_leafs_bsp29, &bspdata.data.mbsp.numleafs, &bspdata.data.mbsp.dleafs);
+    CopyVector(map.exported_leafs, &bspdata.data.mbsp.numleafs, &bspdata.data.mbsp.dleafs);
     CopyVector(map.exported_vertexes, &bspdata.data.mbsp.numvertexes, &bspdata.data.mbsp.dvertexes);
-    CopyVector(map.exported_nodes_bsp29, &bspdata.data.mbsp.numnodes, &bspdata.data.mbsp.dnodes);
+    CopyVector(map.exported_nodes, &bspdata.data.mbsp.numnodes, &bspdata.data.mbsp.dnodes);
     CopyVector(map.exported_texinfos, &bspdata.data.mbsp.numtexinfo, &bspdata.data.mbsp.texinfo);
     CopyVector(map.exported_faces, &bspdata.data.mbsp.numfaces, &bspdata.data.mbsp.dfaces);
     CopyVector(map.exported_clipnodes, &bspdata.data.mbsp.numclipnodes, &bspdata.data.mbsp.dclipnodes);
