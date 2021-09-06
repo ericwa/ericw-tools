@@ -576,7 +576,7 @@ CreateHulls(void)
 
     if (options.target_version == &bspver_hl)
         CreateSingleHull(3);
-    else if (options.target_version->hexen2)
+    else if (options.target_version->game == GAME_HEXEN_II)
     {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
         CreateSingleHull(4);
@@ -596,19 +596,14 @@ EnsureTexturesLoaded()
         return;
     
     wadlist_tried_loading = true;
-    
-    // Quake II doesn't use wads, .wal's are loaded from pak/loose files
-    if (!options.target_version->quake2) {
-        wadstring = ValueForKey(pWorldEnt(), "_wad");
-        if (!wadstring[0])
-            wadstring = ValueForKey(pWorldEnt(), "wad");
-        if (!wadstring[0])
-            Message(msgWarning, warnNoWadKey);
-        else
-            WADList_Init(wadstring);
-    } else {
-        wadstring = "";
-    }
+
+    wadstring = ValueForKey(pWorldEnt(), "_wad");
+    if (!wadstring[0])
+        wadstring = ValueForKey(pWorldEnt(), "wad");
+    if (!wadstring[0])
+        Message(msgWarning, warnNoWadKey);
+    else
+        WADList_Init(wadstring);
     
     if (!wadlist.size()) {
         if (wadstring[0])
@@ -983,7 +978,7 @@ ParseOptions(char *szOptions)
     }
 
     // force specific flags for Q2
-    if (options.target_version->quake2) {
+    if (options.target_version->game == GAME_QUAKE_II) {
         options.fNoclip = true;
     }
 }

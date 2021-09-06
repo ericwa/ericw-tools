@@ -968,6 +968,15 @@ typedef struct {
     bspxentry_t *bspxentries;
 } bspdata_t;
 
+// native game ID target
+enum bspgame_t {
+    GAME_UNKNOWN,
+    GAME_QUAKE,
+    GAME_HEXEN_II,
+    GAME_HALF_LIFE,
+    GAME_QUAKE_II
+};
+
 // BSP version struct & instances
 struct bspversion_t
 {
@@ -979,8 +988,11 @@ struct bspversion_t
     const char *short_name;
     /* full display name for printing */
     const char *name;
-    bool hexen2;
-    bool quake2;
+    /* game ID */
+    bspgame_t game;
+    /* whether the game natively has a colored lightmap or not */
+    /* TODO: move to a game-specific table */
+    bool rgb_lightmap;
     bool (*surf_is_lightmapped)(const surfflags_t &flags);
     bool (*surf_needs_subdivision)(const surfflags_t &flags);
 };

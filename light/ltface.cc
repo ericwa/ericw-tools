@@ -3144,9 +3144,10 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     uint8_t *out, *lit, *lux;
     GetFileSpace(&out, &lit, &lux, size * numstyles);
 
-    // q2 support
     int lightofs;
-    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism || bsp->loadversion == &bspver_hl) {
+
+    // Q2/HL native colored lightmaps
+    if (bsp->loadversion->rgb_lightmap) {
         lightofs = lit - lit_filebase;
     } else {
         lightofs = out - filebase;

@@ -30,7 +30,8 @@
 static void
 AssertVanillaContentType(int content)
 {
-	if (options.target_version->quake2) {
+    // TODO
+	if (options.target_version->game == GAME_QUAKE_II) {
 		return;
 	}
 	
@@ -70,7 +71,8 @@ RemapContentsForExport(int content)
 {
     content = RemapContentsForExport_(content);
 
-    if (options.target_version->quake2) {
+    // TODO
+    if (options.target_version->game == GAME_QUAKE_II) {
         switch (content) {
         case CONTENTS_EMPTY:
             return 0;
@@ -289,7 +291,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             // (probably for collision purposes? makes sense given they store leafbrushes)
-            if (!options.target_version->quake2 && node->children[i]->contents == CONTENTS_SOLID)
+            if (options.target_version->game != GAME_QUAKE_II && node->children[i]->contents == CONTENTS_SOLID)
                 dnode->children[i] = -1;
             else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs_bsp29.size());

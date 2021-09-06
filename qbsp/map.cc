@@ -172,7 +172,7 @@ FindMiptex(const char *name)
     const char *pathsep;
     int i;
 
-    if (!options.target_version->quake2) {
+    if (options.target_version->game != GAME_QUAKE_II) {
         /* Ignore leading path in texture names (Q2 map compatibility) */
         pathsep = strrchr(name, '/');
         if (pathsep)
@@ -185,13 +185,13 @@ FindMiptex(const char *name)
     }
     
     /* Handle animating textures carefully */
-    if (!options.target_version->quake2) {
+    if (options.target_version->game != GAME_QUAKE_II) {
         if (name[0] == '+') {
             AddAnimTex(name);
             i = map.nummiptex();
         }
     } else {
-        // load data from Q2 .wal
+        // TODO: load data from Q2 .wal
     }
 
     map.miptex.push_back({ name });
@@ -306,7 +306,7 @@ FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
     const char *texname = map.miptex.at(texinfo->miptex).name.c_str();
     const int shadow = atoi(ValueForKey(entity, "_shadow"));
     // These flags are pulled from surf flags in Q2.
-    if (!options.target_version->quake2) {
+    if (options.target_version->game != GAME_QUAKE_II) {
         if (IsSkipName(texname))
             flags.extended |= TEX_EXFLAG_SKIP;
         if (IsHintName(texname))
@@ -421,8 +421,8 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
         if (!Q_strcasecmp(epair->value, "info_player_start")) {
             // Quake II uses multiple starts for level transitions/backtracking.
             // TODO: instead, this should check targetnames. There should only be
-            // one info_player_start per targetname.
-            if (!options.target_version->quake2 && (rgfStartSpots & info_player_start))
+            // one info_player_start per targetname in Q2.
+            if (options.target_version->game != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
                 Message(msgWarning, warnMultipleStarts);
             rgfStartSpots |= info_player_start;
         } else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {

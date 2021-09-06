@@ -439,7 +439,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     CalculateVertexNormals(bsp);
     
     const qboolean bouncerequired = cfg_static.bounce.boolValue() && (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); //mxd
-    const qboolean isQuake2map = (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism); //mxd
+    const qboolean isQuake2map = bsp->loadversion->game == GAME_QUAKE_II; //mxd
 
     if (bouncerequired || isQuake2map) {
         MakeTextureColors(bsp);
@@ -470,7 +470,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
         free(bsp->dlightdata);
-        if (isQuake2map || bsp->loadversion == &bspver_hl) {
+        if (bsp->loadversion->rgb_lightmap) {
             bsp->lightdatasize = lit_file_p;
             bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
             memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
@@ -1234,8 +1234,9 @@ light_main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (loadversion != &bspver_q2 && loadversion != &bspver_qbism && bsp->loadversion != &bspver_hl) //mxd. No lit for Quake 2
+        if (!loadversion->rgb_lightmap) {
             CheckLitNeeded(cfg);
+        }
         SetupDirt(cfg);
         
         LightWorld(&bspdata, !!lmscaleoverride);

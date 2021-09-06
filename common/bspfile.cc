@@ -37,18 +37,18 @@ bool q2_surf_needs_subdivision(const surfflags_t &flags) {
     return flags.native & (Q2_SURF_WARP | Q2_SURF_SKY);
 }
 
-/*                                                                                                           hexen2, quake2, surf_is_lightmapped     surf_needs_subdivision    */
-const bspversion_t bspver_generic    { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         false,  false };
-const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+/*                                                                                                            game,        colored lightmap, surf_is_lightmapped     surf_needs_subdivision    */
+const bspversion_t bspver_generic    { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         GAME_UNKNOWN };
+const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           GAME_QUAKE,       false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          GAME_QUAKE,       false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      GAME_QUAKE,       false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */               
-const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        true,   false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       true,   false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   true,   false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       false,  false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        false,  true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
-const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  false,  true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
+const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        GAME_HEXEN_II,    false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       GAME_HEXEN_II,    false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   GAME_HEXEN_II,    false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       GAME_HALF_LIFE,   true, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
+const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        GAME_QUAKE_II,    true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
+const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  GAME_QUAKE_II,    true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
 
 static const char *
 BSPVersionString(const bspversion_t *version)
