@@ -1025,7 +1025,10 @@ constexpr const bspversion_t *const bspversions[] = {
 void LoadBSPFile(char *filename, bspdata_t *bspdata);       //returns the filename as contained inside a bsp
 void WriteBSPFile(const char *filename, bspdata_t *bspdata);
 void PrintBSPFileSizes(const bspdata_t *bspdata);
-void ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
+/**
+ * Returns false if the conversion failed.
+ */
+bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
 

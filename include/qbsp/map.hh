@@ -162,8 +162,8 @@ typedef struct mapdata_s {
     // Final, exported data
     std::vector<gtexinfo_t> exported_texinfos;
     std::vector<dplane_t> exported_planes;
-    std::vector<mleaf_t> exported_leafs_bsp29;
-    std::vector<bsp2_dnode_t> exported_nodes_bsp29;
+    std::vector<mleaf_t> exported_leafs;
+    std::vector<bsp2_dnode_t> exported_nodes;
     std::vector<uint32_t> exported_marksurfaces;
     std::vector<bsp2_dclipnode_t> exported_clipnodes;
     std::vector<bsp2_dedge_t> exported_edges;
@@ -177,6 +177,7 @@ typedef struct mapdata_s {
     // bspx data
     std::vector<uint8_t> exported_lmshifts;
     bool needslmshifts = false;
+    std::vector<uint8_t> exported_bspxbrushes;
 
     // helpers
     const std::string &miptexTextureName(int mt) const {
@@ -238,11 +239,8 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 
-struct bspxbrushes_s
-{
-        uint8_t *lumpinfo;
-        size_t lumpsize;
-        size_t lumpmaxsize;
+struct bspxbrushes_s {
+    std::vector<uint8_t> lumpdata;
 };
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);

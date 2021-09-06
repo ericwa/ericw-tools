@@ -316,14 +316,21 @@ This lump replaces the clipnodes stuff for custom collision sizes.
 */
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx)
 {
-        //BSPX_AddLump("BRUSHLIST", ctx->lumpinfo, ctx->lumpsize); // FIXME: fix bspx
-
-//      free(ctx->lumpinfo);
+    // Actually written in WriteBSPFile()
+    map.exported_bspxbrushes = std::move(ctx->lumpdata);
 }
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx)
 {
-        memset(ctx, 0, sizeof(*ctx));
+    ctx->lumpdata.clear();
 }
+
+static void
+vec_push_bytes(std::vector<uint8_t>& vec, const void* data, size_t count) {
+    const uint8_t* bytes = static_cast<const uint8_t*>(data);
+
+    vec.insert(vec.end(), bytes, bytes + count);
+}
+
 /*
 WriteBrushes
 Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific hull sizes
@@ -372,18 +379,11 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 }
         }
 
-        if (ctx->lumpmaxsize < ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))
-        {
-                ctx->lumpmaxsize = (ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))*2;
-                ctx->lumpinfo = (uint8_t *) realloc(ctx->lumpinfo, ctx->lumpmaxsize);
-        }
-
         permodel.ver = LittleLong(1);
         permodel.modelnum = LittleLong(modelnum);
         permodel.numbrushes = LittleLong(permodel.numbrushes);
         permodel.numfaces = LittleLong(permodel.numfaces);
-        memcpy(ctx->lumpinfo+ctx->lumpsize, &permodel, sizeof(permodel));
-        ctx->lumpsize += sizeof(permodel);
+        vec_push_bytes(ctx->lumpdata, &permodel, sizeof(permodel));
 
         for (b = brushes; b; b = b->next)
         {
@@ -426,8 +426,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 }
                 perbrush.contents = LittleShort(perbrush.contents);
                 perbrush.numfaces = LittleShort(perbrush.numfaces);
-                memcpy(ctx->lumpinfo+ctx->lumpsize, &perbrush, sizeof(perbrush));
-                ctx->lumpsize += sizeof(perbrush);
+                vec_push_bytes(ctx->lumpdata, &perbrush, sizeof(perbrush));
                 
                 for (f = b->faces; f; f = f->next)
                 {
@@ -452,11 +451,11 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                                 perface.dist      = map.planes[f->planenum].dist;
                         }
 
-                        memcpy(ctx->lumpinfo+ctx->lumpsize, &perface, sizeof(perface));
-                        ctx->lumpsize += sizeof(perface);
+                        vec_push_bytes(ctx->lumpdata, &perface, sizeof(perface));
                 }
         }
 }
+
 /* for generating BRUSHLIST bspx lump */
 static void BSPX_CreateBrushList(void)
 {

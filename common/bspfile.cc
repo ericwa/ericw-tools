@@ -20,6 +20,7 @@
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
+#include <cstdint>
 
 bool q1_surf_is_lightmapped(const surfflags_t &flags) {
     return !(flags.native & TEX_SPECIAL);
@@ -972,6 +973,60 @@ BSP29toM_Leafs(const bsp29_dleaf_t *dleafs29, int numleafs) {
     return newdata;
 }
 
+static bool
+OverflowsInt16(float input) {
+    constexpr float minvalue = static_cast<float>(INT16_MIN);
+    constexpr float maxvalue = static_cast<float>(INT16_MAX);
+    
+    if (input < minvalue) {
+        return true;
+    }
+    if (input > maxvalue) {
+        return true;
+    }
+    return false;
+}
+
+static bool
+OverflowsInt16(int32_t input) {
+    if (input < INT16_MIN) {
+        return true;
+    }
+    if (input > INT16_MAX) {
+        return true;
+    }
+    return false;
+}
+
+static bool
+OverflowsUint16(uint32_t input) {
+    if (input > INT16_MAX) {
+        return true;
+    }
+    return false;
+}
+
+static bool
+MBSPto29_Leafs_Validate(const mleaf_t *mleafs, int numleafs) {
+    const mleaf_t *mleaf = mleafs;
+    
+    for (int i = 0; i < numleafs; i++, mleaf++) {
+        for (int j = 0; j < 3; j++) {
+            const float min_j = floor(mleaf->mins[j]);
+            const float max_j = ceil(mleaf->maxs[j]);
+
+            if (OverflowsInt16(min_j) || OverflowsInt16(max_j)) {
+                return false;
+            }
+        }
+        if (OverflowsUint16(mleaf->firstmarksurface)
+            || OverflowsUint16(mleaf->nummarksurfaces)) {
+            return false;
+        }
+    }    
+    return true;
+}
+
 static bsp29_dleaf_t *
 MBSPto29_Leafs(const mleaf_t *mleafs, int numleafs) {
     const mleaf_t *mleaf = mleafs;
@@ -984,8 +1039,8 @@ MBSPto29_Leafs(const mleaf_t *mleafs, int numleafs) {
         dleaf29->contents = mleaf->contents;
         dleaf29->visofs = mleaf->visofs;
         for (j = 0; j < 3; j++) {
-            dleaf29->mins[j] = mleaf->mins[j];
-            dleaf29->maxs[j] = mleaf->maxs[j];
+            dleaf29->mins[j] = floor(mleaf->mins[j]);
+            dleaf29->maxs[j] = ceil(mleaf->maxs[j]);
         }
         dleaf29->firstmarksurface = mleaf->firstmarksurface;
         dleaf29->nummarksurfaces = mleaf->nummarksurfaces;
@@ -1662,6 +1717,31 @@ BSP29to2_Nodes(const bsp29_dnode_t *dnodes29, int numnodes) {
     return newdata;
 }
 
+static bool
+BSP2to29_Nodes_Validate(const bsp2_dnode_t *dnodes2, int numnodes) {
+    const bsp2_dnode_t *dnode2 = dnodes2;
+    
+    for (int i = 0; i < numnodes; i++, dnode2++) {
+        if (OverflowsInt16(dnode2->children[0]) || OverflowsInt16(dnode2->children[1])) {
+            return false;
+        }
+        for (int j = 0; j < 3; j++) {
+            const float min_j = floor(dnode2->mins[j]);
+            const float max_j = ceil(dnode2->maxs[j]);
+
+            if (OverflowsInt16(min_j) || OverflowsInt16(max_j)) {
+                return false;
+            }
+        }
+        if (OverflowsUint16(dnode2->firstface)
+            || OverflowsUint16(dnode2->numfaces)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static bsp29_dnode_t *
 BSP2to29_Nodes(const bsp2_dnode_t *dnodes2, int numnodes) {
     const bsp2_dnode_t *dnode2 = dnodes2;
@@ -1675,8 +1755,8 @@ BSP2to29_Nodes(const bsp2_dnode_t *dnodes2, int numnodes) {
         dnode29->children[0] = dnode2->children[0];
         dnode29->children[1] = dnode2->children[1];
         for (j = 0; j < 3; j++) {
-            dnode29->mins[j] = dnode2->mins[j];
-            dnode29->maxs[j] = dnode2->maxs[j];
+            dnode29->mins[j] = floor(dnode2->mins[j]);
+            dnode29->maxs[j] = ceil(dnode2->maxs[j]);
         }
         dnode29->firstface = dnode2->firstface;
         dnode29->numfaces = dnode2->numfaces;
@@ -1705,6 +1785,28 @@ BSP29to2_Faces(const bsp29_dface_t *dfaces29, int numfaces) {
     }
 
     return newdata;
+}
+
+static bool
+BSP2to29_Faces_Validate(const bsp2_dface_t *dfaces2, int numfaces) {
+    const bsp2_dface_t *dface2 = dfaces2;
+
+    for (int i = 0; i < numfaces; i++, dface2++) {
+        if (OverflowsInt16(dface2->planenum)) {
+            return false;
+        }
+        if (OverflowsInt16(dface2->side)) {
+            return false;
+        }
+        if (OverflowsInt16(dface2->numedges)) {
+            return false;
+        }
+        if (OverflowsInt16(dface2->texinfo)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static bsp29_dface_t *
@@ -1749,6 +1851,23 @@ BSP29to2_Clipnodes(const bsp29_dclipnode_t *dclipnodes29, int numclipnodes) {
     return newdata;
 }
 
+static bool
+BSP2to29_Clipnodes_Validate(const bsp2_dclipnode_t *dclipnodes2, int numclipnodes) {
+    const bsp2_dclipnode_t *dclipnode2 = dclipnodes2;
+
+    for (int i = 0; i < numclipnodes; i++, dclipnode2++) {
+        for (int j = 0; j < 2; j++) {
+            /* Slightly tricky since we support > 32k clipnodes */
+            int32_t child = dclipnode2->children[j];
+            if (child < -15 || child > 0xFFF0) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 static bsp29_dclipnode_t *
 BSP2to29_Clipnodes(const bsp2_dclipnode_t *dclipnodes2, int numclipnodes) {
     const bsp2_dclipnode_t *dclipnode2 = dclipnodes2;
@@ -1786,6 +1905,21 @@ BSP29to2_Edges(const bsp29_dedge_t *dedges29, int numedges)
     return newdata;
 }
 
+static bool
+BSP2to29_Edges_Validate(const bsp2_dedge_t *dedges2, int numedges)
+{
+    const bsp2_dedge_t *dedge2 = dedges2;
+    
+    for (int i = 0; i < numedges; i++, dedge2++) {
+        if (OverflowsUint16(dedge2->v[0])
+            || OverflowsUint16(dedge2->v[1])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static bsp29_dedge_t *
 BSP2to29_Edges(const bsp2_dedge_t *dedges2, int numedges)
 {
@@ -1816,6 +1950,20 @@ BSP29to2_Marksurfaces(const uint16_t *dmarksurfaces29, int nummarksurfaces)
         *dmarksurface2 = *dmarksurface29;
 
     return newdata;
+}
+
+static bool
+BSP2to29_Marksurfaces_Validate(const uint32_t *dmarksurfaces2, int nummarksurfaces)
+{
+    const uint32_t *dmarksurface2 = dmarksurfaces2;
+
+    for (int i = 0; i < nummarksurfaces; i++, dmarksurface2++) {
+        if (OverflowsUint16(*dmarksurface2)) {
+            return false;
+        }
+    }
+        
+    return true;
 }
 
 static uint16_t *
@@ -2209,14 +2357,16 @@ ConvertBSPToMFormatComplete(const bspversion_t **mbsp_loadversion, const bspvers
  * - No checks are done here (yet) for overflow of values when down-converting
  * =========================================================================
  */
-void
+bool
 ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
 {
     if (bspdata->version == to_version)
-        return;
+        return true;
 
-    // conversions to bspver_generic
     if (to_version == &bspver_generic) {
+        // Conversions to bspver_generic
+        // NOTE: these always succeed
+
         if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
             // bspver_q1, bspver_h2, bspver_hl -> bspver_generic
 
@@ -2269,7 +2419,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
         
-            return;
+            return true;
         } else if (bspdata->version == &bspver_q2) {
             // bspver_q2 -> bspver_generic
 
@@ -2327,7 +2477,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
 
-            return;
+            return true;
         } else if (bspdata->version == &bspver_qbism) {
             // bspver_qbism -> bspver_generic
 
@@ -2385,7 +2535,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
 
-            return;
+            return true;
         } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
             // bspver_bsp2rmq, bspver_h2bsp2rmq -> bspver_generic
 
@@ -2438,7 +2588,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
         
-            return;
+            return true;
         } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
             // bspver_bsp2, bspver_h2bsp2 -> bspver_generic
 
@@ -2491,17 +2641,39 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
 
-            return;
+            return true;
         }
     }
-    // conversions from GENERIC_BSP
     else if (bspdata->version == &bspver_generic) {
+        // Conversions from bspver_generic
+
         if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
             // bspver_generic -> bspver_q1, bspver_h2, bspver_hl
 
             bsp29_t *bsp29 = &bspdata->data.bsp29;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
+            // validate that the conversion is possible
+            if (!MBSPto29_Leafs_Validate(mbsp->dleafs, mbsp->numleafs)) {
+                return false;
+            }
+            if (!BSP2to29_Nodes_Validate(mbsp->dnodes, mbsp->numnodes)) {
+                return false;
+            }
+            if (!BSP2to29_Faces_Validate(mbsp->dfaces, mbsp->numfaces)) {
+                return false;
+            }
+            if (!BSP2to29_Clipnodes_Validate(mbsp->dclipnodes, mbsp->numclipnodes)) {
+                return false;
+            }
+            if (!BSP2to29_Edges_Validate(mbsp->dedges, mbsp->numedges)) {
+                return false;
+            }
+            if (!BSP2to29_Marksurfaces_Validate(mbsp->dleaffaces, mbsp->numleaffaces)) {
+                return false;
+            }
+
+            // zero destination struct
             memset(bsp29, 0, sizeof(*bsp29));
         
             // copy counts
@@ -2548,7 +2720,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             bspdata->version = to_version;
         
-            return;
+            return true;
         } else if (to_version == &bspver_q2) {
             // bspver_generic -> bspver_q2
 
@@ -2605,7 +2777,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             bspdata->version = to_version;
 
-            return;
+            return true;
         } else if (to_version == &bspver_qbism) {
             // bspver_generic -> bspver_qbism
 
@@ -2662,7 +2834,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             bspdata->version = to_version;
 
-            return;
+            return true;
         } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
             // bspver_generic -> bspver_bsp2rmq, bspver_h2bsp2rmq
 
@@ -2715,7 +2887,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             bspdata->version = to_version;
         
-            return;
+            return true;
         } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
             // bspver_generic -> bspver_bsp2, bspver_h2bsp2
 
@@ -2768,7 +2940,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             /* Conversion complete! */
             bspdata->version = to_version;
         
-            return;
+            return true;
         }
     }
     

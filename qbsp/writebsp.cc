@@ -223,8 +223,8 @@ ExportLeaf
 static void
 ExportLeaf(mapentity_t *entity, node_t *node)
 {
-    map.exported_leafs_bsp29.push_back({});
-    mleaf_t *dleaf = &map.exported_leafs_bsp29.back();
+    map.exported_leafs.push_back({});
+    mleaf_t *dleaf = &map.exported_leafs.back();
 
     dleaf->contents = RemapContentsForExport(node->contents);
     AssertVanillaContentType(dleaf->contents);
@@ -232,9 +232,9 @@ ExportLeaf(mapentity_t *entity, node_t *node)
     /*
      * write bounding box info
      */
-    for (int32_t i = 0; i < 3; i++) {
-        dleaf->mins[i] = node->mins[i];
-        dleaf->maxs[i] = node->maxs[i];
+    for (int32_t i = 0; i < 3; ++i) {
+        dleaf->mins[i] = floor(node->mins[i]);
+        dleaf->maxs[i] = ceil(node->maxs[i]);
     }
 
     dleaf->visofs = -1; // no vis info yet
@@ -272,14 +272,15 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
     bsp2_dnode_t *dnode;
     int i;
 
-    const size_t ourNodeIndex = map.exported_nodes_bsp29.size();
-    map.exported_nodes_bsp29.push_back({});
+    const size_t ourNodeIndex = map.exported_nodes.size();
+    map.exported_nodes.push_back({});
 
-    dnode = &map.exported_nodes_bsp29[ourNodeIndex];
+    dnode = &map.exported_nodes[ourNodeIndex];
 
-    for (int32_t i = 0; i < 3; i++) {
-        dnode->mins[i] = node->mins[i];
-        dnode->maxs[i] = node->maxs[i];
+    // VectorCopy doesn't work since dest are shorts
+    for (int32_t i = 0; i < 3; ++i) {
+        dnode->mins[i] = floor(node->mins[i]);
+        dnode->maxs[i] = ceil(node->maxs[i]);
     }
 
     dnode->planenum = ExportMapPlane(node->planenum);
@@ -294,19 +295,19 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
             if (options.target_version->game != GAME_QUAKE_II && node->children[i]->contents == CONTENTS_SOLID)
                 dnode->children[i] = -1;
             else {
-                int nextLeafIndex = static_cast<int>(map.exported_leafs_bsp29.size());
+                int nextLeafIndex = static_cast<int>(map.exported_leafs.size());
                 const int childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
                 ExportLeaf(entity, node->children[i]);
             }
         } else {
-            const int childnum = static_cast<int>(map.exported_nodes_bsp29.size());
+            const int childnum = static_cast<int>(map.exported_nodes.size());
             dnode->children[i] = childnum;
             ExportDrawNodes(entity, node->children[i]);
 
             // Important: our dnode pointer may be invalid after the recursive call, if the vector got resized.
             // So re-set the pointer.
-            dnode = &map.exported_nodes_bsp29[ourNodeIndex];
+            dnode = &map.exported_nodes[ourNodeIndex];
         }
     }
 
@@ -331,11 +332,11 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     // populate model struct (which was emitted previously)
     dmodel = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
-    dmodel->headnode[0] = static_cast<int>(map.exported_nodes_bsp29.size());
+    dmodel->headnode[0] = static_cast<int>(map.exported_nodes.size());
     dmodel->firstface = firstface;
     dmodel->numfaces = static_cast<int>(map.exported_faces.size()) - firstface;
 
-    const size_t mapleafsAtStart = map.exported_leafs_bsp29.size();
+    const size_t mapleafsAtStart = map.exported_leafs.size();
 
     if (headnode->planenum == PLANENUM_LEAF)
         ExportLeaf(entity, headnode);
@@ -343,7 +344,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
         ExportDrawNodes(entity, headnode);
 
     // count how many leafs were exported by the above calls
-    dmodel->visleafs = static_cast<int>(map.exported_leafs_bsp29.size() - mapleafsAtStart);
+    dmodel->visleafs = static_cast<int>(map.exported_leafs.size() - mapleafsAtStart);
 
     /* remove the headnode padding */
     for (i = 0; i < 3; i++) {
@@ -367,9 +368,9 @@ BeginBSPFile(void)
     Q_assert(map.exported_edges.size() == 1);
 
     // Leave room for leaf 0 (must be solid)
-    map.exported_leafs_bsp29.push_back({});
-    map.exported_leafs_bsp29.back().contents = RemapContentsForExport(CONTENTS_SOLID);
-    Q_assert(map.exported_leafs_bsp29.size() == 1);
+    map.exported_leafs.push_back({});
+    map.exported_leafs.back().contents = RemapContentsForExport(CONTENTS_SOLID);
+    Q_assert(map.exported_leafs.size() == 1);
 }
 
 /*
@@ -463,9 +464,9 @@ WriteBSPFile()
     bspdata.version = &bspver_generic;
 
     CopyVector(map.exported_planes, &bspdata.data.mbsp.numplanes, &bspdata.data.mbsp.dplanes);
-    CopyVector(map.exported_leafs_bsp29, &bspdata.data.mbsp.numleafs, &bspdata.data.mbsp.dleafs);
+    CopyVector(map.exported_leafs, &bspdata.data.mbsp.numleafs, &bspdata.data.mbsp.dleafs);
     CopyVector(map.exported_vertexes, &bspdata.data.mbsp.numvertexes, &bspdata.data.mbsp.dvertexes);
-    CopyVector(map.exported_nodes_bsp29, &bspdata.data.mbsp.numnodes, &bspdata.data.mbsp.dnodes);
+    CopyVector(map.exported_nodes, &bspdata.data.mbsp.numnodes, &bspdata.data.mbsp.dnodes);
     CopyVector(map.exported_texinfos, &bspdata.data.mbsp.numtexinfo, &bspdata.data.mbsp.texinfo);
     CopyVector(map.exported_faces, &bspdata.data.mbsp.numfaces, &bspdata.data.mbsp.dfaces);
     CopyVector(map.exported_clipnodes, &bspdata.data.mbsp.numclipnodes, &bspdata.data.mbsp.dclipnodes);
@@ -477,15 +478,33 @@ WriteBSPFile()
     CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
     CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void**)&bspdata.data.mbsp.dtexdata);
 
+    if (map.needslmshifts) {
+        BSPX_AddLump(&bspdata, "LMSHIFT", map.exported_lmshifts.data(), map.exported_lmshifts.size());
+    }
+    if (!map.exported_bspxbrushes.empty()) {
+        BSPX_AddLump(&bspdata, "BRUSHLIST", map.exported_bspxbrushes.data(), map.exported_bspxbrushes.size());
+    }
+
     bspdata.data.mbsp.numareas = 1;
     bspdata.data.mbsp.dareas = (darea_t *) malloc(sizeof(darea_t));
     bspdata.data.mbsp.dareas->firstareaportal = bspdata.data.mbsp.dareas->numareaportals = 0;
+    if (!ConvertBSPFormat(&bspdata, options.target_version)) {
+        const bspversion_t* highLimitsFormat = nullptr;
 
-    // TODO: pass bspx lumps to generic bsp code so they are written
+        if (options.target_version == &bspver_q1) {
+            highLimitsFormat = &bspver_bsp2;
+        } else if (options.target_version == &bspver_h2) {
+            highLimitsFormat = &bspver_h2bsp2;
+        } else if (options.target_version == &bspver_q2) {
+            highLimitsFormat = &bspver_qbism;
+        } else {
+            Error("No high limits version of %s available", options.target_version->name);
+        }
 
-    //GenLump("LMSHIFT", BSPX_LMSHIFT, 1);
+        logprint("NOTE: limits exceeded for %s - switching to %s\n", options.target_version->name, highLimitsFormat->name);
 
-    ConvertBSPFormat(&bspdata, options.target_version);
+        Q_assert(ConvertBSPFormat(&bspdata, highLimitsFormat));
+    }
 
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".bsp");
