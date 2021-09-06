@@ -442,7 +442,23 @@ WriteBSPFile()
         BSPX_AddLump(&bspdata, "BRUSHLIST", map.exported_bspxbrushes.data(), map.exported_bspxbrushes.size());
     }
 
-    ConvertBSPFormat(&bspdata, options.target_version);
+    if (!ConvertBSPFormat(&bspdata, options.target_version)) {
+        const bspversion_t* highLimitsFormat = nullptr;
+
+        if (options.target_version == &bspver_q1) {
+            highLimitsFormat = &bspver_bsp2;
+        } else if (options.target_version == &bspver_h2) {
+            highLimitsFormat = &bspver_h2bsp2;
+        } else if (options.target_version == &bspver_q2) {
+            highLimitsFormat = &bspver_qbism;
+        } else {
+            Error("No high limits version of %s available", options.target_version->name);
+        }
+
+        logprint("NOTE: limits exceeded for %s - switching to %s\n", options.target_version->name, highLimitsFormat->name);
+
+        Q_assert(ConvertBSPFormat(&bspdata, highLimitsFormat));
+    }
 
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".bsp");
