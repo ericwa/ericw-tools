@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <cfloat>
 #include <cstdint>
 
 static void
@@ -364,12 +365,10 @@ ExportLeaf_BSP29(mapentity_t *entity, node_t *node)
      * write bounding box info
      * (VectorCopy doesn't work since dest are shorts)
      */
-    dleaf->mins[0] = (short)node->mins[0];
-    dleaf->mins[1] = (short)node->mins[1];
-    dleaf->mins[2] = (short)node->mins[2];
-    dleaf->maxs[0] = (short)node->maxs[0];
-    dleaf->maxs[1] = (short)node->maxs[1];
-    dleaf->maxs[2] = (short)node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dleaf->mins[i] = (short)floor(node->mins[i]);
+        dleaf->maxs[i] = (short)ceil(node->maxs[i]);
+    }
 
     dleaf->visofs = -1; // no vis info yet
 
@@ -414,12 +413,10 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
      * write bounding box info
      * (VectorCopy doesn't work double->float)
      */
-    dleaf->mins[0] = node->mins[0];
-    dleaf->mins[1] = node->mins[1];
-    dleaf->mins[2] = node->mins[2];
-    dleaf->maxs[0] = node->maxs[0];
-    dleaf->maxs[1] = node->maxs[1];
-    dleaf->maxs[2] = node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dleaf->mins[i] = node->mins[i];
+        dleaf->maxs[i] = node->maxs[i];
+    }
 
     dleaf->visofs = -1; // no vis info yet
 
@@ -464,12 +461,10 @@ ExportLeaf_BSP2rmq(mapentity_t *entity, node_t *node)
      * write bounding box info
      * (VectorCopy doesn't work since dest are shorts)
      */
-    dleaf->mins[0] = (short)node->mins[0];
-    dleaf->mins[1] = (short)node->mins[1];
-    dleaf->mins[2] = (short)node->mins[2];
-    dleaf->maxs[0] = (short)node->maxs[0];
-    dleaf->maxs[1] = (short)node->maxs[1];
-    dleaf->maxs[2] = (short)node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dleaf->mins[i] = (short)floor(node->mins[i]);
+        dleaf->maxs[i] = (short)ceil(node->maxs[i]);
+    }
 
     dleaf->visofs = -1; // no vis info yet
 
@@ -510,12 +505,10 @@ ExportDrawNodes_BSP29(mapentity_t *entity, node_t *node)
     map.cTotal[LUMP_NODES]++;
 
     // VectorCopy doesn't work since dest are shorts
-    dnode->mins[0] = (short)node->mins[0];
-    dnode->mins[1] = (short)node->mins[1];
-    dnode->mins[2] = (short)node->mins[2];
-    dnode->maxs[0] = (short)node->maxs[0];
-    dnode->maxs[1] = (short)node->maxs[1];
-    dnode->maxs[2] = (short)node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dnode->mins[i] = (short)floor(node->mins[i]);
+        dnode->maxs[i] = (short)ceil(node->maxs[i]);
+    }
 
     dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
@@ -564,12 +557,10 @@ ExportDrawNodes_BSP2(mapentity_t *entity, node_t *node)
     map.cTotal[LUMP_NODES]++;
 
     // VectorCopy doesn't work double->float
-    dnode->mins[0] = node->mins[0];
-    dnode->mins[1] = node->mins[1];
-    dnode->mins[2] = node->mins[2];
-    dnode->maxs[0] = node->maxs[0];
-    dnode->maxs[1] = node->maxs[1];
-    dnode->maxs[2] = node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dnode->mins[i] = node->mins[i];
+        dnode->maxs[i] = node->maxs[i];
+    }
 
     dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
@@ -606,12 +597,10 @@ ExportDrawNodes_BSP2rmq(mapentity_t *entity, node_t *node)
     map.cTotal[LUMP_NODES]++;
 
     // VectorCopy doesn't work since dest are shorts
-    dnode->mins[0] = node->mins[0];
-    dnode->mins[1] = node->mins[1];
-    dnode->mins[2] = node->mins[2];
-    dnode->maxs[0] = node->maxs[0];
-    dnode->maxs[1] = node->maxs[1];
-    dnode->maxs[2] = node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dnode->mins[i] = (short)floor(node->mins[i]);
+        dnode->maxs[i] = (short)ceil(node->maxs[i]);
+    }
 
     dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
