@@ -537,9 +537,9 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
 static const char* //mxd
 GetBaseDirName(bspdata_t *bspdata)
 {
-    if (bspdata->loadversion == &bspver_q2 || bspdata->loadversion == &bspver_qbism)
+    if (bspdata->loadversion->game == GAME_QUAKE_II)
         return "BASEQ2";
-    if (bspdata->loadversion == &bspver_h2)
+    if (bspdata->loadversion->game == GAME_HEXEN_II)
         return "DATA1";
     return "ID1";
 }
@@ -1194,7 +1194,7 @@ light_main(int argc, const char **argv)
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     //mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
-    if ((loadversion == &bspver_q2 || loadversion == &bspver_qbism) && !cfg.rangescale.isChanged())
+    if ((loadversion->game == GAME_QUAKE_II) && !cfg.rangescale.isChanged())
     {
         const auto rs = new lockable_vec_t(cfg.rangescale.primaryName(), 1.0f, 0.0f, 100.0f);
         cfg.rangescale = *rs; // Gross hacks to avoid displaying this in OptionsSummary...

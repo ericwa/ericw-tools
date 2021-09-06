@@ -622,9 +622,9 @@ EnsureTexturesLoaded()
 static const char* //mxd
 GetBaseDirName(const bspversion_t *bspver)
 {
-    if (bspver == &bspver_q2 || bspver == &bspver_qbism)
+    if (bspver->game == GAME_QUAKE_II)
         return "BASEQ2";
-    if (bspver == &bspver_h2)
+    if (bspver->game == GAME_HEXEN_II)
         return "DATA1";
     return "ID1";
 }

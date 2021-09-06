@@ -69,18 +69,13 @@ enum class brushformat_t {
     
 class mapbrush_t {
 public:
-    int firstface;
-    int numfaces;
-    brushformat_t format;
-    int contents;
-    
-    mapbrush_t() :
-        firstface(0),
-        numfaces(0),
-        format(brushformat_t::NORMAL),
-        contents(0) {}
+    int firstface = 0;
+    int numfaces = 0;
+    brushformat_t format = brushformat_t::NORMAL;
+    int contents = 0;
+
     const mapface_t &face(int i) const;
-} ;
+};
 
 struct lumpdata {
     int count;

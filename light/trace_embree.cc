@@ -353,7 +353,7 @@ Embree_FilterFuncN(const struct RTCFilterFunctionNArguments* args)
 
         //mxd
         bool isFence, isGlass;
-        if(bsp_static->loadversion == &bspver_q2 || bsp_static->loadversion == &bspver_qbism) {
+        if(bsp_static->loadversion->game == GAME_QUAKE_II) {
             const int surf_flags = Face_ContentsOrSurfaceFlags(bsp_static, face);
             isFence = ((surf_flags & Q2_SURF_TRANSLUCENT) == Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
             isGlass = !isFence && (surf_flags & Q2_SURF_TRANSLUCENT);
@@ -558,7 +558,7 @@ MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *planes, 
         const int leafnum = -nodenum - 1;
         const mleaf_t *leaf = &bsp->dleafs[leafnum];
         
-        if ((bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) ? leaf->contents & Q2_CONTENTS_SOLID : leaf->contents == CONTENTS_SOLID) {
+        if ((bsp->loadversion->game == GAME_QUAKE_II) ? (leaf->contents & Q2_CONTENTS_SOLID) : leaf->contents == CONTENTS_SOLID) {
             std::vector<winding_t *> leaf_windings = Leaf_MakeFaces(bsp, leaf, *planes);
             for (winding_t *w : leaf_windings) {
                 result->push_back(w);
@@ -630,7 +630,7 @@ Embree_TraceInit(const mbsp_t *bsp)
             
             const int contents_or_surf_flags = Face_ContentsOrSurfaceFlags(bsp, face); //mxd
             const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
-            const bool is_q2 = bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism;
+            const bool is_q2 = bsp->loadversion->game == GAME_QUAKE_II;
 
             //mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
             if(is_q2 && (contents_or_surf_flags & Q2_SURF_NODRAW) && !(contents_or_surf_flags & Q2_SURF_SKY))

@@ -716,7 +716,7 @@ TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
             
             // only solid and sky faces stop the trace.
             bool issolid, issky; //mxd
-            if(bsp_static->loadversion == &bspver_q2 || bsp_static->loadversion == &bspver_qbism) {
+            if(bsp_static->loadversion->game == GAME_QUAKE_II) {
                 issolid = !(fi->content_or_surf_flags & Q2_SURF_TRANSLUCENT);
                 issky = (fi->content_or_surf_flags & Q2_SURF_SKY);
             } else {
