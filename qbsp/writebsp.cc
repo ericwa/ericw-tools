@@ -414,8 +414,8 @@ ExportLeaf_BSP2(mapentity_t *entity, node_t *node)
      * (VectorCopy doesn't work double->float)
      */
     for (int i = 0; i < 3; ++i) {
-        dleaf->mins[i] = node->mins[i];
-        dleaf->maxs[i] = node->maxs[i];
+        dleaf->mins[i] = floor(node->mins[i]);
+        dleaf->maxs[i] = ceil(node->maxs[i]);
     }
 
     dleaf->visofs = -1; // no vis info yet
@@ -558,8 +558,8 @@ ExportDrawNodes_BSP2(mapentity_t *entity, node_t *node)
 
     // VectorCopy doesn't work double->float
     for (int i = 0; i < 3; ++i) {
-        dnode->mins[i] = node->mins[i];
-        dnode->maxs[i] = node->maxs[i];
+        dnode->mins[i] = floor(node->mins[i]);
+        dnode->maxs[i] = ceil(node->maxs[i]);
     }
 
     dnode->planenum = ExportMapPlane(node->planenum);
