@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <cfloat>
 #include <cstdint>
 
 static void
@@ -196,12 +197,10 @@ ExportLeaf(mapentity_t *entity, node_t *node)
      * write bounding box info
      * (VectorCopy doesn't work since dest are shorts)
      */
-    dleaf->mins[0] = (short)node->mins[0];
-    dleaf->mins[1] = (short)node->mins[1];
-    dleaf->mins[2] = (short)node->mins[2];
-    dleaf->maxs[0] = (short)node->maxs[0];
-    dleaf->maxs[1] = (short)node->maxs[1];
-    dleaf->maxs[2] = (short)node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dleaf->mins[i] = floor(node->mins[i]);
+        dleaf->maxs[i] = ceil(node->maxs[i]);
+    }
 
     dleaf->visofs = -1; // no vis info yet
 
@@ -242,12 +241,10 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
     dnode = &map.exported_nodes[ourNodeIndex];
 
     // VectorCopy doesn't work since dest are shorts
-    dnode->mins[0] = (short)node->mins[0];
-    dnode->mins[1] = (short)node->mins[1];
-    dnode->mins[2] = (short)node->mins[2];
-    dnode->maxs[0] = (short)node->maxs[0];
-    dnode->maxs[1] = (short)node->maxs[1];
-    dnode->maxs[2] = (short)node->maxs[2];
+    for (int i = 0; i < 3; ++i) {
+        dnode->mins[i] = floor(node->mins[i]);
+        dnode->maxs[i] = ceil(node->maxs[i]);
+    }
 
     dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
