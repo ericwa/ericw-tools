@@ -386,6 +386,18 @@ struct surfflags_t {
             minlight_color[1] || minlight_color[2] || phong_angle_concave ||
             light_alpha;
     }
+
+    constexpr auto as_tuple() const {
+        return std::tie(native, extended, phong_angle, minlight, minlight_color[0], minlight_color[1], minlight_color[2], phong_angle_concave, light_alpha);
+    }
+
+    constexpr bool operator<(const surfflags_t &other) const {
+        return as_tuple() < other.as_tuple();
+    }
+
+    constexpr bool operator>(const surfflags_t &other) const {
+        return as_tuple() > other.as_tuple();
+    }
 };
 
 // header before tightly packed surfflags_t[num_texinfo]

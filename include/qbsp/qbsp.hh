@@ -153,10 +153,9 @@ typedef struct mtexinfo_s {
         if (this->miptex > other.miptex)
             return false;
         
-        // CHECK: is it worth sorting by all members?
-        if (this->flags.native < other.flags.native)
+        if (this->flags < other.flags)
             return true;
-        if (this->flags.native > other.flags.native)
+        if (this->flags > other.flags)
             return false;
         
         for (int i=0; i<2; i++) {
