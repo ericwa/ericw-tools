@@ -26,6 +26,7 @@
 #include <list>
 #include <utility>
 #include <cassert>
+#include <optional>
 
 #include <ctype.h>
 #include <string.h>
@@ -166,8 +167,35 @@ AddAnimTex(const char *name)
     }
 }
 
+struct wal_t
+{
+    char name[32];
+    int32_t width, height;
+    int32_t mip_offsets[MIPLEVELS];
+    char anim_name[32];
+    int32_t flags, contents, value;
+};
+
+static std::optional<wal_t> LoadWal(const char *name) {
+    static char buf[1024];
+    q_snprintf(buf, sizeof(buf), "%stextures/%s.wal", gamedir, name);
+
+    FILE *fp = fopen(buf, "rb");
+
+    if (!fp)
+        return std::nullopt;
+
+    wal_t wal;
+
+    fread(&wal, 1, sizeof(wal), fp);
+
+    fclose(fp);
+
+    return wal;
+}
+
 int
-FindMiptex(const char *name)
+FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info)
 {
     const char *pathsep;
     int i;
@@ -177,24 +205,59 @@ FindMiptex(const char *name)
         pathsep = strrchr(name, '/');
         if (pathsep)
             name = pathsep + 1;
-    }
 
-    for (i = 0; i < map.nummiptex(); i++) {
-        if (!Q_strcasecmp(name, map.miptex.at(i).name.c_str()))
-            return i;
-    }
+        extended_info = extended_texinfo_t { };
+
+        for (i = 0; i < map.nummiptex(); i++) {
+            const texdata_t &tex = map.miptex.at(i);
+
+            if (!Q_strcasecmp(name, tex.name.c_str())) {
+
+                return i;
+            }
+        }
+
+        i = map.miptex.size();
+        map.miptex.push_back({ name });
     
-    /* Handle animating textures carefully */
-    if (options.target_version->game->id != GAME_QUAKE_II) {
+        /* Handle animating textures carefully */
         if (name[0] == '+') {
             AddAnimTex(name);
-            i = map.nummiptex();
         }
     } else {
-        // TODO: load data from Q2 .wal
+        // load .wal first
+        std::optional<wal_t> wal = LoadWal(name);
+
+        // FIXME: this spams the console if wal not found, because we
+        // need to load the wal to figure out if it will match anything
+        // in the list...
+        if (!wal.has_value()) {
+            Message(msgLiteral, "Couldn't locate wal for %s\n", name);
+            wal = wal_t {};
+        }
+
+        extended_info = extended_info.value_or(extended_texinfo_t { wal->contents, wal->flags, wal->value });
+
+        for (i = 0; i < map.nummiptex(); i++) {
+            const texdata_t &tex = map.miptex.at(i);
+
+            if (!Q_strcasecmp(name, tex.name.c_str()) &&
+                tex.flags == extended_info->flags &&
+                tex.value == extended_info->value) {
+
+                return i;
+            }
+        }
+
+        i = map.miptex.size();
+        map.miptex.push_back({ name, wal->flags, wal->value });
+    
+        /* Handle animating textures carefully */
+        if (wal->anim_name[0]) {
+            FindMiptex(wal->anim_name);
+        }
     }
 
-    map.miptex.push_back({ name });
     return i;
 }
 
@@ -256,7 +319,7 @@ Returns a global texinfo number
 ===============
 */
 int
-FindTexinfo(const mtexinfo_t &texinfo, surfflags_t flags)
+FindTexinfo(const mtexinfo_t &texinfo)
 {
     // NaN's will break mtexinfo_lookup, since they're being used as a std::map key and don't compare properly with <.
     // They should have been stripped out already in ValidateTextureProjection.
@@ -295,9 +358,9 @@ normalize_color_format(vec3_t color)
     }
 }
 
-static int
-FindTexinfoEnt(const mtexinfo_t &texinfo, const mapentity_t *entity)
-{
+static surfflags_t
+SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity_t *entity)
+{    
     surfflags_t flags {};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
     const int shadow = atoi(ValueForKey(entity, "_shadow"));
@@ -309,6 +372,13 @@ FindTexinfoEnt(const mtexinfo_t &texinfo, const mapentity_t *entity)
             flags.extended |= TEX_EXFLAG_HINT;
         if (IsSpecialName(texname))
             flags.native |= TEX_SPECIAL;
+    } else {
+        flags.native = texinfo.flags.native;
+
+        if (texinfo.flags.native & Q2_SURF_NODRAW)
+            flags.extended |= TEX_EXFLAG_SKIP;
+        if (texinfo.flags.native & Q2_SURF_HINT)
+            flags.extended |= TEX_EXFLAG_HINT;
     }
     if (IsNoExpandName(texname))
         flags.extended |= TEX_EXFLAG_NOEXPAND;
@@ -389,8 +459,8 @@ FindTexinfoEnt(const mtexinfo_t &texinfo, const mapentity_t *entity)
     if (lightalpha != 0.0) {
         flags.light_alpha = qclamp((int)rint(lightalpha * 255.0), 0, 255);
     }
-    
-    return FindTexinfo(texinfo, flags);
+
+    return flags;
 }
 
 
@@ -466,10 +536,10 @@ TextureAxisFromPlane(const qbsp_plane_t *plane, vec3_t xv, vec3_t yv, vec3_t sna
     VectorCopy(baseaxis[bestaxis * 3], snapped_normal);
 }
 
-static extended_tx_info_t
+static quark_tx_info_t
 ParseExtendedTX(parser_t *parser)
 {
-    extended_tx_info_t result;
+    quark_tx_info_t result;
 
     if (ParseToken(parser, PARSE_COMMENT | PARSE_OPTIONAL)) {
         if (!strncmp(parser->token, "//TX", 4)) {
@@ -481,13 +551,14 @@ ParseExtendedTX(parser_t *parser)
     } else {
         // Parse extra Quake 2 surface info
         if (ParseToken(parser, PARSE_OPTIONAL)) {
-            result.contents = atoi(parser->token);
-        }
-        if (ParseToken(parser, PARSE_OPTIONAL)) {
-            result.flags = atoi(parser->token);
-        }
-        if (ParseToken(parser, PARSE_OPTIONAL)) {
-            result.value = atoi(parser->token);
+            result.info = extended_texinfo_t { atoi(parser->token) };
+
+            if (ParseToken(parser, PARSE_OPTIONAL)) {
+                result.info->flags = atoi(parser->token);
+            }
+            if (ParseToken(parser, PARSE_OPTIONAL)) {
+                result.info->value = atoi(parser->token);
+            }
         }
     }
 
@@ -1359,7 +1430,7 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
     
     memset(tx, 0, sizeof(*tx));
 
-    extended_tx_info_t extinfo { };
+    quark_tx_info_t extinfo;
 
     if (brush->format == brushformat_t::BRUSH_PRIMITIVES) {
         ParseBrushPrimTX(parser, texMat);
@@ -1372,9 +1443,6 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
         
         // Read extra Q2 params
         extinfo = ParseExtendedTX(parser);
-        mapface.contents = extinfo.contents;
-        mapface.flags = { extinfo.flags };
-        mapface.value = extinfo.value;
     } else if (brush->format == brushformat_t::NORMAL) {
         ParseToken(parser, PARSE_SAMELINE);
         mapface.texname = std::string(parser->token);
@@ -1387,9 +1455,6 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
             
             // Read extra Q2 params
             extinfo = ParseExtendedTX(parser);
-            mapface.contents = extinfo.contents;
-            mapface.flags = { extinfo.flags };
-            mapface.value = extinfo.value;
         } else {
             shift[0] = atof(parser->token);
             ParseToken(parser, PARSE_SAMELINE);
@@ -1410,13 +1475,15 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
             } else {
                 tx_type = TX_QUAKED;
             }
-            mapface.contents = extinfo.contents;
-            mapface.flags = { extinfo.flags };
-            mapface.value = extinfo.value;
         }
     }
 
-    tx->miptex = FindMiptex(mapface.texname.c_str());
+    tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
+
+    const auto &miptex = map.miptex[tx->miptex];
+    mapface.contents = extinfo.info->contents;
+    tx->flags = mapface.flags = { extinfo.info->flags };
+    tx->value = mapface.value = extinfo.info->value;
 
     if (!planepts || !plane)
         return;
@@ -1479,7 +1546,7 @@ void mapface_t::set_texvecs(const std::array<qvec4f, 2> &vecs)
         }
     }
     
-    this->texinfo = FindTexinfo(texInfoNew, texInfoNew.flags);
+    this->texinfo = FindTexinfo(texInfoNew);
 }
 
 bool
@@ -1570,7 +1637,8 @@ ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *ent
     
     ValidateTextureProjection(*face, &tx);
 
-    face->texinfo = FindTexinfoEnt(tx, entity);
+    tx.flags = SurfFlagsForEntity(tx, entity);
+    face->texinfo = FindTexinfo(tx);
 
     return face;
 }

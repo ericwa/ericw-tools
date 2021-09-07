@@ -453,7 +453,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
             texInfoNew.vecs[0][3] += DotProduct( rotate_offset, vecs[0] );
             texInfoNew.vecs[1][3] += DotProduct( rotate_offset, vecs[1] );
 
-            mapface->texinfo = FindTexinfo(texInfoNew, texInfoNew.flags);
+            mapface->texinfo = FindTexinfo(texInfoNew);
         }
 
         VectorCopy(mapface->plane.normal, plane.normal);
@@ -845,6 +845,14 @@ Brush_GetContents(const mapbrush_t *mapbrush)
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
         texname = map.miptexTextureName(texinfo.miptex).c_str();
 
+        // if we were already assigned contents from somewhere else
+        // (Quake II), use this.
+        if (mapface.contents) {
+            return mapface.contents;
+        } else if (options.target_version->game->id == GAME_QUAKE_II) {
+            continue;
+        }
+
         if (!Q_strcasecmp(texname, "origin"))
             return CONTENTS_ORIGIN;
         if (!Q_strcasecmp(texname, "hint"))
@@ -864,7 +872,7 @@ Brush_GetContents(const mapbrush_t *mapbrush)
             return CONTENTS_SKY;
     }
     //and anything else is assumed to be a regular solid.
-    return CONTENTS_SOLID;
+    return options.target_version->game->id == GAME_QUAKE_II ? Q2_CONTENTS_SOLID : CONTENTS_SOLID;
 }
 
 

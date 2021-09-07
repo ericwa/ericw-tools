@@ -124,8 +124,8 @@ int
 ExportMapTexinfo(int texinfonum)
 {
     mtexinfo_t *src = &map.mtexinfos.at(texinfonum);
-    if (src->outputnum != -1)
-        return src->outputnum;
+    if (src->outputnum.has_value())
+        return src->outputnum.value();
     
     // this will be the index of the exported texinfo in the BSP lump
     const int i = static_cast<int>(map.exported_texinfos.size());

@@ -27,6 +27,7 @@
 #include <map>
 #include <unordered_map>
 #include <array>
+#include <optional>
 
 #include <assert.h>
 #include <ctype.h>
@@ -149,7 +150,7 @@ typedef struct mtexinfo_s {
     int32_t miptex = 0;
     surfflags_t flags = {};
     int32_t value = 0; // Q2-specific
-    int outputnum = -1; // -1 until added to bsp
+    std::optional<int> outputnum = std::nullopt; // nullopt until added to bsp
 
     constexpr auto as_tuple() const {
         return std::tie(vecs, miptex, flags, value);

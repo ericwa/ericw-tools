@@ -24,6 +24,7 @@
 
 #include <qbsp/parser.hh>
 
+#include <optional>
 #include <vector>
 
 typedef struct epair_s {
@@ -196,17 +197,25 @@ void LoadMapFile(void);
 mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);
 
-struct extended_tx_info_t {
-    bool quark_tx1 = false;
-    bool quark_tx2 = false;
-    
+struct extended_texinfo_t {
     int contents = 0;
     int flags = 0;
     int value = 0;
 };
 
-int FindMiptex(const char *name);
-int FindTexinfo(const mtexinfo_t &texinfo, surfflags_t flags);
+struct quark_tx_info_t {
+    bool quark_tx1 = false;
+    bool quark_tx2 = false;
+    
+    std::optional<extended_texinfo_t> info;
+};
+
+int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info);
+inline int FindMiptex(const char *name) {
+    std::optional<extended_texinfo_t> extended_info;
+    return FindMiptex(name, extended_info);
+}
+int FindTexinfo(const mtexinfo_t &texinfo);
 
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);

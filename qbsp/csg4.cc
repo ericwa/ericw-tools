@@ -59,7 +59,7 @@ MakeSkipTexinfo()
     mt.flags = { 0, TEX_EXFLAG_SKIP };
     memset(&mt.vecs, 0, sizeof(mt.vecs));
 
-    return FindTexinfo(mt, mt.flags);
+    return FindTexinfo(mt);
 }
 
 /*
