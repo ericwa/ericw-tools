@@ -80,7 +80,7 @@ ExportObjFace(FILE *f, FILE *mtlF, const face_t *face, int *vertcount)
     }
     
     //fprintf(f, "usemtl %s\n", texname);
-    fprintf(f, "usemtl contents%d\n", face->contents[1]);
+    fprintf(f, "usemtl contents%d_%d\n", face->contents[1].native, face->contents->extended);
     fprintf(f, "f");
     for (int i=0; i<face->w.numpoints; i++) {
         // .obj vertexes start from 1
@@ -94,9 +94,9 @@ ExportObjFace(FILE *f, FILE *mtlF, const face_t *face, int *vertcount)
 }
 
 static void
-WriteContentsMaterial(FILE *mtlf, int contents, float r, float g, float b)
+WriteContentsMaterial(FILE *mtlf, contentflags_t contents, float r, float g, float b)
 {
-    fprintf(mtlf, "newmtl contents%d\n", contents);
+    fprintf(mtlf, "newmtl contents%d_%d\n", contents.native, contents.extended);
     fprintf(mtlf, "Ka 0 0 0\n");
     fprintf(mtlf, "Kd %f %f %f\n", r, g, b);
     fprintf(mtlf, "Ks 0 0 0\n");
@@ -109,19 +109,19 @@ ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *>
     FILE *objfile = InitObjFile(filesuffix);
     FILE *mtlfile = InitMtlFile(filesuffix);
     
-    WriteContentsMaterial(mtlfile, 0, 0, 0, 0);
-    WriteContentsMaterial(mtlfile, CONTENTS_EMPTY, 0, 1, 0);
-    WriteContentsMaterial(mtlfile, CONTENTS_SOLID, 0.2, 0.2, 0.2);
+    WriteContentsMaterial(mtlfile, { }, 0, 0, 0);
+    WriteContentsMaterial(mtlfile, { CONTENTS_EMPTY }, 0, 1, 0);
+    WriteContentsMaterial(mtlfile, { CONTENTS_SOLID }, 0.2, 0.2, 0.2);
     
-    WriteContentsMaterial(mtlfile, CONTENTS_WATER, 0.0, 0.0, 0.2);
-    WriteContentsMaterial(mtlfile, CONTENTS_SLIME, 0.0, 0.2, 0.0);
-    WriteContentsMaterial(mtlfile, CONTENTS_LAVA,  0.2, 0.0, 0.0);
+    WriteContentsMaterial(mtlfile, { CONTENTS_WATER }, 0.0, 0.0, 0.2);
+    WriteContentsMaterial(mtlfile, { CONTENTS_SLIME }, 0.0, 0.2, 0.0);
+    WriteContentsMaterial(mtlfile, { CONTENTS_LAVA },  0.2, 0.0, 0.0);
     
-    WriteContentsMaterial(mtlfile, CONTENTS_SKY,  0.8, 0.8, 1.0);
-    WriteContentsMaterial(mtlfile, CONTENTS_CLIP,  1, 0.8, 0.8);
-    WriteContentsMaterial(mtlfile, CONTENTS_HINT,  1, 1, 1);
+    WriteContentsMaterial(mtlfile, { CONTENTS_SKY },  0.8, 0.8, 1.0);
+    WriteContentsMaterial(mtlfile, { CONTENTS_SOLID, CFLAGS_CLIP },  1, 0.8, 0.8);
+    WriteContentsMaterial(mtlfile, { CONTENTS_EMPTY, CFLAGS_HINT },  1, 1, 1);
     
-    WriteContentsMaterial(mtlfile, CONTENTS_DETAIL,  0.5, 0.5, 0.5);
+    WriteContentsMaterial(mtlfile, { CONTENTS_SOLID, CFLAGS_DETAIL },  0.5, 0.5, 0.5);
     
     int vertcount = 0;
     for (const face_t *face : faces) {

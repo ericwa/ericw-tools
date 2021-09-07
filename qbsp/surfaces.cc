@@ -292,7 +292,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     int v1, v2;
     int i;
 
-    if (!face->contents[0])
+    if (!face->contents[0].native)
         Error("Face with 0 contents (%s)", __func__);
 
     v1 = GetVertex(entity, p1);

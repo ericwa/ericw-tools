@@ -43,7 +43,7 @@ static int mapsurfaces;
 //============================================================================
 
 void
-ConvertNodeToLeaf(node_t *node, int contents)
+ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // backup the mins/maxs
     vec3_t mins, maxs;
@@ -67,28 +67,17 @@ ConvertNodeToLeaf(node_t *node, int contents)
 void
 DetailToSolid(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF) {
-        // We need to remap CONTENTS_DETAIL to a standard quake content type
-        if (node->contents == CONTENTS_DETAIL) {
-            node->contents = CONTENTS_SOLID;
-        } else if (node->contents == CONTENTS_DETAIL_ILLUSIONARY) {
-            node->contents = CONTENTS_EMPTY;
-        }
-        /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
-         * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
-         */
-        return;
-    } else {
+    if (node->planenum != PLANENUM_LEAF) {
         DetailToSolid(node->children[0]);
         DetailToSolid(node->children[1]);
 
 		// If both children are solid, we can merge the two leafs into one.
         // DarkPlaces has an assertion that fails if both children are
         // solid.
-		if (node->children[0]->contents == CONTENTS_SOLID
-			&& node->children[1]->contents == CONTENTS_SOLID) {
+		if (node->children[0]->contents.native == CONTENTS_SOLID
+			&& node->children[1]->contents.native == CONTENTS_SOLID) {
             // This discards any faces on-node. Should be safe (?)
-            ConvertNodeToLeaf(node, CONTENTS_SOLID);
+            ConvertNodeToLeaf(node, { CONTENTS_SOLID });
 		}
     }
 }
@@ -549,28 +538,17 @@ CalcSurfaceInfo(surface_t *surf)
     surf->has_struct = false;
     
     for (const face_t *f = surf->faces; f; f = f->next) {
-        if (f->contents[0] >= 0 || f->contents[1] >= 0)
+        if (f->contents[0].native >= 0 || f->contents[1].native >= 0)
             Error("Bad contents in face (%s)", __func__);
 
         surf->lmshift = (f->lmshift[0]<f->lmshift[1])?f->lmshift[0]:f->lmshift[1];
         
         bool faceIsDetail = false;
-        if ((f->contents[0] == CONTENTS_DETAIL)
-            || (f->contents[1] == CONTENTS_DETAIL))
-            faceIsDetail = true;
-        
-        if ((f->contents[0] == CONTENTS_DETAIL_ILLUSIONARY)
-            || (f->contents[1] == CONTENTS_DETAIL_ILLUSIONARY))
-            faceIsDetail = true;
-        
-        if ((f->contents[0] == CONTENTS_DETAIL_FENCE)
-            || (f->contents[1] == CONTENTS_DETAIL_FENCE))
-            faceIsDetail = true;
-        
-        if ((f->cflags[0] & CFLAGS_WAS_ILLUSIONARY)
-            || (f->cflags[1] & CFLAGS_WAS_ILLUSIONARY))
-            faceIsDetail = true;
 
+        if ((f->contents[0].extended | f->contents[1].extended) &
+            (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))
+            faceIsDetail = true;
+        
         if (faceIsDetail)
             surf->has_detail = true;
         else
@@ -717,8 +695,16 @@ GetContentsName
 ==================
 */
 const char *
-GetContentsName( int Contents ) {
-    switch( Contents ) {
+GetContentsName( const contentflags_t &Contents ) {
+    if (Contents.extended & CFLAGS_DETAIL) {
+        return "Detail";
+    } else if (Contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        return "DetailIllusionary";
+    } else if (Contents.extended & CFLAGS_DETAIL_FENCE) {
+        return "DetailFence";
+    } else if (Contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+        return "IllusionaryVisblocker";
+    } else switch( Contents.native ) {
         case CONTENTS_EMPTY:
             return "Empty";
             
@@ -736,41 +722,30 @@ GetContentsName( int Contents ) {
             
         case CONTENTS_SKY:
             return "Sky";
-        
-        case CONTENTS_DETAIL:
-            return "Detail";
-            
-        case CONTENTS_DETAIL_ILLUSIONARY:
-            return "DetailIllusionary";
-
-        case CONTENTS_DETAIL_FENCE:
-            return "DetailFence";
-
-        case CONTENTS_ILLUSIONARY_VISBLOCKER:
-            return "IllusionaryVisblocker";
 
         default:
             return "Error";
     }
 }
 
-int Contents_Priority(int contents)
+int Contents_Priority(const contentflags_t &contents)
 {
-    switch (contents) {
+    if (contents.extended & CFLAGS_DETAIL) {
+        return 5;
+    } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        return 3;
+    } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
+        return 4;
+    } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+        return 2;
+    } else switch( contents.native ) {
         case CONTENTS_SOLID:  return 7;
             
         case CONTENTS_SKY:    return 6;
             
-        case CONTENTS_DETAIL: return 5;
-    
-        case CONTENTS_DETAIL_FENCE: return 4;
-            
-        case CONTENTS_DETAIL_ILLUSIONARY: return 3;
-            
         case CONTENTS_WATER:  return 2;
         case CONTENTS_SLIME:  return 2;
         case CONTENTS_LAVA:   return 2;
-        case CONTENTS_ILLUSIONARY_VISBLOCKER: return 2;
 
         case CONTENTS_EMPTY:  return 1;
         case 0:               return 0;
@@ -795,7 +770,7 @@ static void
 LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 {
     leafnode->faces = NULL;
-    leafnode->contents = 0;
+    leafnode->contents = { 0, 0 };
     leafnode->planenum = PLANENUM_LEAF;
 
     int count = 0;
@@ -810,11 +785,11 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
             }
             
             // HACK: Handle structural covered by detail.
-            if (f->cflags[0] & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
-                Q_assert(f->contents[0] == CONTENTS_EMPTY);
+            if (f->contents[0].extended & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
+                Q_assert(f->contents[0].native == CONTENTS_EMPTY);
 
-                if (Contents_Priority(CONTENTS_DETAIL) > currentpri) {
-                    leafnode->contents = CONTENTS_DETAIL;
+                if (Contents_Priority({ CONTENTS_SOLID, CFLAGS_DETAIL }) > currentpri) {
+                    leafnode->contents = { CONTENTS_SOLID, CFLAGS_DETAIL };
                 }
             }
         }
@@ -823,10 +798,19 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     // NOTE: This is crazy..
     // Liquid leafs get assigned liquid content types because of the
     // "cosmetic" mirrored faces.
-    if (!leafnode->contents)
-        leafnode->contents = CONTENTS_SOLID; // FIXME: Need to create CONTENTS_DETAIL sometimes?
-    
-    switch (leafnode->contents) {
+    if (!leafnode->contents.native) {
+        leafnode->contents.native = CONTENTS_SOLID; // FIXME: Need to create CONTENTS_DETAIL sometimes?
+    }
+
+    if (leafnode->contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+        c_illusionary_visblocker++;
+    } else if (leafnode->contents.extended & CFLAGS_DETAIL_FENCE) {
+        c_detail_fence++;
+    } else if (leafnode->contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        c_detail_illusionary++;
+    } else if (leafnode->contents.extended & CFLAGS_DETAIL) {
+        c_detail++;
+    } else switch (leafnode->contents.native) {
     case CONTENTS_EMPTY:
         c_empty++;
         break;
@@ -838,18 +822,6 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     case CONTENTS_LAVA:
     case CONTENTS_SKY:
         c_water++;
-        break;
-    case CONTENTS_DETAIL:
-        c_detail++;
-        break;
-    case CONTENTS_DETAIL_ILLUSIONARY:
-        c_detail_illusionary++;
-        break;
-    case CONTENTS_DETAIL_FENCE:
-        c_detail_fence++;
-        break;
-    case CONTENTS_ILLUSIONARY_VISBLOCKER:
-        c_illusionary_visblocker++;
         break;
     default:
         Error("Bad contents in face (%s)", __func__);
@@ -1011,11 +983,11 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
         }
         headnode->children[0] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
         headnode->children[0]->planenum = PLANENUM_LEAF;
-        headnode->children[0]->contents = CONTENTS_EMPTY;
+        headnode->children[0]->contents = { CONTENTS_EMPTY };
         headnode->children[0]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
         headnode->children[1] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
         headnode->children[1]->planenum = PLANENUM_LEAF;
-        headnode->children[1]->contents = CONTENTS_EMPTY;
+        headnode->children[1]->contents = { CONTENTS_EMPTY };
         headnode->children[1]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
 
         return headnode;

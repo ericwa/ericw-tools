@@ -29,11 +29,15 @@ struct gamedef_generic_t : public gamedef_t {
         base_dir = nullptr;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const {
+    bool surf_is_lightmapped(const surfflags_t &) const {
         throw std::bad_cast();
     }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const {
+    bool surf_is_subdivided(const surfflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const {
         throw std::bad_cast();
     }
 };
@@ -53,6 +57,27 @@ struct gamedef_q1_like_t : public gamedef_t {
 
     bool surf_is_subdivided(const surfflags_t &flags) const {
         return !(flags.native & TEX_SPECIAL);
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        if (contents0 == contents1)
+            return contents0;
+
+        /*
+         * Clusters may be partially solid but still be seen into
+         * ?? - Should we do something more explicit with mixed liquid contents?
+         */
+        if (contents0.native == CONTENTS_EMPTY || contents1.native == CONTENTS_EMPTY)
+            return { CONTENTS_EMPTY, (uint16_t) (contents0.extended | contents1.extended) };
+
+        if (contents0.native >= CONTENTS_LAVA && contents0.native <= CONTENTS_WATER)
+            return { contents0.native, (uint16_t) (contents0.extended | contents1.extended) };
+        if (contents1.native >= CONTENTS_LAVA && contents1.native <= CONTENTS_WATER)
+            return { contents1.native, (uint16_t) (contents0.extended | contents1.extended) };
+        if (contents0.native == CONTENTS_SKY || contents1.native == CONTENTS_SKY)
+            return { CONTENTS_SKY, (uint16_t) (contents0.extended | contents1.extended) };
+
+        return { CONTENTS_SOLID, (uint16_t) (contents0.extended | contents1.extended) };
     }
 };
 
@@ -85,6 +110,17 @@ struct gamedef_q2_t : public gamedef_t {
 
     bool surf_is_subdivided(const surfflags_t &flags) const {
         return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY));
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        contentflags_t c = { contents0.native | contents1.native, (uint16_t) (contents0.extended | contents1.extended) };
+
+	    // a cluster may include some solid detail areas, but
+	    // still be seen into
+	    if (!(contents0.native & Q2_CONTENTS_SOLID) || !(contents1.native & Q2_CONTENTS_SOLID))
+		    c.native &= ~Q2_CONTENTS_SOLID;
+
+	    return c;
     }
 };
 

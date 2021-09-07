@@ -404,7 +404,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 perbrush.maxs[0] = LittleFloat(b->maxs[0]);
                 perbrush.maxs[1] = LittleFloat(b->maxs[1]);
                 perbrush.maxs[2] = LittleFloat(b->maxs[2]);
-                switch(b->contents)
+                switch(b->contents.native)
                 {
                 //contents should match the engine.
                 case CONTENTS_EMPTY:    //really an error, but whatever
@@ -413,14 +413,17 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 case CONTENTS_SLIME:
                 case CONTENTS_LAVA:
                 case CONTENTS_SKY:
-                case CONTENTS_CLIP:
-                        perbrush.contents = b->contents;
+                        if (b->contents.extended & CFLAGS_CLIP) {
+                            perbrush.contents = -8;
+                        } else {
+                            perbrush.contents = b->contents.native;
+                        }
                         break;
 //              case CONTENTS_LADDER:
 //                      perbrush.contents = -16;
 //                      break;
                 default:
-                        Message(msgWarning, "Unknown contents: %i. Translating to solid.", b->contents);
+                        Message(msgWarning, "Unknown contents: %i-%i. Translating to solid.", b->contents.native, b->contents.extended);
                         perbrush.contents = CONTENTS_SOLID;
                         break;
                 }

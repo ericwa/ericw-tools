@@ -209,13 +209,13 @@ typedef struct {
 #define CONTENTS_SKY   -6
 #define CONTENTS_MIN   CONTENTS_SKY
 
-#define CONTENTS_HINT   -7      /* compiler internal use only */
-#define CONTENTS_CLIP   -8      /* compiler internal use only */
-#define CONTENTS_ORIGIN -9      /* compiler internal use only */
-#define CONTENTS_DETAIL -10     /* compiler internal use only */
-#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
-#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
-#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
+//#define CONTENTS_HINT   -7      /* compiler internal use only */
+//#define CONTENTS_CLIP   -8      /* compiler internal use only */
+//#define CONTENTS_ORIGIN -9      /* compiler internal use only */
+//#define CONTENTS_DETAIL -10     /* compiler internal use only */
+//#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
+//#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
+//#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
 //#define CONTENTS_FENCE  -15     /* compiler internal use only */
 //#define CONTENTS_LADDER -16     /* reserved for engine use */
 
@@ -261,6 +261,43 @@ typedef struct {
 #define    Q2_CONTENTS_DETAIL         0x8000000    // brushes to be added after vis leafs
 #define    Q2_CONTENTS_TRANSLUCENT    0x10000000    // auto set if any surface has trans
 #define    Q2_CONTENTS_LADDER         0x20000000
+
+// Special contents flags for the compiler only
+#define    CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
+#define    CFLAGS_WAS_ILLUSIONARY              (1U << 1) /* was illusionary, got changed to something else */
+#define    CFLAGS_DETAIL_WALL                  (1U << 2) /* don't clip world for func_detail_wall entities */
+#define    CFLAGS_BMODEL_MIRROR_INSIDE		   (1U << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
+#define    CFLAGS_NO_CLIPPING_SAME_TYPE        (1U << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
+// only one of these flags below should ever be set.
+#define    CFLAGS_HINT                         (1U << 5)
+#define    CFLAGS_CLIP                         (1U << 6)
+#define    CFLAGS_ORIGIN                       (1U << 7)
+#define    CFLAGS_DETAIL                       (1U << 8)
+#define    CFLAGS_DETAIL_ILLUSIONARY           (1U << 9)
+#define    CFLAGS_DETAIL_FENCE                 (1U << 10)
+#define    CFLAGS_ILLUSIONARY_VISBLOCKER       (1U << 11)
+
+struct contentflags_t {
+    // native flags value; what's written to the BSP basically
+    int32_t native;
+
+    // extra flags, specific to BSP only
+    uint16_t extended;
+
+    // merge these content flags with other, and use
+    // their native contents.
+    contentflags_t merge(const contentflags_t &other) const {
+        return { other.native, (uint16_t) (extended | other.extended) };
+    }
+
+    bool operator==(const contentflags_t &other) const {
+        return native == other.native && extended == other.extended;
+    }
+
+    bool operator!=(const contentflags_t &other) const {
+        return !(*this == other);
+    }
+};
 
 struct bsp29_dnode_t {
     int32_t planenum;
@@ -1004,6 +1041,7 @@ struct gamedef_t
 
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
+    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
 };
 
 // BSP version struct & instances

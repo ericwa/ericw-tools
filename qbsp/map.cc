@@ -2406,7 +2406,7 @@ TestExpandBrushes(const mapentity_t *src)
     
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        brush_t *hull1brush = LoadBrush(src, mapbrush, CONTENTS_SOLID, vec3_origin, rotation_t::none, 1);
+        brush_t *hull1brush = LoadBrush(src, mapbrush, { CONTENTS_SOLID }, vec3_origin, rotation_t::none, 1);
         
         if (hull1brush != nullptr)
             hull1brushes.push_back(hull1brush);

@@ -83,8 +83,6 @@ NewFaceFromFace(face_t *in)
     newf->original = in->original;
     newf->contents[0] = in->contents[0];
     newf->contents[1] = in->contents[1];
-    newf->cflags[0] = in->cflags[0];
-    newf->cflags[1] = in->cflags[1];
     newf->lmshift[0] = in->lmshift[0];
     newf->lmshift[1] = in->lmshift[1];
 
@@ -361,8 +359,6 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
             newface->planeside = face->planeside ^ 1;
             newface->contents[0] = face->contents[1];
             newface->contents[1] = face->contents[0];
-            newface->cflags[0] = face->cflags[1];
-            newface->cflags[1] = face->cflags[0];
             newface->lmshift[0] = face->lmshift[1];
             newface->lmshift[1] = face->lmshift[0];
 
@@ -377,14 +373,11 @@ SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &pla
             // HACK: We only want this mirrored face for CONTENTS_DETAIL
             // to force the right content type for the leaf, but we don't actually
             // want the face. So just set the texinfo to "skip" so it gets deleted.
-            if (face->contents[1] == CONTENTS_DETAIL
-                || face->contents[1] == CONTENTS_DETAIL_ILLUSIONARY
-                || face->contents[1] == CONTENTS_DETAIL_FENCE
-                || (face->cflags[1] & CFLAGS_WAS_ILLUSIONARY)
-                || (options.fContentHack && face->contents[1] == CONTENTS_SOLID)) {
+            if ((face->contents[1].extended & (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))
+                || (options.fContentHack && face->contents[1].native == CONTENTS_SOLID)) {
                 
                 // if CFLAGS_BMODEL_MIRROR_INSIDE is set, never change to skip
-                if (!(face->cflags[1] & CFLAGS_BMODEL_MIRROR_INSIDE)) {
+                if (!(face->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
                 	newface->texinfo = MakeSkipTexinfo();
                 }
             }
@@ -430,7 +423,7 @@ contents override the face inside contents.
 static void
 SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
 {
-    Q_assert(clipbrush->contents != CONTENTS_SOLID);
+    Q_assert(clipbrush->contents.native != CONTENTS_SOLID);
     
     face_t *next;
 
@@ -440,10 +433,9 @@ SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
         
         next = face->next;
         face->contents[0] = clipbrush->contents;
-        face->cflags[0] = clipbrush->cflags;
         
-        if ((face->contents[1] == CONTENTS_SOLID || face->contents[1] == CONTENTS_SKY)
-             && clipbrush->contents == CONTENTS_DETAIL) {
+        if ((face->contents[1].native == CONTENTS_SOLID || face->contents[1].native == CONTENTS_SKY)
+             && (clipbrush->contents.extended & CFLAGS_DETAIL)) {
             // This case is when a structural and detail brush are touching,
             // and we want to save the sturctural face that is
             // touching detail.
@@ -458,28 +450,26 @@ SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
             // marked as empty here, and the detail faces have their "back"
             // marked as detail.
             
-            face->contents[0] = CONTENTS_EMPTY;
-            face->cflags[0] = CFLAGS_STRUCTURAL_COVERED_BY_DETAIL;
+            face->contents[0] = { CONTENTS_EMPTY, CFLAGS_STRUCTURAL_COVERED_BY_DETAIL };
             face->texinfo = MakeSkipTexinfo();
         }
         
         // N.B.: We don't need a hack like above for when clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY.
         
         // These would create leaks
-        Q_assert(!(face->contents[1] == CONTENTS_SOLID && face->contents[0] == CONTENTS_DETAIL));
-        Q_assert(!(face->contents[1] == CONTENTS_SKY && face->contents[0] == CONTENTS_DETAIL));
+        Q_assert(!((face->contents[1].native == CONTENTS_SKY || face->contents[1].native == CONTENTS_SOLID) &&
+                   (face->contents[0].extended & CFLAGS_DETAIL)));
         
         /*
          * If the inside brush is empty space, inherit the outside contents.
          * The only brushes with empty contents currently are hint brushes.
          */
-        if (face->contents[1] == CONTENTS_EMPTY)
+        if (face->contents[1].extended & CFLAGS_DETAIL_ILLUSIONARY) {
+            face->contents[1] = { clipbrush->contents.native, (uint16_t) ((face->contents[1].extended & ~CFLAGS_DETAIL_ILLUSIONARY) | CFLAGS_WAS_ILLUSIONARY) };
+        }
+        if (face->contents[1].native == CONTENTS_EMPTY)
             face->contents[1] = clipbrush->contents;
         
-        if (face->contents[1] == CONTENTS_DETAIL_ILLUSIONARY) {
-            face->contents[1] = clipbrush->contents;
-            face->cflags[1] |= CFLAGS_WAS_ILLUSIONARY;
-        }
 
         face->next = *savelist;
         *savelist = face;
@@ -543,10 +533,8 @@ CopyBrushFaces(const brush_t *brush)
         brushfaces++;
         newface = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
         *newface = *face;
-        newface->contents[0] = CONTENTS_EMPTY;
+        newface->contents[0] = { CONTENTS_EMPTY };
         newface->contents[1] = brush->contents;
-        newface->cflags[0] = 0;
-        newface->cflags[1] = brush->cflags;
         newface->lmshift[0] = brush->lmshift;
         newface->lmshift[1] = brush->lmshift;
         newface->next = facelist;
@@ -556,16 +544,15 @@ CopyBrushFaces(const brush_t *brush)
     return facelist;
 }
 
-static bool IsLiquid(int contents)
+static bool IsLiquid(const contentflags_t &contents)
 {
-    return contents == CONTENTS_WATER
-        || contents == CONTENTS_LAVA
-        || contents == CONTENTS_SLIME;
+    return contents.native == CONTENTS_WATER
+        || contents.native == CONTENTS_LAVA
+        || contents.native == CONTENTS_SLIME;
 }
 
-static bool IsFence(int contents) {
-    return contents == CONTENTS_DETAIL_FENCE
-        || contents == CONTENTS_DETAIL_ILLUSIONARY;
+static bool IsFence(const contentflags_t &contents) {
+    return contents.extended & (CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY);
 }
 
 /*
@@ -623,33 +610,35 @@ CSGFaces(const mapentity_t *entity)
                 overwrite = true;
                 continue;
             }
-            if (clipbrush->contents == CONTENTS_EMPTY) {
+            if (clipbrush->contents.native == CONTENTS_EMPTY) {
                 /* Ensure hint never clips anything */
                 continue;
             }
             
-            if (clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY
-                && brush->contents != CONTENTS_DETAIL_ILLUSIONARY) {
+            if ((clipbrush->contents.extended & CFLAGS_DETAIL_ILLUSIONARY)
+                && !(brush->contents.extended & CFLAGS_DETAIL_ILLUSIONARY)) {
                 /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
                 continue;
             }
             
-            if (clipbrush->contents == CONTENTS_DETAIL && (clipbrush->cflags & CFLAGS_DETAIL_WALL)
-                && !(brush->contents == CONTENTS_DETAIL && (brush->cflags & CFLAGS_DETAIL_WALL))) {
+            if ((clipbrush->contents.extended & CFLAGS_DETAIL) && (clipbrush->contents.extended & CFLAGS_DETAIL_WALL)
+                && !((brush->contents.extended & CFLAGS_DETAIL) && (brush->contents.extended & CFLAGS_DETAIL_WALL))) {
                 /* if clipbrush has CONTENTS_DETAIL and CFLAGS_DETAIL_WALL are set,
                    only clip other brushes with both CONTENTS_DETAIL and CFLAGS_DETAIL_WALL.
                  */
                 continue;
             }
             
-            if (clipbrush->contents == CONTENTS_DETAIL_FENCE
-                && brush->contents != CONTENTS_DETAIL_FENCE) {
+            if ((clipbrush->contents.extended & CFLAGS_DETAIL_FENCE)
+                && !(brush->contents.extended & CFLAGS_DETAIL_FENCE)) {
                 /* CONTENTS_DETAIL_FENCE never clips anything but itself */
                 continue;
             }
             
-            if (clipbrush->contents == brush->contents
-                && (clipbrush->cflags & CFLAGS_NO_CLIPPING_SAME_TYPE)) {
+            // TODO: this might break because this == won't catch the extended types now.
+            // might need a specific function for this one.
+            if (clipbrush->contents.native == brush->contents.native
+                && (clipbrush->contents.extended & CFLAGS_NO_CLIPPING_SAME_TYPE)) {
                 /* _noclipfaces key */
                 continue;
             }
@@ -690,13 +679,13 @@ CSGFaces(const mapentity_t *entity)
              *
              * FIXME: clean this up, the predicate seems to be "can you see 'brush' from inside 'clipbrush'"
              */
-            if ((brush->contents == CONTENTS_SOLID && clipbrush->contents != CONTENTS_SOLID)
-                || (brush->contents == CONTENTS_SKY && (clipbrush->contents != CONTENTS_SOLID
-                                                        && clipbrush->contents != CONTENTS_SKY))
-                || (brush->contents == CONTENTS_DETAIL && (clipbrush->contents != CONTENTS_SOLID
-                                                           && clipbrush->contents != CONTENTS_SKY
-                                                           && clipbrush->contents != CONTENTS_DETAIL))
-                || (IsLiquid(brush->contents)          && clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY)
+            if ((brush->contents.native == CONTENTS_SOLID && clipbrush->contents.native != CONTENTS_SOLID)
+                || (brush->contents.native == CONTENTS_SKY && (clipbrush->contents.native != CONTENTS_SOLID
+                                                        && clipbrush->contents.native != CONTENTS_SKY))
+                || ((brush->contents.extended & CFLAGS_DETAIL) && (clipbrush->contents.native != CONTENTS_SOLID
+                                                           && clipbrush->contents.native != CONTENTS_SKY
+                                                           && !(clipbrush->contents.extended & CFLAGS_DETAIL)))
+                || (IsLiquid(brush->contents)          && (clipbrush->contents.extended & CFLAGS_DETAIL_ILLUSIONARY))
                 || (IsFence(brush->contents)           && (IsLiquid(clipbrush->contents) || IsFence(clipbrush->contents))))
             {
                 SaveInsideFaces(inside, clipbrush, &outside);
@@ -719,7 +708,7 @@ CSGFaces(const mapentity_t *entity)
          * All of the faces left on the outside list are real surface faces
          * If the brush is non-solid, mirror faces for the inside view
          */
-        const bool mirror = options.fContentHack ? true : (brush->contents != CONTENTS_SOLID);
+        const bool mirror = options.fContentHack ? true : (brush->contents.native != CONTENTS_SOLID);
         SaveFacesToPlaneList(outside, mirror, planefaces);
     }
     surface_t *surfaces = BuildSurfaces(planefaces);

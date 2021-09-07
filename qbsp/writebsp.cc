@@ -44,14 +44,14 @@ AssertVanillaContentType(int content)
     case CONTENTS_SKY:
         break;
     default:
-        Error("Internal error: Tried to save compiler-internal contents type %s\n", GetContentsName(content));
+        Error("Internal error: Tried to save compiler-internal contents type %s\n", GetContentsName({ content }));
     }
 }
 
 static int
-RemapContentsForExport_(int content)
+RemapContentsForExport_(const contentflags_t &content)
 {
-    if (content == CONTENTS_DETAIL_FENCE) {
+    if (content.extended & CFLAGS_DETAIL_FENCE) {
         /*
          * This is for func_detail_wall.. we want to write a solid leaf that has faces,
          * because it may be possible to see inside (fence textures).
@@ -60,24 +60,25 @@ RemapContentsForExport_(int content)
          */
         return CONTENTS_SOLID;
     }
-    if (content == CONTENTS_ILLUSIONARY_VISBLOCKER) {
-        return CONTENTS_EMPTY;
-    }
-    return content;
+
+    return content.native;
 }
 
 static int
-RemapContentsForExport(int content)
+RemapContentsForExport(const contentflags_t &content)
 {
-    content = RemapContentsForExport_(content);
+    int32_t contents = RemapContentsForExport_(content);
 
     // TODO
     if (options.target_version->game->id == GAME_QUAKE_II) {
-        switch (content) {
+        switch (contents) {
         case CONTENTS_EMPTY:
             return 0;
         case CONTENTS_SOLID:
         case CONTENTS_SKY:
+            if (content.extended & CFLAGS_CLIP) {
+                return Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP;
+            }
             return Q2_CONTENTS_SOLID;
         case CONTENTS_WATER:
             return Q2_CONTENTS_WATER;
@@ -85,14 +86,12 @@ RemapContentsForExport(int content)
             return Q2_CONTENTS_SLIME;
         case CONTENTS_LAVA:
             return Q2_CONTENTS_LAVA;
-        case CONTENTS_CLIP:
-            return Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP;
         default:
             Error("dunno what to do with contents %i\n", content);
         }
     }
 
-    return content;
+    return contents;
 }
 
 /**
@@ -165,7 +164,7 @@ ExportClipNodes(mapentity_t *entity, node_t *node)
 
     // FIXME: free more stuff?
     if (node->planenum == PLANENUM_LEAF) {
-        int contents = node->contents;
+        int contents = node->contents.native;
         free(node);
         return contents;
     }
@@ -292,7 +291,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             // (probably for collision purposes? makes sense given they store leafbrushes)
-            if (options.target_version->game->id != GAME_QUAKE_II && node->children[i]->contents == CONTENTS_SOLID)
+            if (options.target_version->game->id != GAME_QUAKE_II && node->children[i]->contents.native == CONTENTS_SOLID)
                 dnode->children[i] = -1;
             else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs.size());
@@ -369,7 +368,7 @@ BeginBSPFile(void)
 
     // Leave room for leaf 0 (must be solid)
     map.exported_leafs.push_back({});
-    map.exported_leafs.back().contents = RemapContentsForExport(CONTENTS_SOLID);
+    map.exported_leafs.back().contents = RemapContentsForExport({ CONTENTS_SOLID });
     Q_assert(map.exported_leafs.size() == 1);
 }
 

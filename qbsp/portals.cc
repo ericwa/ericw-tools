@@ -52,36 +52,14 @@ WriteFloat(FILE *portalFile, vec_t v)
         fprintf(portalFile, "%f ", v);
 }
 
-static int
+static contentflags_t
 ClusterContents(const node_t *node)
 {
-    int contents0, contents1;
-
     /* Pass the leaf contents up the stack */
-    if (node->contents)
+    if (node->planenum == PLANENUM_LEAF)
         return node->contents;
 
-    contents0 = ClusterContents(node->children[0]);
-    contents1 = ClusterContents(node->children[1]);
-
-    if (contents0 == contents1)
-        return contents0;
-
-    /*
-     * Clusters may be partially solid but still be seen into
-     * ?? - Should we do something more explicit with mixed liquid contents?
-     */
-    if (contents0 == CONTENTS_EMPTY || contents1 == CONTENTS_EMPTY)
-        return CONTENTS_EMPTY;
-
-    if (contents0 >= CONTENTS_LAVA && contents0 <= CONTENTS_WATER)
-        return contents0;
-    if (contents1 >= CONTENTS_LAVA && contents1 <= CONTENTS_WATER)
-        return contents1;
-    if (contents0 == CONTENTS_SKY || contents1 == CONTENTS_SKY)
-        return CONTENTS_SKY;
-
-    return CONTENTS_SOLID;
+    return options.target_version->game->cluster_contents(ClusterContents(node->children[0]), ClusterContents(node->children[1]));
 }
 
 /*
@@ -90,36 +68,36 @@ ClusterContents(const node_t *node)
 static bool
 PortalThru(const portal_t *p)
 {
-    int contents0 = ClusterContents(p->nodes[0]);
-    int contents1 = ClusterContents(p->nodes[1]);
+    contentflags_t contents0 = ClusterContents(p->nodes[0]);
+    contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
     /* Can't see through solids */
-    if (contents0 == CONTENTS_SOLID || contents1 == CONTENTS_SOLID)
+    if (contents0.native == CONTENTS_SOLID || contents1.native == CONTENTS_SOLID)
+        return false;
+
+    /* Can't see through func_illusionary_visblocker */
+    if ((contents0.extended | contents1.extended) & CFLAGS_ILLUSIONARY_VISBLOCKER)
         return false;
 
     /* If contents values are the same and not solid, can see through */
     if (contents0 == contents1)
         return true;
 
-    /* Can't see through func_illusionary_visblocker */
-    if (contents0 == CONTENTS_ILLUSIONARY_VISBLOCKER || contents1 == CONTENTS_ILLUSIONARY_VISBLOCKER)
-        return false;
-
     /* If water is transparent, liquids are like empty space */
     if (options.fTranswater) {
-        if (contents0 >= CONTENTS_LAVA && contents0 <= CONTENTS_WATER &&
-            contents1 == CONTENTS_EMPTY)
+        if (contents0.native >= CONTENTS_LAVA && contents0.native <= CONTENTS_WATER &&
+            contents1.native == CONTENTS_EMPTY)
             return true;
-        if (contents1 >= CONTENTS_LAVA && contents1 <= CONTENTS_WATER &&
-            contents0 == CONTENTS_EMPTY)
+        if (contents1.native >= CONTENTS_LAVA && contents1.native <= CONTENTS_WATER &&
+            contents0.native == CONTENTS_EMPTY)
             return true;
     }
 
     /* If sky is transparent, then sky is like empty space */
     if (options.fTranssky) {
-        if (contents0 == CONTENTS_SKY && contents1 == CONTENTS_EMPTY)
+        if (contents0.native == CONTENTS_SKY && contents1.native == CONTENTS_EMPTY)
             return true;
-        if (contents0 == CONTENTS_EMPTY && contents1 == CONTENTS_SKY)
+        if (contents0.native == CONTENTS_EMPTY && contents1.native == CONTENTS_SKY)
             return true;
     }
 
@@ -135,12 +113,12 @@ WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
     int i, front, back;
     qbsp_plane_t plane2;
 
-    if (!node->contents && !node->detail_separator) {
+    if (node->planenum != PLANENUM_LEAF && !node->detail_separator) {
         WritePortals_r(node->children[0], portalFile, clusters);
         WritePortals_r(node->children[1], portalFile, clusters);
         return;
     }
-    if (node->contents == CONTENTS_SOLID)
+    if (node->contents.native == CONTENTS_SOLID)
         return;
 
     for (p = node->portals; p; p = next) {
@@ -180,12 +158,12 @@ WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
 static int
 WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
 {
-    if (!node->contents) {
+    if (node->planenum != PLANENUM_LEAF) {
         viscluster = WriteClusters_r(node->children[0], portalFile, viscluster);
         viscluster = WriteClusters_r(node->children[1], portalFile, viscluster);
         return viscluster;
     }
-    if (node->contents == CONTENTS_SOLID)
+    if (node->contents.native == CONTENTS_SOLID)
         return viscluster;
 
     /* If we're in the next cluster, start a new line */
@@ -233,7 +211,7 @@ static void
 NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
 {
     /* decision node */
-    if (!node->contents) {
+    if (node->planenum != PLANENUM_LEAF) {
         node->visleafnum = -99;
         node->viscluster = -99;
         if (cluster < 0 && node->detail_separator) {
@@ -247,7 +225,7 @@ NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
         return;
     }
 
-    if (node->contents == CONTENTS_SOLID) {
+    if (node->contents.native == CONTENTS_SOLID) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;
@@ -403,7 +381,7 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         bounds[1][i] = entity->maxs[i] + SIDESPACE;
     }
 
-    outside_node.contents = CONTENTS_SOLID;
+    outside_node.contents = { CONTENTS_SOLID };
     outside_node.portals = NULL;
 
     for (i = 0; i < 3; i++)
@@ -565,7 +543,7 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
 #endif
 
     /* If a leaf, no more dividing */
-    if (node->contents)
+    if (node->planenum == PLANENUM_LEAF)
         return;
 
     /* No portals on detail separators */
@@ -716,7 +694,7 @@ FreeAllPortals(node_t *node)
 {
     portal_t *p, *nextp;
 
-    if (!node->contents) {
+    if (node->planenum != PLANENUM_LEAF) {
         FreeAllPortals(node->children[0]);
         FreeAllPortals(node->children[1]);
     }

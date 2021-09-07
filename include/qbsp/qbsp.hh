@@ -100,13 +100,6 @@
 // Pi
 #define Q_PI    3.14159265358979323846
 
-// Special contents flags for the compiler only
-#define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
-#define CFLAGS_WAS_ILLUSIONARY           (1U << 1) /* was illusionary, got changed to something else */
-#define CFLAGS_DETAIL_WALL  (1U << 2) /* don't clip world for func_detail_wall entities */
-#define CFLAGS_BMODEL_MIRROR_INSIDE		 (1U << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
-#define CFLAGS_NO_CLIPPING_SAME_TYPE     (1U << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
-
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:
@@ -171,8 +164,7 @@ typedef struct visfacet_s {
     int planenum;
     int planeside;              // which side is the front of the face
     int texinfo;
-    short contents[2];          // 0 = front side
-    short cflags[2];            // contents flags
+    contentflags_t contents[2];          // 0 = front side
     short lmshift[2];           //lightmap scale.
 
     struct visfacet_s *original;        // face on node
@@ -219,7 +211,7 @@ typedef struct node_s {
     face_t *faces;              // decision nodes only, list for both sides
 
     // information for leafs
-    int contents;               // leaf nodes (0 for decision nodes)
+    contentflags_t contents;               // leaf nodes (0 for decision nodes)
     face_t **markfaces;         // leaf nodes only, point to node faces
     struct portal_s *portals;
     int visleafnum;             // -1 = solid
@@ -229,8 +221,8 @@ typedef struct node_s {
     bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
     
     bool opaque() const {
-        return contents == CONTENTS_SOLID
-            || contents == CONTENTS_SKY;
+        return contents.native == CONTENTS_SOLID
+            || contents.native == CONTENTS_SKY;
     }
 } node_t;
 

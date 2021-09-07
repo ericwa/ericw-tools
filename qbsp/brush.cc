@@ -33,7 +33,7 @@
 
 typedef struct hullbrush_s {
     const mapbrush_t *srcbrush;
-    int contents;
+    contentflags_t contents;
     int numfaces;
     vec3_t mins;
     vec3_t maxs;
@@ -385,7 +385,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (!hullnum && hullbrush->contents == CONTENTS_HINT) {
+        if (!hullnum && (hullbrush->contents.extended & CFLAGS_HINT)) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
             const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
@@ -833,7 +833,7 @@ Brush_IsDetail(const mapbrush_t *mapbrush)
 }
 
 
-static int
+static contentflags_t
 Brush_GetContents(const mapbrush_t *mapbrush)
 {
     const char *texname;
@@ -847,32 +847,34 @@ Brush_GetContents(const mapbrush_t *mapbrush)
 
         // if we were already assigned contents from somewhere else
         // (Quake II), use this.
-        if (mapface.contents) {
-            return mapface.contents;
-        } else if (options.target_version->game->id == GAME_QUAKE_II) {
+        if (options.target_version->game->id == GAME_QUAKE_II) {
+            if (mapface.contents) {
+                return { mapface.contents };
+            }
+
             continue;
         }
 
         if (!Q_strcasecmp(texname, "origin"))
-            return CONTENTS_ORIGIN;
+            return { CONTENTS_EMPTY, CFLAGS_ORIGIN };
         if (!Q_strcasecmp(texname, "hint"))
-            return CONTENTS_HINT;
+            return { CONTENTS_EMPTY, CFLAGS_HINT };
         if (!Q_strcasecmp(texname, "clip"))
-            return CONTENTS_CLIP;
+            return { CONTENTS_SOLID, CFLAGS_CLIP };
 
         if (texname[0] == '*') {
             if (!Q_strncasecmp(texname + 1, "lava", 4))
-                return CONTENTS_LAVA;
+                return { CONTENTS_LAVA };
             if (!Q_strncasecmp(texname + 1, "slime", 5))
-                return CONTENTS_SLIME;
-            return CONTENTS_WATER;
+                return { CONTENTS_SLIME };
+            return { CONTENTS_WATER };
         }
 
         if (!Q_strncasecmp(texname, "sky", 3))
-            return CONTENTS_SKY;
+            return { CONTENTS_SKY };
     }
     //and anything else is assumed to be a regular solid.
-    return options.target_version->game->id == GAME_QUAKE_II ? Q2_CONTENTS_SOLID : CONTENTS_SOLID;
+    return { options.target_version->game->id == GAME_QUAKE_II ? Q2_CONTENTS_SOLID : CONTENTS_SOLID };
 }
 
 
@@ -883,7 +885,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
+brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -1031,7 +1033,7 @@ Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
 {
     int cnt = 0;
     for (const brush_t *b = brush; b; b = b->next) {
-        if (cflags == (b->cflags & cflags))
+        if (cflags == (b->contents.extended & cflags))
             cnt++;
     }
     return cnt;
@@ -1109,9 +1111,10 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     const char *classname;
     const mapbrush_t *mapbrush;
     vec3_t rotate_offset;
-    int i, contents, cflags = 0;
+    int i;
     int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
+    contentflags_t contents { };
 
     /*
      * The brush list needs to be ordered (lowest to highest priority):
@@ -1131,8 +1134,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        const int contents = Brush_GetContents(mapbrush);
-        if (contents == CONTENTS_ORIGIN) {
+        const contentflags_t contents = Brush_GetContents(mapbrush);
+        if (contents.extended & CFLAGS_ORIGIN) {
             if (dst == pWorldEnt()) {
                 Message(msgWarning, warnOriginBrushInWorld);
                 continue;
@@ -1172,7 +1175,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
     if (!Q_strcasecmp(classname, "func_detail_wall") && !options.fNodetail) {
         all_detail = true;
-        cflags |= CFLAGS_DETAIL_WALL;
+        contents.extended |= CFLAGS_DETAIL_WALL;
     }
     
     all_detail_fence = false;
@@ -1197,12 +1200,12 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     
     /* _mirrorinside key (for func_water etc.) */
     if (atoi(ValueForKey(src, "_mirrorinside"))) {
-        cflags |= CFLAGS_BMODEL_MIRROR_INSIDE;
+        contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
     }
     
     /* _noclipfaces */
     if (atoi(ValueForKey(src, "_noclipfaces"))) {
-        cflags |= CFLAGS_NO_CLIPPING_SAME_TYPE;
+        contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
     }
 
     const bool func_illusionary_visblocker =
@@ -1210,7 +1213,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
-        contents = Brush_GetContents(mapbrush);
+        contents = contents.merge(Brush_GetContents(mapbrush));
 
         // per-brush settings
         bool detail = Brush_IsDetail(mapbrush);
@@ -1223,17 +1226,19 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         detail_fence |= all_detail_fence;
         
         /* FIXME: move into Brush_GetContents? */
-        if (func_illusionary_visblocker)
-            contents = CONTENTS_ILLUSIONARY_VISBLOCKER;
+        if (func_illusionary_visblocker) {
+            contents.native = CONTENTS_EMPTY;
+            contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
+        }
 
         /* "origin" brushes always discarded */
-        if (contents == CONTENTS_ORIGIN)
+        if (contents.extended & CFLAGS_ORIGIN)
             continue;
         
         /* -omitdetail option omits all types of detail */
-        if (options.fOmitDetail && detail && !(cflags & CFLAGS_DETAIL_WALL))
+        if (options.fOmitDetail && detail && !(contents.extended & CFLAGS_DETAIL_WALL))
             continue;
-        if ((options.fOmitDetail || options.fOmitDetailWall) && detail && (cflags & CFLAGS_DETAIL_WALL))
+        if ((options.fOmitDetail || options.fOmitDetailWall) && detail && (contents.extended & CFLAGS_DETAIL_WALL))
             continue;
         if ((options.fOmitDetail || options.fOmitDetailIllusionary) && detail_illusionary)
             continue;
@@ -1241,13 +1246,15 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         
         /* turn solid brushes into detail, if we're in hull0 */
-        if (hullnum == 0 && contents == CONTENTS_SOLID) {
+        if (hullnum == 0 && contents.native == CONTENTS_SOLID) {
             if (detail) {
-                contents = CONTENTS_DETAIL;
+                contents.extended |= CFLAGS_DETAIL;
             } else if (detail_illusionary) {
-                contents = CONTENTS_DETAIL_ILLUSIONARY;
+                contents.native = CONTENTS_EMPTY;
+                contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
             } else if (detail_fence) {
-                contents = CONTENTS_DETAIL_FENCE;
+                contents.native = CONTENTS_EMPTY; // fences need to generate leaves
+                contents.extended |= CFLAGS_DETAIL_FENCE;
             }
         }
         
@@ -1262,7 +1269,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (contents == CONTENTS_CLIP) {
+        if (contents.extended & CFLAGS_CLIP) {
             if (hullnum == 0) {
                 brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
                 if (brush) {
@@ -1272,23 +1279,18 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 }
                 continue;
             }
-            // for hull1, 2, etc., convert clip to CONTENTS_SOLID
-            if (hullnum > 0) {
-                contents = CONTENTS_SOLID;
-            }
-            // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
 
         /* "hint" brushes don't affect the collision hulls */
-        if (contents == CONTENTS_HINT) {
+        if (contents.extended & CFLAGS_HINT) {
             if (hullnum)
                 continue;
-            contents = CONTENTS_EMPTY;
+            contents.native = CONTENTS_EMPTY;
         }
 
         /* entities never use water merging */
         if (dst != pWorldEnt())
-            contents = CONTENTS_SOLID;
+            contents.native = CONTENTS_SOLID;
 
         /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
            this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
@@ -1298,17 +1300,20 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
            before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
            contents type.
          */
-        if (dst != pWorldEnt() && hullnum == 0 && (cflags & CFLAGS_BMODEL_MIRROR_INSIDE)) {
-            contents = CONTENTS_DETAIL_FENCE;
+        if (dst != pWorldEnt() && hullnum == 0 && (contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
+            contents.native = CONTENTS_EMPTY;
+            contents.extended |= CFLAGS_DETAIL_FENCE;
         }
         
         /* nonsolid brushes don't show up in clipping hulls */
-        if (hullnum > 0 && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
+        // TODO: will this statement need to be modified since clip
+        // detail etc aren't native types any more?
+        if (hullnum > 0 && contents.native != CONTENTS_SOLID && contents.native != CONTENTS_SKY)
             continue;
 
         /* sky brushes are solid in the collision hulls */
-        if (hullnum > 0 && contents == CONTENTS_SKY)
-            contents = CONTENTS_SOLID;
+        if (hullnum > 0 && contents.native == CONTENTS_SKY)
+            contents.native = CONTENTS_SOLID;
         
         brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
@@ -1316,23 +1321,22 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
         dst->numbrushes++;
         brush->lmshift = lmshift;
-        brush->cflags = cflags;
         
-        if (brush->contents == CONTENTS_SOLID) {
-            brush->next = dst->solid;
-            dst->solid = brush;
-        } else if (brush->contents == CONTENTS_SKY) {
-            brush->next = dst->sky;
-            dst->sky = brush;
-        } else if (brush->contents == CONTENTS_DETAIL) {
+        if (brush->contents.extended & CFLAGS_DETAIL) {
             brush->next = dst->detail;
             dst->detail = brush;
-        } else if (brush->contents == CONTENTS_DETAIL_ILLUSIONARY) {
+        } else if (brush->contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
             brush->next = dst->detail_illusionary;
             dst->detail_illusionary = brush;
-        } else if (brush->contents == CONTENTS_DETAIL_FENCE) {
+        } else if (brush->contents.extended & CFLAGS_DETAIL_FENCE) {
             brush->next = dst->detail_fence;
             dst->detail_fence = brush;
+        } else if (brush->contents.native == CONTENTS_SOLID) {
+            brush->next = dst->solid;
+            dst->solid = brush;
+        } else if (brush->contents.native == CONTENTS_SKY) {
+            brush->next = dst->sky;
+            dst->sky = brush;
         } else {
             brush->next = dst->liquid;
             dst->liquid = brush;
@@ -1651,7 +1655,6 @@ void SplitBrush (const brush_t *brush,
 
         // NOTE: brush copying
         b[i]->contents = brush->contents;
-        b[i]->cflags = brush->cflags;
         b[i]->lmshift = brush->lmshift;
         b[i]->faces = nullptr;
         b[i]->next = nullptr;
