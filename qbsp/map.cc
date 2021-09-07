@@ -112,7 +112,7 @@ public:
 static texdef_valve_t TexDef_BSPToValve(const float in_vecs[2][4]);
 static qvec2f projectToAxisPlane(const vec3_t snapped_normal, qvec3f point);
 static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t *plane, bool preserveX);
-static void SetTexinfo_QuakeEd_New(const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4]);
+static void SetTexinfo_QuakeEd_New(const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], stvecs &out_vecs);
 static void TestExpandBrushes(const mapentity_t *src);
 
 const mapface_t &mapbrush_t::face(int i) const {
@@ -172,7 +172,7 @@ FindMiptex(const char *name)
     const char *pathsep;
     int i;
 
-    if (options.target_version->game != GAME_QUAKE_II) {
+    if (options.target_version->game->id != GAME_QUAKE_II) {
         /* Ignore leading path in texture names (Q2 map compatibility) */
         pathsep = strrchr(name, '/');
         if (pathsep)
@@ -185,7 +185,7 @@ FindMiptex(const char *name)
     }
     
     /* Handle animating textures carefully */
-    if (options.target_version->game != GAME_QUAKE_II) {
+    if (options.target_version->game->id != GAME_QUAKE_II) {
         if (name[0] == '+') {
             AddAnimTex(name);
             i = map.nummiptex();
@@ -256,33 +256,29 @@ Returns a global texinfo number
 ===============
 */
 int
-FindTexinfo(mtexinfo_t *texinfo, surfflags_t flags)
+FindTexinfo(const mtexinfo_t &texinfo, surfflags_t flags)
 {
-    /* Set the texture flags */
-    texinfo->flags = flags;
-    texinfo->outputnum = -1;
-
     // NaN's will break mtexinfo_lookup, since they're being used as a std::map key and don't compare properly with <.
     // They should have been stripped out already in ValidateTextureProjection.
     for (int i=0;i<2;i++) {
         for (int j=0;j<4;j++) {
-            Q_assert(!std::isnan(texinfo->vecs[i][j]));
+            Q_assert(!std::isnan(texinfo.vecs[i][j]));
         }
     }
     
     // check for an exact match in the reverse lookup
-    const auto it = map.mtexinfo_lookup.find(*texinfo);
+    const auto it = map.mtexinfo_lookup.find(texinfo);
     if (it != map.mtexinfo_lookup.end()) {
         return it->second;
     }
     
     /* Allocate a new texinfo at the end of the array */
     const int num_texinfo = static_cast<int>(map.mtexinfos.size());
-    map.mtexinfos.push_back(*texinfo);
-    map.mtexinfo_lookup[*texinfo] = num_texinfo;
+    map.mtexinfos.push_back(texinfo);
+    map.mtexinfo_lookup[texinfo] = num_texinfo;
     
     // catch broken < implementations in mtexinfo_t
-    assert(map.mtexinfo_lookup.find(*texinfo) != map.mtexinfo_lookup.end());
+    assert(map.mtexinfo_lookup.find(texinfo) != map.mtexinfo_lookup.end());
     
     return num_texinfo;
 }
@@ -299,14 +295,14 @@ normalize_color_format(vec3_t color)
     }
 }
 
-int
-FindTexinfoEnt(mtexinfo_t *texinfo, const mapentity_t *entity)
+static int
+FindTexinfoEnt(const mtexinfo_t &texinfo, const mapentity_t *entity)
 {
     surfflags_t flags {};
-    const char *texname = map.miptex.at(texinfo->miptex).name.c_str();
+    const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
     const int shadow = atoi(ValueForKey(entity, "_shadow"));
     // These flags are pulled from surf flags in Q2.
-    if (options.target_version->game != GAME_QUAKE_II) {
+    if (options.target_version->game->id != GAME_QUAKE_II) {
         if (IsSkipName(texname))
             flags.extended |= TEX_EXFLAG_SKIP;
         if (IsHintName(texname))
@@ -422,7 +418,7 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
             // Quake II uses multiple starts for level transitions/backtracking.
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
-            if (options.target_version->game != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
+            if (options.target_version->game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
                 Message(msgWarning, warnMultipleStarts);
             rgfStartSpots |= info_player_start;
         } else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {
@@ -498,7 +494,7 @@ ParseExtendedTX(parser_t *parser)
     return result;
 }
 
-static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const float in_vecs[2][4])
+static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const stvecs &in_vecs)
 {
     //           [s]
     // T * vec = [t]
@@ -545,7 +541,7 @@ static float extractRotation(qmat2x2f m) {
 
 static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plane_t *faceplane, const qvec3f point)
 {
-    float temp[2][4];
+    stvecs temp;
     SetTexinfo_QuakeEd_New(faceplane, texdef.shift, texdef.rotate, texdef.scale, temp);
     
     const qmat4x4f worldToTexSpace_res = texVecsTo4x4Matrix(*faceplane, temp);
@@ -608,7 +604,7 @@ qvec2f normalizeShift(const texture_t *texture, const qvec2f &in)
 
 /// `texture` is optional. If given, the "shift" values can be normalized
 static texdef_quake_ed_t
-TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const texture_t *texture, const float in_vecs[2][4], const vec3_t facepoints[3])
+TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const texture_t *texture, const stvecs &in_vecs, const vec3_t facepoints[3])
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
     vec3_t snapped_normal;
@@ -892,7 +888,7 @@ Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t *plane, bool preserveX)
 }
 
 static void
-SetTexinfo_QuakeEd_New(const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], float out_vecs[2][4])
+SetTexinfo_QuakeEd_New(const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], stvecs &out_vecs)
 {
     vec_t sanitized_scale[2];
     for (int i=0; i<2; i++) {
@@ -1011,7 +1007,7 @@ SetTexinfo_QuakeEd(const qbsp_plane_t *plane, const vec3_t planepts[3], const ve
     
     if (false) {
         // Self-test of SetTexinfo_QuakeEd_New
-        float check[2][4];
+        stvecs check;
         SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
         for (int i=0; i<2; i++) {
             for (int j=0; j<4; j++) {
@@ -1174,7 +1170,7 @@ static void ComputeAxisBase( const vec3_t normal_unsanitized, vec3_t texX, vec3_
 }
 
 static void
-SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, float vecs[2][4])
+SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, stvecs &vecs)
 {
     vec3_t texX, texY;
     
@@ -1214,7 +1210,7 @@ SetTexinfo_BrushPrimitives(const vec3_t texMat[2], const vec3_t faceNormal, int 
     vecs[1][3] = texHeight * texMat[1][2];
 }
 
-static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const float in_vecs[2][4], vec_t *st_out)
+static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const stvecs &in_vecs, vec_t *st_out)
 {
     for (int i=0; i<2; i++) {
         st_out[i] = (point[0] * in_vecs[i][0]
@@ -1226,7 +1222,7 @@ static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], co
 
 // From FaceToBrushPrimitFace in GtkRadiant
 static texdef_brush_primitives_t
-TexDef_BSPToBrushPrimitives(const qbsp_plane_t plane, const int texSize[2], const float in_vecs[2][4])
+TexDef_BSPToBrushPrimitives(const qbsp_plane_t plane, const int texSize[2], const stvecs &in_vecs)
 {
     vec3_t texX, texY;
     ComputeAxisBase( plane.normal, texX, texY );
@@ -1474,6 +1470,7 @@ void mapface_t::set_texvecs(const std::array<qvec4f, 2> &vecs)
 {
     // start with a copy of the current texinfo structure
     mtexinfo_t texInfoNew = map.mtexinfos.at(this->texinfo);
+    texInfoNew.outputnum = -1;
     
     // update vecs
     for (int i=0; i<2; i++) {
@@ -1482,7 +1479,7 @@ void mapface_t::set_texvecs(const std::array<qvec4f, 2> &vecs)
         }
     }
     
-    this->texinfo = FindTexinfo( &texInfoNew, texInfoNew.flags );
+    this->texinfo = FindTexinfo(texInfoNew, texInfoNew.flags);
 }
 
 bool
@@ -1573,7 +1570,7 @@ ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *ent
     
     ValidateTextureProjection(*face, &tx);
 
-    face->texinfo = FindTexinfoEnt(&tx, entity);
+    face->texinfo = FindTexinfoEnt(tx, entity);
 
     return face;
 }
@@ -1972,7 +1969,7 @@ LoadMapFile(void)
 }
 
 static texdef_valve_t
-TexDef_BSPToValve(const float in_vecs[2][4])
+TexDef_BSPToValve(const stvecs &in_vecs)
 {
     texdef_valve_t res;
     

@@ -189,7 +189,7 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face)
     if (texinfo == nullptr)
         return false;
 
-    return bsp->loadversion->surf_is_lightmapped(texinfo->flags);
+    return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
 }
 
 const float *GetSurfaceVertexPoint(const mbsp_t *bsp, const bsp2_dface_t *f, int v)
@@ -215,7 +215,7 @@ TextureName_Contents(const char *texname)
 bool //mxd
 ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, const int contents_or_surf_flags)
 {
-    if (bsp->loadversion->game == GAME_QUAKE_II)
+    if (bsp->loadversion->game->id == GAME_QUAKE_II)
         return (contents_or_surf_flags & Q2_SURF_TRANSLUCENT) && ((contents_or_surf_flags & Q2_SURF_TRANSLUCENT) != Q2_SURF_TRANSLUCENT); // Don't count KMQ2 fence flags combo as translucent
     else
         return contents_or_surf_flags == CONTENTS_WATER || contents_or_surf_flags == CONTENTS_LAVA || contents_or_surf_flags == CONTENTS_SLIME;
@@ -230,7 +230,7 @@ Face_IsTranslucent(const mbsp_t *bsp, const bsp2_dface_t *face)
 int //mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    if (bsp->loadversion->game == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         const gtexinfo_t *info = Face_Texinfo(bsp, face);
         return info->flags.native;
     } else {
@@ -275,7 +275,7 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec
         const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
 
         //mxd
-        if (bsp->loadversion->game == GAME_QUAKE_II) {
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             return leaf->contents & Q2_CONTENTS_SOLID;
         }
         

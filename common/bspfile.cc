@@ -22,34 +22,88 @@
 #include <common/bspfile.hh>
 #include <cstdint>
 
-bool q1_surf_is_lightmapped(const surfflags_t &flags) {
-    return !(flags.native & TEX_SPECIAL);
-}
+struct gamedef_generic_t : public gamedef_t {
+    gamedef_generic_t()
+    {
+        id = GAME_UNKNOWN;
+        base_dir = nullptr;
+    }
 
-bool q2_surf_is_lightmapped(const surfflags_t &flags) {
-    return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY | Q2_SURF_NODRAW)); // mxd. +Q2_SURF_NODRAW
-}
+    bool surf_is_lightmapped(const surfflags_t &flags) const {
+        throw std::bad_cast();
+    }
 
-bool q1_surf_needs_subdivision(const surfflags_t &flags) {
-    return flags.native & TEX_SPECIAL;
-}
+    bool surf_is_subdivided(const surfflags_t &flags) const {
+        throw std::bad_cast();
+    }
+};
 
-bool q2_surf_needs_subdivision(const surfflags_t &flags) {
-    return flags.native & (Q2_SURF_WARP | Q2_SURF_SKY);
-}
+template<gameid_t id>
+struct gamedef_q1_like_t : public gamedef_t {
+    gamedef_q1_like_t()
+    {
+        this->id = id;
+        has_rgb_lightmap = false;
+        base_dir = "ID1";
+    }
 
-/*                                                                                                            game,        colored lightmap, surf_is_lightmapped     surf_needs_subdivision    */
-const bspversion_t bspver_generic    { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         GAME_UNKNOWN };
-const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           GAME_QUAKE,       false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          GAME_QUAKE,       false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      GAME_QUAKE,       false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */               
-const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        GAME_HEXEN_II,    false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       GAME_HEXEN_II,    false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   GAME_HEXEN_II,    false, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       GAME_HALF_LIFE,   true, q1_surf_is_lightmapped, q1_surf_needs_subdivision };
-const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        GAME_QUAKE_II,    true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
-const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  GAME_QUAKE_II,    true,  q2_surf_is_lightmapped, q2_surf_needs_subdivision };
+    bool surf_is_lightmapped(const surfflags_t &flags) const {
+        return !(flags.native & TEX_SPECIAL);
+    }
+
+    bool surf_is_subdivided(const surfflags_t &flags) const {
+        return !(flags.native & TEX_SPECIAL);
+    }
+};
+
+struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II> {
+    gamedef_h2_t()
+    {
+        base_dir = "DATA1";
+    }
+};
+
+struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE> {
+    gamedef_hl_t()
+    {
+        has_rgb_lightmap = true;
+        base_dir = "VALVE";
+    }
+};
+
+struct gamedef_q2_t : public gamedef_t {
+    gamedef_q2_t()
+    {
+        this->id = GAME_QUAKE_II;
+        has_rgb_lightmap = true;
+        base_dir = "BASEQ2";
+    }
+
+    bool surf_is_lightmapped(const surfflags_t &flags) const {
+        return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY | Q2_SURF_NODRAW)); // mxd. +Q2_SURF_NODRAW
+    }
+
+    bool surf_is_subdivided(const surfflags_t &flags) const {
+        return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY));
+    }
+};
+
+static const gamedef_generic_t gamedef_generic;
+const bspversion_t bspver_generic    { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         &gamedef_generic };
+static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
+const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           &gamedef_q1 };
+const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          &gamedef_q1 };
+const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      &gamedef_q1 };
+/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */     
+static const gamedef_h2_t gamedef_h2;          
+const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        &gamedef_h2 };
+const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       &gamedef_h2 };
+const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   &gamedef_h2 };
+static const gamedef_hl_t gamedef_hl;
+const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       &gamedef_hl };
+static const gamedef_q2_t gamedef_q2;
+const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        &gamedef_q2 };
+const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  &gamedef_q2 };
 
 static const char *
 BSPVersionString(const bspversion_t *version)

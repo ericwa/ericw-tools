@@ -26,6 +26,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <array>
 
 #include <assert.h>
 #include <ctype.h>
@@ -141,14 +142,17 @@ enum {
 #include <common/mathlib.hh>
 #include <qbsp/winding.hh>
 
+using stvecs = std::array<std::array<float, 4>, 2>;
+
 typedef struct mtexinfo_s {
-    float vecs[2][4];           /* [s/t][xyz offset] */
-    int32_t miptex;
-    surfflags_t flags;
-    int outputnum; // -1 until added to bsp
+    stvecs vecs;           /* [s/t][xyz offset] */
+    int32_t miptex = 0;
+    surfflags_t flags = {};
+    int32_t value = 0; // Q2-specific
+    int outputnum = -1; // -1 until added to bsp
 
     constexpr auto as_tuple() const {
-        return std::tie(vecs, miptex, flags);
+        return std::tie(vecs, miptex, flags, value);
     }
     
     constexpr bool operator<(const mtexinfo_s &other) const {

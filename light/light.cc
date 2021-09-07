@@ -439,7 +439,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     CalculateVertexNormals(bsp);
     
     const qboolean bouncerequired = cfg_static.bounce.boolValue() && (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); //mxd
-    const qboolean isQuake2map = bsp->loadversion->game == GAME_QUAKE_II; //mxd
+    const qboolean isQuake2map = bsp->loadversion->game->id == GAME_QUAKE_II; //mxd
 
     if (bouncerequired || isQuake2map) {
         MakeTextureColors(bsp);
@@ -470,7 +470,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
         free(bsp->dlightdata);
-        if (bsp->loadversion->rgb_lightmap) {
+        if (bsp->loadversion->game->has_rgb_lightmap) {
             bsp->lightdatasize = lit_file_p;
             bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
             memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
@@ -537,11 +537,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
 static const char* //mxd
 GetBaseDirName(bspdata_t *bspdata)
 {
-    if (bspdata->loadversion->game == GAME_QUAKE_II)
-        return "BASEQ2";
-    if (bspdata->loadversion->game == GAME_HEXEN_II)
-        return "DATA1";
-    return "ID1";
+    return bspdata->loadversion->game->base_dir;
 }
 
 //obj
@@ -1194,7 +1190,7 @@ light_main(int argc, const char **argv)
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     //mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
-    if ((loadversion->game == GAME_QUAKE_II) && !cfg.rangescale.isChanged())
+    if ((loadversion->game->id == GAME_QUAKE_II) && !cfg.rangescale.isChanged())
     {
         const auto rs = new lockable_vec_t(cfg.rangescale.primaryName(), 1.0f, 0.0f, 100.0f);
         cfg.rangescale = *rs; // Gross hacks to avoid displaying this in OptionsSummary...
@@ -1234,7 +1230,7 @@ light_main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (!loadversion->rgb_lightmap) {
+        if (!loadversion->game->has_rgb_lightmap) {
             CheckLitNeeded(cfg);
         }
         SetupDirt(cfg);

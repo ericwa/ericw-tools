@@ -206,8 +206,7 @@ struct extended_tx_info_t {
 };
 
 int FindMiptex(const char *name);
-int FindTexinfo(mtexinfo_t *texinfo, surfflags_t flags); //FIXME: Make this take const texinfo
-int FindTexinfoEnt(mtexinfo_t *texinfo, mapentity_t *entity); //FIXME: Make this take const texinfo
+int FindTexinfo(const mtexinfo_t &texinfo, surfflags_t flags);
 
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);

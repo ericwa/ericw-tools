@@ -575,7 +575,7 @@ CreateHulls(void)
 
     if (options.target_version == &bspver_hl)
         CreateSingleHull(3);
-    else if (options.target_version->game == GAME_HEXEN_II)
+    else if (options.target_version->game->id == GAME_HEXEN_II)
     {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
         CreateSingleHull(4);
@@ -622,11 +622,7 @@ EnsureTexturesLoaded()
 static const char* //mxd
 GetBaseDirName(const bspversion_t *bspver)
 {
-    if (bspver->game == GAME_QUAKE_II)
-        return "BASEQ2";
-    if (bspver->game == GAME_HEXEN_II)
-        return "DATA1";
-    return "ID1";
+    return bspver->game->base_dir;
 }
 
 /*
@@ -977,7 +973,7 @@ ParseOptions(char *szOptions)
     }
 
     // force specific flags for Q2
-    if (options.target_version->game == GAME_QUAKE_II) {
+    if (options.target_version->game->id == GAME_QUAKE_II) {
         options.fNoclip = true;
     }
 }

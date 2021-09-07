@@ -571,7 +571,7 @@ LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
     /*
      * flow through all portals, collecting visible bits
      */
-    outbuffer = (bsp->loadversion->game == GAME_QUAKE_II ? uncompressed_q2 : uncompressed) + leafnum * leafbytes;
+    outbuffer = (bsp->loadversion->game->id == GAME_QUAKE_II ? uncompressed_q2 : uncompressed) + leafnum * leafbytes;
     leaf = &leafs[leafnum];
     for (i = 0; i < leaf->numportals; i++) {
         p = leaf->portals[i];
@@ -653,7 +653,7 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
      */
     numvis = 0;
 
-    if (bsp->loadversion->game == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         outbuffer = uncompressed_q2 + clusternum * leafbytes;
         for (i = 0; i < portalleafs; i++) {
             if (TestLeafBit(buffer, i)) {
@@ -688,7 +688,7 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
     }
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    if (bsp->loadversion->game == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         compressed = static_cast<uint8_t *>(malloc(portalleafs * 2 / 8));
         len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
     } else {
@@ -1061,7 +1061,7 @@ LoadPortals(char *name, mbsp_t *bsp)
         if (count != 2)
             Error("%s: unable to parse %s HEADER\n", __func__, PORTALFILE);
 
-        if (bsp->loadversion->game == GAME_QUAKE_II) {
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             portalleafs_real = bsp->numleafs;
             logprint("%6d leafs\n", portalleafs_real);
             logprint("%6d clusters\n", portalleafs);
@@ -1101,7 +1101,7 @@ LoadPortals(char *name, mbsp_t *bsp)
     leafs = static_cast<leaf_t *>(malloc(portalleafs * sizeof(leaf_t)));
     memset(leafs, 0, portalleafs * sizeof(leaf_t));
 
-    if (bsp->loadversion->game == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
     } else {
         originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
@@ -1180,7 +1180,7 @@ LoadPortals(char *name, mbsp_t *bsp)
     }
 
     /* Load the cluster expansion map if needed */
-    if (bsp->loadversion->game == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
 
         for (int32_t i = 0; i < bsp->numleafs; i++) {
@@ -1333,7 +1333,7 @@ main(int argc, char **argv)
     StripExtension(statetmpfile);
     DefaultExtension(statetmpfile, ".vi0");
 
-    if (bsp->loadversion->game != GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
         uncompressed = static_cast<uint8_t *>(calloc(portalleafs, leafbytes_real));
     } else {
         uncompressed_q2 = static_cast<uint8_t *>(calloc(portalleafs, leafbytes));
@@ -1351,7 +1351,7 @@ main(int argc, char **argv)
              bsp->visdatasize, originalvismapsize);
     
     // no ambient sounds for Q2
-    if (bsp->loadversion->game != GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
         CalcAmbientSounds(bsp);
     }
 

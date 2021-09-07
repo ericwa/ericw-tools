@@ -53,16 +53,13 @@ MakeSkipTexinfo()
     // FindMiptex, FindTexinfo not threadsafe
     std::unique_lock<std::mutex> lck { csgfaces_lock };
 
-    int texinfo;
-    mtexinfo_t mt;
+    mtexinfo_t mt { };
     
     mt.miptex = FindMiptex("skip");
     mt.flags = { 0, TEX_EXFLAG_SKIP };
     memset(&mt.vecs, 0, sizeof(mt.vecs));
-    
-    texinfo = FindTexinfo(&mt, mt.flags);
-    
-    return texinfo;
+
+    return FindTexinfo(mt, mt.flags);
 }
 
 /*

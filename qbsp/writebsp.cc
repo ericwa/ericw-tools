@@ -31,7 +31,7 @@ static void
 AssertVanillaContentType(int content)
 {
     // TODO
-	if (options.target_version->game == GAME_QUAKE_II) {
+	if (options.target_version->game->id == GAME_QUAKE_II) {
 		return;
 	}
 	
@@ -72,7 +72,7 @@ RemapContentsForExport(int content)
     content = RemapContentsForExport_(content);
 
     // TODO
-    if (options.target_version->game == GAME_QUAKE_II) {
+    if (options.target_version->game->id == GAME_QUAKE_II) {
         switch (content) {
         case CONTENTS_EMPTY:
             return 0;
@@ -124,7 +124,7 @@ int
 ExportMapTexinfo(int texinfonum)
 {
     mtexinfo_t *src = &map.mtexinfos.at(texinfonum);
-    if (src->outputnum != PLANENUM_LEAF)
+    if (src->outputnum != -1)
         return src->outputnum;
     
     // this will be the index of the exported texinfo in the BSP lump
@@ -292,7 +292,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             // (probably for collision purposes? makes sense given they store leafbrushes)
-            if (options.target_version->game != GAME_QUAKE_II && node->children[i]->contents == CONTENTS_SOLID)
+            if (options.target_version->game->id != GAME_QUAKE_II && node->children[i]->contents == CONTENTS_SOLID)
                 dnode->children[i] = -1;
             else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs.size());

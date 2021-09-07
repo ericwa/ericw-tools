@@ -44,7 +44,7 @@ void // WHO TOUCHED MY PALET?
 LoadPalette(bspdata_t *bspdata)
 {
     // Load Quake 2 palette
-    if (bspdata->loadversion->game == GAME_QUAKE_II) {
+    if (bspdata->loadversion->game->id == GAME_QUAKE_II) {
         uint8_t *palette;
         char path[1024];
         char colormap[] = "pics/colormap.pcx";
@@ -66,7 +66,7 @@ LoadPalette(bspdata_t *bspdata)
         for (int i = 0; i < 768; i++)
             thepalette[i] = palette[i];
 
-    } else if (bspdata->loadversion->game == GAME_HEXEN_II) {
+    } else if (bspdata->loadversion->game->id == GAME_HEXEN_II) {
         // Copy Hexen 2 palette
         for (int i = 0; i < 768; i++)
             thepalette[i] = hexen2palette[i];
@@ -721,7 +721,7 @@ void // Expects correct palette and game/mod paths to be set
 LoadOrConvertTextures(mbsp_t *bsp)
 {
     // Load or convert textures...
-    if (bsp->loadversion->game == GAME_QUAKE_II)
+    if (bsp->loadversion->game->id == GAME_QUAKE_II)
         LoadTextures(bsp);
     else if (bsp->texdatasize > 0)
         ConvertTextures(bsp);

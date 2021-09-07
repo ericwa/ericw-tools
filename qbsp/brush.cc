@@ -439,11 +439,11 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
-            mtexinfo_t texInfoNew;
+            mtexinfo_t texInfoNew = texinfo;
+            texInfoNew.outputnum = -1;
             vec3_t vecs[2];
             int k, l;
 
-            memcpy(&texInfoNew, &texinfo, sizeof(texInfoNew));
             for (k=0; k<2; k++) {
                 for (l=0; l<3; l++) {
                     vecs[k][l] = texinfo.vecs[k][l];
@@ -453,7 +453,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
             texInfoNew.vecs[0][3] += DotProduct( rotate_offset, vecs[0] );
             texInfoNew.vecs[1][3] += DotProduct( rotate_offset, vecs[1] );
 
-            mapface->texinfo = FindTexinfo( &texInfoNew, texInfoNew.flags );
+            mapface->texinfo = FindTexinfo(texInfoNew, texInfoNew.flags);
         }
 
         VectorCopy(mapface->plane.normal, plane.normal);
@@ -487,7 +487,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
            (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0)
         && rottype == rotation_t::hipnotic
         && (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-        && options.target_version->game != GAME_HEXEN_II; // never do this in Hexen 2
+        && options.target_version->game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t delta;
@@ -930,7 +930,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int conte
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
         }
     }
-    else if (options.target_version->game == GAME_HEXEN_II)
+    else if (options.target_version->game->id == GAME_HEXEN_II)
     {
         if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };

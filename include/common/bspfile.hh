@@ -21,6 +21,7 @@
 #define __COMMON_BSPFILE_H__
 
 #include <stdint.h>
+#include <array>
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
@@ -373,7 +374,7 @@ struct surfflags_t {
     uint8_t minlight;
 
     // red minlight colors for this face
-    uint8_t minlight_color[3];
+    std::array<uint8_t, 3> minlight_color;
     
     // if non zero, overrides _phong_angle for concave joints
     uint8_t phong_angle_concave;
@@ -980,13 +981,29 @@ typedef struct {
     bspxentry_t *bspxentries;
 } bspdata_t;
 
-// native game ID target
-enum bspgame_t {
+// native game target ID
+enum gameid_t {
     GAME_UNKNOWN,
     GAME_QUAKE,
     GAME_HEXEN_II,
     GAME_HALF_LIFE,
-    GAME_QUAKE_II
+    GAME_QUAKE_II,
+
+    GAME_TOTAL
+};
+
+// Game definition, which contains data specific to
+// the game a BSP version is being compiled for.
+struct gamedef_t
+{
+    gameid_t    id;
+
+    bool        has_rgb_lightmap;
+
+    const char *base_dir;
+
+    virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
+    virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
 };
 
 // BSP version struct & instances
@@ -1000,13 +1017,8 @@ struct bspversion_t
     const char *short_name;
     /* full display name for printing */
     const char *name;
-    /* game ID */
-    bspgame_t game;
-    /* whether the game natively has a colored lightmap or not */
-    /* TODO: move to a game-specific table */
-    bool rgb_lightmap;
-    bool (*surf_is_lightmapped)(const surfflags_t &flags);
-    bool (*surf_needs_subdivision)(const surfflags_t &flags);
+    /* game ptr */
+    const gamedef_t *game;
 };
 
 extern const bspversion_t bspver_generic;

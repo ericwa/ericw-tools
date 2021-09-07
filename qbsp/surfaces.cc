@@ -47,9 +47,9 @@ SubdivideFace(face_t *f, face_t **prevptr)
 
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
-    // FIXME: Q2
+
     if (tex->flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT) ||
-        options.target_version->surf_needs_subdivision(tex->flags))
+        !options.target_version->game->surf_is_subdivided(tex->flags))
         return;
 //subdivision is pretty much pointless other than because of lightmap block limits
 //one lightmap block will always be added at the end, for smooth interpolation

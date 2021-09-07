@@ -1579,7 +1579,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     
     for (int i = 0; i < bsp->numleafs; i++) {
         const mleaf_t *leaf = bsp->dleafs + i;
-        const qboolean underwater = ((bsp->loadversion->game == GAME_QUAKE_II) ? (leaf->contents & Q2_CONTENTS_LIQUID) : leaf->contents != CONTENTS_EMPTY); //mxd
+        const qboolean underwater = ((bsp->loadversion->game->id == GAME_QUAKE_II) ? (leaf->contents & Q2_CONTENTS_LIQUID) : leaf->contents != CONTENTS_EMPTY); //mxd
 
         for (int k = 0; k < leaf->nummarksurfaces; k++) {
             const int facenum = bsp->dleaffaces[leaf->firstmarksurface + k];
