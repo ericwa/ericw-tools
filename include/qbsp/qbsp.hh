@@ -146,28 +146,17 @@ typedef struct mtexinfo_s {
     int32_t miptex;
     surfflags_t flags;
     int outputnum; // -1 until added to bsp
+
+    constexpr auto as_tuple() const {
+        return std::tie(vecs, miptex, flags);
+    }
     
-    bool operator<(const mtexinfo_s &other) const {
-        if (this->miptex < other.miptex)
-            return true;
-        if (this->miptex > other.miptex)
-            return false;
-        
-        if (this->flags < other.flags)
-            return true;
-        if (this->flags > other.flags)
-            return false;
-        
-        for (int i=0; i<2; i++) {
-            for (int j=0; j<4; j++) {
-                if (this->vecs[i][j] < other.vecs[i][j])
-                    return true;
-                if (this->vecs[i][j] > other.vecs[i][j])
-                    return false;
-            }
-        }
-        
-        return false;
+    constexpr bool operator<(const mtexinfo_s &other) const {
+        return as_tuple() < other.as_tuple();
+    }
+    
+    constexpr bool operator>(const mtexinfo_s &other) const {
+        return as_tuple() > other.as_tuple();
     }
 } mtexinfo_t;
 
