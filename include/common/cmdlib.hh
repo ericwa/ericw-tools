@@ -125,6 +125,7 @@ char *copystring(const char *s);
 void CRC_Init(unsigned short *crcvalue);
 void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
 unsigned short CRC_Value(unsigned short crcvalue);
+unsigned short CRC_Block (const unsigned char *start, int count);
 
 void CreatePath(char *path);
 void Q_CopyFile(const char *from, char *to);
