@@ -167,6 +167,10 @@ typedef struct mapdata_s {
     std::vector<int32_t> exported_surfedges;
     std::vector<bsp2_dface_t> exported_faces;
     std::vector<dmodelh2_t> exported_models;
+    std::vector<uint32_t> exported_leafbrushes;
+    std::vector<q2_dbrushside_qbism_t> exported_brushsides;
+    std::vector<dbrush_t> exported_brushes;
+
     std::string exported_entities;
     std::string exported_texdata;
 

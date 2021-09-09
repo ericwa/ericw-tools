@@ -226,8 +226,10 @@ ExportLeaf(mapentity_t *entity, node_t *node)
         static_cast<int>(map.exported_marksurfaces.size()) - dleaf->firstmarksurface;
 
     // FIXME-Q2: fill in other things
-    dleaf->area = 0;
+    dleaf->area = 1;
     dleaf->cluster = node->viscluster;
+    dleaf->firstleafbrush = node->firstleafbrush;
+    dleaf->numleafbrushes = node->numleafbrushes;
 }
 
 /*
@@ -443,6 +445,9 @@ WriteBSPFile()
     CopyVector(map.exported_surfedges, &bspdata.data.mbsp.numsurfedges, &bspdata.data.mbsp.dsurfedges);
     CopyVector(map.exported_edges, &bspdata.data.mbsp.numedges, &bspdata.data.mbsp.dedges);
     CopyVector(map.exported_models, &bspdata.data.mbsp.nummodels, &bspdata.data.mbsp.dmodels);
+    CopyVector(map.exported_leafbrushes, &bspdata.data.mbsp.numleafbrushes, &bspdata.data.mbsp.dleafbrushes);
+    CopyVector(map.exported_brushsides, &bspdata.data.mbsp.numbrushsides, &bspdata.data.mbsp.dbrushsides);
+    CopyVector(map.exported_brushes, &bspdata.data.mbsp.numbrushes, &bspdata.data.mbsp.dbrushes);
 
     CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
     CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void**)&bspdata.data.mbsp.dtexdata);
@@ -454,9 +459,13 @@ WriteBSPFile()
         BSPX_AddLump(&bspdata, "BRUSHLIST", map.exported_bspxbrushes.data(), map.exported_bspxbrushes.size());
     }
 
-    bspdata.data.mbsp.numareas = 1;
-    bspdata.data.mbsp.dareas = (darea_t *) malloc(sizeof(darea_t));
-    bspdata.data.mbsp.dareas->firstareaportal = bspdata.data.mbsp.dareas->numareaportals = 0;
+    // FIXME: temp
+    bspdata.data.mbsp.numareaportals = 1;
+    bspdata.data.mbsp.dareaportals = (dareaportal_t *) calloc(bspdata.data.mbsp.numareaportals, sizeof(dareaportal_t));
+
+    bspdata.data.mbsp.numareas = 2;
+    bspdata.data.mbsp.dareas = (darea_t *) calloc(bspdata.data.mbsp.numareas, sizeof(darea_t));
+    bspdata.data.mbsp.dareas[1].firstareaportal = 1;
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
         const bspversion_t* highLimitsFormat = nullptr;
 

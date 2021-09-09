@@ -1072,15 +1072,17 @@ void Q2_Qbism_SwapBSPFile (q2bsp_qbism_t *bsp, qboolean todisk)
     //
     // visibility
     //
-    if (todisk)
-        j = bsp->dvis->numclusters;
-    else
-        j = LittleLong(bsp->dvis->numclusters);
-    bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
-    for (i=0 ; i<j ; i++)
-    {
-        bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
-        bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+    if (bsp->dvis) {
+        if (todisk)
+            j = bsp->dvis->numclusters;
+        else
+            j = LittleLong(bsp->dvis->numclusters);
+        bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
+        for (i=0 ; i<j ; i++)
+        {
+            bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
+            bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+        }
     }
 }
 

@@ -219,6 +219,8 @@ typedef struct node_s {
     int occupied;               // 0=can't reach entity, 1 = has entity, >1 = distance from leaf with entity
     mapentity_t *occupant;      // example occupant, for leak hunting
     bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
+    uint32_t firstleafbrush;         // Q2
+    uint32_t numleafbrushes;
     
     bool opaque() const;
 } node_t;

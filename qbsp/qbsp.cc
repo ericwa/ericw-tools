@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include <common/log.hh>
+#include <common/aabb.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 
@@ -36,6 +37,54 @@ options_t options;
 
 bool node_t::opaque() const {
     return contents.is_structural_sky_or_solid(options.target_version->game);
+}
+
+static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
+{
+    if (node->planenum == PLANENUM_LEAF)
+    {
+        if (node->visleafnum == -1) {
+            node->firstleafbrush = map.exported_leafbrushes.size();
+            node->numleafbrushes = 0;
+
+            int32_t b_id = 0;
+
+            for (const brush_t *b = entity->brushes; b; b = b->next, b_id++)
+            {
+                if (aabb3f(qvec3f(node->mins[0], node->mins[1], node->mins[2]), qvec3f(node->maxs[0], node->maxs[1], node->maxs[2])).intersectWith(
+                    aabb3f(qvec3f(b->mins[0], b->mins[1], b->mins[2]), qvec3f(b->maxs[0], b->maxs[1], b->maxs[2]))).valid) {
+                    map.exported_leafbrushes.push_back(b_id);
+                    node->numleafbrushes++;
+                }
+            }
+        }
+
+        return;
+    }
+    
+    ExportBrushList_r(entity, node->children[0]);
+    ExportBrushList_r(entity, node->children[1]);
+}
+
+static void ExportBrushList(const mapentity_t *entity, node_t *node)
+{
+    for (const brush_t *b = entity->brushes; b; b = b->next)
+    {
+        dbrush_t brush { (int32_t) map.exported_brushsides.size(), 0, b->contents.native };
+
+        for (const face_t *f = b->faces; f; f = f->next)
+        {
+            if (map.planes[f->planenum].outputplanenum == -1) {
+                continue;
+            }
+            map.exported_brushsides.push_back({ (uint32_t) map.planes[f->planenum].outputplanenum, map.mtexinfos[f->texinfo].outputnum.value_or(-1) });
+            brush.numsides++;
+        }
+
+        map.exported_brushes.push_back(brush);
+    }
+
+    ExportBrushList_r(entity, node);
 }
 
 /*
@@ -249,6 +298,10 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
         firstface = MakeFaceEdges(entity, nodes);
         ExportDrawNodes(entity, nodes, firstface);
+
+        if (options.target_version->game->id == GAME_QUAKE_II) {
+            ExportBrushList(entity, nodes);
+        }
     }
 
     FreeBrushes(entity);
