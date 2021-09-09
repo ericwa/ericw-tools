@@ -310,6 +310,11 @@ WADList_Process()
         }
     }
 
+    // Q2 doesn't use texdata
+    if (options.target_version->game->id == GAME_QUAKE_II) {
+        return;
+    }
+    
     /* Default texture data to store in worldmodel */
     map.exported_texdata = std::string(texdatasize, '\0');
     miptexlump = (dmiptexlump_t *)map.exported_texdata.data();

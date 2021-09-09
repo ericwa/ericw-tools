@@ -379,6 +379,7 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         bounds[1][i] = entity->maxs[i] + SIDESPACE;
     }
 
+    outside_node.planenum = PLANENUM_LEAF;
     outside_node.contents = options.target_version->game->create_solid_contents();
     outside_node.portals = NULL;
 

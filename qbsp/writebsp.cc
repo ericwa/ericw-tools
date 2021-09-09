@@ -384,7 +384,7 @@ WriteExtendedTexinfoFlags(void)
     
     int count = 0;
     for (const auto &tx : texinfos_sorted) {
-        if (tx.outputnum == -1)
+        if (tx.outputnum.has_value())
             continue;
         
         Q_assert(count == tx.outputnum); // check we are outputting them in the proper sequence

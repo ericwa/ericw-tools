@@ -452,7 +452,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         if (options.fixRotateObjTexture) {
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
             mtexinfo_t texInfoNew = texinfo;
-            texInfoNew.outputnum = -1;
+            texInfoNew.outputnum = std::nullopt;
             vec3_t vecs[2];
             int k, l;
 

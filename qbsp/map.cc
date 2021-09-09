@@ -1537,7 +1537,7 @@ void mapface_t::set_texvecs(const std::array<qvec4f, 2> &vecs)
 {
     // start with a copy of the current texinfo structure
     mtexinfo_t texInfoNew = map.mtexinfos.at(this->texinfo);
-    texInfoNew.outputnum = -1;
+    texInfoNew.outputnum = std::nullopt;
     
     // update vecs
     for (int i=0; i<2; i++) {
@@ -1677,6 +1677,24 @@ ParseBrush(parser_t *parser, const mapentity_t *entity)
         std::unique_ptr<mapface_t> face = ParseBrushFace(parser, &brush, entity);
         if (face.get() == nullptr)
             continue;
+
+        if (options.target_version->game->id == GAME_QUAKE_II) {
+		    // translucent objects are automatically classified as detail
+		    //if ((face->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))
+            //    || (face->contents & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)))
+			//    face->contents |= Q2_CONTENTS_DETAIL;
+
+		    if (!(face->contents & (((Q2_LAST_VISIBLE_CONTENTS << 1)-1) 
+			    | Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)  ) )
+			    face->contents |= Q2_CONTENTS_SOLID;
+
+		    // hints and skips are never detail, and have no content
+		    if (face->flags.native & (Q2_SURF_HINT | Q2_SURF_SKIP) )
+		    {
+			    face->contents = 0;
+			    face->contents &= ~Q2_CONTENTS_DETAIL;
+		    }
+        }
 
         /* Check for duplicate planes */
         bool discardFace = false;

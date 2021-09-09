@@ -423,7 +423,7 @@ contents override the face inside contents.
 static void
 SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
 {
-    Q_assert(!clipbrush->contents.is_solid(options.target_version->game));
+    Q_assert(!clipbrush->contents.is_structural_solid(options.target_version->game));
     
     face_t *next;
 
@@ -434,7 +434,7 @@ SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
         next = face->next;
         face->contents[0] = clipbrush->contents;
         
-        if ((face->contents[1].is_solid(options.target_version->game) || face->contents[1].is_sky(options.target_version->game))
+        if (face->contents[1].is_structural_sky_or_solid(options.target_version->game)
              && clipbrush->contents.is_detail(CFLAGS_DETAIL)) {
             // This case is when a structural and detail brush are touching,
             // and we want to save the sturctural face that is
@@ -457,7 +457,7 @@ SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
         // N.B.: We don't need a hack like above for when clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY.
         
         // These would create leaks
-        Q_assert(!((face->contents[1].is_sky(options.target_version->game) || face->contents[1].is_solid(options.target_version->game)) &&
+        Q_assert(!(face->contents[1].is_structural_sky_or_solid(options.target_version->game) &&
                    face->contents[0].is_detail(CFLAGS_DETAIL)));
         
         /*

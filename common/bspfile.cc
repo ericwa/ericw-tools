@@ -225,7 +225,7 @@ struct gamedef_q2_t : public gamedef_t {
             return 7;
         } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
             return 2;
-        } else switch( contents.native & (Q2_LAST_VISIBLE_CONTENTS - 1) ) {
+        } else switch( contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) ) {
             case Q2_CONTENTS_SOLID:  return 10;
             case Q2_CONTENTS_WINDOW:  return 9;
             case Q2_CONTENTS_AUX: return 5;
@@ -262,6 +262,13 @@ struct gamedef_q2_t : public gamedef_t {
         }
     }
 
+    bool contents_are_empty(const contentflags_t &contents) const {
+        return !(contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
+    }
+    bool contents_are_solid(const contentflags_t &contents) const {
+        return contents.native & Q2_CONTENTS_SOLID;
+    }
+
     bool contents_are_sky(const contentflags_t &contents) const {
         return false;
     }
@@ -274,7 +281,7 @@ struct gamedef_q2_t : public gamedef_t {
         if (!strict) {
             return true;
         }
-        return contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_LIQUID | Q2_CONTENTS_MIST | Q2_CONTENTS_AUX);
+        return !contents_are_empty(contents);
     }
 };
 
