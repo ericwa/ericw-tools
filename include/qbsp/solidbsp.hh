@@ -27,7 +27,6 @@
 extern std::atomic<int> splitnodes;
 
 void DetailToSolid(node_t *node);
-int Contents_Priority(const contentflags_t &contents);
 const char *GetContentsName( const contentflags_t &Contents );
 void DivideFacet(face_t *in, qbsp_plane_t *split, face_t **front, face_t **back);
 void CalcSurfaceInfo(surface_t *surf);

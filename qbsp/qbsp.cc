@@ -34,6 +34,10 @@ static const char *IntroString =
 // command line flags
 options_t options;
 
+bool node_t::opaque() const {
+    return contents.is_structural_sky_or_solid(options.target_version->game);
+}
+
 /*
 ===============
 ProcessEntity

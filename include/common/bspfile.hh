@@ -263,40 +263,87 @@ typedef struct {
 #define    Q2_CONTENTS_LADDER         0x20000000
 
 // Special contents flags for the compiler only
-#define    CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
-#define    CFLAGS_WAS_ILLUSIONARY              (1U << 1) /* was illusionary, got changed to something else */
-#define    CFLAGS_DETAIL_WALL                  (1U << 2) /* don't clip world for func_detail_wall entities */
-#define    CFLAGS_BMODEL_MIRROR_INSIDE		   (1U << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
-#define    CFLAGS_NO_CLIPPING_SAME_TYPE        (1U << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
+#define    CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1 << 0)
+#define    CFLAGS_WAS_ILLUSIONARY              (1 << 1) /* was illusionary, got changed to something else */
+#define    CFLAGS_DETAIL_WALL                  (1 << 2) /* don't clip world for func_detail_wall entities */
+#define    CFLAGS_BMODEL_MIRROR_INSIDE		   (1 << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
+#define    CFLAGS_NO_CLIPPING_SAME_TYPE        (1 << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
 // only one of these flags below should ever be set.
-#define    CFLAGS_HINT                         (1U << 5)
-#define    CFLAGS_CLIP                         (1U << 6)
-#define    CFLAGS_ORIGIN                       (1U << 7)
-#define    CFLAGS_DETAIL                       (1U << 8)
-#define    CFLAGS_DETAIL_ILLUSIONARY           (1U << 9)
-#define    CFLAGS_DETAIL_FENCE                 (1U << 10)
-#define    CFLAGS_ILLUSIONARY_VISBLOCKER       (1U << 11)
+#define    CFLAGS_HINT                         (1 << 5)
+#define    CFLAGS_CLIP                         (1 << 6)
+#define    CFLAGS_ORIGIN                       (1 << 7)
+#define    CFLAGS_DETAIL                       (1 << 8)
+#define    CFLAGS_DETAIL_ILLUSIONARY           (1 << 9)
+#define    CFLAGS_DETAIL_FENCE                 (1 << 10)
+#define    CFLAGS_ILLUSIONARY_VISBLOCKER       (1 << 11)
+// all of the detail values
+#define    CFLAGS_DETAIL_MASK                  (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE)
+
+struct gamedef_t;
 
 struct contentflags_t {
     // native flags value; what's written to the BSP basically
     int32_t native;
 
     // extra flags, specific to BSP only
-    uint16_t extended;
+    int32_t extended;
 
     // merge these content flags with other, and use
     // their native contents.
-    contentflags_t merge(const contentflags_t &other) const {
-        return { other.native, (uint16_t) (extended | other.extended) };
+    constexpr contentflags_t merge(const contentflags_t &other) const {
+        return { other.native, extended | other.extended };
     }
 
-    bool operator==(const contentflags_t &other) const {
+    constexpr bool operator==(const contentflags_t &other) const {
         return native == other.native && extended == other.extended;
     }
 
-    bool operator!=(const contentflags_t &other) const {
+    constexpr bool operator!=(const contentflags_t &other) const {
         return !(*this == other);
     }
+
+    // check if these contents are marked as any (or a specific kind of) detail brush.
+    constexpr bool is_detail(int32_t types = CFLAGS_DETAIL_MASK) const {
+        return (extended & CFLAGS_DETAIL_MASK) & types;
+    }
+
+    bool is_empty(const gamedef_t *game) const;
+    bool is_solid(const gamedef_t *game) const;
+    bool is_sky(const gamedef_t *game) const;
+    bool is_liquid(const gamedef_t *game) const;
+    bool is_valid(const gamedef_t *game, bool strict = true) const;
+    
+    bool is_structural_solid(const gamedef_t *game) const {
+        return is_solid(game) && !is_detail();
+    }
+
+    bool is_structural_sky(const gamedef_t *game) const {
+        return is_sky(game) && !is_detail();
+    }
+
+    bool is_structural_sky_or_solid(const gamedef_t *game) const {
+        return (is_sky(game) || is_solid(game)) && !is_detail();
+    }
+
+    constexpr bool is_hint() const {
+        return extended & CFLAGS_HINT;
+    }
+
+    constexpr bool clips_same_type() const {
+        return !(extended & CFLAGS_NO_CLIPPING_SAME_TYPE);
+    }
+
+    constexpr bool is_fence() const {
+        return is_detail(CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY);
+    }
+
+    // check if this content's `type` - which is distinct from various
+    // flags that turn things on/off - match. Exactly what the native
+    // "type" is depends on the game, but any of the detail flags must
+    // also match.
+    bool types_equal(const contentflags_t &other, const gamedef_t *game) const;
+
+    int32_t priority(const gamedef_t *game) const;
 };
 
 struct bsp29_dnode_t {
@@ -1042,6 +1089,23 @@ struct gamedef_t
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
+    virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
+    virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
+    virtual bool contents_are_empty(const contentflags_t &contents) const {
+        return contents.native == create_empty_contents().native;
+    }
+    virtual bool contents_are_solid(const contentflags_t &contents) const {
+        return contents.native == create_solid_contents().native;
+    }
+    virtual bool contents_are_sky(const contentflags_t &contents) const {
+        return contents.native == create_sky_contents().native;
+    }
+    virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
 };
 
 // BSP version struct & instances

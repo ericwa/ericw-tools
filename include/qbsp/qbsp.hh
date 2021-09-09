@@ -220,10 +220,7 @@ typedef struct node_s {
     mapentity_t *occupant;      // example occupant, for leak hunting
     bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
     
-    bool opaque() const {
-        return contents.native == CONTENTS_SOLID
-            || contents.native == CONTENTS_SKY;
-    }
+    bool opaque() const;
 } node_t;
 
 #include <qbsp/brush.hh>

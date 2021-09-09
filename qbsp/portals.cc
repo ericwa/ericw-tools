@@ -72,7 +72,7 @@ PortalThru(const portal_t *p)
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
     /* Can't see through solids */
-    if (contents0.native == CONTENTS_SOLID || contents1.native == CONTENTS_SOLID)
+    if (contents0.is_structural_solid(options.target_version->game) || contents1.is_structural_solid(options.target_version->game))
         return false;
 
     /* Can't see through func_illusionary_visblocker */
@@ -85,19 +85,17 @@ PortalThru(const portal_t *p)
 
     /* If water is transparent, liquids are like empty space */
     if (options.fTranswater) {
-        if (contents0.native >= CONTENTS_LAVA && contents0.native <= CONTENTS_WATER &&
-            contents1.native == CONTENTS_EMPTY)
+        if (contents0.is_liquid(options.target_version->game) && contents1.is_empty(options.target_version->game))
             return true;
-        if (contents1.native >= CONTENTS_LAVA && contents1.native <= CONTENTS_WATER &&
-            contents0.native == CONTENTS_EMPTY)
+        if (contents1.is_liquid(options.target_version->game) && contents0.is_empty(options.target_version->game))
             return true;
     }
 
     /* If sky is transparent, then sky is like empty space */
     if (options.fTranssky) {
-        if (contents0.native == CONTENTS_SKY && contents1.native == CONTENTS_EMPTY)
+        if (contents0.is_sky(options.target_version->game) && contents1.is_empty(options.target_version->game))
             return true;
-        if (contents0.native == CONTENTS_EMPTY && contents1.native == CONTENTS_SKY)
+        if (contents0.is_empty(options.target_version->game) && contents1.is_sky(options.target_version->game))
             return true;
     }
 
@@ -118,7 +116,7 @@ WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
         WritePortals_r(node->children[1], portalFile, clusters);
         return;
     }
-    if (node->contents.native == CONTENTS_SOLID)
+    if (node->contents.is_solid(options.target_version->game))
         return;
 
     for (p = node->portals; p; p = next) {
@@ -163,7 +161,7 @@ WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
         viscluster = WriteClusters_r(node->children[1], portalFile, viscluster);
         return viscluster;
     }
-    if (node->contents.native == CONTENTS_SOLID)
+    if (node->contents.is_solid(options.target_version->game))
         return viscluster;
 
     /* If we're in the next cluster, start a new line */
@@ -225,7 +223,7 @@ NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
         return;
     }
 
-    if (node->contents.native == CONTENTS_SOLID) {
+    if (node->contents.is_solid(options.target_version->game)) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;
@@ -381,7 +379,7 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         bounds[1][i] = entity->maxs[i] + SIDESPACE;
     }
 
-    outside_node.contents = { CONTENTS_SOLID };
+    outside_node.contents = options.target_version->game->create_solid_contents();
     outside_node.portals = NULL;
 
     for (i = 0; i < 3; i++)

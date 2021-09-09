@@ -40,6 +40,38 @@ struct gamedef_generic_t : public gamedef_t {
     contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const {
         throw std::bad_cast();
     }
+
+    int32_t get_content_type(const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    int32_t contents_priority(const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_empty_contents(const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_solid_contents(const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_sky_contents(const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_liquid_contents(const int32_t &, const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_liquid(const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_valid(const contentflags_t &, bool) const {
+        throw std::bad_cast();
+    }
 };
 
 template<gameid_t id>
@@ -63,21 +95,78 @@ struct gamedef_q1_like_t : public gamedef_t {
         if (contents0 == contents1)
             return contents0;
 
+        const int32_t merged_flags = contents0.extended | contents1.extended;
+
         /*
          * Clusters may be partially solid but still be seen into
          * ?? - Should we do something more explicit with mixed liquid contents?
          */
         if (contents0.native == CONTENTS_EMPTY || contents1.native == CONTENTS_EMPTY)
-            return { CONTENTS_EMPTY, (uint16_t) (contents0.extended | contents1.extended) };
+            return create_empty_contents(merged_flags);
 
         if (contents0.native >= CONTENTS_LAVA && contents0.native <= CONTENTS_WATER)
-            return { contents0.native, (uint16_t) (contents0.extended | contents1.extended) };
+            return create_liquid_contents(contents0.native, merged_flags);
         if (contents1.native >= CONTENTS_LAVA && contents1.native <= CONTENTS_WATER)
-            return { contents1.native, (uint16_t) (contents0.extended | contents1.extended) };
+            return create_liquid_contents(contents1.native, merged_flags);
         if (contents0.native == CONTENTS_SKY || contents1.native == CONTENTS_SKY)
-            return { CONTENTS_SKY, (uint16_t) (contents0.extended | contents1.extended) };
+            return create_sky_contents(merged_flags);
 
-        return { CONTENTS_SOLID, (uint16_t) (contents0.extended | contents1.extended) };
+        return create_solid_contents(merged_flags);
+    }
+
+    int32_t get_content_type(const contentflags_t &contents) const {
+        return contents.native;
+    }
+
+    int32_t contents_priority(const contentflags_t &contents) const {
+        if (contents.extended & CFLAGS_DETAIL) {
+            return 5;
+        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+            return 3;
+        } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
+            return 4;
+        } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+            return 2;
+        } else switch( contents.native ) {
+            case CONTENTS_SOLID:  return 7;
+            
+            case CONTENTS_SKY:    return 6;
+            
+            case CONTENTS_WATER:  return 2;
+            case CONTENTS_SLIME:  return 2;
+            case CONTENTS_LAVA:   return 2;
+
+            case CONTENTS_EMPTY:  return 1;
+            case 0:               return 0;
+
+            default:
+                Error("Bad contents in face (%s)", __func__);
+                return 0;
+        }
+    }
+
+    contentflags_t create_empty_contents(const int32_t &cflags) const {
+        return { CONTENTS_EMPTY, cflags };
+    }
+
+    contentflags_t create_solid_contents(const int32_t &cflags) const {
+        return { CONTENTS_SOLID, cflags };
+    }
+
+    contentflags_t create_sky_contents(const int32_t &cflags) const {
+        return { CONTENTS_SKY, cflags };
+    }
+
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags) const {
+        return { liquid_type, cflags };
+    }
+
+    bool contents_are_liquid(const contentflags_t &contents) const {
+        return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
+    }
+
+    bool contents_are_valid(const contentflags_t &contents, bool strict) const {
+        return contents.native <= 0;
     }
 };
 
@@ -113,7 +202,7 @@ struct gamedef_q2_t : public gamedef_t {
     }
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const {
-        contentflags_t c = { contents0.native | contents1.native, (uint16_t) (contents0.extended | contents1.extended) };
+        contentflags_t c = { contents0.native | contents1.native, contents0.extended | contents1.extended };
 
 	    // a cluster may include some solid detail areas, but
 	    // still be seen into
@@ -121,6 +210,71 @@ struct gamedef_q2_t : public gamedef_t {
 		    c.native &= ~Q2_CONTENTS_SOLID;
 
 	    return c;
+    }
+
+    int32_t get_content_type(const contentflags_t &contents) const {
+        return (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) | (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP);
+    }
+
+    int32_t contents_priority(const contentflags_t &contents) const {
+        if (contents.extended & CFLAGS_DETAIL) {
+            return 8;
+        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+            return 6;
+        } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
+            return 7;
+        } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+            return 2;
+        } else switch( contents.native & (Q2_LAST_VISIBLE_CONTENTS - 1) ) {
+            case Q2_CONTENTS_SOLID:  return 10;
+            case Q2_CONTENTS_WINDOW:  return 9;
+            case Q2_CONTENTS_AUX: return 5;
+            case Q2_CONTENTS_LAVA: return 4;
+            case Q2_CONTENTS_SLIME: return 3;
+            case Q2_CONTENTS_WATER: return 2;
+            case Q2_CONTENTS_MIST: return 1;
+            default: return 0;
+        }
+    }
+    
+    contentflags_t create_empty_contents(const int32_t &cflags) const {
+        return { 0, cflags };
+    }
+
+    contentflags_t create_solid_contents(const int32_t &cflags) const {
+        return { Q2_CONTENTS_SOLID, cflags };
+    }
+
+    contentflags_t create_sky_contents(const int32_t &cflags) const {
+        return create_solid_contents(cflags);
+    }
+
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags) const {
+        switch (liquid_type) {
+            case CONTENTS_WATER:
+                return { Q2_CONTENTS_WATER, cflags };
+            case CONTENTS_SLIME:
+                return { Q2_CONTENTS_SLIME, cflags };
+            case CONTENTS_LAVA:
+                return { Q2_CONTENTS_LAVA, cflags };
+            default:
+                Error("bad contents");
+        }
+    }
+
+    bool contents_are_sky(const contentflags_t &contents) const {
+        return false;
+    }
+
+    bool contents_are_liquid(const contentflags_t &contents) const {
+        return contents.native & Q2_CONTENTS_LIQUID;
+    }
+
+    bool contents_are_valid(const contentflags_t &contents, bool strict) const {
+        if (!strict) {
+            return true;
+        }
+        return contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_LIQUID | Q2_CONTENTS_MIST | Q2_CONTENTS_AUX);
     }
 };
 
@@ -140,6 +294,35 @@ const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",     
 static const gamedef_q2_t gamedef_q2;
 const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        &gamedef_q2 };
 const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  &gamedef_q2 };
+
+bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const {
+    return (extended & CFLAGS_DETAIL_MASK) == (other.extended & CFLAGS_DETAIL_MASK) &&
+        game->get_content_type(*this) == game->get_content_type(other);
+}
+
+int32_t contentflags_t::priority(const gamedef_t *game) const {
+    return game->contents_priority(*this);
+}
+
+bool contentflags_t::is_empty(const gamedef_t *game) const {
+    return game->contents_are_empty(*this);
+}
+
+bool contentflags_t::is_solid(const gamedef_t *game) const {
+    return game->contents_are_solid(*this);
+}
+
+bool contentflags_t::is_sky(const gamedef_t *game) const {
+    return game->contents_are_sky(*this);
+}
+
+bool contentflags_t::is_liquid(const gamedef_t *game) const {
+    return game->contents_are_liquid(*this);
+}
+
+bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const {
+    return game->contents_are_valid(*this, strict);
+}
 
 static const char *
 BSPVersionString(const bspversion_t *version)

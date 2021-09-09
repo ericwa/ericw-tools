@@ -48,8 +48,8 @@ AssertVanillaContentType(int content)
     }
 }
 
-static int
-RemapContentsForExport_(const contentflags_t &content)
+static contentflags_t
+RemapContentsForExport(const contentflags_t &content)
 {
     if (content.extended & CFLAGS_DETAIL_FENCE) {
         /*
@@ -58,40 +58,10 @@ RemapContentsForExport_(const contentflags_t &content)
          *
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
-        return CONTENTS_SOLID;
+        return options.target_version->game->create_solid_contents();
     }
 
-    return content.native;
-}
-
-static int
-RemapContentsForExport(const contentflags_t &content)
-{
-    int32_t contents = RemapContentsForExport_(content);
-
-    // TODO
-    if (options.target_version->game->id == GAME_QUAKE_II) {
-        switch (contents) {
-        case CONTENTS_EMPTY:
-            return 0;
-        case CONTENTS_SOLID:
-        case CONTENTS_SKY:
-            if (content.extended & CFLAGS_CLIP) {
-                return Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP;
-            }
-            return Q2_CONTENTS_SOLID;
-        case CONTENTS_WATER:
-            return Q2_CONTENTS_WATER;
-        case CONTENTS_SLIME:
-            return Q2_CONTENTS_SLIME;
-        case CONTENTS_LAVA:
-            return Q2_CONTENTS_LAVA;
-        default:
-            Error("dunno what to do with contents %i\n", content);
-        }
-    }
-
-    return contents;
+    return content;
 }
 
 /**
@@ -225,7 +195,7 @@ ExportLeaf(mapentity_t *entity, node_t *node)
     map.exported_leafs.push_back({});
     mleaf_t *dleaf = &map.exported_leafs.back();
 
-    dleaf->contents = RemapContentsForExport(node->contents);
+    dleaf->contents = RemapContentsForExport(node->contents).native;
     AssertVanillaContentType(dleaf->contents);
 
     /*
@@ -291,7 +261,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             // (probably for collision purposes? makes sense given they store leafbrushes)
-            if (options.target_version->game->id != GAME_QUAKE_II && node->children[i]->contents.native == CONTENTS_SOLID)
+            if (options.target_version->game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(options.target_version->game))
                 dnode->children[i] = -1;
             else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs.size());
@@ -368,7 +338,7 @@ BeginBSPFile(void)
 
     // Leave room for leaf 0 (must be solid)
     map.exported_leafs.push_back({});
-    map.exported_leafs.back().contents = RemapContentsForExport({ CONTENTS_SOLID });
+    map.exported_leafs.back().contents = options.target_version->game->create_solid_contents().native;
     Q_assert(map.exported_leafs.size() == 1);
 }
 
