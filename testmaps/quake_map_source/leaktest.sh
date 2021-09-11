@@ -3,6 +3,6 @@
 set -x
 
 for file in *.map; do
-  qbsp -leaktest "$file" || exit 1
+  qbsp -leaktest -noverbose "$file" || exit 1
 done
 
