@@ -18,6 +18,13 @@ make -j8 testlight || exit 1
 make -j8 testqbsp || exit 1
 cpack || exit 1
 
+# print shared libraries used
+otool -L ./light/light
+otool -L ./qbsp/qbsp
+otool -L ./vis/vis
+otool -L ./bspinfo/bspinfo
+otool -L ./bsputil/bsputil
+
 # run tests
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
