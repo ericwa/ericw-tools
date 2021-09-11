@@ -64,6 +64,7 @@ if (embree_FOUND)
 	find_file(EMBREE_LICENSE LICENSE.txt 
 		"${embree_DIR}/doc"
 		"${embree_DIR}/../embree3/embree3" # vcpkg puts it here
+		"${embree_DIR}/../../.." # homebrew puts it here
 		NO_DEFAULT_PATH)
 	if (EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
 		message(WARNING "Couldn't find embree license")
