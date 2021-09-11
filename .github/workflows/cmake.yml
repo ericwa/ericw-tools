@@ -26,4 +26,5 @@ jobs:
 
     - name: macOS Build
       if: runner.os == 'macOS'
+      run: |
           ./build-osx.sh
