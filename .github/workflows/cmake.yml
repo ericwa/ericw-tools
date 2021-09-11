@@ -17,6 +17,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
 
     - name: Linux Build
       if: runner.os == 'Linux'
