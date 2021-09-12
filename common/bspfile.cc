@@ -21,6 +21,8 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 
+#include <limits.h>
+
 const bspversion_t bspver_generic { NO_VERSION, NO_VERSION, "mbsp", "generic BSP" };
 const bspversion_t bspver_q1 { BSPVERSION, NO_VERSION, "bsp29", "Quake BSP" };
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
