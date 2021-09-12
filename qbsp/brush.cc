@@ -484,7 +484,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
 
         free(w);
 
-        f->texinfo = hullnum ? 0 : mapface->texinfo;
+        f->texinfo = hullnum > 0 ? 0 : mapface->texinfo;
         f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
         f->next = facelist;
         facelist = f;
