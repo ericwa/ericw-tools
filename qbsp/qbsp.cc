@@ -40,17 +40,57 @@ bool node_t::opaque() const {
     return contents.is_structural_sky_or_solid(options.target_game);
 }
 
+// a simple tree structure used for leaf brush
+// compression.
+struct leafbrush_entry_t {
+    uint32_t offset;
+    std::map<uint32_t, leafbrush_entry_t> entries;
+};
+
+// per-entity
 static struct {
     uint32_t total_brushes, total_brush_sides;
     uint32_t total_leaf_brushes, unique_leaf_brushes;
+    std::map<uint32_t, leafbrush_entry_t> leaf_entries;
 } brush_state;
 
-static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
+// running total
+static uint32_t brush_offset;
+
+static std::optional<uint32_t> FindLeafBrushesSpanOffset(const std::vector<uint32_t> &brushes) {
+    int32_t offset = 0;
+    const auto *map = &brush_state.leaf_entries;
+    decltype(brush_state.leaf_entries)::const_iterator it = map->find(brushes[offset]);
+
+    while (it != map->end()) {
+
+        if (++offset == brushes.size()) {
+            return it->second.offset;
+        }
+
+        map = &it->second.entries;
+        it = map->find(brushes[offset]);
+    }
+
+    return std::nullopt;
+}
+
+static void PopulateLeafBrushesSpan(const std::vector<uint32_t> &brushes, uint32_t offset) {
+    auto *map = &brush_state.leaf_entries;
+
+    for (auto &id : brushes) {
+        auto it = map->try_emplace(id, leafbrush_entry_t { offset });
+        map = &it.first->second.entries;
+        offset++;
+    }
+}
+
+static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uint32_t &brush_offset)
 {
     if (node->planenum == PLANENUM_LEAF)
     {
         if (node->contents.native) {
-            int32_t b_id = 0;
+            uint32_t b_id = brush_offset;
             std::vector<uint32_t> brushes;
 
             for (const brush_t *b = entity->brushes; b; b = b->next, b_id++)
@@ -65,20 +105,27 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
             brush_state.total_leaf_brushes += node->numleafbrushes;
 
             if (brushes.size()) {
-                node->firstleafbrush = map.exported_leafbrushes.size();
-                map.exported_leafbrushes.insert(map.exported_leafbrushes.end(), brushes.begin(), brushes.end());
-                brush_state.unique_leaf_brushes += node->numleafbrushes;
+                auto span = FindLeafBrushesSpanOffset(brushes);
+
+                if (span.has_value()) {
+                    node->firstleafbrush = *span;
+                } else {
+                    node->firstleafbrush = map.exported_leafbrushes.size();
+                    PopulateLeafBrushesSpan(brushes, node->firstleafbrush);
+                    map.exported_leafbrushes.insert(map.exported_leafbrushes.end(), brushes.begin(), brushes.end());
+                    brush_state.unique_leaf_brushes += node->numleafbrushes;
+                }
             }
         }
 
         return;
     }
     
-    ExportBrushList_r(entity, node->children[0]);
-    ExportBrushList_r(entity, node->children[1]);
+    ExportBrushList_r(entity, node->children[0], brush_offset);
+    ExportBrushList_r(entity, node->children[1], brush_offset);
 }
 
-static void ExportBrushList(const mapentity_t *entity, node_t *node)
+static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &brush_offset)
 {
     brush_state = { };
 
@@ -143,7 +190,9 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node)
         brush_state.total_brushes++;
     }
 
-    ExportBrushList_r(entity, node);
+    ExportBrushList_r(entity, node, brush_offset);
+
+    brush_offset += brush_state.total_brushes;
     
     Message(msgStat, "%8u total brushes", brush_state.total_brushes);
     Message(msgStat, "%8u total brush sides", brush_state.total_brush_sides);
@@ -364,7 +413,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
         if (options.target_game->id == GAME_QUAKE_II) {
             Message(msgProgress, "Calculating Brush List");
-            ExportBrushList(entity, nodes);
+            ExportBrushList(entity, nodes, brush_offset);
         }
 
         ExportDrawNodes(entity, nodes, firstface);
