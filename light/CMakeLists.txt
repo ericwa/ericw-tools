@@ -83,8 +83,23 @@ if (embree_FOUND)
 		add_custom_command(TARGET light POST_BUILD 
 			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
 	endif()
+	
+	install(FILES $<TARGET_FILE:embree> DESTINATION bin)
 
-	install(FILES "$<TARGET_FILE:embree>" "$<TARGET_FILE:TBB::tbb>" DESTINATION bin)
+	# install TBB
+	if(UNIX)
+		# HACK: preferred method is installing the symlink instead of the actual .so
+		get_target_property(TBB_SO_FILE_SYMLINK TBB::tbb IMPORTED_LOCATION_RELEASE)
+		get_filename_component(TBB_SO_FILE "${TBB_SO_FILE_SYMLINK}" REALPATH)
+
+		message(STATUS "TBB .so file: ${TBB_SO_FILE}")
+
+		install(FILES ${TBB_SO_FILE} DESTINATION bin)
+	else()
+		# preferred method
+		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION bin)
+	endif()
+
 	install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
 endif(embree_FOUND)
 
