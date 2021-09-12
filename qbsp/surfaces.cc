@@ -79,7 +79,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
             tmp[1] = tex->vecs[axis][1];
             tmp[2] = tex->vecs[axis][2];
 
-            for (i = 0; i < f->w.numpoints; i++) {
+            for (int32_t i = 0; i < f->w.numpoints; i++) {
                 v = DotProduct(f->w.points[i], tmp);
                 if (v < mins)
                     mins = v;

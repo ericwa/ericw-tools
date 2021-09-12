@@ -21,39 +21,6 @@
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 
-inline void PrintBSPInfo(const bspdata_t &bsp) {
-    printf("brushes:\n");
-    for (int32_t i = 0; i < bsp.data.q2bsp.numbrushes; i++) {
-        printf(" %i: contents: %i, num sides: %i, first side: %i\n", i, bsp.data.q2bsp.dbrushes[i].contents, bsp.data.q2bsp.dbrushes[i].numsides, bsp.data.q2bsp.dbrushes[i].firstside);
-    }
-
-    printf("brush sides:\n");
-    for (int32_t i = 0; i < bsp.data.q2bsp.numbrushsides; i++) {
-        auto &plane = bsp.data.q2bsp.dplanes[bsp.data.q2bsp.dbrushsides[i].planenum];
-        printf(" %i: { %i: %f %f %f -> %f }\n", i, plane.type, plane.normal[0], plane.normal[1], plane.normal[2], plane.dist);
-    }
-
-    printf("leaves:\n");
-    for (int32_t i = 0; i < bsp.data.q2bsp.numleafs; i++) {
-        auto &leaf = bsp.data.q2bsp.dleafs[i];
-
-        printf(" %i: contents %i, leafbrushes first %i -> count %i\n", i, leaf.contents, leaf.firstleafbrush, leaf.numleafbrushes);
-    }
-
-    printf("nodes:\n");
-    for (int32_t i = 0; i < bsp.data.q2bsp.numnodes; i++) {
-        auto &node = bsp.data.q2bsp.dnodes[i];
-        auto &plane = bsp.data.q2bsp.dplanes[node.planenum];
-        printf(" %i: { %i: %f %f %f -> %f }\n", i, plane.type, plane.normal[0], plane.normal[1], plane.normal[2], plane.dist);
-    }
-
-    printf("models:\n");
-    for (int32_t i = 0; i < bsp.data.q2bsp.nummodels; i++) {
-        auto &model = bsp.data.q2bsp.dmodels[i];
-        printf(" %i: headnode %i (%f %f %f -> %f %f %f)\n", i, model.headnode, model.mins[0], model.mins[1], model.mins[2], model.maxs[0], model.maxs[1], model.maxs[2]);
-    }
-}
-
 int
 main(int argc, char **argv)
 {
@@ -75,8 +42,6 @@ main(int argc, char **argv)
 
         LoadBSPFile(source, &bsp);
         PrintBSPFileSizes(&bsp);
-
-        PrintBSPInfo(bsp);
 
         printf("---------------------\n");
     }

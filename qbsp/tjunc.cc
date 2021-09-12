@@ -381,7 +381,7 @@ FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
                       __func__, MAX_SUPERFACE_POINTS);
 
             tjuncs++;
-            for (k = superface->w.numpoints; k > j; k--)
+            for (int32_t k = superface->w.numpoints; k > j; k--)
                 VectorCopy(superface->w.points[k - 1], superface->w.points[k]);
             VectorMA(edge->origin, v->t, edge->dir, superface->w.points[j]);
             superface->w.numpoints++;
