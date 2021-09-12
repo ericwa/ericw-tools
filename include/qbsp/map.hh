@@ -214,10 +214,10 @@ struct quark_tx_info_t {
     std::optional<extended_texinfo_t> info;
 };
 
-int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info);
-inline int FindMiptex(const char *name) {
+int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal = false);
+inline int FindMiptex(const char *name, bool internal = false) {
     std::optional<extended_texinfo_t> extended_info;
-    return FindMiptex(name, extended_info);
+    return FindMiptex(name, extended_info, internal);
 }
 int FindTexinfo(const mtexinfo_t &texinfo);
 

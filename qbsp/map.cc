@@ -195,18 +195,16 @@ static std::optional<wal_t> LoadWal(const char *name) {
 }
 
 int
-FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info)
+FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal)
 {
     const char *pathsep;
     int i;
 
-    if (options.target_version->game->id != GAME_QUAKE_II) {
+    if (options.target_game->id != GAME_QUAKE_II) {
         /* Ignore leading path in texture names (Q2 map compatibility) */
         pathsep = strrchr(name, '/');
         if (pathsep)
             name = pathsep + 1;
-
-        extended_info = extended_texinfo_t { };
 
         for (i = 0; i < map.nummiptex(); i++) {
             const texdata_t &tex = map.miptex.at(i);
@@ -226,17 +224,21 @@ FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info)
         }
     } else {
         // load .wal first
-        std::optional<wal_t> wal = LoadWal(name);
+        std::optional<wal_t> wal;
 
-        // FIXME: this spams the console if wal not found, because we
-        // need to load the wal to figure out if it will match anything
-        // in the list...
-        if (!wal.has_value()) {
-            Message(msgLiteral, "Couldn't locate wal for %s\n", name);
-            wal = wal_t {};
+        if (!internal || !extended_info.has_value()) {
+            wal = LoadWal(name);
+
+            if (!wal.has_value()) {
+                //FIXME
+                //Message(msgLiteral, "Couldn't locate wal for %s\n", name);
+                if (!extended_info.has_value()) {
+                    extended_info = extended_texinfo_t { };
+                }
+            } else if (!extended_info.has_value()) {
+                extended_info = extended_texinfo_t { wal->contents, wal->flags, wal->value };
+            }
         }
-
-        extended_info = extended_info.value_or(extended_texinfo_t { wal->contents, wal->flags, wal->value });
 
         for (i = 0; i < map.nummiptex(); i++) {
             const texdata_t &tex = map.miptex.at(i);
@@ -250,10 +252,10 @@ FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info)
         }
 
         i = map.miptex.size();
-        map.miptex.push_back({ name, wal->flags, wal->value });
+        map.miptex.push_back({ name, extended_info->flags, extended_info->value });
     
         /* Handle animating textures carefully */
-        if (wal->anim_name[0]) {
+        if (wal && wal->anim_name[0]) {
             FindMiptex(wal->anim_name);
         }
     }
@@ -365,7 +367,13 @@ SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity_t *entity)
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
     const int shadow = atoi(ValueForKey(entity, "_shadow"));
     // These flags are pulled from surf flags in Q2.
-    if (options.target_version->game->id != GAME_QUAKE_II) {
+    // TODO: the Q1 version of this block can now be moved into texinfo
+    // loading by shoving them inside of texinfo.flags like
+    // Q2 does. Similarly, we can move the Q2 block out
+    // into a special function, like.. I dunno,
+    // game->surface_flags_from_name(surfflags_t &inout, const char *name)
+    // which we can just call instead of this block.
+    if (options.target_game->id != GAME_QUAKE_II) {
         if (IsSkipName(texname))
             flags.extended |= TEX_EXFLAG_SKIP;
         if (IsHintName(texname))
@@ -375,9 +383,15 @@ SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity_t *entity)
     } else {
         flags.native = texinfo.flags.native;
 
-        if (texinfo.flags.native & Q2_SURF_NODRAW)
+        // This fixes a bug in some old maps.
+        if ((flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
+            flags.native &= ~Q2_SURF_NODRAW;
+            //logprint("Corrected invalid SKY flag\n");
+        }
+
+        if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
             flags.extended |= TEX_EXFLAG_SKIP;
-        if (texinfo.flags.native & Q2_SURF_HINT)
+        if ((flags.native & Q2_SURF_HINT) || IsHintName(texname))
             flags.extended |= TEX_EXFLAG_HINT;
     }
     if (IsNoExpandName(texname))
@@ -488,7 +502,7 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
             // Quake II uses multiple starts for level transitions/backtracking.
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
-            if (options.target_version->game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
+            if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
                 Message(msgWarning, warnMultipleStarts);
             rgfStartSpots |= info_player_start;
         } else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {
@@ -1485,6 +1499,8 @@ ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, m
     tx->flags = mapface.flags = { extinfo.info->flags };
     tx->value = mapface.value = extinfo.info->value;
 
+    Q_assert(contentflags_t { mapface.contents }.is_valid(options.target_game, false));
+
     if (!planepts || !plane)
         return;
 
@@ -1678,11 +1694,12 @@ ParseBrush(parser_t *parser, const mapentity_t *entity)
         if (face.get() == nullptr)
             continue;
 
-        if (options.target_version->game->id == GAME_QUAKE_II) {
+        // FIXME: can we move this somewhere later?
+        if (options.target_game->id == GAME_QUAKE_II) {
 		    // translucent objects are automatically classified as detail
-		    //if ((face->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))
-            //    || (face->contents & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)))
-			//    face->contents |= Q2_CONTENTS_DETAIL;
+		    if ((face->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))
+                || (face->contents & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)))
+			    face->contents |= Q2_CONTENTS_DETAIL;
 
 		    if (!(face->contents & (((Q2_LAST_VISIBLE_CONTENTS << 1)-1) 
 			    | Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)  ) )

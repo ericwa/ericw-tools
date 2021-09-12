@@ -357,7 +357,7 @@ FixFaceEdges
 static void
 FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
 {
-    int i, j, k;
+    int i, j;
     wedge_t *edge;
     wvert_t *v;
     vec_t t1, t2;

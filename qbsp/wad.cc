@@ -77,7 +77,7 @@ WAD_LoadInfo(wad_t &wad, bool external)
             int w = LittleLong(miptex.width);
             int h = LittleLong(miptex.height);
             lump.size = sizeof(miptex) + (w>>0)*(h>>0) + (w>>1)*(h>>1) + (w>>2)*(h>>2) + (w>>3)*(h>>3);
-            if (options.target_version == &bspver_hl)
+            if (options.target_game->id == GAME_HALF_LIFE)
                 lump.size += 2+3*256;    //palette size+palette data
             lump.size = (lump.size+3) & ~3;    //keep things aligned if we can.
 
@@ -219,7 +219,7 @@ WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
         memcpy(dest+out->offsets[2], data.data()+(in->offsets[2]), (in->width>>2)*(in->height>>2));
         memcpy(dest+out->offsets[3], data.data()+(in->offsets[3]), (in->width>>3)*(in->height>>3));
 
-        if (options.target_version == &bspver_hl)
+        if (options.target_game->id == GAME_HALF_LIFE)
         {    //palette size. 256 in little endian.
             dest[palofs+0] = ((256>>0)&0xff);
             dest[palofs+1] = ((256>>8)&0xff);
@@ -311,7 +311,7 @@ WADList_Process()
     }
 
     // Q2 doesn't use texdata
-    if (options.target_version->game->id == GAME_QUAKE_II) {
+    if (options.target_game->id == GAME_QUAKE_II) {
         return;
     }
     

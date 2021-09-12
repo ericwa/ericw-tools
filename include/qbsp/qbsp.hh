@@ -170,7 +170,7 @@ typedef struct visfacet_s {
     struct visfacet_s *original;        // face on node
     int outputnumber;           // only valid for original faces after
                                 // write surfaces
-    bool touchesOccupiedLeaf; // internal use in outside.cc
+    bool touchesOccupiedLeaf;   // internal use in outside.cc
     vec3_t origin;
     vec_t radius;
 
@@ -272,6 +272,7 @@ public:
     bool fbspx_brushes;
     bool fNoTextures;
     const bspversion_t *target_version = &bspver_q1;
+    const gamedef_t *target_game = target_version->game;
     int dxSubdivide;
     int dxLeakDist;
         int maxNodeSize;

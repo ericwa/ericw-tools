@@ -36,7 +36,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
 {
     vec_t mins, maxs;
     vec_t v;
-    int axis, i;
+    int axis;
     qbsp_plane_t plane;
     face_t *front, *back, *next;
     const mtexinfo_t *tex;
@@ -49,7 +49,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
     tex = &map.mtexinfos.at(f->texinfo);
 
     if (tex->flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT) ||
-        !options.target_version->game->surf_is_subdivided(tex->flags))
+        !options.target_game->surf_is_subdivided(tex->flags))
         return;
 //subdivision is pretty much pointless other than because of lightmap block limits
 //one lightmap block will always be added at the end, for smooth interpolation
@@ -292,7 +292,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     int v1, v2;
     int i;
 
-    if (!face->contents[0].is_valid(options.target_version->game, false))
+    if (!face->contents[0].is_valid(options.target_game, false))
         Error("Face with invalid contents (%s)", __func__);
 
     v1 = GetVertex(entity, p1);

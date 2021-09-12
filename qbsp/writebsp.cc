@@ -28,23 +28,10 @@
 #include <cstdint>
 
 static void
-AssertVanillaContentType(int content)
+AssertVanillaContentType(const contentflags_t &flags)
 {
-    // TODO
-	if (options.target_version->game->id == GAME_QUAKE_II) {
-		return;
-	}
-	
-    switch (content) {
-    case CONTENTS_EMPTY:
-    case CONTENTS_SOLID:
-    case CONTENTS_WATER:
-    case CONTENTS_SLIME:
-    case CONTENTS_LAVA:
-    case CONTENTS_SKY:
-        break;
-    default:
-        Error("Internal error: Tried to save compiler-internal contents type %s\n", GetContentsName({ content }));
+    if (!flags.is_valid(options.target_game, false)) {
+        Error("Internal error: Tried to save invalid contents type %s\n", GetContentsName(flags));
     }
 }
 
@@ -58,7 +45,7 @@ RemapContentsForExport(const contentflags_t &content)
          *
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
-        return options.target_version->game->create_solid_contents();
+        return options.target_game->create_solid_contents();
     }
 
     return content;
@@ -195,8 +182,9 @@ ExportLeaf(mapentity_t *entity, node_t *node)
     map.exported_leafs.push_back({});
     mleaf_t *dleaf = &map.exported_leafs.back();
 
-    dleaf->contents = RemapContentsForExport(node->contents).native;
-    AssertVanillaContentType(dleaf->contents);
+    const contentflags_t remapped = RemapContentsForExport(node->contents);
+    AssertVanillaContentType(remapped);
+    dleaf->contents = remapped.native;
 
     /*
      * write bounding box info
@@ -263,7 +251,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             // (probably for collision purposes? makes sense given they store leafbrushes)
-            if (options.target_version->game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(options.target_version->game))
+            if (options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(options.target_game))
                 dnode->children[i] = -1;
             else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs.size());
@@ -340,7 +328,7 @@ BeginBSPFile(void)
 
     // Leave room for leaf 0 (must be solid)
     map.exported_leafs.push_back({});
-    map.exported_leafs.back().contents = options.target_version->game->create_solid_contents().native;
+    map.exported_leafs.back().contents = options.target_game->create_solid_contents().native;
     Q_assert(map.exported_leafs.size() == 1);
 }
 
@@ -386,10 +374,10 @@ WriteExtendedTexinfoFlags(void)
     
     int count = 0;
     for (const auto &tx : texinfos_sorted) {
-        if (tx.outputnum.has_value())
+        if (!tx.outputnum.has_value())
             continue;
         
-        Q_assert(count == tx.outputnum); // check we are outputting them in the proper sequence
+        Q_assert(count == tx.outputnum.value()); // check we are outputting them in the proper sequence
       
         fwrite(&tx.flags, 1, sizeof(tx.flags), texinfofile);
         count++;

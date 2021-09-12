@@ -59,47 +59,42 @@ ClusterContents(const node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return node->contents;
 
-    return options.target_version->game->cluster_contents(ClusterContents(node->children[0]), ClusterContents(node->children[1]));
+    return options.target_game->cluster_contents(ClusterContents(node->children[0]), ClusterContents(node->children[1]));
 }
 
-/*
- * Return true if possible to see the through the contents of the portals nodes
- */
+/* Return true if possible to see the through the contents of the portals nodes */
 static bool
 PortalThru(const portal_t *p)
 {
     contentflags_t contents0 = ClusterContents(p->nodes[0]);
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
-    /* Can't see through solids */
-    if (contents0.is_structural_solid(options.target_version->game) || contents1.is_structural_solid(options.target_version->game))
-        return false;
-
     /* Can't see through func_illusionary_visblocker */
     if ((contents0.extended | contents1.extended) & CFLAGS_ILLUSIONARY_VISBLOCKER)
         return false;
 
-    /* If contents values are the same and not solid, can see through */
-    if (contents0 == contents1)
-        return true;
+    // FIXME: we can't move this directly to portal_can_see_through because
+    // "options" isn't exposed there.
+    if (options.target_game->id != GAME_QUAKE_II) {
+        /* If water is transparent, liquids are like empty space */
+        if (options.fTranswater) {
+            if (contents0.is_liquid(options.target_game) && contents1.is_empty(options.target_game))
+                return true;
+            if (contents1.is_liquid(options.target_game) && contents0.is_empty(options.target_game))
+                return true;
+        }
 
-    /* If water is transparent, liquids are like empty space */
-    if (options.fTranswater) {
-        if (contents0.is_liquid(options.target_version->game) && contents1.is_empty(options.target_version->game))
-            return true;
-        if (contents1.is_liquid(options.target_version->game) && contents0.is_empty(options.target_version->game))
-            return true;
+        /* If sky is transparent, then sky is like empty space */
+        if (options.fTranssky) {
+            if (contents0.is_sky(options.target_game) && contents1.is_empty(options.target_game))
+                return true;
+            if (contents0.is_empty(options.target_game) && contents1.is_sky(options.target_game))
+                return true;
+        }
     }
 
-    /* If sky is transparent, then sky is like empty space */
-    if (options.fTranssky) {
-        if (contents0.is_sky(options.target_version->game) && contents1.is_empty(options.target_version->game))
-            return true;
-        if (contents0.is_empty(options.target_version->game) && contents1.is_sky(options.target_version->game))
-            return true;
-    }
-
-    return false;
+    // Check per-game visibility
+    return options.target_game->portal_can_see_through(contents0, contents1);
 }
 
 static void
@@ -116,7 +111,7 @@ WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
         WritePortals_r(node->children[1], portalFile, clusters);
         return;
     }
-    if (node->contents.is_solid(options.target_version->game))
+    if (node->contents.is_solid(options.target_game))
         return;
 
     for (p = node->portals; p; p = next) {
@@ -161,7 +156,7 @@ WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
         viscluster = WriteClusters_r(node->children[1], portalFile, viscluster);
         return viscluster;
     }
-    if (node->contents.is_solid(options.target_version->game))
+    if (node->contents.is_solid(options.target_game))
         return viscluster;
 
     /* If we're in the next cluster, start a new line */
@@ -223,7 +218,7 @@ NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
         return;
     }
 
-    if (node->contents.is_solid(options.target_version->game)) {
+    if (node->contents.is_structural_solid(options.target_game)) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;
@@ -380,7 +375,7 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
     }
 
     outside_node.planenum = PLANENUM_LEAF;
-    outside_node.contents = options.target_version->game->create_solid_contents();
+    outside_node.contents = options.target_game->create_solid_contents();
     outside_node.portals = NULL;
 
     for (i = 0; i < 3; i++)
@@ -671,7 +666,7 @@ PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
     MakeHeadnodePortals(entity, headnode);
     CutNodePortals_r(headnode, &state);
 
-    if (!hullnum) {
+    if (hullnum <= 0) {
         /* save portal file for vis tracing */
         WritePortalfile(headnode, &state);
 

@@ -22,6 +22,8 @@
 #include <common/bspfile.hh>
 #include <cstdint>
 
+#include <fmt/format.h>
+
 struct gamedef_generic_t : public gamedef_t {
     gamedef_generic_t()
     {
@@ -70,6 +72,14 @@ struct gamedef_generic_t : public gamedef_t {
     }
 
     bool contents_are_valid(const contentflags_t &, bool) const {
+        throw std::bad_cast();
+    }
+
+    bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    std::string get_contents_display(const contentflags_t &contents) const {
         throw std::bad_cast();
     }
 };
@@ -167,6 +177,33 @@ struct gamedef_q1_like_t : public gamedef_t {
 
     bool contents_are_valid(const contentflags_t &contents, bool strict) const {
         return contents.native <= 0;
+    }
+
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        /* If contents values are the same and not solid, can see through */
+        return !(contents0.is_structural_solid(this) || contents1.is_structural_solid(this)) &&
+            contents0 == contents1;
+    }
+
+    std::string get_contents_display(const contentflags_t &contents) const {
+        switch (contents.native) {
+            case 0:
+                return "UNSET";
+            case CONTENTS_EMPTY:
+                return "EMPTY";
+            case CONTENTS_SOLID:
+                return "SOLID";
+            case CONTENTS_SKY:
+                return "SKY";
+            case CONTENTS_WATER:
+                return "WATER";
+            case CONTENTS_SLIME:
+                return "SLIME";
+            case CONTENTS_LAVA:
+                return "LAVA";
+            default:
+                return fmt::to_string(contents.native);
+        }
     }
 };
 
@@ -278,10 +315,101 @@ struct gamedef_q2_t : public gamedef_t {
     }
 
     bool contents_are_valid(const contentflags_t &contents, bool strict) const {
-        if (!strict) {
-            return true;
+        // check that we don't have more than one visible contents type
+        const int32_t x = (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
+        if ((x & (x - 1)) != 0) {
+            return false;
         }
-        return !contents_are_empty(contents);
+
+        // TODO: check other invalid mixes
+        if (!x && strict) {
+            return false;
+        }
+
+        return true;
+    }
+
+    constexpr int32_t visible_contents(const int32_t &contents) const {
+	    for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1)
+		    if (contents & i )
+			    return i;
+
+	    return 0;
+    }
+
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        int32_t c0 = contents0.native, c1 = contents1.native;
+
+        if (!visible_contents(c0 ^ c1))
+            return true;
+
+        if ((c0 & Q2_CONTENTS_TRANSLUCENT) ||
+            contents0.is_detail())
+            c0 = 0;
+        if ((c1 & Q2_CONTENTS_TRANSLUCENT) ||
+            contents1.is_detail())
+            c1 = 0;
+
+        // can't see through solid
+        if ((c0 | c1) & Q2_CONTENTS_SOLID)
+            return false;
+
+        // identical on both sides
+        if (!(c0 ^ c1))
+            return true;
+
+        return visible_contents(c0 ^ c1);
+    }
+
+    std::string get_contents_display(const contentflags_t &contents) const {
+        constexpr const char *bitflag_names[] = {
+            "SOLID",
+            "WINDOW",
+            "AUX",
+            "LAVA",
+            "SLIME",
+            "WATER",
+            "MIST",
+            "128",
+            "256",
+            "512",
+            "1024",
+            "2048",
+            "4096",
+            "8192",
+            "16384",
+            "AREAPORTAL",
+            "PLAYERCLIP",
+            "MONSTERCLIP",
+            "CURRENT_0",
+            "CURRENT_90",
+            "CURRENT_180",
+            "CURRENT_270",
+            "CURRENT_UP",
+            "CURRENT_DOWN",
+            "ORIGIN",
+            "MONSTER",
+            "DEADMONSTER",
+            "DETAIL",
+            "TRANSLUCENT",
+            "LADDER",
+            "1073741824",
+            "2147483648"
+        };
+
+        std::string s;
+
+        for (int32_t i = 0; i < std::size(bitflag_names); i++) {
+            if (contents.native & (1 << i)) {
+                if (s.size()) {
+                    s += " | " + std::string(bitflag_names[i]);
+                } else {
+                    s += bitflag_names[i];
+                }
+            }
+        }
+
+        return s;
     }
 };
 
@@ -329,6 +457,11 @@ bool contentflags_t::is_liquid(const gamedef_t *game) const {
 
 bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const {
     return game->contents_are_valid(*this, strict);
+}
+
+std::string contentflags_t::to_string(const gamedef_t *game) const {
+    std::string s = game->get_contents_display(*this);
+    return s;
 }
 
 static const char *

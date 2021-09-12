@@ -55,7 +55,7 @@ if (embree_FOUND)
 endif(embree_FOUND)
 
 add_executable(light ${LIGHT_SOURCES} main.cc)
-target_link_libraries (light PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (light PRIVATE ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
 
 if (embree_FOUND)
 	target_link_libraries (light PRIVATE embree)

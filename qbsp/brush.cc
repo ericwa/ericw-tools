@@ -169,13 +169,11 @@ AddToBounds(mapentity_t *entity, const vec3_t point)
 //===========================================================================
 
 static int
-NormalizePlane(qbsp_plane_t *p)
+NormalizePlane(qbsp_plane_t *p, bool flip = true)
 {
     int i;
     vec_t ax, ay, az;
 
-    p->outputplanenum = PLANENUM_LEAF;
-    
     for (i = 0; i < 3; i++) {
         if (p->normal[i] == 1.0) {
             p->normal[(i + 1) % 3] = 0;
@@ -184,10 +182,12 @@ NormalizePlane(qbsp_plane_t *p)
             return 0; /* no flip */
         }
         if (p->normal[i] == -1.0) {
+            if (flip) {
             p->normal[i] = 1.0;
+                p->dist = -p->dist;
+            }
             p->normal[(i + 1) % 3] = 0;
             p->normal[(i + 2) % 3] = 0;
-            p->dist = -p->dist;
             p->type = PLANE_X + i;
             return 1; /* plane flipped */
         }
@@ -204,7 +204,7 @@ NormalizePlane(qbsp_plane_t *p)
     else
         p->type = PLANE_ANYZ;
 
-    if (p->normal[p->type - PLANE_ANYX] < 0) {
+    if (flip && p->normal[p->type - PLANE_ANYX] < 0) {
         VectorSubtract(vec3_origin, p->normal, p->normal);
         p->dist = -p->dist;
         return 1; /* plane flipped */
@@ -262,7 +262,13 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
     qbsp_plane_t plane;
     VectorCopy(normal, plane.normal);
     plane.dist = dist;
-    *side = NormalizePlane(&plane) ? SIDE_BACK : SIDE_FRONT;
+    plane.outputplanenum = PLANENUM_LEAF;
+    
+    int32_t out_side = NormalizePlane(&plane, side != nullptr);
+
+    if (side) {
+        *side = out_side;
+    }
     
     int index = map.planes.size();
     map.planes.push_back(plane);
@@ -273,6 +279,7 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
 /*
  * FindPlane
  * - Returns a global plane number and the side that will be the front
+ * - if `side` is null, only an exact match will be fetched.
  */
 int
 FindPlane(const vec3_t normal, const vec_t dist, int *side)
@@ -284,9 +291,11 @@ FindPlane(const vec3_t normal, const vec_t dist, int *side)
     for (int i : map.planehash[plane_hash_fn(&plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
         if (PlaneEqual(&p, &plane)) {
+            if (side) {
             *side = SIDE_FRONT;
+            }
             return i;
-        } else if (PlaneInvEqual(&p, &plane)) {
+        } else if (side && PlaneInvEqual(&p, &plane)) {
             *side = SIDE_BACK;
             return i;
         }
@@ -394,11 +403,11 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         hullbrush->maxs[i] = -VECT_MAX;
     }
 
-    auto DiscardHintSkipFace = (options.target_version->game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
+    auto DiscardHintSkipFace = (options.target_game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (!hullnum && hullbrush->contents.is_hint()) {
+        if (hullnum <= 0 && hullbrush->contents.is_hint()) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
 
@@ -499,7 +508,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
            (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0)
         && rottype == rotation_t::hipnotic
         && (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-        && options.target_version->game->id != GAME_HEXEN_II; // never do this in Hexen 2
+        && options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t delta;
@@ -849,20 +858,20 @@ Brush_IsDetail(const mapbrush_t *mapbrush)
 // contents.
 static bool AdjustContentsFromName(const char *texname, contentflags_t &flags) {
     if (!Q_strcasecmp(texname, "origin"))
-        flags = flags.merge(options.target_version->game->create_empty_contents(CFLAGS_ORIGIN));
+        flags = flags.merge(options.target_game->create_empty_contents(CFLAGS_ORIGIN));
     else if (!Q_strcasecmp(texname, "hint"))
-        flags = flags.merge(options.target_version->game->create_empty_contents(CFLAGS_HINT));
+        flags = flags.merge(options.target_game->create_empty_contents(CFLAGS_HINT));
     else if (!Q_strcasecmp(texname, "clip"))
-        flags = flags.merge(options.target_version->game->create_solid_contents(CFLAGS_CLIP));
+        flags = flags.merge(options.target_game->create_solid_contents(CFLAGS_CLIP));
     else if (texname[0] == '*') {
         if (!Q_strncasecmp(texname + 1, "lava", 4))
-            flags = flags.merge(options.target_version->game->create_liquid_contents(CONTENTS_LAVA));
+            flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_LAVA));
         else if (!Q_strncasecmp(texname + 1, "slime", 5))
-            flags = flags.merge(options.target_version->game->create_liquid_contents(CONTENTS_SLIME));
-        flags = flags.merge(options.target_version->game->create_liquid_contents(CONTENTS_WATER));
+            flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_SLIME));
+        flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_WATER));
     }
     else if (!Q_strncasecmp(texname, "sky", 3))
-        flags = flags.merge(options.target_version->game->create_sky_contents());
+        flags = flags.merge(options.target_game->create_sky_contents());
     else
         return false;
 
@@ -888,7 +897,7 @@ Brush_GetContents_Q1(const mapbrush_t *mapbrush, const contentflags_t &base_cont
     }
 
     //and anything else is assumed to be a regular solid.
-    return options.target_version->game->create_solid_contents();
+    return options.target_game->create_solid_contents();
 }
 
 static contentflags_t
@@ -903,6 +912,10 @@ Brush_GetContents_Q2 (const mapbrush_t *mapbrush, const contentflags_t &base_con
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
         
+        if (texinfo.flags.extended & TEX_EXFLAG_SKIP) {
+            continue;
+        }
+        
         if (!is_trans && (texinfo.flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
             is_trans = true;
         }
@@ -912,7 +925,8 @@ Brush_GetContents_Q2 (const mapbrush_t *mapbrush, const contentflags_t &base_con
         }
 
         if (mapface.contents != contents.native) {
-			logprint("mixed face contents\n"); // TODO: need entity # and brush #
+            logprint("mixed face contents (%s != %s at line %i)\n", contentflags_t { mapface.contents }.to_string(options.target_game).c_str(),
+                     contents.to_string(options.target_game).c_str(), mapface.linenum); // TODO: need entity # and brush #
 			break;
         }
     }
@@ -920,7 +934,10 @@ Brush_GetContents_Q2 (const mapbrush_t *mapbrush, const contentflags_t &base_con
 	// if any side is translucent, mark the contents
 	// and change solid to window
 	if (is_trans) {
-		contents.native = (contents.native & ~Q2_CONTENTS_SOLID) | (Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_WINDOW);
+        contents.native |= Q2_CONTENTS_TRANSLUCENT;
+		if (contents.native & Q2_CONTENTS_SOLID) {
+            contents.native = (contents.native & ~Q2_CONTENTS_SOLID) | Q2_CONTENTS_WINDOW;
+	}
 	}
 
     // add extended flags that we may need
@@ -936,9 +953,24 @@ Brush_GetContents_Q2 (const mapbrush_t *mapbrush, const contentflags_t &base_con
         contents.extended |= CFLAGS_ORIGIN;
     }
 
+    if (contents.native & Q2_CONTENTS_MIST) {
+        contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
+    }
+
     if (is_hint) {
         contents.extended |= CFLAGS_HINT;
     }
+
+    // FIXME: this is a bit of a hack, but this is because clip
+    // and liquids and stuff are already handled *like* detail by
+    // the compiler.
+    if (contents.extended & CFLAGS_DETAIL) {
+        if (!(contents.native & Q2_CONTENTS_SOLID)) {
+            contents.extended &= ~CFLAGS_DETAIL;
+        }
+    }
+
+    Q_assert(contents.is_valid(options.target_game, false));
 
 	return contents;
 }
@@ -985,7 +1017,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
         return NULL;
     }
 
-    if (options.target_version == &bspver_hl)
+    if (options.target_game->id == GAME_HALF_LIFE)
     {
          if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
@@ -1006,7 +1038,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
         }
     }
-    else if (options.target_version->game->id == GAME_HEXEN_II)
+    else if (options.target_game->id == GAME_HEXEN_II)
     {
         if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
@@ -1200,14 +1232,14 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     const bool func_illusionary_visblocker =
         (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
-    contentflags_t base_contents = options.target_version->game->create_empty_contents();
+    contentflags_t base_contents = options.target_game->create_empty_contents();
 
     if (func_illusionary_visblocker) {
         base_contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
     }
 
     // TODO: move to game
-    auto Brush_GetContents = (options.target_version->game->id == GAME_QUAKE_II) ? Brush_GetContents_Q2 : Brush_GetContents_Q1;
+    auto Brush_GetContents = (options.target_game->id == GAME_QUAKE_II) ? Brush_GetContents_Q2 : Brush_GetContents_Q1;
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
@@ -1314,19 +1346,19 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         
         /* turn solid brushes into detail, if we're in hull0 */
-        if (hullnum == 0 && contents.is_solid(options.target_version->game)) {
+        if (hullnum <= 0 && contents.is_solid(options.target_game)) {
             if (detail) {
                 contents.extended |= CFLAGS_DETAIL;
             } else if (detail_illusionary) {
-                contents = contents.merge(options.target_version->game->create_empty_contents(CFLAGS_DETAIL_ILLUSIONARY));
+                contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_ILLUSIONARY));
             } else if (detail_fence) {
-                contents = contents.merge(options.target_version->game->create_empty_contents(CFLAGS_DETAIL_FENCE)); // fences need to generate leaves
+                contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_FENCE)); // fences need to generate leaves
             }
         }
         
         /* func_detail_illusionary don't exist in the collision hull
          * (or bspx export) */
-        if (hullnum && detail_illusionary) {
+        if ((options.target_game->id != GAME_QUAKE_II && hullnum) && detail_illusionary) {
             continue;
         }
         
@@ -1349,14 +1381,14 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
         /* "hint" brushes don't affect the collision hulls */
         if (contents.is_hint()) {
-            if (hullnum)
+            if (hullnum > 0)
                 continue;
-            contents = contents.merge(options.target_version->game->create_empty_contents());
+            contents = contents.merge(options.target_game->create_empty_contents());
         }
 
         /* entities never use water merging */
         if (dst != pWorldEnt())
-            contents = contents.merge(options.target_version->game->create_solid_contents());
+            contents = contents.merge(options.target_game->create_solid_contents());
 
         /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
            this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
@@ -1366,19 +1398,19 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
            before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
            contents type.
          */
-        if (dst != pWorldEnt() && hullnum == 0 && (contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
-            contents = contents.merge(options.target_version->game->create_empty_contents(CFLAGS_DETAIL_FENCE));
+        if (dst != pWorldEnt() && hullnum <= 0 && (contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
+            contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_FENCE));
         }
         
         /* nonsolid brushes don't show up in clipping hulls */
         // TODO: will this statement need to be modified since clip
         // detail etc aren't native types any more?
-        if (hullnum > 0 && !contents.is_solid(options.target_version->game) && !contents.is_sky(options.target_version->game))
+        if (hullnum > 0 && !contents.is_solid(options.target_game) && !contents.is_sky(options.target_game))
             continue;
 
         /* sky brushes are solid in the collision hulls */
-        if (hullnum > 0 && contents.is_sky(options.target_version->game))
-            contents = contents.merge(options.target_version->game->create_solid_contents());
+        if (hullnum > 0 && contents.is_sky(options.target_game))
+            contents = contents.merge(options.target_game->create_solid_contents());
 
         brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
@@ -1396,10 +1428,10 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
             brush->next = dst->detail_fence;
             dst->detail_fence = brush;
-        } else if (brush->contents.is_solid(options.target_version->game)) {
+        } else if (brush->contents.is_solid(options.target_game)) {
             brush->next = dst->solid;
             dst->solid = brush;
-        } else if (brush->contents.is_sky(options.target_version->game)) {
+        } else if (brush->contents.is_sky(options.target_game)) {
             brush->next = dst->sky;
             dst->sky = brush;
         } else {
