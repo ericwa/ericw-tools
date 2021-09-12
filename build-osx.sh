@@ -21,10 +21,10 @@ fi
 mkdir "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-wget "$EMBREE_ZIP"
-unzip "$EMBREE_ZIP_NAME"
+wget -q "$EMBREE_ZIP"
+unzip -q "$EMBREE_ZIP_NAME"
 
-wget "$TBB_TGZ"
+wget -q "$TBB_TGZ"
 tar xf "$TBB_TGZ_NAME"
 
 EMBREE_CMAKE_DIR="$(pwd)/$EMBREE_DIR_NAME/lib/cmake/embree-3.13.0"
