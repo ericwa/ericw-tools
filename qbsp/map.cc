@@ -206,11 +206,14 @@ FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, b
         if (pathsep)
             name = pathsep + 1;
 
+        if (!extended_info.has_value()) {
+            extended_info = extended_texinfo_t { };
+        }
+
         for (i = 0; i < map.nummiptex(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str())) {
-
                 return i;
             }
         }
