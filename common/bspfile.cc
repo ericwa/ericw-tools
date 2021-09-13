@@ -501,7 +501,7 @@ BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_ver
  * =========================================================================
  */
 
-typedef enum { TO_DISK, TO_CPU } swaptype_t;
+enum swaptype_t : bool { TO_DISK, TO_CPU };
 
 static void
 SwapBSPVertexes(int numvertexes, dvertex_t *verticies)
@@ -3906,7 +3906,7 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
 
 /* ========================================================================= */
 
-typedef struct {
+struct bspfile_t {
     const bspversion_t *version;
     
     // which one is used depends on version
@@ -3916,7 +3916,7 @@ typedef struct {
     };
     
     FILE *file;
-} bspfile_t;
+};
 
 static void
 AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)

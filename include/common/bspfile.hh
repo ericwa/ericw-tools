@@ -62,10 +62,10 @@
 #define Q2_BSPVERSION  38
 #define Q2_QBISMIDENT  (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
 
-typedef struct {
+struct lump_t {
     int32_t fileofs;
     int32_t filelen;
-} lump_t;
+};
 
 #define LUMP_ENTITIES      0
 #define LUMP_PLANES        1
@@ -106,15 +106,16 @@ typedef struct {
 #define Q2_LUMP_AREAPORTALS 18
 #define Q2_HEADER_LUMPS     19
 
-typedef struct {
+struct bspx_header_t {
         char id[4]; //'BSPX'
         uint32_t numlumps;
-} bspx_header_t;
-typedef struct {
+};
+
+struct bspx_lump_t {
         char lumpname[24];
         uint32_t fileofs;
         uint32_t filelen;
-} bspx_lump_t;
+};
 
 typedef struct {
     const char *name;

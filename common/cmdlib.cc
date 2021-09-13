@@ -588,16 +588,17 @@ SafeWrite(FILE *f, const void *buffer, int count)
         Error("File write failure");
 }
 
-typedef struct {
-        char magic[4];
-        unsigned int tableofs;
-        unsigned int numfiles;
-} pakheader_t;
-typedef struct {
-        char name[56];
-        unsigned int offset;
-        unsigned int length;
-} pakfile_t;
+struct pakheader_t {
+    char magic[4];
+    unsigned int tableofs;
+    unsigned int numfiles;
+};
+
+struct pakfile_t {
+    char name[56];
+    unsigned int offset;
+    unsigned int length;
+};
 
 /*
  * ==============

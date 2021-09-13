@@ -24,13 +24,13 @@
 
 #include <qbsp/winding.hh>
 
-typedef struct brush_s {
+struct brush_t {
     struct brush_s *next;
     vec3_t mins, maxs;
     face_t *faces;
     contentflags_t contents;    /* BSP contents */
     short lmshift;              /* lightmap scaling (qu/lightmap pixel), passed to the light util */
-} brush_t;
+};
 
 class mapbrush_t;
 

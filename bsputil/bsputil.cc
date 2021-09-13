@@ -38,13 +38,13 @@
 #include <light/light.hh>
 
 /* FIXME - share header with qbsp, etc. */
-typedef struct {
+struct wadinfo_t {
     char identification[4];     // should be WAD2
     int32_t numlumps;
     int32_t infotableofs;
-} wadinfo_t;
+};
 
-typedef struct {
+struct lumpinfo_t {
     int32_t filepos;
     int32_t disksize;
     int32_t size;                       // uncompressed
@@ -52,7 +52,7 @@ typedef struct {
     char compression;
     char pad1, pad2;
     char name[16];              // must be null terminated
-} lumpinfo_t;
+};
 
 static void
 ExportWad(FILE *wadfile, mbsp_t *bsp)
