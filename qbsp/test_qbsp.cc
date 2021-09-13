@@ -230,7 +230,7 @@ static void checkCube(const brush_t *brush)
     
     checkForAllCubeNormals(brush);
     
-    EXPECT_EQ(CONTENTS_SOLID, brush->contents);
+    EXPECT_EQ(contentflags_t { CONTENTS_SOLID }, brush->contents);
 }
 
 TEST(qbsp, SplitBrush) {
