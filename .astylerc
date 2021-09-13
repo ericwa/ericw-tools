@@ -1,0 +1,35 @@
+# source tree
+recursive
+ignore-exclude-errors
+exclude=.git
+exclude=.vs
+exclude=3rdparty
+exclude=qbsp3
+exclude=out
+
+# braces and indent
+style=kr
+indent=spaces
+
+# indentation
+min-conditional-indent=0
+max-continuation-indent=120
+indent-switches
+indent-col1-comments
+
+# padding
+pad-oper
+pad-comma
+pad-header
+unpad-paren
+align-pointer=name
+align-reference=name
+
+# formatting
+remove-braces
+attach-return-type
+break-one-line-headers
+convert-tabs
+close-templates
+max-code-length=200
+break-after-logical

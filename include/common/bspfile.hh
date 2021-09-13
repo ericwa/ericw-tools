@@ -117,17 +117,17 @@ struct bspx_lump_t {
         uint32_t filelen;
 };
 
-typedef struct {
+struct lumpspec_t {
     const char *name;
     size_t size;
-} lumpspec_t;
+};
 
 extern const lumpspec_t lumpspec_bsp29[BSP_LUMPS];
 extern const lumpspec_t lumpspec_bsp2rmq[BSP_LUMPS];
 extern const lumpspec_t lumpspec_bsp2[BSP_LUMPS];
 extern const lumpspec_t lumpspec_q2bsp[Q2_HEADER_LUMPS];
 
-typedef struct {
+struct dmodelq1_t {
     float mins[3];
     float maxs[3];
     float origin[3];
@@ -135,9 +135,9 @@ typedef struct {
     int32_t visleafs;           /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
-} dmodelq1_t;
+};
 
-typedef struct {
+struct dmodelh2_t {
     float mins[3];
     float maxs[3];
     float origin[3];
@@ -145,9 +145,9 @@ typedef struct {
     int32_t visleafs;           /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
-} dmodelh2_t;
+};
 
-typedef struct {
+struct q2_dmodel_t {
     float mins[3];
     float maxs[3];
     float origin[3];         // for sounds or lights
@@ -155,15 +155,15 @@ typedef struct {
     int32_t firstface;
     int32_t numfaces;    // submodels just draw faces
                          // without walking the bsp tree
-} q2_dmodel_t;
+};
 
 // FIXME: remove
-typedef dmodelh2_t dmodel_t;
+using dmodel_t = dmodelh2_t;
 
-typedef struct {
+struct dmiptexlump_t {
     int32_t nummiptex;
     int32_t dataofs[4];         /* [nummiptex] */
-} dmiptexlump_t;
+};
 
 #define MIPLEVELS 4
 typedef struct miptex_s {
