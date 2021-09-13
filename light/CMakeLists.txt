@@ -136,7 +136,7 @@ add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
 add_test(testlight testlight)
 add_dependencies(check testlight)
 
-target_link_libraries (testlight PRIVATE ${CMAKE_THREAD_LIBS_INIT} gtest)
+target_link_libraries (testlight PRIVATE ${CMAKE_THREAD_LIBS_INIT} gtest fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)
