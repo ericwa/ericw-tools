@@ -115,7 +115,7 @@ TEST(qbsp, duplicatePlanes) {
     EXPECT_EQ(0, worldspawn.numbrushes);
     EXPECT_EQ(6, worldspawn.mapbrush(0).numfaces);
     
-    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), CONTENTS_SOLID, vec3_origin, rotation_t::none, 0);
+    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), { CONTENTS_SOLID }, vec3_origin, rotation_t::none, 0);
     ASSERT_NE(nullptr, brush);
     EXPECT_EQ(6, Brush_NumFaces(brush));
     FreeBrush(brush);
@@ -141,10 +141,10 @@ static brush_t *load128x128x32Brush()
     mapentity_t worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.nummapbrushes);
     
-    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), CONTENTS_SOLID, vec3_origin, rotation_t::none, 0);
+    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), { CONTENTS_SOLID}, vec3_origin, rotation_t::none, 0);
     Q_assert(nullptr != brush);
     
-    brush->contents = CONTENTS_SOLID;
+    brush->contents = { CONTENTS_SOLID };
     
     return brush;
 }
