@@ -1,0 +1,32 @@
+name: CMake
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Don't cancel the macOS build if the Linux build fails, etc.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-18.04, macos-10.15]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    - name: Linux Build
+      if: runner.os == 'Linux'
+      run: |
+          sudo apt install -y groff 
+          ./build-linux-64.sh
+
+    - name: macOS Build
+      if: runner.os == 'macOS'
+      run: |
+          ./build-osx.sh

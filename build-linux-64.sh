@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUILD_DIR=build
+BUILD_DIR=build-linux
 
 if [ -d "$BUILD_DIR" ]; then
   echo "$BUILD_DIR already exists, remove it first"
@@ -11,15 +11,20 @@ cmake --version
 
 mkdir "$BUILD_DIR"
 cd "$BUILD_DIR"
-wget https://github.com/embree/embree/releases/download/v2.17.7/embree-2.17.7.x86_64.linux.tar.gz -O embree.tgz
-wget https://github.com/intel/tbb/releases/download/2017_U7/tbb2017_20170604oss_lin.tgz -O tbb.tgz
+wget -q https://github.com/embree/embree/releases/download/v3.13.1/embree-3.13.1.x86_64.linux.tar.gz -O embree.tgz
+wget -q https://github.com/oneapi-src/oneTBB/releases/download/v2021.3.0/oneapi-tbb-2021.3.0-lin.tgz -O tbb.tgz
+
 tar xf embree.tgz
 tar xf tbb.tgz
-cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$(pwd)/embree-2.17.7.x86_64.linux" -DTBB_DIR="$(pwd)/tbb2017_20170604oss/cmake"
-make -j8 VERBOSE=1
-make -j8 VERBOSE=1 testlight
-make -j8 VERBOSE=1 testqbsp
-cpack
+
+EMBREE_CMAKE_DIR="$(pwd)/embree-3.13.1.x86_64.linux/lib/cmake/embree-3.13.1"
+TBB_CMAKE_DIR="$(pwd)/oneapi-tbb-2021.3.0/lib/cmake"
+
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
+make -j8 VERBOSE=1 || exit 1
+make -j8 VERBOSE=1 testlight || exit 1
+make -j8 VERBOSE=1 testqbsp || exit 1
+cpack || exit 1
 
 # run tests
 ./light/testlight || exit 1

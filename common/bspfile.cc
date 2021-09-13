@@ -22,6 +22,7 @@
 #include <common/bspfile.hh>
 
 #include <cstdint>
+#include <limits.h>
 
 /*                                                                                                           hexen2, quake2 */
 const bspversion_t bspver_generic   { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         false,  false };
