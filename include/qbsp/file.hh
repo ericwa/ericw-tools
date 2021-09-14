@@ -21,6 +21,4 @@
 
 #pragma once
 
-#include <stdbool.h>
-
 size_t LoadFile(const char *filename, void *bufptr, bool nofail);

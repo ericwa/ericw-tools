@@ -30,10 +30,6 @@
 #include <cstdlib>
 #include <limits>
 
-#ifdef _MSC_VER
-#include <malloc.h>
-#endif
-
 using namespace std;
 using namespace polylib;
 

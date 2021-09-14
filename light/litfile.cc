@@ -29,7 +29,7 @@ void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, i
     char litname[1024];
     litheader_t header;
 
-    q_snprintf(litname, sizeof(litname) - 4, "%s", filename);
+    snprintf(litname, sizeof(litname) - 4, "%s", filename);
     StripExtension(litname);
     DefaultExtension(litname, ".lit");
 
@@ -81,7 +81,7 @@ void WriteLuxFile(const mbsp_t *bsp, const char *filename, int version)
     char luxname[1024];
     litheader_t header;
 
-    q_snprintf(luxname, sizeof(luxname) - 4, "%s", filename);
+    snprintf(luxname, sizeof(luxname) - 4, "%s", filename);
     StripExtension(luxname);
     DefaultExtension(luxname, ".lux");
 

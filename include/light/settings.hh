@@ -177,7 +177,7 @@ public:
     virtual std::string stringValue() const
     {
         char setting[256];
-        q_snprintf(setting, sizeof(setting), "%g", _value);
+        snprintf(setting, sizeof(setting), "%g", _value);
         return setting;
     }
 

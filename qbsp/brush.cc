@@ -20,7 +20,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <string.h>
+#include <cstring>
 
 #include <qbsp/qbsp.hh>
 
@@ -345,7 +345,7 @@ void FixRotateOrigin(mapentity_t *entity)
         VectorCopy(vec3_origin, offset);
     }
 
-    q_snprintf(value, sizeof(value), "%d %d %d", (int)offset[0], (int)offset[1], (int)offset[2]);
+    snprintf(value, sizeof(value), "%d %d %d", (int)offset[0], (int)offset[1], (int)offset[2]);
     SetKeyValue(entity, "origin", value);
 }
 
@@ -1204,7 +1204,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
                 VectorScale(origin, 0.5, origin);
 
                 char value[1024];
-                q_snprintf(value, sizeof(value), "%.2f %.2f %.2f", origin[0], origin[1], origin[2]);
+                snprintf(value, sizeof(value), "%.2f %.2f %.2f", origin[0], origin[1], origin[2]);
                 SetKeyValue(dst, "origin", value);
 
                 VectorCopy(origin, rotate_offset);

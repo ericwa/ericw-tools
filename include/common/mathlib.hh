@@ -19,8 +19,8 @@
 
 #pragma once
 
-#include <float.h>
-#include <math.h>
+#include <cfloat>
+#include <cmath>
 #include <common/cmdlib.hh>
 #include <vector>
 #include <set>

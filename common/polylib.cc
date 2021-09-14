@@ -1,7 +1,7 @@
 /* common/polylib.c */
 
-#include <stddef.h>
-#include <float.h>
+#include <cstddef>
+#include <cfloat>
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>

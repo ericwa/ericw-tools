@@ -17,7 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <stdint.h>
+#include <cstdint>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -95,7 +95,7 @@ static void ExportWad(FILE *wadfile, mbsp_t *bsp)
         lump.disksize = lump.size;
         lump.compression = 0;
         lump.pad1 = lump.pad2 = 0;
-        q_snprintf(lump.name, sizeof(lump.name), "%s", miptex->name);
+        snprintf(lump.name, sizeof(lump.name), "%s", miptex->name);
 
         filepos += lump.disksize;
 

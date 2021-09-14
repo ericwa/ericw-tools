@@ -1,8 +1,8 @@
 // vis.c
 
-#include <limits.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <climits>
+#include <cstddef>
+#include <cstdint>
 
 #include <vis/leafbits.hh>
 #include <vis/vis.hh>

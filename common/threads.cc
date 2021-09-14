@@ -1,18 +1,13 @@
 /* common/threads.c */
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdlib>
+#include <thread>
+#include <mutex>
+#include <vector>
 
 #include <common/log.hh>
 #include <common/threads.hh>
-
-/*
- * FIXME - Temporary hack while trying to get qbsp to use the common
- *         thread/logging code.  Error() would normally be defined in
- *         either common/cmdlib.h or qbsp/qbsp.h.
- */
-[[noreturn]] void Error(const char *error, ...) __attribute__((format(printf, 1, 2), noreturn));
 
 /* Make the locks no-ops if we aren't running threads */
 static bool threads_active = false;
@@ -70,127 +65,54 @@ void InterruptThreadProgress__(void)
  *                              WIN32
  * ===================================================================
  */
+
 #ifdef USE_WIN32THREADS
-#define HAVE_THREADS
 
 #include <windows.h>
+#define HAVE_THREADS
 
-int numthreads = 1;
-CRITICAL_SECTION crit;
-
-void LowerProcessPriority(void)
+void LowerProcessPriority()
 {
     SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
 }
 
-int GetDefaultThreads(void)
-{
-    SYSTEM_INFO info;
+#elif USE_PTHREADS
 
-    GetSystemInfo(&info);
-
-    return info.dwNumberOfProcessors;
-}
-
-void ThreadLock(void)
-{
-    if (threads_active)
-        EnterCriticalSection(&crit);
-}
-
-void ThreadUnlock(void)
-{
-    if (threads_active)
-        LeaveCriticalSection(&crit);
-}
-
-/*
- * =============
- * RunThreadsOn
- * =============
- */
-void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
-{
-    uintptr_t i; /* avoid warning due to cast for the CreateThread API */
-    DWORD *threadid;
-    HANDLE *threadhandle;
-
-    dispatch = start;
-    workcount = workcnt;
-    oldpercent = -1;
-
-    threadid = static_cast<DWORD *>(malloc(sizeof(*threadid) * numthreads));
-    threadhandle = static_cast<HANDLE *>(malloc(sizeof(*threadhandle) * numthreads));
-
-    if (!threadid || !threadhandle)
-        Error("Failed to allocate memory for threads");
-
-    /* run threads in parallel */
-    InitializeCriticalSection(&crit);
-    threads_active = true;
-    for (i = 0; i < numthreads; i++) {
-        threadhandle[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, (LPVOID)arg, 0, &threadid[i]);
-    }
-
-    for (i = 0; i < numthreads; i++)
-        WaitForSingleObject(threadhandle[i], INFINITE);
-
-    threads_active = false;
-    oldpercent = -1;
-    DeleteCriticalSection(&crit);
-
-    logprint("\n");
-
-    free(threadhandle);
-    free(threadid);
-}
-
-#endif /* USE_WIN32THREADS */
-
-/*
- * ===================================================================
- *                               PTHREADS
- * ===================================================================
- */
-
-#ifdef USE_PTHREADS
 #define HAVE_THREADS
 
-#include <pthread.h>
-#include <unistd.h>
+/* not implemented for now */
+void LowerProcessPriority()
+{
+}
 
-int numthreads = 1;
-pthread_mutex_t *my_mutex;
+#else
 
 void LowerProcessPriority(void)
-{ /* not implemented for now */
+{
 }
 
-int GetDefaultThreads(void)
-{
-    int threads;
-
-#ifdef _SC_NPROCESSORS_ONLN
-    threads = sysconf(_SC_NPROCESSORS_ONLN);
-    if (threads < 1)
-        threads = 1;
-#else
-    threads = 4;
 #endif
 
-    return threads;
+#ifdef HAVE_THREADS
+
+int numthreads = 1;
+std::mutex crit;
+
+int GetDefaultThreads()
+{
+    return std::thread::hardware_concurrency();
 }
 
-void ThreadLock(void)
+void ThreadLock()
 {
     if (threads_active)
-        pthread_mutex_lock(my_mutex);
+        crit.lock();
 }
 
-void ThreadUnlock(void)
+void ThreadUnlock()
 {
     if (threads_active)
-        pthread_mutex_unlock(my_mutex);
+        crit.unlock();
 }
 
 /*
@@ -200,63 +122,26 @@ void ThreadUnlock(void)
  */
 void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 {
-    pthread_t *threads;
-    pthread_mutexattr_t mattrib;
-    pthread_attr_t attrib;
-    int status;
-    int i;
+    std::vector<std::thread> threadhandle;
 
     dispatch = start;
     workcount = workcnt;
     oldpercent = -1;
 
-    status = pthread_mutexattr_init(&mattrib);
-    if (status)
-        Error("pthread_mutexattr_init failed");
-
-    my_mutex = static_cast<pthread_mutex_t *>(malloc(sizeof(*my_mutex)));
-    if (!my_mutex)
-        Error("failed to allocate memory for thread mutex");
-    status = pthread_mutex_init(my_mutex, &mattrib);
-    if (status)
-        Error("pthread_mutex_init failed");
-
-    status = pthread_attr_init(&attrib);
-    if (status)
-        Error("pthread_attr_init failed");
-
-    threads = static_cast<pthread_t *>(malloc(sizeof(*threads) * numthreads));
-    if (!threads)
-        Error("failed to allocate memory for threads");
-
+    /* run threads in parallel */
     threads_active = true;
 
-    for (i = 0; i < numthreads; i++) {
-        status = pthread_create(&threads[i], &attrib, func, arg);
-        if (status)
-            Error("pthread_create failed");
-    }
+    for (int32_t i = 0; i < numthreads; i++)
+        threadhandle.push_back(std::thread(func, arg));
 
-    for (i = 0; i < numthreads; i++) {
-        status = pthread_join(threads[i], NULL);
-        if (status)
-            Error("pthread_join failed");
-    }
+    for (int32_t i = 0; i < numthreads; i++)
+        threadhandle[i].join();
 
     threads_active = false;
     oldpercent = -1;
 
-    status = pthread_mutex_destroy(my_mutex);
-    if (status)
-        Error("pthread_mutex_destroy failed");
-
-    free(threads);
-    free(my_mutex);
-
     logprint("\n");
 }
-
-#endif /* USE_PTHREADS */
 
 /*
  * =======================================================================
@@ -264,7 +149,7 @@ void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
  * =======================================================================
  */
 
-#ifndef HAVE_THREADS
+#else
 
 int numthreads = 1;
 
@@ -287,4 +172,4 @@ void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     logprint("\n");
 }
 
-#endif
+#endif /* HAVE_THREADS */

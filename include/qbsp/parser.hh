@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <stdbool.h>
-
 #define MAXTOKEN 1024
 
 enum parseflags

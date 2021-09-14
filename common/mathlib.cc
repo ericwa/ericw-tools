@@ -20,7 +20,7 @@
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/polylib.hh>
-#include <assert.h>
+#include <cassert>
 
 #include <tuple>
 #include <map>
@@ -76,7 +76,7 @@ std::string VecStr(const vec3_t vec)
 {
     char buf[128];
 
-    q_snprintf(buf, sizeof(buf), "%i %i %i", (int)vec[0], (int)vec[1], (int)vec[2]);
+    snprintf(buf, sizeof(buf), "%i %i %i", (int)vec[0], (int)vec[1], (int)vec[2]);
 
     return buf;
 }
@@ -93,7 +93,7 @@ std::string VecStrf(const vec3_t vec)
 {
     char buf[128];
 
-    q_snprintf(buf, sizeof(buf), "%.2f %.2f %.2f", vec[0], vec[1], vec[2]);
+    snprintf(buf, sizeof(buf), "%.2f %.2f %.2f", vec[0], vec[1], vec[2]);
 
     return buf;
 }

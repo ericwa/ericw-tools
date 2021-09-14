@@ -17,8 +17,8 @@
     See file, 'COPYING', for details.
 */
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 #ifdef LINUX
 #include <unistd.h>

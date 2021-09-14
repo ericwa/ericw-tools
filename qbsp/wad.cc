@@ -19,7 +19,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <string.h>
+#include <cstring>
 #include <string>
 
 #include <qbsp/qbsp.hh>

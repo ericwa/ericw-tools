@@ -19,8 +19,8 @@
     See file, 'COPYING', for details.
 */
 
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
+#include <cstdio>
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/file.hh>

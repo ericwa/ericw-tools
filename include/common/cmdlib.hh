@@ -20,14 +20,13 @@
 #pragma once
 
 #include <cassert>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <ctype.h>
-#include <time.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
+#include <cerrno>
+#include <cctype>
+#include <ctime>
+#include <cstdarg>
 #include <string>
 #include <common/log.hh>
 #include <common/qvec.hh> // FIXME: For qmax/qmin
@@ -120,15 +119,6 @@ void Q_CopyFile(const char *from, char *to);
 
 extern qboolean archive;
 extern char archivedir[1024];
-
-/* platform dependant (v)snprintf function names: */
-#if defined(_WIN32)
-#define q_vsnprintf _vsnprintf
-#define q_snprintf _snprintf
-#else
-#define q_vsnprintf vsnprintf
-#define q_snprintf snprintf
-#endif
 
 static inline void Q_assert_(bool success, const char *expr, const char *file, int line)
 {

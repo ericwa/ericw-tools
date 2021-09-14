@@ -32,10 +32,10 @@
 #ifdef LINUX
 #include <sys/time.h>
 #include <unistd.h>
-#include <string.h>
+#include <cstring>
 #endif
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <string>
 

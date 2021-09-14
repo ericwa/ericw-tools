@@ -20,7 +20,7 @@
 */
 // winding.c
 
-#include <stddef.h>
+#include <cstddef>
 
 #include <qbsp/qbsp.hh>
 

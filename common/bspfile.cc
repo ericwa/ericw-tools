@@ -402,9 +402,9 @@ static const char *BSPVersionString(const bspversion_t *version)
     static int index;
     char *buffer = buffers[1 & ++index];
     if (version->version != NO_VERSION) {
-        q_snprintf(buffer, sizeof(buffers[0]), "%d:%d", version->version, version->ident);
+        snprintf(buffer, sizeof(buffers[0]), "%d:%d", version->version, version->ident);
     } else {
-        q_snprintf(buffer, sizeof(buffers[0]), "%d", version->version);
+        snprintf(buffer, sizeof(buffers[0]), "%d", version->version);
     }
     return buffer;
 }

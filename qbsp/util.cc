@@ -20,9 +20,9 @@
 */
 
 #include <mutex>
-#include <stddef.h>
-#include <stdarg.h>
-#include <stdlib.h>
+#include <cstddef>
+#include <cstdarg>
+#include <cstdlib>
 
 #include <common/threads.hh>
 #include <common/log.hh>

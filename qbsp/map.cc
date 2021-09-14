@@ -20,16 +20,16 @@
     See file, 'COPYING', for details.
 */
 
+#include <cassert>
+#include <cctype>
+#include <cstring>
+
 #include <string>
 #include <sstream>
 #include <memory>
 #include <list>
 #include <utility>
-#include <cassert>
 #include <optional>
-
-#include <ctype.h>
-#include <string.h>
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/parser.hh>
@@ -165,7 +165,7 @@ static void AddAnimTex(const char *name)
      * Always add the lower numbered animation frames first, otherwise
      * many Quake engines will exit with an error loading the bsp.
      */
-    q_snprintf(framename, sizeof(framename), "%s", name);
+    snprintf(framename, sizeof(framename), "%s", name);
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
         for (j = 0; j < map.nummiptex(); j++) {
@@ -191,7 +191,7 @@ struct wal_t
 static std::optional<wal_t> LoadWal(const char *name)
 {
     static char buf[1024];
-    q_snprintf(buf, sizeof(buf), "%stextures/%s.wal", gamedir, name);
+    snprintf(buf, sizeof(buf), "%stextures/%s.wal", gamedir, name);
 
     FILE *fp = fopen(buf, "rb");
 

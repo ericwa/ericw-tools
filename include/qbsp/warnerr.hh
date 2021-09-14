@@ -20,43 +20,35 @@
 */
 // warnerr.h
 
-#ifdef __cplusplus
-extern "C"
+enum
 {
-#endif
+    warnNoWadKey, // 0
+    warnNoValidWads,
+    warnMultipleStarts,
+    warnBrushDuplicatePlane,
+    warnNoPlaneNormal,
+    warnNoPlayerStart,
+    warnNoPlayerDeathmatch,
+    warnNoPlayerCoop,
+    warnPointOffPlane,
+    warnNoBrushFaces,
+    warnMapLeak, // 10
+    warnBadPortalDirection,
+    warnPortalClippedAway,
+    warnWindingOutside,
+    warnLowWindingArea,
+    warnNotWad,
+    warnTextureNotFound,
+    warnInvalidOption,
+    warnNoLogFile,
+    warnNoFilling,
+    warnBadMapFaceCount, // 20
+    warnTooManyMergePoints,
+    warnDegenerateEdge,
+    warnNoRotateTarget,
+    warnDegenerateQuArKTX,
+    warnMixedFaceContents,
+    warnOriginBrushInWorld,
+    cWarnings
+};
 
-    enum
-    {
-        warnNoWadKey, // 0
-        warnNoValidWads,
-        warnMultipleStarts,
-        warnBrushDuplicatePlane,
-        warnNoPlaneNormal,
-        warnNoPlayerStart,
-        warnNoPlayerDeathmatch,
-        warnNoPlayerCoop,
-        warnPointOffPlane,
-        warnNoBrushFaces,
-        warnMapLeak, // 10
-        warnBadPortalDirection,
-        warnPortalClippedAway,
-        warnWindingOutside,
-        warnLowWindingArea,
-        warnNotWad,
-        warnTextureNotFound,
-        warnInvalidOption,
-        warnNoLogFile,
-        warnNoFilling,
-        warnBadMapFaceCount, // 20
-        warnTooManyMergePoints,
-        warnDegenerateEdge,
-        warnNoRotateTarget,
-        warnDegenerateQuArKTX,
-        warnMixedFaceContents,
-        warnOriginBrushInWorld,
-        cWarnings
-    };
-
-#ifdef __cplusplus
-}
-#endif

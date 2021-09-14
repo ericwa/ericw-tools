@@ -21,9 +21,8 @@
  * common/log.c
  */
 
-#include <stdbool.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <cstdarg>
+#include <cstdio>
 
 #include <common/log.hh>
 #include <common/threads.hh>
@@ -55,7 +54,7 @@ static void logvprint_locked__(const char *fmt, va_list args)
     char line[1024];
 
     va_copy(log_args, args);
-    q_vsnprintf(line, sizeof(line), fmt, args);
+    vsnprintf(line, sizeof(line), fmt, args);
     va_end(log_args);
 
     // print to log file

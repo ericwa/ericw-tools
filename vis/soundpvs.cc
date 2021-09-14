@@ -17,7 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <float.h>
+#include <cfloat>
 
 #include <vis/vis.hh>
 #include <common/bsputils.hh>

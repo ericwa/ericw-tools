@@ -19,7 +19,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <limits.h>
+#include <climits>
 
 #include <qbsp/qbsp.hh>
 

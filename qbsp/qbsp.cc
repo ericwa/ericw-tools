@@ -238,7 +238,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         if (entity == pWorldEnt() + 1)
             Message(msgProgress, "Internal Entities");
-        q_snprintf(mod, sizeof(mod), "*%d", entity->outputmodelnumber);
+        snprintf(mod, sizeof(mod), "*%d", entity->outputmodelnumber);
         if (options.fVerbose)
             PrintEntity(entity);
 
@@ -466,7 +466,7 @@ static void UpdateEntLump(void)
         if (IsWorldBrushEntity(entity))
             continue;
 
-        q_snprintf(modname, sizeof(modname), "*%d", modnum);
+        snprintf(modname, sizeof(modname), "*%d", modnum);
         SetKeyValue(entity, "model", modname);
         modnum++;
 
