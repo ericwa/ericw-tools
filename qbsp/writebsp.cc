@@ -27,16 +27,14 @@
 #include <algorithm>
 #include <cstdint>
 
-static void
-AssertVanillaContentType(const contentflags_t &flags)
+static void AssertVanillaContentType(const contentflags_t &flags)
 {
     if (!flags.is_valid(options.target_game, false)) {
         Error("Internal error: Tried to save invalid contents type %s\n", GetContentsName(flags));
     }
 }
 
-static contentflags_t
-RemapContentsForExport(const contentflags_t &content)
+static contentflags_t RemapContentsForExport(const contentflags_t &content)
 {
     if (content.extended & CFLAGS_DETAIL_FENCE) {
         /*
@@ -54,14 +52,13 @@ RemapContentsForExport(const contentflags_t &content)
 /**
  * Returns the output plane number
  */
-int
-ExportMapPlane(int planenum)
+int ExportMapPlane(int planenum)
 {
     qbsp_plane_t *plane = &map.planes.at(planenum);
 
     if (plane->outputplanenum != PLANENUM_LEAF)
         return plane->outputplanenum; // already output.
-    
+
     const int newIndex = static_cast<int>(map.exported_planes.size());
     map.exported_planes.push_back({});
 
@@ -71,38 +68,37 @@ ExportMapPlane(int planenum)
     dplane->normal[2] = plane->normal[2];
     dplane->dist = plane->dist;
     dplane->type = plane->type;
-    
+
     plane->outputplanenum = newIndex;
     return newIndex;
 }
 
-int
-ExportMapTexinfo(int texinfonum)
+int ExportMapTexinfo(int texinfonum)
 {
     mtexinfo_t *src = &map.mtexinfos.at(texinfonum);
     if (src->outputnum.has_value())
         return src->outputnum.value();
-    
+
     // this will be the index of the exported texinfo in the BSP lump
     const int i = static_cast<int>(map.exported_texinfos.size());
-    
+
     map.exported_texinfos.push_back({});
-    gtexinfo_t* dest = &map.exported_texinfos.back();
+    gtexinfo_t *dest = &map.exported_texinfos.back();
     memset(dest, 0, sizeof(dest));
 
     dest->flags = src->flags;
     dest->miptex = src->miptex;
-    for (int j=0; j<2; j++) {
-        for (int k=0; k<4; k++) {
+    for (int j = 0; j < 2; j++) {
+        for (int k = 0; k < 4; k++) {
             dest->vecs[j][k] = src->vecs[j][k];
         }
     }
 
     strcpy(dest->texture, map.texinfoTextureName(texinfonum).c_str());
-    //dest->flags = map.miptex[src->miptex].flags;
+    // dest->flags = map.miptex[src->miptex].flags;
     dest->value = map.miptex[src->miptex].value;
 
-    src->outputnum = i;    
+    src->outputnum = i;
     return i;
 }
 
@@ -113,8 +109,7 @@ ExportMapTexinfo(int texinfonum)
 ExportClipNodes
 ==================
 */
-static int
-ExportClipNodes(mapentity_t *entity, node_t *node)
+static int ExportClipNodes(mapentity_t *entity, node_t *node)
 {
     bsp2_dclipnode_t *clipnode;
     face_t *face, *next;
@@ -161,8 +156,7 @@ First time just store away data, second time fix up reference points to
 accomodate new data interleaved with old.
 ==================
 */
-void
-ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
+void ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 {
     auto *model = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
 
@@ -176,8 +170,7 @@ ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 ExportLeaf
 ==================
 */
-static void
-ExportLeaf(mapentity_t *entity, node_t *node)
+static void ExportLeaf(mapentity_t *entity, node_t *node)
 {
     map.exported_leafs.push_back({});
     mleaf_t *dleaf = &map.exported_leafs.back();
@@ -207,11 +200,10 @@ ExportLeaf(mapentity_t *entity, node_t *node)
         /* emit a marksurface */
         do {
             map.exported_marksurfaces.push_back(face->outputnumber);
-            face = face->original;      /* grab tjunction split faces */
+            face = face->original; /* grab tjunction split faces */
         } while (face);
     }
-    dleaf->nummarksurfaces =
-        static_cast<int>(map.exported_marksurfaces.size()) - dleaf->firstmarksurface;
+    dleaf->nummarksurfaces = static_cast<int>(map.exported_marksurfaces.size()) - dleaf->firstmarksurface;
 
     // FIXME-Q2: fill in other things
     dleaf->area = 1;
@@ -225,8 +217,7 @@ ExportLeaf(mapentity_t *entity, node_t *node)
 ExportDrawNodes
 ==================
 */
-static void
-ExportDrawNodes(mapentity_t *entity, node_t *node)
+static void ExportDrawNodes(mapentity_t *entity, node_t *node)
 {
     bsp2_dnode_t *dnode;
     int i;
@@ -275,7 +266,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
     // The most likely way it could fail is if both sides are the
     // shared CONTENTS_SOLID leaf (-1)
     Q_assert(!(dnode->children[0] == -1 && dnode->children[1] == -1));
-	Q_assert(dnode->children[0] != dnode->children[1]);
+    Q_assert(dnode->children[0] != dnode->children[1]);
 }
 
 /*
@@ -283,8 +274,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *node)
 ExportDrawNodes
 ==================
 */
-void
-ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
+void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 {
     int i;
     dmodelh2_t *dmodel;
@@ -319,8 +309,7 @@ ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 BeginBSPFile
 ==================
 */
-void
-BeginBSPFile(void)
+void BeginBSPFile(void)
 {
     // First edge must remain unused because 0 can't be negated
     map.exported_edges.push_back({});
@@ -336,12 +325,11 @@ BeginBSPFile(void)
  * Writes extended texinfo flags to a file so they can be read by the light tool.
  * Used for phong shading and other lighting settings on func_detail.
  */
-static void
-WriteExtendedTexinfoFlags(void)
+static void WriteExtendedTexinfoFlags(void)
 {
     bool needwrite = false;
     const int num_texinfo = map.numtexinfo();
-    
+
     for (int i = 0; i < num_texinfo; i++) {
         if (map.mtexinfos.at(i).flags.needs_write()) {
             // this texinfo uses some extended flags, write them to a file
@@ -352,13 +340,12 @@ WriteExtendedTexinfoFlags(void)
 
     if (!needwrite)
         return;
-    
+
     // sort by output texinfo number
     std::vector<mtexinfo_t> texinfos_sorted(map.mtexinfos);
-    std::sort(texinfos_sorted.begin(), texinfos_sorted.end(), [](const mtexinfo_t &a, const mtexinfo_t &b) {
-        return a.outputnum < b.outputnum;
-    });
-    
+    std::sort(texinfos_sorted.begin(), texinfos_sorted.end(),
+        [](const mtexinfo_t &a, const mtexinfo_t &b) { return a.outputnum < b.outputnum; });
+
     FILE *texinfofile;
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".texinfo");
@@ -371,39 +358,37 @@ WriteExtendedTexinfoFlags(void)
     header.surfflags_size = sizeof(surfflags_t);
 
     fwrite(&header, 1, sizeof(header), texinfofile);
-    
+
     int count = 0;
     for (const auto &tx : texinfos_sorted) {
         if (!tx.outputnum.has_value())
             continue;
-        
+
         Q_assert(count == tx.outputnum.value()); // check we are outputting them in the proper sequence
-      
+
         fwrite(&tx.flags, 1, sizeof(tx.flags), texinfofile);
         count++;
     }
     Q_assert(count == static_cast<int>(map.exported_texinfos.size()));
-    
+
     fclose(texinfofile);
 }
 
-template <class C>
-static void
-CopyVector(const std::vector<C>& vec, int* elementCountOut, C** arrayCopyOut)
+template<class C>
+static void CopyVector(const std::vector<C> &vec, int *elementCountOut, C **arrayCopyOut)
 {
     const size_t numBytes = sizeof(C) * vec.size();
-    void* data = (void*)malloc(numBytes);
+    void *data = (void *)malloc(numBytes);
     memcpy(data, vec.data(), numBytes);
 
     *elementCountOut = vec.size();
-    *arrayCopyOut = (C*)data;
+    *arrayCopyOut = (C *)data;
 }
 
-static void
-CopyString(const std::string& string, bool addNullTermination, int* elementCountOut, void** arrayCopyOut)
+static void CopyString(const std::string &string, bool addNullTermination, int *elementCountOut, void **arrayCopyOut)
 {
     const size_t numBytes = addNullTermination ? string.size() + 1 : string.size();
-    void* data = malloc(numBytes);
+    void *data = malloc(numBytes);
     memcpy(data, string.data(), numBytes); // std::string::data() has null termination, so it's safe to copy it
 
     *elementCountOut = numBytes;
@@ -415,11 +400,10 @@ CopyString(const std::string& string, bool addNullTermination, int* elementCount
 WriteBSPFile
 =============
 */
-static void
-WriteBSPFile()
+static void WriteBSPFile()
 {
     bspdata_t bspdata{};
-    
+
     bspdata.version = &bspver_generic;
 
     CopyVector(map.exported_planes, &bspdata.data.mbsp.numplanes, &bspdata.data.mbsp.dplanes);
@@ -437,8 +421,8 @@ WriteBSPFile()
     CopyVector(map.exported_brushsides, &bspdata.data.mbsp.numbrushsides, &bspdata.data.mbsp.dbrushsides);
     CopyVector(map.exported_brushes, &bspdata.data.mbsp.numbrushes, &bspdata.data.mbsp.dbrushes);
 
-    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
-    CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void**)&bspdata.data.mbsp.dtexdata);
+    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void **)&bspdata.data.mbsp.dentdata);
+    CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void **)&bspdata.data.mbsp.dtexdata);
 
     if (map.needslmshifts) {
         BSPX_AddLump(&bspdata, "LMSHIFT", map.exported_lmshifts.data(), map.exported_lmshifts.size());
@@ -449,13 +433,13 @@ WriteBSPFile()
 
     // FIXME: temp
     bspdata.data.mbsp.numareaportals = 1;
-    bspdata.data.mbsp.dareaportals = (dareaportal_t *) calloc(bspdata.data.mbsp.numareaportals, sizeof(dareaportal_t));
+    bspdata.data.mbsp.dareaportals = (dareaportal_t *)calloc(bspdata.data.mbsp.numareaportals, sizeof(dareaportal_t));
 
     bspdata.data.mbsp.numareas = 2;
-    bspdata.data.mbsp.dareas = (darea_t *) calloc(bspdata.data.mbsp.numareas, sizeof(darea_t));
+    bspdata.data.mbsp.dareas = (darea_t *)calloc(bspdata.data.mbsp.numareas, sizeof(darea_t));
     bspdata.data.mbsp.dareas[1].firstareaportal = 1;
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
-        const bspversion_t* highLimitsFormat = nullptr;
+        const bspversion_t *highLimitsFormat = nullptr;
 
         if (options.target_version == &bspver_q1) {
             highLimitsFormat = &bspver_bsp2;
@@ -467,7 +451,8 @@ WriteBSPFile()
             Error("No high limits version of %s available", options.target_version->name);
         }
 
-        logprint("NOTE: limits exceeded for %s - switching to %s\n", options.target_version->name, highLimitsFormat->name);
+        logprint(
+            "NOTE: limits exceeded for %s - switching to %s\n", options.target_version->name, highLimitsFormat->name);
 
         Q_assert(ConvertBSPFormat(&bspdata, highLimitsFormat));
     }
@@ -486,8 +471,7 @@ WriteBSPFile()
 FinishBSPFile
 ==================
 */
-void
-FinishBSPFile(void)
+void FinishBSPFile(void)
 {
     options.fVerbose = true;
     Message(msgProgress, "WriteBSPFile");
@@ -503,8 +487,7 @@ FinishBSPFile(void)
 UpdateBSPFileEntitiesLump
 ==================
 */
-void
-UpdateBSPFileEntitiesLump()
+void UpdateBSPFileEntitiesLump()
 {
     bspdata_t bspdata;
     StripExtension(options.szBSPName);
@@ -515,7 +498,7 @@ UpdateBSPFileEntitiesLump()
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     // replace the existing entities lump with map.exported_entities
-    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void**)&bspdata.data.mbsp.dentdata);
+    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void **)&bspdata.data.mbsp.dentdata);
 
     // write the .bsp back to disk
     ConvertBSPFormat(&bspdata, bspdata.loadversion);

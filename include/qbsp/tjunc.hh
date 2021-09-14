@@ -19,19 +19,18 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_TJUNC_HH
-#define QBSP_TJUNC_HH
+#pragma once
 
-typedef struct wvert_s {
-    vec_t t;                    /* t-value for parametric equation of edge */
-    struct wvert_s *prev, *next; /* t-ordered list of vertices on same edge */
-} wvert_t;
+struct wvert_t
+{
+    vec_t t; /* t-value for parametric equation of edge */
+    wvert_t *prev, *next; /* t-ordered list of vertices on same edge */
+};
 
-typedef struct wedge_s {
-    struct wedge_s *next;       /* pointer for hash bucket chain */
-    vec3_t dir;                 /* direction vector for the edge */
-    vec3_t origin;              /* origin (t = 0) in parametric form */
-    wvert_t head;               /* linked list of verticies on this edge */
-} wedge_t;
-
-#endif
+struct wedge_t
+{
+    wedge_t *next; /* pointer for hash bucket chain */
+    vec3_t dir; /* direction vector for the edge */
+    vec3_t origin; /* origin (t = 0) in parametric form */
+    wvert_t head; /* linked list of verticies on this edge */
+};

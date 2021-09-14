@@ -31,7 +31,8 @@
 #define MAX_HULL_POINTS 512
 #define MAX_HULL_EDGES 1024
 
-typedef struct hullbrush_s {
+struct hullbrush_t
+{
     const mapbrush_t *srcbrush;
     contentflags_t contents;
     int numfaces;
@@ -46,27 +47,26 @@ typedef struct hullbrush_s {
     int edges[MAX_HULL_EDGES][2];
 
     int linenum;
-} hullbrush_t;
+};
 
 /*
 =================
 Face_Plane
 =================
 */
-plane_t
-Face_Plane(const face_t *face)
+plane_t Face_Plane(const face_t *face)
 {
     const qbsp_plane_t *plane = &map.planes.at(face->planenum);
     plane_t result;
-    
+
     result.dist = plane->dist;
     VectorCopy(plane->normal, result.normal);
-    
+
     if (face->planeside) {
         VectorScale(result.normal, -1.0, result.normal);
         result.dist = -result.dist;
     }
-    
+
     return result;
 }
 
@@ -77,8 +77,7 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-void
-CheckFace(face_t *face, const mapface_t *sourceface)
+void CheckFace(face_t *face, const mapface_t *sourceface)
 {
     const qbsp_plane_t *plane = &map.planes[face->planenum];
     const vec_t *p1, *p2;
@@ -89,11 +88,11 @@ CheckFace(face_t *face, const mapface_t *sourceface)
     if (face->w.numpoints < 3) {
         if (face->w.numpoints == 2) {
             Error("%s: line %d: too few points (2): (%f %f %f) (%f %f %f)\n", __func__, sourceface->linenum,
-                  face->w.points[0][0], face->w.points[0][1], face->w.points[0][2],
-                  face->w.points[1][0], face->w.points[1][1], face->w.points[1][2]);
+                face->w.points[0][0], face->w.points[0][1], face->w.points[0][2], face->w.points[1][0],
+                face->w.points[1][1], face->w.points[1][2]);
         } else if (face->w.numpoints == 1) {
-            Error("%s: line %d: too few points (1): (%f %f %f)\n", __func__, sourceface->linenum,
-                  face->w.points[0][0], face->w.points[0][1], face->w.points[0][2]);
+            Error("%s: line %d: too few points (1): (%f %f %f)\n", __func__, sourceface->linenum, face->w.points[0][0],
+                face->w.points[0][1], face->w.points[0][2]);
         } else {
             Error("%s: line %d: too few points (%d)", __func__, sourceface->linenum, face->w.numpoints);
         }
@@ -139,12 +138,12 @@ CheckFace(face_t *face, const mapface_t *sourceface)
                 continue;
             dist = DotProduct(face->w.points[j], edgenormal);
             if (dist > edgedist)
-                Error("%s: line %d: Found a non-convex face (error size %f, point: %f %f %f)\n",
-                      __func__, sourceface->linenum, dist - edgedist, face->w.points[j][0], face->w.points[j][1], face->w.points[j][2]);
+                Error("%s: line %d: Found a non-convex face (error size %f, point: %f %f %f)\n", __func__,
+                    sourceface->linenum, dist - edgedist, face->w.points[j][0], face->w.points[j][1],
+                    face->w.points[j][2]);
         }
     }
 }
-
 
 //===========================================================================
 
@@ -153,8 +152,7 @@ CheckFace(face_t *face, const mapface_t *sourceface)
 AddToBounds
 =================
 */
-static void
-AddToBounds(mapentity_t *entity, const vec3_t point)
+static void AddToBounds(mapentity_t *entity, const vec3_t point)
 {
     int i;
 
@@ -168,8 +166,7 @@ AddToBounds(mapentity_t *entity, const vec3_t point)
 
 //===========================================================================
 
-static int
-NormalizePlane(qbsp_plane_t *p, bool flip = true)
+static int NormalizePlane(qbsp_plane_t *p, bool flip = true)
 {
     int i;
     vec_t ax, ay, az;
@@ -183,7 +180,7 @@ NormalizePlane(qbsp_plane_t *p, bool flip = true)
         }
         if (p->normal[i] == -1.0) {
             if (flip) {
-            p->normal[i] = 1.0;
+                p->normal[i] = 1.0;
                 p->dist = -p->dist;
             }
             p->normal[(i + 1) % 3] = 0;
@@ -212,18 +209,14 @@ NormalizePlane(qbsp_plane_t *p, bool flip = true)
     return 0; /* no flip */
 }
 
-
-bool
-PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
+bool PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 {
     return (fabs(p1->normal[0] - p2->normal[0]) < NORMAL_EPSILON &&
             fabs(p1->normal[1] - p2->normal[1]) < NORMAL_EPSILON &&
-            fabs(p1->normal[2] - p2->normal[2]) < NORMAL_EPSILON &&
-            fabs(p1->dist - p2->dist) < DIST_EPSILON);
+            fabs(p1->normal[2] - p2->normal[2]) < NORMAL_EPSILON && fabs(p1->dist - p2->dist) < DIST_EPSILON);
 }
 
-bool
-PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
+bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 {
     qbsp_plane_t temp = {0};
     VectorScale(p1->normal, -1.0, temp.normal);
@@ -233,14 +226,9 @@ PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 
 /* Plane Hashing */
 
-static inline int
-plane_hash_fn(const qbsp_plane_t *p)
-{
-    return Q_rint(fabs(p->dist));
-}
+static inline int plane_hash_fn(const qbsp_plane_t *p) { return Q_rint(fabs(p->dist)); }
 
-static void
-PlaneHash_Add(const qbsp_plane_t *p, int index)
+static void PlaneHash_Add(const qbsp_plane_t *p, int index)
 {
     const int hash = plane_hash_fn(p);
     map.planehash[hash].push_back(index);
@@ -250,8 +238,7 @@ PlaneHash_Add(const qbsp_plane_t *p, int index)
  * NewPlane
  * - Returns a global plane number and the side that will be the front
  */
-static int
-NewPlane(const vec3_t normal, const vec_t dist, int *side)
+static int NewPlane(const vec3_t normal, const vec_t dist, int *side)
 {
     vec_t len;
 
@@ -263,13 +250,13 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
     VectorCopy(normal, plane.normal);
     plane.dist = dist;
     plane.outputplanenum = PLANENUM_LEAF;
-    
+
     int32_t out_side = NormalizePlane(&plane, side != nullptr);
 
     if (side) {
         *side = out_side;
     }
-    
+
     int index = map.planes.size();
     map.planes.push_back(plane);
     PlaneHash_Add(&plane, index);
@@ -281,18 +268,17 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
  * - Returns a global plane number and the side that will be the front
  * - if `side` is null, only an exact match will be fetched.
  */
-int
-FindPlane(const vec3_t normal, const vec_t dist, int *side)
+int FindPlane(const vec3_t normal, const vec_t dist, int *side)
 {
     qbsp_plane_t plane = {0};
     VectorCopy(normal, plane.normal);
     plane.dist = dist;
-    
+
     for (int i : map.planehash[plane_hash_fn(&plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
         if (PlaneEqual(&p, &plane)) {
             if (side) {
-            *side = SIDE_FRONT;
+                *side = SIDE_FRONT;
             }
             return i;
         } else if (side && PlaneInvEqual(&p, &plane)) {
@@ -302,7 +288,6 @@ FindPlane(const vec3_t normal, const vec_t dist, int *side)
     }
     return NewPlane(plane.normal, plane.dist, side);
 }
-
 
 /*
 =============================================================================
@@ -317,8 +302,7 @@ FindPlane(const vec3_t normal, const vec_t dist, int *side)
 FindTargetEntity
 =================
 */
-static const mapentity_t *
-FindTargetEntity(const char *target)
+static const mapentity_t *FindTargetEntity(const char *target)
 {
     int i;
     const char *name;
@@ -334,14 +318,12 @@ FindTargetEntity(const char *target)
     return NULL;
 }
 
-
 /*
 =================
 FixRotateOrigin
 =================
 */
-void
-FixRotateOrigin(mapentity_t *entity)
+void FixRotateOrigin(mapentity_t *entity)
 {
     const mapentity_t *target = NULL;
     const char *search;
@@ -360,20 +342,20 @@ FixRotateOrigin(mapentity_t *entity)
         VectorCopy(vec3_origin, offset);
     }
 
-    q_snprintf(value, sizeof(value), "%d %d %d", (int)offset[0],
-             (int)offset[1], (int)offset[2]);
+    q_snprintf(value, sizeof(value), "%d %d %d", (int)offset[0], (int)offset[1], (int)offset[2]);
     SetKeyValue(entity, "origin", value);
 }
 
-static bool
-DiscardHintSkipFace_Q1(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo) {
+static bool DiscardHintSkipFace_Q1(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo)
+{
     const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
 
-    return Q_strcasecmp(texname, "hint"); // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
+    return Q_strcasecmp(
+        texname, "hint"); // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
 }
 
-static bool
-DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo) {
+static bool DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo)
+{
     return texinfo.flags.native & Q2_SURF_SKIP; // skip brushes in a hint brush are treated as "hintskip", and discarded
 }
 
@@ -382,9 +364,8 @@ DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbrush, const mt
 CreateBrushFaces
 =================
 */
-static face_t *
-CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
-                 const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
+static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const vec3_t rotate_offset,
+    const rotation_t rottype, const int hullnum)
 {
     int i, j, k;
     vec_t r;
@@ -403,7 +384,8 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         hullbrush->maxs[i] = -VECT_MAX;
     }
 
-    auto DiscardHintSkipFace = (options.target_game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
+    auto DiscardHintSkipFace =
+        (options.target_game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
@@ -427,15 +409,14 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
             w = ClipWinding(w, &plane, false);
         }
         if (!w)
-            continue;           // overconstrained plane
+            continue; // overconstrained plane
 
         // this face is a keeper
         f = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
         f->planenum = PLANENUM_LEAF;
         f->w.numpoints = w->numpoints;
         if (f->w.numpoints > MAXEDGES)
-            Error("face->numpoints > MAXEDGES (%d), source face on line %d",
-                  MAXEDGES, mapface->linenum);
+            Error("face->numpoints > MAXEDGES (%d), source face on line %d", MAXEDGES, mapface->linenum);
 
         for (j = 0; j < w->numpoints; j++) {
             for (k = 0; k < 3; k++) {
@@ -465,14 +446,14 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
             vec3_t vecs[2];
             int k, l;
 
-            for (k=0; k<2; k++) {
-                for (l=0; l<3; l++) {
+            for (k = 0; k < 2; k++) {
+                for (l = 0; l < 3; l++) {
                     vecs[k][l] = texinfo.vecs[k][l];
                 }
             }
 
-            texInfoNew.vecs[0][3] += DotProduct( rotate_offset, vecs[0] );
-            texInfoNew.vecs[1][3] += DotProduct( rotate_offset, vecs[1] );
+            texInfoNew.vecs[0][3] += DotProduct(rotate_offset, vecs[0]);
+            texInfoNew.vecs[1][3] += DotProduct(rotate_offset, vecs[1]);
 
             mapface->texinfo = FindTexinfo(texInfoNew);
         }
@@ -497,18 +478,17 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
 
     // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
     // the actual non-hacked bbox (it doesn't write axial planes).
-    
+
     // Hexen2 also doesn't want the bbox expansion, it's handled in engine (see: SV_LinkEdict)
 
     // Only do this for hipnotic rotation. For origin brushes in Quake, it breaks some of their
     // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
     // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
     // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
-    const bool shouldExpand = 
-           (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0)
-        && rottype == rotation_t::hipnotic
-        && (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-        && options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
+    const bool shouldExpand = (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0) &&
+                              rottype == rotation_t::hipnotic &&
+                              (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
+                              && options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t delta;
@@ -526,14 +506,12 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
     return facelist;
 }
 
-
 /*
 =================
 FreeBrushFaces
 =================
 */
-static void
-FreeBrushFaces(face_t *facelist)
+static void FreeBrushFaces(face_t *facelist)
 {
     face_t *face, *next;
 
@@ -543,14 +521,12 @@ FreeBrushFaces(face_t *facelist)
     }
 }
 
-
 /*
 =====================
 FreeBrushes
 =====================
 */
-void
-FreeBrushes(mapentity_t *ent)
+void FreeBrushes(mapentity_t *ent)
 {
     brush_t *brush, *next;
 
@@ -566,8 +542,7 @@ FreeBrushes(mapentity_t *ent)
 FreeBrush
 =====================
 */
-void
-FreeBrush(brush_t *brush)
+void FreeBrush(brush_t *brush)
 {
     FreeBrushFaces(brush->faces);
     free(brush);
@@ -587,8 +562,7 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 AddBrushPlane
 =============
 */
-static void
-AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
+static void AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
 {
     int i;
     mapface_t *mapface;
@@ -605,14 +579,13 @@ AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
             return;
     }
     if (hullbrush->numfaces == MAX_FACES)
-        Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
-              MAX_FACES, hullbrush->srcbrush->face(0).linenum);
+        Error(
+            "brush->faces >= MAX_FACES (%d), source brush on line %d", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
 
     mapface->plane = *plane;
     mapface->texinfo = 0;
     hullbrush->numfaces++;
 }
-
 
 /*
 ============
@@ -622,8 +595,7 @@ Adds the given plane to the brush description if all of the original brush
 vertexes can be put on the front side
 =============
 */
-static void
-TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
+static void TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
 {
     int i, c;
     vec_t d;
@@ -678,8 +650,7 @@ AddHullPoint
 Doesn't add if duplicated
 =============
 */
-static int
-AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
+static int AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
 {
     int i;
     vec_t *c;
@@ -692,7 +663,7 @@ AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
     if (hullbrush->numpoints == MAX_HULL_POINTS)
         Error("hullbrush->numpoints == MAX_HULL_POINTS (%d), "
               "source brush on line %d",
-              MAX_HULL_POINTS, hullbrush->srcbrush->face(0).linenum);
+            MAX_HULL_POINTS, hullbrush->srcbrush->face(0).linenum);
 
     VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
 
@@ -712,7 +683,6 @@ AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
     return i;
 }
 
-
 /*
 ============
 AddHullEdge
@@ -720,8 +690,7 @@ AddHullEdge
 Creates all of the hull planes around the given edge, if not done allready
 =============
 */
-static void
-AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
+static void AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
 {
     int pt1, pt2;
     int i;
@@ -734,14 +703,14 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     pt2 = AddHullPoint(hullbrush, p2, hull_size);
 
     for (i = 0; i < hullbrush->numedges; i++)
-        if ((hullbrush->edges[i][0] == pt1 && hullbrush->edges[i][1] == pt2)
-            || (hullbrush->edges[i][0] == pt2 && hullbrush->edges[i][1] == pt1))
+        if ((hullbrush->edges[i][0] == pt1 && hullbrush->edges[i][1] == pt2) ||
+            (hullbrush->edges[i][0] == pt2 && hullbrush->edges[i][1] == pt1))
             return;
 
     if (hullbrush->numedges == MAX_HULL_EDGES)
         Error("hullbrush->numedges == MAX_HULL_EDGES (%d), "
               "source brush on line %d",
-              MAX_HULL_EDGES, hullbrush->srcbrush->face(0).linenum);
+            MAX_HULL_EDGES, hullbrush->srcbrush->face(0).linenum);
 
     hullbrush->edges[i][0] = pt1;
     hullbrush->edges[i][1] = pt2;
@@ -777,14 +746,12 @@ AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
     }
 }
 
-
 /*
 ============
 ExpandBrush
 =============
 */
-static void
-ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
+static void ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
 {
     int i, x, s;
     vec3_t corner;
@@ -834,19 +801,17 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
     // add all of the edge bevels
     for (f = facelist; f; f = f->next)
         for (i = 0; i < f->w.numpoints; i++)
-            AddHullEdge(hullbrush, f->w.points[i],
-                        f->w.points[(i + 1) % f->w.numpoints], hull_size);
+            AddHullEdge(hullbrush, f->w.points[i], f->w.points[(i + 1) % f->w.numpoints], hull_size);
 }
 
 //============================================================================
 
 static const int DetailFlag = (1 << 27);
 
-static bool
-Brush_IsDetail(const mapbrush_t *mapbrush)
+static bool Brush_IsDetail(const mapbrush_t *mapbrush)
 {
     const mapface_t &mapface = mapbrush->face(0);
-    
+
     if ((mapface.contents & DetailFlag) == DetailFlag) {
         return true;
     }
@@ -856,7 +821,8 @@ Brush_IsDetail(const mapbrush_t *mapbrush)
 // adjust the given content flags from the texture name input.
 // this is where special names are transformed into game-specific
 // contents.
-static bool AdjustContentsFromName(const char *texname, contentflags_t &flags) {
+static bool AdjustContentsFromName(const char *texname, contentflags_t &flags)
+{
     if (!Q_strcasecmp(texname, "origin"))
         flags = flags.merge(options.target_game->create_empty_contents(CFLAGS_ORIGIN));
     else if (!Q_strcasecmp(texname, "hint"))
@@ -869,8 +835,7 @@ static bool AdjustContentsFromName(const char *texname, contentflags_t &flags) {
         else if (!Q_strncasecmp(texname + 1, "slime", 5))
             flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_SLIME));
         flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_WATER));
-    }
-    else if (!Q_strncasecmp(texname, "sky", 3))
+    } else if (!Q_strncasecmp(texname, "sky", 3))
         flags = flags.merge(options.target_game->create_sky_contents());
     else
         return false;
@@ -878,15 +843,13 @@ static bool AdjustContentsFromName(const char *texname, contentflags_t &flags) {
     return true;
 }
 
-static contentflags_t
-Brush_GetContents_Q1(const mapbrush_t *mapbrush, const contentflags_t &base_contents)
+static contentflags_t Brush_GetContents_Q1(const mapbrush_t *mapbrush, const contentflags_t &base_contents)
 {
     const char *texname;
     contentflags_t contents = base_contents;
 
-    //check for strong content indicators
-    for (int i = 0; i < mapbrush->numfaces; i++)
-    {
+    // check for strong content indicators
+    for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
         texname = map.miptexTextureName(texinfo.miptex).c_str();
@@ -896,26 +859,24 @@ Brush_GetContents_Q1(const mapbrush_t *mapbrush, const contentflags_t &base_cont
         }
     }
 
-    //and anything else is assumed to be a regular solid.
+    // and anything else is assumed to be a regular solid.
     return options.target_game->create_solid_contents();
 }
 
-static contentflags_t
-Brush_GetContents_Q2 (const mapbrush_t *mapbrush, const contentflags_t &base_contents)
+static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush, const contentflags_t &base_contents)
 {
     bool is_trans = false;
     bool is_hint = false;
-    contentflags_t contents = base_contents.merge({ mapbrush->face(0).contents });
+    contentflags_t contents = base_contents.merge({mapbrush->face(0).contents});
 
-    for (int i = 0; i < mapbrush->numfaces; i++)
-    {
+    for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-        
+
         if (texinfo.flags.extended & TEX_EXFLAG_SKIP) {
             continue;
         }
-        
+
         if (!is_trans && (texinfo.flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
             is_trans = true;
         }
@@ -925,20 +886,21 @@ Brush_GetContents_Q2 (const mapbrush_t *mapbrush, const contentflags_t &base_con
         }
 
         if (mapface.contents != contents.native) {
-            logprint("mixed face contents (%s != %s at line %i)\n", contentflags_t { mapface.contents }.to_string(options.target_game).c_str(),
-                     contents.to_string(options.target_game).c_str(), mapface.linenum); // TODO: need entity # and brush #
-			break;
+            logprint("mixed face contents (%s != %s at line %i)\n",
+                contentflags_t{mapface.contents}.to_string(options.target_game).c_str(),
+                contents.to_string(options.target_game).c_str(), mapface.linenum); // TODO: need entity # and brush #
+            break;
         }
     }
 
-	// if any side is translucent, mark the contents
-	// and change solid to window
-	if (is_trans) {
+    // if any side is translucent, mark the contents
+    // and change solid to window
+    if (is_trans) {
         contents.native |= Q2_CONTENTS_TRANSLUCENT;
-		if (contents.native & Q2_CONTENTS_SOLID) {
+        if (contents.native & Q2_CONTENTS_SOLID) {
             contents.native = (contents.native & ~Q2_CONTENTS_SOLID) | Q2_CONTENTS_WINDOW;
-	}
-	}
+        }
+    }
 
     // add extended flags that we may need
     if (contents.native & Q2_CONTENTS_DETAIL) {
@@ -972,9 +934,8 @@ Brush_GetContents_Q2 (const mapbrush_t *mapbrush, const contentflags_t &base_con
 
     Q_assert(contents.is_valid(options.target_game, false));
 
-	return contents;
+    return contents;
 }
-
 
 /*
 ===============
@@ -983,7 +944,8 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
+brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+    const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -991,15 +953,14 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 
     // create the faces
 
-    hullbrush.linenum =  mapbrush->face(0).linenum;
+    hullbrush.linenum = mapbrush->face(0).linenum;
     if (mapbrush->numfaces > MAX_FACES)
-        Error("brush->faces >= MAX_FACES (%d), source brush on line %d",
-              MAX_FACES, hullbrush.linenum);
-    
+        Error("brush->faces >= MAX_FACES (%d), source brush on line %d", MAX_FACES, hullbrush.linenum);
+
     hullbrush.contents = contents;
     hullbrush.srcbrush = mapbrush;
     hullbrush.numfaces = mapbrush->numfaces;
-    for (int i=0; i<mapbrush->numfaces; i++)
+    for (int i = 0; i < mapbrush->numfaces; i++)
         hullbrush.faces[i] = mapbrush->face(i);
 
     if (hullnum <= 0) {
@@ -1010,55 +971,47 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
         // it will be applied below
         facelist = CreateBrushFaces(src, &hullbrush, vec3_origin, rottype, hullnum);
     }
-    
+
     if (!facelist) {
         Message(msgWarning, warnNoBrushFaces);
         logprint("^ brush at line %d of .map file\n", hullbrush.linenum);
         return NULL;
     }
 
-    if (options.target_game->id == GAME_HALF_LIFE)
-    {
-         if (hullnum == 1) {
-            vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        }
-        else    if (hullnum == 2) {
-            vec3_t size[2] = { {-32, -32, -32}, {32, 32, 32} };
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype,  hullnum);
-        }
-        else    if (hullnum == 3) {
-            vec3_t size[2] = { {-16, -16, -18}, {16, 16, 18} };
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        }
-    }
-    else if (options.target_game->id == GAME_HEXEN_II)
-    {
+    if (options.target_game->id == GAME_HALF_LIFE) {
         if (hullnum == 1) {
-            vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
+            vec3_t size[2] = {{-16, -16, -36}, {16, 16, 36}};
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
+        } else if (hullnum == 2) {
+            vec3_t size[2] = {{-32, -32, -32}, {32, 32, 32}};
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
+        } else if (hullnum == 3) {
+            vec3_t size[2] = {{-16, -16, -18}, {16, 16, 18}};
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
         }
-        else    if (hullnum == 2) {
-            vec3_t size[2] = { {-24, -24, -20}, {24, 24, 20} };
+    } else if (options.target_game->id == GAME_HEXEN_II) {
+        if (hullnum == 1) {
+            vec3_t size[2] = {{-16, -16, -32}, {16, 16, 24}};
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        }
-        else    if (hullnum == 3) {
-            vec3_t size[2] = { {-16, -16, -12}, {16, 16, 16} };
+        } else if (hullnum == 2) {
+            vec3_t size[2] = {{-24, -24, -20}, {24, 24, 20}};
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        }
-        else    if (hullnum == 4) {
+        } else if (hullnum == 3) {
+            vec3_t size[2] = {{-16, -16, -12}, {16, 16, 16}};
+            ExpandBrush(&hullbrush, size, facelist);
+            FreeBrushFaces(facelist);
+            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
+        } else if (hullnum == 4) {
 #if 0
             if (options.hexen2 == 1) { /*original game*/
                 vec3_t size[2] = { {-40, -40, -42}, {40, 40, 42} };
@@ -1067,30 +1020,27 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
                 facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype,  hullnum);
             } else
 #endif
-            {   /*mission pack*/
-                    vec3_t size[2] = { {-8, -8, -8}, {8, 8, 8} };
-                    ExpandBrush(&hullbrush, size, facelist);
-                    FreeBrushFaces(facelist);
-                    facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
+            { /*mission pack*/
+                vec3_t size[2] = {{-8, -8, -8}, {8, 8, 8}};
+                ExpandBrush(&hullbrush, size, facelist);
+                FreeBrushFaces(facelist);
+                facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
             }
-        }
-        else    if (hullnum == 5) {
-            vec3_t size[2] = { {-48, -48, -50}, {48, 48, 50} };
+        } else if (hullnum == 5) {
+            vec3_t size[2] = {{-48, -48, -50}, {48, 48, 50}};
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
         }
-    }
-    else
-    {
+    } else {
         if (hullnum == 1) {
-            vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
+            vec3_t size[2] = {{-16, -16, -32}, {16, 16, 24}};
 
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
         } else if (hullnum == 2) {
-            vec3_t size[2] = { {-32, -32, -64}, {32, 32, 24} };
+            vec3_t size[2] = {{-32, -32, -64}, {32, 32, 24}};
 
             ExpandBrush(&hullbrush, size, facelist);
             FreeBrushFaces(facelist);
@@ -1111,23 +1061,21 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 
 //=============================================================================
 
-static brush_t *
-Brush_ListTail(brush_t *brush)
+static brush_t *Brush_ListTail(brush_t *brush)
 {
     if (brush == nullptr) {
         return nullptr;
     }
- 
+
     while (brush->next != nullptr) {
         brush = brush->next;
     }
-    
+
     Q_assert(brush->next == nullptr);
     return brush;
 }
 
-int
-Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
+int Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
 {
     int cnt = 0;
     for (const brush_t *b = brush; b; b = b->next) {
@@ -1137,11 +1085,7 @@ Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
     return cnt;
 }
 
-int
-Brush_ListCount(const brush_t *brush)
-{
-    return Brush_ListCountWithCFlags(brush, 0);
-}
+int Brush_ListCount(const brush_t *brush) { return Brush_ListCountWithCFlags(brush, 0); }
 
 static int FaceListCount(const face_t *facelist)
 {
@@ -1151,18 +1095,14 @@ static int FaceListCount(const face_t *facelist)
         return 0;
 }
 
-int Brush_NumFaces(const brush_t *brush)
-{
-    return FaceListCount(brush->faces);
-}
+int Brush_NumFaces(const brush_t *brush) { return FaceListCount(brush->faces); }
 
-void
-Entity_SortBrushes(mapentity_t *dst)
+void Entity_SortBrushes(mapentity_t *dst)
 {
     Q_assert(dst->brushes == nullptr);
-    
+
     brush_t **nextLink = &dst->brushes;
-    
+
     if (dst->detail_illusionary) {
         brush_t *last = Brush_ListTail(dst->detail_illusionary);
         *nextLink = dst->detail_illusionary;
@@ -1192,7 +1132,7 @@ Entity_SortBrushes(mapentity_t *dst)
         brush_t *last = Brush_ListTail(dst->solid);
         *nextLink = dst->solid;
         nextLink = &last->next;
-    }    
+    }
 }
 
 /*
@@ -1203,8 +1143,7 @@ hullnum -1 should contain ALL brushes. (used by BSPX_CreateBrushList())
 hullnum 0 does not contain clip brushes.
 ============
 */
-void
-Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
+void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 {
     const char *classname;
     const mapbrush_t *mapbrush;
@@ -1228,9 +1167,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
     VectorCopy(vec3_origin, rotate_offset);
-    
-    const bool func_illusionary_visblocker =
-        (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
+
+    const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
     contentflags_t base_contents = options.target_game->create_empty_contents();
 
@@ -1249,25 +1187,25 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 Message(msgWarning, warnOriginBrushInWorld);
                 continue;
             }
-            
+
             brush_t *brush = LoadBrush(src, mapbrush, contents, vec3_origin, rotation_t::none, 0);
             if (brush) {
                 vec3_t origin;
                 VectorAdd(brush->mins, brush->maxs, origin);
                 VectorScale(origin, 0.5, origin);
-                
+
                 char value[1024];
                 q_snprintf(value, sizeof(value), "%.2f %.2f %.2f", origin[0], origin[1], origin[2]);
                 SetKeyValue(dst, "origin", value);
-                
+
                 VectorCopy(origin, rotate_offset);
                 rottype = rotation_t::origin_brush;
-                
+
                 FreeBrush(brush);
             }
         }
     }
-    
+
     /* Hipnotic rotation */
     if (rottype == rotation_t::none) {
         if (!strncmp(classname, "rotate_", 7)) {
@@ -1286,12 +1224,12 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         all_detail = true;
         base_contents.extended |= CFLAGS_DETAIL_WALL;
     }
-    
+
     all_detail_fence = false;
     if (!Q_strcasecmp(classname, "func_detail_fence") && !options.fNodetail) {
         all_detail_fence = true;
     }
-    
+
     all_detail_illusionary = false;
     if (!Q_strcasecmp(classname, "func_detail_illusionary") && !options.fNodetail) {
         all_detail_illusionary = true;
@@ -1299,19 +1237,19 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
     /* entities with custom lmscales are important for the qbsp to know about */
     i = 16 * atof(ValueForKey(src, "_lmscale"));
-    if (!i) i = 16;     //if 0, pick a suitable default
+    if (!i)
+        i = 16; // if 0, pick a suitable default
     lmshift = 0;
-    while (i > 1)
-    {
-        lmshift++;      //only allow power-of-two scales
+    while (i > 1) {
+        lmshift++; // only allow power-of-two scales
         i /= 2;
     }
-    
+
     /* _mirrorinside key (for func_water etc.) */
     if (atoi(ValueForKey(src, "_mirrorinside"))) {
         base_contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
     }
-    
+
     /* _noclipfaces */
     if (atoi(ValueForKey(src, "_noclipfaces"))) {
         base_contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
@@ -1325,7 +1263,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         bool detail = Brush_IsDetail(mapbrush);
         bool detail_illusionary = false;
         bool detail_fence = false;
-        
+
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
@@ -1334,7 +1272,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         /* "origin" brushes always discarded */
         if (contents.extended & CFLAGS_ORIGIN)
             continue;
-        
+
         /* -omitdetail option omits all types of detail */
         if (options.fOmitDetail && detail && !contents.is_detail(CFLAGS_DETAIL_WALL))
             continue;
@@ -1344,7 +1282,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         if ((options.fOmitDetail || options.fOmitDetailFence) && detail_fence)
             continue;
-        
+
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(options.target_game)) {
             if (detail) {
@@ -1352,16 +1290,17 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             } else if (detail_illusionary) {
                 contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_ILLUSIONARY));
             } else if (detail_fence) {
-                contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_FENCE)); // fences need to generate leaves
+                contents = contents.merge(
+                    options.target_game->create_empty_contents(CFLAGS_DETAIL_FENCE)); // fences need to generate leaves
             }
         }
-        
+
         /* func_detail_illusionary don't exist in the collision hull
          * (or bspx export) */
         if ((options.target_game->id != GAME_QUAKE_II && hullnum) && detail_illusionary) {
             continue;
         }
-        
+
         /*
          * "clip" brushes don't show up in the draw hull, but we still want to
          * include them in the model bounds so collision detection works
@@ -1393,7 +1332,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
            this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
            Otherwise they would be CONTENTS_SOLID and the inside faces would be deleted.
-         
+
            It's CONTENTS_DETAIL_FENCE because this gets mapped to CONTENTS_SOLID just
            before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
            contents type.
@@ -1401,7 +1340,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         if (dst != pWorldEnt() && hullnum <= 0 && (contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
             contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_FENCE));
         }
-        
+
         /* nonsolid brushes don't show up in clipping hulls */
         // TODO: will this statement need to be modified since clip
         // detail etc aren't native types any more?
@@ -1418,7 +1357,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 
         dst->numbrushes++;
         brush->lmshift = lmshift;
-        
+
         if (brush->contents.is_detail(CFLAGS_DETAIL)) {
             brush->next = dst->detail;
             dst->detail = brush;
@@ -1458,23 +1397,22 @@ returns false if the brush doesn't enclose a valid volume
 from q3map
 ==================
 */
-bool BoundBrush (brush_t *brush)
+bool BoundBrush(brush_t *brush)
 {
-    ClearBounds (brush->mins, brush->maxs);
-    
+    ClearBounds(brush->mins, brush->maxs);
+
     for (face_t *face = brush->faces; face; face = face->next) {
         const winding_t *w = &face->w;
-        for (int j=0 ; j<w->numpoints ; j++)
-            AddPointToBounds (w->points[j], brush->mins, brush->maxs);
+        for (int j = 0; j < w->numpoints; j++)
+            AddPointToBounds(w->points[j], brush->mins, brush->maxs);
     }
-    
-    for (int i=0 ; i<3 ; i++) {
-        if (brush->mins[i] < MIN_WORLD_COORD || brush->maxs[i] > MAX_WORLD_COORD
-            || brush->mins[i] >= brush->maxs[i] ) {
+
+    for (int i = 0; i < 3; i++) {
+        if (brush->mins[i] < MIN_WORLD_COORD || brush->maxs[i] > MAX_WORLD_COORD || brush->mins[i] >= brush->maxs[i]) {
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -1486,24 +1424,24 @@ from q3map
 modified to follow https://en.wikipedia.org/wiki/Polyhedron#Volume
 ==================
 */
-vec_t BrushVolume (const brush_t *brush)
+vec_t BrushVolume(const brush_t *brush)
 {
     if (!brush)
         return 0;
-    
+
     vec_t volume = 0;
     for (const face_t *face = brush->faces; face; face = face->next) {
         if (!face->w.numpoints)
             continue;
-        
+
         const vec_t area = WindingArea(&face->w);
         const plane_t faceplane = Face_Plane(face);
-        
+
         volume += DotProduct(faceplane.normal, face->w.points[0]) * area;
     }
-    
+
     volume /= 3.0;
-    
+
     return volume;
 }
 
@@ -1514,21 +1452,21 @@ BrushMostlyOnSide
 from q3map
 ==================
 */
-int BrushMostlyOnSide (const brush_t *brush, const vec3_t planenormal, vec_t planedist)
+int BrushMostlyOnSide(const brush_t *brush, const vec3_t planenormal, vec_t planedist)
 {
     vec_t max;
     int side;
-    
+
     max = 0;
     side = SIDE_FRONT;
-    
+
     for (const face_t *face = brush->faces; face; face = face->next) {
         const winding_t *w = &face->w;
         if (!w->numpoints)
             continue;
-        
-        for (int j=0 ; j<w->numpoints ; j++) {
-            const vec_t d = DotProduct (w->points[j], planenormal) - planedist;
+
+        for (int j = 0; j < w->numpoints; j++) {
+            const vec_t d = DotProduct(w->points[j], planenormal) - planedist;
             if (d > max) {
                 max = d;
                 side = SIDE_FRONT;
@@ -1539,22 +1477,22 @@ int BrushMostlyOnSide (const brush_t *brush, const vec3_t planenormal, vec_t pla
             }
         }
     }
-    
+
     return side;
 }
 
 face_t *CopyFace(const face_t *face)
 {
     face_t *newface = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
-    
+
     memcpy(newface, face, sizeof(face_t));
-    
+
     // clear stuff that shouldn't be copied.
     newface->original = nullptr;
     newface->outputnumber = -1;
     newface->edges = nullptr;
     newface->next = nullptr;
-    
+
     return newface;
 }
 
@@ -1567,24 +1505,24 @@ from q3map
 Duplicates the brush, the sides, and the windings
 ==================
 */
-brush_t *CopyBrush (const brush_t *brush)
+brush_t *CopyBrush(const brush_t *brush)
 {
     brush_t *newbrush = (brush_t *)AllocMem(OTHER, sizeof(brush_t), true);
-    
+
     memcpy(newbrush, brush, sizeof(brush_t));
-    
+
     newbrush->next = nullptr;
     newbrush->faces = nullptr;
-    
+
     for (const face_t *face = brush->faces; face; face = face->next) {
-        
+
         face_t *newface = CopyFace(face);
-        
+
         // link into newbrush
         newface->next = newbrush->faces;
         newbrush->faces = newface;
     }
-    
+
     return newbrush;
 }
 
@@ -1598,28 +1536,25 @@ existance by the vertex snapping.
 from q3map
 ================
 */
-#define	EDGE_LENGTH	0.2
-static qboolean
-WindingIsTiny (const winding_t *w)
+#define EDGE_LENGTH 0.2
+static qboolean WindingIsTiny(const winding_t *w)
 {
     /*
      if (WindingArea (w) < 1)
      return qtrue;
      return qfalse;
      */
-    int		i, j;
-    vec_t	len;
-    vec3_t	delta;
-    int		edges;
-    
+    int i, j;
+    vec_t len;
+    vec3_t delta;
+    int edges;
+
     edges = 0;
-    for (i=0 ; i<w->numpoints ; i++)
-    {
-        j = i == w->numpoints - 1 ? 0 : i+1;
-        VectorSubtract (w->points[j], w->points[i], delta);
-        len = VectorLength (delta);
-        if (len > EDGE_LENGTH)
-        {
+    for (i = 0; i < w->numpoints; i++) {
+        j = i == w->numpoints - 1 ? 0 : i + 1;
+        VectorSubtract(w->points[j], w->points[i], delta);
+        len = VectorLength(delta);
+        if (len > EDGE_LENGTH) {
             if (++edges == 3)
                 return false;
         }
@@ -1633,16 +1568,16 @@ WindingIsHuge
 
 Returns true if the winding still has one of the points
 from basewinding for plane
- 
+
 from q3map
 ================
 */
-qboolean WindingIsHuge (winding_t *w)
+qboolean WindingIsHuge(winding_t *w)
 {
-    int		i, j;
-    
-    for (i=0 ; i<w->numpoints ; i++) {
-        for (j=0 ; j<3 ; j++)
+    int i, j;
+
+    for (i = 0; i < w->numpoints; i++) {
+        for (j = 0; j < 3; j++)
             if (w->points[i][j] <= MIN_WORLD_COORD || w->points[i][j] >= MAX_WORLD_COORD)
                 return true;
     }
@@ -1655,18 +1590,15 @@ SplitBrush
 
 Generates two new brushes, leaving the original
 unchanged
- 
+
 from q3map
 ================
 */
-void SplitBrush (const brush_t *brush,
-                 int planenum,
-                 int planeside,
-                 brush_t **front, brush_t **back)
+void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **front, brush_t **back)
 {
     *front = nullptr;
     *back = nullptr;
-    
+
     qbsp_plane_t plane;
     {
         const qbsp_plane_t *globalplane = &map.planes.at(planenum);
@@ -1680,7 +1612,7 @@ void SplitBrush (const brush_t *brush,
         plane.type = -1000;
         plane.outputplanenum = PLANENUM_LEAF;
     }
-    
+
     // check all points
     vec_t d_front = 0;
     vec_t d_back = 0;
@@ -1688,67 +1620,64 @@ void SplitBrush (const brush_t *brush,
         const winding_t *w = &face->w;
         if (!w->numpoints)
             continue;
-        
-        for (int j=0 ; j<w->numpoints ; j++) {
-            const vec_t d = DotProduct (w->points[j], plane.normal) - plane.dist;
+
+        for (int j = 0; j < w->numpoints; j++) {
+            const vec_t d = DotProduct(w->points[j], plane.normal) - plane.dist;
             if (d > 0 && d > d_front)
                 d_front = d;
             if (d < 0 && d < d_back)
                 d_back = d;
         }
     }
-    
+
     if (d_front < 0.1) // PLANESIDE_EPSILON)
-    {	// only on back
-        *back = CopyBrush (brush);
+    { // only on back
+        *back = CopyBrush(brush);
         return;
     }
     if (d_back > -0.1) // PLANESIDE_EPSILON)
-    {	// only on front
-        *front = CopyBrush (brush);
+    { // only on front
+        *front = CopyBrush(brush);
         return;
     }
-    
-    // create a new winding from the split plane    
-    winding_t *w = BaseWindingForPlane (&plane);
+
+    // create a new winding from the split plane
+    winding_t *w = BaseWindingForPlane(&plane);
     for (const face_t *face = brush->faces; face; face = face->next) {
         if (!w)
             break;
         const plane_t plane2 = FlipPlane(Face_Plane(face));
-        ChopWindingInPlace (&w, plane2.normal, plane2.dist, 0); // PLANESIDE_EPSILON);
+        ChopWindingInPlace(&w, plane2.normal, plane2.dist, 0); // PLANESIDE_EPSILON);
     }
 
-    if (!w || WindingIsTiny (w) )
-    {	// the brush isn't really split
-        int		side;
-        
+    if (!w || WindingIsTiny(w)) { // the brush isn't really split
+        int side;
+
         if (w)
             free(w);
-        
-        side = BrushMostlyOnSide (brush, plane.normal, plane.dist);
+
+        side = BrushMostlyOnSide(brush, plane.normal, plane.dist);
         if (side == SIDE_FRONT)
-            *front = CopyBrush (brush);
+            *front = CopyBrush(brush);
         if (side == SIDE_BACK)
-            *back = CopyBrush (brush);
+            *back = CopyBrush(brush);
         return;
     }
-    
-    if (WindingIsHuge (w))
-    {
-        logprint ("WARNING: huge winding\n");
+
+    if (WindingIsHuge(w)) {
+        logprint("WARNING: huge winding\n");
     }
-    
+
     winding_t *midwinding = w;
-    brush_t	*b[2];
-    
+    brush_t *b[2];
+
     // split it for real
-    
+
     // first, make two empty brushes (for the front and back side of the plane)
-    
-    for (int i=0 ; i<2 ; i++)
-    {
-        b[i] = (brush_t *) AllocMem (OTHER, sizeof(brush_t), true);
-        //memcpy( b[i], brush, sizeof( brush_t ) );
+
+    for (int i = 0; i < 2; i++) {
+        b[i] = (brush_t *)AllocMem(OTHER, sizeof(brush_t), true);
+        // memcpy( b[i], brush, sizeof( brush_t ) );
 
         // NOTE: brush copying
         b[i]->contents = brush->contents;
@@ -1757,21 +1686,20 @@ void SplitBrush (const brush_t *brush,
         b[i]->next = nullptr;
 
         // FIXME:
-        //b[i]->original = brush->original;
+        // b[i]->original = brush->original;
     }
-    
+
     // split all the current windings
-    
+
     for (const face_t *face = brush->faces; face; face = face->next) {
         const winding_t *w = &face->w;
         if (!w->numpoints)
             continue;
-        
+
         winding_t *cw[2];
         DivideWinding(w, &plane, &cw[0], &cw[1]);
-        
-        for (int j=0 ; j<2 ; j++)
-        {
+
+        for (int j = 0; j < 2; j++) {
             if (!cw[j])
                 continue;
             /*
@@ -1781,72 +1709,63 @@ void SplitBrush (const brush_t *brush,
              continue;
              }
              */
-            
+
             face_t *newface = CopyFace(face);
             CopyWindingInto(&newface->w, cw[j]);
             UpdateFaceSphere(newface);
-            
+
             // link it into the front or back brush we are building
             newface->next = b[j]->faces;
             b[j]->faces = newface;
         }
-        
+
         if (cw[0])
             free(cw[0]);
         if (cw[1])
             free(cw[1]);
     }
-    
-    
+
     // see if we have valid polygons on both sides
-    
-    for (int i=0 ; i<2 ; i++)
-    {
-        BoundBrush (b[i]);
-        
+
+    for (int i = 0; i < 2; i++) {
+        BoundBrush(b[i]);
+
         int j;
-        for (j=0 ; j<3 ; j++)
-        {
-            if (b[i]->mins[j] < MIN_WORLD_COORD || b[i]->maxs[j] > MAX_WORLD_COORD)
-            {
-                logprint ("bogus brush after clip\n");
+        for (j = 0; j < 3; j++) {
+            if (b[i]->mins[j] < MIN_WORLD_COORD || b[i]->maxs[j] > MAX_WORLD_COORD) {
+                logprint("bogus brush after clip\n");
                 break;
             }
         }
-        
+
         // 3 faces is ok because we add a 4th face below
-        if (Brush_NumFaces(b[i]) < 3 || j < 3)
-        {
-            FreeBrush (b[i]);
+        if (Brush_NumFaces(b[i]) < 3 || j < 3) {
+            FreeBrush(b[i]);
             b[i] = nullptr;
         }
     }
-    
-    if ( !(b[0] && b[1]) )
-    {
+
+    if (!(b[0] && b[1])) {
         if (!b[0] && !b[1])
-            logprint ("split removed brush\n");
+            logprint("split removed brush\n");
         else
-            logprint ("split not on both sides\n");
-        if (b[0])
-        {
-            FreeBrush (b[0]);
-            *front = CopyBrush (brush);
+            logprint("split not on both sides\n");
+        if (b[0]) {
+            FreeBrush(b[0]);
+            *front = CopyBrush(brush);
         }
-        if (b[1])
-        {
-            FreeBrush (b[1]);
-            *back = CopyBrush (brush);
+        if (b[1]) {
+            FreeBrush(b[1]);
+            *back = CopyBrush(brush);
         }
         return;
     }
-    
+
     // add the midwinding to both sides
-    for (int i=0 ; i<2 ; i++)
-    {
+    for (int i = 0; i < 2; i++) {
         // clone the first face (arbitrarily)
         face_t *newface = CopyFace(b[i]->faces);
-        
+
         if (i == 0) {
             winding_t *newwinding = FlipWinding(midwinding);
             CopyWindingInto(&newface->w, newwinding);
@@ -1858,33 +1777,31 @@ void SplitBrush (const brush_t *brush,
             newface->planenum = planenum;
             newface->planeside = planeside;
         }
-        
+
         UpdateFaceSphere(newface);
-        
+
         // link it into the front or back brush
         newface->next = b[i]->faces;
         b[i]->faces = newface;
     }
-    
+
     {
-        vec_t	v1;
-        int		i;
-        
-        for (i=0 ; i<2 ; i++)
-        {
-            v1 = BrushVolume (b[i]);
-            if (v1 < 1.0)
-            {
+        vec_t v1;
+        int i;
+
+        for (i = 0; i < 2; i++) {
+            v1 = BrushVolume(b[i]);
+            if (v1 < 1.0) {
                 FreeBrush(b[i]);
                 b[i] = nullptr;
-                logprint ("tiny volume after clip\n");
+                logprint("tiny volume after clip\n");
             }
         }
     }
-    
+
     *front = b[0];
     *back = b[1];
-    
+
     free(midwinding);
 }
 

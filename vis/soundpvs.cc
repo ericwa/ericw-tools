@@ -29,15 +29,12 @@ Find an aproximate distance to the nearest emiter of each class for each leaf.
 
 */
 
-
 /*
   ====================
   SurfaceBBox
   ====================
 */
-static void
-SurfaceBBox(const mbsp_t *bsp, const bsp2_dface_t *surf,
-            vec3_t mins, vec3_t maxs)
+static void SurfaceBBox(const mbsp_t *bsp, const bsp2_dface_t *surf, vec3_t mins, vec3_t maxs)
 {
     int i, j;
     int edgenum;
@@ -63,14 +60,12 @@ SurfaceBBox(const mbsp_t *bsp, const bsp2_dface_t *surf,
     }
 }
 
-
 /*
   ====================
   CalcAmbientSounds
   ====================
 */
-void
-CalcAmbientSounds(mbsp_t *bsp)
+void CalcAmbientSounds(mbsp_t *bsp)
 {
     const bsp2_dface_t *surf;
     const gtexinfo_t *info;
@@ -122,7 +117,7 @@ CalcAmbientSounds(mbsp_t *bsp)
                 else if (!Q_strncasecmp(miptex->name, "*04water", 8) && ambientwater)
                     ambient_type = AMBIENT_WATER;
                 else if (!Q_strncasecmp(miptex->name, "*slime", 6) && ambientslime)
-                    ambient_type = AMBIENT_WATER;       // AMBIENT_SLIME;
+                    ambient_type = AMBIENT_WATER; // AMBIENT_SLIME;
                 else if (!Q_strncasecmp(miptex->name, "*lava", 5) && ambientlava)
                     ambient_type = AMBIENT_LAVA;
                 else

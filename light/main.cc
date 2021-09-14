@@ -19,7 +19,4 @@
 
 #include <light/light.hh>
 
-int main(int argc, const char **argv)
-{
-    return light_main(argc, argv);
-}
+int main(int argc, const char **argv) { return light_main(argc, argv); }

@@ -39,7 +39,7 @@
 
 #include <string>
 
-#define PATHSEPERATOR '/'
+constexpr char PATHSEPERATOR = '/';
 
 /* set these before calling CheckParm */
 int myargc;
@@ -57,8 +57,7 @@ char archivedir[1024];
  * For abnormal program terminations
  * =================
  */
-[[noreturn]] void
-Error(const char *error, ...)
+[[noreturn]] void Error(const char *error, ...)
 {
     va_list argptr;
 
@@ -72,7 +71,6 @@ Error(const char *error, ...)
     logprint_locked__("\n");
     exit(1);
 }
-
 
 /*
  * qdir will hold the path up to the base directory (basedir), including the
@@ -91,14 +89,15 @@ Error(const char *error, ...)
  *
  */
 
-char qdir[1024];        // c:/Quake/, c:/Hexen II/ etc.
-char gamedir[1024];     // c:/Quake/mymod/
-char basedir[1024]; //mxd. c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
+char qdir[1024]; // c:/Quake/, c:/Hexen II/ etc.
+char gamedir[1024]; // c:/Quake/mymod/
+char basedir[1024]; // mxd. c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
 
-void //mxd
-string_replaceall(std::string& str, const std::string& from, const std::string& to)
+void // mxd
+string_replaceall(std::string &str, const std::string &from, const std::string &to)
 {
-    if (from.empty()) return;
+    if (from.empty())
+        return;
     size_t start_pos = 0;
     while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
         str.replace(start_pos, from.length(), to);
@@ -106,37 +105,39 @@ string_replaceall(std::string& str, const std::string& from, const std::string& 
     }
 }
 
-bool //mxd
-string_iequals(const std::string& a, const std::string& b)
+bool // mxd
+string_iequals(const std::string &a, const std::string &b)
 {
     const auto sz = a.size();
-    if (b.size() != sz) return false;
+    if (b.size() != sz)
+        return false;
     for (unsigned int i = 0; i < sz; ++i)
         if (tolower(a[i]) != tolower(b[i]))
             return false;
     return true;
 }
 
-int //mxd. Returns offset in path to the next updir, sets dirname to the name of updir
-up_dir_pos(const std::string& path, std::string& dirname)
+int // mxd. Returns offset in path to the next updir, sets dirname to the name of updir
+up_dir_pos(const std::string &path, std::string &dirname)
 {
     const int pos = path.rfind(PATHSEPERATOR);
-    if (pos > -1) dirname = path.substr(pos + 1, path.size() - pos - 1);
+    if (pos > -1)
+        dirname = path.substr(pos + 1, path.size() - pos - 1);
     return pos;
 }
 
-
-int //mxd. Finds dirname in path and returns offset to it
-find_dir(const std::string& path, const std::string& dirname)
+int // mxd. Finds dirname in path and returns offset to it
+find_dir(const std::string &path, const std::string &dirname)
 {
-    std::string cur_path { path };
-    std::string cur_dir {};
+    std::string cur_path{path};
+    std::string cur_dir{};
     int pos = 0;
 
     while (pos != -1) {
         pos = up_dir_pos(cur_path, cur_dir);
         if (pos > -1) {
-            if (string_iequals(cur_dir, dirname)) return pos;
+            if (string_iequals(cur_dir, dirname))
+                return pos;
             cur_path = cur_path.substr(0, pos);
         }
     }
@@ -144,29 +145,30 @@ find_dir(const std::string& path, const std::string& dirname)
     return pos;
 }
 
-bool //mxd
+bool // mxd
 dir_exists(const char *path)
 {
-    struct stat buf{};
+    struct stat buf
+    {
+    };
     return (stat(path, &buf) == 0 && buf.st_mode & S_IFDIR);
 }
 
 /**
  * It's possible to compile quake 1/hexen 2 maps without a qdir
  */
-static void
-ClearQdir(void)
+static void ClearQdir(void)
 {
     qdir[0] = '\0';
     gamedir[0] = '\0';
     basedir[0] = '\0';
 }
 
-void //mxd. Expects the path to contain "maps" folder
+void // mxd. Expects the path to contain "maps" folder
 SetQdirFromPath(const char *basedirname, const char *path)
 {
     char temp[1024];
-    
+
     if (!(path[0] == PATHSEPERATOR || path[0] == '\\' || path[1] == ':')) {
         // path is partial
         Q_getwd(temp);
@@ -175,8 +177,8 @@ SetQdirFromPath(const char *basedirname, const char *path)
         path = temp;
     }
 
-    const std::string basedir_s { basedirname };
-    std::string path_s{ path };
+    const std::string basedir_s{basedirname};
+    std::string path_s{path};
     string_replaceall(path_s, "\\", "/");
 
     int pos = find_dir(path_s, "maps");
@@ -238,8 +240,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
     logprint("qdir:    %s\n", qdir);
 }
 
-char *
-ExpandPath(char *path)
+char *ExpandPath(char *path)
 {
     static char full[1024];
 
@@ -251,8 +252,7 @@ ExpandPath(char *path)
     return full;
 }
 
-char *
-ExpandPathAndArchive(char *path)
+char *ExpandPathAndArchive(char *path)
 {
     char *expanded;
     char archivename[1024];
@@ -266,8 +266,7 @@ ExpandPathAndArchive(char *path)
     return expanded;
 }
 
-char *
-copystring(const char *s)
+char *copystring(const char *s)
 {
     char *b;
 
@@ -276,32 +275,29 @@ copystring(const char *s)
     return b;
 }
 
-
 /*
  * ================
  * I_FloatTime
  * ================
  */
-double
-I_FloatTime(void)
+double I_FloatTime(void)
 {
 #ifdef WIN32
-        FILETIME ft;
-        uint64_t hundred_ns;
-        GetSystemTimeAsFileTime(&ft);
-        hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
-        return (double)hundred_ns / 10000000.0;
+    FILETIME ft;
+    uint64_t hundred_ns;
+    GetSystemTimeAsFileTime(&ft);
+    hundred_ns = (((uint64_t)ft.dwHighDateTime) << 32) + ((uint64_t)ft.dwLowDateTime);
+    return (double)hundred_ns / 10000000.0;
 #else
     struct timeval tv;
-    
+
     gettimeofday(&tv, NULL);
-    
+
     return (double)tv.tv_sec + (tv.tv_usec / 1000000.0);
 #endif
 }
 
-void
-Q_getwd(char *out)
+void Q_getwd(char *out)
 {
 #ifdef WIN32
     _getcwd(out, 256);
@@ -327,8 +323,7 @@ Q_getwd(char *out)
 #endif
 }
 
-void
-Q_mkdir(const char *path)
+void Q_mkdir(const char *path)
 {
 #ifdef WIN32
     if (_mkdir(path) != -1)
@@ -347,8 +342,7 @@ Q_mkdir(const char *path)
  * returns -1 if not present
  * ============
  */
-int
-FileTime(const char *path)
+int FileTime(const char *path)
 {
     struct stat buf;
 
@@ -364,8 +358,7 @@ FileTime(const char *path)
  * Parse a token out of a string
  * ==============
  */
-const char *
-COM_Parse(const char *data)
+const char *COM_Parse(const char *data)
 {
     int c;
     int len;
@@ -377,11 +370,11 @@ COM_Parse(const char *data)
         return NULL;
 
     /* skip whitespace */
-  skipwhite:
+skipwhite:
     while ((c = *data) <= ' ') {
         if (c == 0) {
             com_eof = true;
-            return NULL;        /* end of file; */
+            return NULL; /* end of file; */
         }
         data++;
     }
@@ -433,8 +426,7 @@ COM_Parse(const char *data)
         data++;
         len++;
         c = *data;
-        if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\''
-            || c == ':')
+        if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\'' || c == ':')
             break;
     } while (c > 32);
 
@@ -442,8 +434,7 @@ COM_Parse(const char *data)
     return data;
 }
 
-int
-Q_strncasecmp(const char *s1, const char *s2, int n)
+int Q_strncasecmp(const char *s1, const char *s2, int n)
 {
     int c1, c2;
 
@@ -452,7 +443,7 @@ Q_strncasecmp(const char *s1, const char *s2, int n)
         c2 = *s2++;
 
         if (!n--)
-            return 0;           /* strings are equal until end point */
+            return 0; /* strings are equal until end point */
 
         if (c1 != c2) {
             if (c1 >= 'a' && c1 <= 'z')
@@ -460,23 +451,18 @@ Q_strncasecmp(const char *s1, const char *s2, int n)
             if (c2 >= 'a' && c2 <= 'z')
                 c2 -= ('a' - 'A');
             if (c1 != c2)
-                return -1;      /* strings not equal */
+                return -1; /* strings not equal */
         }
         if (!c1)
-            return 0;           /* strings are equal */
+            return 0; /* strings are equal */
     }
 
     return -1;
 }
 
-int
-Q_strcasecmp(const char *s1, const char *s2)
-{
-    return Q_strncasecmp(s1, s2, 99999);
-}
+int Q_strcasecmp(const char *s1, const char *s2) { return Q_strncasecmp(s1, s2, 99999); }
 
-char *
-Q_strupr(char *start)
+char *Q_strupr(char *start)
 {
     char *in;
 
@@ -488,8 +474,7 @@ Q_strupr(char *start)
     return start;
 }
 
-char *
-Q_strlower(char *start)
+char *Q_strlower(char *start)
 {
     char *in;
 
@@ -500,7 +485,6 @@ Q_strlower(char *start)
     }
     return start;
 }
-
 
 /* ============================================================================
  *                                 MISC FUNCTIONS
@@ -514,8 +498,7 @@ Q_strlower(char *start)
  * Returns the argument number (1 to argc-1) or 0 if not present
  * =================
  */
-int
-CheckParm(const char *check)
+int CheckParm(const char *check)
 {
     int i;
 
@@ -527,14 +510,12 @@ CheckParm(const char *check)
     return 0;
 }
 
-
 /*
  * ===========
  * filelength
  * ===========
  */
-int
-Sys_filelength(FILE *f)
+int Sys_filelength(FILE *f)
 {
     int pos;
     int end;
@@ -547,8 +528,7 @@ Sys_filelength(FILE *f)
     return end;
 }
 
-FILE *
-SafeOpenWrite(const char *filename)
+FILE *SafeOpenWrite(const char *filename)
 {
     FILE *f;
 
@@ -560,8 +540,7 @@ SafeOpenWrite(const char *filename)
     return f;
 }
 
-FILE *
-SafeOpenRead(const char *filename)
+FILE *SafeOpenRead(const char *filename)
 {
     FILE *f;
 
@@ -573,28 +552,28 @@ SafeOpenRead(const char *filename)
     return f;
 }
 
-void
-SafeRead(FILE *f, void *buffer, int count)
+void SafeRead(FILE *f, void *buffer, int count)
 {
-    if (fread(buffer, 1, count, f) != (size_t) count)
+    if (fread(buffer, 1, count, f) != (size_t)count)
         Error("File read failure");
 }
 
-void
-SafeWrite(FILE *f, const void *buffer, int count)
+void SafeWrite(FILE *f, const void *buffer, int count)
 {
     const size_t written = fwrite(buffer, 1, count, f);
-    if (written != (size_t) count)
+    if (written != (size_t)count)
         Error("File write failure");
 }
 
-struct pakheader_t {
+struct pakheader_t
+{
     char magic[4];
     unsigned int tableofs;
     unsigned int numfiles;
 };
 
-struct pakfile_t {
+struct pakfile_t
+{
     char name[56];
     unsigned int offset;
     unsigned int length;
@@ -607,8 +586,7 @@ struct pakfile_t {
  * writes to the filename, stripping the pak part of the name
  * ==============
  */
-int
-LoadFilePak(char *filename, void *destptr)
+int LoadFilePak(char *filename, void *destptr)
 {
     uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
     uint8_t *buffer;
@@ -617,47 +595,40 @@ LoadFilePak(char *filename, void *destptr)
     char *e = NULL;
 
     file = fopen(filename, "rb");
-    if (!file)
-    {
+    if (!file) {
         e = filename + strlen(filename);
-        for( ; e>filename ; )
-        {
-            while(e > filename)
+        for (; e > filename;) {
+            while (e > filename)
                 if (*--e == '/')
-                        break;
-            if (*e == '/')
-            {
+                    break;
+            if (*e == '/') {
                 *e = 0;
                 file = fopen(filename, "rb");
-                if (file)
-                {
+                if (file) {
                     uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
                     pakheader_t header;
                     unsigned int i;
-                    const char *innerfile = e+1;
+                    const char *innerfile = e + 1;
                     length = -1;
                     SafeRead(file, &header, sizeof(header));
 
                     header.numfiles = LittleLong(header.numfiles) / sizeof(pakfile_t);
                     header.tableofs = LittleLong(header.tableofs);
 
-                    if (!strncmp(header.magic, "PACK", 4))
-                    {
+                    if (!strncmp(header.magic, "PACK", 4)) {
                         pakfile_t *files = static_cast<pakfile_t *>(malloc(header.numfiles * sizeof(*files)));
-//                      printf("%s: %u files\n", pakfilename, header.numfiles);
+                        //                      printf("%s: %u files\n", pakfilename, header.numfiles);
                         fseek(file, header.tableofs, SEEK_SET);
                         SafeRead(file, files, header.numfiles * sizeof(*files));
 
-                        for (i = 0; i < header.numfiles; i++)
-                        {
-                                if (!strcmp(files[i].name, innerfile))
-                                {
-                                        fseek(file, files[i].offset, SEEK_SET);
-                                        *bufferptr = static_cast<uint8_t*>(malloc(files[i].length + 1));
-                                        SafeRead(file, *bufferptr, files[i].length);
-                                        length = files[i].length;
-                                        break;
-                                }
+                        for (i = 0; i < header.numfiles; i++) {
+                            if (!strcmp(files[i].name, innerfile)) {
+                                fseek(file, files[i].offset, SEEK_SET);
+                                *bufferptr = static_cast<uint8_t *>(malloc(files[i].length + 1));
+                                SafeRead(file, *bufferptr, files[i].length);
+                                length = files[i].length;
+                                break;
+                            }
                         }
                         free(files);
                     }
@@ -666,10 +637,9 @@ LoadFilePak(char *filename, void *destptr)
                     if (length < 0)
                         Error("Unable to find %s inside %s", innerfile, filename);
 
-                    while(e > filename)
-                        if (*--e == '/')
-                        {
-                            strcpy(e+1, innerfile);
+                    while (e > filename)
+                        if (*--e == '/') {
+                            strcpy(e + 1, innerfile);
                             return length;
                         }
                     strcpy(filename, innerfile);
@@ -681,10 +651,9 @@ LoadFilePak(char *filename, void *destptr)
         Error("Error opening %s: %s", filename, strerror(errno));
     }
 
-
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = static_cast<uint8_t*>(malloc(length + 1));
+    buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -700,17 +669,16 @@ LoadFilePak(char *filename, void *destptr)
  * LoadFile
  * ==============
  */
-int
-LoadFile(const char *filename, void *destptr)
+int LoadFile(const char *filename, void *destptr)
 {
-    uint8_t **bufferptr = static_cast<uint8_t**>(destptr);
+    uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
     uint8_t *buffer;
     FILE *file;
     int length;
 
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = static_cast<uint8_t*>(malloc(length + 1));
+    buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -726,8 +694,7 @@ LoadFile(const char *filename, void *destptr)
  * SaveFile
  * ==============
  */
-void
-SaveFile(const char *filename, const void *buffer, int count)
+void SaveFile(const char *filename, const void *buffer, int count)
 {
     FILE *f;
 
@@ -736,8 +703,7 @@ SaveFile(const char *filename, const void *buffer, int count)
     fclose(f);
 }
 
-void
-DefaultExtension(char *path, const char *extension)
+void DefaultExtension(char *path, const char *extension)
 {
     char *src;
 
@@ -747,27 +713,25 @@ DefaultExtension(char *path, const char *extension)
 
     while (*src != PATHSEPERATOR && *src != '\\' && src != path) {
         if (*src == '.')
-            return;             /* it has an extension */
+            return; /* it has an extension */
         src--;
     }
 
     strcat(path, extension);
 }
 
-void
-DefaultPath(char *path, const char *basepath)
+void DefaultPath(char *path, const char *basepath)
 {
     char temp[128];
 
     if (path[0] == PATHSEPERATOR)
-        return;                 /* absolute path location */
+        return; /* absolute path location */
     strcpy(temp, path);
     strcpy(path, basepath);
     strcat(path, temp);
 }
 
-std::string
-StrippedFilename(const std::string& path)
+std::string StrippedFilename(const std::string &path)
 {
     const size_t lastSlash = path.rfind(PATHSEPERATOR);
     if (lastSlash == std::string::npos) {
@@ -777,8 +741,7 @@ StrippedFilename(const std::string& path)
     return path.substr(0, lastSlash);
 }
 
-void
-StripExtension(char *path)
+void StripExtension(char *path)
 {
     int length;
 
@@ -786,14 +749,14 @@ StripExtension(char *path)
     while (length > 0 && path[length] != '.') {
         length--;
         if (path[length] == '/' || path[length] == '\\')
-            return;             /* no extension */
+            return; /* no extension */
     }
     if (length)
         path[length] = 0;
 }
 
-std::string
-StrippedExtension(const std::string& path) {
+std::string StrippedExtension(const std::string &path)
+{
     std::string result = path;
 
     int length;
@@ -801,7 +764,7 @@ StrippedExtension(const std::string& path) {
     while (length > 0 && path[length] != '.') {
         length--;
         if (path[length] == '/' || path[length] == '\\')
-            return path;             /* no extension */
+            return path; /* no extension */
     }
     if (length)
         result = result.substr(0, static_cast<size_t>(length - 1));
@@ -809,19 +772,14 @@ StrippedExtension(const std::string& path) {
     return result;
 }
 
-int
-IsAbsolutePath(const char *path)
-{
-    return path[0] == PATHSEPERATOR || (isalpha(path[0]) && path[1] == ':');
-}
+int IsAbsolutePath(const char *path) { return path[0] == PATHSEPERATOR || (isalpha(path[0]) && path[1] == ':'); }
 
 /*
  * ====================
  * Extract file parts
  * ====================
  */
-void
-ExtractFilePath(char *path, char *dest)
+void ExtractFilePath(char *path, char *dest)
 {
     char *src;
 
@@ -835,16 +793,14 @@ ExtractFilePath(char *path, char *dest)
     dest[src - path] = 0;
 }
 
-void
-ExtractFileBase(char *path, char *dest)
+void ExtractFileBase(char *path, char *dest)
 {
     char *src;
 
     src = path + strlen(path) - 1;
 
     /* back up until a \ or the start */
-    while (src != path && *(src - 1) != PATHSEPERATOR
-                       && *(src - 1) != '\\') {
+    while (src != path && *(src - 1) != PATHSEPERATOR && *(src - 1) != '\\') {
         src--;
     }
     while (*src && *src != '.') {
@@ -853,8 +809,7 @@ ExtractFileBase(char *path, char *dest)
     *dest = 0;
 }
 
-void
-ExtractFileExtension(char *path, char *dest)
+void ExtractFileExtension(char *path, char *dest)
 {
     char *src;
 
@@ -864,7 +819,7 @@ ExtractFileExtension(char *path, char *dest)
     while (src != path && *(src - 1) != '.')
         src--;
     if (src == path) {
-        *dest = 0;              /* no extension */
+        *dest = 0; /* no extension */
         return;
     }
 
@@ -876,8 +831,7 @@ ExtractFileExtension(char *path, char *dest)
  * ParseNum / ParseHex
  * ==============
  */
-int
-ParseHex(char *hex)
+int ParseHex(char *hex)
 {
     char *str;
     int num;
@@ -901,8 +855,7 @@ ParseHex(char *hex)
     return num;
 }
 
-int
-ParseNum(char *str)
+int ParseNum(char *str)
 {
     if (str[0] == '$')
         return ParseHex(str + 1);
@@ -910,7 +863,6 @@ ParseNum(char *str)
         return ParseHex(str + 2);
     return atol(str);
 }
-
 
 /*
  * ============================================================================
@@ -924,8 +876,7 @@ ParseNum(char *str)
 
 #ifdef __BIG_ENDIAN__
 
-short
-LittleShort(short l)
+short LittleShort(short l)
 {
     uint8_t b1, b2;
 
@@ -935,15 +886,9 @@ LittleShort(short l)
     return (b1 << 8) + b2;
 }
 
-short
-BigShort(short l)
-{
-    return l;
-}
+short BigShort(short l) { return l; }
 
-
-int
-LittleLong(int l)
+int LittleLong(int l)
 {
     uint8_t b1, b2, b3, b4;
 
@@ -955,19 +900,15 @@ LittleLong(int l)
     return ((int)b1 << 24) + ((int)b2 << 16) + ((int)b3 << 8) + b4;
 }
 
-int
-BigLong(int l)
-{
-    return l;
-}
+int BigLong(int l) { return l; }
 
-float
-LittleFloat(float l)
+float LittleFloat(float l)
 {
-    union {
+    union
+    {
         uint8_t b[4];
         float f;
-    } in , out;
+    } in, out;
 
     in.f = l;
     out.b[0] = in.b[3];
@@ -978,18 +919,11 @@ LittleFloat(float l)
     return out.f;
 }
 
-float
-BigFloat(float l)
-{
-    return l;
-}
-
+float BigFloat(float l) { return l; }
 
 #else /* must be little endian */
 
-
-short
-BigShort(short l)
+short BigShort(short l)
 {
     uint8_t b1, b2;
 
@@ -999,14 +933,9 @@ BigShort(short l)
     return (b1 << 8) + b2;
 }
 
-short
-LittleShort(short l)
-{
-    return l;
-}
+short LittleShort(short l) { return l; }
 
-int
-BigLong(int l)
+int BigLong(int l)
 {
     uint8_t b1, b2, b3, b4;
 
@@ -1018,19 +947,15 @@ BigLong(int l)
     return ((int)b1 << 24) + ((int)b2 << 16) + ((int)b3 << 8) + b4;
 }
 
-int
-LittleLong(int l)
-{
-    return l;
-}
+int LittleLong(int l) { return l; }
 
-float
-BigFloat(float l)
+float BigFloat(float l)
 {
-    union {
+    union
+    {
         uint8_t b[4];
         float f;
-    } in , out;
+    } in, out;
 
     in.f = l;
     out.b[0] = in.b[3];
@@ -1041,17 +966,11 @@ BigFloat(float l)
     return out.f;
 }
 
-float
-LittleFloat(float l)
-{
-    return l;
-}
-
+float LittleFloat(float l) { return l; }
 
 #endif
 
 /* ========================================================================= */
-
 
 /*
  * FIXME: byte swap?
@@ -1061,61 +980,37 @@ LittleFloat(float l)
  * CCITT standard CRC used by XMODEM
  */
 
-#define CRC_INIT_VALUE    0xffff
-#define CRC_XOR_VALUE    0x0000
+#define CRC_INIT_VALUE 0xffff
+#define CRC_XOR_VALUE 0x0000
 
-static unsigned short crctable[256] = {
-    0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,
-    0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef,
-    0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7, 0x62d6,
-    0x9339, 0x8318, 0xb37b, 0xa35a, 0xd3bd, 0xc39c, 0xf3ff, 0xe3de,
-    0x2462, 0x3443, 0x0420, 0x1401, 0x64e6, 0x74c7, 0x44a4, 0x5485,
-    0xa56a, 0xb54b, 0x8528, 0x9509, 0xe5ee, 0xf5cf, 0xc5ac, 0xd58d,
-    0x3653, 0x2672, 0x1611, 0x0630, 0x76d7, 0x66f6, 0x5695, 0x46b4,
-    0xb75b, 0xa77a, 0x9719, 0x8738, 0xf7df, 0xe7fe, 0xd79d, 0xc7bc,
-    0x48c4, 0x58e5, 0x6886, 0x78a7, 0x0840, 0x1861, 0x2802, 0x3823,
-    0xc9cc, 0xd9ed, 0xe98e, 0xf9af, 0x8948, 0x9969, 0xa90a, 0xb92b,
-    0x5af5, 0x4ad4, 0x7ab7, 0x6a96, 0x1a71, 0x0a50, 0x3a33, 0x2a12,
-    0xdbfd, 0xcbdc, 0xfbbf, 0xeb9e, 0x9b79, 0x8b58, 0xbb3b, 0xab1a,
-    0x6ca6, 0x7c87, 0x4ce4, 0x5cc5, 0x2c22, 0x3c03, 0x0c60, 0x1c41,
-    0xedae, 0xfd8f, 0xcdec, 0xddcd, 0xad2a, 0xbd0b, 0x8d68, 0x9d49,
-    0x7e97, 0x6eb6, 0x5ed5, 0x4ef4, 0x3e13, 0x2e32, 0x1e51, 0x0e70,
-    0xff9f, 0xefbe, 0xdfdd, 0xcffc, 0xbf1b, 0xaf3a, 0x9f59, 0x8f78,
-    0x9188, 0x81a9, 0xb1ca, 0xa1eb, 0xd10c, 0xc12d, 0xf14e, 0xe16f,
-    0x1080, 0x00a1, 0x30c2, 0x20e3, 0x5004, 0x4025, 0x7046, 0x6067,
-    0x83b9, 0x9398, 0xa3fb, 0xb3da, 0xc33d, 0xd31c, 0xe37f, 0xf35e,
-    0x02b1, 0x1290, 0x22f3, 0x32d2, 0x4235, 0x5214, 0x6277, 0x7256,
-    0xb5ea, 0xa5cb, 0x95a8, 0x8589, 0xf56e, 0xe54f, 0xd52c, 0xc50d,
-    0x34e2, 0x24c3, 0x14a0, 0x0481, 0x7466, 0x6447, 0x5424, 0x4405,
-    0xa7db, 0xb7fa, 0x8799, 0x97b8, 0xe75f, 0xf77e, 0xc71d, 0xd73c,
-    0x26d3, 0x36f2, 0x0691, 0x16b0, 0x6657, 0x7676, 0x4615, 0x5634,
-    0xd94c, 0xc96d, 0xf90e, 0xe92f, 0x99c8, 0x89e9, 0xb98a, 0xa9ab,
-    0x5844, 0x4865, 0x7806, 0x6827, 0x18c0, 0x08e1, 0x3882, 0x28a3,
-    0xcb7d, 0xdb5c, 0xeb3f, 0xfb1e, 0x8bf9, 0x9bd8, 0xabbb, 0xbb9a,
-    0x4a75, 0x5a54, 0x6a37, 0x7a16, 0x0af1, 0x1ad0, 0x2ab3, 0x3a92,
-    0xfd2e, 0xed0f, 0xdd6c, 0xcd4d, 0xbdaa, 0xad8b, 0x9de8, 0x8dc9,
-    0x7c26, 0x6c07, 0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0, 0x0cc1,
-    0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
-    0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
-};
+static unsigned short crctable[256] = {0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7, 0x8108, 0x9129,
+    0xa14a, 0xb16b, 0xc18c, 0xd1ad, 0xe1ce, 0xf1ef, 0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7, 0x62d6,
+    0x9339, 0x8318, 0xb37b, 0xa35a, 0xd3bd, 0xc39c, 0xf3ff, 0xe3de, 0x2462, 0x3443, 0x0420, 0x1401, 0x64e6, 0x74c7,
+    0x44a4, 0x5485, 0xa56a, 0xb54b, 0x8528, 0x9509, 0xe5ee, 0xf5cf, 0xc5ac, 0xd58d, 0x3653, 0x2672, 0x1611, 0x0630,
+    0x76d7, 0x66f6, 0x5695, 0x46b4, 0xb75b, 0xa77a, 0x9719, 0x8738, 0xf7df, 0xe7fe, 0xd79d, 0xc7bc, 0x48c4, 0x58e5,
+    0x6886, 0x78a7, 0x0840, 0x1861, 0x2802, 0x3823, 0xc9cc, 0xd9ed, 0xe98e, 0xf9af, 0x8948, 0x9969, 0xa90a, 0xb92b,
+    0x5af5, 0x4ad4, 0x7ab7, 0x6a96, 0x1a71, 0x0a50, 0x3a33, 0x2a12, 0xdbfd, 0xcbdc, 0xfbbf, 0xeb9e, 0x9b79, 0x8b58,
+    0xbb3b, 0xab1a, 0x6ca6, 0x7c87, 0x4ce4, 0x5cc5, 0x2c22, 0x3c03, 0x0c60, 0x1c41, 0xedae, 0xfd8f, 0xcdec, 0xddcd,
+    0xad2a, 0xbd0b, 0x8d68, 0x9d49, 0x7e97, 0x6eb6, 0x5ed5, 0x4ef4, 0x3e13, 0x2e32, 0x1e51, 0x0e70, 0xff9f, 0xefbe,
+    0xdfdd, 0xcffc, 0xbf1b, 0xaf3a, 0x9f59, 0x8f78, 0x9188, 0x81a9, 0xb1ca, 0xa1eb, 0xd10c, 0xc12d, 0xf14e, 0xe16f,
+    0x1080, 0x00a1, 0x30c2, 0x20e3, 0x5004, 0x4025, 0x7046, 0x6067, 0x83b9, 0x9398, 0xa3fb, 0xb3da, 0xc33d, 0xd31c,
+    0xe37f, 0xf35e, 0x02b1, 0x1290, 0x22f3, 0x32d2, 0x4235, 0x5214, 0x6277, 0x7256, 0xb5ea, 0xa5cb, 0x95a8, 0x8589,
+    0xf56e, 0xe54f, 0xd52c, 0xc50d, 0x34e2, 0x24c3, 0x14a0, 0x0481, 0x7466, 0x6447, 0x5424, 0x4405, 0xa7db, 0xb7fa,
+    0x8799, 0x97b8, 0xe75f, 0xf77e, 0xc71d, 0xd73c, 0x26d3, 0x36f2, 0x0691, 0x16b0, 0x6657, 0x7676, 0x4615, 0x5634,
+    0xd94c, 0xc96d, 0xf90e, 0xe92f, 0x99c8, 0x89e9, 0xb98a, 0xa9ab, 0x5844, 0x4865, 0x7806, 0x6827, 0x18c0, 0x08e1,
+    0x3882, 0x28a3, 0xcb7d, 0xdb5c, 0xeb3f, 0xfb1e, 0x8bf9, 0x9bd8, 0xabbb, 0xbb9a, 0x4a75, 0x5a54, 0x6a37, 0x7a16,
+    0x0af1, 0x1ad0, 0x2ab3, 0x3a92, 0xfd2e, 0xed0f, 0xdd6c, 0xcd4d, 0xbdaa, 0xad8b, 0x9de8, 0x8dc9, 0x7c26, 0x6c07,
+    0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0, 0x0cc1, 0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
+    0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0};
 
-void
-CRC_Init(unsigned short *crcvalue)
-{
-    *crcvalue = CRC_INIT_VALUE;
-}
+void CRC_Init(unsigned short *crcvalue) { *crcvalue = CRC_INIT_VALUE; }
 
-void
-CRC_ProcessByte(unsigned short *crcvalue, uint8_t data)
+void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data)
 {
     *crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }
 
-unsigned short
-CRC_Value(unsigned short crcvalue)
-{
-    return crcvalue ^ CRC_XOR_VALUE;
-}
+unsigned short CRC_Value(unsigned short crcvalue) { return crcvalue ^ CRC_XOR_VALUE; }
 
 /* ========================================================================= */
 
@@ -1124,14 +1019,13 @@ CRC_Value(unsigned short crcvalue)
  * CreatePath
  * ============
  */
-void
-CreatePath(char *path)
+void CreatePath(char *path)
 {
     char *ofs, c;
 
     for (ofs = path + 1; *ofs; ofs++) {
         c = *ofs;
-        if (c == '/' || c == '\\') {    /* create the directory */
+        if (c == '/' || c == '\\') { /* create the directory */
             *ofs = 0;
             Q_mkdir(path);
             *ofs = c;
@@ -1139,15 +1033,13 @@ CreatePath(char *path)
     }
 }
 
-
 /*
  * ============
  * Q_CopyFile
  * Used to archive source files
  *============
  */
-void
-Q_CopyFile(const char *from, char *to)
+void Q_CopyFile(const char *from, char *to)
 {
     void *buffer;
     int length;
@@ -1156,43 +1048,4 @@ Q_CopyFile(const char *from, char *to)
     CreatePath(to);
     SaveFile(to, buffer, length);
     free(buffer);
-}
-
-// from QuakeSpasm
-
-/* platform dependant (v)snprintf function names: */
-#if defined(_WIN32)
-#define	snprintf_func		_snprintf
-#define	vsnprintf_func		_vsnprintf
-#else
-#define	snprintf_func		snprintf
-#define	vsnprintf_func		vsnprintf
-#endif
-
-int q_vsnprintf(char *str, size_t size, const char *format, va_list args)
-{
-	int		ret;
-
-	ret = vsnprintf_func(str, size, format, args);
-
-	if (ret < 0)
-		ret = (int)size;
-	if (size == 0)	/* no buffer */
-		return ret;
-	if ((size_t)ret >= size)
-		str[size - 1] = '\0';
-
-	return ret;
-}
-
-int q_snprintf(char *str, size_t size, const char *format, ...)
-{
-	int		ret;
-	va_list		argptr;
-
-	va_start(argptr, format);
-	ret = q_vsnprintf(str, size, format, argptr);
-	va_end(argptr);
-
-	return ret;
 }

@@ -19,38 +19,42 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef WAD_H
-#define WAD_H
+#pragma once
 
 #include <unordered_map>
 #include <vector>
 #include <list>
 
 // Texture data stored for quick searching
-struct texture_t {
+struct texture_t
+{
     char name[16];
     int width, height;
 };
 
 // WAD Format
-struct wadinfo_t {
-    char identification[4];     // should be WAD2
+struct wadinfo_t
+{
+    char identification[4]; // should be WAD2
     int numlumps;
     int infotableofs;
 };
 
-struct lumpinfo_t {
+struct lumpinfo_t
+{
     int filepos;
     int disksize;
-    int size;                   // uncompressed
+    int size; // uncompressed
     char type;
     char compression;
     char pad1, pad2;
-    char name[16];              // must be null terminated
+    char name[16]; // must be null terminated
 };
 
-struct case_insensitive_hash {
-    std::size_t operator()(const std::string &s) const noexcept {
+struct case_insensitive_hash
+{
+    std::size_t operator()(const std::string &s) const noexcept
+    {
         std::size_t hash = 0x811c9dc5;
         constexpr std::size_t prime = 0x1000193;
 
@@ -63,20 +67,24 @@ struct case_insensitive_hash {
     }
 };
 
-struct case_insensitive_equal {
-    bool operator()(const std::string &l, const std::string &r) const noexcept {
+struct case_insensitive_equal
+{
+    bool operator()(const std::string &l, const std::string &r) const noexcept
+    {
         return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
     }
 };
 
-struct wad_t {
+struct wad_t
+{
     wadinfo_t header;
     int version;
     std::unordered_map<std::string, lumpinfo_t, case_insensitive_hash, case_insensitive_equal> lumps;
     std::unordered_map<std::string, texture_t, case_insensitive_hash, case_insensitive_equal> textures;
     FILE *file;
 
-    ~wad_t() {
+    ~wad_t()
+    {
         if (file) {
             fclose(file);
         }
@@ -85,7 +93,8 @@ struct wad_t {
 
 // Q1 miptex format
 #define MIPLEVELS 4
-struct dmiptex_t {
+struct dmiptex_t
+{
     char name[16];
     uint32_t width, height;
     uint32_t offsets[MIPLEVELS];
@@ -98,5 +107,3 @@ const texture_t *WADList_GetTexture(const char *name);
 
 // FIXME: don't like global state like this :(
 extern std::list<wad_t> wadlist;
-
-#endif /* WAD_H */

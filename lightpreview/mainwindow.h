@@ -17,13 +17,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 See file, 'COPYING', for details.
 */
 
-
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include <QMainWindow>
 
-namespace Ui {
+namespace Ui
+{
 class MainWindow;
 }
 
@@ -38,5 +37,3 @@ public:
 private:
     Ui::MainWindow *ui;
 };
-
-#endif // MAINWINDOW_H

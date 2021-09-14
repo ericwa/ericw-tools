@@ -17,33 +17,34 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef __LIGHT_LITFILE_H__
-#define __LIGHT_LITFILE_H__
+#pragma once
 
 #include <common/bspfile.hh>
 
 #define LIT_VERSION 1
 
-typedef struct litheader_s {
-    struct {
+struct litheader_t
+{
+    struct
+    {
         char ident[4];
         int version;
     } v1;
-    struct {
+    struct
+    {
         int numsurfs;
         int lmsamples;
     } v2;
-} litheader_t;
+};
 
 /* internal representation for bspx/lit2 */
-typedef struct {
+struct facesup_t
+{
     float lmscale;
-    uint8_t styles[MAXLIGHTMAPS];       /* scaled styles */
-    int32_t lightofs;           /* scaled lighting */
+    uint8_t styles[MAXLIGHTMAPS]; /* scaled styles */
+    int32_t lightofs; /* scaled lighting */
     unsigned short extent[2];
-} facesup_t;
+};
 
 void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, int version);
 void WriteLuxFile(const mbsp_t *bsp, const char *filename, int version);
-
-#endif /* __LIGHT_LITFILE_H__ */

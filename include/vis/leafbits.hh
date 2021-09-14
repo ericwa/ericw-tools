@@ -17,8 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef VIS_LEAFBITS_H
-#define VIS_LEAFBITS_H
+#pragma once
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,54 +30,52 @@
 #include <intrin.h>
 inline int ffsl(long int val)
 {
-        unsigned long indexout;
-        unsigned char res = _BitScanForward(&indexout, val);
-        if (!res) return 0;
-        else return indexout + 1;
+    unsigned long indexout;
+    unsigned char res = _BitScanForward(&indexout, val);
+    if (!res)
+        return 0;
+    else
+        return indexout + 1;
 }
 #endif
 
+using leafblock_t = unsigned long;
 
-#ifndef offsetof
-#define offsetof(type, member)  __builtin_offsetof(type, member)
-#endif
-
-typedef unsigned long leafblock_t;
-typedef struct {
+struct leafbits_t
+{
     int numleafs;
     leafblock_t bits[]; /* Variable Sized */
-} leafbits_t;
+};
 
-#define QBYTESHIFT(x) ((x) == 8 ? 6 : ((x) == 4 ? 5 : 0 ))
-#define LEAFSHIFT QBYTESHIFT(sizeof(leafblock_t))
+constexpr size_t QBYTESHIFT(size_t x)
+{
+    return (x == 8 ? 6 : (x == 4 ? 5 : 0));
+}
+
+constexpr size_t LEAFSHIFT = QBYTESHIFT(sizeof(leafblock_t));
 
 static_assert(LEAFSHIFT != 0, "unsupported sizeof(unsigned long)");
 
-#define LEAFMASK  ((sizeof(leafblock_t) << 3) - 1UL)
+constexpr size_t LEAFMASK = (sizeof(leafblock_t) << 3) - 1UL;
 
-static inline int
-TestLeafBit(const leafbits_t *bits, int leafnum)
+static inline int TestLeafBit(const leafbits_t *bits, int leafnum)
 {
     return !!(bits->bits[leafnum >> LEAFSHIFT] & (1UL << (leafnum & LEAFMASK)));
 }
 
-static inline void
-SetLeafBit(leafbits_t *bits, int leafnum)
+static inline void SetLeafBit(leafbits_t *bits, int leafnum)
 {
     bits->bits[leafnum >> LEAFSHIFT] |= 1UL << (leafnum & LEAFMASK);
 }
 
-static inline void
-ClearLeafBit(leafbits_t *bits, int leafnum)
+static inline void ClearLeafBit(leafbits_t *bits, int leafnum)
 {
     bits->bits[leafnum >> LEAFSHIFT] &= ~(1UL << (leafnum & LEAFMASK));
 }
 
-static inline size_t
-LeafbitsSize(int numleafs)
+static inline size_t LeafbitsSize(int numleafs)
 {
-	int numblocks = (numleafs + LEAFMASK) >> LEAFSHIFT;
-	return sizeof(leafbits_t) + (sizeof(leafblock_t) * numblocks);
+    int numblocks = (numleafs + LEAFMASK) >> LEAFSHIFT;
+    return sizeof(leafbits_t) + (sizeof(leafblock_t) * numblocks);
 }
 
-#endif /* VIS_LEAFBITS_H */

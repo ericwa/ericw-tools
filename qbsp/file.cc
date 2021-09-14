@@ -30,8 +30,7 @@
 LoadFile
 ==============
 */
-size_t
-LoadFile(const char *filename, void *bufptr, bool nofail)
+size_t LoadFile(const char *filename, void *bufptr, bool nofail)
 {
     char **buf = (char **)bufptr;
     size_t len;

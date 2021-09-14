@@ -17,8 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef __COMMON_CMDLIB_H__
-#define __COMMON_CMDLIB_H__
+#pragma once
 
 #include <cassert>
 #include <stdio.h>
@@ -36,30 +35,22 @@
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
 
-typedef bool qboolean;
+using qboolean = bool;
 
 #ifndef __GNUC__
 #define __attribute__(x)
 #endif
 
 #ifdef _MSC_VER
-#define __func__ __FUNCTION__
-#ifndef __cplusplus
-#define inline _inline
-#endif
-#endif
-
-#ifdef _MSC_VER
 #define unlink _unlink
 #endif
-
 
 /* set these before calling CheckParm */
 extern int myargc;
 extern char **myargv;
 
-char *Q_strupr(char * start);
-char *Q_strlower(char * start);
+char *Q_strupr(char *start);
+char *Q_strlower(char *start);
 int Q_strncasecmp(const char *s1, const char *s2, int n);
 int Q_strcasecmp(const char *s1, const char *s2);
 void Q_getwd(char *out);
@@ -71,18 +62,17 @@ void Q_mkdir(const char *path);
 
 extern char qdir[1024];
 extern char gamedir[1024];
-extern char basedir[1024]; //mxd
+extern char basedir[1024]; // mxd
 
-bool string_iequals(const std::string& a, const std::string& b); //mxd
+bool string_iequals(const std::string &a, const std::string &b); // mxd
 
-void SetQdirFromPath(const char *basedirname, const char *path); //mxd
+void SetQdirFromPath(const char *basedirname, const char *path); // mxd
 char *ExpandPath(char *path);
 char *ExpandPathAndArchive(char *path);
 
 double I_FloatTime(void);
 
-[[noreturn]] void Error(const char *error, ...)
-    __attribute__((format(printf,1,2),noreturn));
+[[noreturn]] void Error(const char *error, ...) __attribute__((format(printf, 1, 2), noreturn));
 int CheckParm(const char *check);
 
 FILE *SafeOpenWrite(const char *filename);
@@ -96,9 +86,9 @@ void SaveFile(const char *filename, const void *buffer, int count);
 
 void DefaultExtension(char *path, const char *extension);
 void DefaultPath(char *path, const char *basepath);
-std::string StrippedFilename(const std::string& path);
+std::string StrippedFilename(const std::string &path);
 void StripExtension(char *path);
-std::string StrippedExtension(const std::string& path);
+std::string StrippedExtension(const std::string &path);
 int IsAbsolutePath(const char *path);
 
 void ExtractFilePath(char *path, char *dest);
@@ -113,7 +103,6 @@ int BigLong(int l);
 int LittleLong(int l);
 float BigFloat(float l);
 float LittleFloat(float l);
-
 
 const char *COM_Parse(const char *data);
 
@@ -132,8 +121,14 @@ void Q_CopyFile(const char *from, char *to);
 extern qboolean archive;
 extern char archivedir[1024];
 
-int q_vsnprintf(char *str, size_t size, const char *format, va_list args);
-int q_snprintf(char *str, size_t size, const char *format, ...);
+/* platform dependant (v)snprintf function names: */
+#if defined(_WIN32)
+#define q_vsnprintf _vsnprintf
+#define q_snprintf _snprintf
+#else
+#define q_vsnprintf vsnprintf
+#define q_snprintf snprintf
+#endif
 
 static inline void Q_assert_(bool success, const char *expr, const char *file, int line)
 {
@@ -151,4 +146,3 @@ static inline void Q_assert_(bool success, const char *expr, const char *file, i
 
 #define Q_assert_unreachable() Q_assert(false)
 
-#endif /* __COMMON_CMDLIB_H__ */

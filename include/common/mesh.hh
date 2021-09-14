@@ -17,8 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef __COMMON_MESH_HH__
-#define __COMMON_MESH_HH__
+#pragma once
 
 #include <vector>
 #include <common/bspfile.hh>
@@ -31,7 +30,8 @@ using meshface_t = std::vector<vertnum_t>;
 
 #define TJUNC_DIST_EPSILON 0.01
 
-class mesh_t {
+class mesh_t
+{
 public:
     std::vector<qvec3f> verts;
     std::vector<meshface_t> faces;
@@ -51,5 +51,3 @@ aabb3f mesh_face_bbox(const mesh_t &mesh, facenum_t facenum);
 // doesn't merge verts.
 // adds verts to fix t-juncs
 void cleanupMesh(mesh_t &mesh);
-
-#endif /* __COMMON_MESH_HH__ */

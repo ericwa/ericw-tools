@@ -36,23 +36,20 @@
 static FILE *logfile;
 static bool log_ok;
 
-void
-init_log(const char *filename)
+void init_log(const char *filename)
 {
     log_ok = false;
     if ((logfile = fopen(filename, "w")))
         log_ok = true;
 }
 
-void
-close_log()
+void close_log()
 {
     if (log_ok)
         fclose(logfile);
 }
 
-static void
-logvprint_locked__(const char *fmt, va_list args)
+static void logvprint_locked__(const char *fmt, va_list args)
 {
     va_list log_args;
     char line[1024];
@@ -66,7 +63,7 @@ logvprint_locked__(const char *fmt, va_list args)
         fprintf(logfile, "%s", line);
         fflush(logfile);
     }
-    
+
     // print to stdout
     printf("%s", line);
     fflush(stdout);
@@ -77,8 +74,7 @@ logvprint_locked__(const char *fmt, va_list args)
 #endif
 }
 
-void
-logvprint(const char *fmt, va_list args)
+void logvprint(const char *fmt, va_list args)
 {
     ThreadLock();
     InterruptThreadProgress__();
@@ -86,8 +82,7 @@ logvprint(const char *fmt, va_list args)
     ThreadUnlock();
 }
 
-void
-logprint_locked__(const char *fmt, ...)
+void logprint_locked__(const char *fmt, ...)
 {
     va_list args;
 
@@ -107,8 +102,7 @@ void logprint_silent(const char *fmt, ...)
     ThreadUnlock();
 }
 
-void
-logprint(const char *fmt, ...)
+void logprint(const char *fmt, ...)
 {
     va_list args;
 

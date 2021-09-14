@@ -22,13 +22,14 @@
 
 #include <qbsp/qbsp.hh>
 
-node_t outside_node;    // portals outside the world face this
+node_t outside_node; // portals outside the world face this
 
-class portal_state_t {
+class portal_state_t
+{
 public:
     int num_visportals;
-    int num_visleafs;        // leafs the player can be in
-    int num_visclusters;     // clusters of leafs
+    int num_visleafs; // leafs the player can be in
+    int num_visclusters; // clusters of leafs
     int iNodesDone;
     bool uses_detail;
 };
@@ -43,8 +44,7 @@ PORTAL FILE GENERATION
 
 static void PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane);
 
-static void
-WriteFloat(FILE *portalFile, vec_t v)
+static void WriteFloat(FILE *portalFile, vec_t v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
         fprintf(portalFile, "%d ", (int)Q_rint(v));
@@ -52,19 +52,18 @@ WriteFloat(FILE *portalFile, vec_t v)
         fprintf(portalFile, "%f ", v);
 }
 
-static contentflags_t
-ClusterContents(const node_t *node)
+static contentflags_t ClusterContents(const node_t *node)
 {
     /* Pass the leaf contents up the stack */
     if (node->planenum == PLANENUM_LEAF)
         return node->contents;
 
-    return options.target_game->cluster_contents(ClusterContents(node->children[0]), ClusterContents(node->children[1]));
+    return options.target_game->cluster_contents(
+        ClusterContents(node->children[0]), ClusterContents(node->children[1]));
 }
 
 /* Return true if possible to see the through the contents of the portals nodes */
-static bool
-PortalThru(const portal_t *p)
+static bool PortalThru(const portal_t *p)
 {
     contentflags_t contents0 = ClusterContents(p->nodes[0]);
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
@@ -97,8 +96,7 @@ PortalThru(const portal_t *p)
     return options.target_game->portal_can_see_through(contents0, contents1);
 }
 
-static void
-WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
+static void WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
 {
     const portal_t *p, *next;
     const winding_t *w;
@@ -123,7 +121,7 @@ WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
 
         w = p->winding;
         front = clusters ? p->nodes[0]->viscluster : p->nodes[0]->visleafnum;
-        back  = clusters ? p->nodes[1]->viscluster : p->nodes[1]->visleafnum;
+        back = clusters ? p->nodes[1]->viscluster : p->nodes[1]->visleafnum;
 
         /*
          * sometimes planes get turned around when they are very near the
@@ -148,8 +146,7 @@ WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
     }
 }
 
-static int
-WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
+static int WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
 {
     if (node->planenum != PLANENUM_LEAF) {
         viscluster = WriteClusters_r(node->children[0], portalFile, viscluster);
@@ -174,9 +171,7 @@ WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
     return viscluster;
 }
 
-
-static void
-CountPortals(const node_t *node, portal_state_t *state)
+static void CountPortals(const node_t *node, portal_state_t *state)
 {
     const portal_t *portal;
 
@@ -200,8 +195,7 @@ NumberLeafs_r
 - Otherwise, assign the given cluster number because parent splitter is detail
 ================
 */
-static void
-NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
+static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
 {
     /* decision node */
     if (node->planenum != PLANENUM_LEAF) {
@@ -230,14 +224,12 @@ NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
     CountPortals(node, state);
 }
 
-
 /*
 ================
 WritePortalfile
 ================
 */
-static void
-WritePortalfile(node_t *headnode, portal_state_t *state)
+static void WritePortalfile(node_t *headnode, portal_state_t *state)
 {
     int check;
     FILE *portalFile;
@@ -259,7 +251,7 @@ WritePortalfile(node_t *headnode, portal_state_t *state)
     portalFile = fopen(options.szBSPName, "wt");
     if (!portalFile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
-    
+
     /* If no detail clusters, just use a normal PRT1 format */
     if (!state->uses_detail) {
         fprintf(portalFile, "PRT1\n");
@@ -290,7 +282,6 @@ WritePortalfile(node_t *headnode, portal_state_t *state)
     fclose(portalFile);
 }
 
-
 //=============================================================================
 
 /*
@@ -298,8 +289,7 @@ WritePortalfile(node_t *headnode, portal_state_t *state)
 AddPortalToNodes
 =============
 */
-static void
-AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
+static void AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
 {
     if (p->nodes[0] || p->nodes[1])
         Error("portal already included (%s)", __func__);
@@ -313,18 +303,16 @@ AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
     back->portals = p;
 }
 
-
 /*
 =============
 RemovePortalFromNode
 =============
 */
-static void
-RemovePortalFromNode(portal_t *portal, node_t *l)
+static void RemovePortalFromNode(portal_t *portal, node_t *l)
 {
     portal_t **pp, *t;
 
-// remove reference to the current portal
+    // remove reference to the current portal
     pp = &l->portals;
     while (1) {
         t = *pp;
@@ -351,7 +339,6 @@ RemovePortalFromNode(portal_t *portal, node_t *l)
     }
 }
 
-
 /*
 ================
 MakeHeadnodePortals
@@ -359,8 +346,7 @@ MakeHeadnodePortals
 The created portals will face the global outside_node
 ================
 */
-static void
-MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
+static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
 {
     vec3_t bounds[2];
     int i, j, n;
@@ -408,14 +394,12 @@ MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         for (j = 0; j < 6; j++) {
             if (j == i)
                 continue;
-            portals[i]->winding =
-                ClipWinding(portals[i]->winding, &bplanes[j], true);
+            portals[i]->winding = ClipWinding(portals[i]->winding, &bplanes[j], true);
         }
     }
 }
 
-static void
-PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane)
+static void PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane)
 {
     vec3_t v1, v2;
 
@@ -431,23 +415,20 @@ PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane)
 
 #ifdef PARANOID
 
-static void
-CheckWindingInNode(winding_t *w, node_t *node)
+static void CheckWindingInNode(winding_t *w, node_t *node)
 {
     int i, j;
 
     for (i = 0; i < w->numpoints; i++) {
         for (j = 0; j < 3; j++)
-            if (w->points[i][j] < node->mins[j] - 1
-                || w->points[i][j] > node->maxs[j] + 1) {
+            if (w->points[i][j] < node->mins[j] - 1 || w->points[i][j] > node->maxs[j] + 1) {
                 Message(msgWarning, warnWindingOutside);
                 return;
             }
     }
 }
 
-static void
-CheckWindingArea(winding_t *w)
+static void CheckWindingArea(winding_t *w)
 {
     int i;
     vec_t total, add;
@@ -465,9 +446,7 @@ CheckWindingArea(winding_t *w)
         Message(msgWarning, warnLowWindingArea, total);
 }
 
-
-static void
-CheckLeafPortalConsistancy(node_t *node)
+static void CheckLeafPortalConsistancy(node_t *node)
 {
     int side, side2;
     portal_t *p, *p2;
@@ -476,7 +455,7 @@ CheckLeafPortalConsistancy(node_t *node)
     winding_t *w;
     vec_t dist;
 
-    side = side2 = 0;           // quiet compiler warning
+    side = side2 = 0; // quiet compiler warning
 
     for (p = node->portals; p; p = p->next[side]) {
         if (p->nodes[0] == node)
@@ -522,8 +501,7 @@ CheckLeafPortalConsistancy(node_t *node)
 CutNodePortals_r
 ================
 */
-static void
-CutNodePortals_r(node_t *node, portal_state_t *state)
+static void CutNodePortals_r(node_t *node, portal_state_t *state)
 {
     const qbsp_plane_t *plane;
     qbsp_plane_t clipplane;
@@ -569,10 +547,8 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
 
         winding = ClipWinding(winding, &clipplane, true);
         if (!winding) {
-            Message(msgWarning, warnPortalClippedAway,
-                    portal->winding->points[0][0],
-                    portal->winding->points[0][1],
-                    portal->winding->points[0][2]);
+            Message(msgWarning, warnPortalClippedAway, portal->winding->points[0][0], portal->winding->points[0][1],
+                portal->winding->points[0][2]);
             break;
         }
     }
@@ -603,7 +579,7 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
         if (!frontwinding) {
             if (backwinding)
                 free(backwinding);
-            
+
             if (side == 0)
                 AddPortalToNodes(portal, back, other_node);
             else
@@ -613,7 +589,7 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
         if (!backwinding) {
             if (frontwinding)
                 free(frontwinding);
-            
+
             if (side == 0)
                 AddPortalToNodes(portal, front, other_node);
             else
@@ -645,7 +621,6 @@ CutNodePortals_r(node_t *node, portal_state_t *state)
     CutNodePortals_r(back, state);
 }
 
-
 /*
 ==================
 PortalizeWorld
@@ -653,14 +628,13 @@ PortalizeWorld
 Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
-void
-PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
+void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
 {
     Message(msgProgress, "Portalize");
 
     portal_state_t state;
     memset(&state, 0, sizeof(state));
-    
+
     state.iNodesDone = 0;
 
     MakeHeadnodePortals(entity, headnode);
@@ -676,15 +650,13 @@ PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
     }
 }
 
-
 /*
 ==================
 FreeAllPortals
 
 ==================
 */
-void
-FreeAllPortals(node_t *node)
+void FreeAllPortals(node_t *node)
 {
     portal_t *p, *nextp;
 

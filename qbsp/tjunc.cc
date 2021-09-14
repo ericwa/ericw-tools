@@ -32,16 +32,14 @@ static int cWEdges;
 static wvert_t *pWVerts;
 static wedge_t *pWEdges;
 
-
 //============================================================================
 
-#define NUM_HASH        1024
+#define NUM_HASH 1024
 
 static wedge_t *wedge_hash[NUM_HASH];
 static vec3_t hash_min, hash_scale;
 
-static void
-InitHash(vec3_t mins, vec3_t maxs)
+static void InitHash(vec3_t mins, vec3_t maxs)
 {
     vec3_t size;
     vec_t volume;
@@ -64,13 +62,11 @@ InitHash(vec3_t mins, vec3_t maxs)
     hash_scale[2] = (vec_t)newsize[1];
 }
 
-static unsigned
-HashVec(vec3_t vec)
+static unsigned HashVec(vec3_t vec)
 {
     unsigned h;
 
-    h = (unsigned)(hash_scale[0] * (vec[0] - hash_min[0]) * hash_scale[2] +
-                   hash_scale[1] * (vec[1] - hash_min[1]));
+    h = (unsigned)(hash_scale[0] * (vec[0] - hash_min[0]) * hash_scale[2] + hash_scale[1] * (vec[1] - hash_min[1]));
     if (h >= NUM_HASH)
         return NUM_HASH - 1;
     return h;
@@ -78,8 +74,7 @@ HashVec(vec3_t vec)
 
 //============================================================================
 
-static void
-CanonicalVector(const vec3_t p1, const vec3_t p2, vec3_t vec)
+static void CanonicalVector(const vec3_t p1, const vec3_t p2, vec3_t vec)
 {
     vec_t length;
 
@@ -112,8 +107,7 @@ CanonicalVector(const vec3_t p1, const vec3_t p2, vec3_t vec)
     Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
 }
 
-static wedge_t *
-FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
+static wedge_t *FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
 {
     vec3_t origin;
     vec3_t edgevec;
@@ -176,15 +170,13 @@ FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
     return edge;
 }
 
-
 /*
 ===============
 AddVert
 
 ===============
 */
-static void
-AddVert(wedge_t *edge, vec_t t)
+static void AddVert(wedge_t *edge, vec_t t)
 {
     wvert_t *v, *newv;
 
@@ -211,15 +203,13 @@ AddVert(wedge_t *edge, vec_t t)
     v->prev = newv;
 }
 
-
 /*
 ===============
 AddEdge
 
 ===============
 */
-static void
-AddEdge(vec3_t p1, vec3_t p2)
+static void AddEdge(vec3_t p1, vec3_t p2)
 {
     wedge_t *edge;
     vec_t t1, t2;
@@ -235,8 +225,7 @@ AddFaceEdges
 
 ===============
 */
-static void
-AddFaceEdges(face_t *f)
+static void AddFaceEdges(face_t *f)
 {
     int i, j;
 
@@ -246,7 +235,6 @@ AddFaceEdges(face_t *f)
     }
 }
 
-
 //============================================================================
 
 /*
@@ -255,8 +243,7 @@ AddFaceEdges(face_t *f)
  */
 #define MAX_SUPERFACE_POINTS 8192
 
-static void
-SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
+static void SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
 {
     winding_t *w = &face->w;
     face_t *newf, *chain;
@@ -280,7 +267,7 @@ SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
 
         tjuncfaces++;
 
-      restart:
+restart:
         /* find the last corner */
         VectorSubtract(w->points[w->numpoints - 1], w->points[0], edgevec[0]);
         VectorNormalize(edgevec[0]);
@@ -332,8 +319,7 @@ SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
         *facelist = newf;
         if (w->numpoints - firstcorner <= MAXPOINTS)
             newf->w.numpoints = firstcorner + 2;
-        else if (lastcorner + 2 < MAXPOINTS &&
-                 w->numpoints - lastcorner <= MAXPOINTS)
+        else if (lastcorner + 2 < MAXPOINTS && w->numpoints - lastcorner <= MAXPOINTS)
             newf->w.numpoints = lastcorner + 2;
         else
             newf->w.numpoints = MAXPOINTS;
@@ -347,15 +333,13 @@ SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
     } while (1);
 }
 
-
 /*
 ===============
 FixFaceEdges
 
 ===============
 */
-static void
-FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
+static void FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
 {
     int i, j;
     wedge_t *edge;
@@ -364,7 +348,7 @@ FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
 
     *superface = *face;
 
- restart:
+restart:
     for (i = 0; i < superface->w.numpoints; i++) {
         j = (i + 1) % superface->w.numpoints;
 
@@ -377,8 +361,7 @@ FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
         if (v->t < t2 - T_EPSILON) {
             /* insert a new vertex here */
             if (superface->w.numpoints == MAX_SUPERFACE_POINTS)
-                Error("%s: tjunc fixups generated too many edges (max %d)",
-                      __func__, MAX_SUPERFACE_POINTS);
+                Error("%s: tjunc fixups generated too many edges (max %d)", __func__, MAX_SUPERFACE_POINTS);
 
             tjuncs++;
             for (int32_t k = superface->w.numpoints; k > j; k--)
@@ -400,11 +383,9 @@ FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
     SplitFaceForTjunc(superface, face, facelist);
 }
 
-
 //============================================================================
 
-static void
-tjunc_count_r(node_t *node)
+static void tjunc_count_r(node_t *node)
 {
     face_t *f;
 
@@ -418,8 +399,7 @@ tjunc_count_r(node_t *node)
     tjunc_count_r(node->children[1]);
 }
 
-static void
-tjunc_find_r(node_t *node)
+static void tjunc_find_r(node_t *node)
 {
     face_t *f;
 
@@ -433,8 +413,7 @@ tjunc_find_r(node_t *node)
     tjunc_find_r(node->children[1]);
 }
 
-static void
-tjunc_fix_r(node_t *node, face_t *superface)
+static void tjunc_fix_r(node_t *node, face_t *superface)
 {
     face_t *face, *next, *facelist;
 
@@ -459,8 +438,7 @@ tjunc_fix_r(node_t *node, face_t *superface)
 tjunc
 ===========
 */
-void
-TJunc(const mapentity_t *entity, node_t *headnode)
+void TJunc(const mapentity_t *entity, node_t *headnode)
 {
     vec3_t maxs, mins;
     face_t *superface;
@@ -503,7 +481,7 @@ TJunc(const mapentity_t *entity, node_t *headnode)
     Message(msgStat, "%8d edge points", numwverts);
 
     superface_bytes = offsetof(face_t, w.points[MAX_SUPERFACE_POINTS]);
-    superface = (face_t*)AllocMem(OTHER, superface_bytes, true);
+    superface = (face_t *)AllocMem(OTHER, superface_bytes, true);
 
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;

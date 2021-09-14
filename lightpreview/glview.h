@@ -17,8 +17,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 See file, 'COPYING', for details.
 */
 
-#ifndef GLVIEW_H
-#define GLVIEW_H
+#pragma once
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
@@ -30,7 +29,8 @@ See file, 'COPYING', for details.
 #include <QVector3D>
 #include <QMatrix4x4>
 
-enum class keys_t : uint32_t {
+enum class keys_t : uint32_t
+{
     none = 0,
     up = 1,
     right = 2,
@@ -38,36 +38,35 @@ enum class keys_t : uint32_t {
     left = 8
 };
 
-class GLView : public QOpenGLWidget,
-               protected QOpenGLFunctions
+class GLView : public QOpenGLWidget, protected QOpenGLFunctions
 {
 private:
     uint32_t m_keysPressed;
     int m_keymoveUpdateTimer;
     QPointF m_lastMouseDownPos;
-    
+
     // camera stuff
     float m_displayAspect;
     QVector3D m_cameraOrigin;
     QVector3D m_cameraFwd; // unit vec
-    QVector3D cameraRight() const {
-        QVector3D v = QVector3D::crossProduct(m_cameraFwd, QVector3D(0,0,1));
+    QVector3D cameraRight() const
+    {
+        QVector3D v = QVector3D::crossProduct(m_cameraFwd, QVector3D(0, 0, 1));
         v.normalize();
         return v;
     }
-    
+
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
     QOpenGLShaderProgram *m_program;
-    
+
     // uniform locations
     int m_program_mvp_location;
-    
+
 public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
 
-    
 protected:
     void initializeGL() override;
     void paintGL() override;
@@ -76,17 +75,15 @@ protected:
 private:
     void startMovementTimer();
     void stopMovementTimer();
-    
+
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
-    void wheelEvent (QWheelEvent *event) override;
-    
+    void wheelEvent(QWheelEvent *event) override;
+
 protected:
     /** animation timer */
     void timerEvent(QTimerEvent *event) override;
 };
-
-#endif // GLVIEW_H

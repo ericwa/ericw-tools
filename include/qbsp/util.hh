@@ -19,25 +19,21 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_UTIL_HH
-#define QBSP_UTIL_HH
+#pragma once
 
-#define msgWarning      1
-#define msgStat         2
-#define msgProgress     3
-#define msgLiteral      4
-#define msgFile         5
-#define msgScreen       6
-#define msgPercent      7
+#define msgWarning 1
+#define msgStat 2
+#define msgProgress 3
+#define msgLiteral 4
+#define msgFile 5
+#define msgScreen 6
+#define msgPercent 7
 
 extern const char *rgszWarnings[cWarnings];
 
 void *AllocMem(int Type, int cSize, bool fZero);
 
 void Message(int MsgType, ...);
-[[noreturn]] void Error(const char *error, ...)
-    __attribute__((format(printf,1,2),noreturn));
+[[noreturn]] void Error(const char *error, ...) __attribute__((format(printf, 1, 2), noreturn));
 
 int q_snprintf(char *str, size_t size, const char *format, ...);
-
-#endif

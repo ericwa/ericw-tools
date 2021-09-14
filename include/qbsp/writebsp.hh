@@ -19,8 +19,7 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_WRITEBSP_HH
-#define QBSP_WRITEBSP_HH
+#pragma once
 
 int ExportMapPlane(int planenum);
 int ExportMapTexinfo(int texinfonum);
@@ -28,5 +27,3 @@ int ExportMapTexinfo(int texinfonum);
 void BeginBSPFile(void);
 void FinishBSPFile(void);
 void UpdateBSPFileEntitiesLump();
-
-#endif

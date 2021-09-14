@@ -19,36 +19,28 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef PARSER_H
-#define PARSER_H
+#pragma once
 
 #include <stdbool.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define MAXTOKEN 1024
 
-typedef enum parseflags {
-    PARSE_NORMAL   = 0,
+enum parseflags
+{
+    PARSE_NORMAL = 0,
     PARSE_SAMELINE = 1, /* Expect the next token the current line */
-    PARSE_COMMENT  = 2, /* If a // comment is next token, return it */
+    PARSE_COMMENT = 2, /* If a // comment is next token, return it */
     PARSE_OPTIONAL = 4, /* Return next token on same line, or false if EOL */
-} parseflags_t;
+};
 
-typedef struct parser {
+struct parser_t
+{
     bool unget;
     const char *pos;
     int linenum;
     char token[MAXTOKEN];
-} parser_t;
+};
 
 bool ParseToken(parser_t *p, int flags);
 void ParserInit(parser_t *p, const char *data);
 
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* PARSER_H */

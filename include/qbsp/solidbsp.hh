@@ -19,17 +19,14 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_SOLIDBSP_HH
-#define QBSP_SOLIDBSP_HH
+#pragma once
 
 #include <atomic>
 
 extern std::atomic<int> splitnodes;
 
 void DetailToSolid(node_t *node);
-const char *GetContentsName( const contentflags_t &Contents );
+const char *GetContentsName(const contentflags_t &Contents);
 void DivideFacet(face_t *in, qbsp_plane_t *split, face_t **front, face_t **back);
 void CalcSurfaceInfo(surface_t *surf);
 void SubdivideFace(face_t *f, face_t **prevptr);
-
-#endif

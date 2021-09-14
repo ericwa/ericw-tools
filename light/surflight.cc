@@ -45,17 +45,18 @@ std::vector<surfacelight_t> surfacelights;
 std::map<int, std::vector<int>> surfacelightsByFacenum;
 int total_surflight_points = 0;
 
-struct make_surface_lights_args_t {
+struct make_surface_lights_args_t
+{
     const mbsp_t *bsp;
     const globalconfig_t *cfg;
 };
 
-struct save_winding_points_args_t {
+struct save_winding_points_args_t
+{
     vector<qvec3f> *points;
 };
 
-static void 
-SaveWindingCenterFn(winding_t *w, void *userinfo)
+static void SaveWindingCenterFn(winding_t *w, void *userinfo)
 {
     auto *args = static_cast<save_winding_points_args_t *>(userinfo);
 
@@ -64,26 +65,28 @@ SaveWindingCenterFn(winding_t *w, void *userinfo)
     args->points->push_back(vec3_t_to_glm(center));
 }
 
-static void *
-MakeSurfaceLightsThread(void *arg)
+static void *MakeSurfaceLightsThread(void *arg)
 {
     const mbsp_t *bsp = static_cast<make_surface_lights_args_t *>(arg)->bsp;
     const globalconfig_t &cfg = *static_cast<make_surface_lights_args_t *>(arg)->cfg;
 
     while (true) {
         const int i = GetThreadWork();
-        if (i == -1) break;
+        if (i == -1)
+            break;
 
         const bsp2_dface_t *face = BSP_GetFace(bsp, i);
 
         // Face casts light?
         const gtexinfo_t *info = Face_Texinfo(bsp, face);
-        if (info == nullptr) continue;
+        if (info == nullptr)
+            continue;
         if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
             if (info->flags.native & Q2_SURF_LIGHT) {
                 vec3_t wc;
                 WindingCenter(WindingFromFace(bsp, face), wc);
-                logprint("WARNING: surface light '%s' at [%s] has 0 intensity.\n", Face_TextureName(bsp, face), VecStr(wc).c_str());
+                logprint("WARNING: surface light '%s' at [%s] has 0 intensity.\n", Face_TextureName(bsp, face),
+                    VecStr(wc).c_str());
             }
             continue;
         }
@@ -91,14 +94,15 @@ MakeSurfaceLightsThread(void *arg)
         // Create face points...
         auto poly = GLM_FacePoints(bsp, face);
         const float facearea = GLM_PolyArea(poly);
-        
+
         // Avoid small, or zero-area faces
-        if(GLM_PolyArea(poly) < 1) continue;
+        if (GLM_PolyArea(poly) < 1)
+            continue;
 
         // Create winding...
         const int numpoints = poly.size();
         winding_t *winding = AllocWinding(numpoints);
-        for (int c = 0; c < numpoints; c++) 
+        for (int c = 0; c < numpoints; c++)
             glm_to_vec3_t(poly.at(c), winding->p[c]);
         winding->numpoints = numpoints;
         RemoveColinearPoints(winding);
@@ -124,7 +128,7 @@ MakeSurfaceLightsThread(void *arg)
 
         // Calculate emit color and intensity...
         VectorScale(texturecolor, 1.0f / 255.0f, texturecolor); // Convert to 0..1 range...
-        VectorScale(texturecolor, info->value, texturecolor);	// Scale by light value
+        VectorScale(texturecolor, info->value, texturecolor); // Scale by light value
 
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
         if (info->flags.native & Q2_SURF_SKY) {
@@ -137,11 +141,14 @@ MakeSurfaceLightsThread(void *arg)
         // Calculate intensity...
         float intensity = 0.0f;
         for (float c : texturecolor)
-            if (c > intensity) intensity = c;
-        if (intensity == 0.0f) continue;
+            if (c > intensity)
+                intensity = c;
+        if (intensity == 0.0f)
+            continue;
 
         // Normalize color...
-        if (intensity > 1.0f) VectorScale(texturecolor, 1.0f / intensity, texturecolor);
+        if (intensity > 1.0f)
+            VectorScale(texturecolor, 1.0f / intensity, texturecolor);
 
         // Sanity checks...
         Q_assert(!points.empty());
@@ -166,7 +173,7 @@ MakeSurfaceLightsThread(void *arg)
             EstimateVisibleBoundsAtPoint(facemidpoint, l.mins, l.maxs);
 
         // Store light...
-        unique_lock<mutex> lck{ surfacelights_lock };
+        unique_lock<mutex> lck{surfacelights_lock};
         surfacelights.push_back(l);
 
         const int index = static_cast<int>(surfacelights.size()) - 1;
@@ -176,21 +183,15 @@ MakeSurfaceLightsThread(void *arg)
     return nullptr;
 }
 
-const std::vector<surfacelight_t> &SurfaceLights()
-{
-    return surfacelights;
-}
+const std::vector<surfacelight_t> &SurfaceLights() { return surfacelights; }
 
-int TotalSurfacelightPoints()
-{
-    return total_surflight_points;
-}
+int TotalSurfacelightPoints() { return total_surflight_points; }
 
 // No surflight_debug (yet?), so unused...
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 {
     const auto &vec = surfacelightsByFacenum.find(facenum);
-    if (vec != surfacelightsByFacenum.end()) 
+    if (vec != surfacelightsByFacenum.end())
         return vec->second;
 
     static std::vector<int> empty;
@@ -202,6 +203,6 @@ MakeSurfaceLights(const globalconfig_t &cfg, const mbsp_t *bsp)
 {
     logprint("--- MakeSurfaceLights ---\n");
 
-    make_surface_lights_args_t args { bsp,  &cfg };
+    make_surface_lights_args_t args{bsp, &cfg};
     RunThreadsOn(0, bsp->numfaces, MakeSurfaceLightsThread, static_cast<void *>(&args));
 }

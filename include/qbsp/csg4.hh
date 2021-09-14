@@ -19,8 +19,7 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_CSG4_HH
-#define QBSP_CSG4_HH
+#pragma once
 
 extern int csgmergefaces;
 
@@ -29,5 +28,3 @@ surface_t *BuildSurfaces(const std::map<int, face_t *> &planefaces);
 face_t *NewFaceFromFace(face_t *in);
 void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **back);
 void UpdateFaceSphere(face_t *in);
-
-#endif

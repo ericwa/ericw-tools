@@ -17,8 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef __LIGHT_TRACE_H__
-#define __LIGHT_TRACE_H__
+#pragma once
 
 #include <light/imglib.hh> //mxd
 
@@ -37,22 +36,24 @@
 #include <sstream>
 #include <utility> // for std::pair
 
-enum class hittype_t : uint8_t {
+enum class hittype_t : uint8_t
+{
     NONE = 0,
     SOLID = 1,
     SKY = 2
 };
 
-const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const vec3_t point );
-int Light_PointContents( const mbsp_t *bsp, const vec3_t point );
+const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const vec3_t point);
+int Light_PointContents(const mbsp_t *bsp, const vec3_t point);
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
-color_rgba SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point); //mxd. Palette index -> RGBA
+color_rgba SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point); // mxd. Palette index -> RGBA
 
 class modelinfo_t;
 
 using style_t = int;
 
-struct hitresult_t {
+struct hitresult_t
+{
     bool blocked;
 
     /**
@@ -74,10 +75,12 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const mod
 
 class modelinfo_t;
 
-class raystream_common_t {
+class raystream_common_t
+{
 public:
     virtual ~raystream_common_t() = default;
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr, const vec_t *normalcontrib = nullptr) = 0;
+    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr,
+        const vec_t *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
     virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
     virtual int getPushedRayPointIndex(size_t j) = 0;
@@ -87,21 +90,24 @@ public:
     virtual void clearPushedRays() = 0;
 
 public:
-    void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist) {
+    void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist)
+    {
         vec3_t originTemp, dirTemp;
         glm_to_vec3_t(origin, originTemp);
         glm_to_vec3_t(dir, dirTemp);
         this->pushRay(i, originTemp, dirTemp, dist);
     }
 
-    qvec3f getPushedRayDir(size_t j) {
+    qvec3f getPushedRayDir(size_t j)
+    {
         vec3_t temp;
         this->getPushedRayDir(j, temp);
         return vec3_t_to_glm(temp);
     }
 };
 
-class raystream_intersection_t : public virtual raystream_common_t {
+class raystream_intersection_t : public virtual raystream_common_t
+{
 public:
     virtual void tracePushedRaysIntersection(const modelinfo_t *self) = 0;
     virtual float getPushedRayHitDist(size_t j) = 0;
@@ -111,7 +117,8 @@ public:
     virtual ~raystream_intersection_t() = default;
 };
 
-class raystream_occlusion_t : public virtual raystream_common_t {
+class raystream_occlusion_t : public virtual raystream_common_t
+{
 public:
     virtual void tracePushedRaysOcclusion(const modelinfo_t *self) = 0;
     virtual bool getPushedRayOccluded(size_t j) = 0;
@@ -124,4 +131,3 @@ raystream_occlusion_t *MakeOcclusionRayStream(int maxrays);
 
 void MakeTnodes(const mbsp_t *bsp);
 
-#endif /* __LIGHT_TRACE_H__ */

@@ -42,8 +42,7 @@ static int mapsurfaces;
 
 //============================================================================
 
-void
-ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
+void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // backup the mins/maxs
     vec3_t mins, maxs;
@@ -52,11 +51,11 @@ ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 
     // zero it
     memset(node, 0, sizeof(*node));
-    
+
     // restore relevant fields
     VectorCopy(mins, node->mins);
     VectorCopy(maxs, node->maxs);
-    
+
     node->planenum = PLANENUM_LEAF;
     node->contents = contents;
     node->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
@@ -64,21 +63,20 @@ ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     Q_assert(node->markfaces[0] == nullptr);
 }
 
-void
-DetailToSolid(node_t *node)
+void DetailToSolid(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF) {
         DetailToSolid(node->children[0]);
         DetailToSolid(node->children[1]);
 
-		// If both children are solid, we can merge the two leafs into one.
+        // If both children are solid, we can merge the two leafs into one.
         // DarkPlaces has an assertion that fails if both children are
         // solid.
-		if (node->children[0]->contents.is_structural_solid(options.target_game)
-			&& node->children[1]->contents.is_structural_solid(options.target_game)) {
+        if (node->children[0]->contents.is_structural_solid(options.target_game) &&
+            node->children[1]->contents.is_structural_solid(options.target_game)) {
             // This discards any faces on-node. Should be safe (?)
             ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
-		}
+        }
     }
 }
 
@@ -89,8 +87,7 @@ FaceSide
 For BSP hueristic
 ==================
 */
-static int
-FaceSide__(const face_t *in, const qbsp_plane_t *split)
+static int FaceSide__(const face_t *in, const qbsp_plane_t *split)
 {
     bool have_front, have_back;
     int i;
@@ -136,8 +133,7 @@ FaceSide__(const face_t *in, const qbsp_plane_t *split)
     return SIDE_ON;
 }
 
-static int
-FaceSide(const face_t *in, const qbsp_plane_t *split)
+static int FaceSide(const face_t *in, const qbsp_plane_t *split)
 {
     vec_t dist;
     int ret;
@@ -159,10 +155,8 @@ FaceSide(const face_t *in, const qbsp_plane_t *split)
  * on that side of the plane. Therefore, if the split plane is
  * non-axial, then the returned bounds will overlap.
  */
-static void
-DivideBounds(const vec3_t mins, const vec3_t maxs, const qbsp_plane_t *split,
-             vec3_t front_mins, vec3_t front_maxs,
-             vec3_t back_mins, vec3_t back_maxs)
+static void DivideBounds(const vec3_t mins, const vec3_t maxs, const qbsp_plane_t *split, vec3_t front_mins,
+    vec3_t front_maxs, vec3_t back_mins, vec3_t back_maxs)
 {
     int a, b, c, i, j;
     vec_t dist1, dist2, mid, split_mins, split_maxs;
@@ -224,8 +218,7 @@ DivideBounds(const vec3_t mins, const vec3_t maxs, const qbsp_plane_t *split,
 /*
  * Calculate the split plane metric for axial planes
  */
-static vec_t
-SplitPlaneMetric_Axial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
+static vec_t SplitPlaneMetric_Axial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
 {
     vec_t value = 0;
     for (int i = 0; i < 3; i++) {
@@ -244,8 +237,7 @@ SplitPlaneMetric_Axial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t ma
 /*
  * Calculate the split plane metric for non-axial planes
  */
-static vec_t
-SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
+static vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
 {
     vec3_t fmins, fmaxs, bmins, bmaxs;
     vec_t value = 0.0;
@@ -259,8 +251,7 @@ SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t
     return value;
 }
 
-static inline vec_t
-SplitPlaneMetric(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
+static inline vec_t SplitPlaneMetric(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
 {
     vec_t value;
 
@@ -279,8 +270,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static surface_t *
-ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins, const vec3_t maxs)
+static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins, const vec3_t maxs)
 {
     /* pick the plane that splits the least */
     vec_t bestmetric = VECT_MAX;
@@ -290,10 +280,10 @@ ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins, const vec3_t maxs
         for (surface_t *surf = surfaces; surf; surf = surf->next) {
             if (surf->onnode)
                 continue;
-            
-            if( surf->has_struct && pass )
+
+            if (surf->has_struct && pass)
                 continue;
-            if( !surf->has_struct && !pass )
+            if (!surf->has_struct && !pass)
                 continue;
 
             /* check for axis aligned surfaces */
@@ -315,11 +305,11 @@ ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins, const vec3_t maxs
                 if (surf->onnode)
                     continue;
 
-                if( surf->has_struct && pass )
+                if (surf->has_struct && pass)
                     continue;
-                if( !surf->has_struct && !pass )
+                if (!surf->has_struct && !pass)
                     continue;
-                
+
                 const qbsp_plane_t *plane = &map.planes[surf->planenum];
                 const vec_t metric = SplitPlaneMetric(plane, mins, maxs);
                 if (metric < bestmetric) {
@@ -328,7 +318,7 @@ ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins, const vec3_t maxs
                 }
             }
         }
-        
+
         if (bestsurface)
             break;
     }
@@ -345,11 +335,9 @@ ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins, const vec3_t maxs
     if (!usemidsplit && !bestsurface->has_struct) {
         bestsurface->detail_separator = true;
     }
-    
+
     return bestsurface;
 }
-
-
 
 /*
 ==================
@@ -358,8 +346,7 @@ ChoosePlaneFromList
 The real BSP hueristic
 ==================
 */
-static surface_t *
-ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
+static surface_t *ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
 {
     /* pick the plane that splits the least */
     int minsplits = INT_MAX - 1;
@@ -382,11 +369,10 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
                     hintsplit = true;
             }
 
-            if( surf->has_struct && pass )
+            if (surf->has_struct && pass)
                 continue;
-            if( !surf->has_struct && !pass )
+            if (!surf->has_struct && !pass)
                 continue;
-            
 
             const qbsp_plane_t *plane = &map.planes[surf->planenum];
             int splits = 0;
@@ -446,7 +432,6 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
     return bestsurface;
 }
 
-
 /*
 ==================
 SelectPartition
@@ -457,8 +442,7 @@ returns NULL if the surface list can not be divided any more (a leaf)
 Called in parallel.
 ==================
 */
-static surface_t *
-SelectPartition(surface_t *surfaces)
+static surface_t *SelectPartition(surface_t *surfaces)
 {
     // count onnode surfaces
     int surfcount = 0;
@@ -473,7 +457,7 @@ SelectPartition(surface_t *surfaces)
         return NULL;
 
     if (surfcount == 1)
-        return bestsurface;     // this is a final split
+        return bestsurface; // this is a final split
 
     // calculate a bounding box of the entire surfaceset
     vec3_t mins, maxs;
@@ -503,9 +487,8 @@ SelectPartition(surface_t *surfaces)
         if (options.maxNodeSize >= 64) {
             const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
 
-            largenode = (maxs[0] - mins[0]) > maxnodesize
-                        || (maxs[1] - mins[1]) > maxnodesize
-                        || (maxs[2] - mins[2]) > maxnodesize;
+            largenode = (maxs[0] - mins[0]) > maxnodesize || (maxs[1] - mins[1]) > maxnodesize ||
+                        (maxs[2] - mins[2]) > maxnodesize;
         }
     }
 
@@ -525,8 +508,7 @@ CalcSurfaceInfo
 Calculates the bounding box
 =================
 */
-void
-CalcSurfaceInfo(surface_t *surf)
+void CalcSurfaceInfo(surface_t *surf)
 {
     // calculate a bounding box
     for (int i = 0; i < 3; i++) {
@@ -536,20 +518,20 @@ CalcSurfaceInfo(surface_t *surf)
 
     surf->has_detail = false;
     surf->has_struct = false;
-    
+
     for (const face_t *f = surf->faces; f; f = f->next) {
         for (auto &contents : f->contents)
             if (!contents.is_valid(options.target_game, false))
                 Error("Bad contents in face: %s (%s)", contents.to_string(options.target_game).c_str(), __func__);
 
-        surf->lmshift = (f->lmshift[0]<f->lmshift[1])?f->lmshift[0]:f->lmshift[1];
-        
+        surf->lmshift = (f->lmshift[0] < f->lmshift[1]) ? f->lmshift[0] : f->lmshift[1];
+
         bool faceIsDetail = false;
 
         if ((f->contents[0].extended | f->contents[1].extended) &
             (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))
             faceIsDetail = true;
-        
+
         if (faceIsDetail)
             surf->has_detail = true;
         else
@@ -565,16 +547,12 @@ CalcSurfaceInfo(surface_t *surf)
     }
 }
 
-
-
 /*
 ==================
 DividePlane
 ==================
 */
-static void
-DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front,
-            surface_t **back)
+static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front, surface_t **back)
 {
     const qbsp_plane_t *inplane = &map.planes[in->planenum];
     *front = *back = NULL;
@@ -592,7 +570,7 @@ DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front,
             *newsurf = *in;
 
             // Prepend each face in facet list to either in or newsurf lists
-            face_t* next;
+            face_t *next;
             for (; facet; facet = next) {
                 next = facet->next;
                 if (facet->planeside == 1) {
@@ -628,8 +606,8 @@ DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front,
             *back = in;
         return;
     }
-// do a real split.  may still end up entirely on one side
-// OPTIMIZE: use bounding box for fast test
+    // do a real split.  may still end up entirely on one side
+    // OPTIMIZE: use bounding box for fast test
     face_t *frontlist = NULL;
     face_t *backlist = NULL;
 
@@ -682,12 +660,10 @@ DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front,
 DivideNodeBounds
 ==================
 */
-static void
-DivideNodeBounds(node_t *node, const qbsp_plane_t *split)
+static void DivideNodeBounds(node_t *node, const qbsp_plane_t *split)
 {
-    DivideBounds(node->mins, node->maxs, split,
-                 node->children[0]->mins, node->children[0]->maxs,
-                 node->children[1]->mins, node->children[1]->maxs);
+    DivideBounds(node->mins, node->maxs, split, node->children[0]->mins, node->children[0]->maxs,
+        node->children[1]->mins, node->children[1]->maxs);
 }
 
 /*
@@ -695,8 +671,8 @@ DivideNodeBounds(node_t *node, const qbsp_plane_t *split)
 GetContentsName
 ==================
 */
-const char *
-GetContentsName( const contentflags_t &Contents ) {
+const char *GetContentsName(const contentflags_t &Contents)
+{
     if (Contents.extended & CFLAGS_DETAIL) {
         return "Detail";
     } else if (Contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
@@ -705,28 +681,22 @@ GetContentsName( const contentflags_t &Contents ) {
         return "DetailFence";
     } else if (Contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
         return "IllusionaryVisblocker";
-    } else switch( Contents.native ) {
-        case CONTENTS_EMPTY:
-            return "Empty";
-            
-        case CONTENTS_SOLID:
-            return "Solid";
-            
-        case CONTENTS_WATER:
-            return "Water";
-            
-        case CONTENTS_SLIME:
-            return "Slime";
-            
-        case CONTENTS_LAVA:
-            return "Lava";
-            
-        case CONTENTS_SKY:
-            return "Sky";
+    } else
+        switch (Contents.native) {
+            case CONTENTS_EMPTY: return "Empty";
 
-        default:
-            return "Error";
-    }
+            case CONTENTS_SOLID: return "Solid";
+
+            case CONTENTS_WATER: return "Water";
+
+            case CONTENTS_SLIME: return "Slime";
+
+            case CONTENTS_LAVA: return "Lava";
+
+            case CONTENTS_SKY: return "Sky";
+
+            default: return "Error";
+        }
 }
 
 /*
@@ -739,8 +709,7 @@ original faces that have some fragment inside this leaf.
 Called in parallel.
 ==================
 */
-static void
-LinkConvexFaces(surface_t *planelist, node_t *leafnode)
+static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 {
     leafnode->faces = NULL;
     leafnode->planenum = PLANENUM_LEAF;
@@ -751,13 +720,13 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     for (surface_t *surf = planelist; surf; surf = surf->next) {
         for (face_t *f = surf->faces; f; f = f->next) {
             count++;
-            
+
             const int currentpri = contents.has_value() ? contents->priority(options.target_game) : -1;
             const int fpri = f->contents[0].priority(options.target_game);
             if (fpri > currentpri) {
                 contents = f->contents[0];
             }
-            
+
             // HACK: Handle structural covered by detail.
             if (f->contents[0].extended & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
                 Q_assert(f->contents[0].is_empty(options.target_game));
@@ -774,7 +743,8 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     // NOTE: This is crazy..
     // Liquid leafs get assigned liquid content types because of the
     // "cosmetic" mirrored faces.
-    leafnode->contents = contents.value_or(options.target_game->create_solid_contents()); // FIXME: Need to create CONTENTS_DETAIL sometimes?
+    leafnode->contents = contents.value_or(
+        options.target_game->create_solid_contents()); // FIXME: Need to create CONTENTS_DETAIL sometimes?
 
     if (leafnode->contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
         c_illusionary_visblocker++;
@@ -791,7 +761,7 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     } else if (leafnode->contents.is_liquid(options.target_game) || leafnode->contents.is_sky(options.target_game)) {
         c_water++;
     } else {
-        //Error("Bad contents in face: %s (%s)", leafnode->contents.to_string(options.target_game).c_str(), __func__);
+        // Error("Bad contents in face: %s (%s)", leafnode->contents.to_string(options.target_game).c_str(), __func__);
     }
 
     // write the list of the original faces to the leaf's markfaces
@@ -803,7 +773,7 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     surface_t *pnext;
     for (surface_t *surf = planelist; surf; surf = pnext) {
         pnext = surf->next;
-        face_t* next;
+        face_t *next;
         for (face_t *f = surf->faces; f; f = next) {
             next = f->next;
             leafnode->markfaces[i] = f->original;
@@ -812,9 +782,8 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
         }
         free(surf);
     }
-    leafnode->markfaces[i] = NULL;      // sentinal
+    leafnode->markfaces[i] = NULL; // sentinal
 }
-
 
 /*
 ==================
@@ -823,19 +792,18 @@ LinkNodeFaces
 First subdivides surface->faces.
 Then, duplicates the list of subdivided faces and returns it.
 
-For each surface->faces, ->original is set to the respective duplicate that 
+For each surface->faces, ->original is set to the respective duplicate that
 is returned here (why?).
 
 Called in parallel.
 ==================
 */
-static face_t *
-LinkNodeFaces(surface_t *surface)
+static face_t *LinkNodeFaces(surface_t *surface)
 {
     face_t *list = NULL;
 
     // subdivide large faces
-    face_t** prevptr = &surface->faces;
+    face_t **prevptr = &surface->faces;
     face_t *f = *prevptr;
     while (f) {
         SubdivideFace(f, prevptr);
@@ -856,7 +824,6 @@ LinkNodeFaces(surface_t *surface)
     return list;
 }
 
-
 /*
 ==================
 PartitionSurfaces
@@ -864,13 +831,12 @@ PartitionSurfaces
 Called in parallel.
 ==================
 */
-static void
-PartitionSurfaces(surface_t *surfaces, node_t *node)
+static void PartitionSurfaces(surface_t *surfaces, node_t *node)
 {
     surface_t *split = SelectPartition(surfaces);
-    if (!split) {               // this is a leaf node
+    if (!split) { // this is a leaf node
         node->planenum = PLANENUM_LEAF;
-        
+
         // frees `surfaces` and the faces on it.
         // saves pointers to face->original in the leaf's markfaces list.
         LinkConvexFaces(surfaces, node);
@@ -903,8 +869,8 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
         if (frontfrag && backfrag) {
             // the plane was split, which may expose oportunities to merge
             // adjacent faces into a single face
-//                      MergePlaneFaces (frontfrag);
-//                      MergePlaneFaces (backfrag);
+            //                      MergePlaneFaces (frontfrag);
+            //                      MergePlaneFaces (backfrag);
         }
 
         if (frontfrag) {
@@ -922,19 +888,17 @@ PartitionSurfaces(surface_t *surfaces, node_t *node)
     }
 
     tbb::task_group g;
-    g.run([&](){ PartitionSurfaces(frontlist, node->children[0]); });
-    g.run([&](){ PartitionSurfaces(backlist, node->children[1]); });
+    g.run([&]() { PartitionSurfaces(frontlist, node->children[0]); });
+    g.run([&]() { PartitionSurfaces(backlist, node->children[1]); });
     g.wait();
 }
-
 
 /*
 ==================
 SolidBSP
 ==================
 */
-node_t *
-SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
+node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 {
     if (!surfhead) {
         /*

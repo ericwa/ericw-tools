@@ -28,15 +28,17 @@
 using keyvalue_t = std::pair<std::string, std::string>;
 using keyvalues_t = std::vector<keyvalue_t>;
 
-class entdict_t {
+class entdict_t
+{
     keyvalues_t keyvalues;
+
 public:
     entdict_t(std::initializer_list<keyvalue_t> l);
     entdict_t();
 
-    const std::string& get(const std::string& key) const;
-    void set(const std::string& key, const std::string& value);
-    void remove(const std::string& key);
+    const std::string &get(const std::string &key) const;
+    void set(const std::string &key, const std::string &value);
+    void remove(const std::string &key);
 
     keyvalues_t::iterator find(std::string_view key);
     keyvalues_t::const_iterator find(std::string_view key) const;

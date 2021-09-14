@@ -17,7 +17,6 @@
     See file, 'COPYING', for details.
 */
 
-
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 
@@ -27,7 +26,8 @@
 
 using namespace nlohmann;
 
-static void serialize_bsp(const mbsp_t &bsp, const char *name) {
+static void serialize_bsp(const mbsp_t &bsp, const char *name)
+{
     json j = json::object();
 
     if (bsp.nummodels) {
@@ -37,13 +37,15 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
             json &model = models.insert(models.end(), json::object()).value();
             auto &src_model = bsp.dmodels[i];
 
-            model.push_back({ "mins", json::array({ src_model.mins[0], src_model.mins[1], src_model.mins[2] }) });
-            model.push_back({ "maxs", json::array({ src_model.maxs[0], src_model.maxs[1], src_model.maxs[2] }) });
-            model.push_back({ "origin", json::array({ src_model.origin[0], src_model.origin[1], src_model.origin[2] }) });
-            model.push_back({ "headnode", json::array({ src_model.headnode[0], src_model.headnode[1], src_model.headnode[2], src_model.headnode[3], src_model.headnode[4], src_model.headnode[5], src_model.headnode[6], src_model.headnode[7] }) });
-            model.push_back({ "visleafs", src_model.visleafs });
-            model.push_back({ "firstface", src_model.firstface });
-            model.push_back({ "numfaces", src_model.numfaces });
+            model.push_back({"mins", json::array({src_model.mins[0], src_model.mins[1], src_model.mins[2]})});
+            model.push_back({"maxs", json::array({src_model.maxs[0], src_model.maxs[1], src_model.maxs[2]})});
+            model.push_back({"origin", json::array({src_model.origin[0], src_model.origin[1], src_model.origin[2]})});
+            model.push_back({"headnode",
+                json::array({src_model.headnode[0], src_model.headnode[1], src_model.headnode[2], src_model.headnode[3],
+                    src_model.headnode[4], src_model.headnode[5], src_model.headnode[6], src_model.headnode[7]})});
+            model.push_back({"visleafs", src_model.visleafs});
+            model.push_back({"firstface", src_model.firstface});
+            model.push_back({"numfaces", src_model.numfaces});
         }
     }
 
@@ -53,18 +55,19 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
         for (int32_t i = 0; i < bsp.numleafs; i++) {
             json &leaf = leafs.insert(leafs.end(), json::object()).value();
             auto &src_leaf = bsp.dleafs[i];
-            
-            leaf.push_back({ "contents", src_leaf.contents });
-            leaf.push_back({ "visofs", src_leaf.visofs });
-            leaf.push_back({ "mins", json::array({ src_leaf.mins[0], src_leaf.mins[1], src_leaf.mins[2] }) });
-            leaf.push_back({ "maxs", json::array({ src_leaf.maxs[0], src_leaf.maxs[1], src_leaf.maxs[2] }) });
-            leaf.push_back({ "firstmarksurface", src_leaf.firstmarksurface });
-            leaf.push_back({ "nummarksurfaces", src_leaf.nummarksurfaces });
-            leaf.push_back({ "ambient_level", json::array({ src_leaf.ambient_level[0], src_leaf.ambient_level[1], src_leaf.ambient_level[2], src_leaf.ambient_level[3] }) });
-            leaf.push_back({ "cluster", src_leaf.cluster });
-            leaf.push_back({ "area", src_leaf.area });
-            leaf.push_back({ "firstleafbrush", src_leaf.firstleafbrush });
-            leaf.push_back({ "numleafbrushes", src_leaf.numleafbrushes });
+
+            leaf.push_back({"contents", src_leaf.contents});
+            leaf.push_back({"visofs", src_leaf.visofs});
+            leaf.push_back({"mins", json::array({src_leaf.mins[0], src_leaf.mins[1], src_leaf.mins[2]})});
+            leaf.push_back({"maxs", json::array({src_leaf.maxs[0], src_leaf.maxs[1], src_leaf.maxs[2]})});
+            leaf.push_back({"firstmarksurface", src_leaf.firstmarksurface});
+            leaf.push_back({"nummarksurfaces", src_leaf.nummarksurfaces});
+            leaf.push_back({"ambient_level", json::array({src_leaf.ambient_level[0], src_leaf.ambient_level[1],
+                                                 src_leaf.ambient_level[2], src_leaf.ambient_level[3]})});
+            leaf.push_back({"cluster", src_leaf.cluster});
+            leaf.push_back({"area", src_leaf.area});
+            leaf.push_back({"firstleafbrush", src_leaf.firstleafbrush});
+            leaf.push_back({"numleafbrushes", src_leaf.numleafbrushes});
         }
     }
 
@@ -75,9 +78,9 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
             json &plane = planes.insert(planes.end(), json::object()).value();
             auto &src_plane = bsp.dplanes[i];
 
-            plane.push_back({ "normal", json::array({ src_plane.normal[0], src_plane.normal[1], src_plane.normal[2] }) });
-            plane.push_back({ "dist", src_plane.dist });
-            plane.push_back({ "type", src_plane.type });
+            plane.push_back({"normal", json::array({src_plane.normal[0], src_plane.normal[1], src_plane.normal[2]})});
+            plane.push_back({"dist", src_plane.dist});
+            plane.push_back({"type", src_plane.type});
         }
     }
 
@@ -87,16 +90,16 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
         for (int32_t i = 0; i < bsp.numnodes; i++) {
             json &node = nodes.insert(nodes.end(), json::object()).value();
             auto &src_node = bsp.dnodes[i];
-            
-            node.push_back({ "planenum", src_node.planenum });
-            node.push_back({ "children", json::array({ src_node.children[0], src_node.children[1] }) });
-            node.push_back({ "mins", json::array({ src_node.mins[0], src_node.mins[1], src_node.mins[2] }) });
-            node.push_back({ "maxs", json::array({ src_node.maxs[0], src_node.maxs[1], src_node.maxs[2] }) });
-            node.push_back({ "firstface", src_node.firstface });
-            node.push_back({ "numfaces", src_node.numfaces });
+
+            node.push_back({"planenum", src_node.planenum});
+            node.push_back({"children", json::array({src_node.children[0], src_node.children[1]})});
+            node.push_back({"mins", json::array({src_node.mins[0], src_node.mins[1], src_node.mins[2]})});
+            node.push_back({"maxs", json::array({src_node.maxs[0], src_node.maxs[1], src_node.maxs[2]})});
+            node.push_back({"firstface", src_node.firstface});
+            node.push_back({"numfaces", src_node.numfaces});
         }
     }
-    
+
     if (bsp.numbrushsides) {
         json &brushsides = (j.emplace("brushsides", json::array())).first.value();
 
@@ -104,8 +107,8 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
             json &brushside = brushsides.insert(brushsides.end(), json::object()).value();
             auto &src_brushside = bsp.dbrushsides[i];
 
-            brushside.push_back({ "planenum", src_brushside.planenum });
-            brushside.push_back({ "texinfo", src_brushside.texinfo });
+            brushside.push_back({"planenum", src_brushside.planenum});
+            brushside.push_back({"texinfo", src_brushside.texinfo});
         }
     }
 
@@ -116,9 +119,9 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
             json &brush = brushes.insert(brushes.end(), json::object()).value();
             auto &src_brush = bsp.dbrushes[i];
 
-            brush.push_back({ "firstside", src_brush.firstside });
-            brush.push_back({ "numsides", src_brush.numsides });
-            brush.push_back({ "contents", src_brush.contents });
+            brush.push_back({"firstside", src_brush.firstside});
+            brush.push_back({"numsides", src_brush.numsides});
+            brush.push_back({"contents", src_brush.contents});
         }
     }
 
@@ -130,11 +133,10 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
         }
     }
 
-    std::ofstream(name, std::fstream::out | std::fstream::trunc | std::fstream::binary) << std::setw(4) <<j;
+    std::ofstream(name, std::fstream::out | std::fstream::trunc | std::fstream::binary) << std::setw(4) << j;
 }
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     bspdata_t bsp;
     char source[1024];

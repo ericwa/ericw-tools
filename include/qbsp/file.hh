@@ -19,11 +19,9 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef FILE_H
-#define FILE_H
+#pragma once
 
 #include <stdbool.h>
 
 size_t LoadFile(const char *filename, void *bufptr, bool nofail);
-    
-#endif
+

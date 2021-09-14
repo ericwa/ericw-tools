@@ -17,8 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef __LIGHT_LTFACE_H__
-#define __LIGHT_LTFACE_H__
+#pragma once
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
@@ -42,17 +41,18 @@
 
 extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
-extern std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; //mxd
+extern std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
 extern std::atomic<uint32_t> fully_transparent_lightmaps;
 
-class faceextents_t {
+class faceextents_t
+{
 private:
     qvec2i m_texmins;
     qvec2i m_texsize;
     float m_lightmapscale;
     qmat4x4f m_worldToTexCoord;
     qmat4x4f m_texCoordToWorld;
-    
+
 public:
     faceextents_t() = default;
     faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float lmscale);
@@ -77,9 +77,10 @@ void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2]);
 void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
-std::map<int, qvec3f> GetDirectLighting(const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t origin, const vec3_t normal);
+std::map<int, qvec3f> GetDirectLighting(
+    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t origin, const vec3_t normal);
 void SetupDirt(globalconfig_t &cfg);
-float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t point, const vec3_t normal, const modelinfo_t *selfshadow);
+float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t point, const vec3_t normal,
+    const modelinfo_t *selfshadow);
 void LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg);
 
-#endif /* __LIGHT_LTFACE_H__ */

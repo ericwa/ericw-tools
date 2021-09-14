@@ -27,26 +27,27 @@
 #include <vis/vis.hh>
 #include <common/cmdlib.hh>
 
-#define VIS_STATE_VERSION ('T' << 24 | 'Y' << 16 | 'R' << 8 | '1')
+constexpr uint32_t VIS_STATE_VERSION = ('T' << 24 | 'Y' << 16 | 'R' << 8 | '1');
 
-typedef struct {
+struct dvisstate_t
+{
     uint32_t version;
     uint32_t numportals;
     uint32_t numleafs;
     uint32_t testlevel;
     uint32_t time_elapsed;
-} dvisstate_t;
+};
 
-typedef struct {
+struct dportal_t
+{
     uint32_t status;
     uint32_t might;
     uint32_t vis;
     uint32_t nummightsee;
     uint32_t numcansee;
-} dportal_t;
+};
 
-static int
-CompressBits(uint8_t *out, const leafbits_t *in)
+static int CompressBits(uint8_t *out, const leafbits_t *in)
 {
     int i, rep, shift, numbytes;
     uint8_t val, repval, *dst;
@@ -86,8 +87,7 @@ CompressBits(uint8_t *out, const leafbits_t *in)
     return numbytes;
 }
 
-static void
-DecompressBits(leafbits_t *dst, const uint8_t *src)
+static void DecompressBits(leafbits_t *dst, const uint8_t *src)
 {
     int i, rep, shift, numbytes;
     uint8_t val;
@@ -116,8 +116,7 @@ DecompressBits(leafbits_t *dst, const uint8_t *src)
     }
 }
 
-static void
-CopyLeafBits(leafbits_t *dst, const uint8_t *src, int numleafs)
+static void CopyLeafBits(leafbits_t *dst, const uint8_t *src, int numleafs)
 {
     int i, shift;
     int numbytes;
@@ -132,8 +131,7 @@ CopyLeafBits(leafbits_t *dst, const uint8_t *src, int numleafs)
     }
 }
 
-void
-SaveVisState(void)
+void SaveVisState(void)
 {
     int i, vis_len, might_len;
     const portal_t *p;
@@ -159,7 +157,7 @@ SaveVisState(void)
     might = static_cast<uint8_t *>(malloc((portalleafs + 7) >> 3));
     vis = static_cast<uint8_t *>(malloc((portalleafs + 7) >> 3));
 
-    for (i = 0, p = portals; i < numportals * 2; i++, p++ ) {
+    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
         might_len = CompressBits(might, p->mightsee);
         if (p->status == pstat_done)
             vis_len = CompressBits(vis, p->visbits);
@@ -192,8 +190,7 @@ SaveVisState(void)
         Error("%s: error renaming state file (%s)", __func__, strerror(errno));
 }
 
-qboolean
-LoadVisState(void)
+qboolean LoadVisState(void)
 {
     FILE *infile;
     int prt_time, state_time;
@@ -240,8 +237,7 @@ LoadVisState(void)
     }
     if (state.numportals != numportals || state.numleafs != portalleafs) {
         fclose(infile);
-        Error("%s: state file %s does not match portal file %s", __func__,
-              statefile, portalfile);
+        Error("%s: state file %s does not match portal file %s", __func__, statefile, portalfile);
     }
 
     /* Move back the start time to simulate already elapsed time */

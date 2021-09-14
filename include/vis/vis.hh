@@ -24,85 +24,98 @@
 #include <common/bspfile.hh>
 #include <vis/leafbits.hh>
 
-#define  PORTALFILE  "PRT1"
-#define  PORTALFILE2 "PRT2"
-#define  PORTALFILEAM "PRT1-AM"
-#define  ON_EPSILON  0.1
-#define  EQUAL_EPSILON 0.001
+constexpr char *PORTALFILE = "PRT1";
+constexpr char *PORTALFILE2 = "PRT2";
+constexpr char *PORTALFILEAM = "PRT1-AM";
+#define ON_EPSILON 0.1
+#define EQUAL_EPSILON 0.001
 
 #define MAX_WINDING 64
 #define MAX_WINDING_FIXED 24
 
-typedef struct {
+struct winding_t
+{
     int numpoints;
-    vec3_t origin;              // Bounding sphere for fast clipping tests
-    vec_t radius;               // Not updated, so won't shrink when clipping
-    vec3_t points[MAX_WINDING_FIXED];   // variable sized
-} winding_t;
+    vec3_t origin; // Bounding sphere for fast clipping tests
+    vec_t radius; // Not updated, so won't shrink when clipping
+    vec3_t points[MAX_WINDING_FIXED]; // variable sized
+};
 
 winding_t *NewWinding(int points);
 winding_t *CopyWinding(const winding_t *w);
 void PlaneFromWinding(const winding_t *w, plane_t *plane);
 qboolean PlaneCompare(plane_t *p1, plane_t *p2);
 
-typedef enum { pstat_none = 0, pstat_working, pstat_done } pstatus_t;
+enum pstatus_t
+{
+    pstat_none = 0,
+    pstat_working,
+    pstat_done
+};
 
-typedef struct {
-    plane_t plane;              // normal pointing into neighbor
-    int leaf;                   // neighbor
+struct portal_t
+{
+    plane_t plane; // normal pointing into neighbor
+    int leaf; // neighbor
     winding_t *winding;
     pstatus_t status;
     leafbits_t *visbits;
     leafbits_t *mightsee;
     int nummightsee;
     int numcansee;
-} portal_t;
+};
 
-typedef struct seperating_plane_s {
-    struct seperating_plane_s *next;
-    plane_t plane;              // from portal is on positive side
-} sep_t;
+struct sep_t
+{
+    sep_t *next;
+    plane_t plane; // from portal is on positive side
+};
 
-typedef struct passage_s {
-    struct passage_s *next;
-    int from, to;               // leaf numbers
+struct passage_t
+{
+    passage_t *next;
+    int from, to; // leaf numbers
     sep_t *planes;
-} passage_t;
+};
 
 /* Increased MAX_PORTALS_ON_LEAF from 128 */
 #define MAX_PORTALS_ON_LEAF 512
 
-typedef struct leaf_s {
+struct leaf_t
+{
     int numportals;
     passage_t *passages;
     portal_t *portals[MAX_PORTALS_ON_LEAF];
-    int visofs;                 // used when writing final visdata
-} leaf_t;
+    int visofs; // used when writing final visdata
+};
 
 #define MAX_SEPARATORS MAX_WINDING
-#define STACK_WINDINGS 3        // source, pass and a temp for clipping
-typedef struct pstack_s {
-    struct pstack_s *next;
+#define STACK_WINDINGS 3 // source, pass and a temp for clipping
+
+struct pstack_t
+{
+    pstack_t *next;
     leaf_t *leaf;
-    portal_t *portal;           // portal exiting
+    portal_t *portal; // portal exiting
     winding_t *source, *pass;
     winding_t windings[STACK_WINDINGS]; // Fixed size windings
     int freewindings[STACK_WINDINGS];
     plane_t portalplane;
-    leafbits_t *mightsee;       // bit string
+    leafbits_t *mightsee; // bit string
     plane_t separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
-} pstack_t;
+};
 
 winding_t *AllocStackWinding(pstack_t *stack);
 void FreeStackWinding(winding_t *w, pstack_t *stack);
 winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split);
 
-typedef struct {
+struct threaddata_t
+{
     leafbits_t *leafvis;
     portal_t *base;
     pstack_t pstack_head;
-} threaddata_t;
+};
 
 extern int numportals;
 extern int portalleafs;

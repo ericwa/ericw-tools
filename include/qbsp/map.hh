@@ -19,21 +19,22 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_MAP_HH
-#define QBSP_MAP_HH
+#pragma once
 
 #include <qbsp/parser.hh>
 
 #include <optional>
 #include <vector>
 
-typedef struct epair_s {
-    struct epair_s *next;
+struct epair_t
+{
+    epair_t *next;
     char *key;
     char *value;
-} epair_t;
+};
 
-struct mapface_t {
+struct mapface_t
+{
     qbsp_plane_t plane;
     vec3_t planepts[3];
     std::string texname;
@@ -41,34 +42,33 @@ struct mapface_t {
     int linenum;
 
     surfflags_t flags;
-    
+
     // Q2 stuff
     int contents;
     int value;
-    
-    mapface_t() :
-        texinfo(0),
-        linenum(0),
-        contents(0),
-        flags({}),
-        value(0) {
+
+    mapface_t() : texinfo(0), linenum(0), contents(0), flags({}), value(0)
+    {
         memset(&plane, 0, sizeof(plane));
-        for (int i=0; i<3; i++) {
+        for (int i = 0; i < 3; i++) {
             VectorSet(planepts[i], 0, 0, 0);
         }
     }
-    
+
     bool set_planepts(const vec3_t *pts);
-    
+
     std::array<qvec4f, 2> get_texvecs(void) const;
     void set_texvecs(const std::array<qvec4f, 2> &vecs);
 };
 
-enum class brushformat_t {
-    NORMAL, BRUSH_PRIMITIVES
+enum class brushformat_t
+{
+    NORMAL,
+    BRUSH_PRIMITIVES
 };
-    
-class mapbrush_t {
+
+class mapbrush_t
+{
 public:
     int firstface = 0;
     int numfaces = 0;
@@ -78,58 +78,53 @@ public:
     const mapface_t &face(int i) const;
 };
 
-struct lumpdata {
+struct lumpdata
+{
     int count;
     int index;
     void *data;
 };
 
-class mapentity_t {
+class mapentity_t
+{
 public:
     vec3_t origin;
 
     int firstmapbrush;
     int nummapbrushes;
-    
+
     // Temporary lists used to build `brushes` in the correct order.
     brush_t *solid, *sky, *detail, *detail_illusionary, *detail_fence, *liquid;
-    
+
     epair_t *epairs;
     vec3_t mins, maxs;
-    brush_t *brushes;           /* NULL terminated list */
+    brush_t *brushes; /* NULL terminated list */
     int numbrushes;
-    
+
     int firstoutputfacenumber;
     int outputmodelnumber;
 
     const mapbrush_t &mapbrush(int i) const;
-    
-    mapentity_t() :
-    firstmapbrush(0),
-    nummapbrushes(0),
-    solid(nullptr),
-    sky(nullptr),
-    detail(nullptr),
-    detail_illusionary(nullptr),
-    detail_fence(nullptr),
-    liquid(nullptr),
-    epairs(nullptr),
-    brushes(nullptr),
-    numbrushes(0),
-    firstoutputfacenumber(-1),
-    outputmodelnumber(-1) {
-        VectorSet(origin,0,0,0);
-        VectorSet(mins,0,0,0);
-        VectorSet(maxs,0,0,0);
+
+    mapentity_t()
+        : firstmapbrush(0), nummapbrushes(0), solid(nullptr), sky(nullptr), detail(nullptr),
+          detail_illusionary(nullptr), detail_fence(nullptr), liquid(nullptr), epairs(nullptr), brushes(nullptr),
+          numbrushes(0), firstoutputfacenumber(-1), outputmodelnumber(-1)
+    {
+        VectorSet(origin, 0, 0, 0);
+        VectorSet(mins, 0, 0, 0);
+        VectorSet(maxs, 0, 0, 0);
     }
 };
 
-struct texdata_t {
-    std::string     name;
-    int32_t         flags, value;
+struct texdata_t
+{
+    std::string name;
+    int32_t flags, value;
 };
 
-typedef struct mapdata_s {
+struct mapdata_t
+{
     /* Arrays of actual items */
     std::vector<mapface_t> faces;
     std::vector<mapbrush_t> brushes;
@@ -137,13 +132,13 @@ typedef struct mapdata_s {
     std::vector<qbsp_plane_t> planes;
     std::vector<texdata_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
-    
+
     /* quick lookup for texinfo */
     std::map<mtexinfo_t, int> mtexinfo_lookup;
-    
+
     /* map from plane hash code to list of indicies in `planes` vector */
     std::unordered_map<int, std::vector<int>> planehash;
-    
+
     /* Number of items currently used */
     int numfaces() const { return faces.size(); };
     int numbrushes() const { return brushes.size(); };
@@ -153,8 +148,8 @@ typedef struct mapdata_s {
     int numtexinfo() const { return static_cast<int>(mtexinfos.size()); };
 
     /* Misc other global state for the compile process */
-    bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
-    
+    bool leakfile; /* Flag once we've written a leak (.por/.pts) file */
+
     // Final, exported data
     std::vector<gtexinfo_t> exported_texinfos;
     std::vector<dplane_t> exported_planes;
@@ -180,14 +175,10 @@ typedef struct mapdata_s {
     std::vector<uint8_t> exported_bspxbrushes;
 
     // helpers
-    const std::string &miptexTextureName(int mt) const {
-        return miptex.at(mt).name;
-    }
+    const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
 
-    const std::string &texinfoTextureName(int texinfo) const {
-        return miptexTextureName(mtexinfos.at(texinfo).miptex);
-    }
-} mapdata_t;
+    const std::string &texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
+};
 
 extern mapdata_t map;
 extern mapentity_t *pWorldEnt();
@@ -201,21 +192,24 @@ void LoadMapFile(void);
 mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);
 
-struct extended_texinfo_t {
+struct extended_texinfo_t
+{
     int contents = 0;
     int flags = 0;
     int value = 0;
 };
 
-struct quark_tx_info_t {
+struct quark_tx_info_t
+{
     bool quark_tx1 = false;
     bool quark_tx2 = false;
-    
+
     std::optional<extended_texinfo_t> info;
 };
 
 int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal = false);
-inline int FindMiptex(const char *name, bool internal = false) {
+inline int FindMiptex(const char *name, bool internal = false)
+{
     std::optional<extended_texinfo_t> extended_info;
     return FindMiptex(name, extended_info, internal);
 }
@@ -231,12 +225,10 @@ void WriteEntitiesToString(void);
 void FixRotateOrigin(mapentity_t *entity);
 
 /* Create BSP brushes from map brushes in src and save into dst */
-void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src,
-                      const int hullnum);
+void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum);
 
 /* Builds the dst->brushes list. Call after Brush_LoadEntity. */
 void Entity_SortBrushes(mapentity_t *dst);
-
 
 surface_t *CSGFaces(const mapentity_t *entity);
 void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
@@ -246,7 +238,8 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 
-struct bspxbrushes_s {
+struct bspxbrushes_s
+{
     std::vector<uint8_t> lumpdata;
 };
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
@@ -263,5 +256,3 @@ void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);
 
-
-#endif

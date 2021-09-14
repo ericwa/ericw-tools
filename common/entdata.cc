@@ -28,11 +28,12 @@
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
 
-entdict_t::entdict_t(std::initializer_list<keyvalue_t> l) : keyvalues(l) {}
+entdict_t::entdict_t(std::initializer_list<keyvalue_t> l) : keyvalues(l) { }
 
 entdict_t::entdict_t() = default;
 
-const std::string& entdict_t::get(const std::string& key) const {
+const std::string &entdict_t::get(const std::string &key) const
+{
     if (auto it = find(key); it != keyvalues.end()) {
         return it->second;
     }
@@ -41,7 +42,8 @@ const std::string& entdict_t::get(const std::string& key) const {
     return empty;
 }
 
-void entdict_t::set(const std::string& key, const std::string& value) {
+void entdict_t::set(const std::string &key, const std::string &value)
+{
     // search for existing key to update
     if (auto it = find(key); it != keyvalues.end()) {
         // found existing key
@@ -53,13 +55,15 @@ void entdict_t::set(const std::string& key, const std::string& value) {
     keyvalues.push_back(std::make_pair(key, value));
 }
 
-void entdict_t::remove(const std::string& key) {
+void entdict_t::remove(const std::string &key)
+{
     if (auto it = find(key); it != keyvalues.end()) {
         keyvalues.erase(it);
     }
 }
 
-keyvalues_t::iterator entdict_t::find(std::string_view key) {
+keyvalues_t::iterator entdict_t::find(std::string_view key)
+{
     auto existingIt = keyvalues.end();
     for (auto it = keyvalues.begin(); it != keyvalues.end(); ++it) {
         if (key == it->first) {
@@ -70,7 +74,8 @@ keyvalues_t::iterator entdict_t::find(std::string_view key) {
     return existingIt;
 }
 
-keyvalues_t::const_iterator entdict_t::find(std::string_view key) const {
+keyvalues_t::const_iterator entdict_t::find(std::string_view key) const
+{
     auto existingIt = keyvalues.end();
     for (auto it = keyvalues.begin(); it != keyvalues.end(); ++it) {
         if (key == it->first) {
@@ -81,33 +86,24 @@ keyvalues_t::const_iterator entdict_t::find(std::string_view key) const {
     return existingIt;
 }
 
-keyvalues_t::const_iterator entdict_t::begin() const {
-    return keyvalues.begin();
-}
+keyvalues_t::const_iterator entdict_t::begin() const { return keyvalues.begin(); }
 
-keyvalues_t::const_iterator entdict_t::end() const {
-    return keyvalues.end();
-}
+keyvalues_t::const_iterator entdict_t::end() const { return keyvalues.end(); }
 
-keyvalues_t::iterator entdict_t::begin() {
-    return keyvalues.begin();
-}
+keyvalues_t::iterator entdict_t::begin() { return keyvalues.begin(); }
 
-keyvalues_t::iterator entdict_t::end() {
-    return keyvalues.end();
-}
+keyvalues_t::iterator entdict_t::end() { return keyvalues.end(); }
 
 /*
  * ==================
  * EntData_Parse
  * ==================
  */
-std::vector<entdict_t>
-EntData_Parse(const char *entdata)
+std::vector<entdict_t> EntData_Parse(const char *entdata)
 {
     std::vector<entdict_t> result;
     const char *data = entdata;
-    
+
     /* go through all the entities */
     while (1) {
         /* parse the opening brace */
@@ -116,42 +112,42 @@ EntData_Parse(const char *entdata)
             break;
         if (com_token[0] != '{')
             Error("%s: found %s when expecting {", __func__, com_token);
-        
+
         /* Allocate a new entity */
         entdict_t entity;
-        
+
         /* go through all the keys in this entity */
         while (1) {
             /* parse key */
             data = COM_Parse(data);
             if (!data)
                 Error("%s: EOF without closing brace", __func__);
-            
-            std::string keystr { com_token };
-            
+
+            std::string keystr{com_token};
+
             if (keystr == "}")
                 break;
             if (keystr.length() > MAX_ENT_KEY - 1)
                 Error("%s: Key length > %i: '%s'", __func__, MAX_ENT_KEY - 1, keystr.c_str());
-            
+
             /* parse value */
             data = COM_Parse(data);
             if (!data)
                 Error("%s: EOF without closing brace", __func__);
-            
-            std::string valstring { com_token };
-            
+
+            std::string valstring{com_token};
+
             if (valstring[0] == '}')
                 Error("%s: closing brace without data", __func__);
             if (valstring.length() > MAX_ENT_VALUE - 1)
                 Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
-            
+
             entity.set(keystr, valstring);
         }
-        
+
         result.push_back(entity);
     }
-    
+
     return result;
 }
 
@@ -160,8 +156,7 @@ EntData_Parse(const char *entdata)
  * EntData_Write
  * ================
  */
-std::string
-EntData_Write(const std::vector<entdict_t> &ents)
+std::string EntData_Write(const std::vector<entdict_t> &ents)
 {
     std::stringstream out;
     for (const auto &ent : ents) {
@@ -174,33 +169,25 @@ EntData_Write(const std::vector<entdict_t> &ents)
     return out.str();
 }
 
-std::string
-EntDict_StringForKey(const entdict_t &dict, const std::string key)
-{
-    return dict.get(key);
-}
+std::string EntDict_StringForKey(const entdict_t &dict, const std::string key) { return dict.get(key); }
 
-float
-EntDict_FloatForKey(const entdict_t &dict, const std::string key)
+float EntDict_FloatForKey(const entdict_t &dict, const std::string key)
 {
     auto s = dict.get(key);
     if (s.empty())
         return 0;
-    
+
     try {
         return std::stof(s);
-    } catch (std::exception &) {
+    }
+    catch (std::exception &) {
         return 0.0f;
     }
 }
 
-void
-EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key)
-{
-    dict.remove(key);
-}
+void EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key) { dict.remove(key); }
 
-void //mxd
+void // mxd
 EntDict_RenameKey(entdict_t &dict, const std::string &from, const std::string &to)
 {
     const auto it = dict.find(from);

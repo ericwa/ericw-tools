@@ -19,9 +19,6 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_REGION_HH
-#define QBSP_REGION_HH
+#pragma once
 
 void GrowNodeRegions(node_t *headnode);
-
-#endif

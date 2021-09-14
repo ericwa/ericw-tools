@@ -24,8 +24,7 @@
  * as well as the stdout.
  */
 
-#ifndef __COMMON_LOG_H__
-#define __COMMON_LOG_H__
+#pragma once
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -38,17 +37,11 @@ void init_log(const char *filename);
 void close_log();
 
 /* Print to screen and to log file */
-void logprint(const char *fmt, ...)
-    __attribute__((format(printf,1,2)));
-void logvprint(const char *fmt, va_list args)
-    __attribute__((format(printf,1,0)));
+void logprint(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void logvprint(const char *fmt, va_list args) __attribute__((format(printf, 1, 0)));
 
 /* Print only into log file */
-void logprint_silent(const char *fmt, ...)
-    __attribute__((format(printf,1,2)));
+void logprint_silent(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 /* Only called from the threads code */
-void logprint_locked__(const char *fmt, ...)
-    __attribute__((format(printf,1,2)));
-
-#endif /* __COMMON_LOG_H__ */
+void logprint_locked__(const char *fmt, ...) __attribute__((format(printf, 1, 2)));

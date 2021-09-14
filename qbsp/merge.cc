@@ -23,8 +23,7 @@
 #include <qbsp/qbsp.hh>
 
 #ifdef PARANOID
-static void
-CheckColinear(face_t *f)
+static void CheckColinear(face_t *f)
 {
     int i, j;
     vec3_t v1, v2;
@@ -57,8 +56,7 @@ Returns NULL if the faces couldn't be merged, or the new face.
 The originals will NOT be freed.
 =============
 */
-static face_t *
-TryMerge(face_t *f1, face_t *f2)
+static face_t *TryMerge(face_t *f1, face_t *f2)
 {
     vec_t *p1, *p2, *p3, *p4, *back;
     face_t *newf;
@@ -68,19 +66,14 @@ TryMerge(face_t *f1, face_t *f2)
     qbsp_plane_t *plane;
     bool keep1, keep2;
 
-    if (f1->w.numpoints == -1 ||
-        f2->w.numpoints == -1 ||
-        f1->planeside != f2->planeside ||
-        f1->texinfo != f2->texinfo ||
-        f1->contents[0] != f2->contents[0] ||
-        f1->contents[1] != f2->contents[1] ||
-        f1->lmshift[0] != f2->lmshift[0] ||
-        f1->lmshift[1] != f2->lmshift[1])
+    if (f1->w.numpoints == -1 || f2->w.numpoints == -1 || f1->planeside != f2->planeside ||
+        f1->texinfo != f2->texinfo || f1->contents[0] != f2->contents[0] || f1->contents[1] != f2->contents[1] ||
+        f1->lmshift[0] != f2->lmshift[0] || f1->lmshift[1] != f2->lmshift[1])
         return NULL;
 
     // find a common edge
-    p1 = p2 = NULL;             // stop compiler warning
-    j = 0;                      //
+    p1 = p2 = NULL; // stop compiler warning
+    j = 0; //
 
     for (i = 0; i < f1->w.numpoints; i++) {
         p1 = f1->w.points[i];
@@ -89,8 +82,7 @@ TryMerge(face_t *f1, face_t *f2)
             p3 = f2->w.points[j];
             p4 = f2->w.points[(j + 1) % f2->w.numpoints];
             for (k = 0; k < 3; k++) {
-                if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON ||
-                    fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
+                if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON || fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
                     break;
             }
             if (k == 3)
@@ -101,7 +93,7 @@ TryMerge(face_t *f1, face_t *f2)
     }
 
     if (i == f1->w.numpoints)
-        return NULL;            // no matching edges
+        return NULL; // no matching edges
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
@@ -119,7 +111,7 @@ TryMerge(face_t *f1, face_t *f2)
     VectorSubtract(back, p1, delta);
     dot = DotProduct(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
-        return NULL;            // not a convex polygon
+        return NULL; // not a convex polygon
     keep1 = dot < -CONTINUOUS_EPSILON;
 
     back = f1->w.points[(i + 2) % f1->w.numpoints];
@@ -131,7 +123,7 @@ TryMerge(face_t *f1, face_t *f2)
     VectorSubtract(back, p2, delta);
     dot = DotProduct(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
-        return NULL;            // not a convex polygon
+        return NULL; // not a convex polygon
     keep2 = dot < -CONTINUOUS_EPSILON;
 
     // build the new polygon
@@ -167,26 +159,24 @@ TryMerge(face_t *f1, face_t *f2)
     return newf;
 }
 
-
 /*
 ===============
 MergeFaceToList
 ===============
 */
-face_t *
-MergeFaceToList(face_t *face, face_t *list)
+face_t *MergeFaceToList(face_t *face, face_t *list)
 {
     face_t *newf, *f;
 
     f = list;
     while (f) {
 #ifdef PARANOID
-        CheckColinear (f);
+        CheckColinear(f);
 #endif
         newf = TryMerge(face, f);
         if (newf) {
             free(face);
-            f->w.numpoints = -1;        // merged out, remove later
+            f->w.numpoints = -1; // merged out, remove later
             face = newf;
             f = list;
         } else
@@ -198,14 +188,12 @@ MergeFaceToList(face_t *face, face_t *list)
     return face;
 }
 
-
 /*
 ===============
 FreeMergeListScraps
 ===============
 */
-face_t *
-FreeMergeListScraps(face_t *merged)
+face_t *FreeMergeListScraps(face_t *merged)
 {
     face_t *head, *next;
 
@@ -223,14 +211,12 @@ FreeMergeListScraps(face_t *merged)
     return head;
 }
 
-
 /*
 ===============
 MergePlaneFaces
 ===============
 */
-void
-MergePlaneFaces(surface_t *plane)
+void MergePlaneFaces(surface_t *plane)
 {
     face_t *f, *next;
     face_t *merged;
@@ -247,14 +233,12 @@ MergePlaneFaces(surface_t *plane)
     plane->faces = FreeMergeListScraps(merged);
 }
 
-
 /*
 ============
 MergeAll
 ============
 */
-void
-MergeAll(surface_t *surfhead)
+void MergeAll(surface_t *surfhead)
 {
     surface_t *surf;
     int mergefaces = 0;

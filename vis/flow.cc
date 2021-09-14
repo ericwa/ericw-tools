@@ -28,12 +28,8 @@ static int c_leafskip;
   pointer, was measurably faster
   ==============
 */
-static winding_t *
-ClipToSeperators(const winding_t *source,
-                 const plane_t src_pl,
-                 const winding_t *pass,
-                 winding_t *target, unsigned int test,
-                 pstack_t *stack)
+static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl, const winding_t *pass,
+    winding_t *target, unsigned int test, pstack_t *stack)
 {
     int i, j, k, l;
     plane_t sep;
@@ -62,14 +58,12 @@ ClipToSeperators(const winding_t *source,
             else if (d > ON_EPSILON)
                 fliptest = false;
             else
-                continue;       // Point lies in source plane
+                continue; // Point lies in source plane
 
             // Make a plane with the three points
             VectorSubtract(pass->points[j], source->points[i], v2);
             CrossProduct(v1, v2, sep.normal);
-            len_sq = sep.normal[0] * sep.normal[0]
-                + sep.normal[1] * sep.normal[1]
-                + sep.normal[2] * sep.normal[2];
+            len_sq = sep.normal[0] * sep.normal[0] + sep.normal[1] * sep.normal[1] + sep.normal[2] * sep.normal[2];
 
             // If points don't make a valid plane, skip it.
             if (len_sq < ON_EPSILON)
@@ -100,9 +94,9 @@ ClipToSeperators(const winding_t *source,
                     ++count;
             }
             if (k != pass->numpoints)
-                continue;       // points on negative side, not a seperating plane
+                continue; // points on negative side, not a seperating plane
             if (!count)
-                continue;       // planar with seperating plane
+                continue; // planar with seperating plane
 
             //
             // flip the normal if we want the back side (tests 1 and 3)
@@ -122,7 +116,7 @@ ClipToSeperators(const winding_t *source,
 
             target = ClipStackWinding(target, stack, &sep);
             if (!target)
-                return NULL;    // target is not visible
+                return NULL; // target is not visible
 
             break;
         }
@@ -130,8 +124,7 @@ ClipToSeperators(const winding_t *source,
     return target;
 }
 
-static int
-CheckStack(leaf_t *leaf, threaddata_t *thread)
+static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 {
     pstack_t *p;
 
@@ -149,8 +142,7 @@ CheckStack(leaf_t *leaf, threaddata_t *thread)
   If src_portal is NULL, this is the originating leaf
   ==================
 */
-static void
-RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
+static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
 {
     pstack_t stack;
     portal_t *p;
@@ -171,8 +163,8 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
         // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
         // causes it to happen a lot.
 
-        //logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
-        //LogLeaf(leaf);
+        // logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
+        // LogLeaf(leaf);
         return;
     }
 
@@ -203,7 +195,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
 
         if (!TestLeafBit(prevstack->mightsee, p->leaf)) {
             c_leafskip++;
-            continue;           // can't possibly see it
+            continue; // can't possibly see it
         }
         // if the portal can't see anything we haven't allready seen, skip it
         if (p->status == pstat_done) {
@@ -232,7 +224,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
         backplane.dist = -p->plane.dist;
 
         if (VectorCompare(prevstack->portalplane.normal, backplane.normal, EQUAL_EPSILON))
-            continue;           // can't go out a coplanar face
+            continue; // can't go out a coplanar face
 
         c_portalcheck++;
 
@@ -251,8 +243,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
          */
 
         /* Clip any part of the target portal behind the source portal */
-        stack.pass = ClipStackWinding(p->winding, &stack,
-                                      &thread->pstack_head.portalplane);
+        stack.pass = ClipStackWinding(p->winding, &stack, &thread->pstack_head.portalplane);
         if (!stack.pass)
             continue;
 
@@ -265,14 +256,12 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
         }
 
         /* Clip any part of the target portal behind the pass portal */
-        stack.pass = ClipStackWinding(stack.pass, &stack,
-                                      &prevstack->portalplane);
+        stack.pass = ClipStackWinding(stack.pass, &stack, &prevstack->portalplane);
         if (!stack.pass)
             continue;
 
         /* Clip any part of the source portal in front of the target portal */
-        stack.source = ClipStackWinding(prevstack->source, &stack,
-                                        &backplane);
+        stack.source = ClipStackWinding(prevstack->source, &stack, &backplane);
         if (!stack.source) {
             FreeStackWinding(stack.pass, &stack);
             continue;
@@ -284,17 +273,14 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
         if (testlevel > 0) {
             if (stack.numseparators[0]) {
                 for (j = 0; j < stack.numseparators[0]; j++) {
-                    stack.pass = ClipStackWinding(stack.pass, &stack,
-                                                  &stack.separators[0][j]);
+                    stack.pass = ClipStackWinding(stack.pass, &stack, &stack.separators[0][j]);
                     if (!stack.pass)
                         break;
                 }
             } else {
                 /* Using prevstack source for separator cache correctness */
-                stack.pass = ClipToSeperators(prevstack->source,
-                                              thread->pstack_head.portalplane,
-                                              prevstack->pass, stack.pass, 0,
-                                              &stack);
+                stack.pass = ClipToSeperators(
+                    prevstack->source, thread->pstack_head.portalplane, prevstack->pass, stack.pass, 0, &stack);
             }
             if (!stack.pass) {
                 FreeStackWinding(stack.source, &stack);
@@ -306,17 +292,14 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
         if (testlevel > 1) {
             if (stack.numseparators[1]) {
                 for (j = 0; j < stack.numseparators[1]; j++) {
-                    stack.pass = ClipStackWinding(stack.pass, &stack,
-                                                  &stack.separators[1][j]);
+                    stack.pass = ClipStackWinding(stack.pass, &stack, &stack.separators[1][j]);
                     if (!stack.pass)
                         break;
                 }
             } else {
                 /* Using prevstack source for separator cache correctness */
-                stack.pass = ClipToSeperators(prevstack->pass,
-                                              prevstack->portalplane,
-                                              prevstack->source, stack.pass, 1,
-                                              &stack);
+                stack.pass =
+                    ClipToSeperators(prevstack->pass, prevstack->portalplane, prevstack->source, stack.pass, 1, &stack);
             }
             if (!stack.pass) {
                 FreeStackWinding(stack.source, &stack);
@@ -326,9 +309,7 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
 
         /* TEST 2 :: target -> pass -> source */
         if (testlevel > 2) {
-            stack.source = ClipToSeperators(stack.pass, stack.portalplane,
-                                            prevstack->pass, stack.source, 2,
-                                            &stack);
+            stack.source = ClipToSeperators(stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, &stack);
             if (!stack.source) {
                 FreeStackWinding(stack.pass, &stack);
                 continue;
@@ -337,9 +318,8 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
 
         /* TEST 3 :: pass -> target -> source */
         if (testlevel > 3) {
-            stack.source = ClipToSeperators(prevstack->pass,
-                                            prevstack->portalplane, stack.pass,
-                                            stack.source, 3, &stack);
+            stack.source =
+                ClipToSeperators(prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, &stack);
             if (!stack.source) {
                 FreeStackWinding(stack.pass, &stack);
                 continue;
@@ -358,14 +338,12 @@ RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevstack)
     free(stack.mightsee);
 }
 
-
 /*
   ===============
   PortalFlow
   ===============
 */
-void
-PortalFlow(portal_t *p)
+void PortalFlow(portal_t *p)
 {
     threaddata_t data;
 
@@ -387,7 +365,6 @@ PortalFlow(portal_t *p)
     RecursiveLeafFlow(p->leaf, &data, &data.pstack_head);
 }
 
-
 /*
   ============================================================================
   This is a rough first-order aproximation that is used to trivially reject
@@ -395,8 +372,7 @@ PortalFlow(portal_t *p)
   ============================================================================
 */
 
-static void
-SimpleFlood(portal_t *srcportal, int leafnum, uint8_t *portalsee)
+static void SimpleFlood(portal_t *srcportal, int leafnum, uint8_t *portalsee)
 {
     int i;
     leaf_t *leaf;
@@ -423,8 +399,7 @@ SimpleFlood(portal_t *srcportal, int leafnum, uint8_t *portalsee)
   ============================================================================
 */
 
-float
-distFromWinding(winding_t *w, portal_t *p)
+float distFromWinding(winding_t *w, portal_t *p)
 {
     float dist, mindist;
     mindist = 1e20;
@@ -438,14 +413,12 @@ distFromWinding(winding_t *w, portal_t *p)
     return mindist;
 }
 
-
 /*
   ==============
   BasePortalVis
   ==============
 */
-static void *
-BasePortalThread(void *dummy)
+static void *BasePortalThread(void *dummy)
 {
     int i, j, portalnum;
     portal_t *p, *tp;
@@ -482,11 +455,12 @@ BasePortalThread(void *dummy)
 
             for (j = 0; j < tw->numpoints; j++) {
                 d = DotProduct(tw->points[j], p->plane.normal) - p->plane.dist;
-                if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for https://github.com/ericwa/ericw-tools/issues/261
+                if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
+                                     // https://github.com/ericwa/ericw-tools/issues/261
                     break;
             }
             if (j == tw->numpoints)
-                continue;       // no points on front
+                continue; // no points on front
 
             // Quick test - completely on front?
             d = DotProduct(w->origin, tp->plane.normal) - tp->plane.dist;
@@ -495,11 +469,12 @@ BasePortalThread(void *dummy)
 
             for (j = 0; j < w->numpoints; j++) {
                 d = DotProduct(w->points[j], tp->plane.normal) - tp->plane.dist;
-                if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for https://github.com/ericwa/ericw-tools/issues/261
+                if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
+                                    // https://github.com/ericwa/ericw-tools/issues/261
                     break;
             }
             if (j == w->numpoints)
-                continue;       // no points on back
+                continue; // no points on back
 
             if (visdist > 0) {
                 if (distFromWinding(tp->winding, p) > visdist || distFromWinding(p->winding, tp) > visdist)
@@ -518,14 +493,9 @@ BasePortalThread(void *dummy)
     return NULL;
 }
 
-
 /*
   ==============
   BasePortalVis
   ==============
 */
-void
-BasePortalVis(void)
-{
-    RunThreadsOn(0, numportals * 2, BasePortalThread, NULL);
-}
+void BasePortalVis(void) { RunThreadsOn(0, numportals * 2, BasePortalThread, NULL); }

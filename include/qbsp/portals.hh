@@ -19,18 +19,16 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_PORTALS_HH
-#define QBSP_PORTALS_HH
+#pragma once
 
-typedef struct portal_s {
+struct portal_t
+{
     int planenum;
-    node_t *nodes[2];           // [0] = front side of planenum
-    struct portal_s *next[2];   // [0] = next portal in nodes[0]'s list of portals
+    node_t *nodes[2]; // [0] = front side of planenum
+    portal_t *next[2]; // [0] = next portal in nodes[0]'s list of portals
     winding_t *winding;
-} portal_t;
+};
 
-extern node_t outside_node;     // portals outside the world face this
+extern node_t outside_node; // portals outside the world face this
 
 void FreeAllPortals(node_t *node);
-
-#endif

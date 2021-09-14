@@ -38,24 +38,25 @@
 #include <light/light.hh>
 
 /* FIXME - share header with qbsp, etc. */
-struct wadinfo_t {
-    char identification[4];     // should be WAD2
+struct wadinfo_t
+{
+    char identification[4]; // should be WAD2
     int32_t numlumps;
     int32_t infotableofs;
 };
 
-struct lumpinfo_t {
+struct lumpinfo_t
+{
     int32_t filepos;
     int32_t disksize;
-    int32_t size;                       // uncompressed
+    int32_t size; // uncompressed
     char type;
     char compression;
     char pad1, pad2;
-    char name[16];              // must be null terminated
+    char name[16]; // must be null terminated
 };
 
-static void
-ExportWad(FILE *wadfile, mbsp_t *bsp)
+static void ExportWad(FILE *wadfile, mbsp_t *bsp)
 {
     wadinfo_t header;
     lumpinfo_t lump;
@@ -119,26 +120,22 @@ ExportWad(FILE *wadfile, mbsp_t *bsp)
     }
 }
 
-static void
-PrintModelInfo(const mbsp_t *bsp)
+static void PrintModelInfo(const mbsp_t *bsp)
 {
     int i;
 
     for (i = 0; i < bsp->nummodels; i++) {
         const dmodel_t *dmodel = &bsp->dmodels[i];
-        printf("model %3d: %5d faces (firstface = %d)\n",
-               i, dmodel->numfaces, dmodel->firstface);
+        printf("model %3d: %5d faces (firstface = %d)\n", i, dmodel->numfaces, dmodel->firstface);
     }
 }
-
 
 /*
  * Quick hack to check verticies of faces lie on the correct plane
  */
-#define PLANE_ON_EPSILON 0.01
+constexpr vec_t PLANE_ON_EPSILON = 0.01;
 
-static void
-CheckBSPFacesPlanar(const mbsp_t *bsp)
+static void CheckBSPFacesPlanar(const mbsp_t *bsp)
 {
     int i, j;
 
@@ -158,19 +155,17 @@ CheckBSPFacesPlanar(const mbsp_t *bsp)
             const float dist = DotProduct(plane.normal, point) - plane.dist;
 
             if (dist < -PLANE_ON_EPSILON || dist > PLANE_ON_EPSILON)
-                printf("WARNING: face %d, point %d off plane by %f\n",
-                       (int)(face - bsp->dfaces), j, dist);
+                printf("WARNING: face %d, point %d off plane by %f\n", (int)(face - bsp->dfaces), j, dist);
         }
     }
 }
 
-static int
-Node_Height(const mbsp_t *bsp, const bsp2_dnode_t *node, std::map<const bsp2_dnode_t *, int> *cache)
+static int Node_Height(const mbsp_t *bsp, const bsp2_dnode_t *node, std::map<const bsp2_dnode_t *, int> *cache)
 {
     // leafs have a height of 0
     int child_heights[2] = {0, 0};
-    
-    for (int i=0; i<2; i++) {
+
+    for (int i = 0; i < 2; i++) {
         const int child = node->children[i];
         if (child >= 0) {
             child_heights[i] = Node_Height(bsp, &bsp->dnodes[child], cache);
@@ -189,38 +184,36 @@ static void PrintNodeHeights(const mbsp_t *bsp)
     const bsp2_dnode_t *headnode = &bsp->dnodes[bsp->dmodels[0].headnode[0]];
     std::map<const bsp2_dnode_t *, int> cache;
     Node_Height(bsp, headnode, &cache);
-    
+
     const int maxlevel = 3;
-    
+
     using level_t = int;
     using visit_t = std::pair<const bsp2_dnode_t *, level_t>;
-    
+
     int current_level = -1;
-    
-    std::list<visit_t> tovisit { std::make_pair(headnode, 0) };
-    while (!tovisit.empty())
-    {
+
+    std::list<visit_t> tovisit{std::make_pair(headnode, 0)};
+    while (!tovisit.empty()) {
         const auto n = tovisit.front();
         tovisit.pop_front();
-        
+
         const bsp2_dnode_t *node = n.first;
         const int level = n.second;
-        
+
         Q_assert(level <= maxlevel);
-        
+
         // handle this node
-        if (level != current_level)
-        {
+        if (level != current_level) {
             current_level = level;
             printf("\nNode heights at level %d: ", level);
         }
-    
+
         // print the level of this node
         printf("%d, ", cache.at(node));
-        
+
         // add child nodes to the bfs
         if (level < maxlevel) {
-            for (int i=0; i<2; i++) {
+            for (int i = 0; i < 2; i++) {
                 const int child = node->children[i];
                 if (child >= 0) {
                     tovisit.push_back(std::make_pair(&bsp->dnodes[child], level + 1));
@@ -231,8 +224,7 @@ static void PrintNodeHeights(const mbsp_t *bsp)
     printf("\n");
 }
 
-static void
-CheckBSPFile(const mbsp_t *bsp)
+static void CheckBSPFile(const mbsp_t *bsp)
 {
     int i;
 
@@ -242,50 +234,43 @@ CheckBSPFile(const mbsp_t *bsp)
     std::set<int32_t> referenced_planenums;
     std::set<uint32_t> referenced_vertexes;
     std::set<uint8_t> used_lightstyles;
-    
+
     /* faces */
     for (i = 0; i < bsp->numfaces; i++) {
         const bsp2_dface_t *face = BSP_GetFace(bsp, i);
 
         /* texinfo bounds check */
         if (face->texinfo < 0)
-            printf("warning: face %d has negative texinfo (%d)\n",
-                   i, face->texinfo);
+            printf("warning: face %d has negative texinfo (%d)\n", i, face->texinfo);
         if (face->texinfo >= bsp->numtexinfo)
-            printf("warning: face %d has texinfo out of range (%d >= %d)\n",
-                   i, face->texinfo, bsp->numtexinfo);
+            printf("warning: face %d has texinfo out of range (%d >= %d)\n", i, face->texinfo, bsp->numtexinfo);
         referenced_texinfos.insert(face->texinfo);
-        
+
         /* planenum bounds check */
         if (face->planenum < 0)
-            printf("warning: face %d has negative planenum (%d)\n",
-                   i, face->planenum);
+            printf("warning: face %d has negative planenum (%d)\n", i, face->planenum);
         if (face->planenum >= bsp->numplanes)
-            printf("warning: face %d has planenum out of range (%d >= %d)\n",
-                   i, face->planenum, bsp->numplanes);
+            printf("warning: face %d has planenum out of range (%d >= %d)\n", i, face->planenum, bsp->numplanes);
         referenced_planenums.insert(face->planenum);
 
         /* lightofs check */
         if (face->lightofs < -1)
-            printf("warning: face %d has negative light offset (%d)\n",
-                   i, face->lightofs);
+            printf("warning: face %d has negative light offset (%d)\n", i, face->lightofs);
         if (face->lightofs >= bsp->lightdatasize)
             printf("warning: face %d has light offset out of range "
-                   "(%d >= %d)\n", i, face->lightofs, bsp->lightdatasize);
+                   "(%d >= %d)\n",
+                i, face->lightofs, bsp->lightdatasize);
 
         /* edge check */
         if (face->firstedge < 0)
-            printf("warning: face %d has negative firstedge (%d)\n",
-                   i, face->firstedge);
+            printf("warning: face %d has negative firstedge (%d)\n", i, face->firstedge);
         if (face->numedges < 3)
-            printf("warning: face %d has < 3 edges (%d)\n",
-                   i, face->numedges);
+            printf("warning: face %d has < 3 edges (%d)\n", i, face->numedges);
         if (face->firstedge + face->numedges > bsp->numsurfedges)
-            printf("warning: face %d has edges out of range (%d..%d >= %d)\n",
-                   i, face->firstedge, face->firstedge + face->numedges - 1,
-                   bsp->numsurfedges);
-        
-        for (int j=0; j<4; j++) {
+            printf("warning: face %d has edges out of range (%d..%d >= %d)\n", i, face->firstedge,
+                face->firstedge + face->numedges - 1, bsp->numsurfedges);
+
+        for (int j = 0; j < 4; j++) {
             used_lightstyles.insert(face->styles[j]);
         }
     }
@@ -299,7 +284,8 @@ CheckBSPFile(const mbsp_t *bsp)
             const uint32_t vertex = edge->v[j];
             if (vertex > bsp->numvertexes)
                 printf("warning: edge %d has vertex %d out range "
-                       "(%d >= %d)\n", i, j, vertex, bsp->numvertexes);
+                       "(%d >= %d)\n",
+                    i, j, vertex, bsp->numvertexes);
             referenced_vertexes.insert(vertex);
         }
     }
@@ -310,33 +296,30 @@ CheckBSPFile(const mbsp_t *bsp)
         if (!edgenum)
             printf("warning: surfedge %d has zero value!\n", i);
         if (abs(edgenum) >= bsp->numedges)
-            printf("warning: surfedge %d is out of range (abs(%d) >= %d)\n",
-                   i, edgenum, bsp->numedges);
+            printf("warning: surfedge %d is out of range (abs(%d) >= %d)\n", i, edgenum, bsp->numedges);
     }
 
     /* marksurfaces */
     for (i = 0; i < bsp->numleaffaces; i++) {
         const uint32_t surfnum = bsp->dleaffaces[i];
         if (surfnum >= bsp->numfaces)
-            printf("warning: marksurface %d is out of range (%d >= %d)\n",
-                   i, surfnum, bsp->numfaces);
+            printf("warning: marksurface %d is out of range (%d >= %d)\n", i, surfnum, bsp->numfaces);
     }
 
     /* leafs */
     for (i = 0; i < bsp->numleafs; i++) {
         const mleaf_t *leaf = &bsp->dleafs[i];
-        const uint32_t endmarksurface =
-            leaf->firstmarksurface + leaf->nummarksurfaces;
+        const uint32_t endmarksurface = leaf->firstmarksurface + leaf->nummarksurfaces;
         if (endmarksurface > bsp->numleaffaces)
             printf("warning: leaf %d has marksurfaces out of range "
-                   "(%d..%d >= %d)\n", i, leaf->firstmarksurface,
-                   endmarksurface - 1, bsp->numleaffaces);
+                   "(%d..%d >= %d)\n",
+                i, leaf->firstmarksurface, endmarksurface - 1, bsp->numleaffaces);
         if (leaf->visofs < -1)
-            printf("warning: leaf %d has negative visdata offset (%d)\n",
-                   i, leaf->visofs);
+            printf("warning: leaf %d has negative visdata offset (%d)\n", i, leaf->visofs);
         if (leaf->visofs >= bsp->visdatasize)
             printf("warning: leaf %d has visdata offset out of range "
-                   "(%d >= %d)\n", i, leaf->visofs, bsp->visdatasize);
+                   "(%d >= %d)\n",
+                i, leaf->visofs, bsp->visdatasize);
     }
 
     /* nodes */
@@ -348,42 +331,44 @@ CheckBSPFile(const mbsp_t *bsp)
             const int32_t child = node->children[j];
             if (child >= 0 && child >= bsp->numnodes)
                 printf("warning: node %d has child %d (node) out of range "
-                       "(%d >= %d)\n", i, j, child, bsp->numnodes);
+                       "(%d >= %d)\n",
+                    i, j, child, bsp->numnodes);
             if (child < 0 && -child - 1 >= bsp->numleafs)
                 printf("warning: node %d has child %d (leaf) out of range "
-                       "(%d >= %d)\n", i, j, -child - 1, bsp->numleafs);
+                       "(%d >= %d)\n",
+                    i, j, -child - 1, bsp->numleafs);
         }
-        
+
         if (node->children[0] == node->children[1]) {
             printf("warning: node %d has both children %d\n", i, node->children[0]);
         }
-        
+
         referenced_planenums.insert(node->planenum);
     }
-    
+
     /* clipnodes */
     for (i = 0; i < bsp->numclipnodes; i++) {
         const bsp2_dclipnode_t *clipnode = &bsp->dclipnodes[i];
-        
+
         for (int j = 0; j < 2; j++) {
             const int32_t child = clipnode->children[j];
             if (child >= 0 && child >= bsp->numclipnodes)
                 printf("warning: clipnode %d has child %d (clipnode) out of range "
-                       "(%d >= %d)\n", i, j, child, bsp->numclipnodes);
+                       "(%d >= %d)\n",
+                    i, j, child, bsp->numclipnodes);
             if (child < 0 && child < CONTENTS_MIN)
-                printf("warning: clipnode %d has invalid contents (%d) for child %d\n",
-                       i, child, j);
+                printf("warning: clipnode %d has invalid contents (%d) for child %d\n", i, child, j);
         }
-        
+
         if (clipnode->children[0] == clipnode->children[1]) {
             printf("warning: clipnode %d has both children %d\n", i, clipnode->children[0]);
         }
-        
+
         referenced_planenums.insert(clipnode->planenum);
     }
 
     /* TODO: finish range checks, add "unreferenced" checks... */
-    
+
     /* unreferenced texinfo */
     {
         int num_unreferenced_texinfo = 0;
@@ -395,7 +380,7 @@ CheckBSPFile(const mbsp_t *bsp)
         if (num_unreferenced_texinfo)
             printf("warning: %d texinfos are unreferenced\n", num_unreferenced_texinfo);
     }
-    
+
     /* unreferenced planes */
     {
         int num_unreferenced_planes = 0;
@@ -407,7 +392,7 @@ CheckBSPFile(const mbsp_t *bsp)
         if (num_unreferenced_planes)
             printf("warning: %d planes are unreferenced\n", num_unreferenced_planes);
     }
-    
+
     /* unreferenced vertices */
     {
         int num_unreferenced_vertexes = 0;
@@ -419,10 +404,10 @@ CheckBSPFile(const mbsp_t *bsp)
         if (num_unreferenced_vertexes)
             printf("warning: %d vertexes are unreferenced\n", num_unreferenced_vertexes);
     }
-    
+
     /* tree balance */
     PrintNodeHeights(bsp);
-    
+
     /* unique visofs's */
     std::set<int32_t> visofs_set;
     for (i = 0; i < bsp->numleafs; i++) {
@@ -431,10 +416,9 @@ CheckBSPFile(const mbsp_t *bsp)
             visofs_set.insert(leaf->visofs);
         }
     }
-    printf("%d unique visdata offsets for %d leafs\n",
-           static_cast<int>(visofs_set.size()), bsp->numleafs);
+    printf("%d unique visdata offsets for %d leafs\n", static_cast<int>(visofs_set.size()), bsp->numleafs);
     printf("%d visleafs in world model\n", bsp->dmodels[0].visleafs);
-    
+
     /* unique lightstyles */
     printf("%d lightstyles used:\n", static_cast<int>(used_lightstyles.size()));
     {
@@ -447,18 +431,12 @@ CheckBSPFile(const mbsp_t *bsp)
             printf("\t%d\n", style);
         }
     }
-    
-    printf("world mins: %f %f %f maxs: %f %f %f\n",
-           bsp->dmodels[0].mins[0],
-           bsp->dmodels[0].mins[1],
-           bsp->dmodels[0].mins[2],
-           bsp->dmodels[0].maxs[0],
-           bsp->dmodels[0].maxs[1],
-           bsp->dmodels[0].maxs[2]);
+
+    printf("world mins: %f %f %f maxs: %f %f %f\n", bsp->dmodels[0].mins[0], bsp->dmodels[0].mins[1],
+        bsp->dmodels[0].mins[2], bsp->dmodels[0].maxs[0], bsp->dmodels[0].maxs[1], bsp->dmodels[0].maxs[2]);
 }
 
-static void
-CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
+static void CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
 {
     printf("comparing %d with %d faces\n", refBsp->numfaces, bsp->numfaces);
 
@@ -466,11 +444,11 @@ CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
     const dmodel_t *refWorld = BSP_GetWorldModel(refBsp);
 
     // iterate through the refBsp world faces
-    for (int i=0; i<refWorld->numfaces; i++) {
-        auto* refFace = BSP_GetFace(refBsp, refWorld->firstface + i);
+    for (int i = 0; i < refWorld->numfaces; i++) {
+        auto *refFace = BSP_GetFace(refBsp, refWorld->firstface + i);
         qvec3f refFaceCentroid = Face_Centroid(refBsp, refFace);
 
-        // FIXME:   
+        // FIXME:
         vec3_t wantedPoint;
         glm_to_vec3_t(refFaceCentroid, wantedPoint);
 
@@ -478,47 +456,38 @@ CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
         Face_Normal(refBsp, refFace, wantedNormal);
 
         // Search for a face in bsp touching refFaceCentroid.
-        auto* matchedFace = BSP_FindFaceAtPoint(bsp, world, wantedPoint, wantedNormal);
+        auto *matchedFace = BSP_FindFaceAtPoint(bsp, world, wantedPoint, wantedNormal);
         if (matchedFace == nullptr) {
-            printf("couldn't find a face at %f %f %f normal %f %f %f\n",
-                    wantedPoint[0], wantedPoint[1], wantedPoint[2],
-                    wantedNormal[0], wantedNormal[1], wantedNormal[2]);
+            printf("couldn't find a face at %f %f %f normal %f %f %f\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
+                wantedNormal[0], wantedNormal[1], wantedNormal[2]);
         }
 
         // TODO: run on some more complex maps
-//        auto* refFaceSelfCheck = BSP_FindFaceAtPoint(refBsp, refWorld, wantedPoint, wantedNormal);
-//        if (refFaceSelfCheck == refFace) {
-//            matches ++;
-//        } else {
-//            printf("not match at %f %f %f wanted %p got %p\n", wantedPoint[0], wantedPoint[1], wantedPoint[2], refFace, refFaceSelfCheck);
-//            Face_DebugPrint(refBsp, refFace);
-//            Face_DebugPrint(refBsp, refFaceSelfCheck);
-//            notmat++;
-//        }
+        //        auto* refFaceSelfCheck = BSP_FindFaceAtPoint(refBsp, refWorld, wantedPoint, wantedNormal);
+        //        if (refFaceSelfCheck == refFace) {
+        //            matches ++;
+        //        } else {
+        //            printf("not match at %f %f %f wanted %p got %p\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
+        //            refFace, refFaceSelfCheck); Face_DebugPrint(refBsp, refFace); Face_DebugPrint(refBsp,
+        //            refFaceSelfCheck); notmat++;
+        //        }
     }
-
-
 }
 
-static void
-FindFaces(const mbsp_t *bsp, const vec3_t pos, const vec3_t normal)
+static void FindFaces(const mbsp_t *bsp, const vec3_t pos, const vec3_t normal)
 {
     for (int i = 0; i < bsp->nummodels; ++i) {
-        const dmodelh2_t* model = &bsp->dmodels[i];
-        const bsp2_dface_t* face = BSP_FindFaceAtPoint(bsp, model, pos, normal);
+        const dmodelh2_t *model = &bsp->dmodels[i];
+        const bsp2_dface_t *face = BSP_FindFaceAtPoint(bsp, model, pos, normal);
 
         if (face != nullptr) {
-            printf("model %d face %d: texture '%s' texinfo %d\n",
-                i, static_cast<int>(face - bsp->dfaces), 
-                Face_TextureName(bsp, face),
-                face->texinfo);
+            printf("model %d face %d: texture '%s' texinfo %d\n", i, static_cast<int>(face - bsp->dfaces),
+                Face_TextureName(bsp, face), face->texinfo);
         }
     }
 }
 
-
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     bspdata_t bspdata;
     mbsp_t *const bsp = &bspdata.data.mbsp;
@@ -528,9 +497,10 @@ main(int argc, char **argv)
 
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
-        printf("usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
-               "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
-               "[--decompile] [--decompile-geomonly] bspfile\n");
+        printf(
+            "usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
+            "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
+            "[--decompile] [--decompile-geomonly] bspfile\n");
         exit(1);
     }
 
@@ -560,8 +530,7 @@ main(int argc, char **argv)
 
             printf("comparing reference bsp %s with test bsp %s\n", refbspname, source);
 
-            CompareBSPFiles(&refbspdata.data.mbsp,
-                            &bspdata.data.mbsp);
+            CompareBSPFiles(&refbspdata.data.mbsp, &bspdata.data.mbsp);
 
             break;
         } else if (!strcmp(argv[i], "--convert")) {
@@ -584,14 +553,14 @@ main(int argc, char **argv)
             }
 
             ConvertBSPFormat(&bspdata, fmt);
-            
+
             StripExtension(source);
             strcat(source, "-");
             strcat(source, argv[i]);
             strcat(source, ".bsp");
-            
+
             WriteBSPFile(source, &bspdata);
-            
+
         } else if (!strcmp(argv[i], "--extract-entities")) {
             StripExtension(source);
             DefaultExtension(source, ".ent");
@@ -638,22 +607,15 @@ main(int argc, char **argv)
             // i + 7 = bsp file
 
             if (i + 7 >= argc) {
-               Error("--findfaces requires 6 arguments");
+                Error("--findfaces requires 6 arguments");
             }
 
             try {
-                const vec3_t pos = {
-                    std::stof(argv[i + 1]),
-                    std::stof(argv[i + 2]),
-                    std::stof(argv[i + 3])
-                };
-                const vec3_t normal = {
-                    std::stof(argv[i + 4]),
-                    std::stof(argv[i + 5]),
-                    std::stof(argv[i + 6])
-                };
+                const vec3_t pos = {std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
+                const vec3_t normal = {std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
                 FindFaces(bsp, pos, normal);
-            } catch (const std::exception&) {
+            }
+            catch (const std::exception &) {
                 printf("Error reading position/normal\n");
             }
             return 0;
@@ -662,16 +624,16 @@ main(int argc, char **argv)
             // (i + 2) texinfonum
 
             if (i + 2 >= argc) {
-               Error("--settexinfo requires 2 arguments");
+                Error("--settexinfo requires 2 arguments");
             }
 
-            const int fnum       = std::stoi(argv[i + 1]);
+            const int fnum = std::stoi(argv[i + 1]);
             const int texinfonum = std::stoi(argv[i + 2]);
 
-            bsp2_dface_t* face = BSP_GetFace(bsp, fnum);
+            bsp2_dface_t *face = BSP_GetFace(bsp, fnum);
             face->texinfo = texinfonum;
 
-            ConvertBSPFormat(&bspdata, bspdata.loadversion);            
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
 
             // Overwrite source bsp!
             WriteBSPFile(source, &bspdata);

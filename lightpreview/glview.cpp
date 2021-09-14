@@ -1,5 +1,5 @@
 /*  Copyright (C) 2017 Eric Wasylishen
- 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
@@ -28,24 +28,13 @@ See file, 'COPYING', for details.
 #include <QTime>
 
 GLView::GLView(QWidget *parent)
-    : QOpenGLWidget(parent),
-    m_keysPressed(0),
-    m_keymoveUpdateTimer(0),
-    m_lastMouseDownPos(0,0),
-    m_displayAspect(1),
-    m_cameraOrigin(0, 0, 0),
-    m_cameraFwd(0, 1, 0),
-    m_vao(),
-    m_program(nullptr),
-    m_program_mvp_location(0)
+    : QOpenGLWidget(parent), m_keysPressed(0), m_keymoveUpdateTimer(0), m_lastMouseDownPos(0, 0), m_displayAspect(1),
+      m_cameraOrigin(0, 0, 0), m_cameraFwd(0, 1, 0), m_vao(), m_program(nullptr), m_program_mvp_location(0)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
 
-GLView::~GLView()
-{
-    delete m_program;
-}
+GLView::~GLView() { delete m_program; }
 
 static const char *s_fragShader = R"(
 #version 330 core
@@ -72,9 +61,9 @@ void main() {
 void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
-    
+
     // set up shader
-    
+
     m_program = new QOpenGLShaderProgram();
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader);
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader);
@@ -83,17 +72,23 @@ void GLView::initializeGL()
 
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");
-    
+
     m_vao.create();
     QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
-    
+
     m_vbo.create();
     m_vbo.bind();
-    
+
     static const GLfloat g_vertex_buffer_data[] = {
-        -1.0f, 0, -1.0f,
-        1.0f, 0, -1.0f,
-        0.0f,  0, 1.0f,
+        -1.0f,
+        0,
+        -1.0f,
+        1.0f,
+        0,
+        -1.0f,
+        0.0f,
+        0,
+        1.0f,
     };
     assert(sizeof(g_vertex_buffer_data) == 36);
 
@@ -107,26 +102,26 @@ void GLView::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_program->bind();
-    
+
     QMatrix4x4 modelMatrix;
     QMatrix4x4 viewMatrix;
     QMatrix4x4 projectionMatrix;
     projectionMatrix.perspective(90, m_displayAspect, 0.1f, 100.0f);
-    viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0,0,1));
+    viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
-    
+
     m_program->setUniformValue(m_program_mvp_location, MVP);
-    
+
     QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
-    
+
     glEnableVertexAttribArray(0);
     assert(m_vbo.bind());
-    
-    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+
+    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     glDisableVertexAttribArray(0);
-    
+
     m_program->release();
 }
 
@@ -135,27 +130,24 @@ void GLView::resizeGL(int width, int height)
     m_displayAspect = static_cast<float>(width) / static_cast<float>(height);
 }
 
-void GLView::mousePressEvent(QMouseEvent *event)
-{
-    m_lastMouseDownPos = event->screenPos();
-}
+void GLView::mousePressEvent(QMouseEvent *event) { m_lastMouseDownPos = event->screenPos(); }
 
 void GLView::mouseMoveEvent(QMouseEvent *event)
 {
     QPointF delta = event->screenPos() - m_lastMouseDownPos;
     m_lastMouseDownPos = event->screenPos();
-    
+
     // handle mouse movement
     float pitchDegrees = delta.y() * -0.2;
     float yawDegrees = delta.x() * -0.2;
-    
+
     QMatrix4x4 mouseRotation;
     mouseRotation.rotate(pitchDegrees, cameraRight());
-    mouseRotation.rotate(yawDegrees, QVector3D(0,0,1));
-    
+    mouseRotation.rotate(yawDegrees, QVector3D(0, 0, 1));
+
     // now rotate m_cameraFwd and m_cameraUp by mouseRotation
     m_cameraFwd = mouseRotation * m_cameraFwd;
-    
+
     repaint();
 }
 
@@ -174,7 +166,7 @@ void GLView::startMovementTimer()
 {
     if (m_keymoveUpdateTimer)
         return;
-    
+
     m_keymoveUpdateTimer = startTimer(10); // repaint timer, calls timerEvent()
 }
 
@@ -189,18 +181,18 @@ void GLView::stopMovementTimer()
 void GLView::keyPressEvent(QKeyEvent *event)
 {
     keys_t key = Qt_Key_To_keys_t(event->key());
-    
+
     m_keysPressed |= static_cast<uint32_t>(key);
-    
+
     startMovementTimer();
 }
 
 void GLView::keyReleaseEvent(QKeyEvent *event)
 {
     keys_t key = Qt_Key_To_keys_t(event->key());
-    
+
     m_keysPressed &= ~static_cast<uint32_t>(key);
-    
+
     if (!m_keysPressed)
         stopMovementTimer();
 }
@@ -215,9 +207,9 @@ void GLView::wheelEvent(QWheelEvent *event)
 void GLView::timerEvent(QTimerEvent *event)
 {
     printf("key movement %s\n", QTime::currentTime().toString().toStdString().c_str());
-    
+
     const float speed = 0.1;
-    
+
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))
         m_cameraOrigin += m_cameraFwd * speed;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::down))
@@ -226,6 +218,6 @@ void GLView::timerEvent(QTimerEvent *event)
         m_cameraOrigin -= cameraRight() * speed;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::right))
         m_cameraOrigin += cameraRight() * speed;
-    
+
     update(); // schedule a repaint
 }

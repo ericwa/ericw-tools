@@ -26,27 +26,28 @@
 #endif
 #include <cassert>
 
-#define TRACE_HIT_NONE  0
+#define TRACE_HIT_NONE 0
 #define TRACE_HIT_SOLID (1 << 0)
 #define TRACE_HIT_WATER (1 << 1)
 #define TRACE_HIT_SLIME (1 << 2)
-#define TRACE_HIT_LAVA  (1 << 3)
-#define TRACE_HIT_SKY   (1 << 4)
+#define TRACE_HIT_LAVA (1 << 3)
+#define TRACE_HIT_SKY (1 << 4)
 
-typedef struct traceinfo_s {
-    vec3_t			point;
-    const bsp2_dface_t          *face;
-    plane_t  hitplane;
+struct traceinfo_t
+{
+    vec3_t point;
+    const bsp2_dface_t *face;
+    plane_t hitplane;
     /* returns true if sky was hit. */
     bool hitsky;
     bool hitback;
-    
+
     // internal
     vec3_t dir;
-} traceinfo_t;
+};
 
 /* Stopped by solid and sky */
-static bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
+static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3_t end);
 
 /*
  * ---------
@@ -70,10 +71,10 @@ static bool TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec
  * Yet, which side is the node with the solid leaf child determines
  * what the hit point will be.
  */
-static int TraceLine(const dmodel_t *model, const int traceflags,
-              const vec3_t start, const vec3_t end);
+static int TraceLine(const dmodel_t *model, const int traceflags, const vec3_t start, const vec3_t end);
 
-typedef struct tnode_s {
+struct tnode_t
+{
     vec3_t normal;
     vec_t dist;
     int type;
@@ -81,22 +82,23 @@ typedef struct tnode_s {
     const dplane_t *plane;
     const mleaf_t *childleafs[2];
     const bsp2_dnode_t *node;
-} tnode_t;
+};
 
-typedef struct faceinfo_s {
+struct faceinfo_t
+{
     int numedges;
     plane_t *edgeplanes;
-    
+
     // sphere culling
     vec3_t origin;
     vec_t radiusSquared;
-    
+
     int content_or_surf_flags;
     plane_t plane;
-    
+
     const char *texturename;
     const bsp2_dface_t *face;
-} faceinfo_t;
+};
 
 static tnode_t *tnodes;
 static const mbsp_t *bsp_static;
@@ -105,23 +107,25 @@ static faceinfo_t *faceinfos;
 static bool *fence_dmodels; // bsp_static->nummodels bools, true if model contains a fence texture
 
 // from hmap2
-#define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)
+constexpr vec_t PlaneDiff(const vec3_t point, const dplane_t *plane)
+{
+    return (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist);
+}
 
 /*
 ==============
 Light_PointInLeaf
- 
+
 from hmap2
 ==============
 */
-const mleaf_t *
-Light_PointInLeaf( const mbsp_t *bsp, const vec3_t point )
+const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const vec3_t point)
 {
     int num = 0;
-    
-    while( num >= 0 )
+
+    while (num >= 0)
         num = bsp->dnodes[num].children[PlaneDiff(point, &bsp->dplanes[bsp->dnodes[num].planenum]) < 0];
-    
+
     return bsp->dleafs + (-1 - num);
 }
 
@@ -132,10 +136,7 @@ Light_PointContents
 from hmap2
 ==============
 */
-int Light_PointContents( const mbsp_t *bsp, const vec3_t point )
-{
-    return Light_PointInLeaf(bsp, point)->contents;
-}
+int Light_PointContents(const mbsp_t *bsp, const vec3_t point) { return Light_PointInLeaf(bsp, point)->contents; }
 
 /*
  * ==============
@@ -143,8 +144,7 @@ int Light_PointContents( const mbsp_t *bsp, const vec3_t point )
  * Converts the disk node structure into the efficient tracing structure
  * ==============
  */
-static void
-MakeTnodes_r(int nodenum, const mbsp_t *bsp)
+static void MakeTnodes_r(int nodenum, const mbsp_t *bsp)
 {
     tnode_t *tnode;
     int i;
@@ -185,29 +185,26 @@ static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
     return deltaLengthSquared > info->radiusSquared;
 }
 
-static void
-MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
+static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 {
     info->face = face;
     info->numedges = face->numedges;
     info->edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
-    
+
     info->plane = Face_Plane(bsp, face);
-    
+
     // make sphere that bounds the face
-    vec3_t centroid = {0,0,0};
-    for (int i=0; i<face->numedges; i++)
-    {
+    vec3_t centroid = {0, 0, 0};
+    for (int i = 0; i < face->numedges; i++) {
         const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
         VectorAdd(centroid, v, centroid);
     }
-    VectorScale(centroid, 1.0f/face->numedges, centroid);
+    VectorScale(centroid, 1.0f / face->numedges, centroid);
     VectorCopy(centroid, info->origin);
-    
+
     // calculate radius
     vec_t maxRadiusSq = 0;
-    for (int i=0; i<face->numedges; i++)
-    {
+    for (int i = 0; i < face->numedges; i++) {
         vec3_t delta;
         vec_t radiusSq;
         const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
@@ -217,11 +214,11 @@ MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
             maxRadiusSq = radiusSq;
     }
     info->radiusSquared = maxRadiusSq;
-    
+
     info->content_or_surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
-    
+
     info->texturename = Face_TextureName(bsp, face);
-    
+
 #if 0
     //test
     for (int i=0; i<face->numedges; i++)
@@ -243,8 +240,7 @@ MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
 #endif
 }
 
-static bool
-Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
+static bool Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
 {
     for (int j = model->firstface; j < model->firstface + model->numfaces; j++) {
         const bsp2_dface_t *face = BSP_GetFace(bsp, j);
@@ -255,27 +251,25 @@ Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
     return false;
 }
 
-static void
-MakeFenceInfo(const mbsp_t *bsp)
+static void MakeFenceInfo(const mbsp_t *bsp)
 {
-    fence_dmodels = (bool *) calloc(bsp->nummodels, sizeof(bool));
+    fence_dmodels = (bool *)calloc(bsp->nummodels, sizeof(bool));
     for (int i = 0; i < bsp->nummodels; i++) {
         fence_dmodels[i] = Model_HasFence(bsp, &bsp->dmodels[i]);
     }
 }
 
-static void
-BSP_MakeTnodes(const mbsp_t *bsp)
+static void BSP_MakeTnodes(const mbsp_t *bsp)
 {
     bsp_static = bsp;
-    tnodes = (tnode_t *) malloc(bsp->numnodes * sizeof(tnode_t));
+    tnodes = (tnode_t *)malloc(bsp->numnodes * sizeof(tnode_t));
     for (int i = 0; i < bsp->nummodels; i++)
         MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
-    
-    faceinfos = (faceinfo_t *) malloc(bsp->numfaces * sizeof(faceinfo_t));
+
+    faceinfos = (faceinfo_t *)malloc(bsp->numfaces * sizeof(faceinfo_t));
     for (int i = 0; i < bsp->numfaces; i++)
         MakeFaceInfo(bsp, BSP_GetFace(bsp, i), &faceinfos[i]);
-    
+
     MakeFenceInfo(bsp);
 }
 
@@ -291,19 +285,16 @@ BSP_MakeTnodes(const mbsp_t *bsp)
  */
 uint32_t clamp_texcoord(vec_t in, uint32_t width)
 {
-    if (in >= 0.0f)
-    {
+    if (in >= 0.0f) {
         return (uint32_t)in % width;
-    }
-    else
-    {
+    } else {
         vec_t in_abs = ceil(fabs(in));
         uint32_t in_abs_mod = (uint32_t)in_abs % width;
         return (width - in_abs_mod) % width;
     }
 }
 
-color_rgba //mxd. int -> color_rgba
+color_rgba // mxd. int -> color_rgba
 SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
 {
     color_rgba sample{};
@@ -338,25 +329,22 @@ SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
 }
 
 /* assumes point is on the same plane as face */
-static inline qboolean
-TestHitFace(const faceinfo_t *fi, const vec3_t point)
+static inline qboolean TestHitFace(const faceinfo_t *fi, const vec3_t point)
 {
     return EdgePlanes_PointInside(fi->face, fi->edgeplanes, point);
 }
 
-static inline bsp2_dface_t *
-SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t point)
+static inline bsp2_dface_t *SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t point)
 {
     // search the faces on this node
     int i;
-    for (i=0; i<bspnode->numfaces; i++)
-    {
+    for (i = 0; i < bspnode->numfaces; i++) {
         int facenum = bspnode->firstface + i;
         const faceinfo_t *fi = &faceinfos[facenum];
-        
+
         if (SphereCullPoint(fi, point))
             continue;
-        
+
         if (TestHitFace(fi, point)) {
             return &bsp_static->dfaces[facenum];
         }
@@ -372,13 +360,14 @@ SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t point)
  * ============================================================================
  */
 
-typedef struct {
+struct tracestack_t
+{
     vec3_t back;
     vec3_t front;
     int node;
     int side;
     const dplane_t *plane;
-} tracestack_t;
+};
 
 /*
  * ==============
@@ -386,9 +375,7 @@ typedef struct {
  * ==============
  */
 #define MAX_TSTACK 256
-static int
-TraceLine(const dmodel_t *model, const int traceflags,
-          const vec3_t start, const vec3_t stop)
+static int TraceLine(const dmodel_t *model, const int traceflags, const vec3_t start, const vec3_t stop)
 {
     int node, side, tracehit;
     vec3_t front, back;
@@ -396,7 +383,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
     tracestack_t tracestack[MAX_TSTACK];
     tracestack_t *tstack, *crossnode;
     tnode_t *tnode;
-    
+
     // Special case for bmodels with fence textures
     const int modelnum = model - &bsp_static->dmodels[0];
     if (modelnum != 0 && fence_dmodels[modelnum]) {
@@ -409,13 +396,12 @@ TraceLine(const dmodel_t *model, const int traceflags,
         }
         return TRACE_HIT_NONE;
     }
-    
+
     // FIXME: check for stack overflow
-//    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
-    
+    //    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
+
     if (traceflags <= 0)
-        Error("Internal error: %s - bad traceflags (%d)",
-              __func__, traceflags);
+        Error("Internal error: %s - bad traceflags (%d)", __func__, traceflags);
 
     VectorCopy(start, front);
     VectorCopy(stop, back);
@@ -428,28 +414,27 @@ TraceLine(const dmodel_t *model, const int traceflags,
     while (1) {
         while (node < 0) {
             switch (node) {
-            case CONTENTS_SOLID:
-                if (traceflags & TRACE_HIT_SOLID)
-                    tracehit = TRACE_HIT_SOLID;
-                break;
-            case CONTENTS_WATER:
-                if (traceflags & TRACE_HIT_WATER)
-                    tracehit = TRACE_HIT_WATER;
-                break;
-            case CONTENTS_SLIME:
-                if (traceflags & TRACE_HIT_SLIME)
-                    tracehit = TRACE_HIT_SLIME;
-                break;
-            case CONTENTS_LAVA:
-                if (traceflags & TRACE_HIT_LAVA)
-                    tracehit = TRACE_HIT_LAVA;
-                break;
-            case CONTENTS_SKY:
-                if (traceflags & TRACE_HIT_SKY)
-                    tracehit = TRACE_HIT_SKY;
-                break;
-            default:
-                break;
+                case CONTENTS_SOLID:
+                    if (traceflags & TRACE_HIT_SOLID)
+                        tracehit = TRACE_HIT_SOLID;
+                    break;
+                case CONTENTS_WATER:
+                    if (traceflags & TRACE_HIT_WATER)
+                        tracehit = TRACE_HIT_WATER;
+                    break;
+                case CONTENTS_SLIME:
+                    if (traceflags & TRACE_HIT_SLIME)
+                        tracehit = TRACE_HIT_SLIME;
+                    break;
+                case CONTENTS_LAVA:
+                    if (traceflags & TRACE_HIT_LAVA)
+                        tracehit = TRACE_HIT_LAVA;
+                    break;
+                case CONTENTS_SKY:
+                    if (traceflags & TRACE_HIT_SKY)
+                        tracehit = TRACE_HIT_SKY;
+                    break;
+                default: break;
             }
             if (tracehit != TRACE_HIT_NONE) {
                 /* If we haven't crossed, start was inside flagged contents */
@@ -472,22 +457,22 @@ TraceLine(const dmodel_t *model, const int traceflags,
 
         tnode = &tnodes[node];
         switch (tnode->type) {
-        case PLANE_X:
-            frontdist = front[0] - tnode->dist;
-            backdist = back[0] - tnode->dist;
-            break;
-        case PLANE_Y:
-            frontdist = front[1] - tnode->dist;
-            backdist = back[1] - tnode->dist;
-            break;
-        case PLANE_Z:
-            frontdist = front[2] - tnode->dist;
-            backdist = back[2] - tnode->dist;
-            break;
-        default:
-            frontdist = DotProduct(front, tnode->normal) - tnode->dist;
-            backdist = DotProduct(back, tnode->normal) - tnode->dist;
-            break;
+            case PLANE_X:
+                frontdist = front[0] - tnode->dist;
+                backdist = back[0] - tnode->dist;
+                break;
+            case PLANE_Y:
+                frontdist = front[1] - tnode->dist;
+                backdist = back[1] - tnode->dist;
+                break;
+            case PLANE_Z:
+                frontdist = front[2] - tnode->dist;
+                backdist = back[2] - tnode->dist;
+                break;
+            default:
+                frontdist = DotProduct(front, tnode->normal) - tnode->dist;
+                backdist = DotProduct(back, tnode->normal) - tnode->dist;
+                break;
         }
 
         if (frontdist >= -ON_EPSILON && backdist >= -ON_EPSILON) {
@@ -517,8 +502,7 @@ TraceLine(const dmodel_t *model, const int traceflags,
     }
 }
 
-static qboolean
-BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
+static qboolean BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 {
     const int traceflags = TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
@@ -539,10 +523,9 @@ BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
     return (result == TRACE_HIT_NONE);
 }
 
-static qboolean
-BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
+static qboolean BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 {
-    //const modelinfo_t *const *model;
+    // const modelinfo_t *const *model;
     int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
     vec3_t stop;
@@ -583,17 +566,17 @@ BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
  * or if it started in the void.
  * ============
  */
-static hittype_t
-BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodel_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+static hittype_t BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodel_t *self,
+    vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
     vec3_t stop;
     VectorMA(start, dist, dirn, stop);
 
     traceinfo_t ti = {0};
     VectorCopy(dirn, ti.dir);
-    
+
     if (self) {
-        if (TraceFaces (&ti, self->headnode[0], start, stop)) {
+        if (TraceFaces(&ti, self->headnode[0], start, stop)) {
             if (hitdist_out) {
                 vec3_t delta;
                 VectorSubtract(ti.point, start, delta);
@@ -608,12 +591,12 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmo
             return ti.hitsky ? hittype_t::SKY : hittype_t::SOLID;
         }
     }
-    
+
     /* Check against the list of global shadow casters */
     for (const modelinfo_t *model : tracelist) {
         if (model->model == self)
             continue;
-        if (TraceFaces (&ti, model->model->headnode[0], start, stop)) {
+        if (TraceFaces(&ti, model->model->headnode[0], start, stop)) {
             if (hitdist_out) {
                 vec3_t delta;
                 VectorSubtract(ti.point, start, delta);
@@ -628,20 +611,20 @@ BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmo
             return ti.hitsky ? hittype_t::SKY : hittype_t::SOLID;
         }
     }
-    
+
     return hittype_t::NONE;
 }
 
-static bool
-BSP_IntersectSingleModel(const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
+static bool BSP_IntersectSingleModel(
+    const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
 {
     vec3_t stop;
     VectorMA(start, dist, dirn, stop);
-    
+
     traceinfo_t ti = {0};
     VectorCopy(dirn, ti.dir);
 
-    if (TraceFaces (&ti, self->headnode[0], start, stop)) {
+    if (TraceFaces(&ti, self->headnode[0], start, stop)) {
         if (hitdist_out) {
             vec3_t delta;
             VectorSubtract(ti.point, start, delta);
@@ -655,68 +638,63 @@ BSP_IntersectSingleModel(const vec3_t start, const vec3_t dirn, vec_t dist, cons
 /*
 =============
 TraceFaces
- 
+
 From lordhavoc, johnfitz (RecursiveLightPoint)
 =============
 */
-static bool
-TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
+static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
 {
-    float		front, back, frac;
-    vec3_t		mid;
-    tnode_t             *tnode;
-    
+    float front, back, frac;
+    vec3_t mid;
+    tnode_t *tnode;
+
     if (node < 0)
-        return false;		// didn't hit anything
-    
-    tnode = &tnodes[node]; //ericw
-    
+        return false; // didn't hit anything
+
+    tnode = &tnodes[node]; // ericw
+
     // calculate mid point
-    if (tnode->type < 3)
-    {
+    if (tnode->type < 3) {
         front = start[tnode->type] - tnode->dist;
         back = end[tnode->type] - tnode->dist;
-    }
-    else
-    {
+    } else {
         front = DotProduct(start, tnode->normal) - tnode->dist;
         back = DotProduct(end, tnode->normal) - tnode->dist;
     }
-    
+
     if ((back < 0) == (front < 0))
-        return TraceFaces (ti, tnode->children[front < 0], start, end);
-    
-    frac = front / (front-back);
-    mid[0] = start[0] + (end[0] - start[0])*frac;
-    mid[1] = start[1] + (end[1] - start[1])*frac;
-    mid[2] = start[2] + (end[2] - start[2])*frac;
-    
+        return TraceFaces(ti, tnode->children[front < 0], start, end);
+
+    frac = front / (front - back);
+    mid[0] = start[0] + (end[0] - start[0]) * frac;
+    mid[1] = start[1] + (end[1] - start[1]) * frac;
+    mid[2] = start[2] + (end[2] - start[2]) * frac;
+
     // go down front side
-    if (TraceFaces (ti, tnode->children[front < 0], start, mid))
-        return true;	// hit something
-    else
-    {
+    if (TraceFaces(ti, tnode->children[front < 0], start, mid))
+        return true; // hit something
+    else {
         // check for impact on this node
-        VectorCopy (mid, ti->point);
-        //ti->lightplane = tnode->plane;
-        
+        VectorCopy(mid, ti->point);
+        // ti->lightplane = tnode->plane;
+
         bsp2_dface_t *face = SearchNodeForHitFace(tnode->node, mid);
         if (face) {
             const int facenum = face - bsp_static->dfaces;
             const faceinfo_t *fi = &faceinfos[facenum];
-            
+
             // check fence
             bool passedThroughFence = false;
             if (fi->texturename[0] == '{') {
-                const color_rgba sample = SampleTexture(face, bsp_static, mid); //mxd. Palette index -> RGBA
+                const color_rgba sample = SampleTexture(face, bsp_static, mid); // mxd. Palette index -> RGBA
                 if (sample.a < 255) {
                     passedThroughFence = true;
                 }
             }
-            
+
             // only solid and sky faces stop the trace.
-            bool issolid, issky; //mxd
-            if(bsp_static->loadversion->game->id == GAME_QUAKE_II) {
+            bool issolid, issky; // mxd
+            if (bsp_static->loadversion->game->id == GAME_QUAKE_II) {
                 issolid = !(fi->content_or_surf_flags & Q2_SURF_TRANSLUCENT);
                 issky = (fi->content_or_surf_flags & Q2_SURF_SKY);
             } else {
@@ -729,18 +707,18 @@ TraceFaces (traceinfo_t *ti, int node, const vec3_t start, const vec3_t end)
                 ti->hitsky = issky;
                 VectorCopy(fi->plane.normal, ti->hitplane.normal);
                 ti->hitplane.dist = fi->plane.dist;
-                
+
                 // check if we hit the back side
                 ti->hitback = (DotProduct(ti->dir, fi->plane.normal) >= 0);
-                
+
                 return true;
             }
         }
 
-        //ericw -- no impact found on this node.
-        
+        // ericw -- no impact found on this node.
+
         // go down back side
-        return TraceFaces (ti, tnode->children[front >= 0], mid, end);
+        return TraceFaces(ti, tnode->children[front >= 0], mid, end);
     }
 }
 
@@ -761,7 +739,7 @@ hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *se
     }
 #endif
     Error("no backend available");
-    throw; //mxd. Silences compiler warning
+    throw; // mxd. Silences compiler warning
 }
 
 hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
@@ -777,11 +755,11 @@ hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *
     }
 #endif
     Error("no backend available");
-    throw; //mxd. Silences compiler warning
+    throw; // mxd. Silences compiler warning
 }
 
-
-hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out,
+    plane_t *hitplane_out, const bsp2_dface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
@@ -794,17 +772,10 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const mod
     }
 #endif
     Error("no backend available");
-    throw; //mxd. Silences compiler warning
+    throw; // mxd. Silences compiler warning
 }
 
-raystream_intersection_t *MakeIntersectionRayStream(int maxrays) {
-    return Embree_MakeIntersectionRayStream(maxrays);
-}
-raystream_occlusion_t* MakeOcclusionRayStream(int maxrays) {
-    return Embree_MakeOcclusionRayStream(maxrays);
-}
+raystream_intersection_t *MakeIntersectionRayStream(int maxrays) { return Embree_MakeIntersectionRayStream(maxrays); }
+raystream_occlusion_t *MakeOcclusionRayStream(int maxrays) { return Embree_MakeOcclusionRayStream(maxrays); }
 
-void MakeTnodes(const mbsp_t *bsp)
-{
-    Embree_TraceInit(bsp);
-}
+void MakeTnodes(const mbsp_t *bsp) { Embree_TraceInit(bsp); }

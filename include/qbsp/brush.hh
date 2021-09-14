@@ -19,17 +19,17 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_BRUSH_HH
-#define QBSP_BRUSH_HH
+#pragma once
 
 #include <qbsp/winding.hh>
 
-struct brush_t {
-    struct brush_s *next;
+struct brush_t
+{
+    brush_t *next;
     vec3_t mins, maxs;
     face_t *faces;
-    contentflags_t contents;    /* BSP contents */
-    short lmshift;              /* lightmap scaling (qu/lightmap pixel), passed to the light util */
+    contentflags_t contents; /* BSP contents */
+    short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
 };
 
 class mapbrush_t;
@@ -40,24 +40,27 @@ int Brush_ListCountWithCFlags(const brush_t *brush, int cflags);
 int Brush_ListCount(const brush_t *brush);
 int Brush_NumFaces(const brush_t *brush);
 
-enum class rotation_t {
-    none, hipnotic, origin_brush
+enum class rotation_t
+{
+    none,
+    hipnotic,
+    origin_brush
 };
 
-brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum);
+brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+    const vec3_t rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const vec3_t normal, const vec_t dist, int *side);
 bool PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
 bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
 
-bool BoundBrush (brush_t *brush);
-vec_t BrushVolume (const brush_t *brush);
-int BrushMostlyOnSide (const brush_t *brush, const vec3_t normal, vec_t dist);
-void SplitBrush (const brush_t *brush, int planenum, int planeside, brush_t **front, brush_t **back);
+bool BoundBrush(brush_t *brush);
+vec_t BrushVolume(const brush_t *brush);
+int BrushMostlyOnSide(const brush_t *brush, const vec3_t normal, vec_t dist);
+void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **front, brush_t **back);
 
-void FilterStructuralBrushesIntoTree( const mapentity_t *e, node_t *headnode );
+void FilterStructuralBrushesIntoTree(const mapentity_t *e, node_t *headnode);
 
 void FreeBrush(brush_t *brush);
 
-#endif

@@ -12,8 +12,7 @@
  *         thread/logging code.  Error() would normally be defined in
  *         either common/cmdlib.h or qbsp/qbsp.h.
  */
-[[noreturn]] void Error(const char *error, ...)
-    __attribute__((format(printf,1,2),noreturn));
+[[noreturn]] void Error(const char *error, ...) __attribute__((format(printf, 1, 2), noreturn));
 
 /* Make the locks no-ops if we aren't running threads */
 static bool threads_active = false;
@@ -27,8 +26,7 @@ static int oldpercent = -1;
  * GetThreadWork
  * =============
  */
-int
-GetThreadWork_Locked__(void)
+int GetThreadWork_Locked__(void)
 {
     int ret;
     int percent;
@@ -48,8 +46,7 @@ GetThreadWork_Locked__(void)
     return ret;
 }
 
-int
-GetThreadWork(void)
+int GetThreadWork(void)
 {
     int ret;
 
@@ -60,8 +57,7 @@ GetThreadWork(void)
     return ret;
 }
 
-void
-InterruptThreadProgress__(void)
+void InterruptThreadProgress__(void)
 {
     if (oldpercent != -1) {
         logprint_locked__("\\\n");
@@ -82,14 +78,9 @@ InterruptThreadProgress__(void)
 int numthreads = 1;
 CRITICAL_SECTION crit;
 
-void
-LowerProcessPriority(void)
-{
-    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
-}
+void LowerProcessPriority(void) { SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS); }
 
-int
-GetDefaultThreads(void)
+int GetDefaultThreads(void)
 {
     SYSTEM_INFO info;
 
@@ -98,15 +89,13 @@ GetDefaultThreads(void)
     return info.dwNumberOfProcessors;
 }
 
-void
-ThreadLock(void)
+void ThreadLock(void)
 {
     if (threads_active)
         EnterCriticalSection(&crit);
 }
 
-void
-ThreadUnlock(void)
+void ThreadUnlock(void)
 {
     if (threads_active)
         LeaveCriticalSection(&crit);
@@ -117,8 +106,7 @@ ThreadUnlock(void)
  * RunThreadsOn
  * =============
  */
-void
-RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
+void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 {
     uintptr_t i; /* avoid warning due to cast for the CreateThread API */
     DWORD *threadid;
@@ -138,12 +126,7 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     InitializeCriticalSection(&crit);
     threads_active = true;
     for (i = 0; i < numthreads; i++) {
-        threadhandle[i] = CreateThread(NULL,
-                                       0,
-                                       (LPTHREAD_START_ROUTINE)func,
-                                       (LPVOID)arg,
-                                       0,
-                                       &threadid[i]);
+        threadhandle[i] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)func, (LPVOID)arg, 0, &threadid[i]);
     }
 
     for (i = 0; i < numthreads; i++)
@@ -176,14 +159,11 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 int numthreads = 1;
 pthread_mutex_t *my_mutex;
 
-void
-LowerProcessPriority(void)
-{
-    /* not implemented for now */
+void LowerProcessPriority(void)
+{ /* not implemented for now */
 }
 
-int
-GetDefaultThreads(void)
+int GetDefaultThreads(void)
 {
     int threads;
 
@@ -198,28 +178,24 @@ GetDefaultThreads(void)
     return threads;
 }
 
-void
-ThreadLock(void)
+void ThreadLock(void)
 {
     if (threads_active)
         pthread_mutex_lock(my_mutex);
 }
 
-void
-ThreadUnlock(void)
+void ThreadUnlock(void)
 {
     if (threads_active)
         pthread_mutex_unlock(my_mutex);
 }
-
 
 /*
  * =============
  * RunThreadsOn
  * =============
  */
-void
-RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
+void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 {
     pthread_t *threads;
     pthread_mutexattr_t mattrib;
@@ -289,16 +265,15 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 
 int numthreads = 1;
 
-void ThreadLock(void) {}
-void ThreadUnlock(void) {}
+void ThreadLock(void) { }
+void ThreadUnlock(void) { }
 
 /*
  * =============
  * RunThreadsOn
  * =============
  */
-void
-RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
+void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 {
     dispatch = start;
     workcount = workcnt;

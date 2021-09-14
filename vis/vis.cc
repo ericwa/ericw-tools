@@ -15,9 +15,9 @@
  * the clusters to the real leaf numbers before writing back to the bsp file.
  */
 int numportals;
-int portalleafs;        /* leafs (PRT1) or clusters (PRT2) */
-int portalleafs_real;   /* real no. of leafs after expanding PRT2 clusters */
-int *clustermap;        /* mapping from real leaf to cluster number */
+int portalleafs; /* leafs (PRT1) or clusters (PRT2) */
+int portalleafs_real; /* real no. of leafs after expanding PRT2 clusters */
+int *clustermap; /* mapping from real leaf to cluster number */
 
 portal_t *portals;
 leaf_t *leafs;
@@ -29,17 +29,17 @@ qboolean showgetleaf = true;
 
 static uint8_t *vismap;
 static uint8_t *vismap_p;
-static uint8_t *vismap_end;        // past visfile
+static uint8_t *vismap_end; // past visfile
 
 uint32_t originalvismapsize;
 
-uint8_t *uncompressed;             // [leafbytes_real*portalleafs]
+uint8_t *uncompressed; // [leafbytes_real*portalleafs]
 
-uint8_t *uncompressed_q2;             // [leafbytes*portalleafs]
+uint8_t *uncompressed_q2; // [leafbytes*portalleafs]
 
-int leafbytes;                  // (portalleafs+63)>>3
+int leafbytes; // (portalleafs+63)>>3
 int leaflongs;
-int leafbytes_real;             // (portalleafs_real+63)>>3
+int leafbytes_real; // (portalleafs_real+63)>>3
 
 /* Options - TODO: collect these in a struct */
 qboolean fastvis;
@@ -101,12 +101,11 @@ NormalizePlane(plane_t *dp)
 }
 #endif
 
-void
-PlaneFromWinding(const winding_t * w, plane_t *plane)
+void PlaneFromWinding(const winding_t *w, plane_t *plane)
 {
     vec3_t v1, v2;
 
-// calc plane
+    // calc plane
     VectorSubtract(w->points[2], w->points[1], v1);
     VectorSubtract(w->points[0], w->points[1], v2);
     CrossProduct(v2, v1, plane->normal);
@@ -121,8 +120,7 @@ PlaneFromWinding(const winding_t * w, plane_t *plane)
   NewWinding
   ==================
 */
-winding_t *
-NewWinding(int points)
+winding_t *NewWinding(int points)
 {
     winding_t *w;
     int size;
@@ -130,7 +128,7 @@ NewWinding(int points)
     if (points > MAX_WINDING)
         Error("%s: %i points", __func__, points);
 
-    //size = offsetof(winding_t, points[points]);
+    // size = offsetof(winding_t, points[points]);
     size = offsetof(winding_t, points[0]);
     size += points * sizeof(w->points[0]);
 
@@ -140,9 +138,7 @@ NewWinding(int points)
     return w;
 }
 
-
-void
-LogWinding(const winding_t *w)
+void LogWinding(const winding_t *w)
 {
     int i;
 
@@ -150,12 +146,10 @@ LogWinding(const winding_t *w)
         return;
 
     for (i = 0; i < w->numpoints; i++)
-        logprint("(%5.1f, %5.1f, %5.1f)\n",
-                 w->points[i][0], w->points[i][1], w->points[i][2]);
+        logprint("(%5.1f, %5.1f, %5.1f)\n", w->points[i][0], w->points[i][1], w->points[i][2]);
 }
 
-void
-LogLeaf(const leaf_t *leaf)
+void LogLeaf(const leaf_t *leaf)
 {
     const portal_t *portal;
     const plane_t *plane;
@@ -167,9 +161,8 @@ LogLeaf(const leaf_t *leaf)
     for (i = 0; i < leaf->numportals; i++) {
         portal = leaf->portals[i];
         plane = &portal->plane;
-        logprint("portal %4i to leaf %4i : %7.1f : (%4.2f, %4.2f, %4.2f)\n",
-                 (int)(portal - portals), portal->leaf, plane->dist,
-                 plane->normal[0], plane->normal[1], plane->normal[2]);
+        logprint("portal %4i to leaf %4i : %7.1f : (%4.2f, %4.2f, %4.2f)\n", (int)(portal - portals), portal->leaf,
+            plane->dist, plane->normal[0], plane->normal[1], plane->normal[2]);
     }
 }
 
@@ -178,13 +171,12 @@ LogLeaf(const leaf_t *leaf)
   CopyWinding
   ==================
 */
-winding_t *
-CopyWinding(const winding_t * w)
+winding_t *CopyWinding(const winding_t *w)
 {
     int size;
     winding_t *c;
 
-    //size = offsetof(winding_t, points[w->numpoints]);
+    // size = offsetof(winding_t, points[w->numpoints]);
     size = offsetof(winding_t, points[0]);
     size += w->numpoints * sizeof(w->points[0]);
 
@@ -193,7 +185,6 @@ CopyWinding(const winding_t * w)
     return c;
 }
 
-
 /*
   ==================
   AllocStackWinding
@@ -201,8 +192,7 @@ CopyWinding(const winding_t * w)
   Return a pointer to a free fixed winding on the stack
   ==================
 */
-winding_t *
-AllocStackWinding(pstack_t *stack)
+winding_t *AllocStackWinding(pstack_t *stack)
 {
     int i;
 
@@ -227,8 +217,7 @@ AllocStackWinding(pstack_t *stack)
   structure further up the call chain).
   ==================
 */
-void
-FreeStackWinding(winding_t *w, pstack_t *stack)
+void FreeStackWinding(winding_t *w, pstack_t *stack)
 {
     uintptr_t index = w - stack->windings;
 
@@ -249,8 +238,7 @@ FreeStackWinding(winding_t *w, pstack_t *stack)
   is returned.
   ==================
 */
-winding_t *
-ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
+winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 {
     vec_t dists[MAX_WINDING + 1];
     int sides[MAX_WINDING + 1];
@@ -271,8 +259,7 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
     }
 
     if (in->numpoints > MAX_WINDING)
-        Error("%s: in->numpoints > MAX_WINDING (%d > %d)",
-              __func__, in->numpoints, MAX_WINDING);
+        Error("%s: in->numpoints > MAX_WINDING (%d > %d)", __func__, in->numpoints, MAX_WINDING);
 
     counts[0] = counts[1] = counts[2] = 0;
 
@@ -294,7 +281,8 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
     dists[i] = dists[0];
 
     // ericw -- coplanar portals: return without clipping. Otherwise when two portals are less than ON_EPSILON apart,
-    // one will get fully clipped away and we can't see through it causing https://github.com/ericwa/ericw-tools/issues/261
+    // one will get fully clipped away and we can't see through it causing
+    // https://github.com/ericwa/ericw-tools/issues/261
     if (counts[SIDE_ON] == in->numpoints) {
         return in;
     }
@@ -354,7 +342,7 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
 
     return neww;
 
- noclip:
+noclip:
     FreeStackWinding(neww, stack);
     c_noclip++;
     return in;
@@ -371,8 +359,7 @@ ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
   the earlier information.
   =============
 */
-portal_t *
-GetNextPortal(void)
+portal_t *GetNextPortal(void)
 {
     int i;
     portal_t *p, *ret;
@@ -400,7 +387,6 @@ GetNextPortal(void)
     return ret;
 }
 
-
 /*
   =============
   UpdateMightSee
@@ -413,8 +399,7 @@ GetNextPortal(void)
   Called with the lock held.
   =============
 */
-static void
-UpdateMightsee(const leaf_t *source, const leaf_t *dest)
+static void UpdateMightsee(const leaf_t *source, const leaf_t *dest)
 {
     int i, leafnum;
     portal_t *p;
@@ -432,7 +417,6 @@ UpdateMightsee(const leaf_t *source, const leaf_t *dest)
     }
 }
 
-
 /*
   =============
   PortalCompleted
@@ -443,8 +427,7 @@ UpdateMightsee(const leaf_t *source, const leaf_t *dest)
   Called with the lock held.
   =============
 */
-static void
-PortalCompleted(portal_t *completed)
+static void PortalCompleted(portal_t *completed)
 {
     int i, j, k, bit, numblocks;
     int leafnum;
@@ -514,8 +497,7 @@ static double stateinterval;
   LeafThread
   ==============
 */
-void *
-LeafThread(void *arg)
+void *LeafThread(void *arg)
 {
     double now;
     portal_t *p;
@@ -539,14 +521,12 @@ LeafThread(void *arg)
         PortalCompleted(p);
 
         if (verbose > 1) {
-            logprint("portal:%4i  mightsee:%4i  cansee:%4i\n",
-                     (int)(p - portals), p->nummightsee, p->numcansee);
+            logprint("portal:%4i  mightsee:%4i  cansee:%4i\n", (int)(p - portals), p->nummightsee, p->numcansee);
         }
     } while (1);
 
     return NULL;
 }
-
 
 /*
   ===============
@@ -557,8 +537,7 @@ LeafThread(void *arg)
 */
 int64_t totalvis;
 
-static void
-LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
+static void LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
 {
     leaf_t *leaf;
     uint8_t *outbuffer;
@@ -616,9 +595,7 @@ LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
     free(compressed);
 }
 
-
-static void
-ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
+static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
 {
     leaf_t *leaf;
     uint8_t *outbuffer;
@@ -643,7 +620,7 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
 
     // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
     // causes it to happen a lot.
-    //if (TestLeafBit(buffer, clusternum))
+    // if (TestLeafBit(buffer, clusternum))
     //    logprint("WARNING: Leaf portals saw into cluster (%i)\n", clusternum);
 
     SetLeafBit(buffer, clusternum);
@@ -676,9 +653,9 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
      */
     if (verbose > 1)
         logprint("cluster %4i : %4i visible\n", clusternum, numvis);
-    
+
     /*
-     * increment totalvis by 
+     * increment totalvis by
      * (# of real leafs in this cluster) x (# of real leafs visible from this cluster)
      */
     for (i = 0; i < portalleafs_real; i++) {
@@ -714,13 +691,12 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
   CalcPortalVis
   ==================
 */
-void
-CalcPortalVis(const mbsp_t *bsp)
+void CalcPortalVis(const mbsp_t *bsp)
 {
     int i, startcount;
     portal_t *p;
 
-// fastvis just uses mightsee for a very loose bound
+    // fastvis just uses mightsee for a very loose bound
     if (fastvis) {
         for (i = 0; i < numportals * 2; i++) {
             portals[i].visbits = portals[i].mightsee;
@@ -742,21 +718,17 @@ CalcPortalVis(const mbsp_t *bsp)
     SaveVisState();
 
     if (verbose) {
-        logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",
-                 c_portalcheck, c_portaltest, c_portalpass);
-        logprint("c_vistest: %i  c_mighttest: %i  c_mightseeupdate %i\n",
-                 c_vistest, c_mighttest, c_mightseeupdate);
+        logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n", c_portalcheck, c_portaltest, c_portalpass);
+        logprint("c_vistest: %i  c_mighttest: %i  c_mightseeupdate %i\n", c_vistest, c_mighttest, c_mightseeupdate);
     }
 }
-
 
 /*
   ==================
   CalcVis
   ==================
 */
-void
-CalcVis(const mbsp_t *bsp)
+void CalcVis(const mbsp_t *bsp)
 {
     int i;
 
@@ -770,9 +742,9 @@ CalcVis(const mbsp_t *bsp)
     logprint("Calculating Full Vis:\n");
     CalcPortalVis(bsp);
 
-//
-// assemble the leaf vis lists by oring and compressing the portal lists
-//
+    //
+    // assemble the leaf vis lists by oring and compressing the portal lists
+    //
     if (portalleafs == portalleafs_real) {
         for (i = 0; i < portalleafs; i++)
             LeafFlow(i, &bsp->dleafs[i + 1], bsp);
@@ -786,7 +758,7 @@ CalcVis(const mbsp_t *bsp)
             ClusterFlow(i, buffer, bsp);
         }
         free(buffer);
-        
+
         // Set pointers
         for (i = 0; i < portalleafs_real; i++) {
             bsp->dleafs[i + 1].visofs = leafs[clustermap[i]].visofs;
@@ -795,7 +767,7 @@ CalcVis(const mbsp_t *bsp)
 
     int64_t avg = totalvis;
     avg /= static_cast<int64_t>(portalleafs_real);
-    
+
     logprint("average leafs visible: %i\n", static_cast<int>(avg));
 }
 
@@ -807,8 +779,7 @@ CalcVis(const mbsp_t *bsp)
 
 int count_sep;
 
-qboolean
-PlaneCompare(plane_t *p1, plane_t *p2)
+qboolean PlaneCompare(plane_t *p1, plane_t *p2)
 {
     int i;
 
@@ -822,8 +793,7 @@ PlaneCompare(plane_t *p1, plane_t *p2)
     return true;
 }
 
-sep_t *
-Findpassages(winding_t * source, winding_t * pass)
+sep_t *Findpassages(winding_t *source, winding_t *pass)
 {
     int i, j, k, l;
     plane_t plane;
@@ -836,7 +806,7 @@ Findpassages(winding_t * source, winding_t * pass)
 
     list = NULL;
 
-// check all combinations
+    // check all combinations
     for (i = 0; i < source->numpoints; i++) {
         l = (i + 1) % source->numpoints;
         VectorSubtract(source->points[l], source->points[i], v1);
@@ -853,9 +823,8 @@ Findpassages(winding_t * source, winding_t * pass)
 
             // if points don't make a valid plane, skip it
 
-            length = plane.normal[0] * plane.normal[0]
-                + plane.normal[1] * plane.normal[1]
-                + plane.normal[2] * plane.normal[2];
+            length = plane.normal[0] * plane.normal[0] + plane.normal[1] * plane.normal[1] +
+                     plane.normal[2] * plane.normal[2];
 
             if (length < ON_EPSILON)
                 continue;
@@ -877,18 +846,18 @@ Findpassages(winding_t * source, winding_t * pass)
                 if (k == i || k == l)
                     continue;
                 d = DotProduct(source->points[k], plane.normal) - plane.dist;
-                if (d < -ON_EPSILON) {  // source is on the negative side, so we want all
+                if (d < -ON_EPSILON) { // source is on the negative side, so we want all
                     // pass and target on the positive side
                     fliptest = false;
                     break;
-                } else if (d > ON_EPSILON) {    // source is on the positive side, so we want all
+                } else if (d > ON_EPSILON) { // source is on the positive side, so we want all
                     // pass and target on the negative side
                     fliptest = true;
                     break;
                 }
             }
             if (k == source->numpoints)
-                continue;       // planar with source portal
+                continue; // planar with source portal
 
             //
             // flip the normal if the source portal is backwards
@@ -914,10 +883,10 @@ Findpassages(winding_t * source, winding_t * pass)
                     counts[2]++;
             }
             if (k != pass->numpoints)
-                continue;       // points on negative side, not a seperating plane
+                continue; // points on negative side, not a seperating plane
 
             if (!counts[0])
-                continue;       // planar with pass portal
+                continue; // planar with pass portal
 
             //
             // save this out
@@ -934,15 +903,12 @@ Findpassages(winding_t * source, winding_t * pass)
     return list;
 }
 
-
-
 /*
   ============
   CalcPassages
   ============
 */
-void
-CalcPassages(void)
+void CalcPassages(void)
 {
     int i, j, k;
     int count, count2;
@@ -974,7 +940,7 @@ CalcPassages(void)
 
                 sep = Findpassages(p1->winding, p2->winding);
                 if (!sep) {
-//                    Error ("No seperating planes found in portal pair");
+                    //                    Error ("No seperating planes found in portal pair");
                     count_sep++;
                     sep = static_cast<sep_t *>(malloc(sizeof(*sep)));
                     sep->next = NULL;
@@ -996,8 +962,7 @@ CalcPassages(void)
 
 // ===========================================================================
 
-static void
-SetWindingSphere(winding_t *w)
+static void SetWindingSphere(winding_t *w)
 {
     int i;
     vec3_t origin, dist;
@@ -1025,8 +990,7 @@ SetWindingSphere(winding_t *w)
   LoadPortals
   ============
 */
-void
-LoadPortals(char *name, mbsp_t *bsp)
+void LoadPortals(char *name, mbsp_t *bsp)
 {
     int i, j, count;
     portal_t *p;
@@ -1072,8 +1036,7 @@ LoadPortals(char *name, mbsp_t *bsp)
             logprint("%6d portals\n", numportals);
         }
     } else if (!strcmp(magic, PORTALFILE2)) {
-        count = fscanf(f, "%i\n%i\n%i\n", &portalleafs_real, &portalleafs,
-                       &numportals);
+        count = fscanf(f, "%i\n%i\n%i\n", &portalleafs_real, &portalleafs, &numportals);
         if (count != 3)
             Error("%s: unable to parse %s HEADER\n", __func__, PORTALFILE);
         logprint("%6d leafs\n", portalleafs_real);
@@ -1094,7 +1057,7 @@ LoadPortals(char *name, mbsp_t *bsp)
     leaflongs = leafbytes / sizeof(long);
     leafbytes_real = ((portalleafs_real + 63) & ~63) >> 3;
 
-// each file portal is split into two memory portals
+    // each file portal is split into two memory portals
     portals = static_cast<portal_t *>(malloc(2 * numportals * sizeof(portal_t)));
     memset(portals, 0, 2 * numportals * sizeof(portal_t));
 
@@ -1110,21 +1073,18 @@ LoadPortals(char *name, mbsp_t *bsp)
     // FIXME - more intelligent allocation?
     bsp->dvisdata = static_cast<uint8_t *>(malloc(MAX_MAP_VISIBILITY));
     if (!bsp->dvisdata)
-        Error("%s: dvisdata allocation failed (%i bytes)", __func__,
-              MAX_MAP_VISIBILITY);
+        Error("%s: dvisdata allocation failed (%i bytes)", __func__, MAX_MAP_VISIBILITY);
     memset(bsp->dvisdata, 0, MAX_MAP_VISIBILITY);
 
     vismap = vismap_p = bsp->dvisdata;
     vismap_end = vismap + MAX_MAP_VISIBILITY;
 
     for (i = 0, p = portals; i < numportals; i++) {
-        if (fscanf(f, "%i %i %i ", &numpoints, &leafnums[0], &leafnums[1])
-            != 3)
+        if (fscanf(f, "%i %i %i ", &numpoints, &leafnums[0], &leafnums[1]) != 3)
             Error("%s: reading portal %i", __func__, i);
         if (numpoints > MAX_WINDING)
             Error("%s: portal %i has too many points", __func__, i);
-        if ((unsigned)leafnums[0] > (unsigned)portalleafs
-            || (unsigned)leafnums[1] > (unsigned)portalleafs)
+        if ((unsigned)leafnums[0] > (unsigned)portalleafs || (unsigned)leafnums[1] > (unsigned)portalleafs)
             Error("%s: reading portal %i", __func__, i);
 
         w = p->winding = NewWinding(numpoints);
@@ -1172,7 +1132,7 @@ LoadPortals(char *name, mbsp_t *bsp)
         for (j = 0; j < numpoints; ++j)
             VectorCopy(w->points[numpoints - (j + 1)], p->winding->points[j]);
 
-        //p->winding = w;
+        // p->winding = w;
         p->plane = plane;
         p->leaf = leafnums[0];
         SetWindingSphere(p->winding);
@@ -1198,8 +1158,7 @@ LoadPortals(char *name, mbsp_t *bsp)
                     if (leafnum < 0)
                         break;
                     if (leafnum >= portalleafs_real)
-                        Error("Invalid leaf number in cluster map (%d >= %d",
-                              leafnum, portalleafs_real);
+                        Error("Invalid leaf number in cluster map (%d >= %d", leafnum, portalleafs_real);
                     clustermap[leafnum] = i;
                 }
                 if (count == EOF)
@@ -1215,7 +1174,8 @@ LoadPortals(char *name, mbsp_t *bsp)
                     Error("Unexpected end of cluster map\n");
                 }
                 if (clusternum < 0 || clusternum >= portalleafs) {
-                    Error("Invalid cluster number %d in cluster map, number of clusters: %d\n", clusternum, portalleafs);
+                    Error(
+                        "Invalid cluster number %d in cluster map, number of clusters: %d\n", clusternum, portalleafs);
                 }
                 clustermap[i] = clusternum;
             }
@@ -1237,8 +1197,7 @@ char statetmpfile[1024];
   main
   ===========
 */
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     bspdata_t bspdata;
     mbsp_t *const bsp = &bspdata.data.mbsp;
@@ -1286,7 +1245,7 @@ main(int argc, char **argv)
             ambientslime = false;
             ambientlava = false;
         } else if (!strcmp(argv[i], "-visdist")) {
-            visdist = atoi(argv[i+1]);
+            visdist = atoi(argv[i + 1]);
             i++;
             logprint("visdist = %i\n", visdist);
         } else if (!strcmp(argv[i], "-nostate")) {
@@ -1339,7 +1298,7 @@ main(int argc, char **argv)
         uncompressed_q2 = static_cast<uint8_t *>(calloc(portalleafs, leafbytes));
     }
 
-//    CalcPassages ();
+    //    CalcPassages ();
 
     CalcVis(bsp);
 
@@ -1347,9 +1306,8 @@ main(int argc, char **argv)
     logprint("c_chains: %lu\n", c_chains);
 
     bsp->visdatasize = vismap_p - bsp->dvisdata;
-    logprint("visdatasize:%i  compressed from %u\n",
-             bsp->visdatasize, originalvismapsize);
-    
+    logprint("visdatasize:%i  compressed from %u\n", bsp->visdatasize, originalvismapsize);
+
     // no ambient sounds for Q2
     if (bsp->loadversion->game->id != GAME_QUAKE_II) {
         CalcAmbientSounds(bsp);
@@ -1360,7 +1318,7 @@ main(int argc, char **argv)
 
     WriteBSPFile(sourcefile, &bspdata);
 
-//    unlink (portalfile);
+    //    unlink (portalfile);
 
     endtime = I_FloatTime();
     logprint("%5.1f seconds elapsed\n", endtime - starttime);

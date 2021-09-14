@@ -19,20 +19,21 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_WINDING_HH
-#define QBSP_WINDING_HH
+#pragma once
 
-typedef struct plane {
+struct qbsp_plane_t
+{
     vec3_t normal;
     vec_t dist;
     int type;
-    int outputplanenum;         // -1=unassigned, only valid after ExportNodePlanes
-} qbsp_plane_t;
+    int outputplanenum; // -1=unassigned, only valid after ExportNodePlanes
+};
 
-typedef struct {
+struct winding_t
+{
     int numpoints;
-    vec3_t points[MAXEDGES];            // variable sized
-} winding_t;
+    vec3_t points[MAXEDGES]; // variable sized
+};
 
 winding_t *BaseWindingForPlane(const qbsp_plane_t *p);
 void CheckWinding(const winding_t *w);
@@ -41,16 +42,12 @@ winding_t *CopyWinding(const winding_t *w);
 void CopyWindingInto(winding_t *dest, const winding_t *src); // FIXME: get rid of this
 winding_t *FlipWinding(const winding_t *w);
 winding_t *ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon);
-void DivideWinding(const winding_t *in, const qbsp_plane_t *split, winding_t **front,
-                   winding_t **back);
+void DivideWinding(const winding_t *in, const qbsp_plane_t *split, winding_t **front, winding_t **back);
 void MidpointWinding(const winding_t *w, vec3_t v);
 
 /* Helper function for ClipWinding and it's variants */
-void CalcSides(const winding_t *in, const qbsp_plane_t *split, int *sides,
-               vec_t *dists, int counts[3]);
+void CalcSides(const winding_t *in, const qbsp_plane_t *split, int *sides, vec_t *dists, int counts[3]);
 
-vec_t WindingArea(const winding_t * w);
+vec_t WindingArea(const winding_t *w);
 
-void ChopWindingInPlace (winding_t **w, const vec3_t normal, vec_t dist, vec_t epsilon);
-
-#endif
+void ChopWindingInPlace(winding_t **w, const vec3_t normal, vec_t dist, vec_t epsilon);

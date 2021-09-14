@@ -19,14 +19,12 @@
     See file, 'COPYING', for details.
 */
 
-#ifndef QBSP_SURFACES_HH
-#define QBSP_SURFACES_HH
+#pragma once
 
-typedef struct hashvert_s {
+struct hashvert_t
+{
     vec3_t point;
     int num;
-} hashvert_t;
+};
 
 surface_t *GatherNodeFaces(node_t *headnode);
-
-#endif

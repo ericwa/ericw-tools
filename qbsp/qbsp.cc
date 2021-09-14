@@ -30,25 +30,24 @@
 
 #include "tbb/global_control.h"
 
-static const char *IntroString =
-    "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
+static const char *IntroString = "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
 
 // command line flags
 options_t options;
 
-bool node_t::opaque() const {
-    return contents.is_structural_sky_or_solid(options.target_game);
-}
+bool node_t::opaque() const { return contents.is_structural_sky_or_solid(options.target_game); }
 
 // a simple tree structure used for leaf brush
 // compression.
-struct leafbrush_entry_t {
+struct leafbrush_entry_t
+{
     uint32_t offset;
     std::map<uint32_t, leafbrush_entry_t> entries;
 };
 
 // per-entity
-static struct {
+static struct
+{
     uint32_t total_brushes, total_brush_sides;
     uint32_t total_leaf_brushes, unique_leaf_brushes;
     std::map<uint32_t, leafbrush_entry_t> leaf_entries;
@@ -57,7 +56,8 @@ static struct {
 // running total
 static uint32_t brush_offset;
 
-static std::optional<uint32_t> FindLeafBrushesSpanOffset(const std::vector<uint32_t> &brushes) {
+static std::optional<uint32_t> FindLeafBrushesSpanOffset(const std::vector<uint32_t> &brushes)
+{
     int32_t offset = 0;
     const auto *map = &brush_state.leaf_entries;
     decltype(brush_state.leaf_entries)::const_iterator it = map->find(brushes[offset]);
@@ -75,11 +75,12 @@ static std::optional<uint32_t> FindLeafBrushesSpanOffset(const std::vector<uint3
     return std::nullopt;
 }
 
-static void PopulateLeafBrushesSpan(const std::vector<uint32_t> &brushes, uint32_t offset) {
+static void PopulateLeafBrushesSpan(const std::vector<uint32_t> &brushes, uint32_t offset)
+{
     auto *map = &brush_state.leaf_entries;
 
     for (auto &id : brushes) {
-        auto it = map->try_emplace(id, leafbrush_entry_t { offset });
+        auto it = map->try_emplace(id, leafbrush_entry_t{offset});
         map = &it.first->second.entries;
         offset++;
     }
@@ -87,16 +88,17 @@ static void PopulateLeafBrushesSpan(const std::vector<uint32_t> &brushes, uint32
 
 static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uint32_t &brush_offset)
 {
-    if (node->planenum == PLANENUM_LEAF)
-    {
+    if (node->planenum == PLANENUM_LEAF) {
         if (node->contents.native) {
             uint32_t b_id = brush_offset;
             std::vector<uint32_t> brushes;
 
-            for (const brush_t *b = entity->brushes; b; b = b->next, b_id++)
-            {
-                if (aabb3f(qvec3f(node->mins[0], node->mins[1], node->mins[2]), qvec3f(node->maxs[0], node->maxs[1], node->maxs[2])).intersectWith(
-                    aabb3f(qvec3f(b->mins[0], b->mins[1], b->mins[2]), qvec3f(b->maxs[0], b->maxs[1], b->maxs[2]))).valid) {
+            for (const brush_t *b = entity->brushes; b; b = b->next, b_id++) {
+                if (aabb3f(qvec3f(node->mins[0], node->mins[1], node->mins[2]),
+                        qvec3f(node->maxs[0], node->maxs[1], node->maxs[2]))
+                        .intersectWith(aabb3f(
+                            qvec3f(b->mins[0], b->mins[1], b->mins[2]), qvec3f(b->maxs[0], b->maxs[1], b->maxs[2])))
+                        .valid) {
                     brushes.push_back(b_id);
                 }
             }
@@ -120,21 +122,19 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
 
         return;
     }
-    
+
     ExportBrushList_r(entity, node->children[0], brush_offset);
     ExportBrushList_r(entity, node->children[1], brush_offset);
 }
 
 static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &brush_offset)
 {
-    brush_state = { };
+    brush_state = {};
 
-    for (const brush_t *b = entity->brushes; b; b = b->next)
-    {
-        dbrush_t brush { (int32_t) map.exported_brushsides.size(), 0, b->contents.native };
+    for (const brush_t *b = entity->brushes; b; b = b->next) {
+        dbrush_t brush{(int32_t)map.exported_brushsides.size(), 0, b->contents.native};
 
-        for (const face_t *f = b->faces; f; f = f->next)
-        {
+        for (const face_t *f = b->faces; f; f = f->next) {
             int32_t planenum = f->planenum;
             int32_t outputplanenum;
 
@@ -149,42 +149,42 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
                 outputplanenum = ExportMapPlane(planenum);
             }
 
-            map.exported_brushsides.push_back({ (uint32_t) outputplanenum, map.mtexinfos[f->texinfo].outputnum.value_or(-1) });
+            map.exported_brushsides.push_back(
+                {(uint32_t)outputplanenum, map.mtexinfos[f->texinfo].outputnum.value_or(-1)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }
 
-		// add any axis planes not contained in the brush to bevel off corners
-		for (int32_t x=0 ; x<3 ; x++)
-			for (int32_t s=-1 ; s<=1 ; s+=2)
-			{
-			// add the plane
-                vec3_t normal { };
+        // add any axis planes not contained in the brush to bevel off corners
+        for (int32_t x = 0; x < 3; x++)
+            for (int32_t s = -1; s <= 1; s += 2) {
+                // add the plane
+                vec3_t normal{};
                 float dist;
-				VectorCopy (vec3_origin, normal);
-				normal[x] = s;
-				if (s == -1)
-					dist = -b->mins[x];
-				else
-					dist = b->maxs[x];
+                VectorCopy(vec3_origin, normal);
+                normal[x] = s;
+                if (s == -1)
+                    dist = -b->mins[x];
+                else
+                    dist = b->maxs[x];
                 int32_t side;
-				int32_t planenum = FindPlane(normal, dist, &side);
+                int32_t planenum = FindPlane(normal, dist, &side);
                 face_t *f;
 
                 for (f = b->faces; f; f = f->next)
-					if (f->planenum == planenum)
-						break;
+                    if (f->planenum == planenum)
+                        break;
 
-				if (f == nullptr)
-				{
+                if (f == nullptr) {
                     planenum = FindPlane(normal, dist, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
-                    
-                    map.exported_brushsides.push_back({ (uint32_t) outputplanenum, map.exported_brushsides[map.exported_brushsides.size() - 1].texinfo });
+
+                    map.exported_brushsides.push_back({(uint32_t)outputplanenum,
+                        map.exported_brushsides[map.exported_brushsides.size() - 1].texinfo});
                     brush.numsides++;
                     brush_state.total_brush_sides++;
-				}
-			}
+                }
+            }
 
         map.exported_brushes.push_back(brush);
         brush_state.total_brushes++;
@@ -193,11 +193,12 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
     ExportBrushList_r(entity, node, brush_offset);
 
     brush_offset += brush_state.total_brushes;
-    
+
     Message(msgStat, "%8u total brushes", brush_state.total_brushes);
     Message(msgStat, "%8u total brush sides", brush_state.total_brush_sides);
     Message(msgStat, "%8u total leaf brushes", brush_state.total_leaf_brushes);
-    Message(msgStat, "%8u unique leaf brushes (%.2f%%)", brush_state.unique_leaf_brushes, (brush_state.unique_leaf_brushes / (float) brush_state.total_leaf_brushes) * 100);
+    Message(msgStat, "%8u unique leaf brushes (%.2f%%)", brush_state.unique_leaf_brushes,
+        (brush_state.unique_leaf_brushes / (float)brush_state.total_leaf_brushes) * 100);
 }
 
 /*
@@ -205,18 +206,17 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 ProcessEntity
 ===============
 */
-static void
-ProcessEntity(mapentity_t *entity, const int hullnum)
+static void ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     int i, firstface;
     surface_t *surfs;
     node_t *nodes;
-    
+
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
     if (!entity->nummapbrushes && entity != pWorldEnt())
         return;
-    
+
     /*
      * func_group and func_detail entities get their brushes added to the
      * worldspawn
@@ -274,20 +274,20 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     if (entity == pWorldEnt()) {
         /*
          * We no longer care about the order of adding func_detail and func_group,
-         * Entity_SortBrushes will sort the brushes 
+         * Entity_SortBrushes will sort the brushes
          */
         for (i = 1; i < map.numentities(); i++) {
             mapentity_t *source = &map.entities.at(i);
-            
+
             /* Load external .map and change the classname, if needed */
             ProcessExternalMapEntity(source);
-            
+
             if (IsWorldBrushEntity(source)) {
                 Brush_LoadEntity(entity, source, hullnum);
             }
         }
     }
-    
+
     /* Print brush counts */
     {
         int solidcount = Brush_ListCount(entity->solid);
@@ -297,10 +297,10 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         int detail_illusionarycount = Brush_ListCount(entity->detail_illusionary);
         int detail_fence_count = Brush_ListCount(entity->detail_fence);
         int liquidcount = Brush_ListCount(entity->liquid);
-    
+
         int nondetailcount = (solidcount + skycount + liquidcount);
         int detailcount = detail_all_count - detail_wall_count;
-        
+
         Message(msgStat, "%8d brushes", nondetailcount);
         if (detailcount > 0) {
             Message(msgStat, "%8d detail", detailcount);
@@ -314,12 +314,12 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         if (detail_illusionarycount > 0) {
             Message(msgStat, "%8d detail illusionary", detail_illusionarycount);
         }
-        
+
         Message(msgStat, "%8d planes", map.numplanes());
     }
-    
+
     Entity_SortBrushes(entity);
-    
+
     if (!entity->brushes && hullnum) {
         PrintEntity(entity);
         Error("Entity with no valid brushes");
@@ -330,11 +330,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      * leaving a perfect skin of the model with no hidden faces
      */
     surfs = CSGFaces(entity);
-    
+
     if (options.fObjExport && entity == pWorldEnt() && hullnum <= 0) {
         ExportObj_Surfaces("post_csg", surfs);
     }
-    
+
     if (hullnum > 0) {
         nodes = SolidBSP(entity, surfs, true);
         if (entity == pWorldEnt() && !options.fNofill) {
@@ -346,7 +346,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
                 surfs = GatherNodeFaces(nodes);
                 // make a really good tree
                 nodes = SolidBSP(entity, surfs, false);
-                
+
                 DetailToSolid(nodes);
             }
         }
@@ -387,7 +387,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
 
                 // convert detail leafs to solid
                 DetailToSolid(nodes);
-                
+
                 // make the real portals for vis tracing
                 PortalizeWorld(entity, nodes, hullnum);
 
@@ -400,7 +400,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         if (entity != pWorldEnt()) {
             TJunc(entity, nodes);
         }
-        
+
         // convert detail leafs to solid (in case we didn't make the call above)
         DetailToSolid(nodes);
 
@@ -428,8 +428,7 @@ UpdateEntLump
 
 =================
 */
-static void
-UpdateEntLump(void)
+static void UpdateEntLump(void)
 {
     int modnum, i;
     char modname[10];
@@ -440,30 +439,30 @@ UpdateEntLump(void)
     modnum = 1;
     for (i = 1; i < map.numentities(); i++) {
         entity = &map.entities.at(i);
-        
+
         /* Special handling for misc_external_map.
            Duplicates some logic from ProcessExternalMapEntity. */
         qboolean is_misc_external_map = false;
         if (!Q_strcasecmp(ValueForKey(entity, "classname"), "misc_external_map")) {
             const char *new_classname = ValueForKey(entity, "_external_map_classname");
-            
+
             SetKeyValue(entity, "classname", new_classname);
             SetKeyValue(entity, "origin", "0 0 0");
-         
-            /* Note: the classname could have switched to 
+
+            /* Note: the classname could have switched to
              * a IsWorldBrushEntity entity (func_group, func_detail),
-             * or a bmodel entity (func_wall 
+             * or a bmodel entity (func_wall
              */
             is_misc_external_map = true;
         }
-        
+
         qboolean isBrushEnt = (entity->nummapbrushes > 0) || is_misc_external_map;
         if (!isBrushEnt)
             continue;
-        
+
         if (IsWorldBrushEntity(entity))
             continue;
-        
+
         q_snprintf(modname, sizeof(modname), "*%d", modnum);
         SetKeyValue(entity, "model", modname);
         modnum++;
@@ -481,7 +480,6 @@ UpdateEntLump(void)
         options.fVerbose = false;
 }
 
-
 /*
 Actually writes out the final bspx BRUSHLIST lump
 This lump replaces the clipnodes stuff for custom collision sizes.
@@ -491,216 +489,201 @@ void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx)
     // Actually written in WriteBSPFile()
     map.exported_bspxbrushes = std::move(ctx->lumpdata);
 }
-void BSPX_Brushes_Init(struct bspxbrushes_s *ctx)
-{
-    ctx->lumpdata.clear();
-}
+void BSPX_Brushes_Init(struct bspxbrushes_s *ctx) { ctx->lumpdata.clear(); }
 
-static void
-vec_push_bytes(std::vector<uint8_t>& vec, const void* data, size_t count) {
-    const uint8_t* bytes = static_cast<const uint8_t*>(data);
+static void vec_push_bytes(std::vector<uint8_t> &vec, const void *data, size_t count)
+{
+    const uint8_t *bytes = static_cast<const uint8_t *>(data);
 
     vec.insert(vec.end(), bytes, bytes + count);
 }
 
 /*
 WriteBrushes
-Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific hull sizes
+Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific
+hull sizes
 */
 #define LittleLong(x) x // FIXME
 #define LittleShort(x) x // FIXME
 #define LittleFloat(x) x // FIXME
 void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes)
 {
-        brush_t *b;
-        face_t *f;
+    brush_t *b;
+    face_t *f;
 
-        struct
-        {
-                int ver;
-                int modelnum;
-                int numbrushes;
-                int numfaces;
-        } permodel;
-        struct
-        {
-                float mins[3];
-                float maxs[3];
-                short contents;
-                unsigned short numfaces;
-        } perbrush;
-        struct
-        {
-                float normal[3];
-                float dist;
-        } perface;
+    struct
+    {
+        int ver;
+        int modelnum;
+        int numbrushes;
+        int numfaces;
+    } permodel;
+    struct
+    {
+        float mins[3];
+        float maxs[3];
+        short contents;
+        unsigned short numfaces;
+    } perbrush;
+    struct
+    {
+        float normal[3];
+        float dist;
+    } perface;
 
-        permodel.numbrushes = 0;
-        permodel.numfaces = 0;
-        for (b = brushes; b; b = b->next)
-        {
-                permodel.numbrushes++;
-                for (f = b->faces; f; f = f->next)
-                {
-                        /*skip axial*/
-                        if (fabs(map.planes[f->planenum].normal[0]) == 1 ||
-                                fabs(map.planes[f->planenum].normal[1]) == 1 ||
-                                fabs(map.planes[f->planenum].normal[2]) == 1)
-                                continue;
-                        permodel.numfaces++;
-                }
+    permodel.numbrushes = 0;
+    permodel.numfaces = 0;
+    for (b = brushes; b; b = b->next) {
+        permodel.numbrushes++;
+        for (f = b->faces; f; f = f->next) {
+            /*skip axial*/
+            if (fabs(map.planes[f->planenum].normal[0]) == 1 || fabs(map.planes[f->planenum].normal[1]) == 1 ||
+                fabs(map.planes[f->planenum].normal[2]) == 1)
+                continue;
+            permodel.numfaces++;
+        }
+    }
+
+    permodel.ver = LittleLong(1);
+    permodel.modelnum = LittleLong(modelnum);
+    permodel.numbrushes = LittleLong(permodel.numbrushes);
+    permodel.numfaces = LittleLong(permodel.numfaces);
+    vec_push_bytes(ctx->lumpdata, &permodel, sizeof(permodel));
+
+    for (b = brushes; b; b = b->next) {
+        perbrush.numfaces = 0;
+        for (f = b->faces; f; f = f->next) {
+            /*skip axial*/
+            if (fabs(map.planes[f->planenum].normal[0]) == 1 || fabs(map.planes[f->planenum].normal[1]) == 1 ||
+                fabs(map.planes[f->planenum].normal[2]) == 1)
+                continue;
+            perbrush.numfaces++;
         }
 
-        permodel.ver = LittleLong(1);
-        permodel.modelnum = LittleLong(modelnum);
-        permodel.numbrushes = LittleLong(permodel.numbrushes);
-        permodel.numfaces = LittleLong(permodel.numfaces);
-        vec_push_bytes(ctx->lumpdata, &permodel, sizeof(permodel));
-
-        for (b = brushes; b; b = b->next)
-        {
-                perbrush.numfaces = 0;
-                for (f = b->faces; f; f = f->next)
-                {
-                        /*skip axial*/
-                        if (fabs(map.planes[f->planenum].normal[0]) == 1 ||
-                                fabs(map.planes[f->planenum].normal[1]) == 1 ||
-                                fabs(map.planes[f->planenum].normal[2]) == 1)
-                                continue;
-                        perbrush.numfaces++;
+        perbrush.mins[0] = LittleFloat(b->mins[0]);
+        perbrush.mins[1] = LittleFloat(b->mins[1]);
+        perbrush.mins[2] = LittleFloat(b->mins[2]);
+        perbrush.maxs[0] = LittleFloat(b->maxs[0]);
+        perbrush.maxs[1] = LittleFloat(b->maxs[1]);
+        perbrush.maxs[2] = LittleFloat(b->maxs[2]);
+        switch (b->contents.native) {
+            // contents should match the engine.
+            case CONTENTS_EMPTY: // really an error, but whatever
+            case CONTENTS_SOLID: // these are okay
+            case CONTENTS_WATER:
+            case CONTENTS_SLIME:
+            case CONTENTS_LAVA:
+            case CONTENTS_SKY:
+                if (b->contents.extended & CFLAGS_CLIP) {
+                    perbrush.contents = -8;
+                } else {
+                    perbrush.contents = b->contents.native;
                 }
-
-                perbrush.mins[0] = LittleFloat(b->mins[0]);
-                perbrush.mins[1] = LittleFloat(b->mins[1]);
-                perbrush.mins[2] = LittleFloat(b->mins[2]);
-                perbrush.maxs[0] = LittleFloat(b->maxs[0]);
-                perbrush.maxs[1] = LittleFloat(b->maxs[1]);
-                perbrush.maxs[2] = LittleFloat(b->maxs[2]);
-                switch(b->contents.native)
-                {
-                //contents should match the engine.
-                case CONTENTS_EMPTY:    //really an error, but whatever
-                case CONTENTS_SOLID:    //these are okay
-                case CONTENTS_WATER:
-                case CONTENTS_SLIME:
-                case CONTENTS_LAVA:
-                case CONTENTS_SKY:
-                        if (b->contents.extended & CFLAGS_CLIP) {
-                            perbrush.contents = -8;
-                        } else {
-                            perbrush.contents = b->contents.native;
-                        }
-                        break;
-//              case CONTENTS_LADDER:
-//                      perbrush.contents = -16;
-//                      break;
-                default:
-                        Message(msgWarning, "Unknown contents: %i-%i. Translating to solid.", b->contents.native, b->contents.extended);
-                        perbrush.contents = CONTENTS_SOLID;
-                        break;
-                }
-                perbrush.contents = LittleShort(perbrush.contents);
-                perbrush.numfaces = LittleShort(perbrush.numfaces);
-                vec_push_bytes(ctx->lumpdata, &perbrush, sizeof(perbrush));
-                
-                for (f = b->faces; f; f = f->next)
-                {
-                        /*skip axial*/
-                        if (fabs(map.planes[f->planenum].normal[0]) == 1 ||
-                                fabs(map.planes[f->planenum].normal[1]) == 1 ||
-                                fabs(map.planes[f->planenum].normal[2]) == 1)
-                                continue;
-
-                        if (f->planeside)
-                        {
-                                perface.normal[0] = -map.planes[f->planenum].normal[0];
-                                perface.normal[1] = -map.planes[f->planenum].normal[1];
-                                perface.normal[2] = -map.planes[f->planenum].normal[2];
-                                perface.dist      = -map.planes[f->planenum].dist;
-                        }
-                        else
-                        {
-                                perface.normal[0] = map.planes[f->planenum].normal[0];
-                                perface.normal[1] = map.planes[f->planenum].normal[1];
-                                perface.normal[2] = map.planes[f->planenum].normal[2];
-                                perface.dist      = map.planes[f->planenum].dist;
-                        }
-
-                        vec_push_bytes(ctx->lumpdata, &perface, sizeof(perface));
-                }
+                break;
+                //              case CONTENTS_LADDER:
+                //                      perbrush.contents = -16;
+                //                      break;
+            default:
+                Message(msgWarning, "Unknown contents: %i-%i. Translating to solid.", b->contents.native,
+                    b->contents.extended);
+                perbrush.contents = CONTENTS_SOLID;
+                break;
         }
+        perbrush.contents = LittleShort(perbrush.contents);
+        perbrush.numfaces = LittleShort(perbrush.numfaces);
+        vec_push_bytes(ctx->lumpdata, &perbrush, sizeof(perbrush));
+
+        for (f = b->faces; f; f = f->next) {
+            /*skip axial*/
+            if (fabs(map.planes[f->planenum].normal[0]) == 1 || fabs(map.planes[f->planenum].normal[1]) == 1 ||
+                fabs(map.planes[f->planenum].normal[2]) == 1)
+                continue;
+
+            if (f->planeside) {
+                perface.normal[0] = -map.planes[f->planenum].normal[0];
+                perface.normal[1] = -map.planes[f->planenum].normal[1];
+                perface.normal[2] = -map.planes[f->planenum].normal[2];
+                perface.dist = -map.planes[f->planenum].dist;
+            } else {
+                perface.normal[0] = map.planes[f->planenum].normal[0];
+                perface.normal[1] = map.planes[f->planenum].normal[1];
+                perface.normal[2] = map.planes[f->planenum].normal[2];
+                perface.dist = map.planes[f->planenum].dist;
+            }
+
+            vec_push_bytes(ctx->lumpdata, &perface, sizeof(perface));
+        }
+    }
 }
 
 /* for generating BRUSHLIST bspx lump */
 static void BSPX_CreateBrushList(void)
 {
-        mapentity_t *ent;
-        int entnum;
-        int modelnum;
-        const char *mod;
-        struct bspxbrushes_s ctx;
+    mapentity_t *ent;
+    int entnum;
+    int modelnum;
+    const char *mod;
+    struct bspxbrushes_s ctx;
 
-        if (!options.fbspx_brushes)
-                return;
+    if (!options.fbspx_brushes)
+        return;
 
-        BSPX_Brushes_Init(&ctx);
+    BSPX_Brushes_Init(&ctx);
 
-        for (entnum = 0; entnum < map.numentities(); entnum++)
-        {
-                ent = &map.entities.at(entnum);
-                if (ent == pWorldEnt())
-                        modelnum = 0;
-                else
-                {
-                        mod = ValueForKey(ent, "model");
-                        if (*mod != '*')
-                                continue;
-                        modelnum = atoi(mod+1);
-                }
-
-                ent->brushes = NULL;
-                ent->detail_illusionary = NULL;
-                ent->liquid = NULL;
-                ent->detail_fence = NULL;
-                ent->detail = NULL;
-                ent->sky = NULL;
-                ent->solid = NULL;
-
-                ent->numbrushes = 0;
-                Brush_LoadEntity (ent, ent, -1);
-
-                // FIXME: copied and pasted from ProcessEntity
-                /*
-                 * If this is the world entity, find all func_group and func_detail
-                 * entities and add their brushes with the appropriate contents flag set.
-                 */
-                if (ent == pWorldEnt()) {
-                    /*
-                     * We no longer care about the order of adding func_detail and func_group,
-                     * Entity_SortBrushes will sort the brushes 
-                     */
-                    for (int i = 1; i < map.numentities(); i++) {
-                        mapentity_t *source = &map.entities.at(i);
-                        
-                        /* Load external .map and change the classname, if needed */
-                        ProcessExternalMapEntity(source);
-                        
-                        if (IsWorldBrushEntity(source)) {
-                            Brush_LoadEntity(ent, source, -1);
-                        }
-                    }
-                }
-
-                Entity_SortBrushes(ent);
-
-                if (!ent->brushes)
-                        continue;               // non-bmodel entity
-
-                BSPX_Brushes_AddModel(&ctx, modelnum , ent->brushes);
-                FreeBrushes(ent);
+    for (entnum = 0; entnum < map.numentities(); entnum++) {
+        ent = &map.entities.at(entnum);
+        if (ent == pWorldEnt())
+            modelnum = 0;
+        else {
+            mod = ValueForKey(ent, "model");
+            if (*mod != '*')
+                continue;
+            modelnum = atoi(mod + 1);
         }
 
-        BSPX_Brushes_Finalize(&ctx);
+        ent->brushes = NULL;
+        ent->detail_illusionary = NULL;
+        ent->liquid = NULL;
+        ent->detail_fence = NULL;
+        ent->detail = NULL;
+        ent->sky = NULL;
+        ent->solid = NULL;
+
+        ent->numbrushes = 0;
+        Brush_LoadEntity(ent, ent, -1);
+
+        // FIXME: copied and pasted from ProcessEntity
+        /*
+         * If this is the world entity, find all func_group and func_detail
+         * entities and add their brushes with the appropriate contents flag set.
+         */
+        if (ent == pWorldEnt()) {
+            /*
+             * We no longer care about the order of adding func_detail and func_group,
+             * Entity_SortBrushes will sort the brushes
+             */
+            for (int i = 1; i < map.numentities(); i++) {
+                mapentity_t *source = &map.entities.at(i);
+
+                /* Load external .map and change the classname, if needed */
+                ProcessExternalMapEntity(source);
+
+                if (IsWorldBrushEntity(source)) {
+                    Brush_LoadEntity(ent, source, -1);
+                }
+            }
+        }
+
+        Entity_SortBrushes(ent);
+
+        if (!ent->brushes)
+            continue; // non-bmodel entity
+
+        BSPX_Brushes_AddModel(&ctx, modelnum, ent->brushes);
+        FreeBrushes(ent);
+    }
+
+    BSPX_Brushes_Finalize(&ctx);
 }
 
 /*
@@ -709,8 +692,7 @@ CreateSingleHull
 
 =================
 */
-static void
-CreateSingleHull(const int hullnum)
+static void CreateSingleHull(const int hullnum)
 {
     int i;
     mapentity_t *entity;
@@ -722,7 +704,7 @@ CreateSingleHull(const int hullnum)
         entity = &map.entities.at(i);
         ProcessEntity(entity, hullnum);
         if (!options.fAllverbose)
-            options.fVerbose = false;   // don't print rest of entities
+            options.fVerbose = false; // don't print rest of entities
     }
 }
 
@@ -732,15 +714,13 @@ CreateHulls
 
 =================
 */
-static void
-CreateHulls(void)
+static void CreateHulls(void)
 {
     /* create the hulls sequentially */
     if (!options.fNoverbose)
         options.fVerbose = true;
 
-    if (options.target_game->id == GAME_QUAKE_II)
-    {
+    if (options.target_game->id == GAME_QUAKE_II) {
         CreateSingleHull(-1);
         return;
     }
@@ -757,8 +737,8 @@ CreateHulls(void)
     // FIXME: use game->get_hull_count
     if (options.target_game->id == GAME_HALF_LIFE)
         CreateSingleHull(3);
-    else if (options.target_game->id == GAME_HEXEN_II)
-    {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
+    else if (options.target_game->id == GAME_HEXEN_II) { /*note: h2mp doesn't use hull 2 automatically, however gamecode
+                                                            can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
         CreateSingleHull(4);
         CreateSingleHull(5);
@@ -767,15 +747,14 @@ CreateHulls(void)
 
 static bool wadlist_tried_loading = false;
 
-void
-EnsureTexturesLoaded()
+void EnsureTexturesLoaded()
 {
     const char *wadstring;
     char *defaultwad;
-    
+
     if (wadlist_tried_loading)
         return;
-    
+
     wadlist_tried_loading = true;
 
     wadstring = ValueForKey(pWorldEnt(), "_wad");
@@ -785,12 +764,12 @@ EnsureTexturesLoaded()
         Message(msgWarning, warnNoWadKey);
     else
         WADList_Init(wadstring);
-    
+
     if (!wadlist.size()) {
         if (wadstring[0])
             Message(msgWarning, warnNoValidWads);
         /* Try the default wad name */
-        defaultwad = (char *) AllocMem(OTHER, strlen(options.szMapName) + 5, false);
+        defaultwad = (char *)AllocMem(OTHER, strlen(options.szMapName) + 5, false);
         strcpy(defaultwad, options.szMapName);
         StripExtension(defaultwad);
         DefaultExtension(defaultwad, ".wad");
@@ -801,7 +780,7 @@ EnsureTexturesLoaded()
     }
 }
 
-static const char* //mxd
+static const char * // mxd
 GetBaseDirName(const bspversion_t *bspver)
 {
     return bspver->game->base_dir;
@@ -812,8 +791,7 @@ GetBaseDirName(const bspversion_t *bspver)
 ProcessFile
 =================
 */
-static void
-ProcessFile(void)
+static void ProcessFile(void)
 {
     // load brushes and entities
     SetQdirFromPath(GetBaseDirName(options.target_version), options.szMapName);
@@ -829,7 +807,7 @@ ProcessFile(void)
 
     // this can happen earlier if brush primitives are in use, because we need texture sizes then
     EnsureTexturesLoaded();
-    
+
     // init the tables to be shared by all models
     BeginBSPFile();
 
@@ -845,66 +823,64 @@ ProcessFile(void)
     wadlist.clear();
 }
 
-
 /*
 ==============
 PrintOptions
 ==============
 */
-static void
-PrintOptions(void)
+static void PrintOptions(void)
 {
-    printf("\n"
-           "qbsp performs geometric level processing of Quake .MAP files to create\n"
-           "Quake .BSP files.\n\n"
-           "qbsp [options] sourcefile [destfile]\n\n"
-           "Options:\n"
-           "   -nofill         Doesn't perform outside filling\n"
-           "   -noclip         Doesn't build clip hulls\n"
-           "   -noskip         Doesn't remove faces with the 'skip' texture\n"
-           "   -nodetail       Convert func_detail to structural\n"
-           "   -onlyents       Only updates .MAP entities\n"
-           "   -verbose        Print out more .MAP information\n"
-           "   -noverbose      Print out almost no information at all\n"
-           "   -splitspecial   Doesn't combine sky and water faces into one large face\n"
-           "   -splitsky       Doesn't combine sky faces into one large face\n"
-           "   -splitturb      Doesn't combine water faces into one large face\n"
-           "   -notranswater   Computes portal information for opaque water\n"
-           "   -transsky       Computes portal information for transparent sky\n"
-           "   -notex          Write only placeholder textures, to depend upon replacements, to keep file sizes down, or to skirt copyrights\n"
-           "   -nooldaxis      Uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older\n"
-           "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
-           "   -nopercent      Prevents output of percent completion information\n"
-           "   -wrbrushes      (bspx) Includes a list of brushes for brush-based collision\n"
-           "   -wrbrushesonly  -wrbrushes with -noclip\n"
-           "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
-           "   -hlbsp          Request output in Half-Life bsp format\n"
-           "   -bsp2           Request output in bsp2 format\n"
-           "   -2psb           Request output in 2psb format (RMQ compatible)\n"
-           "   -leakdist  [n]  Space between leakfile points (default 2)\n"
-           "   -subdivide [n]  Use different texture subdivision (default 240)\n"
-           "   -wadpath <dir>  Search this directory for wad files (mips will be embedded unless -notex)\n"
-           "   -xwadpath <dir> Search this directory for wad files (mips will NOT be embedded, avoiding texture license issues)\n"
-           "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
-           "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
-           "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
-           "   -forceprt1      Create a PRT1 file for loading in editors, even if PRT2 is required to run vis.\n"
-           "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
-           "   -omitdetail     func_detail brushes are omitted from the compile\n"
-           "   -omitdetailwall          func_detail_wall brushes are omitted from the compile\n"
-           "   -omitdetailillusionary   func_detail_illusionary brushes are omitted from the compile\n"
-           "   -omitdetailfence         func_detail_fence brushes are omitted from the compile\n"
-           "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
-           "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
-           "   -leaktest       Make compilation fail if the map leaks\n"
-           "   -contenthack    Hack to fix leaks through solids. Causes missing faces in some cases so disabled by default.\n"
-           "   -nothreads      Disable multithreading\n"
-           "   sourcefile      .MAP file to process\n"
-           "   destfile        .BSP file to output\n");
+    printf(
+        "\n"
+        "qbsp performs geometric level processing of Quake .MAP files to create\n"
+        "Quake .BSP files.\n\n"
+        "qbsp [options] sourcefile [destfile]\n\n"
+        "Options:\n"
+        "   -nofill         Doesn't perform outside filling\n"
+        "   -noclip         Doesn't build clip hulls\n"
+        "   -noskip         Doesn't remove faces with the 'skip' texture\n"
+        "   -nodetail       Convert func_detail to structural\n"
+        "   -onlyents       Only updates .MAP entities\n"
+        "   -verbose        Print out more .MAP information\n"
+        "   -noverbose      Print out almost no information at all\n"
+        "   -splitspecial   Doesn't combine sky and water faces into one large face\n"
+        "   -splitsky       Doesn't combine sky faces into one large face\n"
+        "   -splitturb      Doesn't combine water faces into one large face\n"
+        "   -notranswater   Computes portal information for opaque water\n"
+        "   -transsky       Computes portal information for transparent sky\n"
+        "   -notex          Write only placeholder textures, to depend upon replacements, to keep file sizes down, or to skirt copyrights\n"
+        "   -nooldaxis      Uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older\n"
+        "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
+        "   -nopercent      Prevents output of percent completion information\n"
+        "   -wrbrushes      (bspx) Includes a list of brushes for brush-based collision\n"
+        "   -wrbrushesonly  -wrbrushes with -noclip\n"
+        "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
+        "   -hlbsp          Request output in Half-Life bsp format\n"
+        "   -bsp2           Request output in bsp2 format\n"
+        "   -2psb           Request output in 2psb format (RMQ compatible)\n"
+        "   -leakdist  [n]  Space between leakfile points (default 2)\n"
+        "   -subdivide [n]  Use different texture subdivision (default 240)\n"
+        "   -wadpath <dir>  Search this directory for wad files (mips will be embedded unless -notex)\n"
+        "   -xwadpath <dir> Search this directory for wad files (mips will NOT be embedded, avoiding texture license issues)\n"
+        "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
+        "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
+        "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
+        "   -forceprt1      Create a PRT1 file for loading in editors, even if PRT2 is required to run vis.\n"
+        "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
+        "   -omitdetail     func_detail brushes are omitted from the compile\n"
+        "   -omitdetailwall          func_detail_wall brushes are omitted from the compile\n"
+        "   -omitdetailillusionary   func_detail_illusionary brushes are omitted from the compile\n"
+        "   -omitdetailfence         func_detail_fence brushes are omitted from the compile\n"
+        "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
+        "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
+        "   -leaktest       Make compilation fail if the map leaks\n"
+        "   -contenthack    Hack to fix leaks through solids. Causes missing faces in some cases so disabled by default.\n"
+        "   -nothreads      Disable multithreading\n"
+        "   sourcefile      .MAP file to process\n"
+        "   destfile        .BSP file to output\n");
 
     exit(1);
 }
-
 
 /*
 =============
@@ -913,8 +889,7 @@ GetTok
 Gets tokens from command line string.
 =============
 */
-static char *
-GetTok(char *szBuf, char *szEnd)
+static char *GetTok(char *szBuf, char *szEnd)
 {
     char *szTok;
 
@@ -922,8 +897,7 @@ GetTok(char *szBuf, char *szEnd)
         return NULL;
 
     // Eliminate leading whitespace
-    while (*szBuf == ' ' || *szBuf == '\n' || *szBuf == '\t' ||
-           *szBuf == '\r')
+    while (*szBuf == ' ' || *szBuf == '\n' || *szBuf == '\t' || *szBuf == '\r')
         szBuf++;
 
     if (szBuf >= szEnd)
@@ -933,18 +907,15 @@ GetTok(char *szBuf, char *szEnd)
     if (*szBuf == '\"') {
         szBuf++;
         szTok = szBuf;
-        while (*szBuf != 0 && *szBuf != '\"' && *szBuf != '\n'
-               && *szBuf != '\r')
+        while (*szBuf != 0 && *szBuf != '\"' && *szBuf != '\n' && *szBuf != '\r')
             szBuf++;
     } else if (*szBuf == '-' || *szBuf == '/') {
         szTok = szBuf;
-        while (*szBuf != ' ' && *szBuf != '\n' && *szBuf != '\t' &&
-               *szBuf != '\r' && *szBuf != 0)
+        while (*szBuf != ' ' && *szBuf != '\n' && *szBuf != '\t' && *szBuf != '\r' && *szBuf != 0)
             szBuf++;
     } else {
         szTok = szBuf;
-        while (*szBuf != ' ' && *szBuf != '\n' && *szBuf != '\t' &&
-               *szBuf != '\r' && *szBuf != 0)
+        while (*szBuf != ' ' && *szBuf != '\n' && *szBuf != '\t' && *szBuf != '\r' && *szBuf != 0)
             szBuf++;
     }
 
@@ -958,8 +929,7 @@ GetTok(char *szBuf, char *szEnd)
 ParseOptions
 ==================
 */
-static void
-ParseOptions(char *szOptions)
+static void ParseOptions(char *szOptions)
 {
     char *szTok, *szTok2;
     char *szEnd;
@@ -1009,7 +979,8 @@ ParseOptions(char *szOptions)
             else if (!Q_strcasecmp(szTok, "notex"))
                 options.fNoTextures = true;
             else if (!Q_strcasecmp(szTok, "oldaxis"))
-                logprint("-oldaxis is now the default and the flag is ignored.\nUse -nooldaxis to get the alternate behaviour.\n");
+                logprint(
+                    "-oldaxis is now the default and the flag is ignored.\nUse -nooldaxis to get the alternate behaviour.\n");
             else if (!Q_strcasecmp(szTok, "nooldaxis"))
                 options.fOldaxis = false;
             else if (!Q_strcasecmp(szTok, "forcegoodtree"))
@@ -1029,8 +1000,7 @@ ParseOptions(char *szOptions)
             else if (!Q_strcasecmp(szTok, "wrbrushesonly") || !Q_strcasecmp(szTok, "bspxonly")) {
                 options.fbspx_brushes = true;
                 options.fNoclip = true;
-            }
-            else if (!Q_strcasecmp(szTok, "hlbsp")) {
+            } else if (!Q_strcasecmp(szTok, "hlbsp")) {
                 options.target_version = &bspver_hl;
             } else if (!Q_strcasecmp(szTok, "bsp2")) {
                 options.target_version = &bspver_bsp2;
@@ -1058,7 +1028,7 @@ ParseOptions(char *szOptions)
                 if (wadpath.size() > 0 && wadpath[wadpath.size() - 1] == '/') {
                     wadpath.resize(wadpath.size() - 1);
                 }
-                    
+
                 options_t::wadpath wp;
                 wp.external = !!Q_strcasecmp(szTok, "wadpath");
                 wp.path = wadpath;
@@ -1071,27 +1041,28 @@ ParseOptions(char *szOptions)
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                options.maxNodeSize= atoi(szTok2);
+                options.maxNodeSize = atoi(szTok2);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "midsplitsurffraction")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                options.midsplitSurfFraction = qclamp(atof(szTok2), 0.0f, 1.0f);
-                logprint("Switching to midsplit when node contains more than fraction %f of model's surfaces\n", options.midsplitSurfFraction);
+                options.midsplitSurfFraction = qclamp((float) atof(szTok2), 0.0f, 1.0f);
+                logprint("Switching to midsplit when node contains more than fraction %f of model's surfaces\n",
+                    options.midsplitSurfFraction);
 
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "epsilon")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                options.on_epsilon= atof(szTok2);
+                options.on_epsilon = atof(szTok2);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "worldextent")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                options.worldExtent= atof(szTok2);
+                options.worldExtent = atof(szTok2);
                 logprint("Overriding maximum world extents to +/- %f units\n", options.worldExtent);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "objexport")) {
@@ -1108,7 +1079,7 @@ ParseOptions(char *szOptions)
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                
+
                 if (!Q_strcasecmp(szTok2, "quake")) {
                     options.convertMapFormat = conversion_t::quake;
                 } else if (!Q_strcasecmp(szTok2, "quake2")) {
@@ -1120,7 +1091,7 @@ ParseOptions(char *szOptions)
                 } else {
                     Error("'-convert' requires one of: quake,quake2,valve,bp");
                 }
-                
+
                 options.fConvertMapFormat = true;
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "forceprt1")) {
@@ -1163,14 +1134,12 @@ ParseOptions(char *szOptions)
     options.target_game = options.target_version->game;
 }
 
-
 /*
 ==================
 InitQBSP
 ==================
 */
-static void
-InitQBSP(int argc, const char **argv)
+static void InitQBSP(int argc, const char **argv)
 {
     int i;
     char *szBuf;
@@ -1191,7 +1160,7 @@ InitQBSP(int argc, const char **argv)
         if (argv[i][0] != '-')
             length += 2; /* quotes */
     }
-    szBuf = (char *) AllocMem(OTHER, length, true);
+    szBuf = (char *)AllocMem(OTHER, length, true);
     for (i = 1; i < argc; i++) {
         /* Quote filenames for the parsing function */
         if (argv[i][0] != '-')
@@ -1260,7 +1229,6 @@ InitQBSP(int argc, const char **argv)
     }
 }
 
-
 /*
 ==================
 main
@@ -1287,8 +1255,8 @@ int qbsp_main(int argc, const char **argv)
 
     Message(msgLiteral, "\n%5.3f seconds elapsed\n", end - start);
 
-//      FreeAllMem();
-//      PrintMem();
+    //      FreeAllMem();
+    //      PrintMem();
 
     close_log();
 

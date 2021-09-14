@@ -5,7 +5,8 @@
 
 // FIXME: Clear global data (planes, etc) between each test
 
-static face_t *Brush_FirstFaceWithTextureName(brush_t *brush, const char *texname) {
+static face_t *Brush_FirstFaceWithTextureName(brush_t *brush, const char *texname)
+{
     for (face_t *face = brush->faces; face; face = face->next) {
         if (map.texinfoTextureName(face->texinfo) == texname)
             return face;
@@ -13,8 +14,9 @@ static face_t *Brush_FirstFaceWithTextureName(brush_t *brush, const char *texnam
     return nullptr;
 }
 
-static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brush, const std::string &texname) {
-    for (int i=0; i<brush->numfaces; i++) {
+static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brush, const std::string &texname)
+{
+    for (int i = 0; i < brush->numfaces; i++) {
         const mapface_t *face = &brush->face(i);
         if (face->texname == texname) {
             return face;
@@ -23,36 +25,35 @@ static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brus
     return nullptr;
 }
 
-static mapentity_t
-LoadMap(const char *map)
+static mapentity_t LoadMap(const char *map)
 {
     options.target_version = &bspver_q1;
     options.target_game = options.target_version->game;
 
     parser_t parser;
     ParserInit(&parser, map);
-    
+
     mapentity_t worldspawn;
     // FIXME: adds the brush to the global map...
     Q_assert(ParseEntity(&parser, &worldspawn));
-    
+
     return worldspawn;
 }
 
-static std::array<qvec4f, 2>
-GetTexvecs(const char *map, const char *texname)
+static std::array<qvec4f, 2> GetTexvecs(const char *map, const char *texname)
 {
     mapentity_t worldspawn = LoadMap(map);
-    
+
     const mapbrush_t *mapbrush = &worldspawn.mapbrush(0);
     const mapface_t *mapface = Mapbrush_FirstFaceWithTextureName(mapbrush, "tech02_1");
     Q_assert(nullptr != mapface);
-    
+
     return mapface->get_texvecs();
 }
 
 // https://github.com/ericwa/ericw-tools/issues/158
-TEST(qbsp, testTextureIssue) {
+TEST(qbsp, testTextureIssue)
+{
     const char *bufActual = R"(
     {
         "classname" "worldspawn"
@@ -82,7 +83,7 @@ TEST(qbsp, testTextureIssue) {
         }
     }
     )";
-    
+
     const auto texvecsExpected = GetTexvecs(bufExpected, "tech02_1");
     const auto texvecsActual = GetTexvecs(bufActual, "tech02_1");
 
@@ -96,7 +97,8 @@ TEST(qbsp, testTextureIssue) {
 #endif
 }
 
-TEST(qbsp, duplicatePlanes) {
+TEST(qbsp, duplicatePlanes)
+{
     // a brush from e1m4.map with 7 planes, only 6 unique.
     const char *mapWithDuplicatePlanes = R"(
     {
@@ -112,13 +114,14 @@ TEST(qbsp, duplicatePlanes) {
         }
     }
     )";
-    
+
     mapentity_t worldspawn = LoadMap(mapWithDuplicatePlanes);
     ASSERT_EQ(1, worldspawn.nummapbrushes);
     EXPECT_EQ(0, worldspawn.numbrushes);
     EXPECT_EQ(6, worldspawn.mapbrush(0).numfaces);
-    
-    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), { CONTENTS_SOLID }, vec3_origin, rotation_t::none, 0);
+
+    brush_t *brush =
+        LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, vec3_origin, rotation_t::none, 0);
     ASSERT_NE(nullptr, brush);
     EXPECT_EQ(6, Brush_NumFaces(brush));
     FreeBrush(brush);
@@ -140,89 +143,90 @@ static brush_t *load128x128x32Brush()
         }
     }
     )";
-    
+
     mapentity_t worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.nummapbrushes);
-    
-    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), { CONTENTS_SOLID}, vec3_origin, rotation_t::none, 0);
+
+    brush_t *brush =
+        LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, vec3_origin, rotation_t::none, 0);
     Q_assert(nullptr != brush);
-    
-    brush->contents = { CONTENTS_SOLID };
-    
+
+    brush->contents = {CONTENTS_SOLID};
+
     return brush;
 }
 
-TEST(qbsp, BrushVolume) {
+TEST(qbsp, BrushVolume)
+{
     brush_t *brush = load128x128x32Brush();
-    
-    EXPECT_FLOAT_EQ((128*128*32), BrushVolume(brush));
+
+    EXPECT_FLOAT_EQ((128 * 128 * 32), BrushVolume(brush));
 }
 
-TEST(qbsp, BrushMostlyOnSide1) {
+TEST(qbsp, BrushMostlyOnSide1)
+{
     brush_t *brush = load128x128x32Brush();
-    
-    vec3_t plane1normal = { -1, 0, 0 };
+
+    vec3_t plane1normal = {-1, 0, 0};
     vec_t plane1dist = -100;
-    
+
     EXPECT_EQ(SIDE_FRONT, BrushMostlyOnSide(brush, plane1normal, plane1dist));
-    
+
     FreeBrush(brush);
 }
 
-TEST(qbsp, BrushMostlyOnSide2) {
+TEST(qbsp, BrushMostlyOnSide2)
+{
     brush_t *brush = load128x128x32Brush();
-    
-    vec3_t plane1normal = { 1, 0, 0 };
+
+    vec3_t plane1normal = {1, 0, 0};
     vec_t plane1dist = 100;
-    
+
     EXPECT_EQ(SIDE_BACK, BrushMostlyOnSide(brush, plane1normal, plane1dist));
-    
+
     FreeBrush(brush);
 }
 
-TEST(qbsp, BoundBrush) {
+TEST(qbsp, BoundBrush)
+{
     brush_t *brush = load128x128x32Brush();
-    
+
     ClearBounds(brush->mins, brush->maxs);
-    
+
     EXPECT_EQ(true, BoundBrush(brush));
-    
+
     EXPECT_FLOAT_EQ(-64, brush->mins[0]);
     EXPECT_FLOAT_EQ(-64, brush->mins[1]);
     EXPECT_FLOAT_EQ(-16, brush->mins[2]);
-    
+
     EXPECT_FLOAT_EQ(64, brush->maxs[0]);
     EXPECT_FLOAT_EQ(64, brush->maxs[1]);
     EXPECT_FLOAT_EQ(16, brush->maxs[2]);
-    
+
     FreeBrush(brush);
 }
 
 static void checkForAllCubeNormals(const brush_t *brush)
 {
-    const vec3_t wanted[6] = {
-        { -1, 0, 0 },{ 1, 0, 0 },
-        {  0,-1, 0 },{ 0, 1, 0 },
-        {  0, 0,-1 },{ 0, 0, 1 }
-    };
-    
+    const vec3_t wanted[6] = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
+
     bool found[6];
-    for (int i=0; i<6; i++) {
+    for (int i = 0; i < 6; i++) {
         found[i] = false;
     }
-    
+
     for (const face_t *face = brush->faces; face; face = face->next) {
         const plane_t faceplane = Face_Plane(face);
-        
-        for (int i=0; i<6; i++) {
+
+        for (int i = 0; i < 6; i++) {
             if (VectorCompare(wanted[i], faceplane.normal, NORMAL_EPSILON)) {
                 EXPECT_FALSE(found[i]);
                 found[i] = true;
             }
         }
     }
-    
-    for (int i=0; i<6; i++) {
+
+    for (int i = 0; i < 6; i++) {
         EXPECT_TRUE(found[i]);
     }
 }
@@ -230,65 +234,67 @@ static void checkForAllCubeNormals(const brush_t *brush)
 static void checkCube(const brush_t *brush)
 {
     EXPECT_EQ(6, Brush_NumFaces(brush));
-    
+
     checkForAllCubeNormals(brush);
-    
-    EXPECT_EQ(contentflags_t { CONTENTS_SOLID }, brush->contents);
+
+    EXPECT_EQ(contentflags_t{CONTENTS_SOLID}, brush->contents);
 }
 
-TEST(qbsp, SplitBrush) {
+TEST(qbsp, SplitBrush)
+{
     brush_t *brush = load128x128x32Brush();
-    
-    const vec3_t planenormal = { -1, 0, 0 };
+
+    const vec3_t planenormal = {-1, 0, 0};
     int planeside;
     const int planenum = FindPlane(planenormal, 0.0, &planeside);
-    
+
     brush_t *front, *back;
     SplitBrush(brush, planenum, planeside, &front, &back);
-    
+
     ASSERT_NE(nullptr, front);
     ASSERT_NE(nullptr, back);
-    
+
     // front
     EXPECT_FLOAT_EQ(-64, front->mins[0]);
     EXPECT_FLOAT_EQ(-64, front->mins[1]);
     EXPECT_FLOAT_EQ(-16, front->mins[2]);
-    
-    EXPECT_FLOAT_EQ(0,  front->maxs[0]);
+
+    EXPECT_FLOAT_EQ(0, front->maxs[0]);
     EXPECT_FLOAT_EQ(64, front->maxs[1]);
     EXPECT_FLOAT_EQ(16, front->maxs[2]);
-    
+
     checkCube(front);
-    
+
     // back
-    EXPECT_FLOAT_EQ(0,   back->mins[0]);
+    EXPECT_FLOAT_EQ(0, back->mins[0]);
     EXPECT_FLOAT_EQ(-64, back->mins[1]);
     EXPECT_FLOAT_EQ(-16, back->mins[2]);
-    
+
     EXPECT_FLOAT_EQ(64, back->maxs[0]);
     EXPECT_FLOAT_EQ(64, back->maxs[1]);
     EXPECT_FLOAT_EQ(16, back->maxs[2]);
-    
+
     checkCube(back);
-    
+
     FreeBrush(brush);
     free(front);
     free(back);
 }
 
-TEST(qbsp, SplitBrushOnSide) {
+TEST(qbsp, SplitBrushOnSide)
+{
     brush_t *brush = load128x128x32Brush();
-    
-    const vec3_t planenormal = { -1, 0, 0 };
+
+    const vec3_t planenormal = {-1, 0, 0};
     int planeside;
     const int planenum = FindPlane(planenormal, -64.0, &planeside);
-    
+
     brush_t *front, *back;
     SplitBrush(brush, planenum, planeside, &front, &back);
-    
+
     ASSERT_NE(nullptr, front);
     checkCube(front);
-    
+
     EXPECT_EQ(nullptr, back);
 }
 
@@ -313,7 +319,8 @@ TEST(qbsp, MemLeaks) {
 /**
  * Test that this skip face gets auto-corrected.
  */
-TEST(qbsp, InvalidTextureProjection) {
+TEST(qbsp, InvalidTextureProjection)
+{
     const char *map = R"(
     // entity 0
     {
@@ -329,10 +336,10 @@ TEST(qbsp, InvalidTextureProjection) {
         }
     }
     )";
-    
+
     mapentity_t worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.nummapbrushes);
-    
+
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     ASSERT_EQ("skip", face->texname);
     const auto texvecs = face->get_texvecs();
@@ -342,7 +349,8 @@ TEST(qbsp, InvalidTextureProjection) {
 /**
  * Same as above but the texture scales are 0
  */
-TEST(qbsp, InvalidTextureProjection2) {
+TEST(qbsp, InvalidTextureProjection2)
+{
     const char *map = R"(
     // entity 0
     {
@@ -358,10 +366,10 @@ TEST(qbsp, InvalidTextureProjection2) {
         }
     }
     )";
-    
+
     mapentity_t worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.nummapbrushes);
-    
+
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     ASSERT_EQ("skip", face->texname);
     const auto texvecs = face->get_texvecs();
@@ -371,7 +379,8 @@ TEST(qbsp, InvalidTextureProjection2) {
 /**
  * More realistic: *lava1 has tex vecs perpendicular to face
  */
-TEST(qbsp, InvalidTextureProjection3) {
+TEST(qbsp, InvalidTextureProjection3)
+{
     const char *map = R"(
     // entity 0
     {
@@ -388,28 +397,27 @@ TEST(qbsp, InvalidTextureProjection3) {
         }
     }
     )";
-    
+
     mapentity_t worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.nummapbrushes);
-    
+
     const mapface_t *face = &worldspawn.mapbrush(0).face(3);
     ASSERT_EQ("*lava1", face->texname);
     const auto texvecs = face->get_texvecs();
     EXPECT_TRUE(IsValidTextureProjection(vec3_t_to_glm(face->plane.normal), texvecs.at(0), texvecs.at(1)));
 }
 
-TEST(mathlib, WindingArea) {
+TEST(mathlib, WindingArea)
+{
     winding_t w;
     w.numpoints = 5;
-    
-    // poor test.. but at least checks that the colinear point is treated correctly
-    VectorSet(w.points[0], 0,0,0);
-    VectorSet(w.points[1], 0,32,0); // colinear
-    VectorSet(w.points[2], 0,64,0);
-    VectorSet(w.points[3], 64,64,0);
-    VectorSet(w.points[4], 64,0,0);
 
-    
+    // poor test.. but at least checks that the colinear point is treated correctly
+    VectorSet(w.points[0], 0, 0, 0);
+    VectorSet(w.points[1], 0, 32, 0); // colinear
+    VectorSet(w.points[2], 0, 64, 0);
+    VectorSet(w.points[3], 64, 64, 0);
+    VectorSet(w.points[4], 64, 0, 0);
+
     EXPECT_EQ(64.0f * 64.0f, WindingArea(&w));
 }
-

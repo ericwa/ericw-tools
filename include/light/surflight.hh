@@ -18,12 +18,12 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 See file, 'COPYING', for details.
 */
 
-#ifndef __SURFACE_LIGHT_H__
-#define __SURFACE_LIGHT_H__
+#pragma once
 
 #include <vector>
 
-typedef struct {
+struct surfacelight_t
+{
     vec3_t pos;
     qvec3f surfnormal;
     /**
@@ -34,18 +34,16 @@ typedef struct {
     std::vector<qvec3f> points;
 
     // Surface light settings...
-    float intensity;       // Surface light strength for each point
-    float totalintensity;  // Total surface light strength
-    vec3_t color;          // Surface color
+    float intensity; // Surface light strength for each point
+    float totalintensity; // Total surface light strength
+    vec3_t color; // Surface color
 
     // Estimated visible AABB culling
     vec3_t mins;
     vec3_t maxs;
-} surfacelight_t;
+};
 
 const std::vector<surfacelight_t> &SurfaceLights();
 int TotalSurfacelightPoints();
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
-void MakeSurfaceLights (const globalconfig_t &cfg, const mbsp_t *bsp);
-
-#endif /* __SURFACE_LIGHT_H__ */
+void MakeSurfaceLights(const globalconfig_t &cfg, const mbsp_t *bsp);
