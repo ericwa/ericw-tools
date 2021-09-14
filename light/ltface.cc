@@ -696,10 +696,10 @@ static void CalcPoints(
 
     /* Allocate surf->points */
     surf->numpoints = surf->width * surf->height;
-    surf->points = (vec3_t *)calloc(surf->numpoints, sizeof(vec3_t));
-    surf->normals = (vec3_t *)calloc(surf->numpoints, sizeof(vec3_t));
-    surf->occluded = (bool *)calloc(surf->numpoints, sizeof(bool));
-    surf->realfacenums = (int *)calloc(surf->numpoints, sizeof(int));
+    surf->points = new vec3_t[surf->numpoints];
+    surf->normals = new vec3_t[surf->numpoints];
+    surf->occluded = new bool[surf->numpoints];
+    surf->realfacenums = new int[surf->numpoints];
 
     const auto points = GLM_FacePoints(bsp, face);
     const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
@@ -844,7 +844,7 @@ static bool Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *fac
     VectorAdd(lightsurf->maxs, modelinfo->offset, lightsurf->maxs);
 
     /* Allocate occlusion array */
-    lightsurf->occlusion = (float *)calloc(lightsurf->numpoints, sizeof(float));
+    lightsurf->occlusion = new float[lightsurf->numpoints] { };
 
     lightsurf->intersection_stream = MakeIntersectionRayStream(lightsurf->numpoints);
     lightsurf->occlusion_stream = MakeOcclusionRayStream(lightsurf->numpoints);
@@ -855,7 +855,7 @@ static void Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *light
 {
     if (lightmap->samples == NULL) {
         /* first use of this lightmap, allocate the storage for it. */
-        lightmap->samples = (lightsample_t *)calloc(lightsurf->numpoints, sizeof(lightsample_t));
+        lightmap->samples = new lightsample_t[lightsurf->numpoints] { };
     } else {
         /* clear only the data that is going to be merged to it. there's no point clearing more */
         memset(lightmap->samples, 0, sizeof(*lightmap->samples) * lightsurf->numpoints);
@@ -2531,8 +2531,8 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 
     // batch implementation:
 
-    vec3_t *myUps = (vec3_t *)calloc(lightsurf->numpoints, sizeof(vec3_t));
-    vec3_t *myRts = (vec3_t *)calloc(lightsurf->numpoints, sizeof(vec3_t));
+    vec3_t *myUps = new vec3_t[lightsurf->numpoints];
+    vec3_t *myRts = new vec3_t[lightsurf->numpoints];
 
     // init
     for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -2584,8 +2584,8 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
         lightsurf->occlusion[i] = 1 - (avgHitdist / cfg.dirtDepth.floatValue());
     }
 
-    free(myUps);
-    free(myRts);
+    delete[] myUps;
+    delete[] myRts;
 }
 
 // clamps negative values. applies gamma and rangescale. clamps values over 255
@@ -3233,14 +3233,14 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, con
 static void LightFaceShutdown(lightsurf_t *lightsurf)
 {
     for (auto &lm : lightsurf->lightmapsByStyle) {
-        free(lm.samples);
+        delete[] lm.samples;
     }
 
-    free(lightsurf->points);
-    free(lightsurf->normals);
-    free(lightsurf->occlusion);
-    free(lightsurf->occluded);
-    free(lightsurf->realfacenums);
+    delete[] lightsurf->points;
+    delete[] lightsurf->normals;
+    delete[] lightsurf->occlusion;
+    delete[] lightsurf->occluded;
+    delete[] lightsurf->realfacenums;
 
     delete lightsurf->occlusion_stream;
     delete lightsurf->intersection_stream;

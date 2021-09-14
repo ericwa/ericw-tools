@@ -58,7 +58,7 @@ void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 
     node->planenum = PLANENUM_LEAF;
     node->contents = contents;
-    node->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
+    node->markfaces = new face_t *[1] { };
 
     Q_assert(node->markfaces[0] == nullptr);
 }
@@ -566,7 +566,7 @@ static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **fr
             in->onnode = true;
 
             // divide the facets to the front and back sides
-            surface_t *newsurf = (surface_t *)AllocMem(OTHER, sizeof(surface_t), true);
+            surface_t *newsurf = new surface_t { };
             *newsurf = *in;
 
             // Prepend each face in facet list to either in or newsurf lists
@@ -590,12 +590,12 @@ static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **fr
             if (in->faces)
                 *front = in;
             else
-                free(in);
+                delete in;
 
             if (newsurf->faces)
                 *back = newsurf;
             else
-                free(newsurf);
+                delete newsurf;
 
             return;
         }
@@ -642,8 +642,7 @@ static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **fr
     }
 
     // stuff got split, so allocate one new plane and reuse in
-    surface_t *newsurf = (surface_t *)AllocMem(OTHER, sizeof(surface_t), true);
-    *newsurf = *in;
+    surface_t *newsurf = new surface_t(*in);
     newsurf->faces = backlist;
     *back = newsurf;
 
@@ -767,7 +766,7 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     // write the list of the original faces to the leaf's markfaces
     // free surf and the surf->faces list.
     leaffaces += count;
-    leafnode->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *) * (count + 1), true);
+    leafnode->markfaces = new face_t *[count + 1] { };
 
     int i = 0;
     surface_t *pnext;
@@ -778,9 +777,9 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
             next = f->next;
             leafnode->markfaces[i] = f->original;
             i++;
-            free(f);
+            delete f;
         }
-        free(surf);
+        delete surf;
     }
     leafnode->markfaces[i] = NULL; // sentinal
 }
@@ -814,8 +813,7 @@ static face_t *LinkNodeFaces(surface_t *surface)
     // copy
     for (face_t *f = surface->faces; f; f = f->next) {
         nodefaces++;
-        face_t *newf = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
-        *newf = *f;
+        face_t *newf = new face_t(*f);
         f->original = newf;
         newf->next = list;
         list = newf;
@@ -847,8 +845,8 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
     Message(msgPercent, splitnodes.load(), csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
-    node->children[0] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
-    node->children[1] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
+    node->children[0] = new node_t { };
+    node->children[1] = new node_t { };
     node->planenum = split->planenum;
     node->detail_separator = split->detail_separator;
 
@@ -907,26 +905,26 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        node_t *headnode = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
+        node_t *headnode = new node_t { };
         for (int i = 0; i < 3; i++) {
             headnode->mins[i] = entity->mins[i] - SIDESPACE;
             headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
         }
-        headnode->children[0] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
+        headnode->children[0] = new node_t { };
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = options.target_game->create_empty_contents();
-        headnode->children[0]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
-        headnode->children[1] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
+        headnode->children[0]->markfaces = new face_t *[1] { };
+        headnode->children[1] = new node_t { };
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = options.target_game->create_empty_contents();
-        headnode->children[1]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
+        headnode->children[1]->markfaces = new face_t *[1] { };
 
         return headnode;
     }
 
     Message(msgProgress, "SolidBSP");
 
-    node_t *headnode = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
+    node_t *headnode = new node_t { };
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model

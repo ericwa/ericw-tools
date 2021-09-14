@@ -256,7 +256,7 @@ static bool Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
 
 static void MakeFenceInfo(const mbsp_t *bsp)
 {
-    fence_dmodels = (bool *)calloc(bsp->nummodels, sizeof(bool));
+    fence_dmodels = new bool[bsp->nummodels];
     for (int i = 0; i < bsp->nummodels; i++) {
         fence_dmodels[i] = Model_HasFence(bsp, &bsp->dmodels[i]);
     }
@@ -265,11 +265,11 @@ static void MakeFenceInfo(const mbsp_t *bsp)
 static void BSP_MakeTnodes(const mbsp_t *bsp)
 {
     bsp_static = bsp;
-    tnodes = (tnode_t *)malloc(bsp->numnodes * sizeof(tnode_t));
+    tnodes = new tnode_t[bsp->numnodes];
     for (int i = 0; i < bsp->nummodels; i++)
         MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
 
-    faceinfos = (faceinfo_t *)malloc(bsp->numfaces * sizeof(faceinfo_t));
+    faceinfos = new faceinfo_t[bsp->numfaces];
     for (int i = 0; i < bsp->numfaces; i++)
         MakeFaceInfo(bsp, BSP_GetFace(bsp, i), &faceinfos[i]);
 

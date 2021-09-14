@@ -98,7 +98,7 @@ class lightmap_t
 {
 public:
     int style;
-    lightsample_t *samples; // malloc'ed array of numpoints   //FIXME: this is stupid, we shouldn't need to allocate
+    lightsample_t *samples; // new'ed array of numpoints   //FIXME: this is stupid, we shouldn't need to allocate
                             // extra data here for -extra4
 };
 
@@ -130,16 +130,16 @@ struct lightsurf_t
     vec3_t midpoint;
 
     int numpoints;
-    vec3_t *points; // malloc'ed array of numpoints
-    vec3_t *normals; // malloc'ed array of numpoints
-    bool *occluded; // malloc'ed array of numpoints
-    int *realfacenums; // malloc'ed array of numpoints
+    vec3_t *points; // new'ed array of numpoints
+    vec3_t *normals; // new'ed array of numpoints
+    bool *occluded; // new'ed array of numpoints
+    int *realfacenums; // new'ed array of numpoints
 
     /*
      raw ambient occlusion amount per sample point, 0-1, where 1 is
      fully occluded. dirtgain/dirtscale are not applied yet
      */
-    vec_t *occlusion; // malloc'ed array of numpoints
+    vec_t *occlusion; // new'ed array of numpoints
 
     /* for sphere culling */
     vec3_t origin;

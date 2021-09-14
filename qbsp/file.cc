@@ -47,8 +47,8 @@ size_t LoadFile(const char *filename, void *bufptr, bool nofail)
     len = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    *buf = (char *)AllocMem(OTHER, len + 1, false);
-    ((char *)*buf)[len] = 0;
+    *buf = new char[len + 1];
+    (*buf)[len] = 0;
 
     if (fread(*buf, 1, len, f) != len)
         Error("Failure reading from file");

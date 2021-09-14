@@ -883,7 +883,10 @@ struct q2bsp_t
     q2_dmodel_t *dmodels;
 
     int visdatasize;
-    dvis_t *dvis;
+    union {
+        dvis_t *dvis;
+        uint8_t *dvisdata;
+    };
 
     int lightdatasize;
     uint8_t *dlightdata;
@@ -942,7 +945,10 @@ struct q2bsp_qbism_t
     q2_dmodel_t *dmodels;
 
     int visdatasize;
-    dvis_t *dvis;
+    union {
+        dvis_t *dvis;
+        uint8_t *dvisdata;
+    };
 
     int lightdatasize;
     uint8_t *dlightdata;

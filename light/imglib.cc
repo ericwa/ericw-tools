@@ -214,7 +214,7 @@ qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int 
     }
 
     if (palette) {
-        *palette = static_cast<uint8_t *>(malloc(768));
+        *palette = new uint8_t[768];
         memcpy(*palette, reinterpret_cast<uint8_t *>(pcx) + len - 768, 768);
     }
 
@@ -227,7 +227,7 @@ qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int 
         return true; // No target array specified, so skip reading pixels
 
     const int numbytes = (pcx->ymax + 1) * (pcx->xmax + 1); // mxd
-    uint8_t *out = static_cast<uint8_t *>(malloc(numbytes));
+    uint8_t *out = new uint8_t[numbytes];
     if (!out) {
         logprint("LoadPCX: Failed to load '%s'. Couldn't allocate %i bytes of memory.\n", filename, numbytes);
         return false; // mxd
@@ -258,7 +258,7 @@ qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int 
         return false; // mxd
     }
 
-    free(pcx);
+    delete[] pcx;
 
     return true;
 }
@@ -346,7 +346,7 @@ qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height
     if (height)
         *height = rows;
 
-    uint8_t *targa_rgba = static_cast<uint8_t *>(malloc(numPixels * 4));
+    uint8_t *targa_rgba = new uint8_t[numPixels * 4];
     *pixels = targa_rgba;
 
     if (targa_header.id_length != 0)
@@ -502,7 +502,7 @@ qboolean LoadWAL(const char *filename, uint8_t **pixels, int *width, int *height
     if (height)
         *height = h;
 
-    uint8_t *out = static_cast<uint8_t *>(malloc(numpixels));
+    uint8_t *out = new uint8_t[numpixels];
     if (!out) {
         logprint("LoadWAL: Failed to load '%s'. Couldn't allocate %i bytes of memory.\n", filename, numpixels);
         return false;
@@ -518,7 +518,7 @@ qboolean LoadWAL(const char *filename, uint8_t **pixels, int *width, int *height
         out[i * 4 + 3] = (palindex == 255 ? 0 : 255); // Last palette index is transparent color
     }
 
-    free(mt);
+    delete[] mt;
 
     return true;
 }
@@ -549,9 +549,11 @@ static void WriteRGBATextureData(
         }
     }
 
+    free(miplmp);
+
     // Step 2: write rgba_miptex_t and palette bytes to uint8_t array
     uint8_t *texdata, *texdatastart;
-    texdata = texdatastart = static_cast<uint8_t *>(malloc(totalsize));
+    texdata = texdatastart = new uint8_t[totalsize];
     memcpy(texdata, miplmp, headersize);
     texdata += headersize;
 
@@ -674,7 +676,7 @@ LoadTextures(mbsp_t *bsp)
         }
 
         // Create rgba_miptex_t...
-        rgba_miptex_t *tex = static_cast<rgba_miptex_t *>(malloc(miptexsize));
+        rgba_miptex_t *tex = new rgba_miptex_t;
         strcpy(tex->name, pair.first.c_str());
         tex->width = width;
         tex->height = height;
@@ -730,7 +732,7 @@ ConvertTextures(mbsp_t *bsp)
         miptex_t *miptex = (miptex_t *)((uint8_t *)bsp->dtexdata + ofs);
 
         // Create rgba_miptex_t...
-        rgba_miptex_t *tex = static_cast<rgba_miptex_t *>(malloc(miptexsize));
+        rgba_miptex_t *tex = new rgba_miptex_t;
         strcpy(tex->name, miptex->name);
         tex->width = miptex->width;
         tex->height = miptex->height;
@@ -741,7 +743,7 @@ ConvertTextures(mbsp_t *bsp)
 
         // Convert to RGBA
         const int numpalpixels = tex->width * tex->height;
-        uint8_t *pixels = static_cast<uint8_t *>(malloc(numpalpixels * 4)); // RGBA
+        uint8_t *pixels = new uint8_t[numpalpixels * 4]; // RGBA
         const uint8_t *data = reinterpret_cast<uint8_t *>(miptex) + miptex->offsets[0];
 
         for (int c = 0; c < numpalpixels; c++) {

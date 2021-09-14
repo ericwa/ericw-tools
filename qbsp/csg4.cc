@@ -70,9 +70,7 @@ MergeFace.
 */
 face_t *NewFaceFromFace(face_t *in)
 {
-    face_t *newf;
-
-    newf = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
+    face_t *newf = new face_t { };
 
     newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;
@@ -203,7 +201,7 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
         Error("Internal error: numpoints > MAXEDGES (%s)", __func__);
 
     /* free the original face now that it is represented by the fragments */
-    free(in);
+    delete in;
 }
 
 /*
@@ -393,7 +391,7 @@ static void FreeFaces(face_t *face)
 
     while (face) {
         next = face->next;
-        free(face);
+        delete face;
         face = next;
     }
 }
@@ -489,7 +487,7 @@ surface_t *BuildSurfaces(const std::map<int, face_t *> &planefaces)
             continue;
 
         /* create a new surface to hold the faces on this plane */
-        surface_t *surf = (surface_t *)AllocMem(OTHER, sizeof(surface_t), true);
+        surface_t *surf = new surface_t { };
         surf->planenum = entry->first;
         surf->next = surfaces;
         surfaces = surf;
@@ -518,7 +516,7 @@ static face_t *CopyBrushFaces(const brush_t *brush)
     facelist = NULL;
     for (face = brush->faces; face; face = face->next) {
         brushfaces++;
-        newface = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
+        newface = new face_t { };
         *newface = *face;
         newface->contents[0] = options.target_game->create_empty_contents();
         newface->contents[1] = brush->contents;

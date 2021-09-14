@@ -277,8 +277,8 @@ TEST(qbsp, SplitBrush)
     checkCube(back);
 
     FreeBrush(brush);
-    free(front);
-    free(back);
+    delete front;
+    delete back;
 }
 
 TEST(qbsp, SplitBrushOnSide)

@@ -775,14 +775,14 @@ void EnsureTexturesLoaded()
         if (wadstring[0])
             Message(msgWarning, warnNoValidWads);
         /* Try the default wad name */
-        defaultwad = (char *)AllocMem(OTHER, strlen(options.szMapName) + 5, false);
+        defaultwad = new char[strlen(options.szMapName) + 5];
         strcpy(defaultwad, options.szMapName);
         StripExtension(defaultwad);
         DefaultExtension(defaultwad, ".wad");
         WADList_Init(defaultwad);
         if (wadlist.size())
             Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
-        free(defaultwad);
+        delete[] defaultwad;
     }
 }
 
@@ -1156,7 +1156,7 @@ static void InitQBSP(int argc, const char **argv)
         Message(msgLiteral, "Loading options from qbsp.ini\n");
         ParseOptions(szBuf);
 
-        free(szBuf);
+        delete[] szBuf;
     }
 
     // Concatenate command line args
@@ -1166,7 +1166,7 @@ static void InitQBSP(int argc, const char **argv)
         if (argv[i][0] != '-')
             length += 2; /* quotes */
     }
-    szBuf = (char *)AllocMem(OTHER, length, true);
+    szBuf = new char[length] { };
     for (i = 1; i < argc; i++) {
         /* Quote filenames for the parsing function */
         if (argv[i][0] != '-')
@@ -1179,7 +1179,7 @@ static void InitQBSP(int argc, const char **argv)
     }
     szBuf[length - 1] = 0;
     ParseOptions(szBuf);
-    free(szBuf);
+    delete[] szBuf;
 
     if (options.szMapName[0] == 0)
         PrintOptions();

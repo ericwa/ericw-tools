@@ -897,9 +897,8 @@ public:
 
 public:
     raystream_embree_common_t(int maxRays)
-        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{static_cast<vec3_t *>(
-                                                                                   calloc(maxRays, sizeof(vec3_t)))},
-          _ray_normalcontribs{static_cast<vec3_t *>(calloc(maxRays, sizeof(vec3_t)))},
+        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{new vec3_t[maxRays] { }},
+          _ray_normalcontribs{new vec3_t[maxRays] { }},
           _ray_dynamic_styles{new int[maxRays]}, _numrays{0}, _maxrays{maxRays}
     {
     }
@@ -910,8 +909,8 @@ public:
     {
         delete[] _rays_maxdist;
         delete[] _point_indices;
-        free(_ray_colors);
-        free(_ray_normalcontribs);
+        delete[] _ray_colors;
+        delete[] _ray_normalcontribs;
         delete[] _ray_dynamic_styles;
     }
 

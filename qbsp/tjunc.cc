@@ -456,8 +456,8 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     cWEdges = cWVerts;
     cWVerts *= 2;
 
-    pWVerts = (wvert_t *)AllocMem(OTHER, cWVerts * sizeof(wvert_t), true);
-    pWEdges = (wedge_t *)AllocMem(OTHER, cWEdges * sizeof(wedge_t), true);
+    pWVerts = new wvert_t[cWVerts] { };
+    pWEdges = new wedge_t[cWEdges] { };
 
     /*
      * identify all points on common edges
@@ -489,8 +489,8 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
 
     free(superface);
 
-    free(pWVerts);
-    free(pWEdges);
+    delete[] pWVerts;
+    delete[] pWEdges;
 
     Message(msgStat, "%8d edges added by tjunctions", tjuncs);
     Message(msgStat, "%8d faces added by tjunctions", tjuncfaces);

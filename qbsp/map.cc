@@ -483,9 +483,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 
 static void ParseEpair(parser_t *parser, mapentity_t *entity)
 {
-    epair_t *epair;
-
-    epair = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
+    epair_t *epair = new epair_t { };
     epair->next = entity->epairs;
     entity->epairs = epair;
 
@@ -1966,7 +1964,7 @@ mapentity_t LoadExternalMap(const char *filename)
 
     Message(msgStat, "LoadExternalMap: '%s': Loaded %d mapbrushes.\n", filename, dest.nummapbrushes);
 
-    free(buf);
+    delete[] buf;
 
     return dest;
 }
@@ -1995,7 +1993,7 @@ void LoadMapFile(void)
     assert(map.entities.back().numbrushes == 0);
     map.entities.pop_back();
 
-    free(buf);
+    delete[] buf;
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))
@@ -2240,11 +2238,12 @@ void SetKeyValue(mapentity_t *entity, const char *key, const char *value)
 
     for (ep = entity->epairs; ep; ep = ep->next)
         if (!Q_strcasecmp(ep->key, key)) {
-            free(ep->value); /* FIXME */
+            delete[] ep->value; /* FIXME */
             ep->value = copystring(value);
             return;
         }
-    ep = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
+
+    ep = new epair_t { };
     ep->next = entity->epairs;
     entity->epairs = ep;
     ep->key = copystring(key);

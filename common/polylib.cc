@@ -337,9 +337,9 @@ polylib::winding_t *polylib::ChopWinding(winding_t *in, vec3_t normal, vec_t dis
     winding_t *f, *b;
 
     ClipWinding(in, normal, dist, &f, &b);
-    free(in);
+    delete in;
     if (b)
-        free(b);
+        delete b;
     return f;
 }
 
@@ -442,7 +442,7 @@ void polylib::DiceWinding(winding_t *w, vec_t subdiv, save_winding_fn_t save_fn,
     split[i] = 1;
     dist = subdiv * (1 + floor((mins[i] + 1) / subdiv));
     ClipWinding(w, split, dist, &o1, &o2);
-    free(w);
+    delete w;
 
     //
     // create a new patch
@@ -491,9 +491,9 @@ polylib::winding_edges_t *polylib::AllocWindingEdges(const winding_t *w)
     plane_t p;
     WindingPlane(w, p.normal, &p.dist);
 
-    winding_edges_t *result = (winding_edges_t *)calloc(1, sizeof(winding_edges_t));
+    winding_edges_t *result = new winding_edges_t;
     result->numedges = w->numpoints;
-    result->planes = (plane_t *)calloc(w->numpoints, sizeof(plane_t));
+    result->planes = new plane_t[w->numpoints];
 
     for (int i = 0; i < w->numpoints; i++) {
         plane_t *dest = &result->planes[i];
@@ -514,8 +514,8 @@ polylib::winding_edges_t *polylib::AllocWindingEdges(const winding_t *w)
 
 void polylib::FreeWindingEdges(winding_edges_t *wi)
 {
-    free(wi->planes);
-    free(wi);
+    delete[] wi->planes;
+    delete wi;
 }
 
 bool polylib::PointInWindingEdges(const winding_edges_t *wi, const vec3_t point)

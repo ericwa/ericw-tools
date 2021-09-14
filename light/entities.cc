@@ -1240,14 +1240,14 @@ void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp)
     std::string entdata = EntData_Write(entdicts);
 
     if (bsp->dentdata)
-        free(bsp->dentdata);
+        delete[] bsp->dentdata;
 
     /* FIXME - why are we printing this here? */
     logprint("%i switchable light styles (%d max)\n", static_cast<int>(lightstyleForTargetname.size()),
         MAX_SWITCHABLE_STYLES - cfg.compilerstyle_start.intValue());
 
     bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
-    bsp->dentdata = (char *)calloc(bsp->entdatasize, 1);
+    bsp->dentdata = new char[bsp->entdatasize];
     if (!bsp->dentdata)
         Error("%s: allocation of %d bytes failed\n", __func__, bsp->entdatasize);
 

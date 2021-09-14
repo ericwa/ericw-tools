@@ -1191,7 +1191,7 @@ static void SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 static dmodelh2_t *BSPQ1toH2_Models(const dmodelq1_t *dmodelsq1, const int nummodels)
 {
     const dmodelq1_t *in = dmodelsq1;
-    dmodelh2_t *out = static_cast<dmodelh2_t *>(calloc(nummodels, sizeof(dmodelh2_t)));
+    dmodelh2_t *out = new dmodelh2_t[nummodels];
     int i, j;
 
     for (i = 0; i < nummodels; i++) {
@@ -1214,7 +1214,7 @@ static dmodelh2_t *BSPQ1toH2_Models(const dmodelq1_t *dmodelsq1, const int nummo
 static dmodelq1_t *BSPH2toQ1_Models(const dmodelh2_t *dmodelsh2, int nummodels)
 {
     const dmodelh2_t *in = dmodelsh2;
-    dmodelq1_t *out = static_cast<dmodelq1_t *>(calloc(nummodels, sizeof(dmodelq1_t)));
+    dmodelq1_t *out = new dmodelq1_t[nummodels];
     int i, j;
 
     for (i = 0; i < nummodels; i++) {
@@ -1238,7 +1238,7 @@ static mleaf_t *BSP29toM_Leafs(const bsp29_dleaf_t *dleafs29, int numleafs)
     mleaf_t *newdata, *mleaf;
     int i, j;
 
-    newdata = mleaf = (mleaf_t *)calloc(numleafs, sizeof(*mleaf));
+    newdata = mleaf = new mleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, dleaf29++, mleaf++) {
         mleaf->contents = dleaf29->contents;
@@ -1315,7 +1315,7 @@ static bsp29_dleaf_t *MBSPto29_Leafs(const mleaf_t *mleafs, int numleafs)
     bsp29_dleaf_t *newdata, *dleaf29;
     int i, j;
 
-    newdata = dleaf29 = (bsp29_dleaf_t *)calloc(numleafs, sizeof(*dleaf29));
+    newdata = dleaf29 = new bsp29_dleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, mleaf++, dleaf29++) {
         dleaf29->contents = mleaf->contents;
@@ -1339,7 +1339,7 @@ static gtexinfo_t *BSP29toM_Texinfo(const texinfo_t *texinfos, int numtexinfo)
     gtexinfo_t *newdata, *mtexinfo;
     int i, j, k;
 
-    newdata = mtexinfo = (gtexinfo_t *)calloc(numtexinfo, sizeof(*mtexinfo));
+    newdata = mtexinfo = new gtexinfo_t[numtexinfo];
 
     for (i = 0; i < numtexinfo; i++, texinfo29++, mtexinfo++) {
         for (j = 0; j < 2; j++)
@@ -1358,7 +1358,7 @@ static texinfo_t *MBSPto29_Texinfo(const gtexinfo_t *mtexinfos, int numtexinfo)
     texinfo_t *newdata, *texinfo29;
     int i, j, k;
 
-    newdata = texinfo29 = (texinfo_t *)calloc(numtexinfo, sizeof(*texinfo29));
+    newdata = texinfo29 = new texinfo_t[numtexinfo];
 
     for (i = 0; i < numtexinfo; i++, texinfo29++, mtexinfo++) {
         for (j = 0; j < 2; j++)
@@ -1383,7 +1383,7 @@ static dmodelh2_t *Q2BSPtoM_Models(const q2_dmodel_t *dmodelsq2, int nummodels)
     dmodelh2_t *newdata, *dmodelh2;
     int i, j;
 
-    newdata = dmodelh2 = (dmodelh2_t *)calloc(nummodels, sizeof(*dmodelh2));
+    newdata = dmodelh2 = new dmodelh2_t[nummodels];
 
     for (i = 0; i < nummodels; i++, dmodelq2++, dmodelh2++) {
         for (j = 0; j < 3; j++) {
@@ -1402,7 +1402,6 @@ static dmodelh2_t *Q2BSPtoM_Models(const q2_dmodel_t *dmodelsq2, int nummodels)
 
 static uint8_t *Q2BSPtoM_CopyVisData(const dvis_t *dvisq2, int vissize, int *outvissize, mleaf_t *leafs, int numleafs)
 {
-
     if (!*outvissize) {
         return nullptr;
     }
@@ -1425,7 +1424,7 @@ static uint8_t *Q2BSPtoM_CopyVisData(const dvis_t *dvisq2, int vissize, int *out
     // cut off the PHS and header
     *outvissize -= header_offset + ((*outvissize - header_offset) - phs_start);
 
-    uint8_t *vis = (uint8_t *)calloc(1, *outvissize);
+    uint8_t *vis = new uint8_t[*outvissize];
     memcpy(vis, ((uint8_t *)dvisq2) + pvs_start, *outvissize);
     return vis;
 }
@@ -1436,7 +1435,7 @@ static q2_dmodel_t *MBSPtoQ2_Models(const dmodelh2_t *dmodelsh2, int nummodels)
     q2_dmodel_t *newdata, *dmodelq2;
     int i, j;
 
-    newdata = dmodelq2 = (q2_dmodel_t *)calloc(nummodels, sizeof(*dmodelq2));
+    newdata = dmodelq2 = new q2_dmodel_t[nummodels];
 
     for (i = 0; i < nummodels; i++, dmodelh2++, dmodelq2++) {
         for (j = 0; j < 3; j++) {
@@ -1466,10 +1465,11 @@ static std::vector<uint8_t> CalcPHS(
     const int32_t leafbytes = (portalclusters + 7) >> 3;
     const int32_t leaflongs = leafbytes / sizeof(long);
     std::vector<uint8_t> compressed_phs;
-    uint8_t *uncompressed = (uint8_t *)calloc(1, leafbytes);
-    uint8_t *uncompressed_2 = (uint8_t *)calloc(1, leafbytes);
-    uint8_t *compressed = (uint8_t *)calloc(1, leafbytes * 2);
-    uint8_t *uncompressed_orig = (uint8_t *)calloc(1, leafbytes);
+    // FIXME: should this use alloca? 
+    uint8_t *uncompressed = new uint8_t[leafbytes];
+    uint8_t *uncompressed_2 = new uint8_t[leafbytes];
+    uint8_t *compressed = new uint8_t[leafbytes * 2];
+    uint8_t *uncompressed_orig = new uint8_t[leafbytes];
 
     printf("Building PHS...\n");
 
@@ -1516,10 +1516,10 @@ static std::vector<uint8_t> CalcPHS(
         compressed_phs.insert(compressed_phs.end(), compressed, compressed + j);
     }
 
-    free(uncompressed);
-    free(uncompressed_2);
-    free(compressed);
-    free(uncompressed_orig);
+    delete[] uncompressed;
+    delete[] uncompressed_2;
+    delete[] compressed;
+    delete[] uncompressed_orig;
 
     printf("Average clusters hearable: %i\n", count / portalclusters);
 
@@ -1581,7 +1581,7 @@ static mleaf_t *Q2BSPtoM_Leafs(const q2_dleaf_t *dleafsq2, int numleafs)
     mleaf_t *newdata, *mleaf;
     int i, j;
 
-    newdata = mleaf = (mleaf_t *)calloc(numleafs, sizeof(*mleaf));
+    newdata = mleaf = new mleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, dleafq2++, mleaf++) {
         mleaf->contents = dleafq2->contents;
@@ -1608,7 +1608,7 @@ static mleaf_t *Q2BSP_QBSPtoM_Leafs(const q2_dleaf_qbism_t *dleafsq2, int numlea
     mleaf_t *newdata, *mleaf;
     int i, j;
 
-    newdata = mleaf = (mleaf_t *)calloc(numleafs, sizeof(*mleaf));
+    newdata = mleaf = new mleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, dleafq2++, mleaf++) {
         mleaf->contents = dleafq2->contents;
@@ -1635,7 +1635,7 @@ static q2_dleaf_t *MBSPtoQ2_Leafs(const mleaf_t *mleafs, int numleafs)
     q2_dleaf_t *newdata, *dleafq2;
     int i, j;
 
-    newdata = dleafq2 = (q2_dleaf_t *)calloc(numleafs, sizeof(*dleafq2));
+    newdata = dleafq2 = new q2_dleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, mleaf++, dleafq2++) {
         dleafq2->contents = mleaf->contents;
@@ -1662,7 +1662,7 @@ static q2_dleaf_qbism_t *MBSPtoQ2_Qbism_Leafs(const mleaf_t *mleafs, int numleaf
     q2_dleaf_qbism_t *newdata, *dleafq2;
     int i, j;
 
-    newdata = dleafq2 = (q2_dleaf_qbism_t *)calloc(numleafs, sizeof(*dleafq2));
+    newdata = dleafq2 = new q2_dleaf_qbism_t[numleafs];
 
     for (i = 0; i < numleafs; i++, mleaf++, dleafq2++) {
         dleafq2->contents = mleaf->contents;
@@ -1689,7 +1689,7 @@ static bsp2_dnode_t *Q2BSPto2_Nodes(const q2_dnode_t *dnodesq2, int numnodes)
     bsp2_dnode_t *newdata, *dnode2;
     int i, j;
 
-    newdata = dnode2 = static_cast<bsp2_dnode_t *>(malloc(numnodes * sizeof(*dnode2)));
+    newdata = dnode2 = new bsp2_dnode_t[numnodes];
 
     for (i = 0; i < numnodes; i++, dnodeq2++, dnode2++) {
         dnode2->planenum = dnodeq2->planenum;
@@ -1712,7 +1712,7 @@ static q2_dnode_t *BSP2toQ2_Nodes(const bsp2_dnode_t *dnodes2, int numnodes)
     q2_dnode_t *newdata, *dnodeq2;
     int i, j;
 
-    newdata = dnodeq2 = static_cast<q2_dnode_t *>(malloc(numnodes * sizeof(*dnodeq2)));
+    newdata = dnodeq2 = new q2_dnode_t[numnodes];
 
     for (i = 0; i < numnodes; i++, dnode2++, dnodeq2++) {
         dnodeq2->planenum = dnode2->planenum;
@@ -1735,7 +1735,7 @@ static bsp2_dface_t *Q2BSPto2_Faces(const q2_dface_t *dfacesq2, int numfaces)
     bsp2_dface_t *newdata, *dface2;
     int i, j;
 
-    newdata = dface2 = static_cast<bsp2_dface_t *>(malloc(numfaces * sizeof(*dface2)));
+    newdata = dface2 = new bsp2_dface_t[numfaces];
 
     for (i = 0; i < numfaces; i++, dfaceq2++, dface2++) {
         dface2->planenum = dfaceq2->planenum;
@@ -1757,7 +1757,7 @@ static bsp2_dface_t *Q2BSP_QBSPto2_Faces(const q2_dface_qbism_t *dfacesq2, int n
     bsp2_dface_t *newdata, *dface2;
     int i, j;
 
-    newdata = dface2 = static_cast<bsp2_dface_t *>(malloc(numfaces * sizeof(*dface2)));
+    newdata = dface2 = new bsp2_dface_t[numfaces];
 
     for (i = 0; i < numfaces; i++, dfaceq2++, dface2++) {
         dface2->planenum = dfaceq2->planenum;
@@ -1779,7 +1779,7 @@ static q2_dface_t *BSP2toQ2_Faces(const bsp2_dface_t *dfaces2, int numfaces)
     q2_dface_t *newdata, *dfaceq2;
     int i, j;
 
-    newdata = dfaceq2 = static_cast<q2_dface_t *>(malloc(numfaces * sizeof(*dfaceq2)));
+    newdata = dfaceq2 = new q2_dface_t[numfaces];
 
     for (i = 0; i < numfaces; i++, dface2++, dfaceq2++) {
         dfaceq2->planenum = dface2->planenum;
@@ -1801,7 +1801,7 @@ static q2_dface_qbism_t *BSP2toQ2_Qbism_Faces(const bsp2_dface_t *dfaces2, int n
     q2_dface_qbism_t *newdata, *dfaceq2;
     int i, j;
 
-    newdata = dfaceq2 = static_cast<q2_dface_qbism_t *>(malloc(numfaces * sizeof(*dfaceq2)));
+    newdata = dfaceq2 = new q2_dface_qbism_t[numfaces];
 
     for (i = 0; i < numfaces; i++, dface2++, dfaceq2++) {
         dfaceq2->planenum = dface2->planenum;
@@ -1823,7 +1823,7 @@ static gtexinfo_t *Q2BSPtoM_Texinfo(const q2_texinfo_t *dtexinfosq2, int numtexi
     gtexinfo_t *newdata, *dtexinfo2;
     int i, j, k;
 
-    newdata = dtexinfo2 = static_cast<gtexinfo_t *>(malloc(numtexinfos * sizeof(*dtexinfo2)));
+    newdata = dtexinfo2 = new gtexinfo_t[numtexinfos];
 
     for (i = 0; i < numtexinfos; i++, dtexinfoq2++, dtexinfo2++) {
         for (j = 0; j < 2; j++)
@@ -1844,7 +1844,7 @@ static q2_texinfo_t *MBSPtoQ2_Texinfo(const gtexinfo_t *dtexinfos2, int numtexin
     q2_texinfo_t *newdata, *dtexinfoq2;
     int i, j, k;
 
-    newdata = dtexinfoq2 = static_cast<q2_texinfo_t *>(malloc(numtexinfos * sizeof(*dtexinfoq2)));
+    newdata = dtexinfoq2 = new q2_texinfo_t[numtexinfos];
 
     for (i = 0; i < numtexinfos; i++, dtexinfo2++, dtexinfoq2++) {
         for (j = 0; j < 2; j++)
@@ -1871,7 +1871,7 @@ static mleaf_t *BSP2rmqtoM_Leafs(const bsp2rmq_dleaf_t *dleafs2rmq, int numleafs
     mleaf_t *newdata, *mleaf;
     int i, j;
 
-    newdata = mleaf = (mleaf_t *)calloc(numleafs, sizeof(*mleaf));
+    newdata = mleaf = new mleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, dleaf2rmq++, mleaf++) {
         mleaf->contents = dleaf2rmq->contents;
@@ -1895,7 +1895,7 @@ static bsp2rmq_dleaf_t *MBSPto2rmq_Leafs(const mleaf_t *mleafs, int numleafs)
     bsp2rmq_dleaf_t *newdata, *dleaf2rmq;
     int i, j;
 
-    newdata = dleaf2rmq = (bsp2rmq_dleaf_t *)calloc(numleafs, sizeof(*dleaf2rmq));
+    newdata = dleaf2rmq = new bsp2rmq_dleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, mleaf++, dleaf2rmq++) {
         dleaf2rmq->contents = mleaf->contents;
@@ -1925,7 +1925,7 @@ static mleaf_t *BSP2toM_Leafs(const bsp2_dleaf_t *dleafs2, int numleafs)
     mleaf_t *newdata, *mleaf;
     int i, j;
 
-    newdata = mleaf = (mleaf_t *)calloc(numleafs, sizeof(*mleaf));
+    newdata = mleaf = new mleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, dleaf2++, mleaf++) {
         mleaf->contents = dleaf2->contents;
@@ -1949,7 +1949,7 @@ static bsp2_dleaf_t *MBSPto2_Leafs(const mleaf_t *mleafs, int numleafs)
     bsp2_dleaf_t *newdata, *dleaf2;
     int i, j;
 
-    newdata = dleaf2 = (bsp2_dleaf_t *)calloc(numleafs, sizeof(*dleaf2));
+    newdata = dleaf2 = new bsp2_dleaf_t[numleafs];
 
     for (i = 0; i < numleafs; i++, mleaf++, dleaf2++) {
         dleaf2->contents = mleaf->contents;
@@ -1979,7 +1979,7 @@ static bsp2_dnode_t *BSP29to2_Nodes(const bsp29_dnode_t *dnodes29, int numnodes)
     bsp2_dnode_t *newdata, *dnode2;
     int i, j;
 
-    newdata = dnode2 = static_cast<bsp2_dnode_t *>(malloc(numnodes * sizeof(*dnode2)));
+    newdata = dnode2 = new bsp2_dnode_t[numnodes];
 
     for (i = 0; i < numnodes; i++, dnode29++, dnode2++) {
         dnode2->planenum = dnode29->planenum;
@@ -2026,7 +2026,7 @@ static bsp29_dnode_t *BSP2to29_Nodes(const bsp2_dnode_t *dnodes2, int numnodes)
     bsp29_dnode_t *newdata, *dnode29;
     int i, j;
 
-    newdata = dnode29 = static_cast<bsp29_dnode_t *>(malloc(numnodes * sizeof(*dnode29)));
+    newdata = dnode29 = new bsp29_dnode_t[numnodes];
 
     for (i = 0; i < numnodes; i++, dnode2++, dnode29++) {
         dnode29->planenum = dnode2->planenum;
@@ -2049,7 +2049,7 @@ static bsp2_dface_t *BSP29to2_Faces(const bsp29_dface_t *dfaces29, int numfaces)
     bsp2_dface_t *newdata, *dface2;
     int i, j;
 
-    newdata = dface2 = static_cast<bsp2_dface_t *>(malloc(numfaces * sizeof(*dface2)));
+    newdata = dface2 = new bsp2_dface_t[numfaces];
 
     for (i = 0; i < numfaces; i++, dface29++, dface2++) {
         dface2->planenum = dface29->planenum;
@@ -2093,7 +2093,7 @@ static bsp29_dface_t *BSP2to29_Faces(const bsp2_dface_t *dfaces2, int numfaces)
     bsp29_dface_t *newdata, *dface29;
     int i, j;
 
-    newdata = dface29 = static_cast<bsp29_dface_t *>(malloc(numfaces * sizeof(*dface29)));
+    newdata = dface29 = new bsp29_dface_t[numfaces];
 
     for (i = 0; i < numfaces; i++, dface2++, dface29++) {
         dface29->planenum = dface2->planenum;
@@ -2115,7 +2115,7 @@ static bsp2_dclipnode_t *BSP29to2_Clipnodes(const bsp29_dclipnode_t *dclipnodes2
     bsp2_dclipnode_t *newdata, *dclipnode2;
     int i, j;
 
-    newdata = dclipnode2 = static_cast<bsp2_dclipnode_t *>(malloc(numclipnodes * sizeof(*dclipnode2)));
+    newdata = dclipnode2 = new bsp2_dclipnode_t[numclipnodes];
 
     for (i = 0; i < numclipnodes; i++, dclipnode29++, dclipnode2++) {
         dclipnode2->planenum = dclipnode29->planenum;
@@ -2152,7 +2152,7 @@ static bsp29_dclipnode_t *BSP2to29_Clipnodes(const bsp2_dclipnode_t *dclipnodes2
     bsp29_dclipnode_t *newdata, *dclipnode29;
     int i, j;
 
-    newdata = dclipnode29 = static_cast<bsp29_dclipnode_t *>(malloc(numclipnodes * sizeof(*dclipnode29)));
+    newdata = dclipnode29 = new bsp29_dclipnode_t[numclipnodes];
 
     for (i = 0; i < numclipnodes; i++, dclipnode2++, dclipnode29++) {
         dclipnode29->planenum = dclipnode2->planenum;
@@ -2172,7 +2172,7 @@ static bsp2_dedge_t *BSP29to2_Edges(const bsp29_dedge_t *dedges29, int numedges)
     bsp2_dedge_t *newdata, *dedge2;
     int i;
 
-    newdata = dedge2 = static_cast<bsp2_dedge_t *>(malloc(numedges * sizeof(*dedge2)));
+    newdata = dedge2 = new bsp2_dedge_t[numedges];
 
     for (i = 0; i < numedges; i++, dedge29++, dedge2++) {
         dedge2->v[0] = dedge29->v[0];
@@ -2201,7 +2201,7 @@ static bsp29_dedge_t *BSP2to29_Edges(const bsp2_dedge_t *dedges2, int numedges)
     bsp29_dedge_t *newdata, *dedge29;
     int i;
 
-    newdata = dedge29 = static_cast<bsp29_dedge_t *>(malloc(numedges * sizeof(*dedge29)));
+    newdata = dedge29 = new bsp29_dedge_t[numedges];
 
     for (i = 0; i < numedges; i++, dedge2++, dedge29++) {
         dedge29->v[0] = dedge2->v[0];
@@ -2217,7 +2217,7 @@ static uint32_t *BSP29to2_Marksurfaces(const uint16_t *dmarksurfaces29, int numm
     uint32_t *newdata, *dmarksurface2;
     int i;
 
-    newdata = dmarksurface2 = static_cast<uint32_t *>(malloc(nummarksurfaces * sizeof(*dmarksurface2)));
+    newdata = dmarksurface2 = new uint32_t[nummarksurfaces];
 
     for (i = 0; i < nummarksurfaces; i++, dmarksurface29++, dmarksurface2++)
         *dmarksurface2 = *dmarksurface29;
@@ -2244,7 +2244,7 @@ static uint16_t *BSP2to29_Marksurfaces(const uint32_t *dmarksurfaces2, int numma
     uint16_t *newdata, *dmarksurface29;
     int i;
 
-    newdata = dmarksurface29 = static_cast<uint16_t *>(malloc(nummarksurfaces * sizeof(*dmarksurface29)));
+    newdata = dmarksurface29 = new uint16_t[nummarksurfaces];
 
     for (i = 0; i < nummarksurfaces; i++, dmarksurface2++, dmarksurface29++)
         *dmarksurface29 = *dmarksurface2;
@@ -2264,7 +2264,7 @@ static bsp2_dnode_t *BSP2rmqto2_Nodes(const bsp2rmq_dnode_t *dnodes2rmq, int num
     bsp2_dnode_t *newdata, *dnode2;
     int i, j;
 
-    newdata = dnode2 = static_cast<bsp2_dnode_t *>(malloc(numnodes * sizeof(*dnode2)));
+    newdata = dnode2 = new bsp2_dnode_t[numnodes];
 
     for (i = 0; i < numnodes; i++, dnode2rmq++, dnode2++) {
         dnode2->planenum = dnode2rmq->planenum;
@@ -2287,7 +2287,7 @@ static bsp2rmq_dnode_t *BSP2to2rmq_Nodes(const bsp2_dnode_t *dnodes2, int numnod
     bsp2rmq_dnode_t *newdata, *dnode2rmq;
     int i, j;
 
-    newdata = dnode2rmq = static_cast<bsp2rmq_dnode_t *>(malloc(numnodes * sizeof(*dnode2rmq)));
+    newdata = dnode2rmq = new bsp2rmq_dnode_t[numnodes];
 
     for (i = 0; i < numnodes; i++, dnode2++, dnode2rmq++) {
         dnode2rmq->planenum = dnode2->planenum;
@@ -2310,129 +2310,130 @@ static bsp2rmq_dnode_t *BSP2to2rmq_Nodes(const bsp2_dnode_t *dnodes2, int numnod
  * =========================================================================
  */
 
-static void *CopyArray(const void *in, int numelems, size_t elemsize)
+template<typename T>
+inline T *CopyArray(const T *in, int numelems)
 {
-    void *out = (void *)calloc(numelems, elemsize);
-    memcpy(out, in, numelems * elemsize);
+    T *out = new T[numelems];
+
+    if constexpr(std::is_trivially_copyable_v<T>)
+        memcpy(out, in, sizeof(T) * numelems);
+    else
+        for (int i = 0; i < numelems; i++)
+            out[i] = in[i];
+
+    return out;
+}
+
+// TODO: if T and F are scalar values, overflow should be checked.
+template<typename T, typename F, typename bool = std::is_convertible_v<T, F>>
+inline T *CopyArray(const F *in, int numelems)
+{
+    T *out = new T[numelems];
+
+    for (int i = 0; i < numelems; i++)
+        out[i] = static_cast<T>(in[i]);
+
     return out;
 }
 
 static dmodelh2_t *H2_CopyModels(const dmodelh2_t *dmodels, int nummodels)
 {
-    return (dmodelh2_t *)CopyArray(dmodels, nummodels, sizeof(*dmodels));
+    return CopyArray(dmodels, nummodels);
 }
 
 static uint8_t *BSP29_CopyVisData(const uint8_t *dvisdata, int visdatasize)
 {
-    return (uint8_t *)CopyArray(dvisdata, visdatasize, 1);
+    return CopyArray(dvisdata, visdatasize);
 }
 
 static uint8_t *BSP29_CopyLightData(const uint8_t *dlightdata, int lightdatasize)
 {
-    return (uint8_t *)CopyArray(dlightdata, lightdatasize, 1);
+    return CopyArray(dlightdata, lightdatasize);
 }
 
 static dmiptexlump_t *BSP29_CopyTexData(const dmiptexlump_t *dtexdata, int texdatasize)
 {
-    return (dmiptexlump_t *)CopyArray(dtexdata, texdatasize, 1);
+    return CopyArray(dtexdata, texdatasize);
 }
 
 static char *BSP29_CopyEntData(const char *dentdata, int entdatasize)
 {
-    return (char *)CopyArray(dentdata, entdatasize, 1);
+    return CopyArray(dentdata, entdatasize);
 }
 
 static dplane_t *BSP29_CopyPlanes(const dplane_t *dplanes, int numplanes)
 {
-    return (dplane_t *)CopyArray(dplanes, numplanes, sizeof(*dplanes));
+    return CopyArray(dplanes, numplanes);
 }
 
 static dvertex_t *BSP29_CopyVertexes(const dvertex_t *dvertexes, int numvertexes)
 {
-    return (dvertex_t *)CopyArray(dvertexes, numvertexes, sizeof(*dvertexes));
+    return CopyArray(dvertexes, numvertexes);
 }
 
 static texinfo_t *BSP29_CopyTexinfo(const texinfo_t *texinfo, int numtexinfo)
 {
-    return (texinfo_t *)CopyArray(texinfo, numtexinfo, sizeof(*texinfo));
+    return CopyArray(texinfo, numtexinfo);
 }
 
 static int32_t *BSP29_CopySurfedges(const int32_t *surfedges, int numsurfedges)
 {
-    return (int32_t *)CopyArray(surfedges, numsurfedges, sizeof(*surfedges));
+    return CopyArray(surfedges, numsurfedges);
 }
 
 static bsp2_dface_t *BSP2_CopyFaces(const bsp2_dface_t *dfaces, int numfaces)
 {
-    return (bsp2_dface_t *)CopyArray(dfaces, numfaces, sizeof(*dfaces));
+    return CopyArray(dfaces, numfaces);
 }
 
 static bsp2_dclipnode_t *BSP2_CopyClipnodes(const bsp2_dclipnode_t *dclipnodes, int numclipnodes)
 {
-    return (bsp2_dclipnode_t *)CopyArray(dclipnodes, numclipnodes, sizeof(*dclipnodes));
+    return CopyArray(dclipnodes, numclipnodes);
 }
 
 static bsp2_dedge_t *BSP2_CopyEdges(const bsp2_dedge_t *dedges, int numedges)
 {
-    return (bsp2_dedge_t *)CopyArray(dedges, numedges, sizeof(*dedges));
+    return CopyArray(dedges, numedges);
 }
 
 static uint32_t *BSP2_CopyMarksurfaces(const uint32_t *marksurfaces, int nummarksurfaces)
 {
-    return (uint32_t *)CopyArray(marksurfaces, nummarksurfaces, sizeof(*marksurfaces));
+    return CopyArray(marksurfaces, nummarksurfaces);
 }
 
 static bsp2_dnode_t *BSP2_CopyNodes(const bsp2_dnode_t *dnodes, int numnodes)
 {
-    return (bsp2_dnode_t *)CopyArray(dnodes, numnodes, sizeof(*dnodes));
+    return CopyArray(dnodes, numnodes);
 }
 
 static uint32_t *Q2BSPtoM_CopyLeafBrushes(const uint16_t *leafbrushes, int count)
 {
-    const uint16_t *leafbrush = leafbrushes;
-    uint32_t *newdata, *leafbrushes2;
-    int i;
-
-    newdata = leafbrushes2 = static_cast<uint32_t *>(malloc(count * sizeof(*leafbrushes2)));
-
-    for (i = 0; i < count; i++, leafbrush++, leafbrushes2++)
-        *leafbrushes2 = *leafbrush;
-
-    return newdata;
+    return CopyArray<uint32_t>(leafbrushes, count);
 }
 
 static uint16_t *MBSPtoQ2_CopyLeafBrushes(const uint32_t *leafbrushes, int count)
 {
-    const uint32_t *leafbrush = leafbrushes;
-    uint16_t *newdata, *leafbrushes2;
-    int i;
-
-    newdata = leafbrushes2 = static_cast<uint16_t *>(malloc(count * sizeof(*leafbrushes2)));
-
-    for (i = 0; i < count; i++, leafbrush++, leafbrushes2++)
-        *leafbrushes2 = *leafbrush;
-
-    return newdata;
+    return CopyArray<uint16_t>(leafbrushes, count);
 }
 
 static uint32_t *Q2BSP_Qbism_CopyLeafBrushes(const uint32_t *leafbrushes, int count)
 {
-    return (uint32_t *)CopyArray(leafbrushes, count, sizeof(*leafbrushes));
+    return CopyArray(leafbrushes, count);
 }
 
 static darea_t *Q2BSP_CopyAreas(const darea_t *areas, int count)
 {
-    return (darea_t *)CopyArray(areas, count, sizeof(*areas));
+    return CopyArray(areas, count);
 }
 
 static dareaportal_t *Q2BSP_CopyAreaPortals(const dareaportal_t *areaportals, int count)
 {
-    return (dareaportal_t *)CopyArray(areaportals, count, sizeof(*areaportals));
+    return CopyArray(areaportals, count);
 }
 
 static dbrush_t *Q2BSP_CopyBrushes(const dbrush_t *brushes, int count)
 {
-    return (dbrush_t *)CopyArray(brushes, count, sizeof(*brushes));
+    return CopyArray(brushes, count);
 }
 
 static q2_dbrushside_qbism_t *Q2BSPtoM_CopyBrushSides(const dbrushside_t *dbrushsides, int count)
@@ -2441,7 +2442,7 @@ static q2_dbrushside_qbism_t *Q2BSPtoM_CopyBrushSides(const dbrushside_t *dbrush
     q2_dbrushside_qbism_t *newdata, *brushsides2;
     int i;
 
-    newdata = brushsides2 = static_cast<q2_dbrushside_qbism_t *>(malloc(count * sizeof(*brushsides2)));
+    newdata = brushsides2 = new q2_dbrushside_qbism_t[count];
 
     for (i = 0; i < count; i++, brushside++, brushsides2++) {
         brushsides2->planenum = brushside->planenum;
@@ -2453,7 +2454,7 @@ static q2_dbrushside_qbism_t *Q2BSPtoM_CopyBrushSides(const dbrushside_t *dbrush
 
 static q2_dbrushside_qbism_t *Q2BSP_Qbism_CopyBrushSides(const q2_dbrushside_qbism_t *brushsides, int count)
 {
-    return (q2_dbrushside_qbism_t *)CopyArray(brushsides, count, sizeof(*brushsides));
+    return CopyArray(brushsides, count);
 }
 
 static dbrushside_t *MBSPtoQ2_CopyBrushSides(const q2_dbrushside_qbism_t *dbrushsides, int count)
@@ -2462,7 +2463,7 @@ static dbrushside_t *MBSPtoQ2_CopyBrushSides(const q2_dbrushside_qbism_t *dbrush
     dbrushside_t *newdata, *brushsides2;
     int i;
 
-    newdata = brushsides2 = static_cast<dbrushside_t *>(malloc(count * sizeof(*brushsides2)));
+    newdata = brushsides2 = new dbrushside_t[count];
 
     for (i = 0; i < count; i++, brushside++, brushsides2++) {
         brushsides2->planenum = brushside->planenum;
@@ -2480,136 +2481,136 @@ static dbrushside_t *MBSPtoQ2_CopyBrushSides(const q2_dbrushside_qbism_t *dbrush
 
 static void FreeBSP29(bsp29_t *bsp)
 {
-    free(bsp->dmodels_q);
-    free(bsp->dmodels_h2);
-    free(bsp->dvisdata);
-    free(bsp->dlightdata);
-    free(bsp->dtexdata);
-    free(bsp->dentdata);
-    free(bsp->dleafs);
-    free(bsp->dplanes);
-    free(bsp->dvertexes);
-    free(bsp->dnodes);
-    free(bsp->texinfo);
-    free(bsp->dfaces);
-    free(bsp->dclipnodes);
-    free(bsp->dedges);
-    free(bsp->dmarksurfaces);
-    free(bsp->dsurfedges);
+    delete[] bsp->dmodels_q;
+    delete[] bsp->dmodels_h2;
+    delete[] bsp->dvisdata;
+    delete[] bsp->dlightdata;
+    delete[] bsp->dtexdata;
+    delete[] bsp->dentdata;
+    delete[] bsp->dleafs;
+    delete[] bsp->dplanes;
+    delete[] bsp->dvertexes;
+    delete[] bsp->dnodes;
+    delete[] bsp->texinfo;
+    delete[] bsp->dfaces;
+    delete[] bsp->dclipnodes;
+    delete[] bsp->dedges;
+    delete[] bsp->dmarksurfaces;
+    delete[] bsp->dsurfedges;
     memset(bsp, 0, sizeof(*bsp));
 }
 
 static void FreeBSP2RMQ(bsp2rmq_t *bsp)
 {
-    free(bsp->dmodels_q);
-    free(bsp->dmodels_h2);
-    free(bsp->dvisdata);
-    free(bsp->dlightdata);
-    free(bsp->dtexdata);
-    free(bsp->dentdata);
-    free(bsp->dleafs);
-    free(bsp->dplanes);
-    free(bsp->dvertexes);
-    free(bsp->dnodes);
-    free(bsp->texinfo);
-    free(bsp->dfaces);
-    free(bsp->dclipnodes);
-    free(bsp->dedges);
-    free(bsp->dmarksurfaces);
-    free(bsp->dsurfedges);
+    delete[] bsp->dmodels_q;
+    delete[] bsp->dmodels_h2;
+    delete[] bsp->dvisdata;
+    delete[] bsp->dlightdata;
+    delete[] bsp->dtexdata;
+    delete[] bsp->dentdata;
+    delete[] bsp->dleafs;
+    delete[] bsp->dplanes;
+    delete[] bsp->dvertexes;
+    delete[] bsp->dnodes;
+    delete[] bsp->texinfo;
+    delete[] bsp->dfaces;
+    delete[] bsp->dclipnodes;
+    delete[] bsp->dedges;
+    delete[] bsp->dmarksurfaces;
+    delete[] bsp->dsurfedges;
     memset(bsp, 0, sizeof(*bsp));
 }
 
 static void FreeBSP2(bsp2_t *bsp)
 {
-    free(bsp->dmodels_q);
-    free(bsp->dmodels_h2);
-    free(bsp->dvisdata);
-    free(bsp->dlightdata);
-    free(bsp->dtexdata);
-    free(bsp->dentdata);
-    free(bsp->dleafs);
-    free(bsp->dplanes);
-    free(bsp->dvertexes);
-    free(bsp->dnodes);
-    free(bsp->texinfo);
-    free(bsp->dfaces);
-    free(bsp->dclipnodes);
-    free(bsp->dedges);
-    free(bsp->dmarksurfaces);
-    free(bsp->dsurfedges);
+    delete[] bsp->dmodels_q;
+    delete[] bsp->dmodels_h2;
+    delete[] bsp->dvisdata;
+    delete[] bsp->dlightdata;
+    delete[] bsp->dtexdata;
+    delete[] bsp->dentdata;
+    delete[] bsp->dleafs;
+    delete[] bsp->dplanes;
+    delete[] bsp->dvertexes;
+    delete[] bsp->dnodes;
+    delete[] bsp->texinfo;
+    delete[] bsp->dfaces;
+    delete[] bsp->dclipnodes;
+    delete[] bsp->dedges;
+    delete[] bsp->dmarksurfaces;
+    delete[] bsp->dsurfedges;
     memset(bsp, 0, sizeof(*bsp));
 }
 
 static void FreeQ2BSP(q2bsp_t *bsp)
 {
-    free(bsp->dmodels);
-    free(bsp->dvis);
-    free(bsp->dlightdata);
-    free(bsp->dentdata);
-    free(bsp->dleafs);
-    free(bsp->dplanes);
-    free(bsp->dvertexes);
-    free(bsp->dnodes);
-    free(bsp->texinfo);
-    free(bsp->dfaces);
-    free(bsp->dedges);
-    free(bsp->dleaffaces);
-    free(bsp->dleafbrushes);
-    free(bsp->dsurfedges);
-    free(bsp->dareas);
-    free(bsp->dareaportals);
-    free(bsp->dbrushes);
-    free(bsp->dbrushsides);
+    delete[] bsp->dmodels;
+    delete[] bsp->dvis;
+    delete[] bsp->dlightdata;
+    delete[] bsp->dentdata;
+    delete[] bsp->dleafs;
+    delete[] bsp->dplanes;
+    delete[] bsp->dvertexes;
+    delete[] bsp->dnodes;
+    delete[] bsp->texinfo;
+    delete[] bsp->dfaces;
+    delete[] bsp->dedges;
+    delete[] bsp->dleaffaces;
+    delete[] bsp->dleafbrushes;
+    delete[] bsp->dsurfedges;
+    delete[] bsp->dareas;
+    delete[] bsp->dareaportals;
+    delete[] bsp->dbrushes;
+    delete[] bsp->dbrushsides;
     memset(bsp, 0, sizeof(*bsp));
 }
 
 static void FreeQ2BSP_QBSP(q2bsp_qbism_t *bsp)
 {
-    free(bsp->dmodels);
-    free(bsp->dvis);
-    free(bsp->dlightdata);
-    free(bsp->dentdata);
-    free(bsp->dleafs);
-    free(bsp->dplanes);
-    free(bsp->dvertexes);
-    free(bsp->dnodes);
-    free(bsp->texinfo);
-    free(bsp->dfaces);
-    free(bsp->dedges);
-    free(bsp->dleaffaces);
-    free(bsp->dleafbrushes);
-    free(bsp->dsurfedges);
-    free(bsp->dareas);
-    free(bsp->dareaportals);
-    free(bsp->dbrushes);
-    free(bsp->dbrushsides);
+    delete[] bsp->dmodels;
+    delete[] bsp->dvis;
+    delete[] bsp->dlightdata;
+    delete[] bsp->dentdata;
+    delete[] bsp->dleafs;
+    delete[] bsp->dplanes;
+    delete[] bsp->dvertexes;
+    delete[] bsp->dnodes;
+    delete[] bsp->texinfo;
+    delete[] bsp->dfaces;
+    delete[] bsp->dedges;
+    delete[] bsp->dleaffaces;
+    delete[] bsp->dleafbrushes;
+    delete[] bsp->dsurfedges;
+    delete[] bsp->dareas;
+    delete[] bsp->dareaportals;
+    delete[] bsp->dbrushes;
+    delete[] bsp->dbrushsides;
     memset(bsp, 0, sizeof(*bsp));
 }
 
 static void FreeMBSP(mbsp_t *bsp)
 {
-    free(bsp->dmodels);
-    free(bsp->dvisdata);
-    free(bsp->dlightdata);
-    free(bsp->dtexdata);
-    free(bsp->drgbatexdata); // mxd
-    free(bsp->dentdata);
-    free(bsp->dleafs);
-    free(bsp->dplanes);
-    free(bsp->dvertexes);
-    free(bsp->dnodes);
-    free(bsp->texinfo);
-    free(bsp->dfaces);
-    free(bsp->dclipnodes);
-    free(bsp->dedges);
-    free(bsp->dleaffaces);
-    free(bsp->dleafbrushes);
-    free(bsp->dsurfedges);
-    free(bsp->dareas);
-    free(bsp->dareaportals);
-    free(bsp->dbrushes);
-    free(bsp->dbrushsides);
+    delete[] bsp->dmodels;
+    delete[] bsp->dvisdata;
+    delete[] bsp->dlightdata;
+    delete[] bsp->dtexdata;
+    delete[] bsp->drgbatexdata; // mxd
+    delete[] bsp->dentdata;
+    delete[] bsp->dleafs;
+    delete[] bsp->dplanes;
+    delete[] bsp->dvertexes;
+    delete[] bsp->dnodes;
+    delete[] bsp->texinfo;
+    delete[] bsp->dfaces;
+    delete[] bsp->dclipnodes;
+    delete[] bsp->dedges;
+    delete[] bsp->dleaffaces;
+    delete[] bsp->dleafbrushes;
+    delete[] bsp->dsurfedges;
+    delete[] bsp->dareas;
+    delete[] bsp->dareaportals;
+    delete[] bsp->dbrushes;
+    delete[] bsp->dbrushsides;
     memset(bsp, 0, sizeof(*bsp));
 }
 
@@ -3413,34 +3414,36 @@ static const lumpspec_t *LumpspecsForVersion(const bspversion_t *version)
     return lumpspec;
 }
 
-static int CopyLump(const void *header, const bspversion_t *version, const lump_t *lumps, int lumpnum, void *destptr)
+template<typename T>
+static int CopyLump(const void *header, const bspversion_t *version, const lump_t *lumps, int lumpnum, T **bufferptr)
 {
     const lumpspec_t *lumpspecs = LumpspecsForVersion(version);
     const lumpspec_t *lumpspec = &lumpspecs[lumpnum];
-    uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
-    uint8_t *buffer = *bufferptr;
-    int length;
-    int ofs;
+    int length = lumps[lumpnum].filelen;
+    int ofs = lumps[lumpnum].fileofs;
 
-    length = lumps[lumpnum].filelen;
-    ofs = lumps[lumpnum].fileofs;
+    if (*bufferptr)
+        delete[] *bufferptr;
 
-    if (buffer)
-        free(buffer);
+    if (sizeof(T) != lumpspec->size || length % lumpspec->size)
+        Error("%s: odd %s lump size", __func__, lumpspec->name);
 
-    {
-        if (length % lumpspec->size)
-            Error("%s: odd %s lump size", __func__, lumpspec->name);
+    T *buffer;
 
-        buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
-        if (!buffer)
-            Error("%s: allocation of %i bytes failed.", __func__, length);
+    if constexpr(std::is_same_v<T, char>)
+        buffer = *bufferptr = new T[length + 1];
+    else
+        buffer = *bufferptr = new T[length];
 
-        memcpy(buffer, (const uint8_t *)header + ofs, length);
+    if (!buffer)
+        Error("%s: allocation of %i bytes failed.", __func__, length);
+
+    memcpy(buffer, (const uint8_t *)header + ofs, length);
+    
+    if constexpr(std::is_same_v<T, char>)
         buffer[length] = 0; /* In case of corrupt entity lump */
 
-        return length / lumpspec->size;
-    }
+    return length / lumpspec->size;
 }
 
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize)
@@ -3452,7 +3455,7 @@ void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size
             e = *link;
             if (!strcmp(e->lumpname, xname)) {
                 *link = e->next;
-                free(e);
+                delete e;
                 break;
             } else
                 link = &(*link)->next;
@@ -3464,15 +3467,14 @@ void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size
             break;
     }
     if (!e) {
-        e = static_cast<bspxentry_t *>(malloc(sizeof(*e)));
-        memset(e, 0, sizeof(*e));
+        e = new bspxentry_t { };
         strncpy(e->lumpname, xname, sizeof(e->lumpname));
         e->next = bspdata->bspxentries;
         bspdata->bspxentries = e;
     }
 
     // ericw -- make a copy
-    uint8_t *xdata_copy = (uint8_t *)malloc(xsize);
+    uint8_t *xdata_copy = new uint8_t[xsize];
     memcpy(xdata_copy, xdata, xsize);
 
     e->lumpdata = xdata_copy;
@@ -3590,11 +3592,11 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->numareaportals =
             CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_AREAPORTALS, &bsp->dareaportals);
 
-        bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_VISIBILITY, &bsp->dvis);
+        bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_VISIBILITY, &bsp->dvisdata);
         bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_LIGHTING, &bsp->dlightdata);
         bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_ENTITIES, &bsp->dentdata);
 
-        CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_POP, &bsp->dpop);
+        //CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_POP, &bsp->dpop);
     } else if (bspdata->version == &bspver_qbism) {
         q2_dheader_t *header = (q2_dheader_t *)file_data;
         q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
@@ -3619,11 +3621,11 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
         bsp->numareaportals =
             CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_AREAPORTALS, &bsp->dareaportals);
 
-        bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_VISIBILITY, &bsp->dvis);
+        bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_VISIBILITY, &bsp->dvisdata);
         bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_LIGHTING, &bsp->dlightdata);
         bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_ENTITIES, &bsp->dentdata);
 
-        CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_POP, &bsp->dpop);
+        //CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_POP, &bsp->dpop);
     } else if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
         dheader_t *header = (dheader_t *)file_data;
         bsp29_t *bsp = &bspdata->data.bsp29;
@@ -3731,7 +3733,7 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
             while (xlumps-- > 0) {
                 uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
                 uint32_t len = LittleLong(xlump[xlumps].filelen);
-                void *lumpdata = malloc(len);
+                void *lumpdata = new uint8_t[len];
                 memcpy(lumpdata, (const uint8_t *)header + ofs, len);
                 BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
             }
@@ -3742,7 +3744,7 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
     }
 
     /* everything has been copied out */
-    free(file_data);
+    delete[] file_data;
 
     /* swap everything */
     SwapBSPFile(bspdata, TO_CPU);

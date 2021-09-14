@@ -426,7 +426,7 @@ static void *BasePortalThread(void *dummy)
     float d;
     uint8_t *portalsee;
 
-    portalsee = static_cast<uint8_t *>(malloc(sizeof(*portalsee) * numportals * 2));
+    portalsee = new uint8_t[numportals * 2];
     if (!portalsee)
         Error("%s: Out of Memory", __func__);
 
@@ -488,7 +488,7 @@ static void *BasePortalThread(void *dummy)
         SimpleFlood(p, p->leaf, portalsee);
     }
 
-    free(portalsee);
+    delete[] portalsee;
 
     return NULL;
 }

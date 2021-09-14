@@ -381,26 +381,26 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     logprint("--- LightWorld ---\n");
 
     mbsp_t *const bsp = &bspdata->data.mbsp;
-    free(filebase);
-    free(lit_filebase);
-    free(lux_filebase);
+    delete[] filebase;
+    delete[] lit_filebase;
+    delete[] lux_filebase;
 
     /* greyscale data stored in a separate buffer */
-    filebase = (uint8_t *)calloc(MAX_MAP_LIGHTING, 1);
+    filebase = new uint8_t[MAX_MAP_LIGHTING] { };
     if (!filebase)
         Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING);
     file_p = 0;
     file_end = MAX_MAP_LIGHTING;
 
     /* litfile data stored in a separate buffer */
-    lit_filebase = (uint8_t *)calloc(MAX_MAP_LIGHTING * 3, 1);
+    lit_filebase = new uint8_t[MAX_MAP_LIGHTING * 3] { };
     if (!lit_filebase)
         Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING * 3);
     lit_file_p = 0;
     lit_file_end = (MAX_MAP_LIGHTING * 3);
 
     /* lux data stored in a separate buffer */
-    lux_filebase = (uint8_t *)calloc(MAX_MAP_LIGHTING * 3, 1);
+    lux_filebase = new uint8_t[MAX_MAP_LIGHTING * 3] { };
     if (!lux_filebase)
         Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING * 3);
     lux_file_p = 0;
@@ -411,10 +411,10 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     const unsigned char *lmshift_lump = (const unsigned char *)BSPX_GetLump(bspdata, "LMSHIFT", NULL);
     if (!lmshift_lump && write_litfile != ~0)
-        faces_sup = NULL; // no scales, no lit2
+        faces_sup = nullptr; // no scales, no lit2
     else { // we have scales or lit2 output. yay...
-        faces_sup = (facesup_t *)malloc(sizeof(*faces_sup) * bsp->numfaces);
-        memset(faces_sup, 0, sizeof(*faces_sup) * bsp->numfaces);
+        faces_sup = new facesup_t[bsp->numfaces] { };
+
         if (lmshift_lump) {
             for (int i = 0; i < bsp->numfaces; i++)
                 faces_sup[i].lmscale = 1 << lmshift_lump[i];
@@ -460,14 +460,14 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
-        free(bsp->dlightdata);
+        delete[] bsp->dlightdata;
         if (bsp->loadversion->game->has_rgb_lightmap) {
             bsp->lightdatasize = lit_file_p;
-            bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
+            bsp->dlightdata = new uint8_t[bsp->lightdatasize];
             memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
         } else {
             bsp->lightdatasize = file_p;
-            bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
+            bsp->dlightdata = new uint8_t[bsp->lightdatasize];
             memcpy(bsp->dlightdata, filebase, bsp->lightdatasize);
         }
     } else {
@@ -476,8 +476,8 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     logprint("lightdatasize: %i\n", bsp->lightdatasize);
 
     if (faces_sup) {
-        uint8_t *styles = (uint8_t *)malloc(sizeof(*styles) * 4 * bsp->numfaces);
-        int32_t *offsets = (int32_t *)malloc(sizeof(*offsets) * bsp->numfaces);
+        uint8_t *styles = new uint8_t[4 * bsp->numfaces];
+        int32_t *offsets = new int32_t[bsp->numfaces];
         for (int i = 0; i < bsp->numfaces; i++) {
             offsets[i] = faces_sup[i].lightofs;
             for (int j = 0; j < MAXLIGHTMAPS; j++)
@@ -497,7 +497,7 @@ static void LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *b
     char filename[1024];
 
     // always create the zero'ed array
-    extended_texinfo_flags = static_cast<surfflags_t *>(calloc(bsp->numtexinfo, sizeof(surfflags_t)));
+    extended_texinfo_flags = new surfflags_t[bsp->numtexinfo] { };
 
     strcpy(filename, sourcefilename);
     StripExtension(filename);

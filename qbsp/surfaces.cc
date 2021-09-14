@@ -138,7 +138,7 @@ static void GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
         for (f = node->faces; f; f = next) {
             next = f->next;
             if (!f->w.numpoints) { // face was removed outside
-                free(f);
+                delete f;
             } else {
                 f->next = planefaces[f->planenum];
                 planefaces[f->planenum] = f;
@@ -147,7 +147,7 @@ static void GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
         GatherNodeFaces_r(node->children[0], planefaces);
         GatherNodeFaces_r(node->children[1], planefaces);
     }
-    free(node);
+    delete node;
 }
 
 /*
@@ -323,7 +323,7 @@ FindFaceEdges
 */
 static void FindFaceEdges(mapentity_t *entity, face_t *face)
 {
-    int i, memsize;
+    int i;
 
     if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
@@ -332,8 +332,7 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
     if (face->w.numpoints > MAXEDGES)
         Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
 
-    memsize = face->w.numpoints * sizeof(face->edges[0]);
-    face->edges = (int *)AllocMem(OTHER, memsize, true);
+    face->edges = new int[face->w.numpoints] { };
     for (i = 0; i < face->w.numpoints; i++) {
         const vec_t *p1 = face->w.points[i];
         const vec_t *p2 = face->w.points[(i + 1) % face->w.numpoints];
@@ -399,7 +398,7 @@ static void EmitFace(mapentity_t *entity, face_t *face)
     for (i = 0; i < face->w.numpoints; i++) {
         map.exported_surfedges.push_back(face->edges[i]);
     }
-    free(face->edges);
+    delete[] face->edges;
 
     out->numedges = static_cast<int>(map.exported_surfedges.size()) - out->firstedge;
 }

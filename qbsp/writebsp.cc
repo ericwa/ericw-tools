@@ -117,7 +117,7 @@ static int ExportClipNodes(mapentity_t *entity, node_t *node)
     // FIXME: free more stuff?
     if (node->planenum == PLANENUM_LEAF) {
         int contents = node->contents.native;
-        free(node);
+        delete node;
         return contents;
     }
 
@@ -136,11 +136,10 @@ static int ExportClipNodes(mapentity_t *entity, node_t *node)
 
     for (face = node->faces; face; face = next) {
         next = face->next;
-        memset(face, 0, sizeof(face_t));
-        free(face);
+        delete face;
     }
-    free(node);
 
+    delete node;
     return nodenum;
 }
 
@@ -377,9 +376,8 @@ static void WriteExtendedTexinfoFlags(void)
 template<class C>
 static void CopyVector(const std::vector<C> &vec, int *elementCountOut, C **arrayCopyOut)
 {
-    const size_t numBytes = sizeof(C) * vec.size();
-    void *data = (void *)malloc(numBytes);
-    memcpy(data, vec.data(), numBytes);
+    C *data = new C[vec.size()];
+    memcpy(data, vec.data(), sizeof(C) * vec.size());
 
     *elementCountOut = vec.size();
     *arrayCopyOut = (C *)data;
@@ -388,7 +386,7 @@ static void CopyVector(const std::vector<C> &vec, int *elementCountOut, C **arra
 static void CopyString(const std::string &string, bool addNullTermination, int *elementCountOut, void **arrayCopyOut)
 {
     const size_t numBytes = addNullTermination ? string.size() + 1 : string.size();
-    void *data = malloc(numBytes);
+    void *data = new uint8_t[numBytes];
     memcpy(data, string.data(), numBytes); // std::string::data() has null termination, so it's safe to copy it
 
     *elementCountOut = numBytes;
@@ -433,10 +431,10 @@ static void WriteBSPFile()
 
     // FIXME: temp
     bspdata.data.mbsp.numareaportals = 1;
-    bspdata.data.mbsp.dareaportals = (dareaportal_t *)calloc(bspdata.data.mbsp.numareaportals, sizeof(dareaportal_t));
+    bspdata.data.mbsp.dareaportals = new dareaportal_t[bspdata.data.mbsp.numareaportals];
 
     bspdata.data.mbsp.numareas = 2;
-    bspdata.data.mbsp.dareas = (darea_t *)calloc(bspdata.data.mbsp.numareas, sizeof(darea_t));
+    bspdata.data.mbsp.dareas = new darea_t[bspdata.data.mbsp.numareas];
     bspdata.data.mbsp.dareas[1].firstareaportal = 1;
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
         const bspversion_t *highLimitsFormat = nullptr;

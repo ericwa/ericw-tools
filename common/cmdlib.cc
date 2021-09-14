@@ -268,9 +268,7 @@ char *ExpandPathAndArchive(char *path)
 
 char *copystring(const char *s)
 {
-    char *b;
-
-    b = static_cast<char *>(malloc(strlen(s) + 1));
+    char *b = new char[strlen(s) + 1];
     strcpy(b, s);
     return b;
 }
@@ -619,7 +617,7 @@ int LoadFilePak(char *filename, void *destptr)
                     header.tableofs = LittleLong(header.tableofs);
 
                     if (!strncmp(header.magic, "PACK", 4)) {
-                        pakfile_t *files = static_cast<pakfile_t *>(malloc(header.numfiles * sizeof(*files)));
+                        pakfile_t *files = new pakfile_t[header.numfiles];
                         //                      printf("%s: %u files\n", pakfilename, header.numfiles);
                         fseek(file, header.tableofs, SEEK_SET);
                         SafeRead(file, files, header.numfiles * sizeof(*files));
@@ -627,13 +625,13 @@ int LoadFilePak(char *filename, void *destptr)
                         for (i = 0; i < header.numfiles; i++) {
                             if (!strcmp(files[i].name, innerfile)) {
                                 fseek(file, files[i].offset, SEEK_SET);
-                                *bufferptr = static_cast<uint8_t *>(malloc(files[i].length + 1));
+                                *bufferptr = new uint8_t[files[i].length + 1];
                                 SafeRead(file, *bufferptr, files[i].length);
                                 length = files[i].length;
                                 break;
                             }
                         }
-                        free(files);
+                        delete[] files;
                     }
 
                     fclose(file);
@@ -656,7 +654,7 @@ int LoadFilePak(char *filename, void *destptr)
 
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
+    buffer = *bufferptr = new uint8_t[length + 1];
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -681,7 +679,7 @@ int LoadFile(const char *filename, void *destptr)
 
     file = SafeOpenRead(filename);
     length = Sys_filelength(file);
-    buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
+    buffer = *bufferptr = new uint8_t[length + 1];
     if (!buffer)
         Error("%s: allocation of %i bytes failed.", __func__, length);
 
@@ -1077,5 +1075,5 @@ void Q_CopyFile(const char *from, char *to)
     length = LoadFile(from, &buffer);
     CreatePath(to);
     SaveFile(to, buffer, length);
-    free(buffer);
+    delete[] buffer;
 }

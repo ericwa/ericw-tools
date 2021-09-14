@@ -46,10 +46,10 @@ void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, i
     SafeWrite(litfile, &header.v1, sizeof(header.v1));
     if (version == 2) {
         unsigned int i, j;
-        unsigned int *offsets = (unsigned int *)malloc(bsp->numfaces * sizeof(*offsets));
-        unsigned short *extents = (unsigned short *)malloc(2 * bsp->numfaces * sizeof(*extents));
-        unsigned char *styles = (unsigned char *)malloc(4 * bsp->numfaces * sizeof(*styles));
-        unsigned char *shifts = (unsigned char *)malloc(bsp->numfaces * sizeof(*shifts));
+        unsigned int *offsets = new unsigned int[bsp->numfaces];
+        unsigned short *extents = new unsigned short[2 * bsp->numfaces];
+        unsigned char *styles = new unsigned char[4 * bsp->numfaces];
+        unsigned char *shifts = new unsigned char[bsp->numfaces];
         for (i = 0; i < bsp->numfaces; i++) {
             offsets[i] = LittleLong(facesup[i].lightofs);
             styles[i * 4 + 0] = LittleShort(facesup[i].styles[0]);

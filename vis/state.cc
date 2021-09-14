@@ -154,8 +154,8 @@ void SaveVisState(void)
     SafeWrite(outfile, &state, sizeof(state));
 
     /* Allocate memory for compressed bitstrings */
-    might = static_cast<uint8_t *>(malloc((portalleafs + 7) >> 3));
-    vis = static_cast<uint8_t *>(malloc((portalleafs + 7) >> 3));
+    might = new uint8_t[(portalleafs + 7) >> 3];
+    vis = new uint8_t[(portalleafs + 7) >> 3];
 
     for (i = 0, p = portals; i < numportals * 2; i++, p++) {
         might_len = CompressBits(might, p->mightsee);
@@ -176,8 +176,8 @@ void SaveVisState(void)
             SafeWrite(outfile, vis, vis_len);
     }
 
-    free(might);
-    free(vis);
+    delete[] might;
+    delete[] vis;
 
     err = fclose(outfile);
     if (err)
@@ -244,7 +244,7 @@ qboolean LoadVisState(void)
     starttime -= state.time_elapsed;
 
     numbytes = (portalleafs + 7) >> 3;
-    compressed = static_cast<uint8_t *>(malloc(numbytes));
+    compressed = new uint8_t[numbytes];
 
     /* Update the portal information */
     for (i = 0, p = portals; i < numportals * 2; i++, p++) {
@@ -282,7 +282,7 @@ qboolean LoadVisState(void)
             p->status = pstat_none;
     }
 
-    free(compressed);
+    delete[] compressed;
     fclose(infile);
 
     return true;

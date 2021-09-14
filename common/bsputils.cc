@@ -340,7 +340,7 @@ static const bsp2_dface_t *BSP_FindFaceAtPoint_r(
         // Next test if it's within the boundaries of the face
         plane_t *edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
         const bool insideFace = EdgePlanes_PointInside(face, edgeplanes, point);
-        free(edgeplanes);
+        delete[] edgeplanes;
 
         // Found a match?
         if (insideFace) {
@@ -370,7 +370,7 @@ const bsp2_dface_t *BSP_FindFaceAtPoint_InWorld(const mbsp_t *bsp, const vec3_t 
 
 plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    plane_t *out = (plane_t *)calloc(face->numedges, sizeof(plane_t));
+    plane_t *out = new plane_t[face->numedges];
 
     const plane_t faceplane = Face_Plane(bsp, face);
     for (int i = 0; i < face->numedges; i++) {

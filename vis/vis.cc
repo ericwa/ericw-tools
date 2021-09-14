@@ -579,7 +579,7 @@ static void LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
     totalvis += numvis;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = static_cast<uint8_t *>(malloc(portalleafs * 2 / 8));
+    compressed = new uint8_t[(portalleafs * 2) / 8];
     len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
 
     dest = vismap_p;
@@ -592,7 +592,7 @@ static void LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
     dleaf->visofs = dest - vismap;
 
     memcpy(dest, compressed, len);
-    free(compressed);
+    delete[] compressed;
 }
 
 static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
@@ -666,10 +666,10 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        compressed = static_cast<uint8_t *>(malloc(portalleafs * 2 / 8));
+        compressed = new uint8_t[(portalleafs * 2) / 8];
         len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
     } else {
-        compressed = static_cast<uint8_t *>(malloc(portalleafs_real * 2 / 8));
+        compressed = new uint8_t[(portalleafs_real * 2) / 8];
         len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
     }
 
@@ -683,7 +683,7 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
     leaf->visofs = dest - vismap;
 
     memcpy(dest, compressed, len);
-    free(compressed);
+    delete[] compressed;
 }
 
 /*
@@ -749,10 +749,8 @@ void CalcVis(const mbsp_t *bsp)
         for (i = 0; i < portalleafs; i++)
             LeafFlow(i, &bsp->dleafs[i + 1], bsp);
     } else {
-        leafbits_t *buffer;
-
         logprint("Expanding clusters...\n");
-        buffer = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
+        leafbits_t *buffer = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
         for (i = 0; i < portalleafs; i++) {
             memset(buffer, 0, LeafbitsSize(portalleafs));
             ClusterFlow(i, buffer, bsp);
@@ -893,7 +891,7 @@ sep_t *Findpassages(winding_t *source, winding_t *pass)
             //
             count_sep++;
 
-            sep = static_cast<sep_t *>(malloc(sizeof(*sep)));
+            sep = new sep_t;
             sep->next = list;
             list = sep;
             sep->plane = plane;
@@ -942,11 +940,11 @@ void CalcPassages(void)
                 if (!sep) {
                     //                    Error ("No seperating planes found in portal pair");
                     count_sep++;
-                    sep = static_cast<sep_t *>(malloc(sizeof(*sep)));
+                    sep = new sep_t;
                     sep->next = NULL;
                     sep->plane = p1->plane;
                 }
-                passages = static_cast<passage_t *>(malloc(sizeof(*passages)));
+                passages = new passage_t;
                 passages->planes = sep;
                 passages->from = p1->leaf;
                 passages->to = p2->leaf;
@@ -1058,11 +1056,9 @@ void LoadPortals(char *name, mbsp_t *bsp)
     leafbytes_real = ((portalleafs_real + 63) & ~63) >> 3;
 
     // each file portal is split into two memory portals
-    portals = static_cast<portal_t *>(malloc(2 * numportals * sizeof(portal_t)));
-    memset(portals, 0, 2 * numportals * sizeof(portal_t));
+    portals = new portal_t[numportals * 2] { };
 
-    leafs = static_cast<leaf_t *>(malloc(portalleafs * sizeof(leaf_t)));
-    memset(leafs, 0, portalleafs * sizeof(leaf_t));
+    leafs = new leaf_t[portalleafs] { };
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
@@ -1071,7 +1067,7 @@ void LoadPortals(char *name, mbsp_t *bsp)
     }
 
     // FIXME - more intelligent allocation?
-    bsp->dvisdata = static_cast<uint8_t *>(malloc(MAX_MAP_VISIBILITY));
+    bsp->dvisdata = new uint8_t[MAX_MAP_VISIBILITY];
     if (!bsp->dvisdata)
         Error("%s: dvisdata allocation failed (%i bytes)", __func__, MAX_MAP_VISIBILITY);
     memset(bsp->dvisdata, 0, MAX_MAP_VISIBILITY);
@@ -1141,13 +1137,13 @@ void LoadPortals(char *name, mbsp_t *bsp)
 
     /* Load the cluster expansion map if needed */
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
+        clustermap = new int[portalleafs_real];
 
         for (int32_t i = 0; i < bsp->numleafs; i++) {
             clustermap[i] = bsp->dleafs[i + 1].cluster;
         }
     } else if (portalleafs != portalleafs_real) {
-        clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
+        clustermap = new int[portalleafs_real];
         if (!strcmp(magic, PORTALFILE2)) {
             for (i = 0; i < portalleafs; i++) {
                 while (1) {
@@ -1293,9 +1289,9 @@ int main(int argc, char **argv)
     DefaultExtension(statetmpfile, ".vi0");
 
     if (bsp->loadversion->game->id != GAME_QUAKE_II) {
-        uncompressed = static_cast<uint8_t *>(calloc(portalleafs, leafbytes_real));
+        uncompressed = new uint8_t[portalleafs * leafbytes_real];
     } else {
-        uncompressed_q2 = static_cast<uint8_t *>(calloc(portalleafs, leafbytes));
+        uncompressed_q2 = new uint8_t[portalleafs * leafbytes];
     }
 
     //    CalcPassages ();
