@@ -226,7 +226,10 @@ bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 
 /* Plane Hashing */
 
-static inline int plane_hash_fn(const qbsp_plane_t *p) { return Q_rint(fabs(p->dist)); }
+static inline int plane_hash_fn(const qbsp_plane_t *p)
+{
+    return Q_rint(fabs(p->dist));
+}
 
 static void PlaneHash_Add(const qbsp_plane_t *p, int index)
 {
@@ -1085,7 +1088,10 @@ int Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
     return cnt;
 }
 
-int Brush_ListCount(const brush_t *brush) { return Brush_ListCountWithCFlags(brush, 0); }
+int Brush_ListCount(const brush_t *brush)
+{
+    return Brush_ListCountWithCFlags(brush, 0);
+}
 
 static int FaceListCount(const face_t *facelist)
 {
@@ -1095,7 +1101,10 @@ static int FaceListCount(const face_t *facelist)
         return 0;
 }
 
-int Brush_NumFaces(const brush_t *brush) { return FaceListCount(brush->faces); }
+int Brush_NumFaces(const brush_t *brush)
+{
+    return FaceListCount(brush->faces);
+}
 
 void Entity_SortBrushes(mapentity_t *dst)
 {

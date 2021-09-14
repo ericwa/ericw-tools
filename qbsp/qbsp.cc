@@ -35,7 +35,10 @@ static const char *IntroString = "---- qbsp / ericw-tools " stringify(ERICWTOOLS
 // command line flags
 options_t options;
 
-bool node_t::opaque() const { return contents.is_structural_sky_or_solid(options.target_game); }
+bool node_t::opaque() const
+{
+    return contents.is_structural_sky_or_solid(options.target_game);
+}
 
 // a simple tree structure used for leaf brush
 // compression.
@@ -489,7 +492,10 @@ void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx)
     // Actually written in WriteBSPFile()
     map.exported_bspxbrushes = std::move(ctx->lumpdata);
 }
-void BSPX_Brushes_Init(struct bspxbrushes_s *ctx) { ctx->lumpdata.clear(); }
+void BSPX_Brushes_Init(struct bspxbrushes_s *ctx)
+{
+    ctx->lumpdata.clear();
+}
 
 static void vec_push_bytes(std::vector<uint8_t> &vec, const void *data, size_t count)
 {
@@ -1047,7 +1053,7 @@ static void ParseOptions(char *szOptions)
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     Error("Invalid argument to option %s", szTok);
-                options.midsplitSurfFraction = qclamp((float) atof(szTok2), 0.0f, 1.0f);
+                options.midsplitSurfFraction = qclamp((float)atof(szTok2), 0.0f, 1.0f);
                 logprint("Switching to midsplit when node contains more than fraction %f of model's surfaces\n",
                     options.midsplitSurfFraction);
 

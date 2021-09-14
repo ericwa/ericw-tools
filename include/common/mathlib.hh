@@ -75,7 +75,10 @@ static inline bool GLMVectorCompare(const qvec3f &v1, const qvec3f &v2, float ep
     return true;
 }
 
-static inline vec_t DotProduct(const vec3_t x, const vec3_t y) { return x[0] * y[0] + x[1] * y[1] + x[2] * y[2]; }
+static inline vec_t DotProduct(const vec3_t x, const vec3_t y)
+{
+    return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+}
 
 static inline void VectorSubtract(const vec3_t x, const vec3_t y, vec3_t out)
 {
@@ -147,16 +150,25 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
 
 plane_t FlipPlane(plane_t input);
 
-static inline qvec3f VectorToGLM(const vec3_t in) { return qvec3f(in[0], in[1], in[2]); }
+static inline qvec3f VectorToGLM(const vec3_t in)
+{
+    return qvec3f(in[0], in[1], in[2]);
+}
 
-static inline vec_t Q_rint(vec_t in) { return (vec_t)(floor(in + 0.5)); }
+static inline vec_t Q_rint(vec_t in)
+{
+    return (vec_t)(floor(in + 0.5));
+}
 
 /*
    Random()
    returns a pseudorandom number between 0 and 1
  */
 
-static inline vec_t Random(void) { return (vec_t)rand() / RAND_MAX; }
+static inline vec_t Random(void)
+{
+    return (vec_t)rand() / RAND_MAX;
+}
 
 static inline void VectorMA(const vec3_t va, vec_t scale, const vec3_t vb, vec3_t vc)
 {
@@ -273,9 +285,15 @@ float Lanczos2D(float x, float y, float a);
 
 // glm geometry
 
-static inline qvec3f vec3_t_to_glm(const vec3_t vec) { return qvec3f(vec[0], vec[1], vec[2]); }
+static inline qvec3f vec3_t_to_glm(const vec3_t vec)
+{
+    return qvec3f(vec[0], vec[1], vec[2]);
+}
 
-static inline qvec3d qvec3d_from_vec3(const vec3_t vec) { return qvec3d(vec[0], vec[1], vec[2]); }
+static inline qvec3d qvec3d_from_vec3(const vec3_t vec)
+{
+    return qvec3d(vec[0], vec[1], vec[2]);
+}
 
 static inline void glm_to_vec3_t(const qvec3f &glm, vec3_t out)
 {
@@ -456,4 +474,3 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
 }
 
 bool LinesOverlap(const qvec3f p0, const qvec3f p1, const qvec3f q0, const qvec3f q1);
-

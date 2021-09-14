@@ -183,9 +183,15 @@ static void *MakeSurfaceLightsThread(void *arg)
     return nullptr;
 }
 
-const std::vector<surfacelight_t> &SurfaceLights() { return surfacelights; }
+const std::vector<surfacelight_t> &SurfaceLights()
+{
+    return surfacelights;
+}
 
-int TotalSurfacelightPoints() { return total_surflight_points; }
+int TotalSurfacelightPoints()
+{
+    return total_surflight_points;
+}
 
 // No surflight_debug (yet?), so unused...
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum)

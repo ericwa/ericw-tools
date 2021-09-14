@@ -356,4 +356,3 @@ public:
 
     const std::vector<lockable_setting_t *> &allSettings() const { return _allsettings; }
 };
-

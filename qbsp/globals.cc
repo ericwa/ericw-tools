@@ -27,7 +27,10 @@
 mapdata_t map;
 
 // Useful shortcuts
-mapentity_t *pWorldEnt() { return &map.entities.at(0); }
+mapentity_t *pWorldEnt()
+{
+    return &map.entities.at(0);
+}
 
 // util.c
 FILE *logfile;

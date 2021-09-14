@@ -19,4 +19,7 @@
 
 #include <qbsp/qbsp.hh>
 
-int main(int argc, const char **argv) { return qbsp_main(argc, argv); }
+int main(int argc, const char **argv)
+{
+    return qbsp_main(argc, argv);
+}

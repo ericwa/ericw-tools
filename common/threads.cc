@@ -78,7 +78,10 @@ void InterruptThreadProgress__(void)
 int numthreads = 1;
 CRITICAL_SECTION crit;
 
-void LowerProcessPriority(void) { SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS); }
+void LowerProcessPriority(void)
+{
+    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+}
 
 int GetDefaultThreads(void)
 {

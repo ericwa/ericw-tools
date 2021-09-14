@@ -86,13 +86,25 @@ keyvalues_t::const_iterator entdict_t::find(std::string_view key) const
     return existingIt;
 }
 
-keyvalues_t::const_iterator entdict_t::begin() const { return keyvalues.begin(); }
+keyvalues_t::const_iterator entdict_t::begin() const
+{
+    return keyvalues.begin();
+}
 
-keyvalues_t::const_iterator entdict_t::end() const { return keyvalues.end(); }
+keyvalues_t::const_iterator entdict_t::end() const
+{
+    return keyvalues.end();
+}
 
-keyvalues_t::iterator entdict_t::begin() { return keyvalues.begin(); }
+keyvalues_t::iterator entdict_t::begin()
+{
+    return keyvalues.begin();
+}
 
-keyvalues_t::iterator entdict_t::end() { return keyvalues.end(); }
+keyvalues_t::iterator entdict_t::end()
+{
+    return keyvalues.end();
+}
 
 /*
  * ==================
@@ -169,7 +181,10 @@ std::string EntData_Write(const std::vector<entdict_t> &ents)
     return out.str();
 }
 
-std::string EntDict_StringForKey(const entdict_t &dict, const std::string key) { return dict.get(key); }
+std::string EntDict_StringForKey(const entdict_t &dict, const std::string key)
+{
+    return dict.get(key);
+}
 
 float EntDict_FloatForKey(const entdict_t &dict, const std::string key)
 {
@@ -185,7 +200,10 @@ float EntDict_FloatForKey(const entdict_t &dict, const std::string key)
     }
 }
 
-void EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key) { dict.remove(key); }
+void EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key)
+{
+    dict.remove(key);
+}
 
 void // mxd
 EntDict_RenameKey(entdict_t &dict, const std::string &from, const std::string &to)

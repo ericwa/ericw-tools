@@ -157,7 +157,10 @@ void UniformPointOnSphere(vec3_t dir, float u1, float u2)
     }
 }
 
-void RandomDir(vec3_t dir) { UniformPointOnSphere(dir, Random(), Random()); }
+void RandomDir(vec3_t dir)
+{
+    UniformPointOnSphere(dir, Random(), Random());
+}
 
 qvec3f CosineWeightedHemisphereSample(float u1, float u2)
 {
@@ -541,7 +544,10 @@ bool GLM_EdgePlanes_PointInside(const vector<qvec4f> &edgeplanes, const qvec3f &
     return minDist >= -POINT_EQUAL_EPSILON;
 }
 
-qvec3f GLM_TriangleCentroid(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2) { return (v0 + v1 + v2) / 3.0f; }
+qvec3f GLM_TriangleCentroid(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2)
+{
+    return (v0 + v1 + v2) / 3.0f;
+}
 
 float GLM_TriangleArea(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2)
 {
@@ -553,7 +559,10 @@ qvec4f GLM_MakePlane(const qvec3f &normal, const qvec3f &point)
     return qvec4f(normal[0], normal[1], normal[2], qv::dot(point, normal));
 }
 
-float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point) { return qv::dot(qvec3f(plane), point) - plane[3]; }
+float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point)
+{
+    return qv::dot(qvec3f(plane), point) - plane[3];
+}
 
 qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point)
 {

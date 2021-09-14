@@ -228,7 +228,10 @@ void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, 
     // NOTE: file_p et. al. are not updated, since we're not dynamically allocating the lightmaps
 }
 
-const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum) { return modelinfo.at(modelnum); }
+const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum)
+{
+    return modelinfo.at(modelnum);
+}
 
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
 {

@@ -793,7 +793,10 @@ float NormalizeDegrees(float degs)
     return degs;
 }
 
-bool EqualDegrees(float a, float b) { return fabs(NormalizeDegrees(a) - NormalizeDegrees(b)) < 0.001; }
+bool EqualDegrees(float a, float b)
+{
+    return fabs(NormalizeDegrees(a) - NormalizeDegrees(b)) < 0.001;
+}
 
 static std::pair<int, int> getSTAxes(const vec3_t snapped_normal)
 {

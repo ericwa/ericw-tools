@@ -135,4 +135,3 @@ using aabb2d = aabb<2, qvec2d>;
 
 using aabb3f = aabb<3, qvec3f>;
 using aabb2f = aabb<2, qvec2f>;
-

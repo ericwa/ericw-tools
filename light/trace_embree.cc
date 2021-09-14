@@ -229,7 +229,10 @@ sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection f
 
 static const mbsp_t *bsp_static;
 
-void ErrorCallback(void *userptr, const RTCError code, const char *str) { printf("RTC Error %d: %s\n", code, str); }
+void ErrorCallback(void *userptr, const RTCError code, const char *str)
+{
+    printf("RTC Error %d: %s\n", code, str);
+}
 
 static const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
 {
@@ -1094,7 +1097,10 @@ public:
     }
 };
 
-raystream_occlusion_t *Embree_MakeOcclusionRayStream(int maxrays) { return new raystream_embree_occlusion_t{maxrays}; }
+raystream_occlusion_t *Embree_MakeOcclusionRayStream(int maxrays)
+{
+    return new raystream_embree_occlusion_t{maxrays};
+}
 
 raystream_intersection_t *Embree_MakeIntersectionRayStream(int maxrays)
 {

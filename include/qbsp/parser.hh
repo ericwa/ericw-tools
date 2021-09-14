@@ -43,4 +43,3 @@ struct parser_t
 
 bool ParseToken(parser_t *p, int flags);
 void ParserInit(parser_t *p, const char *data);
-

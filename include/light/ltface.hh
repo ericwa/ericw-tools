@@ -83,4 +83,3 @@ void SetupDirt(globalconfig_t &cfg);
 float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t point, const vec3_t normal,
     const modelinfo_t *selfshadow);
 void LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg);
-

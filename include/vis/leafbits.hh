@@ -78,4 +78,3 @@ static inline size_t LeafbitsSize(int numleafs)
     int numblocks = (numleafs + LEAFMASK) >> LEAFSHIFT;
     return sizeof(leafbits_t) + (sizeof(leafblock_t) * numblocks);
 }
-

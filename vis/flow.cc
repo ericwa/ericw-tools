@@ -498,4 +498,7 @@ static void *BasePortalThread(void *dummy)
   BasePortalVis
   ==============
 */
-void BasePortalVis(void) { RunThreadsOn(0, numportals * 2, BasePortalThread, NULL); }
+void BasePortalVis(void)
+{
+    RunThreadsOn(0, numportals * 2, BasePortalThread, NULL);
+}

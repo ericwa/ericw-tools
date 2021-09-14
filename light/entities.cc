@@ -34,16 +34,25 @@ std::vector<sun_t> all_suns;
 std::vector<entdict_t> entdicts;
 static std::vector<entdict_t> radlights;
 
-const std::vector<light_t> &GetLights() { return all_lights; }
+const std::vector<light_t> &GetLights()
+{
+    return all_lights;
+}
 
-const std::vector<sun_t> &GetSuns() { return all_suns; }
+const std::vector<sun_t> &GetSuns()
+{
+    return all_suns;
+}
 
 /* surface lights */
 static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 
-const char *light_t::classname() const { return ValueForKey(this, "classname"); }
+const char *light_t::classname() const
+{
+    return ValueForKey(this, "classname");
+}
 
 /*
  * ============================================================================
@@ -64,8 +73,14 @@ static entdict_t &WorldEnt()
     return entdicts.at(0);
 }
 
-void SetWorldKeyValue(const std::string &key, const std::string &value) { WorldEnt().set(key, value); }
-std::string WorldValueForKey(const std::string &key) { return EntDict_StringForKey(WorldEnt(), key); }
+void SetWorldKeyValue(const std::string &key, const std::string &value)
+{
+    WorldEnt().set(key, value);
+}
+std::string WorldValueForKey(const std::string &key)
+{
+    return EntDict_StringForKey(WorldEnt(), key);
+}
 
 /**
  * Assigns a lightstyle number for the given non-empty targetname string

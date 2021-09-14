@@ -36,7 +36,7 @@ void CheckWinding(const winding_t *w, vec_t bogus_range = DEFAULT_BOGUS_RANGE);
 void WindingPlane(const winding_t *w, vec3_t normal, vec_t *dist);
 void RemoveColinearPoints(winding_t *w);
 
-using save_winding_fn_t = void(*)(winding_t *w, void *userinfo);
+using save_winding_fn_t = void (*)(winding_t *w, void *userinfo);
 void DiceWinding(winding_t *w, vec_t subdiv, save_winding_fn_t save_fn, void *userinfo);
 
 winding_t *WindingFromFace(const mbsp_t *bsp, const bsp2_dface_t *f);

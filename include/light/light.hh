@@ -53,9 +53,15 @@ struct lightsample_t
     vec3_t direction;
 };
 
-static inline float LightSample_Brightness(const vec3_t color) { return ((color[0] + color[1] + color[2]) / 3.0); }
+static inline float LightSample_Brightness(const vec3_t color)
+{
+    return ((color[0] + color[1] + color[2]) / 3.0);
+}
 
-static inline float LightSample_Brightness(const qvec3f color) { return ((color[0] + color[1] + color[2]) / 3.0); }
+static inline float LightSample_Brightness(const qvec3f color)
+{
+    return ((color[0] + color[1] + color[2]) / 3.0);
+}
 
 /**
  * A directional light, emitted from "sky*" textured faces.
@@ -410,4 +416,3 @@ const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 // bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf); //mxd. Missing definition
 int light_main(int argc, const char **argv);
-

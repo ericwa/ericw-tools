@@ -187,7 +187,10 @@ static void InitHash(void)
     hashedges.clear();
 }
 
-static void AddHashEdge(int v1, int v2, int i) { hashedges[std::make_pair(v1, v2)].push_front(i); }
+static void AddHashEdge(int v1, int v2, int i)
+{
+    hashedges[std::make_pair(v1, v2)].push_front(i);
+}
 
 static std::tuple<int, int, int> HashVec(const vec3_t vec)
 {

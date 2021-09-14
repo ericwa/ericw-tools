@@ -325,4 +325,3 @@ extern options_t options;
 #include <qbsp/util.hh>
 
 int qbsp_main(int argc, const char **argv);
-

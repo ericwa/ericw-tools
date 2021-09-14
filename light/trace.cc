@@ -136,7 +136,10 @@ Light_PointContents
 from hmap2
 ==============
 */
-int Light_PointContents(const mbsp_t *bsp, const vec3_t point) { return Light_PointInLeaf(bsp, point)->contents; }
+int Light_PointContents(const mbsp_t *bsp, const vec3_t point)
+{
+    return Light_PointInLeaf(bsp, point)->contents;
+}
 
 /*
  * ==============
@@ -775,7 +778,16 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const mod
     throw; // mxd. Silences compiler warning
 }
 
-raystream_intersection_t *MakeIntersectionRayStream(int maxrays) { return Embree_MakeIntersectionRayStream(maxrays); }
-raystream_occlusion_t *MakeOcclusionRayStream(int maxrays) { return Embree_MakeOcclusionRayStream(maxrays); }
+raystream_intersection_t *MakeIntersectionRayStream(int maxrays)
+{
+    return Embree_MakeIntersectionRayStream(maxrays);
+}
+raystream_occlusion_t *MakeOcclusionRayStream(int maxrays)
+{
+    return Embree_MakeOcclusionRayStream(maxrays);
+}
 
-void MakeTnodes(const mbsp_t *bsp) { Embree_TraceInit(bsp); }
+void MakeTnodes(const mbsp_t *bsp)
+{
+    Embree_TraceInit(bsp);
+}

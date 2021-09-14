@@ -534,4 +534,3 @@ qmat4x4d inverse(const qmat4x4d &input);
 
 qmat2x2f inverse(const qmat2x2f &input);
 }; // namespace qv
-

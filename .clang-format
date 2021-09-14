@@ -19,7 +19,7 @@ AllowShortBlocksOnASingleLine: Never
 #BreakBeforeConceptDeclarations: true
 #IndentRequires: true
 AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: Inline
 AllowShortLambdasOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false

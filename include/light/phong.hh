@@ -89,4 +89,3 @@ public:
 };
 
 const face_cache_t &FaceCacheForFNum(int fnum);
-

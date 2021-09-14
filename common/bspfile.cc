@@ -356,15 +356,30 @@ bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *g
            game->get_content_type(*this) == game->get_content_type(other);
 }
 
-int32_t contentflags_t::priority(const gamedef_t *game) const { return game->contents_priority(*this); }
+int32_t contentflags_t::priority(const gamedef_t *game) const
+{
+    return game->contents_priority(*this);
+}
 
-bool contentflags_t::is_empty(const gamedef_t *game) const { return game->contents_are_empty(*this); }
+bool contentflags_t::is_empty(const gamedef_t *game) const
+{
+    return game->contents_are_empty(*this);
+}
 
-bool contentflags_t::is_solid(const gamedef_t *game) const { return game->contents_are_solid(*this); }
+bool contentflags_t::is_solid(const gamedef_t *game) const
+{
+    return game->contents_are_solid(*this);
+}
 
-bool contentflags_t::is_sky(const gamedef_t *game) const { return game->contents_are_sky(*this); }
+bool contentflags_t::is_sky(const gamedef_t *game) const
+{
+    return game->contents_are_sky(*this);
+}
 
-bool contentflags_t::is_liquid(const gamedef_t *game) const { return game->contents_are_liquid(*this); }
+bool contentflags_t::is_liquid(const gamedef_t *game) const
+{
+    return game->contents_are_liquid(*this);
+}
 
 bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
 {

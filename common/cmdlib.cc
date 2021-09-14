@@ -460,7 +460,10 @@ int Q_strncasecmp(const char *s1, const char *s2, int n)
     return -1;
 }
 
-int Q_strcasecmp(const char *s1, const char *s2) { return Q_strncasecmp(s1, s2, 99999); }
+int Q_strcasecmp(const char *s1, const char *s2)
+{
+    return Q_strncasecmp(s1, s2, 99999);
+}
 
 char *Q_strupr(char *start)
 {
@@ -772,7 +775,10 @@ std::string StrippedExtension(const std::string &path)
     return result;
 }
 
-int IsAbsolutePath(const char *path) { return path[0] == PATHSEPERATOR || (isalpha(path[0]) && path[1] == ':'); }
+int IsAbsolutePath(const char *path)
+{
+    return path[0] == PATHSEPERATOR || (isalpha(path[0]) && path[1] == ':');
+}
 
 /*
  * ====================
@@ -886,7 +892,10 @@ short LittleShort(short l)
     return (b1 << 8) + b2;
 }
 
-short BigShort(short l) { return l; }
+short BigShort(short l)
+{
+    return l;
+}
 
 int LittleLong(int l)
 {
@@ -900,7 +909,10 @@ int LittleLong(int l)
     return ((int)b1 << 24) + ((int)b2 << 16) + ((int)b3 << 8) + b4;
 }
 
-int BigLong(int l) { return l; }
+int BigLong(int l)
+{
+    return l;
+}
 
 float LittleFloat(float l)
 {
@@ -919,7 +931,10 @@ float LittleFloat(float l)
     return out.f;
 }
 
-float BigFloat(float l) { return l; }
+float BigFloat(float l)
+{
+    return l;
+}
 
 #else /* must be little endian */
 
@@ -933,7 +948,10 @@ short BigShort(short l)
     return (b1 << 8) + b2;
 }
 
-short LittleShort(short l) { return l; }
+short LittleShort(short l)
+{
+    return l;
+}
 
 int BigLong(int l)
 {
@@ -947,7 +965,10 @@ int BigLong(int l)
     return ((int)b1 << 24) + ((int)b2 << 16) + ((int)b3 << 8) + b4;
 }
 
-int LittleLong(int l) { return l; }
+int LittleLong(int l)
+{
+    return l;
+}
 
 float BigFloat(float l)
 {
@@ -966,7 +987,10 @@ float BigFloat(float l)
     return out.f;
 }
 
-float LittleFloat(float l) { return l; }
+float LittleFloat(float l)
+{
+    return l;
+}
 
 #endif
 
@@ -1003,14 +1027,20 @@ static unsigned short crctable[256] = {0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0
     0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0, 0x0cc1, 0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
     0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0};
 
-void CRC_Init(unsigned short *crcvalue) { *crcvalue = CRC_INIT_VALUE; }
+void CRC_Init(unsigned short *crcvalue)
+{
+    *crcvalue = CRC_INIT_VALUE;
+}
 
 void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data)
 {
     *crcvalue = (*crcvalue << 8) ^ crctable[(*crcvalue >> 8) ^ data];
 }
 
-unsigned short CRC_Value(unsigned short crcvalue) { return crcvalue ^ CRC_XOR_VALUE; }
+unsigned short CRC_Value(unsigned short crcvalue)
+{
+    return crcvalue ^ CRC_XOR_VALUE;
+}
 
 /* ========================================================================= */
 

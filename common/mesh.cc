@@ -170,9 +170,15 @@ static octree_t<vertnum_t> build_vert_octree(const mesh_t &mesh)
     return makeOctree(vertBboxNumPairs);
 }
 
-qvec3f qToG(qvec3f in) { return qvec3f(in[0], in[1], in[2]); }
+qvec3f qToG(qvec3f in)
+{
+    return qvec3f(in[0], in[1], in[2]);
+}
 
-qvec3f gToQ(qvec3f in) { return qvec3f(in[0], in[1], in[2]); }
+qvec3f gToQ(qvec3f in)
+{
+    return qvec3f(in[0], in[1], in[2]);
+}
 
 /**
  * Possibly insert vert `vnum` on one of the edges of face `fnum`, if it happens

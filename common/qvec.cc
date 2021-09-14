@@ -115,7 +115,10 @@ qmat4x4d qv::inverse(const qmat4x4d &input)
     return res;
 }
 
-qmat4x4f qv::inverse(const qmat4x4f &input) { return qmat4x4f(qv::inverse(qmat4x4d(input))); }
+qmat4x4f qv::inverse(const qmat4x4f &input)
+{
+    return qmat4x4f(qv::inverse(qmat4x4d(input)));
+}
 
 qmat2x2f qv::inverse(const qmat2x2f &m)
 {

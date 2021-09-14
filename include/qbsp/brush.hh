@@ -63,4 +63,3 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
 void FilterStructuralBrushesIntoTree(const mapentity_t *e, node_t *headnode);
 
 void FreeBrush(brush_t *brush);
-

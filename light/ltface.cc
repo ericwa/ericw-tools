@@ -119,10 +119,22 @@ faceextents_t::faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float 
     }
 }
 
-int faceextents_t::width() const { return m_texsize[0] + 1; }
-int faceextents_t::height() const { return m_texsize[1] + 1; }
-int faceextents_t::numsamples() const { return width() * height(); }
-qvec2i faceextents_t::texsize() const { return qvec2i(width(), height()); }
+int faceextents_t::width() const
+{
+    return m_texsize[0] + 1;
+}
+int faceextents_t::height() const
+{
+    return m_texsize[1] + 1;
+}
+int faceextents_t::numsamples() const
+{
+    return width() * height();
+}
+qvec2i faceextents_t::texsize() const
+{
+    return qvec2i(width(), height());
+}
 
 int faceextents_t::indexOf(const qvec2i &lm) const
 {
@@ -173,9 +185,15 @@ qvec3f faceextents_t::texCoordToWorld(qvec2f tc) const
     return qvec3f(res[0], res[1], res[2]);
 }
 
-qvec2f faceextents_t::worldToLMCoord(qvec3f world) const { return TexCoordToLMCoord(worldToTexCoord(world)); }
+qvec2f faceextents_t::worldToLMCoord(qvec3f world) const
+{
+    return TexCoordToLMCoord(worldToTexCoord(world));
+}
 
-qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const { return texCoordToWorld(LMCoordToTexCoord(lm)); }
+qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
+{
+    return texCoordToWorld(LMCoordToTexCoord(lm));
+}
 
 qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const bsp2_dface_t *f)
 {
@@ -1022,7 +1040,10 @@ void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec
     *dist_out = dist;
 }
 
-constexpr vec_t SQR(vec_t x) { return x * x; }
+constexpr vec_t SQR(vec_t x)
+{
+    return x * x;
+}
 
 // this is the inverse of GetLightValue
 float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desiredLight)
@@ -2729,9 +2750,15 @@ static std::vector<qvec4f> LightmapToGLMVector(const mbsp_t *bsp, const lightsur
     return std::vector<qvec4f>();
 }
 
-static qvec3f LinearToGamma22(const qvec3f &c) { return qv::pow(c, qvec3f(1 / 2.2f)); }
+static qvec3f LinearToGamma22(const qvec3f &c)
+{
+    return qv::pow(c, qvec3f(1 / 2.2f));
+}
 
-static qvec3f Gamma22ToLinear(const qvec3f &c) { return qv::pow(c, qvec3f(2.2f)); }
+static qvec3f Gamma22ToLinear(const qvec3f &c)
+{
+    return qv::pow(c, qvec3f(2.2f));
+}
 
 void GLMVector_GammaToLinear(std::vector<qvec3f> &vec)
 {

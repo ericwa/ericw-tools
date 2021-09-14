@@ -263,7 +263,10 @@ static void AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorB
     radlightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
 }
 
-const std::vector<bouncelight_t> &BounceLights() { return radlights; }
+const std::vector<bouncelight_t> &BounceLights()
+{
+    return radlights;
+}
 
 const std::vector<int> &BounceLightsForFaceNum(int facenum)
 {
