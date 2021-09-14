@@ -20,6 +20,8 @@
 */
 // warnerr.h
 
+#pragma once
+
 enum
 {
     warnNoWadKey, // 0
