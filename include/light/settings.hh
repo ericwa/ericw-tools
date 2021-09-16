@@ -226,12 +226,12 @@ private:
     vec3_t _default, _value;
     vec3_transformer_t _transformer;
 
-    void transformVec3Value(const vec3_t val, vec3_t out) const
+    void transformVec3Value(const vec3_t &val, vec3_t &out) const
     {
         // apply transform
         switch (_transformer) {
             case vec3_transformer_t::NONE: VectorCopy(val, out); break;
-            case vec3_transformer_t::MANGLE_TO_VEC: glm_to_vec3_t(vec_from_mangle(vec3_t_to_glm(val)), out); break;
+            case vec3_transformer_t::MANGLE_TO_VEC: VectorCopy(vec_from_mangle(val), out); break;
             case vec3_transformer_t::NORMALIZE_COLOR_TO_255:
                 VectorCopy(val, out);
                 normalize_color_format(out);
@@ -239,7 +239,7 @@ private:
         }
     }
 
-    void transformAndSetVec3Value(const vec3_t val, setting_source_t newsource)
+    void transformAndSetVec3Value(const vec3_t &val, setting_source_t newsource)
     {
         if (changeSource(newsource)) {
             vec3_t tmp;
@@ -265,9 +265,9 @@ public:
 
     const vec3_t *vec3Value() const { return &_value; }
 
-    void setVec3Value(const vec3_t val) { transformAndSetVec3Value(val, setting_source_t::MAP); }
+    void setVec3Value(const vec3_t &val) { transformAndSetVec3Value(val, setting_source_t::MAP); }
 
-    void setVec3ValueLocked(const vec3_t val) { transformAndSetVec3Value(val, setting_source_t::COMMANDLINE); }
+    void setVec3ValueLocked(const vec3_t &val) { transformAndSetVec3Value(val, setting_source_t::COMMANDLINE); }
 
     virtual void setStringValue(const std::string &str, bool locked = false)
     {

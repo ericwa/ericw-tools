@@ -78,8 +78,8 @@ void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
 std::map<int, qvec3f> GetDirectLighting(
-    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t origin, const vec3_t normal);
+    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t &origin, const vec3_t &normal);
 void SetupDirt(globalconfig_t &cfg);
-float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t point, const vec3_t normal,
+float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t &point, const vec3_t &normal,
     const modelinfo_t *selfshadow);
 void LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg);

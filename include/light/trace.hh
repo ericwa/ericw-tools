@@ -93,8 +93,8 @@ public:
     void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist)
     {
         vec3_t originTemp, dirTemp;
-        glm_to_vec3_t(origin, originTemp);
-        glm_to_vec3_t(dir, dirTemp);
+        VectorCopy(origin, originTemp);
+        VectorCopy(dir, dirTemp);
         this->pushRay(i, originTemp, dirTemp, dist);
     }
 
@@ -102,7 +102,7 @@ public:
     {
         vec3_t temp;
         this->getPushedRayDir(j, temp);
-        return vec3_t_to_glm(temp);
+        return temp;
     }
 };
 

@@ -24,6 +24,7 @@
 #include <cmath>
 #include <string>
 #include <algorithm>
+#include <array>
 
 #define qmax std::max
 #define qmin std::min
@@ -38,42 +39,41 @@ template<int N, class T>
 class qvec
 {
 protected:
-    T v[N];
+    std::array<T, N> v;
 
 public:
-    qvec()
+    constexpr qvec() :
+        v({ })
     {
-        for (int i = 0; i < N; i++)
-            v[i] = 0;
     }
 
-    qvec(const T &a)
+    constexpr qvec(const T &a)
     {
-        for (int i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++)
             v[i] = a;
     }
 
-    qvec(const T &a, const T &b)
+    constexpr qvec(const T &a, const T &b)
     {
         v[0] = a;
         if (1 < N)
             v[1] = b;
-        for (int i = 2; i < N; i++)
+        for (size_t i = 2; i < N; i++)
             v[i] = 0;
     }
 
-    qvec(const T &a, const T &b, const T &c)
+    constexpr qvec(const T &a, const T &b, const T &c)
     {
         v[0] = a;
         if (1 < N)
             v[1] = b;
         if (2 < N)
             v[2] = c;
-        for (int i = 3; i < N; i++)
+        for (size_t i = 3; i < N; i++)
             v[i] = 0;
     }
 
-    qvec(const T &a, const T &b, const T &c, const T &d)
+    constexpr qvec(const T &a, const T &b, const T &c, const T &d)
     {
         v[0] = a;
         if (1 < N)
@@ -82,22 +82,33 @@ public:
             v[2] = c;
         if (3 < N)
             v[3] = d;
-        for (int i = 4; i < N; i++)
+        for (size_t i = 4; i < N; i++)
             v[i] = 0;
+    }
+
+    template<typename T2>
+    constexpr qvec(const T2 (&array)[N]) :
+        qvec(static_cast<T>(array[0]), static_cast<T>(array[1]), static_cast<T>(array[2]), static_cast<T>(array[3]))
+    {
+    }
+
+    constexpr size_t size() const
+    {
+        return N;
     }
 
     /**
      * Casting from another vector type of the same length
      */
     template<class T2>
-    qvec(const qvec<N, T2> &other)
+    constexpr qvec(const qvec<N, T2> &other)
     {
         for (int i = 0; i < N; i++)
             v[i] = static_cast<T>(other[i]);
     }
 
     template<int N2>
-    qvec(const qvec<N2, T> &other)
+    constexpr qvec(const qvec<N2, T> &other)
     {
         const int minSize = qmin(N, N2);
 
@@ -113,7 +124,7 @@ public:
     /**
      * Extending a vector
      */
-    qvec(const qvec<N - 1, T> &other, T value)
+    constexpr qvec(const qvec<N - 1, T> &other, T value)
     {
         for (int i = 0; i < N - 1; ++i) {
             v[i] = other[i];
@@ -121,7 +132,7 @@ public:
         v[N - 1] = value;
     }
 
-    bool operator==(const qvec<N, T> &other) const
+    constexpr bool operator==(const qvec<N, T> &other) const
     {
         for (int i = 0; i < N; i++)
             if (v[i] != other.v[i])
@@ -129,77 +140,77 @@ public:
         return true;
     }
 
-    bool operator!=(const qvec<N, T> &other) const { return !(*this == other); }
+    constexpr bool operator!=(const qvec<N, T> &other) const { return !(*this == other); }
 
-    T operator[](const int idx) const
+    constexpr const T &operator[](const int idx) const
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
     }
 
-    T &operator[](const int idx)
+    constexpr T &operator[](const int idx)
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
     }
 
-    void operator+=(const qvec<N, T> &other)
+    constexpr void operator+=(const qvec<N, T> &other)
     {
         for (int i = 0; i < N; i++)
             v[i] += other.v[i];
     }
-    void operator-=(const qvec<N, T> &other)
+    constexpr void operator-=(const qvec<N, T> &other)
     {
         for (int i = 0; i < N; i++)
             v[i] -= other.v[i];
     }
-    void operator*=(const T &scale)
+    constexpr void operator*=(const T &scale)
     {
         for (int i = 0; i < N; i++)
             v[i] *= scale;
     }
-    void operator/=(const T &scale)
+    constexpr void operator/=(const T &scale)
     {
         for (int i = 0; i < N; i++)
             v[i] /= scale;
     }
 
-    qvec<N, T> operator+(const qvec<N, T> &other) const
+    constexpr qvec<N, T> operator+(const qvec<N, T> &other) const
     {
         qvec<N, T> res(*this);
         res += other;
         return res;
     }
 
-    qvec<N, T> operator-(const qvec<N, T> &other) const
+    constexpr qvec<N, T> operator-(const qvec<N, T> &other) const
     {
         qvec<N, T> res(*this);
         res -= other;
         return res;
     }
 
-    qvec<N, T> operator*(const T &scale) const
+    constexpr qvec<N, T> operator*(const T &scale) const
     {
         qvec<N, T> res(*this);
         res *= scale;
         return res;
     }
 
-    qvec<N, T> operator/(const T &scale) const
+    constexpr qvec<N, T> operator/(const T &scale) const
     {
         qvec<N, T> res(*this);
         res /= scale;
         return res;
     }
 
-    qvec<N, T> operator-() const
+    constexpr qvec<N, T> operator-() const
     {
         qvec<N, T> res(*this);
         res *= -1;
         return res;
     }
 
-    qvec<3, T> xyz() const
+    constexpr qvec<3, T> xyz() const
     {
         static_assert(N >= 3);
         return qvec<3, T>(*this);
@@ -297,7 +308,7 @@ std::string to_string(const qvec<3, float> &v1);
 template<int N, class T>
 bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
 {
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         T diff = v1[i] - v2[i];
         if (fabs(diff) > epsilon)
             return false;

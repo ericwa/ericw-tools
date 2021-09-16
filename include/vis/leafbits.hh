@@ -58,22 +58,22 @@ static_assert(LEAFSHIFT != 0, "unsupported sizeof(unsigned long)");
 
 constexpr size_t LEAFMASK = (sizeof(leafblock_t) << 3) - 1UL;
 
-static inline int TestLeafBit(const leafbits_t *bits, int leafnum)
+constexpr int TestLeafBit(const leafbits_t *bits, int leafnum)
 {
     return !!(bits->bits[leafnum >> LEAFSHIFT] & (1UL << (leafnum & LEAFMASK)));
 }
 
-static inline void SetLeafBit(leafbits_t *bits, int leafnum)
+constexpr void SetLeafBit(leafbits_t *bits, int leafnum)
 {
     bits->bits[leafnum >> LEAFSHIFT] |= 1UL << (leafnum & LEAFMASK);
 }
 
-static inline void ClearLeafBit(leafbits_t *bits, int leafnum)
+constexpr inline void ClearLeafBit(leafbits_t *bits, int leafnum)
 {
     bits->bits[leafnum >> LEAFSHIFT] &= ~(1UL << (leafnum & LEAFMASK));
 }
 
-static inline size_t LeafbitsSize(int numleafs)
+constexpr inline size_t LeafbitsSize(int numleafs)
 {
     int numblocks = (numleafs + LEAFMASK) >> LEAFSHIFT;
     return sizeof(leafbits_t) + (sizeof(leafblock_t) * numblocks);

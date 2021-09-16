@@ -251,7 +251,7 @@ const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &s
     return nullptr;
 }
 
-vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
+vec_t Plane_Dist(const vec3_t &point, const dplane_t *plane)
 {
     switch (plane->type) {
         case PLANE_X: return point[0] - plane->dist;
@@ -265,7 +265,7 @@ vec_t Plane_Dist(const vec3_t point, const dplane_t *plane)
     }
 }
 
-static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec3_t point)
+static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec3_t &point)
 {
     if (nodenum < 0) {
         const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
@@ -291,7 +291,7 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec
 }
 
 // Tests hull 0 of the given model
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t point)
+bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t &point)
 {
     // fast bounds check
     for (int i = 0; i < 3; ++i) {
@@ -304,13 +304,13 @@ bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t p
     return Light_PointInSolid_r(bsp, model->headnode[0], point);
 }
 
-bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t point)
+bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t &point)
 {
     return Light_PointInSolid(bsp, &bsp->dmodels[0], point);
 }
 
 static const bsp2_dface_t *BSP_FindFaceAtPoint_r(
-    const mbsp_t *bsp, const int nodenum, const vec3_t point, const vec3_t wantedNormal)
+    const mbsp_t *bsp, const int nodenum, const vec3_t &point, const vec3_t &wantedNormal)
 {
     if (nodenum < 0) {
         // we're only interested in nodes, since faces are owned by nodes.
@@ -358,14 +358,9 @@ static const bsp2_dface_t *BSP_FindFaceAtPoint_r(
 }
 
 const bsp2_dface_t *BSP_FindFaceAtPoint(
-    const mbsp_t *bsp, const dmodel_t *model, const vec3_t point, const vec3_t wantedNormal)
+    const mbsp_t *bsp, const dmodel_t *model, const vec3_t &point, const vec3_t &wantedNormal)
 {
     return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
-}
-
-const bsp2_dface_t *BSP_FindFaceAtPoint_InWorld(const mbsp_t *bsp, const vec3_t point, const vec3_t wantedNormal)
-{
-    return BSP_FindFaceAtPoint(bsp, &bsp->dmodels[0], point, wantedNormal);
 }
 
 plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t *face)
@@ -396,7 +391,7 @@ plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t 
     return out;
 }
 
-bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t point)
+bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t &point)
 {
     for (int i = 0; i < face->numedges; i++) {
         const vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
@@ -424,14 +419,14 @@ qvec3f Vertex_GetPos_E(const mbsp_t *bsp, int num)
 {
     vec3_t temp;
     Vertex_GetPos(bsp, num, temp);
-    return vec3_t_to_glm(temp);
+    return temp;
 }
 
 qvec3f Face_Normal_E(const mbsp_t *bsp, const bsp2_dface_t *f)
 {
     vec3_t temp;
     Face_Normal(bsp, f, temp);
-    return vec3_t_to_glm(temp);
+    return temp;
 }
 
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *face)

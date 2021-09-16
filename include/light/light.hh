@@ -53,12 +53,8 @@ struct lightsample_t
     vec3_t direction;
 };
 
-static inline float LightSample_Brightness(const vec3_t color)
-{
-    return ((color[0] + color[1] + color[2]) / 3.0);
-}
-
-static inline float LightSample_Brightness(const qvec3f color)
+template<typename T>
+constexpr float LightSample_Brightness(const T &color)
 {
     return ((color[0] + color[1] + color[2]) / 3.0);
 }
@@ -139,7 +135,7 @@ struct lightsurf_t
      raw ambient occlusion amount per sample point, 0-1, where 1 is
      fully occluded. dirtgain/dirtscale are not applied yet
      */
-    vec_t *occlusion; // new'ed array of numpoints
+    float *occlusion; // new'ed array of numpoints
 
     /* for sphere culling */
     vec3_t origin;

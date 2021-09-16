@@ -704,7 +704,7 @@ static texdef_quake_ed_t TexDef_BSPToQuakeEd(
     // Project the 3 reference points onto the axis plane. They are now 2d points.
     qvec2f facepoints_projected[3];
     for (int i = 0; i < 3; i++) {
-        facepoints_projected[i] = projectToAxisPlane(snapped_normal, vec3_t_to_glm(facepoints[i]));
+        facepoints_projected[i] = projectToAxisPlane(snapped_normal, facepoints[i]);
     }
 
     // Now make 2 vectors out of our 3 points (so we are ignoring translation for now)
@@ -765,7 +765,7 @@ static texdef_quake_ed_t TexDef_BSPToQuakeEd(
     const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, &faceplane, false);
 
     // figure out shift based on facepoints[0]
-    qvec3f testpoint = vec3_t_to_glm(facepoints[0]);
+    qvec3f testpoint = facepoints[0];
     qvec2f uv0_actual = evalTexDefAtPoint(addShift(res, qvec2f(0, 0)), &faceplane, testpoint);
     qvec2f uv0_desired = qvec2f(worldToTexSpace * qvec4f(testpoint[0], testpoint[1], testpoint[2], 1.0f));
     qvec2f shift = uv0_desired - uv0_actual;
@@ -907,8 +907,8 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
     vec3_t snapped_normal;
     TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
 
-    const qvec2f sAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[0]));
-    const qvec2f tAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[1]));
+    const qvec2f sAxis = projectToAxisPlane(snapped_normal, vecs[0]);
+    const qvec2f tAxis = projectToAxisPlane(snapped_normal, vecs[1]);
 
     // This is an identity matrix possibly with negative signs.
     const qmat2x2f axisFlipsM{sAxis[0], tAxis[0], // col0
@@ -975,8 +975,8 @@ static void SetTexinfo_QuakeEd_New(
     vec3_t snapped_normal;
     TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
 
-    qvec2f sAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[0]));
-    qvec2f tAxis = projectToAxisPlane(snapped_normal, vec3_t_to_glm(vecs[1]));
+    qvec2f sAxis = projectToAxisPlane(snapped_normal, vecs[0]);
+    qvec2f tAxis = projectToAxisPlane(snapped_normal, vecs[1]);
 
     // This is an identity matrix possibly with negative signs.
     qmat2x2f axisFlipsM{sAxis[0], tAxis[0], // col0
@@ -1549,7 +1549,7 @@ bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, con
 
 static bool IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t *tx)
 {
-    const qvec3f faceNormal = vec3_t_to_glm(mapface.plane.normal);
+    const qvec3f faceNormal = mapface.plane.normal;
     const qvec3f s_vec = qvec3f(tx->vecs[0][0], tx->vecs[0][1], tx->vecs[0][2]);
     const qvec3f t_vec = qvec3f(tx->vecs[1][0], tx->vecs[1][1], tx->vecs[1][2]);
     const bool valid = IsValidTextureProjection(faceNormal, s_vec, t_vec);
@@ -1742,10 +1742,10 @@ static void ScaleMapFace(mapface_t *face, const vec3_t scale)
 
     vec3_t new_planepts[3];
     for (int i = 0; i < 3; i++) {
-        qvec3d oldpt = qvec3d_from_vec3(face->planepts[i]);
+        qvec3d oldpt = face->planepts[i];
         qvec3d newpt = scaleM * oldpt;
 
-        glm_to_vec3_t(newpt, new_planepts[i]);
+        VectorCopy(newpt, new_planepts[i]);
     }
 
     face->set_planepts(new_planepts);
@@ -1781,10 +1781,10 @@ static void RotateMapFace(mapface_t *face, const vec3_t angles)
 
     vec3_t new_planepts[3];
     for (int i = 0; i < 3; i++) {
-        qvec3d oldpt = qvec3d_from_vec3(face->planepts[i]);
+        qvec3d oldpt = face->planepts[i];
         qvec3d newpt = rotation * oldpt;
 
-        glm_to_vec3_t(newpt, new_planepts[i]);
+        VectorCopy(newpt, new_planepts[i]);
     }
 
     face->set_planepts(new_planepts);
@@ -1806,7 +1806,7 @@ static void RotateMapFace(mapface_t *face, const vec3_t angles)
     face->set_texvecs(newtexvecs);
 }
 
-static void TranslateMapFace(mapface_t *face, const vec3_t offset)
+static void TranslateMapFace(mapface_t *face, const vec3_t &offset)
 {
     vec3_t new_planepts[3];
     for (int i = 0; i < 3; i++) {
@@ -1822,7 +1822,7 @@ static void TranslateMapFace(mapface_t *face, const vec3_t offset)
 
     for (int i = 0; i < 2; i++) {
         qvec4f out = texvecs.at(i);
-        out[3] += qv::dot(qvec3f(out), vec3_t_to_glm(offset) * -1.0f);
+        out[3] += qv::dot(qvec3f(out), qvec3f(offset) * -1.0f);
         newtexvecs.at(i) = out;
     }
 

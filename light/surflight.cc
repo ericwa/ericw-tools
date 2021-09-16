@@ -56,13 +56,11 @@ struct save_winding_points_args_t
     vector<qvec3f> *points;
 };
 
-static void SaveWindingCenterFn(winding_t *w, void *userinfo)
+static void SaveWindingCenterFn(winding_t &w, void *userinfo)
 {
     auto *args = static_cast<save_winding_points_args_t *>(userinfo);
 
-    vec3_t center{};
-    WindingCenter(w, center);
-    args->points->push_back(vec3_t_to_glm(center));
+    args->points->push_back(w.center());
 }
 
 static void *MakeSurfaceLightsThread(void *arg)
@@ -83,8 +81,7 @@ static void *MakeSurfaceLightsThread(void *arg)
             continue;
         if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
             if (info->flags.native & Q2_SURF_LIGHT) {
-                vec3_t wc;
-                WindingCenter(WindingFromFace(bsp, face), wc);
+                qvec3d wc = winding_t::from_face(bsp, face).center();
                 logprint("WARNING: surface light '%s' at [%s] has 0 intensity.\n", Face_TextureName(bsp, face),
                     VecStr(wc).c_str());
             }
@@ -101,16 +98,15 @@ static void *MakeSurfaceLightsThread(void *arg)
 
         // Create winding...
         const int numpoints = poly.size();
-        winding_t *winding = AllocWinding(numpoints);
+        winding_t winding(numpoints);
         for (int c = 0; c < numpoints; c++)
-            glm_to_vec3_t(poly.at(c), winding->p[c]);
-        winding->numpoints = numpoints;
-        RemoveColinearPoints(winding);
+            winding[c] = poly.at(c);
+        winding.remove_colinear();
 
         // Get face normal and midpoint...
         vec3_t facenormal, facemidpoint;
         Face_Normal(bsp, face, facenormal);
-        WindingCenter(winding, facemidpoint);
+        VectorCopy(winding.center(), facemidpoint);
         VectorMA(facemidpoint, 1, facenormal, facemidpoint); // Lift 1 unit
 
         // Dice winding...
@@ -118,8 +114,7 @@ static void *MakeSurfaceLightsThread(void *arg)
         save_winding_points_args_t args{};
         args.points = &points;
 
-        DiceWinding(winding, cfg.surflightsubdivision.floatValue(), SaveWindingCenterFn, &args);
-        winding = nullptr; // DiceWinding frees winding
+        winding.dice(cfg.surflightsubdivision.floatValue(), SaveWindingCenterFn, &args);
         total_surflight_points += points.size();
 
         // Get texture color
@@ -155,7 +150,7 @@ static void *MakeSurfaceLightsThread(void *arg)
 
         // Add surfacelight...
         surfacelight_t l;
-        l.surfnormal = vec3_t_to_glm(facenormal);
+        l.surfnormal = facenormal;
         l.omnidirectional = (info->flags.native & Q2_SURF_SKY) ? true : false;
         l.points = points;
         VectorCopy(facemidpoint, l.pos);

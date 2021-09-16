@@ -251,7 +251,7 @@ static vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const vec3_t mins,
     return value;
 }
 
-static inline vec_t SplitPlaneMetric(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
+inline vec_t SplitPlaneMetric(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
 {
     vec_t value;
 

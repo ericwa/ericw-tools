@@ -33,7 +33,6 @@ set(QBSP3_SOURCES
     csg.cc
     ../common/cmdlib.cc
     ../common/mathlib.cc
-    ../common/polylib.cc
     ../common/threads.cc
     ../common/bspfile.cc)
 

@@ -120,7 +120,7 @@ void Q_CopyFile(const char *from, char *to);
 extern qboolean archive;
 extern char archivedir[1024];
 
-static inline void Q_assert_(bool success, const char *expr, const char *file, int line)
+inline void Q_assert_(bool success, const char *expr, const char *file, int line)
 {
     if (!success) {
         logprint("%s:%d: Q_assert(%s) failed.\n", file, line, expr);

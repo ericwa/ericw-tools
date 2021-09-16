@@ -32,25 +32,7 @@ using namespace polylib;
 
 const vec3_t vec3_origin = {0, 0, 0};
 
-qboolean VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon)
-{
-    int i;
-
-    for (i = 0; i < 3; i++)
-        if (fabs(v1[i] - v2[i]) > epsilon)
-            return false;
-
-    return true;
-}
-
-void CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross)
-{
-    cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
-    cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
-    cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
-}
-
-bool SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist)
+bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist)
 {
     vec3_t planevecs[2];
 
@@ -85,7 +67,7 @@ std::string // mxd
 VecStr(const qvec3f vec)
 {
     vec3_t v;
-    glm_to_vec3_t(vec, v);
+    VectorCopy(vec, v);
     return VecStr(v);
 }
 
@@ -102,7 +84,7 @@ std::string // mxd
 VecStrf(const qvec3f vec)
 {
     vec3_t v;
-    glm_to_vec3_t(vec, v);
+    VectorCopy(vec, v);
     return VecStrf(v);
 }
 
@@ -733,49 +715,19 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
     return make_pair(false, qvec3f(0));
 }
 
-static winding_t *glm_to_winding(const std::vector<qvec3f> &poly)
-{
-    const int N = poly.size();
-    winding_t *winding = AllocWinding(N);
-    for (int i = 0; i < N; i++) {
-        glm_to_vec3_t(poly.at(i), winding->p[i]);
-    }
-    winding->numpoints = N;
-    return winding;
-}
-
-static std::vector<qvec3f> winding_to_glm(const winding_t *w)
-{
-    if (w == nullptr)
-        return {};
-    std::vector<qvec3f> res;
-    res.reserve(
-        w->numpoints); // mxd.
-                       // https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
-    for (int i = 0; i < w->numpoints; i++) {
-        res.push_back(vec3_t_to_glm(w->p[i]));
-    }
-    return res;
-}
-
 /// Returns (front part, back part)
 std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane)
 {
-    vec3_t normal;
-    winding_t *front = nullptr;
-    winding_t *back = nullptr;
-
     if (poly.empty())
         return make_pair(vector<qvec3f>(), vector<qvec3f>());
 
-    winding_t *w = glm_to_winding(poly);
-    glm_to_vec3_t(qvec3f(plane), normal);
-    ClipWinding(w, normal, plane[3], &front, &back);
+    vec3_t normal;
 
-    const auto res = make_pair(winding_to_glm(front), winding_to_glm(back));
-    free(front);
-    free(back);
-    return res;
+    winding_t w = winding_t::from_winding_points(poly);
+    VectorCopy(qvec3f(plane), normal);
+    auto clipped = w.clip(normal, plane[3]);
+
+    return make_pair(clipped[0].value_or(winding_t {}).glm_winding_points(), clipped[1].value_or(winding_t {}).glm_winding_points());
 }
 
 std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount)
@@ -883,7 +835,7 @@ concavity_t FacePairConcavity(
  * - the direction doesn't matter.
  * - only tips touching is enough
  */
-bool LinesOverlap(const qvec3f p0, const qvec3f p1, const qvec3f q0, const qvec3f q1)
+bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1)
 {
     const float q0_linedist = DistToLine(p0, p1, q0);
     if (q0_linedist > ON_EPSILON)

@@ -144,7 +144,7 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
         dplane_t plane = bsp->dplanes[face->planenum];
 
         if (face->side) {
-            VectorSubtract(vec3_origin, plane.normal, plane.normal);
+            VectorInverse(plane.normal);
             plane.dist = -plane.dist;
         }
 
@@ -450,7 +450,7 @@ static void CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
 
         // FIXME:
         vec3_t wantedPoint;
-        glm_to_vec3_t(refFaceCentroid, wantedPoint);
+        VectorCopy(refFaceCentroid, wantedPoint);
 
         vec3_t wantedNormal;
         Face_Normal(refBsp, refFace, wantedNormal);
@@ -474,7 +474,7 @@ static void CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
     }
 }
 
-static void FindFaces(const mbsp_t *bsp, const vec3_t pos, const vec3_t normal)
+static void FindFaces(const mbsp_t *bsp, const vec3_t &pos, const vec3_t &normal)
 {
     for (int i = 0; i < bsp->nummodels; ++i) {
         const dmodelh2_t *model = &bsp->dmodels[i];

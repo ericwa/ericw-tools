@@ -145,8 +145,8 @@ std::vector<decomp_plane_t> RemoveRedundantPlanes(const std::vector<decomp_plane
     for (const decomp_plane_t &plane : planes) {
         // outward-facing plane
         vec3_t normal;
-        glm_to_vec3_t(plane.normal, normal);
-        winding_t *winding = BaseWindingForPlane(normal, plane.distance);
+        VectorCopy(plane.normal, normal);
+        std::optional<winding_t> winding = winding_t::from_plane(normal, plane.distance);
 
         // clip `winding` by all of the other planes, flipped
         for (const decomp_plane_t &plane2 : planes) {
@@ -155,29 +155,24 @@ std::vector<decomp_plane_t> RemoveRedundantPlanes(const std::vector<decomp_plane
 
             // get flipped plane
             vec3_t plane2normal;
-            glm_to_vec3_t(plane2.normal * -1.0, plane2normal);
+            VectorCopy(plane2.normal * -1.0, plane2normal);
             float plane2dist = -plane2.distance;
 
             // frees winding.
-            winding_t *front = nullptr;
-            winding_t *back = nullptr;
-            ClipWinding(winding, plane2normal, plane2dist, &front, &back);
+            auto clipped = winding->clip(plane2normal, plane2dist);
 
             // discard the back, continue clipping the front part
-            free(back);
-            winding = front;
+            winding = clipped[0];
 
             // check if everything was clipped away
-            if (winding == nullptr)
+            if (!winding)
                 break;
         }
 
-        if (winding != nullptr) {
+        if (winding) {
             // this plane is not redundant
             result.push_back(plane);
         }
-
-        free(winding);
     }
 
     return result;
@@ -266,9 +261,9 @@ struct decomp_brush_face_t
 {
     /**
      * The currently clipped section of the face.
-     * May be null to indicate it was clipped away.
+     * May be nullopt to indicate it was clipped away.
      */
-    winding_t *winding;
+    std::optional<winding_t> winding;
     /**
      * The face we were originally derived from
      */
@@ -279,40 +274,22 @@ struct decomp_brush_face_t
 private:
     void buildInwardFacingEdgePlanes()
     {
-        if (winding == nullptr) {
+        if (!winding) {
             return;
         }
-        inwardFacingEdgePlanes = GLM_MakeInwardFacingEdgePlanes(GLM_WindingPoints(winding));
+        inwardFacingEdgePlanes = GLM_MakeInwardFacingEdgePlanes(winding->glm_winding_points());
     }
 
-public: // rule of three
-    ~decomp_brush_face_t() { free(winding); }
-
-    decomp_brush_face_t(const decomp_brush_face_t &other)
-        : // copy constructor
-          winding(CopyWinding(other.winding)), original_face(other.original_face),
-          inwardFacingEdgePlanes(other.inwardFacingEdgePlanes)
-    {
-    }
-
-    decomp_brush_face_t &operator=(const decomp_brush_face_t &other)
-    { // copy assignment
-        winding = CopyWinding(other.winding);
-        original_face = other.original_face;
-        inwardFacingEdgePlanes = other.inwardFacingEdgePlanes;
-        return *this;
-    }
-
-public: // constructors
-    decomp_brush_face_t() : winding(nullptr), original_face(nullptr) { }
+public:
+    decomp_brush_face_t() : winding(std::nullopt), original_face(nullptr) { }
 
     decomp_brush_face_t(const mbsp_t *bsp, const bsp2_dface_t *face)
-        : winding(WindingFromFace(bsp, face)), original_face(face)
+        : winding(winding_t::from_face(bsp, face)), original_face(face)
     {
         buildInwardFacingEdgePlanes();
     }
 
-    decomp_brush_face_t(winding_t *windingToTakeOwnership, const bsp2_dface_t *face)
+    decomp_brush_face_t(std::optional<winding_t> &&windingToTakeOwnership, const bsp2_dface_t *face)
         : winding(windingToTakeOwnership), original_face(face)
     {
         buildInwardFacingEdgePlanes();
@@ -325,24 +302,19 @@ public:
     std::pair<decomp_brush_face_t, decomp_brush_face_t> clipToPlane(const qvec3d &normal, double distance) const
     {
         vec3_t pnormal;
-        glm_to_vec3_t(normal, pnormal);
+        VectorCopy(normal, pnormal);
 
-        winding_t *temp = CopyWinding(winding);
-        winding_t *front = nullptr;
-        winding_t *back = nullptr;
-        ClipWinding(temp, pnormal, (float)distance, &front, &back); // frees temp
+        auto clipped = winding->clip(pnormal, (float)distance);
 
         // front or back may be null (if fully clipped).
         // these constructors take ownership of the winding.
-        return std::make_pair(decomp_brush_face_t(front, original_face), decomp_brush_face_t(back, original_face));
+        return std::make_pair(decomp_brush_face_t(std::move(clipped[0]), original_face), decomp_brush_face_t(std::move(clipped[1]), original_face));
     }
 
     qvec3d normal() const
     {
-        plane_t plane;
-        WindingPlane(winding, plane.normal, &plane.dist);
-
-        return vec3_t_to_glm(plane.normal);
+        plane_t plane = winding->plane();
+        return plane.normal;
     }
 };
 
@@ -363,7 +335,7 @@ static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bs
     for (int i = 0; i < node->numfaces; i++) {
         const bsp2_dface_t *face = BSP_GetFace(bsp, static_cast<int>(node->firstface) + i);
 
-        auto decompFace = decomp_brush_face_t(bsp, face);
+        decomp_brush_face_t decompFace(bsp, face);
 
         const double dp = qv::dot(plane.normal, decompFace.normal());
 
@@ -471,9 +443,9 @@ struct decomp_brush_t
     {
         for (auto &side : sides) {
             for (auto &face : side.faces) {
-                for (int i = 0; i < face.winding->numpoints; ++i) {
+                for (int i = 0; i < face.winding->size(); ++i) {
                     // check against all planes
-                    const qvec3f point = vec3_t_to_glm(face.winding->p[i]);
+                    const qvec3f point(face.winding->at(i));
 
                     for (auto &otherSide : sides) {
                         float distance = GLM_DistAbovePlane(

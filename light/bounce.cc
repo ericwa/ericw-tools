@@ -52,21 +52,21 @@ std::map<int, std::vector<int>> radlightsByFacenum;
 class patch_t
 {
 public:
-    winding_t *w;
+    winding_t w;
     vec3_t center;
     vec3_t samplepoint; // 1 unit above center
     plane_t plane;
     std::map<int, qvec3f> lightByStyle;
 };
 
-static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const globalconfig_t &cfg, winding_t *w)
+static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const globalconfig_t &cfg, winding_t &w)
 {
     unique_ptr<patch_t> p{new patch_t};
-    p->w = w;
+    p->w = std::move(w);
 
     // cache some stuff
-    WindingCenter(p->w, p->center);
-    WindingPlane(p->w, p->plane.normal, &p->plane.dist);
+    VectorCopy(&p->w.center()[0], p->center);
+    p->plane = p->w.plane();
 
     // nudge the cernter point 1 unit off
     VectorMA(p->center, 1.0f, p->plane.normal, p->samplepoint);
@@ -91,7 +91,7 @@ struct save_winding_args_t
     const globalconfig_t *cfg;
 };
 
-static void SaveWindingFn(winding_t *w, void *userinfo)
+static void SaveWindingFn(winding_t &w, void *userinfo)
 {
     save_winding_args_t *args = static_cast<save_winding_args_t *>(userinfo);
     args->patches->push_back(MakePatch(args->bsp, *args->cfg, w));
@@ -128,14 +128,53 @@ void Face_LookupTextureColor(const mbsp_t *bsp, const bsp2_dface_t *face, vec3_t
 
     if (texturecolors.find(facename) != texturecolors.end()) {
         const qvec3f texcolor = texturecolors.at(facename);
-        VectorCopyFromGLM(texcolor, color);
+        VectorCopy(texcolor, color);
     } else {
         VectorSet(color, 127, 127, 127);
     }
 }
 
-static void AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal,
-    vec_t area, const bsp2_dface_t *face, const mbsp_t *bsp);
+template<typename T>
+static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t &surfnormal,
+    vec_t area, const bsp2_dface_t *face, const mbsp_t *bsp)
+{
+    for (const auto &styleColor : colorByStyle) {
+        Q_assert(styleColor.second[0] >= 0);
+        Q_assert(styleColor.second[1] >= 0);
+        Q_assert(styleColor.second[2] >= 0);
+    }
+    Q_assert(area > 0);
+
+    bouncelight_t l;
+    l.poly = GLM_FacePoints(bsp, face);
+    l.poly_edgeplanes = GLM_MakeInwardFacingEdgePlanes(l.poly);
+    l.pos = pos;
+    l.colorByStyle = colorByStyle;
+
+    qvec3f componentwiseMaxColor(0);
+    for (const auto &styleColor : colorByStyle) {
+        for (int i = 0; i < 3; i++) {
+            if (styleColor.second[i] > componentwiseMaxColor[i]) {
+                componentwiseMaxColor[i] = styleColor.second[i];
+            }
+        }
+    }
+    l.componentwiseMaxColor = componentwiseMaxColor;
+    l.surfnormal = surfnormal;
+    l.area = area;
+    VectorSet(l.mins, 0, 0, 0);
+    VectorSet(l.maxs, 0, 0, 0);
+
+    if (!novisapprox) {
+        EstimateVisibleBoundsAtPoint(&pos[0], l.mins, l.maxs);
+    }
+
+    unique_lock<mutex> lck{radlights_lock};
+    radlights.push_back(l);
+
+    const int lastBounceLightIndex = static_cast<int>(radlights.size()) - 1;
+    radlightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
+}
 
 static void *MakeBounceLightsThread(void *arg)
 {
@@ -155,31 +194,28 @@ static void *MakeBounceLightsThread(void *arg)
 
         vector<unique_ptr<patch_t>> patches;
 
-        winding_t *winding = WindingFromFace(bsp, face);
+        winding_t winding = winding_t::from_face(bsp, face);
         // grab some info about the face winding
-        const float facearea = WindingArea(winding);
+        const vec_t facearea = winding.area();
 
-        plane_t faceplane;
-        WindingPlane(winding, faceplane.normal, &faceplane.dist);
+        plane_t faceplane = winding.plane();
 
-        vec3_t facemidpoint;
-        WindingCenter(winding, facemidpoint);
-        VectorMA(facemidpoint, 1, faceplane.normal, facemidpoint); // lift 1 unit
+        qvec3d facemidpoint = winding.center();
+        facemidpoint += faceplane.normal; // lift 1 unit
 
         save_winding_args_t args;
         args.patches = &patches;
         args.bsp = bsp;
         args.cfg = &cfg;
 
-        DiceWinding(winding, 64.0f, SaveWindingFn, &args);
-        winding = nullptr; // DiceWinding frees winding
+        winding.dice(64.0f, SaveWindingFn, &args);
 
         // average them, area weighted
         map<int, qvec3f> sum;
         float totalarea = 0;
 
         for (const auto &patch : patches) {
-            const float patcharea = WindingArea(patch->w);
+            const float patcharea = patch->w.area();
             totalarea += patcharea;
 
             for (const auto &styleColor : patch->lightByStyle) {
@@ -220,47 +256,6 @@ static void *MakeBounceLightsThread(void *arg)
     }
 
     return NULL;
-}
-
-static void AddBounceLight(const vec3_t pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t surfnormal,
-    vec_t area, const bsp2_dface_t *face, const mbsp_t *bsp)
-{
-    for (const auto &styleColor : colorByStyle) {
-        Q_assert(styleColor.second[0] >= 0);
-        Q_assert(styleColor.second[1] >= 0);
-        Q_assert(styleColor.second[2] >= 0);
-    }
-    Q_assert(area > 0);
-
-    bouncelight_t l;
-    l.poly = GLM_FacePoints(bsp, face);
-    l.poly_edgeplanes = GLM_MakeInwardFacingEdgePlanes(l.poly);
-    l.pos = vec3_t_to_glm(pos);
-    l.colorByStyle = colorByStyle;
-
-    qvec3f componentwiseMaxColor(0);
-    for (const auto &styleColor : colorByStyle) {
-        for (int i = 0; i < 3; i++) {
-            if (styleColor.second[i] > componentwiseMaxColor[i]) {
-                componentwiseMaxColor[i] = styleColor.second[i];
-            }
-        }
-    }
-    l.componentwiseMaxColor = componentwiseMaxColor;
-    l.surfnormal = vec3_t_to_glm(surfnormal);
-    l.area = area;
-    VectorSet(l.mins, 0, 0, 0);
-    VectorSet(l.maxs, 0, 0, 0);
-
-    if (!novisapprox) {
-        EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);
-    }
-
-    unique_lock<mutex> lck{radlights_lock};
-    radlights.push_back(l);
-
-    const int lastBounceLightIndex = static_cast<int>(radlights.size()) - 1;
-    radlightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
 }
 
 const std::vector<bouncelight_t> &BounceLights()

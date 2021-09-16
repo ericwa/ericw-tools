@@ -76,8 +76,8 @@ faceextents_t::faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float 
     m_worldToTexCoord = WorldToTexSpace(bsp, face);
     m_texCoordToWorld = TexSpaceToWorld(bsp, face);
 
-    qvec2f mins(VECT_MAX, VECT_MAX);
-    qvec2f maxs(-VECT_MAX, -VECT_MAX);
+    qvec2f mins(FLT_MAX, FLT_MAX);
+    qvec2f maxs(-FLT_MAX, -FLT_MAX);
 
     for (int i = 0; i < face->numedges; i++) {
         const qvec3f worldpoint = Face_PointAtIndex_E(bsp, face, i);
@@ -211,10 +211,10 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const bsp2_dface_t *f)
     //           [?]
 
     qmat4x4f T{
-        tex->vecs[0][0], tex->vecs[1][0], norm[0], 0, // col 0
-        tex->vecs[0][1], tex->vecs[1][1], norm[1], 0, // col 1
-        tex->vecs[0][2], tex->vecs[1][2], norm[2], 0, // col 2
-        tex->vecs[0][3], tex->vecs[1][3], -plane.dist, 1 // col 3
+        tex->vecs[0][0], tex->vecs[1][0], static_cast<float>(norm[0]), 0, // col 0
+        tex->vecs[0][1], tex->vecs[1][1], static_cast<float>(norm[1]), 0, // col 1
+        tex->vecs[0][2], tex->vecs[1][2], static_cast<float>(norm[2]), 0, // col 2
+        tex->vecs[0][3], tex->vecs[1][3], static_cast<float>(-plane.dist), 1 // col 3
     };
     return T;
 }
@@ -230,7 +230,7 @@ static void TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t wor
 {
     qvec4f worldPos = texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0);
 
-    glm_to_vec3_t(qvec3f(worldPos), world);
+    VectorCopy(qvec3f(worldPos), world);
 }
 
 void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2])
@@ -270,7 +270,7 @@ void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp)
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
-        const vec_t *point = GetSurfaceVertexPoint(bsp, face, i);
+        const float *point = GetSurfaceVertexPoint(bsp, face, i);
         const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i);
         logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: normal (%3.3f, %3.3f, %3.3f) :: edge %d\n",
             i ? "          " : "    verts ", vert, point[0], point[1], point[2], norm[0], norm[1], norm[2], edge);
@@ -319,7 +319,7 @@ static void CalcFaceExtents(const bsp2_dface_t *face, const mbsp_t *bsp, lightsu
     }
 
     vec3_t worldpoint;
-    glm_to_vec3_t(Face_Centroid(bsp, face), worldpoint);
+    VectorCopy(Face_Centroid(bsp, face), worldpoint);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
 
     // calculate a bounding sphere for the face
@@ -553,7 +553,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
         for (int s = 0; s < surf->width; s++) {
             const int i = t * surf->width + s;
             const vec_t *point = surf->points[i];
-            const qvec3f mangle = mangle_from_vec(vec3_t_to_glm(surf->normals[i]));
+            const qvec3f mangle = mangle_from_vec(surf->normals[i]);
 
             fprintf(f, "{\n");
             fprintf(f, "\"classname\" \"light\"\n");
@@ -584,7 +584,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodel_t *self, const qvec3f &point)
 {
     vec3_t v3;
-    glm_to_vec3_t(point, v3);
+    VectorCopy(point, v3);
 
     if (Light_PointInSolid(bsp, self, v3))
         return true;
@@ -677,7 +677,7 @@ static position_t PositionSamplePointOnFace(
  * =================
  */
 static void CalcPoints(
-    const modelinfo_t *modelinfo, const vec3_t offset, lightsurf_t *surf, const mbsp_t *bsp, const bsp2_dface_t *face)
+    const modelinfo_t *modelinfo, const vec3_t &offset, lightsurf_t *surf, const mbsp_t *bsp, const bsp2_dface_t *face)
 {
     const globalconfig_t &cfg = *surf->cfg;
 
@@ -707,8 +707,8 @@ static void CalcPoints(
     for (int t = 0; t < surf->height; t++) {
         for (int s = 0; s < surf->width; s++) {
             const int i = t * surf->width + s;
-            vec_t *point = surf->points[i];
-            vec_t *norm = surf->normals[i];
+            vec3_t &point = surf->points[i];
+            vec3_t &norm = surf->normals[i];
             int *realfacenum = &surf->realfacenums[i];
 
             const vec_t us = starts + s * st_step;
@@ -719,12 +719,12 @@ static void CalcPoints(
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
             const auto res = CalcPointNormal(
-                bsp, face, vec3_t_to_glm(point), phongshaded, surf->lightmapscale, 0, vec3_t_to_glm(offset));
+                bsp, face, point, phongshaded, surf->lightmapscale, 0, offset);
 
             surf->occluded[i] = !res.m_unoccluded;
             *realfacenum = res.m_actualFace != nullptr ? Face_GetNum(bsp, res.m_actualFace) : -1;
-            glm_to_vec3_t(res.m_position, point);
-            glm_to_vec3_t(res.m_interpolatedNormal, norm);
+            VectorCopy(res.m_position, point);
+            VectorCopy(res.m_interpolatedNormal, norm);
 
             // apply model offset after calling CalcPointNormal
             VectorAdd(point, offset, point);
@@ -967,7 +967,7 @@ vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist
 }
 
 float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm,
-    const vec3_t surfpointToLightDir, float dist, bool twosided)
+    const vec3_t &surfpointToLightDir, float dist, bool twosided)
 {
     float angle = DotProduct(surfpointToLightDir, surfnorm);
     if (entity->bleed.boolValue() || twosided) {
@@ -1005,10 +1005,10 @@ float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, c
 }
 
 static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
-    float *result); // mxd. miptex_t -> rgba_miptex_t
+    vec_t *result); // mxd. miptex_t -> rgba_miptex_t
 
-void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t surfpoint,
-    bool twosided, vec3_t color_out, vec3_t surfpointToLightDir_out, vec3_t normalmap_addition_out, float *dist_out)
+void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t &surfpoint,
+    bool twosided, vec3_t &color_out, vec3_t &surfpointToLightDir_out, vec3_t &normalmap_addition_out, float *dist_out)
 {
     float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
     if (dist < 0.1) {
@@ -1058,7 +1058,7 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
         /* Calculate the distance at which brightness falls to desiredLight */
         switch (entity->getFormula()) {
             case LF_INFINITE:
-            case LF_LOCALMIN: fadedist = VECT_MAX; break;
+            case LF_LOCALMIN: fadedist = FLT_MAX; break;
             case LF_INVERSE:
                 fadedist = (LF_SCALE * fabs(entity->light.floatValue())) /
                            (cfg.scaledist.floatValue() * entity->atten.floatValue() * desiredLight);
@@ -1081,13 +1081,13 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
     return fadedist;
 }
 
-static inline void Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color, const vec3_t direction)
+constexpr void Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color, const vec3_t direction)
 {
     VectorMA(sample->color, light / 255.0f, color, sample->color);
     VectorMA(sample->direction, light, direction, sample->direction);
 }
 
-static inline void Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
+constexpr void Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
 {
     for (int i = 0; i < 3; i++) {
         if (sample->color[i] < color[i] * light / 255.0f) {
@@ -1096,7 +1096,7 @@ static inline void Light_ClampMin(lightsample_t *sample, const vec_t light, cons
     }
 }
 
-static float fraction(float min, float val, float max)
+constexpr float fraction(float min, float val, float max)
 {
     if (val >= max)
         return 1.0;
@@ -1113,7 +1113,7 @@ static float fraction(float min, float val, float max)
  * returns scale factor for dirt/ambient occlusion
  * ============
  */
-static inline vec_t Dirt_GetScaleFactor(
+inline vec_t Dirt_GetScaleFactor(
     const globalconfig_t &cfg, vec_t occlusion, const light_t *entity, const vec_t entitydist, const lightsurf_t *surf)
 {
     vec_t light_dirtgain = cfg.dirtGain.floatValue();
@@ -1201,7 +1201,7 @@ static inline vec_t Dirt_GetScaleFactor(
  * Returns true if the given light doesn't reach lightsurf.
  * ================
  */
-static inline qboolean CullLight(const light_t *entity, const lightsurf_t *lightsurf)
+inline qboolean CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
 
@@ -1257,7 +1257,7 @@ static qboolean Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *m
     return result;
 }
 static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
-    float *result) // mxd. miptex_t -> rgba_miptex_t
+    vec_t *result) // mxd. miptex_t -> rgba_miptex_t
 {
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
     // this is because we're treating it like a cubemap. why? no idea.
@@ -1318,7 +1318,7 @@ static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projecti
  * ================
  */
 std::map<int, qvec3f> GetDirectLighting(
-    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t origin, const vec3_t normal)
+    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t &origin, const vec3_t &normal)
 {
     std::map<int, qvec3f> result;
 
@@ -1327,7 +1327,7 @@ std::map<int, qvec3f> GetDirectLighting(
         // Bounce light falloff. Uses light surface center and intensity based on face area
         vec3_t surfpointToLightDir;
         const float surfpointToLightDist =
-            qmax(128.0f, GetDir(surfpointToLightDir, vpl.pos,
+            qmax(128.0, GetDir(surfpointToLightDir, vpl.pos,
                              surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
         const float angle = DotProduct(surfpointToLightDir, normal);
         if (angle <= 0)
@@ -1351,7 +1351,7 @@ std::map<int, qvec3f> GetDirectLighting(
         if (!TestLight(vpl.pos, origin, nullptr).blocked)
             continue;
 
-        result[0] += vec3_t_to_glm(color);
+        result[0] += color;
     }
 
     for (const light_t &entity : GetLights()) {
@@ -1390,7 +1390,7 @@ std::map<int, qvec3f> GetDirectLighting(
             lightstyle = hit.passedSwitchableShadowStyle;
         }
 
-        result[lightstyle] += vec3_t_to_glm(color);
+        result[lightstyle] += color;
     }
 
     for (const sun_t &sun : GetSuns()) {
@@ -1436,7 +1436,7 @@ std::map<int, qvec3f> GetDirectLighting(
             }
         }
 
-        const qvec3f sunContrib = vec3_t_to_glm(sun.sunlight_color) * (cosangle * sun.sunlight / 255.0f);
+        const qvec3f sunContrib = qvec3f(sun.sunlight_color) * (cosangle * sun.sunlight / 255.0f);
         result[lightstyle] += sunContrib;
     }
 
@@ -1480,8 +1480,8 @@ static void LightFace_Entity(
     rs->clearPushedRays();
 
     for (int i = 0; i < lightsurf->numpoints; i++) {
-        const vec_t *surfpoint = lightsurf->points[i];
-        const vec_t *surfnorm = lightsurf->normals[i];
+        const vec3_t &surfpoint = lightsurf->points[i];
+        const vec3_t &surfnorm = lightsurf->normals[i];
 
         if (lightsurf->occluded[i])
             continue;
@@ -1846,7 +1846,7 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
             const bouncelight_t &vpl = all_vpls[vplnum];
 
             // check for point in polygon (note: could be on the edge of more than one)
-            if (!GLM_EdgePlanes_PointInside(vpl.poly_edgeplanes, vec3_t_to_glm(lightsurf->points[i])))
+            if (!GLM_EdgePlanes_PointInside(vpl.poly_edgeplanes, lightsurf->points[i]))
                 continue;
 
             for (const auto &styleColor : vpl.colorByStyle) {
@@ -1854,7 +1854,7 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
 
                 lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, styleColor.first, lightsurf);
                 lightsample_t *sample = &lightmap->samples[i];
-                glm_to_vec3_t(patch_color, sample->color);
+                VectorCopy(patch_color, sample->color);
                 Lightmap_Save(lightmaps, lightsurf, lightmap, styleColor.first);
             }
         }
@@ -1862,7 +1862,7 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
 }
 
 // returns color in [0,255]
-static inline qvec3f BounceLight_ColorAtDist(
+inline qvec3f BounceLight_ColorAtDist(
     const globalconfig_t &cfg, float area, const qvec3f &bounceLightColor, float dist)
 {
     // clamp away hotspots
@@ -1892,7 +1892,7 @@ static qvec3f SurfaceLight_ColorAtDist(
 
 // dir: vpl -> sample point direction
 // returns color in [0,255]
-static inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t *vpl,
+inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t *vpl,
     const qvec3f &bounceLightColor, const qvec3f &dir, const float dist, const qvec3f &origin, const qvec3f &normal)
 {
     const float dp1 = qv::dot(vpl->surfnormal, dir);
@@ -1949,7 +1949,7 @@ static qvec3f GetSurfaceLighting(
     }
 
     // Get light contribution
-    result = SurfaceLight_ColorAtDist(cfg, vpl->intensity, vec3_t_to_glm(vpl->color), dist);
+    result = SurfaceLight_ColorAtDist(cfg, vpl->intensity, vpl->color, dist);
 
     // Apply angle scale
     const qvec3f resultscaled = result * dotProductFactor;
@@ -1958,14 +1958,14 @@ static qvec3f GetSurfaceLighting(
     return resultscaled;
 }
 
-static inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
+inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
 
     if (!novisapprox && AABBsDisjoint(vpl->mins, vpl->maxs, lightsurf->mins, lightsurf->maxs))
         return true;
 
-    const qvec3f dir = vec3_t_to_glm(lightsurf->origin) - vpl->pos; // vpl -> sample point
+    const qvec3f dir = qvec3f(lightsurf->origin) - vpl->pos; // vpl -> sample point
     const float dist = qv::length(dir) + lightsurf->radius;
 
     // get light contribution
@@ -1981,11 +1981,11 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
         return true;
 
     const globalconfig_t &cfg = *lightsurf->cfg;
-    const qvec3f dir = vec3_t_to_glm(lightsurf->origin) - vec3_t_to_glm(vpl->pos); // vpl -> sample point
+    const qvec3f dir = qvec3f(lightsurf->origin) - qvec3f(vpl->pos); // vpl -> sample point
     const float dist = qv::length(dir) + lightsurf->radius;
 
     // Get light contribution
-    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vec3_t_to_glm(vpl->color), dist);
+    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, qvec3f(vpl->color), dist);
 
     return LightSample_Brightness(color) < 0.25f;
 }
@@ -2021,22 +2021,22 @@ static void LightFace_Bounce(
                 if (lightsurf->occluded[i])
                     continue;
 
-                qvec3f dir = vec3_t_to_glm(lightsurf->points[i]) - vpl.pos; // vpl -> sample point
+                qvec3f dir = qvec3f(lightsurf->points[i]) - vpl.pos; // vpl -> sample point
                 const float dist = qv::length(dir);
                 if (dist == 0.0f)
                     continue; // FIXME: nudge or something
                 dir /= dist;
 
                 const qvec3f indirect = GetIndirectLighting(cfg, &vpl, color, dir, dist,
-                    vec3_t_to_glm(lightsurf->points[i]), vec3_t_to_glm(lightsurf->normals[i]));
+                    lightsurf->points[i], lightsurf->normals[i]);
 
                 if (LightSample_Brightness(indirect) < 0.25)
                     continue;
 
                 vec3_t vplPos, vplDir, vplColor;
-                glm_to_vec3_t(vpl.pos, vplPos);
-                glm_to_vec3_t(dir, vplDir);
-                glm_to_vec3_t(indirect, vplColor);
+                VectorCopy(vpl.pos, vplPos);
+                VectorCopy(dir, vplDir);
+                VectorCopy(indirect, vplColor);
 
                 rs->pushRay(i, vplPos, vplDir, dist, vplColor);
             }
@@ -2174,7 +2174,7 @@ static void LightFace_Bounce(
             lightsample_t *sample = &lightmap->samples[i];
 
             vec3_t indirectTmp;
-            glm_to_vec3_t(colorAvg, indirectTmp);
+            VectorCopy(colorAvg, indirectTmp);
             VectorAdd(sample->color, indirectTmp, sample->color);
         }
     }
@@ -2203,8 +2203,8 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
                 if (lightsurf->occluded[i])
                     continue;
 
-                const qvec3f lightsurf_pos = vec3_t_to_glm(lightsurf->points[i]);
-                const qvec3f lightsurf_normal = vec3_t_to_glm(lightsurf->normals[i]);
+                const qvec3f lightsurf_pos = lightsurf->points[i];
+                const qvec3f lightsurf_normal = lightsurf->normals[i];
 
                 // Push 1 unit behind the surflight (fixes darkening near surflight face on neighbouring faces)
                 qvec3f pos = vpl.points[c] - vpl.surfnormal;
@@ -2231,9 +2231,9 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
                     dir /= dist;
 
                 vec3_t vplPos, vplDir, vplColor;
-                glm_to_vec3_t(pos, vplPos);
-                glm_to_vec3_t(dir, vplDir);
-                glm_to_vec3_t(indirect, vplColor);
+                VectorCopy(pos, vplPos);
+                VectorCopy(dir, vplDir);
+                VectorCopy(indirect, vplColor);
 
                 rs->pushRay(i, vplPos, vplDir, dist, vplColor);
             }
@@ -2288,9 +2288,9 @@ static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *ligh
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
         if (lightsurf->occluded[i]) {
-            glm_to_vec3_t(qvec3f(255, 0, 0), sample->color);
+            VectorCopy(qvec3f(255, 0, 0), sample->color);
         } else {
-            glm_to_vec3_t(qvec3f(0, 255, 0), sample->color);
+            VectorCopy(qvec3f(0, 255, 0), sample->color);
         }
         // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
         lightsurf->occluded[i] = false;
@@ -2329,12 +2329,12 @@ static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *li
 
         if (sample_face == dump_facenum) {
             /* Red - the sample is on the selected face */
-            glm_to_vec3_t(qvec3f(255, 0, 0), sample->color);
+            VectorCopy(qvec3f(255, 0, 0), sample->color);
         } else if (has_sample_on_dumpface) {
             /* Green - the face has some samples on the selected face */
-            glm_to_vec3_t(qvec3f(0, 255, 0), sample->color);
+            VectorCopy(qvec3f(0, 255, 0), sample->color);
         } else {
-            glm_to_vec3_t(qvec3f(0, 0, 0), sample->color);
+            VectorCopy(qvec3f(0, 0, 0), sample->color);
         }
         // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
         lightsurf->occluded[i] = false;
@@ -2422,7 +2422,7 @@ void SetupDirt(globalconfig_t &cfg)
 }
 
 // from q3map2
-static void GetUpRtVecs(const vec3_t normal, vec3_t myUp, vec3_t myRt)
+static void GetUpRtVecs(const vec3_t &normal, vec3_t &myUp, vec3_t &myRt)
 {
     /* check if the normal is aligned to the world-up */
     if (normal[0] == 0.0f && normal[1] == 0.0f) {
@@ -2452,7 +2452,7 @@ static void TransformToTangentSpace(
 }
 
 // from q3map2
-static inline void GetDirtVector(const globalconfig_t &cfg, int i, vec3_t out)
+inline void GetDirtVector(const globalconfig_t &cfg, int i, vec3_t out)
 {
     Q_assert(i < numDirtVectors);
 
@@ -2468,7 +2468,7 @@ static inline void GetDirtVector(const globalconfig_t &cfg, int i, vec3_t out)
     }
 }
 
-float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t point, const vec3_t normal,
+float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t &point, const vec3_t &normal,
     const modelinfo_t *selfshadow)
 {
     if (!dirt_in_use) {
@@ -2670,7 +2670,7 @@ static void DumpFullSizeLightmap(const mbsp_t *bsp, const lightsurf_t *lightsurf
         for (int i = 0; i < lightsurf->numpoints; i++) {
             const vec_t *color = lm->samples[i].color;
             for (int j = 0; j < 3; j++) {
-                int intval = static_cast<int>(qclamp(color[j], 0.0f, 255.0f));
+                int intval = static_cast<int>(qclamp(color[j], 0.0, 255.0));
                 rgbdata.push_back(static_cast<uint8_t>(intval));
             }
         }
@@ -2709,7 +2709,7 @@ static void DumpDownscaledLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, 
     std::vector<uint8_t> rgbdata;
     for (int i = 0; i < (w * h); i++) {
         for (int j = 0; j < 3; j++) {
-            int intval = static_cast<int>(qclamp(colors[i][j], 0.0f, 255.0f));
+            int intval = static_cast<int>(qclamp(colors[i][j], 0.0, 255.0));
             rgbdata.push_back(static_cast<uint8_t>(intval));
         }
     }
@@ -3210,9 +3210,9 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, con
                 vec3_t temp;
                 int v;
                 const qvec4f &direction = output_dir.at(sampleindex);
-                temp[0] = qv::dot(qvec3f(direction), vec3_t_to_glm(lightsurf->snormal));
-                temp[1] = qv::dot(qvec3f(direction), vec3_t_to_glm(lightsurf->tnormal));
-                temp[2] = qv::dot(qvec3f(direction), vec3_t_to_glm(lightsurf->plane.normal));
+                temp[0] = qv::dot(qvec3f(direction), qvec3f(lightsurf->snormal));
+                temp[1] = qv::dot(qvec3f(direction), qvec3f(lightsurf->tnormal));
+                temp[2] = qv::dot(qvec3f(direction), qvec3f(lightsurf->plane.normal));
 
                 if (!temp[0] && !temp[1] && !temp[2])
                     VectorSet(temp, 0, 0, 1);

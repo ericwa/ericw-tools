@@ -43,9 +43,6 @@ public:
     neighbour_t(const bsp2_dface_t *f, const qvec3f p0in, const qvec3f p1in) : face(f), p0(p0in), p1(p1in) { }
 };
 
-std::vector<neighbour_t> FacesOverlappingEdge(
-    const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const dmodel_t *model);
-
 void CalculateVertexNormals(const mbsp_t *bsp);
 const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int vertindex);
 bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2);

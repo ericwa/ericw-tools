@@ -1137,7 +1137,7 @@ void LoadPortals(char *name, mbsp_t *bsp)
 
     /* Load the cluster expansion map if needed */
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        clustermap = new int[portalleafs_real];
+        clustermap = new int[bsp->numleafs];
 
         for (int32_t i = 0; i < bsp->numleafs; i++) {
             clustermap[i] = bsp->dleafs[i + 1].cluster;
@@ -1289,9 +1289,9 @@ int main(int argc, char **argv)
     DefaultExtension(statetmpfile, ".vi0");
 
     if (bsp->loadversion->game->id != GAME_QUAKE_II) {
-        uncompressed = new uint8_t[portalleafs * leafbytes_real];
+        uncompressed = new uint8_t[portalleafs * leafbytes_real] { };
     } else {
-        uncompressed_q2 = new uint8_t[portalleafs * leafbytes];
+        uncompressed_q2 = new uint8_t[portalleafs * leafbytes] { };
     }
 
     //    CalcPassages ();

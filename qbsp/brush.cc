@@ -226,7 +226,7 @@ bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2)
 
 /* Plane Hashing */
 
-static inline int plane_hash_fn(const qbsp_plane_t *p)
+inline int plane_hash_fn(const qbsp_plane_t *p)
 {
     return Q_rint(fabs(p->dist));
 }
@@ -653,7 +653,7 @@ AddHullPoint
 Doesn't add if duplicated
 =============
 */
-static int AddHullPoint(hullbrush_t *hullbrush, vec3_t p, vec3_t hull_size[2])
+static int AddHullPoint(hullbrush_t *hullbrush, const vec3_t &p, vec3_t hull_size[2])
 {
     int i;
     vec_t *c;
@@ -693,7 +693,7 @@ AddHullEdge
 Creates all of the hull planes around the given edge, if not done allready
 =============
 */
-static void AddHullEdge(hullbrush_t *hullbrush, vec3_t p1, vec3_t p2, vec3_t hull_size[2])
+static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &p2, vec3_t hull_size[2])
 {
     int pt1, pt2;
     int i;

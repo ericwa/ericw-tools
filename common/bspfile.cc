@@ -1587,6 +1587,7 @@ static mleaf_t *Q2BSPtoM_Leafs(const q2_dleaf_t *dleafsq2, int numleafs)
         mleaf->contents = dleafq2->contents;
         mleaf->cluster = dleafq2->cluster;
         mleaf->area = dleafq2->area;
+        mleaf->visofs = 0;
 
         for (j = 0; j < 3; j++) {
             mleaf->mins[j] = dleafq2->mins[j];
@@ -1614,6 +1615,7 @@ static mleaf_t *Q2BSP_QBSPtoM_Leafs(const q2_dleaf_qbism_t *dleafsq2, int numlea
         mleaf->contents = dleafq2->contents;
         mleaf->cluster = dleafq2->cluster;
         mleaf->area = dleafq2->area;
+        mleaf->visofs = 0;
 
         for (j = 0; j < 3; j++) {
             mleaf->mins[j] = dleafq2->mins[j];

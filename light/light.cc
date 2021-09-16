@@ -598,7 +598,7 @@ static void CheckNoDebugModeSet()
 static const bsp2_dface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &point)
 {
     const bsp2_dface_t *nearest_face = NULL;
-    float nearest_dist = VECT_MAX;
+    float nearest_dist = FLT_MAX;
 
     for (int i = 0; i < bsp->numfaces; i++) {
         const bsp2_dface_t *f = BSP_GetFace(bsp, i);
@@ -622,7 +622,7 @@ static void FindDebugFace(const mbsp_t *bsp)
     if (!dump_face)
         return;
 
-    const bsp2_dface_t *f = Face_NearestCentroid(bsp, vec3_t_to_glm(dump_face_point));
+    const bsp2_dface_t *f = Face_NearestCentroid(bsp, dump_face_point);
     if (f == NULL)
         Error("FindDebugFace: f == NULL\n");
 
@@ -1066,7 +1066,7 @@ int light_main(int argc, const char **argv)
             }
 
             if (lockable_bool_t *boolsetting = dynamic_cast<lockable_bool_t *>(setting)) {
-                float v;
+                vec_t v;
                 if (ParseVecOptional(&v, &i, argc, argv)) {
                     boolsetting->setStringValue(std::to_string(v), true);
                 } else {

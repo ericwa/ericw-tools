@@ -149,7 +149,7 @@ sceneinfo CreateGeometry(
     return s;
 }
 
-void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const std::vector<winding_t *> &windings)
+static void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const std::vector<winding_t> &windings)
 {
     if (windings.empty())
         return;
@@ -158,9 +158,9 @@ void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const std::v
     int numtris = 0;
     int numverts = 0;
     for (const auto &winding : windings) {
-        Q_assert(winding->numpoints >= 3);
-        numtris += (winding->numpoints - 2);
-        numverts += winding->numpoints;
+        Q_assert(winding.size() >= 3);
+        numtris += (winding.size() - 2);
+        numverts += winding.size();
     }
 
     unsigned int geomID;
@@ -186,12 +186,12 @@ void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const std::v
     {
         int vert_index = 0;
         for (const auto &winding : windings) {
-            for (int j = 0; j < winding->numpoints; j++) {
+            for (int j = 0; j < winding.size(); j++) {
                 for (int k = 0; k < 3; k++) {
-                    vertices[vert_index + j].point[k] = winding->p[j][k];
+                    vertices[vert_index + j].point[k] = winding.at(j)[k];
                 }
             }
-            vert_index += winding->numpoints;
+            vert_index += winding.size();
         }
     }
 
@@ -201,14 +201,14 @@ void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const std::v
     int tri_index = 0;
     int vert_index = 0;
     for (const auto &winding : windings) {
-        for (int j = 2; j < winding->numpoints; j++) {
+        for (int j = 2; j < winding.size(); j++) {
             Triangle *tri = &triangles[tri_index];
             tri->v0 = vert_index + (j - 1);
             tri->v1 = vert_index + j;
             tri->v2 = vert_index + 0;
             tri_index++;
         }
-        vert_index += winding->numpoints;
+        vert_index += winding.size();
     }
     Q_assert(vert_index == numverts);
     Q_assert(tri_index == numtris);
@@ -500,57 +500,40 @@ plane_t Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
 /**
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
-std::vector<winding_t *> Leaf_MakeFaces(const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<plane_t> &planes)
+static void Leaf_MakeFaces(const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<plane_t> &planes, std::vector<winding_t> &result)
 {
-    std::vector<winding_t *> result;
-
     for (const plane_t &plane : planes) {
         // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
         plane_t faceplane;
         VectorScale(plane.normal, -1, faceplane.normal);
         faceplane.dist = -plane.dist;
 
-        winding_t *winding = BaseWindingForPlane(faceplane.normal, faceplane.dist);
+        std::optional<winding_t> winding = winding_t::from_plane(faceplane.normal, faceplane.dist);
 
         // clip `winding` by all of the other planes
         for (const plane_t &plane2 : planes) {
             if (&plane2 == &plane)
                 continue;
 
-            winding_t *front = nullptr;
-            winding_t *back = nullptr;
-
-            // frees winding.
-            ClipWinding(winding, plane2.normal, plane2.dist, &front, &back);
+            auto clipped = winding->clip(plane2.normal, plane2.dist);
 
             // discard the back, continue clipping the front part
-            free(back);
-            winding = front;
+            winding = clipped[0];
 
             // check if everything was clipped away
-            if (winding == nullptr)
+            if (!winding)
                 break;
         }
 
-        if (winding == nullptr) {
+        if (winding) {
             // logprint("WARNING: winding clipped away\n");
         } else {
-            result.push_back(winding);
+            result.push_back(std::move(*winding));
         }
     }
-
-    return result;
 }
 
-void FreeWindings(std::vector<winding_t *> &windings)
-{
-    for (winding_t *winding : windings) {
-        free(winding);
-    }
-    windings.clear();
-}
-
-void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *planes, std::vector<winding_t *> *result)
+void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *planes, std::vector<winding_t> &result)
 {
     if (nodenum < 0) {
         const int leafnum = -nodenum - 1;
@@ -558,10 +541,7 @@ void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *pla
 
         if ((bsp->loadversion->game->id == GAME_QUAKE_II) ? (leaf->contents & Q2_CONTENTS_SOLID)
                                                           : leaf->contents == CONTENTS_SOLID) {
-            std::vector<winding_t *> leaf_windings = Leaf_MakeFaces(bsp, leaf, *planes);
-            for (winding_t *w : leaf_windings) {
-                result->push_back(w);
-            }
+            Leaf_MakeFaces(bsp, leaf, *planes, result);
         }
         return;
     }
@@ -581,14 +561,11 @@ void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *pla
     planes->pop_back();
 }
 
-std::vector<winding_t *> MakeFaces(const mbsp_t *bsp, const dmodel_t *model)
+static void MakeFaces(const mbsp_t *bsp, const dmodel_t *model, std::vector<winding_t> &result)
 {
-    std::vector<winding_t *> result;
     std::vector<plane_t> planes;
-    MakeFaces_r(bsp, model->headnode[0], &planes, &result);
+    MakeFaces_r(bsp, model->headnode[0], &planes, result);
     Q_assert(planes.empty());
-
-    return result;
 }
 
 void Embree_TraceInit(const mbsp_t *bsp)
@@ -688,13 +665,10 @@ void Embree_TraceInit(const mbsp_t *bsp)
     }
 
     /* Special handling of skip-textured bmodels */
-    std::vector<winding_t *> skipwindings;
+    std::vector<winding_t> skipwindings;
     for (const modelinfo_t *model : tracelist) {
         if (model->model->numfaces == 0) {
-            std::vector<winding_t *> windings = MakeFaces(bsp, model->model);
-            for (auto &w : windings) {
-                skipwindings.push_back(w);
-            }
+            MakeFaces(bsp, model->model, skipwindings);
         }
     }
 
@@ -729,8 +703,6 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logprint("\t%d solid faces\n", (int)solidfaces.size());
     logprint("\t%d filtered faces\n", (int)filterfaces.size());
     logprint("\t%d shadow-casting skip faces\n", (int)skipwindings.size());
-
-    FreeWindings(skipwindings);
 }
 
 static RTCRayHit SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist)

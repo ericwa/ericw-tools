@@ -26,7 +26,7 @@
 #include <set>
 #include <cassert>
 
-static inline aabb3f bboxOctant(const aabb3f &box, int i)
+inline aabb3f bboxOctant(const aabb3f &box, int i)
 {
     assert(i >= 0 && i < 8);
 

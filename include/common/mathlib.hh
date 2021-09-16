@@ -31,11 +31,7 @@
 
 #include <common/qvec.hh>
 
-#ifdef DOUBLEVEC_T
 using vec_t = double;
-#else
-using vec_t = float;
-#endif
 constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();
 using vec3_t = vec_t[3];
 
@@ -45,10 +41,14 @@ struct plane_t
     vec_t dist;
 };
 
-#define SIDE_FRONT 0
-#define SIDE_ON 2
-#define SIDE_BACK 1
-#define SIDE_CROSS -2
+enum side_t : int8_t
+{
+    SIDE_FRONT,
+    SIDE_BACK,
+    SIDE_ON,
+
+    SIDE_CROSS = -2
+};
 
 constexpr vec_t Q_PI = 3.14159265358979323846;
 
@@ -65,84 +65,102 @@ extern const vec3_t vec3_origin;
 #define NORMAL_EPSILON 0.000001
 #define DEGREES_EPSILON 0.001
 
-qboolean VectorCompare(const vec3_t v1, const vec3_t v2, vec_t epsilon);
-
-static inline bool GLMVectorCompare(const qvec3f &v1, const qvec3f &v2, float epsilon)
+template<typename T1, typename T2>
+constexpr qboolean VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
 {
-    for (int i = 0; i < 3; i++)
+    for (size_t i = 0; i < std::size(v1); i++)
         if (fabs(v1[i] - v2[i]) > epsilon)
             return false;
+
     return true;
 }
 
-static inline vec_t DotProduct(const vec3_t x, const vec3_t y)
+template<typename T>
+constexpr void CrossProduct(const T &v1, const T &v2, T &cross)
 {
+    //static_assert(std::size(v1) == 3);
+
+    cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
+    cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
+    cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
+}
+
+template<typename Tx, typename Ty>
+constexpr vec_t DotProduct(const Tx &x, const Ty &y)
+{
+    //static_assert(std::size(x) == 3);
+
     return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
 }
 
-static inline void VectorSubtract(const vec3_t x, const vec3_t y, vec3_t out)
+template<typename Tx, typename Ty, typename Tout>
+constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
 {
+    //static_assert(std::size(x) == 3);
+
     out[0] = x[0] - y[0];
     out[1] = x[1] - y[1];
     out[2] = x[2] - y[2];
 }
 
-static inline void VectorAdd(const vec3_t x, const vec3_t y, vec3_t out)
+template<typename Tx, typename Ty, typename Tout>
+constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
 {
+    //static_assert(std::size(x) == 3);
+
     out[0] = x[0] + y[0];
     out[1] = x[1] + y[1];
     out[2] = x[2] + y[2];
 }
 
-static inline void VectorCopy(const vec3_t in, vec3_t out)
+template<typename TFrom, typename TTo>
+constexpr void VectorCopy(const TFrom &in, TTo &out)
 {
+    //static_assert(std::size(in) == 3 && std::size(out) == 3);
+
     out[0] = in[0];
     out[1] = in[1];
     out[2] = in[2];
 }
 
-#ifdef DOUBLEVEC_T
-static inline void VectorCopy(const float in[3], vec3_t out)
+template<typename T>
+constexpr void VectorScale(const T &v, vec_t scale, T &out)
 {
-    out[0] = in[0];
-    out[1] = in[1];
-    out[2] = in[2];
-}
-#endif
+    //static_assert(std::size(v) == 3);
 
-static inline void VectorScale(const vec3_t v, vec_t scale, vec3_t out)
-{
     out[0] = v[0] * scale;
     out[1] = v[1] * scale;
     out[2] = v[2] * scale;
 }
 
-static inline void VectorInverse(vec3_t v)
+template<typename T>
+constexpr void VectorInverse(T &v)
 {
+    //static_assert(std::size(v) == 3);
+
     v[0] = -v[0];
     v[1] = -v[1];
     v[2] = -v[2];
 }
 
-static inline void VectorSet(vec3_t out, vec_t x, vec_t y, vec_t z)
+template<typename T>
+constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
 {
+    //static_assert(std::size(out) == 3);
+
     out[0] = x;
     out[1] = y;
     out[2] = z;
 }
 
-static inline void VectorClear(vec3_t out)
+template<typename T>
+constexpr void VectorClear(T &out)
 {
+    //static_assert(std::size(out) == 3);
+
     out[0] = 0;
     out[1] = 0;
     out[2] = 0;
-}
-
-static inline void VectorCopyFromGLM(const qvec3f &in, vec3_t out)
-{
-    out[0] = in[0];
-    out[1] = in[1];
-    out[2] = in[2];
 }
 
 void ClearBounds(vec3_t mins, vec3_t maxs);
@@ -150,63 +168,62 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
 
 plane_t FlipPlane(plane_t input);
 
-static inline qvec3f VectorToGLM(const vec3_t in)
-{
-    return qvec3f(in[0], in[1], in[2]);
-}
-
-static inline vec_t Q_rint(vec_t in)
-{
-    return (vec_t)(floor(in + 0.5));
-}
+#define Q_rint rint
 
 /*
    Random()
    returns a pseudorandom number between 0 and 1
  */
 
-static inline vec_t Random(void)
+inline vec_t Random(void)
 {
     return (vec_t)rand() / RAND_MAX;
 }
 
-static inline void VectorMA(const vec3_t va, vec_t scale, const vec3_t vb, vec3_t vc)
+template<typename Ta, typename Tb, typename Tc>
+constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
 {
+    //static_assert(std::size(vc) == 3);
+
     vc[0] = va[0] + scale * vb[0];
     vc[1] = va[1] + scale * vb[1];
     vc[2] = va[2] + scale * vb[2];
 }
 
-void CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross);
-
-static inline double VectorLengthSq(const vec3_t v)
+template<typename T>
+constexpr vec_t VectorLengthSq(const T &v)
 {
-    double length = 0;
+    //static_assert(std::size(v) == 3);
+
+    vec_t length = 0;
     for (int i = 0; i < 3; i++)
         length += v[i] * v[i];
     return length;
 }
 
-static inline double VectorLength(const vec3_t v)
+template<typename T>
+inline vec_t VectorLength(const T &v)
 {
-    double length = VectorLengthSq(v);
+    //static_assert(std::size(v) == 3);
+
+    vec_t length = VectorLengthSq(v);
     length = sqrt(length);
     return length;
 }
 
-static inline vec_t VectorNormalize(vec3_t v)
+template<typename T>
+inline vec_t VectorNormalize(T &v)
 {
-    int i;
-    double length;
+    //static_assert(std::size(v) == 3);
 
-    length = 0;
-    for (i = 0; i < 3; i++)
+    vec_t length = 0;
+    for (size_t i = 0; i < 3; i++)
         length += v[i] * v[i];
     length = sqrt(length);
     if (length == 0)
         return 0;
 
-    for (i = 0; i < 3; i++)
+    for (size_t i = 0; i < 3; i++)
         v[i] /= (vec_t)length;
 
     return (vec_t)length;
@@ -214,18 +231,25 @@ static inline vec_t VectorNormalize(vec3_t v)
 
 // returns the normalized direction from `start` to `stop` in the `dir` param
 // returns the distance from `start` to `stop`
-static inline vec_t GetDir(const vec3_t start, const vec3_t stop, vec3_t dir)
+template<typename Tstart, typename Tstop, typename Tdir>
+inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
 {
+    //static_assert(std::size(dir) == 3);
+
     VectorSubtract(stop, start, dir);
     return VectorNormalize(dir);
 }
 
-static inline vec_t DistanceAbovePlane(const vec3_t normal, const vec_t dist, const vec3_t point)
+template<typename T>
+constexpr vec_t DistanceAbovePlane(const T &normal, const vec_t dist, const T &point)
 {
+    //static_assert(std::size(normal) == 3);
+
     return DotProduct(normal, point) - dist;
 }
 
-static inline void ProjectPointOntoPlane(const vec3_t normal, const vec_t dist, vec3_t point)
+template<typename T>
+constexpr void ProjectPointOntoPlane(const T &normal, const vec_t dist, T &point)
 {
     vec_t distAbove = DistanceAbovePlane(normal, dist, point);
     vec3_t move;
@@ -233,7 +257,7 @@ static inline void ProjectPointOntoPlane(const vec3_t normal, const vec_t dist, 
     VectorAdd(point, move, point);
 }
 
-bool SetPlanePts(const vec3_t planepts[3], vec3_t normal, vec_t *dist);
+bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist);
 
 /* Shortcut for output of warnings/errors */
 std::string VecStr(const vec3_t vec);
@@ -282,32 +306,6 @@ float Filter_Gaussian(float width, float height, float x, float y);
 
 // sqrt(x^2 + y^2) should be <= a, returns 0 outside that range.
 float Lanczos2D(float x, float y, float a);
-
-// glm geometry
-
-static inline qvec3f vec3_t_to_glm(const vec3_t vec)
-{
-    return qvec3f(vec[0], vec[1], vec[2]);
-}
-
-static inline qvec3d qvec3d_from_vec3(const vec3_t vec)
-{
-    return qvec3d(vec[0], vec[1], vec[2]);
-}
-
-static inline void glm_to_vec3_t(const qvec3f &glm, vec3_t out)
-{
-    out[0] = glm[0];
-    out[1] = glm[1];
-    out[2] = glm[2];
-}
-
-static inline void glm_to_vec3_t(const qvec3d &glm, vec3_t out)
-{
-    out[0] = glm[0];
-    out[1] = glm[1];
-    out[2] = glm[2];
-}
 
 // Returns (0 0 0) if we couldn't determine the normal
 qvec3f GLM_FaceNormal(std::vector<qvec3f> points);
@@ -376,7 +374,7 @@ concavity_t FacePairConcavity(
 
 // Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
 // from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
-static inline qvec4f bilinearWeights(const float x, const float y)
+inline qvec4f bilinearWeights(const float x, const float y)
 {
     Q_assert(x >= 0.0f);
     Q_assert(x <= 1.0f);
@@ -389,7 +387,7 @@ static inline qvec4f bilinearWeights(const float x, const float y)
 
 // This uses a coordinate system where the pixel centers are on integer coords.
 // e.g. the corners of a 3x3 pixel bitmap are at (-0.5, -0.5) and (2.5, 2.5).
-static inline std::array<std::pair<qvec2i, float>, 4> bilinearWeightsAndCoords(qvec2f pos, const qvec2i &size)
+inline std::array<std::pair<qvec2i, float>, 4> bilinearWeightsAndCoords(qvec2f pos, const qvec2i &size)
 {
     Q_assert(pos[0] >= -0.5f && pos[0] <= (size[0] - 0.5f));
     Q_assert(pos[1] >= -0.5f && pos[1] <= (size[1] - 0.5f));
@@ -473,4 +471,4 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     return result;
 }
 
-bool LinesOverlap(const qvec3f p0, const qvec3f p1, const qvec3f q0, const qvec3f q1);
+bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1);

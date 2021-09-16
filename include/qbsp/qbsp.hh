@@ -87,12 +87,6 @@
 // planenum for a leaf (?)
 #define PLANENUM_LEAF -1
 
-// Which side of polygon a point is on
-#define SIDE_FRONT 0
-#define SIDE_BACK 1
-#define SIDE_ON 2
-#define SIDE_CROSS -2
-
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:

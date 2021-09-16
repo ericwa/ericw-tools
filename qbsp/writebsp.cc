@@ -431,10 +431,10 @@ static void WriteBSPFile()
 
     // FIXME: temp
     bspdata.data.mbsp.numareaportals = 1;
-    bspdata.data.mbsp.dareaportals = new dareaportal_t[bspdata.data.mbsp.numareaportals];
+    bspdata.data.mbsp.dareaportals = new dareaportal_t[bspdata.data.mbsp.numareaportals] { };
 
     bspdata.data.mbsp.numareas = 2;
-    bspdata.data.mbsp.dareas = new darea_t[bspdata.data.mbsp.numareas];
+    bspdata.data.mbsp.dareas = new darea_t[bspdata.data.mbsp.numareas] { };
     bspdata.data.mbsp.dareas[1].firstareaportal = 1;
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
         const bspversion_t *highLimitsFormat = nullptr;

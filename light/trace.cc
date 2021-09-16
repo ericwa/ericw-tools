@@ -179,12 +179,11 @@ static void MakeTnodes_r(int nodenum, const mbsp_t *bsp)
     }
 }
 
-static inline bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
+constexpr bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
 {
-    vec3_t delta;
-    vec_t deltaLengthSquared;
+    vec3_t delta { };
     VectorSubtract(point, info->origin, delta);
-    deltaLengthSquared = DotProduct(delta, delta);
+    vec_t deltaLengthSquared = DotProduct(delta, delta);
     return deltaLengthSquared > info->radiusSquared;
 }
 
@@ -199,7 +198,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t
     // make sphere that bounds the face
     vec3_t centroid = {0, 0, 0};
     for (int i = 0; i < face->numedges; i++) {
-        const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
+        const float *v = GetSurfaceVertexPoint(bsp, face, i);
         VectorAdd(centroid, v, centroid);
     }
     VectorScale(centroid, 1.0f / face->numedges, centroid);
@@ -210,7 +209,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t
     for (int i = 0; i < face->numedges; i++) {
         vec3_t delta;
         vec_t radiusSq;
-        const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
+        const float *v = GetSurfaceVertexPoint(bsp, face, i);
         VectorSubtract(v, centroid, delta);
         radiusSq = DotProduct(delta, delta);
         if (radiusSq > maxRadiusSq)
@@ -332,12 +331,12 @@ SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
 }
 
 /* assumes point is on the same plane as face */
-static inline qboolean TestHitFace(const faceinfo_t *fi, const vec3_t point)
+inline qboolean TestHitFace(const faceinfo_t *fi, const vec3_t &point)
 {
     return EdgePlanes_PointInside(fi->face, fi->edgeplanes, point);
 }
 
-static inline bsp2_dface_t *SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t point)
+inline bsp2_dface_t *SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t &point)
 {
     // search the faces on this node
     int i;

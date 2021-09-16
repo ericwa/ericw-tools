@@ -997,8 +997,8 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             entity.settings().setSettings(*entity.epairs, false);
 
             if (entity.mangle.isChanged()) {
-                const qvec3f temp = vec_from_mangle(vec3_t_to_glm(*entity.mangle.vec3Value()));
-                glm_to_vec3_t(temp, entity.spotvec);
+                const qvec3f temp = vec_from_mangle(*entity.mangle.vec3Value());
+                VectorCopy(temp, entity.spotvec);
                 entity.spotlight = true;
 
                 if (!entity.projangle.isChanged()) {
@@ -1049,7 +1049,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         "%d entities read, %d are lights.\n", static_cast<int>(entdicts.size()), static_cast<int>(all_lights.size()));
 }
 
-static void FixLightOnFace(const mbsp_t *bsp, const vec3_t point, vec3_t point_out)
+static void FixLightOnFace(const mbsp_t *bsp, const vec3_t &point, vec3_t &point_out)
 {
     // FIXME: Check all shadow casters
     if (!Light_PointInWorld(bsp, point)) {
@@ -1225,7 +1225,7 @@ void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t v
     std::string value = EntDict_StringForKey(ent, key);
 
     VectorSet(vec, 0, 0, 0);
-    sscanf(value.c_str(), "%f %f %f", &vec[0], &vec[1], &vec[2]);
+    sscanf(value.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
 }
 
 /*
@@ -1253,7 +1253,7 @@ void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp)
 
     memcpy(bsp->dentdata, entdata.data(), entdata.size());
 
-    Q_assert(0 == bsp->dentdata[bsp->entdatasize - 1]);
+    bsp->dentdata[entdata.size()] = 0;
 }
 
 /*
@@ -1279,7 +1279,7 @@ static void SurfLights_WriteEntityToFile(FILE *f, light_t *entity, const vec3_t 
     fwrite(entstring.data(), 1, entstring.size(), f);
 }
 
-static void CreateSurfaceLight(const vec3_t origin, const vec3_t normal, const light_t *surflight_template)
+static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const light_t *surflight_template)
 {
     light_t entity = DuplicateEntity(*surflight_template);
 
@@ -1337,13 +1337,13 @@ static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const 
     CreateSurfaceLight(midpoint, normal, surflight_template);
 }
 
-static void BoundPoly(int numverts, float *verts, vec3_t mins, vec3_t maxs)
+static void BoundPoly(int numverts, vec_t *verts, vec3_t mins, vec3_t maxs)
 {
     int i, j;
-    float *v;
+    vec_t *v;
 
-    mins[0] = mins[1] = mins[2] = FLT_MAX;
-    maxs[0] = maxs[1] = maxs[2] = -FLT_MAX;
+    ClearBounds(mins, maxs);
+
     v = verts;
     for (i = 0; i < numverts; i++)
         for (j = 0; j < 3; j++, v++) {
@@ -1372,7 +1372,7 @@ static void SubdividePolygon(const bsp2_dface_t *face, const modelinfo_t *face_m
     int i, j, k;
     vec3_t mins, maxs;
     float m;
-    float *v;
+    vec_t *v;
     vec3_t front[64], back[64];
     int f, b;
     float dist[64];

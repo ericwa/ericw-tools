@@ -42,7 +42,7 @@
 
 using namespace std;
 
-static neighbour_t FaceOverlapsEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const bsp2_dface_t *f)
+static neighbour_t FaceOverlapsEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const bsp2_dface_t *f)
 {
     for (int edgeindex = 0; edgeindex < f->numedges; edgeindex++) {
         const int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
@@ -50,7 +50,7 @@ static neighbour_t FaceOverlapsEdge(const vec3_t p0, const vec3_t p1, const mbsp
 
         const qvec3f v0point = Vertex_GetPos_E(bsp, v0);
         const qvec3f v1point = Vertex_GetPos_E(bsp, v1);
-        if (LinesOverlap(vec3_t_to_glm(p0), vec3_t_to_glm(p1), v0point, v1point)) {
+        if (LinesOverlap(p0, p1, v0point, v1point)) {
             return neighbour_t{f, v0point, v1point};
         }
     }
@@ -58,7 +58,7 @@ static neighbour_t FaceOverlapsEdge(const vec3_t p0, const vec3_t p1, const mbsp
 }
 
 static void FacesOverlappingEdge_r(
-    const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, int nodenum, vector<neighbour_t> *result)
+    const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, int nodenum, vector<neighbour_t> *result)
 {
     if (nodenum < 0) {
         // we don't do anything for leafs.
@@ -100,7 +100,7 @@ static void FacesOverlappingEdge_r(
  * Returns faces which have an edge that overlaps the given p0-p1 edge.
  * Uses hull 0.
  */
-vector<neighbour_t> FacesOverlappingEdge(const vec3_t p0, const vec3_t p1, const mbsp_t *bsp, const dmodel_t *model)
+inline vector<neighbour_t> FacesOverlappingEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const dmodel_t *model)
 {
     vector<neighbour_t> result;
     FacesOverlappingEdge_r(p0, p1, bsp, model->headnode[0], &result);
@@ -121,7 +121,7 @@ std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dfa
 
         // ensure the neighbour_t edges are pointing the same direction as the p0->p1 edge
         // (modifies them inplace)
-        const qvec3f p0p1dir = qv::normalize(vec3_t_to_glm(p1) - vec3_t_to_glm(p0));
+        const qvec3f p0p1dir = qv::normalize(qvec3d(p1) - qvec3d(p0));
         for (auto &neighbour : tmp) {
             qvec3f neighbourDir = qv::normalize(neighbour.p1 - neighbour.p0);
             float dp = qv::dot(neighbourDir, p0p1dir); // should really be 1 or -1
@@ -605,7 +605,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         // sanity check
         if (!neighboursToSmooth.size()) {
             for (auto vertIndexNormalPair : smoothedNormals) {
-                Q_assert(GLMVectorCompare(vertIndexNormalPair.second, f_norm, EQUAL_EPSILON));
+                Q_assert(qv::epsilonEqual(vertIndexNormalPair.second, f_norm, EQUAL_EPSILON));
             }
         }
 
