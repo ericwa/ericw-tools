@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <array>
+#include <variant>
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
@@ -730,6 +731,15 @@ struct bspxentry_t
     bspxentry_t *next;
 };
 
+// this is just temporary until the types use typesafe
+// containers.
+#define IMPL_MOVE_COPY(T) \
+    T() { memset(this, 0, sizeof(*this)); } \
+    T(T &&move) { memcpy(this, &move, sizeof(move)); memset(&move, 0, sizeof(move)); } \
+    T(const T &copy) { memcpy(this, &copy, sizeof(copy)); } \
+    T &operator=(T &&move) { memcpy(this, &move, sizeof(move)); memset(&move, 0, sizeof(move)); return *this; } \
+    T &operator=(const T &copy) { memcpy(this, &copy, sizeof(copy)); return *this; }
+
 struct bsp29_t
 {
     int nummodels;
@@ -777,6 +787,28 @@ struct bsp29_t
 
     int numsurfedges;
     int32_t *dsurfedges;
+
+    IMPL_MOVE_COPY(bsp29_t);
+
+    ~bsp29_t()
+    {
+        delete[] dmodels_q;
+        delete[] dmodels_h2;
+        delete[] dvisdata;
+        delete[] dlightdata;
+        delete[] dtexdata;
+        delete[] dentdata;
+        delete[] dleafs;
+        delete[] dplanes;
+        delete[] dvertexes;
+        delete[] dnodes;
+        delete[] texinfo;
+        delete[] dfaces;
+        delete[] dclipnodes;
+        delete[] dedges;
+        delete[] dmarksurfaces;
+        delete[] dsurfedges;
+    }
 };
 
 struct bsp2rmq_t
@@ -826,6 +858,28 @@ struct bsp2rmq_t
 
     int numsurfedges;
     int32_t *dsurfedges;
+
+    IMPL_MOVE_COPY(bsp2rmq_t);
+
+    ~bsp2rmq_t()
+    {
+        delete[] dmodels_q;
+        delete[] dmodels_h2;
+        delete[] dvisdata;
+        delete[] dlightdata;
+        delete[] dtexdata;
+        delete[] dentdata;
+        delete[] dleafs;
+        delete[] dplanes;
+        delete[] dvertexes;
+        delete[] dnodes;
+        delete[] texinfo;
+        delete[] dfaces;
+        delete[] dclipnodes;
+        delete[] dedges;
+        delete[] dmarksurfaces;
+        delete[] dsurfedges;
+    }
 };
 
 struct bsp2_t
@@ -875,6 +929,28 @@ struct bsp2_t
 
     int numsurfedges;
     int32_t *dsurfedges;
+
+    IMPL_MOVE_COPY(bsp2_t);
+
+    ~bsp2_t()
+    {
+        delete[] dmodels_q;
+        delete[] dmodels_h2;
+        delete[] dvisdata;
+        delete[] dlightdata;
+        delete[] dtexdata;
+        delete[] dentdata;
+        delete[] dleafs;
+        delete[] dplanes;
+        delete[] dvertexes;
+        delete[] dnodes;
+        delete[] texinfo;
+        delete[] dfaces;
+        delete[] dclipnodes;
+        delete[] dedges;
+        delete[] dmarksurfaces;
+        delete[] dsurfedges;
+    }
 };
 
 struct q2bsp_t
@@ -937,6 +1013,30 @@ struct q2bsp_t
     dbrushside_t *dbrushsides;
 
     uint8_t dpop[256];
+
+    IMPL_MOVE_COPY(q2bsp_t);
+
+    ~q2bsp_t()
+    {
+        delete[] dmodels;
+        delete[] dvis;
+        delete[] dlightdata;
+        delete[] dentdata;
+        delete[] dleafs;
+        delete[] dplanes;
+        delete[] dvertexes;
+        delete[] dnodes;
+        delete[] texinfo;
+        delete[] dfaces;
+        delete[] dedges;
+        delete[] dleaffaces;
+        delete[] dleafbrushes;
+        delete[] dsurfedges;
+        delete[] dareas;
+        delete[] dareaportals;
+        delete[] dbrushes;
+        delete[] dbrushsides;
+    }
 };
 
 struct q2bsp_qbism_t
@@ -999,6 +1099,30 @@ struct q2bsp_qbism_t
     q2_dbrushside_qbism_t *dbrushsides;
 
     uint8_t dpop[256];
+
+    IMPL_MOVE_COPY(q2bsp_qbism_t);
+
+    ~q2bsp_qbism_t()
+    {
+        delete[] dmodels;
+        delete[] dvis;
+        delete[] dlightdata;
+        delete[] dentdata;
+        delete[] dleafs;
+        delete[] dplanes;
+        delete[] dvertexes;
+        delete[] dnodes;
+        delete[] texinfo;
+        delete[] dfaces;
+        delete[] dedges;
+        delete[] dleaffaces;
+        delete[] dleafbrushes;
+        delete[] dsurfedges;
+        delete[] dareas;
+        delete[] dareaportals;
+        delete[] dbrushes;
+        delete[] dbrushsides;
+    }
 };
 
 struct bspversion_t;
@@ -1072,6 +1196,33 @@ struct mbsp_t
     q2_dbrushside_qbism_t *dbrushsides;
 
     uint8_t dpop[256];
+
+    IMPL_MOVE_COPY(mbsp_t);
+
+    ~mbsp_t()
+    {
+        delete[] dmodels;
+        delete[] dvisdata;
+        delete[] dlightdata;
+        delete[] dtexdata;
+        delete[] drgbatexdata; // mxd
+        delete[] dentdata;
+        delete[] dleafs;
+        delete[] dplanes;
+        delete[] dvertexes;
+        delete[] dnodes;
+        delete[] texinfo;
+        delete[] dfaces;
+        delete[] dclipnodes;
+        delete[] dedges;
+        delete[] dleaffaces;
+        delete[] dleafbrushes;
+        delete[] dsurfedges;
+        delete[] dareas;
+        delete[] dareaportals;
+        delete[] dbrushes;
+        delete[] dbrushsides;
+    }
 }; // "generic" bsp - superset of all other supported types
 
 struct dheader_t
@@ -1091,15 +1242,8 @@ struct bspdata_t
 {
     const bspversion_t *version, *loadversion;
 
-    struct
-    {
-        bsp29_t bsp29;
-        bsp2rmq_t bsp2rmq;
-        bsp2_t bsp2;
-        q2bsp_t q2bsp;
-        mbsp_t mbsp;
-        q2bsp_qbism_t q2bsp_qbism;
-    } data;
+    // Stay in monostate until a BSP type is requested.
+    std::variant<std::monostate, mbsp_t, bsp29_t, bsp2rmq_t, bsp2_t, q2bsp_t, q2bsp_qbism_t> bsp;
 
     bspxentry_t *bspxentries;
 };

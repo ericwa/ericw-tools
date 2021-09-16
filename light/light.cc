@@ -380,7 +380,8 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 {
     logprint("--- LightWorld ---\n");
 
-    mbsp_t *const bsp = &bspdata->data.mbsp;
+    mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
+
     delete[] filebase;
     delete[] lit_filebase;
     delete[] lux_filebase;
@@ -413,30 +414,30 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     if (!lmshift_lump && write_litfile != ~0)
         faces_sup = nullptr; // no scales, no lit2
     else { // we have scales or lit2 output. yay...
-        faces_sup = new facesup_t[bsp->numfaces] { };
+        faces_sup = new facesup_t[bsp.numfaces] { };
 
         if (lmshift_lump) {
-            for (int i = 0; i < bsp->numfaces; i++)
+            for (int i = 0; i < bsp.numfaces; i++)
                 faces_sup[i].lmscale = 1 << lmshift_lump[i];
         } else {
-            for (int i = 0; i < bsp->numfaces; i++)
+            for (int i = 0; i < bsp.numfaces; i++)
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
         }
     }
 
-    CalculateVertexNormals(bsp);
+    CalculateVertexNormals(&bsp);
 
     const qboolean bouncerequired =
         cfg_static.bounce.boolValue() &&
         (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); // mxd
-    const qboolean isQuake2map = bsp->loadversion->game->id == GAME_QUAKE_II; // mxd
+    const qboolean isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
 
     if (bouncerequired || isQuake2map) {
-        MakeTextureColors(bsp);
+        MakeTextureColors(&bsp);
         if (isQuake2map)
-            MakeSurfaceLights(cfg_static, bsp);
+            MakeSurfaceLights(cfg_static, &bsp);
         if (bouncerequired)
-            MakeBounceLights(cfg_static, bsp);
+            MakeBounceLights(cfg_static, &bsp);
     }
 
 #if 0
@@ -447,7 +448,7 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
     logprint("--- LightThread ---\n"); // mxd
-    RunThreadsOn(0, bsp->numfaces, LightThread, bsp);
+    RunThreadsOn(0, bsp.numfaces, LightThread, &bsp);
 #endif
 
     if (bouncerequired || isQuake2map) { // mxd. Print some extra stats...
@@ -460,31 +461,31 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
-        delete[] bsp->dlightdata;
-        if (bsp->loadversion->game->has_rgb_lightmap) {
-            bsp->lightdatasize = lit_file_p;
-            bsp->dlightdata = new uint8_t[bsp->lightdatasize];
-            memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
+        delete[] bsp.dlightdata;
+        if (bsp.loadversion->game->has_rgb_lightmap) {
+            bsp.lightdatasize = lit_file_p;
+            bsp.dlightdata = new uint8_t[bsp.lightdatasize];
+            memcpy(bsp.dlightdata, lit_filebase, bsp.lightdatasize);
         } else {
-            bsp->lightdatasize = file_p;
-            bsp->dlightdata = new uint8_t[bsp->lightdatasize];
-            memcpy(bsp->dlightdata, filebase, bsp->lightdatasize);
+            bsp.lightdatasize = file_p;
+            bsp.dlightdata = new uint8_t[bsp.lightdatasize];
+            memcpy(bsp.dlightdata, filebase, bsp.lightdatasize);
         }
     } else {
-        // NOTE: bsp->lightdatasize is already valid in the -litonly case
+        // NOTE: bsp.lightdatasize is already valid in the -litonly case
     }
-    logprint("lightdatasize: %i\n", bsp->lightdatasize);
+    logprint("lightdatasize: %i\n", bsp.lightdatasize);
 
     if (faces_sup) {
-        uint8_t *styles = new uint8_t[4 * bsp->numfaces];
-        int32_t *offsets = new int32_t[bsp->numfaces];
-        for (int i = 0; i < bsp->numfaces; i++) {
+        uint8_t *styles = new uint8_t[4 * bsp.numfaces];
+        int32_t *offsets = new int32_t[bsp.numfaces];
+        for (int i = 0; i < bsp.numfaces; i++) {
             offsets[i] = faces_sup[i].lightofs;
             for (int j = 0; j < MAXLIGHTMAPS; j++)
                 styles[i * 4 + j] = faces_sup[i].styles[j];
         }
-        BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles) * 4 * bsp->numfaces);
-        BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets) * bsp->numfaces);
+        BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles) * 4 * bsp.numfaces);
+        BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets) * bsp.numfaces);
     } else {
         // kill this stuff if its somehow found.
         BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
@@ -914,7 +915,6 @@ static const char *ParseString(int *i_inout, int argc, const char **argv)
 int light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
-    mbsp_t *const bsp = &bspdata.data.mbsp;
     const bspversion_t *loadversion;
     int i;
     double start;
@@ -1158,6 +1158,8 @@ int light_main(int argc, const char **argv)
     loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
+    mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
     if ((loadversion->game->id == GAME_QUAKE_II) && !cfg.rangescale.isChanged()) {
         const auto rs = new lockable_vec_t(cfg.rangescale.primaryName(), 1.0f, 0.0f, 100.0f);
@@ -1167,32 +1169,32 @@ int light_main(int argc, const char **argv)
     // mxd. Load or convert textures...
     SetQdirFromPath(GetBaseDirName(&bspdata), source);
     LoadPalette(&bspdata);
-    LoadOrConvertTextures(bsp);
+    LoadOrConvertTextures(&bsp);
 
-    LoadExtendedTexinfoFlags(source, bsp);
-    LoadEntities(cfg, bsp);
+    LoadExtendedTexinfoFlags(source, &bsp);
+    LoadEntities(cfg, &bsp);
 
     PrintOptionsSummary();
 
-    FindModelInfo(bsp, lmscaleoverride);
+    FindModelInfo(&bsp, lmscaleoverride);
 
-    FindDebugFace(bsp);
-    FindDebugVert(bsp);
+    FindDebugFace(&bsp);
+    FindDebugVert(&bsp);
 
-    MakeTnodes(bsp);
+    MakeTnodes(&bsp);
 
     if (debugmode == debugmode_phong_obj) {
         StripExtension(source);
         DefaultExtension(source, ".obj");
 
-        CalculateVertexNormals(bsp);
-        ExportObj(source, bsp);
+        CalculateVertexNormals(&bsp);
+        ExportObj(source, &bsp);
 
         close_log();
         return 0;
     }
 
-    SetupLights(cfg, bsp);
+    SetupLights(cfg, &bsp);
 
     // PrintLights();
 
@@ -1209,30 +1211,30 @@ int light_main(int argc, const char **argv)
         BSPX_AddLump(&bspdata, "LIGHTINGDIR", NULL, 0);
 
         if (write_litfile == ~0) {
-            WriteLitFile(bsp, faces_sup, source, 2);
+            WriteLitFile(&bsp, faces_sup, source, 2);
             return 0; // run away before any files are written
         } else {
             /*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
             if (write_litfile & 1)
-                WriteLitFile(bsp, faces_sup, source, LIT_VERSION);
+                WriteLitFile(&bsp, faces_sup, source, LIT_VERSION);
             if (write_litfile & 2)
-                BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp->lightdatasize * 3);
+                BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp.lightdatasize * 3);
             if (write_luxfile & 1)
-                WriteLuxFile(bsp, source, LIT_VERSION);
+                WriteLuxFile(&bsp, source, LIT_VERSION);
             if (write_luxfile & 2)
-                BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp->lightdatasize * 3);
+                BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp.lightdatasize * 3);
         }
     }
 
     /* -novanilla + internal lighting = no grey lightmap */
     if (scaledonly && (write_litfile & 2))
-        bsp->lightdatasize = 0;
+        bsp.lightdatasize = 0;
 
 #if 0
     ExportObj(source, bsp);
 #endif
 
-    WriteEntitiesToString(cfg, bsp);
+    WriteEntitiesToString(cfg, &bsp);
     /* Convert data format back if necessary */
     ConvertBSPFormat(&bspdata, loadversion);
 

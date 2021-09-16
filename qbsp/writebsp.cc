@@ -400,27 +400,28 @@ WriteBSPFile
 */
 static void WriteBSPFile()
 {
-    bspdata_t bspdata{};
+    bspdata_t bspdata { };
+    mbsp_t &bsp = bspdata.bsp.emplace<mbsp_t>();
 
     bspdata.version = &bspver_generic;
 
-    CopyVector(map.exported_planes, &bspdata.data.mbsp.numplanes, &bspdata.data.mbsp.dplanes);
-    CopyVector(map.exported_leafs, &bspdata.data.mbsp.numleafs, &bspdata.data.mbsp.dleafs);
-    CopyVector(map.exported_vertexes, &bspdata.data.mbsp.numvertexes, &bspdata.data.mbsp.dvertexes);
-    CopyVector(map.exported_nodes, &bspdata.data.mbsp.numnodes, &bspdata.data.mbsp.dnodes);
-    CopyVector(map.exported_texinfos, &bspdata.data.mbsp.numtexinfo, &bspdata.data.mbsp.texinfo);
-    CopyVector(map.exported_faces, &bspdata.data.mbsp.numfaces, &bspdata.data.mbsp.dfaces);
-    CopyVector(map.exported_clipnodes, &bspdata.data.mbsp.numclipnodes, &bspdata.data.mbsp.dclipnodes);
-    CopyVector(map.exported_marksurfaces, &bspdata.data.mbsp.numleaffaces, &bspdata.data.mbsp.dleaffaces);
-    CopyVector(map.exported_surfedges, &bspdata.data.mbsp.numsurfedges, &bspdata.data.mbsp.dsurfedges);
-    CopyVector(map.exported_edges, &bspdata.data.mbsp.numedges, &bspdata.data.mbsp.dedges);
-    CopyVector(map.exported_models, &bspdata.data.mbsp.nummodels, &bspdata.data.mbsp.dmodels);
-    CopyVector(map.exported_leafbrushes, &bspdata.data.mbsp.numleafbrushes, &bspdata.data.mbsp.dleafbrushes);
-    CopyVector(map.exported_brushsides, &bspdata.data.mbsp.numbrushsides, &bspdata.data.mbsp.dbrushsides);
-    CopyVector(map.exported_brushes, &bspdata.data.mbsp.numbrushes, &bspdata.data.mbsp.dbrushes);
+    CopyVector(map.exported_planes, &bsp.numplanes, &bsp.dplanes);
+    CopyVector(map.exported_leafs, &bsp.numleafs, &bsp.dleafs);
+    CopyVector(map.exported_vertexes, &bsp.numvertexes, &bsp.dvertexes);
+    CopyVector(map.exported_nodes, &bsp.numnodes, &bsp.dnodes);
+    CopyVector(map.exported_texinfos, &bsp.numtexinfo, &bsp.texinfo);
+    CopyVector(map.exported_faces, &bsp.numfaces, &bsp.dfaces);
+    CopyVector(map.exported_clipnodes, &bsp.numclipnodes, &bsp.dclipnodes);
+    CopyVector(map.exported_marksurfaces, &bsp.numleaffaces, &bsp.dleaffaces);
+    CopyVector(map.exported_surfedges, &bsp.numsurfedges, &bsp.dsurfedges);
+    CopyVector(map.exported_edges, &bsp.numedges, &bsp.dedges);
+    CopyVector(map.exported_models, &bsp.nummodels, &bsp.dmodels);
+    CopyVector(map.exported_leafbrushes, &bsp.numleafbrushes, &bsp.dleafbrushes);
+    CopyVector(map.exported_brushsides, &bsp.numbrushsides, &bsp.dbrushsides);
+    CopyVector(map.exported_brushes, &bsp.numbrushes, &bsp.dbrushes);
 
-    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void **)&bspdata.data.mbsp.dentdata);
-    CopyString(map.exported_texdata, false, &bspdata.data.mbsp.texdatasize, (void **)&bspdata.data.mbsp.dtexdata);
+    CopyString(map.exported_entities, true, &bsp.entdatasize, (void **)&bsp.dentdata);
+    CopyString(map.exported_texdata, false, &bsp.texdatasize, (void **)&bsp.dtexdata);
 
     if (map.needslmshifts) {
         BSPX_AddLump(&bspdata, "LMSHIFT", map.exported_lmshifts.data(), map.exported_lmshifts.size());
@@ -430,12 +431,12 @@ static void WriteBSPFile()
     }
 
     // FIXME: temp
-    bspdata.data.mbsp.numareaportals = 1;
-    bspdata.data.mbsp.dareaportals = new dareaportal_t[bspdata.data.mbsp.numareaportals] { };
+    bsp.numareaportals = 1;
+    bsp.dareaportals = new dareaportal_t[bsp.numareaportals] { };
 
-    bspdata.data.mbsp.numareas = 2;
-    bspdata.data.mbsp.dareas = new darea_t[bspdata.data.mbsp.numareas] { };
-    bspdata.data.mbsp.dareas[1].firstareaportal = 1;
+    bsp.numareas = 2;
+    bsp.dareas = new darea_t[bsp.numareas] { };
+    bsp.dareas[1].firstareaportal = 1;
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
         const bspversion_t *highLimitsFormat = nullptr;
 
@@ -488,6 +489,7 @@ UpdateBSPFileEntitiesLump
 void UpdateBSPFileEntitiesLump()
 {
     bspdata_t bspdata;
+
     StripExtension(options.szBSPName);
     DefaultExtension(options.szBSPName, ".bsp");
 
@@ -495,8 +497,10 @@ void UpdateBSPFileEntitiesLump()
     LoadBSPFile(options.szBSPName, &bspdata);
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
+    mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
     // replace the existing entities lump with map.exported_entities
-    CopyString(map.exported_entities, true, &bspdata.data.mbsp.entdatasize, (void **)&bspdata.data.mbsp.dentdata);
+    CopyString(map.exported_entities, true, &bsp.entdatasize, (void **)&bsp.dentdata);
 
     // write the .bsp back to disk
     ConvertBSPFormat(&bspdata, bspdata.loadversion);

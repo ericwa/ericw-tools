@@ -1196,7 +1196,6 @@ char statetmpfile[1024];
 int main(int argc, char **argv)
 {
     bspdata_t bspdata;
-    mbsp_t *const bsp = &bspdata.data.mbsp;
     const bspversion_t *loadversion;
     int i;
 
@@ -1274,11 +1273,13 @@ int main(int argc, char **argv)
     loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
+    mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
     strcat(portalfile, ".prt");
 
-    LoadPortals(portalfile, bsp);
+    LoadPortals(portalfile, &bsp);
 
     strcpy(statefile, sourcefile);
     StripExtension(statefile);
@@ -1288,7 +1289,7 @@ int main(int argc, char **argv)
     StripExtension(statetmpfile);
     DefaultExtension(statetmpfile, ".vi0");
 
-    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
+    if (bsp.loadversion->game->id != GAME_QUAKE_II) {
         uncompressed = new uint8_t[portalleafs * leafbytes_real] { };
     } else {
         uncompressed_q2 = new uint8_t[portalleafs * leafbytes] { };
@@ -1296,17 +1297,17 @@ int main(int argc, char **argv)
 
     //    CalcPassages ();
 
-    CalcVis(bsp);
+    CalcVis(&bsp);
 
     logprint("c_noclip: %i\n", c_noclip);
     logprint("c_chains: %lu\n", c_chains);
 
-    bsp->visdatasize = vismap_p - bsp->dvisdata;
-    logprint("visdatasize:%i  compressed from %u\n", bsp->visdatasize, originalvismapsize);
+    bsp.visdatasize = vismap_p - bsp.dvisdata;
+    logprint("visdatasize:%i  compressed from %u\n", bsp.visdatasize, originalvismapsize);
 
     // no ambient sounds for Q2
-    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
-        CalcAmbientSounds(bsp);
+    if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+        CalcAmbientSounds(&bsp);
     }
 
     /* Convert data format back if necessary */

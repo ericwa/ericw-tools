@@ -436,27 +436,27 @@ static void CheckBSPFile(const mbsp_t *bsp)
         bsp->dmodels[0].mins[2], bsp->dmodels[0].maxs[0], bsp->dmodels[0].maxs[1], bsp->dmodels[0].maxs[2]);
 }
 
-static void CompareBSPFiles(const mbsp_t *refBsp, const mbsp_t *bsp)
+static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
 {
-    printf("comparing %d with %d faces\n", refBsp->numfaces, bsp->numfaces);
+    printf("comparing %d with %d faces\n", refBsp.numfaces, bsp.numfaces);
 
-    const dmodel_t *world = BSP_GetWorldModel(bsp);
-    const dmodel_t *refWorld = BSP_GetWorldModel(refBsp);
+    const dmodel_t *world = BSP_GetWorldModel(&bsp);
+    const dmodel_t *refWorld = BSP_GetWorldModel(&refBsp);
 
     // iterate through the refBsp world faces
     for (int i = 0; i < refWorld->numfaces; i++) {
-        auto *refFace = BSP_GetFace(refBsp, refWorld->firstface + i);
-        qvec3f refFaceCentroid = Face_Centroid(refBsp, refFace);
+        auto *refFace = BSP_GetFace(&refBsp, refWorld->firstface + i);
+        qvec3f refFaceCentroid = Face_Centroid(&refBsp, refFace);
 
         // FIXME:
         vec3_t wantedPoint;
         VectorCopy(refFaceCentroid, wantedPoint);
 
         vec3_t wantedNormal;
-        Face_Normal(refBsp, refFace, wantedNormal);
+        Face_Normal(&refBsp, refFace, wantedNormal);
 
         // Search for a face in bsp touching refFaceCentroid.
-        auto *matchedFace = BSP_FindFaceAtPoint(bsp, world, wantedPoint, wantedNormal);
+        auto *matchedFace = BSP_FindFaceAtPoint(&bsp, world, wantedPoint, wantedNormal);
         if (matchedFace == nullptr) {
             printf("couldn't find a face at %f %f %f normal %f %f %f\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
                 wantedNormal[0], wantedNormal[1], wantedNormal[2]);
@@ -490,7 +490,8 @@ static void FindFaces(const mbsp_t *bsp, const vec3_t &pos, const vec3_t &normal
 int main(int argc, char **argv)
 {
     bspdata_t bspdata;
-    mbsp_t *const bsp = &bspdata.data.mbsp;
+    mbsp_t &bsp = bspdata.bsp.emplace<mbsp_t>();
+
     char source[1024];
     FILE *f;
     int i, err;
@@ -530,7 +531,7 @@ int main(int argc, char **argv)
 
             printf("comparing reference bsp %s with test bsp %s\n", refbspname, source);
 
-            CompareBSPFiles(&refbspdata.data.mbsp, &bspdata.data.mbsp);
+            CompareBSPFiles(std::get<mbsp_t>(refbspdata.bsp), bsp);
 
             break;
         } else if (!strcmp(argv[i], "--convert")) {
@@ -570,8 +571,8 @@ int main(int argc, char **argv)
             if (!f)
                 Error("couldn't open %s for writing\n", source);
 
-            err = fwrite(bsp->dentdata, sizeof(char), bsp->entdatasize - 1, f);
-            if (err != bsp->entdatasize - 1)
+            err = fwrite(bsp.dentdata, sizeof(char), bsp.entdatasize - 1, f);
+            if (err != bsp.entdatasize - 1)
                 Error("%s", strerror(errno));
 
             err = fclose(f);
@@ -588,7 +589,7 @@ int main(int argc, char **argv)
             if (!f)
                 Error("couldn't open %s for writing\n", source);
 
-            ExportWad(f, bsp);
+            ExportWad(f, &bsp);
 
             err = fclose(f);
             if (err)
@@ -597,11 +598,11 @@ int main(int argc, char **argv)
             printf("done.\n");
         } else if (!strcmp(argv[i], "--check")) {
             printf("Beginning BSP data check...\n");
-            CheckBSPFile(bsp);
-            CheckBSPFacesPlanar(bsp);
+            CheckBSPFile(&bsp);
+            CheckBSPFacesPlanar(&bsp);
             printf("Done.\n");
         } else if (!strcmp(argv[i], "--modelinfo")) {
-            PrintModelInfo(bsp);
+            PrintModelInfo(&bsp);
         } else if (!strcmp(argv[i], "--findfaces")) {
             // (i + 1) ... (i + 6) = x y z nx ny nz
             // i + 7 = bsp file
@@ -613,7 +614,7 @@ int main(int argc, char **argv)
             try {
                 const vec3_t pos = {std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
                 const vec3_t normal = {std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
-                FindFaces(bsp, pos, normal);
+                FindFaces(&bsp, pos, normal);
             }
             catch (const std::exception &) {
                 printf("Error reading position/normal\n");
@@ -630,7 +631,7 @@ int main(int argc, char **argv)
             const int fnum = std::stoi(argv[i + 1]);
             const int texinfonum = std::stoi(argv[i + 2]);
 
-            bsp2_dface_t *face = BSP_GetFace(bsp, fnum);
+            bsp2_dface_t *face = BSP_GetFace(&bsp, fnum);
             face->texinfo = texinfonum;
 
             ConvertBSPFormat(&bspdata, bspdata.loadversion);
@@ -653,7 +654,7 @@ int main(int argc, char **argv)
             decomp_options options;
             options.geometryOnly = geomOnly;
 
-            DecompileBSP(bsp, options, f);
+            DecompileBSP(&bsp, options, f);
 
             fclose(f);
             printf("done.\n");

@@ -160,7 +160,7 @@ int main(int argc, char **argv)
         strcat(source, ".json");
         ConvertBSPFormat(&bsp, &bspver_generic);
 
-        serialize_bsp(bsp.data.mbsp, source);
+        serialize_bsp(std::get<mbsp_t>(bsp.bsp), source);
 
         printf("---------------------\n");
     }
