@@ -682,6 +682,13 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
     /* leaf 0 is a common solid */
     leaf->visofs = dest - vismap;
 
+    // Set pointers
+    for (i = 0; i < portalleafs_real; i++) {
+        if (bsp->dleafs[i + 1].cluster == clusternum) {
+            bsp->dleafs[i + 1].visofs = leaf->visofs;
+        }
+    }
+
     memcpy(dest, compressed, len);
     delete[] compressed;
 }
@@ -756,11 +763,6 @@ void CalcVis(const mbsp_t *bsp)
             ClusterFlow(i, buffer, bsp);
         }
         free(buffer);
-
-        // Set pointers
-        for (i = 0; i < portalleafs_real; i++) {
-            bsp->dleafs[i + 1].visofs = leafs[clustermap[i]].visofs;
-        }
     }
 
     int64_t avg = totalvis;
@@ -1136,13 +1138,13 @@ void LoadPortals(char *name, mbsp_t *bsp)
     }
 
     /* Load the cluster expansion map if needed */
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    /*if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         clustermap = new int[bsp->numleafs];
 
         for (int32_t i = 0; i < bsp->numleafs; i++) {
             clustermap[i] = bsp->dleafs[i + 1].cluster;
         }
-    } else if (portalleafs != portalleafs_real) {
+    } else */if (portalleafs != portalleafs_real) {
         clustermap = new int[portalleafs_real];
         if (!strcmp(magic, PORTALFILE2)) {
             for (i = 0; i < portalleafs; i++) {
