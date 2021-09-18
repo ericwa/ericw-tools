@@ -252,6 +252,17 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     if (!portalFile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
 
+    // q2 uses a PRT1 file, but with clusters.
+    // (Since q2bsp natively supports clusters, we don't need PRT2.)
+    if (options.target_game->id == GAME_QUAKE_II) {
+        fprintf(portalFile, "PRT1\n");
+        fprintf(portalFile, "%d\n", state->num_visclusters);
+        fprintf(portalFile, "%d\n", state->num_visportals);
+        WritePortals_r(headnode, portalFile, true);
+        fclose(portalFile);
+        return;
+    }
+
     /* If no detail clusters, just use a normal PRT1 format */
     if (!state->uses_detail) {
         fprintf(portalFile, "PRT1\n");
