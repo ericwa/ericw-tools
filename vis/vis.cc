@@ -16,8 +16,8 @@
  */
 int numportals;
 int portalleafs;        /* leafs (PRT1) or clusters (PRT2) */
-int portalleafs_real;   /* real no. of leafs after expanding PRT2 clusters */
-int *clustermap;        /* mapping from real leaf to cluster number */
+int portalleafs_real; /* real no. of leafs after expanding PRT2 clusters. Not used for Q2. */
+int *clustermap; /* mapping from real leaf to cluster number. Not used for Q2. */
 
 portal_t *portals;
 leaf_t *leafs;
@@ -39,7 +39,7 @@ uint8_t *uncompressed_q2;             // [leafbytes*portalleafs]
 
 int leafbytes;                  // (portalleafs+63)>>3
 int leaflongs;
-int leafbytes_real;             // (portalleafs_real+63)>>3
+int leafbytes_real; // (portalleafs_real+63)>>3, not used for Q2.
 
 /* Options - TODO: collect these in a struct */
 qboolean fastvis;
@@ -681,10 +681,15 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
      * increment totalvis by 
      * (# of real leafs in this cluster) x (# of real leafs visible from this cluster)
      */
-    for (i = 0; i < portalleafs_real; i++) {
-        if (clustermap[i] == clusternum) {
-            totalvis += numvis;
-        }
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // FIXME: not sure what this is supposed to be?
+        totalvis += numvis;
+    } else {
+    	for (i = 0; i < portalleafs_real; i++) {
+        	if (clustermap[i] == clusternum) {
+         	    totalvis += numvis;
+        	}
+    	}
     }
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
@@ -704,6 +709,13 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
 
     /* leaf 0 is a common solid */
     leaf->visofs = dest - vismap;
+
+    // Set pointers
+    for (i = 1; i < bsp->numleafs; i++) {
+        if (bsp->dleafs[i].cluster == clusternum) {
+            bsp->dleafs[i].visofs = leaf->visofs;
+        }
+    }
 
     memcpy(dest, compressed, len);
     free(compressed);
@@ -773,7 +785,10 @@ CalcVis(const mbsp_t *bsp)
 //
 // assemble the leaf vis lists by oring and compressing the portal lists
 //
-    if (portalleafs == portalleafs_real) {
+    if (portalleafs == portalleafs_real && bsp->loadversion->game->id != GAME_QUAKE_II) {
+        // Legacy, non-detail Q1 vis codepath
+        // FIXME: Should be possible to remove this and just use ClusterFlow even on Q1 maps
+        // with no detail.
         for (i = 0; i < portalleafs; i++)
             LeafFlow(i, &bsp->dleafs[i + 1], bsp);
     } else {
@@ -794,9 +809,16 @@ CalcVis(const mbsp_t *bsp)
     }
 
     int64_t avg = totalvis;
-    avg /= static_cast<int64_t>(portalleafs_real);
-    
-    logprint("average leafs visible: %i\n", static_cast<int>(avg));
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        avg /= static_cast<int64_t>(portalleafs);
+
+        logprint("average clusters visible: %i\n", static_cast<int>(avg));
+    } else {
+    	avg /= static_cast<int64_t>(portalleafs_real);
+
+    	logprint("average leafs visible: %i\n", static_cast<int>(avg));
+	}
 }
 
 /*
@@ -1062,8 +1084,8 @@ LoadPortals(char *name, mbsp_t *bsp)
             Error("%s: unable to parse %s HEADER\n", __func__, PORTALFILE);
 
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            portalleafs_real = bsp->numleafs;
-            logprint("%6d leafs\n", portalleafs_real);
+            // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
+            portalleafs_real = 0;
             logprint("%6d clusters\n", portalleafs);
             logprint("%6d portals\n", numportals);
         } else {
@@ -1076,6 +1098,9 @@ LoadPortals(char *name, mbsp_t *bsp)
                        &numportals);
         if (count != 3)
             Error("%s: unable to parse %s HEADER\n", __func__, PORTALFILE);
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            Error("%s: %s can not be used with Q2\n", __func__, PORTALFILE2);
+        }
         logprint("%6d leafs\n", portalleafs_real);
         logprint("%6d clusters\n", portalleafs);
         logprint("%6d portals\n", numportals);
@@ -1083,6 +1108,9 @@ LoadPortals(char *name, mbsp_t *bsp)
         count = fscanf(f, "%i\n%i\n%i\n", &portalleafs, &numportals, &portalleafs_real);
         if (count != 3)
             Error("%s: unable to parse %s HEADER\n", __func__, PORTALFILE);
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            Error("%s: %s can not be used with Q2\n", __func__, PORTALFILEAM);
+        }
         logprint("%6d leafs\n", portalleafs_real);
         logprint("%6d clusters\n", portalleafs);
         logprint("%6d portals\n", numportals);
@@ -1092,7 +1120,12 @@ LoadPortals(char *name, mbsp_t *bsp)
 
     leafbytes = ((portalleafs + 63) & ~63) >> 3;
     leaflongs = leafbytes / sizeof(long);
-    leafbytes_real = ((portalleafs_real + 63) & ~63) >> 3;
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // not used in Q2
+        leafbytes_real = 0;
+    } else {
+    	leafbytes_real = ((portalleafs_real + 63) & ~63) >> 3;
+    }
 
 // each file portal is split into two memory portals
     portals = static_cast<portal_t *>(malloc(2 * numportals * sizeof(portal_t)));
@@ -1181,13 +1214,10 @@ LoadPortals(char *name, mbsp_t *bsp)
 
     /* Load the cluster expansion map if needed */
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
-
-        for (int32_t i = 0; i < bsp->numleafs; i++) {
-            clustermap[i] = bsp->dleafs[i + 1].cluster;
-        }
+        // not used
+        clustermap = nullptr;
     } else if (portalleafs != portalleafs_real) {
-        clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
+        clustermap = new int[portalleafs_real];
         if (!strcmp(magic, PORTALFILE2)) {
             for (i = 0; i < portalleafs; i++) {
                 while (1) {
