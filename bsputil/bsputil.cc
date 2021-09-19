@@ -541,7 +541,7 @@ main(int argc, char **argv)
 
     LoadBSPFile(source, &bspdata);
 
-    ConvertBSPFormat(&bspdata, &bspver_generic);
+    ConvertBSPFormat(GENERIC_BSP, &bspdata);
 
     for (i = 0; i < argc - 1; i++) {
         if (!strcmp(argv[i], "--compare")) {
@@ -556,7 +556,7 @@ main(int argc, char **argv)
             strcpy(refbspname, argv[i]);
             DefaultExtension(refbspname, ".bsp");
             LoadBSPFile(refbspname, &refbspdata);
-            ConvertBSPFormat(&refbspdata, &bspver_generic);
+            ConvertBSPFormat(GENERIC_BSP, &refbspdata);
 
             printf("comparing reference bsp %s with test bsp %s\n", refbspname, source);
 
@@ -569,21 +569,21 @@ main(int argc, char **argv)
             if (!(i < argc - 1)) {
                 Error("--convert requires an argument");
             }
-
-            const bspversion_t *fmt = nullptr;
-
-            for (const bspversion_t *bspver : bspversions) {
-                if (!strcmp(argv[i], bspver->short_name)) {
-                    fmt = bspver;
-                    break;
-                }
-            }
-
-            if (!fmt) {
+            
+            int fmt;
+            if (!strcmp(argv[i], "bsp29")) {
+                fmt = BSPVERSION;
+            } else if (!strcmp(argv[i], "bsp2")) {
+                fmt = BSP2VERSION;
+            } else if (!strcmp(argv[i], "bsp2rmq")) {
+                fmt = BSP2RMQVERSION;
+            } else if (!strcmp(argv[i], "q2bsp")) {
+                fmt = Q2_BSPVERSION;
+            } else {
                 Error("Unsupported format %s", argv[i]);
             }
-
-            ConvertBSPFormat(&bspdata, fmt);
+            
+            ConvertBSPFormat(fmt, &bspdata);
             
             StripExtension(source);
             strcat(source, "-");
@@ -672,7 +672,7 @@ main(int argc, char **argv)
             bsp2_dface_t* face = BSP_GetFace(bsp, fnum);
             face->texinfo = texinfonum;
 
-            ConvertBSPFormat(&bspdata, bspdata.loadversion);            
+            ConvertBSPFormat(bspdata.loadversion, &bspdata);            
 
             // Overwrite source bsp!
             WriteBSPFile(source, &bspdata);

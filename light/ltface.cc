@@ -1034,7 +1034,7 @@ GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t s
     if (dist < 0.1) {
         // Catch 0 distance between sample point and light (produces infinite brightness / nan's) and causes
         // problems later
-        dist = 0.1f;
+        dist = 0.1;
         VectorSet(surfpointToLightDir_out, 0, 0, 1);
     }
     const float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
@@ -3081,7 +3081,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             continue;
         
         // skip lightmaps where all samples have brightness below 1
-        if (bsp->loadversion != &bspver_q2 && bsp->loadversion != &bspver_qbism) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
+        if (bsp->loadversion != Q2_BSPVERSION) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
             const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
             if (maxb < 1)
                 continue;
@@ -3146,7 +3146,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
 
     // q2 support
     int lightofs;
-    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism || bsp->loadversion == &bspver_hl) {
+    if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION) {
         lightofs = lit - lit_filebase;
     } else {
         lightofs = out - filebase;

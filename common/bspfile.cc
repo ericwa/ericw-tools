@@ -23,45 +23,43 @@
 
 #include <limits.h>
 
-const bspversion_t bspver_generic { NO_VERSION, NO_VERSION, "mbsp", "generic BSP" };
-const bspversion_t bspver_q1 { BSPVERSION, NO_VERSION, "bsp29", "Quake BSP" };
-/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
-const bspversion_t bspver_h2 { BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP" };
-const bspversion_t bspver_bsp2 { BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2" };
-const bspversion_t bspver_bsp2rmq { BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ" };
-const bspversion_t bspver_hl { BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP" };
-const bspversion_t bspver_q2 { Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP" };
-const bspversion_t bspver_qbism { Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II Qbism BSP" };
-
 static const char *
-BSPVersionString(const bspversion_t *version)
+BSPVersionString(int32_t version)
 {
-    if (version->name) {
-        return version->name;
-    }
-
     static char buffers[2][20];
     static int index;
-    char *buffer = buffers[1 & ++index];
-    if (version->version != NO_VERSION) {
-        q_snprintf(buffer, sizeof(buffers[0]), "%d:%d", version->version, version->ident);
-    } else {
-        q_snprintf(buffer, sizeof(buffers[0]), "%d", version->version);
+    char *buffer;
+
+    switch (version) {
+    case BSP2RMQVERSION:
+        return "BSP2rmq";
+    case BSP2VERSION:
+        return "BSP2";
+    case BSPHLVERSION:
+        return "HLBSP";
+    case Q2_BSPVERSION:
+        return "Q2BSP";
+    default:
+        buffer = buffers[1 & ++index];
+        q_snprintf(buffer, sizeof(buffers[0]), "%d", version);
+        return buffer;
     }
-    return buffer;
 }
 
 static qboolean
-BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_version)
+BSPVersionSupported(int32_t version)
 {
-    for (const bspversion_t *bspver : bspversions) {
-        if (bspver->ident == ident && bspver->version == version) {
-            *out_version = bspver;
-            return true;
-        }
+    switch (version) {
+    case BSPVERSION:
+    case BSP2VERSION:
+    case BSP2RMQVERSION:
+    case BSPHLVERSION:
+        return true;
+    case Q2_BSPVERSION:
+        return true;
+    default:
+        return false;
     }
-
-    return false;
 }
 
 /*
@@ -571,200 +569,6 @@ void Q2_SwapBSPFile (q2bsp_t *bsp, qboolean todisk)
 }
 
 /*
-=============
-Q2_Qbism_SwapBSPFile
-
-Byte swaps all data in a bsp file.
-=============
-*/
-void Q2_Qbism_SwapBSPFile (q2bsp_qbism_t *bsp, qboolean todisk)
-{
-    int                i, j;
-    q2_dmodel_t        *d;
-    
-    
-    // models
-    for (i=0 ; i<bsp->nummodels ; i++)
-    {
-        d = &bsp->dmodels[i];
-        
-        d->firstface = LittleLong (d->firstface);
-        d->numfaces = LittleLong (d->numfaces);
-        d->headnode = LittleLong (d->headnode);
-        
-        for (j=0 ; j<3 ; j++)
-        {
-            d->mins[j] = LittleFloat(d->mins[j]);
-            d->maxs[j] = LittleFloat(d->maxs[j]);
-            d->origin[j] = LittleFloat(d->origin[j]);
-        }
-    }
-    
-    //
-    // vertexes
-    //
-    for (i=0 ; i<bsp->numvertexes ; i++)
-    {
-        for (j=0 ; j<3 ; j++)
-            bsp->dvertexes[i].point[j] = LittleFloat (bsp->dvertexes[i].point[j]);
-    }
-    
-    //
-    // planes
-    //
-    for (i=0 ; i<bsp->numplanes ; i++)
-    {
-        for (j=0 ; j<3 ; j++)
-            bsp->dplanes[i].normal[j] = LittleFloat (bsp->dplanes[i].normal[j]);
-        bsp->dplanes[i].dist = LittleFloat (bsp->dplanes[i].dist);
-        bsp->dplanes[i].type = LittleLong (bsp->dplanes[i].type);
-    }
-    
-    //
-    // texinfos
-    //
-    for (i=0 ; i<bsp->numtexinfo ; i++)
-    {
-        for (j=0 ; j<4 ; j++)
-        {
-            bsp->texinfo[i].vecs[0][j] = LittleFloat(bsp->texinfo[i].vecs[0][j]);
-            bsp->texinfo[i].vecs[1][j] = LittleFloat(bsp->texinfo[i].vecs[1][j]);
-        }
-        bsp->texinfo[i].flags = LittleLong (bsp->texinfo[i].flags);
-        bsp->texinfo[i].value = LittleLong (bsp->texinfo[i].value);
-        bsp->texinfo[i].nexttexinfo = LittleLong (bsp->texinfo[i].nexttexinfo);
-    }
-    
-    //
-    // faces
-    //
-    for (i=0 ; i<bsp->numfaces ; i++)
-    {
-        bsp->dfaces[i].texinfo = LittleLong (bsp->dfaces[i].texinfo);
-        bsp->dfaces[i].planenum = LittleLong (bsp->dfaces[i].planenum);
-        bsp->dfaces[i].side = LittleLong (bsp->dfaces[i].side);
-        bsp->dfaces[i].lightofs = LittleLong (bsp->dfaces[i].lightofs);
-        bsp->dfaces[i].firstedge = LittleLong (bsp->dfaces[i].firstedge);
-        bsp->dfaces[i].numedges = LittleLong (bsp->dfaces[i].numedges);
-    }
-    
-    //
-    // nodes
-    //
-    for (i=0 ; i<bsp->numnodes ; i++)
-    {
-        bsp->dnodes[i].planenum = LittleLong (bsp->dnodes[i].planenum);
-        for (j=0 ; j<3 ; j++)
-        {
-            bsp->dnodes[i].mins[j] = LittleFloat (bsp->dnodes[i].mins[j]);
-            bsp->dnodes[i].maxs[j] = LittleFloat (bsp->dnodes[i].maxs[j]);
-        }
-        bsp->dnodes[i].children[0] = LittleLong (bsp->dnodes[i].children[0]);
-        bsp->dnodes[i].children[1] = LittleLong (bsp->dnodes[i].children[1]);
-        bsp->dnodes[i].firstface = LittleLong (bsp->dnodes[i].firstface);
-        bsp->dnodes[i].numfaces = LittleLong (bsp->dnodes[i].numfaces);
-    }
-    
-    //
-    // leafs
-    //
-    for (i=0 ; i<bsp->numleafs ; i++)
-    {
-        bsp->dleafs[i].contents = LittleLong (bsp->dleafs[i].contents);
-        bsp->dleafs[i].cluster = LittleLong (bsp->dleafs[i].cluster);
-        bsp->dleafs[i].area = LittleLong (bsp->dleafs[i].area);
-        for (j=0 ; j<3 ; j++)
-        {
-            bsp->dleafs[i].mins[j] = LittleFloat (bsp->dleafs[i].mins[j]);
-            bsp->dleafs[i].maxs[j] = LittleFloat (bsp->dleafs[i].maxs[j]);
-        }
-        
-        bsp->dleafs[i].firstleafface = LittleLong (bsp->dleafs[i].firstleafface);
-        bsp->dleafs[i].numleaffaces = LittleLong (bsp->dleafs[i].numleaffaces);
-        bsp->dleafs[i].firstleafbrush = LittleLong (bsp->dleafs[i].firstleafbrush);
-        bsp->dleafs[i].numleafbrushes = LittleLong (bsp->dleafs[i].numleafbrushes);
-    }
-    
-    //
-    // leaffaces
-    //
-    for (i=0 ; i<bsp->numleaffaces ; i++)
-        bsp->dleaffaces[i] = LittleLong (bsp->dleaffaces[i]);
-    
-    //
-    // leafbrushes
-    //
-    for (i=0 ; i<bsp->numleafbrushes ; i++)
-        bsp->dleafbrushes[i] = LittleLong (bsp->dleafbrushes[i]);
-    
-    //
-    // surfedges
-    //
-    for (i=0 ; i<bsp->numsurfedges ; i++)
-        bsp->dsurfedges[i] = LittleLong (bsp->dsurfedges[i]);
-    
-    //
-    // edges
-    //
-    for (i=0 ; i<bsp->numedges ; i++)
-    {
-        bsp->dedges[i].v[0] = LittleLong (bsp->dedges[i].v[0]);
-        bsp->dedges[i].v[1] = LittleLong (bsp->dedges[i].v[1]);
-    }
-    
-    //
-    // brushes
-    //
-    for (i=0 ; i<bsp->numbrushes ; i++)
-    {
-        bsp->dbrushes[i].firstside = LittleLong (bsp->dbrushes[i].firstside);
-        bsp->dbrushes[i].numsides = LittleLong (bsp->dbrushes[i].numsides);
-        bsp->dbrushes[i].contents = LittleLong (bsp->dbrushes[i].contents);
-    }
-    
-    //
-    // areas
-    //
-    for (i=0 ; i<bsp->numareas ; i++)
-    {
-        bsp->dareas[i].numareaportals = LittleLong (bsp->dareas[i].numareaportals);
-        bsp->dareas[i].firstareaportal = LittleLong (bsp->dareas[i].firstareaportal);
-    }
-    
-    //
-    // areasportals
-    //
-    for (i=0 ; i<bsp->numareaportals ; i++)
-    {
-        bsp->dareaportals[i].portalnum = LittleLong (bsp->dareaportals[i].portalnum);
-        bsp->dareaportals[i].otherarea = LittleLong (bsp->dareaportals[i].otherarea);
-    }
-    
-    //
-    // brushsides
-    //
-    for (i=0 ; i<bsp->numbrushsides ; i++)
-    {
-        bsp->dbrushsides[i].planenum = LittleLong (bsp->dbrushsides[i].planenum);
-        bsp->dbrushsides[i].texinfo = LittleLong (bsp->dbrushsides[i].texinfo);
-    }
-    
-    //
-    // visibility
-    //
-    if (todisk)
-        j = bsp->dvis->numclusters;
-    else
-        j = LittleLong(bsp->dvis->numclusters);
-    bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
-    for (i=0 ; i<j ; i++)
-    {
-        bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
-        bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
-    }
-}
-
-/*
  * =============
  * SwapBSPFile
  * Byte swaps all data in a bsp file.
@@ -773,17 +577,15 @@ void Q2_Qbism_SwapBSPFile (q2bsp_qbism_t *bsp, qboolean todisk)
 static void
 SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
 {
-    if (bspdata->version == &bspver_q2) {
+    if (bspdata->version == Q2_BSPVERSION) {
         q2bsp_t *bsp = &bspdata->data.q2bsp;
+        
         Q2_SwapBSPFile(bsp, swap == TO_DISK);
-        return;
-    } else if (bspdata->version == &bspver_qbism) {
-        q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
-        Q2_Qbism_SwapBSPFile(bsp, swap == TO_DISK);
+        
         return;
     }
     
-    if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
+    if (bspdata->version == BSPVERSION || bspdata->version == BSPHLVERSION) {
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         SwapBSPVertexes(bsp->numvertexes, bsp->dvertexes);
@@ -802,7 +604,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
         return;
     }
 
-    if (bspdata->version == &bspver_bsp2rmq) {
+    if (bspdata->version == BSP2RMQVERSION) {
         bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         SwapBSPVertexes(bsp->numvertexes, bsp->dvertexes);
@@ -821,7 +623,7 @@ SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
         return;
     }
 
-    if (bspdata->version == &bspver_bsp2) {
+    if (bspdata->version == BSP2VERSION) {
         bsp2_t *bsp = &bspdata->data.bsp2;
 
         SwapBSPVertexes(bsp->numvertexes, bsp->dvertexes);
@@ -1013,33 +815,6 @@ Q2BSPtoM_Leafs(const q2_dleaf_t *dleafsq2, int numleafs) {
     return newdata;
 }
 
-static mleaf_t *
-Q2BSP_QBSPtoM_Leafs(const q2_dleaf_qbism_t *dleafsq2, int numleafs) {
-    const q2_dleaf_qbism_t *dleafq2 = dleafsq2;
-    mleaf_t *newdata, *mleaf;
-    int i, j;
-    
-    newdata = mleaf = (mleaf_t *)calloc(numleafs, sizeof(*mleaf));
-    
-    for (i = 0; i < numleafs; i++, dleafq2++, mleaf++) {
-        mleaf->contents = dleafq2->contents;
-        mleaf->cluster = dleafq2->cluster;
-        mleaf->area = dleafq2->area;
-        
-        for (j = 0; j < 3; j++) {
-            mleaf->mins[j] = dleafq2->mins[j];
-            mleaf->maxs[j] = dleafq2->maxs[j];
-        }
-        mleaf->firstmarksurface = dleafq2->firstleafface;
-        mleaf->nummarksurfaces = dleafq2->numleaffaces;
-        
-        mleaf->firstleafbrush = dleafq2->firstleafbrush;
-        mleaf->numleafbrushes = dleafq2->numleafbrushes;
-    }
-    
-    return newdata;
-}
-
 static q2_dleaf_t *
 MBSPtoQ2_Leafs(const mleaf_t *mleafs, int numleafs) {
     const mleaf_t *mleaf = mleafs;
@@ -1047,33 +822,6 @@ MBSPtoQ2_Leafs(const mleaf_t *mleafs, int numleafs) {
     int i, j;
     
     newdata = dleafq2 = (q2_dleaf_t *)calloc(numleafs, sizeof(*dleafq2));
-    
-    for (i = 0; i < numleafs; i++, mleaf++, dleafq2++) {
-        dleafq2->contents = mleaf->contents;
-        dleafq2->cluster = mleaf->cluster;
-        dleafq2->area = mleaf->area;
-        
-        for (j = 0; j < 3; j++) {
-            dleafq2->mins[j] = mleaf->mins[j];
-            dleafq2->maxs[j] = mleaf->maxs[j];
-        }
-        dleafq2->firstleafface = mleaf->firstmarksurface;
-        dleafq2->numleaffaces = mleaf->nummarksurfaces;
-        
-        dleafq2->firstleafbrush = mleaf->firstleafbrush;
-        dleafq2->numleafbrushes = mleaf->numleafbrushes;
-    }
-    
-    return newdata;
-}
-
-static q2_dleaf_qbism_t *
-MBSPtoQ2_Qbism_Leafs(const mleaf_t *mleafs, int numleafs) {
-    const mleaf_t *mleaf = mleafs;
-    q2_dleaf_qbism_t *newdata, *dleafq2;
-    int i, j;
-    
-    newdata = dleafq2 = (q2_dleaf_qbism_t *)calloc(numleafs, sizeof(*dleafq2));
     
     for (i = 0; i < numleafs; i++, mleaf++, dleafq2++) {
         dleafq2->contents = mleaf->contents;
@@ -1162,28 +910,6 @@ Q2BSPto2_Faces(const q2_dface_t *dfacesq2, int numfaces) {
     return newdata;
 }
 
-static bsp2_dface_t *
-Q2BSP_QBSPto2_Faces(const q2_dface_qbism_t *dfacesq2, int numfaces) {
-    const q2_dface_qbism_t *dfaceq2 = dfacesq2;
-    bsp2_dface_t *newdata, *dface2;
-    int i, j;
-    
-    newdata = dface2 = static_cast<bsp2_dface_t *>(malloc(numfaces * sizeof(*dface2)));
-    
-    for (i = 0; i < numfaces; i++, dfaceq2++, dface2++) {
-        dface2->planenum = dfaceq2->planenum;
-        dface2->side = dfaceq2->side;
-        dface2->firstedge = dfaceq2->firstedge;
-        dface2->numedges = dfaceq2->numedges;
-        dface2->texinfo = dfaceq2->texinfo;
-        for (j = 0; j < MAXLIGHTMAPS; j++)
-            dface2->styles[j] = dfaceq2->styles[j];
-        dface2->lightofs = dfaceq2->lightofs;
-    }
-    
-    return newdata;
-}
-
 static q2_dface_t *
 BSP2toQ2_Faces(const bsp2_dface_t *dfaces2, int numfaces) {
     const bsp2_dface_t *dface2 = dfaces2;
@@ -1191,28 +917,6 @@ BSP2toQ2_Faces(const bsp2_dface_t *dfaces2, int numfaces) {
     int i, j;
     
     newdata = dfaceq2 = static_cast<q2_dface_t *>(malloc(numfaces * sizeof(*dfaceq2)));
-    
-    for (i = 0; i < numfaces; i++, dface2++, dfaceq2++) {
-        dfaceq2->planenum = dface2->planenum;
-        dfaceq2->side = dface2->side;
-        dfaceq2->firstedge = dface2->firstedge;
-        dfaceq2->numedges = dface2->numedges;
-        dfaceq2->texinfo = dface2->texinfo;
-        for (j = 0; j < MAXLIGHTMAPS; j++)
-            dfaceq2->styles[j] = dface2->styles[j];
-        dfaceq2->lightofs = dface2->lightofs;
-    }
-    
-    return newdata;
-}
-
-static q2_dface_qbism_t *
-BSP2toQ2_Qbism_Faces(const bsp2_dface_t *dfaces2, int numfaces) {
-    const bsp2_dface_t *dface2 = dfaces2;
-    q2_dface_qbism_t *newdata, *dfaceq2;
-    int i, j;
-    
-    newdata = dfaceq2 = static_cast<q2_dface_qbism_t *>(malloc(numfaces * sizeof(*dfaceq2)));
     
     for (i = 0; i < numfaces; i++, dface2++, dfaceq2++) {
         dfaceq2->planenum = dface2->planenum;
@@ -1713,37 +1417,9 @@ static bsp2_dnode_t *BSP2_CopyNodes(const bsp2_dnode_t *dnodes, int numnodes)
     return (bsp2_dnode_t *)CopyArray(dnodes, numnodes, sizeof(*dnodes));
 }
 
-static uint32_t *Q2BSPtoM_CopyLeafBrushes(const uint16_t *leafbrushes, int count)
+static uint16_t *Q2BSP_CopyLeafBrushes(const uint16_t *leafbrushes, int count)
 {
-    const uint16_t *leafbrush = leafbrushes;
-    uint32_t *newdata, *leafbrushes2;
-    int i;
-
-    newdata = leafbrushes2 = static_cast<uint32_t *>(malloc(count * sizeof(*leafbrushes2)));
-
-    for (i = 0; i < count; i++, leafbrush++, leafbrushes2++)
-        *leafbrushes2 = *leafbrush;
-
-    return newdata;
-}
-
-static uint16_t *MBSPtoQ2_CopyLeafBrushes(const uint32_t *leafbrushes, int count)
-{
-    const uint32_t *leafbrush = leafbrushes;
-    uint16_t *newdata, *leafbrushes2;
-    int i;
-
-    newdata = leafbrushes2 = static_cast<uint16_t *>(malloc(count * sizeof(*leafbrushes2)));
-
-    for (i = 0; i < count; i++, leafbrush++, leafbrushes2++)
-        *leafbrushes2 = *leafbrush;
-
-    return newdata;
-}
-
-static uint32_t *Q2BSP_Qbism_CopyLeafBrushes(const uint32_t *leafbrushes, int count)
-{
-    return (uint32_t *)CopyArray(leafbrushes, count, sizeof(*leafbrushes));
+    return (uint16_t *)CopyArray(leafbrushes, count, sizeof(*leafbrushes));
 }
 
 static darea_t *Q2BSP_CopyAreas(const darea_t *areas, int count)
@@ -1761,41 +1437,9 @@ static dbrush_t *Q2BSP_CopyBrushes(const dbrush_t *brushes, int count)
     return (dbrush_t *)CopyArray(brushes, count, sizeof(*brushes));
 }
 
-static q2_dbrushside_qbism_t *Q2BSPtoM_CopyBrushSides(const dbrushside_t *dbrushsides, int count)
+static dbrushside_t *Q2BSP_CopyBrushSides(const dbrushside_t *dbrushsides, int count)
 {
-    const dbrushside_t *brushside = dbrushsides;
-    q2_dbrushside_qbism_t *newdata, *brushsides2;
-    int i;
-
-    newdata = brushsides2 = static_cast<q2_dbrushside_qbism_t *>(malloc(count * sizeof(*brushsides2)));
-
-    for (i = 0; i < count; i++, brushside++, brushsides2++) {
-        brushsides2->planenum = brushside->planenum;
-        brushsides2->texinfo = brushside->texinfo;
-    }
-
-    return newdata;
-}
-
-static q2_dbrushside_qbism_t *Q2BSP_Qbism_CopyBrushSides(const q2_dbrushside_qbism_t *brushsides, int count)
-{
-    return (q2_dbrushside_qbism_t *)CopyArray(brushsides, count, sizeof(*brushsides));
-}
-
-static dbrushside_t *MBSPtoQ2_CopyBrushSides(const q2_dbrushside_qbism_t *dbrushsides, int count)
-{
-    const q2_dbrushside_qbism_t *brushside = dbrushsides;
-    dbrushside_t *newdata, *brushsides2;
-    int i;
-
-    newdata = brushsides2 = static_cast<dbrushside_t *>(malloc(count * sizeof(*brushsides2)));
-
-    for (i = 0; i < count; i++, brushside++, brushsides2++) {
-        brushsides2->planenum = brushside->planenum;
-        brushsides2->texinfo = brushside->texinfo;
-    }
-
-    return newdata;
+    return (dbrushside_t *)CopyArray(dbrushsides, count, sizeof(*dbrushsides));
 }
 
 
@@ -1888,29 +1532,6 @@ static void FreeQ2BSP(q2bsp_t *bsp)
     memset(bsp, 0, sizeof(*bsp));
 }
 
-static void FreeQ2BSP_QBSP(q2bsp_qbism_t *bsp)
-{
-    free(bsp->dmodels);
-    free(bsp->dvis);
-    free(bsp->dlightdata);
-    free(bsp->dentdata);
-    free(bsp->dleafs);
-    free(bsp->dplanes);
-    free(bsp->dvertexes);
-    free(bsp->dnodes);
-    free(bsp->texinfo);
-    free(bsp->dfaces);
-    free(bsp->dedges);
-    free(bsp->dleaffaces);
-    free(bsp->dleafbrushes);
-    free(bsp->dsurfedges);
-    free(bsp->dareas);
-    free(bsp->dareaportals);
-    free(bsp->dbrushes);
-    free(bsp->dbrushsides);
-    memset(bsp, 0, sizeof(*bsp));
-}
-
 static void FreeMBSP(mbsp_t *bsp)
 {
     free(bsp->dmodels);
@@ -1937,13 +1558,6 @@ static void FreeMBSP(mbsp_t *bsp)
     memset(bsp, 0, sizeof(*bsp));
 }
 
-inline void
-ConvertBSPToMFormatComplete(const bspversion_t **mbsp_loadversion, const bspversion_t *version, bspdata_t *bspdata)
-{
-    *mbsp_loadversion = bspdata->version;
-    bspdata->version = version;
-}
-
 /*
  * =========================================================================
  * ConvertBSPFormat
@@ -1952,547 +1566,440 @@ ConvertBSPToMFormatComplete(const bspversion_t **mbsp_loadversion, const bspvers
  * =========================================================================
  */
 void
-ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
+ConvertBSPFormat(int32_t version, bspdata_t *bspdata)
 {
-    if (bspdata->version == to_version)
+    if (bspdata->version == version)
         return;
 
     // conversions to GENERIC_BSP
-    if (to_version == &bspver_generic) {
-        if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
-            const bsp29_t *bsp29 = &bspdata->data.bsp29;
-            mbsp_t *mbsp = &bspdata->data.mbsp;
-        
-            memset(mbsp, 0, sizeof(*mbsp));
-        
-            // copy counts
-            mbsp->nummodels = bsp29->nummodels;
-            mbsp->visdatasize = bsp29->visdatasize;
-            mbsp->lightdatasize = bsp29->lightdatasize;
-            mbsp->texdatasize = bsp29->texdatasize;
-            mbsp->entdatasize = bsp29->entdatasize;
-            mbsp->numleafs = bsp29->numleafs;
-            mbsp->numplanes = bsp29->numplanes;
-            mbsp->numvertexes = bsp29->numvertexes;
-            mbsp->numnodes = bsp29->numnodes;
-            mbsp->numtexinfo = bsp29->numtexinfo;
-            mbsp->numfaces = bsp29->numfaces;
-            mbsp->numclipnodes = bsp29->numclipnodes;
-            mbsp->numedges = bsp29->numedges;
-            mbsp->numleaffaces = bsp29->nummarksurfaces;
-            mbsp->numsurfedges = bsp29->numsurfedges;
-        
-            // copy or convert data
-            mbsp->dmodels = BSP29_CopyModels(bsp29->dmodels, bsp29->nummodels);
-            mbsp->dvisdata = BSP29_CopyVisData(bsp29->dvisdata, bsp29->visdatasize);
-            mbsp->dlightdata = BSP29_CopyLightData(bsp29->dlightdata, bsp29->lightdatasize);
-            mbsp->dtexdata = BSP29_CopyTexData(bsp29->dtexdata, bsp29->texdatasize);
-            mbsp->dentdata = BSP29_CopyEntData(bsp29->dentdata, bsp29->entdatasize);
-            mbsp->dleafs = BSP29toM_Leafs(bsp29->dleafs, bsp29->numleafs);
-            mbsp->dplanes = BSP29_CopyPlanes(bsp29->dplanes, bsp29->numplanes);
-            mbsp->dvertexes = BSP29_CopyVertexes(bsp29->dvertexes, bsp29->numvertexes);
-            mbsp->dnodes = BSP29to2_Nodes(bsp29->dnodes, bsp29->numnodes);
-            mbsp->texinfo = BSP29toM_Texinfo(bsp29->texinfo, bsp29->numtexinfo);
-            mbsp->dfaces = BSP29to2_Faces(bsp29->dfaces, bsp29->numfaces);
-            mbsp->dclipnodes = BSP29to2_Clipnodes(bsp29->dclipnodes, bsp29->numclipnodes);
-            mbsp->dedges = BSP29to2_Edges(bsp29->dedges, bsp29->numedges);
-            mbsp->dleaffaces = BSP29to2_Marksurfaces(bsp29->dmarksurfaces, bsp29->nummarksurfaces);
-            mbsp->dsurfedges = BSP29_CopySurfedges(bsp29->dsurfedges, bsp29->numsurfedges);
-        
-            /* Free old data */
-            FreeBSP29((bsp29_t *)bsp29);
-        
-            /* Conversion complete! */
-            ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
-        
-            return;
-        }
     
-        else if (bspdata->version == &bspver_q2) {
-            const q2bsp_t *q2bsp = &bspdata->data.q2bsp;
-            mbsp_t *mbsp = &bspdata->data.mbsp;
+    if ((bspdata->version == BSPVERSION || bspdata->version == BSPHLVERSION) && version == GENERIC_BSP) {
+        const bsp29_t *bsp29 = &bspdata->data.bsp29;
+        mbsp_t *mbsp = &bspdata->data.mbsp;
         
-            memset(mbsp, 0, sizeof(*mbsp));
+        memset(mbsp, 0, sizeof(*mbsp));
         
-            // copy counts
-            mbsp->nummodels = q2bsp->nummodels;
-            mbsp->visdatasize = q2bsp->visdatasize;
-            mbsp->lightdatasize = q2bsp->lightdatasize;
-            mbsp->entdatasize = q2bsp->entdatasize;
-            mbsp->numleafs = q2bsp->numleafs;
-            mbsp->numplanes = q2bsp->numplanes;
-            mbsp->numvertexes = q2bsp->numvertexes;
-            mbsp->numnodes = q2bsp->numnodes;
-            mbsp->numtexinfo = q2bsp->numtexinfo;
-            mbsp->numfaces = q2bsp->numfaces;
-            mbsp->numedges = q2bsp->numedges;
-            mbsp->numleaffaces = q2bsp->numleaffaces;
-            mbsp->numleafbrushes = q2bsp->numleafbrushes;
-            mbsp->numsurfedges = q2bsp->numsurfedges;
-            mbsp->numareas = q2bsp->numareas;
-            mbsp->numareaportals = q2bsp->numareaportals;
-            mbsp->numbrushes = q2bsp->numbrushes;
-            mbsp->numbrushsides = q2bsp->numbrushsides;
+        // copy counts
+        mbsp->nummodels = bsp29->nummodels;
+        mbsp->visdatasize = bsp29->visdatasize;
+        mbsp->lightdatasize = bsp29->lightdatasize;
+        mbsp->texdatasize = bsp29->texdatasize;
+        mbsp->entdatasize = bsp29->entdatasize;
+        mbsp->numleafs = bsp29->numleafs;
+        mbsp->numplanes = bsp29->numplanes;
+        mbsp->numvertexes = bsp29->numvertexes;
+        mbsp->numnodes = bsp29->numnodes;
+        mbsp->numtexinfo = bsp29->numtexinfo;
+        mbsp->numfaces = bsp29->numfaces;
+        mbsp->numclipnodes = bsp29->numclipnodes;
+        mbsp->numedges = bsp29->numedges;
+        mbsp->numleaffaces = bsp29->nummarksurfaces;
+        mbsp->numsurfedges = bsp29->numsurfedges;
         
-            // copy or convert data
-            mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
-            mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
-            mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
-            mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
-            mbsp->dleafs = Q2BSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
-            mbsp->dplanes = BSP29_CopyPlanes(q2bsp->dplanes, q2bsp->numplanes);
-            mbsp->dvertexes = BSP29_CopyVertexes(q2bsp->dvertexes, q2bsp->numvertexes);
-            mbsp->dnodes = Q2BSPto2_Nodes(q2bsp->dnodes, q2bsp->numnodes);
-            mbsp->texinfo = Q2BSPtoM_Texinfo(q2bsp->texinfo, q2bsp->numtexinfo);
-            mbsp->dfaces = Q2BSPto2_Faces(q2bsp->dfaces, q2bsp->numfaces);
-            mbsp->dedges = BSP29to2_Edges(q2bsp->dedges, q2bsp->numedges);
-            mbsp->dleaffaces = BSP29to2_Marksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
-            mbsp->dleafbrushes = Q2BSPtoM_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
-            mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
+        // copy or convert data
+        mbsp->dmodels = BSP29_CopyModels(bsp29->dmodels, bsp29->nummodels);
+        mbsp->dvisdata = BSP29_CopyVisData(bsp29->dvisdata, bsp29->visdatasize);
+        mbsp->dlightdata = BSP29_CopyLightData(bsp29->dlightdata, bsp29->lightdatasize);
+        mbsp->dtexdata = BSP29_CopyTexData(bsp29->dtexdata, bsp29->texdatasize);
+        mbsp->dentdata = BSP29_CopyEntData(bsp29->dentdata, bsp29->entdatasize);
+        mbsp->dleafs = BSP29toM_Leafs(bsp29->dleafs, bsp29->numleafs);
+        mbsp->dplanes = BSP29_CopyPlanes(bsp29->dplanes, bsp29->numplanes);
+        mbsp->dvertexes = BSP29_CopyVertexes(bsp29->dvertexes, bsp29->numvertexes);
+        mbsp->dnodes = BSP29to2_Nodes(bsp29->dnodes, bsp29->numnodes);
+        mbsp->texinfo = BSP29toM_Texinfo(bsp29->texinfo, bsp29->numtexinfo);
+        mbsp->dfaces = BSP29to2_Faces(bsp29->dfaces, bsp29->numfaces);
+        mbsp->dclipnodes = BSP29to2_Clipnodes(bsp29->dclipnodes, bsp29->numclipnodes);
+        mbsp->dedges = BSP29to2_Edges(bsp29->dedges, bsp29->numedges);
+        mbsp->dleaffaces = BSP29to2_Marksurfaces(bsp29->dmarksurfaces, bsp29->nummarksurfaces);
+        mbsp->dsurfedges = BSP29_CopySurfedges(bsp29->dsurfedges, bsp29->numsurfedges);
         
-            mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
-            mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
+        /* Free old data */
+        FreeBSP29((bsp29_t *)bsp29);
         
-            mbsp->dbrushes = Q2BSP_CopyBrushes(q2bsp->dbrushes, q2bsp->numbrushes);
-            mbsp->dbrushsides = Q2BSPtoM_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
+        /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
+        bspdata->version = version;
         
-            /* Free old data */
-            FreeQ2BSP((q2bsp_t *)q2bsp);
-        
-            /* Conversion complete! */
-            ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
-
-            return;
-        } else if (bspdata->version == &bspver_qbism) {
-            const q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
-            mbsp_t *mbsp = &bspdata->data.mbsp;
-        
-            memset(mbsp, 0, sizeof(*mbsp));
-        
-            // copy counts
-            mbsp->nummodels = q2bsp->nummodels;
-            mbsp->visdatasize = q2bsp->visdatasize;
-            mbsp->lightdatasize = q2bsp->lightdatasize;
-            mbsp->entdatasize = q2bsp->entdatasize;
-            mbsp->numleafs = q2bsp->numleafs;
-            mbsp->numplanes = q2bsp->numplanes;
-            mbsp->numvertexes = q2bsp->numvertexes;
-            mbsp->numnodes = q2bsp->numnodes;
-            mbsp->numtexinfo = q2bsp->numtexinfo;
-            mbsp->numfaces = q2bsp->numfaces;
-            mbsp->numedges = q2bsp->numedges;
-            mbsp->numleaffaces = q2bsp->numleaffaces;
-            mbsp->numleafbrushes = q2bsp->numleafbrushes;
-            mbsp->numsurfedges = q2bsp->numsurfedges;
-            mbsp->numareas = q2bsp->numareas;
-            mbsp->numareaportals = q2bsp->numareaportals;
-            mbsp->numbrushes = q2bsp->numbrushes;
-            mbsp->numbrushsides = q2bsp->numbrushsides;
-        
-            // copy or convert data
-            mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
-            mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
-            mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
-            mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
-            mbsp->dleafs = Q2BSP_QBSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
-            mbsp->dplanes = BSP29_CopyPlanes(q2bsp->dplanes, q2bsp->numplanes);
-            mbsp->dvertexes = BSP29_CopyVertexes(q2bsp->dvertexes, q2bsp->numvertexes);
-            mbsp->dnodes = BSP2_CopyNodes(q2bsp->dnodes, q2bsp->numnodes);
-            mbsp->texinfo = Q2BSPtoM_Texinfo(q2bsp->texinfo, q2bsp->numtexinfo);
-            mbsp->dfaces = Q2BSP_QBSPto2_Faces(q2bsp->dfaces, q2bsp->numfaces);
-            mbsp->dedges = BSP2_CopyEdges(q2bsp->dedges, q2bsp->numedges);
-            mbsp->dleaffaces = BSP2_CopyMarksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
-            mbsp->dleafbrushes = Q2BSP_Qbism_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
-            mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
-        
-            mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
-            mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
-        
-            mbsp->dbrushes = Q2BSP_CopyBrushes(q2bsp->dbrushes, q2bsp->numbrushes);
-            mbsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
-        
-            /* Free old data */
-            FreeQ2BSP_QBSP((q2bsp_qbism_t *)q2bsp);
-        
-            /* Conversion complete! */
-            ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
-
-            return;
-        }
-    
-        else if (bspdata->version == &bspver_bsp2rmq) {
-            const bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
-            mbsp_t *mbsp = &bspdata->data.mbsp;
-        
-            memset(mbsp, 0, sizeof(*mbsp));
-        
-            // copy counts
-            mbsp->nummodels = bsp2rmq->nummodels;
-            mbsp->visdatasize = bsp2rmq->visdatasize;
-            mbsp->lightdatasize = bsp2rmq->lightdatasize;
-            mbsp->texdatasize = bsp2rmq->texdatasize;
-            mbsp->entdatasize = bsp2rmq->entdatasize;
-            mbsp->numleafs = bsp2rmq->numleafs;
-            mbsp->numplanes = bsp2rmq->numplanes;
-            mbsp->numvertexes = bsp2rmq->numvertexes;
-            mbsp->numnodes = bsp2rmq->numnodes;
-            mbsp->numtexinfo = bsp2rmq->numtexinfo;
-            mbsp->numfaces = bsp2rmq->numfaces;
-            mbsp->numclipnodes = bsp2rmq->numclipnodes;
-            mbsp->numedges = bsp2rmq->numedges;
-            mbsp->numleaffaces = bsp2rmq->nummarksurfaces;
-            mbsp->numsurfedges = bsp2rmq->numsurfedges;
-        
-            // copy or convert data
-            mbsp->dmodels = BSP29_CopyModels(bsp2rmq->dmodels, bsp2rmq->nummodels);
-            mbsp->dvisdata = BSP29_CopyVisData(bsp2rmq->dvisdata, bsp2rmq->visdatasize);
-            mbsp->dlightdata = BSP29_CopyLightData(bsp2rmq->dlightdata, bsp2rmq->lightdatasize);
-            mbsp->dtexdata = BSP29_CopyTexData(bsp2rmq->dtexdata, bsp2rmq->texdatasize);
-            mbsp->dentdata = BSP29_CopyEntData(bsp2rmq->dentdata, bsp2rmq->entdatasize);
-            mbsp->dleafs = BSP2rmqtoM_Leafs(bsp2rmq->dleafs, bsp2rmq->numleafs);
-            mbsp->dplanes = BSP29_CopyPlanes(bsp2rmq->dplanes, bsp2rmq->numplanes);
-            mbsp->dvertexes = BSP29_CopyVertexes(bsp2rmq->dvertexes, bsp2rmq->numvertexes);
-            mbsp->dnodes = BSP2rmqto2_Nodes(bsp2rmq->dnodes, bsp2rmq->numnodes);
-            mbsp->texinfo = BSP29toM_Texinfo(bsp2rmq->texinfo, bsp2rmq->numtexinfo);
-            mbsp->dfaces = BSP2_CopyFaces(bsp2rmq->dfaces, bsp2rmq->numfaces);
-            mbsp->dclipnodes = BSP2_CopyClipnodes(bsp2rmq->dclipnodes, bsp2rmq->numclipnodes);
-            mbsp->dedges = BSP2_CopyEdges(bsp2rmq->dedges, bsp2rmq->numedges);
-            mbsp->dleaffaces = BSP2_CopyMarksurfaces(bsp2rmq->dmarksurfaces, bsp2rmq->nummarksurfaces);
-            mbsp->dsurfedges = BSP29_CopySurfedges(bsp2rmq->dsurfedges, bsp2rmq->numsurfedges);
-        
-            /* Free old data */
-            FreeBSP2RMQ((bsp2rmq_t *)bsp2rmq);
-        
-            /* Conversion complete! */
-            ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
-        
-            return;
-        }
-    
-        else if (bspdata->version == &bspver_bsp2) {
-            const bsp2_t *bsp2 = &bspdata->data.bsp2;
-            mbsp_t *mbsp = &bspdata->data.mbsp;
-        
-            memset(mbsp, 0, sizeof(*mbsp));
-        
-            // copy counts
-            mbsp->nummodels = bsp2->nummodels;
-            mbsp->visdatasize = bsp2->visdatasize;
-            mbsp->lightdatasize = bsp2->lightdatasize;
-            mbsp->texdatasize = bsp2->texdatasize;
-            mbsp->entdatasize = bsp2->entdatasize;
-            mbsp->numleafs = bsp2->numleafs;
-            mbsp->numplanes = bsp2->numplanes;
-            mbsp->numvertexes = bsp2->numvertexes;
-            mbsp->numnodes = bsp2->numnodes;
-            mbsp->numtexinfo = bsp2->numtexinfo;
-            mbsp->numfaces = bsp2->numfaces;
-            mbsp->numclipnodes = bsp2->numclipnodes;
-            mbsp->numedges = bsp2->numedges;
-            mbsp->numleaffaces = bsp2->nummarksurfaces;
-            mbsp->numsurfedges = bsp2->numsurfedges;
-        
-            // copy or convert data
-            mbsp->dmodels = BSP29_CopyModels(bsp2->dmodels, bsp2->nummodels);
-            mbsp->dvisdata = BSP29_CopyVisData(bsp2->dvisdata, bsp2->visdatasize);
-            mbsp->dlightdata = BSP29_CopyLightData(bsp2->dlightdata, bsp2->lightdatasize);
-            mbsp->dtexdata = BSP29_CopyTexData(bsp2->dtexdata, bsp2->texdatasize);
-            mbsp->dentdata = BSP29_CopyEntData(bsp2->dentdata, bsp2->entdatasize);
-            mbsp->dleafs = BSP2toM_Leafs(bsp2->dleafs, bsp2->numleafs);
-            mbsp->dplanes = BSP29_CopyPlanes(bsp2->dplanes, bsp2->numplanes);
-            mbsp->dvertexes = BSP29_CopyVertexes(bsp2->dvertexes, bsp2->numvertexes);
-            mbsp->dnodes = BSP2_CopyNodes(bsp2->dnodes, bsp2->numnodes);
-            mbsp->texinfo = BSP29toM_Texinfo(bsp2->texinfo, bsp2->numtexinfo);
-            mbsp->dfaces = BSP2_CopyFaces(bsp2->dfaces, bsp2->numfaces);
-            mbsp->dclipnodes = BSP2_CopyClipnodes(bsp2->dclipnodes, bsp2->numclipnodes);
-            mbsp->dedges = BSP2_CopyEdges(bsp2->dedges, bsp2->numedges);
-            mbsp->dleaffaces = BSP2_CopyMarksurfaces(bsp2->dmarksurfaces, bsp2->nummarksurfaces);
-            mbsp->dsurfedges = BSP29_CopySurfedges(bsp2->dsurfedges, bsp2->numsurfedges);
-        
-            /* Free old data */
-            FreeBSP2((bsp2_t *)bsp2);
-        
-            /* Conversion complete! */
-            ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
-
-            return;
-        }
+        return;
     }
+    
+    if (bspdata->version == Q2_BSPVERSION && version == GENERIC_BSP) {
+        const q2bsp_t *q2bsp = &bspdata->data.q2bsp;
+        mbsp_t *mbsp = &bspdata->data.mbsp;
+        
+        memset(mbsp, 0, sizeof(*mbsp));
+        
+        // copy counts
+        mbsp->nummodels = q2bsp->nummodels;
+        mbsp->visdatasize = q2bsp->visdatasize;
+        mbsp->lightdatasize = q2bsp->lightdatasize;
+        mbsp->entdatasize = q2bsp->entdatasize;
+        mbsp->numleafs = q2bsp->numleafs;
+        mbsp->numplanes = q2bsp->numplanes;
+        mbsp->numvertexes = q2bsp->numvertexes;
+        mbsp->numnodes = q2bsp->numnodes;
+        mbsp->numtexinfo = q2bsp->numtexinfo;
+        mbsp->numfaces = q2bsp->numfaces;
+        mbsp->numedges = q2bsp->numedges;
+        mbsp->numleaffaces = q2bsp->numleaffaces;
+        mbsp->numleafbrushes = q2bsp->numleafbrushes;
+        mbsp->numsurfedges = q2bsp->numsurfedges;
+        mbsp->numareas = q2bsp->numareas;
+        mbsp->numareaportals = q2bsp->numareaportals;
+        mbsp->numbrushes = q2bsp->numbrushes;
+        mbsp->numbrushsides = q2bsp->numbrushsides;
+        
+        // copy or convert data
+        mbsp->dmodels = Q2BSPtoM_Models(q2bsp->dmodels, q2bsp->nummodels);
+        mbsp->dvisdata = (uint8_t *)CopyArray(q2bsp->dvis, q2bsp->visdatasize, 1);
+        mbsp->dlightdata = BSP29_CopyLightData(q2bsp->dlightdata, q2bsp->lightdatasize);
+        mbsp->dentdata = BSP29_CopyEntData(q2bsp->dentdata, q2bsp->entdatasize);
+        mbsp->dleafs = Q2BSPtoM_Leafs(q2bsp->dleafs, q2bsp->numleafs);
+        mbsp->dplanes = BSP29_CopyPlanes(q2bsp->dplanes, q2bsp->numplanes);
+        mbsp->dvertexes = BSP29_CopyVertexes(q2bsp->dvertexes, q2bsp->numvertexes);
+        mbsp->dnodes = Q2BSPto2_Nodes(q2bsp->dnodes, q2bsp->numnodes);
+        mbsp->texinfo = Q2BSPtoM_Texinfo(q2bsp->texinfo, q2bsp->numtexinfo);
+        mbsp->dfaces = Q2BSPto2_Faces(q2bsp->dfaces, q2bsp->numfaces);
+        mbsp->dedges = BSP29to2_Edges(q2bsp->dedges, q2bsp->numedges);
+        mbsp->dleaffaces = BSP29to2_Marksurfaces(q2bsp->dleaffaces, q2bsp->numleaffaces);
+        mbsp->dleafbrushes = Q2BSP_CopyLeafBrushes(q2bsp->dleafbrushes, q2bsp->numleafbrushes);
+        mbsp->dsurfedges = BSP29_CopySurfedges(q2bsp->dsurfedges, q2bsp->numsurfedges);
+        
+        mbsp->dareas = Q2BSP_CopyAreas(q2bsp->dareas, q2bsp->numareas);
+        mbsp->dareaportals = Q2BSP_CopyAreaPortals(q2bsp->dareaportals, q2bsp->numareaportals);
+        
+        mbsp->dbrushes = Q2BSP_CopyBrushes(q2bsp->dbrushes, q2bsp->numbrushes);
+        mbsp->dbrushsides = Q2BSP_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
+        
+        /* Free old data */
+        FreeQ2BSP((q2bsp_t *)q2bsp);
+        
+        /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
+        bspdata->version = version;
+        
+        return;
+    }
+    
+    if (bspdata->version == BSP2RMQVERSION && version == GENERIC_BSP) {
+        const bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
+        mbsp_t *mbsp = &bspdata->data.mbsp;
+        
+        memset(mbsp, 0, sizeof(*mbsp));
+        
+        // copy counts
+        mbsp->nummodels = bsp2rmq->nummodels;
+        mbsp->visdatasize = bsp2rmq->visdatasize;
+        mbsp->lightdatasize = bsp2rmq->lightdatasize;
+        mbsp->texdatasize = bsp2rmq->texdatasize;
+        mbsp->entdatasize = bsp2rmq->entdatasize;
+        mbsp->numleafs = bsp2rmq->numleafs;
+        mbsp->numplanes = bsp2rmq->numplanes;
+        mbsp->numvertexes = bsp2rmq->numvertexes;
+        mbsp->numnodes = bsp2rmq->numnodes;
+        mbsp->numtexinfo = bsp2rmq->numtexinfo;
+        mbsp->numfaces = bsp2rmq->numfaces;
+        mbsp->numclipnodes = bsp2rmq->numclipnodes;
+        mbsp->numedges = bsp2rmq->numedges;
+        mbsp->numleaffaces = bsp2rmq->nummarksurfaces;
+        mbsp->numsurfedges = bsp2rmq->numsurfedges;
+        
+        // copy or convert data
+        mbsp->dmodels = BSP29_CopyModels(bsp2rmq->dmodels, bsp2rmq->nummodels);
+        mbsp->dvisdata = BSP29_CopyVisData(bsp2rmq->dvisdata, bsp2rmq->visdatasize);
+        mbsp->dlightdata = BSP29_CopyLightData(bsp2rmq->dlightdata, bsp2rmq->lightdatasize);
+        mbsp->dtexdata = BSP29_CopyTexData(bsp2rmq->dtexdata, bsp2rmq->texdatasize);
+        mbsp->dentdata = BSP29_CopyEntData(bsp2rmq->dentdata, bsp2rmq->entdatasize);
+        mbsp->dleafs = BSP2rmqtoM_Leafs(bsp2rmq->dleafs, bsp2rmq->numleafs);
+        mbsp->dplanes = BSP29_CopyPlanes(bsp2rmq->dplanes, bsp2rmq->numplanes);
+        mbsp->dvertexes = BSP29_CopyVertexes(bsp2rmq->dvertexes, bsp2rmq->numvertexes);
+        mbsp->dnodes = BSP2rmqto2_Nodes(bsp2rmq->dnodes, bsp2rmq->numnodes);
+        mbsp->texinfo = BSP29toM_Texinfo(bsp2rmq->texinfo, bsp2rmq->numtexinfo);
+        mbsp->dfaces = BSP2_CopyFaces(bsp2rmq->dfaces, bsp2rmq->numfaces);
+        mbsp->dclipnodes = BSP2_CopyClipnodes(bsp2rmq->dclipnodes, bsp2rmq->numclipnodes);
+        mbsp->dedges = BSP2_CopyEdges(bsp2rmq->dedges, bsp2rmq->numedges);
+        mbsp->dleaffaces = BSP2_CopyMarksurfaces(bsp2rmq->dmarksurfaces, bsp2rmq->nummarksurfaces);
+        mbsp->dsurfedges = BSP29_CopySurfedges(bsp2rmq->dsurfedges, bsp2rmq->numsurfedges);
+        
+        /* Free old data */
+        FreeBSP2RMQ((bsp2rmq_t *)bsp2rmq);
+        
+        /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
+        bspdata->version = version;
+        
+        return;
+    }
+    
+    if (bspdata->version == BSP2VERSION && version == GENERIC_BSP) {
+        const bsp2_t *bsp2 = &bspdata->data.bsp2;
+        mbsp_t *mbsp = &bspdata->data.mbsp;
+        
+        memset(mbsp, 0, sizeof(*mbsp));
+        
+        // copy counts
+        mbsp->nummodels = bsp2->nummodels;
+        mbsp->visdatasize = bsp2->visdatasize;
+        mbsp->lightdatasize = bsp2->lightdatasize;
+        mbsp->texdatasize = bsp2->texdatasize;
+        mbsp->entdatasize = bsp2->entdatasize;
+        mbsp->numleafs = bsp2->numleafs;
+        mbsp->numplanes = bsp2->numplanes;
+        mbsp->numvertexes = bsp2->numvertexes;
+        mbsp->numnodes = bsp2->numnodes;
+        mbsp->numtexinfo = bsp2->numtexinfo;
+        mbsp->numfaces = bsp2->numfaces;
+        mbsp->numclipnodes = bsp2->numclipnodes;
+        mbsp->numedges = bsp2->numedges;
+        mbsp->numleaffaces = bsp2->nummarksurfaces;
+        mbsp->numsurfedges = bsp2->numsurfedges;
+        
+        // copy or convert data
+        mbsp->dmodels = BSP29_CopyModels(bsp2->dmodels, bsp2->nummodels);
+        mbsp->dvisdata = BSP29_CopyVisData(bsp2->dvisdata, bsp2->visdatasize);
+        mbsp->dlightdata = BSP29_CopyLightData(bsp2->dlightdata, bsp2->lightdatasize);
+        mbsp->dtexdata = BSP29_CopyTexData(bsp2->dtexdata, bsp2->texdatasize);
+        mbsp->dentdata = BSP29_CopyEntData(bsp2->dentdata, bsp2->entdatasize);
+        mbsp->dleafs = BSP2toM_Leafs(bsp2->dleafs, bsp2->numleafs);
+        mbsp->dplanes = BSP29_CopyPlanes(bsp2->dplanes, bsp2->numplanes);
+        mbsp->dvertexes = BSP29_CopyVertexes(bsp2->dvertexes, bsp2->numvertexes);
+        mbsp->dnodes = BSP2_CopyNodes(bsp2->dnodes, bsp2->numnodes);
+        mbsp->texinfo = BSP29toM_Texinfo(bsp2->texinfo, bsp2->numtexinfo);
+        mbsp->dfaces = BSP2_CopyFaces(bsp2->dfaces, bsp2->numfaces);
+        mbsp->dclipnodes = BSP2_CopyClipnodes(bsp2->dclipnodes, bsp2->numclipnodes);
+        mbsp->dedges = BSP2_CopyEdges(bsp2->dedges, bsp2->numedges);
+        mbsp->dleaffaces = BSP2_CopyMarksurfaces(bsp2->dmarksurfaces, bsp2->nummarksurfaces);
+        mbsp->dsurfedges = BSP29_CopySurfedges(bsp2->dsurfedges, bsp2->numsurfedges);
+        
+        /* Free old data */
+        FreeBSP2((bsp2_t *)bsp2);
+        
+        /* Conversion complete! */
+        mbsp->loadversion = bspdata->version;
+        bspdata->version = version;
+
+        return;
+    }
+    
     // conversions from GENERIC_BSP
-    else if (bspdata->version == &bspver_generic) {
-        if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
-            bsp29_t *bsp29 = &bspdata->data.bsp29;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
-        
-            memset(bsp29, 0, sizeof(*bsp29));
-        
-            // copy counts
-            bsp29->nummodels = mbsp->nummodels;
-            bsp29->visdatasize = mbsp->visdatasize;
-            bsp29->lightdatasize = mbsp->lightdatasize;
-            bsp29->texdatasize = mbsp->texdatasize;
-            bsp29->entdatasize = mbsp->entdatasize;
-            bsp29->numleafs = mbsp->numleafs;
-            bsp29->numplanes = mbsp->numplanes;
-            bsp29->numvertexes = mbsp->numvertexes;
-            bsp29->numnodes = mbsp->numnodes;
-            bsp29->numtexinfo = mbsp->numtexinfo;
-            bsp29->numfaces = mbsp->numfaces;
-            bsp29->numclipnodes = mbsp->numclipnodes;
-            bsp29->numedges = mbsp->numedges;
-            bsp29->nummarksurfaces = mbsp->numleaffaces;
-            bsp29->numsurfedges = mbsp->numsurfedges;
-        
-            // copy or convert data
-            bsp29->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
-            bsp29->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
-            bsp29->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
-            bsp29->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
-            bsp29->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
-            bsp29->dleafs = MBSPto29_Leafs(mbsp->dleafs, mbsp->numleafs);
-            bsp29->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
-            bsp29->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
-            bsp29->dnodes = BSP2to29_Nodes(mbsp->dnodes, mbsp->numnodes);
-            bsp29->texinfo = MBSPto29_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
-            bsp29->dfaces = BSP2to29_Faces(mbsp->dfaces, mbsp->numfaces);
-            bsp29->dclipnodes = BSP2to29_Clipnodes(mbsp->dclipnodes, mbsp->numclipnodes);
-            bsp29->dedges = BSP2to29_Edges(mbsp->dedges, mbsp->numedges);
-            bsp29->dmarksurfaces = BSP2to29_Marksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
-            bsp29->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
-        
-            /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
-        
-            /* Conversion complete! */
-            bspdata->version = to_version;
-        
-            return;
-        }
     
-        else if (to_version == &bspver_q2) {
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
-            q2bsp_t *q2bsp = &bspdata->data.q2bsp;
+    if (bspdata->version == GENERIC_BSP && (version == BSPVERSION || version == BSPHLVERSION)) {
+        bsp29_t *bsp29 = &bspdata->data.bsp29;
+        const mbsp_t *mbsp = &bspdata->data.mbsp;
         
-            memset(q2bsp, 0, sizeof(*q2bsp));
+        memset(bsp29, 0, sizeof(*bsp29));
         
-            // copy counts
-            q2bsp->nummodels = mbsp->nummodels;
-            q2bsp->visdatasize = mbsp->visdatasize;
-            q2bsp->lightdatasize = mbsp->lightdatasize;
-            q2bsp->entdatasize = mbsp->entdatasize;
-            q2bsp->numleafs = mbsp->numleafs;
-            q2bsp->numplanes = mbsp->numplanes;
-            q2bsp->numvertexes = mbsp->numvertexes;
-            q2bsp->numnodes = mbsp->numnodes;
-            q2bsp->numtexinfo = mbsp->numtexinfo;
-            q2bsp->numfaces = mbsp->numfaces;
-            q2bsp->numedges = mbsp->numedges;
-            q2bsp->numleaffaces = mbsp->numleaffaces;
-            q2bsp->numleafbrushes = mbsp->numleafbrushes;
-            q2bsp->numsurfedges = mbsp->numsurfedges;
-            q2bsp->numareas = mbsp->numareas;
-            q2bsp->numareaportals = mbsp->numareaportals;
-            q2bsp->numbrushes = mbsp->numbrushes;
-            q2bsp->numbrushsides = mbsp->numbrushsides;
+        // copy counts
+        bsp29->nummodels = mbsp->nummodels;
+        bsp29->visdatasize = mbsp->visdatasize;
+        bsp29->lightdatasize = mbsp->lightdatasize;
+        bsp29->texdatasize = mbsp->texdatasize;
+        bsp29->entdatasize = mbsp->entdatasize;
+        bsp29->numleafs = mbsp->numleafs;
+        bsp29->numplanes = mbsp->numplanes;
+        bsp29->numvertexes = mbsp->numvertexes;
+        bsp29->numnodes = mbsp->numnodes;
+        bsp29->numtexinfo = mbsp->numtexinfo;
+        bsp29->numfaces = mbsp->numfaces;
+        bsp29->numclipnodes = mbsp->numclipnodes;
+        bsp29->numedges = mbsp->numedges;
+        bsp29->nummarksurfaces = mbsp->numleaffaces;
+        bsp29->numsurfedges = mbsp->numsurfedges;
         
-            // copy or convert data
-            q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
-            q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
-            q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
-            q2bsp->dleafs = MBSPtoQ2_Leafs(mbsp->dleafs, mbsp->numleafs);
-            q2bsp->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
-            q2bsp->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
-            q2bsp->dnodes = BSP2toQ2_Nodes(mbsp->dnodes, mbsp->numnodes);
-            q2bsp->texinfo = MBSPtoQ2_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
-            q2bsp->dfaces = BSP2toQ2_Faces(mbsp->dfaces, mbsp->numfaces);
-            q2bsp->dedges = BSP2to29_Edges(mbsp->dedges, mbsp->numedges);
-            q2bsp->dleaffaces = BSP2to29_Marksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
-            q2bsp->dleafbrushes = MBSPtoQ2_CopyLeafBrushes(mbsp->dleafbrushes, mbsp->numleafbrushes);
-            q2bsp->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
+        // copy or convert data
+        bsp29->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
+        bsp29->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
+        bsp29->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
+        bsp29->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
+        bsp29->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
+        bsp29->dleafs = MBSPto29_Leafs(mbsp->dleafs, mbsp->numleafs);
+        bsp29->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
+        bsp29->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
+        bsp29->dnodes = BSP2to29_Nodes(mbsp->dnodes, mbsp->numnodes);
+        bsp29->texinfo = MBSPto29_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
+        bsp29->dfaces = BSP2to29_Faces(mbsp->dfaces, mbsp->numfaces);
+        bsp29->dclipnodes = BSP2to29_Clipnodes(mbsp->dclipnodes, mbsp->numclipnodes);
+        bsp29->dedges = BSP2to29_Edges(mbsp->dedges, mbsp->numedges);
+        bsp29->dmarksurfaces = BSP2to29_Marksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
+        bsp29->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
-            q2bsp->dareas = Q2BSP_CopyAreas(mbsp->dareas, mbsp->numareas);
-            q2bsp->dareaportals = Q2BSP_CopyAreaPortals(mbsp->dareaportals, mbsp->numareaportals);
+        /* Free old data */
+        FreeMBSP((mbsp_t *)mbsp);
         
-            q2bsp->dbrushes = Q2BSP_CopyBrushes(mbsp->dbrushes, mbsp->numbrushes);
-            q2bsp->dbrushsides = MBSPtoQ2_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
+        /* Conversion complete! */
+        bspdata->version = version;
         
-            /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
-        
-            /* Conversion complete! */
-            bspdata->version = to_version;
-
-            return;
-        } else if (to_version == &bspver_qbism) {
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
-            q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
-        
-            memset(q2bsp, 0, sizeof(*q2bsp));
-        
-            // copy counts
-            q2bsp->nummodels = mbsp->nummodels;
-            q2bsp->visdatasize = mbsp->visdatasize;
-            q2bsp->lightdatasize = mbsp->lightdatasize;
-            q2bsp->entdatasize = mbsp->entdatasize;
-            q2bsp->numleafs = mbsp->numleafs;
-            q2bsp->numplanes = mbsp->numplanes;
-            q2bsp->numvertexes = mbsp->numvertexes;
-            q2bsp->numnodes = mbsp->numnodes;
-            q2bsp->numtexinfo = mbsp->numtexinfo;
-            q2bsp->numfaces = mbsp->numfaces;
-            q2bsp->numedges = mbsp->numedges;
-            q2bsp->numleaffaces = mbsp->numleaffaces;
-            q2bsp->numleafbrushes = mbsp->numleafbrushes;
-            q2bsp->numsurfedges = mbsp->numsurfedges;
-            q2bsp->numareas = mbsp->numareas;
-            q2bsp->numareaportals = mbsp->numareaportals;
-            q2bsp->numbrushes = mbsp->numbrushes;
-            q2bsp->numbrushsides = mbsp->numbrushsides;
-        
-            // copy or convert data
-            q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
-            q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
-            q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
-            q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
-            q2bsp->dleafs = MBSPtoQ2_Qbism_Leafs(mbsp->dleafs, mbsp->numleafs);
-            q2bsp->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
-            q2bsp->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
-            q2bsp->dnodes = BSP2_CopyNodes(mbsp->dnodes, mbsp->numnodes);
-            q2bsp->texinfo = MBSPtoQ2_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
-            q2bsp->dfaces = BSP2toQ2_Qbism_Faces(mbsp->dfaces, mbsp->numfaces);
-            q2bsp->dedges = BSP2_CopyEdges(mbsp->dedges, mbsp->numedges);
-            q2bsp->dleaffaces = BSP2_CopyMarksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
-            q2bsp->dleafbrushes = Q2BSP_Qbism_CopyLeafBrushes(mbsp->dleafbrushes, mbsp->numleafbrushes);
-            q2bsp->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
-        
-            q2bsp->dareas = Q2BSP_CopyAreas(mbsp->dareas, mbsp->numareas);
-            q2bsp->dareaportals = Q2BSP_CopyAreaPortals(mbsp->dareaportals, mbsp->numareaportals);
-        
-            q2bsp->dbrushes = Q2BSP_CopyBrushes(mbsp->dbrushes, mbsp->numbrushes);
-            q2bsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
-        
-            /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
-        
-            /* Conversion complete! */
-            bspdata->version = to_version;
-
-            return;
-        }
+        return;
+    }
     
-        else if (to_version == &bspver_bsp2rmq) {
-            bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+    if (bspdata->version == GENERIC_BSP && version == Q2_BSPVERSION) {
+        const mbsp_t *mbsp = &bspdata->data.mbsp;
+        q2bsp_t *q2bsp = &bspdata->data.q2bsp;
         
-            memset(bsp2rmq, 0, sizeof(*bsp2rmq));
+        memset(q2bsp, 0, sizeof(*q2bsp));
         
-            // copy counts
-            bsp2rmq->nummodels = mbsp->nummodels;
-            bsp2rmq->visdatasize = mbsp->visdatasize;
-            bsp2rmq->lightdatasize = mbsp->lightdatasize;
-            bsp2rmq->texdatasize = mbsp->texdatasize;
-            bsp2rmq->entdatasize = mbsp->entdatasize;
-            bsp2rmq->numleafs = mbsp->numleafs;
-            bsp2rmq->numplanes = mbsp->numplanes;
-            bsp2rmq->numvertexes = mbsp->numvertexes;
-            bsp2rmq->numnodes = mbsp->numnodes;
-            bsp2rmq->numtexinfo = mbsp->numtexinfo;
-            bsp2rmq->numfaces = mbsp->numfaces;
-            bsp2rmq->numclipnodes = mbsp->numclipnodes;
-            bsp2rmq->numedges = mbsp->numedges;
-            bsp2rmq->nummarksurfaces = mbsp->numleaffaces;
-            bsp2rmq->numsurfedges = mbsp->numsurfedges;
+        // copy counts
+        q2bsp->nummodels = mbsp->nummodels;
+        q2bsp->visdatasize = mbsp->visdatasize;
+        q2bsp->lightdatasize = mbsp->lightdatasize;
+        q2bsp->entdatasize = mbsp->entdatasize;
+        q2bsp->numleafs = mbsp->numleafs;
+        q2bsp->numplanes = mbsp->numplanes;
+        q2bsp->numvertexes = mbsp->numvertexes;
+        q2bsp->numnodes = mbsp->numnodes;
+        q2bsp->numtexinfo = mbsp->numtexinfo;
+        q2bsp->numfaces = mbsp->numfaces;
+        q2bsp->numedges = mbsp->numedges;
+        q2bsp->numleaffaces = mbsp->numleaffaces;
+        q2bsp->numleafbrushes = mbsp->numleafbrushes;
+        q2bsp->numsurfedges = mbsp->numsurfedges;
+        q2bsp->numareas = mbsp->numareas;
+        q2bsp->numareaportals = mbsp->numareaportals;
+        q2bsp->numbrushes = mbsp->numbrushes;
+        q2bsp->numbrushsides = mbsp->numbrushsides;
         
-            // copy or convert data
-            bsp2rmq->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
-            bsp2rmq->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
-            bsp2rmq->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
-            bsp2rmq->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
-            bsp2rmq->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
-            bsp2rmq->dleafs = MBSPto2rmq_Leafs(mbsp->dleafs, mbsp->numleafs);
-            bsp2rmq->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
-            bsp2rmq->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
-            bsp2rmq->dnodes = BSP2to2rmq_Nodes(mbsp->dnodes, mbsp->numnodes);
-            bsp2rmq->texinfo = MBSPto29_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
-            bsp2rmq->dfaces = BSP2_CopyFaces(mbsp->dfaces, mbsp->numfaces);
-            bsp2rmq->dclipnodes = BSP2_CopyClipnodes(mbsp->dclipnodes, mbsp->numclipnodes);
-            bsp2rmq->dedges = BSP2_CopyEdges(mbsp->dedges, mbsp->numedges);
-            bsp2rmq->dmarksurfaces = BSP2_CopyMarksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
-            bsp2rmq->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
+        // copy or convert data
+        q2bsp->dmodels = MBSPtoQ2_Models(mbsp->dmodels, mbsp->nummodels);
+        q2bsp->dvis = (dvis_t *)CopyArray(mbsp->dvisdata, mbsp->visdatasize, 1);
+        q2bsp->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
+        q2bsp->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
+        q2bsp->dleafs = MBSPtoQ2_Leafs(mbsp->dleafs, mbsp->numleafs);
+        q2bsp->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
+        q2bsp->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
+        q2bsp->dnodes = BSP2toQ2_Nodes(mbsp->dnodes, mbsp->numnodes);
+        q2bsp->texinfo = MBSPtoQ2_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
+        q2bsp->dfaces = BSP2toQ2_Faces(mbsp->dfaces, mbsp->numfaces);
+        q2bsp->dedges = BSP2to29_Edges(mbsp->dedges, mbsp->numedges);
+        q2bsp->dleaffaces = BSP2to29_Marksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
+        q2bsp->dleafbrushes = Q2BSP_CopyLeafBrushes(mbsp->dleafbrushes, mbsp->numleafbrushes);
+        q2bsp->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
-            /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+        q2bsp->dareas = Q2BSP_CopyAreas(mbsp->dareas, mbsp->numareas);
+        q2bsp->dareaportals = Q2BSP_CopyAreaPortals(mbsp->dareaportals, mbsp->numareaportals);
         
-            /* Conversion complete! */
-            bspdata->version = to_version;
+        q2bsp->dbrushes = Q2BSP_CopyBrushes(mbsp->dbrushes, mbsp->numbrushes);
+        q2bsp->dbrushsides = Q2BSP_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
         
-            return;
-        }
+        /* Free old data */
+        FreeMBSP((mbsp_t *)mbsp);
+        
+        /* Conversion complete! */
+        bspdata->version = version;
+        
+        return;
+    }
     
-        else if (to_version == &bspver_bsp2) {
-            bsp2_t *bsp2 = &bspdata->data.bsp2;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+    if (bspdata->version == GENERIC_BSP && version == BSP2RMQVERSION) {
+        bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
+        const mbsp_t *mbsp = &bspdata->data.mbsp;
         
-            memset(bsp2, 0, sizeof(*bsp2));
+        memset(bsp2rmq, 0, sizeof(*bsp2rmq));
         
-            // copy counts
-            bsp2->nummodels = mbsp->nummodels;
-            bsp2->visdatasize = mbsp->visdatasize;
-            bsp2->lightdatasize = mbsp->lightdatasize;
-            bsp2->texdatasize = mbsp->texdatasize;
-            bsp2->entdatasize = mbsp->entdatasize;
-            bsp2->numleafs = mbsp->numleafs;
-            bsp2->numplanes = mbsp->numplanes;
-            bsp2->numvertexes = mbsp->numvertexes;
-            bsp2->numnodes = mbsp->numnodes;
-            bsp2->numtexinfo = mbsp->numtexinfo;
-            bsp2->numfaces = mbsp->numfaces;
-            bsp2->numclipnodes = mbsp->numclipnodes;
-            bsp2->numedges = mbsp->numedges;
-            bsp2->nummarksurfaces = mbsp->numleaffaces;
-            bsp2->numsurfedges = mbsp->numsurfedges;
+        // copy counts
+        bsp2rmq->nummodels = mbsp->nummodels;
+        bsp2rmq->visdatasize = mbsp->visdatasize;
+        bsp2rmq->lightdatasize = mbsp->lightdatasize;
+        bsp2rmq->texdatasize = mbsp->texdatasize;
+        bsp2rmq->entdatasize = mbsp->entdatasize;
+        bsp2rmq->numleafs = mbsp->numleafs;
+        bsp2rmq->numplanes = mbsp->numplanes;
+        bsp2rmq->numvertexes = mbsp->numvertexes;
+        bsp2rmq->numnodes = mbsp->numnodes;
+        bsp2rmq->numtexinfo = mbsp->numtexinfo;
+        bsp2rmq->numfaces = mbsp->numfaces;
+        bsp2rmq->numclipnodes = mbsp->numclipnodes;
+        bsp2rmq->numedges = mbsp->numedges;
+        bsp2rmq->nummarksurfaces = mbsp->numleaffaces;
+        bsp2rmq->numsurfedges = mbsp->numsurfedges;
         
-            // copy or convert data
-            bsp2->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
-            bsp2->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
-            bsp2->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
-            bsp2->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
-            bsp2->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
-            bsp2->dleafs = MBSPto2_Leafs(mbsp->dleafs, mbsp->numleafs);
-            bsp2->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
-            bsp2->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
-            bsp2->dnodes = BSP2_CopyNodes(mbsp->dnodes, mbsp->numnodes);
-            bsp2->texinfo = MBSPto29_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
-            bsp2->dfaces = BSP2_CopyFaces(mbsp->dfaces, mbsp->numfaces);
-            bsp2->dclipnodes = BSP2_CopyClipnodes(mbsp->dclipnodes, mbsp->numclipnodes);
-            bsp2->dedges = BSP2_CopyEdges(mbsp->dedges, mbsp->numedges);
-            bsp2->dmarksurfaces = BSP2_CopyMarksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
-            bsp2->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
+        // copy or convert data
+        bsp2rmq->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
+        bsp2rmq->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
+        bsp2rmq->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
+        bsp2rmq->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
+        bsp2rmq->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
+        bsp2rmq->dleafs = MBSPto2rmq_Leafs(mbsp->dleafs, mbsp->numleafs);
+        bsp2rmq->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
+        bsp2rmq->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
+        bsp2rmq->dnodes = BSP2to2rmq_Nodes(mbsp->dnodes, mbsp->numnodes);
+        bsp2rmq->texinfo = MBSPto29_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
+        bsp2rmq->dfaces = BSP2_CopyFaces(mbsp->dfaces, mbsp->numfaces);
+        bsp2rmq->dclipnodes = BSP2_CopyClipnodes(mbsp->dclipnodes, mbsp->numclipnodes);
+        bsp2rmq->dedges = BSP2_CopyEdges(mbsp->dedges, mbsp->numedges);
+        bsp2rmq->dmarksurfaces = BSP2_CopyMarksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
+        bsp2rmq->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
-            /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+        /* Free old data */
+        FreeMBSP((mbsp_t *)mbsp);
         
-            /* Conversion complete! */
-            bspdata->version = to_version;
+        /* Conversion complete! */
+        bspdata->version = version;
         
-            return;
-        }
+        return;
+    }
+    
+    if (bspdata->version == GENERIC_BSP && version == BSP2VERSION) {
+        bsp2_t *bsp2 = &bspdata->data.bsp2;
+        const mbsp_t *mbsp = &bspdata->data.mbsp;
+        
+        memset(bsp2, 0, sizeof(*bsp2));
+        
+        // copy counts
+        bsp2->nummodels = mbsp->nummodels;
+        bsp2->visdatasize = mbsp->visdatasize;
+        bsp2->lightdatasize = mbsp->lightdatasize;
+        bsp2->texdatasize = mbsp->texdatasize;
+        bsp2->entdatasize = mbsp->entdatasize;
+        bsp2->numleafs = mbsp->numleafs;
+        bsp2->numplanes = mbsp->numplanes;
+        bsp2->numvertexes = mbsp->numvertexes;
+        bsp2->numnodes = mbsp->numnodes;
+        bsp2->numtexinfo = mbsp->numtexinfo;
+        bsp2->numfaces = mbsp->numfaces;
+        bsp2->numclipnodes = mbsp->numclipnodes;
+        bsp2->numedges = mbsp->numedges;
+        bsp2->nummarksurfaces = mbsp->numleaffaces;
+        bsp2->numsurfedges = mbsp->numsurfedges;
+        
+        // copy or convert data
+        bsp2->dmodels = BSP29_CopyModels(mbsp->dmodels, mbsp->nummodels);
+        bsp2->dvisdata = BSP29_CopyVisData(mbsp->dvisdata, mbsp->visdatasize);
+        bsp2->dlightdata = BSP29_CopyLightData(mbsp->dlightdata, mbsp->lightdatasize);
+        bsp2->dtexdata = BSP29_CopyTexData(mbsp->dtexdata, mbsp->texdatasize);
+        bsp2->dentdata = BSP29_CopyEntData(mbsp->dentdata, mbsp->entdatasize);
+        bsp2->dleafs = MBSPto2_Leafs(mbsp->dleafs, mbsp->numleafs);
+        bsp2->dplanes = BSP29_CopyPlanes(mbsp->dplanes, mbsp->numplanes);
+        bsp2->dvertexes = BSP29_CopyVertexes(mbsp->dvertexes, mbsp->numvertexes);
+        bsp2->dnodes = BSP2_CopyNodes(mbsp->dnodes, mbsp->numnodes);
+        bsp2->texinfo = MBSPto29_Texinfo(mbsp->texinfo, mbsp->numtexinfo);
+        bsp2->dfaces = BSP2_CopyFaces(mbsp->dfaces, mbsp->numfaces);
+        bsp2->dclipnodes = BSP2_CopyClipnodes(mbsp->dclipnodes, mbsp->numclipnodes);
+        bsp2->dedges = BSP2_CopyEdges(mbsp->dedges, mbsp->numedges);
+        bsp2->dmarksurfaces = BSP2_CopyMarksurfaces(mbsp->dleaffaces, mbsp->numleaffaces);
+        bsp2->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
+        
+        /* Free old data */
+        FreeMBSP((mbsp_t *)mbsp);
+        
+        /* Conversion complete! */
+        bspdata->version = version;
+        
+        return;
     }
     
     Error("Don't know how to convert BSP version %s to %s",
-          BSPVersionString(bspdata->version), BSPVersionString(to_version));
+          BSPVersionString(bspdata->version), BSPVersionString(version));
 }
 
 static int 
 isHexen2(const dheader_t *header)
 {
-    /*
+        /*
         the world should always have some face.
         however, if the sizes are wrong then we're actually reading headnode[6]. hexen2 only used 5 hulls, so this should be 0 in hexen2, and not in quake.
-    */
-    const dmodelq1_t *modelsq1 = (const dmodelq1_t*)((const uint8_t *)header + header->lumps[LUMP_MODELS].fileofs);
-    return !modelsq1->numfaces;
+        */
+        const dmodelq1_t *modelsq1 = (const dmodelq1_t*)((const uint8_t *)header + header->lumps[LUMP_MODELS].fileofs);
+        return !modelsq1->numfaces;
 }
 
 /*
@@ -2577,30 +2084,8 @@ const lumpspec_t lumpspec_q2bsp[] = {
     { "areaportals",  sizeof(dareaportal_t)     },
 };
 
-const lumpspec_t lumpspec_qbism[] = {
-    { "entities",     sizeof(char)              },
-    { "planes",       sizeof(dplane_t)          },
-    { "vertexes",     sizeof(dvertex_t)         },
-    { "visibility",   sizeof(uint8_t)              },
-    { "nodes",        sizeof(q2_dnode_qbism_t)        },
-    { "texinfos",     sizeof(q2_texinfo_t)      },
-    { "faces",        sizeof(q2_dface_qbism_t)        },
-    { "lighting",     sizeof(uint8_t)              },
-    { "leafs",        sizeof(q2_dleaf_qbism_t)        },
-    { "leaffaces",    sizeof(uint32_t)          },
-    { "leafbrushes",  sizeof(uint32_t)          },
-    { "edges",        sizeof(q2_dedge_qbism_t)     },
-    { "surfedges",    sizeof(int32_t)           },
-    { "models",       sizeof(q2_dmodel_t)       },
-    { "brushes",      sizeof(dbrush_t)          },
-    { "brushsides",   sizeof(q2_dbrushside_qbism_t)      },
-    { "pop",          sizeof(uint8_t)              },
-    { "areas",        sizeof(darea_t)           },
-    { "areaportals",  sizeof(dareaportal_t)     },
-};
-
 static int
-CopyLump(const void *header, const bspversion_t *version, const lump_t *lumps, int lumpnum, void *destptr)
+CopyLump(const dheader_t *header, int lumpnum, void *destptr)
 {
     const lumpspec_t *lumpspec;
     uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
@@ -2608,29 +2093,29 @@ CopyLump(const void *header, const bspversion_t *version, const lump_t *lumps, i
     int length;
     int ofs;
 
-    if (version == &bspver_q1 || version == &bspver_h2 || version == &bspver_hl) {
+    switch (header->version) {
+    case BSPVERSION:
+    case BSPHLVERSION:
         lumpspec = &lumpspec_bsp29[lumpnum];
-    } else if (version == &bspver_bsp2rmq) {
+        break;
+    case BSP2RMQVERSION:
         lumpspec = &lumpspec_bsp2rmq[lumpnum];
-    } else if (version == &bspver_bsp2) {
+        break;
+    case BSP2VERSION:
         lumpspec = &lumpspec_bsp2[lumpnum];
-    } else if (version == &bspver_q2) {
-        lumpspec = &lumpspec_q2bsp[lumpnum];
-    } else if (version == &bspver_qbism) {
-        lumpspec = &lumpspec_qbism[lumpnum];
-    } else {
-        Error("Unsupported BSP version: %s", BSPVersionString(version));
+        break;
+    default:
+        Error("Unsupported BSP version: %d", header->version);
         throw; //mxd. Fixes "Uninitialized variable" warning
     }
 
-    length = lumps[lumpnum].filelen;
-    ofs = lumps[lumpnum].fileofs;
+    length = header->lumps[lumpnum].filelen;
+    ofs = header->lumps[lumpnum].fileofs;
 
     if (buffer)
         free(buffer);
 
-    // convert non-Hexen II BSP model hulls over to Hexen II ones
-    if (lumpnum == LUMP_MODELS && (version == &bspver_q1 || version == &bspver_hl))
+    if (lumpnum == LUMP_MODELS && !isHexen2(header))
     {   /*convert in-place. no need to care about endian here.*/
         const dmodelq1_t *in = (const dmodelq1_t*)((const uint8_t *)header + ofs);
         dmodel_t *out;
@@ -2676,6 +2161,45 @@ CopyLump(const void *header, const bspversion_t *version, const lump_t *lumps, i
         return length / lumpspec->size;
     }
 }
+
+// FIXME: Could merge this with CopyLump once the hexen 2 hack is moved elsewhere
+static int
+Q2_CopyLump(const q2_dheader_t *header, int lumpnum, void *destptr)
+{
+    const lumpspec_t *lumpspec;
+    uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
+    uint8_t *buffer = *bufferptr;
+    int length;
+    int ofs;
+    
+    switch (header->version) {
+        case Q2_BSPVERSION:
+            lumpspec = &lumpspec_q2bsp[lumpnum];
+            break;
+        default:
+            Error("Unsupported BSP version: %d", header->version);
+            throw; //mxd. Fixes "Uninitialized variable" warning
+    }
+    
+    length = header->lumps[lumpnum].filelen;
+    ofs = header->lumps[lumpnum].fileofs;
+    
+    if (buffer)
+        free(buffer);
+    
+    if (length % lumpspec->size)
+        Error("%s: odd %s lump size", __func__, lumpspec->name);
+    
+    buffer = *bufferptr = static_cast<uint8_t *>(malloc(length + 1));
+    if (!buffer)
+        Error("%s: allocation of %i bytes failed.", __func__, length);
+    
+    memcpy(buffer, (const uint8_t *)header + ofs, length);
+    buffer[length] = 0; /* In case of corrupt entity lump */
+    
+    return length / lumpspec->size;
+}
+
 
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize)
 {
@@ -2762,37 +2286,32 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
 
     /* transfer the header data to these variables */
     int numlumps;
+    int32_t version;
     lump_t *lumps;
 
     /* check for IBSP */
-    bspversion_t temp_version { LittleLong(((int *)file_data)[0]) };
-
-    if (temp_version.ident == Q2_BSPIDENT ||
-        temp_version.ident == Q2_QBISMIDENT) {
+    if (LittleLong(((int *)file_data)[0]) == Q2_BSPIDENT) {
         q2_dheader_t *q2header = (q2_dheader_t *)file_data;
         q2header->version = LittleLong(q2header->version);
         
         numlumps = Q2_HEADER_LUMPS;
-        temp_version.version = q2header->version;
+        version = q2header->version;
         lumps = q2header->lumps;
     } else {
         dheader_t *q1header = (dheader_t *)file_data;
         q1header->version = LittleLong(q1header->version);
         
         numlumps = BSP_LUMPS;
+        version = q1header->version;
         lumps = q1header->lumps;
-
-        // not useful for Q1BSP, but we'll initialize it to -1
-        temp_version.version = NO_VERSION;
     }
     
+    bspdata->loadversion = version;
+    
     /* check the file version */
-    if (!BSPVersionSupported(temp_version.ident, temp_version.version, &bspdata->version)) {
-        logprint("BSP is version %s\n", BSPVersionString(&temp_version));
+    logprint("BSP is version %s\n", BSPVersionString(version));
+    if (!BSPVersionSupported(version))
         Error("Sorry, this bsp version is not supported.");
-    } else {
-        logprint("BSP is version %s\n", BSPVersionString(bspdata->version));
-    }
 
     /* swap the lump headers */
     for (i = 0; i < numlumps; i++) {
@@ -2800,175 +2319,152 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
         lumps[i].filelen = LittleLong(lumps[i].filelen);
     }
 
+    if (isHexen2((dheader_t *)file_data))
+    {
+            logprint("BSP appears to be from hexen2\n");
+            bspdata->hullcount = MAX_MAP_HULLS_H2;
+    }
+    else
+            bspdata->hullcount = MAX_MAP_HULLS_Q1;
+
     /* copy the data */
-    if (bspdata->version == &bspver_q2) {
+    if (version == Q2_BSPVERSION) {
         q2_dheader_t *header = (q2_dheader_t *)file_data;
         q2bsp_t *bsp = &bspdata->data.q2bsp;
-
+        
         memset(bsp, 0, sizeof(*bsp));
-
-        bsp->nummodels = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_MODELS, &bsp->dmodels);
-        bsp->numvertexes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_VERTEXES, &bsp->dvertexes);
-        bsp->numplanes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_PLANES, &bsp->dplanes);
-        bsp->numleafs = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LEAFS, &bsp->dleafs);
-        bsp->numnodes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_NODES, &bsp->dnodes);
-        bsp->numtexinfo = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_TEXINFO, &bsp->texinfo);
-        bsp->numfaces = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_FACES, &bsp->dfaces);
-        bsp->numleaffaces = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LEAFFACES, &bsp->dleaffaces);
-        bsp->numleafbrushes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LEAFBRUSHES, &bsp->dleafbrushes);
-        bsp->numsurfedges = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_SURFEDGES, &bsp->dsurfedges);
-        bsp->numedges = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_EDGES, &bsp->dedges);
-        bsp->numbrushes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_BRUSHES, &bsp->dbrushes);
-        bsp->numbrushsides = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_BRUSHSIDES, &bsp->dbrushsides);
-        bsp->numareas = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_AREAS, &bsp->dareas);
-        bsp->numareaportals = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_AREAPORTALS, &bsp->dareaportals);
+        bspdata->version = header->version;
         
-        bsp->visdatasize = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_VISIBILITY, &bsp->dvis);
-        bsp->lightdatasize = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LIGHTING, &bsp->dlightdata);
-        bsp->entdatasize = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_ENTITIES, &bsp->dentdata);
+        bsp->nummodels = Q2_CopyLump (header, Q2_LUMP_MODELS, &bsp->dmodels);
+        bsp->numvertexes = Q2_CopyLump (header, Q2_LUMP_VERTEXES, &bsp->dvertexes);
+        bsp->numplanes = Q2_CopyLump (header, Q2_LUMP_PLANES, &bsp->dplanes);
+        bsp->numleafs = Q2_CopyLump (header, Q2_LUMP_LEAFS, &bsp->dleafs);
+        bsp->numnodes = Q2_CopyLump (header, Q2_LUMP_NODES, &bsp->dnodes);
+        bsp->numtexinfo = Q2_CopyLump (header, Q2_LUMP_TEXINFO, &bsp->texinfo);
+        bsp->numfaces = Q2_CopyLump (header, Q2_LUMP_FACES, &bsp->dfaces);
+        bsp->numleaffaces = Q2_CopyLump (header, Q2_LUMP_LEAFFACES, &bsp->dleaffaces);
+        bsp->numleafbrushes = Q2_CopyLump (header, Q2_LUMP_LEAFBRUSHES, &bsp->dleafbrushes);
+        bsp->numsurfedges = Q2_CopyLump (header, Q2_LUMP_SURFEDGES, &bsp->dsurfedges);
+        bsp->numedges = Q2_CopyLump (header, Q2_LUMP_EDGES, &bsp->dedges);
+        bsp->numbrushes = Q2_CopyLump (header, Q2_LUMP_BRUSHES, &bsp->dbrushes);
+        bsp->numbrushsides = Q2_CopyLump (header, Q2_LUMP_BRUSHSIDES, &bsp->dbrushsides);
+        bsp->numareas = Q2_CopyLump (header, Q2_LUMP_AREAS, &bsp->dareas);
+        bsp->numareaportals = Q2_CopyLump (header, Q2_LUMP_AREAPORTALS, &bsp->dareaportals);
         
-        CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_POP, &bsp->dpop);
-    } else if (bspdata->version == &bspver_qbism) {
-        q2_dheader_t *header = (q2_dheader_t *)file_data;
-        q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
-
-        memset(bsp, 0, sizeof(*bsp));
-
-        bsp->nummodels = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_MODELS, &bsp->dmodels);
-        bsp->numvertexes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_VERTEXES, &bsp->dvertexes);
-        bsp->numplanes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_PLANES, &bsp->dplanes);
-        bsp->numleafs = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LEAFS, &bsp->dleafs);
-        bsp->numnodes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_NODES, &bsp->dnodes);
-        bsp->numtexinfo = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_TEXINFO, &bsp->texinfo);
-        bsp->numfaces = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_FACES, &bsp->dfaces);
-        bsp->numleaffaces = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LEAFFACES, &bsp->dleaffaces);
-        bsp->numleafbrushes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LEAFBRUSHES, &bsp->dleafbrushes);
-        bsp->numsurfedges = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_SURFEDGES, &bsp->dsurfedges);
-        bsp->numedges = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_EDGES, &bsp->dedges);
-        bsp->numbrushes = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_BRUSHES, &bsp->dbrushes);
-        bsp->numbrushsides = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_BRUSHSIDES, &bsp->dbrushsides);
-        bsp->numareas = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_AREAS, &bsp->dareas);
-        bsp->numareaportals = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_AREAPORTALS, &bsp->dareaportals);
+        bsp->visdatasize = Q2_CopyLump (header, Q2_LUMP_VISIBILITY, &bsp->dvis);
+        bsp->lightdatasize = Q2_CopyLump (header, Q2_LUMP_LIGHTING, &bsp->dlightdata);
+        bsp->entdatasize = Q2_CopyLump (header, Q2_LUMP_ENTITIES, &bsp->dentdata);
         
-        bsp->visdatasize = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_VISIBILITY, &bsp->dvis);
-        bsp->lightdatasize = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_LIGHTING, &bsp->dlightdata);
-        bsp->entdatasize = CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_ENTITIES, &bsp->dentdata);
-        
-        CopyLump (header, bspdata->version, header->lumps, Q2_LUMP_POP, &bsp->dpop);
-    } else {
-        // Only Q1-like maps need hullcount
-        if (isHexen2((dheader_t *)file_data)) {
-            logprint("BSP appears to be from hexen2\n");
-            // swap version over to H2
-            bspdata->version = &bspver_h2;
-            bspdata->hullcount = MAX_MAP_HULLS_H2;
-        } else {
-            bspdata->hullcount = MAX_MAP_HULLS_Q1;
-        }
+        Q2_CopyLump (header, Q2_LUMP_POP, &bsp->dpop);
     }
     
-    if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
+    if (version == BSPVERSION || version == BSPHLVERSION) {
         dheader_t *header = (dheader_t *)file_data;
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         memset(bsp, 0, sizeof(*bsp));
+        bspdata->version = header->version;
+        bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
+        bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
+        bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
+        bsp->numleafs = CopyLump(header, LUMP_LEAFS, &bsp->dleafs);
+        bsp->numnodes = CopyLump(header, LUMP_NODES, &bsp->dnodes);
+        bsp->numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp->texinfo);
+        bsp->numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp->dclipnodes);
+        bsp->numfaces = CopyLump(header, LUMP_FACES, &bsp->dfaces);
+        bsp->nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
+        bsp->numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp->dsurfedges);
+        bsp->numedges = CopyLump(header, LUMP_EDGES, &bsp->dedges);
 
-        bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels);
-        bsp->numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp->dvertexes);
-        bsp->numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp->dplanes);
-        bsp->numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp->dleafs);
-        bsp->numnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_NODES, &bsp->dnodes);
-        bsp->numtexinfo = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXINFO, &bsp->texinfo);
-        bsp->numclipnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_CLIPNODES, &bsp->dclipnodes);
-        bsp->numfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_FACES, &bsp->dfaces);
-        bsp->nummarksurfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
-        bsp->numsurfedges = CopyLump(header, bspdata->version, header->lumps, LUMP_SURFEDGES, &bsp->dsurfedges);
-        bsp->numedges = CopyLump(header, bspdata->version, header->lumps, LUMP_EDGES, &bsp->dedges);
+        bsp->texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp->dtexdata);
+        bsp->visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp->dvisdata);
+        bsp->lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp->dlightdata);
+        bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
+    }
 
-        bsp->texdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXTURES, &bsp->dtexdata);
-        bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp->dvisdata);
-        bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp->dlightdata);
-        bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp->dentdata);
-    } else if (bspdata->version == &bspver_bsp2rmq) {
+    if (version == BSP2RMQVERSION) {
         dheader_t *header = (dheader_t *)file_data;
         bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         memset(bsp, 0, sizeof(*bsp));
+        bspdata->version = header->version;
+        bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
+        bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
+        bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
+        bsp->numleafs = CopyLump(header, LUMP_LEAFS, &bsp->dleafs);
+        bsp->numnodes = CopyLump(header, LUMP_NODES, &bsp->dnodes);
+        bsp->numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp->texinfo);
+        bsp->numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp->dclipnodes);
+        bsp->numfaces = CopyLump(header, LUMP_FACES, &bsp->dfaces);
+        bsp->nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
+        bsp->numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp->dsurfedges);
+        bsp->numedges = CopyLump(header, LUMP_EDGES, &bsp->dedges);
 
-        bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels);
-        bsp->numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp->dvertexes);
-        bsp->numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp->dplanes);
-        bsp->numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp->dleafs);
-        bsp->numnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_NODES, &bsp->dnodes);
-        bsp->numtexinfo = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXINFO, &bsp->texinfo);
-        bsp->numclipnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_CLIPNODES, &bsp->dclipnodes);
-        bsp->numfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_FACES, &bsp->dfaces);
-        bsp->nummarksurfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
-        bsp->numsurfedges = CopyLump(header, bspdata->version, header->lumps, LUMP_SURFEDGES, &bsp->dsurfedges);
-        bsp->numedges = CopyLump(header, bspdata->version, header->lumps, LUMP_EDGES, &bsp->dedges);
+        bsp->texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp->dtexdata);
+        bsp->visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp->dvisdata);
+        bsp->lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp->dlightdata);
+        bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
+    }
 
-        bsp->texdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXTURES, &bsp->dtexdata);
-        bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp->dvisdata);
-        bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp->dlightdata);
-        bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp->dentdata);
-    } else if (bspdata->version == &bspver_bsp2) {
+    if (version == BSP2VERSION) {
         dheader_t *header = (dheader_t *)file_data;
         bsp2_t *bsp = &bspdata->data.bsp2;
 
         memset(bsp, 0, sizeof(*bsp));
+        bspdata->version = header->version;
+        bsp->nummodels = CopyLump(header, LUMP_MODELS, &bsp->dmodels);
+        bsp->numvertexes = CopyLump(header, LUMP_VERTEXES, &bsp->dvertexes);
+        bsp->numplanes = CopyLump(header, LUMP_PLANES, &bsp->dplanes);
+        bsp->numleafs = CopyLump(header, LUMP_LEAFS, &bsp->dleafs);
+        bsp->numnodes = CopyLump(header, LUMP_NODES, &bsp->dnodes);
+        bsp->numtexinfo = CopyLump(header, LUMP_TEXINFO, &bsp->texinfo);
+        bsp->numclipnodes = CopyLump(header, LUMP_CLIPNODES, &bsp->dclipnodes);
+        bsp->numfaces = CopyLump(header, LUMP_FACES, &bsp->dfaces);
+        bsp->nummarksurfaces = CopyLump(header, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
+        bsp->numsurfedges = CopyLump(header, LUMP_SURFEDGES, &bsp->dsurfedges);
+        bsp->numedges = CopyLump(header, LUMP_EDGES, &bsp->dedges);
 
-        bsp->nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp->dmodels);
-        bsp->numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp->dvertexes);
-        bsp->numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp->dplanes);
-        bsp->numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp->dleafs);
-        bsp->numnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_NODES, &bsp->dnodes);
-        bsp->numtexinfo = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXINFO, &bsp->texinfo);
-        bsp->numclipnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_CLIPNODES, &bsp->dclipnodes);
-        bsp->numfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_FACES, &bsp->dfaces);
-        bsp->nummarksurfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_MARKSURFACES, &bsp->dmarksurfaces);
-        bsp->numsurfedges = CopyLump(header, bspdata->version, header->lumps, LUMP_SURFEDGES, &bsp->dsurfedges);
-        bsp->numedges = CopyLump(header, bspdata->version, header->lumps, LUMP_EDGES, &bsp->dedges);
-
-        bsp->texdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXTURES, &bsp->dtexdata);
-        bsp->visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp->dvisdata);
-        bsp->lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp->dlightdata);
-        bsp->entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp->dentdata);
+        bsp->texdatasize = CopyLump(header, LUMP_TEXTURES, &bsp->dtexdata);
+        bsp->visdatasize = CopyLump(header, LUMP_VISIBILITY, &bsp->dvisdata);
+        bsp->lightdatasize = CopyLump(header, LUMP_LIGHTING, &bsp->dlightdata);
+        bsp->entdatasize = CopyLump(header, LUMP_ENTITIES, &bsp->dentdata);
     }
 
-    // detect BSPX
-    dheader_t *header = (dheader_t *)file_data;
+    if (version != Q2_BSPVERSION) {
+        dheader_t *header = (dheader_t *)file_data;
         
-    /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
-    for (i = 0, bspxofs = 0; i < BSP_LUMPS; i++)
-    {
-        if (bspxofs < header->lumps[i].fileofs + header->lumps[i].filelen)
-        bspxofs = header->lumps[i].fileofs + header->lumps[i].filelen;
-    }
-    bspxofs = (bspxofs+3) & ~3;
-    /*okay, so that's where it *should* be if it exists */
-    if (bspxofs + sizeof(*bspx) <= flen)
-    {
-        int xlumps;
-        const bspx_lump_t *xlump;
-        bspx = (const bspx_header_t*)((const uint8_t*)header + bspxofs);
-        xlump = (const bspx_lump_t*)(bspx+1);
-        xlumps = LittleLong(bspx->numlumps);
-        if (!memcmp(&bspx->id,"BSPX",4) && xlumps >= 0 && bspxofs+sizeof(*bspx)+sizeof(*xlump)*xlumps <= flen)
+        /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
+        for (i = 0, bspxofs = 0; i < BSP_LUMPS; i++)
         {
-            /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring that they get written out anew*/
-            while(xlumps --> 0)
-            {
-                uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
-                uint32_t len = LittleLong(xlump[xlumps].filelen);
-                void *lumpdata = malloc(len);
-                memcpy(lumpdata, (const uint8_t*)header + ofs, len);
-                BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
-            }
+            if (bspxofs < header->lumps[i].fileofs + header->lumps[i].filelen)
+            bspxofs = header->lumps[i].fileofs + header->lumps[i].filelen;
         }
-        else
+        bspxofs = (bspxofs+3) & ~3;
+        /*okay, so that's where it *should* be if it exists */
+        if (bspxofs + sizeof(*bspx) <= flen)
         {
-            if (!memcmp(&bspx->id,"BSPX",4))
-                printf("invalid bspx header\n");
+            int xlumps;
+            const bspx_lump_t *xlump;
+            bspx = (const bspx_header_t*)((const uint8_t*)header + bspxofs);
+            xlump = (const bspx_lump_t*)(bspx+1);
+            xlumps = LittleLong(bspx->numlumps);
+            if (!memcmp(&bspx->id,"BSPX",4) && xlumps >= 0 && bspxofs+sizeof(*bspx)+sizeof(*xlump)*xlumps <= flen)
+            {
+                /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring that they get written out anew*/
+                while(xlumps --> 0)
+                {
+                    uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
+                    uint32_t len = LittleLong(xlump[xlumps].filelen);
+                    void *lumpdata = malloc(len);
+                    memcpy(lumpdata, (const uint8_t*)header + ofs, len);
+                    BSPX_AddLump(bspdata, xlump[xlumps].lumpname, lumpdata, len);
+                }
+            }
+            else
+            {
+                if (!memcmp(&bspx->id,"BSPX",4))
+                    printf("invalid bspx header\n");
+            }
         }
     }
     
@@ -2982,13 +2478,11 @@ LoadBSPFile(char *filename, bspdata_t *bspdata)
 /* ========================================================================= */
 
 typedef struct {
-    const bspversion_t *version;
+    int version;
     
     // which one is used depends on version
-    union {
-        dheader_t q1header;
-        q2_dheader_t q2header;
-    };
+    dheader_t q1header;
+    q2_dheader_t q2header;
     
     FILE *file;
 } bspfile_t;
@@ -2998,33 +2492,33 @@ AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
 {
     bool q2 = false;
     size_t size;
-    const lumpspec_t *lumpspec;
-    lump_t *lumps;
-
-    if (bspfile->version == &bspver_q1 || bspfile->version == &bspver_h2 || bspfile->version == &bspver_hl) {
-        lumpspec = &lumpspec_bsp29[lumpnum];
-        lumps = bspfile->q1header.lumps;
-    } else if (bspfile->version == &bspver_bsp2rmq) {
-        lumpspec = &lumpspec_bsp2rmq[lumpnum];
-        lumps = bspfile->q1header.lumps;
-    } else if (bspfile->version == &bspver_bsp2) {
-        lumpspec = &lumpspec_bsp2[lumpnum];
-        lumps = bspfile->q1header.lumps;
-    } else if (bspfile->version == &bspver_q2) {
-        lumpspec = &lumpspec_q2bsp[lumpnum];
-        lumps = bspfile->q2header.lumps;
-    } else if (bspfile->version == &bspver_qbism) {
-        lumpspec = &lumpspec_qbism[lumpnum];
-        lumps = bspfile->q2header.lumps;
-    } else {
-        Error("Unsupported BSP version: %s", BSPVersionString(bspfile->version));
+    
+    switch (bspfile->version) {
+    case BSPVERSION:
+    case BSPHLVERSION:
+        size = lumpspec_bsp29[lumpnum].size * count;
+        break;
+    case BSP2RMQVERSION:
+        size = lumpspec_bsp2rmq[lumpnum].size * count;
+        break;
+    case BSP2VERSION:
+        size = lumpspec_bsp2[lumpnum].size * count;
+        break;
+    case Q2_BSPVERSION:
+        size = lumpspec_q2bsp[lumpnum].size * count;
+        q2 = true;
+        break;
+    default:
+        Error("Unsupported BSP version: %d", LittleLong(bspfile->version));
         throw; //mxd. Fixes "Uninitialized variable" warning
     }
 
-    size = lumpspec->size * count;
-
     uint8_t pad[4] = {0};
-    lump_t *lump = &lumps[lumpnum];
+    lump_t *lump;
+    if (q2)
+        lump = &bspfile->q2header.lumps[lumpnum];
+    else
+        lump = &bspfile->q1header.lumps[lumpnum];
     
     lump->fileofs = LittleLong(ftell(bspfile->file));
     lump->filelen = LittleLong(size);
@@ -3081,27 +2575,25 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
     SwapBSPFile(bspdata, TO_DISK);
 
     bspfile.version = bspdata->version;
-
-    // headers are union'd, so this sets both
-    bspfile.q2header.ident = LittleLong(bspfile.version->ident);
-
-    if (bspfile.version->version != NO_VERSION) {
-        bspfile.q2header.version = LittleLong(bspfile.version->version);
+    if (bspfile.version == Q2_BSPVERSION) {
+        bspfile.q2header.ident = LittleLong(Q2_BSPIDENT);
+        bspfile.q2header.version = LittleLong(Q2_BSPVERSION);
+    } else {
+        bspfile.q1header.version = LittleLong(bspfile.version);
     }
     
     logprint("Writing %s as BSP version %s\n", filename, BSPVersionString(bspdata->version));
     bspfile.file = SafeOpenWrite(filename);
 
     /* Save header space, updated after adding the lumps */
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version == Q2_BSPVERSION) {
     	SafeWrite(bspfile.file, &bspfile.q2header, sizeof(bspfile.q2header));
     } else {
         SafeWrite(bspfile.file, &bspfile.q1header, sizeof(bspfile.q1header));
     }
 
-    if (bspdata->version == &bspver_q1 ||
-        bspdata->version == &bspver_h2 ||
-        bspdata->version == &bspver_hl) {
+    if (bspdata->version == BSPVERSION ||
+        bspdata->version == BSPHLVERSION) {
         bsp29_t *bsp = &bspdata->data.bsp29;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
@@ -3120,7 +2612,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
-    } else if (bspdata->version == &bspver_bsp2rmq) {
+    } else if (bspdata->version == BSP2RMQVERSION) {
         bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
@@ -3139,7 +2631,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
-    } else if (bspdata->version == &bspver_bsp2) {
+    } else if (bspdata->version == BSP2VERSION) {
         bsp2_t *bsp = &bspdata->data.bsp2;
 
         AddLump(&bspfile, LUMP_PLANES, bsp->dplanes, bsp->numplanes);
@@ -3158,31 +2650,8 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, LUMP_VISIBILITY, bsp->dvisdata, bsp->visdatasize);
         AddLump(&bspfile, LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
         AddLump(&bspfile, LUMP_TEXTURES, bsp->dtexdata, bsp->texdatasize);
-    } else if (bspdata->version == &bspver_q2) {
+    } else if (bspdata->version == Q2_BSPVERSION) {
         q2bsp_t *bsp = &bspdata->data.q2bsp;
-
-        AddLump(&bspfile, Q2_LUMP_MODELS, bsp->dmodels, bsp->nummodels);
-        AddLump(&bspfile, Q2_LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
-        AddLump(&bspfile, Q2_LUMP_PLANES, bsp->dplanes, bsp->numplanes);
-        AddLump(&bspfile, Q2_LUMP_LEAFS, bsp->dleafs, bsp->numleafs);
-		AddLump(&bspfile, Q2_LUMP_NODES, bsp->dnodes, bsp->numnodes);
-        AddLump(&bspfile, Q2_LUMP_TEXINFO, bsp->texinfo, bsp->numtexinfo);
-        AddLump(&bspfile, Q2_LUMP_FACES, bsp->dfaces, bsp->numfaces);
-        AddLump(&bspfile, Q2_LUMP_LEAFFACES, bsp->dleaffaces, bsp->numleaffaces);
-        AddLump(&bspfile, Q2_LUMP_LEAFBRUSHES, bsp->dleafbrushes, bsp->numleafbrushes);
-        AddLump(&bspfile, Q2_LUMP_SURFEDGES, bsp->dsurfedges, bsp->numsurfedges);
-        AddLump(&bspfile, Q2_LUMP_EDGES, bsp->dedges, bsp->numedges);
-        AddLump(&bspfile, Q2_LUMP_BRUSHES, bsp->dbrushes, bsp->numbrushes);
-        AddLump(&bspfile, Q2_LUMP_BRUSHSIDES, bsp->dbrushsides, bsp->numbrushsides);
-        AddLump(&bspfile, Q2_LUMP_AREAS, bsp->dareas, bsp->numareas);
-        AddLump(&bspfile, Q2_LUMP_AREAPORTALS, bsp->dareaportals, bsp->numareaportals);
-        
-        AddLump(&bspfile, Q2_LUMP_VISIBILITY, bsp->dvis, bsp->visdatasize);
-        AddLump(&bspfile, Q2_LUMP_LIGHTING, bsp->dlightdata, bsp->lightdatasize);
-        AddLump(&bspfile, Q2_LUMP_ENTITIES, bsp->dentdata, bsp->entdatasize);
-        AddLump(&bspfile, Q2_LUMP_POP, bsp->dpop, sizeof(bsp->dpop));
-    } else if (bspdata->version == &bspver_qbism) {
-        q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
 
         AddLump(&bspfile, Q2_LUMP_MODELS, bsp->dmodels, bsp->nummodels);
         AddLump(&bspfile, Q2_LUMP_VERTEXES, bsp->dvertexes, bsp->numvertexes);
@@ -3251,7 +2720,7 @@ WriteBSPFile(const char *filename, bspdata_t *bspdata)
     fseek(bspfile.file, 0, SEEK_SET);
 	
     // write the real header
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version == Q2_BSPVERSION) {
         SafeWrite(bspfile.file, &bspfile.q2header, sizeof(bspfile.q2header));
     } else {
         SafeWrite(bspfile.file, &bspfile.q1header, sizeof(bspfile.q1header));
@@ -3280,7 +2749,7 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
 {
     int numtextures = 0;
 
-    if (bspdata->version == &bspver_q2) {
+    if (bspdata->version == Q2_BSPVERSION) {
         const q2bsp_t *bsp = &bspdata->data.q2bsp;
         const lumpspec_t *lumpspec = lumpspec_q2bsp;
         
@@ -3304,31 +2773,9 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
         logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
-    } else if (bspdata->version == &bspver_qbism) {
-        const q2bsp_qbism_t *bsp = &bspdata->data.q2bsp_qbism;
-        const lumpspec_t *lumpspec = lumpspec_qbism;
-        
-        logprint("%7i %-12s\n", bsp->nummodels, "models");
-        
-        PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp->numplanes);
-        PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp->numvertexes);
-        PrintLumpSize(lumpspec, Q2_LUMP_NODES, bsp->numnodes);
-        PrintLumpSize(lumpspec, Q2_LUMP_TEXINFO, bsp->numtexinfo);
-        PrintLumpSize(lumpspec, Q2_LUMP_FACES, bsp->numfaces);
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFS, bsp->numleafs);
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFFACES, bsp->numleaffaces);
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFBRUSHES, bsp->numleafbrushes);
-        PrintLumpSize(lumpspec, Q2_LUMP_EDGES, bsp->numedges);
-        PrintLumpSize(lumpspec, Q2_LUMP_SURFEDGES, bsp->numsurfedges);
-        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHES, bsp->numbrushes);
-        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHSIDES, bsp->numbrushsides);
-        PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp->numareas);
-        PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp->numareaportals);
-        
-        logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
-        logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
-        logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
-    } else if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
+    }
+    
+    if (bspdata->version == BSPVERSION || bspdata->version == BSPHLVERSION) {
         const bsp29_t *bsp = &bspdata->data.bsp29;
         const lumpspec_t *lumpspec = lumpspec_bsp29;
 
@@ -3352,15 +2799,9 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
         logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
+    }
 
-        if (bspdata->bspxentries)
-        {
-            bspxentry_t *x;
-            for (x = bspdata->bspxentries; x; x = x->next) {
-                logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, (int)x->lumpsize);
-            }
-        }
-    } else if (bspdata->version == &bspver_bsp2rmq) {
+    if (bspdata->version == BSP2RMQVERSION) {
         const bsp2rmq_t *bsp = &bspdata->data.bsp2rmq;
         const lumpspec_t *lumpspec = lumpspec_bsp2rmq;
 
@@ -3384,7 +2825,9 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
         logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
-    } else if (bspdata->version == &bspver_bsp2) {
+    }
+
+    if (bspdata->version == BSP2VERSION) {
         const bsp2_t *bsp = &bspdata->data.bsp2;
         const lumpspec_t *lumpspec = lumpspec_bsp2;
 
@@ -3408,5 +2851,13 @@ PrintBSPFileSizes(const bspdata_t *bspdata)
         logprint("%7s %-12s %10i\n", "", "lightdata", bsp->lightdatasize);
         logprint("%7s %-12s %10i\n", "", "visdata", bsp->visdatasize);
         logprint("%7s %-12s %10i\n", "", "entdata", bsp->entdatasize);
+    }
+
+    if (bspdata->bspxentries)
+    {
+        bspxentry_t *x;
+        for (x = bspdata->bspxentries; x; x = x->next) {
+            logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, (int)x->lumpsize);
+        }
     }
 }

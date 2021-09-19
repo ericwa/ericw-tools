@@ -188,7 +188,7 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face)
     if (texinfo == nullptr)
         return false;
     
-    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
+    if (bsp->loadversion == Q2_BSPVERSION) {
         if (texinfo->flags & (Q2_SURF_WARP|Q2_SURF_SKY|Q2_SURF_NODRAW)) { //mxd. +Q2_SURF_NODRAW
             return false;
         }
@@ -223,7 +223,7 @@ TextureName_Contents(const char *texname)
 bool //mxd
 Contents_IsTranslucent(const mbsp_t *bsp, const int contents)
 {
-    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism)
+    if (bsp->loadversion == Q2_BSPVERSION)
         return (contents & Q2_SURF_TRANSLUCENT) && ((contents & Q2_SURF_TRANSLUCENT) != Q2_SURF_TRANSLUCENT); // Don't count KMQ2 fence flags combo as translucent
     else
         return contents == CONTENTS_WATER || contents == CONTENTS_LAVA || contents == CONTENTS_SLIME;
@@ -238,7 +238,7 @@ Face_IsTranslucent(const mbsp_t *bsp, const bsp2_dface_t *face)
 int //mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 Face_Contents(const mbsp_t *bsp, const bsp2_dface_t *face)
 {
-    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
+    if (bsp->loadversion == Q2_BSPVERSION) {
         const gtexinfo_t *info = Face_Texinfo(bsp, face);
         return info->flags;
     } else {
@@ -281,13 +281,8 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec
 {
     if (nodenum < 0) {
         const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
-
-        //mxd
-        if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
-            return leaf->contents & Q2_CONTENTS_SOLID;
-        }
         
-        return (leaf->contents == CONTENTS_SOLID || leaf->contents == CONTENTS_SKY);
+        return (bsp->loadversion == Q2_BSPVERSION ? leaf->contents & Q2_CONTENTS_SOLID : (leaf->contents == CONTENTS_SOLID || leaf->contents == CONTENTS_SKY)); //mxd
     }
     
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
