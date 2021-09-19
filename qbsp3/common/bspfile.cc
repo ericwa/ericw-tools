@@ -86,6 +86,78 @@ dareaportal_t	dareaportals[MAX_MAP_AREAPORTALS];
 
 uint8_t		dpop[256];
 
+/*
+===============
+CompressVis
+
+===============
+*/
+int CompressVis (uint8_t *vis, uint8_t *dest)
+{
+	int		j;
+	int		rep;
+	int		visrow;
+	uint8_t	*dest_p;
+
+	dest_p = dest;
+//	visrow = (r_numvisleafs + 7)>>3;
+	visrow = (dvis->numclusters + 7)>>3;
+
+	for (j=0 ; j<visrow ; j++)
+	{
+		*dest_p++ = vis[j];
+		if (vis[j])
+			continue;
+
+		rep = 1;
+		for ( j++; j<visrow ; j++)
+			if (vis[j] || rep == 255)
+				break;
+			else
+				rep++;
+		*dest_p++ = rep;
+		j--;
+	}
+
+	return dest_p - dest;
+}
+
+
+/*
+===================
+DecompressVis
+===================
+*/
+void DecompressVis (uint8_t *in, uint8_t *decompressed)
+{
+	int		c;
+	uint8_t	*out;
+	int		row;
+
+//	row = (r_numvisleafs+7)>>3;
+	row = (dvis->numclusters+7)>>3;
+	out = decompressed;
+
+	do
+	{
+		if (*in)
+		{
+			*out++ = *in++;
+			continue;
+		}
+
+		c = in[1];
+		if (!c)
+			Error ("DecompressVis: 0 repeat");
+		in += 2;
+		while (c)
+		{
+			*out++ = 0;
+			c--;
+		}
+	} while (out - decompressed < row);
+}
+
 //=============================================================================
 
 /*

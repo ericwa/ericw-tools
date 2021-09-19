@@ -217,7 +217,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
         }
 
         if (pos == -1) {
-            logprint("SetQ2dirFromPath: failed to find %s in '%s'\n", basedir, path);
+            logprint("SetQ2dirFromPath: failed to find %s in '%s'", basedir, path);
             ClearQdir();
             return;
         }

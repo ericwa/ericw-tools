@@ -575,10 +575,10 @@ typedef struct {
 // compressed bit vectors
 #define    DVIS_PVS    0
 #define    DVIS_PHS    1
-struct dvis_t {
+typedef struct {
     int32_t numclusters;
-    int32_t bitofs[][2];    // bitofs[numclusters][2]
-};
+    int32_t bitofs[8][2];    // bitofs[numclusters][2]
+} dvis_t;
 
 // each area has a list of portals that lead into other areas
 // when portals are closed, other areas may not be visible or
@@ -964,11 +964,5 @@ void PrintBSPFileSizes(const bspdata_t *bspdata);
 void ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
-
-void
-DecompressRow (const uint8_t *in, const int numbytes, uint8_t *decompressed);
-
-int
-CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out);
 
 #endif /* __COMMON_BSPFILE_H__ */

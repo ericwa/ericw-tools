@@ -657,8 +657,8 @@ Embree_TraceInit(const mbsp_t *bsp)
                 // Q2: arghrad compat: sky faces only emit sunlight if:
                 // sky flag set, light flag set, value nonzero
                 if ((contents & Q2_SURF_SKY) != 0
-                    && (!arghradcompat || ((contents & Q2_SURF_LIGHT) != 0
-                    && texinfo->value != 0)))
+                    && (contents & Q2_SURF_LIGHT) != 0
+                    && texinfo->value != 0)
                 {
                     skyfaces.push_back(face);
                     continue;

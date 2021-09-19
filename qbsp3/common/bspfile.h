@@ -80,6 +80,9 @@ extern	dbrushside_t	dbrushsides[MAX_MAP_BRUSHSIDES];
 
 extern	uint8_t		dpop[256];
 
+void DecompressVis (uint8_t *in, uint8_t *decompressed);
+int CompressVis (uint8_t *vis, uint8_t *dest);
+
 void	LoadBSPFile (char *filename);
 void	LoadBSPFileTexinfo (char *filename);	// just for qdata
 void	WriteBSPFile (char *filename);
