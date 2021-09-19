@@ -51,3 +51,7 @@ done
 for bsp in ${HASH_CHECK_BSPS}; do
     light ${bsp} || exit 1
 done
+
+# leak tests on all id1 maps
+cd quake_map_source
+./leaktest.sh || exit 1

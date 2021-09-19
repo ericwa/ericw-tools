@@ -35,12 +35,8 @@ readelf -d ./light/light
 unzip -X ericw-tools-*.zip
 readelf -d ./ericw-tools-*/bin/light
 
-# coarse tests on real maps (only checks success/failure exit status of tool)
+# run regression tests
 cd ..
-export PATH="$(pwd)/$BUILD_DIR/qbsp:$(pwd)/$BUILD_DIR/light:$PATH"
+export PATH="$(pwd)/$BUILD_DIR/qbsp:$(pwd)/$BUILD_DIR/light:$(pwd)/$BUILD_DIR/vis:$PATH"
 cd testmaps
 ./automatated_tests.sh || exit 1
-
-# test id1 maps for leaks
-cd quake_map_source
-./leaktest.sh || exit 1
