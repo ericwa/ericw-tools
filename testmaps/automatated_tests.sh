@@ -1,11 +1,22 @@
 #!/bin/bash
 
 # usage:
-# - qbsp, vis, light need to be in PATH before running
-# - returns exit status 1 if any tests failed, otherwise 0
+#     ./automated_tests.sh [--update-hashes]
+#
+# If --update-hashes is given, updates the expected hash files.
+# Otherwise tests the generated .bsp's match the expected hashes.
+#
+# qbsp, vis, light need to be in PATH before running.
+#
+# Returns exit status 1 if any tests failed, otherwise 0
 
 # print statements as they are executed
 set -x
+
+UPDATE_HASHES=0
+if [[ "$1" == "--update-hashes" ]]; then 
+    UPDATE_HASHES=1
+fi
 
 # checking for lack of crashes
 
@@ -29,7 +40,8 @@ e1m1-bsp2.bsp \
 e1m1-2psb.bsp \
 e1m1-hexen2.bsp \
 e1m1-hexen2-bsp2.bsp \
-e1m1-hexen2-2psb.bsp"
+e1m1-hexen2-2psb.bsp \
+e1m1-hlbsp.bsp"
 
 qbsp -noverbose               quake_map_source/E1M1.map e1m1-bsp29.bsp       || exit 1
 qbsp -noverbose         -bsp2 quake_map_source/E1M1.map e1m1-bsp2.bsp        || exit 1
@@ -37,8 +49,13 @@ qbsp -noverbose         -2psb quake_map_source/E1M1.map e1m1-2psb.bsp        || 
 qbsp -noverbose -hexen2       quake_map_source/E1M1.map e1m1-hexen2.bsp      || exit 1
 qbsp -noverbose -hexen2 -bsp2 quake_map_source/E1M1.map e1m1-hexen2-bsp2.bsp || exit 1
 qbsp -noverbose -hexen2 -2psb quake_map_source/E1M1.map e1m1-hexen2-2psb.bsp || exit 1
+qbsp -noverbose -hlbsp        quake_map_source/E1M1.map e1m1-hlbsp.bsp       || exit 1
 
-sha256sum ${HASH_CHECK_BSPS}
+if [[ $UPDATE_HASHES -ne 0 ]]; then
+    sha256sum ${HASH_CHECK_BSPS} > qbsp.sha256sum || exit 1
+else
+    sha256sum --strict --check qbsp.sha256sum || exit 1
+fi
 
 # now run vis
 
@@ -46,11 +63,23 @@ for bsp in ${HASH_CHECK_BSPS}; do
     vis -nostate ${bsp} || exit 1
 done
 
+if [[ $UPDATE_HASHES -ne 0 ]]; then
+    sha256sum ${HASH_CHECK_BSPS} > qbsp-vis.sha256sum || exit 1
+else
+    sha256sum --strict --check qbsp-vis.sha256sum || exit 1
+fi
+
 # now run light
 
 for bsp in ${HASH_CHECK_BSPS}; do
     light ${bsp} || exit 1
 done
+
+if [[ $UPDATE_HASHES -ne 0 ]]; then
+    sha256sum ${HASH_CHECK_BSPS} > qbsp-vis-light.sha256sum || exit 1
+else
+    sha256sum --strict --check qbsp-vis-light.sha256sum || exit 1
+fi
 
 # leak tests on all id1 maps
 cd quake_map_source
