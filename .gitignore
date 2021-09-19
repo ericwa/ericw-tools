@@ -5,3 +5,11 @@ build*/
 CMakeFiles/
 *.xcodeproj
 .*/
+testmaps/*.bsp
+testmaps/*.log
+testmaps/*.prt
+testmaps/*.vis
+testmaps/quake_map_source/*.bsp
+testmaps/quake_map_source/*.log
+testmaps/quake_map_source/*.prt
+testmaps/quake_map_source/*.vis
