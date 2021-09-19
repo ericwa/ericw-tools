@@ -198,7 +198,7 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
     }
 
     if (newf->w.numpoints > MAXEDGES || new2->w.numpoints > MAXEDGES)
-        Error("Internal error: numpoints > MAXEDGES (%s)", __func__);
+        FError("Internal error: numpoints > MAXEDGES");
 
     /* free the original face now that it is represented by the fragments */
     delete in;
@@ -538,16 +538,16 @@ Returns a list of surfaces containing all of the faces
 */
 surface_t *CSGFaces(const mapentity_t *entity)
 {
-    Message(msgProgress, "CSGFaces");
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     csgfaces = 0;
     brushfaces = 0;
     csgmergefaces = 0;
 
 #if 0
-    logprint("CSGFaces brush order:\n");
+    LogPrint("CSGFaces brush order:\n");
     for (brush = entity->brushes; brush; brush = brush->next) {
-        logprint("    %s (%s)\n", map.texinfoTextureName(brush->faces->texinfo).c_str(), GetContentsName(brush->contents));
+        LogPrint("    {} ({})\n", map.texinfoTextureName(brush->faces->texinfo), brush->contents.to_string(options.target_game));
     }
 #endif
 
@@ -691,9 +691,9 @@ surface_t *CSGFaces(const mapentity_t *entity)
     }
     surface_t *surfaces = BuildSurfaces(planefaces);
 
-    Message(msgStat, "%8d brushfaces", brushfaces.load());
-    Message(msgStat, "%8d csgfaces", csgfaces);
-    Message(msgStat, "%8d mergedfaces", csgmergefaces);
+    LogPrint(LOG_STAT, "     {:8} brushfaces\n", brushfaces.load());
+    LogPrint(LOG_STAT, "     {:8} csgfaces\n", csgfaces);
+    LogPrint(LOG_STAT, "     {:8} mergedfaces\n", csgmergefaces);
 
     return surfaces;
 }

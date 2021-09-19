@@ -21,18 +21,5 @@
 
 #pragma once
 
-#define msgWarning 1
-#define msgStat 2
-#define msgProgress 3
-#define msgLiteral 4
-#define msgFile 5
-#define msgScreen 6
-#define msgPercent 7
-
-extern const char *rgszWarnings[cWarnings];
-
 void *AllocMem(int Type, int cSize, bool fZero);
-
-void Message(int MsgType, ...);
-[[noreturn]] void Error(const char *error, ...) __attribute__((format(printf, 1, 2), noreturn));
 

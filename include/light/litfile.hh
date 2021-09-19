@@ -46,5 +46,5 @@ struct facesup_t
     unsigned short extent[2];
 };
 
-void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, int version);
-void WriteLuxFile(const mbsp_t *bsp, const char *filename, int version);
+void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const std::filesystem::path &filename, int version);
+void WriteLuxFile(const mbsp_t *bsp, const std::filesystem::path &filename, int version);

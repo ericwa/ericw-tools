@@ -26,7 +26,7 @@ const dmodel_t *BSP_GetWorldModel(const mbsp_t *bsp)
 {
     // We only support .bsp's that have a world model
     if (bsp->nummodels < 1) {
-        Error("BSP has no models");
+        FError("BSP has no models");
     }
     return &bsp->dmodels[0];
 }
@@ -50,7 +50,7 @@ const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum)
 const mleaf_t *BSP_GetLeaf(const mbsp_t *bsp, int leafnum)
 {
     if (leafnum < 0 || leafnum >= bsp->numleafs) {
-        Error("Corrupt BSP: leaf %d is out of bounds (bsp->numleafs = %d)", leafnum, bsp->numleafs);
+        Error("Corrupt BSP: leaf {} is out of bounds (bsp->numleafs = {})", leafnum, bsp->numleafs);
     }
     return &bsp->dleafs[leafnum];
 }
@@ -452,17 +452,17 @@ void Face_DebugPrint(const mbsp_t *bsp, const bsp2_dface_t *face)
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
-    logprint("face %d, texture '%s', %d edges...\n"
-             "  vectors (%3.3f, %3.3f, %3.3f) (%3.3f)\n"
-             "          (%3.3f, %3.3f, %3.3f) (%3.3f)\n",
-        (int)(face - bsp->dfaces), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
+    LogPrint("face {}, texture '{}', {} edges...\n"
+             "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"
+             "          ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n",
+        (ptrdiff_t)(face - bsp->dfaces), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
         tex->vecs[0][3], tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
 
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
         const float *point = GetSurfaceVertexPoint(bsp, face, i);
-        logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: edge %d\n", i ? "          " : "    verts ", vert, point[0], point[1],
+        LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n", i ? "          " : "    verts ", vert, point[0], point[1],
             point[2], edge);
     }
 }

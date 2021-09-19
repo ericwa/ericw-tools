@@ -130,14 +130,14 @@ static void TestExpandBrushes(const mapentity_t *src);
 const mapface_t &mapbrush_t::face(int i) const
 {
     if (i < 0 || i >= this->numfaces)
-        Error("mapbrush_t::face: %d out of bounds (numfaces %d)", i, this->numfaces);
+        FError("{} out of bounds (numfaces {})", i, this->numfaces);
     return map.faces.at(this->firstface + i);
 }
 
 const mapbrush_t &mapentity_t::mapbrush(int i) const
 {
     if (i < 0 || i >= this->nummapbrushes)
-        Error("mapentity_t::mapbrush: %d out of bounds (nummapbrushes %d)", i, this->nummapbrushes);
+        FError("{} out of bounds (nummapbrushes {})", i, this->nummapbrushes);
     return map.brushes.at(this->firstmapbrush + i);
 }
 
@@ -159,7 +159,7 @@ static void AddAnimTex(const char *name)
     }
 
     if (frame < 0 || frame > 9)
-        Error("Bad animating texture %s", name);
+        FError("Bad animating texture {}", name);
 
     /*
      * Always add the lower numbered animation frames first, otherwise
@@ -190,10 +190,9 @@ struct wal_t
 
 static std::optional<wal_t> LoadWal(const char *name)
 {
-    static char buf[1024];
-    snprintf(buf, sizeof(buf), "%stextures/%s.wal", gamedir, name);
+    std::filesystem::path p = (gamedir / "textures" / name).replace_extension("wal");
 
-    FILE *fp = fopen(buf, "rb");
+    FILE *fp = fopen(p.string().c_str(), "rb");
 
     if (!fp)
         return std::nullopt;
@@ -246,7 +245,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
 
             if (!wal.has_value()) {
                 // FIXME
-                // Message(msgLiteral, "Couldn't locate wal for %s\n", name);
+                // LogPrint("Couldn't locate wal for {}\n", name);
                 if (!extended_info.has_value()) {
                     extended_info = extended_texinfo_t{};
                 }
@@ -390,7 +389,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
         // This fixes a bug in some old maps.
         if ((flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             flags.native &= ~Q2_SURF_NODRAW;
-            // logprint("Corrected invalid SKY flag\n");
+            // LogPrint("Corrected invalid SKY flag\n");
         }
 
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
@@ -503,7 +502,7 @@ static void ParseEpair(parser_t *parser, mapentity_t *entity)
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
             if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
-                Message(msgWarning, warnMultipleStarts);
+                LogPrint("WARNING: Multiple info_player_start entities\n");
             rgfStartSpots |= info_player_start;
         } else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {
             rgfStartSpots |= info_player_deathmatch;
@@ -514,7 +513,7 @@ static void ParseEpair(parser_t *parser, mapentity_t *entity)
     return;
 
 parse_error:
-    Error("line %d: Entity key or value too long", parser->linenum);
+    FError("line {}: Entity key or value too long", parser->linenum);
 }
 
 static void TextureAxisFromPlane(const qbsp_plane_t *plane, vec3_t xv, vec3_t yv, vec3_t snapped_normal)
@@ -883,7 +882,7 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
             // recheck
             cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
             if (fabs(cosAngle) > 0.001) {
-                Error("SHEAR correction failed\n");
+                FError("SHEAR correction failed\n");
             }
 
             // update M
@@ -999,12 +998,12 @@ static void SetTexinfo_QuakeEd_New(
         }
 
         if (!EqualDegrees(reversed.rotate, rotate)) {
-            Error("wrong rotat got %f expected %f\n", reversed.rotate, rotate);
+            FError("wrong rotate got {} expected {}\n", reversed.rotate, rotate);
         }
 
         if (fabs(reversed.scale[0] - sanitized_scale[0]) > 0.001 ||
             fabs(reversed.scale[1] - sanitized_scale[1]) > 0.001) {
-            Error("wrong scale, got %f %f exp %f %f\n", reversed.scale[0], reversed.scale[1], sanitized_scale[0],
+            FError("wrong scale, got {} {} exp {} {}\n", reversed.scale[0], reversed.scale[1], sanitized_scale[0],
                 sanitized_scale[1]);
         }
     }
@@ -1085,7 +1084,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t *plane, const vec3_t planepts[
             for (int j = 0; j < 4; j++) {
                 if (fabs(check[i][j] - out->vecs[i][j]) > 0.001) {
                     SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
-                    Error("fail");
+                    FError("fail");
                 }
             }
         }
@@ -1102,15 +1101,15 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t *plane, const vec3_t planepts[
         }
 
         if (!EqualDegrees(reversed.rotate, rotate)) {
-            printf("wrong rotat got %f expected %f\n", reversed.rotate, rotate);
+            fmt::print("wrong rotate got {} expected {}\n", reversed.rotate, rotate);
         }
 
         if (fabs(reversed.scale[0] - scale[0]) > 0.001 || fabs(reversed.scale[1] - scale[1]) > 0.001) {
-            printf("wrong scale, got %f %f exp %f %f\n", reversed.scale[0], reversed.scale[1], scale[0], scale[1]);
+            fmt::print("wrong scale, got {} {} exp {} {}\n", reversed.scale[0], reversed.scale[1], scale[0], scale[1]);
         }
 
         if (fabs(reversed.shift[0] - shift[0]) > 0.1 || fabs(reversed.shift[1] - shift[1]) > 0.1) {
-            printf("wrong shift, got %f %f exp %f %f\n", reversed.shift[0], reversed.shift[1], shift[0], shift[1]);
+            fmt::print("wrong shift, got {} {} exp {} {}\n", reversed.shift[0], reversed.shift[1], shift[0], shift[1]);
         }
     }
 }
@@ -1136,7 +1135,7 @@ static void SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_styl
             VectorSubtract(planepts[1], planepts[0], vecs[0]);
             VectorSubtract(planepts[2], planepts[0], vecs[1]);
             break;
-        default: Error("Internal error: bad texture coordinate style");
+        default: FError("Internal error: bad texture coordinate style");
     }
     VectorScale(vecs[0], 1.0 / 128.0, vecs[0]);
     VectorScale(vecs[1], 1.0 / 128.0, vecs[1]);
@@ -1157,7 +1156,7 @@ static void SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_styl
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
-        Message(msgWarning, warnDegenerateQuArKTX, parser->linenum);
+        LogPrint("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser->linenum);
         for (i = 0; i < 3; i++)
             out->vecs[0][i] = out->vecs[1][i] = 0;
     } else {
@@ -1339,7 +1338,7 @@ static void ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
     return;
 
 parse_error:
-    Error("line %d: Invalid brush plane format", parser->linenum);
+    FError("line {}: Invalid brush plane format", parser->linenum);
 }
 
 static void ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2], vec_t *rotate, vec_t scale[2])
@@ -1369,7 +1368,7 @@ static void ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2], ve
     return;
 
 parse_error:
-    Error("line %d: couldn't parse Valve220 texture info", parser->linenum);
+    FError("line {}: couldn't parse Valve220 texture info", parser->linenum);
 }
 
 static void ParseBrushPrimTX(parser_t *parser, vec3_t texMat[2])
@@ -1400,7 +1399,7 @@ static void ParseBrushPrimTX(parser_t *parser, vec3_t texMat[2])
     return;
 
 parse_error:
-    Error("line %d: couldn't parse Brush Primitives texture info", parser->linenum);
+    FError("line {}: couldn't parse Brush Primitives texture info", parser->linenum);
 }
 
 static void ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, mtexinfo_t *tx,
@@ -1560,8 +1559,8 @@ static bool IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t 
 static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
-        logprint("WARNING: repairing invalid texture projection on line %d (\"%s\" near %d %d %d)\n", mapface.linenum,
-            mapface.texname.c_str(), (int)mapface.planepts[0][0], (int)mapface.planepts[0][1],
+        LogPrint("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
+            mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1],
             (int)mapface.planepts[0][2]);
 
         // Reset texturing to sensible defaults
@@ -1592,7 +1591,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t *parser, const mapbrus
     ParseTextureDef(parser, *face, brush, &tx, face->planepts, plane);
 
     if (!normal_ok) {
-        Message(msgWarning, warnNoPlaneNormal, parser->linenum);
+        LogPrint("WARNING: line {}: Brush plane with no normal\n", parser->linenum);
         return nullptr;
     }
 
@@ -1621,7 +1620,7 @@ mapbrush_t ParseBrush(parser_t *parser, const mapentity_t *entity)
 
     // ericw -- brush primitives
     if (!ParseToken(parser, PARSE_NORMAL))
-        Error("Unexpected EOF after { beginning brush");
+        FError("Unexpected EOF after { beginning brush");
 
     if (!strcmp(parser->token, "(")) {
         brush.format = brushformat_t::NORMAL;
@@ -1632,12 +1631,12 @@ mapbrush_t ParseBrush(parser_t *parser, const mapentity_t *entity)
         // optional
         if (!strcmp(parser->token, "brushDef")) {
             if (!ParseToken(parser, PARSE_NORMAL))
-                Error("Brush primitives: unexpected EOF (nothing after brushDef)");
+                FError("Brush primitives: unexpected EOF (nothing after brushDef)");
         }
 
         // mandatory
         if (strcmp(parser->token, "{"))
-            Error("Brush primitives: expected second { at beginning of brush, got \"%s\"", parser->token);
+            FError("Brush primitives: expected second { at beginning of brush, got \"{}\"", parser->token);
     }
     // ericw -- end brush primitives
 
@@ -1672,13 +1671,13 @@ mapbrush_t ParseBrush(parser_t *parser, const mapentity_t *entity)
         for (int i = 0; i < brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
             if (PlaneEqual(&check.plane, &face->plane)) {
-                Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
+                LogPrint("line {}: Brush with duplicate plane", parser->linenum);
                 discardFace = true;
                 continue;
             }
             if (PlaneInvEqual(&check.plane, &face->plane)) {
                 /* FIXME - this is actually an invalid brush */
-                Message(msgWarning, warnBrushDuplicatePlane, parser->linenum);
+                LogPrint("line {}: Brush with duplicate plane", parser->linenum);
                 continue;
             }
         }
@@ -1696,9 +1695,9 @@ mapbrush_t ParseBrush(parser_t *parser, const mapentity_t *entity)
     // ericw -- brush primitives - there should be another closing }
     if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
         if (!ParseToken(parser, PARSE_NORMAL))
-            Error("Brush primitives: unexpected EOF (no closing brace)");
+            FError("Brush primitives: unexpected EOF (no closing brace)");
         if (strcmp(parser->token, "}"))
-            Error("Brush primitives: Expected }, got: %s", parser->token);
+            FError("Brush primitives: Expected }, got: {}", parser->token);
     }
     // ericw -- end brush primitives
 
@@ -1711,12 +1710,12 @@ bool ParseEntity(parser_t *parser, mapentity_t *entity)
         return false;
 
     if (strcmp(parser->token, "{"))
-        Error("line %d: Invalid entity format, { not found", parser->linenum);
+        FError("line {}: Invalid entity format, { not found", parser->linenum);
 
     entity->nummapbrushes = 0;
     do {
         if (!ParseToken(parser, PARSE_NORMAL))
-            Error("Unexpected EOF (no closing brace)");
+            FError("Unexpected EOF (no closing brace)");
         if (!strcmp(parser->token, "}"))
             break;
         else if (!strcmp(parser->token, "{")) {
@@ -1935,11 +1934,11 @@ mapentity_t LoadExternalMap(const char *filename)
 
     // parse the worldspawn
     if (!ParseEntity(&parser, &dest)) {
-        Error("LoadExternalMap: '%s': Couldn't parse worldspawn entity\n", filename);
+        FError("'{}': Couldn't parse worldspawn entity\n", filename);
     }
     const char *classname = ValueForKey(&dest, "classname");
     if (Q_strcasecmp("worldspawn", classname)) {
-        Error("LoadExternalMap: '%s': Expected first entity to be worldspawn, got: '%s'\n", filename, classname);
+        FError("'{}': Expected first entity to be worldspawn, got: '{}'\n", filename, classname);
     }
 
     // parse any subsequent entities, move any brushes to worldspawn
@@ -1959,10 +1958,10 @@ mapentity_t LoadExternalMap(const char *filename)
     }
 
     if (!dest.nummapbrushes) {
-        Error("Expected at least one brush for external map %s\n", filename);
+        FError("Expected at least one brush for external map {}\n", filename);
     }
 
-    Message(msgStat, "LoadExternalMap: '%s': Loaded %d mapbrushes.\n", filename, dest.nummapbrushes);
+    LogPrint(LOG_STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
 
     delete[] buf;
 
@@ -1974,8 +1973,8 @@ void LoadMapFile(void)
     parser_t parser;
     char *buf;
     int length;
-
-    Message(msgProgress, "LoadMapFile");
+    
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     length = LoadFile(options.szMapName, &buf, true);
     ParserInit(&parser, buf);
@@ -1997,18 +1996,18 @@ void LoadMapFile(void)
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))
-        Message(msgWarning, warnNoPlayerStart);
+        LogPrint("WARNING: No info_player_start entity in level\n");
     if (!(rgfStartSpots & info_player_deathmatch))
-        Message(msgWarning, warnNoPlayerDeathmatch);
+        LogPrint("WARNING: No info_player_deathmatch entities in level\n");
     //      if (!(rgfStartSpots & info_player_coop))
-    //              Message(msgWarning, warnNoPlayerCoop);
+    //              LogPrint("WARNING: No info_player_coop entities in level\n");
 
-    Message(msgStat, "%8d faces", map.numfaces());
-    Message(msgStat, "%8d brushes", map.numbrushes());
-    Message(msgStat, "%8d entities", map.numentities());
-    Message(msgStat, "%8d unique texnames", map.nummiptex());
-    Message(msgStat, "%8d texinfo", map.numtexinfo());
-    Message(msgLiteral, "\n");
+    LogPrint(LOG_STAT, "     {:8} faces\n", map.numfaces());
+    LogPrint(LOG_STAT, "     {:8} brushes\n", map.numbrushes());
+    LogPrint(LOG_STAT, "     {:8} entities\n", map.numentities());
+    LogPrint(LOG_STAT, "     {:8} unique texnames\n", map.nummiptex());
+    LogPrint(LOG_STAT, "     {:8} texinfo\n", map.numtexinfo());
+    LogPrint(LOG_STAT, "\n");
 
     if (options.fTestExpand) {
         TestExpandBrushes(pWorldEnt());
@@ -2132,7 +2131,7 @@ static void ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t
             fprintf(f, ") ) %s 0 0 0", mapface.texname.c_str());
             break;
         }
-        default: Error("Internal error: unknown texcoord_style_t\n");
+        default: FError("Internal error: unknown texcoord_style_t\n");
     }
 
     fprintf(f, "\n");
@@ -2173,33 +2172,26 @@ static void ConvertEntity(FILE *f, const mapentity_t *entity, const conversion_t
     fprintf(f, "}\n");
 }
 
-static std::string stripExt(const std::string &filename)
-{
-    char filenameCstr[1024];
-    strncpy(filenameCstr, filename.c_str(), sizeof(filenameCstr));
-    filenameCstr[1023] = '\0';
-
-    StripExtension(filenameCstr);
-    return std::string(filenameCstr);
-}
-
 void ConvertMapFile(void)
 {
-    Message(msgProgress, "ConvertMapFile");
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    std::string filename = stripExt(options.szBSPName);
+    std::string append;
 
     switch (options.convertMapFormat) {
-        case conversion_t::quake: filename += "-quake.map"; break;
-        case conversion_t::quake2: filename += "-quake2.map"; break;
-        case conversion_t::valve: filename += "-valve.map"; break;
-        case conversion_t::bp: filename += "-bp.map"; break;
-        default: Error("Internal error: unknown conversion_t\n");
+        case conversion_t::quake: append = "-quake"; break;
+        case conversion_t::quake2: append = "-quake2"; break;
+        case conversion_t::valve: append = "-valve"; break;
+        case conversion_t::bp: append = "-bp"; break;
+        default: FError("Internal error: unknown conversion_t\n");
     }
 
-    FILE *f = fopen(filename.c_str(), "wb");
+    std::filesystem::path filename = options.szBSPName;
+    filename.replace_filename(options.szBSPName.filename().string() + append);
+
+    FILE *f = fopen(filename.string().c_str(), "wb");
     if (f == nullptr)
-        Error("Couldn't open file\n");
+        FError("Couldn't open file\n");
 
     for (const mapentity_t &entity : map.entities) {
         ConvertEntity(f, &entity, options.convertMapFormat);
@@ -2207,8 +2199,7 @@ void ConvertMapFile(void)
 
     fclose(f);
 
-    std::string msg("Conversion saved to " + filename + "\n");
-    Message(msgLiteral, msg.c_str());
+    LogPrint("Conversion saved to {}\n", filename);
 
     options.fVerbose = false;
 }
@@ -2218,7 +2209,7 @@ void PrintEntity(const mapentity_t *entity)
     epair_t *epair;
 
     for (epair = entity->epairs; epair; epair = epair->next)
-        Message(msgStat, "%20s : %s", epair->key, epair->value);
+        LogPrint(LOG_STAT, "     {:20} : {}\n", epair->key, epair->value);
 }
 
 const char *ValueForKey(const mapentity_t *entity, const char *key)
@@ -2312,10 +2303,10 @@ void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list
 {
     FILE *f;
 
-    logprint("writing %s\n", name);
+    LogPrint("writing {}\n", name);
     f = fopen(name, "wb");
     if (!f)
-        Error("Can't write %s\b", name);
+        FError("Can't write {}", name);
 
     fprintf(f, "{\n\"classname\" \"worldspawn\"\n");
 

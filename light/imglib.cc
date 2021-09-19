@@ -103,26 +103,26 @@ uint8_t quake2palette[768] = // mxd
         55, 55, 255, 255, 0, 0, 0, 0, 255, 43, 43, 35, 27, 27, 23, 19, 19, 15, 235, 151, 127, 195, 115, 83, 159, 87, 51,
         123, 63, 27, 235, 211, 199, 199, 171, 155, 167, 139, 119, 135, 107, 87, 159, 91, 83};
 
+const std::filesystem::path colormap = std::filesystem::path("pics") / "colormap.pcx";
+
 void // WHO TOUCHED MY PALET?
 LoadPalette(bspdata_t *bspdata)
 {
     // Load Quake 2 palette
     if (bspdata->loadversion->game->id == GAME_QUAKE_II) {
         uint8_t *palette;
-        char path[1024];
-        char colormap[] = "pics/colormap.pcx";
+        std::filesystem::path path = gamedir / colormap;
 
-        sprintf(path, "%s%s", gamedir, colormap);
-        if (FileTime(path) == -1 || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
-            if (Q_strcasecmp(gamedir, basedir)) {
-                sprintf(path, "%s%s", basedir, colormap);
-                if (FileTime(path) == -1 || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
-                    logprint("WARNING: failed to load palette from '%s%s' or '%s%s'.\nUsing built-in palette.\n",
-                        gamedir, colormap, basedir, colormap);
+        if (!std::filesystem::exists(path) || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
+            if (gamedir != basedir) {
+                path = basedir / colormap;
+                if (!std::filesystem::exists(path) || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
+                    LogPrint("INFO: failed to load palette from '{}' or '{}'.\nUsing built-in palette.\n",
+                        gamedir / colormap, path);
                     palette = quake2palette;
                 }
             } else {
-                logprint("WARNING: failed to load palette from '%s%s'.\nUsing built-in palette.\n", gamedir, colormap);
+                LogPrint("INFO: failed to load palette from '{}'.\nUsing built-in palette.\n", path);
                 palette = quake2palette;
             }
         }
@@ -178,19 +178,19 @@ struct pcx_t
 LoadPCX
 ==============
 */
-qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int *width, int *height)
+bool LoadPCX(const std::filesystem::path &filename, uint8_t **pixels, uint8_t **palette, int *width, int *height)
 {
     uint8_t *raw;
     int runLength;
 
     // Load the file
-    if (FileTime(filename) == -1) {
-        logprint("LoadPCX: Failed to load '%s'. File does not exist.\n", filename);
+    if (!std::filesystem::exists(filename)) {
+        FLogPrint("Failed to load '{}'. File does not exist.\n", filename);
         return false; // mxd. Because LoadFile will throw Error if the file doesn't exist...
     }
-    const int len = LoadFile(filename, reinterpret_cast<void **>(&raw));
+    const int len = LoadFile(filename.string().c_str(), reinterpret_cast<void **>(&raw));
     if (len < 1) {
-        logprint("LoadPCX: Failed to load '%s'. File is empty.\n", filename);
+        FLogPrint("Failed to load '{}'. File is empty.\n", filename);
         return false;
     }
 
@@ -209,7 +209,7 @@ qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int 
 
     if (pcx->manufacturer != 0x0a || pcx->version != 5 || pcx->encoding != 1 || pcx->bits_per_pixel != 8 ||
         pcx->xmax >= 640 || pcx->ymax >= 480) {
-        logprint("LoadPCX: Failed to load '%s'. Unsupported PCX file.\n", filename);
+        FLogPrint("Failed to load '{}'. Unsupported PCX file.\n", filename);
         return false; // mxd
     }
 
@@ -229,7 +229,7 @@ qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int 
     const int numbytes = (pcx->ymax + 1) * (pcx->xmax + 1); // mxd
     uint8_t *out = new uint8_t[numbytes];
     if (!out) {
-        logprint("LoadPCX: Failed to load '%s'. Couldn't allocate %i bytes of memory.\n", filename, numbytes);
+        FLogPrint("Failed to load '{}'. Couldn't allocate {} bytes of memory.\n", filename, numbytes);
         return false; // mxd
     }
 
@@ -254,7 +254,7 @@ qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int 
     }
 
     if (raw - reinterpret_cast<uint8_t *>(pcx) > len) {
-        logprint("LoadPCX: File '%s' was malformed.\n", filename);
+        FLogPrint("File '{}' was malformed.\n", filename);
         return false; // mxd
     }
 
@@ -301,15 +301,15 @@ int fgetLittleLong(FILE *f)
 LoadTGA
 =============
 */
-qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height)
+bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width, int *height)
 {
     uint8_t *pixbuf;
     int row, column;
     TargaHeader targa_header;
 
-    FILE *fin = fopen(filename, "rb");
+    FILE *fin = fopen(filename.string().c_str(), "rb");
     if (!fin) {
-        logprint("LoadTGA: Failed to load '%s'. File does not exist.\n", filename);
+        FLogPrint("Failed to load '{}'. File does not exist.\n", filename);
         return false; // mxd
     }
 
@@ -328,12 +328,12 @@ qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height
     targa_header.attributes = fgetc(fin);
 
     if (targa_header.image_type != 2 && targa_header.image_type != 10) {
-        logprint("LoadTGA: Failed to load '%s'. Only type 2 and 10 targa RGB images supported.\n", filename);
+        FLogPrint("Failed to load '{}'. Only type 2 and 10 targa RGB images supported.\n", filename);
         return false; // mxd
     }
 
     if (targa_header.colormap_type != 0 || (targa_header.pixel_size != 32 && targa_header.pixel_size != 24)) {
-        logprint("LoadTGA: Failed to load '%s'. Only 32 or 24 bit images supported (no colormaps).\n", filename);
+        FLogPrint("Failed to load '{}'. Only 32 or 24 bit images supported (no colormaps).\n", filename);
         return false; // mxd
     }
 
@@ -378,7 +378,7 @@ qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height
                         *pixbuf++ = alphabyte;
                         break;
                     default:
-                        logprint("LoadTGA: unsupported pixel size: %i\n", targa_header.pixel_size); // mxd
+                        FLogPrint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
                         return false;
                 }
             }
@@ -405,7 +405,7 @@ qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height
                             alphabyte = getc(fin);
                             break;
                         default:
-                            logprint("LoadTGA: unsupported pixel size: %i\n", targa_header.pixel_size); // mxd
+                            FLogPrint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
                             return false;
                     }
 
@@ -447,7 +447,7 @@ qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height
                                 *pixbuf++ = alphabyte;
                                 break;
                             default:
-                                logprint("LoadTGA: unsupported pixel size: %i\n", targa_header.pixel_size); // mxd
+                                FLogPrint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
                                 return false;
                         }
                         column++;
@@ -477,17 +477,17 @@ WAL IMAGE
 ============================================================================
 */
 
-qboolean LoadWAL(const char *filename, uint8_t **pixels, int *width, int *height)
+bool LoadWAL(const std::filesystem::path &filename, uint8_t **pixels, int *width, int *height)
 {
-    if (FileTime(filename) == -1) {
-        logprint("LoadWAL: Failed to load '%s'. File does not exist.\n", filename);
+    if (!std::filesystem::exists(filename)) {
+        FLogPrint("Failed to load '{}'. File does not exist.\n", filename);
         return false; // Because LoadFile will throw an Error if the file doesn't exist...
     }
 
     q2_miptex_t *mt;
-    const int len = LoadFile(filename, static_cast<void *>(&mt));
+    const int len = LoadFile(filename.string().c_str(), static_cast<void *>(&mt));
     if (len < 1) {
-        logprint("LoadWAL: Failed to load '%s'. File is empty.\n", filename);
+        FLogPrint("Failed to load '{}'. File is empty.\n", filename);
         return false;
     }
 
@@ -504,7 +504,7 @@ qboolean LoadWAL(const char *filename, uint8_t **pixels, int *width, int *height
 
     uint8_t *out = new uint8_t[numpixels];
     if (!out) {
-        logprint("LoadWAL: Failed to load '%s'. Couldn't allocate %i bytes of memory.\n", filename, numpixels);
+        FLogPrint("Failed to load '{}'. Couldn't allocate {} bytes of memory.\n", filename, numpixels);
         return false;
     }
 
@@ -582,42 +582,43 @@ static void AddTextureName(std::map<std::string, std::string> &texturenames, con
     if (texturenames.find(texture) != texturenames.end())
         return;
 
-    char path[4][1024];
-    static const qboolean is_mod = Q_strcasecmp(gamedir, basedir);
-
-    sprintf(path[0], "%stextures/%s.tga", gamedir, texture); // TGA, in mod dir...
-    sprintf(path[1], "%stextures/%s.tga", basedir, texture); // TGA, in game dir...
-    sprintf(path[2], "%stextures/%s.wal", gamedir, texture); // WAL, in mod dir...
-    sprintf(path[3], "%stextures/%s.wal", basedir, texture); // WAL, in game dir...
+    static const bool is_mod = gamedir != basedir;
+    const char *TEXTURES_PATH = "textures";
+    std::filesystem::path path[] = {
+        (gamedir / TEXTURES_PATH / texture).replace_extension("tga"),
+        (basedir / TEXTURES_PATH / texture).replace_extension("tga"),
+        (gamedir / TEXTURES_PATH / texture).replace_extension("wal"),
+        (basedir / TEXTURES_PATH / texture).replace_extension("wal"),
+    };
 
     int c;
     for (c = 0; c < 4; c++) {
         // Skip paths at even indexes when running from game folder...
-        if ((is_mod || c % 2 == 0) && FileTime(path[c]) != -1) {
-            texturenames[std::string{texture}] = std::string{path[c]};
+        if ((is_mod || c % 2 == 0) && std::filesystem::exists(path[c])) {
+            texturenames[texture] = path[c].string();
             break;
         }
     }
 
     if (c == 4) {
         if (is_mod)
-            logprint("WARNING: failed to find texture '%s'. Checked paths:\n'%s'\n'%s'\n'%s'\n'%s'\n", texture, path[0],
+            LogPrint("WARNING: failed to find texture '{}'. Checked paths:\n'{}'\n'{}'\n'{}'\n'{}'\n", texture, path[0],
                 path[1], path[2], path[3]);
         else
-            logprint("WARNING: failed to find texture '%s'. Checked paths:\n'%s'\n'%s'\n", texture, path[0], path[2]);
+            LogPrint("WARNING: failed to find texture '{}'. Checked paths:\n'{}'\n'{}'\n", texture, path[0], path[2]);
 
         // Store to preserve offset...
-        texturenames[std::string{texture}] = std::string{};
+        texturenames[texture] = {};
     }
 }
 
 static void // Loads textures from disk and stores them in bsp->drgbatexdata (Quake 2)
 LoadTextures(mbsp_t *bsp)
 {
-    logprint("--- LoadTextures ---\n");
+    LogPrint("--- LoadTextures ---\n");
 
     if (bsp->texdatasize) {
-        Error("ERROR: Expected an empty dtexdata lump...\n");
+        FError("ERROR: Expected an empty dtexdata lump...\n");
         return;
     }
 
@@ -655,7 +656,7 @@ LoadTextures(mbsp_t *bsp)
         const int dpos = pair.second.rfind('.');
         if (dpos == -1) {
             if (!pair.second.empty()) // Missing texture warning was already displayed
-                logprint("WARNING: unexpected texture filename: '%s'\n", pair.second.c_str());
+                LogPrint("WARNING: unexpected texture filename: '{}'\n", pair.second);
             continue;
         }
         const std::string ext = pair.second.substr(dpos + 1);
@@ -671,7 +672,7 @@ LoadTextures(mbsp_t *bsp)
             if (!LoadWAL(pair.second.c_str(), &pixels, &width, &height))
                 continue;
         } else {
-            logprint("WARNING: unsupported image format: '%s'\n", pair.second.c_str());
+            LogPrint("WARNING: unsupported image format: '{}'\n", pair.second);
             continue;
         }
 
@@ -711,7 +712,7 @@ ConvertTextures(mbsp_t *bsp)
     if (!bsp->texdatasize)
         return;
 
-    logprint("--- ConvertTextures ---\n");
+    LogPrint("--- ConvertTextures ---\n");
 
     std::map<int, std::string> texturenamesbyindex;
     std::vector<rgba_miptex_t *> tex_mips{};
@@ -785,5 +786,5 @@ LoadOrConvertTextures(mbsp_t *bsp)
     else if (bsp->texdatasize > 0)
         ConvertTextures(bsp);
     else
-        logprint("WARNING: failed to load or convert textures.\n");
+        LogPrint("WARNING: failed to load or convert textures.\n");
 }

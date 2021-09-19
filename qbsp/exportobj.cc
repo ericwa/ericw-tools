@@ -27,10 +27,12 @@ static FILE *InitObjFile(const std::string &filesuffix)
 {
     FILE *objfile;
 
-    std::string name = StrippedExtension(options.szBSPName) + "_" + filesuffix + ".obj";
-    objfile = fopen(name.c_str(), "wt");
+    std::filesystem::path name = options.szBSPName;
+    name.replace_filename(options.szBSPName.filename().string() + "_" + filesuffix).replace_extension("obj");
+
+    objfile = fopen(name.string().c_str(), "wt");
     if (!objfile)
-        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
     return objfile;
 }
@@ -39,10 +41,12 @@ static FILE *InitMtlFile(const std::string &filesuffix)
 {
     FILE *file;
 
-    std::string name = StrippedExtension(options.szBSPName) + "_" + filesuffix + ".mtl";
-    file = fopen(name.c_str(), "wt");
+    std::filesystem::path name = options.szBSPName;
+    name.replace_filename(options.szBSPName.filename().string() + "_" + filesuffix).replace_extension("mtl");
+
+    file = fopen(name.string().c_str(), "wt");
     if (!file)
-        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
     return file;
 }

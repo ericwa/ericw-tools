@@ -164,7 +164,7 @@ static int WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
 
     /* Sanity check */
     if (node->viscluster != viscluster)
-        Error("Internal error: Detail cluster mismatch (%s)", __func__);
+        FError("Internal error: Detail cluster mismatch");
 
     fprintf(portalFile, "%d ", node->visleafnum);
 
@@ -245,12 +245,11 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     NumberLeafs_r(headnode, state, -1);
 
     // write the file
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".prt");
+    options.szBSPName.replace_extension("prt");
 
-    portalFile = fopen(options.szBSPName, "wt");
+    portalFile = fopen(options.szBSPName.string().c_str(), "wt");
     if (!portalFile)
-        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
     /* If no detail clusters, just use a normal PRT1 format */
     if (!state->uses_detail) {
@@ -274,7 +273,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
             WritePortals_r(headnode, portalFile, true);
             check = WriteClusters_r(headnode, portalFile, 0);
             if (check != state->num_visclusters - 1)
-                Error("Internal error: Detail cluster mismatch (%s)", __func__);
+                FError("Internal error: Detail cluster mismatch");
             fprintf(portalFile, "-1\n");
         }
     }
@@ -292,7 +291,7 @@ AddPortalToNodes
 static void AddPortalToNodes(portal_t *p, node_t *front, node_t *back)
 {
     if (p->nodes[0] || p->nodes[1])
-        Error("portal already included (%s)", __func__);
+        FError("portal already included");
 
     p->nodes[0] = front;
     p->next[0] = front->portals;
@@ -317,7 +316,7 @@ static void RemovePortalFromNode(portal_t *portal, node_t *l)
     while (1) {
         t = *pp;
         if (!t)
-            Error("Portal not in leaf (%s)", __func__);
+            FError("Portal not in leaf");
 
         if (t == portal)
             break;
@@ -327,7 +326,7 @@ static void RemovePortalFromNode(portal_t *portal, node_t *l)
         else if (t->nodes[1] == l)
             pp = &t->next[1];
         else
-            Error("Portal not bounding leaf (%s)", __func__);
+            FError("Portal not bounding leaf");
     }
 
     if (portal->nodes[0] == l) {
@@ -422,7 +421,7 @@ static void CheckWindingInNode(winding_t *w, node_t *node)
     for (i = 0; i < w->numpoints; i++) {
         for (j = 0; j < 3; j++)
             if (w->points[i][j] < node->mins[j] - 1 || w->points[i][j] > node->maxs[j] + 1) {
-                Message(msgWarning, warnWindingOutside);
+                LogPrint("WARNING: Winding outside node\n");
                 return;
             }
     }
@@ -443,7 +442,7 @@ static void CheckWindingArea(winding_t *w)
         total += add * 0.5;
     }
     if (total < 16)
-        Message(msgWarning, warnLowWindingArea, total);
+        LogPrint("WARNING: Winding with area {}\n", total);
 }
 
 static void CheckLeafPortalConsistancy(node_t *node)
@@ -463,7 +462,7 @@ static void CheckLeafPortalConsistancy(node_t *node)
         else if (p->nodes[1] == node)
             side = 1;
         else
-            Error("Mislinked portal (%s)", __func__);
+            FError("Mislinked portal");
 
         CheckWindingInNode(p->winding, node);
         CheckWindingArea(p->winding);
@@ -478,13 +477,13 @@ static void CheckLeafPortalConsistancy(node_t *node)
             else if (p2->nodes[1] == node)
                 side2 = 1;
             else
-                Error("Mislinked portal (%s)", __func__);
+                FError("Mislinked portal");
 
             w = p2->winding;
             for (i = 0; i < w->numpoints; i++) {
                 dist = DotProduct(w->points[i], plane.normal) - plane.dist;
                 if ((side == 0 && dist < -1) || (side == 1 && dist > 1)) {
-                    Message(msgWarning, warnBadPortalDirection);
+                    LogPrint("WARNING: Portal siding direction is wrong\n");
                     return;
                 }
             }
@@ -543,11 +542,11 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
             VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
             side = 1;
         } else
-            Error("Mislinked portal (%s)", __func__);
+            FError("Mislinked portal");
 
         winding = ClipWinding(winding, &clipplane, true);
         if (!winding) {
-            Message(msgWarning, warnPortalClippedAway, portal->winding->points[0][0], portal->winding->points[0][1],
+            FLogPrint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->points[0][0], portal->winding->points[0][1],
                 portal->winding->points[0][2]);
             break;
         }
@@ -566,7 +565,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
         else if (portal->nodes[1] == node)
             side = 1;
         else
-            Error("Mislinked portal (%s)", __func__);
+            FError("Mislinked portal");
         next_portal = portal->next[side];
 
         other_node = portal->nodes[!side];
@@ -615,7 +614,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
 
     /* Display progress */
     state->iNodesDone++;
-    Message(msgPercent, state->iNodesDone, splitnodes.load());
+    LogPercent(state->iNodesDone, splitnodes.load());
 
     CutNodePortals_r(front, state);
     CutNodePortals_r(back, state);
@@ -630,7 +629,7 @@ Builds the exact polyhedrons for the nodes and leafs
 */
 void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
 {
-    Message(msgProgress, "Portalize");
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     portal_state_t state;
     memset(&state, 0, sizeof(state));
@@ -644,9 +643,9 @@ void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hulln
         /* save portal file for vis tracing */
         WritePortalfile(headnode, &state);
 
-        Message(msgStat, "%8d vis leafs", state.num_visleafs);
-        Message(msgStat, "%8d vis clusters", state.num_visclusters);
-        Message(msgStat, "%8d vis portals", state.num_visportals);
+        LogPrint(LOG_STAT, "     {:8} vis leafs\n", state.num_visleafs);
+        LogPrint(LOG_STAT, "     {:8} vis clusters\n", state.num_visclusters);
+        LogPrint(LOG_STAT, "     {:8} vis portals\n", state.num_visportals);
     }
 }
 

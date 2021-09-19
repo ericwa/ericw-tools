@@ -68,7 +68,7 @@ public:
     vec3_t sunvec;
     vec_t sunlight;
     vec3_t sunlight_color;
-    qboolean dirt;
+    bool dirt;
     float anglescale;
     int style;
     std::string suntexture;
@@ -110,7 +110,7 @@ struct lightsurf_t
     /* these take precedence the values in modelinfo */
     vec_t minlight;
     vec3_t minlight_color;
-    qboolean nodirt;
+    bool nodirt;
 
     plane_t plane;
     vec3_t snormal;
@@ -118,7 +118,7 @@ struct lightsurf_t
 
     /* 16 in vanilla. engines will hate you if this is not power-of-two-and-at-least-one */
     float lightmapscale;
-    qboolean curved; /*normals are interpolated for smooth lighting*/
+    bool curved; /*normals are interpolated for smooth lighting*/
 
     int texmins[2];
     int texsize[2];
@@ -381,10 +381,10 @@ extern uint8_t *lux_filebase;
 extern int oversample;
 extern int write_litfile;
 extern int write_luxfile;
-extern qboolean onlyents;
-extern qboolean scaledonly;
+extern bool onlyents;
+extern bool scaledonly;
 extern surfflags_t *extended_texinfo_flags;
-extern qboolean novisapprox;
+extern bool novisapprox;
 extern bool nolights;
 extern bool litonly;
 
@@ -395,8 +395,8 @@ enum backend_t
 };
 
 extern backend_t rtbackend;
-extern qboolean surflight_dump;
-extern char mapfilename[1024];
+extern bool surflight_dump;
+extern std::filesystem::path mapfilename;
 
 // public functions
 

@@ -26,10 +26,10 @@
 
 struct gamedef_generic_t : public gamedef_t
 {
-    gamedef_generic_t()
+    gamedef_generic_t() :
+        gamedef_t("")
     {
         id = GAME_UNKNOWN;
-        base_dir = nullptr;
     }
 
     bool surf_is_lightmapped(const surfflags_t &) const { throw std::bad_cast(); }
@@ -62,11 +62,11 @@ struct gamedef_generic_t : public gamedef_t
 template<gameid_t id>
 struct gamedef_q1_like_t : public gamedef_t
 {
-    gamedef_q1_like_t()
+    gamedef_q1_like_t(const char *base_dir = "ID1") :
+        gamedef_t(base_dir)
     {
         this->id = id;
         has_rgb_lightmap = false;
-        base_dir = "ID1";
     }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
@@ -122,7 +122,7 @@ struct gamedef_q1_like_t : public gamedef_t
                 case CONTENTS_EMPTY: return 1;
                 case 0: return 0;
 
-                default: Error("Bad contents in face (%s)", __func__); return 0;
+                default: FError("Bad contents in face"); return 0;
             }
     }
 
@@ -167,25 +167,25 @@ struct gamedef_q1_like_t : public gamedef_t
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 {
-    gamedef_h2_t() { base_dir = "DATA1"; }
+    gamedef_h2_t() : gamedef_q1_like_t("DATA1") { }
 };
 
 struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 {
-    gamedef_hl_t()
+    gamedef_hl_t() :
+        gamedef_q1_like_t("VALVE")
     {
         has_rgb_lightmap = true;
-        base_dir = "VALVE";
     }
 };
 
 struct gamedef_q2_t : public gamedef_t
 {
-    gamedef_q2_t()
+    gamedef_q2_t() :
+        gamedef_t("BASEQ2")
     {
         this->id = GAME_QUAKE_II;
         has_rgb_lightmap = true;
-        base_dir = "BASEQ2";
     }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const
@@ -248,7 +248,7 @@ struct gamedef_q2_t : public gamedef_t
             case CONTENTS_WATER: return {Q2_CONTENTS_WATER, cflags};
             case CONTENTS_SLIME: return {Q2_CONTENTS_SLIME, cflags};
             case CONTENTS_LAVA: return {Q2_CONTENTS_LAVA, cflags};
-            default: Error("bad contents");
+            default: FError("bad contents");
         }
     }
 
@@ -410,7 +410,7 @@ static const char *BSPVersionString(const bspversion_t *version)
     return buffer;
 }
 
-static qboolean BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_version)
+static bool BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_version)
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
@@ -744,7 +744,7 @@ Q2_SwapBSPFile
 Byte swaps all data in a bsp file.
 =============
 */
-void Q2_SwapBSPFile(q2bsp_t &bsp, qboolean todisk)
+void Q2_SwapBSPFile(q2bsp_t &bsp, bool todisk)
 {
     int i, j;
     q2_dmodel_t *d;
@@ -922,7 +922,7 @@ Q2_Qbism_SwapBSPFile
 Byte swaps all data in a bsp file.
 =============
 */
-void Q2_Qbism_SwapBSPFile(q2bsp_qbism_t &bsp, qboolean todisk)
+void Q2_Qbism_SwapBSPFile(q2bsp_qbism_t &bsp, bool todisk)
 {
     int i, j;
     q2_dmodel_t *d;
@@ -1178,7 +1178,7 @@ static void SwapBSPFile(bspdata_t *bspdata, swaptype_t swap)
         return;
     }
 
-    Error("Unsupported BSP version: %d", bspdata->version);
+    FError("Unsupported BSP version: {}", BSPVersionString(bspdata->version));
 }
 
 /*
@@ -1492,7 +1492,7 @@ static std::vector<uint8_t> CalcPHS(
                 // OR this pvs row into the phs
                 int32_t index = ((j << 3) + k);
                 if (index >= portalclusters)
-                    Error("Bad bit in PVS"); // pad bits should be 0
+                    FError("Bad bit in PVS"); // pad bits should be 0
                 const uint8_t *src_compressed = &visdata[bitofs[index][DVIS_PVS]];
                 DecompressRow(src_compressed, leafbytes, uncompressed_2);
                 const long *src = (long *)uncompressed_2;
@@ -1520,7 +1520,7 @@ static std::vector<uint8_t> CalcPHS(
     delete[] compressed;
     delete[] uncompressed_orig;
 
-    printf("Average clusters hearable: %i\n", count / portalclusters);
+    fmt::print("Average clusters hearable: {}\n", count / portalclusters);
 
     return compressed_phs;
 }
@@ -2987,7 +2987,7 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         }
     }
 
-    Error("Don't know how to convert BSP version %s to %s", BSPVersionString(bspdata->version),
+    Error("Don't know how to convert BSP version {} to {}", BSPVersionString(bspdata->version),
         BSPVersionString(to_version));
 }
 
@@ -3181,7 +3181,7 @@ static const lumpspec_t *LumpspecsForVersion(const bspversion_t *version)
     } else if (version == &bspver_qbism) {
         lumpspec = lumpspec_qbism;
     } else {
-        Error("Unsupported BSP version: %s", BSPVersionString(version));
+        Error("Unsupported BSP version: {}", BSPVersionString(version));
     }
     return lumpspec;
 }
@@ -3198,7 +3198,7 @@ static int CopyLump(const void *header, const bspversion_t *version, const lump_
         delete[] *bufferptr;
 
     if (sizeof(T) != lumpspec->size || length % lumpspec->size)
-        Error("%s: odd %s lump size", __func__, lumpspec->name);
+        FError("odd {} lump size", lumpspec->name);
 
     T *buffer;
 
@@ -3208,7 +3208,7 @@ static int CopyLump(const void *header, const bspversion_t *version, const lump_
         buffer = *bufferptr = new T[length];
 
     if (!buffer)
-        Error("%s: allocation of %i bytes failed.", __func__, length);
+        FError("allocation of {} bytes failed.", length);
 
     memcpy(buffer, (const uint8_t *)header + ofs, length);
     
@@ -3275,7 +3275,7 @@ const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize)
  * LoadBSPFile
  * =============
  */
-void LoadBSPFile(char *filename, bspdata_t *bspdata)
+void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
 {
     int i;
     uint32_t bspxofs;
@@ -3283,7 +3283,7 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
 
     bspdata->bspxentries = NULL;
 
-    logprint("LoadBSPFile: '%s'\n", filename);
+    FLogPrint("'{}'\n", filename);
 
     /* load the file header */
     uint8_t *file_data;
@@ -3316,7 +3316,7 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
 
     /* check the file version */
     if (!BSPVersionSupported(temp_version.ident, temp_version.version, &bspdata->version)) {
-        logprint("BSP is version %s\n", BSPVersionString(&temp_version));
+        LogPrint("BSP is version {}\n", BSPVersionString(&temp_version));
         Error("Sorry, this bsp version is not supported.");
     } else {
         // special case handling for Hexen II
@@ -3330,7 +3330,7 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
             }
         }
 
-        logprint("BSP is version %s\n", BSPVersionString(bspdata->version));
+        LogPrint("BSP is version {}\n", BSPVersionString(bspdata->version));
     }
 
     /* swap the lump headers */
@@ -3476,7 +3476,7 @@ void LoadBSPFile(char *filename, bspdata_t *bspdata)
 
         bspdata->bsp = std::move(bsp);
     } else {
-        Error("Unknown format");
+        FError("Unknown format");
     }
 
     // detect BSPX
@@ -3531,7 +3531,7 @@ struct bspfile_t
         q2_dheader_t q2header;
     };
 
-    FILE *file;
+    qfile_t file { nullptr, nullptr };
 };
 
 static void AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
@@ -3553,7 +3553,7 @@ static void AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count
     uint8_t pad[4] = {0};
     lump_t *lump = &lumps[lumpnum];
 
-    lump->fileofs = LittleLong(ftell(bspfile->file));
+    lump->fileofs = LittleLong(SafeTell(bspfile->file));
     lump->filelen = LittleLong(size);
     SafeWrite(bspfile->file, data, size);
     if (size % 4)
@@ -3566,10 +3566,9 @@ static void AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count
  * Swaps the bsp file in place, so it should not be referenced again
  * =============
  */
-void WriteBSPFile(const char *filename, bspdata_t *bspdata)
+void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
 {
-    bspfile_t bspfile;
-    memset(&bspfile, 0, sizeof(bspfile));
+    bspfile_t bspfile { };
 
     SwapBSPFile(bspdata, TO_DISK);
 
@@ -3582,7 +3581,7 @@ void WriteBSPFile(const char *filename, bspdata_t *bspdata)
         bspfile.q2header.version = LittleLong(bspfile.version->version);
     }
 
-    logprint("Writing %s as BSP version %s\n", filename, BSPVersionString(bspdata->version));
+    LogPrint("Writing {} as BSP version {}\n", filename, BSPVersionString(bspdata->version));
     bspfile.file = SafeOpenWrite(filename);
 
     /* Save header space, updated after adding the lumps */
@@ -3708,7 +3707,7 @@ void WriteBSPFile(const char *filename, bspdata_t *bspdata)
         AddLump(&bspfile, Q2_LUMP_ENTITIES, bsp.dentdata, bsp.entdatasize);
         AddLump(&bspfile, Q2_LUMP_POP, bsp.dpop, sizeof(bsp.dpop));
     } else {
-        Error("Unknown format");
+        FError("Unknown format");
     }
 
     /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
@@ -3717,9 +3716,9 @@ void WriteBSPFile(const char *filename, bspdata_t *bspdata)
         bspxentry_t *x;
         bspx_lump_t xlumps[64];
         uint32_t l;
-        uint32_t bspxheader = ftell(bspfile.file);
+        long bspxheader = SafeTell(bspfile.file);
         if (bspxheader & 3)
-            Error("BSPX header is misaligned");
+            FError("BSPX header is misaligned");
         xheader.id[0] = 'B';
         xheader.id[1] = 'S';
         xheader.id[2] = 'P';
@@ -3737,19 +3736,19 @@ void WriteBSPFile(const char *filename, bspdata_t *bspdata)
         for (x = bspdata->bspxentries, l = 0; x && l < xheader.numlumps; x = x->next, l++) {
             uint8_t pad[4] = {0};
             xlumps[l].filelen = LittleLong(x->lumpsize);
-            xlumps[l].fileofs = LittleLong(ftell(bspfile.file));
+            xlumps[l].fileofs = LittleLong(SafeTell(bspfile.file));
             strncpy(xlumps[l].lumpname, x->lumpname, sizeof(xlumps[l].lumpname));
             SafeWrite(bspfile.file, x->lumpdata, x->lumpsize);
             if (x->lumpsize % 4)
                 SafeWrite(bspfile.file, pad, 4 - (x->lumpsize % 4));
         }
 
-        fseek(bspfile.file, bspxheader, SEEK_SET);
+        SafeSeek(bspfile.file, bspxheader, SEEK_SET);
         SafeWrite(bspfile.file, &xheader, sizeof(xheader));
         SafeWrite(bspfile.file, xlumps, xheader.numlumps * sizeof(xlumps[0]));
     }
 
-    fseek(bspfile.file, 0, SEEK_SET);
+    SafeSeek(bspfile.file, 0, SEEK_SET);
 
     // write the real header
     if (bspfile.version->version != NO_VERSION) {
@@ -3757,8 +3756,6 @@ void WriteBSPFile(const char *filename, bspdata_t *bspdata)
     } else {
         SafeWrite(bspfile.file, &bspfile.q1header, sizeof(bspfile.q1header));
     }
-
-    fclose(bspfile.file);
 }
 
 /* ========================================================================= */
@@ -3766,7 +3763,7 @@ void WriteBSPFile(const char *filename, bspdata_t *bspdata)
 static void PrintLumpSize(const lumpspec_t *lumpspec, int lumptype, int count)
 {
     const lumpspec_t *lump = &lumpspec[lumptype];
-    logprint("%7i %-12s %10i\n", count, lump->name, count * (int)lump->size);
+    LogPrint("{:7} {:<12} {:10}\n", count, lump->name, count * (int)lump->size);
 }
 
 /*
@@ -3783,7 +3780,7 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
     if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
         const q2bsp_t &bsp = std::get<q2bsp_t>(bspdata->bsp);
 
-        logprint("%7i %-12s\n", bsp.nummodels, "models");
+        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
 
         PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp.numplanes);
         PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp.numvertexes);
@@ -3800,13 +3797,13 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp.numareas);
         PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp.numareaportals);
 
-        logprint("%7s %-12s %10i\n", "", "lightdata", bsp.lightdatasize);
-        logprint("%7s %-12s %10i\n", "", "visdata", bsp.visdatasize);
-        logprint("%7s %-12s %10i\n", "", "entdata", bsp.entdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
     } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
         const q2bsp_qbism_t &bsp = std::get<q2bsp_qbism_t>(bspdata->bsp);
 
-        logprint("%7i %-12s\n", bsp.nummodels, "models");
+        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
 
         PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp.numplanes);
         PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp.numvertexes);
@@ -3823,16 +3820,16 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp.numareas);
         PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp.numareaportals);
 
-        logprint("%7s %-12s %10i\n", "", "lightdata", bsp.lightdatasize);
-        logprint("%7s %-12s %10i\n", "", "visdata", bsp.visdatasize);
-        logprint("%7s %-12s %10i\n", "", "entdata", bsp.entdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
     } else if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
         const bsp29_t &bsp = std::get<bsp29_t>(bspdata->bsp);
 
         if (bsp.texdatasize)
             numtextures = bsp.dtexdata->nummiptex;
 
-        logprint("%7i %-12s\n", bsp.nummodels, "models");
+        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
 
         PrintLumpSize(lumpspec, LUMP_PLANES, bsp.numplanes);
         PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.numvertexes);
@@ -3845,17 +3842,17 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintLumpSize(lumpspec, LUMP_EDGES, bsp.numedges);
         PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.numsurfedges);
 
-        logprint("%7i %-12s %10i\n", numtextures, "textures", bsp.texdatasize);
-        logprint("%7s %-12s %10i\n", "", "lightdata", bsp.lightdatasize);
-        logprint("%7s %-12s %10i\n", "", "visdata", bsp.visdatasize);
-        logprint("%7s %-12s %10i\n", "", "entdata", bsp.entdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", numtextures, "textures", bsp.texdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
     } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
         const bsp2rmq_t &bsp = std::get<bsp2rmq_t>(bspdata->bsp);
 
         if (bsp.texdatasize)
             numtextures = bsp.dtexdata->nummiptex;
 
-        logprint("%7i %-12s\n", bsp.nummodels, "models");
+        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
 
         PrintLumpSize(lumpspec, LUMP_PLANES, bsp.numplanes);
         PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.numvertexes);
@@ -3868,17 +3865,17 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintLumpSize(lumpspec, LUMP_EDGES, bsp.numedges);
         PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.numsurfedges);
 
-        logprint("%7i %-12s %10i\n", numtextures, "textures", bsp.texdatasize);
-        logprint("%7s %-12s %10i\n", "", "lightdata", bsp.lightdatasize);
-        logprint("%7s %-12s %10i\n", "", "visdata", bsp.visdatasize);
-        logprint("%7s %-12s %10i\n", "", "entdata", bsp.entdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", numtextures, "textures", bsp.texdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
     } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
         const bsp2_t &bsp = std::get<bsp2_t>(bspdata->bsp);
 
         if (bsp.texdatasize)
             numtextures = bsp.dtexdata->nummiptex;
 
-        logprint("%7i %-12s\n", bsp.nummodels, "models");
+        LogPrint("{:7} {:<12s\n", bsp.nummodels, "models");
 
         PrintLumpSize(lumpspec, LUMP_PLANES, bsp.numplanes);
         PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.numvertexes);
@@ -3891,18 +3888,18 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintLumpSize(lumpspec, LUMP_EDGES, bsp.numedges);
         PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.numsurfedges);
 
-        logprint("%7i %-12s %10i\n", numtextures, "textures", bsp.texdatasize);
-        logprint("%7s %-12s %10i\n", "", "lightdata", bsp.lightdatasize);
-        logprint("%7s %-12s %10i\n", "", "visdata", bsp.visdatasize);
-        logprint("%7s %-12s %10i\n", "", "entdata", bsp.entdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", numtextures, "textures", bsp.texdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
+        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
     } else {
-        Error("Unsupported BSP version: %s", BSPVersionString(bspdata->version));
+        Error("Unsupported BSP version: {}", BSPVersionString(bspdata->version));
     }
 
     if (bspdata->bspxentries) {
         bspxentry_t *x;
         for (x = bspdata->bspxentries; x; x = x->next) {
-            logprint("%7s %-12s %10i\n", "BSPX", x->lumpname, (int)x->lumpsize);
+            LogPrint("{:7} {:<12} {:10}\n", "BSPX", x->lumpname, (int)x->lumpsize);
         }
     }
 }
@@ -3958,7 +3955,7 @@ void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
 
         c = in[1];
         if (!c)
-            Error("DecompressVis: 0 repeat");
+            FError("0 repeat");
         in += 2;
         while (c) {
             *out++ = 0;

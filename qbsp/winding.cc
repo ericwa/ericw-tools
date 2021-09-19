@@ -52,7 +52,7 @@ winding_t *BaseWindingForPlane(const qbsp_plane_t *p)
         case 0:
         case 1: vup[2] = 1; break;
         case 2: vup[0] = 1; break;
-        default: Error("Internal error: no axis for winding (%s)", __func__);
+        default: FError("Internal error: no axis for winding");
     }
 
     v = DotProduct(vup, p->normal);
@@ -179,7 +179,7 @@ winding_t *ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon)
     int maxpts;
 
     if (in->numpoints > MAX_POINTS_ON_WINDING)
-        Error("Internal error: in->numpoints > MAX (%s: %d > %d)", __func__, in->numpoints, MAX_POINTS_ON_WINDING);
+        FError("Internal error: in->numpoints > MAX ({} > {})", in->numpoints, MAX_POINTS_ON_WINDING);
 
     CalcSides(in, split, sides, dists, counts);
 
@@ -242,7 +242,7 @@ winding_t *ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon)
     return neww;
 
 noclip:
-    Error("Internal error: new->numpoints > MAX (%s: %d > %d)", __func__, neww->numpoints, maxpts);
+    FError("Internal error: new->numpoints > MAX ({} > {})", neww->numpoints, maxpts);
 }
 
 /*
@@ -268,7 +268,7 @@ void DivideWinding(const winding_t *in, const qbsp_plane_t *split, winding_t **f
     int maxpts;
 
     if (in->numpoints > MAX_POINTS_ON_WINDING)
-        Error("Internal error: in->numpoints > MAX (%s: %d > %d)", __func__, in->numpoints, MAX_POINTS_ON_WINDING);
+        FError("Internal error: in->numpoints > MAX ({} > {})", in->numpoints, MAX_POINTS_ON_WINDING);
 
     CalcSides(in, split, sides, dists, counts);
 
@@ -345,9 +345,9 @@ void DivideWinding(const winding_t *in, const qbsp_plane_t *split, winding_t **f
     return;
 
 noclip_front:
-    Error("Internal error: front->numpoints > MAX (%s: %d > %d)", __func__, f->numpoints, maxpts);
+    FError("Internal error: front->numpoints > MAX ({} > {})", f->numpoints, maxpts);
 noclip_back:
-    Error("Internal error: back->numpoints > MAX (%s: %d > %d)", __func__, b->numpoints, maxpts);
+    FError("Internal error: back->numpoints > MAX ({} > {})", b->numpoints, maxpts);
 }
 
 /*
@@ -476,9 +476,9 @@ void ChopWindingInPlace(winding_t **inout, const vec3_t normal, vec_t dist, vec_
     }
 
     if (f->numpoints > maxpts)
-        Error("ClipWinding: points exceeded estimate");
+        FError("points exceeded estimate");
     if (f->numpoints > MAX_POINTS_ON_WINDING)
-        Error("ClipWinding: MAX_POINTS_ON_WINDING");
+        FError("MAX_POINTS_ON_WINDING");
 
     free(in);
 

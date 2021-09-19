@@ -331,7 +331,7 @@ SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
 }
 
 /* assumes point is on the same plane as face */
-inline qboolean TestHitFace(const faceinfo_t *fi, const vec3_t &point)
+inline bool TestHitFace(const faceinfo_t *fi, const vec3_t &point)
 {
     return EdgePlanes_PointInside(fi->face, fi->edgeplanes, point);
 }
@@ -403,7 +403,7 @@ static int TraceLine(const dmodel_t *model, const int traceflags, const vec3_t s
     //    const tracestack_t *const tstack_max = tracestack + MAX_TSTACK;
 
     if (traceflags <= 0)
-        Error("Internal error: %s - bad traceflags (%d)", __func__, traceflags);
+        FError("Internal error: bad traceflags ({})", traceflags);
 
     VectorCopy(start, front);
     VectorCopy(stop, back);
@@ -504,7 +504,7 @@ static int TraceLine(const dmodel_t *model, const int traceflags, const vec3_t s
     }
 }
 
-static qboolean BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
+static bool BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
 {
     const int traceflags = TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
@@ -525,7 +525,7 @@ static qboolean BSP_TestLight(const vec3_t start, const vec3_t stop, const dmode
     return (result == TRACE_HIT_NONE);
 }
 
-static qboolean BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
+static bool BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
 {
     // const modelinfo_t *const *model;
     int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
@@ -740,8 +740,7 @@ hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *se
         return BSP_TestSky(start, dirn, self);
     }
 #endif
-    Error("no backend available");
-    throw; // mxd. Silences compiler warning
+    FError("no backend available");
 }
 
 hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
@@ -756,8 +755,7 @@ hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *
         return BSP_TestLight(start, stop, self);
     }
 #endif
-    Error("no backend available");
-    throw; // mxd. Silences compiler warning
+    FError("no backend available");
 }
 
 hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out,
@@ -773,8 +771,7 @@ hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const mod
         return BSP_DirtTrace(start, dirn, dist, self, hitdist_out, hitplane_out, face_out);
     }
 #endif
-    Error("no backend available");
-    throw; // mxd. Silences compiler warning
+    FError("no backend available");
 }
 
 raystream_intersection_t *MakeIntersectionRayStream(int maxrays)

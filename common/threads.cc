@@ -32,7 +32,7 @@ int GetThreadWork_Locked__(void)
     percent = 50 * dispatch / workcount;
     while (oldpercent < percent) {
         oldpercent++;
-        logprint_locked__("%c", (oldpercent % 5) ? '.' : '0' + (oldpercent / 5));
+        LogPrintLocked("{}", (oldpercent % 5) ? '.' : '0' + (oldpercent / 5));
     }
 
     ret = dispatch;
@@ -55,7 +55,7 @@ int GetThreadWork(void)
 void InterruptThreadProgress__(void)
 {
     if (oldpercent != -1) {
-        logprint_locked__("\\\n");
+        LogPrintLocked("\\\n");
         oldpercent = -1;
     }
 }
@@ -140,7 +140,7 @@ void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     threads_active = false;
     oldpercent = -1;
 
-    logprint("\n");
+    LogPrint("\n");
 }
 
 /*
@@ -169,7 +169,7 @@ void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
 
     func(arg);
 
-    logprint("\n");
+    LogPrint("\n");
 }
 
 #endif /* HAVE_THREADS */

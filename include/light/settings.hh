@@ -82,7 +82,7 @@ public:
             case setting_source_t::DEFAULT: return "default";
             case setting_source_t::MAP: return "map";
             case setting_source_t::COMMANDLINE: return "commandline";
-            default: Error("Error: unknown setting source"); throw; // mxd. Silences compiler warning
+            default: FError("Error: unknown setting source");
         }
     }
 };
@@ -133,11 +133,11 @@ private:
     {
         if (changeSource(newsource)) {
             if (f < _min) {
-                logprint("WARNING: '%s': %f is less than minimum value %f.\n", primaryName().c_str(), f, _min);
+                LogPrint("WARNING: '{}': {} is less than minimum value {}.\n", primaryName(), f, _min);
                 f = _min;
             }
             if (f > _max) {
-                logprint("WARNING: '%s': %f is greater than maximum value %f.\n", primaryName().c_str(), f, _max);
+                LogPrint("WARNING: '{}': {} is greater than maximum value {}.\n", primaryName(), f, _max);
                 f = _max;
             }
             _value = f;
@@ -166,7 +166,7 @@ public:
             f = std::stof(str);
         }
         catch (std::exception &) {
-            logprint("WARNING: couldn't parse '%s' as number for key '%s'\n", str.c_str(), primaryName().c_str());
+            LogPrint("WARNING: couldn't parse '{}' as number for key '{}'\n", str, primaryName());
         }
         if (locked)
             setFloatValueLocked(f);
@@ -176,9 +176,7 @@ public:
 
     virtual std::string stringValue() const
     {
-        char setting[256];
-        snprintf(setting, sizeof(setting), "%g", _value);
-        return setting;
+        return std::to_string(_value);
     }
 
     lockable_vec_t(std::vector<std::string> names, float v, float minval = -std::numeric_limits<float>::infinity(),
@@ -274,7 +272,7 @@ public:
         double vec[3] = {0.0, 0.0, 0.0};
 
         if (sscanf(str.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]) != 3) {
-            logprint("WARNING: Not 3 values for %s\n", primaryName().c_str());
+            LogPrint("WARNING: Not 3 values for {}\n", primaryName());
         }
 
         vec3_t vec3t;
@@ -339,7 +337,7 @@ public:
         lockable_setting_t *setting = findSetting(name);
         if (setting == nullptr) {
             if (cmdline) {
-                Error("Unrecognized command-line option '%s'\n", name.c_str());
+                FError("Unrecognized command-line option '{}'\n", name);
             }
             return;
         }

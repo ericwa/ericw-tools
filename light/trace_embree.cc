@@ -227,7 +227,7 @@ static const mbsp_t *bsp_static;
 
 void ErrorCallback(void *userptr, const RTCError code, const char *str)
 {
-    printf("RTC Error %d: %s\n", code, str);
+    fmt::print("RTC Error {}: {}\n", code, str);
 }
 
 static const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
@@ -239,8 +239,7 @@ static const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
     } else if (geomID == filtergeom.geomID) {
         return filtergeom;
     } else {
-        Error("unexpected geomID");
-        throw; // mxd. Added to silence compiler warning
+        FError("unexpected geomID");
     }
 }
 
@@ -436,7 +435,7 @@ InitObjFile(const char *filename)
     
     objfile = fopen(objfilename, "wt");
     if (!objfile)
-        Error("Failed to open %s: %s", objfilename, strerror(errno));
+        FError("Failed to open {}: {}", objfilename, strerror(errno));
     
     return objfile;
 }
@@ -526,7 +525,7 @@ static void Leaf_MakeFaces(const mbsp_t *bsp, const mleaf_t *leaf, const std::ve
         }
 
         if (winding) {
-            // logprint("WARNING: winding clipped away\n");
+            // LogPrint("WARNING: winding clipped away\n");
         } else {
             result.push_back(std::move(*winding));
         }
@@ -680,8 +679,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     const size_t ver_maj = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_MAJOR);
     const size_t ver_min = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_MINOR);
     const size_t ver_pat = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_PATCH);
-    logprint("Embree_TraceInit: Embree version: %d.%d.%d\n", static_cast<int>(ver_maj), static_cast<int>(ver_min),
-        static_cast<int>(ver_pat));
+    FLogPrint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
 
     scene = rtcNewScene(device);
     rtcSetSceneFlags(scene, RTC_SCENE_FLAG_NONE);
@@ -698,11 +696,11 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
     rtcCommitScene(scene);
 
-    logprint("Embree_TraceInit:\n");
-    logprint("\t%d sky faces\n", (int)skyfaces.size());
-    logprint("\t%d solid faces\n", (int)solidfaces.size());
-    logprint("\t%d filtered faces\n", (int)filterfaces.size());
-    logprint("\t%d shadow-casting skip faces\n", (int)skipwindings.size());
+    FLogPrint("\n");
+    LogPrint("\t{} sky faces\n", skyfaces.size());
+    LogPrint("\t{} solid faces\n", solidfaces.size());
+    LogPrint("\t{} filtered faces\n", filterfaces.size());
+    LogPrint("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
 static RTCRayHit SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist)
@@ -769,7 +767,7 @@ hitresult_t Embree_TestSky(
     ray_source_info ctx2(nullptr, self);
     rtcIntersect1(scene, &ctx2, &ray);
 
-    qboolean hit_sky = (ray.hit.geomID == skygeom.geomID);
+    bool hit_sky = (ray.hit.geomID == skygeom.geomID);
 
     if (face_out) {
         if (hit_sky) {

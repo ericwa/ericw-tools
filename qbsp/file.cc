@@ -20,7 +20,7 @@
 */
 
 #include <cstdarg>
-#include <cstdio>
+//#include <cstdio>
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/file.hh>
@@ -30,16 +30,16 @@
 LoadFile
 ==============
 */
-size_t LoadFile(const char *filename, void *bufptr, bool nofail)
+size_t LoadFile(const std::filesystem::path &filename, void *bufptr, bool nofail)
 {
     char **buf = (char **)bufptr;
     size_t len;
     FILE *f;
 
-    f = fopen(filename, "rb");
+    f = fopen(filename.string().c_str(), "rb");
     if (!f) {
         if (nofail)
-            Error("Failed to open %s: %s", filename, strerror(errno));
+            FError("Failed to open {}: {}", filename, strerror(errno));
         return 0;
     }
 
@@ -51,7 +51,7 @@ size_t LoadFile(const char *filename, void *bufptr, bool nofail)
     (*buf)[len] = 0;
 
     if (fread(*buf, 1, len, f) != len)
-        Error("Failure reading from file");
+        FError("Failure reading from file");
 
     fclose(f);
 

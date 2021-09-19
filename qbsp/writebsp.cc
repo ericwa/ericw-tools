@@ -30,7 +30,7 @@
 static void AssertVanillaContentType(const contentflags_t &flags)
 {
     if (!flags.is_valid(options.target_game, false)) {
-        Error("Internal error: Tried to save invalid contents type %s\n", GetContentsName(flags));
+        FError("Internal error: Tried to save invalid contents type {}", flags.to_string(options.target_game));
     }
 }
 
@@ -346,11 +346,12 @@ static void WriteExtendedTexinfoFlags(void)
         [](const mtexinfo_t &a, const mtexinfo_t &b) { return a.outputnum < b.outputnum; });
 
     FILE *texinfofile;
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".texinfo");
-    texinfofile = fopen(options.szBSPName, "wt");
+    options.szBSPName.replace_extension("texinfo");
+
+    texinfofile = fopen(options.szBSPName.string().c_str(), "wt");
+
     if (!texinfofile)
-        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
     extended_flags_header_t header;
     header.num_texinfo = map.exported_texinfos.size();
@@ -447,20 +448,19 @@ static void WriteBSPFile()
         } else if (options.target_version == &bspver_q2) {
             highLimitsFormat = &bspver_qbism;
         } else {
-            Error("No high limits version of %s available", options.target_version->name);
+            FError("No high limits version of {} available", options.target_version->name);
         }
 
-        logprint(
-            "NOTE: limits exceeded for %s - switching to %s\n", options.target_version->name, highLimitsFormat->name);
+        LogPrint(
+            "NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name, highLimitsFormat->name);
 
         Q_assert(ConvertBSPFormat(&bspdata, highLimitsFormat));
     }
 
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".bsp");
+    options.szBSPName.replace_extension("bsp");
 
     WriteBSPFile(options.szBSPName, &bspdata);
-    logprint("Wrote %s\n", options.szBSPName);
+    LogPrint("Wrote {}\n", options.szBSPName);
 
     PrintBSPFileSizes(&bspdata);
 }
@@ -473,7 +473,7 @@ FinishBSPFile
 void FinishBSPFile(void)
 {
     options.fVerbose = true;
-    Message(msgProgress, "WriteBSPFile");
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     WriteExtendedTexinfoFlags();
     WriteBSPFile();
@@ -490,8 +490,7 @@ void UpdateBSPFileEntitiesLump()
 {
     bspdata_t bspdata;
 
-    StripExtension(options.szBSPName);
-    DefaultExtension(options.szBSPName, ".bsp");
+    options.szBSPName.replace_extension("bsp");
 
     // load the .bsp
     LoadBSPFile(options.szBSPName, &bspdata);
@@ -506,5 +505,5 @@ void UpdateBSPFileEntitiesLump()
     ConvertBSPFormat(&bspdata, bspdata.loadversion);
     WriteBSPFile(options.szBSPName, &bspdata);
 
-    logprint("Wrote %s\n", options.szBSPName);
+    LogPrint("Wrote {}\n", options.szBSPName);
 }

@@ -35,7 +35,6 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/parser.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/wad.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/warnerr.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh

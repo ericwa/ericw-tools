@@ -19,7 +19,7 @@ See file, 'COPYING', for details.
 */
 
 #include <cassert>
-#include <cstdio>
+//#include <cstdio>
 #include <iostream>
 
 #include <light/light.hh>
@@ -82,8 +82,8 @@ static void *MakeSurfaceLightsThread(void *arg)
         if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
             if (info->flags.native & Q2_SURF_LIGHT) {
                 qvec3d wc = winding_t::from_face(bsp, face).center();
-                logprint("WARNING: surface light '%s' at [%s] has 0 intensity.\n", Face_TextureName(bsp, face),
-                    VecStr(wc).c_str());
+                LogPrint("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face),
+                    VecStr(wc));
             }
             continue;
         }
@@ -202,7 +202,7 @@ const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 void // Quake 2 surface lights
 MakeSurfaceLights(const globalconfig_t &cfg, const mbsp_t *bsp)
 {
-    logprint("--- MakeSurfaceLights ---\n");
+    LogPrint("--- MakeSurfaceLights ---\n");
 
     make_surface_lights_args_t args{bsp, &cfg};
     RunThreadsOn(0, bsp->numfaces, MakeSurfaceLightsThread, static_cast<void *>(&args));

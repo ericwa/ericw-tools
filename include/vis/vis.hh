@@ -44,7 +44,7 @@ struct winding_t
 winding_t *NewWinding(int points);
 winding_t *CopyWinding(const winding_t *w);
 void PlaneFromWinding(const winding_t *w, plane_t *plane);
-qboolean PlaneCompare(plane_t *p1, plane_t *p2);
+bool PlaneCompare(plane_t *p1, plane_t *p2);
 
 enum pstatus_t
 {
@@ -130,25 +130,22 @@ extern int c_portaltest, c_portalpass, c_portalcheck;
 extern int c_vistest, c_mighttest;
 extern unsigned long c_chains;
 
-extern qboolean showgetleaf;
+extern bool showgetleaf;
 
 extern int testlevel;
-extern qboolean ambientsky;
-extern qboolean ambientwater;
-extern qboolean ambientslime;
-extern qboolean ambientlava;
+extern bool ambientsky;
+extern bool ambientwater;
+extern bool ambientslime;
+extern bool ambientlava;
 extern int visdist;
-extern qboolean nostate;
+extern bool nostate;
 
 extern uint8_t *uncompressed;
 extern int leafbytes;
 extern int leafbytes_real;
 extern int leaflongs;
 
-extern char sourcefile[1024];
-extern char portalfile[1024];
-extern char statefile[1024];
-extern char statetmpfile[1024];
+extern std::filesystem::path sourcefile, portalfile, statefile, statetmpfile;
 
 void BasePortalVis(void);
 
@@ -156,10 +153,10 @@ void PortalFlow(portal_t *p);
 
 void CalcAmbientSounds(mbsp_t *bsp);
 
-extern double starttime, endtime, statetime;
+extern time_point starttime, endtime, statetime;
 
 void SaveVisState(void);
-qboolean LoadVisState(void);
+bool LoadVisState(void);
 
 /* Print winding/leaf info for debugging */
 void LogWinding(const winding_t *w);

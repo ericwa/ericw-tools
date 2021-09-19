@@ -49,11 +49,12 @@ static FILE *InitPtsFile(void)
 {
     FILE *ptsfile;
 
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".pts");
-    ptsfile = fopen(options.szBSPName, "wt");
+    options.szBSPName.replace_extension("pts");
+
+    ptsfile = fopen(options.szBSPName.string().c_str(), "wt");
+
     if (!ptsfile)
-        Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
     return ptsfile;
 }
@@ -224,7 +225,7 @@ static void WriteLeakLine(const std::pair<std::vector<portal_t *>, node_t *> &le
     }
 
     fclose(ptsfile);
-    Message(msgLiteral, "Leak file written to %s\n", options.szBSPName);
+    LogPrint("Leak file written to {}\n", options.szBSPName);
 }
 
 /*
@@ -388,10 +389,10 @@ FillOutside
 */
 bool FillOutside(node_t *node, const int hullnum)
 {
-    Message(msgProgress, "FillOutside");
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     if (options.fNofill) {
-        Message(msgStat, "skipped");
+        LogPrint(LOG_STAT, "     skipped\n");
         return false;
     }
 
@@ -401,7 +402,7 @@ bool FillOutside(node_t *node, const int hullnum)
     const std::vector<node_t *> occupied_leafs = FindOccupiedLeafs(node);
 
     if (occupied_leafs.empty()) {
-        Message(msgWarning, warnNoFilling, hullnum);
+        LogPrint("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
         return false;
     }
 
@@ -418,7 +419,7 @@ bool FillOutside(node_t *node, const int hullnum)
         Q_assert(leakentity != nullptr);
 
         const vec_t *origin = leakentity->origin;
-        Message(msgWarning, warnMapLeak, ValueForKey(leakentity, "classname"), origin[0], origin[1], origin[2]);
+        LogPrint("WARNING: Reached occupant \"{}\" at ({:.0} {:.0} {:.0}), no filling performed.\n", ValueForKey(leakentity, "classname"), origin[0], origin[1], origin[2]);
         if (map.leakfile)
             return false;
 
@@ -426,12 +427,11 @@ bool FillOutside(node_t *node, const int hullnum)
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
-        StripExtension(options.szBSPName);
-        strcat(options.szBSPName, ".prt");
+        options.szBSPName.replace_extension("prt");
         remove(options.szBSPName);
 
         if (options.fLeakTest) {
-            logprint("Aborting because -leaktest was used.\n");
+            LogPrint("Aborting because -leaktest was used.\n");
             exit(1);
         }
 
@@ -465,6 +465,6 @@ bool FillOutside(node_t *node, const int hullnum)
     /* remove faces from filled in leafs */
     ClearOutFaces(node);
 
-    Message(msgStat, "%8d outleafs", outleafs);
+    LogPrint(LOG_STAT, "     {:8} outleafs\n", outleafs);
     return true;
 }

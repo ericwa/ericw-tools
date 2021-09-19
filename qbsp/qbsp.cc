@@ -30,7 +30,7 @@
 
 #include "tbb/global_control.h"
 
-static const char *IntroString = "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
+constexpr const char *IntroString = "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
 
 // command line flags
 options_t options;
@@ -197,10 +197,10 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 
     brush_offset += brush_state.total_brushes;
 
-    Message(msgStat, "%8u total brushes", brush_state.total_brushes);
-    Message(msgStat, "%8u total brush sides", brush_state.total_brush_sides);
-    Message(msgStat, "%8u total leaf brushes", brush_state.total_leaf_brushes);
-    Message(msgStat, "%8u unique leaf brushes (%.2f%%)", brush_state.unique_leaf_brushes,
+    LogPrint(LOG_STAT, "     {:8} total brushes\n", brush_state.total_brushes);
+    LogPrint(LOG_STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
+    LogPrint(LOG_STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
+    LogPrint(LOG_STAT, "     {:8} unique leaf brushes ({:.2}%)\n", brush_state.unique_leaf_brushes,
         (brush_state.unique_leaf_brushes / (float)brush_state.total_leaf_brushes) * 100);
 }
 
@@ -237,13 +237,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         char mod[20];
 
         if (entity == pWorldEnt() + 1)
-            Message(msgProgress, "Internal Entities");
+            LogPrint(LOG_PROGRESS, "---- Internal Entities ----\n");
         snprintf(mod, sizeof(mod), "*%d", entity->outputmodelnumber);
         if (options.fVerbose)
             PrintEntity(entity);
 
         if (hullnum <= 0)
-            Message(msgStat, "MODEL: %s", mod);
+            LogPrint(LOG_STAT, "     MODEL: {}\n", mod);
         SetKeyValue(entity, "model", mod);
     }
 
@@ -266,7 +266,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
-    Message(msgProgress, "Brush_LoadEntity");
+    LogPrint(LOG_PROGRESS, "---- Brush_LoadEntity ----\n");
     Brush_LoadEntity(entity, entity, hullnum);
 
     // FIXME: copied and pasted to BSPX_CreateBrushList
@@ -304,28 +304,28 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         int nondetailcount = (solidcount + skycount + liquidcount);
         int detailcount = detail_all_count - detail_wall_count;
 
-        Message(msgStat, "%8d brushes", nondetailcount);
+        LogPrint(LOG_STAT, "     {:8} brushes\n", nondetailcount);
         if (detailcount > 0) {
-            Message(msgStat, "%8d detail", detailcount);
+            LogPrint(LOG_STAT, "     {:8} detail\n", detailcount);
         }
         if (detail_wall_count > 0) {
-            Message(msgStat, "%8d detail wall", detail_wall_count);
+            LogPrint(LOG_STAT, "     {:8} detail wall\n", detail_wall_count);
         }
         if (detail_fence_count > 0) {
-            Message(msgStat, "%8d detail fence", detail_fence_count);
+            LogPrint(LOG_STAT, "     {:8} detail fence\n", detail_fence_count);
         }
         if (detail_illusionarycount > 0) {
-            Message(msgStat, "%8d detail illusionary", detail_illusionarycount);
+            LogPrint(LOG_STAT, "     {:8} detail illusionary\n", detail_illusionarycount);
         }
 
-        Message(msgStat, "%8d planes", map.numplanes());
+        LogPrint(LOG_STAT, "     {:8} planes\n", map.numplanes());
     }
 
     Entity_SortBrushes(entity);
 
     if (!entity->brushes && hullnum) {
         PrintEntity(entity);
-        Error("Entity with no valid brushes");
+        FError("Entity with no valid brushes");
     }
 
     /*
@@ -415,7 +415,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         firstface = MakeFaceEdges(entity, nodes);
 
         if (options.target_game->id == GAME_QUAKE_II) {
-            Message(msgProgress, "Calculating Brush List");
+            LogPrint(LOG_PROGRESS, "---- ExportBrushList ----\n");
             ExportBrushList(entity, nodes, brush_offset);
         }
 
@@ -437,7 +437,7 @@ static void UpdateEntLump(void)
     char modname[10];
     mapentity_t *entity;
 
-    Message(msgStat, "Updating entities lump...");
+    LogPrint(LOG_STAT, "     Updating entities lump...\n");
 
     modnum = 1;
     for (i = 1; i < map.numentities(); i++) {
@@ -445,7 +445,7 @@ static void UpdateEntLump(void)
 
         /* Special handling for misc_external_map.
            Duplicates some logic from ProcessExternalMapEntity. */
-        qboolean is_misc_external_map = false;
+        bool is_misc_external_map = false;
         if (!Q_strcasecmp(ValueForKey(entity, "classname"), "misc_external_map")) {
             const char *new_classname = ValueForKey(entity, "_external_map_classname");
 
@@ -459,7 +459,7 @@ static void UpdateEntLump(void)
             is_misc_external_map = true;
         }
 
-        qboolean isBrushEnt = (entity->nummapbrushes > 0) || is_misc_external_map;
+        bool isBrushEnt = (entity->nummapbrushes > 0) || is_misc_external_map;
         if (!isBrushEnt)
             continue;
 
@@ -590,8 +590,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 //                      perbrush.contents = -16;
                 //                      break;
             default:
-                Message(msgWarning, "Unknown contents: %i-%i. Translating to solid.", b->contents.native,
-                    b->contents.extended);
+                LogPrint("WARNING: Unknown contents: {}. Translating to solid.\n", b->contents.to_string(options.target_game));
                 perbrush.contents = CONTENTS_SOLID;
                 break;
         }
@@ -703,7 +702,7 @@ static void CreateSingleHull(const int hullnum)
     int i;
     mapentity_t *entity;
 
-    Message(msgLiteral, "Processing hull %d...\n", hullnum);
+    LogPrint("Processing hull {}...\n", hullnum);
 
     // for each entity in the map file that has geometry
     for (i = 0; i < map.numentities(); i++) {
@@ -755,41 +754,32 @@ static bool wadlist_tried_loading = false;
 
 void EnsureTexturesLoaded()
 {
-    const char *wadstring;
-    char *defaultwad;
-
     if (wadlist_tried_loading)
         return;
 
     wadlist_tried_loading = true;
 
-    wadstring = ValueForKey(pWorldEnt(), "_wad");
+    const char *wadstring = ValueForKey(pWorldEnt(), "_wad");
     if (!wadstring[0])
         wadstring = ValueForKey(pWorldEnt(), "wad");
     if (!wadstring[0])
-        Message(msgWarning, warnNoWadKey);
+        LogPrint("WARNING: No wad or _wad key exists in the worldmodel\n");
     else
         WADList_Init(wadstring);
 
     if (!wadlist.size()) {
         if (wadstring[0])
-            Message(msgWarning, warnNoValidWads);
-        /* Try the default wad name */
-        defaultwad = new char[strlen(options.szMapName) + 5];
-        strcpy(defaultwad, options.szMapName);
-        StripExtension(defaultwad);
-        DefaultExtension(defaultwad, ".wad");
-        WADList_Init(defaultwad);
-        if (wadlist.size())
-            Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
-        delete[] defaultwad;
-    }
-}
+            LogPrint("WARNING: No valid WAD filenames in worldmodel\n");
 
-static const char * // mxd
-GetBaseDirName(const bspversion_t *bspver)
-{
-    return bspver->game->base_dir;
+        /* Try the default wad name */
+        std::filesystem::path defaultwad = options.szMapName;
+        defaultwad.replace_extension("wad");
+
+        WADList_Init(defaultwad.string().c_str());
+
+        if (wadlist.size())
+            LogPrint("Using default WAD: {}\n", defaultwad);
+    }
 }
 
 /*
@@ -800,7 +790,7 @@ ProcessFile
 static void ProcessFile(void)
 {
     // load brushes and entities
-    SetQdirFromPath(GetBaseDirName(options.target_version), options.szMapName);
+    SetQdirFromPath(options.target_game->base_dir, options.szMapName);
     LoadMapFile();
     if (options.fConvertMapFormat) {
         ConvertMapFile();
@@ -834,7 +824,7 @@ static void ProcessFile(void)
 PrintOptions
 ==============
 */
-static void PrintOptions(void)
+[[noreturn]] static void PrintOptions()
 {
     printf(
         "\n"
@@ -950,11 +940,11 @@ static void ParseOptions(char *szOptions)
         if (szTok[0] != '-') {
             /* Treat as filename */
             if (NameCount == 0)
-                strcpy(options.szMapName, szTok);
+                options.szMapName = szTok;
             else if (NameCount == 1)
-                strcpy(options.szBSPName, szTok);
+                options.szBSPName = szTok;
             else
-                Error("Unknown option '%s'", szTok);
+                FError("Unknown option '{}'", szTok);
             NameCount++;
         } else {
             szTok++;
@@ -968,8 +958,10 @@ static void ParseOptions(char *szOptions)
                 options.fNodetail = true;
             else if (!Q_strcasecmp(szTok, "onlyents"))
                 options.fOnlyents = true;
-            else if (!Q_strcasecmp(szTok, "verbose"))
+            else if (!Q_strcasecmp(szTok, "verbose")) {
                 options.fAllverbose = true;
+                log_mask |= 1 << LOG_VERBOSE;
+            }
             else if (!Q_strcasecmp(szTok, "splitspecial"))
                 options.fSplitspecial = true;
             else if (!Q_strcasecmp(szTok, "splitsky"))
@@ -985,16 +977,19 @@ static void ParseOptions(char *szOptions)
             else if (!Q_strcasecmp(szTok, "notex"))
                 options.fNoTextures = true;
             else if (!Q_strcasecmp(szTok, "oldaxis"))
-                logprint(
+                LogPrint(
                     "-oldaxis is now the default and the flag is ignored.\nUse -nooldaxis to get the alternate behaviour.\n");
             else if (!Q_strcasecmp(szTok, "nooldaxis"))
                 options.fOldaxis = false;
             else if (!Q_strcasecmp(szTok, "forcegoodtree"))
                 options.forceGoodTree = true;
-            else if (!Q_strcasecmp(szTok, "noverbose"))
+            else if (!Q_strcasecmp(szTok, "noverbose")) {
                 options.fNoverbose = true;
-            else if (!Q_strcasecmp(szTok, "nopercent"))
+                log_mask &= ~((1 << LOG_PERCENT) | (1 << LOG_STAT) | (1 << LOG_PROGRESS));
+            } else if (!Q_strcasecmp(szTok, "nopercent")) {
                 options.fNopercent = true;
+                log_mask &= ~(1 << LOG_PERCENT);
+            }
             else if (!Q_strcasecmp(szTok, "hexen2"))
                 hexen2 = true; // can be combined with -bsp2 or -2psb
             else if (!Q_strcasecmp(szTok, "q2bsp"))
@@ -1015,19 +1010,19 @@ static void ParseOptions(char *szOptions)
             } else if (!Q_strcasecmp(szTok, "leakdist")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
                 options.dxLeakDist = atoi(szTok2);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "subdivide")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
                 options.dxSubdivide = atoi(szTok2);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "wadpath") || !Q_strcasecmp(szTok, "xwadpath")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
 
                 std::string wadpath = szTok2;
                 /* Remove trailing /, if any */
@@ -1046,30 +1041,30 @@ static void ParseOptions(char *szOptions)
             } else if (!Q_strcasecmp(szTok, "maxnodesize")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
                 options.maxNodeSize = atoi(szTok2);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "midsplitsurffraction")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
                 options.midsplitSurfFraction = qclamp((float)atof(szTok2), 0.0f, 1.0f);
-                logprint("Switching to midsplit when node contains more than fraction %f of model's surfaces\n",
+                LogPrint("Switching to midsplit when node contains more than fraction {} of model's surfaces\n",
                     options.midsplitSurfFraction);
 
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "epsilon")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
                 options.on_epsilon = atof(szTok2);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "worldextent")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
                 options.worldExtent = atof(szTok2);
-                logprint("Overriding maximum world extents to +/- %f units\n", options.worldExtent);
+                LogPrint("Overriding maximum world extents to +/- {} units\n", options.worldExtent);
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "objexport")) {
                 options.fObjExport = true;
@@ -1084,7 +1079,7 @@ static void ParseOptions(char *szOptions)
             } else if (!Q_strcasecmp(szTok, "convert")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
-                    Error("Invalid argument to option %s", szTok);
+                    FError("Invalid argument to option {}", szTok);
 
                 if (!Q_strcasecmp(szTok2, "quake")) {
                     options.convertMapFormat = conversion_t::quake;
@@ -1095,15 +1090,15 @@ static void ParseOptions(char *szOptions)
                 } else if (!Q_strcasecmp(szTok2, "bp")) {
                     options.convertMapFormat = conversion_t::bp;
                 } else {
-                    Error("'-convert' requires one of: quake,quake2,valve,bp");
+                    FError("'-convert' requires one of: quake,quake2,valve,bp");
                 }
 
                 options.fConvertMapFormat = true;
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "forceprt1")) {
                 options.fForcePRT1 = true;
-                logprint("WARNING: Forcing creation of PRT1.\n");
-                logprint("         Only use this for viewing portals in a map editor.\n");
+                LogPrint("WARNING: Forcing creation of PRT1.\n");
+                LogPrint("         Only use this for viewing portals in a map editor.\n");
             } else if (!Q_strcasecmp(szTok, "expand")) {
                 options.fTestExpand = true;
             } else if (!Q_strcasecmp(szTok, "leaktest")) {
@@ -1112,10 +1107,11 @@ static void ParseOptions(char *szOptions)
                 options.fContentHack = true;
             } else if (!Q_strcasecmp(szTok, "nothreads")) {
                 options.fNoThreads = true;
-            } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help"))
+            } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help")) {
                 PrintOptions();
-            else
-                Error("Unknown option '%s'", szTok);
+            } else {
+                FError("Unknown option '{}'", szTok);
+            }
         }
         szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);
     }
@@ -1153,7 +1149,7 @@ static void InitQBSP(int argc, const char **argv)
 
     length = LoadFile("qbsp.ini", &szBuf, false);
     if (length) {
-        Message(msgLiteral, "Loading options from qbsp.ini\n");
+        LogPrint("Loading options from qbsp.ini\n");
         ParseOptions(szBuf);
 
         delete[] szBuf;
@@ -1181,28 +1177,26 @@ static void InitQBSP(int argc, const char **argv)
     ParseOptions(szBuf);
     delete[] szBuf;
 
-    if (options.szMapName[0] == 0)
+    if (options.szMapName.empty())
         PrintOptions();
 
-    StripExtension(options.szMapName);
-    strcat(options.szMapName, ".map");
+    options.szMapName.replace_extension("map");
 
     // The .map extension gets removed right away anyways...
-    if (options.szBSPName[0] == 0)
-        strcpy(options.szBSPName, options.szMapName);
+    if (options.szBSPName.empty())
+        options.szBSPName = options.szMapName;
 
     /* Start logging to <bspname>.log */
-    StripExtension(options.szBSPName);
-    strcat(options.szBSPName, ".log");
-    init_log(options.szBSPName);
+    options.szBSPName.replace_extension("log");
+    InitLog(options.szBSPName);
 
-    Message(msgFile, IntroString);
+    LogPrintSilent(IntroString);
 
     /* If no wadpath given, default to the map directory */
     if (options.wadPathsVec.empty()) {
         options_t::wadpath wp;
         wp.external = false;
-        wp.path = StrippedFilename(options.szMapName);
+        wp.path = options.szMapName.parent_path();
 
         // If options.szMapName is a relative path, StrippedFilename will return the empty string.
         // In that case, don't add it as a wad path.
@@ -1213,24 +1207,20 @@ static void InitQBSP(int argc, const char **argv)
 
     // Remove already existing files
     if (!options.fOnlyents && !options.fConvertMapFormat) {
-        StripExtension(options.szBSPName);
-        strcat(options.szBSPName, ".bsp");
+        options.szBSPName.replace_extension("bsp");
         remove(options.szBSPName);
 
         // Probably not the best place to do this
-        Message(msgLiteral, "Input file: %s\n", options.szMapName);
-        Message(msgLiteral, "Output file: %s\n\n", options.szBSPName);
-
-        StripExtension(options.szBSPName);
-        strcat(options.szBSPName, ".prt");
+        LogPrint("Input file: {}\n", options.szMapName);
+        LogPrint("Output file: {}\n\n", options.szBSPName);
+        
+        options.szBSPName.replace_extension("prt");
         remove(options.szBSPName);
 
-        StripExtension(options.szBSPName);
-        strcat(options.szBSPName, ".pts");
+        options.szBSPName.replace_extension("pts");
         remove(options.szBSPName);
 
-        StripExtension(options.szBSPName);
-        strcat(options.szBSPName, ".por");
+        options.szBSPName.replace_extension("por");
         remove(options.szBSPName);
     }
 }
@@ -1242,9 +1232,7 @@ main
 */
 int qbsp_main(int argc, const char **argv)
 {
-    double start, end;
-
-    Message(msgScreen, IntroString);
+    LogPrint(IntroString);
 
     InitQBSP(argc, argv);
 
@@ -1255,16 +1243,16 @@ int qbsp_main(int argc, const char **argv)
     }
 
     // do it!
-    start = I_FloatTime();
+    auto start = I_FloatTime();
     ProcessFile();
-    end = I_FloatTime();
+    auto end = I_FloatTime();
 
-    Message(msgLiteral, "\n%5.3f seconds elapsed\n", end - start);
+    LogPrint("\n{:5.3} seconds elapsed\n", (end - start).count());
 
     //      FreeAllMem();
     //      PrintMem();
 
-    close_log();
+    CloseLog();
 
     return 0;
 }

@@ -296,7 +296,7 @@ public:
         }
 
         if (x == -1)
-            Error("%s: no axis found", __func__);
+            FError("no axis found");
 
         qvec3d vup { };
 
@@ -335,11 +335,11 @@ public:
         vec3_t dir, edgenormal;
 
         if (count < 3)
-            Error("%s: %zu points", __func__, count);
+            FError("{} points", count);
 
         vec_t a = area();
         if (a < 1)
-            Error("%s: %f area", __func__, a);
+            FError("{} area", a);
 
         plane_t face = plane();
 
@@ -349,19 +349,19 @@ public:
 
             for (; j < 3; j++)
                 if (p1[j] > bogus_range || p1[j] < -bogus_range)
-                    Error("%s: BUGUS_RANGE: %f", __func__, p1[j]);
+                    FError("BOGUS_RANGE: %f", p1[j]);
 
             /* check the point is on the face plane */
             vec_t d = DotProduct(&p1[0], face.normal) - face.dist;
             if (d < -ON_EPSILON || d > ON_EPSILON)
-                Error("%s: point off plane", __func__);
+                FError("point off plane");
 
             /* check the edge isn't degenerate */
             const qvec3d &p2 = get[(i + 1) % count];
             qvec3d dir = p2 - p1;
 
             if (qv::length(dir) < ON_EPSILON)
-                Error("%s: degenerate edge", __func__);
+                FError("degenerate edge");
 
             qvec3d edgenormal = qv::normalize(qv::cross(face.normal, dir));
             vec_t edgedist = qv::dot(p1, edgenormal) + ON_EPSILON;
@@ -372,7 +372,7 @@ public:
                     continue;
                 d = qv::dot(at(j), edgenormal);
                 if (d > edgedist)
-                    Error("%s: non-convex", __func__);
+                    FError("non-convex");
             }
         }
     }
@@ -484,7 +484,7 @@ public:
         }
 
         if (results[0].count > MAX_POINTS_ON_WINDING || results[1].count > MAX_POINTS_ON_WINDING)
-            Error("%s: MAX_POINTS_ON_WINDING", __func__);
+            FError("MAX_POINTS_ON_WINDING");
 
         return { std::move(results[0]), std::move(results[1]) };
     }

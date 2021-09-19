@@ -104,7 +104,7 @@ static void CanonicalVector(const vec3_t p1, const vec3_t p2, vec3_t vec)
     } else
         vec[2] = 0;
 
-    Message(msgWarning, warnDegenerateEdge, length, p1[0], p1[1], p1[2]);
+    LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", length, p1[0], p1[1], p1[2]);
 }
 
 static wedge_t *FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
@@ -155,7 +155,7 @@ static wedge_t *FindEdge(vec3_t p1, vec3_t p2, vec_t *t1, vec_t *t2)
     }
 
     if (numwedges >= cWEdges)
-        Error("Internal error: didn't allocate enough edges for tjuncs?");
+        FError("Internal error: didn't allocate enough edges for tjuncs?");
     edge = pWEdges + numwedges;
     numwedges++;
 
@@ -191,7 +191,7 @@ static void AddVert(wedge_t *edge, vec_t t)
 
     // insert a new wvert before v
     if (numwverts >= cWVerts)
-        Error("Internal error: didn't allocate enough vertices for tjuncs?");
+        FError("Internal error: didn't allocate enough vertices for tjuncs?");
 
     newv = pWVerts + numwverts;
     numwverts++;
@@ -311,7 +311,7 @@ restart:
          */
         newf = NewFaceFromFace(face);
         if (face->original)
-            Error("original face still exists (%s)", __func__);
+            FError("original face still exists");
 
         newf->original = chain;
         chain = newf;
@@ -361,7 +361,7 @@ restart:
         if (v->t < t2 - T_EPSILON) {
             /* insert a new vertex here */
             if (superface->w.numpoints == MAX_SUPERFACE_POINTS)
-                Error("%s: tjunc fixups generated too many edges (max %d)", __func__, MAX_SUPERFACE_POINTS);
+                FError("tjunc fixups generated too many edges (max {})", MAX_SUPERFACE_POINTS);
 
             tjuncs++;
             for (int32_t k = superface->w.numpoints; k > j; k--)
@@ -443,8 +443,8 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     vec3_t maxs, mins;
     face_t *superface;
     int i, superface_bytes;
-
-    Message(msgProgress, "Tjunc");
+    
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     /*
      * Guess edges = 1/2 verts
@@ -477,8 +477,8 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
 
     tjunc_find_r(headnode);
 
-    Message(msgStat, "%8d world edges", numwedges);
-    Message(msgStat, "%8d edge points", numwverts);
+    LogPrint(LOG_STAT, "     {:8} world edges\n", numwedges);
+    LogPrint(LOG_STAT, "     {:8} edge points\n", numwverts);
 
     superface_bytes = offsetof(face_t, w.points[MAX_SUPERFACE_POINTS]);
     superface = (face_t *)AllocMem(OTHER, superface_bytes, true);
@@ -492,6 +492,6 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     delete[] pWVerts;
     delete[] pWEdges;
 
-    Message(msgStat, "%8d edges added by tjunctions", tjuncs);
-    Message(msgStat, "%8d faces added by tjunctions", tjuncfaces);
+    LogPrint(LOG_STAT, "     {:8} edges added by tjunctions\n", tjuncs);
+    LogPrint(LOG_STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);
 }

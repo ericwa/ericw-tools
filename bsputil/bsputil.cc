@@ -35,6 +35,7 @@
 #include <list>
 #include <algorithm> // std::sort
 #include <string>
+#include <fstream>
 #include <light/light.hh>
 
 /* FIXME - share header with qbsp, etc. */
@@ -56,7 +57,7 @@ struct lumpinfo_t
     char name[16]; // must be null terminated
 };
 
-static void ExportWad(FILE *wadfile, mbsp_t *bsp)
+static void ExportWad(const qfile_t &wadfile, mbsp_t *bsp)
 {
     wadinfo_t header;
     lumpinfo_t lump;
@@ -79,7 +80,7 @@ static void ExportWad(FILE *wadfile, mbsp_t *bsp)
     /* Byte-swap header and write out */
     header.numlumps = LittleLong(header.numlumps);
     header.infotableofs = LittleLong(header.infotableofs);
-    fwrite(&header, sizeof(header), 1, wadfile);
+    SafeWrite(wadfile, &header, sizeof(header));
 
     /* Miptex data will follow the lump headers */
     filepos = sizeof(header) + numvalid * sizeof(lump);
@@ -103,7 +104,7 @@ static void ExportWad(FILE *wadfile, mbsp_t *bsp)
         lump.filepos = LittleLong(lump.filepos);
         lump.disksize = LittleLong(lump.disksize);
         lump.size = LittleLong(lump.size);
-        fwrite(&lump, sizeof(lump), 1, wadfile);
+        SafeWrite(wadfile, &lump, sizeof(lump));
     }
     for (i = 0; i < texdata->nummiptex; i++) {
         if (texdata->dataofs[i] < 0)
@@ -116,7 +117,7 @@ static void ExportWad(FILE *wadfile, mbsp_t *bsp)
         miptex->height = LittleLong(miptex->height);
         for (j = 0; j < MIPLEVELS; j++)
             miptex->offsets[j] = LittleLong(miptex->offsets[j]);
-        fwrite(miptex, size, 1, wadfile);
+        SafeWrite(wadfile, miptex, size);
     }
 }
 
@@ -126,7 +127,7 @@ static void PrintModelInfo(const mbsp_t *bsp)
 
     for (i = 0; i < bsp->nummodels; i++) {
         const dmodel_t *dmodel = &bsp->dmodels[i];
-        printf("model %3d: %5d faces (firstface = %d)\n", i, dmodel->numfaces, dmodel->firstface);
+        Print("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
     }
 }
 
@@ -155,7 +156,7 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
             const float dist = DotProduct(plane.normal, point) - plane.dist;
 
             if (dist < -PLANE_ON_EPSILON || dist > PLANE_ON_EPSILON)
-                printf("WARNING: face %d, point %d off plane by %f\n", (int)(face - bsp->dfaces), j, dist);
+                fmt::print("WARNING: face {}, point {} off plane by {}\n", static_cast<ptrdiff_t>(face - bsp->dfaces), j, dist);
         }
     }
 }
@@ -205,11 +206,11 @@ static void PrintNodeHeights(const mbsp_t *bsp)
         // handle this node
         if (level != current_level) {
             current_level = level;
-            printf("\nNode heights at level %d: ", level);
+            fmt::print("\nNode heights at level {}: ", level);
         }
 
         // print the level of this node
-        printf("%d, ", cache.at(node));
+        fmt::print("{}, ", cache.at(node));
 
         // add child nodes to the bfs
         if (level < maxlevel) {
@@ -241,33 +242,33 @@ static void CheckBSPFile(const mbsp_t *bsp)
 
         /* texinfo bounds check */
         if (face->texinfo < 0)
-            printf("warning: face %d has negative texinfo (%d)\n", i, face->texinfo);
+            fmt::print("warning: face {} has negative texinfo ({})\n", i, face->texinfo);
         if (face->texinfo >= bsp->numtexinfo)
-            printf("warning: face %d has texinfo out of range (%d >= %d)\n", i, face->texinfo, bsp->numtexinfo);
+            fmt::print("warning: face {} has texinfo out of range ({} >= {})\n", i, face->texinfo, bsp->numtexinfo);
         referenced_texinfos.insert(face->texinfo);
 
         /* planenum bounds check */
         if (face->planenum < 0)
-            printf("warning: face %d has negative planenum (%d)\n", i, face->planenum);
+            fmt::print("warning: face {} has negative planenum ({})\n", i, face->planenum);
         if (face->planenum >= bsp->numplanes)
-            printf("warning: face %d has planenum out of range (%d >= %d)\n", i, face->planenum, bsp->numplanes);
+            fmt::print("warning: face {} has planenum out of range ({} >= {})\n", i, face->planenum, bsp->numplanes);
         referenced_planenums.insert(face->planenum);
 
         /* lightofs check */
         if (face->lightofs < -1)
-            printf("warning: face %d has negative light offset (%d)\n", i, face->lightofs);
+            fmt::print("warning: face {} has negative light offset ({})\n", i, face->lightofs);
         if (face->lightofs >= bsp->lightdatasize)
-            printf("warning: face %d has light offset out of range "
-                   "(%d >= %d)\n",
-                i, face->lightofs, bsp->lightdatasize);
+            fmt::print("warning: face {} has light offset out of range "
+                        "({} >= {})\n",
+                        i, face->lightofs, bsp->lightdatasize);
 
         /* edge check */
         if (face->firstedge < 0)
-            printf("warning: face %d has negative firstedge (%d)\n", i, face->firstedge);
+            fmt::print("warning: face {} has negative firstedge ({})\n", i, face->firstedge);
         if (face->numedges < 3)
-            printf("warning: face %d has < 3 edges (%d)\n", i, face->numedges);
+            fmt::print("warning: face {} has < 3 edges ({})\n", i, face->numedges);
         if (face->firstedge + face->numedges > bsp->numsurfedges)
-            printf("warning: face %d has edges out of range (%d..%d >= %d)\n", i, face->firstedge,
+            fmt::print("warning: face {} has edges out of range ({}..{} >= {})\n", i, face->firstedge,
                 face->firstedge + face->numedges - 1, bsp->numsurfedges);
 
         for (int j = 0; j < 4; j++) {
@@ -283,9 +284,9 @@ static void CheckBSPFile(const mbsp_t *bsp)
         for (j = 0; j < 2; j++) {
             const uint32_t vertex = edge->v[j];
             if (vertex > bsp->numvertexes)
-                printf("warning: edge %d has vertex %d out range "
-                       "(%d >= %d)\n",
-                    i, j, vertex, bsp->numvertexes);
+                fmt::print("warning: edge {} has vertex {} out range "
+                            "({} >= {})\n",
+                            i, j, vertex, bsp->numvertexes);
             referenced_vertexes.insert(vertex);
         }
     }
@@ -294,16 +295,16 @@ static void CheckBSPFile(const mbsp_t *bsp)
     for (i = 0; i < bsp->numsurfedges; i++) {
         const int edgenum = bsp->dsurfedges[i];
         if (!edgenum)
-            printf("warning: surfedge %d has zero value!\n", i);
+            fmt::print("warning: surfedge {} has zero value!\n", i);
         if (abs(edgenum) >= bsp->numedges)
-            printf("warning: surfedge %d is out of range (abs(%d) >= %d)\n", i, edgenum, bsp->numedges);
+            fmt::print("warning: surfedge {} is out of range (abs({}) >= {})\n", i, edgenum, bsp->numedges);
     }
 
     /* marksurfaces */
     for (i = 0; i < bsp->numleaffaces; i++) {
         const uint32_t surfnum = bsp->dleaffaces[i];
         if (surfnum >= bsp->numfaces)
-            printf("warning: marksurface %d is out of range (%d >= %d)\n", i, surfnum, bsp->numfaces);
+            fmt::print("warning: marksurface {} is out of range ({} >= {})\n", i, surfnum, bsp->numfaces);
     }
 
     /* leafs */
@@ -311,15 +312,15 @@ static void CheckBSPFile(const mbsp_t *bsp)
         const mleaf_t *leaf = &bsp->dleafs[i];
         const uint32_t endmarksurface = leaf->firstmarksurface + leaf->nummarksurfaces;
         if (endmarksurface > bsp->numleaffaces)
-            printf("warning: leaf %d has marksurfaces out of range "
-                   "(%d..%d >= %d)\n",
-                i, leaf->firstmarksurface, endmarksurface - 1, bsp->numleaffaces);
+            fmt::print("warning: leaf {} has marksurfaces out of range "
+                        "({}..{} >= {})\n",
+                        i, leaf->firstmarksurface, endmarksurface - 1, bsp->numleaffaces);
         if (leaf->visofs < -1)
-            printf("warning: leaf %d has negative visdata offset (%d)\n", i, leaf->visofs);
+            fmt::print("warning: leaf {} has negative visdata offset ({})\n", i, leaf->visofs);
         if (leaf->visofs >= bsp->visdatasize)
-            printf("warning: leaf %d has visdata offset out of range "
-                   "(%d >= %d)\n",
-                i, leaf->visofs, bsp->visdatasize);
+            fmt::print("warning: leaf {} has visdata offset out of range "
+                        "({} >= {})\n",
+                        i, leaf->visofs, bsp->visdatasize);
     }
 
     /* nodes */
@@ -330,17 +331,17 @@ static void CheckBSPFile(const mbsp_t *bsp)
         for (j = 0; j < 2; j++) {
             const int32_t child = node->children[j];
             if (child >= 0 && child >= bsp->numnodes)
-                printf("warning: node %d has child %d (node) out of range "
-                       "(%d >= %d)\n",
-                    i, j, child, bsp->numnodes);
+                fmt::print("warning: node {} has child {} (node) out of range "
+                            "({} >= {})\n",
+                            i, j, child, bsp->numnodes);
             if (child < 0 && -child - 1 >= bsp->numleafs)
-                printf("warning: node %d has child %d (leaf) out of range "
-                       "(%d >= %d)\n",
-                    i, j, -child - 1, bsp->numleafs);
+                fmt::print("warning: node {} has child {} (leaf) out of range "
+                            "({} >= {})\n",
+                            i, j, -child - 1, bsp->numleafs);
         }
 
         if (node->children[0] == node->children[1]) {
-            printf("warning: node %d has both children %d\n", i, node->children[0]);
+            fmt::print("warning: node {} has both children {}\n", i, node->children[0]);
         }
 
         referenced_planenums.insert(node->planenum);
@@ -353,15 +354,15 @@ static void CheckBSPFile(const mbsp_t *bsp)
         for (int j = 0; j < 2; j++) {
             const int32_t child = clipnode->children[j];
             if (child >= 0 && child >= bsp->numclipnodes)
-                printf("warning: clipnode %d has child %d (clipnode) out of range "
-                       "(%d >= %d)\n",
-                    i, j, child, bsp->numclipnodes);
+                fmt::print("warning: clipnode {} has child {} (clipnode) out of range "
+                            "({} >= {})\n",
+                            i, j, child, bsp->numclipnodes);
             if (child < 0 && child < CONTENTS_MIN)
-                printf("warning: clipnode %d has invalid contents (%d) for child %d\n", i, child, j);
+                fmt::print("warning: clipnode {} has invalid contents ({}) for child {}\n", i, child, j);
         }
 
         if (clipnode->children[0] == clipnode->children[1]) {
-            printf("warning: clipnode %d has both children %d\n", i, clipnode->children[0]);
+            fmt::print("warning: clipnode {} has both children {}\n", i, clipnode->children[0]);
         }
 
         referenced_planenums.insert(clipnode->planenum);
@@ -378,7 +379,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
             }
         }
         if (num_unreferenced_texinfo)
-            printf("warning: %d texinfos are unreferenced\n", num_unreferenced_texinfo);
+            fmt::print("warning: {} texinfos are unreferenced\n", num_unreferenced_texinfo);
     }
 
     /* unreferenced planes */
@@ -390,7 +391,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
             }
         }
         if (num_unreferenced_planes)
-            printf("warning: %d planes are unreferenced\n", num_unreferenced_planes);
+            fmt::print("warning: {} planes are unreferenced\n", num_unreferenced_planes);
     }
 
     /* unreferenced vertices */
@@ -402,7 +403,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
             }
         }
         if (num_unreferenced_vertexes)
-            printf("warning: %d vertexes are unreferenced\n", num_unreferenced_vertexes);
+            fmt::print("warning: {} vertexes are unreferenced\n", num_unreferenced_vertexes);
     }
 
     /* tree balance */
@@ -416,29 +417,29 @@ static void CheckBSPFile(const mbsp_t *bsp)
             visofs_set.insert(leaf->visofs);
         }
     }
-    printf("%d unique visdata offsets for %d leafs\n", static_cast<int>(visofs_set.size()), bsp->numleafs);
-    printf("%d visleafs in world model\n", bsp->dmodels[0].visleafs);
+    fmt::print("{} unique visdata offsets for {} leafs\n", visofs_set.size(), bsp->numleafs);
+    fmt::print("{} visleafs in world model\n", bsp->dmodels[0].visleafs);
 
     /* unique lightstyles */
-    printf("%d lightstyles used:\n", static_cast<int>(used_lightstyles.size()));
+    fmt::print("{} lightstyles used:\n", used_lightstyles.size());
     {
-        std::vector<int> v;
+        std::vector<uint8_t> v;
         for (uint8_t style : used_lightstyles) {
-            v.push_back(static_cast<int>(style));
+            v.push_back(style);
         }
         std::sort(v.begin(), v.end());
-        for (int style : v) {
-            printf("\t%d\n", style);
+        for (uint8_t style : v) {
+            fmt::print("\t{}\n", style);
         }
     }
 
-    printf("world mins: %f %f %f maxs: %f %f %f\n", bsp->dmodels[0].mins[0], bsp->dmodels[0].mins[1],
+    fmt::print("world mins: {} {} {} maxs: {} {} {}\n", bsp->dmodels[0].mins[0], bsp->dmodels[0].mins[1],
         bsp->dmodels[0].mins[2], bsp->dmodels[0].maxs[0], bsp->dmodels[0].maxs[1], bsp->dmodels[0].maxs[2]);
 }
 
 static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
 {
-    printf("comparing %d with %d faces\n", refBsp.numfaces, bsp.numfaces);
+    fmt::print("comparing {} with {} faces\n", refBsp.numfaces, bsp.numfaces);
 
     const dmodel_t *world = BSP_GetWorldModel(&bsp);
     const dmodel_t *refWorld = BSP_GetWorldModel(&refBsp);
@@ -458,7 +459,7 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
         // Search for a face in bsp touching refFaceCentroid.
         auto *matchedFace = BSP_FindFaceAtPoint(&bsp, world, wantedPoint, wantedNormal);
         if (matchedFace == nullptr) {
-            printf("couldn't find a face at %f %f %f normal %f %f %f\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
+            fmt::print("couldn't find a face at {} {} {} normal {} {} {}\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
                 wantedNormal[0], wantedNormal[1], wantedNormal[2]);
         }
 
@@ -467,7 +468,7 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
         //        if (refFaceSelfCheck == refFace) {
         //            matches ++;
         //        } else {
-        //            printf("not match at %f %f %f wanted %p got %p\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
+        //            fmt::print("not match at {} {} {} wanted {} got {}\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
         //            refFace, refFaceSelfCheck); Face_DebugPrint(refBsp, refFace); Face_DebugPrint(refBsp,
         //            refFaceSelfCheck); notmat++;
         //        }
@@ -481,7 +482,7 @@ static void FindFaces(const mbsp_t *bsp, const vec3_t &pos, const vec3_t &normal
         const bsp2_dface_t *face = BSP_FindFaceAtPoint(bsp, model, pos, normal);
 
         if (face != nullptr) {
-            printf("model %d face %d: texture '%s' texinfo %d\n", i, static_cast<int>(face - bsp->dfaces),
+            fmt::print("model {} face {}: texture '{}' texinfo {}\n", i, static_cast<ptrdiff_t>(face - bsp->dfaces),
                 Face_TextureName(bsp, face), face->texinfo);
         }
     }
@@ -492,10 +493,6 @@ int main(int argc, char **argv)
     bspdata_t bspdata;
     mbsp_t &bsp = bspdata.bsp.emplace<mbsp_t>();
 
-    char source[1024];
-    FILE *f;
-    int i, err;
-
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf(
@@ -505,16 +502,15 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    strcpy(source, argv[argc - 1]);
-    DefaultExtension(source, ".bsp");
+    std::filesystem::path source = DefaultExtension(argv[argc - 1], "bsp");
     printf("---------------------\n");
-    printf("%s\n", source);
+    fmt::print("{}\n", source);
 
     LoadBSPFile(source, &bspdata);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
-    for (i = 0; i < argc - 1; i++) {
+    for (int32_t i = 0; i < argc - 1; i++) {
         if (!strcmp(argv[i], "--compare")) {
             i++;
             if (i == argc - 1) {
@@ -522,14 +518,13 @@ int main(int argc, char **argv)
             }
             // Load the reference BSP
 
-            char refbspname[1024];
+            std::filesystem::path refbspname = DefaultExtension(argv[i], "bsp");
+
             bspdata_t refbspdata;
-            strcpy(refbspname, argv[i]);
-            DefaultExtension(refbspname, ".bsp");
             LoadBSPFile(refbspname, &refbspdata);
             ConvertBSPFormat(&refbspdata, &bspver_generic);
 
-            printf("comparing reference bsp %s with test bsp %s\n", refbspname, source);
+            fmt::print("comparing reference bsp {} with test bsp {}\n", refbspname, source);
 
             CompareBSPFiles(std::get<mbsp_t>(refbspdata.bsp), bsp);
 
@@ -550,50 +545,39 @@ int main(int argc, char **argv)
             }
 
             if (!fmt) {
-                Error("Unsupported format %s", argv[i]);
+                Error("Unsupported format {}", argv[i]);
             }
 
             ConvertBSPFormat(&bspdata, fmt);
 
-            StripExtension(source);
-            strcat(source, "-");
-            strcat(source, argv[i]);
-            strcat(source, ".bsp");
-
-            WriteBSPFile(source, &bspdata);
+            WriteBSPFile(source.replace_filename(source.filename().string() + "-" + argv[i]), &bspdata);
 
         } else if (!strcmp(argv[i], "--extract-entities")) {
-            StripExtension(source);
-            DefaultExtension(source, ".ent");
-            printf("-> writing %s... ", source);
+            source.replace_extension(".ent");
+            fmt::print("-> writing {}... ", source);
 
-            f = fopen(source, "w");
+            std::ofstream f(source);
             if (!f)
-                Error("couldn't open %s for writing\n", source);
+                Error("couldn't open {} for writing\n", source);
 
-            err = fwrite(bsp.dentdata, sizeof(char), bsp.entdatasize - 1, f);
-            if (err != bsp.entdatasize - 1)
-                Error("%s", strerror(errno));
+            f << bsp.dentdata;
 
-            err = fclose(f);
-            if (err)
-                Error("%s", strerror(errno));
+            f.close();
+
+            if (!f)
+                Error("{}", strerror(errno));
 
             printf("done.\n");
         } else if (!strcmp(argv[i], "--extract-textures")) {
-            StripExtension(source);
-            DefaultExtension(source, ".wad");
-            printf("-> writing %s... ", source);
+            source.replace_extension(".wad");
+            fmt::print("-> writing {}... ", source);
 
-            f = fopen(source, "wb");
+            auto f = SafeOpenWrite(source);
+            
             if (!f)
-                Error("couldn't open %s for writing\n", source);
+                Error("couldn't open {} for writing\n", source);
 
             ExportWad(f, &bsp);
-
-            err = fclose(f);
-            if (err)
-                Error("%s", strerror(errno));
 
             printf("done.\n");
         } else if (!strcmp(argv[i], "--check")) {
@@ -617,7 +601,7 @@ int main(int argc, char **argv)
                 FindFaces(&bsp, pos, normal);
             }
             catch (const std::exception &) {
-                printf("Error reading position/normal\n");
+                Error("Error reading position/normal\n");
             }
             return 0;
         } else if (!strcmp(argv[i], "--settexinfo")) {
@@ -643,20 +627,24 @@ int main(int argc, char **argv)
         } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly")) {
             const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
 
-            StripExtension(source);
-            DefaultExtension(source, "-decompile.map");
-            printf("-> writing %s... ", source);
+            source.replace_filename(source.filename().string() + "-decompile").replace_extension("map");
+            fmt::print("-> writing {}... ", source);
 
-            f = fopen(source, "w");
+            std::ofstream f(source);
+
             if (!f)
-                Error("couldn't open %s for writing\n", source);
+                Error("couldn't open {} for writing\n", source);
 
             decomp_options options;
             options.geometryOnly = geomOnly;
 
             DecompileBSP(&bsp, options, f);
 
-            fclose(f);
+            f.close();
+
+            if (!f)
+                Error("{}", strerror(errno));
+
             printf("done.\n");
             return 0;
         }

@@ -26,7 +26,7 @@
 
 using namespace nlohmann;
 
-static void serialize_bsp(const mbsp_t &bsp, const char *name)
+static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
 {
     json j = json::object();
 
@@ -138,29 +138,25 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name)
 
 int main(int argc, char **argv)
 {
-    bspdata_t bsp;
-    char source[1024];
-    int i;
-
     printf("---- bspinfo / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf("usage: bspinfo bspfile [bspfiles]\n");
         exit(1);
     }
 
-    for (i = 1; i < argc; i++) {
+    for (int32_t i = 1; i < argc; i++) {
         printf("---------------------\n");
-        strcpy(source, argv[i]);
-        DefaultExtension(source, ".bsp");
-        printf("%s\n", source);
-
+        std::filesystem::path source = DefaultExtension(argv[i], ".bsp");
+        fmt::print("{}\n", source);
+        
+        bspdata_t bsp;
         LoadBSPFile(source, &bsp);
         PrintBSPFileSizes(&bsp);
 
-        strcat(source, ".json");
+        source.replace_extension("json");
         ConvertBSPFormat(&bsp, &bspver_generic);
 
-        serialize_bsp(std::get<mbsp_t>(bsp.bsp), source);
+        SerializeBSP(std::get<mbsp_t>(bsp.bsp), source);
 
         printf("---------------------\n");
     }

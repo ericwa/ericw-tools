@@ -20,7 +20,7 @@
 
 #include <cstdint>
 #include <cassert>
-#include <cstdio>
+//#include <cstdio>
 #include <iostream>
 
 #include <light/phong.hh>
@@ -412,7 +412,7 @@ static int Q2_FacePhongValue(const mbsp_t *bsp, const bsp2_dface_t *face)
 
 void CalculateVertexNormals(const mbsp_t *bsp)
 {
-    logprint("--- %s ---\n", __func__);
+    LogPrint("--- {} ---\n", __func__);
 
     Q_assert(!s_builtPhongCaches);
     s_builtPhongCaches = true;
@@ -457,7 +457,8 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             interior_verts.insert(i);
         }
     }
-    // printf("CalculateVertexNormals: %d interior verts\n", (int)interior_verts.size());
+
+    //fmt::print("CalculateVertexNormals: {} interior verts\n", interior_verts.size());
 
     // build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
@@ -544,11 +545,11 @@ void CalculateVertexNormals(const mbsp_t *bsp)
     for (int i = 0; i < bsp->numfaces; i++) {
         const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         if (f->numedges < 3) {
-            logprint("%s: face %d is degenerate with %d edges\n", __func__, i, f->numedges);
+            FLogPrint("face {} is degenerate with {} edges\n", i, f->numedges);
             for (int j = 0; j < f->numedges; j++) {
                 vec3_t pt;
                 Face_PointAtIndex(bsp, f, j, pt);
-                logprint("                         vert at %f %f %f\n", pt[0], pt[1], pt[2]);
+                LogPrint("                         vert at {} {} {}\n", pt[0], pt[1], pt[2]);
             }
             continue;
         }
@@ -590,7 +591,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 // so there is no contribution to the normal of the triangle in the middle of the
                 // line. Not really an error, just set it to use the face normal.
 #if 0
-                logprint("Failed to calculate normal for vertex %d at (%f %f %f)\n",
+                LogPrint("Failed to calculate normal for vertex {} at ({} {} {})\n",
                          vertIndex,
                          bsp->dvertexes[vertIndex].point[0],
                          bsp->dvertexes[vertIndex].point[1],

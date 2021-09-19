@@ -23,92 +23,99 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <fstream>
+#include <iostream>
 
 #include <common/log.hh>
 #include <common/threads.hh>
 #include <common/cmdlib.hh>
 
+log_flag_t log_mask = (std::numeric_limits<log_flag_t>::max()) & ~((1 << LOG_VERBOSE) | (1 << LOG_STAT) | (1 << LOG_PROGRESS));
+
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h> // for OutputDebugStringA
 #endif
 
-static FILE *logfile;
-static bool log_ok;
+static std::ofstream logfile;
 
-void init_log(const char *filename)
+void InitLog(const std::filesystem::path &filename)
 {
-    log_ok = false;
-    if ((logfile = fopen(filename, "w")))
-        log_ok = true;
+    logfile.open(filename);
 }
 
-void close_log()
+void CloseLog()
 {
-    if (log_ok)
-        fclose(logfile);
+    if (logfile)
+        logfile.close();
 }
 
-static void logvprint_locked__(const char *fmt, va_list args)
+void LogPrintLocked(const char *str)
 {
-    va_list log_args;
-    char line[1024];
-
-    va_copy(log_args, args);
-    vsnprintf(line, sizeof(line), fmt, args);
-    va_end(log_args);
-
-    // print to log file
-    if (log_ok) {
-        fprintf(logfile, "%s", line);
-        fflush(logfile);
+    // log file, if open
+    if (logfile)
+    {
+        logfile << str;
+        logfile.flush();
     }
 
-    // print to stdout
-    printf("%s", line);
-    fflush(stdout);
+    // stdout
+    std::cout << str;
 
     // print to windows console
 #ifdef _WIN32
-    OutputDebugStringA(line);
+    OutputDebugStringA(str);
 #endif
 }
 
-void logvprint(const char *fmt, va_list args)
+static bool fInPercent = false;
+
+void LogPrint(log_flag_t type, const char *str)
 {
-    ThreadLock();
-    InterruptThreadProgress__();
-    logvprint_locked__(fmt, args);
-    ThreadUnlock();
-}
+    if (type && !(log_mask & (1 << type)))
+        return;
 
-void logprint_locked__(const char *fmt, ...)
-{
-    va_list args;
-
-    va_start(args, fmt);
-    logvprint_locked__(fmt, args);
-    va_end(args);
-}
-
-void logprint_silent(const char *fmt, ...)
-{
-    va_list args;
-
-    ThreadLock();
-    va_start(args, fmt);
-    vfprintf(logfile, fmt, args);
-    va_end(args);
-    ThreadUnlock();
-}
-
-void logprint(const char *fmt, ...)
-{
-    va_list args;
+    if (fInPercent && type != LOG_PERCENT) {
+        std::cout << "\r";
+        fInPercent = false;
+    }
 
     ThreadLock();
     InterruptThreadProgress__();
-    va_start(args, fmt);
-    logvprint_locked__(fmt, args);
-    va_end(args);
+    LogPrintLocked(str);
+    ThreadUnlock();
+}
+
+void LogPrintSilent(const char *str)
+{
+    ThreadLock();
+    InterruptThreadProgress__();
+
+    if (logfile)
+    {
+        logfile << str;
+        logfile.flush();
+    }
+
+    ThreadUnlock();
+}
+
+void LogPercent(int32_t value, int32_t max)
+{
+    if (!(log_mask & (1 << LOG_PERCENT)))
+        return;
+
+    if (((value + 1) * 100) / max == (value * 100) / max)
+        return;
+
+    ThreadLock();
+    InterruptThreadProgress__();
+
+    // stdout
+    fmt::print("\r{:3}%", ((value + 1) * 100) / max);
+    fflush(stdout);
+
+    fInPercent = true;
+
     ThreadUnlock();
 }

@@ -19,13 +19,14 @@ See file, 'COPYING', for details.
 
 #include "glview.h"
 
-#include <cstdio>
+//#include <cstdio>
 #include <cassert>
 
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QTime>
+#include <fmt/format.h>
 
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent), m_keysPressed(0), m_keymoveUpdateTimer(0), m_lastMouseDownPos(0, 0), m_displayAspect(1),
@@ -206,7 +207,7 @@ void GLView::wheelEvent(QWheelEvent *event)
 
 void GLView::timerEvent(QTimerEvent *event)
 {
-    printf("key movement %s\n", QTime::currentTime().toString().toStdString().c_str());
+    fmt::print("key movement {}\n", QTime::currentTime().toString().toStdString());
 
     const float speed = 0.1;
 

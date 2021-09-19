@@ -123,7 +123,7 @@ std::vector<entdict_t> EntData_Parse(const char *entdata)
         if (!data)
             break;
         if (com_token[0] != '{')
-            Error("%s: found %s when expecting {", __func__, com_token);
+            FError("found {} when expecting {", com_token);
 
         /* Allocate a new entity */
         entdict_t entity;
@@ -133,26 +133,26 @@ std::vector<entdict_t> EntData_Parse(const char *entdata)
             /* parse key */
             data = COM_Parse(data);
             if (!data)
-                Error("%s: EOF without closing brace", __func__);
+                FError("EOF without closing brace");
 
             std::string keystr{com_token};
 
             if (keystr == "}")
                 break;
             if (keystr.length() > MAX_ENT_KEY - 1)
-                Error("%s: Key length > %i: '%s'", __func__, MAX_ENT_KEY - 1, keystr.c_str());
+                FError("Key length > {}: '{}'", MAX_ENT_KEY - 1, keystr);
 
             /* parse value */
             data = COM_Parse(data);
             if (!data)
-                Error("%s: EOF without closing brace", __func__);
+                FError("EOF without closing brace");
 
             std::string valstring{com_token};
 
             if (valstring[0] == '}')
-                Error("%s: closing brace without data", __func__);
+                FError("closing brace without data");
             if (valstring.length() > MAX_ENT_VALUE - 1)
-                Error("%s: Value length > %i", __func__, MAX_ENT_VALUE - 1);
+                FError("Value length > {}", MAX_ENT_VALUE - 1);
 
             entity.set(keystr, valstring);
         }

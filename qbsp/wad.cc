@@ -112,7 +112,7 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
             if (external)
                 lump.size = lump.disksize = sizeof(dmiptex_t);
 
-            // printf("Created texture_t %s %d %d\n", tex->name, tex->width, tex->height);
+            //fmt::print("Created texture_t {} {} {}\n", tex->name, tex->width, tex->height);
         } else
             lump.size = 0;
 
@@ -124,15 +124,15 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
     return true;
 }
 
-static void WADList_OpenWad(const char *fpath, bool external)
+static void WADList_OpenWad(const std::filesystem::path &fpath, bool external)
 {
     wad_t wad;
 
-    wad.file = fopen(fpath, "rb");
+    wad.file = fopen(fpath.string().c_str(), "rb");
 
     if (wad.file) {
         if (options.fVerbose)
-            Message(msgLiteral, "Opened WAD: %s\n", fpath);
+            LogPrint("Opened WAD: {}\n", fpath);
 
         if (WAD_LoadInfo(wad, external)) {
             wadlist.push_front(wad);
@@ -140,7 +140,7 @@ static void WADList_OpenWad(const char *fpath, bool external)
             return;
         }
 
-        Message(msgWarning, warnNotWad, fpath);
+        LogPrint("WARNING: {} isn't a wadfile\n", fpath);
         fclose(wad.file);
     } else {
         // Message?
@@ -161,16 +161,17 @@ void WADList_Init(const char *wadstring)
             pos++;
 
         const size_t fpathLen = pos - fname;
-        std::string fpath;
-        fpath.resize(fpathLen);
-        memcpy(&fpath[0], fname, fpathLen);
+        std::string fpathstr;
+        fpathstr.resize(fpathLen);
+        memcpy(&fpathstr[0], fname, fpathLen);
+        std::filesystem::path fpath = fpathstr;
 
-        if (options.wadPathsVec.empty() || IsAbsolutePath(fpath.c_str())) {
-            WADList_OpenWad(fpath.c_str(), false);
+        if (options.wadPathsVec.empty() || fpath.is_absolute()) {
+            WADList_OpenWad(fpath, false);
         } else {
             for (const options_t::wadpath &wadpath : options.wadPathsVec) {
-                const std::string fullPath = wadpath.path + "/" + fpath;
-                WADList_OpenWad(fullPath.c_str(), wadpath.external);
+                std::filesystem::path fullPath = wadpath.path / fpath;
+                WADList_OpenWad(fullPath, wadpath.external);
             }
         }
 
@@ -211,18 +212,18 @@ static int WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
     if (lump.disksize == sizeof(dmiptex_t)) {
         size = fread(dest, 1, sizeof(dmiptex_t), wad.file);
         if (size != sizeof(dmiptex_t))
-            Error("Failure reading from file");
+            FError("Failure reading from file");
         for (i = 0; i < MIPLEVELS; i++)
             ((dmiptex_t *)dest)->offsets[i] = 0;
         return sizeof(dmiptex_t);
     }
 
     if (lump.size != lump.disksize) {
-        logprint("Texture %s is %i bytes in wad, packed to %i bytes in bsp\n", name, lump.disksize, lump.size);
+        LogPrint("Texture {} is {} bytes in wad, packed to {} bytes in bsp\n", name, lump.disksize, lump.size);
         std::vector<uint8_t> data(lump.disksize);
         size = fread(data.data(), 1, lump.disksize, wad.file);
         if (size != lump.disksize)
-            Error("Failure reading from file");
+            FError("Failure reading from file");
         auto out = (dmiptex_t *)dest;
         auto in = (dmiptex_t *)data.data();
         *out = *in;
@@ -250,7 +251,7 @@ static int WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
     } else {
         size = fread(dest, 1, lump.disksize, wad.file);
         if (size != lump.disksize)
-            Error("Failure reading from file");
+            FError("Failure reading from file");
     }
     return lump.size;
 }
@@ -274,7 +275,7 @@ static void WADList_LoadTextures(dmiptexlump_t *lump)
         if (!size)
             continue;
         if (data + size - (uint8_t *)map.exported_texdata.data() > map.exported_texdata.size())
-            Error("Internal error: not enough texture memory allocated");
+            FError("Internal error: not enough texture memory allocated");
         lump->dataofs[i] = data - (uint8_t *)lump;
         data += size;
     }
@@ -300,7 +301,7 @@ static void WADList_AddAnimationFrames()
         }
     }
 
-    Message(msgStat, "%8d texture frames added", map.nummiptex() - oldcount);
+    LogPrint(LOG_STAT, "     {:8} texture frames added\n", map.nummiptex() - oldcount);
 }
 
 void WADList_Process()
@@ -338,7 +339,7 @@ void WADList_Process()
     for (i = 0; i < map.nummiptex(); i++) {
         if (miptexlump->dataofs[i] == 0) {
             miptexlump->dataofs[i] = -1;
-            Message(msgWarning, warnTextureNotFound, map.miptexTextureName(i).c_str());
+            LogPrint("WARNING: Texture {} not found\n", map.miptexTextureName(i));
         }
     }
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdio>
+#include <fstream>
 
 struct mbsp_t;
 struct bsp2_dnode_t;
@@ -16,4 +16,4 @@ struct decomp_options
     bool geometryOnly = false;
 };
 
-void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, FILE *file);
+void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file);

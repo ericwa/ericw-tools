@@ -50,9 +50,9 @@ qvec3f Palette_GetColor(const int i);
 qvec4f Texture_GetColor(const rgba_miptex_t *tex, const int i);
 
 // Image loading
-qboolean LoadPCX(const char *filename, uint8_t **pixels, uint8_t **palette, int *width, int *height);
-qboolean LoadTGA(const char *filename, uint8_t **pixels, int *width, int *height);
-qboolean LoadWAL(const char *filename, uint8_t **pixels, int *width, int *height);
+bool LoadPCX(const std::filesystem::path &filename, uint8_t **pixels, uint8_t **palette, int *width, int *height);
+bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width, int *height);
+bool LoadWAL(const std::filesystem::path &filename, uint8_t **pixels, int *width, int *height);
 
 // Texture loading
 void LoadOrConvertTextures(

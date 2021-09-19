@@ -19,7 +19,7 @@
 
 #include <cstdint>
 #include <cassert>
-#include <cstdio>
+//#include <cstdio>
 #include <iostream>
 
 #include <light/light.hh>
@@ -61,9 +61,9 @@ int softsamples = 0;
 const vec3_t vec3_white = {255, 255, 255};
 float surflight_subdivide = 128.0f;
 int sunsamples = 64;
-qboolean scaledonly = false;
+bool scaledonly = false;
 
-qboolean surflight_dump = false;
+bool surflight_dump = false;
 
 static facesup_t *faces_sup; // lit2/bspx stuff
 
@@ -97,8 +97,8 @@ std::vector<const modelinfo_t *> switchableshadowlist;
 int oversample = 1;
 int write_litfile = 0; /* 0 for none, 1 for .lit, 2 for bspx, 3 for both */
 int write_luxfile = 0; /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
-qboolean onlyents = false;
-qboolean novisapprox = false;
+bool onlyents = false;
+bool novisapprox = false;
 bool nolights = false;
 backend_t rtbackend = backend_embree;
 bool debug_highlightseams = false;
@@ -108,7 +108,7 @@ bool litonly = false;
 
 surfflags_t *extended_texinfo_flags = nullptr;
 
-char mapfilename[1024];
+std::filesystem::path mapfilename;
 
 int dump_facenum = -1;
 bool dump_face;
@@ -118,7 +118,7 @@ int dump_vertnum = -1;
 bool dump_vert;
 vec3_t dump_vert_point = {0, 0, 0};
 
-qboolean arghradcompat = false; // mxd
+bool arghradcompat = false; // mxd
 
 lockable_setting_t *FindSetting(std::string name)
 {
@@ -160,14 +160,14 @@ void FixupGlobalSettings()
 
 static void PrintOptionsSummary(void)
 {
-    logprint("--- OptionsSummary ---\n");
+    LogPrint("--- OptionsSummary ---\n");
 
     settingsdict_t sd = cfg_static.settings();
 
     for (lockable_setting_t *setting : sd.allSettings()) {
         if (setting->isChanged()) {
-            logprint("    \"%s\" was set to \"%s\" from %s\n", setting->primaryName().c_str(),
-                setting->stringValue().c_str(), setting->sourceString().c_str());
+            LogPrint("    \"{}\" was set to \"{}\" from {}\n", setting->primaryName(),
+                setting->stringValue(), setting->sourceString());
         }
     }
 }
@@ -201,10 +201,10 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
     ThreadUnlock();
 
     if (file_p > file_end)
-        Error("%s: overrun", __func__);
+        FError("overrun");
 
     if (lit_file_p > lit_file_end)
-        Error("%s: overrun", __func__);
+        FError("overrun");
 }
 
 /**
@@ -271,7 +271,7 @@ static void *LightThread(void *arg)
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
         if (face_modelinfo == NULL) {
             // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
-            // logprint("warning: no model has face %d\n", facenum);
+            // LogPrint("warning: no model has face {}\n", facenum);
             continue;
         }
 
@@ -304,7 +304,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
     Q_assert(switchableshadowlist.size() == 0);
 
     if (!bsp->nummodels) {
-        Error("Corrupt .BSP: bsp->nummodels is 0!");
+        FError("Corrupt .BSP: bsp->nummodels is 0!");
     }
 
     if (lmscaleoverride)
@@ -314,9 +314,9 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
     if (!lightmapscale)
         lightmapscale = 16; /* the default */
     if (lightmapscale <= 0)
-        Error("lightmap scale is 0 or negative\n");
+        FError("lightmap scale is 0 or negative\n");
     if (lmscaleoverride || lightmapscale != 16)
-        logprint("Forcing lightmap scale of %gqu\n", lightmapscale);
+        LogPrint("Forcing lightmap scale of {}qu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software
      * ones that might be able to just do some mip hacks). This tool doesn't really care.*/
     {
@@ -325,7 +325,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
             i++;
         }
         if (i != lightmapscale) {
-            logprint("WARNING: lightmap scale is not a power of 2\n");
+            LogPrint("WARNING: lightmap scale is not a power of 2\n");
         }
     }
 
@@ -347,7 +347,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
 
         const entdict_t *entdict = FindEntDictWithKeyPair("model", modelname);
         if (entdict == nullptr)
-            Error("%s: Couldn't find entity for model %s.\n", __func__, modelname.c_str());
+            FError("Couldn't find entity for model {}.\n", modelname);
 
         // apply settings
         info->settings().setSettings(*entdict, false);
@@ -376,9 +376,9 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
  *  LightWorld
  * =============
  */
-static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
+static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 {
-    logprint("--- LightWorld ---\n");
+    LogPrint("--- LightWorld ---\n");
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
@@ -389,21 +389,21 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     /* greyscale data stored in a separate buffer */
     filebase = new uint8_t[MAX_MAP_LIGHTING] { };
     if (!filebase)
-        Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING);
+        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING);
     file_p = 0;
     file_end = MAX_MAP_LIGHTING;
 
     /* litfile data stored in a separate buffer */
     lit_filebase = new uint8_t[MAX_MAP_LIGHTING * 3] { };
     if (!lit_filebase)
-        Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING * 3);
+        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
     lit_file_p = 0;
     lit_file_end = (MAX_MAP_LIGHTING * 3);
 
     /* lux data stored in a separate buffer */
     lux_filebase = new uint8_t[MAX_MAP_LIGHTING * 3] { };
     if (!lux_filebase)
-        Error("%s: allocation of %i bytes failed.", __func__, MAX_MAP_LIGHTING * 3);
+        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
     lux_file_p = 0;
     lux_file_end = (MAX_MAP_LIGHTING * 3);
 
@@ -427,10 +427,10 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
 
     CalculateVertexNormals(&bsp);
 
-    const qboolean bouncerequired =
+    const bool bouncerequired =
         cfg_static.bounce.boolValue() &&
         (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); // mxd
-    const qboolean isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
+    const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
 
     if (bouncerequired || isQuake2map) {
         MakeTextureColors(&bsp);
@@ -447,17 +447,17 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     info.bsp = bsp;
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
-    logprint("--- LightThread ---\n"); // mxd
+    LogPrint("--- LightThread ---\n"); // mxd
     RunThreadsOn(0, bsp.numfaces, LightThread, &bsp);
 #endif
 
     if (bouncerequired || isQuake2map) { // mxd. Print some extra stats...
-        logprint("Indirect lights: %i bounce lights, %i surface lights (%i light points) in use.\n",
-            static_cast<int>(BounceLights().size()), static_cast<int>(SurfaceLights().size()),
-            static_cast<int>(TotalSurfacelightPoints()));
+        LogPrint("Indirect lights: {} bounce lights, {} surface lights ({} light points) in use.\n",
+            BounceLights().size(), SurfaceLights().size(),
+            TotalSurfacelightPoints());
     }
 
-    logprint("Lighting Completed.\n\n");
+    LogPrint("Lighting Completed.\n\n");
 
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
@@ -474,7 +474,7 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     } else {
         // NOTE: bsp.lightdatasize is already valid in the -litonly case
     }
-    logprint("lightdatasize: %i\n", bsp.lightdatasize);
+    LogPrint("lightdatasize: {}\n", bsp.lightdatasize);
 
     if (faces_sup) {
         uint8_t *styles = new uint8_t[4 * bsp.numfaces];
@@ -493,29 +493,26 @@ static void LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     }
 }
 
-static void LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
+static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename, const mbsp_t *bsp)
 {
-    char filename[1024];
-
     // always create the zero'ed array
     extended_texinfo_flags = new surfflags_t[bsp->numtexinfo] { };
 
-    strcpy(filename, sourcefilename);
-    StripExtension(filename);
-    DefaultExtension(filename, ".texinfo");
+    std::filesystem::path filename(sourcefilename);
+    filename.replace_extension("texinfo");
 
-    FILE *texinfofile = fopen(filename, "rt");
+    FILE *texinfofile = fopen(filename.string().c_str(), "rt");
     if (!texinfofile)
         return;
 
-    logprint("Loading extended texinfo flags from %s...\n", filename);
+    LogPrint("Loading extended texinfo flags from {}...\n", filename);
 
     extended_flags_header_t header;
 
     if (fread(&header, 1, sizeof(extended_flags_header_t), texinfofile) != sizeof(extended_flags_header_t) ||
         header.num_texinfo != bsp->numtexinfo || header.surfflags_size != sizeof(surfflags_t) ||
         fread(extended_texinfo_flags, sizeof(surfflags_t), header.num_texinfo, texinfofile) != header.num_texinfo) {
-        logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
+        LogPrint("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
         fclose(texinfofile);
         memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
         return;
@@ -524,24 +521,16 @@ static void LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *b
     fclose(texinfofile);
 }
 
-static const char * // mxd
-GetBaseDirName(bspdata_t *bspdata)
-{
-    return bspdata->loadversion->game->base_dir;
-}
-
 // obj
 
-static FILE *InitObjFile(const char *filename)
+static FILE *InitObjFile(const std::filesystem::path &filename)
 {
-    char objfilename[1024];
-    strcpy(objfilename, filename);
-    StripExtension(objfilename);
-    DefaultExtension(objfilename, ".obj");
+    std::filesystem::path objfilename(filename);
+    objfilename.replace_extension("obj");
 
-    FILE *objfile = fopen(objfilename, "wt");
+    FILE *objfile = fopen(objfilename.string().c_str(), "wt");
     if (!objfile)
-        Error("Failed to open %s: %s", objfilename, strerror(errno));
+        FError("Failed to open {}: {}", objfilename, strerror(errno));
 
     return objfile;
 }
@@ -569,7 +558,7 @@ static void ExportObjFace(FILE *f, const mbsp_t *bsp, const bsp2_dface_t *face, 
     *vertcount += face->numedges;
 }
 
-static void ExportObj(const char *filename, const mbsp_t *bsp)
+static void ExportObj(const std::filesystem::path &filename, const mbsp_t *bsp)
 {
     FILE *objfile = InitObjFile(filename);
     int vertcount = 0;
@@ -583,7 +572,7 @@ static void ExportObj(const char *filename, const mbsp_t *bsp)
 
     fclose(objfile);
 
-    logprint("Wrote %s\n", filename);
+    LogPrint("Wrote {}\n", filename);
 }
 
 // obj
@@ -625,7 +614,7 @@ static void FindDebugFace(const mbsp_t *bsp)
 
     const bsp2_dface_t *f = Face_NearestCentroid(bsp, dump_face_point);
     if (f == NULL)
-        Error("FindDebugFace: f == NULL\n");
+        FError("f == NULL\n");
 
     const int facenum = f - bsp->dfaces;
 
@@ -636,7 +625,7 @@ static void FindDebugFace(const mbsp_t *bsp)
 
     const char *texname = Face_TextureName(bsp, f);
 
-    logprint("FindDebugFace: dumping face %d (texture '%s' model %d)\n", facenum, texname, modelnum);
+    FLogPrint("dumping face {} (texture '{}' model {})\n", facenum, texname, modelnum);
 }
 
 // returns the vert nearest the given point
@@ -669,7 +658,7 @@ static void FindDebugVert(const mbsp_t *bsp)
     int v = Vertex_NearestPoint(bsp, dump_vert_point);
     const dvertex_t *vertex = &bsp->dvertexes[v];
 
-    logprint("FindDebugVert: dumping vert %d at %f %f %f\n", v, vertex->point[0], vertex->point[1], vertex->point[2]);
+    FLogPrint("dumping vert {} at {} {} {}\n", v, vertex->point[0], vertex->point[1], vertex->point[2]);
     dump_vertnum = v;
 }
 
@@ -678,11 +667,11 @@ static void SetLitNeeded()
     if (!write_litfile) {
         if (scaledonly) {
             write_litfile = 2;
-            logprint("Colored light entities/settings detected: "
+            LogPrint("Colored light entities/settings detected: "
                      "bspxlit output enabled.\n");
         } else {
             write_litfile = 1;
-            logprint("Colored light entities/settings detected: "
+            LogPrint("Colored light entities/settings detected: "
                      ".lit output enabled.\n");
         }
     }
@@ -724,19 +713,19 @@ static void PrintLight(const light_t &light)
 
         // print separator
         if (!first) {
-            logprint("; ");
+            LogPrint("; ");
         } else {
             first = false;
         }
 
-        logprint("%s=%s", setting->primaryName().c_str(), setting->stringValue().c_str());
+        LogPrint("{}={}", setting->primaryName(), setting->stringValue());
     }
-    logprint("\n");
+    LogPrint("\n");
 }
 
 static void PrintLights(void)
 {
-    logprint("===PrintLights===\n");
+    LogPrint("===PrintLights===\n");
 
     for (const auto &light : GetLights()) {
         PrintLight(light);
@@ -786,7 +775,7 @@ static void PrintUsage()
         for (int i = 0; i < s->names().size(); i++) {
             const auto &name = s->names().at(i);
 
-            printf("-%s ", name.c_str());
+            fmt::print("-{} ", name);
 
             if (dynamic_cast<lockable_vec_t *>(s)) {
                 printf("[n] ");
@@ -873,7 +862,7 @@ static const char *ParseStringOptional(int *i_inout, int argc, const char **argv
 static void ParseVec3(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
 {
     if (!ParseVec3Optional(vec3_out, i_inout, argc, argv)) {
-        Error("%s requires 3 numberic arguments\n", argv[*i_inout]);
+        Error("{} requires 3 numberic arguments\n", argv[*i_inout]);
     }
 }
 
@@ -881,7 +870,7 @@ static vec_t ParseVec(int *i_inout, int argc, const char **argv)
 {
     vec_t result = 0;
     if (!ParseVecOptional(&result, i_inout, argc, argv)) {
-        Error("%s requires 1 numeric argument\n", argv[*i_inout]);
+        Error("{} requires 1 numeric argument\n", argv[*i_inout]);
         return 0;
     }
     return result;
@@ -891,7 +880,7 @@ static int ParseInt(int *i_inout, int argc, const char **argv)
 {
     int result = 0;
     if (!ParseIntOptional(&result, i_inout, argc, argv)) {
-        Error("%s requires 1 integer argument\n", argv[*i_inout]);
+        Error("{} requires 1 integer argument\n", argv[*i_inout]);
         return 0;
     }
     return result;
@@ -901,7 +890,7 @@ static const char *ParseString(int *i_inout, int argc, const char **argv)
 {
     const char *result = NULL;
     if (!(result = ParseStringOptional(i_inout, argc, argv))) {
-        Error("%s requires 1 string argument\n", argv[*i_inout]);
+        Error("{} requires 1 string argument\n", argv[*i_inout]);
     }
     return result;
 }
@@ -917,13 +906,10 @@ int light_main(int argc, const char **argv)
     bspdata_t bspdata;
     const bspversion_t *loadversion;
     int i;
-    double start;
-    double end;
-    char source[1024];
     const char *lmscaleoverride = NULL;
 
-    init_log("light.log");
-    logprint("---- light / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
+    InitLog("light.log");
+    LogPrint("---- light / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
 
     LowerProcessPriority();
     numthreads = GetDefaultThreads();
@@ -935,14 +921,14 @@ int light_main(int argc, const char **argv)
             numthreads = ParseInt(&i, argc, argv);
         } else if (!strcmp(argv[i], "-extra")) {
             oversample = 2;
-            logprint("extra 2x2 sampling enabled\n");
+            LogPrint("extra 2x2 sampling enabled\n");
         } else if (!strcmp(argv[i], "-extra4")) {
             oversample = 4;
-            logprint("extra 4x4 sampling enabled\n");
+            LogPrint("extra 4x4 sampling enabled\n");
         } else if (!strcmp(argv[i], "-gate")) {
             fadegate = ParseVec(&i, argc, argv);
             if (fadegate > 1) {
-                logprint("WARNING: -gate value greater than 1 may cause artifacts\n");
+                LogPrint("WARNING: -gate value greater than 1 may cause artifacts\n");
             }
         } else if (!strcmp(argv[i], "-lit")) {
             write_litfile |= 1;
@@ -965,7 +951,7 @@ int light_main(int argc, const char **argv)
             scaledonly = true;
         } else if (!strcmp(argv[i], "-radlights")) {
             if (!ParseLightsFile(argv[++i]))
-                logprint("Unable to read surfacelights file %s\n", argv[i]);
+                LogPrint("Unable to read surfacelights file {}\n", argv[i]);
         } else if (!strcmp(argv[i], "-lmscale")) {
             lmscaleoverride = argv[++i];
         } else if (!strcmp(argv[i], "-soft")) {
@@ -978,45 +964,45 @@ int light_main(int argc, const char **argv)
 
             cfg.globalDirt.setBoolValueLocked(true);
             debugmode = debugmode_dirt;
-            logprint("Dirtmap debugging enabled\n");
+            LogPrint("Dirtmap debugging enabled\n");
         } else if (!strcmp(argv[i], "-bouncedebug")) {
             CheckNoDebugModeSet();
             cfg.bounce.setBoolValueLocked(true);
             debugmode = debugmode_bounce;
-            logprint("Bounce debugging mode enabled on command line\n");
+            LogPrint("Bounce debugging mode enabled on command line\n");
         } else if (!strcmp(argv[i], "-bouncelightsdebug")) {
             CheckNoDebugModeSet();
             cfg.bounce.setBoolValueLocked(true);
             debugmode = debugmode_bouncelights;
-            logprint("Bounce emitters debugging mode enabled on command line\n");
+            LogPrint("Bounce emitters debugging mode enabled on command line\n");
         } else if (!strcmp(argv[i], "-surflight_subdivide")) {
             surflight_subdivide = ParseVec(&i, argc, argv);
             surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
-            logprint("Using surface light subdivision size of %f\n", surflight_subdivide);
+            LogPrint("Using surface light subdivision size of {}\n", surflight_subdivide);
         } else if (!strcmp(argv[i], "-surflight_dump")) {
             surflight_dump = true;
         } else if (!strcmp(argv[i], "-sunsamples")) {
             sunsamples = ParseInt(&i, argc, argv);
             sunsamples = qmin(qmax(sunsamples, 8), 2048);
-            logprint("Using sunsamples of %d\n", sunsamples);
+            LogPrint("Using sunsamples of {}\n", sunsamples);
         } else if (!strcmp(argv[i], "-onlyents")) {
             onlyents = true;
-            logprint("Onlyents mode enabled\n");
+            LogPrint("Onlyents mode enabled\n");
         } else if (!strcmp(argv[i], "-phongdebug")) {
             CheckNoDebugModeSet();
             debugmode = debugmode_phong;
             write_litfile |= 1;
-            logprint("Phong shading debug mode enabled\n");
+            LogPrint("Phong shading debug mode enabled\n");
         } else if (!strcmp(argv[i], "-phongdebug_obj")) {
             CheckNoDebugModeSet();
             debugmode = debugmode_phong_obj;
-            logprint("Phong shading debug mode (.obj export) enabled\n");
+            LogPrint("Phong shading debug mode (.obj export) enabled\n");
         } else if (!strcmp(argv[i], "-novisapprox")) {
             novisapprox = true;
-            logprint("Skipping approximate light visibility\n");
+            LogPrint("Skipping approximate light visibility\n");
         } else if (!strcmp(argv[i], "-nolights")) {
             nolights = true;
-            logprint("Skipping all light entities (sunlight / minlight only)\n");
+            LogPrint("Skipping all light entities (sunlight / minlight only)\n");
         } else if (!strcmp(argv[i], "-backend")) {
             const char *requested = ParseString(&i, argc, argv);
             if (!strcmp(requested, "bsp")) {
@@ -1024,7 +1010,7 @@ int light_main(int argc, const char **argv)
             } else if (!strcmp(requested, "embree")) {
                 rtbackend = backend_embree;
             } else {
-                Error("unknown backend %s", requested);
+                Error("unknown backend {}", requested);
             }
         } else if (!strcmp(argv[i], "-debugface")) {
             ParseVec3(dump_face_point, &i, argc, argv);
@@ -1042,13 +1028,13 @@ int light_main(int argc, const char **argv)
             CheckNoDebugModeSet();
             debugmode = debugmode_debugneighbours;
         } else if (!strcmp(argv[i], "-highlightseams")) {
-            logprint("Highlighting lightmap seams\n");
+            LogPrint("Highlighting lightmap seams\n");
             debug_highlightseams = true;
         } else if (!strcmp(argv[i], "-arghradcompat")) { // mxd
-            logprint("Arghrad entity keys conversion enabled\n");
+            LogPrint("Arghrad entity keys conversion enabled\n");
             arghradcompat = true;
         } else if (!strcmp(argv[i], "-litonly")) {
-            logprint("-litonly specified; .bsp file will not be modified\n");
+            LogPrint("-litonly specified; .bsp file will not be modified\n");
             litonly = true;
             write_litfile |= 1;
         } else if (!strcmp(argv[i], "-verbose") || !strcmp(argv[i], "-v")) { // Quark always passes -v
@@ -1061,7 +1047,7 @@ int light_main(int argc, const char **argv)
             std::string settingname{&argv[i][1]};
             lockable_setting_t *setting = FindSetting(settingname);
             if (setting == nullptr) {
-                Error("Unknown option \"-%s\"", settingname.c_str());
+                Error("Unknown option \"-{}\"", settingname);
                 PrintUsage();
             }
 
@@ -1101,26 +1087,26 @@ int light_main(int argc, const char **argv)
     }
 #endif
 
-    logprint("Raytracing backend: ");
+    LogPrint("Raytracing backend: ");
     switch (rtbackend) {
-        case backend_bsp: logprint("BSP\n"); break;
-        case backend_embree: logprint("Embree\n"); break;
+        case backend_bsp: LogPrint("BSP\n"); break;
+        case backend_embree: LogPrint("Embree\n"); break;
     }
 
     if (numthreads > 1)
-        logprint("running with %d threads\n", numthreads);
+        LogPrint("running with {} threads\n", numthreads);
 
     if (write_litfile == ~0)
-        logprint("generating lit2 output only.\n");
+        LogPrint("generating lit2 output only.\n");
     else {
         if (write_litfile & 1)
-            logprint(".lit colored light output requested on command line.\n");
+            LogPrint(".lit colored light output requested on command line.\n");
         if (write_litfile & 2)
-            logprint("BSPX colored light output requested on command line.\n");
+            LogPrint("BSPX colored light output requested on command line.\n");
         if (write_luxfile & 1)
-            logprint(".lux light directions output requested on command line.\n");
+            LogPrint(".lux light directions output requested on command line.\n");
         if (write_luxfile & 2)
-            logprint("BSPX light directions output requested on command line.\n");
+            LogPrint("BSPX light directions output requested on command line.\n");
     }
 
     if (softsamples == -1) {
@@ -1131,28 +1117,25 @@ int light_main(int argc, const char **argv)
         }
     }
 
-    start = I_FloatTime();
+    auto start = I_FloatTime();
 
-    strcpy(source, argv[i]);
-    strcpy(mapfilename, argv[i]);
+    std::filesystem::path source(argv[i]);
+    mapfilename = source;
 
     // delete previous litfile
     if (!onlyents) {
-        StripExtension(source);
-        DefaultExtension(source, ".lit");
+        source.replace_extension("lit");
         remove(source);
     }
 
     {
-        StripExtension(source);
-        DefaultExtension(source, ".rad");
-        if (strcmp(source, "lights.rad"))
+        source.replace_extension("rad");
+        if (source != "lights.rad")
             ParseLightsFile("lights.rad"); // generic/default name
         ParseLightsFile(source); // map-specific file name
     }
 
-    StripExtension(source);
-    DefaultExtension(source, ".bsp");
+    source.replace_extension("bsp");
     LoadBSPFile(source, &bspdata);
 
     loadversion = bspdata.version;
@@ -1167,7 +1150,7 @@ int light_main(int argc, const char **argv)
     }
 
     // mxd. Load or convert textures...
-    SetQdirFromPath(GetBaseDirName(&bspdata), source);
+    SetQdirFromPath(bspdata.loadversion->game->base_dir, source);
     LoadPalette(&bspdata);
     LoadOrConvertTextures(&bsp);
 
@@ -1184,13 +1167,11 @@ int light_main(int argc, const char **argv)
     MakeTnodes(&bsp);
 
     if (debugmode == debugmode_phong_obj) {
-        StripExtension(source);
-        DefaultExtension(source, ".obj");
-
         CalculateVertexNormals(&bsp);
+        source.replace_extension("obj");
         ExportObj(source, &bsp);
 
-        close_log();
+        CloseLog();
         return 0;
     }
 
@@ -1242,21 +1223,21 @@ int light_main(int argc, const char **argv)
         WriteBSPFile(source, &bspdata);
     }
 
-    end = I_FloatTime();
-    logprint("%5.3f seconds elapsed\n", end - start);
-    logprint("\n");
-    logprint("stats:\n");
-    logprint("%f lights tested, %f hits per sample point\n",
+    auto end = I_FloatTime();
+    LogPrint("{:5.3} seconds elapsed\n", (end - start).count());
+    LogPrint("\n");
+    LogPrint("stats:\n");
+    LogPrint("{} lights tested, {} hits per sample point\n",
         static_cast<double>(total_light_rays) / static_cast<double>(total_samplepoints),
         static_cast<double>(total_light_ray_hits) / static_cast<double>(total_samplepoints));
-    logprint("%f surface lights tested, %f hits per sample point\n",
+    LogPrint("{} surface lights tested, {} hits per sample point\n",
         static_cast<double>(total_surflight_rays) / static_cast<double>(total_samplepoints),
         static_cast<double>(total_surflight_ray_hits) / static_cast<double>(total_samplepoints)); // mxd
-    logprint("%f bounce lights tested, %f hits per sample point\n",
+    LogPrint("{} bounce lights tested, {} hits per sample point\n",
         static_cast<double>(total_bounce_rays) / static_cast<double>(total_samplepoints),
         static_cast<double>(total_bounce_ray_hits) / static_cast<double>(total_samplepoints));
-    logprint("%d empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
-    close_log();
+    LogPrint("{} empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
+    CloseLog();
 
     return 0;
 }

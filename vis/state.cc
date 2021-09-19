@@ -18,7 +18,7 @@
 */
 
 #include <cstdint>
-#include <cstdio>
+//#include <cstdio>
 
 #ifdef LINUX
 #include <unistd.h>
@@ -105,7 +105,7 @@ static void DecompressBits(leafbits_t *dst, const uint8_t *src)
 
         rep = *src++;
         if (i + rep > numbytes)
-            Error("%s: overflow", __func__);
+            FError("overflow");
 
         /* Already wrote the first byte, add (rep - 1) copies */
         while (--rep) {
@@ -139,17 +139,15 @@ void SaveVisState(void)
     dportal_t pstate;
     uint8_t *vis;
     uint8_t *might;
-    FILE *outfile;
-    int err;
 
-    outfile = SafeOpenWrite(statetmpfile);
+    auto outfile = SafeOpenWrite(statetmpfile.string().c_str());
 
     /* Write out a header */
     state.version = LittleLong(VIS_STATE_VERSION);
     state.numportals = LittleLong(numportals);
     state.numleafs = LittleLong(portalleafs);
     state.testlevel = LittleLong(testlevel);
-    state.time_elapsed = LittleLong((uint32_t)(statetime - starttime));
+    state.time_elapsed = LittleLong((uint32_t)(statetime - starttime).count());
 
     SafeWrite(outfile, &state, sizeof(state));
 
@@ -179,22 +177,21 @@ void SaveVisState(void)
     delete[] might;
     delete[] vis;
 
-    err = fclose(outfile);
-    if (err)
-        Error("%s: error writing new state (%s)", __func__, strerror(errno));
-    err = unlink(statefile);
-    if (err && errno != ENOENT)
-        Error("%s: error removing old state (%s)", __func__, strerror(errno));
-    err = rename(statetmpfile, statefile);
-    if (err)
-        Error("%s: error renaming state file (%s)", __func__, strerror(errno));
+    std::error_code ec;
+
+    std::filesystem::remove(statefile, ec);
+    if (ec && ec.value() != ENOENT)
+        FError("error removing old state ({})", ec.message());
+
+    std::filesystem::rename(statetmpfile, statefile, ec);
+    if (ec)
+        FError("error renaming state file ({})", ec.message());
 }
 
-qboolean LoadVisState(void)
+bool LoadVisState(void)
 {
-    FILE *infile;
-    int prt_time, state_time;
-    int i, numbytes, err;
+    std::filesystem::file_time_type prt_time, state_time;
+    int i, numbytes;
     portal_t *p;
     dvisstate_t state;
     dportal_t pstate;
@@ -204,24 +201,28 @@ qboolean LoadVisState(void)
         return false;
     }
 
-    state_time = FileTime(statefile);
-    if (state_time == -1) {
+    if (!std::filesystem::exists(statefile)) {
         /* No state file, maybe temp file is there? */
-        state_time = FileTime(statetmpfile);
-        if (state_time == -1)
+        if (!std::filesystem::exists(statetmpfile))
             return false;
-        err = rename(statetmpfile, statefile);
-        if (err)
+        state_time = std::filesystem::last_write_time(statetmpfile);
+
+        std::error_code ec;
+        std::filesystem::rename(statetmpfile, statefile, ec);
+
+        if (ec)
             return false;
+    } else {
+        state_time = std::filesystem::last_write_time(statefile);
     }
 
-    prt_time = FileTime(portalfile);
+    prt_time = std::filesystem::last_write_time(portalfile);
     if (prt_time > state_time) {
-        logprint("State file is out of date, will be overwritten\n");
+        LogPrint("State file is out of date, will be overwritten\n");
         return false;
     }
 
-    infile = SafeOpenRead(statefile);
+    auto infile = SafeOpenRead(statefile.string().c_str());
 
     SafeRead(infile, &state, sizeof(state));
     state.version = LittleLong(state.version);
@@ -232,16 +233,14 @@ qboolean LoadVisState(void)
 
     /* Sanity check the headers */
     if (state.version != VIS_STATE_VERSION) {
-        fclose(infile);
-        Error("%s: state file version does not match", __func__);
+        FError("state file version does not match");
     }
     if (state.numportals != numportals || state.numleafs != portalleafs) {
-        fclose(infile);
-        Error("%s: state file %s does not match portal file %s", __func__, statefile, portalfile);
+        FError("state file {} does not match portal file {}", statefile, portalfile);
     }
 
     /* Move back the start time to simulate already elapsed time */
-    starttime -= state.time_elapsed;
+    starttime -= duration(state.time_elapsed);
 
     numbytes = (portalleafs + 7) >> 3;
     compressed = new uint8_t[numbytes];
@@ -283,7 +282,6 @@ qboolean LoadVisState(void)
     }
 
     delete[] compressed;
-    fclose(infile);
 
     return true;
 }

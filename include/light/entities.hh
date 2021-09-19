@@ -52,7 +52,7 @@ enum light_formula_t
 class light_t
 {
 public:
-    qboolean spotlight;
+    bool spotlight;
     vec3_t spotvec; // computed
     float spotfalloff;
     float spotfalloff2;
@@ -63,7 +63,7 @@ public:
 
     const entdict_t *targetent;
 
-    qboolean generated; // if true, don't write to the bsp
+    bool generated; // if true, don't write to the bsp
 
     const char *classname() const;
 
@@ -156,7 +156,7 @@ std::string WorldValueForKey(const std::string &key);
 
 void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp);
 void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp);
-bool ParseLightsFile(const char *fname);
+bool ParseLightsFile(const std::filesystem::path &fname);
 void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp);
 void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
 

@@ -40,7 +40,7 @@ static void CheckColinear(face_t *f)
         VectorNormalize(v2);
 
         if (VectorCompare(v1, v2, EQUAL_EPSILON))
-            Error("Colinear edge (%s)", __func__);
+            FError("Colinear edge");
     }
 }
 #endif /* PARANOID */
@@ -128,7 +128,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     // build the new polygon
     if (f1->w.numpoints + f2->w.numpoints > MAXEDGES) {
-        Message(msgWarning, warnTooManyMergePoints);
+        FLogPrint("WARNING: Too many edges\n");
         return NULL;
     }
 
@@ -243,8 +243,8 @@ void MergeAll(surface_t *surfhead)
     surface_t *surf;
     int mergefaces = 0;
     face_t *f;
-
-    Message(msgProgress, "MergeAll");
+    
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     for (surf = surfhead; surf; surf = surf->next) {
         MergePlaneFaces(surf);
@@ -252,7 +252,7 @@ void MergeAll(surface_t *surfhead)
             mergefaces++;
     }
 
-    Message(msgStat, "%8d mergefaces", mergefaces);
+    LogPrint(LOG_STAT, "     {:8} mergefaces\n", mergefaces);
 
     // Quick hack to let solidbsp print out progress %
     csgmergefaces = mergefaces;

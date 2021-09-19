@@ -102,14 +102,14 @@ static int LightStyleForTargetname(const globalconfig_t &cfg, const std::string 
 
     // check if full
     if (newStylenum >= MAX_SWITCHABLE_STYLES) {
-        Error("%s: Too many unique light targetnames (max=%d)\n", __func__, MAX_SWITCHABLE_STYLES);
+        FError("Too many unique light targetnames (max={})\n", MAX_SWITCHABLE_STYLES);
     }
 
     lightstyleForTargetname.emplace_back(
         targetname, newStylenum); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
 
     if (verbose_log) {
-        logprint("%s: Allocated lightstyle %d for targetname '%s'\n", __func__, newStylenum, targetname.c_str());
+        FLogPrint("Allocated lightstyle {} for targetname '{}'\n", newStylenum);
     }
 
     return newStylenum;
@@ -181,8 +181,8 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
     // empty values warning
     for (const auto &keyval : entdict) {
         if (keyval.first.empty() || keyval.second.empty()) {
-            logprint("WARNING: %s has empty key/value \"%s\" \"%s\"\n", EntDict_PrettyDescription(bsp, entdict).c_str(),
-                keyval.first.c_str(), keyval.second.c_str());
+            LogPrint("WARNING: {} has empty key/value \"{}\" \"{}\"\n", EntDict_PrettyDescription(bsp, entdict),
+                keyval.first, keyval.second);
             ok = false;
         }
     }
@@ -211,8 +211,8 @@ bool EntDict_CheckTargetKeysMatched(
             continue;
 
         if (targetVal == targetname) {
-            logprint("WARNING: %s has \"%s\" set to itself\n", EntDict_PrettyDescription(bsp, entity).c_str(),
-                targetKey.c_str());
+            LogPrint("WARNING: {} has \"{}\" set to itself\n", EntDict_PrettyDescription(bsp, entity),
+                targetKey);
             ok = false;
             continue;
         }
@@ -230,8 +230,8 @@ bool EntDict_CheckTargetKeysMatched(
         }
 
         if (!found) {
-            logprint("WARNING: %s has unmatched \"%s\" (%s)\n", EntDict_PrettyDescription(bsp, entity).c_str(),
-                targetKey.c_str(), targetVal.c_str());
+            LogPrint("WARNING: {} has unmatched \"{}\" ({})\n", EntDict_PrettyDescription(bsp, entity),
+                targetKey, targetVal);
             ok = false;
         }
     }
@@ -269,8 +269,8 @@ bool EntDict_CheckTargetnameKeyMatched(
         }
 
         if (!found) {
-            logprint("WARNING: %s has targetname \"%s\", which is not targeted by anything.\n",
-                EntDict_PrettyDescription(bsp, entity).c_str(), targetnameVal.c_str());
+            LogPrint("WARNING: {} has targetname \"{}\", which is not targeted by anything.\n",
+                EntDict_PrettyDescription(bsp, entity), targetnameVal);
             ok = false;
         }
     }
@@ -324,20 +324,20 @@ static void CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
 
     // mxd. Warn about unsupported _falloff / delay combos...
     if (entity->falloff.floatValue() > 0.0f && entity->getFormula() != LF_LINEAR) {
-        logprint("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
-                 "   %s at (%s)\n",
-            entity->classname(), VecStr(*entity->origin.vec3Value()).c_str());
+        LogPrint("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
+                 "   {} at ({})\n",
+            entity->classname(), VecStr(*entity->origin.vec3Value()));
         entity->falloff.setFloatValue(0.0f);
     }
 
     if (entity->getFormula() < LF_LINEAR || entity->getFormula() >= LF_COUNT) {
-        static qboolean warned_once = true;
+        static bool warned_once = true;
         if (!warned_once) {
             warned_once = true;
-            logprint("WARNING: unknown formula number (%d) in delay field\n"
-                     "   %s at (%s)\n"
+            LogPrint("WARNING: unknown formula number ({}) in delay field\n"
+                     "   {} at ({})\n"
                      "   (further formula warnings will be supressed)\n",
-                entity->getFormula(), entity->classname(), VecStr(*entity->origin.vec3Value()).c_str());
+                entity->getFormula(), entity->classname(), VecStr(*entity->origin.vec3Value()));
         }
         entity->formula.setFloatValue(LF_LINEAR);
     }
@@ -359,7 +359,7 @@ static void CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
     }
 
     if (entity->style.intValue() < 0 || entity->style.intValue() > 254) {
-        Error("Bad light style %i (must be 0-254)", entity->style.intValue());
+        FError("Bad light style {} (must be 0-254)", entity->style.intValue());
     }
 }
 
@@ -370,7 +370,7 @@ static void CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
  * Resolves a dirt flag (0=default, 1=enable, -1=disable) to a boolean
  * =============
  */
-static qboolean Dirt_ResolveFlag(const globalconfig_t &cfg, int dirtInt)
+static bool Dirt_ResolveFlag(const globalconfig_t &cfg, int dirtInt)
 {
     if (dirtInt == 1)
         return true;
@@ -405,7 +405,7 @@ static void AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const 
     // add to list
     all_suns.push_back(sun);
 
-    // printf( "sun is using vector %f %f %f light %f color %f %f %f anglescale %f dirt %d resolved to %d\n",
+    //fmt::print( "sun is using vector {} {} {} light {} color {} {} {} anglescale {} dirt {} resolved to {}\n",
     //  sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
     //  sun->sunlight.color[0], sun->sunlight.color[1], sun->sunlight.color[2],
     //  anglescale,
@@ -436,7 +436,7 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color,
     VectorCopy(sunvec_in, sunvec);
     VectorNormalize(sunvec);
 
-    // printf( "input sunvec %f %f %f. deviance is %f, %d samples\n",sunvec[0],sunvec[1], sunvec[2], sun_deviance,
+    //fmt::print( "input sunvec {} {} {}. deviance is {}, {} samples\n",sunvec[0],sunvec[1], sunvec[2], sun_deviance,
     // sun_num_samples);
 
     /* set photons */
@@ -468,7 +468,7 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color,
             direction[2] = sin(elevation);
         }
 
-        // printf( "sun %d is using vector %f %f %f\n", i, direction[0], direction[1], direction[2]);
+        //fmt::print( "sun {} is using vector {} {} {}\n", i, direction[0], direction[1], direction[2]);
 
         AddSun(cfg, direction, light, color, sunlight_dirt, sun_anglescale, style, suntexture);
     }
@@ -488,7 +488,7 @@ static void SetupSuns(const globalconfig_t &cfg)
             } else if (VectorLengthSq(*entity.mangle.vec3Value()) > 0) {
                 VectorCopy(*entity.mangle.vec3Value(), sunvec);
             } else { // Use { 0, 0, 0 } as sun target...
-                logprint("WARNING: sun missing target, { 0 0 0 } used.\n");
+                LogPrint("WARNING: sun missing target, { 0 0 0 } used.\n");
                 VectorCopy(*entity.origin.vec3Value(), sunvec);
                 VectorInverse(sunvec);
             }
@@ -507,7 +507,7 @@ static void SetupSuns(const globalconfig_t &cfg)
         cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue(), 0, "");
 
     if (cfg.sun2.floatValue() != 0) {
-        logprint("creating sun2\n");
+        LogPrint("creating sun2\n");
         SetupSun(cfg, cfg.sun2.floatValue(), *cfg.sun2_color.vec3Value(), *cfg.sun2vec.vec3Value(),
             cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue(), 0, "");
     }
@@ -836,7 +836,7 @@ float CalcFov(float fov_x, float width, float height)
     float x;
 
     if (fov_x < 1 || fov_x > 179)
-        Error("Unsupported fov: %f. Expected a value in [1..179] range.", fov_x);
+        FError("Unsupported fov: {}. Expected a value in [1..179] range.", fov_x);
 
     x = fov_x / 360 * Q_PI;
     x = tan(x);
@@ -900,7 +900,7 @@ static std::string ParseEscapeSequences(const std::string &input)
  */
 void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 {
-    logprint("--- LoadEntities ---\n");
+    LogPrint("--- LoadEntities ---\n");
 
     entdicts = EntData_Parse(bsp->dentdata);
 
@@ -926,7 +926,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         // fix "lightmap_scale"
         const std::string lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
         if (!lmscale.empty()) {
-            logprint("lightmap_scale should be _lightmap_scale\n");
+            LogPrint("lightmap_scale should be _lightmap_scale\n");
 
             EntDict_RemoveValueForKey(entdict, "lightmap_scale");
             entdict.set("_lightmap_scale", lmscale);
@@ -1011,9 +1011,9 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
                 auto texname = entity.project_texture.stringValue();
                 entity.projectedmip = FindProjectionTexture(bsp, texname.c_str());
                 if (entity.projectedmip == nullptr) {
-                    logprint(
-                        "WARNING: light has \"_project_texture\" \"%s\", but this texture is not present in the bsp\n",
-                        texname.c_str());
+                    LogPrint(
+                        "WARNING: light has \"_project_texture\" \"{}\", but this texture is not present in the bsp\n",
+                        texname);
                 }
 
                 if (!entity.projangle.isChanged()) { // mxd
@@ -1045,8 +1045,8 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         }
     }
 
-    logprint(
-        "%d entities read, %d are lights.\n", static_cast<int>(entdicts.size()), static_cast<int>(all_lights.size()));
+    LogPrint(
+        "{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
 }
 
 static void FixLightOnFace(const mbsp_t *bsp, const vec3_t &point, vec3_t &point_out)
@@ -1073,7 +1073,7 @@ static void FixLightOnFace(const mbsp_t *bsp, const vec3_t &point, vec3_t &point
         }
     }
 
-    logprint("WARNING: couldn't nudge light in solid at %f %f %f\n", point[0], point[1], point[2]);
+    LogPrint("WARNING: couldn't nudge light in solid at {} {} {}\n", point[0], point[1], point[2]);
     VectorCopy(point, point_out);
     return;
 }
@@ -1130,7 +1130,7 @@ void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
     AABB_Grow(mins, maxs, size);
 
     /*
-    logprint("light at %f %f %f has mins %f %f %f maxs %f %f %f\n",
+    LogPrint("light at {} {} {} has mins {} {} {} maxs {} {} {}\n",
            point[0],
            point[1],
            point[2],
@@ -1167,23 +1167,23 @@ void EstimateLightVisibility(void)
     if (novisapprox)
         return;
 
-    logprint("--- EstimateLightVisibility ---\n");
+    LogPrint("--- EstimateLightVisibility ---\n");
 
     RunThreadsOn(0, static_cast<int>(all_lights.size()), EstimateLightAABBThread, nullptr);
 }
 
 void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp)
 {
-    logprint("SetupLights: %d initial lights\n", static_cast<int>(all_lights.size()));
+    LogPrint("SetupLights: {} initial lights\n", all_lights.size());
 
     // Creates more light entities, needs to be done before the rest
     MakeSurfaceLights(bsp);
 
-    logprint("SetupLights: %d after surface lights\n", static_cast<int>(all_lights.size()));
+    LogPrint("SetupLights: {} after surface lights\n", all_lights.size());
 
     JitterEntities();
 
-    logprint("SetupLights: %d after jittering\n", static_cast<int>(all_lights.size()));
+    LogPrint("SetupLights: {} after jittering\n", all_lights.size());
 
     const size_t final_lightcount = all_lights.size();
 
@@ -1194,8 +1194,8 @@ void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp)
     FixLightsOnFaces(bsp);
     EstimateLightVisibility();
 
-    logprint("Final count: %d lights, %d suns in use.\n", static_cast<int>(all_lights.size()),
-        static_cast<int>(all_suns.size()));
+    LogPrint("Final count: {} lights, {} suns in use.\n", all_lights.size(),
+        all_suns.size());
 
     Q_assert(final_lightcount == all_lights.size());
 }
@@ -1243,13 +1243,13 @@ void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp)
         delete[] bsp->dentdata;
 
     /* FIXME - why are we printing this here? */
-    logprint("%i switchable light styles (%d max)\n", static_cast<int>(lightstyleForTargetname.size()),
+    LogPrint("{} switchable light styles ({} max)\n", lightstyleForTargetname.size(),
         MAX_SWITCHABLE_STYLES - cfg.compilerstyle_start.intValue());
 
     bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
     bsp->dentdata = new char[bsp->entdatasize];
     if (!bsp->dentdata)
-        Error("%s: allocation of %d bytes failed\n", __func__, bsp->entdatasize);
+        FError("allocation of {} bytes failed\n", bsp->entdatasize);
 
     memcpy(bsp->dentdata, entdata.data(), entdata.size());
 
@@ -1262,10 +1262,10 @@ void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp)
  * =======================================================================
  */
 
-std::vector<light_t> surfacelight_templates;
+static std::vector<light_t> surfacelight_templates;
 
-FILE *surflights_dump_file;
-char surflights_dump_filename[1024];
+static FILE *surflights_dump_file;
+static std::filesystem::path surflights_dump_filename;
 
 static void SurfLights_WriteEntityToFile(FILE *f, light_t *entity, const vec3_t pos)
 {
@@ -1381,7 +1381,7 @@ static void SubdividePolygon(const bsp2_dface_t *face, const modelinfo_t *face_m
     // float   s, t;
 
     if (numverts > 64)
-        Error("numverts = %i", numverts);
+        FError("numverts = {}", numverts);
 
     BoundPoly(numverts, verts, mins, maxs);
 
@@ -1462,14 +1462,14 @@ static void GL_SubdivideSurface(const bsp2_dface_t *face, const modelinfo_t *fac
     SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts[0], surflight_subdivide);
 }
 
-bool ParseLightsFile(const char *fname)
+bool ParseLightsFile(const std::filesystem::path &fname)
 { // note: this creates dupes. super bright light! (and super slow, too)
     light_t l;
     char buf[1024];
     char gah[256];
     const char *t;
     float r, g, b;
-    FILE *f = fopen(fname, "r");
+    FILE *f = fopen(fname.string().c_str(), "r");
     if (!f)
         return false;
     while (!feof(f)) {
@@ -1501,7 +1501,7 @@ bool ParseLightsFile(const char *fname)
 
 static void MakeSurfaceLights(const mbsp_t *bsp)
 {
-    logprint("--- MakeSurfaceLights ---\n");
+    LogPrint("--- MakeSurfaceLights ---\n");
 
     Q_assert(surfacelight_templates.empty());
 
@@ -1520,7 +1520,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             // Hack: clear templates light value to 0 so they don't cast light
             entity.light.setFloatValue(0);
 
-            logprint("Creating surface lights for texture \"%s\" from template at (%s)\n", tex.c_str(),
+            LogPrint("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
                 ValueForKey(&entity, "origin"));
         }
     }
@@ -1529,10 +1529,9 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
         return;
 
     if (surflight_dump) {
-        strcpy(surflights_dump_filename, mapfilename);
-        StripExtension(surflights_dump_filename);
-        strcat(surflights_dump_filename, "-surflights.map");
-        surflights_dump_file = fopen(surflights_dump_filename, "w");
+        surflights_dump_filename = mapfilename;
+        surflights_dump_filename.replace_filename(surflights_dump_filename.filename().string() + "-surflights").replace_extension("map");
+        surflights_dump_file = fopen(surflights_dump_filename.string().c_str(), "w");
     }
 
     /* Create the surface lights */
@@ -1540,7 +1539,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
     for (int i = 0; i < bsp->numleafs; i++) {
         const mleaf_t *leaf = bsp->dleafs + i;
-        const qboolean underwater =
+        const bool underwater =
             ((bsp->loadversion->game->id == GAME_QUAKE_II) ? (leaf->contents & Q2_CONTENTS_LIQUID)
                                                            : leaf->contents != CONTENTS_EMPTY); // mxd
 
@@ -1577,6 +1576,6 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
     if (surflights_dump_file) {
         fclose(surflights_dump_file);
-        printf("wrote surface lights to '%s'\n", surflights_dump_filename);
+        fmt::print("wrote surface lights to '{}'\n", surflights_dump_filename);
     }
 }

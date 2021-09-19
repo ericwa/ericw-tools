@@ -340,7 +340,7 @@ static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bs
         const double dp = qv::dot(plane.normal, decompFace.normal());
 
         if (dp < 0.9) {
-            // printf("face on back %g, discarding\n", dp);
+            //fmt::print("face on back {}, discarding\n", dp);
             continue;
         }
 
@@ -627,7 +627,7 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
         return "";
     }
 
-    // printf("before: %d after %d\n", (int)task.allPlanes.size(), (int)reducedPlanes.size());
+    //fmt::print("before: {} after {}\n", task.allPlanes.size(), reducedPlanes.size());
 
     // At this point, we should gather all of the faces on `reducedPlanes` and clip away the
     // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
@@ -748,7 +748,7 @@ void AddMapBoundsToStack(std::vector<decomp_plane_t> *planestack, const mbsp_t *
 }
 
 static void DecompileEntity(
-    const mbsp_t *bsp, const decomp_options &options, FILE *file, const entdict_t &dict, bool isWorld)
+    const mbsp_t *bsp, const decomp_options &options, std::ofstream &file, const entdict_t &dict, bool isWorld)
 {
     // we use -1 to indicate it's not a brush model
     int modelNum = -1;
@@ -757,7 +757,7 @@ static void DecompileEntity(
     }
 
     // First, print the key/values for this entity
-    fprintf(file, "{\n");
+    file << '{' << std::endl;
     for (const auto &keyValue : dict) {
         if (keyValue.first == "model" && !keyValue.second.empty() && keyValue.second[0] == '*') {
             // strip "model" "*NNN" key/values
@@ -769,7 +769,7 @@ static void DecompileEntity(
             continue;
         }
 
-        fprintf(file, "\"%s\" \"%s\"\n", keyValue.first.c_str(), keyValue.second.c_str());
+        file << "\"" << keyValue.first << "\" \"" << keyValue.second << "\"" << std::endl;
     }
 
     // Print brushes if any
@@ -798,14 +798,14 @@ static void DecompileEntity(
 
         // finally print out the leafs
         for (auto &leafString : leafStrings) {
-            fprintf(file, "%s", leafString.c_str());
+            file << leafString;
         }
     }
 
-    fprintf(file, "}\n");
+    file << "}" << std::endl;
 }
 
-void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, FILE *file)
+void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file)
 {
     auto entdicts = EntData_Parse(bsp->dentdata);
 

@@ -21,4 +21,4 @@
 
 #pragma once
 
-size_t LoadFile(const char *filename, void *bufptr, bool nofail);
+size_t LoadFile(const std::filesystem::path &filename, void *bufptr, bool nofail);

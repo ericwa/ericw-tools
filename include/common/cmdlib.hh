@@ -20,7 +20,7 @@
 #pragma once
 
 #include <cassert>
-#include <cstdio>
+//#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <cerrno>
@@ -28,13 +28,14 @@
 #include <ctime>
 #include <cstdarg>
 #include <string>
+#include <filesystem>
+#include <memory>
+#include <fmt/format.h>
 #include <common/log.hh>
 #include <common/qvec.hh> // FIXME: For qmax/qmin
 
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
-
-using qboolean = bool;
 
 #ifndef __GNUC__
 #define __attribute__(x)
@@ -52,47 +53,73 @@ char *Q_strupr(char *start);
 char *Q_strlower(char *start);
 int Q_strncasecmp(const char *s1, const char *s2, int n);
 int Q_strcasecmp(const char *s1, const char *s2);
-void Q_getwd(char *out);
 
-int Sys_filelength(FILE *f);
-int FileTime(const char *path);
-
-void Q_mkdir(const char *path);
-
-extern char qdir[1024];
-extern char gamedir[1024];
-extern char basedir[1024]; // mxd
+extern std::filesystem::path    qdir, // c:/Quake/, c:/Hexen II/ etc.
+                                gamedir, // c:/Quake/mymod/
+                                basedir; // c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
 
 bool string_iequals(const std::string &a, const std::string &b); // mxd
 
-void SetQdirFromPath(const char *basedirname, const char *path); // mxd
-char *ExpandPath(char *path);
-char *ExpandPathAndArchive(char *path);
+void SetQdirFromPath(const std::string &basedirname, std::filesystem::path path);
 
-double I_FloatTime(void);
+// Returns the path itself if it has an extension already, otherwise
+// returns the path with extension replaced with `extension`.
+inline std::filesystem::path DefaultExtension(const std::filesystem::path &path, const std::filesystem::path &extension)
+{
+    if (path.has_extension())
+        return path;
 
-[[noreturn]] void Error(const char *error, ...) __attribute__((format(printf, 1, 2), noreturn));
+    return std::filesystem::path(path).replace_extension(extension);
+}
+
+#include <chrono>
+
+using qclock = std::chrono::high_resolution_clock;
+using duration = std::chrono::duration<double>;
+using time_point = std::chrono::time_point<qclock, duration>;
+
+inline time_point I_FloatTime()
+{
+    return qclock::now();
+}
+
+template<typename ...Args>
+inline void Print(const char *fmt, const Args &...args)
+{
+    fmt::print(fmt, std::forward<const Args &>(args)...);
+}
+
+[[noreturn]] void Error(const char *error) __attribute__((noreturn));
+
+template<typename ...Args>
+[[noreturn]] inline void Error(const char *fmt, const Args &...args)
+{
+    auto formatted = fmt::format(fmt, std::forward<const Args &>(args)...);
+    Error(formatted.c_str());
+}
+
+#define FError(fmt, ...) \
+    Error("{}: " fmt, __func__, __VA_ARGS__)
+
 int CheckParm(const char *check);
 
-FILE *SafeOpenWrite(const char *filename);
-FILE *SafeOpenRead(const char *filename);
-void SafeRead(FILE *f, void *buffer, int count);
-void SafeWrite(FILE *f, const void *buffer, int count);
+using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;
 
-int LoadFilePak(char *filename, void *destptr);
-int LoadFile(const char *filename, void *destptr);
-void SaveFile(const char *filename, const void *buffer, int count);
+qfile_t SafeOpenWrite(const std::filesystem::path &filename);
+qfile_t SafeOpenRead(const std::filesystem::path &filename);
+void SafeRead(const qfile_t &f, void *buffer, int count);
+void SafeWrite(const qfile_t &f, const void *buffer, int count);
+void SafeSeek(const qfile_t &f, long offset, int32_t origin);
+long SafeTell(const qfile_t &f);
+template<typename ...Args>
+inline void SafePrint(const qfile_t &f, const char *fmt, const Args &...args)
+{
+    if (fmt::fprintf(f.get(), fmt, std::forward<const Args &>(args)...) < 0)
+        FError("Error writing to file");
+}
 
-void DefaultExtension(char *path, const char *extension);
-void DefaultPath(char *path, const char *basepath);
-std::string StrippedFilename(const std::string &path);
-void StripExtension(char *path);
-std::string StrippedExtension(const std::string &path);
-int IsAbsolutePath(const char *path);
-
-void ExtractFilePath(char *path, char *dest);
-void ExtractFileBase(char *path, char *dest);
-void ExtractFileExtension(char *path, char *dest);
+long LoadFilePak(std::filesystem::path &filename, void *destptr);
+long LoadFile(const std::filesystem::path &filename, void *destptr);
 
 int ParseNum(char *str);
 
@@ -106,24 +133,19 @@ float LittleFloat(float l);
 const char *COM_Parse(const char *data);
 
 extern char com_token[1024];
-extern qboolean com_eof;
+extern bool com_eof;
 
-char *copystring(const char *s);
-
-void CRC_Init(unsigned short *crcvalue);
-void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
-unsigned short CRC_Value(unsigned short crcvalue);
-
-void CreatePath(char *path);
-void Q_CopyFile(const char *from, char *to);
-
-extern qboolean archive;
-extern char archivedir[1024];
+// temporary
+#ifdef _WIN32
+#define copystring _strdup
+#else
+#define copystring strdup
+#endif
 
 inline void Q_assert_(bool success, const char *expr, const char *file, int line)
 {
     if (!success) {
-        logprint("%s:%d: Q_assert(%s) failed.\n", file, line, expr);
+        LogPrint("{}:{}: Q_assert({}) failed.\n", file, line, expr);
         assert(0);
         exit(1);
     }

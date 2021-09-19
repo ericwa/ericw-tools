@@ -23,15 +23,12 @@
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
 
-void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, int version)
+void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const std::filesystem::path &filename, int version)
 {
-    FILE *litfile;
-    char litname[1024];
     litheader_t header;
 
-    snprintf(litname, sizeof(litname) - 4, "%s", filename);
-    StripExtension(litname);
-    DefaultExtension(litname, ".lit");
+    std::filesystem::path litname = filename;
+    litname.replace_extension("lit");
 
     header.v1.ident[0] = 'Q';
     header.v1.ident[1] = 'L';
@@ -41,8 +38,8 @@ void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, i
     header.v2.numsurfs = LittleLong(bsp->numfaces);
     header.v2.lmsamples = LittleLong(bsp->lightdatasize);
 
-    logprint("Writing %s\n", litname);
-    litfile = SafeOpenWrite(litname);
+    LogPrint("Writing {}\n", litname);
+    auto litfile = SafeOpenWrite(litname);
     SafeWrite(litfile, &header.v1, sizeof(header.v1));
     if (version == 2) {
         unsigned int i, j;
@@ -72,18 +69,14 @@ void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const char *filename, i
         SafeWrite(litfile, lux_filebase, bsp->lightdatasize * 3);
     } else
         SafeWrite(litfile, lit_filebase, bsp->lightdatasize * 3);
-    fclose(litfile);
 }
 
-void WriteLuxFile(const mbsp_t *bsp, const char *filename, int version)
+void WriteLuxFile(const mbsp_t *bsp, const std::filesystem::path &filename, int version)
 {
-    FILE *luxfile;
-    char luxname[1024];
     litheader_t header;
 
-    snprintf(luxname, sizeof(luxname) - 4, "%s", filename);
-    StripExtension(luxname);
-    DefaultExtension(luxname, ".lux");
+    std::filesystem::path luxname = filename;
+    luxname.replace_extension("lux");
 
     header.v1.ident[0] = 'Q';
     header.v1.ident[1] = 'L';
@@ -91,8 +84,7 @@ void WriteLuxFile(const mbsp_t *bsp, const char *filename, int version)
     header.v1.ident[3] = 'T';
     header.v1.version = LittleLong(version);
 
-    luxfile = SafeOpenWrite(luxname);
+    auto luxfile = SafeOpenWrite(luxname);
     SafeWrite(luxfile, &header.v1, sizeof(header.v1));
     SafeWrite(luxfile, lux_filebase, bsp->lightdatasize * 3);
-    fclose(luxfile);
 }

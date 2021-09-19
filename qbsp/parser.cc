@@ -46,14 +46,14 @@ skipspace:
             if (flags & PARSE_OPTIONAL)
                 return false;
             if (flags & PARSE_SAMELINE)
-                Error("line %d: Line is incomplete", p->linenum);
+                FError("line {}: Line is incomplete", p->linenum);
             return false;
         }
         if (*p->pos == '\n') {
             if (flags & PARSE_OPTIONAL)
                 return false;
             if (flags & PARSE_SAMELINE)
-                Error("line %d: Line is incomplete", p->linenum);
+                FError("line {}: Line is incomplete", p->linenum);
             p->linenum++;
         }
         p->pos++;
@@ -66,18 +66,18 @@ skipspace:
             while (*p->pos && *p->pos != '\n') {
                 *token_p++ = *p->pos++;
                 if (token_p > &p->token[MAXTOKEN - 1])
-                    Error("line %d: Token too large", p->linenum);
+                    FError("line {}: Token too large", p->linenum);
             }
             goto out;
         }
         if (flags & PARSE_OPTIONAL)
             return false;
         if (flags & PARSE_SAMELINE)
-            Error("line %d: Line is incomplete", p->linenum);
+            FError("line {}: Line is incomplete", p->linenum);
         while (*p->pos++ != '\n') {
             if (!*p->pos) {
                 if (flags & PARSE_SAMELINE)
-                    Error("line %d: Line is incomplete", p->linenum);
+                    FError("line {}: Line is incomplete", p->linenum);
                 return false;
             }
         }
@@ -94,7 +94,7 @@ skipspace:
         p->pos++;
         while (*p->pos != '"') {
             if (!*p->pos)
-                Error("line %d: EOF inside quoted token", p->linenum);
+                FError("line {}: EOF inside quoted token", p->linenum);
             if (*p->pos == '\\') {
                 // small note. the vanilla quake engine just parses the "foo" stuff then goes and looks for \n
                 // explicitly within strings. this means ONLY \n works, and double-quotes cannot be used either in maps
@@ -110,7 +110,7 @@ skipspace:
                               // regular two-char escapes
                         *token_p++ = *p->pos++;
                         if (token_p > &p->token[MAXTOKEN - 1])
-                            Error("line %d: Token too large", p->linenum);
+                            FError("line {}: Token too large", p->linenum);
                         break;
                     case 'x':
                     case '0':
@@ -127,25 +127,25 @@ skipspace:
                     case '\"':
                         *token_p++ = *p->pos++;
                         if (token_p > &p->token[MAXTOKEN - 1])
-                            Error("line %d: Token too large", p->linenum);
+                            FError("line {}: Token too large", p->linenum);
                         if (p->pos[1] == '\r' || p->pos[1] == '\n')
-                            Error("line %d: escaped double-quote at end of string", p->linenum);
+                            FError("line {}: escaped double-quote at end of string", p->linenum);
                         break;
                     default:
-                        Message(msgLiteral, "line %d: Unrecognised string escape - \\%c\n", p->linenum, p->pos[1]);
+                        LogPrint("line {}: Unrecognised string escape - \\{}\n", p->linenum, p->pos[1]);
                         break;
                 }
             }
             *token_p++ = *p->pos++;
             if (token_p > &p->token[MAXTOKEN - 1])
-                Error("line %d: Token too large", p->linenum);
+                FError("line {}: Token too large", p->linenum);
         }
         p->pos++;
     } else {
         while (*p->pos > 32) {
             *token_p++ = *p->pos++;
             if (token_p > &p->token[MAXTOKEN - 1])
-                Error("line %d: Token too large", p->linenum);
+                FError("line {}: Token too large", p->linenum);
         }
     }
 out:

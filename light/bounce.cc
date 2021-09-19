@@ -20,7 +20,7 @@
 
 #include <cstdint>
 #include <cassert>
-#include <cstdio>
+//#include <cstdio>
 #include <iostream>
 
 #include <light/light.hh>
@@ -221,7 +221,7 @@ static void *MakeBounceLightsThread(void *arg)
             for (const auto &styleColor : patch->lightByStyle) {
                 sum[styleColor.first] = sum[styleColor.first] + (styleColor.second * patcharea);
             }
-            //              printf("  %f %f %f\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
+            //fmt::print("  {} {} {}\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
         }
 
         for (auto &styleColor : sum) {
@@ -296,7 +296,7 @@ static qvec3f Texture_AvgColor(const mbsp_t *bsp, const rgba_miptex_t *miptex)
 
 void MakeTextureColors(const mbsp_t *bsp)
 {
-    logprint("--- MakeTextureColors ---\n");
+    LogPrint("--- MakeTextureColors ---\n");
 
     if (!bsp->rgbatexdatasize) // mxd. dtexdata -> drgbatexdata
         return;
@@ -310,19 +310,19 @@ void MakeTextureColors(const mbsp_t *bsp)
         const string name{miptex->name};
         const qvec3f color = Texture_AvgColor(bsp, miptex);
 
-        //      printf("%s has color %s\n", name.c_str(), VecStr(color));
+        //fmt::print("{} has color {}\n", name, VecStr(color));
         texturecolors[name] = color;
     }
 }
 
 void MakeBounceLights(const globalconfig_t &cfg, const mbsp_t *bsp)
 {
-    logprint("--- MakeBounceLights ---\n");
+    LogPrint("--- MakeBounceLights ---\n");
 
     make_bounce_lights_args_t args{
         bsp, &cfg}; // mxd. https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html
 
     RunThreadsOn(0, bsp->numfaces, MakeBounceLightsThread, (void *)&args);
 
-    logprint("%d bounce lights created\n", static_cast<int>(radlights.size()));
+    LogPrint("{} bounce lights created\n", radlights.size());
 }

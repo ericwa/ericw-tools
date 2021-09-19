@@ -1268,7 +1268,12 @@ struct gamedef_t
 
     bool has_rgb_lightmap;
 
-    const char *base_dir;
+    const std::string base_dir;
+
+    gamedef_t(const char *base_dir) :
+        base_dir(base_dir)
+    {
+    }
 
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
@@ -1327,8 +1332,8 @@ extern const bspversion_t bspver_qbism;
 constexpr const bspversion_t *const bspversions[] = {&bspver_generic, &bspver_q1, &bspver_h2, &bspver_h2bsp2,
     &bspver_h2bsp2rmq, &bspver_bsp2, &bspver_bsp2rmq, &bspver_hl, &bspver_q2, &bspver_qbism};
 
-void LoadBSPFile(char *filename, bspdata_t *bspdata); // returns the filename as contained inside a bsp
-void WriteBSPFile(const char *filename, bspdata_t *bspdata);
+void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata); // returns the filename as contained inside a bsp
+void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata);
 void PrintBSPFileSizes(const bspdata_t *bspdata);
 /**
  * Returns false if the conversion failed.

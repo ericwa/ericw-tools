@@ -34,7 +34,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
+//#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -42,11 +42,6 @@
 #include <common/bspfile.hh>
 
 #include "file.hh"
-#include "warnerr.hh"
-
-#ifdef _MSC_VER
-#define __func__ __FUNCTION__
-#endif
 
 #ifndef __GNUC__
 #define __attribute__(x)
@@ -276,12 +271,12 @@ public:
      * total surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)
      */
     float midsplitSurfFraction;
-    char szMapName[512];
-    char szBSPName[512];
+    std::filesystem::path szMapName;
+    std::filesystem::path szBSPName;
 
     struct wadpath
     {
-        std::string path;
+        std::filesystem::path path;
         bool external; // wads from this path are not to be embedded into the bsp, but will instead require the engine
                        // to load them from elsewhere. strongly recommended for eg halflife.wad
     };

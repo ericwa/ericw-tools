@@ -110,11 +110,11 @@ faceextents_t::faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float 
             const char *texname = Face_TextureName(bsp, face);
 
             Error("Bad surface extents:\n"
-                  "   surface %d, %s extents = %d, scale = %g\n"
-                  "   texture %s at (%s)\n"
-                  "   surface normal (%s)\n",
+                  "   surface {}, {} extents = {}, scale = {}\n"
+                  "   texture {} at ({})\n"
+                  "   surface normal ({})\n",
                 Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname,
-                qv::to_string(point).c_str(), VecStrf(plane.normal).c_str());
+                qv::to_string(point), VecStrf(plane.normal));
         }
     }
 }
@@ -261,10 +261,10 @@ void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp)
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
-    logprint("face %d, texture %s, %d edges...\n"
-             "  vectors (%3.3f, %3.3f, %3.3f) (%3.3f)\n"
-             "          (%3.3f, %3.3f, %3.3f) (%3.3f)\n",
-        (int)(face - bsp->dfaces), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
+    LogPrint("face {}, texture {}, {} edges...\n"
+             "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"
+             "          ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n",
+        (ptrdiff_t)(face - bsp->dfaces), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
         tex->vecs[0][3], tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
 
     for (int i = 0; i < face->numedges; i++) {
@@ -272,7 +272,7 @@ void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp)
         int vert = Face_VertexAtIndex(bsp, face, i);
         const float *point = GetSurfaceVertexPoint(bsp, face, i);
         const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i);
-        logprint("%s %3d (%3.3f, %3.3f, %3.3f) :: normal (%3.3f, %3.3f, %3.3f) :: edge %d\n",
+        LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
             i ? "          " : "    verts ", vert, point[0], point[1], point[2], norm[0], norm[1], norm[2], edge);
     }
 }
@@ -345,11 +345,11 @@ static void CalcFaceExtents(const bsp2_dface_t *face, const mbsp_t *bsp, lightsu
             const dplane_t *plane = bsp->dplanes + face->planenum;
             const char *texname = Face_TextureName(bsp, face);
             Error("Bad surface extents:\n"
-                  "   surface %d, %s extents = %d, scale = %g\n"
-                  "   texture %s at (%s)\n"
-                  "   surface normal (%s)\n",
-                (int)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname,
-                VecStr(worldpoint).c_str(), VecStrf(plane->normal).c_str());
+                  "   surface {}, {} extents = {}, scale = {}\n"
+                  "   texture {} at ({})\n"
+                  "   surface normal ({})\n",
+                (ptrdiff_t)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname,
+                VecStr(worldpoint), VecStrf(plane->normal));
         }
     }
 }
@@ -569,7 +569,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 
     fclose(f);
 
-    logprint("wrote face %d's sample points (%dx%d) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
+    LogPrint("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
         surf->height);
 
     PrintFaceInfo(surf->face, bsp);
@@ -816,7 +816,7 @@ static bool Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *fac
 
     /* Check for invalid texture axes */
     if (std::isnan(lightsurf->texorg.texSpaceToWorld.at(0, 0))) {
-        logprint("Bad texture axes on face:\n");
+        LogPrint("Bad texture axes on face:\n");
         PrintFaceInfo(face, bsp);
         return false;
     }
@@ -962,7 +962,7 @@ vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist
                 return (light - value > 0) ? light - value : 0;
             else
                 return (light + value < 0) ? light + value : 0;
-        default: Error("Internal error: unknown light formula"); throw; // mxd. Silences compiler warning
+        default: Error("Internal error: unknown light formula");
     }
 }
 
@@ -1004,7 +1004,7 @@ float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, c
     return add;
 }
 
-static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
+static bool LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
     vec_t *result); // mxd. miptex_t -> rgba_miptex_t
 
 void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t &surfpoint,
@@ -1074,8 +1074,7 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
                 fadedist = qmax(0.0f, fadedist);
                 break;
             default:
-                Error("Internal error: formula not handled in %s", __func__);
-                throw; // mxd. Fixes "uninitialized variable" warning
+                FError("Internal error: formula not handled");
         }
     }
     return fadedist;
@@ -1201,7 +1200,7 @@ inline vec_t Dirt_GetScaleFactor(
  * Returns true if the given light doesn't reach lightsurf.
  * ================
  */
-inline qboolean CullLight(const light_t *entity, const lightsurf_t *lightsurf)
+inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
 
@@ -1231,9 +1230,9 @@ static void Matrix4x4_CM_Transform4(const float *matrix, const float *vector, fl
     product[2] = matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2] + matrix[14] * vector[3];
     product[3] = matrix[3] * vector[0] + matrix[7] * vector[1] + matrix[11] * vector[2] + matrix[15] * vector[3];
 }
-static qboolean Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *modelviewproj)
+static bool Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *modelviewproj)
 {
-    qboolean result = true;
+    bool result = true;
 
     float v[4], tempv[4];
     tempv[0] = in[0];
@@ -1256,7 +1255,7 @@ static qboolean Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *m
         result = false; // beyond far clip plane
     return result;
 }
-static qboolean LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
+static bool LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
     vec_t *result) // mxd. miptex_t -> rgba_miptex_t
 {
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
@@ -2143,7 +2142,7 @@ static void LightFace_Bounce(
             }
 
             if (!(fabs(1.0f - qv::length(raydir)) < 0.1)) {
-                // printf("bad raydir: %f %f %f (len %f)\n", raydir.x, raydir.y, raydir.z, qv::length(raydir));
+                //fmt::print("bad raydir: {} {} {} (len {})\n", raydir.x, raydir.y, raydir.z, qv::length(raydir));
                 continue;
             }
 
@@ -2390,7 +2389,7 @@ void SetupDirt(globalconfig_t &cfg)
     }
 
     /* note it */
-    logprint("--- SetupDirt ---\n");
+    LogPrint("--- SetupDirt ---\n");
 
     /* clamp dirtAngle */
     if (cfg.dirtAngle.floatValue() <= 1.0f) {
@@ -2418,7 +2417,7 @@ void SetupDirt(globalconfig_t &cfg)
     }
 
     /* emit some statistics */
-    logprint("%9d dirtmap vectors\n", numDirtVectors);
+    LogPrint("{:9} dirtmap vectors\n", numDirtVectors);
 }
 
 // from q3map2
@@ -2903,7 +2902,7 @@ static std::vector<qvec4f> FloodFillTransparent(const std::vector<qvec4f> &input
         }
 
         if (unhandled_pixels == input.size()) {
-            // logprint("FloodFillTransparent: warning, fully transparent lightmap\n");
+            // FLogPrint("warning, fully transparent lightmap\n");
             fully_transparent_lightmaps++;
             break;
         }
@@ -3071,9 +3070,9 @@ static void WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *fac
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
         if (sorted.size() == MAXLIGHTMAPS) {
-            logprint("WARNING: Too many light styles on a face\n"
-                     "         lightmap point near (%s)\n",
-                VecStr(lightsurf->points[0]).c_str());
+            LogPrint("WARNING: Too many light styles on a face\n"
+                     "         lightmap point near ({})\n",
+                VecStr(lightsurf->points[0]));
             break;
         }
 

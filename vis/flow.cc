@@ -36,7 +36,7 @@ static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl
     vec3_t v1, v2;
     vec_t d;
     int count;
-    qboolean fliptest;
+    bool fliptest;
     vec_t len_sq;
 
     // check all combinations
@@ -109,7 +109,7 @@ static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl
             /* Cache separating planes for tests 0, 1 */
             if (test < 2) {
                 if (stack->numseparators[test] == MAX_SEPARATORS)
-                    Error("MAX_SEPARATORS");
+                    FError("MAX_SEPARATORS");
                 stack->separators[test][stack->numseparators[test]] = sep;
                 stack->numseparators[test]++;
             }
@@ -163,7 +163,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
         // causes it to happen a lot.
 
-        // logprint("WARNING: %s: recursion on leaf %d\n", __func__, leafnum);
+        // FLogPrint("WARNING: recursion on leaf {}\n", leafnum);
         // LogLeaf(leaf);
         return;
     }
@@ -348,7 +348,7 @@ void PortalFlow(portal_t *p)
     threaddata_t data;
 
     if (p->status != pstat_working)
-        Error("%s: reflowed", __func__);
+        FError("reflowed");
 
     p->visbits = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
     memset(p->visbits, 0, LeafbitsSize(portalleafs));
@@ -428,7 +428,7 @@ static void *BasePortalThread(void *dummy)
 
     portalsee = new uint8_t[numportals * 2];
     if (!portalsee)
-        Error("%s: Out of Memory", __func__);
+        FError("Out of Memory");
 
     while (1) {
         portalnum = GetThreadWork();

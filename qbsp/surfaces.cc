@@ -110,7 +110,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
             if (!front || !back) {
                 printf("didn't split\n");
                 break;
-                //              Error("Didn't split the polygon (%s)", __func__);
+                //FError("Didn't split the polygon");
             }
             *prevptr = back;
             back->next = front;
@@ -280,7 +280,7 @@ static int GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2, const 
     int i;
 
     if (!face->contents[0].is_valid(options.target_game, false))
-        Error("Face with invalid contents (%s)", __func__);
+        FError("Face with invalid contents");
 
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
@@ -330,7 +330,7 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
 
     face->outputnumber = -1;
     if (face->w.numpoints > MAXEDGES)
-        Error("Internal error: face->numpoints > MAXEDGES (%s)", __func__);
+        FError("Internal error: face->numpoints > MAXEDGES");
 
     face->edges = new int[face->w.numpoints] { };
     for (i = 0; i < face->w.numpoints; i++) {
@@ -356,7 +356,7 @@ static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
         FindFaceEdges(entity, f);
     }
 
-    Message(msgPercent, ++progress, splitnodes.load());
+    LogPercent(++progress, splitnodes.load());
     progress = MakeFaceEdges_r(entity, node->children[0], progress);
     progress = MakeFaceEdges_r(entity, node->children[1], progress);
 
@@ -468,8 +468,8 @@ MakeFaceEdges
 int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int firstface;
-
-    Message(msgProgress, "MakeFaceEdges");
+    
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     Q_assert(entity->firstoutputfacenumber == -1);
     entity->firstoutputfacenumber = static_cast<int>(map.exported_faces.size());
@@ -486,8 +486,8 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
-
-    Message(msgProgress, "GrowRegions");
+    
+    LogPrint(LOG_PROGRESS, "---- GrowRegions ----\n");
     GrowNodeRegion(entity, headnode);
 
     return firstface;

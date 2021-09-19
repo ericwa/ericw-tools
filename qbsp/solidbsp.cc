@@ -323,7 +323,7 @@ static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins,
             break;
     }
     if (!bestsurface)
-        Error("No valid planes in surface list (%s)", __func__);
+        FError("No valid planes in surface list");
 
     // ericw -- (!usemidsplit) is true on the final SolidBSP phase for the world.
     // !bestsurface->has_struct means all surfaces in this node are detail, so
@@ -522,7 +522,7 @@ void CalcSurfaceInfo(surface_t *surf)
     for (const face_t *f = surf->faces; f; f = f->next) {
         for (auto &contents : f->contents)
             if (!contents.is_valid(options.target_game, false))
-                Error("Bad contents in face: %s (%s)", contents.to_string(options.target_game).c_str(), __func__);
+                FError("Bad contents in face: {}", contents.to_string(options.target_game));
 
         surf->lmshift = (f->lmshift[0] < f->lmshift[1]) ? f->lmshift[0] : f->lmshift[1];
 
@@ -667,39 +667,6 @@ static void DivideNodeBounds(node_t *node, const qbsp_plane_t *split)
 
 /*
 ==================
-GetContentsName
-==================
-*/
-const char *GetContentsName(const contentflags_t &Contents)
-{
-    if (Contents.extended & CFLAGS_DETAIL) {
-        return "Detail";
-    } else if (Contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
-        return "DetailIllusionary";
-    } else if (Contents.extended & CFLAGS_DETAIL_FENCE) {
-        return "DetailFence";
-    } else if (Contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
-        return "IllusionaryVisblocker";
-    } else
-        switch (Contents.native) {
-            case CONTENTS_EMPTY: return "Empty";
-
-            case CONTENTS_SOLID: return "Solid";
-
-            case CONTENTS_WATER: return "Water";
-
-            case CONTENTS_SLIME: return "Slime";
-
-            case CONTENTS_LAVA: return "Lava";
-
-            case CONTENTS_SKY: return "Sky";
-
-            default: return "Error";
-        }
-}
-
-/*
-==================
 LinkConvexFaces
 
 Determines the contents of the leaf and creates the final list of
@@ -760,7 +727,8 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     } else if (leafnode->contents.is_liquid(options.target_game) || leafnode->contents.is_sky(options.target_game)) {
         c_water++;
     } else {
-        // Error("Bad contents in face: %s (%s)", leafnode->contents.to_string(options.target_game).c_str(), __func__);
+        // FIXME: what to call here? is_valid()? this hits in Q2 a lot
+        // FError("Bad contents in face: {}", leafnode->contents.to_string(options.target_game));
     }
 
     // write the list of the original faces to the leaf's markfaces
@@ -842,7 +810,7 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
     }
 
     splitnodes++;
-    Message(msgPercent, splitnodes.load(), csgmergefaces);
+    LogPercent(splitnodes.load(), csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
     node->children[0] = new node_t { };
@@ -873,13 +841,13 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
 
         if (frontfrag) {
             if (!frontfrag->faces)
-                Error("Surface with no faces (%s)", __func__);
+                FError("Surface with no faces");
             frontfrag->next = frontlist;
             frontlist = frontfrag;
         }
         if (backfrag) {
             if (!backfrag->faces)
-                Error("Surface with no faces (%s)", __func__);
+                FError("Surface with no faces");
             backfrag->next = backlist;
             backlist = backfrag;
         }
@@ -921,8 +889,8 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 
         return headnode;
     }
-
-    Message(msgProgress, "SolidBSP");
+    
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     node_t *headnode = new node_t { };
     usemidsplit = midsplit;
@@ -952,16 +920,16 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
 
     PartitionSurfaces(surfhead, headnode);
 
-    Message(msgStat, "%8d split nodes", splitnodes.load());
-    Message(msgStat, "%8d solid leafs", c_solid.load());
-    Message(msgStat, "%8d empty leafs", c_empty.load());
-    Message(msgStat, "%8d water leafs", c_water.load());
-    Message(msgStat, "%8d detail leafs", c_detail.load());
-    Message(msgStat, "%8d detail illusionary leafs", c_detail_illusionary.load());
-    Message(msgStat, "%8d detail fence leafs", c_detail_fence.load());
-    Message(msgStat, "%8d illusionary visblocker leafs", c_illusionary_visblocker.load());
-    Message(msgStat, "%8d leaffaces", leaffaces.load());
-    Message(msgStat, "%8d nodefaces", nodefaces.load());
+    LogPrint(LOG_STAT, "     {:8} split nodes\n", splitnodes.load());
+    LogPrint(LOG_STAT, "     {:8} solid leafs\n", c_solid.load());
+    LogPrint(LOG_STAT, "     {:8} empty leafs\n", c_empty.load());
+    LogPrint(LOG_STAT, "     {:8} water leafs\n", c_water.load());
+    LogPrint(LOG_STAT, "     {:8} detail leafs\n", c_detail.load());
+    LogPrint(LOG_STAT, "     {:8} detail illusionary leafs\n", c_detail_illusionary.load());
+    LogPrint(LOG_STAT, "     {:8} detail fence leafs\n", c_detail_fence.load());
+    LogPrint(LOG_STAT, "     {:8} illusionary visblocker leafs\n", c_illusionary_visblocker.load());
+    LogPrint(LOG_STAT, "     {:8} leaffaces\n", leaffaces.load());
+    LogPrint(LOG_STAT, "     {:8} nodefaces\n", nodefaces.load());
 
     return headnode;
 }

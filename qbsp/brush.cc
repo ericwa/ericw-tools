@@ -87,14 +87,14 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
 
     if (face->w.numpoints < 3) {
         if (face->w.numpoints == 2) {
-            Error("%s: line %d: too few points (2): (%f %f %f) (%f %f %f)\n", __func__, sourceface->linenum,
+            FError("line {}: too few points (2): ({} {} {}) ({} {} {})\n", sourceface->linenum,
                 face->w.points[0][0], face->w.points[0][1], face->w.points[0][2], face->w.points[1][0],
                 face->w.points[1][1], face->w.points[1][2]);
         } else if (face->w.numpoints == 1) {
-            Error("%s: line %d: too few points (1): (%f %f %f)\n", __func__, sourceface->linenum, face->w.points[0][0],
+            FError("line {}: too few points (1): ({} {} {})\n", sourceface->linenum, face->w.points[0][0],
                 face->w.points[0][1], face->w.points[0][2]);
         } else {
-            Error("%s: line %d: too few points (%d)", __func__, sourceface->linenum, face->w.numpoints);
+            FError("line {}: too few points ({})", sourceface->linenum, face->w.numpoints);
         }
     }
 
@@ -108,18 +108,18 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
 
         for (j = 0; j < 3; j++)
             if (p1[j] > options.worldExtent || p1[j] < -options.worldExtent)
-                Error("%s: line %d: coordinate out of range (%f)", __func__, sourceface->linenum, p1[j]);
+                FError("line {}: coordinate out of range ({})", sourceface->linenum, p1[j]);
 
         /* check the point is on the face plane */
         dist = DotProduct(p1, plane->normal) - plane->dist;
         if (dist < -ON_EPSILON || dist > ON_EPSILON)
-            Message(msgWarning, warnPointOffPlane, sourceface->linenum, p1[0], p1[1], p1[2], dist);
+            LogPrint("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface->linenum, p1[0], p1[1], p1[2], dist);
 
         /* check the edge isn't degenerate */
         VectorSubtract(p2, p1, edgevec);
         length = VectorLength(edgevec);
         if (length < ON_EPSILON) {
-            Message(msgWarning, warnDegenerateEdge, sourceface->linenum, length, p1[0], p1[1], p1[2]);
+            LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface->linenum, length, p1[0], p1[1], p1[2]);
             for (j = i + 1; j < face->w.numpoints; j++)
                 VectorCopy(face->w.points[j], face->w.points[j - 1]);
             face->w.numpoints--;
@@ -138,7 +138,7 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
                 continue;
             dist = DotProduct(face->w.points[j], edgenormal);
             if (dist > edgedist)
-                Error("%s: line %d: Found a non-convex face (error size %f, point: %f %f %f)\n", __func__,
+                FError("line {}: Found a non-convex face (error size {}, point: {} {} {})\n",
                     sourceface->linenum, dist - edgedist, face->w.points[j][0], face->w.points[j][1],
                     face->w.points[j][2]);
         }
@@ -247,7 +247,7 @@ static int NewPlane(const vec3_t normal, const vec_t dist, int *side)
 
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
-        Error("%s: invalid normal (vector length %.4f)", __func__, len);
+        FError("invalid normal (vector length {:.4})", len);
 
     qbsp_plane_t plane;
     VectorCopy(normal, plane.normal);
@@ -341,7 +341,7 @@ void FixRotateOrigin(mapentity_t *entity)
         GetVectorForKey(target, "origin", offset);
     } else {
         search = ValueForKey(entity, "classname");
-        Message(msgWarning, warnNoRotateTarget, search);
+        LogPrint("WARNING: No target for rotation entity \"{}\"", search);
         VectorCopy(vec3_origin, offset);
     }
 
@@ -419,7 +419,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         f->planenum = PLANENUM_LEAF;
         f->w.numpoints = w->numpoints;
         if (f->w.numpoints > MAXEDGES)
-            Error("face->numpoints > MAXEDGES (%d), source face on line %d", MAXEDGES, mapface->linenum);
+            FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface->linenum);
 
         for (j = 0; j < w->numpoints; j++) {
             for (k = 0; k < 3; k++) {
@@ -573,7 +573,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
 
     len = VectorLength(plane->normal);
     if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
-        Error("%s: invalid normal (vector length %.4f)", __func__, len);
+        FError("invalid normal (vector length {:.4})", len);
 
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
@@ -582,8 +582,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
             return;
     }
     if (hullbrush->numfaces == MAX_FACES)
-        Error(
-            "brush->faces >= MAX_FACES (%d), source brush on line %d", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
+        FError("brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
 
     mapface->plane = *plane;
     mapface->texinfo = 0;
@@ -664,8 +663,8 @@ static int AddHullPoint(hullbrush_t *hullbrush, const vec3_t &p, vec3_t hull_siz
             return i;
 
     if (hullbrush->numpoints == MAX_HULL_POINTS)
-        Error("hullbrush->numpoints == MAX_HULL_POINTS (%d), "
-              "source brush on line %d",
+        FError("hullbrush->numpoints == MAX_HULL_POINTS ({}), "
+              "source brush on line {}",
             MAX_HULL_POINTS, hullbrush->srcbrush->face(0).linenum);
 
     VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
@@ -711,8 +710,8 @@ static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &
             return;
 
     if (hullbrush->numedges == MAX_HULL_EDGES)
-        Error("hullbrush->numedges == MAX_HULL_EDGES (%d), "
-              "source brush on line %d",
+        FError("hullbrush->numedges == MAX_HULL_EDGES ({}), "
+              "source brush on line {}",
             MAX_HULL_EDGES, hullbrush->srcbrush->face(0).linenum);
 
     hullbrush->edges[i][0] = pt1;
@@ -889,9 +888,9 @@ static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush, const con
         }
 
         if (mapface.contents != contents.native) {
-            logprint("mixed face contents (%s != %s at line %i)\n",
-                contentflags_t{mapface.contents}.to_string(options.target_game).c_str(),
-                contents.to_string(options.target_game).c_str(), mapface.linenum); // TODO: need entity # and brush #
+            LogPrint("mixed face contents ({} != {} at line {})\n",
+                contentflags_t{mapface.contents}.to_string(options.target_game),
+                contents.to_string(options.target_game), mapface.linenum);
             break;
         }
     }
@@ -958,7 +957,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 
     hullbrush.linenum = mapbrush->face(0).linenum;
     if (mapbrush->numfaces > MAX_FACES)
-        Error("brush->faces >= MAX_FACES (%d), source brush on line %d", MAX_FACES, hullbrush.linenum);
+        FError("brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush.linenum);
 
     hullbrush.contents = contents;
     hullbrush.srcbrush = mapbrush;
@@ -976,8 +975,8 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
     }
 
     if (!facelist) {
-        Message(msgWarning, warnNoBrushFaces);
-        logprint("^ brush at line %d of .map file\n", hullbrush.linenum);
+        LogPrint("WARNING: Couldn't create brush faces\n");
+        LogPrint("^ brush at line {} of .map file\n", hullbrush.linenum);
         return NULL;
     }
 
@@ -1193,7 +1192,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         const contentflags_t contents = Brush_GetContents(mapbrush, base_contents);
         if (contents.extended & CFLAGS_ORIGIN) {
             if (dst == pWorldEnt()) {
-                Message(msgWarning, warnOriginBrushInWorld);
+                LogPrint("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
             }
 
@@ -1390,7 +1389,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         AddToBounds(dst, brush->mins);
         AddToBounds(dst, brush->maxs);
 
-        Message(msgPercent, i + 1, src->nummapbrushes);
+        LogPercent(i + 1, src->nummapbrushes);
     }
 }
 
@@ -1542,7 +1541,7 @@ from q3map
 ================
 */
 #define EDGE_LENGTH 0.2
-static qboolean WindingIsTiny(const winding_t *w)
+static bool WindingIsTiny(const winding_t *w)
 {
     /*
      if (WindingArea (w) < 1)
@@ -1577,7 +1576,7 @@ from basewinding for plane
 from q3map
 ================
 */
-qboolean WindingIsHuge(winding_t *w)
+bool WindingIsHuge(winding_t *w)
 {
     int i, j;
 
@@ -1670,7 +1669,7 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     }
 
     if (WindingIsHuge(w)) {
-        logprint("WARNING: huge winding\n");
+        LogPrint("WARNING: huge winding\n");
     }
 
     winding_t *midwinding = w;
@@ -1738,7 +1737,7 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
         int j;
         for (j = 0; j < 3; j++) {
             if (b[i]->mins[j] < MIN_WORLD_COORD || b[i]->maxs[j] > MAX_WORLD_COORD) {
-                logprint("bogus brush after clip\n");
+                LogPrint("bogus brush after clip\n");
                 break;
             }
         }
@@ -1752,9 +1751,9 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
 
     if (!(b[0] && b[1])) {
         if (!b[0] && !b[1])
-            logprint("split removed brush\n");
+            LogPrint("split removed brush\n");
         else
-            logprint("split not on both sides\n");
+            LogPrint("split not on both sides\n");
         if (b[0]) {
             FreeBrush(b[0]);
             *front = CopyBrush(brush);
@@ -1799,7 +1798,7 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
             if (v1 < 1.0) {
                 FreeBrush(b[i]);
                 b[i] = nullptr;
-                logprint("tiny volume after clip\n");
+                LogPrint("tiny volume after clip\n");
             }
         }
     }
@@ -1862,9 +1861,9 @@ from q3map
 */
 void FilterStructuralBrushesIntoTree( const mapentity_t *e, node_t *headnode )
 {
-    logprint( "----- FilterStructuralBrushesIntoTree -----\n");
+    LogPrint( "----- FilterStructuralBrushesIntoTree -----\n");
     
-    double st = I_FloatTime();
+    auto st = I_FloatTime();
     
     int c_unique = 0;
     int c_clusters = 0;
@@ -1878,8 +1877,8 @@ void FilterStructuralBrushesIntoTree( const mapentity_t *e, node_t *headnode )
         // mark all sides as visible so drawsurfs are created
     }
     
-    logprint( "%5i structural brushes\n", c_unique );
-    logprint( "%5i cluster references\n", c_clusters );
-    logprint( "took %f seconds\n", I_FloatTime() - st );
+    LogPrint( "{:5} structural brushes\n", c_unique );
+    LogPrint( "{:5} cluster references\n", c_clusters );
+    LogPrint( "took {} seconds\n", (I_FloatTime() - st).count() );
 }
 #endif

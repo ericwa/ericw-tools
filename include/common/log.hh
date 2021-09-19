@@ -27,21 +27,71 @@
 #pragma once
 
 #include <cstdarg>
-#include <cstdio>
+//#include <cstdio>
+#include <filesystem>
+#include <fmt/format.h>
 
-#ifndef __GNUC__
-#define __attribute__(x)
-#endif
+// TODO: no wchar_t support in this version apparently
+template <>
+struct fmt::formatter<std::filesystem::path> : formatter<std::string>
+{
+    template <typename FormatContext>
+    auto format(const std::filesystem::path &p, FormatContext &ctx)
+    {
+        return formatter<std::string>::format(p.string(), ctx);
+    }
+};
 
-void init_log(const char *filename);
-void close_log();
+enum : int8_t
+{
+    LOG_DEFAULT,
+    LOG_VERBOSE,
+    LOG_PROGRESS,
+    LOG_PERCENT,
+    LOG_STAT
+};
+
+using log_flag_t = int8_t;
+
+extern log_flag_t log_mask;
+
+void InitLog(const std::filesystem::path &filename);
+
+void CloseLog();
 
 /* Print to screen and to log file */
-void logprint(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
-void logvprint(const char *fmt, va_list args) __attribute__((format(printf, 1, 0)));
+void LogPrint(log_flag_t type, const char *str);
+
+void LogPercent(int32_t value, int32_t max);
+
+inline void LogPrint(const char *str)
+{
+    LogPrint(LOG_DEFAULT, str);
+}
+
+template<typename ...Args>
+inline void LogPrint(log_flag_t type, const char *fmt, const Args &...args)
+{
+    LogPrint(type, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
+}
+
+template<typename ...Args>
+inline void LogPrint(const char *fmt, const Args &...args)
+{
+    LogPrint(LOG_DEFAULT, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
+}
+
+#define FLogPrint(fmt, ...) \
+    LogPrint("{}: " fmt, __func__, __VA_ARGS__)
 
 /* Print only into log file */
-void logprint_silent(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void LogPrintSilent(const char *str);
 
 /* Only called from the threads code */
-void logprint_locked__(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+void LogPrintLocked(const char *str);
+
+template<typename ...Args>
+inline void LogPrintLocked(const char *fmt, const Args &...args)
+{
+    LogPrintLocked(fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
+}

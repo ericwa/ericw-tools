@@ -4,6 +4,7 @@
 
 #include <random>
 #include <algorithm> // for std::sort
+#include <fmt/format.h>
 
 #include <common/qvec.hh>
 
@@ -917,13 +918,13 @@ TEST(mathlib, octree_basic)
     }
 
     // build octree
-    const double insert_start = I_FloatTime();
+    auto insert_start = I_FloatTime();
     auto octree = makeOctree(objs);
-    const double insert_end = I_FloatTime();
-    printf("inserting %d cubes took %f ms\n", N, 1000.0 * (insert_end - insert_start));
+    auto insert_end = I_FloatTime();
+    fmt::print("inserting {} cubes took {} ms\n", N, 1000.0 * (insert_end - insert_start).count());
 
     // query for objects overlapping objs[0]'s bbox
-    const double exhaustive_query_start = I_FloatTime();
+    auto exhaustive_query_start = I_FloatTime();
     vector<vector<int>> objsTouchingObjs;
     for (int i = 0; i < N; i++) {
         const aabb3f obj_iBBox = objs[i].first;
@@ -936,11 +937,11 @@ TEST(mathlib, octree_basic)
         }
         objsTouchingObjs.push_back(objsTouchingObj_i);
     }
-    const double exhaustive_query_end = I_FloatTime();
-    printf("exhaustive query took %f ms\n", 1000.0 * (exhaustive_query_end - exhaustive_query_start));
+    auto exhaustive_query_end = I_FloatTime();
+    fmt::print("exhaustive query took {} ms\n", 1000.0 * (exhaustive_query_end - exhaustive_query_start).count());
 
     // now repeat the same query using the octree
-    const double octree_query_start = I_FloatTime();
+    auto octree_query_start = I_FloatTime();
     vector<vector<int>> objsTouchingObjs_octree;
     for (int i = 0; i < N; i++) {
         const aabb3f obj_iBBox = objs[i].first;
@@ -948,8 +949,8 @@ TEST(mathlib, octree_basic)
         vector<int> objsTouchingObj_i = octree.queryTouchingBBox(obj_iBBox);
         objsTouchingObjs_octree.push_back(objsTouchingObj_i);
     }
-    const double octree_query_end = I_FloatTime();
-    printf("octree query took %f ms\n", 1000.0 * (octree_query_end - octree_query_start));
+    auto octree_query_end = I_FloatTime();
+    fmt::print("octree query took {} ms\n", 1000.0 * (octree_query_end - octree_query_start).count());
 
     // compare result
     for (int i = 0; i < N; i++) {
