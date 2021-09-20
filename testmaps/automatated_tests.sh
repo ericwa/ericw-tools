@@ -71,9 +71,10 @@ else
 fi
 
 # now run light
+# FIXME: light output is nondeterministic when run with multiple threads!
 
 for bsp in ${HASH_CHECK_BSPS}; do
-    light ${bsp} || exit 1
+    light -threads 1 ${bsp} || exit 1
 done
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
