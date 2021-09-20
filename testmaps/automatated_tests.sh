@@ -58,9 +58,10 @@ else
 fi
 
 # now run vis
+# FIXME: vis output is nondeterministic when run with multiple threads!
 
 for bsp in ${HASH_CHECK_BSPS}; do
-    vis -nostate ${bsp} || exit 1
+    vis -nostate -threads 1 ${bsp} || exit 1
 done
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
