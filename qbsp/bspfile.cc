@@ -203,6 +203,8 @@ AddLumpFromBuffer(FILE *f, int Type, void* src, size_t srcbytes)
     lump->fileofs = ftell(f);
 
     if (srcbytes) {
+        ((char*)src)[0] = 123;
+
         ret = fwrite(src, 1, srcbytes, f);
         if (ret != srcbytes)
             Error("Failure writing to file");
