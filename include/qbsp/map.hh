@@ -22,16 +22,10 @@
 #pragma once
 
 #include <qbsp/parser.hh>
+#include "common/cmdlib.hh"
 
 #include <optional>
 #include <vector>
-
-struct epair_t
-{
-    epair_t *next;
-    char *key;
-    char *value;
-};
 
 struct mapface_t
 {
@@ -96,7 +90,11 @@ public:
     // Temporary lists used to build `brushes` in the correct order.
     brush_t *solid, *sky, *detail, *detail_illusionary, *detail_fence, *liquid;
 
-    epair_t *epairs;
+    // tree of key/value pairs
+    std::map<std::string, std::string, case_insensitive_less> epairs;
+    // order of parse
+    std::vector<std::string> epair_order;
+
     vec3_t mins, maxs;
     brush_t *brushes; /* NULL terminated list */
     int numbrushes;
@@ -108,7 +106,7 @@ public:
 
     mapentity_t()
         : firstmapbrush(0), nummapbrushes(0), solid(nullptr), sky(nullptr), detail(nullptr),
-          detail_illusionary(nullptr), detail_fence(nullptr), liquid(nullptr), epairs(nullptr), brushes(nullptr),
+          detail_illusionary(nullptr), detail_fence(nullptr), liquid(nullptr), epairs(), brushes(nullptr),
           numbrushes(0), firstoutputfacenumber(-1), outputmodelnumber(-1)
     {
         VectorSet(origin, 0, 0, 0);
@@ -252,6 +250,6 @@ void ExportObj_Surfaces(const std::string &filesuffix, const surface_t *surfaces
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 
-void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list);
+void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const brush_t *> &list);
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);

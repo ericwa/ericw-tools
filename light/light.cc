@@ -21,6 +21,8 @@
 #include <cassert>
 //#include <cstdio>
 #include <iostream>
+#include <fstream>
+#include <fmt/ostream.h>
 
 #include <light/light.hh>
 #include <light/phong.hh>
@@ -341,9 +343,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
         modelinfo.push_back(info);
 
         /* Find the entity for the model */
-        std::stringstream ss;
-        ss << "*" << i;
-        std::string modelname = ss.str();
+        std::string modelname = fmt::format("*{}", i);
 
         const entdict_t *entdict = FindEntDictWithKeyPair("model", modelname);
         if (entdict == nullptr)
@@ -501,7 +501,8 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
     std::filesystem::path filename(sourcefilename);
     filename.replace_extension("texinfo");
 
-    FILE *texinfofile = fopen(filename.string().c_str(), "rt");
+    qfile_t texinfofile = SafeOpenRead(filename);
+
     if (!texinfofile)
         return;
 
@@ -509,58 +510,56 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
 
     extended_flags_header_t header;
 
-    if (fread(&header, 1, sizeof(extended_flags_header_t), texinfofile) != sizeof(extended_flags_header_t) ||
+    if (SafeRead(texinfofile, &header, sizeof(extended_flags_header_t)) != sizeof(extended_flags_header_t) ||
         header.num_texinfo != bsp->numtexinfo || header.surfflags_size != sizeof(surfflags_t) ||
-        fread(extended_texinfo_flags, sizeof(surfflags_t), header.num_texinfo, texinfofile) != header.num_texinfo) {
+        SafeRead(texinfofile, extended_texinfo_flags, sizeof(surfflags_t) * header.num_texinfo) != (sizeof(surfflags_t) * header.num_texinfo)) {
         LogPrint("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
-        fclose(texinfofile);
         memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
         return;
     }
-
-    fclose(texinfofile);
 }
 
 // obj
 
-static FILE *InitObjFile(const std::filesystem::path &filename)
+static qfile_t InitObjFile(const std::filesystem::path &filename)
 {
     std::filesystem::path objfilename(filename);
     objfilename.replace_extension("obj");
 
-    FILE *objfile = fopen(objfilename.string().c_str(), "wt");
+    qfile_t objfile = SafeOpenWrite(objfilename);
+
     if (!objfile)
         FError("Failed to open {}: {}", objfilename, strerror(errno));
 
     return objfile;
 }
 
-static void ExportObjFace(FILE *f, const mbsp_t *bsp, const bsp2_dface_t *face, int *vertcount)
+static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const bsp2_dface_t *face, int *vertcount)
 {
     // export the vertices and uvs
     for (int i = 0; i < face->numedges; i++) {
         const int vertnum = Face_VertexAtIndex(bsp, face, i);
         const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i);
         const float *pos = bsp->dvertexes[vertnum].point;
-        fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
-        fprintf(f, "vn %.9g %.9g %.9g\n", normal[0], normal[1], normal[2]);
+        fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
+        fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
     }
 
-    fprintf(f, "f");
+    f << "f";
     for (int i = 0; i < face->numedges; i++) {
         // .obj vertexes start from 1
         // .obj faces are CCW, quake is CW, so reverse the order
         const int vertindex = *vertcount + (face->numedges - 1 - i) + 1;
-        fprintf(f, " %d//%d", vertindex, vertindex);
+        fmt::print(f, " {}//{}", vertindex, vertindex);
     }
-    fprintf(f, "\n");
+    f << '\n';
 
     *vertcount += face->numedges;
 }
 
 static void ExportObj(const std::filesystem::path &filename, const mbsp_t *bsp)
 {
-    FILE *objfile = InitObjFile(filename);
+    std::ofstream objfile(filename);
     int vertcount = 0;
 
     const int start = bsp->dmodels[0].firstface;
@@ -569,8 +568,6 @@ static void ExportObj(const std::filesystem::path &filename, const mbsp_t *bsp)
     for (int i = start; i < end; i++) {
         ExportObjFace(objfile, bsp, BSP_GetFace(bsp, i), &vertcount);
     }
-
-    fclose(objfile);
 
     LogPrint("Wrote {}\n", filename);
 }

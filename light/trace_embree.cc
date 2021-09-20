@@ -422,64 +422,6 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 
 // building faces for skip-textured bmodels
 
-#if 0
-
-static FILE *
-InitObjFile(const char *filename)
-{
-    FILE *objfile;
-    char objfilename[1024];
-    strcpy(objfilename, filename);
-    StripExtension(objfilename);
-    DefaultExtension(objfilename, ".obj");
-    
-    objfile = fopen(objfilename, "wt");
-    if (!objfile)
-        FError("Failed to open {}: {}", objfilename, strerror(errno));
-    
-    return objfile;
-}
-
-static void
-ExportObjFace(FILE *f, const winding_t *winding, int *vertcount)
-{
-//    plane_t plane;
-//    WindingPlane(winding, plane.normal, &plane.dist);
-    
-    // export the vertices and uvs
-    for (int i=0; i<winding->numpoints; i++)
-    {
-        fprintf(f, "v %.9g %.9g %.9g\n", winding->p[i][0], winding->p[i][1], winding->p[i][2]);
-//        fprintf(f, "vn %.9g %.9g %.9g\n", plane.normal[0], plane.normal[1], plane.normal[2]);
-    }
-    
-    fprintf(f, "f");
-    for (int i=0; i<winding->numpoints; i++) {
-        // .obj vertexes start from 1
-        // .obj faces are CCW, quake is CW, so reverse the order
-        const int vertindex = *vertcount + (winding->numpoints - 1 - i) + 1;
-        fprintf(f, " %d//%d", vertindex, vertindex);
-    }
-    fprintf(f, "\n");
-    
-    *vertcount += winding->numpoints;
-}
-
-static void
-ExportObj(const char *filename, const vector<winding_t *> &windings)
-{
-    FILE *objfile = InitObjFile(filename);
-    int vertcount = 0;
-    
-    for (const auto &winding : windings) {
-        ExportObjFace(objfile, winding, &vertcount);
-    }
-    
-    fclose(objfile);
-}
-
-#endif
-
 plane_t Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
 {
     const dplane_t *dplane = &bsp->dplanes[node->planenum];

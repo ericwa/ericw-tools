@@ -22,29 +22,27 @@
 #include <qbsp/wad.hh>
 
 #include <unordered_set>
+#include <fstream>
+#include <fmt/ostream.h>
 
-static FILE *InitObjFile(const std::string &filesuffix)
+static std::ofstream InitObjFile(const std::string &filesuffix)
 {
-    FILE *objfile;
-
     std::filesystem::path name = options.szBSPName;
     name.replace_filename(options.szBSPName.filename().string() + "_" + filesuffix).replace_extension("obj");
 
-    objfile = fopen(name.string().c_str(), "wt");
+    std::ofstream objfile(name);
     if (!objfile)
         FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
     return objfile;
 }
 
-static FILE *InitMtlFile(const std::string &filesuffix)
+static std::ofstream InitMtlFile(const std::string &filesuffix)
 {
-    FILE *file;
-
     std::filesystem::path name = options.szBSPName;
     name.replace_filename(options.szBSPName.filename().string() + "_" + filesuffix).replace_extension("mtl");
 
-    file = fopen(name.string().c_str(), "wt");
+    std::ofstream file(name);
     if (!file)
         FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
@@ -61,7 +59,7 @@ static void GetUV(const mtexinfo_t *texinfo, const vec_t *pos, const int width, 
          height;
 }
 
-static void ExportObjFace(FILE *f, FILE *mtlF, const face_t *face, int *vertcount)
+static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
 {
     const mtexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
     const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
@@ -73,42 +71,41 @@ static void ExportObjFace(FILE *f, FILE *mtlF, const face_t *face, int *vertcoun
     // export the vertices and uvs
     for (int i = 0; i < face->w.numpoints; i++) {
         const vec_t *pos = face->w.points[i];
-        fprintf(f, "v %.9g %.9g %.9g\n", pos[0], pos[1], pos[2]);
+        fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
 
         vec_t u, v;
         GetUV(&texinfo, pos, width, height, &u, &v);
 
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
-        fprintf(f, "vt %.9g %.9g\n", u, -v);
+        fmt::print(f, "vt {:.9} {:.9}\n", u, -v);
     }
 
-    // fprintf(f, "usemtl %s\n", texname);
-    fprintf(f, "usemtl contents%d_%d\n", face->contents[1].native, face->contents->extended);
-    fprintf(f, "f");
+    fmt::print(f, "usemtl contents{}_{}\n", face->contents[0].native, face->contents[0].extended);
+    f << 'f';
     for (int i = 0; i < face->w.numpoints; i++) {
         // .obj vertexes start from 1
         // .obj faces are CCW, quake is CW, so reverse the order
         const int vertindex = *vertcount + (face->w.numpoints - 1 - i) + 1;
-        fprintf(f, " %d/%d", vertindex, vertindex);
+        fmt::print(f, " {}/{}", vertindex, vertindex);
     }
-    fprintf(f, "\n");
+    f << '\n';
 
     *vertcount += face->w.numpoints;
 }
 
-static void WriteContentsMaterial(FILE *mtlf, contentflags_t contents, float r, float g, float b)
+static void WriteContentsMaterial(std::ofstream &mtlf, contentflags_t contents, float r, float g, float b)
 {
-    fprintf(mtlf, "newmtl contents%d_%d\n", contents.native, contents.extended);
-    fprintf(mtlf, "Ka 0 0 0\n");
-    fprintf(mtlf, "Kd %f %f %f\n", r, g, b);
-    fprintf(mtlf, "Ks 0 0 0\n");
-    fprintf(mtlf, "illum 0\n");
+    fmt::print(mtlf, "newmtl contents{}_{}\n", contents.native, contents.extended);
+    mtlf << "Ka 0 0 0\n";
+    fmt::print(mtlf, "Kd {} {} {}\n", r, g, b);
+    mtlf << "Ks 0 0 0\n";
+    mtlf << "illum 0\n";
 }
 
 void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces)
 {
-    FILE *objfile = InitObjFile(filesuffix);
-    FILE *mtlfile = InitMtlFile(filesuffix);
+    std::ofstream objfile = InitObjFile(filesuffix);
+    std::ofstream mtlfile = InitMtlFile(filesuffix);
 
     WriteContentsMaterial(mtlfile, {}, 0, 0, 0);
     WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY}, 0, 1, 0);
@@ -126,11 +123,8 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
 
     int vertcount = 0;
     for (const face_t *face : faces) {
-        ExportObjFace(objfile, mtlfile, face, &vertcount);
+        ExportObjFace(objfile, face, &vertcount);
     }
-
-    fclose(objfile);
-    fclose(mtlfile);
 }
 
 void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const brush_t *> &brushes)

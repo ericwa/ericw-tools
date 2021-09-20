@@ -287,9 +287,7 @@ public:
 
     virtual std::string stringValue() const
     {
-        std::stringstream ss;
-        ss << _value[0] << " " << _value[1] << " " << _value[2];
-        return ss.str();
+        return fmt::format("{} {} {}", _value[0], _value[1], _value[2]);
     }
 };
 

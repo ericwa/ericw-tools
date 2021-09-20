@@ -222,7 +222,7 @@ bool LoadVisState(void)
         return false;
     }
 
-    auto infile = SafeOpenRead(statefile.string().c_str());
+    auto infile = SafeOpenRead(statefile, true);
 
     SafeRead(infile, &state, sizeof(state));
     state.version = LittleLong(state.version);

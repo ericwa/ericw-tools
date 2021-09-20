@@ -998,32 +998,27 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     portal_t *p;
     leaf_t *l;
     char magic[80];
-    FILE *f;
+    qfile_t f { nullptr, nullptr };
     int numpoints;
     winding_t *w;
     int leafnums[2];
     plane_t plane;
 
     if (name == "-")
-        f = stdin;
+        f = { stdin, nullptr };
     else {
-        f = fopen(name.string().c_str(), "r");
-        if (!f) {
-            FLogPrint("couldn't read {}\n", name);
-            LogPrint("No vising performed.\n");
-            exit(1);
-        }
+        f = SafeOpenRead(name, true);
     }
 
     /*
      * Parse the portal file header
      */
-    count = fscanf(f, "%79s\n", magic);
+    count = fscanf(f.get(), "%79s\n", magic);
     if (count != 1)
         FError("unknown header: {}\n", magic);
 
     if (!strcmp(magic, PORTALFILE)) {
-        count = fscanf(f, "%i\n%i\n", &portalleafs, &numportals);
+        count = fscanf(f.get(), "%i\n%i\n", &portalleafs, &numportals);
         if (count != 2)
             FError("unable to parse {} HEADER\n", PORTALFILE);
 
@@ -1038,14 +1033,14 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
             LogPrint("{:6} portals\n", numportals);
         }
     } else if (!strcmp(magic, PORTALFILE2)) {
-        count = fscanf(f, "%i\n%i\n%i\n", &portalleafs_real, &portalleafs, &numportals);
+        count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs_real, &portalleafs, &numportals);
         if (count != 3)
             FError("unable to parse {} HEADER\n", PORTALFILE);
         LogPrint("{:6} leafs\n", portalleafs_real);
         LogPrint("{:6} clusters\n", portalleafs);
         LogPrint("{:6} portals\n", numportals);
     } else if (!strcmp(magic, PORTALFILEAM)) {
-        count = fscanf(f, "%i\n%i\n%i\n", &portalleafs, &numportals, &portalleafs_real);
+        count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs, &numportals, &portalleafs_real);
         if (count != 3)
             FError("unable to parse {} HEADER\n", PORTALFILE);
         LogPrint("{:6} leafs\n", portalleafs_real);
@@ -1080,7 +1075,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     vismap_end = vismap + MAX_MAP_VISIBILITY;
 
     for (i = 0, p = portals; i < numportals; i++) {
-        if (fscanf(f, "%i %i %i ", &numpoints, &leafnums[0], &leafnums[1]) != 3)
+        if (fscanf(f.get(), "%i %i %i ", &numpoints, &leafnums[0], &leafnums[1]) != 3)
             FError("reading portal {}", i);
         if (numpoints > MAX_WINDING)
             FError("portal {} has too many points", i);
@@ -1091,10 +1086,10 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         w->numpoints = numpoints;
 
         for (j = 0; j < numpoints; j++) {
-            if (fscanf(f, "(%lf %lf %lf ) ", &w->points[j][0], &w->points[j][1], &w->points[j][2]) != 3)
+            if (fscanf(f.get(), "(%lf %lf %lf ) ", &w->points[j][0], &w->points[j][1], &w->points[j][2]) != 3)
                 FError("reading portal {}", i);
         }
-        fscanf(f, "\n");
+        fscanf(f.get(), "\n");
 
         // calc plane
         PlaneFromWinding(w, &plane);
@@ -1146,7 +1141,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
             for (i = 0; i < portalleafs; i++) {
                 while (1) {
                     int leafnum;
-                    count = fscanf(f, "%i", &leafnum);
+                    count = fscanf(f.get(), "%i", &leafnum);
                     if (!count || count == EOF)
                         break;
                     if (leafnum < 0)
@@ -1163,7 +1158,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         } else if (!strcmp(magic, PORTALFILEAM)) {
             for (i = 0; i < portalleafs_real; i++) {
                 int clusternum;
-                count = fscanf(f, "%i", &clusternum);
+                count = fscanf(f.get(), "%i", &clusternum);
                 if (!count || count == EOF) {
                     Error("Unexpected end of cluster map\n");
                 }
@@ -1177,8 +1172,6 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
             FError("Unknown header {}\n", magic);
         }
     }
-
-    fclose(f);
 }
 
 /*

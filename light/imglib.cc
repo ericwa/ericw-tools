@@ -307,25 +307,25 @@ bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width
     int row, column;
     TargaHeader targa_header;
 
-    FILE *fin = fopen(filename.string().c_str(), "rb");
+    qfile_t fin = SafeOpenRead(filename);
     if (!fin) {
         FLogPrint("Failed to load '{}'. File does not exist.\n", filename);
         return false; // mxd
     }
 
-    targa_header.id_length = fgetc(fin);
-    targa_header.colormap_type = fgetc(fin);
-    targa_header.image_type = fgetc(fin);
+    targa_header.id_length = fgetc(fin.get());
+    targa_header.colormap_type = fgetc(fin.get());
+    targa_header.image_type = fgetc(fin.get());
 
-    targa_header.colormap_index = fgetLittleShort(fin);
-    targa_header.colormap_length = fgetLittleShort(fin);
-    targa_header.colormap_size = fgetc(fin);
-    targa_header.x_origin = fgetLittleShort(fin);
-    targa_header.y_origin = fgetLittleShort(fin);
-    targa_header.width = fgetLittleShort(fin);
-    targa_header.height = fgetLittleShort(fin);
-    targa_header.pixel_size = fgetc(fin);
-    targa_header.attributes = fgetc(fin);
+    targa_header.colormap_index = fgetLittleShort(fin.get());
+    targa_header.colormap_length = fgetLittleShort(fin.get());
+    targa_header.colormap_size = fgetc(fin.get());
+    targa_header.x_origin = fgetLittleShort(fin.get());
+    targa_header.y_origin = fgetLittleShort(fin.get());
+    targa_header.width = fgetLittleShort(fin.get());
+    targa_header.height = fgetLittleShort(fin.get());
+    targa_header.pixel_size = fgetc(fin.get());
+    targa_header.attributes = fgetc(fin.get());
 
     if (targa_header.image_type != 2 && targa_header.image_type != 10) {
         FLogPrint("Failed to load '{}'. Only type 2 and 10 targa RGB images supported.\n", filename);
@@ -350,7 +350,7 @@ bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width
     *pixels = targa_rgba;
 
     if (targa_header.id_length != 0)
-        fseek(fin, targa_header.id_length, SEEK_CUR); // skip TARGA image comment
+        SafeSeek(fin, targa_header.id_length, SEEK_CUR); // skip TARGA image comment
 
     if (targa_header.image_type == 2) { // Uncompressed, RGB images
         for (row = rows - 1; row >= 0; row--) {
@@ -359,19 +359,19 @@ bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width
                 unsigned char red, green, blue, alphabyte;
                 switch (targa_header.pixel_size) {
                     case 24:
-                        blue = getc(fin);
-                        green = getc(fin);
-                        red = getc(fin);
+                        blue = getc(fin.get());
+                        green = getc(fin.get());
+                        red = getc(fin.get());
                         *pixbuf++ = red;
                         *pixbuf++ = green;
                         *pixbuf++ = blue;
                         *pixbuf++ = 255;
                         break;
                     case 32:
-                        blue = getc(fin);
-                        green = getc(fin);
-                        red = getc(fin);
-                        alphabyte = getc(fin);
+                        blue = getc(fin.get());
+                        green = getc(fin.get());
+                        red = getc(fin.get());
+                        alphabyte = getc(fin.get());
                         *pixbuf++ = red;
                         *pixbuf++ = green;
                         *pixbuf++ = blue;
@@ -388,21 +388,21 @@ bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width
         for (row = rows - 1; row >= 0; row--) {
             pixbuf = targa_rgba + row * columns * 4;
             for (column = 0; column < columns;) {
-                const unsigned char packetHeader = getc(fin);
+                const unsigned char packetHeader = getc(fin.get());
                 const unsigned char packetSize = 1 + (packetHeader & 0x7f);
                 if (packetHeader & 0x80) { // run-length packet
                     switch (targa_header.pixel_size) {
                         case 24:
-                            blue = getc(fin);
-                            green = getc(fin);
-                            red = getc(fin);
+                            blue = getc(fin.get());
+                            green = getc(fin.get());
+                            red = getc(fin.get());
                             alphabyte = 255;
                             break;
                         case 32:
-                            blue = getc(fin);
-                            green = getc(fin);
-                            red = getc(fin);
-                            alphabyte = getc(fin);
+                            blue = getc(fin.get());
+                            green = getc(fin.get());
+                            red = getc(fin.get());
+                            alphabyte = getc(fin.get());
                             break;
                         default:
                             FLogPrint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
@@ -428,19 +428,19 @@ bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width
                     for (j = 0; j < packetSize; j++) {
                         switch (targa_header.pixel_size) {
                             case 24:
-                                blue = getc(fin);
-                                green = getc(fin);
-                                red = getc(fin);
+                                blue = getc(fin.get());
+                                green = getc(fin.get());
+                                red = getc(fin.get());
                                 *pixbuf++ = red;
                                 *pixbuf++ = green;
                                 *pixbuf++ = blue;
                                 *pixbuf++ = 255;
                                 break;
                             case 32:
-                                blue = getc(fin);
-                                green = getc(fin);
-                                red = getc(fin);
-                                alphabyte = getc(fin);
+                                blue = getc(fin.get());
+                                green = getc(fin.get());
+                                red = getc(fin.get());
+                                alphabyte = getc(fin.get());
                                 *pixbuf++ = red;
                                 *pixbuf++ = green;
                                 *pixbuf++ = blue;
@@ -465,8 +465,6 @@ bool LoadTGA(const std::filesystem::path &filename, uint8_t **pixels, int *width
 breakOut:;
         }
     }
-
-    fclose(fin);
 
     return true; // mxd
 }

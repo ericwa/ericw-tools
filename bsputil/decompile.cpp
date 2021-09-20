@@ -35,6 +35,7 @@
 #include <tuple>
 
 #include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #include "tbb/parallel_for.h"
 
@@ -757,7 +758,7 @@ static void DecompileEntity(
     }
 
     // First, print the key/values for this entity
-    file << '{' << std::endl;
+    fmt::print(file, "{\n");
     for (const auto &keyValue : dict) {
         if (keyValue.first == "model" && !keyValue.second.empty() && keyValue.second[0] == '*') {
             // strip "model" "*NNN" key/values
@@ -769,7 +770,7 @@ static void DecompileEntity(
             continue;
         }
 
-        file << "\"" << keyValue.first << "\" \"" << keyValue.second << "\"" << std::endl;
+        fmt::print(file, "\"{}\" \"{}\"\n", keyValue.first, keyValue.second);
     }
 
     // Print brushes if any
@@ -802,7 +803,7 @@ static void DecompileEntity(
         }
     }
 
-    file << "}" << std::endl;
+    fmt::print(file, "}\n");
 }
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file)

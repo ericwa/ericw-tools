@@ -28,6 +28,8 @@
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
 
+#include <fmt/ostream.h>
+
 entdict_t::entdict_t(std::initializer_list<keyvalue_t> l) : keyvalues(l) { }
 
 entdict_t::entdict_t() = default;
@@ -170,15 +172,15 @@ std::vector<entdict_t> EntData_Parse(const char *entdata)
  */
 std::string EntData_Write(const std::vector<entdict_t> &ents)
 {
-    std::stringstream out;
+    std::string out;
     for (const auto &ent : ents) {
-        out << "{\n";
+        out += "{\n";
         for (const auto &epair : ent) {
-            out << "\"" << epair.first << "\" \"" << epair.second << "\"\n";
+            fmt::format_to(std::back_inserter(out), "\"{}\" \"{}\"\n", epair.first, epair.second);
         }
-        out << "}\n";
+        out += "}\n";
     }
-    return out.str();
+    return out;
 }
 
 std::string EntDict_StringForKey(const entdict_t &dict, const std::string key)

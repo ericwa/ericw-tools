@@ -230,13 +230,13 @@ int Q_strncasecmp(const char *s1, const char *s2, int n)
             if (c2 >= 'a' && c2 <= 'z')
                 c2 -= ('a' - 'A');
             if (c1 != c2)
-                return -1; /* strings not equal */
+                return c1 < c2 ? -1 : 1; /* strings not equal */
         }
         if (!c1)
             return 0; /* strings are equal */
     }
 
-    return -1;
+    return 0;
 }
 
 int Q_strcasecmp(const char *s1, const char *s2)
@@ -296,7 +296,11 @@ qfile_t SafeOpenWrite(const std::filesystem::path &filename)
 {
     FILE *f;
 
+#ifdef _WIN32
+    f = _wfopen(filename.c_str(), L"wb");
+#else
     f = fopen(filename.string().c_str(), "wb");
+#endif
 
     if (!f)
         FError("Error opening {}: {}", filename, strerror(errno));
@@ -304,28 +308,41 @@ qfile_t SafeOpenWrite(const std::filesystem::path &filename)
     return { f, fclose };
 }
 
-qfile_t SafeOpenRead(const std::filesystem::path &filename)
+qfile_t SafeOpenRead(const std::filesystem::path &filename, bool must_exist)
 {
     FILE *f;
 
+#ifdef _WIN32
+    f = _wfopen(filename.c_str(), L"rb");
+#else
     f = fopen(filename.string().c_str(), "rb");
+#endif
 
     if (!f)
-        FError("Error opening {}: {}", filename, strerror(errno));
+    {
+        if (must_exist)
+            FError("Error opening {}: {}", filename, strerror(errno));
+
+        return { nullptr, nullptr };
+    }
 
     return { f, fclose };
 }
 
-void SafeRead(const qfile_t &f, void *buffer, int count)
+size_t SafeRead(const qfile_t &f, void *buffer, size_t count)
 {
     if (fread(buffer, 1, count, f.get()) != (size_t)count)
         FError("File read failure");
+
+    return count;
 }
 
-void SafeWrite(const qfile_t &f, const void *buffer, int count)
+size_t SafeWrite(const qfile_t &f, const void *buffer, size_t count)
 {
     if (fwrite(buffer, 1, count, f.get()) != (size_t)count)
         FError("File write failure");
+
+    return count;
 }
 
 void SafeSeek(const qfile_t &f, long offset, int32_t origin)
@@ -364,7 +381,7 @@ long LoadFilePak(std::filesystem::path &filename, void *destptr)
     // check if we have a .pak file in this path
     for (auto p = filename.parent_path(); !p.empty() && p != p.root_path(); p = p.parent_path()) {
         if (p.extension() == ".pak") {
-            auto file = SafeOpenRead(p);
+            qfile_t file = SafeOpenRead(p);
 
             // false positive
             if (!file)

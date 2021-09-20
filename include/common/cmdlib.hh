@@ -60,6 +60,38 @@ extern std::filesystem::path    qdir, // c:/Quake/, c:/Hexen II/ etc.
 
 bool string_iequals(const std::string &a, const std::string &b); // mxd
 
+struct case_insensitive_hash
+{
+    std::size_t operator()(const std::string &s) const noexcept
+    {
+        std::size_t hash = 0x811c9dc5;
+        constexpr std::size_t prime = 0x1000193;
+
+        for (auto &c : s) {
+            hash ^= tolower(c);
+            hash *= prime;
+        }
+
+        return hash;
+    }
+};
+
+struct case_insensitive_equal
+{
+    bool operator()(const std::string &l, const std::string &r) const noexcept
+    {
+        return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
+    }
+};
+
+struct case_insensitive_less
+{
+    bool operator()(const std::string &l, const std::string &r) const noexcept
+    {
+        return Q_strcasecmp(l.c_str(), r.c_str()) < 0;
+    }
+};
+
 void SetQdirFromPath(const std::string &basedirname, std::filesystem::path path);
 
 // Returns the path itself if it has an extension already, otherwise
@@ -106,17 +138,11 @@ int CheckParm(const char *check);
 using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;
 
 qfile_t SafeOpenWrite(const std::filesystem::path &filename);
-qfile_t SafeOpenRead(const std::filesystem::path &filename);
-void SafeRead(const qfile_t &f, void *buffer, int count);
-void SafeWrite(const qfile_t &f, const void *buffer, int count);
+qfile_t SafeOpenRead(const std::filesystem::path &filename, bool must_exist = false);
+size_t SafeRead(const qfile_t &f, void *buffer, size_t count);
+size_t SafeWrite(const qfile_t &f, const void *buffer, size_t count);
 void SafeSeek(const qfile_t &f, long offset, int32_t origin);
 long SafeTell(const qfile_t &f);
-template<typename ...Args>
-inline void SafePrint(const qfile_t &f, const char *fmt, const Args &...args)
-{
-    if (fmt::fprintf(f.get(), fmt, std::forward<const Args &>(args)...) < 0)
-        FError("Error writing to file");
-}
 
 long LoadFilePak(std::filesystem::path &filename, void *destptr);
 long LoadFile(const std::filesystem::path &filename, void *destptr);

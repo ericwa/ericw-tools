@@ -20,7 +20,7 @@
 #include <common/qvec.hh>
 
 #include <cmath> // for NAN
-#include <sstream>
+#include <fmt/format.h>
 
 /*
  * SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
@@ -143,7 +143,5 @@ qmat2x2f qv::inverse(const qmat2x2f &m)
 
 std::string qv::to_string(const qvec<3, float> &v1)
 {
-    std::stringstream ss;
-    ss << v1[0] << " " << v1[1] << " " << v1[2];
-    return ss.str();
+    return fmt::format("{} {} {}", v1[0], v1[1], v1[2]);
 }

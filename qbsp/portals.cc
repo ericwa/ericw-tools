@@ -20,6 +20,8 @@
 */
 // portals.c
 
+#include <fstream>
+#include <fmt/ostream.h>
 #include <qbsp/qbsp.hh>
 
 node_t outside_node; // portals outside the world face this
@@ -44,12 +46,12 @@ PORTAL FILE GENERATION
 
 static void PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane);
 
-static void WriteFloat(FILE *portalFile, vec_t v)
+static void WriteFloat(std::ofstream &portalFile, vec_t v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
-        fprintf(portalFile, "%d ", (int)Q_rint(v));
+        fmt::print(portalFile, "{} ", (int)Q_rint(v));
     else
-        fprintf(portalFile, "%f ", v);
+        fmt::print(portalFile, "{} ", v);
 }
 
 static contentflags_t ClusterContents(const node_t *node)
@@ -96,7 +98,7 @@ static bool PortalThru(const portal_t *p)
     return options.target_game->portal_can_see_through(contents0, contents1);
 }
 
-static void WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
+static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool clusters)
 {
     const portal_t *p, *next;
     const winding_t *w;
@@ -131,22 +133,22 @@ static void WritePortals_r(node_t *node, FILE *portalFile, bool clusters)
         pl = &map.planes[p->planenum];
         PlaneFromWinding(w, &plane2);
         if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
-            fprintf(portalFile, "%d %d %d ", w->numpoints, back, front);
+            fmt::print(portalFile, "{} {} {} ", w->numpoints, back, front);
         else
-            fprintf(portalFile, "%d %d %d ", w->numpoints, front, back);
+            fmt::print(portalFile, "{} {} {} ", w->numpoints, front, back);
 
         for (i = 0; i < w->numpoints; i++) {
-            fprintf(portalFile, "(");
+            fmt::print(portalFile, "(");
             WriteFloat(portalFile, w->points[i][0]);
             WriteFloat(portalFile, w->points[i][1]);
             WriteFloat(portalFile, w->points[i][2]);
-            fprintf(portalFile, ") ");
+            fmt::print(portalFile, ") ");
         }
-        fprintf(portalFile, "\n");
+        fmt::print(portalFile, "\n");
     }
 }
 
-static int WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
+static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int viscluster)
 {
     if (node->planenum != PLANENUM_LEAF) {
         viscluster = WriteClusters_r(node->children[0], portalFile, viscluster);
@@ -158,7 +160,7 @@ static int WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
 
     /* If we're in the next cluster, start a new line */
     if (node->viscluster != viscluster) {
-        fprintf(portalFile, "-1\n");
+        fmt::print(portalFile, "-1\n");
         viscluster++;
     }
 
@@ -166,7 +168,7 @@ static int WriteClusters_r(node_t *node, FILE *portalFile, int viscluster)
     if (node->viscluster != viscluster)
         FError("Internal error: Detail cluster mismatch");
 
-    fprintf(portalFile, "%d ", node->visleafnum);
+    fmt::print(portalFile, "%d ", node->visleafnum);
 
     return viscluster;
 }
@@ -232,7 +234,6 @@ WritePortalfile
 static void WritePortalfile(node_t *headnode, portal_state_t *state)
 {
     int check;
-    FILE *portalFile;
 
     /*
      * Set the visleafnum and viscluster field in every leaf and count the
@@ -247,38 +248,36 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     // write the file
     options.szBSPName.replace_extension("prt");
 
-    portalFile = fopen(options.szBSPName.string().c_str(), "wt");
+    std::ofstream portalFile(options.szBSPName);
     if (!portalFile)
         FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 
     /* If no detail clusters, just use a normal PRT1 format */
     if (!state->uses_detail) {
-        fprintf(portalFile, "PRT1\n");
-        fprintf(portalFile, "%d\n", state->num_visleafs);
-        fprintf(portalFile, "%d\n", state->num_visportals);
+        fmt::print(portalFile, "PRT1\n");
+        fmt::print(portalFile, "{}\n", state->num_visleafs);
+        fmt::print(portalFile, "{}\n", state->num_visportals);
         WritePortals_r(headnode, portalFile, false);
     } else {
         if (options.fForcePRT1) {
             /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
-            fprintf(portalFile, "PRT1\n");
-            fprintf(portalFile, "%d\n", state->num_visclusters);
-            fprintf(portalFile, "%d\n", state->num_visportals);
+            fmt::print(portalFile, "PRT1\n");
+            fmt::print(portalFile, "{}\n", state->num_visclusters);
+            fmt::print(portalFile, "{}\n", state->num_visportals);
             WritePortals_r(headnode, portalFile, true);
         } else {
             /* Write a PRT2 */
-            fprintf(portalFile, "PRT2\n");
-            fprintf(portalFile, "%d\n", state->num_visleafs);
-            fprintf(portalFile, "%d\n", state->num_visclusters);
-            fprintf(portalFile, "%d\n", state->num_visportals);
+            fmt::print(portalFile, "PRT2\n");
+            fmt::print(portalFile, "{}\n", state->num_visleafs);
+            fmt::print(portalFile, "{}\n", state->num_visclusters);
+            fmt::print(portalFile, "{}\n", state->num_visportals);
             WritePortals_r(headnode, portalFile, true);
             check = WriteClusters_r(headnode, portalFile, 0);
             if (check != state->num_visclusters - 1)
                 FError("Internal error: Detail cluster mismatch");
-            fprintf(portalFile, "-1\n");
+            fmt::print(portalFile, "-1\n");
         }
     }
-
-    fclose(portalFile);
 }
 
 //=============================================================================

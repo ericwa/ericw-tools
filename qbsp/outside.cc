@@ -25,6 +25,8 @@
 #include <set>
 #include <list>
 #include <utility>
+#include <fstream>
+#include <fmt/ostream.h>
 
 /*
 ===========
@@ -45,13 +47,11 @@ node_t *PointInLeaf(node_t *node, const vec3_t point)
     return node;
 }
 
-static FILE *InitPtsFile(void)
+static std::ofstream InitPtsFile(void)
 {
-    FILE *ptsfile;
-
     options.szBSPName.replace_extension("pts");
 
-    ptsfile = fopen(options.szBSPName.string().c_str(), "wt");
+    std::ofstream ptsfile(options.szBSPName);
 
     if (!ptsfile)
         FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
@@ -191,7 +191,7 @@ static std::pair<std::vector<portal_t *>, node_t *> MakeLeakLine(node_t *outleaf
 WriteLeakTrail
 ===============
 */
-static void WriteLeakTrail(FILE *leakfile, const vec3_t point1, const vec3_t point2)
+static void WriteLeakTrail(std::ofstream &leakfile, const vec3_t point1, const vec3_t point2)
 {
     vec3_t vector, trail;
     vec_t dist;
@@ -201,7 +201,7 @@ static void WriteLeakTrail(FILE *leakfile, const vec3_t point1, const vec3_t poi
 
     VectorCopy(point1, trail);
     while (dist > options.dxLeakDist) {
-        fprintf(leakfile, "%f %f %f\n", trail[0], trail[1], trail[2]);
+        fmt::print(leakfile, "{} {} {}\n", trail[0], trail[1], trail[2]);
         VectorMA(trail, options.dxLeakDist, vector, trail);
         dist -= options.dxLeakDist;
     }
@@ -209,7 +209,7 @@ static void WriteLeakTrail(FILE *leakfile, const vec3_t point1, const vec3_t poi
 
 static void WriteLeakLine(const std::pair<std::vector<portal_t *>, node_t *> &leakline)
 {
-    FILE *ptsfile = InitPtsFile();
+    std::ofstream ptsfile = InitPtsFile();
 
     vec3_t prevpt, currpt;
     VectorCopy(leakline.second->occupant->origin, prevpt);
@@ -224,7 +224,6 @@ static void WriteLeakLine(const std::pair<std::vector<portal_t *>, node_t *> &le
         VectorCopy(currpt, prevpt);
     }
 
-    fclose(ptsfile);
     LogPrint("Leak file written to {}\n", options.szBSPName);
 }
 

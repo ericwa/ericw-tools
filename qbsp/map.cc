@@ -25,11 +25,12 @@
 #include <cstring>
 
 #include <string>
-#include <sstream>
 #include <memory>
 #include <list>
 #include <utility>
 #include <optional>
+#include <fstream>
+#include <fmt/ostream.h>
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/parser.hh>
@@ -482,35 +483,42 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 
 static void ParseEpair(parser_t *parser, mapentity_t *entity)
 {
-    epair_t *epair = new epair_t { };
-    epair->next = entity->epairs;
-    entity->epairs = epair;
-
     if (strlen(parser->token) >= MAX_KEY - 1)
         goto parse_error;
-    epair->key = copystring(parser->token);
-    ParseToken(parser, PARSE_SAMELINE);
-    if (strlen(parser->token) >= MAX_VALUE - 1)
-        goto parse_error;
-    epair->value = copystring(parser->token);
 
-    if (!Q_strcasecmp(epair->key, "origin")) {
-        GetVectorForKey(entity, epair->key, entity->origin);
-    } else if (!Q_strcasecmp(epair->key, "classname")) {
-        if (!Q_strcasecmp(epair->value, "info_player_start")) {
-            // Quake II uses multiple starts for level transitions/backtracking.
-            // TODO: instead, this should check targetnames. There should only be
-            // one info_player_start per targetname in Q2.
-            if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
-                LogPrint("WARNING: Multiple info_player_start entities\n");
-            rgfStartSpots |= info_player_start;
-        } else if (!Q_strcasecmp(epair->value, "info_player_deathmatch")) {
-            rgfStartSpots |= info_player_deathmatch;
-        } else if (!Q_strcasecmp(epair->value, "info_player_coop")) {
-            rgfStartSpots |= info_player_coop;
+    {
+        std::string key(parser->token);
+
+        ParseToken(parser, PARSE_SAMELINE);
+
+        if (strlen(parser->token) >= MAX_VALUE - 1)
+            goto parse_error;
+
+        {
+            std::string &value = (entity->epairs[key] = parser->token);
+
+            if (!Q_strcasecmp(key.c_str(), "origin")) {
+                GetVectorForKey(entity, key.c_str(), entity->origin);
+            } else if (!Q_strcasecmp(key.c_str(), "classname")) {
+                if (!Q_strcasecmp(value.c_str(), "info_player_start")) {
+                    // Quake II uses multiple starts for level transitions/backtracking.
+                    // TODO: instead, this should check targetnames. There should only be
+                    // one info_player_start per targetname in Q2.
+                    if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
+                        LogPrint("WARNING: Multiple info_player_start entities\n");
+                    rgfStartSpots |= info_player_start;
+                } else if (!Q_strcasecmp(value.c_str(), "info_player_deathmatch")) {
+                    rgfStartSpots |= info_player_deathmatch;
+                } else if (!Q_strcasecmp(value.c_str(), "info_player_coop")) {
+                    rgfStartSpots |= info_player_coop;
+                }
+            }
+
+            entity->epair_order.push_back(std::move(key));
+
+            return;
         }
     }
-    return;
 
 parse_error:
     FError("line {}: Entity key or value too long", parser->linenum);
@@ -1988,7 +1996,7 @@ void LoadMapFile(void)
         }
     }
     // Remove dummy entity inserted above
-    assert(map.entities.back().epairs == nullptr);
+    assert(!map.entities.back().epairs.size());
     assert(map.entities.back().numbrushes == 0);
     map.entities.pop_back();
 
@@ -2046,20 +2054,20 @@ static texdef_valve_t TexDef_BSPToValve(const stvecs &in_vecs)
     return res;
 }
 
-static void fprintDoubleAndSpc(FILE *f, double v)
+static void fprintDoubleAndSpc(std::ofstream &f, double v)
 {
     int rounded = rint(v);
     if (static_cast<double>(rounded) == v) {
-        fprintf(f, "%d ", rounded);
+        fmt::print(f, "{} ", rounded);
     } else if (std::isfinite(v)) {
-        fprintf(f, "%0.17g ", v);
+        fmt::print(f, "{:0.17} ", v);
     } else {
         printf("WARNING: suppressing nan or infinity\n");
-        fprintf(f, "0 ");
+        f << "0 ";
     }
 }
 
-static void ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t format)
+static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const conversion_t format)
 {
     EnsureTexturesLoaded();
     const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
@@ -2068,11 +2076,11 @@ static void ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t
 
     // Write plane points
     for (int i = 0; i < 3; i++) {
-        fprintf(f, " ( ");
+        f << " ( ";
         for (int j = 0; j < 3; j++) {
             fprintDoubleAndSpc(f, mapface.planepts[i][j]);
         }
-        fprintf(f, ") ");
+        f << ") ";
     }
 
     switch (format) {
@@ -2081,7 +2089,7 @@ static void ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t
             const texdef_quake_ed_t quakeed =
                 TexDef_BSPToQuakeEd(mapface.plane, texture, texinfo.vecs, mapface.planepts);
 
-            fprintf(f, "%s ", mapface.texname.c_str());
+            fmt::print(f, "{} ", mapface.texname);
             fprintDoubleAndSpc(f, quakeed.shift[0]);
             fprintDoubleAndSpc(f, quakeed.shift[1]);
             fprintDoubleAndSpc(f, quakeed.rotate);
@@ -2089,7 +2097,8 @@ static void ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t
             fprintDoubleAndSpc(f, quakeed.scale[1]);
 
             if (format == conversion_t::quake2) {
-                fprintf(f, "0 0 0");
+                // TODO??
+                f << "0 0 0";
             }
 
             break;
@@ -2097,19 +2106,21 @@ static void ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t
         case conversion_t::valve: {
             const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
 
-            fprintf(f, "%s [ ", mapface.texname.c_str());
+            fmt::print(f, "{} [ ", mapface.texname);
             fprintDoubleAndSpc(f, valve.axis[0][0]);
             fprintDoubleAndSpc(f, valve.axis[0][1]);
             fprintDoubleAndSpc(f, valve.axis[0][2]);
             fprintDoubleAndSpc(f, valve.shift[0]);
-            fprintf(f, "] [ ");
+            f << "] [ ";
             fprintDoubleAndSpc(f, valve.axis[1][0]);
             fprintDoubleAndSpc(f, valve.axis[1][1]);
             fprintDoubleAndSpc(f, valve.axis[1][2]);
             fprintDoubleAndSpc(f, valve.shift[1]);
-            fprintf(f, "] 0 ");
+            f << "] 0 ";
             fprintDoubleAndSpc(f, valve.scale[0]);
             fprintDoubleAndSpc(f, valve.scale[1]);
+
+            // TODO: Q2
             break;
         }
         case conversion_t::bp: {
@@ -2118,58 +2129,53 @@ static void ConvertMapFace(FILE *f, const mapface_t &mapface, const conversion_t
             texSize[1] = texture ? texture->height : 64;
 
             const texdef_brush_primitives_t bp = TexDef_BSPToBrushPrimitives(mapface.plane, texSize, texinfo.vecs);
-            fprintf(f, "( ( ");
+            f << "( ( ";
             fprintDoubleAndSpc(f, bp.texMat[0][0]);
             fprintDoubleAndSpc(f, bp.texMat[0][1]);
             fprintDoubleAndSpc(f, bp.texMat[0][2]);
-            fprintf(f, ") ( ");
+            f << ") ( ";
             fprintDoubleAndSpc(f, bp.texMat[1][0]);
             fprintDoubleAndSpc(f, bp.texMat[1][1]);
             fprintDoubleAndSpc(f, bp.texMat[1][2]);
 
             // N.B.: always print the Q2/Q3 flags
-            fprintf(f, ") ) %s 0 0 0", mapface.texname.c_str());
+            fmt::print(f, ") ) {} 0 0 0", mapface.texname);
             break;
         }
         default: FError("Internal error: unknown texcoord_style_t\n");
     }
 
-    fprintf(f, "\n");
+    f << '\n';
 }
 
-static void ConvertMapBrush(FILE *f, const mapbrush_t &mapbrush, const conversion_t format)
+static void ConvertMapBrush(std::ofstream &f, const mapbrush_t &mapbrush, const conversion_t format)
 {
-    fprintf(f, "{\n");
+    f << "{\n";
     if (format == conversion_t::bp) {
-        fprintf(f, "brushDef\n");
-        fprintf(f, "{\n");
+        f << "brushDef\n";
+        f << "{\n";
     }
     for (int i = 0; i < mapbrush.numfaces; i++) {
         ConvertMapFace(f, mapbrush.face(i), format);
     }
     if (format == conversion_t::bp) {
-        fprintf(f, "}\n");
+        f << "}\n";
     }
-    fprintf(f, "}\n");
+    f << "}\n";
 }
 
-static void ConvertEntity(FILE *f, const mapentity_t *entity, const conversion_t format)
+static void ConvertEntity(std::ofstream &f, const mapentity_t *entity, const conversion_t format)
 {
-    fprintf(f, "{\n");
+    f << "{\n";
 
-    // put the epairs in a temporary list to reverse the order, so we can print them in the same order as the .MAP file
-    std::list<std::pair<std::string, std::string>> epairs;
-    for (const epair_t *epair = entity->epairs; epair; epair = epair->next) {
-        epairs.push_front(std::make_pair(std::string(epair->key), std::string(epair->value)));
-    }
-    for (const auto &epair : epairs) {
-        fprintf(f, "\"%s\" \"%s\"\n", epair.first.c_str(), epair.second.c_str());
+    for (const auto &key : entity->epair_order) {
+        fmt::print(f, "\"{}\" \"{}\"\n", key, entity->epairs.at(key));
     }
 
     for (int i = 0; i < entity->nummapbrushes; i++) {
         ConvertMapBrush(f, entity->mapbrush(i), format);
     }
-    fprintf(f, "}\n");
+    f << "}\n";
 }
 
 void ConvertMapFile(void)
@@ -2189,15 +2195,14 @@ void ConvertMapFile(void)
     std::filesystem::path filename = options.szBSPName;
     filename.replace_filename(options.szBSPName.filename().string() + append);
 
-    FILE *f = fopen(filename.string().c_str(), "wb");
-    if (f == nullptr)
+    std::ofstream f(filename);
+
+    if (!f)
         FError("Couldn't open file\n");
 
     for (const mapentity_t &entity : map.entities) {
         ConvertEntity(f, &entity, options.convertMapFormat);
     }
-
-    fclose(f);
 
     LogPrint("Conversion saved to {}\n", filename);
 
@@ -2206,39 +2211,23 @@ void ConvertMapFile(void)
 
 void PrintEntity(const mapentity_t *entity)
 {
-    epair_t *epair;
-
-    for (epair = entity->epairs; epair; epair = epair->next)
-        LogPrint(LOG_STAT, "     {:20} : {}\n", epair->key, epair->value);
+    for (auto &epair : entity->epairs)
+        LogPrint(LOG_STAT, "     {:20} : {}\n", epair.first, epair.second);
 }
 
 const char *ValueForKey(const mapentity_t *entity, const char *key)
 {
-    const epair_t *ep;
+    auto it = entity->epairs.find(key);
 
-    for (ep = entity->epairs; ep; ep = ep->next)
-        if (!Q_strcasecmp(ep->key, key))
-            return ep->value;
+    if (it == entity->epairs.end())
+        return "";
 
-    return "";
+    return it->second.c_str();
 }
 
 void SetKeyValue(mapentity_t *entity, const char *key, const char *value)
 {
-    epair_t *ep;
-
-    for (ep = entity->epairs; ep; ep = ep->next)
-        if (!Q_strcasecmp(ep->key, key)) {
-            delete[] ep->value; /* FIXME */
-            ep->value = copystring(value);
-            return;
-        }
-
-    ep = new epair_t { };
-    ep->next = entity->epairs;
-    entity->epairs = ep;
-    ep->key = copystring(key);
-    ep->value = copystring(value);
+    entity->epairs[key] = value;
 }
 
 /**
@@ -2262,32 +2251,31 @@ int GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec)
 
 void WriteEntitiesToString(void)
 {
-    epair_t *ep;
     int i;
     mapentity_t *entity;
 
-    std::stringstream ss;
+    std::string ss;
 
     for (i = 0; i < map.numentities(); i++) {
         entity = &map.entities.at(i);
 
         /* Check if entity needs to be removed */
-        if (!entity->epairs || IsWorldBrushEntity(entity)) {
+        if (!entity->epairs.size() || IsWorldBrushEntity(entity)) {
             continue;
         }
 
-        ss << "{\n";
+        ss += "{\n";
 
-        for (ep = entity->epairs; ep; ep = ep->next) {
+        for (auto &ep : entity->epairs) {
             // Limit on Quake's strings of 128 bytes
             // TODO: Warn when limit is exceeded
-            ss << "\"" << std::string(ep->key) << "\" \"" << std::string(ep->value) << "\"\n";
+            fmt::format_to(std::back_inserter(ss), "\"{}\" \"{}\"\n", ep.first, ep.second);
         }
 
-        ss << "}\n";
+        ss += "}\n";
     }
 
-    map.exported_entities = ss.str();
+    map.exported_entities = std::move(ss);
 }
 
 //====================================================================
@@ -2299,19 +2287,18 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list)
+void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const brush_t *> &list)
 {
-    FILE *f;
-
     LogPrint("writing {}\n", name);
-    f = fopen(name, "wb");
+    std::ofstream f(name);
+
     if (!f)
         FError("Can't write {}", name);
 
-    fprintf(f, "{\n\"classname\" \"worldspawn\"\n");
+    fmt::print(f, "{\n\"classname\" \"worldspawn\"\n");
 
     for (const brush_t *brush : list) {
-        fprintf(f, "{\n");
+        fmt::print(f, "{\n");
         for (const face_t *face = brush->faces; face; face = face->next) {
             // FIXME: Factor out this mess
             qbsp_plane_t plane = map.planes.at(face->planenum);
@@ -2322,19 +2309,19 @@ void WriteBspBrushMap(const char *name, const std::vector<const brush_t *> &list
 
             winding_t *w = BaseWindingForPlane(&plane);
 
-            fprintf(f, "( %g %g %g ) ", w->points[0][0], w->points[0][1], w->points[0][2]);
-            fprintf(f, "( %g %g %g ) ", w->points[1][0], w->points[1][1], w->points[1][2]);
-            fprintf(f, "( %g %g %g ) ", w->points[2][0], w->points[2][1], w->points[2][2]);
+            fmt::print(f, "( {} {} {} ) ", w->points[0][0], w->points[0][1], w->points[0][2]);
+            fmt::print(f, "( {} {} {} ) ", w->points[1][0], w->points[1][1], w->points[1][2]);
+            fmt::print(f, "( {} {} {} ) ", w->points[2][0], w->points[2][1], w->points[2][2]);
 
-            fprintf(f, "notexture 0 0 0 1 1\n");
+            fmt::print(f, "notexture 0 0 0 1 1\n");
 
             free(w);
         }
-        fprintf(f, "}\n");
-    }
-    fprintf(f, "}\n");
 
-    fclose(f);
+        fmt::print(f, "}\n");
+    }
+
+    fmt::print(f, "}\n");
 }
 
 /*

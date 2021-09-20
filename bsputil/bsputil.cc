@@ -562,10 +562,10 @@ int main(int argc, char **argv)
 
             f << bsp.dentdata;
 
-            f.close();
-
             if (!f)
                 Error("{}", strerror(errno));
+
+            f.close();
 
             printf("done.\n");
         } else if (!strcmp(argv[i], "--extract-textures")) {

@@ -345,10 +345,9 @@ static void WriteExtendedTexinfoFlags(void)
     std::sort(texinfos_sorted.begin(), texinfos_sorted.end(),
         [](const mtexinfo_t &a, const mtexinfo_t &b) { return a.outputnum < b.outputnum; });
 
-    FILE *texinfofile;
     options.szBSPName.replace_extension("texinfo");
 
-    texinfofile = fopen(options.szBSPName.string().c_str(), "wt");
+    qfile_t texinfofile = SafeOpenWrite(options.szBSPName);
 
     if (!texinfofile)
         FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
@@ -357,7 +356,7 @@ static void WriteExtendedTexinfoFlags(void)
     header.num_texinfo = map.exported_texinfos.size();
     header.surfflags_size = sizeof(surfflags_t);
 
-    fwrite(&header, 1, sizeof(header), texinfofile);
+    SafeWrite(texinfofile, &header, sizeof(header));
 
     int count = 0;
     for (const auto &tx : texinfos_sorted) {
@@ -366,12 +365,10 @@ static void WriteExtendedTexinfoFlags(void)
 
         Q_assert(count == tx.outputnum.value()); // check we are outputting them in the proper sequence
 
-        fwrite(&tx.flags, 1, sizeof(tx.flags), texinfofile);
+        SafeWrite(texinfofile, &tx.flags, sizeof(tx.flags));
         count++;
     }
     Q_assert(count == static_cast<int>(map.exported_texinfos.size()));
-
-    fclose(texinfofile);
 }
 
 template<class C>

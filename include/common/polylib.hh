@@ -349,7 +349,7 @@ public:
 
             for (; j < 3; j++)
                 if (p1[j] > bogus_range || p1[j] < -bogus_range)
-                    FError("BOGUS_RANGE: %f", p1[j]);
+                    FError("BOGUS_RANGE: {}", p1[j]);
 
             /* check the point is on the face plane */
             vec_t d = DotProduct(&p1[0], face.normal) - face.dist;

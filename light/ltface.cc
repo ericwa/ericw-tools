@@ -31,6 +31,8 @@
 #include <cassert>
 #include <cmath>
 #include <algorithm>
+#include <fstream>
+#include <fmt/ostream.h>
 
 using namespace std;
 
@@ -547,7 +549,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
 // Dump points to a .map file
 static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 {
-    FILE *f = fopen("calcpoints.map", "w");
+    std::ofstream f("calcpoints.map");
 
     for (int t = 0; t < surf->height; t++) {
         for (int s = 0; s < surf->width; s++) {
@@ -555,19 +557,17 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
             const vec_t *point = surf->points[i];
             const qvec3f mangle = mangle_from_vec(surf->normals[i]);
 
-            fprintf(f, "{\n");
-            fprintf(f, "\"classname\" \"light\"\n");
-            fprintf(f, "\"origin\" \"%f %f %f\"\n", point[0], point[1], point[2]);
-            fprintf(f, "\"mangle\" \"%f %f %f\"\n", mangle[0], mangle[1], mangle[2]);
-            fprintf(f, "\"face\" \"%d\"\n", surf->realfacenums[i]);
-            fprintf(f, "\"occluded\" \"%d\"\n", (int)surf->occluded[i]);
-            fprintf(f, "\"s\" \"%d\"\n", s);
-            fprintf(f, "\"t\" \"%d\"\n", t);
-            fprintf(f, "}\n");
+            f << "{\n";
+            f << "\"classname\" \"light\"\n";
+            fmt::print(f, "\"origin\" \"{} {} {}\"\n", point[0], point[1], point[2]);
+            fmt::print(f, "\"mangle\" \"{} {} {}\"\n", mangle[0], mangle[1], mangle[2]);
+            fmt::print(f, "\"face\" \"{}\"\n", surf->realfacenums[i]);
+            fmt::print(f, "\"occluded\" \"{}\"\n", (int)surf->occluded[i]);
+            fmt::print(f, "\"s\" \"{}\"\n", s);
+            fmt::print(f, "\"t\" \"{}\"\n", t);
+            f << "}\n";
         }
     }
-
-    fclose(f);
 
     LogPrint("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
         surf->height);
@@ -2644,16 +2644,14 @@ static float Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lig
     return maxb;
 }
 
-static void WritePPM(std::string fname, int width, int height, const uint8_t *rgbdata)
+static void WritePPM(const std::filesystem::path &fname, int width, int height, const uint8_t *rgbdata)
 {
-    FILE *file = fopen(fname.c_str(), "wb");
+    qfile_t file = SafeOpenWrite(fname);
 
     // see: http://netpbm.sourceforge.net/doc/ppm.html
-    fprintf(file, "P6 %d %d 255 ", width, height);
+    fmt::print(file.get(), "P6 {} {} 255 ", width, height);
     int bytes = width * height * 3;
-    Q_assert(bytes == fwrite(rgbdata, 1, bytes, file));
-
-    fclose(file);
+    Q_assert(bytes == SafeWrite(file, rgbdata, bytes));
 }
 
 static void DumpFullSizeLightmap(const mbsp_t *bsp, const lightsurf_t *lightsurf)
@@ -2661,9 +2659,6 @@ static void DumpFullSizeLightmap(const mbsp_t *bsp, const lightsurf_t *lightsurf
     const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(lightsurf, 0);
     if (lm != nullptr) {
         int fnum = Face_GetNum(bsp, lightsurf->face);
-
-        char fname[1024];
-        sprintf(fname, "face%04d.ppm", fnum);
 
         std::vector<uint8_t> rgbdata;
         for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -2679,7 +2674,7 @@ static void DumpFullSizeLightmap(const mbsp_t *bsp, const lightsurf_t *lightsurf
 
         Q_assert(lightsurf->numpoints == (oversampled_height * oversampled_width));
 
-        WritePPM(std::string{fname}, oversampled_width, oversampled_height, rgbdata.data());
+        WritePPM(fmt::format("face{:04}.ppm", fnum), oversampled_width, oversampled_height, rgbdata.data());
     }
 }
 
@@ -2702,8 +2697,6 @@ static void DumpGLMVector(std::string fname, std::vector<qvec3f> vec, int width,
 static void DumpDownscaledLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, int w, int h, const vec3_t *colors)
 {
     int fnum = Face_GetNum(bsp, face);
-    char fname[1024];
-    sprintf(fname, "face-small%04d.ppm", fnum);
 
     std::vector<uint8_t> rgbdata;
     for (int i = 0; i < (w * h); i++) {
@@ -2713,7 +2706,7 @@ static void DumpDownscaledLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, 
         }
     }
 
-    WritePPM(std::string{fname}, w, h, rgbdata.data());
+    WritePPM(fmt::format("face-small{:04}.ppm", fnum), w, h, rgbdata.data());
 }
 
 static std::vector<qvec4f> LightmapColorsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)

@@ -19,7 +19,7 @@
 
 #include <algorithm>
 #include <cstring>
-#include <sstream>
+#include <fstream>
 #include <common/cmdlib.hh>
 
 #include <light/light.hh>
@@ -154,25 +154,15 @@ static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t 
 {
     // get the submodel's bbox if it's a brush entity
     if (bsp != nullptr && EntDict_StringForKey(entity, "origin") == "" && EntDict_StringForKey(entity, "model") != "") {
-
         const std::string submodel_str = EntDict_StringForKey(entity, "model");
         const dmodel_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
-            std::stringstream s;
-            s << "brush entity with mins (";
-            s << VecStrf(info->mins);
-            s << ") maxs (";
-            s << VecStrf(info->maxs);
-            s << ") (" << EntDict_StringForKey(entity, "classname") << ")";
-            return s.str();
+            return fmt::format("brush entity with mins ({}) maxs ({}) ({})", VecStrf(info->mins), VecStrf(info->maxs), EntDict_StringForKey(entity, "classname"));
         }
     }
 
-    std::stringstream s;
-    s << "entity at (" << EntDict_StringForKey(entity, "origin") << ") (" << EntDict_StringForKey(entity, "classname")
-      << ")";
-    return s.str();
+    return fmt::format("entity at ({}) ({})", EntDict_StringForKey(entity, "origin"), EntDict_StringForKey(entity, "classname"));
 }
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
@@ -875,7 +865,9 @@ static rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texna
 
 static std::string ParseEscapeSequences(const std::string &input)
 {
-    std::stringstream ss;
+    std::string s;
+    s.reserve(input.size());
+
     bool bold = false;
 
     for (size_t i = 0; i < input.length(); i++) {
@@ -887,10 +879,10 @@ static std::string ParseEscapeSequences(const std::string &input)
             if (bold) {
                 c |= 128;
             }
-            ss.put(static_cast<char>(c));
+            s += static_cast<char>(c);
         }
     }
-    return ss.str();
+    return s;
 }
 
 /*
@@ -1264,10 +1256,10 @@ void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp)
 
 static std::vector<light_t> surfacelight_templates;
 
-static FILE *surflights_dump_file;
+static std::ofstream surflights_dump_file;
 static std::filesystem::path surflights_dump_filename;
 
-static void SurfLights_WriteEntityToFile(FILE *f, light_t *entity, const vec3_t pos)
+static void SurfLights_WriteEntityToFile(light_t *entity, const vec3_t pos)
 {
     Q_assert(entity->epairs != nullptr);
 
@@ -1275,8 +1267,7 @@ static void SurfLights_WriteEntityToFile(FILE *f, light_t *entity, const vec3_t 
     EntDict_RemoveValueForKey(epairs, "_surface");
     epairs.set("origin", VecStr(pos));
 
-    std::string entstring = EntData_Write({epairs});
-    fwrite(entstring.data(), 1, entstring.size(), f);
+    surflights_dump_file << EntData_Write({epairs});
 }
 
 static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const light_t *surflight_template)
@@ -1296,7 +1287,7 @@ static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const
 
     /* export it to a map file for debugging */
     if (surflight_dump) {
-        SurfLights_WriteEntityToFile(surflights_dump_file, &entity, origin);
+        SurfLights_WriteEntityToFile(&entity, origin);
     }
 
     all_lights.push_back(entity);
@@ -1463,39 +1454,39 @@ static void GL_SubdivideSurface(const bsp2_dface_t *face, const modelinfo_t *fac
 }
 
 bool ParseLightsFile(const std::filesystem::path &fname)
-{ // note: this creates dupes. super bright light! (and super slow, too)
-    light_t l;
-    char buf[1024];
-    char gah[256];
-    const char *t;
-    float r, g, b;
-    FILE *f = fopen(fname.string().c_str(), "r");
+{
+    // note: this creates dupes. super bright light! (and super slow, too)
+    std::string buf;
+    std::ifstream f(fname);
+
     if (!f)
         return false;
-    while (!feof(f)) {
-        fgets(buf, sizeof(buf), f);
-        t = buf;
 
-        t = COM_Parse(buf);
+    while (!f.eof())
+    {
+        std::getline(f, buf);
+
+        const char *t = COM_Parse(buf.c_str());
+
         if (!t)
             continue;
-        entdict_t d = {};
-        d.set("_surface", std::string(com_token));
+
+        entdict_t d {};
+        d.set("_surface", com_token);
         t = COM_Parse(t);
-        r = atof(com_token);
+        float r = atof(com_token);
         t = COM_Parse(t);
-        g = atof(com_token);
+        float g = atof(com_token);
         t = COM_Parse(t);
-        b = atof(com_token);
-        snprintf(gah, sizeof(gah), "%f %f %f", r, g, b);
-        d.set("_color", std::string(gah));
+        float b = atof(com_token);
+        d.set("_color", fmt::format("{} {} {}", r, g, b));
         t = COM_Parse(t);
-        d.set("light", std::string(com_token));
+        d.set("light", com_token);
         // might be hdr rgbi values here
 
         radlights.push_back(d);
     }
-    fclose(f);
+
     return true;
 }
 
@@ -1531,7 +1522,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     if (surflight_dump) {
         surflights_dump_filename = mapfilename;
         surflights_dump_filename.replace_filename(surflights_dump_filename.filename().string() + "-surflights").replace_extension("map");
-        surflights_dump_file = fopen(surflights_dump_filename.string().c_str(), "w");
+        surflights_dump_file.open(surflights_dump_filename);
     }
 
     /* Create the surface lights */
@@ -1575,7 +1566,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     }
 
     if (surflights_dump_file) {
-        fclose(surflights_dump_file);
+        surflights_dump_file.close();
         fmt::print("wrote surface lights to '{}'\n", surflights_dump_filename);
     }
 }

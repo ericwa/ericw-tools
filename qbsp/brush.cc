@@ -1202,9 +1202,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
                 VectorAdd(brush->mins, brush->maxs, origin);
                 VectorScale(origin, 0.5, origin);
 
-                char value[1024];
-                snprintf(value, sizeof(value), "%.2f %.2f %.2f", origin[0], origin[1], origin[2]);
-                SetKeyValue(dst, "origin", value);
+                SetKeyValue(dst, "origin", VecStrf(origin).c_str());
 
                 VectorCopy(origin, rotate_offset);
                 rottype = rotation_t::origin_brush;

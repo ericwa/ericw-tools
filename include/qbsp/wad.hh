@@ -24,6 +24,7 @@
 #include <unordered_map>
 #include <vector>
 #include <list>
+#include "common/cmdlib.hh"
 
 // Texture data stored for quick searching
 struct texture_t
@@ -51,44 +52,13 @@ struct lumpinfo_t
     char name[16]; // must be null terminated
 };
 
-struct case_insensitive_hash
-{
-    std::size_t operator()(const std::string &s) const noexcept
-    {
-        std::size_t hash = 0x811c9dc5;
-        constexpr std::size_t prime = 0x1000193;
-
-        for (auto &c : s) {
-            hash ^= tolower(c);
-            hash *= prime;
-        }
-
-        return hash;
-    }
-};
-
-struct case_insensitive_equal
-{
-    bool operator()(const std::string &l, const std::string &r) const noexcept
-    {
-        return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
-    }
-};
-
 struct wad_t
 {
     wadinfo_t header;
     int version;
     std::unordered_map<std::string, lumpinfo_t, case_insensitive_hash, case_insensitive_equal> lumps;
     std::unordered_map<std::string, texture_t, case_insensitive_hash, case_insensitive_equal> textures;
-    FILE *file;
-
-    ~wad_t()
-    {
-        if (file) {
-            fclose(file);
-        }
-    }
+    qfile_t file = { nullptr, nullptr };
 };
 
 // Q1 miptex format

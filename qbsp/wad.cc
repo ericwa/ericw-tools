@@ -64,7 +64,7 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
 
     external |= options.fNoTextures;
 
-    len = fread(hdr, 1, sizeof(wadinfo_t), wad.file);
+    len = SafeRead(wad.file, hdr, sizeof(wadinfo_t));
     if (len != sizeof(wadinfo_t))
         return false;
 
@@ -76,21 +76,21 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
     if (!wad.version)
         return false;
 
-    fseek(wad.file, hdr->infotableofs, SEEK_SET);
+    SafeSeek(wad.file, hdr->infotableofs, SEEK_SET);
     wad.lumps.reserve(wad.header.numlumps);
 
     /* Get the dimensions and make a texture_t */
     for (i = 0; i < wad.header.numlumps; i++) {
         lumpinfo_t lump;
 
-        len = fread(&lump, 1, sizeof(lump), wad.file);
+        len = SafeRead(wad.file, &lump, sizeof(lump));
         if (len != sizeof(lump))
             return false;
 
-        auto restore_pos = ftell(wad.file);
+        auto restore_pos = SafeTell(wad.file);
 
-        fseek(wad.file, lump.filepos, SEEK_SET);
-        len = fread(&miptex, 1, sizeof(miptex), wad.file);
+        SafeSeek(wad.file, lump.filepos, SEEK_SET);
+        len = SafeRead(wad.file, &miptex, sizeof(miptex));
 
         if (len == sizeof(miptex)) {
             int w = LittleLong(miptex.width);
@@ -116,7 +116,7 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
         } else
             lump.size = 0;
 
-        fseek(wad.file, restore_pos, SEEK_SET);
+        SafeSeek(wad.file, restore_pos, SEEK_SET);
 
         wad.lumps.insert({lump.name, lump});
     }
@@ -128,20 +128,19 @@ static void WADList_OpenWad(const std::filesystem::path &fpath, bool external)
 {
     wad_t wad;
 
-    wad.file = fopen(fpath.string().c_str(), "rb");
+    wad.file = SafeOpenRead(fpath);
 
     if (wad.file) {
         if (options.fVerbose)
             LogPrint("Opened WAD: {}\n", fpath);
 
         if (WAD_LoadInfo(wad, external)) {
-            wadlist.push_front(wad);
-            wad.file = nullptr; // wadlist now owns this file handle
+            wadlist.emplace_front(std::move(wad));
             return;
         }
 
         LogPrint("WARNING: {} isn't a wadfile\n", fpath);
-        fclose(wad.file);
+        wad.file.reset();
     } else {
         // Message?
     }
@@ -207,10 +206,10 @@ static int WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
 
     auto &lump = it->second;
 
-    fseek(wad.file, lump.filepos, SEEK_SET);
+    SafeSeek(wad.file, lump.filepos, SEEK_SET);
 
     if (lump.disksize == sizeof(dmiptex_t)) {
-        size = fread(dest, 1, sizeof(dmiptex_t), wad.file);
+        size = SafeRead(wad.file, dest, sizeof(dmiptex_t));
         if (size != sizeof(dmiptex_t))
             FError("Failure reading from file");
         for (i = 0; i < MIPLEVELS; i++)
@@ -221,7 +220,7 @@ static int WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
     if (lump.size != lump.disksize) {
         LogPrint("Texture {} is {} bytes in wad, packed to {} bytes in bsp\n", name, lump.disksize, lump.size);
         std::vector<uint8_t> data(lump.disksize);
-        size = fread(data.data(), 1, lump.disksize, wad.file);
+        size = SafeRead(wad.file, data.data(), lump.disksize);
         if (size != lump.disksize)
             FError("Failure reading from file");
         auto out = (dmiptex_t *)dest;
@@ -249,7 +248,7 @@ static int WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
                 memcpy(dest + palofs + 2, thepalette, 3 * 256); // FIXME: quake palette or something.
         }
     } else {
-        size = fread(dest, 1, lump.disksize, wad.file);
+        size = SafeRead(wad.file, dest, lump.disksize);
         if (size != lump.disksize)
             FError("Failure reading from file");
     }

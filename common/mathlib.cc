@@ -56,11 +56,7 @@ bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist)
  */
 std::string VecStr(const vec3_t vec)
 {
-    char buf[128];
-
-    snprintf(buf, sizeof(buf), "%i %i %i", (int)vec[0], (int)vec[1], (int)vec[2]);
-
-    return buf;
+    return fmt::format("{} {} {}", (int32_t) vec[0], (int32_t) vec[1], (int32_t) vec[2]);
 }
 
 std::string // mxd
@@ -73,11 +69,7 @@ VecStr(const qvec3f vec)
 
 std::string VecStrf(const vec3_t vec)
 {
-    char buf[128];
-
-    snprintf(buf, sizeof(buf), "%.2f %.2f %.2f", vec[0], vec[1], vec[2]);
-
-    return buf;
+    return fmt::format("{:.2} {:.2} {:.2}", vec[0], vec[1], vec[2]);
 }
 
 std::string // mxd
