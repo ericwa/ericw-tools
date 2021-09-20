@@ -70,18 +70,17 @@ else
     sha256sum --strict --check qbsp-vis.sha256sum || exit 1
 fi
 
-# now run light
-# FIXME: light output is nondeterministic when run with multiple threads!
+# FIXME: light output is nondeterministic
 
-for bsp in ${HASH_CHECK_BSPS}; do
-    light -threads 1 ${bsp} || exit 1
-done
+# for bsp in ${HASH_CHECK_BSPS}; do
+#     light -threads 1 ${bsp} || exit 1
+# done
 
-if [[ $UPDATE_HASHES -ne 0 ]]; then
-    sha256sum ${HASH_CHECK_BSPS} > qbsp-vis-light.sha256sum || exit 1
-else
-    sha256sum --strict --check qbsp-vis-light.sha256sum || exit 1
-fi
+# if [[ $UPDATE_HASHES -ne 0 ]]; then
+#     sha256sum ${HASH_CHECK_BSPS} > qbsp-vis-light.sha256sum || exit 1
+# else
+#     sha256sum --strict --check qbsp-vis-light.sha256sum || exit 1
+# fi
 
 # leak tests on all id1 maps
 cd quake_map_source
