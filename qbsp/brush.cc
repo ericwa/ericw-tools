@@ -652,7 +652,7 @@ AddHullPoint
 Doesn't add if duplicated
 =============
 */
-static int AddHullPoint(hullbrush_t *hullbrush, const vec3_t &p, vec3_t hull_size[2])
+static int AddHullPoint(hullbrush_t *hullbrush, const vec3_t &p, const qboundsd &hull_size)
 {
     int i;
     vec_t *c;
@@ -692,7 +692,7 @@ AddHullEdge
 Creates all of the hull planes around the given edge, if not done allready
 =============
 */
-static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &p2, vec3_t hull_size[2])
+static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &p2, const qboundsd &hull_size)
 {
     int pt1, pt2;
     int i;
@@ -753,7 +753,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &
 ExpandBrush
 =============
 */
-static void ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
+static void ExpandBrush(hullbrush_t *hullbrush, const qboundsd &hull_size, face_t *facelist)
 {
     int i, x, s;
     vec3_t corner;
@@ -980,74 +980,12 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
         return NULL;
     }
 
-    if (options.target_game->id == GAME_HALF_LIFE) {
-        if (hullnum == 1) {
-            vec3_t size[2] = {{-16, -16, -36}, {16, 16, 36}};
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        } else if (hullnum == 2) {
-            vec3_t size[2] = {{-32, -32, -32}, {32, 32, 32}};
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        } else if (hullnum == 3) {
-            vec3_t size[2] = {{-16, -16, -18}, {16, 16, 18}};
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        }
-    } else if (options.target_game->id == GAME_HEXEN_II) {
-        if (hullnum == 1) {
-            vec3_t size[2] = {{-16, -16, -32}, {16, 16, 24}};
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        } else if (hullnum == 2) {
-            vec3_t size[2] = {{-24, -24, -20}, {24, 24, 20}};
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        } else if (hullnum == 3) {
-            vec3_t size[2] = {{-16, -16, -12}, {16, 16, 16}};
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        } else if (hullnum == 4) {
-#if 0
-            if (options.hexen2 == 1) { /*original game*/
-                vec3_t size[2] = { {-40, -40, -42}, {40, 40, 42} };
-                ExpandBrush(&hullbrush, size, facelist);
-                FreeBrushFaces(facelist);
-                facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype,  hullnum);
-            } else
-#endif
-            { /*mission pack*/
-                vec3_t size[2] = {{-8, -8, -8}, {8, 8, 8}};
-                ExpandBrush(&hullbrush, size, facelist);
-                FreeBrushFaces(facelist);
-                facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-            }
-        } else if (hullnum == 5) {
-            vec3_t size[2] = {{-48, -48, -50}, {48, 48, 50}};
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        }
-    } else {
-        if (hullnum == 1) {
-            vec3_t size[2] = {{-16, -16, -32}, {16, 16, 24}};
-
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        } else if (hullnum == 2) {
-            vec3_t size[2] = {{-32, -32, -64}, {32, 32, 24}};
-
-            ExpandBrush(&hullbrush, size, facelist);
-            FreeBrushFaces(facelist);
-            facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
-        }
+    if (hullnum) {
+        auto &hulls = options.target_game->get_hull_sizes();
+        Q_assert(hullnum < hulls.size());
+        ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);
+        FreeBrushFaces(facelist);
+        facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
     }
 
     // create the brush

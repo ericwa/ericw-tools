@@ -72,7 +72,8 @@ inline void LogPrint(const char *str)
 template<typename ...Args>
 inline void LogPrint(log_flag_t type, const char *fmt, const Args &...args)
 {
-    LogPrint(type, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
+    if (!type || (log_mask & (1 << type)))
+        LogPrint(type, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
 }
 
 template<typename ...Args>

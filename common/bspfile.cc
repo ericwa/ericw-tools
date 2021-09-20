@@ -57,6 +57,8 @@ struct gamedef_generic_t : public gamedef_t
     bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
     std::string get_contents_display(const contentflags_t &contents) const { throw std::bad_cast(); }
+
+    const std::initializer_list<qboundsd> &get_hull_sizes() const { throw std::bad_cast(); }
 };
 
 template<gameid_t id>
@@ -163,11 +165,36 @@ struct gamedef_q1_like_t : public gamedef_t
             default: return fmt::to_string(contents.native);
         }
     }
+
+    const std::initializer_list<qboundsd> &get_hull_sizes() const
+    {
+        static constexpr std::initializer_list<qboundsd> hulls = {
+            {{0, 0, 0}, {0, 0, 0}},
+            {{-16, -16, -32}, {16, 16, 24}},
+            {{-32, -32, -64}, {32, 32, 24}}
+        };
+
+        return hulls;
+    }
 };
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 {
     gamedef_h2_t() : gamedef_q1_like_t("DATA1") { }
+
+    const std::initializer_list<qboundsd> &get_hull_sizes() const
+    {
+        static constexpr std::initializer_list<qboundsd> hulls = {
+            {{0, 0, 0}, {0, 0, 0}},
+            {{-16, -16, -32}, {16, 16, 24}},
+            {{-24, -24, -20}, {24, 24, 20}},
+            {{-16, -16, -12}, {16, 16, 16}},
+            {{-8, -8, -8}, {8, 8, 8}}, // {{-40, -40, -42}, {40, 40, 42}} = original game
+            {{-48, -48, -50}, {48, 48, 50}}
+        };
+
+        return hulls;
+    }
 };
 
 struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
@@ -176,6 +203,18 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         gamedef_q1_like_t("VALVE")
     {
         has_rgb_lightmap = true;
+    }
+
+    const std::initializer_list<qboundsd> &get_hull_sizes() const
+    {
+        static constexpr std::initializer_list<qboundsd> hulls = {
+            {{0, 0, 0}, {0, 0, 0}},
+            {{-16, -16, -36}, {16, 16, 36}},
+            {{-32, -32, -32}, {32, 32, 32}},
+            {{-16, -16, -18}, {16, 16, 18}}
+        };
+
+        return hulls;
     }
 };
 
@@ -331,6 +370,12 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return s;
+    }
+
+    const std::initializer_list<qboundsd> &get_hull_sizes() const
+    {
+        static constexpr std::initializer_list<qboundsd> hulls = {};
+        return hulls;
     }
 };
 

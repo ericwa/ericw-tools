@@ -181,7 +181,7 @@ struct mapdata_t
 extern mapdata_t map;
 extern mapentity_t *pWorldEnt();
 
-bool ParseEntity(parser_t *parser, mapentity_t *entity);
+bool ParseEntity(parser_t &parser, mapentity_t *entity);
 
 void EnsureTexturesLoaded();
 void ProcessExternalMapEntity(mapentity_t *entity);

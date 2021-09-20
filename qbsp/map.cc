@@ -481,21 +481,21 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     return flags;
 }
 
-static void ParseEpair(parser_t *parser, mapentity_t *entity)
+static void ParseEpair(parser_t &parser, mapentity_t *entity)
 {
-    if (strlen(parser->token) >= MAX_KEY - 1)
+    if (parser.token.size() >= MAX_KEY - 1)
         goto parse_error;
 
     {
-        std::string key(parser->token);
+        std::string key = parser.token;
 
-        ParseToken(parser, PARSE_SAMELINE);
+        parser.parse_token(PARSE_SAMELINE);
 
-        if (strlen(parser->token) >= MAX_VALUE - 1)
+        if (parser.token.size() >= MAX_VALUE - 1)
             goto parse_error;
 
         {
-            std::string &value = (entity->epairs[key] = parser->token);
+            std::string &value = (entity->epairs[key] = parser.token);
 
             if (!Q_strcasecmp(key.c_str(), "origin")) {
                 GetVectorForKey(entity, key.c_str(), entity->origin);
@@ -521,7 +521,7 @@ static void ParseEpair(parser_t *parser, mapentity_t *entity)
     }
 
 parse_error:
-    FError("line {}: Entity key or value too long", parser->linenum);
+    FError("line {}: Entity key or value too long", parser.linenum);
 }
 
 static void TextureAxisFromPlane(const qbsp_plane_t *plane, vec3_t xv, vec3_t yv, vec3_t snapped_normal)
@@ -555,27 +555,27 @@ static void TextureAxisFromPlane(const qbsp_plane_t *plane, vec3_t xv, vec3_t yv
     VectorCopy(baseaxis[bestaxis * 3], snapped_normal);
 }
 
-static quark_tx_info_t ParseExtendedTX(parser_t *parser)
+static quark_tx_info_t ParseExtendedTX(parser_t &parser)
 {
     quark_tx_info_t result;
 
-    if (ParseToken(parser, PARSE_COMMENT | PARSE_OPTIONAL)) {
-        if (!strncmp(parser->token, "//TX", 4)) {
-            if (parser->token[4] == '1')
+    if (parser.parse_token(PARSE_COMMENT | PARSE_OPTIONAL)) {
+        if (!strncmp(parser.token.c_str(), "//TX", 4)) {
+            if (parser.token[4] == '1')
                 result.quark_tx1 = true;
-            else if (parser->token[4] == '2')
+            else if (parser.token[4] == '2')
                 result.quark_tx2 = true;
         }
     } else {
         // Parse extra Quake 2 surface info
-        if (ParseToken(parser, PARSE_OPTIONAL)) {
-            result.info = extended_texinfo_t{atoi(parser->token)};
+        if (parser.parse_token(PARSE_OPTIONAL)) {
+            result.info = extended_texinfo_t{std::stoi(parser.token)};
 
-            if (ParseToken(parser, PARSE_OPTIONAL)) {
-                result.info->flags = atoi(parser->token);
+            if (parser.parse_token(PARSE_OPTIONAL)) {
+                result.info->flags = std::stoi(parser.token);
             }
-            if (ParseToken(parser, PARSE_OPTIONAL)) {
-                result.info->value = atoi(parser->token);
+            if (parser.parse_token(PARSE_OPTIONAL)) {
+                result.info->value = std::stoi(parser.token);
             }
         }
     }
@@ -1122,7 +1122,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t *plane, const vec3_t planepts[
     }
 }
 
-static void SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_style_t style, mtexinfo_t *out)
+static void SetTexinfo_QuArK(parser_t &parser, vec3_t planepts[3], texcoord_style_t style, mtexinfo_t *out)
 {
     int i;
     vec3_t vecs[2];
@@ -1164,7 +1164,7 @@ static void SetTexinfo_QuArK(parser_t *parser, vec3_t planepts[3], texcoord_styl
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
-        LogPrint("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser->linenum);
+        LogPrint("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser.linenum);
         for (i = 0; i < 3; i++)
             out->vecs[0][i] = out->vecs[1][i] = 0;
     } else {
@@ -1324,93 +1324,93 @@ static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     return res;
 }
 
-static void ParsePlaneDef(parser_t *parser, vec3_t planepts[3])
+static void ParsePlaneDef(parser_t &parser, vec3_t planepts[3])
 {
     int i, j;
 
     for (i = 0; i < 3; i++) {
         if (i != 0)
-            ParseToken(parser, PARSE_NORMAL);
-        if (strcmp(parser->token, "("))
+            parser.parse_token();
+        if (parser.token != "(")
             goto parse_error;
 
         for (j = 0; j < 3; j++) {
-            ParseToken(parser, PARSE_SAMELINE);
-            planepts[i][j] = atof(parser->token);
+            parser.parse_token(PARSE_SAMELINE);
+            planepts[i][j] = std::stod(parser.token);
         }
 
-        ParseToken(parser, PARSE_SAMELINE);
-        if (strcmp(parser->token, ")"))
+        parser.parse_token(PARSE_SAMELINE);
+        if (parser.token != ")")
             goto parse_error;
     }
     return;
 
 parse_error:
-    FError("line {}: Invalid brush plane format", parser->linenum);
+    FError("line {}: Invalid brush plane format", parser.linenum);
 }
 
-static void ParseValve220TX(parser_t *parser, vec3_t axis[2], vec_t shift[2], vec_t *rotate, vec_t scale[2])
+static void ParseValve220TX(parser_t &parser, vec3_t axis[2], vec_t shift[2], vec_t *rotate, vec_t scale[2])
 {
     int i, j;
 
     for (i = 0; i < 2; i++) {
-        ParseToken(parser, PARSE_SAMELINE);
-        if (strcmp(parser->token, "["))
+        parser.parse_token(PARSE_SAMELINE);
+        if (parser.token != "[")
             goto parse_error;
         for (j = 0; j < 3; j++) {
-            ParseToken(parser, PARSE_SAMELINE);
-            axis[i][j] = atof(parser->token);
+            parser.parse_token(PARSE_SAMELINE);
+            axis[i][j] = std::stod(parser.token);
         }
-        ParseToken(parser, PARSE_SAMELINE);
-        shift[i] = atof(parser->token);
-        ParseToken(parser, PARSE_SAMELINE);
-        if (strcmp(parser->token, "]"))
+        parser.parse_token(PARSE_SAMELINE);
+        shift[i] = std::stod(parser.token);
+        parser.parse_token(PARSE_SAMELINE);
+        if (parser.token != "]")
             goto parse_error;
     }
-    ParseToken(parser, PARSE_SAMELINE);
-    rotate[0] = atof(parser->token);
-    ParseToken(parser, PARSE_SAMELINE);
-    scale[0] = atof(parser->token);
-    ParseToken(parser, PARSE_SAMELINE);
-    scale[1] = atof(parser->token);
+    parser.parse_token(PARSE_SAMELINE);
+    rotate[0] = std::stod(parser.token);
+    parser.parse_token(PARSE_SAMELINE);
+    scale[0] = std::stod(parser.token);
+    parser.parse_token(PARSE_SAMELINE);
+    scale[1] = std::stod(parser.token);
     return;
 
 parse_error:
-    FError("line {}: couldn't parse Valve220 texture info", parser->linenum);
+    FError("line {}: couldn't parse Valve220 texture info", parser.linenum);
 }
 
-static void ParseBrushPrimTX(parser_t *parser, vec3_t texMat[2])
+static void ParseBrushPrimTX(parser_t &parser, vec3_t texMat[2])
 {
-    ParseToken(parser, PARSE_SAMELINE);
-    if (strcmp(parser->token, "("))
+    parser.parse_token(PARSE_SAMELINE);
+    if (parser.token != "(")
         goto parse_error;
 
     for (int i = 0; i < 2; i++) {
-        ParseToken(parser, PARSE_SAMELINE);
-        if (strcmp(parser->token, "("))
+        parser.parse_token(PARSE_SAMELINE);
+        if (parser.token != "(")
             goto parse_error;
 
         for (int j = 0; j < 3; j++) {
-            ParseToken(parser, PARSE_SAMELINE);
-            texMat[i][j] = atof(parser->token);
+            parser.parse_token(PARSE_SAMELINE);
+            texMat[i][j] = std::stod(parser.token);
         }
 
-        ParseToken(parser, PARSE_SAMELINE);
-        if (strcmp(parser->token, ")"))
+        parser.parse_token(PARSE_SAMELINE);
+        if (parser.token != ")")
             goto parse_error;
     }
 
-    ParseToken(parser, PARSE_SAMELINE);
-    if (strcmp(parser->token, ")"))
+    parser.parse_token(PARSE_SAMELINE);
+    if (parser.token != ")")
         goto parse_error;
 
     return;
 
 parse_error:
-    FError("line {}: couldn't parse Brush Primitives texture info", parser->linenum);
+    FError("line {}: couldn't parse Brush Primitives texture info", parser.linenum);
 }
 
-static void ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush_t *brush, mtexinfo_t *tx,
+static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t *brush, mtexinfo_t *tx,
     vec3_t planepts[3], const qbsp_plane_t *plane)
 {
     vec3_t texMat[2];
@@ -1426,35 +1426,35 @@ static void ParseTextureDef(parser_t *parser, mapface_t &mapface, const mapbrush
         ParseBrushPrimTX(parser, texMat);
         tx_type = TX_BRUSHPRIM;
 
-        ParseToken(parser, PARSE_SAMELINE);
-        mapface.texname = std::string(parser->token);
+        parser.parse_token(PARSE_SAMELINE);
+        mapface.texname = parser.token;
 
         EnsureTexturesLoaded();
 
         // Read extra Q2 params
         extinfo = ParseExtendedTX(parser);
     } else if (brush->format == brushformat_t::NORMAL) {
-        ParseToken(parser, PARSE_SAMELINE);
-        mapface.texname = std::string(parser->token);
+        parser.parse_token(PARSE_SAMELINE);
+        mapface.texname = parser.token;
 
-        ParseToken(parser, PARSE_SAMELINE);
-        if (!strcmp(parser->token, "[")) {
-            parser->unget = true;
+        parser.parse_token(PARSE_SAMELINE | PARSE_PEEK);
+        if (parser.token == "[") {
             ParseValve220TX(parser, axis, shift, &rotate, scale);
             tx_type = TX_VALVE_220;
 
             // Read extra Q2 params
             extinfo = ParseExtendedTX(parser);
         } else {
-            shift[0] = atof(parser->token);
-            ParseToken(parser, PARSE_SAMELINE);
-            shift[1] = atof(parser->token);
-            ParseToken(parser, PARSE_SAMELINE);
-            rotate = atof(parser->token);
-            ParseToken(parser, PARSE_SAMELINE);
-            scale[0] = atof(parser->token);
-            ParseToken(parser, PARSE_SAMELINE);
-            scale[1] = atof(parser->token);
+            parser.parse_token(PARSE_SAMELINE);
+            shift[0] = std::stod(parser.token);
+            parser.parse_token(PARSE_SAMELINE);
+            shift[1] = std::stod(parser.token);
+            parser.parse_token(PARSE_SAMELINE);
+            rotate = std::stod(parser.token);
+            parser.parse_token(PARSE_SAMELINE);
+            scale[0] = std::stod(parser.token);
+            parser.parse_token(PARSE_SAMELINE);
+            scale[1] = std::stod(parser.token);
 
             // Read extra Q2 params and/or QuArK subtype
             extinfo = ParseExtendedTX(parser);
@@ -1581,7 +1581,7 @@ static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
     }
 }
 
-static std::unique_ptr<mapface_t> ParseBrushFace(parser_t *parser, const mapbrush_t *brush, const mapentity_t *entity)
+static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_t *brush, const mapentity_t *entity)
 {
     vec3_t planepts[3];
     bool normal_ok;
@@ -1590,7 +1590,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t *parser, const mapbrus
     int i, j;
     std::unique_ptr<mapface_t> face{new mapface_t};
 
-    face->linenum = parser->linenum;
+    face->linenum = parser.linenum;
     ParsePlaneDef(parser, planepts);
 
     normal_ok = face->set_planepts(planepts);
@@ -1599,7 +1599,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t *parser, const mapbrus
     ParseTextureDef(parser, *face, brush, &tx, face->planepts, plane);
 
     if (!normal_ok) {
-        LogPrint("WARNING: line {}: Brush plane with no normal\n", parser->linenum);
+        LogPrint("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
         return nullptr;
     }
 
@@ -1622,34 +1622,34 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t *parser, const mapbrus
     return face;
 }
 
-mapbrush_t ParseBrush(parser_t *parser, const mapentity_t *entity)
+mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
 {
     mapbrush_t brush;
 
     // ericw -- brush primitives
-    if (!ParseToken(parser, PARSE_NORMAL))
+    if (!parser.parse_token(PARSE_PEEK))
         FError("Unexpected EOF after { beginning brush");
 
-    if (!strcmp(parser->token, "(")) {
+    if (parser.token == "(") {
         brush.format = brushformat_t::NORMAL;
-        parser->unget = true;
     } else {
+        parser.parse_token();
         brush.format = brushformat_t::BRUSH_PRIMITIVES;
 
         // optional
-        if (!strcmp(parser->token, "brushDef")) {
-            if (!ParseToken(parser, PARSE_NORMAL))
+        if (parser.token == "brushDef") {
+            if (!parser.parse_token())
                 FError("Brush primitives: unexpected EOF (nothing after brushDef)");
         }
 
         // mandatory
-        if (strcmp(parser->token, "{"))
-            FError("Brush primitives: expected second { at beginning of brush, got \"{}\"", parser->token);
+        if (parser.token != "{")
+            FError("Brush primitives: expected second { at beginning of brush, got \"{}\"", parser.token);
     }
     // ericw -- end brush primitives
 
-    while (ParseToken(parser, PARSE_NORMAL)) {
-        if (!strcmp(parser->token, "}"))
+    while (parser.parse_token()) {
+        if (parser.token == "}")
             break;
 
         std::unique_ptr<mapface_t> face = ParseBrushFace(parser, &brush, entity);
@@ -1679,13 +1679,13 @@ mapbrush_t ParseBrush(parser_t *parser, const mapentity_t *entity)
         for (int i = 0; i < brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
             if (PlaneEqual(&check.plane, &face->plane)) {
-                LogPrint("line {}: Brush with duplicate plane", parser->linenum);
+                LogPrint("line {}: Brush with duplicate plane", parser.linenum);
                 discardFace = true;
                 continue;
             }
             if (PlaneInvEqual(&check.plane, &face->plane)) {
                 /* FIXME - this is actually an invalid brush */
-                LogPrint("line {}: Brush with duplicate plane", parser->linenum);
+                LogPrint("line {}: Brush with duplicate plane", parser.linenum);
                 continue;
             }
         }
@@ -1702,34 +1702,34 @@ mapbrush_t ParseBrush(parser_t *parser, const mapentity_t *entity)
 
     // ericw -- brush primitives - there should be another closing }
     if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
-        if (!ParseToken(parser, PARSE_NORMAL))
+        if (!parser.parse_token())
             FError("Brush primitives: unexpected EOF (no closing brace)");
-        if (strcmp(parser->token, "}"))
-            FError("Brush primitives: Expected }, got: {}", parser->token);
+        if (parser.token != "}")
+            FError("Brush primitives: Expected }, got: {}", parser.token);
     }
     // ericw -- end brush primitives
 
     return brush;
 }
 
-bool ParseEntity(parser_t *parser, mapentity_t *entity)
+bool ParseEntity(parser_t &parser, mapentity_t *entity)
 {
-    if (!ParseToken(parser, PARSE_NORMAL))
+    if (!parser.parse_token())
         return false;
 
-    if (strcmp(parser->token, "{"))
-        FError("line {}: Invalid entity format, { not found", parser->linenum);
+    if (parser.token != "{")
+        FError("line {}: Invalid entity format, { not found", parser.linenum);
 
     entity->nummapbrushes = 0;
     do {
-        if (!ParseToken(parser, PARSE_NORMAL))
+        if (!parser.parse_token())
             FError("Unexpected EOF (no closing brace)");
-        if (!strcmp(parser->token, "}"))
+        if (parser.token == "}")
             break;
-        else if (!strcmp(parser->token, "{")) {
+        else if (parser.token == "{") {
             mapbrush_t brush = ParseBrush(parser, entity);
 
-            if (0 == entity->nummapbrushes)
+            if (!entity->nummapbrushes)
                 entity->firstmapbrush = map.brushes.size();
             entity->nummapbrushes++;
 
@@ -1932,16 +1932,15 @@ bool IsWorldBrushEntity(const mapentity_t *entity)
  */
 mapentity_t LoadExternalMap(const char *filename)
 {
-    parser_t parser;
     char *buf;
     int length;
     mapentity_t dest{};
 
     length = LoadFile(filename, &buf, true);
-    ParserInit(&parser, buf);
+    parser_t parser(buf);
 
     // parse the worldspawn
-    if (!ParseEntity(&parser, &dest)) {
+    if (!ParseEntity(parser, &dest)) {
         FError("'{}': Couldn't parse worldspawn entity\n", filename);
     }
     const char *classname = ValueForKey(&dest, "classname");
@@ -1951,7 +1950,7 @@ mapentity_t LoadExternalMap(const char *filename)
 
     // parse any subsequent entities, move any brushes to worldspawn
     mapentity_t dummy{};
-    while (ParseEntity(&parser, &dummy)) {
+    while (ParseEntity(parser, &dummy)) {
         // this is kind of fragile, but move the brushes to the worldspawn.
         if (dummy.nummapbrushes) {
             // special case for when the external map's worldspawn has no brushes
@@ -1978,20 +1977,19 @@ mapentity_t LoadExternalMap(const char *filename)
 
 void LoadMapFile(void)
 {
-    parser_t parser;
     char *buf;
     int length;
     
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     length = LoadFile(options.szMapName, &buf, true);
-    ParserInit(&parser, buf);
+    parser_t parser(buf);
 
     for (int i = 0;; i++) {
         map.entities.push_back(mapentity_t{});
         mapentity_t *entity = &map.entities.at(i);
 
-        if (!ParseEntity(&parser, entity)) {
+        if (!ParseEntity(parser, entity)) {
             break;
         }
     }

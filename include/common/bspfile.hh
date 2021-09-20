@@ -1300,6 +1300,7 @@ struct gamedef_t
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
     virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
+    virtual const std::initializer_list<qboundsd> &get_hull_sizes() const = 0;
 };
 
 // BSP version struct & instances

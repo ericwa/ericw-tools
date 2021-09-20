@@ -21,23 +21,41 @@
 
 #pragma once
 
-#define MAXTOKEN 1024
+#include <utility>
 
-enum parseflags
+enum : int32_t
 {
     PARSE_NORMAL = 0,
     PARSE_SAMELINE = 1, /* Expect the next token the current line */
     PARSE_COMMENT = 2, /* If a // comment is next token, return it */
     PARSE_OPTIONAL = 4, /* Return next token on same line, or false if EOL */
+    PARSE_PEEK = 8 /* Don't change parser state */
 };
+
+using parseflags = int32_t;
+
+template<typename ...T>
+inline auto untie(const std::tuple<T...> &tuple)
+{
+    return std::tuple<typename std::remove_reference<T>::type...>(tuple);
+}
 
 struct parser_t
 {
-    bool unget;
     const char *pos;
-    int linenum;
-    char token[MAXTOKEN];
+    uint32_t linenum = 1;
+    std::string token;
+
+    parser_t(const char *data) :
+        pos(data)
+    {
+    }
+
+    bool parse_token(parseflags flags = PARSE_NORMAL);
+
+    auto state()
+    {
+        return std::tie(pos, linenum);
+    }
 };
 
-bool ParseToken(parser_t *p, int flags);
-void ParserInit(parser_t *p, const char *data);

@@ -22,85 +22,77 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/parser.hh>
 
-void ParserInit(parser_t *p, const char *data)
+bool parser_t::parse_token(parseflags flags)
 {
-    p->linenum = 1;
-    p->pos = data;
-    p->unget = false;
-}
-
-bool ParseToken(parser_t *p, int flags)
-{
-    char *token_p;
-
-    /* is a token already waiting? */
-    if (p->unget) {
-        p->unget = false;
-        return true;
+    /* for peek, we'll do a backup/restore. */
+    if (flags & PARSE_PEEK) {
+        auto restore = untie(state());
+        bool result = parse_token(flags & ~PARSE_PEEK);
+        state() = restore;
+        return result;
     }
+
+    token.clear();
+    auto token_p = std::back_inserter(token);
 
 skipspace:
     /* skip space */
-    while (*p->pos <= 32) {
-        if (!*p->pos) {
+    while (*pos <= 32) {
+        if (!*pos) {
             if (flags & PARSE_OPTIONAL)
                 return false;
             if (flags & PARSE_SAMELINE)
-                FError("line {}: Line is incomplete", p->linenum);
+                FError("line {}: Line is incomplete", linenum);
             return false;
         }
-        if (*p->pos == '\n') {
+        if (*pos == '\n') {
             if (flags & PARSE_OPTIONAL)
                 return false;
             if (flags & PARSE_SAMELINE)
-                FError("line {}: Line is incomplete", p->linenum);
-            p->linenum++;
+                FError("line {}: Line is incomplete", linenum);
+            linenum++;
         }
-        p->pos++;
+        pos++;
     }
 
     /* comment field */
-    if (p->pos[0] == '/' && p->pos[1] == '/') {
+    if (pos[0] == '/' && pos[1] == '/') {
         if (flags & PARSE_COMMENT) {
-            token_p = p->token;
-            while (*p->pos && *p->pos != '\n') {
-                *token_p++ = *p->pos++;
-                if (token_p > &p->token[MAXTOKEN - 1])
-                    FError("line {}: Token too large", p->linenum);
+            while (*pos && *pos != '\n') {
+                *token_p++ = *pos++;
             }
             goto out;
         }
         if (flags & PARSE_OPTIONAL)
             return false;
         if (flags & PARSE_SAMELINE)
-            FError("line {}: Line is incomplete", p->linenum);
-        while (*p->pos++ != '\n') {
-            if (!*p->pos) {
+            FError("line {}: Line is incomplete", linenum);
+        while (*pos++ != '\n') {
+            if (!*pos) {
                 if (flags & PARSE_SAMELINE)
-                    FError("line {}: Line is incomplete", p->linenum);
+                    FError("line {}: Line is incomplete", linenum);
                 return false;
             }
         }
-        p->linenum++; // count the \n the preceding while() loop just consumed
+        linenum++; // count the \n the preceding while() loop just consumed
         goto skipspace;
     }
     if (flags & PARSE_COMMENT)
         return false;
 
     /* copy token */
-    token_p = p->token;
 
-    if (*p->pos == '"') {
-        p->pos++;
-        while (*p->pos != '"') {
-            if (!*p->pos)
-                FError("line {}: EOF inside quoted token", p->linenum);
-            if (*p->pos == '\\') {
+    if (*pos == '"') {
+        pos++;
+        while (*pos != '"') {
+            if (!*pos)
+                FError("line {}: EOF inside quoted token", linenum);
+            if (*pos == '\\') {
                 // small note. the vanilla quake engine just parses the "foo" stuff then goes and looks for \n
                 // explicitly within strings. this means ONLY \n works, and double-quotes cannot be used either in maps
                 // _NOR SAVED GAMES_. certain editors can write "wad" "c:\foo\" which is completely fucked. so lets try
                 // to prevent more brokenness and encourage map editors to switch to using sane wad keys.
-                switch (p->pos[1]) {
+                switch (pos[1]) {
                     case 'n':
                     case '\'':
                     case 'r':
@@ -108,9 +100,7 @@ skipspace:
                     case '\\':
                     case 'b': // ericw-tools extension, parsed by light, used to toggle bold text
                               // regular two-char escapes
-                        *token_p++ = *p->pos++;
-                        if (token_p > &p->token[MAXTOKEN - 1])
-                            FError("line {}: Token too large", p->linenum);
+                        *token_p++ = *pos++;
                         break;
                     case 'x':
                     case '0':
@@ -125,31 +115,24 @@ skipspace:
                     case '9': // too lazy to validate these. doesn't break stuff.
                         break;
                     case '\"':
-                        *token_p++ = *p->pos++;
-                        if (token_p > &p->token[MAXTOKEN - 1])
-                            FError("line {}: Token too large", p->linenum);
-                        if (p->pos[1] == '\r' || p->pos[1] == '\n')
-                            FError("line {}: escaped double-quote at end of string", p->linenum);
+                        *token_p++ = *pos++;
+                        if (pos[1] == '\r' || pos[1] == '\n')
+                            FError("line {}: escaped double-quote at end of string", linenum);
                         break;
                     default:
-                        LogPrint("line {}: Unrecognised string escape - \\{}\n", p->linenum, p->pos[1]);
+                        LogPrint("line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]);
                         break;
                 }
             }
-            *token_p++ = *p->pos++;
-            if (token_p > &p->token[MAXTOKEN - 1])
-                FError("line {}: Token too large", p->linenum);
+            *token_p++ = *pos++;
         }
-        p->pos++;
+        pos++;
     } else {
-        while (*p->pos > 32) {
-            *token_p++ = *p->pos++;
-            if (token_p > &p->token[MAXTOKEN - 1])
-                FError("line {}: Token too large", p->linenum);
+        while (*pos > 32) {
+            *token_p++ = *pos++;
         }
     }
-out:
-    *token_p = 0;
 
+out:
     return true;
 }

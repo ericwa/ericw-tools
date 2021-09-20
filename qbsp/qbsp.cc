@@ -725,28 +725,22 @@ static void CreateHulls(void)
     if (!options.fNoverbose)
         options.fVerbose = true;
 
-    if (options.target_game->id == GAME_QUAKE_II) {
+    auto &hulls = options.target_game->get_hull_sizes();
+
+    // game has no hulls, so we have to export brush lists and stuff.
+    if (!hulls.size()) {
         CreateSingleHull(-1);
         return;
     }
 
-    CreateSingleHull(0);
+    // we got hulls!
+    for (size_t i = 0; i < hulls.size(); i++) {
+        /* ignore the clipping hulls altogether */
+        if (i && options.fNoclip) {
+            return;
+        }
 
-    /* ignore the clipping hulls altogether */
-    if (options.fNoclip)
-        return;
-
-    CreateSingleHull(1);
-    CreateSingleHull(2);
-
-    // FIXME: use game->get_hull_count
-    if (options.target_game->id == GAME_HALF_LIFE)
-        CreateSingleHull(3);
-    else if (options.target_game->id == GAME_HEXEN_II) { /*note: h2mp doesn't use hull 2 automatically, however gamecode
-                                                            can explicitly set ent.hull=3 to access it*/
-        CreateSingleHull(3);
-        CreateSingleHull(4);
-        CreateSingleHull(5);
+        CreateSingleHull(i);
     }
 }
 
