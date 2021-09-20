@@ -61,14 +61,18 @@ if (embree_FOUND)
 	target_link_libraries (light PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)
 
+	# macOS/homebrew: hack around find_file applying the .. before resolving the symlink
+	# causing it not to find the LICENSE.txt
+	get_filename_component(embree_DIR_ABS "${embree_DIR}" REALPATH CACHE)
+
 	find_file(EMBREE_LICENSE LICENSE.txt 
-		"${embree_DIR}/doc"
-        "${embree_DIR}/../../../doc"
-		"${embree_DIR}/../embree3/embree3" # vcpkg puts it here
-		"${embree_DIR}/../../.." # homebrew puts it here
+		"${embree_DIR_ABS}/doc"
+		"${embree_DIR_ABS}/../../../doc"
+		"${embree_DIR_ABS}/../embree3/embree3" # vcpkg puts it here
+		"${embree_DIR_ABS}/../../.." # homebrew puts it here
 		NO_DEFAULT_PATH)
 	if (EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
-		message(WARNING "Couldn't find embree license. embree_DIR is ${embree_DIR}")
+		message(WARNING "Couldn't find embree license. embree_DIR: ${embree_DIR}, embree_DIR_ABS: ${embree_DIR_ABS}")
 	else()
 		message(STATUS "Found embree license: ${EMBREE_LICENSE}")
 	endif()
