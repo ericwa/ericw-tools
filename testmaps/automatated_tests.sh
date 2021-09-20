@@ -85,3 +85,5 @@ fi
 # leak tests on all id1 maps
 cd quake_map_source
 ./leaktest.sh || exit 1
+
+exit 0
