@@ -62,7 +62,7 @@ build_script:
 
     . "C:\Program Files\Git\usr\bin\bash.exe" .\automatated_tests.sh
 
-    if ( $? -eq $false ) {
+    if ( $LastExitCode -ne 0 ) {
       throw "automatated_tests.sh failed"
     }
 artifacts:
