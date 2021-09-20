@@ -20,7 +20,7 @@
 */
 
 #include <qbsp/qbsp.hh>
-#include <qbsp/parser.hh>
+#include <common/parser.hh>
 
 bool parser_t::parse_token(parseflags flags)
 {

@@ -27,6 +27,7 @@
 #include <light/entities.hh>
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
+#include <common/parser.hh>
 
 #include <fmt/ostream.h>
 
@@ -116,16 +117,15 @@ keyvalues_t::iterator entdict_t::end()
 std::vector<entdict_t> EntData_Parse(const char *entdata)
 {
     std::vector<entdict_t> result;
-    const char *data = entdata;
+    parser_t parser(entdata);
 
     /* go through all the entities */
     while (1) {
         /* parse the opening brace */
-        data = COM_Parse(data);
-        if (!data)
+        if (!parser.parse_token())
             break;
-        if (com_token[0] != '{')
-            FError("found {} when expecting {", com_token);
+        if (parser.token != "{")
+            FError("found {} when expecting {", parser.token);
 
         /* Allocate a new entity */
         entdict_t entity;
@@ -133,30 +133,26 @@ std::vector<entdict_t> EntData_Parse(const char *entdata)
         /* go through all the keys in this entity */
         while (1) {
             /* parse key */
-            data = COM_Parse(data);
-            if (!data)
+            if (!parser.parse_token())
                 FError("EOF without closing brace");
 
-            std::string keystr{com_token};
-
-            if (keystr == "}")
+            if (parser.token == "}")
                 break;
-            if (keystr.length() > MAX_ENT_KEY - 1)
-                FError("Key length > {}: '{}'", MAX_ENT_KEY - 1, keystr);
+            if (parser.token.length() > MAX_ENT_KEY - 1)
+                FError("Key length > {}: '{}'", MAX_ENT_KEY - 1, parser.token);
+
+            std::string keystr = parser.token;
 
             /* parse value */
-            data = COM_Parse(data);
-            if (!data)
+            if (!parser.parse_token())
                 FError("EOF without closing brace");
 
-            std::string valstring{com_token};
-
-            if (valstring[0] == '}')
+            if (parser.token == "}")
                 FError("closing brace without data");
-            if (valstring.length() > MAX_ENT_VALUE - 1)
+            if (parser.token.length() > MAX_ENT_VALUE - 1)
                 FError("Value length > {}", MAX_ENT_VALUE - 1);
 
-            entity.set(keystr, valstring);
+            entity.set(keystr, parser.token);
         }
 
         result.push_back(entity);

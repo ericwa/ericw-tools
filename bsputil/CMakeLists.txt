@@ -10,6 +10,7 @@ set(BSPUTIL_SOURCES
 	${CMAKE_SOURCE_DIR}/common/qvec.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/threads.cc
+	${CMAKE_SOURCE_DIR}/common/parser.cc
 	${COMMON_INCLUDES})
 
 add_executable(bsputil ${BSPUTIL_SOURCES})

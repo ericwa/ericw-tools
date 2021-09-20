@@ -33,7 +33,7 @@
 #include <fmt/ostream.h>
 
 #include <qbsp/qbsp.hh>
-#include <qbsp/parser.hh>
+#include <common/parser.hh>
 #include <qbsp/wad.hh>
 
 #include <common/qvec.hh>

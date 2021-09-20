@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <qbsp/parser.hh>
+#include <common/parser.hh>
 #include "common/cmdlib.hh"
 
 #include <optional>

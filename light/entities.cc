@@ -21,6 +21,7 @@
 #include <cstring>
 #include <fstream>
 #include <common/cmdlib.hh>
+#include <common/parser.hh>
 
 #include <light/light.hh>
 #include <light/entities.hh>
@@ -1466,22 +1467,22 @@ bool ParseLightsFile(const std::filesystem::path &fname)
     {
         std::getline(f, buf);
 
-        const char *t = COM_Parse(buf.c_str());
+        parser_t parser(buf.c_str());
 
-        if (!t)
+        if (!parser.parse_token())
             continue;
 
         entdict_t d {};
-        d.set("_surface", com_token);
-        t = COM_Parse(t);
-        float r = atof(com_token);
-        t = COM_Parse(t);
-        float g = atof(com_token);
-        t = COM_Parse(t);
-        float b = atof(com_token);
+        d.set("_surface", parser.token);
+        parser.parse_token();
+        float r = std::stof(parser.token);
+        parser.parse_token();
+        float g = std::stof(parser.token);
+        parser.parse_token();
+        float b = std::stof(parser.token);
         d.set("_color", fmt::format("{} {} {}", r, g, b));
-        t = COM_Parse(t);
-        d.set("light", com_token);
+        parser.parse_token();
+        d.set("light", parser.token);
         // might be hdr rgbi values here
 
         radlights.push_back(d);

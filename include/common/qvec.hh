@@ -546,5 +546,54 @@ qmat4x4d inverse(const qmat4x4d &input);
 qmat2x2f inverse(const qmat2x2f &input);
 }; // namespace qv
 
-// TODO: bounds type
-using qboundsd = std::array<qvec3d, 2>;
+template<typename T>
+struct qbounds
+{
+    using vec = qvec<3, T>;
+
+    vec  mins, maxs;
+
+    // default constructor is an "empty" bounds
+    constexpr qbounds() :
+        mins(VECT_MAX, VECT_MAX, VECT_MAX),
+        maxs(-VECT_MAX, -VECT_MAX, -VECT_MAX)
+    {
+    }
+
+    // construct from mins/maxs
+    constexpr qbounds(const vec &mins, const vec &maxs) :
+        mins(mins),
+        maxs(maxs)
+    {
+    }
+
+    // add point to bounds
+    constexpr qbounds &operator+=(const vec &v)
+    {
+        mins = qv::min(mins, v);
+        maxs = qv::max(maxs, v);
+
+        return *this;
+    }
+
+    // add bounds to bounds
+    constexpr qbounds &operator+=(const qbounds &v)
+    {
+        mins = qv::min(mins, v.mins);
+        maxs = qv::max(maxs, v.maxs);
+
+        return *this;
+    }
+
+    constexpr vec &operator[](const int32_t &index)
+    {
+        return (index == 0 ? mins : index == 1 ? maxs : throw std::exception());
+    }
+
+    constexpr const vec &operator[](const int32_t &index) const
+    {
+        return (index == 0 ? mins : index == 1 ? maxs : throw std::exception());
+    }
+};
+
+using qboundsd = qbounds<double>;

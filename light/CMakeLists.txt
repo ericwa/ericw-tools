@@ -30,6 +30,7 @@ set(LIGHT_SOURCES
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/threads.cc
 	${CMAKE_SOURCE_DIR}/common/bsputils.cc
+	${CMAKE_SOURCE_DIR}/common/parser.cc
 	${COMMON_INCLUDES}
 	${LIGHT_INCLUDES})
 

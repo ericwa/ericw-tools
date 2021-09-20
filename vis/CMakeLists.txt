@@ -18,6 +18,7 @@ set(VIS_SOURCES
 	${CMAKE_SOURCE_DIR}/common/bspfile.cc
 	${CMAKE_SOURCE_DIR}/common/log.cc
 	${CMAKE_SOURCE_DIR}/common/threads.cc
+	${CMAKE_SOURCE_DIR}/common/parser.cc
 	${COMMON_INCLUDES}
 	${VIS_INCLUDES})
 

@@ -156,11 +156,6 @@ int LittleLong(int l);
 float BigFloat(float l);
 float LittleFloat(float l);
 
-const char *COM_Parse(const char *data);
-
-extern char com_token[1024];
-extern bool com_eof;
-
 // temporary
 #ifdef _WIN32
 #define copystring _strdup

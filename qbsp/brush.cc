@@ -980,7 +980,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
         return NULL;
     }
 
-    if (hullnum) {
+    if (hullnum > 0) {
         auto &hulls = options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
         ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);

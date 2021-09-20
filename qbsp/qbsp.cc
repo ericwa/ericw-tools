@@ -480,7 +480,10 @@ static void UpdateEntLump(void)
     UpdateBSPFileEntitiesLump();
 
     if (!options.fAllverbose)
+    {
         options.fVerbose = false;
+        log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+    }
 }
 
 /*
@@ -709,7 +712,10 @@ static void CreateSingleHull(const int hullnum)
         entity = &map.entities.at(i);
         ProcessEntity(entity, hullnum);
         if (!options.fAllverbose)
+        {
             options.fVerbose = false; // don't print rest of entities
+            log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+        }
     }
 }
 
@@ -723,7 +729,10 @@ static void CreateHulls(void)
 {
     /* create the hulls sequentially */
     if (!options.fNoverbose)
-        options.fVerbose = true;
+    {
+        options.fVerbose = true;        
+        log_mask |= (1 << LOG_STAT) | (1 << LOG_PROGRESS);
+    }
 
     auto &hulls = options.target_game->get_hull_sizes();
 
@@ -802,7 +811,10 @@ static void ProcessFile(void)
     BeginBSPFile();
 
     if (!options.fAllverbose)
+    {
         options.fVerbose = false;
+        log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+    }
     CreateHulls();
 
     WriteEntitiesToString();
