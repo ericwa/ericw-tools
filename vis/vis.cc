@@ -31,9 +31,11 @@ static uint8_t *vismap;
 static uint8_t *vismap_p;
 static uint8_t *vismap_end;        // past visfile
 
-int originalvismapsize;
+uint32_t originalvismapsize;
 
 uint8_t *uncompressed;             // [leafbytes_real*portalleafs]
+
+uint8_t *uncompressed_q2;             // [leafbytes*portalleafs]
 
 int leafbytes;                  // (portalleafs+63)>>3
 int leaflongs;
@@ -545,36 +547,6 @@ LeafThread(void *arg)
     return NULL;
 }
 
-/*
-  ===============
-  CompressRow
-  ===============
-*/
-static int
-CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
-{
-    int i, rep;
-    uint8_t *dst;
-
-    dst = out;
-    for (i = 0; i < numbytes; i++) {
-        *dst++ = vis[i];
-        if (vis[i])
-            continue;
-
-        rep = 1;
-        for (i++; i < numbytes; i++)
-            if (vis[i] || rep == 255)
-                break;
-            else
-                rep++;
-        *dst++ = rep;
-        i--;
-    }
-
-    return dst - out;
-}
-
 
 /*
   ===============
@@ -586,7 +558,7 @@ CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
 int64_t totalvis;
 
 static void
-LeafFlow(int leafnum, mleaf_t *dleaf)
+LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
 {
     leaf_t *leaf;
     uint8_t *outbuffer;
@@ -599,7 +571,7 @@ LeafFlow(int leafnum, mleaf_t *dleaf)
     /*
      * flow through all portals, collecting visible bits
      */
-    outbuffer = uncompressed + leafnum * leafbytes;
+    outbuffer = (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism ? uncompressed_q2 : uncompressed) + leafnum * leafbytes;
     leaf = &leafs[leafnum];
     for (i = 0; i < leaf->numportals; i++) {
         p = leaf->portals[i];
@@ -645,8 +617,8 @@ LeafFlow(int leafnum, mleaf_t *dleaf)
 }
 
 
-void
-ClusterFlow(int clusternum, leafbits_t *buffer)
+static void
+ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
 {
     leaf_t *leaf;
     uint8_t *outbuffer;
@@ -680,11 +652,22 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
      * Now expand the clusters into the full leaf visibility map
      */
     numvis = 0;
-    outbuffer = uncompressed + clusternum * leafbytes_real;
-    for (i = 0; i < portalleafs_real; i++) {
-        if (TestLeafBit(buffer, clustermap[i])) {
-            outbuffer[i >> 3] |= (1 << (i & 7));
-            numvis++;
+
+    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
+        outbuffer = uncompressed_q2 + clusternum * leafbytes;
+        for (i = 0; i < portalleafs; i++) {
+            if (TestLeafBit(buffer, i)) {
+                outbuffer[i >> 3] |= (1 << (i & 7));
+                numvis++;
+            }
+        }
+    } else {
+        outbuffer = uncompressed + clusternum * leafbytes_real;
+        for (i = 0; i < portalleafs_real; i++) {
+            if (TestLeafBit(buffer, clustermap[i])) {
+                outbuffer[i >> 3] |= (1 << (i & 7));
+                numvis++;
+            }
         }
     }
 
@@ -705,8 +688,13 @@ ClusterFlow(int clusternum, leafbits_t *buffer)
     }
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = static_cast<uint8_t *>(malloc(portalleafs_real * 2 / 8));
-    len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
+    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
+        compressed = static_cast<uint8_t *>(malloc(portalleafs * 2 / 8));
+        len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
+    } else {
+        compressed = static_cast<uint8_t *>(malloc(portalleafs_real * 2 / 8));
+        len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
+    }
 
     dest = vismap_p;
     vismap_p += len;
@@ -751,6 +739,8 @@ CalcPortalVis(const mbsp_t *bsp)
     }
     RunThreadsOn(startcount, numportals * 2, LeafThread, NULL);
 
+    SaveVisState();
+
     if (verbose) {
         logprint("portalcheck: %i  portaltest: %i  portalpass: %i\n",
                  c_portalcheck, c_portaltest, c_portalpass);
@@ -785,7 +775,7 @@ CalcVis(const mbsp_t *bsp)
 //
     if (portalleafs == portalleafs_real) {
         for (i = 0; i < portalleafs; i++)
-            LeafFlow(i, &bsp->dleafs[i + 1]);
+            LeafFlow(i, &bsp->dleafs[i + 1], bsp);
     } else {
         leafbits_t *buffer;
 
@@ -793,7 +783,7 @@ CalcVis(const mbsp_t *bsp)
         buffer = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
         for (i = 0; i < portalleafs; i++) {
             memset(buffer, 0, LeafbitsSize(portalleafs));
-            ClusterFlow(i, buffer);
+            ClusterFlow(i, buffer, bsp);
         }
         free(buffer);
         
@@ -1070,9 +1060,17 @@ LoadPortals(char *name, mbsp_t *bsp)
         count = fscanf(f, "%i\n%i\n", &portalleafs, &numportals);
         if (count != 2)
             Error("%s: unable to parse %s HEADER\n", __func__, PORTALFILE);
-        portalleafs_real = portalleafs;
-        logprint("%6d leafs\n", portalleafs);
-        logprint("%6d portals\n", numportals);
+
+        if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
+            portalleafs_real = bsp->numleafs;
+            logprint("%6d leafs\n", portalleafs_real);
+            logprint("%6d clusters\n", portalleafs);
+            logprint("%6d portals\n", numportals);
+        } else {
+            portalleafs_real = portalleafs;
+            logprint("%6d leafs\n", portalleafs);
+            logprint("%6d portals\n", numportals);
+        }
     } else if (!strcmp(magic, PORTALFILE2)) {
         count = fscanf(f, "%i\n%i\n%i\n", &portalleafs_real, &portalleafs,
                        &numportals);
@@ -1103,7 +1101,11 @@ LoadPortals(char *name, mbsp_t *bsp)
     leafs = static_cast<leaf_t *>(malloc(portalleafs * sizeof(leaf_t)));
     memset(leafs, 0, portalleafs * sizeof(leaf_t));
 
-    originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
+    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
+        originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
+    } else {
+        originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
+    }
 
     // FIXME - more intelligent allocation?
     bsp->dvisdata = static_cast<uint8_t *>(malloc(MAX_MAP_VISIBILITY));
@@ -1178,7 +1180,13 @@ LoadPortals(char *name, mbsp_t *bsp)
     }
 
     /* Load the cluster expansion map if needed */
-    if (portalleafs != portalleafs_real) {
+    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism) {
+        clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
+
+        for (int32_t i = 0; i < bsp->numleafs; i++) {
+            clustermap[i] = bsp->dleafs[i + 1].cluster;
+        }
+    } else if (portalleafs != portalleafs_real) {
         clustermap = static_cast<int *>(malloc(portalleafs_real * sizeof(int)));
         if (!strcmp(magic, PORTALFILE2)) {
             for (i = 0; i < portalleafs; i++) {
@@ -1325,7 +1333,11 @@ main(int argc, char **argv)
     StripExtension(statetmpfile);
     DefaultExtension(statetmpfile, ".vi0");
 
-    uncompressed = static_cast<uint8_t *>(calloc(portalleafs, leafbytes_real));
+    if (bsp->loadversion != &bspver_q2 && bsp->loadversion != &bspver_qbism) {
+        uncompressed = static_cast<uint8_t *>(calloc(portalleafs, leafbytes_real));
+    } else {
+        uncompressed_q2 = static_cast<uint8_t *>(calloc(portalleafs, leafbytes));
+    }
 
 //    CalcPassages ();
 
@@ -1335,10 +1347,13 @@ main(int argc, char **argv)
     logprint("c_chains: %lu\n", c_chains);
 
     bsp->visdatasize = vismap_p - bsp->dvisdata;
-    logprint("visdatasize:%i  compressed from %i\n",
+    logprint("visdatasize:%i  compressed from %u\n",
              bsp->visdatasize, originalvismapsize);
-
-    CalcAmbientSounds(bsp);
+    
+    // no ambient sounds for Q2
+    if (bsp->loadversion != &bspver_q2 && bsp->loadversion != &bspver_qbism) {
+        CalcAmbientSounds(bsp);
+    }
 
     /* Convert data format back if necessary */
     ConvertBSPFormat(&bspdata, loadversion);
