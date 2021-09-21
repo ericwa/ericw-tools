@@ -127,7 +127,7 @@ if (MSVC)
 	add_definitions("/wd4264") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
 	add_definitions("/wd4267") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
 	add_definitions("/wd4305") # disable "truncation from 'double' to 'float'" warning
-	
+	add_definitions("/wd4250") # disable "inherits via dominance' warning (used in trace_embree.cc)
 endif (MSVC)
 
 # 10.9: minimum version that supports unordered_map
