@@ -439,7 +439,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     CalcualateVertexNormals(bsp);
     
     const qboolean bouncerequired = cfg_static.bounce.boolValue() && (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); //mxd
-    const qboolean isQuake2map = (bsp->loadversion == Q2_BSPVERSION); //mxd
+    const qboolean isQuake2map = (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism); //mxd
 
     if (bouncerequired || isQuake2map) {
         MakeTextureColors(bsp);
@@ -470,7 +470,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
         free(bsp->dlightdata);
-        if (bsp->loadversion == Q2_BSPVERSION || bsp->loadversion == BSPHLVERSION) {
+        if (isQuake2map || bsp->loadversion == &bspver_hl) {
             bsp->lightdatasize = lit_file_p;
             bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
             memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
@@ -545,9 +545,9 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
 static const char* //mxd
 GetBaseDirName(bspdata_t *bspdata)
 {
-    if (bspdata->loadversion == Q2_BSPVERSION)
+    if (bspdata->loadversion == &bspver_q2 || bspdata->loadversion == &bspver_qbism)
         return "BASEQ2";
-    if (bspdata->hullcount == MAX_MAP_HULLS_H2)
+    if (bspdata->loadversion == &bspver_h2)
         return "DATA1";
     return "ID1";
 }
@@ -951,7 +951,7 @@ light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
     mbsp_t *const bsp = &bspdata.data.mbsp;
-    int32_t loadversion;
+    const bspversion_t *loadversion;
     int i;
     double start;
     double end;
@@ -1199,10 +1199,10 @@ light_main(int argc, const char **argv)
     LoadBSPFile(source, &bspdata);
 
     loadversion = bspdata.version;
-    ConvertBSPFormat(GENERIC_BSP, &bspdata);
+    ConvertBSPFormat(&bspdata, &bspver_generic);
 
     //mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
-    if (loadversion == Q2_BSPVERSION && !cfg.rangescale.isChanged())
+    if ((loadversion == &bspver_q2 || loadversion == &bspver_qbism) && !cfg.rangescale.isChanged())
     {
         const auto rs = new lockable_vec_t(cfg.rangescale.primaryName(), 1.0f, 0.0f, 100.0f);
         cfg.rangescale = *rs; // Gross hacks to avoid displaying this in OptionsSummary...
@@ -1242,7 +1242,7 @@ light_main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (loadversion != Q2_BSPVERSION && bsp->loadversion != BSPHLVERSION) //mxd. No lit for Quake 2
+        if (loadversion != &bspver_q2 && loadversion != &bspver_qbism && bsp->loadversion != &bspver_hl) //mxd. No lit for Quake 2
             CheckLitNeeded(cfg);
         SetupDirt(cfg);
         
@@ -1281,7 +1281,7 @@ light_main(int argc, const char **argv)
     
     WriteEntitiesToString(cfg, bsp);
     /* Convert data format back if necessary */
-    ConvertBSPFormat(loadversion, &bspdata);
+    ConvertBSPFormat(&bspdata, loadversion);
 
     if (!litonly) {
         WriteBSPFile(source, &bspdata);

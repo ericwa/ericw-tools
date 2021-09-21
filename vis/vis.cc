@@ -1234,7 +1234,7 @@ main(int argc, char **argv)
 {
     bspdata_t bspdata;
     mbsp_t *const bsp = &bspdata.data.mbsp;
-    int32_t loadversion;
+    const bspversion_t *loadversion;
     int i;
 
     init_log("vis.log");
@@ -1309,7 +1309,7 @@ main(int argc, char **argv)
     LoadBSPFile(sourcefile, &bspdata);
 
     loadversion = bspdata.version;
-    ConvertBSPFormat(GENERIC_BSP, &bspdata);
+    ConvertBSPFormat(&bspdata, &bspver_generic);
 
     strcpy(portalfile, argv[i]);
     StripExtension(portalfile);
@@ -1341,7 +1341,7 @@ main(int argc, char **argv)
     CalcAmbientSounds(bsp);
 
     /* Convert data format back if necessary */
-    ConvertBSPFormat(loadversion, &bspdata);
+    ConvertBSPFormat(&bspdata, loadversion);
 
     WriteBSPFile(sourcefile, &bspdata);
 
