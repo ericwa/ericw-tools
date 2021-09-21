@@ -2716,6 +2716,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             const mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_t *q2bsp = &bspdata->data.q2bsp;
         
+            // FIXME: validate that the conversion is possible without overflow
+            // (see bspver_q1 case above)
+
             memset(q2bsp, 0, sizeof(*q2bsp));
         
             // copy counts
