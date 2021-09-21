@@ -42,7 +42,8 @@ e1m1-hexen2.bsp \
 e1m1-hexen2-bsp2.bsp \
 e1m1-hexen2-2psb.bsp \
 e1m1-hlbsp.bsp \
-e1m1-bspxbrushes.bsp"
+e1m1-bspxbrushes.bsp \
+e1m1-bsp29-onlyents.bsp"
 
 qbsp -noverbose               quake_map_source/E1M1.map e1m1-bsp29.bsp       || exit 1
 qbsp -noverbose         -bsp2 quake_map_source/E1M1.map e1m1-bsp2.bsp        || exit 1
@@ -52,6 +53,23 @@ qbsp -noverbose -hexen2 -bsp2 quake_map_source/E1M1.map e1m1-hexen2-bsp2.bsp || 
 qbsp -noverbose -hexen2 -2psb quake_map_source/E1M1.map e1m1-hexen2-2psb.bsp || exit 1
 qbsp -noverbose -hlbsp        quake_map_source/E1M1.map e1m1-hlbsp.bsp       || exit 1
 qbsp -noverbose -wrbrushes    quake_map_source/E1M1.map e1m1-bspxbrushes.bsp || exit 1
+
+# -onlyents test:
+#  - start with a copy of e1m1-bsp29.bsp called e1m1-bsp29-onlyents.bsp
+#  - make a E1M1-edited-ents.map by adding an extra entity
+#  - patch e1m1-bsp29-onlyents.bsp with the entities lump from E1M1-edited-ents.map
+cp e1m1-bsp29.bsp e1m1-bsp29-onlyents.bsp || exit 1
+cp e1m1-bsp29.prt e1m1-bsp29-onlyents.prt || exit 1
+cp quake_map_source/E1M1.map E1M1-edited-ents.map || exit 1
+cat << EOF >> E1M1-edited-ents.map
+{
+"classname"	"weapon_nailgun"
+"origin"	"112 2352 20"
+"spawnflags"	"2048"
+}
+EOF
+qbsp -onlyents E1M1-edited-ents.map e1m1-bsp29-onlyents.bsp || exit 1
+rm E1M1-edited-ents.map || exit 1
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} > qbsp.sha256sum || exit 1
