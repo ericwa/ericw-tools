@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# for sha256sum, used by the tests
+brew install coreutils
+
 BUILD_DIR=build-osx
 EMBREE_ZIP="https://github.com/embree/embree/releases/download/v3.13.0/embree-3.13.0.x86_64.macosx.zip"
 
@@ -46,12 +49,8 @@ otool -L ./bsputil/bsputil
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
 
-# coarse tests on real maps (only checks success/failure exit status of tool)
+# run regression tests
 cd ..
-export PATH="$(pwd)/$BUILD_DIR/qbsp:$(pwd)/$BUILD_DIR/light:$PATH"
+export PATH="$(pwd)/$BUILD_DIR/qbsp:$(pwd)/$BUILD_DIR/light:$(pwd)/$BUILD_DIR/vis:$PATH"
 cd testmaps
 ./automatated_tests.sh || exit 1
-
-# test id1 maps for leaks
-cd quake_map_source
-./leaktest.sh || exit 1
