@@ -60,6 +60,12 @@ BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_ver
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
+            if (bspver->hexen2) {
+                // HACK: don't detect as Hexen II here, it's done later (isHexen2).
+                // Since the Hexen II bspversion_t's have the same ident/version as Quake
+                // we need to assume Quake.
+                continue;
+            }
             *out_version = bspver;
             return true;
         }
