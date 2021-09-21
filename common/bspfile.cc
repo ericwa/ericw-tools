@@ -988,13 +988,16 @@ OverflowsInt16(int32_t input) {
     return false;
 }
 
-static bool
+static constexpr bool
 OverflowsUint16(uint32_t input) {
-    if (input > INT16_MAX) {
+    if (input > UINT16_MAX) {
         return true;
     }
     return false;
 }
+
+static_assert(!OverflowsUint16(65535));
+static_assert( OverflowsUint16(65536));
 
 static bool
 MBSPto29_Leafs_Validate(const mleaf_t *mleafs, int numleafs) {
