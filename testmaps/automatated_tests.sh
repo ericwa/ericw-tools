@@ -60,16 +60,7 @@ qbsp -noverbose -wrbrushes    quake_map_source/E1M1.map e1m1-bspxbrushes.bsp || 
 #  - patch e1m1-bsp29-onlyents.bsp with the entities lump from E1M1-edited-ents.map
 cp e1m1-bsp29.bsp e1m1-bsp29-onlyents.bsp || exit 1
 cp e1m1-bsp29.prt e1m1-bsp29-onlyents.prt || exit 1
-cp quake_map_source/E1M1.map E1M1-edited-ents.map || exit 1
-cat << EOF >> E1M1-edited-ents.map
-{
-"classname"	"weapon_nailgun"
-"origin"	"112 2352 20"
-"spawnflags"	"2048"
-}
-EOF
 qbsp -onlyents E1M1-edited-ents.map e1m1-bsp29-onlyents.bsp || exit 1
-rm E1M1-edited-ents.map || exit 1
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} > qbsp.sha256sum || exit 1
