@@ -36,8 +36,7 @@ struct hullbrush_t
     const mapbrush_t *srcbrush;
     contentflags_t contents;
     int numfaces;
-    vec3_t mins;
-    vec3_t maxs;
+    aabb3d bounds;
     mapface_t faces[MAX_FACES];
 
     int numpoints;
@@ -142,25 +141,6 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
                     sourceface->linenum, dist - edgedist, face->w.points[j][0], face->w.points[j][1],
                     face->w.points[j][2]);
         }
-    }
-}
-
-//===========================================================================
-
-/*
-=================
-AddToBounds
-=================
-*/
-static void AddToBounds(mapentity_t *entity, const vec3_t point)
-{
-    int i;
-
-    for (i = 0; i < 3; i++) {
-        if (point[i] < entity->mins[i])
-            entity->mins[i] = point[i];
-        if (point[i] > entity->maxs[i])
-            entity->maxs[i] = point[i];
     }
 }
 
@@ -382,10 +362,8 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
 
     min = VECT_MAX;
     max = -VECT_MAX;
-    for (i = 0; i < 3; i++) {
-        hullbrush->mins[i] = VECT_MAX;
-        hullbrush->maxs[i] = -VECT_MAX;
-    }
+
+    hullbrush->bounds = {};
 
     auto DiscardHintSkipFace =
         (options.target_game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
@@ -430,15 +408,13 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
                 else
                     f->w.points[j][k] = point[k];
 
-                if (f->w.points[j][k] < hullbrush->mins[k])
-                    hullbrush->mins[k] = f->w.points[j][k];
-                if (f->w.points[j][k] > hullbrush->maxs[k])
-                    hullbrush->maxs[k] = f->w.points[j][k];
                 if (f->w.points[j][k] < min)
                     min = f->w.points[j][k];
                 if (f->w.points[j][k] > max)
                     max = f->w.points[j][k];
             }
+
+            hullbrush->bounds += f->w.points[j];
         }
 
         // account for texture offset, from txqbsp-xt
@@ -499,11 +475,8 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         delta = fabs(max);
         if (fabs(min) > delta)
             delta = fabs(min);
-
-        for (k = 0; k < 3; k++) {
-            hullbrush->mins[k] = -delta;
-            hullbrush->maxs[k] = delta;
-        }
+        
+        hullbrush->bounds = { -delta, delta };
     }
 
     return facelist;
@@ -652,7 +625,7 @@ AddHullPoint
 Doesn't add if duplicated
 =============
 */
-static int AddHullPoint(hullbrush_t *hullbrush, const vec3_t &p, const qboundsd &hull_size)
+static int AddHullPoint(hullbrush_t *hullbrush, const vec3_t &p, const aabb3d &hull_size)
 {
     int i;
     vec_t *c;
@@ -692,7 +665,7 @@ AddHullEdge
 Creates all of the hull planes around the given edge, if not done allready
 =============
 */
-static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &p2, const qboundsd &hull_size)
+static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &p2, const aabb3d &hull_size)
 {
     int pt1, pt2;
     int i;
@@ -753,7 +726,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &
 ExpandBrush
 =============
 */
-static void ExpandBrush(hullbrush_t *hullbrush, const qboundsd &hull_size, face_t *facelist)
+static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, face_t *facelist)
 {
     int i, x, s;
     vec3_t corner;
@@ -794,9 +767,9 @@ static void ExpandBrush(hullbrush_t *hullbrush, const qboundsd &hull_size, face_
             VectorCopy(vec3_origin, plane.normal);
             plane.normal[x] = (vec_t)s;
             if (s == -1)
-                plane.dist = -hullbrush->mins[x] + -hull_size[0][x];
+                plane.dist = -hullbrush->bounds.mins()[x] + -hull_size[0][x];
             else
-                plane.dist = hullbrush->maxs[x] + hull_size[1][x];
+                plane.dist = hullbrush->bounds.maxs()[x] + hull_size[1][x];
             AddBrushPlane(hullbrush, &plane);
         }
 
@@ -993,8 +966,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 
     brush->contents = contents;
     brush->faces = facelist;
-    VectorCopy(hullbrush.mins, brush->mins);
-    VectorCopy(hullbrush.maxs, brush->maxs);
+    brush->bounds = hullbrush.bounds;
 
     return brush;
 }
@@ -1137,7 +1109,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
             brush_t *brush = LoadBrush(src, mapbrush, contents, vec3_origin, rotation_t::none, 0);
             if (brush) {
                 vec3_t origin;
-                VectorAdd(brush->mins, brush->maxs, origin);
+                VectorAdd(brush->bounds.mins(), brush->bounds.maxs(), origin);
                 VectorScale(origin, 0.5, origin);
 
                 SetKeyValue(dst, "origin", VecStrf(origin).c_str());
@@ -1254,8 +1226,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
             if (hullnum == 0) {
                 brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
                 if (brush) {
-                    AddToBounds(dst, brush->mins);
-                    AddToBounds(dst, brush->maxs);
+                    dst->bounds += brush->bounds;
                     FreeBrush(brush);
                 }
                 continue;
@@ -1322,8 +1293,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
             dst->liquid = brush;
         }
 
-        AddToBounds(dst, brush->mins);
-        AddToBounds(dst, brush->maxs);
+        dst->bounds += brush->bounds;
 
         LogPercent(i + 1, src->nummapbrushes);
     }
@@ -1343,16 +1313,17 @@ from q3map
 */
 bool BoundBrush(brush_t *brush)
 {
-    ClearBounds(brush->mins, brush->maxs);
+    brush->bounds = {};
 
     for (face_t *face = brush->faces; face; face = face->next) {
         const winding_t *w = &face->w;
         for (int j = 0; j < w->numpoints; j++)
-            AddPointToBounds(w->points[j], brush->mins, brush->maxs);
+            brush->bounds += w->points[j];
     }
 
     for (int i = 0; i < 3; i++) {
-        if (brush->mins[i] < MIN_WORLD_COORD || brush->maxs[i] > MAX_WORLD_COORD || brush->mins[i] >= brush->maxs[i]) {
+        // CHECK: because aabb::fix, is this latter check ever possible?
+        if (brush->bounds.mins()[i] < MIN_WORLD_COORD || brush->bounds.maxs()[i] > MAX_WORLD_COORD || brush->bounds.mins()[i] >= brush->bounds.maxs()[i]) {
             return false;
         }
     }
@@ -1668,18 +1639,15 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     // see if we have valid polygons on both sides
 
     for (int i = 0; i < 2; i++) {
-        BoundBrush(b[i]);
+        bool bad_brush = false;
 
-        int j;
-        for (j = 0; j < 3; j++) {
-            if (b[i]->mins[j] < MIN_WORLD_COORD || b[i]->maxs[j] > MAX_WORLD_COORD) {
-                LogPrint("bogus brush after clip\n");
-                break;
-            }
+        if (!BoundBrush(b[i])) {
+            LogPrint("bogus brush after clip\n");
+            bad_brush = true;
         }
 
         // 3 faces is ok because we add a 4th face below
-        if (Brush_NumFaces(b[i]) < 3 || j < 3) {
+        if (Brush_NumFaces(b[i]) < 3 || bad_brush) {
             FreeBrush(b[i]);
             b[i] = nullptr;
         }

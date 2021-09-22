@@ -228,7 +228,6 @@ static int GetVertex(mapentity_t *entity, const vec3_t in)
 {
     int i;
     vec3_t vert;
-    dvertex_t *dvertex;
 
     for (i = 0; i < 3; i++) {
         if (fabs(in[i] - Q_rint(in[i])) < ZERO_EPSILON)
@@ -254,11 +253,7 @@ static int GetVertex(mapentity_t *entity, const vec3_t in)
     AddHashVert(vert, global_vert_num);
 
     /* emit a vertex */
-    map.exported_vertexes.push_back({});
-    dvertex = &map.exported_vertexes.at(global_vert_num);
-    dvertex->point[0] = vert[0];
-    dvertex->point[1] = vert[1];
-    dvertex->point[2] = vert[2];
+    map.exported_vertexes.push_back({ (float) vert[0], (float) vert[1], (float) vert[2] });
 
     return global_vert_num;
 }
@@ -306,8 +301,8 @@ static int GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2, const 
         i = static_cast<int>(map.exported_edges.size());
         map.exported_edges.push_back({});
         edge = &map.exported_edges.at(i);
-        edge->v[0] = v1;
-        edge->v[1] = v2;
+        (*edge)[0] = v1;
+        (*edge)[1] = v2;
     }
 
     AddHashEdge(v1, v2, i);
@@ -370,7 +365,7 @@ EmitFace
 */
 static void EmitFace(mapentity_t *entity, face_t *face)
 {
-    bsp2_dface_t *out;
+    mface_t *out;
     int i;
 
     if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))

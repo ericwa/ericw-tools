@@ -31,7 +31,7 @@ const dmodel_t *BSP_GetWorldModel(const mbsp_t *bsp)
     return &bsp->dmodels[0];
 }
 
-int Face_GetNum(const mbsp_t *bsp, const bsp2_dface_t *f)
+int Face_GetNum(const mbsp_t *bsp, const mface_t *f)
 {
     Q_assert(f != nullptr);
 
@@ -67,7 +67,7 @@ const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum)
     return &bsp->dplanes[planenum];
 }
 
-const bsp2_dface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
+const mface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
 {
     Q_assert(fnum >= 0 && fnum < bsp->numfaces);
     return &bsp->dfaces[fnum];
@@ -85,14 +85,14 @@ const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
     return tex;
 }
 
-bsp2_dface_t *BSP_GetFace(mbsp_t *bsp, int fnum)
+mface_t *BSP_GetFace(mbsp_t *bsp, int fnum)
 {
     Q_assert(fnum >= 0 && fnum < bsp->numfaces);
     return &bsp->dfaces[fnum];
 }
 
 /* small helper that just retrieves the correct vertex from face->surfedge->edge lookups */
-int Face_VertexAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v)
+int Face_VertexAtIndex(const mbsp_t *bsp, const mface_t *f, int v)
 {
     Q_assert(v >= 0);
     Q_assert(v < f->numedges);
@@ -100,32 +100,29 @@ int Face_VertexAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v)
     int edge = f->firstedge + v;
     edge = bsp->dsurfedges[edge];
     if (edge < 0)
-        return bsp->dedges[-edge].v[1];
-    return bsp->dedges[edge].v[0];
+        return bsp->dedges[-edge][1];
+    return bsp->dedges[edge][0];
 }
 
 static void Vertex_GetPos(const mbsp_t *bsp, int num, vec3_t out)
 {
     Q_assert(num >= 0 && num < bsp->numvertexes);
-    const dvertex_t *v = &bsp->dvertexes[num];
-
-    for (int i = 0; i < 3; i++)
-        out[i] = v->point[i];
+    VectorCopy(bsp->dvertexes[num], out);
 }
 
-void Face_PointAtIndex(const mbsp_t *bsp, const bsp2_dface_t *f, int v, vec3_t point_out)
+void Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v, vec3_t point_out)
 {
     const int vertnum = Face_VertexAtIndex(bsp, f, v);
     Vertex_GetPos(bsp, vertnum, point_out);
 }
 
-void Face_Normal(const mbsp_t *bsp, const bsp2_dface_t *f, vec3_t norm)
+void Face_Normal(const mbsp_t *bsp, const mface_t *f, vec3_t norm)
 {
     plane_t pl = Face_Plane(bsp, f);
     VectorCopy(pl.normal, norm);
 }
 
-plane_t Face_Plane(const mbsp_t *bsp, const bsp2_dface_t *f)
+plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f)
 {
     Q_assert(f->planenum >= 0 && f->planenum < bsp->numplanes);
     const dplane_t *dplane = &bsp->dplanes[f->planenum];
@@ -144,7 +141,7 @@ plane_t Face_Plane(const mbsp_t *bsp, const bsp2_dface_t *f)
     return result;
 }
 
-const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const bsp2_dface_t *face)
+const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
 {
     if (face->texinfo < 0 || face->texinfo >= bsp->numtexinfo)
         return nullptr;
@@ -152,7 +149,7 @@ const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const bsp2_dface_t *face)
     return &bsp->texinfo[face->texinfo];
 }
 
-const miptex_t *Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face)
+const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
 {
     if (!bsp->texdatasize)
         return nullptr;
@@ -172,13 +169,13 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const bsp2_dface_t *face)
     return miptex;
 }
 
-const char *Face_TextureName(const mbsp_t *bsp, const bsp2_dface_t *face)
+const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
     const auto *miptex = Face_Miptex(bsp, face);
     return (miptex ? miptex->name : "");
 }
 
-bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face)
+bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
 {
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
@@ -188,9 +185,9 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const bsp2_dface_t *face)
     return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
 }
 
-const float *GetSurfaceVertexPoint(const mbsp_t *bsp, const bsp2_dface_t *f, int v)
+const bspvec3f_t &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v)
 {
-    return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)].point;
+    return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)];
 }
 
 int TextureName_Contents(const char *texname)
@@ -220,13 +217,13 @@ ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, const int contents_or_su
 }
 
 bool // mxd. Moved here from ltface.c (was Face_IsLiquid)
-Face_IsTranslucent(const mbsp_t *bsp, const bsp2_dface_t *face)
+Face_IsTranslucent(const mbsp_t *bsp, const mface_t *face)
 {
     return ContentsOrSurfaceFlags_IsTranslucent(bsp, Face_ContentsOrSurfaceFlags(bsp, face));
 }
 
 int // mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
-Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const bsp2_dface_t *face)
+Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         const gtexinfo_t *info = Face_Texinfo(bsp, face);
@@ -309,7 +306,7 @@ bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t &point)
     return Light_PointInSolid(bsp, &bsp->dmodels[0], point);
 }
 
-static const bsp2_dface_t *BSP_FindFaceAtPoint_r(
+static const mface_t *BSP_FindFaceAtPoint_r(
     const mbsp_t *bsp, const int nodenum, const vec3_t &point, const vec3_t &wantedNormal)
 {
     if (nodenum < 0) {
@@ -327,7 +324,7 @@ static const bsp2_dface_t *BSP_FindFaceAtPoint_r(
 
     // Point is close to this node plane. Check all faces on the plane.
     for (int i = 0; i < node->numfaces; i++) {
-        const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+        const mface_t *face = BSP_GetFace(bsp, node->firstface + i);
         // First check if it's facing the right way
         vec3_t faceNormal;
         Face_Normal(bsp, face, faceNormal);
@@ -349,7 +346,7 @@ static const bsp2_dface_t *BSP_FindFaceAtPoint_r(
     }
 
     // No match found on this plane. Check both sides of the tree.
-    const bsp2_dface_t *side0Match = BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal);
+    const mface_t *side0Match = BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal);
     if (side0Match != nullptr) {
         return side0Match;
     } else {
@@ -357,13 +354,13 @@ static const bsp2_dface_t *BSP_FindFaceAtPoint_r(
     }
 }
 
-const bsp2_dface_t *BSP_FindFaceAtPoint(
+const mface_t *BSP_FindFaceAtPoint(
     const mbsp_t *bsp, const dmodel_t *model, const vec3_t &point, const vec3_t &wantedNormal)
 {
     return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
 }
 
-plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t *face)
+plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face)
 {
     plane_t *out = new plane_t[face->numedges];
 
@@ -371,8 +368,8 @@ plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t 
     for (int i = 0; i < face->numedges; i++) {
         plane_t *dest = &out[i];
 
-        const float *v0 = GetSurfaceVertexPoint(bsp, face, i);
-        const float *v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
+        const bspvec3f_t &v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const bspvec3f_t &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
 
         vec3_t v0_vec3t;
         vec3_t v1_vec3t;
@@ -391,7 +388,7 @@ plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const bsp2_dface_t 
     return out;
 }
 
-bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes, const vec3_t &point)
+bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const vec3_t &point)
 {
     for (int i = 0; i < face->numedges; i++) {
         const vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
@@ -404,13 +401,13 @@ bool EdgePlanes_PointInside(const bsp2_dface_t *face, const plane_t *edgeplanes,
 
 // glm stuff
 
-qplane3f Face_Plane_E(const mbsp_t *bsp, const bsp2_dface_t *f)
+qplane3f Face_Plane_E(const mbsp_t *bsp, const mface_t *f)
 {
     const plane_t pl = Face_Plane(bsp, f);
     return qplane3f(qvec3f(pl.normal[0], pl.normal[1], pl.normal[2]), pl.dist);
 }
 
-qvec3f Face_PointAtIndex_E(const mbsp_t *bsp, const bsp2_dface_t *f, int v)
+qvec3f Face_PointAtIndex_E(const mbsp_t *bsp, const mface_t *f, int v)
 {
     return Vertex_GetPos_E(bsp, Face_VertexAtIndex(bsp, f, v));
 }
@@ -422,14 +419,14 @@ qvec3f Vertex_GetPos_E(const mbsp_t *bsp, int num)
     return temp;
 }
 
-qvec3f Face_Normal_E(const mbsp_t *bsp, const bsp2_dface_t *f)
+qvec3f Face_Normal_E(const mbsp_t *bsp, const mface_t *f)
 {
     vec3_t temp;
     Face_Normal(bsp, f, temp);
     return temp;
 }
 
-std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *face)
+std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
 {
     std::vector<qvec3f> points;
     points.reserve(
@@ -441,13 +438,13 @@ std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const bsp2_dface_t *face)
     return points;
 }
 
-qvec3f Face_Centroid(const mbsp_t *bsp, const bsp2_dface_t *face)
+qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face)
 {
     // FIXME: GLM_PolyCentroid has a assertion that there are >= 3 points
     return GLM_PolyCentroid(GLM_FacePoints(bsp, face));
 }
 
-void Face_DebugPrint(const mbsp_t *bsp, const bsp2_dface_t *face)
+void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
 {
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
@@ -461,7 +458,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const bsp2_dface_t *face)
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
-        const float *point = GetSurfaceVertexPoint(bsp, face, i);
+        const bspvec3f_t &point = GetSurfaceVertexPoint(bsp, face, i);
         LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n", i ? "          " : "    verts ", vert, point[0], point[1],
             point[2], edge);
     }

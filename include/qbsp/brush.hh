@@ -22,11 +22,12 @@
 #pragma once
 
 #include <qbsp/winding.hh>
+#include <common/aabb.hh>
 
 struct brush_t
 {
     brush_t *next;
-    vec3_t mins, maxs;
+    aabb3d bounds;
     face_t *faces;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */

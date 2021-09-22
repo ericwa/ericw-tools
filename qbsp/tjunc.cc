@@ -464,10 +464,10 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
      * origin points won't allways be inside the map, so extend the hash area
      */
     for (i = 0; i < 3; i++) {
-        if (fabs(entity->maxs[i]) > fabs(entity->mins[i]))
-            maxs[i] = fabs(entity->maxs[i]);
+        if (fabs(entity->bounds.maxs()[i]) > fabs(entity->bounds.mins()[i]))
+            maxs[i] = fabs(entity->bounds.maxs()[i]);
         else
-            maxs[i] = fabs(entity->mins[i]);
+            maxs[i] = fabs(entity->bounds.mins()[i]);
     }
     VectorSubtract(vec3_origin, maxs, mins);
 

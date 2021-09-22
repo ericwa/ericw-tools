@@ -90,7 +90,7 @@ TEST(qbsp, testTextureIssue)
 #if 0
     for (int i=0; i<2; i++) {
         for (int j=0; j<4; j++) {
-            EXPECT_FLOAT_EQ(texvecsExpected[i][j], texvecsActual[i][j]);
+            EXPECT_DOUBLE_EQ(texvecsExpected[i][j], texvecsActual[i][j]);
         }
     }
 #endif
@@ -159,7 +159,7 @@ TEST(qbsp, BrushVolume)
 {
     brush_t *brush = load128x128x32Brush();
 
-    EXPECT_FLOAT_EQ((128 * 128 * 32), BrushVolume(brush));
+    EXPECT_DOUBLE_EQ((128 * 128 * 32), BrushVolume(brush));
 }
 
 TEST(qbsp, BrushMostlyOnSide1)
@@ -190,17 +190,17 @@ TEST(qbsp, BoundBrush)
 {
     brush_t *brush = load128x128x32Brush();
 
-    ClearBounds(brush->mins, brush->maxs);
+    brush->bounds = {};
 
     EXPECT_EQ(true, BoundBrush(brush));
 
-    EXPECT_FLOAT_EQ(-64, brush->mins[0]);
-    EXPECT_FLOAT_EQ(-64, brush->mins[1]);
-    EXPECT_FLOAT_EQ(-16, brush->mins[2]);
+    EXPECT_DOUBLE_EQ(-64, brush->mins[0]);
+    EXPECT_DOUBLE_EQ(-64, brush->mins[1]);
+    EXPECT_DOUBLE_EQ(-16, brush->mins[2]);
 
-    EXPECT_FLOAT_EQ(64, brush->maxs[0]);
-    EXPECT_FLOAT_EQ(64, brush->maxs[1]);
-    EXPECT_FLOAT_EQ(16, brush->maxs[2]);
+    EXPECT_DOUBLE_EQ(64, brush->maxs[0]);
+    EXPECT_DOUBLE_EQ(64, brush->maxs[1]);
+    EXPECT_DOUBLE_EQ(16, brush->maxs[2]);
 
     FreeBrush(brush);
 }
@@ -254,24 +254,24 @@ TEST(qbsp, SplitBrush)
     ASSERT_NE(nullptr, back);
 
     // front
-    EXPECT_FLOAT_EQ(-64, front->mins[0]);
-    EXPECT_FLOAT_EQ(-64, front->mins[1]);
-    EXPECT_FLOAT_EQ(-16, front->mins[2]);
+    EXPECT_DOUBLE_EQ(-64, front->mins[0]);
+    EXPECT_DOUBLE_EQ(-64, front->mins[1]);
+    EXPECT_DOUBLE_EQ(-16, front->mins[2]);
 
-    EXPECT_FLOAT_EQ(0, front->maxs[0]);
-    EXPECT_FLOAT_EQ(64, front->maxs[1]);
-    EXPECT_FLOAT_EQ(16, front->maxs[2]);
+    EXPECT_DOUBLE_EQ(0, front->maxs[0]);
+    EXPECT_DOUBLE_EQ(64, front->maxs[1]);
+    EXPECT_DOUBLE_EQ(16, front->maxs[2]);
 
     checkCube(front);
 
     // back
-    EXPECT_FLOAT_EQ(0, back->mins[0]);
-    EXPECT_FLOAT_EQ(-64, back->mins[1]);
-    EXPECT_FLOAT_EQ(-16, back->mins[2]);
+    EXPECT_DOUBLE_EQ(0, back->mins[0]);
+    EXPECT_DOUBLE_EQ(-64, back->mins[1]);
+    EXPECT_DOUBLE_EQ(-16, back->mins[2]);
 
-    EXPECT_FLOAT_EQ(64, back->maxs[0]);
-    EXPECT_FLOAT_EQ(64, back->maxs[1]);
-    EXPECT_FLOAT_EQ(16, back->maxs[2]);
+    EXPECT_DOUBLE_EQ(64, back->maxs[0]);
+    EXPECT_DOUBLE_EQ(64, back->maxs[1]);
+    EXPECT_DOUBLE_EQ(16, back->maxs[2]);
 
     checkCube(back);
 

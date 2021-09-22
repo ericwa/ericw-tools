@@ -94,7 +94,7 @@ int ExportMapTexinfo(int texinfonum)
         }
     }
 
-    strcpy(dest->texture, map.texinfoTextureName(texinfonum).c_str());
+    strcpy(dest->texture.data(), map.texinfoTextureName(texinfonum).c_str());
     // dest->flags = map.miptex[src->miptex].flags;
     dest->value = map.miptex[src->miptex].value;
 
@@ -182,8 +182,8 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
      * write bounding box info
      */
     for (int32_t i = 0; i < 3; ++i) {
-        dleaf->mins[i] = floor(node->mins[i]);
-        dleaf->maxs[i] = ceil(node->maxs[i]);
+        dleaf->mins[i] = floor(node->bounds.mins()[i]);
+        dleaf->maxs[i] = ceil(node->bounds.maxs()[i]);
     }
 
     dleaf->visofs = -1; // no vis info yet
@@ -228,8 +228,8 @@ static void ExportDrawNodes(mapentity_t *entity, node_t *node)
 
     // VectorCopy doesn't work since dest are shorts
     for (int32_t i = 0; i < 3; ++i) {
-        dnode->mins[i] = floor(node->mins[i]);
-        dnode->maxs[i] = ceil(node->maxs[i]);
+        dnode->mins[i] = floor(node->bounds.mins()[i]);
+        dnode->maxs[i] = ceil(node->bounds.maxs()[i]);
     }
 
     dnode->planenum = ExportMapPlane(node->planenum);
@@ -296,8 +296,8 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     /* remove the headnode padding */
     for (i = 0; i < 3; i++) {
-        dmodel->mins[i] = headnode->mins[i] + SIDESPACE + 1;
-        dmodel->maxs[i] = headnode->maxs[i] - SIDESPACE - 1;
+        dmodel->mins[i] = headnode->bounds.mins()[i] + SIDESPACE + 1;
+        dmodel->maxs[i] = headnode->bounds.maxs()[i] - SIDESPACE - 1;
     }
 }
 

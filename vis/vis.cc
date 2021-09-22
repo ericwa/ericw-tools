@@ -1315,8 +1315,6 @@ int main(int argc, char **argv)
 
     WriteBSPFile(sourcefile, &bspdata);
 
-    //    unlink (portalfile);
-
     endtime = I_FloatTime();
     LogPrint("{:5.1} seconds elapsed\n", (endtime - starttime).count());
 

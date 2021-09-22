@@ -37,25 +37,25 @@
 class neighbour_t
 {
 public:
-    const bsp2_dface_t *face;
+    const mface_t *face;
     qvec3f p0, p1;
 
-    neighbour_t(const bsp2_dface_t *f, const qvec3f p0in, const qvec3f p1in) : face(f), p0(p0in), p1(p1in) { }
+    neighbour_t(const mface_t *f, const qvec3f p0in, const qvec3f p1in) : face(f), p0(p0in), p1(p1in) { }
 };
 
 void CalculateVertexNormals(const mbsp_t *bsp);
-const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int vertindex);
-bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2);
-const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face);
-const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face);
-const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int v);
-const bsp2_dface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t *f, const int edgeindex);
+const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const int vertindex);
+bool FacesSmoothed(const mface_t *f1, const mface_t *f2);
+const std::set<const mface_t *> &GetSmoothFaces(const mface_t *face);
+const std::vector<const mface_t *> &GetPlaneFaces(const mface_t *face);
+const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const int v);
+const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const int edgeindex);
 
 /// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
-using edgeToFaceMap_t = std::map<std::pair<int, int>, std::vector<const bsp2_dface_t *>>;
+using edgeToFaceMap_t = std::map<std::pair<int, int>, std::vector<const mface_t *>>;
 
-std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dface_t *face);
-std::vector<const bsp2_dface_t *> FacesUsingVert(int vertnum);
+std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const mface_t *face);
+std::vector<const mface_t *> FacesUsingVert(int vertnum);
 const edgeToFaceMap_t &GetEdgeToFaceMap();
 
 class face_cache_t
@@ -69,7 +69,7 @@ private:
     std::vector<neighbour_t> m_neighbours;
 
 public:
-    face_cache_t(const mbsp_t *bsp, const bsp2_dface_t *face, const std::vector<qvec3f> &normals)
+    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<qvec3f> &normals)
         : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_plane(Face_Plane_E(bsp, face).vec4()),
           m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)), m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
           m_neighbours(NeighbouringFaces_new(bsp, face))

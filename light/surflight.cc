@@ -73,7 +73,7 @@ static void *MakeSurfaceLightsThread(void *arg)
         if (i == -1)
             break;
 
-        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
+        const mface_t *face = BSP_GetFace(bsp, i);
 
         // Face casts light?
         const gtexinfo_t *info = Face_Texinfo(bsp, face);

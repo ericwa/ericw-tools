@@ -121,11 +121,11 @@ public:
     }
 };
 
-static texdef_valve_t TexDef_BSPToValve(const float in_vecs[2][4]);
+static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
 static qvec2f projectToAxisPlane(const vec3_t snapped_normal, qvec3f point);
 static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t *plane, bool preserveX);
 static void SetTexinfo_QuakeEd_New(
-    const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], stvecs &out_vecs);
+    const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], texvecf &out_vecs);
 static void TestExpandBrushes(const mapentity_t *src);
 
 const mapface_t &mapbrush_t::face(int i) const
@@ -583,7 +583,7 @@ static quark_tx_info_t ParseExtendedTX(parser_t &parser)
     return result;
 }
 
-static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const stvecs &in_vecs)
+static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const texvecf &in_vecs)
 {
     //           [s]
     // T * vec = [t]
@@ -630,7 +630,7 @@ static float extractRotation(qmat2x2f m)
 
 static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plane_t *faceplane, const qvec3f point)
 {
-    stvecs temp;
+    texvecf temp;
     SetTexinfo_QuakeEd_New(faceplane, texdef.shift, texdef.rotate, texdef.scale, temp);
 
     const qmat4x4f worldToTexSpace_res = texVecsTo4x4Matrix(*faceplane, temp);
@@ -693,7 +693,7 @@ qvec2f normalizeShift(const texture_t *texture, const qvec2f &in)
 
 /// `texture` is optional. If given, the "shift" values can be normalized
 static texdef_quake_ed_t TexDef_BSPToQuakeEd(
-    const qbsp_plane_t &faceplane, const texture_t *texture, const stvecs &in_vecs, const vec3_t facepoints[3])
+    const qbsp_plane_t &faceplane, const texture_t *texture, const texvecf &in_vecs, const vec3_t facepoints[3])
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
     vec3_t snapped_normal;
@@ -971,7 +971,7 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
 }
 
 static void SetTexinfo_QuakeEd_New(
-    const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], stvecs &out_vecs)
+    const qbsp_plane_t *plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], texvecf &out_vecs)
 {
     vec_t sanitized_scale[2];
     for (int i = 0; i < 2; i++) {
@@ -1086,7 +1086,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t *plane, const vec3_t planepts[
 
     if (false) {
         // Self-test of SetTexinfo_QuakeEd_New
-        stvecs check;
+        texvecf check;
         SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 4; j++) {
@@ -1238,7 +1238,7 @@ static void ComputeAxisBase(const vec3_t normal_unsanitized, vec3_t texX, vec3_t
 }
 
 static void SetTexinfo_BrushPrimitives(
-    const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, stvecs &vecs)
+    const vec3_t texMat[2], const vec3_t faceNormal, int texWidth, int texHeight, texvecf &vecs)
 {
     vec3_t texX, texY;
 
@@ -1278,7 +1278,7 @@ static void SetTexinfo_BrushPrimitives(
     vecs[1][3] = texHeight * texMat[1][2];
 }
 
-static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const stvecs &in_vecs, vec_t *st_out)
+static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const texvecf &in_vecs, vec_t *st_out)
 {
     for (int i = 0; i < 2; i++) {
         st_out[i] = (point[0] * in_vecs[i][0] + point[1] * in_vecs[i][1] + point[2] * in_vecs[i][2] + in_vecs[i][3]) /
@@ -1288,7 +1288,7 @@ static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], co
 
 // From FaceToBrushPrimitFace in GtkRadiant
 static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
-    const qbsp_plane_t plane, const int texSize[2], const stvecs &in_vecs)
+    const qbsp_plane_t plane, const int texSize[2], const texvecf &in_vecs)
 {
     vec3_t texX, texY;
     ComputeAxisBase(plane.normal, texX, texY);
@@ -2020,7 +2020,7 @@ void LoadMapFile(void)
     }
 }
 
-static texdef_valve_t TexDef_BSPToValve(const stvecs &in_vecs)
+static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
 {
     texdef_valve_t res;
 

@@ -51,35 +51,6 @@ bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist)
     return true;
 }
 
-/*
- * VecStr - handy shortcut for printf
- */
-std::string VecStr(const vec3_t vec)
-{
-    return fmt::format("{} {} {}", (int32_t) vec[0], (int32_t) vec[1], (int32_t) vec[2]);
-}
-
-std::string // mxd
-VecStr(const qvec3f vec)
-{
-    vec3_t v;
-    VectorCopy(vec, v);
-    return VecStr(v);
-}
-
-std::string VecStrf(const vec3_t vec)
-{
-    return fmt::format("{:.2} {:.2} {:.2}", vec[0], vec[1], vec[2]);
-}
-
-std::string // mxd
-VecStrf(const qvec3f vec)
-{
-    vec3_t v;
-    VectorCopy(vec, v);
-    return VecStrf(v);
-}
-
 void ClearBounds(vec3_t mins, vec3_t maxs)
 {
     for (int i = 0; i < 3; i++) {

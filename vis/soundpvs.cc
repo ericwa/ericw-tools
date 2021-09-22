@@ -34,30 +34,23 @@ Find an aproximate distance to the nearest emiter of each class for each leaf.
   SurfaceBBox
   ====================
 */
-static void SurfaceBBox(const mbsp_t *bsp, const bsp2_dface_t *surf, vec3_t mins, vec3_t maxs)
+static aabb3d SurfaceBBox(const mbsp_t *bsp, const mface_t *surf)
 {
-    int i, j;
-    int edgenum;
-    int vertnum;
-    const float *vert;
+    aabb3d bounds;
 
-    ClearBounds(mins, maxs);
+    for (int32_t i = 0; i < surf->numedges; i++) {
+        int32_t edgenum = bsp->dsurfedges[surf->firstedge + i],
+                vertnum;
 
-    for (i = 0; i < surf->numedges; i++) {
-        edgenum = bsp->dsurfedges[surf->firstedge + i];
         if (edgenum >= 0)
-            vertnum = bsp->dedges[edgenum].v[0];
+            vertnum = bsp->dedges[edgenum][0];
         else
-            vertnum = bsp->dedges[-edgenum].v[1];
-        vert = bsp->dvertexes[vertnum].point;
+            vertnum = bsp->dedges[-edgenum][1];
 
-        for (j = 0; j < 3; j++) {
-            if (vert[j] < mins[j])
-                mins[j] = vert[j];
-            if (vert[j] > maxs[j])
-                maxs[j] = vert[j];
-        }
+        bounds += bsp->dvertexes[vertnum];
     }
+
+    return bounds;
 }
 
 /*
@@ -67,13 +60,12 @@ static void SurfaceBBox(const mbsp_t *bsp, const bsp2_dface_t *surf, vec3_t mins
 */
 void CalcAmbientSounds(mbsp_t *bsp)
 {
-    const bsp2_dface_t *surf;
+    const mface_t *surf;
     const gtexinfo_t *info;
     const miptex_t *miptex;
     int i, j, k, l;
     mleaf_t *leaf, *hit;
     uint8_t *vis;
-    vec3_t mins, maxs;
     float d, maxd;
     int ambient_type;
     int ofs;
@@ -124,13 +116,13 @@ void CalcAmbientSounds(mbsp_t *bsp)
                     continue;
 
                 // find distance from source leaf to polygon
-                SurfaceBBox(bsp, surf, mins, maxs);
+                aabb3d bounds = SurfaceBBox(bsp, surf);
                 maxd = 0;
                 for (l = 0; l < 3; l++) {
-                    if (mins[l] > leaf->maxs[l])
-                        d = mins[l] - leaf->maxs[l];
-                    else if (maxs[l] < leaf->mins[l])
-                        d = leaf->mins[l] - mins[l];
+                    if (bounds.mins()[l] > leaf->maxs[l])
+                        d = bounds.mins()[l] - leaf->maxs[l];
+                    else if (bounds.maxs()[l] < leaf->mins[l])
+                        d = leaf->mins[l] - bounds.mins()[l];
                     else
                         d = 0;
                     if (d > maxd)

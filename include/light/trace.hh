@@ -46,7 +46,7 @@ enum class hittype_t : uint8_t
 const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const vec3_t point);
 int Light_PointContents(const mbsp_t *bsp, const vec3_t point);
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
-color_rgba SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point); // mxd. Palette index -> RGBA
+color_rgba SampleTexture(const mface_t *face, const mbsp_t *bsp, const vec3_t point); // mxd. Palette index -> RGBA
 
 class modelinfo_t;
 
@@ -67,10 +67,10 @@ struct hitresult_t
  * Convenience functions TestLight and TestSky will test against all shadow
  * casting bmodels and self-shadow the model 'self' if self != NULL.
  */
-hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out);
+hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const mface_t **face_out);
 hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
 #if 0
-hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
+hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out);
 #endif
 
 class modelinfo_t;
@@ -112,7 +112,7 @@ public:
     virtual void tracePushedRaysIntersection(const modelinfo_t *self) = 0;
     virtual float getPushedRayHitDist(size_t j) = 0;
     virtual hittype_t getPushedRayHitType(size_t j) = 0;
-    virtual const bsp2_dface_t *getPushedRayHitFace(size_t j) = 0;
+    virtual const mface_t *getPushedRayHitFace(size_t j) = 0;
 
     virtual ~raystream_intersection_t() = default;
 };

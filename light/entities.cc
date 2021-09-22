@@ -1294,8 +1294,8 @@ static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const
     all_lights.push_back(entity);
 }
 
-static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo,
-    const light_t *surflight_template, const mbsp_t *bsp, int numverts, const vec_t *verts)
+static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const modelinfo_t *face_modelinfo,
+    const light_t *surflight_template, const mbsp_t *bsp, int numverts, const qvec3d *verts)
 {
     int i;
     vec3_t midpoint = {0, 0, 0};
@@ -1303,7 +1303,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const 
     vec_t offset;
 
     for (i = 0; i < numverts; i++) {
-        VectorAdd(midpoint, verts + (i * 3), midpoint);
+        VectorAdd(midpoint, verts[i], midpoint);
     }
     midpoint[0] /= numverts;
     midpoint[1] /= numverts;
@@ -1329,24 +1329,18 @@ static void CreateSurfaceLightOnFaceSubdivision(const bsp2_dface_t *face, const 
     CreateSurfaceLight(midpoint, normal, surflight_template);
 }
 
-static void BoundPoly(int numverts, vec_t *verts, vec3_t mins, vec3_t maxs)
+static aabb3d BoundPoly(int numverts, qvec3d *verts)
 {
-    int i, j;
-    vec_t *v;
+    aabb3d bounds;
 
-    ClearBounds(mins, maxs);
+    for (auto v = verts; v < verts + numverts; v++) {
+        bounds += *v;
+    }
 
-    v = verts;
-    for (i = 0; i < numverts; i++)
-        for (j = 0; j < 3; j++, v++) {
-            if (*v < mins[j])
-                mins[j] = *v;
-            if (*v > maxs[j])
-                maxs[j] = *v;
-        }
+    return bounds;
 }
 
-static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const bsp2_dface_t *face, const light_t &surflight)
+static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight)
 {
     const char *texname = Face_TextureName(bsp, face);
 
@@ -1358,14 +1352,12 @@ static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const bsp2_dface_
  SubdividePolygon - from GLQuake
  ================
  */
-static void SubdividePolygon(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp,
-    int numverts, vec_t *verts, float subdivide_size)
+static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp,
+    int numverts, qvec3d *verts, float subdivide_size)
 {
-    int i, j, k;
-    vec3_t mins, maxs;
+    int i, j;
     float m;
-    vec_t *v;
-    vec3_t front[64], back[64];
+    qvec3d front[64], back[64];
     int f, b;
     float dist[64];
     float frac;
@@ -1375,20 +1367,20 @@ static void SubdividePolygon(const bsp2_dface_t *face, const modelinfo_t *face_m
     if (numverts > 64)
         FError("numverts = {}", numverts);
 
-    BoundPoly(numverts, verts, mins, maxs);
+    aabb3d bounds = BoundPoly(numverts, verts);
 
     for (i = 0; i < 3; i++) {
-        m = (mins[i] + maxs[i]) * 0.5;
+        m = (bounds.mins()[i] + bounds.maxs()[i]) * 0.5;
         m = subdivide_size * floor(m / subdivide_size + 0.5);
-        if (maxs[i] - m < 8)
+        if (bounds.maxs()[i] - m < 8)
             continue;
-        if (m - mins[i] < 8)
+        if (m - bounds.mins()[i] < 8)
             continue;
 
         // cut it
-        v = verts + i;
+        qvec3d *v = verts + i;
         for (j = 0; j < numverts; j++, v += 3)
-            dist[j] = *v - m;
+            dist[j] = (*v)[0] - m;
 
         // wrap cases
         dist[j] = dist[0];
@@ -1399,11 +1391,11 @@ static void SubdividePolygon(const bsp2_dface_t *face, const modelinfo_t *face_m
         v = verts;
         for (j = 0; j < numverts; j++, v += 3) {
             if (dist[j] >= 0) {
-                VectorCopy(v, front[f]);
+                front[f] = *v;
                 f++;
             }
             if (dist[j] <= 0) {
-                VectorCopy(v, back[b]);
+                back[b] = *v;
                 b++;
             }
             if (dist[j] == 0 || dist[j + 1] == 0)
@@ -1411,15 +1403,14 @@ static void SubdividePolygon(const bsp2_dface_t *face, const modelinfo_t *face_m
             if ((dist[j] > 0) != (dist[j + 1] > 0)) {
                 // clip point
                 frac = dist[j] / (dist[j] - dist[j + 1]);
-                for (k = 0; k < 3; k++)
-                    front[f][k] = back[b][k] = v[k] + frac * (v[3 + k] - v[k]);
+                front[f] = back[b] = *v + ((*(v + 1) - *v) * frac);
                 f++;
                 b++;
             }
         }
 
-        SubdividePolygon(face, face_modelinfo, bsp, f, front[0], subdivide_size);
-        SubdividePolygon(face, face_modelinfo, bsp, b, back[0], subdivide_size);
+        SubdividePolygon(face, face_modelinfo, bsp, f, front, subdivide_size);
+        SubdividePolygon(face, face_modelinfo, bsp, b, back, subdivide_size);
         return;
     }
 
@@ -1435,23 +1426,23 @@ static void SubdividePolygon(const bsp2_dface_t *face, const modelinfo_t *face_m
  GL_SubdivideSurface - from GLQuake
  ================
  */
-static void GL_SubdivideSurface(const bsp2_dface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp)
+static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp)
 {
     int i;
-    vec3_t verts[64];
+    // TODO: is numedges ever > 64? should we use a winding_t here for
+    // simplicity?
+    qvec3d verts[64];
 
     for (i = 0; i < face->numedges; i++) {
-        dvertex_t *v;
         int edgenum = bsp->dsurfedges[face->firstedge + i];
         if (edgenum >= 0) {
-            v = bsp->dvertexes + bsp->dedges[edgenum].v[0];
+            verts[i] = bsp->dvertexes[bsp->dedges[edgenum][0]];
         } else {
-            v = bsp->dvertexes + bsp->dedges[-edgenum].v[1];
+            verts[i] = bsp->dvertexes[bsp->dedges[-edgenum][1]];
         }
-        VectorCopy(v->point, verts[i]);
     }
 
-    SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts[0], surflight_subdivide);
+    SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts, surflight_subdivide);
 }
 
 bool ParseLightsFile(const std::filesystem::path &fname)
@@ -1537,7 +1528,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
         for (int k = 0; k < leaf->nummarksurfaces; k++) {
             const int facenum = bsp->dleaffaces[leaf->firstmarksurface + k];
-            const bsp2_dface_t *surf = BSP_GetFace(bsp, facenum);
+            const mface_t *surf = BSP_GetFace(bsp, facenum);
             const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
 
             /* Skip face with no modelinfo */

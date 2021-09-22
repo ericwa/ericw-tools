@@ -260,10 +260,18 @@ constexpr void ProjectPointOntoPlane(const T &normal, const vec_t dist, T &point
 bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist);
 
 /* Shortcut for output of warnings/errors */
-std::string VecStr(const vec3_t vec);
-std::string VecStrf(const vec3_t vec);
-std::string VecStr(const qvec3f vec); // mxd
-std::string VecStrf(const qvec3f vec); // mxd
+
+template<typename T>
+inline std::string VecStr(const T &vec)
+{
+    return fmt::format("{} {} {}", (int32_t) vec[0], (int32_t) vec[1], (int32_t) vec[2]);
+}
+
+template<typename T>
+inline std::string VecStrf(const T &vec)
+{
+    return fmt::format("{:.2} {:.2} {:.2}", vec[0], vec[1], vec[2]);
+}
 
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
 void UniformPointOnSphere(vec3_t dir, float u, float v);

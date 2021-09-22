@@ -55,7 +55,7 @@ private:
 
 public:
     faceextents_t() = default;
-    faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float lmscale);
+    faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmscale);
     int width() const;
     int height() const;
     int numsamples() const;
@@ -70,11 +70,11 @@ public:
     qvec3f LMCoordToWorld(qvec2f lm) const;
 };
 
-qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const bsp2_dface_t *face, const qvec3f &world);
-qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const bsp2_dface_t *f);
-qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const bsp2_dface_t *f);
+qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, const qvec3f &world);
+qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f);
+qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f);
 void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2]);
-void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp);
+void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
 std::map<int, qvec3f> GetDirectLighting(
@@ -82,4 +82,4 @@ std::map<int, qvec3f> GetDirectLighting(
 void SetupDirt(globalconfig_t &cfg);
 float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t &point, const vec3_t &normal,
     const modelinfo_t *selfshadow);
-void LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg);
+void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globalconfig_t &cfg);

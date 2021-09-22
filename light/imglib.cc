@@ -623,7 +623,7 @@ LoadTextures(mbsp_t *bsp)
     // Step 1: gather all loadable textures...
     std::map<std::string, std::string> texturenames; // <texture name, texture file path>
     for (int i = 0; i < bsp->numtexinfo; i++)
-        AddTextureName(texturenames, bsp->texinfo[i].texture);
+        AddTextureName(texturenames, bsp->texinfo[i].texture.data());
 
     // Step 2: gather textures used by _project_texture. Yes, this means parsing dentdata twice...
     auto entdicts = EntData_Parse(bsp->dentdata);
@@ -698,7 +698,7 @@ LoadTextures(mbsp_t *bsp)
     for (int i = 0; i < bsp->numtexinfo; i++) {
         gtexinfo_t *info = &bsp->texinfo[i];
 
-        const auto pair = indicesbytexturename.find(info->texture);
+        const auto pair = indicesbytexturename.find(info->texture.data());
         if (pair != indicesbytexturename.end())
             info->miptex = pair->second;
     }
@@ -771,7 +771,7 @@ ConvertTextures(mbsp_t *bsp)
 
         const auto pair = texturenamesbyindex.find(info->miptex);
         if (pair != texturenamesbyindex.end())
-            strcpy(info->texture, pair->second.c_str());
+            strcpy(info->texture.data(), pair->second.c_str());
     }
 }
 

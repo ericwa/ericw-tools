@@ -42,7 +42,7 @@
 
 using namespace std;
 
-static neighbour_t FaceOverlapsEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const bsp2_dface_t *f)
+static neighbour_t FaceOverlapsEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const mface_t *f)
 {
     for (int edgeindex = 0; edgeindex < f->numedges; edgeindex++) {
         const int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
@@ -74,7 +74,7 @@ static void FacesOverlappingEdge_r(
     if (fabs(p0dist) < 0.1 && fabs(p1dist) < 0.1) {
         // check all faces on this node.
         for (int i = 0; i < node->numfaces; i++) {
-            const bsp2_dface_t *face = BSP_GetFace(bsp, node->firstface + i);
+            const mface_t *face = BSP_GetFace(bsp, node->firstface + i);
             const auto neighbour = FaceOverlapsEdge(p0, p1, bsp, face);
             if (neighbour.face != nullptr) {
                 result->push_back(neighbour);
@@ -107,10 +107,10 @@ inline vector<neighbour_t> FacesOverlappingEdge(const vec3_t &p0, const vec3_t &
     return result;
 }
 
-std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const bsp2_dface_t *face)
+std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const mface_t *face)
 {
     std::vector<neighbour_t> result;
-    std::set<const bsp2_dface_t *> used_faces;
+    std::set<const mface_t *> used_faces;
 
     for (int i = 0; i < face->numedges; i++) {
         vec3_t p0, p1;
@@ -170,15 +170,15 @@ static float AngleBetweenPoints(const qvec3f &p1, const qvec3f &p2, const qvec3f
 }
 
 static bool s_builtPhongCaches;
-static std::map<const bsp2_dface_t *, std::vector<qvec3f>> vertex_normals;
+static std::map<const mface_t *, std::vector<qvec3f>> vertex_normals;
 static std::set<int> interior_verts;
-static map<const bsp2_dface_t *, set<const bsp2_dface_t *>> smoothFaces;
-static map<int, vector<const bsp2_dface_t *>> vertsToFaces;
-static map<int, vector<const bsp2_dface_t *>> planesToFaces;
+static map<const mface_t *, set<const mface_t *>> smoothFaces;
+static map<int, vector<const mface_t *>> vertsToFaces;
+static map<int, vector<const mface_t *>> planesToFaces;
 static edgeToFaceMap_t EdgeToFaceMap;
 static vector<face_cache_t> FaceCache;
 
-vector<const bsp2_dface_t *> FacesUsingVert(int vertnum)
+vector<const mface_t *> FacesUsingVert(int vertnum)
 {
     const auto &vertsToFaces_const = vertsToFaces;
 
@@ -195,7 +195,7 @@ const edgeToFaceMap_t &GetEdgeToFaceMap()
 }
 
 // Uses `smoothFaces` static var
-bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2)
+bool FacesSmoothed(const mface_t *f1, const mface_t *f2)
 {
     Q_assert(s_builtPhongCaches);
 
@@ -203,18 +203,18 @@ bool FacesSmoothed(const bsp2_dface_t *f1, const bsp2_dface_t *f2)
     if (facesIt == smoothFaces.end())
         return false;
 
-    const set<const bsp2_dface_t *> &faceSet = facesIt->second;
+    const set<const mface_t *> &faceSet = facesIt->second;
     if (faceSet.find(f2) == faceSet.end())
         return false;
 
     return true;
 }
 
-const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face)
+const std::set<const mface_t *> &GetSmoothFaces(const mface_t *face)
 {
     Q_assert(s_builtPhongCaches);
 
-    static std::set<const bsp2_dface_t *> empty;
+    static std::set<const mface_t *> empty;
     const auto it = smoothFaces.find(face);
 
     if (it == smoothFaces.end())
@@ -223,11 +223,11 @@ const std::set<const bsp2_dface_t *> &GetSmoothFaces(const bsp2_dface_t *face)
     return it->second;
 }
 
-const std::vector<const bsp2_dface_t *> &GetPlaneFaces(const bsp2_dface_t *face)
+const std::vector<const mface_t *> &GetPlaneFaces(const mface_t *face)
 {
     Q_assert(s_builtPhongCaches);
 
-    static std::vector<const bsp2_dface_t *> empty;
+    static std::vector<const mface_t *> empty;
     const auto it = planesToFaces.find(face->planenum);
 
     if (it == planesToFaces.end())
@@ -265,7 +265,7 @@ static void AddTriangleNormals(
 }
 
 /* access the final phong-shaded vertex normal */
-const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, const int vertindex)
+const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const int vertindex)
 {
     Q_assert(s_builtPhongCaches);
 
@@ -278,7 +278,7 @@ const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const bsp2_dface_t *f, co
     return face_normals_vec.at(vertindex);
 }
 
-static bool FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
+static bool FacesOnSamePlane(const std::vector<const mface_t *> &faces)
 {
     if (faces.empty()) {
         return false;
@@ -292,7 +292,7 @@ static bool FacesOnSamePlane(const std::vector<const bsp2_dface_t *> &faces)
     return true;
 }
 
-const bsp2_dface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t *f, const int edgeindex)
+const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const int edgeindex)
 {
     Q_assert(s_builtPhongCaches);
 
@@ -301,7 +301,7 @@ const bsp2_dface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const bsp2_dface_t
 
     auto it = EdgeToFaceMap.find(make_pair(v1, v0));
     if (it != EdgeToFaceMap.end()) {
-        for (const bsp2_dface_t *neighbour : it->second) {
+        for (const mface_t *neighbour : it->second) {
             if (neighbour == f) {
                 // Invalid face, e.g. with vertex numbers: [0, 1, 0, 2]
                 continue;
@@ -349,7 +349,7 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
     edgeToFaceMap_t result;
 
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
+        const mface_t *f = BSP_GetFace(bsp, i);
 
         // walk edges
         for (int j = 0; j < f->numedges; j++) {
@@ -375,7 +375,7 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
     return result;
 }
 
-static vector<qvec3f> Face_VertexNormals(const mbsp_t *bsp, const bsp2_dface_t *face)
+static vector<qvec3f> Face_VertexNormals(const mbsp_t *bsp, const mface_t *face)
 {
     vector<qvec3f> normals;
     for (int i = 0; i < face->numedges; i++) {
@@ -389,7 +389,7 @@ static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
 {
     vector<face_cache_t> result;
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
+        const mface_t *face = BSP_GetFace(bsp, i);
         result.push_back(face_cache_t{bsp, face, Face_VertexNormals(bsp, face)});
     }
     return result;
@@ -399,7 +399,7 @@ static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
  * Q2: Returns nonzero if phong is requested on this face, in which case that is
  * the face tag to smooth with. Otherwise returns 0.
  */
-static int Q2_FacePhongValue(const mbsp_t *bsp, const bsp2_dface_t *face)
+static int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
 {
     const gtexinfo_t *texinfo = BSP_GetTexinfo(bsp, face->texinfo);
     if (texinfo != nullptr) {
@@ -429,7 +429,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             continue;
 
         for (int j = info->model->firstface; j < info->model->firstface + info->model->numfaces; j++) {
-            const bsp2_dface_t *f = BSP_GetFace(bsp, j);
+            const mface_t *f = BSP_GetFace(bsp, j);
 
             extended_texinfo_flags[f->texinfo].phong_angle = phongangle_byte;
         }
@@ -437,13 +437,13 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
     // build "plane -> faces" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
+        const mface_t *f = BSP_GetFace(bsp, i);
         planesToFaces[f->planenum].push_back(f);
     }
 
     // build "vert index -> faces" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
+        const mface_t *f = BSP_GetFace(bsp, i);
         for (int j = 0; j < f->numedges; j++) {
             const int v = Face_VertexAtIndex(bsp, f, j);
             vertsToFaces[v].push_back(f);
@@ -462,7 +462,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
     // build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
+        const mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
 
         const auto f_points = GLM_FacePoints(bsp, f);
         const qvec3f f_norm = Face_Normal_E(bsp, f);
@@ -482,7 +482,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         for (int j = 0; j < f->numedges; j++) {
             const int v = Face_VertexAtIndex(bsp, f, j);
             // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
-            for (const bsp2_dface_t *f2 : vertsToFaces[v]) {
+            for (const mface_t *f2 : vertsToFaces[v]) {
                 if (f2 == f)
                     continue;
 
@@ -519,7 +519,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
     // Q2: build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
+        const mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
         const int f_phongValue = Q2_FacePhongValue(bsp, f);
         if (f_phongValue == 0)
             continue;
@@ -527,7 +527,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         for (int j = 0; j < f->numedges; j++) {
             const int v = Face_VertexAtIndex(bsp, f, j);
             // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
-            for (const bsp2_dface_t *f2 : vertsToFaces[v]) {
+            for (const mface_t *f2 : vertsToFaces[v]) {
                 if (f2 == f)
                     continue;
 
@@ -543,7 +543,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
     // finally do the smoothing for each face
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
+        const mface_t *f = BSP_GetFace(bsp, i);
         if (f->numedges < 3) {
             FLogPrint("face {} is degenerate with {} edges\n", i, f->numedges);
             for (int j = 0; j < f->numedges; j++) {
@@ -558,7 +558,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         const qvec3f f_norm = Face_Normal_E(bsp, f); // get the face normal
 
         // gather up f and neighboursToSmooth
-        std::vector<const bsp2_dface_t *> fPlusNeighbours;
+        std::vector<const mface_t *> fPlusNeighbours;
         fPlusNeighbours.push_back(f);
         for (auto neighbour : neighboursToSmooth) {
             fPlusNeighbours.push_back(neighbour);

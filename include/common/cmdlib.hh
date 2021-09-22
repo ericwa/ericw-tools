@@ -37,22 +37,17 @@
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
 
-#ifndef __GNUC__
-#define __attribute__(x)
+#ifdef _WIN32
+#define Q_strncasecmp _strnicmp
+#define Q_strcasecmp _stricmp
+#elif defined(__has_include) && __has_include(<strings.h>)
+#include <strings.h>
+#define Q_strncasecmp strncasecmp
+#define Q_strcasecmp strcasecmp
+#else
+#define Q_strncasecmp strnicmp
+#define Q_strcasecmp stricmp
 #endif
-
-#ifdef _MSC_VER
-#define unlink _unlink
-#endif
-
-/* set these before calling CheckParm */
-extern int myargc;
-extern char **myargv;
-
-char *Q_strupr(char *start);
-char *Q_strlower(char *start);
-int Q_strncasecmp(const char *s1, const char *s2, int n);
-int Q_strcasecmp(const char *s1, const char *s2);
 
 extern std::filesystem::path    qdir, // c:/Quake/, c:/Hexen II/ etc.
                                 gamedir, // c:/Quake/mymod/
@@ -115,13 +110,7 @@ inline time_point I_FloatTime()
     return qclock::now();
 }
 
-template<typename ...Args>
-inline void Print(const char *fmt, const Args &...args)
-{
-    fmt::print(fmt, std::forward<const Args &>(args)...);
-}
-
-[[noreturn]] void Error(const char *error) __attribute__((noreturn));
+[[noreturn]] void Error(const char *error);
 
 template<typename ...Args>
 [[noreturn]] inline void Error(const char *fmt, const Args &...args)
@@ -132,8 +121,6 @@ template<typename ...Args>
 
 #define FError(fmt, ...) \
     Error("{}: " fmt, __func__, __VA_ARGS__)
-
-int CheckParm(const char *check);
 
 using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;
 
@@ -147,21 +134,92 @@ long SafeTell(const qfile_t &f);
 long LoadFilePak(std::filesystem::path &filename, void *destptr);
 long LoadFile(const std::filesystem::path &filename, void *destptr);
 
-int ParseNum(char *str);
-
-short BigShort(short l);
-short LittleShort(short l);
-int BigLong(int l);
-int LittleLong(int l);
-float BigFloat(float l);
-float LittleFloat(float l);
-
-// temporary
-#ifdef _WIN32
-#define copystring _strdup
+/*
+ * ============================================================================
+ *                            BYTE ORDER FUNCTIONS
+ * ============================================================================
+ */
+// C++20 polyfill
+// For cpp20, #include <bit> instead
+namespace std
+{
+    enum class endian
+    {
+        little = 0,
+        big = 1,
+        
+#ifdef __BIG_ENDIAN__
+        native = big
 #else
-#define copystring strdup
+        native = little
 #endif
+    };
+}
+
+// C/C++ portable and defined method of swapping bytes.
+template<typename T>
+inline T byte_swap(const T &val)
+{
+    T retVal;
+    const char *pVal = reinterpret_cast<const char *>(&val);
+    char *pRetVal = reinterpret_cast<char *>(&retVal);
+
+    for (size_t i = 0; i < sizeof(T); i++) {
+        pRetVal[sizeof(T) - 1 - i] = pVal[i];
+    }
+
+    return retVal;
+}
+
+// little <-> native
+inline int16_t LittleShort(int16_t l)
+{
+    if constexpr(std::endian::native == std::endian::little)
+        return l;
+    else
+        return byte_swap(l);
+}
+
+inline int32_t LittleLong(int32_t l)
+{
+    if constexpr(std::endian::native == std::endian::little)
+        return l;
+    else
+        return byte_swap(l);
+}
+
+inline float LittleFloat(float l)
+{
+    if constexpr(std::endian::native == std::endian::little)
+        return l;
+    else
+        return byte_swap(l);
+}
+
+// big <-> native
+inline int16_t BigShort(int16_t l)
+{
+    if constexpr(std::endian::native == std::endian::big)
+        return l;
+    else
+        return byte_swap(l);
+}
+
+inline int32_t BigLong(int32_t l)
+{
+    if constexpr(std::endian::native == std::endian::big)
+        return l;
+    else
+        return byte_swap(l);
+}
+
+inline float BigFloat(float l)
+{
+    if constexpr(std::endian::native == std::endian::big)
+        return l;
+    else
+        return byte_swap(l);
+}
 
 inline void Q_assert_(bool success, const char *expr, const char *file, int line)
 {
@@ -178,3 +236,333 @@ inline void Q_assert_(bool success, const char *expr, const char *file, int line
 #define Q_assert(x) Q_assert_((x), stringify(x), __FILE__, __LINE__)
 
 #define Q_assert_unreachable() Q_assert(false)
+
+// Binary streams; by default, streams use the native endianness
+// (unchanged bytes) but can be changed to a specific endianness
+// with the manipulator below.
+namespace detail
+{
+    inline int32_t endian_i()
+    {
+        static int32_t i = std::ios_base::xalloc();
+        return i;
+    }
+
+    // 0 is the default for iwords
+    enum class st_en : long
+    {
+        na = 0,
+        le = 1,
+        be = 2,
+    };
+
+    inline bool need_swap(std::ios_base &os)
+    {
+        st_en e = static_cast<st_en>(os.iword(detail::endian_i()));
+
+        // if we're in a "default state" of native endianness, we never
+        // need to swap.
+        if (e == st_en::na)
+            return false;
+
+        return (static_cast<int32_t>(e) - 1) != static_cast<int32_t>(std::endian::native);
+    }
+
+    template<typename T>
+    inline void write_swapped(std::ostream &s, const T &val)
+    {
+        const char *pVal = reinterpret_cast<const char *>(&val);
+
+        for (int32_t i = sizeof(T) - 1; i >= 0; i--) {
+            s.write(&pVal[i], 1);
+        }
+    }
+
+    template<typename T>
+    inline void read_swapped(std::istream &s, T &val)
+    {
+        char *pRetVal = reinterpret_cast<char *>(&val);
+        
+        for (int32_t i = sizeof(T) - 1; i >= 0; i--) {
+            s.read(&pRetVal[i], 1);
+        }
+    }
+}
+
+template<std::endian e>
+inline std::ios_base &endianness(std::ios_base &os)
+{
+    os.iword(detail::endian_i()) = static_cast<int32_t>(e) + 1;
+
+    return os;
+}
+
+// using <= for ostream and >= for istream
+inline std::ostream &operator<=(std::ostream &s, const char &c)
+{
+    s.write(&c, sizeof(c));
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const uint8_t &c)
+{
+    s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const uint16_t &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const int16_t &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const uint32_t &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const int32_t &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const uint64_t &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const int64_t &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const float &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const double &c)
+{
+    if (!detail::need_swap(s))
+        s.write(reinterpret_cast<const char *>(&c), sizeof(c));
+    else
+        detail::write_swapped(s, c);
+
+    return s;
+}
+
+template<typename... T>
+inline std::ostream &operator<=(std::ostream &s, const std::tuple<T...> &tuple)
+{
+    std::apply([&s](auto&&... args) { ((s <= args), ...); }, tuple);
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, char &c)
+{
+    s.read(&c, sizeof(c));
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, uint8_t &c)
+{
+    s.read(reinterpret_cast<char *>(&c), sizeof(c));
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, uint16_t &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, int16_t &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, uint32_t &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, int32_t &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, uint64_t &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, int64_t &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, float &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, double &c)
+{
+    if (!detail::need_swap(s))
+        s.read(reinterpret_cast<char *>(&c), sizeof(c));
+    else
+        detail::read_swapped(s, c);
+
+    return s;
+}
+
+template<typename... T>
+inline std::istream &operator>=(std::istream &s, const std::tuple<T...> &tuple)
+{
+    std::apply([&s](auto&&... args) { ((s >= args), ...); }, tuple);
+    return s;
+}
+
+template<typename Dst, typename Src>
+constexpr bool numeric_cast_will_overflow(const Src &value)
+{
+    using DstLim = std::numeric_limits<Dst>;
+    using SrcLim = std::numeric_limits<Src>;
+
+    constexpr bool positive_overflow_possible = DstLim::max() < SrcLim::max();
+    constexpr bool negative_overflow_possible = SrcLim::is_signed || (DstLim::lowest() > SrcLim::lowest());
+
+    // unsigned <-- unsigned
+    if constexpr ((!DstLim::is_signed) && (!SrcLim::is_signed)) {
+        if constexpr (positive_overflow_possible) {
+            if (value > DstLim::max()) {
+                return true;
+            }
+        }
+    }
+    // unsigned <-- signed
+    else if constexpr ((!DstLim::is_signed) && SrcLim::is_signed) {
+        if constexpr (positive_overflow_possible) {
+            if (value > DstLim::max()) {
+                return true;
+            }
+        }
+        
+        if constexpr (negative_overflow_possible) {
+            if (value < 0) {
+                return true;
+            }
+        }
+    }
+    // signed <-- unsigned
+    else if constexpr (DstLim::is_signed && (!SrcLim::is_signed)) {
+        if constexpr (positive_overflow_possible) {
+            if (value > DstLim::max()) {
+                return true;
+            }
+        }
+    }
+    // signed <-- signed
+    else if constexpr (DstLim::is_signed && SrcLim::is_signed) {
+        if constexpr (positive_overflow_possible) {
+            if (value > DstLim::max()) {
+                return true;
+            }
+        }
+        
+        if constexpr (negative_overflow_possible) {
+            if (value < DstLim::lowest()) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+template<typename Dst, typename Src>
+constexpr Dst numeric_cast(const Src &value)
+{
+    if (numeric_cast_will_overflow<Dst, Src>(value)) {
+        throw std::overflow_error("value");
+    }
+    
+    return static_cast<Dst>(value);
+}

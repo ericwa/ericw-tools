@@ -106,7 +106,7 @@ struct lightsurf_t
     const globalconfig_t *cfg;
     const modelinfo_t *modelinfo;
     const mbsp_t *bsp;
-    const bsp2_dface_t *face;
+    const mface_t *face;
     /* these take precedence the values in modelinfo */
     vec_t minlight;
     vec3_t minlight_color;

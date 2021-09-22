@@ -127,7 +127,7 @@ static void PrintModelInfo(const mbsp_t *bsp)
 
     for (i = 0; i < bsp->nummodels; i++) {
         const dmodel_t *dmodel = &bsp->dmodels[i];
-        Print("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
+        LogPrint("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
     }
 }
 
@@ -141,7 +141,7 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
     int i, j;
 
     for (i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
+        const mface_t *face = BSP_GetFace(bsp, i);
         dplane_t plane = bsp->dplanes[face->planenum];
 
         if (face->side) {
@@ -151,8 +151,8 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
 
         for (j = 0; j < face->numedges; j++) {
             const int edgenum = bsp->dsurfedges[face->firstedge + j];
-            const int vertnum = (edgenum >= 0) ? bsp->dedges[edgenum].v[0] : bsp->dedges[-edgenum].v[1];
-            const float *point = bsp->dvertexes[vertnum].point;
+            const int vertnum = (edgenum >= 0) ? bsp->dedges[edgenum][0] : bsp->dedges[-edgenum][1];
+            const bspvec3f_t &point = bsp->dvertexes[vertnum];
             const float dist = DotProduct(plane.normal, point) - plane.dist;
 
             if (dist < -PLANE_ON_EPSILON || dist > PLANE_ON_EPSILON)
@@ -238,7 +238,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
 
     /* faces */
     for (i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
+        const mface_t *face = BSP_GetFace(bsp, i);
 
         /* texinfo bounds check */
         if (face->texinfo < 0)
@@ -282,7 +282,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
         int j;
 
         for (j = 0; j < 2; j++) {
-            const uint32_t vertex = edge->v[j];
+            const uint32_t vertex = (*edge)[j];
             if (vertex > bsp->numvertexes)
                 fmt::print("warning: edge {} has vertex {} out range "
                             "({} >= {})\n",
@@ -479,7 +479,7 @@ static void FindFaces(const mbsp_t *bsp, const vec3_t &pos, const vec3_t &normal
 {
     for (int i = 0; i < bsp->nummodels; ++i) {
         const dmodelh2_t *model = &bsp->dmodels[i];
-        const bsp2_dface_t *face = BSP_FindFaceAtPoint(bsp, model, pos, normal);
+        const mface_t *face = BSP_FindFaceAtPoint(bsp, model, pos, normal);
 
         if (face != nullptr) {
             fmt::print("model {} face {}: texture '{}' texinfo {}\n", i, static_cast<ptrdiff_t>(face - bsp->dfaces),
@@ -615,7 +615,7 @@ int main(int argc, char **argv)
             const int fnum = std::stoi(argv[i + 1]);
             const int texinfonum = std::stoi(argv[i + 2]);
 
-            bsp2_dface_t *face = BSP_GetFace(&bsp, fnum);
+            mface_t *face = BSP_GetFace(&bsp, fnum);
             face->texinfo = texinfonum;
 
             ConvertBSPFormat(&bspdata, bspdata.loadversion);

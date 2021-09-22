@@ -97,11 +97,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
             std::vector<uint32_t> brushes;
 
             for (const brush_t *b = entity->brushes; b; b = b->next, b_id++) {
-                if (aabb3f(qvec3f(node->mins[0], node->mins[1], node->mins[2]),
-                        qvec3f(node->maxs[0], node->maxs[1], node->maxs[2]))
-                        .intersectWith(aabb3f(
-                            qvec3f(b->mins[0], b->mins[1], b->mins[2]), qvec3f(b->maxs[0], b->maxs[1], b->maxs[2])))
-                        .valid) {
+                if (node->bounds.intersectWith(b->bounds).valid) {
                     brushes.push_back(b_id);
                 }
             }
@@ -167,9 +163,9 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
                 VectorCopy(vec3_origin, normal);
                 normal[x] = s;
                 if (s == -1)
-                    dist = -b->mins[x];
+                    dist = -b->bounds.mins()[x];
                 else
-                    dist = b->maxs[x];
+                    dist = b->bounds.maxs()[x];
                 int32_t side;
                 int32_t planenum = FindPlane(normal, dist, &side);
                 face_t *f;
@@ -258,10 +254,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     entity->detail_fence = NULL;
     entity->liquid = NULL;
     entity->numbrushes = 0;
-    for (i = 0; i < 3; i++) {
-        entity->mins[i] = VECT_MAX;
-        entity->maxs[i] = -VECT_MAX;
-    }
+    entity->bounds = {};
 
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
@@ -512,9 +505,7 @@ WriteBrushes
 Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific
 hull sizes
 */
-#define LittleLong(x) x // FIXME
-#define LittleShort(x) x // FIXME
-#define LittleFloat(x) x // FIXME
+
 void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes)
 {
     brush_t *b;
@@ -569,12 +560,12 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
             perbrush.numfaces++;
         }
 
-        perbrush.mins[0] = LittleFloat(b->mins[0]);
-        perbrush.mins[1] = LittleFloat(b->mins[1]);
-        perbrush.mins[2] = LittleFloat(b->mins[2]);
-        perbrush.maxs[0] = LittleFloat(b->maxs[0]);
-        perbrush.maxs[1] = LittleFloat(b->maxs[1]);
-        perbrush.maxs[2] = LittleFloat(b->maxs[2]);
+        perbrush.mins[0] = LittleFloat(b->bounds.mins()[0]);
+        perbrush.mins[1] = LittleFloat(b->bounds.mins()[1]);
+        perbrush.mins[2] = LittleFloat(b->bounds.mins()[2]);
+        perbrush.maxs[0] = LittleFloat(b->bounds.maxs()[0]);
+        perbrush.maxs[1] = LittleFloat(b->bounds.maxs()[1]);
+        perbrush.maxs[2] = LittleFloat(b->bounds.maxs()[2]);
         switch (b->contents.native) {
             // contents should match the engine.
             case CONTENTS_EMPTY: // really an error, but whatever
@@ -1230,6 +1221,8 @@ static void InitQBSP(int argc, const char **argv)
         remove(options.szBSPName);
     }
 }
+
+#include <fstream>
 
 /*
 ==================

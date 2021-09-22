@@ -38,7 +38,7 @@ class sceneinfo
 public:
     unsigned geomID;
 
-    std::vector<const bsp2_dface_t *> triToFace;
+    std::vector<const mface_t *> triToFace;
     std::vector<const modelinfo_t *> triToModelinfo;
 };
 
@@ -64,7 +64,7 @@ struct ray_source_info : public RTCIntersectContext
  * Returns 1.0 unless a custom alpha value is set.
  * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha"
  */
-static float Face_Alpha(const modelinfo_t *modelinfo, const bsp2_dface_t *face)
+static float Face_Alpha(const modelinfo_t *modelinfo, const mface_t *face)
 {
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
@@ -79,11 +79,11 @@ static float Face_Alpha(const modelinfo_t *modelinfo, const bsp2_dface_t *face)
 }
 
 sceneinfo CreateGeometry(
-    const mbsp_t *bsp, RTCDevice g_device, RTCScene scene, const std::vector<const bsp2_dface_t *> &faces)
+    const mbsp_t *bsp, RTCDevice g_device, RTCScene scene, const std::vector<const mface_t *> &faces)
 {
     // count triangles
     int numtris = 0;
-    for (const bsp2_dface_t *face : faces) {
+    for (const mface_t *face : faces) {
         if (face->numedges < 3)
             continue;
         numtris += (face->numedges - 2);
@@ -112,10 +112,10 @@ sceneinfo CreateGeometry(
     Vertex *vertices = (Vertex *)rtcSetNewGeometryBuffer(
         geom_0, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 4 * sizeof(float), bsp->numvertexes);
     for (int i = 0; i < bsp->numvertexes; i++) {
-        const dvertex_t *dvertex = &bsp->dvertexes[i];
+        const dvertex_t &dvertex = bsp->dvertexes[i];
         Vertex *vert = &vertices[i];
         for (int j = 0; j < 3; j++) {
-            vert->point[j] = dvertex->point[j];
+            vert->point[j] = dvertex[j];
         }
     }
 
@@ -126,7 +126,7 @@ sceneinfo CreateGeometry(
     Triangle *triangles = (Triangle *)rtcSetNewGeometryBuffer(
         geom_0, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * sizeof(int), numtris);
     int tri_index = 0;
-    for (const bsp2_dface_t *face : faces) {
+    for (const mface_t *face : faces) {
         if (face->numedges < 3)
             continue;
 
@@ -243,7 +243,7 @@ static const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
     }
 }
 
-const bsp2_dface_t *Embree_LookupFace(unsigned int geomID, unsigned int primID)
+const mface_t *Embree_LookupFace(unsigned int geomID, unsigned int primID)
 {
     const sceneinfo &info = Embree_SceneinfoForGeomID(geomID);
     return info.triToFace.at(primID);
@@ -353,7 +353,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
         }
 
         // test fence textures and glass
-        const bsp2_dface_t *face = Embree_LookupFace(geomID, primID);
+        const mface_t *face = Embree_LookupFace(geomID, primID);
         float alpha = Face_Alpha(hit_modelinfo, face);
 
         // mxd
@@ -514,7 +514,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     bsp_static = bsp;
     Q_assert(device == nullptr);
 
-    std::vector<const bsp2_dface_t *> skyfaces, solidfaces, filterfaces;
+    std::vector<const mface_t *> skyfaces, solidfaces, filterfaces;
 
     // check all modelinfos
     for (int mi = 0; mi < bsp->nummodels; mi++) {
@@ -530,7 +530,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
             continue;
 
         for (int i = 0; i < model->model->numfaces; i++) {
-            const bsp2_dface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
+            const mface_t *face = BSP_GetFace(bsp, model->model->firstface + i);
 
             // check for TEX_NOSHADOW
             const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
@@ -695,7 +695,7 @@ hitresult_t Embree_TestLight(const vec3_t start, const vec3_t stop, const modeli
 
 // public
 hitresult_t Embree_TestSky(
-    const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
+    const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const mface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -725,7 +725,7 @@ hitresult_t Embree_TestSky(
 
 // public
 hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self,
-    vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+    vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out)
 {
     RTCRayHit ray = SetupRay(0, start, dirn, dist);
     ray_source_info ctx2(nullptr, self);
@@ -929,7 +929,7 @@ public:
         }
     }
 
-    const bsp2_dface_t *getPushedRayHitFace(size_t j) override
+    const mface_t *getPushedRayHitFace(size_t j) override
     {
         Q_assert(j < _maxrays);
 
@@ -939,7 +939,7 @@ public:
             return nullptr;
 
         const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-        const bsp2_dface_t *face = si.triToFace.at(ray.hit.primID);
+        const mface_t *face = si.triToFace.at(ray.hit.primID);
         Q_assert(face != nullptr);
 
         return face;

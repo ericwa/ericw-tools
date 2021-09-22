@@ -45,16 +45,13 @@ static int mapsurfaces;
 void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // backup the mins/maxs
-    vec3_t mins, maxs;
-    VectorCopy(node->mins, mins);
-    VectorCopy(node->maxs, maxs);
+    aabb3d bounds = node->bounds;
 
     // zero it
     memset(node, 0, sizeof(*node));
 
     // restore relevant fields
-    VectorCopy(mins, node->mins);
-    VectorCopy(maxs, node->maxs);
+    node->bounds = bounds;
 
     node->planenum = PLANENUM_LEAF;
     node->contents = contents;
@@ -155,27 +152,22 @@ static int FaceSide(const face_t *in, const qbsp_plane_t *split)
  * on that side of the plane. Therefore, if the split plane is
  * non-axial, then the returned bounds will overlap.
  */
-static void DivideBounds(const vec3_t mins, const vec3_t maxs, const qbsp_plane_t *split, vec3_t front_mins,
-    vec3_t front_maxs, vec3_t back_mins, vec3_t back_maxs)
+static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t *split, aabb3d &front_bounds, aabb3d &back_bounds)
 {
     int a, b, c, i, j;
     vec_t dist1, dist2, mid, split_mins, split_maxs;
     vec3_t corner;
-    const vec_t *bounds[2];
 
-    VectorCopy(mins, front_mins);
-    VectorCopy(mins, back_mins);
-    VectorCopy(maxs, front_maxs);
-    VectorCopy(maxs, back_maxs);
+    front_bounds = back_bounds = in_bounds;
 
     if (split->type < 3) {
-        front_mins[split->type] = back_maxs[split->type] = split->dist;
+        // CHECK: this escapes the immutability "sandbox" of aabb3d, is this a good idea?
+        // it'd take like 6 lines to otherwise reproduce this line.
+        front_bounds[0][split->type] = back_bounds[1][split->type] = split->dist;
         return;
     }
 
     /* Make proper sloping cuts... */
-    bounds[0] = mins;
-    bounds[1] = maxs;
     for (a = 0; a < 3; ++a) {
         /* Check for parallel case... no intersection */
         if (fabs(split->normal[a]) < NORMAL_EPSILON)
@@ -184,33 +176,33 @@ static void DivideBounds(const vec3_t mins, const vec3_t maxs, const qbsp_plane_
         b = (a + 1) % 3;
         c = (a + 2) % 3;
 
-        split_mins = maxs[a];
-        split_maxs = mins[a];
+        split_mins = in_bounds.maxs()[a];
+        split_maxs = in_bounds.mins()[a];
         for (i = 0; i < 2; ++i) {
-            corner[b] = bounds[i][b];
+            corner[b] = in_bounds[i][b];
             for (j = 0; j < 2; ++j) {
-                corner[c] = bounds[j][c];
+                corner[c] = in_bounds[j][c];
 
-                corner[a] = bounds[0][a];
+                corner[a] = in_bounds[0][a];
                 dist1 = DotProduct(corner, split->normal) - split->dist;
 
-                corner[a] = bounds[1][a];
+                corner[a] = in_bounds[1][a];
                 dist2 = DotProduct(corner, split->normal) - split->dist;
 
-                mid = bounds[1][a] - bounds[0][a];
+                mid = in_bounds[1][a] - in_bounds[0][a];
                 mid *= (dist1 / (dist1 - dist2));
-                mid += bounds[0][a];
+                mid += in_bounds[0][a];
 
-                split_mins = qmax(qmin(mid, split_mins), mins[a]);
-                split_maxs = qmin(qmax(mid, split_maxs), maxs[a]);
+                split_mins = qmax(qmin(mid, split_mins), in_bounds.mins()[a]);
+                split_maxs = qmin(qmax(mid, split_maxs), in_bounds.maxs()[a]);
             }
         }
         if (split->normal[a] > 0) {
-            front_mins[a] = split_mins;
-            back_maxs[a] = split_maxs;
+            front_bounds[0][a] = split_mins;
+            back_bounds[1][a] = split_maxs;
         } else {
-            back_mins[a] = split_mins;
-            front_maxs[a] = split_maxs;
+            back_bounds[0][a] = split_mins;
+            front_bounds[1][a] = split_maxs;
         }
     }
 }
@@ -218,16 +210,16 @@ static void DivideBounds(const vec3_t mins, const vec3_t maxs, const qbsp_plane_
 /*
  * Calculate the split plane metric for axial planes
  */
-static vec_t SplitPlaneMetric_Axial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
+static vec_t SplitPlaneMetric_Axial(const qbsp_plane_t *p, const aabb3d &bounds)
 {
     vec_t value = 0;
     for (int i = 0; i < 3; i++) {
         if (i == p->type) {
             const vec_t dist = p->dist * p->normal[i];
-            value += (maxs[i] - dist) * (maxs[i] - dist);
-            value += (dist - mins[i]) * (dist - mins[i]);
+            value += (bounds.maxs()[i] - dist) * (bounds.maxs()[i] - dist);
+            value += (dist - bounds.mins()[i]) * (dist - bounds.mins()[i]);
         } else {
-            value += 2 * (maxs[i] - mins[i]) * (maxs[i] - mins[i]);
+            value += 2 * (bounds.maxs()[i] - bounds.mins()[i]) * (bounds.maxs()[i] - bounds.mins()[i]);
         }
     }
 
@@ -237,30 +229,26 @@ static vec_t SplitPlaneMetric_Axial(const qbsp_plane_t *p, const vec3_t mins, co
 /*
  * Calculate the split plane metric for non-axial planes
  */
-static vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
+static vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const aabb3d &bounds)
 {
-    vec3_t fmins, fmaxs, bmins, bmaxs;
+    aabb3d f, b;
     vec_t value = 0.0;
 
-    DivideBounds(mins, maxs, p, fmins, fmaxs, bmins, bmaxs);
+    DivideBounds(bounds, p, f, b);
     for (int i = 0; i < 3; i++) {
-        value += (fmaxs[i] - fmins[i]) * (fmaxs[i] - fmins[i]);
-        value += (bmaxs[i] - bmins[i]) * (bmaxs[i] - bmins[i]);
+        value += (f.maxs()[i] - f.mins()[i]) * (f.maxs()[i] - f.mins()[i]);
+        value += (b.maxs()[i] - b.mins()[i]) * (b.maxs()[i] - b.mins()[i]);
     }
 
     return value;
 }
 
-inline vec_t SplitPlaneMetric(const qbsp_plane_t *p, const vec3_t mins, const vec3_t maxs)
+inline vec_t SplitPlaneMetric(const qbsp_plane_t *p, const aabb3d &bounds)
 {
-    vec_t value;
-
     if (p->type < 3)
-        value = SplitPlaneMetric_Axial(p, mins, maxs);
+        return SplitPlaneMetric_Axial(p, bounds);
     else
-        value = SplitPlaneMetric_NonAxial(p, mins, maxs);
-
-    return value;
+        return SplitPlaneMetric_NonAxial(p, bounds);
 }
 
 /*
@@ -270,7 +258,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins, const vec3_t maxs)
+static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     vec_t bestmetric = VECT_MAX;
@@ -292,7 +280,7 @@ static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins,
                 continue;
 
             /* calculate the split metric, smaller values are better */
-            const vec_t metric = SplitPlaneMetric(plane, mins, maxs);
+            const vec_t metric = SplitPlaneMetric(plane, bounds);
             if (metric < bestmetric) {
                 bestmetric = metric;
                 bestsurface = surf;
@@ -311,7 +299,7 @@ static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const vec3_t mins,
                     continue;
 
                 const qbsp_plane_t *plane = &map.planes[surf->planenum];
-                const vec_t metric = SplitPlaneMetric(plane, mins, maxs);
+                const vec_t metric = SplitPlaneMetric(plane, bounds);
                 if (metric < bestmetric) {
                     bestmetric = metric;
                     bestsurface = surf;
@@ -346,7 +334,7 @@ ChoosePlaneFromList
 The real BSP hueristic
 ==================
 */
-static surface_t *ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
+static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     int minsplits = INT_MAX - 1;
@@ -411,7 +399,7 @@ static surface_t *ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t m
              */
             if (splits < minsplits || (splits == minsplits && plane->type < 3)) {
                 if (plane->type < 3) {
-                    const vec_t distribution = SplitPlaneMetric(plane, mins, maxs);
+                    const vec_t distribution = SplitPlaneMetric(plane, bounds);
                     if (distribution > bestdistribution && splits == minsplits)
                         continue;
                     bestdistribution = distribution;
@@ -460,18 +448,11 @@ static surface_t *SelectPartition(surface_t *surfaces)
         return bestsurface; // this is a final split
 
     // calculate a bounding box of the entire surfaceset
-    vec3_t mins, maxs;
-    for (int i = 0; i < 3; i++) {
-        mins[i] = VECT_MAX;
-        maxs[i] = -VECT_MAX;
+    aabb3d bounds;
+
+    for (surface_t *surf = surfaces; surf; surf = surf->next) {
+        bounds += surf->bounds;
     }
-    for (surface_t *surf = surfaces; surf; surf = surf->next)
-        for (int i = 0; i < 3; i++) {
-            if (surf->mins[i] < mins[i])
-                mins[i] = surf->mins[i];
-            if (surf->maxs[i] > maxs[i])
-                maxs[i] = surf->maxs[i];
-        }
 
     // how much of the map are we partitioning?
     double fractionOfMap = surfcount / (double)mapsurfaces;
@@ -487,16 +468,16 @@ static surface_t *SelectPartition(surface_t *surfaces)
         if (options.maxNodeSize >= 64) {
             const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
 
-            largenode = (maxs[0] - mins[0]) > maxnodesize || (maxs[1] - mins[1]) > maxnodesize ||
-                        (maxs[2] - mins[2]) > maxnodesize;
+            largenode = (bounds.maxs()[0] - bounds.mins()[0]) > maxnodesize || (bounds.maxs()[1] - bounds.mins()[1]) > maxnodesize ||
+                        (bounds.maxs()[2] - bounds.mins()[2]) > maxnodesize;
         }
     }
 
     if (usemidsplit || largenode) // do fast way for clipping hull
-        return ChooseMidPlaneFromList(surfaces, mins, maxs);
+        return ChooseMidPlaneFromList(surfaces, bounds);
 
     // do slow way to save poly splits for drawing hull
-    return ChoosePlaneFromList(surfaces, mins, maxs);
+    return ChoosePlaneFromList(surfaces, bounds);
 }
 
 //============================================================================
@@ -511,10 +492,7 @@ Calculates the bounding box
 void CalcSurfaceInfo(surface_t *surf)
 {
     // calculate a bounding box
-    for (int i = 0; i < 3; i++) {
-        surf->mins[i] = VECT_MAX;
-        surf->maxs[i] = -VECT_MAX;
-    }
+    surf->bounds = {};
 
     surf->has_detail = false;
     surf->has_struct = false;
@@ -537,13 +515,9 @@ void CalcSurfaceInfo(surface_t *surf)
         else
             surf->has_struct = true;
 
-        for (int i = 0; i < f->w.numpoints; i++)
-            for (int j = 0; j < 3; j++) {
-                if (f->w.points[i][j] < surf->mins[j])
-                    surf->mins[j] = f->w.points[i][j];
-                if (f->w.points[i][j] > surf->maxs[j])
-                    surf->maxs[j] = f->w.points[i][j];
-            }
+        for (int i = 0; i < f->w.numpoints; i++) {
+            surf->bounds += f->w.points[i];
+        }
     }
 }
 
@@ -659,10 +633,9 @@ static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **fr
 DivideNodeBounds
 ==================
 */
-static void DivideNodeBounds(node_t *node, const qbsp_plane_t *split)
+inline void DivideNodeBounds(node_t *node, const qbsp_plane_t *split)
 {
-    DivideBounds(node->mins, node->maxs, split, node->children[0]->mins, node->children[0]->maxs,
-        node->children[1]->mins, node->children[1]->maxs);
+    DivideBounds(node->bounds, split, node->children[0]->bounds, node->children[1]->bounds);
 }
 
 /*
@@ -874,10 +847,7 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
          * smarter, but this works.
          */
         node_t *headnode = new node_t { };
-        for (int i = 0; i < 3; i++) {
-            headnode->mins[i] = entity->mins[i] - SIDESPACE;
-            headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
-        }
+        headnode->bounds = entity->bounds.grow(SIDESPACE);
         headnode->children[0] = new node_t { };
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = options.target_game->create_empty_contents();
@@ -896,10 +866,7 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model
-    for (int i = 0; i < 3; i++) {
-        headnode->mins[i] = entity->mins[i] - SIDESPACE;
-        headnode->maxs[i] = entity->maxs[i] + SIDESPACE;
-    }
+    headnode->bounds = entity->bounds.grow(SIDESPACE);
 
     // recursively partition everything
     splitnodes = 0;

@@ -97,7 +97,7 @@ static void SaveWindingFn(winding_t &w, void *userinfo)
     args->patches->push_back(MakePatch(args->bsp, *args->cfg, w));
 }
 
-static bool Face_ShouldBounce(const mbsp_t *bsp, const bsp2_dface_t *face)
+static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
     // make bounce light, only if this face is shadow casting
     const modelinfo_t *mi = ModelInfoForFace(bsp, static_cast<int>(face - bsp->dfaces));
@@ -122,7 +122,7 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const bsp2_dface_t *face)
     return true;
 }
 
-void Face_LookupTextureColor(const mbsp_t *bsp, const bsp2_dface_t *face, vec3_t color)
+void Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face, vec3_t color)
 {
     const char *facename = Face_TextureName(bsp, face);
 
@@ -136,7 +136,7 @@ void Face_LookupTextureColor(const mbsp_t *bsp, const bsp2_dface_t *face, vec3_t
 
 template<typename T>
 static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t &surfnormal,
-    vec_t area, const bsp2_dface_t *face, const mbsp_t *bsp)
+    vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
         Q_assert(styleColor.second[0] >= 0);
@@ -186,7 +186,7 @@ static void *MakeBounceLightsThread(void *arg)
         if (i == -1)
             break;
 
-        const bsp2_dface_t *face = BSP_GetFace(bsp, i);
+        const mface_t *face = BSP_GetFace(bsp, i);
 
         if (!Face_ShouldBounce(bsp, face)) {
             continue;

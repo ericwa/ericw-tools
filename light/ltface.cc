@@ -43,7 +43,7 @@ std::atomic<uint32_t> fully_transparent_lightmaps;
 
 /* ======================================================================== */
 
-qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const bsp2_dface_t *face, const qvec3f &world)
+qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, const qvec3f &world)
 {
     const gtexinfo_t *tex = Face_Texinfo(bsp, face);
     if (tex == nullptr)
@@ -73,7 +73,7 @@ qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const bsp2_dface_t *face
     return coord;
 }
 
-faceextents_t::faceextents_t(const bsp2_dface_t *face, const mbsp_t *bsp, float lmscale) : m_lightmapscale(lmscale)
+faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmscale) : m_lightmapscale(lmscale)
 {
     m_worldToTexCoord = WorldToTexSpace(bsp, face);
     m_texCoordToWorld = TexSpaceToWorld(bsp, face);
@@ -197,7 +197,7 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
     return texCoordToWorld(LMCoordToTexCoord(lm));
 }
 
-qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const bsp2_dface_t *f)
+qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
 {
     const gtexinfo_t *tex = Face_Texinfo(bsp, f);
     if (tex == nullptr) {
@@ -221,7 +221,7 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const bsp2_dface_t *f)
     return T;
 }
 
-qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const bsp2_dface_t *f)
+qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
 {
     const qmat4x4f T = WorldToTexSpace(bsp, f);
     const qmat4x4f inv = qv::inverse(T);
@@ -258,7 +258,7 @@ void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2])
 }
 
 /* Debug helper - move elsewhere? */
-void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp)
+void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
 {
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
@@ -272,7 +272,7 @@ void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp)
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
-        const float *point = GetSurfaceVertexPoint(bsp, face, i);
+        const bspvec3f_t &point = GetSurfaceVertexPoint(bsp, face, i);
         const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i);
         LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
             i ? "          " : "    verts ", vert, point[0], point[1], point[2], norm[0], norm[1], norm[2], edge);
@@ -285,7 +285,7 @@ void PrintFaceInfo(const bsp2_dface_t *face, const mbsp_t *bsp)
  * Fills in surf->texmins[], surf->texsize[] and sets surf->exactmid[]
  * ================
  */
-static void CalcFaceExtents(const bsp2_dface_t *face, const mbsp_t *bsp, lightsurf_t *surf)
+static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
     vec3_t worldmaxs, worldmins;
@@ -298,11 +298,11 @@ static void CalcFaceExtents(const bsp2_dface_t *face, const mbsp_t *bsp, lightsu
 
     for (int i = 0; i < face->numedges; i++) {
         const int edge = bsp->dsurfedges[face->firstedge + i];
-        const int vert = (edge >= 0) ? bsp->dedges[edge].v[0] : bsp->dedges[-edge].v[1];
-        const dvertex_t *dvertex = &bsp->dvertexes[vert];
+        const int vert = (edge >= 0) ? bsp->dedges[edge][0] : bsp->dedges[-edge][1];
+        const dvertex_t &dvertex = bsp->dvertexes[vert];
 
         vec3_t worldpoint;
-        VectorCopy(dvertex->point, worldpoint);
+        VectorCopy(dvertex, worldpoint);
         WorldToTexCoord(worldpoint, tex, texcoord);
         for (int j = 0; j < 2; j++) {
             if (texcoord[j] < mins[j])
@@ -360,7 +360,7 @@ class position_t
 {
 public:
     bool m_unoccluded;
-    const bsp2_dface_t *m_actualFace;
+    const mface_t *m_actualFace;
     qvec3f m_position;
     qvec3f m_interpolatedNormal;
 
@@ -369,14 +369,14 @@ public:
     {
     }
 
-    position_t(const bsp2_dface_t *actualFace, qvec3f position, qvec3f interpolatedNormal)
+    position_t(const mface_t *actualFace, qvec3f position, qvec3f interpolatedNormal)
         : m_unoccluded(true), m_actualFace(actualFace), m_position(position),
           m_interpolatedNormal(interpolatedNormal){};
 };
 
 static const float sampleOffPlaneDist = 1.0f;
 
-static float TexSpaceDist(const mbsp_t *bsp, const bsp2_dface_t *face, const qvec3f &p0, const qvec3f &p1)
+static float TexSpaceDist(const mbsp_t *bsp, const mface_t *face, const qvec3f &p0, const qvec3f &p1)
 {
     const qvec2f p0_tex = WorldToTexCoord_HighPrecision(bsp, face, p0);
     const qvec2f p1_tex = WorldToTexCoord_HighPrecision(bsp, face, p1);
@@ -399,14 +399,14 @@ static float TexSpaceDist(const mbsp_t *bsp, const bsp2_dface_t *face, const qve
    both for phong shading to look good, as well as general light quality
 
  */
-static position_t PositionSamplePointOnFace(const mbsp_t *bsp, const bsp2_dface_t *face, const bool phongShaded,
+static position_t PositionSamplePointOnFace(const mbsp_t *bsp, const mface_t *face, const bool phongShaded,
     const qvec3f &point, const qvec3f &modelOffset);
 
-std::vector<const bsp2_dface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const bsp2_dface_t *face)
+std::vector<const mface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const mface_t *face)
 {
-    std::vector<const bsp2_dface_t *> result;
+    std::vector<const mface_t *> result;
     for (int i = 0; i < face->numedges; i++) {
-        const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, i);
+        const mface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, i);
         if (smoothed != nullptr && smoothed != face) {
             result.push_back(smoothed);
         }
@@ -414,7 +414,7 @@ std::vector<const bsp2_dface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const
     return result;
 }
 
-position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qvec3f &origPoint, bool phongShaded,
+position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f &origPoint, bool phongShaded,
     float face_lmscale, int recursiondepth, const qvec3f &modelOffset)
 {
     const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
@@ -517,7 +517,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const bsp2_dface_t *face, const qv
 
         if (bestplane != -1) {
             // FIXME: Also need to handle non-smoothed but same plane
-            const bsp2_dface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, bestplane);
+            const mface_t *smoothed = Face_EdgeIndexSmoothed(bsp, face, bestplane);
             if (smoothed) {
                 // try recursive search
                 if (recursiondepth < 3) {
@@ -605,7 +605,7 @@ bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodel_t *self, const qvec3f
 
 // precondition: `point` is on the same plane as `face` and within the bounds.
 static position_t PositionSamplePointOnFace(
-    const mbsp_t *bsp, const bsp2_dface_t *face, const bool phongShaded, const qvec3f &point, const qvec3f &modelOffset)
+    const mbsp_t *bsp, const mface_t *face, const bool phongShaded, const qvec3f &point, const qvec3f &modelOffset)
 {
     const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
     const auto &points = facecache.points();
@@ -677,7 +677,7 @@ static position_t PositionSamplePointOnFace(
  * =================
  */
 static void CalcPoints(
-    const modelinfo_t *modelinfo, const vec3_t &offset, lightsurf_t *surf, const mbsp_t *bsp, const bsp2_dface_t *face)
+    const modelinfo_t *modelinfo, const vec3_t &offset, lightsurf_t *surf, const mbsp_t *bsp, const mface_t *face)
 {
     const globalconfig_t &cfg = *surf->cfg;
 
@@ -739,13 +739,13 @@ static void CalcPoints(
 
 // mxd. That's Q1-specific. Also moved to bsputils.c as Face_IsTranslucent
 /*static bool
-Face_IsLiquid(const mbsp_t *bsp, const bsp2_dface_t *face)
+Face_IsLiquid(const mbsp_t *bsp, const mface_t *face)
 {
     const char *name = Face_TextureName(bsp, face);
     return name[0] == '*';
 }*/
 
-static bool Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face, const mbsp_t *bsp,
+static bool Lightsurf_Init(const modelinfo_t *modelinfo, const mface_t *face, const mbsp_t *bsp,
     lightsurf_t *lightsurf, facesup_t *facesup)
 {
     /*FIXME: memset can be slow on large datasets*/
@@ -1414,7 +1414,7 @@ std::map<int, qvec3f> GetDirectLighting(
         // apply anglescale
         cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
 
-        const bsp2_dface_t *face = nullptr;
+        const mface_t *face = nullptr;
         const hitresult_t hit = TestSky(origin, sun.sunvec, NULL, &face);
         if (!hit.blocked) {
             continue;
@@ -1635,7 +1635,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
         // check if we hit the wrong texture
         // TODO: this could be faster!
         if (!sun->suntexture.empty()) {
-            const bsp2_dface_t *face = rs->getPushedRayHitFace(j);
+            const mface_t *face = rs->getPushedRayHitFace(j);
             const char *facetex = Face_TextureName(lightsurf->bsp, face);
             if (sun->suntexture != facetex) {
                 continue;
@@ -1674,7 +1674,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
  * LightFace_Min
  * ============
  */
-static void LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face, const vec3_t color, vec_t light,
+static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const vec3_t color, vec_t light,
     const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
@@ -1990,7 +1990,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 }
 
 static void LightFace_Bounce(
-    const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+    const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     // const dmodel_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
@@ -2118,7 +2118,7 @@ static void LightFace_Bounce(
             if (rs->getPushedRayHitType(j) == hittype_t::SKY)
                 continue;
 
-            const bsp2_dface_t *face = rs->getPushedRayHitFace(j);
+            const mface_t *face = rs->getPushedRayHitFace(j);
             if (face == nullptr)
                 continue;
 
@@ -2694,7 +2694,7 @@ static void DumpGLMVector(std::string fname, std::vector<qvec3f> vec, int width,
     WritePPM(fname, width, height, rgbdata.data());
 }
 
-static void DumpDownscaledLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, int w, int h, const vec3_t *colors)
+static void DumpDownscaledLightmap(const mbsp_t *bsp, const mface_t *face, int w, int h, const vec3_t *colors)
 {
     int fnum = Face_GetNum(bsp, face);
 
@@ -2989,10 +2989,10 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
     return res;
 }
 
-static void WriteSingleLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf,
+static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
     const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux);
 
-static void WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
+static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
     const lightmapdict_t *lightmaps)
 {
     const int actual_width = lightsurf->texsize[0] + 1;
@@ -3145,7 +3145,7 @@ static void WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *fac
  * - Writes (actual_width * actual_height * 3) bytes to `lit`
  * - Writes (actual_width * actual_height * 3) bytes to `lux`
  */
-static void WriteSingleLightmap(const mbsp_t *bsp, const bsp2_dface_t *face, const lightsurf_t *lightsurf,
+static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
     const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux)
 {
     const int oversampled_width = actual_width * oversample;
@@ -3245,7 +3245,7 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
  * LightFace
  * ============
  */
-void LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
+void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
 {
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));

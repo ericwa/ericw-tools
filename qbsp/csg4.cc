@@ -615,11 +615,12 @@ surface_t *CSGFaces(const mapentity_t *entity)
             }
 
             /* check bounding box first */
+            // TODO: is this a disjoint check? brush->bounds.disjoint(clipbrush->bounds)?
             int i;
             for (i = 0; i < 3; i++) {
-                if (brush->mins[i] > clipbrush->maxs[i])
+                if (brush->bounds.mins()[i] > clipbrush->bounds.maxs()[i])
                     break;
-                if (brush->maxs[i] < clipbrush->mins[i])
+                if (brush->bounds.maxs()[i] < clipbrush->bounds.mins()[i])
                     break;
             }
             if (i < 3)

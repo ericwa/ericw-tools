@@ -36,7 +36,7 @@
 struct traceinfo_t
 {
     vec3_t point;
-    const bsp2_dface_t *face;
+    const mface_t *face;
     plane_t hitplane;
     /* returns true if sky was hit. */
     bool hitsky;
@@ -97,7 +97,7 @@ struct faceinfo_t
     plane_t plane;
 
     const char *texturename;
-    const bsp2_dface_t *face;
+    const mface_t *face;
 };
 
 static tnode_t *tnodes;
@@ -187,7 +187,7 @@ constexpr bool SphereCullPoint(const faceinfo_t *info, const vec3_t point)
     return deltaLengthSquared > info->radiusSquared;
 }
 
-static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t *info)
+static void MakeFaceInfo(const mbsp_t *bsp, const mface_t *face, faceinfo_t *info)
 {
     info->face = face;
     info->numedges = face->numedges;
@@ -198,7 +198,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t
     // make sphere that bounds the face
     vec3_t centroid = {0, 0, 0};
     for (int i = 0; i < face->numedges; i++) {
-        const float *v = GetSurfaceVertexPoint(bsp, face, i);
+        const bspvec3f_t &v = GetSurfaceVertexPoint(bsp, face, i);
         VectorAdd(centroid, v, centroid);
     }
     VectorScale(centroid, 1.0f / face->numedges, centroid);
@@ -209,7 +209,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t
     for (int i = 0; i < face->numedges; i++) {
         vec3_t delta;
         vec_t radiusSq;
-        const float *v = GetSurfaceVertexPoint(bsp, face, i);
+        const bspvec3f_t &v = GetSurfaceVertexPoint(bsp, face, i);
         VectorSubtract(v, centroid, delta);
         radiusSq = DotProduct(delta, delta);
         if (radiusSq > maxRadiusSq)
@@ -225,7 +225,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t
     //test
     for (int i=0; i<face->numedges; i++)
     {
-        const vec_t *v = GetSurfaceVertexPoint(bsp, face, i);
+        const bspvec3f_t &v = GetSurfaceVertexPoint(bsp, face, i);
         Q_assert(!SphereCullPoint(info, v));
     }
     //test
@@ -245,7 +245,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const bsp2_dface_t *face, faceinfo_t
 static bool Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
 {
     for (int j = model->firstface; j < model->firstface + model->numfaces; j++) {
-        const bsp2_dface_t *face = BSP_GetFace(bsp, j);
+        const mface_t *face = BSP_GetFace(bsp, j);
         if (Face_TextureName(bsp, face)[0] == '{') {
             return true;
         }
@@ -297,7 +297,7 @@ uint32_t clamp_texcoord(vec_t in, uint32_t width)
 }
 
 color_rgba // mxd. int -> color_rgba
-SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point)
+SampleTexture(const mface_t *face, const mbsp_t *bsp, const vec3_t point)
 {
     color_rgba sample{};
     if (!bsp->rgbatexdatasize)
@@ -336,7 +336,7 @@ inline bool TestHitFace(const faceinfo_t *fi, const vec3_t &point)
     return EdgePlanes_PointInside(fi->face, fi->edgeplanes, point);
 }
 
-inline bsp2_dface_t *SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t &point)
+inline mface_t *SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t &point)
 {
     // search the faces on this node
     int i;
@@ -569,7 +569,7 @@ static bool BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
  * ============
  */
 static hittype_t BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodel_t *self,
-    vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out)
+    vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out)
 {
     vec3_t stop;
     VectorMA(start, dist, dirn, stop);
@@ -680,7 +680,7 @@ static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3
         VectorCopy(mid, ti->point);
         // ti->lightplane = tnode->plane;
 
-        bsp2_dface_t *face = SearchNodeForHitFace(tnode->node, mid);
+        mface_t *face = SearchNodeForHitFace(tnode->node, mid);
         if (face) {
             const int facenum = face - bsp_static->dfaces;
             const faceinfo_t *fi = &faceinfos[facenum];
@@ -728,7 +728,7 @@ static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3
 // Embree wrappers
 //
 
-hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out)
+hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const mface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
@@ -759,7 +759,7 @@ hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *
 }
 
 hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out,
-    plane_t *hitplane_out, const bsp2_dface_t **face_out)
+    plane_t *hitplane_out, const mface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {

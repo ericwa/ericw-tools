@@ -133,7 +133,7 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
         }
     }
 
-    std::ofstream(name, std::fstream::out | std::fstream::trunc | std::fstream::binary) << std::setw(4) << j;
+    std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
 }
 
 int main(int argc, char **argv)

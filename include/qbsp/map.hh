@@ -95,7 +95,7 @@ public:
     // order of parse
     std::vector<std::string> epair_order;
 
-    vec3_t mins, maxs;
+    aabb3d bounds;
     brush_t *brushes; /* NULL terminated list */
     int numbrushes;
 
@@ -110,8 +110,6 @@ public:
           numbrushes(0), firstoutputfacenumber(-1), outputmodelnumber(-1)
     {
         VectorSet(origin, 0, 0, 0);
-        VectorSet(mins, 0, 0, 0);
-        VectorSet(maxs, 0, 0, 0);
     }
 };
 
@@ -158,7 +156,7 @@ struct mapdata_t
     std::vector<bsp2_dedge_t> exported_edges;
     std::vector<dvertex_t> exported_vertexes;
     std::vector<int32_t> exported_surfedges;
-    std::vector<bsp2_dface_t> exported_faces;
+    std::vector<mface_t> exported_faces;
     std::vector<dmodelh2_t> exported_models;
     std::vector<uint32_t> exported_leafbrushes;
     std::vector<q2_dbrushside_qbism_t> exported_brushsides;

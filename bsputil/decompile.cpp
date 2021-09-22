@@ -63,7 +63,7 @@ public:
 };
 
 // FIXME: merge with map.cc copy
-static texdef_valve_t TexDef_BSPToValve(const float in_vecs[2][4])
+static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
 {
     texdef_valve_t res;
 
@@ -95,7 +95,7 @@ static texdef_valve_t TexDef_BSPToValve(const float in_vecs[2][4])
     return res;
 }
 
-static void WriteFaceTexdef(const mbsp_t *bsp, const bsp2_dface_t *face, fmt::memory_buffer &file)
+static void WriteFaceTexdef(const mbsp_t *bsp, const mface_t *face, fmt::memory_buffer &file)
 {
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
     const auto valve = TexDef_BSPToValve(texinfo->vecs);
@@ -268,7 +268,7 @@ struct decomp_brush_face_t
     /**
      * The face we were originally derived from
      */
-    const bsp2_dface_t *original_face;
+    const mface_t *original_face;
 
     std::vector<qvec4f> inwardFacingEdgePlanes;
 
@@ -284,13 +284,13 @@ private:
 public:
     decomp_brush_face_t() : winding(std::nullopt), original_face(nullptr) { }
 
-    decomp_brush_face_t(const mbsp_t *bsp, const bsp2_dface_t *face)
+    decomp_brush_face_t(const mbsp_t *bsp, const mface_t *face)
         : winding(winding_t::from_face(bsp, face)), original_face(face)
     {
         buildInwardFacingEdgePlanes();
     }
 
-    decomp_brush_face_t(std::optional<winding_t> &&windingToTakeOwnership, const bsp2_dface_t *face)
+    decomp_brush_face_t(std::optional<winding_t> &&windingToTakeOwnership, const mface_t *face)
         : winding(windingToTakeOwnership), original_face(face)
     {
         buildInwardFacingEdgePlanes();
@@ -334,7 +334,7 @@ static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bs
     result.reserve(static_cast<size_t>(node->numfaces));
 
     for (int i = 0; i < node->numfaces; i++) {
-        const bsp2_dface_t *face = BSP_GetFace(bsp, static_cast<int>(node->firstface) + i);
+        const mface_t *face = BSP_GetFace(bsp, static_cast<int>(node->firstface) + i);
 
         decomp_brush_face_t decompFace(bsp, face);
 
@@ -651,7 +651,7 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
             // see if we have a face
             auto faces = side.faces; // FindFacesOnNode(side.plane.node, bsp);
             if (!faces.empty()) {
-                const bsp2_dface_t *face = faces.at(0).original_face;
+                const mface_t *face = faces.at(0).original_face;
                 const char *name = Face_TextureName(bsp, face);
                 if (0 == strlen(name)) {
                     fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());

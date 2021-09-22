@@ -5,6 +5,7 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
+#include <common/aabb.hh>
 #include <variant>
 #include <array>
 #include <vector>
@@ -230,13 +231,14 @@ public:
         return center * (1.0 / count);
     }
 
-    // TODO: qboundf/qboundd type
-    void bounds(vec3_t out_mins, vec3_t out_maxs) const
+    aabb3d bounds() const
     {
-        ClearBounds(out_mins, out_maxs);
+        aabb3d b;
 
         for (auto &point : *this)
-            AddPointToBounds((const vec_t *) &point[0], out_mins, out_maxs);
+            b += point;
+
+        return b;
     }
 
     /*
@@ -502,14 +504,12 @@ public:
 
     void dice(vec_t subdiv, save_fn_t save_fn, void *userinfo)
     {
-        vec3_t mins, maxs;
-
-        bounds(mins, maxs);
+        aabb3d b = bounds();
 
         size_t i;
 
         for (i = 0; i < 3; i++)
-            if (floor((mins[i] + 1) / subdiv) < floor((maxs[i] - 1) / subdiv))
+            if (floor((b.mins()[i] + 1) / subdiv) < floor((b.maxs()[i] - 1) / subdiv))
                 break;
 
         if (i == 3) {
@@ -523,7 +523,7 @@ public:
         //
         vec3_t split { };
         split[i] = 1;
-        vec_t dist = subdiv * (1 + floor((mins[i] + 1) / subdiv));
+        vec_t dist = subdiv * (1 + floor((b.mins()[i] + 1) / subdiv));
         auto clipped = clip(split, dist);
         clear();
 
@@ -535,7 +535,7 @@ public:
                 o->dice(subdiv, save_fn, userinfo);
     }
 
-    static winding_base_t from_face(const mbsp_t *bsp, const bsp2_dface_t *f)
+    static winding_base_t from_face(const mbsp_t *bsp, const mface_t *f)
     {
         winding_base_t w(f->numedges);
 
@@ -544,15 +544,11 @@ public:
             uint32_t v;
 
             if (se < 0)
-                v = bsp->dedges[-se].v[1];
+                v = bsp->dedges[-se][1];
             else
-                v = bsp->dedges[se].v[0];
+                v = bsp->dedges[se][0];
 
-            const dvertex_t *dv = &bsp->dvertexes[v];
-
-            for (size_t j = 0; j < 3; j++) {
-                w[i][j] = dv->point[j];
-            }
+            w[i] = bsp->dvertexes[v];
         }
 
         // CHECK: can we do the above + colinear checks

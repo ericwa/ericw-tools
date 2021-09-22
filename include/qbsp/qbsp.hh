@@ -40,12 +40,9 @@
 #include <ctime>
 
 #include <common/bspfile.hh>
+#include <common/aabb.hh>
 
 #include "file.hh"
-
-#ifndef __GNUC__
-#define __attribute__(x)
-#endif
 
 /*
  * Clipnodes need to be stored as a 16-bit offset. Originally, this was a
@@ -119,11 +116,9 @@ enum
 #include <common/mathlib.hh>
 #include <qbsp/winding.hh>
 
-using stvecs = std::array<std::array<float, 4>, 2>;
-
 struct mtexinfo_t
 {
-    stvecs vecs; /* [s/t][xyz offset] */
+    texvecf vecs; /* [s/t][xyz offset] */
     int32_t miptex = 0;
     surfflags_t flags = {};
     int32_t value = 0; // Q2-specific
@@ -163,7 +158,7 @@ struct surface_t
     surface_t *original; // before BSP cuts it up
     int planenum;
     int outputplanenum; // only valid after WriteSurfacePlanes
-    vec3_t mins, maxs;
+    aabb3d bounds;
     bool onnode; // true if surface has already been used
                  //   as a splitting node
     bool detail_separator; // true if ALL faces are detail
@@ -181,7 +176,7 @@ struct portal_t;
 
 struct node_t
 {
-    vec3_t mins, maxs; // bounding volume, not just points inside
+    aabb3d bounds; // bounding volume, not just points inside
 
     // information for decision nodes
     int planenum; // -1 = leaf node

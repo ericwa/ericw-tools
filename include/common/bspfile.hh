@@ -25,6 +25,7 @@
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
+#include <common/aabb.hh>
 
 /* upper design bounds */
 
@@ -125,42 +126,138 @@ struct lumpspec_t
     size_t size;
 };
 
+using bspvec3s_t = std::array<int16_t, 3>;
+using bspvec3f_t = std::array<float, 3>;
+
+// helper functions to quickly numerically cast mins/maxs
+// and floor/ceil them in the case of float -> integral
+template<typename T, typename F>
+inline std::array<T, 3> aabb_mins_cast(const std::array<F, 3> &f)
+{
+    if constexpr(std::is_floating_point_v<T>)
+        return { numeric_cast<T>(floor(f[0])), numeric_cast<T>(floor(f[1])), numeric_cast<T>(floor(f[2])) };
+    else
+        return { numeric_cast<T>(f[0]), numeric_cast<T>(f[1]), numeric_cast<T>(f[2]) };
+}
+
+template<typename T, typename F>
+inline std::array<T, 3> aabb_maxs_cast(const std::array<F, 3> &f)
+{
+    if constexpr(std::is_floating_point_v<T>)
+        return { numeric_cast<T>(ceil(f[0])), numeric_cast<T>(ceil(f[1])), numeric_cast<T>(ceil(f[2])) };
+    else
+        return { numeric_cast<T>(f[0]), numeric_cast<T>(f[1]), numeric_cast<T>(f[2]) };
+}
+
 extern const lumpspec_t lumpspec_bsp29[BSP_LUMPS];
 extern const lumpspec_t lumpspec_bsp2rmq[BSP_LUMPS];
 extern const lumpspec_t lumpspec_bsp2[BSP_LUMPS];
 extern const lumpspec_t lumpspec_q2bsp[Q2_HEADER_LUMPS];
 
-struct dmodelq1_t
+struct dmodelh2_t
 {
-    float mins[3];
-    float maxs[3];
-    float origin[3];
-    int32_t headnode[MAX_MAP_HULLS_Q1]; /* 4 for backward compat, only 3 hulls exist */
+    bspvec3f_t mins;
+    bspvec3f_t maxs;
+    bspvec3f_t origin;
+    std::array<int32_t, MAX_MAP_HULLS_H2> headnode; /* hexen2 only uses 6 */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
 };
 
-struct dmodelh2_t
+// shortcut template to trim (& convert) std::arrays
+// between two lengths
+template<typename ADest, typename ASrc>
+constexpr ADest array_cast(const ASrc &src)
 {
-    float mins[3];
-    float maxs[3];
-    float origin[3];
-    int32_t headnode[MAX_MAP_HULLS_H2]; /* hexen2 only uses 6 */
+    ADest dest { };
+
+    for (size_t i = 0; i < std::min(dest.size(), src.size()); i++)
+    {
+        if constexpr (std::is_arithmetic_v<ADest::value_type> && std::is_arithmetic_v<ASrc::value_type>)
+            dest[i] = numeric_cast<ADest::value_type>(src[i]);
+        else
+            dest[i] = static_cast<ADest::value_type>(src[i]);
+    }
+
+    return dest;
+}
+
+struct dmodelq1_t
+{
+    bspvec3f_t mins;
+    bspvec3f_t maxs;
+    bspvec3f_t origin;
+    std::array<int32_t, MAX_MAP_HULLS_Q1> headnode; /* 4 for backward compat, only 3 hulls exist */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
+
+    dmodelq1_t() = default;
+
+    // convert from mbsp_t
+    dmodelq1_t(const dmodelh2_t &model) :
+        mins(model.mins),
+        maxs(model.maxs),
+        origin(model.origin),
+        headnode(array_cast<decltype(headnode)>(model.headnode)),
+        visleafs(model.visleafs),
+        firstface(model.firstface),
+        numfaces(model.numfaces)
+    {
+    }
+
+    // convert to mbsp_t
+    operator dmodelh2_t() const
+    {
+        return {
+            mins,
+            maxs,
+            origin,
+            array_cast<decltype(dmodelh2_t::headnode)>(headnode),
+            visleafs,
+            firstface,
+            numfaces
+        };
+    }
 };
 
 struct q2_dmodel_t
 {
-    float mins[3];
-    float maxs[3];
-    float origin[3]; // for sounds or lights
+    bspvec3f_t mins;
+    bspvec3f_t maxs;
+    bspvec3f_t origin; // for sounds or lights
     int32_t headnode;
     int32_t firstface;
     int32_t numfaces; // submodels just draw faces
                       // without walking the bsp tree
+
+    q2_dmodel_t() = default;
+
+    // convert from mbsp_t
+    q2_dmodel_t(const dmodelh2_t &model) :
+        mins(model.mins),
+        maxs(model.maxs),
+        origin(model.origin),
+        headnode(model.headnode[0]),
+        firstface(model.firstface),
+        numfaces(model.numfaces)
+    {
+    }
+
+    // convert to mbsp_t
+    operator dmodelh2_t() const
+    {
+        return {
+            mins,
+            maxs,
+            origin,
+            { headnode },
+            0, // visleafs
+            firstface,
+            numfaces
+        };
+    }
 };
 
 // FIXME: remove
@@ -188,10 +285,7 @@ struct rgba_miptex_t
     unsigned offset; // Offset to RGBA texture pixels
 };
 
-struct dvertex_t
-{
-    float point[3];
-};
+using dvertex_t = bspvec3f_t;
 
 /* 0-2 are axial planes */
 #define PLANE_X 0
@@ -344,44 +438,122 @@ struct contentflags_t
     std::string to_string(const gamedef_t *game) const;
 };
 
+struct bsp2_dnode_t
+{
+    int32_t planenum;
+    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
+    bspvec3f_t mins; /* for sphere culling */
+    bspvec3f_t maxs;
+    uint32_t firstface;
+    uint32_t numfaces; /* counting both sides */
+};
+
 struct bsp29_dnode_t
 {
     int32_t planenum;
-    int16_t children[2]; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
-    int16_t mins[3]; /* for sphere culling */
-    int16_t maxs[3];
+    std::array<int16_t, 2> children; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
+    bspvec3s_t mins; /* for sphere culling */
+    bspvec3s_t maxs;
     uint16_t firstface;
     uint16_t numfaces; /* counting both sides */
+
+    bsp29_dnode_t() = default;
+
+    // convert from mbsp_t
+    bsp29_dnode_t(const bsp2_dnode_t &model) :
+        planenum(model.planenum),
+        children(array_cast<decltype(children)>(model.children)),
+        mins(aabb_mins_cast<int16_t>(model.mins)),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
+        firstface(numeric_cast<uint16_t>(model.firstface)),
+        numfaces(numeric_cast<uint16_t>(model.numfaces))
+    {
+    }
+
+    // convert to mbsp_t
+    operator bsp2_dnode_t() const
+    {
+        return {
+            planenum,
+            array_cast<decltype(bsp2_dnode_t::children)>(children),
+            aabb_mins_cast<float>(mins),
+            aabb_mins_cast<float>(maxs),
+            firstface,
+            numfaces
+        };
+    }
 };
 
 struct bsp2rmq_dnode_t
 {
     int32_t planenum;
-    int32_t children[2]; /* negative numbers are -(leafs+1), not nodes */
-    int16_t mins[3]; /* for sphere culling */
-    int16_t maxs[3];
+    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
+    bspvec3s_t mins; /* for sphere culling */
+    bspvec3s_t maxs;
     uint32_t firstface;
     uint32_t numfaces; /* counting both sides */
-};
 
-struct bsp2_dnode_t
-{
-    int32_t planenum;
-    int32_t children[2]; /* negative numbers are -(leafs+1), not nodes */
-    float mins[3]; /* for sphere culling */
-    float maxs[3];
-    uint32_t firstface;
-    uint32_t numfaces; /* counting both sides */
+    bsp2rmq_dnode_t() = default;
+
+    // convert from mbsp_t
+    bsp2rmq_dnode_t(const bsp2_dnode_t &model) :
+        planenum(model.planenum),
+        children(model.children),
+        mins(aabb_mins_cast<int16_t>(model.mins)),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
+        firstface(model.firstface),
+        numfaces(model.numfaces)
+    {
+    }
+
+    // convert to mbsp_t
+    operator bsp2_dnode_t() const
+    {
+        return {
+            planenum,
+            children,
+            aabb_mins_cast<float>(mins),
+            aabb_mins_cast<float>(maxs),
+            firstface,
+            numfaces
+        };
+    }
 };
 
 struct q2_dnode_t
 {
     int32_t planenum;
-    int32_t children[2]; // negative numbers are -(leafs+1), not nodes
-    int16_t mins[3]; // for frustom culling
-    int16_t maxs[3];
+    std::array<int32_t, 2> children; // negative numbers are -(leafs+1), not nodes
+    bspvec3s_t mins; // for frustom culling
+    bspvec3s_t maxs;
     uint16_t firstface;
     uint16_t numfaces; // counting both sides
+
+    q2_dnode_t() = default;
+
+    // convert from mbsp_t
+    q2_dnode_t(const bsp2_dnode_t &model) :
+        planenum(model.planenum),
+        children(model.children),
+        mins(aabb_mins_cast<int16_t>(model.mins)),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
+        firstface(numeric_cast<uint16_t>(model.firstface)),
+        numfaces(numeric_cast<uint16_t>(model.numfaces))
+    {
+    }
+
+    // convert to mbsp_t
+    operator bsp2_dnode_t() const
+    {
+        return {
+            planenum,
+            children,
+            aabb_mins_cast<float>(mins),
+            aabb_mins_cast<float>(maxs),
+            firstface,
+            numfaces
+        };
+    }
 };
 
 using q2_dnode_qbism_t = bsp2_dnode_t;
@@ -392,32 +564,47 @@ using q2_dnode_qbism_t = bsp2_dnode_t;
  * values and can be read as the signed value to be compatible with the above
  * (i.e. simply subtract 65536).
  */
-struct bsp29_dclipnode_t
-{
-    int32_t planenum;
-    int16_t children[2]; /* negative numbers are contents */
-};
-
 struct bsp2_dclipnode_t
 {
     int32_t planenum;
-    int32_t children[2]; /* negative numbers are contents */
+    std::array<int32_t, 2> children; /* negative numbers are contents */
 };
 
-struct texinfo_t
+struct bsp29_dclipnode_t
 {
-    float vecs[2][4]; /* [s/t][xyz offset] */
-    int32_t miptex;
-    int32_t flags;
-};
+    int32_t planenum;
+    std::array<int16_t, 2> children; /* negative numbers are contents */
 
-struct q2_texinfo_t
-{
-    float vecs[2][4]; // [s/t][xyz offset]
-    int32_t flags; // miptex flags + overrides
-    int32_t value; // light emission, etc
-    char texture[32]; // texture name (textures/*.wal)
-    int32_t nexttexinfo; // for animations, -1 = end of chain
+    bsp29_dclipnode_t() = default;
+    
+    // convert from mbsp_t
+    bsp29_dclipnode_t(const bsp2_dclipnode_t &model) :
+        planenum(model.planenum),
+        children({ downcast(model.children[0]), downcast(model.children[1]) })
+    {
+    }
+
+    // convert to mbsp_t
+    operator bsp2_dclipnode_t() const
+    {
+        return {
+            planenum,
+            { upcast(children[0]), upcast(children[1]) }
+        };
+    }
+    
+    /* Slightly tricky since we support > 32k clipnodes */
+private:
+    static constexpr int16_t downcast(const int32_t &v)
+    {
+        return numeric_cast<int16_t>(v < 0 ? v + 0x10000 : v);
+    }
+    
+    static constexpr int32_t upcast(const int16_t &v)
+    {
+        int32_t child = (uint16_t)v;
+        return child > 0xfff0 ? child - 0x10000 : child;
+    }
 };
 
 // Q1 Texture flags.
@@ -496,9 +683,11 @@ struct extended_flags_header_t
     uint32_t surfflags_size; // sizeof(surfflags_t)
 };
 
+using texvecf = std::array<std::array<float, 4>, 2>;
+
 struct gtexinfo_t
 {
-    float vecs[2][4]; // [s/t][xyz offset]
+    texvecf vecs; // [s/t][xyz offset]
     surfflags_t flags; // native miptex flags + extended flags
 
     // q1 only
@@ -506,27 +695,93 @@ struct gtexinfo_t
 
     // q2 only
     int32_t value; // light emission, etc
-    char texture[32]; // texture name (textures/*.wal)
+    std::array<char, 32> texture; // texture name (textures/*.wal)
     int32_t nexttexinfo; // for animations, -1 = end of chain
+};
+
+struct texinfo_t
+{
+    texvecf vecs; /* [s/t][xyz offset] */
+    int32_t miptex;
+    int32_t flags;
+
+    texinfo_t() = default;
+
+    // convert from mbsp_t
+    texinfo_t(const gtexinfo_t &model) :
+        vecs(model.vecs),
+        miptex(model.miptex),
+        flags(model.flags.native)
+    {
+    }
+
+    // convert to mbsp_t
+    operator gtexinfo_t() const
+    {
+        return {
+            vecs,
+            { flags },
+            miptex
+        };
+    }
+};
+
+struct q2_texinfo_t
+{
+    texvecf vecs; // [s/t][xyz offset]
+    int32_t flags; // miptex flags + overrides
+    int32_t value; // light emission, etc
+    std::array<char, 32> texture; // texture name (textures/*.wal)
+    int32_t nexttexinfo; // for animations, -1 = end of chain
+
+    q2_texinfo_t() = default;
+
+    // convert from mbsp_t
+    q2_texinfo_t(const gtexinfo_t &model) :
+        vecs(model.vecs),
+        flags(model.flags.native),
+        value(model.value),
+        texture(model.texture),
+        nexttexinfo(model.nexttexinfo)
+    {
+    }
+
+    // convert to mbsp_t
+    operator gtexinfo_t() const
+    {
+        return {
+            vecs,
+            { flags },
+            -1,
+            value,
+            texture,
+            nexttexinfo
+        };
+    }
 };
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for
  * counterclockwise use of the edge in a face
  */
-struct bsp29_dedge_t
+using bsp29_dedge_t = std::array<uint16_t, 2>; /* vertex numbers */
+using bsp2_dedge_t = std::array<uint32_t, 2>; /* vertex numbers */
+
+constexpr size_t MAXLIGHTMAPS = 4;
+
+struct mface_t
 {
-    uint16_t v[2]; /* vertex numbers */
+    int64_t planenum;
+    int32_t side; // if true, the face is on the back side of the plane
+    int32_t firstedge; /* we must support > 64k edges */
+    int32_t numedges;
+    int32_t texinfo;
+
+    /* lighting info */
+    std::array<uint8_t, MAXLIGHTMAPS> styles;
+    int32_t lightofs; /* start of [numstyles*surfsize] samples */
 };
 
-struct bsp2_dedge_t
-{
-    uint32_t v[2]; /* vertex numbers */
-};
-
-using q2_dedge_qbism_t = bsp2_dedge_t;
-
-#define MAXLIGHTMAPS 4
 struct bsp29_dface_t
 {
     int16_t planenum;
@@ -536,8 +791,36 @@ struct bsp29_dface_t
     int16_t texinfo;
 
     /* lighting info */
-    uint8_t styles[MAXLIGHTMAPS];
+    std::array<uint8_t, MAXLIGHTMAPS> styles;
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
+
+    bsp29_dface_t() = default;
+
+    // convert from mbsp_t
+    bsp29_dface_t(const mface_t &model) :
+        planenum(numeric_cast<int16_t>(model.planenum)),
+        side(numeric_cast<int16_t>(model.side)),
+        firstedge(model.firstedge),
+        numedges(numeric_cast<int16_t>(model.numedges)),
+        texinfo(numeric_cast<int16_t>(model.texinfo)),
+        styles(model.styles),
+        lightofs(model.lightofs)
+    {
+    }
+
+    // convert to mbsp_t
+    operator mface_t() const
+    {
+        return {
+            planenum,
+            side,
+            firstedge,
+            numedges,
+            texinfo,
+            styles,
+            lightofs
+        };
+    }
 };
 
 struct bsp2_dface_t
@@ -549,8 +832,36 @@ struct bsp2_dface_t
     int32_t texinfo;
 
     /* lighting info */
-    uint8_t styles[MAXLIGHTMAPS];
+    std::array<uint8_t, MAXLIGHTMAPS> styles;
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
+
+    bsp2_dface_t() = default;
+
+    // convert from mbsp_t
+    bsp2_dface_t(const mface_t &model) :
+        planenum(numeric_cast<int32_t>(model.planenum)),
+        side(model.side),
+        firstedge(model.firstedge),
+        numedges(model.numedges),
+        texinfo(model.texinfo),
+        styles(model.styles),
+        lightofs(model.lightofs)
+    {
+    }
+
+    // convert to mbsp_t
+    operator mface_t() const
+    {
+        return {
+            planenum,
+            side,
+            firstedge,
+            numedges,
+            texinfo,
+            styles,
+            lightofs
+        };
+    }
 };
 
 struct q2_dface_t
@@ -562,8 +873,36 @@ struct q2_dface_t
     int16_t texinfo;
 
     // lighting info
-    uint8_t styles[MAXLIGHTMAPS];
+    std::array<uint8_t, MAXLIGHTMAPS> styles;
     int32_t lightofs; // start of [numstyles*surfsize] samples
+
+    q2_dface_t() = default;
+
+    // convert from mbsp_t
+    q2_dface_t(const mface_t &model) :
+        planenum(numeric_cast<uint16_t>(model.planenum)),
+        side(numeric_cast<int16_t>(model.side)),
+        firstedge(model.firstedge),
+        numedges(numeric_cast<int16_t>(model.numedges)),
+        texinfo(numeric_cast<int16_t>(model.texinfo)),
+        styles(model.styles),
+        lightofs(model.lightofs)
+    {
+    }
+
+    // convert to mbsp_t
+    operator mface_t() const
+    {
+        return {
+            planenum,
+            side,
+            firstedge,
+            numedges,
+            texinfo,
+            styles,
+            lightofs
+        };
+    }
 };
 
 struct q2_dface_qbism_t
@@ -575,52 +914,182 @@ struct q2_dface_qbism_t
     int32_t texinfo;
 
     // lighting info
-    uint8_t styles[MAXLIGHTMAPS];
+    std::array<uint8_t, MAXLIGHTMAPS> styles;
     int32_t lightofs; // start of [numstyles*surfsize] samples
-};
 
-/* Ambient Sounds */
-#define AMBIENT_WATER 0
-#define AMBIENT_SKY 1
-#define AMBIENT_SLIME 2
-#define AMBIENT_LAVA 3
-#define NUM_AMBIENTS 4
+    q2_dface_qbism_t() = default;
+
+    // convert from mbsp_t
+    q2_dface_qbism_t(const mface_t &model) :
+        planenum(numeric_cast<uint32_t>(model.planenum)),
+        side(model.side),
+        firstedge(model.firstedge),
+        numedges(model.numedges),
+        texinfo(model.texinfo),
+        styles(model.styles),
+        lightofs(model.lightofs)
+    {
+    }
+
+    // convert to mbsp_t
+    operator mface_t() const
+    {
+        return {
+            planenum,
+            side,
+            firstedge,
+            numedges,
+            texinfo,
+            styles,
+            lightofs
+        };
+    }
+};
 
 /*
  * leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas (except Q2)
  * all other leafs need visibility info
  */
+/* Ambient Sounds */
+#define AMBIENT_WATER 0
+#define AMBIENT_SKY 1
+#define AMBIENT_SLIME 2
+#define AMBIENT_LAVA 3
+constexpr size_t NUM_AMBIENTS = 4;
+
+struct mleaf_t
+{
+    // bsp2_dleaf_t
+    int32_t contents;
+    int32_t visofs; /* -1 = no visibility info */
+    bspvec3f_t mins; /* for frustum culling     */
+    bspvec3f_t maxs;
+    uint32_t firstmarksurface;
+    uint32_t nummarksurfaces;
+    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
+
+    // q2 extras
+    int32_t cluster;
+    int32_t area;
+    uint32_t firstleafbrush;
+    uint32_t numleafbrushes;
+};
+
 struct bsp29_dleaf_t
 {
     int32_t contents;
     int32_t visofs; /* -1 = no visibility info */
-    int16_t mins[3]; /* for frustum culling     */
-    int16_t maxs[3];
+    bspvec3s_t mins; /* for frustum culling     */
+    bspvec3s_t maxs;
     uint16_t firstmarksurface;
     uint16_t nummarksurfaces;
-    uint8_t ambient_level[NUM_AMBIENTS];
+    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
+
+    bsp29_dleaf_t() = default;
+
+    // convert from mbsp_t
+    bsp29_dleaf_t(const mleaf_t &model) :
+        contents(model.contents),
+        visofs(model.visofs),
+        mins(aabb_mins_cast<int16_t>(model.mins)),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
+        firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface)),
+        nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces)),
+        ambient_level(model.ambient_level)
+    {
+    }
+
+    // convert to mbsp_t
+    operator mleaf_t() const
+    {
+        return {
+            contents,
+            visofs,
+            aabb_mins_cast<float>(mins),
+            aabb_mins_cast<float>(maxs),
+            firstmarksurface,
+            nummarksurfaces,
+            ambient_level
+        };
+    }
 };
 
 struct bsp2rmq_dleaf_t
 {
     int32_t contents;
     int32_t visofs; /* -1 = no visibility info */
-    int16_t mins[3]; /* for frustum culling     */
-    int16_t maxs[3];
+    bspvec3s_t mins; /* for frustum culling     */
+    bspvec3s_t maxs;
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
-    uint8_t ambient_level[NUM_AMBIENTS];
+    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
+
+    bsp2rmq_dleaf_t() = default;
+
+    // convert from mbsp_t
+    bsp2rmq_dleaf_t(const mleaf_t &model) :
+        contents(model.contents),
+        visofs(model.visofs),
+        mins(aabb_mins_cast<int16_t>(model.mins)),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
+        firstmarksurface(model.firstmarksurface),
+        nummarksurfaces(model.nummarksurfaces),
+        ambient_level(model.ambient_level)
+    {
+    }
+
+    // convert to mbsp_t
+    operator mleaf_t() const
+    {
+        return {
+            contents,
+            visofs,
+            aabb_mins_cast<float>(mins),
+            aabb_mins_cast<float>(maxs),
+            firstmarksurface,
+            nummarksurfaces,
+            ambient_level
+        };
+    }
 };
 
 struct bsp2_dleaf_t
 {
     int32_t contents;
     int32_t visofs; /* -1 = no visibility info */
-    float mins[3]; /* for frustum culling     */
-    float maxs[3];
+    bspvec3f_t mins; /* for frustum culling     */
+    bspvec3f_t maxs;
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
-    uint8_t ambient_level[NUM_AMBIENTS];
+    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
+
+    bsp2_dleaf_t() = default;
+
+    // convert from mbsp_t
+    bsp2_dleaf_t(const mleaf_t &model) :
+        contents(model.contents),
+        visofs(model.visofs),
+        mins(model.mins),
+        maxs(model.maxs),
+        firstmarksurface(model.firstmarksurface),
+        nummarksurfaces(model.nummarksurfaces),
+        ambient_level(model.ambient_level)
+    {
+    }
+
+    // convert to mbsp_t
+    operator mleaf_t() const
+    {
+        return {
+            contents,
+            visofs,
+            mins,
+            maxs,
+            firstmarksurface,
+            nummarksurfaces,
+            ambient_level
+        };
+    }
 };
 
 struct q2_dleaf_t
@@ -630,14 +1099,48 @@ struct q2_dleaf_t
     int16_t cluster;
     int16_t area;
 
-    int16_t mins[3]; // for frustum culling
-    int16_t maxs[3];
+    bspvec3s_t mins; // for frustum culling
+    bspvec3s_t maxs;
 
     uint16_t firstleafface;
     uint16_t numleaffaces;
 
     uint16_t firstleafbrush;
     uint16_t numleafbrushes;
+
+    q2_dleaf_t() = default;
+
+    // convert from mbsp_t
+    q2_dleaf_t(const mleaf_t &model) :
+        contents(model.contents),
+        cluster(numeric_cast<int16_t>(model.cluster)),
+        area(numeric_cast<int16_t>(model.area)),
+        mins(aabb_mins_cast<int16_t>(model.mins)),
+        maxs(aabb_mins_cast<int16_t>(model.maxs)),
+        firstleafface(numeric_cast<uint16_t>(model.firstmarksurface)),
+        numleaffaces(numeric_cast<uint16_t>(model.nummarksurfaces)),
+        firstleafbrush(numeric_cast<uint16_t>(model.firstleafbrush)),
+        numleafbrushes(numeric_cast<uint16_t>(model.numleafbrushes))
+    {
+    }
+
+    // convert to mbsp_t
+    operator mleaf_t() const
+    {
+        return {
+            contents,
+            -1,
+            aabb_mins_cast<float>(mins),
+            aabb_mins_cast<float>(maxs),
+            firstleafface,
+            numleaffaces,
+            {},
+            cluster,
+            area,
+            firstleafbrush,
+            numleafbrushes
+        };
+    }
 };
 
 struct q2_dleaf_qbism_t
@@ -647,44 +1150,78 @@ struct q2_dleaf_qbism_t
     int32_t cluster;
     int32_t area;
 
-    float mins[3]; // for frustum culling
-    float maxs[3];
+    bspvec3f_t mins; // for frustum culling
+    bspvec3f_t maxs;
 
     uint32_t firstleafface;
     uint32_t numleaffaces;
 
     uint32_t firstleafbrush;
     uint32_t numleafbrushes;
-};
 
-struct mleaf_t
-{
-    // bsp2_dleaf_t
-    int32_t contents;
-    int32_t visofs; /* -1 = no visibility info */
-    float mins[3]; /* for frustum culling     */
-    float maxs[3];
-    uint32_t firstmarksurface;
-    uint32_t nummarksurfaces;
-    uint8_t ambient_level[NUM_AMBIENTS];
+    q2_dleaf_qbism_t() = default;
 
-    // q2 extras
-    int32_t cluster;
-    int32_t area;
-    uint32_t firstleafbrush;
-    uint32_t numleafbrushes;
-};
+    // convert from mbsp_t
+    q2_dleaf_qbism_t(const mleaf_t &model) :
+        contents(model.contents),
+        cluster(model.cluster),
+        area(model.area),
+        mins(model.mins),
+        maxs(model.maxs),
+        firstleafface(model.firstmarksurface),
+        numleaffaces(model.nummarksurfaces),
+        firstleafbrush(model.firstleafbrush),
+        numleafbrushes(model.numleafbrushes)
+    {
+    }
 
-struct dbrushside_t
-{
-    uint16_t planenum; // facing out of the leaf
-    int16_t texinfo;
+    // convert to mbsp_t
+    operator mleaf_t() const
+    {
+        return {
+            contents,
+            -1,
+            mins,
+            maxs,
+            firstleafface,
+            numleaffaces,
+            {},
+            cluster,
+            area,
+            firstleafbrush,
+            numleafbrushes
+        };
+    }
 };
 
 struct q2_dbrushside_qbism_t
 {
     uint32_t planenum; // facing out of the leaf
     int32_t texinfo;
+};
+
+struct q2_dbrushside_t
+{
+    uint16_t planenum; // facing out of the leaf
+    int16_t texinfo;
+
+    q2_dbrushside_t() = default;
+
+    // convert from mbsp_t
+    q2_dbrushside_t(const q2_dbrushside_qbism_t &model) :
+        planenum(numeric_cast<uint16_t>(model.planenum)),
+        texinfo(numeric_cast<int16_t>(model.texinfo))
+    {
+    }
+
+    // convert to mbsp_t
+    operator q2_dbrushside_qbism_t() const
+    {
+        return {
+            planenum,
+            texinfo
+        };
+    }
 };
 
 struct dbrush_t
@@ -1010,7 +1547,7 @@ struct q2bsp_t
     dbrush_t *dbrushes;
 
     int numbrushsides;
-    dbrushside_t *dbrushsides;
+    q2_dbrushside_t *dbrushsides;
 
     uint8_t dpop[256];
 
@@ -1075,7 +1612,7 @@ struct q2bsp_qbism_t
     q2_dface_qbism_t *dfaces;
 
     int numedges;
-    q2_dedge_qbism_t *dedges;
+    bsp2_dedge_t *dedges;
 
     int numleaffaces;
     uint32_t *dleaffaces;
@@ -1166,7 +1703,7 @@ struct mbsp_t
     gtexinfo_t *texinfo;
 
     int numfaces;
-    bsp2_dface_t *dfaces;
+    mface_t *dfaces;
 
     int numclipnodes;
     bsp2_dclipnode_t *dclipnodes;
@@ -1300,7 +1837,7 @@ struct gamedef_t
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
     virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
-    virtual const std::initializer_list<qboundsd> &get_hull_sizes() const = 0;
+    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
 };
 
 // BSP version struct & instances

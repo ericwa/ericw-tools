@@ -34,17 +34,17 @@ public:
         bool valid;
         aabb<N, V> bbox;
 
-        intersection_t() : valid(false), bbox(V(0), V(0)) { }
+        constexpr intersection_t() : valid(false), bbox(V(0), V(0)) { }
 
-        intersection_t(const aabb<N, V> &i) : valid(true), bbox(i) { }
+        constexpr intersection_t(const aabb<N, V> &i) : valid(true), bbox(i) { }
 
-        bool operator==(const intersection_t &other) const { return valid == other.valid && bbox == other.bbox; }
+        constexpr bool operator==(const intersection_t &other) const { return valid == other.valid && bbox == other.bbox; }
     };
 
 private:
     V m_mins, m_maxs;
 
-    void fix()
+    constexpr void fix()
     {
         for (int i = 0; i < N; i++) {
             if (m_maxs[i] < m_mins[i]) {
@@ -54,17 +54,23 @@ private:
     }
 
 public:
-    aabb(const V &mins, const V &maxs) : m_mins(mins), m_maxs(maxs) { fix(); }
+    constexpr aabb() :
+        m_mins(VECT_MAX, VECT_MAX, VECT_MAX),
+        m_maxs(-VECT_MAX, -VECT_MAX, -VECT_MAX)
+    {
+    }
 
-    aabb(const aabb<N, V> &other) : m_mins(other.m_mins), m_maxs(other.m_maxs) { fix(); }
+    constexpr aabb(const V &mins, const V &maxs) : m_mins(mins), m_maxs(maxs) { fix(); }
 
-    bool operator==(const aabb<N, V> &other) const { return m_mins == other.m_mins && m_maxs == other.m_maxs; }
+    constexpr aabb(const aabb<N, V> &other) : m_mins(other.m_mins), m_maxs(other.m_maxs) { fix(); }
 
-    const V &mins() const { return m_mins; }
+    constexpr bool operator==(const aabb<N, V> &other) const { return m_mins == other.m_mins && m_maxs == other.m_maxs; }
 
-    const V &maxs() const { return m_maxs; }
+    constexpr const V &mins() const { return m_mins; }
 
-    bool disjoint(const aabb<N, V> &other) const
+    constexpr const V &maxs() const { return m_maxs; }
+
+    constexpr bool disjoint(const aabb<N, V> &other) const
     {
         for (int i = 0; i < N; i++) {
             if (m_maxs[i] < other.m_mins[i])
@@ -75,7 +81,7 @@ public:
         return false;
     }
 
-    bool contains(const aabb<N, V> &other) const
+    constexpr bool contains(const aabb<N, V> &other) const
     {
         for (int i = 0; i < 3; i++) {
             if (other.m_mins[i] < m_mins[i])
@@ -86,7 +92,7 @@ public:
         return true;
     }
 
-    bool containsPoint(const V &p) const
+    constexpr bool containsPoint(const V &p) const
     {
         for (int i = 0; i < N; i++) {
             if (!(p[i] >= m_mins[i] && p[i] <= m_maxs[i]))
@@ -95,7 +101,7 @@ public:
         return true;
     }
 
-    aabb<N, V> expand(const V &pt) const
+    constexpr aabb<N, V> expand(const V &pt) const
     {
         V mins, maxs;
         for (int i = 0; i < N; i++) {
@@ -105,9 +111,29 @@ public:
         return aabb<N, V>(mins, maxs);
     }
 
-    aabb<N, V> unionWith(const aabb<N, V> &other) const { return expand(other.m_mins).expand(other.m_maxs); }
+    constexpr aabb<N, V> operator+(const V &pt) const
+    {
+        return expand(pt);
+    }
 
-    intersection_t intersectWith(const aabb<N, V> &other) const
+    constexpr aabb<N, V> operator+(const aabb<N, V> &other) const
+    {
+        return unionWith(other);
+    }
+
+    constexpr aabb<N, V> &operator+=(const V &pt)
+    {
+        return (*this = expand(pt));
+    }
+
+    constexpr aabb<N, V> &operator+=(const aabb<N, V> &other)
+    {
+        return (*this = unionWith(other));
+    }
+
+    constexpr aabb<N, V> unionWith(const aabb<N, V> &other) const { return expand(other.m_mins).expand(other.m_maxs); }
+
+    constexpr intersection_t intersectWith(const aabb<N, V> &other) const
     {
         V mins, maxs;
         for (int i = 0; i < N; i++) {
@@ -121,13 +147,22 @@ public:
         return intersection_t(aabb<N, V>(mins, maxs));
     }
 
-    V size() const
+    constexpr V size() const
     {
-        V result = m_maxs - m_mins;
-        return result;
+        return m_maxs - m_mins;
     }
 
-    aabb<N, V> grow(const V &size) const { return aabb<N, V>(m_mins - size, m_maxs + size); }
+    constexpr aabb<N, V> grow(const V &size) const { return aabb<N, V>(m_mins - size, m_maxs + size); }
+
+    constexpr V &operator[](const int32_t &index)
+    {
+        return (index == 0 ? m_mins : index == 1 ? m_maxs : throw std::exception());
+    }
+
+    constexpr const V &operator[](const int32_t &index) const
+    {
+        return (index == 0 ? m_mins : index == 1 ? m_maxs : throw std::exception());
+    }
 };
 
 using aabb3d = aabb<3, qvec3d>;

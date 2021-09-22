@@ -267,7 +267,7 @@ static void *LightThread(void *arg)
         if (facenum == -1)
             break;
 
-        bsp2_dface_t *f = const_cast<bsp2_dface_t *>(BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum));
+        mface_t *f = const_cast<mface_t *>(BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum));
 
         /* Find the correct model offset */
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
@@ -534,13 +534,13 @@ static qfile_t InitObjFile(const std::filesystem::path &filename)
     return objfile;
 }
 
-static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const bsp2_dface_t *face, int *vertcount)
+static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *face, int *vertcount)
 {
     // export the vertices and uvs
     for (int i = 0; i < face->numedges; i++) {
         const int vertnum = Face_VertexAtIndex(bsp, face, i);
         const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i);
-        const float *pos = bsp->dvertexes[vertnum].point;
+        const bspvec3f_t &pos = bsp->dvertexes[vertnum];
         fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
         fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
     }
@@ -582,13 +582,13 @@ static void CheckNoDebugModeSet()
 }
 
 // returns the face with a centroid nearest the given point.
-static const bsp2_dface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &point)
+static const mface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &point)
 {
-    const bsp2_dface_t *nearest_face = NULL;
+    const mface_t *nearest_face = NULL;
     float nearest_dist = FLT_MAX;
 
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = BSP_GetFace(bsp, i);
+        const mface_t *f = BSP_GetFace(bsp, i);
 
         const qvec3f fc = Face_Centroid(bsp, f);
 
@@ -609,7 +609,7 @@ static void FindDebugFace(const mbsp_t *bsp)
     if (!dump_face)
         return;
 
-    const bsp2_dface_t *f = Face_NearestCentroid(bsp, dump_face_point);
+    const mface_t *f = Face_NearestCentroid(bsp, dump_face_point);
     if (f == NULL)
         FError("f == NULL\n");
 
@@ -632,10 +632,10 @@ static int Vertex_NearestPoint(const mbsp_t *bsp, const vec3_t point)
     vec_t nearest_dist = VECT_MAX;
 
     for (int i = 0; i < bsp->numvertexes; i++) {
-        const dvertex_t *vertex = &bsp->dvertexes[i];
+        const dvertex_t &vertex = bsp->dvertexes[i];
 
         vec3_t distvec;
-        VectorSubtract(vertex->point, point, distvec);
+        VectorSubtract(vertex, point, distvec);
         vec_t dist = VectorLength(distvec);
 
         if (dist < nearest_dist) {
@@ -653,9 +653,9 @@ static void FindDebugVert(const mbsp_t *bsp)
         return;
 
     int v = Vertex_NearestPoint(bsp, dump_vert_point);
-    const dvertex_t *vertex = &bsp->dvertexes[v];
+    const bspvec3f_t &vertex = bsp->dvertexes[v];
 
-    FLogPrint("dumping vert {} at {} {} {}\n", v, vertex->point[0], vertex->point[1], vertex->point[2]);
+    FLogPrint("dumping vert {} at {} {} {}\n", v, vertex[0], vertex[1], vertex[2]);
     dump_vertnum = v;
 }
 

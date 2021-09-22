@@ -102,13 +102,11 @@ mesh_t buildMeshFromBSP(const mbsp_t *bsp)
 {
     mesh_t res;
     for (int i = 0; i < bsp->numvertexes; i++) {
-        const dvertex_t *vert = &bsp->dvertexes[i];
-        res.verts.emplace_back(vert->point[0], vert->point[1],
-            vert->point[2]); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
+        res.verts.emplace_back(bsp->dvertexes[i]); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
     }
 
     for (int i = 0; i < bsp->numfaces; i++) {
-        const bsp2_dface_t *f = &bsp->dfaces[i];
+        const mface_t *f = &bsp->dfaces[i];
 
         // grab face verts
         std::vector<vertnum_t> face;

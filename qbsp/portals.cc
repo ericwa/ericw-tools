@@ -356,17 +356,13 @@ The created portals will face the global outside_node
 */
 static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
 {
-    vec3_t bounds[2];
     int i, j, n;
     portal_t *p, *portals[6];
     qbsp_plane_t bplanes[6], *pl;
     int side;
 
     // pad with some space so there will never be null volume leafs
-    for (i = 0; i < 3; i++) {
-        bounds[0][i] = entity->mins[i] - SIDESPACE;
-        bounds[1][i] = entity->maxs[i] + SIDESPACE;
-    }
+    aabb3d bounds = entity->bounds.grow(SIDESPACE);
 
     outside_node.planenum = PLANENUM_LEAF;
     outside_node.contents = options.target_game->create_solid_contents();
