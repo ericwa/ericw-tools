@@ -29,14 +29,6 @@
 
 #include <qbsp/qbsp.hh>
 
-static int rgMemTotal[GLOBAL + 1];
-static int rgMemActive[GLOBAL + 1];
-static int rgMemPeak[GLOBAL + 1];
-static int rgMemActiveBytes[GLOBAL + 1];
-static int rgMemPeakBytes[GLOBAL + 1];
-
-std::mutex memoryStatsLock;
-
 /*
 ==========
 AllocMem
@@ -48,7 +40,7 @@ AllocMem(int Type, int cElements, bool fZero)
     void *pTemp;
     int cSize;
 
-    if (Type < 0 || Type > OTHER)
+    if (!(Type == WINDING || Type == OTHER))
         Error("Internal error: invalid memory type %d (%s)", Type, __func__);
 
     // For windings, cElements == number of points on winding
@@ -63,9 +55,9 @@ AllocMem(int Type, int cElements, bool fZero)
 
         // Set cElements to 1 so bookkeeping works OK
         cElements = 1;
-    } else
-        cSize = cElements * MemSize[Type];
-
+    } else {
+        cSize = cElements;
+    }
     pTemp = malloc(cSize);
     if (!pTemp)
         Error("allocation of %d bytes failed (%s)", cSize, __func__);
@@ -73,135 +65,8 @@ AllocMem(int Type, int cElements, bool fZero)
     if (fZero)
         memset(pTemp, 0, cSize);
 
-    // Special stuff for face_t
-    if (Type == FACE && cElements == 1)
-        ((face_t *)pTemp)->planenum = -1;
-
-    std::unique_lock<std::mutex> lck { memoryStatsLock };
-
-    rgMemTotal[Type] += cElements;
-    rgMemActive[Type] += cElements;
-    rgMemActiveBytes[Type] += cSize;
-    if (rgMemActive[Type] > rgMemPeak[Type])
-        rgMemPeak[Type] = rgMemActive[Type];
-    if (rgMemActiveBytes[Type] > rgMemPeakBytes[Type])
-        rgMemPeakBytes[Type] = rgMemActiveBytes[Type];
-
-    // Also keep global statistics
-    rgMemTotal[GLOBAL] += cSize;
-    rgMemActive[GLOBAL] += cSize;
-    if (rgMemActive[GLOBAL] > rgMemPeak[GLOBAL])
-        rgMemPeak[GLOBAL] = rgMemActive[GLOBAL];
-
     return pTemp;
 }
-
-
-/*
-==========
-FreeMem
-==========
-*/
-void
-FreeMem(void *pMem, int Type, int cElements)
-{
-    free(pMem);
-
-    std::unique_lock<std::mutex> lck { memoryStatsLock };
-
-    rgMemActive[Type] -= cElements;
-
-    rgMemActiveBytes[Type] -= cElements * MemSize[Type];
-    rgMemActive[GLOBAL] -= cElements * MemSize[Type];
-}
-
-
-static const char *
-MemString(int bytes)
-{
-    static char buf[20];
-
-    if (bytes > 1024 * 1024 * 1024 / 2)
-        q_snprintf(buf, 20, "%0.1fG", (float)bytes / (1024 * 1024 * 1024));
-    else if (bytes > 1024 * 1024 / 2)
-        q_snprintf(buf, 20, "%0.1fM", (float)bytes / (1024 * 1024));
-    else if (bytes > 1024 / 2)
-        q_snprintf(buf, 20, "%0.1fk", (float)bytes / 1024);
-    else
-        buf[0] = 0;
-
-    return buf;
-}
-
-/*
-==========
-PrintMem
-==========
-*/
-void
-PrintMem(void)
-{
-    const char *MemTypes[] = {
-        "BSPEntity", "BSPPlane", "BSPTex", "BSPVertex", "BSPVis", "BSPNode",
-        "BSPTexinfo", "BSPFace", "BSPLight", "BSPClipnode", "BSPLeaf",
-        "BSPMarksurface", "BSPEdge", "BSPSurfedge", "BSPModel",
-
-        "Mapface", "Mapbrush", "Mapentity", "Winding", "Face", "Plane",
-        "Portal", "Surface", "Node", "Brush", "Miptex", "World verts",
-        "World edges", "Hash verts", "Other", "Total"
-    };
-    int i;
-
-    if (options.fVerbose) {
-        Message(msgLiteral,
-                "\nData type        CurrentNum    PeakNum      PeakMem\n");
-        for (i = 0; i <= OTHER; i++)
-            Message(msgLiteral, "%-16s  %9d  %9d %12d %8s\n",
-                    MemTypes[i], rgMemActive[i], rgMemPeak[i],
-                    rgMemPeakBytes[i], MemString(rgMemPeakBytes[i]));
-        Message(msgLiteral, "%-16s                       %12d %8s\n",
-                MemTypes[GLOBAL], rgMemPeak[GLOBAL],
-                MemString(rgMemPeak[GLOBAL]));
-    } else
-        Message(msgLiteral, "Peak memory usage: %d (%s)\n", rgMemPeak[GLOBAL],
-                MemString(rgMemPeak[GLOBAL]));
-}
-
-#if 0
-/*
-============
-FreeAllMem
-============
-*/
-void
-FreeAllMem(void)
-{
-    int i, j;
-    epair_t *ep, *next;
-    struct lumpdata *lump;
-    mapentity_t *entity;
-
-    for (i = 0, entity = map.entities; i < map.numentities; i++, entity++) {
-        for (ep = entity->epairs; ep; ep = next) {
-            next = ep->next;
-            if (ep->key)
-                FreeMem(ep->key, OTHER, strlen(ep->key) + 1);
-            if (ep->value)
-                FreeMem(ep->value, OTHER, strlen(ep->value) + 1);
-            FreeMem(ep, OTHER, sizeof(epair_t));
-        }
-        lump = entity->lumps;
-        for (j = 0; j < BSP_LUMPS; j++)
-            if (lump[j].data)
-                FreeMem(lump[j].data, j, lump[j].count);
-    }
-
-    FreeMem(map.planes, PLANE, map.maxplanes);
-    FreeMem(map.faces, MAPFACE, map.maxfaces);
-    FreeMem(map.brushes, MAPBRUSH, map.maxbrushes);
-    FreeMem(map.entities, MAPENTITY, map.maxentities);
-}
-#endif
 
 /* Keep track of output state */
 static bool fInPercent = false;

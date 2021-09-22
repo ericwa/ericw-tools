@@ -101,8 +101,10 @@ public:
     vec3_t mins, maxs;
     brush_t *brushes;           /* NULL terminated list */
     int numbrushes;
-    struct lumpdata lumps[BSPX_LUMPS];
     
+    int firstoutputfacenumber;
+    int outputmodelnumber;
+
     const mapbrush_t &mapbrush(int i) const;
     
     mapentity_t() :
@@ -116,13 +118,16 @@ public:
     liquid(nullptr),
     epairs(nullptr),
     brushes(nullptr),
-    numbrushes(0) {
+    numbrushes(0),
+    firstoutputfacenumber(-1),
+    outputmodelnumber(-1) {
         VectorSet(origin,0,0,0);
         VectorSet(mins,0,0,0);
         VectorSet(maxs,0,0,0);
-        memset(lumps, 0, sizeof(lumps));
     }
 };
+
+using texname_t = std::string;
 
 typedef struct mapdata_s {
     /* Arrays of actual items */
@@ -130,7 +135,7 @@ typedef struct mapdata_s {
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
     std::vector<qbsp_plane_t> planes;
-    std::vector<miptex_t> miptex;
+    std::vector<texname_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
     
     /* quick lookup for texinfo */
@@ -147,14 +152,28 @@ typedef struct mapdata_s {
     int nummiptex() const { return miptex.size(); };
     int numtexinfo() const { return static_cast<int>(mtexinfos.size()); };
 
-    /* Totals for BSP data items -> TODO: move to a bspdata struct? */
-    int cTotal[BSPX_LUMPS];
-
     /* Misc other global state for the compile process */
     bool leakfile;      /* Flag once we've written a leak (.por/.pts) file */
     
-    std::vector<bsp29_dclipnode_t> exported_clipnodes_bsp29;
-    std::vector<bsp2_dclipnode_t> exported_clipnodes_bsp2;
+    // Final, exported data
+    std::vector<gtexinfo_t> exported_texinfos;
+    std::vector<dplane_t> exported_planes;
+    std::vector<mleaf_t> exported_leafs;
+    std::vector<bsp2_dnode_t> exported_nodes;
+    std::vector<uint32_t> exported_marksurfaces;
+    std::vector<bsp2_dclipnode_t> exported_clipnodes;
+    std::vector<bsp2_dedge_t> exported_edges;
+    std::vector<dvertex_t> exported_vertexes;
+    std::vector<int32_t> exported_surfedges;
+    std::vector<bsp2_dface_t> exported_faces;
+    std::vector<dmodelh2_t> exported_models;
+    std::string exported_entities;
+    std::string exported_texdata;
+
+    // bspx data
+    std::vector<uint8_t> exported_lmshifts;
+    bool needslmshifts = false;
+    std::vector<uint8_t> exported_bspxbrushes;
 
     // helpers
     std::string texinfoTextureName(int texinfo) const {
@@ -204,11 +223,8 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 
-struct bspxbrushes_s
-{
-        uint8_t *lumpinfo;
-        size_t lumpsize;
-        size_t lumpmaxsize;
+struct bspxbrushes_s {
+    std::vector<uint8_t> lumpdata;
 };
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);

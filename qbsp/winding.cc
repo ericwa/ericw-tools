@@ -204,7 +204,7 @@ ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon)
         return in;
 
     if (!counts[SIDE_FRONT]) {
-        FreeMem(in, WINDING, 1);
+        free(in);
         return NULL;
     }
 
@@ -254,7 +254,7 @@ ClipWinding(winding_t *in, const qbsp_plane_t *split, bool keepon)
         VectorCopy(mid, neww->points[neww->numpoints]);
         neww->numpoints++;
     }
-    FreeMem(in, WINDING, 1);
+    free(in);
 
     return neww;
 
@@ -459,7 +459,7 @@ void ChopWindingInPlace (winding_t **inout, const vec3_t normal, vec_t dist, vec
     
     if (!counts[0])
     {
-        FreeMem (in, WINDING, 1);
+        free(in);
         *inout = nullptr;
         return;
     }
@@ -514,7 +514,7 @@ void ChopWindingInPlace (winding_t **inout, const vec3_t normal, vec_t dist, vec
     if (f->numpoints > MAX_POINTS_ON_WINDING)
         Error ("ClipWinding: MAX_POINTS_ON_WINDING");
     
-    FreeMem (in, WINDING, 1);
+    free(in);
     
     *inout = f;
 }

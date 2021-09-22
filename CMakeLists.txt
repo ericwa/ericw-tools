@@ -35,7 +35,6 @@ set(COMMON_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/common/bsputils.hh)
 
 set(QBSP_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/qbsp/bspfile.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/file.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/parser.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
@@ -67,7 +66,6 @@ set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/common/polylib.cc
 	${CMAKE_SOURCE_DIR}/common/bsputils.cc
 	${CMAKE_SOURCE_DIR}/qbsp/brush.cc
-	${CMAKE_SOURCE_DIR}/qbsp/bspfile.cc
 	${CMAKE_SOURCE_DIR}/qbsp/csg4.cc
 	${CMAKE_SOURCE_DIR}/qbsp/file.cc
 	${CMAKE_SOURCE_DIR}/qbsp/globals.cc

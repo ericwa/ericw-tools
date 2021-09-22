@@ -38,7 +38,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "bspfile.hh"
+#include <common/bspfile.hh>
+
 #include "file.hh"
 #include "warnerr.hh"
 
@@ -97,23 +98,6 @@
 // Pi
 #define Q_PI    3.14159265358979323846
 
-// Possible contents of a leaf node
-#define CONTENTS_EMPTY  -1
-#define CONTENTS_SOLID  -2
-#define CONTENTS_WATER  -3
-#define CONTENTS_SLIME  -4
-#define CONTENTS_LAVA   -5
-#define CONTENTS_SKY    -6
-#define CONTENTS_CLIP   -7      /* compiler internal use only */
-#define CONTENTS_HINT   -8      /* compiler internal use only */
-#define CONTENTS_ORIGIN -9      /* compiler internal use only */
-#define CONTENTS_DETAIL -10     /* compiler internal use only */
-#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
-#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
-#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
-#define CONTENTS_FENCE  -15     /* compiler internal use only */
-#define CONTENTS_LADDER -16     /* reserved for engine use */
-
 // Special contents flags for the compiler only
 #define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
 #define CFLAGS_WAS_ILLUSIONARY           (1U << 1) /* was illusionary, got changed to something else */
@@ -121,31 +105,6 @@
 #define CFLAGS_BMODEL_MIRROR_INSIDE		 (1U << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
 #define CFLAGS_NO_CLIPPING_SAME_TYPE     (1U << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
 
-// Texture flags. Only TEX_SPECIAL is written to the .bsp.
-// Extended flags are written to a .texinfo file and read by the light tool
-#define TEX_SPECIAL (1ULL << 0)   /* sky or liquid (no lightmap or subdivision */
-#define TEX_SKIP    (1ULL << 1)   /* an invisible surface */
-#define TEX_HINT    (1ULL << 2)   /* hint surface */
-#define TEX_NODIRT  (1ULL << 3)   /* don't receive dirtmapping */
-#define TEX_PHONG_ANGLE_SHIFT   4
-#define TEX_PHONG_ANGLE_MASK    (255ULL << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
-#define TEX_MINLIGHT_SHIFT      12
-#define TEX_MINLIGHT_MASK       (255ULL << TEX_MINLIGHT_SHIFT)    /* 8 bit value, minlight value for this face. */
-#define TEX_MINLIGHT_COLOR_R_SHIFT      20
-#define TEX_MINLIGHT_COLOR_R_MASK       (255ULL << TEX_MINLIGHT_COLOR_R_SHIFT)    /* 8 bit value, red minlight color for this face. */
-#define TEX_MINLIGHT_COLOR_G_SHIFT      28
-#define TEX_MINLIGHT_COLOR_G_MASK       (255ULL << TEX_MINLIGHT_COLOR_G_SHIFT)    /* 8 bit value, green minlight color for this face. */
-#define TEX_MINLIGHT_COLOR_B_SHIFT      36
-#define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
-#define TEX_NOSHADOW  (1ULL << 44)   /* don't cast a shadow */
-#define TEX_PHONG_ANGLE_CONCAVE_SHIFT   45
-#define TEX_PHONG_ANGLE_CONCAVE_MASK    (255ULL << TEX_PHONG_ANGLE_CONCAVE_SHIFT) /* 8 bit value. if non zero, overrides _phong_angle for concave joints. */
-#define TEX_NOBOUNCE  (1ULL << 53)   /* light doesn't bounce off this face */
-#define TEX_NOMINLIGHT (1ULL << 54)   /* opt out of minlight on this face */
-#define TEX_NOEXPAND  (1ULL << 55)   /* don't expand this face for larger clip hulls */
-#define TEX_LIGHTIGNORE (1ULL << 56)
-#define TEX_LIGHT_ALPHA_SHIFT 57
-#define TEX_LIGHT_ALPHA_MASK  (127ULL << TEX_LIGHT_ALPHA_SHIFT) /* 7 bit unsigned value. custom opacity */
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:
@@ -172,42 +131,10 @@
 // volume.  is this still needed?
 #define SIDESPACE       24
 
-/*
- * If this enum is changed, make sure to also update MemSize and PrintMem
- */
+// AllocMem types
 enum {
-    BSP_ENT,
-    BSP_PLANE,
-    BSP_TEX,
-    BSP_VERTEX,
-    BSP_VIS,
-    BSP_NODE,
-    BSP_TEXINFO,
-    BSP_FACE,
-    BSP_LIGHT,
-    BSP_CLIPNODE,
-    BSP_LEAF,
-    BSP_MARKSURF,
-    BSP_EDGE,
-    BSP_SURFEDGE,
-    BSP_MODEL,
-
-    MAPFACE,
-    MAPBRUSH,
-    MAPENTITY,
     WINDING,
-    FACE,
-    PLANE,
-    PORTAL,
-    SURFACE,
-    NODE,
-    BRUSH,
-    MIPTEX,
-    WVERT,
-    WEDGE,
-    HASHVERT,
-    OTHER,
-    GLOBAL
+    OTHER
 };
 
 #include <common/cmdlib.hh>
@@ -359,8 +286,7 @@ public:
     bool fixRotateObjTexture;
     bool fbspx_brushes;
     bool fNoTextures;
-    int hexen2;/*2 if the worldspawn mission pack flag was set*/
-    int BSPVersion;
+    const bspversion_t *target_version = &bspver_q1;
     int dxSubdivide;
     int dxLeakDist;
         int maxNodeSize;
@@ -415,8 +341,6 @@ public:
     fixRotateObjTexture(true),
     fbspx_brushes(false),
     fNoTextures(false),
-    hexen2(0),
-    BSPVersion(BSPVERSION), // Default to the original Quake BSP Version...
     dxSubdivide(240),
     dxLeakDist(2),
     maxNodeSize(1024),

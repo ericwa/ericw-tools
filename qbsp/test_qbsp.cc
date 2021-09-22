@@ -269,8 +269,8 @@ TEST(qbsp, SplitBrush) {
     checkCube(back);
     
     FreeBrush(brush);
-    FreeMem(front, BRUSH, 1);
-    FreeMem(back, BRUSH, 1);
+    free(front);
+    free(back);
 }
 
 TEST(qbsp, SplitBrushOnSide) {

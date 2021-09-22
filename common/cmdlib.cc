@@ -217,7 +217,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
         }
 
         if (pos == -1) {
-            logprint("SetQ2dirFromPath: failed to find %s in '%s'", basedir, path);
+            logprint("SetQ2dirFromPath: failed to find %s in '%s'\n", basedir, path);
             ClearQdir();
             return;
         }
@@ -744,7 +744,7 @@ DefaultExtension(char *path, const char *extension)
     /* (extension should include the .)              */
     src = path + strlen(path) - 1;
 
-    while (*src != PATHSEPERATOR && src != path) {
+    while (*src != PATHSEPERATOR && *src != '\\' && src != path) {
         if (*src == '.')
             return;             /* it has an extension */
         src--;
@@ -784,7 +784,7 @@ StripExtension(char *path)
     length = strlen(path) - 1;
     while (length > 0 && path[length] != '.') {
         length--;
-        if (path[length] == '/')
+        if (path[length] == '/' || path[length] == '\\')
             return;             /* no extension */
     }
     if (length)
@@ -799,7 +799,7 @@ StrippedExtension(const std::string& path) {
     length = static_cast<int>(path.size()) - 1;
     while (length > 0 && path[length] != '.') {
         length--;
-        if (path[length] == '/')
+        if (path[length] == '/' || path[length] == '\\')
             return path;             /* no extension */
     }
     if (length)
@@ -842,9 +842,10 @@ ExtractFileBase(char *path, char *dest)
     src = path + strlen(path) - 1;
 
     /* back up until a \ or the start */
-    while (src != path && *(src - 1) != PATHSEPERATOR)
+    while (src != path && *(src - 1) != PATHSEPERATOR
+                       && *(src - 1) != '\\') {
         src--;
-
+    }
     while (*src && *src != '.') {
         *dest++ = *src++;
     }

@@ -58,12 +58,18 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     if (IsWorldBrushEntity(entity))
         return;
 
+    // Export a blank model struct, and reserve the index (only do this once, for all hulls)
+    if (entity->outputmodelnumber == -1) {
+        entity->outputmodelnumber = static_cast<int>(map.exported_models.size());
+        map.exported_models.push_back({});
+    }
+
     if (entity != pWorldEnt()) {
         char mod[20];
 
         if (entity == pWorldEnt() + 1)
             Message(msgProgress, "Internal Entities");
-        q_snprintf(mod, sizeof(mod), "*%d", map.cTotal[LUMP_MODELS]);
+        q_snprintf(mod, sizeof(mod), "*%d", entity->outputmodelnumber);
         if (options.fVerbose)
             PrintEntity(entity);
 
@@ -178,8 +184,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
                 DetailToSolid(nodes);
             }
         }
-        AllocBSPPlanes();
-        AllocBSPTexinfo();
         ExportClipNodes(entity, nodes, hullnum);
     } else {
         /*
@@ -234,9 +238,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         // convert detail leafs to solid (in case we didn't make the call above)
         DetailToSolid(nodes);
 
-        AllocBSPPlanes();
-        AllocBSPTexinfo();
-
         if (options.fObjExport && entity == pWorldEnt()) {
             ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", nodes);
@@ -247,8 +248,6 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     FreeBrushes(entity);
-    
-    map.cTotal[LUMP_MODELS]++;
 }
 
 /*
@@ -303,9 +302,8 @@ UpdateEntLump(void)
             FixRotateOrigin(entity);
     }
 
-    LoadBSPFile();
     WriteEntitiesToString();
-    WriteBSPFile();
+    UpdateBSPFileEntitiesLump();
 
     if (!options.fAllverbose)
         options.fVerbose = false;
@@ -318,14 +316,21 @@ This lump replaces the clipnodes stuff for custom collision sizes.
 */
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx)
 {
-        BSPX_AddLump("BRUSHLIST", ctx->lumpinfo, ctx->lumpsize);
-
-//      free(ctx->lumpinfo);
+    // Actually written in WriteBSPFile()
+    map.exported_bspxbrushes = std::move(ctx->lumpdata);
 }
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx)
 {
-        memset(ctx, 0, sizeof(*ctx));
+    ctx->lumpdata.clear();
 }
+
+static void
+vec_push_bytes(std::vector<uint8_t>& vec, const void* data, size_t count) {
+    const uint8_t* bytes = static_cast<const uint8_t*>(data);
+
+    vec.insert(vec.end(), bytes, bytes + count);
+}
+
 /*
 WriteBrushes
 Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific hull sizes
@@ -374,18 +379,11 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 }
         }
 
-        if (ctx->lumpmaxsize < ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))
-        {
-                ctx->lumpmaxsize = (ctx->lumpsize + sizeof(permodel) + permodel.numbrushes*sizeof(perbrush) + permodel.numfaces*sizeof(perface))*2;
-                ctx->lumpinfo = (uint8_t *) realloc(ctx->lumpinfo, ctx->lumpmaxsize);
-        }
-
         permodel.ver = LittleLong(1);
         permodel.modelnum = LittleLong(modelnum);
         permodel.numbrushes = LittleLong(permodel.numbrushes);
         permodel.numfaces = LittleLong(permodel.numfaces);
-        memcpy(ctx->lumpinfo+ctx->lumpsize, &permodel, sizeof(permodel));
-        ctx->lumpsize += sizeof(permodel);
+        vec_push_bytes(ctx->lumpdata, &permodel, sizeof(permodel));
 
         for (b = brushes; b; b = b->next)
         {
@@ -430,8 +428,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 }
                 perbrush.contents = LittleShort(perbrush.contents);
                 perbrush.numfaces = LittleShort(perbrush.numfaces);
-                memcpy(ctx->lumpinfo+ctx->lumpsize, &perbrush, sizeof(perbrush));
-                ctx->lumpsize += sizeof(perbrush);
+                vec_push_bytes(ctx->lumpdata, &perbrush, sizeof(perbrush));
                 
                 for (f = b->faces; f; f = f->next)
                 {
@@ -456,11 +453,11 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                                 perface.dist      = map.planes[f->planenum].dist;
                         }
 
-                        memcpy(ctx->lumpinfo+ctx->lumpsize, &perface, sizeof(perface));
-                        ctx->lumpsize += sizeof(perface);
+                        vec_push_bytes(ctx->lumpdata, &perface, sizeof(perface));
                 }
         }
 }
+
 /* for generating BRUSHLIST bspx lump */
 static void BSPX_CreateBrushList(void)
 {
@@ -546,7 +543,6 @@ CreateSingleHull(const int hullnum)
     mapentity_t *entity;
 
     Message(msgLiteral, "Processing hull %d...\n", hullnum);
-    map.cTotal[LUMP_MODELS] = 0;
 
     // for each entity in the map file that has geometry
     for (i = 0; i < map.numentities(); i++) {
@@ -579,9 +575,9 @@ CreateHulls(void)
     CreateSingleHull(1);
     CreateSingleHull(2);
 
-    if (options.BSPVersion == BSPHLVERSION)
+    if (options.target_version == &bspver_hl)
         CreateSingleHull(3);
-    else if (options.hexen2)
+    else if (options.target_version->hexen2)
     {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
         CreateSingleHull(4);
@@ -623,7 +619,7 @@ EnsureTexturesLoaded()
         wadlist = WADList_Init(defaultwad);
         if (wadlist)
             Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
-        FreeMem(defaultwad, OTHER, strlen(options.szMapName) + 5);
+        free(defaultwad);
     }
 }
 
@@ -784,6 +780,9 @@ ParseOptions(char *szOptions)
     char *szEnd;
     int NameCount = 0;
 
+    // temporary flags
+    bool hexen2 = false;
+
     szEnd = szOptions + strlen(szOptions);
     szTok = GetTok(szOptions, szEnd);
     while (szTok) {
@@ -835,7 +834,11 @@ ParseOptions(char *szOptions)
             else if (!Q_strcasecmp(szTok, "nopercent"))
                 options.fNopercent = true;
             else if (!Q_strcasecmp(szTok, "hexen2"))
-                options.hexen2 = true;
+                hexen2 = true; // can be combined with -bsp2 or -2psb
+            else if (!Q_strcasecmp(szTok, "q2bsp"))
+                options.target_version = &bspver_q2;
+            else if (!Q_strcasecmp(szTok, "qbism"))
+                options.target_version = &bspver_qbism;
             else if (!Q_strcasecmp(szTok, "wrbrushes") || !Q_strcasecmp(szTok, "bspx"))
                 options.fbspx_brushes = true;
             else if (!Q_strcasecmp(szTok, "wrbrushesonly") || !Q_strcasecmp(szTok, "bspxonly")) {
@@ -843,14 +846,11 @@ ParseOptions(char *szOptions)
                 options.fNoclip = true;
             }
             else if (!Q_strcasecmp(szTok, "hlbsp")) {
-                options.BSPVersion = BSPHLVERSION;
-                MemSize = MemSize_BSP29;
+                options.target_version = &bspver_hl;
             } else if (!Q_strcasecmp(szTok, "bsp2")) {
-                options.BSPVersion = BSP2VERSION;
-                MemSize = MemSize_BSP2;
+                options.target_version = &bspver_bsp2;
             } else if (!Q_strcasecmp(szTok, "2psb")) {
-                options.BSPVersion = BSP2RMQVERSION;
-                MemSize = MemSize_BSP2rmq;
+                options.target_version = &bspver_bsp2rmq;
             } else if (!Q_strcasecmp(szTok, "leakdist")) {
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
@@ -957,6 +957,17 @@ ParseOptions(char *szOptions)
         }
         szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);
     }
+
+    // combine format flags
+    if (hexen2) {
+        if (options.target_version == &bspver_bsp2) {
+            options.target_version = &bspver_h2bsp2;
+        } else if (options.target_version == &bspver_bsp2rmq) {
+            options.target_version = &bspver_h2bsp2rmq;
+        } else {
+            options.target_version = &bspver_h2;
+        }
+    }
 }
 
 
@@ -977,7 +988,7 @@ InitQBSP(int argc, const char **argv)
         Message(msgLiteral, "Loading options from qbsp.ini\n");
         ParseOptions(szBuf);
 
-        FreeMem(szBuf, OTHER, length + 1);
+        free(szBuf);
     }
 
     // Concatenate command line args
@@ -1000,7 +1011,7 @@ InitQBSP(int argc, const char **argv)
     }
     szBuf[length - 1] = 0;
     ParseOptions(szBuf);
-    FreeMem(szBuf, OTHER, length);
+    free(szBuf);
 
     if (options.szMapName[0] == 0)
         PrintOptions();
@@ -1082,7 +1093,7 @@ int qbsp_main(int argc, const char **argv)
     end = I_FloatTime();
 
     Message(msgLiteral, "\n%5.3f seconds elapsed\n", end - start);
-    PrintMem();
+
 //      FreeAllMem();
 //      PrintMem();
 
