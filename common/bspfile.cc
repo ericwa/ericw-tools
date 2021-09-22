@@ -21,6 +21,7 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 #include <cstdint>
+#include <limits.h>
 
 #include <fmt/format.h>
 
@@ -487,6 +488,12 @@ BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_ver
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
+            if (bspver->hexen2) {
+                // HACK: don't detect as Hexen II here, it's done later (isHexen2).
+                // Since the Hexen II bspversion_t's have the same ident/version as Quake
+                // we need to assume Quake.
+                continue;
+            }
             *out_version = bspver;
             return true;
         }
@@ -1413,13 +1420,16 @@ OverflowsInt16(int32_t input) {
     return false;
 }
 
-static bool
+static constexpr bool
 OverflowsUint16(uint32_t input) {
-    if (input > INT16_MAX) {
+    if (input > UINT16_MAX) {
         return true;
     }
     return false;
 }
+
+static_assert(!OverflowsUint16(65535));
+static_assert( OverflowsUint16(65536));
 
 static bool
 MBSPto29_Leafs_Validate(const mleaf_t *mleafs, int numleafs) {
@@ -3142,6 +3152,9 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_t *q2bsp = &bspdata->data.q2bsp;
         
+            // FIXME: validate that the conversion is possible without overflow
+            // (see bspver_q1 case above)
+
             memset(q2bsp, 0, sizeof(*q2bsp));
         
             // copy counts

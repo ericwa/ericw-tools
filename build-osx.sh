@@ -1,14 +1,20 @@
 #!/bin/bash
 
-BUILD_DIR=build-osx
-EMBREE_TGZ="https://github.com/embree/embree/releases/download/v2.17.7/embree-2.17.7.x86_64.macosx.tar.gz"
-EMBREE_TGZ_NAME=$(basename "$EMBREE_TGZ")
-EMBREE_DIR_NAME=$(basename "$EMBREE_TGZ" ".tar.gz")
-EMBREE_WITH_VERSION=$(basename "$EMBREE_TGZ" ".x86_64.macosx.tar.gz")
+# for sha256sum, used by the tests
+brew install coreutils
 
-TBB_TGZ="https://github.com/intel/tbb/releases/download/2017_U7/tbb2017_20170604oss_mac.tgz"
+BUILD_DIR=build-osx
+EMBREE_ZIP="https://github.com/embree/embree/releases/download/v3.13.0/embree-3.13.0.x86_64.macosx.zip"
+
+# embree-3.13.1.x86_64.macosx.zip
+EMBREE_ZIP_NAME=$(basename "$EMBREE_ZIP")
+
+# embree-3.13.1.x86_64.macosx
+EMBREE_DIR_NAME=$(basename "$EMBREE_ZIP_NAME" ".zip")
+
+TBB_TGZ="https://github.com/oneapi-src/oneTBB/releases/download/v2021.2.0/oneapi-tbb-2021.2.0-mac.tgz"
 TBB_TGZ_NAME=$(basename "$TBB_TGZ")
-TBB_DIR_NAME="tbb2017_20170604oss"
+TBB_DIR_NAME="oneapi-tbb-2021.2.0"
 
 if [ -d "$BUILD_DIR" ]; then
   echo "$BUILD_DIR already exists, remove it first"
@@ -17,29 +23,34 @@ fi
 
 mkdir "$BUILD_DIR"
 cd "$BUILD_DIR"
-wget "$EMBREE_TGZ"
-wget "$TBB_TGZ"
-tar xf "$EMBREE_TGZ_NAME"
+
+wget -q "$EMBREE_ZIP"
+unzip -q "$EMBREE_ZIP_NAME"
+
+wget -q "$TBB_TGZ"
 tar xf "$TBB_TGZ_NAME"
 
-EMBREE_CMAKE_DIR="$(pwd)/$EMBREE_DIR_NAME"
-TBB_CMAKE_DIR="$(pwd)/${TBB_DIR_NAME}/cmake"
-cmake .. -DCMAKE_BUILD_TYPE=Release -Dembree_DIR="$EMBREE_CMAKE_DIR" -DTBB_DIR="$TBB_CMAKE_DIR"
-make -j8
-make -j8 testlight
-make -j8 testqbsp
-cpack
+EMBREE_CMAKE_DIR="$(pwd)/$EMBREE_DIR_NAME/lib/cmake/embree-3.13.0"
+TBB_CMAKE_DIR="$(pwd)/${TBB_DIR_NAME}/lib/cmake"
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
+make -j8 || exit 1
+make -j8 testlight || exit 1
+make -j8 testqbsp || exit 1
+cpack || exit 1
+
+# print shared libraries used
+otool -L ./light/light
+otool -L ./qbsp/qbsp
+otool -L ./vis/vis
+otool -L ./bspinfo/bspinfo
+otool -L ./bsputil/bsputil
 
 # run tests
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
 
-# coarse tests on real maps (only checks success/failure exit status of tool)
+# run regression tests
 cd ..
-export PATH="$(pwd)/$BUILD_DIR/qbsp:$(pwd)/$BUILD_DIR/light:$PATH"
+export PATH="$(pwd)/$BUILD_DIR/qbsp:$(pwd)/$BUILD_DIR/light:$(pwd)/$BUILD_DIR/vis:$PATH"
 cd testmaps
 ./automatated_tests.sh || exit 1
-
-# test id1 maps for leaks
-cd quake_map_source
-./leaktest.sh || exit 1

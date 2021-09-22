@@ -60,57 +60,48 @@ target_link_libraries (light PRIVATE ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (light PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)
-	
+
+	# macOS/homebrew: hack around find_file applying the .. before resolving the symlink
+	# causing it not to find the LICENSE.txt
+	get_filename_component(embree_DIR_ABS "${embree_DIR}" REALPATH CACHE)
+
 	find_file(EMBREE_LICENSE LICENSE.txt 
-		"${embree_DIR}/doc"
-		"${embree_DIR}/../embree3/embree3" # vcpkg puts it here
+		"${embree_DIR_ABS}/doc"
+		"${embree_DIR_ABS}/../../../doc"
+		"${embree_DIR_ABS}/../embree3/embree3" # vcpkg puts it here
+		"${embree_DIR_ABS}/../../.." # homebrew puts it here
 		NO_DEFAULT_PATH)
 	if (EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
-		message(WARNING "Couldn't find embree license")
+		message(WARNING "Couldn't find embree license. embree_DIR: ${embree_DIR}, embree_DIR_ABS: ${embree_DIR_ABS}")
 	else()
 		message(STATUS "Found embree license: ${EMBREE_LICENSE}")
 	endif()
 
-	if(WIN32)
-		file(GLOB EMBREE_DLLS "${embree_DIR}/bin/*.dll")
-		foreach(EMBREE_DLL ${EMBREE_DLLS})
-			add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_DLL} $<TARGET_FILE_DIR:light>)
-		endforeach(EMBREE_DLL)
-		
-		add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_LICENSE} $<TARGET_FILE_DIR:light>/LICENSE-embree.txt)
+	add_custom_command(TARGET light POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:light>"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:light>"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_LICENSE}"       "$<TARGET_FILE_DIR:light>/LICENSE-embree.txt")
 
-		install(FILES ${EMBREE_DLLS} DESTINATION bin)
+	# so the executable will search for dylib's in the same directory as the executable 
+	if(APPLE)
+		add_custom_command(TARGET light POST_BUILD 
+			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
 	endif()
+	
+	install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+
+	# install TBB
 	if(UNIX)
-		if (APPLE)
-			set(SHARED_LIB_EXT dylib)
-		elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-			set(SHARED_LIB_EXT "so.*")
-		else ()
-			message(FATAL_ERROR "only Linux and macOS currently supported")	
-		endif()
+		# HACK: preferred method is installing the symlink instead of the actual .so
+		get_target_property(TBB_SO_FILE_SYMLINK TBB::tbb IMPORTED_LOCATION_RELEASE)
+		get_filename_component(TBB_SO_FILE "${TBB_SO_FILE_SYMLINK}" REALPATH)
 
+		message(STATUS "TBB .so file: ${TBB_SO_FILE}")
 
-		file(GLOB EMBREE_DYLIBS_WITH_SYMLINKS "${embree_DIR}/lib/*.${SHARED_LIB_EXT}")
-
-		# Gather all .dylib's that are not symlinks
-		foreach(EMBREE_DYLIB ${EMBREE_DYLIBS_WITH_SYMLINKS})
-			if(NOT IS_SYMLINK ${EMBREE_DYLIB})
-				list(APPEND EMBREE_DYLIBS ${EMBREE_DYLIB})
-			endif()
-		endforeach()
-
-		foreach(EMBREE_DYLIB ${EMBREE_DYLIBS})
-			message(STATUS "Copying dylib: ${EMBREE_DYLIB}")
-			add_custom_command(TARGET light POST_BUILD COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${EMBREE_DYLIB} $<TARGET_FILE_DIR:light>)
-		endforeach()
-
-		# so the executable will search for dylib's in the same directory as the executable 
-		if(APPLE)
-			add_custom_command(TARGET light POST_BUILD COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
-		endif()
-
-		install(FILES ${EMBREE_DYLIBS} DESTINATION bin)
+		install(FILES ${TBB_SO_FILE} DESTINATION bin)
+	else()
+		# preferred method
+		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION bin)
 	endif()
 
 	install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
