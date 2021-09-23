@@ -382,18 +382,18 @@ struct gamedef_q2_t : public gamedef_t
 static const gamedef_generic_t gamedef_generic;
 const bspversion_t bspver_generic{NO_VERSION, NO_VERSION, "mbsp", "generic BSP", &gamedef_generic};
 static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
-const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP", &gamedef_q1};
+const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP", &gamedef_q1, &bspver_bsp2};
 const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2", &gamedef_q1};
 const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ", &gamedef_q1};
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
 static const gamedef_h2_t gamedef_h2;
-const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP", &gamedef_h2};
+const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP", &gamedef_h2, &bspver_h2bsp2};
 const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2", &gamedef_h2};
 const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ", &gamedef_h2};
 static const gamedef_hl_t gamedef_hl;
 const bspversion_t bspver_hl{BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP", &gamedef_hl};
 static const gamedef_q2_t gamedef_q2;
-const bspversion_t bspver_q2{Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP", &gamedef_q2};
+const bspversion_t bspver_q2{Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP", &gamedef_q2, &bspver_qbism};
 const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II Qbism BSP", &gamedef_q2};
 
 bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const

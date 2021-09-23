@@ -1853,6 +1853,8 @@ struct bspversion_t
     const char *name;
     /* game ptr */
     const gamedef_t *game;
+    /* if we surpass the limits of this format, upgrade to this one */
+    const bspversion_t *extended_limits;
 };
 
 extern const bspversion_t bspver_generic;

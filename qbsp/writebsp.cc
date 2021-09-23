@@ -435,23 +435,18 @@ static void WriteBSPFile()
     bsp.numareas = 2;
     bsp.dareas = new darea_t[bsp.numareas] { };
     bsp.dareas[1].firstareaportal = 1;
-    if (!ConvertBSPFormat(&bspdata, options.target_version)) {
-        const bspversion_t *highLimitsFormat = nullptr;
 
-        if (options.target_version == &bspver_q1) {
-            highLimitsFormat = &bspver_bsp2;
-        } else if (options.target_version == &bspver_h2) {
-            highLimitsFormat = &bspver_h2bsp2;
-        } else if (options.target_version == &bspver_q2) {
-            highLimitsFormat = &bspver_qbism;
-        } else {
-            FError("No high limits version of {} available", options.target_version->name);
+    if (!ConvertBSPFormat(&bspdata, options.target_version)) {
+        const bspversion_t *extendedLimitsFormat = options.target_version->extended_limits;
+
+        if (!extendedLimitsFormat) {
+            FError("No extended limits version of {} available", options.target_version->name);
         }
 
         LogPrint(
-            "NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name, highLimitsFormat->name);
+            "NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name, extendedLimitsFormat->name);
 
-        Q_assert(ConvertBSPFormat(&bspdata, highLimitsFormat));
+        Q_assert(ConvertBSPFormat(&bspdata, extendedLimitsFormat));
     }
 
     options.szBSPName.replace_extension("bsp");
