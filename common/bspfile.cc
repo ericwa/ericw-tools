@@ -85,11 +85,11 @@ struct gamedef_generic_t : public gamedef_t {
     }
 };
 
-template<gameid_t id>
+template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t {
     gamedef_q1_like_t()
     {
-        this->id = id;
+        this->id = ID;
         has_rgb_lightmap = false;
         base_dir = "ID1";
     }
