@@ -22,6 +22,7 @@
 
 #include <stdint.h>
 #include <array>
+#include <tuple>
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
