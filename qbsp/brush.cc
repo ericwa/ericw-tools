@@ -868,7 +868,8 @@ static bool AdjustContentsFromName(const char *texname, contentflags_t &flags) {
             flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_LAVA));
         else if (!Q_strncasecmp(texname + 1, "slime", 5))
             flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_SLIME));
-        flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_WATER));
+        else
+            flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_WATER));
     }
     else if (!Q_strncasecmp(texname, "sky", 3))
         flags = flags.merge(options.target_game->create_sky_contents());
