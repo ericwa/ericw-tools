@@ -27,7 +27,7 @@
 #include <embree3/rtcore_ray.h>
 #include <vector>
 #include <cassert>
-#include <cstdint>
+#include <climits>
 #include <cstdlib>
 #include <limits>
 
