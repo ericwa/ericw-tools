@@ -88,7 +88,6 @@ ExportMapTexinfo(int texinfonum)
     
     map.exported_texinfos.push_back({});
     gtexinfo_t* dest = &map.exported_texinfos.back();
-    memset(dest, 0, sizeof(dest));
 
     dest->flags = src->flags;
     dest->miptex = src->miptex;
