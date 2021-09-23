@@ -168,7 +168,7 @@ static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int visclust
     if (node->viscluster != viscluster)
         FError("Internal error: Detail cluster mismatch");
 
-    fmt::print(portalFile, "%d ", node->visleafnum);
+    fmt::print(portalFile, "{} ", node->visleafnum);
 
     return viscluster;
 }

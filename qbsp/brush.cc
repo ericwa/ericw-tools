@@ -311,7 +311,6 @@ void FixRotateOrigin(mapentity_t *entity)
     const mapentity_t *target = NULL;
     const char *search;
     vec3_t offset;
-    char value[20];
 
     search = ValueForKey(entity, "target");
     if (search[0])
@@ -325,8 +324,7 @@ void FixRotateOrigin(mapentity_t *entity)
         VectorCopy(vec3_origin, offset);
     }
 
-    snprintf(value, sizeof(value), "%d %d %d", (int)offset[0], (int)offset[1], (int)offset[2]);
-    SetKeyValue(entity, "origin", value);
+    SetKeyValue(entity, "origin", VecStr(offset).c_str());
 }
 
 static bool DiscardHintSkipFace_Q1(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo)
@@ -809,6 +807,7 @@ static bool AdjustContentsFromName(const char *texname, contentflags_t &flags)
             flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_LAVA));
         else if (!Q_strncasecmp(texname + 1, "slime", 5))
             flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_SLIME));
+        else
         flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_WATER));
     } else if (!Q_strncasecmp(texname, "sky", 3))
         flags = flags.merge(options.target_game->create_sky_contents());

@@ -21,6 +21,7 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 #include <cstdint>
+#include <limits.h>
 
 #include <fmt/format.h>
 
@@ -61,13 +62,13 @@ struct gamedef_generic_t : public gamedef_t
     const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
 };
 
-template<gameid_t id>
+template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
     gamedef_q1_like_t(const char *base_dir = "ID1") :
         gamedef_t(base_dir)
     {
-        this->id = id;
+        this->id = ID;
         has_rgb_lightmap = false;
     }
 
@@ -459,6 +460,12 @@ static bool BSPVersionSupported(int32_t ident, int32_t version, const bspversion
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
+            if (bspver->game->id == GAME_HEXEN_II) {
+                // HACK: don't detect as Hexen II here, it's done later (isHexen2).
+                // Since the Hexen II bspversion_t's have the same ident/version as Quake
+                // we need to assume Quake.
+                continue;
+            }
             *out_version = bspver;
             return true;
         }
@@ -1437,492 +1444,499 @@ static uint8_t *BSP29_CopyVisData(const uint8_t *dvisdata, int visdatasize)
  */
 bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
 {
-    if (bspdata->version == to_version)
-        return true;
+    try
+    {
+        if (bspdata->version == to_version)
+            return true;
 
-    if (to_version == &bspver_generic) {
-        // Conversions to bspver_generic
-        // NOTE: these always succeed
-        mbsp_t mbsp { };
+        if (to_version == &bspver_generic) {
+            // Conversions to bspver_generic
+            // NOTE: these always succeed
+            mbsp_t mbsp { };
 
-        if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
-            // bspver_q1, bspver_h2, bspver_hl -> bspver_generic
-            const bsp29_t &bsp29 = std::get<bsp29_t>(bspdata->bsp);
+            if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
+                // bspver_q1, bspver_h2, bspver_hl -> bspver_generic
+                const bsp29_t &bsp29 = std::get<bsp29_t>(bspdata->bsp);
 
-            // copy counts
-            mbsp.nummodels = bsp29.nummodels;
-            mbsp.visdatasize = bsp29.visdatasize;
-            mbsp.lightdatasize = bsp29.lightdatasize;
-            mbsp.texdatasize = bsp29.texdatasize;
-            mbsp.entdatasize = bsp29.entdatasize;
-            mbsp.numleafs = bsp29.numleafs;
-            mbsp.numplanes = bsp29.numplanes;
-            mbsp.numvertexes = bsp29.numvertexes;
-            mbsp.numnodes = bsp29.numnodes;
-            mbsp.numtexinfo = bsp29.numtexinfo;
-            mbsp.numfaces = bsp29.numfaces;
-            mbsp.numclipnodes = bsp29.numclipnodes;
-            mbsp.numedges = bsp29.numedges;
-            mbsp.numleaffaces = bsp29.nummarksurfaces;
-            mbsp.numsurfedges = bsp29.numsurfedges;
+                // copy counts
+                mbsp.nummodels = bsp29.nummodels;
+                mbsp.visdatasize = bsp29.visdatasize;
+                mbsp.lightdatasize = bsp29.lightdatasize;
+                mbsp.texdatasize = bsp29.texdatasize;
+                mbsp.entdatasize = bsp29.entdatasize;
+                mbsp.numleafs = bsp29.numleafs;
+                mbsp.numplanes = bsp29.numplanes;
+                mbsp.numvertexes = bsp29.numvertexes;
+                mbsp.numnodes = bsp29.numnodes;
+                mbsp.numtexinfo = bsp29.numtexinfo;
+                mbsp.numfaces = bsp29.numfaces;
+                mbsp.numclipnodes = bsp29.numclipnodes;
+                mbsp.numedges = bsp29.numedges;
+                mbsp.numleaffaces = bsp29.nummarksurfaces;
+                mbsp.numsurfedges = bsp29.numsurfedges;
 
-            // copy or convert data
-            if (bspdata->version == &bspver_h2) {
-                CopyArray(bsp29.dmodels_h2, bsp29.nummodels, mbsp.dmodels);
+                // copy or convert data
+                if (bspdata->version == &bspver_h2) {
+                    CopyArray(bsp29.dmodels_h2, bsp29.nummodels, mbsp.dmodels);
+                } else {
+                    CopyArray(bsp29.dmodels_q, bsp29.nummodels, mbsp.dmodels);
+                }
+                mbsp.dvisdata = BSP29_CopyVisData(bsp29.dvisdata, bsp29.visdatasize);
+                CopyArray(bsp29.dlightdata, bsp29.lightdatasize, mbsp.dlightdata);
+                CopyArray(bsp29.dtexdata, bsp29.texdatasize, mbsp.dtexdata);
+                CopyArray(bsp29.dentdata, bsp29.entdatasize, mbsp.dentdata);
+                CopyArray(bsp29.dleafs, bsp29.numleafs, mbsp.dleafs);
+                CopyArray(bsp29.dplanes, bsp29.numplanes, mbsp.dplanes);
+                CopyArray(bsp29.dvertexes, bsp29.numvertexes, mbsp.dvertexes);
+                CopyArray(bsp29.dnodes, bsp29.numnodes, mbsp.dnodes);
+                CopyArray(bsp29.texinfo, bsp29.numtexinfo, mbsp.texinfo);
+                CopyArray(bsp29.dfaces, bsp29.numfaces, mbsp.dfaces);
+                CopyArray(bsp29.dclipnodes, bsp29.numclipnodes, mbsp.dclipnodes);
+                CopyArray(bsp29.dedges, bsp29.numedges, mbsp.dedges);
+                CopyArray(bsp29.dmarksurfaces, bsp29.nummarksurfaces, mbsp.dleaffaces);
+                CopyArray(bsp29.dsurfedges, bsp29.numsurfedges, mbsp.dsurfedges);
+            } else if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
+                // bspver_q2 -> bspver_generic
+                const q2bsp_t &q2bsp = std::get<q2bsp_t>(bspdata->bsp);
+
+                // copy counts
+                mbsp.nummodels = q2bsp.nummodels;
+                mbsp.visdatasize = q2bsp.visdatasize;
+                mbsp.lightdatasize = q2bsp.lightdatasize;
+                mbsp.entdatasize = q2bsp.entdatasize;
+                mbsp.numleafs = q2bsp.numleafs;
+                mbsp.numplanes = q2bsp.numplanes;
+                mbsp.numvertexes = q2bsp.numvertexes;
+                mbsp.numnodes = q2bsp.numnodes;
+                mbsp.numtexinfo = q2bsp.numtexinfo;
+                mbsp.numfaces = q2bsp.numfaces;
+                mbsp.numedges = q2bsp.numedges;
+                mbsp.numleaffaces = q2bsp.numleaffaces;
+                mbsp.numleafbrushes = q2bsp.numleafbrushes;
+                mbsp.numsurfedges = q2bsp.numsurfedges;
+                mbsp.numareas = q2bsp.numareas;
+                mbsp.numareaportals = q2bsp.numareaportals;
+                mbsp.numbrushes = q2bsp.numbrushes;
+                mbsp.numbrushsides = q2bsp.numbrushsides;
+
+                // copy or convert data
+                CopyArray(q2bsp.dmodels, q2bsp.nummodels, mbsp.dmodels);
+                CopyArray(q2bsp.dlightdata, q2bsp.lightdatasize, mbsp.dlightdata);
+                CopyArray(q2bsp.dentdata, q2bsp.entdatasize, mbsp.dentdata);
+                CopyArray(q2bsp.dleafs, q2bsp.numleafs, mbsp.dleafs);
+                CopyArray(q2bsp.dplanes, q2bsp.numplanes, mbsp.dplanes);
+                CopyArray(q2bsp.dvertexes, q2bsp.numvertexes, mbsp.dvertexes);
+                CopyArray(q2bsp.dnodes, q2bsp.numnodes, mbsp.dnodes);
+                CopyArray(q2bsp.texinfo, q2bsp.numtexinfo, mbsp.texinfo);
+                CopyArray(q2bsp.dfaces, q2bsp.numfaces, mbsp.dfaces);
+                CopyArray(q2bsp.dedges, q2bsp.numedges, mbsp.dedges);
+                CopyArray(q2bsp.dleaffaces, q2bsp.numleaffaces, mbsp.dleaffaces);
+                CopyArray(q2bsp.dleafbrushes, q2bsp.numleafbrushes, mbsp.dleafbrushes);
+                CopyArray(q2bsp.dsurfedges, q2bsp.numsurfedges, mbsp.dsurfedges);
+
+                mbsp.dvisdata =
+                    Q2BSPtoM_CopyVisData(q2bsp.dvis, q2bsp.visdatasize, &mbsp.visdatasize, mbsp.dleafs, mbsp.numleafs);
+
+                CopyArray(q2bsp.dareas, q2bsp.numareas, mbsp.dareas);
+                CopyArray(q2bsp.dareaportals, q2bsp.numareaportals, mbsp.dareaportals);
+
+                CopyArray(q2bsp.dbrushes, q2bsp.numbrushes, mbsp.dbrushes);
+                CopyArray(q2bsp.dbrushsides, q2bsp.numbrushsides, mbsp.dbrushsides);
+            } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
+                // bspver_qbism -> bspver_generic
+                const q2bsp_qbism_t &q2bsp = std::get<q2bsp_qbism_t>(bspdata->bsp);
+
+                // copy counts
+                mbsp.nummodels = q2bsp.nummodels;
+                mbsp.visdatasize = q2bsp.visdatasize;
+                mbsp.lightdatasize = q2bsp.lightdatasize;
+                mbsp.entdatasize = q2bsp.entdatasize;
+                mbsp.numleafs = q2bsp.numleafs;
+                mbsp.numplanes = q2bsp.numplanes;
+                mbsp.numvertexes = q2bsp.numvertexes;
+                mbsp.numnodes = q2bsp.numnodes;
+                mbsp.numtexinfo = q2bsp.numtexinfo;
+                mbsp.numfaces = q2bsp.numfaces;
+                mbsp.numedges = q2bsp.numedges;
+                mbsp.numleaffaces = q2bsp.numleaffaces;
+                mbsp.numleafbrushes = q2bsp.numleafbrushes;
+                mbsp.numsurfedges = q2bsp.numsurfedges;
+                mbsp.numareas = q2bsp.numareas;
+                mbsp.numareaportals = q2bsp.numareaportals;
+                mbsp.numbrushes = q2bsp.numbrushes;
+                mbsp.numbrushsides = q2bsp.numbrushsides;
+
+                // copy or convert data
+                CopyArray(q2bsp.dmodels, q2bsp.nummodels, mbsp.dmodels);
+                CopyArray(q2bsp.dlightdata, q2bsp.lightdatasize, mbsp.dlightdata);
+                CopyArray(q2bsp.dentdata, q2bsp.entdatasize, mbsp.dentdata);
+                CopyArray(q2bsp.dleafs, q2bsp.numleafs, mbsp.dleafs);
+                CopyArray(q2bsp.dplanes, q2bsp.numplanes, mbsp.dplanes);
+                CopyArray(q2bsp.dvertexes, q2bsp.numvertexes, mbsp.dvertexes);
+                CopyArray(q2bsp.dnodes, q2bsp.numnodes, mbsp.dnodes);
+                CopyArray(q2bsp.texinfo, q2bsp.numtexinfo, mbsp.texinfo);
+                CopyArray(q2bsp.dfaces, q2bsp.numfaces, mbsp.dfaces);
+                CopyArray(q2bsp.dedges, q2bsp.numedges, mbsp.dedges);
+                CopyArray(q2bsp.dleaffaces, q2bsp.numleaffaces, mbsp.dleaffaces);
+                CopyArray(q2bsp.dleafbrushes, q2bsp.numleafbrushes, mbsp.dleafbrushes);
+                CopyArray(q2bsp.dsurfedges, q2bsp.numsurfedges, mbsp.dsurfedges);
+
+                mbsp.dvisdata =
+                    Q2BSPtoM_CopyVisData(q2bsp.dvis, q2bsp.visdatasize, &mbsp.visdatasize, mbsp.dleafs, mbsp.numleafs);
+
+                CopyArray(q2bsp.dareas, q2bsp.numareas, mbsp.dareas);
+                CopyArray(q2bsp.dareaportals, q2bsp.numareaportals, mbsp.dareaportals);
+
+                CopyArray(q2bsp.dbrushes, q2bsp.numbrushes, mbsp.dbrushes);
+                CopyArray(q2bsp.dbrushsides, q2bsp.numbrushsides, mbsp.dbrushsides);
+            } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
+                // bspver_bsp2rmq, bspver_h2bsp2rmq -> bspver_generic
+                const bsp2rmq_t &bsp2rmq = std::get<bsp2rmq_t>(bspdata->bsp);
+
+                // copy counts
+                mbsp.nummodels = bsp2rmq.nummodels;
+                mbsp.visdatasize = bsp2rmq.visdatasize;
+                mbsp.lightdatasize = bsp2rmq.lightdatasize;
+                mbsp.texdatasize = bsp2rmq.texdatasize;
+                mbsp.entdatasize = bsp2rmq.entdatasize;
+                mbsp.numleafs = bsp2rmq.numleafs;
+                mbsp.numplanes = bsp2rmq.numplanes;
+                mbsp.numvertexes = bsp2rmq.numvertexes;
+                mbsp.numnodes = bsp2rmq.numnodes;
+                mbsp.numtexinfo = bsp2rmq.numtexinfo;
+                mbsp.numfaces = bsp2rmq.numfaces;
+                mbsp.numclipnodes = bsp2rmq.numclipnodes;
+                mbsp.numedges = bsp2rmq.numedges;
+                mbsp.numleaffaces = bsp2rmq.nummarksurfaces;
+                mbsp.numsurfedges = bsp2rmq.numsurfedges;
+
+                // copy or convert data
+                if (bspdata->version == &bspver_h2bsp2rmq) {
+                    CopyArray(bsp2rmq.dmodels_h2, bsp2rmq.nummodels, mbsp.dmodels);
+                } else {
+                    CopyArray(bsp2rmq.dmodels_q, bsp2rmq.nummodels, mbsp.dmodels);
+                }
+                mbsp.dvisdata = BSP29_CopyVisData(bsp2rmq.dvisdata, bsp2rmq.visdatasize);
+                CopyArray(bsp2rmq.dlightdata, bsp2rmq.lightdatasize, mbsp.dlightdata);
+                CopyArray(bsp2rmq.dtexdata, bsp2rmq.texdatasize, mbsp.dtexdata);
+                CopyArray(bsp2rmq.dentdata, bsp2rmq.entdatasize,mbsp.dentdata);
+                CopyArray(bsp2rmq.dleafs, bsp2rmq.numleafs, mbsp.dleafs);
+                CopyArray(bsp2rmq.dplanes, bsp2rmq.numplanes, mbsp.dplanes);
+                CopyArray(bsp2rmq.dvertexes, bsp2rmq.numvertexes, mbsp.dvertexes);
+                CopyArray(bsp2rmq.dnodes, bsp2rmq.numnodes, mbsp.dnodes);
+                CopyArray(bsp2rmq.texinfo, bsp2rmq.numtexinfo, mbsp.texinfo);
+                CopyArray(bsp2rmq.dfaces, bsp2rmq.numfaces, mbsp.dfaces);
+                CopyArray(bsp2rmq.dclipnodes, bsp2rmq.numclipnodes, mbsp.dclipnodes);
+                CopyArray(bsp2rmq.dedges, bsp2rmq.numedges, mbsp.dedges);
+                CopyArray(bsp2rmq.dmarksurfaces, bsp2rmq.nummarksurfaces, mbsp.dleaffaces);
+                CopyArray(bsp2rmq.dsurfedges, bsp2rmq.numsurfedges, mbsp.dsurfedges);
+            } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
+                // bspver_bsp2, bspver_h2bsp2 -> bspver_generic
+                const bsp2_t &bsp2 = std::get<bsp2_t>(bspdata->bsp);
+
+                // copy counts
+                mbsp.nummodels = bsp2.nummodels;
+                mbsp.visdatasize = bsp2.visdatasize;
+                mbsp.lightdatasize = bsp2.lightdatasize;
+                mbsp.texdatasize = bsp2.texdatasize;
+                mbsp.entdatasize = bsp2.entdatasize;
+                mbsp.numleafs = bsp2.numleafs;
+                mbsp.numplanes = bsp2.numplanes;
+                mbsp.numvertexes = bsp2.numvertexes;
+                mbsp.numnodes = bsp2.numnodes;
+                mbsp.numtexinfo = bsp2.numtexinfo;
+                mbsp.numfaces = bsp2.numfaces;
+                mbsp.numclipnodes = bsp2.numclipnodes;
+                mbsp.numedges = bsp2.numedges;
+                mbsp.numleaffaces = bsp2.nummarksurfaces;
+                mbsp.numsurfedges = bsp2.numsurfedges;
+
+                // copy or convert data
+                if (bspdata->version == &bspver_h2bsp2) {
+                    CopyArray(bsp2.dmodels_h2, bsp2.nummodels, mbsp.dmodels);
+                } else {
+                    CopyArray(bsp2.dmodels_q, bsp2.nummodels, mbsp.dmodels);
+                }
+                mbsp.dvisdata = BSP29_CopyVisData(bsp2.dvisdata, bsp2.visdatasize);
+                CopyArray(bsp2.dlightdata, bsp2.lightdatasize, mbsp.dlightdata);
+                CopyArray(bsp2.dtexdata, bsp2.texdatasize, mbsp.dtexdata);
+                CopyArray(bsp2.dentdata, bsp2.entdatasize, mbsp.dentdata);
+                CopyArray(bsp2.dleafs, bsp2.numleafs, mbsp.dleafs);
+                CopyArray(bsp2.dplanes, bsp2.numplanes, mbsp.dplanes);
+                CopyArray(bsp2.dvertexes, bsp2.numvertexes, mbsp.dvertexes);
+                CopyArray(bsp2.dnodes, bsp2.numnodes, mbsp.dnodes);
+                CopyArray(bsp2.texinfo, bsp2.numtexinfo, mbsp.texinfo);
+                CopyArray(bsp2.dfaces, bsp2.numfaces, mbsp.dfaces);
+                CopyArray(bsp2.dclipnodes, bsp2.numclipnodes, mbsp.dclipnodes);
+                CopyArray(bsp2.dedges, bsp2.numedges, mbsp.dedges);
+                CopyArray(bsp2.dmarksurfaces, bsp2.nummarksurfaces, mbsp.dleaffaces);
+                CopyArray(bsp2.dsurfedges, bsp2.numsurfedges, mbsp.dsurfedges);
             } else {
-                CopyArray(bsp29.dmodels_q, bsp29.nummodels, mbsp.dmodels);
+                return false;
             }
-            mbsp.dvisdata = BSP29_CopyVisData(bsp29.dvisdata, bsp29.visdatasize);
-            CopyArray(bsp29.dlightdata, bsp29.lightdatasize, mbsp.dlightdata);
-            CopyArray(bsp29.dtexdata, bsp29.texdatasize, mbsp.dtexdata);
-            CopyArray(bsp29.dentdata, bsp29.entdatasize, mbsp.dentdata);
-            CopyArray(bsp29.dleafs, bsp29.numleafs, mbsp.dleafs);
-            CopyArray(bsp29.dplanes, bsp29.numplanes, mbsp.dplanes);
-            CopyArray(bsp29.dvertexes, bsp29.numvertexes, mbsp.dvertexes);
-            CopyArray(bsp29.dnodes, bsp29.numnodes, mbsp.dnodes);
-            CopyArray(bsp29.texinfo, bsp29.numtexinfo, mbsp.texinfo);
-            CopyArray(bsp29.dfaces, bsp29.numfaces, mbsp.dfaces);
-            CopyArray(bsp29.dclipnodes, bsp29.numclipnodes, mbsp.dclipnodes);
-            CopyArray(bsp29.dedges, bsp29.numedges, mbsp.dedges);
-            CopyArray(bsp29.dmarksurfaces, bsp29.nummarksurfaces, mbsp.dleaffaces);
-            CopyArray(bsp29.dsurfedges, bsp29.numsurfedges, mbsp.dsurfedges);
-        } else if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
-            // bspver_q2 -> bspver_generic
-            const q2bsp_t &q2bsp = std::get<q2bsp_t>(bspdata->bsp);
 
-            // copy counts
-            mbsp.nummodels = q2bsp.nummodels;
-            mbsp.visdatasize = q2bsp.visdatasize;
-            mbsp.lightdatasize = q2bsp.lightdatasize;
-            mbsp.entdatasize = q2bsp.entdatasize;
-            mbsp.numleafs = q2bsp.numleafs;
-            mbsp.numplanes = q2bsp.numplanes;
-            mbsp.numvertexes = q2bsp.numvertexes;
-            mbsp.numnodes = q2bsp.numnodes;
-            mbsp.numtexinfo = q2bsp.numtexinfo;
-            mbsp.numfaces = q2bsp.numfaces;
-            mbsp.numedges = q2bsp.numedges;
-            mbsp.numleaffaces = q2bsp.numleaffaces;
-            mbsp.numleafbrushes = q2bsp.numleafbrushes;
-            mbsp.numsurfedges = q2bsp.numsurfedges;
-            mbsp.numareas = q2bsp.numareas;
-            mbsp.numareaportals = q2bsp.numareaportals;
-            mbsp.numbrushes = q2bsp.numbrushes;
-            mbsp.numbrushsides = q2bsp.numbrushsides;
+            bspdata->loadversion = mbsp.loadversion = bspdata->version;
+            bspdata->version = to_version;
 
-            // copy or convert data
-            CopyArray(q2bsp.dmodels, q2bsp.nummodels, mbsp.dmodels);
-            CopyArray(q2bsp.dlightdata, q2bsp.lightdatasize, mbsp.dlightdata);
-            CopyArray(q2bsp.dentdata, q2bsp.entdatasize, mbsp.dentdata);
-            CopyArray(q2bsp.dleafs, q2bsp.numleafs, mbsp.dleafs);
-            CopyArray(q2bsp.dplanes, q2bsp.numplanes, mbsp.dplanes);
-            CopyArray(q2bsp.dvertexes, q2bsp.numvertexes, mbsp.dvertexes);
-            CopyArray(q2bsp.dnodes, q2bsp.numnodes, mbsp.dnodes);
-            CopyArray(q2bsp.texinfo, q2bsp.numtexinfo, mbsp.texinfo);
-            CopyArray(q2bsp.dfaces, q2bsp.numfaces, mbsp.dfaces);
-            CopyArray(q2bsp.dedges, q2bsp.numedges, mbsp.dedges);
-            CopyArray(q2bsp.dleaffaces, q2bsp.numleaffaces, mbsp.dleaffaces);
-            CopyArray(q2bsp.dleafbrushes, q2bsp.numleafbrushes, mbsp.dleafbrushes);
-            CopyArray(q2bsp.dsurfedges, q2bsp.numsurfedges, mbsp.dsurfedges);
+            bspdata->bsp = std::move(mbsp);
+            return true;
+        } else if (bspdata->version == &bspver_generic) {
+            // Conversions from bspver_generic
+            const mbsp_t &mbsp = std::get<mbsp_t>(bspdata->bsp);
 
-            mbsp.dvisdata =
-                Q2BSPtoM_CopyVisData(q2bsp.dvis, q2bsp.visdatasize, &mbsp.visdatasize, mbsp.dleafs, mbsp.numleafs);
+            if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
+                // bspver_generic -> bspver_q1, bspver_h2, bspver_hl
+                bsp29_t bsp29 { };
 
-            CopyArray(q2bsp.dareas, q2bsp.numareas, mbsp.dareas);
-            CopyArray(q2bsp.dareaportals, q2bsp.numareaportals, mbsp.dareaportals);
+                // copy counts
+                bsp29.nummodels = mbsp.nummodels;
+                bsp29.visdatasize = mbsp.visdatasize;
+                bsp29.lightdatasize = mbsp.lightdatasize;
+                bsp29.texdatasize = mbsp.texdatasize;
+                bsp29.entdatasize = mbsp.entdatasize;
+                bsp29.numleafs = mbsp.numleafs;
+                bsp29.numplanes = mbsp.numplanes;
+                bsp29.numvertexes = mbsp.numvertexes;
+                bsp29.numnodes = mbsp.numnodes;
+                bsp29.numtexinfo = mbsp.numtexinfo;
+                bsp29.numfaces = mbsp.numfaces;
+                bsp29.numclipnodes = mbsp.numclipnodes;
+                bsp29.numedges = mbsp.numedges;
+                bsp29.nummarksurfaces = mbsp.numleaffaces;
+                bsp29.numsurfedges = mbsp.numsurfedges;
 
-            CopyArray(q2bsp.dbrushes, q2bsp.numbrushes, mbsp.dbrushes);
-            CopyArray(q2bsp.dbrushsides, q2bsp.numbrushsides, mbsp.dbrushsides);
-        } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
-            // bspver_qbism -> bspver_generic
-            const q2bsp_qbism_t &q2bsp = std::get<q2bsp_qbism_t>(bspdata->bsp);
+                // copy or convert data
+                if (to_version == &bspver_h2) {
+                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp29.dmodels_h2);
+                } else {
+                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp29.dmodels_q);
+                }
+                bsp29.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
+                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp29.dlightdata);
+                CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp29.dtexdata);
+                CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp29.dentdata);
+                CopyArray(mbsp.dleafs, mbsp.numleafs, bsp29.dleafs);
+                CopyArray(mbsp.dplanes, mbsp.numplanes, bsp29.dplanes);
+                CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp29.dvertexes);
+                CopyArray(mbsp.dnodes, mbsp.numnodes, bsp29.dnodes);
+                CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp29.texinfo);
+                CopyArray(mbsp.dfaces, mbsp.numfaces, bsp29.dfaces);
+                CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp29.dclipnodes);
+                CopyArray(mbsp.dedges, mbsp.numedges, bsp29.dedges);
+                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp29.dmarksurfaces);
+                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp29.dsurfedges);
 
-            // copy counts
-            mbsp.nummodels = q2bsp.nummodels;
-            mbsp.visdatasize = q2bsp.visdatasize;
-            mbsp.lightdatasize = q2bsp.lightdatasize;
-            mbsp.entdatasize = q2bsp.entdatasize;
-            mbsp.numleafs = q2bsp.numleafs;
-            mbsp.numplanes = q2bsp.numplanes;
-            mbsp.numvertexes = q2bsp.numvertexes;
-            mbsp.numnodes = q2bsp.numnodes;
-            mbsp.numtexinfo = q2bsp.numtexinfo;
-            mbsp.numfaces = q2bsp.numfaces;
-            mbsp.numedges = q2bsp.numedges;
-            mbsp.numleaffaces = q2bsp.numleaffaces;
-            mbsp.numleafbrushes = q2bsp.numleafbrushes;
-            mbsp.numsurfedges = q2bsp.numsurfedges;
-            mbsp.numareas = q2bsp.numareas;
-            mbsp.numareaportals = q2bsp.numareaportals;
-            mbsp.numbrushes = q2bsp.numbrushes;
-            mbsp.numbrushsides = q2bsp.numbrushsides;
+                /* Conversion complete! */
+                bspdata->version = to_version;
+                bspdata->bsp = std::move(bsp29);
 
-            // copy or convert data
-            CopyArray(q2bsp.dmodels, q2bsp.nummodels, mbsp.dmodels);
-            CopyArray(q2bsp.dlightdata, q2bsp.lightdatasize, mbsp.dlightdata);
-            CopyArray(q2bsp.dentdata, q2bsp.entdatasize, mbsp.dentdata);
-            CopyArray(q2bsp.dleafs, q2bsp.numleafs, mbsp.dleafs);
-            CopyArray(q2bsp.dplanes, q2bsp.numplanes, mbsp.dplanes);
-            CopyArray(q2bsp.dvertexes, q2bsp.numvertexes, mbsp.dvertexes);
-            CopyArray(q2bsp.dnodes, q2bsp.numnodes, mbsp.dnodes);
-            CopyArray(q2bsp.texinfo, q2bsp.numtexinfo, mbsp.texinfo);
-            CopyArray(q2bsp.dfaces, q2bsp.numfaces, mbsp.dfaces);
-            CopyArray(q2bsp.dedges, q2bsp.numedges, mbsp.dedges);
-            CopyArray(q2bsp.dleaffaces, q2bsp.numleaffaces, mbsp.dleaffaces);
-            CopyArray(q2bsp.dleafbrushes, q2bsp.numleafbrushes, mbsp.dleafbrushes);
-            CopyArray(q2bsp.dsurfedges, q2bsp.numsurfedges, mbsp.dsurfedges);
+                return true;
+            } else if (to_version == &bspver_q2) {
+                // bspver_generic -> bspver_q2
+                q2bsp_t q2bsp { };
 
-            mbsp.dvisdata =
-                Q2BSPtoM_CopyVisData(q2bsp.dvis, q2bsp.visdatasize, &mbsp.visdatasize, mbsp.dleafs, mbsp.numleafs);
+                // copy counts
+                q2bsp.nummodels = mbsp.nummodels;
+                q2bsp.visdatasize = mbsp.visdatasize;
+                q2bsp.lightdatasize = mbsp.lightdatasize;
+                q2bsp.entdatasize = mbsp.entdatasize;
+                q2bsp.numleafs = mbsp.numleafs;
+                q2bsp.numplanes = mbsp.numplanes;
+                q2bsp.numvertexes = mbsp.numvertexes;
+                q2bsp.numnodes = mbsp.numnodes;
+                q2bsp.numtexinfo = mbsp.numtexinfo;
+                q2bsp.numfaces = mbsp.numfaces;
+                q2bsp.numedges = mbsp.numedges;
+                q2bsp.numleaffaces = mbsp.numleaffaces;
+                q2bsp.numleafbrushes = mbsp.numleafbrushes;
+                q2bsp.numsurfedges = mbsp.numsurfedges;
+                q2bsp.numareas = mbsp.numareas;
+                q2bsp.numareaportals = mbsp.numareaportals;
+                q2bsp.numbrushes = mbsp.numbrushes;
+                q2bsp.numbrushsides = mbsp.numbrushsides;
 
-            CopyArray(q2bsp.dareas, q2bsp.numareas, mbsp.dareas);
-            CopyArray(q2bsp.dareaportals, q2bsp.numareaportals, mbsp.dareaportals);
+                // copy or convert data
+                CopyArray(mbsp.dmodels, mbsp.nummodels, q2bsp.dmodels);
+                q2bsp.dvis = MBSPtoQ2_CopyVisData(mbsp.dvisdata, &q2bsp.visdatasize, mbsp.numleafs, mbsp.dleafs);
+                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, q2bsp.dlightdata);
+                CopyArray(mbsp.dentdata, mbsp.entdatasize, q2bsp.dentdata);
+                CopyArray(mbsp.dleafs, mbsp.numleafs, q2bsp.dleafs);
+                CopyArray(mbsp.dplanes, mbsp.numplanes, q2bsp.dplanes);
+                CopyArray(mbsp.dvertexes, mbsp.numvertexes, q2bsp.dvertexes);
+                CopyArray(mbsp.dnodes, mbsp.numnodes, q2bsp.dnodes);
+                CopyArray(mbsp.texinfo, mbsp.numtexinfo, q2bsp.texinfo);
+                CopyArray(mbsp.dfaces, mbsp.numfaces, q2bsp.dfaces);
+                CopyArray(mbsp.dedges, mbsp.numedges,q2bsp.dedges);
+                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, q2bsp.dleaffaces);
+                CopyArray(mbsp.dleafbrushes, mbsp.numleafbrushes,q2bsp.dleafbrushes);
+                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, q2bsp.dsurfedges);
 
-            CopyArray(q2bsp.dbrushes, q2bsp.numbrushes, mbsp.dbrushes);
-            CopyArray(q2bsp.dbrushsides, q2bsp.numbrushsides, mbsp.dbrushsides);
-        } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
-            // bspver_bsp2rmq, bspver_h2bsp2rmq -> bspver_generic
-            const bsp2rmq_t &bsp2rmq = std::get<bsp2rmq_t>(bspdata->bsp);
+                CopyArray(mbsp.dareas, mbsp.numareas, q2bsp.dareas);
+                CopyArray(mbsp.dareaportals, mbsp.numareaportals, q2bsp.dareaportals);
 
-            // copy counts
-            mbsp.nummodels = bsp2rmq.nummodels;
-            mbsp.visdatasize = bsp2rmq.visdatasize;
-            mbsp.lightdatasize = bsp2rmq.lightdatasize;
-            mbsp.texdatasize = bsp2rmq.texdatasize;
-            mbsp.entdatasize = bsp2rmq.entdatasize;
-            mbsp.numleafs = bsp2rmq.numleafs;
-            mbsp.numplanes = bsp2rmq.numplanes;
-            mbsp.numvertexes = bsp2rmq.numvertexes;
-            mbsp.numnodes = bsp2rmq.numnodes;
-            mbsp.numtexinfo = bsp2rmq.numtexinfo;
-            mbsp.numfaces = bsp2rmq.numfaces;
-            mbsp.numclipnodes = bsp2rmq.numclipnodes;
-            mbsp.numedges = bsp2rmq.numedges;
-            mbsp.numleaffaces = bsp2rmq.nummarksurfaces;
-            mbsp.numsurfedges = bsp2rmq.numsurfedges;
+                CopyArray(mbsp.dbrushes, mbsp.numbrushes, q2bsp.dbrushes);
+                CopyArray(mbsp.dbrushsides, mbsp.numbrushsides, q2bsp.dbrushsides);
 
-            // copy or convert data
-            if (bspdata->version == &bspver_h2bsp2rmq) {
-                CopyArray(bsp2rmq.dmodels_h2, bsp2rmq.nummodels, mbsp.dmodels);
-            } else {
-                CopyArray(bsp2rmq.dmodels_q, bsp2rmq.nummodels, mbsp.dmodels);
+                /* Conversion complete! */
+                bspdata->version = to_version;
+                bspdata->bsp = std::move(q2bsp);
+
+                return true;
+            } else if (to_version == &bspver_qbism) {
+                // bspver_generic -> bspver_qbism
+                q2bsp_qbism_t q2bsp { };
+
+                // copy counts
+                q2bsp.nummodels = mbsp.nummodels;
+                q2bsp.visdatasize = mbsp.visdatasize;
+                q2bsp.lightdatasize = mbsp.lightdatasize;
+                q2bsp.entdatasize = mbsp.entdatasize;
+                q2bsp.numleafs = mbsp.numleafs;
+                q2bsp.numplanes = mbsp.numplanes;
+                q2bsp.numvertexes = mbsp.numvertexes;
+                q2bsp.numnodes = mbsp.numnodes;
+                q2bsp.numtexinfo = mbsp.numtexinfo;
+                q2bsp.numfaces = mbsp.numfaces;
+                q2bsp.numedges = mbsp.numedges;
+                q2bsp.numleaffaces = mbsp.numleaffaces;
+                q2bsp.numleafbrushes = mbsp.numleafbrushes;
+                q2bsp.numsurfedges = mbsp.numsurfedges;
+                q2bsp.numareas = mbsp.numareas;
+                q2bsp.numareaportals = mbsp.numareaportals;
+                q2bsp.numbrushes = mbsp.numbrushes;
+                q2bsp.numbrushsides = mbsp.numbrushsides;
+
+                // copy or convert data
+                CopyArray(mbsp.dmodels, mbsp.nummodels, q2bsp.dmodels);
+                q2bsp.dvis = MBSPtoQ2_CopyVisData(mbsp.dvisdata, &q2bsp.visdatasize, mbsp.numleafs, mbsp.dleafs);
+                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, q2bsp.dlightdata);
+                CopyArray(mbsp.dentdata, mbsp.entdatasize, q2bsp.dentdata);
+                CopyArray(mbsp.dleafs, mbsp.numleafs, q2bsp.dleafs);
+                CopyArray(mbsp.dplanes, mbsp.numplanes, q2bsp.dplanes);
+                CopyArray(mbsp.dvertexes, mbsp.numvertexes, q2bsp.dvertexes);
+                CopyArray(mbsp.dnodes, mbsp.numnodes, q2bsp.dnodes);
+                CopyArray(mbsp.texinfo, mbsp.numtexinfo, q2bsp.texinfo);
+                CopyArray(mbsp.dfaces, mbsp.numfaces, q2bsp.dfaces);
+                CopyArray(mbsp.dedges, mbsp.numedges, q2bsp.dedges);
+                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, q2bsp.dleaffaces);
+                CopyArray(mbsp.dleafbrushes, mbsp.numleafbrushes, q2bsp.dleafbrushes);
+                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, q2bsp.dsurfedges);
+
+                CopyArray(mbsp.dareas, mbsp.numareas, q2bsp.dareas);
+                CopyArray(mbsp.dareaportals, mbsp.numareaportals, q2bsp.dareaportals);
+
+                CopyArray(mbsp.dbrushes, mbsp.numbrushes, q2bsp.dbrushes);
+                CopyArray(mbsp.dbrushsides, mbsp.numbrushsides, q2bsp.dbrushsides);
+
+                /* Conversion complete! */
+                bspdata->version = to_version;
+                bspdata->bsp = std::move(q2bsp);
+
+                return true;
+            } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
+                // bspver_generic -> bspver_bsp2rmq, bspver_h2bsp2rmq
+                bsp2rmq_t bsp2rmq { };
+
+                // copy counts
+                bsp2rmq.nummodels = mbsp.nummodels;
+                bsp2rmq.visdatasize = mbsp.visdatasize;
+                bsp2rmq.lightdatasize = mbsp.lightdatasize;
+                bsp2rmq.texdatasize = mbsp.texdatasize;
+                bsp2rmq.entdatasize = mbsp.entdatasize;
+                bsp2rmq.numleafs = mbsp.numleafs;
+                bsp2rmq.numplanes = mbsp.numplanes;
+                bsp2rmq.numvertexes = mbsp.numvertexes;
+                bsp2rmq.numnodes = mbsp.numnodes;
+                bsp2rmq.numtexinfo = mbsp.numtexinfo;
+                bsp2rmq.numfaces = mbsp.numfaces;
+                bsp2rmq.numclipnodes = mbsp.numclipnodes;
+                bsp2rmq.numedges = mbsp.numedges;
+                bsp2rmq.nummarksurfaces = mbsp.numleaffaces;
+                bsp2rmq.numsurfedges = mbsp.numsurfedges;
+
+                // copy or convert data
+                if (to_version == &bspver_h2bsp2rmq) {
+                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2rmq.dmodels_h2);
+                } else {
+                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2rmq.dmodels_q);
+                }
+                bsp2rmq.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
+                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp2rmq.dlightdata);
+                CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp2rmq.dtexdata);
+                CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp2rmq.dentdata);
+                CopyArray(mbsp.dleafs, mbsp.numleafs, bsp2rmq.dleafs);
+                CopyArray(mbsp.dplanes, mbsp.numplanes, bsp2rmq.dplanes);
+                CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp2rmq.dvertexes);
+                CopyArray(mbsp.dnodes, mbsp.numnodes, bsp2rmq.dnodes);
+                CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp2rmq.texinfo);
+                CopyArray(mbsp.dfaces, mbsp.numfaces, bsp2rmq.dfaces);
+                CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp2rmq.dclipnodes);
+                CopyArray(mbsp.dedges, mbsp.numedges, bsp2rmq.dedges);
+                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp2rmq.dmarksurfaces);
+                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp2rmq.dsurfedges);
+
+                /* Conversion complete! */
+                bspdata->version = to_version;
+                bspdata->bsp = std::move(bsp2rmq);
+
+                return true;
+            } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
+                // bspver_generic -> bspver_bsp2, bspver_h2bsp2
+                bsp2_t bsp2 { };
+
+                // copy counts
+                bsp2.nummodels = mbsp.nummodels;
+                bsp2.visdatasize = mbsp.visdatasize;
+                bsp2.lightdatasize = mbsp.lightdatasize;
+                bsp2.texdatasize = mbsp.texdatasize;
+                bsp2.entdatasize = mbsp.entdatasize;
+                bsp2.numleafs = mbsp.numleafs;
+                bsp2.numplanes = mbsp.numplanes;
+                bsp2.numvertexes = mbsp.numvertexes;
+                bsp2.numnodes = mbsp.numnodes;
+                bsp2.numtexinfo = mbsp.numtexinfo;
+                bsp2.numfaces = mbsp.numfaces;
+                bsp2.numclipnodes = mbsp.numclipnodes;
+                bsp2.numedges = mbsp.numedges;
+                bsp2.nummarksurfaces = mbsp.numleaffaces;
+                bsp2.numsurfedges = mbsp.numsurfedges;
+
+                // copy or convert data
+                if (to_version == &bspver_h2bsp2) {
+                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2.dmodels_h2);
+                } else {
+                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2.dmodels_q);
+                }
+                bsp2.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
+                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp2.dlightdata);
+                CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp2.dtexdata);
+                CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp2.dentdata);
+                CopyArray(mbsp.dleafs, mbsp.numleafs, bsp2.dleafs);
+                CopyArray(mbsp.dplanes, mbsp.numplanes, bsp2.dplanes);
+                CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp2.dvertexes);
+                CopyArray(mbsp.dnodes, mbsp.numnodes, bsp2.dnodes);
+                CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp2.texinfo);
+                CopyArray(mbsp.dfaces, mbsp.numfaces, bsp2.dfaces);
+                CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp2.dclipnodes);
+                CopyArray(mbsp.dedges, mbsp.numedges, bsp2.dedges);
+                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp2.dmarksurfaces);
+                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp2.dsurfedges);
+
+                /* Conversion complete! */
+                bspdata->version = to_version;
+                bspdata->bsp = std::move(bsp2);
+
+                return true;
             }
-            mbsp.dvisdata = BSP29_CopyVisData(bsp2rmq.dvisdata, bsp2rmq.visdatasize);
-            CopyArray(bsp2rmq.dlightdata, bsp2rmq.lightdatasize, mbsp.dlightdata);
-            CopyArray(bsp2rmq.dtexdata, bsp2rmq.texdatasize, mbsp.dtexdata);
-            CopyArray(bsp2rmq.dentdata, bsp2rmq.entdatasize,mbsp.dentdata);
-            CopyArray(bsp2rmq.dleafs, bsp2rmq.numleafs, mbsp.dleafs);
-            CopyArray(bsp2rmq.dplanes, bsp2rmq.numplanes, mbsp.dplanes);
-            CopyArray(bsp2rmq.dvertexes, bsp2rmq.numvertexes, mbsp.dvertexes);
-            CopyArray(bsp2rmq.dnodes, bsp2rmq.numnodes, mbsp.dnodes);
-            CopyArray(bsp2rmq.texinfo, bsp2rmq.numtexinfo, mbsp.texinfo);
-            CopyArray(bsp2rmq.dfaces, bsp2rmq.numfaces, mbsp.dfaces);
-            CopyArray(bsp2rmq.dclipnodes, bsp2rmq.numclipnodes, mbsp.dclipnodes);
-            CopyArray(bsp2rmq.dedges, bsp2rmq.numedges, mbsp.dedges);
-            CopyArray(bsp2rmq.dmarksurfaces, bsp2rmq.nummarksurfaces, mbsp.dleaffaces);
-            CopyArray(bsp2rmq.dsurfedges, bsp2rmq.numsurfedges, mbsp.dsurfedges);
-        } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
-            // bspver_bsp2, bspver_h2bsp2 -> bspver_generic
-            const bsp2_t &bsp2 = std::get<bsp2_t>(bspdata->bsp);
-
-            // copy counts
-            mbsp.nummodels = bsp2.nummodels;
-            mbsp.visdatasize = bsp2.visdatasize;
-            mbsp.lightdatasize = bsp2.lightdatasize;
-            mbsp.texdatasize = bsp2.texdatasize;
-            mbsp.entdatasize = bsp2.entdatasize;
-            mbsp.numleafs = bsp2.numleafs;
-            mbsp.numplanes = bsp2.numplanes;
-            mbsp.numvertexes = bsp2.numvertexes;
-            mbsp.numnodes = bsp2.numnodes;
-            mbsp.numtexinfo = bsp2.numtexinfo;
-            mbsp.numfaces = bsp2.numfaces;
-            mbsp.numclipnodes = bsp2.numclipnodes;
-            mbsp.numedges = bsp2.numedges;
-            mbsp.numleaffaces = bsp2.nummarksurfaces;
-            mbsp.numsurfedges = bsp2.numsurfedges;
-
-            // copy or convert data
-            if (bspdata->version == &bspver_h2bsp2) {
-                CopyArray(bsp2.dmodels_h2, bsp2.nummodels, mbsp.dmodels);
-            } else {
-                CopyArray(bsp2.dmodels_q, bsp2.nummodels, mbsp.dmodels);
-            }
-            mbsp.dvisdata = BSP29_CopyVisData(bsp2.dvisdata, bsp2.visdatasize);
-            CopyArray(bsp2.dlightdata, bsp2.lightdatasize, mbsp.dlightdata);
-            CopyArray(bsp2.dtexdata, bsp2.texdatasize, mbsp.dtexdata);
-            CopyArray(bsp2.dentdata, bsp2.entdatasize, mbsp.dentdata);
-            CopyArray(bsp2.dleafs, bsp2.numleafs, mbsp.dleafs);
-            CopyArray(bsp2.dplanes, bsp2.numplanes, mbsp.dplanes);
-            CopyArray(bsp2.dvertexes, bsp2.numvertexes, mbsp.dvertexes);
-            CopyArray(bsp2.dnodes, bsp2.numnodes, mbsp.dnodes);
-            CopyArray(bsp2.texinfo, bsp2.numtexinfo, mbsp.texinfo);
-            CopyArray(bsp2.dfaces, bsp2.numfaces, mbsp.dfaces);
-            CopyArray(bsp2.dclipnodes, bsp2.numclipnodes, mbsp.dclipnodes);
-            CopyArray(bsp2.dedges, bsp2.numedges, mbsp.dedges);
-            CopyArray(bsp2.dmarksurfaces, bsp2.nummarksurfaces, mbsp.dleaffaces);
-            CopyArray(bsp2.dsurfedges, bsp2.numsurfedges, mbsp.dsurfedges);
-        } else {
-            return false;
         }
 
-        bspdata->loadversion = mbsp.loadversion = bspdata->version;
-        bspdata->version = to_version;
-
-        bspdata->bsp = std::move(mbsp);
-        return true;
-    } else if (bspdata->version == &bspver_generic) {
-        // Conversions from bspver_generic
-        const mbsp_t &mbsp = std::get<mbsp_t>(bspdata->bsp);
-
-        if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
-            // bspver_generic -> bspver_q1, bspver_h2, bspver_hl
-            bsp29_t bsp29 { };
-
-            // copy counts
-            bsp29.nummodels = mbsp.nummodels;
-            bsp29.visdatasize = mbsp.visdatasize;
-            bsp29.lightdatasize = mbsp.lightdatasize;
-            bsp29.texdatasize = mbsp.texdatasize;
-            bsp29.entdatasize = mbsp.entdatasize;
-            bsp29.numleafs = mbsp.numleafs;
-            bsp29.numplanes = mbsp.numplanes;
-            bsp29.numvertexes = mbsp.numvertexes;
-            bsp29.numnodes = mbsp.numnodes;
-            bsp29.numtexinfo = mbsp.numtexinfo;
-            bsp29.numfaces = mbsp.numfaces;
-            bsp29.numclipnodes = mbsp.numclipnodes;
-            bsp29.numedges = mbsp.numedges;
-            bsp29.nummarksurfaces = mbsp.numleaffaces;
-            bsp29.numsurfedges = mbsp.numsurfedges;
-
-            // copy or convert data
-            if (to_version == &bspver_h2) {
-                CopyArray(mbsp.dmodels, mbsp.nummodels, bsp29.dmodels_h2);
-            } else {
-                CopyArray(mbsp.dmodels, mbsp.nummodels, bsp29.dmodels_q);
-            }
-            bsp29.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
-            CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp29.dlightdata);
-            CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp29.dtexdata);
-            CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp29.dentdata);
-            CopyArray(mbsp.dleafs, mbsp.numleafs, bsp29.dleafs);
-            CopyArray(mbsp.dplanes, mbsp.numplanes, bsp29.dplanes);
-            CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp29.dvertexes);
-            CopyArray(mbsp.dnodes, mbsp.numnodes, bsp29.dnodes);
-            CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp29.texinfo);
-            CopyArray(mbsp.dfaces, mbsp.numfaces, bsp29.dfaces);
-            CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp29.dclipnodes);
-            CopyArray(mbsp.dedges, mbsp.numedges, bsp29.dedges);
-            CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp29.dmarksurfaces);
-            CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp29.dsurfedges);
-
-            /* Conversion complete! */
-            bspdata->version = to_version;
-            bspdata->bsp = std::move(bsp29);
-
-            return true;
-        } else if (to_version == &bspver_q2) {
-            // bspver_generic -> bspver_q2
-            q2bsp_t q2bsp { };
-
-            // copy counts
-            q2bsp.nummodels = mbsp.nummodels;
-            q2bsp.visdatasize = mbsp.visdatasize;
-            q2bsp.lightdatasize = mbsp.lightdatasize;
-            q2bsp.entdatasize = mbsp.entdatasize;
-            q2bsp.numleafs = mbsp.numleafs;
-            q2bsp.numplanes = mbsp.numplanes;
-            q2bsp.numvertexes = mbsp.numvertexes;
-            q2bsp.numnodes = mbsp.numnodes;
-            q2bsp.numtexinfo = mbsp.numtexinfo;
-            q2bsp.numfaces = mbsp.numfaces;
-            q2bsp.numedges = mbsp.numedges;
-            q2bsp.numleaffaces = mbsp.numleaffaces;
-            q2bsp.numleafbrushes = mbsp.numleafbrushes;
-            q2bsp.numsurfedges = mbsp.numsurfedges;
-            q2bsp.numareas = mbsp.numareas;
-            q2bsp.numareaportals = mbsp.numareaportals;
-            q2bsp.numbrushes = mbsp.numbrushes;
-            q2bsp.numbrushsides = mbsp.numbrushsides;
-
-            // copy or convert data
-            CopyArray(mbsp.dmodels, mbsp.nummodels, q2bsp.dmodels);
-            q2bsp.dvis = MBSPtoQ2_CopyVisData(mbsp.dvisdata, &q2bsp.visdatasize, mbsp.numleafs, mbsp.dleafs);
-            CopyArray(mbsp.dlightdata, mbsp.lightdatasize, q2bsp.dlightdata);
-            CopyArray(mbsp.dentdata, mbsp.entdatasize, q2bsp.dentdata);
-            CopyArray(mbsp.dleafs, mbsp.numleafs, q2bsp.dleafs);
-            CopyArray(mbsp.dplanes, mbsp.numplanes, q2bsp.dplanes);
-            CopyArray(mbsp.dvertexes, mbsp.numvertexes, q2bsp.dvertexes);
-            CopyArray(mbsp.dnodes, mbsp.numnodes, q2bsp.dnodes);
-            CopyArray(mbsp.texinfo, mbsp.numtexinfo, q2bsp.texinfo);
-            CopyArray(mbsp.dfaces, mbsp.numfaces, q2bsp.dfaces);
-            CopyArray(mbsp.dedges, mbsp.numedges,q2bsp.dedges);
-            CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, q2bsp.dleaffaces);
-            CopyArray(mbsp.dleafbrushes, mbsp.numleafbrushes,q2bsp.dleafbrushes);
-            CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, q2bsp.dsurfedges);
-
-            CopyArray(mbsp.dareas, mbsp.numareas, q2bsp.dareas);
-            CopyArray(mbsp.dareaportals, mbsp.numareaportals, q2bsp.dareaportals);
-
-            CopyArray(mbsp.dbrushes, mbsp.numbrushes, q2bsp.dbrushes);
-            CopyArray(mbsp.dbrushsides, mbsp.numbrushsides, q2bsp.dbrushsides);
-
-            /* Conversion complete! */
-            bspdata->version = to_version;
-            bspdata->bsp = std::move(q2bsp);
-
-            return true;
-        } else if (to_version == &bspver_qbism) {
-            // bspver_generic -> bspver_qbism
-            q2bsp_qbism_t q2bsp { };
-
-            // copy counts
-            q2bsp.nummodels = mbsp.nummodels;
-            q2bsp.visdatasize = mbsp.visdatasize;
-            q2bsp.lightdatasize = mbsp.lightdatasize;
-            q2bsp.entdatasize = mbsp.entdatasize;
-            q2bsp.numleafs = mbsp.numleafs;
-            q2bsp.numplanes = mbsp.numplanes;
-            q2bsp.numvertexes = mbsp.numvertexes;
-            q2bsp.numnodes = mbsp.numnodes;
-            q2bsp.numtexinfo = mbsp.numtexinfo;
-            q2bsp.numfaces = mbsp.numfaces;
-            q2bsp.numedges = mbsp.numedges;
-            q2bsp.numleaffaces = mbsp.numleaffaces;
-            q2bsp.numleafbrushes = mbsp.numleafbrushes;
-            q2bsp.numsurfedges = mbsp.numsurfedges;
-            q2bsp.numareas = mbsp.numareas;
-            q2bsp.numareaportals = mbsp.numareaportals;
-            q2bsp.numbrushes = mbsp.numbrushes;
-            q2bsp.numbrushsides = mbsp.numbrushsides;
-
-            // copy or convert data
-            CopyArray(mbsp.dmodels, mbsp.nummodels, q2bsp.dmodels);
-            q2bsp.dvis = MBSPtoQ2_CopyVisData(mbsp.dvisdata, &q2bsp.visdatasize, mbsp.numleafs, mbsp.dleafs);
-            CopyArray(mbsp.dlightdata, mbsp.lightdatasize, q2bsp.dlightdata);
-            CopyArray(mbsp.dentdata, mbsp.entdatasize, q2bsp.dentdata);
-            CopyArray(mbsp.dleafs, mbsp.numleafs, q2bsp.dleafs);
-            CopyArray(mbsp.dplanes, mbsp.numplanes, q2bsp.dplanes);
-            CopyArray(mbsp.dvertexes, mbsp.numvertexes, q2bsp.dvertexes);
-            CopyArray(mbsp.dnodes, mbsp.numnodes, q2bsp.dnodes);
-            CopyArray(mbsp.texinfo, mbsp.numtexinfo, q2bsp.texinfo);
-            CopyArray(mbsp.dfaces, mbsp.numfaces, q2bsp.dfaces);
-            CopyArray(mbsp.dedges, mbsp.numedges, q2bsp.dedges);
-            CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, q2bsp.dleaffaces);
-            CopyArray(mbsp.dleafbrushes, mbsp.numleafbrushes, q2bsp.dleafbrushes);
-            CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, q2bsp.dsurfedges);
-
-            CopyArray(mbsp.dareas, mbsp.numareas, q2bsp.dareas);
-            CopyArray(mbsp.dareaportals, mbsp.numareaportals, q2bsp.dareaportals);
-
-            CopyArray(mbsp.dbrushes, mbsp.numbrushes, q2bsp.dbrushes);
-            CopyArray(mbsp.dbrushsides, mbsp.numbrushsides, q2bsp.dbrushsides);
-
-            /* Conversion complete! */
-            bspdata->version = to_version;
-            bspdata->bsp = std::move(q2bsp);
-
-            return true;
-        } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
-            // bspver_generic -> bspver_bsp2rmq, bspver_h2bsp2rmq
-            bsp2rmq_t bsp2rmq { };
-
-            // copy counts
-            bsp2rmq.nummodels = mbsp.nummodels;
-            bsp2rmq.visdatasize = mbsp.visdatasize;
-            bsp2rmq.lightdatasize = mbsp.lightdatasize;
-            bsp2rmq.texdatasize = mbsp.texdatasize;
-            bsp2rmq.entdatasize = mbsp.entdatasize;
-            bsp2rmq.numleafs = mbsp.numleafs;
-            bsp2rmq.numplanes = mbsp.numplanes;
-            bsp2rmq.numvertexes = mbsp.numvertexes;
-            bsp2rmq.numnodes = mbsp.numnodes;
-            bsp2rmq.numtexinfo = mbsp.numtexinfo;
-            bsp2rmq.numfaces = mbsp.numfaces;
-            bsp2rmq.numclipnodes = mbsp.numclipnodes;
-            bsp2rmq.numedges = mbsp.numedges;
-            bsp2rmq.nummarksurfaces = mbsp.numleaffaces;
-            bsp2rmq.numsurfedges = mbsp.numsurfedges;
-
-            // copy or convert data
-            if (to_version == &bspver_h2bsp2rmq) {
-                CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2rmq.dmodels_h2);
-            } else {
-                CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2rmq.dmodels_q);
-            }
-            bsp2rmq.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
-            CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp2rmq.dlightdata);
-            CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp2rmq.dtexdata);
-            CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp2rmq.dentdata);
-            CopyArray(mbsp.dleafs, mbsp.numleafs, bsp2rmq.dleafs);
-            CopyArray(mbsp.dplanes, mbsp.numplanes, bsp2rmq.dplanes);
-            CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp2rmq.dvertexes);
-            CopyArray(mbsp.dnodes, mbsp.numnodes, bsp2rmq.dnodes);
-            CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp2rmq.texinfo);
-            CopyArray(mbsp.dfaces, mbsp.numfaces, bsp2rmq.dfaces);
-            CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp2rmq.dclipnodes);
-            CopyArray(mbsp.dedges, mbsp.numedges, bsp2rmq.dedges);
-            CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp2rmq.dmarksurfaces);
-            CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp2rmq.dsurfedges);
-
-            /* Conversion complete! */
-            bspdata->version = to_version;
-            bspdata->bsp = std::move(bsp2rmq);
-
-            return true;
-        } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
-            // bspver_generic -> bspver_bsp2, bspver_h2bsp2
-            bsp2_t bsp2 { };
-
-            // copy counts
-            bsp2.nummodels = mbsp.nummodels;
-            bsp2.visdatasize = mbsp.visdatasize;
-            bsp2.lightdatasize = mbsp.lightdatasize;
-            bsp2.texdatasize = mbsp.texdatasize;
-            bsp2.entdatasize = mbsp.entdatasize;
-            bsp2.numleafs = mbsp.numleafs;
-            bsp2.numplanes = mbsp.numplanes;
-            bsp2.numvertexes = mbsp.numvertexes;
-            bsp2.numnodes = mbsp.numnodes;
-            bsp2.numtexinfo = mbsp.numtexinfo;
-            bsp2.numfaces = mbsp.numfaces;
-            bsp2.numclipnodes = mbsp.numclipnodes;
-            bsp2.numedges = mbsp.numedges;
-            bsp2.nummarksurfaces = mbsp.numleaffaces;
-            bsp2.numsurfedges = mbsp.numsurfedges;
-
-            // copy or convert data
-            if (to_version == &bspver_h2bsp2) {
-                CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2.dmodels_h2);
-            } else {
-                CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2.dmodels_q);
-            }
-            bsp2.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
-            CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp2.dlightdata);
-            CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp2.dtexdata);
-            CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp2.dentdata);
-            CopyArray(mbsp.dleafs, mbsp.numleafs, bsp2.dleafs);
-            CopyArray(mbsp.dplanes, mbsp.numplanes, bsp2.dplanes);
-            CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp2.dvertexes);
-            CopyArray(mbsp.dnodes, mbsp.numnodes, bsp2.dnodes);
-            CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp2.texinfo);
-            CopyArray(mbsp.dfaces, mbsp.numfaces, bsp2.dfaces);
-            CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp2.dclipnodes);
-            CopyArray(mbsp.dedges, mbsp.numedges, bsp2.dedges);
-            CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp2.dmarksurfaces);
-            CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp2.dsurfedges);
-
-            /* Conversion complete! */
-            bspdata->version = to_version;
-            bspdata->bsp = std::move(bsp2);
-
-            return true;
-        }
+        Error("Don't know how to convert BSP version {} to {}", BSPVersionString(bspdata->version),
+            BSPVersionString(to_version));
     }
-
-    Error("Don't know how to convert BSP version {} to {}", BSPVersionString(bspdata->version),
-        BSPVersionString(to_version));
+    catch (std::overflow_error)
+    {
+        return false;
+    }
 }
 
 static int isHexen2(const dheader_t *header)
@@ -2131,7 +2145,7 @@ static int CopyLump(const void *header, const bspversion_t *version, const lump_
     if (*bufferptr)
         delete[] *bufferptr;
 
-    if (sizeof(T) != lumpspec->size || length % lumpspec->size)
+    if (lumpspec->size > 1 && (sizeof(T) != lumpspec->size || length % lumpspec->size))
         FError("odd {} lump size", lumpspec->name);
 
     T *buffer;
@@ -2809,7 +2823,7 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         if (bsp.texdatasize)
             numtextures = bsp.dtexdata->nummiptex;
 
-        LogPrint("{:7} {:<12s\n", bsp.nummodels, "models");
+        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
 
         PrintLumpSize(lumpspec, LUMP_PLANES, bsp.numplanes);
         PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.numvertexes);

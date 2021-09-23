@@ -66,6 +66,167 @@ private:
     variant_type data;
 
 public:
+    class iterator
+    {
+        using array_iterator = typename array_type::const_iterator;
+        using vector_iterator = vector_type::const_iterator;
+
+        std::variant<array_iterator, vector_iterator> it;
+
+    public:
+        using iterator_category = vector_iterator::iterator_category;
+        using value_type        = vector_iterator::value_type;
+        using difference_type   = vector_iterator::difference_type;
+        using pointer           = vector_iterator::pointer;
+        using reference         = vector_iterator::reference;
+
+        iterator(array_iterator it) :
+            it(it)
+        {
+        }
+
+
+        iterator(vector_iterator it) :
+            it(it)
+        {
+        }
+
+        [[nodiscard]] constexpr reference operator*() const noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+                return std::get<array_iterator>(it).operator*();
+            return std::get<vector_iterator>(it).operator*();
+        }
+
+        constexpr iterator& operator=(const iterator &) noexcept = default;
+
+        constexpr iterator& operator++() noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+                std::get<array_iterator>(it).operator++();
+            else
+                std::get<vector_iterator>(it).operator++();
+
+            return *this;
+        }
+
+        constexpr iterator &operator++(int) noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+                std::get<array_iterator>(it).operator++(0);
+            else
+                return std::get<vector_iterator>(it).operator++(0);
+
+            return *this;
+        }
+
+        constexpr iterator& operator--() noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+                std::get<array_iterator>(it).operator--();
+            else
+                std::get<vector_iterator>(it).operator--();
+
+            return *this;
+        }
+
+        constexpr iterator operator--(int) noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+                std::get<array_iterator>(it).operator--(0);
+            else
+                std::get<vector_iterator>(it).operator--(0);
+
+            return *this;
+        }
+
+        constexpr iterator& operator+=(const difference_type _Off) noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+                std::get<array_iterator>(it).operator+=(_Off);
+            else
+                std::get<vector_iterator>(it).operator+=(_Off);
+
+            return *this;
+        }
+
+        [[nodiscard]] constexpr iterator operator+(const difference_type _Off) const noexcept {
+            iterator _Tmp = *this;
+            _Tmp += _Off; // TRANSITION, LLVM-49342
+            return _Tmp;
+        }
+
+        constexpr iterator& operator-=(const difference_type _Off) noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+                std::get<array_iterator>(it).operator-=(_Off);
+            else
+                std::get<vector_iterator>(it).operator-=(_Off);
+
+            return *this;
+        }
+
+        [[nodiscard]] constexpr bool operator==(const iterator &_Off) const noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+            {
+                auto sit = std::get<array_iterator>(it);
+
+                Q_assert(std::holds_alternative<array_iterator>(_Off.it));
+
+                return sit == std::get<array_iterator>(_Off.it);
+            }
+            else
+            {
+                auto sit = std::get<vector_iterator>(it);
+
+                Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
+
+                return sit == std::get<vector_iterator>(_Off.it);
+            }
+        }
+
+        [[nodiscard]] constexpr bool operator!=(const iterator &_Off) const noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+            {
+                auto sit = std::get<array_iterator>(it);
+
+                Q_assert(std::holds_alternative<array_iterator>(_Off.it));
+
+                return sit != std::get<array_iterator>(_Off.it);
+            }
+            else
+            {
+                auto sit = std::get<vector_iterator>(it);
+
+                Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
+
+                return sit != std::get<vector_iterator>(_Off.it);
+            }
+        }
+
+        [[nodiscard]] constexpr difference_type operator-(const iterator &_Off) const noexcept {
+            if (std::holds_alternative<array_iterator>(it))
+            {
+                auto sit = std::get<array_iterator>(it);
+
+                Q_assert(std::holds_alternative<array_iterator>(_Off.it));
+
+                return sit - std::get<array_iterator>(_Off.it);
+            }
+            else
+            {
+                auto sit = std::get<vector_iterator>(it);
+
+                Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
+
+                return sit - std::get<vector_iterator>(_Off.it);
+            }
+        }
+
+        [[nodiscard]] constexpr iterator operator-(const difference_type _Off) const noexcept {
+            iterator _Tmp = *this;
+            _Tmp -= _Off; // TRANSITION, LLVM-49342
+            return _Tmp;
+        }
+
+        [[nodiscard]] constexpr reference operator[](const difference_type _Off) const noexcept {
+            return *(*this + _Off);
+        }
+    };
+
     // default constructor
     winding_base_t() { }
 
@@ -168,18 +329,18 @@ public:
         return at(index);
     }
 
-    const qvec3d *begin() const
+    const iterator begin() const
     {
         if (is_dynamic())
-            return &std::get<vector_type>(data)[0];
-        return &std::get<array_type>(data)[0];
+            return iterator(std::get<vector_type>(data).begin());
+        return iterator(std::get<array_type>(data).begin());
     }
 
-    const qvec3d *end() const
+    const iterator end() const
     {
         if (is_dynamic())
-            return &std::get<vector_type>(data)[count];
-        return &std::get<array_type>(data)[count];
+            return iterator(std::get<vector_type>(data).end());
+        return iterator(std::get<array_type>(data).end());
     }
 
     void push_back(const qvec3d &vec)
@@ -383,7 +544,7 @@ public:
     {
         std::vector<qvec3f> points;
         points.resize(count);
-        std::copy(begin(), end(), points.begin());
+        std::copy_n(begin(), count, points.begin());
         return points;
     }
 

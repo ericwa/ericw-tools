@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <array>
+#include <tuple>
 #include <variant>
 
 #include <common/cmdlib.hh>
@@ -257,6 +258,11 @@ struct q2_dmodel_t
             firstface,
             numfaces
         };
+    }
+
+    auto data()
+    {
+        return std::tie(mins, maxs, origin, headnode, firstface, numfaces);
     }
 };
 

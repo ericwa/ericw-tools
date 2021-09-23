@@ -1051,7 +1051,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         if (count != 3)
             FError("unable to parse {} HEADER\n", PORTALFILE);
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            FError("%s can not be used with Q2\n", PORTALFILE2);
+            FError("{} can not be used with Q2\n", PORTALFILE2);
         }
         LogPrint("{:6} leafs\n", portalleafs_real);
         LogPrint("{:6} clusters\n", portalleafs);
@@ -1061,7 +1061,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         if (count != 3)
             FError("unable to parse {} HEADER\n", PORTALFILE);
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            Error("%s: %s can not be used with Q2\n", __func__, PORTALFILEAM);
+            FError("{} can not be used with Q2\n", PORTALFILEAM);
         }
         LogPrint("{:6} leafs\n", portalleafs_real);
         LogPrint("{:6} clusters\n", portalleafs);

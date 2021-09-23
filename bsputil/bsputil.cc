@@ -553,10 +553,12 @@ int main(int argc, char **argv)
             WriteBSPFile(source.replace_filename(source.filename().string() + "-" + argv[i]), &bspdata);
 
         } else if (!strcmp(argv[i], "--extract-entities")) {
-            source.replace_extension(".ent");
-            fmt::print("-> writing {}... ", source);
+            uint32_t crc = CRC_Block((unsigned char *)bsp.dentdata, bsp.entdatasize - 1);
 
-            std::ofstream f(source);
+            source.replace_extension(".ent");
+            fmt::print("-> writing {} [CRC: {:04x}]... ", source, crc);
+
+            std::ofstream f(source, std::ios_base::out | std::ios_base::binary);
             if (!f)
                 Error("couldn't open {} for writing\n", source);
 

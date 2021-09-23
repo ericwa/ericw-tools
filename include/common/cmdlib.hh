@@ -167,6 +167,7 @@ inline T byte_swap(const T &val)
     for (size_t i = 0; i < sizeof(T); i++) {
         pRetVal[sizeof(T) - 1 - i] = pVal[i];
     }
+unsigned short CRC_Block (const unsigned char *start, int count);
 
     return retVal;
 }
@@ -566,3 +567,8 @@ constexpr Dst numeric_cast(const Src &value)
     
     return static_cast<Dst>(value);
 }
+
+void CRC_Init(unsigned short *crcvalue);
+void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
+unsigned short CRC_Value(unsigned short crcvalue);
+unsigned short CRC_Block (const unsigned char *start, int count);

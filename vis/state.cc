@@ -174,6 +174,8 @@ void SaveVisState(void)
             SafeWrite(outfile, vis, vis_len);
     }
 
+    outfile.reset();
+
     delete[] might;
     delete[] vis;
 
