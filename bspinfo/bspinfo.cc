@@ -21,11 +21,23 @@
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 
+#include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <fmt/ostream.h>
 #include <nlohmann/json.hpp>
 
 using namespace nlohmann;
+
+static std::string hex_string(const uint8_t* bytes, const size_t count) {
+    std::stringstream str;
+    
+    for (size_t i = 0; i < count; ++i) {
+        fmt::print(str, "{:x}", bytes[i]);
+    }    
+
+    return str.str();
+}
 
 static void serialize_bsp(const mbsp_t &bsp, const char *name) {
     json j = json::object();
@@ -45,6 +57,18 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
             model.push_back({ "firstface", src_model.firstface });
             model.push_back({ "numfaces", src_model.numfaces });
         }
+    }
+    
+    if (bsp.visdatasize) {
+        j["visdata"] = hex_string(bsp.dvisdata, bsp.visdatasize);
+    }
+
+    if (bsp.lightdatasize) {
+        j["lightdata"] = hex_string(bsp.dlightdata, bsp.lightdatasize);
+    }
+
+    if (bsp.entdatasize) {
+        j["entdata"] = std::string(bsp.dentdata, static_cast<size_t>(bsp.entdatasize));
     }
 
     if (bsp.numleafs) {
@@ -78,6 +102,16 @@ static void serialize_bsp(const mbsp_t &bsp, const char *name) {
             plane.push_back({ "normal", json::array({ src_plane.normal[0], src_plane.normal[1], src_plane.normal[2] }) });
             plane.push_back({ "dist", src_plane.dist });
             plane.push_back({ "type", src_plane.type });
+        }
+    }
+
+    if (bsp.numvertexes) {
+        json &vertexes = (j.emplace("vertexes", json::array())).first.value();
+
+        for (int32_t i = 0; i < bsp.numvertexes; i++) {            
+            auto &src_vertex = bsp.dvertexes[i];
+
+            vertexes.insert(vertexes.end(), json::array({src_vertex.point[0], src_vertex.point[1], src_vertex.point[2]}));
         }
     }
 
