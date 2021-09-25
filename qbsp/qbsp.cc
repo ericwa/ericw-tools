@@ -515,26 +515,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
         brush_t *b;
         face_t *f;
 
-        struct
-        {
-                int ver;
-                int modelnum;
-                int numbrushes;
-                int numfaces;
-        } permodel;
-        struct
-        {
-                float mins[3];
-                float maxs[3];
-                short contents;
-                unsigned short numfaces;
-        } perbrush;
-        struct
-        {
-                float normal[3];
-                float dist;
-        } perface;
-
+        bspxbrushes_permodel permodel;
         permodel.numbrushes = 0;
         permodel.numfaces = 0;
         for (b = brushes; b; b = b->next)
@@ -559,6 +540,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
 
         for (b = brushes; b; b = b->next)
         {
+                bspxbrushes_perbrush perbrush;
                 perbrush.numfaces = 0;
                 for (f = b->faces; f; f = f->next)
                 {
@@ -605,6 +587,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 
                 for (f = b->faces; f; f = f->next)
                 {
+                        bspxbrushes_perface perface;
                         /*skip axial*/
                         if (fabs(map.planes[f->planenum].normal[0]) == 1 ||
                                 fabs(map.planes[f->planenum].normal[1]) == 1 ||

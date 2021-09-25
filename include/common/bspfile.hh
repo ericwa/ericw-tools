@@ -714,6 +714,27 @@ typedef struct bspxentry_s
     struct bspxentry_s *next;
 } bspxentry_t;
 
+// BRUSHLIST BSPX lump
+
+struct bspxbrushes_permodel {
+        int32_t ver;
+        int32_t modelnum;
+        int32_t numbrushes;
+        int32_t numfaces;
+};
+struct bspxbrushes_perbrush {
+        float mins[3];
+        float maxs[3];
+        int16_t contents;
+        uint16_t numfaces;
+};
+struct bspxbrushes_perface {
+        float normal[3];
+        float dist;
+};
+
+/* ========================================================================= */
+
 struct bsp29_t {
     int nummodels;
     dmodelq1_t *dmodels_q;
