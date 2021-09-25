@@ -781,7 +781,7 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.floatValue();
     } else {
-        lightsurf->minlight = extended_flags.minlight;
+        lightsurf->minlight = (float)extended_flags.minlight * 2; // see SurfFlagsForEntity
     }
     
     // minlight_color

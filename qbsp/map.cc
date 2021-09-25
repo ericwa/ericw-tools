@@ -450,7 +450,7 @@ SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity_t *entity)
     // handle "_minlight"
     const vec_t minlight = atof(ValueForKey(entity, "_minlight"));
     if (minlight > 0) {
-        flags.minlight = qclamp((int)rint(minlight), 0, 255);
+        flags.minlight = qclamp((int)rint(minlight), 0, 510) / 2; // map 0..510 to 0..255, so we can handle overbright
     }
 
     // handle "_mincolor"

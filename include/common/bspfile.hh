@@ -457,10 +457,14 @@ struct surfflags_t {
     // if non zero, enables phong shading and gives the angle threshold to use
     uint8_t phong_angle;
 
-    // minlight value for this face
+    // minlight value for this face, multiplied by 0.5, so we can store overbrights in 8 bits
+    // FIXME: skip the compression and just store a float? serialize all of these to a JSON .texinfo
+    // for better extensibility?
     uint8_t minlight;
 
     // red minlight colors for this face
+    // FIXME: this probably makes it illegal to memcpy() from a surfflags_t, which is done in
+    // WriteExtendedTexinfoFlags. Again, points to switching to JSON serialization.
     std::array<uint8_t, 3> minlight_color;
     
     // if non zero, overrides _phong_angle for concave joints
