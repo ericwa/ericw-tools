@@ -1398,8 +1398,13 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         }
 
         /* entities never use water merging */
-        if (dst != pWorldEnt())
+        if (dst != pWorldEnt()) {
+            // FIXME: the old code here was just `contents = CONTENTS_SOLID`.
+            // which would also clear CONTENTS_CLIP. Now CONTENTS_CLIP is an extended flag
+            // so we need to unset it explicitly.
             contents = contents.merge(options.target_game->create_solid_contents());
+            contents.extended &= ~CFLAGS_CLIP;
+        }
 
         /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
            this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
