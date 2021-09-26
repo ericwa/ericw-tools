@@ -1444,7 +1444,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
             brush->next = dst->detail_fence;
             dst->detail_fence = brush;
-        } else if (brush->contents.is_solid(options.target_game)) {
+        } else if (brush->contents.is_solid(options.target_game) && !(contents.extended & CFLAGS_CLIP)) {
             brush->next = dst->solid;
             dst->solid = brush;
         } else if (brush->contents.is_sky(options.target_game)) {
