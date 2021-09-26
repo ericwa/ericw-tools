@@ -1388,6 +1388,12 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 }
                 continue;
             }
+            // for hull1, 2, etc., convert clip to CONTENTS_SOLID
+            if (hullnum > 0) {
+                contents = contents.merge(options.target_game->create_solid_contents());
+                contents.extended &= ~CFLAGS_CLIP;
+            }
+            // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
 
         /* "hint" brushes don't affect the collision hulls */
