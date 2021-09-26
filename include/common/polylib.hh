@@ -544,7 +544,7 @@ public:
     {
         std::vector<qvec3f> points;
         points.resize(count);
-        std::copy_n(begin(), count, points.begin());
+        std::copy_n(begin(), count, std::back_inserter(points));
         return points;
     }
 

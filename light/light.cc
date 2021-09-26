@@ -23,6 +23,7 @@
 #include <iostream>
 #include <fstream>
 #include <fmt/ostream.h>
+#include <fmt/chrono.h>
 
 #include <light/light.hh>
 #include <light/phong.hh>
@@ -238,16 +239,16 @@ const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum)
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
 {
     int i;
-    dmodel_t *model;
+    const dmodel_t *model;
 
     /* Find the correct model offset */
-    for (i = 0, model = bsp->dmodels; i < bsp->nummodels; i++, model++) {
+    for (i = 0, model = bsp->dmodels.data(); i < bsp->dmodels.size(); i++, model++) {
         if (facenum < model->firstface)
             continue;
         if (facenum < model->firstface + model->numfaces)
             break;
     }
-    if (i == bsp->nummodels) {
+    if (i == bsp->dmodels.size()) {
         return NULL;
     }
     return modelinfo.at(i);
@@ -305,7 +306,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
     Q_assert(shadowworldonlylist.size() == 0);
     Q_assert(switchableshadowlist.size() == 0);
 
-    if (!bsp->nummodels) {
+    if (!bsp->dmodels.size()) {
         FError("Corrupt .BSP: bsp->nummodels is 0!");
     }
 
@@ -338,7 +339,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
     modelinfo.push_back(world);
     tracelist.push_back(world);
 
-    for (int i = 1; i < bsp->nummodels; i++) {
+    for (int i = 1; i < bsp->dmodels.size(); i++) {
         modelinfo_t *info = new modelinfo_t{bsp, &bsp->dmodels[i], lightmapscale};
         modelinfo.push_back(info);
 
@@ -368,7 +369,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
         EntDict_VectorForKey(*entdict, "origin", info->offset);
     }
 
-    Q_assert(modelinfo.size() == bsp->nummodels);
+    Q_assert(modelinfo.size() == bsp->dmodels.size());
 }
 
 /*
@@ -414,13 +415,13 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (!lmshift_lump && write_litfile != ~0)
         faces_sup = nullptr; // no scales, no lit2
     else { // we have scales or lit2 output. yay...
-        faces_sup = new facesup_t[bsp.numfaces] { };
+        faces_sup = new facesup_t[bsp.dfaces.size()] { };
 
         if (lmshift_lump) {
-            for (int i = 0; i < bsp.numfaces; i++)
+            for (int i = 0; i < bsp.dfaces.size(); i++)
                 faces_sup[i].lmscale = 1 << lmshift_lump[i];
         } else {
-            for (int i = 0; i < bsp.numfaces; i++)
+            for (int i = 0; i < bsp.dfaces.size(); i++)
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
         }
     }
@@ -448,7 +449,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
     LogPrint("--- LightThread ---\n"); // mxd
-    RunThreadsOn(0, bsp.numfaces, LightThread, &bsp);
+    RunThreadsOn(0, bsp.dfaces.size(), LightThread, &bsp);
 #endif
 
     if (bouncerequired || isQuake2map) { // mxd. Print some extra stats...
@@ -461,31 +462,28 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
-        delete[] bsp.dlightdata;
         if (bsp.loadversion->game->has_rgb_lightmap) {
-            bsp.lightdatasize = lit_file_p;
-            bsp.dlightdata = new uint8_t[bsp.lightdatasize];
-            memcpy(bsp.dlightdata, lit_filebase, bsp.lightdatasize);
+            bsp.dlightdata.resize(lit_file_p);
+            memcpy(bsp.dlightdata.data(), lit_filebase, bsp.dlightdata.size());
         } else {
-            bsp.lightdatasize = file_p;
-            bsp.dlightdata = new uint8_t[bsp.lightdatasize];
-            memcpy(bsp.dlightdata, filebase, bsp.lightdatasize);
+            bsp.dlightdata.resize(file_p);
+            memcpy(bsp.dlightdata.data(), filebase, bsp.dlightdata.size());
         }
     } else {
         // NOTE: bsp.lightdatasize is already valid in the -litonly case
     }
-    LogPrint("lightdatasize: {}\n", bsp.lightdatasize);
+    LogPrint("lightdatasize: {}\n", bsp.dlightdata.size());
 
     if (faces_sup) {
-        uint8_t *styles = new uint8_t[4 * bsp.numfaces];
-        int32_t *offsets = new int32_t[bsp.numfaces];
-        for (int i = 0; i < bsp.numfaces; i++) {
+        uint8_t *styles = new uint8_t[4 * bsp.dfaces.size()];
+        int32_t *offsets = new int32_t[bsp.dfaces.size()];
+        for (int i = 0; i < bsp.dfaces.size(); i++) {
             offsets[i] = faces_sup[i].lightofs;
             for (int j = 0; j < MAXLIGHTMAPS; j++)
                 styles[i * 4 + j] = faces_sup[i].styles[j];
         }
-        BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles) * 4 * bsp.numfaces);
-        BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets) * bsp.numfaces);
+        BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles) * 4 * bsp.dfaces.size());
+        BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets) * bsp.dfaces.size());
     } else {
         // kill this stuff if its somehow found.
         BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
@@ -496,7 +494,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename, const mbsp_t *bsp)
 {
     // always create the zero'ed array
-    extended_texinfo_flags = new surfflags_t[bsp->numtexinfo] { };
+    extended_texinfo_flags = new surfflags_t[bsp->texinfo.size()] { };
 
     std::filesystem::path filename(sourcefilename);
     filename.replace_extension("texinfo");
@@ -511,10 +509,10 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
     extended_flags_header_t header;
 
     if (SafeRead(texinfofile, &header, sizeof(extended_flags_header_t)) != sizeof(extended_flags_header_t) ||
-        header.num_texinfo != bsp->numtexinfo || header.surfflags_size != sizeof(surfflags_t) ||
+        header.num_texinfo != bsp->texinfo.size() || header.surfflags_size != sizeof(surfflags_t) ||
         SafeRead(texinfofile, extended_texinfo_flags, sizeof(surfflags_t) * header.num_texinfo) != (sizeof(surfflags_t) * header.num_texinfo)) {
         LogPrint("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
-        memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
+        memset(extended_texinfo_flags, 0, bsp->texinfo.size() * sizeof(uint32_t));
         return;
     }
 }
@@ -587,7 +585,7 @@ static const mface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &poin
     const mface_t *nearest_face = NULL;
     float nearest_dist = FLT_MAX;
 
-    for (int i = 0; i < bsp->numfaces; i++) {
+    for (int i = 0; i < bsp->dfaces.size(); i++) {
         const mface_t *f = BSP_GetFace(bsp, i);
 
         const qvec3f fc = Face_Centroid(bsp, f);
@@ -613,12 +611,12 @@ static void FindDebugFace(const mbsp_t *bsp)
     if (f == NULL)
         FError("f == NULL\n");
 
-    const int facenum = f - bsp->dfaces;
+    const int facenum = f - bsp->dfaces.data();
 
     dump_facenum = facenum;
 
     const modelinfo_t *mi = ModelInfoForFace(bsp, facenum);
-    const int modelnum = mi ? (mi->model - bsp->dmodels) : -1;
+    const int modelnum = mi ? (mi->model - bsp->dmodels.data()) : -1;
 
     const char *texname = Face_TextureName(bsp, f);
 
@@ -631,7 +629,7 @@ static int Vertex_NearestPoint(const mbsp_t *bsp, const vec3_t point)
     int nearest_vert = -1;
     vec_t nearest_dist = VECT_MAX;
 
-    for (int i = 0; i < bsp->numvertexes; i++) {
+    for (int i = 0; i < bsp->dvertexes.size(); i++) {
         const dvertex_t &vertex = bsp->dvertexes[i];
 
         vec3_t distvec;
@@ -1196,17 +1194,17 @@ int light_main(int argc, const char **argv)
             if (write_litfile & 1)
                 WriteLitFile(&bsp, faces_sup, source, LIT_VERSION);
             if (write_litfile & 2)
-                BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp.lightdatasize * 3);
+                BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp.dlightdata.size() * 3);
             if (write_luxfile & 1)
                 WriteLuxFile(&bsp, source, LIT_VERSION);
             if (write_luxfile & 2)
-                BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp.lightdatasize * 3);
+                BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp.dlightdata.size() * 3);
         }
     }
 
     /* -novanilla + internal lighting = no grey lightmap */
     if (scaledonly && (write_litfile & 2))
-        bsp.lightdatasize = 0;
+        bsp.dlightdata.clear();
 
 #if 0
     ExportObj(source, bsp);
@@ -1221,7 +1219,7 @@ int light_main(int argc, const char **argv)
     }
 
     auto end = I_FloatTime();
-    LogPrint("{:5.3} seconds elapsed\n", (end - start).count());
+    LogPrint("{:.3} seconds elapsed\n", (end - start));
     LogPrint("\n");
     LogPrint("stats:\n");
     LogPrint("{} lights tested, {} hits per sample point\n",

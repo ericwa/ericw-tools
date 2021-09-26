@@ -348,13 +348,11 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
 {
     edgeToFaceMap_t result;
 
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *f = BSP_GetFace(bsp, i);
-
+    for (auto &f : bsp->dfaces) {
         // walk edges
-        for (int j = 0; j < f->numedges; j++) {
-            const int v0 = Face_VertexAtIndex(bsp, f, j);
-            const int v1 = Face_VertexAtIndex(bsp, f, (j + 1) % f->numedges);
+        for (int j = 0; j < f.numedges; j++) {
+            const int v0 = Face_VertexAtIndex(bsp, &f, j);
+            const int v1 = Face_VertexAtIndex(bsp, &f, (j + 1) % f.numedges);
 
             if (v0 == v1) {
                 // ad_swampy.bsp has faces with repeated verts...
@@ -364,11 +362,11 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
             const auto edge = make_pair(v0, v1);
             auto &edgeFacesRef = result[edge];
 
-            if (find(begin(edgeFacesRef), end(edgeFacesRef), f) != end(edgeFacesRef)) {
+            if (find(begin(edgeFacesRef), end(edgeFacesRef), &f) != end(edgeFacesRef)) {
                 // another sort of degenerate face where the same edge A->B appears more than once on the face
                 continue;
             }
-            edgeFacesRef.push_back(f);
+            edgeFacesRef.push_back(&f);
         }
     }
 
@@ -388,9 +386,8 @@ static vector<qvec3f> Face_VertexNormals(const mbsp_t *bsp, const mface_t *face)
 static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
 {
     vector<face_cache_t> result;
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *face = BSP_GetFace(bsp, i);
-        result.push_back(face_cache_t{bsp, face, Face_VertexNormals(bsp, face)});
+    for (auto &face : bsp->dfaces) {
+        result.emplace_back(bsp, &face, Face_VertexNormals(bsp, &face));
     }
     return result;
 }
@@ -421,9 +418,9 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
     // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
     // support on func_detail/func_group
-    for (int i = 0; i < bsp->nummodels; i++) {
+    for (size_t i = 0; i < bsp->dmodels.size(); i++) {
         const modelinfo_t *info = ModelInfoForModel(bsp, i);
-        const uint8_t phongangle_byte = (uint8_t)qmax(0, qmin(255, (int)rint(info->getResolvedPhongAngle())));
+        const uint8_t phongangle_byte = (uint8_t)qclamp((int)rint(info->getResolvedPhongAngle()), 0, 255);
 
         if (!phongangle_byte)
             continue;
@@ -435,23 +432,19 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         }
     }
 
-    // build "plane -> faces" map
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *f = BSP_GetFace(bsp, i);
-        planesToFaces[f->planenum].push_back(f);
-    }
-
-    // build "vert index -> faces" map
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *f = BSP_GetFace(bsp, i);
-        for (int j = 0; j < f->numedges; j++) {
-            const int v = Face_VertexAtIndex(bsp, f, j);
-            vertsToFaces[v].push_back(f);
+    for (auto &f : bsp->dfaces) {
+        // build "plane -> faces" map
+        planesToFaces[f.planenum].push_back(&f);
+        
+        // build "vert index -> faces" map
+        for (size_t j = 0; j < f.numedges; j++) {
+            const int v = Face_VertexAtIndex(bsp, &f, j);
+            vertsToFaces[v].push_back(&f);
         }
     }
 
     // track "interior" verts, these are in the middle of a face, and mess up normal interpolation
-    for (int i = 0; i < bsp->numvertexes; i++) {
+    for (size_t i = 0; i < bsp->dvertexes.size(); i++) {
         auto &faces = vertsToFaces[i];
         if (faces.size() > 1 && FacesOnSamePlane(faces)) {
             interior_verts.insert(i);
@@ -461,16 +454,14 @@ void CalculateVertexNormals(const mbsp_t *bsp)
     //fmt::print("CalculateVertexNormals: {} interior verts\n", interior_verts.size());
 
     // build the "face -> faces to smooth with" map
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
-
-        const auto f_points = GLM_FacePoints(bsp, f);
-        const qvec3f f_norm = Face_Normal_E(bsp, f);
-        const qplane3f f_plane = Face_Plane_E(bsp, f);
+    for (auto &f : bsp->dfaces) {
+        const auto f_points = GLM_FacePoints(bsp, &f);
+        const qvec3f f_norm = Face_Normal_E(bsp, &f);
+        const qplane3f f_plane = Face_Plane_E(bsp, &f);
 
         // any face normal within this many degrees can be smoothed with this face
-        const int f_phong_angle = extended_texinfo_flags[f->texinfo].phong_angle;
-        int f_phong_angle_concave = extended_texinfo_flags[f->texinfo].phong_angle_concave;
+        const int f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
+        int f_phong_angle_concave = extended_texinfo_flags[f.texinfo].phong_angle_concave;
         if (f_phong_angle_concave == 0) {
             f_phong_angle_concave = f_phong_angle;
         }
@@ -479,11 +470,11 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         if (!f_wants_phong)
             continue;
 
-        for (int j = 0; j < f->numedges; j++) {
-            const int v = Face_VertexAtIndex(bsp, f, j);
+        for (int j = 0; j < f.numedges; j++) {
+            const int v = Face_VertexAtIndex(bsp, &f, j);
             // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
             for (const mface_t *f2 : vertsToFaces[v]) {
-                if (f2 == f)
+                if (f2 == &f)
                     continue;
 
                 // FIXME: factor out and share with above?
@@ -511,24 +502,24 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
                 // check the angle between the face normals
                 if (cosangle >= cosmaxangle) {
-                    smoothFaces[f].insert(f2);
+                    smoothFaces[&f].insert(f2);
                 }
             }
         }
     }
 
     // Q2: build the "face -> faces to smooth with" map
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), i);
-        const int f_phongValue = Q2_FacePhongValue(bsp, f);
+    // FIXME: merge this into the above loop
+    for (auto &f : bsp->dfaces) {
+        const int f_phongValue = Q2_FacePhongValue(bsp, &f);
         if (f_phongValue == 0)
             continue;
 
-        for (int j = 0; j < f->numedges; j++) {
-            const int v = Face_VertexAtIndex(bsp, f, j);
+        for (int j = 0; j < f.numedges; j++) {
+            const int v = Face_VertexAtIndex(bsp, &f, j);
             // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
             for (const mface_t *f2 : vertsToFaces[v]) {
-                if (f2 == f)
+                if (f2 == &f)
                     continue;
 
                 const int f2_phongValue = Q2_FacePhongValue(bsp, f2);
@@ -536,30 +527,29 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                     continue;
 
                 // we've already checked f_phongValue is nonzero, so smooth these two faces.
-                smoothFaces[f].insert(f2);
+                smoothFaces[&f].insert(f2);
             }
         }
     }
 
     // finally do the smoothing for each face
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *f = BSP_GetFace(bsp, i);
-        if (f->numedges < 3) {
-            FLogPrint("face {} is degenerate with {} edges\n", i, f->numedges);
-            for (int j = 0; j < f->numedges; j++) {
+    for (auto &f : bsp->dfaces) {
+        if (f.numedges < 3) {
+            FLogPrint("face {} is degenerate with {} edges\n", Face_GetNum(bsp, &f), f.numedges);
+            for (int j = 0; j < f.numedges; j++) {
                 vec3_t pt;
-                Face_PointAtIndex(bsp, f, j, pt);
+                Face_PointAtIndex(bsp, &f, j, pt);
                 LogPrint("                         vert at {} {} {}\n", pt[0], pt[1], pt[2]);
             }
             continue;
         }
 
-        const auto &neighboursToSmooth = smoothFaces[f];
-        const qvec3f f_norm = Face_Normal_E(bsp, f); // get the face normal
+        const auto &neighboursToSmooth = smoothFaces[&f];
+        const qvec3f f_norm = Face_Normal_E(bsp, &f); // get the face normal
 
         // gather up f and neighboursToSmooth
         std::vector<const mface_t *> fPlusNeighbours;
-        fPlusNeighbours.push_back(f);
+        fPlusNeighbours.push_back(&f);
         for (auto neighbour : neighboursToSmooth) {
             fPlusNeighbours.push_back(neighbour);
         }
@@ -611,11 +601,11 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         }
 
         // now, record all of the smoothed normals that are actually part of `f`
-        for (int j = 0; j < f->numedges; j++) {
-            int v = Face_VertexAtIndex(bsp, f, j);
+        for (int j = 0; j < f.numedges; j++) {
+            int v = Face_VertexAtIndex(bsp, &f, j);
             Q_assert(smoothedNormals.find(v) != smoothedNormals.end());
 
-            vertex_normals[f].push_back(smoothedNormals[v]);
+            vertex_normals[&f].push_back(smoothedNormals[v]);
         }
     }
 

@@ -25,7 +25,7 @@
 const dmodel_t *BSP_GetWorldModel(const mbsp_t *bsp)
 {
     // We only support .bsp's that have a world model
-    if (bsp->nummodels < 1) {
+    if (bsp->dmodels.size() < 1) {
         FError("BSP has no models");
     }
     return &bsp->dmodels[0];
@@ -35,22 +35,22 @@ int Face_GetNum(const mbsp_t *bsp, const mface_t *f)
 {
     Q_assert(f != nullptr);
 
-    const ptrdiff_t diff = f - bsp->dfaces;
-    Q_assert(diff >= 0 && diff < bsp->numfaces);
+    const ptrdiff_t diff = f - bsp->dfaces.data();
+    Q_assert(diff >= 0 && diff < bsp->dfaces.size());
 
     return static_cast<int>(diff);
 }
 
 const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum)
 {
-    Q_assert(nodenum >= 0 && nodenum < bsp->numnodes);
+    Q_assert(nodenum >= 0 && nodenum < bsp->dnodes.size());
     return &bsp->dnodes[nodenum];
 }
 
 const mleaf_t *BSP_GetLeaf(const mbsp_t *bsp, int leafnum)
 {
-    if (leafnum < 0 || leafnum >= bsp->numleafs) {
-        Error("Corrupt BSP: leaf {} is out of bounds (bsp->numleafs = {})", leafnum, bsp->numleafs);
+    if (leafnum < 0 || leafnum >= bsp->dleafs.size()) {
+        Error("Corrupt BSP: leaf {} is out of bounds (bsp->numleafs = {})", leafnum, bsp->dleafs.size());
     }
     return &bsp->dleafs[leafnum];
 }
@@ -63,13 +63,13 @@ const mleaf_t *BSP_GetLeafFromNodeNum(const mbsp_t *bsp, int nodenum)
 
 const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum)
 {
-    Q_assert(planenum >= 0 && planenum < bsp->numplanes);
+    Q_assert(planenum >= 0 && planenum < bsp->dplanes.size());
     return &bsp->dplanes[planenum];
 }
 
 const mface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
 {
-    Q_assert(fnum >= 0 && fnum < bsp->numfaces);
+    Q_assert(fnum >= 0 && fnum < bsp->dfaces.size());
     return &bsp->dfaces[fnum];
 }
 
@@ -78,7 +78,7 @@ const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
     if (texinfo < 0) {
         return nullptr;
     }
-    if (texinfo >= bsp->numtexinfo) {
+    if (texinfo >= bsp->texinfo.size()) {
         return nullptr;
     }
     const gtexinfo_t *tex = &bsp->texinfo[texinfo];
@@ -87,7 +87,7 @@ const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
 
 mface_t *BSP_GetFace(mbsp_t *bsp, int fnum)
 {
-    Q_assert(fnum >= 0 && fnum < bsp->numfaces);
+    Q_assert(fnum >= 0 && fnum < bsp->dfaces.size());
     return &bsp->dfaces[fnum];
 }
 
@@ -106,7 +106,7 @@ int Face_VertexAtIndex(const mbsp_t *bsp, const mface_t *f, int v)
 
 static void Vertex_GetPos(const mbsp_t *bsp, int num, vec3_t out)
 {
-    Q_assert(num >= 0 && num < bsp->numvertexes);
+    Q_assert(num >= 0 && num < bsp->dvertexes.size());
     VectorCopy(bsp->dvertexes[num], out);
 }
 
@@ -124,7 +124,7 @@ void Face_Normal(const mbsp_t *bsp, const mface_t *f, vec3_t norm)
 
 plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f)
 {
-    Q_assert(f->planenum >= 0 && f->planenum < bsp->numplanes);
+    Q_assert(f->planenum >= 0 && f->planenum < bsp->dplanes.size());
     const dplane_t *dplane = &bsp->dplanes[f->planenum];
 
     vec3_t planeNormal;
@@ -143,7 +143,7 @@ plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f)
 
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
 {
-    if (face->texinfo < 0 || face->texinfo >= bsp->numtexinfo)
+    if (face->texinfo < 0 || face->texinfo >= bsp->texinfo.size())
         return nullptr;
 
     return &bsp->texinfo[face->texinfo];
@@ -239,7 +239,7 @@ const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &s
     int submodel = -1;
     if (1 == sscanf(submodel_str.c_str(), "*%d", &submodel)) {
 
-        if (submodel < 0 || submodel >= bsp->nummodels) {
+        if (submodel < 0 || submodel >= bsp->dmodels.size()) {
             return nullptr;
         }
 
@@ -452,7 +452,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
     LogPrint("face {}, texture '{}', {} edges...\n"
              "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"
              "          ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n",
-        (ptrdiff_t)(face - bsp->dfaces), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
+        Face_GetNum(bsp, face), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
         tex->vecs[0][3], tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
 
     for (int i = 0; i < face->numedges; i++) {

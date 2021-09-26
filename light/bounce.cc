@@ -100,7 +100,7 @@ static void SaveWindingFn(winding_t &w, void *userinfo)
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
     // make bounce light, only if this face is shadow casting
-    const modelinfo_t *mi = ModelInfoForFace(bsp, static_cast<int>(face - bsp->dfaces));
+    const modelinfo_t *mi = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
     if (!mi || !mi->shadow.boolValue()) {
         return false;
     }
@@ -322,7 +322,7 @@ void MakeBounceLights(const globalconfig_t &cfg, const mbsp_t *bsp)
     make_bounce_lights_args_t args{
         bsp, &cfg}; // mxd. https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html
 
-    RunThreadsOn(0, bsp->numfaces, MakeBounceLightsThread, (void *)&args);
+    RunThreadsOn(0, bsp->dfaces.size(), MakeBounceLightsThread, (void *)&args);
 
     LogPrint("{} bounce lights created\n", radlights.size());
 }

@@ -205,5 +205,5 @@ MakeSurfaceLights(const globalconfig_t &cfg, const mbsp_t *bsp)
     LogPrint("--- MakeSurfaceLights ---\n");
 
     make_surface_lights_args_t args{bsp, &cfg};
-    RunThreadsOn(0, bsp->numfaces, MakeSurfaceLightsThread, static_cast<void *>(&args));
+    RunThreadsOn(0, bsp->dfaces.size(), MakeSurfaceLightsThread, static_cast<void *>(&args));
 }

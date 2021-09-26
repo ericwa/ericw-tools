@@ -400,6 +400,23 @@ inline std::ostream &operator<=(std::ostream &s, const std::tuple<T...> &tuple)
     return s;
 }
 
+template<typename T, size_t N>
+inline std::ostream &operator<=(std::ostream &s, const std::array<T, N> &c)
+{
+    for (auto &v : c)
+        s <= v;
+
+    return s;
+}
+
+template<typename T>
+inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_data)>, std::ostream &> operator<=(std::ostream &s, const T &obj)
+{
+    // A big ugly, but, this skips us needing a const version of stream_data()
+    s <= const_cast<T &>(obj).stream_data();
+    return s;
+}
+
 inline std::istream &operator>=(std::istream &s, char &c)
 {
     s.read(&c, sizeof(c));
@@ -495,9 +512,25 @@ inline std::istream &operator>=(std::istream &s, double &c)
 }
 
 template<typename... T>
-inline std::istream &operator>=(std::istream &s, const std::tuple<T...> &tuple)
+inline std::istream &operator>=(std::istream &s, std::tuple<T...> &tuple)
 {
     std::apply([&s](auto&&... args) { ((s >= args), ...); }, tuple);
+    return s;
+}
+
+template<typename T, size_t N>
+inline std::istream &operator>=(std::istream &s, std::array<T, N> &c)
+{
+    for (auto &v : c)
+        s >= v;
+
+    return s;
+}
+
+template<typename T>
+inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_data)>, std::istream &> operator>=(std::istream &s, T &obj)
+{
+    s >= obj.stream_data();
     return s;
 }
 
@@ -567,6 +600,78 @@ constexpr Dst numeric_cast(const Src &value)
     
     return static_cast<Dst>(value);
 }
+
+// Memory streams, because C++ doesn't supply these.
+struct imembuf: std::streambuf
+{
+	imembuf(const void *base, size_t size)
+	{
+        auto cbase = const_cast<char *>(static_cast<const char *>(base));
+		this->setg(cbase, cbase, cbase + size);
+	}
+
+    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in)
+    {
+        setg(eback(), eback() + off, egptr());
+        return gptr() - eback();
+    }
+
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in)
+    {
+        if (dir == std::ios_base::cur)
+            gbump(off);
+        else if (dir == std::ios_base::end)
+            setg(eback(), egptr() + off, egptr());
+        else if (dir == std::ios_base::beg)
+            setg(eback(), eback() + off, egptr());
+
+        return gptr() - eback();
+    }
+};
+
+struct imemstream: virtual imembuf, std::istream
+{
+	imemstream(const void *base, size_t size) :
+		imembuf(base, size),
+		std::istream(static_cast<std::streambuf*>(this))
+	{
+	}
+};
+
+struct omembuf: std::streambuf
+{
+	omembuf(void *base, size_t size)
+	{
+		this->setp(reinterpret_cast<char *>(base), reinterpret_cast<char *>(base) + size);
+	}
+
+    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in)
+    {
+        setg(eback(), eback() + off, egptr());
+        return gptr() - eback();
+    }
+
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::out)
+    {
+        if (dir == std::ios_base::cur)
+            gbump(off);
+        else if (dir == std::ios_base::end)
+            setg(eback(), egptr() + off, egptr());
+        else if (dir == std::ios_base::beg)
+            setg(eback(), eback() + off, egptr());
+
+        return gptr() - eback();
+    }
+};
+
+struct omemstream: virtual omembuf, std::ostream
+{
+	omemstream(void *base, size_t size) :
+		omembuf(base, size),
+		std::ostream(static_cast<std::streambuf*>(this))
+	{
+	}
+};
 
 void CRC_Init(unsigned short *crcvalue);
 void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);

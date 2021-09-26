@@ -266,7 +266,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
     LogPrint("face {}, texture {}, {} edges...\n"
              "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"
              "          ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n",
-        (ptrdiff_t)(face - bsp->dfaces), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
+        Face_GetNum(bsp, face), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
         tex->vecs[0][3], tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
 
     for (int i = 0; i < face->numedges; i++) {
@@ -344,14 +344,14 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
         surf->texmins[i] = mins[i];
         surf->texsize[i] = maxs[i] - mins[i];
         if (surf->texsize[i] >= MAXDIMENSION) {
-            const dplane_t *plane = bsp->dplanes + face->planenum;
+            const dplane_t &plane = bsp->dplanes[face->planenum];
             const char *texname = Face_TextureName(bsp, face);
             Error("Bad surface extents:\n"
-                  "   surface {}, {} extents = {}, scale = {}\n"
+                  "   face {}, {} extents = {}, scale = {}\n"
                   "   texture {} at ({})\n"
                   "   surface normal ({})\n",
-                (ptrdiff_t)(face - bsp->dfaces), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname,
-                VecStr(worldpoint), VecStrf(plane->normal));
+                Face_GetNum(bsp, face), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname,
+                VecStr(worldpoint), VecStrf(plane.normal));
         }
     }
 }
@@ -731,8 +731,7 @@ static void CalcPoints(
         }
     }
 
-    const int facenum = (face - bsp->dfaces);
-    if (dump_facenum == facenum) {
+    if (dump_facenum == Face_GetNum(bsp, face)) {
         CalcPoints_Debug(surf, bsp);
     }
 }

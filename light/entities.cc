@@ -1230,23 +1230,11 @@ void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t v
  */
 void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp)
 {
-    std::string entdata = EntData_Write(entdicts);
-
-    if (bsp->dentdata)
-        delete[] bsp->dentdata;
+    bsp->dentdata = EntData_Write(entdicts);
 
     /* FIXME - why are we printing this here? */
     LogPrint("{} switchable light styles ({} max)\n", lightstyleForTargetname.size(),
         MAX_SWITCHABLE_STYLES - cfg.compilerstyle_start.intValue());
-
-    bsp->entdatasize = entdata.size() + 1; // +1 for a null byte at the end
-    bsp->dentdata = new char[bsp->entdatasize];
-    if (!bsp->dentdata)
-        FError("allocation of {} bytes failed\n", bsp->entdatasize);
-
-    memcpy(bsp->dentdata, entdata.data(), entdata.size());
-
-    bsp->dentdata[entdata.size()] = 0;
 }
 
 /*
@@ -1518,16 +1506,15 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     }
 
     /* Create the surface lights */
-    std::vector<bool> face_visited(static_cast<size_t>(bsp->numfaces), false);
+    std::vector<bool> face_visited(bsp->dfaces.size(), false);
 
-    for (int i = 0; i < bsp->numleafs; i++) {
-        const mleaf_t *leaf = bsp->dleafs + i;
+    for (auto &leaf : bsp->dleafs) {
         const bool underwater =
-            ((bsp->loadversion->game->id == GAME_QUAKE_II) ? (leaf->contents & Q2_CONTENTS_LIQUID)
-                                                           : leaf->contents != CONTENTS_EMPTY); // mxd
+            ((bsp->loadversion->game->id == GAME_QUAKE_II) ? (leaf.contents & Q2_CONTENTS_LIQUID)
+                                                           : leaf.contents != CONTENTS_EMPTY); // mxd
 
-        for (int k = 0; k < leaf->nummarksurfaces; k++) {
-            const int facenum = bsp->dleaffaces[leaf->firstmarksurface + k];
+        for (int k = 0; k < leaf.nummarksurfaces; k++) {
+            const int facenum = bsp->dleaffaces[leaf.firstmarksurface + k];
             const mface_t *surf = BSP_GetFace(bsp, facenum);
             const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
 

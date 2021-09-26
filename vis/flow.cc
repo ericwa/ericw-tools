@@ -149,7 +149,6 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     plane_t backplane;
     leaf_t *leaf;
     int i, j, err, numblocks;
-    leafblock_t *test, *might, *vis, more;
 
     ++c_chains;
 
@@ -169,8 +168,8 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     }
 
     // mark the leaf as visible
-    if (!TestLeafBit(thread->leafvis, leafnum)) {
-        SetLeafBit(thread->leafvis, leafnum);
+    if (!thread->leafvis[leafnum]) {
+        thread->leafvis[leafnum] = true;
         thread->base->numcansee++;
     }
 
@@ -185,31 +184,36 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     for (i = 0; i < STACK_WINDINGS; i++)
         stack.freewindings[i] = 1;
 
-    stack.mightsee = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
-    might = stack.mightsee->bits;
-    vis = thread->leafvis->bits;
+    leafbits_t local(portalleafs);
+    stack.mightsee = &local;
+
+    auto might = stack.mightsee->data();
+    auto vis = thread->leafvis.data();
 
     // check all portals for flowing into other leafs
     for (i = 0; i < leaf->numportals; i++) {
         p = leaf->portals[i];
 
-        if (!TestLeafBit(prevstack->mightsee, p->leaf)) {
+        if (!(*prevstack->mightsee)[p->leaf]) {
             c_leafskip++;
             continue; // can't possibly see it
         }
+
+        uint32_t *test;
+
         // if the portal can't see anything we haven't allready seen, skip it
         if (p->status == pstat_done) {
             c_vistest++;
-            test = p->visbits->bits;
+            test = p->visbits.data();
         } else {
             c_mighttest++;
-            test = p->mightsee->bits;
+            test = p->mightsee.data();
         }
 
-        more = 0;
-        numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
+        uint32_t more = 0;
+        numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
         for (j = 0; j < numblocks; j++) {
-            might[j] = prevstack->mightsee->bits[j] & test[j];
+            might[j] = prevstack->mightsee->data()[j] & test[j];
             more |= (might[j] & ~vis[j]);
         }
 
@@ -334,8 +338,6 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         FreeStackWinding(stack.source, &stack);
         FreeStackWinding(stack.pass, &stack);
     }
-
-    free(stack.mightsee);
 }
 
 /*
@@ -345,22 +347,19 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
 */
 void PortalFlow(portal_t *p)
 {
-    threaddata_t data;
+    threaddata_t data { p->visbits };
 
     if (p->status != pstat_working)
         FError("reflowed");
 
-    p->visbits = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
-    memset(p->visbits, 0, LeafbitsSize(portalleafs));
+    data.leafvis.resize(portalleafs);
 
-    memset(&data, 0, sizeof(data));
-    data.leafvis = p->visbits;
     data.base = p;
 
     data.pstack_head.portal = p;
     data.pstack_head.source = p->winding;
     data.pstack_head.portalplane = p->plane;
-    data.pstack_head.mightsee = p->mightsee;
+    data.pstack_head.mightsee = &p->mightsee;
 
     RecursiveLeafFlow(p->leaf, &data, &data.pstack_head);
 }
@@ -372,16 +371,16 @@ void PortalFlow(portal_t *p)
   ============================================================================
 */
 
-static void SimpleFlood(portal_t *srcportal, int leafnum, uint8_t *portalsee)
+static void SimpleFlood(portal_t *srcportal, int leafnum, const std::vector<bool> &portalsee)
 {
     int i;
     leaf_t *leaf;
     portal_t *p;
 
-    if (TestLeafBit(srcportal->mightsee, leafnum))
+    if (srcportal->mightsee[leafnum])
         return;
 
-    SetLeafBit(srcportal->mightsee, leafnum);
+    srcportal->mightsee[leafnum] = true;
     srcportal->nummightsee++;
 
     leaf = &leafs[leafnum];
@@ -424,11 +423,8 @@ static void *BasePortalThread(void *dummy)
     portal_t *p, *tp;
     winding_t *w, *tw;
     float d;
-    uint8_t *portalsee;
-
-    portalsee = new uint8_t[numportals * 2];
-    if (!portalsee)
-        FError("Out of Memory");
+    std::vector<bool> portalsee;
+    portalsee.resize(numportals * 2);
 
     while (1) {
         portalnum = GetThreadWork();
@@ -438,10 +434,7 @@ static void *BasePortalThread(void *dummy)
         p = portals + portalnum;
         w = p->winding;
 
-        p->mightsee = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
-        memset(p->mightsee, 0, LeafbitsSize(portalleafs));
-
-        memset(portalsee, 0, numportals * 2);
+        p->mightsee.resize(portalleafs);
 
         for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
             tw = tp->winding;
@@ -486,9 +479,9 @@ static void *BasePortalThread(void *dummy)
 
         p->nummightsee = 0;
         SimpleFlood(p, p->leaf, portalsee);
-    }
 
-    delete[] portalsee;
+        portalsee.assign(portalsee.size(), false);
+    }
 
     return NULL;
 }

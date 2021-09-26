@@ -27,6 +27,7 @@
 #include <common/aabb.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
+#include <fmt/chrono.h>
 
 #include "tbb/global_control.h"
 
@@ -1246,7 +1247,7 @@ int qbsp_main(int argc, const char **argv)
     ProcessFile();
     auto end = I_FloatTime();
 
-    LogPrint("\n{:5.3} seconds elapsed\n", (end - start).count());
+    LogPrint("\n{:.3} seconds elapsed\n", (end - start));
 
     //      FreeAllMem();
     //      PrintMem();

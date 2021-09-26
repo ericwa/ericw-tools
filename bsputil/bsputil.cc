@@ -123,9 +123,7 @@ static void ExportWad(const qfile_t &wadfile, mbsp_t *bsp)
 
 static void PrintModelInfo(const mbsp_t *bsp)
 {
-    int i;
-
-    for (i = 0; i < bsp->nummodels; i++) {
+    for (size_t i = 0; i < bsp->dmodels.size(); i++) {
         const dmodel_t *dmodel = &bsp->dmodels[i];
         LogPrint("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
     }
@@ -138,9 +136,7 @@ constexpr vec_t PLANE_ON_EPSILON = 0.01;
 
 static void CheckBSPFacesPlanar(const mbsp_t *bsp)
 {
-    int i, j;
-
-    for (i = 0; i < bsp->numfaces; i++) {
+    for (size_t i = 0; i < bsp->dfaces.size(); i++) {
         const mface_t *face = BSP_GetFace(bsp, i);
         dplane_t plane = bsp->dplanes[face->planenum];
 
@@ -149,14 +145,14 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
             plane.dist = -plane.dist;
         }
 
-        for (j = 0; j < face->numedges; j++) {
+        for (size_t j = 0; j < face->numedges; j++) {
             const int edgenum = bsp->dsurfedges[face->firstedge + j];
             const int vertnum = (edgenum >= 0) ? bsp->dedges[edgenum][0] : bsp->dedges[-edgenum][1];
             const bspvec3f_t &point = bsp->dvertexes[vertnum];
             const float dist = DotProduct(plane.normal, point) - plane.dist;
 
             if (dist < -PLANE_ON_EPSILON || dist > PLANE_ON_EPSILON)
-                fmt::print("WARNING: face {}, point {} off plane by {}\n", static_cast<ptrdiff_t>(face - bsp->dfaces), j, dist);
+                fmt::print("WARNING: face {}, point {} off plane by {}\n", i, j, dist);
         }
     }
 }
@@ -237,39 +233,39 @@ static void CheckBSPFile(const mbsp_t *bsp)
     std::set<uint8_t> used_lightstyles;
 
     /* faces */
-    for (i = 0; i < bsp->numfaces; i++) {
+    for (i = 0; i < bsp->dfaces.size(); i++) {
         const mface_t *face = BSP_GetFace(bsp, i);
 
         /* texinfo bounds check */
         if (face->texinfo < 0)
             fmt::print("warning: face {} has negative texinfo ({})\n", i, face->texinfo);
-        if (face->texinfo >= bsp->numtexinfo)
-            fmt::print("warning: face {} has texinfo out of range ({} >= {})\n", i, face->texinfo, bsp->numtexinfo);
+        if (face->texinfo >= bsp->texinfo.size())
+            fmt::print("warning: face {} has texinfo out of range ({} >= {})\n", i, face->texinfo, bsp->texinfo.size());
         referenced_texinfos.insert(face->texinfo);
 
         /* planenum bounds check */
         if (face->planenum < 0)
             fmt::print("warning: face {} has negative planenum ({})\n", i, face->planenum);
-        if (face->planenum >= bsp->numplanes)
-            fmt::print("warning: face {} has planenum out of range ({} >= {})\n", i, face->planenum, bsp->numplanes);
+        if (face->planenum >= bsp->dplanes.size())
+            fmt::print("warning: face {} has planenum out of range ({} >= {})\n", i, face->planenum, bsp->dplanes.size());
         referenced_planenums.insert(face->planenum);
 
         /* lightofs check */
         if (face->lightofs < -1)
             fmt::print("warning: face {} has negative light offset ({})\n", i, face->lightofs);
-        if (face->lightofs >= bsp->lightdatasize)
+        if (face->lightofs >= bsp->dlightdata.size())
             fmt::print("warning: face {} has light offset out of range "
                         "({} >= {})\n",
-                        i, face->lightofs, bsp->lightdatasize);
+                        i, face->lightofs, bsp->dlightdata.size());
 
         /* edge check */
         if (face->firstedge < 0)
             fmt::print("warning: face {} has negative firstedge ({})\n", i, face->firstedge);
         if (face->numedges < 3)
             fmt::print("warning: face {} has < 3 edges ({})\n", i, face->numedges);
-        if (face->firstedge + face->numedges > bsp->numsurfedges)
+        if (face->firstedge + face->numedges > bsp->dsurfedges.size())
             fmt::print("warning: face {} has edges out of range ({}..{} >= {})\n", i, face->firstedge,
-                face->firstedge + face->numedges - 1, bsp->numsurfedges);
+                face->firstedge + face->numedges - 1, bsp->dsurfedges.size());
 
         for (int j = 0; j < 4; j++) {
             used_lightstyles.insert(face->styles[j]);
@@ -277,67 +273,67 @@ static void CheckBSPFile(const mbsp_t *bsp)
     }
 
     /* edges */
-    for (i = 0; i < bsp->numedges; i++) {
+    for (i = 0; i < bsp->dedges.size(); i++) {
         const bsp2_dedge_t *edge = &bsp->dedges[i];
         int j;
 
         for (j = 0; j < 2; j++) {
             const uint32_t vertex = (*edge)[j];
-            if (vertex > bsp->numvertexes)
+            if (vertex > bsp->dvertexes.size())
                 fmt::print("warning: edge {} has vertex {} out range "
                             "({} >= {})\n",
-                            i, j, vertex, bsp->numvertexes);
+                            i, j, vertex, bsp->dvertexes.size());
             referenced_vertexes.insert(vertex);
         }
     }
 
     /* surfedges */
-    for (i = 0; i < bsp->numsurfedges; i++) {
+    for (i = 0; i < bsp->dsurfedges.size(); i++) {
         const int edgenum = bsp->dsurfedges[i];
         if (!edgenum)
             fmt::print("warning: surfedge {} has zero value!\n", i);
-        if (abs(edgenum) >= bsp->numedges)
-            fmt::print("warning: surfedge {} is out of range (abs({}) >= {})\n", i, edgenum, bsp->numedges);
+        if (abs(edgenum) >= bsp->dedges.size())
+            fmt::print("warning: surfedge {} is out of range (abs({}) >= {})\n", i, edgenum, bsp->dedges.size());
     }
 
     /* marksurfaces */
-    for (i = 0; i < bsp->numleaffaces; i++) {
+    for (i = 0; i < bsp->dleaffaces.size(); i++) {
         const uint32_t surfnum = bsp->dleaffaces[i];
-        if (surfnum >= bsp->numfaces)
-            fmt::print("warning: marksurface {} is out of range ({} >= {})\n", i, surfnum, bsp->numfaces);
+        if (surfnum >= bsp->dfaces.size())
+            fmt::print("warning: marksurface {} is out of range ({} >= {})\n", i, surfnum, bsp->dfaces.size());
     }
 
     /* leafs */
-    for (i = 0; i < bsp->numleafs; i++) {
+    for (i = 0; i < bsp->dleafs.size(); i++) {
         const mleaf_t *leaf = &bsp->dleafs[i];
         const uint32_t endmarksurface = leaf->firstmarksurface + leaf->nummarksurfaces;
-        if (endmarksurface > bsp->numleaffaces)
+        if (endmarksurface > bsp->dleaffaces.size())
             fmt::print("warning: leaf {} has marksurfaces out of range "
                         "({}..{} >= {})\n",
-                        i, leaf->firstmarksurface, endmarksurface - 1, bsp->numleaffaces);
+                        i, leaf->firstmarksurface, endmarksurface - 1, bsp->dleaffaces.size());
         if (leaf->visofs < -1)
             fmt::print("warning: leaf {} has negative visdata offset ({})\n", i, leaf->visofs);
-        if (leaf->visofs >= bsp->visdatasize)
+        if (leaf->visofs >= bsp->dvis.bits.size())
             fmt::print("warning: leaf {} has visdata offset out of range "
                         "({} >= {})\n",
-                        i, leaf->visofs, bsp->visdatasize);
+                        i, leaf->visofs, bsp->dvis.bits.size());
     }
 
     /* nodes */
-    for (i = 0; i < bsp->numnodes; i++) {
+    for (i = 0; i < bsp->dnodes.size(); i++) {
         const bsp2_dnode_t *node = &bsp->dnodes[i];
         int j;
 
         for (j = 0; j < 2; j++) {
             const int32_t child = node->children[j];
-            if (child >= 0 && child >= bsp->numnodes)
+            if (child >= 0 && child >= bsp->dnodes.size())
                 fmt::print("warning: node {} has child {} (node) out of range "
                             "({} >= {})\n",
-                            i, j, child, bsp->numnodes);
-            if (child < 0 && -child - 1 >= bsp->numleafs)
+                            i, j, child, bsp->dnodes.size());
+            if (child < 0 && -child - 1 >= bsp->dleafs.size())
                 fmt::print("warning: node {} has child {} (leaf) out of range "
                             "({} >= {})\n",
-                            i, j, -child - 1, bsp->numleafs);
+                            i, j, -child - 1, bsp->dleafs.size());
         }
 
         if (node->children[0] == node->children[1]) {
@@ -348,15 +344,15 @@ static void CheckBSPFile(const mbsp_t *bsp)
     }
 
     /* clipnodes */
-    for (i = 0; i < bsp->numclipnodes; i++) {
+    for (i = 0; i < bsp->dclipnodes.size(); i++) {
         const bsp2_dclipnode_t *clipnode = &bsp->dclipnodes[i];
 
         for (int j = 0; j < 2; j++) {
             const int32_t child = clipnode->children[j];
-            if (child >= 0 && child >= bsp->numclipnodes)
+            if (child >= 0 && child >= bsp->dclipnodes.size())
                 fmt::print("warning: clipnode {} has child {} (clipnode) out of range "
                             "({} >= {})\n",
-                            i, j, child, bsp->numclipnodes);
+                            i, j, child, bsp->dclipnodes.size());
             if (child < 0 && child < CONTENTS_MIN)
                 fmt::print("warning: clipnode {} has invalid contents ({}) for child {}\n", i, child, j);
         }
@@ -373,7 +369,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
     /* unreferenced texinfo */
     {
         int num_unreferenced_texinfo = 0;
-        for (i = 0; i < bsp->numtexinfo; i++) {
+        for (i = 0; i < bsp->texinfo.size(); i++) {
             if (referenced_texinfos.find(i) == referenced_texinfos.end()) {
                 num_unreferenced_texinfo++;
             }
@@ -385,7 +381,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
     /* unreferenced planes */
     {
         int num_unreferenced_planes = 0;
-        for (i = 0; i < bsp->numplanes; i++) {
+        for (i = 0; i < bsp->dplanes.size(); i++) {
             if (referenced_planenums.find(i) == referenced_planenums.end()) {
                 num_unreferenced_planes++;
             }
@@ -397,7 +393,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
     /* unreferenced vertices */
     {
         int num_unreferenced_vertexes = 0;
-        for (i = 0; i < bsp->numvertexes; i++) {
+        for (i = 0; i < bsp->dvertexes.size(); i++) {
             if (referenced_vertexes.find(i) == referenced_vertexes.end()) {
                 num_unreferenced_vertexes++;
             }
@@ -411,13 +407,13 @@ static void CheckBSPFile(const mbsp_t *bsp)
 
     /* unique visofs's */
     std::set<int32_t> visofs_set;
-    for (i = 0; i < bsp->numleafs; i++) {
+    for (i = 0; i < bsp->dleafs.size(); i++) {
         const mleaf_t *leaf = &bsp->dleafs[i];
         if (leaf->visofs >= 0) {
             visofs_set.insert(leaf->visofs);
         }
     }
-    fmt::print("{} unique visdata offsets for {} leafs\n", visofs_set.size(), bsp->numleafs);
+    fmt::print("{} unique visdata offsets for {} leafs\n", visofs_set.size(), bsp->dleafs.size());
     fmt::print("{} visleafs in world model\n", bsp->dmodels[0].visleafs);
 
     /* unique lightstyles */
@@ -439,7 +435,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
 
 static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
 {
-    fmt::print("comparing {} with {} faces\n", refBsp.numfaces, bsp.numfaces);
+    fmt::print("comparing {} with {} faces\n", refBsp.dfaces.size(), bsp.dfaces.size());
 
     const dmodel_t *world = BSP_GetWorldModel(&bsp);
     const dmodel_t *refWorld = BSP_GetWorldModel(&refBsp);
@@ -477,12 +473,12 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
 
 static void FindFaces(const mbsp_t *bsp, const vec3_t &pos, const vec3_t &normal)
 {
-    for (int i = 0; i < bsp->nummodels; ++i) {
+    for (int i = 0; i < bsp->dmodels.size(); ++i) {
         const dmodelh2_t *model = &bsp->dmodels[i];
         const mface_t *face = BSP_FindFaceAtPoint(bsp, model, pos, normal);
 
         if (face != nullptr) {
-            fmt::print("model {} face {}: texture '{}' texinfo {}\n", i, static_cast<ptrdiff_t>(face - bsp->dfaces),
+            fmt::print("model {} face {}: texture '{}' texinfo {}\n", i, Face_GetNum(bsp, face),
                 Face_TextureName(bsp, face), face->texinfo);
         }
     }
@@ -553,7 +549,7 @@ int main(int argc, char **argv)
             WriteBSPFile(source.replace_filename(source.filename().string() + "-" + argv[i]), &bspdata);
 
         } else if (!strcmp(argv[i], "--extract-entities")) {
-            uint32_t crc = CRC_Block((unsigned char *)bsp.dentdata, bsp.entdatasize - 1);
+            uint32_t crc = CRC_Block((unsigned char *)bsp.dentdata.data(), bsp.dentdata.size() - 1);
 
             source.replace_extension(".ent");
             fmt::print("-> writing {} [CRC: {:04x}]... ", source, crc);

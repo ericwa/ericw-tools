@@ -111,10 +111,11 @@ sceneinfo CreateGeometry(
 
     // fill in vertices
     Vertex *vertices = (Vertex *)rtcSetNewGeometryBuffer(
-        geom_0, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 4 * sizeof(float), bsp->numvertexes);
-    for (int i = 0; i < bsp->numvertexes; i++) {
-        const dvertex_t &dvertex = bsp->dvertexes[i];
-        Vertex *vert = &vertices[i];
+        geom_0, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 4 * sizeof(float), bsp->dvertexes.size());
+
+    size_t i = 0;
+    for (auto &dvertex : bsp->dvertexes) {
+        Vertex *vert = &vertices[i++];
         for (int j = 0; j < 3; j++) {
             vert->point[j] = dvertex[j];
         }
@@ -518,7 +519,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     std::vector<const mface_t *> skyfaces, solidfaces, filterfaces;
 
     // check all modelinfos
-    for (int mi = 0; mi < bsp->nummodels; mi++) {
+    for (size_t mi = 0; mi < bsp->dmodels.size(); mi++) {
         const modelinfo_t *model = ModelInfoForModel(bsp, mi);
 
         const bool isWorld = model->isWorld();

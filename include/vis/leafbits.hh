@@ -39,42 +39,114 @@ inline int ffsl(long int val)
 }
 #endif
 
-using leafblock_t = unsigned long;
-
-struct leafbits_t
+class leafbits_t
 {
-    int numleafs;
-    leafblock_t bits[]; /* Variable Sized */
+    size_t _size;
+    uint32_t *bits;
+
+    constexpr size_t block_size() const { return (_size + mask) >> shift; }
+    uint32_t *allocate() { return new uint32_t[block_size()] { }; }
+    constexpr size_t byte_size() const { return block_size() * sizeof(*bits); }
+
+public:
+    static constexpr size_t shift = 5;
+    static constexpr size_t mask = (sizeof(uint32_t) << 3) - 1UL;
+
+    constexpr leafbits_t() :
+        _size(0),
+        bits(nullptr)
+    {
+    }
+
+    leafbits_t(size_t size) :
+        _size(size),
+        bits(allocate())
+    {
+    }
+
+    leafbits_t(const leafbits_t &copy) :
+        leafbits_t(copy._size)
+    {
+        memcpy(bits, copy.bits, byte_size());
+    }
+
+    constexpr leafbits_t(leafbits_t &&move) noexcept :
+        _size(move._size),
+        bits(move.bits)
+    {
+        move._size = 0;
+        move.bits = nullptr;
+    }
+
+    leafbits_t &operator=(leafbits_t &&move) noexcept
+    {
+        _size = move._size;
+        bits = move.bits;
+
+        move._size = 0;
+        move.bits = nullptr;
+
+        return *this;
+    }
+
+    leafbits_t &operator=(const leafbits_t &copy)
+    {
+        resize(copy._size);
+        memcpy(bits, copy.bits, byte_size());
+        return *this;
+    }
+
+    ~leafbits_t()
+    {
+        delete[] bits;
+        bits = nullptr;
+    }
+
+    constexpr const size_t &size() const
+    {
+        return _size;
+    }
+
+    // this clears existing bit data!
+    void resize(size_t new_size)
+    {
+        *this = leafbits_t(new_size);
+    }
+
+    void clear()
+    {
+        memset(bits, 0, byte_size());
+    }
+    
+    constexpr uint32_t *data() { return bits; }
+    constexpr const uint32_t *data() const { return bits; }
+
+    constexpr bool operator[](const size_t &index) const { return !!(bits[index >> shift] & (1UL << (index & mask))); }
+
+    struct reference
+    {
+        uint32_t *bits;
+        size_t block_index;
+        size_t mask;
+
+        constexpr operator bool() const
+        {
+            return !!(bits[block_index] & mask);
+        }
+
+        reference &operator=(bool value)
+        {
+            if (value)
+                bits[block_index] |= mask;
+            else
+                bits[block_index] &= ~mask;
+
+            return *this;
+        }
+    };
+
+    constexpr reference operator[](const size_t &index)
+    {
+        return { bits, index >> shift, 1ULL << (index & mask) };
+    }
 };
-
-constexpr size_t QBYTESHIFT(size_t x)
-{
-    return (x == 8 ? 6 : (x == 4 ? 5 : 0));
-}
-
-constexpr size_t LEAFSHIFT = QBYTESHIFT(sizeof(leafblock_t));
-
-static_assert(LEAFSHIFT != 0, "unsupported sizeof(unsigned long)");
-
-constexpr size_t LEAFMASK = (sizeof(leafblock_t) << 3) - 1UL;
-
-constexpr int TestLeafBit(const leafbits_t *bits, int leafnum)
-{
-    return !!(bits->bits[leafnum >> LEAFSHIFT] & (1UL << (leafnum & LEAFMASK)));
-}
-
-constexpr void SetLeafBit(leafbits_t *bits, int leafnum)
-{
-    bits->bits[leafnum >> LEAFSHIFT] |= 1UL << (leafnum & LEAFMASK);
-}
-
-constexpr inline void ClearLeafBit(leafbits_t *bits, int leafnum)
-{
-    bits->bits[leafnum >> LEAFSHIFT] &= ~(1UL << (leafnum & LEAFMASK));
-}
-
-constexpr inline size_t LeafbitsSize(int numleafs)
-{
-    int numblocks = (numleafs + LEAFMASK) >> LEAFSHIFT;
-    return sizeof(leafbits_t) + (sizeof(leafblock_t) * numblocks);
-}

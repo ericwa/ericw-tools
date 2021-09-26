@@ -622,8 +622,8 @@ LoadTextures(mbsp_t *bsp)
 
     // Step 1: gather all loadable textures...
     std::map<std::string, std::string> texturenames; // <texture name, texture file path>
-    for (int i = 0; i < bsp->numtexinfo; i++)
-        AddTextureName(texturenames, bsp->texinfo[i].texture.data());
+    for (auto &texinfo : bsp->texinfo)
+        AddTextureName(texturenames, texinfo.texture.data());
 
     // Step 2: gather textures used by _project_texture. Yes, this means parsing dentdata twice...
     auto entdicts = EntData_Parse(bsp->dentdata);
@@ -695,12 +695,10 @@ LoadTextures(mbsp_t *bsp)
     WriteRGBATextureData(bsp, tex_mips, tex_bytes);
 
     // Step 5: set miptex indices to gtexinfo_t
-    for (int i = 0; i < bsp->numtexinfo; i++) {
-        gtexinfo_t *info = &bsp->texinfo[i];
-
-        const auto pair = indicesbytexturename.find(info->texture.data());
+    for (auto &info : bsp->texinfo) {
+        const auto pair = indicesbytexturename.find(info.texture.data());
         if (pair != indicesbytexturename.end())
-            info->miptex = pair->second;
+            info.miptex = pair->second;
     }
 }
 
@@ -766,12 +764,10 @@ ConvertTextures(mbsp_t *bsp)
     WriteRGBATextureData(bsp, tex_mips, tex_bytes);
 
     // Step 3: set texturenames to gmiptex_t
-    for (int i = 0; i < bsp->numtexinfo; i++) {
-        gtexinfo_t *info = &bsp->texinfo[i];
-
-        const auto pair = texturenamesbyindex.find(info->miptex);
+    for (auto &info : bsp->texinfo) {
+        const auto pair = texturenamesbyindex.find(info.miptex);
         if (pair != texturenamesbyindex.end())
-            strcpy(info->texture.data(), pair->second.c_str());
+            strcpy(info.texture.data(), pair->second.c_str());
     }
 }
 

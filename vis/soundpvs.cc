@@ -82,7 +82,7 @@ void CalcAmbientSounds(mbsp_t *bsp)
             dists[j] = 1020;
 
         if (portalleafs != portalleafs_real) {
-            vis = &uncompressed[clustermap[i] * leafbytes_real];
+            vis = &uncompressed[leaf->cluster * leafbytes_real];
         } else {
             vis = &uncompressed[i * leafbytes_real];
         }
@@ -146,4 +146,80 @@ void CalcAmbientSounds(mbsp_t *bsp)
             leaf->ambient_level[j] = (uint8_t)(vol * 255);
         }
     }
+}
+
+
+/*
+================
+CalcPHS
+
+Calculate the PHS (Potentially Hearable Set)
+by ORing together all the PVS visible from a leaf
+================
+*/
+void CalcPHS(mbsp_t *bsp)
+{
+    const int32_t leafbytes = (portalleafs + 7) >> 3;
+    const int32_t leaflongs = leafbytes / sizeof(long);
+
+    // increase the bits size with approximately how much space we'll need
+    bsp->dvis.bits.reserve(bsp->dvis.bits.size() * 2);
+
+    // FIXME: should this use alloca? 
+    uint8_t *uncompressed = new uint8_t[leafbytes];
+    uint8_t *uncompressed_2 = new uint8_t[leafbytes];
+    uint8_t *compressed = new uint8_t[leafbytes * 2];
+    uint8_t *uncompressed_orig = new uint8_t[leafbytes];
+
+    int32_t count = 0;
+    for (int32_t i = 0; i < portalleafs; i++) {
+        const uint8_t *scan = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, i);
+
+        DecompressRow(scan, leafbytes, uncompressed);
+        memset(uncompressed_orig, 0, leafbytes);
+        memcpy(uncompressed_orig, uncompressed, leafbytes);
+
+        scan = uncompressed_orig;
+
+        for (int32_t j = 0; j < leafbytes; j++) {
+            uint8_t bitbyte = scan[j];
+            if (!bitbyte)
+                continue;
+            for (int32_t k = 0; k < 8; k++) {
+                if (!(bitbyte & (1 << k)))
+                    continue;
+                // OR this pvs row into the phs
+                int32_t index = ((j << 3) + k);
+                if (index >= portalleafs)
+                    FError("Bad bit in PVS"); // pad bits should be 0
+                const uint8_t *src_compressed = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, index);
+                DecompressRow(src_compressed, leafbytes, uncompressed_2);
+                const long *src = (long *)uncompressed_2;
+                long *dest = (long *)uncompressed;
+                for (int32_t l = 0; l < leaflongs; l++)
+                    ((long *)uncompressed)[l] |= src[l];
+            }
+        }
+        for (int32_t j = 0; j < portalleafs; j++)
+            if (uncompressed[j >> 3] & (1 << (j & 7)))
+                count++;
+
+        //
+        // compress the bit string
+        //
+        int32_t j = CompressRow(uncompressed, leafbytes, compressed);
+
+        bsp->dvis.set_bit_offset(VIS_PHS, i, bsp->dvis.bits.size());
+
+        std::copy(compressed, compressed + j, std::back_inserter(bsp->dvis.bits));
+    }
+
+    delete[] uncompressed;
+    delete[] uncompressed_2;
+    delete[] compressed;
+    delete[] uncompressed_orig;
+
+    fmt::print("Average clusters hearable: {}\n", count / portalleafs);
+
+    bsp->dvis.bits.shrink_to_fit();
 }

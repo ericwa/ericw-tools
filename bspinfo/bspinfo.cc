@@ -30,12 +30,11 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
 {
     json j = json::object();
 
-    if (bsp.nummodels) {
+    if (!bsp.dmodels.empty()) {
         json &models = (j.emplace("models", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.nummodels; i++) {
-            json &model = models.insert(models.end(), json::object()).value();
-            auto &src_model = bsp.dmodels[i];
+         for (auto &src_model : bsp.dmodels) {
+           json &model = models.insert(models.end(), json::object()).value();
 
             model.push_back({"mins", json::array({src_model.mins[0], src_model.mins[1], src_model.mins[2]})});
             model.push_back({"maxs", json::array({src_model.maxs[0], src_model.maxs[1], src_model.maxs[2]})});
@@ -49,12 +48,11 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
         }
     }
 
-    if (bsp.numleafs) {
+    if (!bsp.dleafs.empty()) {
         json &leafs = (j.emplace("leafs", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numleafs; i++) {
+        for (auto &src_leaf : bsp.dleafs) {
             json &leaf = leafs.insert(leafs.end(), json::object()).value();
-            auto &src_leaf = bsp.dleafs[i];
 
             leaf.push_back({"contents", src_leaf.contents});
             leaf.push_back({"visofs", src_leaf.visofs});
@@ -71,25 +69,23 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
         }
     }
 
-    if (bsp.numplanes) {
+    if (!bsp.dplanes.empty()) {
         json &planes = (j.emplace("planes", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numplanes; i++) {
+        for (auto &src_plane : bsp.dplanes) {
             json &plane = planes.insert(planes.end(), json::object()).value();
-            auto &src_plane = bsp.dplanes[i];
 
             plane.push_back({"normal", json::array({src_plane.normal[0], src_plane.normal[1], src_plane.normal[2]})});
             plane.push_back({"dist", src_plane.dist});
             plane.push_back({"type", src_plane.type});
         }
     }
-
-    if (bsp.numnodes) {
+    
+    if (!bsp.dnodes.empty()) {
         json &nodes = (j.emplace("nodes", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numnodes; i++) {
+        for (auto &src_node : bsp.dnodes) {
             json &node = nodes.insert(nodes.end(), json::object()).value();
-            auto &src_node = bsp.dnodes[i];
 
             node.push_back({"planenum", src_node.planenum});
             node.push_back({"children", json::array({src_node.children[0], src_node.children[1]})});
@@ -100,24 +96,22 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
         }
     }
 
-    if (bsp.numbrushsides) {
+    if (!bsp.dbrushsides.empty()) {
         json &brushsides = (j.emplace("brushsides", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numbrushsides; i++) {
+        for (auto &src_brushside : bsp.dbrushsides) {
             json &brushside = brushsides.insert(brushsides.end(), json::object()).value();
-            auto &src_brushside = bsp.dbrushsides[i];
 
             brushside.push_back({"planenum", src_brushside.planenum});
             brushside.push_back({"texinfo", src_brushside.texinfo});
         }
     }
 
-    if (bsp.numbrushes) {
+    if (!bsp.dbrushes.empty()) {
         json &brushes = (j.emplace("brushes", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numbrushes; i++) {
+        for (auto &src_brush : bsp.dbrushes) {
             json &brush = brushes.insert(brushes.end(), json::object()).value();
-            auto &src_brush = bsp.dbrushes[i];
 
             brush.push_back({"firstside", src_brush.firstside});
             brush.push_back({"numsides", src_brush.numsides});
@@ -125,11 +119,11 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
         }
     }
 
-    if (bsp.numleafbrushes) {
+    if (!bsp.dleafbrushes.empty()) {
         json &leafbrushes = (j.emplace("leafbrushes", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numleafbrushes; i++) {
-            leafbrushes.push_back(bsp.dleafbrushes[i]);
+        for (auto &src_leafbrush : bsp.dleafbrushes) {
+            leafbrushes.push_back(src_leafbrush);
         }
     }
 

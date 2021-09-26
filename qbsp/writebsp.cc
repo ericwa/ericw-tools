@@ -401,23 +401,23 @@ static void WriteBSPFile()
     mbsp_t &bsp = bspdata.bsp.emplace<mbsp_t>();
 
     bspdata.version = &bspver_generic;
-
-    CopyVector(map.exported_planes, &bsp.numplanes, &bsp.dplanes);
-    CopyVector(map.exported_leafs, &bsp.numleafs, &bsp.dleafs);
-    CopyVector(map.exported_vertexes, &bsp.numvertexes, &bsp.dvertexes);
-    CopyVector(map.exported_nodes, &bsp.numnodes, &bsp.dnodes);
-    CopyVector(map.exported_texinfos, &bsp.numtexinfo, &bsp.texinfo);
-    CopyVector(map.exported_faces, &bsp.numfaces, &bsp.dfaces);
-    CopyVector(map.exported_clipnodes, &bsp.numclipnodes, &bsp.dclipnodes);
-    CopyVector(map.exported_marksurfaces, &bsp.numleaffaces, &bsp.dleaffaces);
-    CopyVector(map.exported_surfedges, &bsp.numsurfedges, &bsp.dsurfedges);
-    CopyVector(map.exported_edges, &bsp.numedges, &bsp.dedges);
-    CopyVector(map.exported_models, &bsp.nummodels, &bsp.dmodels);
-    CopyVector(map.exported_leafbrushes, &bsp.numleafbrushes, &bsp.dleafbrushes);
-    CopyVector(map.exported_brushsides, &bsp.numbrushsides, &bsp.dbrushsides);
-    CopyVector(map.exported_brushes, &bsp.numbrushes, &bsp.dbrushes);
-
-    CopyString(map.exported_entities, true, &bsp.entdatasize, (void **)&bsp.dentdata);
+    
+    bsp.dplanes = std::move(map.exported_planes);
+    bsp.dleafs = std::move(map.exported_leafs);
+    bsp.dvertexes = std::move(map.exported_vertexes);
+    bsp.dnodes = std::move(map.exported_nodes);
+    bsp.texinfo = std::move(map.exported_texinfos);
+    bsp.dfaces = std::move(map.exported_faces);
+    bsp.dclipnodes = std::move(map.exported_clipnodes);
+    bsp.dleaffaces = std::move(map.exported_marksurfaces);
+    bsp.dsurfedges = std::move(map.exported_surfedges);
+    bsp.dedges = std::move(map.exported_edges);
+    bsp.dmodels = std::move(map.exported_models);
+    bsp.dleafbrushes = std::move(map.exported_leafbrushes);
+    bsp.dbrushsides = std::move(map.exported_brushsides);
+    bsp.dbrushes = std::move(map.exported_brushes);
+    
+    bsp.dentdata = std::move(map.exported_entities);
     CopyString(map.exported_texdata, false, &bsp.texdatasize, (void **)&bsp.dtexdata);
 
     if (map.needslmshifts) {
@@ -428,12 +428,10 @@ static void WriteBSPFile()
     }
 
     // FIXME: temp
-    bsp.numareaportals = 1;
-    bsp.dareaportals = new dareaportal_t[bsp.numareaportals] { };
-
-    bsp.numareas = 2;
-    bsp.dareas = new darea_t[bsp.numareas] { };
-    bsp.dareas[1].firstareaportal = 1;
+    bsp.dareaportals.push_back({});
+    
+    bsp.dareas.push_back({});
+    bsp.dareas.push_back({ 0, 1 });
 
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
         const bspversion_t *extendedLimitsFormat = options.target_version->extended_limits;
@@ -490,7 +488,7 @@ void UpdateBSPFileEntitiesLump()
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
     // replace the existing entities lump with map.exported_entities
-    CopyString(map.exported_entities, true, &bsp.entdatasize, (void **)&bsp.dentdata);
+    bsp.dentdata = std::move(map.exported_entities);
 
     // write the .bsp back to disk
     ConvertBSPFormat(&bspdata, bspdata.loadversion);

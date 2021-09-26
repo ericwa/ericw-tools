@@ -114,10 +114,10 @@ keyvalues_t::iterator entdict_t::end()
  * EntData_Parse
  * ==================
  */
-std::vector<entdict_t> EntData_Parse(const char *entdata)
+std::vector<entdict_t> EntData_Parse(const std::string &entdata)
 {
     std::vector<entdict_t> result;
-    parser_t parser(entdata);
+    parser_t parser(entdata.data());
 
     /* go through all the entities */
     while (1) {

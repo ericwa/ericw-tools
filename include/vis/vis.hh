@@ -59,8 +59,7 @@ struct portal_t
     int leaf; // neighbor
     winding_t *winding;
     pstatus_t status;
-    leafbits_t *visbits;
-    leafbits_t *mightsee;
+    leafbits_t visbits, mightsee;
     int nummightsee;
     int numcansee;
 };
@@ -86,7 +85,6 @@ struct leaf_t
     int numportals;
     passage_t *passages;
     portal_t *portals[MAX_PORTALS_ON_LEAF];
-    int visofs; // used when writing final visdata
 };
 
 #define MAX_SEPARATORS MAX_WINDING
@@ -112,7 +110,7 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split);
 
 struct threaddata_t
 {
-    leafbits_t *leafvis;
+    leafbits_t &leafvis;
     portal_t *base;
     pstack_t pstack_head;
 };
@@ -120,7 +118,6 @@ struct threaddata_t
 extern int numportals;
 extern int portalleafs;
 extern int portalleafs_real;
-extern int *clustermap;
 
 extern portal_t *portals;
 extern leaf_t *leafs;
@@ -152,6 +149,8 @@ void BasePortalVis(void);
 void PortalFlow(portal_t *p);
 
 void CalcAmbientSounds(mbsp_t *bsp);
+
+void CalcPHS(mbsp_t *bsp);
 
 extern time_point starttime, endtime, statetime;
 

@@ -126,7 +126,7 @@ const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const vec3_t point)
     while (num >= 0)
         num = bsp->dnodes[num].children[PlaneDiff(point, &bsp->dplanes[bsp->dnodes[num].planenum]) < 0];
 
-    return bsp->dleafs + (-1 - num);
+    return &bsp->dleafs[-1 - num];
 }
 
 /*
@@ -149,27 +149,22 @@ int Light_PointContents(const mbsp_t *bsp, const vec3_t point)
  */
 static void MakeTnodes_r(int nodenum, const mbsp_t *bsp)
 {
-    tnode_t *tnode;
-    int i;
-    bsp2_dnode_t *node;
-    mleaf_t *leaf;
-
     Q_assert(nodenum >= 0);
-    Q_assert(nodenum < bsp->numnodes);
-    tnode = &tnodes[nodenum];
+    Q_assert(nodenum < bsp->dnodes.size());
+    tnode_t *tnode = &tnodes[nodenum];
 
-    node = bsp->dnodes + nodenum;
-    tnode->plane = bsp->dplanes + node->planenum;
-    tnode->node = node;
+    const bsp2_dnode_t &node = bsp->dnodes[nodenum];
+    tnode->plane = &bsp->dplanes[node.planenum];
+    tnode->node = &node;
 
     tnode->type = tnode->plane->type;
     VectorCopy(tnode->plane->normal, tnode->normal);
     tnode->dist = tnode->plane->dist;
 
-    for (i = 0; i < 2; i++) {
-        int childnum = node->children[i];
+    for (int32_t i = 0; i < 2; i++) {
+        int32_t childnum = node.children[i];
         if (childnum < 0) {
-            leaf = &bsp->dleafs[-childnum - 1];
+            const mleaf_t *leaf = &bsp->dleafs[-childnum - 1];
             tnode->children[i] = leaf->contents;
             tnode->childleafs[i] = leaf;
         } else {
@@ -255,8 +250,8 @@ static bool Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
 
 static void MakeFenceInfo(const mbsp_t *bsp)
 {
-    fence_dmodels = new bool[bsp->nummodels];
-    for (int i = 0; i < bsp->nummodels; i++) {
+    fence_dmodels = new bool[bsp->dmodels.size()];
+    for (int i = 0; i < bsp->dmodels.size(); i++) {
         fence_dmodels[i] = Model_HasFence(bsp, &bsp->dmodels[i]);
     }
 }
@@ -264,12 +259,12 @@ static void MakeFenceInfo(const mbsp_t *bsp)
 static void BSP_MakeTnodes(const mbsp_t *bsp)
 {
     bsp_static = bsp;
-    tnodes = new tnode_t[bsp->numnodes];
-    for (int i = 0; i < bsp->nummodels; i++)
-        MakeTnodes_r(bsp->dmodels[i].headnode[0], bsp);
+    tnodes = new tnode_t[bsp->dnodes.size()];
+    for (auto &model : bsp->dmodels)
+        MakeTnodes_r(model.headnode[0], bsp);
 
-    faceinfos = new faceinfo_t[bsp->numfaces];
-    for (int i = 0; i < bsp->numfaces; i++)
+    faceinfos = new faceinfo_t[bsp->dfaces.size()];
+    for (size_t i = 0; i < bsp->dfaces.size(); i++)
         MakeFaceInfo(bsp, BSP_GetFace(bsp, i), &faceinfos[i]);
 
     MakeFenceInfo(bsp);
@@ -336,7 +331,7 @@ inline bool TestHitFace(const faceinfo_t *fi, const vec3_t &point)
     return EdgePlanes_PointInside(fi->face, fi->edgeplanes, point);
 }
 
-inline mface_t *SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t &point)
+inline const mface_t *SearchNodeForHitFace(const bsp2_dnode_t *bspnode, const vec3_t &point)
 {
     // search the faces on this node
     int i;
@@ -680,9 +675,9 @@ static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3
         VectorCopy(mid, ti->point);
         // ti->lightplane = tnode->plane;
 
-        mface_t *face = SearchNodeForHitFace(tnode->node, mid);
+        const mface_t *face = SearchNodeForHitFace(tnode->node, mid);
         if (face) {
-            const int facenum = face - bsp_static->dfaces;
+            const int facenum = Face_GetNum(bsp_static, face);
             const faceinfo_t *fi = &faceinfos[facenum];
 
             // check fence

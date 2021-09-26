@@ -47,7 +47,7 @@ struct dportal_t
     uint32_t numcansee;
 };
 
-static int CompressBits(uint8_t *out, const leafbits_t *in)
+static int CompressBits(uint8_t *out, const leafbits_t &in)
 {
     int i, rep, shift, numbytes;
     uint8_t val, repval, *dst;
@@ -55,8 +55,8 @@ static int CompressBits(uint8_t *out, const leafbits_t *in)
     dst = out;
     numbytes = (portalleafs + 7) >> 3;
     for (i = 0; i < numbytes && dst - out < numbytes; i++) {
-        shift = (i << 3) & LEAFMASK;
-        val = (in->bits[i >> (LEAFSHIFT - 3)] >> shift) & 0xff;
+        shift = (i << 3) & leafbits_t::mask;
+        val = (in.data()[i >> (leafbits_t::shift - 3)] >> shift) & 0xff;
         *dst++ = val;
         if (val != 0 && val != 0xff)
             continue;
@@ -65,8 +65,8 @@ static int CompressBits(uint8_t *out, const leafbits_t *in)
 
         rep = 1;
         for (i++; i < numbytes; i++) {
-            shift = (i << 3) & LEAFMASK;
-            repval = (in->bits[i >> (LEAFSHIFT - 3)] >> shift) & 0xff;
+            shift = (i << 3) & leafbits_t::mask;
+            repval = (in.data()[i >> (leafbits_t::shift - 3)] >> shift) & 0xff;
             if (repval != val || rep == 255)
                 break;
             rep++;
@@ -81,53 +81,46 @@ static int CompressBits(uint8_t *out, const leafbits_t *in)
     /* Compression ineffective, just copy the data */
     dst = out;
     for (i = 0; i < numbytes; i++) {
-        shift = (i << 3) & LEAFMASK;
-        *dst++ = (in->bits[i >> (LEAFSHIFT - 3)] >> shift) & 0xff;
+        shift = (i << 3) & leafbits_t::mask;
+        *dst++ = (in.data()[i >> (leafbits_t::shift - 3)] >> shift) & 0xff;
     }
     return numbytes;
 }
 
-static void DecompressBits(leafbits_t *dst, const uint8_t *src)
+static void DecompressBits(leafbits_t &dst, const uint8_t *src)
 {
-    int i, rep, shift, numbytes;
-    uint8_t val;
+    const size_t numbytes = (portalleafs + 7) >> 3;
 
-    numbytes = (portalleafs + 7) >> 3;
-    memset(dst->bits, 0, numbytes);
-    dst->numleafs = portalleafs;
+    dst.resize(portalleafs);
 
-    for (i = 0; i < numbytes; i++) {
-        val = *src++;
-        shift = (i << 3) & LEAFMASK;
-        dst->bits[i >> (LEAFSHIFT - 3)] |= (leafblock_t)val << shift;
+    for (size_t i = 0; i < numbytes; i++) {
+        uint8_t val = *src++;
+        uint32_t shift = (i << 3) & leafbits_t::mask;
+        dst.data()[i >> (leafbits_t::shift - 3)] |= (uint32_t)val << shift;
         if (val != 0 && val != 0xff)
             continue;
 
-        rep = *src++;
+        int32_t rep = *src++;
         if (i + rep > numbytes)
             FError("overflow");
 
         /* Already wrote the first byte, add (rep - 1) copies */
         while (--rep) {
             i++;
-            shift = (i << 3) & LEAFMASK;
-            dst->bits[i >> (LEAFSHIFT - 3)] |= (leafblock_t)val << shift;
+            shift = (i << 3) & leafbits_t::mask;
+            dst.data()[i >> (leafbits_t::shift - 3)] |= (uint32_t)val << shift;
         }
     }
 }
 
-static void CopyLeafBits(leafbits_t *dst, const uint8_t *src, int numleafs)
+static void CopyLeafBits(leafbits_t &dst, const uint8_t *src, size_t numleafs)
 {
-    int i, shift;
-    int numbytes;
+    const size_t numbytes = (numleafs + 7) >> 3;
+    dst.resize(numleafs);
 
-    numbytes = (numleafs + 7) >> 3;
-    memset(dst->bits, 0, numbytes);
-    dst->numleafs = numleafs;
-
-    for (i = 0; i < numbytes; i++) {
-        shift = (i << 3) & LEAFMASK;
-        dst->bits[i >> (LEAFSHIFT - 3)] |= (leafblock_t)(*src++) << shift;
+    for (size_t i = 0; i < numbytes; i++) {
+        const uint32_t shift = (i << 3) & leafbits_t::mask;
+        dst.data()[i >> (leafbits_t::shift - 3)] |= (uint32_t)(*src++) << shift;
     }
 }
 
@@ -261,15 +254,15 @@ bool LoadVisState(void)
         p->numcansee = pstate.numcansee;
 
         SafeRead(infile, compressed, pstate.might);
-        p->mightsee = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
-        memset(p->mightsee, 0, LeafbitsSize(portalleafs));
+        p->mightsee.resize(portalleafs);
+
         if (pstate.might < numbytes)
             DecompressBits(p->mightsee, compressed);
         else
             CopyLeafBits(p->mightsee, compressed, portalleafs);
 
-        p->visbits = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
-        memset(p->visbits, 0, LeafbitsSize(portalleafs));
+        p->visbits.resize(portalleafs);
+
         if (pstate.vis) {
             SafeRead(infile, compressed, pstate.vis);
             if (pstate.vis < numbytes)

@@ -8,6 +8,7 @@
 #include <vis/vis.hh>
 #include <common/log.hh>
 #include <common/threads.hh>
+#include <fmt/chrono.h>
 
 /*
  * If the portal file is "PRT2" format, then the leafs we are dealing with are
@@ -17,7 +18,6 @@
 int numportals;
 int portalleafs; /* leafs (PRT1) or clusters (PRT2) */
 int portalleafs_real; /* real no. of leafs after expanding PRT2 clusters. Not used for Q2. */
-int *clustermap; /* mapping from real leaf to cluster number. Not used for Q2. */
 
 portal_t *portals;
 leaf_t *leafs;
@@ -411,8 +411,8 @@ static void UpdateMightsee(const leaf_t *source, const leaf_t *dest)
         p = source->portals[i];
         if (p->status != pstat_none)
             continue;
-        if (TestLeafBit(p->mightsee, leafnum)) {
-            ClearLeafBit(p->mightsee, leafnum);
+        if (p->mightsee[leafnum]) {
+            p->mightsee[leafnum] = false;
             p->nummightsee--;
             c_mightseeupdate++;
         }
@@ -435,8 +435,8 @@ static void PortalCompleted(portal_t *completed)
     int leafnum;
     const portal_t *p, *p2;
     const leaf_t *myleaf;
-    const leafblock_t *might, *vis;
-    leafblock_t changed;
+    const uint32_t *might, *vis;
+    uint32_t changed;
 
     ThreadLock();
 
@@ -452,9 +452,9 @@ static void PortalCompleted(portal_t *completed)
         if (p->status != pstat_done)
             continue;
 
-        might = p->mightsee->bits;
-        vis = p->visbits->bits;
-        numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
+        might = p->mightsee.data();
+        vis = p->visbits.data();
+        numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
         for (j = 0; j < numblocks; j++) {
             changed = might[j] & ~vis[j];
             if (!changed)
@@ -469,9 +469,9 @@ static void PortalCompleted(portal_t *completed)
                     continue;
                 p2 = myleaf->portals[k];
                 if (p2->status == pstat_done)
-                    changed &= ~p2->visbits->bits[j];
+                    changed &= ~p2->visbits.data()[j];
                 else
-                    changed &= ~p2->mightsee->bits[j];
+                    changed &= ~p2->mightsee.data()[j];
                 if (!changed)
                     break;
             }
@@ -482,7 +482,7 @@ static void PortalCompleted(portal_t *completed)
             while (changed) {
                 bit = ffsl(changed) - 1;
                 changed &= ~(1UL << bit);
-                leafnum = (j << LEAFSHIFT) + bit;
+                leafnum = (j << leafbits_t::shift) + bit;
                 UpdateMightsee(leafs + leafnum, myleaf);
             }
         }
@@ -558,8 +558,8 @@ static void LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
         if (p->status != pstat_done)
             FError("portal not done");
         for (j = 0; j < leafbytes; j++) {
-            shift = (j << 3) & LEAFMASK;
-            outbuffer[j] |= (p->visbits->bits[j >> (LEAFSHIFT - 3)] >> shift) & 0xff;
+            shift = (j << 3) & leafbits_t::mask;
+            outbuffer[j] |= (p->visbits.data()[j >> (leafbits_t::shift - 3)] >> shift) & 0xff;
         }
     }
 
@@ -596,7 +596,7 @@ static void LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
     delete[] compressed;
 }
 
-static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
+static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 {
     leaf_t *leaf;
     uint8_t *outbuffer;
@@ -610,13 +610,13 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
      * Collect visible bits from all portals into buffer
      */
     leaf = &leafs[clusternum];
-    numblocks = (portalleafs + LEAFMASK) >> LEAFSHIFT;
+    numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
     for (i = 0; i < leaf->numportals; i++) {
         p = leaf->portals[i];
         if (p->status != pstat_done)
             FError("portal not done");
         for (j = 0; j < numblocks; j++)
-            buffer->bits[j] |= p->visbits->bits[j];
+            buffer.data()[j] |= p->visbits.data()[j];
     }
 
     // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
@@ -624,7 +624,7 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
     // if (TestLeafBit(buffer, clusternum))
     //    LogPrint("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
 
-    SetLeafBit(buffer, clusternum);
+    buffer[clusternum] = true;
 
     /*
      * Now expand the clusters into the full leaf visibility map
@@ -634,7 +634,7 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         outbuffer = uncompressed_q2 + clusternum * leafbytes;
         for (i = 0; i < portalleafs; i++) {
-            if (TestLeafBit(buffer, i)) {
+            if (buffer[i]) {
                 outbuffer[i >> 3] |= (1 << (i & 7));
                 numvis++;
             }
@@ -642,7 +642,7 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
     } else {
         outbuffer = uncompressed + clusternum * leafbytes_real;
         for (i = 0; i < portalleafs_real; i++) {
-            if (TestLeafBit(buffer, clustermap[i])) {
+            if (buffer[bsp->dleafs[i + 1].cluster]) {
                 outbuffer[i >> 3] |= (1 << (i & 7));
                 numvis++;
             }
@@ -663,11 +663,11 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
         // FIXME: not sure what this is supposed to be?
         totalvis += numvis;
     } else {
-    for (i = 0; i < portalleafs_real; i++) {
-        if (clustermap[i] == clusternum) {
-            totalvis += numvis;
+        for (i = 0; i < portalleafs_real; i++) {
+            if (bsp->dleafs[i + 1].cluster == clusternum) {
+                totalvis += numvis;
+            }
         }
-    }
     }
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
@@ -686,12 +686,16 @@ static void ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
         FError("Vismap expansion overflow");
 
     /* leaf 0 is a common solid */
-    leaf->visofs = dest - vismap;
+    int32_t visofs = dest - vismap;
+
+    bsp->dvis.set_bit_offset(VIS_PVS, clusternum, visofs);
 
     // Set pointers
-    for (i = 1; i < bsp->numleafs; i++) {
+    // TODO: get rid of, we'll copy this data over from dvis
+    // during conversion
+    for (i = 1; i < bsp->dleafs.size(); i++) {
         if (bsp->dleafs[i].cluster == clusternum) {
-            bsp->dleafs[i].visofs = leaf->visofs;
+            bsp->dleafs[i].visofs = visofs;
         }
     }
 
@@ -741,7 +745,7 @@ void CalcPortalVis(const mbsp_t *bsp)
   CalcVis
   ==================
 */
-void CalcVis(const mbsp_t *bsp)
+void CalcVis(mbsp_t *bsp)
 {
     int i;
 
@@ -766,12 +770,11 @@ void CalcVis(const mbsp_t *bsp)
             LeafFlow(i, &bsp->dleafs[i + 1], bsp);
     } else {
         LogPrint("Expanding clusters...\n");
-        leafbits_t *buffer = static_cast<leafbits_t *>(malloc(LeafbitsSize(portalleafs)));
+        leafbits_t buffer(portalleafs);
         for (i = 0; i < portalleafs; i++) {
-            memset(buffer, 0, LeafbitsSize(portalleafs));
             ClusterFlow(i, buffer, bsp);
+            buffer.clear();
         }
-        free(buffer);
     }
 
     int64_t avg = totalvis;
@@ -1076,7 +1079,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         // not used in Q2
         leafbytes_real = 0;
     } else {
-    leafbytes_real = ((portalleafs_real + 63) & ~63) >> 3;
+        leafbytes_real = ((portalleafs_real + 63) & ~63) >> 3;
     }
 
     // each file portal is split into two memory portals
@@ -1090,14 +1093,12 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         originalvismapsize = portalleafs_real * ((portalleafs_real + 7) / 8);
     }
 
-    // FIXME - more intelligent allocation?
-    bsp->dvisdata = new uint8_t[MAX_MAP_VISIBILITY];
-    if (!bsp->dvisdata)
-        FError("dvisdata allocation failed ({} bytes)", MAX_MAP_VISIBILITY);
-    memset(bsp->dvisdata, 0, MAX_MAP_VISIBILITY);
+    bsp->dvis.resize(portalleafs);
 
-    vismap = vismap_p = bsp->dvisdata;
-    vismap_end = vismap + MAX_MAP_VISIBILITY;
+    bsp->dvis.bits.resize(originalvismapsize * 2);
+
+    vismap = vismap_p = bsp->dvis.bits.data();
+    vismap_end = vismap + bsp->dvis.bits.size();
 
     for (i = 0, p = portals; i < numportals; i++) {
         if (fscanf(f.get(), "%i %i %i ", &numpoints, &leafnums[0], &leafnums[1]) != 3)
@@ -1153,46 +1154,49 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         p++;
     }
 
-    /* Load the cluster expansion map if needed */
+    // Q2 doesn't need this, it's PRT1 has the data we need
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        // not used
-        clustermap = nullptr;
-    } else if (portalleafs != portalleafs_real) {
-        clustermap = new int[portalleafs_real];
-        if (!strcmp(magic, PORTALFILE2)) {
-            for (i = 0; i < portalleafs; i++) {
-                while (1) {
-                    int leafnum;
-                    count = fscanf(f.get(), "%i", &leafnum);
-                    if (!count || count == EOF)
-                        break;
-                    if (leafnum < 0)
-                        break;
-                    if (leafnum >= portalleafs_real)
-                        FError("Invalid leaf number in cluster map ({} >= {})", leafnum, portalleafs_real);
-                    clustermap[leafnum] = i;
-                }
-                if (count == EOF)
+        return;
+    }
+    
+    // No clusters
+    if (portalleafs == portalleafs_real) {
+        return;
+    }
+
+    if (!strcmp(magic, PORTALFILE2)) {
+        for (i = 0; i < portalleafs; i++) {
+            while (1) {
+                int leafnum;
+                count = fscanf(f.get(), "%i", &leafnum);
+                if (!count || count == EOF)
                     break;
+                if (leafnum < 0)
+                    break;
+                if (leafnum >= portalleafs_real)
+                    FError("Invalid leaf number in cluster map ({} >= {})", leafnum, portalleafs_real);
+                bsp->dleafs[leafnum + 1].cluster = i;
             }
-            if (i < portalleafs)
-                FError("Couldn't read cluster map ({} / {})\n", i, portalleafs);
-        } else if (!strcmp(magic, PORTALFILEAM)) {
-            for (i = 0; i < portalleafs_real; i++) {
-                int clusternum;
-                count = fscanf(f.get(), "%i", &clusternum);
-                if (!count || count == EOF) {
-                    Error("Unexpected end of cluster map\n");
-                }
-                if (clusternum < 0 || clusternum >= portalleafs) {
-                    FError(
-                        "Invalid cluster number {} in cluster map, number of clusters: {}\n", clusternum, portalleafs);
-                }
-                clustermap[i] = clusternum;
-            }
-        } else {
-            FError("Unknown header {}\n", magic);
+            if (count == EOF)
+                break;
         }
+        if (i < portalleafs)
+            FError("Couldn't read cluster map ({} / {})\n", i, portalleafs);
+    } else if (!strcmp(magic, PORTALFILEAM)) {
+        for (i = 0; i < portalleafs_real; i++) {
+            int clusternum;
+            count = fscanf(f.get(), "%i", &clusternum);
+            if (!count || count == EOF) {
+                Error("Unexpected end of cluster map\n");
+            }
+            if (clusternum < 0 || clusternum >= portalleafs) {
+                FError(
+                    "Invalid cluster number {} in cluster map, number of clusters: {}\n", clusternum, portalleafs);
+            }
+            bsp->dleafs[i + 1].cluster = clusternum;
+        }
+    } else {
+        FError("Unknown header {}\n", magic);
     }
 }
 
@@ -1302,12 +1306,17 @@ int main(int argc, char **argv)
     LogPrint("c_noclip: {}\n", c_noclip);
     LogPrint("c_chains: {}\n", c_chains);
 
-    bsp.visdatasize = vismap_p - bsp.dvisdata;
-    LogPrint("visdatasize:{}  compressed from {}\n", bsp.visdatasize, originalvismapsize);
+    bsp.dvis.bits.resize(vismap_p - bsp.dvis.bits.data());
+    bsp.dvis.bits.shrink_to_fit();
+    LogPrint("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
 
     // no ambient sounds for Q2
     if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+        LogPrint("---- CalcAmbientSounds ----\n");
         CalcAmbientSounds(&bsp);
+    } else {
+        LogPrint("---- CalcPHS ----\n");
+        CalcPHS(&bsp);
     }
 
     /* Convert data format back if necessary */
@@ -1316,7 +1325,7 @@ int main(int argc, char **argv)
     WriteBSPFile(sourcefile, &bspdata);
 
     endtime = I_FloatTime();
-    LogPrint("{:5.1} seconds elapsed\n", (endtime - starttime).count());
+    LogPrint("{:.2} elapsed\n", (endtime - starttime));
 
     CloseLog();
 

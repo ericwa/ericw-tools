@@ -101,23 +101,19 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
 mesh_t buildMeshFromBSP(const mbsp_t *bsp)
 {
     mesh_t res;
-    for (int i = 0; i < bsp->numvertexes; i++) {
-        res.verts.emplace_back(bsp->dvertexes[i]); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
-    }
+    std::copy(bsp->dvertexes.begin(), bsp->dvertexes.end(), std::back_inserter(res.verts));
 
-    for (int i = 0; i < bsp->numfaces; i++) {
-        const mface_t *f = &bsp->dfaces[i];
-
+    for (auto &f : bsp->dfaces) {
         // grab face verts
         std::vector<vertnum_t> face;
-        for (int j = 0; j < f->numedges; j++) {
-            int vnum = Face_VertexAtIndex(bsp, f, j);
+        for (int j = 0; j < f.numedges; j++) {
+            int vnum = Face_VertexAtIndex(bsp, &f, j);
             face.push_back(vnum);
         }
         res.faces.push_back(face);
 
         // grab exact plane
-        const qplane3f plane = Face_Plane_E(bsp, f);
+        const qplane3f plane = Face_Plane_E(bsp, &f);
         res.faceplanes.push_back(plane);
     }
 

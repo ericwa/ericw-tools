@@ -67,6 +67,11 @@ struct lump_t
 {
     int32_t fileofs;
     int32_t filelen;
+
+    auto stream_data()
+    {
+        return std::tie(fileofs, filelen);
+    }
 };
 
 #define LUMP_ENTITIES 0
@@ -110,15 +115,25 @@ struct lump_t
 
 struct bspx_header_t
 {
-    char id[4]; //'BSPX'
-    uint32_t numlumps;
+    std::array<char, 4> id = { 'B', 'S', 'P', 'X' }; //'BSPX'
+    uint32_t numlumps = 0;
+
+    auto stream_data()
+    {
+        return std::tie(id, numlumps);
+    }
 };
 
 struct bspx_lump_t
 {
-    char lumpname[24];
+    std::array<char, 24> lumpname;
     uint32_t fileofs;
     uint32_t filelen;
+
+    auto stream_data()
+    {
+        return std::tie(lumpname, fileofs, filelen);
+    }
 };
 
 struct lumpspec_t
@@ -149,11 +164,6 @@ inline std::array<T, 3> aabb_maxs_cast(const std::array<F, 3> &f)
     else
         return { numeric_cast<T>(f[0]), numeric_cast<T>(f[1]), numeric_cast<T>(f[2]) };
 }
-
-extern const lumpspec_t lumpspec_bsp29[BSP_LUMPS];
-extern const lumpspec_t lumpspec_bsp2rmq[BSP_LUMPS];
-extern const lumpspec_t lumpspec_bsp2[BSP_LUMPS];
-extern const lumpspec_t lumpspec_q2bsp[Q2_HEADER_LUMPS];
 
 struct dmodelh2_t
 {
@@ -259,8 +269,9 @@ struct q2_dmodel_t
             numfaces
         };
     }
-
-    auto data()
+    
+    // serialize for streams
+    auto stream_data()
     {
         return std::tie(mins, maxs, origin, headnode, firstface, numfaces);
     }
@@ -305,9 +316,15 @@ using dvertex_t = bspvec3f_t;
 
 struct dplane_t
 {
-    float normal[3];
+    bspvec3f_t normal;
     float dist;
     int32_t type;
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(normal, dist, type);
+    }
 };
 
 // Q1 contents
@@ -560,6 +577,12 @@ struct q2_dnode_t
             numfaces
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
+    }
 };
 
 using q2_dnode_qbism_t = bsp2_dnode_t;
@@ -764,6 +787,12 @@ struct q2_texinfo_t
             nexttexinfo
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(vecs, flags, value, texture, nexttexinfo);
+    }
 };
 
 /*
@@ -908,6 +937,12 @@ struct q2_dface_t
             styles,
             lightofs
         };
+    }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
     }
 };
 
@@ -1147,6 +1182,12 @@ struct q2_dleaf_t
             numleafbrushes
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
+    }
 };
 
 struct q2_dleaf_qbism_t
@@ -1228,6 +1269,12 @@ struct q2_dbrushside_t
             texinfo
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, texinfo);
+    }
 };
 
 struct dbrush_t
@@ -1235,17 +1282,82 @@ struct dbrush_t
     int32_t firstside;
     int32_t numsides;
     int32_t contents;
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(firstside, numsides, contents);
+    }
+};
+
+enum vistype_t
+{
+    VIS_PVS,
+    VIS_PHS
 };
 
 // the visibility lump consists of a header with a count, then
 // byte offsets for the PVS and PHS of each cluster, then the raw
-// compressed bit vectors
-#define DVIS_PVS 0
-#define DVIS_PHS 1
-struct dvis_t
+// compressed bit vectors.
+struct mvis_t
 {
     int32_t numclusters;
-    int32_t bitofs[][2]; // bitofs[numclusters][2]
+    std::vector<std::array<int32_t, 2>> bit_offsets;
+    std::vector<uint8_t> bits;
+
+    inline size_t header_offset() const
+    {
+        return sizeof(numclusters) + (sizeof(int32_t) * numclusters * 2);
+    }
+
+    // set a bit offset of the specified cluster/vistype *relative to the start of the bits array*
+    // (after the header)
+    inline void set_bit_offset(vistype_t type, size_t cluster, size_t offset)
+    {
+        bit_offsets[cluster][type] = offset + header_offset();
+    }
+
+    // fetch the bit offset of the specified cluster/vistype
+    // relative to the start of the bits array
+    inline int32_t get_bit_offset(vistype_t type, size_t cluster)
+    {
+        return bit_offsets[cluster][type] - header_offset();
+    }
+
+    void resize(size_t numclusters)
+    {
+        this->numclusters = numclusters;
+        bit_offsets.resize(numclusters);
+    }
+
+    void stream_read(std::istream &stream, size_t lump_size)
+    {
+        auto start = stream.tellg();
+        stream >= numclusters;
+
+        bit_offsets.resize(numclusters);
+
+        // read cluster -> offset tables
+        for (auto &bit_offset : bit_offsets)
+            stream >= bit_offset;
+
+        // pull in final bit set
+        auto remaining = lump_size - (stream.tellg() - start);
+        bits.resize(remaining);
+        stream.read(reinterpret_cast<char *>(bits.data()), remaining);
+    }
+
+    void stream_write(std::ostream &stream) const
+    {
+        stream <= numclusters;
+
+        // write cluster -> offset tables
+        for (auto &bit_offset : bit_offsets)
+            stream <= bit_offset;
+
+        // write bitset
+        stream.write(reinterpret_cast<const char *>(bits.data()), bits.size());
+    }
 };
 
 // each area has a list of portals that lead into other areas
@@ -1255,19 +1367,31 @@ struct dareaportal_t
 {
     int32_t portalnum;
     int32_t otherarea;
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(portalnum, otherarea);
+    }
 };
 
 struct darea_t
 {
     int32_t numareaportals;
     int32_t firstareaportal;
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(numareaportals, firstareaportal);
+    }
 };
 
 /* ========================================================================= */
 
 struct bspxentry_t
 {
-    char lumpname[24];
+    std::array<char, 24> lumpname;
     const void *lumpdata;
     size_t lumpsize;
 
@@ -1498,88 +1622,26 @@ struct bsp2_t
 
 struct q2bsp_t
 {
-    int nummodels;
-    q2_dmodel_t *dmodels;
+    std::vector<q2_dmodel_t> dmodels;
 
-    int visdatasize;
-    union {
-        dvis_t *dvis;
-        uint8_t *dvisdata;
-    };
+    mvis_t dvis;
 
-    int lightdatasize;
-    uint8_t *dlightdata;
-
-    int entdatasize;
-    char *dentdata;
-
-    int numleafs;
-    q2_dleaf_t *dleafs;
-
-    int numplanes;
-    dplane_t *dplanes;
-
-    int numvertexes;
-    dvertex_t *dvertexes;
-
-    int numnodes;
-    q2_dnode_t *dnodes;
-
-    int numtexinfo;
-    q2_texinfo_t *texinfo;
-
-    int numfaces;
-    q2_dface_t *dfaces;
-
-    int numedges;
-    bsp29_dedge_t *dedges;
-
-    int numleaffaces;
-    uint16_t *dleaffaces;
-
-    int numleafbrushes;
-    uint16_t *dleafbrushes;
-
-    int numsurfedges;
-    int32_t *dsurfedges;
-
-    int numareas;
-    darea_t *dareas;
-
-    int numareaportals;
-    dareaportal_t *dareaportals;
-
-    int numbrushes;
-    dbrush_t *dbrushes;
-
-    int numbrushsides;
-    q2_dbrushside_t *dbrushsides;
-
-    uint8_t dpop[256];
-
-    IMPL_MOVE_COPY(q2bsp_t);
-
-    ~q2bsp_t()
-    {
-        delete[] dmodels;
-        delete[] dvis;
-        delete[] dlightdata;
-        delete[] dentdata;
-        delete[] dleafs;
-        delete[] dplanes;
-        delete[] dvertexes;
-        delete[] dnodes;
-        delete[] texinfo;
-        delete[] dfaces;
-        delete[] dedges;
-        delete[] dleaffaces;
-        delete[] dleafbrushes;
-        delete[] dsurfedges;
-        delete[] dareas;
-        delete[] dareaportals;
-        delete[] dbrushes;
-        delete[] dbrushsides;
-    }
+    std::vector<uint8_t> dlightdata;
+    std::string dentdata;
+    std::vector<q2_dleaf_t> dleafs;
+    std::vector<dplane_t> dplanes;
+    std::vector<dvertex_t> dvertexes;
+    std::vector<q2_dnode_t> dnodes;
+    std::vector<q2_texinfo_t> texinfo;
+    std::vector<q2_dface_t> dfaces;
+    std::vector<bsp29_dedge_t> dedges;
+    std::vector<uint16_t> dleaffaces;
+    std::vector<uint16_t> dleafbrushes;
+    std::vector<int32_t> dsurfedges;
+    std::vector<darea_t> dareas;
+    std::vector<dareaportal_t> dareaportals;
+    std::vector<dbrush_t> dbrushes;
+    std::vector<q2_dbrushside_t> dbrushsides;
 };
 
 struct q2bsp_qbism_t
@@ -1587,11 +1649,7 @@ struct q2bsp_qbism_t
     int nummodels;
     q2_dmodel_t *dmodels;
 
-    int visdatasize;
-    union {
-        dvis_t *dvis;
-        uint8_t *dvisdata;
-    };
+    mvis_t dvis;
 
     int lightdatasize;
     uint8_t *dlightdata;
@@ -1648,7 +1706,6 @@ struct q2bsp_qbism_t
     ~q2bsp_qbism_t()
     {
         delete[] dmodels;
-        delete[] dvis;
         delete[] dlightdata;
         delete[] dentdata;
         delete[] dleafs;
@@ -1674,15 +1731,11 @@ struct mbsp_t
 {
     const bspversion_t *loadversion;
 
-    int nummodels;
-    dmodelh2_t *dmodels;
+    std::vector<dmodelh2_t> dmodels;
 
-    // FIXME: split this into q1 and q2 members, since the format is different
-    int visdatasize;
-    uint8_t *dvisdata;
+    mvis_t dvis;
 
-    int lightdatasize;
-    uint8_t *dlightdata;
+    std::vector<uint8_t> dlightdata;
 
     int texdatasize;
     dmiptexlump_t *dtexdata;
@@ -1690,95 +1743,45 @@ struct mbsp_t
     int rgbatexdatasize; // mxd
     dmiptexlump_t *drgbatexdata; // mxd. Followed by rgba_miptex_t structs
 
-    int entdatasize;
-    char *dentdata;
-
-    int numleafs;
-    mleaf_t *dleafs;
-
-    int numplanes;
-    dplane_t *dplanes;
-
-    int numvertexes;
-    dvertex_t *dvertexes;
-
-    int numnodes;
-    bsp2_dnode_t *dnodes;
-
-    int numtexinfo;
-    gtexinfo_t *texinfo;
-
-    int numfaces;
-    mface_t *dfaces;
-
-    int numclipnodes;
-    bsp2_dclipnode_t *dclipnodes;
-
-    int numedges;
-    bsp2_dedge_t *dedges;
-
-    int numleaffaces;
-    uint32_t *dleaffaces;
-
-    int numleafbrushes;
-    uint32_t *dleafbrushes;
-
-    int numsurfedges;
-    int32_t *dsurfedges;
-
-    int numareas;
-    darea_t *dareas;
-
-    int numareaportals;
-    dareaportal_t *dareaportals;
-
-    int numbrushes;
-    dbrush_t *dbrushes;
-
-    int numbrushsides;
-    q2_dbrushside_qbism_t *dbrushsides;
-
-    uint8_t dpop[256];
-
-    IMPL_MOVE_COPY(mbsp_t);
-
-    ~mbsp_t()
-    {
-        delete[] dmodels;
-        delete[] dvisdata;
-        delete[] dlightdata;
-        delete[] dtexdata;
-        delete[] drgbatexdata; // mxd
-        delete[] dentdata;
-        delete[] dleafs;
-        delete[] dplanes;
-        delete[] dvertexes;
-        delete[] dnodes;
-        delete[] texinfo;
-        delete[] dfaces;
-        delete[] dclipnodes;
-        delete[] dedges;
-        delete[] dleaffaces;
-        delete[] dleafbrushes;
-        delete[] dsurfedges;
-        delete[] dareas;
-        delete[] dareaportals;
-        delete[] dbrushes;
-        delete[] dbrushsides;
-    }
+    std::string dentdata;
+    std::vector<mleaf_t> dleafs;
+    std::vector<dplane_t> dplanes;
+    std::vector<dvertex_t> dvertexes;
+    std::vector<bsp2_dnode_t> dnodes;
+    std::vector<gtexinfo_t> texinfo;
+    std::vector<mface_t> dfaces;
+    std::vector<bsp2_dclipnode_t> dclipnodes;
+    std::vector<bsp2_dedge_t> dedges;
+    std::vector<uint32_t> dleaffaces;
+    std::vector<uint32_t> dleafbrushes;
+    std::vector<int32_t> dsurfedges;
+    std::vector<darea_t> dareas;
+    std::vector<dareaportal_t> dareaportals;
+    std::vector<dbrush_t> dbrushes;
+    std::vector<q2_dbrushside_qbism_t> dbrushsides;
 }; // "generic" bsp - superset of all other supported types
 
 struct dheader_t
 {
     int32_t version;
-    lump_t lumps[BSP_LUMPS];
+    std::array<lump_t, BSP_LUMPS> lumps;
+
+    auto stream_data()
+    {
+        return std::tie(version, lumps);
+    }
 };
 
 struct q2_dheader_t
 {
     int32_t ident;
     int32_t version;
-    lump_t lumps[Q2_HEADER_LUMPS];
+    std::array<lump_t, Q2_HEADER_LUMPS> lumps;
+
+    auto stream_data()
+    {
+        return std::tie(ident, version, lumps);
+    }
 };
 
 struct bspdata_t
@@ -1857,6 +1860,8 @@ struct bspversion_t
     const char *short_name;
     /* full display name for printing */
     const char *name;
+    /* lump specification */
+    const lumpspec_t *lumps;
     /* game ptr */
     const gamedef_t *game;
     /* if we surpass the limits of this format, upgrade to this one */

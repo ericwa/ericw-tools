@@ -50,7 +50,7 @@ public:
     keyvalues_t::iterator end();
 };
 
-std::vector<entdict_t> EntData_Parse(const char *entdata);
+std::vector<entdict_t> EntData_Parse(const std::string &entdata);
 std::string EntData_Write(const std::vector<entdict_t> &ents);
 std::string EntDict_StringForKey(const entdict_t &dict, const std::string key);
 float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
