@@ -178,7 +178,38 @@ static void serialize_bsp(const bspdata_t &bspdata, const char *name) {
             node.push_back({ "numfaces", src_node.numfaces });
         }
     }
+
+    if (bsp.numtexinfo) {
+        json &texinfos = (j.emplace("texinfo", json::array())).first.value();
+
+        for (int32_t i = 0; i < bsp.numtexinfo; i++) {
+            json &texinfo = texinfos.insert(texinfos.end(), json::object()).value();
+            auto &src_texinfo = bsp.texinfo[i];
+            
+            texinfo.push_back({ "vecs", json::array({
+                json::array({ src_texinfo.vecs[0][0], src_texinfo.vecs[0][1], src_texinfo.vecs[0][2], src_texinfo.vecs[0][3] }),
+                json::array({ src_texinfo.vecs[1][0], src_texinfo.vecs[1][1], src_texinfo.vecs[1][2], src_texinfo.vecs[1][3] })
+            })});
+            texinfo.push_back({ "flags", src_texinfo.flags.native });
+            texinfo.push_back({ "miptex", src_texinfo.miptex });
+            texinfo.push_back({ "value", src_texinfo.value });
+            texinfo.push_back({ "texture", std::string(src_texinfo.texture) });
+            texinfo.push_back({ "nexttexinfo", src_texinfo.nexttexinfo });
+        }
+    }
     
+    if (bsp.numclipnodes) {
+        json &clipnodes = (j.emplace("clipnodes", json::array())).first.value();
+
+        for (int32_t i = 0; i < bsp.numclipnodes; i++) {
+            json &clipnode = clipnodes.insert(clipnodes.end(), json::object()).value();
+            auto &src_clipnodes = bsp.dclipnodes[i];
+
+            clipnode.push_back({ "planenum", src_clipnodes.planenum });
+            clipnode.push_back({ "children", json::array({ src_clipnodes.children[0], src_clipnodes.children[1] })});
+        }
+    }
+
     if (bsp.numbrushsides) {
         json &brushsides = (j.emplace("brushsides", json::array())).first.value();
 
