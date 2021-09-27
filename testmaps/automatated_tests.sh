@@ -43,7 +43,8 @@ e1m1-hexen2-bsp2.bsp \
 e1m1-hexen2-2psb.bsp \
 e1m1-hlbsp.bsp \
 e1m1-bspxbrushes.bsp \
-e1m1-bsp29-onlyents.bsp"
+e1m1-bsp29-onlyents.bsp \
+qbspfeatures.bsp"
 
 qbsp -noverbose               quake_map_source/E1M1.map e1m1-bsp29.bsp       || exit 1
 qbsp -noverbose         -bsp2 quake_map_source/E1M1.map e1m1-bsp2.bsp        || exit 1
@@ -61,6 +62,8 @@ qbsp -noverbose -wrbrushes    quake_map_source/E1M1.map e1m1-bspxbrushes.bsp || 
 cp e1m1-bsp29.bsp e1m1-bsp29-onlyents.bsp || exit 1
 cp e1m1-bsp29.prt e1m1-bsp29-onlyents.prt || exit 1
 qbsp -onlyents E1M1-edited-ents.map e1m1-bsp29-onlyents.bsp || exit 1
+
+qbsp -noverbose               qbspfeatures.map                               || exit 1
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} > qbsp.sha256sum || exit 1
