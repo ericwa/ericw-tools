@@ -30,23 +30,10 @@
 
 using namespace std;
 
-// FIXME: Remove
-std::vector<qvec3f> qvecsToGlm(std::vector<qvec3f> qvecs)
-{
-    std::vector<qvec3f> res;
-    res.reserve(
-        qvecs.size()); // mxd.
-                       // https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
-    for (const auto &qvec : qvecs) {
-        res.emplace_back(qvec[0], qvec[1],
-            qvec[2]); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
-    }
-    return res;
-}
-
 mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
 {
     // FIXME: this is ugly
+    // TODO: qvec<N, T>::operator<
     using pos_t = tuple<float, float, float>;
 
     int nextVert = 0;
@@ -58,8 +45,7 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
         vector<int> vertIndices;
 
         // compute face plane
-        const auto glmvecs = qvecsToGlm(face);
-        qvec4f gp = GLM_PolyPlane(glmvecs);
+        qvec4f gp = GLM_PolyPlane(face);
         qplane3f qp(qvec3f(gp[0], gp[1], gp[2]), gp[3]);
         faceplanes.push_back(qp);
 
@@ -124,12 +110,11 @@ std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh)
 {
     std::vector<std::vector<qvec3f>> res;
     for (const auto &meshFace : mesh.faces) {
-        std::vector<qvec3f> points;
+        std::vector<qvec3f> &points = res.emplace_back();
         for (int vertIndex : meshFace) {
-            const qvec3f point = mesh.verts.at(vertIndex);
+            const qvec3f &point = mesh.verts.at(vertIndex);
             points.push_back(point);
         }
-        res.push_back(points);
     }
     Q_assert(res.size() == mesh.faces.size());
     return res;
@@ -139,11 +124,11 @@ aabb3f mesh_face_bbox(const mesh_t &mesh, facenum_t facenum)
 {
     const std::vector<int> &face = mesh.faces.at(facenum);
 
-    const qvec3f vert0 = mesh.verts.at(face.at(0));
+    const qvec3f &vert0 = mesh.verts.at(face.at(0));
     aabb3f bbox(vert0, vert0);
 
     for (int vert_i : face) {
-        const qvec3f vert = mesh.verts.at(vert_i);
+        const qvec3f &vert = mesh.verts.at(vert_i);
         bbox = bbox.expand(vert);
     }
     return bbox;
@@ -154,24 +139,13 @@ static octree_t<vertnum_t> build_vert_octree(const mesh_t &mesh)
     std::vector<std::pair<aabb3f, vertnum_t>> vertBboxNumPairs;
 
     for (int i = 0; i < mesh.verts.size(); i++) {
-        const qvec3f vert = mesh.verts[i];
+        const qvec3f &vert = mesh.verts[i];
         const aabb3f bbox(vert, vert);
 
-        vertBboxNumPairs.emplace_back(
-            bbox, i); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
+        vertBboxNumPairs.emplace_back(bbox, i);
     }
 
     return makeOctree(vertBboxNumPairs);
-}
-
-qvec3f qToG(qvec3f in)
-{
-    return qvec3f(in[0], in[1], in[2]);
-}
-
-qvec3f gToQ(qvec3f in)
-{
-    return qvec3f(in[0], in[1], in[2]);
 }
 
 /**
@@ -190,16 +164,16 @@ void face_InsertVertIfNeeded(mesh_t &mesh, facenum_t fnum, vertnum_t vnum)
 
     // N.B. we will modify the `face` std::vector within this loop
     for (int i = 0; i < face.size(); i++) {
-        const qvec3f v0 = mesh.verts.at(i);
-        const qvec3f v1 = mesh.verts.at((i + 1) % face.size());
+        const qvec3f &v0 = mesh.verts.at(i);
+        const qvec3f &v1 = mesh.verts.at((i + 1) % face.size());
 
         // does `potentialVertPos` lie on the line between `v0` and `v1`?
-        float distToLine = DistToLine(qToG(v0), qToG(v1), qToG(potentialVertPos));
+        float distToLine = DistToLine(v0, v1, potentialVertPos);
         if (distToLine > TJUNC_DIST_EPSILON)
             continue;
 
         // N.B.: not a distance
-        float fracOfLine = FractionOfLine(qToG(v0), qToG(v1), qToG(potentialVertPos));
+        float fracOfLine = FractionOfLine(v0, v1, potentialVertPos);
         if (fracOfLine < 0 || fracOfLine > 1)
             continue;
 
@@ -227,9 +201,8 @@ static set<T> vecToSet(const vector<T> &vec)
 
 void cleanupFace(mesh_t &mesh, facenum_t i, const octree_t<vertnum_t> &vertoctree)
 {
-
     aabb3f facebbox = mesh_face_bbox(mesh, i);
-    facebbox = facebbox.grow(qvec3f(1, 1, 1));
+    facebbox = facebbox.grow(qvec3f(1));
 
     const set<vertnum_t> face_vert_set = vecToSet(mesh.faces.at(i));
     const vector<vertnum_t> nearbyverts = vertoctree.queryTouchingBBox(facebbox);
@@ -249,7 +222,7 @@ void cleanupMesh(mesh_t &mesh)
 {
     const octree_t<vertnum_t> vertoctree = build_vert_octree(mesh);
 
-    for (int i = 0; i < mesh.faces.size(); i++) {
+    for (size_t i = 0; i < mesh.faces.size(); i++) {
         cleanupFace(mesh, i, vertoctree);
     }
 }

@@ -69,12 +69,12 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
     const int height = texture ? texture->height : 64;
 
     // export the vertices and uvs
-    for (int i = 0; i < face->w.numpoints; i++) {
-        const vec_t *pos = face->w.points[i];
+    for (int i = 0; i < face->w.size(); i++) {
+        const qvec3d &pos = face->w[i];
         fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
 
         vec_t u, v;
-        GetUV(&texinfo, pos, width, height, &u, &v);
+        GetUV(&texinfo, &pos[0], width, height, &u, &v);
 
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
         fmt::print(f, "vt {:.9} {:.9}\n", u, -v);
@@ -82,15 +82,15 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
 
     fmt::print(f, "usemtl contents{}_{}\n", face->contents[0].native, face->contents[0].extended);
     f << 'f';
-    for (int i = 0; i < face->w.numpoints; i++) {
+    for (int i = 0; i < face->w.size(); i++) {
         // .obj vertexes start from 1
         // .obj faces are CCW, quake is CW, so reverse the order
-        const int vertindex = *vertcount + (face->w.numpoints - 1 - i) + 1;
+        const int vertindex = *vertcount + (face->w.size() - 1 - i) + 1;
         fmt::print(f, " {}/{}", vertindex, vertindex);
     }
     f << '\n';
 
-    *vertcount += face->w.numpoints;
+    *vertcount += face->w.size();
 }
 
 static void WriteContentsMaterial(std::ofstream &mtlf, contentflags_t contents, float r, float g, float b)

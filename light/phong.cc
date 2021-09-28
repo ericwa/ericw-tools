@@ -272,7 +272,7 @@ const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const i
     // handle degenerate faces
     const auto it = vertex_normals.find(f);
     if (it == vertex_normals.end()) {
-        return qvec3f(0, 0, 0);
+        return { };
     }
     const auto &face_normals_vec = it->second;
     return face_normals_vec.at(vertindex);

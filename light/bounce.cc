@@ -151,7 +151,7 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
     l.pos = pos;
     l.colorByStyle = colorByStyle;
 
-    qvec3f componentwiseMaxColor(0);
+    qvec3f componentwiseMaxColor { };
     for (const auto &styleColor : colorByStyle) {
         for (int i = 0; i < 3; i++) {
             if (styleColor.second[i] > componentwiseMaxColor[i]) {
@@ -245,7 +245,7 @@ static void *MakeBounceLightsThread(void *arg)
         // final colors to emit
         map<int, qvec3f> emitcolors;
         for (const auto &styleColor : sum) {
-            qvec3f emitcolor(0);
+            qvec3f emitcolor { };
             for (int k = 0; k < 3; k++) {
                 emitcolor[k] = (styleColor.second[k] / 255.0f) * (blendedcolor[k] / 255.0f);
             }
@@ -275,15 +275,15 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
 }
 
 // Returns color in [0,255]
-static qvec3f Texture_AvgColor(const mbsp_t *bsp, const rgba_miptex_t *miptex)
+static qvec3f Texture_AvgColor(const mbsp_t *bsp, const rgba_miptex_t &miptex)
 {
-    qvec4f color(0);
+    qvec4f color { };
 
-    if (!bsp->rgbatexdatasize)
+    if (!miptex.data)
         return color;
 
     // mxd
-    const auto miptexsize = miptex->width * miptex->height;
+    const auto miptexsize = miptex.width * miptex.height;
     for (auto i = 0; i < miptexsize; i++) {
         auto c = Texture_GetColor(miptex, i);
         if (c[3] < 128)
@@ -296,18 +296,17 @@ static qvec3f Texture_AvgColor(const mbsp_t *bsp, const rgba_miptex_t *miptex)
 
 void MakeTextureColors(const mbsp_t *bsp)
 {
-    LogPrint("--- MakeTextureColors ---\n");
-
-    if (!bsp->rgbatexdatasize) // mxd. dtexdata -> drgbatexdata
+    if (!bsp->drgbatexdata.size()) // mxd. dtexdata -> drgbatexdata
         return;
 
-    for (int i = 0; i < bsp->drgbatexdata->nummiptex; i++) {
-        const int ofs = bsp->drgbatexdata->dataofs[i];
-        if (ofs < 0)
-            continue;
+    LogPrint("--- MakeTextureColors ---\n");
 
-        const rgba_miptex_t *miptex = (rgba_miptex_t *)((uint8_t *)bsp->drgbatexdata + ofs);
-        const string name{miptex->name};
+    for (auto &miptex : bsp->drgbatexdata) {
+        if (!miptex.data) {
+            continue;
+        }
+
+        const string name{miptex.name};
         const qvec3f color = Texture_AvgColor(bsp, miptex);
 
         //fmt::print("{} has color {}\n", name, VecStr(color));

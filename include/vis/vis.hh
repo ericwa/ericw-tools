@@ -22,29 +22,17 @@
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
+#include <common/polylib.hh>
 #include <vis/leafbits.hh>
 
 constexpr char *PORTALFILE = "PRT1";
 constexpr char *PORTALFILE2 = "PRT2";
 constexpr char *PORTALFILEAM = "PRT1-AM";
-#define ON_EPSILON 0.1
-#define EQUAL_EPSILON 0.001
+constexpr vec_t ON_EPSILON = 0.1;
+constexpr vec_t EQUAL_EPSILON = 0.001;
 
-#define MAX_WINDING 64
-#define MAX_WINDING_FIXED 24
-
-struct winding_t
-{
-    int numpoints;
-    vec3_t origin; // Bounding sphere for fast clipping tests
-    vec_t radius; // Not updated, so won't shrink when clipping
-    vec3_t points[MAX_WINDING_FIXED]; // variable sized
-};
-
-winding_t *NewWinding(int points);
-winding_t *CopyWinding(const winding_t *w);
-void PlaneFromWinding(const winding_t *w, plane_t *plane);
-bool PlaneCompare(plane_t *p1, plane_t *p2);
+constexpr size_t MAX_WINDING_FIXED = 24;
+constexpr size_t MAX_WINDING = 64;
 
 enum pstatus_t
 {
@@ -57,11 +45,89 @@ struct portal_t
 {
     plane_t plane; // normal pointing into neighbor
     int leaf; // neighbor
-    winding_t *winding;
+    std::shared_ptr<struct winding_t> winding;
     pstatus_t status;
     leafbits_t visbits, mightsee;
     int nummightsee;
     int numcansee;
+};
+
+struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
+{
+    qvec3d origin; // Bounding sphere for fast clipping tests
+    vec_t radius;  // Not updated, so won't shrink when clipping
+
+    using winding_base_t::winding_base_t;
+
+    // copy constructor
+    winding_t(const winding_t &copy) :
+        origin(copy.origin),
+        radius(copy.radius),
+        winding_base_t(copy)
+    {
+    }
+
+    // move constructor
+    winding_t(winding_t &&move) :
+        origin(move.origin),
+        radius(move.radius),
+        winding_base_t(move)
+    {
+    }
+
+    // assignment copy
+    inline winding_t &operator=(const winding_t &copy)
+    {
+        origin = copy.origin;
+        radius = copy.radius;
+
+        winding_base_t::operator=(copy);
+
+        return *this;
+    }
+
+    // assignment move
+    inline winding_t &operator=(winding_t &&move)
+    {
+        origin = move.origin;
+        radius = move.radius;
+
+        winding_base_t::operator=(move);
+
+        return *this;
+    }
+
+    void SetWindingSphere()
+    {
+        // set origin
+        origin = {};
+        for (auto &point : *this)
+            origin += point;
+        origin /= size();
+
+        // set radius
+        radius = 0;
+        for (auto &point : *this) {
+            qvec3d dist = point - origin;
+            radius = std::max(radius, qv::length(dist));
+        }
+    }
+
+    /*
+      ============================================================================
+      Used for visdist to get the distance from a winding to a portal
+      ============================================================================
+    */
+    float distFromPortal(portal_t *p)
+    {
+        vec_t mindist = 1e20;
+
+        for (size_t i = 0; i < size(); ++i) {
+            mindist = std::min(mindist, fabs(DotProduct(at(i), p->plane.normal) - p->plane.dist));
+        }
+
+        return mindist;
+    }
 };
 
 struct sep_t
@@ -78,7 +144,7 @@ struct passage_t
 };
 
 /* Increased MAX_PORTALS_ON_LEAF from 128 */
-#define MAX_PORTALS_ON_LEAF 512
+constexpr size_t MAX_PORTALS_ON_LEAF = 512;
 
 struct leaf_t
 {
@@ -87,26 +153,25 @@ struct leaf_t
     portal_t *portals[MAX_PORTALS_ON_LEAF];
 };
 
-#define MAX_SEPARATORS MAX_WINDING
-#define STACK_WINDINGS 3 // source, pass and a temp for clipping
+constexpr size_t MAX_SEPARATORS = MAX_WINDING;
+constexpr size_t STACK_WINDINGS = 3; // source, pass and a temp for clipping
 
 struct pstack_t
 {
     pstack_t *next;
     leaf_t *leaf;
     portal_t *portal; // portal exiting
-    winding_t *source, *pass;
-    winding_t windings[STACK_WINDINGS]; // Fixed size windings
-    int freewindings[STACK_WINDINGS];
+    std::shared_ptr<winding_t> source, pass;
+    std::shared_ptr<winding_t> windings[STACK_WINDINGS]; // Fixed size windings
     plane_t portalplane;
     leafbits_t *mightsee; // bit string
     plane_t separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
 };
 
-winding_t *AllocStackWinding(pstack_t *stack);
-void FreeStackWinding(winding_t *w, pstack_t *stack);
-winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split);
+std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack);
+void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack);
+std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, plane_t *split);
 
 struct threaddata_t
 {
@@ -156,7 +221,3 @@ extern time_point starttime, endtime, statetime;
 
 void SaveVisState(void);
 bool LoadVisState(void);
-
-/* Print winding/leaf info for debugging */
-void LogWinding(const winding_t *w);
-void LogLeaf(const leaf_t *leaf);

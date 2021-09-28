@@ -58,8 +58,7 @@
 #define MAX_VALUE 1024
 
 // Various other geometry maximums
-#define MAX_POINTS_ON_WINDING 96
-#define MAXEDGES 64
+constexpr size_t MAXEDGES = 64;
 #define MAXPOINTS                                                                                                      \
     60 // don't let a base face get past this
        // because it can be split more later
@@ -306,6 +305,5 @@ public:
 extern options_t options;
 
 #include <qbsp/map.hh>
-#include <qbsp/util.hh>
 
 int qbsp_main(int argc, const char **argv);

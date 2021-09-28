@@ -44,8 +44,6 @@ PORTAL FILE GENERATION
 ==============================================================================
 */
 
-static void PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane);
-
 static void WriteFloat(std::ofstream &portalFile, vec_t v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
@@ -101,10 +99,10 @@ static bool PortalThru(const portal_t *p)
 static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool clusters)
 {
     const portal_t *p, *next;
-    const winding_t *w;
+    std::optional<winding_t> w;
     const qbsp_plane_t *pl;
     int i, front, back;
-    qbsp_plane_t plane2;
+    plane_t plane2;
 
     if (node->planenum != PLANENUM_LEAF && !node->detail_separator) {
         WritePortals_r(node->children[0], portalFile, clusters);
@@ -131,17 +129,17 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
          * same way vis will, and flip the side orders if needed
          */
         pl = &map.planes[p->planenum];
-        PlaneFromWinding(w, &plane2);
+        plane2 = w->plane();
         if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
-            fmt::print(portalFile, "{} {} {} ", w->numpoints, back, front);
+            fmt::print(portalFile, "{} {} {} ", w->size(), back, front);
         else
-            fmt::print(portalFile, "{} {} {} ", w->numpoints, front, back);
+            fmt::print(portalFile, "{} {} {} ", w->size(), front, back);
 
-        for (i = 0; i < w->numpoints; i++) {
+        for (i = 0; i < w->size(); i++) {
             fmt::print(portalFile, "(");
-            WriteFloat(portalFile, w->points[i][0]);
-            WriteFloat(portalFile, w->points[i][1]);
-            WriteFloat(portalFile, w->points[i][2]);
+            WriteFloat(portalFile, w->at(i)[0]);
+            WriteFloat(portalFile, w->at(i)[1]);
+            WriteFloat(portalFile, w->at(i)[2]);
             fmt::print(portalFile, ") ");
         }
         fmt::print(portalFile, "\n");
@@ -398,21 +396,9 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         for (j = 0; j < 6; j++) {
             if (j == i)
                 continue;
-            portals[i]->winding = ClipWinding(portals[i]->winding, &bplanes[j], true);
+            portals[i]->winding = portals[i]->winding->clip(bplanes[j].normal, bplanes[j].dist, ON_EPSILON, true)[SIDE_FRONT];
         }
     }
-}
-
-static void PlaneFromWinding(const winding_t *w, qbsp_plane_t *plane)
-{
-    vec3_t v1, v2;
-
-    // calc plane
-    VectorSubtract(w->points[2], w->points[1], v1);
-    VectorSubtract(w->points[0], w->points[1], v2);
-    CrossProduct(v2, v1, plane->normal);
-    VectorNormalize(plane->normal);
-    plane->dist = DotProduct(w->points[0], plane->normal);
 }
 
 //============================================================================
@@ -474,7 +460,7 @@ static void CheckLeafPortalConsistancy(node_t *node)
 
         // check that the side orders are correct
         plane = map.planes[p->planenum];
-        PlaneFromWinding(p->winding, &plane2);
+        plane2 = p->winding.plane();
 
         for (p2 = node->portals; p2; p2 = p2->next[side2]) {
             if (p2->nodes[0] == node)
@@ -511,7 +497,6 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     qbsp_plane_t clipplane;
     node_t *front, *back, *other_node;
     portal_t *portal, *new_portal, *next_portal;
-    winding_t *winding, *frontwinding, *backwinding;
     int side;
 
 #ifdef PARANOID
@@ -527,8 +512,8 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
         return;
 
     plane = &map.planes[node->planenum];
-    front = node->children[0];
-    back = node->children[1];
+    front = node->children[SIDE_FRONT];
+    back = node->children[SIDE_BACK];
 
     /*
      * create the new portal by taking the full plane winding for the cutting
@@ -537,22 +522,22 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     new_portal = new portal_t { };
     new_portal->planenum = node->planenum;
 
-    winding = BaseWindingForPlane(plane);
+    std::optional<winding_t> winding = BaseWindingForPlane(plane);
     for (portal = node->portals; portal; portal = portal->next[side]) {
         clipplane = map.planes[portal->planenum];
         if (portal->nodes[0] == node)
-            side = 0;
+            side = SIDE_FRONT;
         else if (portal->nodes[1] == node) {
             clipplane.dist = -clipplane.dist;
             VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
-            side = 1;
+            side = SIDE_BACK;
         } else
             FError("Mislinked portal");
 
-        winding = ClipWinding(winding, &clipplane, true);
+        winding = winding->clip(clipplane.normal, clipplane.dist, ON_EPSILON, true)[SIDE_FRONT];
         if (!winding) {
-            FLogPrint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->points[0][0], portal->winding->points[0][1],
-                portal->winding->points[0][2]);
+            FLogPrint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0], portal->winding->at(0)[1],
+                portal->winding->at(0)[2]);
             break;
         }
     }
@@ -566,9 +551,9 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     /* partition the portals */
     for (portal = node->portals; portal; portal = next_portal) {
         if (portal->nodes[0] == node)
-            side = 0;
+            side = SIDE_FRONT;
         else if (portal->nodes[1] == node)
-            side = 1;
+            side = SIDE_BACK;
         else
             FError("Mislinked portal");
         next_portal = portal->next[side];
@@ -578,23 +563,17 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
         RemovePortalFromNode(portal, portal->nodes[1]);
 
         /* cut the portal into two portals, one on each side of the cut plane */
-        DivideWinding(portal->winding, plane, &frontwinding, &backwinding);
+        auto windings = portal->winding->clip(plane->normal, plane->dist, ON_EPSILON);
 
-        if (!frontwinding) {
-            if (backwinding)
-                free(backwinding);
-
-            if (side == 0)
+        if (!windings[SIDE_FRONT]) {
+            if (side == SIDE_FRONT)
                 AddPortalToNodes(portal, back, other_node);
             else
                 AddPortalToNodes(portal, other_node, back);
             continue;
         }
-        if (!backwinding) {
-            if (frontwinding)
-                free(frontwinding);
-
-            if (side == 0)
+        if (!windings[SIDE_BACK]) {
+            if (side == SIDE_FRONT)
                 AddPortalToNodes(portal, front, other_node);
             else
                 AddPortalToNodes(portal, other_node, front);
@@ -604,11 +583,10 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
         /* the winding is split */
         new_portal = new portal_t { };
         *new_portal = *portal;
-        new_portal->winding = backwinding;
-        free(portal->winding);
-        portal->winding = frontwinding;
+        new_portal->winding = std::move(windings[SIDE_BACK]);
+        portal->winding = std::move(windings[SIDE_FRONT]);
 
-        if (side == 0) {
+        if (side == SIDE_FRONT) {
             AddPortalToNodes(portal, front, other_node);
             AddPortalToNodes(new_portal, back, other_node);
         } else {
@@ -676,7 +654,6 @@ void FreeAllPortals(node_t *node)
             nextp = p->next[1];
         RemovePortalFromNode(p, p->nodes[0]);
         RemovePortalFromNode(p, p->nodes[1]);
-        free(p->winding);
         delete p;
     }
     node->portals = NULL;

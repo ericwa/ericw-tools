@@ -297,9 +297,9 @@ struct miptex_t
 // mxd. Used to store RGBA data in mbsp->drgbatexdata
 struct rgba_miptex_t
 {
-    char name[32]; // Same as in Q2
-    unsigned width, height;
-    unsigned offset; // Offset to RGBA texture pixels
+    char name[32] = { 0 }; // Same as in Q2
+    uint32_t width = 0, height = 0;
+    std::unique_ptr<uint8_t> data;
 };
 
 using dvertex_t = bspvec3f_t;
@@ -1740,8 +1740,7 @@ struct mbsp_t
     int texdatasize;
     dmiptexlump_t *dtexdata;
 
-    int rgbatexdatasize; // mxd
-    dmiptexlump_t *drgbatexdata; // mxd. Followed by rgba_miptex_t structs
+    std::vector<rgba_miptex_t> drgbatexdata;
 
     std::string dentdata;
     std::vector<mleaf_t> dleafs;

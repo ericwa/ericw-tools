@@ -79,8 +79,8 @@ void SubdivideFace(face_t *f, face_t **prevptr)
             tmp[1] = tex->vecs[axis][1];
             tmp[2] = tex->vecs[axis][2];
 
-            for (int32_t i = 0; i < f->w.numpoints; i++) {
-                v = DotProduct(f->w.points[i], tmp);
+            for (int32_t i = 0; i < f->w.size(); i++) {
+                v = DotProduct(f->w[i], tmp);
                 if (v < mins)
                     mins = v;
                 if (v > maxs)
@@ -137,7 +137,7 @@ static void GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
         // decision node
         for (f = node->faces; f; f = next) {
             next = f->next;
-            if (!f->w.numpoints) { // face was removed outside
+            if (!f->w.size()) { // face was removed outside
                 delete f;
             } else {
                 f->next = planefaces[f->planenum];
@@ -324,14 +324,14 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
         return;
 
     face->outputnumber = -1;
-    if (face->w.numpoints > MAXEDGES)
+    if (face->w.size() > MAXEDGES)
         FError("Internal error: face->numpoints > MAXEDGES");
 
-    face->edges = new int[face->w.numpoints] { };
-    for (i = 0; i < face->w.numpoints; i++) {
-        const vec_t *p1 = face->w.points[i];
-        const vec_t *p2 = face->w.points[(i + 1) % face->w.numpoints];
-        face->edges[i] = GetEdge(entity, p1, p2, face);
+    face->edges = new int[face->w.size()] { };
+    for (i = 0; i < face->w.size(); i++) {
+        const qvec3d &p1 = face->w[i];
+        const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
+        face->edges[i] = GetEdge(entity, &p1[0], &p2[0], face);
     }
 }
 
@@ -390,7 +390,7 @@ static void EmitFace(mapentity_t *entity, face_t *face)
 
     // emit surfedges
     out->firstedge = static_cast<int>(map.exported_surfedges.size());
-    for (i = 0; i < face->w.numpoints; i++) {
+    for (i = 0; i < face->w.size(); i++) {
         map.exported_surfedges.push_back(face->edges[i]);
     }
     delete[] face->edges;
@@ -432,7 +432,7 @@ static void CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vert
         map.needslmshifts = true;
 
     (*facesCount)++;
-    (*vertexesCount) += f->w.numpoints;
+    (*vertexesCount) += f->w.size();
 }
 
 /*

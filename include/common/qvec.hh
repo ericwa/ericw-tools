@@ -35,67 +35,58 @@ constexpr const T &qclamp(const T &val, const T &min, const T &max)
     return qmax(qmin(val, max), min);
 }
 
-template<int N, class T>
+template<size_t N, class T>
 class qvec
 {
 protected:
     std::array<T, N> v;
 
 public:
-    constexpr qvec() :
-        v({ })
+    qvec() = default;
+
+    template<typename ...Args, typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
+    constexpr qvec(Args... a)
     {
+        constexpr size_t count = sizeof...(Args);
+
+        // special case for single argument
+        if constexpr(count == 1)
+        {
+            for (auto &e : v)
+                ((e = a, true) || ...);
+        }
+        // multiple arguments; copy up to min(N, `count`),
+        // fill `count` -> N with zero
+        else
+        {
+            constexpr size_t copy_size = qmin(N, count);
+            size_t i = 0;
+            ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
+            // Bug with MSVC: https://developercommunity.visualstudio.com/t/stdc20-fatal-error-c1004-unexpected-end-of-file-fo/1509806
+            constexpr bool fill_rest = count < N;
+
+            if constexpr(fill_rest)
+            {
+                for (i = count; i < N; i++)
+                    v[i] = 0;
+            }
+        }
     }
 
-    constexpr qvec(const T &a)
+    // copy from C-style array, exact lengths only
+    template<typename T2>
+    constexpr qvec(const T2 (&array)[N])
     {
         for (size_t i = 0; i < N; i++)
-            v[i] = a;
+            v[i] = array[i];
     }
-
-    constexpr qvec(const T &a, const T &b)
-    {
-        v[0] = a;
-        if (1 < N)
-            v[1] = b;
-        for (size_t i = 2; i < N; i++)
-            v[i] = 0;
-    }
-
-    constexpr qvec(const T &a, const T &b, const T &c)
-    {
-        v[0] = a;
-        if (1 < N)
-            v[1] = b;
-        if (2 < N)
-            v[2] = c;
-        for (size_t i = 3; i < N; i++)
-            v[i] = 0;
-    }
-
-    constexpr qvec(const T &a, const T &b, const T &c, const T &d)
-    {
-        v[0] = a;
-        if (1 < N)
-            v[1] = b;
-        if (2 < N)
-            v[2] = c;
-        if (3 < N)
-            v[3] = d;
-        for (size_t i = 4; i < N; i++)
-            v[i] = 0;
-    }
-
+    
+    // copy from std::array, exact lengths only
     template<typename T2>
-    constexpr qvec(const T2 (&array)[N]) :
-        qvec(static_cast<T>(array[0]), static_cast<T>(array[1]), static_cast<T>(array[2]), static_cast<T>(array[3]))
+    constexpr qvec(const std::array<T2, N> &array)
     {
-    }
-
-    template<typename T2>
-    constexpr qvec(const std::array<T2, N> &array) :
-        qvec(static_cast<T>(array[0]), static_cast<T>(array[1]), static_cast<T>(array[2]), static_cast<T>(array[3]))
-    {
+        for (size_t i = 0; i < N; i++)
+            v[i] = array[i];
     }
 
     constexpr size_t size() const
@@ -109,22 +100,28 @@ public:
     template<class T2>
     constexpr qvec(const qvec<N, T2> &other)
     {
-        for (int i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++)
             v[i] = static_cast<T>(other[i]);
     }
-
-    template<int N2>
+    
+    /**
+     * Casting from another vector type of the same type but
+     * different length
+     */
+    template<size_t N2>
     constexpr qvec(const qvec<N2, T> &other)
     {
-        const int minSize = qmin(N, N2);
+        constexpr size_t minSize = qmin(N, N2);
 
         // truncates if `other` is longer than `this`
-        for (int i = 0; i < minSize; i++)
+        for (size_t i = 0; i < minSize; i++)
             v[i] = other[i];
 
         // zero-fill if `other` is smaller than `this`
-        for (int i = minSize; i < N; i++)
-            v[i] = 0;
+        if constexpr (N2 < N) {
+            for (size_t i = minSize; i < N; i++)
+                v[i] = 0;
+        }
     }
 
     /**
@@ -132,7 +129,7 @@ public:
      */
     constexpr qvec(const qvec<N - 1, T> &other, T value)
     {
-        for (int i = 0; i < N - 1; ++i) {
+        for (size_t i = 0; i < N - 1; ++i) {
             v[i] = other[i];
         }
         v[N - 1] = value;
@@ -140,7 +137,7 @@ public:
 
     constexpr bool operator==(const qvec<N, T> &other) const
     {
-        for (int i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++)
             if (v[i] != other.v[i])
                 return false;
         return true;
@@ -148,13 +145,13 @@ public:
 
     constexpr bool operator!=(const qvec<N, T> &other) const { return !(*this == other); }
 
-    constexpr const T &operator[](const int idx) const
+    constexpr const T &operator[](const size_t idx) const
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
     }
 
-    constexpr T &operator[](const int idx)
+    constexpr T &operator[](const size_t idx)
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
@@ -162,22 +159,22 @@ public:
 
     constexpr void operator+=(const qvec<N, T> &other)
     {
-        for (int i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++)
             v[i] += other.v[i];
     }
     constexpr void operator-=(const qvec<N, T> &other)
     {
-        for (int i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++)
             v[i] -= other.v[i];
     }
     constexpr void operator*=(const T &scale)
     {
-        for (int i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++)
             v[i] *= scale;
     }
     constexpr void operator/=(const T &scale)
     {
-        for (int i = 0; i < N; i++)
+        for (size_t i = 0; i < N; i++)
             v[i] /= scale;
     }
 
@@ -231,79 +228,79 @@ qvec<3, T> cross(const qvec<3, T> &v1, const qvec<3, T> &v2)
     return qvec<3, T>(v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]);
 }
 
-template<int N, class T>
+template<size_t N, class T>
 T dot(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     T result = 0;
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         result += v1[i] * v2[i];
     }
     return result;
 }
 
-template<int N, class T>
+template<size_t N, class T>
 qvec<N, T> floor(const qvec<N, T> &v1)
 {
     qvec<N, T> res;
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         res[i] = std::floor(v1[i]);
     }
     return res;
 }
 
-template<int N, class T>
+template<size_t N, class T>
 qvec<N, T> pow(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     qvec<N, T> res;
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         res[i] = std::pow(v1[i], v2[i]);
     }
     return res;
 }
 
-template<int N, class T>
+template<size_t N, class T>
 qvec<N, T> min(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     qvec<N, T> res;
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         res[i] = qmin(v1[i], v2[i]);
     }
     return res;
 }
 
-template<int N, class T>
+template<size_t N, class T>
 qvec<N, T> max(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     qvec<N, T> res;
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         res[i] = qmax(v1[i], v2[i]);
     }
     return res;
 }
 
-template<int N, class T>
+template<size_t N, class T>
 T length2(const qvec<N, T> &v1)
 {
     T len2 = 0;
-    for (int i = 0; i < N; i++) {
+    for (size_t i = 0; i < N; i++) {
         len2 += (v1[i] * v1[i]);
     }
     return len2;
 }
 
-template<int N, class T>
+template<size_t N, class T>
 T length(const qvec<N, T> &v1)
 {
     return std::sqrt(length2(v1));
 }
 
-template<int N, class T>
+template<size_t N, class T>
 qvec<N, T> normalize(const qvec<N, T> &v1)
 {
     return v1 / length(v1);
 }
 
-template<int N, class T>
+template<size_t N, class T>
 T distance(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     return length(v2 - v1);
@@ -311,7 +308,7 @@ T distance(const qvec<N, T> &v1, const qvec<N, T> &v2)
 
 std::string to_string(const qvec<3, float> &v1);
 
-template<int N, class T>
+template<size_t N, class T>
 bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
@@ -322,13 +319,43 @@ bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
     return true;
 }
 
-template<int N, class T>
-int indexOfLargestMagnitudeComponent(const qvec<N, T> &v)
+template<size_t N, class T>
+bool epsilonEmpty(const qvec<N, T> &v1, T epsilon)
 {
-    int largestIndex = 0;
+    for (size_t i = 0; i < N; i++) {
+        if (fabs(v1[i]) > epsilon)
+            return false;
+    }
+    return true;
+}
+
+template<size_t N, class T>
+bool equalExact(const qvec<N, T> &v1, const qvec<N, T> &v2)
+{
+    for (size_t i = 0; i < N; i++) {
+        if (v1[i] != v2[i])
+            return false;
+    }
+    return true;
+}
+
+template<size_t N, class T>
+bool emptyExact(const qvec<N, T> &v1)
+{
+    for (size_t i = 0; i < N; i++) {
+        if (!v1[i])
+            return false;
+    }
+    return true;
+}
+
+template<size_t N, class T>
+size_t indexOfLargestMagnitudeComponent(const qvec<N, T> &v)
+{
+    size_t largestIndex = 0;
     T largestMag = 0;
 
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
         const T currentMag = std::fabs(v[i]);
 
         if (currentMag > largestMag) {
@@ -359,6 +386,7 @@ private:
     T m_dist;
 
 public:
+    qplane3() = default;
     qplane3(const qvec<3, T> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
 
     T distAbove(const qvec<3, T> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
@@ -478,7 +506,7 @@ public:
 
     qvec<M, T> operator*(const qvec<N, T> &vec) const
     {
-        qvec<M, T> res(0);
+        qvec<M, T> res { };
         for (int i = 0; i < M; i++) { // for each row
             for (int j = 0; j < N; j++) { // for each col
                 res[i] += this->at(i, j) * vec[j];

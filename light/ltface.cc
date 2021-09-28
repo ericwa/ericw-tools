@@ -46,10 +46,10 @@ std::atomic<uint32_t> fully_transparent_lightmaps;
 qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, const qvec3f &world)
 {
     const gtexinfo_t *tex = Face_Texinfo(bsp, face);
-    if (tex == nullptr)
-        return qvec2f(0);
+    qvec2f coord { };
 
-    qvec2f coord;
+    if (tex == nullptr)
+        return coord;
 
     /*
      * The (long double) casts below are important: The original code
@@ -135,7 +135,7 @@ int faceextents_t::numsamples() const
 }
 qvec2i faceextents_t::texsize() const
 {
-    return qvec2i(width(), height());
+    return { width(), height() };
 }
 
 int faceextents_t::indexOf(const qvec2i &lm) const
@@ -169,12 +169,12 @@ qvec2f faceextents_t::TexCoordToLMCoord(const qvec2f &tc) const
 
 qvec2f faceextents_t::worldToTexCoord(qvec3f world) const
 {
-    const qvec4f worldPadded(world[0], world[1], world[2], 1.0f);
+    const qvec4f worldPadded(world, 1.0f);
     const qvec4f res = m_worldToTexCoord * worldPadded;
 
     Q_assert(res[3] == 1.0f);
 
-    return qvec2f(res[0], res[1]);
+    return res;
 }
 
 qvec3f faceextents_t::texCoordToWorld(qvec2f tc) const
@@ -184,7 +184,7 @@ qvec3f faceextents_t::texCoordToWorld(qvec2f tc) const
 
     Q_assert(fabs(res[3] - 1.0f) < 0.01f);
 
-    return qvec3f(res[0], res[1], res[2]);
+    return res;
 }
 
 qvec2f faceextents_t::worldToLMCoord(qvec3f world) const
@@ -232,7 +232,7 @@ static void TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t wor
 {
     qvec4f worldPos = texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0);
 
-    VectorCopy(qvec3f(worldPos), world);
+    VectorCopy(worldPos, world);
 }
 
 void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2])
@@ -365,16 +365,16 @@ public:
     qvec3f m_interpolatedNormal;
 
     position_t(qvec3f position)
-        : m_unoccluded(false), m_actualFace(nullptr), m_position(position), m_interpolatedNormal(qvec3f(0, 0, 0))
+        : m_unoccluded(false), m_actualFace(nullptr), m_position(position), m_interpolatedNormal({ })
     {
     }
 
-    position_t(const mface_t *actualFace, qvec3f position, qvec3f interpolatedNormal)
+    position_t(const mface_t *actualFace, const qvec3f &position, const qvec3f &interpolatedNormal)
         : m_unoccluded(true), m_actualFace(actualFace), m_position(position),
           m_interpolatedNormal(interpolatedNormal){};
 };
 
-static const float sampleOffPlaneDist = 1.0f;
+static constexpr float sampleOffPlaneDist = 1.0f;
 
 static float TexSpaceDist(const mbsp_t *bsp, const mface_t *face, const qvec3f &p0, const qvec3f &p1)
 {
@@ -484,10 +484,10 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
         float bestdist = FLT_MAX;
 
         for (int i = 0; i < face->numedges; i++) {
-            const qvec3f v0 = points.at(i);
-            const qvec3f v1 = points.at((i + 1) % points.size());
+            const qvec3f &v0 = points.at(i);
+            const qvec3f &v1 = points.at((i + 1) % points.size());
 
-            const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, qvec3f(surfplane));
+            const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, surfplane);
             if (!edgeplane.first)
                 continue; // degenerate edge
 
@@ -645,7 +645,7 @@ static position_t PositionSamplePointOnFace(
             return position_t(point);
         pointNormal = interpNormal.second;
     } else {
-        pointNormal = qvec3f(plane);
+        pointNormal = plane;
     }
 
     const bool inSolid = Light_PointInAnySolid(bsp, mi->model, point + modelOffset);
@@ -735,14 +735,6 @@ static void CalcPoints(
         CalcPoints_Debug(surf, bsp);
     }
 }
-
-// mxd. That's Q1-specific. Also moved to bsputils.c as Face_IsTranslucent
-/*static bool
-Face_IsLiquid(const mbsp_t *bsp, const mface_t *face)
-{
-    const char *name = Face_TextureName(bsp, face);
-    return name[0] == '*';
-}*/
 
 static bool Lightsurf_Init(const modelinfo_t *modelinfo, const mface_t *face, const mbsp_t *bsp,
     lightsurf_t *lightsurf, facesup_t *facesup)
@@ -1003,8 +995,8 @@ float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, c
     return add;
 }
 
-static bool LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
-    vec_t *result); // mxd. miptex_t -> rgba_miptex_t
+static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
+    vec_t *result);
 
 void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t &surfpoint,
     bool twosided, vec3_t &color_out, vec3_t &surfpointToLightDir_out, vec3_t &normalmap_addition_out, float *dist_out)
@@ -1254,14 +1246,14 @@ static bool Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *model
         result = false; // beyond far clip plane
     return result;
 }
-static bool LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
-    vec_t *result) // mxd. miptex_t -> rgba_miptex_t
+static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
+    vec_t *result)
 {
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
     // this is because we're treating it like a cubemap. why? no idea.
     float weight[4];
     color_rgba pi[4];
-    color_rgba *data = (color_rgba *)((uint8_t *)tex + tex->offset);
+    const color_rgba *data = reinterpret_cast<const color_rgba *>(tex->data.get());
 
     vec3_t coord;
     if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
@@ -1300,7 +1292,7 @@ static bool LightFace_SampleMipTex(rgba_miptex_t *tex, const float *projectionma
         result[2] += weight[3] * pi[3].b;
         VectorScale(result, 2, result);
 
-        return true; // mxd
+        return true;
     }
 }
 
@@ -1895,22 +1887,18 @@ inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t
 {
     const float dp1 = qv::dot(vpl->surfnormal, dir);
     if (dp1 < 0.0f)
-        return qvec3f(0); // sample point behind vpl
+        return { }; // sample point behind vpl
 
     const qvec3f sp_vpl = dir * -1.0f;
     const float dp2 = qv::dot(sp_vpl, normal);
     if (dp2 < 0.0f)
-        return qvec3f(0); // vpl behind sample face
+        return { }; // vpl behind sample face
 
     // get light contribution
     const qvec3f result = BounceLight_ColorAtDist(cfg, vpl->area, bounceLightColor, dist);
 
     // apply angle scale
     const qvec3f resultscaled = result * dp1 * dp2;
-
-    /*if (dp1 < 0) { //mxd. But it's const and was already checked above?
-        Q_assert(!std::isnan(dp1));
-    }*/
 
     Q_assert(!std::isnan(resultscaled[0]));
     Q_assert(!std::isnan(resultscaled[1]));
@@ -1924,7 +1912,7 @@ inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t
 static qvec3f GetSurfaceLighting(
     const globalconfig_t &cfg, const surfacelight_t *vpl, const qvec3f &dir, const float dist, const qvec3f &normal)
 {
-    qvec3f result{0};
+    qvec3f result;
     float dotProductFactor = 1.0f;
 
     const float dp1 = qv::dot(vpl->surfnormal, dir);
@@ -2110,7 +2098,7 @@ static void LightFace_Bounce(
 
         rs->tracePushedRaysIntersection(lightsurf->modelinfo);
 
-        qvec3f colorAvg(0);
+        qvec3f colorAvg{};
         int Nhits = 0;
 
         for (int j = 0; j < N; j++) {
@@ -2682,7 +2670,7 @@ static void DumpGLMVector(std::string fname, std::vector<qvec3f> vec, int width,
     std::vector<uint8_t> rgbdata;
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
-            const qvec3f sample = vec.at((y * width) + x);
+            const qvec3f &sample = vec.at((y * width) + x);
             for (int j = 0; j < 3; j++) {
                 int intval = static_cast<int>(qclamp(sample[j], 0.0f, 255.0f));
                 rgbdata.push_back(static_cast<uint8_t>(intval));
@@ -2714,8 +2702,7 @@ static std::vector<qvec4f> LightmapColorsToGLMVector(const lightsurf_t *lightsur
     for (int i = 0; i < lightsurf->numpoints; i++) {
         const vec_t *color = lm->samples[i].color;
         const float alpha = lightsurf->occluded[i] ? 0.0f : 1.0f;
-        res.emplace_back(color[0], color[1], color[2],
-            alpha); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
+        res.emplace_back(color[0], color[1], color[2], alpha);
     }
     return res;
 }
@@ -2726,8 +2713,7 @@ static std::vector<qvec4f> LightmapNormalsToGLMVector(const lightsurf_t *lightsu
     for (int i = 0; i < lightsurf->numpoints; i++) {
         const vec_t *color = lm->samples[i].direction;
         const float alpha = lightsurf->occluded[i] ? 0.0f : 1.0f;
-        res.emplace_back(color[0], color[1], color[2],
-            alpha); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
+        res.emplace_back(color[0], color[1], color[2], alpha);
     }
     return res;
 }
@@ -2789,11 +2775,11 @@ static std::vector<qvec4f> IntegerDownsampleImage(const std::vector<qvec4f> &inp
         for (int x = 0; x < outw; x++) {
 
             float totalWeight = 0.0f;
-            qvec3f totalColor(0);
+            qvec3f totalColor{};
 
             // These are only used if all the samples in the kernel have alpha = 0
             float totalWeightIgnoringOcclusion = 0.0f;
-            qvec3f totalColorIgnoringOcclusion(0);
+            qvec3f totalColorIgnoringOcclusion{};
 
             const int extraradius = 0;
             const int kernelextent = factor + (2 * extraradius);
@@ -2811,7 +2797,7 @@ static std::vector<qvec4f> IntegerDownsampleImage(const std::vector<qvec4f> &inp
 
                     // read the input sample
                     const float weight = 1.0f;
-                    const qvec4f inSample = input.at((y1 * w) + x1);
+                    const qvec4f &inSample = input.at((y1 * w) + x1);
 
                     totalColorIgnoringOcclusion += qvec3f(inSample) * weight;
                     totalWeightIgnoringOcclusion += weight;
@@ -2853,13 +2839,13 @@ static std::vector<qvec4f> FloodFillTransparent(const std::vector<qvec4f> &input
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
                 const int i = (y * w) + x;
-                const qvec4f inSample = res.at(i);
+                const qvec4f &inSample = res.at(i);
 
                 if (inSample[3] == 0) {
                     // average the neighbouring non-transparent samples
 
                     int opaque_neighbours = 0;
-                    qvec3f neighbours_sum;
+                    qvec3f neighbours_sum { };
                     for (int y0 = -1; y0 <= 1; y0++) {
                         for (int x0 = -1; x0 <= 1; x0++) {
                             const int x1 = x + x0;
@@ -2913,7 +2899,7 @@ static std::vector<qvec4f> HighlightSeams(const std::vector<qvec4f> &input, int 
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             const int i = (y * w) + x;
-            const qvec4f inSample = res.at(i);
+            const qvec4f &inSample = res.at(i);
 
             if (inSample[3] == 0) {
                 res.at(i) = qvec4f(255, 0, 0, 1);
@@ -2932,11 +2918,11 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
         for (int x = 0; x < w; x++) {
 
             float totalWeight = 0.0f;
-            qvec3f totalColor(0);
+            qvec3f totalColor{};
 
             // These are only used if all the samples in the kernel have alpha = 0
             float totalWeightIgnoringOcclusion = 0.0f;
-            qvec3f totalColorIgnoringOcclusion(0);
+            qvec3f totalColorIgnoringOcclusion{};
 
             for (int y0 = -radius; y0 <= radius; y0++) {
                 for (int x0 = -radius; x0 <= radius; x0++) {
@@ -2958,7 +2944,7 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
 
                     // read the input sample
                     const float weight = 1.0f;
-                    const qvec4f inSample = input.at((y1 * w) + x1);
+                    const qvec4f &inSample = input.at((y1 * w) + x1);
 
                     totalColorIgnoringOcclusion += qvec3f(inSample) * weight;
                     totalWeightIgnoringOcclusion += weight;
@@ -3043,7 +3029,7 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
             continue;
 
         // skip lightmaps where all samples have brightness below 1
-        if (bsp->loadversion->game->id == GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff,
+        if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff,
                                                            // the face is drawn fullbright instead of black (Q1)
             const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
             if (maxb < 1)
@@ -3051,8 +3037,7 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         }
 
         const float avgb = Lightmap_AvgBrightness(&lightmap, lightsurf);
-        sortable.emplace_back(
-            avgb, &lightmap); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
+        sortable.emplace_back(avgb, &lightmap);
     }
 
     // sort in descending order of average brightness
@@ -3170,14 +3155,14 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
         IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, oversample);
     const std::vector<qvec4f> output_dir = (lux ? IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm),
                                                       oversampled_width, oversampled_height, oversample)
-                                                : *new std::vector<qvec4f>); // mxd. Skip when lux isn't needed
+                                            : std::vector<qvec4f>()); // mxd. Skip when lux isn't needed
 
     // copy from the float buffers to byte buffers in .bsp / .lit / .lux
 
     for (int t = 0; t < actual_height; t++) {
         for (int s = 0; s < actual_width; s++) {
             const int sampleindex = (t * actual_width) + s;
-            qvec4f color = output_color.at(sampleindex);
+            const qvec4f &color = output_color.at(sampleindex);
 
             *lit++ = color[0];
             *lit++ = color[1];
@@ -3294,7 +3279,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
      * lit water in mind. In that case receive light from both top and bottom.
      * (lit will only be rendered in compatible engines, but degrades gracefully.)
      */
-    if (/* texname[0] == '*' */ Face_IsTranslucent(bsp, face)) { // mxd
+    if (Face_IsTranslucent(bsp, face)) {
         lightsurf->twosided = true;
     }
 
@@ -3343,7 +3328,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
-        if (texinfo != nullptr && texinfo->value > 0 && texinfo->flags.native & Q2_SURF_LIGHT) {
+        if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
             vec3_t color;
             Face_LookupTextureColor(bsp, face, color);
             LightFace_Min(bsp, face, color, texinfo->value * 2.0f, lightsurf,
@@ -3402,4 +3387,6 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
     WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
 
     LightFaceShutdown(lightsurf);
+
+    Q_assert(face->lightofs != -1);
 }

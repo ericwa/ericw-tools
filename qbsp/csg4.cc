@@ -93,10 +93,10 @@ void UpdateFaceSphere(face_t *in)
     vec3_t radius;
     vec_t lensq;
 
-    MidpointWinding(&in->w, in->origin);
+    VectorCopy(in->w.center(), in->origin);
     in->radius = 0;
-    for (i = 0; i < in->w.numpoints; i++) {
-        VectorSubtract(in->w.points[i], in->origin, radius);
+    for (i = 0; i < in->w.size(); i++) {
+        VectorSubtract(in->w[i], in->origin, radius);
         lensq = VectorLengthSq(radius);
         if (lensq > in->radius)
             in->radius = lensq;
@@ -113,16 +113,15 @@ Frees in.
 */
 void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **back)
 {
-    vec_t dists[MAXEDGES + 1];
-    int sides[MAXEDGES + 1];
-    int counts[3];
+    vec_t *dists = (vec_t *) alloca(sizeof(vec_t) * (in->w.size() + 1));
+    side_t *sides = (side_t *) alloca(sizeof(side_t) * (in->w.size() + 1));
+    int counts[3] { };
     vec_t dot;
-    int i, j;
+    size_t i, j;
     face_t *newf, *new2;
-    vec_t *p1, *p2;
     vec3_t mid;
 
-    if (in->w.numpoints < 0)
+    if (in->w.size() < 0)
         Error("Attempting to split freed face");
 
     /* Fast test */
@@ -134,7 +133,7 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
         counts[SIDE_FRONT] = 0;
         counts[SIDE_BACK] = 1;
     } else {
-        CalcSides(&in->w, split, sides, dists, counts);
+        in->w.calc_sides(split->normal, split->dist, dists, sides, counts, ON_EPSILON);
     }
 
     // Plane doesn't split this face after all
@@ -153,33 +152,28 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
     *front = new2 = NewFaceFromFace(in);
 
     // distribute the points and generate splits
-    for (i = 0; i < in->w.numpoints; i++) {
+    for (i = 0; i < in->w.size(); i++) {
         // Note: Possible for numpoints on newf or new2 to exceed MAXEDGES if
         // in->w.numpoints == MAXEDGES and it is a really devious split.
-
-        p1 = in->w.points[i];
+        const qvec3d &p1 = in->w[i];
 
         if (sides[i] == SIDE_ON) {
-            VectorCopy(p1, newf->w.points[newf->w.numpoints]);
-            newf->w.numpoints++;
-            VectorCopy(p1, new2->w.points[new2->w.numpoints]);
-            new2->w.numpoints++;
+            newf->w.push_back(p1);
+            new2->w.push_back(p1);
             continue;
         }
 
         if (sides[i] == SIDE_FRONT) {
-            VectorCopy(p1, new2->w.points[new2->w.numpoints]);
-            new2->w.numpoints++;
+            new2->w.push_back(p1);
         } else {
-            VectorCopy(p1, newf->w.points[newf->w.numpoints]);
-            newf->w.numpoints++;
+            newf->w.push_back(p1);
         }
 
         if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
             continue;
 
         // generate a split point
-        p2 = in->w.points[(i + 1) % in->w.numpoints];
+        const qvec3d &p2 = in->w[(i + 1) % in->w.size()];
 
         dot = dists[i] / (dists[i] - dists[i + 1]);
         for (j = 0; j < 3; j++) { // avoid round off error when possible
@@ -191,13 +185,11 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
                 mid[j] = p1[j] + dot * (p2[j] - p1[j]);
         }
 
-        VectorCopy(mid, newf->w.points[newf->w.numpoints]);
-        newf->w.numpoints++;
-        VectorCopy(mid, new2->w.points[new2->w.numpoints]);
-        new2->w.numpoints++;
+        newf->w.push_back(mid);
+        new2->w.push_back(mid);
     }
 
-    if (newf->w.numpoints > MAXEDGES || new2->w.numpoints > MAXEDGES)
+    if (newf->w.size() > MAXEDGES || new2->w.size() > MAXEDGES)
         FError("Internal error: numpoints > MAXEDGES");
 
     /* free the original face now that it is represented by the fragments */
@@ -220,14 +212,14 @@ static void RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **o
     *inside = NULL;
     while (face) {
         next = face->next;
-        winding_t *w = CopyWinding(&face->w);
+        std::optional<winding_t> w = face->w;
         for (const face_t *clipface = brush->faces; clipface; clipface = clipface->next) {
             qbsp_plane_t clipplane = map.planes[clipface->planenum];
             if (!clipface->planeside) {
                 VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
                 clipplane.dist = -clipplane.dist;
             }
-            w = ClipWinding(w, &clipplane, true);
+            w = w->clip(clipplane.normal, clipplane.dist, ON_EPSILON, true)[SIDE_FRONT];
             if (!w)
                 break;
         }
@@ -238,7 +230,6 @@ static void RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **o
         } else {
             face->next = *inside;
             *inside = face;
-            free(w);
         }
         face = next;
     }
@@ -271,11 +262,12 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
          */
         bool spurious_onplane = false;
         {
-            vec_t dists[MAXEDGES + 1];
-            int sides[MAXEDGES + 1];
-            int counts[3];
+            //face->w, splitplane
+            vec_t *dists = (vec_t *) alloca(sizeof(vec_t) * (face->w.size() + 1));
+            side_t *sides = (side_t *) alloca(sizeof(side_t) * (face->w.size() + 1));
+            int counts[3] { };
+            face->w.calc_sides(splitplane->normal, splitplane->dist, dists, sides, counts, ON_EPSILON);
 
-            CalcSides(&face->w, splitplane, sides, dists, counts);
             if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
                 spurious_onplane = true;
             }
@@ -343,7 +335,7 @@ void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *>
 
         if (mirror) {
             face_t *newface = NewFaceFromFace(face);
-            newface->w.numpoints = face->w.numpoints;
+            newface->w = face->w.flip();
             newface->planeside = face->planeside ^ 1;
             newface->contents[0] = face->contents[1];
             newface->contents[1] = face->contents[0];
@@ -369,9 +361,6 @@ void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *>
                     newface->texinfo = MakeSkipTexinfo();
                 }
             }
-
-            for (int i = 0; i < face->w.numpoints; i++)
-                VectorCopy(face->w.points[face->w.numpoints - 1 - i], newface->w.points[i]);
 
             plane_current_facelist = MergeFaceToList(newface, plane_current_facelist);
         }

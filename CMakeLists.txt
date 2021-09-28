@@ -46,7 +46,6 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/solidbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/surfaces.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/tjunc.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/util.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
 
 set(QBSP_SOURCES
@@ -72,9 +71,7 @@ set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/qbsp/solidbsp.cc
 	${CMAKE_SOURCE_DIR}/qbsp/surfaces.cc
 	${CMAKE_SOURCE_DIR}/qbsp/tjunc.cc
-	${CMAKE_SOURCE_DIR}/qbsp/util.cc
 	${CMAKE_SOURCE_DIR}/qbsp/wad.cc
-	${CMAKE_SOURCE_DIR}/qbsp/winding.cc
 	${CMAKE_SOURCE_DIR}/qbsp/writebsp.cc
 	${CMAKE_SOURCE_DIR}/qbsp/exportobj.cc
 	${COMMON_INCLUDES}

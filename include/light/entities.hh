@@ -56,7 +56,7 @@ public:
     vec3_t spotvec; // computed
     float spotfalloff;
     float spotfalloff2;
-    rgba_miptex_t *projectedmip; /*projected texture*/ // mxd. miptex_t -> rgba_miptex_t
+    const rgba_miptex_t *projectedmip; /*projected texture*/ // mxd. miptex_t -> rgba_miptex_t
     float projectionmatrix[16]; /*matrix used to project the specified texture. already contains origin.*/
 
     const entdict_t *epairs;
@@ -152,7 +152,7 @@ const char *ValueForKey(const light_t *ent, const char *key);
 void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec);
 
 void SetWorldKeyValue(const std::string &key, const std::string &value);
-std::string WorldValueForKey(const std::string &key);
+const std::string &WorldValueForKey(const std::string &key);
 
 void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp);
 void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp);

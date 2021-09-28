@@ -34,7 +34,7 @@ inline aabb3f bboxOctant(const aabb3f &box, int i)
 
     const qvec3f octantSigns((i & 1) ? 1.0f : -1.0f, (i & 2) ? 1.0f : -1.0f, (i & 4) ? 1.0f : -1.0f);
 
-    qvec3f mins, maxs;
+    qvec3f mins { }, maxs { };
     for (int j = 0; j < 3; j++) {
         if (octantSigns[j] == -1.0f) {
             mins[j] = box.mins()[j];
@@ -188,7 +188,9 @@ template<typename T>
 octree_t<T> makeOctree(const std::vector<std::pair<aabb3f, T>> &objects)
 {
     if (objects.empty()) {
-        octree_t<T> empty{aabb3f{qvec3f(), qvec3f()}};
+        // CHECK: this purposefully creates a 0,0,0 -> 0,0,0 box, should it not
+        // just use the default constructor for a fully empty box?
+        octree_t<T> empty{aabb3f{{}, {}}};
         return empty;
     }
 

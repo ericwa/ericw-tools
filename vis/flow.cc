@@ -10,11 +10,11 @@ static int c_leafskip;
 
 /*
   ==============
-  ClipToSeperators
+  ClipToSeparators
 
   Source, pass, and target are an ordering of portals.
 
-  Generates seperating planes canidates by taking two points from source and
+  Generates separating planes canidates by taking two points from source and
   one point from pass, and clips target by them.
 
   If target is totally clipped away, that portal can not be seen through.
@@ -28,8 +28,8 @@ static int c_leafskip;
   pointer, was measurably faster
   ==============
 */
-static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl, const winding_t *pass,
-    winding_t *target, unsigned int test, pstack_t *stack)
+static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const plane_t src_pl, const std::shared_ptr<winding_t> &pass,
+    std::shared_ptr<winding_t> &target, unsigned int test, pstack_t *stack)
 {
     int i, j, k, l;
     plane_t sep;
@@ -40,19 +40,19 @@ static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl
     vec_t len_sq;
 
     // check all combinations
-    for (i = 0; i < source->numpoints; i++) {
-        l = (i + 1) % source->numpoints;
-        VectorSubtract(source->points[l], source->points[i], v1);
+    for (i = 0; i < source->size(); i++) {
+        l = (i + 1) % source->size();
+        VectorSubtract(source->at(l), source->at(i), v1);
 
         // find a vertex of pass that makes a plane that puts all of the
         // vertexes of pass on the front side and all of the vertexes of
         // source on the back side
-        for (j = 0; j < pass->numpoints; j++) {
+        for (j = 0; j < pass->size(); j++) {
 
             // Which side of the source portal is this point?
-            // This also tells us which side of the seperating plane has
+            // This also tells us which side of the separating plane has
             //  the source portal.
-            d = DotProduct(pass->points[j], src_pl.normal) - src_pl.dist;
+            d = DotProduct(pass->at(j), src_pl.normal) - src_pl.dist;
             if (d < -ON_EPSILON)
                 fliptest = true;
             else if (d > ON_EPSILON)
@@ -61,7 +61,7 @@ static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl
                 continue; // Point lies in source plane
 
             // Make a plane with the three points
-            VectorSubtract(pass->points[j], source->points[i], v2);
+            VectorSubtract(pass->at(j), source->at(i), v2);
             CrossProduct(v1, v2, sep.normal);
             len_sq = sep.normal[0] * sep.normal[0] + sep.normal[1] * sep.normal[1] + sep.normal[2] * sep.normal[2];
 
@@ -70,7 +70,7 @@ static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl
                 continue;
 
             VectorScale(sep.normal, 1.0 / sqrt(len_sq), sep.normal);
-            sep.dist = DotProduct(pass->points[j], sep.normal);
+            sep.dist = DotProduct(pass->at(j), sep.normal);
 
             //
             // flip the plane if the source portal is backwards
@@ -81,22 +81,22 @@ static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl
             }
             //
             // if all of the pass portal points are now on the positive side,
-            // this is the seperating plane
+            // this is the separating plane
             //
             count = 0;
-            for (k = 0; k < pass->numpoints; k++) {
+            for (k = 0; k < pass->size(); k++) {
                 if (k == j)
                     continue;
-                d = DotProduct(pass->points[k], sep.normal) - sep.dist;
+                d = DotProduct(pass->at(k), sep.normal) - sep.dist;
                 if (d < -ON_EPSILON)
                     break;
                 else if (d > ON_EPSILON)
                     ++count;
             }
-            if (k != pass->numpoints)
-                continue; // points on negative side, not a seperating plane
+            if (k != pass->size())
+                continue; // points on negative side, not a separating plane
             if (!count)
-                continue; // planar with seperating plane
+                continue; // planar with separating plane
 
             //
             // flip the normal if we want the back side (tests 1 and 3)
@@ -115,13 +115,13 @@ static winding_t *ClipToSeperators(const winding_t *source, const plane_t src_pl
             }
 
             target = ClipStackWinding(target, stack, &sep);
+
             if (!target)
-                return NULL; // target is not visible
+                return; // target is not visible
 
             break;
         }
     }
-    return target;
 }
 
 static int CheckStack(leaf_t *leaf, threaddata_t *thread)
@@ -161,9 +161,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     if (err) {
         // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
         // causes it to happen a lot.
-
         // FLogPrint("WARNING: recursion on leaf {}\n", leafnum);
-        // LogLeaf(leaf);
         return;
     }
 
@@ -182,7 +180,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     stack.numseparators[1] = 0;
 
     for (i = 0; i < STACK_WINDINGS; i++)
-        stack.freewindings[i] = 1;
+        stack.windings[i].reset();
 
     leafbits_t local(portalleafs);
     stack.mightsee = &local;
@@ -283,7 +281,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
                 }
             } else {
                 /* Using prevstack source for separator cache correctness */
-                stack.pass = ClipToSeperators(
+                ClipToSeparators(
                     prevstack->source, thread->pstack_head.portalplane, prevstack->pass, stack.pass, 0, &stack);
             }
             if (!stack.pass) {
@@ -302,8 +300,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
                 }
             } else {
                 /* Using prevstack source for separator cache correctness */
-                stack.pass =
-                    ClipToSeperators(prevstack->pass, prevstack->portalplane, prevstack->source, stack.pass, 1, &stack);
+                ClipToSeparators(prevstack->pass, prevstack->portalplane, prevstack->source, stack.pass, 1, &stack);
             }
             if (!stack.pass) {
                 FreeStackWinding(stack.source, &stack);
@@ -313,7 +310,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
 
         /* TEST 2 :: target -> pass -> source */
         if (testlevel > 2) {
-            stack.source = ClipToSeperators(stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, &stack);
+            ClipToSeparators(stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, &stack);
             if (!stack.source) {
                 FreeStackWinding(stack.pass, &stack);
                 continue;
@@ -322,8 +319,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
 
         /* TEST 3 :: pass -> target -> source */
         if (testlevel > 3) {
-            stack.source =
-                ClipToSeperators(prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, &stack);
+            ClipToSeparators(prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, &stack);
             if (!stack.source) {
                 FreeStackWinding(stack.pass, &stack);
                 continue;
@@ -371,7 +367,7 @@ void PortalFlow(portal_t *p)
   ============================================================================
 */
 
-static void SimpleFlood(portal_t *srcportal, int leafnum, const std::vector<bool> &portalsee)
+static void SimpleFlood(portal_t *srcportal, int leafnum, const leafbits_t &portalsee)
 {
     int i;
     leaf_t *leaf;
@@ -393,26 +389,6 @@ static void SimpleFlood(portal_t *srcportal, int leafnum, const std::vector<bool
 }
 
 /*
-  ============================================================================
-  Used for visdist to get the distance from a winding to a portal
-  ============================================================================
-*/
-
-float distFromWinding(winding_t *w, portal_t *p)
-{
-    float dist, mindist;
-    mindist = 1e20;
-
-    for (int i = 0; i < w->numpoints; ++i) {
-        dist = fabs(DotProduct(w->points[i], p->plane.normal) - p->plane.dist);
-
-        if (dist < mindist)
-            mindist = dist;
-    }
-    return mindist;
-}
-
-/*
   ==============
   BasePortalVis
   ==============
@@ -421,10 +397,8 @@ static void *BasePortalThread(void *dummy)
 {
     int i, j, portalnum;
     portal_t *p, *tp;
-    winding_t *w, *tw;
     float d;
-    std::vector<bool> portalsee;
-    portalsee.resize(numportals * 2);
+    leafbits_t portalsee(numportals * 2);
 
     while (1) {
         portalnum = GetThreadWork();
@@ -432,45 +406,46 @@ static void *BasePortalThread(void *dummy)
             break;
 
         p = portals + portalnum;
-        w = p->winding;
+        winding_t &w = *p->winding;
 
         p->mightsee.resize(portalleafs);
 
         for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
-            tw = tp->winding;
             if (tp == p)
                 continue;
 
+            winding_t &tw = *tp->winding;
+
             // Quick test - completely at the back?
-            d = DotProduct(tw->origin, p->plane.normal) - p->plane.dist;
-            if (d < -tw->radius)
+            d = DotProduct(tw.origin, p->plane.normal) - p->plane.dist;
+            if (d < -tw.radius)
                 continue;
 
-            for (j = 0; j < tw->numpoints; j++) {
-                d = DotProduct(tw->points[j], p->plane.normal) - p->plane.dist;
+            for (j = 0; j < tw.size(); j++) {
+                d = DotProduct(tw[j], p->plane.normal) - p->plane.dist;
                 if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
                                      // https://github.com/ericwa/ericw-tools/issues/261
                     break;
             }
-            if (j == tw->numpoints)
+            if (j == tw.size())
                 continue; // no points on front
 
             // Quick test - completely on front?
-            d = DotProduct(w->origin, tp->plane.normal) - tp->plane.dist;
-            if (d > w->radius)
+            d = DotProduct(w.origin, tp->plane.normal) - tp->plane.dist;
+            if (d > w.radius)
                 continue;
 
-            for (j = 0; j < w->numpoints; j++) {
-                d = DotProduct(w->points[j], tp->plane.normal) - tp->plane.dist;
+            for (j = 0; j < w.size(); j++) {
+                d = DotProduct(w[j], tp->plane.normal) - tp->plane.dist;
                 if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
                                     // https://github.com/ericwa/ericw-tools/issues/261
                     break;
             }
-            if (j == w->numpoints)
+            if (j == w.size())
                 continue; // no points on back
 
             if (visdist > 0) {
-                if (distFromWinding(tp->winding, p) > visdist || distFromWinding(p->winding, tp) > visdist)
+                if (tp->winding->distFromPortal(p) > visdist || p->winding->distFromPortal(tp) > visdist)
                     continue;
             }
 
@@ -480,7 +455,7 @@ static void *BasePortalThread(void *dummy)
         p->nummightsee = 0;
         SimpleFlood(p, p->leaf, portalsee);
 
-        portalsee.assign(portalsee.size(), false);
+        portalsee.clear();
     }
 
     return NULL;

@@ -54,139 +54,6 @@ bool nostate = false;
 
 std::filesystem::path sourcefile, portalfile, statefile, statetmpfile;
 
-#if 0
-void
-NormalizePlane(plane_t *dp)
-{
-    vec_t ax, ay, az;
-
-    if (dp->normal[0] == -1.0) {
-        dp->normal[0] = 1.0;
-        dp->dist = -dp->dist;
-        return;
-    }
-    if (dp->normal[1] == -1.0) {
-        dp->normal[1] = 1.0;
-        dp->dist = -dp->dist;
-        return;
-    }
-    if (dp->normal[2] == -1.0) {
-        dp->normal[2] = 1.0;
-        dp->dist = -dp->dist;
-        return;
-    }
-
-    ax = fabs(dp->normal[0]);
-    ay = fabs(dp->normal[1]);
-    az = fabs(dp->normal[2]);
-
-    if (ax >= ay && ax >= az) {
-        if (dp->normal[0] < 0) {
-            VectorSubtract(vec3_origin, dp->normal, dp->normal);
-            dp->dist = -dp->dist;
-        }
-        return;
-    }
-
-    if (ay >= ax && ay >= az) {
-        if (dp->normal[1] < 0) {
-            VectorSubtract(vec3_origin, dp->normal, dp->normal);
-            dp->dist = -dp->dist;
-        }
-        return;
-    }
-
-    if (dp->normal[2] < 0) {
-        VectorSubtract(vec3_origin, dp->normal, dp->normal);
-        dp->dist = -dp->dist;
-    }
-}
-#endif
-
-void PlaneFromWinding(const winding_t *w, plane_t *plane)
-{
-    vec3_t v1, v2;
-
-    // calc plane
-    VectorSubtract(w->points[2], w->points[1], v1);
-    VectorSubtract(w->points[0], w->points[1], v2);
-    CrossProduct(v2, v1, plane->normal);
-    VectorNormalize(plane->normal);
-    plane->dist = DotProduct(w->points[0], plane->normal);
-}
-
-//============================================================================
-
-/*
-  ==================
-  NewWinding
-  ==================
-*/
-winding_t *NewWinding(int points)
-{
-    winding_t *w;
-    int size;
-
-    if (points > MAX_WINDING)
-        FError("{} points", points);
-
-    // size = offsetof(winding_t, points[points]);
-    size = offsetof(winding_t, points[0]);
-    size += points * sizeof(w->points[0]);
-
-    w = static_cast<winding_t *>(malloc(size));
-    memset(w, 0, size);
-
-    return w;
-}
-
-void LogWinding(const winding_t *w)
-{
-    int i;
-
-    if (!verbose)
-        return;
-
-    for (i = 0; i < w->numpoints; i++)
-        LogPrint("({:5.1}, {:5.1}, {:5.1})\n", w->points[i][0], w->points[i][1], w->points[i][2]);
-}
-
-void LogLeaf(const leaf_t *leaf)
-{
-    const portal_t *portal;
-    const plane_t *plane;
-    int i;
-
-    if (!verbose)
-        return;
-
-    for (i = 0; i < leaf->numportals; i++) {
-        portal = leaf->portals[i];
-        plane = &portal->plane;
-        LogPrint("portal {:4} to leaf {:4} : {:7.1} : ({:4.2}, {:4.2}, {:4.2})\n", (ptrdiff_t)(portal - portals), portal->leaf,
-            plane->dist, plane->normal[0], plane->normal[1], plane->normal[2]);
-    }
-}
-
-/*
-  ==================
-  CopyWinding
-  ==================
-*/
-winding_t *CopyWinding(const winding_t *w)
-{
-    int size;
-    winding_t *c;
-
-    // size = offsetof(winding_t, points[w->numpoints]);
-    size = offsetof(winding_t, points[0]);
-    size += w->numpoints * sizeof(w->points[0]);
-
-    c = static_cast<winding_t *>(malloc(size));
-    memcpy(c, w, size);
-    return c;
-}
-
 /*
   ==================
   AllocStackWinding
@@ -194,20 +61,15 @@ winding_t *CopyWinding(const winding_t *w)
   Return a pointer to a free fixed winding on the stack
   ==================
 */
-winding_t *AllocStackWinding(pstack_t *stack)
+std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack)
 {
-    int i;
-
-    for (i = 0; i < STACK_WINDINGS; i++) {
-        if (stack->freewindings[i]) {
-            stack->freewindings[i] = 0;
-            return &stack->windings[i];
+    for (auto &winding : stack->windings) {
+        if (!winding) {
+            return (winding = std::make_shared<winding_t>());
         }
     }
 
     FError("failed");
-
-    return NULL;
 }
 
 /*
@@ -219,14 +81,14 @@ winding_t *AllocStackWinding(pstack_t *stack)
   structure further up the call chain).
   ==================
 */
-void FreeStackWinding(winding_t *w, pstack_t *stack)
+void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack)
 {
-    uintptr_t index = w - stack->windings;
-
-    if (index < (uintptr_t)STACK_WINDINGS) {
-        if (stack->freewindings[index])
-            FError("winding already freed");
-        stack->freewindings[index] = 1;
+    for (auto &winding : stack->windings) {
+        if (winding == w) {
+            w.reset();
+            winding.reset();
+            return;
+        }
     }
 }
 
@@ -240,19 +102,15 @@ void FreeStackWinding(winding_t *w, pstack_t *stack)
   is returned.
   ==================
 */
-winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
+std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, plane_t *split)
 {
-    vec_t dists[MAX_WINDING + 1];
-    int sides[MAX_WINDING + 1];
+    vec_t *dists = (vec_t *) alloca(sizeof(vec_t) * (in->size() + 1));
+    int *sides = (int *) alloca(sizeof(int) * (in->size() + 1));
     int counts[3];
-    vec_t dot, fraction;
     int i, j;
-    vec_t *p1, *p2;
-    vec3_t mid;
-    winding_t *neww;
 
     /* Fast test first */
-    dot = DotProduct(in->origin, split->normal) - split->dist;
+    vec_t dot = DotProduct(in->origin, split->normal) - split->dist;
     if (dot < -in->radius) {
         FreeStackWinding(in, stack);
         return NULL;
@@ -260,14 +118,14 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
         return in;
     }
 
-    if (in->numpoints > MAX_WINDING)
-        FError("in->numpoints > MAX_WINDING ({} > {})", in->numpoints, MAX_WINDING);
+    if (in->size() > MAX_WINDING)
+        FError("in->numpoints > MAX_WINDING ({} > {})", in->size(), MAX_WINDING);
 
     counts[0] = counts[1] = counts[2] = 0;
 
     /* determine sides for each point */
-    for (i = 0; i < in->numpoints; i++) {
-        dot = DotProduct(in->points[i], split->normal);
+    for (i = 0; i < in->size(); i++) {
+        dot = DotProduct((*in)[i], split->normal);
         dot -= split->dist;
         dists[i] = dot;
         if (dot > ON_EPSILON)
@@ -285,7 +143,7 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
     // ericw -- coplanar portals: return without clipping. Otherwise when two portals are less than ON_EPSILON apart,
     // one will get fully clipped away and we can't see through it causing
     // https://github.com/ericwa/ericw-tools/issues/261
-    if (counts[SIDE_ON] == in->numpoints) {
+    if (counts[SIDE_ON] == in->size()) {
         return in;
     }
 
@@ -296,35 +154,33 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
     if (!counts[1])
         return in;
 
-    neww = AllocStackWinding(stack);
-    neww->numpoints = 0;
-    VectorCopy(in->origin, neww->origin);
+    auto neww = AllocStackWinding(stack);
+    neww->origin = in->origin;
     neww->radius = in->radius;
 
-    for (i = 0; i < in->numpoints; i++) {
-        p1 = in->points[i];
+    for (i = 0; i < in->size(); i++) {
+        const qvec3d &p1 = (*in)[i];
 
         if (sides[i] == SIDE_ON) {
-            if (neww->numpoints == MAX_WINDING_FIXED)
+            if (neww->size() == MAX_WINDING_FIXED)
                 goto noclip;
-            VectorCopy(p1, neww->points[neww->numpoints]);
-            neww->numpoints++;
+            neww->push_back(p1);
             continue;
         }
 
         if (sides[i] == SIDE_FRONT) {
-            if (neww->numpoints == MAX_WINDING_FIXED)
+            if (neww->size() == MAX_WINDING_FIXED)
                 goto noclip;
-            VectorCopy(p1, neww->points[neww->numpoints]);
-            neww->numpoints++;
+            neww->push_back(p1);
         }
 
         if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
             continue;
 
         /* generate a split point */
-        p2 = in->points[(i + 1) % in->numpoints];
-        fraction = dists[i] / (dists[i] - dists[i + 1]);
+        const qvec3d &p2 = (*in)[(i + 1) % in->size()];
+        qvec3d mid;
+        vec_t fraction = dists[i] / (dists[i] - dists[i + 1]);
         for (j = 0; j < 3; j++) {
             /* avoid round off error when possible */
             if (split->normal[j] == 1)
@@ -335,13 +191,13 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, plane_t *split)
                 mid[j] = p1[j] + fraction * (p2[j] - p1[j]);
         }
 
-        if (neww->numpoints == MAX_WINDING_FIXED)
+        if (neww->size() == MAX_WINDING_FIXED)
             goto noclip;
-        VectorCopy(mid, neww->points[neww->numpoints]);
-        neww->numpoints++;
-    }
-    FreeStackWinding(in, stack);
 
+        neww->push_back(mid);
+    }
+
+    FreeStackWinding(in, stack);
     return neww;
 
 noclip:
@@ -795,7 +651,7 @@ void CalcVis(mbsp_t *bsp)
   PASSAGE CALCULATION (not used yet...)
   ============================================================================
 */
-
+#if 0
 int count_sep;
 
 bool PlaneCompare(plane_t *p1, plane_t *p2)
@@ -978,31 +834,9 @@ void CalcPassages(void)
     LogPrint("numpassages: {} ({})\n", count2, count);
     LogPrint("total passages: {}\n", count_sep);
 }
+#endif
 
 // ===========================================================================
-
-static void SetWindingSphere(winding_t *w)
-{
-    int i;
-    vec3_t origin, dist;
-    vec_t r, max_r;
-
-    VectorCopy(vec3_origin, origin);
-    for (i = 0; i < w->numpoints; i++)
-        VectorAdd(origin, w->points[i], origin);
-    VectorScale(origin, 1.0 / w->numpoints, origin);
-
-    max_r = 0;
-    for (i = 0; i < w->numpoints; i++) {
-        VectorSubtract(w->points[i], origin, dist);
-        r = VectorLength(dist);
-        if (r > max_r)
-            max_r = r;
-    }
-
-    VectorCopy(origin, w->origin);
-    w->radius = max_r;
-}
 
 /*
   ============
@@ -1017,7 +851,6 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     char magic[80];
     qfile_t f { nullptr, nullptr };
     int numpoints;
-    winding_t *w;
     int leafnums[2];
     plane_t plane;
 
@@ -1108,17 +941,16 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         if ((unsigned)leafnums[0] > (unsigned)portalleafs || (unsigned)leafnums[1] > (unsigned)portalleafs)
             FError("out of bounds leaf in portal {}", i);
 
-        w = p->winding = NewWinding(numpoints);
-        w->numpoints = numpoints;
+        winding_t &w = *(p->winding = std::make_shared<winding_t>(numpoints));
 
         for (j = 0; j < numpoints; j++) {
-            if (fscanf(f.get(), "(%lf %lf %lf ) ", &w->points[j][0], &w->points[j][1], &w->points[j][2]) != 3)
+            if (fscanf(f.get(), "(%lf %lf %lf ) ", &w[j][0], &w[j][1], &w[j][2]) != 3)
                 FError("reading portal {}", i);
         }
         fscanf(f.get(), "\n");
 
         // calc plane
-        PlaneFromWinding(w, &plane);
+        plane = w.plane();
 
         // create forward portal
         l = &leafs[leafnums[0]];
@@ -1127,11 +959,10 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         l->portals[l->numportals] = p;
         l->numportals++;
 
-        p->winding = w;
         VectorSubtract(vec3_origin, plane.normal, p->plane.normal);
         p->plane.dist = -plane.dist;
         p->leaf = leafnums[1];
-        SetWindingSphere(p->winding);
+        p->winding->SetWindingSphere();
         p++;
 
         // create backwards portal
@@ -1142,15 +973,14 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         l->numportals++;
 
         // Create a reverse winding
-        p->winding = NewWinding(numpoints);
-        p->winding->numpoints = numpoints;
-        for (j = 0; j < numpoints; ++j)
-            VectorCopy(w->points[numpoints - (j + 1)], p->winding->points[j]);
+        p->winding = std::make_shared<winding_t>(numpoints);
 
-        // p->winding = w;
+        for (j = 0; j < numpoints; ++j)
+            p->winding->at(j) = w[numpoints - (j + 1)];
+
         p->plane = plane;
         p->leaf = leafnums[0];
-        SetWindingSphere(p->winding);
+        p->winding->SetWindingSphere();
         p++;
     }
 

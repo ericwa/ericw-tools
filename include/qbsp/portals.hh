@@ -26,7 +26,7 @@ struct portal_t
     int planenum;
     node_t *nodes[2]; // [0] = front side of planenum
     portal_t *next[2]; // [0] = next portal in nodes[0]'s list of portals
-    winding_t *winding;
+    std::optional<winding_t> winding;
 };
 
 extern node_t outside_node; // portals outside the world face this

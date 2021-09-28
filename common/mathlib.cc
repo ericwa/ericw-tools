@@ -397,11 +397,11 @@ qvec3f GLM_FaceNormal(std::vector<qvec3f> points)
     float maxArea = -FLT_MAX;
     int bestI = -1;
 
-    const qvec3f p0 = points[0];
+    const qvec3f &p0 = points[0];
 
     for (int i = 2; i < N; i++) {
-        const qvec3f p1 = points[i - 1];
-        const qvec3f p2 = points[i];
+        const qvec3f &p1 = points[i - 1];
+        const qvec3f &p2 = points[i];
 
         const float area = GLM_TriangleArea(p0, p1, p2);
         if (area > maxArea) {
@@ -411,10 +411,10 @@ qvec3f GLM_FaceNormal(std::vector<qvec3f> points)
     }
 
     if (bestI == -1 || maxArea < ZERO_TRI_AREA_EPSILON)
-        return qvec3f(0);
+        return qvec3f { };
 
-    const qvec3f p1 = points[bestI - 1];
-    const qvec3f p2 = points[bestI];
+    const qvec3f &p1 = points[bestI - 1];
+    const qvec3f &p2 = points[bestI];
     const qvec3f normal = qv::normalize(qv::cross(p2 - p0, p1 - p0));
     return normal;
 }
@@ -441,7 +441,7 @@ std::pair<bool, qvec4f> GLM_MakeInwardFacingEdgePlane(const qvec3f &v0, const qv
 
 vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
 {
-    const int N = points.size();
+    const size_t N = points.size();
     if (N < 3)
         return {};
 
@@ -450,12 +450,12 @@ vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
 
     const qvec3f faceNormal = GLM_FaceNormal(points);
 
-    if (faceNormal == qvec3f(0, 0, 0))
+    if (qv::emptyExact(faceNormal))
         return {};
 
     for (int i = 0; i < N; i++) {
-        const qvec3f v0 = points[i];
-        const qvec3f v1 = points[(i + 1) % N];
+        const qvec3f &v0 = points[i];
+        const qvec3f &v1 = points[(i + 1) % N];
 
         const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, faceNormal);
         if (!edgeplane.first)
@@ -512,7 +512,7 @@ float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point)
 qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point)
 {
     float dist = GLM_DistAbovePlane(plane, point);
-    qvec3f move = qvec3f(plane[0], plane[1], plane[2]) * -dist;
+    qvec3f move = qvec3f(plane) * -dist;
     return point + move;
 }
 
@@ -522,10 +522,10 @@ float GLM_PolyArea(const std::vector<qvec3f> &points)
 
     float poly_area = 0;
 
-    const qvec3f v0 = points.at(0);
+    const qvec3f &v0 = points.at(0);
     for (int i = 2; i < points.size(); i++) {
-        const qvec3f v1 = points.at(i - 1);
-        const qvec3f v2 = points.at(i);
+        const qvec3f &v1 = points.at(i - 1);
+        const qvec3f &v2 = points.at(i);
 
         const float triarea = GLM_TriangleArea(v0, v1, v2);
 
@@ -546,13 +546,13 @@ qvec3f GLM_PolyCentroid(const std::vector<qvec3f> &points)
 
     Q_assert(points.size() >= 3);
 
-    qvec3f poly_centroid(0);
+    qvec3f poly_centroid { };
     float poly_area = 0;
 
-    const qvec3f v0 = points.at(0);
+    const qvec3f &v0 = points.at(0);
     for (int i = 2; i < points.size(); i++) {
-        const qvec3f v1 = points.at(i - 1);
-        const qvec3f v2 = points.at(i);
+        const qvec3f &v1 = points.at(i - 1);
+        const qvec3f &v2 = points.at(i);
 
         const float triarea = GLM_TriangleArea(v0, v1, v2);
         const qvec3f tricentroid = GLM_TriangleCentroid(v0, v1, v2);
@@ -573,10 +573,10 @@ poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &p
     float poly_area = 0;
     std::vector<float> triareas;
 
-    const qvec3f v0 = points.at(0);
+    const qvec3f &v0 = points.at(0);
     for (int i = 2; i < points.size(); i++) {
-        const qvec3f v1 = points.at(i - 1);
-        const qvec3f v2 = points.at(i);
+        const qvec3f &v1 = points.at(i - 1);
+        const qvec3f &v2 = points.at(i);
 
         const float triarea = GLM_TriangleArea(v0, v1, v2);
         Q_assert(triarea >= 0.0f);
@@ -617,11 +617,11 @@ std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> 
 
     int bestI = -1;
     float bestDist = FLT_MAX;
-    qvec3f bestPointOnPoly(0);
+    qvec3f bestPointOnPoly { };
 
     for (int i = 0; i < N; i++) {
-        const qvec3f p0 = poly.at(i);
-        const qvec3f p1 = poly.at((i + 1) % N);
+        const qvec3f &p0 = poly.at(i);
+        const qvec3f &p1 = poly.at((i + 1) % N);
 
         const qvec3f c = ClosestPointOnLineSegment(p0, p1, point);
         const float distToC = qv::length(c - point);
@@ -644,7 +644,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
     Q_assert(points.size() == normals.size());
 
     if (points.size() < 3)
-        return make_pair(false, qvec3f(0));
+        return make_pair(false, qvec3f { });
 
     // Step through the triangles, being careful to handle zero-size ones
 
@@ -675,7 +675,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
         }
     }
 
-    return make_pair(false, qvec3f(0));
+    return make_pair(false, qvec3f { });
 }
 
 /// Returns (front part, back part)
@@ -684,11 +684,9 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vect
     if (poly.empty())
         return make_pair(vector<qvec3f>(), vector<qvec3f>());
 
-    vec3_t normal;
-
     winding_t w = winding_t::from_winding_points(poly);
-    VectorCopy(qvec3f(plane), normal);
-    auto clipped = w.clip(normal, plane[3]);
+
+    auto clipped = w.clip(qvec3f(plane), plane[3]);
 
     return make_pair(clipped[0].value_or(winding_t {}).glm_winding_points(), clipped[1].value_or(winding_t {}).glm_winding_points());
 }
@@ -798,14 +796,14 @@ concavity_t FacePairConcavity(
  * - the direction doesn't matter.
  * - only tips touching is enough
  */
-bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1)
+bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, const vec_t &on_epsilon)
 {
     const float q0_linedist = DistToLine(p0, p1, q0);
-    if (q0_linedist > ON_EPSILON)
+    if (q0_linedist > on_epsilon)
         return false; // not colinear
 
     const float q1_linedist = DistToLine(p0, p1, q1);
-    if (q1_linedist > ON_EPSILON)
+    if (q1_linedist > on_epsilon)
         return false; // not colinear
 
     const float q0_frac = FractionOfLine(p0, p1, q0);

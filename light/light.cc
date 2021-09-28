@@ -268,7 +268,7 @@ static void *LightThread(void *arg)
         if (facenum == -1)
             break;
 
-        mface_t *f = const_cast<mface_t *>(BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum));
+        mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum);
 
         /* Find the correct model offset */
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);

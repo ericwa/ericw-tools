@@ -187,10 +187,10 @@ std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec3d &nor
     const int otherAxisB = (axis + 2) % 3;
 
     // setup two other vectors that are perpendicular to each other
-    qvec3d otherVecA;
+    qvec3d otherVecA { };
     otherVecA[otherAxisA] = 1.0;
 
-    qvec3d otherVecB;
+    qvec3d otherVecB { };
     otherVecB[otherAxisB] = 1.0;
 
     qvec3d tangent = qv::cross(normal, otherVecA);
@@ -542,7 +542,7 @@ static qvec4f SuggestSplit(const mbsp_t *bsp, const decomp_brush_side_t &side)
         }
     }
 
-    assert(bestPlane != qvec4f());
+    assert(!qv::emptyExact(bestPlane));
     return bestPlane;
 }
 
@@ -731,7 +731,7 @@ void AddMapBoundsToStack(std::vector<decomp_plane_t> *planestack, const mbsp_t *
     for (int i = 0; i < 3; ++i) {
         for (int sign = 0; sign < 2; ++sign) {
 
-            qvec3d normal;
+            qvec3d normal { };
             normal[i] = (sign == 0) ? 1 : -1;
 
             double dist;

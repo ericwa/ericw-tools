@@ -169,10 +169,31 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
     return miptex;
 }
 
+const rgba_miptex_t *Face_RgbaMiptex(const mbsp_t *bsp, const mface_t *face)
+{
+    if (!bsp->drgbatexdata.size())
+        return nullptr;
+
+    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    if (texinfo == nullptr)
+        return nullptr;
+
+    return &bsp->drgbatexdata[texinfo->miptex];
+}
+
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
     const auto *miptex = Face_Miptex(bsp, face);
-    return (miptex ? miptex->name : "");
+
+    if (miptex)
+        return miptex->name;
+
+    const auto *rgbamiptex = Face_RgbaMiptex(bsp, face);
+
+    if (rgbamiptex)
+        return rgbamiptex->name;
+
+    return nullptr;
 }
 
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
@@ -404,7 +425,7 @@ bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, cons
 qplane3f Face_Plane_E(const mbsp_t *bsp, const mface_t *f)
 {
     const plane_t pl = Face_Plane(bsp, f);
-    return qplane3f(qvec3f(pl.normal[0], pl.normal[1], pl.normal[2]), pl.dist);
+    return qplane3f(pl.normal, pl.dist);
 }
 
 qvec3f Face_PointAtIndex_E(const mbsp_t *bsp, const mface_t *f, int v)
@@ -429,12 +450,13 @@ qvec3f Face_Normal_E(const mbsp_t *bsp, const mface_t *f)
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
 {
     std::vector<qvec3f> points;
-    points.reserve(
-        face->numedges); // mxd.
-                         // https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
+
+    points.reserve(face->numedges);
+
     for (int j = 0; j < face->numedges; j++) {
         points.push_back(Face_PointAtIndex_E(bsp, face, j));
     }
+
     return points;
 }
 

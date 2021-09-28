@@ -93,8 +93,8 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t *split)
 
     if (split->type < 3) {
         /* shortcut for axial planes */
-        const vec_t *p = in->w.points[0] + split->type;
-        for (i = 0; i < in->w.numpoints; i++, p += 3) {
+        const vec_t *p = &in->w[0][split->type];
+        for (i = 0; i < in->w.size(); i++, p += 3) {
             if (*p > split->dist + ON_EPSILON) {
                 if (have_back)
                     return SIDE_ON;
@@ -107,8 +107,8 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t *split)
         }
     } else {
         /* sloping planes take longer */
-        const vec_t *p = in->w.points[0];
-        for (i = 0; i < in->w.numpoints; i++, p += 3) {
+        const vec_t *p = &in->w[0][0];
+        for (i = 0; i < in->w.size(); i++, p += 3) {
             const vec_t dot = DotProduct(p, split->normal) - split->dist;
             if (dot > ON_EPSILON) {
                 if (have_back)
@@ -515,8 +515,8 @@ void CalcSurfaceInfo(surface_t *surf)
         else
             surf->has_struct = true;
 
-        for (int i = 0; i < f->w.numpoints; i++) {
-            surf->bounds += f->w.points[i];
+        for (int i = 0; i < f->w.size(); i++) {
+            surf->bounds += f->w[i];
         }
     }
 }

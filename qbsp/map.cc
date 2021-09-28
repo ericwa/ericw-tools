@@ -628,7 +628,7 @@ static float extractRotation(qmat2x2f m)
     return rotation;
 }
 
-static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plane_t *faceplane, const qvec3f point)
+static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plane_t *faceplane, const qvec3f &point)
 {
     texvecf temp;
     SetTexinfo_QuakeEd_New(faceplane, texdef.shift, texdef.rotate, texdef.scale, temp);
@@ -772,7 +772,7 @@ static texdef_quake_ed_t TexDef_BSPToQuakeEd(
     const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, &faceplane, false);
 
     // figure out shift based on facepoints[0]
-    qvec3f testpoint = facepoints[0];
+    const qvec3f &testpoint = facepoints[0];
     qvec2f uv0_actual = evalTexDefAtPoint(addShift(res, qvec2f(0, 0)), &faceplane, testpoint);
     qvec2f uv0_desired = qvec2f(worldToTexSpace * qvec4f(testpoint[0], testpoint[1], testpoint[2], 1.0f));
     qvec2f shift = uv0_desired - uv0_actual;
@@ -1505,33 +1505,18 @@ bool mapface_t::set_planepts(const vec3_t *pts)
     return SetPlanePts(pts, this->plane.normal, &this->plane.dist);
 }
 
-std::array<qvec4f, 2> mapface_t::get_texvecs(void) const
+const texvecf &mapface_t::get_texvecs() const
 {
     const mtexinfo_t &texinfo = map.mtexinfos.at(this->texinfo);
-
-    qvec4f res[2];
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 4; j++) {
-            res[i][j] = texinfo.vecs[i][j];
-        }
-    }
-
-    return std::array<qvec4f, 2>{{res[0], res[1]}};
+    return texinfo.vecs;
 }
 
-void mapface_t::set_texvecs(const std::array<qvec4f, 2> &vecs)
+void mapface_t::set_texvecs(const texvecf &vecs)
 {
     // start with a copy of the current texinfo structure
     mtexinfo_t texInfoNew = map.mtexinfos.at(this->texinfo);
     texInfoNew.outputnum = std::nullopt;
-
-    // update vecs
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 4; j++) {
-            texInfoNew.vecs[i][j] = vecs.at(i)[j];
-        }
-    }
-
+    texInfoNew.vecs = vecs;
     this->texinfo = FindTexinfo(texInfoNew);
 }
 
@@ -1763,16 +1748,15 @@ static void ScaleMapFace(mapface_t *face, const vec3_t scale)
         static_cast<double>(1 / scale[0]), 0.0, 0.0, 0.0, static_cast<double>(1 / scale[1]), 0.0, 0.0, 0.0,
         static_cast<double>(1 / scale[2])};
 
-    const std::array<qvec4f, 2> texvecs = face->get_texvecs();
-    std::array<qvec4f, 2> newtexvecs;
+    const auto &texvecs = face->get_texvecs();
+    texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
-        const qvec4f in = texvecs.at(i);
+        const qvec4f &in = texvecs.at(i);
         const qvec3f in_first3(in);
 
         const qvec3f out_first3 = inversescaleM * in_first3;
-        const qvec4f out(out_first3[0], out_first3[1], out_first3[2], in[3]);
-        newtexvecs.at(i) = out;
+        newtexvecs[i] = { out_first3[0], out_first3[1], out_first3[2], in[3] };
     }
 
     face->set_texvecs(newtexvecs);
@@ -1798,16 +1782,15 @@ static void RotateMapFace(mapface_t *face, const vec3_t angles)
 
     // update texinfo
 
-    const std::array<qvec4f, 2> texvecs = face->get_texvecs();
-    std::array<qvec4f, 2> newtexvecs;
+    const auto &texvecs = face->get_texvecs();
+    texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
         const qvec4f in = texvecs.at(i);
         const qvec3f in_first3(in);
 
         const qvec3f out_first3 = rotation * in_first3;
-        const qvec4f out(out_first3[0], out_first3[1], out_first3[2], in[3]);
-        newtexvecs.at(i) = out;
+        newtexvecs[i] = { out_first3[0], out_first3[1], out_first3[2], in[3] };
     }
 
     face->set_texvecs(newtexvecs);
@@ -1824,13 +1807,13 @@ static void TranslateMapFace(mapface_t *face, const vec3_t &offset)
 
     // update texinfo
 
-    const std::array<qvec4f, 2> texvecs = face->get_texvecs();
-    std::array<qvec4f, 2> newtexvecs;
+    const auto &texvecs = face->get_texvecs();
+    texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
         qvec4f out = texvecs.at(i);
         out[3] += qv::dot(qvec3f(out), qvec3f(offset) * -1.0f);
-        newtexvecs.at(i) = out;
+        newtexvecs[i] = { out[0], out[1], out[2], out[3] };
     }
 
     face->set_texvecs(newtexvecs);
@@ -2305,15 +2288,13 @@ void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const
                 plane.dist = -plane.dist;
             }
 
-            winding_t *w = BaseWindingForPlane(&plane);
+            winding_t w = BaseWindingForPlane(&plane);
 
-            fmt::print(f, "( {} {} {} ) ", w->points[0][0], w->points[0][1], w->points[0][2]);
-            fmt::print(f, "( {} {} {} ) ", w->points[1][0], w->points[1][1], w->points[1][2]);
-            fmt::print(f, "( {} {} {} ) ", w->points[2][0], w->points[2][1], w->points[2][2]);
+            fmt::print(f, "( {} {} {} ) ", w[0][0], w[0][1], w[0][2]);
+            fmt::print(f, "( {} {} {} ) ", w[1][0], w[1][1], w[1][2]);
+            fmt::print(f, "( {} {} {} ) ", w[2][0], w[2][1], w[2][2]);
 
             fmt::print(f, "notexture 0 0 0 1 1\n");
-
-            free(w);
         }
 
         fmt::print(f, "}\n");

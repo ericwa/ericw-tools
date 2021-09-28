@@ -78,7 +78,7 @@ void SetWorldKeyValue(const std::string &key, const std::string &value)
 {
     WorldEnt().set(key, value);
 }
-std::string WorldValueForKey(const std::string &key)
+const std::string &WorldValueForKey(const std::string &key)
 {
     return EntDict_StringForKey(WorldEnt(), key);
 }
@@ -143,7 +143,7 @@ static void MatchTargets(void)
             continue;
 
         for (const entdict_t &target : entdicts) {
-            if (targetstr == EntDict_StringForKey(target, "targetname")) {
+            if (string_iequals(targetstr, EntDict_StringForKey(target, "targetname"))) {
                 entity.targetent = &target;
                 break;
             }
@@ -155,7 +155,7 @@ static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t 
 {
     // get the submodel's bbox if it's a brush entity
     if (bsp != nullptr && EntDict_StringForKey(entity, "origin") == "" && EntDict_StringForKey(entity, "model") != "") {
-        const std::string submodel_str = EntDict_StringForKey(entity, "model");
+        const std::string &submodel_str = EntDict_StringForKey(entity, "model");
         const dmodel_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
@@ -188,16 +188,17 @@ bool EntDict_CheckTargetKeysMatched(
 {
     bool ok = true;
 
+    // TODO: what if we just do this for any key that contains `target` not immediately followed by `name`?
     const std::vector<std::string> targetKeys{
         "target", "killtarget", "target2", "angrytarget", "deathtarget" // from AD
     };
 
-    std::string targetname = EntDict_StringForKey(entity, "targetname");
+    const std::string &targetname = EntDict_StringForKey(entity, "targetname");
 
     // search for "target" values such that no entity has a matching "targetname"
 
     for (const auto &targetKey : targetKeys) {
-        const auto targetVal = EntDict_StringForKey(entity, targetKey);
+        const auto &targetVal = EntDict_StringForKey(entity, targetKey);
         if (!targetVal.length())
             continue;
 
@@ -214,7 +215,7 @@ bool EntDict_CheckTargetKeysMatched(
                 continue;
             }
 
-            if (targetVal == EntDict_StringForKey(target, "targetname")) {
+            if (string_iequals(targetVal, EntDict_StringForKey(target, "targetname"))) {
                 found = true;
                 break;
             }
@@ -239,7 +240,7 @@ bool EntDict_CheckTargetnameKeyMatched(
 
     bool ok = true;
 
-    const auto targetnameVal = EntDict_StringForKey(entity, "targetname");
+    const auto &targetnameVal = EntDict_StringForKey(entity, "targetname");
     if (targetnameVal.length()) {
         bool found = false;
         for (const entdict_t &targetter : all_edicts) {
@@ -843,22 +844,15 @@ float CalcFov(float fov_x, float width, float height)
 /*
 finds the texture that is meant to be projected.
 */
-static rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texname) // mxd. miptex_t -> rgba_miptex_t
+static const rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texname)
 {
-    if (!bsp->rgbatexdatasize)
-        return nullptr;
-
-    dmiptexlump_t *miplump = bsp->drgbatexdata;
-
     /*outer loop finds the textures*/
-    for (int texnum = 0; texnum < miplump->nummiptex; texnum++) {
-        const int offset = miplump->dataofs[texnum];
-        if (offset < 0)
+    for (auto &miptex : bsp->drgbatexdata) {
+        if (!miptex.data)
             continue;
 
-        rgba_miptex_t *miptex = (rgba_miptex_t *)((uint8_t *)bsp->drgbatexdata + offset);
-        if (!Q_strcasecmp(miptex->name, texname))
-            return miptex;
+        if (!Q_strcasecmp(miptex.name, texname))
+            return &miptex;
     }
 
     return nullptr;
@@ -917,7 +911,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
     for (auto &entdict : entdicts) {
 
         // fix "lightmap_scale"
-        const std::string lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
+        const std::string &lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
         if (!lmscale.empty()) {
             LogPrint("lightmap_scale should be _lightmap_scale\n");
 
@@ -927,9 +921,9 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 
         // setup light styles for switchable lights
         // NOTE: this also handles "_sun" "1" entities without any extra work.
-        std::string classname = EntDict_StringForKey(entdict, "classname");
+        const std::string &classname = EntDict_StringForKey(entdict, "classname");
         if (classname.find("light") == 0) {
-            const std::string targetname = EntDict_StringForKey(entdict, "targetname");
+            const std::string &targetname = EntDict_StringForKey(entdict, "targetname");
             if (!targetname.empty()) {
                 const int style = LightStyleForTargetname(cfg, targetname);
                 entdict.set("style", std::to_string(style));
@@ -938,7 +932,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 
         // setup light styles for dynamic shadow entities
         if (EntDict_StringForKey(entdict, "_switchableshadow") == "1") {
-            const std::string targetname = EntDict_StringForKey(entdict, "targetname");
+            const std::string &targetname = EntDict_StringForKey(entdict, "targetname");
             // if targetname is "", generates a new unique lightstyle
             const int style = LightStyleForTargetname(cfg, targetname);
             // TODO: Configurable key?
@@ -1215,7 +1209,7 @@ const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::strin
 
 void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec)
 {
-    std::string value = EntDict_StringForKey(ent, key);
+    const std::string &value = EntDict_StringForKey(ent, key);
 
     VectorSet(vec, 0, 0, 0);
     sscanf(value.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);

@@ -51,8 +51,8 @@ struct mapface_t
 
     bool set_planepts(const vec3_t *pts);
 
-    std::array<qvec4f, 2> get_texvecs(void) const;
-    void set_texvecs(const std::array<qvec4f, 2> &vecs);
+    const texvecf &get_texvecs() const;
+    void set_texvecs(const texvecf &vecs);
 };
 
 enum class brushformat_t

@@ -79,7 +79,7 @@ public:
     const std::vector<qvec3f> &points() const { return m_points; }
     const std::vector<qvec3f> &normals() const { return m_normals; }
     const qvec4f &plane() const { return m_plane; }
-    const qvec3f normal() const { return qvec3f(m_plane); }
+    const qvec3f normal() const { return m_plane; }
     const std::vector<qvec4f> &edgePlanes() const { return m_edgePlanes; }
     const std::vector<qvec3f> &pointsShrunkBy1Unit() const { return m_pointsShrunkBy1Unit; }
     const std::vector<neighbour_t> &neighbours() const { return m_neighbours; }

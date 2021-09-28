@@ -295,7 +295,7 @@ color_rgba // mxd. int -> color_rgba
 SampleTexture(const mface_t *face, const mbsp_t *bsp, const vec3_t point)
 {
     color_rgba sample{};
-    if (!bsp->rgbatexdatasize)
+    if (!bsp->drgbatexdata.size())
         return sample;
 
     // FIXME: re-enable the following code

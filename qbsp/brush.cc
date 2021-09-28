@@ -79,21 +79,20 @@ Note: this will not catch 0 area polygons
 void CheckFace(face_t *face, const mapface_t *sourceface)
 {
     const qbsp_plane_t *plane = &map.planes[face->planenum];
-    const vec_t *p1, *p2;
     vec_t length, dist, edgedist;
     vec3_t edgevec, edgenormal, facenormal;
     int i, j;
 
-    if (face->w.numpoints < 3) {
-        if (face->w.numpoints == 2) {
+    if (face->w.size() < 3) {
+        if (face->w.size() == 2) {
             FError("line {}: too few points (2): ({} {} {}) ({} {} {})\n", sourceface->linenum,
-                face->w.points[0][0], face->w.points[0][1], face->w.points[0][2], face->w.points[1][0],
-                face->w.points[1][1], face->w.points[1][2]);
-        } else if (face->w.numpoints == 1) {
-            FError("line {}: too few points (1): ({} {} {})\n", sourceface->linenum, face->w.points[0][0],
-                face->w.points[0][1], face->w.points[0][2]);
+                face->w[0][0], face->w[0][1], face->w[0][2], face->w[1][0],
+                face->w[1][1], face->w[1][2]);
+        } else if (face->w.size() == 1) {
+            FError("line {}: too few points (1): ({} {} {})\n", sourceface->linenum, face->w[0][0],
+                face->w[0][1], face->w[0][2]);
         } else {
-            FError("line {}: too few points ({})", sourceface->linenum, face->w.numpoints);
+            FError("line {}: too few points ({})", sourceface->linenum, face->w.size());
         }
     }
 
@@ -101,9 +100,9 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
     if (face->planeside)
         VectorSubtract(vec3_origin, facenormal, facenormal);
 
-    for (i = 0; i < face->w.numpoints; i++) {
-        p1 = face->w.points[i];
-        p2 = face->w.points[(i + 1) % face->w.numpoints];
+    for (i = 0; i < face->w.size(); i++) {
+        const qvec3d &p1 = face->w[i];
+        const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
 
         for (j = 0; j < 3; j++)
             if (p1[j] > options.worldExtent || p1[j] < -options.worldExtent)
@@ -119,9 +118,9 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
         length = VectorLength(edgevec);
         if (length < ON_EPSILON) {
             LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface->linenum, length, p1[0], p1[1], p1[2]);
-            for (j = i + 1; j < face->w.numpoints; j++)
-                VectorCopy(face->w.points[j], face->w.points[j - 1]);
-            face->w.numpoints--;
+            for (j = i + 1; j < face->w.size(); j++)
+                VectorCopy(face->w[j], face->w[j - 1]);
+            face->w.resize(face->w.size() - 1);
             CheckFace(face, sourceface);
             break;
         }
@@ -132,14 +131,14 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
         edgedist += ON_EPSILON;
 
         /* all other points must be on front side */
-        for (j = 0; j < face->w.numpoints; j++) {
+        for (j = 0; j < face->w.size(); j++) {
             if (j == i)
                 continue;
-            dist = DotProduct(face->w.points[j], edgenormal);
+            dist = DotProduct(face->w[j], edgenormal);
             if (dist > edgedist)
                 FError("line {}: Found a non-convex face (error size {}, point: {} {} {})\n",
-                    sourceface->linenum, dist - edgedist, face->w.points[j][0], face->w.points[j][1],
-                    face->w.points[j][2]);
+                    sourceface->linenum, dist - edgedist, face->w[j][0], face->w[j][1],
+                    face->w[j][2]);
         }
     }
 }
@@ -351,7 +350,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
     int i, j, k;
     vec_t r;
     face_t *f;
-    winding_t *w;
+    std::optional<winding_t> w;
     qbsp_plane_t plane;
     face_t *facelist = NULL;
     mapface_t *mapface, *mapface2;
@@ -385,7 +384,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
             VectorSubtract(vec3_origin, mapface2->plane.normal, plane.normal);
             plane.dist = -mapface2->plane.dist;
 
-            w = ClipWinding(w, &plane, false);
+            w = w->clip(plane.normal, plane.dist, ON_EPSILON, false)[SIDE_FRONT];
         }
         if (!w)
             continue; // overconstrained plane
@@ -393,26 +392,28 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         // this face is a keeper
         f = new face_t { };
         f->planenum = PLANENUM_LEAF;
-        f->w.numpoints = w->numpoints;
-        if (f->w.numpoints > MAXEDGES)
+
+        if (w->size() > MAXEDGES)
             FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface->linenum);
 
-        for (j = 0; j < w->numpoints; j++) {
+        f->w.resize(w->size());
+
+        for (j = 0; j < w->size(); j++) {
             for (k = 0; k < 3; k++) {
-                point[k] = w->points[j][k] - rotate_offset[k];
+                point[k] = w->at(j)[k] - rotate_offset[k];
                 r = Q_rint(point[k]);
                 if (fabs(point[k] - r) < ZERO_EPSILON)
-                    f->w.points[j][k] = r;
+                    f->w[j][k] = r;
                 else
-                    f->w.points[j][k] = point[k];
+                    f->w[j][k] = point[k];
 
-                if (f->w.points[j][k] < min)
-                    min = f->w.points[j][k];
-                if (f->w.points[j][k] > max)
-                    max = f->w.points[j][k];
+                if (f->w[j][k] < min)
+                    min = f->w[j][k];
+                if (f->w[j][k] > max)
+                    max = f->w[j][k];
             }
 
-            hullbrush->bounds += f->w.points[j];
+            hullbrush->bounds += f->w[j];
         }
 
         // account for texture offset, from txqbsp-xt
@@ -439,8 +440,6 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         VectorScale(mapface->plane.normal, mapface->plane.dist, point);
         VectorSubtract(point, rotate_offset, point);
         plane.dist = DotProduct(plane.normal, point);
-
-        free(w);
 
         f->texinfo = hullnum > 0 ? 0 : mapface->texinfo;
         f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
@@ -491,7 +490,7 @@ static void FreeBrushFaces(face_t *facelist)
 
     for (face = facelist; face; face = next) {
         next = face->next;
-        free(face);
+        delete face;
     }
 }
 
@@ -623,7 +622,7 @@ AddHullPoint
 Doesn't add if duplicated
 =============
 */
-static int AddHullPoint(hullbrush_t *hullbrush, const vec3_t &p, const aabb3d &hull_size)
+static int AddHullPoint(hullbrush_t *hullbrush, const qvec3d &p, const aabb3d &hull_size)
 {
     int i;
     vec_t *c;
@@ -663,7 +662,7 @@ AddHullEdge
 Creates all of the hull planes around the given edge, if not done allready
 =============
 */
-static void AddHullEdge(hullbrush_t *hullbrush, const vec3_t &p1, const vec3_t &p2, const aabb3d &hull_size)
+static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &p2, const aabb3d &hull_size)
 {
     int pt1, pt2;
     int i;
@@ -738,8 +737,8 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, face_t 
 
     // create all the hull points
     for (f = facelist; f; f = f->next)
-        for (i = 0; i < f->w.numpoints; i++) {
-            AddHullPoint(hullbrush, f->w.points[i], hull_size);
+        for (i = 0; i < f->w.size(); i++) {
+            AddHullPoint(hullbrush, f->w[i], hull_size);
             cBevEdge++;
         }
 
@@ -773,8 +772,8 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, face_t 
 
     // add all of the edge bevels
     for (f = facelist; f; f = f->next)
-        for (i = 0; i < f->w.numpoints; i++)
-            AddHullEdge(hullbrush, f->w.points[i], f->w.points[(i + 1) % f->w.numpoints], hull_size);
+        for (i = 0; i < f->w.size(); i++)
+            AddHullEdge(hullbrush, f->w[i], f->w[(i + 1) % f->w.size()], hull_size);
 }
 
 //============================================================================
@@ -1315,9 +1314,9 @@ bool BoundBrush(brush_t *brush)
     brush->bounds = {};
 
     for (face_t *face = brush->faces; face; face = face->next) {
-        const winding_t *w = &face->w;
-        for (int j = 0; j < w->numpoints; j++)
-            brush->bounds += w->points[j];
+        const winding_t &w = face->w;
+        for (int j = 0; j < w.size(); j++)
+            brush->bounds += w[j];
     }
 
     for (int i = 0; i < 3; i++) {
@@ -1345,13 +1344,13 @@ vec_t BrushVolume(const brush_t *brush)
 
     vec_t volume = 0;
     for (const face_t *face = brush->faces; face; face = face->next) {
-        if (!face->w.numpoints)
+        if (!face->w.size())
             continue;
 
-        const vec_t area = WindingArea(&face->w);
+        const vec_t area = face->w.area();
         const plane_t faceplane = Face_Plane(face);
 
-        volume += DotProduct(faceplane.normal, face->w.points[0]) * area;
+        volume += DotProduct(faceplane.normal, face->w[0]) * area;
     }
 
     volume /= 3.0;
@@ -1375,12 +1374,13 @@ int BrushMostlyOnSide(const brush_t *brush, const vec3_t planenormal, vec_t plan
     side = SIDE_FRONT;
 
     for (const face_t *face = brush->faces; face; face = face->next) {
-        const winding_t *w = &face->w;
-        if (!w->numpoints)
+        const winding_t &w = face->w;
+
+        if (!w.size())
             continue;
 
-        for (int j = 0; j < w->numpoints; j++) {
-            const vec_t d = DotProduct(w->points[j], planenormal) - planedist;
+        for (int j = 0; j < w.size(); j++) {
+            const vec_t d = DotProduct(w[j], planenormal) - planedist;
             if (d > max) {
                 max = d;
                 side = SIDE_FRONT;
@@ -1447,28 +1447,26 @@ from q3map
 ================
 */
 #define EDGE_LENGTH 0.2
-static bool WindingIsTiny(const winding_t *w)
+static bool WindingIsTiny(const winding_t &w)
 {
     /*
      if (WindingArea (w) < 1)
      return qtrue;
      return qfalse;
      */
-    int i, j;
-    vec_t len;
-    vec3_t delta;
-    int edges;
+    size_t edges = 0;
 
-    edges = 0;
-    for (i = 0; i < w->numpoints; i++) {
-        j = i == w->numpoints - 1 ? 0 : i + 1;
-        VectorSubtract(w->points[j], w->points[i], delta);
-        len = VectorLength(delta);
+    for (size_t i = 0; i < w.size(); i++) {
+        size_t j = i == w.size() - 1 ? 0 : i + 1;
+        qvec3d delta = w[j] - w[i];
+        vec_t len = VectorLength(delta);
+
         if (len > EDGE_LENGTH) {
             if (++edges == 3)
                 return false;
         }
     }
+
     return true;
 }
 
@@ -1482,15 +1480,13 @@ from basewinding for plane
 from q3map
 ================
 */
-bool WindingIsHuge(winding_t *w)
+static bool WindingIsHuge(const winding_t &w)
 {
-    int i, j;
-
-    for (i = 0; i < w->numpoints; i++) {
-        for (j = 0; j < 3; j++)
-            if (w->points[i][j] <= MIN_WORLD_COORD || w->points[i][j] >= MAX_WORLD_COORD)
+    for (size_t i = 0; i < w.size(); i++)
+        for (size_t j = 0; j < 3; j++)
+            if (w[i][j] <= MIN_WORLD_COORD || w[i][j] >= MAX_WORLD_COORD)
                 return true;
-    }
+
     return false;
 }
 
@@ -1527,12 +1523,12 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     vec_t d_front = 0;
     vec_t d_back = 0;
     for (const face_t *face = brush->faces; face; face = face->next) {
-        const winding_t *w = &face->w;
-        if (!w->numpoints)
+        const winding_t &w = face->w;
+        if (!w.size())
             continue;
 
-        for (int j = 0; j < w->numpoints; j++) {
-            const vec_t d = DotProduct(w->points[j], plane.normal) - plane.dist;
+        for (int j = 0; j < w.size(); j++) {
+            const vec_t d = DotProduct(w[j], plane.normal) - plane.dist;
             if (d > 0 && d > d_front)
                 d_front = d;
             if (d < 0 && d < d_back)
@@ -1552,19 +1548,17 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     }
 
     // create a new winding from the split plane
-    winding_t *w = BaseWindingForPlane(&plane);
+    std::optional<winding_t> w = BaseWindingForPlane(&plane);
+
     for (const face_t *face = brush->faces; face; face = face->next) {
         if (!w)
             break;
         const plane_t plane2 = FlipPlane(Face_Plane(face));
-        ChopWindingInPlace(&w, plane2.normal, plane2.dist, 0); // PLANESIDE_EPSILON);
+        w = w->chop(plane2.normal, plane2.dist, 0); // PLANESIDE_EPSILON);
     }
 
-    if (!w || WindingIsTiny(w)) { // the brush isn't really split
+    if (!w || WindingIsTiny(*w)) { // the brush isn't really split
         int side;
-
-        if (w)
-            free(w);
 
         side = BrushMostlyOnSide(brush, plane.normal, plane.dist);
         if (side == SIDE_FRONT)
@@ -1574,11 +1568,10 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
         return;
     }
 
-    if (WindingIsHuge(w)) {
+    if (WindingIsHuge(*w)) {
         LogPrint("WARNING: huge winding\n");
     }
 
-    winding_t *midwinding = w;
     brush_t *b[2];
 
     // split it for real
@@ -1602,12 +1595,11 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     // split all the current windings
 
     for (const face_t *face = brush->faces; face; face = face->next) {
-        const winding_t *w = &face->w;
-        if (!w->numpoints)
+        const winding_t &w = face->w;
+        if (!w.size())
             continue;
 
-        winding_t *cw[2];
-        DivideWinding(w, &plane, &cw[0], &cw[1]);
+        auto cw = w.clip(plane.normal, plane.dist, ON_EPSILON);
 
         for (int j = 0; j < 2; j++) {
             if (!cw[j])
@@ -1621,18 +1613,13 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
              */
 
             face_t *newface = CopyFace(face);
-            CopyWindingInto(&newface->w, cw[j]);
+            newface->w = std::move(*cw[j]);
             UpdateFaceSphere(newface);
 
             // link it into the front or back brush we are building
             newface->next = b[j]->faces;
             b[j]->faces = newface;
         }
-
-        if (cw[0])
-            free(cw[0]);
-        if (cw[1])
-            free(cw[1]);
     }
 
     // see if we have valid polygons on both sides
@@ -1674,13 +1661,11 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
         face_t *newface = CopyFace(b[i]->faces);
 
         if (i == 0) {
-            winding_t *newwinding = FlipWinding(midwinding);
-            CopyWindingInto(&newface->w, newwinding);
+            newface->w = w->flip();
             newface->planenum = planenum;
             newface->planeside = !planeside;
-            free(newwinding);
         } else {
-            CopyWindingInto(&newface->w, midwinding);
+            newface->w = *w;
             newface->planenum = planenum;
             newface->planeside = planeside;
         }
@@ -1708,8 +1693,6 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
 
     *front = b[0];
     *back = b[1];
-
-    free(midwinding);
 }
 
 #if 0

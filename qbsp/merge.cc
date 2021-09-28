@@ -58,7 +58,7 @@ The originals will NOT be freed.
 */
 static face_t *TryMerge(face_t *f1, face_t *f2)
 {
-    vec_t *p1, *p2, *p3, *p4, *back;
+    qvec3d p1, p2, p3, p4, back;
     face_t *newf;
     int i, j, k, l;
     vec3_t normal, delta, planenormal;
@@ -66,7 +66,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     qbsp_plane_t *plane;
     bool keep1, keep2;
 
-    if (f1->w.numpoints == -1 || f2->w.numpoints == -1 || f1->planeside != f2->planeside ||
+    if (!f1->w.size() || !f2->w.size() || f1->planeside != f2->planeside ||
         f1->texinfo != f2->texinfo || f1->contents[0] != f2->contents[0] || f1->contents[1] != f2->contents[1] ||
         f1->lmshift[0] != f2->lmshift[0] || f1->lmshift[1] != f2->lmshift[1])
         return NULL;
@@ -75,12 +75,12 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     p1 = p2 = NULL; // stop compiler warning
     j = 0; //
 
-    for (i = 0; i < f1->w.numpoints; i++) {
-        p1 = f1->w.points[i];
-        p2 = f1->w.points[(i + 1) % f1->w.numpoints];
-        for (j = 0; j < f2->w.numpoints; j++) {
-            p3 = f2->w.points[j];
-            p4 = f2->w.points[(j + 1) % f2->w.numpoints];
+    for (i = 0; i < f1->w.size(); i++) {
+        p1 = f1->w[i];
+        p2 = f1->w[(i + 1) % f1->w.size()];
+        for (j = 0; j < f2->w.size(); j++) {
+            p3 = f2->w[j];
+            p4 = f2->w[(j + 1) % f2->w.size()];
             for (k = 0; k < 3; k++) {
                 if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON || fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
                     break;
@@ -88,11 +88,11 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
             if (k == 3)
                 break;
         }
-        if (j < f2->w.numpoints)
+        if (j < f2->w.size())
             break;
     }
 
-    if (i == f1->w.numpoints)
+    if (i == f1->w.size())
         return NULL; // no matching edges
 
     // check slope of connected lines
@@ -102,24 +102,24 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     if (f1->planeside)
         VectorSubtract(vec3_origin, planenormal, planenormal);
 
-    back = f1->w.points[(i + f1->w.numpoints - 1) % f1->w.numpoints];
+    back = f1->w[(i + f1->w.size() - 1) % f1->w.size()];
     VectorSubtract(p1, back, delta);
     CrossProduct(planenormal, delta, normal);
     VectorNormalize(normal);
 
-    back = f2->w.points[(j + 2) % f2->w.numpoints];
+    back = f2->w[(j + 2) % f2->w.size()];
     VectorSubtract(back, p1, delta);
     dot = DotProduct(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
         return NULL; // not a convex polygon
     keep1 = dot < -CONTINUOUS_EPSILON;
 
-    back = f1->w.points[(i + 2) % f1->w.numpoints];
+    back = f1->w[(i + 2) % f1->w.size()];
     VectorSubtract(back, p2, delta);
     CrossProduct(planenormal, delta, normal);
     VectorNormalize(normal);
 
-    back = f2->w.points[(j + f2->w.numpoints - 1) % f2->w.numpoints];
+    back = f2->w[(j + f2->w.size() - 1) % f2->w.size()];
     VectorSubtract(back, p2, delta);
     dot = DotProduct(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
@@ -127,7 +127,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     keep2 = dot < -CONTINUOUS_EPSILON;
 
     // build the new polygon
-    if (f1->w.numpoints + f2->w.numpoints > MAXEDGES) {
+    if (f1->w.size() + f2->w.size() > MAXEDGES) {
         FLogPrint("WARNING: Too many edges\n");
         return NULL;
     }
@@ -136,22 +136,20 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     // copy first polygon
     if (keep2)
-        k = (i + 1) % f1->w.numpoints;
+        k = (i + 1) % f1->w.size();
     else
-        k = (i + 2) % f1->w.numpoints;
-    for (; k != i; k = (k + 1) % f1->w.numpoints) {
-        VectorCopy(f1->w.points[k], newf->w.points[newf->w.numpoints]);
-        newf->w.numpoints++;
+        k = (i + 2) % f1->w.size();
+    for (; k != i; k = (k + 1) % f1->w.size()) {
+        newf->w.push_back(f1->w[k]);
     }
 
     // copy second polygon
     if (keep1)
-        l = (j + 1) % f2->w.numpoints;
+        l = (j + 1) % f2->w.size();
     else
-        l = (j + 2) % f2->w.numpoints;
-    for (; l != j; l = (l + 1) % f2->w.numpoints) {
-        VectorCopy(f2->w.points[l], newf->w.points[newf->w.numpoints]);
-        newf->w.numpoints++;
+        l = (j + 2) % f2->w.size();
+    for (; l != j; l = (l + 1) % f2->w.size()) {
+        newf->w.push_back(f2->w[l]);
     }
 
     UpdateFaceSphere(newf);
@@ -176,7 +174,7 @@ face_t *MergeFaceToList(face_t *face, face_t *list)
         newf = TryMerge(face, f);
         if (newf) {
             delete face;
-            f->w.numpoints = -1; // merged out, remove later
+            f->w.clear(); // merged out, remove later
             face = newf;
             f = list;
         } else
@@ -200,7 +198,7 @@ face_t *FreeMergeListScraps(face_t *merged)
     head = NULL;
     for (; merged; merged = next) {
         next = merged->next;
-        if (merged->w.numpoints == -1)
+        if (!merged->w.size())
             delete merged;
         else {
             merged->next = head;

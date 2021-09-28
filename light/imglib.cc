@@ -142,10 +142,10 @@ qvec3f Palette_GetColor(const int i)
     return qvec3f((float)thepalette[3 * i], (float)thepalette[3 * i + 1], (float)thepalette[3 * i + 2]);
 }
 
-qvec4f Texture_GetColor(const rgba_miptex_t *tex, const int i)
+qvec4f Texture_GetColor(const rgba_miptex_t &tex, const size_t i)
 {
-    const uint8_t *data = (uint8_t *)tex + tex->offset;
-    return qvec4f{(float)data[i * 4], (float)data[i * 4 + 1], (float)data[i * 4 + 2], (float)data[i * 4 + 3]};
+    const uint8_t *data = tex.data.get();
+    return {(float)data[i * 4], (float)data[i * 4 + 1], (float)data[i * 4 + 2], (float)data[i * 4 + 3]};
 }
 
 /*
@@ -527,53 +527,6 @@ Load (Quake 2) / Convert (Quake, Hexen 2) textures from paletted to RGBA (mxd)
 ==============================================================================
 */
 
-static void WriteRGBATextureData(
-    mbsp_t *bsp, const std::vector<rgba_miptex_t *> &tex_mips, const std::vector<uint8_t *> &tex_bytes)
-{
-    // Step 1: create header and write it...
-    const int headersize = 4 + tex_mips.size() * 4;
-    dmiptexlump_t *miplmp = static_cast<dmiptexlump_t *>(malloc(headersize));
-    miplmp->nummiptex = tex_mips.size();
-
-    // Write data offsets to the header...
-    int totalsize = headersize; // total size of miptex_t + palette bytes
-    const int miptexsize = sizeof(rgba_miptex_t);
-    for (unsigned int i = 0; i < tex_mips.size(); i++) {
-        if (tex_mips[i] == nullptr) {
-            miplmp->dataofs[i] = -1;
-        } else {
-            miplmp->dataofs[i] = totalsize;
-            totalsize += miptexsize + (tex_mips[i]->width * tex_mips[i]->height) * 4; // RGBA
-        }
-    }
-
-    free(miplmp);
-
-    // Step 2: write rgba_miptex_t and palette bytes to uint8_t array
-    uint8_t *texdata, *texdatastart;
-    texdata = texdatastart = new uint8_t[totalsize];
-    memcpy(texdata, miplmp, headersize);
-    texdata += headersize;
-
-    for (unsigned int i = 0; i < tex_mips.size(); i++) {
-        if (tex_mips[i] == nullptr)
-            continue;
-
-        // Write rgba_miptex_t
-        memcpy(texdata, tex_mips[i], miptexsize);
-        texdata += miptexsize;
-
-        // Write RGBA pixels
-        const int numpixels = (tex_mips[i]->width * tex_mips[i]->height) * 4; // RGBA
-        memcpy(texdata, tex_bytes[i], numpixels);
-        texdata += numpixels;
-    }
-
-    // Store in bsp->drgbatexdata...
-    bsp->drgbatexdata = reinterpret_cast<dmiptexlump_t *>(texdatastart);
-    bsp->rgbatexdatasize = totalsize;
-}
-
 static void AddTextureName(std::map<std::string, std::string> &texturenames, const char *texture)
 {
     // See if an earlier texinfo allready got the value
@@ -629,7 +582,7 @@ LoadTextures(mbsp_t *bsp)
     auto entdicts = EntData_Parse(bsp->dentdata);
     for (auto &entdict : entdicts) {
         if (EntDict_StringForKey(entdict, "classname").find("light") == 0) {
-            auto tex = EntDict_StringForKey(entdict, "_project_texture");
+            const auto &tex = EntDict_StringForKey(entdict, "_project_texture");
             if (!tex.empty())
                 AddTextureName(texturenames, tex.c_str());
         }
@@ -637,22 +590,19 @@ LoadTextures(mbsp_t *bsp)
 
     // Step 3: load and convert to miptex_t, store texturename indices...
     std::map<std::string, int> indicesbytexturename;
-    std::vector<rgba_miptex_t *> tex_mips{};
-    std::vector<uint8_t *> tex_bytes{};
-    const int miptexsize = sizeof(rgba_miptex_t);
+    auto &tex_mips = bsp->drgbatexdata;
     int counter = 0;
 
     for (auto pair : texturenames) {
         // Store texturename index...
         indicesbytexturename[std::string{pair.first}] = counter++;
 
-        // Add nullptrs to keep texture index in case of load problems...
-        tex_mips.push_back(nullptr);
-        tex_bytes.push_back(nullptr);
+        // Add empty to keep texture index in case of load problems...
+        auto &tex = tex_mips.emplace_back();
 
         // Find file extension
-        const int dpos = pair.second.rfind('.');
-        if (dpos == -1) {
+        const size_t dpos = pair.second.rfind('.');
+        if (dpos == std::string::npos) {
             if (!pair.second.empty()) // Missing texture warning was already displayed
                 LogPrint("WARNING: unexpected texture filename: '{}'\n", pair.second);
             continue;
@@ -675,26 +625,17 @@ LoadTextures(mbsp_t *bsp)
         }
 
         // Create rgba_miptex_t...
-        rgba_miptex_t *tex = new rgba_miptex_t;
-        strcpy(tex->name, pair.first.c_str());
-        tex->width = width;
-        tex->height = height;
-        tex->offset = miptexsize;
-
-        // Replace nullptrs with actual data...
-        tex_mips[tex_mips.size() - 1] = tex;
-        tex_bytes[tex_bytes.size() - 1] = pixels;
+        strcpy(tex.name, pair.first.c_str());
+        tex.width = width;
+        tex.height = height;
+        tex.data = std::unique_ptr<uint8_t>(pixels);
     }
 
     // Sanity checks...
-    Q_assert(tex_mips.size() == tex_bytes.size());
-    Q_assert(texturenames.size() == tex_bytes.size());
+    Q_assert(tex_mips.size() == texturenames.size());
     Q_assert(texturenames.size() == indicesbytexturename.size());
 
-    // Step 4: write data to bsp...
-    WriteRGBATextureData(bsp, tex_mips, tex_bytes);
-
-    // Step 5: set miptex indices to gtexinfo_t
+    // Step 4: set miptex indices to gtexinfo_t
     for (auto &info : bsp->texinfo) {
         const auto pair = indicesbytexturename.find(info.texture.data());
         if (pair != indicesbytexturename.end())
@@ -711,35 +652,32 @@ ConvertTextures(mbsp_t *bsp)
     LogPrint("--- ConvertTextures ---\n");
 
     std::map<int, std::string> texturenamesbyindex;
-    std::vector<rgba_miptex_t *> tex_mips{};
-    std::vector<uint8_t *> tex_bytes{};
-    const int miptexsize = sizeof(rgba_miptex_t);
+    auto &tex_mips = bsp->drgbatexdata;
 
     // Step 1: store texture data and RGBA bytes in temporary arrays...
     for (int i = 0; i < bsp->dtexdata->nummiptex; i++) {
         const int ofs = bsp->dtexdata->dataofs[i];
 
+        // Add empty to keep texture index in case of load problems...
+        auto &tex = tex_mips.emplace_back();
+
         // Pad to keep offsets...
         if (ofs < 0) {
-            tex_mips.push_back(nullptr);
-            tex_bytes.push_back(nullptr);
             continue;
         }
 
         miptex_t *miptex = (miptex_t *)((uint8_t *)bsp->dtexdata + ofs);
 
         // Create rgba_miptex_t...
-        rgba_miptex_t *tex = new rgba_miptex_t;
-        strcpy(tex->name, miptex->name);
-        tex->width = miptex->width;
-        tex->height = miptex->height;
-        tex->offset = miptexsize;
+        strcpy(tex.name, miptex->name);
+        tex.width = miptex->width;
+        tex.height = miptex->height;
 
         // Store texturename index...
-        texturenamesbyindex[i] = std::string{tex->name};
+        texturenamesbyindex[i] = std::string{tex.name};
 
         // Convert to RGBA
-        const int numpalpixels = tex->width * tex->height;
+        const size_t numpalpixels = tex.width * tex.height;
         uint8_t *pixels = new uint8_t[numpalpixels * 4]; // RGBA
         const uint8_t *data = reinterpret_cast<uint8_t *>(miptex) + miptex->offsets[0];
 
@@ -751,19 +689,13 @@ ConvertTextures(mbsp_t *bsp)
             pixels[c * 4 + 3] = static_cast<uint8_t>(palindex == 255 ? 0 : 255);
         }
 
-        // Store...
-        tex_mips.push_back(tex);
-        tex_bytes.push_back(pixels);
+        tex.data = std::unique_ptr<uint8_t>(pixels);
     }
 
     // Sanity checks...
-    Q_assert(tex_mips.size() == tex_bytes.size());
     Q_assert(bsp->dtexdata->nummiptex == tex_mips.size());
 
-    // Step 2: write data to bsp...
-    WriteRGBATextureData(bsp, tex_mips, tex_bytes);
-
-    // Step 3: set texturenames to gmiptex_t
+    // Step 2: set texturenames to gmiptex_t
     for (auto &info : bsp->texinfo) {
         const auto pair = texturenamesbyindex.find(info.miptex);
         if (pair != texturenamesbyindex.end())

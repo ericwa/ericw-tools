@@ -216,7 +216,7 @@ static void WriteLeakLine(const std::pair<std::vector<portal_t *>, node_t *> &le
 
     for (auto it = leakline.first.rbegin(); it != leakline.first.rend(); ++it) {
         portal_t *portal = *it;
-        MidpointWinding(portal->winding, currpt);
+        VectorCopy(portal->winding->center(), currpt);
 
         // draw dots from prevpt to currpt
         WriteLeakTrail(ptsfile, prevpt, currpt);
@@ -330,7 +330,7 @@ static void ClearOutFaces(node_t *node)
 
     for (face_t **markface = node->markfaces; *markface; markface++) {
         // NOTE: This is how faces are deleted here, kind of ugly
-        (*markface)->w.numpoints = 0;
+        (*markface)->w.clear();
     }
 
     // FIXME: Shouldn't be needed here

@@ -179,7 +179,7 @@ std::string EntData_Write(const std::vector<entdict_t> &ents)
     return out;
 }
 
-std::string EntDict_StringForKey(const entdict_t &dict, const std::string key)
+const std::string &EntDict_StringForKey(const entdict_t &dict, const std::string key)
 {
     return dict.get(key);
 }

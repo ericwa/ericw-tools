@@ -64,6 +64,7 @@ extern const vec3_t vec3_origin;
 
 #define NORMAL_EPSILON 0.000001
 #define DEGREES_EPSILON 0.001
+constexpr vec_t DEFAULT_ON_EPSILON = 0.1;
 
 template<typename T1, typename T2>
 constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
@@ -270,7 +271,7 @@ inline std::string VecStr(const T &vec)
 template<typename T>
 inline std::string VecStrf(const T &vec)
 {
-    return fmt::format("{:.2} {:.2} {:.2}", vec[0], vec[1], vec[2]);
+    return fmt::format("{} {} {}", vec[0], vec[1], vec[2]);
 }
 
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
@@ -284,6 +285,7 @@ qmat3x3d RotateAboutY(double radians);
 qmat3x3d RotateAboutZ(double radians);
 qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal);
 
+// TODO: remove, replace with qaabb
 bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
 void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
 void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
@@ -479,4 +481,4 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     return result;
 }
 
-bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1);
+bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, const vec_t &on_epsilon = DEFAULT_ON_EPSILON);

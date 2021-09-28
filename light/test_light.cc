@@ -16,7 +16,7 @@ using namespace std;
 
 static qvec4f extendTo4(const qvec3f &v)
 {
-    return qvec4f(v[0], v[1], v[2], 1.0);
+    return qvec4f(v, 1.0f);
 }
 
 TEST(mathlib, MakeCDF)
@@ -502,7 +502,7 @@ TEST(mathlib, bilinearWeightsAndCoords)
 {
     const auto res = bilinearWeightsAndCoords(qvec2f(0.5, 0.25), qvec2i(2, 2));
 
-    qvec2f sum(0);
+    qvec2f sum{};
     for (int i = 0; i < 4; i++) {
         const float weight = res[i].second;
         const qvec2i intPos = res[i].first;
@@ -515,7 +515,7 @@ TEST(mathlib, bilinearWeightsAndCoords2)
 {
     const auto res = bilinearWeightsAndCoords(qvec2f(1.5, 0.5), qvec2i(2, 2));
 
-    qvec2f sum(0);
+    qvec2f sum{};
     for (int i = 0; i < 4; i++) {
         const float weight = res[i].second;
         const qvec2i intPos = res[i].first;
@@ -548,7 +548,7 @@ TEST(mathlib, RandomPointInPoly) {
     
     qvec3f min(FLT_MAX);
     qvec3f max(-FLT_MAX);
-    qvec3f avg(0);
+    qvec3f avg{};
     
     const auto randomstate = GLM_PolyRandomPoint_Setup(poly);
     
@@ -749,9 +749,9 @@ TEST(mathlib, qvec_copy)
     EXPECT_EQ(2, test2[1]);
 }
 
-TEST(mathlib, qvec_constructor_0)
+TEST(mathlib, qvec_constructor_init)
 {
-    const qvec2f test;
+    const qvec2f test{};
     EXPECT_EQ(0, test[0]);
     EXPECT_EQ(0, test[1]);
 }
