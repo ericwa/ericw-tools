@@ -3153,9 +3153,11 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
 
     const std::vector<qvec4f> output_color =
         IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, oversample);
-    const std::vector<qvec4f> output_dir = (lux ? IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm),
-                                                      oversampled_width, oversampled_height, oversample)
-                                            : std::vector<qvec4f>()); // mxd. Skip when lux isn't needed
+    std::optional<std::vector<qvec4f>> output_dir;
+    
+    if (lux) {
+        output_dir = IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
+    }
 
     // copy from the float buffers to byte buffers in .bsp / .lit / .lux
 
@@ -3185,7 +3187,7 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
             if (lux) {
                 vec3_t temp;
                 int v;
-                const qvec4f &direction = output_dir.at(sampleindex);
+                const qvec4f &direction = output_dir->at(sampleindex);
                 temp[0] = qv::dot(qvec3f(direction), qvec3f(lightsurf->snormal));
                 temp[1] = qv::dot(qvec3f(direction), qvec3f(lightsurf->tnormal));
                 temp[2] = qv::dot(qvec3f(direction), qvec3f(lightsurf->plane.normal));

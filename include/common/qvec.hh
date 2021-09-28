@@ -343,7 +343,7 @@ template<size_t N, class T>
 bool emptyExact(const qvec<N, T> &v1)
 {
     for (size_t i = 0; i < N; i++) {
-        if (!v1[i])
+        if (v1[i])
             return false;
     }
     return true;
