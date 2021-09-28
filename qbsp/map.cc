@@ -1468,6 +1468,12 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         }
     }
 
+    // If we're not Q2 but we're loading a Q2 map, just remove the extra
+    // info so it can at least compile.
+    if (options.target_game->id != GAME_QUAKE_II) {
+        extinfo.info = std::nullopt;
+    }
+
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
 
     const auto &miptex = map.miptex[tx->miptex];
@@ -2276,10 +2282,10 @@ void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const
     if (!f)
         FError("Can't write {}", name);
 
-    fmt::print(f, "{\n\"classname\" \"worldspawn\"\n");
+    fmt::print(f, "{{\n\"classname\" \"worldspawn\"\n");
 
     for (const brush_t *brush : list) {
-        fmt::print(f, "{\n");
+        fmt::print(f, "{{\n");
         for (const face_t *face = brush->faces; face; face = face->next) {
             // FIXME: Factor out this mess
             qbsp_plane_t plane = map.planes.at(face->planenum);
@@ -2297,10 +2303,10 @@ void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const
             fmt::print(f, "notexture 0 0 0 1 1\n");
         }
 
-        fmt::print(f, "}\n");
+        fmt::print(f, "}}\n");
     }
 
-    fmt::print(f, "}\n");
+    fmt::print(f, "}}\n");
 }
 
 /*
@@ -2319,7 +2325,7 @@ static void TestExpandBrushes(const mapentity_t *src)
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        brush_t *hull1brush = LoadBrush(src, mapbrush, {CONTENTS_SOLID}, vec3_origin, rotation_t::none, 1);
+        brush_t *hull1brush = LoadBrush(src, mapbrush, {CONTENTS_SOLID}, vec3_origin, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? -1 : 1);
 
         if (hull1brush != nullptr)
             hull1brushes.push_back(hull1brush);

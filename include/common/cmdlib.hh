@@ -592,10 +592,10 @@ constexpr bool numeric_cast_will_overflow(const Src &value)
 }
 
 template<typename Dst, typename Src>
-constexpr Dst numeric_cast(const Src &value)
+constexpr Dst numeric_cast(const Src &value, const char *overflow_message = "value")
 {
     if (numeric_cast_will_overflow<Dst, Src>(value)) {
-        throw std::overflow_error("value");
+        throw std::overflow_error(overflow_message);
     }
     
     return static_cast<Dst>(value);

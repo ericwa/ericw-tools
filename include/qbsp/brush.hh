@@ -53,8 +53,8 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const vec3_t normal, const vec_t dist, int *side);
-bool PlaneEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
-bool PlaneInvEqual(const qbsp_plane_t *p1, const qbsp_plane_t *p2);
+bool PlaneEqual(const plane_t *p1, const plane_t *p2);
+bool PlaneInvEqual(const plane_t *p1, const plane_t *p2);
 
 bool BoundBrush(brush_t *brush);
 vec_t BrushVolume(const brush_t *brush);

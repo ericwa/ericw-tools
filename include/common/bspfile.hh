@@ -148,21 +148,21 @@ using bspvec3f_t = std::array<float, 3>;
 // helper functions to quickly numerically cast mins/maxs
 // and floor/ceil them in the case of float -> integral
 template<typename T, typename F>
-inline std::array<T, 3> aabb_mins_cast(const std::array<F, 3> &f)
+inline std::array<T, 3> aabb_mins_cast(const std::array<F, 3> &f, const char *overflow_message = "mins")
 {
     if constexpr(std::is_floating_point_v<T>)
-        return { numeric_cast<T>(floor(f[0])), numeric_cast<T>(floor(f[1])), numeric_cast<T>(floor(f[2])) };
+        return { numeric_cast<T>(floor(f[0]), overflow_message), numeric_cast<T>(floor(f[1]), overflow_message), numeric_cast<T>(floor(f[2]), overflow_message) };
     else
-        return { numeric_cast<T>(f[0]), numeric_cast<T>(f[1]), numeric_cast<T>(f[2]) };
+        return { numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message), numeric_cast<T>(f[2], overflow_message) };
 }
 
 template<typename T, typename F>
-inline std::array<T, 3> aabb_maxs_cast(const std::array<F, 3> &f)
+inline std::array<T, 3> aabb_maxs_cast(const std::array<F, 3> &f, const char *overflow_message = "maxs")
 {
     if constexpr(std::is_floating_point_v<T>)
-        return { numeric_cast<T>(ceil(f[0])), numeric_cast<T>(ceil(f[1])), numeric_cast<T>(ceil(f[2])) };
+        return { numeric_cast<T>(ceil(f[0]), overflow_message), numeric_cast<T>(ceil(f[1]), overflow_message), numeric_cast<T>(ceil(f[2]), overflow_message) };
     else
-        return { numeric_cast<T>(f[0]), numeric_cast<T>(f[1]), numeric_cast<T>(f[2]) };
+        return { numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message), numeric_cast<T>(f[2], overflow_message) };
 }
 
 struct dmodelh2_t
@@ -179,14 +179,14 @@ struct dmodelh2_t
 // shortcut template to trim (& convert) std::arrays
 // between two lengths
 template<typename ADest, typename ASrc>
-constexpr ADest array_cast(const ASrc &src)
+constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src")
 {
     ADest dest { };
 
     for (size_t i = 0; i < std::min(dest.size(), src.size()); i++)
     {
         if constexpr (std::is_arithmetic_v<ADest::value_type> && std::is_arithmetic_v<ASrc::value_type>)
-            dest[i] = numeric_cast<ADest::value_type>(src[i]);
+            dest[i] = numeric_cast<ADest::value_type>(src[i], overflow_message);
         else
             dest[i] = static_cast<ADest::value_type>(src[i]);
     }
@@ -211,7 +211,7 @@ struct dmodelq1_t
         mins(model.mins),
         maxs(model.maxs),
         origin(model.origin),
-        headnode(array_cast<decltype(headnode)>(model.headnode)),
+        headnode(array_cast<decltype(headnode)>(model.headnode, "dmodel_t::headnode")),
         visleafs(model.visleafs),
         firstface(model.firstface),
         numfaces(model.numfaces)
@@ -225,7 +225,7 @@ struct dmodelq1_t
             mins,
             maxs,
             origin,
-            array_cast<decltype(dmodelh2_t::headnode)>(headnode),
+            array_cast<decltype(dmodelh2_t::headnode)>(headnode, "dmodel_t::headnode"),
             visleafs,
             firstface,
             numfaces
@@ -485,11 +485,11 @@ struct bsp29_dnode_t
     // convert from mbsp_t
     bsp29_dnode_t(const bsp2_dnode_t &model) :
         planenum(model.planenum),
-        children(array_cast<decltype(children)>(model.children)),
-        mins(aabb_mins_cast<int16_t>(model.mins)),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
-        firstface(numeric_cast<uint16_t>(model.firstface)),
-        numfaces(numeric_cast<uint16_t>(model.numfaces))
+        children(array_cast<decltype(children)>(model.children, "dnode_t::children")),
+        mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
+        firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
+        numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
     {
     }
 
@@ -498,9 +498,9 @@ struct bsp29_dnode_t
     {
         return {
             planenum,
-            array_cast<decltype(bsp2_dnode_t::children)>(children),
-            aabb_mins_cast<float>(mins),
-            aabb_mins_cast<float>(maxs),
+            array_cast<decltype(bsp2_dnode_t::children)>(children, "dnode_t::children"),
+            aabb_mins_cast<float>(mins, "dnode_t::mins"),
+            aabb_mins_cast<float>(maxs, "dnode_t::maxs"),
             firstface,
             numfaces
         };
@@ -522,8 +522,8 @@ struct bsp2rmq_dnode_t
     bsp2rmq_dnode_t(const bsp2_dnode_t &model) :
         planenum(model.planenum),
         children(model.children),
-        mins(aabb_mins_cast<int16_t>(model.mins)),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
+        mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
         firstface(model.firstface),
         numfaces(model.numfaces)
     {
@@ -535,8 +535,8 @@ struct bsp2rmq_dnode_t
         return {
             planenum,
             children,
-            aabb_mins_cast<float>(mins),
-            aabb_mins_cast<float>(maxs),
+            aabb_mins_cast<float>(mins, "dnode_t::mins"),
+            aabb_mins_cast<float>(maxs, "dnode_t::maxs"),
             firstface,
             numfaces
         };
@@ -558,10 +558,10 @@ struct q2_dnode_t
     q2_dnode_t(const bsp2_dnode_t &model) :
         planenum(model.planenum),
         children(model.children),
-        mins(aabb_mins_cast<int16_t>(model.mins)),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
-        firstface(numeric_cast<uint16_t>(model.firstface)),
-        numfaces(numeric_cast<uint16_t>(model.numfaces))
+        mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
+        firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
+        numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
     {
     }
 
@@ -571,8 +571,8 @@ struct q2_dnode_t
         return {
             planenum,
             children,
-            aabb_mins_cast<float>(mins),
-            aabb_mins_cast<float>(maxs),
+            aabb_mins_cast<float>(mins, "dnode_t::mins"),
+            aabb_mins_cast<float>(maxs, "dnode_t::maxs"),
             firstface,
             numfaces
         };
@@ -626,7 +626,7 @@ struct bsp29_dclipnode_t
 private:
     static constexpr int16_t downcast(const int32_t &v)
     {
-        return numeric_cast<int16_t>(v < 0 ? v + 0x10000 : v);
+        return numeric_cast<int16_t>(v < 0 ? v + 0x10000 : v, "dclipmode_t::children");
     }
     
     static constexpr int32_t upcast(const int16_t &v)
@@ -833,11 +833,11 @@ struct bsp29_dface_t
 
     // convert from mbsp_t
     bsp29_dface_t(const mface_t &model) :
-        planenum(numeric_cast<int16_t>(model.planenum)),
-        side(numeric_cast<int16_t>(model.side)),
+        planenum(numeric_cast<int16_t>(model.planenum, "dface_t::planenum")),
+        side(numeric_cast<int16_t>(model.side, "dface_t::side")),
         firstedge(model.firstedge),
-        numedges(numeric_cast<int16_t>(model.numedges)),
-        texinfo(numeric_cast<int16_t>(model.texinfo)),
+        numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
+        texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")),
         styles(model.styles),
         lightofs(model.lightofs)
     {
@@ -874,7 +874,7 @@ struct bsp2_dface_t
 
     // convert from mbsp_t
     bsp2_dface_t(const mface_t &model) :
-        planenum(numeric_cast<int32_t>(model.planenum)),
+        planenum(numeric_cast<int32_t>(model.planenum, "dface_t::planenum")),
         side(model.side),
         firstedge(model.firstedge),
         numedges(model.numedges),
@@ -915,11 +915,11 @@ struct q2_dface_t
 
     // convert from mbsp_t
     q2_dface_t(const mface_t &model) :
-        planenum(numeric_cast<uint16_t>(model.planenum)),
-        side(numeric_cast<int16_t>(model.side)),
+        planenum(numeric_cast<uint16_t>(model.planenum, "dface_t::planenum")),
+        side(numeric_cast<int16_t>(model.side, "dface_t::side")),
         firstedge(model.firstedge),
-        numedges(numeric_cast<int16_t>(model.numedges)),
-        texinfo(numeric_cast<int16_t>(model.texinfo)),
+        numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
+        texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")),
         styles(model.styles),
         lightofs(model.lightofs)
     {
@@ -962,7 +962,7 @@ struct q2_dface_qbism_t
 
     // convert from mbsp_t
     q2_dface_qbism_t(const mface_t &model) :
-        planenum(numeric_cast<uint32_t>(model.planenum)),
+        planenum(numeric_cast<uint32_t>(model.planenum, "dface_t::planenum")),
         side(model.side),
         firstedge(model.firstedge),
         numedges(model.numedges),
@@ -1032,10 +1032,10 @@ struct bsp29_dleaf_t
     bsp29_dleaf_t(const mleaf_t &model) :
         contents(model.contents),
         visofs(model.visofs),
-        mins(aabb_mins_cast<int16_t>(model.mins)),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
-        firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface)),
-        nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces)),
+        mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
+        firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
+        nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
         ambient_level(model.ambient_level)
     {
     }
@@ -1046,8 +1046,8 @@ struct bsp29_dleaf_t
         return {
             contents,
             visofs,
-            aabb_mins_cast<float>(mins),
-            aabb_mins_cast<float>(maxs),
+            aabb_mins_cast<float>(mins, "dleaf_t::mins"),
+            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"),
             firstmarksurface,
             nummarksurfaces,
             ambient_level
@@ -1071,8 +1071,8 @@ struct bsp2rmq_dleaf_t
     bsp2rmq_dleaf_t(const mleaf_t &model) :
         contents(model.contents),
         visofs(model.visofs),
-        mins(aabb_mins_cast<int16_t>(model.mins)),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs)),
+        mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
         firstmarksurface(model.firstmarksurface),
         nummarksurfaces(model.nummarksurfaces),
         ambient_level(model.ambient_level)
@@ -1085,8 +1085,8 @@ struct bsp2rmq_dleaf_t
         return {
             contents,
             visofs,
-            aabb_mins_cast<float>(mins),
-            aabb_mins_cast<float>(maxs),
+            aabb_mins_cast<float>(mins, "dleaf_t::mins"),
+            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"),
             firstmarksurface,
             nummarksurfaces,
             ambient_level
@@ -1154,14 +1154,14 @@ struct q2_dleaf_t
     // convert from mbsp_t
     q2_dleaf_t(const mleaf_t &model) :
         contents(model.contents),
-        cluster(numeric_cast<int16_t>(model.cluster)),
-        area(numeric_cast<int16_t>(model.area)),
-        mins(aabb_mins_cast<int16_t>(model.mins)),
-        maxs(aabb_mins_cast<int16_t>(model.maxs)),
-        firstleafface(numeric_cast<uint16_t>(model.firstmarksurface)),
-        numleaffaces(numeric_cast<uint16_t>(model.nummarksurfaces)),
-        firstleafbrush(numeric_cast<uint16_t>(model.firstleafbrush)),
-        numleafbrushes(numeric_cast<uint16_t>(model.numleafbrushes))
+        cluster(numeric_cast<int16_t>(model.cluster, "dleaf_t::cluster")),
+        area(numeric_cast<int16_t>(model.area, "dleaf_t::area")),
+        mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+        maxs(aabb_mins_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
+        firstleafface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
+        numleaffaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
+        firstleafbrush(numeric_cast<uint16_t>(model.firstleafbrush, "dleaf_t::firstleafbrush")),
+        numleafbrushes(numeric_cast<uint16_t>(model.numleafbrushes, "dleaf_t::numleafbrushes"))
     {
     }
 
@@ -1171,8 +1171,8 @@ struct q2_dleaf_t
         return {
             contents,
             -1,
-            aabb_mins_cast<float>(mins),
-            aabb_mins_cast<float>(maxs),
+            aabb_mins_cast<float>(mins, "dleaf_t::mins"),
+            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"),
             firstleafface,
             numleaffaces,
             {},
@@ -1256,8 +1256,8 @@ struct q2_dbrushside_t
 
     // convert from mbsp_t
     q2_dbrushside_t(const q2_dbrushside_qbism_t &model) :
-        planenum(numeric_cast<uint16_t>(model.planenum)),
-        texinfo(numeric_cast<int16_t>(model.texinfo))
+        planenum(numeric_cast<uint16_t>(model.planenum, "dbrushside_t::planenum")),
+        texinfo(numeric_cast<int16_t>(model.texinfo, "dbrushside_t::texinfo"))
     {
     }
 

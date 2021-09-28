@@ -53,42 +53,11 @@ struct leafbrush_entry_t
 static struct
 {
     uint32_t total_brushes, total_brush_sides;
-    uint32_t total_leaf_brushes, unique_leaf_brushes;
-    std::map<uint32_t, leafbrush_entry_t> leaf_entries;
+    uint32_t total_leaf_brushes;
 } brush_state;
 
 // running total
 static uint32_t brush_offset;
-
-static std::optional<uint32_t> FindLeafBrushesSpanOffset(const std::vector<uint32_t> &brushes)
-{
-    int32_t offset = 0;
-    const auto *map = &brush_state.leaf_entries;
-    decltype(brush_state.leaf_entries)::const_iterator it = map->find(brushes[offset]);
-
-    while (it != map->end()) {
-
-        if (++offset == brushes.size()) {
-            return it->second.offset;
-        }
-
-        map = &it->second.entries;
-        it = map->find(brushes[offset]);
-    }
-
-    return std::nullopt;
-}
-
-static void PopulateLeafBrushesSpan(const std::vector<uint32_t> &brushes, uint32_t offset)
-{
-    auto *map = &brush_state.leaf_entries;
-
-    for (auto &id : brushes) {
-        auto it = map->try_emplace(id, leafbrush_entry_t{offset});
-        map = &it.first->second.entries;
-        offset++;
-    }
-}
 
 static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uint32_t &brush_offset)
 {
@@ -103,20 +72,12 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
                 }
             }
 
-            node->numleafbrushes = brushes.size();
-            brush_state.total_leaf_brushes += node->numleafbrushes;
 
             if (brushes.size()) {
-                auto span = FindLeafBrushesSpanOffset(brushes);
-
-                if (span.has_value()) {
-                    node->firstleafbrush = *span;
-                } else {
-                    node->firstleafbrush = map.exported_leafbrushes.size();
-                    PopulateLeafBrushesSpan(brushes, node->firstleafbrush);
-                    map.exported_leafbrushes.insert(map.exported_leafbrushes.end(), brushes.begin(), brushes.end());
-                    brush_state.unique_leaf_brushes += node->numleafbrushes;
-                }
+                node->numleafbrushes = brushes.size();
+                brush_state.total_leaf_brushes += node->numleafbrushes;
+                node->firstleafbrush = map.exported_leafbrushes.size();
+                map.exported_leafbrushes.insert(map.exported_leafbrushes.end(), brushes.begin(), brushes.end());
             }
         }
 
@@ -127,6 +88,196 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
     ExportBrushList_r(entity, node->children[1], brush_offset);
 }
 
+/*
+==============
+SnapVector
+==============
+*/
+static void SnapVector (vec3_t normal)
+{
+    int32_t		i;
+
+    for (i=0 ; i<3 ; i++)
+    {
+        if ( fabs(normal[i] - 1) < NORMAL_EPSILON )
+        {
+            VectorClear (normal);
+            normal[i] = 1;
+            break;
+        }
+        if ( fabs(normal[i] - -1) < NORMAL_EPSILON )
+        {
+            VectorClear (normal);
+            normal[i] = -1;
+            break;
+        }
+    }
+}
+
+/*
+=================
+AddBrushBevels
+
+Adds any additional planes necessary to allow the brush to be expanded
+against axial bounding boxes
+=================
+*/
+static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b)
+{
+    // add already-present planes
+    std::vector<std::tuple<size_t, face_t *>> planes;
+
+    for (face_t *f = b->faces; f; f = f->next)
+    {
+        int32_t planenum = f->planenum;
+
+        if (f->planeside)
+        {
+            auto &plane = map.planes[f->planenum];
+            plane_t flipped;
+            flipped.dist = -plane.dist;
+            VectorCopy(plane.normal, flipped.normal);
+            VectorInverse(flipped.normal);
+            planenum = FindPlane(flipped.normal, flipped.dist, nullptr);
+        }
+
+        int32_t outputplanenum = ExportMapPlane(planenum);
+        planes.push_back({ outputplanenum, f });
+    }
+
+    //
+    // add the axial planes
+    //
+    int32_t order = 0;
+    for (int32_t axis=0 ; axis <3 ; axis++)
+    {
+        for (int32_t dir=-1 ; dir <= 1 ; dir+=2, order++)
+        {
+            size_t i;
+            // see if the plane is allready present
+            for (i=0; i<planes.size() ; i++)
+            {
+                if (map.exported_planes[std::get<0>(planes[i])].normal[axis] == dir)
+                    break;
+            }
+
+            if (i == planes.size())
+            {
+                // add a new side
+                plane_t new_plane;
+                VectorClear (new_plane.normal);
+                new_plane.normal[axis] = dir;
+                if (dir == 1)
+                    new_plane.dist = b->bounds.maxs()[axis];
+                else
+                    new_plane.dist = -b->bounds.mins()[axis];
+
+                int32_t planenum = FindPlane(new_plane.normal, new_plane.dist, nullptr);
+                int32_t outputplanenum = ExportMapPlane(planenum);
+                planes.push_back({ outputplanenum, nullptr });
+            }
+
+            // if the plane is not in it canonical order, swap it
+            if (i != order)
+                std::swap(planes[i], planes[order]);
+        }
+    }
+
+    //
+    // add the edge bevels
+    //
+    if (planes.size() == 6)
+        return planes;		// pure axial
+
+    // test the non-axial plane edges
+    size_t edges_to_test = planes.size();
+    for (size_t i=6 ; i<edges_to_test ; i++)
+    {
+        auto &s = std::get<1>(planes[i]);
+        if (!s)
+            continue;
+        auto &w = s->w;
+        if (!w.size())
+            continue;
+        for (size_t j=0 ; j<w.size() ; j++)
+        {
+            vec3_t vec;
+            size_t k = (j+1)%w.size();
+            VectorSubtract (w[j], w[k], vec);
+            if (VectorNormalize(vec) < 0.5)
+                continue;
+            SnapVector (vec);
+            for (k=0 ; k<3 ; k++)
+                if ( vec[k] == -1 || vec[k] == 1)
+                    break;	// axial
+            if (k != 3)
+                continue;	// only test non-axial edges
+
+            // try the six possible slanted axials from this edge
+            for (int32_t axis=0 ; axis <3 ; axis++)
+            {
+                for (int32_t dir=-1 ; dir <= 1 ; dir+=2)
+                {
+                    vec3_t vec2;
+                    // construct a plane
+                    VectorClear (vec2);
+                    vec2[axis] = dir;
+                    plane_t current;
+                    CrossProduct (vec, vec2, current.normal);
+                    if (VectorNormalize (current.normal) < 0.5)
+                        continue;
+                    current.dist = DotProduct (w[j], current.normal);
+
+                    face_t *f;
+
+                    // if all the points on all the sides are
+                    // behind this plane, it is a proper edge bevel
+                    for (f = b->faces; f; f = f->next)
+                    {
+                        auto &plane = map.planes[f->planenum];
+                        plane_t temp;
+                        VectorCopy(plane.normal, temp.normal);
+                        temp.dist = plane.dist;
+
+                        if (f->planeside)
+                        {
+                            temp.dist = -temp.dist;
+                            VectorInverse(temp.normal);
+                        }
+
+                        // if this plane has allready been used, skip it
+                        if (PlaneEqual(&current, &temp) )
+                            break;
+
+                        auto &w2 = f->w;
+                        if (!w2.size())
+                            continue;
+                        size_t l;
+                        for (l=0 ; l<w2.size(); l++)
+                        {
+                            vec_t d = DotProduct (w2[l], current.normal) - current.dist;
+                            if (d > 0.1)
+                                break;	// point in front
+                        }
+                        if (l != w2.size())
+                            break;
+                    }
+
+                    if (f)
+                        continue;	// wasn't part of the outer hull
+                    
+                    // add this plane
+                    int32_t planenum = FindPlane(current.normal, current.dist, nullptr);
+                    int32_t outputplanenum = ExportMapPlane(planenum);
+                    planes.push_back({ outputplanenum, nullptr });
+                }
+            }
+        }
+    }
+
+    return planes;
+}
+
 static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &brush_offset)
 {
     brush_state = {};
@@ -134,57 +285,14 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
     for (const brush_t *b = entity->brushes; b; b = b->next) {
         dbrush_t brush{(int32_t)map.exported_brushsides.size(), 0, b->contents.native};
 
-        for (const face_t *f = b->faces; f; f = f->next) {
-            int32_t planenum = f->planenum;
-            int32_t outputplanenum;
+        auto bevels = AddBrushBevels(b);
 
-            if (f->planeside) {
-                vec3_t flipped;
-                VectorCopy(map.planes[f->planenum].normal, flipped);
-                VectorInverse(flipped);
-                planenum = FindPlane(flipped, -map.planes[f->planenum].dist, nullptr);
-                outputplanenum = ExportMapPlane(planenum);
-            } else {
-                planenum = FindPlane(map.planes[f->planenum].normal, map.planes[f->planenum].dist, nullptr);
-                outputplanenum = ExportMapPlane(planenum);
-            }
-
+        for (auto &plane : bevels) {
             map.exported_brushsides.push_back(
-                {(uint32_t)outputplanenum, map.mtexinfos[f->texinfo].outputnum.value_or(-1)});
+                {(uint32_t)std::get<0>(plane), map.mtexinfos[b->faces->texinfo].outputnum.value_or(-1)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }
-
-        // add any axis planes not contained in the brush to bevel off corners
-        for (int32_t x = 0; x < 3; x++)
-            for (int32_t s = -1; s <= 1; s += 2) {
-                // add the plane
-                vec3_t normal{};
-                float dist;
-                VectorCopy(vec3_origin, normal);
-                normal[x] = s;
-                if (s == -1)
-                    dist = -b->bounds.mins()[x];
-                else
-                    dist = b->bounds.maxs()[x];
-                int32_t side;
-                int32_t planenum = FindPlane(normal, dist, &side);
-                face_t *f;
-
-                for (f = b->faces; f; f = f->next)
-                    if (f->planenum == planenum)
-                        break;
-
-                if (f == nullptr) {
-                    planenum = FindPlane(normal, dist, nullptr);
-                    int32_t outputplanenum = ExportMapPlane(planenum);
-
-                    map.exported_brushsides.push_back({(uint32_t)outputplanenum,
-                        map.exported_brushsides[map.exported_brushsides.size() - 1].texinfo});
-                    brush.numsides++;
-                    brush_state.total_brush_sides++;
-                }
-            }
 
         map.exported_brushes.push_back(brush);
         brush_state.total_brushes++;
@@ -197,8 +305,6 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
     LogPrint(LOG_STAT, "     {:8} total brushes\n", brush_state.total_brushes);
     LogPrint(LOG_STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
     LogPrint(LOG_STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
-    LogPrint(LOG_STAT, "     {:8} unique leaf brushes ({:.2}%)\n", brush_state.unique_leaf_brushes,
-        (brush_state.unique_leaf_brushes / (float)brush_state.total_leaf_brushes) * 100);
 }
 
 /*
