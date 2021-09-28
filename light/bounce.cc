@@ -195,8 +195,14 @@ static void *MakeBounceLightsThread(void *arg)
         vector<unique_ptr<patch_t>> patches;
 
         winding_t winding = winding_t::from_face(bsp, face);
+
         // grab some info about the face winding
         const vec_t facearea = winding.area();
+
+        // degenerate face
+        if (!facearea) {
+            continue;
+        }
 
         plane_t faceplane = winding.plane();
 

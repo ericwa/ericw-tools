@@ -723,11 +723,11 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
 ExpandBrush
 =============
 */
-static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, face_t *facelist)
+static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const face_t *facelist)
 {
     int i, x, s;
     vec3_t corner;
-    face_t *f;
+    const face_t *f;
     qbsp_plane_t plane;
     mapface_t *mapface;
     int cBevEdge = 0;

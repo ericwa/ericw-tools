@@ -1349,6 +1349,11 @@ struct mvis_t
 
     void stream_write(std::ostream &stream) const
     {
+        // no vis data
+        if (!numclusters) {
+            return;
+        }
+
         stream <= numclusters;
 
         // write cluster -> offset tables

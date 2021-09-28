@@ -123,15 +123,18 @@ static void *MakeSurfaceLightsThread(void *arg)
 
         // Calculate emit color and intensity...
         VectorScale(texturecolor, 1.0f / 255.0f, texturecolor); // Convert to 0..1 range...
-        VectorScale(texturecolor, info->value, texturecolor); // Scale by light value
 
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
         if (info->flags.native & Q2_SURF_SKY) {
             // FIXME: this only handles the "_sky_surface"  "red green blue" format.
             //        There are other more complex variants we could handle documented in the link above.
             // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-            VectorCopy(*cfg.sky_surface.vec3Value(), texturecolor);
+            if (cfg.sky_surface.isChanged()) {
+                VectorCopy(*cfg.sky_surface.vec3Value(), texturecolor);
+            }
         }
+
+        VectorScale(texturecolor, info->value, texturecolor); // Scale by light value
 
         // Calculate intensity...
         float intensity = 0.0f;

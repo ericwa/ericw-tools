@@ -614,8 +614,7 @@ void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hulln
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    portal_state_t state;
-    memset(&state, 0, sizeof(state));
+    portal_state_t state { };
 
     state.iNodesDone = 0;
 

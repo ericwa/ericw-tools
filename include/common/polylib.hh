@@ -373,8 +373,8 @@ public:
 
     vec_t area() const
     {
-        if (count < 3)
-            throw std::domain_error("count");
+        //if (count < 3)
+        //    throw std::domain_error("count");
 
         vec_t total = 0;
 
