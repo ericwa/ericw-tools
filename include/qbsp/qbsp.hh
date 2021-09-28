@@ -197,6 +197,7 @@ struct node_t
                            // are detail.
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
+    int32_t area;
 
     bool opaque() const;
 };

@@ -280,6 +280,8 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
 
 static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &brush_offset)
 {
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+
     brush_state = {};
 
     for (const brush_t *b = entity->brushes; b; b = b->next) {
@@ -308,6 +310,218 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 }
 
 /*
+=========================================================
+
+FLOOD AREAS
+
+=========================================================
+*/
+
+int32_t c_areas;
+
+/*
+===============
+Portal_EntityFlood
+
+The entity flood determines which areas are
+"outside" on the map, which are then filled in.
+Flowing from side s to side !s
+===============
+*/
+static bool Portal_EntityFlood(const portal_t *p, int32_t s)
+{
+	if (p->nodes[0]->planenum != PLANENUM_LEAF
+		|| p->nodes[1]->planenum != PLANENUM_LEAF)
+		Error ("Portal_EntityFlood: not a leaf");
+
+	// can never cross to a solid
+	if ( (p->nodes[0]->contents.native & CONTENTS_SOLID)
+	|| (p->nodes[1]->contents.native & CONTENTS_SOLID) )
+		return false;
+
+	// can flood through everything else
+	return true;
+}
+
+/*
+=============
+FloodAreas_r
+=============
+*/
+static void FloodAreas_r(mapentity_t *entity, node_t *node)
+{
+	if (node->contents.native == Q2_CONTENTS_AREAPORTAL)
+	{
+		// this node is part of an area portal;
+		// if the current area has allready touched this
+		// portal, we are done
+		if (entity->portalareas[0] == c_areas || entity->portalareas[1] == c_areas)
+			return;
+
+		// note the current area as bounding the portal
+		if (entity->portalareas[1])
+		{
+            // FIXME: entity #
+			LogPrint("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n",
+				VecStr(node->bounds.mins()), VecStr(node->bounds.maxs()));
+			return;
+		}
+
+		if (entity->portalareas[0])
+			entity->portalareas[1] = c_areas;
+		else
+			entity->portalareas[0] = c_areas;
+
+		return;
+	}
+
+	if (node->area)
+		return;		// already got it
+
+	node->area = c_areas;
+
+    int32_t s;
+
+	for (portal_t *p = node->portals; p; p = p->next[s])
+	{
+		s = (p->nodes[1] == node);
+#if 0
+		if (p->nodes[!s]->occupied)
+			continue;
+#endif
+		if (!Portal_EntityFlood (p, s))
+			continue;
+
+		FloodAreas_r(entity, p->nodes[!s]);
+	}
+}
+
+/*
+=============
+FindAreas_r
+
+Just decend the tree, and for each node that hasn't had an
+area set, flood fill out from there
+=============
+*/
+static void FindAreas_r(mapentity_t *entity, node_t *node)
+{
+	if (node->planenum != PLANENUM_LEAF)
+	{
+		FindAreas_r(entity, node->children[0]);
+		FindAreas_r(entity, node->children[1]);
+		return;
+	}
+
+	if (node->area)
+		return;		// already got it
+
+	if (node->contents.native & Q2_CONTENTS_SOLID)
+		return;
+
+    // FIXME: how to do this since the nodes are destroyed by this point?
+	//if (!node->occupied)
+	//	return;			// not reachable by entities
+
+	// area portals are always only flooded into, never
+	// out of
+	if (node->contents.native == Q2_CONTENTS_AREAPORTAL)
+		return;
+
+	c_areas++;
+	FloodAreas_r(entity, node);
+}
+
+/*
+=============
+SetAreaPortalAreas_r
+
+Just decend the tree, and for each node that hasn't had an
+area set, flood fill out from there
+=============
+*/
+static void SetAreaPortalAreas_r(mapentity_t *entity, node_t *node)
+{
+	if (node->planenum != PLANENUM_LEAF)
+	{
+		SetAreaPortalAreas_r(entity, node->children[0]);
+		SetAreaPortalAreas_r(entity, node->children[1]);
+		return;
+	}
+
+	if (node->contents.native != Q2_CONTENTS_AREAPORTAL)
+        return;
+
+    if (node->area)
+		return;		// already set
+
+	node->area = entity->portalareas[0];
+	if (!entity->portalareas[1])
+	{
+        // FIXME: entity #
+        LogPrint("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n", VecStr(entity->bounds.mins()), VecStr(entity->bounds.maxs()));
+		return;
+	}
+}
+
+/*
+=============
+FloodAreas
+
+Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
+=============
+*/
+static void FloodAreas(mapentity_t *entity, node_t *headnode)
+{
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+	FindAreas_r(entity, headnode);
+	SetAreaPortalAreas_r(entity, headnode);
+	LogPrint(LOG_STAT, "{:5} areas\n", c_areas);
+}
+
+/*
+=============
+EmitAreaPortals
+
+=============
+*/
+static void EmitAreaPortals(node_t *headnode)
+{
+    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+
+    map.exported_areaportals.emplace_back();
+    map.exported_areas.emplace_back();
+
+	for (size_t i = 1; i <= c_areas; i++) {
+        darea_t &area = map.exported_areas.emplace_back();
+		area.firstareaportal = map.exported_areaportals.size();
+
+		for (auto &e : map.entities) {
+
+			if (!e.areaportalnum)
+				continue;
+			dareaportal_t &dp = map.exported_areaportals.emplace_back();
+
+			if (e.portalareas[0] == i)
+			{
+				dp.portalnum = e.areaportalnum;
+				dp.otherarea = e.portalareas[1];
+			}
+			else if (e.portalareas[1] == i)
+			{
+				dp.portalnum = e.areaportalnum;
+				dp.otherarea = e.portalareas[0];
+			}
+		}
+
+		area.numareaportals = map.exported_areaportals.size() - area.firstareaportal;
+	}
+
+	LogPrint(LOG_STAT, "{:5} numareas\n", map.exported_areas.size());
+	LogPrint(LOG_STAT, "{:5} numareaportals\n", map.exported_areaportals.size());
+}
+
+/*
 ===============
 ProcessEntity
 ===============
@@ -327,7 +541,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      * func_group and func_detail entities get their brushes added to the
      * worldspawn
      */
-    if (IsWorldBrushEntity(entity))
+    if (IsWorldBrushEntity(entity) || IsNonRemoveWorldBrushEntity(entity))
         return;
 
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
@@ -385,7 +599,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             /* Load external .map and change the classname, if needed */
             ProcessExternalMapEntity(source);
 
-            if (IsWorldBrushEntity(source)) {
+            ProcessAreaPortal(source);
+
+            if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
                 Brush_LoadEntity(entity, source, hullnum);
             }
         }
@@ -496,6 +712,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
                 TJunc(entity, nodes);
             }
+
+            // Area portals
+            if (options.target_game->id == GAME_QUAKE_II) {
+                FloodAreas(entity, nodes);
+                EmitAreaPortals(nodes);
+            }
+
             FreeAllPortals(nodes);
         }
 
@@ -515,7 +738,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         firstface = MakeFaceEdges(entity, nodes);
 
         if (options.target_game->id == GAME_QUAKE_II) {
-            LogPrint(LOG_PROGRESS, "---- ExportBrushList ----\n");
             ExportBrushList(entity, nodes, brush_offset);
         }
 
@@ -563,7 +785,7 @@ static void UpdateEntLump(void)
         if (!isBrushEnt)
             continue;
 
-        if (IsWorldBrushEntity(entity))
+        if (IsWorldBrushEntity(entity) || IsNonRemoveWorldBrushEntity(entity))
             continue;
 
         snprintf(modname, sizeof(modname), "*%d", modnum);
@@ -774,7 +996,7 @@ static void BSPX_CreateBrushList(void)
                 /* Load external .map and change the classname, if needed */
                 ProcessExternalMapEntity(source);
 
-                if (IsWorldBrushEntity(source)) {
+                if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
                     Brush_LoadEntity(ent, source, -1);
                 }
             }

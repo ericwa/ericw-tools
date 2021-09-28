@@ -416,6 +416,8 @@ static void WriteBSPFile()
     bsp.dleafbrushes = std::move(map.exported_leafbrushes);
     bsp.dbrushsides = std::move(map.exported_brushsides);
     bsp.dbrushes = std::move(map.exported_brushes);
+    bsp.dareaportals = std::move(map.exported_areaportals);
+    bsp.dareas = std::move(map.exported_areas);
     
     bsp.dentdata = std::move(map.exported_entities);
     CopyString(map.exported_texdata, false, &bsp.texdatasize, (void **)&bsp.dtexdata);
@@ -426,12 +428,6 @@ static void WriteBSPFile()
     if (!map.exported_bspxbrushes.empty()) {
         BSPX_AddLump(&bspdata, "BRUSHLIST", map.exported_bspxbrushes.data(), map.exported_bspxbrushes.size());
     }
-
-    // FIXME: temp
-    bsp.dareaportals.push_back({});
-    
-    bsp.dareas.push_back({});
-    bsp.dareas.push_back({ 0, 1 });
 
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
         const bspversion_t *extendedLimitsFormat = options.target_version->extended_limits;

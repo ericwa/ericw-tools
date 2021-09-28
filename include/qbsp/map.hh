@@ -102,12 +102,15 @@ public:
     int firstoutputfacenumber;
     int outputmodelnumber;
 
+    int32_t areaportalnum;
+    std::array<int32_t, 2> portalareas;
+
     const mapbrush_t &mapbrush(int i) const;
 
     mapentity_t()
         : firstmapbrush(0), nummapbrushes(0), solid(nullptr), sky(nullptr), detail(nullptr),
           detail_illusionary(nullptr), detail_fence(nullptr), liquid(nullptr), epairs(), brushes(nullptr),
-          numbrushes(0), firstoutputfacenumber(-1), outputmodelnumber(-1)
+          numbrushes(0), firstoutputfacenumber(-1), outputmodelnumber(-1), areaportalnum(0), portalareas({})
     {
         VectorSet(origin, 0, 0, 0);
     }
@@ -161,6 +164,8 @@ struct mapdata_t
     std::vector<uint32_t> exported_leafbrushes;
     std::vector<q2_dbrushside_qbism_t> exported_brushsides;
     std::vector<dbrush_t> exported_brushes;
+    std::vector<dareaportal_t> exported_areaportals;
+    std::vector<darea_t> exported_areas;
 
     std::string exported_entities;
     std::string exported_texdata;
@@ -169,6 +174,9 @@ struct mapdata_t
     std::vector<uint8_t> exported_lmshifts;
     bool needslmshifts = false;
     std::vector<uint8_t> exported_bspxbrushes;
+
+    // Q2 stuff
+    int32_t numareaportals;
 
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
@@ -183,7 +191,9 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity);
 
 void EnsureTexturesLoaded();
 void ProcessExternalMapEntity(mapentity_t *entity);
+void ProcessAreaPortal(mapentity_t *entity);
 bool IsWorldBrushEntity(const mapentity_t *entity);
+bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity);
 void LoadMapFile(void);
 mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);

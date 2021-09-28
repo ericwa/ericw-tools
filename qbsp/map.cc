@@ -1884,10 +1884,31 @@ void ProcessExternalMapEntity(mapentity_t *entity)
     SetKeyValue(entity, "origin", "0 0 0");
 }
 
+void ProcessAreaPortal(mapentity_t *entity)
+{
+    Q_assert(!options.fOnlyents);
+
+    const char *classname = ValueForKey(entity, "classname");
+
+    if (Q_strcasecmp(classname, "func_areaportal"))
+        return;
+
+    // areaportal entities move their brushes, but don't eliminate
+    // the entity
+    // FIXME: print entity ID/line number
+    if (entity->nummapbrushes != 1)
+        FError("func_areaportal can only be a single brush");
+
+    map.brushes[entity->firstmapbrush].contents = Q2_CONTENTS_AREAPORTAL;
+    map.faces[map.brushes[entity->firstmapbrush].firstface].contents = Q2_CONTENTS_AREAPORTAL;
+    entity->areaportalnum = ++map.numareaportals;
+    // set the portal number as "style"
+    SetKeyValue(entity, "style", std::to_string(map.numareaportals).c_str());
+}
+
 /*
  * Special world entities are entities which have their brushes added to the
- * world before being removed from the map. Currently func_detail and
- * func_group.
+ * world before being removed from the map.
  */
 bool IsWorldBrushEntity(const mapentity_t *entity)
 {
@@ -1911,6 +1932,20 @@ bool IsWorldBrushEntity(const mapentity_t *entity)
         return true;
     if (!Q_strcasecmp(classname, "func_illusionary_visblocker"))
         return true;
+    return false;
+}
+
+/**
+ * Some games need special entities that are merged into the world, but not
+ * removed from the map entirely.
+ */
+bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity)
+{
+    const char *classname = ValueForKey(entity, "classname");
+
+    if (!Q_strcasecmp(classname, "func_areaportal"))
+        return true;
+
     return false;
 }
 
