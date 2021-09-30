@@ -109,8 +109,8 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
         return false;
     }
 
-    const char *texname = Face_TextureName(bsp, face);
-    if (!strcmp("skip", texname)) {
+    const std::string &texname = Face_TextureName(bsp, face);
+    if (!Q_strcasecmp("skip", texname.data())) {
         return false;
     }
 
@@ -124,11 +124,11 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 
 void Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face, vec3_t color)
 {
-    const char *facename = Face_TextureName(bsp, face);
+    const std::string &facename = Face_TextureName(bsp, face);
+    auto it = texturecolors.find(facename);
 
-    if (texturecolors.find(facename) != texturecolors.end()) {
-        const qvec3f texcolor = texturecolors.at(facename);
-        VectorCopy(texcolor, color);
+    if (it != texturecolors.end()) {
+        VectorCopy((*it).second, color);
     } else {
         VectorSet(color, 127, 127, 127);
     }

@@ -652,8 +652,8 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
             auto faces = side.faces; // FindFacesOnNode(side.plane.node, bsp);
             if (!faces.empty()) {
                 const mface_t *face = faces.at(0).original_face;
-                const char *name = Face_TextureName(bsp, face);
-                if (0 == strlen(name)) {
+                const std::string &name = Face_TextureName(bsp, face);
+                if (name.empty()) {
                     fmt::format_to(file, " {} ", DefaultTextureForContents(leaf->contents).c_str());
                     WriteNullTexdef(file);
                 } else {

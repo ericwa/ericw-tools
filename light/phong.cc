@@ -100,7 +100,7 @@ static void FacesOverlappingEdge_r(
  * Returns faces which have an edge that overlaps the given p0-p1 edge.
  * Uses hull 0.
  */
-inline vector<neighbour_t> FacesOverlappingEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const dmodel_t *model)
+inline vector<neighbour_t> FacesOverlappingEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const dmodelh2_t *model)
 {
     vector<neighbour_t> result;
     FacesOverlappingEdge_r(p0, p1, bsp, model->headnode[0], &result);

@@ -22,7 +22,7 @@
 
 #include <common/qvec.hh>
 
-const dmodel_t *BSP_GetWorldModel(const mbsp_t *bsp)
+const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp)
 {
     // We only support .bsp's that have a world model
     if (bsp->dmodels.size() < 1) {
@@ -151,21 +151,17 @@ const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
 
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
 {
-    if (!bsp->texdatasize)
-        return nullptr;
-
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
     if (texinfo == nullptr)
         return nullptr;
 
-    const int texnum = texinfo->miptex;
-    const dmiptexlump_t *miplump = bsp->dtexdata;
+    const int32_t texnum = texinfo->miptex;
+    const miptex_t *miptex = &bsp->dtex.textures[texnum];
 
-    const int offset = miplump->dataofs[texnum];
-    if (offset < 0)
-        return nullptr; // sometimes the texture just wasn't written. including its name.
+    // sometimes the texture just wasn't written. including its name.
+    if (!miptex->name.size())
+        return nullptr;
 
-    const miptex_t *miptex = (const miptex_t *)((const uint8_t *)bsp->dtexdata + offset);
     return miptex;
 }
 
@@ -181,7 +177,7 @@ const rgba_miptex_t *Face_RgbaMiptex(const mbsp_t *bsp, const mface_t *face)
     return &bsp->drgbatexdata[texinfo->miptex];
 }
 
-const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
+const std::string &Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
     const auto *miptex = Face_Miptex(bsp, face);
 
@@ -193,7 +189,9 @@ const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
     if (rgbamiptex)
         return rgbamiptex->name;
 
-    return nullptr;
+    // a bit silly, but...
+    static std::string empty_name;
+    return empty_name;
 }
 
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
@@ -211,13 +209,13 @@ const bspvec3f_t &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int
     return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)];
 }
 
-int TextureName_Contents(const char *texname)
+static int TextureName_Contents(const std::string &texname)
 {
-    if (!Q_strncasecmp(texname, "sky", 3))
+    if (!Q_strncasecmp(texname.data(), "sky", 3))
         return CONTENTS_SKY;
-    else if (!Q_strncasecmp(texname, "*lava", 5))
+    else if (!Q_strncasecmp(texname.data(), "*lava", 5))
         return CONTENTS_LAVA;
-    else if (!Q_strncasecmp(texname, "*slime", 6))
+    else if (!Q_strncasecmp(texname.data(), "*slime", 6))
         return CONTENTS_SLIME;
     else if (texname[0] == '*')
         return CONTENTS_WATER;
@@ -250,12 +248,11 @@ Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const mface_t *face)
         const gtexinfo_t *info = Face_Texinfo(bsp, face);
         return info->flags.native;
     } else {
-        const char *texname = Face_TextureName(bsp, face);
-        return TextureName_Contents(texname);
+        return TextureName_Contents(Face_TextureName(bsp, face));
     }
 }
 
-const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str)
+const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str)
 {
     int submodel = -1;
     if (1 == sscanf(submodel_str.c_str(), "*%d", &submodel)) {
@@ -309,7 +306,7 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec
 }
 
 // Tests hull 0 of the given model
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t &point)
+bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point)
 {
     // fast bounds check
     for (int i = 0; i < 3; ++i) {
@@ -376,7 +373,7 @@ static const mface_t *BSP_FindFaceAtPoint_r(
 }
 
 const mface_t *BSP_FindFaceAtPoint(
-    const mbsp_t *bsp, const dmodel_t *model, const vec3_t &point, const vec3_t &wantedNormal)
+    const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point, const vec3_t &wantedNormal)
 {
     return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
 }
@@ -469,7 +466,7 @@ qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face)
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
 {
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    const char *texname = Face_TextureName(bsp, face);
+    const std::string &texname = Face_TextureName(bsp, face);
 
     LogPrint("face {}, texture '{}', {} edges...\n"
              "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"

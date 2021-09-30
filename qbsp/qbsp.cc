@@ -714,10 +714,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             }
 
             // Area portals
-            if (options.target_game->id == GAME_QUAKE_II) {
+            /*if (options.target_game->id == GAME_QUAKE_II) {
                 FloodAreas(entity, nodes);
                 EmitAreaPortals(nodes);
-            }
+            }*/
 
             FreeAllPortals(nodes);
         }

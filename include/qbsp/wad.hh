@@ -61,15 +61,6 @@ struct wad_t
     qfile_t file = { nullptr, nullptr };
 };
 
-// Q1 miptex format
-#define MIPLEVELS 4
-struct dmiptex_t
-{
-    char name[16];
-    uint32_t width, height;
-    uint32_t offsets[MIPLEVELS];
-};
-
 void WADList_Init(const char *wadstring);
 void WADList_Process();
 const texture_t *WADList_GetTexture(const char *name);

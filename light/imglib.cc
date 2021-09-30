@@ -568,7 +568,7 @@ LoadTextures(mbsp_t *bsp)
 {
     LogPrint("--- LoadTextures ---\n");
 
-    if (bsp->texdatasize) {
+    if (bsp->dtex.textures.size()) {
         FError("ERROR: Expected an empty dtexdata lump...\n");
         return;
     }
@@ -595,7 +595,7 @@ LoadTextures(mbsp_t *bsp)
 
     for (auto pair : texturenames) {
         // Store texturename index...
-        indicesbytexturename[std::string{pair.first}] = counter++;
+        indicesbytexturename[pair.first] = counter++;
 
         // Add empty to keep texture index in case of load problems...
         auto &tex = tex_mips.emplace_back();
@@ -625,10 +625,10 @@ LoadTextures(mbsp_t *bsp)
         }
 
         // Create rgba_miptex_t...
-        strcpy(tex.name, pair.first.c_str());
+        tex.name = pair.first;
         tex.width = width;
         tex.height = height;
-        tex.data = std::unique_ptr<uint8_t>(pixels);
+        tex.data = std::unique_ptr<uint8_t[]>(pixels);
     }
 
     // Sanity checks...
@@ -646,7 +646,7 @@ LoadTextures(mbsp_t *bsp)
 static void // Converts paletted bsp->dtexdata textures to RGBA bsp->drgbatexdata textures (Quake / Hexen2)
 ConvertTextures(mbsp_t *bsp)
 {
-    if (!bsp->texdatasize)
+    if (!bsp->dtex.textures.size())
         return;
 
     LogPrint("--- ConvertTextures ---\n");
@@ -655,33 +655,30 @@ ConvertTextures(mbsp_t *bsp)
     auto &tex_mips = bsp->drgbatexdata;
 
     // Step 1: store texture data and RGBA bytes in temporary arrays...
-    for (int i = 0; i < bsp->dtexdata->nummiptex; i++) {
-        const int ofs = bsp->dtexdata->dataofs[i];
+    for (size_t i = 0; i < bsp->dtex.textures.size(); i++) {
+        auto &miptex = bsp->dtex.textures[i];
 
         // Add empty to keep texture index in case of load problems...
         auto &tex = tex_mips.emplace_back();
 
-        // Pad to keep offsets...
-        if (ofs < 0) {
+        if (!miptex.data[0]) {
             continue;
         }
 
-        miptex_t *miptex = (miptex_t *)((uint8_t *)bsp->dtexdata + ofs);
-
         // Create rgba_miptex_t...
-        strcpy(tex.name, miptex->name);
-        tex.width = miptex->width;
-        tex.height = miptex->height;
+        tex.name = miptex.name;
+        tex.width = miptex.width;
+        tex.height = miptex.height;
 
         // Store texturename index...
-        texturenamesbyindex[i] = std::string{tex.name};
+        texturenamesbyindex[i] = tex.name;
 
         // Convert to RGBA
         const size_t numpalpixels = tex.width * tex.height;
+        const uint8_t *data = miptex.data[0].get();
         uint8_t *pixels = new uint8_t[numpalpixels * 4]; // RGBA
-        const uint8_t *data = reinterpret_cast<uint8_t *>(miptex) + miptex->offsets[0];
 
-        for (int c = 0; c < numpalpixels; c++) {
+        for (size_t c = 0; c < numpalpixels; c++) {
             const uint8_t palindex = data[c];
             auto color = Palette_GetColor(palindex);
             for (int d = 0; d < 3; d++)
@@ -689,11 +686,11 @@ ConvertTextures(mbsp_t *bsp)
             pixels[c * 4 + 3] = static_cast<uint8_t>(palindex == 255 ? 0 : 255);
         }
 
-        tex.data = std::unique_ptr<uint8_t>(pixels);
+        tex.data = std::unique_ptr<uint8_t[]>(pixels);
     }
 
     // Sanity checks...
-    Q_assert(bsp->dtexdata->nummiptex == tex_mips.size());
+    Q_assert(bsp->dtex.textures.size() == tex_mips.size());
 
     // Step 2: set texturenames to gmiptex_t
     for (auto &info : bsp->texinfo) {
@@ -709,7 +706,7 @@ LoadOrConvertTextures(mbsp_t *bsp)
     // Load or convert textures...
     if (bsp->loadversion->game->id == GAME_QUAKE_II)
         LoadTextures(bsp);
-    else if (bsp->texdatasize > 0)
+    else if (bsp->dtex.textures.size() > 0)
         ConvertTextures(bsp);
     else
         LogPrint("WARNING: failed to load or convert textures.\n");

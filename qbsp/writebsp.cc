@@ -420,7 +420,7 @@ static void WriteBSPFile()
     bsp.dareas = std::move(map.exported_areas);
     
     bsp.dentdata = std::move(map.exported_entities);
-    CopyString(map.exported_texdata, false, &bsp.texdatasize, (void **)&bsp.dtexdata);
+    bsp.dtex.textures = std::move(map.exported_textures);
 
     if (map.needslmshifts) {
         BSPX_AddLump(&bspdata, "LMSHIFT", map.exported_lmshifts.data(), map.exported_lmshifts.size());

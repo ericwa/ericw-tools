@@ -41,9 +41,14 @@
 /* FIXME - share header with qbsp, etc. */
 struct wadinfo_t
 {
-    char identification[4]; // should be WAD2
+    std::array<char, 4> identification = { 'W', 'A', 'D', '2' }; // should be WAD2
     int32_t numlumps;
-    int32_t infotableofs;
+    int32_t infotableofs = sizeof(wadinfo_t);
+
+    auto stream_data()
+    {
+        return std::tie(identification, numlumps, infotableofs);
+    }
 };
 
 struct lumpinfo_t
@@ -54,77 +59,61 @@ struct lumpinfo_t
     char type;
     char compression;
     char pad1, pad2;
-    char name[16]; // must be null terminated
+    std::array<char, 16> name; // must be null terminated
+
+    auto stream_data()
+    {
+        return std::tie(filepos, disksize, size, type, compression, pad1, pad2, name);
+    }
 };
 
-static void ExportWad(const qfile_t &wadfile, mbsp_t *bsp)
+static void ExportWad(std::ofstream &wadfile, mbsp_t *bsp)
 {
-    wadinfo_t header;
-    lumpinfo_t lump;
-    dmiptexlump_t *texdata;
-    miptex_t *miptex;
-    int i, j, size, filepos, numvalid;
-
-    texdata = bsp->dtexdata;
+    int filepos, numvalid;
+    const auto &texdata = bsp->dtex;
 
     /* Count up the valid lumps */
     numvalid = 0;
-    for (i = 0; i < texdata->nummiptex; i++)
-        if (texdata->dataofs[i] >= 0)
+    for (auto &texture : texdata.textures)
+        if (texture.data[0])
             numvalid++;
 
-    memcpy(&header.identification, "WAD2", 4);
+    // Write out
+    wadinfo_t header;
     header.numlumps = numvalid;
-    header.infotableofs = sizeof(header);
-
-    /* Byte-swap header and write out */
-    header.numlumps = LittleLong(header.numlumps);
-    header.infotableofs = LittleLong(header.infotableofs);
-    SafeWrite(wadfile, &header, sizeof(header));
+    wadfile <= header;
+    
+    lumpinfo_t lump { };
+    lump.type = 'D';
 
     /* Miptex data will follow the lump headers */
     filepos = sizeof(header) + numvalid * sizeof(lump);
-    for (i = 0; i < texdata->nummiptex; i++) {
-        if (texdata->dataofs[i] < 0)
+    for (auto &miptex : texdata.textures) {
+        if (!miptex.data[0])
             continue;
 
-        miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
-
         lump.filepos = filepos;
-        lump.size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
-        lump.type = 'D';
+        lump.size = sizeof(dmiptex_t) + miptex.width * miptex.height / 64 * 85;
         lump.disksize = lump.size;
-        lump.compression = 0;
-        lump.pad1 = lump.pad2 = 0;
-        snprintf(lump.name, sizeof(lump.name), "%s", miptex->name);
+        snprintf(lump.name.data(), sizeof(lump.name), "%s", miptex.name.data());
 
         filepos += lump.disksize;
 
-        /* Byte-swap lumpinfo and write out */
-        lump.filepos = LittleLong(lump.filepos);
-        lump.disksize = LittleLong(lump.disksize);
-        lump.size = LittleLong(lump.size);
-        SafeWrite(wadfile, &lump, sizeof(lump));
+        // Write it out
+        wadfile <= lump;
     }
-    for (i = 0; i < texdata->nummiptex; i++) {
-        if (texdata->dataofs[i] < 0)
+    for (auto &miptex : texdata.textures) {
+        if (!miptex.data[0])
             continue;
-        miptex = (miptex_t *)((uint8_t *)texdata + texdata->dataofs[i]);
-        size = sizeof(*miptex) + miptex->width * miptex->height / 64 * 85;
 
-        /* Byte-swap miptex info and write out */
-        miptex->width = LittleLong(miptex->width);
-        miptex->height = LittleLong(miptex->height);
-        for (j = 0; j < MIPLEVELS; j++)
-            miptex->offsets[j] = LittleLong(miptex->offsets[j]);
-        SafeWrite(wadfile, miptex, size);
+        miptex.stream_write(wadfile);
     }
 }
 
 static void PrintModelInfo(const mbsp_t *bsp)
 {
     for (size_t i = 0; i < bsp->dmodels.size(); i++) {
-        const dmodel_t *dmodel = &bsp->dmodels[i];
+        const dmodelh2_t *dmodel = &bsp->dmodels[i];
         LogPrint("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
     }
 }
@@ -437,8 +426,8 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
 {
     fmt::print("comparing {} with {} faces\n", refBsp.dfaces.size(), bsp.dfaces.size());
 
-    const dmodel_t *world = BSP_GetWorldModel(&bsp);
-    const dmodel_t *refWorld = BSP_GetWorldModel(&refBsp);
+    const dmodelh2_t *world = BSP_GetWorldModel(&bsp);
+    const dmodelh2_t *refWorld = BSP_GetWorldModel(&refBsp);
 
     // iterate through the refBsp world faces
     for (int i = 0; i < refWorld->numfaces; i++) {
@@ -570,7 +559,7 @@ int main(int argc, char **argv)
             source.replace_extension(".wad");
             fmt::print("-> writing {}... ", source);
 
-            auto f = SafeOpenWrite(source);
+            std::ofstream f(source);
             
             if (!f)
                 Error("couldn't open {} for writing\n", source);

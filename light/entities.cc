@@ -156,7 +156,7 @@ static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t 
     // get the submodel's bbox if it's a brush entity
     if (bsp != nullptr && EntDict_StringForKey(entity, "origin") == "" && EntDict_StringForKey(entity, "model") != "") {
         const std::string &submodel_str = EntDict_StringForKey(entity, "model");
-        const dmodel_t *info = BSP_DModelForModelString(bsp, submodel_str);
+        const dmodelh2_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
             return fmt::format("brush entity with mins ({}) maxs ({}) ({})", VecStrf(info->mins), VecStrf(info->maxs), EntDict_StringForKey(entity, "classname"));
@@ -844,14 +844,14 @@ float CalcFov(float fov_x, float width, float height)
 /*
 finds the texture that is meant to be projected.
 */
-static const rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const char *texname)
+static const rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const std::string &texname)
 {
     /*outer loop finds the textures*/
     for (auto &miptex : bsp->drgbatexdata) {
         if (!miptex.data)
             continue;
 
-        if (!Q_strcasecmp(miptex.name, texname))
+        if (string_iequals(miptex.name, texname))
             return &miptex;
     }
 
@@ -996,7 +996,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 
             if (!entity.project_texture.stringValue().empty()) {
                 auto texname = entity.project_texture.stringValue();
-                entity.projectedmip = FindProjectionTexture(bsp, texname.c_str());
+                entity.projectedmip = FindProjectionTexture(bsp, texname);
                 if (entity.projectedmip == nullptr) {
                     LogPrint(
                         "WARNING: light has \"_project_texture\" \"{}\", but this texture is not present in the bsp\n",
@@ -1324,9 +1324,8 @@ static aabb3d BoundPoly(int numverts, qvec3d *verts)
 
 static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight)
 {
-    const char *texname = Face_TextureName(bsp, face);
-
-    return !Q_strcasecmp(texname, ValueForKey(&surflight, "_surface"));
+    const std::string &texname = Face_TextureName(bsp, face);
+    return !Q_strcasecmp(texname.data(), ValueForKey(&surflight, "_surface"));
 }
 
 /*
@@ -1517,8 +1516,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
                 continue;
 
             /* Ignore the underwater side of liquid surfaces */
-            // FIXME: Use a Face_TextureName function for this
-            if (/*texname[0] == '*' && */ underwater && Face_IsTranslucent(bsp, surf)) // mxd
+            if (underwater && Face_IsTranslucent(bsp, surf)) // mxd
                 continue;
 
             /* Skip if already handled */

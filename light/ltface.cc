@@ -109,7 +109,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
         if (m_texsize[i] >= MAXDIMENSION) {
             const plane_t plane = Face_Plane(bsp, face);
             const qvec3f point = Face_PointAtIndex_E(bsp, face, 0); // grab first vert
-            const char *texname = Face_TextureName(bsp, face);
+            const std::string &texname = Face_TextureName(bsp, face);
 
             Error("Bad surface extents:\n"
                   "   surface {}, {} extents = {}, scale = {}\n"
@@ -261,7 +261,7 @@ void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2])
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
 {
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    const char *texname = Face_TextureName(bsp, face);
+    const std::string &texname = Face_TextureName(bsp, face);
 
     LogPrint("face {}, texture {}, {} edges...\n"
              "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"
@@ -345,7 +345,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
         surf->texsize[i] = maxs[i] - mins[i];
         if (surf->texsize[i] >= MAXDIMENSION) {
             const dplane_t &plane = bsp->dplanes[face->planenum];
-            const char *texname = Face_TextureName(bsp, face);
+            const std::string &texname = Face_TextureName(bsp, face);
             Error("Bad surface extents:\n"
                   "   face {}, {} extents = {}, scale = {}\n"
                   "   texture {} at ({})\n"
@@ -581,7 +581,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 /// 3. the `self` model (regardless of whether it's selfshadowing)
 ///
 /// This is used for marking sample points as occluded.
-bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodel_t *self, const qvec3f &point)
+bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, const qvec3f &point)
 {
     vec3_t v3;
     VectorCopy(point, v3);
@@ -1420,7 +1420,7 @@ std::map<int, qvec3f> GetDirectLighting(
         // TODO: this could be faster!
         // TODO: deduplicate from LightFace_Sky
         if (!sun.suntexture.empty()) {
-            const char *facetex = Face_TextureName(bsp, face);
+            const std::string &facetex = Face_TextureName(bsp, face);
             if (sun.suntexture != facetex) {
                 continue;
             }
@@ -1627,7 +1627,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
         // TODO: this could be faster!
         if (!sun->suntexture.empty()) {
             const mface_t *face = rs->getPushedRayHitFace(j);
-            const char *facetex = Face_TextureName(lightsurf->bsp, face);
+            const std::string &facetex = Face_TextureName(lightsurf->bsp, face);
             if (sun->suntexture != facetex) {
                 continue;
             }
@@ -1980,7 +1980,7 @@ static void LightFace_Bounce(
     const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
-    // const dmodel_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
+    // const dmodelh2_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
 
     if (!cfg.bounce.boolValue())
         return;
@@ -3107,10 +3107,10 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
     {
-        const char *texname = Face_TextureName(bsp, face);
+        const std::string &texname = Face_TextureName(bsp, face);
         Q_assert(Face_IsLightmapped(bsp, face));
-        Q_assert(Q_strcasecmp(texname, "skip") != 0);
-        Q_assert(Q_strcasecmp(texname, "trigger") != 0);
+        Q_assert(Q_strcasecmp(texname.data(), "skip") != 0);
+        Q_assert(Q_strcasecmp(texname.data(), "trigger") != 0);
     }
 
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
@@ -3263,14 +3263,14 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
     if (!Face_IsLightmapped(bsp, face))
         return;
 
-    const char *texname = Face_TextureName(bsp, face);
+    const std::string &texname = Face_TextureName(bsp, face);
 
     /* don't save lightmaps for "trigger" texture */
-    if (!Q_strcasecmp(texname, "trigger"))
+    if (!Q_strcasecmp(texname.data(), "trigger"))
         return;
 
     /* don't save lightmaps for "skip" texture */
-    if (!Q_strcasecmp(texname, "skip"))
+    if (!Q_strcasecmp(texname.data(), "skip"))
         return;
 
     /* all good, this face is going to be lightmapped. */

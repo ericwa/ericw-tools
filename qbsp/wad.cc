@@ -102,7 +102,7 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
             lump.size = (lump.size + 3) & ~3; // keep things aligned if we can.
 
             texture_t tex;
-            memcpy(tex.name, miptex.name, 16);
+            memcpy(tex.name, miptex.name.data(), 16);
             tex.name[15] = '\0';
             tex.width = miptex.width;
             tex.height = miptex.height;
@@ -113,12 +113,13 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
                 lump.size = lump.disksize = sizeof(dmiptex_t);
 
             //fmt::print("Created texture_t {} {} {}\n", tex->name, tex->width, tex->height);
-        } else
+            wad.lumps.insert({tex.name, lump});
+        } else {
             lump.size = 0;
+            wad.lumps.insert({lump.name, lump});
+        }
 
         SafeSeek(wad.file, restore_pos, SEEK_SET);
-
-        wad.lumps.insert({lump.name, lump});
     }
 
     return true;
@@ -178,7 +179,7 @@ void WADList_Init(const char *wadstring)
     }
 }
 
-static const lumpinfo_t *WADList_FindTexture(const char *name)
+static const lumpinfo_t *WADList_FindTexture(const std::string &name)
 {
     for (auto &wad : wadlist) {
         auto it = wad.lumps.find(name);
@@ -193,109 +194,104 @@ static const lumpinfo_t *WADList_FindTexture(const char *name)
     return NULL;
 }
 
-static int WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
+static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
 {
-    int i;
-    int size;
-
     auto it = wad.lumps.find(name);
 
     if (it == wad.lumps.end()) {
-        return 0;
+        it = wad.lumps.find("*slime0");
+        return false;
     }
 
     auto &lump = it->second;
 
     SafeSeek(wad.file, lump.filepos, SEEK_SET);
 
-    if (lump.disksize == sizeof(dmiptex_t)) {
-        size = SafeRead(wad.file, dest, sizeof(dmiptex_t));
-        if (size != sizeof(dmiptex_t))
-            FError("Failure reading from file");
-        for (i = 0; i < MIPLEVELS; i++)
-            ((dmiptex_t *)dest)->offsets[i] = 0;
-        return sizeof(dmiptex_t);
+    if (lump.disksize < sizeof(dmiptex_t)) {
+        LogPrint("Wad texture {} is invalid", name);
+        return false;
     }
 
     if (lump.size != lump.disksize) {
         LogPrint("Texture {} is {} bytes in wad, packed to {} bytes in bsp\n", name, lump.disksize, lump.size);
-        std::vector<uint8_t> data(lump.disksize);
-        size = SafeRead(wad.file, data.data(), lump.disksize);
-        if (size != lump.disksize)
-            FError("Failure reading from file");
-        auto out = (dmiptex_t *)dest;
-        auto in = (dmiptex_t *)data.data();
-        *out = *in;
-        out->offsets[0] = sizeof(*out);
-        out->offsets[1] = out->offsets[0] + (in->width >> 0) * (in->height >> 0);
-        out->offsets[2] = out->offsets[1] + (in->width >> 1) * (in->height >> 1);
-        out->offsets[3] = out->offsets[2] + (in->width >> 2) * (in->height >> 2);
-        auto palofs = out->offsets[3] + (in->width >> 3) * (in->height >> 3);
-        memcpy(dest + out->offsets[0], data.data() + (in->offsets[0]), (in->width >> 0) * (in->height >> 0));
-        memcpy(dest + out->offsets[1], data.data() + (in->offsets[1]), (in->width >> 1) * (in->height >> 1));
-        memcpy(dest + out->offsets[2], data.data() + (in->offsets[2]), (in->width >> 2) * (in->height >> 2));
-        memcpy(dest + out->offsets[3], data.data() + (in->offsets[3]), (in->width >> 3) * (in->height >> 3));
+    }
 
-        if (options.target_game->id == GAME_HALF_LIFE) { // palette size. 256 in little endian.
-            dest[palofs + 0] = ((256 >> 0) & 0xff);
-            dest[palofs + 1] = ((256 >> 8) & 0xff);
+    std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(lump.disksize);
+    size_t size = SafeRead(wad.file, buffer.get(), lump.disksize);
 
-            // now the palette
-            if (wad.version == 3)
-                memcpy(dest + palofs + 2, data.data() + (in->offsets[3] + (in->width >> 3) * (in->height >> 3) + 2),
-                    3 * 256);
-            else
-                memcpy(dest + palofs + 2, thepalette, 3 * 256); // FIXME: quake palette or something.
+    if (size != lump.disksize)
+        FError("Failure reading from file");
+
+    imemstream stream(buffer.get(), size);
+
+    dmiptex_t header;
+    stream >= header;
+
+    dest.name = header.name.data();
+    dest.width = header.width;
+    dest.height = header.height;
+
+    // only header, no actual texture data
+    if (lump.disksize == sizeof(dmiptex_t)) {
+        return true;
+    }
+
+    if (lump.size != lump.disksize) {
+        LogPrint("Texture {} is {} bytes in wad, packed to {} bytes in bsp\n", name, lump.disksize, lump.size);
+    }
+
+    for (size_t i = 0; i < MIPLEVELS; i++) {
+        stream.seekg(header.offsets[i]);
+        size_t mipsize = (header.width >> i) * (header.height >> i);
+        dest.data[i] = std::make_unique<uint8_t[]>(mipsize);
+        stream.read(reinterpret_cast<char *>(dest.data[i].get()), mipsize);
+    }
+
+    // we're right after offsets[3] now, so see if palette is here
+    uint16_t palette_size;
+
+    if (stream >= palette_size) {
+        dest.palette.resize(palette_size);
+
+        if (!stream.read(reinterpret_cast<char *>(dest.palette.data()), palette_size * 3)) {
+            FError("Invalid palette in wad texture {}\n", name);
         }
     } else {
-        size = SafeRead(wad.file, dest, lump.disksize);
-        if (size != lump.disksize)
-            FError("Failure reading from file");
+        dest.palette.resize(sizeof(thepalette));
+        memcpy(dest.palette.data(), thepalette, sizeof(thepalette));
     }
-    return lump.size;
+
+    return true;
 }
 
-static void WADList_LoadTextures(dmiptexlump_t *lump)
+static void WADList_LoadTextures()
 {
-    int i, size;
-    uint8_t *data;
-
-    data = (uint8_t *)&lump->dataofs[map.nummiptex()];
-
-    for (i = 0; i < map.nummiptex(); i++) {
-        if (lump->dataofs[i])
+    for (size_t i = 0; i < map.nummiptex(); i++) {
+        // already loaded?
+        if (map.exported_textures[i].data[0])
             continue;
-        size = 0;
+
         for (auto &wad : wadlist) {
-            size = WAD_LoadLump(wad, map.miptexTextureName(i).c_str(), data);
-            if (size)
+            if (WAD_LoadLump(wad, map.miptexTextureName(i).c_str(), map.exported_textures[i]))
                 break;
         }
-        if (!size)
-            continue;
-        if (data + size - (uint8_t *)map.exported_texdata.data() > map.exported_texdata.size())
-            FError("Internal error: not enough texture memory allocated");
-        lump->dataofs[i] = data - (uint8_t *)lump;
-        data += size;
     }
 }
 
 static void WADList_AddAnimationFrames()
 {
-    int oldcount, i, j;
+    size_t oldcount = map.nummiptex();
 
-    oldcount = map.nummiptex();
-
-    for (i = 0; i < oldcount; i++) {
+    for (size_t i = 0; i < oldcount; i++) {
         const std::string &existing_name = map.miptexTextureName(i);
-        if (existing_name[0] != '+' && (options.target_version != &bspver_hl || existing_name[0] != '-'))
+        if (existing_name[0] != '+' && (options.target_game->id != GAME_HALF_LIFE || existing_name[0] != '-'))
             continue;
         std::string name = map.miptexTextureName(i);
 
         /* Search for all animations (0-9) and alt-animations (A-J) */
-        for (j = 0; j < 20; j++) {
+        for (size_t j = 0; j < 20; j++) {
             name[1] = (j < 10) ? '0' + j : 'a' + j - 10;
-            if (WADList_FindTexture(name.c_str()))
+            if (WADList_FindTexture(name))
                 FindMiptex(name.c_str());
         }
     }
@@ -305,22 +301,7 @@ static void WADList_AddAnimationFrames()
 
 void WADList_Process()
 {
-    int i;
-    const lumpinfo_t *texture;
-    dmiptexlump_t *miptexlump;
-
     WADList_AddAnimationFrames();
-
-    /* Count space for miptex header/offsets */
-    size_t texdatasize = offsetof(dmiptexlump_t, dataofs[0]) + (map.nummiptex() * sizeof(uint32_t));
-
-    /* Count texture size.  Slower, but saves memory. */
-    for (i = 0; i < map.nummiptex(); i++) {
-        texture = WADList_FindTexture(map.miptexTextureName(i).c_str());
-        if (texture) {
-            texdatasize += texture->size;
-        }
-    }
 
     // Q2 doesn't use texdata
     if (options.target_game->id == GAME_QUAKE_II) {
@@ -328,16 +309,13 @@ void WADList_Process()
     }
 
     /* Default texture data to store in worldmodel */
-    map.exported_texdata = std::string(texdatasize, '\0');
-    miptexlump = (dmiptexlump_t *)map.exported_texdata.data();
-    miptexlump->nummiptex = map.nummiptex();
+    map.exported_textures.resize(map.nummiptex());
 
-    WADList_LoadTextures(miptexlump);
+    WADList_LoadTextures();
 
     /* Last pass, mark unfound textures as such */
-    for (i = 0; i < map.nummiptex(); i++) {
-        if (miptexlump->dataofs[i] == 0) {
-            miptexlump->dataofs[i] = -1;
+    for (size_t i = 0; i < map.nummiptex(); i++) {
+        if (!map.exported_textures[i].data[0]) {
             LogPrint("WARNING: Texture {} not found\n", map.miptexTextureName(i));
         }
     }

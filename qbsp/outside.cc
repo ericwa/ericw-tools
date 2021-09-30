@@ -35,12 +35,9 @@ PointInLeaf
 */
 node_t *PointInLeaf(node_t *node, const vec3_t point)
 {
-    vec_t dist;
-    const qbsp_plane_t *plane;
-
     while (node->planenum != PLANENUM_LEAF) {
-        plane = &map.planes[node->planenum];
-        dist = DotProduct(plane->normal, point) - plane->dist;
+        auto &plane = map.planes[node->planenum];
+        vec_t dist = DotProduct(plane.normal, point) - plane.dist;
         node = (dist > 0) ? node->children[0] : node->children[1];
     }
 

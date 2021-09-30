@@ -62,13 +62,11 @@ void CalcAmbientSounds(mbsp_t *bsp)
 {
     const mface_t *surf;
     const gtexinfo_t *info;
-    const miptex_t *miptex;
     int i, j, k, l;
     mleaf_t *leaf, *hit;
     uint8_t *vis;
     float d, maxd;
     int ambient_type;
-    int ofs;
     float dists[NUM_AMBIENTS];
     float vol;
 
@@ -99,18 +97,17 @@ void CalcAmbientSounds(mbsp_t *bsp)
             for (k = 0; k < hit->nummarksurfaces; k++) {
                 surf = BSP_GetFace(bsp, bsp->dleaffaces[hit->firstmarksurface + k]);
                 info = &bsp->texinfo[surf->texinfo];
-                ofs = bsp->dtexdata->dataofs[info->miptex];
-                miptex = (const miptex_t *)((uint8_t *)bsp->dtexdata + ofs);
+                const auto &miptex = bsp->dtex.textures[info->miptex];
 
-                if (!Q_strncasecmp(miptex->name, "sky", 3) && ambientsky)
+                if (!Q_strncasecmp(miptex.name.data(), "sky", 3) && ambientsky)
                     ambient_type = AMBIENT_SKY;
-                else if (!Q_strncasecmp(miptex->name, "*water", 6) && ambientwater)
+                else if (!Q_strncasecmp(miptex.name.data(), "*water", 6) && ambientwater)
                     ambient_type = AMBIENT_WATER;
-                else if (!Q_strncasecmp(miptex->name, "*04water", 8) && ambientwater)
+                else if (!Q_strncasecmp(miptex.name.data(), "*04water", 8) && ambientwater)
                     ambient_type = AMBIENT_WATER;
-                else if (!Q_strncasecmp(miptex->name, "*slime", 6) && ambientslime)
+                else if (!Q_strncasecmp(miptex.name.data(), "*slime", 6) && ambientslime)
                     ambient_type = AMBIENT_WATER; // AMBIENT_SLIME;
-                else if (!Q_strncasecmp(miptex->name, "*lava", 5) && ambientlava)
+                else if (!Q_strncasecmp(miptex.name.data(), "*lava", 5) && ambientlava)
                     ambient_type = AMBIENT_LAVA;
                 else
                     continue;

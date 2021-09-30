@@ -239,7 +239,7 @@ const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum)
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
 {
     int i;
-    const dmodel_t *model;
+    const dmodelh2_t *model;
 
     /* Find the correct model offset */
     for (i = 0, model = bsp->dmodels.data(); i < bsp->dmodels.size(); i++, model++) {
@@ -618,8 +618,7 @@ static void FindDebugFace(const mbsp_t *bsp)
     const modelinfo_t *mi = ModelInfoForFace(bsp, facenum);
     const int modelnum = mi ? (mi->model - bsp->dmodels.data()) : -1;
 
-    const char *texname = Face_TextureName(bsp, f);
-
+    const std::string &texname = Face_TextureName(bsp, f);
     FLogPrint("dumping face {} (texture '{}' model {})\n", facenum, texname, modelnum);
 }
 

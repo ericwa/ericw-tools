@@ -213,7 +213,7 @@ class modelinfo_t
 
 public:
     const mbsp_t *bsp;
-    const dmodel_t *model;
+    const dmodelh2_t *model;
     float lightmapscale;
     vec3_t offset;
 
@@ -238,7 +238,7 @@ public:
     bool isWorld() const { return &bsp->dmodels[0] == model; }
 
 public:
-    modelinfo_t(const mbsp_t *b, const dmodel_t *m, float lmscale)
+    modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
         : bsp{b}, model{m}, lightmapscale{lmscale}, minlight{"minlight", 0}, shadow{"shadow", 0},
           shadowself{strings{"shadowself", "selfshadow"}, 0}, shadowworldonly{"shadowworldonly", 0},
           switchableshadow{"switchableshadow", 0},

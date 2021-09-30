@@ -111,6 +111,7 @@ struct lump_t
 #define Q2_LUMP_POP 16
 #define Q2_LUMP_AREAS 17
 #define Q2_LUMP_AREAPORTALS 18
+
 #define Q2_HEADER_LUMPS 19
 
 struct bspx_header_t
@@ -174,6 +175,12 @@ struct dmodelh2_t
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
+    
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces);
+    }
 };
 
 // shortcut template to trim (& convert) std::arrays
@@ -211,7 +218,7 @@ struct dmodelq1_t
         mins(model.mins),
         maxs(model.maxs),
         origin(model.origin),
-        headnode(array_cast<decltype(headnode)>(model.headnode, "dmodel_t::headnode")),
+        headnode(array_cast<decltype(headnode)>(model.headnode, "dmodelh2_t::headnode")),
         visleafs(model.visleafs),
         firstface(model.firstface),
         numfaces(model.numfaces)
@@ -225,11 +232,17 @@ struct dmodelq1_t
             mins,
             maxs,
             origin,
-            array_cast<decltype(dmodelh2_t::headnode)>(headnode, "dmodel_t::headnode"),
+            array_cast<decltype(dmodelh2_t::headnode)>(headnode, "dmodelh2_t::headnode"),
             visleafs,
             firstface,
             numfaces
         };
+    }
+    
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces);
     }
 };
 
@@ -277,29 +290,183 @@ struct q2_dmodel_t
     }
 };
 
-// FIXME: remove
-using dmodel_t = dmodelh2_t;
-
-struct dmiptexlump_t
+// structured data from BSP
+constexpr size_t MIPLEVELS = 4;
+struct dmiptex_t
 {
-    int32_t nummiptex;
-    int32_t dataofs[4]; /* [nummiptex] */
+    std::array<char, 16> name;
+    uint32_t width, height;
+    std::array<int32_t, MIPLEVELS> offsets; /* four mip maps stored */
+
+    auto stream_data()
+    {
+        return std::tie(name, width, height, offsets);
+    }
 };
 
-#define MIPLEVELS 4
+// miptex in memory
 struct miptex_t
 {
-    char name[16];
+    std::string name;
     uint32_t width, height;
-    uint32_t offsets[MIPLEVELS]; /* four mip maps stored */
+    std::array<std::unique_ptr<uint8_t[]>, MIPLEVELS> data;
+
+    virtual void stream_read(std::istream &stream)
+    {
+        auto start = stream.tellg();
+
+        dmiptex_t dtex;
+        stream >= dtex;
+
+        name = dtex.name.data();
+
+        width = dtex.width;
+        height = dtex.height;
+
+        for (size_t g = 0; g < MIPLEVELS; g++) {
+            if (dtex.offsets[g] < 0) {
+                continue;
+            }
+
+            stream.seekg(static_cast<uint32_t>(start) + dtex.offsets[g]);
+            const size_t num_bytes = (dtex.width >> g) * (dtex.height >> g);
+            uint8_t *bytes = new uint8_t[num_bytes];
+            stream.read(reinterpret_cast<char *>(bytes), num_bytes);
+            data[g] = std::unique_ptr<uint8_t[]>(bytes);
+        }
+    }
+
+    virtual void stream_write(std::ostream &stream) const
+    {
+        Q_assert((bool) data[0]);
+
+        std::array<char, 16> as_array { };
+        memcpy(as_array.data(), name.c_str(), name.size());
+
+        stream <= as_array <= width <= height;
+
+        uint32_t header_end = sizeof(dmiptex_t);
+
+        for (size_t i = 0; i < MIPLEVELS; i++) {
+            stream <= header_end;
+            header_end += (width >> i) * (height >> i);
+        }
+
+        for (size_t i = 0; i < MIPLEVELS; i++) {
+            stream.write(reinterpret_cast<char *>(data[i].get()), (width >> i) * (height >> i));
+        }
+    }
 };
 
-// mxd. Used to store RGBA data in mbsp->drgbatexdata
+// Half Life miptex, which includes a palette
+struct miptexhl_t : miptex_t
+{
+    std::vector<uint8_t> palette;
+
+    miptexhl_t() = default;
+
+    // convert miptex_t to miptexhl_t
+    miptexhl_t(miptex_t &&move) :
+        miptex_t(std::forward<miptex_t &&>(move))
+    {
+    }
+
+    virtual void stream_read(std::istream &stream)
+    {
+        miptex_t::stream_read(stream);
+
+        uint16_t num_colors;
+        stream >= num_colors;
+
+        palette.resize(num_colors * 3);
+        stream.read(reinterpret_cast<char *>(palette.data()), palette.size());
+    }
+
+    virtual void stream_write(std::ostream &stream) const
+    {
+        miptex_t::stream_write(stream);
+
+        stream <= static_cast<uint16_t>(palette.size());
+
+        stream.write(reinterpret_cast<const char *>(palette.data()), palette.size());
+    }
+};
+
+// structured miptex container lump
+template<typename T>
+struct dmiptexlump_t
+{
+    std::vector<T> textures;
+
+    dmiptexlump_t() = default;
+
+    // move from a different lump type
+    template<typename T2>
+    dmiptexlump_t(dmiptexlump_t<T2> &&move)
+    {
+        textures.reserve(move.textures.size());
+
+        for (auto &m : move.textures) {
+            textures.emplace_back(std::move(m));
+        }
+    }
+
+    void stream_read(std::istream &stream, const lump_t &lump)
+    {
+        int32_t nummiptex;
+        stream >= nummiptex;
+
+        for (size_t i = 0; i < nummiptex; i++) {
+            int32_t mipofs;
+
+            stream >= mipofs;
+
+            miptex_t &tex = textures.emplace_back();
+
+            if (mipofs < 0)
+                continue;
+
+            auto pos = stream.tellg();
+
+            stream.seekg(lump.fileofs + mipofs);
+
+            tex.stream_read(stream);
+
+            stream.seekg(pos);
+        }
+    }
+
+    void stream_write(std::ostream &stream) const
+    {
+        stream <= static_cast<int32_t>(textures.size());
+
+        const size_t header_size = sizeof(int32_t) + (sizeof(int32_t) * textures.size());
+        size_t miptex_offset = 0;
+        
+        for (auto &texture : textures) {
+            if (!texture.name[0]) {
+                stream <= static_cast<int32_t>(-1);
+                continue;
+            }
+            stream <= static_cast<int32_t>(header_size + miptex_offset);
+            miptex_offset += sizeof(dmiptex_t) + texture.width * texture.height / 64 * 85;
+        }
+
+        for (auto &texture : textures) {
+            if (texture.name[0]) {
+                texture.stream_write(stream);
+            }
+        }
+    }
+};
+
+// mxd. Used to store RGBA data in mbsp->drgbatexdata.
+// This isn't persisted to BSPs so we don't need stream stuff.
 struct rgba_miptex_t
 {
-    char name[32] = { 0 }; // Same as in Q2
+    std::string name;
     uint32_t width = 0, height = 0;
-    std::unique_ptr<uint8_t> data;
+    std::unique_ptr<uint8_t[]> data;
 };
 
 using dvertex_t = bspvec3f_t;
@@ -469,6 +636,12 @@ struct bsp2_dnode_t
     bspvec3f_t maxs;
     uint32_t firstface;
     uint32_t numfaces; /* counting both sides */
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
+    }
 };
 
 struct bsp29_dnode_t
@@ -505,6 +678,12 @@ struct bsp29_dnode_t
             numfaces
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
+    }
 };
 
 struct bsp2rmq_dnode_t
@@ -540,6 +719,12 @@ struct bsp2rmq_dnode_t
             firstface,
             numfaces
         };
+    }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
     }
 };
 
@@ -597,6 +782,12 @@ struct bsp2_dclipnode_t
 {
     int32_t planenum;
     std::array<int32_t, 2> children; /* negative numbers are contents */
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, children);
+    }
 };
 
 struct bsp29_dclipnode_t
@@ -621,12 +812,21 @@ struct bsp29_dclipnode_t
             { upcast(children[0]), upcast(children[1]) }
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, children);
+    }
     
     /* Slightly tricky since we support > 32k clipnodes */
 private:
     static constexpr int16_t downcast(const int32_t &v)
     {
-        return numeric_cast<int16_t>(v < 0 ? v + 0x10000 : v, "dclipmode_t::children");
+        if (v < -15 || v > 0xFFF0)
+            throw std::overflow_error("dclipmode_t::children");
+
+        return static_cast<int16_t>(v < 0 ? v + 0x10000 : v);
     }
     
     static constexpr int32_t upcast(const int16_t &v)
@@ -753,6 +953,12 @@ struct texinfo_t
             miptex
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(vecs, miptex, flags);
+    }
 };
 
 struct q2_texinfo_t
@@ -815,6 +1021,12 @@ struct mface_t
     /* lighting info */
     std::array<uint8_t, MAXLIGHTMAPS> styles;
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
+    }
 };
 
 struct bsp29_dface_t
@@ -856,6 +1068,12 @@ struct bsp29_dface_t
             lightofs
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
+    }
 };
 
 struct bsp2_dface_t
@@ -896,6 +1114,12 @@ struct bsp2_dface_t
             styles,
             lightofs
         };
+    }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
     }
 };
 
@@ -985,6 +1209,12 @@ struct q2_dface_qbism_t
             lightofs
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
+    }
 };
 
 /*
@@ -1053,6 +1283,12 @@ struct bsp29_dleaf_t
             ambient_level
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
+    }
 };
 
 struct bsp2rmq_dleaf_t
@@ -1092,6 +1328,12 @@ struct bsp2rmq_dleaf_t
             ambient_level
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
+    }
 };
 
 struct bsp2_dleaf_t
@@ -1130,6 +1372,12 @@ struct bsp2_dleaf_t
             nummarksurfaces,
             ambient_level
         };
+    }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
     }
 };
 
@@ -1239,12 +1487,24 @@ struct q2_dleaf_qbism_t
             numleafbrushes
         };
     }
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
+    }
 };
 
 struct q2_dbrushside_qbism_t
 {
     uint32_t planenum; // facing out of the leaf
     int32_t texinfo;
+
+    // serialize for streams
+    auto stream_data()
+    {
+        return std::tie(planenum, texinfo);
+    }
 };
 
 struct q2_dbrushside_t
@@ -1301,13 +1561,12 @@ enum vistype_t
 // compressed bit vectors.
 struct mvis_t
 {
-    int32_t numclusters;
     std::vector<std::array<int32_t, 2>> bit_offsets;
     std::vector<uint8_t> bits;
 
     inline size_t header_offset() const
     {
-        return sizeof(numclusters) + (sizeof(int32_t) * numclusters * 2);
+        return sizeof(int32_t) + (sizeof(int32_t) * bit_offsets.size() * 2);
     }
 
     // set a bit offset of the specified cluster/vistype *relative to the start of the bits array*
@@ -1326,23 +1585,23 @@ struct mvis_t
 
     void resize(size_t numclusters)
     {
-        this->numclusters = numclusters;
         bit_offsets.resize(numclusters);
     }
 
-    void stream_read(std::istream &stream, size_t lump_size)
+    void stream_read(std::istream &stream, const lump_t &lump)
     {
-        auto start = stream.tellg();
+        int32_t numclusters;
+
         stream >= numclusters;
 
-        bit_offsets.resize(numclusters);
+        resize(numclusters);
 
         // read cluster -> offset tables
         for (auto &bit_offset : bit_offsets)
             stream >= bit_offset;
 
         // pull in final bit set
-        auto remaining = lump_size - (stream.tellg() - start);
+        auto remaining = lump.filelen - (static_cast<int32_t>(stream.tellg()) - lump.fileofs);
         bits.resize(remaining);
         stream.read(reinterpret_cast<char *>(bits.data()), remaining);
     }
@@ -1350,11 +1609,11 @@ struct mvis_t
     void stream_write(std::ostream &stream) const
     {
         // no vis data
-        if (!numclusters) {
+        if (!bit_offsets.size()) {
             return;
         }
 
-        stream <= numclusters;
+        stream <= static_cast<int32_t>(bit_offsets.size());
 
         // write cluster -> offset tables
         for (auto &bit_offset : bit_offsets)
@@ -1392,237 +1651,69 @@ struct darea_t
     }
 };
 
-/* ========================================================================= */
+// Q1-esque maps can use one of these two.
+using dmodelq1_vector = std::vector<dmodelq1_t>;
+using dmodelh2_vector = std::vector<dmodelh2_t>;
 
-struct bspxentry_t
-{
-    std::array<char, 24> lumpname;
-    const void *lumpdata;
-    size_t lumpsize;
-
-    bspxentry_t *next;
-};
-
-// this is just temporary until the types use typesafe
-// containers.
-#define IMPL_MOVE_COPY(T) \
-    T() { memset(this, 0, sizeof(*this)); } \
-    T(T &&move) { memcpy(this, &move, sizeof(move)); memset(&move, 0, sizeof(move)); } \
-    T(const T &copy) { memcpy(this, &copy, sizeof(copy)); } \
-    T &operator=(T &&move) { memcpy(this, &move, sizeof(move)); memset(&move, 0, sizeof(move)); return *this; } \
-    T &operator=(const T &copy) { memcpy(this, &copy, sizeof(copy)); return *this; }
+// Q1-esque maps can use one of these two.
+using miptexq1_lump = dmiptexlump_t<miptex_t>;
+using miptexhl_lump = dmiptexlump_t<miptexhl_t>;
 
 struct bsp29_t
 {
-    int nummodels;
-    dmodelq1_t *dmodels_q;
-    dmodelh2_t *dmodels_h2;
-
-    int visdatasize;
-    uint8_t *dvisdata;
-
-    int lightdatasize;
-    uint8_t *dlightdata;
-
-    int texdatasize;
-    dmiptexlump_t *dtexdata;
-
-    int entdatasize;
-    char *dentdata;
-
-    int numleafs;
-    bsp29_dleaf_t *dleafs;
-
-    int numplanes;
-    dplane_t *dplanes;
-
-    int numvertexes;
-    dvertex_t *dvertexes;
-
-    int numnodes;
-    bsp29_dnode_t *dnodes;
-
-    int numtexinfo;
-    texinfo_t *texinfo;
-
-    int numfaces;
-    bsp29_dface_t *dfaces;
-
-    int numclipnodes;
-    bsp29_dclipnode_t *dclipnodes;
-
-    int numedges;
-    bsp29_dedge_t *dedges;
-
-    int nummarksurfaces;
-    uint16_t *dmarksurfaces;
-
-    int numsurfedges;
-    int32_t *dsurfedges;
-
-    IMPL_MOVE_COPY(bsp29_t);
-
-    ~bsp29_t()
-    {
-        delete[] dmodels_q;
-        delete[] dmodels_h2;
-        delete[] dvisdata;
-        delete[] dlightdata;
-        delete[] dtexdata;
-        delete[] dentdata;
-        delete[] dleafs;
-        delete[] dplanes;
-        delete[] dvertexes;
-        delete[] dnodes;
-        delete[] texinfo;
-        delete[] dfaces;
-        delete[] dclipnodes;
-        delete[] dedges;
-        delete[] dmarksurfaces;
-        delete[] dsurfedges;
-    }
+    std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
+    std::vector<uint8_t> dvisdata;
+    std::vector<uint8_t> dlightdata;
+    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    std::string dentdata;
+    std::vector<bsp29_dleaf_t> dleafs;
+    std::vector<dplane_t> dplanes;
+    std::vector<dvertex_t> dvertexes;
+    std::vector<bsp29_dnode_t> dnodes;
+    std::vector<texinfo_t> texinfo;
+    std::vector<bsp29_dface_t> dfaces;
+    std::vector<bsp29_dclipnode_t> dclipnodes;
+    std::vector<bsp29_dedge_t> dedges;
+    std::vector<uint16_t> dmarksurfaces;
+    std::vector<int32_t> dsurfedges;
 };
 
 struct bsp2rmq_t
 {
-    int nummodels;
-    dmodelq1_t *dmodels_q;
-    dmodelh2_t *dmodels_h2;
-
-    int visdatasize;
-    uint8_t *dvisdata;
-
-    int lightdatasize;
-    uint8_t *dlightdata;
-
-    int texdatasize;
-    dmiptexlump_t *dtexdata;
-
-    int entdatasize;
-    char *dentdata;
-
-    int numleafs;
-    bsp2rmq_dleaf_t *dleafs;
-
-    int numplanes;
-    dplane_t *dplanes;
-
-    int numvertexes;
-    dvertex_t *dvertexes;
-
-    int numnodes;
-    bsp2rmq_dnode_t *dnodes;
-
-    int numtexinfo;
-    texinfo_t *texinfo;
-
-    int numfaces;
-    bsp2_dface_t *dfaces;
-
-    int numclipnodes;
-    bsp2_dclipnode_t *dclipnodes;
-
-    int numedges;
-    bsp2_dedge_t *dedges;
-
-    int nummarksurfaces;
-    uint32_t *dmarksurfaces;
-
-    int numsurfedges;
-    int32_t *dsurfedges;
-
-    IMPL_MOVE_COPY(bsp2rmq_t);
-
-    ~bsp2rmq_t()
-    {
-        delete[] dmodels_q;
-        delete[] dmodels_h2;
-        delete[] dvisdata;
-        delete[] dlightdata;
-        delete[] dtexdata;
-        delete[] dentdata;
-        delete[] dleafs;
-        delete[] dplanes;
-        delete[] dvertexes;
-        delete[] dnodes;
-        delete[] texinfo;
-        delete[] dfaces;
-        delete[] dclipnodes;
-        delete[] dedges;
-        delete[] dmarksurfaces;
-        delete[] dsurfedges;
-    }
+    std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
+    std::vector<uint8_t> dvisdata;
+    std::vector<uint8_t> dlightdata;
+    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    std::string dentdata;
+    std::vector<bsp2rmq_dleaf_t> dleafs;
+    std::vector<dplane_t> dplanes;
+    std::vector<dvertex_t> dvertexes;
+    std::vector<bsp2rmq_dnode_t> dnodes;
+    std::vector<texinfo_t> texinfo;
+    std::vector<bsp2_dface_t> dfaces;
+    std::vector<bsp2_dclipnode_t> dclipnodes;
+    std::vector<bsp2_dedge_t> dedges;
+    std::vector<uint32_t> dmarksurfaces;
+    std::vector<int32_t> dsurfedges;
 };
 
 struct bsp2_t
 {
-    int nummodels;
-    dmodelq1_t *dmodels_q;
-    dmodelh2_t *dmodels_h2;
-
-    int visdatasize;
-    uint8_t *dvisdata;
-
-    int lightdatasize;
-    uint8_t *dlightdata;
-
-    int texdatasize;
-    dmiptexlump_t *dtexdata;
-
-    int entdatasize;
-    char *dentdata;
-
-    int numleafs;
-    bsp2_dleaf_t *dleafs;
-
-    int numplanes;
-    dplane_t *dplanes;
-
-    int numvertexes;
-    dvertex_t *dvertexes;
-
-    int numnodes;
-    bsp2_dnode_t *dnodes;
-
-    int numtexinfo;
-    texinfo_t *texinfo;
-
-    int numfaces;
-    bsp2_dface_t *dfaces;
-
-    int numclipnodes;
-    bsp2_dclipnode_t *dclipnodes;
-
-    int numedges;
-    bsp2_dedge_t *dedges;
-
-    int nummarksurfaces;
-    uint32_t *dmarksurfaces;
-
-    int numsurfedges;
-    int32_t *dsurfedges;
-
-    IMPL_MOVE_COPY(bsp2_t);
-
-    ~bsp2_t()
-    {
-        delete[] dmodels_q;
-        delete[] dmodels_h2;
-        delete[] dvisdata;
-        delete[] dlightdata;
-        delete[] dtexdata;
-        delete[] dentdata;
-        delete[] dleafs;
-        delete[] dplanes;
-        delete[] dvertexes;
-        delete[] dnodes;
-        delete[] texinfo;
-        delete[] dfaces;
-        delete[] dclipnodes;
-        delete[] dedges;
-        delete[] dmarksurfaces;
-        delete[] dsurfedges;
-    }
+    std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
+    std::vector<uint8_t> dvisdata;
+    std::vector<uint8_t> dlightdata;
+    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    std::string dentdata;
+    std::vector<bsp2_dleaf_t> dleafs;
+    std::vector<dplane_t> dplanes;
+    std::vector<dvertex_t> dvertexes;
+    std::vector<bsp2_dnode_t> dnodes;
+    std::vector<texinfo_t> texinfo;
+    std::vector<bsp2_dface_t> dfaces;
+    std::vector<bsp2_dclipnode_t> dclipnodes;
+    std::vector<bsp2_dedge_t> dedges;
+    std::vector<uint32_t> dmarksurfaces;
+    std::vector<int32_t> dsurfedges;
 };
 
 struct q2bsp_t
@@ -1651,83 +1742,24 @@ struct q2bsp_t
 
 struct q2bsp_qbism_t
 {
-    int nummodels;
-    q2_dmodel_t *dmodels;
-
+    std::vector<q2_dmodel_t> dmodels;
     mvis_t dvis;
-
-    int lightdatasize;
-    uint8_t *dlightdata;
-
-    int entdatasize;
-    char *dentdata;
-
-    int numleafs;
-    q2_dleaf_qbism_t *dleafs;
-
-    int numplanes;
-    dplane_t *dplanes;
-
-    int numvertexes;
-    dvertex_t *dvertexes;
-
-    int numnodes;
-    q2_dnode_qbism_t *dnodes;
-
-    int numtexinfo;
-    q2_texinfo_t *texinfo;
-
-    int numfaces;
-    q2_dface_qbism_t *dfaces;
-
-    int numedges;
-    bsp2_dedge_t *dedges;
-
-    int numleaffaces;
-    uint32_t *dleaffaces;
-
-    int numleafbrushes;
-    uint32_t *dleafbrushes;
-
-    int numsurfedges;
-    int32_t *dsurfedges;
-
-    int numareas;
-    darea_t *dareas;
-
-    int numareaportals;
-    dareaportal_t *dareaportals;
-
-    int numbrushes;
-    dbrush_t *dbrushes;
-
-    int numbrushsides;
-    q2_dbrushside_qbism_t *dbrushsides;
-
-    uint8_t dpop[256];
-
-    IMPL_MOVE_COPY(q2bsp_qbism_t);
-
-    ~q2bsp_qbism_t()
-    {
-        delete[] dmodels;
-        delete[] dlightdata;
-        delete[] dentdata;
-        delete[] dleafs;
-        delete[] dplanes;
-        delete[] dvertexes;
-        delete[] dnodes;
-        delete[] texinfo;
-        delete[] dfaces;
-        delete[] dedges;
-        delete[] dleaffaces;
-        delete[] dleafbrushes;
-        delete[] dsurfedges;
-        delete[] dareas;
-        delete[] dareaportals;
-        delete[] dbrushes;
-        delete[] dbrushsides;
-    }
+    std::vector<uint8_t> dlightdata;
+    std::string dentdata;
+    std::vector<q2_dleaf_qbism_t> dleafs;
+    std::vector<dplane_t> dplanes;
+    std::vector<dvertex_t> dvertexes;
+    std::vector<q2_dnode_qbism_t> dnodes;
+    std::vector<q2_texinfo_t> texinfo;
+    std::vector<q2_dface_qbism_t> dfaces;
+    std::vector<bsp2_dedge_t> dedges;
+    std::vector<uint32_t> dleaffaces;
+    std::vector<uint32_t> dleafbrushes;
+    std::vector<int32_t> dsurfedges;
+    std::vector<darea_t> dareas;
+    std::vector<dareaportal_t> dareaportals;
+    std::vector<dbrush_t> dbrushes;
+    std::vector<q2_dbrushside_qbism_t> dbrushsides;
 };
 
 struct bspversion_t;
@@ -1737,16 +1769,10 @@ struct mbsp_t
     const bspversion_t *loadversion;
 
     std::vector<dmodelh2_t> dmodels;
-
     mvis_t dvis;
-
     std::vector<uint8_t> dlightdata;
-
-    int texdatasize;
-    dmiptexlump_t *dtexdata;
-
+    dmiptexlump_t<miptexhl_t> dtex;
     std::vector<rgba_miptex_t> drgbatexdata;
-
     std::string dentdata;
     std::vector<mleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
@@ -1767,25 +1793,34 @@ struct mbsp_t
 
 struct dheader_t
 {
-    int32_t version;
+    int32_t ident;
     std::array<lump_t, BSP_LUMPS> lumps;
 
     auto stream_data()
     {
-        return std::tie(version, lumps);
+        return std::tie(ident, lumps);
     }
 };
 
-struct q2_dheader_t
+struct q2_dheader_t : dheader_t
 {
-    int32_t ident;
     int32_t version;
-    std::array<lump_t, Q2_HEADER_LUMPS> lumps;
 
+    // note: intentionally not virtual & hides inherited version
     auto stream_data()
     {
         return std::tie(ident, version, lumps);
     }
+};
+/* ========================================================================= */
+
+struct bspxentry_t
+{
+    std::array<char, 24> lumpname;
+    const void *lumpdata;
+    size_t lumpsize;
+
+    bspxentry_t *next;
 };
 
 struct bspdata_t
@@ -1896,7 +1931,3 @@ void PrintBSPFileSizes(const bspdata_t *bspdata);
 bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
 const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);
-
-void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed);
-
-int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out);

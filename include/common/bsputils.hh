@@ -25,7 +25,7 @@
 
 #include <common/qvec.hh>
 
-const dmodel_t *BSP_GetWorldModel(const mbsp_t *bsp);
+const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp);
 int Face_GetNum(const mbsp_t *bsp, const mface_t *f);
 
 // bounds-checked array access (assertion failure on out-of-bounds)
@@ -43,17 +43,16 @@ void Face_Normal(const mbsp_t *bsp, const mface_t *f, vec3_t norm); // mxd
 plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f);
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face); // mxd. miptex_t -> rgba_miptex_t
-const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face);
+const std::string &Face_TextureName(const mbsp_t *bsp, const mface_t *face);
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);
 const bspvec3f_t &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v);
-// int TextureName_Contents(const char *texname); //mxd
 bool ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, int contents_or_surf_flags); // mxd
 bool Face_IsTranslucent(const mbsp_t *bsp, const mface_t *face); // mxd
 int Face_ContentsOrSurfaceFlags(
     const mbsp_t *bsp, const mface_t *face); // mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
-const dmodel_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
+const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
 vec_t Plane_Dist(const vec3_t &point, const dplane_t *plane);
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodel_t *model, const vec3_t &point);
+bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point);
 bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t &point);
 /**
  * Searches for a face touching a point and facing a certain way.
@@ -61,7 +60,7 @@ bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t &point);
  * is used to disambiguate these.
  */
 const mface_t *BSP_FindFaceAtPoint(
-    const mbsp_t *bsp, const dmodel_t *model, const vec3_t &point, const vec3_t &wantedNormal);
+    const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point, const vec3_t &wantedNormal);
 plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face);
 bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const vec3_t &point);
 

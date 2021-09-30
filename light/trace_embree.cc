@@ -368,7 +368,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             if (isGlass)
                 alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.66f : 0.33f);
         } else {
-            const char *name = Face_TextureName(bsp_static, face);
+            const std::string &name = Face_TextureName(bsp_static, face);
             isFence = (name[0] == '{');
             isGlass = (alpha < 1.0f);
         }
@@ -504,7 +504,7 @@ void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *pla
     planes->pop_back();
 }
 
-static void MakeFaces(const mbsp_t *bsp, const dmodel_t *model, std::vector<winding_t> &result)
+static void MakeFaces(const mbsp_t *bsp, const dmodelh2_t *model, std::vector<winding_t> &result)
 {
     std::vector<plane_t> planes;
     MakeFaces_r(bsp, model->headnode[0], &planes, result);
@@ -563,7 +563,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
             }
 
             // fence
-            const char *texname = Face_TextureName(bsp, face);
+            const std::string &texname = Face_TextureName(bsp, face);
             if (texname[0] == '{') {
                 filterfaces.push_back(face);
                 continue;
@@ -580,7 +580,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
                 }
             } else {
                 // Q1
-                if (!Q_strncasecmp("sky", texname, 3)) {
+                if (!Q_strncasecmp("sky", texname.data(), 3)) {
                     skyfaces.push_back(face);
                     continue;
                 }

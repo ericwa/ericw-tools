@@ -648,8 +648,8 @@ inline void CopyOrMoveArray(T &in, T &out)
 }
 
 // convert structured data if we're different types
-template<typename T, typename F>
-inline void CopyOrMoveArray(const std::vector<F> &from, std::vector<T> &to)
+template<typename T, typename F, typename = std::enable_if_t<!std::is_same_v<T, F>>>
+inline void CopyOrMoveArray(std::vector<F> &from, std::vector<T> &to)
 {
     to.reserve(from.size());
 
@@ -658,14 +658,22 @@ inline void CopyOrMoveArray(const std::vector<F> &from, std::vector<T> &to)
         if constexpr(std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
             to.emplace_back(numeric_cast<T>(v));
         else
-            to.emplace_back(v);
+            to.emplace_back(std::move(v));
     }
+}
+
+// move structured data if the input and output
+// are of the same type
+template<typename T, typename F>
+inline void CopyOrMoveArray(F &in, T &out)
+{
+    out = std::move(in);
 }
 
 // convert structured data if we're different types
 // with numeric casting for arrays
-template<typename T, typename F, size_t N>
-inline void CopyOrMoveArray(const std::vector<std::array<F, N>> &from, std::vector<std::array<T, N>> &to)
+template<typename T, typename F, size_t N, typename = std::enable_if_t<!std::is_same_v<T, F>>>
+inline void CopyOrMoveArray(std::vector<std::array<F, N>> &from, std::vector<std::array<T, N>> &to)
 {
     to.reserve(from.size());
 
@@ -674,8 +682,124 @@ inline void CopyOrMoveArray(const std::vector<std::array<F, N>> &from, std::vect
         if constexpr(std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
             to.emplace_back(array_cast<std::array<T, N>>(v));
         else
-            to.emplace_back(v);
+            to.emplace_back(std::move(v));
     }
+}
+
+// Convert from a Q1-esque format to Generic
+template<typename T>
+inline void ConvertQ1BSPToGeneric(T &bsp, mbsp_t &mbsp)
+{
+    CopyOrMoveArray(bsp.dentdata, mbsp.dentdata);
+    CopyOrMoveArray(bsp.dplanes, mbsp.dplanes);
+    if (std::holds_alternative<miptexhl_lump>(bsp.dtex)) {
+        CopyOrMoveArray(std::get<miptexhl_lump>(bsp.dtex), mbsp.dtex);
+    } else {
+        CopyOrMoveArray(std::get<miptexq1_lump>(bsp.dtex), mbsp.dtex);
+    }
+    CopyOrMoveArray(bsp.dvertexes, mbsp.dvertexes);
+    CopyOrMoveArray(bsp.dvisdata, mbsp.dvis.bits);
+    CopyOrMoveArray(bsp.dnodes, mbsp.dnodes);
+    CopyOrMoveArray(bsp.texinfo, mbsp.texinfo);
+    CopyOrMoveArray(bsp.dfaces, mbsp.dfaces);
+    CopyOrMoveArray(bsp.dlightdata, mbsp.dlightdata);
+    CopyOrMoveArray(bsp.dclipnodes, mbsp.dclipnodes);
+    CopyOrMoveArray(bsp.dleafs, mbsp.dleafs);
+    CopyOrMoveArray(bsp.dmarksurfaces, mbsp.dleaffaces);
+    CopyOrMoveArray(bsp.dedges, mbsp.dedges);
+    CopyOrMoveArray(bsp.dsurfedges, mbsp.dsurfedges);
+    if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels)) {
+        CopyOrMoveArray(std::get<dmodelh2_vector>(bsp.dmodels), mbsp.dmodels);
+    } else {
+        CopyOrMoveArray(std::get<dmodelq1_vector>(bsp.dmodels), mbsp.dmodels);
+    }
+}
+
+// Convert from a Q2-esque format to Generic
+template<typename T>
+inline void ConvertQ2BSPToGeneric(T &bsp, mbsp_t &mbsp)
+{
+    CopyOrMoveArray(bsp.dentdata, mbsp.dentdata);
+    CopyOrMoveArray(bsp.dplanes, mbsp.dplanes);
+    CopyOrMoveArray(bsp.dvertexes, mbsp.dvertexes);
+    CopyOrMoveArray(bsp.dvis, mbsp.dvis);
+    CopyOrMoveArray(bsp.dnodes, mbsp.dnodes);
+    CopyOrMoveArray(bsp.texinfo, mbsp.texinfo);
+    CopyOrMoveArray(bsp.dfaces, mbsp.dfaces);
+    CopyOrMoveArray(bsp.dlightdata, mbsp.dlightdata);
+    CopyOrMoveArray(bsp.dleafs, mbsp.dleafs);
+    CopyOrMoveArray(bsp.dleaffaces, mbsp.dleaffaces);
+    CopyOrMoveArray(bsp.dleafbrushes, mbsp.dleafbrushes);
+    CopyOrMoveArray(bsp.dedges, mbsp.dedges);
+    CopyOrMoveArray(bsp.dsurfedges, mbsp.dsurfedges);
+    CopyOrMoveArray(bsp.dmodels, mbsp.dmodels);
+    CopyOrMoveArray(bsp.dbrushes, mbsp.dbrushes);
+    CopyOrMoveArray(bsp.dbrushsides, mbsp.dbrushsides);
+    CopyOrMoveArray(bsp.dareas, mbsp.dareas);
+    CopyOrMoveArray(bsp.dareaportals, mbsp.dareaportals);
+}
+
+// Convert from a Q1-esque format to Generic
+template<typename T>
+inline T ConvertGenericToQ1BSP(mbsp_t &mbsp, const bspversion_t *to_version)
+{
+    T bsp { };
+
+    // copy or convert data
+    CopyOrMoveArray(mbsp.dentdata, bsp.dentdata);
+    CopyOrMoveArray(mbsp.dplanes, bsp.dplanes);
+    if (to_version->game->id == GAME_HALF_LIFE) {
+        CopyOrMoveArray(mbsp.dtex, bsp.dtex.emplace<miptexhl_lump>());
+    } else {
+        CopyOrMoveArray(mbsp.dtex, bsp.dtex.emplace<miptexq1_lump>());
+    }
+    CopyOrMoveArray(mbsp.dvertexes, bsp.dvertexes);
+    CopyOrMoveArray(mbsp.dvis.bits, bsp.dvisdata);
+    CopyOrMoveArray(mbsp.dnodes, bsp.dnodes);
+    CopyOrMoveArray(mbsp.texinfo, bsp.texinfo);
+    CopyOrMoveArray(mbsp.dfaces, bsp.dfaces);
+    CopyOrMoveArray(mbsp.dlightdata, bsp.dlightdata);
+    CopyOrMoveArray(mbsp.dclipnodes, bsp.dclipnodes);
+    CopyOrMoveArray(mbsp.dleafs, bsp.dleafs);
+    CopyOrMoveArray(mbsp.dleaffaces, bsp.dmarksurfaces);
+    CopyOrMoveArray(mbsp.dedges, bsp.dedges);
+    CopyOrMoveArray(mbsp.dsurfedges, bsp.dsurfedges);
+    if (to_version->game->id == GAME_HEXEN_II) {
+        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.emplace<dmodelh2_vector>());
+    } else {
+        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.emplace<dmodelq1_vector>());
+    }
+
+    return bsp;
+}
+
+// Convert from a Q2-esque format to Generic
+template<typename T>
+inline T ConvertGenericToQ2BSP(mbsp_t &mbsp, const bspversion_t *to_version)
+{
+    T bsp { };
+
+    // copy or convert data
+    CopyOrMoveArray(mbsp.dentdata, bsp.dentdata);
+    CopyOrMoveArray(mbsp.dplanes, bsp.dplanes);
+    CopyOrMoveArray(mbsp.dvertexes, bsp.dvertexes);
+    CopyOrMoveArray(mbsp.dvis, bsp.dvis);
+    CopyOrMoveArray(mbsp.dnodes, bsp.dnodes);
+    CopyOrMoveArray(mbsp.texinfo, bsp.texinfo);
+    CopyOrMoveArray(mbsp.dfaces, bsp.dfaces);
+    CopyOrMoveArray(mbsp.dlightdata, bsp.dlightdata);
+    CopyOrMoveArray(mbsp.dleafs, bsp.dleafs);
+    CopyOrMoveArray(mbsp.dleaffaces, bsp.dleaffaces);
+    CopyOrMoveArray(mbsp.dleafbrushes, bsp.dleafbrushes);
+    CopyOrMoveArray(mbsp.dedges, bsp.dedges);
+    CopyOrMoveArray(mbsp.dsurfedges, bsp.dsurfedges);
+    CopyOrMoveArray(mbsp.dmodels, bsp.dmodels);
+    CopyOrMoveArray(mbsp.dbrushes, bsp.dbrushes);
+    CopyOrMoveArray(mbsp.dbrushsides, bsp.dbrushsides);
+    CopyOrMoveArray(mbsp.dareas, bsp.dareas);
+    CopyOrMoveArray(mbsp.dareaportals, bsp.dareaportals);
+
+    return bsp;
 }
 
 /*
@@ -687,459 +811,62 @@ inline void CopyOrMoveArray(const std::vector<std::array<F, N>> &from, std::vect
  */
 bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
 {
-    try
-    {
-        if (bspdata->version == to_version)
-            return true;
+    if (bspdata->version == to_version)
+        return true;
 
-        if (to_version == &bspver_generic) {
-            // Conversions to bspver_generic
-            // NOTE: these always succeed
-            mbsp_t mbsp { };
+    if (to_version == &bspver_generic) {
+        // Conversions to bspver_generic
+        mbsp_t mbsp { };
 
-            /*if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
-                // bspver_q1, bspver_h2, bspver_hl -> bspver_generic
-                const bsp29_t &bsp29 = std::get<bsp29_t>(bspdata->bsp);
-
-                // copy counts
-                mbsp.nummodels = bsp29.nummodels;
-                mbsp.visdatasize = bsp29.visdatasize;
-                mbsp.lightdatasize = bsp29.lightdatasize;
-                mbsp.texdatasize = bsp29.texdatasize;
-                mbsp.entdatasize = bsp29.entdatasize;
-                mbsp.numleafs = bsp29.numleafs;
-                mbsp.numplanes = bsp29.numplanes;
-                mbsp.numvertexes = bsp29.numvertexes;
-                mbsp.numnodes = bsp29.numnodes;
-                mbsp.numtexinfo = bsp29.numtexinfo;
-                mbsp.numfaces = bsp29.numfaces;
-                mbsp.numclipnodes = bsp29.numclipnodes;
-                mbsp.numedges = bsp29.numedges;
-                mbsp.numleaffaces = bsp29.nummarksurfaces;
-                mbsp.numsurfedges = bsp29.numsurfedges;
-
-                // copy or convert data
-                if (bspdata->version == &bspver_h2) {
-                    CopyArray(bsp29.dmodels_h2, bsp29.nummodels, mbsp.dmodels);
-                } else {
-                    CopyArray(bsp29.dmodels_q, bsp29.nummodels, mbsp.dmodels);
-                }
-                mbsp.dvisdata = BSP29_CopyVisData(bsp29.dvisdata, bsp29.visdatasize);
-                CopyArray(bsp29.dlightdata, bsp29.lightdatasize, mbsp.dlightdata);
-                CopyArray(bsp29.dtexdata, bsp29.texdatasize, mbsp.dtexdata);
-                CopyArray(bsp29.dentdata, bsp29.entdatasize, mbsp.dentdata);
-                CopyArray(bsp29.dleafs, bsp29.numleafs, mbsp.dleafs);
-                CopyArray(bsp29.dplanes, bsp29.numplanes, mbsp.dplanes);
-                CopyArray(bsp29.dvertexes, bsp29.numvertexes, mbsp.dvertexes);
-                CopyArray(bsp29.dnodes, bsp29.numnodes, mbsp.dnodes);
-                CopyArray(bsp29.texinfo, bsp29.numtexinfo, mbsp.texinfo);
-                CopyArray(bsp29.dfaces, bsp29.numfaces, mbsp.dfaces);
-                CopyArray(bsp29.dclipnodes, bsp29.numclipnodes, mbsp.dclipnodes);
-                CopyArray(bsp29.dedges, bsp29.numedges, mbsp.dedges);
-                CopyArray(bsp29.dmarksurfaces, bsp29.nummarksurfaces, mbsp.dleaffaces);
-                CopyArray(bsp29.dsurfedges, bsp29.numsurfedges, mbsp.dsurfedges);
-            } else*/ if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
-                // bspver_q2 -> bspver_generic
-                q2bsp_t &q2bsp = std::get<q2bsp_t>(bspdata->bsp);
-
-                // copy or convert data
-                CopyOrMoveArray(q2bsp.dmodels, mbsp.dmodels);
-                CopyOrMoveArray(q2bsp.dlightdata, mbsp.dlightdata);
-                CopyOrMoveArray(q2bsp.dentdata, mbsp.dentdata);
-                CopyOrMoveArray(q2bsp.dleafs, mbsp.dleafs);
-                CopyOrMoveArray(q2bsp.dplanes, mbsp.dplanes);
-                CopyOrMoveArray(q2bsp.dvertexes, mbsp.dvertexes);
-                CopyOrMoveArray(q2bsp.dnodes, mbsp.dnodes);
-                CopyOrMoveArray(q2bsp.texinfo, mbsp.texinfo);
-                CopyOrMoveArray(q2bsp.dfaces, mbsp.dfaces);
-                CopyOrMoveArray(q2bsp.dedges, mbsp.dedges);
-                CopyOrMoveArray(q2bsp.dleaffaces, mbsp.dleaffaces);
-                CopyOrMoveArray(q2bsp.dleafbrushes, mbsp.dleafbrushes);
-                CopyOrMoveArray(q2bsp.dsurfedges, mbsp.dsurfedges);
-
-                mbsp.dvis = std::move(q2bsp.dvis);
-
-                CopyOrMoveArray(q2bsp.dareas, mbsp.dareas);
-                CopyOrMoveArray(q2bsp.dareaportals, mbsp.dareaportals);
-
-                CopyOrMoveArray(q2bsp.dbrushes, mbsp.dbrushes);
-                CopyOrMoveArray(q2bsp.dbrushsides, mbsp.dbrushsides);
-            } /*else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
-                // bspver_qbism -> bspver_generic
-                const q2bsp_qbism_t &q2bsp = std::get<q2bsp_qbism_t>(bspdata->bsp);
-
-                // copy counts
-                mbsp.nummodels = q2bsp.nummodels;
-                mbsp.visdatasize = q2bsp.visdatasize;
-                mbsp.lightdatasize = q2bsp.lightdatasize;
-                mbsp.entdatasize = q2bsp.entdatasize;
-                mbsp.numleafs = q2bsp.numleafs;
-                mbsp.numplanes = q2bsp.numplanes;
-                mbsp.numvertexes = q2bsp.numvertexes;
-                mbsp.numnodes = q2bsp.numnodes;
-                mbsp.numtexinfo = q2bsp.numtexinfo;
-                mbsp.numfaces = q2bsp.numfaces;
-                mbsp.numedges = q2bsp.numedges;
-                mbsp.numleaffaces = q2bsp.numleaffaces;
-                mbsp.numleafbrushes = q2bsp.numleafbrushes;
-                mbsp.numsurfedges = q2bsp.numsurfedges;
-                mbsp.numareas = q2bsp.numareas;
-                mbsp.numareaportals = q2bsp.numareaportals;
-                mbsp.numbrushes = q2bsp.numbrushes;
-                mbsp.numbrushsides = q2bsp.numbrushsides;
-
-                // copy or convert data
-                CopyArray(q2bsp.dmodels, q2bsp.nummodels, mbsp.dmodels);
-                CopyArray(q2bsp.dlightdata, q2bsp.lightdatasize, mbsp.dlightdata);
-                CopyArray(q2bsp.dentdata, q2bsp.entdatasize, mbsp.dentdata);
-                CopyArray(q2bsp.dleafs, q2bsp.numleafs, mbsp.dleafs);
-                CopyArray(q2bsp.dplanes, q2bsp.numplanes, mbsp.dplanes);
-                CopyArray(q2bsp.dvertexes, q2bsp.numvertexes, mbsp.dvertexes);
-                CopyArray(q2bsp.dnodes, q2bsp.numnodes, mbsp.dnodes);
-                CopyArray(q2bsp.texinfo, q2bsp.numtexinfo, mbsp.texinfo);
-                CopyArray(q2bsp.dfaces, q2bsp.numfaces, mbsp.dfaces);
-                CopyArray(q2bsp.dedges, q2bsp.numedges, mbsp.dedges);
-                CopyArray(q2bsp.dleaffaces, q2bsp.numleaffaces, mbsp.dleaffaces);
-                CopyArray(q2bsp.dleafbrushes, q2bsp.numleafbrushes, mbsp.dleafbrushes);
-                CopyArray(q2bsp.dsurfedges, q2bsp.numsurfedges, mbsp.dsurfedges);
-
-                mbsp.dvisdata =
-                    Q2BSPtoM_CopyVisData(q2bsp.dvis, q2bsp.visdatasize, &mbsp.visdatasize, mbsp.dleafs, mbsp.numleafs);
-
-                CopyArray(q2bsp.dareas, q2bsp.numareas, mbsp.dareas);
-                CopyArray(q2bsp.dareaportals, q2bsp.numareaportals, mbsp.dareaportals);
-
-                CopyArray(q2bsp.dbrushes, q2bsp.numbrushes, mbsp.dbrushes);
-                CopyArray(q2bsp.dbrushsides, q2bsp.numbrushsides, mbsp.dbrushsides);
-            } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
-                // bspver_bsp2rmq, bspver_h2bsp2rmq -> bspver_generic
-                const bsp2rmq_t &bsp2rmq = std::get<bsp2rmq_t>(bspdata->bsp);
-
-                // copy counts
-                mbsp.nummodels = bsp2rmq.nummodels;
-                mbsp.visdatasize = bsp2rmq.visdatasize;
-                mbsp.lightdatasize = bsp2rmq.lightdatasize;
-                mbsp.texdatasize = bsp2rmq.texdatasize;
-                mbsp.entdatasize = bsp2rmq.entdatasize;
-                mbsp.numleafs = bsp2rmq.numleafs;
-                mbsp.numplanes = bsp2rmq.numplanes;
-                mbsp.numvertexes = bsp2rmq.numvertexes;
-                mbsp.numnodes = bsp2rmq.numnodes;
-                mbsp.numtexinfo = bsp2rmq.numtexinfo;
-                mbsp.numfaces = bsp2rmq.numfaces;
-                mbsp.numclipnodes = bsp2rmq.numclipnodes;
-                mbsp.numedges = bsp2rmq.numedges;
-                mbsp.numleaffaces = bsp2rmq.nummarksurfaces;
-                mbsp.numsurfedges = bsp2rmq.numsurfedges;
-
-                // copy or convert data
-                if (bspdata->version == &bspver_h2bsp2rmq) {
-                    CopyArray(bsp2rmq.dmodels_h2, bsp2rmq.nummodels, mbsp.dmodels);
-                } else {
-                    CopyArray(bsp2rmq.dmodels_q, bsp2rmq.nummodels, mbsp.dmodels);
-                }
-                mbsp.dvisdata = BSP29_CopyVisData(bsp2rmq.dvisdata, bsp2rmq.visdatasize);
-                CopyArray(bsp2rmq.dlightdata, bsp2rmq.lightdatasize, mbsp.dlightdata);
-                CopyArray(bsp2rmq.dtexdata, bsp2rmq.texdatasize, mbsp.dtexdata);
-                CopyArray(bsp2rmq.dentdata, bsp2rmq.entdatasize,mbsp.dentdata);
-                CopyArray(bsp2rmq.dleafs, bsp2rmq.numleafs, mbsp.dleafs);
-                CopyArray(bsp2rmq.dplanes, bsp2rmq.numplanes, mbsp.dplanes);
-                CopyArray(bsp2rmq.dvertexes, bsp2rmq.numvertexes, mbsp.dvertexes);
-                CopyArray(bsp2rmq.dnodes, bsp2rmq.numnodes, mbsp.dnodes);
-                CopyArray(bsp2rmq.texinfo, bsp2rmq.numtexinfo, mbsp.texinfo);
-                CopyArray(bsp2rmq.dfaces, bsp2rmq.numfaces, mbsp.dfaces);
-                CopyArray(bsp2rmq.dclipnodes, bsp2rmq.numclipnodes, mbsp.dclipnodes);
-                CopyArray(bsp2rmq.dedges, bsp2rmq.numedges, mbsp.dedges);
-                CopyArray(bsp2rmq.dmarksurfaces, bsp2rmq.nummarksurfaces, mbsp.dleaffaces);
-                CopyArray(bsp2rmq.dsurfedges, bsp2rmq.numsurfedges, mbsp.dsurfedges);
-            } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
-                // bspver_bsp2, bspver_h2bsp2 -> bspver_generic
-                const bsp2_t &bsp2 = std::get<bsp2_t>(bspdata->bsp);
-
-                // copy counts
-                mbsp.nummodels = bsp2.nummodels;
-                mbsp.visdatasize = bsp2.visdatasize;
-                mbsp.lightdatasize = bsp2.lightdatasize;
-                mbsp.texdatasize = bsp2.texdatasize;
-                mbsp.entdatasize = bsp2.entdatasize;
-                mbsp.numleafs = bsp2.numleafs;
-                mbsp.numplanes = bsp2.numplanes;
-                mbsp.numvertexes = bsp2.numvertexes;
-                mbsp.numnodes = bsp2.numnodes;
-                mbsp.numtexinfo = bsp2.numtexinfo;
-                mbsp.numfaces = bsp2.numfaces;
-                mbsp.numclipnodes = bsp2.numclipnodes;
-                mbsp.numedges = bsp2.numedges;
-                mbsp.numleaffaces = bsp2.nummarksurfaces;
-                mbsp.numsurfedges = bsp2.numsurfedges;
-
-                // copy or convert data
-                if (bspdata->version == &bspver_h2bsp2) {
-                    CopyArray(bsp2.dmodels_h2, bsp2.nummodels, mbsp.dmodels);
-                } else {
-                    CopyArray(bsp2.dmodels_q, bsp2.nummodels, mbsp.dmodels);
-                }
-                mbsp.dvisdata = BSP29_CopyVisData(bsp2.dvisdata, bsp2.visdatasize);
-                CopyArray(bsp2.dlightdata, bsp2.lightdatasize, mbsp.dlightdata);
-                CopyArray(bsp2.dtexdata, bsp2.texdatasize, mbsp.dtexdata);
-                CopyArray(bsp2.dentdata, bsp2.entdatasize, mbsp.dentdata);
-                CopyArray(bsp2.dleafs, bsp2.numleafs, mbsp.dleafs);
-                CopyArray(bsp2.dplanes, bsp2.numplanes, mbsp.dplanes);
-                CopyArray(bsp2.dvertexes, bsp2.numvertexes, mbsp.dvertexes);
-                CopyArray(bsp2.dnodes, bsp2.numnodes, mbsp.dnodes);
-                CopyArray(bsp2.texinfo, bsp2.numtexinfo, mbsp.texinfo);
-                CopyArray(bsp2.dfaces, bsp2.numfaces, mbsp.dfaces);
-                CopyArray(bsp2.dclipnodes, bsp2.numclipnodes, mbsp.dclipnodes);
-                CopyArray(bsp2.dedges, bsp2.numedges, mbsp.dedges);
-                CopyArray(bsp2.dmarksurfaces, bsp2.nummarksurfaces, mbsp.dleaffaces);
-                CopyArray(bsp2.dsurfedges, bsp2.numsurfedges, mbsp.dsurfedges);
-            } */else {
-                return false;
-            }
-
-            bspdata->loadversion = mbsp.loadversion = bspdata->version;
-            bspdata->version = to_version;
-
-            bspdata->bsp = std::move(mbsp);
-            return true;
-        } else if (bspdata->version == &bspver_generic) {
-            // Conversions from bspver_generic
-            mbsp_t &mbsp = std::get<mbsp_t>(bspdata->bsp);
-
-            /*if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
-                // bspver_generic -> bspver_q1, bspver_h2, bspver_hl
-                bsp29_t bsp29 { };
-
-                // copy counts
-                bsp29.nummodels = mbsp.nummodels;
-                bsp29.visdatasize = mbsp.visdatasize;
-                bsp29.lightdatasize = mbsp.lightdatasize;
-                bsp29.texdatasize = mbsp.texdatasize;
-                bsp29.entdatasize = mbsp.entdatasize;
-                bsp29.numleafs = mbsp.numleafs;
-                bsp29.numplanes = mbsp.numplanes;
-                bsp29.numvertexes = mbsp.numvertexes;
-                bsp29.numnodes = mbsp.numnodes;
-                bsp29.numtexinfo = mbsp.numtexinfo;
-                bsp29.numfaces = mbsp.numfaces;
-                bsp29.numclipnodes = mbsp.numclipnodes;
-                bsp29.numedges = mbsp.numedges;
-                bsp29.nummarksurfaces = mbsp.numleaffaces;
-                bsp29.numsurfedges = mbsp.numsurfedges;
-
-                // copy or convert data
-                if (to_version == &bspver_h2) {
-                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp29.dmodels_h2);
-                } else {
-                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp29.dmodels_q);
-                }
-                bsp29.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
-                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp29.dlightdata);
-                CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp29.dtexdata);
-                CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp29.dentdata);
-                CopyArray(mbsp.dleafs, mbsp.numleafs, bsp29.dleafs);
-                CopyArray(mbsp.dplanes, mbsp.numplanes, bsp29.dplanes);
-                CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp29.dvertexes);
-                CopyArray(mbsp.dnodes, mbsp.numnodes, bsp29.dnodes);
-                CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp29.texinfo);
-                CopyArray(mbsp.dfaces, mbsp.numfaces, bsp29.dfaces);
-                CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp29.dclipnodes);
-                CopyArray(mbsp.dedges, mbsp.numedges, bsp29.dedges);
-                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp29.dmarksurfaces);
-                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp29.dsurfedges);
-
-                // Conversion complete!
-                bspdata->version = to_version;
-                bspdata->bsp = std::move(bsp29);
-
-                return true;
-            } else */if (to_version == &bspver_q2) {
-                // bspver_generic -> bspver_q2
-                q2bsp_t q2bsp { };
-
-                // copy or convert data
-                CopyOrMoveArray(mbsp.dmodels, q2bsp.dmodels);
-                q2bsp.dvis = std::move(mbsp.dvis);
-                CopyOrMoveArray(mbsp.dlightdata, q2bsp.dlightdata);
-                CopyOrMoveArray(mbsp.dentdata, q2bsp.dentdata);
-                CopyOrMoveArray(mbsp.dleafs, q2bsp.dleafs);
-                CopyOrMoveArray(mbsp.dplanes, q2bsp.dplanes);
-                CopyOrMoveArray(mbsp.dvertexes, q2bsp.dvertexes);
-                CopyOrMoveArray(mbsp.dnodes, q2bsp.dnodes);
-                CopyOrMoveArray(mbsp.texinfo, q2bsp.texinfo);
-                CopyOrMoveArray(mbsp.dfaces, q2bsp.dfaces);
-                CopyOrMoveArray(mbsp.dedges,q2bsp.dedges);
-                CopyOrMoveArray(mbsp.dleaffaces, q2bsp.dleaffaces);
-                CopyOrMoveArray(mbsp.dleafbrushes,q2bsp.dleafbrushes);
-                CopyOrMoveArray(mbsp.dsurfedges, q2bsp.dsurfedges);
-
-                CopyOrMoveArray(mbsp.dareas, q2bsp.dareas);
-                CopyOrMoveArray(mbsp.dareaportals, q2bsp.dareaportals);
-
-                CopyOrMoveArray(mbsp.dbrushes, q2bsp.dbrushes);
-                CopyOrMoveArray(mbsp.dbrushsides, q2bsp.dbrushsides);
-
-                /* Conversion complete! */
-                bspdata->version = to_version;
-                bspdata->bsp = std::move(q2bsp);
-
-                return true;
-            } /*else if (to_version == &bspver_qbism) {
-                // bspver_generic -> bspver_qbism
-                q2bsp_qbism_t q2bsp { };
-
-                // copy counts
-                q2bsp.nummodels = mbsp.nummodels;
-                q2bsp.visdatasize = mbsp.visdatasize;
-                q2bsp.lightdatasize = mbsp.lightdatasize;
-                q2bsp.entdatasize = mbsp.entdatasize;
-                q2bsp.numleafs = mbsp.numleafs;
-                q2bsp.numplanes = mbsp.numplanes;
-                q2bsp.numvertexes = mbsp.numvertexes;
-                q2bsp.numnodes = mbsp.numnodes;
-                q2bsp.numtexinfo = mbsp.numtexinfo;
-                q2bsp.numfaces = mbsp.numfaces;
-                q2bsp.numedges = mbsp.numedges;
-                q2bsp.numleaffaces = mbsp.numleaffaces;
-                q2bsp.numleafbrushes = mbsp.numleafbrushes;
-                q2bsp.numsurfedges = mbsp.numsurfedges;
-                q2bsp.numareas = mbsp.numareas;
-                q2bsp.numareaportals = mbsp.numareaportals;
-                q2bsp.numbrushes = mbsp.numbrushes;
-                q2bsp.numbrushsides = mbsp.numbrushsides;
-
-                // copy or convert data
-                CopyArray(mbsp.dmodels, mbsp.nummodels, q2bsp.dmodels);
-                q2bsp.dvis = MBSPtoQ2_CopyVisData(mbsp.dvisdata, &q2bsp.visdatasize, mbsp.numleafs, mbsp.dleafs);
-                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, q2bsp.dlightdata);
-                CopyArray(mbsp.dentdata, mbsp.entdatasize, q2bsp.dentdata);
-                CopyArray(mbsp.dleafs, mbsp.numleafs, q2bsp.dleafs);
-                CopyArray(mbsp.dplanes, mbsp.numplanes, q2bsp.dplanes);
-                CopyArray(mbsp.dvertexes, mbsp.numvertexes, q2bsp.dvertexes);
-                CopyArray(mbsp.dnodes, mbsp.numnodes, q2bsp.dnodes);
-                CopyArray(mbsp.texinfo, mbsp.numtexinfo, q2bsp.texinfo);
-                CopyArray(mbsp.dfaces, mbsp.numfaces, q2bsp.dfaces);
-                CopyArray(mbsp.dedges, mbsp.numedges, q2bsp.dedges);
-                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, q2bsp.dleaffaces);
-                CopyArray(mbsp.dleafbrushes, mbsp.numleafbrushes, q2bsp.dleafbrushes);
-                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, q2bsp.dsurfedges);
-
-                CopyArray(mbsp.dareas, mbsp.numareas, q2bsp.dareas);
-                CopyArray(mbsp.dareaportals, mbsp.numareaportals, q2bsp.dareaportals);
-
-                CopyArray(mbsp.dbrushes, mbsp.numbrushes, q2bsp.dbrushes);
-                CopyArray(mbsp.dbrushsides, mbsp.numbrushsides, q2bsp.dbrushsides);
-
-                // Conversion complete!
-                bspdata->version = to_version;
-                bspdata->bsp = std::move(q2bsp);
-
-                return true;
-            } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
-                // bspver_generic -> bspver_bsp2rmq, bspver_h2bsp2rmq
-                bsp2rmq_t bsp2rmq { };
-
-                // copy counts
-                bsp2rmq.nummodels = mbsp.nummodels;
-                bsp2rmq.visdatasize = mbsp.visdatasize;
-                bsp2rmq.lightdatasize = mbsp.lightdatasize;
-                bsp2rmq.texdatasize = mbsp.texdatasize;
-                bsp2rmq.entdatasize = mbsp.entdatasize;
-                bsp2rmq.numleafs = mbsp.numleafs;
-                bsp2rmq.numplanes = mbsp.numplanes;
-                bsp2rmq.numvertexes = mbsp.numvertexes;
-                bsp2rmq.numnodes = mbsp.numnodes;
-                bsp2rmq.numtexinfo = mbsp.numtexinfo;
-                bsp2rmq.numfaces = mbsp.numfaces;
-                bsp2rmq.numclipnodes = mbsp.numclipnodes;
-                bsp2rmq.numedges = mbsp.numedges;
-                bsp2rmq.nummarksurfaces = mbsp.numleaffaces;
-                bsp2rmq.numsurfedges = mbsp.numsurfedges;
-
-                // copy or convert data
-                if (to_version == &bspver_h2bsp2rmq) {
-                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2rmq.dmodels_h2);
-                } else {
-                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2rmq.dmodels_q);
-                }
-                bsp2rmq.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
-                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp2rmq.dlightdata);
-                CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp2rmq.dtexdata);
-                CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp2rmq.dentdata);
-                CopyArray(mbsp.dleafs, mbsp.numleafs, bsp2rmq.dleafs);
-                CopyArray(mbsp.dplanes, mbsp.numplanes, bsp2rmq.dplanes);
-                CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp2rmq.dvertexes);
-                CopyArray(mbsp.dnodes, mbsp.numnodes, bsp2rmq.dnodes);
-                CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp2rmq.texinfo);
-                CopyArray(mbsp.dfaces, mbsp.numfaces, bsp2rmq.dfaces);
-                CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp2rmq.dclipnodes);
-                CopyArray(mbsp.dedges, mbsp.numedges, bsp2rmq.dedges);
-                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp2rmq.dmarksurfaces);
-                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp2rmq.dsurfedges);
-
-                // Conversion complete!
-                bspdata->version = to_version;
-                bspdata->bsp = std::move(bsp2rmq);
-
-                return true;
-            } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
-                // bspver_generic -> bspver_bsp2, bspver_h2bsp2
-                bsp2_t bsp2 { };
-
-                // copy counts
-                bsp2.nummodels = mbsp.nummodels;
-                bsp2.visdatasize = mbsp.visdatasize;
-                bsp2.lightdatasize = mbsp.lightdatasize;
-                bsp2.texdatasize = mbsp.texdatasize;
-                bsp2.entdatasize = mbsp.entdatasize;
-                bsp2.numleafs = mbsp.numleafs;
-                bsp2.numplanes = mbsp.numplanes;
-                bsp2.numvertexes = mbsp.numvertexes;
-                bsp2.numnodes = mbsp.numnodes;
-                bsp2.numtexinfo = mbsp.numtexinfo;
-                bsp2.numfaces = mbsp.numfaces;
-                bsp2.numclipnodes = mbsp.numclipnodes;
-                bsp2.numedges = mbsp.numedges;
-                bsp2.nummarksurfaces = mbsp.numleaffaces;
-                bsp2.numsurfedges = mbsp.numsurfedges;
-
-                // copy or convert data
-                if (to_version == &bspver_h2bsp2) {
-                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2.dmodels_h2);
-                } else {
-                    CopyArray(mbsp.dmodels, mbsp.nummodels, bsp2.dmodels_q);
-                }
-                bsp2.dvisdata = BSP29_CopyVisData(mbsp.dvisdata, mbsp.visdatasize);
-                CopyArray(mbsp.dlightdata, mbsp.lightdatasize, bsp2.dlightdata);
-                CopyArray(mbsp.dtexdata, mbsp.texdatasize, bsp2.dtexdata);
-                CopyArray(mbsp.dentdata, mbsp.entdatasize, bsp2.dentdata);
-                CopyArray(mbsp.dleafs, mbsp.numleafs, bsp2.dleafs);
-                CopyArray(mbsp.dplanes, mbsp.numplanes, bsp2.dplanes);
-                CopyArray(mbsp.dvertexes, mbsp.numvertexes, bsp2.dvertexes);
-                CopyArray(mbsp.dnodes, mbsp.numnodes, bsp2.dnodes);
-                CopyArray(mbsp.texinfo, mbsp.numtexinfo, bsp2.texinfo);
-                CopyArray(mbsp.dfaces, mbsp.numfaces, bsp2.dfaces);
-                CopyArray(mbsp.dclipnodes, mbsp.numclipnodes, bsp2.dclipnodes);
-                CopyArray(mbsp.dedges, mbsp.numedges, bsp2.dedges);
-                CopyArray(mbsp.dleaffaces, mbsp.numleaffaces, bsp2.dmarksurfaces);
-                CopyArray(mbsp.dsurfedges, mbsp.numsurfedges, bsp2.dsurfedges);
-
-                // Conversion complete!
-                bspdata->version = to_version;
-                bspdata->bsp = std::move(bsp2);
-
-                return true;
-            }*/
+        if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
+            ConvertQ1BSPToGeneric(std::get<bsp29_t>(bspdata->bsp), mbsp);
+        } else if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
+            ConvertQ2BSPToGeneric(std::get<q2bsp_t>(bspdata->bsp), mbsp);
+        } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
+            ConvertQ2BSPToGeneric(std::get<q2bsp_qbism_t>(bspdata->bsp), mbsp);
+        } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
+            ConvertQ1BSPToGeneric(std::get<bsp2rmq_t>(bspdata->bsp), mbsp);
+        } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
+            ConvertQ1BSPToGeneric(std::get<bsp2_t>(bspdata->bsp), mbsp);
+        } else {
+            return false;
         }
 
-        Error("Don't know how to convert BSP version {} to {}", BSPVersionString(bspdata->version),
-            BSPVersionString(to_version));
+        bspdata->loadversion = mbsp.loadversion = bspdata->version;
+        bspdata->version = to_version;
+
+        bspdata->bsp = std::move(mbsp);
+        return true;
+    } else if (bspdata->version == &bspver_generic) {
+        // Conversions from bspver_generic
+        mbsp_t &mbsp = std::get<mbsp_t>(bspdata->bsp);
+            
+        try
+        {
+            if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
+                bspdata->bsp = std::move(ConvertGenericToQ1BSP<bsp29_t>(mbsp, to_version));
+            } else if (to_version == &bspver_q2) {
+                bspdata->bsp = std::move(ConvertGenericToQ2BSP<q2bsp_t>(mbsp, to_version));
+            } else if (to_version == &bspver_qbism) {
+                bspdata->bsp = std::move(ConvertGenericToQ2BSP<q2bsp_qbism_t>(mbsp, to_version));
+            } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
+                bspdata->bsp = std::move(ConvertGenericToQ1BSP<bsp2rmq_t>(mbsp, to_version));
+            } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
+                bspdata->bsp = std::move(ConvertGenericToQ1BSP<bsp2_t>(mbsp, to_version));
+            } else {
+                return false;
+            }
+        }
+        catch (std::overflow_error e)
+        {
+            LogPrint("LIMITS EXCEEDED ON {}\n", e.what());
+        }
+
+        bspdata->version = to_version;
+        return true;
     }
-    catch (std::overflow_error e)
-    {
-        LogPrint("LIMITS EXCEEDED ON {}\n", e.what());
-        return false;
-    }
+
+    return false;
 }
 
 static bool isHexen2(const dheader_t *header)
@@ -1153,83 +880,141 @@ static bool isHexen2(const dheader_t *header)
     return !modelsq1->numfaces;
 }
 
-// read structured lump data from stream into vector
-template<typename T>
-static void ReadLump(std::istream &s, const bspversion_t *version, const std::vector<lump_t> &lumps, size_t lump_num, std::vector<T> &buffer)
+struct lump_reader
 {
-    const lumpspec_t &lumpspec = version->lumps[lump_num];
-    const lump_t &lump = lumps[lump_num];
-    size_t length;
+    std::istream &s;
+    const bspversion_t *version;
+    const std::vector<lump_t> &lumps;
 
-    Q_assert(!buffer.size());
+    // read structured lump data from stream into vector
+    template<typename T>
+    void read(size_t lump_num, std::vector<T> &buffer)
+    {
+        const lumpspec_t &lumpspec = version->lumps[lump_num];
+        const lump_t &lump = lumps[lump_num];
+        size_t length;
 
-    if (lumpspec.size > 1) {
-        if (sizeof(T) != lumpspec.size)
-            FError("odd {} value size ({} != {})", lumpspec.name, sizeof(T), lumpspec.size);
-        else if (lump.filelen % lumpspec.size)
-            FError("odd {} lump size ({} not multiple of {})", lumpspec.name, lump.filelen, lumpspec.size);
+        Q_assert(!buffer.size());
 
-        buffer.reserve(length = (lump.filelen / lumpspec.size));
-    } else {
-        buffer.reserve(length = lump.filelen);
-    }
+        if (lumpspec.size > 1) {
+            if (sizeof(T) != lumpspec.size)
+                FError("odd {} value size ({} != {})", lumpspec.name, sizeof(T), lumpspec.size);
+            else if (lump.filelen % lumpspec.size)
+                FError("odd {} lump size ({} not multiple of {})", lumpspec.name, lump.filelen, lumpspec.size);
 
-    if (!lump.filelen)
-        return;
-
-    s.seekg(lump.fileofs);
-    
-    if (lumpspec.size > 1) {
-        T val;
-
-        for (size_t i = 0; i < length; i++) {
-            s >= val;
-            buffer.push_back(val);
+            buffer.reserve(length = (lump.filelen / lumpspec.size));
+        } else {
+            buffer.reserve(length = lump.filelen);
         }
-    } else {
-        s.read(reinterpret_cast<char *>(buffer.data()), length);
-    }
-}
 
-// read string from stream
-static void ReadLump(std::istream &s, const bspversion_t *version, const std::vector<lump_t> &lumps, size_t lump_num, std::string &buffer)
-{
-    const lumpspec_t &lumpspec = version->lumps[lump_num];
-    const lump_t &lump = lumps[lump_num];
+        if (!lump.filelen)
+            return;
 
-    Q_assert(lumpspec.size == 1);
-    Q_assert(!buffer.size());
-
-    buffer.resize(lump.filelen);
-
-    if (!lump.filelen)
-        return;
-
-    s.seekg(lump.fileofs);
+        s.seekg(lump.fileofs);
     
-    s.read(reinterpret_cast<char *>(buffer.data()), lump.filelen);
+        if (lumpspec.size > 1) {
+            T val;
 
-    // in case of bad BSPs, we'll fix it by growing the lump
-    if (buffer[lump.filelen]) {
-        buffer += '\0';
+            for (size_t i = 0; i < length; i++) {
+                s >= val;
+                buffer.push_back(val);
+            }
+        } else {
+            s.read(reinterpret_cast<char *>(buffer.data()), length);
+        }
+    }
+
+    // read string from stream
+    void read(size_t lump_num, std::string &buffer)
+    {
+        const lumpspec_t &lumpspec = version->lumps[lump_num];
+        const lump_t &lump = lumps[lump_num];
+
+        Q_assert(lumpspec.size == 1);
+        Q_assert(!buffer.size());
+
+        buffer.resize(lump.filelen);
+
+        if (!lump.filelen)
+            return;
+
+        s.seekg(lump.fileofs);
+    
+        s.read(reinterpret_cast<char *>(buffer.data()), lump.filelen);
+
+        // in case of bad BSPs, we'll fix it by growing the lump
+        if (buffer[lump.filelen]) {
+            buffer += '\0';
+        }
+    }
+
+    // read structured lump data from stream into struct
+    template<typename T, typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_read)>>>
+    void read(size_t lump_num, T &buffer)
+    {
+        const lumpspec_t &lumpspec = version->lumps[lump_num];
+        const lump_t &lump = lumps[lump_num];
+
+        if (!lump.filelen)
+            return;
+
+        Q_assert(lumpspec.size == 1);
+
+        s.seekg(lump.fileofs);
+
+        buffer.stream_read(s, lump);
+    }
+};
+
+template<typename T>
+inline void ReadQ1BSP(lump_reader &reader, T &bsp)
+{
+    reader.read(LUMP_ENTITIES, bsp.dentdata);
+    reader.read(LUMP_PLANES, bsp.dplanes);
+    if (reader.version->game->id == GAME_HALF_LIFE) {
+        reader.read(LUMP_TEXTURES, bsp.dtex.emplace<miptexhl_lump>());
+    } else {
+        reader.read(LUMP_TEXTURES, bsp.dtex.emplace<miptexq1_lump>());
+    }
+    reader.read(LUMP_VERTEXES, bsp.dvertexes);
+    reader.read(LUMP_VISIBILITY, bsp.dvisdata);
+    reader.read(LUMP_NODES, bsp.dnodes);
+    reader.read(LUMP_TEXINFO, bsp.texinfo);
+    reader.read(LUMP_FACES, bsp.dfaces);
+    reader.read(LUMP_LIGHTING, bsp.dlightdata);
+    reader.read(LUMP_CLIPNODES, bsp.dclipnodes);
+    reader.read(LUMP_LEAFS, bsp.dleafs);
+    reader.read(LUMP_MARKSURFACES, bsp.dmarksurfaces);
+    reader.read(LUMP_EDGES, bsp.dedges);
+    reader.read(LUMP_SURFEDGES, bsp.dsurfedges);
+    if (reader.version->game->id == GAME_HEXEN_II) {
+        reader.read(LUMP_MODELS, bsp.dmodels.emplace<dmodelh2_vector>());
+    } else {
+        reader.read(LUMP_MODELS, bsp.dmodels.emplace<dmodelq1_vector>());
     }
 }
 
-// read structured lump data from stream into struct
-template<typename T, typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_read)>>>
-static void ReadLump(std::istream &s, const bspversion_t *version, const std::vector<lump_t> &lumps, size_t lump_num, T &buffer)
+template<typename T>
+inline void ReadQ2BSP(lump_reader &reader, T &bsp)
 {
-    const lumpspec_t &lumpspec = version->lumps[lump_num];
-    const lump_t &lump = lumps[lump_num];
-
-    if (!lump.filelen)
-        return;
-
-    Q_assert(lumpspec.size == 1);
-
-    s.seekg(lump.fileofs);
-
-    buffer.stream_read(s, lump.filelen);
+    reader.read(Q2_LUMP_ENTITIES, bsp.dentdata);
+    reader.read(Q2_LUMP_PLANES, bsp.dplanes);
+    reader.read(Q2_LUMP_VERTEXES, bsp.dvertexes);
+    reader.read(Q2_LUMP_VISIBILITY, bsp.dvis);
+    reader.read(Q2_LUMP_NODES, bsp.dnodes);
+    reader.read(Q2_LUMP_TEXINFO, bsp.texinfo);
+    reader.read(Q2_LUMP_FACES, bsp.dfaces);
+    reader.read(Q2_LUMP_LIGHTING, bsp.dlightdata);
+    reader.read(Q2_LUMP_LEAFS, bsp.dleafs);
+    reader.read(Q2_LUMP_LEAFFACES, bsp.dleaffaces);
+    reader.read(Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
+    reader.read(Q2_LUMP_EDGES, bsp.dedges);
+    reader.read(Q2_LUMP_SURFEDGES, bsp.dsurfedges);
+    reader.read(Q2_LUMP_MODELS, bsp.dmodels);
+    reader.read(Q2_LUMP_BRUSHES, bsp.dbrushes);
+    reader.read(Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
+    reader.read(Q2_LUMP_AREAS, bsp.dareas);
+    reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
 }
 
 void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize)
@@ -1348,130 +1133,20 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
         LogPrint("BSP is version {}\n", BSPVersionString(bspdata->version));
     }
 
+    lump_reader reader { stream, bspdata->version, lumps };
+
     /* copy the data */
     if (bspdata->version == &bspver_q2) {
-        q2bsp_t &bsp = bspdata->bsp.emplace<q2bsp_t>();
-
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_MODELS, bsp.dmodels);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_VERTEXES, bsp.dvertexes);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_PLANES, bsp.dplanes);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_LEAFS, bsp.dleafs);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_NODES, bsp.dnodes);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_TEXINFO, bsp.texinfo);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_FACES, bsp.dfaces);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_LEAFFACES, bsp.dleaffaces);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_SURFEDGES, bsp.dsurfedges);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_EDGES, bsp.dedges);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_BRUSHES, bsp.dbrushes);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_AREAS, bsp.dareas);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_AREAPORTALS, bsp.dareaportals);
-
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_VISIBILITY, bsp.dvis);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_LIGHTING, bsp.dlightdata);
-        ReadLump(stream, bspdata->version, lumps, Q2_LUMP_ENTITIES, bsp.dentdata);
-    } /*else if (bspdata->version == &bspver_qbism) {
-        q2_dheader_t *header = (q2_dheader_t *)file_data;
-        q2bsp_qbism_t &bsp = bspdata->bsp.emplace<q2bsp_qbism_t>();
-
-        bsp.nummodels = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_MODELS, &bsp.dmodels);
-        bsp.numvertexes = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_VERTEXES, &bsp.dvertexes);
-        bsp.numplanes = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_PLANES, &bsp.dplanes);
-        bsp.numleafs = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_LEAFS, &bsp.dleafs);
-        bsp.numnodes = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_NODES, &bsp.dnodes);
-        bsp.numtexinfo = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_TEXINFO, &bsp.texinfo);
-        bsp.numfaces = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_FACES, &bsp.dfaces);
-        bsp.numleaffaces = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_LEAFFACES, &bsp.dleaffaces);
-        bsp.numleafbrushes =
-            CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_LEAFBRUSHES, &bsp.dleafbrushes);
-        bsp.numsurfedges = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_SURFEDGES, &bsp.dsurfedges);
-        bsp.numedges = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_EDGES, &bsp.dedges);
-        bsp.numbrushes = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_BRUSHES, &bsp.dbrushes);
-        bsp.numbrushsides = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_BRUSHSIDES, &bsp.dbrushsides);
-        bsp.numareas = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_AREAS, &bsp.dareas);
-        bsp.numareaportals =
-            CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_AREAPORTALS, &bsp.dareaportals);
-
-        bsp.visdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_VISIBILITY, &bsp.dvisdata);
-        bsp.lightdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_LIGHTING, &bsp.dlightdata);
-        bsp.entdatasize = CopyLump(header, bspdata->version, header->lumps, Q2_LUMP_ENTITIES, &bsp.dentdata);
+        ReadQ2BSP(reader, bspdata->bsp.emplace<q2bsp_t>());
+    } else if (bspdata->version == &bspver_qbism) {
+        ReadQ2BSP(reader, bspdata->bsp.emplace<q2bsp_qbism_t>());
     } else if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
-        dheader_t *header = (dheader_t *)file_data;
-        bsp29_t &bsp = bspdata->bsp.emplace<bsp29_t>();
-
-        if (bspdata->version == &bspver_h2) {
-            bsp.nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp.dmodels_h2);
-        } else {
-            bsp.nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp.dmodels_q);
-        }
-        bsp.numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp.dvertexes);
-        bsp.numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp.dplanes);
-        bsp.numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp.dleafs);
-        bsp.numnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_NODES, &bsp.dnodes);
-        bsp.numtexinfo = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXINFO, &bsp.texinfo);
-        bsp.numclipnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_CLIPNODES, &bsp.dclipnodes);
-        bsp.numfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_FACES, &bsp.dfaces);
-        bsp.nummarksurfaces =
-            CopyLump(header, bspdata->version, header->lumps, LUMP_MARKSURFACES, &bsp.dmarksurfaces);
-        bsp.numsurfedges = CopyLump(header, bspdata->version, header->lumps, LUMP_SURFEDGES, &bsp.dsurfedges);
-        bsp.numedges = CopyLump(header, bspdata->version, header->lumps, LUMP_EDGES, &bsp.dedges);
-
-        bsp.texdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXTURES, &bsp.dtexdata);
-        bsp.visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp.dvisdata);
-        bsp.lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp.dlightdata);
-        bsp.entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp.dentdata);
+        ReadQ1BSP(reader, bspdata->bsp.emplace<bsp29_t>());
     } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
-        dheader_t *header = (dheader_t *)file_data;
-        bsp2rmq_t &bsp = bspdata->bsp.emplace<bsp2rmq_t>();
-
-        if (bspdata->version == &bspver_h2bsp2rmq) {
-            bsp.nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp.dmodels_h2);
-        } else {
-            bsp.nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp.dmodels_q);
-        }
-        bsp.numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp.dvertexes);
-        bsp.numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp.dplanes);
-        bsp.numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp.dleafs);
-        bsp.numnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_NODES, &bsp.dnodes);
-        bsp.numtexinfo = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXINFO, &bsp.texinfo);
-        bsp.numclipnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_CLIPNODES, &bsp.dclipnodes);
-        bsp.numfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_FACES, &bsp.dfaces);
-        bsp.nummarksurfaces =
-            CopyLump(header, bspdata->version, header->lumps, LUMP_MARKSURFACES, &bsp.dmarksurfaces);
-        bsp.numsurfedges = CopyLump(header, bspdata->version, header->lumps, LUMP_SURFEDGES, &bsp.dsurfedges);
-        bsp.numedges = CopyLump(header, bspdata->version, header->lumps, LUMP_EDGES, &bsp.dedges);
-
-        bsp.texdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXTURES, &bsp.dtexdata);
-        bsp.visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp.dvisdata);
-        bsp.lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp.dlightdata);
-        bsp.entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp.dentdata);
+        ReadQ1BSP(reader, bspdata->bsp.emplace<bsp2rmq_t>());
     } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
-        dheader_t *header = (dheader_t *)file_data;
-        bsp2_t &bsp = bspdata->bsp.emplace<bsp2_t>();
-
-        if (bspdata->version == &bspver_h2bsp2) {
-            bsp.nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp.dmodels_h2);
-        } else {
-            bsp.nummodels = CopyLump(header, bspdata->version, header->lumps, LUMP_MODELS, &bsp.dmodels_q);
-        }
-        bsp.numvertexes = CopyLump(header, bspdata->version, header->lumps, LUMP_VERTEXES, &bsp.dvertexes);
-        bsp.numplanes = CopyLump(header, bspdata->version, header->lumps, LUMP_PLANES, &bsp.dplanes);
-        bsp.numleafs = CopyLump(header, bspdata->version, header->lumps, LUMP_LEAFS, &bsp.dleafs);
-        bsp.numnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_NODES, &bsp.dnodes);
-        bsp.numtexinfo = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXINFO, &bsp.texinfo);
-        bsp.numclipnodes = CopyLump(header, bspdata->version, header->lumps, LUMP_CLIPNODES, &bsp.dclipnodes);
-        bsp.numfaces = CopyLump(header, bspdata->version, header->lumps, LUMP_FACES, &bsp.dfaces);
-        bsp.nummarksurfaces =
-            CopyLump(header, bspdata->version, header->lumps, LUMP_MARKSURFACES, &bsp.dmarksurfaces);
-        bsp.numsurfedges = CopyLump(header, bspdata->version, header->lumps, LUMP_SURFEDGES, &bsp.dsurfedges);
-        bsp.numedges = CopyLump(header, bspdata->version, header->lumps, LUMP_EDGES, &bsp.dedges);
-
-        bsp.texdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_TEXTURES, &bsp.dtexdata);
-        bsp.visdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_VISIBILITY, &bsp.dvisdata);
-        bsp.lightdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_LIGHTING, &bsp.dlightdata);
-        bsp.entdatasize = CopyLump(header, bspdata->version, header->lumps, LUMP_ENTITIES, &bsp.dentdata);
-    }*/ else {
+        ReadQ1BSP(reader, bspdata->bsp.emplace<bsp2_t>());
+    } else {
         FError("Unknown format");
     }
 
@@ -1646,6 +1321,55 @@ static void WriteLump(bspfile_t &bspfile, size_t lump_num, const T &data)
         bspfile.stream.write(pad, 4 - (written % 4));
 }
 
+template<typename T>
+inline void WriteQ1BSP(bspfile_t &bspfile, const T &bsp)
+{
+    WriteLump(bspfile, LUMP_ENTITIES, bsp.dentdata);
+    WriteLump(bspfile, LUMP_PLANES, bsp.dplanes);
+    if (std::holds_alternative<miptexhl_lump>(bsp.dtex))
+        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexhl_lump>(bsp.dtex));
+    else
+        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexq1_lump>(bsp.dtex));
+    WriteLump(bspfile, LUMP_VERTEXES, bsp.dvertexes);
+    WriteLump(bspfile, LUMP_VISIBILITY, bsp.dvisdata);
+    WriteLump(bspfile, LUMP_NODES, bsp.dnodes);
+    WriteLump(bspfile, LUMP_TEXINFO, bsp.texinfo);
+    WriteLump(bspfile, LUMP_FACES, bsp.dfaces);
+    WriteLump(bspfile, LUMP_LIGHTING, bsp.dlightdata);
+    WriteLump(bspfile, LUMP_CLIPNODES, bsp.dclipnodes);
+    WriteLump(bspfile, LUMP_LEAFS, bsp.dleafs);
+    WriteLump(bspfile, LUMP_MARKSURFACES, bsp.dmarksurfaces);
+    WriteLump(bspfile, LUMP_EDGES, bsp.dedges);
+    WriteLump(bspfile, LUMP_SURFEDGES, bsp.dsurfedges);
+    if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels))
+        WriteLump(bspfile, LUMP_MODELS, std::get<dmodelh2_vector>(bsp.dmodels));
+    else
+        WriteLump(bspfile, LUMP_MODELS, std::get<dmodelq1_vector>(bsp.dmodels));
+}
+
+template<typename T>
+inline void WriteQ2BSP(bspfile_t &bspfile, const T &bsp)
+{
+    WriteLump(bspfile, Q2_LUMP_ENTITIES, bsp.dentdata);
+    WriteLump(bspfile, Q2_LUMP_PLANES, bsp.dplanes);
+    WriteLump(bspfile, Q2_LUMP_VERTEXES, bsp.dvertexes);
+    WriteLump(bspfile, Q2_LUMP_VISIBILITY, bsp.dvis);
+    WriteLump(bspfile, Q2_LUMP_NODES, bsp.dnodes);
+    WriteLump(bspfile, Q2_LUMP_TEXINFO, bsp.texinfo);
+    WriteLump(bspfile, Q2_LUMP_FACES, bsp.dfaces);
+    WriteLump(bspfile, Q2_LUMP_LIGHTING, bsp.dlightdata);
+    WriteLump(bspfile, Q2_LUMP_LEAFS, bsp.dleafs);
+    WriteLump(bspfile, Q2_LUMP_LEAFFACES, bsp.dleaffaces);
+    WriteLump(bspfile, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
+    WriteLump(bspfile, Q2_LUMP_EDGES, bsp.dedges);
+    WriteLump(bspfile, Q2_LUMP_SURFEDGES, bsp.dsurfedges);
+    WriteLump(bspfile, Q2_LUMP_MODELS, bsp.dmodels);
+    WriteLump(bspfile, Q2_LUMP_BRUSHES, bsp.dbrushes);
+    WriteLump(bspfile, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
+    WriteLump(bspfile, Q2_LUMP_AREAS, bsp.dareas);
+    WriteLump(bspfile, Q2_LUMP_AREAPORTALS, bsp.dareaportals);
+}
+
 /*
  * =============
  * WriteBSPFile
@@ -1680,121 +1404,17 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
         bspfile.stream <= bspfile.q1header;
     }
 
-    /*if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
-        const bsp29_t &bsp = std::get<bsp29_t>(bspdata->bsp);
-
-        AddLump(&bspfile, LUMP_PLANES, bsp.dplanes, bsp.numplanes);
-        AddLump(&bspfile, LUMP_LEAFS, bsp.dleafs, bsp.numleafs);
-        AddLump(&bspfile, LUMP_VERTEXES, bsp.dvertexes, bsp.numvertexes);
-        AddLump(&bspfile, LUMP_NODES, bsp.dnodes, bsp.numnodes);
-        AddLump(&bspfile, LUMP_TEXINFO, bsp.texinfo, bsp.numtexinfo);
-        AddLump(&bspfile, LUMP_FACES, bsp.dfaces, bsp.numfaces);
-        AddLump(&bspfile, LUMP_CLIPNODES, bsp.dclipnodes, bsp.numclipnodes);
-        AddLump(&bspfile, LUMP_MARKSURFACES, bsp.dmarksurfaces, bsp.nummarksurfaces);
-        AddLump(&bspfile, LUMP_SURFEDGES, bsp.dsurfedges, bsp.numsurfedges);
-        AddLump(&bspfile, LUMP_EDGES, bsp.dedges, bsp.numedges);
-        if (bspdata->version == &bspver_h2) {
-            AddLump(&bspfile, LUMP_MODELS, bsp.dmodels_h2, bsp.nummodels);
-        } else {
-            AddLump(&bspfile, LUMP_MODELS, bsp.dmodels_q, bsp.nummodels);
-        }
-
-        AddLump(&bspfile, LUMP_LIGHTING, bsp.dlightdata, bsp.lightdatasize);
-        AddLump(&bspfile, LUMP_VISIBILITY, bsp.dvisdata, bsp.visdatasize);
-        AddLump(&bspfile, LUMP_ENTITIES, bsp.dentdata, bsp.entdatasize);
-        AddLump(&bspfile, LUMP_TEXTURES, bsp.dtexdata, bsp.texdatasize);
+    if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
+        WriteQ1BSP(bspfile, std::get<bsp29_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
-        const bsp2rmq_t &bsp = std::get<bsp2rmq_t>(bspdata->bsp);
-
-        AddLump(&bspfile, LUMP_PLANES, bsp.dplanes, bsp.numplanes);
-        AddLump(&bspfile, LUMP_LEAFS, bsp.dleafs, bsp.numleafs);
-        AddLump(&bspfile, LUMP_VERTEXES, bsp.dvertexes, bsp.numvertexes);
-        AddLump(&bspfile, LUMP_NODES, bsp.dnodes, bsp.numnodes);
-        AddLump(&bspfile, LUMP_TEXINFO, bsp.texinfo, bsp.numtexinfo);
-        AddLump(&bspfile, LUMP_FACES, bsp.dfaces, bsp.numfaces);
-        AddLump(&bspfile, LUMP_CLIPNODES, bsp.dclipnodes, bsp.numclipnodes);
-        AddLump(&bspfile, LUMP_MARKSURFACES, bsp.dmarksurfaces, bsp.nummarksurfaces);
-        AddLump(&bspfile, LUMP_SURFEDGES, bsp.dsurfedges, bsp.numsurfedges);
-        AddLump(&bspfile, LUMP_EDGES, bsp.dedges, bsp.numedges);
-        if (bspdata->version == &bspver_h2bsp2rmq) {
-            AddLump(&bspfile, LUMP_MODELS, bsp.dmodels_h2, bsp.nummodels);
-        } else {
-            AddLump(&bspfile, LUMP_MODELS, bsp.dmodels_q, bsp.nummodels);
-        }
-
-        AddLump(&bspfile, LUMP_LIGHTING, bsp.dlightdata, bsp.lightdatasize);
-        AddLump(&bspfile, LUMP_VISIBILITY, bsp.dvisdata, bsp.visdatasize);
-        AddLump(&bspfile, LUMP_ENTITIES, bsp.dentdata, bsp.entdatasize);
-        AddLump(&bspfile, LUMP_TEXTURES, bsp.dtexdata, bsp.texdatasize);
+        WriteQ1BSP(bspfile, std::get<bsp2rmq_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
-        const bsp2_t &bsp = std::get<bsp2_t>(bspdata->bsp);
-
-        AddLump(&bspfile, LUMP_PLANES, bsp.dplanes, bsp.numplanes);
-        AddLump(&bspfile, LUMP_LEAFS, bsp.dleafs, bsp.numleafs);
-        AddLump(&bspfile, LUMP_VERTEXES, bsp.dvertexes, bsp.numvertexes);
-        AddLump(&bspfile, LUMP_NODES, bsp.dnodes, bsp.numnodes);
-        AddLump(&bspfile, LUMP_TEXINFO, bsp.texinfo, bsp.numtexinfo);
-        AddLump(&bspfile, LUMP_FACES, bsp.dfaces, bsp.numfaces);
-        AddLump(&bspfile, LUMP_CLIPNODES, bsp.dclipnodes, bsp.numclipnodes);
-        AddLump(&bspfile, LUMP_MARKSURFACES, bsp.dmarksurfaces, bsp.nummarksurfaces);
-        AddLump(&bspfile, LUMP_SURFEDGES, bsp.dsurfedges, bsp.numsurfedges);
-        AddLump(&bspfile, LUMP_EDGES, bsp.dedges, bsp.numedges);
-        if (bspdata->version == &bspver_h2bsp2) {
-            AddLump(&bspfile, LUMP_MODELS, bsp.dmodels_h2, bsp.nummodels);
-        } else {
-            AddLump(&bspfile, LUMP_MODELS, bsp.dmodels_q, bsp.nummodels);
-        }
-
-        AddLump(&bspfile, LUMP_LIGHTING, bsp.dlightdata, bsp.lightdatasize);
-        AddLump(&bspfile, LUMP_VISIBILITY, bsp.dvisdata, bsp.visdatasize);
-        AddLump(&bspfile, LUMP_ENTITIES, bsp.dentdata, bsp.entdatasize);
-        AddLump(&bspfile, LUMP_TEXTURES, bsp.dtexdata, bsp.texdatasize);
-    } else */if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
-        const q2bsp_t &bsp = std::get<q2bsp_t>(bspdata->bsp);
-
-        WriteLump(bspfile, Q2_LUMP_MODELS, bsp.dmodels);
-        WriteLump(bspfile, Q2_LUMP_VERTEXES, bsp.dvertexes);
-        WriteLump(bspfile, Q2_LUMP_PLANES, bsp.dplanes);
-        WriteLump(bspfile, Q2_LUMP_LEAFS, bsp.dleafs);
-        WriteLump(bspfile, Q2_LUMP_NODES, bsp.dnodes);
-        WriteLump(bspfile, Q2_LUMP_TEXINFO, bsp.texinfo);
-        WriteLump(bspfile, Q2_LUMP_FACES, bsp.dfaces);
-        WriteLump(bspfile, Q2_LUMP_LEAFFACES, bsp.dleaffaces);
-        WriteLump(bspfile, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
-        WriteLump(bspfile, Q2_LUMP_SURFEDGES, bsp.dsurfedges);
-        WriteLump(bspfile, Q2_LUMP_EDGES, bsp.dedges);
-        WriteLump(bspfile, Q2_LUMP_BRUSHES, bsp.dbrushes);
-        WriteLump(bspfile, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
-        WriteLump(bspfile, Q2_LUMP_AREAS, bsp.dareas);
-        WriteLump(bspfile, Q2_LUMP_AREAPORTALS, bsp.dareaportals);
-
-        WriteLump(bspfile, Q2_LUMP_VISIBILITY, bsp.dvis);
-        WriteLump(bspfile, Q2_LUMP_LIGHTING, bsp.dlightdata);
-        WriteLump(bspfile, Q2_LUMP_ENTITIES, bsp.dentdata);
-    } /*else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
-        const q2bsp_qbism_t &bsp = std::get<q2bsp_qbism_t>(bspdata->bsp);
-
-        AddLump(&bspfile, Q2_LUMP_MODELS, bsp.dmodels, bsp.nummodels);
-        AddLump(&bspfile, Q2_LUMP_VERTEXES, bsp.dvertexes, bsp.numvertexes);
-        AddLump(&bspfile, Q2_LUMP_PLANES, bsp.dplanes, bsp.numplanes);
-        AddLump(&bspfile, Q2_LUMP_LEAFS, bsp.dleafs, bsp.numleafs);
-        AddLump(&bspfile, Q2_LUMP_NODES, bsp.dnodes, bsp.numnodes);
-        AddLump(&bspfile, Q2_LUMP_TEXINFO, bsp.texinfo, bsp.numtexinfo);
-        AddLump(&bspfile, Q2_LUMP_FACES, bsp.dfaces, bsp.numfaces);
-        AddLump(&bspfile, Q2_LUMP_LEAFFACES, bsp.dleaffaces, bsp.numleaffaces);
-        AddLump(&bspfile, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes, bsp.numleafbrushes);
-        AddLump(&bspfile, Q2_LUMP_SURFEDGES, bsp.dsurfedges, bsp.numsurfedges);
-        AddLump(&bspfile, Q2_LUMP_EDGES, bsp.dedges, bsp.numedges);
-        AddLump(&bspfile, Q2_LUMP_BRUSHES, bsp.dbrushes, bsp.numbrushes);
-        AddLump(&bspfile, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides, bsp.numbrushsides);
-        AddLump(&bspfile, Q2_LUMP_AREAS, bsp.dareas, bsp.numareas);
-        AddLump(&bspfile, Q2_LUMP_AREAPORTALS, bsp.dareaportals, bsp.numareaportals);
-
-        AddLump(&bspfile, Q2_LUMP_VISIBILITY, bsp.dvis, bsp.visdatasize);
-        AddLump(&bspfile, Q2_LUMP_LIGHTING, bsp.dlightdata, bsp.lightdatasize);
-        AddLump(&bspfile, Q2_LUMP_ENTITIES, bsp.dentdata, bsp.entdatasize);
-        AddLump(&bspfile, Q2_LUMP_POP, bsp.dpop, sizeof(bsp.dpop));
-    } */else {
+        WriteQ1BSP(bspfile, std::get<bsp2_t>(bspdata->bsp));
+    } else if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
+        WriteQ2BSP(bspfile, std::get<q2bsp_t>(bspdata->bsp));
+    } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
+        WriteQ2BSP(bspfile, std::get<q2bsp_qbism_t>(bspdata->bsp));
+    } else {
         FError("Unknown format");
     }
 
@@ -1854,7 +1474,60 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
 static void PrintLumpSize(const lumpspec_t *lumpspec, int lumptype, int count)
 {
     const lumpspec_t *lump = &lumpspec[lumptype];
-    LogPrint("{:7} {:<12} {:10}\n", count, lump->name, count * (int)lump->size);
+    LogPrint("{:7} {:<12} {:10}\n", count, lump->name, count * lump->size);
+}
+
+template<typename T>
+inline void PrintQ1BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
+{
+    if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels))
+        LogPrint("{:7} {:<12}\n", std::get<dmodelh2_vector>(bsp.dmodels).size(), "models");
+    else
+        LogPrint("{:7} {:<12}\n", std::get<dmodelq1_vector>(bsp.dmodels).size(), "models");
+
+    PrintLumpSize(lumpspec, LUMP_PLANES, bsp.dplanes.size());
+    PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.dvertexes.size());
+    PrintLumpSize(lumpspec, LUMP_NODES, bsp.dnodes.size());
+    PrintLumpSize(lumpspec, LUMP_TEXINFO, bsp.texinfo.size());
+    PrintLumpSize(lumpspec, LUMP_FACES, bsp.dfaces.size());
+    PrintLumpSize(lumpspec, LUMP_CLIPNODES, bsp.dclipnodes.size());
+    PrintLumpSize(lumpspec, LUMP_LEAFS, bsp.dleafs.size());
+    PrintLumpSize(lumpspec, LUMP_MARKSURFACES, bsp.dmarksurfaces.size());
+    PrintLumpSize(lumpspec, LUMP_EDGES, bsp.dedges.size());
+    PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.dsurfedges.size());
+    
+    if (std::holds_alternative<miptexhl_lump>(bsp.dtex))
+        LogPrint("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexhl_lump>(bsp.dtex).textures.size());
+    else
+        LogPrint("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexq1_lump>(bsp.dtex).textures.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvisdata.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size());
+}
+
+template<typename T>
+inline void PrintQ2BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
+{
+    LogPrint("{:7} {:<12}\n", bsp.dmodels.size(), "models");
+
+    PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp.dplanes.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp.dvertexes.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_NODES, bsp.dnodes.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_TEXINFO, bsp.texinfo.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_FACES, bsp.dfaces.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_LEAFS, bsp.dleafs.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_LEAFFACES, bsp.dleaffaces.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_EDGES, bsp.dedges.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_SURFEDGES, bsp.dsurfedges.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_BRUSHES, bsp.dbrushes.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp.dareas.size());
+    PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp.dareaportals.size());
+
+    LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size());
 }
 
 /*
@@ -1865,125 +1538,19 @@ static void PrintLumpSize(const lumpspec_t *lumpspec, int lumptype, int count)
  */
 void PrintBSPFileSizes(const bspdata_t *bspdata)
 {
-    int numtextures = 0;
     const lumpspec_t *lumpspec = bspdata->version->lumps;
 
     if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
-        const q2bsp_t &bsp = std::get<q2bsp_t>(bspdata->bsp);
-
-        LogPrint("{:7} {:<12}\n", bsp.dmodels.size(), "models");
-
-        PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp.dplanes.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp.dvertexes.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_NODES, bsp.dnodes.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_TEXINFO, bsp.texinfo.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_FACES, bsp.dfaces.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFS, bsp.dleafs.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFFACES, bsp.dleaffaces.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_EDGES, bsp.dedges.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_SURFEDGES, bsp.dsurfedges.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHES, bsp.dbrushes.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp.dareas.size());
-        PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp.dareaportals.size());
-
-        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
-        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
-        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size());
-    } /*else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
-        const q2bsp_qbism_t &bsp = std::get<q2bsp_qbism_t>(bspdata->bsp);
-
-        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
-
-        PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp.numplanes);
-        PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp.numvertexes);
-        PrintLumpSize(lumpspec, Q2_LUMP_NODES, bsp.numnodes);
-        PrintLumpSize(lumpspec, Q2_LUMP_TEXINFO, bsp.numtexinfo);
-        PrintLumpSize(lumpspec, Q2_LUMP_FACES, bsp.numfaces);
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFS, bsp.numleafs);
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFFACES, bsp.numleaffaces);
-        PrintLumpSize(lumpspec, Q2_LUMP_LEAFBRUSHES, bsp.numleafbrushes);
-        PrintLumpSize(lumpspec, Q2_LUMP_EDGES, bsp.numedges);
-        PrintLumpSize(lumpspec, Q2_LUMP_SURFEDGES, bsp.numsurfedges);
-        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHES, bsp.numbrushes);
-        PrintLumpSize(lumpspec, Q2_LUMP_BRUSHSIDES, bsp.numbrushsides);
-        PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp.numareas);
-        PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp.numareaportals);
-
-        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
+        PrintQ2BSPLumps(lumpspec, std::get<q2bsp_t>(bspdata->bsp));
+    } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
+        PrintQ2BSPLumps(lumpspec, std::get<q2bsp_qbism_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
-        const bsp29_t &bsp = std::get<bsp29_t>(bspdata->bsp);
-
-        if (bsp.texdatasize)
-            numtextures = bsp.dtexdata->nummiptex;
-
-        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
-
-        PrintLumpSize(lumpspec, LUMP_PLANES, bsp.numplanes);
-        PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.numvertexes);
-        PrintLumpSize(lumpspec, LUMP_NODES, bsp.numnodes);
-        PrintLumpSize(lumpspec, LUMP_TEXINFO, bsp.numtexinfo);
-        PrintLumpSize(lumpspec, LUMP_FACES, bsp.numfaces);
-        PrintLumpSize(lumpspec, LUMP_CLIPNODES, bsp.numclipnodes);
-        PrintLumpSize(lumpspec, LUMP_LEAFS, bsp.numleafs);
-        PrintLumpSize(lumpspec, LUMP_MARKSURFACES, bsp.nummarksurfaces);
-        PrintLumpSize(lumpspec, LUMP_EDGES, bsp.numedges);
-        PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.numsurfedges);
-
-        LogPrint("{:7} {:<12} {:10}\n", numtextures, "textures", bsp.texdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
+        PrintQ1BSPLumps(lumpspec, std::get<bsp29_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
-        const bsp2rmq_t &bsp = std::get<bsp2rmq_t>(bspdata->bsp);
-
-        if (bsp.texdatasize)
-            numtextures = bsp.dtexdata->nummiptex;
-
-        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
-
-        PrintLumpSize(lumpspec, LUMP_PLANES, bsp.numplanes);
-        PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.numvertexes);
-        PrintLumpSize(lumpspec, LUMP_NODES, bsp.numnodes);
-        PrintLumpSize(lumpspec, LUMP_TEXINFO, bsp.numtexinfo);
-        PrintLumpSize(lumpspec, LUMP_FACES, bsp.numfaces);
-        PrintLumpSize(lumpspec, LUMP_CLIPNODES, bsp.numclipnodes);
-        PrintLumpSize(lumpspec, LUMP_LEAFS, bsp.numleafs);
-        PrintLumpSize(lumpspec, LUMP_MARKSURFACES, bsp.nummarksurfaces);
-        PrintLumpSize(lumpspec, LUMP_EDGES, bsp.numedges);
-        PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.numsurfedges);
-
-        LogPrint("{:7} {:<12} {:10}\n", numtextures, "textures", bsp.texdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
+        PrintQ1BSPLumps(lumpspec, std::get<bsp2rmq_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
-        const bsp2_t &bsp = std::get<bsp2_t>(bspdata->bsp);
-
-        if (bsp.texdatasize)
-            numtextures = bsp.dtexdata->nummiptex;
-
-        LogPrint("{:7} {:<12}\n", bsp.nummodels, "models");
-
-        PrintLumpSize(lumpspec, LUMP_PLANES, bsp.numplanes);
-        PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.numvertexes);
-        PrintLumpSize(lumpspec, LUMP_NODES, bsp.numnodes);
-        PrintLumpSize(lumpspec, LUMP_TEXINFO, bsp.numtexinfo);
-        PrintLumpSize(lumpspec, LUMP_FACES, bsp.numfaces);
-        PrintLumpSize(lumpspec, LUMP_CLIPNODES, bsp.numclipnodes);
-        PrintLumpSize(lumpspec, LUMP_LEAFS, bsp.numleafs);
-        PrintLumpSize(lumpspec, LUMP_MARKSURFACES, bsp.nummarksurfaces);
-        PrintLumpSize(lumpspec, LUMP_EDGES, bsp.numedges);
-        PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.numsurfedges);
-
-        LogPrint("{:7} {:<12} {:10}\n", numtextures, "textures", bsp.texdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.lightdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.visdatasize);
-        LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.entdatasize);
-    } */else {
+        PrintQ1BSPLumps(lumpspec, std::get<bsp2_t>(bspdata->bsp));
+    } else {
         Error("Unsupported BSP version: {}", BSPVersionString(bspdata->version));
     }
 
@@ -1993,64 +1560,4 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
             LogPrint("{:7} {:<12} {:10}\n", "BSPX", x->lumpname.data(), x->lumpsize);
         }
     }
-}
-
-/*
-  ===============
-  CompressRow
-  ===============
-*/
-int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
-{
-    int i, rep;
-    uint8_t *dst;
-
-    dst = out;
-    for (i = 0; i < numbytes; i++) {
-        *dst++ = vis[i];
-        if (vis[i])
-            continue;
-
-        rep = 1;
-        for (i++; i < numbytes; i++)
-            if (vis[i] || rep == 255)
-                break;
-            else
-                rep++;
-        *dst++ = rep;
-        i--;
-    }
-
-    return dst - out;
-}
-
-/*
-===================
-DecompressRow
-===================
-*/
-void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
-{
-    int c;
-    uint8_t *out;
-    int row;
-
-    row = numbytes;
-    out = decompressed;
-
-    do {
-        if (*in) {
-            *out++ = *in++;
-            continue;
-        }
-
-        c = in[1];
-        if (!c)
-            FError("0 repeat");
-        in += 2;
-        while (c) {
-            *out++ = 0;
-            c--;
-        }
-    } while (out - decompressed < row);
 }

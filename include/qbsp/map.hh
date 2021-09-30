@@ -166,9 +166,9 @@ struct mapdata_t
     std::vector<dbrush_t> exported_brushes;
     std::vector<dareaportal_t> exported_areaportals;
     std::vector<darea_t> exported_areas;
+    std::vector<miptexhl_t> exported_textures;
 
     std::string exported_entities;
-    std::string exported_texdata;
 
     // bspx data
     std::vector<uint8_t> exported_lmshifts;

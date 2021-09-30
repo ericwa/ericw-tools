@@ -71,7 +71,7 @@ static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3
  * Yet, which side is the node with the solid leaf child determines
  * what the hit point will be.
  */
-static int TraceLine(const dmodel_t *model, const int traceflags, const vec3_t start, const vec3_t end);
+static int TraceLine(const dmodelh2_t *model, const int traceflags, const vec3_t start, const vec3_t end);
 
 struct tnode_t
 {
@@ -96,7 +96,7 @@ struct faceinfo_t
     int content_or_surf_flags;
     plane_t plane;
 
-    const char *texturename;
+    const std::string *texturename;
     const mface_t *face;
 };
 
@@ -214,7 +214,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const mface_t *face, faceinfo_t *inf
 
     info->content_or_surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
 
-    info->texturename = Face_TextureName(bsp, face);
+    info->texturename = &Face_TextureName(bsp, face);
 
 #if 0
     //test
@@ -237,7 +237,7 @@ static void MakeFaceInfo(const mbsp_t *bsp, const mface_t *face, faceinfo_t *inf
 #endif
 }
 
-static bool Model_HasFence(const mbsp_t *bsp, const dmodel_t *model)
+static bool Model_HasFence(const mbsp_t *bsp, const dmodelh2_t *model)
 {
     for (int j = model->firstface; j < model->firstface + model->numfaces; j++) {
         const mface_t *face = BSP_GetFace(bsp, j);
@@ -372,7 +372,7 @@ struct tracestack_t
  * ==============
  */
 #define MAX_TSTACK 256
-static int TraceLine(const dmodel_t *model, const int traceflags, const vec3_t start, const vec3_t stop)
+static int TraceLine(const dmodelh2_t *model, const int traceflags, const vec3_t start, const vec3_t stop)
 {
     int node, side, tracehit;
     vec3_t front, back;
@@ -499,7 +499,7 @@ static int TraceLine(const dmodel_t *model, const int traceflags, const vec3_t s
     }
 }
 
-static bool BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t *self)
+static bool BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodelh2_t *self)
 {
     const int traceflags = TRACE_HIT_SOLID;
     int result = TRACE_HIT_NONE;
@@ -520,7 +520,7 @@ static bool BSP_TestLight(const vec3_t start, const vec3_t stop, const dmodel_t 
     return (result == TRACE_HIT_NONE);
 }
 
-static bool BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *self)
+static bool BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodelh2_t *self)
 {
     // const modelinfo_t *const *model;
     int traceflags = TRACE_HIT_SKY | TRACE_HIT_SOLID;
@@ -563,7 +563,7 @@ static bool BSP_TestSky(const vec3_t start, const vec3_t dirn, const dmodel_t *s
  * or if it started in the void.
  * ============
  */
-static hittype_t BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodel_t *self,
+static hittype_t BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_t dist, const dmodelh2_t *self,
     vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out)
 {
     vec3_t stop;
@@ -613,7 +613,7 @@ static hittype_t BSP_DirtTrace(const vec3_t start, const vec3_t dirn, const vec_
 }
 
 static bool BSP_IntersectSingleModel(
-    const vec3_t start, const vec3_t dirn, vec_t dist, const dmodel_t *self, vec_t *hitdist_out)
+    const vec3_t start, const vec3_t dirn, vec_t dist, const dmodelh2_t *self, vec_t *hitdist_out)
 {
     vec3_t stop;
     VectorMA(start, dist, dirn, stop);
@@ -682,7 +682,7 @@ static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3
 
             // check fence
             bool passedThroughFence = false;
-            if (fi->texturename[0] == '{') {
+            if (fi->texturename->at(0) == '{') {
                 const color_rgba sample = SampleTexture(face, bsp_static, mid); // mxd. Palette index -> RGBA
                 if (sample.a < 255) {
                     passedThroughFence = true;
