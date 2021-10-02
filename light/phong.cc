@@ -377,8 +377,7 @@ static vector<qvec3f> Face_VertexNormals(const mbsp_t *bsp, const mface_t *face)
 {
     vector<qvec3f> normals;
     for (int i = 0; i < face->numedges; i++) {
-        const qvec3f n = GetSurfaceVertexNormal(bsp, face, i);
-        normals.push_back(n);
+        normals.push_back(GetSurfaceVertexNormal(bsp, face, i));
     }
     return normals;
 }
@@ -550,9 +549,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         // gather up f and neighboursToSmooth
         std::vector<const mface_t *> fPlusNeighbours;
         fPlusNeighbours.push_back(&f);
-        for (auto neighbour : neighboursToSmooth) {
-            fPlusNeighbours.push_back(neighbour);
-        }
+        std::copy(neighboursToSmooth.begin(), neighboursToSmooth.end(), std::back_inserter(fPlusNeighbours));
 
         // global vertex index -> smoothed normal
         std::map<int, qvec3f> smoothedNormals;

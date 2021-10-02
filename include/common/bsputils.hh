@@ -42,10 +42,11 @@ void Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v, vec3_t point_
 void Face_Normal(const mbsp_t *bsp, const mface_t *f, vec3_t norm); // mxd
 plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f);
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
-const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face); // mxd. miptex_t -> rgba_miptex_t
+const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face); 
+const rgba_miptex_t *Face_RgbaMiptex(const mbsp_t *bsp, const mface_t *face);
 const std::string &Face_TextureName(const mbsp_t *bsp, const mface_t *face);
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);
-const bspvec3f_t &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v);
+const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v);
 bool ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, int contents_or_surf_flags); // mxd
 bool Face_IsTranslucent(const mbsp_t *bsp, const mface_t *face); // mxd
 int Face_ContentsOrSurfaceFlags(

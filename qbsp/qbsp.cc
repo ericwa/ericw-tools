@@ -133,16 +133,14 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
 
         if (f->planeside)
         {
-            auto &plane = map.planes[f->planenum];
-            plane_t flipped;
-            flipped.dist = -plane.dist;
-            VectorCopy(plane.normal, flipped.normal);
+            auto flipped = map.planes[f->planenum];
+            flipped.dist = -flipped.dist;
             VectorInverse(flipped.normal);
-            planenum = FindPlane(flipped.normal, flipped.dist, nullptr);
+            planenum = FindPlane(&flipped.normal[0], flipped.dist, nullptr);
         }
 
         int32_t outputplanenum = ExportMapPlane(planenum);
-        planes.push_back({ outputplanenum, f });
+        planes.emplace_back(outputplanenum, f);
     }
 
     //
@@ -172,9 +170,9 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                 else
                     new_plane.dist = -b->bounds.mins()[axis];
 
-                int32_t planenum = FindPlane(new_plane.normal, new_plane.dist, nullptr);
+                int32_t planenum = FindPlane(&new_plane.normal[0], new_plane.dist, nullptr);
                 int32_t outputplanenum = ExportMapPlane(planenum);
-                planes.push_back({ outputplanenum, nullptr });
+                planes.emplace_back(outputplanenum, nullptr);
             }
 
             // if the plane is not in it canonical order, swap it
@@ -267,9 +265,9 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                         continue;	// wasn't part of the outer hull
                     
                     // add this plane
-                    int32_t planenum = FindPlane(current.normal, current.dist, nullptr);
+                    int32_t planenum = FindPlane(&current.normal[0], current.dist, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
-                    planes.push_back({ outputplanenum, nullptr });
+                    planes.emplace_back(outputplanenum, nullptr);
                 }
             }
         }
@@ -290,8 +288,8 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
         auto bevels = AddBrushBevels(b);
 
         for (auto &plane : bevels) {
-            map.exported_brushsides.push_back(
-                {(uint32_t)std::get<0>(plane), map.mtexinfos[b->faces->texinfo].outputnum.value_or(-1)});
+            map.exported_brushsides.push_back({
+                (uint32_t)std::get<0>(plane), (int32_t)map.mtexinfos[b->faces->texinfo].outputnum.value_or(-1)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }

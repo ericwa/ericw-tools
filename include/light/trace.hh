@@ -67,10 +67,10 @@ struct hitresult_t
  * Convenience functions TestLight and TestSky will test against all shadow
  * casting bmodels and self-shadow the model 'self' if self != NULL.
  */
-hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const mface_t **face_out);
-hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
+hitresult_t TestSky(const vec3_t &start, const vec3_t &dirn, const modelinfo_t *self, const mface_t **face_out);
+hitresult_t TestLight(const vec3_t &start, const vec3_t &stop, const modelinfo_t *self);
 #if 0
-hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out);
+hittype_t DirtTrace(const vec3_t &start, const vec3_t &dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out);
 #endif
 
 class modelinfo_t;
@@ -79,8 +79,8 @@ class raystream_common_t
 {
 public:
     virtual ~raystream_common_t() = default;
-    virtual void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr,
-        const vec_t *normalcontrib = nullptr) = 0;
+    virtual void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
+        const qvec3d *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
     virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
     virtual int getPushedRayPointIndex(size_t j) = 0;
@@ -90,14 +90,6 @@ public:
     virtual void clearPushedRays() = 0;
 
 public:
-    void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist)
-    {
-        vec3_t originTemp, dirTemp;
-        VectorCopy(origin, originTemp);
-        VectorCopy(dir, dirTemp);
-        this->pushRay(i, originTemp, dirTemp, dist);
-    }
-
     qvec3f getPushedRayDir(size_t j)
     {
         vec3_t temp;

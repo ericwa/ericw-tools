@@ -135,7 +135,7 @@ void Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face, vec3_t colo
 }
 
 template<typename T>
-static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorByStyle, const vec3_t &surfnormal,
+static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorByStyle, const qvec3d &surfnormal,
     vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
@@ -166,7 +166,7 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
     VectorSet(l.maxs, 0, 0, 0);
 
     if (!novisapprox) {
-        EstimateVisibleBoundsAtPoint(&pos[0], l.mins, l.maxs);
+        EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);
     }
 
     unique_lock<mutex> lck{radlights_lock};

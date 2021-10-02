@@ -382,7 +382,7 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
                 pl->normal[i] = 1;
                 pl->dist = bounds[j][i];
             }
-            p->planenum = FindPlane(pl->normal, pl->dist, &side);
+            p->planenum = FindPlane(&pl->normal[0], pl->dist, &side);
 
             p->winding = BaseWindingForPlane(pl);
             if (side)

@@ -32,12 +32,12 @@
 #include <common/qvec.hh>
 
 using vec_t = double;
-constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();
 using vec3_t = vec_t[3];
+constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();
 
 struct plane_t
 {
-    vec3_t normal;
+    qvec3d normal;
     vec_t dist;
 };
 
@@ -76,8 +76,8 @@ constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
     return true;
 }
 
-template<typename T>
-constexpr void CrossProduct(const T &v1, const T &v2, T &cross)
+template<typename T, typename T2, typename T3>
+constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
 {
     //static_assert(std::size(v1) == 3);
 
@@ -124,8 +124,8 @@ constexpr void VectorCopy(const TFrom &in, TTo &out)
     out[2] = in[2];
 }
 
-template<typename T>
-constexpr void VectorScale(const T &v, vec_t scale, T &out)
+template<typename TFrom, typename TScale, typename TTo>
+constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
 {
     //static_assert(std::size(v) == 3);
 
@@ -258,7 +258,7 @@ constexpr void ProjectPointOntoPlane(const T &normal, const vec_t dist, T &point
     VectorAdd(point, move, point);
 }
 
-bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist);
+bool SetPlanePts(const std::array<qvec3d, 3> &planepts, qvec3d &normal, vec_t &dist);
 
 /* Shortcut for output of warnings/errors */
 
@@ -472,11 +472,11 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
         return {};
 
     std::vector<V> result;
+    result.reserve(stepCount + 1);
     const V dir = linesegment / len;
     const int stepCount = static_cast<int>(len / step);
     for (int i = 0; i <= stepCount; i++) {
-        const V pt = start + (dir * (step * i));
-        result.push_back(pt);
+        result.push_back(start + (dir * (step * i)));
     }
     return result;
 }

@@ -143,24 +143,21 @@ struct lumpspec_t
     size_t size;
 };
 
-using bspvec3s_t = std::array<int16_t, 3>;
-using bspvec3f_t = std::array<float, 3>;
-
 // helper functions to quickly numerically cast mins/maxs
 // and floor/ceil them in the case of float -> integral
 template<typename T, typename F>
-inline std::array<T, 3> aabb_mins_cast(const std::array<F, 3> &f, const char *overflow_message = "mins")
+inline qvec<3, T> aabb_mins_cast(const qvec<3, F> &f, const char *overflow_message = "mins")
 {
-    if constexpr(std::is_floating_point_v<T>)
+    if constexpr(std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
         return { numeric_cast<T>(floor(f[0]), overflow_message), numeric_cast<T>(floor(f[1]), overflow_message), numeric_cast<T>(floor(f[2]), overflow_message) };
     else
         return { numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message), numeric_cast<T>(f[2], overflow_message) };
 }
 
 template<typename T, typename F>
-inline std::array<T, 3> aabb_maxs_cast(const std::array<F, 3> &f, const char *overflow_message = "maxs")
+inline qvec<3, T> aabb_maxs_cast(const qvec<3, F> &f, const char *overflow_message = "maxs")
 {
-    if constexpr(std::is_floating_point_v<T>)
+    if constexpr(std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
         return { numeric_cast<T>(ceil(f[0]), overflow_message), numeric_cast<T>(ceil(f[1]), overflow_message), numeric_cast<T>(ceil(f[2]), overflow_message) };
     else
         return { numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message), numeric_cast<T>(f[2], overflow_message) };
@@ -168,9 +165,9 @@ inline std::array<T, 3> aabb_maxs_cast(const std::array<F, 3> &f, const char *ov
 
 struct dmodelh2_t
 {
-    bspvec3f_t mins;
-    bspvec3f_t maxs;
-    bspvec3f_t origin;
+    qvec3f mins;
+    qvec3f maxs;
+    qvec3f origin;
     std::array<int32_t, MAX_MAP_HULLS_H2> headnode; /* hexen2 only uses 6 */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
@@ -203,9 +200,9 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
 
 struct dmodelq1_t
 {
-    bspvec3f_t mins;
-    bspvec3f_t maxs;
-    bspvec3f_t origin;
+    qvec3f mins;
+    qvec3f maxs;
+    qvec3f origin;
     std::array<int32_t, MAX_MAP_HULLS_Q1> headnode; /* 4 for backward compat, only 3 hulls exist */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
@@ -248,9 +245,9 @@ struct dmodelq1_t
 
 struct q2_dmodel_t
 {
-    bspvec3f_t mins;
-    bspvec3f_t maxs;
-    bspvec3f_t origin; // for sounds or lights
+    qvec3f mins;
+    qvec3f maxs;
+    qvec3f origin; // for sounds or lights
     int32_t headnode;
     int32_t firstface;
     int32_t numfaces; // submodels just draw faces
@@ -469,8 +466,6 @@ struct rgba_miptex_t
     std::unique_ptr<uint8_t[]> data;
 };
 
-using dvertex_t = bspvec3f_t;
-
 /* 0-2 are axial planes */
 #define PLANE_X 0
 #define PLANE_Y 1
@@ -483,7 +478,7 @@ using dvertex_t = bspvec3f_t;
 
 struct dplane_t
 {
-    bspvec3f_t normal;
+    qvec3f normal;
     float dist;
     int32_t type;
 
@@ -632,8 +627,8 @@ struct bsp2_dnode_t
 {
     int32_t planenum;
     std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
-    bspvec3f_t mins; /* for sphere culling */
-    bspvec3f_t maxs;
+    qvec3f mins; /* for sphere culling */
+    qvec3f maxs;
     uint32_t firstface;
     uint32_t numfaces; /* counting both sides */
 
@@ -648,8 +643,8 @@ struct bsp29_dnode_t
 {
     int32_t planenum;
     std::array<int16_t, 2> children; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
-    bspvec3s_t mins; /* for sphere culling */
-    bspvec3s_t maxs;
+    qvec3s mins; /* for sphere culling */
+    qvec3s maxs;
     uint16_t firstface;
     uint16_t numfaces; /* counting both sides */
 
@@ -690,8 +685,8 @@ struct bsp2rmq_dnode_t
 {
     int32_t planenum;
     std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
-    bspvec3s_t mins; /* for sphere culling */
-    bspvec3s_t maxs;
+    qvec3s mins; /* for sphere culling */
+    qvec3s maxs;
     uint32_t firstface;
     uint32_t numfaces; /* counting both sides */
 
@@ -732,8 +727,8 @@ struct q2_dnode_t
 {
     int32_t planenum;
     std::array<int32_t, 2> children; // negative numbers are -(leafs+1), not nodes
-    bspvec3s_t mins; // for frustom culling
-    bspvec3s_t maxs;
+    qvec3s mins; // for frustom culling
+    qvec3s maxs;
     uint16_t firstface;
     uint16_t numfaces; // counting both sides
 
@@ -1233,8 +1228,8 @@ struct mleaf_t
     // bsp2_dleaf_t
     int32_t contents;
     int32_t visofs; /* -1 = no visibility info */
-    bspvec3f_t mins; /* for frustum culling     */
-    bspvec3f_t maxs;
+    qvec3f mins; /* for frustum culling     */
+    qvec3f maxs;
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
     std::array<uint8_t, NUM_AMBIENTS> ambient_level;
@@ -1250,8 +1245,8 @@ struct bsp29_dleaf_t
 {
     int32_t contents;
     int32_t visofs; /* -1 = no visibility info */
-    bspvec3s_t mins; /* for frustum culling     */
-    bspvec3s_t maxs;
+    qvec3s mins; /* for frustum culling     */
+    qvec3s maxs;
     uint16_t firstmarksurface;
     uint16_t nummarksurfaces;
     std::array<uint8_t, NUM_AMBIENTS> ambient_level;
@@ -1295,8 +1290,8 @@ struct bsp2rmq_dleaf_t
 {
     int32_t contents;
     int32_t visofs; /* -1 = no visibility info */
-    bspvec3s_t mins; /* for frustum culling     */
-    bspvec3s_t maxs;
+    qvec3s mins; /* for frustum culling     */
+    qvec3s maxs;
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
     std::array<uint8_t, NUM_AMBIENTS> ambient_level;
@@ -1340,8 +1335,8 @@ struct bsp2_dleaf_t
 {
     int32_t contents;
     int32_t visofs; /* -1 = no visibility info */
-    bspvec3f_t mins; /* for frustum culling     */
-    bspvec3f_t maxs;
+    qvec3f mins; /* for frustum culling     */
+    qvec3f maxs;
     uint32_t firstmarksurface;
     uint32_t nummarksurfaces;
     std::array<uint8_t, NUM_AMBIENTS> ambient_level;
@@ -1388,8 +1383,8 @@ struct q2_dleaf_t
     int16_t cluster;
     int16_t area;
 
-    bspvec3s_t mins; // for frustum culling
-    bspvec3s_t maxs;
+    qvec3s mins; // for frustum culling
+    qvec3s maxs;
 
     uint16_t firstleafface;
     uint16_t numleaffaces;
@@ -1445,8 +1440,8 @@ struct q2_dleaf_qbism_t
     int32_t cluster;
     int32_t area;
 
-    bspvec3f_t mins; // for frustum culling
-    bspvec3f_t maxs;
+    qvec3f mins; // for frustum culling
+    qvec3f maxs;
 
     uint32_t firstleafface;
     uint32_t numleaffaces;
@@ -1668,7 +1663,7 @@ struct bsp29_t
     std::string dentdata;
     std::vector<bsp29_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
-    std::vector<dvertex_t> dvertexes;
+    std::vector<qvec3f> dvertexes;
     std::vector<bsp29_dnode_t> dnodes;
     std::vector<texinfo_t> texinfo;
     std::vector<bsp29_dface_t> dfaces;
@@ -1687,7 +1682,7 @@ struct bsp2rmq_t
     std::string dentdata;
     std::vector<bsp2rmq_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
-    std::vector<dvertex_t> dvertexes;
+    std::vector<qvec3f> dvertexes;
     std::vector<bsp2rmq_dnode_t> dnodes;
     std::vector<texinfo_t> texinfo;
     std::vector<bsp2_dface_t> dfaces;
@@ -1706,7 +1701,7 @@ struct bsp2_t
     std::string dentdata;
     std::vector<bsp2_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
-    std::vector<dvertex_t> dvertexes;
+    std::vector<qvec3f> dvertexes;
     std::vector<bsp2_dnode_t> dnodes;
     std::vector<texinfo_t> texinfo;
     std::vector<bsp2_dface_t> dfaces;
@@ -1726,7 +1721,7 @@ struct q2bsp_t
     std::string dentdata;
     std::vector<q2_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
-    std::vector<dvertex_t> dvertexes;
+    std::vector<qvec3f> dvertexes;
     std::vector<q2_dnode_t> dnodes;
     std::vector<q2_texinfo_t> texinfo;
     std::vector<q2_dface_t> dfaces;
@@ -1748,7 +1743,7 @@ struct q2bsp_qbism_t
     std::string dentdata;
     std::vector<q2_dleaf_qbism_t> dleafs;
     std::vector<dplane_t> dplanes;
-    std::vector<dvertex_t> dvertexes;
+    std::vector<qvec3f> dvertexes;
     std::vector<q2_dnode_qbism_t> dnodes;
     std::vector<q2_texinfo_t> texinfo;
     std::vector<q2_dface_qbism_t> dfaces;
@@ -1776,7 +1771,7 @@ struct mbsp_t
     std::string dentdata;
     std::vector<mleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
-    std::vector<dvertex_t> dvertexes;
+    std::vector<qvec3f> dvertexes;
     std::vector<bsp2_dnode_t> dnodes;
     std::vector<gtexinfo_t> texinfo;
     std::vector<mface_t> dfaces;
@@ -1802,11 +1797,12 @@ struct dheader_t
     }
 };
 
-struct q2_dheader_t : dheader_t
+struct q2_dheader_t
 {
+    int32_t ident;
     int32_t version;
+    std::array<lump_t, Q2_HEADER_LUMPS> lumps;
 
-    // note: intentionally not virtual & hides inherited version
     auto stream_data()
     {
         return std::tie(ident, version, lumps);

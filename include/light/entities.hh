@@ -158,7 +158,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp);
 void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp);
 bool ParseLightsFile(const std::filesystem::path &fname);
 void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp);
-void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs);
+void EstimateVisibleBoundsAtPoint(const qvec3d &point, vec3_t mins, vec3_t maxs);
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
 

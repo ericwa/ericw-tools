@@ -382,8 +382,9 @@ static void AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const 
 {
     if (light == 0.0f)
         return;
-
-    sun_t sun{};
+    
+    // add to list
+    sun_t &sun = all_suns.emplace_back();
     VectorCopy(sunvec, sun.sunvec);
     VectorNormalize(sun.sunvec);
     VectorScale(sun.sunvec, -16384, sun.sunvec);
@@ -393,9 +394,6 @@ static void AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const 
     sun.dirt = Dirt_ResolveFlag(cfg, dirtInt);
     sun.style = style;
     sun.suntexture = suntexture;
-
-    // add to list
-    all_suns.push_back(sun);
 
     //fmt::print( "sun is using vector {} {} {} light {} color {} {} {} anglescale {} dirt {} resolved to {}\n",
     //  sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
@@ -651,7 +649,7 @@ static void JitterEntity(const light_t entity)
     /* jitter the light */
     for (int j = 1; j < entity.samples.intValue(); j++) {
         /* create a light */
-        light_t light2 = DuplicateEntity(entity);
+        light_t &light2 = all_lights.emplace_back(DuplicateEntity(entity));
         light2.generated = true; // don't write generated light to bsp
 
         /* jitter it */
@@ -659,8 +657,6 @@ static void JitterEntity(const light_t entity)
             (*entity.origin.vec3Value())[1] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue(),
             (*entity.origin.vec3Value())[2] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue()};
         light2.origin.setVec3Value(neworigin);
-
-        all_lights.push_back(light2);
     }
 }
 
@@ -975,7 +971,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             }
 
             /* Allocate a new entity */
-            light_t entity{};
+            light_t &entity = all_lights.emplace_back();
 
             // save pointer to the entdict
             entity.epairs = &entdict;
@@ -1027,8 +1023,6 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             }
 
             CheckEntityFields(cfg, &entity);
-
-            all_lights.push_back(entity);
         }
     }
 
@@ -1076,14 +1070,14 @@ void FixLightsOnFaces(const mbsp_t *bsp)
     }
 }
 
-void EstimateVisibleBoundsAtPoint(const vec3_t point, vec3_t mins, vec3_t maxs)
+void EstimateVisibleBoundsAtPoint(const qvec3d &point, vec3_t mins, vec3_t maxs)
 {
     const int N = 32;
     const int N2 = N * N;
 
     raystream_intersection_t *rs = MakeIntersectionRayStream(N2);
 
-    AABB_Init(mins, maxs, point);
+    AABB_Init(mins, maxs, &point[0]);
     for (int x = 0; x < N; x++) {
         for (int y = 0; y < N; y++) {
             const vec_t u1 = static_cast<float>(x) / static_cast<float>(N - 1);
@@ -1255,7 +1249,7 @@ static void SurfLights_WriteEntityToFile(light_t *entity, const vec3_t pos)
 
 static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const light_t *surflight_template)
 {
-    light_t entity = DuplicateEntity(*surflight_template);
+    light_t &entity = all_lights.emplace_back(DuplicateEntity(*surflight_template));
 
     entity.origin.setVec3Value(origin);
 
@@ -1272,8 +1266,6 @@ static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const
     if (surflight_dump) {
         SurfLights_WriteEntityToFile(&entity, origin);
     }
-
-    all_lights.push_back(entity);
 }
 
 static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const modelinfo_t *face_modelinfo,
@@ -1444,7 +1436,7 @@ bool ParseLightsFile(const std::filesystem::path &fname)
         if (!parser.parse_token())
             continue;
 
-        entdict_t d {};
+        entdict_t &d = radlights.emplace_back();
         d.set("_surface", parser.token);
         parser.parse_token();
         float r = std::stof(parser.token);
@@ -1456,8 +1448,6 @@ bool ParseLightsFile(const std::filesystem::path &fname)
         parser.parse_token();
         d.set("light", parser.token);
         // might be hdr rgbi values here
-
-        radlights.push_back(d);
     }
 
     return true;
@@ -1470,10 +1460,9 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     Q_assert(surfacelight_templates.empty());
 
     for (entdict_t &l : radlights) {
-        light_t entity{};
+        light_t &entity = surfacelight_templates.emplace_back();
         entity.epairs = &l;
         entity.settings().setSettings(*entity.epairs, false);
-        surfacelight_templates.push_back(entity);
     }
 
     for (light_t &entity : all_lights) {

@@ -73,12 +73,12 @@ public:
 qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, const qvec3f &world);
 qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f);
 qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f);
-void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2]);
+void WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex, vec_t coord[2]);
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);
 std::map<int, qvec3f> GetDirectLighting(
-    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t &origin, const vec3_t &normal);
+    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t &origin, const qvec3d &normal);
 void SetupDirt(globalconfig_t &cfg);
 float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const vec3_t &point, const vec3_t &normal,
     const modelinfo_t *selfshadow);

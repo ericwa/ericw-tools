@@ -394,10 +394,10 @@ struct decomp_brush_side_t
         for (auto &face : faces) {
             auto [faceFront, faceBack] = face.clipToPlane(normal, distance);
             if (faceFront.winding) {
-                frontfaces.push_back(std::move(faceFront));
+                frontfaces.emplace_back(std::move(faceFront));
             }
             if (faceBack.winding) {
-                backfaces.push_back(std::move(faceBack));
+                backfaces.emplace_back(std::move(faceBack));
             }
         }
 
@@ -424,18 +424,15 @@ struct decomp_brush_t
 
         for (const auto &side : sides) {
             auto [frontSide, backSide] = side.clipToPlane(normal, distance);
-            frontSides.push_back(frontSide);
-            backSides.push_back(backSide);
+            frontSides.emplace_back(frontSide);
+            backSides.emplace_back(backSide);
         }
 
         // NOTE: the frontSides, backSides vectors will have redundant planes at this point. Should be OK..
 
         // Now we need to add the splitting plane itself to the sides vectors
-        auto splittingPlaneForFrontBrush = decomp_brush_side_t(-normal, -distance);
-        auto splittingPlaneForBackBrush = decomp_brush_side_t(normal, distance);
-
-        frontSides.push_back(splittingPlaneForFrontBrush);
-        backSides.push_back(splittingPlaneForBackBrush);
+        frontSides.emplace_back(-normal, -distance);
+        backSides.emplace_back(normal, distance);
 
         return {decomp_brush_t(frontSides), decomp_brush_t(backSides)};
     }
@@ -488,7 +485,7 @@ static decomp_brush_t BuildInitialBrush(const mbsp_t *bsp, const std::vector<dec
         // NOTE: side may have had all of its faces clipped away, but we still need to keep it
         // as it's one of the final boundaries of the brush
 
-        sides.push_back(std::move(side));
+        sides.emplace_back(std::move(side));
     }
 
     return decomp_brush_t(sides);
@@ -547,7 +544,7 @@ static qvec4f SuggestSplit(const mbsp_t *bsp, const decomp_brush_side_t &side)
 }
 
 static void SplitDifferentTexturedPartsOfBrush_R(
-    const mbsp_t *bsp, const decomp_brush_t &brush, std::vector<decomp_brush_t> *out)
+    const mbsp_t *bsp, const decomp_brush_t &brush, std::vector<decomp_brush_t> &out)
 {
     for (auto &side : brush.sides) {
         if (SideNeedsSplitting(bsp, side)) {
@@ -562,13 +559,13 @@ static void SplitDifferentTexturedPartsOfBrush_R(
     }
 
     // nothing needed splitting
-    out->push_back(brush);
+    out.push_back(brush);
 }
 
 static std::vector<decomp_brush_t> SplitDifferentTexturedPartsOfBrush(const mbsp_t *bsp, const decomp_brush_t &brush)
 {
     std::vector<decomp_brush_t> result;
-    SplitDifferentTexturedPartsOfBrush_R(bsp, brush, &result);
+    SplitDifferentTexturedPartsOfBrush_R(bsp, brush, result);
 
     //    printf("SplitDifferentTexturedPartsOfBrush: %d sides in. split into %d brushes\n",
     //           (int)brush.sides.size(),
@@ -588,15 +585,15 @@ struct leaf_decompile_task
  *  - The existing path of plane side choices have been pushed onto `planestack`
  *  - We've arrived at a leaf
  */
-static void DecompileLeaf(const std::vector<decomp_plane_t> *planestack, const mbsp_t *bsp, const mleaf_t *leaf,
-    std::vector<leaf_decompile_task> *result)
+static void DecompileLeaf(const std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const mleaf_t *leaf,
+    std::vector<leaf_decompile_task> &result)
 {
     if (leaf->contents == CONTENTS_EMPTY) {
         return;
     }
 
     // NOTE: copies the whole plane stack
-    result->push_back({*planestack, leaf});
+    result.push_back({planestack, leaf});
 }
 
 static std::string DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const leaf_decompile_task &task)
@@ -702,11 +699,11 @@ decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, cons
  *  - The existing path of plane side choices have been pushed onto `planestack` (but not `node`)
  *  - We're presented with a new plane, `node`
  */
-static void DecompileNode(std::vector<decomp_plane_t> *planestack, const mbsp_t *bsp, const bsp2_dnode_t *node,
-    std::vector<leaf_decompile_task> *result)
+static void DecompileNode(std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const bsp2_dnode_t *node,
+    std::vector<leaf_decompile_task> &result)
 {
     auto handleSide = [&](const bool front) {
-        planestack->push_back(MakeDecompPlane(bsp, node, front));
+        planestack.push_back(MakeDecompPlane(bsp, node, front));
 
         const int32_t child = node->children[front ? 0 : 1];
 
@@ -718,7 +715,7 @@ static void DecompileNode(std::vector<decomp_plane_t> *planestack, const mbsp_t 
             DecompileNode(planestack, bsp, BSP_GetNode(bsp, child), result);
         }
 
-        planestack->pop_back();
+        planestack.pop_back();
     };
 
     // handle the front and back
@@ -726,7 +723,7 @@ static void DecompileNode(std::vector<decomp_plane_t> *planestack, const mbsp_t 
     handleSide(false);
 }
 
-void AddMapBoundsToStack(std::vector<decomp_plane_t> *planestack, const mbsp_t *bsp, const bsp2_dnode_t *headnode)
+static void AddMapBoundsToStack(std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const bsp2_dnode_t *headnode)
 {
     for (int i = 0; i < 3; ++i) {
         for (int sign = 0; sign < 2; ++sign) {
@@ -743,7 +740,7 @@ void AddMapBoundsToStack(std::vector<decomp_plane_t> *planestack, const mbsp_t *
             }
 
             // we want outward-facing planes
-            planestack->push_back(decomp_plane_t::make(normal, dist));
+            planestack.emplace_back(decomp_plane_t::make(normal, dist));
         }
     }
 }
@@ -783,8 +780,8 @@ static void DecompileEntity(
         // recursively visit the nodes to gather up a list of leafs to decompile
         std::vector<decomp_plane_t> stack;
         std::vector<leaf_decompile_task> tasks;
-        AddMapBoundsToStack(&stack, bsp, headnode);
-        DecompileNode(&stack, bsp, headnode, &tasks);
+        AddMapBoundsToStack(stack, bsp, headnode);
+        DecompileNode(stack, bsp, headnode, tasks);
 
         // decompile the leafs in parallel
         std::vector<std::string> leafStrings;

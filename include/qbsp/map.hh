@@ -49,7 +49,7 @@ struct mapface_t
         }
     }
 
-    bool set_planepts(const vec3_t *pts);
+    bool set_planepts(const std::array<qvec3d, 3> &pts);
 
     const texvecf &get_texvecs() const;
     void set_texvecs(const texvecf &vecs);
@@ -157,7 +157,7 @@ struct mapdata_t
     std::vector<uint32_t> exported_marksurfaces;
     std::vector<bsp2_dclipnode_t> exported_clipnodes;
     std::vector<bsp2_dedge_t> exported_edges;
-    std::vector<dvertex_t> exported_vertexes;
+    std::vector<qvec3f> exported_vertexes;
     std::vector<int32_t> exported_surfedges;
     std::vector<mface_t> exported_faces;
     std::vector<dmodelh2_t> exported_models;

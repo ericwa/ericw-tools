@@ -387,6 +387,7 @@ extern surfflags_t *extended_texinfo_flags;
 extern bool novisapprox;
 extern bool nolights;
 extern bool litonly;
+extern bool write_normals;
 
 enum backend_t
 {

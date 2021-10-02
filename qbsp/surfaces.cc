@@ -323,7 +323,7 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
     if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
 
-    face->outputnumber = -1;
+    face->outputnumber = std::nullopt;
     if (face->w.size() > MAXEDGES)
         FError("Internal error: face->numpoints > MAXEDGES");
 
@@ -365,37 +365,34 @@ EmitFace
 */
 static void EmitFace(mapentity_t *entity, face_t *face)
 {
-    mface_t *out;
     int i;
 
     if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
 
     // emit a region
-    Q_assert(face->outputnumber == -1);
-    face->outputnumber = static_cast<int>(map.exported_faces.size());
-    map.exported_faces.push_back({});
+    Q_assert(!face->outputnumber.has_value());
+    face->outputnumber = map.exported_faces.size();
+    
+    mface_t &out = map.exported_faces.emplace_back();
 
     // emit lmshift
     map.exported_lmshifts.push_back(face->lmshift[1]);
     Q_assert(map.exported_faces.size() == map.exported_lmshifts.size());
 
-    out = &map.exported_faces.at(face->outputnumber);
-    out->planenum = ExportMapPlane(face->planenum);
-    out->side = face->planeside;
-    out->texinfo = ExportMapTexinfo(face->texinfo);
+    out.planenum = ExportMapPlane(face->planenum);
+    out.side = face->planeside;
+    out.texinfo = ExportMapTexinfo(face->texinfo);
     for (i = 0; i < MAXLIGHTMAPS; i++)
-        out->styles[i] = 255;
-    out->lightofs = -1;
+        out.styles[i] = 255;
+    out.lightofs = -1;
 
     // emit surfedges
-    out->firstedge = static_cast<int>(map.exported_surfedges.size());
-    for (i = 0; i < face->w.size(); i++) {
-        map.exported_surfedges.push_back(face->edges[i]);
-    }
+    out.firstedge = static_cast<int32_t>(map.exported_surfedges.size());
+    std::copy(face->edges, face->edges + face->w.size(), std::back_inserter(map.exported_surfedges));
     delete[] face->edges;
 
-    out->numedges = static_cast<int>(map.exported_surfedges.size()) - out->firstedge;
+    out.numedges = static_cast<int32_t>(map.exported_surfedges.size()) - out.firstedge;
 }
 
 /*

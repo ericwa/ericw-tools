@@ -132,7 +132,7 @@ void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     threads_active = true;
 
     for (int32_t i = 0; i < numthreads; i++)
-        threadhandle.push_back(std::thread(func, arg));
+        threadhandle.emplace_back(func, arg);
 
     for (int32_t i = 0; i < numthreads; i++)
         threadhandle[i].join();

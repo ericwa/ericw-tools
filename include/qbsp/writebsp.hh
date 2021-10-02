@@ -21,8 +21,8 @@
 
 #pragma once
 
-int ExportMapPlane(int planenum);
-int ExportMapTexinfo(int texinfonum);
+size_t ExportMapPlane(size_t planenum);
+size_t ExportMapTexinfo(size_t texinfonum);
 
 void BeginBSPFile(void);
 void FinishBSPFile(void);

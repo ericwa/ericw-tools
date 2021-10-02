@@ -35,7 +35,7 @@ constexpr lumpspec_t lumpspec_bsp29[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
     {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(bsp29_dnode_t)},
     {"texinfos", sizeof(texinfo_t)},
@@ -53,7 +53,7 @@ constexpr lumpspec_t lumpspec_bsp2rmq[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
     {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(bsp2rmq_dnode_t)},
     {"texinfos", sizeof(texinfo_t)},
@@ -71,7 +71,7 @@ constexpr lumpspec_t lumpspec_bsp2[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
     {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(bsp2_dnode_t)},
     {"texinfos", sizeof(texinfo_t)},
@@ -89,7 +89,7 @@ constexpr lumpspec_t lumpspec_bsp29_h2[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
     {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(bsp29_dnode_t)},
     {"texinfos", sizeof(texinfo_t)},
@@ -107,7 +107,7 @@ constexpr lumpspec_t lumpspec_bsp2rmq_h2[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
     {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(bsp2rmq_dnode_t)},
     {"texinfos", sizeof(texinfo_t)},
@@ -125,7 +125,7 @@ constexpr lumpspec_t lumpspec_bsp2_h2[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
     {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(bsp2_dnode_t)},
     {"texinfos", sizeof(texinfo_t)},
@@ -142,7 +142,7 @@ constexpr lumpspec_t lumpspec_bsp2_h2[] = {
 constexpr lumpspec_t lumpspec_q2bsp[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(q2_dnode_t)},
     {"texinfos", sizeof(q2_texinfo_t)},
@@ -164,7 +164,7 @@ constexpr lumpspec_t lumpspec_q2bsp[] = {
 constexpr lumpspec_t lumpspec_qbism[] = {
     {"entities", sizeof(char)},
     {"planes", sizeof(dplane_t)},
-    {"vertexes", sizeof(dvertex_t)},
+    {"vertexes", sizeof(qvec3f)},
     {"visibility", sizeof(uint8_t)},
     {"nodes", sizeof(q2_dnode_qbism_t)},
     {"texinfos", sizeof(q2_texinfo_t)},
@@ -913,11 +913,9 @@ struct lump_reader
         s.seekg(lump.fileofs);
     
         if (lumpspec.size > 1) {
-            T val;
-
             for (size_t i = 0; i < length; i++) {
+                T &val = buffer.emplace_back();
                 s >= val;
-                buffer.push_back(val);
             }
         } else {
             s.read(reinterpret_cast<char *>(buffer.data()), length);
@@ -1089,7 +1087,8 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
     uint8_t *file_data;
     uint32_t flen = LoadFilePak(filename, &file_data);
 
-    imemstream stream(file_data, flen);
+    memstream stream(file_data, flen);
+
     stream >> endianness<std::endian::little>;
 
     /* transfer the header data to this */
@@ -1202,31 +1201,6 @@ struct bspfile_t
 
     std::ofstream stream;
 };
-
-/*static void AddLump(bspfile_t *bspfile, int lumpnum, const void *data, int count)
-{
-    bool q2 = false;
-    size_t size;
-    const lumpspec_t &lumpspec = bspfile->version->lumps[lumpnum];
-    lump_t *lumps;
-
-    if (bspfile->version->version != NO_VERSION) {
-        lumps = bspfile->q2header.lumps.data();
-    } else {
-        lumps = bspfile->q1header.lumps.data();
-    }
-
-    size = lumpspec.size * count;
-
-    uint8_t pad[4] = {0};
-    lump_t *lump = &lumps[lumpnum];
-
-    lump->fileofs = LittleLong(SafeTell(bspfile->file));
-    lump->filelen = LittleLong(size);
-    SafeWrite(bspfile->file, data, size);
-    if (size % 4)
-        SafeWrite(bspfile->file, pad, 4 - (size % 4));
-}*/
 
 // write structured lump data from vector
 template<typename T>

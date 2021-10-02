@@ -55,7 +55,7 @@ void entdict_t::set(const std::string &key, const std::string &value)
     }
 
     // no existing key; add new
-    keyvalues.push_back(std::make_pair(key, value));
+    keyvalues.emplace_back(key, value);
 }
 
 void entdict_t::remove(const std::string &key)
@@ -128,7 +128,7 @@ std::vector<entdict_t> EntData_Parse(const std::string &entdata)
             FError("found {} when expecting {", parser.token);
 
         /* Allocate a new entity */
-        entdict_t entity;
+        entdict_t &entity = result.emplace_back();
 
         /* go through all the keys in this entity */
         while (1) {
@@ -154,8 +154,6 @@ std::vector<entdict_t> EntData_Parse(const std::string &entdata)
 
             entity.set(keystr, parser.token);
         }
-
-        result.push_back(entity);
     }
 
     return result;

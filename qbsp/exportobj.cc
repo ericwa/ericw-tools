@@ -49,16 +49,6 @@ static std::ofstream InitMtlFile(const std::string &filesuffix)
     return file;
 }
 
-static void GetUV(const mtexinfo_t *texinfo, const vec_t *pos, const int width, const int height, vec_t *u, vec_t *v)
-{
-    *u = (pos[0] * texinfo->vecs[0][0] + pos[1] * texinfo->vecs[0][1] + pos[2] * texinfo->vecs[0][2] +
-             texinfo->vecs[0][3]) /
-         width;
-    *v = (pos[0] * texinfo->vecs[1][0] + pos[1] * texinfo->vecs[1][1] + pos[2] * texinfo->vecs[1][2] +
-             texinfo->vecs[1][3]) /
-         height;
-}
-
 static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
 {
     const mtexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
@@ -73,11 +63,10 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
         const qvec3d &pos = face->w[i];
         fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
 
-        vec_t u, v;
-        GetUV(&texinfo, &pos[0], width, height, &u, &v);
+        qvec3d uv = texinfo.uvs(pos, width, height);
 
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
-        fmt::print(f, "vt {:.9} {:.9}\n", u, -v);
+        fmt::print(f, "vt {:.9} {:.9}\n", uv[0], -uv[1]);
     }
 
     fmt::print(f, "usemtl contents{}_{}\n", face->contents[0].native, face->contents[0].extended);

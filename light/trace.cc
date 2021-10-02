@@ -191,24 +191,18 @@ static void MakeFaceInfo(const mbsp_t *bsp, const mface_t *face, faceinfo_t *inf
     info->plane = Face_Plane(bsp, face);
 
     // make sphere that bounds the face
-    vec3_t centroid = {0, 0, 0};
+    qvec3d centroid { };
     for (int i = 0; i < face->numedges; i++) {
-        const bspvec3f_t &v = GetSurfaceVertexPoint(bsp, face, i);
-        VectorAdd(centroid, v, centroid);
+        centroid += GetSurfaceVertexPoint(bsp, face, i);
     }
-    VectorScale(centroid, 1.0f / face->numedges, centroid);
+    centroid *= 1.0f / face->numedges;
     VectorCopy(centroid, info->origin);
 
     // calculate radius
     vec_t maxRadiusSq = 0;
     for (int i = 0; i < face->numedges; i++) {
-        vec3_t delta;
-        vec_t radiusSq;
-        const bspvec3f_t &v = GetSurfaceVertexPoint(bsp, face, i);
-        VectorSubtract(v, centroid, delta);
-        radiusSq = DotProduct(delta, delta);
-        if (radiusSq > maxRadiusSq)
-            maxRadiusSq = radiusSq;
+        qvec3d delta = GetSurfaceVertexPoint(bsp, face, i) - centroid;
+        maxRadiusSq = std::max(maxRadiusSq, qv::length2(delta));
     }
     info->radiusSquared = maxRadiusSq;
 
@@ -723,7 +717,7 @@ static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3
 // Embree wrappers
 //
 
-hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const mface_t **face_out)
+hitresult_t TestSky(const vec3_t &start, const vec3_t &dirn, const modelinfo_t *self, const mface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
@@ -738,7 +732,7 @@ hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *se
     FError("no backend available");
 }
 
-hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
+hitresult_t TestLight(const vec3_t &start, const vec3_t &stop, const modelinfo_t *self)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
@@ -753,7 +747,7 @@ hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *
     FError("no backend available");
 }
 
-hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out,
+hittype_t DirtTrace(const vec3_t &start, const vec3_t &dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out,
     plane_t *hitplane_out, const mface_t **face_out)
 {
 #ifdef HAVE_EMBREE

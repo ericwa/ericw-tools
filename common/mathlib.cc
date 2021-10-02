@@ -32,7 +32,7 @@ using namespace polylib;
 
 const vec3_t vec3_origin = {0, 0, 0};
 
-bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist)
+bool SetPlanePts(const std::array<qvec3d, 3> &planepts, qvec3d &normal, vec_t &dist)
 {
     vec3_t planevecs[2];
 
@@ -42,7 +42,7 @@ bool SetPlanePts(const vec3_t planepts[3], vec3_t &normal, vec_t *dist)
 
     CrossProduct(planevecs[0], planevecs[1], normal);
     vec_t length = VectorNormalize(normal);
-    *dist = DotProduct(planepts[1], normal);
+    dist = DotProduct(planepts[1], normal);
 
     if (length < NORMAL_EPSILON) {
         return false;
@@ -320,9 +320,7 @@ static std::vector<float> NormalizePDF(const std::vector<float> &pdf)
     }
 
     std::vector<float> normalizedPdf;
-    normalizedPdf.reserve(
-        pdf.size()); // mxd.
-                     // https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
+    normalizedPdf.reserve(pdf.size());
     for (float val : pdf) {
         normalizedPdf.push_back(val / pdfSum);
     }
@@ -333,6 +331,7 @@ std::vector<float> MakeCDF(const std::vector<float> &pdf)
 {
     const std::vector<float> normzliedPdf = NormalizePDF(pdf);
     std::vector<float> cdf;
+    cdf.reserve(normzliedPdf.size());
     float cdfSum = 0.0f;
     for (float val : normzliedPdf) {
         cdfSum += val;
@@ -572,6 +571,7 @@ poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &p
 
     float poly_area = 0;
     std::vector<float> triareas;
+    triareas.reserve(points.size() - 2);
 
     const qvec3f &v0 = points.at(0);
     for (int i = 2; i < points.size(); i++) {

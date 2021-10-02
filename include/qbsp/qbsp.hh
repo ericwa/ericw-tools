@@ -121,13 +121,21 @@ struct mtexinfo_t
     int32_t miptex = 0;
     surfflags_t flags = {};
     int32_t value = 0; // Q2-specific
-    std::optional<int> outputnum = std::nullopt; // nullopt until added to bsp
+    std::optional<size_t> outputnum = std::nullopt; // nullopt until added to bsp
 
     constexpr auto as_tuple() const { return std::tie(vecs, miptex, flags, value); }
 
     constexpr bool operator<(const mtexinfo_t &other) const { return as_tuple() < other.as_tuple(); }
 
     constexpr bool operator>(const mtexinfo_t &other) const { return as_tuple() > other.as_tuple(); }
+
+    constexpr qvec2d uvs(const qvec3d &pos, const int32_t &width, const int32_t &height) const
+    {
+        return {
+            (pos[0] * vecs[0][0] + pos[1] * vecs[0][1] + pos[2] * vecs[0][2] + vecs[0][3]) / width,
+            (pos[0] * vecs[1][0] + pos[1] * vecs[1][1] + pos[2] * vecs[1][2] + vecs[1][3]) / height
+        };
+    }
 };
 
 struct face_t
@@ -141,8 +149,8 @@ struct face_t
     short lmshift[2]; // lightmap scale.
 
     face_t *original; // face on node
-    int outputnumber; // only valid for original faces after
-                      // write surfaces
+    std::optional<size_t> outputnumber; // only valid for original faces after
+                                        // write surfaces
     bool touchesOccupiedLeaf; // internal use in outside.cc
     vec3_t origin;
     vec_t radius;
@@ -156,7 +164,7 @@ struct surface_t
     surface_t *next;
     surface_t *original; // before BSP cuts it up
     int planenum;
-    int outputplanenum; // only valid after WriteSurfacePlanes
+    std::optional<size_t> outputplanenum; // only valid after WriteSurfacePlanes
     aabb3d bounds;
     bool onnode; // true if surface has already been used
                  //   as a splitting node

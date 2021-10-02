@@ -137,8 +137,8 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
         for (size_t j = 0; j < face->numedges; j++) {
             const int edgenum = bsp->dsurfedges[face->firstedge + j];
             const int vertnum = (edgenum >= 0) ? bsp->dedges[edgenum][0] : bsp->dedges[-edgenum][1];
-            const bspvec3f_t &point = bsp->dvertexes[vertnum];
-            const float dist = DotProduct(plane.normal, point) - plane.dist;
+            const qvec3f &point = bsp->dvertexes[vertnum];
+            const float dist = qv::dot(plane.normal, point) - plane.dist;
 
             if (dist < -PLANE_ON_EPSILON || dist > PLANE_ON_EPSILON)
                 fmt::print("WARNING: face {}, point {} off plane by {}\n", i, j, dist);
@@ -202,7 +202,7 @@ static void PrintNodeHeights(const mbsp_t *bsp)
             for (int i = 0; i < 2; i++) {
                 const int child = node->children[i];
                 if (child >= 0) {
-                    tovisit.push_back(std::make_pair(&bsp->dnodes[child], level + 1));
+                    tovisit.emplace_back(&bsp->dnodes[child], level + 1);
                 }
             }
         }
@@ -408,10 +408,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
     /* unique lightstyles */
     fmt::print("{} lightstyles used:\n", used_lightstyles.size());
     {
-        std::vector<uint8_t> v;
-        for (uint8_t style : used_lightstyles) {
-            v.push_back(style);
-        }
+        std::vector<uint8_t> v(used_lightstyles.begin(), used_lightstyles.end());
         std::sort(v.begin(), v.end());
         for (uint8_t style : v) {
             fmt::print("\t{}\n", style);

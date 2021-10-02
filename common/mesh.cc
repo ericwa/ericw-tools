@@ -32,32 +32,29 @@ using namespace std;
 
 mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
 {
-    // FIXME: this is ugly
-    // TODO: qvec<N, T>::operator<
-    using pos_t = tuple<float, float, float>;
-
     int nextVert = 0;
-    map<pos_t, int> posToVertIndex;
+    map<qvec3f, int> posToVertIndex;
 
     vector<qplane3f> faceplanes;
     vector<vector<int>> facesWithIndices;
+    facesWithIndices.reserve(faces.size());
+
     for (const auto &face : faces) {
         vector<int> vertIndices;
+        vertIndices.reserve(face.size());
 
         // compute face plane
         qvec4f gp = GLM_PolyPlane(face);
-        qplane3f qp(qvec3f(gp[0], gp[1], gp[2]), gp[3]);
-        faceplanes.push_back(qp);
+        qplane3f &qp = faceplanes.emplace_back(qvec3f(gp[0], gp[1], gp[2]), gp[3]);
 
         for (const auto &vert : face) {
             float distOff = qp.distAbove(vert);
             Q_assert(fabs(distOff) < 0.001);
 
-            const pos_t pos = make_tuple(vert[0], vert[1], vert[2]);
-            const auto it = posToVertIndex.find(pos);
+            const auto it = posToVertIndex.find(vert);
 
             if (it == posToVertIndex.end()) {
-                posToVertIndex[pos] = nextVert;
+                posToVertIndex[vert] = nextVert;
                 vertIndices.push_back(nextVert);
                 nextVert++;
             } else {
@@ -72,9 +69,9 @@ mesh_t buildMesh(const vector<vector<qvec3f>> &faces)
     // convert posToVertIndex to a vector
     vector<qvec3f> vertsVec;
     vertsVec.resize(posToVertIndex.size());
+
     for (const auto &posIndex : posToVertIndex) {
-        const pos_t &pos = posIndex.first;
-        vertsVec.at(posIndex.second) = qvec3f(std::get<0>(pos), std::get<1>(pos), std::get<2>(pos));
+        vertsVec.at(posIndex.second) = posIndex.first;
     }
 
     mesh_t res;
@@ -92,15 +89,14 @@ mesh_t buildMeshFromBSP(const mbsp_t *bsp)
     for (auto &f : bsp->dfaces) {
         // grab face verts
         std::vector<vertnum_t> face;
+        face.reserve(f.numedges);
         for (int j = 0; j < f.numedges; j++) {
-            int vnum = Face_VertexAtIndex(bsp, &f, j);
-            face.push_back(vnum);
+            face.push_back(Face_VertexAtIndex(bsp, &f, j));
         }
         res.faces.push_back(face);
 
         // grab exact plane
-        const qplane3f plane = Face_Plane_E(bsp, &f);
-        res.faceplanes.push_back(plane);
+        res.faceplanes.push_back(Face_Plane_E(bsp, &f));
     }
 
     return res;
@@ -109,11 +105,12 @@ mesh_t buildMeshFromBSP(const mbsp_t *bsp)
 std::vector<std::vector<qvec3f>> meshToFaces(const mesh_t &mesh)
 {
     std::vector<std::vector<qvec3f>> res;
+    res.reserve(mesh.faces.size());
     for (const auto &meshFace : mesh.faces) {
         std::vector<qvec3f> &points = res.emplace_back();
+        points.reserve(meshFace.size());
         for (int vertIndex : meshFace) {
-            const qvec3f &point = mesh.verts.at(vertIndex);
-            points.push_back(point);
+            points.push_back(mesh.verts.at(vertIndex));
         }
     }
     Q_assert(res.size() == mesh.faces.size());

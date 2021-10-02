@@ -205,7 +205,7 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
         return qmat4x4f();
     }
     const plane_t plane = Face_Plane(bsp, f);
-    const vec_t *norm = plane.normal;
+    const qvec3d &norm = plane.normal;
 
     //           [s]
     // T * vec = [t]
@@ -235,7 +235,7 @@ static void TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t wor
     VectorCopy(worldPos, world);
 }
 
-void WorldToTexCoord(const vec3_t world, const gtexinfo_t *tex, vec_t coord[2])
+void WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex, vec_t coord[2])
 {
     /*
      * The (long double) casts below are important: The original code
@@ -272,7 +272,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
-        const bspvec3f_t &point = GetSurfaceVertexPoint(bsp, face, i);
+        const qvec3f &point = GetSurfaceVertexPoint(bsp, face, i);
         const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i);
         LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
             i ? "          " : "    verts ", vert, point[0], point[1], point[2], norm[0], norm[1], norm[2], edge);
@@ -299,10 +299,8 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
     for (int i = 0; i < face->numedges; i++) {
         const int edge = bsp->dsurfedges[face->firstedge + i];
         const int vert = (edge >= 0) ? bsp->dedges[edge][0] : bsp->dedges[-edge][1];
-        const dvertex_t &dvertex = bsp->dvertexes[vert];
+        const qvec3d worldpoint = bsp->dvertexes[vert];
 
-        vec3_t worldpoint;
-        VectorCopy(dvertex, worldpoint);
         WorldToTexCoord(worldpoint, tex, texcoord);
         for (int j = 0; j < 2; j++) {
             if (texcoord[j] < mins[j])
@@ -320,8 +318,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
         }
     }
 
-    vec3_t worldpoint;
-    VectorCopy(Face_Centroid(bsp, face), worldpoint);
+    qvec3d worldpoint = Face_Centroid(bsp, face);
     WorldToTexCoord(worldpoint, tex, surf->exactmid);
 
     // calculate a bounding sphere for the face
@@ -885,12 +882,10 @@ static lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style,
     }
 
     // add a new one to the vector (invalidates existing lightmap_t pointers)
-    lightmap_t newLightmap{};
+    lightmap_t &newLightmap = lightmaps->emplace_back();
     newLightmap.style = 255;
     Lightmap_AllocOrClear(&newLightmap, lightsurf);
-    lightmaps->push_back(newLightmap);
-
-    return &lightmaps->back();
+    return &newLightmap;
 }
 
 static void Lightmap_ClearAll(lightmapdict_t *lightmaps)
@@ -957,8 +952,8 @@ vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist
     }
 }
 
-float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm,
-    const vec3_t &surfpointToLightDir, float dist, bool twosided)
+static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm,
+    const qvec3d &surfpointToLightDir, float dist, bool twosided)
 {
     float angle = DotProduct(surfpointToLightDir, surfnorm);
     if (entity->bleed.boolValue() || twosided) {
@@ -995,11 +990,11 @@ float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, c
     return add;
 }
 
-static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
-    vec_t *result);
+static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const qvec3d &point,
+    qvec3d &result);
 
-void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec3_t surfnorm, const vec3_t &surfpoint,
-    bool twosided, vec3_t &color_out, vec3_t &surfpointToLightDir_out, vec3_t &normalmap_addition_out, float *dist_out)
+static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm, const qvec3d &surfpoint,
+    bool twosided, qvec3d &color_out, qvec3d &surfpointToLightDir_out, qvec3d &normalmap_addition_out, float *dist_out)
 {
     float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
     if (dist < 0.1) {
@@ -1012,7 +1007,7 @@ void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const vec
 
     /* write out the final color */
     if (entity->projectedmip) {
-        vec3_t col;
+        qvec3d col;
         if (LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col)) {
             // mxd. Modulate by light color...
             const auto entcol = *entity->color.vec3Value();
@@ -1246,8 +1241,8 @@ static bool Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *model
         result = false; // beyond far clip plane
     return result;
 }
-static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const vec3_t point,
-    vec_t *result)
+static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const qvec3d &point,
+    qvec3d &result)
 {
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
     // this is because we're treating it like a cubemap. why? no idea.
@@ -1256,7 +1251,7 @@ static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projec
     const color_rgba *data = reinterpret_cast<const color_rgba *>(tex->data.get());
 
     vec3_t coord;
-    if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
+    if (!Matrix4x4_CM_Project(&point[0], coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
         coord[1] >= 1) {
         VectorSet(result, 0, 0, 0);
         return false; // mxd
@@ -1308,7 +1303,7 @@ static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projec
  * ================
  */
 std::map<int, qvec3f> GetDirectLighting(
-    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t &origin, const vec3_t &normal)
+    const mbsp_t *bsp, const globalconfig_t &cfg, const vec3_t &origin, const qvec3d &normal)
 {
     std::map<int, qvec3f> result;
 
@@ -1329,7 +1324,7 @@ std::map<int, qvec3f> GetDirectLighting(
             continue;
 
         // Write out the final color
-        vec3_t color;
+        qvec3d color;
         VectorScale(
             vpl.color, add, color); // color_out is expected to be in [0..255] range, vpl->color is in [0..1] range.
         VectorScale(color, cfg.surflightbouncescale.floatValue(), color);
@@ -1345,9 +1340,9 @@ std::map<int, qvec3f> GetDirectLighting(
     }
 
     for (const light_t &entity : GetLights()) {
-        vec3_t surfpointToLightDir;
+        qvec3d surfpointToLightDir;
         float surfpointToLightDist;
-        vec3_t color, normalcontrib;
+        qvec3d color, normalcontrib;
 
         if (entity.nostaticlight.boolValue()) {
             continue;
@@ -1476,9 +1471,9 @@ static void LightFace_Entity(
         if (lightsurf->occluded[i])
             continue;
 
-        vec3_t surfpointToLightDir;
+        qvec3d surfpointToLightDir;
         float surfpointToLightDist;
-        vec3_t color, normalcontrib;
+        qvec3d color, normalcontrib;
 
         GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir,
             normalcontrib, &surfpointToLightDist);
@@ -1492,7 +1487,7 @@ static void LightFace_Entity(
             continue;
         }
 
-        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, color, normalcontrib);
+        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, &color, &normalcontrib);
     }
 
     // don't need closest hit, just checking for occlusion between light and surface point
@@ -1597,7 +1592,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
 
-        vec3_t color, normalcontrib;
+        qvec3d color, normalcontrib;
         VectorScale(sun->sunlight_color, value / 255.0, color);
         VectorScale(sun->sunvec, value, normalcontrib);
 
@@ -1606,7 +1601,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
             continue;
         }
 
-        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, color, normalcontrib);
+        rs->pushRay(i, *surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
     }
 
     // We need to check if the first hit face is a sky face, so we need
@@ -1733,7 +1728,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const vec3_t c
                 vec3_t surfpointToLightDir;
                 const vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
 
-                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
+                rs->pushRay(i, *surfpoint, surfpointToLightDir, surfpointToLightDist);
             }
         }
 
@@ -2019,12 +2014,12 @@ static void LightFace_Bounce(
                 if (LightSample_Brightness(indirect) < 0.25)
                     continue;
 
-                vec3_t vplPos, vplDir, vplColor;
+                qvec3d vplPos, vplDir, vplColor;
                 VectorCopy(vpl.pos, vplPos);
                 VectorCopy(dir, vplDir);
                 VectorCopy(indirect, vplColor);
 
-                rs->pushRay(i, vplPos, vplDir, dist, vplColor);
+                rs->pushRay(i, vplPos, vplDir, dist, &vplColor);
             }
 
             if (!rs->numPushedRays())
@@ -2216,12 +2211,12 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
                 else
                     dir /= dist;
 
-                vec3_t vplPos, vplDir, vplColor;
+                qvec3d vplPos, vplDir, vplColor;
                 VectorCopy(pos, vplPos);
                 VectorCopy(dir, vplDir);
                 VectorCopy(indirect, vplColor);
 
-                rs->pushRay(i, vplPos, vplDir, dist, vplColor);
+                rs->pushRay(i, vplPos, vplDir, dist, &vplColor);
             }
 
             if (!rs->numPushedRays())

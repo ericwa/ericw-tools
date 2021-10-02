@@ -40,6 +40,9 @@ class qvec
 {
 protected:
     std::array<T, N> v;
+    
+    template<size_t N2, class T2>
+    friend class qvec;
 
 public:
     qvec() = default;
@@ -135,15 +138,13 @@ public:
         v[N - 1] = value;
     }
 
-    constexpr bool operator==(const qvec<N, T> &other) const
-    {
-        for (size_t i = 0; i < N; i++)
-            if (v[i] != other.v[i])
-                return false;
-        return true;
-    }
-
-    constexpr bool operator!=(const qvec<N, T> &other) const { return !(*this == other); }
+    // Sort support
+    constexpr bool operator<(const qvec<N, T> &other) const { return v < other.v; }
+    constexpr bool operator<=(const qvec<N, T> &other) const { return v <= other.v; }
+    constexpr bool operator>(const qvec<N, T> &other) const { return v > other.v; }
+    constexpr bool operator>=(const qvec<N, T> &other) const { return v >= other.v; }
+    constexpr bool operator==(const qvec<N, T> &other) const { return v == other.v; }
+    constexpr bool operator!=(const qvec<N, T> &other) const { return v != other.v; }
 
     constexpr const T &operator[](const size_t idx) const
     {
@@ -157,12 +158,14 @@ public:
         return v[idx];
     }
 
-    constexpr void operator+=(const qvec<N, T> &other)
+    template<typename F>
+    constexpr void operator+=(const qvec<N, F> &other)
     {
         for (size_t i = 0; i < N; i++)
             v[i] += other.v[i];
     }
-    constexpr void operator-=(const qvec<N, T> &other)
+    template<typename F>
+    constexpr void operator-=(const qvec<N, F> &other)
     {
         for (size_t i = 0; i < N; i++)
             v[i] -= other.v[i];
@@ -177,15 +180,17 @@ public:
         for (size_t i = 0; i < N; i++)
             v[i] /= scale;
     }
-
-    constexpr qvec<N, T> operator+(const qvec<N, T> &other) const
+    
+    template<typename F>
+    constexpr qvec<N, T> operator+(const qvec<N, F> &other) const
     {
         qvec<N, T> res(*this);
         res += other;
         return res;
     }
-
-    constexpr qvec<N, T> operator-(const qvec<N, T> &other) const
+    
+    template<typename F>
+    constexpr qvec<N, T> operator-(const qvec<N, F> &other) const
     {
         qvec<N, T> res(*this);
         res -= other;
@@ -218,6 +223,9 @@ public:
         static_assert(N >= 3);
         return qvec<3, T>(*this);
     }
+
+    // stream support
+    auto stream_data() { return std::tie(v); }
 };
 
 namespace qv
@@ -376,7 +384,9 @@ using qvec2d = qvec<2, double>;
 using qvec3d = qvec<3, double>;
 using qvec4d = qvec<4, double>;
 
-using qvec2i = qvec<2, int>;
+using qvec2i = qvec<2, int32_t>;
+
+using qvec3s = qvec<3, int16_t>;
 
 template<class T>
 class qplane3

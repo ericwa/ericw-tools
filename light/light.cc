@@ -108,6 +108,7 @@ bool debug_highlightseams = false;
 debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
 bool litonly = false;
+bool write_normals = false;
 
 surfflags_t *extended_texinfo_flags = nullptr;
 
@@ -115,11 +116,11 @@ std::filesystem::path mapfilename;
 
 int dump_facenum = -1;
 bool dump_face;
-vec3_t dump_face_point = {0, 0, 0};
+qvec3d dump_face_point { };
 
 int dump_vertnum = -1;
 bool dump_vert;
-vec3_t dump_vert_point = {0, 0, 0};
+qvec3d dump_vert_point { };
 
 bool arghradcompat = false; // mxd
 
@@ -538,7 +539,7 @@ static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *fa
     for (int i = 0; i < face->numedges; i++) {
         const int vertnum = Face_VertexAtIndex(bsp, face, i);
         const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i);
-        const bspvec3f_t &pos = bsp->dvertexes[vertnum];
+        const qvec3f &pos = bsp->dvertexes[vertnum];
         fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
         fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
     }
@@ -623,17 +624,16 @@ static void FindDebugFace(const mbsp_t *bsp)
 }
 
 // returns the vert nearest the given point
-static int Vertex_NearestPoint(const mbsp_t *bsp, const vec3_t point)
+// FIXME: qv distance double
+static int Vertex_NearestPoint(const mbsp_t *bsp, const qvec3f &point)
 {
     int nearest_vert = -1;
-    vec_t nearest_dist = VECT_MAX;
+    float nearest_dist = std::numeric_limits<float>::infinity();
 
     for (int i = 0; i < bsp->dvertexes.size(); i++) {
-        const dvertex_t &vertex = bsp->dvertexes[i];
+        const qvec3f &vertex = bsp->dvertexes[i];
 
-        vec3_t distvec;
-        VectorSubtract(vertex, point, distvec);
-        vec_t dist = VectorLength(distvec);
+        float dist = qv::distance(vertex, point);
 
         if (dist < nearest_dist) {
             nearest_dist = dist;
@@ -650,7 +650,7 @@ static void FindDebugVert(const mbsp_t *bsp)
         return;
 
     int v = Vertex_NearestPoint(bsp, dump_vert_point);
-    const bspvec3f_t &vertex = bsp->dvertexes[v];
+    const qvec3f &vertex = bsp->dvertexes[v];
 
     FLogPrint("dumping vert {} at {} {} {}\n", v, vertex[0], vertex[1], vertex[2]);
     dump_vertnum = v;
@@ -759,7 +759,8 @@ static void PrintUsage()
            "  -bspxlit            writes rgb data into the bsp itself\n"
            "  -bspx               writes both rgb and directions data into the bsp itself\n"
            "  -novanilla          implies -bspxlit. don't write vanilla lighting\n"
-           "  -radlights filename.rad loads a <surfacename> <r> <g> <b> <intensity> file\n");
+           "  -radlights filename.rad loads a <surfacename> <r> <g> <b> <intensity> file\n"
+           "  -wrnormals          write normals into the bsp itself\n");
 
     printf("\n");
     printf("Overridable worldspawn keys:\n");
@@ -860,6 +861,11 @@ static void ParseVec3(vec3_t vec3_out, int *i_inout, int argc, const char **argv
     }
 }
 
+static void ParseVec3(qvec3d &vec3_out, int *i_inout, int argc, const char **argv)
+{
+    return ParseVec3(&vec3_out[0], i_inout, argc, argv);
+}
+
 static vec_t ParseVec(int *i_inout, int argc, const char **argv)
 {
     vec_t result = 0;
@@ -887,6 +893,41 @@ static const char *ParseString(int *i_inout, int argc, const char **argv)
         Error("{} requires 1 string argument\n", argv[*i_inout]);
     }
     return result;
+}
+
+static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
+{
+    std::set<qvec3f> unique_normals;
+    size_t num_normals = 0;
+
+    for (auto &face : bsp.dfaces) {
+        auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
+        unique_normals.insert(cache.normals().begin(), cache.normals().end());
+        num_normals += cache.normals().size();
+    }
+    
+    size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
+    std::unique_ptr<uint8_t[]> data = std::make_unique<uint8_t[]>(data_size);
+    memstream stream(data.get(), data_size);
+
+    stream << endianness<std::endian::little>;
+    stream <= numeric_cast<uint32_t>(unique_normals.size());
+
+    for (auto &n : unique_normals) {
+        stream <= std::tie(n[0], n[1], n[2]);
+    }
+
+    for (auto &face : bsp.dfaces) {
+        auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
+
+        for (auto &n : cache.normals()) {
+            stream <= numeric_cast<uint32_t>(std::distance(unique_normals.begin(), unique_normals.find(n)));
+        }
+    }
+
+    Q_assert(stream.tellp() == data_size);
+
+    BSPX_AddLump(&bspdata, "FACENORMALS", data.get(), data_size);
 }
 
 /*
@@ -1031,6 +1072,8 @@ int light_main(int argc, const char **argv)
             LogPrint("-litonly specified; .bsp file will not be modified\n");
             litonly = true;
             write_litfile |= 1;
+        } else if (!strcmp(argv[i], "-wrnormals")) {
+            write_normals = true;
         } else if (!strcmp(argv[i], "-verbose") || !strcmp(argv[i], "-v")) { // Quark always passes -v
             verbose_log = true;
         } else if (!strcmp(argv[i], "-help")) {
@@ -1180,6 +1223,13 @@ int light_main(int argc, const char **argv)
         SetupDirt(cfg);
 
         LightWorld(&bspdata, !!lmscaleoverride);
+
+        // invalidate normals
+        BSPX_AddLump(&bspdata, "FACENORMALS", NULL, 0);
+
+        if (write_normals) {
+            WriteNormals(bsp, bspdata);
+        }
 
         /*invalidate any bspx lighting info early*/
         BSPX_AddLump(&bspdata, "RGBLIGHTING", NULL, 0);

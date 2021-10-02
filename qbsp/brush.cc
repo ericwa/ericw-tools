@@ -227,11 +227,11 @@ static int NewPlane(const vec3_t normal, const vec_t dist, int *side)
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
-
-    qbsp_plane_t plane;
+    
+    size_t index = map.planes.size();
+    qbsp_plane_t &plane = map.planes.emplace_back();
     VectorCopy(normal, plane.normal);
     plane.dist = dist;
-    plane.outputplanenum = PLANENUM_LEAF;
 
     int32_t out_side = NormalizePlane(&plane, side != nullptr);
 
@@ -239,8 +239,6 @@ static int NewPlane(const vec3_t normal, const vec_t dist, int *side)
         *side = out_side;
     }
 
-    int index = map.planes.size();
-    map.planes.push_back(plane);
     PlaneHash_Add(&plane, index);
     return index;
 }
@@ -268,7 +266,7 @@ int FindPlane(const vec3_t normal, const vec_t dist, int *side)
             return i;
         }
     }
-    return NewPlane(plane.normal, plane.dist, side);
+    return NewPlane(&plane.normal[0], plane.dist, side);
 }
 
 /*
@@ -442,7 +440,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         plane.dist = DotProduct(plane.normal, point);
 
         f->texinfo = hullnum > 0 ? 0 : mapface->texinfo;
-        f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
+        f->planenum = FindPlane(&plane.normal[0], plane.dist, &f->planeside);
         f->next = facelist;
         facelist = f;
         CheckFace(f, mapface);
@@ -1401,7 +1399,7 @@ face_t *CopyFace(const face_t *face)
 
     // clear stuff that shouldn't be copied.
     newface->original = nullptr;
-    newface->outputnumber = -1;
+    newface->outputnumber = std::nullopt;
     newface->edges = nullptr;
     newface->next = nullptr;
 
@@ -1516,7 +1514,7 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
         }
         // FIXME: dangerous..
         plane.type = -1000;
-        plane.outputplanenum = PLANENUM_LEAF;
+        plane.outputplanenum = std::nullopt;
     }
 
     // check all points
@@ -1560,7 +1558,7 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     if (!w || WindingIsTiny(*w)) { // the brush isn't really split
         int side;
 
-        side = BrushMostlyOnSide(brush, plane.normal, plane.dist);
+        side = BrushMostlyOnSide(brush, &plane.normal[0], plane.dist);
         if (side == SIDE_FRONT)
             *front = CopyBrush(brush);
         if (side == SIDE_BACK)

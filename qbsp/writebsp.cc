@@ -52,52 +52,45 @@ static contentflags_t RemapContentsForExport(const contentflags_t &content)
 /**
  * Returns the output plane number
  */
-int ExportMapPlane(int planenum)
+size_t ExportMapPlane(size_t planenum)
 {
-    qbsp_plane_t *plane = &map.planes.at(planenum);
+    qbsp_plane_t &plane = map.planes.at(planenum);
 
-    if (plane->outputplanenum != PLANENUM_LEAF)
-        return plane->outputplanenum; // already output.
+    if (plane.outputplanenum.has_value())
+        return plane.outputplanenum.value(); // already output.
 
-    const int newIndex = static_cast<int>(map.exported_planes.size());
-    map.exported_planes.push_back({});
+    const size_t newIndex = map.exported_planes.size();
+    dplane_t &dplane = map.exported_planes.emplace_back();
+    dplane.normal[0] = plane.normal[0];
+    dplane.normal[1] = plane.normal[1];
+    dplane.normal[2] = plane.normal[2];
+    dplane.dist = plane.dist;
+    dplane.type = plane.type;
 
-    dplane_t *dplane = &map.exported_planes.back();
-    dplane->normal[0] = plane->normal[0];
-    dplane->normal[1] = plane->normal[1];
-    dplane->normal[2] = plane->normal[2];
-    dplane->dist = plane->dist;
-    dplane->type = plane->type;
-
-    plane->outputplanenum = newIndex;
+    plane.outputplanenum = newIndex;
     return newIndex;
 }
 
-int ExportMapTexinfo(int texinfonum)
+size_t ExportMapTexinfo(size_t texinfonum)
 {
-    mtexinfo_t *src = &map.mtexinfos.at(texinfonum);
-    if (src->outputnum.has_value())
-        return src->outputnum.value();
+    mtexinfo_t &src = map.mtexinfos.at(texinfonum);
+
+    if (src.outputnum.has_value())
+        return src.outputnum.value();
 
     // this will be the index of the exported texinfo in the BSP lump
     const int i = static_cast<int>(map.exported_texinfos.size());
 
-    map.exported_texinfos.push_back({});
-    gtexinfo_t *dest = &map.exported_texinfos.back();
+    gtexinfo_t &dest = map.exported_texinfos.emplace_back();
 
-    dest->flags = src->flags;
-    dest->miptex = src->miptex;
-    for (int j = 0; j < 2; j++) {
-        for (int k = 0; k < 4; k++) {
-            dest->vecs[j][k] = src->vecs[j][k];
-        }
-    }
+    dest.flags = src.flags;
+    dest.miptex = src.miptex;
+    dest.vecs = src.vecs;
 
-    strcpy(dest->texture.data(), map.texinfoTextureName(texinfonum).c_str());
-    // dest->flags = map.miptex[src->miptex].flags;
-    dest->value = map.miptex[src->miptex].value;
+    strcpy(dest.texture.data(), map.texinfoTextureName(texinfonum).c_str());
+    dest.value = map.miptex[src.miptex].value;
 
-    src->outputnum = i;
+    src.outputnum = i;
     return i;
 }
 
@@ -110,7 +103,6 @@ ExportClipNodes
 */
 static int ExportClipNodes(mapentity_t *entity, node_t *node)
 {
-    bsp2_dclipnode_t *clipnode;
     face_t *face, *next;
 
     // FIXME: free more stuff?
@@ -121,17 +113,16 @@ static int ExportClipNodes(mapentity_t *entity, node_t *node)
     }
 
     /* emit a clipnode */
-    const int nodenum = static_cast<int>(map.exported_clipnodes.size());
-    map.exported_clipnodes.push_back({});
+    const size_t nodenum = map.exported_clipnodes.size();
+    bsp2_dclipnode_t &clipnode = map.exported_clipnodes.emplace_back();
 
     const int child0 = ExportClipNodes(entity, node->children[0]);
     const int child1 = ExportClipNodes(entity, node->children[1]);
 
     // Careful not to modify the vector while using this clipnode pointer
-    clipnode = &map.exported_clipnodes.at(nodenum);
-    clipnode->planenum = ExportMapPlane(node->planenum);
-    clipnode->children[0] = child0;
-    clipnode->children[1] = child1;
+    clipnode.planenum = ExportMapPlane(node->planenum);
+    clipnode.children[0] = child0;
+    clipnode.children[1] = child1;
 
     for (face = node->faces; face; face = next) {
         next = face->next;
@@ -170,25 +161,24 @@ ExportLeaf
 */
 static void ExportLeaf(mapentity_t *entity, node_t *node)
 {
-    map.exported_leafs.push_back({});
-    mleaf_t *dleaf = &map.exported_leafs.back();
+    mleaf_t &dleaf = map.exported_leafs.emplace_back();
 
     const contentflags_t remapped = RemapContentsForExport(node->contents);
     AssertVanillaContentType(remapped);
-    dleaf->contents = remapped.native;
+    dleaf.contents = remapped.native;
 
     /*
      * write bounding box info
      */
     for (int32_t i = 0; i < 3; ++i) {
-        dleaf->mins[i] = floor(node->bounds.mins()[i]);
-        dleaf->maxs[i] = ceil(node->bounds.maxs()[i]);
+        dleaf.mins[i] = floor(node->bounds.mins()[i]);
+        dleaf.maxs[i] = ceil(node->bounds.maxs()[i]);
     }
 
-    dleaf->visofs = -1; // no vis info yet
+    dleaf.visofs = -1; // no vis info yet
 
     // write the marksurfaces
-    dleaf->firstmarksurface = static_cast<int>(map.exported_marksurfaces.size());
+    dleaf.firstmarksurface = static_cast<int>(map.exported_marksurfaces.size());
 
     for (face_t **markfaces = node->markfaces; *markfaces; markfaces++) {
         face_t *face = *markfaces;
@@ -197,17 +187,17 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
 
         /* emit a marksurface */
         do {
-            map.exported_marksurfaces.push_back(face->outputnumber);
+            map.exported_marksurfaces.push_back(face->outputnumber.value());
             face = face->original; /* grab tjunction split faces */
         } while (face);
     }
-    dleaf->nummarksurfaces = static_cast<int>(map.exported_marksurfaces.size()) - dleaf->firstmarksurface;
+    dleaf.nummarksurfaces = static_cast<int>(map.exported_marksurfaces.size()) - dleaf.firstmarksurface;
 
     // FIXME-Q2: fill in other things
-    dleaf->area = 1;
-    dleaf->cluster = node->viscluster;
-    dleaf->firstleafbrush = node->firstleafbrush;
-    dleaf->numleafbrushes = node->numleafbrushes;
+    dleaf.area = 1;
+    dleaf.cluster = node->viscluster;
+    dleaf.firstleafbrush = node->firstleafbrush;
+    dleaf.numleafbrushes = node->numleafbrushes;
 }
 
 /*
@@ -217,13 +207,8 @@ ExportDrawNodes
 */
 static void ExportDrawNodes(mapentity_t *entity, node_t *node)
 {
-    bsp2_dnode_t *dnode;
-    int i;
-
     const size_t ourNodeIndex = map.exported_nodes.size();
-    map.exported_nodes.push_back({});
-
-    dnode = &map.exported_nodes[ourNodeIndex];
+    bsp2_dnode_t *dnode = &map.exported_nodes.emplace_back();
 
     // VectorCopy doesn't work since dest are shorts
     for (int32_t i = 0; i < 3; ++i) {
@@ -236,13 +221,12 @@ static void ExportDrawNodes(mapentity_t *entity, node_t *node)
     dnode->numfaces = node->numfaces;
 
     // recursively output the other nodes
-    for (i = 0; i < 2; i++) {
+    for (size_t i = 0; i < 2; i++) {
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
-            // (probably for collision purposes? makes sense given they store leafbrushes)
-            if (options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(options.target_game))
+            if (options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(options.target_game)) {
                 dnode->children[i] = -1;
-            else {
+            } else {
                 int nextLeafIndex = static_cast<int>(map.exported_leafs.size());
                 const int childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
@@ -274,14 +258,11 @@ ExportDrawNodes
 */
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 {
-    int i;
-    dmodelh2_t *dmodel;
-
     // populate model struct (which was emitted previously)
-    dmodel = &map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
-    dmodel->headnode[0] = static_cast<int>(map.exported_nodes.size());
-    dmodel->firstface = firstface;
-    dmodel->numfaces = static_cast<int>(map.exported_faces.size()) - firstface;
+    dmodelh2_t &dmodel = map.exported_models.at(static_cast<size_t>(entity->outputmodelnumber));
+    dmodel.headnode[0] = static_cast<int>(map.exported_nodes.size());
+    dmodel.firstface = firstface;
+    dmodel.numfaces = static_cast<int>(map.exported_faces.size()) - firstface;
 
     const size_t mapleafsAtStart = map.exported_leafs.size();
 
@@ -291,12 +272,12 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
         ExportDrawNodes(entity, headnode);
 
     // count how many leafs were exported by the above calls
-    dmodel->visleafs = static_cast<int>(map.exported_leafs.size() - mapleafsAtStart);
+    dmodel.visleafs = static_cast<int>(map.exported_leafs.size() - mapleafsAtStart);
 
     /* remove the headnode padding */
-    for (i = 0; i < 3; i++) {
-        dmodel->mins[i] = headnode->bounds.mins()[i] + SIDESPACE + 1;
-        dmodel->maxs[i] = headnode->bounds.maxs()[i] - SIDESPACE - 1;
+    for (size_t i = 0; i < 3; i++) {
+        dmodel.mins[i] = headnode->bounds.mins()[i] + SIDESPACE + 1;
+        dmodel.maxs[i] = headnode->bounds.maxs()[i] - SIDESPACE - 1;
     }
 }
 
@@ -310,12 +291,12 @@ BeginBSPFile
 void BeginBSPFile(void)
 {
     // First edge must remain unused because 0 can't be negated
-    map.exported_edges.push_back({});
+    map.exported_edges.emplace_back();
     Q_assert(map.exported_edges.size() == 1);
 
     // Leave room for leaf 0 (must be solid)
-    map.exported_leafs.push_back({});
-    map.exported_leafs.back().contents = options.target_game->create_solid_contents().native;
+    auto &solid_leaf = map.exported_leafs.emplace_back();
+    solid_leaf.contents = options.target_game->create_solid_contents().native;
     Q_assert(map.exported_leafs.size() == 1);
 }
 
@@ -428,6 +409,12 @@ static void WriteBSPFile()
     if (!map.exported_bspxbrushes.empty()) {
         BSPX_AddLump(&bspdata, "BRUSHLIST", map.exported_bspxbrushes.data(), map.exported_bspxbrushes.size());
     }
+
+    // TEMP
+    bsp.dareaportals.push_back({});
+    
+    bsp.dareas.push_back({});
+    bsp.dareas.push_back({ 0, 1 });
 
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {
         const bspversion_t *extendedLimitsFormat = options.target_version->extended_limits;

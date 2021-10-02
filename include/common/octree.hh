@@ -82,12 +82,12 @@ private:
      */
     octree_nodeid createChild(octree_nodeid thisNode, int i)
     {
-        octree_node_t<T> *node = &m_nodes[thisNode];
+        octree_node_t<T> &node = m_nodes[thisNode];
 
-        const aabb3f childBox = bboxOctant(node->m_bbox, i);
-        octree_node_t<T> newNode(childBox, node->m_depth + 1);
+        const aabb3f childBox = bboxOctant(node.m_bbox, i);
 
-        m_nodes.push_back(newNode); // invalidates `node` reference
+        m_nodes.emplace_back(childBox, node.m_depth + 1); // invalidates `node` reference
+
         return static_cast<int>(m_nodes.size() - 1);
     }
 
@@ -98,22 +98,22 @@ private:
             newNodeIds[i] = createChild(thisNode, i);
         }
 
-        octree_node_t<T> *node = &m_nodes[thisNode];
-        assert(node->m_leafNode);
-        assert(node->m_leafObjects.empty()); // we always convert leafs to nodes before adding anything
+        octree_node_t<T> &node = m_nodes[thisNode];
+        assert(node.m_leafNode);
+        assert(node.m_leafObjects.empty()); // we always convert leafs to nodes before adding anything
         for (int i = 0; i < 8; i++) {
-            node->m_children[i] = newNodeIds[i];
+            node.m_children[i] = newNodeIds[i];
         }
-        node->m_leafNode = false;
+        node.m_leafNode = false;
     }
 
     void queryTouchingBBox(octree_nodeid thisNode, const aabb3f &query, std::set<T> &dest) const
     {
-        const octree_node_t<T> *node = &m_nodes[thisNode];
+        const octree_node_t<T> &node = m_nodes[thisNode];
 
-        if (node->m_leafNode) {
+        if (node.m_leafNode) {
             // Test all objects
-            for (const auto &boxObjPair : node->m_leafObjects) {
+            for (const auto &boxObjPair : node.m_leafObjects) {
                 if (!query.disjoint(boxObjPair.first)) {
                     dest.insert(boxObjPair.second);
                 }
@@ -123,10 +123,10 @@ private:
 
         // Test all children that intersect the query
         for (int i = 0; i < 8; i++) {
-            const octree_nodeid child_i_index = node->m_children[i];
-            const octree_node_t<T> *child_i_node = &m_nodes[child_i_index];
+            const octree_nodeid child_i_index = node.m_children[i];
+            const octree_node_t<T> &child_i_node = m_nodes[child_i_index];
 
-            const aabb3f::intersection_t intersection = query.intersectWith(child_i_node->m_bbox);
+            const aabb3f::intersection_t intersection = query.intersectWith(child_i_node.m_bbox);
             if (intersection.valid) {
                 queryTouchingBBox(child_i_index, intersection.bbox, dest);
             }
@@ -169,16 +169,10 @@ public:
     std::vector<T> queryTouchingBBox(const aabb3f &query) const
     {
         std::set<T> res;
+
         queryTouchingBBox(0, query, res);
 
-        std::vector<T> res_vec;
-        res_vec.reserve(
-            res.size()); // mxd.
-                         // https://clang.llvm.org/extra/clang-tidy/checks/performance-inefficient-vector-operation.html
-        for (const auto &item : res) {
-            res_vec.push_back(item);
-        }
-        return res_vec;
+        return { res.begin(), res.end() };
     }
 
     octree_t(const aabb3f &box) { this->m_nodes.push_back(octree_node_t<T>(box, 0)); }
@@ -190,8 +184,7 @@ octree_t<T> makeOctree(const std::vector<std::pair<aabb3f, T>> &objects)
     if (objects.empty()) {
         // CHECK: this purposefully creates a 0,0,0 -> 0,0,0 box, should it not
         // just use the default constructor for a fully empty box?
-        octree_t<T> empty{aabb3f{{}, {}}};
-        return empty;
+        return { { {}, {} } };
     }
 
     // take bbox of objects

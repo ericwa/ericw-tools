@@ -22,11 +22,12 @@
 #pragma once
 
 #include "common/polylib.hh"
+#include <optional>
 
 struct qbsp_plane_t : plane_t
 {
     int type;
-    int outputplanenum; // -1=unassigned, only valid after ExportNodePlanes
+    std::optional<size_t> outputplanenum; // only valid after ExportNodePlanes
 };
 
 using winding_t = polylib::winding_base_t<MAXEDGES>;

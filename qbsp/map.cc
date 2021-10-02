@@ -1291,7 +1291,7 @@ static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     const qbsp_plane_t plane, const int texSize[2], const texvecf &in_vecs)
 {
     vec3_t texX, texY;
-    ComputeAxisBase(plane.normal, texX, texY);
+    ComputeAxisBase(&plane.normal[0], texX, texY);
 
     // ST of (0,0) (1,0) (0,1)
     vec_t ST[3][5]; // [ point index ] [ xyz ST ]
@@ -1324,7 +1324,7 @@ static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     return res;
 }
 
-static void ParsePlaneDef(parser_t &parser, vec3_t planepts[3])
+static void ParsePlaneDef(parser_t &parser, std::array<qvec3d, 3> &planepts)
 {
     int i, j;
 
@@ -1495,7 +1495,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             const int32_t width = texture ? texture->width : 64;
             const int32_t height = texture ? texture->height : 64;
 
-            SetTexinfo_BrushPrimitives(texMat, plane->normal, width, height, tx->vecs);
+            SetTexinfo_BrushPrimitives(texMat, &plane->normal[0], width, height, tx->vecs);
             break;
         }
         case TX_QUAKED:
@@ -1503,12 +1503,12 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     }
 }
 
-bool mapface_t::set_planepts(const vec3_t *pts)
+bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
 {
     for (int i = 0; i < 3; i++)
         VectorCopy(pts[i], this->planepts[i]);
 
-    return SetPlanePts(pts, this->plane.normal, &this->plane.dist);
+    return SetPlanePts(pts, this->plane.normal, this->plane.dist);
 }
 
 const texvecf &mapface_t::get_texvecs() const
@@ -1574,7 +1574,7 @@ static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
 
 static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_t *brush, const mapentity_t *entity)
 {
-    vec3_t planepts[3];
+    std::array<qvec3d, 3> planepts;
     bool normal_ok;
     const qbsp_plane_t *plane;
     mtexinfo_t tx;
@@ -1738,7 +1738,7 @@ static void ScaleMapFace(mapface_t *face, const vec3_t scale)
         static_cast<double>(scale[0]), 0.0, 0.0, 0.0, static_cast<double>(scale[1]), 0.0, 0.0, 0.0,
         static_cast<double>(scale[2])};
 
-    vec3_t new_planepts[3];
+    std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
         qvec3d oldpt = face->planepts[i];
         qvec3d newpt = scaleM * oldpt;
@@ -1776,7 +1776,7 @@ static void RotateMapFace(mapface_t *face, const vec3_t angles)
 
     qmat3x3d rotation = RotateAboutZ(yaw) * RotateAboutY(pitch) * RotateAboutX(roll);
 
-    vec3_t new_planepts[3];
+    std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
         qvec3d oldpt = face->planepts[i];
         qvec3d newpt = rotation * oldpt;
@@ -1804,7 +1804,7 @@ static void RotateMapFace(mapface_t *face, const vec3_t angles)
 
 static void TranslateMapFace(mapface_t *face, const vec3_t &offset)
 {
-    vec3_t new_planepts[3];
+    std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
         VectorAdd(face->planepts[i], offset, new_planepts[i]);
     }
@@ -2010,10 +2010,9 @@ void LoadMapFile(void)
     parser_t parser(buf);
 
     for (int i = 0;; i++) {
-        map.entities.push_back(mapentity_t{});
-        mapentity_t *entity = &map.entities.at(i);
+        mapentity_t &entity = map.entities.emplace_back();
 
-        if (!ParseEntity(parser, entity)) {
+        if (!ParseEntity(parser, &entity)) {
             break;
         }
     }

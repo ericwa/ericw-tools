@@ -602,73 +602,128 @@ constexpr Dst numeric_cast(const Src &value, const char *overflow_message = "val
 }
 
 // Memory streams, because C++ doesn't supply these.
-struct imembuf: std::streambuf
+struct membuf: std::streambuf
 {
-	imembuf(const void *base, size_t size)
+public:
+    // construct membuf for reading and/or writing
+	membuf(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
 	{
-        auto cbase = const_cast<char *>(static_cast<const char *>(base));
-		this->setg(cbase, cbase, cbase + size);
+        auto cbase = reinterpret_cast<char *>(base);
+
+        if (which & std::ios_base::in) {
+    		this->setg(cbase, cbase, cbase + size);
+        }
+
+        if (which & std::ios_base::out) {
+            this->setp(cbase, cbase, cbase + size);
+        }
 	}
 
-    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in)
+    // construct membuf for reading
+	membuf(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+	{
+        auto cbase = const_cast<char *>(reinterpret_cast<const char *>(base));
+
+        if (which & std::ios_base::in) {
+    		this->setg(cbase, cbase, cbase + size);
+        }
+	}
+
+    // seek operations
+    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
-        setg(eback(), eback() + off, egptr());
-        return gptr() - eback();
+        if (which & std::ios_base::in) {
+            setg(eback(), eback() + off, egptr());
+        }
+
+        if (which & std::ios_base::out) {
+            setp(pbase(), pbase() + off, epptr());
+        }
+        
+        if (which & std::ios_base::in) {
+            return gptr() - eback();
+        } else {
+            return pptr() - pbase();
+        }
     }
 
-    pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in)
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
-        if (dir == std::ios_base::cur)
-            gbump(off);
-        else if (dir == std::ios_base::end)
-            setg(eback(), egptr() + off, egptr());
-        else if (dir == std::ios_base::beg)
-            setg(eback(), eback() + off, egptr());
+        if (which & std::ios_base::in) {
+            if (dir == std::ios_base::cur)
+                gbump(off);
+            else if (dir == std::ios_base::end)
+                setg(eback(), egptr() + off, egptr());
+            else if (dir == std::ios_base::beg)
+                setg(eback(), eback() + off, egptr());
+        }
 
-        return gptr() - eback();
+        if (which & std::ios_base::out) {
+            if (dir == std::ios_base::cur)
+                pbump(off);
+            else if (dir == std::ios_base::end)
+                setp(pbase(), epptr() + off, epptr());
+            else if (dir == std::ios_base::beg)
+                setp(pbase(), pbase() + off, epptr());
+        }
+        
+        if (which & std::ios_base::in) {
+            return gptr() - eback();
+        } else {
+            return pptr() - pbase();
+        }
+    }
+
+protected:
+    // put stuff
+    std::streamsize xsputn(const char_type *s, std::streamsize n) override 
+    {
+        if (pptr() == epptr()) {
+            return traits_type::eof();
+        }
+
+        ptrdiff_t free_space = epptr() - pptr();
+        std::streamsize num_write = std::min(free_space, n);
+
+        memcpy(pptr(), s, n);
+        setp(pbase(), pptr() + n, epptr());
+
+        return num_write;
+    };
+
+    int_type overflow(int_type ch) override 
+    {
+        return traits_type::eof();
+    }
+
+    // get stuff
+    std::streamsize xsgetn(char_type *s, std::streamsize n) override 
+    {
+        if (gptr() == egptr()) {
+            return traits_type::eof();
+        }
+
+        ptrdiff_t free_space = egptr() - gptr();
+        std::streamsize num_read = std::min(free_space, n);
+
+        memcpy(s, gptr(), n);
+        setg(eback(), gptr() + n, egptr());
+
+        return num_read;
+    };
+
+    int_type underflow() override 
+    {
+        return traits_type::eof();
     }
 };
 
-struct imemstream: virtual imembuf, std::istream
+struct memstream: virtual membuf, std::ostream, std::istream
 {
-	imemstream(const void *base, size_t size) :
-		imembuf(base, size),
+	memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) :
+		membuf(base, size, which),
+		std::ostream(static_cast<std::streambuf*>(this)),
 		std::istream(static_cast<std::streambuf*>(this))
-	{
-	}
-};
-
-struct omembuf: std::streambuf
-{
-	omembuf(void *base, size_t size)
-	{
-		this->setp(reinterpret_cast<char *>(base), reinterpret_cast<char *>(base) + size);
-	}
-
-    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in)
-    {
-        setg(eback(), eback() + off, egptr());
-        return gptr() - eback();
-    }
-
-    pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::out)
-    {
-        if (dir == std::ios_base::cur)
-            gbump(off);
-        else if (dir == std::ios_base::end)
-            setg(eback(), egptr() + off, egptr());
-        else if (dir == std::ios_base::beg)
-            setg(eback(), eback() + off, egptr());
-
-        return gptr() - eback();
-    }
-};
-
-struct omemstream: virtual omembuf, std::ostream
-{
-	omemstream(void *base, size_t size) :
-		omembuf(base, size),
-		std::ostream(static_cast<std::streambuf*>(this))
 	{
 	}
 };

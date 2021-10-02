@@ -647,7 +647,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     LogPrint("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
-static RTCRayHit SetupRay(unsigned rayindex, const vec3_t start, const vec3_t dir, vec_t dist)
+static RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &dir, vec_t dist)
 {
     RTCRayHit ray;
     ray.ray.org_x = start[0];
@@ -671,17 +671,16 @@ static RTCRayHit SetupRay(unsigned rayindex, const vec3_t start, const vec3_t di
     return ray;
 }
 
-static RTCRayHit SetupRay_StartStop(const vec3_t start, const vec3_t stop)
+static RTCRayHit SetupRay_StartStop(const qvec3d &start, const qvec3d &stop)
 {
-    vec3_t dir;
-    VectorSubtract(stop, start, dir);
+    qvec3d dir = stop - start;
     vec_t dist = VectorNormalize(dir);
 
     return SetupRay(0, start, dir, dist);
 }
 
 // public
-hitresult_t Embree_TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self)
+hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
 {
     RTCRay ray = SetupRay_StartStop(start, stop).ray;
 
@@ -697,7 +696,7 @@ hitresult_t Embree_TestLight(const vec3_t start, const vec3_t stop, const modeli
 
 // public
 hitresult_t Embree_TestSky(
-    const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const mface_t **face_out)
+    const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -726,7 +725,7 @@ hitresult_t Embree_TestSky(
 }
 
 // public
-hittype_t Embree_DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self,
+hittype_t Embree_DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, const modelinfo_t *self,
     vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out)
 {
     RTCRayHit ray = SetupRay(0, start, dirn, dist);
@@ -876,8 +875,8 @@ public:
 
     ~raystream_embree_intersection_t() { q_aligned_free(_rays); }
 
-    void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr,
-        const vec_t *normalcontrib = nullptr) override
+    void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
+        const qvec3d *normalcontrib = nullptr) override
     {
         Q_assert(_numrays < _maxrays);
         const RTCRayHit rayHit = SetupRay(_numrays, origin, dir, dist);
@@ -885,10 +884,10 @@ public:
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
-            VectorCopy(color, _ray_colors[_numrays]);
+            VectorCopy(*color, _ray_colors[_numrays]);
         }
         if (normalcontrib) {
-            VectorCopy(normalcontrib, _ray_normalcontribs[_numrays]);
+            VectorCopy(*normalcontrib, _ray_normalcontribs[_numrays]);
         }
         _ray_dynamic_styles[_numrays] = 0;
         _numrays++;
@@ -962,18 +961,18 @@ public:
 
     ~raystream_embree_occlusion_t() { q_aligned_free(_rays); }
 
-    void pushRay(int i, const vec_t *origin, const vec3_t dir, float dist, const vec_t *color = nullptr,
-        const vec_t *normalcontrib = nullptr) override
+    void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
+        const qvec3d *normalcontrib = nullptr) override
     {
         Q_assert(_numrays < _maxrays);
         _rays[_numrays] = SetupRay(_numrays, origin, dir, dist).ray;
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
-            VectorCopy(color, _ray_colors[_numrays]);
+            VectorCopy(*color, _ray_colors[_numrays]);
         }
         if (normalcontrib) {
-            VectorCopy(normalcontrib, _ray_normalcontribs[_numrays]);
+            VectorCopy(*normalcontrib, _ray_normalcontribs[_numrays]);
         }
         _ray_dynamic_styles[_numrays] = 0;
         _numrays++;

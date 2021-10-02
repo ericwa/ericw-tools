@@ -151,6 +151,10 @@ const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
 
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
 {
+    // no miptex data (Q2 maps)
+    if (!bsp->dtex.textures.size())
+        return nullptr;
+
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
     if (texinfo == nullptr)
         return nullptr;
@@ -204,7 +208,7 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
     return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
 }
 
-const bspvec3f_t &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v)
+const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v)
 {
     return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)];
 }
@@ -386,21 +390,15 @@ plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face
     for (int i = 0; i < face->numedges; i++) {
         plane_t *dest = &out[i];
 
-        const bspvec3f_t &v0 = GetSurfaceVertexPoint(bsp, face, i);
-        const bspvec3f_t &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
-
-        vec3_t v0_vec3t;
-        vec3_t v1_vec3t;
-
-        VectorCopy(v0, v0_vec3t);
-        VectorCopy(v1, v1_vec3t); // convert float->double
+        const qvec3d v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const qvec3d v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
 
         vec3_t edgevec;
-        VectorSubtract(v1_vec3t, v0_vec3t, edgevec);
+        VectorSubtract(v1, v0, edgevec);
         VectorNormalize(edgevec);
 
         CrossProduct(edgevec, faceplane.normal, dest->normal);
-        dest->dist = DotProduct(dest->normal, v0_vec3t);
+        dest->dist = DotProduct(dest->normal, v0);
     }
 
     return out;
@@ -477,7 +475,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
-        const bspvec3f_t &point = GetSurfaceVertexPoint(bsp, face, i);
+        const qvec3f &point = GetSurfaceVertexPoint(bsp, face, i);
         LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n", i ? "          " : "    verts ", vert, point[0], point[1],
             point[2], edge);
     }
