@@ -608,15 +608,7 @@ CSGFaces(const mapentity_t *entity)
                 /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
                 continue;
             }
-            
-            if (clipbrush->contents.is_detail(CFLAGS_DETAIL) && clipbrush->contents.is_detail(CFLAGS_DETAIL_WALL)
-                && !(brush->contents.is_detail(CFLAGS_DETAIL) && brush->contents.is_detail(CFLAGS_DETAIL_WALL))) {
-                /* if clipbrush has CONTENTS_DETAIL and CFLAGS_DETAIL_WALL are set,
-                   only clip other brushes with both CONTENTS_DETAIL and CFLAGS_DETAIL_WALL.
-                 */
-                continue;
-            }
-            
+
             if (clipbrush->contents.is_detail(CFLAGS_DETAIL_FENCE)
                 && !brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
                 /* CONTENTS_DETAIL_FENCE never clips anything but itself */

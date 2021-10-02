@@ -1293,13 +1293,9 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     if (!Q_strcasecmp(classname, "func_detail") && !options.fNodetail) {
         all_detail = true;
     }
-    if (!Q_strcasecmp(classname, "func_detail_wall") && !options.fNodetail) {
-        all_detail = true;
-        base_contents.extended |= CFLAGS_DETAIL_WALL;
-    }
     
     all_detail_fence = false;
-    if (!Q_strcasecmp(classname, "func_detail_fence") && !options.fNodetail) {
+    if ((!Q_strcasecmp(classname, "func_detail_fence") || !Q_strcasecmp(classname, "func_detail_wall")) && !options.fNodetail) {
         all_detail_fence = true;
     }
     
@@ -1347,9 +1343,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         
         /* -omitdetail option omits all types of detail */
-        if (options.fOmitDetail && detail && !contents.is_detail(CFLAGS_DETAIL_WALL))
-            continue;
-        if ((options.fOmitDetail || options.fOmitDetailWall) && detail && contents.is_detail(CFLAGS_DETAIL_WALL))
+        if (options.fOmitDetail && detail)
             continue;
         if ((options.fOmitDetail || options.fOmitDetailIllusionary) && detail_illusionary)
             continue;
