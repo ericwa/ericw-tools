@@ -898,7 +898,7 @@ Brush_GetContents_Q1(const mapbrush_t *mapbrush, const contentflags_t &base_cont
     }
 
     //and anything else is assumed to be a regular solid.
-    return options.target_game->create_solid_contents();
+    return contents.merge(options.target_game->create_solid_contents());
 }
 
 static contentflags_t
