@@ -620,7 +620,7 @@ typedef struct {
 typedef struct bspxentry_s
 {
     char lumpname[24];
-    const void *lumpdata;
+    const uint8_t *lumpdata;
     size_t lumpsize;
 
     struct bspxentry_s *next;
