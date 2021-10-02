@@ -4,3 +4,6 @@
 [submodule "3rdparty/googletest"]
 	path = 3rdparty/googletest
 	url = https://github.com/google/googletest
+[submodule "3rdparty/json"]
+	path = 3rdparty/json
+	url = https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent
