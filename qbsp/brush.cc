@@ -1351,7 +1351,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         
         /* turn solid brushes into detail, if we're in hull0 */
-        if (hullnum <= 0 && contents.is_solid(options.target_game)) {
+        if (hullnum <= 0 && contents.is_structural_solid(options.target_game)) {
             if (detail) {
                 contents.extended |= CFLAGS_DETAIL;
             } else if (detail_illusionary) {
@@ -1421,7 +1421,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         /* nonsolid brushes don't show up in clipping hulls */
         // TODO: will this statement need to be modified since clip
         // detail etc aren't native types any more?
-        if (hullnum > 0 && !contents.is_solid(options.target_game) && !contents.is_sky(options.target_game))
+        if (hullnum > 0 && !contents.is_structural_sky_or_solid(options.target_game))
             continue;
 
         /* sky brushes are solid in the collision hulls */
@@ -1435,7 +1435,13 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         dst->numbrushes++;
         brush->lmshift = lmshift;
         
-        if (brush->contents.is_detail(CFLAGS_DETAIL)) {
+        if (brush->contents.is_structural_solid(options.target_game) && !contents.extended) {
+            brush->next = dst->solid;
+            dst->solid = brush;
+        } else if (brush->contents.is_structural_sky(options.target_game) && !contents.extended) {
+            brush->next = dst->sky;
+            dst->sky = brush;
+        } else if (brush->contents.is_solid(options.target_game) && brush->contents.is_detail(CFLAGS_DETAIL)) {
             brush->next = dst->detail;
             dst->detail = brush;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
@@ -1444,12 +1450,6 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
             brush->next = dst->detail_fence;
             dst->detail_fence = brush;
-        } else if (brush->contents.is_solid(options.target_game) && !(contents.extended & CFLAGS_CLIP)) {
-            brush->next = dst->solid;
-            dst->solid = brush;
-        } else if (brush->contents.is_sky(options.target_game)) {
-            brush->next = dst->sky;
-            dst->sky = brush;
         } else {
             brush->next = dst->liquid;
             dst->liquid = brush;
