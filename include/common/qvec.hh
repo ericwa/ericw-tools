@@ -45,6 +45,8 @@ protected:
     friend class qvec;
 
 public:
+    using value_type = T;
+
     qvec() = default;
 
     template<typename ...Args, typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
@@ -81,7 +83,7 @@ public:
     constexpr qvec(const T2 (&array)[N])
     {
         for (size_t i = 0; i < N; i++)
-            v[i] = array[i];
+            v[i] = static_cast<T>(array[i]);
     }
     
     // copy from std::array, exact lengths only
@@ -89,12 +91,7 @@ public:
     constexpr qvec(const std::array<T2, N> &array)
     {
         for (size_t i = 0; i < N; i++)
-            v[i] = array[i];
-    }
-
-    constexpr size_t size() const
-    {
-        return N;
+            v[i] = static_cast<T>(array[i]);
     }
 
     /**
@@ -138,6 +135,8 @@ public:
         v[N - 1] = value;
     }
 
+    constexpr size_t size() const { return N; }
+
     // Sort support
     constexpr bool operator<(const qvec<N, T> &other) const { return v < other.v; }
     constexpr bool operator<=(const qvec<N, T> &other) const { return v <= other.v; }
@@ -146,17 +145,20 @@ public:
     constexpr bool operator==(const qvec<N, T> &other) const { return v == other.v; }
     constexpr bool operator!=(const qvec<N, T> &other) const { return v != other.v; }
 
-    constexpr const T &operator[](const size_t idx) const
+    constexpr const T &at(const size_t idx) const
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
     }
 
-    constexpr T &operator[](const size_t idx)
+    constexpr T &at(const size_t idx)
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
     }
+
+    constexpr const T &operator[](const size_t idx) const { return at(idx); }
+    constexpr T &operator[](const size_t idx) { return at(idx); }
 
     template<typename F>
     constexpr void operator+=(const qvec<N, F> &other)
@@ -226,6 +228,14 @@ public:
 
     // stream support
     auto stream_data() { return std::tie(v); }
+
+    // iterator support
+    auto begin() { return v.begin(); }
+    auto end() { return v.end(); }
+    auto begin() const { return v.begin(); }
+    auto end() const { return v.end(); }
+    auto cbegin() const { return v.cbegin(); }
+    auto cend() const { return v.cend(); }
 };
 
 namespace qv
@@ -262,6 +272,26 @@ qvec<N, T> pow(const qvec<N, T> &v1, const qvec<N, T> &v2)
     qvec<N, T> res;
     for (size_t i = 0; i < N; i++) {
         res[i] = std::pow(v1[i], v2[i]);
+    }
+    return res;
+}
+
+template<size_t N, class T>
+T min(const qvec<N, T> &v)
+{
+    T res = std::numeric_limits<T>::largest();
+    for (auto &c : v) {
+        res = qmin(c, res);
+    }
+    return res;
+}
+
+template<size_t N, class T>
+T max(const qvec<N, T> &v)
+{
+    T res = std::numeric_limits<T>::lowest();
+    for (auto &c : v) {
+        res = qmax(c, res);
     }
     return res;
 }
@@ -314,7 +344,11 @@ T distance(const qvec<N, T> &v1, const qvec<N, T> &v2)
     return length(v2 - v1);
 }
 
-std::string to_string(const qvec<3, float> &v1);
+template<typename T>
+inline std::string to_string(const qvec<3, T> &v1)
+{
+    return fmt::format("{} {} {}", v1[0], v1[1], v1[2]);
+}
 
 template<size_t N, class T>
 bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
@@ -385,6 +419,7 @@ using qvec3d = qvec<3, double>;
 using qvec4d = qvec<4, double>;
 
 using qvec2i = qvec<2, int32_t>;
+using qvec3i = qvec<3, int32_t>;
 
 using qvec3s = qvec<3, int16_t>;
 
@@ -412,27 +447,25 @@ using qplane3d = qplane3<double>;
 /**
  * M row, N column matrix.
  */
-template<int M, int N, class T>
+template<size_t M, size_t N, class T>
 class qmat
 {
 public:
     /**
      * Column-major order. [ (row0,col0), (row1,col0), .. ]
      */
-    T m_values[M * N];
+    std::array<T, M * N> m_values;
 
 public:
     /**
      * Identity matrix if square, otherwise fill with 0
      */
-    qmat()
+    constexpr qmat() :
+        m_values({})
     {
-        for (int i = 0; i < M * N; i++)
-            m_values[i] = 0;
-
-        if (M == N) {
+        if constexpr (M == N) {
             // identity matrix
-            for (int i = 0; i < N; i++) {
+            for (size_t i = 0; i < N; i++) {
                 this->at(i, i) = 1;
             }
         }
@@ -441,58 +474,49 @@ public:
     /**
      * Fill with a value
      */
-    qmat(T val)
+    inline qmat(const T &val)
     {
-        for (int i = 0; i < M * N; i++)
-            m_values[i] = val;
+        m_values.fill(val);
     }
 
     // copy constructor
-    qmat(const qmat<M, N, T> &other)
+    constexpr qmat(const qmat<M, N, T> &other) :
+        m_values(other.m_values)
     {
-        for (int i = 0; i < M * N; i++)
-            this->m_values[i] = other.m_values[i];
     }
 
     /**
      * Casting from another matrix type of the same size
      */
     template<class T2>
-    qmat(const qmat<M, N, T2> &other)
+    constexpr qmat(const qmat<M, N, T2> &other)
     {
-        for (int i = 0; i < M * N; i++)
+        for (size_t i = 0; i < M * N; i++)
             this->m_values[i] = static_cast<T>(other.m_values[i]);
     }
 
     // initializer list, column-major order
-    qmat(std::initializer_list<T> list)
+    constexpr qmat(std::initializer_list<T> list)
     {
         assert(list.size() == M * N);
-        const T *listPtr = list.begin();
-
-        for (int i = 0; i < M * N; i++) {
-            this->m_values[i] = listPtr[i];
-        }
+        std::copy(list.begin(), list.end(), m_values.begin());
     }
 
-    bool operator==(const qmat<M, N, T> &other) const
+    constexpr bool operator==(const qmat<M, N, T> &other) const
     {
-        for (int i = 0; i < M * N; i++)
-            if (this->m_values[i] != other.m_values[i])
-                return false;
-        return true;
+        return m_values == other.m_values;
     }
 
     // access to elements
 
-    T &at(int row, int col)
+    constexpr T &at(size_t row, size_t col)
     {
         assert(row >= 0 && row < M);
         assert(col >= 0 && col < N);
         return m_values[col * M + row];
     }
 
-    T at(int row, int col) const
+    constexpr T at(size_t row, size_t col) const
     {
         assert(row >= 0 && row < M);
         assert(col >= 0 && col < N);
@@ -500,13 +524,13 @@ public:
     }
 
     // hacky accessor for mat[col][row] access
-    const T *operator[](int col) const
+    constexpr const T *operator[](size_t col) const
     {
         assert(col >= 0 && col < N);
         return &m_values[col * M];
     }
 
-    T *operator[](int col)
+    constexpr T *operator[](size_t col)
     {
         assert(col >= 0 && col < N);
         return &m_values[col * M];
@@ -517,8 +541,8 @@ public:
     qvec<M, T> operator*(const qvec<N, T> &vec) const
     {
         qvec<M, T> res { };
-        for (int i = 0; i < M; i++) { // for each row
-            for (int j = 0; j < N; j++) { // for each col
+        for (size_t i = 0; i < M; i++) { // for each row
+            for (size_t j = 0; j < N; j++) { // for each col
                 res[i] += this->at(i, j) * vec[j];
             }
         }
@@ -531,10 +555,10 @@ public:
     qmat<M, P, T> operator*(const qmat<N, P, T> &other) const
     {
         qmat<M, P, T> res;
-        for (int i = 0; i < M; i++) {
-            for (int j = 0; j < P; j++) {
+        for (size_t i = 0; i < M; i++) {
+            for (size_t j = 0; j < P; j++) {
                 T val = 0;
-                for (int k = 0; k < N; k++) {
+                for (size_t k = 0; k < N; k++) {
                     val += this->at(i, k) * other.at(k, j);
                 }
                 res.at(i, j) = val;
@@ -548,7 +572,7 @@ public:
     qmat<M, N, T> operator*(const T scalar) const
     {
         qmat<M, N, T> res(*this);
-        for (int i = 0; i < M * N; i++) {
+        for (size_t i = 0; i < M * N; i++) {
             res.m_values[i] *= scalar;
         }
         return res;

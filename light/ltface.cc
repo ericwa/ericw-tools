@@ -116,7 +116,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
                   "   texture {} at ({})\n"
                   "   surface normal ({})\n",
                 Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname,
-                qv::to_string(point), VecStrf(plane.normal));
+                qv::to_string(point), qv::to_string(plane.normal));
         }
     }
 }
@@ -221,18 +221,14 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
     return T;
 }
 
-qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
+inline qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
 {
-    const qmat4x4f T = WorldToTexSpace(bsp, f);
-    const qmat4x4f inv = qv::inverse(T);
-    return inv;
+    return qv::inverse(WorldToTexSpace(bsp, f));
 }
 
-static void TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg, vec3_t world)
+constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg)
 {
-    qvec4f worldPos = texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0);
-
-    VectorCopy(worldPos, world);
+    return (texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0)).xyz();
 }
 
 void WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex, vec_t coord[2])
@@ -331,8 +327,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
         VectorAdd(worldmins, radius, surf->origin);
         surf->radius = VectorLength(radius);
 
-        VectorCopy(worldmaxs, surf->maxs);
-        VectorCopy(worldmins, surf->mins);
+        surf->bounds = { worldmins, worldmaxs };
     }
 
     for (int i = 0; i < 2; i++) {
@@ -348,7 +343,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
                   "   texture {} at ({})\n"
                   "   surface normal ({})\n",
                 Face_GetNum(bsp, face), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname,
-                VecStr(worldpoint), VecStrf(plane.normal));
+                qv::to_string(worldpoint), qv::to_string(plane.normal));
         }
     }
 }
@@ -551,12 +546,12 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
     for (int t = 0; t < surf->height; t++) {
         for (int s = 0; s < surf->width; s++) {
             const int i = t * surf->width + s;
-            const vec_t *point = surf->points[i];
+            const qvec3d &point = surf->points[i];
             const qvec3f mangle = mangle_from_vec(surf->normals[i]);
 
             f << "{\n";
             f << "\"classname\" \"light\"\n";
-            fmt::print(f, "\"origin\" \"{} {} {}\"\n", point[0], point[1], point[2]);
+            fmt::print(f, "\"origin\" \"{}\"\n", qv::to_string(point));
             fmt::print(f, "\"mangle\" \"{} {} {}\"\n", mangle[0], mangle[1], mangle[2]);
             fmt::print(f, "\"face\" \"{}\"\n", surf->realfacenums[i]);
             fmt::print(f, "\"occluded\" \"{}\"\n", (int)surf->occluded[i]);
@@ -674,7 +669,7 @@ static position_t PositionSamplePointOnFace(
  * =================
  */
 static void CalcPoints(
-    const modelinfo_t *modelinfo, const vec3_t &offset, lightsurf_t *surf, const mbsp_t *bsp, const mface_t *face)
+    const modelinfo_t *modelinfo, const qvec3d &offset, lightsurf_t *surf, const mbsp_t *bsp, const mface_t *face)
 {
     const globalconfig_t &cfg = *surf->cfg;
 
@@ -682,7 +677,7 @@ static void CalcPoints(
      * Fill in the surface points. The points are biased towards the center of
      * the surface to help avoid edge cases just inside walls
      */
-    TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg, surf->midpoint);
+    surf->midpoint = TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg);
     VectorAdd(surf->midpoint, offset, surf->midpoint);
 
     surf->width = (surf->texsize[0] + 1) * oversample;
@@ -693,7 +688,7 @@ static void CalcPoints(
 
     /* Allocate surf->points */
     surf->numpoints = surf->width * surf->height;
-    surf->points = new vec3_t[surf->numpoints];
+    surf->points = new qvec3d[surf->numpoints];
     surf->normals = new vec3_t[surf->numpoints];
     surf->occluded = new bool[surf->numpoints];
     surf->realfacenums = new int[surf->numpoints];
@@ -704,14 +699,14 @@ static void CalcPoints(
     for (int t = 0; t < surf->height; t++) {
         for (int s = 0; s < surf->width; s++) {
             const int i = t * surf->width + s;
-            vec3_t &point = surf->points[i];
+            qvec3d &point = surf->points[i];
             vec3_t &norm = surf->normals[i];
             int *realfacenum = &surf->realfacenums[i];
 
             const vec_t us = starts + s * st_step;
             const vec_t ut = startt + t * st_step;
 
-            TexCoordToWorld(us, ut, &surf->texorg, point);
+            point = TexCoordToWorld(us, ut, &surf->texorg);
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
@@ -766,7 +761,7 @@ static bool Lightsurf_Init(const modelinfo_t *modelinfo, const mface_t *face, co
 
     // minlight_color
     if (modelinfo->minlight_color.isChanged()) {
-        VectorCopy(*modelinfo->minlight_color.vec3Value(), lightsurf->minlight_color);
+        VectorCopy(modelinfo->minlight_color.vec3Value(), lightsurf->minlight_color);
     } else {
         // if modelinfo mincolor not set, use the one from the .texinfo file
         vec3_t extended_mincolor{(float)extended_flags.minlight_color[0], (float)extended_flags.minlight_color[1],
@@ -828,8 +823,7 @@ static bool Lightsurf_Init(const modelinfo_t *modelinfo, const mface_t *face, co
 
     /* Correct bounding sphere */
     VectorAdd(lightsurf->origin, modelinfo->offset, lightsurf->origin);
-    VectorAdd(lightsurf->mins, modelinfo->offset, lightsurf->mins);
-    VectorAdd(lightsurf->maxs, modelinfo->offset, lightsurf->maxs);
+    lightsurf->bounds = lightsurf->bounds.translate(modelinfo->offset);
 
     /* Allocate occlusion array */
     lightsurf->occlusion = new float[lightsurf->numpoints] { };
@@ -990,13 +984,13 @@ static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *en
     return add;
 }
 
-static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const qvec3d &point,
+static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point,
     qvec3d &result);
 
 static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm, const qvec3d &surfpoint,
     bool twosided, qvec3d &color_out, qvec3d &surfpointToLightDir_out, qvec3d &normalmap_addition_out, float *dist_out)
 {
-    float dist = GetDir(surfpoint, *entity->origin.vec3Value(), surfpointToLightDir_out);
+    float dist = GetDir(surfpoint, entity->origin.vec3Value(), surfpointToLightDir_out);
     if (dist < 0.1) {
         // Catch 0 distance between sample point and light (produces infinite brightness / nan's) and causes
         // problems later
@@ -1010,14 +1004,14 @@ static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, co
         qvec3d col;
         if (LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col)) {
             // mxd. Modulate by light color...
-            const auto entcol = *entity->color.vec3Value();
+            const auto &entcol = entity->color.vec3Value();
             for (int i = 0; i < 3; i++)
                 col[i] *= entcol[i] * (1.0f / 255.0f);
         }
 
         VectorScale(col, add * (1.0f / 255.0f), color_out);
     } else {
-        VectorScale(*entity->color.vec3Value(), add * (1.0f / 255.0f), color_out);
+        VectorScale(entity->color.vec3Value(), add * (1.0f / 255.0f), color_out);
     }
 
     // write normalmap contrib
@@ -1066,22 +1060,21 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
     return fadedist;
 }
 
-constexpr void Light_Add(lightsample_t *sample, const vec_t light, const vec3_t color, const vec3_t direction)
+constexpr void Light_Add(lightsample_t *sample, const vec_t light, const qvec3d &color, const qvec3d &direction)
 {
     VectorMA(sample->color, light / 255.0f, color, sample->color);
     VectorMA(sample->direction, light, direction, sample->direction);
 }
 
-constexpr void Light_ClampMin(lightsample_t *sample, const vec_t light, const vec3_t color)
+// CHECK: naming? why clamp*min*?
+constexpr void Light_ClampMin(lightsample_t *sample, const vec_t light, const qvec3d &color)
 {
     for (int i = 0; i < 3; i++) {
-        if (sample->color[i] < color[i] * light / 255.0f) {
-            sample->color[i] = color[i] * light / 255.0f;
-        }
+        sample->color[i] = std::max(sample->color[i], color[i] * light / 255.0f);
     }
 }
 
-constexpr float fraction(float min, float val, float max)
+constexpr vec_t fraction(const vec_t &min, const vec_t &val, const vec_t &max)
 {
     if (val >= max)
         return 1.0;
@@ -1190,12 +1183,12 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
 
-    if (!novisapprox && AABBsDisjoint(entity->mins, entity->maxs, lightsurf->mins, lightsurf->maxs)) {
+    if (!novisapprox && entity->bounds.disjoint(lightsurf->bounds, 0.001)) {
         return true;
     }
 
     vec3_t distvec;
-    VectorSubtract(*entity->origin.vec3Value(), lightsurf->origin, distvec);
+    VectorSubtract(entity->origin.vec3Value(), lightsurf->origin, distvec);
     const float dist = VectorLength(distvec) - lightsurf->radius;
 
     /* light is inside surface bounding sphere => can't cull */
@@ -1209,24 +1202,19 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     return fabs(GetLightValue(cfg, entity, dist)) <= fadegate;
 }
 
-static void Matrix4x4_CM_Transform4(const float *matrix, const float *vector, float *product)
+static void Matrix4x4_CM_Transform4(const std::array<vec_t, 16> &matrix, const qvec4d &vector, qvec4d &product)
 {
     product[0] = matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2] + matrix[12] * vector[3];
     product[1] = matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2] + matrix[13] * vector[3];
     product[2] = matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2] + matrix[14] * vector[3];
     product[3] = matrix[3] * vector[0] + matrix[7] * vector[1] + matrix[11] * vector[2] + matrix[15] * vector[3];
 }
-static bool Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *modelviewproj)
+static bool Matrix4x4_CM_Project(const qvec3d &in, qvec3d &out, const std::array<vec_t, 16> &modelviewproj)
 {
     bool result = true;
 
-    float v[4], tempv[4];
-    tempv[0] = in[0];
-    tempv[1] = in[1];
-    tempv[2] = in[2];
-    tempv[3] = 1;
-
-    Matrix4x4_CM_Transform4(modelviewproj, tempv, v);
+    qvec4d v;
+    Matrix4x4_CM_Transform4(modelviewproj, { in, 1 }, v);
 
     v[0] /= v[3];
     v[1] /= v[3];
@@ -1241,7 +1229,7 @@ static bool Matrix4x4_CM_Project(const vec3_t in, vec3_t out, const float *model
         result = false; // beyond far clip plane
     return result;
 }
-static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projectionmatrix, const qvec3d &point,
+static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point,
     qvec3d &result)
 {
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
@@ -1250,8 +1238,8 @@ static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const float *projec
     color_rgba pi[4];
     const color_rgba *data = reinterpret_cast<const color_rgba *>(tex->data.get());
 
-    vec3_t coord;
-    if (!Matrix4x4_CM_Project(&point[0], coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
+    qvec3d coord;
+    if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
         coord[1] >= 1) {
         VectorSet(result, 0, 0, 0);
         return false; // mxd
@@ -1363,7 +1351,7 @@ std::map<int, qvec3f> GetDirectLighting(
             continue;
         }
 
-        const hitresult_t hit = TestLight(*entity.origin.vec3Value(), origin, NULL);
+        const hitresult_t hit = TestLight(entity.origin.vec3Value(), origin, NULL);
         if (!hit.blocked) {
             continue;
         }
@@ -1440,7 +1428,7 @@ static void LightFace_Entity(
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const plane_t *plane = &lightsurf->plane;
 
-    const float planedist = DotProduct(*entity->origin.vec3Value(), plane->normal) - plane->dist;
+    const float planedist = DotProduct(entity->origin.vec3Value(), plane->normal) - plane->dist;
 
     /* don't bother with lights behind the surface.
 
@@ -1465,7 +1453,7 @@ static void LightFace_Entity(
     rs->clearPushedRays();
 
     for (int i = 0; i < lightsurf->numpoints; i++) {
-        const vec3_t &surfpoint = lightsurf->points[i];
+        const qvec3d &surfpoint = lightsurf->points[i];
         const vec3_t &surfnorm = lightsurf->normals[i];
 
         if (lightsurf->occluded[i])
@@ -1571,7 +1559,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
     rs->clearPushedRays();
 
     for (int i = 0; i < lightsurf->numpoints; i++) {
-        const vec_t *surfpoint = lightsurf->points[i];
+        const qvec3d &surfpoint = lightsurf->points[i];
         const vec_t *surfnorm = lightsurf->normals[i];
 
         if (lightsurf->occluded[i])
@@ -1601,7 +1589,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
             continue;
         }
 
-        rs->pushRay(i, *surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
+        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
     }
 
     // We need to check if the first hit face is a sky face, so we need
@@ -1660,7 +1648,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
  * LightFace_Min
  * ============
  */
-static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const vec3_t color, vec_t light,
+static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &color, vec_t light,
     const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
@@ -1723,12 +1711,12 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const vec3_t c
                 continue;
 
             const lightsample_t *sample = &lightmap->samples[i];
-            const vec_t *surfpoint = lightsurf->points[i];
+            const qvec3d &surfpoint = lightsurf->points[i];
             if (cfg.addminlight.boolValue() || LightSample_Brightness(sample->color) < entity.light.floatValue()) {
                 vec3_t surfpointToLightDir;
-                const vec_t surfpointToLightDist = GetDir(surfpoint, *entity.origin.vec3Value(), surfpointToLightDir);
+                const vec_t surfpointToLightDist = GetDir(surfpoint, entity.origin.vec3Value(), surfpointToLightDir);
 
-                rs->pushRay(i, *surfpoint, surfpointToLightDir, surfpointToLightDist);
+                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
             }
         }
 
@@ -1749,9 +1737,9 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const vec3_t c
             value *=
                 Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], &entity, 0.0 /* TODO: pass distance */, lightsurf);
             if (cfg.addminlight.boolValue()) {
-                Light_Add(sample, value, *entity.color.vec3Value(), vec3_origin);
+                Light_Add(sample, value, entity.color.vec3Value(), vec3_origin);
             } else {
-                Light_ClampMin(sample, value, *entity.color.vec3Value());
+                Light_ClampMin(sample, value, entity.color.vec3Value());
             }
 
             hit = true;
@@ -1943,7 +1931,7 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
 
-    if (!novisapprox && AABBsDisjoint(vpl->mins, vpl->maxs, lightsurf->mins, lightsurf->maxs))
+    if (!novisapprox && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
         return true;
 
     const qvec3f dir = qvec3f(lightsurf->origin) - vpl->pos; // vpl -> sample point
@@ -1958,7 +1946,7 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 {
-    if (!novisapprox && AABBsDisjoint(vpl->mins, vpl->maxs, lightsurf->mins, lightsurf->maxs))
+    if (!novisapprox && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
         return true;
 
     const globalconfig_t &cfg = *lightsurf->cfg;
@@ -2486,7 +2474,7 @@ float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const
     // accumulate hitdists
     for (int j = 0; j < numDirtVectors; j++) {
         if (rs->getPushedRayHitType(j) == hittype_t::SOLID) {
-            const float dist = rs->getPushedRayHitDist(j);
+            const vec_t dist = rs->getPushedRayHitDist(j);
             occlusion += qmin(cfg.dirtDepth.floatValue(), dist);
         } else {
             occlusion += cfg.dirtDepth.floatValue();
@@ -2551,7 +2539,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
         for (int k = 0; k < rs->numPushedRays(); k++) {
             const int i = rs->getPushedRayPointIndex(k);
             if (rs->getPushedRayHitType(k) == hittype_t::SOLID) {
-                float dist = rs->getPushedRayHitDist(k);
+                vec_t dist = rs->getPushedRayHitDist(k);
                 lightsurf->occlusion[i] += qmin(cfg.dirtDepth.floatValue(), dist);
             } else {
                 lightsurf->occlusion[i] += cfg.dirtDepth.floatValue();
@@ -2577,26 +2565,20 @@ static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t
 
     for (lightmap_t &lightmap : *lightmaps) {
         for (int i = 0; i < lightsurf->numpoints; i++) {
-            vec_t *color = lightmap.samples[i].color;
+            qvec3d &color = lightmap.samples[i].color;
 
             /* Fix any negative values */
-            for (int k = 0; k < 3; k++) {
-                if (color[k] < 0) {
-                    color[k] = 0;
-                }
-            }
+            color = qv::max(color, { 0 });
 
             /* Scale and clamp any out-of-range samples */
-            vec_t maxcolor = 0;
             VectorScale(color, cfg.rangescale.floatValue(), color);
-            for (int c = 0; c < 3; c++) {
-                color[c] = pow(color[c] / 255.0f, 1.0 / cfg.lightmapgamma.floatValue()) * 255.0f;
+
+            for (auto &c : color) {
+                c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.floatValue()) * 255.0f;
             }
-            for (int c = 0; c < 3; c++) {
-                if (color[c] > maxcolor) {
-                    maxcolor = color[c];
-                }
-            }
+
+            vec_t maxcolor = qv::max(color);
+
             if (maxcolor > 255) {
                 VectorScale(color, 255.0f / maxcolor, color);
             }
@@ -2644,7 +2626,7 @@ static void DumpFullSizeLightmap(const mbsp_t *bsp, const lightsurf_t *lightsurf
 
         std::vector<uint8_t> rgbdata;
         for (int i = 0; i < lightsurf->numpoints; i++) {
-            const vec_t *color = lm->samples[i].color;
+            const qvec3d &color = lm->samples[i].color;
             for (int j = 0; j < 3; j++) {
                 int intval = static_cast<int>(qclamp(color[j], 0.0, 255.0));
                 rgbdata.push_back(static_cast<uint8_t>(intval));
@@ -2695,7 +2677,7 @@ static std::vector<qvec4f> LightmapColorsToGLMVector(const lightsurf_t *lightsur
 {
     std::vector<qvec4f> res;
     for (int i = 0; i < lightsurf->numpoints; i++) {
-        const vec_t *color = lm->samples[i].color;
+        const qvec3d &color = lm->samples[i].color;
         const float alpha = lightsurf->occluded[i] ? 0.0f : 1.0f;
         res.emplace_back(color[0], color[1], color[2], alpha);
     }
@@ -2706,7 +2688,7 @@ static std::vector<qvec4f> LightmapNormalsToGLMVector(const lightsurf_t *lightsu
 {
     std::vector<qvec4f> res;
     for (int i = 0; i < lightsurf->numpoints; i++) {
-        const vec_t *color = lm->samples[i].direction;
+        const qvec3d &color = lm->samples[i].direction;
         const float alpha = lightsurf->occluded[i] ? 0.0f : 1.0f;
         res.emplace_back(color[0], color[1], color[2], alpha);
     }
@@ -3044,7 +3026,7 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         if (sorted.size() == MAXLIGHTMAPS) {
             LogPrint("WARNING: Too many light styles on a face\n"
                      "         lightmap point near ({})\n",
-                VecStr(lightsurf->points[0]));
+                qv::to_string(lightsurf->points[0]));
             break;
         }
 
@@ -3335,8 +3317,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
             LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
         } else {
             const float light = cfg.minlight.floatValue();
-            vec3_t color;
-            VectorCopy(*cfg.minlight_color.vec3Value(), color);
+            const qvec3d &color = cfg.minlight_color.vec3Value();
 
             LightFace_Min(bsp, face, color, light, lightsurf, lightmaps);
         }

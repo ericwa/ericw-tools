@@ -1015,59 +1015,6 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
     reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
 }
 
-void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize)
-{
-    bspxentry_t *e;
-    bspxentry_t **link;
-    if (!xdata) {
-        for (link = &bspdata->bspxentries; *link;) {
-            e = *link;
-            if (!strcmp(e->lumpname.data(), xname)) {
-                *link = e->next;
-                delete e;
-                break;
-            } else
-                link = &(*link)->next;
-        }
-        return;
-    }
-    for (e = bspdata->bspxentries; e; e = e->next) {
-        if (!strcmp(e->lumpname.data(), xname))
-            break;
-    }
-    if (!e) {
-        e = new bspxentry_t { };
-        strncpy(e->lumpname.data(), xname, sizeof(e->lumpname));
-        e->next = bspdata->bspxentries;
-        bspdata->bspxentries = e;
-    }
-
-    // ericw -- make a copy
-    uint8_t *xdata_copy = new uint8_t[xsize];
-    memcpy(xdata_copy, xdata, xsize);
-
-    e->lumpdata = xdata_copy;
-    e->lumpsize = xsize;
-}
-
-const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize)
-{
-    bspxentry_t *e;
-    for (e = bspdata->bspxentries; e; e = e->next) {
-        if (!strcmp(e->lumpname.data(), xname))
-            break;
-    }
-    if (e) {
-        if (xsize)
-            *xsize = e->lumpsize;
-        return e->lumpdata;
-    } else {
-        if (xsize)
-            *xsize = 0;
-        return NULL;
-    }
-}
-
 /*
  * =============
  * LoadBSPFile
@@ -1078,8 +1025,6 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
     int i;
     uint32_t bspxofs;
     const bspx_header_t *bspx;
-
-    bspdata->bspxentries = NULL;
 
     FLogPrint("'{}'\n", filename);
 
@@ -1171,9 +1116,9 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
             while (xlumps-- > 0) {
                 uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
                 uint32_t len = LittleLong(xlump[xlumps].filelen);
-                void *lumpdata = new uint8_t[len];
+                uint8_t *lumpdata = new uint8_t[len];
                 memcpy(lumpdata, (const uint8_t *)header + ofs, len);
-                BSPX_AddLump(bspdata, xlump[xlumps].lumpname.data(), lumpdata, len);
+                bspdata->bspx.transfer(xlump[xlumps].lumpname.data(), lumpdata, len);
             }
         } else {
             if (!memcmp(&bspx->id, "BSPX", 4))
@@ -1298,50 +1243,93 @@ static void WriteLump(bspfile_t &bspfile, size_t lump_num, const T &data)
 template<typename T>
 inline void WriteQ1BSP(bspfile_t &bspfile, const T &bsp)
 {
-    WriteLump(bspfile, LUMP_ENTITIES, bsp.dentdata);
     WriteLump(bspfile, LUMP_PLANES, bsp.dplanes);
-    if (std::holds_alternative<miptexhl_lump>(bsp.dtex))
-        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexhl_lump>(bsp.dtex));
-    else
-        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexq1_lump>(bsp.dtex));
+    WriteLump(bspfile, LUMP_LEAFS, bsp.dleafs);
     WriteLump(bspfile, LUMP_VERTEXES, bsp.dvertexes);
-    WriteLump(bspfile, LUMP_VISIBILITY, bsp.dvisdata);
     WriteLump(bspfile, LUMP_NODES, bsp.dnodes);
     WriteLump(bspfile, LUMP_TEXINFO, bsp.texinfo);
     WriteLump(bspfile, LUMP_FACES, bsp.dfaces);
-    WriteLump(bspfile, LUMP_LIGHTING, bsp.dlightdata);
     WriteLump(bspfile, LUMP_CLIPNODES, bsp.dclipnodes);
-    WriteLump(bspfile, LUMP_LEAFS, bsp.dleafs);
     WriteLump(bspfile, LUMP_MARKSURFACES, bsp.dmarksurfaces);
-    WriteLump(bspfile, LUMP_EDGES, bsp.dedges);
     WriteLump(bspfile, LUMP_SURFEDGES, bsp.dsurfedges);
-    if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels))
+    WriteLump(bspfile, LUMP_EDGES, bsp.dedges);
+    if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels)) {
         WriteLump(bspfile, LUMP_MODELS, std::get<dmodelh2_vector>(bsp.dmodels));
-    else
+    } else {
         WriteLump(bspfile, LUMP_MODELS, std::get<dmodelq1_vector>(bsp.dmodels));
+    }
+    WriteLump(bspfile, LUMP_LIGHTING, bsp.dlightdata);
+    WriteLump(bspfile, LUMP_VISIBILITY, bsp.dvisdata);
+    WriteLump(bspfile, LUMP_ENTITIES, bsp.dentdata);
+    if (std::holds_alternative<miptexhl_lump>(bsp.dtex)) {
+        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexhl_lump>(bsp.dtex));
+    } else {
+        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexq1_lump>(bsp.dtex));
+    }
 }
 
 template<typename T>
 inline void WriteQ2BSP(bspfile_t &bspfile, const T &bsp)
 {
-    WriteLump(bspfile, Q2_LUMP_ENTITIES, bsp.dentdata);
     WriteLump(bspfile, Q2_LUMP_PLANES, bsp.dplanes);
+    WriteLump(bspfile, Q2_LUMP_LEAFS, bsp.dleafs);
     WriteLump(bspfile, Q2_LUMP_VERTEXES, bsp.dvertexes);
-    WriteLump(bspfile, Q2_LUMP_VISIBILITY, bsp.dvis);
     WriteLump(bspfile, Q2_LUMP_NODES, bsp.dnodes);
     WriteLump(bspfile, Q2_LUMP_TEXINFO, bsp.texinfo);
     WriteLump(bspfile, Q2_LUMP_FACES, bsp.dfaces);
-    WriteLump(bspfile, Q2_LUMP_LIGHTING, bsp.dlightdata);
-    WriteLump(bspfile, Q2_LUMP_LEAFS, bsp.dleafs);
     WriteLump(bspfile, Q2_LUMP_LEAFFACES, bsp.dleaffaces);
-    WriteLump(bspfile, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
-    WriteLump(bspfile, Q2_LUMP_EDGES, bsp.dedges);
     WriteLump(bspfile, Q2_LUMP_SURFEDGES, bsp.dsurfedges);
+    WriteLump(bspfile, Q2_LUMP_EDGES, bsp.dedges);
     WriteLump(bspfile, Q2_LUMP_MODELS, bsp.dmodels);
+    WriteLump(bspfile, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
     WriteLump(bspfile, Q2_LUMP_BRUSHES, bsp.dbrushes);
     WriteLump(bspfile, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
     WriteLump(bspfile, Q2_LUMP_AREAS, bsp.dareas);
     WriteLump(bspfile, Q2_LUMP_AREAPORTALS, bsp.dareaportals);
+
+    WriteLump(bspfile, Q2_LUMP_LIGHTING, bsp.dlightdata);
+    WriteLump(bspfile, Q2_LUMP_VISIBILITY, bsp.dvis);
+    WriteLump(bspfile, Q2_LUMP_ENTITIES, bsp.dentdata);
+}
+
+inline void WriteBSPXLumps(bspdata_t *bspdata, bspfile_t &bspfile)
+{
+    if (!bspdata->bspx.entries.size())
+        return;
+    
+    if (bspfile.stream.tellp() & 3)
+        FError("BSPX header is misaligned");
+
+    bspfile.stream <= bspx_header_t(bspdata->bspx.entries.size());
+
+    auto bspxheader = bspfile.stream.tellp();
+
+    // write dummy lump headers
+    for (auto &x : bspdata->bspx.entries) {
+        bspfile.stream <= bspx_lump_t{};
+    }
+
+    std::vector<bspx_lump_t> xlumps;
+    xlumps.reserve(bspdata->bspx.entries.size());
+
+    for (auto &x : bspdata->bspx.entries) {
+        static constexpr char pad[4] {};
+
+        bspx_lump_t &lump = xlumps.emplace_back();
+        lump.filelen = x.second.lumpsize;
+        lump.fileofs = bspfile.stream.tellp();
+        memcpy(lump.lumpname.data(), x.first.c_str(), std::min(x.first.size(), lump.lumpname.size() - 1));
+
+        bspfile.stream.write(reinterpret_cast<const char *>(x.second.lumpdata.get()), x.second.lumpsize);
+
+        if (x.second.lumpsize % 4)
+            bspfile.stream.write(pad, 4 - (x.second.lumpsize % 4));
+    }
+
+    bspfile.stream.seekp(bspxheader);
+
+    for (auto &lump : xlumps)
+        bspfile.stream <= lump;
 }
 
 /*
@@ -1393,45 +1381,7 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
     }
 
     /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
-    if (bspdata->bspxentries) {
-        bspx_header_t xheader;
-        bspxentry_t *x;
-        bspx_lump_t xlumps[64];
-        uint32_t l;
-
-        if (bspfile.stream.tellp() & 3)
-            FError("BSPX header is misaligned");
-
-        for (x = bspdata->bspxentries; x; x = x->next)
-            xheader.numlumps++;
-
-        xheader.numlumps = std::min(xheader.numlumps, (uint32_t) std::size(xlumps)); // FIXME
-
-        bspfile.stream <= xheader;
-
-        auto bspxheader = bspfile.stream.tellp();
-
-        for (size_t i = 0; i < xheader.numlumps; i++)
-            bspfile.stream <= xlumps[i];
-
-        for (x = bspdata->bspxentries, l = 0; x && l < xheader.numlumps; x = x->next, l++) {
-            static constexpr char pad[4] {};
-
-            xlumps[l].filelen = x->lumpsize;
-            xlumps[l].fileofs = bspfile.stream.tellp();
-            xlumps[l].lumpname = x->lumpname;
-
-            bspfile.stream.write(reinterpret_cast<const char *>(x->lumpdata), x->lumpsize);
-
-            if (x->lumpsize % 4)
-                bspfile.stream.write(pad, 4 - (x->lumpsize % 4));
-        }
-
-        bspfile.stream.seekp(bspxheader);
-
-        for (size_t i = 0; i < xheader.numlumps; i++)
-            bspfile.stream <= xlumps[i];
-    }
+    WriteBSPXLumps(bspdata, bspfile);
 
     bspfile.stream.seekp(0);
 
@@ -1528,10 +1478,7 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         Error("Unsupported BSP version: {}", BSPVersionString(bspdata->version));
     }
 
-    if (bspdata->bspxentries) {
-        bspxentry_t *x;
-        for (x = bspdata->bspxentries; x; x = x->next) {
-            LogPrint("{:7} {:<12} {:10}\n", "BSPX", x->lumpname.data(), x->lumpsize);
-        }
+    for (auto &x : bspdata->bspx.entries) {
+        LogPrint("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.lumpsize);
     }
 }

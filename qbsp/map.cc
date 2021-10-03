@@ -358,10 +358,10 @@ int FindTexinfo(const mtexinfo_t &texinfo)
 }
 
 /* detect colors with components in 0-1 and scale them to 0-255 */
-static void normalize_color_format(vec3_t color)
+constexpr void normalize_color_format(qvec3d &color)
 {
     if (color[0] >= 0 && color[0] <= 1 && color[1] >= 0 && color[1] <= 1 && color[2] >= 0 && color[2] <= 1) {
-        VectorScale(color, 255, color);
+        color *= 255;
     }
 }
 
@@ -456,7 +456,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 
     // handle "_mincolor"
     {
-        vec3_t mincolor{0.0, 0.0, 0.0};
+        qvec3d mincolor {};
 
         GetVectorForKey(entity, "_mincolor", mincolor);
         if (VectorCompare(vec3_origin, mincolor, EQUAL_EPSILON)) {
@@ -1732,11 +1732,11 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
     return true;
 }
 
-static void ScaleMapFace(mapface_t *face, const vec3_t scale)
+static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
 {
     const qmat3x3d scaleM{// column-major...
-        static_cast<double>(scale[0]), 0.0, 0.0, 0.0, static_cast<double>(scale[1]), 0.0, 0.0, 0.0,
-        static_cast<double>(scale[2])};
+        scale[0], 0.0, 0.0, 0.0, scale[1], 0.0, 0.0, 0.0,
+        scale[2]};
 
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
@@ -1751,8 +1751,9 @@ static void ScaleMapFace(mapface_t *face, const vec3_t scale)
     // update texinfo
 
     const qmat3x3d inversescaleM{// column-major...
-        static_cast<double>(1 / scale[0]), 0.0, 0.0, 0.0, static_cast<double>(1 / scale[1]), 0.0, 0.0, 0.0,
-        static_cast<double>(1 / scale[2])};
+        1 / scale[0], 0.0, 0.0, 0.0, 1 / scale[1], 0.0, 0.0, 0.0,
+        1 / scale[2]
+    };
 
     const auto &texvecs = face->get_texvecs();
     texvecf newtexvecs;
@@ -1768,7 +1769,7 @@ static void ScaleMapFace(mapface_t *face, const vec3_t scale)
     face->set_texvecs(newtexvecs);
 }
 
-static void RotateMapFace(mapface_t *face, const vec3_t angles)
+static void RotateMapFace(mapface_t *face, const qvec3d &angles)
 {
     const double pitch = DEG2RAD(angles[0]);
     const double yaw = DEG2RAD(angles[1]);
@@ -1802,7 +1803,7 @@ static void RotateMapFace(mapface_t *face, const vec3_t angles)
     face->set_texvecs(newtexvecs);
 }
 
-static void TranslateMapFace(mapface_t *face, const vec3_t &offset)
+static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
 {
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
@@ -1818,6 +1819,7 @@ static void TranslateMapFace(mapface_t *face, const vec3_t &offset)
 
     for (int i = 0; i < 2; i++) {
         qvec4f out = texvecs.at(i);
+        // CHECK: precision loss here?
         out[3] += qv::dot(qvec3f(out), qvec3f(offset) * -1.0f);
         newtexvecs[i] = { out[0], out[1], out[2], out[3] };
     }
@@ -1847,23 +1849,22 @@ void ProcessExternalMapEntity(mapentity_t *entity)
     entity->firstmapbrush = external_worldspawn.firstmapbrush;
     entity->nummapbrushes = external_worldspawn.nummapbrushes;
 
-    vec3_t origin;
+    qvec3d origin;
     GetVectorForKey(entity, "origin", origin);
 
-    vec3_t angles;
+    qvec3d angles;
     GetVectorForKey(entity, "_external_map_angles", angles);
     if (VectorCompare(angles, vec3_origin, EQUAL_EPSILON)) {
         angles[1] = atof(ValueForKey(entity, "_external_map_angle"));
     }
 
-    vec3_t scale;
+    qvec3d scale;
     int ncomps = GetVectorForKey(entity, "_external_map_scale", scale);
     if (ncomps < 3) {
         if (scale[0] == 0.0) {
-            VectorSet(scale, 1, 1, 1);
+            scale = 1;
         } else {
-            scale[1] = scale[0];
-            scale[2] = scale[0];
+            scale = scale[0];
         }
     }
 
@@ -2254,49 +2255,31 @@ void SetKeyValue(mapentity_t *entity, const char *key, const char *value)
 /**
  * returnts number of vector components read
  */
-int GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec)
+int GetVectorForKey(const mapentity_t *entity, const char *szKey, qvec3d &vec)
 {
-    const char *value;
-    double v1, v2, v3;
-
-    value = ValueForKey(entity, szKey);
-    v1 = v2 = v3 = 0;
-    // scanf into doubles, then assign, so it is vec_t size independent
-    const int numComps = sscanf(value, "%lf %lf %lf", &v1, &v2, &v3);
-    vec[0] = v1;
-    vec[1] = v2;
-    vec[2] = v3;
-
-    return numComps;
+    const char *value = ValueForKey(entity, szKey);
+    vec = {};
+    return sscanf(value, "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
 }
 
-void WriteEntitiesToString(void)
+void WriteEntitiesToString()
 {
-    int i;
-    mapentity_t *entity;
-
-    std::string ss;
-
-    for (i = 0; i < map.numentities(); i++) {
-        entity = &map.entities.at(i);
-
+    for (auto &entity : map.entities) {
         /* Check if entity needs to be removed */
-        if (!entity->epairs.size() || IsWorldBrushEntity(entity)) {
+        if (!entity.epairs.size() || IsWorldBrushEntity(&entity)) {
             continue;
         }
 
-        ss += "{\n";
+        map.bsp.dentdata += "{\n";
 
-        for (auto &ep : entity->epairs) {
+        for (auto &ep : entity.epairs) {
             // Limit on Quake's strings of 128 bytes
             // TODO: Warn when limit is exceeded
-            fmt::format_to(std::back_inserter(ss), "\"{}\" \"{}\"\n", ep.first, ep.second);
+            fmt::format_to(std::back_inserter(map.bsp.dentdata), "\"{}\" \"{}\"\n", ep.first, ep.second);
         }
 
-        ss += "}\n";
+        map.bsp.dentdata += "}\n";
     }
-
-    map.exported_entities = std::move(ss);
 }
 
 //====================================================================
@@ -2359,7 +2342,7 @@ static void TestExpandBrushes(const mapentity_t *src)
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        brush_t *hull1brush = LoadBrush(src, mapbrush, {CONTENTS_SOLID}, vec3_origin, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? -1 : 1);
+        brush_t *hull1brush = LoadBrush(src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? -1 : 1);
 
         if (hull1brush != nullptr)
             hull1brushes.push_back(hull1brush);

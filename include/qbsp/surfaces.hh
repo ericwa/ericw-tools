@@ -21,10 +21,4 @@
 
 #pragma once
 
-struct hashvert_t
-{
-    vec3_t point;
-    int num;
-};
-
 surface_t *GatherNodeFaces(node_t *headnode);

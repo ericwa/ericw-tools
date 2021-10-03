@@ -82,13 +82,13 @@ struct lumpdata
 class mapentity_t
 {
 public:
-    vec3_t origin;
+    qvec3d origin { };
 
-    int firstmapbrush;
-    int nummapbrushes;
+    int firstmapbrush = 0;
+    int nummapbrushes = 0;
 
     // Temporary lists used to build `brushes` in the correct order.
-    brush_t *solid, *sky, *detail, *detail_illusionary, *detail_fence, *liquid;
+    brush_t *solid = nullptr, *sky = nullptr, *detail = nullptr, *detail_illusionary = nullptr, *detail_fence = nullptr, *liquid = nullptr;
 
     // tree of key/value pairs
     std::map<std::string, std::string, case_insensitive_less> epairs;
@@ -96,24 +96,16 @@ public:
     std::vector<std::string> epair_order;
 
     aabb3d bounds;
-    brush_t *brushes; /* NULL terminated list */
-    int numbrushes;
+    brush_t *brushes = nullptr; /* NULL terminated list */
+    int numbrushes = 0;
 
-    int firstoutputfacenumber;
-    int outputmodelnumber;
+    int firstoutputfacenumber = -1;
+    std::optional<size_t> outputmodelnumber = std::nullopt;
 
-    int32_t areaportalnum;
-    std::array<int32_t, 2> portalareas;
+    int32_t areaportalnum = 0;
+    std::array<int32_t, 2> portalareas = {};
 
     const mapbrush_t &mapbrush(int i) const;
-
-    mapentity_t()
-        : firstmapbrush(0), nummapbrushes(0), solid(nullptr), sky(nullptr), detail(nullptr),
-          detail_illusionary(nullptr), detail_fence(nullptr), liquid(nullptr), epairs(), brushes(nullptr),
-          numbrushes(0), firstoutputfacenumber(-1), outputmodelnumber(-1), areaportalnum(0), portalareas({})
-    {
-        VectorSet(origin, 0, 0, 0);
-    }
 };
 
 struct texdata_t
@@ -144,31 +136,13 @@ struct mapdata_t
     int numentities() const { return entities.size(); };
     int numplanes() const { return planes.size(); };
     int nummiptex() const { return miptex.size(); };
-    int numtexinfo() const { return static_cast<int>(mtexinfos.size()); };
+    int numtexinfo() const { return mtexinfos.size(); };
 
     /* Misc other global state for the compile process */
     bool leakfile; /* Flag once we've written a leak (.por/.pts) file */
 
-    // Final, exported data
-    std::vector<gtexinfo_t> exported_texinfos;
-    std::vector<dplane_t> exported_planes;
-    std::vector<mleaf_t> exported_leafs;
-    std::vector<bsp2_dnode_t> exported_nodes;
-    std::vector<uint32_t> exported_marksurfaces;
-    std::vector<bsp2_dclipnode_t> exported_clipnodes;
-    std::vector<bsp2_dedge_t> exported_edges;
-    std::vector<qvec3f> exported_vertexes;
-    std::vector<int32_t> exported_surfedges;
-    std::vector<mface_t> exported_faces;
-    std::vector<dmodelh2_t> exported_models;
-    std::vector<uint32_t> exported_leafbrushes;
-    std::vector<q2_dbrushside_qbism_t> exported_brushsides;
-    std::vector<dbrush_t> exported_brushes;
-    std::vector<dareaportal_t> exported_areaportals;
-    std::vector<darea_t> exported_areas;
-    std::vector<miptexhl_t> exported_textures;
-
-    std::string exported_entities;
+    // Final, exported BSP
+    mbsp_t bsp;
 
     // bspx data
     std::vector<uint8_t> exported_lmshifts;
@@ -224,9 +198,9 @@ int FindTexinfo(const mtexinfo_t &texinfo);
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);
 void SetKeyValue(mapentity_t *entity, const char *key, const char *value);
-int GetVectorForKey(const mapentity_t *entity, const char *szKey, vec3_t vec);
+int GetVectorForKey(const mapentity_t *entity, const char *szKey, qvec3d &vec);
 
-void WriteEntitiesToString(void);
+void WriteEntitiesToString();
 
 void FixRotateOrigin(mapentity_t *entity);
 

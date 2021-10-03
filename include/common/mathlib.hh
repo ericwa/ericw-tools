@@ -260,20 +260,6 @@ constexpr void ProjectPointOntoPlane(const T &normal, const vec_t dist, T &point
 
 bool SetPlanePts(const std::array<qvec3d, 3> &planepts, qvec3d &normal, vec_t &dist);
 
-/* Shortcut for output of warnings/errors */
-
-template<typename T>
-inline std::string VecStr(const T &vec)
-{
-    return fmt::format("{} {} {}", (int32_t) vec[0], (int32_t) vec[1], (int32_t) vec[2]);
-}
-
-template<typename T>
-inline std::string VecStrf(const T &vec)
-{
-    return fmt::format("{} {} {}", vec[0], vec[1], vec[2]);
-}
-
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
 void UniformPointOnSphere(vec3_t dir, float u, float v);
 void RandomDir(vec3_t dir);
@@ -284,13 +270,6 @@ qmat3x3d RotateAboutX(double radians);
 qmat3x3d RotateAboutY(double radians);
 qmat3x3d RotateAboutZ(double radians);
 qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal);
-
-// TODO: remove, replace with qaabb
-bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB);
-void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt);
-void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt);
-void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out);
-void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size);
 
 using tri_t = std::tuple<qvec3f, qvec3f, qvec3f>;
 

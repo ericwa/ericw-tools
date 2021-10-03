@@ -270,11 +270,11 @@ static void WADList_LoadTextures()
 {
     for (size_t i = 0; i < map.nummiptex(); i++) {
         // already loaded?
-        if (map.exported_textures[i].data[0])
+        if (map.bsp.dtex.textures[i].data[0])
             continue;
 
         for (auto &wad : wadlist) {
-            if (WAD_LoadLump(wad, map.miptexTextureName(i).c_str(), map.exported_textures[i]))
+            if (WAD_LoadLump(wad, map.miptexTextureName(i).c_str(), map.bsp.dtex.textures[i]))
                 break;
         }
     }
@@ -311,13 +311,13 @@ void WADList_Process()
     }
 
     /* Default texture data to store in worldmodel */
-    map.exported_textures.resize(map.nummiptex());
+    map.bsp.dtex.textures.resize(map.nummiptex());
 
     WADList_LoadTextures();
 
     /* Last pass, mark unfound textures as such */
     for (size_t i = 0; i < map.nummiptex(); i++) {
-        if (!map.exported_textures[i].data[0]) {
+        if (!map.bsp.dtex.textures[i].data[0]) {
             LogPrint("WARNING: Texture {} not found\n", map.miptexTextureName(i));
         }
     }

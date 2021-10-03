@@ -117,7 +117,12 @@ struct lump_t
 struct bspx_header_t
 {
     std::array<char, 4> id = { 'B', 'S', 'P', 'X' }; //'BSPX'
-    uint32_t numlumps = 0;
+    uint32_t numlumps;
+
+    bspx_header_t(uint32_t numlumps) :
+        numlumps(numlumps)
+    {
+    }
 
     auto stream_data()
     {
@@ -127,7 +132,7 @@ struct bspx_header_t
 
 struct bspx_lump_t
 {
-    std::array<char, 24> lumpname;
+    std::array<char, 24> lumpname { };
     uint32_t fileofs;
     uint32_t filelen;
 
@@ -1808,15 +1813,21 @@ struct q2_dheader_t
         return std::tie(ident, version, lumps);
     }
 };
+
 /* ========================================================================= */
 
 struct bspxentry_t
 {
-    std::array<char, 24> lumpname;
-    const void *lumpdata;
+    std::unique_ptr<std::byte[]> lumpdata;
     size_t lumpsize;
 
-    bspxentry_t *next;
+    // bspxentry_t takes ownership over the pointer and will
+    // free it automatically.
+    bspxentry_t(void *lumpdata, size_t lumpsize) :
+        lumpdata(reinterpret_cast<std::byte *>(lumpdata)),
+        lumpsize(lumpsize)
+    {
+    }
 };
 
 struct bspdata_t
@@ -1826,7 +1837,27 @@ struct bspdata_t
     // Stay in monostate until a BSP type is requested.
     std::variant<std::monostate, mbsp_t, bsp29_t, bsp2rmq_t, bsp2_t, q2bsp_t, q2bsp_qbism_t> bsp;
 
-    bspxentry_t *bspxentries;
+    // This can be used with any BSP format.
+    struct
+    {
+        std::unordered_map<std::string, bspxentry_t> entries;
+
+        // convenience function to transfer a generic pointer into
+        // the entries list
+        inline void transfer(const char *xname, uint8_t *&xdata, size_t xsize)
+        {
+            entries.insert_or_assign(xname, bspxentry_t { xdata, xsize });
+            xdata = nullptr;
+        }
+
+        // copies the data over to the BSP
+        void copy(const char *xname, const uint8_t *xdata, size_t xsize)
+        {
+            uint8_t *copy = new uint8_t[xsize];
+            memcpy(copy, xdata, xsize);
+            transfer(xname, copy, xsize);
+        }
+    } bspx;
 };
 
 // native game target ID
@@ -1925,5 +1956,3 @@ void PrintBSPFileSizes(const bspdata_t *bspdata);
  * Returns false if the conversion failed.
  */
 bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
-void BSPX_AddLump(bspdata_t *bspdata, const char *xname, const void *xdata, size_t xsize);
-const void *BSPX_GetLump(bspdata_t *bspdata, const char *xname, size_t *xsize);

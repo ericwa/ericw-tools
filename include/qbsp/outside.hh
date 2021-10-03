@@ -21,5 +21,4 @@
 
 #pragma once
 
-node_t *PointInLeaf(node_t *node, const vec3_t point);
 bool FillOutside(node_t *node, const int hullnum);

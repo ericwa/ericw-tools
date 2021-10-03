@@ -33,7 +33,7 @@
 PointInLeaf
 ===========
 */
-node_t *PointInLeaf(node_t *node, const vec3_t point)
+static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 {
     while (node->planenum != PLANENUM_LEAF) {
         auto &plane = map.planes[node->planenum];
@@ -244,6 +244,7 @@ static std::vector<node_t *> FindOccupiedLeafs(node_t *headnode)
 
         /* find the leaf it's in. Skip opqaue leafs */
         node_t *leaf = PointInLeaf(headnode, entity->origin);
+
         if (leaf->opaque())
             continue;
 
@@ -414,8 +415,7 @@ bool FillOutside(node_t *node, const int hullnum)
         mapentity_t *leakentity = leakline.second->occupant;
         Q_assert(leakentity != nullptr);
 
-        const vec_t *origin = leakentity->origin;
-        LogPrint("WARNING: Reached occupant \"{}\" at ({:.0} {:.0} {:.0}), no filling performed.\n", ValueForKey(leakentity, "classname"), origin[0], origin[1], origin[2]);
+        LogPrint("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n", ValueForKey(leakentity, "classname"), qv::to_string(leakentity->origin));
         if (map.leakfile)
             return false;
 

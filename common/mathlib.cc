@@ -219,47 +219,6 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
     return qmat3x3f(rotations);
 }
 
-// FIXME: remove these
-bool AABBsDisjoint(const vec3_t minsA, const vec3_t maxsA, const vec3_t minsB, const vec3_t maxsB)
-{
-    for (int i = 0; i < 3; i++) {
-        if (maxsA[i] < (minsB[i] - 0.001))
-            return true;
-        if (minsA[i] > (maxsB[i] + 0.001))
-            return true;
-    }
-    return false;
-}
-
-void AABB_Init(vec3_t mins, vec3_t maxs, const vec3_t pt)
-{
-    VectorCopy(pt, mins);
-    VectorCopy(pt, maxs);
-}
-
-void AABB_Expand(vec3_t mins, vec3_t maxs, const vec3_t pt)
-{
-    for (int i = 0; i < 3; i++) {
-        mins[i] = qmin(mins[i], pt[i]);
-        maxs[i] = qmax(maxs[i], pt[i]);
-    }
-}
-
-void AABB_Size(const vec3_t mins, const vec3_t maxs, vec3_t size_out)
-{
-    for (int i = 0; i < 3; i++) {
-        size_out[i] = maxs[i] - mins[i];
-    }
-}
-
-void AABB_Grow(vec3_t mins, vec3_t maxs, const vec3_t size)
-{
-    for (int i = 0; i < 3; i++) {
-        mins[i] -= size[i];
-        maxs[i] += size[i];
-    }
-}
-
 qvec3f Barycentric_FromPoint(const qvec3f &p, const tri_t &tri)
 {
     using std::get;

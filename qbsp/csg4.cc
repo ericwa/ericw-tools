@@ -504,8 +504,7 @@ static face_t *CopyBrushFaces(const brush_t *brush)
     facelist = NULL;
     for (face = brush->faces; face; face = face->next) {
         brushfaces++;
-        newface = new face_t { };
-        *newface = *face;
+        newface = new face_t(*face);
         newface->contents[0] = options.target_game->create_empty_contents();
         newface->contents[1] = brush->contents;
         newface->lmshift[0] = brush->lmshift;

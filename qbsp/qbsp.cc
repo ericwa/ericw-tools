@@ -76,8 +76,8 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
             if (brushes.size()) {
                 node->numleafbrushes = brushes.size();
                 brush_state.total_leaf_brushes += node->numleafbrushes;
-                node->firstleafbrush = map.exported_leafbrushes.size();
-                map.exported_leafbrushes.insert(map.exported_leafbrushes.end(), brushes.begin(), brushes.end());
+                node->firstleafbrush = map.bsp.dleafbrushes.size();
+                map.bsp.dleafbrushes.insert(map.bsp.dleafbrushes.end(), brushes.begin(), brushes.end());
             }
         }
 
@@ -155,7 +155,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
             // see if the plane is allready present
             for (i=0; i<planes.size() ; i++)
             {
-                if (map.exported_planes[std::get<0>(planes[i])].normal[axis] == dir)
+                if (map.bsp.dplanes[std::get<0>(planes[i])].normal[axis] == dir)
                     break;
             }
 
@@ -283,18 +283,17 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
     brush_state = {};
 
     for (const brush_t *b = entity->brushes; b; b = b->next) {
-        dbrush_t brush{(int32_t)map.exported_brushsides.size(), 0, b->contents.native};
+        dbrush_t &brush = map.bsp.dbrushes.emplace_back(dbrush_t { static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native });
 
         auto bevels = AddBrushBevels(b);
 
         for (auto &plane : bevels) {
-            map.exported_brushsides.push_back({
+            map.bsp.dbrushsides.push_back({
                 (uint32_t)std::get<0>(plane), (int32_t)map.mtexinfos[b->faces->texinfo].outputnum.value_or(-1)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }
 
-        map.exported_brushes.push_back(brush);
         brush_state.total_brushes++;
     }
 
@@ -361,7 +360,7 @@ static void FloodAreas_r(mapentity_t *entity, node_t *node)
 		{
             // FIXME: entity #
 			LogPrint("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n",
-				VecStr(node->bounds.mins()), VecStr(node->bounds.maxs()));
+				qv::to_string(node->bounds.mins()), qv::to_string(node->bounds.maxs()));
 			return;
 		}
 
@@ -457,7 +456,7 @@ static void SetAreaPortalAreas_r(mapentity_t *entity, node_t *node)
 	if (!entity->portalareas[1])
 	{
         // FIXME: entity #
-        LogPrint("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n", VecStr(entity->bounds.mins()), VecStr(entity->bounds.maxs()));
+        LogPrint("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n", qv::to_string(entity->bounds.mins()), qv::to_string(entity->bounds.maxs()));
 		return;
 	}
 }
@@ -487,18 +486,18 @@ static void EmitAreaPortals(node_t *headnode)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    map.exported_areaportals.emplace_back();
-    map.exported_areas.emplace_back();
+    map.bsp.dareaportals.emplace_back();
+    map.bsp.dareas.emplace_back();
 
 	for (size_t i = 1; i <= c_areas; i++) {
-        darea_t &area = map.exported_areas.emplace_back();
-		area.firstareaportal = map.exported_areaportals.size();
+        darea_t &area = map.bsp.dareas.emplace_back();
+		area.firstareaportal = map.bsp.dareaportals.size();
 
 		for (auto &e : map.entities) {
 
 			if (!e.areaportalnum)
 				continue;
-			dareaportal_t &dp = map.exported_areaportals.emplace_back();
+			dareaportal_t &dp = map.bsp.dareaportals.emplace_back();
 
 			if (e.portalareas[0] == i)
 			{
@@ -512,11 +511,11 @@ static void EmitAreaPortals(node_t *headnode)
 			}
 		}
 
-		area.numareaportals = map.exported_areaportals.size() - area.firstareaportal;
+		area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
 	}
 
-	LogPrint(LOG_STAT, "{:5} numareas\n", map.exported_areas.size());
-	LogPrint(LOG_STAT, "{:5} numareaportals\n", map.exported_areaportals.size());
+	LogPrint(LOG_STAT, "{:5} numareas\n", map.bsp.dareas.size());
+	LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
 }
 
 /*
@@ -543,23 +542,23 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         return;
 
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
-    if (entity->outputmodelnumber == -1) {
-        entity->outputmodelnumber = static_cast<int>(map.exported_models.size());
-        map.exported_models.push_back({});
+    if (!entity->outputmodelnumber.has_value()) {
+        entity->outputmodelnumber = map.bsp.dmodels.size();
+        map.bsp.dmodels.emplace_back();
     }
 
     if (entity != pWorldEnt()) {
-        char mod[20];
-
         if (entity == pWorldEnt() + 1)
             LogPrint(LOG_PROGRESS, "---- Internal Entities ----\n");
-        snprintf(mod, sizeof(mod), "*%d", entity->outputmodelnumber);
+
+        std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
+
         if (options.fVerbose)
             PrintEntity(entity);
 
         if (hullnum <= 0)
             LogPrint(LOG_STAT, "     MODEL: {}\n", mod);
-        SetKeyValue(entity, "model", mod);
+        SetKeyValue(entity, "model", mod.c_str());
     }
 
     /*
@@ -716,6 +715,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 FloodAreas(entity, nodes);
                 EmitAreaPortals(nodes);
             }*/
+            // TEMP
+            if (options.target_game->id == GAME_QUAKE_II) {
+                map.bsp.dareaportals.emplace_back();
+    
+                map.bsp.dareas.emplace_back();
+                map.bsp.dareas.push_back({ 0, 1 });
+            }
 
             FreeAllPortals(nodes);
         }

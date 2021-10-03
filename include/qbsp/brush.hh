@@ -49,7 +49,7 @@ enum class rotation_t
 };
 
 brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
-    const vec3_t rotate_offset, const rotation_t rottype, const int hullnum);
+    const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const vec3_t normal, const vec_t dist, int *side);

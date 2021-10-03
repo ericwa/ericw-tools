@@ -52,9 +52,9 @@ bool Face_IsTranslucent(const mbsp_t *bsp, const mface_t *face); // mxd
 int Face_ContentsOrSurfaceFlags(
     const mbsp_t *bsp, const mface_t *face); // mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
-vec_t Plane_Dist(const vec3_t &point, const dplane_t *plane);
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point);
-bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t &point);
+vec_t Plane_Dist(const qvec3d &point, const dplane_t *plane);
+bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
+bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
 /**
  * Searches for a face touching a point and facing a certain way.
  * Sometimes (water, sky?) there will be 2 overlapping candidates facing opposite ways, the provided normal

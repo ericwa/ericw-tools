@@ -40,8 +40,7 @@ struct bouncelight_t
     float area;
 
     /* estimated visible AABB culling */
-    vec3_t mins;
-    vec3_t maxs;
+    aabb3d bounds;
 };
 
 // public functions

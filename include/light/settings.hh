@@ -44,7 +44,13 @@ enum class vec3_transformer_t
     NORMALIZE_COLOR_TO_255
 };
 
-void normalize_color_format(vec3_t color);
+/* detect colors with components in 0-1 and scale them to 0-255 */
+constexpr void normalize_color_format(qvec3d &color)
+{
+    if (color[0] >= 0 && color[0] <= 1 && color[1] >= 0 && color[1] <= 1 && color[2] >= 0 && color[2] <= 1) {
+        color *= 255;
+    }
+}
 
 class lockable_setting_t
 {
@@ -127,9 +133,9 @@ public:
 class lockable_vec_t : public lockable_setting_t
 {
 private:
-    float _default, _value, _min, _max;
+    vec_t _default, _value, _min, _max;
 
-    void setFloatInternal(float f, setting_source_t newsource)
+    inline void setFloatInternal(vec_t f, setting_source_t newsource)
     {
         if (changeSource(newsource)) {
             if (f < _min) {
@@ -153,17 +159,17 @@ public:
 
     int intValue() const { return static_cast<int>(_value); }
 
-    float floatValue() const { return _value; }
+    const vec_t &floatValue() const { return _value; }
 
-    void setFloatValue(float f) { setFloatInternal(f, setting_source_t::MAP); }
+    void setFloatValue(vec_t f) { setFloatInternal(f, setting_source_t::MAP); }
 
-    void setFloatValueLocked(float f) { setFloatInternal(f, setting_source_t::COMMANDLINE); }
+    void setFloatValueLocked(vec_t f) { setFloatInternal(f, setting_source_t::COMMANDLINE); }
 
     virtual void setStringValue(const std::string &str, bool locked = false)
     {
-        float f = 0.0f;
+        vec_t f = 0.0;
         try {
-            f = std::stof(str);
+            f = std::stod(str);
         }
         catch (std::exception &) {
             LogPrint("WARNING: couldn't parse '{}' as number for key '{}'\n", str, primaryName());
@@ -179,8 +185,8 @@ public:
         return std::to_string(_value);
     }
 
-    lockable_vec_t(std::vector<std::string> names, float v, float minval = -std::numeric_limits<float>::infinity(),
-        float maxval = std::numeric_limits<float>::infinity())
+    lockable_vec_t(std::vector<std::string> names, vec_t v, vec_t minval = -std::numeric_limits<vec_t>::infinity(),
+        vec_t maxval = std::numeric_limits<vec_t>::infinity())
         : lockable_setting_t(names), _default(v), _value(v), _min(minval), _max(maxval)
     {
         // check the default value is valid
@@ -189,8 +195,8 @@ public:
         Q_assert(_value <= _max);
     }
 
-    lockable_vec_t(std::string name, float v, float minval = -std::numeric_limits<float>::infinity(),
-        float maxval = std::numeric_limits<float>::infinity())
+    lockable_vec_t(std::string name, vec_t v, vec_t minval = -std::numeric_limits<vec_t>::infinity(),
+        vec_t maxval = std::numeric_limits<vec_t>::infinity())
         : lockable_vec_t(std::vector<std::string>{name}, v, minval, maxval)
     {
     }
@@ -221,28 +227,26 @@ public:
 class lockable_vec3_t : public lockable_setting_t
 {
 private:
-    vec3_t _default, _value;
+    qvec3d _default, _value;
     vec3_transformer_t _transformer;
 
-    void transformVec3Value(const vec3_t &val, vec3_t &out) const
+    void transformVec3Value(const qvec3d &val, qvec3d &out) const
     {
         // apply transform
         switch (_transformer) {
             case vec3_transformer_t::NONE: VectorCopy(val, out); break;
             case vec3_transformer_t::MANGLE_TO_VEC: VectorCopy(vec_from_mangle(val), out); break;
             case vec3_transformer_t::NORMALIZE_COLOR_TO_255:
-                VectorCopy(val, out);
+                out = val;
                 normalize_color_format(out);
                 break;
         }
     }
 
-    void transformAndSetVec3Value(const vec3_t &val, setting_source_t newsource)
+    void transformAndSetVec3Value(const qvec3d &val, setting_source_t newsource)
     {
         if (changeSource(newsource)) {
-            vec3_t tmp;
-            transformVec3Value(val, tmp);
-            VectorCopy(tmp, _value);
+            transformVec3Value(val, _value);
         }
     }
 
@@ -251,9 +255,8 @@ public:
         std::vector<std::string> names, vec_t a, vec_t b, vec_t c, vec3_transformer_t t = vec3_transformer_t::NONE)
         : lockable_setting_t(names), _transformer(t)
     {
-        vec3_t tmp = {a, b, c};
-        transformVec3Value(tmp, _default);
-        VectorCopy(_default, _value);
+        transformVec3Value({a, b, c}, _default);
+        _value = _default;
     }
 
     lockable_vec3_t(std::string name, vec_t a, vec_t b, vec_t c, vec3_transformer_t t = vec3_transformer_t::NONE)
@@ -261,33 +264,29 @@ public:
     {
     }
 
-    const vec3_t *vec3Value() const { return &_value; }
+    const qvec3d &vec3Value() const { return _value; }
 
-    void setVec3Value(const vec3_t &val) { transformAndSetVec3Value(val, setting_source_t::MAP); }
+    void setVec3Value(const qvec3d &val) { transformAndSetVec3Value(val, setting_source_t::MAP); }
 
-    void setVec3ValueLocked(const vec3_t &val) { transformAndSetVec3Value(val, setting_source_t::COMMANDLINE); }
+    void setVec3ValueLocked(const qvec3d &val) { transformAndSetVec3Value(val, setting_source_t::COMMANDLINE); }
 
     virtual void setStringValue(const std::string &str, bool locked = false)
     {
-        double vec[3] = {0.0, 0.0, 0.0};
+        qvec3d vec {};
 
         if (sscanf(str.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]) != 3) {
             LogPrint("WARNING: Not 3 values for {}\n", primaryName());
         }
 
-        vec3_t vec3t;
-        for (int i = 0; i < 3; ++i)
-            vec3t[i] = vec[i];
-
         if (locked)
-            setVec3ValueLocked(vec3t);
+            setVec3ValueLocked(vec);
         else
-            setVec3Value(vec3t);
+            setVec3Value(vec);
     }
 
     virtual std::string stringValue() const
     {
-        return fmt::format("{} {} {}", _value[0], _value[1], _value[2]);
+        return qv::to_string(_value);
     }
 };
 

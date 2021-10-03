@@ -270,7 +270,7 @@ const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string 
     return nullptr;
 }
 
-vec_t Plane_Dist(const vec3_t &point, const dplane_t *plane)
+vec_t Plane_Dist(const qvec3d &point, const dplane_t *plane)
 {
     switch (plane->type) {
         case PLANE_X: return point[0] - plane->dist;
@@ -284,7 +284,7 @@ vec_t Plane_Dist(const vec3_t &point, const dplane_t *plane)
     }
 }
 
-static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec3_t &point)
+static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const qvec3d &point)
 {
     if (nodenum < 0) {
         const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
@@ -310,7 +310,7 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const vec
 }
 
 // Tests hull 0 of the given model
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point)
+bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point)
 {
     // fast bounds check
     for (int i = 0; i < 3; ++i) {
@@ -323,7 +323,7 @@ bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t
     return Light_PointInSolid_r(bsp, model->headnode[0], point);
 }
 
-bool Light_PointInWorld(const mbsp_t *bsp, const vec3_t &point)
+bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point)
 {
     return Light_PointInSolid(bsp, &bsp->dmodels[0], point);
 }

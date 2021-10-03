@@ -174,12 +174,18 @@ static std::map<int, const face_t *> pEdgeFaces1;
 
 //============================================================================
 
-using vertidx_t = int;
-using edgeidx_t = int;
-static std::map<std::pair<vertidx_t, vertidx_t>, std::list<edgeidx_t>> hashedges;
-static std::map<std::tuple<int, int, int>, std::list<hashvert_t>> hashverts;
+struct hashvert_t
+{
+    qvec3d point;
+    size_t num;
+};
 
-static void InitHash(void)
+using vertidx_t = size_t;
+using edgeidx_t = size_t;
+static std::map<std::pair<vertidx_t, vertidx_t>, std::list<edgeidx_t>> hashedges;
+static std::map<qvec3i, std::list<hashvert_t>> hashverts;
+
+inline void InitHash()
 {
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
@@ -187,23 +193,22 @@ static void InitHash(void)
     hashedges.clear();
 }
 
-static void AddHashEdge(int v1, int v2, int i)
+inline void AddHashEdge(size_t v1, size_t v2, size_t i)
 {
     hashedges[std::make_pair(v1, v2)].push_front(i);
 }
 
-static std::tuple<int, int, int> HashVec(const vec3_t vec)
+constexpr qvec3i HashVec(const qvec3d &vec)
 {
-    return std::make_tuple(
-        static_cast<int>(floor(vec[0])), static_cast<int>(floor(vec[1])), static_cast<int>(floor(vec[2])));
+    return {
+        floor(vec[0]),
+        floor(vec[1]),
+        floor(vec[2])
+    };
 }
 
-static void AddHashVert(const vec3_t vert, const int global_vert_num)
+inline void AddHashVert(const hashvert_t &hv)
 {
-    hashvert_t hv;
-    VectorCopy(vert, hv.point);
-    hv.num = global_vert_num;
-
     // insert each vert at floor(pos[axis]) and floor(pos[axis]) + 1 (for each axis)
     // so e.g. a vert at (0.99, 0.99, 0.99) shows up if we search at (1.01, 1.01, 1.01)
     // this is a bit wasteful, since it inserts 8 copies of each vert.
@@ -211,8 +216,7 @@ static void AddHashVert(const vec3_t vert, const int global_vert_num)
     for (int x = 0; x <= 1; x++) {
         for (int y = 0; y <= 1; y++) {
             for (int z = 0; z <= 1; z++) {
-                const auto h = std::make_tuple(static_cast<int>(floor(vert[0])) + x,
-                    static_cast<int>(floor(vert[1])) + y, static_cast<int>(floor(vert[2])) + z);
+                const qvec3i h { floor(hv.point[0]) + x, floor(hv.point[1]) + y, floor(hv.point[2]) + z };
                 hashverts[h].push_front(hv);
             }
         }
@@ -224,16 +228,12 @@ static void AddHashVert(const vec3_t vert, const int global_vert_num)
 GetVertex
 =============
 */
-static int GetVertex(mapentity_t *entity, const vec3_t in)
+inline size_t GetVertex(qvec3d vert)
 {
-    int i;
-    vec3_t vert;
-
-    for (i = 0; i < 3; i++) {
-        if (fabs(in[i] - Q_rint(in[i])) < ZERO_EPSILON)
-            vert[i] = Q_rint(in[i]);
-        else
-            vert[i] = in[i];
+    for (auto &v : vert) {
+        double rounded = Q_rint(v);
+        if (fabs(v - rounded) < ZERO_EPSILON)
+            v = rounded;
     }
 
     const auto h = HashVec(vert);
@@ -248,12 +248,12 @@ static int GetVertex(mapentity_t *entity, const vec3_t in)
         }
     }
 
-    const int global_vert_num = static_cast<int>(map.exported_vertexes.size());
+    const size_t global_vert_num = map.bsp.dvertexes.size();
 
-    AddHashVert(vert, global_vert_num);
+    AddHashVert({ vert, global_vert_num });
 
     /* emit a vertex */
-    map.exported_vertexes.push_back({ (float) vert[0], (float) vert[1], (float) vert[2] });
+    map.bsp.dvertexes.emplace_back(vert);
 
     return global_vert_num;
 }
@@ -269,41 +269,30 @@ Don't allow four way edges (FIXME: What is this?)
 Returns a global edge number, possibly negative to indicate a backwards edge.
 ==================
 */
-static int GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2, const face_t *face)
+inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, const face_t *face)
 {
-    int v1, v2;
-    int i;
-
     if (!face->contents[0].is_valid(options.target_game, false))
         FError("Face with invalid contents");
 
-    v1 = GetVertex(entity, p1);
-    v2 = GetVertex(entity, p2);
+    size_t v1 = GetVertex(p1);
+    size_t v2 = GetVertex(p2);
 
     // search for an existing edge from v2->v1
     const std::pair<int, int> edge_hash_key = std::make_pair(v2, v1);
 
-    {
-        bsp2_dedge_t *edge;
-
-        auto it = hashedges.find(edge_hash_key);
-        if (it != hashedges.end()) {
-            for (const int i : it->second) {
-                edge = &map.exported_edges.at(i);
-                if (pEdgeFaces1[i] == NULL && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
-                    pEdgeFaces1[i] = face;
-                    return -i;
-                }
+    auto it = hashedges.find(edge_hash_key);
+    if (it != hashedges.end()) {
+        for (const int i : it->second) {
+            if (pEdgeFaces1[i] == NULL && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+                pEdgeFaces1[i] = face;
+                return -i;
             }
         }
-
-        /* emit an edge */
-        i = static_cast<int>(map.exported_edges.size());
-        map.exported_edges.push_back({});
-        edge = &map.exported_edges.at(i);
-        (*edge)[0] = v1;
-        (*edge)[1] = v2;
     }
+
+    /* emit an edge */
+    size_t i = map.bsp.dedges.size();
+    auto &edge = map.bsp.dedges.emplace_back(bsp2_dedge_t { static_cast<uint32_t>(v1), static_cast<uint32_t>(v2) });
 
     AddHashEdge(v1, v2, i);
 
@@ -318,8 +307,6 @@ FindFaceEdges
 */
 static void FindFaceEdges(mapentity_t *entity, face_t *face)
 {
-    int i;
-
     if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
 
@@ -327,11 +314,13 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
     if (face->w.size() > MAXEDGES)
         FError("Internal error: face->numpoints > MAXEDGES");
 
-    face->edges = new int[face->w.size()] { };
-    for (i = 0; i < face->w.size(); i++) {
+    // C++20 make_shared not supported here
+    face->edges = std::shared_ptr<size_t[]>(new size_t[face->w.size()]);
+
+    for (size_t i = 0; i < face->w.size(); i++) {
         const qvec3d &p1 = face->w[i];
         const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
-        face->edges[i] = GetEdge(entity, &p1[0], &p2[0], face);
+        face->edges[i] = GetEdge(entity, p1, p2, face);
     }
 }
 
@@ -342,12 +331,10 @@ MakeFaceEdges_r
 */
 static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 {
-    face_t *f;
-
     if (node->planenum == PLANENUM_LEAF)
         return progress;
 
-    for (f = node->faces; f; f = f->next) {
+    for (face_t *f = node->faces; f; f = f->next) {
         FindFaceEdges(entity, f);
     }
 
@@ -372,13 +359,13 @@ static void EmitFace(mapentity_t *entity, face_t *face)
 
     // emit a region
     Q_assert(!face->outputnumber.has_value());
-    face->outputnumber = map.exported_faces.size();
+    face->outputnumber = map.bsp.dfaces.size();
     
-    mface_t &out = map.exported_faces.emplace_back();
+    mface_t &out = map.bsp.dfaces.emplace_back();
 
     // emit lmshift
     map.exported_lmshifts.push_back(face->lmshift[1]);
-    Q_assert(map.exported_faces.size() == map.exported_lmshifts.size());
+    Q_assert(map.bsp.dfaces.size() == map.exported_lmshifts.size());
 
     out.planenum = ExportMapPlane(face->planenum);
     out.side = face->planeside;
@@ -388,11 +375,11 @@ static void EmitFace(mapentity_t *entity, face_t *face)
     out.lightofs = -1;
 
     // emit surfedges
-    out.firstedge = static_cast<int32_t>(map.exported_surfedges.size());
-    std::copy(face->edges, face->edges + face->w.size(), std::back_inserter(map.exported_surfedges));
-    delete[] face->edges;
+    out.firstedge = static_cast<int32_t>(map.bsp.dsurfedges.size());
+    std::copy(&face->edges[0], &face->edges[face->w.size()], std::back_inserter(map.bsp.dsurfedges));
+    face->edges.reset();
 
-    out.numedges = static_cast<int32_t>(map.exported_surfedges.size()) - out.firstedge;
+    out.numedges = static_cast<int32_t>(map.bsp.dsurfedges.size()) - out.firstedge;
 }
 
 /*
@@ -405,7 +392,7 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    node->firstface = static_cast<int>(map.exported_faces.size());
+    node->firstface = static_cast<int>(map.bsp.dfaces.size());
 
     for (face_t *face = node->faces; face; face = face->next) {
         Q_assert(face->planenum == node->planenum);
@@ -414,13 +401,13 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
         EmitFace(entity, face);
     }
 
-    node->numfaces = static_cast<int>(map.exported_faces.size()) - node->firstface;
+    node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
 
     GrowNodeRegion(entity, node->children[0]);
     GrowNodeRegion(entity, node->children[1]);
 }
 
-static void CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vertexesCount)
+static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t &vertexesCount)
 {
     if (map.mtexinfos.at(f->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
@@ -428,8 +415,8 @@ static void CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vert
     if (f->lmshift[1] != 4)
         map.needslmshifts = true;
 
-    (*facesCount)++;
-    (*vertexesCount) += f->w.size();
+    facesCount++;
+    vertexesCount += f->w.size();
 }
 
 /*
@@ -437,7 +424,7 @@ static void CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vert
 CountData_r
 ==============
 */
-static void CountData_r(mapentity_t *entity, node_t *node, int *facesCount, int *vertexesCount)
+static void CountData_r(mapentity_t *entity, node_t *node, size_t &facesCount, size_t &vertexesCount)
 {
     face_t *f;
 
@@ -464,16 +451,15 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     Q_assert(entity->firstoutputfacenumber == -1);
-    entity->firstoutputfacenumber = static_cast<int>(map.exported_faces.size());
+    entity->firstoutputfacenumber = static_cast<int>(map.bsp.dfaces.size());
 
-    int facesCount = 0;
-    int vertexesCount = 0;
-    CountData_r(entity, headnode, &facesCount, &vertexesCount);
+    size_t facesCount = 0, vertexesCount = 0;
+    CountData_r(entity, headnode, facesCount, vertexesCount);
 
     // Accessory data
     InitHash();
 
-    firstface = static_cast<int>(map.exported_faces.size());
+    firstface = static_cast<int>(map.bsp.dfaces.size());
     MakeFaceEdges_r(entity, headnode, 0);
 
     pEdgeFaces0.clear();

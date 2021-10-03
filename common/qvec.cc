@@ -55,7 +55,7 @@
  ** Invert 4x4 matrix.
  ** Contributed by David Moore (See Mesa bug #6748)
  */
-static bool gluInvertMatrixd(const double m[16], double invOut[16])
+static bool gluInvertMatrixd(const std::array<double, 16> &m, std::array<double, 16> &invOut)
 {
     double inv[16], det;
     int i;
@@ -139,9 +139,4 @@ qmat2x2f qv::inverse(const qmat2x2f &m)
     };
 
     return result * (1.0f / det);
-}
-
-std::string qv::to_string(const qvec<3, float> &v1)
-{
-    return fmt::format("{} {} {}", v1[0], v1[1], v1[2]);
 }

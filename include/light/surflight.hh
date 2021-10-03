@@ -39,8 +39,7 @@ struct surfacelight_t
     vec3_t color; // Surface color
 
     // Estimated visible AABB culling
-    vec3_t mins;
-    vec3_t maxs;
+    aabb3d bounds;
 };
 
 const std::vector<surfacelight_t> &SurfaceLights();

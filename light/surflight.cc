@@ -83,7 +83,7 @@ static void *MakeSurfaceLightsThread(void *arg)
             if (info->flags.native & Q2_SURF_LIGHT) {
                 qvec3d wc = winding_t::from_face(bsp, face).center();
                 LogPrint("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face),
-                    VecStr(wc));
+                    qv::to_string(wc));
             }
             continue;
         }
@@ -130,7 +130,7 @@ static void *MakeSurfaceLightsThread(void *arg)
             //        There are other more complex variants we could handle documented in the link above.
             // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
             if (cfg.sky_surface.isChanged()) {
-                VectorCopy(*cfg.sky_surface.vec3Value(), texturecolor);
+                VectorCopy(cfg.sky_surface.vec3Value(), texturecolor);
             }
         }
 
@@ -164,11 +164,10 @@ static void *MakeSurfaceLightsThread(void *arg)
         VectorCopy(texturecolor, l.color);
 
         // Init bbox...
-        VectorSet(l.mins, 0, 0, 0);
-        VectorSet(l.maxs, 0, 0, 0);
+        l.bounds = qvec3d(0);
 
         if (!novisapprox)
-            EstimateVisibleBoundsAtPoint(facemidpoint, l.mins, l.maxs);
+            l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
 
         // Store light...
         unique_lock<mutex> lck{surfacelights_lock};

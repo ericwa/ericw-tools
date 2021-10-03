@@ -159,7 +159,7 @@ static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t 
         const dmodelh2_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
-            return fmt::format("brush entity with mins ({}) maxs ({}) ({})", VecStrf(info->mins), VecStrf(info->maxs), EntDict_StringForKey(entity, "classname"));
+            return fmt::format("brush entity with mins ({}) maxs ({}) ({})", qv::to_string(info->mins), qv::to_string(info->maxs), EntDict_StringForKey(entity, "classname"));
         }
     }
 
@@ -273,11 +273,10 @@ bool EntDict_CheckTargetnameKeyMatched(
 static void SetupSpotlights(const globalconfig_t &cfg)
 {
     for (light_t &entity : all_lights) {
-        float targetdist = 0.0f; // mxd
+        vec_t targetdist = 0.0; // mxd
         if (entity.targetent) {
-            vec3_t targetOrigin;
-            EntDict_VectorForKey(*entity.targetent, "origin", targetOrigin);
-            VectorSubtract(targetOrigin, *entity.origin.vec3Value(), entity.spotvec);
+            qvec3d targetOrigin = EntDict_VectorForKey(*entity.targetent, "origin");
+            VectorSubtract(targetOrigin, entity.origin.vec3Value(), entity.spotvec);
             targetdist = VectorLength(entity.spotvec); // mxd
             VectorNormalize(entity.spotvec);
             entity.spotlight = true;
@@ -293,7 +292,7 @@ static void SetupSpotlights(const globalconfig_t &cfg)
 
             // mxd. Apply autofalloff?
             if (targetdist > 0.0f && entity.falloff.floatValue() == 0 && cfg.spotlightautofalloff.boolValue()) {
-                const float coneradius = targetdist * tan(angle / 2 * Q_PI / 180);
+                const vec_t coneradius = targetdist * tan(angle / 2 * Q_PI / 180);
                 entity.falloff.setFloatValue(targetdist + coneradius);
             }
         }
@@ -318,7 +317,7 @@ static void CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
     if (entity->falloff.floatValue() > 0.0f && entity->getFormula() != LF_LINEAR) {
         LogPrint("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
                  "   {} at ({})\n",
-            entity->classname(), VecStr(*entity->origin.vec3Value()));
+            entity->classname(), qv::to_string(entity->origin.vec3Value()));
         entity->falloff.setFloatValue(0.0f);
     }
 
@@ -329,7 +328,7 @@ static void CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
             LogPrint("WARNING: unknown formula number ({}) in delay field\n"
                      "   {} at ({})\n"
                      "   (further formula warnings will be supressed)\n",
-                entity->getFormula(), entity->classname(), VecStr(*entity->origin.vec3Value()));
+                entity->getFormula(), entity->classname(), qv::to_string(entity->origin.vec3Value()));
         }
         entity->formula.setFloatValue(LF_LINEAR);
     }
@@ -377,8 +376,8 @@ static bool Dirt_ResolveFlag(const globalconfig_t &cfg, int dirtInt)
  * AddSun
  * =============
  */
-static void AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const vec3_t color, int dirtInt,
-    float sun_anglescale, const int style, const std::string &suntexture)
+static void AddSun(const globalconfig_t &cfg, const qvec3d &sunvec, vec_t light, const qvec3d &color, int dirtInt,
+    vec_t sun_anglescale, const int style, const std::string &suntexture)
 {
     if (light == 0.0f)
         return;
@@ -413,15 +412,15 @@ static void AddSun(const globalconfig_t &cfg, vec3_t sunvec, vec_t light, const 
  * From q3map2
  * =============
  */
-static void SetupSun(const globalconfig_t &cfg, vec_t light, const vec3_t color, const vec3_t sunvec_in,
-    const float sun_anglescale, const float sun_deviance, const int sunlight_dirt, const int style,
+static void SetupSun(const globalconfig_t &cfg, vec_t light, const qvec3d &color, const qvec3d &sunvec_in,
+    const vec_t sun_anglescale, const vec_t sun_deviance, const int sunlight_dirt, const int style,
     const std::string &suntexture)
 {
     vec3_t sunvec;
     int i;
     int sun_num_samples = (sun_deviance == 0 ? 1 : sunsamples); // mxd
-    float sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
-    float sun_deviance_sq = sun_deviance * sun_deviance; // mxd
+    vec_t sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
+    vec_t sun_deviance_sq = sun_deviance * sun_deviance; // mxd
 
     VectorCopy(sunvec_in, sunvec);
     VectorNormalize(sunvec);
@@ -472,19 +471,18 @@ static void SetupSuns(const globalconfig_t &cfg)
             // Set sun vector
             vec3_t sunvec;
             if (entity.targetent) {
-                vec3_t target_pos;
-                EntDict_VectorForKey(*entity.targetent, "origin", target_pos);
-                VectorSubtract(target_pos, *entity.origin.vec3Value(), sunvec);
-            } else if (VectorLengthSq(*entity.mangle.vec3Value()) > 0) {
-                VectorCopy(*entity.mangle.vec3Value(), sunvec);
+                qvec3d target_pos = EntDict_VectorForKey(*entity.targetent, "origin");
+                VectorSubtract(target_pos, entity.origin.vec3Value(), sunvec);
+            } else if (VectorLengthSq(entity.mangle.vec3Value()) > 0) {
+                VectorCopy(entity.mangle.vec3Value(), sunvec);
             } else { // Use { 0, 0, 0 } as sun target...
                 LogPrint("WARNING: sun missing target, { 0 0 0 } used.\n");
-                VectorCopy(*entity.origin.vec3Value(), sunvec);
+                VectorCopy(entity.origin.vec3Value(), sunvec);
                 VectorInverse(sunvec);
             }
 
             // Add the sun
-            SetupSun(cfg, entity.light.floatValue(), *entity.color.vec3Value(), sunvec, entity.anglescale.floatValue(),
+            SetupSun(cfg, entity.light.floatValue(), entity.color.vec3Value(), sunvec, entity.anglescale.floatValue(),
                 entity.deviance.floatValue(), entity.dirt.intValue(), entity.style.intValue(),
                 entity.suntexture.stringValue());
 
@@ -493,12 +491,12 @@ static void SetupSuns(const globalconfig_t &cfg)
         }
     }
 
-    SetupSun(cfg, cfg.sunlight.floatValue(), *cfg.sunlight_color.vec3Value(), *cfg.sunvec.vec3Value(),
+    SetupSun(cfg, cfg.sunlight.floatValue(), cfg.sunlight_color.vec3Value(), cfg.sunvec.vec3Value(),
         cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue(), 0, "");
 
     if (cfg.sun2.floatValue() != 0) {
         LogPrint("creating sun2\n");
-        SetupSun(cfg, cfg.sun2.floatValue(), *cfg.sun2_color.vec3Value(), *cfg.sun2vec.vec3Value(),
+        SetupSun(cfg, cfg.sun2.floatValue(), cfg.sun2_color.vec3Value(), cfg.sun2vec.vec3Value(),
             cfg.global_anglescale.floatValue(), cfg.sun_deviance.floatValue(), cfg.sunlight_dirt.intValue(), 0, "");
     }
 }
@@ -514,16 +512,16 @@ static void SetupSuns(const globalconfig_t &cfg)
  * FIXME: this is becoming a mess
  * =============
  */
-static void SetupSkyDome(const globalconfig_t &cfg, float upperLight, const vec3_t upperColor, const int upperDirt,
-    const float upperAnglescale, const int upperStyle, const std::string &upperSuntexture, float lowerLight,
-    const vec3_t lowerColor, const int lowerDirt, const float lowerAnglescale, const int lowerStyle,
+static void SetupSkyDome(const globalconfig_t &cfg, vec_t upperLight, const qvec3d &upperColor, const int upperDirt,
+    const vec_t upperAnglescale, const int upperStyle, const std::string &upperSuntexture, vec_t lowerLight,
+    const qvec3d &lowerColor, const int lowerDirt, const vec_t lowerAnglescale, const int lowerStyle,
     const std::string &lowerSuntexture)
 {
     int i, j, numSuns;
     int angleSteps, elevationSteps;
     int iterations;
-    float angle, elevation;
-    float angleStep, elevationStep;
+    vec_t angle, elevation;
+    vec_t angleStep, elevationStep;
     vec3_t direction;
 
     /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
@@ -545,8 +543,8 @@ static void SetupSkyDome(const globalconfig_t &cfg, float upperLight, const vec3
     /* calc individual sun brightness */
     numSuns = angleSteps * elevationSteps + 1;
 
-    const float sunlight2value = upperLight / numSuns;
-    const float sunlight3value = lowerLight / numSuns;
+    const vec_t sunlight2value = upperLight / numSuns;
+    const vec_t sunlight3value = lowerLight / numSuns;
 
     /* iterate elevation */
     elevation = elevationStep * 0.5f;
@@ -599,8 +597,8 @@ static void SetupSkyDome(const globalconfig_t &cfg, float upperLight, const vec3
 static void SetupSkyDomes(const globalconfig_t &cfg)
 {
     // worldspawn "legacy" skydomes
-    SetupSkyDome(cfg, cfg.sunlight2.floatValue(), *cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(),
-        cfg.global_anglescale.floatValue(), 0, "", cfg.sunlight3.floatValue(), *cfg.sunlight3_color.vec3Value(),
+    SetupSkyDome(cfg, cfg.sunlight2.floatValue(), cfg.sunlight2_color.vec3Value(), cfg.sunlight2_dirt.intValue(),
+        cfg.global_anglescale.floatValue(), 0, "", cfg.sunlight3.floatValue(), cfg.sunlight3_color.vec3Value(),
         cfg.sunlight2_dirt.intValue(), cfg.global_anglescale.floatValue(), 0, "");
 
     // new per-entity sunlight2/3 skydomes
@@ -608,12 +606,12 @@ static void SetupSkyDomes(const globalconfig_t &cfg)
         if ((entity.sunlight2.boolValue() || entity.sunlight3.boolValue()) && entity.light.intValue() > 0) {
             if (entity.sunlight2.boolValue()) {
                 // Add the upper dome, like sunlight2 (pointing down)
-                SetupSkyDome(cfg, entity.light.floatValue(), *entity.color.vec3Value(), entity.dirt.intValue(),
+                SetupSkyDome(cfg, entity.light.floatValue(), entity.color.vec3Value(), entity.dirt.intValue(),
                     entity.anglescale.floatValue(), entity.style.intValue(), entity.suntexture.stringValue(), 0,
                     vec3_origin, 0, 0, 0, "");
             } else {
                 // Add the lower dome, like sunlight3 (pointing up)
-                SetupSkyDome(cfg, 0, vec3_origin, 0, 0, 0, "", entity.light.floatValue(), *entity.color.vec3Value(),
+                SetupSkyDome(cfg, 0, vec3_origin, 0, 0, 0, "", entity.light.floatValue(), entity.color.vec3Value(),
                     entity.dirt.intValue(), entity.anglescale.floatValue(), entity.style.intValue(),
                     entity.suntexture.stringValue());
             }
@@ -653,9 +651,9 @@ static void JitterEntity(const light_t entity)
         light2.generated = true; // don't write generated light to bsp
 
         /* jitter it */
-        vec3_t neworigin = {(*entity.origin.vec3Value())[0] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue(),
-            (*entity.origin.vec3Value())[1] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue(),
-            (*entity.origin.vec3Value())[2] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue()};
+        qvec3d neworigin = {(entity.origin.vec3Value())[0] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue(),
+            (entity.origin.vec3Value())[1] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue(),
+            (entity.origin.vec3Value())[2] + (Random() * 2.0f - 1.0f) * entity.deviance.floatValue()};
         light2.origin.setVec3Value(neworigin);
     }
 }
@@ -669,10 +667,10 @@ static void JitterEntities()
     }
 }
 
-void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float neard)
+void Matrix4x4_CM_Projection_Inf(std::array<vec_t, 16> &proj, vec_t fovx, vec_t fovy, vec_t neard)
 {
-    float xmin, xmax, ymin, ymax;
-    float nudge = 1;
+    vec_t xmin, xmax, ymin, ymax;
+    constexpr vec_t nudge = 1;
 
     // proj
     ymax = neard * tan(fovy * Q_PI / 360.0);
@@ -698,7 +696,7 @@ void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float near
 
     proj[2] = 0;
     proj[6] = 0;
-    proj[10] = -1 * ((float)(1 << 21) / (1 << 22));
+    proj[10] = -1 * ((vec_t)(1 << 21) / (1 << 22));
     proj[14] = -2 * neard * nudge;
 
     proj[3] = 0;
@@ -706,10 +704,10 @@ void Matrix4x4_CM_Projection_Inf(float *proj, float fovx, float fovy, float near
     proj[11] = -1;
     proj[15] = 0;
 }
-float *Matrix4x4_CM_NewRotation(float ret[16], float a, float x, float y, float z)
+std::array<vec_t, 16> &Matrix4x4_CM_NewRotation(std::array<vec_t, 16> &ret, vec_t a, vec_t x, vec_t y, vec_t z)
 {
-    float c = cos(a * Q_PI / 180.0);
-    float s = sin(a * Q_PI / 180.0);
+    vec_t c = cos(a * Q_PI / 180.0);
+    vec_t s = sin(a * Q_PI / 180.0);
 
     ret[0] = x * x * (1 - c) + c;
     ret[4] = x * y * (1 - c) - z * s;
@@ -732,7 +730,7 @@ float *Matrix4x4_CM_NewRotation(float ret[16], float a, float x, float y, float 
     ret[15] = 1;
     return ret;
 }
-float *Matrix4x4_CM_NewTranslation(float ret[16], float x, float y, float z)
+std::array<vec_t, 16> &Matrix4x4_CM_NewTranslation(std::array<vec_t, 16> &ret, vec_t x, vec_t y, vec_t z)
 {
     ret[0] = 1;
     ret[4] = 0;
@@ -755,7 +753,7 @@ float *Matrix4x4_CM_NewTranslation(float ret[16], float x, float y, float z)
     ret[15] = 1;
     return ret;
 }
-void Matrix4_Multiply(const float *a, const float *b, float *out)
+void Matrix4_Multiply(const std::array<vec_t, 16> &a, const std::array<vec_t, 16> &b, std::array<vec_t, 16> &out)
 {
     out[0] = a[0] * b[0] + a[4] * b[1] + a[8] * b[2] + a[12] * b[3];
     out[1] = a[1] * b[0] + a[5] * b[1] + a[9] * b[2] + a[13] * b[3];
@@ -777,12 +775,12 @@ void Matrix4_Multiply(const float *a, const float *b, float *out)
     out[14] = a[2] * b[12] + a[6] * b[13] + a[10] * b[14] + a[14] * b[15];
     out[15] = a[3] * b[12] + a[7] * b[13] + a[11] * b[14] + a[15] * b[15];
 }
-void Matrix4x4_CM_ModelViewMatrix(float *modelview, const vec3_t viewangles, const vec3_t vieworg)
+void Matrix4x4_CM_ModelViewMatrix(std::array<vec_t, 16> &modelview, const qvec3d &viewangles, const qvec3d &vieworg)
 {
-    float t2[16];
-    float tempmat[16];
+    std::array<vec_t, 16> t2;
+    std::array<vec_t, 16> tempmat;
     // load identity.
-    memset(modelview, 0, sizeof(*modelview) * 16);
+    modelview = {};
 #if FULLYGL
     modelview[0] = 1;
     modelview[5] = 1;
@@ -808,29 +806,28 @@ void Matrix4x4_CM_ModelViewMatrix(float *modelview, const vec3_t viewangles, con
     Matrix4_Multiply(
         tempmat, Matrix4x4_CM_NewTranslation(t2, -vieworg[0], -vieworg[1], -vieworg[2]), modelview); // put Z going up
 }
-void Matrix4x4_CM_MakeModelViewProj(
-    const vec3_t viewangles, const vec3_t vieworg, float fovx, float fovy, float *modelviewproj)
+
+static void Matrix4x4_CM_MakeModelViewProj(
+    const qvec3d &viewangles, const qvec3d &vieworg, vec_t fovx, vec_t fovy, std::array<vec_t, 16> &modelviewproj)
 {
-    float modelview[16];
-    float proj[16];
+    std::array<vec_t, 16> modelview;
+    std::array<vec_t, 16> proj;
 
     Matrix4x4_CM_ModelViewMatrix(modelview, viewangles, vieworg);
     Matrix4x4_CM_Projection_Inf(proj, fovx, fovy, 4);
     Matrix4_Multiply(proj, modelview, modelviewproj);
 }
-float CalcFov(float fov_x, float width, float height)
-{
-    float a;
-    float x;
 
+inline vec_t CalcFov(vec_t fov_x, vec_t width, vec_t height)
+{
     if (fov_x < 1 || fov_x > 179)
         FError("Unsupported fov: {}. Expected a value in [1..179] range.", fov_x);
 
-    x = fov_x / 360 * Q_PI;
+    vec_t x = fov_x / 360 * Q_PI;
     x = tan(x);
     x = width / x;
 
-    a = atan(height / x);
+    vec_t a = atan(height / x);
 
     a = a * 360 / Q_PI;
 
@@ -965,7 +962,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
                 const auto anglescale = entdict.find("_anglescale");
                 if (anglescale != entdict.end()) {
                     // Convert from 0..2 to 0..1 range...
-                    const float val = qmin(1.0f, qmax(0.0f, EntDict_FloatForKey(entdict, "_anglescale") * 0.5f));
+                    const vec_t val = qmin(1.0, qmax(0.0, EntDict_FloatForKey(entdict, "_anglescale") * 0.5));
                     entdict.set("_anglescale", std::to_string(val));
                 }
             }
@@ -980,13 +977,13 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             entity.settings().setSettings(*entity.epairs, false);
 
             if (entity.mangle.isChanged()) {
-                const qvec3f temp = vec_from_mangle(*entity.mangle.vec3Value());
+                const qvec3f temp = vec_from_mangle(entity.mangle.vec3Value());
                 VectorCopy(temp, entity.spotvec);
                 entity.spotlight = true;
 
                 if (!entity.projangle.isChanged()) {
                     // copy from mangle
-                    entity.projangle.setVec3Value(*entity.mangle.vec3Value());
+                    entity.projangle.setVec3Value(entity.mangle.vec3Value());
                 }
             }
 
@@ -1001,9 +998,8 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 
                 if (!entity.projangle.isChanged()) { // mxd
                     // Copy from angles
-                    vec3_t angles;
-                    EntDict_VectorForKey(entdict, "angles", angles);
-                    vec3_t mangle{angles[1], -angles[0], angles[2]}; // -pitch yaw roll -> yaw pitch roll
+                    qvec3d angles = EntDict_VectorForKey(entdict, "angles");
+                    qvec3d mangle{angles[1], -angles[0], angles[2]}; // -pitch yaw roll -> yaw pitch roll
                     entity.projangle.setVec3Value(mangle);
 
                     entity.spotlight = true;
@@ -1012,12 +1008,12 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 
             if (entity.projectedmip) {
                 if (entity.projectedmip->width > entity.projectedmip->height)
-                    Matrix4x4_CM_MakeModelViewProj(*entity.projangle.vec3Value(), *entity.origin.vec3Value(),
+                    Matrix4x4_CM_MakeModelViewProj(entity.projangle.vec3Value(), entity.origin.vec3Value(),
                         entity.projfov.floatValue(),
                         CalcFov(entity.projfov.floatValue(), entity.projectedmip->width, entity.projectedmip->height),
                         entity.projectionmatrix);
                 else
-                    Matrix4x4_CM_MakeModelViewProj(*entity.projangle.vec3Value(), *entity.origin.vec3Value(),
+                    Matrix4x4_CM_MakeModelViewProj(entity.projangle.vec3Value(), entity.origin.vec3Value(),
                         CalcFov(entity.projfov.floatValue(), entity.projectedmip->height, entity.projectedmip->width),
                         entity.projfov.floatValue(), entity.projectionmatrix);
             }
@@ -1030,7 +1026,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         "{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
 }
 
-static void FixLightOnFace(const mbsp_t *bsp, const vec3_t &point, vec3_t &point_out)
+static void FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, vec3_t &point_out)
 {
     // FIXME: Check all shadow casters
     if (!Light_PointInWorld(bsp, point)) {
@@ -1039,8 +1035,7 @@ static void FixLightOnFace(const mbsp_t *bsp, const vec3_t &point, vec3_t &point
     }
 
     for (int i = 0; i < 6; i++) {
-        vec3_t testpoint;
-        VectorCopy(point, testpoint);
+        qvec3d testpoint = point;
 
         int axis = i / 2;
         bool add = i % 2;
@@ -1064,36 +1059,37 @@ void FixLightsOnFaces(const mbsp_t *bsp)
     for (light_t &entity : all_lights) {
         if (entity.light.floatValue() != 0) {
             vec3_t tmp;
-            FixLightOnFace(bsp, *entity.origin.vec3Value(), tmp);
+            FixLightOnFace(bsp, entity.origin.vec3Value(), tmp);
             entity.origin.setVec3Value(tmp);
         }
     }
 }
 
-void EstimateVisibleBoundsAtPoint(const qvec3d &point, vec3_t mins, vec3_t maxs)
+aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
 {
     const int N = 32;
     const int N2 = N * N;
 
     raystream_intersection_t *rs = MakeIntersectionRayStream(N2);
 
-    AABB_Init(mins, maxs, &point[0]);
+    aabb3d bounds = point;
+
     for (int x = 0; x < N; x++) {
         for (int y = 0; y < N; y++) {
-            const vec_t u1 = static_cast<float>(x) / static_cast<float>(N - 1);
-            const vec_t u2 = static_cast<float>(y) / static_cast<float>(N - 1);
+            const vec_t u1 = static_cast<vec_t>(x) / static_cast<vec_t>(N - 1);
+            const vec_t u2 = static_cast<vec_t>(y) / static_cast<vec_t>(N - 1);
 
             vec3_t dir;
             UniformPointOnSphere(dir, u1, u2);
 
-            rs->pushRay(0, point, dir, 65536.0f);
+            rs->pushRay(0, point, dir, 65536.0);
         }
     }
 
     rs->tracePushedRaysIntersection(nullptr);
 
     for (int i = 0; i < N2; i++) {
-        const float dist = rs->getPushedRayHitDist(i);
+        const vec_t dist = rs->getPushedRayHitDist(i);
         vec3_t dir;
         rs->getPushedRayDir(i, dir);
 
@@ -1101,14 +1097,13 @@ void EstimateVisibleBoundsAtPoint(const qvec3d &point, vec3_t mins, vec3_t maxs)
         vec3_t stop;
         VectorMA(point, dist, dir, stop);
 
-        AABB_Expand(mins, maxs, stop);
+        bounds += stop;
     }
 
+    delete rs;
+
     // grow it by 25% in each direction
-    vec3_t size;
-    AABB_Size(mins, maxs, size);
-    VectorScale(size, 0.25, size);
-    AABB_Grow(mins, maxs, size);
+    return bounds.grow(bounds.size() * 0.25);
 
     /*
     LogPrint("light at {} {} {} has mins {} {} {} maxs {} {} {}\n",
@@ -1122,13 +1117,11 @@ void EstimateVisibleBoundsAtPoint(const qvec3d &point, vec3_t mins, vec3_t maxs)
            maxs[1],
            maxs[2]);
     */
-
-    delete rs;
 }
 
-static void EstimateLightAABB(light_t *light)
+inline void EstimateLightAABB(light_t *light)
 {
-    EstimateVisibleBoundsAtPoint(*light->origin.vec3Value(), light->mins, light->maxs);
+    light->bounds = EstimateVisibleBoundsAtPoint(light->origin.vec3Value());
 }
 
 static void *EstimateLightAABBThread(void *arg)
@@ -1201,12 +1194,12 @@ const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::strin
     return nullptr;
 }
 
-void EntDict_VectorForKey(const entdict_t &ent, const std::string &key, vec3_t vec)
+qvec3d EntDict_VectorForKey(const entdict_t &ent, const std::string &key)
 {
     const std::string &value = EntDict_StringForKey(ent, key);
-
-    VectorSet(vec, 0, 0, 0);
+    qvec3d vec { };
     sscanf(value.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
+    return vec;
 }
 
 /*
@@ -1236,13 +1229,13 @@ static std::vector<light_t> surfacelight_templates;
 static std::ofstream surflights_dump_file;
 static std::filesystem::path surflights_dump_filename;
 
-static void SurfLights_WriteEntityToFile(light_t *entity, const vec3_t pos)
+static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3d &pos)
 {
     Q_assert(entity->epairs != nullptr);
 
     entdict_t epairs{*entity->epairs};
     EntDict_RemoveValueForKey(epairs, "_surface");
-    epairs.set("origin", VecStr(pos));
+    epairs.set("origin", qv::to_string(pos));
 
     surflights_dump_file << EntData_Write({epairs});
 }
@@ -1326,14 +1319,14 @@ static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *fa
  ================
  */
 static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp,
-    int numverts, qvec3d *verts, float subdivide_size)
+    int numverts, qvec3d *verts, vec_t subdivide_size)
 {
     int i, j;
-    float m;
+    vec_t m;
     qvec3d front[64], back[64];
     int f, b;
-    float dist[64];
-    float frac;
+    vec_t dist[64];
+    vec_t frac;
     // glpoly_t        *poly;
     // float   s, t;
 
@@ -1439,11 +1432,11 @@ bool ParseLightsFile(const std::filesystem::path &fname)
         entdict_t &d = radlights.emplace_back();
         d.set("_surface", parser.token);
         parser.parse_token();
-        float r = std::stof(parser.token);
+        vec_t r = std::stod(parser.token);
         parser.parse_token();
-        float g = std::stof(parser.token);
+        vec_t g = std::stod(parser.token);
         parser.parse_token();
-        float b = std::stof(parser.token);
+        vec_t b = std::stod(parser.token);
         d.set("_color", fmt::format("{} {} {}", r, g, b));
         parser.parse_token();
         d.set("light", parser.token);

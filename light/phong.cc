@@ -593,7 +593,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         // sanity check
         if (!neighboursToSmooth.size()) {
             for (auto vertIndexNormalPair : smoothedNormals) {
-                Q_assert(qv::epsilonEqual(vertIndexNormalPair.second, f_norm, EQUAL_EPSILON));
+                Q_assert(qv::epsilonEqual(vertIndexNormalPair.second, f_norm, (float) EQUAL_EPSILON));
             }
         }
 

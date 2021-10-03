@@ -20,11 +20,3 @@
 
 #include <light/settings.hh>
 #include <common/mathlib.hh>
-
-/* detect colors with components in 0-1 and scale them to 0-255 */
-void normalize_color_format(vec3_t color)
-{
-    if (color[0] >= 0 && color[0] <= 1 && color[1] >= 0 && color[1] <= 1 && color[2] >= 0 && color[2] <= 1) {
-        VectorScale(color, 255, color);
-    }
-}

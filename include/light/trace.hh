@@ -67,10 +67,10 @@ struct hitresult_t
  * Convenience functions TestLight and TestSky will test against all shadow
  * casting bmodels and self-shadow the model 'self' if self != NULL.
  */
-hitresult_t TestSky(const vec3_t &start, const vec3_t &dirn, const modelinfo_t *self, const mface_t **face_out);
-hitresult_t TestLight(const vec3_t &start, const vec3_t &stop, const modelinfo_t *self);
+hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out);
+hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self);
 #if 0
-hittype_t DirtTrace(const vec3_t &start, const vec3_t &dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out);
+hittype_t DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out);
 #endif
 
 class modelinfo_t;

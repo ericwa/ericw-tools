@@ -717,7 +717,7 @@ static bool TraceFaces(traceinfo_t *ti, int node, const vec3_t start, const vec3
 // Embree wrappers
 //
 
-hitresult_t TestSky(const vec3_t &start, const vec3_t &dirn, const modelinfo_t *self, const mface_t **face_out)
+hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
@@ -732,7 +732,7 @@ hitresult_t TestSky(const vec3_t &start, const vec3_t &dirn, const modelinfo_t *
     FError("no backend available");
 }
 
-hitresult_t TestLight(const vec3_t &start, const vec3_t &stop, const modelinfo_t *self)
+hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
 {
 #ifdef HAVE_EMBREE
     if (rtbackend == backend_embree) {
@@ -747,7 +747,7 @@ hitresult_t TestLight(const vec3_t &start, const vec3_t &stop, const modelinfo_t
     FError("no backend available");
 }
 
-hittype_t DirtTrace(const vec3_t &start, const vec3_t &dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out,
+hittype_t DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out,
     plane_t *hitplane_out, const mface_t **face_out)
 {
 #ifdef HAVE_EMBREE

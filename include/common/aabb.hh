@@ -62,7 +62,9 @@ public:
 
     constexpr aabb(const V &mins, const V &maxs) : m_mins(mins), m_maxs(maxs) { fix(); }
 
-    constexpr aabb(const aabb<N, V> &other) : m_mins(other.m_mins), m_maxs(other.m_maxs) { fix(); }
+    constexpr aabb(const V &points) : aabb(points, points) { }
+
+    constexpr aabb(const aabb<N, V> &other) : aabb(other.m_mins, other.m_maxs) { }
 
     constexpr bool operator==(const aabb<N, V> &other) const { return m_mins == other.m_mins && m_maxs == other.m_maxs; }
 
@@ -70,12 +72,17 @@ public:
 
     constexpr const V &maxs() const { return m_maxs; }
 
-    constexpr bool disjoint(const aabb<N, V> &other) const
+    constexpr aabb translate(const V &vec) const
+    {
+        return { m_mins + vec, m_maxs + vec };
+    }
+
+    constexpr bool disjoint(const aabb<N, V> &other, const typename V::value_type &epsilon = 0) const
     {
         for (int i = 0; i < N; i++) {
-            if (m_maxs[i] < other.m_mins[i])
+            if (m_maxs[i] < (other.m_mins[i] - epsilon))
                 return true;
-            if (m_mins[i] > other.m_maxs[i])
+            if (m_mins[i] > (other.m_maxs[i] + epsilon))
                 return true;
         }
         return false;
@@ -162,6 +169,11 @@ public:
     constexpr const V &operator[](const int32_t &index) const
     {
         return (index == 0 ? m_mins : index == 1 ? m_maxs : throw std::exception());
+    }
+
+    constexpr V centroid() const
+    {
+        return (m_mins + m_maxs) * 0.5;
     }
 };
 

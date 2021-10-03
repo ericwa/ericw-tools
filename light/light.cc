@@ -367,7 +367,7 @@ static void FindModelInfo(const mbsp_t *bsp, const char *lmscaleoverride)
         }
 
         /* Set up the offset for rotate_* entities */
-        EntDict_VectorForKey(*entdict, "origin", info->offset);
+        info->offset = EntDict_VectorForKey(*entdict, "origin");
     }
 
     Q_assert(modelinfo.size() == bsp->dmodels.size());
@@ -410,17 +410,18 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     lux_file_end = (MAX_MAP_LIGHTING * 3);
 
     if (forcedscale)
-        BSPX_AddLump(bspdata, "LMSHIFT", NULL, 0);
+        bspdata->bspx.entries.erase("LMSHIFT");
 
-    const unsigned char *lmshift_lump = (const unsigned char *)BSPX_GetLump(bspdata, "LMSHIFT", NULL);
-    if (!lmshift_lump && write_litfile != ~0)
+    auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
+
+    if (lmshift_lump == bspdata->bspx.entries.end() && write_litfile != ~0)
         faces_sup = nullptr; // no scales, no lit2
     else { // we have scales or lit2 output. yay...
         faces_sup = new facesup_t[bsp.dfaces.size()] { };
 
-        if (lmshift_lump) {
+        if (lmshift_lump != bspdata->bspx.entries.end()) {
             for (int i = 0; i < bsp.dfaces.size(); i++)
-                faces_sup[i].lmscale = 1 << lmshift_lump[i];
+                faces_sup[i].lmscale = 1 << reinterpret_cast<const char *>(lmshift_lump->second.lumpdata.get())[i];
         } else {
             for (int i = 0; i < bsp.dfaces.size(); i++)
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
@@ -474,6 +475,10 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         // NOTE: bsp.lightdatasize is already valid in the -litonly case
     }
     LogPrint("lightdatasize: {}\n", bsp.dlightdata.size());
+    
+    // kill this stuff if its somehow found.
+    bspdata->bspx.entries.erase("LMSTYLE");
+    bspdata->bspx.entries.erase("LMOFFSET");
 
     if (faces_sup) {
         uint8_t *styles = new uint8_t[4 * bsp.dfaces.size()];
@@ -483,12 +488,8 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             for (int j = 0; j < MAXLIGHTMAPS; j++)
                 styles[i * 4 + j] = faces_sup[i].styles[j];
         }
-        BSPX_AddLump(bspdata, "LMSTYLE", styles, sizeof(*styles) * 4 * bsp.dfaces.size());
-        BSPX_AddLump(bspdata, "LMOFFSET", offsets, sizeof(*offsets) * bsp.dfaces.size());
-    } else {
-        // kill this stuff if its somehow found.
-        BSPX_AddLump(bspdata, "LMSTYLE", NULL, 0);
-        BSPX_AddLump(bspdata, "LMOFFSET", NULL, 0);
+        bspdata->bspx.transfer("LMSTYLE", styles, sizeof(*styles) * 4 * bsp.dfaces.size());
+        bspdata->bspx.transfer("LMOFFSET", (uint8_t *&) offsets, sizeof(*offsets) * bsp.dfaces.size());
     }
 }
 
@@ -673,11 +674,11 @@ static void SetLitNeeded()
 
 static void CheckLitNeeded(const globalconfig_t &cfg)
 {
-    const vec3_t white = {255, 255, 255};
+    static constexpr qvec3d white { 255 };
 
     // check lights
     for (const auto &light : GetLights()) {
-        if (!VectorCompare(white, *light.color.vec3Value(), EQUAL_EPSILON) ||
+        if (!VectorCompare(white, light.color.vec3Value(), EQUAL_EPSILON) ||
             light.projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
             SetLitNeeded();
             return;
@@ -686,11 +687,11 @@ static void CheckLitNeeded(const globalconfig_t &cfg)
 
     // check global settings
     if (cfg.bouncecolorscale.floatValue() != 0 ||
-        !VectorCompare(*cfg.minlight_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(*cfg.sunlight_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(*cfg.sun2_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(*cfg.sunlight2_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(*cfg.sunlight3_color.vec3Value(), white, EQUAL_EPSILON)) {
+        !VectorCompare(cfg.minlight_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(cfg.sunlight_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(cfg.sun2_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(cfg.sunlight2_color.vec3Value(), white, EQUAL_EPSILON) ||
+        !VectorCompare(cfg.sunlight3_color.vec3Value(), white, EQUAL_EPSILON)) {
         SetLitNeeded();
         return;
     }
@@ -907,8 +908,8 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
     }
     
     size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
-    std::unique_ptr<uint8_t[]> data = std::make_unique<uint8_t[]>(data_size);
-    memstream stream(data.get(), data_size);
+    uint8_t *data = new uint8_t[data_size];
+    memstream stream(data, data_size);
 
     stream << endianness<std::endian::little>;
     stream <= numeric_cast<uint32_t>(unique_normals.size());
@@ -927,7 +928,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 
     Q_assert(stream.tellp() == data_size);
 
-    BSPX_AddLump(&bspdata, "FACENORMALS", data.get(), data_size);
+    bspdata.bspx.transfer("FACENORMALS", data, data_size);
 }
 
 /*
@@ -1225,15 +1226,15 @@ int light_main(int argc, const char **argv)
         LightWorld(&bspdata, !!lmscaleoverride);
 
         // invalidate normals
-        BSPX_AddLump(&bspdata, "FACENORMALS", NULL, 0);
+        bspdata.bspx.entries.erase("FACENORMALS");
 
         if (write_normals) {
             WriteNormals(bsp, bspdata);
         }
 
         /*invalidate any bspx lighting info early*/
-        BSPX_AddLump(&bspdata, "RGBLIGHTING", NULL, 0);
-        BSPX_AddLump(&bspdata, "LIGHTINGDIR", NULL, 0);
+        bspdata.bspx.entries.erase("RGBLIGHTING");
+        bspdata.bspx.entries.erase("LIGHTINGDIR");
 
         if (write_litfile == ~0) {
             WriteLitFile(&bsp, faces_sup, source, 2);
@@ -1243,11 +1244,11 @@ int light_main(int argc, const char **argv)
             if (write_litfile & 1)
                 WriteLitFile(&bsp, faces_sup, source, LIT_VERSION);
             if (write_litfile & 2)
-                BSPX_AddLump(&bspdata, "RGBLIGHTING", lit_filebase, bsp.dlightdata.size() * 3);
+                bspdata.bspx.transfer("RGBLIGHTING", lit_filebase, bsp.dlightdata.size() * 3);
             if (write_luxfile & 1)
                 WriteLuxFile(&bsp, source, LIT_VERSION);
             if (write_luxfile & 2)
-                BSPX_AddLump(&bspdata, "LIGHTINGDIR", lux_filebase, bsp.dlightdata.size() * 3);
+                bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase, bsp.dlightdata.size() * 3);
         }
     }
 

@@ -162,11 +162,10 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
     l.componentwiseMaxColor = componentwiseMaxColor;
     l.surfnormal = surfnormal;
     l.area = area;
-    VectorSet(l.mins, 0, 0, 0);
-    VectorSet(l.maxs, 0, 0, 0);
+    l.bounds = qvec3d(0);
 
     if (!novisapprox) {
-        EstimateVisibleBoundsAtPoint(pos, l.mins, l.maxs);
+        l.bounds = EstimateVisibleBoundsAtPoint(pos);
     }
 
     unique_lock<mutex> lck{radlights_lock};
@@ -315,7 +314,7 @@ void MakeTextureColors(const mbsp_t *bsp)
         const string name{miptex.name};
         const qvec3f color = Texture_AvgColor(bsp, miptex);
 
-        //fmt::print("{} has color {}\n", name, VecStr(color));
+        //fmt::print("{} has color {}\n", name, qv::to_string(color));
         texturecolors[name] = color;
     }
 }

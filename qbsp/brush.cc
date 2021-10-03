@@ -284,18 +284,13 @@ FindTargetEntity
 */
 static const mapentity_t *FindTargetEntity(const char *target)
 {
-    int i;
-    const char *name;
-    const mapentity_t *entity;
-
-    for (i = 0; i < map.numentities(); i++) {
-        entity = &map.entities.at(i);
-        name = ValueForKey(entity, "targetname");
+    for (const auto &entity : map.entities) {
+        const char *name = ValueForKey(&entity, "targetname");
         if (!Q_strcasecmp(target, name))
-            return entity;
+            return &entity;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 /*
@@ -305,36 +300,35 @@ FixRotateOrigin
 */
 void FixRotateOrigin(mapentity_t *entity)
 {
-    const mapentity_t *target = NULL;
-    const char *search;
-    vec3_t offset;
+    const char *search = ValueForKey(entity, "target");
+    const mapentity_t *target = nullptr;
 
-    search = ValueForKey(entity, "target");
     if (search[0])
         target = FindTargetEntity(search);
+    
+    qvec3d offset;
 
     if (target) {
         GetVectorForKey(target, "origin", offset);
     } else {
         search = ValueForKey(entity, "classname");
         LogPrint("WARNING: No target for rotation entity \"{}\"", search);
-        VectorCopy(vec3_origin, offset);
+        offset = {};
     }
 
-    SetKeyValue(entity, "origin", VecStr(offset).c_str());
+    SetKeyValue(entity, "origin", qv::to_string(offset).c_str());
 }
 
 static bool DiscardHintSkipFace_Q1(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo)
 {
-    const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
-
-    return Q_strcasecmp(
-        texname, "hint"); // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
+    // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
+    return !string_iequals(map.miptexTextureName(texinfo.miptex), "hint");
 }
 
 static bool DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo)
 {
-    return texinfo.flags.native & Q2_SURF_SKIP; // skip brushes in a hint brush are treated as "hintskip", and discarded
+    // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
+    return !(texinfo.flags.native & Q2_SURF_HINT);
 }
 
 /*
@@ -342,7 +336,7 @@ static bool DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbru
 CreateBrushFaces
 =================
 */
-static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const vec3_t rotate_offset,
+static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const qvec3d &rotate_offset,
     const rotation_t rottype, const int hullnum)
 {
     int i, j, k;
@@ -416,20 +410,11 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
 
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
-            const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
-            mtexinfo_t texInfoNew = texinfo;
+            mtexinfo_t texInfoNew = map.mtexinfos.at(mapface->texinfo);
             texInfoNew.outputnum = std::nullopt;
-            vec3_t vecs[2];
-            int k, l;
 
-            for (k = 0; k < 2; k++) {
-                for (l = 0; l < 3; l++) {
-                    vecs[k][l] = texinfo.vecs[k][l];
-                }
-            }
-
-            texInfoNew.vecs[0][3] += DotProduct(rotate_offset, vecs[0]);
-            texInfoNew.vecs[1][3] += DotProduct(rotate_offset, vecs[1]);
+            texInfoNew.vecs[0][3] += DotProduct(rotate_offset, texInfoNew.vecs[0]);
+            texInfoNew.vecs[1][3] += DotProduct(rotate_offset, texInfoNew.vecs[1]);
 
             mapface->texinfo = FindTexinfo(texInfoNew);
         }
@@ -465,12 +450,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
                               && options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
-        vec_t delta;
-
-        delta = fabs(max);
-        if (fabs(min) > delta)
-            delta = fabs(min);
-        
+        vec_t delta = std::max(fabs(max), fabs(min));
         hullbrush->bounds = { -delta, delta };
     }
 
@@ -916,7 +896,7 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
-    const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
+    const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -1061,7 +1041,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
 {
     const char *classname;
     const mapbrush_t *mapbrush;
-    vec3_t rotate_offset;
+    qvec3d rotate_offset { };
     int i;
     int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
@@ -1080,7 +1060,6 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
 
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
-    VectorCopy(vec3_origin, rotate_offset);
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
@@ -1102,15 +1081,12 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
                 continue;
             }
 
-            brush_t *brush = LoadBrush(src, mapbrush, contents, vec3_origin, rotation_t::none, 0);
+            brush_t *brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
             if (brush) {
-                vec3_t origin;
-                VectorAdd(brush->bounds.mins(), brush->bounds.maxs(), origin);
-                VectorScale(origin, 0.5, origin);
+                qvec3d origin = brush->bounds.centroid();
 
-                SetKeyValue(dst, "origin", VecStrf(origin).c_str());
+                SetKeyValue(dst, "origin", qv::to_string(origin).c_str());
 
-                VectorCopy(origin, rotate_offset);
                 rottype = rotation_t::origin_brush;
 
                 FreeBrush(brush);
