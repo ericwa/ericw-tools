@@ -343,13 +343,6 @@ extern bool nolights;
 extern bool litonly;
 extern bool write_normals;
 
-enum backend_t
-{
-    backend_bsp,
-    backend_embree
-};
-
-extern backend_t rtbackend;
 extern bool surflight_dump;
 extern std::filesystem::path mapfilename;
 

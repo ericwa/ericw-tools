@@ -756,7 +756,7 @@ static bool Lightsurf_Init(const modelinfo_t *modelinfo, const mface_t *face, co
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.floatValue();
     } else {
-        lightsurf->minlight = extended_flags.minlight;
+        lightsurf->minlight = (float)extended_flags.minlight * 2; // see SurfFlagsForEntity
     }
 
     // minlight_color
@@ -3006,8 +3006,7 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
             continue;
 
         // skip lightmaps where all samples have brightness below 1
-        if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff,
-                                                           // the face is drawn fullbright instead of black (Q1)
+        if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
             const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
             if (maxb < 1)
                 continue;

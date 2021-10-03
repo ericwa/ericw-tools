@@ -322,7 +322,7 @@ static void ClearOutFaces(node_t *node)
     }
 
     // visit the leaf
-    if (!node->contents.is_solid(options.target_game)) {
+    if (!node->contents.is_structural_solid(options.target_game)) {
         return;
     }
 
@@ -348,7 +348,7 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
         return;
 
     // Don't fill sky, or count solids as outleafs
-    if (node->contents.is_sky(options.target_game) || node->contents.is_solid(options.target_game))
+    if (node->contents.is_structural_sky_or_solid(options.target_game))
         return;
 
     // Now check all faces touching the leaf. If any of them are partially going into the occupied part of the map,

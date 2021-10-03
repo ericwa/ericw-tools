@@ -811,7 +811,7 @@ static contentflags_t Brush_GetContents_Q1(const mapbrush_t *mapbrush, const con
     }
 
     // and anything else is assumed to be a regular solid.
-    return options.target_game->create_solid_contents();
+    return contents.merge(options.target_game->create_solid_contents());
 }
 
 static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush, const contentflags_t &base_contents)
@@ -1108,13 +1108,9 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
     if (!Q_strcasecmp(classname, "func_detail") && !options.fNodetail) {
         all_detail = true;
     }
-    if (!Q_strcasecmp(classname, "func_detail_wall") && !options.fNodetail) {
-        all_detail = true;
-        base_contents.extended |= CFLAGS_DETAIL_WALL;
-    }
 
     all_detail_fence = false;
-    if (!Q_strcasecmp(classname, "func_detail_fence") && !options.fNodetail) {
+    if ((!Q_strcasecmp(classname, "func_detail_fence") || !Q_strcasecmp(classname, "func_detail_wall")) && !options.fNodetail) {
         all_detail_fence = true;
     }
 
@@ -1162,9 +1158,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
             continue;
 
         /* -omitdetail option omits all types of detail */
-        if (options.fOmitDetail && detail && !contents.is_detail(CFLAGS_DETAIL_WALL))
-            continue;
-        if ((options.fOmitDetail || options.fOmitDetailWall) && detail && contents.is_detail(CFLAGS_DETAIL_WALL))
+        if (options.fOmitDetail && detail)
             continue;
         if ((options.fOmitDetail || options.fOmitDetailIllusionary) && detail_illusionary)
             continue;
@@ -1203,6 +1197,12 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
                 }
                 continue;
             }
+            // for hull1, 2, etc., convert clip to CONTENTS_SOLID
+            if (hullnum > 0) {
+                contents = contents.merge(options.target_game->create_solid_contents());
+                contents.extended &= ~CFLAGS_CLIP;
+        }
+            // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
 
         /* "hint" brushes don't affect the collision hulls */
@@ -1213,8 +1213,13 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         }
 
         /* entities never use water merging */
-        if (dst != pWorldEnt())
+        if (dst != pWorldEnt()) {
+            // FIXME: the old code here was just `contents = CONTENTS_SOLID`.
+            // which would also clear CONTENTS_CLIP. Now CONTENTS_CLIP is an extended flag
+            // so we need to unset it explicitly.
             contents = contents.merge(options.target_game->create_solid_contents());
+            contents.extended &= ~CFLAGS_CLIP;
+        }
 
         /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
            this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
@@ -1254,7 +1259,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
             brush->next = dst->detail_fence;
             dst->detail_fence = brush;
-        } else if (brush->contents.is_solid(options.target_game)) {
+        } else if (brush->contents.is_solid(options.target_game) && !(contents.extended & CFLAGS_CLIP)) {
             brush->next = dst->solid;
             dst->solid = brush;
         } else if (brush->contents.is_sky(options.target_game)) {

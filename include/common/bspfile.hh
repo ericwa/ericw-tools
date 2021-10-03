@@ -550,7 +550,6 @@ struct dplane_t
 // Special contents flags for the compiler only
 #define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1 << 0)
 #define CFLAGS_WAS_ILLUSIONARY (1 << 1) /* was illusionary, got changed to something else */
-#define CFLAGS_DETAIL_WALL (1 << 2) /* don't clip world for func_detail_wall entities */
 #define CFLAGS_BMODEL_MIRROR_INSIDE                                                                                    \
     (1 << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
 #define CFLAGS_NO_CLIPPING_SAME_TYPE                                                                                   \
@@ -877,10 +876,14 @@ struct surfflags_t
     // if non zero, enables phong shading and gives the angle threshold to use
     uint8_t phong_angle;
 
-    // minlight value for this face
+    // minlight value for this face, multiplied by 0.5, so we can store overbrights in 8 bits
+    // FIXME: skip the compression and just store a float? serialize all of these to a JSON .texinfo
+    // for better extensibility?
     uint8_t minlight;
 
     // red minlight colors for this face
+    // FIXME: this probably makes it illegal to memcpy() from a surfflags_t, which is done in
+    // WriteExtendedTexinfoFlags. Again, points to switching to JSON serialization.
     std::array<uint8_t, 3> minlight_color;
 
     // if non zero, overrides _phong_angle for concave joints
@@ -1334,6 +1337,25 @@ struct bsp2rmq_dleaf_t
     {
         return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
     }
+};
+
+// BRUSHLIST BSPX lump
+
+struct bspxbrushes_permodel {
+        int32_t ver;
+        int32_t modelnum;
+        int32_t numbrushes;
+        int32_t numfaces;
+};
+struct bspxbrushes_perbrush {
+        float mins[3];
+        float maxs[3];
+        int16_t contents;
+        uint16_t numfaces;
+};
+struct bspxbrushes_perface {
+        float normal[3];
+        float dist;
 };
 
 struct bsp2_dleaf_t

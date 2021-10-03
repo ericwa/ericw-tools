@@ -20,13 +20,71 @@
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 
+#include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <fmt/ostream.h>
 #include <nlohmann/json.hpp>
 
 using namespace nlohmann;
 
-static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
+static std::string hex_string(const uint8_t* bytes, const size_t count) {
+    std::stringstream str;
+    
+    for (size_t i = 0; i < count; ++i) {
+        fmt::print(str, "{:x}", bytes[i]);
+    }    
+
+    return str.str();
+}
+
+/**
+ * returns a JSON array of models
+ */
+static json serialize_bspxbrushlist(const bspxentry_t &lump) {
+    json j = json::array();
+
+    const uint8_t *p = reinterpret_cast<uint8_t *>(lump.lumpdata.get()), *base = p;
+
+    while (p < (base + lump.lumpsize)) {
+        bspxbrushes_permodel src_model;
+        memcpy(&src_model, p, sizeof(bspxbrushes_permodel));
+        p += sizeof(src_model);
+
+        json &model = j.insert(j.end(), json::object()).value();
+        model["ver"] = src_model.ver;
+        model["modelnum"] = src_model.modelnum;
+        model["numbrushes"] = src_model.numbrushes;
+        model["numfaces"] = src_model.numfaces;
+        json &brushes = (model.emplace("brushes", json::array())).first.value();
+
+        for (int32_t i = 0; i < src_model.numbrushes; ++i) {
+            bspxbrushes_perbrush src_brush;
+            memcpy(&src_brush, p, sizeof(bspxbrushes_perbrush));
+            p += sizeof(src_brush);
+
+            json &brush = brushes.insert(brushes.end(), json::object()).value();
+            brush.push_back({ "mins", json::array({ src_brush.mins[0], src_brush.mins[1], src_brush.mins[2] }) });
+            brush.push_back({ "maxs", json::array({ src_brush.maxs[0], src_brush.maxs[1], src_brush.maxs[2] }) });
+            brush.push_back({ "contents", src_brush.contents });
+            json &faces = (brush.emplace("faces", json::array())).first.value();
+
+            for (int32_t j = 0; j < src_brush.numfaces; ++j) {
+                bspxbrushes_perface src_face;
+                memcpy(&src_face, p, sizeof(bspxbrushes_perface));
+                p += sizeof(src_face);
+
+                json &face = faces.insert(faces.end(), json::object()).value();
+                face.push_back({ "normal", json::array({ src_face.normal[0], src_face.normal[1], src_face.normal[2] }) });
+                face.push_back({ "dist", src_face.dist });
+            }
+        }
+    }
+
+    return j;
+}
+
+static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std::filesystem::path &name)
 {
     json j = json::object();
 
@@ -46,6 +104,18 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
             model.push_back({"firstface", src_model.firstface});
             model.push_back({"numfaces", src_model.numfaces});
         }
+    }
+
+    if (bsp.dvis.bits.size()) {
+        j["visdata"] = hex_string(bsp.dvis.bits.data(), bsp.dvis.bits.size());
+    }
+
+    if (bsp.dlightdata.size()) {
+        j["lightdata"] = hex_string(bsp.dlightdata.data(), bsp.dlightdata.size());
+    }
+
+    if (!bsp.dentdata.empty()) {
+        j["entdata"] = bsp.dentdata;
     }
 
     if (!bsp.dleafs.empty()) {
@@ -81,6 +151,14 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
         }
     }
     
+    if (!bsp.dvertexes.empty()) {
+        json &vertexes = (j.emplace("vertexes", json::array())).first.value();
+
+        for (auto &src_vertex : bsp.dvertexes) {            
+            vertexes.insert(vertexes.end(), json::array({src_vertex[0], src_vertex[1], src_vertex[2]}));
+        }
+    }
+
     if (!bsp.dnodes.empty()) {
         json &nodes = (j.emplace("nodes", json::array())).first.value();
 
@@ -93,6 +171,35 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
             node.push_back({"maxs", json::array({src_node.maxs[0], src_node.maxs[1], src_node.maxs[2]})});
             node.push_back({"firstface", src_node.firstface});
             node.push_back({"numfaces", src_node.numfaces});
+        }
+    }
+
+    if (!bsp.texinfo.empty()) {
+        json &texinfos = (j.emplace("texinfo", json::array())).first.value();
+
+        for (auto &src_texinfo : bsp.texinfo) {
+            json &texinfo = texinfos.insert(texinfos.end(), json::object()).value();
+            
+            texinfo.push_back({ "vecs", json::array({
+                json::array({ src_texinfo.vecs[0][0], src_texinfo.vecs[0][1], src_texinfo.vecs[0][2], src_texinfo.vecs[0][3] }),
+                json::array({ src_texinfo.vecs[1][0], src_texinfo.vecs[1][1], src_texinfo.vecs[1][2], src_texinfo.vecs[1][3] })
+            })});
+            texinfo.push_back({ "flags", src_texinfo.flags.native });
+            texinfo.push_back({ "miptex", src_texinfo.miptex });
+            texinfo.push_back({ "value", src_texinfo.value });
+            texinfo.push_back({ "texture", std::string(src_texinfo.texture.data()) });
+            texinfo.push_back({ "nexttexinfo", src_texinfo.nexttexinfo });
+        }
+    }
+    
+    if (!bsp.dclipnodes.empty()) {
+        json &clipnodes = (j.emplace("clipnodes", json::array())).first.value();
+
+        for (auto &src_clipnodes : bsp.dclipnodes) {
+            json &clipnode = clipnodes.insert(clipnodes.end(), json::object()).value();
+
+            clipnode.push_back({ "planenum", src_clipnodes.planenum });
+            clipnode.push_back({ "children", json::array({ src_clipnodes.children[0], src_clipnodes.children[1] })});
         }
     }
 
@@ -127,6 +234,22 @@ static void SerializeBSP(const mbsp_t &bsp, const std::filesystem::path &name)
         }
     }
 
+    if (!bspdata.bspx.entries.empty()) {
+        json &bspxentries = (j.emplace("bspxentries", json::array())).first.value();
+
+        for (auto& lump : bspdata.bspx.entries) {
+            json &entry = bspxentries.insert(bspxentries.end(), json::object()).value();
+            entry["lumpname"] = lump.first;
+
+            if (lump.first == "BRUSHLIST") {
+                entry["models"] = serialize_bspxbrushlist(lump.second);
+            } else {
+                // unhandled BSPX lump, just write the raw data
+                entry["lumpdata"] = hex_string(reinterpret_cast<uint8_t *>(lump.second.lumpdata.get()), lump.second.lumpsize);
+            }
+        }
+    }
+
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
 }
 
@@ -150,7 +273,7 @@ int main(int argc, char **argv)
         source.replace_extension("json");
         ConvertBSPFormat(&bsp, &bspver_generic);
 
-        SerializeBSP(std::get<mbsp_t>(bsp.bsp), source);
+        serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), source);
 
         printf("---------------------\n");
     }
