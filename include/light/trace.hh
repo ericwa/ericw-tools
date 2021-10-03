@@ -43,8 +43,6 @@ enum class hittype_t : uint8_t {
     SKY = 2
 };
 
-const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const vec3_t point );
-int Light_PointContents( const mbsp_t *bsp, const vec3_t point );
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
 color_rgba SampleTexture(const bsp2_dface_t *face, const mbsp_t *bsp, const vec3_t point); //mxd. Palette index -> RGBA
 
@@ -68,9 +66,6 @@ struct hitresult_t {
  */
 hitresult_t TestSky(const vec3_t start, const vec3_t dirn, const modelinfo_t *self, const bsp2_dface_t **face_out);
 hitresult_t TestLight(const vec3_t start, const vec3_t stop, const modelinfo_t *self);
-#if 0
-hittype_t DirtTrace(const vec3_t start, const vec3_t dirn, vec_t dist, const modelinfo_t *self, vec_t *hitdist_out, plane_t *hitplane_out, const bsp2_dface_t **face_out);
-#endif
 
 class modelinfo_t;
 

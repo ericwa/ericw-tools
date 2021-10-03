@@ -410,12 +410,6 @@ extern qboolean novisapprox;
 extern bool nolights;
 extern bool litonly;
 
-typedef enum {
-    backend_bsp,
-    backend_embree
-} backend_t;
-    
-extern backend_t rtbackend;
 extern qboolean surflight_dump;
 extern char mapfilename[1024];
 

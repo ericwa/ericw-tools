@@ -100,7 +100,6 @@ int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean novisapprox = false;
 bool nolights = false;
-backend_t rtbackend = backend_embree;
 bool debug_highlightseams = false;
 debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
@@ -1041,15 +1040,6 @@ light_main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-nolights" ) ) {
             nolights = true;
             logprint( "Skipping all light entities (sunlight / minlight only)\n" );
-        } else if ( !strcmp( argv[ i ], "-backend" ) ) {
-            const char *requested = ParseString(&i, argc, argv);
-            if (!strcmp(requested, "bsp")) {
-                rtbackend = backend_bsp;
-            } else if (!strcmp(requested, "embree")) {
-                rtbackend = backend_embree;
-            } else {
-                Error("unknown backend %s", requested);
-            }
         } else if ( !strcmp( argv[ i ], "-debugface" ) ) {
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
@@ -1118,19 +1108,7 @@ light_main(int argc, const char **argv)
     if (debugmode != debugmode_none) {
         write_litfile |= 1;
     }
-    
-#ifndef HAVE_EMBREE
-    if (rtbackend == backend_embree) {
-        rtbackend = backend_bsp;
-    }
-#endif
-    
-    logprint("Raytracing backend: ");
-    switch (rtbackend) {
-        case backend_bsp: logprint("BSP\n"); break;
-        case backend_embree: logprint("Embree\n"); break;
-    }
-    
+
     if (numthreads > 1)
         logprint("running with %d threads\n", numthreads);
 
