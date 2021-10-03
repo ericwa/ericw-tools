@@ -434,7 +434,7 @@ SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
         face->contents[0] = clipbrush->contents;
         
         if (face->contents[1].is_structural_sky_or_solid(options.target_game)
-             && clipbrush->contents.is_detail(CFLAGS_DETAIL)) {
+             && (clipbrush->contents.is_solid(options.target_game) && clipbrush->contents.is_detail(CFLAGS_DETAIL))) {
             // This case is when a structural and detail brush are touching,
             // and we want to save the sturctural face that is
             // touching detail.
@@ -463,11 +463,12 @@ SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
          * If the inside brush is empty space, inherit the outside contents.
          * The only brushes with empty contents currently are hint brushes.
          */
-        if (face->contents[1].is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
-            face->contents[1] = { clipbrush->contents.native, (face->contents[1].extended & ~CFLAGS_DETAIL_ILLUSIONARY) | CFLAGS_WAS_ILLUSIONARY };
-        }
-        if (face->contents[1].is_empty(options.target_game)) {
+        if (face->contents[1].is_hint()) {
             face->contents[1] = clipbrush->contents;
+        }
+        if (face->contents[1].is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+            face->contents[1] = clipbrush->contents;
+            face->contents[1].extended |= CFLAGS_WAS_ILLUSIONARY;
         }
 
         face->next = *savelist;
@@ -664,8 +665,7 @@ CSGFaces(const mapentity_t *entity)
                 || (brush->contents.is_structural_sky(options.target_game) && !clipbrush->contents.is_structural_sky_or_solid(options.target_game))
 
                 || ((brush->contents.is_solid(options.target_game) && brush->contents.is_detail(CFLAGS_DETAIL)) &&
-                    (!clipbrush->contents.is_solid(options.target_game)
-                    && !clipbrush->contents.is_sky(options.target_game)
+                    (!clipbrush->contents.is_structural_sky_or_solid(options.target_game)
                     && !clipbrush->contents.is_detail(CFLAGS_DETAIL)))
 
                 || (brush->contents.is_liquid(options.target_game) && clipbrush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
@@ -692,7 +692,7 @@ CSGFaces(const mapentity_t *entity)
          * All of the faces left on the outside list are real surface faces
          * If the brush is non-solid, mirror faces for the inside view
          */
-        const bool mirror = options.fContentHack ? true : !brush->contents.is_solid(options.target_game);
+        const bool mirror = options.fContentHack ? true : !brush->contents.is_structural_solid(options.target_game);
         SaveFacesToPlaneList(outside, mirror, planefaces);
     }
     surface_t *surfaces = BuildSurfaces(planefaces);
