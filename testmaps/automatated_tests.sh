@@ -47,6 +47,8 @@ e1m1-bspxbrushes.bsp \
 e1m1-bsp29-onlyents.bsp \
 qbspfeatures.bsp"
 
+HASH_CHECK_PRTS=${HASH_CHECK_BSPS//.bsp/.prt}
+
 qbsp -noverbose               qbsp_func_detail.map                           || exit 1
 
 qbsp -noverbose               quake_map_source/E1M1.map e1m1-bsp29.bsp       || exit 1
@@ -69,17 +71,21 @@ qbsp -onlyents E1M1-edited-ents.map e1m1-bsp29-onlyents.bsp || exit 1
 qbsp -noverbose               qbspfeatures.map                               || exit 1
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
-    sha256sum ${HASH_CHECK_BSPS} > qbsp.sha256sum || exit 1
+    sha256sum ${HASH_CHECK_BSPS} ${HASH_CHECK_PRTS} > qbsp.sha256sum || exit 1
 else
     sha256sum --strict --check qbsp.sha256sum || exit 1
 fi
 
 # now run vis
-# FIXME: vis output is nondeterministic when run with multiple threads!
+# since vis is slower, launch all as background processes, and then wait for all of them to finish
+# FIXME: vis output is nondeterministic when run with multiple threads, so force 1 thread per process
 
 for bsp in ${HASH_CHECK_BSPS}; do
-    vis -nostate -threads 1 ${bsp} || exit 1
+    vis -nostate -threads 1 ${bsp} &
 done
+
+# we don't get the exit status this way, but the hash check will test the resulting visdata
+wait 
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} > qbsp-vis.sha256sum || exit 1
