@@ -35,7 +35,8 @@ light invalid_texture_axes.map || exit 1
 # regenerate the expected hashes, but check that the .bsp's still
 # work in game at the same time.
 
-HASH_CHECK_BSPS="e1m1-bsp29.bsp \
+HASH_CHECK_BSPS="qbsp_func_detail.bsp \
+e1m1-bsp29.bsp \
 e1m1-bsp2.bsp \
 e1m1-2psb.bsp \
 e1m1-hexen2.bsp \
@@ -45,6 +46,8 @@ e1m1-hlbsp.bsp \
 e1m1-bspxbrushes.bsp \
 e1m1-bsp29-onlyents.bsp \
 qbspfeatures.bsp"
+
+qbsp -noverbose               qbsp_func_detail.map                           || exit 1
 
 qbsp -noverbose               quake_map_source/E1M1.map e1m1-bsp29.bsp       || exit 1
 qbsp -noverbose         -bsp2 quake_map_source/E1M1.map e1m1-bsp2.bsp        || exit 1
