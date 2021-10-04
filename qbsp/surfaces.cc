@@ -309,7 +309,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
             for (const int i : it->second) {
                 edge = &map.exported_edges.at(i);
                 if (pEdgeFaces1[i] == NULL
-                    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+                    && pEdgeFaces0[i]->contents[0].native == face->contents[0].native) {
                     pEdgeFaces1[i] = face;
                     return -i;
                 }

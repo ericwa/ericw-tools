@@ -89,7 +89,11 @@ ExportMapTexinfo(int texinfonum)
     map.exported_texinfos.push_back({});
     gtexinfo_t* dest = &map.exported_texinfos.back();
 
-    dest->flags = src->flags;
+    // make sure we don't write any non-native flags.
+    // e.g. Quake only accepts 0 or TEX_SPECIAL.
+    dest->flags = options.target_game->surf_remap_for_export(src->flags);
+    // TODO: warn if dest->flags.native != src->flags.native
+
     dest->miptex = src->miptex;
     for (int j=0; j<2; j++) {
         for (int k=0; k<4; k++) {

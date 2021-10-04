@@ -278,6 +278,8 @@ typedef struct {
 #define    CFLAGS_ILLUSIONARY_VISBLOCKER       (1 << 11)
 // all of the detail values
 #define    CFLAGS_DETAIL_MASK                  (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE)
+// all of the special content types
+#define    CFLAGS_CONTENTS_MASK                (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
 
 struct gamedef_t;
 
@@ -287,12 +289,6 @@ struct contentflags_t {
 
     // extra flags, specific to BSP only
     int32_t extended;
-
-    // merge these content flags with other, and use
-    // their native contents.
-    constexpr contentflags_t merge(const contentflags_t &other) const {
-        return { other.native, extended | other.extended };
-    }
 
     constexpr bool operator==(const contentflags_t &other) const {
         return native == other.native && extended == other.extended;
@@ -308,25 +304,23 @@ struct contentflags_t {
     }
 
     bool is_empty(const gamedef_t *game) const;
+
+    // solid, not detail or any other extended content types
     bool is_solid(const gamedef_t *game) const;
     bool is_sky(const gamedef_t *game) const;
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
     
-    bool is_structural_solid(const gamedef_t *game) const {
-        return is_solid(game) && !is_detail();
-    }
-
-    bool is_structural_sky(const gamedef_t *game) const {
-        return is_sky(game) && !is_detail();
-    }
-
-    bool is_structural_sky_or_solid(const gamedef_t *game) const {
-        return (is_sky(game) || is_solid(game)) && !is_detail();
-    }
-
     constexpr bool is_hint() const {
         return extended & CFLAGS_HINT;
+    }
+
+    constexpr bool is_clip() const {
+        return extended & CFLAGS_CLIP;
+    }
+
+    constexpr bool is_origin() const {
+        return extended & CFLAGS_ORIGIN;
     }
 
     constexpr bool clips_same_type() const {
@@ -334,7 +328,7 @@ struct contentflags_t {
     }
 
     constexpr bool is_fence() const {
-        return is_detail(CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY);
+        return (extended & (CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY)) != 0;
     }
 
     // check if this content's `type` - which is distinct from various
@@ -1115,9 +1109,11 @@ struct gamedef_t
 
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
+    virtual surfflags_t surf_remap_for_export(const surfflags_t &flags) const = 0;
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
     virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
+    virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
