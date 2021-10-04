@@ -256,7 +256,7 @@ WritePortalfile(node_t *headnode, portal_state_t *state)
     StripExtension(options.szBSPName);
     strcat(options.szBSPName, ".prt");
 
-    portalFile = fopen(options.szBSPName, "wt");
+    portalFile = fopen(options.szBSPName, "wb");
     if (!portalFile)
         Error("Failed to open %s: %s", options.szBSPName, strerror(errno));
     
