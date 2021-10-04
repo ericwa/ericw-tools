@@ -117,6 +117,10 @@ if (MSVC)
 	add_definitions("/wd4267") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
 	add_definitions("/wd4305") # disable "truncation from 'double' to 'float'" warning
 	add_definitions("/wd4250") # disable "inherits via dominance' warning (used in trace_embree.cc)
+	set("NO_ITERATOR_DEBUG" FALSE CACHE BOOL "Whether to use MSVC iterator debugging or not")
+if (NO_ITERATOR_DEBUG)
+add_definitions("/D_ITERATOR_DEBUG_LEVEL=0")
+endif ()
 endif (MSVC)
 
 # 10.9: minimum version that supports unordered_map
