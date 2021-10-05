@@ -36,6 +36,7 @@ light invalid_texture_axes.map || exit 1
 # work in game at the same time.
 
 HASH_CHECK_BSPS="qbsp_func_detail.bsp \
+qbsp_func_detail_illusionary_plus_water.bsp \
 e1m1-bsp29.bsp \
 e1m1-bsp2.bsp \
 e1m1-2psb.bsp \
@@ -49,7 +50,9 @@ qbspfeatures.bsp"
 
 HASH_CHECK_PRTS=${HASH_CHECK_BSPS//.bsp/.prt}
 
+# smaller test maps for specific features/combinations
 qbsp -noverbose               qbsp_func_detail.map                           || exit 1
+qbsp -noverbose               qbsp_func_detail_illusionary_plus_water.bsp    || exit 1
 
 qbsp -noverbose               quake_map_source/E1M1.map e1m1-bsp29.bsp       || exit 1
 qbsp -noverbose         -bsp2 quake_map_source/E1M1.map e1m1-bsp2.bsp        || exit 1
