@@ -26,6 +26,8 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <array>
+#include <optional>
 
 #include <assert.h>
 #include <ctype.h>
@@ -98,12 +100,6 @@
 // Pi
 #define Q_PI    3.14159265358979323846
 
-// Special contents flags for the compiler only
-#define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1U << 0)
-#define CFLAGS_WAS_ILLUSIONARY           (1U << 1) /* was illusionary, got changed to something else */
-#define CFLAGS_BMODEL_MIRROR_INSIDE		 (1U << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
-#define CFLAGS_NO_CLIPPING_SAME_TYPE     (1U << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
-
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:
@@ -140,33 +136,25 @@ enum {
 #include <common/mathlib.hh>
 #include <qbsp/winding.hh>
 
+using stvecs = std::array<std::array<float, 4>, 2>;
+
 typedef struct mtexinfo_s {
-    float vecs[2][4];           /* [s/t][xyz offset] */
-    int32_t miptex;
-    uint64_t flags;
-    int outputnum; // -1 until added to bsp
+    stvecs vecs;           /* [s/t][xyz offset] */
+    int32_t miptex = 0;
+    surfflags_t flags = {};
+    int32_t value = 0; // Q2-specific
+    std::optional<int> outputnum = std::nullopt; // nullopt until added to bsp
+
+    constexpr auto as_tuple() const {
+        return std::tie(vecs, miptex, flags, value);
+    }
     
-    bool operator<(const mtexinfo_s &other) const {
-        if (this->miptex < other.miptex)
-            return true;
-        if (this->miptex > other.miptex)
-            return false;
-        
-        if (this->flags < other.flags)
-            return true;
-        if (this->flags > other.flags)
-            return false;
-        
-        for (int i=0; i<2; i++) {
-            for (int j=0; j<4; j++) {
-                if (this->vecs[i][j] < other.vecs[i][j])
-                    return true;
-                if (this->vecs[i][j] > other.vecs[i][j])
-                    return false;
-            }
-        }
-        
-        return false;
+    constexpr bool operator<(const mtexinfo_s &other) const {
+        return as_tuple() < other.as_tuple();
+    }
+    
+    constexpr bool operator>(const mtexinfo_s &other) const {
+        return as_tuple() > other.as_tuple();
     }
 } mtexinfo_t;
 
@@ -176,14 +164,13 @@ typedef struct visfacet_s {
     int planenum;
     int planeside;              // which side is the front of the face
     int texinfo;
-    short contents[2];          // 0 = front side
-    short cflags[2];            // contents flags
+    contentflags_t contents[2];          // 0 = front side
     short lmshift[2];           //lightmap scale.
 
     struct visfacet_s *original;        // face on node
     int outputnumber;           // only valid for original faces after
                                 // write surfaces
-    bool touchesOccupiedLeaf; // internal use in outside.cc
+    bool touchesOccupiedLeaf;   // internal use in outside.cc
     vec3_t origin;
     vec_t radius;
 
@@ -224,7 +211,7 @@ typedef struct node_s {
     face_t *faces;              // decision nodes only, list for both sides
 
     // information for leafs
-    int contents;               // leaf nodes (0 for decision nodes)
+    contentflags_t contents;               // leaf nodes (0 for decision nodes)
     face_t **markfaces;         // leaf nodes only, point to node faces
     struct portal_s *portals;
     int visleafnum;             // -1 = solid
@@ -232,11 +219,10 @@ typedef struct node_s {
     int occupied;               // 0=can't reach entity, 1 = has entity, >1 = distance from leaf with entity
     mapentity_t *occupant;      // example occupant, for leak hunting
     bool detail_separator;      // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs, are detail.
+    uint32_t firstleafbrush;         // Q2
+    uint32_t numleafbrushes;
     
-    bool opaque() const {
-        return contents == CONTENTS_SOLID
-            || contents == CONTENTS_SKY;
-    }
+    bool opaque() const;
 } node_t;
 
 #include <qbsp/brush.hh>
@@ -286,6 +272,7 @@ public:
     bool fbspx_brushes;
     bool fNoTextures;
     const bspversion_t *target_version = &bspver_q1;
+    const gamedef_t *target_game = target_version->game;
     int dxSubdivide;
     int dxLeakDist;
         int maxNodeSize;
@@ -366,8 +353,5 @@ extern options_t options;
 #include <qbsp/util.hh>
 
 int qbsp_main(int argc, const char **argv);
-void ProcessEntity(mapentity_t *entity, const int hullnum);
-void CreateSingleHull(const int hullnum);
-void CreateHulls(void);
 
 #endif

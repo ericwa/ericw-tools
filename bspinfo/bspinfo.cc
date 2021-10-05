@@ -190,7 +190,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const char *name) {
                 json::array({ src_texinfo.vecs[0][0], src_texinfo.vecs[0][1], src_texinfo.vecs[0][2], src_texinfo.vecs[0][3] }),
                 json::array({ src_texinfo.vecs[1][0], src_texinfo.vecs[1][1], src_texinfo.vecs[1][2], src_texinfo.vecs[1][3] })
             })});
-            texinfo.push_back({ "flags", src_texinfo.flags });
+            texinfo.push_back({ "flags", src_texinfo.flags.native });
             texinfo.push_back({ "miptex", src_texinfo.miptex });
             texinfo.push_back({ "value", src_texinfo.value });
             texinfo.push_back({ "texture", std::string(src_texinfo.texture) });

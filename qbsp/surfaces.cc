@@ -36,7 +36,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
 {
     vec_t mins, maxs;
     vec_t v;
-    int axis, i;
+    int axis;
     qbsp_plane_t plane;
     face_t *front, *back, *next;
     const mtexinfo_t *tex;
@@ -47,9 +47,10 @@ SubdivideFace(face_t *f, face_t **prevptr)
 
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
-    if (tex->flags & (TEX_SPECIAL | TEX_SKIP | TEX_HINT))
-        return;
 
+    if (tex->flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT) ||
+        !options.target_game->surf_is_subdivided(tex->flags))
+        return;
 //subdivision is pretty much pointless other than because of lightmap block limits
 //one lightmap block will always be added at the end, for smooth interpolation
 
@@ -78,7 +79,7 @@ SubdivideFace(face_t *f, face_t **prevptr)
             tmp[1] = tex->vecs[axis][1];
             tmp[2] = tex->vecs[axis][2];
 
-            for (i = 0; i < f->w.numpoints; i++) {
+            for (int32_t i = 0; i < f->w.numpoints; i++) {
                 v = DotProduct(f->w.points[i], tmp);
                 if (v < mins)
                     mins = v;
@@ -291,8 +292,8 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
     int v1, v2;
     int i;
 
-    if (!face->contents[0])
-        Error("Face with 0 contents (%s)", __func__);
+    if (!face->contents[0].is_valid(options.target_game, false))
+        Error("Face with invalid contents (%s)", __func__);
 
     v1 = GetVertex(entity, p1);
     v2 = GetVertex(entity, p2);
@@ -308,7 +309,7 @@ GetEdge(mapentity_t *entity, const vec3_t p1, const vec3_t p2,
             for (const int i : it->second) {
                 edge = &map.exported_edges.at(i);
                 if (pEdgeFaces1[i] == NULL
-                    && pEdgeFaces0[i]->contents[0] == face->contents[0]) {
+                    && pEdgeFaces0[i]->contents[0].native == face->contents[0].native) {
                     pEdgeFaces1[i] = face;
                     return -i;
                 }
@@ -340,7 +341,7 @@ FindFaceEdges(mapentity_t *entity, face_t *face)
 {
     int i, memsize;
 
-    if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
+    if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
     
     face->outputnumber = -1;
@@ -392,7 +393,7 @@ EmitFace(mapentity_t *entity, face_t *face)
     bsp2_dface_t *out;
     int i;
 
-    if (map.mtexinfos.at(face->texinfo).flags & (TEX_SKIP | TEX_HINT))
+    if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
     
     // emit a region
@@ -451,7 +452,7 @@ GrowNodeRegion(mapentity_t *entity, node_t *node)
 static void
 CountFace(mapentity_t *entity, face_t *f, int *facesCount, int *vertexesCount)
 {
-    if (map.mtexinfos.at(f->texinfo).flags & (TEX_SKIP | TEX_HINT))
+    if (map.mtexinfos.at(f->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
         return;
     
     if (f->lmshift[1] != 4)

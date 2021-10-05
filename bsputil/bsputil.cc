@@ -135,7 +135,7 @@ PrintModelInfo(const mbsp_t *bsp)
 /*
  * Quick hack to check verticies of faces lie on the correct plane
  */
-#define ON_EPSILON 0.01
+#define PLANE_ON_EPSILON 0.01
 
 static void
 CheckBSPFacesPlanar(const mbsp_t *bsp)
@@ -157,7 +157,7 @@ CheckBSPFacesPlanar(const mbsp_t *bsp)
             const float *point = bsp->dvertexes[vertnum].point;
             const float dist = DotProduct(plane.normal, point) - plane.dist;
 
-            if (dist < -ON_EPSILON || dist > ON_EPSILON)
+            if (dist < -PLANE_ON_EPSILON || dist > PLANE_ON_EPSILON)
                 printf("WARNING: face %d, point %d off plane by %f\n",
                        (int)(face - bsp->dfaces), j, dist);
         }

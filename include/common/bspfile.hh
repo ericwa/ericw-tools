@@ -21,6 +21,8 @@
 #define __COMMON_BSPFILE_H__
 
 #include <stdint.h>
+#include <array>
+#include <tuple>
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
@@ -51,20 +53,6 @@
 #define MAX_ENT_KEY   32
 #define MAX_ENT_VALUE 1024
 
-struct bspversion_t
-{
-    /* identifier value, the first int32_t in the header */
-    int32_t ident;
-    /* version value, if supported; use NO_VERSION if a version is not required */
-    int32_t version;
-    /* short name used for command line args, etc */
-    const char *short_name;
-    /* full display name for printing */
-    const char *name;
-    bool hexen2;
-    bool quake2;
-};
-
 #define NO_VERSION      -1
 
 #define BSPVERSION     29
@@ -74,31 +62,6 @@ struct bspversion_t
 #define Q2_BSPIDENT    (('P'<<24)+('S'<<16)+('B'<<8)+'I')
 #define Q2_BSPVERSION  38
 #define Q2_QBISMIDENT  (('P'<<24)+('S'<<16)+('B'<<8)+'Q')
-
-extern const bspversion_t bspver_generic;
-extern const bspversion_t bspver_q1;
-extern const bspversion_t bspver_h2;
-extern const bspversion_t bspver_h2bsp2;
-extern const bspversion_t bspver_h2bsp2rmq;
-extern const bspversion_t bspver_bsp2;
-extern const bspversion_t bspver_bsp2rmq;
-extern const bspversion_t bspver_hl;
-extern const bspversion_t bspver_q2;
-extern const bspversion_t bspver_qbism;
-
-/* table of supported versions */
-constexpr const bspversion_t *const bspversions[] = {
-    &bspver_generic,
-    &bspver_q1,
-    &bspver_h2,
-    &bspver_h2bsp2,
-    &bspver_h2bsp2rmq,
-    &bspver_bsp2,
-    &bspver_bsp2rmq,
-    &bspver_hl,
-    &bspver_q2,
-    &bspver_qbism
-};
 
 typedef struct {
     int32_t fileofs;
@@ -247,15 +210,15 @@ typedef struct {
 #define CONTENTS_SKY   -6
 #define CONTENTS_MIN   CONTENTS_SKY
 
-#define CONTENTS_CLIP   -7      /* compiler internal use only */
-#define CONTENTS_HINT   -8      /* compiler internal use only */
-#define CONTENTS_ORIGIN -9      /* compiler internal use only */
-#define CONTENTS_DETAIL -10     /* compiler internal use only */
-#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
-#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
-#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
-#define CONTENTS_FENCE  -15     /* compiler internal use only */
-#define CONTENTS_LADDER -16     /* reserved for engine use */
+//#define CONTENTS_HINT   -7      /* compiler internal use only */
+//#define CONTENTS_CLIP   -8      /* compiler internal use only */
+//#define CONTENTS_ORIGIN -9      /* compiler internal use only */
+//#define CONTENTS_DETAIL -10     /* compiler internal use only */
+//#define CONTENTS_DETAIL_ILLUSIONARY -11 /* compiler internal use only */
+//#define CONTENTS_DETAIL_FENCE        -12   /* compiler internal use only */
+//#define CONTENTS_ILLUSIONARY_VISBLOCKER -13
+//#define CONTENTS_FENCE  -15     /* compiler internal use only */
+//#define CONTENTS_LADDER -16     /* reserved for engine use */
 
 // Q2 contents (from qfiles.h)
 
@@ -299,6 +262,85 @@ typedef struct {
 #define    Q2_CONTENTS_DETAIL         0x8000000    // brushes to be added after vis leafs
 #define    Q2_CONTENTS_TRANSLUCENT    0x10000000    // auto set if any surface has trans
 #define    Q2_CONTENTS_LADDER         0x20000000
+
+// Special contents flags for the compiler only
+#define    CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1 << 0)
+#define    CFLAGS_WAS_ILLUSIONARY              (1 << 1) /* was illusionary, got changed to something else */
+#define    CFLAGS_BMODEL_MIRROR_INSIDE		   (1 << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
+#define    CFLAGS_NO_CLIPPING_SAME_TYPE        (1 << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
+// only one of these flags below should ever be set.
+#define    CFLAGS_HINT                         (1 << 5)
+#define    CFLAGS_CLIP                         (1 << 6)
+#define    CFLAGS_ORIGIN                       (1 << 7)
+#define    CFLAGS_DETAIL                       (1 << 8)
+#define    CFLAGS_DETAIL_ILLUSIONARY           (1 << 9)
+#define    CFLAGS_DETAIL_FENCE                 (1 << 10)
+#define    CFLAGS_ILLUSIONARY_VISBLOCKER       (1 << 11)
+// all of the detail values
+#define    CFLAGS_DETAIL_MASK                  (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE)
+// all of the special content types
+#define    CFLAGS_CONTENTS_MASK                (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
+
+struct gamedef_t;
+
+struct contentflags_t {
+    // native flags value; what's written to the BSP basically
+    int32_t native;
+
+    // extra flags, specific to BSP only
+    int32_t extended;
+
+    constexpr bool operator==(const contentflags_t &other) const {
+        return native == other.native && extended == other.extended;
+    }
+
+    constexpr bool operator!=(const contentflags_t &other) const {
+        return !(*this == other);
+    }
+
+    // check if these contents are marked as any (or a specific kind of) detail brush.
+    constexpr bool is_detail(int32_t types = CFLAGS_DETAIL_MASK) const {
+        return (extended & CFLAGS_DETAIL_MASK) & types;
+    }
+
+    bool is_empty(const gamedef_t *game) const;
+
+    // solid, not detail or any other extended content types
+    bool is_solid(const gamedef_t *game) const;
+    bool is_sky(const gamedef_t *game) const;
+    bool is_liquid(const gamedef_t *game) const;
+    bool is_valid(const gamedef_t *game, bool strict = true) const;
+    
+    constexpr bool is_hint() const {
+        return extended & CFLAGS_HINT;
+    }
+
+    constexpr bool is_clip() const {
+        return extended & CFLAGS_CLIP;
+    }
+
+    constexpr bool is_origin() const {
+        return extended & CFLAGS_ORIGIN;
+    }
+
+    constexpr bool clips_same_type() const {
+        return !(extended & CFLAGS_NO_CLIPPING_SAME_TYPE);
+    }
+
+    constexpr bool is_fence() const {
+        return (extended & (CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY)) != 0;
+    }
+
+    // check if this content's `type` - which is distinct from various
+    // flags that turn things on/off - match. Exactly what the native
+    // "type" is depends on the game, but any of the detail flags must
+    // also match.
+    bool types_equal(const contentflags_t &other, const gamedef_t *game) const;
+
+    int32_t priority(const gamedef_t *game) const;
+
+    std::string to_string(const gamedef_t *game) const;
+};
 
 struct bsp29_dnode_t {
     int32_t planenum;
@@ -368,43 +410,8 @@ typedef struct {
     int32_t nexttexinfo;      // for animations, -1 = end of chain
 } q2_texinfo_t;
 
-typedef struct {
-    float vecs[2][4];     // [s/t][xyz offset]
-    int32_t flags;            // miptex flags + overrides
-    
-    // q1 only
-    int32_t miptex;
-    
-    // q2 only
-    int32_t value;            // light emission, etc
-    char texture[32];     // texture name (textures/*.wal)
-    int32_t nexttexinfo;      // for animations, -1 = end of chain
-} gtexinfo_t;
-
-// Texture flags. Only TEX_SPECIAL is written to the .bsp.
-#define TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
-#define TEX_SKIP    (1U << 1)   /* an invisible surface */
-#define TEX_HINT    (1U << 2)   /* hint surface */
-#define TEX_NODIRT  (1U << 3)   /* don't receive dirtmapping */
-#define TEX_PHONG_ANGLE_SHIFT   4
-#define TEX_PHONG_ANGLE_MASK    (255U << TEX_PHONG_ANGLE_SHIFT) /* 8 bit value. if non zero, enables phong shading and gives the angle threshold to use. */
-#define TEX_MINLIGHT_SHIFT      12
-#define TEX_MINLIGHT_MASK       (255U << TEX_MINLIGHT_SHIFT)    /* 8 bit value, minlight value for this face. */
-#define TEX_MINLIGHT_COLOR_R_SHIFT      20
-#define TEX_MINLIGHT_COLOR_R_MASK       (255ULL << TEX_MINLIGHT_COLOR_R_SHIFT)    /* 8 bit value, red minlight color for this face. */
-#define TEX_MINLIGHT_COLOR_G_SHIFT      28
-#define TEX_MINLIGHT_COLOR_G_MASK       (255ULL << TEX_MINLIGHT_COLOR_G_SHIFT)    /* 8 bit value, green minlight color for this face. */
-#define TEX_MINLIGHT_COLOR_B_SHIFT      36
-#define TEX_MINLIGHT_COLOR_B_MASK       (255ULL << TEX_MINLIGHT_COLOR_B_SHIFT)    /* 8 bit value, blue minlight color for this face. */
-#define TEX_NOSHADOW  (1ULL << 44)   /* don't cast a shadow */
-#define TEX_PHONG_ANGLE_CONCAVE_SHIFT   45
-#define TEX_PHONG_ANGLE_CONCAVE_MASK    (255ULL << TEX_PHONG_ANGLE_CONCAVE_SHIFT) /* 8 bit value. if non zero, overrides _phong_angle for concave joints. */
-#define TEX_NOBOUNCE  (1ULL << 53)   /* light doesn't bounce off this face */
-#define TEX_NOMINLIGHT (1ULL << 54)   /* opt out of minlight on this face */
-#define TEX_NOEXPAND  (1ULL << 55)   /* don't expand this face for larger clip hulls */
-#define TEX_LIGHTIGNORE (1ULL << 56)
-#define TEX_LIGHT_ALPHA_SHIFT 57
-#define TEX_LIGHT_ALPHA_MASK  (127ULL << TEX_LIGHT_ALPHA_SHIFT) /* 7 bit unsigned value. custom opacity */
+// Q1 Texture flags.
+#define    TEX_SPECIAL 1           /* sky or slime, no lightmap or 256 subdivision */
 
 // Q2 Texture flags.
 #define    Q2_SURF_LIGHT      0x1        // value will hold the light strength
@@ -422,6 +429,80 @@ typedef struct {
 #define    Q2_SURF_SKIP       0x200    // completely ignore, allowing non-closed brushes
 
 #define    Q2_SURF_TRANSLUCENT (Q2_SURF_TRANS33|Q2_SURF_TRANS66) //mxd
+
+// QBSP/LIGHT flags
+#define TEX_EXFLAG_SKIP    (1U << 0)   /* an invisible surface */
+#define TEX_EXFLAG_HINT    (1U << 1)   /* hint surface */
+#define TEX_EXFLAG_NODIRT  (1U << 2)   /* don't receive dirtmapping */
+#define TEX_EXFLAG_NOSHADOW  (1U << 3)   /* don't cast a shadow */
+#define TEX_EXFLAG_NOBOUNCE  (1U << 4)   /* light doesn't bounce off this face */
+#define TEX_EXFLAG_NOMINLIGHT (1U << 5)   /* opt out of minlight on this face */
+#define TEX_EXFLAG_NOEXPAND  (1U << 6)   /* don't expand this face for larger clip hulls */
+#define TEX_EXFLAG_LIGHTIGNORE (1U << 7)  /* PLEASE DOCUMENT ME MOMMY */
+
+struct surfflags_t {
+    // native flags value; what's written to the BSP basically
+    int32_t native;
+
+    // extra flags, specific to BSP/LIGHT only
+    uint8_t extended;
+
+    // if non zero, enables phong shading and gives the angle threshold to use
+    uint8_t phong_angle;
+
+    // minlight value for this face, multiplied by 0.5, so we can store overbrights in 8 bits
+    // FIXME: skip the compression and just store a float? serialize all of these to a JSON .texinfo
+    // for better extensibility?
+    uint8_t minlight;
+
+    // red minlight colors for this face
+    // FIXME: this probably makes it illegal to memcpy() from a surfflags_t, which is done in
+    // WriteExtendedTexinfoFlags. Again, points to switching to JSON serialization.
+    std::array<uint8_t, 3> minlight_color;
+    
+    // if non zero, overrides _phong_angle for concave joints
+    uint8_t phong_angle_concave;
+
+    // custom opacity
+    uint8_t light_alpha;
+
+    constexpr bool needs_write() const {
+        return (extended & ~(TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT)) || phong_angle || minlight || minlight_color[0] ||
+            minlight_color[1] || minlight_color[2] || phong_angle_concave ||
+            light_alpha;
+    }
+
+    constexpr auto as_tuple() const {
+        return std::tie(native, extended, phong_angle, minlight, minlight_color, phong_angle_concave, light_alpha);
+    }
+
+    constexpr bool operator<(const surfflags_t &other) const {
+        return as_tuple() < other.as_tuple();
+    }
+
+    constexpr bool operator>(const surfflags_t &other) const {
+        return as_tuple() > other.as_tuple();
+    }
+};
+
+// header before tightly packed surfflags_t[num_texinfo]
+struct extended_flags_header_t {
+    uint32_t    num_texinfo;
+    uint32_t    surfflags_size; // sizeof(surfflags_t)
+};
+
+typedef struct {
+    float vecs[2][4];     // [s/t][xyz offset]
+    surfflags_t flags;    // native miptex flags + extended flags
+    
+    // q1 only
+    int32_t miptex;
+    
+    // q2 only
+    int32_t value;            // light emission, etc
+    char texture[32];     // texture name (textures/*.wal)
+    int32_t nexttexinfo;      // for animations, -1 = end of chain
+} gtexinfo_t;
 
 /*
  * Note that edge 0 is never used, because negative edge nums are used for
@@ -907,6 +988,8 @@ struct q2bsp_qbism_t {
     uint8_t dpop[256];
 };
 
+struct bspversion_t;
+
 struct mbsp_t {
     const bspversion_t *loadversion;
     
@@ -1002,6 +1085,93 @@ typedef struct {
 
     bspxentry_t *bspxentries;
 } bspdata_t;
+
+// native game target ID
+enum gameid_t {
+    GAME_UNKNOWN,
+    GAME_QUAKE,
+    GAME_HEXEN_II,
+    GAME_HALF_LIFE,
+    GAME_QUAKE_II,
+
+    GAME_TOTAL
+};
+
+// Game definition, which contains data specific to
+// the game a BSP version is being compiled for.
+struct gamedef_t
+{
+    gameid_t    id;
+
+    bool        has_rgb_lightmap;
+
+    const char *base_dir;
+
+    virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
+    virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
+    virtual surfflags_t surf_remap_for_export(const surfflags_t &flags) const = 0;
+    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
+    virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
+    virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
+    virtual bool contents_are_empty(const contentflags_t &contents) const {
+        return contents.native == create_empty_contents().native;
+    }
+    virtual bool contents_are_solid(const contentflags_t &contents) const {
+        return contents.native == create_solid_contents().native;
+    }
+    virtual bool contents_are_sky(const contentflags_t &contents) const {
+        return contents.native == create_sky_contents().native;
+    }
+    virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
+    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
+};
+
+// BSP version struct & instances
+struct bspversion_t
+{
+    /* identifier value, the first int32_t in the header */
+    int32_t ident;
+    /* version value, if supported; use NO_VERSION if a version is not required */
+    int32_t version;
+    /* short name used for command line args, etc */
+    const char *short_name;
+    /* full display name for printing */
+    const char *name;
+    /* game ptr */
+    const gamedef_t *game;
+};
+
+extern const bspversion_t bspver_generic;
+extern const bspversion_t bspver_q1;
+extern const bspversion_t bspver_h2;
+extern const bspversion_t bspver_h2bsp2;
+extern const bspversion_t bspver_h2bsp2rmq;
+extern const bspversion_t bspver_bsp2;
+extern const bspversion_t bspver_bsp2rmq;
+extern const bspversion_t bspver_hl;
+extern const bspversion_t bspver_q2;
+extern const bspversion_t bspver_qbism;
+
+/* table of supported versions */
+constexpr const bspversion_t *const bspversions[] = {
+    &bspver_generic,
+    &bspver_q1,
+    &bspver_h2,
+    &bspver_h2bsp2,
+    &bspver_h2bsp2rmq,
+    &bspver_bsp2,
+    &bspver_bsp2rmq,
+    &bspver_hl,
+    &bspver_q2,
+    &bspver_qbism
+};
 
 void LoadBSPFile(char *filename, bspdata_t *bspdata);       //returns the filename as contained inside a bsp
 void WriteBSPFile(const char *filename, bspdata_t *bspdata);

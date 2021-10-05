@@ -22,7 +22,7 @@ set(VIS_SOURCES
 	${VIS_INCLUDES})
 
 add_executable(vis ${VIS_SOURCES})
-target_link_libraries (vis ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (vis ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
 find_library(M_LIB m)
 if (M_LIB)
     target_link_libraries (vis ${M_LIB})

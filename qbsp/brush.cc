@@ -33,7 +33,7 @@
 
 typedef struct hullbrush_s {
     const mapbrush_t *srcbrush;
-    int contents;
+    contentflags_t contents;
     int numfaces;
     vec3_t mins;
     vec3_t maxs;
@@ -169,13 +169,11 @@ AddToBounds(mapentity_t *entity, const vec3_t point)
 //===========================================================================
 
 static int
-NormalizePlane(qbsp_plane_t *p)
+NormalizePlane(qbsp_plane_t *p, bool flip = true)
 {
     int i;
     vec_t ax, ay, az;
 
-    p->outputplanenum = -1;
-    
     for (i = 0; i < 3; i++) {
         if (p->normal[i] == 1.0) {
             p->normal[(i + 1) % 3] = 0;
@@ -184,10 +182,12 @@ NormalizePlane(qbsp_plane_t *p)
             return 0; /* no flip */
         }
         if (p->normal[i] == -1.0) {
+            if (flip) {
             p->normal[i] = 1.0;
+                p->dist = -p->dist;
+            }
             p->normal[(i + 1) % 3] = 0;
             p->normal[(i + 2) % 3] = 0;
-            p->dist = -p->dist;
             p->type = PLANE_X + i;
             return 1; /* plane flipped */
         }
@@ -204,7 +204,7 @@ NormalizePlane(qbsp_plane_t *p)
     else
         p->type = PLANE_ANYZ;
 
-    if (p->normal[p->type - PLANE_ANYX] < 0) {
+    if (flip && p->normal[p->type - PLANE_ANYX] < 0) {
         VectorSubtract(vec3_origin, p->normal, p->normal);
         p->dist = -p->dist;
         return 1; /* plane flipped */
@@ -262,7 +262,13 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
     qbsp_plane_t plane;
     VectorCopy(normal, plane.normal);
     plane.dist = dist;
-    *side = NormalizePlane(&plane) ? SIDE_BACK : SIDE_FRONT;
+    plane.outputplanenum = PLANENUM_LEAF;
+    
+    int32_t out_side = NormalizePlane(&plane, side != nullptr);
+
+    if (side) {
+        *side = out_side;
+    }
     
     int index = map.planes.size();
     map.planes.push_back(plane);
@@ -273,6 +279,7 @@ NewPlane(const vec3_t normal, const vec_t dist, int *side)
 /*
  * FindPlane
  * - Returns a global plane number and the side that will be the front
+ * - if `side` is null, only an exact match will be fetched.
  */
 int
 FindPlane(const vec3_t normal, const vec_t dist, int *side)
@@ -284,9 +291,11 @@ FindPlane(const vec3_t normal, const vec_t dist, int *side)
     for (int i : map.planehash[plane_hash_fn(&plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
         if (PlaneEqual(&p, &plane)) {
+            if (side) {
             *side = SIDE_FRONT;
+            }
             return i;
-        } else if (PlaneInvEqual(&p, &plane)) {
+        } else if (side && PlaneInvEqual(&p, &plane)) {
             *side = SIDE_BACK;
             return i;
         }
@@ -356,6 +365,17 @@ FixRotateOrigin(mapentity_t *entity)
     SetKeyValue(entity, "origin", value);
 }
 
+static bool
+DiscardHintSkipFace_Q1(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo) {
+    const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
+
+    return Q_strcasecmp(texname, "hint"); // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
+}
+
+static bool
+DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo) {
+    return texinfo.flags.native & Q2_SURF_SKIP; // skip brushes in a hint brush are treated as "hintskip", and discarded
+}
 
 /*
 =================
@@ -383,15 +403,16 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         hullbrush->maxs[i] = -VECT_MAX;
     }
 
+    auto DiscardHintSkipFace = (options.target_game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
+
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (!hullnum && hullbrush->contents == CONTENTS_HINT) {
+        if (hullnum <= 0 && hullbrush->contents.is_hint()) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
-            const char *texname = map.miptex.at(texinfo.miptex).c_str();
 
-            if (Q_strcasecmp(texname, "hint"))
-                continue; // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
+            if (DiscardHintSkipFace(hullnum, hullbrush, texinfo))
+                continue;
         }
 
         w = BaseWindingForPlane(&mapface->plane);
@@ -410,7 +431,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
 
         // this face is a keeper
         f = (face_t *)AllocMem(OTHER, sizeof(face_t), true);
-        f->planenum = -1;
+        f->planenum = PLANENUM_LEAF;
         f->w.numpoints = w->numpoints;
         if (f->w.numpoints > MAXEDGES)
             Error("face->numpoints > MAXEDGES (%d), source face on line %d",
@@ -439,11 +460,11 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
-            mtexinfo_t texInfoNew;
+            mtexinfo_t texInfoNew = texinfo;
+            texInfoNew.outputnum = std::nullopt;
             vec3_t vecs[2];
             int k, l;
 
-            memcpy(&texInfoNew, &texinfo, sizeof(texInfoNew));
             for (k=0; k<2; k++) {
                 for (l=0; l<3; l++) {
                     vecs[k][l] = texinfo.vecs[k][l];
@@ -453,7 +474,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
             texInfoNew.vecs[0][3] += DotProduct( rotate_offset, vecs[0] );
             texInfoNew.vecs[1][3] += DotProduct( rotate_offset, vecs[1] );
 
-            mapface->texinfo = FindTexinfo( &texInfoNew, texInfoNew.flags );
+            mapface->texinfo = FindTexinfo(texInfoNew);
         }
 
         VectorCopy(mapface->plane.normal, plane.normal);
@@ -463,7 +484,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
 
         free(w);
 
-        f->texinfo = hullnum ? 0 : mapface->texinfo;
+        f->texinfo = hullnum > 0 ? 0 : mapface->texinfo;
         f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
         f->next = facelist;
         facelist = f;
@@ -487,7 +508,7 @@ CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush,
            (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0)
         && rottype == rotation_t::hipnotic
         && (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-        && !options.target_version->hexen2; // never do this in Hexen 2
+        && options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t delta;
@@ -785,7 +806,7 @@ ExpandBrush(hullbrush_t *hullbrush, vec3_t hull_size[2], face_t *facelist)
     // expand all of the planes
     mapface = hullbrush->faces;
     for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (mapface->flags & TEX_NOEXPAND)
+        if (mapface->flags.extended & TEX_EXFLAG_NOEXPAND)
             continue;
         VectorCopy(vec3_origin, corner);
         for (x = 0; x < 3; x++) {
@@ -832,9 +853,8 @@ Brush_IsDetail(const mapbrush_t *mapbrush)
     return false;
 }
 
-
-static int
-Brush_GetContents(const mapbrush_t *mapbrush)
+static contentflags_t
+Brush_GetContents_Q1(const mapbrush_t *mapbrush)
 {
     const char *texname;
 
@@ -843,28 +863,103 @@ Brush_GetContents(const mapbrush_t *mapbrush)
     {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-        texname = map.miptex.at(texinfo.miptex).c_str();
+        texname = map.miptexTextureName(texinfo.miptex).c_str();
 
         if (!Q_strcasecmp(texname, "origin"))
-            return CONTENTS_ORIGIN;
-        if (!Q_strcasecmp(texname, "hint"))
-            return CONTENTS_HINT;
-        if (!Q_strcasecmp(texname, "clip"))
-            return CONTENTS_CLIP;
-
-        if (texname[0] == '*') {
+            return options.target_game->create_extended_contents(CFLAGS_ORIGIN);
+        else if (!Q_strcasecmp(texname, "hint"))
+            return options.target_game->create_extended_contents(CFLAGS_HINT);
+        else if (!Q_strcasecmp(texname, "clip"))
+            return options.target_game->create_extended_contents(CFLAGS_CLIP);
+        else if (texname[0] == '*') {
             if (!Q_strncasecmp(texname + 1, "lava", 4))
-                return CONTENTS_LAVA;
-            if (!Q_strncasecmp(texname + 1, "slime", 5))
-                return CONTENTS_SLIME;
-            return CONTENTS_WATER;
+                return options.target_game->create_liquid_contents(CONTENTS_LAVA);
+            else if (!Q_strncasecmp(texname + 1, "slime", 5))
+                return options.target_game->create_liquid_contents(CONTENTS_SLIME);
+            else
+                return options.target_game->create_liquid_contents(CONTENTS_WATER);
+        }
+        else if (!Q_strncasecmp(texname, "sky", 3))
+            return options.target_game->create_sky_contents();
+    }
+
+    //and anything else is assumed to be a regular solid.
+    return options.target_game->create_solid_contents();
+}
+
+static contentflags_t
+Brush_GetContents_Q2 (const mapbrush_t *mapbrush)
+{
+    bool is_trans = false;
+    bool is_hint = false;
+    contentflags_t contents = { mapbrush->face(0).contents };
+
+    for (int i = 0; i < mapbrush->numfaces; i++)
+    {
+        const mapface_t &mapface = mapbrush->face(i);
+        const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+        
+        if (texinfo.flags.extended & TEX_EXFLAG_SKIP) {
+            continue;
+        }
+        
+        if (!is_trans && (texinfo.flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
+            is_trans = true;
         }
 
-        if (!Q_strncasecmp(texname, "sky", 3))
-            return CONTENTS_SKY;
+        if (!is_hint && (texinfo.flags.native & Q2_SURF_HINT)) {
+            is_hint = true;
+        }
+
+        if (mapface.contents != contents.native) {
+            logprint("mixed face contents (%s != %s at line %i)\n", contentflags_t { mapface.contents }.to_string(options.target_game).c_str(),
+                     contents.to_string(options.target_game).c_str(), mapface.linenum); // TODO: need entity # and brush #
+			break;
+        }
     }
-    //and anything else is assumed to be a regular solid.
-    return CONTENTS_SOLID;
+
+	// if any side is translucent, mark the contents
+	// and change solid to window
+	if (is_trans) {
+        contents.native |= Q2_CONTENTS_TRANSLUCENT;
+		if (contents.native & Q2_CONTENTS_SOLID) {
+            contents.native = (contents.native & ~Q2_CONTENTS_SOLID) | Q2_CONTENTS_WINDOW;
+	}
+	}
+
+    // add extended flags that we may need
+    if (contents.native & Q2_CONTENTS_DETAIL) {
+        contents.extended |= CFLAGS_DETAIL;
+    }
+
+    if (contents.native & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
+        contents.extended |= CFLAGS_CLIP;
+    }
+
+    if (contents.native & Q2_CONTENTS_ORIGIN) {
+        contents.extended |= CFLAGS_ORIGIN;
+    }
+
+    if (contents.native & Q2_CONTENTS_MIST) {
+        contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
+    }
+
+    if (is_hint) {
+        contents.extended |= CFLAGS_HINT;
+    }
+
+    // FIXME: this is a bit of a hack, but this is because clip
+    // and liquids and stuff are already handled *like* detail by
+    // the compiler.
+    if (contents.extended & CFLAGS_DETAIL) {
+        if (!(contents.native & Q2_CONTENTS_SOLID)) {
+            contents.extended &= ~CFLAGS_DETAIL;
+        }
+    }
+
+    Q_assert(contents.is_valid(options.target_game, false));
+
+	return contents;
 }
 
 
@@ -875,7 +970,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
+brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
     brush_t *brush;
@@ -909,7 +1004,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int conte
         return NULL;
     }
 
-    if (options.target_version == &bspver_hl)
+    if (options.target_game->id == GAME_HALF_LIFE)
     {
          if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -36}, {16, 16, 36} };
@@ -930,7 +1025,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int conte
             facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
         }
     }
-    else if (options.target_version->hexen2)
+    else if (options.target_game->id == GAME_HEXEN_II)
     {
         if (hullnum == 1) {
             vec3_t size[2] = { {-16, -16, -32}, {16, 16, 24} };
@@ -1033,7 +1128,7 @@ Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
 {
     int cnt = 0;
     for (const brush_t *b = brush; b; b = b->next) {
-        if (cflags == (b->cflags & cflags))
+        if (cflags == (b->contents.extended & cflags))
             cnt++;
     }
     return cnt;
@@ -1111,7 +1206,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     const char *classname;
     const mapbrush_t *mapbrush;
     vec3_t rotate_offset;
-    int i, contents, cflags = 0;
+    int i;
     int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
@@ -1130,11 +1225,14 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
     VectorCopy(vec3_origin, rotate_offset);
-    
+
+    // TODO: move to game
+    auto Brush_GetContents = (options.target_game->id == GAME_QUAKE_II) ? Brush_GetContents_Q2 : Brush_GetContents_Q1;
+
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        const int contents = Brush_GetContents(mapbrush);
-        if (contents == CONTENTS_ORIGIN) {
+        const contentflags_t contents = Brush_GetContents(mapbrush);
+        if (contents.is_origin()) {
             if (dst == pWorldEnt()) {
                 Message(msgWarning, warnOriginBrushInWorld);
                 continue;
@@ -1194,21 +1292,17 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
     }
     
     /* _mirrorinside key (for func_water etc.) */
-    if (atoi(ValueForKey(src, "_mirrorinside"))) {
-        cflags |= CFLAGS_BMODEL_MIRROR_INSIDE;
-    }
+    const bool mirrorinside = !!atoi(ValueForKey(src, "_mirrorinside"));
     
     /* _noclipfaces */
-    if (atoi(ValueForKey(src, "_noclipfaces"))) {
-        cflags |= CFLAGS_NO_CLIPPING_SAME_TYPE;
-    }
+    const bool noclipfaces = !!atoi(ValueForKey(src, "_noclipfaces"));
 
     const bool func_illusionary_visblocker =
         (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
-        contents = Brush_GetContents(mapbrush);
+        contentflags_t contents = Brush_GetContents(mapbrush);
 
         // per-brush settings
         bool detail = Brush_IsDetail(mapbrush);
@@ -1219,13 +1313,9 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
-        
-        /* FIXME: move into Brush_GetContents? */
-        if (func_illusionary_visblocker)
-            contents = CONTENTS_ILLUSIONARY_VISBLOCKER;
 
         /* "origin" brushes always discarded */
-        if (contents == CONTENTS_ORIGIN)
+        if (contents.is_origin())
             continue;
         
         /* -omitdetail option omits all types of detail */
@@ -1237,19 +1327,19 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             continue;
         
         /* turn solid brushes into detail, if we're in hull0 */
-        if (hullnum == 0 && contents == CONTENTS_SOLID) {
+        if (hullnum <= 0 && contents.is_solid(options.target_game)) {
             if (detail) {
-                contents = CONTENTS_DETAIL;
+                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL);
             } else if (detail_illusionary) {
-                contents = CONTENTS_DETAIL_ILLUSIONARY;
+                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_ILLUSIONARY);
             } else if (detail_fence) {
-                contents = CONTENTS_DETAIL_FENCE;
+                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
             }
         }
         
         /* func_detail_illusionary don't exist in the collision hull
          * (or bspx export) */
-        if (hullnum && detail_illusionary) {
+        if ((options.target_game->id != GAME_QUAKE_II && hullnum) && detail_illusionary) {
             continue;
         }
         
@@ -1258,7 +1348,7 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (contents == CONTENTS_CLIP) {
+        if (contents.is_clip()) {
             if (hullnum == 0) {
                 brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
                 if (brush) {
@@ -1270,21 +1360,22 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
             }
             // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             if (hullnum > 0) {
-                contents = CONTENTS_SOLID;
+                contents = options.target_game->create_solid_contents();
             }
             // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
 
         /* "hint" brushes don't affect the collision hulls */
-        if (contents == CONTENTS_HINT) {
-            if (hullnum)
+        if (contents.is_hint()) {
+            if (hullnum > 0)
                 continue;
-            contents = CONTENTS_EMPTY;
+            contents = options.target_game->create_empty_contents();
         }
 
         /* entities never use water merging */
-        if (dst != pWorldEnt())
-            contents = CONTENTS_SOLID;
+        if (dst != pWorldEnt()) {
+            contents = options.target_game->create_solid_contents();
+        }
 
         /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
            this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
@@ -1294,39 +1385,49 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
            before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
            contents type.
          */
-        if (dst != pWorldEnt() && hullnum == 0 && (cflags & CFLAGS_BMODEL_MIRROR_INSIDE)) {
-            contents = CONTENTS_DETAIL_FENCE;
+        if (dst != pWorldEnt() && hullnum <= 0 && mirrorinside) {
+            contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
         }
         
         /* nonsolid brushes don't show up in clipping hulls */
-        if (hullnum > 0 && contents != CONTENTS_SOLID && contents != CONTENTS_SKY)
+        if (hullnum > 0 && !contents.is_solid(options.target_game) && !contents.is_sky(options.target_game))
             continue;
 
         /* sky brushes are solid in the collision hulls */
-        if (hullnum > 0 && contents == CONTENTS_SKY)
-            contents = CONTENTS_SOLID;
-        
+        if (hullnum > 0 && contents.is_sky(options.target_game))
+            contents = options.target_game->create_solid_contents();
+
+        // apply extended flags
+        if (mirrorinside) {
+            contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
+        }
+        if (noclipfaces) {
+            contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
+        }
+        if (func_illusionary_visblocker) {
+            contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
+        }
+
         brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
             continue;
 
         dst->numbrushes++;
         brush->lmshift = lmshift;
-        brush->cflags = cflags;
         
-        if (brush->contents == CONTENTS_SOLID) {
+        if (brush->contents.is_solid(options.target_game)) {
             brush->next = dst->solid;
             dst->solid = brush;
-        } else if (brush->contents == CONTENTS_SKY) {
+        } else if (brush->contents.is_sky(options.target_game)) {
             brush->next = dst->sky;
             dst->sky = brush;
-        } else if (brush->contents == CONTENTS_DETAIL) {
+        } else if (brush->contents.is_detail(CFLAGS_DETAIL)) {
             brush->next = dst->detail;
             dst->detail = brush;
-        } else if (brush->contents == CONTENTS_DETAIL_ILLUSIONARY) {
+        } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
             brush->next = dst->detail_illusionary;
             dst->detail_illusionary = brush;
-        } else if (brush->contents == CONTENTS_DETAIL_FENCE) {
+        } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
             brush->next = dst->detail_fence;
             dst->detail_fence = brush;
         } else {
@@ -1573,7 +1674,7 @@ void SplitBrush (const brush_t *brush,
         }
         // FIXME: dangerous..
         plane.type = -1000;
-        plane.outputplanenum = -1;
+        plane.outputplanenum = PLANENUM_LEAF;
     }
     
     // check all points
@@ -1647,7 +1748,6 @@ void SplitBrush (const brush_t *brush,
 
         // NOTE: brush copying
         b[i]->contents = brush->contents;
-        b[i]->cflags = brush->cflags;
         b[i]->lmshift = brush->lmshift;
         b[i]->faces = nullptr;
         b[i]->next = nullptr;

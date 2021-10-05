@@ -405,17 +405,11 @@ extern int write_litfile;
 extern int write_luxfile;
 extern qboolean onlyents;
 extern qboolean scaledonly;
-extern uint64_t *extended_texinfo_flags;
+extern surfflags_t *extended_texinfo_flags;
 extern qboolean novisapprox;
 extern bool nolights;
 extern bool litonly;
 
-typedef enum {
-    backend_bsp,
-    backend_embree
-} backend_t;
-    
-extern backend_t rtbackend;
 extern qboolean surflight_dump;
 extern char mapfilename[1024];
 

@@ -55,7 +55,7 @@ if (embree_FOUND)
 endif(embree_FOUND)
 
 add_executable(light ${LIGHT_SOURCES} main.cc)
-target_link_libraries (light PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (light PRIVATE ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
 
 if (embree_FOUND)
 	target_link_libraries (light PRIVATE embree)
@@ -127,7 +127,7 @@ add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
 add_test(testlight testlight)
 add_dependencies(check testlight)
 
-target_link_libraries (testlight PRIVATE ${CMAKE_THREAD_LIBS_INIT} gtest)
+target_link_libraries (testlight PRIVATE ${CMAKE_THREAD_LIBS_INIT} gtest fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)

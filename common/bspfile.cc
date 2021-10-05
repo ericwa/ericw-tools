@@ -20,22 +20,510 @@
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
-
 #include <cstdint>
 #include <limits.h>
 
-/*                                                                                                           hexen2, quake2 */
-const bspversion_t bspver_generic   { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         false,  false };
-const bspversion_t bspver_q1        { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           false,  false };
-const bspversion_t bspver_bsp2      { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          false,  false };
-const bspversion_t bspver_bsp2rmq   { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      false,  false };
-/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */               
-const bspversion_t bspver_h2        { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        true,   false };
-const bspversion_t bspver_h2bsp2    { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       true,   false };
-const bspversion_t bspver_h2bsp2rmq { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   true,   false };
-const bspversion_t bspver_hl        { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       false,  false };
-const bspversion_t bspver_q2        { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        false,  true  };
-const bspversion_t bspver_qbism     { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  false,  true  };
+#include <fmt/format.h>
+
+struct gamedef_generic_t : public gamedef_t {
+    gamedef_generic_t()
+    {
+        id = GAME_UNKNOWN;
+        base_dir = nullptr;
+    }
+
+    bool surf_is_lightmapped(const surfflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    bool surf_is_subdivided(const surfflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    surfflags_t surf_remap_for_export(const surfflags_t& flags) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    int32_t get_content_type(const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    int32_t contents_priority(const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_extended_contents(const int32_t&) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_empty_contents(const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_solid_contents(const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_sky_contents(const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_liquid_contents(const int32_t &, const int32_t &) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_empty(const contentflags_t& contents) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_solid(const contentflags_t& contents) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_sky(const contentflags_t& contents) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_liquid(const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_valid(const contentflags_t &, bool) const {
+        throw std::bad_cast();
+    }
+
+    bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const {
+        throw std::bad_cast();
+    }
+
+    std::string get_contents_display(const contentflags_t &contents) const {
+        throw std::bad_cast();
+    }
+};
+
+template<gameid_t ID>
+struct gamedef_q1_like_t : public gamedef_t {
+    gamedef_q1_like_t()
+    {
+        this->id = ID;
+        has_rgb_lightmap = false;
+        base_dir = "ID1";
+    }
+
+    bool surf_is_lightmapped(const surfflags_t &flags) const {
+        return !(flags.native & TEX_SPECIAL);
+    }
+
+    bool surf_is_subdivided(const surfflags_t &flags) const {
+        return !(flags.native & TEX_SPECIAL);
+    }
+
+    surfflags_t surf_remap_for_export(const surfflags_t& flags) const {
+        auto remapped = flags;
+        remapped.native &= TEX_SPECIAL;
+        return remapped;
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        if (contents0 == contents1)
+            return contents0;
+
+        /*
+         * Clusters may be partially solid but still be seen into
+         * ?? - Should we do something more explicit with mixed liquid contents?
+         */
+        if (contents0.native == CONTENTS_EMPTY || contents1.native == CONTENTS_EMPTY)
+            return create_empty_contents();
+
+        if (contents0.native >= CONTENTS_LAVA && contents0.native <= CONTENTS_WATER)
+            return create_liquid_contents(contents0.native);
+        if (contents1.native >= CONTENTS_LAVA && contents1.native <= CONTENTS_WATER)
+            return create_liquid_contents(contents1.native);
+        if (contents0.native == CONTENTS_SKY || contents1.native == CONTENTS_SKY)
+            return create_sky_contents();
+
+        return create_solid_contents();
+    }
+
+    int32_t get_content_type(const contentflags_t &contents) const {
+        return contents.native;
+    }
+
+    int32_t contents_priority(const contentflags_t &contents) const {
+        if (contents.extended & CFLAGS_DETAIL) {
+            return 5;
+        } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
+            return 4;
+        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+            return 3;
+        } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+            return 2;
+        } else switch( contents.native ) {
+            case CONTENTS_SOLID:  return 7;
+            
+            case CONTENTS_SKY:    return 6;
+            
+            case CONTENTS_WATER:  return 2;
+            case CONTENTS_SLIME:  return 2;
+            case CONTENTS_LAVA:   return 2;
+
+            case CONTENTS_EMPTY:  return 1;
+            case 0:               return 0;
+
+            default:
+                Error("Bad contents in face (%s)", __func__);
+                return 0;
+        }
+    }
+
+    contentflags_t create_extended_contents(const int32_t &cflags) const {
+        return { 0, cflags };
+    }
+
+    contentflags_t create_empty_contents(const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
+
+        return { CONTENTS_EMPTY, cflags };
+    }
+
+    contentflags_t create_solid_contents(const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
+
+        return { CONTENTS_SOLID, cflags };
+    }
+
+    contentflags_t create_sky_contents(const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
+
+        return { CONTENTS_SKY, cflags };
+    }
+
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
+
+        return { liquid_type, cflags };
+    }
+
+    bool contents_are_liquid(const contentflags_t &contents) const {
+        return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
+    }
+
+    bool contents_are_valid(const contentflags_t &contents, bool strict) const {
+        if (!contents.native && !strict) {
+            return true;
+        }
+
+        switch (contents.native) {
+        case CONTENTS_EMPTY:
+        case CONTENTS_SOLID:
+        case CONTENTS_WATER:
+        case CONTENTS_SLIME:
+        case CONTENTS_LAVA:
+        case CONTENTS_SKY:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        /* If contents values are the same and not solid, can see through */
+        return !(contents0.is_solid(this) || contents1.is_solid(this)) &&
+            contents0 == contents1;
+    }
+
+    std::string get_contents_display(const contentflags_t &contents) const {
+        switch (contents.native) {
+            case 0:
+                return "UNSET";
+            case CONTENTS_EMPTY:
+                return "EMPTY";
+            case CONTENTS_SOLID:
+                return "SOLID";
+            case CONTENTS_SKY:
+                return "SKY";
+            case CONTENTS_WATER:
+                return "WATER";
+            case CONTENTS_SLIME:
+                return "SLIME";
+            case CONTENTS_LAVA:
+                return "LAVA";
+            default:
+                return fmt::to_string(contents.native);
+        }
+    }
+};
+
+struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II> {
+    gamedef_h2_t()
+    {
+        base_dir = "DATA1";
+    }
+};
+
+struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE> {
+    gamedef_hl_t()
+    {
+        has_rgb_lightmap = true;
+        base_dir = "VALVE";
+    }
+};
+
+struct gamedef_q2_t : public gamedef_t {
+    gamedef_q2_t()
+    {
+        this->id = GAME_QUAKE_II;
+        has_rgb_lightmap = true;
+        base_dir = "BASEQ2";
+    }
+
+    bool surf_is_lightmapped(const surfflags_t &flags) const {
+        return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY | Q2_SURF_NODRAW)); // mxd. +Q2_SURF_NODRAW
+    }
+
+    bool surf_is_subdivided(const surfflags_t &flags) const {
+        return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY));
+    }
+
+    surfflags_t surf_remap_for_export(const surfflags_t& flags) const {
+        auto remapped = flags;
+        // TODO: strip any illegal flags off remapped.native
+        return remapped;
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        contentflags_t c = { contents0.native | contents1.native, contents0.extended | contents1.extended };
+
+	    // a cluster may include some solid detail areas, but
+	    // still be seen into
+	    if (!(contents0.native & Q2_CONTENTS_SOLID) || !(contents1.native & Q2_CONTENTS_SOLID))
+		    c.native &= ~Q2_CONTENTS_SOLID;
+
+	    return c;
+    }
+
+    int32_t get_content_type(const contentflags_t &contents) const {
+        return (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) | (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP);
+    }
+
+    int32_t contents_priority(const contentflags_t &contents) const {
+        if (contents.extended & CFLAGS_DETAIL) {
+            return 8;
+        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+            return 6;
+        } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
+            return 7;
+        } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+            return 2;
+        } else switch( contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) ) {
+            case Q2_CONTENTS_SOLID:  return 10;
+            case Q2_CONTENTS_WINDOW:  return 9;
+            case Q2_CONTENTS_AUX: return 5;
+            case Q2_CONTENTS_LAVA: return 4;
+            case Q2_CONTENTS_SLIME: return 3;
+            case Q2_CONTENTS_WATER: return 2;
+            case Q2_CONTENTS_MIST: return 1;
+            default: return 0;
+        }
+    }
+    
+    contentflags_t create_extended_contents(const int32_t &cflags) const {
+        return { 0, cflags };
+    }
+
+    contentflags_t create_empty_contents(const int32_t &cflags) const {
+        return { 0, cflags };
+    }
+
+    contentflags_t create_solid_contents(const int32_t &cflags) const {
+        return { Q2_CONTENTS_SOLID, cflags };
+    }
+
+    contentflags_t create_sky_contents(const int32_t &cflags) const {
+        return create_solid_contents(cflags);
+    }
+
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags) const {
+        switch (liquid_type) {
+            case CONTENTS_WATER:
+                return { Q2_CONTENTS_WATER, cflags };
+            case CONTENTS_SLIME:
+                return { Q2_CONTENTS_SLIME, cflags };
+            case CONTENTS_LAVA:
+                return { Q2_CONTENTS_LAVA, cflags };
+            default:
+                Error("bad contents");
+        }
+    }
+
+    bool contents_are_empty(const contentflags_t &contents) const {
+        return !(contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
+    }
+    bool contents_are_solid(const contentflags_t &contents) const {
+        return contents.native & Q2_CONTENTS_SOLID;
+    }
+
+    bool contents_are_sky(const contentflags_t &contents) const {
+        return false;
+    }
+
+    bool contents_are_liquid(const contentflags_t &contents) const {
+        return contents.native & Q2_CONTENTS_LIQUID;
+    }
+
+    bool contents_are_valid(const contentflags_t &contents, bool strict) const {
+        // check that we don't have more than one visible contents type
+        const int32_t x = (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
+        if ((x & (x - 1)) != 0) {
+            return false;
+        }
+
+        // TODO: check other invalid mixes
+        if (!x && strict) {
+            return false;
+        }
+
+        return true;
+    }
+
+    constexpr int32_t visible_contents(const int32_t &contents) const {
+	    for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1)
+		    if (contents & i )
+			    return i;
+
+	    return 0;
+    }
+
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const {
+        int32_t c0 = contents0.native, c1 = contents1.native;
+
+        if (!visible_contents(c0 ^ c1))
+            return true;
+
+        if ((c0 & Q2_CONTENTS_TRANSLUCENT) ||
+            contents0.is_detail())
+            c0 = 0;
+        if ((c1 & Q2_CONTENTS_TRANSLUCENT) ||
+            contents1.is_detail())
+            c1 = 0;
+
+        // can't see through solid
+        if ((c0 | c1) & Q2_CONTENTS_SOLID)
+            return false;
+
+        // identical on both sides
+        if (!(c0 ^ c1))
+            return true;
+
+        return visible_contents(c0 ^ c1);
+    }
+
+    std::string get_contents_display(const contentflags_t &contents) const {
+        constexpr const char *bitflag_names[] = {
+            "SOLID",
+            "WINDOW",
+            "AUX",
+            "LAVA",
+            "SLIME",
+            "WATER",
+            "MIST",
+            "128",
+            "256",
+            "512",
+            "1024",
+            "2048",
+            "4096",
+            "8192",
+            "16384",
+            "AREAPORTAL",
+            "PLAYERCLIP",
+            "MONSTERCLIP",
+            "CURRENT_0",
+            "CURRENT_90",
+            "CURRENT_180",
+            "CURRENT_270",
+            "CURRENT_UP",
+            "CURRENT_DOWN",
+            "ORIGIN",
+            "MONSTER",
+            "DEADMONSTER",
+            "DETAIL",
+            "TRANSLUCENT",
+            "LADDER",
+            "1073741824",
+            "2147483648"
+        };
+
+        std::string s;
+
+        for (int32_t i = 0; i < std::size(bitflag_names); i++) {
+            if (contents.native & (1 << i)) {
+                if (s.size()) {
+                    s += " | " + std::string(bitflag_names[i]);
+                } else {
+                    s += bitflag_names[i];
+                }
+            }
+        }
+
+        return s;
+    }
+};
+
+static const gamedef_generic_t gamedef_generic;
+const bspversion_t bspver_generic    { NO_VERSION,     NO_VERSION,    "mbsp",          "generic BSP",         &gamedef_generic };
+static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
+const bspversion_t bspver_q1         { BSPVERSION,     NO_VERSION,    "bsp29",         "Quake BSP",           &gamedef_q1 };
+const bspversion_t bspver_bsp2       { BSP2VERSION,    NO_VERSION,    "bsp2",          "Quake BSP2",          &gamedef_q1 };
+const bspversion_t bspver_bsp2rmq    { BSP2RMQVERSION, NO_VERSION,    "bsp2rmq",       "Quake BSP2-RMQ",      &gamedef_q1 };
+/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */     
+static const gamedef_h2_t gamedef_h2;          
+const bspversion_t bspver_h2         { BSPVERSION,     NO_VERSION,    "hexen2",        "Hexen II BSP",        &gamedef_h2 };
+const bspversion_t bspver_h2bsp2     { BSP2VERSION,    NO_VERSION,    "hexen2bsp2",    "Hexen II BSP2",       &gamedef_h2 };
+const bspversion_t bspver_h2bsp2rmq  { BSP2RMQVERSION, NO_VERSION,    "hexen2bsp2rmq", "Hexen II BSP2-RMQ",   &gamedef_h2 };
+static const gamedef_hl_t gamedef_hl;
+const bspversion_t bspver_hl         { BSPHLVERSION,   NO_VERSION,    "hl",            "Half-Life BSP",       &gamedef_hl };
+static const gamedef_q2_t gamedef_q2;
+const bspversion_t bspver_q2         { Q2_BSPIDENT,    Q2_BSPVERSION, "q2bsp",         "Quake II BSP",        &gamedef_q2 };
+const bspversion_t bspver_qbism      { Q2_QBISMIDENT,  Q2_BSPVERSION, "qbism",         "Quake II Qbism BSP",  &gamedef_q2 };
+
+bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const {
+    return (extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
+        game->get_content_type(*this) == game->get_content_type(other);
+}
+
+int32_t contentflags_t::priority(const gamedef_t *game) const {
+    return game->contents_priority(*this);
+}
+
+bool contentflags_t::is_empty(const gamedef_t *game) const {
+    return game->contents_are_empty(*this);
+}
+
+bool contentflags_t::is_solid(const gamedef_t *game) const {
+    return game->contents_are_solid(*this);
+}
+
+bool contentflags_t::is_sky(const gamedef_t *game) const {
+    return game->contents_are_sky(*this);
+}
+
+bool contentflags_t::is_liquid(const gamedef_t *game) const {
+    return game->contents_are_liquid(*this);
+}
+
+bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const {
+    return game->contents_are_valid(*this, strict);
+}
+
+std::string contentflags_t::to_string(const gamedef_t *game) const {
+    std::string s = game->get_contents_display(*this);
+    return s;
+}
 
 static const char *
 BSPVersionString(const bspversion_t *version)
@@ -60,7 +548,7 @@ BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_ver
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
-            if (bspver->hexen2) {
+            if (bspver->game->id == GAME_HEXEN_II) {
                 // HACK: don't detect as Hexen II here, it's done later (isHexen2).
                 // Since the Hexen II bspversion_t's have the same ident/version as Quake
                 // we need to assume Quake.
@@ -588,15 +1076,17 @@ void Q2_SwapBSPFile (q2bsp_t *bsp, qboolean todisk)
     //
     // visibility
     //
-    if (todisk)
-        j = bsp->dvis->numclusters;
-    else
-        j = LittleLong(bsp->dvis->numclusters);
-    bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
-    for (i=0 ; i<j ; i++)
-    {
-        bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
-        bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+    if (bsp->dvis) {
+        if (todisk)
+            j = bsp->dvis->numclusters;
+        else
+            j = LittleLong(bsp->dvis->numclusters);
+        bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
+        for (i=0 ; i<j ; i++)
+        {
+            bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
+            bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+        }
     }
 }
 
@@ -782,15 +1272,17 @@ void Q2_Qbism_SwapBSPFile (q2bsp_qbism_t *bsp, qboolean todisk)
     //
     // visibility
     //
-    if (todisk)
-        j = bsp->dvis->numclusters;
-    else
-        j = LittleLong(bsp->dvis->numclusters);
-    bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
-    for (i=0 ; i<j ; i++)
-    {
-        bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
-        bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+    if (bsp->dvis) {
+        if (todisk)
+            j = bsp->dvis->numclusters;
+        else
+            j = LittleLong(bsp->dvis->numclusters);
+        bsp->dvis->numclusters = LittleLong (bsp->dvis->numclusters);
+        for (i=0 ; i<j ; i++)
+        {
+            bsp->dvis->bitofs[i][0] = LittleLong (bsp->dvis->bitofs[i][0]);
+            bsp->dvis->bitofs[i][1] = LittleLong (bsp->dvis->bitofs[i][1]);
+        }
     }
 }
 
@@ -1056,7 +1548,7 @@ BSP29toM_Texinfo(const texinfo_t *texinfos, int numtexinfo) {
         for (j=0; j<2; j++)
             for (k=0; k<4; k++)
                 mtexinfo->vecs[j][k] = texinfo29->vecs[j][k];
-        mtexinfo->flags = texinfo29->flags;
+        mtexinfo->flags = { texinfo29->flags };
         mtexinfo->miptex = texinfo29->miptex;
     }
     
@@ -1075,7 +1567,7 @@ MBSPto29_Texinfo(const gtexinfo_t *mtexinfos, int numtexinfo) {
         for (j=0; j<2; j++)
             for (k=0; k<4; k++)
                 texinfo29->vecs[j][k] = mtexinfo->vecs[j][k];
-        texinfo29->flags = mtexinfo->flags;
+        texinfo29->flags = mtexinfo->flags.native;
         texinfo29->miptex = mtexinfo->miptex;
     }
     
@@ -1115,7 +1607,7 @@ static uint8_t *
 Q2BSPtoM_CopyVisData(const dvis_t *dvisq2, int vissize, int *outvissize, mleaf_t *leafs, int numleafs) {
 
     if (!*outvissize) {
-        return ((uint8_t *) dvisq2);
+        return nullptr;
     }
 
     // FIXME: assumes PHS always follows PVS.
@@ -1242,6 +1734,10 @@ static std::vector<uint8_t> CalcPHS(int32_t portalclusters, const uint8_t *visda
 
 static dvis_t *
 MBSPtoQ2_CopyVisData(const uint8_t *visdata, int *visdatasize, int numleafs, const mleaf_t *leafs) {
+    if (!*visdatasize) {
+        return nullptr;
+    }
+
     int32_t num_clusters = 0;
     
     for (int32_t i = 0; i < numleafs; i++) {
@@ -1539,7 +2035,7 @@ Q2BSPtoM_Texinfo(const q2_texinfo_t *dtexinfosq2, int numtexinfos) {
         for (j = 0; j < 2; j++)
             for (k = 0; k < 4; k++)
                 dtexinfo2->vecs[j][k] = dtexinfoq2->vecs[j][k];
-        dtexinfo2->flags = dtexinfoq2->flags;
+        dtexinfo2->flags = { dtexinfoq2->flags };
         memcpy(dtexinfo2->texture, dtexinfoq2->texture, sizeof(dtexinfo2->texture));
         dtexinfo2->value = dtexinfoq2->value;
         dtexinfo2->nexttexinfo = dtexinfoq2->nexttexinfo;
@@ -1560,7 +2056,7 @@ MBSPtoQ2_Texinfo(const gtexinfo_t *dtexinfos2, int numtexinfos) {
         for (j = 0; j < 2; j++)
             for (k = 0; k < 4; k++)
                 dtexinfoq2->vecs[j][k] = dtexinfo2->vecs[j][k];
-        dtexinfoq2->flags = dtexinfo2->flags;
+        dtexinfoq2->flags = dtexinfo2->flags.native;
         memcpy(dtexinfoq2->texture, dtexinfo2->texture, sizeof(dtexinfo2->texture));
         dtexinfoq2->value = dtexinfo2->value;
         dtexinfoq2->nexttexinfo = dtexinfo2->nexttexinfo;
@@ -2359,7 +2855,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         if (bspdata->version == &bspver_q1 || bspdata->version == &bspver_h2 || bspdata->version == &bspver_hl) {
             // bspver_q1, bspver_h2, bspver_hl -> bspver_generic
 
-            const bsp29_t *bsp29 = &bspdata->data.bsp29;
+            bsp29_t *bsp29 = &bspdata->data.bsp29;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2403,7 +2899,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dsurfedges = BSP29_CopySurfedges(bsp29->dsurfedges, bsp29->numsurfedges);
         
             /* Free old data */
-            FreeBSP29((bsp29_t *)bsp29);
+            FreeBSP29(bsp29);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2412,7 +2908,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_q2) {
             // bspver_q2 -> bspver_generic
 
-            const q2bsp_t *q2bsp = &bspdata->data.q2bsp;
+            q2bsp_t *q2bsp = &bspdata->data.q2bsp;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2461,7 +2957,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dbrushsides = Q2BSPtoM_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
         
             /* Free old data */
-            FreeQ2BSP((q2bsp_t *)q2bsp);
+            FreeQ2BSP(q2bsp);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2470,7 +2966,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_qbism) {
             // bspver_qbism -> bspver_generic
 
-            const q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
+            q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2519,7 +3015,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(q2bsp->dbrushsides, q2bsp->numbrushsides);
         
             /* Free old data */
-            FreeQ2BSP_QBSP((q2bsp_qbism_t *)q2bsp);
+            FreeQ2BSP_QBSP(q2bsp);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2528,7 +3024,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_bsp2rmq || bspdata->version == &bspver_h2bsp2rmq) {
             // bspver_bsp2rmq, bspver_h2bsp2rmq -> bspver_generic
 
-            const bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
+            bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2572,7 +3068,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dsurfedges = BSP29_CopySurfedges(bsp2rmq->dsurfedges, bsp2rmq->numsurfedges);
         
             /* Free old data */
-            FreeBSP2RMQ((bsp2rmq_t *)bsp2rmq);
+            FreeBSP2RMQ(bsp2rmq);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
@@ -2581,7 +3077,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
             // bspver_bsp2, bspver_h2bsp2 -> bspver_generic
 
-            const bsp2_t *bsp2 = &bspdata->data.bsp2;
+            bsp2_t *bsp2 = &bspdata->data.bsp2;
             mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(mbsp, 0, sizeof(*mbsp));
@@ -2625,14 +3121,14 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             mbsp->dsurfedges = BSP29_CopySurfedges(bsp2->dsurfedges, bsp2->numsurfedges);
         
             /* Free old data */
-            FreeBSP2((bsp2_t *)bsp2);
+            FreeBSP2(bsp2);
         
             /* Conversion complete! */
             ConvertBSPToMFormatComplete(&mbsp->loadversion, to_version, bspdata);
 
             return true;
         }
-    } 
+    }
     else if (bspdata->version == &bspver_generic) {
         // Conversions from bspver_generic
 
@@ -2640,7 +3136,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             // bspver_generic -> bspver_q1, bspver_h2, bspver_hl
 
             bsp29_t *bsp29 = &bspdata->data.bsp29;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
         
             // validate that the conversion is possible
             if (!MBSPto29_Leafs_Validate(mbsp->dleafs, mbsp->numleafs)) {
@@ -2704,7 +3200,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp29->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2713,7 +3209,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (to_version == &bspver_q2) {
             // bspver_generic -> bspver_q2
 
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_t *q2bsp = &bspdata->data.q2bsp;
         
             // FIXME: validate that the conversion is possible without overflow
@@ -2764,7 +3260,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             q2bsp->dbrushsides = MBSPtoQ2_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2773,7 +3269,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         } else if (to_version == &bspver_qbism) {
             // bspver_generic -> bspver_qbism
 
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
             q2bsp_qbism_t *q2bsp = &bspdata->data.q2bsp_qbism;
         
             memset(q2bsp, 0, sizeof(*q2bsp));
@@ -2821,7 +3317,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             q2bsp->dbrushsides = Q2BSP_Qbism_CopyBrushSides(mbsp->dbrushsides, mbsp->numbrushsides);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2831,8 +3327,8 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             // bspver_generic -> bspver_bsp2rmq, bspver_h2bsp2rmq
 
             bsp2rmq_t *bsp2rmq = &bspdata->data.bsp2rmq;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
-
+            mbsp_t *mbsp = &bspdata->data.mbsp;
+        
             memset(bsp2rmq, 0, sizeof(*bsp2rmq));
         
             // copy counts
@@ -2874,7 +3370,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp2rmq->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;
@@ -2884,7 +3380,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             // bspver_generic -> bspver_bsp2, bspver_h2bsp2
 
             bsp2_t *bsp2 = &bspdata->data.bsp2;
-            const mbsp_t *mbsp = &bspdata->data.mbsp;
+            mbsp_t *mbsp = &bspdata->data.mbsp;
         
             memset(bsp2, 0, sizeof(*bsp2));
         
@@ -2927,7 +3423,7 @@ ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             bsp2->dsurfedges = BSP29_CopySurfedges(mbsp->dsurfedges, mbsp->numsurfedges);
         
             /* Free old data */
-            FreeMBSP((mbsp_t *)mbsp);
+            FreeMBSP(mbsp);
         
             /* Conversion complete! */
             bspdata->version = to_version;

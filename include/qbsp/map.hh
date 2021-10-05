@@ -24,6 +24,7 @@
 
 #include <qbsp/parser.hh>
 
+#include <optional>
 #include <vector>
 
 typedef struct epair_s {
@@ -38,18 +39,19 @@ struct mapface_t {
     std::string texname;
     int texinfo;
     int linenum;
+
+    surfflags_t flags;
     
     // Q2 stuff
     int contents;
-    int flags;
     int value;
     
     mapface_t() :
-    texinfo(0),
-    linenum(0),
-    contents(0),
-    flags(0),
-    value(0) {
+        texinfo(0),
+        linenum(0),
+        contents(0),
+        flags({}),
+        value(0) {
         memset(&plane, 0, sizeof(plane));
         for (int i=0; i<3; i++) {
             VectorSet(planepts[i], 0, 0, 0);
@@ -68,18 +70,13 @@ enum class brushformat_t {
     
 class mapbrush_t {
 public:
-    int firstface;
-    int numfaces;
-    brushformat_t format;
-    int contents;
-    
-    mapbrush_t() :
-        firstface(0),
-        numfaces(0),
-        format(brushformat_t::NORMAL),
-        contents(0) {}
+    int firstface = 0;
+    int numfaces = 0;
+    brushformat_t format = brushformat_t::NORMAL;
+    int contents = 0;
+
     const mapface_t &face(int i) const;
-} ;
+};
 
 struct lumpdata {
     int count;
@@ -127,7 +124,10 @@ public:
     }
 };
 
-using texname_t = std::string;
+struct texdata_t {
+    std::string     name;
+    int32_t         flags, value;
+};
 
 typedef struct mapdata_s {
     /* Arrays of actual items */
@@ -135,7 +135,7 @@ typedef struct mapdata_s {
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
     std::vector<qbsp_plane_t> planes;
-    std::vector<texname_t> miptex;
+    std::vector<texdata_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
     
     /* quick lookup for texinfo */
@@ -167,6 +167,10 @@ typedef struct mapdata_s {
     std::vector<int32_t> exported_surfedges;
     std::vector<bsp2_dface_t> exported_faces;
     std::vector<dmodelh2_t> exported_models;
+    std::vector<uint32_t> exported_leafbrushes;
+    std::vector<q2_dbrushside_qbism_t> exported_brushsides;
+    std::vector<dbrush_t> exported_brushes;
+
     std::string exported_entities;
     std::string exported_texdata;
 
@@ -176,9 +180,12 @@ typedef struct mapdata_s {
     std::vector<uint8_t> exported_bspxbrushes;
 
     // helpers
-    std::string texinfoTextureName(int texinfo) const {
-        int mt = mtexinfos.at(texinfo).miptex;
-        return miptex.at(mt);
+    const std::string &miptexTextureName(int mt) const {
+        return miptex.at(mt).name;
+    }
+
+    const std::string &texinfoTextureName(int texinfo) const {
+        return miptexTextureName(mtexinfos.at(texinfo).miptex);
     }
 } mapdata_t;
 
@@ -194,9 +201,25 @@ void LoadMapFile(void);
 mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);
 
-int FindMiptex(const char *name);
-int FindTexinfo(mtexinfo_t *texinfo, uint64_t flags); //FIXME: Make this take const texinfo
-int FindTexinfoEnt(mtexinfo_t *texinfo, mapentity_t *entity); //FIXME: Make this take const texinfo
+struct extended_texinfo_t {
+    int contents = 0;
+    int flags = 0;
+    int value = 0;
+};
+
+struct quark_tx_info_t {
+    bool quark_tx1 = false;
+    bool quark_tx2 = false;
+    
+    std::optional<extended_texinfo_t> info;
+};
+
+int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal = false);
+inline int FindMiptex(const char *name, bool internal = false) {
+    std::optional<extended_texinfo_t> extended_info;
+    return FindMiptex(name, extended_info, internal);
+}
+int FindTexinfo(const mtexinfo_t &texinfo);
 
 void PrintEntity(const mapentity_t *entity);
 const char *ValueForKey(const mapentity_t *entity, const char *key);

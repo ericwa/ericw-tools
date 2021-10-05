@@ -43,7 +43,7 @@ static int mapsurfaces;
 //============================================================================
 
 void
-ConvertNodeToLeaf(node_t *node, int contents)
+ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // backup the mins/maxs
     vec3_t mins, maxs;
@@ -68,11 +68,15 @@ void
 DetailToSolid(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
+        if (options.target_game->id == GAME_QUAKE_II) {
+            return;
+        }
+
         // We need to remap CONTENTS_DETAIL to a standard quake content type
-        if (node->contents == CONTENTS_DETAIL) {
-            node->contents = CONTENTS_SOLID;
-        } else if (node->contents == CONTENTS_DETAIL_ILLUSIONARY) {
-            node->contents = CONTENTS_EMPTY;
+        if (node->contents.is_detail(CFLAGS_DETAIL)) {
+            node->contents = options.target_game->create_solid_contents();
+        } else if (node->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+            node->contents = options.target_game->create_empty_contents();
         }
         /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
          * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
@@ -85,10 +89,10 @@ DetailToSolid(node_t *node)
 		// If both children are solid, we can merge the two leafs into one.
         // DarkPlaces has an assertion that fails if both children are
         // solid.
-		if (node->children[0]->contents == CONTENTS_SOLID
-			&& node->children[1]->contents == CONTENTS_SOLID) {
+		if (node->children[0]->contents.is_solid(options.target_game)
+			&& node->children[1]->contents.is_solid(options.target_game)) {
             // This discards any faces on-node. Should be safe (?)
-            ConvertNodeToLeaf(node, CONTENTS_SOLID);
+            ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
 		}
     }
 }
@@ -389,7 +393,7 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
              */
             bool hintsplit = false;
             for (const face_t *face = surf->faces; face; face = face->next) {
-                if (map.mtexinfos.at(face->texinfo).flags & TEX_HINT)
+                if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_HINT)
                     hintsplit = true;
             }
 
@@ -409,13 +413,13 @@ ChoosePlaneFromList(surface_t *surfaces, vec3_t mins, vec3_t maxs)
                 if (plane->type < 3 && plane->type == plane2->type)
                     continue;
                 for (const face_t *face = surf2->faces; face; face = face->next) {
-                    const uint64_t flags = map.mtexinfos.at(face->texinfo).flags;
+                    const surfflags_t &flags = map.mtexinfos.at(face->texinfo).flags;
                     /* Don't penalize for splitting skip faces */
-                    if (flags & TEX_SKIP)
+                    if (flags.extended & TEX_EXFLAG_SKIP)
                         continue;
                     if (FaceSide(face, plane) == SIDE_ON) {
                         /* Never split a hint face except with a hint */
-                        if (!hintsplit && (flags & TEX_HINT)) {
+                        if (!hintsplit && (flags.extended & TEX_EXFLAG_HINT)) {
                             splits = INT_MAX;
                             break;
                         }
@@ -549,28 +553,18 @@ CalcSurfaceInfo(surface_t *surf)
     surf->has_struct = false;
     
     for (const face_t *f = surf->faces; f; f = f->next) {
-        if (f->contents[0] >= 0 || f->contents[1] >= 0)
-            Error("Bad contents in face (%s)", __func__);
+        for (auto &contents : f->contents)
+            if (!contents.is_valid(options.target_game, false))
+                Error("Bad contents in face: %s (%s)", contents.to_string(options.target_game).c_str(), __func__);
 
         surf->lmshift = (f->lmshift[0]<f->lmshift[1])?f->lmshift[0]:f->lmshift[1];
         
         bool faceIsDetail = false;
-        if ((f->contents[0] == CONTENTS_DETAIL)
-            || (f->contents[1] == CONTENTS_DETAIL))
-            faceIsDetail = true;
-        
-        if ((f->contents[0] == CONTENTS_DETAIL_ILLUSIONARY)
-            || (f->contents[1] == CONTENTS_DETAIL_ILLUSIONARY))
-            faceIsDetail = true;
-        
-        if ((f->contents[0] == CONTENTS_DETAIL_FENCE)
-            || (f->contents[1] == CONTENTS_DETAIL_FENCE))
-            faceIsDetail = true;
-        
-        if ((f->cflags[0] & CFLAGS_WAS_ILLUSIONARY)
-            || (f->cflags[1] & CFLAGS_WAS_ILLUSIONARY))
-            faceIsDetail = true;
 
+        if ((f->contents[0].extended | f->contents[1].extended) &
+            (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))
+            faceIsDetail = true;
+        
         if (faceIsDetail)
             surf->has_detail = true;
         else
@@ -717,8 +711,16 @@ GetContentsName
 ==================
 */
 const char *
-GetContentsName( int Contents ) {
-    switch( Contents ) {
+GetContentsName( const contentflags_t &Contents ) {
+    if (Contents.extended & CFLAGS_DETAIL) {
+        return "Detail";
+    } else if (Contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        return "DetailIllusionary";
+    } else if (Contents.extended & CFLAGS_DETAIL_FENCE) {
+        return "DetailFence";
+    } else if (Contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+        return "IllusionaryVisblocker";
+    } else switch( Contents.native ) {
         case CONTENTS_EMPTY:
             return "Empty";
             
@@ -736,48 +738,9 @@ GetContentsName( int Contents ) {
             
         case CONTENTS_SKY:
             return "Sky";
-        
-        case CONTENTS_DETAIL:
-            return "Detail";
-            
-        case CONTENTS_DETAIL_ILLUSIONARY:
-            return "DetailIllusionary";
-
-        case CONTENTS_DETAIL_FENCE:
-            return "DetailFence";
-
-        case CONTENTS_ILLUSIONARY_VISBLOCKER:
-            return "IllusionaryVisblocker";
 
         default:
             return "Error";
-    }
-}
-
-int Contents_Priority(int contents)
-{
-    switch (contents) {
-        case CONTENTS_SOLID:  return 7;
-            
-        case CONTENTS_SKY:    return 6;
-            
-        case CONTENTS_DETAIL: return 5;
-    
-        case CONTENTS_DETAIL_FENCE: return 4;
-            
-        case CONTENTS_DETAIL_ILLUSIONARY: return 3;
-            
-        case CONTENTS_WATER:  return 2;
-        case CONTENTS_SLIME:  return 2;
-        case CONTENTS_LAVA:   return 2;
-        case CONTENTS_ILLUSIONARY_VISBLOCKER: return 2;
-
-        case CONTENTS_EMPTY:  return 1;
-        case 0:               return 0;
-        
-        default:
-            Error("Bad contents in face (%s)", __func__);
-            return 0;
     }
 }
 
@@ -795,26 +758,29 @@ static void
 LinkConvexFaces(surface_t *planelist, node_t *leafnode)
 {
     leafnode->faces = NULL;
-    leafnode->contents = 0;
     leafnode->planenum = PLANENUM_LEAF;
 
     int count = 0;
+    std::optional<contentflags_t> contents;
+
     for (surface_t *surf = planelist; surf; surf = surf->next) {
         for (face_t *f = surf->faces; f; f = f->next) {
             count++;
             
-            const int currentpri = Contents_Priority(leafnode->contents);
-            const int fpri = Contents_Priority(f->contents[0]);
+            const int currentpri = contents.has_value() ? contents->priority(options.target_game) : -1;
+            const int fpri = f->contents[0].priority(options.target_game);
             if (fpri > currentpri) {
-                leafnode->contents = f->contents[0];
+                contents = f->contents[0];
             }
             
             // HACK: Handle structural covered by detail.
-            if (f->cflags[0] & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
-                Q_assert(f->contents[0] == CONTENTS_EMPTY);
+            if (f->contents[0].extended & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
+                Q_assert(f->contents[0].is_empty(options.target_game));
 
-                if (Contents_Priority(CONTENTS_DETAIL) > currentpri) {
-                    leafnode->contents = CONTENTS_DETAIL;
+                const contentflags_t solid_detail = options.target_game->create_extended_contents(CFLAGS_DETAIL);
+
+                if (solid_detail.priority(options.target_game) > currentpri) {
+                    contents = solid_detail;
                 }
             }
         }
@@ -823,36 +789,24 @@ LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     // NOTE: This is crazy..
     // Liquid leafs get assigned liquid content types because of the
     // "cosmetic" mirrored faces.
-    if (!leafnode->contents)
-        leafnode->contents = CONTENTS_SOLID; // FIXME: Need to create CONTENTS_DETAIL sometimes?
-    
-    switch (leafnode->contents) {
-    case CONTENTS_EMPTY:
-        c_empty++;
-        break;
-    case CONTENTS_SOLID:
-        c_solid++;
-        break;
-    case CONTENTS_WATER:
-    case CONTENTS_SLIME:
-    case CONTENTS_LAVA:
-    case CONTENTS_SKY:
-        c_water++;
-        break;
-    case CONTENTS_DETAIL:
-        c_detail++;
-        break;
-    case CONTENTS_DETAIL_ILLUSIONARY:
-        c_detail_illusionary++;
-        break;
-    case CONTENTS_DETAIL_FENCE:
-        c_detail_fence++;
-        break;
-    case CONTENTS_ILLUSIONARY_VISBLOCKER:
+    leafnode->contents = contents.value_or(options.target_game->create_solid_contents()); // FIXME: Need to create CONTENTS_DETAIL sometimes?
+
+    if (leafnode->contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
         c_illusionary_visblocker++;
-        break;
-    default:
-        Error("Bad contents in face (%s)", __func__);
+    } else if (leafnode->contents.extended & CFLAGS_DETAIL_FENCE) {
+        c_detail_fence++;
+    } else if (leafnode->contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        c_detail_illusionary++;
+    } else if (leafnode->contents.extended & CFLAGS_DETAIL) {
+        c_detail++;
+    } else if (leafnode->contents.is_empty(options.target_game)) {
+        c_empty++;
+    } else if (leafnode->contents.is_solid(options.target_game)) {
+        c_solid++;
+    } else if (leafnode->contents.is_liquid(options.target_game) || leafnode->contents.is_sky(options.target_game)) {
+        c_water++;
+    } else {
+        //Error("Bad contents in face: %s (%s)", leafnode->contents.to_string(options.target_game).c_str(), __func__);
     }
 
     // write the list of the original faces to the leaf's markfaces
@@ -1011,11 +965,11 @@ SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
         }
         headnode->children[0] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
         headnode->children[0]->planenum = PLANENUM_LEAF;
-        headnode->children[0]->contents = CONTENTS_EMPTY;
+        headnode->children[0]->contents = options.target_game->create_empty_contents();
         headnode->children[0]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
         headnode->children[1] = (node_t *)AllocMem(OTHER, sizeof(node_t), true);
         headnode->children[1]->planenum = PLANENUM_LEAF;
-        headnode->children[1]->contents = CONTENTS_EMPTY;
+        headnode->children[1]->contents = options.target_game->create_empty_contents();
         headnode->children[1]->markfaces = (face_t **)AllocMem(OTHER, sizeof(face_t *), true);
 
         return headnode;

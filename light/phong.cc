@@ -409,7 +409,7 @@ static int Q2_FacePhongValue(const mbsp_t *bsp, const bsp2_dface_t *face) {
     const gtexinfo_t* texinfo = BSP_GetTexinfo(bsp, face->texinfo);
     if (texinfo != nullptr) {
         if (texinfo->value != 0
-            && ((texinfo->flags & Q2_SURF_LIGHT) == 0)) {
+            && ((texinfo->flags.native & Q2_SURF_LIGHT) == 0)) {
             return texinfo->value;
         }
     }
@@ -417,9 +417,9 @@ static int Q2_FacePhongValue(const mbsp_t *bsp, const bsp2_dface_t *face) {
 }
 
 void
-CalcualateVertexNormals(const mbsp_t *bsp)
+CalculateVertexNormals(const mbsp_t *bsp)
 {
-    logprint("--- CalcualateVertexNormals ---\n");
+    logprint("--- %s ---\n", __func__);
 
     Q_assert(!s_builtPhongCaches);
     s_builtPhongCaches = true;
@@ -438,8 +438,7 @@ CalcualateVertexNormals(const mbsp_t *bsp)
         for (int j=info->model->firstface; j < info->model->firstface + info->model->numfaces; j++) {
             const bsp2_dface_t *f = BSP_GetFace(bsp, j);
             
-            extended_texinfo_flags[f->texinfo] &= ~(TEX_PHONG_ANGLE_MASK);
-            extended_texinfo_flags[f->texinfo] |= (phongangle_byte << TEX_PHONG_ANGLE_SHIFT);
+            extended_texinfo_flags[f->texinfo].phong_angle = phongangle_byte;
         }
     }
     
@@ -465,7 +464,7 @@ CalcualateVertexNormals(const mbsp_t *bsp)
             interior_verts.insert(i);
         }
     }
-    //printf("CalcualateVertexNormals: %d interior verts\n", (int)interior_verts.size());
+    //printf("CalculateVertexNormals: %d interior verts\n", (int)interior_verts.size());
     
     // build the "face -> faces to smooth with" map
     for (int i = 0; i < bsp->numfaces; i++) {
@@ -476,8 +475,8 @@ CalcualateVertexNormals(const mbsp_t *bsp)
         const qplane3f f_plane = Face_Plane_E(bsp, f);
         
         // any face normal within this many degrees can be smoothed with this face
-        const int f_phong_angle = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
-        int f_phong_angle_concave = (extended_texinfo_flags[f->texinfo] & TEX_PHONG_ANGLE_CONCAVE_MASK) >> TEX_PHONG_ANGLE_CONCAVE_SHIFT;
+        const int f_phong_angle = extended_texinfo_flags[f->texinfo].phong_angle;
+        int f_phong_angle_concave = extended_texinfo_flags[f->texinfo].phong_angle_concave;
         if (f_phong_angle_concave == 0) {
             f_phong_angle_concave = f_phong_angle;
         }
@@ -494,8 +493,8 @@ CalcualateVertexNormals(const mbsp_t *bsp)
                     continue;
                 
                 // FIXME: factor out and share with above?
-                const int f2_phong_angle = (extended_texinfo_flags[f2->texinfo] & TEX_PHONG_ANGLE_MASK) >> TEX_PHONG_ANGLE_SHIFT;
-                int f2_phong_angle_concave = (extended_texinfo_flags[f2->texinfo] & TEX_PHONG_ANGLE_CONCAVE_MASK) >> TEX_PHONG_ANGLE_CONCAVE_SHIFT;
+                const int f2_phong_angle = extended_texinfo_flags[f2->texinfo].phong_angle;
+                int f2_phong_angle_concave = extended_texinfo_flags[f2->texinfo].phong_angle_concave;
                 if (f2_phong_angle_concave == 0) {
                     f2_phong_angle_concave = f2_phong_angle;
                 }
@@ -553,7 +552,7 @@ CalcualateVertexNormals(const mbsp_t *bsp)
     {
         const bsp2_dface_t *f = BSP_GetFace(bsp, i);
         if (f->numedges < 3) {
-            logprint("CalcualateVertexNormals: face %d is degenerate with %d edges\n", i, f->numedges);
+            logprint("%s: face %d is degenerate with %d edges\n", __func__, i, f->numedges);
             for (int j = 0; j<f->numedges; j++) {
                 vec3_t pt;
                 Face_PointAtIndex(bsp, f, j, pt);

@@ -28,8 +28,7 @@ typedef struct brush_s {
     struct brush_s *next;
     vec3_t mins, maxs;
     face_t *faces;
-    short contents;             /* BSP contents */
-    short cflags;               /* Compiler internal contents flags */
+    contentflags_t contents;    /* BSP contents */
     short lmshift;              /* lightmap scaling (qu/lightmap pixel), passed to the light util */
 } brush_t;
 
@@ -45,7 +44,7 @@ enum class rotation_t {
     none, hipnotic, origin_brush
 };
 
-brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, int contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum);
+brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const vec3_t rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const vec3_t normal, const vec_t dist, int *side);

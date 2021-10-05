@@ -767,21 +767,21 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     else
         lightsurf->lightmapscale = modelinfo->lightmapscale;
 
-    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
-    lightsurf->curved = !!(extended_flags & TEX_PHONG_ANGLE_MASK);
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+    lightsurf->curved = extended_flags.phong_angle != 0;
     
     // nodirt
     if (modelinfo->dirt.isChanged()) {
         lightsurf->nodirt = (modelinfo->dirt.intValue() == -1);
     } else {
-        lightsurf->nodirt = !!(extended_flags & TEX_NODIRT);
+        lightsurf->nodirt = !!(extended_flags.extended & TEX_EXFLAG_NODIRT);
     }
     
     // minlight
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.floatValue();
     } else {
-        lightsurf->minlight = static_cast<vec_t>((extended_flags & TEX_MINLIGHT_MASK) >> TEX_MINLIGHT_SHIFT);
+        lightsurf->minlight = (float)extended_flags.minlight * 2; // see SurfFlagsForEntity
     }
     
     // minlight_color
@@ -790,9 +790,9 @@ Lightsurf_Init(const modelinfo_t *modelinfo, const bsp2_dface_t *face,
     } else {
         // if modelinfo mincolor not set, use the one from the .texinfo file
         vec3_t extended_mincolor {
-            static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_R_MASK) >> TEX_MINLIGHT_COLOR_R_SHIFT),
-            static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_G_MASK) >> TEX_MINLIGHT_COLOR_G_SHIFT),
-            static_cast<float>((extended_flags & TEX_MINLIGHT_COLOR_B_MASK) >> TEX_MINLIGHT_COLOR_B_SHIFT)};
+            (float) extended_flags.minlight_color[0],
+            (float) extended_flags.minlight_color[1],
+            (float) extended_flags.minlight_color[2] };
         if (lightsurf->minlight > 0 && VectorCompare(extended_mincolor, vec3_origin, EQUAL_EPSILON)) {
             VectorSet(extended_mincolor, 255, 255, 255);
         }
@@ -1687,8 +1687,8 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
     const globalconfig_t &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
-    const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
-    if ((extended_flags & TEX_NOMINLIGHT) != 0) {
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+    if ((extended_flags.extended & TEX_EXFLAG_NOMINLIGHT) != 0) {
         return; /* this face is excluded from minlight */
     }
 
@@ -1718,7 +1718,7 @@ LightFace_Min(const mbsp_t *bsp, const bsp2_dface_t *face,
     
     // FIXME: Refactor this?
     if (lightsurf->modelinfo->lightignore.boolValue()
-        || (extended_flags & TEX_LIGHTIGNORE) != 0)
+        || (extended_flags.extended & TEX_EXFLAG_LIGHTIGNORE) != 0)
         return;
     
     /* Cast rays for local minlight entities */
@@ -3081,7 +3081,7 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
             continue;
         
         // skip lightmaps where all samples have brightness below 1
-        if (bsp->loadversion != &bspver_q2 && bsp->loadversion != &bspver_qbism) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
+        if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
             const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
             if (maxb < 1)
                 continue;
@@ -3144,9 +3144,10 @@ WriteLightmaps(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const 
     uint8_t *out, *lit, *lux;
     GetFileSpace(&out, &lit, &lux, size * numstyles);
 
-    // q2 support
     int lightofs;
-    if (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism || bsp->loadversion == &bspver_hl) {
+
+    // Q2/HL native colored lightmaps
+    if (bsp->loadversion->game->has_rgb_lightmap) {
         lightofs = lit - lit_filebase;
     } else {
         lightofs = out - filebase;
@@ -3357,11 +3358,11 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         
         total_samplepoints += lightsurf->numpoints;
 
-        const uint64_t extended_flags = extended_texinfo_flags[face->texinfo];
+        const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
         /* positive lights */
         if (!(modelinfo->lightignore.boolValue()
-              || (extended_flags & TEX_LIGHTIGNORE) != 0)) {
+              || (extended_flags.extended & TEX_EXFLAG_LIGHTIGNORE) != 0)) {
             for (const auto &entity : GetLights())
             {
                 if (entity.getFormula() == LF_LOCALMIN)
@@ -3384,7 +3385,7 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
         
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); //mxd. Surface lights...
-        if (texinfo != nullptr && texinfo->value > 0 && texinfo->flags & Q2_SURF_LIGHT) {
+        if (texinfo != nullptr && texinfo->value > 0 && texinfo->flags.native & Q2_SURF_LIGHT) {
             vec3_t color;
             Face_LookupTextureColor(bsp, face, color);
             LightFace_Min(bsp, face, color, texinfo->value * 2.0f, lightsurf, lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface is renered fullbright, when using arghrad3
@@ -3400,7 +3401,7 @@ LightFace(const mbsp_t *bsp, bsp2_dface_t *face, facesup_t *facesup, const globa
 
         /* negative lights */
         if (!(modelinfo->lightignore.boolValue()
-              || (extended_flags & TEX_LIGHTIGNORE) != 0)) {
+              || (extended_flags.extended & TEX_EXFLAG_LIGHTIGNORE) != 0)) {
             for (const auto &entity : GetLights())
             {
                 if (entity.getFormula() == LF_LOCALMIN)

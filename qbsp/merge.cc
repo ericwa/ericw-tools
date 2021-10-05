@@ -74,8 +74,6 @@ TryMerge(face_t *f1, face_t *f2)
         f1->texinfo != f2->texinfo ||
         f1->contents[0] != f2->contents[0] ||
         f1->contents[1] != f2->contents[1] ||
-        f1->cflags[0] != f2->cflags[0] ||
-        f1->cflags[1] != f2->cflags[1] ||
         f1->lmshift[0] != f2->lmshift[0] ||
         f1->lmshift[1] != f2->lmshift[1])
         return NULL;

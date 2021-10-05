@@ -181,7 +181,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
 
     int pos = find_dir(path_s, "maps");
     if (pos == -1) {
-        logprint("SetQdirFromPath: no \"maps\" in '%s'", path);
+        logprint("SetQdirFromPath: no \"maps\" in '%s'\n", path);
         ClearQdir();
         return;
     }
@@ -195,7 +195,7 @@ SetQdirFromPath(const char *basedirname, const char *path)
     std::string gamename_s;
     pos = up_dir_pos(path_s, gamename_s);
     if (pos == -1) {
-        logprint("SetQdirFromPath: invalid path: '%s'", path);
+        logprint("SetQdirFromPath: invalid path: '%s'\n", path);
         ClearQdir();
         return;
     }

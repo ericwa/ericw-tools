@@ -79,8 +79,8 @@ MakeSurfaceLightsThread(void *arg)
         // Face casts light?
         const gtexinfo_t *info = Face_Texinfo(bsp, face);
         if (info == nullptr) continue;
-        if (!(info->flags & Q2_SURF_LIGHT) || info->value == 0) {
-            if (info->flags & Q2_SURF_LIGHT) {
+        if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
+            if (info->flags.native & Q2_SURF_LIGHT) {
                 vec3_t wc;
                 WindingCenter(WindingFromFace(bsp, face), wc);
                 logprint("WARNING: surface light '%s' at [%s] has 0 intensity.\n", Face_TextureName(bsp, face), VecStr(wc).c_str());
@@ -127,7 +127,7 @@ MakeSurfaceLightsThread(void *arg)
         VectorScale(texturecolor, info->value, texturecolor);	// Scale by light value
 
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
-        if (info->flags & Q2_SURF_SKY) {
+        if (info->flags.native & Q2_SURF_SKY) {
             // FIXME: this only handles the "_sky_surface"  "red green blue" format.
             //        There are other more complex variants we could handle documented in the link above.
             // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
@@ -149,7 +149,7 @@ MakeSurfaceLightsThread(void *arg)
         // Add surfacelight...
         surfacelight_t l;
         l.surfnormal = vec3_t_to_glm(facenormal);
-        l.omnidirectional = (info->flags & Q2_SURF_SKY) ? true : false;
+        l.omnidirectional = (info->flags.native & Q2_SURF_SKY) ? true : false;
         l.points = points;
         VectorCopy(facemidpoint, l.pos);
 

@@ -20,9 +20,11 @@
 */
 
 #include <memory>
-#include <string.h>
+#include <cstring>
+#include <algorithm>
 
 #include <common/log.hh>
+#include <common/aabb.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 
@@ -34,12 +36,177 @@ static const char *IntroString =
 // command line flags
 options_t options;
 
+bool node_t::opaque() const {
+    return contents.is_sky(options.target_game)
+        || contents.is_solid(options.target_game);
+}
+
+// a simple tree structure used for leaf brush
+// compression.
+struct leafbrush_entry_t {
+    uint32_t offset;
+    std::map<uint32_t, leafbrush_entry_t> entries;
+};
+
+// per-entity
+static struct {
+    uint32_t total_brushes, total_brush_sides;
+    uint32_t total_leaf_brushes, unique_leaf_brushes;
+    std::map<uint32_t, leafbrush_entry_t> leaf_entries;
+} brush_state;
+
+// running total
+static uint32_t brush_offset;
+
+static std::optional<uint32_t> FindLeafBrushesSpanOffset(const std::vector<uint32_t> &brushes) {
+    int32_t offset = 0;
+    const auto *map = &brush_state.leaf_entries;
+    decltype(brush_state.leaf_entries)::const_iterator it = map->find(brushes[offset]);
+
+    while (it != map->end()) {
+
+        if (++offset == brushes.size()) {
+            return it->second.offset;
+        }
+
+        map = &it->second.entries;
+        it = map->find(brushes[offset]);
+    }
+
+    return std::nullopt;
+}
+
+static void PopulateLeafBrushesSpan(const std::vector<uint32_t> &brushes, uint32_t offset) {
+    auto *map = &brush_state.leaf_entries;
+
+    for (auto &id : brushes) {
+        auto it = map->try_emplace(id, leafbrush_entry_t { offset });
+        map = &it.first->second.entries;
+        offset++;
+    }
+}
+
+static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uint32_t &brush_offset)
+{
+    if (node->planenum == PLANENUM_LEAF)
+    {
+        if (node->contents.native) {
+            uint32_t b_id = brush_offset;
+            std::vector<uint32_t> brushes;
+
+            for (const brush_t *b = entity->brushes; b; b = b->next, b_id++)
+            {
+                if (aabb3f(qvec3f(node->mins[0], node->mins[1], node->mins[2]), qvec3f(node->maxs[0], node->maxs[1], node->maxs[2])).intersectWith(
+                    aabb3f(qvec3f(b->mins[0], b->mins[1], b->mins[2]), qvec3f(b->maxs[0], b->maxs[1], b->maxs[2]))).valid) {
+                    brushes.push_back(b_id);
+                }
+            }
+
+            node->numleafbrushes = brushes.size();
+            brush_state.total_leaf_brushes += node->numleafbrushes;
+
+            if (brushes.size()) {
+                auto span = FindLeafBrushesSpanOffset(brushes);
+
+                if (span.has_value()) {
+                    node->firstleafbrush = *span;
+                } else {
+                    node->firstleafbrush = map.exported_leafbrushes.size();
+                    PopulateLeafBrushesSpan(brushes, node->firstleafbrush);
+                    map.exported_leafbrushes.insert(map.exported_leafbrushes.end(), brushes.begin(), brushes.end());
+                    brush_state.unique_leaf_brushes += node->numleafbrushes;
+                }
+            }
+        }
+
+        return;
+    }
+    
+    ExportBrushList_r(entity, node->children[0], brush_offset);
+    ExportBrushList_r(entity, node->children[1], brush_offset);
+}
+
+static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &brush_offset)
+{
+    brush_state = { };
+
+    for (const brush_t *b = entity->brushes; b; b = b->next)
+    {
+        dbrush_t brush { (int32_t) map.exported_brushsides.size(), 0, b->contents.native };
+
+        for (const face_t *f = b->faces; f; f = f->next)
+        {
+            int32_t planenum = f->planenum;
+            int32_t outputplanenum;
+
+            if (f->planeside) {
+                vec3_t flipped;
+                VectorCopy(map.planes[f->planenum].normal, flipped);
+                VectorInverse(flipped);
+                planenum = FindPlane(flipped, -map.planes[f->planenum].dist, nullptr);
+                outputplanenum = ExportMapPlane(planenum);
+            } else {
+                planenum = FindPlane(map.planes[f->planenum].normal, map.planes[f->planenum].dist, nullptr);
+                outputplanenum = ExportMapPlane(planenum);
+            }
+
+            map.exported_brushsides.push_back({ (uint32_t) outputplanenum, map.mtexinfos[f->texinfo].outputnum.value_or(-1) });
+            brush.numsides++;
+            brush_state.total_brush_sides++;
+        }
+
+		// add any axis planes not contained in the brush to bevel off corners
+		for (int32_t x=0 ; x<3 ; x++)
+			for (int32_t s=-1 ; s<=1 ; s+=2)
+			{
+			// add the plane
+                vec3_t normal { };
+                float dist;
+				VectorCopy (vec3_origin, normal);
+				normal[x] = s;
+				if (s == -1)
+					dist = -b->mins[x];
+				else
+					dist = b->maxs[x];
+                int32_t side;
+				int32_t planenum = FindPlane(normal, dist, &side);
+                face_t *f;
+
+                for (f = b->faces; f; f = f->next)
+					if (f->planenum == planenum)
+						break;
+
+				if (f == nullptr)
+				{
+                    planenum = FindPlane(normal, dist, nullptr);
+                    int32_t outputplanenum = ExportMapPlane(planenum);
+                    
+                    map.exported_brushsides.push_back({ (uint32_t) outputplanenum, map.exported_brushsides[map.exported_brushsides.size() - 1].texinfo });
+                    brush.numsides++;
+                    brush_state.total_brush_sides++;
+				}
+			}
+
+        map.exported_brushes.push_back(brush);
+        brush_state.total_brushes++;
+    }
+
+    ExportBrushList_r(entity, node, brush_offset);
+
+    brush_offset += brush_state.total_brushes;
+    
+    Message(msgStat, "%8u total brushes", brush_state.total_brushes);
+    Message(msgStat, "%8u total brush sides", brush_state.total_brush_sides);
+    Message(msgStat, "%8u total leaf brushes", brush_state.total_leaf_brushes);
+    Message(msgStat, "%8u unique leaf brushes (%.2f%%)", brush_state.unique_leaf_brushes, (brush_state.unique_leaf_brushes / (float) brush_state.total_leaf_brushes) * 100);
+}
+
 /*
 ===============
 ProcessEntity
 ===============
 */
-void
+static void
 ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     int i, firstface;
@@ -73,7 +240,7 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         if (options.fVerbose)
             PrintEntity(entity);
 
-        if (hullnum == 0)
+        if (hullnum <= 0)
             Message(msgStat, "MODEL: %s", mod);
         SetKeyValue(entity, "model", mod);
     }
@@ -161,11 +328,11 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     surfs = CSGFaces(entity);
     
-    if (options.fObjExport && entity == pWorldEnt() && hullnum == 0) {
+    if (options.fObjExport && entity == pWorldEnt() && hullnum <= 0) {
         ExportObj_Surfaces("post_csg", surfs);
     }
     
-    if (hullnum != 0) {
+    if (hullnum > 0) {
         nodes = SolidBSP(entity, surfs, true);
         if (entity == pWorldEnt() && !options.fNofill) {
             // assume non-world bmodels are simple
@@ -240,6 +407,12 @@ ProcessEntity(mapentity_t *entity, const int hullnum)
         }
 
         firstface = MakeFaceEdges(entity, nodes);
+
+        if (options.target_game->id == GAME_QUAKE_II) {
+            Message(msgProgress, "Calculating Brush List");
+            ExportBrushList(entity, nodes, brush_offset);
+        }
+
         ExportDrawNodes(entity, nodes, firstface);
     }
 
@@ -382,27 +555,29 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 perbrush.maxs[0] = LittleFloat(b->maxs[0]);
                 perbrush.maxs[1] = LittleFloat(b->maxs[1]);
                 perbrush.maxs[2] = LittleFloat(b->maxs[2]);
-                switch(b->contents)
+                switch(b->contents.native)
                 {
+                //contents should match the engine.
                 case CONTENTS_EMPTY:    //really an error, but whatever
                 case CONTENTS_SOLID:    //these are okay
                 case CONTENTS_WATER:
                 case CONTENTS_SLIME:
                 case CONTENTS_LAVA:
-                case CONTENTS_SKY:
-                        perbrush.contents = b->contents;
-                        break;
-                //contents should match the engine.
-                case CONTENTS_CLIP:
-                        perbrush.contents = -8;
+                case CONTENTS_SKY:                        
+                        perbrush.contents = b->contents.native;
                         break;
 //              case CONTENTS_LADDER:
 //                      perbrush.contents = -16;
 //                      break;
-                default:
-                        Message(msgWarning, "Uknown contents: %i. Translating to solid.", b->contents);
-                        perbrush.contents = CONTENTS_SOLID;
+                default: {
+                        if (b->contents.is_clip()) {
+                            perbrush.contents = -8;
+                        } else {
+                            Message(msgWarning, "Unknown contents: %i-%i. Translating to solid.", b->contents.native, b->contents.extended);
+                            perbrush.contents = CONTENTS_SOLID;
+                        }
                         break;
+                    }
                 }
                 perbrush.contents = LittleShort(perbrush.contents);
                 perbrush.numfaces = LittleShort(perbrush.numfaces);
@@ -515,7 +690,7 @@ CreateSingleHull
 
 =================
 */
-void
+static void
 CreateSingleHull(const int hullnum)
 {
     int i;
@@ -538,12 +713,18 @@ CreateHulls
 
 =================
 */
-void
+static void
 CreateHulls(void)
 {
     /* create the hulls sequentially */
     if (!options.fNoverbose)
         options.fVerbose = true;
+
+    if (options.target_game->id == GAME_QUAKE_II)
+    {
+        CreateSingleHull(-1);
+        return;
+    }
 
     CreateSingleHull(0);
 
@@ -554,9 +735,10 @@ CreateHulls(void)
     CreateSingleHull(1);
     CreateSingleHull(2);
 
-    if (options.target_version == &bspver_hl)
+    // FIXME: use game->get_hull_count
+    if (options.target_game->id == GAME_HALF_LIFE)
         CreateSingleHull(3);
-    else if (options.target_version->hexen2)
+    else if (options.target_game->id == GAME_HEXEN_II)
     {   /*note: h2mp doesn't use hull 2 automatically, however gamecode can explicitly set ent.hull=3 to access it*/
         CreateSingleHull(3);
         CreateSingleHull(4);
@@ -564,7 +746,6 @@ CreateHulls(void)
     }
 }
 
-wad_t *wadlist = NULL;
 static bool wadlist_tried_loading = false;
 
 void
@@ -577,17 +758,16 @@ EnsureTexturesLoaded()
         return;
     
     wadlist_tried_loading = true;
-    
-    wadlist = NULL;
+
     wadstring = ValueForKey(pWorldEnt(), "_wad");
     if (!wadstring[0])
         wadstring = ValueForKey(pWorldEnt(), "wad");
     if (!wadstring[0])
         Message(msgWarning, warnNoWadKey);
     else
-        wadlist = WADList_Init(wadstring);
+        WADList_Init(wadstring);
     
-    if (!wadlist) {
+    if (!wadlist.size()) {
         if (wadstring[0])
             Message(msgWarning, warnNoValidWads);
         /* Try the default wad name */
@@ -595,11 +775,17 @@ EnsureTexturesLoaded()
         strcpy(defaultwad, options.szMapName);
         StripExtension(defaultwad);
         DefaultExtension(defaultwad, ".wad");
-        wadlist = WADList_Init(defaultwad);
-        if (wadlist)
+        WADList_Init(defaultwad);
+        if (wadlist.size())
             Message(msgLiteral, "Using default WAD: %s\n", defaultwad);
         free(defaultwad);
     }
+}
+
+static const char* //mxd
+GetBaseDirName(const bspversion_t *bspver)
+{
+    return bspver->game->base_dir;
 }
 
 /*
@@ -611,6 +797,7 @@ static void
 ProcessFile(void)
 {
     // load brushes and entities
+    SetQdirFromPath(GetBaseDirName(options.target_version), options.szMapName);
     LoadMapFile();
     if (options.fConvertMapFormat) {
         ConvertMapFile();
@@ -632,11 +819,11 @@ ProcessFile(void)
     CreateHulls();
 
     WriteEntitiesToString();
-    WADList_Process(wadlist);
+    WADList_Process();
     BSPX_CreateBrushList();
     FinishBSPFile();
 
-    WADList_Free(wadlist);
+    wadlist.clear();
 }
 
 
@@ -937,7 +1124,7 @@ ParseOptions(char *szOptions)
         szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);
     }
 
-    // combine format flags
+    // if we wanted hexen2, update it now
     if (hexen2) {
         if (options.target_version == &bspver_bsp2) {
             options.target_version = &bspver_h2bsp2;
@@ -947,6 +1134,14 @@ ParseOptions(char *szOptions)
             options.target_version = &bspver_h2;
         }
     }
+
+    // force specific flags for Q2
+    if (options.target_game->id == GAME_QUAKE_II) {
+        options.fNoclip = true;
+    }
+
+    // update target game
+    options.target_game = options.target_version->game;
 }
 
 

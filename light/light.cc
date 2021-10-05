@@ -100,13 +100,12 @@ int write_luxfile = 0;  /* 0 for none, 1 for .lux, 2 for bspx, 3 for both */
 qboolean onlyents = false;
 qboolean novisapprox = false;
 bool nolights = false;
-backend_t rtbackend = backend_embree;
 bool debug_highlightseams = false;
 debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
 bool litonly = false;
 
-uint64_t *extended_texinfo_flags = NULL;
+surfflags_t *extended_texinfo_flags = nullptr;
 
 char mapfilename[1024];
 
@@ -436,10 +435,10 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
         }
     }
 
-    CalcualateVertexNormals(bsp);
+    CalculateVertexNormals(bsp);
     
     const qboolean bouncerequired = cfg_static.bounce.boolValue() && (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); //mxd
-    const qboolean isQuake2map = (bsp->loadversion == &bspver_q2 || bsp->loadversion == &bspver_qbism); //mxd
+    const qboolean isQuake2map = bsp->loadversion->game->id == GAME_QUAKE_II; //mxd
 
     if (bouncerequired || isQuake2map) {
         MakeTextureColors(bsp);
@@ -470,7 +469,7 @@ LightWorld(bspdata_t *bspdata, qboolean forcedscale)
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!litonly) {
         free(bsp->dlightdata);
-        if (isQuake2map || bsp->loadversion == &bspver_hl) {
+        if (bsp->loadversion->game->has_rgb_lightmap) {
             bsp->lightdatasize = lit_file_p;
             bsp->dlightdata = (uint8_t *)malloc(bsp->lightdatasize);
             memcpy(bsp->dlightdata, lit_filebase, bsp->lightdatasize);
@@ -507,7 +506,7 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
     char filename[1024];
     
     // always create the zero'ed array
-    extended_texinfo_flags = static_cast<uint64_t *>(calloc(bsp->numtexinfo, sizeof(uint64_t)));
+    extended_texinfo_flags = static_cast<surfflags_t *>(calloc(bsp->numtexinfo, sizeof(surfflags_t)));
     
     strcpy(filename, sourcefilename);
     StripExtension(filename);
@@ -517,39 +516,27 @@ LoadExtendedTexinfoFlags(const char *sourcefilename, const mbsp_t *bsp)
     if (!texinfofile)
         return;
     
-    logprint("Loaded extended texinfo flags from %s\n", filename);
-    
-    for (int i = 0; i < bsp->numtexinfo; i++) {
-        long long unsigned int flags = 0;
-        const int cnt = fscanf(texinfofile, "%llu\n", &flags);
-        if (cnt != 1) {
-            logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
-            fclose(texinfofile);
-            memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
-            return;
-        }
-        extended_texinfo_flags[i] = flags;
-    }
-    
-    // fail if there are more lines in the file
-    if (fgetc(texinfofile) != EOF) {
+    logprint("Loading extended texinfo flags from %s...\n", filename);
+
+    extended_flags_header_t header;
+
+    if (fread(&header, 1, sizeof(extended_flags_header_t), texinfofile) != sizeof(extended_flags_header_t) ||
+        header.num_texinfo != bsp->numtexinfo ||
+        header.surfflags_size != sizeof(surfflags_t) ||
+        fread(extended_texinfo_flags, sizeof(surfflags_t), header.num_texinfo, texinfofile) != header.num_texinfo) {
         logprint("WARNING: Extended texinfo flags in %s does not match bsp, ignoring\n", filename);
         fclose(texinfofile);
         memset(extended_texinfo_flags, 0, bsp->numtexinfo * sizeof(uint32_t));
         return;
     }
-    
+
     fclose(texinfofile);
 }
 
 static const char* //mxd
 GetBaseDirName(bspdata_t *bspdata)
 {
-    if (bspdata->loadversion == &bspver_q2 || bspdata->loadversion == &bspver_qbism)
-        return "BASEQ2";
-    if (bspdata->loadversion == &bspver_h2)
-        return "DATA1";
-    return "ID1";
+    return bspdata->loadversion->game->base_dir;
 }
 
 //obj
@@ -1053,15 +1040,6 @@ light_main(int argc, const char **argv)
         } else if ( !strcmp( argv[ i ], "-nolights" ) ) {
             nolights = true;
             logprint( "Skipping all light entities (sunlight / minlight only)\n" );
-        } else if ( !strcmp( argv[ i ], "-backend" ) ) {
-            const char *requested = ParseString(&i, argc, argv);
-            if (!strcmp(requested, "bsp")) {
-                rtbackend = backend_bsp;
-            } else if (!strcmp(requested, "embree")) {
-                rtbackend = backend_embree;
-            } else {
-                Error("unknown backend %s", requested);
-            }
         } else if ( !strcmp( argv[ i ], "-debugface" ) ) {
             ParseVec3(dump_face_point, &i, argc, argv);
             dump_face = true;
@@ -1130,19 +1108,7 @@ light_main(int argc, const char **argv)
     if (debugmode != debugmode_none) {
         write_litfile |= 1;
     }
-    
-#ifndef HAVE_EMBREE
-    if (rtbackend == backend_embree) {
-        rtbackend = backend_bsp;
-    }
-#endif
-    
-    logprint("Raytracing backend: ");
-    switch (rtbackend) {
-        case backend_bsp: logprint("BSP\n"); break;
-        case backend_embree: logprint("Embree\n"); break;
-    }
-    
+
     if (numthreads > 1)
         logprint("running with %d threads\n", numthreads);
 
@@ -1202,7 +1168,7 @@ light_main(int argc, const char **argv)
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     //mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
-    if ((loadversion == &bspver_q2 || loadversion == &bspver_qbism) && !cfg.rangescale.isChanged())
+    if ((loadversion->game->id == GAME_QUAKE_II) && !cfg.rangescale.isChanged())
     {
         const auto rs = new lockable_vec_t(cfg.rangescale.primaryName(), 1.0f, 0.0f, 100.0f);
         cfg.rangescale = *rs; // Gross hacks to avoid displaying this in OptionsSummary...
@@ -1229,7 +1195,7 @@ light_main(int argc, const char **argv)
         StripExtension(source);
         DefaultExtension(source, ".obj");
         
-        CalcualateVertexNormals(bsp);
+        CalculateVertexNormals(bsp);
         ExportObj(source, bsp);
         
         close_log();
@@ -1242,8 +1208,9 @@ light_main(int argc, const char **argv)
     
     if (!onlyents)
     {
-        if (loadversion != &bspver_q2 && loadversion != &bspver_qbism && bsp->loadversion != &bspver_hl) //mxd. No lit for Quake 2
+        if (!loadversion->game->has_rgb_lightmap) {
             CheckLitNeeded(cfg);
+        }
         SetupDirt(cfg);
         
         LightWorld(&bspdata, !!lmscaleoverride);

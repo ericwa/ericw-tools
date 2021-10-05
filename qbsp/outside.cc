@@ -37,7 +37,7 @@ PointInLeaf(node_t *node, const vec3_t point)
     vec_t dist;
     const qbsp_plane_t *plane;
 
-    while (!node->contents) {
+    while (node->planenum != PLANENUM_LEAF) {
         plane = &map.planes[node->planenum];
         dist = DotProduct(plane->normal, point) - plane->dist;
         node = (dist > 0) ? node->children[0] : node->children[1];
@@ -338,7 +338,7 @@ ClearOutFaces(node_t *node)
     }
 
     // visit the leaf
-    if (node->contents != CONTENTS_SOLID) {
+    if (!node->contents.is_solid(options.target_game)) {
         return;
     }
 
@@ -365,8 +365,8 @@ OutLeafsToSolid_r(node_t *node, int *outleafs_count)
         return;
     
     // Don't fill sky, or count solids as outleafs
-    if (node->contents == CONTENTS_SKY
-        || node->contents == CONTENTS_SOLID)
+    if (node->contents.is_solid(options.target_game)
+        || node->contents.is_sky(options.target_game))
         return;
 
     // Now check all faces touching the leaf. If any of them are partially going into the occupied part of the map,
@@ -383,7 +383,7 @@ OutLeafsToSolid_r(node_t *node, int *outleafs_count)
     }
 
     // Finally, we can fill it in as void.
-    node->contents = CONTENTS_SOLID;
+    node->contents = options.target_game->create_solid_contents();
     *outleafs_count += 1;
 }
 
