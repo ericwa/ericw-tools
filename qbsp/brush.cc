@@ -765,36 +765,10 @@ static bool Brush_IsDetail(const mapbrush_t *mapbrush)
     return false;
 }
 
-// adjust the given content flags from the texture name input.
-// this is where special names are transformed into game-specific
-// contents.
-static bool AdjustContentsFromName(const char *texname, contentflags_t &flags)
-{
-    if (!Q_strcasecmp(texname, "origin"))
-        flags = flags.merge(options.target_game->create_empty_contents(CFLAGS_ORIGIN));
-    else if (!Q_strcasecmp(texname, "hint"))
-        flags = flags.merge(options.target_game->create_empty_contents(CFLAGS_HINT));
-    else if (!Q_strcasecmp(texname, "clip"))
-        flags = flags.merge(options.target_game->create_solid_contents(CFLAGS_CLIP));
-    else if (texname[0] == '*') {
-        if (!Q_strncasecmp(texname + 1, "lava", 4))
-            flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_LAVA));
-        else if (!Q_strncasecmp(texname + 1, "slime", 5))
-            flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_SLIME));
-        else
-        flags = flags.merge(options.target_game->create_liquid_contents(CONTENTS_WATER));
-    } else if (!Q_strncasecmp(texname, "sky", 3))
-        flags = flags.merge(options.target_game->create_sky_contents());
-    else
-        return false;
-
-    return true;
-}
-
-static contentflags_t Brush_GetContents_Q1(const mapbrush_t *mapbrush, const contentflags_t &base_contents)
+static contentflags_t
+Brush_GetContents_Q1(const mapbrush_t *mapbrush)
 {
     const char *texname;
-    contentflags_t contents = base_contents;
 
     // check for strong content indicators
     for (int i = 0; i < mapbrush->numfaces; i++) {
@@ -802,20 +776,34 @@ static contentflags_t Brush_GetContents_Q1(const mapbrush_t *mapbrush, const con
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
         texname = map.miptexTextureName(texinfo.miptex).c_str();
 
-        if (AdjustContentsFromName(texname, contents)) {
-            return contents;
+        if (!Q_strcasecmp(texname, "origin"))
+            return options.target_game->create_extended_contents(CFLAGS_ORIGIN);
+        else if (!Q_strcasecmp(texname, "hint"))
+            return options.target_game->create_extended_contents(CFLAGS_HINT);
+        else if (!Q_strcasecmp(texname, "clip"))
+            return options.target_game->create_extended_contents(CFLAGS_CLIP);
+        else if (texname[0] == '*') {
+            if (!Q_strncasecmp(texname + 1, "lava", 4))
+                return options.target_game->create_liquid_contents(CONTENTS_LAVA);
+            else if (!Q_strncasecmp(texname + 1, "slime", 5))
+                return options.target_game->create_liquid_contents(CONTENTS_SLIME);
+            else
+                return options.target_game->create_liquid_contents(CONTENTS_WATER);
         }
+        else if (!Q_strncasecmp(texname, "sky", 3))
+            return options.target_game->create_sky_contents();
     }
 
     // and anything else is assumed to be a regular solid.
-    return contents.merge(options.target_game->create_solid_contents());
+    return options.target_game->create_solid_contents();
 }
 
-static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush, const contentflags_t &base_contents)
+static contentflags_t
+Brush_GetContents_Q2 (const mapbrush_t *mapbrush)
 {
     bool is_trans = false;
     bool is_hint = false;
-    contentflags_t contents = base_contents.merge({mapbrush->face(0).contents});
+    contentflags_t contents = { mapbrush->face(0).contents };
 
     for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
@@ -1058,21 +1046,13 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
 
-    const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
-
-    contentflags_t base_contents = options.target_game->create_empty_contents();
-
-    if (func_illusionary_visblocker) {
-        base_contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
-    }
-
     // TODO: move to game
     auto Brush_GetContents = (options.target_game->id == GAME_QUAKE_II) ? Brush_GetContents_Q2 : Brush_GetContents_Q1;
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        const contentflags_t contents = Brush_GetContents(mapbrush, base_contents);
-        if (contents.extended & CFLAGS_ORIGIN) {
+        const contentflags_t contents = Brush_GetContents(mapbrush);
+        if (contents.is_origin()) {
             if (dst == pWorldEnt()) {
                 LogPrint("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
@@ -1127,18 +1107,17 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
     }
 
     /* _mirrorinside key (for func_water etc.) */
-    if (atoi(ValueForKey(src, "_mirrorinside"))) {
-        base_contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
-    }
+    const bool mirrorinside = !!atoi(ValueForKey(src, "_mirrorinside"));
 
     /* _noclipfaces */
-    if (atoi(ValueForKey(src, "_noclipfaces"))) {
-        base_contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
-    }
+    const bool noclipfaces = !!atoi(ValueForKey(src, "_noclipfaces"));
+
+    const bool func_illusionary_visblocker =
+        (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
-        contentflags_t contents = Brush_GetContents(mapbrush, base_contents);
+        contentflags_t contents = Brush_GetContents(mapbrush);
 
         // per-brush settings
         bool detail = Brush_IsDetail(mapbrush);
@@ -1151,7 +1130,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         detail_fence |= all_detail_fence;
 
         /* "origin" brushes always discarded */
-        if (contents.extended & CFLAGS_ORIGIN)
+        if (contents.is_origin())
             continue;
 
         /* -omitdetail option omits all types of detail */
@@ -1165,12 +1144,11 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(options.target_game)) {
             if (detail) {
-                contents.extended |= CFLAGS_DETAIL;
+                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL);
             } else if (detail_illusionary) {
-                contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_ILLUSIONARY));
+                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_ILLUSIONARY);
             } else if (detail_fence) {
-                contents = contents.merge(
-                    options.target_game->create_empty_contents(CFLAGS_DETAIL_FENCE)); // fences need to generate leaves
+                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
             }
         }
 
@@ -1185,7 +1163,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (contents.extended & CFLAGS_CLIP) {
+        if (contents.is_clip()) {
             if (hullnum == 0) {
                 brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
                 if (brush) {
@@ -1196,8 +1174,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
             }
             // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             if (hullnum > 0) {
-                contents = contents.merge(options.target_game->create_solid_contents());
-                contents.extended &= ~CFLAGS_CLIP;
+                contents = options.target_game->create_solid_contents();
         }
             // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
@@ -1206,16 +1183,12 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         if (contents.is_hint()) {
             if (hullnum > 0)
                 continue;
-            contents = contents.merge(options.target_game->create_empty_contents());
+            contents = options.target_game->create_empty_contents();
         }
 
         /* entities never use water merging */
         if (dst != pWorldEnt()) {
-            // FIXME: the old code here was just `contents = CONTENTS_SOLID`.
-            // which would also clear CONTENTS_CLIP. Now CONTENTS_CLIP is an extended flag
-            // so we need to unset it explicitly.
-            contents = contents.merge(options.target_game->create_solid_contents());
-            contents.extended &= ~CFLAGS_CLIP;
+            contents = options.target_game->create_solid_contents();
         }
 
         /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
@@ -1226,19 +1199,28 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
            before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
            contents type.
          */
-        if (dst != pWorldEnt() && hullnum <= 0 && (contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
-            contents = contents.merge(options.target_game->create_empty_contents(CFLAGS_DETAIL_FENCE));
+        if (dst != pWorldEnt() && hullnum <= 0 && mirrorinside) {
+            contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
         }
 
         /* nonsolid brushes don't show up in clipping hulls */
-        // TODO: will this statement need to be modified since clip
-        // detail etc aren't native types any more?
         if (hullnum > 0 && !contents.is_solid(options.target_game) && !contents.is_sky(options.target_game))
             continue;
 
         /* sky brushes are solid in the collision hulls */
         if (hullnum > 0 && contents.is_sky(options.target_game))
-            contents = contents.merge(options.target_game->create_solid_contents());
+            contents = options.target_game->create_solid_contents();
+
+        // apply extended flags
+        if (mirrorinside) {
+            contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
+        }
+        if (noclipfaces) {
+            contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
+        }
+        if (func_illusionary_visblocker) {
+            contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
+        }
 
         brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
@@ -1247,7 +1229,13 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         dst->numbrushes++;
         brush->lmshift = lmshift;
 
-        if (brush->contents.is_detail(CFLAGS_DETAIL)) {
+        if (brush->contents.is_solid(options.target_game)) {
+            brush->next = dst->solid;
+            dst->solid = brush;
+        } else if (brush->contents.is_sky(options.target_game)) {
+            brush->next = dst->sky;
+            dst->sky = brush;
+        } else if (brush->contents.is_detail(CFLAGS_DETAIL)) {
             brush->next = dst->detail;
             dst->detail = brush;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
@@ -1256,12 +1244,6 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
             brush->next = dst->detail_fence;
             dst->detail_fence = brush;
-        } else if (brush->contents.is_solid(options.target_game) && !(contents.extended & CFLAGS_CLIP)) {
-            brush->next = dst->solid;
-            dst->solid = brush;
-        } else if (brush->contents.is_sky(options.target_game)) {
-            brush->next = dst->sky;
-            dst->sky = brush;
         } else {
             brush->next = dst->liquid;
             dst->liquid = brush;

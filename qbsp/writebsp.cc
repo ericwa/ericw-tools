@@ -83,10 +83,13 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     gtexinfo_t &dest = map.bsp.texinfo.emplace_back();
 
-    dest.flags = src.flags;
-    dest.miptex = src.miptex;
-    dest.vecs = src.vecs;
+    // make sure we don't write any non-native flags.
+    // e.g. Quake only accepts 0 or TEX_SPECIAL.
+    dest->flags = options.target_game->surf_remap_for_export(src->flags);
+    // TODO: warn if dest->flags.native != src->flags.native
 
+    dest->miptex = src->miptex;
+    dest.vecs = src.vecs;
     strcpy(dest.texture.data(), map.texinfoTextureName(texinfonum).c_str());
     dest.value = map.miptex[src.miptex].value;
 

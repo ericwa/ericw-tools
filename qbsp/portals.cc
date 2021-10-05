@@ -212,7 +212,7 @@ static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
         return;
     }
 
-    if (node->contents.is_structural_solid(options.target_game)) {
+    if (node->contents.is_solid(options.target_game)) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;

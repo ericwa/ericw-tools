@@ -195,13 +195,25 @@ struct gamedef_generic_t : public gamedef_t
 
     bool surf_is_subdivided(const surfflags_t &) const { throw std::bad_cast(); }
 
-    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
+    surfflags_t surf_remap_for_export(const surfflags_t& flags) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const {
+        throw std::bad_cast();
+    }
 
     int32_t get_content_type(const contentflags_t &) const { throw std::bad_cast(); }
 
     int32_t contents_priority(const contentflags_t &) const { throw std::bad_cast(); }
 
-    contentflags_t create_empty_contents(const int32_t &) const { throw std::bad_cast(); }
+    contentflags_t create_extended_contents(const int32_t&) const {
+        throw std::bad_cast();
+    }
+
+    contentflags_t create_empty_contents(const int32_t &) const {
+        throw std::bad_cast();
+    }
 
     contentflags_t create_solid_contents(const int32_t &) const { throw std::bad_cast(); }
 
@@ -209,7 +221,21 @@ struct gamedef_generic_t : public gamedef_t
 
     contentflags_t create_liquid_contents(const int32_t &, const int32_t &) const { throw std::bad_cast(); }
 
-    bool contents_are_liquid(const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_are_empty(const contentflags_t& contents) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_solid(const contentflags_t& contents) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_sky(const contentflags_t& contents) const {
+        throw std::bad_cast();
+    }
+
+    bool contents_are_liquid(const contentflags_t &) const {
+        throw std::bad_cast();
+    }
 
     bool contents_are_valid(const contentflags_t &, bool) const { throw std::bad_cast(); }
 
@@ -234,28 +260,31 @@ struct gamedef_q1_like_t : public gamedef_t
 
     bool surf_is_subdivided(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
-    {
+    surfflags_t surf_remap_for_export(const surfflags_t& flags) const {
+        auto remapped = flags;
+        remapped.native &= TEX_SPECIAL;
+        return remapped;
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const {
         if (contents0 == contents1)
             return contents0;
-
-        const int32_t merged_flags = contents0.extended | contents1.extended;
 
         /*
          * Clusters may be partially solid but still be seen into
          * ?? - Should we do something more explicit with mixed liquid contents?
          */
         if (contents0.native == CONTENTS_EMPTY || contents1.native == CONTENTS_EMPTY)
-            return create_empty_contents(merged_flags);
+            return create_empty_contents();
 
         if (contents0.native >= CONTENTS_LAVA && contents0.native <= CONTENTS_WATER)
-            return create_liquid_contents(contents0.native, merged_flags);
+            return create_liquid_contents(contents0.native);
         if (contents1.native >= CONTENTS_LAVA && contents1.native <= CONTENTS_WATER)
-            return create_liquid_contents(contents1.native, merged_flags);
+            return create_liquid_contents(contents1.native);
         if (contents0.native == CONTENTS_SKY || contents1.native == CONTENTS_SKY)
-            return create_sky_contents(merged_flags);
+            return create_sky_contents();
 
-        return create_solid_contents(merged_flags);
+        return create_solid_contents();
     }
 
     int32_t get_content_type(const contentflags_t &contents) const { return contents.native; }
@@ -264,10 +293,10 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         if (contents.extended & CFLAGS_DETAIL) {
             return 5;
-        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
-            return 3;
         } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
             return 4;
+        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+            return 3;
         } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
             return 2;
         } else {
@@ -286,16 +315,32 @@ struct gamedef_q1_like_t : public gamedef_t
                 default: FError("Bad contents in face"); return 0;
             }
         }
+
+    contentflags_t create_extended_contents(const int32_t &cflags) const {
+        return { 0, cflags };
     }
 
-    contentflags_t create_empty_contents(const int32_t &cflags) const { return {CONTENTS_EMPTY, cflags}; }
+    contentflags_t create_empty_contents(const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
-    contentflags_t create_solid_contents(const int32_t &cflags) const { return {CONTENTS_SOLID, cflags}; }
+        return { CONTENTS_EMPTY, cflags };
+    }
 
-    contentflags_t create_sky_contents(const int32_t &cflags) const { return {CONTENTS_SKY, cflags}; }
+    contentflags_t create_solid_contents(const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
-    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags) const
-    {
+        return { CONTENTS_SOLID, cflags };
+    }
+
+    contentflags_t create_sky_contents(const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
+
+        return { CONTENTS_SKY, cflags };
+    }
+
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const {
+        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
+
         return {liquid_type, cflags};
     }
 
@@ -304,12 +349,28 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
     }
 
-    bool contents_are_valid(const contentflags_t &contents, bool strict) const { return contents.native <= 0; }
+    bool contents_are_valid(const contentflags_t &contents, bool strict) const {
+        if (!contents.native && !strict) {
+            return true;
+        }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
-    {
+        switch (contents.native) {
+        case CONTENTS_EMPTY:
+        case CONTENTS_SOLID:
+        case CONTENTS_WATER:
+        case CONTENTS_SLIME:
+        case CONTENTS_LAVA:
+        case CONTENTS_SKY:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const {
         /* If contents values are the same and not solid, can see through */
-        return !(contents0.is_structural_solid(this) || contents1.is_structural_solid(this)) && contents0 == contents1;
+        return !(contents0.is_solid(this) || contents1.is_solid(this)) &&
+            contents0 == contents1;
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
@@ -394,8 +455,13 @@ struct gamedef_q2_t : public gamedef_t
 
     bool surf_is_subdivided(const surfflags_t &flags) const { return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY)); }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
-    {
+    surfflags_t surf_remap_for_export(const surfflags_t& flags) const {
+        auto remapped = flags;
+        // TODO: strip any illegal flags off remapped.native
+        return remapped;
+    }
+
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const {
         contentflags_t c = {contents0.native | contents1.native, contents0.extended | contents1.extended};
 
         // a cluster may include some solid detail areas, but
@@ -435,7 +501,13 @@ struct gamedef_q2_t : public gamedef_t
             }
     }
 
-    contentflags_t create_empty_contents(const int32_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_extended_contents(const int32_t &cflags) const {
+        return { 0, cflags };
+    }
+
+    contentflags_t create_empty_contents(const int32_t &cflags) const {
+        return { 0, cflags };
+    }
 
     contentflags_t create_solid_contents(const int32_t &cflags) const { return {Q2_CONTENTS_SOLID, cflags}; }
 
@@ -558,7 +630,7 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
 
 bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
 {
-    return (extended & CFLAGS_DETAIL_MASK) == (other.extended & CFLAGS_DETAIL_MASK) &&
+    return (extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
            game->get_content_type(*this) == game->get_content_type(other);
 }
 

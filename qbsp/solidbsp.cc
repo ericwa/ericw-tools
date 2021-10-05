@@ -62,15 +62,30 @@ void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 
 void DetailToSolid(node_t *node)
 {
-    if (node->planenum != PLANENUM_LEAF) {
+    if (node->planenum == PLANENUM_LEAF) {
+        if (options.target_game->id == GAME_QUAKE_II) {
+            return;
+        }
+
+        // We need to remap CONTENTS_DETAIL to a standard quake content type
+        if (node->contents.is_detail(CFLAGS_DETAIL)) {
+            node->contents = options.target_game->create_solid_contents();
+        } else if (node->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+            node->contents = options.target_game->create_empty_contents();
+        }
+        /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
+         * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
+         */
+        return;
+    } else {
         DetailToSolid(node->children[0]);
         DetailToSolid(node->children[1]);
 
         // If both children are solid, we can merge the two leafs into one.
         // DarkPlaces has an assertion that fails if both children are
         // solid.
-        if (node->children[0]->contents.is_structural_solid(options.target_game) &&
-            node->children[1]->contents.is_structural_solid(options.target_game)) {
+		if (node->children[0]->contents.is_solid(options.target_game)
+			&& node->children[1]->contents.is_solid(options.target_game)) {
             // This discards any faces on-node. Should be safe (?)
             ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
         }
@@ -670,7 +685,7 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
             if (f->contents[0].extended & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
                 Q_assert(f->contents[0].is_empty(options.target_game));
 
-                const contentflags_t solid_detail = options.target_game->create_solid_contents(CFLAGS_DETAIL);
+                const contentflags_t solid_detail = options.target_game->create_extended_contents(CFLAGS_DETAIL);
 
                 if (solid_detail.priority(options.target_game) > currentpri) {
                     contents = solid_detail;

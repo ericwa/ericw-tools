@@ -38,7 +38,8 @@ options_t options;
 
 bool node_t::opaque() const
 {
-    return contents.is_structural_sky_or_solid(options.target_game);
+    return contents.is_sky(options.target_game)
+        || contents.is_solid(options.target_game);
 }
 
 // a simple tree structure used for leaf brush
@@ -894,10 +895,15 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 //              case CONTENTS_LADDER:
                 //                      perbrush.contents = -16;
                 //                      break;
-            default:
+                default: {
+                        if (b->contents.is_clip()) {
+                            perbrush.contents = -8;
+                        } else {
                 LogPrint("WARNING: Unknown contents: {}. Translating to solid.\n", b->contents.to_string(options.target_game));
                 perbrush.contents = CONTENTS_SOLID;
+                }
                 break;
+        	}
         }
         perbrush.contents = LittleShort(perbrush.contents);
         perbrush.numfaces = LittleShort(perbrush.numfaces);

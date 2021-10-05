@@ -608,11 +608,11 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     bsp->dvis.set_bit_offset(VIS_PVS, clusternum, visofs);
 
     // Set pointers
-    // TODO: get rid of, we'll copy this data over from dvis
-    // during conversion
-    for (i = 1; i < bsp->dleafs.size(); i++) {
-        if (bsp->dleafs[i].cluster == clusternum) {
-            bsp->dleafs[i].visofs = visofs;
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        for (i = 1; i < bsp->numleafs; i++) {
+            if (bsp->dleafs[i].cluster == clusternum) {
+                bsp->dleafs[i].visofs = leaf->visofs;
+            }
         }
     }
 
