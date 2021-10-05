@@ -212,6 +212,16 @@ static void serialize_bsp(const bspdata_t &bspdata, const char *name) {
             face.push_back({ "texinfo", src_face.texinfo });
             face.push_back({ "styles", json::array({ src_face.styles[0], src_face.styles[1], src_face.styles[2], src_face.styles[3] }) });
             face.push_back({ "lightofs", src_face.lightofs });
+
+            // for readibility, also output the actual vertices
+            auto verts = json::array();
+            for (int32_t k = 0; k < src_face.numedges; ++k) {
+                auto se = bsp.dsurfedges[src_face.firstedge + k];
+                uint32_t v = (se < 0) ? bsp.dedges[-se].v[1] : bsp.dedges[se].v[0];
+                auto dv = bsp.dvertexes[v];
+                verts.push_back(json::array({ dv.point[0], dv.point[1], dv.point[2] }));
+            }
+            face.push_back({ "vertices", verts });
         }
     }
     
