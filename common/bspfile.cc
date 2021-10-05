@@ -315,6 +315,7 @@ struct gamedef_q1_like_t : public gamedef_t
                 default: FError("Bad contents in face"); return 0;
             }
         }
+    }
 
     contentflags_t create_extended_contents(const int32_t &cflags) const {
         return { 0, cflags };

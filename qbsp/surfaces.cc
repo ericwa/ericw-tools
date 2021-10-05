@@ -283,9 +283,8 @@ inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, c
     auto it = hashedges.find(edge_hash_key);
     if (it != hashedges.end()) {
         for (const int i : it->second) {
-                edge = &map.exported_edges.at(i);
-                if (pEdgeFaces1[i] == NULL
-                    && pEdgeFaces0[i]->contents[0].native == face->contents[0].native) {
+            if (pEdgeFaces1[i] == NULL
+                && pEdgeFaces0[i]->contents[0].native == face->contents[0].native) {
                 pEdgeFaces1[i] = face;
                 return -i;
             }

@@ -609,9 +609,9 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 
     // Set pointers
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        for (i = 1; i < bsp->numleafs; i++) {
+        for (i = 1; i < bsp->dleafs.size(); i++) {
             if (bsp->dleafs[i].cluster == clusternum) {
-                bsp->dleafs[i].visofs = leaf->visofs;
+                bsp->dleafs[i].visofs = visofs;
             }
         }
     }

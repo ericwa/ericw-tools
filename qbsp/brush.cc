@@ -1060,9 +1060,9 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
 
             brush_t *brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
             if (brush) {
-                qvec3d origin = brush->bounds.centroid();
+                rotate_offset = brush->bounds.centroid();
 
-                SetKeyValue(dst, "origin", qv::to_string(origin).c_str());
+                SetKeyValue(dst, "origin", qv::to_string(rotate_offset).c_str());
 
                 rottype = rotation_t::origin_brush;
 

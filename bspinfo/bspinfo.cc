@@ -192,12 +192,11 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
         }
     }
     
-    if (bsp.numfaces) {
+    if (!bsp.dfaces.empty()) {
         json &faces = (j.emplace("faces", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numfaces; i++) {
+        for (auto &src_face : bsp.dfaces) {
             json &face = faces.insert(faces.end(), json::object()).value();
-            auto &src_face = bsp.dfaces[i];
             
             face.push_back({ "planenum", src_face.planenum });
             face.push_back({ "side", src_face.side });
@@ -211,9 +210,9 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
             auto verts = json::array();
             for (int32_t k = 0; k < src_face.numedges; ++k) {
                 auto se = bsp.dsurfedges[src_face.firstedge + k];
-                uint32_t v = (se < 0) ? bsp.dedges[-se].v[1] : bsp.dedges[se].v[0];
+                uint32_t v = (se < 0) ? bsp.dedges[-se][1] : bsp.dedges[se][0];
                 auto dv = bsp.dvertexes[v];
-                verts.push_back(json::array({ dv.point[0], dv.point[1], dv.point[2] }));
+                verts.push_back(json::array({ dv[0], dv[1], dv[2] }));
             }
             face.push_back({ "vertices", verts });
         }
@@ -230,29 +229,27 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
         }
     }
 
-    if (bsp.numedges) {
+    if (!bsp.dedges.empty()) {
         json &edges = (j.emplace("edges", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numedges; i++) {
-            auto &src_edge = bsp.dedges[i];
-
-            edges.insert(edges.end(), json::array({src_edge.v[0], src_edge.v[1]}));
+        for (auto &src_edge : bsp.dedges) {
+            edges.insert(edges.end(), json::array({src_edge[0], src_edge[1]}));
         }
     }
 
-    if (bsp.numleaffaces) {
+    if (!bsp.dleaffaces.empty()) {
         json &leaffaces = (j.emplace("leaffaces", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numleaffaces; i++) {
-            leaffaces.insert(leaffaces.end(), bsp.dleaffaces[i]);
+        for (auto &src_leafface : bsp.dleaffaces) {
+            leaffaces.insert(leaffaces.end(), src_leafface);
         }
     }
 
-    if (bsp.numsurfedges) {
+    if (!bsp.dsurfedges.empty()) {
         json &surfedges = (j.emplace("surfedges", json::array())).first.value();
 
-        for (int32_t i = 0; i < bsp.numsurfedges; i++) {
-            surfedges.insert(surfedges.end(), bsp.dsurfedges[i]);
+        for (auto &src_surfedges : bsp.dsurfedges) {
+            surfedges.insert(surfedges.end(), src_surfedges);
         }
     }
 

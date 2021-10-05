@@ -3308,13 +3308,13 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
-        /*if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
-            vec3_t color;
+        if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
+            vec3_t color;   
             Face_LookupTextureColor(bsp, face, color);
             LightFace_Min(bsp, face, color, texinfo->value * 2.0f, lightsurf,
                 lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface
                             // is renered fullbright, when using arghrad3
-        } else*/ if (lightsurf->minlight > cfg.minlight.floatValue()) {
+        } else if (lightsurf->minlight > cfg.minlight.floatValue()) {
             LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
         } else {
             const float light = cfg.minlight.floatValue();
