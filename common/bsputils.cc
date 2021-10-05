@@ -104,25 +104,24 @@ int Face_VertexAtIndex(const mbsp_t *bsp, const mface_t *f, int v)
     return bsp->dedges[edge][0];
 }
 
-static void Vertex_GetPos(const mbsp_t *bsp, int num, vec3_t out)
+const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num)
 {
     Q_assert(num >= 0 && num < bsp->dvertexes.size());
-    VectorCopy(bsp->dvertexes[num], out);
+    return bsp->dvertexes[num];
 }
 
-void Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v, vec3_t point_out)
+const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v)
 {
     const int vertnum = Face_VertexAtIndex(bsp, f, v);
-    Vertex_GetPos(bsp, vertnum, point_out);
+    return Vertex_GetPos(bsp, vertnum);
 }
 
-void Face_Normal(const mbsp_t *bsp, const mface_t *f, vec3_t norm)
+qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f)
 {
-    plane_t pl = Face_Plane(bsp, f);
-    VectorCopy(pl.normal, norm);
+    return Face_Plane(bsp, f).normal();
 }
 
-plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f)
+qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
 {
     Q_assert(f->planenum >= 0 && f->planenum < bsp->dplanes.size());
     const dplane_t *dplane = &bsp->dplanes[f->planenum];
@@ -138,7 +137,7 @@ plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f)
         VectorCopy(planeNormal, result.normal);
         result.dist = dplane->dist;
     }
-    return result;
+    return { result.normal, result.dist };
 }
 
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
@@ -329,7 +328,7 @@ bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point)
 }
 
 static const mface_t *BSP_FindFaceAtPoint_r(
-    const mbsp_t *bsp, const int nodenum, const vec3_t &point, const vec3_t &wantedNormal)
+    const mbsp_t *bsp, const int nodenum, const qvec3d &point, const qvec3d &wantedNormal)
 {
     if (nodenum < 0) {
         // we're only interested in nodes, since faces are owned by nodes.
@@ -348,8 +347,7 @@ static const mface_t *BSP_FindFaceAtPoint_r(
     for (int i = 0; i < node->numfaces; i++) {
         const mface_t *face = BSP_GetFace(bsp, node->firstface + i);
         // First check if it's facing the right way
-        vec3_t faceNormal;
-        Face_Normal(bsp, face, faceNormal);
+        qvec3d faceNormal = Face_Normal(bsp, face);
 
         if (DotProduct(faceNormal, wantedNormal) < 0) {
             // Opposite, so not the right face.
@@ -377,7 +375,7 @@ static const mface_t *BSP_FindFaceAtPoint_r(
 }
 
 const mface_t *BSP_FindFaceAtPoint(
-    const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point, const vec3_t &wantedNormal)
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal)
 {
     return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
 }
@@ -386,7 +384,7 @@ plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face
 {
     plane_t *out = new plane_t[face->numedges];
 
-    const plane_t faceplane = Face_Plane(bsp, face);
+    const qplane3d faceplane = Face_Plane(bsp, face);
     for (int i = 0; i < face->numedges; i++) {
         plane_t *dest = &out[i];
 
@@ -397,14 +395,14 @@ plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face
         VectorSubtract(v1, v0, edgevec);
         VectorNormalize(edgevec);
 
-        CrossProduct(edgevec, faceplane.normal, dest->normal);
+        CrossProduct(edgevec, faceplane.normal(), dest->normal);
         dest->dist = DotProduct(dest->normal, v0);
     }
 
     return out;
 }
 
-bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const vec3_t &point)
+bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const qvec3d &point)
 {
     for (int i = 0; i < face->numedges; i++) {
         const vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
@@ -416,32 +414,6 @@ bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, cons
 }
 
 // glm stuff
-
-qplane3f Face_Plane_E(const mbsp_t *bsp, const mface_t *f)
-{
-    const plane_t pl = Face_Plane(bsp, f);
-    return qplane3f(pl.normal, pl.dist);
-}
-
-qvec3f Face_PointAtIndex_E(const mbsp_t *bsp, const mface_t *f, int v)
-{
-    return Vertex_GetPos_E(bsp, Face_VertexAtIndex(bsp, f, v));
-}
-
-qvec3f Vertex_GetPos_E(const mbsp_t *bsp, int num)
-{
-    vec3_t temp;
-    Vertex_GetPos(bsp, num, temp);
-    return temp;
-}
-
-qvec3f Face_Normal_E(const mbsp_t *bsp, const mface_t *f)
-{
-    vec3_t temp;
-    Face_Normal(bsp, f, temp);
-    return temp;
-}
-
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
 {
     std::vector<qvec3f> points;
@@ -449,7 +421,7 @@ std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
     points.reserve(face->numedges);
 
     for (int j = 0; j < face->numedges; j++) {
-        points.push_back(Face_PointAtIndex_E(bsp, face, j));
+        points.push_back(Face_PointAtIndex(bsp, face, j));
     }
 
     return points;

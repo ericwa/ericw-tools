@@ -42,14 +42,14 @@
 
 using namespace std;
 
-static neighbour_t FaceOverlapsEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const mface_t *f)
+static neighbour_t FaceOverlapsEdge(const qvec3f &p0, const qvec3f &p1, const mbsp_t *bsp, const mface_t *f)
 {
     for (int edgeindex = 0; edgeindex < f->numedges; edgeindex++) {
         const int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
         const int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
 
-        const qvec3f v0point = Vertex_GetPos_E(bsp, v0);
-        const qvec3f v1point = Vertex_GetPos_E(bsp, v1);
+        const qvec3f &v0point = Vertex_GetPos(bsp, v0);
+        const qvec3f &v1point = Vertex_GetPos(bsp, v1);
         if (LinesOverlap(p0, p1, v0point, v1point)) {
             return neighbour_t{f, v0point, v1point};
         }
@@ -58,7 +58,7 @@ static neighbour_t FaceOverlapsEdge(const vec3_t &p0, const vec3_t &p1, const mb
 }
 
 static void FacesOverlappingEdge_r(
-    const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, int nodenum, vector<neighbour_t> *result)
+    const qvec3f &p0, const qvec3f &p1, const mbsp_t *bsp, int nodenum, vector<neighbour_t> *result)
 {
     if (nodenum < 0) {
         // we don't do anything for leafs.
@@ -100,7 +100,7 @@ static void FacesOverlappingEdge_r(
  * Returns faces which have an edge that overlaps the given p0-p1 edge.
  * Uses hull 0.
  */
-inline vector<neighbour_t> FacesOverlappingEdge(const vec3_t &p0, const vec3_t &p1, const mbsp_t *bsp, const dmodelh2_t *model)
+inline vector<neighbour_t> FacesOverlappingEdge(const qvec3f &p0, const qvec3f &p1, const mbsp_t *bsp, const dmodelh2_t *model)
 {
     vector<neighbour_t> result;
     FacesOverlappingEdge_r(p0, p1, bsp, model->headnode[0], &result);
@@ -113,15 +113,14 @@ std::vector<neighbour_t> NeighbouringFaces_new(const mbsp_t *bsp, const mface_t 
     std::set<const mface_t *> used_faces;
 
     for (int i = 0; i < face->numedges; i++) {
-        vec3_t p0, p1;
-        Face_PointAtIndex(bsp, face, i, p0);
-        Face_PointAtIndex(bsp, face, (i + 1) % face->numedges, p1);
+        const qvec3f &p0 = Face_PointAtIndex(bsp, face, i);
+        const qvec3f &p1 = Face_PointAtIndex(bsp, face, (i + 1) % face->numedges);
 
         std::vector<neighbour_t> tmp = FacesOverlappingEdge(p0, p1, bsp, &bsp->dmodels[0]);
 
         // ensure the neighbour_t edges are pointing the same direction as the p0->p1 edge
         // (modifies them inplace)
-        const qvec3f p0p1dir = qv::normalize(qvec3d(p1) - qvec3d(p0));
+        const qvec3f p0p1dir = qv::normalize(p1 - p0);
         for (auto &neighbour : tmp) {
             qvec3f neighbourDir = qv::normalize(neighbour.p1 - neighbour.p0);
             float dp = qv::dot(neighbourDir, p0p1dir); // should really be 1 or -1
@@ -171,6 +170,8 @@ static float AngleBetweenPoints(const qvec3f &p1, const qvec3f &p2, const qvec3f
 
 static bool s_builtPhongCaches;
 static std::map<const mface_t *, std::vector<qvec3f>> vertex_normals;
+static std::map<const mface_t *, std::vector<qvec3f>> vertex_tangents;
+static std::map<const mface_t *, std::vector<qvec3f>> vertex_bitangents;
 static std::set<int> interior_verts;
 static map<const mface_t *, set<const mface_t *>> smoothFaces;
 static map<int, vector<const mface_t *>> vertsToFaces;
@@ -236,14 +237,38 @@ const std::vector<const mface_t *> &GetPlaneFaces(const mface_t *face)
     return it->second;
 }
 
+// Adapted from https://github.com/NVIDIAGameWorks/donut/blob/main/src/engine/GltfImporter.cpp#L684
+std::tuple<qvec3f, qvec3f> compute_tangents(const std::array<qvec3f, 3> &positions, const std::array<qvec2f, 3> &tex_coords, const qvec3f &normal)
+{
+    qvec3f dPds = positions[1] - positions[0];
+    qvec3f dPdt = positions[2] - positions[0];
+
+    qvec3f dTds = tex_coords[1] - tex_coords[0];
+    qvec3f dTdt = tex_coords[2] - tex_coords[0];
+
+    float r = 1.0f / (dTds[0] * dTdt[1] - dTds[1] * dTdt[0]);
+    qvec3f tangent = (dPds * dTdt[1] - dPdt * dTds[1]) * r;
+    qvec3f bitangent = (dPdt * dTds[0] - dPds * dTdt[0]) * r;
+
+    return { qv::normalize(tangent), qv::normalize(bitangent) };
+}
+
+constexpr qvec2d uvs(const texvecf &vecs, const qvec3d &pos, const int32_t &width, const int32_t &height)
+{
+    return {
+        (pos[0] * vecs[0][0] + pos[1] * vecs[0][1] + pos[2] * vecs[0][2] + vecs[0][3]) / width,
+        (pos[0] * vecs[1][0] + pos[1] * vecs[1][1] + pos[2] * vecs[1][2] + vecs[1][3]) / height
+    };
+}
+
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at
  * the verts. v1, v2, v3 are global vertex indices */
 static void AddTriangleNormals(
-    std::map<int, qvec3f> &smoothed_normals, const qvec3f &norm, const mbsp_t *bsp, int v1, int v2, int v3)
+    std::map<int, qvec3f> &smoothed_normals, std::map<int, qvec3f> &smoothed_tangents, std::map<int, qvec3f> &smoothed_bitangents, const gtexinfo_t *texinfo, const rgba_miptex_t *miptex, const qvec3d &norm, const mbsp_t *bsp, int v1, int v2, int v3)
 {
-    const qvec3f p1 = Vertex_GetPos_E(bsp, v1);
-    const qvec3f p2 = Vertex_GetPos_E(bsp, v2);
-    const qvec3f p3 = Vertex_GetPos_E(bsp, v3);
+    const qvec3f &p1 = Vertex_GetPos(bsp, v1);
+    const qvec3f &p2 = Vertex_GetPos(bsp, v2);
+    const qvec3f &p3 = Vertex_GetPos(bsp, v3);
     float weight;
 
     float areaweight = GLM_TriangleArea(p1, p2, p3);
@@ -251,17 +276,29 @@ static void AddTriangleNormals(
         areaweight = 0;
     }
 
+    auto uv1 = uvs(texinfo->vecs, p1, miptex->width, miptex->height);
+    auto uv2 = uvs(texinfo->vecs, p2, miptex->width, miptex->height);
+    auto uv3 = uvs(texinfo->vecs, p3, miptex->width, miptex->height);
+
+    auto tangent = compute_tangents({ p1, p2, p3 }, { uv1, uv2, uv3 }, norm);
+    
     weight = AngleBetweenPoints(p2, p1, p3);
     weight *= areaweight;
-    smoothed_normals[v1] = smoothed_normals[v1] + (norm * weight);
+    smoothed_normals[v1] += norm * weight;
+    smoothed_tangents[v1] += std::get<0>(tangent) * weight;
+    smoothed_bitangents[v1] += std::get<1>(tangent) * weight;
 
     weight = AngleBetweenPoints(p1, p2, p3);
     weight *= areaweight;
-    smoothed_normals[v2] = smoothed_normals[v2] + (norm * weight);
+    smoothed_normals[v2] += norm * weight;
+    smoothed_tangents[v2] += std::get<0>(tangent) * weight;
+    smoothed_bitangents[v2] += std::get<1>(tangent) * weight;
 
     weight = AngleBetweenPoints(p1, p3, p2);
     weight *= areaweight;
-    smoothed_normals[v3] = smoothed_normals[v3] + (norm * weight);
+    smoothed_normals[v3] += norm * weight;
+    smoothed_tangents[v3] += std::get<0>(tangent) * weight;
+    smoothed_bitangents[v3] += std::get<1>(tangent) * weight;
 }
 
 /* access the final phong-shaded vertex normal */
@@ -276,6 +313,34 @@ const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const i
     }
     const auto &face_normals_vec = it->second;
     return face_normals_vec.at(vertindex);
+}
+
+/* access the final phong-shaded vertex tangent */
+static const qvec3f GetSurfaceVertexTangent(const mbsp_t *bsp, const mface_t *f, const int vertindex)
+{
+    Q_assert(s_builtPhongCaches);
+
+    // handle degenerate faces
+    const auto it = vertex_tangents.find(f);
+    if (it == vertex_tangents.end()) {
+        return { };
+    }
+    const auto &face_tangents_vec = it->second;
+    return face_tangents_vec.at(vertindex);
+}
+
+/* access the final phong-shaded vertex tangent */
+static const qvec3f GetSurfaceVertexBitangent(const mbsp_t *bsp, const mface_t *f, const int vertindex)
+{
+    Q_assert(s_builtPhongCaches);
+
+    // handle degenerate faces
+    const auto it = vertex_bitangents.find(f);
+    if (it == vertex_bitangents.end()) {
+        return { };
+    }
+    const auto &face_bitangents_vec = it->second;
+    return face_bitangents_vec.at(vertindex);
 }
 
 static bool FacesOnSamePlane(const std::vector<const mface_t *> &faces)
@@ -382,11 +447,29 @@ static vector<qvec3f> Face_VertexNormals(const mbsp_t *bsp, const mface_t *face)
     return normals;
 }
 
+static vector<qvec3f> Face_VertexTangents(const mbsp_t *bsp, const mface_t *face)
+{
+    vector<qvec3f> tangents;
+    for (int i = 0; i < face->numedges; i++) {
+        tangents.push_back(GetSurfaceVertexTangent(bsp, face, i));
+    }
+    return tangents;
+}
+
+static vector<qvec3f> Face_VertexBitangents(const mbsp_t *bsp, const mface_t *face)
+{
+    vector<qvec3f> tangents;
+    for (int i = 0; i < face->numedges; i++) {
+        tangents.push_back(GetSurfaceVertexBitangent(bsp, face, i));
+    }
+    return tangents;
+}
+
 static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
 {
     vector<face_cache_t> result;
     for (auto &face : bsp->dfaces) {
-        result.emplace_back(bsp, &face, Face_VertexNormals(bsp, &face));
+        result.emplace_back(bsp, &face, Face_VertexNormals(bsp, &face), Face_VertexTangents(bsp, &face), Face_VertexBitangents(bsp, &face));
     }
     return result;
 }
@@ -455,8 +538,8 @@ void CalculateVertexNormals(const mbsp_t *bsp)
     // build the "face -> faces to smooth with" map
     for (auto &f : bsp->dfaces) {
         const auto f_points = GLM_FacePoints(bsp, &f);
-        const qvec3f f_norm = Face_Normal_E(bsp, &f);
-        const qplane3f f_plane = Face_Plane_E(bsp, &f);
+        const qvec3d f_norm = Face_Normal(bsp, &f);
+        const qplane3d f_plane = Face_Plane(bsp, &f);
 
         // any face normal within this many degrees can be smoothed with this face
         const int f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
@@ -489,7 +572,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
                 const auto f2_points = GLM_FacePoints(bsp, f2);
                 const qvec3f f2_centroid = GLM_PolyCentroid(f2_points);
-                const qvec3f f2_norm = Face_Normal_E(bsp, f2);
+                const qvec3d f2_norm = Face_Normal(bsp, f2);
 
                 const vec_t cosangle = qv::dot(f_norm, f2_norm);
 
@@ -536,15 +619,25 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         if (f.numedges < 3) {
             FLogPrint("face {} is degenerate with {} edges\n", Face_GetNum(bsp, &f), f.numedges);
             for (int j = 0; j < f.numedges; j++) {
-                vec3_t pt;
-                Face_PointAtIndex(bsp, &f, j, pt);
-                LogPrint("                         vert at {} {} {}\n", pt[0], pt[1], pt[2]);
+                LogPrint("                         vert at {}\n", Face_PointAtIndex(bsp, &f, j));
             }
             continue;
         }
 
         const auto &neighboursToSmooth = smoothFaces[&f];
-        const qvec3f f_norm = Face_Normal_E(bsp, &f); // get the face normal
+        const qvec3f f_norm = Face_Normal(bsp, &f); // get the face normal
+
+        // face tangent
+        auto texinfo = BSP_GetTexinfo(bsp, f.texinfo);
+        auto miptex = Face_RgbaMiptex(bsp, &f);
+        auto p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 0));
+        auto p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 1));
+        auto p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 2));
+        auto uv1 = uvs(texinfo->vecs, p1, miptex->width, miptex->height);
+        auto uv2 = uvs(texinfo->vecs, p2, miptex->width, miptex->height);
+        auto uv3 = uvs(texinfo->vecs, p3, miptex->width, miptex->height);
+
+        auto tangents = compute_tangents({ p1, p2, p3 }, { uv1, uv2, uv3 }, f_norm);
 
         // gather up f and neighboursToSmooth
         std::vector<const mface_t *> fPlusNeighbours;
@@ -552,11 +645,11 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         std::copy(neighboursToSmooth.begin(), neighboursToSmooth.end(), std::back_inserter(fPlusNeighbours));
 
         // global vertex index -> smoothed normal
-        std::map<int, qvec3f> smoothedNormals;
+        std::map<int, qvec3f> smoothedNormals, smoothedTangents, smoothedBitangents;
 
         // walk fPlusNeighbours
         for (auto f2 : fPlusNeighbours) {
-            const qvec3f f2_norm = Face_Normal_E(bsp, f2);
+            const qvec3d f2_norm = Face_Normal(bsp, f2);
 
             /* now just walk around the surface as a triangle fan */
             int v1, v2, v3;
@@ -564,7 +657,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             v2 = Face_VertexAtIndex(bsp, f2, 1);
             for (int j = 2; j < f2->numedges; j++) {
                 v3 = Face_VertexAtIndex(bsp, f2, j);
-                AddTriangleNormals(smoothedNormals, f2_norm, bsp, v1, v2, v3);
+                AddTriangleNormals(smoothedNormals, smoothedTangents, smoothedBitangents, BSP_GetTexinfo(bsp, f2->texinfo), Face_RgbaMiptex(bsp, f2), f2_norm, bsp, v1, v2, v3);
                 v2 = v3;
             }
         }
@@ -590,6 +683,48 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             }
         }
 
+        // normalize vertex tangents (NOTE: updates smoothedTangents map)
+        for (auto &pair : smoothedTangents) {
+            const int vertIndex = pair.first;
+            const qvec3f vertTangent = pair.second;
+            if (0 == qv::length(vertTangent)) {
+                // this happens when there are colinear vertices, which give zero-area triangles,
+                // so there is no contribution to the normal of the triangle in the middle of the
+                // line. Not really an error, just set it to use the face normal.
+#if 0
+                LogPrint("Failed to calculate normal for vertex {} at ({} {} {})\n",
+                         vertIndex,
+                         bsp->dvertexes[vertIndex].point[0],
+                         bsp->dvertexes[vertIndex].point[1],
+                         bsp->dvertexes[vertIndex].point[2]);
+#endif
+                pair.second = std::get<0>(tangents);
+            } else {
+                pair.second = qv::normalize(vertTangent);
+            }
+        }
+
+        // normalize vertex tangents (NOTE: updates smoothedTangents map)
+        for (auto &pair : smoothedBitangents) {
+            const int vertIndex = pair.first;
+            const qvec3f vertBitangent = pair.second;
+            if (0 == qv::length(vertBitangent)) {
+                // this happens when there are colinear vertices, which give zero-area triangles,
+                // so there is no contribution to the normal of the triangle in the middle of the
+                // line. Not really an error, just set it to use the face normal.
+#if 0
+                LogPrint("Failed to calculate normal for vertex {} at ({} {} {})\n",
+                         vertIndex,
+                         bsp->dvertexes[vertIndex].point[0],
+                         bsp->dvertexes[vertIndex].point[1],
+                         bsp->dvertexes[vertIndex].point[2]);
+#endif
+                pair.second = std::get<1>(tangents);
+            } else {
+                pair.second = qv::normalize(vertBitangent);
+            }
+        }
+
         // sanity check
         if (!neighboursToSmooth.size()) {
             for (auto vertIndexNormalPair : smoothedNormals) {
@@ -601,8 +736,12 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         for (int j = 0; j < f.numedges; j++) {
             int v = Face_VertexAtIndex(bsp, &f, j);
             Q_assert(smoothedNormals.find(v) != smoothedNormals.end());
-
+            Q_assert(smoothedTangents.find(v) != smoothedTangents.end());
+            Q_assert(smoothedBitangents.find(v) != smoothedBitangents.end());
+            
             vertex_normals[&f].push_back(smoothedNormals[v]);
+            vertex_tangents[&f].push_back(smoothedTangents[v]);
+            vertex_bitangents[&f].push_back(smoothedBitangents[v]);
         }
     }
 

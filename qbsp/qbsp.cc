@@ -360,7 +360,7 @@ static void FloodAreas_r(mapentity_t *entity, node_t *node)
 		{
             // FIXME: entity #
 			LogPrint("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n",
-				qv::to_string(node->bounds.mins()), qv::to_string(node->bounds.maxs()));
+				node->bounds.mins(), node->bounds.maxs());
 			return;
 		}
 

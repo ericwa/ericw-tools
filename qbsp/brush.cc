@@ -85,12 +85,10 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
-            FError("line {}: too few points (2): ({} {} {}) ({} {} {})\n", sourceface->linenum,
-                face->w[0][0], face->w[0][1], face->w[0][2], face->w[1][0],
-                face->w[1][1], face->w[1][2]);
+            FError("line {}: too few points (2): ({}) ({})\n", sourceface->linenum,
+                face->w[0], face->w[1]);
         } else if (face->w.size() == 1) {
-            FError("line {}: too few points (1): ({} {} {})\n", sourceface->linenum, face->w[0][0],
-                face->w[0][1], face->w[0][2]);
+            FError("line {}: too few points (1): ({})\n", sourceface->linenum, face->w[0]);
         } else {
             FError("line {}: too few points ({})", sourceface->linenum, face->w.size());
         }
@@ -136,9 +134,8 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
                 continue;
             dist = DotProduct(face->w[j], edgenormal);
             if (dist > edgedist)
-                FError("line {}: Found a non-convex face (error size {}, point: {} {} {})\n",
-                    sourceface->linenum, dist - edgedist, face->w[j][0], face->w[j][1],
-                    face->w[j][2]);
+                FError("line {}: Found a non-convex face (error size {}, point: {})\n",
+                    sourceface->linenum, dist - edgedist, face->w[j]);
         }
     }
 }

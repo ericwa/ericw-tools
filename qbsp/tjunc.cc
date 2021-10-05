@@ -229,7 +229,7 @@ static void AddFaceEdges(face_t *f)
 
 /*
  * superface is a large face used as intermediate stage in tjunc fixes,
- * can hold hundreds of edges of edges if needed
+ * can hold hundreds of edges if needed
  */
 #define MAX_SUPERFACE_POINTS 8192
 

@@ -28,12 +28,7 @@
 
 #define qmax std::max
 #define qmin std::min
-
-template<typename T>
-constexpr const T &qclamp(const T &val, const T &min, const T &max)
-{
-    return qmax(qmin(val, max), min);
-}
+#define qclamp std::clamp
 
 template<size_t N, class T>
 class qvec
@@ -47,7 +42,7 @@ protected:
 public:
     using value_type = T;
 
-    qvec() = default;
+    constexpr qvec() = default;
 
     template<typename ...Args, typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
     constexpr qvec(Args... a)
@@ -135,30 +130,30 @@ public:
         v[N - 1] = value;
     }
 
-    constexpr size_t size() const { return N; }
+    [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
-    constexpr bool operator<(const qvec<N, T> &other) const { return v < other.v; }
-    constexpr bool operator<=(const qvec<N, T> &other) const { return v <= other.v; }
-    constexpr bool operator>(const qvec<N, T> &other) const { return v > other.v; }
-    constexpr bool operator>=(const qvec<N, T> &other) const { return v >= other.v; }
-    constexpr bool operator==(const qvec<N, T> &other) const { return v == other.v; }
-    constexpr bool operator!=(const qvec<N, T> &other) const { return v != other.v; }
+    [[nodiscard]] constexpr bool operator<(const qvec<N, T> &other) const { return v < other.v; }
+    [[nodiscard]] constexpr bool operator<=(const qvec<N, T> &other) const { return v <= other.v; }
+    [[nodiscard]] constexpr bool operator>(const qvec<N, T> &other) const { return v > other.v; }
+    [[nodiscard]] constexpr bool operator>=(const qvec<N, T> &other) const { return v >= other.v; }
+    [[nodiscard]] constexpr bool operator==(const qvec<N, T> &other) const { return v == other.v; }
+    [[nodiscard]] constexpr bool operator!=(const qvec<N, T> &other) const { return v != other.v; }
 
-    constexpr const T &at(const size_t idx) const
+    [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
     }
 
-    constexpr T &at(const size_t idx)
+    [[nodiscard]] constexpr T &at(const size_t idx)
     {
         assert(idx >= 0 && idx < N);
         return v[idx];
     }
 
-    constexpr const T &operator[](const size_t idx) const { return at(idx); }
-    constexpr T &operator[](const size_t idx) { return at(idx); }
+    [[nodiscard]] constexpr const T &operator[](const size_t idx) const { return at(idx); }
+    [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
 
     template<typename F>
     constexpr void operator+=(const qvec<N, F> &other)
@@ -184,7 +179,7 @@ public:
     }
     
     template<typename F>
-    constexpr qvec<N, T> operator+(const qvec<N, F> &other) const
+    [[nodiscard]] constexpr qvec<N, T> operator+(const qvec<N, F> &other) const
     {
         qvec<N, T> res(*this);
         res += other;
@@ -192,35 +187,35 @@ public:
     }
     
     template<typename F>
-    constexpr qvec<N, T> operator-(const qvec<N, F> &other) const
+    [[nodiscard]] constexpr qvec<N, T> operator-(const qvec<N, F> &other) const
     {
         qvec<N, T> res(*this);
         res -= other;
         return res;
     }
 
-    constexpr qvec<N, T> operator*(const T &scale) const
+    [[nodiscard]] constexpr qvec<N, T> operator*(const T &scale) const
     {
         qvec<N, T> res(*this);
         res *= scale;
         return res;
     }
 
-    constexpr qvec<N, T> operator/(const T &scale) const
+    [[nodiscard]] constexpr qvec<N, T> operator/(const T &scale) const
     {
         qvec<N, T> res(*this);
         res /= scale;
         return res;
     }
 
-    constexpr qvec<N, T> operator-() const
+    [[nodiscard]] constexpr qvec<N, T> operator-() const
     {
         qvec<N, T> res(*this);
         res *= -1;
         return res;
     }
 
-    constexpr qvec<3, T> xyz() const
+    [[nodiscard]] constexpr qvec<3, T> xyz() const
     {
         static_assert(N >= 3);
         return qvec<3, T>(*this);
@@ -230,24 +225,24 @@ public:
     auto stream_data() { return std::tie(v); }
 
     // iterator support
-    auto begin() { return v.begin(); }
-    auto end() { return v.end(); }
-    auto begin() const { return v.begin(); }
-    auto end() const { return v.end(); }
-    auto cbegin() const { return v.cbegin(); }
-    auto cend() const { return v.cend(); }
+    constexpr auto begin() { return v.begin(); }
+    constexpr auto end() { return v.end(); }
+    constexpr auto begin() const { return v.begin(); }
+    constexpr auto end() const { return v.end(); }
+    constexpr auto cbegin() const { return v.cbegin(); }
+    constexpr auto cend() const { return v.cend(); }
 };
 
 namespace qv
 {
 template<class T>
-qvec<3, T> cross(const qvec<3, T> &v1, const qvec<3, T> &v2)
+[[nodiscard]] qvec<3, T> cross(const qvec<3, T> &v1, const qvec<3, T> &v2)
 {
     return qvec<3, T>(v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]);
 }
 
 template<size_t N, class T>
-T dot(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] T dot(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     T result = 0;
     for (size_t i = 0; i < N; i++) {
@@ -257,7 +252,7 @@ T dot(const qvec<N, T> &v1, const qvec<N, T> &v2)
 }
 
 template<size_t N, class T>
-qvec<N, T> floor(const qvec<N, T> &v1)
+[[nodiscard]] qvec<N, T> floor(const qvec<N, T> &v1)
 {
     qvec<N, T> res;
     for (size_t i = 0; i < N; i++) {
@@ -267,7 +262,7 @@ qvec<N, T> floor(const qvec<N, T> &v1)
 }
 
 template<size_t N, class T>
-qvec<N, T> pow(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] qvec<N, T> pow(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     qvec<N, T> res;
     for (size_t i = 0; i < N; i++) {
@@ -277,7 +272,7 @@ qvec<N, T> pow(const qvec<N, T> &v1, const qvec<N, T> &v2)
 }
 
 template<size_t N, class T>
-T min(const qvec<N, T> &v)
+[[nodiscard]] T min(const qvec<N, T> &v)
 {
     T res = std::numeric_limits<T>::largest();
     for (auto &c : v) {
@@ -287,7 +282,7 @@ T min(const qvec<N, T> &v)
 }
 
 template<size_t N, class T>
-T max(const qvec<N, T> &v)
+[[nodiscard]] T max(const qvec<N, T> &v)
 {
     T res = std::numeric_limits<T>::lowest();
     for (auto &c : v) {
@@ -297,7 +292,7 @@ T max(const qvec<N, T> &v)
 }
 
 template<size_t N, class T>
-qvec<N, T> min(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] qvec<N, T> min(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     qvec<N, T> res;
     for (size_t i = 0; i < N; i++) {
@@ -307,7 +302,7 @@ qvec<N, T> min(const qvec<N, T> &v1, const qvec<N, T> &v2)
 }
 
 template<size_t N, class T>
-qvec<N, T> max(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] qvec<N, T> max(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     qvec<N, T> res;
     for (size_t i = 0; i < N; i++) {
@@ -317,7 +312,7 @@ qvec<N, T> max(const qvec<N, T> &v1, const qvec<N, T> &v2)
 }
 
 template<size_t N, class T>
-T length2(const qvec<N, T> &v1)
+[[nodiscard]] T length2(const qvec<N, T> &v1)
 {
     T len2 = 0;
     for (size_t i = 0; i < N; i++) {
@@ -327,31 +322,31 @@ T length2(const qvec<N, T> &v1)
 }
 
 template<size_t N, class T>
-T length(const qvec<N, T> &v1)
+[[nodiscard]] T length(const qvec<N, T> &v1)
 {
     return std::sqrt(length2(v1));
 }
 
 template<size_t N, class T>
-qvec<N, T> normalize(const qvec<N, T> &v1)
+[[nodiscard]] qvec<N, T> normalize(const qvec<N, T> &v1)
 {
     return v1 / length(v1);
 }
 
 template<size_t N, class T>
-T distance(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] T distance(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     return length(v2 - v1);
 }
 
 template<typename T>
-inline std::string to_string(const qvec<3, T> &v1)
+[[nodiscard]] inline std::string to_string(const qvec<3, T> &v1)
 {
-    return fmt::format("{} {} {}", v1[0], v1[1], v1[2]);
+    return fmt::format("{}", v1);
 }
 
 template<size_t N, class T>
-bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
+[[nodiscard]] bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
         T diff = v1[i] - v2[i];
@@ -362,7 +357,7 @@ bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
 }
 
 template<size_t N, class T>
-bool epsilonEmpty(const qvec<N, T> &v1, T epsilon)
+[[nodiscard]] bool epsilonEmpty(const qvec<N, T> &v1, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
         if (fabs(v1[i]) > epsilon)
@@ -372,7 +367,7 @@ bool epsilonEmpty(const qvec<N, T> &v1, T epsilon)
 }
 
 template<size_t N, class T>
-bool equalExact(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] bool equalExact(const qvec<N, T> &v1, const qvec<N, T> &v2)
 {
     for (size_t i = 0; i < N; i++) {
         if (v1[i] != v2[i])
@@ -382,7 +377,7 @@ bool equalExact(const qvec<N, T> &v1, const qvec<N, T> &v2)
 }
 
 template<size_t N, class T>
-bool emptyExact(const qvec<N, T> &v1)
+[[nodiscard]] bool emptyExact(const qvec<N, T> &v1)
 {
     for (size_t i = 0; i < N; i++) {
         if (v1[i])
@@ -392,7 +387,7 @@ bool emptyExact(const qvec<N, T> &v1)
 }
 
 template<size_t N, class T>
-size_t indexOfLargestMagnitudeComponent(const qvec<N, T> &v)
+[[nodiscard]] size_t indexOfLargestMagnitudeComponent(const qvec<N, T> &v)
 {
     size_t largestIndex = 0;
     T largestMag = 0;
@@ -431,14 +426,20 @@ private:
     T m_dist;
 
 public:
-    qplane3() = default;
-    qplane3(const qvec<3, T> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
+    constexpr qplane3() = default;
+    constexpr qplane3(const qvec<3, T> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
+    
+    template<typename T2>
+    constexpr qplane3(const qplane3<T2> &plane) :
+        qplane3(plane.normal(), plane.dist())
+    {
+    }
 
-    T distAbove(const qvec<3, T> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
-    const qvec<3, T> &normal() const { return m_normal; }
-    const T dist() const { return m_dist; }
+    [[nodiscard]] inline T distAbove(const qvec<3, T> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
+    [[nodiscard]] constexpr const qvec<3, T> &normal() const { return m_normal; }
+    [[nodiscard]] constexpr const T dist() const { return m_dist; }
 
-    const qvec<4, T> vec4() const { return qvec<4, T>(m_normal[0], m_normal[1], m_normal[2], m_dist); }
+    [[nodiscard]] constexpr const qvec<4, T> vec4() const { return qvec<4, T>(m_normal[0], m_normal[1], m_normal[2], m_dist); }
 };
 
 using qplane3f = qplane3<float>;
@@ -509,14 +510,14 @@ public:
 
     // access to elements
 
-    constexpr T &at(size_t row, size_t col)
+    [[nodiscard]] constexpr T &at(size_t row, size_t col)
     {
         assert(row >= 0 && row < M);
         assert(col >= 0 && col < N);
         return m_values[col * M + row];
     }
 
-    constexpr T at(size_t row, size_t col) const
+    [[nodiscard]] constexpr T at(size_t row, size_t col) const
     {
         assert(row >= 0 && row < M);
         assert(col >= 0 && col < N);
@@ -524,13 +525,13 @@ public:
     }
 
     // hacky accessor for mat[col][row] access
-    constexpr const T *operator[](size_t col) const
+    [[nodiscard]] constexpr const T *operator[](size_t col) const
     {
         assert(col >= 0 && col < N);
         return &m_values[col * M];
     }
 
-    constexpr T *operator[](size_t col)
+    [[nodiscard]] constexpr T *operator[](size_t col)
     {
         assert(col >= 0 && col < N);
         return &m_values[col * M];
@@ -538,7 +539,7 @@ public:
 
     // multiplication by a vector
 
-    qvec<M, T> operator*(const qvec<N, T> &vec) const
+    [[nodiscard]] qvec<M, T> operator*(const qvec<N, T> &vec) const
     {
         qvec<M, T> res { };
         for (size_t i = 0; i < M; i++) { // for each row
@@ -552,7 +553,7 @@ public:
     // multiplication by a matrix
 
     template<int P>
-    qmat<M, P, T> operator*(const qmat<N, P, T> &other) const
+    [[nodiscard]] qmat<M, P, T> operator*(const qmat<N, P, T> &other) const
     {
         qmat<M, P, T> res;
         for (size_t i = 0; i < M; i++) {
@@ -569,7 +570,7 @@ public:
 
     // multiplication by a scalar
 
-    qmat<M, N, T> operator*(const T scalar) const
+    [[nodiscard]] qmat<M, N, T> operator*(const T scalar) const
     {
         qmat<M, N, T> res(*this);
         for (size_t i = 0; i < M * N; i++) {
@@ -608,8 +609,25 @@ namespace qv
 /**
  * These return a matrix filled with NaN if there is no inverse.
  */
-qmat4x4f inverse(const qmat4x4f &input);
-qmat4x4d inverse(const qmat4x4d &input);
+[[nodiscard]] qmat4x4f inverse(const qmat4x4f &input);
+[[nodiscard]] qmat4x4d inverse(const qmat4x4d &input);
 
-qmat2x2f inverse(const qmat2x2f &input);
+[[nodiscard]] qmat2x2f inverse(const qmat2x2f &input);
 }; // namespace qv
+
+// FMT support
+#include <fmt/format.h>
+
+template<size_t N, class T>
+struct fmt::formatter<qvec<N, T>> : formatter<T> {
+    template <typename FormatContext>
+    auto format(const qvec<N, T> &p, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        for (size_t i = 0; i < N - 1; i++) {
+            formatter<T>::format(p[i], ctx);
+            format_to(ctx.out(), " ");
+        }
+
+        return formatter<T>::format(p[N - 1], ctx);
+    }
+};

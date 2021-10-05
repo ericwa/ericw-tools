@@ -230,7 +230,7 @@ static planepoints NormalDistanceToThreePoints(const qvec3d &normal, const doubl
 
 void PrintPoint(const qvec3d &v, fmt::memory_buffer &file)
 {
-    fmt::format_to(file, "( {} {} {} )", v[0], v[1], v[2]);
+    fmt::format_to(file, "( {} )", v);
 }
 
 static void PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t &decompplane, fmt::memory_buffer &file)

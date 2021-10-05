@@ -227,6 +227,9 @@ inline void Q_assert_(bool success, const char *expr, const char *file, int line
     if (!success) {
         LogPrint("{}:{}: Q_assert({}) failed.\n", file, line, expr);
         assert(0);
+#ifdef _WIN32
+        __debugbreak();
+#endif
         exit(1);
     }
 }

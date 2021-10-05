@@ -415,8 +415,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
         }
     }
 
-    fmt::print("world mins: {} {} {} maxs: {} {} {}\n", bsp->dmodels[0].mins[0], bsp->dmodels[0].mins[1],
-        bsp->dmodels[0].mins[2], bsp->dmodels[0].maxs[0], bsp->dmodels[0].maxs[1], bsp->dmodels[0].maxs[2]);
+    fmt::print("world mins: {} maxs: {}\n", bsp->dmodels[0].mins, bsp->dmodels[0].maxs);
 }
 
 static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
@@ -435,8 +434,7 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
         vec3_t wantedPoint;
         VectorCopy(refFaceCentroid, wantedPoint);
 
-        vec3_t wantedNormal;
-        Face_Normal(&refBsp, refFace, wantedNormal);
+        qvec3d wantedNormal = Face_Normal(&refBsp, refFace);
 
         // Search for a face in bsp touching refFaceCentroid.
         auto *matchedFace = BSP_FindFaceAtPoint(&bsp, world, wantedPoint, wantedNormal);

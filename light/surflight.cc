@@ -82,8 +82,7 @@ static void *MakeSurfaceLightsThread(void *arg)
         if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
             if (info->flags.native & Q2_SURF_LIGHT) {
                 qvec3d wc = winding_t::from_face(bsp, face).center();
-                LogPrint("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face),
-                    qv::to_string(wc));
+                LogPrint("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
             }
             continue;
         }
@@ -104,8 +103,8 @@ static void *MakeSurfaceLightsThread(void *arg)
         winding.remove_colinear();
 
         // Get face normal and midpoint...
-        vec3_t facenormal, facemidpoint;
-        Face_Normal(bsp, face, facenormal);
+        vec3_t facemidpoint;
+        qvec3d facenormal = Face_Normal(bsp, face);
         VectorCopy(winding.center(), facemidpoint);
         VectorMA(facemidpoint, 1, facenormal, facemidpoint); // Lift 1 unit
 

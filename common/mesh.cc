@@ -96,7 +96,7 @@ mesh_t buildMeshFromBSP(const mbsp_t *bsp)
         res.faces.push_back(face);
 
         // grab exact plane
-        res.faceplanes.push_back(Face_Plane_E(bsp, &f));
+        res.faceplanes.push_back(Face_Plane(bsp, &f));
     }
 
     return res;

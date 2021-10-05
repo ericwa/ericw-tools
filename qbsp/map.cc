@@ -2313,9 +2313,9 @@ void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const
 
             winding_t w = BaseWindingForPlane(&plane);
 
-            fmt::print(f, "( {} {} {} ) ", w[0][0], w[0][1], w[0][2]);
-            fmt::print(f, "( {} {} {} ) ", w[1][0], w[1][1], w[1][2]);
-            fmt::print(f, "( {} {} {} ) ", w[2][0], w[2][1], w[2][2]);
+            fmt::print(f, "( {} ) ", w[0]);
+            fmt::print(f, "( {} ) ", w[1]);
+            fmt::print(f, "( {} ) ", w[2]);
 
             fmt::print(f, "notexture 0 0 0 1 1\n");
         }

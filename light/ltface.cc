@@ -82,7 +82,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
     qvec2f maxs(-FLT_MAX, -FLT_MAX);
 
     for (int i = 0; i < face->numedges; i++) {
-        const qvec3f worldpoint = Face_PointAtIndex_E(bsp, face, i);
+        const qvec3f &worldpoint = Face_PointAtIndex(bsp, face, i);
         const qvec2f texcoord = WorldToTexCoord_HighPrecision(bsp, face, worldpoint);
 
         // self test
@@ -107,8 +107,8 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
         m_texsize[i] = static_cast<int>(maxs[i] - mins[i]);
 
         if (m_texsize[i] >= MAXDIMENSION) {
-            const plane_t plane = Face_Plane(bsp, face);
-            const qvec3f point = Face_PointAtIndex_E(bsp, face, 0); // grab first vert
+            const qplane3d plane = Face_Plane(bsp, face);
+            const qvec3f &point = Face_PointAtIndex(bsp, face, 0); // grab first vert
             const std::string &texname = Face_TextureName(bsp, face);
 
             Error("Bad surface extents:\n"
@@ -116,7 +116,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
                   "   texture {} at ({})\n"
                   "   surface normal ({})\n",
                 Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname,
-                qv::to_string(point), qv::to_string(plane.normal));
+                point, plane.normal());
         }
     }
 }
@@ -204,8 +204,7 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
         Q_assert_unreachable();
         return qmat4x4f();
     }
-    const plane_t plane = Face_Plane(bsp, f);
-    const qvec3d &norm = plane.normal;
+    const qplane3d plane = Face_Plane(bsp, f);
 
     //           [s]
     // T * vec = [t]
@@ -213,10 +212,10 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
     //           [?]
 
     qmat4x4f T{
-        tex->vecs[0][0], tex->vecs[1][0], static_cast<float>(norm[0]), 0, // col 0
-        tex->vecs[0][1], tex->vecs[1][1], static_cast<float>(norm[1]), 0, // col 1
-        tex->vecs[0][2], tex->vecs[1][2], static_cast<float>(norm[2]), 0, // col 2
-        tex->vecs[0][3], tex->vecs[1][3], static_cast<float>(-plane.dist), 1 // col 3
+        tex->vecs[0][0], tex->vecs[1][0], static_cast<float>(plane.normal()[0]), 0, // col 0
+        tex->vecs[0][1], tex->vecs[1][1], static_cast<float>(plane.normal()[1]), 0, // col 1
+        tex->vecs[0][2], tex->vecs[1][2], static_cast<float>(plane.normal()[2]), 0, // col 2
+        tex->vecs[0][3], tex->vecs[1][3], static_cast<float>(-plane.dist()), 1 // col 3
     };
     return T;
 }
@@ -281,6 +280,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
  * Fills in surf->texmins[], surf->texsize[] and sets surf->exactmid[]
  * ================
  */
+// FIXME: duped by faceextents_t?
 static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t *surf)
 {
     vec_t mins[2], maxs[2], texcoord[2];
@@ -340,10 +340,10 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
             const std::string &texname = Face_TextureName(bsp, face);
             Error("Bad surface extents:\n"
                   "   face {}, {} extents = {}, scale = {}\n"
-                  "   texture {} at ({})\n"
-                  "   surface normal ({})\n",
+                  "   texture {} at [{}]\n"
+                  "   surface normal [{}]\n",
                 Face_GetNum(bsp, face), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname,
-                qv::to_string(worldpoint), qv::to_string(plane.normal));
+                worldpoint, plane.normal);
         }
     }
 }
@@ -551,8 +551,8 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 
             f << "{\n";
             f << "\"classname\" \"light\"\n";
-            fmt::print(f, "\"origin\" \"{}\"\n", qv::to_string(point));
-            fmt::print(f, "\"mangle\" \"{} {} {}\"\n", mangle[0], mangle[1], mangle[2]);
+            fmt::print(f, "\"origin\" \"{}\"\n", point);
+            fmt::print(f, "\"mangle\" \"{}\"\n", mangle);
             fmt::print(f, "\"face\" \"{}\"\n", surf->realfacenums[i]);
             fmt::print(f, "\"occluded\" \"{}\"\n", (int)surf->occluded[i]);
             fmt::print(f, "\"s\" \"{}\"\n", s);
@@ -1298,9 +1298,12 @@ std::map<int, qvec3f> GetDirectLighting(
     // mxd. Surface lights...
     for (const surfacelight_t &vpl : SurfaceLights()) {
         // Bounce light falloff. Uses light surface center and intensity based on face area
+        // FIXME: this was originally used as an input to GetDir, which resulted in nans.
+        // GetDir(surfpointToLightDir, vpl.pos, surfpointToLightDir)
+        // I replaced with (vpl.pos, origin), not sure if it's meant to be this
         vec3_t surfpointToLightDir;
         const float surfpointToLightDist =
-            qmax(128.0, GetDir(surfpointToLightDir, vpl.pos,
+            qmax(128.0, GetDir(vpl.pos, origin,
                              surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
         const float angle = DotProduct(surfpointToLightDir, normal);
         if (angle <= 0)
@@ -3024,8 +3027,7 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     for (const auto &pair : sortable) {
         if (sorted.size() == MAXLIGHTMAPS) {
             LogPrint("WARNING: Too many light styles on a face\n"
-                     "         lightmap point near ({})\n",
-                qv::to_string(lightsurf->points[0]));
+                     "         lightmap point near [{}]\n", lightsurf->points[0]);
             break;
         }
 
@@ -3272,10 +3274,10 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
         LightFace_CalculateDirt(lightsurf);
 
     /*
-     * The lighting procedure is: cast all positive lights, fix
-     * minlight levels, then cast all negative lights. Finally, we
-     * clamp any values that may have gone negative.
-     */
+        * The lighting procedure is: cast all positive lights, fix
+        * minlight levels, then cast all negative lights. Finally, we
+        * clamp any values that may have gone negative.
+        */
 
     if (debugmode == debugmode_none) {
 
@@ -3306,13 +3308,13 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
-        if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
+        /*if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
             vec3_t color;
             Face_LookupTextureColor(bsp, face, color);
             LightFace_Min(bsp, face, color, texinfo->value * 2.0f, lightsurf,
                 lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface
                             // is renered fullbright, when using arghrad3
-        } else if (lightsurf->minlight > cfg.minlight.floatValue()) {
+        } else*/ if (lightsurf->minlight > cfg.minlight.floatValue()) {
             LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
         } else {
             const float light = cfg.minlight.floatValue();

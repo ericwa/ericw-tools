@@ -355,7 +355,7 @@ public:
             else {
                 auto vector = std::move(std::get<vector_type>(data));
                 auto &array = data.emplace<array_type>();
-                std::copy_n(vector.begin(), count, array.begin());
+                std::copy_n(vector.begin(), new_size, array.begin());
             }
         }
 

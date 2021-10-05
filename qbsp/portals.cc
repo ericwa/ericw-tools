@@ -246,7 +246,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     // write the file
     options.szBSPName.replace_extension("prt");
 
-    std::ofstream portalFile(options.szBSPName);
+    std::ofstream portalFile(options.szBSPName, std::ios_base::binary | std::ios_base::out);
     if (!portalFile)
         FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
 

@@ -110,7 +110,7 @@ static int LightStyleForTargetname(const globalconfig_t &cfg, const std::string 
         targetname, newStylenum); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
 
     if (verbose_log) {
-        FLogPrint("Allocated lightstyle {} for targetname '{}'\n", newStylenum);
+        FLogPrint("Allocated lightstyle {} for targetname '{}'\n", newStylenum, targetname);
     }
 
     return newStylenum;
@@ -159,7 +159,7 @@ static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t 
         const dmodelh2_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
-            return fmt::format("brush entity with mins ({}) maxs ({}) ({})", qv::to_string(info->mins), qv::to_string(info->maxs), EntDict_StringForKey(entity, "classname"));
+            return fmt::format("brush entity with mins [{}] maxs [{}] ({})", info->mins, info->maxs, EntDict_StringForKey(entity, "classname"));
         }
     }
 
@@ -316,8 +316,8 @@ static void CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
     // mxd. Warn about unsupported _falloff / delay combos...
     if (entity->falloff.floatValue() > 0.0f && entity->getFormula() != LF_LINEAR) {
         LogPrint("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
-                 "   {} at ({})\n",
-            entity->classname(), qv::to_string(entity->origin.vec3Value()));
+                 "   {} at [{}]\n",
+            entity->classname(), entity->origin.vec3Value());
         entity->falloff.setFloatValue(0.0f);
     }
 
@@ -326,9 +326,9 @@ static void CheckEntityFields(const globalconfig_t &cfg, light_t *entity)
         if (!warned_once) {
             warned_once = true;
             LogPrint("WARNING: unknown formula number ({}) in delay field\n"
-                     "   {} at ({})\n"
+                     "   {} at [{}]\n"
                      "   (further formula warnings will be supressed)\n",
-                entity->getFormula(), entity->classname(), qv::to_string(entity->origin.vec3Value()));
+                entity->getFormula(), entity->classname(), entity->origin.vec3Value());
         }
         entity->formula.setFloatValue(LF_LINEAR);
     }
@@ -967,6 +967,11 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
                 }
             }
 
+            // Skip non-switchable lights if we're skipping world lighting
+            if (skiplighting && EntDict_StringForKey(entdict, "style").empty() && EntDict_StringForKey(entdict, "switchshadstyle").empty()) {
+                continue;
+            } 
+
             /* Allocate a new entity */
             light_t &entity = all_lights.emplace_back();
 
@@ -1026,12 +1031,11 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         "{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
 }
 
-static void FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, vec3_t &point_out)
+static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
 {
     // FIXME: Check all shadow casters
     if (!Light_PointInWorld(bsp, point)) {
-        VectorCopy(point, point_out);
-        return;
+        return point;
     }
 
     for (int i = 0; i < 6; i++) {
@@ -1044,23 +1048,19 @@ static void FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, vec3_t &point
 
         // FIXME: Check all shadow casters
         if (!Light_PointInWorld(bsp, testpoint)) {
-            VectorCopy(testpoint, point_out);
-            return;
+            return testpoint;
         }
     }
 
-    LogPrint("WARNING: couldn't nudge light in solid at {} {} {}\n", point[0], point[1], point[2]);
-    VectorCopy(point, point_out);
-    return;
+    LogPrint("WARNING: couldn't nudge light in solid at {}\n", point);
+    return point;
 }
 
 void FixLightsOnFaces(const mbsp_t *bsp)
 {
     for (light_t &entity : all_lights) {
         if (entity.light.floatValue() != 0) {
-            vec3_t tmp;
-            FixLightOnFace(bsp, entity.origin.vec3Value(), tmp);
-            entity.origin.setVec3Value(tmp);
+            entity.origin.setVec3Value(FixLightOnFace(bsp, entity.origin.vec3Value()));
         }
     }
 }

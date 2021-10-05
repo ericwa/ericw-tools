@@ -52,7 +52,7 @@ public:
 
 std::vector<entdict_t> EntData_Parse(const std::string &entdata);
 std::string EntData_Write(const std::vector<entdict_t> &ents);
-const std::string &EntDict_StringForKey(const entdict_t &dict, const std::string key);
-float EntDict_FloatForKey(const entdict_t &dict, const std::string key);
+const std::string &EntDict_StringForKey(const entdict_t &dict, const std::string &key);
+float EntDict_FloatForKey(const entdict_t &dict, const std::string &key);
 void EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key);
 void EntDict_RenameKey(entdict_t &dict, const std::string &from, const std::string &to);

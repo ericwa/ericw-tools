@@ -38,9 +38,8 @@ const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo);
 mface_t *BSP_GetFace(mbsp_t *bsp, int fnum);
 
 int Face_VertexAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
-void Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v, vec3_t point_out);
-void Face_Normal(const mbsp_t *bsp, const mface_t *f, vec3_t norm); // mxd
-plane_t Face_Plane(const mbsp_t *bsp, const mface_t *f);
+const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
+qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f);
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face); 
 const rgba_miptex_t *Face_RgbaMiptex(const mbsp_t *bsp, const mface_t *face);
@@ -61,14 +60,13 @@ bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
  * is used to disambiguate these.
  */
 const mface_t *BSP_FindFaceAtPoint(
-    const mbsp_t *bsp, const dmodelh2_t *model, const vec3_t &point, const vec3_t &wantedNormal);
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
 plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face);
-bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const vec3_t &point);
+bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const qvec3d &point);
 
-qplane3f Face_Plane_E(const mbsp_t *bsp, const mface_t *f);
-qvec3f Face_PointAtIndex_E(const mbsp_t *bsp, const mface_t *f, int v);
-qvec3f Vertex_GetPos_E(const mbsp_t *bsp, int num);
-qvec3f Face_Normal_E(const mbsp_t *bsp, const mface_t *f);
+const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f);
+const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);
+qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f);
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face);
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face);
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);

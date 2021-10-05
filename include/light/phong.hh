@@ -63,14 +63,16 @@ class face_cache_t
 private:
     std::vector<qvec3f> m_points;
     std::vector<qvec3f> m_normals;
+    std::vector<qvec3f> m_tangents;
+    std::vector<qvec3f> m_bitangents;
     qvec4f m_plane;
     std::vector<qvec4f> m_edgePlanes;
     std::vector<qvec3f> m_pointsShrunkBy1Unit;
     std::vector<neighbour_t> m_neighbours;
 
 public:
-    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<qvec3f> &normals)
-        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_plane(Face_Plane_E(bsp, face).vec4()),
+    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<qvec3f> &normals, const std::vector<qvec3f> &tangents, const std::vector<qvec3f> &bitangents)
+        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_tangents(tangents), m_bitangents(bitangents), m_plane(Face_Plane(bsp, face).vec4()),
           m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)), m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
           m_neighbours(NeighbouringFaces_new(bsp, face))
     {
@@ -78,6 +80,8 @@ public:
 
     const std::vector<qvec3f> &points() const { return m_points; }
     const std::vector<qvec3f> &normals() const { return m_normals; }
+    const std::vector<qvec3f> &tangents() const { return m_tangents; }
+    const std::vector<qvec3f> &bitangents() const { return m_bitangents; }
     const qvec4f &plane() const { return m_plane; }
     const qvec3f normal() const { return m_plane; }
     const std::vector<qvec4f> &edgePlanes() const { return m_edgePlanes; }

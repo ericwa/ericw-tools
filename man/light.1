@@ -61,6 +61,9 @@ Typically you would make a temporary copy of the .bsp, update the lights in the
 entity lump (e.g. with "qbsp -onlyents"), then re-light it with "light -litonly".
 Engines may enforce a restriction that you can't make areas brighter than they originally were (cheat protection).
 Also, styled lights (flickering/switchable) can't be added in new areas or have their styles changed.
+.IP "\fB-nolighting\fP"
+Do all of the stuff required for lighting to work without actually performing any lighting calculations.
+This is mainly for engines that don't use the light data, but still need switchable lights, etc.
 
 .br
 .SS "Postprocessing options:"

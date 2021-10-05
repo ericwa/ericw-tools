@@ -76,9 +76,9 @@ public:
 
 /* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap
  * resolution. */
-/*with extra sampling, lit+lux etc, we need at least 46mb stack space per thread. yes, that's a lot. on the plus side,
+/*with extra sampling, lit+lux etc, we need at least 46mb space per thread. yes, that's a lot. on the plus side,
  * it doesn't affect bsp complexity (actually, can simplify it a little)*/
-#define MAXDIMENSION (255 + 1)
+constexpr size_t MAXDIMENSION = 255 + 1;
 
 struct texorg_t
 {
@@ -341,6 +341,7 @@ extern surfflags_t *extended_texinfo_flags;
 extern bool novisapprox;
 extern bool nolights;
 extern bool litonly;
+extern bool skiplighting;
 extern bool write_normals;
 
 extern bool surflight_dump;

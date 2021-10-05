@@ -107,6 +107,7 @@ bool debug_highlightseams = false;
 debugmode_t debugmode = debugmode_none;
 bool verbose_log = false;
 bool litonly = false;
+bool skiplighting = false;
 bool write_normals = false;
 
 surfflags_t *extended_texinfo_flags = nullptr;
@@ -434,7 +435,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         (debugmode == debugmode_none || debugmode == debugmode_bounce || debugmode == debugmode_bouncelights); // mxd
     const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
 
-    if (bouncerequired || isQuake2map) {
+    if ((bouncerequired || isQuake2map) && !skiplighting) {
         MakeTextureColors(&bsp);
         if (isQuake2map)
             MakeSurfaceLights(cfg_static, &bsp);
@@ -453,7 +454,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     RunThreadsOn(0, bsp.dfaces.size(), LightThread, &bsp);
 #endif
 
-    if (bouncerequired || isQuake2map) { // mxd. Print some extra stats...
+    if ((bouncerequired || isQuake2map) && !skiplighting) { // mxd. Print some extra stats...
         LogPrint("Indirect lights: {} bounce lights, {} surface lights ({} light points) in use.\n",
             BounceLights().size(), SurfaceLights().size(),
             TotalSurfacelightPoints());
@@ -650,9 +651,9 @@ static void FindDebugVert(const mbsp_t *bsp)
         return;
 
     int v = Vertex_NearestPoint(bsp, dump_vert_point);
-    const qvec3f &vertex = bsp->dvertexes[v];
 
-    FLogPrint("dumping vert {} at {} {} {}\n", v, vertex[0], vertex[1], vertex[2]);
+    FLogPrint("dumping vert {} at {}\n", v, bsp->dvertexes[v]);
+
     dump_vertnum = v;
 }
 
@@ -903,7 +904,9 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
     for (auto &face : bsp.dfaces) {
         auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
         unique_normals.insert(cache.normals().begin(), cache.normals().end());
-        num_normals += cache.normals().size();
+        unique_normals.insert(cache.tangents().begin(), cache.tangents().end());
+        unique_normals.insert(cache.bitangents().begin(), cache.bitangents().end());
+        num_normals += cache.normals().size() + cache.tangents().size() + cache.bitangents().size();
     }
     
     size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
@@ -923,9 +926,21 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
         for (auto &n : cache.normals()) {
             stream <= numeric_cast<uint32_t>(std::distance(unique_normals.begin(), unique_normals.find(n)));
         }
+
+        for (auto &n : cache.tangents()) {
+            stream <= numeric_cast<uint32_t>(std::distance(unique_normals.begin(), unique_normals.find(n)));
+        }
+
+        for (auto &n : cache.bitangents()) {
+            stream <= numeric_cast<uint32_t>(std::distance(unique_normals.begin(), unique_normals.find(n)));
+        }
     }
 
     Q_assert(stream.tellp() == data_size);
+
+    if (verbose_log) {
+        LogPrint("Compressed {} normals down to {}\n", num_normals, unique_normals.size());
+    }
 
     bspdata.bspx.transfer("FACENORMALS", data, data_size);
 }
@@ -1063,6 +1078,9 @@ int light_main(int argc, const char **argv)
             LogPrint("-litonly specified; .bsp file will not be modified\n");
             litonly = true;
             write_litfile |= 1;
+        } else if (!strcmp(argv[i], "-nolighting")) {
+            LogPrint("-nolighting specified; .bsp file will not calculate lightmap data\n");
+            skiplighting = true;
         } else if (!strcmp(argv[i], "-wrnormals")) {
             write_normals = true;
         } else if (!strcmp(argv[i], "-verbose") || !strcmp(argv[i], "-v")) { // Quark always passes -v

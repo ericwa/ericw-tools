@@ -44,7 +44,7 @@ enum class hittype_t : uint8_t
 };
 
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
-color_rgba SampleTexture(const mface_t *face, const mbsp_t *bsp, const vec3_t point); // mxd. Palette index -> RGBA
+color_rgba SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point); // mxd. Palette index -> RGBA
 
 class modelinfo_t;
 
