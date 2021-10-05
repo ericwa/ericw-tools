@@ -711,9 +711,11 @@ ClusterFlow(int clusternum, leafbits_t *buffer, const mbsp_t *bsp)
     leaf->visofs = dest - vismap;
 
     // Set pointers
-    for (i = 1; i < bsp->numleafs; i++) {
-        if (bsp->dleafs[i].cluster == clusternum) {
-            bsp->dleafs[i].visofs = leaf->visofs;
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        for (i = 1; i < bsp->numleafs; i++) {
+            if (bsp->dleafs[i].cluster == clusternum) {
+                bsp->dleafs[i].visofs = leaf->visofs;
+            }
         }
     }
 
