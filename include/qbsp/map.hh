@@ -82,13 +82,14 @@ struct lumpdata
 class mapentity_t
 {
 public:
-    qvec3d origin { };
+    qvec3d origin{};
 
     int firstmapbrush = 0;
     int nummapbrushes = 0;
 
     // Temporary lists used to build `brushes` in the correct order.
-    brush_t *solid = nullptr, *sky = nullptr, *detail = nullptr, *detail_illusionary = nullptr, *detail_fence = nullptr, *liquid = nullptr;
+    brush_t *solid = nullptr, *sky = nullptr, *detail = nullptr, *detail_illusionary = nullptr, *detail_fence = nullptr,
+            *liquid = nullptr;
 
     // tree of key/value pairs
     std::map<std::string, std::string, case_insensitive_less> epairs;

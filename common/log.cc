@@ -30,7 +30,8 @@
 #include <common/threads.hh>
 #include <common/cmdlib.hh>
 
-log_flag_t log_mask = (std::numeric_limits<log_flag_t>::max()) & ~((1 << LOG_VERBOSE) | (1 << LOG_STAT) | (1 << LOG_PROGRESS));
+log_flag_t log_mask =
+    (std::numeric_limits<log_flag_t>::max()) & ~((1 << LOG_VERBOSE) | (1 << LOG_STAT) | (1 << LOG_PROGRESS));
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -53,8 +54,7 @@ void CloseLog()
 void LogPrintLocked(const char *str)
 {
     // log file, if open
-    if (logfile)
-    {
+    if (logfile) {
         logfile << str;
         logfile.flush();
     }
@@ -91,8 +91,7 @@ void LogPrintSilent(const char *str)
     ThreadLock();
     InterruptThreadProgress__();
 
-    if (logfile)
-    {
+    if (logfile) {
         logfile << str;
         logfile.flush();
     }

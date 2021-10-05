@@ -159,11 +159,13 @@ static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t 
         const dmodelh2_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
-            return fmt::format("brush entity with mins [{}] maxs [{}] ({})", info->mins, info->maxs, EntDict_StringForKey(entity, "classname"));
+            return fmt::format("brush entity with mins [{}] maxs [{}] ({})", info->mins, info->maxs,
+                EntDict_StringForKey(entity, "classname"));
         }
     }
 
-    return fmt::format("entity at ({}) ({})", EntDict_StringForKey(entity, "origin"), EntDict_StringForKey(entity, "classname"));
+    return fmt::format(
+        "entity at ({}) ({})", EntDict_StringForKey(entity, "origin"), EntDict_StringForKey(entity, "classname"));
 }
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
@@ -203,8 +205,7 @@ bool EntDict_CheckTargetKeysMatched(
             continue;
 
         if (targetVal == targetname) {
-            LogPrint("WARNING: {} has \"{}\" set to itself\n", EntDict_PrettyDescription(bsp, entity),
-                targetKey);
+            LogPrint("WARNING: {} has \"{}\" set to itself\n", EntDict_PrettyDescription(bsp, entity), targetKey);
             ok = false;
             continue;
         }
@@ -222,8 +223,8 @@ bool EntDict_CheckTargetKeysMatched(
         }
 
         if (!found) {
-            LogPrint("WARNING: {} has unmatched \"{}\" ({})\n", EntDict_PrettyDescription(bsp, entity),
-                targetKey, targetVal);
+            LogPrint("WARNING: {} has unmatched \"{}\" ({})\n", EntDict_PrettyDescription(bsp, entity), targetKey,
+                targetVal);
             ok = false;
         }
     }
@@ -381,7 +382,7 @@ static void AddSun(const globalconfig_t &cfg, const qvec3d &sunvec, vec_t light,
 {
     if (light == 0.0f)
         return;
-    
+
     // add to list
     sun_t &sun = all_suns.emplace_back();
     VectorCopy(sunvec, sun.sunvec);
@@ -394,7 +395,7 @@ static void AddSun(const globalconfig_t &cfg, const qvec3d &sunvec, vec_t light,
     sun.style = style;
     sun.suntexture = suntexture;
 
-    //fmt::print( "sun is using vector {} {} {} light {} color {} {} {} anglescale {} dirt {} resolved to {}\n",
+    // fmt::print( "sun is using vector {} {} {} light {} color {} {} {} anglescale {} dirt {} resolved to {}\n",
     //  sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
     //  sun->sunlight.color[0], sun->sunlight.color[1], sun->sunlight.color[2],
     //  anglescale,
@@ -425,7 +426,7 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const qvec3d &color
     VectorCopy(sunvec_in, sunvec);
     VectorNormalize(sunvec);
 
-    //fmt::print( "input sunvec {} {} {}. deviance is {}, {} samples\n",sunvec[0],sunvec[1], sunvec[2], sun_deviance,
+    // fmt::print( "input sunvec {} {} {}. deviance is {}, {} samples\n",sunvec[0],sunvec[1], sunvec[2], sun_deviance,
     // sun_num_samples);
 
     /* set photons */
@@ -457,7 +458,7 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const qvec3d &color
             direction[2] = sin(elevation);
         }
 
-        //fmt::print( "sun {} is using vector {} {} {}\n", i, direction[0], direction[1], direction[2]);
+        // fmt::print( "sun {} is using vector {} {} {}\n", i, direction[0], direction[1], direction[2]);
 
         AddSun(cfg, direction, light, color, sunlight_dirt, sun_anglescale, style, suntexture);
     }
@@ -968,9 +969,10 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             }
 
             // Skip non-switchable lights if we're skipping world lighting
-            if (skiplighting && EntDict_StringForKey(entdict, "style").empty() && EntDict_StringForKey(entdict, "switchshadstyle").empty()) {
+            if (skiplighting && EntDict_StringForKey(entdict, "style").empty() &&
+                EntDict_StringForKey(entdict, "switchshadstyle").empty()) {
                 continue;
-            } 
+            }
 
             /* Allocate a new entity */
             light_t &entity = all_lights.emplace_back();
@@ -1027,8 +1029,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
         }
     }
 
-    LogPrint(
-        "{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
+    LogPrint("{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
 }
 
 static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
@@ -1168,8 +1169,7 @@ void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp)
     FixLightsOnFaces(bsp);
     EstimateLightVisibility();
 
-    LogPrint("Final count: {} lights, {} suns in use.\n", all_lights.size(),
-        all_suns.size());
+    LogPrint("Final count: {} lights, {} suns in use.\n", all_lights.size(), all_suns.size());
 
     Q_assert(final_lightcount == all_lights.size());
 }
@@ -1197,7 +1197,7 @@ const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::strin
 qvec3d EntDict_VectorForKey(const entdict_t &ent, const std::string &key)
 {
     const std::string &value = EntDict_StringForKey(ent, key);
-    qvec3d vec { };
+    qvec3d vec{};
     sscanf(value.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
     return vec;
 }
@@ -1318,8 +1318,8 @@ static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *fa
  SubdividePolygon - from GLQuake
  ================
  */
-static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp,
-    int numverts, qvec3d *verts, vec_t subdivide_size)
+static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp, int numverts,
+    qvec3d *verts, vec_t subdivide_size)
 {
     int i, j;
     vec_t m;
@@ -1420,8 +1420,7 @@ bool ParseLightsFile(const std::filesystem::path &fname)
     if (!f)
         return false;
 
-    while (!f.eof())
-    {
+    while (!f.eof()) {
         std::getline(f, buf);
 
         parser_t parser(buf.c_str());
@@ -1476,7 +1475,8 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
     if (surflight_dump) {
         surflights_dump_filename = mapfilename;
-        surflights_dump_filename.replace_filename(surflights_dump_filename.filename().string() + "-surflights").replace_extension("map");
+        surflights_dump_filename.replace_filename(surflights_dump_filename.filename().string() + "-surflights")
+            .replace_extension("map");
         surflights_dump_file.open(surflights_dump_filename);
     }
 

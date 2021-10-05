@@ -370,7 +370,7 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         for (j = 0; j < 2; j++) {
             n = j * 3 + i;
 
-            p = new portal_t { };
+            p = new portal_t{};
             portals[n] = p;
 
             pl = &bplanes[n];
@@ -396,7 +396,8 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         for (j = 0; j < 6; j++) {
             if (j == i)
                 continue;
-            portals[i]->winding = portals[i]->winding->clip(bplanes[j].normal, bplanes[j].dist, ON_EPSILON, true)[SIDE_FRONT];
+            portals[i]->winding =
+                portals[i]->winding->clip(bplanes[j].normal, bplanes[j].dist, ON_EPSILON, true)[SIDE_FRONT];
         }
     }
 }
@@ -519,7 +520,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
      * create the new portal by taking the full plane winding for the cutting
      * plane and clipping it by all of the planes from the other portals
      */
-    new_portal = new portal_t { };
+    new_portal = new portal_t{};
     new_portal->planenum = node->planenum;
 
     std::optional<winding_t> winding = BaseWindingForPlane(plane);
@@ -536,8 +537,8 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
 
         winding = winding->clip(clipplane.normal, clipplane.dist, ON_EPSILON, true)[SIDE_FRONT];
         if (!winding) {
-            FLogPrint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0], portal->winding->at(0)[1],
-                portal->winding->at(0)[2]);
+            FLogPrint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0],
+                portal->winding->at(0)[1], portal->winding->at(0)[2]);
             break;
         }
     }
@@ -581,7 +582,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
         }
 
         /* the winding is split */
-        new_portal = new portal_t { };
+        new_portal = new portal_t{};
         *new_portal = *portal;
         new_portal->winding = std::move(windings[SIDE_BACK]);
         portal->winding = std::move(windings[SIDE_FRONT]);
@@ -614,7 +615,7 @@ void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hulln
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    portal_state_t state { };
+    portal_state_t state{};
 
     state.iNodesDone = 0;
 

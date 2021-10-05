@@ -348,8 +348,7 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
         return;
 
     // Don't fill sky, or count solids as outleafs
-    if (node->contents.is_solid(options.target_game)
-        || node->contents.is_sky(options.target_game))
+    if (node->contents.is_solid(options.target_game) || node->contents.is_sky(options.target_game))
         return;
 
     // Now check all faces touching the leaf. If any of them are partially going into the occupied part of the map,
@@ -416,7 +415,8 @@ bool FillOutside(node_t *node, const int hullnum)
         mapentity_t *leakentity = leakline.second->occupant;
         Q_assert(leakentity != nullptr);
 
-        LogPrint("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n", ValueForKey(leakentity, "classname"), leakentity->origin);
+        LogPrint("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n",
+            ValueForKey(leakentity, "classname"), leakentity->origin);
         if (map.leakfile)
             return false;
 

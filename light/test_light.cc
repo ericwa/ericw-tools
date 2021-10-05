@@ -913,7 +913,7 @@ TEST(mathlib, octree_basic)
         qvec3f mins = center - boxsize;
         qvec3f maxs = center + boxsize;
 
-        objs.emplace_back(aabb3f { mins, maxs }, i);
+        objs.emplace_back(aabb3f{mins, maxs}, i);
     }
 
     // build octree

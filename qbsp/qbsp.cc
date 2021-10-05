@@ -38,8 +38,7 @@ options_t options;
 
 bool node_t::opaque() const
 {
-    return contents.is_sky(options.target_game)
-        || contents.is_solid(options.target_game);
+    return contents.is_sky(options.target_game) || contents.is_solid(options.target_game);
 }
 
 // a simple tree structure used for leaf brush
@@ -73,7 +72,6 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
                 }
             }
 
-
             if (brushes.size()) {
                 node->numleafbrushes = brushes.size();
                 brush_state.total_leaf_brushes += node->numleafbrushes;
@@ -94,21 +92,18 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
 SnapVector
 ==============
 */
-static void SnapVector (vec3_t normal)
+static void SnapVector(vec3_t normal)
 {
-    int32_t		i;
+    int32_t i;
 
-    for (i=0 ; i<3 ; i++)
-    {
-        if ( fabs(normal[i] - 1) < NORMAL_EPSILON )
-        {
-            VectorClear (normal);
+    for (i = 0; i < 3; i++) {
+        if (fabs(normal[i] - 1) < NORMAL_EPSILON) {
+            VectorClear(normal);
             normal[i] = 1;
             break;
         }
-        if ( fabs(normal[i] - -1) < NORMAL_EPSILON )
-        {
-            VectorClear (normal);
+        if (fabs(normal[i] - -1) < NORMAL_EPSILON) {
+            VectorClear(normal);
             normal[i] = -1;
             break;
         }
@@ -128,12 +123,10 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
     // add already-present planes
     std::vector<std::tuple<size_t, face_t *>> planes;
 
-    for (face_t *f = b->faces; f; f = f->next)
-    {
+    for (face_t *f = b->faces; f; f = f->next) {
         int32_t planenum = f->planenum;
 
-        if (f->planeside)
-        {
+        if (f->planeside) {
             auto flipped = map.planes[f->planenum];
             flipped.dist = -flipped.dist;
             VectorInverse(flipped.normal);
@@ -148,23 +141,19 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
     // add the axial planes
     //
     int32_t order = 0;
-    for (int32_t axis=0 ; axis <3 ; axis++)
-    {
-        for (int32_t dir=-1 ; dir <= 1 ; dir+=2, order++)
-        {
+    for (int32_t axis = 0; axis < 3; axis++) {
+        for (int32_t dir = -1; dir <= 1; dir += 2, order++) {
             size_t i;
             // see if the plane is allready present
-            for (i=0; i<planes.size() ; i++)
-            {
+            for (i = 0; i < planes.size(); i++) {
                 if (map.bsp.dplanes[std::get<0>(planes[i])].normal[axis] == dir)
                     break;
             }
 
-            if (i == planes.size())
-            {
+            if (i == planes.size()) {
                 // add a new side
                 plane_t new_plane;
-                VectorClear (new_plane.normal);
+                VectorClear(new_plane.normal);
                 new_plane.normal[axis] = dir;
                 if (dir == 1)
                     new_plane.dist = b->bounds.maxs()[axis];
@@ -186,85 +175,78 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
     // add the edge bevels
     //
     if (planes.size() == 6)
-        return planes;		// pure axial
+        return planes; // pure axial
 
     // test the non-axial plane edges
     size_t edges_to_test = planes.size();
-    for (size_t i=6 ; i<edges_to_test ; i++)
-    {
+    for (size_t i = 6; i < edges_to_test; i++) {
         auto &s = std::get<1>(planes[i]);
         if (!s)
             continue;
         auto &w = s->w;
         if (!w.size())
             continue;
-        for (size_t j=0 ; j<w.size() ; j++)
-        {
+        for (size_t j = 0; j < w.size(); j++) {
             vec3_t vec;
-            size_t k = (j+1)%w.size();
-            VectorSubtract (w[j], w[k], vec);
+            size_t k = (j + 1) % w.size();
+            VectorSubtract(w[j], w[k], vec);
             if (VectorNormalize(vec) < 0.5)
                 continue;
-            SnapVector (vec);
-            for (k=0 ; k<3 ; k++)
-                if ( vec[k] == -1 || vec[k] == 1)
-                    break;	// axial
+            SnapVector(vec);
+            for (k = 0; k < 3; k++)
+                if (vec[k] == -1 || vec[k] == 1)
+                    break; // axial
             if (k != 3)
-                continue;	// only test non-axial edges
+                continue; // only test non-axial edges
 
             // try the six possible slanted axials from this edge
-            for (int32_t axis=0 ; axis <3 ; axis++)
-            {
-                for (int32_t dir=-1 ; dir <= 1 ; dir+=2)
-                {
+            for (int32_t axis = 0; axis < 3; axis++) {
+                for (int32_t dir = -1; dir <= 1; dir += 2) {
                     vec3_t vec2;
                     // construct a plane
-                    VectorClear (vec2);
+                    VectorClear(vec2);
                     vec2[axis] = dir;
                     plane_t current;
-                    CrossProduct (vec, vec2, current.normal);
-                    if (VectorNormalize (current.normal) < 0.5)
+                    CrossProduct(vec, vec2, current.normal);
+                    if (VectorNormalize(current.normal) < 0.5)
                         continue;
-                    current.dist = DotProduct (w[j], current.normal);
+                    current.dist = DotProduct(w[j], current.normal);
 
                     face_t *f;
 
                     // if all the points on all the sides are
                     // behind this plane, it is a proper edge bevel
-                    for (f = b->faces; f; f = f->next)
-                    {
+                    for (f = b->faces; f; f = f->next) {
                         auto &plane = map.planes[f->planenum];
                         plane_t temp;
                         VectorCopy(plane.normal, temp.normal);
                         temp.dist = plane.dist;
 
-                        if (f->planeside)
-                        {
+                        if (f->planeside) {
                             temp.dist = -temp.dist;
                             VectorInverse(temp.normal);
                         }
 
                         // if this plane has allready been used, skip it
-                        if (PlaneEqual(&current, &temp) )
+                        if (PlaneEqual(&current, &temp))
                             break;
 
                         auto &w2 = f->w;
                         if (!w2.size())
                             continue;
                         size_t l;
-                        for (l=0 ; l<w2.size(); l++)
-                        {
-                            vec_t d = DotProduct (w2[l], current.normal) - current.dist;
+                        for (l = 0; l < w2.size(); l++) {
+                            vec_t d = DotProduct(w2[l], current.normal) - current.dist;
                             if (d > 0.1)
-                                break;	// point in front
+                                break; // point in front
                         }
                         if (l != w2.size())
                             break;
                     }
 
                     if (f)
-                        continue;	// wasn't part of the outer hull
-                    
+                        continue; // wasn't part of the outer hull
+
                     // add this plane
                     int32_t planenum = FindPlane(&current.normal[0], current.dist, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
@@ -284,13 +266,14 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
     brush_state = {};
 
     for (const brush_t *b = entity->brushes; b; b = b->next) {
-        dbrush_t &brush = map.bsp.dbrushes.emplace_back(dbrush_t { static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native });
+        dbrush_t &brush = map.bsp.dbrushes.emplace_back(
+            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
 
         auto bevels = AddBrushBevels(b);
 
         for (auto &plane : bevels) {
-            map.bsp.dbrushsides.push_back({
-                (uint32_t)std::get<0>(plane), (int32_t)map.mtexinfos[b->faces->texinfo].outputnum.value_or(-1)});
+            map.bsp.dbrushsides.push_back(
+                {(uint32_t)std::get<0>(plane), (int32_t)map.mtexinfos[b->faces->texinfo].outputnum.value_or(-1)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }
@@ -328,17 +311,15 @@ Flowing from side s to side !s
 */
 static bool Portal_EntityFlood(const portal_t *p, int32_t s)
 {
-	if (p->nodes[0]->planenum != PLANENUM_LEAF
-		|| p->nodes[1]->planenum != PLANENUM_LEAF)
-		Error ("Portal_EntityFlood: not a leaf");
+    if (p->nodes[0]->planenum != PLANENUM_LEAF || p->nodes[1]->planenum != PLANENUM_LEAF)
+        Error("Portal_EntityFlood: not a leaf");
 
-	// can never cross to a solid
-	if ( (p->nodes[0]->contents.native & CONTENTS_SOLID)
-	|| (p->nodes[1]->contents.native & CONTENTS_SOLID) )
-		return false;
+    // can never cross to a solid
+    if ((p->nodes[0]->contents.native & CONTENTS_SOLID) || (p->nodes[1]->contents.native & CONTENTS_SOLID))
+        return false;
 
-	// can flood through everything else
-	return true;
+    // can flood through everything else
+    return true;
 }
 
 /*
@@ -348,50 +329,47 @@ FloodAreas_r
 */
 static void FloodAreas_r(mapentity_t *entity, node_t *node)
 {
-	if (node->contents.native == Q2_CONTENTS_AREAPORTAL)
-	{
-		// this node is part of an area portal;
-		// if the current area has allready touched this
-		// portal, we are done
-		if (entity->portalareas[0] == c_areas || entity->portalareas[1] == c_areas)
-			return;
+    if (node->contents.native == Q2_CONTENTS_AREAPORTAL) {
+        // this node is part of an area portal;
+        // if the current area has allready touched this
+        // portal, we are done
+        if (entity->portalareas[0] == c_areas || entity->portalareas[1] == c_areas)
+            return;
 
-		// note the current area as bounding the portal
-		if (entity->portalareas[1])
-		{
+        // note the current area as bounding the portal
+        if (entity->portalareas[1]) {
             // FIXME: entity #
-			LogPrint("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n",
-				node->bounds.mins(), node->bounds.maxs());
-			return;
-		}
+            LogPrint("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n", node->bounds.mins(),
+                node->bounds.maxs());
+            return;
+        }
 
-		if (entity->portalareas[0])
-			entity->portalareas[1] = c_areas;
-		else
-			entity->portalareas[0] = c_areas;
+        if (entity->portalareas[0])
+            entity->portalareas[1] = c_areas;
+        else
+            entity->portalareas[0] = c_areas;
 
-		return;
-	}
+        return;
+    }
 
-	if (node->area)
-		return;		// already got it
+    if (node->area)
+        return; // already got it
 
-	node->area = c_areas;
+    node->area = c_areas;
 
     int32_t s;
 
-	for (portal_t *p = node->portals; p; p = p->next[s])
-	{
-		s = (p->nodes[1] == node);
+    for (portal_t *p = node->portals; p; p = p->next[s]) {
+        s = (p->nodes[1] == node);
 #if 0
 		if (p->nodes[!s]->occupied)
 			continue;
 #endif
-		if (!Portal_EntityFlood (p, s))
-			continue;
+        if (!Portal_EntityFlood(p, s))
+            continue;
 
-		FloodAreas_r(entity, p->nodes[!s]);
-	}
+        FloodAreas_r(entity, p->nodes[!s]);
+    }
 }
 
 /*
@@ -404,30 +382,29 @@ area set, flood fill out from there
 */
 static void FindAreas_r(mapentity_t *entity, node_t *node)
 {
-	if (node->planenum != PLANENUM_LEAF)
-	{
-		FindAreas_r(entity, node->children[0]);
-		FindAreas_r(entity, node->children[1]);
-		return;
-	}
+    if (node->planenum != PLANENUM_LEAF) {
+        FindAreas_r(entity, node->children[0]);
+        FindAreas_r(entity, node->children[1]);
+        return;
+    }
 
-	if (node->area)
-		return;		// already got it
+    if (node->area)
+        return; // already got it
 
-	if (node->contents.native & Q2_CONTENTS_SOLID)
-		return;
+    if (node->contents.native & Q2_CONTENTS_SOLID)
+        return;
 
     // FIXME: how to do this since the nodes are destroyed by this point?
-	//if (!node->occupied)
-	//	return;			// not reachable by entities
+    // if (!node->occupied)
+    //	return;			// not reachable by entities
 
-	// area portals are always only flooded into, never
-	// out of
-	if (node->contents.native == Q2_CONTENTS_AREAPORTAL)
-		return;
+    // area portals are always only flooded into, never
+    // out of
+    if (node->contents.native == Q2_CONTENTS_AREAPORTAL)
+        return;
 
-	c_areas++;
-	FloodAreas_r(entity, node);
+    c_areas++;
+    FloodAreas_r(entity, node);
 }
 
 /*
@@ -440,26 +417,25 @@ area set, flood fill out from there
 */
 static void SetAreaPortalAreas_r(mapentity_t *entity, node_t *node)
 {
-	if (node->planenum != PLANENUM_LEAF)
-	{
-		SetAreaPortalAreas_r(entity, node->children[0]);
-		SetAreaPortalAreas_r(entity, node->children[1]);
-		return;
-	}
+    if (node->planenum != PLANENUM_LEAF) {
+        SetAreaPortalAreas_r(entity, node->children[0]);
+        SetAreaPortalAreas_r(entity, node->children[1]);
+        return;
+    }
 
-	if (node->contents.native != Q2_CONTENTS_AREAPORTAL)
+    if (node->contents.native != Q2_CONTENTS_AREAPORTAL)
         return;
 
     if (node->area)
-		return;		// already set
+        return; // already set
 
-	node->area = entity->portalareas[0];
-	if (!entity->portalareas[1])
-	{
+    node->area = entity->portalareas[0];
+    if (!entity->portalareas[1]) {
         // FIXME: entity #
-        LogPrint("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n", qv::to_string(entity->bounds.mins()), qv::to_string(entity->bounds.maxs()));
-		return;
-	}
+        LogPrint("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n",
+            qv::to_string(entity->bounds.mins()), qv::to_string(entity->bounds.maxs()));
+        return;
+    }
 }
 
 /*
@@ -472,9 +448,9 @@ Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
 static void FloodAreas(mapentity_t *entity, node_t *headnode)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
-	FindAreas_r(entity, headnode);
-	SetAreaPortalAreas_r(entity, headnode);
-	LogPrint(LOG_STAT, "{:5} areas\n", c_areas);
+    FindAreas_r(entity, headnode);
+    SetAreaPortalAreas_r(entity, headnode);
+    LogPrint(LOG_STAT, "{:5} areas\n", c_areas);
 }
 
 /*
@@ -490,33 +466,30 @@ static void EmitAreaPortals(node_t *headnode)
     map.bsp.dareaportals.emplace_back();
     map.bsp.dareas.emplace_back();
 
-	for (size_t i = 1; i <= c_areas; i++) {
+    for (size_t i = 1; i <= c_areas; i++) {
         darea_t &area = map.bsp.dareas.emplace_back();
-		area.firstareaportal = map.bsp.dareaportals.size();
+        area.firstareaportal = map.bsp.dareaportals.size();
 
-		for (auto &e : map.entities) {
+        for (auto &e : map.entities) {
 
-			if (!e.areaportalnum)
-				continue;
-			dareaportal_t &dp = map.bsp.dareaportals.emplace_back();
+            if (!e.areaportalnum)
+                continue;
+            dareaportal_t &dp = map.bsp.dareaportals.emplace_back();
 
-			if (e.portalareas[0] == i)
-			{
-				dp.portalnum = e.areaportalnum;
-				dp.otherarea = e.portalareas[1];
-			}
-			else if (e.portalareas[1] == i)
-			{
-				dp.portalnum = e.areaportalnum;
-				dp.otherarea = e.portalareas[0];
-			}
-		}
+            if (e.portalareas[0] == i) {
+                dp.portalnum = e.areaportalnum;
+                dp.otherarea = e.portalareas[1];
+            } else if (e.portalareas[1] == i) {
+                dp.portalnum = e.areaportalnum;
+                dp.otherarea = e.portalareas[0];
+            }
+        }
 
-		area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
-	}
+        area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
+    }
 
-	LogPrint(LOG_STAT, "{:5} numareas\n", map.bsp.dareas.size());
-	LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
+    LogPrint(LOG_STAT, "{:5} numareas\n", map.bsp.dareas.size());
+    LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
 }
 
 /*
@@ -715,9 +688,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             // TEMP
             if (options.target_game->id == GAME_QUAKE_II) {
                 map.bsp.dareaportals.emplace_back();
-    
+
                 map.bsp.dareas.emplace_back();
-                map.bsp.dareas.push_back({ 0, 1 });
+                map.bsp.dareas.push_back({0, 1});
             }
 
             FreeAllPortals(nodes);
@@ -802,8 +775,7 @@ static void UpdateEntLump(void)
     WriteEntitiesToString();
     UpdateBSPFileEntitiesLump();
 
-    if (!options.fAllverbose)
-    {
+    if (!options.fAllverbose) {
         options.fVerbose = false;
         log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
     }
@@ -841,7 +813,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
     brush_t *b;
     face_t *f;
 
-        bspxbrushes_permodel permodel;
+    bspxbrushes_permodel permodel;
     permodel.numbrushes = 0;
     permodel.numfaces = 0;
     for (b = brushes; b; b = b->next) {
@@ -862,7 +834,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
     vec_push_bytes(ctx->lumpdata, &permodel, sizeof(permodel));
 
     for (b = brushes; b; b = b->next) {
-                bspxbrushes_perbrush perbrush;
+        bspxbrushes_perbrush perbrush;
         perbrush.numfaces = 0;
         for (f = b->faces; f; f = f->next) {
             /*skip axial*/
@@ -892,25 +864,26 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                     perbrush.contents = b->contents.native;
                 }
                 break;
-                //              case CONTENTS_LADDER:
-                //                      perbrush.contents = -16;
-                //                      break;
-                default: {
-                        if (b->contents.is_clip()) {
-                            perbrush.contents = -8;
-                        } else {
-                LogPrint("WARNING: Unknown contents: {}. Translating to solid.\n", b->contents.to_string(options.target_game));
-                perbrush.contents = CONTENTS_SOLID;
+            //              case CONTENTS_LADDER:
+            //                      perbrush.contents = -16;
+            //                      break;
+            default: {
+                if (b->contents.is_clip()) {
+                    perbrush.contents = -8;
+                } else {
+                    LogPrint("WARNING: Unknown contents: {}. Translating to solid.\n",
+                        b->contents.to_string(options.target_game));
+                    perbrush.contents = CONTENTS_SOLID;
                 }
                 break;
-        	}
+            }
         }
         perbrush.contents = LittleShort(perbrush.contents);
         perbrush.numfaces = LittleShort(perbrush.numfaces);
         vec_push_bytes(ctx->lumpdata, &perbrush, sizeof(perbrush));
 
         for (f = b->faces; f; f = f->next) {
-                        bspxbrushes_perface perface;
+            bspxbrushes_perface perface;
             /*skip axial*/
             if (fabs(map.planes[f->planenum].normal[0]) == 1 || fabs(map.planes[f->planenum].normal[1]) == 1 ||
                 fabs(map.planes[f->planenum].normal[2]) == 1)
@@ -1020,8 +993,7 @@ static void CreateSingleHull(const int hullnum)
     for (i = 0; i < map.numentities(); i++) {
         entity = &map.entities.at(i);
         ProcessEntity(entity, hullnum);
-        if (!options.fAllverbose)
-        {
+        if (!options.fAllverbose) {
             options.fVerbose = false; // don't print rest of entities
             log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
         }
@@ -1037,9 +1009,8 @@ CreateHulls
 static void CreateHulls(void)
 {
     /* create the hulls sequentially */
-    if (!options.fNoverbose)
-    {
-        options.fVerbose = true;        
+    if (!options.fNoverbose) {
+        options.fVerbose = true;
         log_mask |= (1 << LOG_STAT) | (1 << LOG_PROGRESS);
     }
 
@@ -1119,8 +1090,7 @@ static void ProcessFile(void)
     // init the tables to be shared by all models
     BeginBSPFile();
 
-    if (!options.fAllverbose)
-    {
+    if (!options.fAllverbose) {
         options.fVerbose = false;
         log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
     }
@@ -1276,8 +1246,7 @@ static void ParseOptions(char *szOptions)
             else if (!Q_strcasecmp(szTok, "verbose")) {
                 options.fAllverbose = true;
                 log_mask |= 1 << LOG_VERBOSE;
-            }
-            else if (!Q_strcasecmp(szTok, "splitspecial"))
+            } else if (!Q_strcasecmp(szTok, "splitspecial"))
                 options.fSplitspecial = true;
             else if (!Q_strcasecmp(szTok, "splitsky"))
                 options.fSplitsky = true;
@@ -1304,8 +1273,7 @@ static void ParseOptions(char *szOptions)
             } else if (!Q_strcasecmp(szTok, "nopercent")) {
                 options.fNopercent = true;
                 log_mask &= ~(1 << LOG_PERCENT);
-            }
-            else if (!Q_strcasecmp(szTok, "hexen2"))
+            } else if (!Q_strcasecmp(szTok, "hexen2"))
                 hexen2 = true; // can be combined with -bsp2 or -2psb
             else if (!Q_strcasecmp(szTok, "q2bsp"))
                 options.target_version = &bspver_q2;
@@ -1477,7 +1445,7 @@ static void InitQBSP(int argc, const char **argv)
         if (argv[i][0] != '-')
             length += 2; /* quotes */
     }
-    szBuf = new char[length] { };
+    szBuf = new char[length]{};
     for (i = 1; i < argc; i++) {
         /* Quote filenames for the parsing function */
         if (argv[i][0] != '-')
@@ -1528,7 +1496,7 @@ static void InitQBSP(int argc, const char **argv)
         // Probably not the best place to do this
         LogPrint("Input file: {}\n", options.szMapName);
         LogPrint("Output file: {}\n\n", options.szBSPName);
-        
+
         options.szBSPName.replace_extension("prt");
         remove(options.szBSPName);
 

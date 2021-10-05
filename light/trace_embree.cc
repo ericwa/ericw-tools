@@ -443,7 +443,8 @@ plane_t Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
 /**
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
-static void Leaf_MakeFaces(const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<plane_t> &planes, std::vector<winding_t> &result)
+static void Leaf_MakeFaces(
+    const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<plane_t> &planes, std::vector<winding_t> &result)
 {
     for (const plane_t &plane : planes) {
         // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
@@ -695,8 +696,7 @@ hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const mode
 }
 
 // public
-hitresult_t Embree_TestSky(
-    const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
+hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -810,9 +810,9 @@ public:
 
 public:
     raystream_embree_common_t(int maxRays)
-        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{new vec3_t[maxRays] { }},
-          _ray_normalcontribs{new vec3_t[maxRays] { }},
-          _ray_dynamic_styles{new int[maxRays]}, _numrays{0}, _maxrays{maxRays}
+        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{new vec3_t[maxRays]{}},
+          _ray_normalcontribs{new vec3_t[maxRays]{}}, _ray_dynamic_styles{new int[maxRays]}, _numrays{0}, _maxrays{
+                                                                                                              maxRays}
     {
     }
     //,

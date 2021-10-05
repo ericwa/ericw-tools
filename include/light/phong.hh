@@ -71,10 +71,11 @@ private:
     std::vector<neighbour_t> m_neighbours;
 
 public:
-    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<qvec3f> &normals, const std::vector<qvec3f> &tangents, const std::vector<qvec3f> &bitangents)
-        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_tangents(tangents), m_bitangents(bitangents), m_plane(Face_Plane(bsp, face).vec4()),
-          m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)), m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
-          m_neighbours(NeighbouringFaces_new(bsp, face))
+    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<qvec3f> &normals,
+        const std::vector<qvec3f> &tangents, const std::vector<qvec3f> &bitangents)
+        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_tangents(tangents), m_bitangents(bitangents),
+          m_plane(Face_Plane(bsp, face).vec4()), m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)),
+          m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)), m_neighbours(NeighbouringFaces_new(bsp, face))
     {
     }
 

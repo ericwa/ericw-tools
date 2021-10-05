@@ -34,7 +34,7 @@ enum : int32_t
 
 using parseflags = int32_t;
 
-template<typename ...T>
+template<typename... T>
 inline auto untie(const std::tuple<T...> &tuple)
 {
     return std::tuple<typename std::remove_reference<T>::type...>(tuple);
@@ -46,16 +46,9 @@ struct parser_t
     uint32_t linenum = 1;
     std::string token;
 
-    parser_t(const char *data) :
-        pos(data)
-    {
-    }
+    parser_t(const char *data) : pos(data) { }
 
     bool parse_token(parseflags flags = PARSE_NORMAL);
 
-    auto state()
-    {
-        return std::tie(pos, linenum);
-    }
+    auto state() { return std::tie(pos, linenum); }
 };
-

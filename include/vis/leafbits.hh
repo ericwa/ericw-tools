@@ -45,34 +45,20 @@ class leafbits_t
     uint32_t *bits;
 
     constexpr size_t block_size() const { return (_size + mask) >> shift; }
-    uint32_t *allocate() { return new uint32_t[block_size()] { }; }
+    uint32_t *allocate() { return new uint32_t[block_size()]{}; }
     constexpr size_t byte_size() const { return block_size() * sizeof(*bits); }
 
 public:
     static constexpr size_t shift = 5;
     static constexpr size_t mask = (sizeof(uint32_t) << 3) - 1UL;
 
-    constexpr leafbits_t() :
-        _size(0),
-        bits(nullptr)
-    {
-    }
+    constexpr leafbits_t() : _size(0), bits(nullptr) { }
 
-    leafbits_t(size_t size) :
-        _size(size),
-        bits(allocate())
-    {
-    }
+    leafbits_t(size_t size) : _size(size), bits(allocate()) { }
 
-    leafbits_t(const leafbits_t &copy) :
-        leafbits_t(copy._size)
-    {
-        memcpy(bits, copy.bits, byte_size());
-    }
+    leafbits_t(const leafbits_t &copy) : leafbits_t(copy._size) { memcpy(bits, copy.bits, byte_size()); }
 
-    constexpr leafbits_t(leafbits_t &&move) noexcept :
-        _size(move._size),
-        bits(move.bits)
+    constexpr leafbits_t(leafbits_t &&move) noexcept : _size(move._size), bits(move.bits)
     {
         move._size = 0;
         move.bits = nullptr;
@@ -102,22 +88,13 @@ public:
         bits = nullptr;
     }
 
-    constexpr const size_t &size() const
-    {
-        return _size;
-    }
+    constexpr const size_t &size() const { return _size; }
 
     // this clears existing bit data!
-    void resize(size_t new_size)
-    {
-        *this = leafbits_t(new_size);
-    }
+    void resize(size_t new_size) { *this = leafbits_t(new_size); }
 
-    void clear()
-    {
-        memset(bits, 0, byte_size());
-    }
-    
+    void clear() { memset(bits, 0, byte_size()); }
+
     constexpr uint32_t *data() { return bits; }
     constexpr const uint32_t *data() const { return bits; }
 
@@ -129,10 +106,7 @@ public:
         size_t block_index;
         size_t mask;
 
-        constexpr operator bool() const
-        {
-            return !!(bits[block_index] & mask);
-        }
+        constexpr operator bool() const { return !!(bits[block_index] & mask); }
 
         reference &operator=(bool value)
         {
@@ -145,8 +119,5 @@ public:
         }
     };
 
-    constexpr reference operator[](const size_t &index)
-    {
-        return { bits, index >> shift, 1ULL << (index & mask) };
-    }
+    constexpr reference operator[](const size_t &index) { return {bits, index >> shift, 1ULL << (index & mask)}; }
 };

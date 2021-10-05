@@ -68,10 +68,7 @@ struct lump_t
     int32_t fileofs;
     int32_t filelen;
 
-    auto stream_data()
-    {
-        return std::tie(fileofs, filelen);
-    }
+    auto stream_data() { return std::tie(fileofs, filelen); }
 };
 
 #define LUMP_ENTITIES 0
@@ -116,30 +113,21 @@ struct lump_t
 
 struct bspx_header_t
 {
-    std::array<char, 4> id = { 'B', 'S', 'P', 'X' }; //'BSPX'
+    std::array<char, 4> id = {'B', 'S', 'P', 'X'}; //'BSPX'
     uint32_t numlumps;
 
-    bspx_header_t(uint32_t numlumps) :
-        numlumps(numlumps)
-    {
-    }
+    bspx_header_t(uint32_t numlumps) : numlumps(numlumps) { }
 
-    auto stream_data()
-    {
-        return std::tie(id, numlumps);
-    }
+    auto stream_data() { return std::tie(id, numlumps); }
 };
 
 struct bspx_lump_t
 {
-    std::array<char, 24> lumpname { };
+    std::array<char, 24> lumpname{};
     uint32_t fileofs;
     uint32_t filelen;
 
-    auto stream_data()
-    {
-        return std::tie(lumpname, fileofs, filelen);
-    }
+    auto stream_data() { return std::tie(lumpname, fileofs, filelen); }
 };
 
 struct lumpspec_t
@@ -153,19 +141,23 @@ struct lumpspec_t
 template<typename T, typename F>
 inline qvec<3, T> aabb_mins_cast(const qvec<3, F> &f, const char *overflow_message = "mins")
 {
-    if constexpr(std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
-        return { numeric_cast<T>(floor(f[0]), overflow_message), numeric_cast<T>(floor(f[1]), overflow_message), numeric_cast<T>(floor(f[2]), overflow_message) };
+    if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
+        return {numeric_cast<T>(floor(f[0]), overflow_message), numeric_cast<T>(floor(f[1]), overflow_message),
+            numeric_cast<T>(floor(f[2]), overflow_message)};
     else
-        return { numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message), numeric_cast<T>(f[2], overflow_message) };
+        return {numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message),
+            numeric_cast<T>(f[2], overflow_message)};
 }
 
 template<typename T, typename F>
 inline qvec<3, T> aabb_maxs_cast(const qvec<3, F> &f, const char *overflow_message = "maxs")
 {
-    if constexpr(std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
-        return { numeric_cast<T>(ceil(f[0]), overflow_message), numeric_cast<T>(ceil(f[1]), overflow_message), numeric_cast<T>(ceil(f[2]), overflow_message) };
+    if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
+        return {numeric_cast<T>(ceil(f[0]), overflow_message), numeric_cast<T>(ceil(f[1]), overflow_message),
+            numeric_cast<T>(ceil(f[2]), overflow_message)};
     else
-        return { numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message), numeric_cast<T>(f[2], overflow_message) };
+        return {numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message),
+            numeric_cast<T>(f[2], overflow_message)};
 }
 
 struct dmodelh2_t
@@ -177,12 +169,9 @@ struct dmodelh2_t
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
     int32_t numfaces;
-    
+
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces);
-    }
+    auto stream_data() { return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces); }
 };
 
 // shortcut template to trim (& convert) std::arrays
@@ -190,10 +179,9 @@ struct dmodelh2_t
 template<typename ADest, typename ASrc>
 constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src")
 {
-    ADest dest { };
+    ADest dest{};
 
-    for (size_t i = 0; i < std::min(dest.size(), src.size()); i++)
-    {
+    for (size_t i = 0; i < std::min(dest.size(), src.size()); i++) {
         if constexpr (std::is_arithmetic_v<ADest::value_type> && std::is_arithmetic_v<ASrc::value_type>)
             dest[i] = numeric_cast<ADest::value_type>(src[i], overflow_message);
         else
@@ -216,36 +204,22 @@ struct dmodelq1_t
     dmodelq1_t() = default;
 
     // convert from mbsp_t
-    dmodelq1_t(const dmodelh2_t &model) :
-        mins(model.mins),
-        maxs(model.maxs),
-        origin(model.origin),
-        headnode(array_cast<decltype(headnode)>(model.headnode, "dmodelh2_t::headnode")),
-        visleafs(model.visleafs),
-        firstface(model.firstface),
-        numfaces(model.numfaces)
+    dmodelq1_t(const dmodelh2_t &model)
+        : mins(model.mins), maxs(model.maxs), origin(model.origin),
+          headnode(array_cast<decltype(headnode)>(model.headnode, "dmodelh2_t::headnode")), visleafs(model.visleafs),
+          firstface(model.firstface), numfaces(model.numfaces)
     {
     }
 
     // convert to mbsp_t
     operator dmodelh2_t() const
     {
-        return {
-            mins,
-            maxs,
-            origin,
-            array_cast<decltype(dmodelh2_t::headnode)>(headnode, "dmodelh2_t::headnode"),
-            visleafs,
-            firstface,
-            numfaces
-        };
+        return {mins, maxs, origin, array_cast<decltype(dmodelh2_t::headnode)>(headnode, "dmodelh2_t::headnode"),
+            visleafs, firstface, numfaces};
     }
-    
+
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces);
-    }
+    auto stream_data() { return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces); }
 };
 
 struct q2_dmodel_t
@@ -261,35 +235,22 @@ struct q2_dmodel_t
     q2_dmodel_t() = default;
 
     // convert from mbsp_t
-    q2_dmodel_t(const dmodelh2_t &model) :
-        mins(model.mins),
-        maxs(model.maxs),
-        origin(model.origin),
-        headnode(model.headnode[0]),
-        firstface(model.firstface),
-        numfaces(model.numfaces)
+    q2_dmodel_t(const dmodelh2_t &model)
+        : mins(model.mins), maxs(model.maxs), origin(model.origin), headnode(model.headnode[0]),
+          firstface(model.firstface), numfaces(model.numfaces)
     {
     }
 
     // convert to mbsp_t
     operator dmodelh2_t() const
     {
-        return {
-            mins,
-            maxs,
-            origin,
-            { headnode },
+        return {mins, maxs, origin, {headnode},
             0, // visleafs
-            firstface,
-            numfaces
-        };
+            firstface, numfaces};
     }
-    
+
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(mins, maxs, origin, headnode, firstface, numfaces);
-    }
+    auto stream_data() { return std::tie(mins, maxs, origin, headnode, firstface, numfaces); }
 };
 
 // structured data from BSP
@@ -300,10 +261,7 @@ struct dmiptex_t
     uint32_t width, height;
     std::array<int32_t, MIPLEVELS> offsets; /* four mip maps stored */
 
-    auto stream_data()
-    {
-        return std::tie(name, width, height, offsets);
-    }
+    auto stream_data() { return std::tie(name, width, height, offsets); }
 };
 
 // miptex in memory
@@ -340,9 +298,9 @@ struct miptex_t
 
     virtual void stream_write(std::ostream &stream) const
     {
-        Q_assert((bool) data[0]);
+        Q_assert((bool)data[0]);
 
-        std::array<char, 16> as_array { };
+        std::array<char, 16> as_array{};
         memcpy(as_array.data(), name.c_str(), name.size());
 
         stream <= as_array <= width <= height;
@@ -368,10 +326,7 @@ struct miptexhl_t : miptex_t
     miptexhl_t() = default;
 
     // convert miptex_t to miptexhl_t
-    miptexhl_t(miptex_t &&move) :
-        miptex_t(std::forward<miptex_t &&>(move))
-    {
-    }
+    miptexhl_t(miptex_t &&move) : miptex_t(std::forward<miptex_t &&>(move)) { }
 
     virtual void stream_read(std::istream &stream)
     {
@@ -444,7 +399,7 @@ struct dmiptexlump_t
 
         const size_t header_size = sizeof(int32_t) + (sizeof(int32_t) * textures.size());
         size_t miptex_offset = 0;
-        
+
         for (auto &texture : textures) {
             if (!texture.name[0]) {
                 stream <= static_cast<int32_t>(-1);
@@ -488,10 +443,7 @@ struct dplane_t
     int32_t type;
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(normal, dist, type);
-    }
+    auto stream_data() { return std::tie(normal, dist, type); }
 };
 
 // Q1 contents
@@ -565,7 +517,8 @@ struct dplane_t
 // all of the detail values
 #define CFLAGS_DETAIL_MASK (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE)
 // all of the special content types
-#define    CFLAGS_CONTENTS_MASK                (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
+#define CFLAGS_CONTENTS_MASK                                                                                           \
+    (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
 
 struct gamedef_t;
 
@@ -598,23 +551,15 @@ struct contentflags_t
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
 
-    constexpr bool is_hint() const {
-        return extended & CFLAGS_HINT;
-    }
+    constexpr bool is_hint() const { return extended & CFLAGS_HINT; }
 
-    constexpr bool is_clip() const {
-        return extended & CFLAGS_CLIP;
-    }
+    constexpr bool is_clip() const { return extended & CFLAGS_CLIP; }
 
-    constexpr bool is_origin() const {
-        return extended & CFLAGS_ORIGIN;
-    }
+    constexpr bool is_origin() const { return extended & CFLAGS_ORIGIN; }
 
     constexpr bool clips_same_type() const { return !(extended & CFLAGS_NO_CLIPPING_SAME_TYPE); }
 
-    constexpr bool is_fence() const {
-        return (extended & (CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY)) != 0;
-    }
+    constexpr bool is_fence() const { return (extended & (CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY)) != 0; }
 
     // check if this content's `type` - which is distinct from various
     // flags that turn things on/off - match. Exactly what the native
@@ -637,16 +582,14 @@ struct bsp2_dnode_t
     uint32_t numfaces; /* counting both sides */
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
-    }
+    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
 };
 
 struct bsp29_dnode_t
 {
     int32_t planenum;
-    std::array<int16_t, 2> children; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
+    std::array<int16_t, 2>
+        children; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
     qvec3s mins; /* for sphere culling */
     qvec3s maxs;
     uint16_t firstface;
@@ -655,34 +598,25 @@ struct bsp29_dnode_t
     bsp29_dnode_t() = default;
 
     // convert from mbsp_t
-    bsp29_dnode_t(const bsp2_dnode_t &model) :
-        planenum(model.planenum),
-        children(array_cast<decltype(children)>(model.children, "dnode_t::children")),
-        mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
-        firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
-        numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
+    bsp29_dnode_t(const bsp2_dnode_t &model)
+        : planenum(model.planenum), children(array_cast<decltype(children)>(model.children, "dnode_t::children")),
+          mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
+          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
+          firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
+          numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
     {
     }
 
     // convert to mbsp_t
     operator bsp2_dnode_t() const
     {
-        return {
-            planenum,
-            array_cast<decltype(bsp2_dnode_t::children)>(children, "dnode_t::children"),
-            aabb_mins_cast<float>(mins, "dnode_t::mins"),
-            aabb_mins_cast<float>(maxs, "dnode_t::maxs"),
-            firstface,
-            numfaces
-        };
+        return {planenum, array_cast<decltype(bsp2_dnode_t::children)>(children, "dnode_t::children"),
+            aabb_mins_cast<float>(mins, "dnode_t::mins"), aabb_mins_cast<float>(maxs, "dnode_t::maxs"), firstface,
+            numfaces};
     }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
-    }
+    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
 };
 
 struct bsp2rmq_dnode_t
@@ -697,34 +631,23 @@ struct bsp2rmq_dnode_t
     bsp2rmq_dnode_t() = default;
 
     // convert from mbsp_t
-    bsp2rmq_dnode_t(const bsp2_dnode_t &model) :
-        planenum(model.planenum),
-        children(model.children),
-        mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
-        firstface(model.firstface),
-        numfaces(model.numfaces)
+    bsp2rmq_dnode_t(const bsp2_dnode_t &model)
+        : planenum(model.planenum), children(model.children),
+          mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
+          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")), firstface(model.firstface),
+          numfaces(model.numfaces)
     {
     }
 
     // convert to mbsp_t
     operator bsp2_dnode_t() const
     {
-        return {
-            planenum,
-            children,
-            aabb_mins_cast<float>(mins, "dnode_t::mins"),
-            aabb_mins_cast<float>(maxs, "dnode_t::maxs"),
-            firstface,
-            numfaces
-        };
+        return {planenum, children, aabb_mins_cast<float>(mins, "dnode_t::mins"),
+            aabb_mins_cast<float>(maxs, "dnode_t::maxs"), firstface, numfaces};
     }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
-    }
+    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
 };
 
 struct q2_dnode_t
@@ -739,34 +662,24 @@ struct q2_dnode_t
     q2_dnode_t() = default;
 
     // convert from mbsp_t
-    q2_dnode_t(const bsp2_dnode_t &model) :
-        planenum(model.planenum),
-        children(model.children),
-        mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
-        firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
-        numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
+    q2_dnode_t(const bsp2_dnode_t &model)
+        : planenum(model.planenum), children(model.children),
+          mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
+          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
+          firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
+          numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
     {
     }
 
     // convert to mbsp_t
     operator bsp2_dnode_t() const
     {
-        return {
-            planenum,
-            children,
-            aabb_mins_cast<float>(mins, "dnode_t::mins"),
-            aabb_mins_cast<float>(maxs, "dnode_t::maxs"),
-            firstface,
-            numfaces
-        };
+        return {planenum, children, aabb_mins_cast<float>(mins, "dnode_t::mins"),
+            aabb_mins_cast<float>(maxs, "dnode_t::maxs"), firstface, numfaces};
     }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, children, mins, maxs, firstface, numfaces);
-    }
+    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
 };
 
 using q2_dnode_qbism_t = bsp2_dnode_t;
@@ -783,10 +696,7 @@ struct bsp2_dclipnode_t
     std::array<int32_t, 2> children; /* negative numbers are contents */
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, children);
-    }
+    auto stream_data() { return std::tie(planenum, children); }
 };
 
 struct bsp29_dclipnode_t
@@ -795,29 +705,19 @@ struct bsp29_dclipnode_t
     std::array<int16_t, 2> children; /* negative numbers are contents */
 
     bsp29_dclipnode_t() = default;
-    
+
     // convert from mbsp_t
-    bsp29_dclipnode_t(const bsp2_dclipnode_t &model) :
-        planenum(model.planenum),
-        children({ downcast(model.children[0]), downcast(model.children[1]) })
+    bsp29_dclipnode_t(const bsp2_dclipnode_t &model)
+        : planenum(model.planenum), children({downcast(model.children[0]), downcast(model.children[1])})
     {
     }
 
     // convert to mbsp_t
-    operator bsp2_dclipnode_t() const
-    {
-        return {
-            planenum,
-            { upcast(children[0]), upcast(children[1]) }
-        };
-    }
+    operator bsp2_dclipnode_t() const { return {planenum, {upcast(children[0]), upcast(children[1])}}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, children);
-    }
-    
+    auto stream_data() { return std::tie(planenum, children); }
+
     /* Slightly tricky since we support > 32k clipnodes */
 private:
     static constexpr int16_t downcast(const int32_t &v)
@@ -827,7 +727,7 @@ private:
 
         return static_cast<int16_t>(v < 0 ? v + 0x10000 : v);
     }
-    
+
     static constexpr int32_t upcast(const int16_t &v)
     {
         int32_t child = (uint16_t)v;
@@ -940,28 +840,13 @@ struct texinfo_t
     texinfo_t() = default;
 
     // convert from mbsp_t
-    texinfo_t(const gtexinfo_t &model) :
-        vecs(model.vecs),
-        miptex(model.miptex),
-        flags(model.flags.native)
-    {
-    }
+    texinfo_t(const gtexinfo_t &model) : vecs(model.vecs), miptex(model.miptex), flags(model.flags.native) { }
 
     // convert to mbsp_t
-    operator gtexinfo_t() const
-    {
-        return {
-            vecs,
-            { flags },
-            miptex
-        };
-    }
+    operator gtexinfo_t() const { return {vecs, {flags}, miptex}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(vecs, miptex, flags);
-    }
+    auto stream_data() { return std::tie(vecs, miptex, flags); }
 };
 
 struct q2_texinfo_t
@@ -975,33 +860,17 @@ struct q2_texinfo_t
     q2_texinfo_t() = default;
 
     // convert from mbsp_t
-    q2_texinfo_t(const gtexinfo_t &model) :
-        vecs(model.vecs),
-        flags(model.flags.native),
-        value(model.value),
-        texture(model.texture),
-        nexttexinfo(model.nexttexinfo)
+    q2_texinfo_t(const gtexinfo_t &model)
+        : vecs(model.vecs), flags(model.flags.native), value(model.value), texture(model.texture),
+          nexttexinfo(model.nexttexinfo)
     {
     }
 
     // convert to mbsp_t
-    operator gtexinfo_t() const
-    {
-        return {
-            vecs,
-            { flags },
-            -1,
-            value,
-            texture,
-            nexttexinfo
-        };
-    }
+    operator gtexinfo_t() const { return {vecs, {flags}, -1, value, texture, nexttexinfo}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(vecs, flags, value, texture, nexttexinfo);
-    }
+    auto stream_data() { return std::tie(vecs, flags, value, texture, nexttexinfo); }
 };
 
 /*
@@ -1026,10 +895,7 @@ struct mface_t
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
-    }
+    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
 };
 
 struct bsp29_dface_t
@@ -1047,36 +913,20 @@ struct bsp29_dface_t
     bsp29_dface_t() = default;
 
     // convert from mbsp_t
-    bsp29_dface_t(const mface_t &model) :
-        planenum(numeric_cast<int16_t>(model.planenum, "dface_t::planenum")),
-        side(numeric_cast<int16_t>(model.side, "dface_t::side")),
-        firstedge(model.firstedge),
-        numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
-        texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")),
-        styles(model.styles),
-        lightofs(model.lightofs)
+    bsp29_dface_t(const mface_t &model)
+        : planenum(numeric_cast<int16_t>(model.planenum, "dface_t::planenum")),
+          side(numeric_cast<int16_t>(model.side, "dface_t::side")), firstedge(model.firstedge),
+          numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
+          texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")), styles(model.styles),
+          lightofs(model.lightofs)
     {
     }
 
     // convert to mbsp_t
-    operator mface_t() const
-    {
-        return {
-            planenum,
-            side,
-            firstedge,
-            numedges,
-            texinfo,
-            styles,
-            lightofs
-        };
-    }
+    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
-    }
+    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
 };
 
 struct bsp2_dface_t
@@ -1094,36 +944,18 @@ struct bsp2_dface_t
     bsp2_dface_t() = default;
 
     // convert from mbsp_t
-    bsp2_dface_t(const mface_t &model) :
-        planenum(numeric_cast<int32_t>(model.planenum, "dface_t::planenum")),
-        side(model.side),
-        firstedge(model.firstedge),
-        numedges(model.numedges),
-        texinfo(model.texinfo),
-        styles(model.styles),
-        lightofs(model.lightofs)
+    bsp2_dface_t(const mface_t &model)
+        : planenum(numeric_cast<int32_t>(model.planenum, "dface_t::planenum")), side(model.side),
+          firstedge(model.firstedge), numedges(model.numedges), texinfo(model.texinfo), styles(model.styles),
+          lightofs(model.lightofs)
     {
     }
 
     // convert to mbsp_t
-    operator mface_t() const
-    {
-        return {
-            planenum,
-            side,
-            firstedge,
-            numedges,
-            texinfo,
-            styles,
-            lightofs
-        };
-    }
+    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
-    }
+    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
 };
 
 struct q2_dface_t
@@ -1141,36 +973,20 @@ struct q2_dface_t
     q2_dface_t() = default;
 
     // convert from mbsp_t
-    q2_dface_t(const mface_t &model) :
-        planenum(numeric_cast<uint16_t>(model.planenum, "dface_t::planenum")),
-        side(numeric_cast<int16_t>(model.side, "dface_t::side")),
-        firstedge(model.firstedge),
-        numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
-        texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")),
-        styles(model.styles),
-        lightofs(model.lightofs)
+    q2_dface_t(const mface_t &model)
+        : planenum(numeric_cast<uint16_t>(model.planenum, "dface_t::planenum")),
+          side(numeric_cast<int16_t>(model.side, "dface_t::side")), firstedge(model.firstedge),
+          numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
+          texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")), styles(model.styles),
+          lightofs(model.lightofs)
     {
     }
 
     // convert to mbsp_t
-    operator mface_t() const
-    {
-        return {
-            planenum,
-            side,
-            firstedge,
-            numedges,
-            texinfo,
-            styles,
-            lightofs
-        };
-    }
+    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
-    }
+    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
 };
 
 struct q2_dface_qbism_t
@@ -1188,36 +1004,18 @@ struct q2_dface_qbism_t
     q2_dface_qbism_t() = default;
 
     // convert from mbsp_t
-    q2_dface_qbism_t(const mface_t &model) :
-        planenum(numeric_cast<uint32_t>(model.planenum, "dface_t::planenum")),
-        side(model.side),
-        firstedge(model.firstedge),
-        numedges(model.numedges),
-        texinfo(model.texinfo),
-        styles(model.styles),
-        lightofs(model.lightofs)
+    q2_dface_qbism_t(const mface_t &model)
+        : planenum(numeric_cast<uint32_t>(model.planenum, "dface_t::planenum")), side(model.side),
+          firstedge(model.firstedge), numedges(model.numedges), texinfo(model.texinfo), styles(model.styles),
+          lightofs(model.lightofs)
     {
     }
 
     // convert to mbsp_t
-    operator mface_t() const
-    {
-        return {
-            planenum,
-            side,
-            firstedge,
-            numedges,
-            texinfo,
-            styles,
-            lightofs
-        };
-    }
+    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
-    }
+    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
 };
 
 /*
@@ -1262,29 +1060,20 @@ struct bsp29_dleaf_t
     bsp29_dleaf_t() = default;
 
     // convert from mbsp_t
-    bsp29_dleaf_t(const mleaf_t &model) :
-        contents(model.contents),
-        visofs(model.visofs),
-        mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
-        firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
-        nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
-        ambient_level(model.ambient_level)
+    bsp29_dleaf_t(const mleaf_t &model)
+        : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
+          firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
+          nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
+          ambient_level(model.ambient_level)
     {
     }
 
     // convert to mbsp_t
     operator mleaf_t() const
     {
-        return {
-            contents,
-            visofs,
-            aabb_mins_cast<float>(mins, "dleaf_t::mins"),
-            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"),
-            firstmarksurface,
-            nummarksurfaces,
-            ambient_level
-        };
+        return {contents, visofs, aabb_mins_cast<float>(mins, "dleaf_t::mins"),
+            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"), firstmarksurface, nummarksurfaces, ambient_level};
     }
 
     // serialize for streams
@@ -1307,29 +1096,18 @@ struct bsp2rmq_dleaf_t
     bsp2rmq_dleaf_t() = default;
 
     // convert from mbsp_t
-    bsp2rmq_dleaf_t(const mleaf_t &model) :
-        contents(model.contents),
-        visofs(model.visofs),
-        mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
-        firstmarksurface(model.firstmarksurface),
-        nummarksurfaces(model.nummarksurfaces),
-        ambient_level(model.ambient_level)
+    bsp2rmq_dleaf_t(const mleaf_t &model)
+        : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")), firstmarksurface(model.firstmarksurface),
+          nummarksurfaces(model.nummarksurfaces), ambient_level(model.ambient_level)
     {
     }
 
     // convert to mbsp_t
     operator mleaf_t() const
     {
-        return {
-            contents,
-            visofs,
-            aabb_mins_cast<float>(mins, "dleaf_t::mins"),
-            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"),
-            firstmarksurface,
-            nummarksurfaces,
-            ambient_level
-        };
+        return {contents, visofs, aabb_mins_cast<float>(mins, "dleaf_t::mins"),
+            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"), firstmarksurface, nummarksurfaces, ambient_level};
     }
 
     // serialize for streams
@@ -1341,21 +1119,24 @@ struct bsp2rmq_dleaf_t
 
 // BRUSHLIST BSPX lump
 
-struct bspxbrushes_permodel {
-        int32_t ver;
-        int32_t modelnum;
-        int32_t numbrushes;
-        int32_t numfaces;
+struct bspxbrushes_permodel
+{
+    int32_t ver;
+    int32_t modelnum;
+    int32_t numbrushes;
+    int32_t numfaces;
 };
-struct bspxbrushes_perbrush {
-        float mins[3];
-        float maxs[3];
-        int16_t contents;
-        uint16_t numfaces;
+struct bspxbrushes_perbrush
+{
+    float mins[3];
+    float maxs[3];
+    int16_t contents;
+    uint16_t numfaces;
 };
-struct bspxbrushes_perface {
-        float normal[3];
-        float dist;
+struct bspxbrushes_perface
+{
+    float normal[3];
+    float dist;
 };
 
 struct bsp2_dleaf_t
@@ -1371,29 +1152,17 @@ struct bsp2_dleaf_t
     bsp2_dleaf_t() = default;
 
     // convert from mbsp_t
-    bsp2_dleaf_t(const mleaf_t &model) :
-        contents(model.contents),
-        visofs(model.visofs),
-        mins(model.mins),
-        maxs(model.maxs),
-        firstmarksurface(model.firstmarksurface),
-        nummarksurfaces(model.nummarksurfaces),
-        ambient_level(model.ambient_level)
+    bsp2_dleaf_t(const mleaf_t &model)
+        : contents(model.contents), visofs(model.visofs), mins(model.mins), maxs(model.maxs),
+          firstmarksurface(model.firstmarksurface), nummarksurfaces(model.nummarksurfaces),
+          ambient_level(model.ambient_level)
     {
     }
 
     // convert to mbsp_t
     operator mleaf_t() const
     {
-        return {
-            contents,
-            visofs,
-            mins,
-            maxs,
-            firstmarksurface,
-            nummarksurfaces,
-            ambient_level
-        };
+        return {contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level};
     }
 
     // serialize for streams
@@ -1422,41 +1191,31 @@ struct q2_dleaf_t
     q2_dleaf_t() = default;
 
     // convert from mbsp_t
-    q2_dleaf_t(const mleaf_t &model) :
-        contents(model.contents),
-        cluster(numeric_cast<int16_t>(model.cluster, "dleaf_t::cluster")),
-        area(numeric_cast<int16_t>(model.area, "dleaf_t::area")),
-        mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-        maxs(aabb_mins_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
-        firstleafface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
-        numleaffaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
-        firstleafbrush(numeric_cast<uint16_t>(model.firstleafbrush, "dleaf_t::firstleafbrush")),
-        numleafbrushes(numeric_cast<uint16_t>(model.numleafbrushes, "dleaf_t::numleafbrushes"))
+    q2_dleaf_t(const mleaf_t &model)
+        : contents(model.contents), cluster(numeric_cast<int16_t>(model.cluster, "dleaf_t::cluster")),
+          area(numeric_cast<int16_t>(model.area, "dleaf_t::area")),
+          mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+          maxs(aabb_mins_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
+          firstleafface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
+          numleaffaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
+          firstleafbrush(numeric_cast<uint16_t>(model.firstleafbrush, "dleaf_t::firstleafbrush")),
+          numleafbrushes(numeric_cast<uint16_t>(model.numleafbrushes, "dleaf_t::numleafbrushes"))
     {
     }
 
     // convert to mbsp_t
     operator mleaf_t() const
     {
-        return {
-            contents,
-            -1,
-            aabb_mins_cast<float>(mins, "dleaf_t::mins"),
-            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"),
-            firstleafface,
-            numleaffaces,
-            {},
-            cluster,
-            area,
-            firstleafbrush,
-            numleafbrushes
-        };
+        return {contents, -1, aabb_mins_cast<float>(mins, "dleaf_t::mins"),
+            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"), firstleafface, numleaffaces, {}, cluster, area,
+            firstleafbrush, numleafbrushes};
     }
 
     // serialize for streams
     auto stream_data()
     {
-        return std::tie(contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
+        return std::tie(
+            contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
     }
 };
 
@@ -1479,16 +1238,10 @@ struct q2_dleaf_qbism_t
     q2_dleaf_qbism_t() = default;
 
     // convert from mbsp_t
-    q2_dleaf_qbism_t(const mleaf_t &model) :
-        contents(model.contents),
-        cluster(model.cluster),
-        area(model.area),
-        mins(model.mins),
-        maxs(model.maxs),
-        firstleafface(model.firstmarksurface),
-        numleaffaces(model.nummarksurfaces),
-        firstleafbrush(model.firstleafbrush),
-        numleafbrushes(model.numleafbrushes)
+    q2_dleaf_qbism_t(const mleaf_t &model)
+        : contents(model.contents), cluster(model.cluster), area(model.area), mins(model.mins), maxs(model.maxs),
+          firstleafface(model.firstmarksurface), numleaffaces(model.nummarksurfaces),
+          firstleafbrush(model.firstleafbrush), numleafbrushes(model.numleafbrushes)
     {
     }
 
@@ -1496,24 +1249,14 @@ struct q2_dleaf_qbism_t
     operator mleaf_t() const
     {
         return {
-            contents,
-            -1,
-            mins,
-            maxs,
-            firstleafface,
-            numleaffaces,
-            {},
-            cluster,
-            area,
-            firstleafbrush,
-            numleafbrushes
-        };
+            contents, -1, mins, maxs, firstleafface, numleaffaces, {}, cluster, area, firstleafbrush, numleafbrushes};
     }
 
     // serialize for streams
     auto stream_data()
     {
-        return std::tie(contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
+        return std::tie(
+            contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
     }
 };
 
@@ -1523,10 +1266,7 @@ struct q2_dbrushside_qbism_t
     int32_t texinfo;
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, texinfo);
-    }
+    auto stream_data() { return std::tie(planenum, texinfo); }
 };
 
 struct q2_dbrushside_t
@@ -1537,26 +1277,17 @@ struct q2_dbrushside_t
     q2_dbrushside_t() = default;
 
     // convert from mbsp_t
-    q2_dbrushside_t(const q2_dbrushside_qbism_t &model) :
-        planenum(numeric_cast<uint16_t>(model.planenum, "dbrushside_t::planenum")),
-        texinfo(numeric_cast<int16_t>(model.texinfo, "dbrushside_t::texinfo"))
+    q2_dbrushside_t(const q2_dbrushside_qbism_t &model)
+        : planenum(numeric_cast<uint16_t>(model.planenum, "dbrushside_t::planenum")),
+          texinfo(numeric_cast<int16_t>(model.texinfo, "dbrushside_t::texinfo"))
     {
     }
 
     // convert to mbsp_t
-    operator q2_dbrushside_qbism_t() const
-    {
-        return {
-            planenum,
-            texinfo
-        };
-    }
+    operator q2_dbrushside_qbism_t() const { return {planenum, texinfo}; }
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(planenum, texinfo);
-    }
+    auto stream_data() { return std::tie(planenum, texinfo); }
 };
 
 struct dbrush_t
@@ -1566,10 +1297,7 @@ struct dbrush_t
     int32_t contents;
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(firstside, numsides, contents);
-    }
+    auto stream_data() { return std::tie(firstside, numsides, contents); }
 };
 
 enum vistype_t
@@ -1586,10 +1314,7 @@ struct mvis_t
     std::vector<std::array<int32_t, 2>> bit_offsets;
     std::vector<uint8_t> bits;
 
-    inline size_t header_offset() const
-    {
-        return sizeof(int32_t) + (sizeof(int32_t) * bit_offsets.size() * 2);
-    }
+    inline size_t header_offset() const { return sizeof(int32_t) + (sizeof(int32_t) * bit_offsets.size() * 2); }
 
     // set a bit offset of the specified cluster/vistype *relative to the start of the bits array*
     // (after the header)
@@ -1605,10 +1330,7 @@ struct mvis_t
         return bit_offsets[cluster][type] - header_offset();
     }
 
-    void resize(size_t numclusters)
-    {
-        bit_offsets.resize(numclusters);
-    }
+    void resize(size_t numclusters) { bit_offsets.resize(numclusters); }
 
     void stream_read(std::istream &stream, const lump_t &lump)
     {
@@ -1655,10 +1377,7 @@ struct dareaportal_t
     int32_t otherarea;
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(portalnum, otherarea);
-    }
+    auto stream_data() { return std::tie(portalnum, otherarea); }
 };
 
 struct darea_t
@@ -1667,10 +1386,7 @@ struct darea_t
     int32_t firstareaportal;
 
     // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(numareaportals, firstareaportal);
-    }
+    auto stream_data() { return std::tie(numareaportals, firstareaportal); }
 };
 
 // Q1-esque maps can use one of these two.
@@ -1818,10 +1534,7 @@ struct dheader_t
     int32_t ident;
     std::array<lump_t, BSP_LUMPS> lumps;
 
-    auto stream_data()
-    {
-        return std::tie(ident, lumps);
-    }
+    auto stream_data() { return std::tie(ident, lumps); }
 };
 
 struct q2_dheader_t
@@ -1830,10 +1543,7 @@ struct q2_dheader_t
     int32_t version;
     std::array<lump_t, Q2_HEADER_LUMPS> lumps;
 
-    auto stream_data()
-    {
-        return std::tie(ident, version, lumps);
-    }
+    auto stream_data() { return std::tie(ident, version, lumps); }
 };
 
 /* ========================================================================= */
@@ -1845,9 +1555,7 @@ struct bspxentry_t
 
     // bspxentry_t takes ownership over the pointer and will
     // free it automatically.
-    bspxentry_t(void *lumpdata, size_t lumpsize) :
-        lumpdata(reinterpret_cast<std::byte *>(lumpdata)),
-        lumpsize(lumpsize)
+    bspxentry_t(void *lumpdata, size_t lumpsize) : lumpdata(reinterpret_cast<std::byte *>(lumpdata)), lumpsize(lumpsize)
     {
     }
 };
@@ -1868,7 +1576,7 @@ struct bspdata_t
         // the entries list
         inline void transfer(const char *xname, uint8_t *&xdata, size_t xsize)
         {
-            entries.insert_or_assign(xname, bspxentry_t { xdata, xsize });
+            entries.insert_or_assign(xname, bspxentry_t{xdata, xsize});
             xdata = nullptr;
         }
 
@@ -1904,10 +1612,7 @@ struct gamedef_t
 
     const std::string base_dir;
 
-    gamedef_t(const char *base_dir) :
-        base_dir(base_dir)
-    {
-    }
+    gamedef_t(const char *base_dir) : base_dir(base_dir) { }
 
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;

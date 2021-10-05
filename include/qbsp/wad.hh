@@ -58,7 +58,7 @@ struct wad_t
     int version;
     std::unordered_map<std::string, lumpinfo_t, case_insensitive_hash, case_insensitive_equal> lumps;
     std::unordered_map<std::string, texture_t, case_insensitive_hash, case_insensitive_equal> textures;
-    qfile_t file = { nullptr, nullptr };
+    qfile_t file = {nullptr, nullptr};
 };
 
 void WADList_Init(const char *wadstring);

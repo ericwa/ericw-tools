@@ -39,8 +39,7 @@ static aabb3d SurfaceBBox(const mbsp_t *bsp, const mface_t *surf)
     aabb3d bounds;
 
     for (int32_t i = 0; i < surf->numedges; i++) {
-        int32_t edgenum = bsp->dsurfedges[surf->firstedge + i],
-                vertnum;
+        int32_t edgenum = bsp->dsurfedges[surf->firstedge + i], vertnum;
 
         if (edgenum >= 0)
             vertnum = bsp->dedges[edgenum][0];
@@ -145,7 +144,6 @@ void CalcAmbientSounds(mbsp_t *bsp)
     }
 }
 
-
 /*
 ================
 CalcPHS
@@ -162,7 +160,7 @@ void CalcPHS(mbsp_t *bsp)
     // increase the bits size with approximately how much space we'll need
     bsp->dvis.bits.reserve(bsp->dvis.bits.size() * 2);
 
-    // FIXME: should this use alloca? 
+    // FIXME: should this use alloca?
     uint8_t *uncompressed = new uint8_t[leafbytes];
     uint8_t *uncompressed_2 = new uint8_t[leafbytes];
     uint8_t *compressed = new uint8_t[leafbytes * 2];

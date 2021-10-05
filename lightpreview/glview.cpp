@@ -35,7 +35,10 @@ GLView::GLView(QWidget *parent)
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
 
-GLView::~GLView() { delete m_program; }
+GLView::~GLView()
+{
+    delete m_program;
+}
 
 static const char *s_fragShader = R"(
 #version 330 core
@@ -131,7 +134,10 @@ void GLView::resizeGL(int width, int height)
     m_displayAspect = static_cast<float>(width) / static_cast<float>(height);
 }
 
-void GLView::mousePressEvent(QMouseEvent *event) { m_lastMouseDownPos = event->screenPos(); }
+void GLView::mousePressEvent(QMouseEvent *event)
+{
+    m_lastMouseDownPos = event->screenPos();
+}
 
 void GLView::mouseMoveEvent(QMouseEvent *event)
 {

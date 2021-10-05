@@ -381,7 +381,7 @@ WriteBSPFile
 */
 static void WriteBSPFile()
 {
-    bspdata_t bspdata { };
+    bspdata_t bspdata{};
     bspdata.bsp = std::move(map.bsp);
 
     bspdata.version = &bspver_generic;
@@ -400,8 +400,8 @@ static void WriteBSPFile()
             FError("No extended limits version of {} available", options.target_version->name);
         }
 
-        LogPrint(
-            "NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name, extendedLimitsFormat->name);
+        LogPrint("NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name,
+            extendedLimitsFormat->name);
 
         Q_assert(ConvertBSPFormat(&bspdata, extendedLimitsFormat));
     }

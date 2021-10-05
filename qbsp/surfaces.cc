@@ -110,7 +110,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
             if (!front || !back) {
                 printf("didn't split\n");
                 break;
-                //FError("Didn't split the polygon");
+                // FError("Didn't split the polygon");
             }
             *prevptr = back;
             back->next = front;
@@ -200,11 +200,7 @@ inline void AddHashEdge(size_t v1, size_t v2, size_t i)
 
 constexpr qvec3i HashVec(const qvec3d &vec)
 {
-    return {
-        floor(vec[0]),
-        floor(vec[1]),
-        floor(vec[2])
-    };
+    return {floor(vec[0]), floor(vec[1]), floor(vec[2])};
 }
 
 inline void AddHashVert(const hashvert_t &hv)
@@ -216,7 +212,7 @@ inline void AddHashVert(const hashvert_t &hv)
     for (int x = 0; x <= 1; x++) {
         for (int y = 0; y <= 1; y++) {
             for (int z = 0; z <= 1; z++) {
-                const qvec3i h { floor(hv.point[0]) + x, floor(hv.point[1]) + y, floor(hv.point[2]) + z };
+                const qvec3i h{floor(hv.point[0]) + x, floor(hv.point[1]) + y, floor(hv.point[2]) + z};
                 hashverts[h].push_front(hv);
             }
         }
@@ -250,7 +246,7 @@ inline size_t GetVertex(qvec3d vert)
 
     const size_t global_vert_num = map.bsp.dvertexes.size();
 
-    AddHashVert({ vert, global_vert_num });
+    AddHashVert({vert, global_vert_num});
 
     /* emit a vertex */
     map.bsp.dvertexes.emplace_back(vert);
@@ -283,8 +279,7 @@ inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, c
     auto it = hashedges.find(edge_hash_key);
     if (it != hashedges.end()) {
         for (const int i : it->second) {
-            if (pEdgeFaces1[i] == NULL
-                && pEdgeFaces0[i]->contents[0].native == face->contents[0].native) {
+            if (pEdgeFaces1[i] == NULL && pEdgeFaces0[i]->contents[0].native == face->contents[0].native) {
                 pEdgeFaces1[i] = face;
                 return -i;
             }
@@ -293,7 +288,7 @@ inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, c
 
     /* emit an edge */
     size_t i = map.bsp.dedges.size();
-    auto &edge = map.bsp.dedges.emplace_back(bsp2_dedge_t { static_cast<uint32_t>(v1), static_cast<uint32_t>(v2) });
+    auto &edge = map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
 
     AddHashEdge(v1, v2, i);
 
@@ -361,7 +356,7 @@ static void EmitFace(mapentity_t *entity, face_t *face)
     // emit a region
     Q_assert(!face->outputnumber.has_value());
     face->outputnumber = map.bsp.dfaces.size();
-    
+
     mface_t &out = map.bsp.dfaces.emplace_back();
 
     // emit lmshift
@@ -448,7 +443,7 @@ MakeFaceEdges
 int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int firstface;
-    
+
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     Q_assert(entity->firstoutputfacenumber == -1);
@@ -465,7 +460,7 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
-    
+
     LogPrint(LOG_PROGRESS, "---- GrowRegions ----\n");
     GrowNodeRegion(entity, headnode);
 

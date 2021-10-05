@@ -439,7 +439,7 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
 {
     vec3_t maxs, mins;
     int i;
-    
+
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     /*
@@ -452,8 +452,8 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     cWEdges = cWVerts;
     cWVerts *= 2;
 
-    pWVerts = new wvert_t[cWVerts] { };
-    pWEdges = new wedge_t[cWEdges] { };
+    pWVerts = new wvert_t[cWVerts]{};
+    pWEdges = new wedge_t[cWEdges]{};
 
     /*
      * identify all points on common edges

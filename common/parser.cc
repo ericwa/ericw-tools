@@ -119,9 +119,7 @@ skipspace:
                         if (pos[1] == '\r' || pos[1] == '\n')
                             FError("line {}: escaped double-quote at end of string", linenum);
                         break;
-                    default:
-                        LogPrint("line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]);
-                        break;
+                    default: LogPrint("line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
                 }
             }
             *token_p++ = *pos++;

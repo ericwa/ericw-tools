@@ -57,31 +57,26 @@ public:
 
     public:
         using iterator_category = vector_iterator::iterator_category;
-        using value_type        = vector_iterator::value_type;
-        using difference_type   = vector_iterator::difference_type;
-        using pointer           = vector_iterator::pointer;
-        using reference         = vector_iterator::reference;
+        using value_type = vector_iterator::value_type;
+        using difference_type = vector_iterator::difference_type;
+        using pointer = vector_iterator::pointer;
+        using reference = vector_iterator::reference;
 
-        iterator(array_iterator it) :
-            it(it)
+        iterator(array_iterator it) : it(it) { }
+
+        iterator(vector_iterator it) : it(it) { }
+
+        [[nodiscard]] constexpr reference operator*() const noexcept
         {
-        }
-
-
-        iterator(vector_iterator it) :
-            it(it)
-        {
-        }
-
-        [[nodiscard]] constexpr reference operator*() const noexcept {
             if (std::holds_alternative<array_iterator>(it))
                 return std::get<array_iterator>(it).operator*();
             return std::get<vector_iterator>(it).operator*();
         }
 
-        constexpr iterator& operator=(const iterator &) noexcept = default;
+        constexpr iterator &operator=(const iterator &) noexcept = default;
 
-        constexpr iterator& operator++() noexcept {
+        constexpr iterator &operator++() noexcept
+        {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it).operator++();
             else
@@ -90,7 +85,8 @@ public:
             return *this;
         }
 
-        constexpr iterator &operator++(int) noexcept {
+        constexpr iterator &operator++(int) noexcept
+        {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it).operator++(0);
             else
@@ -99,7 +95,8 @@ public:
             return *this;
         }
 
-        constexpr iterator& operator--() noexcept {
+        constexpr iterator &operator--() noexcept
+        {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it).operator--();
             else
@@ -108,7 +105,8 @@ public:
             return *this;
         }
 
-        constexpr iterator operator--(int) noexcept {
+        constexpr iterator operator--(int) noexcept
+        {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it).operator--(0);
             else
@@ -117,7 +115,8 @@ public:
             return *this;
         }
 
-        constexpr iterator& operator+=(const difference_type _Off) noexcept {
+        constexpr iterator &operator+=(const difference_type _Off) noexcept
+        {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it).operator+=(_Off);
             else
@@ -126,13 +125,15 @@ public:
             return *this;
         }
 
-        [[nodiscard]] constexpr iterator operator+(const difference_type _Off) const noexcept {
+        [[nodiscard]] constexpr iterator operator+(const difference_type _Off) const noexcept
+        {
             iterator _Tmp = *this;
             _Tmp += _Off; // TRANSITION, LLVM-49342
             return _Tmp;
         }
 
-        constexpr iterator& operator-=(const difference_type _Off) noexcept {
+        constexpr iterator &operator-=(const difference_type _Off) noexcept
+        {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it).operator-=(_Off);
             else
@@ -141,17 +142,15 @@ public:
             return *this;
         }
 
-        [[nodiscard]] constexpr bool operator==(const iterator &_Off) const noexcept {
-            if (std::holds_alternative<array_iterator>(it))
-            {
+        [[nodiscard]] constexpr bool operator==(const iterator &_Off) const noexcept
+        {
+            if (std::holds_alternative<array_iterator>(it)) {
                 auto sit = std::get<array_iterator>(it);
 
                 Q_assert(std::holds_alternative<array_iterator>(_Off.it));
 
                 return sit == std::get<array_iterator>(_Off.it);
-            }
-            else
-            {
+            } else {
                 auto sit = std::get<vector_iterator>(it);
 
                 Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
@@ -160,17 +159,15 @@ public:
             }
         }
 
-        [[nodiscard]] constexpr bool operator!=(const iterator &_Off) const noexcept {
-            if (std::holds_alternative<array_iterator>(it))
-            {
+        [[nodiscard]] constexpr bool operator!=(const iterator &_Off) const noexcept
+        {
+            if (std::holds_alternative<array_iterator>(it)) {
                 auto sit = std::get<array_iterator>(it);
 
                 Q_assert(std::holds_alternative<array_iterator>(_Off.it));
 
                 return sit != std::get<array_iterator>(_Off.it);
-            }
-            else
-            {
+            } else {
                 auto sit = std::get<vector_iterator>(it);
 
                 Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
@@ -179,17 +176,15 @@ public:
             }
         }
 
-        [[nodiscard]] constexpr difference_type operator-(const iterator &_Off) const noexcept {
-            if (std::holds_alternative<array_iterator>(it))
-            {
+        [[nodiscard]] constexpr difference_type operator-(const iterator &_Off) const noexcept
+        {
+            if (std::holds_alternative<array_iterator>(it)) {
                 auto sit = std::get<array_iterator>(it);
 
                 Q_assert(std::holds_alternative<array_iterator>(_Off.it));
 
                 return sit - std::get<array_iterator>(_Off.it);
-            }
-            else
-            {
+            } else {
                 auto sit = std::get<vector_iterator>(it);
 
                 Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
@@ -198,13 +193,15 @@ public:
             }
         }
 
-        [[nodiscard]] constexpr iterator operator-(const difference_type _Off) const noexcept {
+        [[nodiscard]] constexpr iterator operator-(const difference_type _Off) const noexcept
+        {
             iterator _Tmp = *this;
             _Tmp -= _Off; // TRANSITION, LLVM-49342
             return _Tmp;
         }
 
-        [[nodiscard]] constexpr reference operator[](const difference_type _Off) const noexcept {
+        [[nodiscard]] constexpr reference operator[](const difference_type _Off) const noexcept
+        {
             return *(*this + _Off);
         }
     };
@@ -215,37 +212,26 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    winding_base_t(const size_t &initial_size) :
-        count(initial_size),
-        data(count > N ? variant_type(vector_type(initial_size)) : variant_type(array_type()))
+    winding_base_t(const size_t &initial_size)
+        : count(initial_size), data(count > N ? variant_type(vector_type(initial_size)) : variant_type(array_type()))
     {
     }
 
     // construct winding from range.
     // iterators must have operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    winding_base_t(Iter begin, Iter end) :
-        count(end - begin),
-        data(count > N ? variant_type(vector_type(begin, end)) : variant_type(array_type()))
+    winding_base_t(Iter begin, Iter end)
+        : count(end - begin), data(count > N ? variant_type(vector_type(begin, end)) : variant_type(array_type()))
     {
         if (!is_dynamic())
             std::copy(begin, end, std::get<array_type>(data).begin());
     }
 
     // copy constructor
-    winding_base_t(const winding_base_t &copy) :
-        count(copy.count),
-        data(copy.data)
-    {
-    }
+    winding_base_t(const winding_base_t &copy) : count(copy.count), data(copy.data) { }
 
     // move constructor
-    winding_base_t(winding_base_t &&move) :
-        count(move.count),
-        data(std::move(move.data))
-    {
-        move.count = 0;
-    }
+    winding_base_t(winding_base_t &&move) : count(move.count), data(std::move(move.data)) { move.count = 0; }
 
     // assignment copy
     inline winding_base_t &operator=(const winding_base_t &copy)
@@ -267,15 +253,9 @@ public:
         return *this;
     }
 
-    inline bool is_dynamic() const
-    {
-        return std::holds_alternative<vector_type>(data);
-    }
+    inline bool is_dynamic() const { return std::holds_alternative<vector_type>(data); }
 
-    inline const size_t &size() const
-    {
-        return count;
-    }
+    inline const size_t &size() const { return count; }
 
     inline qvec3d &at(const size_t &index)
     {
@@ -301,15 +281,9 @@ public:
         return std::get<array_type>(data)[index];
     }
 
-    inline qvec3d &operator[](const size_t &index)
-    {
-        return at(index);
-    }
+    inline qvec3d &operator[](const size_t &index) { return at(index); }
 
-    inline const qvec3d &operator[](const size_t &index) const
-    {
-        return at(index);
-    }
+    inline const qvec3d &operator[](const size_t &index) const { return at(index); }
 
     const iterator begin() const
     {
@@ -342,13 +316,10 @@ public:
     void resize(const size_t &new_size)
     {
         // move us to dynamic if we'll expand too big
-        if (new_size > N && !is_dynamic())
-        {
+        if (new_size > N && !is_dynamic()) {
             auto &vector = data.emplace<vector_type>(begin(), end());
             vector.resize(new_size);
-        }
-        else if (is_dynamic())
-        {
+        } else if (is_dynamic()) {
             if (new_size > N)
                 std::get<vector_type>(data).resize(new_size);
             // move us to array if we're shrinking
@@ -373,7 +344,7 @@ public:
 
     vec_t area() const
     {
-        //if (count < 3)
+        // if (count < 3)
         //    throw std::domain_error("count");
 
         vec_t total = 0;
@@ -389,7 +360,7 @@ public:
 
     qvec3d center() const
     {
-        qvec3d center { };
+        qvec3d center{};
 
         for (auto &point : *this)
             center += point;
@@ -466,7 +437,7 @@ public:
         if (x == -1)
             FError("no axis found");
 
-        qvec3d vup { };
+        qvec3d vup{};
 
         switch (x) {
             case 0:
@@ -540,14 +511,11 @@ public:
         }
     }
 
-    std::vector<qvec3f> glm_winding_points() const
-    {
-        return { begin(), end() };
-    }
+    std::vector<qvec3f> glm_winding_points() const { return {begin(), end()}; }
 
     static inline winding_base_t from_winding_points(const std::vector<qvec3f> &points)
     {
-        return { points.begin(), points.end() };
+        return {points.begin(), points.end()};
     }
 
     winding_edges_t winding_edges() const
@@ -573,7 +541,8 @@ public:
     }
 
     // dists/sides must have (size() + 1) reserved
-    inline void calc_sides(const qvec3d &normal, const vec_t &dist, vec_t *dists, side_t *sides, int32_t counts[3], const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
+    inline void calc_sides(const qvec3d &normal, const vec_t &dist, vec_t *dists, side_t *sides, int32_t counts[3],
+        const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         /* determine sides for each point */
         size_t i;
@@ -597,7 +566,7 @@ public:
         sides[i] = sides[SIDE_FRONT];
         dists[i] = dists[SIDE_FRONT];
     }
-    
+
     /*
     ==================
     ClipWinding
@@ -607,23 +576,24 @@ public:
     it will be clipped away.
     ==================
     */
-    std::array<std::optional<winding_base_t>, 2> clip(const qvec3d &normal, const vec_t &dist, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+    std::array<std::optional<winding_base_t>, 2> clip(const qvec3d &normal, const vec_t &dist,
+        const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
-        vec_t *dists = (vec_t *) alloca(sizeof(vec_t) * (count + 1));
-        side_t *sides = (side_t *) alloca(sizeof(side_t) * (count + 1));
-        int counts[3] { };
+        vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (count + 1));
+        side_t *sides = (side_t *)alloca(sizeof(side_t) * (count + 1));
+        int counts[3]{};
 
         calc_sides(normal, dist, dists, sides, counts, on_epsilon);
 
         if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
-            return { *this, std::nullopt };
+            return {*this, std::nullopt};
 
         if (!counts[SIDE_FRONT])
-            return { std::nullopt, *this };
+            return {std::nullopt, *this};
         else if (!counts[SIDE_BACK])
-            return { *this, std::nullopt };
+            return {*this, std::nullopt};
 
-        std::array<winding_base_t, 2> results { };
+        std::array<winding_base_t, 2> results{};
 
         for (size_t i = 0; i < count; i++) {
             const qvec3d &p1 = at(i);
@@ -655,7 +625,7 @@ public:
                 else
                     mid[j] = p1[j] + dot * (p2[j] - p1[j]);
             }
-        
+
             results[SIDE_FRONT].push_back(mid);
             results[SIDE_BACK].push_back(mid);
         }
@@ -663,10 +633,11 @@ public:
         if (results[SIDE_FRONT].count > MAX_POINTS_ON_WINDING || results[SIDE_BACK].count > MAX_POINTS_ON_WINDING)
             FError("MAX_POINTS_ON_WINDING");
 
-        return { std::move(results[SIDE_FRONT]), std::move(results[SIDE_BACK]) };
+        return {std::move(results[SIDE_FRONT]), std::move(results[SIDE_BACK])};
     }
 
-    std::optional<winding_base_t> chop(const qvec3d &normal, const vec_t &dist, const vec_t &on_epsilon = DEFAULT_ON_EPSILON)
+    std::optional<winding_base_t> chop(
+        const qvec3d &normal, const vec_t &dist, const vec_t &on_epsilon = DEFAULT_ON_EPSILON)
     {
         auto clipped = clip(normal, dist, on_epsilon);
 
@@ -699,7 +670,7 @@ public:
         //
         // split the winding
         //
-        qvec3d split { };
+        qvec3d split{};
         split[i] = 1;
         vec_t dist = subdiv * (1 + floor((b.mins()[i] + 1) / subdiv));
         auto clipped = clip(split, dist);

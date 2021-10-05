@@ -66,9 +66,9 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     qbsp_plane_t *plane;
     bool keep1, keep2;
 
-    if (!f1->w.size() || !f2->w.size() || f1->planeside != f2->planeside ||
-        f1->texinfo != f2->texinfo || f1->contents[0] != f2->contents[0] || f1->contents[1] != f2->contents[1] ||
-        f1->lmshift[0] != f2->lmshift[0] || f1->lmshift[1] != f2->lmshift[1])
+    if (!f1->w.size() || !f2->w.size() || f1->planeside != f2->planeside || f1->texinfo != f2->texinfo ||
+        f1->contents[0] != f2->contents[0] || f1->contents[1] != f2->contents[1] || f1->lmshift[0] != f2->lmshift[0] ||
+        f1->lmshift[1] != f2->lmshift[1])
         return NULL;
 
     // find a common edge
@@ -241,7 +241,7 @@ void MergeAll(surface_t *surfhead)
     surface_t *surf;
     int mergefaces = 0;
     face_t *f;
-    
+
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     for (surf = surfhead; surf; surf = surf->next) {

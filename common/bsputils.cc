@@ -137,7 +137,7 @@ qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
         VectorCopy(planeNormal, result.normal);
         result.dist = dplane->dist;
     }
-    return { result.normal, result.dist };
+    return {result.normal, result.dist};
 }
 
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
@@ -448,7 +448,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
         const qvec3f &point = GetSurfaceVertexPoint(bsp, face, i);
-        LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n", i ? "          " : "    verts ", vert, point[0], point[1],
-            point[2], edge);
+        LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n", i ? "          " : "    verts ", vert, point[0],
+            point[1], point[2], edge);
     }
 }

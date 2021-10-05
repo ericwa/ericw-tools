@@ -187,10 +187,10 @@ std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec3d &nor
     const int otherAxisB = (axis + 2) % 3;
 
     // setup two other vectors that are perpendicular to each other
-    qvec3d otherVecA { };
+    qvec3d otherVecA{};
     otherVecA[otherAxisA] = 1.0;
 
-    qvec3d otherVecB { };
+    qvec3d otherVecB{};
     otherVecB[otherAxisB] = 1.0;
 
     qvec3d tangent = qv::cross(normal, otherVecA);
@@ -309,7 +309,8 @@ public:
 
         // front or back may be null (if fully clipped).
         // these constructors take ownership of the winding.
-        return std::make_pair(decomp_brush_face_t(std::move(clipped[0]), original_face), decomp_brush_face_t(std::move(clipped[1]), original_face));
+        return std::make_pair(decomp_brush_face_t(std::move(clipped[0]), original_face),
+            decomp_brush_face_t(std::move(clipped[1]), original_face));
     }
 
     qvec3d normal() const
@@ -341,7 +342,7 @@ static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bs
         const double dp = qv::dot(plane.normal, decompFace.normal());
 
         if (dp < 0.9) {
-            //fmt::print("face on back {}, discarding\n", dp);
+            // fmt::print("face on back {}, discarding\n", dp);
             continue;
         }
 
@@ -625,7 +626,7 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
         return "";
     }
 
-    //fmt::print("before: {} after {}\n", task.allPlanes.size(), reducedPlanes.size());
+    // fmt::print("before: {} after {}\n", task.allPlanes.size(), reducedPlanes.size());
 
     // At this point, we should gather all of the faces on `reducedPlanes` and clip away the
     // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
@@ -723,12 +724,13 @@ static void DecompileNode(std::vector<decomp_plane_t> &planestack, const mbsp_t 
     handleSide(false);
 }
 
-static void AddMapBoundsToStack(std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const bsp2_dnode_t *headnode)
+static void AddMapBoundsToStack(
+    std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const bsp2_dnode_t *headnode)
 {
     for (int i = 0; i < 3; ++i) {
         for (int sign = 0; sign < 2; ++sign) {
 
-            qvec3d normal { };
+            qvec3d normal{};
             normal[i] = (sign == 0) ? 1 : -1;
 
             double dist;

@@ -32,10 +32,10 @@
 #include <fmt/format.h>
 
 // TODO: no wchar_t support in this version apparently
-template <>
+template<>
 struct fmt::formatter<std::filesystem::path> : formatter<std::string>
 {
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const std::filesystem::path &p, FormatContext &ctx)
     {
         return formatter<std::string>::format(p.string(), ctx);
@@ -69,21 +69,20 @@ inline void LogPrint(const char *str)
     LogPrint(LOG_DEFAULT, str);
 }
 
-template<typename ...Args>
+template<typename... Args>
 inline void LogPrint(log_flag_t type, const char *fmt, const Args &...args)
 {
     if (!type || (log_mask & (1 << type)))
         LogPrint(type, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
 }
 
-template<typename ...Args>
+template<typename... Args>
 inline void LogPrint(const char *fmt, const Args &...args)
 {
     LogPrint(LOG_DEFAULT, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
 }
 
-#define FLogPrint(fmt, ...) \
-    LogPrint("{}: " fmt, __func__, __VA_ARGS__)
+#define FLogPrint(fmt, ...) LogPrint("{}: " fmt, __func__, __VA_ARGS__)
 
 /* Print only into log file */
 void LogPrintSilent(const char *str);
@@ -91,7 +90,7 @@ void LogPrintSilent(const char *str);
 /* Only called from the threads code */
 void LogPrintLocked(const char *str);
 
-template<typename ...Args>
+template<typename... Args>
 inline void LogPrintLocked(const char *fmt, const Args &...args)
 {
     LogPrintLocked(fmt::format(fmt, std::forward<const Args &>(args)...).c_str());

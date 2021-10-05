@@ -55,7 +55,7 @@ void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 
     node->planenum = PLANENUM_LEAF;
     node->contents = contents;
-    node->markfaces = new face_t *[1] { };
+    node->markfaces = new face_t *[1] {};
 
     Q_assert(node->markfaces[0] == nullptr);
 }
@@ -84,8 +84,8 @@ void DetailToSolid(node_t *node)
         // If both children are solid, we can merge the two leafs into one.
         // DarkPlaces has an assertion that fails if both children are
         // solid.
-		if (node->children[0]->contents.is_solid(options.target_game)
-			&& node->children[1]->contents.is_solid(options.target_game)) {
+        if (node->children[0]->contents.is_solid(options.target_game) &&
+            node->children[1]->contents.is_solid(options.target_game)) {
             // This discards any faces on-node. Should be safe (?)
             ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
         }
@@ -483,7 +483,8 @@ static surface_t *SelectPartition(surface_t *surfaces)
         if (options.maxNodeSize >= 64) {
             const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
 
-            largenode = (bounds.maxs()[0] - bounds.mins()[0]) > maxnodesize || (bounds.maxs()[1] - bounds.mins()[1]) > maxnodesize ||
+            largenode = (bounds.maxs()[0] - bounds.mins()[0]) > maxnodesize ||
+                        (bounds.maxs()[1] - bounds.mins()[1]) > maxnodesize ||
                         (bounds.maxs()[2] - bounds.mins()[2]) > maxnodesize;
         }
     }
@@ -555,7 +556,7 @@ static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **fr
             in->onnode = true;
 
             // divide the facets to the front and back sides
-            surface_t *newsurf = new surface_t { };
+            surface_t *newsurf = new surface_t{};
             *newsurf = *in;
 
             // Prepend each face in facet list to either in or newsurf lists
@@ -722,7 +723,7 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     // write the list of the original faces to the leaf's markfaces
     // free surf and the surf->faces list.
     leaffaces += count;
-    leafnode->markfaces = new face_t *[count + 1] { };
+    leafnode->markfaces = new face_t *[count + 1] {};
 
     int i = 0;
     surface_t *pnext;
@@ -801,8 +802,8 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
     LogPercent(splitnodes.load(), csgmergefaces);
 
     node->faces = LinkNodeFaces(split);
-    node->children[0] = new node_t { };
-    node->children[1] = new node_t { };
+    node->children[0] = new node_t{};
+    node->children[1] = new node_t{};
     node->planenum = split->planenum;
     node->detail_separator = split->detail_separator;
 
@@ -861,23 +862,23 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        node_t *headnode = new node_t { };
+        node_t *headnode = new node_t{};
         headnode->bounds = entity->bounds.grow(SIDESPACE);
-        headnode->children[0] = new node_t { };
+        headnode->children[0] = new node_t{};
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = options.target_game->create_empty_contents();
-        headnode->children[0]->markfaces = new face_t *[1] { };
-        headnode->children[1] = new node_t { };
+        headnode->children[0]->markfaces = new face_t *[1] {};
+        headnode->children[1] = new node_t{};
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = options.target_game->create_empty_contents();
-        headnode->children[1]->markfaces = new face_t *[1] { };
+        headnode->children[1]->markfaces = new face_t *[1] {};
 
         return headnode;
     }
-    
+
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    node_t *headnode = new node_t { };
+    node_t *headnode = new node_t{};
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model

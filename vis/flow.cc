@@ -28,8 +28,8 @@ static int c_leafskip;
   pointer, was measurably faster
   ==============
 */
-static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const plane_t src_pl, const std::shared_ptr<winding_t> &pass,
-    std::shared_ptr<winding_t> &target, unsigned int test, pstack_t *stack)
+static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const plane_t src_pl,
+    const std::shared_ptr<winding_t> &pass, std::shared_ptr<winding_t> &target, unsigned int test, pstack_t *stack)
 {
     int i, j, k, l;
     plane_t sep;
@@ -343,7 +343,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
 */
 void PortalFlow(portal_t *p)
 {
-    threaddata_t data { p->visbits };
+    threaddata_t data{p->visbits};
 
     if (p->status != pstat_working)
         FError("reflowed");

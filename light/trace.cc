@@ -53,10 +53,10 @@ SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point)
     color_rgba sample{};
 
     const auto *miptex = Face_RgbaMiptex(bsp, face);
-    
+
     if (miptex == nullptr || !miptex->width)
         return sample;
-        
+
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
 
     vec_t texcoord[2];

@@ -215,20 +215,21 @@ public:
     const mbsp_t *bsp;
     const dmodelh2_t *model;
     float lightmapscale;
-    qvec3d offset { };
+    qvec3d offset{};
 
-    lockable_vec_t minlight {"minlight", 0};
-    lockable_vec_t shadow {"shadow", 0};
-    lockable_vec_t shadowself {strings{"shadowself", "selfshadow"}, 0};
-    lockable_vec_t shadowworldonly {"shadowworldonly", 0};
-    lockable_vec_t switchableshadow {"switchableshadow", 0};
-    lockable_vec_t switchshadstyle {"switchshadstyle", 0};
-    lockable_vec_t dirt {"dirt", 0};
-    lockable_vec_t phong {"phong", 0};
-    lockable_vec_t phong_angle {"phong_angle", 0};
-    lockable_vec_t alpha {"alpha", 1.0};
-    lockable_vec3_t minlight_color {strings{"minlight_color", "mincolor"}, 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_bool_t lightignore {"lightignore", false};
+    lockable_vec_t minlight{"minlight", 0};
+    lockable_vec_t shadow{"shadow", 0};
+    lockable_vec_t shadowself{strings{"shadowself", "selfshadow"}, 0};
+    lockable_vec_t shadowworldonly{"shadowworldonly", 0};
+    lockable_vec_t switchableshadow{"switchableshadow", 0};
+    lockable_vec_t switchshadstyle{"switchshadstyle", 0};
+    lockable_vec_t dirt{"dirt", 0};
+    lockable_vec_t phong{"phong", 0};
+    lockable_vec_t phong_angle{"phong_angle", 0};
+    lockable_vec_t alpha{"alpha", 1.0};
+    lockable_vec3_t minlight_color{
+        strings{"minlight_color", "mincolor"}, 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+    lockable_bool_t lightignore{"lightignore", false};
 
     float getResolvedPhongAngle() const
     {
@@ -244,10 +245,7 @@ public:
 
     bool isWorld() const { return &bsp->dmodels[0] == model; }
 
-    modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
-        : bsp{b}, model{m}, lightmapscale{lmscale}
-    {
-    }
+    modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale) : bsp{b}, model{m}, lightmapscale{lmscale} { }
 
     settingsdict_t settings()
     {
@@ -265,56 +263,66 @@ class globalconfig_t
     using strings = std::vector<std::string>;
 
 public:
-    lockable_vec_t scaledist {"dist", 1.0, 0.0, 100.0};
-    lockable_vec_t rangescale {"range", 0.5, 0.0, 100.0};
-    lockable_vec_t global_anglescale {strings{"anglescale", "anglesense"}, 0.5, 0.0, 1.0};
-    lockable_vec_t lightmapgamma {"gamma", 1.0, 0.0, 100.0};
-    lockable_bool_t addminlight {"addmin", false};
-    lockable_vec_t minlight {strings{"light", "minlight"}, 0};
-    lockable_vec3_t minlight_color {strings{"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_bool_t spotlightautofalloff {"spotlightautofalloff", false}; // mxd
-    lockable_vec_t compilerstyle_start {"compilerstyle_start", 32}; // start index for switchable light styles, default 32 (FIXME: should be int)
+    lockable_vec_t scaledist{"dist", 1.0, 0.0, 100.0};
+    lockable_vec_t rangescale{"range", 0.5, 0.0, 100.0};
+    lockable_vec_t global_anglescale{strings{"anglescale", "anglesense"}, 0.5, 0.0, 1.0};
+    lockable_vec_t lightmapgamma{"gamma", 1.0, 0.0, 100.0};
+    lockable_bool_t addminlight{"addmin", false};
+    lockable_vec_t minlight{strings{"light", "minlight"}, 0};
+    lockable_vec3_t minlight_color{
+        strings{"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+    lockable_bool_t spotlightautofalloff{"spotlightautofalloff", false}; // mxd
+    lockable_vec_t compilerstyle_start{
+        "compilerstyle_start", 32}; // start index for switchable light styles, default 32 (FIXME: should be int)
 
     /* dirt */
-    lockable_bool_t globalDirt {strings{"dirt", "dirty"}, false}; // apply dirt to all lights (unless they override it) + sunlight + minlight?
-    lockable_vec_t dirtMode {"dirtmode", 0.0f};
-    lockable_vec_t dirtDepth {"dirtdepth", 128.0, 1.0, std::numeric_limits<vec_t>::infinity()};
-    lockable_vec_t dirtScale {"dirtscale", 1.0, 0.0, 100.0};
-    lockable_vec_t dirtGain {"dirtgain", 1.0, 0.0, 100.0};
-    lockable_vec_t dirtAngle {"dirtangle", 88.0, 0.0, 90.0};
-    lockable_bool_t minlightDirt {"minlight_dirt", false}; // apply dirt to minlight?
+    lockable_bool_t globalDirt{
+        strings{"dirt", "dirty"}, false}; // apply dirt to all lights (unless they override it) + sunlight + minlight?
+    lockable_vec_t dirtMode{"dirtmode", 0.0f};
+    lockable_vec_t dirtDepth{"dirtdepth", 128.0, 1.0, std::numeric_limits<vec_t>::infinity()};
+    lockable_vec_t dirtScale{"dirtscale", 1.0, 0.0, 100.0};
+    lockable_vec_t dirtGain{"dirtgain", 1.0, 0.0, 100.0};
+    lockable_vec_t dirtAngle{"dirtangle", 88.0, 0.0, 90.0};
+    lockable_bool_t minlightDirt{"minlight_dirt", false}; // apply dirt to minlight?
 
     /* phong */
-    lockable_bool_t phongallowed {"phong", true};
-    lockable_vec_t phongangle {"phong_angle", 0};
+    lockable_bool_t phongallowed{"phong", true};
+    lockable_vec_t phongangle{"phong_angle", 0};
 
     /* bounce */
-    lockable_bool_t bounce {"bounce", false};
-    lockable_bool_t bouncestyled {"bouncestyled", false};
-    lockable_vec_t bouncescale {"bouncescale", 1.0, 0.0, 100.0};
-    lockable_vec_t bouncecolorscale {"bouncecolorscale", 0.0, 0.0, 1.0};
+    lockable_bool_t bounce{"bounce", false};
+    lockable_bool_t bouncestyled{"bouncestyled", false};
+    lockable_vec_t bouncescale{"bouncescale", 1.0, 0.0, 100.0};
+    lockable_vec_t bouncecolorscale{"bouncecolorscale", 0.0, 0.0, 1.0};
 
     /* Q2 surface lights (mxd) */
-    lockable_vec_t surflightscale {"surflightscale", 0.3}; // Strange defaults to match arghrad3 look...
-    lockable_vec_t surflightbouncescale {"surflightbouncescale", 0.1};
-    lockable_vec_t surflightsubdivision {strings{"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0}; // "choplight" - arghrad3 name
+    lockable_vec_t surflightscale{"surflightscale", 0.3}; // Strange defaults to match arghrad3 look...
+    lockable_vec_t surflightbouncescale{"surflightbouncescale", 0.1};
+    lockable_vec_t surflightsubdivision{
+        strings{"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0}; // "choplight" - arghrad3 name
 
     /* sunlight */
     /* sun_light, sun_color, sun_angle for http://www.bspquakeeditor.com/arghrad/ compatibility */
-    lockable_vec_t sunlight {strings{"sunlight", "sun_light"}, 0.0}; /* main sun */
-    lockable_vec3_t sunlight_color {strings{"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_vec_t sun2 {"sun2", 0.0}; /* second sun */
-    lockable_vec3_t sun2_color {"sun2_color", 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_vec_t sunlight2 {"sunlight2", 0.0}; /* top sky dome */
-    lockable_vec3_t sunlight2_color {strings{"sunlight2_color", "sunlight_color2"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_vec_t sunlight3 {"sunlight3", 0.0}; /* bottom sky dome */
-    lockable_vec3_t sunlight3_color {strings{"sunlight3_color", "sunlight_color3"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_vec_t sunlight_dirt {"sunlight_dirt", 0.0};
-    lockable_vec_t sunlight2_dirt {"sunlight2_dirt", 0.0};
-    lockable_vec3_t sunvec {strings{"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, -90.0, 0.0, vec3_transformer_t::MANGLE_TO_VEC}; /* defaults to straight down */
-    lockable_vec3_t sun2vec {"sun2_mangle", 0.0, -90.0, 0.0, vec3_transformer_t::MANGLE_TO_VEC}; /* defaults to straight down */
-    lockable_vec_t sun_deviance {"sunlight_penumbra", 0.0, 0.0, 180.0};
-    lockable_vec3_t sky_surface {strings{"sky_surface", "sun_surface"}, 0, 0, 0} /* arghrad surface lights on sky faces */;
+    lockable_vec_t sunlight{strings{"sunlight", "sun_light"}, 0.0}; /* main sun */
+    lockable_vec3_t sunlight_color{
+        strings{"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+    lockable_vec_t sun2{"sun2", 0.0}; /* second sun */
+    lockable_vec3_t sun2_color{"sun2_color", 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+    lockable_vec_t sunlight2{"sunlight2", 0.0}; /* top sky dome */
+    lockable_vec3_t sunlight2_color{
+        strings{"sunlight2_color", "sunlight_color2"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+    lockable_vec_t sunlight3{"sunlight3", 0.0}; /* bottom sky dome */
+    lockable_vec3_t sunlight3_color{
+        strings{"sunlight3_color", "sunlight_color3"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+    lockable_vec_t sunlight_dirt{"sunlight_dirt", 0.0};
+    lockable_vec_t sunlight2_dirt{"sunlight2_dirt", 0.0};
+    lockable_vec3_t sunvec{strings{"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, -90.0, 0.0,
+        vec3_transformer_t::MANGLE_TO_VEC}; /* defaults to straight down */
+    lockable_vec3_t sun2vec{
+        "sun2_mangle", 0.0, -90.0, 0.0, vec3_transformer_t::MANGLE_TO_VEC}; /* defaults to straight down */
+    lockable_vec_t sun_deviance{"sunlight_penumbra", 0.0, 0.0, 180.0};
+    lockable_vec3_t sky_surface{
+        strings{"sky_surface", "sun_surface"}, 0, 0, 0} /* arghrad surface lights on sky faces */;
 
     settingsdict_t settings()
     {

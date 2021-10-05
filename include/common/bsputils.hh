@@ -41,7 +41,7 @@ int Face_VertexAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
 const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
 qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f);
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
-const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face); 
+const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face);
 const rgba_miptex_t *Face_RgbaMiptex(const mbsp_t *bsp, const mface_t *face);
 const std::string &Face_TextureName(const mbsp_t *bsp, const mface_t *face);
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);

@@ -456,7 +456,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 
     // handle "_mincolor"
     {
-        qvec3d mincolor {};
+        qvec3d mincolor{};
 
         GetVectorForKey(entity, "_mincolor", mincolor);
         if (VectorCompare(vec3_origin, mincolor, EQUAL_EPSILON)) {
@@ -1559,8 +1559,7 @@ static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
         LogPrint("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
-            mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1],
-            (int)mapface.planepts[0][2]);
+            mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
 
         // Reset texturing to sensible defaults
         const double shift[2] = {0, 0};
@@ -1735,8 +1734,7 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
 static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
 {
     const qmat3x3d scaleM{// column-major...
-        scale[0], 0.0, 0.0, 0.0, scale[1], 0.0, 0.0, 0.0,
-        scale[2]};
+        scale[0], 0.0, 0.0, 0.0, scale[1], 0.0, 0.0, 0.0, scale[2]};
 
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
@@ -1751,9 +1749,7 @@ static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
     // update texinfo
 
     const qmat3x3d inversescaleM{// column-major...
-        1 / scale[0], 0.0, 0.0, 0.0, 1 / scale[1], 0.0, 0.0, 0.0,
-        1 / scale[2]
-    };
+        1 / scale[0], 0.0, 0.0, 0.0, 1 / scale[1], 0.0, 0.0, 0.0, 1 / scale[2]};
 
     const auto &texvecs = face->get_texvecs();
     texvecf newtexvecs;
@@ -1763,7 +1759,7 @@ static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
         const qvec3f in_first3(in);
 
         const qvec3f out_first3 = inversescaleM * in_first3;
-        newtexvecs[i] = { out_first3[0], out_first3[1], out_first3[2], in[3] };
+        newtexvecs[i] = {out_first3[0], out_first3[1], out_first3[2], in[3]};
     }
 
     face->set_texvecs(newtexvecs);
@@ -1797,7 +1793,7 @@ static void RotateMapFace(mapface_t *face, const qvec3d &angles)
         const qvec3f in_first3(in);
 
         const qvec3f out_first3 = rotation * in_first3;
-        newtexvecs[i] = { out_first3[0], out_first3[1], out_first3[2], in[3] };
+        newtexvecs[i] = {out_first3[0], out_first3[1], out_first3[2], in[3]};
     }
 
     face->set_texvecs(newtexvecs);
@@ -1821,7 +1817,7 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
         qvec4f out = texvecs.at(i);
         // CHECK: precision loss here?
         out[3] += qv::dot(qvec3f(out), qvec3f(offset) * -1.0f);
-        newtexvecs[i] = { out[0], out[1], out[2], out[3] };
+        newtexvecs[i] = {out[0], out[1], out[2], out[3]};
     }
 
     face->set_texvecs(newtexvecs);
@@ -2004,7 +2000,7 @@ void LoadMapFile(void)
 {
     char *buf;
     int length;
-    
+
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     length = LoadFile(options.szMapName, &buf, true);
@@ -2342,7 +2338,8 @@ static void TestExpandBrushes(const mapentity_t *src)
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        brush_t *hull1brush = LoadBrush(src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? -1 : 1);
+        brush_t *hull1brush = LoadBrush(
+            src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? -1 : 1);
 
         if (hull1brush != nullptr)
             hull1brushes.push_back(hull1brush);

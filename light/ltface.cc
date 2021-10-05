@@ -46,7 +46,7 @@ std::atomic<uint32_t> fully_transparent_lightmaps;
 qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, const qvec3f &world)
 {
     const gtexinfo_t *tex = Face_Texinfo(bsp, face);
-    qvec2f coord { };
+    qvec2f coord{};
 
     if (tex == nullptr)
         return coord;
@@ -115,8 +115,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
                   "   surface {}, {} extents = {}, scale = {}\n"
                   "   texture {} at ({})\n"
                   "   surface normal ({})\n",
-                Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname,
-                point, plane.normal());
+                Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname, point, plane.normal());
         }
     }
 }
@@ -135,7 +134,7 @@ int faceextents_t::numsamples() const
 }
 qvec2i faceextents_t::texsize() const
 {
-    return { width(), height() };
+    return {width(), height()};
 }
 
 int faceextents_t::indexOf(const qvec2i &lm) const
@@ -327,7 +326,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
         VectorAdd(worldmins, radius, surf->origin);
         surf->radius = VectorLength(radius);
 
-        surf->bounds = { worldmins, worldmaxs };
+        surf->bounds = {worldmins, worldmaxs};
     }
 
     for (int i = 0; i < 2; i++) {
@@ -342,8 +341,8 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
                   "   face {}, {} extents = {}, scale = {}\n"
                   "   texture {} at [{}]\n"
                   "   surface normal [{}]\n",
-                Face_GetNum(bsp, face), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname,
-                worldpoint, plane.normal);
+                Face_GetNum(bsp, face), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname, worldpoint,
+                plane.normal);
         }
     }
 }
@@ -357,7 +356,7 @@ public:
     qvec3f m_interpolatedNormal;
 
     position_t(qvec3f position)
-        : m_unoccluded(false), m_actualFace(nullptr), m_position(position), m_interpolatedNormal({ })
+        : m_unoccluded(false), m_actualFace(nullptr), m_position(position), m_interpolatedNormal({})
     {
     }
 
@@ -391,8 +390,8 @@ static float TexSpaceDist(const mbsp_t *bsp, const mface_t *face, const qvec3f &
    both for phong shading to look good, as well as general light quality
 
  */
-static position_t PositionSamplePointOnFace(const mbsp_t *bsp, const mface_t *face, const bool phongShaded,
-    const qvec3f &point, const qvec3f &modelOffset);
+static position_t PositionSamplePointOnFace(
+    const mbsp_t *bsp, const mface_t *face, const bool phongShaded, const qvec3f &point, const qvec3f &modelOffset);
 
 std::vector<const mface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const mface_t *face)
 {
@@ -710,8 +709,7 @@ static void CalcPoints(
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
-            const auto res = CalcPointNormal(
-                bsp, face, point, phongshaded, surf->lightmapscale, 0, offset);
+            const auto res = CalcPointNormal(bsp, face, point, phongshaded, surf->lightmapscale, 0, offset);
 
             surf->occluded[i] = !res.m_unoccluded;
             *realfacenum = res.m_actualFace != nullptr ? Face_GetNum(bsp, res.m_actualFace) : -1;
@@ -728,8 +726,8 @@ static void CalcPoints(
     }
 }
 
-static bool Lightsurf_Init(const modelinfo_t *modelinfo, const mface_t *face, const mbsp_t *bsp,
-    lightsurf_t *lightsurf, facesup_t *facesup)
+static bool Lightsurf_Init(
+    const modelinfo_t *modelinfo, const mface_t *face, const mbsp_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
 {
     /*FIXME: memset can be slow on large datasets*/
     //    memset(lightsurf, 0, sizeof(*lightsurf));
@@ -826,7 +824,7 @@ static bool Lightsurf_Init(const modelinfo_t *modelinfo, const mface_t *face, co
     lightsurf->bounds = lightsurf->bounds.translate(modelinfo->offset);
 
     /* Allocate occlusion array */
-    lightsurf->occlusion = new float[lightsurf->numpoints] { };
+    lightsurf->occlusion = new float[lightsurf->numpoints]{};
 
     lightsurf->intersection_stream = MakeIntersectionRayStream(lightsurf->numpoints);
     lightsurf->occlusion_stream = MakeOcclusionRayStream(lightsurf->numpoints);
@@ -837,7 +835,7 @@ static void Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *light
 {
     if (lightmap->samples == NULL) {
         /* first use of this lightmap, allocate the storage for it. */
-        lightmap->samples = new lightsample_t[lightsurf->numpoints] { };
+        lightmap->samples = new lightsample_t[lightsurf->numpoints]{};
     } else {
         /* clear only the data that is going to be merged to it. there's no point clearing more */
         memset(lightmap->samples, 0, sizeof(*lightmap->samples) * lightsurf->numpoints);
@@ -984,11 +982,12 @@ static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *en
     return add;
 }
 
-static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point,
-    qvec3d &result);
+static bool LightFace_SampleMipTex(
+    const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point, qvec3d &result);
 
-static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm, const qvec3d &surfpoint,
-    bool twosided, qvec3d &color_out, qvec3d &surfpointToLightDir_out, qvec3d &normalmap_addition_out, float *dist_out)
+static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm,
+    const qvec3d &surfpoint, bool twosided, qvec3d &color_out, qvec3d &surfpointToLightDir_out,
+    qvec3d &normalmap_addition_out, float *dist_out)
 {
     float dist = GetDir(surfpoint, entity->origin.vec3Value(), surfpointToLightDir_out);
     if (dist < 0.1) {
@@ -1053,8 +1052,7 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
                 }
                 fadedist = qmax(0.0f, fadedist);
                 break;
-            default:
-                FError("Internal error: formula not handled");
+            default: FError("Internal error: formula not handled");
         }
     }
     return fadedist;
@@ -1214,7 +1212,7 @@ static bool Matrix4x4_CM_Project(const qvec3d &in, qvec3d &out, const std::array
     bool result = true;
 
     qvec4d v;
-    Matrix4x4_CM_Transform4(modelviewproj, { in, 1 }, v);
+    Matrix4x4_CM_Transform4(modelviewproj, {in, 1}, v);
 
     v[0] /= v[3];
     v[1] /= v[3];
@@ -1229,8 +1227,8 @@ static bool Matrix4x4_CM_Project(const qvec3d &in, qvec3d &out, const std::array
         result = false; // beyond far clip plane
     return result;
 }
-static bool LightFace_SampleMipTex(const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point,
-    qvec3d &result)
+static bool LightFace_SampleMipTex(
+    const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point, qvec3d &result)
 {
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
     // this is because we're treating it like a cubemap. why? no idea.
@@ -1304,7 +1302,7 @@ std::map<int, qvec3f> GetDirectLighting(
         vec3_t surfpointToLightDir;
         const float surfpointToLightDist =
             qmax(128.0, GetDir(vpl.pos, origin,
-                             surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
+                            surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
         const float angle = DotProduct(surfpointToLightDir, normal);
         if (angle <= 0)
             continue;
@@ -1838,8 +1836,7 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
 }
 
 // returns color in [0,255]
-inline qvec3f BounceLight_ColorAtDist(
-    const globalconfig_t &cfg, float area, const qvec3f &bounceLightColor, float dist)
+inline qvec3f BounceLight_ColorAtDist(const globalconfig_t &cfg, float area, const qvec3f &bounceLightColor, float dist)
 {
     // clamp away hotspots
     if (dist < 128.0f) {
@@ -1868,17 +1865,17 @@ static qvec3f SurfaceLight_ColorAtDist(
 
 // dir: vpl -> sample point direction
 // returns color in [0,255]
-inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t *vpl,
-    const qvec3f &bounceLightColor, const qvec3f &dir, const float dist, const qvec3f &origin, const qvec3f &normal)
+inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t *vpl, const qvec3f &bounceLightColor,
+    const qvec3f &dir, const float dist, const qvec3f &origin, const qvec3f &normal)
 {
     const float dp1 = qv::dot(vpl->surfnormal, dir);
     if (dp1 < 0.0f)
-        return { }; // sample point behind vpl
+        return {}; // sample point behind vpl
 
     const qvec3f sp_vpl = dir * -1.0f;
     const float dp2 = qv::dot(sp_vpl, normal);
     if (dp2 < 0.0f)
-        return { }; // vpl behind sample face
+        return {}; // vpl behind sample face
 
     // get light contribution
     const qvec3f result = BounceLight_ColorAtDist(cfg, vpl->area, bounceLightColor, dist);
@@ -1999,8 +1996,8 @@ static void LightFace_Bounce(
                     continue; // FIXME: nudge or something
                 dir /= dist;
 
-                const qvec3f indirect = GetIndirectLighting(cfg, &vpl, color, dir, dist,
-                    lightsurf->points[i], lightsurf->normals[i]);
+                const qvec3f indirect =
+                    GetIndirectLighting(cfg, &vpl, color, dir, dist, lightsurf->points[i], lightsurf->normals[i]);
 
                 if (LightSample_Brightness(indirect) < 0.25)
                     continue;
@@ -2115,7 +2112,7 @@ static void LightFace_Bounce(
             }
 
             if (!(fabs(1.0f - qv::length(raydir)) < 0.1)) {
-                //fmt::print("bad raydir: {} {} {} (len {})\n", raydir.x, raydir.y, raydir.z, qv::length(raydir));
+                // fmt::print("bad raydir: {} {} {} (len {})\n", raydir.x, raydir.y, raydir.z, qv::length(raydir));
                 continue;
             }
 
@@ -2571,7 +2568,7 @@ static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t
             qvec3d &color = lightmap.samples[i].color;
 
             /* Fix any negative values */
-            color = qv::max(color, { 0 });
+            color = qv::max(color, {0});
 
             /* Scale and clamp any out-of-range samples */
             VectorScale(color, cfg.rangescale.floatValue(), color);
@@ -2825,7 +2822,7 @@ static std::vector<qvec4f> FloodFillTransparent(const std::vector<qvec4f> &input
                     // average the neighbouring non-transparent samples
 
                     int opaque_neighbours = 0;
-                    qvec3f neighbours_sum { };
+                    qvec3f neighbours_sum{};
                     for (int y0 = -1; y0 <= 1; y0++) {
                         for (int x0 = -1; x0 <= 1; x0++) {
                             const int x1 = x + x0;
@@ -2957,8 +2954,8 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
     const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux);
 
-static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
-    const lightmapdict_t *lightmaps)
+static void WriteLightmaps(
+    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const lightmapdict_t *lightmaps)
 {
     const int actual_width = lightsurf->texsize[0] + 1;
     const int actual_height = lightsurf->texsize[1] + 1;
@@ -3009,7 +3006,8 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
             continue;
 
         // skip lightmaps where all samples have brightness below 1
-        if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff, the face is drawn fullbright instead of black (Q1)
+        if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff,
+                                                           // the face is drawn fullbright instead of black (Q1)
             const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
             if (maxb < 1)
                 continue;
@@ -3027,7 +3025,8 @@ static void WriteLightmaps(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     for (const auto &pair : sortable) {
         if (sorted.size() == MAXLIGHTMAPS) {
             LogPrint("WARNING: Too many light styles on a face\n"
-                     "         lightmap point near [{}]\n", lightsurf->points[0]);
+                     "         lightmap point near [{}]\n",
+                lightsurf->points[0]);
             break;
         }
 
@@ -3132,9 +3131,10 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     const std::vector<qvec4f> output_color =
         IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, oversample);
     std::optional<std::vector<qvec4f>> output_dir;
-    
+
     if (lux) {
-        output_dir = IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
+        output_dir = IntegerDownsampleImage(
+            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
     }
 
     // copy from the float buffers to byte buffers in .bsp / .lit / .lux
@@ -3274,10 +3274,10 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
         LightFace_CalculateDirt(lightsurf);
 
     /*
-        * The lighting procedure is: cast all positive lights, fix
-        * minlight levels, then cast all negative lights. Finally, we
-        * clamp any values that may have gone negative.
-        */
+     * The lighting procedure is: cast all positive lights, fix
+     * minlight levels, then cast all negative lights. Finally, we
+     * clamp any values that may have gone negative.
+     */
 
     if (debugmode == debugmode_none) {
 
@@ -3309,7 +3309,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
         if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
-            vec3_t color;   
+            vec3_t color;
             Face_LookupTextureColor(bsp, face, color);
             LightFace_Min(bsp, face, color, texinfo->value * 2.0f, lightsurf,
                 lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface

@@ -41,14 +41,11 @@
 /* FIXME - share header with qbsp, etc. */
 struct wadinfo_t
 {
-    std::array<char, 4> identification = { 'W', 'A', 'D', '2' }; // should be WAD2
+    std::array<char, 4> identification = {'W', 'A', 'D', '2'}; // should be WAD2
     int32_t numlumps;
     int32_t infotableofs = sizeof(wadinfo_t);
 
-    auto stream_data()
-    {
-        return std::tie(identification, numlumps, infotableofs);
-    }
+    auto stream_data() { return std::tie(identification, numlumps, infotableofs); }
 };
 
 struct lumpinfo_t
@@ -61,10 +58,7 @@ struct lumpinfo_t
     char pad1, pad2;
     std::array<char, 16> name; // must be null terminated
 
-    auto stream_data()
-    {
-        return std::tie(filepos, disksize, size, type, compression, pad1, pad2, name);
-    }
+    auto stream_data() { return std::tie(filepos, disksize, size, type, compression, pad1, pad2, name); }
 };
 
 static void ExportWad(std::ofstream &wadfile, mbsp_t *bsp)
@@ -82,8 +76,8 @@ static void ExportWad(std::ofstream &wadfile, mbsp_t *bsp)
     wadinfo_t header;
     header.numlumps = numvalid;
     wadfile <= header;
-    
-    lumpinfo_t lump { };
+
+    lumpinfo_t lump{};
     lump.type = 'D';
 
     /* Miptex data will follow the lump headers */
@@ -236,7 +230,8 @@ static void CheckBSPFile(const mbsp_t *bsp)
         if (face->planenum < 0)
             fmt::print("warning: face {} has negative planenum ({})\n", i, face->planenum);
         if (face->planenum >= bsp->dplanes.size())
-            fmt::print("warning: face {} has planenum out of range ({} >= {})\n", i, face->planenum, bsp->dplanes.size());
+            fmt::print(
+                "warning: face {} has planenum out of range ({} >= {})\n", i, face->planenum, bsp->dplanes.size());
         referenced_planenums.insert(face->planenum);
 
         /* lightofs check */
@@ -244,8 +239,8 @@ static void CheckBSPFile(const mbsp_t *bsp)
             fmt::print("warning: face {} has negative light offset ({})\n", i, face->lightofs);
         if (face->lightofs >= bsp->dlightdata.size())
             fmt::print("warning: face {} has light offset out of range "
-                        "({} >= {})\n",
-                        i, face->lightofs, bsp->dlightdata.size());
+                       "({} >= {})\n",
+                i, face->lightofs, bsp->dlightdata.size());
 
         /* edge check */
         if (face->firstedge < 0)
@@ -270,8 +265,8 @@ static void CheckBSPFile(const mbsp_t *bsp)
             const uint32_t vertex = (*edge)[j];
             if (vertex > bsp->dvertexes.size())
                 fmt::print("warning: edge {} has vertex {} out range "
-                            "({} >= {})\n",
-                            i, j, vertex, bsp->dvertexes.size());
+                           "({} >= {})\n",
+                    i, j, vertex, bsp->dvertexes.size());
             referenced_vertexes.insert(vertex);
         }
     }
@@ -298,14 +293,14 @@ static void CheckBSPFile(const mbsp_t *bsp)
         const uint32_t endmarksurface = leaf->firstmarksurface + leaf->nummarksurfaces;
         if (endmarksurface > bsp->dleaffaces.size())
             fmt::print("warning: leaf {} has marksurfaces out of range "
-                        "({}..{} >= {})\n",
-                        i, leaf->firstmarksurface, endmarksurface - 1, bsp->dleaffaces.size());
+                       "({}..{} >= {})\n",
+                i, leaf->firstmarksurface, endmarksurface - 1, bsp->dleaffaces.size());
         if (leaf->visofs < -1)
             fmt::print("warning: leaf {} has negative visdata offset ({})\n", i, leaf->visofs);
         if (leaf->visofs >= bsp->dvis.bits.size())
             fmt::print("warning: leaf {} has visdata offset out of range "
-                        "({} >= {})\n",
-                        i, leaf->visofs, bsp->dvis.bits.size());
+                       "({} >= {})\n",
+                i, leaf->visofs, bsp->dvis.bits.size());
     }
 
     /* nodes */
@@ -317,12 +312,12 @@ static void CheckBSPFile(const mbsp_t *bsp)
             const int32_t child = node->children[j];
             if (child >= 0 && child >= bsp->dnodes.size())
                 fmt::print("warning: node {} has child {} (node) out of range "
-                            "({} >= {})\n",
-                            i, j, child, bsp->dnodes.size());
+                           "({} >= {})\n",
+                    i, j, child, bsp->dnodes.size());
             if (child < 0 && -child - 1 >= bsp->dleafs.size())
                 fmt::print("warning: node {} has child {} (leaf) out of range "
-                            "({} >= {})\n",
-                            i, j, -child - 1, bsp->dleafs.size());
+                           "({} >= {})\n",
+                    i, j, -child - 1, bsp->dleafs.size());
         }
 
         if (node->children[0] == node->children[1]) {
@@ -340,8 +335,8 @@ static void CheckBSPFile(const mbsp_t *bsp)
             const int32_t child = clipnode->children[j];
             if (child >= 0 && child >= bsp->dclipnodes.size())
                 fmt::print("warning: clipnode {} has child {} (clipnode) out of range "
-                            "({} >= {})\n",
-                            i, j, child, bsp->dclipnodes.size());
+                           "({} >= {})\n",
+                    i, j, child, bsp->dclipnodes.size());
             if (child < 0 && child < CONTENTS_MIN)
                 fmt::print("warning: clipnode {} has invalid contents ({}) for child {}\n", i, child, j);
         }
@@ -439,8 +434,8 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
         // Search for a face in bsp touching refFaceCentroid.
         auto *matchedFace = BSP_FindFaceAtPoint(&bsp, world, wantedPoint, wantedNormal);
         if (matchedFace == nullptr) {
-            fmt::print("couldn't find a face at {} {} {} normal {} {} {}\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
-                wantedNormal[0], wantedNormal[1], wantedNormal[2]);
+            fmt::print("couldn't find a face at {} {} {} normal {} {} {}\n", wantedPoint[0], wantedPoint[1],
+                wantedPoint[2], wantedNormal[0], wantedNormal[1], wantedNormal[2]);
         }
 
         // TODO: run on some more complex maps
@@ -448,9 +443,9 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
         //        if (refFaceSelfCheck == refFace) {
         //            matches ++;
         //        } else {
-        //            fmt::print("not match at {} {} {} wanted {} got {}\n", wantedPoint[0], wantedPoint[1], wantedPoint[2],
-        //            refFace, refFaceSelfCheck); Face_DebugPrint(refBsp, refFace); Face_DebugPrint(refBsp,
-        //            refFaceSelfCheck); notmat++;
+        //            fmt::print("not match at {} {} {} wanted {} got {}\n", wantedPoint[0], wantedPoint[1],
+        //            wantedPoint[2], refFace, refFaceSelfCheck); Face_DebugPrint(refBsp, refFace);
+        //            Face_DebugPrint(refBsp, refFaceSelfCheck); notmat++;
         //        }
     }
 }
@@ -555,7 +550,7 @@ int main(int argc, char **argv)
             fmt::print("-> writing {}... ", source);
 
             std::ofstream f(source);
-            
+
             if (!f)
                 Error("couldn't open {} for writing\n", source);
 

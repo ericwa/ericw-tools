@@ -49,9 +49,9 @@
 #define Q_strcasecmp stricmp
 #endif
 
-extern std::filesystem::path    qdir, // c:/Quake/, c:/Hexen II/ etc.
-                                gamedir, // c:/Quake/mymod/
-                                basedir; // c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
+extern std::filesystem::path qdir, // c:/Quake/, c:/Hexen II/ etc.
+    gamedir, // c:/Quake/mymod/
+    basedir; // c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
 
 bool string_iequals(const std::string &a, const std::string &b); // mxd
 
@@ -112,15 +112,14 @@ inline time_point I_FloatTime()
 
 [[noreturn]] void Error(const char *error);
 
-template<typename ...Args>
+template<typename... Args>
 [[noreturn]] inline void Error(const char *fmt, const Args &...args)
 {
     auto formatted = fmt::format(fmt, std::forward<const Args &>(args)...);
     Error(formatted.c_str());
 }
 
-#define FError(fmt, ...) \
-    Error("{}: " fmt, __func__, __VA_ARGS__)
+#define FError(fmt, ...) Error("{}: " fmt, __func__, __VA_ARGS__)
 
 using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;
 
@@ -143,18 +142,18 @@ long LoadFile(const std::filesystem::path &filename, void *destptr);
 // For cpp20, #include <bit> instead
 namespace std
 {
-    enum class endian
-    {
-        little = 0,
-        big = 1,
-        
+enum class endian
+{
+    little = 0,
+    big = 1,
+
 #ifdef __BIG_ENDIAN__
-        native = big
+    native = big
 #else
-        native = little
+    native = little
 #endif
-    };
-}
+};
+} // namespace std
 
 // C/C++ portable and defined method of swapping bytes.
 template<typename T>
@@ -167,7 +166,7 @@ inline T byte_swap(const T &val)
     for (size_t i = 0; i < sizeof(T); i++) {
         pRetVal[sizeof(T) - 1 - i] = pVal[i];
     }
-unsigned short CRC_Block (const unsigned char *start, int count);
+    unsigned short CRC_Block(const unsigned char *start, int count);
 
     return retVal;
 }
@@ -175,7 +174,7 @@ unsigned short CRC_Block (const unsigned char *start, int count);
 // little <-> native
 inline int16_t LittleShort(int16_t l)
 {
-    if constexpr(std::endian::native == std::endian::little)
+    if constexpr (std::endian::native == std::endian::little)
         return l;
     else
         return byte_swap(l);
@@ -183,7 +182,7 @@ inline int16_t LittleShort(int16_t l)
 
 inline int32_t LittleLong(int32_t l)
 {
-    if constexpr(std::endian::native == std::endian::little)
+    if constexpr (std::endian::native == std::endian::little)
         return l;
     else
         return byte_swap(l);
@@ -191,7 +190,7 @@ inline int32_t LittleLong(int32_t l)
 
 inline float LittleFloat(float l)
 {
-    if constexpr(std::endian::native == std::endian::little)
+    if constexpr (std::endian::native == std::endian::little)
         return l;
     else
         return byte_swap(l);
@@ -200,7 +199,7 @@ inline float LittleFloat(float l)
 // big <-> native
 inline int16_t BigShort(int16_t l)
 {
-    if constexpr(std::endian::native == std::endian::big)
+    if constexpr (std::endian::native == std::endian::big)
         return l;
     else
         return byte_swap(l);
@@ -208,7 +207,7 @@ inline int16_t BigShort(int16_t l)
 
 inline int32_t BigLong(int32_t l)
 {
-    if constexpr(std::endian::native == std::endian::big)
+    if constexpr (std::endian::native == std::endian::big)
         return l;
     else
         return byte_swap(l);
@@ -216,7 +215,7 @@ inline int32_t BigLong(int32_t l)
 
 inline float BigFloat(float l)
 {
-    if constexpr(std::endian::native == std::endian::big)
+    if constexpr (std::endian::native == std::endian::big)
         return l;
     else
         return byte_swap(l);
@@ -246,52 +245,52 @@ inline void Q_assert_(bool success, const char *expr, const char *file, int line
 // with the manipulator below.
 namespace detail
 {
-    inline int32_t endian_i()
-    {
-        static int32_t i = std::ios_base::xalloc();
-        return i;
-    }
+inline int32_t endian_i()
+{
+    static int32_t i = std::ios_base::xalloc();
+    return i;
+}
 
-    // 0 is the default for iwords
-    enum class st_en : long
-    {
-        na = 0,
-        le = 1,
-        be = 2,
-    };
+// 0 is the default for iwords
+enum class st_en : long
+{
+    na = 0,
+    le = 1,
+    be = 2,
+};
 
-    inline bool need_swap(std::ios_base &os)
-    {
-        st_en e = static_cast<st_en>(os.iword(detail::endian_i()));
+inline bool need_swap(std::ios_base &os)
+{
+    st_en e = static_cast<st_en>(os.iword(detail::endian_i()));
 
-        // if we're in a "default state" of native endianness, we never
-        // need to swap.
-        if (e == st_en::na)
-            return false;
+    // if we're in a "default state" of native endianness, we never
+    // need to swap.
+    if (e == st_en::na)
+        return false;
 
-        return (static_cast<int32_t>(e) - 1) != static_cast<int32_t>(std::endian::native);
-    }
+    return (static_cast<int32_t>(e) - 1) != static_cast<int32_t>(std::endian::native);
+}
 
-    template<typename T>
-    inline void write_swapped(std::ostream &s, const T &val)
-    {
-        const char *pVal = reinterpret_cast<const char *>(&val);
+template<typename T>
+inline void write_swapped(std::ostream &s, const T &val)
+{
+    const char *pVal = reinterpret_cast<const char *>(&val);
 
-        for (int32_t i = sizeof(T) - 1; i >= 0; i--) {
-            s.write(&pVal[i], 1);
-        }
-    }
-
-    template<typename T>
-    inline void read_swapped(std::istream &s, T &val)
-    {
-        char *pRetVal = reinterpret_cast<char *>(&val);
-        
-        for (int32_t i = sizeof(T) - 1; i >= 0; i--) {
-            s.read(&pRetVal[i], 1);
-        }
+    for (int32_t i = sizeof(T) - 1; i >= 0; i--) {
+        s.write(&pVal[i], 1);
     }
 }
+
+template<typename T>
+inline void read_swapped(std::istream &s, T &val)
+{
+    char *pRetVal = reinterpret_cast<char *>(&val);
+
+    for (int32_t i = sizeof(T) - 1; i >= 0; i--) {
+        s.read(&pRetVal[i], 1);
+    }
+}
+} // namespace detail
 
 template<std::endian e>
 inline std::ios_base &endianness(std::ios_base &os)
@@ -399,7 +398,7 @@ inline std::ostream &operator<=(std::ostream &s, const double &c)
 template<typename... T>
 inline std::ostream &operator<=(std::ostream &s, const std::tuple<T...> &tuple)
 {
-    std::apply([&s](auto&&... args) { ((s <= args), ...); }, tuple);
+    std::apply([&s](auto &&...args) { ((s <= args), ...); }, tuple);
     return s;
 }
 
@@ -413,7 +412,8 @@ inline std::ostream &operator<=(std::ostream &s, const std::array<T, N> &c)
 }
 
 template<typename T>
-inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_data)>, std::ostream &> operator<=(std::ostream &s, const T &obj)
+inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_data)>, std::ostream &> operator<=(
+    std::ostream &s, const T &obj)
 {
     // A big ugly, but, this skips us needing a const version of stream_data()
     s <= const_cast<T &>(obj).stream_data();
@@ -517,7 +517,7 @@ inline std::istream &operator>=(std::istream &s, double &c)
 template<typename... T>
 inline std::istream &operator>=(std::istream &s, std::tuple<T...> &tuple)
 {
-    std::apply([&s](auto&&... args) { ((s >= args), ...); }, tuple);
+    std::apply([&s](auto &&...args) { ((s >= args), ...); }, tuple);
     return s;
 }
 
@@ -531,7 +531,8 @@ inline std::istream &operator>=(std::istream &s, std::array<T, N> &c)
 }
 
 template<typename T>
-inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_data)>, std::istream &> operator>=(std::istream &s, T &obj)
+inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_data)>, std::istream &> operator>=(
+    std::istream &s, T &obj)
 {
     s >= obj.stream_data();
     return s;
@@ -561,7 +562,7 @@ constexpr bool numeric_cast_will_overflow(const Src &value)
                 return true;
             }
         }
-        
+
         if constexpr (negative_overflow_possible) {
             if (value < 0) {
                 return true;
@@ -583,7 +584,7 @@ constexpr bool numeric_cast_will_overflow(const Src &value)
                 return true;
             }
         }
-        
+
         if constexpr (negative_overflow_possible) {
             if (value < DstLim::lowest()) {
                 return true;
@@ -600,37 +601,37 @@ constexpr Dst numeric_cast(const Src &value, const char *overflow_message = "val
     if (numeric_cast_will_overflow<Dst, Src>(value)) {
         throw std::overflow_error(overflow_message);
     }
-    
+
     return static_cast<Dst>(value);
 }
 
 // Memory streams, because C++ doesn't supply these.
-struct membuf: std::streambuf
+struct membuf : std::streambuf
 {
 public:
     // construct membuf for reading and/or writing
-	membuf(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
-	{
+    membuf(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    {
         auto cbase = reinterpret_cast<char *>(base);
 
         if (which & std::ios_base::in) {
-    		this->setg(cbase, cbase, cbase + size);
+            this->setg(cbase, cbase, cbase + size);
         }
 
         if (which & std::ios_base::out) {
             this->setp(cbase, cbase, cbase + size);
         }
-	}
+    }
 
     // construct membuf for reading
-	membuf(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
-	{
+    membuf(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+    {
         auto cbase = const_cast<char *>(reinterpret_cast<const char *>(base));
 
         if (which & std::ios_base::in) {
-    		this->setg(cbase, cbase, cbase + size);
+            this->setg(cbase, cbase, cbase + size);
         }
-	}
+    }
 
     // seek operations
     pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
@@ -642,7 +643,7 @@ public:
         if (which & std::ios_base::out) {
             setp(pbase(), pbase() + off, epptr());
         }
-        
+
         if (which & std::ios_base::in) {
             return gptr() - eback();
         } else {
@@ -650,7 +651,8 @@ public:
         }
     }
 
-    pos_type seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
         if (which & std::ios_base::in) {
             if (dir == std::ios_base::cur)
@@ -669,7 +671,7 @@ public:
             else if (dir == std::ios_base::beg)
                 setp(pbase(), pbase() + off, epptr());
         }
-        
+
         if (which & std::ios_base::in) {
             return gptr() - eback();
         } else {
@@ -679,7 +681,7 @@ public:
 
 protected:
     // put stuff
-    std::streamsize xsputn(const char_type *s, std::streamsize n) override 
+    std::streamsize xsputn(const char_type *s, std::streamsize n) override
     {
         if (pptr() == epptr()) {
             return traits_type::eof();
@@ -694,13 +696,10 @@ protected:
         return num_write;
     };
 
-    int_type overflow(int_type ch) override 
-    {
-        return traits_type::eof();
-    }
+    int_type overflow(int_type ch) override { return traits_type::eof(); }
 
     // get stuff
-    std::streamsize xsgetn(char_type *s, std::streamsize n) override 
+    std::streamsize xsgetn(char_type *s, std::streamsize n) override
     {
         if (gptr() == egptr()) {
             return traits_type::eof();
@@ -715,20 +714,16 @@ protected:
         return num_read;
     };
 
-    int_type underflow() override 
-    {
-        return traits_type::eof();
-    }
+    int_type underflow() override { return traits_type::eof(); }
 };
 
-struct memstream: virtual membuf, std::ostream, std::istream
+struct memstream : virtual membuf, std::ostream, std::istream
 {
-	memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) :
-		membuf(base, size, which),
-		std::ostream(static_cast<std::streambuf*>(this)),
-		std::istream(static_cast<std::streambuf*>(this))
-	{
-	}
+    memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+        : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
+          std::istream(static_cast<std::streambuf *>(this))
+    {
+    }
 };
 
 template<class T, class = void>
@@ -738,11 +733,9 @@ struct is_iterator : std::false_type
 
 template<class T>
 struct is_iterator<T,
-    std::void_t<typename std::iterator_traits<T>::difference_type,
-                typename std::iterator_traits<T>::pointer,
-                typename std::iterator_traits<T>::reference,
-                typename std::iterator_traits<T>::value_type,
-                typename std::iterator_traits<T>::iterator_category>> : std::true_type
+    std::void_t<typename std::iterator_traits<T>::difference_type, typename std::iterator_traits<T>::pointer,
+        typename std::iterator_traits<T>::reference, typename std::iterator_traits<T>::value_type,
+        typename std::iterator_traits<T>::iterator_category>> : std::true_type
 {
 };
 
@@ -752,4 +745,4 @@ constexpr bool is_iterator_v = is_iterator<T>::value;
 void CRC_Init(unsigned short *crcvalue);
 void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
 unsigned short CRC_Value(unsigned short crcvalue);
-unsigned short CRC_Block (const unsigned char *start, int count);
+unsigned short CRC_Block(const unsigned char *start, int count);

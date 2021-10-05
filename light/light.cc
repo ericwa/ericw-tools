@@ -116,11 +116,11 @@ std::filesystem::path mapfilename;
 
 int dump_facenum = -1;
 bool dump_face;
-qvec3d dump_face_point { };
+qvec3d dump_face_point{};
 
 int dump_vertnum = -1;
 bool dump_vert;
-qvec3d dump_vert_point { };
+qvec3d dump_vert_point{};
 
 bool arghradcompat = false; // mxd
 
@@ -170,8 +170,8 @@ static void PrintOptionsSummary(void)
 
     for (lockable_setting_t *setting : sd.allSettings()) {
         if (setting->isChanged()) {
-            LogPrint("    \"{}\" was set to \"{}\" from {}\n", setting->primaryName(),
-                setting->stringValue(), setting->sourceString());
+            LogPrint("    \"{}\" was set to \"{}\" from {}\n", setting->primaryName(), setting->stringValue(),
+                setting->sourceString());
         }
     }
 }
@@ -389,21 +389,21 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     delete[] lux_filebase;
 
     /* greyscale data stored in a separate buffer */
-    filebase = new uint8_t[MAX_MAP_LIGHTING] { };
+    filebase = new uint8_t[MAX_MAP_LIGHTING]{};
     if (!filebase)
         FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING);
     file_p = 0;
     file_end = MAX_MAP_LIGHTING;
 
     /* litfile data stored in a separate buffer */
-    lit_filebase = new uint8_t[MAX_MAP_LIGHTING * 3] { };
+    lit_filebase = new uint8_t[MAX_MAP_LIGHTING * 3]{};
     if (!lit_filebase)
         FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
     lit_file_p = 0;
     lit_file_end = (MAX_MAP_LIGHTING * 3);
 
     /* lux data stored in a separate buffer */
-    lux_filebase = new uint8_t[MAX_MAP_LIGHTING * 3] { };
+    lux_filebase = new uint8_t[MAX_MAP_LIGHTING * 3]{};
     if (!lux_filebase)
         FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
     lux_file_p = 0;
@@ -417,7 +417,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (lmshift_lump == bspdata->bspx.entries.end() && write_litfile != ~0)
         faces_sup = nullptr; // no scales, no lit2
     else { // we have scales or lit2 output. yay...
-        faces_sup = new facesup_t[bsp.dfaces.size()] { };
+        faces_sup = new facesup_t[bsp.dfaces.size()]{};
 
         if (lmshift_lump != bspdata->bspx.entries.end()) {
             for (int i = 0; i < bsp.dfaces.size(); i++)
@@ -456,8 +456,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     if ((bouncerequired || isQuake2map) && !skiplighting) { // mxd. Print some extra stats...
         LogPrint("Indirect lights: {} bounce lights, {} surface lights ({} light points) in use.\n",
-            BounceLights().size(), SurfaceLights().size(),
-            TotalSurfacelightPoints());
+            BounceLights().size(), SurfaceLights().size(), TotalSurfacelightPoints());
     }
 
     LogPrint("Lighting Completed.\n\n");
@@ -475,7 +474,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         // NOTE: bsp.lightdatasize is already valid in the -litonly case
     }
     LogPrint("lightdatasize: {}\n", bsp.dlightdata.size());
-    
+
     // kill this stuff if its somehow found.
     bspdata->bspx.entries.erase("LMSTYLE");
     bspdata->bspx.entries.erase("LMOFFSET");
@@ -489,14 +488,14 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
                 styles[i * 4 + j] = faces_sup[i].styles[j];
         }
         bspdata->bspx.transfer("LMSTYLE", styles, sizeof(*styles) * 4 * bsp.dfaces.size());
-        bspdata->bspx.transfer("LMOFFSET", (uint8_t *&) offsets, sizeof(*offsets) * bsp.dfaces.size());
+        bspdata->bspx.transfer("LMOFFSET", (uint8_t *&)offsets, sizeof(*offsets) * bsp.dfaces.size());
     }
 }
 
 static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename, const mbsp_t *bsp)
 {
     // always create the zero'ed array
-    extended_texinfo_flags = new surfflags_t[bsp->texinfo.size()] { };
+    extended_texinfo_flags = new surfflags_t[bsp->texinfo.size()]{};
 
     std::filesystem::path filename(sourcefilename);
     filename.replace_extension("texinfo");
@@ -512,7 +511,8 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
 
     if (SafeRead(texinfofile, &header, sizeof(extended_flags_header_t)) != sizeof(extended_flags_header_t) ||
         header.num_texinfo != bsp->texinfo.size() || header.surfflags_size != sizeof(surfflags_t) ||
-        SafeRead(texinfofile, extended_texinfo_flags, sizeof(surfflags_t) * header.num_texinfo) != (sizeof(surfflags_t) * header.num_texinfo)) {
+        SafeRead(texinfofile, extended_texinfo_flags, sizeof(surfflags_t) * header.num_texinfo) !=
+            (sizeof(surfflags_t) * header.num_texinfo)) {
         LogPrint("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
         memset(extended_texinfo_flags, 0, bsp->texinfo.size() * sizeof(uint32_t));
         return;
@@ -674,7 +674,7 @@ static void SetLitNeeded()
 
 static void CheckLitNeeded(const globalconfig_t &cfg)
 {
-    static constexpr qvec3d white { 255 };
+    static constexpr qvec3d white{255};
 
     // check lights
     for (const auto &light : GetLights()) {
@@ -908,7 +908,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
         unique_normals.insert(cache.bitangents().begin(), cache.bitangents().end());
         num_normals += cache.normals().size() + cache.tangents().size() + cache.bitangents().size();
     }
-    
+
     size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
     uint8_t *data = new uint8_t[data_size];
     memstream stream(data, data_size);

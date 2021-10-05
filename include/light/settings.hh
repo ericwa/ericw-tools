@@ -180,10 +180,7 @@ public:
             setFloatValue(f);
     }
 
-    virtual std::string stringValue() const
-    {
-        return std::to_string(_value);
-    }
+    virtual std::string stringValue() const { return std::to_string(_value); }
 
     lockable_vec_t(std::vector<std::string> names, vec_t v, vec_t minval = -std::numeric_limits<vec_t>::infinity(),
         vec_t maxval = std::numeric_limits<vec_t>::infinity())
@@ -272,7 +269,7 @@ public:
 
     virtual void setStringValue(const std::string &str, bool locked = false)
     {
-        qvec3d vec {};
+        qvec3d vec{};
 
         if (sscanf(str.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]) != 3) {
             LogPrint("WARNING: Not 3 values for {}\n", primaryName());
@@ -284,10 +281,7 @@ public:
             setVec3Value(vec);
     }
 
-    virtual std::string stringValue() const
-    {
-        return qv::to_string(_value);
-    }
+    virtual std::string stringValue() const { return qv::to_string(_value); }
 };
 
 // settings dictionary

@@ -79,7 +79,7 @@ constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
 template<typename T, typename T2, typename T3>
 constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
 {
-    //static_assert(std::size(v1) == 3);
+    // static_assert(std::size(v1) == 3);
 
     cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
     cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
@@ -89,7 +89,7 @@ constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
 template<typename Tx, typename Ty>
 constexpr vec_t DotProduct(const Tx &x, const Ty &y)
 {
-    //static_assert(std::size(x) == 3);
+    // static_assert(std::size(x) == 3);
 
     return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
 }
@@ -97,7 +97,7 @@ constexpr vec_t DotProduct(const Tx &x, const Ty &y)
 template<typename Tx, typename Ty, typename Tout>
 constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
 {
-    //static_assert(std::size(x) == 3);
+    // static_assert(std::size(x) == 3);
 
     out[0] = x[0] - y[0];
     out[1] = x[1] - y[1];
@@ -107,7 +107,7 @@ constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
 template<typename Tx, typename Ty, typename Tout>
 constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
 {
-    //static_assert(std::size(x) == 3);
+    // static_assert(std::size(x) == 3);
 
     out[0] = x[0] + y[0];
     out[1] = x[1] + y[1];
@@ -117,7 +117,7 @@ constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
 template<typename TFrom, typename TTo>
 constexpr void VectorCopy(const TFrom &in, TTo &out)
 {
-    //static_assert(std::size(in) == 3 && std::size(out) == 3);
+    // static_assert(std::size(in) == 3 && std::size(out) == 3);
 
     out[0] = in[0];
     out[1] = in[1];
@@ -127,7 +127,7 @@ constexpr void VectorCopy(const TFrom &in, TTo &out)
 template<typename TFrom, typename TScale, typename TTo>
 constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
 {
-    //static_assert(std::size(v) == 3);
+    // static_assert(std::size(v) == 3);
 
     out[0] = v[0] * scale;
     out[1] = v[1] * scale;
@@ -137,7 +137,7 @@ constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
 template<typename T>
 constexpr void VectorInverse(T &v)
 {
-    //static_assert(std::size(v) == 3);
+    // static_assert(std::size(v) == 3);
 
     v[0] = -v[0];
     v[1] = -v[1];
@@ -147,7 +147,7 @@ constexpr void VectorInverse(T &v)
 template<typename T>
 constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
 {
-    //static_assert(std::size(out) == 3);
+    // static_assert(std::size(out) == 3);
 
     out[0] = x;
     out[1] = y;
@@ -157,7 +157,7 @@ constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
 template<typename T>
 constexpr void VectorClear(T &out)
 {
-    //static_assert(std::size(out) == 3);
+    // static_assert(std::size(out) == 3);
 
     out[0] = 0;
     out[1] = 0;
@@ -184,7 +184,7 @@ inline vec_t Random(void)
 template<typename Ta, typename Tb, typename Tc>
 constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
 {
-    //static_assert(std::size(vc) == 3);
+    // static_assert(std::size(vc) == 3);
 
     vc[0] = va[0] + scale * vb[0];
     vc[1] = va[1] + scale * vb[1];
@@ -194,7 +194,7 @@ constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
 template<typename T>
 constexpr vec_t VectorLengthSq(const T &v)
 {
-    //static_assert(std::size(v) == 3);
+    // static_assert(std::size(v) == 3);
 
     vec_t length = 0;
     for (int i = 0; i < 3; i++)
@@ -205,7 +205,7 @@ constexpr vec_t VectorLengthSq(const T &v)
 template<typename T>
 inline vec_t VectorLength(const T &v)
 {
-    //static_assert(std::size(v) == 3);
+    // static_assert(std::size(v) == 3);
 
     vec_t length = VectorLengthSq(v);
     length = sqrt(length);
@@ -215,7 +215,7 @@ inline vec_t VectorLength(const T &v)
 template<typename T>
 inline vec_t VectorNormalize(T &v)
 {
-    //static_assert(std::size(v) == 3);
+    // static_assert(std::size(v) == 3);
 
     vec_t length = 0;
     for (size_t i = 0; i < 3; i++)
@@ -235,7 +235,7 @@ inline vec_t VectorNormalize(T &v)
 template<typename Tstart, typename Tstop, typename Tdir>
 inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
 {
-    //static_assert(std::size(dir) == 3);
+    // static_assert(std::size(dir) == 3);
 
     VectorSubtract(stop, start, dir);
     return VectorNormalize(dir);
@@ -244,7 +244,7 @@ inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
 template<typename T>
 constexpr vec_t DistanceAbovePlane(const T &normal, const vec_t dist, const T &point)
 {
-    //static_assert(std::size(normal) == 3);
+    // static_assert(std::size(normal) == 3);
 
     return DotProduct(normal, point) - dist;
 }
@@ -460,4 +460,5 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     return result;
 }
 
-bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, const vec_t &on_epsilon = DEFAULT_ON_EPSILON);
+bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1,
+    const vec_t &on_epsilon = DEFAULT_ON_EPSILON);

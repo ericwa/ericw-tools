@@ -53,11 +53,11 @@ class light_t
 {
 public:
     bool spotlight = false;
-    qvec3d spotvec { }; // computed
+    qvec3d spotvec{}; // computed
     float spotfalloff = 0;
     float spotfalloff2 = 0;
     const rgba_miptex_t *projectedmip = nullptr; /*projected texture*/ // mxd. miptex_t -> rgba_miptex_t
-    std::array<vec_t, 16> projectionmatrix { }; /*matrix used to project the specified texture. already contains origin.*/
+    std::array<vec_t, 16> projectionmatrix{}; /*matrix used to project the specified texture. already contains origin.*/
 
     const entdict_t *epairs = nullptr;
 
@@ -70,34 +70,34 @@ public:
     const char *classname() const;
 
 public:
-    lockable_vec_t light {"light", DEFAULTLIGHTLEVEL};
-    lockable_vec_t atten {"wait", 1.0, 0.0, std::numeric_limits<vec_t>::infinity()};
-    lockable_vec_t formula {"delay", 0.0};
-    lockable_vec_t spotangle {"angle", 40.0};
-    lockable_vec_t spotangle2 {"softangle", 0.0};
-    lockable_vec_t style {"style", 0.0};
-    lockable_vec_t anglescale {strings{"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
-    lockable_vec_t dirtscale {"dirtscale", 0.0};
-    lockable_vec_t dirtgain {"dirtgain", 0};
-    lockable_vec_t dirt {"dirt", 0};
-    lockable_vec_t deviance {"deviance", 0};
-    lockable_vec_t samples {"samples", 16};
-    lockable_vec_t projfov {"project_fov", 90};
-    lockable_vec_t bouncescale {"bouncescale", 1.0};
-    lockable_vec_t dirt_off_radius {"dirt_off_radius", 0.0};
-    lockable_vec_t dirt_on_radius {"dirt_on_radius", 0.0};
-    lockable_vec_t sun {"sun", 0}; // mxd
-    lockable_bool_t sunlight2 {"sunlight2", 0};
-    lockable_bool_t sunlight3 {"sunlight3", 0};
-    lockable_vec_t falloff {"falloff", 0.0}; // mxd
-    lockable_bool_t bleed {"bleed", false};
-    lockable_vec3_t origin {"origin", 0, 0, 0};
-    lockable_vec3_t color {"color", 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_vec3_t mangle {"mangle", 0, 0, 0}; // not transformed to vec
-    lockable_vec3_t projangle {"project_mangle", 20, 0, 0}; // not transformed to vec
-    lockable_string_t project_texture {"project_texture", ""};
-    lockable_string_t suntexture {"suntexture", ""};
-    lockable_bool_t nostaticlight {"nostaticlight", false};
+    lockable_vec_t light{"light", DEFAULTLIGHTLEVEL};
+    lockable_vec_t atten{"wait", 1.0, 0.0, std::numeric_limits<vec_t>::infinity()};
+    lockable_vec_t formula{"delay", 0.0};
+    lockable_vec_t spotangle{"angle", 40.0};
+    lockable_vec_t spotangle2{"softangle", 0.0};
+    lockable_vec_t style{"style", 0.0};
+    lockable_vec_t anglescale{strings{"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
+    lockable_vec_t dirtscale{"dirtscale", 0.0};
+    lockable_vec_t dirtgain{"dirtgain", 0};
+    lockable_vec_t dirt{"dirt", 0};
+    lockable_vec_t deviance{"deviance", 0};
+    lockable_vec_t samples{"samples", 16};
+    lockable_vec_t projfov{"project_fov", 90};
+    lockable_vec_t bouncescale{"bouncescale", 1.0};
+    lockable_vec_t dirt_off_radius{"dirt_off_radius", 0.0};
+    lockable_vec_t dirt_on_radius{"dirt_on_radius", 0.0};
+    lockable_vec_t sun{"sun", 0}; // mxd
+    lockable_bool_t sunlight2{"sunlight2", 0};
+    lockable_bool_t sunlight3{"sunlight3", 0};
+    lockable_vec_t falloff{"falloff", 0.0}; // mxd
+    lockable_bool_t bleed{"bleed", false};
+    lockable_vec3_t origin{"origin", 0, 0, 0};
+    lockable_vec3_t color{"color", 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+    lockable_vec3_t mangle{"mangle", 0, 0, 0}; // not transformed to vec
+    lockable_vec3_t projangle{"project_mangle", 20, 0, 0}; // not transformed to vec
+    lockable_string_t project_texture{"project_texture", ""};
+    lockable_string_t suntexture{"suntexture", ""};
+    lockable_bool_t nostaticlight{"nostaticlight", false};
 
     light_formula_t getFormula() const { return static_cast<light_formula_t>(formula.intValue()); }
 

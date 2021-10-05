@@ -85,8 +85,7 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
-            FError("line {}: too few points (2): ({}) ({})\n", sourceface->linenum,
-                face->w[0], face->w[1]);
+            FError("line {}: too few points (2): ({}) ({})\n", sourceface->linenum, face->w[0], face->w[1]);
         } else if (face->w.size() == 1) {
             FError("line {}: too few points (1): ({})\n", sourceface->linenum, face->w[0]);
         } else {
@@ -109,13 +108,15 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
         /* check the point is on the face plane */
         dist = DotProduct(p1, plane->normal) - plane->dist;
         if (dist < -ON_EPSILON || dist > ON_EPSILON)
-            LogPrint("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface->linenum, p1[0], p1[1], p1[2], dist);
+            LogPrint("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface->linenum, p1[0],
+                p1[1], p1[2], dist);
 
         /* check the edge isn't degenerate */
         VectorSubtract(p2, p1, edgevec);
         length = VectorLength(edgevec);
         if (length < ON_EPSILON) {
-            LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface->linenum, length, p1[0], p1[1], p1[2]);
+            LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface->linenum,
+                length, p1[0], p1[1], p1[2]);
             for (j = i + 1; j < face->w.size(); j++)
                 VectorCopy(face->w[j], face->w[j - 1]);
             face->w.resize(face->w.size() - 1);
@@ -134,8 +135,8 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
                 continue;
             dist = DotProduct(face->w[j], edgenormal);
             if (dist > edgedist)
-                FError("line {}: Found a non-convex face (error size {}, point: {})\n",
-                    sourceface->linenum, dist - edgedist, face->w[j]);
+                FError("line {}: Found a non-convex face (error size {}, point: {})\n", sourceface->linenum,
+                    dist - edgedist, face->w[j]);
         }
     }
 }
@@ -194,7 +195,7 @@ bool PlaneEqual(const plane_t *p1, const plane_t *p2)
 
 bool PlaneInvEqual(const plane_t *p1, const plane_t *p2)
 {
-    plane_t temp {};
+    plane_t temp{};
     VectorScale(p1->normal, -1.0, temp.normal);
     temp.dist = -p1->dist;
     return PlaneEqual(&temp, p2);
@@ -224,7 +225,7 @@ static int NewPlane(const vec3_t normal, const vec_t dist, int *side)
     len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
-    
+
     size_t index = map.planes.size();
     qbsp_plane_t &plane = map.planes.emplace_back();
     VectorCopy(normal, plane.normal);
@@ -302,7 +303,7 @@ void FixRotateOrigin(mapentity_t *entity)
 
     if (search[0])
         target = FindTargetEntity(search);
-    
+
     qvec3d offset;
 
     if (target) {
@@ -379,7 +380,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
             continue; // overconstrained plane
 
         // this face is a keeper
-        f = new face_t { };
+        f = new face_t{};
         f->planenum = PLANENUM_LEAF;
 
         if (w->size() > MAXEDGES)
@@ -448,7 +449,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
 
     if (shouldExpand) {
         vec_t delta = std::max(fabs(max), fabs(min));
-        hullbrush->bounds = { -delta, delta };
+        hullbrush->bounds = {-delta, delta};
     }
 
     return facelist;
@@ -527,7 +528,8 @@ static void AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
             return;
     }
     if (hullbrush->numfaces == MAX_FACES)
-        FError("brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
+        FError(
+            "brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
 
     mapface->plane = *plane;
     mapface->texinfo = 0;
@@ -609,7 +611,7 @@ static int AddHullPoint(hullbrush_t *hullbrush, const qvec3d &p, const aabb3d &h
 
     if (hullbrush->numpoints == MAX_HULL_POINTS)
         FError("hullbrush->numpoints == MAX_HULL_POINTS ({}), "
-              "source brush on line {}",
+               "source brush on line {}",
             MAX_HULL_POINTS, hullbrush->srcbrush->face(0).linenum);
 
     VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
@@ -656,7 +658,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
 
     if (hullbrush->numedges == MAX_HULL_EDGES)
         FError("hullbrush->numedges == MAX_HULL_EDGES ({}), "
-              "source brush on line {}",
+               "source brush on line {}",
             MAX_HULL_EDGES, hullbrush->srcbrush->face(0).linenum);
 
     hullbrush->edges[i][0] = pt1;
@@ -765,8 +767,7 @@ static bool Brush_IsDetail(const mapbrush_t *mapbrush)
     return false;
 }
 
-static contentflags_t
-Brush_GetContents_Q1(const mapbrush_t *mapbrush)
+static contentflags_t Brush_GetContents_Q1(const mapbrush_t *mapbrush)
 {
     const char *texname;
 
@@ -789,8 +790,7 @@ Brush_GetContents_Q1(const mapbrush_t *mapbrush)
                 return options.target_game->create_liquid_contents(CONTENTS_SLIME);
             else
                 return options.target_game->create_liquid_contents(CONTENTS_WATER);
-        }
-        else if (!Q_strncasecmp(texname, "sky", 3))
+        } else if (!Q_strncasecmp(texname, "sky", 3))
             return options.target_game->create_sky_contents();
     }
 
@@ -798,12 +798,11 @@ Brush_GetContents_Q1(const mapbrush_t *mapbrush)
     return options.target_game->create_solid_contents();
 }
 
-static contentflags_t
-Brush_GetContents_Q2 (const mapbrush_t *mapbrush)
+static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush)
 {
     bool is_trans = false;
     bool is_hint = false;
-    contentflags_t contents = { mapbrush->face(0).contents };
+    contentflags_t contents = {mapbrush->face(0).contents};
 
     for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
@@ -923,7 +922,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
     }
 
     // create the brush
-    brush = new brush_t { };
+    brush = new brush_t{};
 
     brush->contents = contents;
     brush->faces = facelist;
@@ -1026,7 +1025,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
 {
     const char *classname;
     const mapbrush_t *mapbrush;
-    qvec3d rotate_offset { };
+    qvec3d rotate_offset{};
     int i;
     int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
@@ -1087,7 +1086,8 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
     }
 
     all_detail_fence = false;
-    if ((!Q_strcasecmp(classname, "func_detail_fence") || !Q_strcasecmp(classname, "func_detail_wall")) && !options.fNodetail) {
+    if ((!Q_strcasecmp(classname, "func_detail_fence") || !Q_strcasecmp(classname, "func_detail_wall")) &&
+        !options.fNodetail) {
         all_detail_fence = true;
     }
 
@@ -1112,8 +1112,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
     /* _noclipfaces */
     const bool noclipfaces = !!atoi(ValueForKey(src, "_noclipfaces"));
 
-    const bool func_illusionary_visblocker =
-        (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
+    const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
@@ -1175,7 +1174,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
             // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             if (hullnum > 0) {
                 contents = options.target_game->create_solid_contents();
-        }
+            }
             // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
 
@@ -1279,7 +1278,8 @@ bool BoundBrush(brush_t *brush)
 
     for (int i = 0; i < 3; i++) {
         // CHECK: because aabb::fix, is this latter check ever possible?
-        if (brush->bounds.mins()[i] < MIN_WORLD_COORD || brush->bounds.maxs()[i] > MAX_WORLD_COORD || brush->bounds.mins()[i] >= brush->bounds.maxs()[i]) {
+        if (brush->bounds.mins()[i] < MIN_WORLD_COORD || brush->bounds.maxs()[i] > MAX_WORLD_COORD ||
+            brush->bounds.mins()[i] >= brush->bounds.maxs()[i]) {
             return false;
         }
     }
@@ -1537,7 +1537,7 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     // first, make two empty brushes (for the front and back side of the plane)
 
     for (int i = 0; i < 2; i++) {
-        b[i] = new brush_t { };
+        b[i] = new brush_t{};
         // memcpy( b[i], brush, sizeof( brush_t ) );
 
         // NOTE: brush copying

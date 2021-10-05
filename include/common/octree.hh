@@ -34,7 +34,7 @@ inline aabb3f bboxOctant(const aabb3f &box, int i)
 
     const qvec3f octantSigns((i & 1) ? 1.0f : -1.0f, (i & 2) ? 1.0f : -1.0f, (i & 4) ? 1.0f : -1.0f);
 
-    qvec3f mins { }, maxs { };
+    qvec3f mins{}, maxs{};
     for (int j = 0; j < 3; j++) {
         if (octantSigns[j] == -1.0f) {
             mins[j] = box.mins()[j];
@@ -172,7 +172,7 @@ public:
 
         queryTouchingBBox(0, query, res);
 
-        return { res.begin(), res.end() };
+        return {res.begin(), res.end()};
     }
 
     octree_t(const aabb3f &box) { this->m_nodes.push_back(octree_node_t<T>(box, 0)); }
@@ -184,7 +184,7 @@ octree_t<T> makeOctree(const std::vector<std::pair<aabb3f, T>> &objects)
     if (objects.empty()) {
         // CHECK: this purposefully creates a 0,0,0 -> 0,0,0 box, should it not
         // just use the default constructor for a fully empty box?
-        return { { {}, {} } };
+        return {{{}, {}}};
     }
 
     // take bbox of objects

@@ -35,7 +35,7 @@ class qvec
 {
 protected:
     std::array<T, N> v;
-    
+
     template<size_t N2, class T2>
     friend class qvec;
 
@@ -44,29 +44,28 @@ public:
 
     constexpr qvec() = default;
 
-    template<typename ...Args, typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
+    template<typename... Args,
+        typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
     constexpr qvec(Args... a)
     {
         constexpr size_t count = sizeof...(Args);
 
         // special case for single argument
-        if constexpr(count == 1)
-        {
+        if constexpr (count == 1) {
             for (auto &e : v)
                 ((e = a, true) || ...);
         }
         // multiple arguments; copy up to min(N, `count`),
         // fill `count` -> N with zero
-        else
-        {
+        else {
             constexpr size_t copy_size = qmin(N, count);
             size_t i = 0;
             ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
-            // Bug with MSVC: https://developercommunity.visualstudio.com/t/stdc20-fatal-error-c1004-unexpected-end-of-file-fo/1509806
+            // Bug with MSVC:
+            // https://developercommunity.visualstudio.com/t/stdc20-fatal-error-c1004-unexpected-end-of-file-fo/1509806
             constexpr bool fill_rest = count < N;
 
-            if constexpr(fill_rest)
-            {
+            if constexpr (fill_rest) {
                 for (i = count; i < N; i++)
                     v[i] = 0;
             }
@@ -80,7 +79,7 @@ public:
         for (size_t i = 0; i < N; i++)
             v[i] = static_cast<T>(array[i]);
     }
-    
+
     // copy from std::array, exact lengths only
     template<typename T2>
     constexpr qvec(const std::array<T2, N> &array)
@@ -98,7 +97,7 @@ public:
         for (size_t i = 0; i < N; i++)
             v[i] = static_cast<T>(other[i]);
     }
-    
+
     /**
      * Casting from another vector type of the same type but
      * different length
@@ -177,7 +176,7 @@ public:
         for (size_t i = 0; i < N; i++)
             v[i] /= scale;
     }
-    
+
     template<typename F>
     [[nodiscard]] constexpr qvec<N, T> operator+(const qvec<N, F> &other) const
     {
@@ -185,7 +184,7 @@ public:
         res += other;
         return res;
     }
-    
+
     template<typename F>
     [[nodiscard]] constexpr qvec<N, T> operator-(const qvec<N, F> &other) const
     {
@@ -428,10 +427,9 @@ private:
 public:
     constexpr qplane3() = default;
     constexpr qplane3(const qvec<3, T> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
-    
+
     template<typename T2>
-    constexpr qplane3(const qplane3<T2> &plane) :
-        qplane3(plane.normal(), plane.dist())
+    constexpr qplane3(const qplane3<T2> &plane) : qplane3(plane.normal(), plane.dist())
     {
     }
 
@@ -439,7 +437,10 @@ public:
     [[nodiscard]] constexpr const qvec<3, T> &normal() const { return m_normal; }
     [[nodiscard]] constexpr const T dist() const { return m_dist; }
 
-    [[nodiscard]] constexpr const qvec<4, T> vec4() const { return qvec<4, T>(m_normal[0], m_normal[1], m_normal[2], m_dist); }
+    [[nodiscard]] constexpr const qvec<4, T> vec4() const
+    {
+        return qvec<4, T>(m_normal[0], m_normal[1], m_normal[2], m_dist);
+    }
 };
 
 using qplane3f = qplane3<float>;
@@ -461,8 +462,7 @@ public:
     /**
      * Identity matrix if square, otherwise fill with 0
      */
-    constexpr qmat() :
-        m_values({})
+    constexpr qmat() : m_values({})
     {
         if constexpr (M == N) {
             // identity matrix
@@ -475,16 +475,10 @@ public:
     /**
      * Fill with a value
      */
-    inline qmat(const T &val)
-    {
-        m_values.fill(val);
-    }
+    inline qmat(const T &val) { m_values.fill(val); }
 
     // copy constructor
-    constexpr qmat(const qmat<M, N, T> &other) :
-        m_values(other.m_values)
-    {
-    }
+    constexpr qmat(const qmat<M, N, T> &other) : m_values(other.m_values) { }
 
     /**
      * Casting from another matrix type of the same size
@@ -503,10 +497,7 @@ public:
         std::copy(list.begin(), list.end(), m_values.begin());
     }
 
-    constexpr bool operator==(const qmat<M, N, T> &other) const
-    {
-        return m_values == other.m_values;
-    }
+    constexpr bool operator==(const qmat<M, N, T> &other) const { return m_values == other.m_values; }
 
     // access to elements
 
@@ -541,7 +532,7 @@ public:
 
     [[nodiscard]] qvec<M, T> operator*(const qvec<N, T> &vec) const
     {
-        qvec<M, T> res { };
+        qvec<M, T> res{};
         for (size_t i = 0; i < M; i++) { // for each row
             for (size_t j = 0; j < N; j++) { // for each col
                 res[i] += this->at(i, j) * vec[j];
@@ -619,8 +610,9 @@ namespace qv
 #include <fmt/format.h>
 
 template<size_t N, class T>
-struct fmt::formatter<qvec<N, T>> : formatter<T> {
-    template <typename FormatContext>
+struct fmt::formatter<qvec<N, T>> : formatter<T>
+{
+    template<typename FormatContext>
     auto format(const qvec<N, T> &p, FormatContext &ctx) -> decltype(ctx.out())
     {
         for (size_t i = 0; i < N - 1; i++) {

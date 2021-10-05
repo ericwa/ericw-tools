@@ -151,7 +151,7 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
     l.pos = pos;
     l.colorByStyle = colorByStyle;
 
-    qvec3f componentwiseMaxColor { };
+    qvec3f componentwiseMaxColor{};
     for (const auto &styleColor : colorByStyle) {
         for (int i = 0; i < 3; i++) {
             if (styleColor.second[i] > componentwiseMaxColor[i]) {
@@ -226,7 +226,7 @@ static void *MakeBounceLightsThread(void *arg)
             for (const auto &styleColor : patch->lightByStyle) {
                 sum[styleColor.first] = sum[styleColor.first] + (styleColor.second * patcharea);
             }
-            //fmt::print("  {} {} {}\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
+            // fmt::print("  {} {} {}\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
         }
 
         for (auto &styleColor : sum) {
@@ -250,7 +250,7 @@ static void *MakeBounceLightsThread(void *arg)
         // final colors to emit
         map<int, qvec3f> emitcolors;
         for (const auto &styleColor : sum) {
-            qvec3f emitcolor { };
+            qvec3f emitcolor{};
             for (int k = 0; k < 3; k++) {
                 emitcolor[k] = (styleColor.second[k] / 255.0f) * (blendedcolor[k] / 255.0f);
             }
@@ -282,7 +282,7 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
 // Returns color in [0,255]
 static qvec3f Texture_AvgColor(const mbsp_t *bsp, const rgba_miptex_t &miptex)
 {
-    qvec4f color { };
+    qvec4f color{};
 
     if (!miptex.data)
         return color;
@@ -314,7 +314,7 @@ void MakeTextureColors(const mbsp_t *bsp)
         const string name{miptex.name};
         const qvec3f color = Texture_AvgColor(bsp, miptex);
 
-        //fmt::print("{} has color {}\n", name, qv::to_string(color));
+        // fmt::print("{} has color {}\n", name, qv::to_string(color));
         texturecolors[name] = color;
     }
 }

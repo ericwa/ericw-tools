@@ -112,7 +112,7 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
             if (external)
                 lump.size = lump.disksize = sizeof(dmiptex_t);
 
-            //fmt::print("Created texture_t {} {} {}\n", tex->name, tex->width, tex->height);
+            // fmt::print("Created texture_t {} {} {}\n", tex->name, tex->width, tex->height);
             wad.lumps.insert({tex.name, lump});
         } else {
             lump.size = 0;

@@ -81,15 +81,11 @@ void LowerProcessPriority()
 #define HAVE_THREADS
 
 /* not implemented for now */
-void LowerProcessPriority()
-{
-}
+void LowerProcessPriority() { }
 
 #else
 
-void LowerProcessPriority(void)
-{
-}
+void LowerProcessPriority(void) { }
 
 #endif
 

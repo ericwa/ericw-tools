@@ -369,7 +369,7 @@ qvec3f GLM_FaceNormal(std::vector<qvec3f> points)
     }
 
     if (bestI == -1 || maxArea < ZERO_TRI_AREA_EPSILON)
-        return qvec3f { };
+        return qvec3f{};
 
     const qvec3f &p1 = points[bestI - 1];
     const qvec3f &p2 = points[bestI];
@@ -504,7 +504,7 @@ qvec3f GLM_PolyCentroid(const std::vector<qvec3f> &points)
 
     Q_assert(points.size() >= 3);
 
-    qvec3f poly_centroid { };
+    qvec3f poly_centroid{};
     float poly_area = 0;
 
     const qvec3f &v0 = points.at(0);
@@ -576,7 +576,7 @@ std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> 
 
     int bestI = -1;
     float bestDist = FLT_MAX;
-    qvec3f bestPointOnPoly { };
+    qvec3f bestPointOnPoly{};
 
     for (int i = 0; i < N; i++) {
         const qvec3f &p0 = poly.at(i);
@@ -603,7 +603,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
     Q_assert(points.size() == normals.size());
 
     if (points.size() < 3)
-        return make_pair(false, qvec3f { });
+        return make_pair(false, qvec3f{});
 
     // Step through the triangles, being careful to handle zero-size ones
 
@@ -634,7 +634,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
         }
     }
 
-    return make_pair(false, qvec3f { });
+    return make_pair(false, qvec3f{});
 }
 
 /// Returns (front part, back part)
@@ -647,7 +647,8 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vect
 
     auto clipped = w.clip(qvec3f(plane), plane[3]);
 
-    return make_pair(clipped[0].value_or(winding_t {}).glm_winding_points(), clipped[1].value_or(winding_t {}).glm_winding_points());
+    return make_pair(
+        clipped[0].value_or(winding_t{}).glm_winding_points(), clipped[1].value_or(winding_t{}).glm_winding_points());
 }
 
 std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount)

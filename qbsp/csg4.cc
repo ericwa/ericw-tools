@@ -70,7 +70,7 @@ MergeFace.
 */
 face_t *NewFaceFromFace(face_t *in)
 {
-    face_t *newf = new face_t { };
+    face_t *newf = new face_t{};
 
     newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;
@@ -113,9 +113,9 @@ Frees in.
 */
 void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **back)
 {
-    vec_t *dists = (vec_t *) alloca(sizeof(vec_t) * (in->w.size() + 1));
-    side_t *sides = (side_t *) alloca(sizeof(side_t) * (in->w.size() + 1));
-    int counts[3] { };
+    vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
+    side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
+    int counts[3]{};
     vec_t dot;
     size_t i, j;
     face_t *newf, *new2;
@@ -262,9 +262,9 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
          */
         bool spurious_onplane = false;
         {
-            vec_t *dists = (vec_t *) alloca(sizeof(vec_t) * (face->w.size() + 1));
-            side_t *sides = (side_t *) alloca(sizeof(side_t) * (face->w.size() + 1));
-            int counts[3] { };
+            vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (face->w.size() + 1));
+            side_t *sides = (side_t *)alloca(sizeof(side_t) * (face->w.size() + 1));
+            int counts[3]{};
             face->w.calc_sides(splitplane->normal, splitplane->dist, dists, sides, counts, ON_EPSILON);
 
             if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
@@ -352,8 +352,8 @@ void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *>
             // HACK: We only want this mirrored face for CONTENTS_DETAIL
             // to force the right content type for the leaf, but we don't actually
             // want the face. So just set the texinfo to "skip" so it gets deleted.
-            if ((face->contents[1].is_detail() || (face->contents[1].extended & CFLAGS_WAS_ILLUSIONARY))
-                || (options.fContentHack && face->contents[1].is_solid(options.target_game))) {
+            if ((face->contents[1].is_detail() || (face->contents[1].extended & CFLAGS_WAS_ILLUSIONARY)) ||
+                (options.fContentHack && face->contents[1].is_solid(options.target_game))) {
 
                 // if CFLAGS_BMODEL_MIRROR_INSIDE is set, never change to skip
                 if (!(face->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
@@ -408,8 +408,8 @@ static void SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **sav
         next = face->next;
         face->contents[0] = clipbrush->contents;
 
-        if ((face->contents[1].is_solid(options.target_game) || face->contents[1].is_sky(options.target_game))
-             && clipbrush->contents.is_detail(CFLAGS_DETAIL)) {
+        if ((face->contents[1].is_solid(options.target_game) || face->contents[1].is_sky(options.target_game)) &&
+            clipbrush->contents.is_detail(CFLAGS_DETAIL)) {
             // This case is when a structural and detail brush are touching,
             // and we want to save the sturctural face that is
             // touching detail.
@@ -480,7 +480,7 @@ surface_t *BuildSurfaces(const std::map<int, face_t *> &planefaces)
             continue;
 
         /* create a new surface to hold the faces on this plane */
-        surface_t *surf = new surface_t { };
+        surface_t *surf = new surface_t{};
         surf->planenum = entry->first;
         surf->next = surfaces;
         surfaces = surf;
@@ -635,12 +635,13 @@ surface_t *CSGFaces(const mapentity_t *entity)
              */
             if ((brush->contents.is_solid(options.target_game) && !clipbrush->contents.is_solid(options.target_game))
 
-                || (brush->contents.is_sky(options.target_game) && (!clipbrush->contents.is_solid(options.target_game)
-                                                                    && !clipbrush->contents.is_sky(options.target_game)))
+                ||
+                (brush->contents.is_sky(options.target_game) && (!clipbrush->contents.is_solid(options.target_game) &&
+                                                                    !clipbrush->contents.is_sky(options.target_game)))
 
-                || (brush->contents.is_detail(CFLAGS_DETAIL) && (!clipbrush->contents.is_solid(options.target_game)
-                                                                 && !clipbrush->contents.is_sky(options.target_game)   
-                                                                 && !clipbrush->contents.is_detail(CFLAGS_DETAIL)))
+                || (brush->contents.is_detail(CFLAGS_DETAIL) && (!clipbrush->contents.is_solid(options.target_game) &&
+                                                                    !clipbrush->contents.is_sky(options.target_game) &&
+                                                                    !clipbrush->contents.is_detail(CFLAGS_DETAIL)))
 
                 || (brush->contents.is_liquid(options.target_game) &&
                        clipbrush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))

@@ -114,7 +114,6 @@ void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
     } while (out - decompressed < row);
 }
 
-
 /*
   ==================
   AllocStackWinding
@@ -165,8 +164,8 @@ void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack)
 */
 std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, plane_t *split)
 {
-    vec_t *dists = (vec_t *) alloca(sizeof(vec_t) * (in->size() + 1));
-    int *sides = (int *) alloca(sizeof(int) * (in->size() + 1));
+    vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
+    int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
     int counts[3];
     int i, j;
 
@@ -417,7 +416,7 @@ static duration stateinterval;
   ==============
 */
 void *LeafThread(void *arg)
-{;
+{
     portal_t *p;
 
     do {
@@ -439,7 +438,8 @@ void *LeafThread(void *arg)
         PortalCompleted(p);
 
         if (verbose > 1) {
-            LogPrint("portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee, p->numcansee);
+            LogPrint(
+                "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee, p->numcansee);
         }
     } while (1);
 
@@ -701,10 +701,10 @@ void CalcVis(mbsp_t *bsp)
 
         LogPrint("average clusters visible: {}\n", avg);
     } else {
-	    avg /= static_cast<int64_t>(portalleafs_real);
+        avg /= static_cast<int64_t>(portalleafs_real);
 
-	    LogPrint("average leafs visible: {}\n", avg);
-	}
+        LogPrint("average leafs visible: {}\n", avg);
+    }
 }
 
 /*
@@ -910,13 +910,13 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     portal_t *p;
     leaf_t *l;
     char magic[80];
-    qfile_t f { nullptr, nullptr };
+    qfile_t f{nullptr, nullptr};
     int numpoints;
     int leafnums[2];
     plane_t plane;
 
     if (name == "-")
-        f = { stdin, nullptr };
+        f = {stdin, nullptr};
     else {
         f = SafeOpenRead(name, true);
     }
@@ -963,7 +963,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         LogPrint("{:6} leafs\n", portalleafs_real);
         LogPrint("{:6} clusters\n", portalleafs);
         LogPrint("{:6} portals\n", numportals);
-    } else {        
+    } else {
         FError("unknown header: {}\n", magic);
     }
 
@@ -977,9 +977,9 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     }
 
     // each file portal is split into two memory portals
-    portals = new portal_t[numportals * 2] { };
+    portals = new portal_t[numportals * 2]{};
 
-    leafs = new leaf_t[portalleafs] { };
+    leafs = new leaf_t[portalleafs]{};
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
@@ -1049,7 +1049,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return;
     }
-    
+
     // No clusters
     if (portalleafs == portalleafs_real) {
         return;
@@ -1081,8 +1081,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
                 Error("Unexpected end of cluster map\n");
             }
             if (clusternum < 0 || clusternum >= portalleafs) {
-                FError(
-                    "Invalid cluster number {} in cluster map, number of clusters: {}\n", clusternum, portalleafs);
+                FError("Invalid cluster number {} in cluster map, number of clusters: {}\n", clusternum, portalleafs);
             }
             bsp->dleafs[i + 1].cluster = clusternum;
         }
@@ -1185,9 +1184,9 @@ int main(int argc, char **argv)
     statetmpfile = path_base.replace_extension("vi0");
 
     if (bsp.loadversion->game->id != GAME_QUAKE_II) {
-        uncompressed = new uint8_t[portalleafs * leafbytes_real] { };
+        uncompressed = new uint8_t[portalleafs * leafbytes_real]{};
     } else {
-        uncompressed_q2 = new uint8_t[portalleafs * leafbytes] { };
+        uncompressed_q2 = new uint8_t[portalleafs * leafbytes]{};
     }
 
     //    CalcPassages ();
