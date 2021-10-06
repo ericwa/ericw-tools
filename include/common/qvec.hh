@@ -551,7 +551,7 @@ public:
 
     // multiplication by a matrix
 
-    template<int P>
+    template<size_t P>
     [[nodiscard]] constexpr qmat<M, P, T> operator*(const qmat<N, P, T> &other) const
     {
         qmat<M, P, T> res;
