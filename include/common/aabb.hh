@@ -24,7 +24,7 @@
 /**
  * touching a side/edge/corner is considered touching
  */
-template<int N, class V>
+template<size_t N, class V>
 class aabb
 {
 public:
@@ -49,7 +49,7 @@ private:
 
     constexpr void fix()
     {
-        for (int i = 0; i < N; i++) {
+        for (size_t i = 0; i < N; i++) {
             if (m_maxs[i] < m_mins[i]) {
                 m_maxs[i] = m_mins[i];
             }
@@ -78,7 +78,7 @@ public:
 
     constexpr bool disjoint(const aabb<N, V> &other, const typename V::value_type &epsilon = 0) const
     {
-        for (int i = 0; i < N; i++) {
+        for (size_t i = 0; i < N; i++) {
             if (m_maxs[i] < (other.m_mins[i] - epsilon))
                 return true;
             if (m_mins[i] > (other.m_maxs[i] + epsilon))
@@ -89,7 +89,7 @@ public:
 
     constexpr bool contains(const aabb<N, V> &other) const
     {
-        for (int i = 0; i < 3; i++) {
+        for (size_t i = 0; i < 3; i++) {
             if (other.m_mins[i] < m_mins[i])
                 return false;
             if (other.m_maxs[i] > m_maxs[i])
@@ -100,7 +100,7 @@ public:
 
     constexpr bool containsPoint(const V &p) const
     {
-        for (int i = 0; i < N; i++) {
+        for (size_t i = 0; i < N; i++) {
             if (!(p[i] >= m_mins[i] && p[i] <= m_maxs[i]))
                 return false;
         }
@@ -109,10 +109,10 @@ public:
 
     constexpr aabb<N, V> expand(const V &pt) const
     {
-        V mins, maxs;
-        for (int i = 0; i < N; i++) {
-            mins[i] = qmin(m_mins[i], pt[i]);
-            maxs[i] = qmax(m_maxs[i], pt[i]);
+        V mins = m_mins, maxs = m_maxs;
+        for (size_t i = 0; i < N; i++) {
+            mins[i] = qmin(mins[i], pt[i]);
+            maxs[i] = qmax(maxs[i], pt[i]);
         }
         return aabb<N, V>(mins, maxs);
     }
@@ -129,10 +129,10 @@ public:
 
     constexpr intersection_t intersectWith(const aabb<N, V> &other) const
     {
-        V mins, maxs;
-        for (int i = 0; i < N; i++) {
-            mins[i] = qmax(m_mins[i], other.m_mins[i]);
-            maxs[i] = qmin(m_maxs[i], other.m_maxs[i]);
+        V mins = m_mins, maxs = m_maxs;
+        for (size_t i = 0; i < N; i++) {
+            mins[i] = qmax(mins[i], other.m_mins[i]);
+            maxs[i] = qmin(maxs[i], other.m_maxs[i]);
             if (mins[i] > maxs[i]) {
                 // empty intersection
                 return intersection_t();
@@ -145,12 +145,12 @@ public:
 
     constexpr aabb<N, V> grow(const V &size) const { return aabb<N, V>(m_mins - size, m_maxs + size); }
 
-    constexpr V &operator[](const int32_t &index)
+    constexpr V &operator[](const size_t &index)
     {
         return (index == 0 ? m_mins : index == 1 ? m_maxs : throw std::exception());
     }
 
-    constexpr const V &operator[](const int32_t &index) const
+    constexpr const V &operator[](const size_t &index) const
     {
         return (index == 0 ? m_mins : index == 1 ? m_maxs : throw std::exception());
     }

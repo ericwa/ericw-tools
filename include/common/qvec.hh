@@ -25,6 +25,7 @@
 #include <string>
 #include <algorithm>
 #include <array>
+#include <fmt/format.h>
 
 #define qmax std::max
 #define qmin std::min
@@ -537,7 +538,7 @@ public:
 
     // multiplication by a vector
 
-    [[nodiscard]] qvec<M, T> operator*(const qvec<N, T> &vec) const
+    [[nodiscard]] constexpr qvec<M, T> operator*(const qvec<N, T> &vec) const
     {
         qvec<M, T> res{};
         for (size_t i = 0; i < M; i++) { // for each row
@@ -551,7 +552,7 @@ public:
     // multiplication by a matrix
 
     template<int P>
-    [[nodiscard]] qmat<M, P, T> operator*(const qmat<N, P, T> &other) const
+    [[nodiscard]] constexpr qmat<M, P, T> operator*(const qmat<N, P, T> &other) const
     {
         qmat<M, P, T> res;
         for (size_t i = 0; i < M; i++) {
@@ -568,7 +569,7 @@ public:
 
     // multiplication by a scalar
 
-    [[nodiscard]] qmat<M, N, T> operator*(const T scalar) const
+    [[nodiscard]] constexpr qmat<M, N, T> operator*(const T scalar) const
     {
         qmat<M, N, T> res(*this);
         for (size_t i = 0; i < M * N; i++) {
