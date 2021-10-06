@@ -262,10 +262,12 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
          */
         bool spurious_onplane = false;
         {
-            vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (face->w.size() + 1));
-            side_t *sides = (side_t *)alloca(sizeof(side_t) * (face->w.size() + 1));
+            vec_t *dists = (vec_t *)malloc(sizeof(vec_t) * (face->w.size() + 1));
+            side_t *sides = (side_t *)malloc(sizeof(side_t) * (face->w.size() + 1));
             int counts[3]{};
             face->w.calc_sides(splitplane->normal, splitplane->dist, dists, sides, counts, ON_EPSILON);
+            free(dists);
+            free(sides);
 
             if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
                 spurious_onplane = true;
