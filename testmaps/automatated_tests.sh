@@ -6,7 +6,7 @@
 # If --update-hashes is given, updates the expected hash files.
 # Otherwise tests the generated .bsp's match the expected hashes.
 #
-# qbsp, vis, light need to be in PATH before running.
+# qbsp, vis, light, bspinfo need to be in PATH before running.
 #
 # Returns exit status 1 if any tests failed, otherwise 0
 
@@ -50,10 +50,29 @@ qbspfeatures.bsp"
 
 HASH_CHECK_PRTS=${HASH_CHECK_BSPS//.bsp/.prt}
 
+# for tiny test maps, we'll commit the .json export of the .bsp's
+# directly to the git repo, so we can print a diff
+COMMIT_JSON_MAPS="qbsp_func_detail.bsp \
+qbsp_func_detail_illusionary_plus_water.bsp"
+
 # smaller test maps for specific features/combinations
 qbsp -noverbose               qbsp_func_detail.map                           || exit 1
 qbsp -noverbose               qbsp_func_detail_illusionary_plus_water.bsp    || exit 1
 
+# check .json diff of COMMIT_JSON_MAPS
+for bsp in ${COMMIT_JSON_MAPS}; do
+    bspinfo ${bsp} || exit 1
+
+    if [[ $UPDATE_HASHES -ne 0 ]]; then
+        mkdir reference_bsp_json
+        cp ${bsp}.json reference_bsp_json/${bsp}.json
+    else
+        echo "Diff of reference_bsp_json/${bsp}.json and ${bsp}.json:"
+        diff -U3 reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
+    fi
+done
+
+# larger test maps (E1M1)
 qbsp -noverbose               quake_map_source/E1M1.map e1m1-bsp29.bsp       || exit 1
 qbsp -noverbose         -bsp2 quake_map_source/E1M1.map e1m1-bsp2.bsp        || exit 1
 qbsp -noverbose         -2psb quake_map_source/E1M1.map e1m1-2psb.bsp        || exit 1
@@ -73,6 +92,7 @@ qbsp -onlyents E1M1-edited-ents.map e1m1-bsp29-onlyents.bsp || exit 1
 
 qbsp -noverbose               qbspfeatures.map                               || exit 1
 
+# check (or regenerate) hashes of .bsp's
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} ${HASH_CHECK_PRTS} > qbsp.sha256sum || exit 1
 else
