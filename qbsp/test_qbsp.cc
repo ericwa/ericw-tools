@@ -39,7 +39,7 @@ static mapentity_t LoadMap(const char *map)
     return worldspawn;
 }
 
-static std::array<qvec4f, 2> GetTexvecs(const char *map, const char *texname)
+static texvecf GetTexvecs(const char *map, const char *texname)
 {
     mapentity_t worldspawn = LoadMap(map);
 
@@ -192,13 +192,13 @@ TEST(qbsp, BoundBrush)
 
     EXPECT_EQ(true, BoundBrush(brush));
 
-    EXPECT_DOUBLE_EQ(-64, brush->mins[0]);
-    EXPECT_DOUBLE_EQ(-64, brush->mins[1]);
-    EXPECT_DOUBLE_EQ(-16, brush->mins[2]);
+    EXPECT_DOUBLE_EQ(-64, brush->bounds.mins()[0]);
+    EXPECT_DOUBLE_EQ(-64, brush->bounds.mins()[1]);
+    EXPECT_DOUBLE_EQ(-16, brush->bounds.mins()[2]);
 
-    EXPECT_DOUBLE_EQ(64, brush->maxs[0]);
-    EXPECT_DOUBLE_EQ(64, brush->maxs[1]);
-    EXPECT_DOUBLE_EQ(16, brush->maxs[2]);
+    EXPECT_DOUBLE_EQ(64, brush->bounds.maxs()[0]);
+    EXPECT_DOUBLE_EQ(64, brush->bounds.maxs()[1]);
+    EXPECT_DOUBLE_EQ(16, brush->bounds.maxs()[2]);
 
     FreeBrush(brush);
 }
@@ -252,24 +252,24 @@ TEST(qbsp, SplitBrush)
     ASSERT_NE(nullptr, back);
 
     // front
-    EXPECT_DOUBLE_EQ(-64, front->mins[0]);
-    EXPECT_DOUBLE_EQ(-64, front->mins[1]);
-    EXPECT_DOUBLE_EQ(-16, front->mins[2]);
+    EXPECT_DOUBLE_EQ(-64, front->bounds.mins()[0]);
+    EXPECT_DOUBLE_EQ(-64, front->bounds.mins()[1]);
+    EXPECT_DOUBLE_EQ(-16, front->bounds.mins()[2]);
 
-    EXPECT_DOUBLE_EQ(0, front->maxs[0]);
-    EXPECT_DOUBLE_EQ(64, front->maxs[1]);
-    EXPECT_DOUBLE_EQ(16, front->maxs[2]);
+    EXPECT_DOUBLE_EQ(0, front->bounds.maxs()[0]);
+    EXPECT_DOUBLE_EQ(64, front->bounds.maxs()[1]);
+    EXPECT_DOUBLE_EQ(16, front->bounds.maxs()[2]);
 
     checkCube(front);
 
     // back
-    EXPECT_DOUBLE_EQ(0, back->mins[0]);
-    EXPECT_DOUBLE_EQ(-64, back->mins[1]);
-    EXPECT_DOUBLE_EQ(-16, back->mins[2]);
+    EXPECT_DOUBLE_EQ(0, back->bounds.mins()[0]);
+    EXPECT_DOUBLE_EQ(-64, back->bounds.mins()[1]);
+    EXPECT_DOUBLE_EQ(-16, back->bounds.mins()[2]);
 
-    EXPECT_DOUBLE_EQ(64, back->maxs[0]);
-    EXPECT_DOUBLE_EQ(64, back->maxs[1]);
-    EXPECT_DOUBLE_EQ(16, back->maxs[2]);
+    EXPECT_DOUBLE_EQ(64, back->bounds.maxs()[0]);
+    EXPECT_DOUBLE_EQ(64, back->bounds.maxs()[1]);
+    EXPECT_DOUBLE_EQ(16, back->bounds.maxs()[2]);
 
     checkCube(back);
 
@@ -340,7 +340,7 @@ TEST(qbsp, InvalidTextureProjection)
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     ASSERT_EQ("skip", face->texname);
     const auto texvecs = face->get_texvecs();
-    EXPECT_TRUE(IsValidTextureProjection(vec3_t_to_glm(face->plane.normal), texvecs.at(0), texvecs.at(1)));
+    EXPECT_TRUE(IsValidTextureProjection(face->plane.normal, qvec4f(texvecs.at(0)), qvec4f(texvecs.at(1))));
 }
 
 /**
@@ -370,7 +370,7 @@ TEST(qbsp, InvalidTextureProjection2)
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     ASSERT_EQ("skip", face->texname);
     const auto texvecs = face->get_texvecs();
-    EXPECT_TRUE(IsValidTextureProjection(vec3_t_to_glm(face->plane.normal), texvecs.at(0), texvecs.at(1)));
+    EXPECT_TRUE(IsValidTextureProjection(face->plane.normal, qvec4f(texvecs.at(0)), qvec4f(texvecs.at(1))));
 }
 
 /**
@@ -401,20 +401,19 @@ TEST(qbsp, InvalidTextureProjection3)
     const mapface_t *face = &worldspawn.mapbrush(0).face(3);
     ASSERT_EQ("*lava1", face->texname);
     const auto texvecs = face->get_texvecs();
-    EXPECT_TRUE(IsValidTextureProjection(vec3_t_to_glm(face->plane.normal), texvecs.at(0), texvecs.at(1)));
+    EXPECT_TRUE(IsValidTextureProjection(qvec3f(face->plane.normal), qvec4f(texvecs.at(0)), qvec4f(texvecs.at(1))));
 }
 
 TEST(mathlib, WindingArea)
 {
-    winding_t w;
-    w.numpoints = 5;
+    winding_t w { 5 };
 
     // poor test.. but at least checks that the colinear point is treated correctly
-    VectorSet(w.points[0], 0, 0, 0);
-    VectorSet(w.points[1], 0, 32, 0); // colinear
-    VectorSet(w.points[2], 0, 64, 0);
-    VectorSet(w.points[3], 64, 64, 0);
-    VectorSet(w.points[4], 64, 0, 0);
+    w[0] = { 0, 0, 0 };
+    w[1] = { 0, 32, 0}; // colinear
+    w[2] = { 0, 64, 0};
+    w[3] = { 64, 64, 0};
+    w[4] = { 64, 0, 0};
 
-    EXPECT_EQ(64.0f * 64.0f, WindingArea(&w));
+    EXPECT_EQ(64.0f * 64.0f, w.area());
 }
