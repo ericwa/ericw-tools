@@ -198,7 +198,7 @@ inline void AddHashEdge(size_t v1, size_t v2, size_t i)
     hashedges[std::make_pair(v1, v2)].push_front(i);
 }
 
-constexpr qvec3i HashVec(const qvec3d &vec)
+inline qvec3i HashVec(const qvec3d &vec)
 {
     return {floor(vec[0]), floor(vec[1]), floor(vec[2])};
 }
