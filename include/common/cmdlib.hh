@@ -632,6 +632,13 @@ public:
             this->setg(cbase, cbase, cbase + size);
         }
     }
+    
+protected:
+    inline void setpptrs(char *first, char *next, char *end)
+    {
+        setp(first, end);
+        pbump(next - first);
+    }
 
     // seek operations
     pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
@@ -641,7 +648,7 @@ public:
         }
 
         if (which & std::ios_base::out) {
-            setp(pbase(), pbase() + off, epptr());
+            setpptrs(pbase(), pbase() + off, epptr());
         }
 
         if (which & std::ios_base::in) {
@@ -667,9 +674,9 @@ public:
             if (dir == std::ios_base::cur)
                 pbump(off);
             else if (dir == std::ios_base::end)
-                setp(pbase(), epptr() + off, epptr());
+                setpptrs(pbase(), epptr() + off, epptr());
             else if (dir == std::ios_base::beg)
-                setp(pbase(), pbase() + off, epptr());
+                setpptrs(pbase(), pbase() + off, epptr());
         }
 
         if (which & std::ios_base::in) {
@@ -679,7 +686,6 @@ public:
         }
     }
 
-protected:
     // put stuff
     std::streamsize xsputn(const char_type *s, std::streamsize n) override
     {
@@ -691,7 +697,7 @@ protected:
         std::streamsize num_write = std::min(free_space, n);
 
         memcpy(pptr(), s, n);
-        setp(pbase(), pptr() + n, epptr());
+        setpptrs(pbase(), pptr() + n, epptr());
 
         return num_write;
     };
