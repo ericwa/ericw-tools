@@ -43,7 +43,7 @@ if ( $? -eq $false ) {
   throw "testqbsp failed"
 }
 
-$env:Path += ";$(pwd)\qbsp\Release;$(pwd)\vis\Release;$(pwd)\light\Release"
+$env:Path += ";$(pwd)\qbsp\Release;$(pwd)\vis\Release;$(pwd)\light\Release;$(pwd)\bspinfo\Release;$(pwd)\bsputil\Release"
 
 cd ..\testmaps
 
