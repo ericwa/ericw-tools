@@ -43,7 +43,7 @@ protected:
 public:
     using value_type = T;
 
-    constexpr qvec() = default;
+    inline qvec() = default;
     
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -426,7 +426,7 @@ private:
     T m_dist;
 
 public:
-    constexpr qplane3() = default;
+    inline qplane3() = default;
     constexpr qplane3(const qvec<3, T> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
 
     template<typename T2>
