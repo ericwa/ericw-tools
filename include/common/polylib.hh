@@ -69,8 +69,8 @@ public:
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
-                return std::get<array_iterator>(it).operator*();
-            return std::get<vector_iterator>(it).operator*();
+                return *std::get<array_iterator>(it);
+            return *std::get<vector_iterator>(it);
         }
 
         constexpr iterator &operator=(const iterator &) noexcept = default;
@@ -78,9 +78,9 @@ public:
         constexpr iterator &operator++() noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it).operator++();
+                ++std::get<array_iterator>(it);
             else
-                std::get<vector_iterator>(it).operator++();
+                ++std::get<vector_iterator>(it);
 
             return *this;
         }
@@ -88,9 +88,9 @@ public:
         constexpr iterator &operator++(int) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it).operator++(0);
+                std::get<array_iterator>(it)++;
             else
-                return std::get<vector_iterator>(it).operator++(0);
+                std::get<vector_iterator>(it)++;
 
             return *this;
         }
@@ -98,9 +98,9 @@ public:
         constexpr iterator &operator--() noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it).operator--();
+                --std::get<array_iterator>(it);
             else
-                std::get<vector_iterator>(it).operator--();
+                --std::get<vector_iterator>(it);
 
             return *this;
         }
@@ -108,9 +108,9 @@ public:
         constexpr iterator operator--(int) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it).operator--(0);
+                std::get<array_iterator>(it)--;
             else
-                std::get<vector_iterator>(it).operator--(0);
+                std::get<vector_iterator>(it)--;
 
             return *this;
         }
@@ -118,9 +118,9 @@ public:
         constexpr iterator &operator+=(const difference_type _Off) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it).operator+=(_Off);
+                std::get<array_iterator>(it) += _Off;
             else
-                std::get<vector_iterator>(it).operator+=(_Off);
+                std::get<vector_iterator>(it) += _Off;
 
             return *this;
         }
@@ -135,9 +135,9 @@ public:
         constexpr iterator &operator-=(const difference_type _Off) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it).operator-=(_Off);
+                std::get<array_iterator>(it) -= _Off;
             else
-                std::get<vector_iterator>(it).operator-=(_Off);
+                std::get<vector_iterator>(it) -= _Off;
 
             return *this;
         }

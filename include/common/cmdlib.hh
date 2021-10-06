@@ -396,7 +396,7 @@ inline std::ostream &operator<=(std::ostream &s, const double &c)
 }
 
 template<typename... T>
-inline std::ostream &operator<=(std::ostream &s, const std::tuple<T...> &tuple)
+inline std::ostream &operator<=(std::ostream &s, std::tuple<T&...> tuple)
 {
     std::apply([&s](auto &&...args) { ((s <= args), ...); }, tuple);
     return s;
@@ -515,7 +515,7 @@ inline std::istream &operator>=(std::istream &s, double &c)
 }
 
 template<typename... T>
-inline std::istream &operator>=(std::istream &s, std::tuple<T...> &tuple)
+inline std::istream &operator>=(std::istream &s, std::tuple<T&...> tuple)
 {
     std::apply([&s](auto &&...args) { ((s >= args), ...); }, tuple);
     return s;
