@@ -324,7 +324,7 @@ int main(int argc, char **argv)
         LoadBSPFile(source, &bsp);
         PrintBSPFileSizes(&bsp);
 
-        source.replace_extension("json");
+        source.replace_extension("bsp.json");
         ConvertBSPFormat(&bsp, &bspver_generic);
 
         serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), source);
