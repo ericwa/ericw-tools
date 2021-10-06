@@ -310,8 +310,7 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
     if (face->w.size() > MAXEDGES)
         FError("Internal error: face->numpoints > MAXEDGES");
 
-    // C++20 make_shared not supported here
-    face->edges = std::shared_ptr<size_t[]>(new size_t[face->w.size()]);
+    face->edges.resize(face->w.size());
 
     for (size_t i = 0; i < face->w.size(); i++) {
         const qvec3d &p1 = face->w[i];
@@ -373,7 +372,7 @@ static void EmitFace(mapentity_t *entity, face_t *face)
     // emit surfedges
     out.firstedge = static_cast<int32_t>(map.bsp.dsurfedges.size());
     std::copy(&face->edges[0], &face->edges[face->w.size()], std::back_inserter(map.bsp.dsurfedges));
-    face->edges.reset();
+    face->edges.clear();
 
     out.numedges = static_cast<int32_t>(map.bsp.dsurfedges.size()) - out.firstedge;
 }

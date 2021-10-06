@@ -1360,7 +1360,7 @@ face_t *CopyFace(const face_t *face)
     // clear stuff that shouldn't be copied.
     newface->original = nullptr;
     newface->outputnumber = std::nullopt;
-    newface->edges = nullptr;
+    newface->edges.clear();
     newface->next = nullptr;
 
     return newface;

@@ -153,10 +153,7 @@ struct face_t
     vec3_t origin;
     vec_t radius;
 
-    // CHECK: should this be a unique_ptr? if so we need
-    // to verify copy constructor usage since it will
-    // be disallowed by default.
-    std::shared_ptr<size_t[]> edges;
+    std::vector<size_t> edges; // only filled in MakeFaceEdges
     winding_t w;
 };
 
