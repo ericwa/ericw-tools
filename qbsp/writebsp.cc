@@ -118,12 +118,13 @@ static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
 
     /* emit a clipnode */
     const size_t nodenum = map.bsp.dclipnodes.size();
-    bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes.emplace_back();
+    map.bsp.dclipnodes.emplace_back();
 
     const int child0 = ExportClipNodes(entity, node->children[0]);
     const int child1 = ExportClipNodes(entity, node->children[1]);
 
     // Careful not to modify the vector while using this clipnode pointer
+    bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
     clipnode.planenum = ExportMapPlane(node->planenum);
     clipnode.children[0] = child0;
     clipnode.children[1] = child1;
