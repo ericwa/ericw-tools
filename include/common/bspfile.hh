@@ -182,10 +182,10 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
     ADest dest{};
 
     for (size_t i = 0; i < std::min(dest.size(), src.size()); i++) {
-        if constexpr (std::is_arithmetic_v<ADest::value_type> && std::is_arithmetic_v<ASrc::value_type>)
-            dest[i] = numeric_cast<ADest::value_type>(src[i], overflow_message);
+        if constexpr (std::is_arithmetic_v<typename ADest::value_type> && std::is_arithmetic_v<typename ASrc::value_type>)
+            dest[i] = numeric_cast<typename ADest::value_type>(src[i], overflow_message);
         else
-            dest[i] = static_cast<ADest::value_type>(src[i]);
+            dest[i] = static_cast<typename ADest::value_type>(src[i]);
     }
 
     return dest;

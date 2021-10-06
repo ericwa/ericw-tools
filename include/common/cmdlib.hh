@@ -120,11 +120,9 @@ template<typename... Args>
 }
 
 #ifdef _MSC_VER
-#define FError(fmt, ...) Error("{}: " fmt, __func__, __VA_ARGS__)
+#define FError(fmt, ...) Error("{}: " fmt, __func__, ##__VA_ARGS__)
 #else
-#define VA_ARGS(...) , ##__VA_ARGS__
-#define FError(fmt, ...) Error("{}: " fmt, __func__ VA_ARGS(__VA_ARGS__))
-#undef VA_ARGS
+#define FError(fmt, ...) Error("{}: " fmt, __func__, ##__VA_ARGS__)
 #endif
 
 using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;

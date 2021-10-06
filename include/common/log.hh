@@ -83,11 +83,9 @@ inline void LogPrint(const char *fmt, const Args &...args)
 }
 
 #ifdef _MSC_VER
-#define FLogPrint(fmt, ...) LogPrint("{}: " fmt, __func__, __VA_ARGS__)
+#define FLogPrint(fmt, ...) LogPrint("{}: " fmt, __func__, ##__VA_ARGS__)
 #else
-#define VA_ARGS(...) , ##__VA_ARGS__
-#define FLogPrint(fmt, ...) LogPrint("{}: " fmt, __func__ VA_ARGS(__VA_ARGS__))
-#undef VA_ARGS
+#define FLogPrint(fmt, ...) LogPrint("{}: " fmt, __func__, ##__VA_ARGS__)
 #endif
 
 /* Print only into log file */

@@ -528,7 +528,7 @@ public:
             plane_t &dest = result[i];
 
             const qvec3d &v0 = at(i);
-            const qvec3d &v1 = get((i + 1) % count);
+            const qvec3d &v1 = at((i + 1) % count);
 
             qvec3d edgevec = qv::normalize(v1 - v0);
             qvec3d normal = qv::cross(edgevec, p.normal);
