@@ -371,7 +371,7 @@ static void EmitFace(mapentity_t *entity, face_t *face)
 
     // emit surfedges
     out.firstedge = static_cast<int32_t>(map.bsp.dsurfedges.size());
-    std::copy(&face->edges[0], &face->edges[face->w.size()], std::back_inserter(map.bsp.dsurfedges));
+    std::copy(face->edges.cbegin(), face->edges.cbegin() + face->w.size(), std::back_inserter(map.bsp.dsurfedges));
     face->edges.clear();
 
     out.numedges = static_cast<int32_t>(map.bsp.dsurfedges.size()) - out.firstedge;
