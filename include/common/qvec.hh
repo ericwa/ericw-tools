@@ -43,7 +43,11 @@ public:
     using value_type = T;
 
     constexpr qvec() = default;
-
+    
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
+#endif
     template<typename... Args,
         typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
     constexpr qvec(Args... a)
@@ -60,14 +64,7 @@ public:
         else {
             constexpr size_t copy_size = qmin(N, count);
             size_t i = 0;
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-value"
-#endif
             ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
             // Bug with MSVC:
             // https://developercommunity.visualstudio.com/t/stdc20-fatal-error-c1004-unexpected-end-of-file-fo/1509806
             constexpr bool fill_rest = count < N;
@@ -78,6 +75,9 @@ public:
             }
         }
     }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
     // copy from C-style array, exact lengths only
     template<typename T2>

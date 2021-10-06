@@ -395,19 +395,19 @@ inline std::ostream &operator<=(std::ostream &s, const double &c)
     return s;
 }
 
-template<typename... T>
-inline std::ostream &operator<=(std::ostream &s, std::tuple<T&...> tuple)
-{
-    std::apply([&s](auto &&...args) { ((s <= args), ...); }, tuple);
-    return s;
-}
-
 template<typename T, size_t N>
 inline std::ostream &operator<=(std::ostream &s, const std::array<T, N> &c)
 {
     for (auto &v : c)
         s <= v;
 
+    return s;
+}
+
+template<typename... T>
+inline std::ostream &operator<=(std::ostream &s, std::tuple<T&...> tuple)
+{
+    std::apply([&s](auto &&...args) { ((s <= args), ...); }, tuple);
     return s;
 }
 
@@ -514,19 +514,19 @@ inline std::istream &operator>=(std::istream &s, double &c)
     return s;
 }
 
-template<typename... T>
-inline std::istream &operator>=(std::istream &s, std::tuple<T&...> tuple)
-{
-    std::apply([&s](auto &&...args) { ((s >= args), ...); }, tuple);
-    return s;
-}
-
 template<typename T, size_t N>
 inline std::istream &operator>=(std::istream &s, std::array<T, N> &c)
 {
     for (auto &v : c)
         s >= v;
 
+    return s;
+}
+
+template<typename... T>
+inline std::istream &operator>=(std::istream &s, std::tuple<T&...> tuple)
+{
+    std::apply([&s](auto &&...args) { ((s >= args), ...); }, tuple);
     return s;
 }
 
