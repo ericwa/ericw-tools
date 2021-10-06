@@ -60,7 +60,7 @@ public:
         else {
             constexpr size_t copy_size = qmin(N, count);
             size_t i = 0;
-            ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
+            [[maybe_unused]] auto _ = ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
             // Bug with MSVC:
             // https://developercommunity.visualstudio.com/t/stdc20-fatal-error-c1004-unexpected-end-of-file-fo/1509806
             constexpr bool fill_rest = count < N;

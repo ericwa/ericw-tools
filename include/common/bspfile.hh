@@ -23,6 +23,7 @@
 #include <array>
 #include <tuple>
 #include <variant>
+#include <unordered_map>
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>

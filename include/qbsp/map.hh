@@ -26,6 +26,7 @@
 
 #include <optional>
 #include <vector>
+#include <unordered_map>
 
 struct mapface_t
 {
