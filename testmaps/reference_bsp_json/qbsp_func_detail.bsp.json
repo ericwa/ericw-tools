@@ -889,7 +889,7 @@
             67
         ]
     ],
-    "entdata": "{\n\"_tb_def\" \"builtin:Quoth2.fgd\"\n\"_wateralpha\" \"0.5\"\n\"wad\" \"deprecated/free_wad.wad;deprecated/fence.wad;deprecated/origin.wad;deprecated/hintskip.wad\"\n\"classname\" \"worldspawn\"\n\"mapversion\" \"220\"\n}\n{\n\"light\" \"3000\"\n\"origin\" \"72 -136 168\"\n\"classname\" \"light\"\n}\n{\n\"origin\" \"-88 -64 120\"\n\"classname\" \"info_player_start\"\n}\n\u0000",
+    "entdata": "{\n\"mapversion\" \"220\"\n\"classname\" \"worldspawn\"\n\"wad\" \"deprecated/free_wad.wad;deprecated/fence.wad;deprecated/origin.wad;deprecated/hintskip.wad\"\n\"_wateralpha\" \"0.5\"\n\"_tb_def\" \"builtin:Quoth2.fgd\"\n}\n{\n\"classname\" \"light\"\n\"origin\" \"72 -136 168\"\n\"light\" \"3000\"\n}\n{\n\"classname\" \"info_player_start\"\n\"origin\" \"-88 -64 120\"\n}\n\u0000",
     "faces": [
         {
             "firstedge": 0,

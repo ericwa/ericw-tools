@@ -486,9 +486,13 @@ ParseEpair(parser_t *parser, mapentity_t *entity)
 {
     epair_t *epair;
 
+    epair_t **next_ptr = &entity->epairs;
+    while (*next_ptr) {
+        next_ptr = &(*next_ptr)->next;
+    }
+
     epair = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
-    epair->next = entity->epairs;
-    entity->epairs = epair;
+    *next_ptr = epair;
 
     if (strlen(parser->token) >= MAX_KEY - 1)
         goto parse_error;
