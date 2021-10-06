@@ -51,7 +51,8 @@ public:
 #endif
     template<typename... Args,
         typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
-    constexpr qvec(Args... a)
+    constexpr qvec(Args... a) :
+        v({})
     {
         constexpr size_t count = sizeof...(Args);
 
@@ -61,19 +62,11 @@ public:
                 ((e = a, true) || ...);
         }
         // multiple arguments; copy up to min(N, `count`),
-        // fill `count` -> N with zero
+        // leave `count` -> N as zeroes
         else {
             constexpr size_t copy_size = qmin(N, count);
             size_t i = 0;
             ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
-            // Bug with MSVC:
-            // https://developercommunity.visualstudio.com/t/stdc20-fatal-error-c1004-unexpected-end-of-file-fo/1509806
-            constexpr bool fill_rest = count < N;
-
-            if constexpr (fill_rest) {
-                for (i = count; i < N; i++)
-                    v[i] = 0;
-            }
         }
     }
 #ifdef __clang__

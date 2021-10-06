@@ -674,7 +674,7 @@ static void SetLitNeeded()
 
 static void CheckLitNeeded(const globalconfig_t &cfg)
 {
-    static const qvec3d white{255};
+    static constexpr qvec3d white{255};
 
     // check lights
     for (const auto &light : GetLights()) {
