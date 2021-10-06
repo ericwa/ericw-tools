@@ -623,3 +623,8 @@ struct fmt::formatter<qvec<N, T>> : formatter<T>
         return formatter<T>::format(p[N - 1], ctx);
     }
 };
+
+using vec_t = double;
+// "vec3" type. legacy; eventually will be replaced entirely
+using vec3_t = vec_t[3];
+constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();

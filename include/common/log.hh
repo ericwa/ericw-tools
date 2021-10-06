@@ -82,7 +82,13 @@ inline void LogPrint(const char *fmt, const Args &...args)
     LogPrint(LOG_DEFAULT, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
 }
 
+#ifdef _MSC_VER
 #define FLogPrint(fmt, ...) LogPrint("{}: " fmt, __func__, __VA_ARGS__)
+#else
+#define VA_ARGS(...) , ##__VA_ARGS__
+#define FLogPrint(fmt, ...) LogPrint("{}: " fmt, __func__ VA_ARGS(__VA_ARGS__))
+#undef VA_ARGS
+#endif
 
 /* Print only into log file */
 void LogPrintSilent(const char *str);

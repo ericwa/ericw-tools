@@ -119,7 +119,13 @@ template<typename... Args>
     Error(formatted.c_str());
 }
 
+#ifdef _MSC_VER
 #define FError(fmt, ...) Error("{}: " fmt, __func__, __VA_ARGS__)
+#else
+#define VA_ARGS(...) , ##__VA_ARGS__
+#define FError(fmt, ...) Error("{}: " fmt, __func__ VA_ARGS(__VA_ARGS__))
+#undef VA_ARGS
+#endif
 
 using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;
 
@@ -610,7 +616,7 @@ struct membuf : std::streambuf
 {
 public:
     // construct membuf for reading and/or writing
-    membuf(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    inline membuf(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
     {
         auto cbase = reinterpret_cast<char *>(base);
 
@@ -624,7 +630,7 @@ public:
     }
 
     // construct membuf for reading
-    membuf(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+    inline membuf(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
     {
         auto cbase = const_cast<char *>(reinterpret_cast<const char *>(base));
 
@@ -641,7 +647,7 @@ protected:
     }
 
     // seek operations
-    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
     {
         if (which & std::ios_base::in) {
             setg(eback(), eback() + off, egptr());
@@ -659,7 +665,7 @@ protected:
     }
 
     pos_type seekoff(off_type off, std::ios_base::seekdir dir,
-        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
     {
         if (which & std::ios_base::in) {
             if (dir == std::ios_base::cur)
@@ -725,7 +731,7 @@ protected:
 
 struct memstream : virtual membuf, std::ostream, std::istream
 {
-    memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    inline memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
         : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
           std::istream(static_cast<std::streambuf *>(this))
     {

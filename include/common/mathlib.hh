@@ -31,10 +31,6 @@
 
 #include <common/qvec.hh>
 
-using vec_t = double;
-using vec3_t = vec_t[3];
-constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();
-
 struct plane_t
 {
     qvec3d normal;
@@ -239,23 +235,6 @@ inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
 
     VectorSubtract(stop, start, dir);
     return VectorNormalize(dir);
-}
-
-template<typename T>
-constexpr vec_t DistanceAbovePlane(const T &normal, const vec_t dist, const T &point)
-{
-    // static_assert(std::size(normal) == 3);
-
-    return DotProduct(normal, point) - dist;
-}
-
-template<typename T>
-constexpr void ProjectPointOntoPlane(const T &normal, const vec_t dist, T &point)
-{
-    vec_t distAbove = DistanceAbovePlane(normal, dist, point);
-    vec3_t move;
-    VectorScale(normal, -distAbove, move);
-    VectorAdd(point, move, point);
 }
 
 bool SetPlanePts(const std::array<qvec3d, 3> &planepts, qvec3d &normal, vec_t &dist);

@@ -280,17 +280,6 @@ TEST(mathlib, DistAbovePlane)
     EXPECT_FLOAT_EQ(90, GLM_DistAbovePlane(plane, point));
 }
 
-TEST(mathlib, ProjectPointOntoPlane)
-{
-    qvec4f plane(0, 0, 1, 10);
-    qvec3f point(100, 100, 100);
-
-    qvec3f projected = GLM_ProjectPointOntoPlane(plane, point);
-    EXPECT_FLOAT_EQ(100, projected[0]);
-    EXPECT_FLOAT_EQ(100, projected[1]);
-    EXPECT_FLOAT_EQ(10, projected[2]);
-}
-
 TEST(mathlib, InterpolateNormalsDegenerate)
 {
     EXPECT_FALSE(GLM_InterpolateNormal({}, {}, qvec3f(0, 0, 0)).first);
