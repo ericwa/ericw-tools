@@ -451,9 +451,9 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
         return {};
 
     std::vector<V> result;
+    const int stepCount = static_cast<int>(len / step);
     result.reserve(stepCount + 1);
     const V dir = linesegment / len;
-    const int stepCount = static_cast<int>(len / step);
     for (int i = 0; i <= stepCount; i++) {
         result.push_back(start + (dir * (step * i)));
     }

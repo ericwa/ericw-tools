@@ -14,11 +14,6 @@
 
 using namespace std;
 
-static qvec4f extendTo4(const qvec3f &v)
-{
-    return qvec4f(v, 1.0f);
-}
-
 TEST(mathlib, MakeCDF)
 {
 

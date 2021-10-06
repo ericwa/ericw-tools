@@ -619,7 +619,7 @@ public:
         }
 
         if (which & std::ios_base::out) {
-            this->setp(cbase, cbase, cbase + size);
+            this->setp(cbase, cbase + size);
         }
     }
 
