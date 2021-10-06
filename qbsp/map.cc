@@ -772,7 +772,7 @@ static texdef_quake_ed_t TexDef_BSPToQuakeEd(
     const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, &faceplane, false);
 
     // figure out shift based on facepoints[0]
-    const qvec3f &testpoint = facepoints[0];
+    const qvec3f testpoint = facepoints[0];
     qvec2f uv0_actual = evalTexDefAtPoint(addShift(res, qvec2f(0, 0)), &faceplane, testpoint);
     qvec2f uv0_desired = qvec2f(worldToTexSpace * qvec4f(testpoint[0], testpoint[1], testpoint[2], 1.0f));
     qvec2f shift = uv0_desired - uv0_actual;

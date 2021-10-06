@@ -147,12 +147,26 @@ public:
 
     constexpr V &operator[](const size_t &index)
     {
-        return (index == 0 ? m_mins : index == 1 ? m_maxs : throw std::exception());
+        switch (index) {
+            case 0:
+                return m_mins;
+            case 1:
+                return m_maxs;
+            default:
+                throw std::exception();
+        }
     }
 
     constexpr const V &operator[](const size_t &index) const
     {
-        return (index == 0 ? m_mins : index == 1 ? m_maxs : throw std::exception());
+        switch (index) {
+            case 0:
+                return m_mins;
+            case 1:
+                return m_maxs;
+            default:
+                throw std::exception();
+        }
     }
 
     constexpr V centroid() const { return (m_mins + m_maxs) * 0.5; }
