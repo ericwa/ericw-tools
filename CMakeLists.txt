@@ -126,7 +126,8 @@ endif (MSVC)
 
 # 10.9: minimum version that supports unordered_map
 # 10.14: required by tbb 2021.3.0 (due to use of alignas)
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.14)
+# 10.15: required by std::filesytstem
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 find_package(TBB REQUIRED)
 
