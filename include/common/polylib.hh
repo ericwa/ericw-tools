@@ -207,12 +207,12 @@ public:
     };
 
     // default constructor
-    winding_base_t() { }
+    inline winding_base_t() = default;
 
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    winding_base_t(const size_t &initial_size)
+    inline winding_base_t(const size_t &initial_size)
         : count(initial_size), data(count > N ? variant_type(vector_type(initial_size)) : variant_type(array_type()))
     {
     }
@@ -220,7 +220,7 @@ public:
     // construct winding from range.
     // iterators must have operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    winding_base_t(Iter begin, Iter end)
+    inline winding_base_t(Iter begin, Iter end)
         : count(end - begin), data(count > N ? variant_type(vector_type(begin, end)) : variant_type(array_type()))
     {
         if (!is_dynamic())
@@ -228,10 +228,10 @@ public:
     }
 
     // copy constructor
-    winding_base_t(const winding_base_t &copy) : count(copy.count), data(copy.data) { }
+    inline winding_base_t(const winding_base_t &copy) : count(copy.count), data(copy.data) { }
 
     // move constructor
-    winding_base_t(winding_base_t &&move) : count(move.count), data(std::move(move.data)) { move.count = 0; }
+    inline winding_base_t(winding_base_t &&move) noexcept : count(move.count), data(std::move(move.data)) { move.count = 0; }
 
     // assignment copy
     inline winding_base_t &operator=(const winding_base_t &copy)
@@ -303,7 +303,7 @@ public:
     {
         // move us to dynamic
         if (count == N)
-            data.emplace<vector_type>(begin(), end());
+            data.template emplace<vector_type>(begin(), end());
 
         if (is_dynamic())
             std::get<vector_type>(data).push_back(vec);
@@ -317,7 +317,7 @@ public:
     {
         // move us to dynamic if we'll expand too big
         if (new_size > N && !is_dynamic()) {
-            auto &vector = data.emplace<vector_type>(begin(), end());
+            auto &vector = data.template emplace<vector_type>(begin(), end());
             vector.resize(new_size);
         } else if (is_dynamic()) {
             if (new_size > N)
@@ -325,7 +325,7 @@ public:
             // move us to array if we're shrinking
             else {
                 auto vector = std::move(std::get<vector_type>(data));
-                auto &array = data.emplace<array_type>();
+                auto &array = data.template emplace<array_type>();
                 std::copy_n(vector.begin(), new_size, array.begin());
             }
         }
@@ -339,7 +339,7 @@ public:
             std::get<vector_type>(data).clear();
 
         count = 0;
-        data.emplace<array_type>();
+        data.template emplace<array_type>();
     }
 
     vec_t area() const
@@ -491,7 +491,7 @@ public:
                 FError("point off plane");
 
             /* check the edge isn't degenerate */
-            const qvec3d &p2 = get[(i + 1) % count];
+            const qvec3d &p2 = at((i + 1) % count);
             qvec3d dir = p2 - p1;
 
             if (qv::length(dir) < on_epsilon)

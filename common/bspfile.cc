@@ -789,9 +789,9 @@ inline T ConvertGenericToQ1BSP(mbsp_t &mbsp, const bspversion_t *to_version)
     CopyOrMoveArray(mbsp.dentdata, bsp.dentdata);
     CopyOrMoveArray(mbsp.dplanes, bsp.dplanes);
     if (to_version->game->id == GAME_HALF_LIFE) {
-        CopyOrMoveArray(mbsp.dtex, bsp.dtex.emplace<miptexhl_lump>());
+        CopyOrMoveArray(mbsp.dtex, bsp.dtex.template emplace<miptexhl_lump>());
     } else {
-        CopyOrMoveArray(mbsp.dtex, bsp.dtex.emplace<miptexq1_lump>());
+        CopyOrMoveArray(mbsp.dtex, bsp.dtex.template emplace<miptexq1_lump>());
     }
     CopyOrMoveArray(mbsp.dvertexes, bsp.dvertexes);
     CopyOrMoveArray(mbsp.dvis.bits, bsp.dvisdata);
@@ -805,9 +805,9 @@ inline T ConvertGenericToQ1BSP(mbsp_t &mbsp, const bspversion_t *to_version)
     CopyOrMoveArray(mbsp.dedges, bsp.dedges);
     CopyOrMoveArray(mbsp.dsurfedges, bsp.dsurfedges);
     if (to_version->game->id == GAME_HEXEN_II) {
-        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.emplace<dmodelh2_vector>());
+        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.template emplace<dmodelh2_vector>());
     } else {
-        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.emplace<dmodelq1_vector>());
+        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.template emplace<dmodelq1_vector>());
     }
 
     return bsp;
@@ -1008,9 +1008,9 @@ inline void ReadQ1BSP(lump_reader &reader, T &bsp)
     reader.read(LUMP_ENTITIES, bsp.dentdata);
     reader.read(LUMP_PLANES, bsp.dplanes);
     if (reader.version->game->id == GAME_HALF_LIFE) {
-        reader.read(LUMP_TEXTURES, bsp.dtex.emplace<miptexhl_lump>());
+        reader.read(LUMP_TEXTURES, bsp.dtex.template emplace<miptexhl_lump>());
     } else {
-        reader.read(LUMP_TEXTURES, bsp.dtex.emplace<miptexq1_lump>());
+        reader.read(LUMP_TEXTURES, bsp.dtex.template emplace<miptexq1_lump>());
     }
     reader.read(LUMP_VERTEXES, bsp.dvertexes);
     reader.read(LUMP_VISIBILITY, bsp.dvisdata);
@@ -1024,9 +1024,9 @@ inline void ReadQ1BSP(lump_reader &reader, T &bsp)
     reader.read(LUMP_EDGES, bsp.dedges);
     reader.read(LUMP_SURFEDGES, bsp.dsurfedges);
     if (reader.version->game->id == GAME_HEXEN_II) {
-        reader.read(LUMP_MODELS, bsp.dmodels.emplace<dmodelh2_vector>());
+        reader.read(LUMP_MODELS, bsp.dmodels.template emplace<dmodelh2_vector>());
     } else {
-        reader.read(LUMP_MODELS, bsp.dmodels.emplace<dmodelq1_vector>());
+        reader.read(LUMP_MODELS, bsp.dmodels.template emplace<dmodelq1_vector>());
     }
 }
 
