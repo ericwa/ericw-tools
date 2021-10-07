@@ -70,10 +70,10 @@ for bsp in ${COMMIT_JSON_MAPS}; do
         cp ${bsp}.qbsplog reference_bsp_json/${bsp}.qbsplog
     else
         echo "Diff of reference_bsp_json/${bsp}.qbsplog and ${bsp}.qbsplog:"
-        diff -U3 --strip-trailing-cr reference_bsp_json/${bsp}.qbsplog ${bsp}.qbsplog
+        diff -U3 -w reference_bsp_json/${bsp}.qbsplog ${bsp}.qbsplog
 
         echo "Diff of reference_bsp_json/${bsp}.json and ${bsp}.json:"
-        diff -U3 --strip-trailing-cr reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
+        diff -U3 -w reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
     fi
 done
 
