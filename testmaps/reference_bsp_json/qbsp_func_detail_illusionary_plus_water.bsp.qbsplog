@@ -1,0 +1,87 @@
+---- qbsp / ericw-tools v0.18.1-373-gca7002c ----
+Input file: qbsp_func_detail_illusionary_plus_water.map
+Output file: qbsp_func_detail_illusionary_plus_water.bsp
+
+SetQdirFromPath: no "maps" in 'C:\Users\Eric\Documents\ericwtools-vcpkgtest\testmaps\/qbsp_func_detail_illusionary_plus_water.map'
+---- LoadMapFile ----
+*** WARNING 06: No info_player_deathmatch entities in level
+           48 faces
+            8 brushes
+            4 entities
+            4 unique texnames
+           36 texinfo
+
+Opened WAD: deprecated/fence.wad
+Opened WAD: deprecated/free_wad.wad
+Processing hull 0...
+---- Brush_LoadEntity ----
+            7 brushes
+            1 detail illusionary
+           18 planes
+---- CSGFaces ----
+           48 brushfaces
+           50 csgfaces
+           60 mergedfaces
+---- SolidBSP ----
+           34 split nodes
+            6 solid leafs
+           23 empty leafs
+            5 water leafs
+            0 detail leafs
+            1 detail illusionary leafs
+            0 detail fence leafs
+            0 illusionary visblocker leafs
+           84 leaffaces
+           60 nodefaces
+---- Portalize ----
+           29 vis leafs
+           29 vis clusters
+           56 vis portals
+---- FillOutside ----
+           18 outleafs
+---- MergeAll ----
+           30 mergefaces
+---- SolidBSP ----
+           16 split nodes
+            6 solid leafs
+            5 empty leafs
+            5 water leafs
+            0 detail leafs
+            1 detail illusionary leafs
+            0 detail fence leafs
+            0 illusionary visblocker leafs
+           54 leaffaces
+           30 nodefaces
+---- Portalize ----
+           11 vis leafs
+            2 vis clusters
+            1 vis portals
+---- Tjunc ----
+           32 world edges
+           72 edge points
+            0 edges added by tjunctions
+            0 faces added by tjunctions
+---- MakeFaceEdges ----
+---- GrowRegions ----
+Processing hull 1...
+Processing hull 2...
+---- WriteBSPFile ----
+Writing qbsp_func_detail_illusionary_plus_water.bsp as BSP version Quake BSP
+Wrote qbsp_func_detail_illusionary_plus_water.bsp
+      1 models      
+     23 planes              460
+     24 vertexes            288
+     16 nodes               384
+      9 texinfos            360
+     30 faces               600
+     12 clipnodes            96
+     12 leafs               336
+     54 marksurfaces        108
+     65 edges               260
+    120 surfedges           480
+      4 textures          38260
+        lightdata             0
+        visdata               0
+        entdata             223
+
+0.037 seconds elapsed
