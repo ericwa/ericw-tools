@@ -175,6 +175,22 @@ WADList_FindTexture(const char *name)
     return NULL;
 }
 
+static void WAD_SanitizeName(dmiptex_t* miptex)
+{
+    bool reached_null = false;
+
+    for (int i = 0; i < sizeof(miptex->name); ++i) {
+        if (!miptex->name[i]) {
+            reached_null = true;
+        }
+
+        // fill the remainder of the buffer with 0 bytes
+        if (reached_null) {
+            miptex->name[i] = '\0';
+        }
+    }
+}
+
 static int
 WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
 {
@@ -195,6 +211,8 @@ WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
         size = fread(dest, 1, sizeof(dmiptex_t), wad.file);
         if (size != sizeof(dmiptex_t))
             Error("Failure reading from file");
+
+        WAD_SanitizeName((dmiptex_t*)dest);
         for (i = 0; i < MIPLEVELS; i++)
             ((dmiptex_t*)dest)->offsets[i] = 0;
         return sizeof(dmiptex_t);
@@ -206,6 +224,8 @@ WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
         size = fread(data.data(), 1, lump.disksize, wad.file);
         if (size != lump.disksize)
             Error("Failure reading from file");
+
+        WAD_SanitizeName((dmiptex_t*)dest);
         auto out = (dmiptex_t *)dest;
         auto in = (dmiptex_t *)data.data();
         *out = *in;
@@ -236,6 +256,8 @@ WAD_LoadLump(const wad_t &wad, const char *name, uint8_t *dest)
         size = fread(dest, 1, lump.disksize, wad.file);
         if (size != lump.disksize)
             Error("Failure reading from file");
+
+        WAD_SanitizeName((dmiptex_t*)dest);
     }
     return lump.size;
 }
