@@ -68,7 +68,7 @@ for bsp in ${COMMIT_JSON_MAPS}; do
         cp ${bsp}.json reference_bsp_json/${bsp}.json
     else
         echo "Diff of reference_bsp_json/${bsp}.json and ${bsp}.json:"
-        diff -U3 reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
+        diff -U3 --ignore-trailing-space reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
     fi
 done
 
