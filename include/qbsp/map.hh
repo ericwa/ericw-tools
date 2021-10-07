@@ -26,6 +26,7 @@
 
 #include <optional>
 #include <vector>
+#include <utility>
 #include <unordered_map>
 
 struct mapface_t
@@ -92,10 +93,8 @@ public:
     brush_t *solid = nullptr, *sky = nullptr, *detail = nullptr, *detail_illusionary = nullptr, *detail_fence = nullptr,
             *liquid = nullptr;
 
-    // tree of key/value pairs
-    std::map<std::string, std::string, case_insensitive_less> epairs;
-    // order of parse
-    std::vector<std::string> epair_order;
+    // key/value pairs in the order they were parsed
+    std::vector<std::pair<std::string, std::string>> epairs;
 
     aabb3d bounds;
     brush_t *brushes = nullptr; /* NULL terminated list */

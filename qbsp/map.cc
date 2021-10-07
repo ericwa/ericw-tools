@@ -495,7 +495,8 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
             goto parse_error;
 
         {
-            std::string &value = (entity->epairs[key] = parser.token);
+            std::string value = parser.token;
+            SetKeyValue(entity, key.c_str(), value.c_str());
 
             if (!Q_strcasecmp(key.c_str(), "origin")) {
                 GetVectorForKey(entity, key.c_str(), entity->origin);
@@ -513,8 +514,6 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
                     rgfStartSpots |= info_player_coop;
                 }
             }
-
-            entity->epair_order.push_back(std::move(key));
 
             return;
         }
@@ -2186,8 +2185,8 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t *entity, const con
 {
     f << "{\n";
 
-    for (const auto &key : entity->epair_order) {
-        fmt::print(f, "\"{}\" \"{}\"\n", key, entity->epairs.at(key));
+    for (const auto &[key, value] : entity->epairs) {
+        fmt::print(f, "\"{}\" \"{}\"\n", key, value);
     }
 
     for (int i = 0; i < entity->nummapbrushes; i++) {
@@ -2235,17 +2234,23 @@ void PrintEntity(const mapentity_t *entity)
 
 const char *ValueForKey(const mapentity_t *entity, const char *key)
 {
-    auto it = entity->epairs.find(key);
-
-    if (it == entity->epairs.end())
-        return "";
-
-    return it->second.c_str();
+    for (auto &epair : entity->epairs) {
+        if (!Q_strcasecmp(key, epair.first.c_str())) {
+            return epair.second.c_str();
+        }
+    }
+    return "";
 }
 
 void SetKeyValue(mapentity_t *entity, const char *key, const char *value)
 {
-    entity->epairs[key] = value;
+    for (auto &epair : entity->epairs) {
+        if (!Q_strcasecmp(key, epair.first.c_str())) {
+            epair.second = value;
+            return;
+        }
+    }
+    entity->epairs.emplace_back(key, value);
 }
 
 /**
