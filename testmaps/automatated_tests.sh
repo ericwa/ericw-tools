@@ -56,19 +56,24 @@ COMMIT_JSON_MAPS="qbsp_func_detail.bsp \
 qbsp_func_detail_illusionary_plus_water.bsp"
 
 # smaller test maps for specific features/combinations
-qbsp -noverbose               qbsp_func_detail.map                           || exit 1
-qbsp -noverbose               qbsp_func_detail_illusionary_plus_water.bsp    || exit 1
-
 # check .json diff of COMMIT_JSON_MAPS
 for bsp in ${COMMIT_JSON_MAPS}; do
+    # save regular verbosity log to file, to avoid spamming the CI log
+    qbsp -nopercent ${bsp} &> ${bsp}.qbsplog || exit 1
+
+    # dump .bsp to .bsp.json
     bspinfo ${bsp} || exit 1
 
     if [[ $UPDATE_HASHES -ne 0 ]]; then
         mkdir reference_bsp_json
         cp ${bsp}.json reference_bsp_json/${bsp}.json
+        cp ${bsp}.qbsplog reference_bsp_json/${bsp}.qbsplog
     else
+        echo "Diff of reference_bsp_json/${bsp}.qbsplog and ${bsp}.qbsplog:"
+        diff -U3 --strip-trailing-cr reference_bsp_json/${bsp}.qbsplog ${bsp}.qbsplog
+
         echo "Diff of reference_bsp_json/${bsp}.json and ${bsp}.json:"
-        diff -U3 --ignore-trailing-space reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
+        diff -U3 --strip-trailing-cr reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
     fi
 done
 
