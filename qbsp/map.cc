@@ -2225,13 +2225,8 @@ ConvertEntity(FILE *f, const mapentity_t *entity, const conversion_t format)
 {
     fprintf(f, "{\n");
     
-    // put the epairs in a temporary list to reverse the order, so we can print them in the same order as the .MAP file
-    std::list<std::pair<std::string, std::string>> epairs;
-    for (const epair_t *epair = entity->epairs; epair; epair = epair->next) {
-        epairs.push_front(std::make_pair(std::string(epair->key), std::string(epair->value)));
-    }
-    for (const auto &epair : epairs) {
-        fprintf(f, "\"%s\" \"%s\"\n", epair.first.c_str(), epair.second.c_str());
+    for (epair_t *ep = entity->epairs; ep; ep = ep->next) {
+        fprintf(f, "\"%s\" \"%s\"\n", ep->key, ep->value);
     }
     
     for (int i=0; i<entity->nummapbrushes; i++) {
@@ -2322,9 +2317,15 @@ SetKeyValue(mapentity_t *entity, const char *key, const char *value)
             ep->value = copystring(value);
             return;
         }
+
+    // insert a new one at the end
+    epair_t **next_ptr = &entity->epairs;
+    while (*next_ptr) {
+        next_ptr = &(*next_ptr)->next;
+    }
+
     ep = (epair_t *)AllocMem(OTHER, sizeof(epair_t), true);
-    ep->next = entity->epairs;
-    entity->epairs = ep;
+    *next_ptr = ep;
     ep->key = copystring(key);
     ep->value = copystring(value);
 }
