@@ -165,7 +165,11 @@ void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs);
 
 plane_t FlipPlane(plane_t input);
 
-#define Q_rint rint
+template<typename T>
+inline T Q_rint(T in)
+{
+    return (T)(floor(in + 0.5));
+}
 
 /*
    Random()
