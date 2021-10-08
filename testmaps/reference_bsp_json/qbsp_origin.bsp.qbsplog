@@ -83,6 +83,6 @@ Wrote qbsp_origin.bsp
       4 textures          38260
         lightdata             0
         visdata               0
-        entdata             417
+        entdata             408
 
-0.057 seconds elapsed
+0.058 seconds elapsed
