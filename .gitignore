@@ -6,6 +6,7 @@ CMakeFiles/
 *.xcodeproj
 .*/
 testmaps/*.bsp
+testmaps/*.bsp.qbsplog
 testmaps/*.log
 testmaps/*.prt
 testmaps/*.vis
