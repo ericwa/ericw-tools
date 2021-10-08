@@ -386,9 +386,9 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
     const std::initializer_list<aabb3d> &get_hull_sizes() const
     {
         static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
-            {{-24, -24, -20}, {24, 24, 20}}, {{-16, -16, -12}, {16, 16, 16}},
+            {{-24, -24, -20}, {24, 24, 20}}, {{-16, -16, -16}, {16, 16, 12}},
             {{-8, -8, -8}, {8, 8, 8}}, // {{-40, -40, -42}, {40, 40, 42}} = original game
-            {{-48, -48, -50}, {48, 48, 50}}};
+            {{-28, -28, -40}, {28, 28, 40}}};
 
         return hulls;
     }
