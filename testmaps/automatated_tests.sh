@@ -37,6 +37,7 @@ light invalid_texture_axes.map || exit 1
 
 HASH_CHECK_BSPS="qbsp_func_detail.bsp \
 qbsp_func_detail_illusionary_plus_water.bsp \
+qbsp_origin.bsp \
 e1m1-bsp29.bsp \
 e1m1-bsp2.bsp \
 e1m1-2psb.bsp \
@@ -53,7 +54,8 @@ HASH_CHECK_PRTS=${HASH_CHECK_BSPS//.bsp/.prt}
 # for tiny test maps, we'll commit the .json export of the .bsp's
 # directly to the git repo, so we can print a diff
 COMMIT_JSON_MAPS="qbsp_func_detail.bsp \
-qbsp_func_detail_illusionary_plus_water.bsp"
+qbsp_func_detail_illusionary_plus_water.bsp \
+qbsp_origin.bsp"
 
 # smaller test maps for specific features/combinations
 # check .json diff of COMMIT_JSON_MAPS

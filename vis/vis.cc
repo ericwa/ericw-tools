@@ -497,7 +497,8 @@ static void LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
     totalvis += numvis;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = new uint8_t[(portalleafs * 2) / 8];
+    /* Also, always allocate at least 1 byte (for vising single leaf test maps) */
+    compressed = new uint8_t[qmax(1, (portalleafs * 2) / 8)];
     len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
 
     dest = vismap_p;
