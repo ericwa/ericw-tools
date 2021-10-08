@@ -600,7 +600,7 @@ LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
     totalvis += numvis;
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
-    compressed = static_cast<uint8_t *>(malloc(portalleafs * 2 / 8));
+    compressed = static_cast<uint8_t *>(malloc(qmax(1, portalleafs * 2 / 8)));
     len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
 
     dest = vismap_p;
