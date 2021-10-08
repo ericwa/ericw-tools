@@ -112,6 +112,20 @@ ThreadUnlock(void)
         LeaveCriticalSection(&crit);
 }
 
+using functype = void *(*)(void *);
+
+struct threadInfo {
+    functype func;
+    void *arg;
+};
+
+// necessary for calling convention reasons
+DWORD WINAPI ThreadWrapper(LPVOID lpParam) {
+    threadInfo* info = (threadInfo*)lpParam;
+    info->func(info->arg);
+    return 0;
+}
+
 /*
  * =============
  * RunThreadsOn
@@ -134,14 +148,18 @@ RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg)
     if (!threadid || !threadhandle)
         Error("Failed to allocate memory for threads");
 
+    threadInfo info;
+    info.func = func;
+    info.arg = arg;
+
     /* run threads in parallel */
     InitializeCriticalSection(&crit);
     threads_active = true;
     for (i = 0; i < numthreads; i++) {
         threadhandle[i] = CreateThread(NULL,
                                        0,
-                                       (LPTHREAD_START_ROUTINE)func,
-                                       (LPVOID)arg,
+                                       ThreadWrapper,
+                                       (LPVOID)&info,
                                        0,
                                        &threadid[i]);
     }
