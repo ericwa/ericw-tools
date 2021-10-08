@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include <qbsp/qbsp.hh>
+#include <fmt/format.h>
 
 /*
  * Beveled clipping hull can generate many extra faces
@@ -346,7 +347,6 @@ FixRotateOrigin(mapentity_t *entity)
     const mapentity_t *target = NULL;
     const char *search;
     vec3_t offset;
-    char value[20];
 
     search = ValueForKey(entity, "target");
     if (search[0])
@@ -360,9 +360,8 @@ FixRotateOrigin(mapentity_t *entity)
         VectorCopy(vec3_origin, offset);
     }
 
-    q_snprintf(value, sizeof(value), "%d %d %d", (int)offset[0],
-             (int)offset[1], (int)offset[2]);
-    SetKeyValue(entity, "origin", value);
+    std::string value = fmt::format("{} {} {}", (int)offset[0], (int)offset[1], (int)offset[2]);
+    SetKeyValue(entity, "origin", value.c_str());
 }
 
 static bool
@@ -1244,9 +1243,8 @@ Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
                 VectorAdd(brush->mins, brush->maxs, origin);
                 VectorScale(origin, 0.5, origin);
                 
-                char value[1024];
-                q_snprintf(value, sizeof(value), "%.2f %.2f %.2f", origin[0], origin[1], origin[2]);
-                SetKeyValue(dst, "origin", value);
+                std::string value = fmt::format("{} {} {}", origin[0], origin[1], origin[2]);
+                SetKeyValue(dst, "origin", value.c_str());
                 
                 VectorCopy(origin, rotate_offset);
                 rottype = rotation_t::origin_brush;
