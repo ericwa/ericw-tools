@@ -44,11 +44,10 @@ public:
 };
 
 void CalculateVertexNormals(const mbsp_t *bsp);
-const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const int vertindex);
+const face_normal_t &GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const int vertindex);
 bool FacesSmoothed(const mface_t *f1, const mface_t *f2);
 const std::set<const mface_t *> &GetSmoothFaces(const mface_t *face);
 const std::vector<const mface_t *> &GetPlaneFaces(const mface_t *face);
-const qvec3f GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const int v);
 const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const int edgeindex);
 
 /// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
@@ -62,27 +61,22 @@ class face_cache_t
 {
 private:
     std::vector<qvec3f> m_points;
-    std::vector<qvec3f> m_normals;
-    std::vector<qvec3f> m_tangents;
-    std::vector<qvec3f> m_bitangents;
+    std::vector<face_normal_t> m_normals;
     qvec4f m_plane;
     std::vector<qvec4f> m_edgePlanes;
     std::vector<qvec3f> m_pointsShrunkBy1Unit;
     std::vector<neighbour_t> m_neighbours;
 
 public:
-    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<qvec3f> &normals,
-        const std::vector<qvec3f> &tangents, const std::vector<qvec3f> &bitangents)
-        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_tangents(tangents), m_bitangents(bitangents),
+    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
+        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals),
           m_plane(Face_Plane(bsp, face).vec4()), m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)),
           m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)), m_neighbours(NeighbouringFaces_new(bsp, face))
     {
     }
 
     const std::vector<qvec3f> &points() const { return m_points; }
-    const std::vector<qvec3f> &normals() const { return m_normals; }
-    const std::vector<qvec3f> &tangents() const { return m_tangents; }
-    const std::vector<qvec3f> &bitangents() const { return m_bitangents; }
+    const std::vector<face_normal_t> &normals() const { return m_normals; }
     const qvec4f &plane() const { return m_plane; }
     const qvec3f normal() const { return m_plane; }
     const std::vector<qvec4f> &edgePlanes() const { return m_edgePlanes; }

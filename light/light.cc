@@ -539,7 +539,7 @@ static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *fa
     // export the vertices and uvs
     for (int i = 0; i < face->numedges; i++) {
         const int vertnum = Face_VertexAtIndex(bsp, face, i);
-        const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i);
+        const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i).normal;
         const qvec3f &pos = bsp->dvertexes[vertnum];
         fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
         fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
@@ -903,10 +903,12 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 
     for (auto &face : bsp.dfaces) {
         auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
-        unique_normals.insert(cache.normals().begin(), cache.normals().end());
-        unique_normals.insert(cache.tangents().begin(), cache.tangents().end());
-        unique_normals.insert(cache.bitangents().begin(), cache.bitangents().end());
-        num_normals += cache.normals().size() + cache.tangents().size() + cache.bitangents().size();
+        for (auto &normals : cache.normals()) {
+            unique_normals.insert(normals.normal);
+            unique_normals.insert(normals.tangent);
+            unique_normals.insert(normals.bitangent);
+            num_normals += 3;
+        }
     }
 
     size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
@@ -916,23 +918,20 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
     stream << endianness<std::endian::little>;
     stream <= numeric_cast<uint32_t>(unique_normals.size());
 
+    std::map<qvec3f, size_t> mapped_normals;
+
     for (auto &n : unique_normals) {
         stream <= std::tie(n[0], n[1], n[2]);
+        mapped_normals.emplace(n, mapped_normals.size());
     }
 
     for (auto &face : bsp.dfaces) {
         auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
 
         for (auto &n : cache.normals()) {
-            stream <= numeric_cast<uint32_t>(std::distance(unique_normals.begin(), unique_normals.find(n)));
-        }
-
-        for (auto &n : cache.tangents()) {
-            stream <= numeric_cast<uint32_t>(std::distance(unique_normals.begin(), unique_normals.find(n)));
-        }
-
-        for (auto &n : cache.bitangents()) {
-            stream <= numeric_cast<uint32_t>(std::distance(unique_normals.begin(), unique_normals.find(n)));
+            stream <= numeric_cast<uint32_t>(mapped_normals[n.normal]);
+            stream <= numeric_cast<uint32_t>(mapped_normals[n.tangent]);
+            stream <= numeric_cast<uint32_t>(mapped_normals[n.bitangent]);
         }
     }
 

@@ -273,7 +273,7 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 
         for (auto &plane : bevels) {
             map.bsp.dbrushsides.push_back(
-                {(uint32_t)std::get<0>(plane), (int32_t)map.mtexinfos[b->faces->texinfo].outputnum.value_or(-1)});
+                {(uint32_t)std::get<0>(plane), (int32_t)ExportMapTexinfo(b->faces->texinfo)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }

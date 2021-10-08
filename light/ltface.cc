@@ -267,7 +267,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
         const qvec3f &point = GetSurfaceVertexPoint(bsp, face, i);
-        const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i);
+        const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i).normal;
         LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
             i ? "          " : "    verts ", vert, point[0], point[1], point[2], norm[0], norm[1], norm[2], edge);
     }

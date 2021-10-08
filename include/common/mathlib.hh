@@ -241,6 +241,12 @@ inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
     return VectorNormalize(dir);
 }
 
+// Stores a normal, tangent and bitangents
+struct face_normal_t
+{
+    qvec3f normal, tangent, bitangent;
+};
+
 bool SetPlanePts(const std::array<qvec3d, 3> &planepts, qvec3d &normal, vec_t &dist);
 
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
@@ -297,7 +303,7 @@ qvec4f GLM_PolyPlane(const std::vector<qvec3f> &points);
 std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point);
 /// Returns `true` and the interpolated normal if `point` is in the polygon, otherwise returns false.
 std::pair<bool, qvec3f> GLM_InterpolateNormal(
-    const std::vector<qvec3f> &points, const std::vector<qvec3f> &normals, const qvec3f &point);
+    const std::vector<qvec3f> &points, const std::vector<face_normal_t> &normals, const qvec3f &point);
 std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount);
 /// Returns (front part, back part)
 std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane);
