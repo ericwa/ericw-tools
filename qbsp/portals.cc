@@ -22,6 +22,8 @@
 
 #include <qbsp/qbsp.hh>
 
+#include <fmt/format.h>
+
 node_t outside_node;    // portals outside the world face this
 
 class portal_state_t {
@@ -47,9 +49,9 @@ static void
 WriteFloat(FILE *portalFile, vec_t v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
-        fprintf(portalFile, "%d ", (int)Q_rint(v));
+        fmt::print(portalFile, "{} ", (int)Q_rint(v));
     else
-        fprintf(portalFile, "%f ", v);
+        fmt::print(portalFile, "{} ", v);
 }
 
 static contentflags_t
