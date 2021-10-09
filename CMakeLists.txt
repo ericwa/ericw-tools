@@ -85,11 +85,6 @@ elseif (CMAKE_USE_WIN32_THREADS_INIT)
 	add_definitions(-DUSE_WIN32THREADS)
 endif ()
 
-# (see http://sourceforge.net/p/mingw-w64/wiki2/printf%20and%20scanf%20family/)
-if (MINGW)
-	add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
-endif (MINGW)
-
 if (UNIX)
 	add_definitions(-DLINUX)
 endif (UNIX)
