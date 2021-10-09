@@ -42,11 +42,14 @@ if (embree_FOUND)
 	endif ()
 endif(embree_FOUND)
 
-add_executable(light ${LIGHT_SOURCES} main.cc)
-target_link_libraries (light PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
+add_library(liblight STATIC ${LIGHT_SOURCES})
+target_link_libraries(liblight PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
+
+add_executable(light main.cc)
+target_link_libraries(light PRIVATE common liblight)
 
 if (embree_FOUND)
-	target_link_libraries (light PRIVATE embree)
+	target_link_libraries (liblight PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)
 
 	# macOS/homebrew: hack around find_file applying the .. before resolving the symlink
@@ -104,7 +107,6 @@ install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
 
 set(LIGHT_TEST_SOURCE 
-	${LIGHT_SOURCES}
 	test.cc
 	test_entities.cc
 	test_ltface.cc
@@ -115,7 +117,7 @@ add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
 add_test(testlight testlight)
 add_dependencies(check testlight)
 
-target_link_libraries (testlight PRIVATE common ${CMAKE_THREAD_LIBS_INIT} gtest fmt::fmt)
+target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} gtest fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
 	add_definitions(-DHAVE_EMBREE)

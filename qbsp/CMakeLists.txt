@@ -33,18 +33,21 @@ set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/qbsp/exportobj.cc
 	${QBSP_INCLUDES})
 
-add_executable(qbsp ${QBSP_SOURCES} main.cc)
-target_link_libraries(qbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt)
+add_library(libqbsp STATIC ${QBSP_SOURCES})
+target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt)
+
+add_executable(qbsp main.cc)
+target_link_libraries(qbsp libqbsp)
+
 install(TARGETS qbsp RUNTIME DESTINATION bin)
 
 # test (copied from light/CMakeLists.txt)
 
 set(QBSP_TEST_SOURCE 
-	${QBSP_SOURCES}
 	test.cc
 	test_qbsp.cc)
 
 add_executable(testqbsp EXCLUDE_FROM_ALL ${QBSP_TEST_SOURCE})
 add_test(testqbsp testqbsp)
 
-target_link_libraries (testqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest fmt::fmt)
+target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest fmt::fmt)
