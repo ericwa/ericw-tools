@@ -9,20 +9,10 @@ set(VIS_SOURCES
 	vis.cc
 	soundpvs.cc
 	state.cc
-	${CMAKE_SOURCE_DIR}/common/entdata.cc
-	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
-	${CMAKE_SOURCE_DIR}/common/mathlib.cc
-	${CMAKE_SOURCE_DIR}/common/qvec.cc
-	${CMAKE_SOURCE_DIR}/common/bsputils.cc
-	${CMAKE_SOURCE_DIR}/common/bspfile.cc
-	${CMAKE_SOURCE_DIR}/common/log.cc
-	${CMAKE_SOURCE_DIR}/common/threads.cc
-	${CMAKE_SOURCE_DIR}/common/parser.cc
-	${COMMON_INCLUDES}
 	${VIS_INCLUDES})
 
 add_executable(vis ${VIS_SOURCES})
-target_link_libraries (vis ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
+target_link_libraries (vis common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
 find_library(M_LIB m)
 if (M_LIB)
     target_link_libraries (vis ${M_LIB})
