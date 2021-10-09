@@ -282,7 +282,7 @@ TEST(mathlib, DistAbovePlane)
 
 TEST(mathlib, InterpolateNormalsDegenerate)
 {
-    EXPECT_FALSE(GLM_InterpolateNormal({}, {}, qvec3f(0, 0, 0)).first);
+    EXPECT_FALSE(GLM_InterpolateNormal({}, std::vector<qvec3f>{}, qvec3f(0, 0, 0)).first);
     EXPECT_FALSE(GLM_InterpolateNormal({qvec3f(0, 0, 0)}, {qvec3f(0, 0, 1)}, qvec3f(0, 0, 0)).first);
     EXPECT_FALSE(
         GLM_InterpolateNormal({qvec3f(0, 0, 0), qvec3f(10, 0, 0)}, {qvec3f(0, 0, 1), qvec3f(0, 0, 1)}, qvec3f(0, 0, 0))
