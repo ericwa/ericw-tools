@@ -3366,6 +3366,4 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
     WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
 
     LightFaceShutdown(lightsurf);
-
-    Q_assert(face->lightofs != -1);
 }
