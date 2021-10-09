@@ -295,6 +295,7 @@ public:
     bool fContentHack;
     vec_t worldExtent;
     bool fNoThreads;
+    bool includeSkip;
 
     options_t()
         : fNofill(false), fNoclip(false), fNoskip(false), fNodetail(false), fOnlyents(false), fConvertMapFormat(false),

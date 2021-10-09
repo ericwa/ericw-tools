@@ -607,9 +607,6 @@ namespace qv
 [[nodiscard]] qmat2x2f inverse(const qmat2x2f &input);
 }; // namespace qv
 
-// FMT support
-#include <fmt/format.h>
-
 template<size_t N, class T>
 struct fmt::formatter<qvec<N, T>> : formatter<T>
 {

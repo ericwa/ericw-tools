@@ -162,7 +162,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
 
                 int32_t planenum = FindPlane(&new_plane.normal[0], new_plane.dist, nullptr);
                 int32_t outputplanenum = ExportMapPlane(planenum);
-                planes.emplace_back(outputplanenum, nullptr);
+                planes.emplace_back(outputplanenum, b->faces);
             }
 
             // if the plane is not in it canonical order, swap it
@@ -250,7 +250,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                     // add this plane
                     int32_t planenum = FindPlane(&current.normal[0], current.dist, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
-                    planes.emplace_back(outputplanenum, nullptr);
+                    planes.emplace_back(outputplanenum, b->faces);
                 }
             }
         }
@@ -273,7 +273,7 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 
         for (auto &plane : bevels) {
             map.bsp.dbrushsides.push_back(
-                {(uint32_t)std::get<0>(plane), (int32_t)ExportMapTexinfo(b->faces->texinfo)});
+                {(uint32_t)std::get<0>(plane), (int32_t)ExportMapTexinfo(std::get<1>(plane)->texinfo)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }
@@ -1153,6 +1153,7 @@ PrintOptions
         "   -omitdetailillusionary   func_detail_illusionary brushes are omitted from the compile\n"
         "   -omitdetailfence         func_detail_fence brushes are omitted from the compile\n"
         "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
+        "   -includeskip    Include skip/nodraw faces."
         "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
         "   -leaktest       Make compilation fail if the map leaks\n"
         "   -contenthack    Hack to fix leaks through solids. Causes missing faces in some cases so disabled by default.\n"
@@ -1378,6 +1379,8 @@ static void ParseOptions(char *szOptions)
 
                 options.fConvertMapFormat = true;
                 szTok = szTok2;
+            } else if (!Q_strcasecmp(szTok, "includeskip")) {
+                options.includeSkip = true;
             } else if (!Q_strcasecmp(szTok, "forceprt1")) {
                 options.fForcePRT1 = true;
                 LogPrint("WARNING: Forcing creation of PRT1.\n");

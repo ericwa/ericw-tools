@@ -303,7 +303,9 @@ FindFaceEdges
 */
 static void FindFaceEdges(mapentity_t *entity, face_t *face)
 {
-    if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
+    if (!options.includeSkip && (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP))
+        return;
+    if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_HINT)
         return;
 
     face->outputnumber = std::nullopt;
@@ -348,8 +350,10 @@ EmitFace
 static void EmitFace(mapentity_t *entity, face_t *face)
 {
     int i;
-
-    if (map.mtexinfos.at(face->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
+    
+    if (!options.includeSkip && (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP))
+        return;
+    if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_HINT)
         return;
 
     // emit a region
@@ -404,7 +408,9 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
 
 static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t &vertexesCount)
 {
-    if (map.mtexinfos.at(f->texinfo).flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT))
+    if (!options.includeSkip && (map.mtexinfos.at(f->texinfo).flags.extended & TEX_EXFLAG_SKIP))
+        return;
+    if (map.mtexinfos.at(f->texinfo).flags.extended & TEX_EXFLAG_HINT)
         return;
 
     if (f->lmshift[1] != 4)

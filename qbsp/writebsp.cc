@@ -186,7 +186,8 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
 
     for (face_t **markfaces = node->markfaces; *markfaces; markfaces++) {
         face_t *face = *markfaces;
-        if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP)
+
+        if (!options.includeSkip && (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP))
             continue;
 
         /* emit a marksurface */

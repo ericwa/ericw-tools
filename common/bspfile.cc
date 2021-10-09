@@ -25,164 +25,6 @@
 
 #include <fmt/format.h>
 
-/*
- * =========================================================================
- * ...
- * =========================================================================
- */
-
-constexpr lumpspec_t lumpspec_bsp29[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp29_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp29_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp29_dclipnode_t)},
-    {"leafs", sizeof(bsp29_dleaf_t)},
-    {"marksurfaces", sizeof(uint16_t)},
-    {"edges", sizeof(bsp29_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelq1_t)},
-};
-
-constexpr lumpspec_t lumpspec_bsp2rmq[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2rmq_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2rmq_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelq1_t)},
-};
-
-constexpr lumpspec_t lumpspec_bsp2[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelq1_t)},
-};
-
-constexpr lumpspec_t lumpspec_bsp29_h2[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp29_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp29_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp29_dclipnode_t)},
-    {"leafs", sizeof(bsp29_dleaf_t)},
-    {"marksurfaces", sizeof(uint16_t)},
-    {"edges", sizeof(bsp29_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelh2_t)},
-};
-
-constexpr lumpspec_t lumpspec_bsp2rmq_h2[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2rmq_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2rmq_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelh2_t)},
-};
-
-constexpr lumpspec_t lumpspec_bsp2_h2[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelh2_t)},
-};
-
-constexpr lumpspec_t lumpspec_q2bsp[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(q2_dnode_t)},
-    {"texinfos", sizeof(q2_texinfo_t)},
-    {"faces", sizeof(q2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"leafs", sizeof(q2_dleaf_t)},
-    {"leaffaces", sizeof(uint16_t)},
-    {"leafbrushes", sizeof(uint16_t)},
-    {"edges", sizeof(bsp29_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(q2_dmodel_t)},
-    {"brushes", sizeof(dbrush_t)},
-    {"brushsides", sizeof(q2_dbrushside_t)},
-    {"pop", sizeof(uint8_t)},
-    {"areas", sizeof(darea_t)},
-    {"areaportals", sizeof(dareaportal_t)},
-};
-
-constexpr lumpspec_t lumpspec_qbism[] = {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(q2_dnode_qbism_t)},
-    {"texinfos", sizeof(q2_texinfo_t)},
-    {"faces", sizeof(q2_dface_qbism_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"leafs", sizeof(q2_dleaf_qbism_t)},
-    {"leaffaces", sizeof(uint32_t)},
-    {"leafbrushes", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(q2_dmodel_t)},
-    {"brushes", sizeof(dbrush_t)},
-    {"brushsides", sizeof(q2_dbrushside_qbism_t)},
-    {"pop", sizeof(uint8_t)},
-    {"areas", sizeof(darea_t)},
-    {"areaportals", sizeof(dareaportal_t)},
-};
-
 struct gamedef_generic_t : public gamedef_t
 {
     gamedef_generic_t() : gamedef_t("") { id = GAME_UNKNOWN; }
@@ -576,27 +418,165 @@ struct gamedef_q2_t : public gamedef_t
     }
 };
 
+// Game definitions, used for the bsp versions below
 static const gamedef_generic_t gamedef_generic;
-const bspversion_t bspver_generic{NO_VERSION, NO_VERSION, "mbsp", "generic BSP", nullptr, &gamedef_generic};
 static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
-const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP", lumpspec_bsp29, &gamedef_q1, &bspver_bsp2};
-const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2", lumpspec_bsp2, &gamedef_q1};
-const bspversion_t bspver_bsp2rmq{
-    BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ", lumpspec_bsp2rmq, &gamedef_q1};
-/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
 static const gamedef_h2_t gamedef_h2;
-const bspversion_t bspver_h2{
-    BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP", lumpspec_bsp29_h2, &gamedef_h2, &bspver_h2bsp2};
-const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2", lumpspec_bsp2_h2, &gamedef_h2};
-const bspversion_t bspver_h2bsp2rmq{
-    BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ", lumpspec_bsp2rmq_h2, &gamedef_h2};
 static const gamedef_hl_t gamedef_hl;
-const bspversion_t bspver_hl{BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP", lumpspec_bsp29, &gamedef_hl};
 static const gamedef_q2_t gamedef_q2;
+
+const bspversion_t bspver_generic{NO_VERSION, NO_VERSION, "mbsp", "generic BSP", {}, &gamedef_generic};
+const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"texture", sizeof(uint8_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(bsp29_dnode_t)},
+    {"texinfos", sizeof(texinfo_t)},
+    {"faces", sizeof(bsp29_dface_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"clipnodes", sizeof(bsp29_dclipnode_t)},
+    {"leafs", sizeof(bsp29_dleaf_t)},
+    {"marksurfaces", sizeof(uint16_t)},
+    {"edges", sizeof(bsp29_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(dmodelq1_t)},
+}, &gamedef_q1, &bspver_bsp2};
+const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"texture", sizeof(uint8_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(bsp2_dnode_t)},
+    {"texinfos", sizeof(texinfo_t)},
+    {"faces", sizeof(bsp2_dface_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"clipnodes", sizeof(bsp2_dclipnode_t)},
+    {"leafs", sizeof(bsp2_dleaf_t)},
+    {"marksurfaces", sizeof(uint32_t)},
+    {"edges", sizeof(bsp2_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(dmodelq1_t)},
+}, &gamedef_q1};
+const bspversion_t bspver_bsp2rmq{
+    BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"texture", sizeof(uint8_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(bsp2rmq_dnode_t)},
+    {"texinfos", sizeof(texinfo_t)},
+    {"faces", sizeof(bsp2_dface_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"clipnodes", sizeof(bsp2_dclipnode_t)},
+    {"leafs", sizeof(bsp2rmq_dleaf_t)},
+    {"marksurfaces", sizeof(uint32_t)},
+    {"edges", sizeof(bsp2_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(dmodelq1_t)},
+}, &gamedef_q1};
+/* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
+const bspversion_t bspver_h2{
+    BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"texture", sizeof(uint8_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(bsp29_dnode_t)},
+    {"texinfos", sizeof(texinfo_t)},
+    {"faces", sizeof(bsp29_dface_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"clipnodes", sizeof(bsp29_dclipnode_t)},
+    {"leafs", sizeof(bsp29_dleaf_t)},
+    {"marksurfaces", sizeof(uint16_t)},
+    {"edges", sizeof(bsp29_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(dmodelh2_t)},
+}, &gamedef_h2, &bspver_h2bsp2};
+const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"texture", sizeof(uint8_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(bsp2_dnode_t)},
+    {"texinfos", sizeof(texinfo_t)},
+    {"faces", sizeof(bsp2_dface_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"clipnodes", sizeof(bsp2_dclipnode_t)},
+    {"leafs", sizeof(bsp2_dleaf_t)},
+    {"marksurfaces", sizeof(uint32_t)},
+    {"edges", sizeof(bsp2_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(dmodelh2_t)},
+}, &gamedef_h2};
+const bspversion_t bspver_h2bsp2rmq{
+    BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"texture", sizeof(uint8_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(bsp2rmq_dnode_t)},
+    {"texinfos", sizeof(texinfo_t)},
+    {"faces", sizeof(bsp2_dface_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"clipnodes", sizeof(bsp2_dclipnode_t)},
+    {"leafs", sizeof(bsp2rmq_dleaf_t)},
+    {"marksurfaces", sizeof(uint32_t)},
+    {"edges", sizeof(bsp2_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(dmodelh2_t)},
+}, &gamedef_h2};
+const bspversion_t bspver_hl{BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
 const bspversion_t bspver_q2{
-    Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP", lumpspec_q2bsp, &gamedef_q2, &bspver_qbism};
+    Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(q2_dnode_t)},
+    {"texinfos", sizeof(q2_texinfo_t)},
+    {"faces", sizeof(q2_dface_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"leafs", sizeof(q2_dleaf_t)},
+    {"leaffaces", sizeof(uint16_t)},
+    {"leafbrushes", sizeof(uint16_t)},
+    {"edges", sizeof(bsp29_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(q2_dmodel_t)},
+    {"brushes", sizeof(dbrush_t)},
+    {"brushsides", sizeof(q2_dbrushside_t)},
+    {"pop", sizeof(uint8_t)},
+    {"areas", sizeof(darea_t)},
+    {"areaportals", sizeof(dareaportal_t)},
+}, &gamedef_q2, &bspver_qbism};
 const bspversion_t bspver_qbism{
-    Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II Qbism BSP", lumpspec_qbism, &gamedef_q2};
+    Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II Qbism BSP", {
+    {"entities", sizeof(char)},
+    {"planes", sizeof(dplane_t)},
+    {"vertexes", sizeof(qvec3f)},
+    {"visibility", sizeof(uint8_t)},
+    {"nodes", sizeof(q2_dnode_qbism_t)},
+    {"texinfos", sizeof(q2_texinfo_t)},
+    {"faces", sizeof(q2_dface_qbism_t)},
+    {"lighting", sizeof(uint8_t)},
+    {"leafs", sizeof(q2_dleaf_qbism_t)},
+    {"leaffaces", sizeof(uint32_t)},
+    {"leafbrushes", sizeof(uint32_t)},
+    {"edges", sizeof(bsp2_dedge_t)},
+    {"surfedges", sizeof(int32_t)},
+    {"models", sizeof(q2_dmodel_t)},
+    {"brushes", sizeof(dbrush_t)},
+    {"brushsides", sizeof(q2_dbrushside_qbism_t)},
+    {"pop", sizeof(uint8_t)},
+    {"areas", sizeof(darea_t)},
+    {"areaportals", sizeof(dareaportal_t)},
+}, &gamedef_q2};
 
 bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
 {
@@ -638,23 +618,6 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
 {
     std::string s = game->get_contents_display(*this);
     return s;
-}
-
-static const char *BSPVersionString(const bspversion_t *version)
-{
-    if (version->name) {
-        return version->name;
-    }
-
-    static char buffers[2][20];
-    static int index;
-    char *buffer = buffers[1 & ++index];
-    if (version->version != NO_VERSION) {
-        snprintf(buffer, sizeof(buffers[0]), "%d:%d", version->version, version->ident);
-    } else {
-        snprintf(buffer, sizeof(buffers[0]), "%d", version->version);
-    }
-    return buffer;
 }
 
 static bool BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_version)
@@ -928,7 +891,8 @@ struct lump_reader
     template<typename T>
     void read(size_t lump_num, std::vector<T> &buffer)
     {
-        const lumpspec_t &lumpspec = version->lumps[lump_num];
+        Q_assert(version->lumps.size() > lump_num);
+        const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         const lump_t &lump = lumps[lump_num];
         size_t length;
 
@@ -963,7 +927,8 @@ struct lump_reader
     // read string from stream
     void read(size_t lump_num, std::string &buffer)
     {
-        const lumpspec_t &lumpspec = version->lumps[lump_num];
+        Q_assert(version->lumps.size() > lump_num);
+        const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         const lump_t &lump = lumps[lump_num];
 
         Q_assert(lumpspec.size == 1);
@@ -988,7 +953,8 @@ struct lump_reader
     template<typename T, typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_read)>>>
     void read(size_t lump_num, T &buffer)
     {
-        const lumpspec_t &lumpspec = version->lumps[lump_num];
+        Q_assert(version->lumps.size() > lump_num);
+        const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         const lump_t &lump = lumps[lump_num];
 
         if (!lump.filelen)
@@ -1098,7 +1064,7 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
 
     /* check the file version */
     if (!BSPVersionSupported(temp_version.ident, temp_version.version, &bspdata->version)) {
-        LogPrint("BSP is version {}\n", BSPVersionString(&temp_version));
+        LogPrint("BSP is version {}\n", temp_version);
         Error("Sorry, this bsp version is not supported.");
     } else {
         // special case handling for Hexen II
@@ -1112,7 +1078,7 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
             }
         }
 
-        LogPrint("BSP is version {}\n", BSPVersionString(bspdata->version));
+        LogPrint("BSP is version {}\n", *bspdata->version);
     }
 
     lump_reader reader{stream, bspdata->version, lumps};
@@ -1183,192 +1149,195 @@ struct bspfile_t
     };
 
     std::ofstream stream;
-};
 
-// write structured lump data from vector
-template<typename T>
-static void WriteLump(bspfile_t &bspfile, size_t lump_num, const std::vector<T> &data)
-{
-    static constexpr char pad[4]{};
-    const lumpspec_t &lumpspec = bspfile.version->lumps[lump_num];
-    lump_t *lumps;
-
-    if (bspfile.version->version != NO_VERSION) {
-        lumps = bspfile.q2header.lumps.data();
-    } else {
-        lumps = bspfile.q1header.lumps.data();
-    }
-
-    lump_t &lump = lumps[lump_num];
-
-    lump.fileofs = bspfile.stream.tellp();
-
-    for (auto &v : data)
-        bspfile.stream <= v;
-
-    auto written = static_cast<int32_t>(bspfile.stream.tellp()) - lump.fileofs;
-
-    if (sizeof(T) == 1 || lumpspec.size > 1)
-        Q_assert(written == (lumpspec.size * data.size()));
-
-    lump.filelen = written;
-
-    if (written % 4)
-        bspfile.stream.write(pad, 4 - (written % 4));
-}
-
-// write structured string data
-static void WriteLump(bspfile_t &bspfile, size_t lump_num, const std::string &data)
-{
-    static constexpr char pad[4]{};
-    const lumpspec_t &lumpspec = bspfile.version->lumps[lump_num];
-    lump_t *lumps;
-
-    Q_assert(lumpspec.size == 1);
-
-    if (bspfile.version->version != NO_VERSION) {
-        lumps = bspfile.q2header.lumps.data();
-    } else {
-        lumps = bspfile.q1header.lumps.data();
-    }
-
-    lump_t &lump = lumps[lump_num];
-
-    lump.fileofs = bspfile.stream.tellp();
-
-    bspfile.stream.write(data.c_str(), data.size() + 1); // null terminator
-
-    auto written = static_cast<int32_t>(bspfile.stream.tellp()) - lump.fileofs;
-
-    Q_assert(written == data.size() + 1);
-
-    lump.filelen = written;
-
-    if (written % 4)
-        bspfile.stream.write(pad, 4 - (written % 4));
-}
-
-// write structured lump data
-template<typename T, typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_write)>>>
-static void WriteLump(bspfile_t &bspfile, size_t lump_num, const T &data)
-{
-    static constexpr char pad[4]{};
-    const lumpspec_t &lumpspec = bspfile.version->lumps[lump_num];
-    lump_t *lumps;
-
-    Q_assert(lumpspec.size == 1);
-
-    if (bspfile.version->version != NO_VERSION) {
-        lumps = bspfile.q2header.lumps.data();
-    } else {
-        lumps = bspfile.q1header.lumps.data();
-    }
-
-    lump_t &lump = lumps[lump_num];
-
-    lump.fileofs = bspfile.stream.tellp();
-
-    data.stream_write(bspfile.stream);
-
-    auto written = static_cast<int32_t>(bspfile.stream.tellp()) - lump.fileofs;
-
-    lump.filelen = written;
-
-    if (written % 4)
-        bspfile.stream.write(pad, 4 - (written % 4));
-}
-
-template<typename T>
-inline void WriteQ1BSP(bspfile_t &bspfile, const T &bsp)
-{
-    WriteLump(bspfile, LUMP_PLANES, bsp.dplanes);
-    WriteLump(bspfile, LUMP_LEAFS, bsp.dleafs);
-    WriteLump(bspfile, LUMP_VERTEXES, bsp.dvertexes);
-    WriteLump(bspfile, LUMP_NODES, bsp.dnodes);
-    WriteLump(bspfile, LUMP_TEXINFO, bsp.texinfo);
-    WriteLump(bspfile, LUMP_FACES, bsp.dfaces);
-    WriteLump(bspfile, LUMP_CLIPNODES, bsp.dclipnodes);
-    WriteLump(bspfile, LUMP_MARKSURFACES, bsp.dmarksurfaces);
-    WriteLump(bspfile, LUMP_SURFEDGES, bsp.dsurfedges);
-    WriteLump(bspfile, LUMP_EDGES, bsp.dedges);
-    if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels)) {
-        WriteLump(bspfile, LUMP_MODELS, std::get<dmodelh2_vector>(bsp.dmodels));
-    } else {
-        WriteLump(bspfile, LUMP_MODELS, std::get<dmodelq1_vector>(bsp.dmodels));
-    }
-    WriteLump(bspfile, LUMP_LIGHTING, bsp.dlightdata);
-    WriteLump(bspfile, LUMP_VISIBILITY, bsp.dvisdata);
-    WriteLump(bspfile, LUMP_ENTITIES, bsp.dentdata);
-    if (std::holds_alternative<miptexhl_lump>(bsp.dtex)) {
-        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexhl_lump>(bsp.dtex));
-    } else {
-        WriteLump(bspfile, LUMP_TEXTURES, std::get<miptexq1_lump>(bsp.dtex));
-    }
-}
-
-template<typename T>
-inline void WriteQ2BSP(bspfile_t &bspfile, const T &bsp)
-{
-    WriteLump(bspfile, Q2_LUMP_PLANES, bsp.dplanes);
-    WriteLump(bspfile, Q2_LUMP_LEAFS, bsp.dleafs);
-    WriteLump(bspfile, Q2_LUMP_VERTEXES, bsp.dvertexes);
-    WriteLump(bspfile, Q2_LUMP_NODES, bsp.dnodes);
-    WriteLump(bspfile, Q2_LUMP_TEXINFO, bsp.texinfo);
-    WriteLump(bspfile, Q2_LUMP_FACES, bsp.dfaces);
-    WriteLump(bspfile, Q2_LUMP_LEAFFACES, bsp.dleaffaces);
-    WriteLump(bspfile, Q2_LUMP_SURFEDGES, bsp.dsurfedges);
-    WriteLump(bspfile, Q2_LUMP_EDGES, bsp.dedges);
-    WriteLump(bspfile, Q2_LUMP_MODELS, bsp.dmodels);
-    WriteLump(bspfile, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
-    WriteLump(bspfile, Q2_LUMP_BRUSHES, bsp.dbrushes);
-    WriteLump(bspfile, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
-    WriteLump(bspfile, Q2_LUMP_AREAS, bsp.dareas);
-    WriteLump(bspfile, Q2_LUMP_AREAPORTALS, bsp.dareaportals);
-
-    WriteLump(bspfile, Q2_LUMP_LIGHTING, bsp.dlightdata);
-    WriteLump(bspfile, Q2_LUMP_VISIBILITY, bsp.dvis);
-    WriteLump(bspfile, Q2_LUMP_ENTITIES, bsp.dentdata);
-}
-
-inline void WriteBSPXLumps(bspdata_t *bspdata, bspfile_t &bspfile)
-{
-    if (!bspdata->bspx.entries.size())
-        return;
-
-    if (bspfile.stream.tellp() & 3)
-        FError("BSPX header is misaligned");
-
-    bspfile.stream <= bspx_header_t(bspdata->bspx.entries.size());
-
-    auto bspxheader = bspfile.stream.tellp();
-
-    // write dummy lump headers
-    for (auto &x : bspdata->bspx.entries) {
-        bspfile.stream <= bspx_lump_t{};
-    }
-
-    std::vector<bspx_lump_t> xlumps;
-    xlumps.reserve(bspdata->bspx.entries.size());
-
-    for (auto &x : bspdata->bspx.entries) {
+private:
+    // write structured lump data from vector
+    template<typename T>
+    inline void write_lump(size_t lump_num, const std::vector<T> &data)
+    {
         static constexpr char pad[4]{};
+        Q_assert(version->lumps.size() > lump_num);
+        const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
+        lump_t *lumps;
 
-        bspx_lump_t &lump = xlumps.emplace_back();
-        lump.filelen = x.second.lumpsize;
-        lump.fileofs = bspfile.stream.tellp();
-        memcpy(lump.lumpname.data(), x.first.c_str(), std::min(x.first.size(), lump.lumpname.size() - 1));
+        if (version->version != NO_VERSION) {
+            lumps = q2header.lumps.data();
+        } else {
+            lumps = q1header.lumps.data();
+        }
 
-        bspfile.stream.write(reinterpret_cast<const char *>(x.second.lumpdata.get()), x.second.lumpsize);
+        lump_t &lump = lumps[lump_num];
 
-        if (x.second.lumpsize % 4)
-            bspfile.stream.write(pad, 4 - (x.second.lumpsize % 4));
+        lump.fileofs = stream.tellp();
+
+        for (auto &v : data)
+            stream <= v;
+
+        auto written = static_cast<int32_t>(stream.tellp()) - lump.fileofs;
+
+        if (sizeof(T) == 1 || lumpspec.size > 1)
+            Q_assert(written == (lumpspec.size * data.size()));
+
+        lump.filelen = written;
+
+        if (written % 4)
+            stream.write(pad, 4 - (written % 4));
     }
 
-    bspfile.stream.seekp(bspxheader);
+    // this is only here to satisfy std::visit
+    constexpr void write_lump(size_t, const std::monostate &) { }
 
-    for (auto &lump : xlumps)
-        bspfile.stream <= lump;
-}
+    // write structured string data
+    inline void write_lump(size_t lump_num, const std::string &data)
+    {
+        Q_assert(version->lumps.size() > lump_num);
+        static constexpr char pad[4]{};
+        const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
+        lump_t *lumps;
+
+        Q_assert(lumpspec.size == 1);
+
+        if (version->version != NO_VERSION) {
+            lumps = q2header.lumps.data();
+        } else {
+            lumps = q1header.lumps.data();
+        }
+
+        lump_t &lump = lumps[lump_num];
+
+        lump.fileofs = stream.tellp();
+
+        stream.write(data.c_str(), data.size() + 1); // null terminator
+
+        auto written = static_cast<int32_t>(stream.tellp()) - lump.fileofs;
+
+        Q_assert(written == data.size() + 1);
+
+        lump.filelen = written;
+
+        if (written % 4)
+            stream.write(pad, 4 - (written % 4));
+    }
+
+    // write structured lump data
+    template<typename T, typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_write)>>>
+    inline void write_lump(size_t lump_num, const T &data)
+    {
+        static constexpr char pad[4]{};
+        const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
+        lump_t *lumps;
+
+        Q_assert(lumpspec.size == 1);
+
+        if (version->version != NO_VERSION) {
+            lumps = q2header.lumps.data();
+        } else {
+            lumps = q1header.lumps.data();
+        }
+
+        lump_t &lump = lumps[lump_num];
+
+        lump.fileofs = stream.tellp();
+
+        data.stream_write(stream);
+
+        auto written = static_cast<int32_t>(stream.tellp()) - lump.fileofs;
+
+        lump.filelen = written;
+
+        if (written % 4)
+            stream.write(pad, 4 - (written % 4));
+    }
+
+public:
+    inline void write_bsp(const mbsp_t &) { FError("Can't write generic BSP"); }
+    inline void write_bsp(const std::monostate &) { FError("No BSP to write"); }
+    
+    template<typename T, typename std::enable_if_t<std::is_base_of_v<q1bsp_tag_t, T>, int> = 0>
+    inline void write_bsp(const T &bsp)
+    {
+        write_lump(LUMP_PLANES, bsp.dplanes);
+        write_lump(LUMP_LEAFS, bsp.dleafs);
+        write_lump(LUMP_VERTEXES, bsp.dvertexes);
+        write_lump(LUMP_NODES, bsp.dnodes);
+        write_lump(LUMP_TEXINFO, bsp.texinfo);
+        write_lump(LUMP_FACES, bsp.dfaces);
+        write_lump(LUMP_CLIPNODES, bsp.dclipnodes);
+        write_lump(LUMP_MARKSURFACES, bsp.dmarksurfaces);
+        write_lump(LUMP_SURFEDGES, bsp.dsurfedges);
+        write_lump(LUMP_EDGES, bsp.dedges);
+        std::visit([this](auto&& arg) { write_lump(LUMP_MODELS, arg); }, bsp.dmodels);
+
+        write_lump(LUMP_LIGHTING, bsp.dlightdata);
+        write_lump(LUMP_VISIBILITY, bsp.dvisdata);
+        write_lump(LUMP_ENTITIES, bsp.dentdata);
+        std::visit([this](auto&& arg) { write_lump(LUMP_TEXTURES, arg); }, bsp.dtex);
+    }
+
+    template<typename T, typename std::enable_if_t<std::is_base_of_v<q2bsp_tag_t, T>, int> = 0>
+    inline void write_bsp(const T &bsp)
+    {
+        write_lump(Q2_LUMP_PLANES, bsp.dplanes);
+        write_lump(Q2_LUMP_LEAFS, bsp.dleafs);
+        write_lump(Q2_LUMP_VERTEXES, bsp.dvertexes);
+        write_lump(Q2_LUMP_NODES, bsp.dnodes);
+        write_lump(Q2_LUMP_TEXINFO, bsp.texinfo);
+        write_lump(Q2_LUMP_FACES, bsp.dfaces);
+        write_lump(Q2_LUMP_LEAFFACES, bsp.dleaffaces);
+        write_lump(Q2_LUMP_SURFEDGES, bsp.dsurfedges);
+        write_lump(Q2_LUMP_EDGES, bsp.dedges);
+        write_lump(Q2_LUMP_MODELS, bsp.dmodels);
+        write_lump(Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
+        write_lump(Q2_LUMP_BRUSHES, bsp.dbrushes);
+        write_lump(Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
+        write_lump(Q2_LUMP_AREAS, bsp.dareas);
+        write_lump(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
+
+        write_lump(Q2_LUMP_LIGHTING, bsp.dlightdata);
+        write_lump(Q2_LUMP_VISIBILITY, bsp.dvis);
+        write_lump(Q2_LUMP_ENTITIES, bsp.dentdata);
+    }
+
+    inline void write_bspx(const bspdata_t &bspdata)
+    {
+        if (!bspdata.bspx.entries.size())
+            return;
+
+        if (stream.tellp() & 3)
+            FError("BSPX header is misaligned");
+
+        stream <= bspx_header_t(bspdata.bspx.entries.size());
+
+        auto bspxheader = stream.tellp();
+
+        // write dummy lump headers
+        for (auto &x : bspdata.bspx.entries) {
+            stream <= bspx_lump_t{};
+        }
+
+        std::vector<bspx_lump_t> xlumps;
+        xlumps.reserve(bspdata.bspx.entries.size());
+
+        for (auto &x : bspdata.bspx.entries) {
+            static constexpr char pad[4]{};
+
+            bspx_lump_t &lump = xlumps.emplace_back();
+            lump.filelen = x.second.lumpsize;
+            lump.fileofs = stream.tellp();
+            memcpy(lump.lumpname.data(), x.first.c_str(), std::min(x.first.size(), lump.lumpname.size() - 1));
+
+            stream.write(reinterpret_cast<const char *>(x.second.lumpdata.get()), x.second.lumpsize);
+
+            if (x.second.lumpsize % 4)
+                stream.write(pad, 4 - (x.second.lumpsize % 4));
+        }
+
+        stream.seekp(bspxheader);
+
+        for (auto &lump : xlumps)
+            stream <= lump;
+    }
+};
 
 /*
  * =============
@@ -1389,7 +1358,7 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
         bspfile.q2header.version = bspfile.version->version;
     }
 
-    LogPrint("Writing {} as BSP version {}\n", filename, BSPVersionString(bspdata->version));
+    LogPrint("Writing {} as BSP version {}\n", filename, *bspdata->version);
     bspfile.stream.open(filename, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 
     if (!bspfile.stream)
@@ -1404,22 +1373,10 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
         bspfile.stream <= bspfile.q1header;
     }
 
-    if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
-        WriteQ1BSP(bspfile, std::get<bsp29_t>(bspdata->bsp));
-    } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
-        WriteQ1BSP(bspfile, std::get<bsp2rmq_t>(bspdata->bsp));
-    } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
-        WriteQ1BSP(bspfile, std::get<bsp2_t>(bspdata->bsp));
-    } else if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
-        WriteQ2BSP(bspfile, std::get<q2bsp_t>(bspdata->bsp));
-    } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
-        WriteQ2BSP(bspfile, std::get<q2bsp_qbism_t>(bspdata->bsp));
-    } else {
-        FError("Unknown format");
-    }
+    std::visit([&bspfile](auto&& arg) { bspfile.write_bsp(arg); }, bspdata->bsp);
 
     /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
-    WriteBSPXLumps(bspdata, bspfile);
+    bspfile.write_bspx(*bspdata);
 
     bspfile.stream.seekp(0);
 
@@ -1433,30 +1390,29 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
 
 /* ========================================================================= */
 
-static void PrintLumpSize(const lumpspec_t *lumpspec, int lumptype, int count)
+inline void PrintLumpSize(const lumpspec_t &lump, size_t count)
 {
-    const lumpspec_t *lump = &lumpspec[lumptype];
-    LogPrint("{:7} {:<12} {:10}\n", count, lump->name, count * lump->size);
+    LogPrint("{:7} {:<12} {:10}\n", count, lump.name, count * lump.size);
 }
 
 template<typename T>
-inline void PrintQ1BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
+inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
 {
     if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels))
         LogPrint("{:7} {:<12}\n", std::get<dmodelh2_vector>(bsp.dmodels).size(), "models");
     else
         LogPrint("{:7} {:<12}\n", std::get<dmodelq1_vector>(bsp.dmodels).size(), "models");
 
-    PrintLumpSize(lumpspec, LUMP_PLANES, bsp.dplanes.size());
-    PrintLumpSize(lumpspec, LUMP_VERTEXES, bsp.dvertexes.size());
-    PrintLumpSize(lumpspec, LUMP_NODES, bsp.dnodes.size());
-    PrintLumpSize(lumpspec, LUMP_TEXINFO, bsp.texinfo.size());
-    PrintLumpSize(lumpspec, LUMP_FACES, bsp.dfaces.size());
-    PrintLumpSize(lumpspec, LUMP_CLIPNODES, bsp.dclipnodes.size());
-    PrintLumpSize(lumpspec, LUMP_LEAFS, bsp.dleafs.size());
-    PrintLumpSize(lumpspec, LUMP_MARKSURFACES, bsp.dmarksurfaces.size());
-    PrintLumpSize(lumpspec, LUMP_EDGES, bsp.dedges.size());
-    PrintLumpSize(lumpspec, LUMP_SURFEDGES, bsp.dsurfedges.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_PLANES], bsp.dplanes.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_VERTEXES], bsp.dvertexes.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_NODES], bsp.dnodes.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_TEXINFO], bsp.texinfo.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_FACES], bsp.dfaces.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_CLIPNODES], bsp.dclipnodes.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_LEAFS], bsp.dleafs.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_MARKSURFACES], bsp.dmarksurfaces.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_EDGES], bsp.dedges.size());
+    PrintLumpSize(lumpspec.begin()[LUMP_SURFEDGES], bsp.dsurfedges.size());
 
     if (std::holds_alternative<miptexhl_lump>(bsp.dtex))
         LogPrint("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexhl_lump>(bsp.dtex).textures.size());
@@ -1468,24 +1424,24 @@ inline void PrintQ1BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
 }
 
 template<typename T>
-inline void PrintQ2BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
+inline void PrintQ2BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
 {
     LogPrint("{:7} {:<12}\n", bsp.dmodels.size(), "models");
 
-    PrintLumpSize(lumpspec, Q2_LUMP_PLANES, bsp.dplanes.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_VERTEXES, bsp.dvertexes.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_NODES, bsp.dnodes.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_TEXINFO, bsp.texinfo.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_FACES, bsp.dfaces.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_LEAFS, bsp.dleafs.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_LEAFFACES, bsp.dleaffaces.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_LEAFBRUSHES, bsp.dleafbrushes.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_EDGES, bsp.dedges.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_SURFEDGES, bsp.dsurfedges.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_BRUSHES, bsp.dbrushes.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_BRUSHSIDES, bsp.dbrushsides.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_AREAS, bsp.dareas.size());
-    PrintLumpSize(lumpspec, Q2_LUMP_AREAPORTALS, bsp.dareaportals.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_PLANES], bsp.dplanes.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_VERTEXES], bsp.dvertexes.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_NODES], bsp.dnodes.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_TEXINFO], bsp.texinfo.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_FACES], bsp.dfaces.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_LEAFS], bsp.dleafs.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_LEAFFACES], bsp.dleaffaces.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_LEAFBRUSHES], bsp.dleafbrushes.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_EDGES], bsp.dedges.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_SURFEDGES], bsp.dsurfedges.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_BRUSHES], bsp.dbrushes.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_BRUSHSIDES], bsp.dbrushsides.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_AREAS], bsp.dareas.size());
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_AREAPORTALS], bsp.dareaportals.size());
 
     LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
     LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
@@ -1500,7 +1456,7 @@ inline void PrintQ2BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
  */
 void PrintBSPFileSizes(const bspdata_t *bspdata)
 {
-    const lumpspec_t *lumpspec = bspdata->version->lumps;
+    const auto &lumpspec = bspdata->version->lumps;
 
     if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
         PrintQ2BSPLumps(lumpspec, std::get<q2bsp_t>(bspdata->bsp));
@@ -1513,7 +1469,7 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
     } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
         PrintQ1BSPLumps(lumpspec, std::get<bsp2_t>(bspdata->bsp));
     } else {
-        Error("Unsupported BSP version: {}", BSPVersionString(bspdata->version));
+        Error("Unsupported BSP version: {}", *bspdata->version);
     }
 
     for (auto &x : bspdata->bspx.entries) {

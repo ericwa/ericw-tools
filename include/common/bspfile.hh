@@ -829,7 +829,7 @@ struct gtexinfo_t
     // q2 only
     int32_t value; // light emission, etc
     std::array<char, 32> texture; // texture name (textures/*.wal)
-    int32_t nexttexinfo; // for animations, -1 = end of chain
+    int32_t nexttexinfo = -1; // for animations, -1 = end of chain
 };
 
 struct texinfo_t
@@ -1398,7 +1398,10 @@ using dmodelh2_vector = std::vector<dmodelh2_t>;
 using miptexq1_lump = dmiptexlump_t<miptex_t>;
 using miptexhl_lump = dmiptexlump_t<miptexhl_t>;
 
-struct bsp29_t
+// type tag used for type inference
+struct q1bsp_tag_t { };
+
+struct bsp29_t : q1bsp_tag_t
 {
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
@@ -1417,7 +1420,7 @@ struct bsp29_t
     std::vector<int32_t> dsurfedges;
 };
 
-struct bsp2rmq_t
+struct bsp2rmq_t : q1bsp_tag_t
 {
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
@@ -1436,7 +1439,7 @@ struct bsp2rmq_t
     std::vector<int32_t> dsurfedges;
 };
 
-struct bsp2_t
+struct bsp2_t : q1bsp_tag_t
 {
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
@@ -1455,7 +1458,10 @@ struct bsp2_t
     std::vector<int32_t> dsurfedges;
 };
 
-struct q2bsp_t
+// type tag used for type inference
+struct q2bsp_tag_t { };
+
+struct q2bsp_t : q2bsp_tag_t
 {
     std::vector<q2_dmodel_t> dmodels;
 
@@ -1479,7 +1485,7 @@ struct q2bsp_t
     std::vector<q2_dbrushside_t> dbrushsides;
 };
 
-struct q2bsp_qbism_t
+struct q2bsp_qbism_t : q2bsp_tag_t
 {
     std::vector<q2_dmodel_t> dmodels;
     mvis_t dvis;
@@ -1657,11 +1663,35 @@ struct bspversion_t
     /* full display name for printing */
     const char *name;
     /* lump specification */
-    const lumpspec_t *lumps;
+    const std::initializer_list<lumpspec_t> lumps;
     /* game ptr */
     const gamedef_t *game;
     /* if we surpass the limits of this format, upgrade to this one */
     const bspversion_t *extended_limits;
+};
+
+// FMT support
+template<>
+struct fmt::formatter<bspversion_t>
+{
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin())
+    {
+        return ctx.end();
+    }
+
+    template<typename FormatContext>
+    auto format(const bspversion_t &v, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        if (v.name) {
+            return format_to(ctx.out(), "{}", v.name);
+        }
+
+        if (v.version != NO_VERSION) {
+            return format_to(ctx.out(), "{}:{}", v.version, v.ident);
+        }
+
+        return format_to(ctx.out(), "{}", v.version, v.ident);
+    }
 };
 
 extern const bspversion_t bspver_generic;
