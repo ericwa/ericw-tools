@@ -1,5 +1,3 @@
-add_definitions(-DDOUBLEVEC_T)
-
 add_executable(qbsp ${QBSP_SOURCES} main.cc)
 target_link_libraries(qbsp ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt)
 install(TARGETS qbsp RUNTIME DESTINATION bin)
