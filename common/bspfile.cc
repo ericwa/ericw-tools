@@ -1467,7 +1467,7 @@ inline void PrintQ1BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
         LogPrint("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexq1_lump>(bsp.dtex).textures.size());
     LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
     LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvisdata.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
 template<typename T>
@@ -1492,7 +1492,7 @@ inline void PrintQ2BSPLumps(const lumpspec_t *lumpspec, const T &bsp)
 
     LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
     LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
 /*
