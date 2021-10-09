@@ -8,9 +8,7 @@
 
 #include <common/qvec.hh>
 
-#include <common/mesh.hh>
 #include <common/aabb.hh>
-#include <common/octree.hh>
 
 using namespace std;
 
@@ -649,59 +647,6 @@ TEST(mathlib, linesOverlap_colinear_not_touching)
     ASSERT_FALSE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 0, 3}));
 }
 
-// mesh_t
-
-TEST(mathlib, meshCreate)
-{
-    const vector<qvec3f> poly1{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
-    const vector<qvec3f> poly2{{64, 0, 0}, {64, 64, 0}, {128, 64, 0}, {128, 0, 0}};
-    const vector<vector<qvec3f>> polys{poly1, poly2};
-
-    const mesh_t m = buildMesh(polys);
-    ASSERT_EQ(6, m.verts.size());
-    ASSERT_EQ(2, m.faces.size());
-    ASSERT_EQ(polys, meshToFaces(m));
-}
-
-TEST(mathlib, meshFixTJuncs)
-{
-    /*
-
-     poly1
-
-   x=0 x=64 x=128
-
-     |---|--| y=64  poly2
-     |   +--| y=32
-     |---|--| y=0   poly3
-
-     poly1 should get a vertex inserted at the +
-
-     */
-    const vector<qvec3f> poly1{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
-    const vector<qvec3f> poly2{{64, 32, 0}, {64, 64, 0}, {128, 64, 0}, {128, 32, 0}};
-    const vector<qvec3f> poly3{{64, 0, 0}, {64, 32, 0}, {128, 32, 0}, {128, 0, 0}};
-
-    const vector<vector<qvec3f>> polys{poly1, poly2, poly3};
-
-    mesh_t m = buildMesh(polys);
-
-    ASSERT_EQ(aabb3f(qvec3f(0, 0, 0), qvec3f(64, 64, 0)), mesh_face_bbox(m, 0));
-
-    ASSERT_EQ(8, m.verts.size());
-    ASSERT_EQ(3, m.faces.size());
-    ASSERT_EQ(polys, meshToFaces(m));
-
-    cleanupMesh(m);
-
-    const vector<qvec3f> poly1_fixed{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 32, 0}, {64, 0, 0}};
-
-    const auto newFaces = meshToFaces(m);
-    EXPECT_EQ(poly1_fixed, newFaces.at(0));
-    EXPECT_EQ(poly2, newFaces.at(1));
-    EXPECT_EQ(poly3, newFaces.at(2));
-}
-
 // qvec
 
 TEST(mathlib, qvec_expand)
@@ -875,75 +820,6 @@ TEST(mathlib, aabb_create_invalid)
 
     EXPECT_EQ(fixed, b1);
     EXPECT_EQ(qvec3f(0, 0, 0), b1.size());
-}
-
-// octree
-
-TEST(mathlib, octree_basic)
-{
-    std::mt19937 engine(0);
-    std::uniform_int_distribution<> dis(-4096, 4096);
-
-    const qvec3f boxsize(64, 64, 64);
-    const int N = 2000;
-
-    // generate some objects
-    vector<pair<aabb3f, int>> objs;
-    for (int i = 0; i < N; i++) {
-        int x = dis(engine);
-        int y = dis(engine);
-        int z = dis(engine);
-        qvec3f center(x, y, z);
-        qvec3f mins = center - boxsize;
-        qvec3f maxs = center + boxsize;
-
-        objs.emplace_back(aabb3f{mins, maxs}, i);
-    }
-
-    // build octree
-    auto insert_start = I_FloatTime();
-    auto octree = makeOctree(objs);
-    auto insert_end = I_FloatTime();
-    fmt::print("inserting {} cubes took {} ms\n", N, 1000.0 * (insert_end - insert_start).count());
-
-    // query for objects overlapping objs[0]'s bbox
-    auto exhaustive_query_start = I_FloatTime();
-    vector<vector<int>> objsTouchingObjs;
-    for (int i = 0; i < N; i++) {
-        const aabb3f obj_iBBox = objs[i].first;
-
-        vector<int> objsTouchingObj_i;
-        for (int j = 0; j < N; j++) {
-            if (!obj_iBBox.disjoint(objs[j].first)) {
-                objsTouchingObj_i.push_back(objs[j].second);
-            }
-        }
-        objsTouchingObjs.push_back(objsTouchingObj_i);
-    }
-    auto exhaustive_query_end = I_FloatTime();
-    fmt::print("exhaustive query took {} ms\n", 1000.0 * (exhaustive_query_end - exhaustive_query_start).count());
-
-    // now repeat the same query using the octree
-    auto octree_query_start = I_FloatTime();
-    vector<vector<int>> objsTouchingObjs_octree;
-    for (int i = 0; i < N; i++) {
-        const aabb3f obj_iBBox = objs[i].first;
-
-        vector<int> objsTouchingObj_i = octree.queryTouchingBBox(obj_iBBox);
-        objsTouchingObjs_octree.push_back(objsTouchingObj_i);
-    }
-    auto octree_query_end = I_FloatTime();
-    fmt::print("octree query took {} ms\n", 1000.0 * (octree_query_end - octree_query_start).count());
-
-    // compare result
-    for (int i = 0; i < N; i++) {
-        vector<int> &objsTouchingObj_i = objsTouchingObjs[i];
-        vector<int> &objsTouchingObj_i_octree = objsTouchingObjs_octree[i];
-
-        std::sort(objsTouchingObj_i.begin(), objsTouchingObj_i.end());
-        std::sort(objsTouchingObj_i_octree.begin(), objsTouchingObj_i_octree.end());
-        EXPECT_EQ(objsTouchingObj_i, objsTouchingObj_i_octree);
-    }
 }
 
 TEST(qvec, matrix2x2inv)
