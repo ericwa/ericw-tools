@@ -978,10 +978,13 @@ struct lump_reader
 
         s.read(reinterpret_cast<char *>(buffer.data()), lump.filelen);
 
-        // in case of bad BSPs, we'll fix it by growing the lump
-        if (buffer[lump.filelen]) {
-            buffer += '\0';
+        // the last byte is required to be '\0' which was added when the .bsp was
+        // written. chop it off now, since we want the std::string to
+        // be the logical string (we'll add the null terminator again when saving the .bsp)
+        if (buffer[lump.filelen - 1] == 0) {
+            buffer.resize(lump.filelen - 1);
         }
+        // TODO: warn about bad .bsp if missing \0?
     }
 
     // read structured lump data from stream into struct
