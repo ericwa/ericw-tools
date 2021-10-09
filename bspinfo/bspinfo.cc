@@ -117,7 +117,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
     }
 
     if (!bsp.dentdata.empty()) {
-        j["entdata"] = bsp.dentdata;
+        j["entdata"] = bsp.dentdata + '\0';
     }
 
     if (!bsp.dleafs.empty()) {

@@ -16,67 +16,6 @@ include_directories(
 	"${CMAKE_SOURCE_DIR}/include"
 	"${CMAKE_SOURCE_DIR}/3rdparty/glm")
 
-set(COMMON_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/common/aabb.hh
-	${CMAKE_SOURCE_DIR}/include/common/entdata.h
-	${CMAKE_SOURCE_DIR}/include/common/mesh.hh
-	${CMAKE_SOURCE_DIR}/include/common/octree.hh
-	${CMAKE_SOURCE_DIR}/include/common/qvec.hh
-	${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
-	${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh
-	${CMAKE_SOURCE_DIR}/include/common/log.hh
-	${CMAKE_SOURCE_DIR}/include/common/mathlib.hh
-	${CMAKE_SOURCE_DIR}/include/common/polylib.hh 
-	${CMAKE_SOURCE_DIR}/include/common/threads.hh 
-	${CMAKE_SOURCE_DIR}/include/common/bsputils.hh
-	${CMAKE_SOURCE_DIR}/include/common/parser.hh)
-
-set(QBSP_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/qbsp/file.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/wad.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/winding.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/outside.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/portals.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/region.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/solidbsp.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/surfaces.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/tjunc.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
-
-set(QBSP_SOURCES
-	${CMAKE_SOURCE_DIR}/common/bspfile.cc
-	${CMAKE_SOURCE_DIR}/common/entdata.cc
-	${CMAKE_SOURCE_DIR}/common/threads.cc
-	${CMAKE_SOURCE_DIR}/common/cmdlib.cc
-	${CMAKE_SOURCE_DIR}/common/log.cc
-	${CMAKE_SOURCE_DIR}/common/qvec.cc
-	${CMAKE_SOURCE_DIR}/common/mesh.cc
-	${CMAKE_SOURCE_DIR}/common/mathlib.cc
-	${CMAKE_SOURCE_DIR}/common/bsputils.cc
-	${CMAKE_SOURCE_DIR}/common/parser.cc
-	${CMAKE_SOURCE_DIR}/qbsp/brush.cc
-	${CMAKE_SOURCE_DIR}/qbsp/csg4.cc
-	${CMAKE_SOURCE_DIR}/qbsp/file.cc
-	${CMAKE_SOURCE_DIR}/qbsp/globals.cc
-	${CMAKE_SOURCE_DIR}/qbsp/map.cc
-	${CMAKE_SOURCE_DIR}/qbsp/merge.cc
-	${CMAKE_SOURCE_DIR}/qbsp/outside.cc
-	${CMAKE_SOURCE_DIR}/qbsp/portals.cc
-	${CMAKE_SOURCE_DIR}/qbsp/qbsp.cc
-	${CMAKE_SOURCE_DIR}/qbsp/solidbsp.cc
-	${CMAKE_SOURCE_DIR}/qbsp/surfaces.cc
-	${CMAKE_SOURCE_DIR}/qbsp/tjunc.cc
-	${CMAKE_SOURCE_DIR}/qbsp/wad.cc
-	${CMAKE_SOURCE_DIR}/qbsp/writebsp.cc
-	${CMAKE_SOURCE_DIR}/qbsp/exportobj.cc
-	${COMMON_INCLUDES}
-	${QBSP_INCLUDES})
-
 find_package (Threads)
 
 if (CMAKE_USE_PTHREADS_INIT)
@@ -84,11 +23,6 @@ if (CMAKE_USE_PTHREADS_INIT)
 elseif (CMAKE_USE_WIN32_THREADS_INIT)
 	add_definitions(-DUSE_WIN32THREADS)
 endif ()
-
-# (see http://sourceforge.net/p/mingw-w64/wiki2/printf%20and%20scanf%20family/)
-if (MINGW)
-	add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
-endif (MINGW)
 
 if (UNIX)
 	add_definitions(-DLINUX)
@@ -132,6 +66,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 find_package(TBB REQUIRED)
 
 add_subdirectory(3rdparty)
+add_subdirectory(common)
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)

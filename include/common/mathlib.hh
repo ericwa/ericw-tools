@@ -304,6 +304,8 @@ std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> 
 /// Returns `true` and the interpolated normal if `point` is in the polygon, otherwise returns false.
 std::pair<bool, qvec3f> GLM_InterpolateNormal(
     const std::vector<qvec3f> &points, const std::vector<face_normal_t> &normals, const qvec3f &point);
+std::pair<bool, qvec3f> GLM_InterpolateNormal(
+    const std::vector<qvec3f> &points, const std::vector<qvec3f> &normals, const qvec3f &point);
 std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount);
 /// Returns (front part, back part)
 std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane);

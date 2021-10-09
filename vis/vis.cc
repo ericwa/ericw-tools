@@ -615,6 +615,12 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
                 bsp->dleafs[i].visofs = visofs;
             }
         }
+    } else {
+        for (i = 0; i < portalleafs_real; i++) {
+            if (bsp->dleafs[i + 1].cluster == clusternum) {
+                bsp->dleafs[i + 1].visofs = visofs;
+            }
+        }
     }
 
     memcpy(dest, compressed, len);

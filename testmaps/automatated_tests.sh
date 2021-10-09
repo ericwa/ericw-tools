@@ -16,6 +16,9 @@ set -x
 UPDATE_HASHES=0
 if [[ "$1" == "--update-hashes" ]]; then 
     UPDATE_HASHES=1
+elif [[ "$1" != "" ]]; then
+    echo "usage: ./automated_tests.sh [--update-hashes]"
+    exit 1
 fi
 
 # checking for lack of crashes
@@ -38,6 +41,7 @@ light invalid_texture_axes.map || exit 1
 HASH_CHECK_BSPS="qbsp_func_detail.bsp \
 qbsp_func_detail_illusionary_plus_water.bsp \
 qbsp_origin.bsp \
+qbsp_angled_brush.bsp \
 e1m1-bsp29.bsp \
 e1m1-bsp2.bsp \
 e1m1-2psb.bsp \
@@ -55,7 +59,8 @@ HASH_CHECK_PRTS=${HASH_CHECK_BSPS//.bsp/.prt}
 # directly to the git repo, so we can print a diff
 COMMIT_JSON_MAPS="qbsp_func_detail.bsp \
 qbsp_func_detail_illusionary_plus_water.bsp \
-qbsp_origin.bsp"
+qbsp_origin.bsp \
+qbsp_angled_brush.bsp"
 
 # smaller test maps for specific features/combinations
 # check .json diff of COMMIT_JSON_MAPS

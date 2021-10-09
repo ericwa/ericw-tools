@@ -943,10 +943,13 @@ struct lump_reader
 
         s.read(reinterpret_cast<char *>(buffer.data()), lump.filelen);
 
-        // in case of bad BSPs, we'll fix it by growing the lump
-        if (buffer[lump.filelen]) {
-            buffer += '\0';
+        // the last byte is required to be '\0' which was added when the .bsp was
+        // written. chop it off now, since we want the std::string to
+        // be the logical string (we'll add the null terminator again when saving the .bsp)
+        if (buffer[lump.filelen - 1] == 0) {
+            buffer.resize(lump.filelen - 1);
         }
+        // TODO: warn about bad .bsp if missing \0?
     }
 
     // read structured lump data from stream into struct
@@ -1420,7 +1423,7 @@ inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
         LogPrint("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexq1_lump>(bsp.dtex).textures.size());
     LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
     LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvisdata.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
 template<typename T>
@@ -1445,7 +1448,7 @@ inline void PrintQ2BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
 
     LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
     LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size());
+    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
 /*

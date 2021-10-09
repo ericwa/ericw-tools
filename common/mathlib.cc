@@ -600,6 +600,17 @@ std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> 
 std::pair<bool, qvec3f> GLM_InterpolateNormal(
     const std::vector<qvec3f> &points, const std::vector<face_normal_t> &normals, const qvec3f &point)
 {
+    std::vector<qvec3f> normalvecs;
+    for (auto& normal : normals) {
+        normalvecs.push_back(normal.normal);
+    }
+
+    return GLM_InterpolateNormal(points, normalvecs, point);
+}
+
+std::pair<bool, qvec3f> GLM_InterpolateNormal(
+    const std::vector<qvec3f> &points, const std::vector<qvec3f> &normals, const qvec3f &point)
+{
     Q_assert(points.size() == normals.size());
 
     if (points.size() < 3)
@@ -608,14 +619,14 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
     // Step through the triangles, being careful to handle zero-size ones
 
     const qvec3f &p0 = points.at(0);
-    const qvec3f &n0 = normals.at(0).normal;
+    const qvec3f &n0 = normals.at(0);
 
     const int N = points.size();
     for (int i = 2; i < N; i++) {
         const qvec3f &p1 = points.at(i - 1);
-        const qvec3f &n1 = normals.at(i - 1).normal;
+        const qvec3f &n1 = normals.at(i - 1);
         const qvec3f &p2 = points.at(i);
-        const qvec3f &n2 = normals.at(i).normal;
+        const qvec3f &n2 = normals.at(i);
 
         const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes({p0, p1, p2});
         if (edgeplanes.size() != 3)
