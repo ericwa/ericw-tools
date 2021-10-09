@@ -147,7 +147,7 @@ std::vector<decomp_plane_t> RemoveRedundantPlanes(const std::vector<decomp_plane
         // outward-facing plane
         vec3_t normal;
         VectorCopy(plane.normal, normal);
-        std::optional<winding_t> winding = winding_t::from_plane(normal, plane.distance);
+        std::optional<winding_t> winding = winding_t::from_plane(normal, plane.distance, 10e6);
 
         // clip `winding` by all of the other planes, flipped
         for (const decomp_plane_t &plane2 : planes) {

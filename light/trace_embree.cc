@@ -452,7 +452,7 @@ static void Leaf_MakeFaces(
         VectorScale(plane.normal, -1, faceplane.normal);
         faceplane.dist = -plane.dist;
 
-        std::optional<winding_t> winding = winding_t::from_plane(faceplane.normal, faceplane.dist);
+        std::optional<winding_t> winding = winding_t::from_plane(faceplane.normal, faceplane.dist, 10e6);
 
         // clip `winding` by all of the other planes
         for (const plane_t &plane2 : planes) {

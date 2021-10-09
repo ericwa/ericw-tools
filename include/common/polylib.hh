@@ -420,7 +420,7 @@ public:
         return p;
     }
 
-    static winding_base_t from_plane(const qvec3d &normal, const vec_t &dist)
+    static winding_base_t from_plane(const qvec3d &normal, const vec_t &dist, const vec_t &worldextent)
     {
         /* find the major axis */
         vec_t max = -VECT_MAX;
@@ -452,8 +452,8 @@ public:
         qvec3d org = normal * dist;
         qvec3d vright = qv::cross(vup, normal);
 
-        vup *= 10e6;
-        vright *= 10e6;
+        vup *= worldextent;
+        vright *= worldextent;
 
         /* project a really big axis aligned box onto the plane */
         winding_base_t w(4);

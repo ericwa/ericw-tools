@@ -32,7 +32,4 @@ struct qbsp_plane_t : plane_t
 
 using winding_t = polylib::winding_base_t<MAXEDGES>;
 
-inline winding_t BaseWindingForPlane(const qbsp_plane_t *p)
-{
-    return winding_t::from_plane(p->normal, p->dist);
-}
+winding_t BaseWindingForPlane(const qbsp_plane_t *p);
