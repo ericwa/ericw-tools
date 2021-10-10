@@ -1420,11 +1420,6 @@ static void ParseOptions(char *szOptions)
 
     // update target game
     options.target_game = options.target_version->game;
-
-    // force specific flags for Q2
-    if (options.target_game->id == GAME_QUAKE_II) {
-        options.fNoclip = true;
-    }
 }
 
 /*
