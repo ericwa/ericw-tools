@@ -4522,7 +4522,7 @@
         {
             "flags": 0,
             "miptex": 0,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4543,7 +4543,7 @@
         {
             "flags": 0,
             "miptex": 0,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4564,7 +4564,7 @@
         {
             "flags": 0,
             "miptex": 1,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4585,7 +4585,7 @@
         {
             "flags": 0,
             "miptex": 1,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4606,7 +4606,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4627,7 +4627,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4648,7 +4648,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4669,7 +4669,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4690,7 +4690,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4711,7 +4711,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4732,7 +4732,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4753,7 +4753,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4774,7 +4774,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4795,7 +4795,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4816,7 +4816,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4837,7 +4837,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4858,7 +4858,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
@@ -4879,7 +4879,7 @@
         {
             "flags": 0,
             "miptex": 3,
-            "nexttexinfo": 0,
+            "nexttexinfo": -1,
             "texture": "",
             "value": 0,
             "vecs": [
