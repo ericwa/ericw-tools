@@ -1026,13 +1026,13 @@ int light_main(int argc, const char **argv)
             LogPrint("Bounce emitters debugging mode enabled on command line\n");
         } else if (!strcmp(argv[i], "-surflight_subdivide")) {
             surflight_subdivide = ParseVec(&i, argc, argv);
-            surflight_subdivide = qmin(qmax(surflight_subdivide, 64.0f), 2048.0f);
+            surflight_subdivide = min(max(surflight_subdivide, 64.0f), 2048.0f);
             LogPrint("Using surface light subdivision size of {}\n", surflight_subdivide);
         } else if (!strcmp(argv[i], "-surflight_dump")) {
             surflight_dump = true;
         } else if (!strcmp(argv[i], "-sunsamples")) {
             sunsamples = ParseInt(&i, argc, argv);
-            sunsamples = qmin(qmax(sunsamples, 8), 2048);
+            sunsamples = min(max(sunsamples, 8), 2048);
             LogPrint("Using sunsamples of {}\n", sunsamples);
         } else if (!strcmp(argv[i], "-onlyents")) {
             onlyents = true;

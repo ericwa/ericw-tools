@@ -140,7 +140,7 @@ struct lumpspec_t
 // helper functions to quickly numerically cast mins/maxs
 // and floor/ceil them in the case of float -> integral
 template<typename T, typename F>
-inline qvec<3, T> aabb_mins_cast(const qvec<3, F> &f, const char *overflow_message = "mins")
+inline qvec<T, 3> aabb_mins_cast(const qvec<F, 3> &f, const char *overflow_message = "mins")
 {
     if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
         return {numeric_cast<T>(floor(f[0]), overflow_message), numeric_cast<T>(floor(f[1]), overflow_message),
@@ -151,7 +151,7 @@ inline qvec<3, T> aabb_mins_cast(const qvec<3, F> &f, const char *overflow_messa
 }
 
 template<typename T, typename F>
-inline qvec<3, T> aabb_maxs_cast(const qvec<3, F> &f, const char *overflow_message = "maxs")
+inline qvec<T, 3> aabb_maxs_cast(const qvec<F, 3> &f, const char *overflow_message = "maxs")
 {
     if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
         return {numeric_cast<T>(ceil(f[0]), overflow_message), numeric_cast<T>(ceil(f[1]), overflow_message),

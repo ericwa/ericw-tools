@@ -89,10 +89,10 @@ static void *MakeSurfaceLightsThread(void *arg)
 
         // Create face points...
         auto poly = GLM_FacePoints(bsp, face);
-        const float facearea = GLM_PolyArea(poly);
+        const float facearea = qv::PolyArea(poly.begin(), poly.end());
 
         // Avoid small, or zero-area faces
-        if (GLM_PolyArea(poly) < 1)
+        if (facearea < 1)
             continue;
 
         // Create winding...

@@ -1027,7 +1027,7 @@ void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacit
     }
 
     // clamp opacity
-    opacity = qmin(qmax(0.0f, opacity), 1.0f);
+    opacity = min(max(0.0f, opacity), 1.0f);
 
     Q_assert(rayIndex < rs->_numrays);
 

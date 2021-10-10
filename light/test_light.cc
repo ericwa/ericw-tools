@@ -160,7 +160,8 @@ TEST(mathlib, ClosestPointOnPolyBoundary)
 
 TEST(mathlib, PolygonCentroid_empty)
 {
-    const qvec3f res = GLM_PolyCentroid({});
+    const std::initializer_list<qvec3d> empty{};
+    const qvec3f res = qv::PolyCentroid(empty.begin(), empty.end());
 
     for (int i = 0; i < 3; i++) {
         EXPECT_TRUE(std::isnan(res[i]));
@@ -169,66 +170,68 @@ TEST(mathlib, PolygonCentroid_empty)
 
 TEST(mathlib, PolygonCentroid_point)
 {
-    EXPECT_EQ(qvec3f(1, 1, 1), GLM_PolyCentroid({qvec3f(1, 1, 1)}));
+    const std::initializer_list<qvec3d> point{ { 1, 1, 1 } };
+    EXPECT_EQ(*point.begin(), qv::PolyCentroid(point.begin(), point.end()));
 }
 
 TEST(mathlib, PolygonCentroid_line)
 {
-    EXPECT_EQ(qvec3f(1, 1, 1), GLM_PolyCentroid({qvec3f(0, 0, 0), qvec3f(2, 2, 2)}));
+    const std::initializer_list<qvec3d> line{ { 0, 0, 0 }, { 2, 2, 2 } };
+    EXPECT_EQ(qvec3d(1, 1, 1), qv::PolyCentroid(line.begin(), line.end()));
 }
 
 TEST(mathlib, PolygonCentroid)
 {
     // poor test.. but at least checks that the colinear point is treated correctly
-    const vector<qvec3f> poly{{0, 0, 0}, {0, 32, 0}, // colinear
+    const std::initializer_list<qvec3d> poly{{0, 0, 0}, {0, 32, 0}, // colinear
         {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(qvec3f(32, 32, 0), GLM_PolyCentroid(poly));
+    EXPECT_EQ(qvec3f(32, 32, 0), qv::PolyCentroid(poly.begin(), poly.end()));
 }
 
 TEST(mathlib, PolygonArea)
 {
     // poor test.. but at least checks that the colinear point is treated correctly
-    const vector<qvec3f> poly{{0, 0, 0}, {0, 32, 0}, // colinear
+    const std::initializer_list<qvec3d> poly{{0, 0, 0}, {0, 32, 0}, // colinear
         {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(64.0f * 64.0f, GLM_PolyArea(poly));
+    EXPECT_EQ(64.0f * 64.0f, qv::PolyArea(poly.begin(), poly.end()));
 }
 
 TEST(mathlib, BarycentricFromPoint)
 {
-    const tri_t tri = make_tuple<qvec3f, qvec3f, qvec3f>( // clockwise
-        {0, 0, 0}, {0, 64, 0}, {64, 0, 0});
+     // clockwise
+    const std::array<qvec3f, 3> tri { qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(qvec3f(1, 0, 0), Barycentric_FromPoint(get<0>(tri), tri));
-    EXPECT_EQ(qvec3f(0, 1, 0), Barycentric_FromPoint(get<1>(tri), tri));
-    EXPECT_EQ(qvec3f(0, 0, 1), Barycentric_FromPoint(get<2>(tri), tri));
+    EXPECT_EQ(qvec3f(1, 0, 0), qv::Barycentric_FromPoint(tri[0], tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0, 1, 0), qv::Barycentric_FromPoint(tri[1], tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0, 0, 1), qv::Barycentric_FromPoint(tri[2], tri[0], tri[1], tri[2]));
 
-    EXPECT_EQ(qvec3f(0.5, 0.5, 0.0), Barycentric_FromPoint(qvec3f(0, 32, 0), tri));
-    EXPECT_EQ(qvec3f(0.0, 0.5, 0.5), Barycentric_FromPoint(qvec3f(32, 32, 0), tri));
-    EXPECT_EQ(qvec3f(0.5, 0.0, 0.5), Barycentric_FromPoint(qvec3f(32, 0, 0), tri));
+    EXPECT_EQ(qvec3f(0.5, 0.5, 0.0), qv::Barycentric_FromPoint({ 0, 32, 0 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0.0, 0.5, 0.5), qv::Barycentric_FromPoint({ 32, 32, 0 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0.5, 0.0, 0.5), qv::Barycentric_FromPoint({ 32, 0, 0 }, tri[0], tri[1], tri[2]));
 }
 
 TEST(mathlib, BarycentricToPoint)
 {
-    const tri_t tri = make_tuple<qvec3f, qvec3f, qvec3f>( // clockwise
-        {0, 0, 0}, {0, 64, 0}, {64, 0, 0});
+     // clockwise
+    const std::array<qvec3f, 3> tri { qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(get<0>(tri), Barycentric_ToPoint(qvec3f(1, 0, 0), tri));
-    EXPECT_EQ(get<1>(tri), Barycentric_ToPoint(qvec3f(0, 1, 0), tri));
-    EXPECT_EQ(get<2>(tri), Barycentric_ToPoint(qvec3f(0, 0, 1), tri));
+    EXPECT_EQ(tri[0], qv::Barycentric_ToPoint({ 1, 0, 0 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(tri[1], qv::Barycentric_ToPoint({ 0, 1, 0 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(tri[2], qv::Barycentric_ToPoint({ 0, 0, 1 }, tri[0], tri[1], tri[2]));
 
-    EXPECT_EQ(qvec3f(0, 32, 0), Barycentric_ToPoint(qvec3f(0.5, 0.5, 0.0), tri));
-    EXPECT_EQ(qvec3f(32, 32, 0), Barycentric_ToPoint(qvec3f(0.0, 0.5, 0.5), tri));
-    EXPECT_EQ(qvec3f(32, 0, 0), Barycentric_ToPoint(qvec3f(0.5, 0.0, 0.5), tri));
+    EXPECT_EQ(qvec3f(0, 32, 0), qv::Barycentric_ToPoint({ 0.5, 0.5, 0.0 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(32, 32, 0), qv::Barycentric_ToPoint({ 0.0, 0.5, 0.5 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(32, 0, 0), qv::Barycentric_ToPoint({ 0.5, 0.0, 0.5 }, tri[0], tri[1], tri[2]));
 }
 
 TEST(mathlib, BarycentricRandom)
 {
-    const tri_t tri = make_tuple<qvec3f, qvec3f, qvec3f>( // clockwise
-        {0, 0, 0}, {0, 64, 0}, {64, 0, 0});
+     // clockwise
+    const std::array<qvec3f, 3> tri { qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
-    const auto triAsVec = vector<qvec3f>{get<0>(tri), get<1>(tri), get<2>(tri)};
+    const auto triAsVec = vector<qvec3f>{tri.begin(), tri.end()};
     const auto edges = GLM_MakeInwardFacingEdgePlanes(triAsVec);
     const auto plane = GLM_PolyPlane(triAsVec);
 
@@ -241,10 +244,10 @@ TEST(mathlib, BarycentricRandom)
         ASSERT_LE(r0, 1);
         ASSERT_LE(r1, 1);
 
-        const auto bary = Barycentric_Random(r0, r1);
+        const auto bary = qv::Barycentric_Random(r0, r1);
         EXPECT_FLOAT_EQ(1.0f, bary[0] + bary[1] + bary[2]);
 
-        const qvec3f point = Barycentric_ToPoint(bary, tri);
+        const qvec3f point = qv::Barycentric_ToPoint(bary, tri[0], tri[1], tri[2]);
         EXPECT_TRUE(GLM_EdgePlanes_PointInside(edges, point));
 
         EXPECT_FLOAT_EQ(0.0f, GLM_DistAbovePlane(plane, point));
@@ -306,14 +309,14 @@ TEST(mathlib, InterpolateNormals)
     for (int i = 0; i < poly.size(); i++) {
         const auto res = GLM_InterpolateNormal(poly, normals, poly.at(i));
         EXPECT_EQ(true, res.first);
-        EXPECT_TRUE(qv::epsilonEqual(normals.at(i), res.second, POINT_EQUAL_EPSILON));
+        EXPECT_TRUE(qv::epsilonEqual(normals.at(i), res.second, static_cast<float>(POINT_EQUAL_EPSILON)));
     }
 
     {
         const qvec3f firstTriCentroid = (poly[0] + poly[1] + poly[2]) / 3.0f;
         const auto res = GLM_InterpolateNormal(poly, normals, firstTriCentroid);
         EXPECT_EQ(true, res.first);
-        EXPECT_TRUE(qv::epsilonEqual(qvec3f(1 / 3.0f), res.second, POINT_EQUAL_EPSILON));
+        EXPECT_TRUE(qv::epsilonEqual(qvec3f(1 / 3.0f), res.second, static_cast<float>(POINT_EQUAL_EPSILON)));
     }
 
     // Outside poly
@@ -325,7 +328,7 @@ static bool polysEqual(const vector<qvec3f> &p1, const vector<qvec3f> &p2)
     if (p1.size() != p2.size())
         return false;
     for (int i = 0; i < p1.size(); i++) {
-        if (!qv::epsilonEqual(p1[i], p2[i], POINT_EQUAL_EPSILON))
+        if (!qv::epsilonEqual(p1[i], p2[i], static_cast<float>(POINT_EQUAL_EPSILON)))
             return false;
     }
     return true;
@@ -511,8 +514,8 @@ TEST(mathlib, pointsAlongLine)
     const auto res = PointsAlongLine(qvec3f(1, 0, 0), qvec3f(3.5, 0, 0), 1.5f);
 
     ASSERT_EQ(2, res.size());
-    ASSERT_TRUE(qv::epsilonEqual(qvec3f(1, 0, 0), res[0], POINT_EQUAL_EPSILON));
-    ASSERT_TRUE(qv::epsilonEqual(qvec3f(2.5, 0, 0), res[1], POINT_EQUAL_EPSILON));
+    ASSERT_TRUE(qv::epsilonEqual(qvec3f(1, 0, 0), res[0], static_cast<float>(POINT_EQUAL_EPSILON)));
+    ASSERT_TRUE(qv::epsilonEqual(qvec3f(2.5, 0, 0), res[1], static_cast<float>(POINT_EQUAL_EPSILON)));
 }
 
 // FIXME: this is failing

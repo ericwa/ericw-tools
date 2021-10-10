@@ -31,25 +31,17 @@
 
 struct mapface_t
 {
-    qbsp_plane_t plane;
-    vec3_t planepts[3];
-    std::string texname;
-    int texinfo;
-    int linenum;
+    qbsp_plane_t plane { };
+    std::array<qvec3d, 3> planepts { };
+    std::string texname { };
+    int texinfo = 0;
+    int linenum = 0;
 
-    surfflags_t flags;
+    surfflags_t flags { };
 
     // Q2 stuff
-    int contents;
-    int value;
-
-    mapface_t() : texinfo(0), linenum(0), contents(0), flags({}), value(0)
-    {
-        memset(&plane, 0, sizeof(plane));
-        for (int i = 0; i < 3; i++) {
-            VectorSet(planepts[i], 0, 0, 0);
-        }
-    }
+    int contents = 0;
+    int value = 0;
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);
 

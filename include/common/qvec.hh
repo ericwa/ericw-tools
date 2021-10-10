@@ -26,18 +26,16 @@
 #include <algorithm>
 #include <array>
 #include <fmt/format.h>
+#include "common/mathlib.hh"
+#include "common/cmdlib.hh"
 
-#define qmax std::max
-#define qmin std::min
-#define qclamp std::clamp
-
-template<size_t N, class T>
+template<class T, size_t N>
 class qvec
 {
 protected:
     std::array<T, N> v;
 
-    template<size_t N2, class T2>
+    template<class T2, size_t N2>
     friend class qvec;
 
 public:
@@ -64,7 +62,7 @@ public:
         // multiple arguments; copy up to min(N, `count`),
         // leave `count` -> N as zeroes
         else {
-            constexpr size_t copy_size = qmin(N, count);
+            constexpr size_t copy_size = min(N, count);
             size_t i = 0;
             ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
         }
@@ -93,7 +91,7 @@ public:
      * Casting from another vector type of the same length
      */
     template<class T2>
-    constexpr qvec(const qvec<N, T2> &other)
+    constexpr qvec(const qvec<T2, N> &other)
     {
         for (size_t i = 0; i < N; i++)
             v[i] = static_cast<T>(other[i]);
@@ -104,9 +102,9 @@ public:
      * different length
      */
     template<size_t N2>
-    constexpr qvec(const qvec<N2, T> &other)
+    constexpr qvec(const qvec<T, N2> &other)
     {
-        constexpr size_t minSize = qmin(N, N2);
+        constexpr size_t minSize = min(N, N2);
 
         // truncates if `other` is longer than `this`
         for (size_t i = 0; i < minSize; i++)
@@ -122,23 +120,21 @@ public:
     /**
      * Extending a vector
      */
-    constexpr qvec(const qvec<N - 1, T> &other, T value)
+    constexpr qvec(const qvec<T, N - 1> &other, T value)
     {
-        for (size_t i = 0; i < N - 1; ++i) {
-            v[i] = other[i];
-        }
+        std::copy(other.begin(), other.end(), v.begin());
         v[N - 1] = value;
     }
 
     [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qvec<N, T> &other) const { return v < other.v; }
-    [[nodiscard]] constexpr bool operator<=(const qvec<N, T> &other) const { return v <= other.v; }
-    [[nodiscard]] constexpr bool operator>(const qvec<N, T> &other) const { return v > other.v; }
-    [[nodiscard]] constexpr bool operator>=(const qvec<N, T> &other) const { return v >= other.v; }
-    [[nodiscard]] constexpr bool operator==(const qvec<N, T> &other) const { return v == other.v; }
-    [[nodiscard]] constexpr bool operator!=(const qvec<N, T> &other) const { return v != other.v; }
+    [[nodiscard]] constexpr bool operator<(const qvec<T, N> &other) const { return v < other.v; }
+    [[nodiscard]] constexpr bool operator<=(const qvec<T, N> &other) const { return v <= other.v; }
+    [[nodiscard]] constexpr bool operator>(const qvec<T, N> &other) const { return v > other.v; }
+    [[nodiscard]] constexpr bool operator>=(const qvec<T, N> &other) const { return v >= other.v; }
+    [[nodiscard]] constexpr bool operator==(const qvec<T, N> &other) const { return v == other.v; }
+    [[nodiscard]] constexpr bool operator!=(const qvec<T, N> &other) const { return v != other.v; }
 
     [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
@@ -156,13 +152,13 @@ public:
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
 
     template<typename F>
-    constexpr void operator+=(const qvec<N, F> &other)
+    constexpr void operator+=(const qvec<F, N> &other)
     {
         for (size_t i = 0; i < N; i++)
             v[i] += other.v[i];
     }
     template<typename F>
-    constexpr void operator-=(const qvec<N, F> &other)
+    constexpr void operator-=(const qvec<F, N> &other)
     {
         for (size_t i = 0; i < N; i++)
             v[i] -= other.v[i];
@@ -179,46 +175,46 @@ public:
     }
 
     template<typename F>
-    [[nodiscard]] constexpr qvec<N, T> operator+(const qvec<N, F> &other) const
+    [[nodiscard]] constexpr qvec<T, N> operator+(const qvec<F, N> &other) const
     {
-        qvec<N, T> res(*this);
+        qvec<T, N> res(*this);
         res += other;
         return res;
     }
 
     template<typename F>
-    [[nodiscard]] constexpr qvec<N, T> operator-(const qvec<N, F> &other) const
+    [[nodiscard]] constexpr qvec<T, N> operator-(const qvec<F, N> &other) const
     {
-        qvec<N, T> res(*this);
+        qvec<T, N> res(*this);
         res -= other;
         return res;
     }
 
-    [[nodiscard]] constexpr qvec<N, T> operator*(const T &scale) const
+    [[nodiscard]] constexpr qvec<T, N> operator*(const T &scale) const
     {
-        qvec<N, T> res(*this);
+        qvec<T, N> res(*this);
         res *= scale;
         return res;
     }
 
-    [[nodiscard]] constexpr qvec<N, T> operator/(const T &scale) const
+    [[nodiscard]] constexpr qvec<T, N> operator/(const T &scale) const
     {
-        qvec<N, T> res(*this);
+        qvec<T, N> res(*this);
         res /= scale;
         return res;
     }
 
-    [[nodiscard]] constexpr qvec<N, T> operator-() const
+    [[nodiscard]] constexpr qvec<T, N> operator-() const
     {
-        qvec<N, T> res(*this);
+        qvec<T, N> res(*this);
         res *= -1;
         return res;
     }
 
-    [[nodiscard]] constexpr qvec<3, T> xyz() const
+    [[nodiscard]] constexpr qvec<T, 3> xyz() const
     {
         static_assert(N >= 3);
-        return qvec<3, T>(*this);
+        return qvec<T, 3>(*this);
     }
 
     // stream support
@@ -236,13 +232,13 @@ public:
 namespace qv
 {
 template<class T>
-[[nodiscard]] qvec<3, T> cross(const qvec<3, T> &v1, const qvec<3, T> &v2)
+[[nodiscard]] qvec<T, 3> cross(const qvec<T, 3> &v1, const qvec<T, 3> &v2)
 {
-    return qvec<3, T>(v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]);
+    return qvec<T, 3>(v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]);
 }
 
 template<size_t N, class T>
-[[nodiscard]] T dot(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] T dot(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     T result = 0;
     for (size_t i = 0; i < N; i++) {
@@ -252,9 +248,9 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<N, T> floor(const qvec<N, T> &v1)
+[[nodiscard]] qvec<T, N> floor(const qvec<T, N> &v1)
 {
-    qvec<N, T> res;
+    qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
         res[i] = std::floor(v1[i]);
     }
@@ -262,9 +258,9 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<N, T> pow(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] qvec<T, N> pow(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
-    qvec<N, T> res;
+    qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
         res[i] = std::pow(v1[i], v2[i]);
     }
@@ -272,47 +268,47 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] T min(const qvec<N, T> &v)
+[[nodiscard]] T min(const qvec<T, N> &v)
 {
     T res = std::numeric_limits<T>::largest();
     for (auto &c : v) {
-        res = qmin(c, res);
+        res = ::min(c, res);
     }
     return res;
 }
 
 template<size_t N, class T>
-[[nodiscard]] T max(const qvec<N, T> &v)
+[[nodiscard]] T max(const qvec<T, N> &v)
 {
     T res = std::numeric_limits<T>::lowest();
     for (auto &c : v) {
-        res = qmax(c, res);
+        res = ::max(c, res);
     }
     return res;
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<N, T> min(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] qvec<T, N> min(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
-    qvec<N, T> res;
+    qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
-        res[i] = qmin(v1[i], v2[i]);
+        res[i] = ::min(v1[i], v2[i]);
     }
     return res;
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<N, T> max(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] qvec<T, N> max(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
-    qvec<N, T> res;
+    qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
-        res[i] = qmax(v1[i], v2[i]);
+        res[i] = ::max(v1[i], v2[i]);
     }
     return res;
 }
 
 template<size_t N, class T>
-[[nodiscard]] T length2(const qvec<N, T> &v1)
+[[nodiscard]] T length2(const qvec<T, N> &v1)
 {
     T len2 = 0;
     for (size_t i = 0; i < N; i++) {
@@ -322,31 +318,31 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] T length(const qvec<N, T> &v1)
+[[nodiscard]] T length(const qvec<T, N> &v1)
 {
     return std::sqrt(length2(v1));
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<N, T> normalize(const qvec<N, T> &v1)
+[[nodiscard]] qvec<T, N> normalize(const qvec<T, N> &v1)
 {
     return v1 / length(v1);
 }
 
 template<size_t N, class T>
-[[nodiscard]] T distance(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] T distance(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     return length(v2 - v1);
 }
 
 template<typename T>
-[[nodiscard]] inline std::string to_string(const qvec<3, T> &v1)
+[[nodiscard]] inline std::string to_string(const qvec<T, 3> &v1)
 {
     return fmt::format("{}", v1);
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool epsilonEqual(const qvec<N, T> &v1, const qvec<N, T> &v2, T epsilon)
+[[nodiscard]] bool epsilonEqual(const qvec<T, N> &v1, const qvec<T, N> &v2, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
         T diff = v1[i] - v2[i];
@@ -357,7 +353,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool epsilonEmpty(const qvec<N, T> &v1, T epsilon)
+[[nodiscard]] bool epsilonEmpty(const qvec<T, N> &v1, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
         if (fabs(v1[i]) > epsilon)
@@ -367,7 +363,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool equalExact(const qvec<N, T> &v1, const qvec<N, T> &v2)
+[[nodiscard]] bool equalExact(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     for (size_t i = 0; i < N; i++) {
         if (v1[i] != v2[i])
@@ -377,7 +373,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool emptyExact(const qvec<N, T> &v1)
+[[nodiscard]] bool emptyExact(const qvec<T, N> &v1)
 {
     for (size_t i = 0; i < N; i++) {
         if (v1[i])
@@ -387,7 +383,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] size_t indexOfLargestMagnitudeComponent(const qvec<N, T> &v)
+[[nodiscard]] size_t indexOfLargestMagnitudeComponent(const qvec<T, N> &v)
 {
     size_t largestIndex = 0;
     T largestMag = 0;
@@ -403,44 +399,140 @@ template<size_t N, class T>
 
     return largestIndex;
 }
+
+template<size_t N, typename T>
+[[nodiscard]] T TriangleArea(const qvec<T, N> &v0, const qvec<T, N> &v1, const qvec<T, N> &v2)
+{
+    return static_cast<T>(0.5) * qv::length(qv::cross(v2 - v0, v1 - v0));
+}
+
+template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_type>
+[[nodiscard]] T PolyCentroid(Iter begin, Iter end)
+{
+    using value_type = typename T::value_type;
+    size_t num_points = end - begin;
+
+    if (!num_points)
+        return qvec3f(std::numeric_limits<value_type>::quiet_NaN());
+    else if (num_points == 1)
+        return *begin;
+    else if (num_points == 2)
+        return avg(*begin, *(++begin));
+
+    T poly_centroid{};
+    value_type poly_area = 0;
+
+    const T &v0 = *begin;
+    for (auto it = begin + 2; it != end; ++it) {
+        const T &v1 = *(it - 1);
+        const T &v2 = *it;
+
+        const value_type triarea = TriangleArea(v0, v1, v2);
+        const T tricentroid = avg(v0, v1, v2);
+
+        poly_area += triarea;
+        poly_centroid = poly_centroid + (tricentroid * triarea);
+    }
+
+    poly_centroid /= poly_area;
+
+    return poly_centroid;
+}
+
+template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_type, typename F = typename T::value_type>
+[[nodiscard]] F PolyArea(Iter begin, Iter end)
+{
+    Q_assert((end - begin) >= 3);
+
+    float poly_area = 0;
+
+    const T &v0 = *begin;
+    for (auto it = begin + 2; it != end; ++it) {
+        const T &v1 = *(it - 1);
+        const T &v2 = *it;
+
+        poly_area += TriangleArea(v0, v1, v2);
+    }
+
+    return poly_area;
+}
+
+template<typename T>
+[[nodiscard]] qvec<T, 3> Barycentric_FromPoint(const qvec<T, 3> &p, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
+{
+    const auto v0 = t1 - t0;
+    const auto v1 = t2 - t0;
+    const auto v2 = p - t0;
+    T d00 = qv::dot(v0, v0);
+    T d01 = qv::dot(v0, v1);
+    T d11 = qv::dot(v1, v1);
+    T d20 = qv::dot(v2, v0);
+    T d21 = qv::dot(v2, v1);
+    T invDenom = (d00 * d11 - d01 * d01);
+    invDenom = 1.0 / invDenom;
+
+    qvec<T, 3> res;
+    res[1] = (d11 * d20 - d01 * d21) * invDenom;
+    res[2] = (d00 * d21 - d01 * d20) * invDenom;
+    res[0] = 1.0 - res[1] - res[2];
+    return res;
+}
+
+// from global illumination total compendium p. 12
+template<typename T>
+[[nodiscard]] qvec<T, 3> Barycentric_Random(T r1, T r2)
+{
+    qvec<T, 3> res;
+    res[0] = 1.0 - sqrt(r1);
+    res[1] = r2 * sqrt(r1);
+    res[2] = 1.0 - res[0] - res[1];
+    return res;
+}
+
+/// Evaluates the given barycentric coord for the given triangle
+template<typename T>
+[[nodiscard]] qvec<T, 3> Barycentric_ToPoint(const qvec<T, 3> &bary, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
+{
+    return (t0 * bary[0]) + (t1 * bary[1]) + (t2 * bary[2]);
+}
 }; // namespace qv
 
-using qvec2f = qvec<2, float>;
-using qvec3f = qvec<3, float>;
-using qvec4f = qvec<4, float>;
+using qvec2f = qvec<float, 2>;
+using qvec3f = qvec<float, 3>;
+using qvec4f = qvec<float, 4>;
 
-using qvec2d = qvec<2, double>;
-using qvec3d = qvec<3, double>;
-using qvec4d = qvec<4, double>;
+using qvec2d = qvec<double, 2>;
+using qvec3d = qvec<double, 3>;
+using qvec4d = qvec<double, 4>;
 
-using qvec2i = qvec<2, int32_t>;
-using qvec3i = qvec<3, int32_t>;
+using qvec2i = qvec<int32_t, 2>;
+using qvec3i = qvec<int32_t, 3>;
 
-using qvec3s = qvec<3, int16_t>;
+using qvec3s = qvec<int16_t, 3>;
 
 template<class T>
 class qplane3
 {
 private:
-    qvec<3, T> m_normal;
+    qvec<T, 3> m_normal;
     T m_dist;
 
 public:
     inline qplane3() = default;
-    constexpr qplane3(const qvec<3, T> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
+    constexpr qplane3(const qvec<T, 3> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
 
     template<typename T2>
     constexpr qplane3(const qplane3<T2> &plane) : qplane3(plane.normal(), plane.dist())
     {
     }
 
-    [[nodiscard]] inline T distAbove(const qvec<3, T> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
-    [[nodiscard]] constexpr const qvec<3, T> &normal() const { return m_normal; }
+    [[nodiscard]] inline T distAbove(const qvec<T, 3> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
+    [[nodiscard]] constexpr const qvec<T, 3> &normal() const { return m_normal; }
     [[nodiscard]] constexpr const T dist() const { return m_dist; }
 
-    [[nodiscard]] constexpr const qvec<4, T> vec4() const
+    [[nodiscard]] constexpr const qvec<T, 4> vec4() const
     {
-        return qvec<4, T>(m_normal[0], m_normal[1], m_normal[2], m_dist);
+        return qvec<T, 4>(m_normal[0], m_normal[1], m_normal[2], m_dist);
     }
 };
 
@@ -531,9 +623,9 @@ public:
 
     // multiplication by a vector
 
-    [[nodiscard]] constexpr qvec<M, T> operator*(const qvec<N, T> &vec) const
+    [[nodiscard]] constexpr qvec<T, M> operator*(const qvec<T, N> &vec) const
     {
-        qvec<M, T> res{};
+        qvec<T, M> res{};
         for (size_t i = 0; i < M; i++) { // for each row
             for (size_t j = 0; j < N; j++) { // for each col
                 res[i] += this->at(i, j) * vec[j];
@@ -573,27 +665,11 @@ public:
 };
 
 using qmat2x2f = qmat<2, 2, float>;
-using qmat2x3f = qmat<2, 3, float>;
-using qmat2x4f = qmat<2, 4, float>;
-
-using qmat3x2f = qmat<3, 2, float>;
 using qmat3x3f = qmat<3, 3, float>;
-using qmat3x4f = qmat<3, 4, float>;
-
-using qmat4x2f = qmat<4, 2, float>;
-using qmat4x3f = qmat<4, 3, float>;
 using qmat4x4f = qmat<4, 4, float>;
 
 using qmat2x2d = qmat<2, 2, double>;
-using qmat2x3d = qmat<2, 3, double>;
-using qmat2x4d = qmat<2, 4, double>;
-
-using qmat3x2d = qmat<3, 2, double>;
 using qmat3x3d = qmat<3, 3, double>;
-using qmat3x4d = qmat<3, 4, double>;
-
-using qmat4x2d = qmat<4, 2, double>;
-using qmat4x3d = qmat<4, 3, double>;
 using qmat4x4d = qmat<4, 4, double>;
 
 namespace qv
@@ -608,10 +684,10 @@ namespace qv
 }; // namespace qv
 
 template<size_t N, class T>
-struct fmt::formatter<qvec<N, T>> : formatter<T>
+struct fmt::formatter<qvec<T, N>> : formatter<T>
 {
     template<typename FormatContext>
-    auto format(const qvec<N, T> &p, FormatContext &ctx) -> decltype(ctx.out())
+    auto format(const qvec<T, N> &p, FormatContext &ctx) -> decltype(ctx.out())
     {
         for (size_t i = 0; i < N - 1; i++) {
             formatter<T>::format(p[i], ctx);
@@ -622,7 +698,321 @@ struct fmt::formatter<qvec<N, T>> : formatter<T>
     }
 };
 
-using vec_t = double;
 // "vec3" type. legacy; eventually will be replaced entirely
 using vec3_t = vec_t[3];
-constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();
+
+struct plane_t
+{
+    qvec3d normal;
+    vec_t dist;
+};
+
+extern const vec3_t vec3_origin;
+
+template<typename T1, typename T2>
+constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
+{
+    for (size_t i = 0; i < std::size(v1); i++)
+        if (fabs(v1[i] - v2[i]) > epsilon)
+            return false;
+
+    return true;
+}
+
+template<typename T, typename T2, typename T3>
+constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
+{
+    cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
+    cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
+    cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
+}
+
+template<typename Tx, typename Ty>
+constexpr vec_t DotProduct(const Tx &x, const Ty &y)
+{
+    return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+}
+
+template<typename Tx, typename Ty, typename Tout>
+constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
+{
+    out[0] = x[0] - y[0];
+    out[1] = x[1] - y[1];
+    out[2] = x[2] - y[2];
+}
+
+template<typename Tx, typename Ty, typename Tout>
+constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
+{
+    out[0] = x[0] + y[0];
+    out[1] = x[1] + y[1];
+    out[2] = x[2] + y[2];
+}
+
+template<typename TFrom, typename TTo>
+constexpr void VectorCopy(const TFrom &in, TTo &out)
+{
+    out[0] = in[0];
+    out[1] = in[1];
+    out[2] = in[2];
+}
+
+template<typename TFrom, typename TScale, typename TTo>
+constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
+{
+    out[0] = v[0] * scale;
+    out[1] = v[1] * scale;
+    out[2] = v[2] * scale;
+}
+
+template<typename T>
+constexpr void VectorInverse(T &v)
+{
+    v[0] = -v[0];
+    v[1] = -v[1];
+    v[2] = -v[2];
+}
+
+template<typename T>
+constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
+{
+    out[0] = x;
+    out[1] = y;
+    out[2] = z;
+}
+
+template<typename T>
+constexpr void VectorClear(T &out)
+{
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+}
+
+plane_t FlipPlane(plane_t input);
+
+template<typename Ta, typename Tb, typename Tc>
+constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
+{
+    vc[0] = va[0] + scale * vb[0];
+    vc[1] = va[1] + scale * vb[1];
+    vc[2] = va[2] + scale * vb[2];
+}
+
+template<typename T>
+constexpr vec_t VectorLengthSq(const T &v)
+{
+    vec_t length = 0;
+    for (int i = 0; i < 3; i++)
+        length += v[i] * v[i];
+    return length;
+}
+
+template<typename T>
+inline vec_t VectorLength(const T &v)
+{
+    vec_t length = VectorLengthSq(v);
+    length = sqrt(length);
+    return length;
+}
+
+template<typename T>
+inline vec_t VectorNormalize(T &v)
+{
+    vec_t length = 0;
+    for (size_t i = 0; i < 3; i++)
+        length += v[i] * v[i];
+    length = sqrt(length);
+    if (length == 0)
+        return 0;
+
+    for (size_t i = 0; i < 3; i++)
+        v[i] /= (vec_t)length;
+
+    return (vec_t)length;
+}
+
+// returns the normalized direction from `start` to `stop` in the `dir` param
+// returns the distance from `start` to `stop`
+template<typename Tstart, typename Tstop, typename Tdir>
+inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
+{
+    VectorSubtract(stop, start, dir);
+    return VectorNormalize(dir);
+}
+
+// Stores a normal, tangent and bitangent
+struct face_normal_t
+{
+    qvec3f normal, tangent, bitangent;
+};
+
+qmat3x3d RotateAboutX(double radians);
+qmat3x3d RotateAboutY(double radians);
+qmat3x3d RotateAboutZ(double radians);
+qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal);
+
+// Returns (0 0 0) if we couldn't determine the normal
+qvec3f GLM_FaceNormal(std::vector<qvec3f> points);
+std::pair<bool, qvec4f> GLM_MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f &v1, const qvec3f &faceNormal);
+std::vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points);
+bool GLM_EdgePlanes_PointInside(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
+float GLM_EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
+qvec4f GLM_MakePlane(const qvec3f &normal, const qvec3f &point);
+float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point);
+qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point);
+qvec4f GLM_PolyPlane(const std::vector<qvec3f> &points);
+/// Returns the index of the polygon edge, and the closest point on that edge, to the given point
+std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point);
+/// Returns `true` and the interpolated normal if `point` is in the polygon, otherwise returns false.
+std::pair<bool, qvec3f> GLM_InterpolateNormal(
+    const std::vector<qvec3f> &points, const std::vector<face_normal_t> &normals, const qvec3f &point);
+std::pair<bool, qvec3f> GLM_InterpolateNormal(
+    const std::vector<qvec3f> &points, const std::vector<qvec3f> &normals, const qvec3f &point);
+std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount);
+/// Returns (front part, back part)
+std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane);
+
+class poly_random_point_state_t
+{
+public:
+    std::vector<qvec3f> points;
+    std::vector<float> triareas;
+    std::vector<float> triareas_cdf;
+};
+
+poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &points);
+qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, float r2, float r3);
+
+/// projects p onto the vw line.
+/// returns 0 for p==v, 1 for p==w
+float FractionOfLine(const qvec3f &v, const qvec3f &w, const qvec3f &p);
+
+/**
+ * Distance from `p` to the line v<->w (extending infinitely in either direction)
+ */
+float DistToLine(const qvec3f &v, const qvec3f &w, const qvec3f &p);
+
+qvec3f ClosestPointOnLine(const qvec3f &v, const qvec3f &w, const qvec3f &p);
+
+/**
+ * Distance from `p` to the line segment v<->w.
+ * i.e., 0 if `p` is between v and w.
+ */
+float DistToLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
+
+qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f &p);
+
+float SignedDegreesBetweenUnitVectors(const qvec3f &start, const qvec3f &end, const qvec3f &normal);
+
+enum class concavity_t
+{
+    Coplanar,
+    Concave,
+    Convex
+};
+
+concavity_t FacePairConcavity(
+    const qvec3f &face1Center, const qvec3f &face1Normal, const qvec3f &face2Center, const qvec3f &face2Normal);
+
+// Returns weights for f(0,0), f(1,0), f(0,1), f(1,1)
+// from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Unit_Square
+inline qvec4f bilinearWeights(const float x, const float y)
+{
+    Q_assert(x >= 0.0f);
+    Q_assert(x <= 1.0f);
+
+    Q_assert(y >= 0.0f);
+    Q_assert(y <= 1.0f);
+
+    return qvec4f((1.0f - x) * (1.0f - y), x * (1.0f - y), (1.0f - x) * y, x * y);
+}
+
+// This uses a coordinate system where the pixel centers are on integer coords.
+// e.g. the corners of a 3x3 pixel bitmap are at (-0.5, -0.5) and (2.5, 2.5).
+inline std::array<std::pair<qvec2i, float>, 4> bilinearWeightsAndCoords(qvec2f pos, const qvec2i &size)
+{
+    Q_assert(pos[0] >= -0.5f && pos[0] <= (size[0] - 0.5f));
+    Q_assert(pos[1] >= -0.5f && pos[1] <= (size[1] - 0.5f));
+
+    // Handle extrapolation.
+    for (int i = 0; i < 2; i++) {
+        if (pos[i] < 0)
+            pos[i] = 0;
+
+        if (pos[i] > (size[i] - 1))
+            pos[i] = (size[i] - 1);
+    }
+
+    Q_assert(pos[0] >= 0.f && pos[0] <= (size[0] - 1));
+    Q_assert(pos[1] >= 0.f && pos[1] <= (size[1] - 1));
+
+    qvec2i integerPart{static_cast<int>(qv::floor(pos)[0]), static_cast<int>(qv::floor(pos)[1])};
+    qvec2f fractionalPart(pos - qv::floor(pos));
+
+    // ensure integerPart + (1, 1) is still in bounds
+    for (int i = 0; i < 2; i++) {
+        if (fractionalPart[i] == 0.0f && integerPart[i] > 0) {
+            integerPart[i] -= 1;
+            fractionalPart[i] = 1.0f;
+        }
+    }
+    Q_assert(integerPart[0] + 1 < size[0]);
+    Q_assert(integerPart[1] + 1 < size[1]);
+
+    Q_assert(qvec2f(integerPart) + fractionalPart == pos);
+
+    // f(0,0), f(1,0), f(0,1), f(1,1)
+    const qvec4f weights = bilinearWeights(fractionalPart[0], fractionalPart[1]);
+
+    std::array<std::pair<qvec2i, float>, 4> result;
+    for (int i = 0; i < 4; i++) {
+        const float weight = weights[i];
+        qvec2i pos(integerPart);
+
+        if ((i % 2) == 1)
+            pos[0] += 1;
+        if (i >= 2)
+            pos[1] += 1;
+
+        Q_assert(pos[0] >= 0);
+        Q_assert(pos[0] < size[0]);
+
+        Q_assert(pos[1] >= 0);
+        Q_assert(pos[1] < size[1]);
+
+        result[i] = std::make_pair(pos, weight);
+    }
+    return result;
+}
+
+template<typename V>
+V bilinearInterpolate(const V &f00, const V &f10, const V &f01, const V &f11, const float x, const float y)
+{
+    qvec4f weights = bilinearWeights(x, y);
+
+    const V fxy = f00 * weights[0] + f10 * weights[1] + f01 * weights[2] + f11 * weights[3];
+
+    return fxy;
+}
+
+template<typename V>
+std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
+{
+    const V linesegment = end - start;
+    const float len = qv::length(linesegment);
+    if (len == 0)
+        return {};
+
+    std::vector<V> result;
+    const int stepCount = static_cast<int>(len / step);
+    result.reserve(stepCount + 1);
+    const V dir = linesegment / len;
+    for (int i = 0; i <= stepCount; i++) {
+        result.push_back(start + (dir * (step * i)));
+    }
+    return result;
+}
+
+bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1,
+    const vec_t &on_epsilon = DEFAULT_ON_EPSILON);

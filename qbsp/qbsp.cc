@@ -1337,7 +1337,7 @@ static void ParseOptions(char *szOptions)
                 szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
                 if (!szTok2)
                     FError("Invalid argument to option {}", szTok);
-                options.midsplitSurfFraction = qclamp((float)atof(szTok2), 0.0f, 1.0f);
+                options.midsplitSurfFraction = clamp((float)atof(szTok2), 0.0f, 1.0f);
                 LogPrint("Switching to midsplit when node contains more than fraction {} of model's surfaces\n",
                     options.midsplitSurfFraction);
 
@@ -1418,13 +1418,13 @@ static void ParseOptions(char *szOptions)
         }
     }
 
+    // update target game
+    options.target_game = options.target_version->game;
+
     // force specific flags for Q2
     if (options.target_game->id == GAME_QUAKE_II) {
         options.fNoclip = true;
     }
-
-    // update target game
-    options.target_game = options.target_version->game;
 }
 
 /*

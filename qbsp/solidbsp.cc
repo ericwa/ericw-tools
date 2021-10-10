@@ -208,8 +208,8 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t *split, aab
                 mid *= (dist1 / (dist1 - dist2));
                 mid += in_bounds[0][a];
 
-                split_mins = qmax(qmin(mid, split_mins), in_bounds.mins()[a]);
-                split_maxs = qmin(qmax(mid, split_maxs), in_bounds.maxs()[a]);
+                split_mins = max(min(mid, split_mins), in_bounds.mins()[a]);
+                split_maxs = min(max(mid, split_maxs), in_bounds.maxs()[a]);
             }
         }
         if (split->normal[a] > 0) {

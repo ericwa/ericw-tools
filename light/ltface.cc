@@ -546,7 +546,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
         for (int s = 0; s < surf->width; s++) {
             const int i = t * surf->width + s;
             const qvec3d &point = surf->points[i];
-            const qvec3f mangle = mangle_from_vec(surf->normals[i]);
+            const qvec3f mangle = mangle_from_vec(qvec3d(surf->normals[i]));
 
             f << "{\n";
             f << "\"classname\" \"light\"\n";
@@ -1032,7 +1032,7 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
         /* Linear formula always has a falloff point */
         fadedist = fabs(entity->light.floatValue()) - desiredLight;
         fadedist = fadedist / entity->atten.floatValue() / cfg.scaledist.floatValue();
-        fadedist = qmax(0.0f, fadedist);
+        fadedist = max(0.0f, fadedist);
     } else {
         /* Calculate the distance at which brightness falls to desiredLight */
         switch (entity->getFormula()) {
@@ -1050,7 +1050,7 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
                 if (entity->getFormula() == LF_INVERSE2A) {
                     fadedist -= (LF_SCALE / (cfg.scaledist.floatValue() * entity->atten.floatValue()));
                 }
-                fadedist = qmax(0.0f, fadedist);
+                fadedist = max(0.0f, fadedist);
                 break;
             default: FError("Internal error: formula not handled");
         }
@@ -1301,7 +1301,7 @@ std::map<int, qvec3f> GetDirectLighting(
         // I replaced with (vpl.pos, origin), not sure if it's meant to be this
         vec3_t surfpointToLightDir;
         const float surfpointToLightDist =
-            qmax(128.0, GetDir(vpl.pos, origin,
+            max(128.0, GetDir(vpl.pos, origin,
                             surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
         const float angle = DotProduct(surfpointToLightDir, normal);
         if (angle <= 0)
@@ -1573,7 +1573,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
             }
         }
 
-        angle = qmax(0.0f, angle);
+        angle = max(0.0f, angle);
 
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         float value = angle * sun->sunlight;
@@ -1856,7 +1856,7 @@ static qvec3f SurfaceLight_ColorAtDist(
     const globalconfig_t &cfg, const float intensity, const qvec3f color, const float dist)
 {
     // Exponential falloff
-    const float d = qmax(dist, 16.0f); // Clamp away hotspots, also avoid division by 0...
+    const float d = max(dist, 16.0f); // Clamp away hotspots, also avoid division by 0...
     const float scaledintensity = intensity * cfg.surflightscale.floatValue();
     const float scale = (1.0f / (d * d));
 
@@ -1958,6 +1958,33 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 
     return LightSample_Brightness(color) < 0.25f;
 }
+
+#if 0
+inline qvec3d CosineWeightedHemisphereSample(float u1, float u2)
+{
+    Q_assert(u1 >= 0.0 && u1 <= 1.0);
+    Q_assert(u2 >= 0.0 && u2 <= 1.0);
+
+    // Generate a uniform sample on the unit disk
+    // http://mathworld.wolfram.com/DiskPointPicking.html
+    const vec_t sqrt_u1 = sqrt(u1);
+    const vec_t theta = 2.0 * Q_PI * u2;
+
+    const vec_t x = sqrt_u1 * cos(theta);
+    const vec_t y = sqrt_u1 * sin(theta);
+
+    // Project it up onto the sphere (calculate z)
+    //
+    // We know sqrt(x^2 + y^2 + z^2) = 1
+    // so      x^2 + y^2 + z^2 = 1
+    //         z = sqrt(1 - x^2 - y^2)
+
+    const vec_t temp = 1.0 - x * x - y * y;
+    const vec_t z = sqrt(max(0.0, temp));
+
+    return { x, y, z };
+}
+#endif
 
 static void LightFace_Bounce(
     const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
@@ -2475,7 +2502,7 @@ float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const
     for (int j = 0; j < numDirtVectors; j++) {
         if (rs->getPushedRayHitType(j) == hittype_t::SOLID) {
             const vec_t dist = rs->getPushedRayHitDist(j);
-            occlusion += qmin(cfg.dirtDepth.floatValue(), dist);
+            occlusion += min(cfg.dirtDepth.floatValue(), dist);
         } else {
             occlusion += cfg.dirtDepth.floatValue();
         }
@@ -2540,7 +2567,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             const int i = rs->getPushedRayPointIndex(k);
             if (rs->getPushedRayHitType(k) == hittype_t::SOLID) {
                 vec_t dist = rs->getPushedRayHitDist(k);
-                lightsurf->occlusion[i] += qmin(cfg.dirtDepth.floatValue(), dist);
+                lightsurf->occlusion[i] += min(cfg.dirtDepth.floatValue(), dist);
             } else {
                 lightsurf->occlusion[i] += cfg.dirtDepth.floatValue();
             }
@@ -2628,7 +2655,7 @@ static void DumpFullSizeLightmap(const mbsp_t *bsp, const lightsurf_t *lightsurf
         for (int i = 0; i < lightsurf->numpoints; i++) {
             const qvec3d &color = lm->samples[i].color;
             for (int j = 0; j < 3; j++) {
-                int intval = static_cast<int>(qclamp(color[j], 0.0, 255.0));
+                int intval = static_cast<int>(clamp(color[j], 0.0, 255.0));
                 rgbdata.push_back(static_cast<uint8_t>(intval));
             }
         }
@@ -2649,7 +2676,7 @@ static void DumpGLMVector(std::string fname, std::vector<qvec3f> vec, int width,
         for (int x = 0; x < width; x++) {
             const qvec3f &sample = vec.at((y * width) + x);
             for (int j = 0; j < 3; j++) {
-                int intval = static_cast<int>(qclamp(sample[j], 0.0f, 255.0f));
+                int intval = static_cast<int>(clamp(sample[j], 0.0f, 255.0f));
                 rgbdata.push_back(static_cast<uint8_t>(intval));
             }
         }
@@ -2665,7 +2692,7 @@ static void DumpDownscaledLightmap(const mbsp_t *bsp, const mface_t *face, int w
     std::vector<uint8_t> rgbdata;
     for (int i = 0; i < (w * h); i++) {
         for (int j = 0; j < 3; j++) {
-            int intval = static_cast<int>(qclamp(colors[i][j], 0.0, 255.0));
+            int intval = static_cast<int>(clamp(colors[i][j], 0.0, 255.0));
             rgbdata.push_back(static_cast<uint8_t>(intval));
         }
     }
@@ -2903,8 +2930,8 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
 
             for (int y0 = -radius; y0 <= radius; y0++) {
                 for (int x0 = -radius; x0 <= radius; x0++) {
-                    const int x1 = qclamp(x + x0, 0, w - 1);
-                    const int y1 = qclamp(y + y0, 0, h - 1);
+                    const int x1 = clamp(x + x0, 0, w - 1);
+                    const int y1 = clamp(y + y0, 0, h - 1);
 
                     // check if the kernel goes outside of the source image
 
@@ -3155,7 +3182,7 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
 
             This must be max(), see LightNormalize in MarkV 1036.
             */
-            float light = qmax(qmax(color[0], color[1]), color[2]);
+            float light = max({ color[0], color[1], color[2] });
             if (light < 0)
                 light = 0;
             if (light > 255)

@@ -527,7 +527,7 @@ static void SetupSkyDome(const globalconfig_t &cfg, vec_t upperLight, const qvec
 
     /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
     iterations = rint(sqrt((sunsamples - 1) / 4)) + 1;
-    iterations = qmax(iterations, 2);
+    iterations = max(iterations, 2);
 
     /* dummy check */
     if (upperLight <= 0.0f && lowerLight <= 0.0f) {
@@ -963,7 +963,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
                 const auto anglescale = entdict.find("_anglescale");
                 if (anglescale != entdict.end()) {
                     // Convert from 0..2 to 0..1 range...
-                    const vec_t val = qmin(1.0, qmax(0.0, EntDict_FloatForKey(entdict, "_anglescale") * 0.5));
+                    const vec_t val = min(1.0, max(0.0, EntDict_FloatForKey(entdict, "_anglescale") * 0.5));
                     entdict.set("_anglescale", std::to_string(val));
                 }
             }
@@ -1066,6 +1066,34 @@ void FixLightsOnFaces(const mbsp_t *bsp)
     }
 }
 
+// Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
+
+// from http://mathworld.wolfram.com/SpherePointPicking.html
+// eqns 6,7,8
+inline qvec3d UniformPointOnSphere(vec_t u1, vec_t u2)
+{
+    Q_assert(u1 >= 0 && u1 <= 1);
+    Q_assert(u2 >= 0 && u2 <= 1);
+
+    const vec_t theta = u1 * 2.0 * Q_PI;
+    const vec_t u = (2.0 * u2) - 1.0;
+
+    const vec_t s = sqrt(1.0 - (u * u));
+    
+    qvec3d dir {
+        s * cos(theta),
+        s * sin(theta),
+        u
+    };
+
+    for (auto &v : dir) {
+        Q_assert(v >= -1.001);
+        Q_assert(v <= 1.001);
+    }
+
+    return dir;
+}
+
 aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
 {
     const int N = 32;
@@ -1080,10 +1108,7 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
             const vec_t u1 = static_cast<vec_t>(x) / static_cast<vec_t>(N - 1);
             const vec_t u2 = static_cast<vec_t>(y) / static_cast<vec_t>(N - 1);
 
-            vec3_t dir;
-            UniformPointOnSphere(dir, u1, u2);
-
-            rs->pushRay(0, point, dir, 65536.0);
+            rs->pushRay(0, point, UniformPointOnSphere(u1, u2), 65536.0);
         }
     }
 

@@ -268,7 +268,7 @@ static void AddTriangleNormals(std::map<int, face_normal_t> &smoothed_normals, c
     const qvec3f &p3 = Vertex_GetPos(bsp, v3);
     float weight;
 
-    float areaweight = GLM_TriangleArea(p1, p2, p3);
+    float areaweight = qv::TriangleArea(p1, p2, p3);
     if (!std::isfinite(areaweight)) {
         areaweight = 0;
     }
@@ -457,7 +457,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
     // support on func_detail/func_group
     for (size_t i = 0; i < bsp->dmodels.size(); i++) {
         const modelinfo_t *info = ModelInfoForModel(bsp, i);
-        const uint8_t phongangle_byte = (uint8_t)qclamp((int)rint(info->getResolvedPhongAngle()), 0, 255);
+        const uint8_t phongangle_byte = (uint8_t)clamp((int)rint(info->getResolvedPhongAngle()), 0, 255);
 
         if (!phongangle_byte)
             continue;
@@ -526,7 +526,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                     continue;
 
                 const auto f2_points = GLM_FacePoints(bsp, f2);
-                const qvec3f f2_centroid = GLM_PolyCentroid(f2_points);
+                const qvec3f f2_centroid = qv::PolyCentroid(f2_points.begin(), f2_points.end());
                 const qvec3d f2_norm = Face_Normal(bsp, f2);
 
                 const vec_t cosangle = qv::dot(f_norm, f2_norm);
@@ -534,7 +534,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 const bool concave = f_plane.distAbove(f2_centroid) > 0.1;
                 const vec_t f_threshold = concave ? f_phong_angle_concave : f_phong_angle;
                 const vec_t f2_threshold = concave ? f2_phong_angle_concave : f2_phong_angle;
-                const vec_t min_threshold = qmin(f_threshold, f2_threshold);
+                const vec_t min_threshold = min(f_threshold, f2_threshold);
                 const vec_t cosmaxangle = cos(DEG2RAD(min_threshold));
 
                 // check the angle between the face normals

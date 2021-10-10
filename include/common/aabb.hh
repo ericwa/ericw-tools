@@ -111,8 +111,8 @@ public:
     {
         V mins = m_mins, maxs = m_maxs;
         for (size_t i = 0; i < N; i++) {
-            mins[i] = qmin(mins[i], pt[i]);
-            maxs[i] = qmax(maxs[i], pt[i]);
+            mins[i] = min(mins[i], pt[i]);
+            maxs[i] = max(maxs[i], pt[i]);
         }
         return aabb<N, V>(mins, maxs);
     }
@@ -131,8 +131,8 @@ public:
     {
         V mins = m_mins, maxs = m_maxs;
         for (size_t i = 0; i < N; i++) {
-            mins[i] = qmax(mins[i], other.m_mins[i]);
-            maxs[i] = qmin(maxs[i], other.m_maxs[i]);
+            mins[i] = max(mins[i], other.m_mins[i]);
+            maxs[i] = min(maxs[i], other.m_maxs[i]);
             if (mins[i] > maxs[i]) {
                 // empty intersection
                 return intersection_t();

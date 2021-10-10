@@ -32,45 +32,6 @@ using namespace polylib;
 
 const vec3_t vec3_origin = {0, 0, 0};
 
-bool SetPlanePts(const std::array<qvec3d, 3> &planepts, qvec3d &normal, vec_t &dist)
-{
-    vec3_t planevecs[2];
-
-    /* calculate the normal/dist plane equation */
-    VectorSubtract(planepts[0], planepts[1], planevecs[0]);
-    VectorSubtract(planepts[2], planepts[1], planevecs[1]);
-
-    CrossProduct(planevecs[0], planevecs[1], normal);
-    vec_t length = VectorNormalize(normal);
-    dist = DotProduct(planepts[1], normal);
-
-    if (length < NORMAL_EPSILON) {
-        return false;
-    }
-
-    return true;
-}
-
-void ClearBounds(vec3_t mins, vec3_t maxs)
-{
-    for (int i = 0; i < 3; i++) {
-        mins[i] = VECT_MAX;
-        maxs[i] = -VECT_MAX;
-    }
-}
-
-void AddPointToBounds(const vec3_t v, vec3_t mins, vec3_t maxs)
-{
-    for (int i = 0; i < 3; i++) {
-        const vec_t val = v[i];
-
-        if (val < mins[i])
-            mins[i] = val;
-        if (val > maxs[i])
-            maxs[i] = val;
-    }
-}
-
 plane_t FlipPlane(plane_t input)
 {
     plane_t result;
@@ -79,85 +40,6 @@ plane_t FlipPlane(plane_t input)
     result.dist = -input.dist;
 
     return result;
-}
-
-// from http://mathworld.wolfram.com/SpherePointPicking.html
-// eqns 6,7,8
-void UniformPointOnSphere(vec3_t dir, float u1, float u2)
-{
-    Q_assert(u1 >= 0 && u1 <= 1);
-    Q_assert(u2 >= 0 && u2 <= 1);
-
-    const vec_t theta = u1 * 2.0 * Q_PI;
-    const vec_t u = (2.0 * u2) - 1.0;
-
-    const vec_t s = sqrt(1.0 - (u * u));
-    dir[0] = s * cos(theta);
-    dir[1] = s * sin(theta);
-    dir[2] = u;
-
-    for (int i = 0; i < 3; i++) {
-        Q_assert(dir[i] >= -1.001);
-        Q_assert(dir[i] <= 1.001);
-    }
-}
-
-void RandomDir(vec3_t dir)
-{
-    UniformPointOnSphere(dir, Random(), Random());
-}
-
-qvec3f CosineWeightedHemisphereSample(float u1, float u2)
-{
-    Q_assert(u1 >= 0.0f && u1 <= 1.0f);
-    Q_assert(u2 >= 0.0f && u2 <= 1.0f);
-
-    // Generate a uniform sample on the unit disk
-    // http://mathworld.wolfram.com/DiskPointPicking.html
-    const float sqrt_u1 = sqrt(u1);
-    const float theta = 2.0f * Q_PI * u2;
-
-    const float x = sqrt_u1 * cos(theta);
-    const float y = sqrt_u1 * sin(theta);
-
-    // Project it up onto the sphere (calculate z)
-    //
-    // We know sqrt(x^2 + y^2 + z^2) = 1
-    // so      x^2 + y^2 + z^2 = 1
-    //         z = sqrt(1 - x^2 - y^2)
-
-    const float temp = 1.0f - x * x - y * y;
-    const float z = sqrt(qmax(0.0f, temp));
-
-    return qvec3f(x, y, z);
-}
-
-qvec3f vec_from_mangle(const qvec3f &m)
-{
-    const qvec3f mRadians = m * static_cast<float>(Q_PI / 180.0f);
-    const qmat3x3d rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
-    const qvec3f v = qvec3f(rotations * qvec3d(1, 0, 0));
-    return v;
-}
-
-qvec3f mangle_from_vec(const qvec3f &v)
-{
-    const qvec3f up(0, 0, 1);
-    const qvec3f east(1, 0, 0);
-    const qvec3f north(0, 1, 0);
-
-    // get rotation about Z axis
-    float x = qv::dot(east, v);
-    float y = qv::dot(north, v);
-    float theta = atan2f(y, x);
-
-    // get angle away from Z axis
-    float cosangleFromUp = qv::dot(up, v);
-    cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
-    float radiansFromUp = acosf(cosangleFromUp);
-
-    const qvec3f mangle = qvec3f(theta, -(radiansFromUp - Q_PI / 2.0), 0) * static_cast<float>(180.0f / Q_PI);
-    return mangle;
 }
 
 qmat3x3d RotateAboutX(double t)
@@ -212,63 +94,11 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
 
     // get angle away from Z axis
     float cosangleFromUp = qv::dot(up, surfaceNormal);
-    cosangleFromUp = qmin(qmax(-1.0f, cosangleFromUp), 1.0f);
+    cosangleFromUp = min(max(-1.0f, cosangleFromUp), 1.0f);
     float radiansFromUp = acosf(cosangleFromUp);
 
     const qmat3x3d rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
     return qmat3x3f(rotations);
-}
-
-qvec3f Barycentric_FromPoint(const qvec3f &p, const tri_t &tri)
-{
-    using std::get;
-
-    const qvec3f v0 = get<1>(tri) - get<0>(tri);
-    const qvec3f v1 = get<2>(tri) - get<0>(tri);
-    const qvec3f v2 = p - get<0>(tri);
-    float d00 = qv::dot(v0, v0);
-    float d01 = qv::dot(v0, v1);
-    float d11 = qv::dot(v1, v1);
-    float d20 = qv::dot(v2, v0);
-    float d21 = qv::dot(v2, v1);
-    float invDenom = (d00 * d11 - d01 * d01);
-    invDenom = 1.0 / invDenom;
-
-    qvec3f res;
-    res[1] = (d11 * d20 - d01 * d21) * invDenom;
-    res[2] = (d00 * d21 - d01 * d20) * invDenom;
-    res[0] = 1.0f - res[1] - res[2];
-    return res;
-}
-
-// from global illumination total compendium p. 12
-qvec3f Barycentric_Random(const float r1, const float r2)
-{
-    qvec3f res;
-    res[0] = 1.0f - sqrtf(r1);
-    res[1] = r2 * sqrtf(r1);
-    res[2] = 1.0f - res[0] - res[1];
-    return res;
-}
-
-/// Evaluates the given barycentric coord for the given triangle
-qvec3f Barycentric_ToPoint(const qvec3f &bary, const tri_t &tri)
-{
-    using std::get;
-
-    const qvec3f pt = (get<0>(tri) * bary[0]) + (get<1>(tri) * bary[1]) + (get<2>(tri) * bary[2]);
-
-    return pt;
-}
-
-vec_t TriangleArea(const vec3_t v0, const vec3_t v1, const vec3_t v2)
-{
-    vec3_t edge0, edge1, cross;
-    VectorSubtract(v2, v0, edge0);
-    VectorSubtract(v1, v0, edge1);
-    CrossProduct(edge0, edge1, cross);
-
-    return VectorLength(cross) * 0.5;
 }
 
 static std::vector<float> NormalizePDF(const std::vector<float> &pdf)
@@ -361,7 +191,7 @@ qvec3f GLM_FaceNormal(std::vector<qvec3f> points)
         const qvec3f &p1 = points[i - 1];
         const qvec3f &p2 = points[i];
 
-        const float area = GLM_TriangleArea(p0, p1, p2);
+        const float area = qv::TriangleArea(p0, p1, p2);
         if (area > maxArea) {
             maxArea = area;
             bestI = i;
@@ -447,16 +277,6 @@ bool GLM_EdgePlanes_PointInside(const vector<qvec4f> &edgeplanes, const qvec3f &
     return minDist >= -POINT_EQUAL_EPSILON;
 }
 
-qvec3f GLM_TriangleCentroid(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2)
-{
-    return (v0 + v1 + v2) / 3.0f;
-}
-
-float GLM_TriangleArea(const qvec3f &v0, const qvec3f &v1, const qvec3f &v2)
-{
-    return 0.5f * qv::length(qv::cross(v2 - v0, v1 - v0));
-}
-
 qvec4f GLM_MakePlane(const qvec3f &normal, const qvec3f &point)
 {
     return qvec4f(normal[0], normal[1], normal[2], qv::dot(point, normal));
@@ -474,56 +294,6 @@ qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point)
     return point + move;
 }
 
-float GLM_PolyArea(const std::vector<qvec3f> &points)
-{
-    Q_assert(points.size() >= 3);
-
-    float poly_area = 0;
-
-    const qvec3f &v0 = points.at(0);
-    for (int i = 2; i < points.size(); i++) {
-        const qvec3f &v1 = points.at(i - 1);
-        const qvec3f &v2 = points.at(i);
-
-        const float triarea = GLM_TriangleArea(v0, v1, v2);
-
-        poly_area += triarea;
-    }
-
-    return poly_area;
-}
-
-qvec3f GLM_PolyCentroid(const std::vector<qvec3f> &points)
-{
-    if (points.size() == 0)
-        return qvec3f(NAN);
-    else if (points.size() == 1)
-        return points.at(0);
-    else if (points.size() == 2)
-        return (points.at(0) + points.at(1)) / 2.0;
-
-    Q_assert(points.size() >= 3);
-
-    qvec3f poly_centroid{};
-    float poly_area = 0;
-
-    const qvec3f &v0 = points.at(0);
-    for (int i = 2; i < points.size(); i++) {
-        const qvec3f &v1 = points.at(i - 1);
-        const qvec3f &v2 = points.at(i);
-
-        const float triarea = GLM_TriangleArea(v0, v1, v2);
-        const qvec3f tricentroid = GLM_TriangleCentroid(v0, v1, v2);
-
-        poly_area += triarea;
-        poly_centroid = poly_centroid + (tricentroid * triarea);
-    }
-
-    poly_centroid /= poly_area;
-
-    return poly_centroid;
-}
-
 poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &points)
 {
     Q_assert(points.size() >= 3);
@@ -537,7 +307,7 @@ poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &p
         const qvec3f &v1 = points.at(i - 1);
         const qvec3f &v2 = points.at(i);
 
-        const float triarea = GLM_TriangleArea(v0, v1, v2);
+        const float triarea = qv::TriangleArea(v0, v1, v2);
         Q_assert(triarea >= 0.0f);
 
         triareas.push_back(triarea);
@@ -561,11 +331,9 @@ qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, flo
 
     Q_assert(whichTri >= 0 && whichTri < state.triareas.size());
 
-    const tri_t tri{state.points.at(0), state.points.at(1 + whichTri), state.points.at(2 + whichTri)};
-
     // Pick random barycentric coords.
-    const qvec3f bary = Barycentric_Random(r2, r3);
-    const qvec3f point = Barycentric_ToPoint(bary, tri);
+    const qvec3f bary = qv::Barycentric_Random(r2, r3);
+    const qvec3f point = qv::Barycentric_ToPoint(bary, state.points.at(0), state.points.at(1 + whichTri), state.points.at(2 + whichTri));
 
     return point;
 }
@@ -635,12 +403,12 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
         if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
             // Found the correct triangle
 
-            const qvec3f bary = Barycentric_FromPoint(point, make_tuple(p0, p1, p2));
+            const qvec3f bary = qv::Barycentric_FromPoint(point, p0, p1, p2);
 
             if (!isfinite(bary[0]) || !isfinite(bary[1]) || !isfinite(bary[2]))
                 continue;
 
-            const qvec3f interpolatedNormal = Barycentric_ToPoint(bary, make_tuple(n0, n1, n2));
+            const qvec3f interpolatedNormal = qv::Barycentric_ToPoint(bary, n0, n1, n2);
             return make_pair(true, interpolatedNormal);
         }
     }
@@ -730,7 +498,7 @@ qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f 
 /// Returns degrees of clockwise rotation from start to end, assuming `normal` is pointing towards the viewer
 float SignedDegreesBetweenUnitVectors(const qvec3f &start, const qvec3f &end, const qvec3f &normal)
 {
-    const float cosangle = qmax(-1.0f, qmin(1.0f, qv::dot(start, end)));
+    const float cosangle = max(-1.0f, min(1.0f, qv::dot(start, end)));
     const float unsigned_degrees = acos(cosangle) * (360.0 / (2.0 * Q_PI));
 
     // get a normal for the rotation plane using the right-hand rule

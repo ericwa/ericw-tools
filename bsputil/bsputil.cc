@@ -152,7 +152,7 @@ static int Node_Height(const mbsp_t *bsp, const bsp2_dnode_t *node, std::map<con
         }
     }
 
-    const int height = qmax(child_heights[0], child_heights[1]) + 1;
+    const int height = max(child_heights[0], child_heights[1]) + 1;
     if (cache)
         (*cache)[node] = height;
     return height;
@@ -424,18 +424,12 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
     for (int i = 0; i < refWorld->numfaces; i++) {
         auto *refFace = BSP_GetFace(&refBsp, refWorld->firstface + i);
         qvec3f refFaceCentroid = Face_Centroid(&refBsp, refFace);
-
-        // FIXME:
-        vec3_t wantedPoint;
-        VectorCopy(refFaceCentroid, wantedPoint);
-
         qvec3d wantedNormal = Face_Normal(&refBsp, refFace);
 
         // Search for a face in bsp touching refFaceCentroid.
-        auto *matchedFace = BSP_FindFaceAtPoint(&bsp, world, wantedPoint, wantedNormal);
+        auto *matchedFace = BSP_FindFaceAtPoint(&bsp, world, refFaceCentroid, wantedNormal);
         if (matchedFace == nullptr) {
-            fmt::print("couldn't find a face at {} {} {} normal {} {} {}\n", wantedPoint[0], wantedPoint[1],
-                wantedPoint[2], wantedNormal[0], wantedNormal[1], wantedNormal[2]);
+            fmt::print("couldn't find a face at {} normal {}\n", refFaceCentroid, wantedNormal);
         }
 
         // TODO: run on some more complex maps

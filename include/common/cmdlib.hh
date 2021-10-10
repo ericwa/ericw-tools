@@ -32,7 +32,6 @@
 #include <memory>
 #include <fmt/format.h>
 #include <common/log.hh>
-#include <common/qvec.hh> // FIXME: For qmax/qmin
 
 #define stringify__(x) #x
 #define stringify(x) stringify__(x)
