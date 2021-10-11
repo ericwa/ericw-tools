@@ -31,17 +31,41 @@
 /*
 ===========
 PointInLeaf
+
+If the point is exactly on a node plane, prefer to return the
+opaque leaf.
+
+This avoids spurious leaks if a point entity is on the outside
+of the map (exactly on a brush faces) - happens in base1.map.
 ===========
 */
 static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 {
-    while (node->planenum != PLANENUM_LEAF) {
-        auto &plane = map.planes[node->planenum];
-        vec_t dist = DotProduct(plane.normal, point) - plane.dist;
-        node = (dist > 0) ? node->children[0] : node->children[1];
+    if (node->planenum == PLANENUM_LEAF) {
+        return node;
     }
 
-    return node;
+    auto &plane = map.planes[node->planenum];
+    vec_t dist = DotProduct(plane.normal, point) - plane.dist;
+
+    if (dist > 0) {
+        // point is on the front of the node plane
+        return PointInLeaf(node->children[0], point);
+    } else if (dist < 0) {
+        // point is on the back of the node plane
+        return PointInLeaf(node->children[1], point);
+    } else {
+        // point is exactly on the node plane
+
+        node_t *front = PointInLeaf(node->children[0], point);    
+        node_t *back = PointInLeaf(node->children[1], point);
+
+        // prefer the opaque one
+        if (front->opaque()) {
+            return front;
+        }
+        return back;
+    }
 }
 
 static std::ofstream InitPtsFile(void)
