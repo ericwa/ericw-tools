@@ -423,7 +423,7 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
     else if (num_points == 1)
         return *begin;
     else if (num_points == 2)
-        return avg(*begin, *(++begin));
+        return avg(*begin, *(begin + 1));
 
     T poly_centroid{};
     value_type poly_area = 0;
