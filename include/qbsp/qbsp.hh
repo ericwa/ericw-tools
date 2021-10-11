@@ -53,15 +53,11 @@
  */
 #define MAX_BSP_CLIPNODES 0xfff0
 
-// key / value pair sizes
-#define MAX_KEY 32
-#define MAX_VALUE 1024
-
 // Various other geometry maximums
 constexpr size_t MAXEDGES = 64;
-#define MAXPOINTS                                                                                                      \
-    60 // don't let a base face get past this
-       // because it can be split more later
+// don't let a base face get past this
+// because it can be split more later
+#define MAXPOINTS 60
 
 // For brush.c, normal and +16 (?)
 #define NUM_HULLS 2
@@ -76,7 +72,7 @@ constexpr size_t MAXEDGES = 64;
 #define PLANE_ANYZ 5
 
 // planenum for a leaf (?)
-#define PLANENUM_LEAF -1
+constexpr int32_t PLANENUM_LEAF = -1;
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -239,39 +235,39 @@ enum class conversion_t
 class options_t
 {
 public:
-    bool fNofill;
-    bool fNoclip;
-    bool fNoskip;
-    bool fNodetail;
-    bool fOnlyents;
-    bool fConvertMapFormat;
-    conversion_t convertMapFormat;
-    bool fVerbose;
-    bool fAllverbose;
-    bool fSplitspecial;
-    bool fSplitturb;
-    bool fSplitsky;
-    bool fTranswater;
-    bool fTranssky;
-    bool fOldaxis;
-    bool fNoverbose;
-    bool fNopercent;
-    bool forceGoodTree;
-    bool fixRotateObjTexture;
-    bool fbspx_brushes;
-    bool fNoTextures;
+    bool fNofill = false;
+    bool fNoclip = false;
+    bool fNoskip = false;
+    bool fNodetail = false;
+    bool fOnlyents = false;
+    bool fConvertMapFormat = false;
+    conversion_t convertMapFormat = conversion_t::quake;
+    bool fVerbose = true;
+    bool fAllverbose = false;
+    bool fSplitspecial = false;
+    bool fSplitturb = false;
+    bool fSplitsky = false;
+    bool fTranswater = true;
+    bool fTranssky = false;
+    bool fOldaxis = true;
+    bool fNoverbose = false;
+    bool fNopercent = false;
+    bool forceGoodTree = false;
+    bool fixRotateObjTexture = true;
+    bool fbspx_brushes = false;
+    bool fNoTextures = false;
     const bspversion_t *target_version = &bspver_q1;
     const gamedef_t *target_game = target_version->game;
-    int dxSubdivide;
-    int dxLeakDist;
-    int maxNodeSize;
+    int dxSubdivide = 240;
+    int dxLeakDist = 2;
+    int maxNodeSize = 1024;
     /**
      * if 0 (default), use maxNodeSize for deciding when to switch to midsplit bsp heuristic.
      *
      * if 0 < midsplitSurfFraction <=1, switch to midsplit if the node contains more than this fraction of the model's
      * total surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)
      */
-    float midsplitSurfFraction;
+    float midsplitSurfFraction = 0.f;
     std::filesystem::path szMapName;
     std::filesystem::path szBSPName;
 
@@ -283,31 +279,19 @@ public:
     };
 
     std::vector<wadpath> wadPathsVec;
-    vec_t on_epsilon;
-    bool fObjExport;
-    bool fOmitDetail;
-    bool fOmitDetailWall;
-    bool fOmitDetailIllusionary;
-    bool fOmitDetailFence;
-    bool fForcePRT1;
-    bool fTestExpand;
-    bool fLeakTest;
-    bool fContentHack;
-    vec_t worldExtent;
-    bool fNoThreads;
-    bool includeSkip;
-
-    options_t()
-        : fNofill(false), fNoclip(false), fNoskip(false), fNodetail(false), fOnlyents(false), fConvertMapFormat(false),
-          convertMapFormat(conversion_t::quake), fVerbose(true), fAllverbose(false), fSplitspecial(false),
-          fSplitturb(false), fSplitsky(false), fTranswater(true), fTranssky(false), fOldaxis(true), fNoverbose(false),
-          fNopercent(false), forceGoodTree(false), fixRotateObjTexture(true), fbspx_brushes(false), fNoTextures(false),
-          dxSubdivide(240), dxLeakDist(2), maxNodeSize(1024), midsplitSurfFraction(0.0f), szMapName{}, szBSPName{},
-          on_epsilon(0.0001), fObjExport(false), fOmitDetail(false), fOmitDetailWall(false),
-          fOmitDetailIllusionary(false), fOmitDetailFence(false), fForcePRT1(false), fTestExpand(false),
-          fLeakTest(false), fContentHack(false), worldExtent(65536.0f), fNoThreads(false)
-    {
-    }
+    vec_t on_epsilon = 0.0001;
+    bool fObjExport = false;
+    bool fOmitDetail = false;
+    bool fOmitDetailWall = false;
+    bool fOmitDetailIllusionary = false;
+    bool fOmitDetailFence = false;
+    bool fForcePRT1 = false;
+    bool fTestExpand = false;
+    bool fLeakTest = false;
+    bool fContentHack = false;
+    vec_t worldExtent = 65536.0f;
+    bool fNoThreads = false;
+    bool includeSkip = false;
 };
 
 extern options_t options;

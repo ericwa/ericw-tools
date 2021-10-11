@@ -807,6 +807,8 @@ struct surfflags_t
     constexpr bool operator<(const surfflags_t &other) const { return as_tuple() < other.as_tuple(); }
 
     constexpr bool operator>(const surfflags_t &other) const { return as_tuple() > other.as_tuple(); }
+
+    bool is_valid(const gamedef_t *game) const;
 };
 
 // header before tightly packed surfflags_t[num_texinfo]
@@ -1613,25 +1615,34 @@ enum gameid_t
 // the game a BSP version is being compiled for.
 struct gamedef_t
 {
+    // ID, used for quick comparisons
     gameid_t id;
 
+    // whether the game uses an RGB lightmap or not
     bool has_rgb_lightmap;
 
+    // base dir for searching for paths, in case we are in a mod dir
+    // note: we need this to be able to be overridden via options
     const std::string base_dir;
+
+    // max values of entity key & value pairs, only used for
+    // printing warnings.
+    size_t max_entity_key = 32;
+    size_t max_entity_value = 128;
 
     gamedef_t(const char *base_dir) : base_dir(base_dir) { }
 
-    virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
-    virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
-    virtual surfflags_t surf_remap_for_export(const surfflags_t &flags) const = 0;
-    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
-    virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
-    virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
-    virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
+    virtual bool surf_is_lightmapped(const surfflags_t &flags) const abstract;
+    virtual bool surf_is_subdivided(const surfflags_t &flags) const abstract;
+    virtual bool surfflags_are_valid(const surfflags_t &flags) const abstract;
+    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const abstract;
+    virtual int32_t get_content_type(const contentflags_t &contents) const abstract;
+    virtual int32_t contents_priority(const contentflags_t &contents) const abstract;
+    virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const abstract;
+    virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const abstract;
+    virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const abstract;
+    virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const abstract;
+    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const abstract;
     virtual bool contents_are_empty(const contentflags_t &contents) const
     {
         return contents.native == create_empty_contents().native;
@@ -1644,11 +1655,11 @@ struct gamedef_t
     {
         return contents.native == create_sky_contents().native;
     }
-    virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
-    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
-    virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
-    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
+    virtual bool contents_are_liquid(const contentflags_t &contents) const abstract;
+    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const abstract;
+    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const abstract;
+    virtual std::string get_contents_display(const contentflags_t &contents) const abstract;
+    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const abstract;
 };
 
 // BSP version struct & instances

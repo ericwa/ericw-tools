@@ -27,13 +27,6 @@
 #include <algorithm>
 #include <cstdint>
 
-static void AssertVanillaContentType(const contentflags_t &flags)
-{
-    if (!flags.is_valid(options.target_game, false)) {
-        FError("Internal error: Tried to save invalid contents type {}", flags.to_string(options.target_game));
-    }
-}
-
 static contentflags_t RemapContentsForExport(const contentflags_t &content)
 {
     if (content.extended & CFLAGS_DETAIL_FENCE) {
@@ -85,9 +78,11 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     // make sure we don't write any non-native flags.
     // e.g. Quake only accepts 0 or TEX_SPECIAL.
-    dest.flags = options.target_game->surf_remap_for_export(src.flags);
-    // TODO: warn if dest->flags.native != src->flags.native
+    if (!src.flags.is_valid(options.target_game)) {
+        FError("Internal error: Texinfo {} has invalid surface flags {}", texinfonum, src.flags.native);
+    }
 
+    dest.flags = src.flags;
     dest.miptex = src.miptex;
     dest.vecs = src.vecs;
     strcpy(dest.texture.data(), map.texinfoTextureName(texinfonum).c_str());
@@ -168,7 +163,11 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
     const contentflags_t remapped = RemapContentsForExport(node->contents);
-    AssertVanillaContentType(remapped);
+
+    if (!remapped.is_valid(options.target_game, false)) {
+        FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1, remapped.to_string(options.target_game));
+    }
+
     dleaf.contents = remapped.native;
 
     /*
@@ -230,7 +229,7 @@ static void ExportDrawNodes(mapentity_t *entity, node_t *node)
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             if (options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(options.target_game)) {
-                dnode->children[i] = -1;
+                dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
                 const int32_t childnum = -(nextLeafIndex + 1);

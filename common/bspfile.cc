@@ -33,7 +33,7 @@ struct gamedef_generic_t : public gamedef_t
 
     bool surf_is_subdivided(const surfflags_t &) const { throw std::bad_cast(); }
 
-    surfflags_t surf_remap_for_export(const surfflags_t &flags) const { throw std::bad_cast(); }
+    bool surfflags_are_valid(const surfflags_t &flags) const { throw std::bad_cast(); }
 
     contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
@@ -81,11 +81,10 @@ struct gamedef_q1_like_t : public gamedef_t
 
     bool surf_is_subdivided(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
 
-    surfflags_t surf_remap_for_export(const surfflags_t &flags) const
+    bool surfflags_are_valid(const surfflags_t &flags) const
     {
-        auto remapped = flags;
-        remapped.native &= TEX_SPECIAL;
-        return remapped;
+        // Q1 only supports TEX_SPECIAL
+        return (flags.native & ~TEX_SPECIAL) == 0;
     }
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
@@ -255,6 +254,7 @@ struct gamedef_q2_t : public gamedef_t
     {
         this->id = GAME_QUAKE_II;
         has_rgb_lightmap = true;
+        max_entity_key = 256;
     }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const
@@ -264,11 +264,10 @@ struct gamedef_q2_t : public gamedef_t
 
     bool surf_is_subdivided(const surfflags_t &flags) const { return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY)); }
 
-    surfflags_t surf_remap_for_export(const surfflags_t &flags) const
+    bool surfflags_are_valid(const surfflags_t &flags) const
     {
-        auto remapped = flags;
-        // TODO: strip any illegal flags off remapped.native
-        return remapped;
+        // no rules in Quake II baby
+        return true;
     }
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
@@ -577,6 +576,11 @@ const bspversion_t bspver_qbism{
     {"areas", sizeof(darea_t)},
     {"areaportals", sizeof(dareaportal_t)},
 }, &gamedef_q2};
+
+bool surfflags_t::is_valid(const gamedef_t *game) const
+{
+    return game->surfflags_are_valid(*this);
+}
 
 bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
 {

@@ -483,44 +483,29 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 
 static void ParseEpair(parser_t &parser, mapentity_t *entity)
 {
-    if (parser.token.size() >= MAX_KEY - 1)
-        goto parse_error;
+    std::string key = parser.token;
 
-    {
-        std::string key = parser.token;
+    parser.parse_token(PARSE_SAMELINE);
 
-        parser.parse_token(PARSE_SAMELINE);
+    SetKeyValue(entity, key.c_str(), parser.token.c_str());
 
-        if (parser.token.size() >= MAX_VALUE - 1)
-            goto parse_error;
-
-        {
-            std::string value = parser.token;
-            SetKeyValue(entity, key.c_str(), value.c_str());
-
-            if (!Q_strcasecmp(key.c_str(), "origin")) {
-                GetVectorForKey(entity, key.c_str(), entity->origin);
-            } else if (!Q_strcasecmp(key.c_str(), "classname")) {
-                if (!Q_strcasecmp(value.c_str(), "info_player_start")) {
-                    // Quake II uses multiple starts for level transitions/backtracking.
-                    // TODO: instead, this should check targetnames. There should only be
-                    // one info_player_start per targetname in Q2.
-                    if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start))
-                        LogPrint("WARNING: Multiple info_player_start entities\n");
-                    rgfStartSpots |= info_player_start;
-                } else if (!Q_strcasecmp(value.c_str(), "info_player_deathmatch")) {
-                    rgfStartSpots |= info_player_deathmatch;
-                } else if (!Q_strcasecmp(value.c_str(), "info_player_coop")) {
-                    rgfStartSpots |= info_player_coop;
-                }
+    if (string_iequals(key, "origin")) {
+        GetVectorForKey(entity, key.c_str(), entity->origin);
+    } else if (string_iequals(key, "classname")) {
+        if (string_iequals(parser.token, "info_player_start")) {
+            // Quake II uses multiple starts for level transitions/backtracking.
+            // TODO: instead, this should check targetnames. There should only be
+            // one info_player_start per targetname in Q2.
+            if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start)) {
+                LogPrint("WARNING: Multiple info_player_start entities\n");
             }
-
-            return;
+            rgfStartSpots |= info_player_start;
+        } else if (string_iequals(parser.token, "info_player_deathmatch")) {
+            rgfStartSpots |= info_player_deathmatch;
+        } else if (string_iequals(parser.token, "info_player_coop")) {
+            rgfStartSpots |= info_player_coop;
         }
     }
-
-parse_error:
-    FError("line {}: Entity key or value too long", parser.linenum);
 }
 
 static void TextureAxisFromPlane(const qbsp_plane_t &plane, vec3_t xv, vec3_t yv, vec3_t snapped_normal)
@@ -2282,8 +2267,15 @@ void WriteEntitiesToString()
         map.bsp.dentdata += "{\n";
 
         for (auto &ep : entity.epairs) {
-            // Limit on Quake's strings of 128 bytes
-            // TODO: Warn when limit is exceeded
+
+            if (ep.first.size() >= options.target_game->max_entity_key - 1) {
+                LogPrint("WARNING: {} at {} (approx. line {}) has long key {} ({} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
+            }
+
+            if (ep.second.size() >= options.target_game->max_entity_value - 1) {
+                LogPrint("WARNING: {} at {} (approx. line {}) has long value for key {} ({} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.second.size(), options.target_game->max_entity_value - 1);
+            }
+
             fmt::format_to(std::back_inserter(map.bsp.dentdata), "\"{}\" \"{}\"\n", ep.first, ep.second);
         }
 
