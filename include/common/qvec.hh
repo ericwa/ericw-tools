@@ -25,6 +25,7 @@
 #include <string>
 #include <algorithm>
 #include <array>
+#include <ostream>
 #include <fmt/format.h>
 #include "common/mathlib.hh"
 #include "common/cmdlib.hh"
@@ -227,6 +228,11 @@ public:
     constexpr auto end() const { return v.end(); }
     constexpr auto cbegin() const { return v.cbegin(); }
     constexpr auto cend() const { return v.cend(); }
+
+    // for Google Test
+    friend std::ostream& operator<<(std::ostream& os, const qvec<T, N>& v) {
+        return os << fmt::format("{}", v);
+    }
 };
 
 namespace qv
