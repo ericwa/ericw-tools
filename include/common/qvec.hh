@@ -25,6 +25,7 @@
 #include <string>
 #include <algorithm>
 #include <array>
+#include <ostream>
 #include <fmt/format.h>
 #include "common/mathlib.hh"
 #include "common/cmdlib.hh"
@@ -227,6 +228,11 @@ public:
     constexpr auto end() const { return v.end(); }
     constexpr auto cbegin() const { return v.cbegin(); }
     constexpr auto cend() const { return v.cend(); }
+
+    // for Google Test
+    friend std::ostream& operator<<(std::ostream& os, const qvec<T, N>& v) {
+        return os << fmt::format("{}", v);
+    }
 };
 
 namespace qv
@@ -413,11 +419,11 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
     size_t num_points = end - begin;
 
     if (!num_points)
-        return qvec3f(std::numeric_limits<value_type>::quiet_NaN());
+        return qvec<value_type, 3>(std::numeric_limits<value_type>::quiet_NaN());
     else if (num_points == 1)
         return *begin;
     else if (num_points == 2)
-        return avg(*begin, *(++begin));
+        return avg(*begin, *(begin + 1));
 
     T poly_centroid{};
     value_type poly_area = 0;
