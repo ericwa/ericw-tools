@@ -413,7 +413,7 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
     size_t num_points = end - begin;
 
     if (!num_points)
-        return qvec3f(std::numeric_limits<value_type>::quiet_NaN());
+        return qvec<value_type, 3>(std::numeric_limits<value_type>::quiet_NaN());
     else if (num_points == 1)
         return *begin;
     else if (num_points == 2)
