@@ -27,6 +27,7 @@
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
+#include <common/qvec.hh>
 #include <common/aabb.hh>
 
 /* upper design bounds */
@@ -821,7 +822,7 @@ struct extended_flags_header_t
 template<typename T>
 struct texvec : qmat<T, 2, 4>
 {
-    using qmat::qmat;
+    using qmat<T, 2, 4>::qmat;
 
     template<typename T2>
     constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos) const
