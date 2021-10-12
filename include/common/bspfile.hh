@@ -1676,17 +1676,17 @@ struct gamedef_t
 
     gamedef_t(const char *base_dir) : base_dir(base_dir) { }
 
-    virtual bool surf_is_lightmapped(const surfflags_t &flags) const abstract;
-    virtual bool surf_is_subdivided(const surfflags_t &flags) const abstract;
-    virtual bool surfflags_are_valid(const surfflags_t &flags) const abstract;
-    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const abstract;
-    virtual int32_t get_content_type(const contentflags_t &contents) const abstract;
-    virtual int32_t contents_priority(const contentflags_t &contents) const abstract;
-    virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const abstract;
-    virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const abstract;
-    virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const abstract;
-    virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const abstract;
-    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const abstract;
+    virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
+    virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
+    virtual bool surfflags_are_valid(const surfflags_t &flags) const = 0;
+    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
+    virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
+    virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const
     {
         return contents.native == create_empty_contents().native;
@@ -1699,11 +1699,11 @@ struct gamedef_t
     {
         return contents.native == create_sky_contents().native;
     }
-    virtual bool contents_are_liquid(const contentflags_t &contents) const abstract;
-    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const abstract;
-    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const abstract;
-    virtual std::string get_contents_display(const contentflags_t &contents) const abstract;
-    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const abstract;
+    virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
+    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
+    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
 };
 
 // BSP version struct & instances

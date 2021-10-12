@@ -366,6 +366,8 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
     outside_node.contents = options.target_game->create_solid_contents();
     outside_node.portals = NULL;
 
+    // create 6 portals forming a cube around the bounds of the map.
+    // these portals will have `outside_node` on one side, and headnode on the other.
     for (i = 0; i < 3; i++)
         for (j = 0; j < 2; j++) {
             n = j * 3 + i;

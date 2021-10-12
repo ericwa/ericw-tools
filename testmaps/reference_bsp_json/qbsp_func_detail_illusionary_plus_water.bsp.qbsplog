@@ -1,16 +1,9 @@
----- qbsp / ericw-tools v0.18.1-373-gca7002c ----
+---- qbsp / ericw-tools v0.18.1-477-g4accc4d-dirty ----
 Input file: qbsp_func_detail_illusionary_plus_water.map
 Output file: qbsp_func_detail_illusionary_plus_water.bsp
 
-SetQdirFromPath: no "maps" in 'C:\Users\Eric\Documents\ericwtools-vcpkgtest\testmaps\/qbsp_func_detail_illusionary_plus_water.map'
----- LoadMapFile ----
-*** WARNING 06: No info_player_deathmatch entities in level
-           48 faces
-            8 brushes
-            4 entities
-            4 unique texnames
-           36 texinfo
-
+SetQdirFromPath: WARNING: 'C:\Users\Eric\Documents\ericw-tools\testmaps' is not directly inside 'maps'
+WARNING: No info_player_deathmatch entities in level
 Opened WAD: deprecated/fence.wad
 Opened WAD: deprecated/free_wad.wad
 Processing hull 0...
@@ -33,7 +26,7 @@ Processing hull 0...
             0 illusionary visblocker leafs
            84 leaffaces
            60 nodefaces
----- Portalize ----
+---- PortalizeWorld ----
            29 vis leafs
            29 vis clusters
            56 vis portals
@@ -52,11 +45,11 @@ Processing hull 0...
             0 illusionary visblocker leafs
            54 leaffaces
            30 nodefaces
----- Portalize ----
+---- PortalizeWorld ----
            11 vis leafs
             2 vis clusters
             1 vis portals
----- Tjunc ----
+---- TJunc ----
            32 world edges
            72 edge points
             0 edges added by tjunctions
@@ -65,7 +58,6 @@ Processing hull 0...
 ---- GrowRegions ----
 Processing hull 1...
 Processing hull 2...
----- WriteBSPFile ----
 Writing qbsp_func_detail_illusionary_plus_water.bsp as BSP version Quake BSP
 Wrote qbsp_func_detail_illusionary_plus_water.bsp
       1 models      
@@ -79,9 +71,9 @@ Wrote qbsp_func_detail_illusionary_plus_water.bsp
      54 marksurfaces        108
      65 edges               260
     120 surfedges           480
-      4 textures          38260
+        textures              4
         lightdata             0
         visdata               0
         entdata             223
 
-0.037 seconds elapsed
+0.013s seconds elapsed

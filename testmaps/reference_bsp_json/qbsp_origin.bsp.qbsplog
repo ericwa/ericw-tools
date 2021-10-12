@@ -1,16 +1,9 @@
----- qbsp / ericw-tools v0.18.1-373-gca7002c ----
+---- qbsp / ericw-tools v0.18.1-477-g4accc4d-dirty ----
 Input file: qbsp_origin.map
 Output file: qbsp_origin.bsp
 
-SetQdirFromPath: no "maps" in 'C:\Users\Eric\Documents\ericwtools-vcpkgtest\testmaps\/qbsp_origin.map'
----- LoadMapFile ----
-*** WARNING 06: No info_player_deathmatch entities in level
-           72 faces
-           12 brushes
-            4 entities
-            4 unique texnames
-           50 texinfo
-
+SetQdirFromPath: WARNING: 'C:\Users\Eric\Documents\ericw-tools\testmaps' is not directly inside 'maps'
+WARNING: No info_player_deathmatch entities in level
 Opened WAD: deprecated/free_wad.wad
 Opened WAD: deprecated/fence.wad
 Opened WAD: deprecated/origin.wad
@@ -34,7 +27,7 @@ Processing hull 0...
             0 illusionary visblocker leafs
           120 leaffaces
           120 nodefaces
----- Portalize ----
+---- PortalizeWorld ----
            19 vis leafs
            19 vis clusters
            40 vis portals
@@ -53,11 +46,11 @@ Processing hull 0...
             0 illusionary visblocker leafs
            32 leaffaces
            32 nodefaces
----- Portalize ----
+---- PortalizeWorld ----
             1 vis leafs
             1 vis clusters
             0 vis portals
----- Tjunc ----
+---- TJunc ----
            28 world edges
           100 edge points
            16 edges added by tjunctions
@@ -66,7 +59,6 @@ Processing hull 0...
 ---- GrowRegions ----
 Processing hull 1...
 Processing hull 2...
----- WriteBSPFile ----
 Writing qbsp_origin.bsp as BSP version Quake BSP
 Wrote qbsp_origin.bsp
       2 models      
@@ -80,9 +72,9 @@ Wrote qbsp_origin.bsp
      54 marksurfaces        108
     117 edges               468
     232 surfedges           928
-      4 textures          38260
+        textures              4
         lightdata             0
         visdata               0
         entdata             408
 
-0.058 seconds elapsed
+0.015s seconds elapsed
