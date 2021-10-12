@@ -272,6 +272,11 @@ struct miptex_t
     std::string name;
     uint32_t width, height;
     std::array<std::unique_ptr<uint8_t[]>, MIPLEVELS> data;
+    
+    miptex_t() = default;
+    miptex_t(miptex_t &&) = default;
+
+    virtual ~miptex_t() { }
 
     virtual void stream_read(std::istream &stream)
     {
@@ -827,8 +832,8 @@ struct texvec : qmat<T, 2, 4>
     template<typename T2>
     constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos) const
     {
-        return {(pos[0] * at(0, 0) + pos[1] * at(0, 1) + pos[2] * at(0, 2) + at(0, 3)),
-                (pos[0] * at(1, 0) + pos[1] * at(1, 1) + pos[2] * at(1, 2) + at(1, 3))};
+        return {(pos[0] * this->at(0, 0) + pos[1] * this->at(0, 1) + pos[2] * this->at(0, 2) + this->at(0, 3)),
+                (pos[0] * this->at(1, 0) + pos[1] * this->at(1, 1) + pos[2] * this->at(1, 2) + this->at(1, 3))};
     }
 
     template<typename T2>
@@ -844,7 +849,7 @@ struct texvec : qmat<T, 2, 4>
     {
         for (size_t i = 0; i < 2; i++)
             for (size_t x = 0; x < 4; x++) {
-                stream >= at(i, x);
+                stream >= this->at(i, x);
             }
     }
 
@@ -852,7 +857,7 @@ struct texvec : qmat<T, 2, 4>
     {
         for (size_t i = 0; i < 2; i++)
             for (size_t x = 0; x < 4; x++) {
-                stream <= at(i, x);
+                stream <= this->at(i, x);
             }
     }
 };

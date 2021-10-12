@@ -818,6 +818,7 @@ static void Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *light
     }
 }
 
+#if 0
 static const lightmap_t *Lightmap_ForStyle_ReadOnly(const lightsurf_t *lightsurf, const int style)
 {
     for (const auto &lm : lightsurf->lightmapsByStyle) {
@@ -826,6 +827,7 @@ static const lightmap_t *Lightmap_ForStyle_ReadOnly(const lightsurf_t *lightsurf
     }
     return nullptr;
 }
+#endif
 
 /*
  * Lightmap_ForStyle
@@ -2278,8 +2280,6 @@ static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *li
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
-    const int fnum = Face_GetNum(lightsurf->bsp, lightsurf->face);
-
     //    std::vector<neighbour_t> neighbours = NeighbouringFaces_new(lightsurf->bsp, BSP_GetFace(lightsurf->bsp,
     //    dump_facenum)); bool found = false; for (auto &f : neighbours) {
     //        if (f.face == lightsurf->face)
@@ -2611,6 +2611,7 @@ static float Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lig
     return maxb;
 }
 
+#if 0
 static void WritePPM(const std::filesystem::path &fname, int width, int height, const uint8_t *rgbdata)
 {
     qfile_t file = SafeOpenWrite(fname);
@@ -2675,6 +2676,7 @@ static void DumpDownscaledLightmap(const mbsp_t *bsp, const mface_t *face, int w
 
     WritePPM(fmt::format("face-small{:04}.ppm", fnum), w, h, rgbdata.data());
 }
+#endif
 
 static std::vector<qvec4f> LightmapColorsToGLMVector(const lightsurf_t *lightsurf, const lightmap_t *lm)
 {
@@ -2698,6 +2700,7 @@ static std::vector<qvec4f> LightmapNormalsToGLMVector(const lightsurf_t *lightsu
     return res;
 }
 
+#if 0
 static std::vector<qvec4f> LightmapToGLMVector(const mbsp_t *bsp, const lightsurf_t *lightsurf)
 {
     const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(lightsurf, 0);
@@ -2706,6 +2709,7 @@ static std::vector<qvec4f> LightmapToGLMVector(const mbsp_t *bsp, const lightsur
     }
     return std::vector<qvec4f>();
 }
+#endif
 
 static qvec3f LinearToGamma22(const qvec3f &c)
 {

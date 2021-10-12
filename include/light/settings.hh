@@ -124,7 +124,7 @@ public:
 class lockable_bool_t : public lockable_setting_t
 {
 private:
-    bool _default, _value;
+    [[maybe_unused]] bool _default, _value;
 
     void setBoolValueInternal(bool f, setting_source_t newsource)
     {
@@ -161,7 +161,7 @@ public:
 class lockable_vec_t : public lockable_setting_t
 {
 private:
-    vec_t _default, _value, _min, _max;
+    [[maybe_unused]] vec_t _default, _value, _min, _max;
 
     inline void setFloatInternal(vec_t f, setting_source_t newsource)
     {

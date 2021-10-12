@@ -1445,6 +1445,8 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
                 tx_type = TX_QUAKED;
             }
         }
+    } else {
+        FError("Bad brush format");
     }
 
     // If we're not Q2 but we're loading a Q2 map, just remove the extra
@@ -1455,7 +1457,6 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
 
-    const auto &miptex = map.miptex[tx->miptex];
     mapface.contents = extinfo.info->contents;
     tx->flags = mapface.flags = {extinfo.info->flags};
     tx->value = mapface.value = extinfo.info->value;

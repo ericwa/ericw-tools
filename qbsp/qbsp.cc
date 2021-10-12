@@ -298,6 +298,7 @@ FLOOD AREAS
 =========================================================
 */
 
+#if 0
 int32_t c_areas;
 
 /*
@@ -491,6 +492,7 @@ static void EmitAreaPortals(node_t *headnode)
     LogPrint(LOG_STAT, "{:5} numareas\n", map.bsp.dareas.size());
     LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
 }
+#endif
 
 winding_t BaseWindingForPlane(const qbsp_plane_t *p)
 {

@@ -60,10 +60,10 @@ struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
     using winding_base_t::winding_base_t;
 
     // copy constructor
-    winding_t(const winding_t &copy) : origin(copy.origin), radius(copy.radius), winding_base_t(copy) { }
+    winding_t(const winding_t &copy) : winding_base_t(copy), origin(copy.origin), radius(copy.radius) { }
 
     // move constructor
-    winding_t(winding_t &&move) : origin(move.origin), radius(move.radius), winding_base_t(move) { }
+    winding_t(winding_t &&move) : winding_base_t(move), origin(move.origin), radius(move.radius) { }
 
     // assignment copy
     inline winding_t &operator=(const winding_t &copy)

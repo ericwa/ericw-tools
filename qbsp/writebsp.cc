@@ -365,16 +365,6 @@ static void CopyVector(const std::vector<C> &vec, int *elementCountOut, C **arra
     *arrayCopyOut = (C *)data;
 }
 
-static void CopyString(const std::string &string, bool addNullTermination, int *elementCountOut, void **arrayCopyOut)
-{
-    const size_t numBytes = addNullTermination ? string.size() + 1 : string.size();
-    void *data = new uint8_t[numBytes];
-    memcpy(data, string.data(), numBytes); // std::string::data() has null termination, so it's safe to copy it
-
-    *elementCountOut = numBytes;
-    *arrayCopyOut = data;
-}
-
 /*
 =============
 WriteBSPFile

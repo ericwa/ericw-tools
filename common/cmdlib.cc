@@ -39,8 +39,6 @@
 
 #include <string>
 
-constexpr char PATHSEPERATOR = '/';
-
 /* set these before calling CheckParm */
 int myargc;
 char **myargv;

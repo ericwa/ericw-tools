@@ -290,7 +290,6 @@ template<filtertype_t filtertype>
 static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 {
     int *const valid = args->valid;
-    void *const userDataPtr = args->geometryUserPtr;
     RTCIntersectContext *const context = args->context;
     struct RTCRayN *const ray = args->ray;
     struct RTCHitN *const potentialHit = args->hit;

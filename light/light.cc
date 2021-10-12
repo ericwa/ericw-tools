@@ -521,19 +521,6 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
 
 // obj
 
-static qfile_t InitObjFile(const std::filesystem::path &filename)
-{
-    std::filesystem::path objfilename(filename);
-    objfilename.replace_extension("obj");
-
-    qfile_t objfile = SafeOpenWrite(objfilename);
-
-    if (!objfile)
-        FError("Failed to open {}: {}", objfilename, strerror(errno));
-
-    return objfile;
-}
-
 static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *face, int *vertcount)
 {
     // export the vertices and uvs
@@ -697,6 +684,7 @@ static void CheckLitNeeded(const globalconfig_t &cfg)
     }
 }
 
+#if 0
 static void PrintLight(const light_t &light)
 {
     bool first = true;
@@ -726,6 +714,7 @@ static void PrintLights(void)
         PrintLight(light);
     }
 }
+#endif
 
 static void PrintUsage()
 {
@@ -846,6 +835,7 @@ static bool ParseIntOptional(int *result, int *i_inout, int argc, const char **a
     }
 }
 
+#if 0
 static const char *ParseStringOptional(int *i_inout, int argc, const char **argv)
 {
     if ((*i_inout + 1) < argc) {
@@ -854,6 +844,7 @@ static const char *ParseStringOptional(int *i_inout, int argc, const char **argv
         return NULL;
     }
 }
+#endif
 
 static void ParseVec3(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
 {
@@ -887,6 +878,7 @@ static int ParseInt(int *i_inout, int argc, const char **argv)
     return result;
 }
 
+#if 0
 static const char *ParseString(int *i_inout, int argc, const char **argv)
 {
     const char *result = NULL;
@@ -895,6 +887,7 @@ static const char *ParseString(int *i_inout, int argc, const char **argv)
     }
     return result;
 }
+#endif
 
 static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 {

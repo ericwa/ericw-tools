@@ -192,7 +192,7 @@ void CalcPHS(mbsp_t *bsp)
                 const long *src = (long *)uncompressed_2;
                 long *dest = (long *)uncompressed;
                 for (int32_t l = 0; l < leaflongs; l++)
-                    ((long *)uncompressed)[l] |= src[l];
+                    dest[l] |= src[l];
             }
         }
         for (int32_t j = 0; j < portalleafs; j++)

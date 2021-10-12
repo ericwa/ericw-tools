@@ -614,13 +614,13 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
         // normalize vertex normals (NOTE: updates smoothedNormals map)
         for (auto &pair : smoothedNormals) {
-            const int vertIndex = pair.first;
             face_normal_t &vertNormal = pair.second;
             if (0 == qv::length(vertNormal.normal)) {
                 // this happens when there are colinear vertices, which give zero-area triangles,
                 // so there is no contribution to the normal of the triangle in the middle of the
                 // line. Not really an error, just set it to use the face normal.
 #if 0
+                const int vertIndex = pair.first;
                 LogPrint("Failed to calculate normal for vertex {} at ({} {} {})\n",
                          vertIndex,
                          bsp->dvertexes[vertIndex].point[0],

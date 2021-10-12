@@ -850,15 +850,15 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
 
         try {
             if (to_version == &bspver_q1 || to_version == &bspver_h2 || to_version == &bspver_hl) {
-                bspdata->bsp = std::move(ConvertGenericToQ1BSP<bsp29_t>(mbsp, to_version));
+                bspdata->bsp = ConvertGenericToQ1BSP<bsp29_t>(mbsp, to_version);
             } else if (to_version == &bspver_q2) {
-                bspdata->bsp = std::move(ConvertGenericToQ2BSP<q2bsp_t>(mbsp, to_version));
+                bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_t>(mbsp, to_version);
             } else if (to_version == &bspver_qbism) {
-                bspdata->bsp = std::move(ConvertGenericToQ2BSP<q2bsp_qbism_t>(mbsp, to_version));
+                bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_qbism_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
-                bspdata->bsp = std::move(ConvertGenericToQ1BSP<bsp2rmq_t>(mbsp, to_version));
+                bspdata->bsp = ConvertGenericToQ1BSP<bsp2rmq_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
-                bspdata->bsp = std::move(ConvertGenericToQ1BSP<bsp2_t>(mbsp, to_version));
+                bspdata->bsp = ConvertGenericToQ1BSP<bsp2_t>(mbsp, to_version);
             } else {
                 return false;
             }
@@ -1273,12 +1273,12 @@ public:
         write_lump(LUMP_MARKSURFACES, bsp.dmarksurfaces);
         write_lump(LUMP_SURFEDGES, bsp.dsurfedges);
         write_lump(LUMP_EDGES, bsp.dedges);
-        std::visit([this](auto&& arg) { write_lump(LUMP_MODELS, arg); }, bsp.dmodels);
+        std::visit([this](auto&& arg) { this->write_lump(LUMP_MODELS, arg); }, bsp.dmodels);
 
         write_lump(LUMP_LIGHTING, bsp.dlightdata);
         write_lump(LUMP_VISIBILITY, bsp.dvisdata);
         write_lump(LUMP_ENTITIES, bsp.dentdata);
-        std::visit([this](auto&& arg) { write_lump(LUMP_TEXTURES, arg); }, bsp.dtex);
+        std::visit([this](auto&& arg) { this->write_lump(LUMP_TEXTURES, arg); }, bsp.dtex);
     }
 
     template<typename T, typename std::enable_if_t<std::is_base_of_v<q2bsp_tag_t, T>, int> = 0>
@@ -1318,7 +1318,7 @@ public:
         auto bspxheader = stream.tellp();
 
         // write dummy lump headers
-        for (auto &x : bspdata.bspx.entries) {
+        for ([[maybe_unused]] auto &_ : bspdata.bspx.entries) {
             stream <= bspx_lump_t{};
         }
 

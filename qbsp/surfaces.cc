@@ -285,7 +285,7 @@ inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, c
 
     /* emit an edge */
     size_t i = map.bsp.dedges.size();
-    auto &edge = map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
+    map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
 
     AddHashEdge(v1, v2, i);
 
