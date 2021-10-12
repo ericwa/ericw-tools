@@ -904,9 +904,9 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
     for (auto &face : bsp.dfaces) {
         auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
         for (auto &normals : cache.normals()) {
-            unique_normals.insert(normals.normal);
-            unique_normals.insert(normals.tangent);
-            unique_normals.insert(normals.bitangent);
+            unique_normals.insert(qv::Snap(normals.normal));
+            unique_normals.insert(qv::Snap(normals.tangent));
+            unique_normals.insert(qv::Snap(normals.bitangent));
             num_normals += 3;
         }
     }
@@ -929,9 +929,9 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
         auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
 
         for (auto &n : cache.normals()) {
-            stream <= numeric_cast<uint32_t>(mapped_normals[n.normal]);
-            stream <= numeric_cast<uint32_t>(mapped_normals[n.tangent]);
-            stream <= numeric_cast<uint32_t>(mapped_normals[n.bitangent]);
+            stream <= numeric_cast<uint32_t>(mapped_normals[qv::Snap(n.normal)]);
+            stream <= numeric_cast<uint32_t>(mapped_normals[qv::Snap(n.tangent)]);
+            stream <= numeric_cast<uint32_t>(mapped_normals[qv::Snap(n.bitangent)]);
         }
     }
 

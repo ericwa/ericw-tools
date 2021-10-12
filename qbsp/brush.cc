@@ -218,26 +218,23 @@ static void PlaneHash_Add(const qbsp_plane_t *p, int index)
  * NewPlane
  * - Returns a global plane number and the side that will be the front
  */
-static int NewPlane(const vec3_t normal, const vec_t dist, int *side)
+static int NewPlane(const qbsp_plane_t &plane, int *side)
 {
-    vec_t len;
+    vec_t len = VectorLength(plane.normal);
 
-    len = VectorLength(normal);
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
 
     size_t index = map.planes.size();
-    qbsp_plane_t &plane = map.planes.emplace_back();
-    VectorCopy(normal, plane.normal);
-    plane.dist = dist;
+    qbsp_plane_t &added_plane = map.planes.emplace_back(plane);
 
-    int32_t out_side = NormalizePlane(&plane, side != nullptr);
+    int32_t out_side = NormalizePlane(&added_plane, side != nullptr);
 
     if (side) {
         *side = out_side;
     }
 
-    PlaneHash_Add(&plane, index);
+    PlaneHash_Add(&added_plane, index);
     return index;
 }
 
@@ -246,10 +243,10 @@ static int NewPlane(const vec3_t normal, const vec_t dist, int *side)
  * - Returns a global plane number and the side that will be the front
  * - if `side` is null, only an exact match will be fetched.
  */
-int FindPlane(const vec3_t normal, const vec_t dist, int *side)
+int FindPlane(const qvec3d &normal, const vec_t dist, int *side)
 {
-    qbsp_plane_t plane = {0};
-    VectorCopy(normal, plane.normal);
+    qbsp_plane_t plane {};
+    plane.normal = normal;
     plane.dist = dist;
 
     for (int i : map.planehash[plane_hash_fn(&plane)]) {
@@ -264,7 +261,7 @@ int FindPlane(const vec3_t normal, const vec_t dist, int *side)
             return i;
         }
     }
-    return NewPlane(&plane.normal[0], plane.dist, side);
+    return NewPlane(plane, side);
 }
 
 /*
@@ -423,7 +420,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         plane.dist = DotProduct(plane.normal, point);
 
         f->texinfo = hullnum > 0 ? 0 : mapface->texinfo;
-        f->planenum = FindPlane(&plane.normal[0], plane.dist, &f->planeside);
+        f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
         f->next = facelist;
         facelist = f;
         CheckFace(f, mapface);
@@ -1328,7 +1325,7 @@ BrushMostlyOnSide
 from q3map
 ==================
 */
-int BrushMostlyOnSide(const brush_t *brush, const vec3_t planenormal, vec_t planedist)
+int BrushMostlyOnSide(const brush_t *brush, const qvec3d &planenormal, vec_t planedist)
 {
     vec_t max;
     int side;
@@ -1523,7 +1520,7 @@ void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **fro
     if (!w || WindingIsTiny(*w)) { // the brush isn't really split
         int side;
 
-        side = BrushMostlyOnSide(brush, &plane.normal[0], plane.dist);
+        side = BrushMostlyOnSide(brush, plane.normal, plane.dist);
         if (side == SIDE_FRONT)
             *front = CopyBrush(brush);
         if (side == SIDE_BACK)

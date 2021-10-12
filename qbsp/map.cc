@@ -835,8 +835,8 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
 {
     // Check for shear, because we might tweak M to remove it
     {
-        qvec2f Xvec = qvec2f(M[0][0], M[1][0]);
-        qvec2f Yvec = qvec2f(M[0][1], M[1][1]);
+        qvec2f Xvec = M.row(0);
+        qvec2f Yvec = M.row(1);
         double cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
 
         // const double oldXscale = sqrt(pow(M[0][0], 2.0) + pow(M[1][0], 2.0));
@@ -878,17 +878,17 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
             }
 
             // update M
-            M[0][0] = Xvec[0];
-            M[1][0] = Xvec[1];
+            M.at(0, 0) = Xvec[0];
+            M.at(0, 1) = Xvec[1];
 
-            M[0][1] = Yvec[0];
-            M[1][1] = Yvec[1];
+            M.at(1, 0) = Yvec[0];
+            M.at(1, 1) = Yvec[1];
         }
     }
 
     // extract abs(scale)
-    const double absXscale = sqrt(pow(M[0][0], 2.0) + pow(M[1][0], 2.0));
-    const double absYscale = sqrt(pow(M[0][1], 2.0) + pow(M[1][1], 2.0));
+    const double absXscale = sqrt(pow(M.at(0, 0), 2.0) + pow(M.at(0, 1), 2.0));
+    const double absYscale = sqrt(pow(M.at(1, 0), 2.0) + pow(M.at(1, 1), 2.0));
     const qmat2x2f applyAbsScaleM{static_cast<float>(absXscale), // col0
         0,
         0, // col1
@@ -933,8 +933,8 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
             const qmat2x2f applyAngleGuessM = rotation2x2_deg(angleGuess);
             const qmat2x2f Mguess = applyGuessedFlipM * applyAbsScaleM * applyAngleGuessM * axisFlipsM;
 
-            if (fabs(M[0][0] - Mguess[0][0]) < 0.001 && fabs(M[0][1] - Mguess[0][1]) < 0.001 &&
-                fabs(M[1][0] - Mguess[1][0]) < 0.001 && fabs(M[1][1] - Mguess[1][1]) < 0.001) {
+            if (fabs(M.at(0, 0) - Mguess.at(0, 0)) < 0.001 && fabs(M.at(1, 0) - Mguess.at(1, 0)) < 0.001 &&
+                fabs(M.at(0, 1) - Mguess.at(0, 1)) < 0.001 && fabs(M.at(1, 1) - Mguess.at(1, 1)) < 0.001) {
 
                 texdef_quake_ed_noshift_t reversed;
                 reversed.rotate = angleGuess;
@@ -1001,7 +1001,6 @@ static void SetTexinfo_QuakeEd_New(
     }
 
     // copy M into the output vectors
-
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 4; j++) {
             out_vecs[i][j] = 0.0;
@@ -1012,13 +1011,13 @@ static void SetTexinfo_QuakeEd_New(
 
     //                        M[col][row]
     // S
-    out_vecs[0][axes.first] = M[0][0];
-    out_vecs[0][axes.second] = M[1][0];
+    out_vecs[0][axes.first] = M.at(0, 0);
+    out_vecs[0][axes.second] = M.at(0, 1);
     out_vecs[0][3] = shift[0];
 
     // T
-    out_vecs[1][axes.first] = M[0][1];
-    out_vecs[1][axes.second] = M[1][1];
+    out_vecs[1][axes.first] = M.at(1, 0);
+    out_vecs[1][axes.second] = M.at(1, 1);
     out_vecs[1][3] = shift[1];
 }
 
@@ -1783,7 +1782,7 @@ static void RotateMapFace(mapface_t *face, const qvec3d &angles)
     for (int i = 0; i < 2; i++) {
         const qvec4f in = texvecs.at(i);
         const qvec3f in_first3(in);
-
+        
         const qvec3f out_first3 = rotation * in_first3;
         newtexvecs[i] = {out_first3[0], out_first3[1], out_first3[2], in[3]};
     }
@@ -1810,6 +1809,7 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
         // CHECK: precision loss here?
         out[3] += qv::dot(qvec3f(out), qvec3f(offset) * -1.0f);
         newtexvecs[i] = {out[0], out[1], out[2], out[3]};
+
     }
 
     face->set_texvecs(newtexvecs);

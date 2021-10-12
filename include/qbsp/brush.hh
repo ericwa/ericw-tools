@@ -52,13 +52,13 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 
-int FindPlane(const vec3_t normal, const vec_t dist, int *side);
+int FindPlane(const qvec3d &normal, const vec_t dist, int *side);
 bool PlaneEqual(const plane_t *p1, const plane_t *p2);
 bool PlaneInvEqual(const plane_t *p1, const plane_t *p2);
 
 bool BoundBrush(brush_t *brush);
 vec_t BrushVolume(const brush_t *brush);
-int BrushMostlyOnSide(const brush_t *brush, const vec3_t normal, vec_t dist);
+int BrushMostlyOnSide(const brush_t *brush, const qvec3d &normal, vec_t dist);
 void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **front, brush_t **back);
 
 void FilterStructuralBrushesIntoTree(const mapentity_t *e, node_t *headnode);

@@ -130,12 +130,12 @@ public:
     [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qvec<T, N> &other) const { return v < other.v; }
-    [[nodiscard]] constexpr bool operator<=(const qvec<T, N> &other) const { return v <= other.v; }
-    [[nodiscard]] constexpr bool operator>(const qvec<T, N> &other) const { return v > other.v; }
-    [[nodiscard]] constexpr bool operator>=(const qvec<T, N> &other) const { return v >= other.v; }
-    [[nodiscard]] constexpr bool operator==(const qvec<T, N> &other) const { return v == other.v; }
-    [[nodiscard]] constexpr bool operator!=(const qvec<T, N> &other) const { return v != other.v; }
+    [[nodiscard]] constexpr bool operator<(const qvec &other) const { return v < other.v; }
+    [[nodiscard]] constexpr bool operator<=(const qvec &other) const { return v <= other.v; }
+    [[nodiscard]] constexpr bool operator>(const qvec &other) const { return v > other.v; }
+    [[nodiscard]] constexpr bool operator>=(const qvec &other) const { return v >= other.v; }
+    [[nodiscard]] constexpr bool operator==(const qvec &other) const { return v == other.v; }
+    [[nodiscard]] constexpr bool operator!=(const qvec &other) const { return v != other.v; }
 
     [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
@@ -153,63 +153,79 @@ public:
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
 
     template<typename F>
-    constexpr void operator+=(const qvec<F, N> &other)
+    constexpr qvec operator+=(const qvec<F, N> &other)
     {
         for (size_t i = 0; i < N; i++)
             v[i] += other.v[i];
+        return *this;
     }
     template<typename F>
-    constexpr void operator-=(const qvec<F, N> &other)
+    constexpr qvec operator-=(const qvec<F, N> &other)
     {
         for (size_t i = 0; i < N; i++)
             v[i] -= other.v[i];
+        return *this;
     }
-    constexpr void operator*=(const T &scale)
+    constexpr qvec operator*=(const T &scale)
     {
         for (size_t i = 0; i < N; i++)
             v[i] *= scale;
+        return *this;
     }
-    constexpr void operator/=(const T &scale)
+    constexpr qvec operator/=(const T &scale)
     {
         for (size_t i = 0; i < N; i++)
             v[i] /= scale;
+        return *this;
+    }
+    constexpr qvec &operator*=(const qvec &scale)
+    {
+        for (size_t i = 0; i < N; i++)
+            v[i] *= scale[i];
+        return *this;
+    }
+    constexpr qvec operator/=(const qvec &scale)
+    {
+        for (size_t i = 0; i < N; i++)
+            v[i] /= scale[i];
+        return *this;
     }
 
     template<typename F>
-    [[nodiscard]] constexpr qvec<T, N> operator+(const qvec<F, N> &other) const
+    [[nodiscard]] constexpr qvec operator+(const qvec<F, N> &other) const
     {
-        qvec<T, N> res(*this);
-        res += other;
-        return res;
+        return qvec(*this) += other;
     }
 
     template<typename F>
     [[nodiscard]] constexpr qvec<T, N> operator-(const qvec<F, N> &other) const
     {
-        qvec<T, N> res(*this);
-        res -= other;
-        return res;
+        return qvec(*this) -= other;
     }
 
     [[nodiscard]] constexpr qvec<T, N> operator*(const T &scale) const
     {
-        qvec<T, N> res(*this);
-        res *= scale;
-        return res;
+        return qvec(*this) *= scale;
     }
 
     [[nodiscard]] constexpr qvec<T, N> operator/(const T &scale) const
     {
-        qvec<T, N> res(*this);
-        res /= scale;
-        return res;
+        return qvec(*this) /= scale;
+    }
+    
+    [[nodiscard]] constexpr qvec<T, N> operator*(const qvec<T, N> &scale) const
+    {
+        return qvec(*this) *= scale;
+    }
+
+    [[nodiscard]] constexpr qvec<T, N> operator/(const qvec<T, N> &scale) const
+    {
+        return qvec(*this) /= scale;
     }
 
     [[nodiscard]] constexpr qvec<T, N> operator-() const
     {
-        qvec<T, N> res(*this);
-        res *= -1;
-        return res;
+        return qvec(*this) *= -1;
     }
 
     [[nodiscard]] constexpr qvec<T, 3> xyz() const
@@ -230,7 +246,7 @@ public:
     constexpr auto cend() const { return v.cend(); }
 
     // for Google Test
-    friend std::ostream& operator<<(std::ostream& os, const qvec<T, N>& v) {
+    friend std::ostream &operator<<(std::ostream &os, const qvec &v) {
         return os << fmt::format("{}", v);
     }
 };
@@ -501,6 +517,26 @@ template<typename T>
 {
     return (t0 * bary[0]) + (t1 * bary[1]) + (t2 * bary[2]);
 }
+
+// Snap vector to nearest axial component
+template<typename T>
+[[nodiscard]] qvec<T, 3> Snap(const qvec<T, 3> &normal, const T &epsilon = NORMAL_EPSILON)
+{
+    qvec<T, 3> vec { };
+
+    for (size_t i = 0; i < 3; i++) {
+        if (fabs(normal[i] - 1) < epsilon) {
+            vec[i] = 1;
+            break;
+        }
+        if (fabs(normal[i] - -1) < epsilon) {
+            vec[i] = -1;
+            break;
+        }
+    }
+    
+    return vec;
+}
 }; // namespace qv
 
 using qvec2f = qvec<float, 2>;
@@ -532,6 +568,16 @@ public:
     {
     }
 
+    auto as_tuple() const { return std::tie(m_normal, m_dist); }
+
+    // Sort support
+    [[nodiscard]] constexpr bool operator<(const qplane3 &other) const { return as_tuple() < other.as_tuple(); }
+    [[nodiscard]] constexpr bool operator<=(const qplane3 &other) const { return as_tuple() <= other.as_tuple(); }
+    [[nodiscard]] constexpr bool operator>(const qplane3 &other) const { return as_tuple() > other.as_tuple(); }
+    [[nodiscard]] constexpr bool operator>=(const qplane3 &other) const { return as_tuple() >= other.as_tuple(); }
+    [[nodiscard]] constexpr bool operator==(const qplane3 &other) const { return as_tuple() == other.as_tuple(); }
+    [[nodiscard]] constexpr bool operator!=(const qplane3 &other) const { return as_tuple() != other.as_tuple(); }
+
     [[nodiscard]] inline T distAbove(const qvec<T, 3> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
     [[nodiscard]] constexpr const qvec<T, 3> &normal() const { return m_normal; }
     [[nodiscard]] constexpr const T dist() const { return m_dist; }
@@ -546,16 +592,16 @@ using qplane3f = qplane3<float>;
 using qplane3d = qplane3<double>;
 
 /**
- * M row, N column matrix.
+ * Row x Col matrix of T.
  */
-template<size_t M, size_t N, class T>
+template<class T, size_t NRow, size_t NCol>
 class qmat
 {
 public:
     /**
      * Column-major order. [ (row0,col0), (row1,col0), .. ]
      */
-    std::array<T, M * N> m_values;
+    std::array<T, NRow * NCol> m_values;
 
 public:
     /**
@@ -563,9 +609,9 @@ public:
      */
     constexpr qmat() : m_values({})
     {
-        if constexpr (M == N) {
+        if constexpr (NRow == NCol) {
             // identity matrix
-            for (size_t i = 0; i < N; i++) {
+            for (size_t i = 0; i < NCol; i++) {
                 this->at(i, i) = 1;
             }
         }
@@ -577,63 +623,73 @@ public:
     inline qmat(const T &val) { m_values.fill(val); }
 
     // copy constructor
-    constexpr qmat(const qmat<M, N, T> &other) : m_values(other.m_values) { }
+    constexpr qmat(const qmat &other) : m_values(other.m_values) { }
 
     /**
      * Casting from another matrix type of the same size
      */
     template<class T2>
-    constexpr qmat(const qmat<M, N, T2> &other)
+    constexpr qmat(const qmat<T2, NRow, NCol> &other)
     {
-        for (size_t i = 0; i < M * N; i++)
+        for (size_t i = 0; i < NRow * NCol; i++)
             this->m_values[i] = static_cast<T>(other.m_values[i]);
     }
 
     // initializer list, column-major order
     constexpr qmat(std::initializer_list<T> list)
     {
-        assert(list.size() == M * N);
+        assert(list.size() == NRow * NCol);
         std::copy(list.begin(), list.end(), m_values.begin());
     }
-
-    constexpr bool operator==(const qmat<M, N, T> &other) const { return m_values == other.m_values; }
+    
+    // Sort support
+    [[nodiscard]] constexpr bool operator<(const qmat &other) const { return m_values < other.m_values; }
+    [[nodiscard]] constexpr bool operator<=(const qmat &other) const { return m_values <= other.m_values; }
+    [[nodiscard]] constexpr bool operator>(const qmat &other) const { return m_values > other.m_values; }
+    [[nodiscard]] constexpr bool operator>=(const qmat &other) const { return m_values >= other.m_values; }
+    [[nodiscard]] constexpr bool operator==(const qmat &other) const { return m_values == other.m_values; }
+    [[nodiscard]] constexpr bool operator!=(const qmat &other) const { return m_values != other.m_values; }
 
     // access to elements
 
     [[nodiscard]] constexpr T &at(size_t row, size_t col)
     {
-        assert(row >= 0 && row < M);
-        assert(col >= 0 && col < N);
-        return m_values[col * M + row];
+        assert(row >= 0 && row < NRow);
+        assert(col >= 0 && col < NCol);
+        return m_values[col * NRow + row];
     }
 
     [[nodiscard]] constexpr T at(size_t row, size_t col) const
     {
-        assert(row >= 0 && row < M);
-        assert(col >= 0 && col < N);
-        return m_values[col * M + row];
+        assert(row >= 0 && row < NRow);
+        assert(col >= 0 && col < NCol);
+        return m_values[col * NRow + row];
     }
 
-    // hacky accessor for mat[col][row] access
-    [[nodiscard]] constexpr const T *operator[](size_t col) const
+    // access row
+    [[nodiscard]] constexpr qvec<T, NCol> row(size_t row) const
     {
-        assert(col >= 0 && col < N);
-        return &m_values[col * M];
+        assert(row >= 0 && row < NRow);
+        qvec<T, NCol> v;
+        for (size_t i = 0; i < NCol; i++) {
+            v[i] = at(row, i);
+        }
+        return v;
     }
 
-    [[nodiscard]] constexpr T *operator[](size_t col)
+    [[nodiscard]] constexpr const qvec<T, NRow> &col(size_t col) const
     {
-        assert(col >= 0 && col < N);
-        return &m_values[col * M];
+        assert(col >= 0 && col < NCol);
+        return reinterpret_cast<const qvec<T, NRow> &>(m_values[col * NRow]);
     }
 
     // multiplication by a vector
 
-    [[nodiscard]] constexpr qvec<T, M> operator*(const qvec<T, N> &vec) const
+    [[nodiscard]] constexpr qvec<T, NRow> operator*(const qvec<T, NCol> &vec) const
     {
-        qvec<T, M> res{};
-        for (size_t i = 0; i < M; i++) { // for each row
-            for (size_t j = 0; j < N; j++) { // for each col
+        qvec<T, NRow> res{};
+        for (size_t i = 0; i < NRow; i++) { // for each row
+            for (size_t j = 0; j < NCol; j++) { // for each col
                 res[i] += this->at(i, j) * vec[j];
             }
         }
@@ -642,14 +698,14 @@ public:
 
     // multiplication by a matrix
 
-    template<size_t P>
-    [[nodiscard]] constexpr qmat<M, P, T> operator*(const qmat<N, P, T> &other) const
+    template<size_t PCol>
+    [[nodiscard]] constexpr qmat<T, NRow, PCol> operator*(const qmat<T, NCol, PCol> &other) const
     {
-        qmat<M, P, T> res;
-        for (size_t i = 0; i < M; i++) {
-            for (size_t j = 0; j < P; j++) {
+        qmat<T, NRow, PCol> res;
+        for (size_t i = 0; i < NRow; i++) {
+            for (size_t j = 0; j < PCol; j++) {
                 T val = 0;
-                for (size_t k = 0; k < N; k++) {
+                for (size_t k = 0; k < NCol; k++) {
                     val += this->at(i, k) * other.at(k, j);
                 }
                 res.at(i, j) = val;
@@ -660,23 +716,26 @@ public:
 
     // multiplication by a scalar
 
-    [[nodiscard]] constexpr qmat<M, N, T> operator*(const T scalar) const
+    [[nodiscard]] constexpr qmat operator*(const T &scalar) const
     {
-        qmat<M, N, T> res(*this);
-        for (size_t i = 0; i < M * N; i++) {
+        qmat res(*this);
+        for (size_t i = 0; i < NRow * NCol; i++) {
             res.m_values[i] *= scalar;
         }
         return res;
     }
+
+    // stream support
+    auto stream_data() { return std::tie(m_values); }
 };
 
-using qmat2x2f = qmat<2, 2, float>;
-using qmat3x3f = qmat<3, 3, float>;
-using qmat4x4f = qmat<4, 4, float>;
+using qmat2x2f = qmat<float, 2, 2>;
+using qmat3x3f = qmat<float, 3, 3>;
+using qmat4x4f = qmat<float, 4, 4>;
 
-using qmat2x2d = qmat<2, 2, double>;
-using qmat3x3d = qmat<3, 3, double>;
-using qmat4x4d = qmat<4, 4, double>;
+using qmat2x2d = qmat<double, 2, 2>;
+using qmat3x3d = qmat<double, 3, 3>;
+using qmat4x4d = qmat<double, 4, 4>;
 
 namespace qv
 {

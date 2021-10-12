@@ -145,9 +145,7 @@ std::vector<decomp_plane_t> RemoveRedundantPlanes(const std::vector<decomp_plane
 
     for (const decomp_plane_t &plane : planes) {
         // outward-facing plane
-        vec3_t normal;
-        VectorCopy(plane.normal, normal);
-        std::optional<winding_t> winding = winding_t::from_plane(normal, plane.distance, 10e6);
+        std::optional<winding_t> winding = winding_t::from_plane(plane.normal, plane.distance, 10e6);
 
         // clip `winding` by all of the other planes, flipped
         for (const decomp_plane_t &plane2 : planes) {
@@ -302,10 +300,7 @@ public:
      */
     std::pair<decomp_brush_face_t, decomp_brush_face_t> clipToPlane(const qvec3d &normal, double distance) const
     {
-        vec3_t pnormal;
-        VectorCopy(normal, pnormal);
-
-        auto clipped = winding->clip(pnormal, (float)distance);
+        auto clipped = winding->clip(normal, (float)distance);
 
         // front or back may be null (if fully clipped).
         // these constructors take ownership of the winding.
@@ -315,8 +310,7 @@ public:
 
     qvec3d normal() const
     {
-        plane_t plane = winding->plane();
-        return plane.normal;
+        return winding->plane().normal;
     }
 };
 

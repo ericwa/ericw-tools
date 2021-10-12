@@ -444,7 +444,7 @@ static void CompareBSPFiles(const mbsp_t &refBsp, const mbsp_t &bsp)
     }
 }
 
-static void FindFaces(const mbsp_t *bsp, const vec3_t &pos, const vec3_t &normal)
+static void FindFaces(const mbsp_t *bsp, const qvec3d &pos, const qvec3d &normal)
 {
     for (int i = 0; i < bsp->dmodels.size(); ++i) {
         const dmodelh2_t *model = &bsp->dmodels[i];
@@ -567,8 +567,8 @@ int main(int argc, char **argv)
             }
 
             try {
-                const vec3_t pos = {std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
-                const vec3_t normal = {std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
+                const qvec3d pos {std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
+                const qvec3d normal {std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
                 FindFaces(&bsp, pos, normal);
             }
             catch (const std::exception &) {

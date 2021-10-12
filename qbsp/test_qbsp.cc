@@ -164,7 +164,7 @@ TEST(qbsp, BrushMostlyOnSide1)
 {
     brush_t *brush = load128x128x32Brush();
 
-    vec3_t plane1normal = {-1, 0, 0};
+    qvec3d plane1normal {-1, 0, 0};
     vec_t plane1dist = -100;
 
     EXPECT_EQ(SIDE_FRONT, BrushMostlyOnSide(brush, plane1normal, plane1dist));
@@ -176,7 +176,7 @@ TEST(qbsp, BrushMostlyOnSide2)
 {
     brush_t *brush = load128x128x32Brush();
 
-    vec3_t plane1normal = {1, 0, 0};
+    qvec3d plane1normal {1, 0, 0};
     vec_t plane1dist = 100;
 
     EXPECT_EQ(SIDE_BACK, BrushMostlyOnSide(brush, plane1normal, plane1dist));
@@ -241,7 +241,7 @@ TEST(qbsp, SplitBrush)
 {
     brush_t *brush = load128x128x32Brush();
 
-    const vec3_t planenormal = {-1, 0, 0};
+    const qvec3d planenormal {-1, 0, 0};
     int planeside;
     const int planenum = FindPlane(planenormal, 0.0, &planeside);
 
@@ -282,7 +282,7 @@ TEST(qbsp, SplitBrushOnSide)
 {
     brush_t *brush = load128x128x32Brush();
 
-    const vec3_t planenormal = {-1, 0, 0};
+    const qvec3d planenormal {-1, 0, 0};
     int planeside;
     const int planenum = FindPlane(planenormal, -64.0, &planeside);
 
@@ -299,7 +299,7 @@ TEST(qbsp, SplitBrushOnSide)
 TEST(qbsp, MemLeaks) {
     brush_t *brush = load128x128x32Brush();
     
-    const vec3_t planenormal = { -1, 0, 0 };
+    const qvec3d planenormal { -1, 0, 0 };
     int planeside;
     const int planenum = FindPlane(planenormal, 0.0, &planeside);
     

@@ -130,7 +130,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
             auto flipped = map.planes[f->planenum];
             flipped.dist = -flipped.dist;
             VectorInverse(flipped.normal);
-            planenum = FindPlane(&flipped.normal[0], flipped.dist, nullptr);
+            planenum = FindPlane(flipped.normal, flipped.dist, nullptr);
         }
 
         int32_t outputplanenum = ExportMapPlane(planenum);
@@ -160,7 +160,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                 else
                     new_plane.dist = -b->bounds.mins()[axis];
 
-                int32_t planenum = FindPlane(&new_plane.normal[0], new_plane.dist, nullptr);
+                int32_t planenum = FindPlane(new_plane.normal, new_plane.dist, nullptr);
                 int32_t outputplanenum = ExportMapPlane(planenum);
                 planes.emplace_back(outputplanenum, b->faces);
             }
@@ -248,7 +248,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                         continue; // wasn't part of the outer hull
 
                     // add this plane
-                    int32_t planenum = FindPlane(&current.normal[0], current.dist, nullptr);
+                    int32_t planenum = FindPlane(current.normal, current.dist, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
                     planes.emplace_back(outputplanenum, b->faces);
                 }

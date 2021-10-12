@@ -126,17 +126,15 @@ qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
     Q_assert(f->planenum >= 0 && f->planenum < bsp->dplanes.size());
     const dplane_t *dplane = &bsp->dplanes[f->planenum];
 
-    vec3_t planeNormal;
-    VectorCopy(dplane->normal, planeNormal); // convert from float->double if needed
-
     plane_t result;
     if (f->side) {
-        VectorSubtract(vec3_origin, planeNormal, result.normal);
+        result.normal = -dplane->normal;
         result.dist = -dplane->dist;
     } else {
-        VectorCopy(planeNormal, result.normal);
+        result.normal = dplane->normal;
         result.dist = dplane->dist;
     }
+
     return {result.normal, result.dist};
 }
 
@@ -276,9 +274,7 @@ vec_t Plane_Dist(const qvec3d &point, const dplane_t *plane)
         case PLANE_Y: return point[1] - plane->dist;
         case PLANE_Z: return point[2] - plane->dist;
         default: {
-            vec3_t planeNormal;
-            VectorCopy(plane->normal, planeNormal); // convert from float->double if needed
-            return DotProduct(point, planeNormal) - plane->dist;
+            return DotProduct(point, qvec3d(plane->normal)) - plane->dist;
         }
     }
 }
@@ -388,12 +384,10 @@ plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face
     for (int i = 0; i < face->numedges; i++) {
         plane_t *dest = &out[i];
 
-        const qvec3d v0 = GetSurfaceVertexPoint(bsp, face, i);
-        const qvec3d v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
+        const qvec3d &v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const qvec3d &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
 
-        vec3_t edgevec;
-        VectorSubtract(v1, v0, edgevec);
-        VectorNormalize(edgevec);
+        qvec3d edgevec = qv::normalize(v1 - v0);
 
         CrossProduct(edgevec, faceplane.normal(), dest->normal);
         dest->dist = DotProduct(dest->normal, v0);
