@@ -193,7 +193,8 @@ struct node_t
     portal_t *portals;
     int visleafnum; // -1 = solid
     int viscluster; // detail cluster for faster vis
-    int occupied; // 0=can't reach entity, 1 = has entity, >1 = distance from leaf with entity
+    int outside_distance; // -1 = can't reach outside, 0 = first void node, >0 = distance from void, in number of portals
+                          // used to write leak lines that take the shortest path to the void
     mapentity_t *occupant; // example occupant, for leak hunting
     bool detail_separator; // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs,
                            // are detail.
