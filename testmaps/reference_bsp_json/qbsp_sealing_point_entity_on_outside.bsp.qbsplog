@@ -1,6 +1,6 @@
 ---- qbsp / ericw-tools v0.18.1-477-g4accc4d-dirty ----
-Input file: qbsp_angled_brush.map
-Output file: qbsp_angled_brush.bsp
+Input file: qbsp_sealing_point_entity_on_outside.map
+Output file: qbsp_sealing_point_entity_on_outside.bsp
 
 SetQdirFromPath: WARNING: 'C:\Users\Eric\Documents\ericw-tools\testmaps' is not directly inside 'maps'
 WARNING: No info_player_deathmatch entities in level
@@ -10,71 +10,71 @@ Opened WAD: deprecated/origin.wad
 Opened WAD: deprecated/hintskip.wad
 Processing hull 0...
 ---- Brush_LoadEntity ----
-            7 brushes
-           18 planes
+            6 brushes
+           12 planes
 ---- CSGFaces ----
-           42 brushfaces
-           42 csgfaces
-           42 mergedfaces
+           36 brushfaces
+           36 csgfaces
+           36 mergedfaces
 ---- SolidBSP ----
-           30 split nodes
-            7 solid leafs
-           24 empty leafs
+           24 split nodes
+            6 solid leafs
+           19 empty leafs
             0 water leafs
             0 detail leafs
             0 detail illusionary leafs
             0 detail fence leafs
             0 illusionary visblocker leafs
-          156 leaffaces
-          126 nodefaces
+          120 leaffaces
+          120 nodefaces
 ---- PortalizeWorld ----
-           24 vis leafs
-           24 vis clusters
-           52 vis portals
+           19 vis leafs
+           19 vis clusters
+           40 vis portals
 ---- FillOutside ----
            18 outleafs
 ---- MergeAll ----
-           12 mergefaces
+            6 mergefaces
 ---- SolidBSP ----
-           12 split nodes
-            7 solid leafs
-            6 empty leafs
+            6 split nodes
+            6 solid leafs
+            1 empty leafs
             0 water leafs
             0 detail leafs
             0 detail illusionary leafs
             0 detail fence leafs
             0 illusionary visblocker leafs
-           68 leaffaces
-           38 nodefaces
+           32 leaffaces
+           32 nodefaces
 ---- PortalizeWorld ----
-            6 vis leafs
-            6 vis clusters
-           12 vis portals
+            1 vis leafs
+            1 vis clusters
+            0 vis portals
 ---- TJunc ----
-           40 world edges
-          124 edge points
+           28 world edges
+          100 edge points
            16 edges added by tjunctions
             0 faces added by tjunctions
 ---- MakeFaceEdges ----
 ---- GrowRegions ----
 Processing hull 1...
 Processing hull 2...
-Writing qbsp_angled_brush.bsp as BSP version Quake BSP
-Wrote qbsp_angled_brush.bsp
+Writing qbsp_sealing_point_entity_on_outside.bsp as BSP version Quake BSP
+Wrote qbsp_sealing_point_entity_on_outside.bsp
       1 models      
-     58 planes             1160
-     50 vertexes            600
-     12 nodes               288
-      9 texinfos            360
-     38 faces               760
-     70 clipnodes           560
-      7 leafs               196
-     68 marksurfaces        136
-     85 edges               340
-    168 surfedges           672
+     17 planes              340
+     42 vertexes            504
+      6 nodes               144
+      4 texinfos            160
+     32 faces               640
+     12 clipnodes            96
+      2 leafs                56
+     32 marksurfaces         64
+     73 edges               292
+    144 surfedges           576
         textures              2
         lightdata             0
         visdata               0
-        entdata             319
+        entdata             463
 
-0.016s seconds elapsed
+0.013s seconds elapsed
