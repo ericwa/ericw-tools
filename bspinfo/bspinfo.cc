@@ -182,10 +182,10 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
         for (auto &src_texinfo : bsp.texinfo) {
             json &texinfo = texinfos.insert(texinfos.end(), json::object()).value();
 
-            texinfo.push_back({"vecs", json::array({json::array({src_texinfo.vecs[0][0], src_texinfo.vecs[0][1],
-                                                        src_texinfo.vecs[0][2], src_texinfo.vecs[0][3]}),
-                                           json::array({src_texinfo.vecs[1][0], src_texinfo.vecs[1][1],
-                                               src_texinfo.vecs[1][2], src_texinfo.vecs[1][3]})})});
+            texinfo.push_back({"vecs", json::array({json::array({src_texinfo.vecs.at(0, 0), src_texinfo.vecs.at(0, 1),
+                                                        src_texinfo.vecs.at(0, 2), src_texinfo.vecs.at(0, 3)}),
+                                           json::array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1),
+                                               src_texinfo.vecs.at(1, 2), src_texinfo.vecs.at(1, 3)})})});
             texinfo.push_back({"flags", src_texinfo.flags.native});
             texinfo.push_back({"miptex", src_texinfo.miptex});
             texinfo.push_back({"value", src_texinfo.value});

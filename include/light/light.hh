@@ -122,7 +122,7 @@ struct lightsurf_t
 
     int texmins[2];
     int texsize[2];
-    vec_t exactmid[2];
+    qvec2d exactmid;
     qvec3d midpoint;
 
     int numpoints;

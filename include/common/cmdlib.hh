@@ -419,6 +419,14 @@ inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_da
     return s;
 }
 
+template<typename T>
+inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_write)>, std::ostream &> operator<=(
+    std::ostream &s, const T &obj)
+{
+    obj.stream_write(s);
+    return s;
+}
+
 inline std::istream &operator>=(std::istream &s, char &c)
 {
     s.read(&c, sizeof(c));
@@ -534,6 +542,14 @@ inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_da
     std::istream &s, T &obj)
 {
     s >= obj.stream_data();
+    return s;
+}
+
+template<typename T>
+inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_read)>, std::istream &> operator>=(
+    std::istream &s, T &obj)
+{
+    obj.stream_read(s);
     return s;
 }
 

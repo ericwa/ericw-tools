@@ -77,10 +77,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
     // We'll generate axis vectors of length 1 and pick the necessary scale
 
     for (int i = 0; i < 2; i++) {
-        vec3_t axis;
-        for (int j = 0; j < 3; j++) {
-            axis[j] = in_vecs[i][j];
-        }
+        qvec3d axis = in_vecs.row(i).xyz();
         const vec_t length = VectorNormalize(axis);
         // avoid division by 0
         if (length != 0.0) {
@@ -88,7 +85,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
         } else {
             res.scale[i] = 0.0;
         }
-        res.shift[i] = in_vecs[i][3];
+        res.shift[i] = in_vecs.at(i, 3);
         VectorCopy(axis, res.axis[i]);
     }
 

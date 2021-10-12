@@ -63,7 +63,7 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
         const qvec3d &pos = face->w[i];
         fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
 
-        qvec3d uv = texinfo.uvs(pos, width, height);
+        qvec3d uv = texinfo.vecs.uvs(pos, width, height);
 
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
         fmt::print(f, "vt {:.9} {:.9}\n", uv[0], -uv[1]);

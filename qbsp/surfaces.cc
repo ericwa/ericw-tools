@@ -39,7 +39,6 @@ void SubdivideFace(face_t *f, face_t **prevptr)
     qbsp_plane_t plane;
     face_t *front, *back, *next;
     const mtexinfo_t *tex;
-    vec3_t tmp;
     vec_t subdiv;
     vec_t extent;
     int lmshift;
@@ -75,9 +74,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
             mins = VECT_MAX;
             maxs = -VECT_MAX;
 
-            tmp[0] = tex->vecs[axis][0];
-            tmp[1] = tex->vecs[axis][1];
-            tmp[2] = tex->vecs[axis][2];
+            qvec3d tmp = tex->vecs.row(axis).xyz();
 
             for (int32_t i = 0; i < f->w.size(); i++) {
                 v = DotProduct(f->w[i], tmp);

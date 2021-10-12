@@ -818,7 +818,51 @@ struct extended_flags_header_t
     uint32_t surfflags_size; // sizeof(surfflags_t)
 };
 
-using texvecf = std::array<std::array<float, 4>, 2>;
+template<typename T>
+struct texvec : qmat<T, 2, 4>
+{
+    using qmat::qmat;
+
+    template<typename T2>
+    constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos) const
+    {
+        return {(pos[0] * at(0, 0) + pos[1] * at(0, 1) + pos[2] * at(0, 2) + at(0, 3)),
+                (pos[0] * at(1, 0) + pos[1] * at(1, 1) + pos[2] * at(1, 2) + at(1, 3))};
+    }
+
+    template<typename T2>
+    constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos, const int32_t &width, const int32_t &height) const
+    {
+        return uvs(pos) / qvec<T2, 2> { width, height };
+    }
+
+    // Not blit compatible because qmat is column-major but
+    // texvecs are row-major
+
+    void stream_read(std::istream &stream)
+    {
+        for (size_t i = 0; i < 2; i++)
+            for (size_t x = 0; x < 4; x++) {
+                stream >= at(i, x);
+            }
+    }
+
+    void stream_write(std::ostream &stream) const
+    {
+        for (size_t i = 0; i < 2; i++)
+            for (size_t x = 0; x < 4; x++) {
+                stream <= at(i, x);
+            }
+    }
+};
+
+// Fmt support
+template<class T>
+struct fmt::formatter<texvec<T>> : formatter<qmat<T, 2, 4>>
+{
+};
+
+using texvecf = texvec<float>;
 
 struct gtexinfo_t
 {

@@ -336,7 +336,7 @@ int FindTexinfo(const mtexinfo_t &texinfo)
     // They should have been stripped out already in ValidateTextureProjection.
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 4; j++) {
-            Q_assert(!std::isnan(texinfo.vecs[i][j]));
+            Q_assert(!std::isnan(texinfo.vecs.at(i, j)));
         }
     }
 
@@ -575,10 +575,10 @@ static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const texvecf 
     //           [?]
 
     qmat4x4f T{
-        in_vecs[0][0], in_vecs[1][0], static_cast<float>(faceplane.normal[0]), 0, // col 0
-        in_vecs[0][1], in_vecs[1][1], static_cast<float>(faceplane.normal[1]), 0, // col 1
-        in_vecs[0][2], in_vecs[1][2], static_cast<float>(faceplane.normal[2]), 0, // col 2
-        in_vecs[0][3], in_vecs[1][3], static_cast<float>(-faceplane.dist), 1 // col 3
+        in_vecs.at(0, 0), in_vecs.at(1, 0), static_cast<float>(faceplane.normal[0]), 0, // col 0
+        in_vecs.at(0, 1), in_vecs.at(1, 1), static_cast<float>(faceplane.normal[1]), 0, // col 1
+        in_vecs.at(0, 2), in_vecs.at(1, 2), static_cast<float>(faceplane.normal[2]), 0, // col 2
+        in_vecs.at(0, 3), in_vecs.at(1, 3), static_cast<float>(-faceplane.dist), 1 // col 3
     };
     return T;
 }
@@ -1001,24 +1001,20 @@ static void SetTexinfo_QuakeEd_New(
     }
 
     // copy M into the output vectors
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 4; j++) {
-            out_vecs[i][j] = 0.0;
-        }
-    }
+    out_vecs = {};
 
     const std::pair<int, int> axes = getSTAxes(snapped_normal);
 
     //                        M[col][row]
     // S
-    out_vecs[0][axes.first] = M.at(0, 0);
-    out_vecs[0][axes.second] = M.at(0, 1);
-    out_vecs[0][3] = shift[0];
+    out_vecs.at(0, axes.first) = M.at(0, 0);
+    out_vecs.at(0, axes.second) = M.at(0, 1);
+    out_vecs.at(0, 3) = shift[0];
 
     // T
-    out_vecs[1][axes.first] = M.at(1, 0);
-    out_vecs[1][axes.second] = M.at(1, 1);
-    out_vecs[1][3] = shift[1];
+    out_vecs.at(1, axes.first) = M.at(1, 0);
+    out_vecs.at(1, axes.second) = M.at(1, 1);
+    out_vecs.at(1, 3) = shift[1];
 }
 
 static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3d, 3> &planepts, const vec_t shift[2], vec_t rotate,
@@ -1062,10 +1058,10 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
     for (i = 0; i < 2; i++)
         for (j = 0; j < 3; j++)
             /* Interpret zero scale as no scaling */
-            out->vecs[i][j] = vecs[i][j] / (scale[i] ? scale[i] : 1);
+            out->vecs.at(i, j) = vecs[i][j] / (scale[i] ? scale[i] : 1);
 
-    out->vecs[0][3] = shift[0];
-    out->vecs[1][3] = shift[1];
+    out->vecs.at(0, 3) = shift[0];
+    out->vecs.at(1, 3) = shift[1];
 
     if (false) {
         // Self-test of SetTexinfo_QuakeEd_New
@@ -1073,7 +1069,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
         SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
         for (int i = 0; i < 2; i++) {
             for (int j = 0; j < 4; j++) {
-                if (fabs(check[i][j] - out->vecs[i][j]) > 0.001) {
+                if (fabs(check.at(i, j) - out->vecs.at(i, j)) > 0.001) {
                     SetTexinfo_QuakeEd_New(plane, shift, rotate, scale, check);
                     FError("fail");
                 }
@@ -1149,21 +1145,21 @@ static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &plan
     if (fabs(determinant) < ZERO_EPSILON) {
         LogPrint("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser.linenum);
         for (i = 0; i < 3; i++)
-            out->vecs[0][i] = out->vecs[1][i] = 0;
+            out->vecs.at(0, i) = out->vecs.at(1, i) = 0;
     } else {
         for (i = 0; i < 3; i++) {
-            out->vecs[0][i] = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
-            out->vecs[1][i] = -(a * vecs[1][i] - c * vecs[0][i]) / determinant;
+            out->vecs.at(0, i) = (d * vecs[0][i] - b * vecs[1][i]) / determinant;
+            out->vecs.at(1, i) = -(a * vecs[1][i] - c * vecs[0][i]) / determinant;
         }
     }
 
     /* Finally, the texture offset is indicated by planepts[0] */
     for (i = 0; i < 3; ++i) {
-        vecs[0][i] = out->vecs[0][i];
-        vecs[1][i] = out->vecs[1][i];
+        vecs[0][i] = out->vecs.at(0, i);
+        vecs[1][i] = out->vecs.at(1, i);
     }
-    out->vecs[0][3] = -DotProduct(vecs[0], planepts[0]);
-    out->vecs[1][3] = -DotProduct(vecs[1], planepts[0]);
+    out->vecs.at(0, 3) = -DotProduct(vecs[0], planepts[0]);
+    out->vecs.at(1, 3) = -DotProduct(vecs[1], planepts[0]);
 }
 
 static void SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2], mtexinfo_t *out)
@@ -1171,11 +1167,11 @@ static void SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_
     int i;
 
     for (i = 0; i < 3; i++) {
-        out->vecs[0][i] = axis[0][i] / scale[0];
-        out->vecs[1][i] = axis[1][i] / scale[1];
+        out->vecs.at(0, i) = axis[0][i] / scale[0];
+        out->vecs.at(1, i) = axis[1][i] / scale[1];
     }
-    out->vecs[0][3] = shift[0];
-    out->vecs[1][3] = shift[1];
+    out->vecs.at(0, 3) = shift[0];
+    out->vecs.at(1, 3) = shift[1];
 }
 
 /*
@@ -1250,21 +1246,21 @@ static void SetTexinfo_BrushPrimitives(
 
      */
 
-    vecs[0][0] = texWidth * ((texX[0] * texMat[0][0]) + (texY[0] * texMat[0][1]));
-    vecs[0][1] = texWidth * ((texX[1] * texMat[0][0]) + (texY[1] * texMat[0][1]));
-    vecs[0][2] = texWidth * ((texX[2] * texMat[0][0]) + (texY[2] * texMat[0][1]));
-    vecs[0][3] = texWidth * texMat[0][2];
+    vecs.at(0, 0) = texWidth * ((texX[0] * texMat[0][0]) + (texY[0] * texMat[0][1]));
+    vecs.at(0, 1) = texWidth * ((texX[1] * texMat[0][0]) + (texY[1] * texMat[0][1]));
+    vecs.at(0, 2) = texWidth * ((texX[2] * texMat[0][0]) + (texY[2] * texMat[0][1]));
+    vecs.at(0, 3) = texWidth * texMat[0][2];
 
-    vecs[1][0] = texHeight * ((texX[0] * texMat[1][0]) + (texY[0] * texMat[1][1]));
-    vecs[1][1] = texHeight * ((texX[1] * texMat[1][0]) + (texY[1] * texMat[1][1]));
-    vecs[1][2] = texHeight * ((texX[2] * texMat[1][0]) + (texY[2] * texMat[1][1]));
-    vecs[1][3] = texHeight * texMat[1][2];
+    vecs.at(1, 0) = texHeight * ((texX[0] * texMat[1][0]) + (texY[0] * texMat[1][1]));
+    vecs.at(1, 1) = texHeight * ((texX[1] * texMat[1][0]) + (texY[1] * texMat[1][1]));
+    vecs.at(1, 2) = texHeight * ((texX[2] * texMat[1][0]) + (texY[2] * texMat[1][1]));
+    vecs.at(1, 3) = texHeight * texMat[1][2];
 }
 
 static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const texvecf &in_vecs, vec_t *st_out)
 {
     for (int i = 0; i < 2; i++) {
-        st_out[i] = (point[0] * in_vecs[i][0] + point[1] * in_vecs[i][1] + point[2] * in_vecs[i][2] + in_vecs[i][3]) /
+        st_out[i] = (point[0] * in_vecs.at(i, 0) + point[1] * in_vecs.at(i, 1) + point[2] * in_vecs.at(i, 2) + in_vecs.at(i, 3)) /
                     static_cast<vec_t>(texSize[i]);
     }
 }
@@ -1538,14 +1534,9 @@ bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, con
     return true;
 }
 
-static bool IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t *tx)
+inline bool IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t *tx)
 {
-    const qvec3f faceNormal = mapface.plane.normal;
-    const qvec3f s_vec = qvec3f(tx->vecs[0][0], tx->vecs[0][1], tx->vecs[0][2]);
-    const qvec3f t_vec = qvec3f(tx->vecs[1][0], tx->vecs[1][1], tx->vecs[1][2]);
-    const bool valid = IsValidTextureProjection(faceNormal, s_vec, t_vec);
-
-    return valid;
+    return IsValidTextureProjection(mapface.plane.normal, tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
 }
 
 static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
@@ -1589,9 +1580,9 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrus
     // (it uses 32 bit precision in CalcSurfaceExtents)
     for (i = 0; i < 2; i++) {
         for (j = 0; j < 4; j++) {
-            vec_t r = Q_rint(tx.vecs[i][j]);
-            if (fabs(tx.vecs[i][j] - r) < ZERO_EPSILON)
-                tx.vecs[i][j] = r;
+            vec_t r = Q_rint(tx.vecs.at(i, j));
+            if (fabs(tx.vecs.at(i, j) - r) < ZERO_EPSILON)
+                tx.vecs.at(i, j) = r;
         }
     }
 
@@ -1746,11 +1737,11 @@ static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
     texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
-        const qvec4f &in = texvecs.at(i);
+        const qvec4f in = texvecs.row(i);
         const qvec3f in_first3(in);
 
         const qvec3f out_first3 = inversescaleM * in_first3;
-        newtexvecs[i] = {out_first3[0], out_first3[1], out_first3[2], in[3]};
+        newtexvecs.set_row(i, { out_first3[0], out_first3[1], out_first3[2], in[3] });
     }
 
     face->set_texvecs(newtexvecs);
@@ -1780,11 +1771,11 @@ static void RotateMapFace(mapface_t *face, const qvec3d &angles)
     texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
-        const qvec4f in = texvecs.at(i);
+        const qvec4f in = texvecs.row(i);
         const qvec3f in_first3(in);
         
         const qvec3f out_first3 = rotation * in_first3;
-        newtexvecs[i] = {out_first3[0], out_first3[1], out_first3[2], in[3]};
+        newtexvecs.set_row(i, {out_first3[0], out_first3[1], out_first3[2], in[3]});
     }
 
     face->set_texvecs(newtexvecs);
@@ -1805,10 +1796,10 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
     texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
-        qvec4f out = texvecs.at(i);
+        qvec4f out = texvecs.row(i);
         // CHECK: precision loss here?
         out[3] += qv::dot(qvec3f(out), qvec3f(offset) * -1.0f);
-        newtexvecs[i] = {out[0], out[1], out[2], out[3]};
+        newtexvecs.set_row(i, {out[0], out[1], out[2], out[3]});
 
     }
 
@@ -2046,10 +2037,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
     // We'll generate axis vectors of length 1 and pick the necessary scale
 
     for (int i = 0; i < 2; i++) {
-        vec3_t axis;
-        for (int j = 0; j < 3; j++) {
-            axis[j] = in_vecs[i][j];
-        }
+        qvec3d axis = in_vecs.row(i).xyz();
         const vec_t length = VectorNormalize(axis);
         // avoid division by 0
         if (length != 0.0) {
@@ -2057,7 +2045,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
         } else {
             res.scale[i] = 0.0;
         }
-        res.shift[i] = in_vecs[i][3];
+        res.shift[i] = in_vecs.at(i, 3);
         VectorCopy(axis, res.axis[i]);
     }
 

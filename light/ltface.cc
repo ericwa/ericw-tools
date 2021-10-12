@@ -43,14 +43,8 @@ std::atomic<uint32_t> fully_transparent_lightmaps;
 
 /* ======================================================================== */
 
-qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, const qvec3f &world)
+qvec2d WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex)
 {
-    const gtexinfo_t *tex = Face_Texinfo(bsp, face);
-    qvec2f coord{};
-
-    if (tex == nullptr)
-        return coord;
-
     /*
      * The (long double) casts below are important: The original code
      * was written for x87 floating-point which uses 80-bit floats for
@@ -66,11 +60,17 @@ qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, con
      * Casting to (long double) keeps the intermediate values at at
      * least 64 bits of precision, probably 128.
      */
-    for (int i = 0; i < 2; i++) {
-        coord[i] = (long double)world[0] * tex->vecs[i][0] + (long double)world[1] * tex->vecs[i][1] +
-                   (long double)world[2] * tex->vecs[i][2] + tex->vecs[i][3];
-    }
-    return coord;
+    return tex->vecs.uvs<long double>(world);
+}
+
+static qvec2f Face_WorldToTexCoord(const mbsp_t *bsp, const mface_t *face, const qvec3f &world)
+{
+    const gtexinfo_t *tex = Face_Texinfo(bsp, face);
+
+    if (tex == nullptr)
+        return {};
+
+    return WorldToTexCoord(world, tex);
 }
 
 faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmscale) : m_lightmapscale(lmscale)
@@ -83,7 +83,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
 
     for (int i = 0; i < face->numedges; i++) {
         const qvec3f &worldpoint = Face_PointAtIndex(bsp, face, i);
-        const qvec2f texcoord = WorldToTexCoord_HighPrecision(bsp, face, worldpoint);
+        const qvec2f texcoord = Face_WorldToTexCoord(bsp, face, worldpoint);
 
         // self test
         auto texcoordRT = this->worldToTexCoord(worldpoint);
@@ -211,10 +211,10 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
     //           [?]
 
     qmat4x4f T{
-        tex->vecs[0][0], tex->vecs[1][0], static_cast<float>(plane.normal()[0]), 0, // col 0
-        tex->vecs[0][1], tex->vecs[1][1], static_cast<float>(plane.normal()[1]), 0, // col 1
-        tex->vecs[0][2], tex->vecs[1][2], static_cast<float>(plane.normal()[2]), 0, // col 2
-        tex->vecs[0][3], tex->vecs[1][3], static_cast<float>(-plane.dist()), 1 // col 3
+        tex->vecs.at(0, 0), tex->vecs.at(1, 0), static_cast<float>(plane.normal()[0]), 0, // col 0
+        tex->vecs.at(0, 1), tex->vecs.at(1, 1), static_cast<float>(plane.normal()[1]), 0, // col 1
+        tex->vecs.at(0, 2), tex->vecs.at(1, 2), static_cast<float>(plane.normal()[2]), 0, // col 2
+        tex->vecs.at(0, 3), tex->vecs.at(1, 3), static_cast<float>(-plane.dist()), 1 // col 3
     };
     return T;
 }
@@ -229,39 +229,15 @@ constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg)
     return (texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0)).xyz();
 }
 
-void WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex, vec_t coord[2])
-{
-    /*
-     * The (long double) casts below are important: The original code
-     * was written for x87 floating-point which uses 80-bit floats for
-     * intermediate calculations. But if you compile it without the
-     * casts for modern x86_64, the compiler will round each
-     * intermediate result to a 32-bit float, which introduces extra
-     * rounding error.
-     *
-     * This becomes a problem if the rounding error causes the light
-     * utilities and the engine to disagree about the lightmap size
-     * for some surfaces.
-     *
-     * Casting to (long double) keeps the intermediate values at at
-     * least 64 bits of precision, probably 128.
-     */
-    for (int i = 0; i < 2; i++)
-        coord[i] = (long double)world[0] * tex->vecs[i][0] + (long double)world[1] * tex->vecs[i][1] +
-                   (long double)world[2] * tex->vecs[i][2] + tex->vecs[i][3];
-}
-
 /* Debug helper - move elsewhere? */
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
 {
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const std::string &texname = Face_TextureName(bsp, face);
 
-    LogPrint("face {}, texture {}, {} edges...\n"
-             "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"
-             "          ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n",
-        Face_GetNum(bsp, face), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
-        tex->vecs[0][3], tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
+    LogPrint("face {}, texture {}, {} edges; vectors:\n"
+             "{: 3.3}\n",
+        Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];
@@ -282,7 +258,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
 // FIXME: duped by faceextents_t?
 static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t *surf)
 {
-    vec_t mins[2], maxs[2], texcoord[2];
+    vec_t mins[2], maxs[2];
     vec3_t worldmaxs, worldmins;
 
     mins[0] = mins[1] = VECT_MAX;
@@ -296,7 +272,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
         const int vert = (edge >= 0) ? bsp->dedges[edge][0] : bsp->dedges[-edge][1];
         const qvec3d worldpoint = bsp->dvertexes[vert];
 
-        WorldToTexCoord(worldpoint, tex, texcoord);
+        qvec2d texcoord = WorldToTexCoord(worldpoint, tex);
         for (int j = 0; j < 2; j++) {
             if (texcoord[j] < mins[j])
                 mins[j] = texcoord[j];
@@ -314,7 +290,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
     }
 
     qvec3d worldpoint = Face_Centroid(bsp, face);
-    WorldToTexCoord(worldpoint, tex, surf->exactmid);
+    surf->exactmid = WorldToTexCoord(worldpoint, tex);
 
     // calculate a bounding sphere for the face
     {
@@ -369,8 +345,8 @@ static constexpr float sampleOffPlaneDist = 1.0f;
 
 static float TexSpaceDist(const mbsp_t *bsp, const mface_t *face, const qvec3f &p0, const qvec3f &p1)
 {
-    const qvec2f p0_tex = WorldToTexCoord_HighPrecision(bsp, face, p0);
-    const qvec2f p1_tex = WorldToTexCoord_HighPrecision(bsp, face, p1);
+    const qvec2f p0_tex = Face_WorldToTexCoord(bsp, face, p0);
+    const qvec2f p1_tex = Face_WorldToTexCoord(bsp, face, p1);
 
     return qv::length(p1_tex - p0_tex);
 }
@@ -803,8 +779,8 @@ static bool Lightsurf_Init(
     }
 
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    VectorCopy(tex->vecs[0], lightsurf->snormal);
-    VectorSubtract(vec3_origin, tex->vecs[1], lightsurf->tnormal);
+    VectorCopy(tex->vecs.row(0), lightsurf->snormal);
+    VectorSubtract(vec3_origin, tex->vecs.row(1), lightsurf->tnormal);
     VectorNormalize(lightsurf->snormal);
     VectorNormalize(lightsurf->tnormal);
 

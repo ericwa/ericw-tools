@@ -252,12 +252,6 @@ std::tuple<qvec3f, qvec3f> compute_tangents(
     return {qv::normalize(tangent), qv::normalize(bitangent)};
 }
 
-constexpr qvec2f uvs(const texvecf &vecs, const qvec3f &pos, const int32_t &width, const int32_t &height)
-{
-    return {(pos[0] * vecs[0][0] + pos[1] * vecs[0][1] + pos[2] * vecs[0][2] + vecs[0][3]) / width,
-            (pos[0] * vecs[1][0] + pos[1] * vecs[1][1] + pos[2] * vecs[1][2] + vecs[1][3]) / height};
-}
-
 /* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at
  * the verts. v1, v2, v3 are global vertex indices */
 static void AddTriangleNormals(std::map<int, face_normal_t> &smoothed_normals, const gtexinfo_t *texinfo, const rgba_miptex_t *miptex,
@@ -273,9 +267,9 @@ static void AddTriangleNormals(std::map<int, face_normal_t> &smoothed_normals, c
         areaweight = 0;
     }
 
-    auto uv1 = uvs(texinfo->vecs, p1, miptex->width, miptex->height);
-    auto uv2 = uvs(texinfo->vecs, p2, miptex->width, miptex->height);
-    auto uv3 = uvs(texinfo->vecs, p3, miptex->width, miptex->height);
+    auto uv1 = texinfo->vecs.uvs(p1, miptex->width, miptex->height);
+    auto uv2 = texinfo->vecs.uvs(p2, miptex->width, miptex->height);
+    auto uv3 = texinfo->vecs.uvs(p3, miptex->width, miptex->height);
 
     auto tangent = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
 
@@ -588,9 +582,9 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         auto p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 0));
         auto p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 1));
         auto p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 2));
-        auto uv1 = uvs(texinfo->vecs, p1, miptex->width, miptex->height);
-        auto uv2 = uvs(texinfo->vecs, p2, miptex->width, miptex->height);
-        auto uv3 = uvs(texinfo->vecs, p3, miptex->width, miptex->height);
+        auto uv1 = texinfo->vecs.uvs(p1, miptex->width, miptex->height);
+        auto uv2 = texinfo->vecs.uvs(p2, miptex->width, miptex->height);
+        auto uv3 = texinfo->vecs.uvs(p3, miptex->width, miptex->height);
 
         auto tangents = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
 

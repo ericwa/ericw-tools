@@ -432,11 +432,9 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const std::string &texname = Face_TextureName(bsp, face);
 
-    LogPrint("face {}, texture '{}', {} edges...\n"
-             "  vectors ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n"
-             "          ({:3.3}, {:3.3}, {:3.3}) ({:3.3})\n",
-        Face_GetNum(bsp, face), texname, face->numedges, tex->vecs[0][0], tex->vecs[0][1], tex->vecs[0][2],
-        tex->vecs[0][3], tex->vecs[1][0], tex->vecs[1][1], tex->vecs[1][2], tex->vecs[1][3]);
+    LogPrint("face {}, texture '{}', {} edges; vectors:\n"
+             "{: 3.3}\n",
+        Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
     for (int i = 0; i < face->numedges; i++) {
         int edge = bsp->dsurfedges[face->firstedge + i];

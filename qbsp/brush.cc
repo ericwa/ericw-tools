@@ -408,8 +408,8 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
             mtexinfo_t texInfoNew = map.mtexinfos.at(mapface->texinfo);
             texInfoNew.outputnum = std::nullopt;
 
-            texInfoNew.vecs[0][3] += DotProduct(rotate_offset, texInfoNew.vecs[0]);
-            texInfoNew.vecs[1][3] += DotProduct(rotate_offset, texInfoNew.vecs[1]);
+            texInfoNew.vecs.at(0, 3) += DotProduct(rotate_offset, texInfoNew.vecs.row(0));
+            texInfoNew.vecs.at(1, 3) += DotProduct(rotate_offset, texInfoNew.vecs.row(1));
 
             mapface->texinfo = FindTexinfo(texInfoNew);
         }

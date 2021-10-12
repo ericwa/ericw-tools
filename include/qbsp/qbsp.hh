@@ -125,11 +125,6 @@ struct mtexinfo_t
     constexpr bool operator<(const mtexinfo_t &other) const { return as_tuple() < other.as_tuple(); }
 
     constexpr bool operator>(const mtexinfo_t &other) const { return as_tuple() > other.as_tuple(); }
-    constexpr qvec2d uvs(const qvec3d &pos, const int32_t &width, const int32_t &height) const
-    {
-        return {(pos[0] * vecs[0][0] + pos[1] * vecs[0][1] + pos[2] * vecs[0][2] + vecs[0][3]) / width,
-            (pos[0] * vecs[1][0] + pos[1] * vecs[1][1] + pos[2] * vecs[1][2] + vecs[1][3]) / height};
-    }
 };
 
 struct face_t

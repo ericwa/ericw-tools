@@ -70,10 +70,9 @@ public:
     qvec3f LMCoordToWorld(qvec2f lm) const;
 };
 
-qvec2f WorldToTexCoord_HighPrecision(const mbsp_t *bsp, const mface_t *face, const qvec3f &world);
 qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f);
 qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f);
-void WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex, vec_t coord[2]);
+qvec2d WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex);
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist);

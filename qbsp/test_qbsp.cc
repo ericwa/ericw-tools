@@ -39,7 +39,7 @@ static mapentity_t LoadMap(const char *map)
     return worldspawn;
 }
 
-static texvecf GetTexvecs(const char *map, const char *texname)
+static const texvecf &GetTexvecs(const char *map, const char *texname)
 {
     mapentity_t worldspawn = LoadMap(map);
 
@@ -340,7 +340,7 @@ TEST(qbsp, InvalidTextureProjection)
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     ASSERT_EQ("skip", face->texname);
     const auto texvecs = face->get_texvecs();
-    EXPECT_TRUE(IsValidTextureProjection(face->plane.normal, qvec4f(texvecs.at(0)), qvec4f(texvecs.at(1))));
+    EXPECT_TRUE(IsValidTextureProjection(face->plane.normal, texvecs.row(0), texvecs.row(1)));
 }
 
 /**
@@ -370,7 +370,7 @@ TEST(qbsp, InvalidTextureProjection2)
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     ASSERT_EQ("skip", face->texname);
     const auto texvecs = face->get_texvecs();
-    EXPECT_TRUE(IsValidTextureProjection(face->plane.normal, qvec4f(texvecs.at(0)), qvec4f(texvecs.at(1))));
+    EXPECT_TRUE(IsValidTextureProjection(face->plane.normal, texvecs.row(0), texvecs.row(1)));
 }
 
 /**
@@ -401,7 +401,7 @@ TEST(qbsp, InvalidTextureProjection3)
     const mapface_t *face = &worldspawn.mapbrush(0).face(3);
     ASSERT_EQ("*lava1", face->texname);
     const auto texvecs = face->get_texvecs();
-    EXPECT_TRUE(IsValidTextureProjection(qvec3f(face->plane.normal), qvec4f(texvecs.at(0)), qvec4f(texvecs.at(1))));
+    EXPECT_TRUE(IsValidTextureProjection(qvec3f(face->plane.normal), texvecs.row(0), texvecs.row(1)));
 }
 
 TEST(mathlib, WindingArea)

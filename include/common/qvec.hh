@@ -251,6 +251,22 @@ public:
     }
 };
 
+// Fmt support
+template<class T, size_t N>
+struct fmt::formatter<qvec<T, N>> : formatter<T>
+{
+    template<typename FormatContext>
+    auto format(const qvec<T, N> &p, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        for (size_t i = 0; i < N - 1; i++) {
+            formatter<T>::format(p[i], ctx);
+            format_to(ctx.out(), " ");
+        }
+
+        return formatter<T>::format(p[N - 1], ctx);
+    }
+};
+
 namespace qv
 {
 template<class T>
@@ -520,22 +536,22 @@ template<typename T>
 
 // Snap vector to nearest axial component
 template<typename T>
-[[nodiscard]] qvec<T, 3> Snap(const qvec<T, 3> &normal, const T &epsilon = NORMAL_EPSILON)
+[[nodiscard]] qvec<T, 3> Snap(qvec<T, 3> normal, const T &epsilon = NORMAL_EPSILON)
 {
-    qvec<T, 3> vec { };
-
-    for (size_t i = 0; i < 3; i++) {
-        if (fabs(normal[i] - 1) < epsilon) {
-            vec[i] = 1;
+    for (auto &v : normal) {
+        if (fabs(v - 1) < epsilon) {
+            normal = {};
+            v = 1;
             break;
         }
-        if (fabs(normal[i] - -1) < epsilon) {
-            vec[i] = -1;
+        if (fabs(v - -1) < epsilon) {
+            normal = {};
+            v = -1;
             break;
         }
     }
     
-    return vec;
+    return normal;
 }
 }; // namespace qv
 
@@ -677,10 +693,22 @@ public:
         return v;
     }
 
+    void set_row(size_t row, const qvec<T, NCol> &values)
+    {
+        for (size_t i = 0; i < NCol; i++) {
+            at(row, i) = values[i];
+        }
+    }
+
     [[nodiscard]] constexpr const qvec<T, NRow> &col(size_t col) const
     {
         assert(col >= 0 && col < NCol);
         return reinterpret_cast<const qvec<T, NRow> &>(m_values[col * NRow]);
+    }
+
+    void set_col(size_t col, const qvec<T, NRow> &values) const
+    {
+        reinterpret_cast<qvec<T, NRow> &>(m_values[col * NRow]) = values;
     }
 
     // multiplication by a vector
@@ -724,9 +752,27 @@ public:
         }
         return res;
     }
+};
 
-    // stream support
-    auto stream_data() { return std::tie(m_values); }
+// Fmt support
+template<class T, size_t NRow, size_t NCol>
+struct fmt::formatter<qmat<T, NRow, NCol>> : formatter<qvec<T, NCol>>
+{
+    template<typename FormatContext>
+    auto format(const qmat<T, NRow, NCol> &p, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        for (size_t i = 0; i < NRow; i++) {
+            format_to(ctx.out(), "[ ");
+            formatter<qvec<T, NCol>>::format(p.row(i), ctx);
+            format_to(ctx.out(), " ]");
+
+            if (i != NRow - 1) {
+                format_to(ctx.out(), "\n");
+            }
+        }
+
+        return ctx.out();
+    }
 };
 
 using qmat2x2f = qmat<float, 2, 2>;
@@ -747,21 +793,6 @@ namespace qv
 
 [[nodiscard]] qmat2x2f inverse(const qmat2x2f &input);
 }; // namespace qv
-
-template<size_t N, class T>
-struct fmt::formatter<qvec<T, N>> : formatter<T>
-{
-    template<typename FormatContext>
-    auto format(const qvec<T, N> &p, FormatContext &ctx) -> decltype(ctx.out())
-    {
-        for (size_t i = 0; i < N - 1; i++) {
-            formatter<T>::format(p[i], ctx);
-            format_to(ctx.out(), " ");
-        }
-
-        return formatter<T>::format(p[N - 1], ctx);
-    }
-};
 
 // "vec3" type. legacy; eventually will be replaced entirely
 using vec3_t = vec_t[3];

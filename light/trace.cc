@@ -59,8 +59,7 @@ SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point)
 
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
 
-    vec_t texcoord[2];
-    WorldToTexCoord(point, tex, texcoord);
+    qvec2d texcoord = WorldToTexCoord(point, tex);
 
     const uint32_t x = clamp_texcoord(texcoord[0], miptex->width);
     const uint32_t y = clamp_texcoord(texcoord[1], miptex->height);
